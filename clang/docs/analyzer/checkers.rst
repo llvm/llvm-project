@@ -1943,6 +1943,18 @@ Check for out-of-bounds access in string functions; applies to:`` strncopy, strn
    int y = strlen((char *)&test); // warn
  }
 
+alpha.nondeterminism.PointerSorting (C++)
+"""""""""""""""""""""""""""""""""""""""""
+Check for non-determinism caused by sorting of pointers.
+
+.. code-block:: c
+
+ void test() {
+  int a = 1, b = 2;
+  std::vector<int *> V = {&a, &b};
+  std::sort(V.begin(), V.end()); // warn
+ }
+
 
 Debug Checkers
 ---------------

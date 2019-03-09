@@ -1743,6 +1743,8 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::CXXTypeidExprClass:
   case Expr::CXXUuidofExprClass:
     return true;
+  case Expr::ObjCBoxedExprClass:
+    return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
     return IsStringLiteralCall(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
@@ -5794,6 +5796,8 @@ public:
   bool VisitObjCStringLiteral(const ObjCStringLiteral *E)
       { return Success(E); }
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+    if (E->isExpressibleAsConstantInitializer())
+      return Success(E);
     if (Info.noteFailure())
       EvaluateIgnoredValue(Info, E->getSubExpr());
     return Error(E);
@@ -11127,6 +11131,7 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
                                   const ASTContext &Ctx) const {
   EvalInfo::EvaluationMode EM = EvalInfo::EM_ConstantExpression;
   EvalInfo Info(Ctx, Result, EM);
+  Info.InConstantContext = true;
   if (!::Evaluate(Result.Val, Info, this))
     return false;
 
@@ -11767,6 +11772,7 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
                                     const Expr *This) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpressionUnevaluated);
+  Info.InConstantContext = true;
 
   LValue ThisVal;
   const LValue *ThisPtr = nullptr;
@@ -11850,6 +11856,7 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
 
   EvalInfo Info(FD->getASTContext(), Status,
                 EvalInfo::EM_PotentialConstantExpressionUnevaluated);
+  Info.InConstantContext = true;
 
   // Fabricate a call stack frame to give the arguments a plausible cover story.
   ArrayRef<const Expr*> Args;

@@ -440,3 +440,14 @@ void test() {
 }
 // CHECK: <key>name</key><string>YET_ANOTHER_SET_TO_NULL</string>
 // CHECK-NEXT: <key>expansion</key><string>print((void *)5); print((void *)&quot;Remember the Vasa&quot;); ptr = nullptr;</string>
+
+int garbage_value;
+
+#define REC_MACRO_FUNC(REC_MACRO_PARAM) garbage_##REC_MACRO_PARAM
+#define value REC_MACRO_FUNC(value)
+
+void recursiveMacroUser() {
+  if (value == 0)
+    1 / value; // expected-warning{{Division by zero}}
+               // expected-warning@-1{{expression result unused}}
+}

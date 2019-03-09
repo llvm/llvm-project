@@ -1,0 +1,74 @@
+# Show that llvm-readelf properly prints the addend for relocations that do not
+# have an associated symbol but have a negative addend.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf --relocations %t | FileCheck %s --check-prefix=REL
+# RUN: llvm-readelf --dyn-relocations %t | FileCheck %s --check-prefix=DYN
+
+# REL:      Relocation section '.rela.text' at offset {{.*}} contains 1 entries:
+# REL-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# REL-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                     ffffffffffffffff
+# REL-EMPTY:
+# REL-NEXT: Relocation section '.rela.dyn' at offset {{.*}} contains 1 entries:
+# REL-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# REL-NEXT: 0000000000000008  0000000000000000 R_X86_64_NONE                     ffffffffffffffff
+
+# DYN:      'RELA' relocation section at offset {{.*}} contains 24 bytes:
+# DYN-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# DYN-NEXT: 0000000000000008  0000000000000000 R_X86_64_NONE                     ffffffffffffffff
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Size: 0x10
+  - Name: .rela.text
+    Type: SHT_RELA
+    Link: .symtab
+    Info: .text
+    Relocations:
+      - Offset: 0
+        Type: R_X86_64_NONE
+        Addend: -1
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Flags: [SHF_ALLOC]
+    Address: 0x1000
+    AddressAlign: 0x1000
+    Entries:
+      - Tag: DT_RELA
+        Value: 0x1100
+      - Tag: DT_RELASZ
+        Value: 24
+      - Tag: DT_RELAENT
+        Value: 24
+      - Tag: DT_NULL
+        Value: 0
+  - Name: .rela.dyn
+    Type: SHT_RELA
+    Flags: [SHF_ALLOC]
+    Info: .text
+    Address: 0x1100
+    AddressAlign: 0x100
+    Relocations:
+      - Offset: 8
+        Type: R_X86_64_NONE
+        Addend: -1
+DynamicSymbols:
+  Global:
+    - Name: force_dynsym
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .rela.dyn
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic

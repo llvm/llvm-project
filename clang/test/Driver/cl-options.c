@@ -397,6 +397,7 @@
 // RUN:     /Bt \
 // RUN:     /Bt+ \
 // RUN:     /clr:pure \
+// RUN:     /d2FH4 \
 // RUN:     /docname \
 // RUN:     /EHsc \
 // RUN:     /F \

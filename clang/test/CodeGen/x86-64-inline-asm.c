@@ -24,9 +24,11 @@ void pr40890(void) {
   __asm__ __volatile__("\n#define S_A abcd%0\n" : : "n"(&((struct s*)0)->a));
   __asm__ __volatile__("\n#define S_B abcd%0\n" : : "n"(&((struct s*)0)->b));
   __asm__ __volatile__("\n#define BEEF abcd%0\n" : : "n"((int*)0xdeadbeeeeeef));
+  __asm__ __volatile__("movabsq %0, %%rax" : : "n"(4624529908474429119));
 
 // CHECK-LABEL: pr40890
 // CHECK: #define S_A abcd$0
 // CHECK: #define S_B abcd$4
 // CHECK: #define BEEF abcd$244837814038255
+// CHECK: movabsq $4624529908474429119, %rax
 }

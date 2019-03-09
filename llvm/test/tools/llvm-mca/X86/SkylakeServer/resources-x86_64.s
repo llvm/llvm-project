@@ -1345,8 +1345,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      2     1.00                        rorb	%dil
 # CHECK-NEXT:  5      7     1.00    *      *            rolb	(%rax)
 # CHECK-NEXT:  5      7     1.00    *      *            rorb	(%rax)
-# CHECK-NEXT:  2      2     1.00                        rolb	$7, %dil
-# CHECK-NEXT:  2      2     1.00                        rorb	$7, %dil
+# CHECK-NEXT:  1      1     0.50                        rolb	$7, %dil
+# CHECK-NEXT:  1      1     0.50                        rorb	$7, %dil
 # CHECK-NEXT:  5      7     1.00    *      *            rolb	$7, (%rax)
 # CHECK-NEXT:  5      7     1.00    *      *            rorb	$7, (%rax)
 # CHECK-NEXT:  3      3     1.50                        rolb	%cl, %dil
@@ -1357,8 +1357,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      2     1.00                        rorw	%di
 # CHECK-NEXT:  5      7     1.00    *      *            rolw	(%rax)
 # CHECK-NEXT:  5      7     1.00    *      *            rorw	(%rax)
-# CHECK-NEXT:  2      2     1.00                        rolw	$7, %di
-# CHECK-NEXT:  2      2     1.00                        rorw	$7, %di
+# CHECK-NEXT:  1      1     0.50                        rolw	$7, %di
+# CHECK-NEXT:  1      1     0.50                        rorw	$7, %di
 # CHECK-NEXT:  5      7     1.00    *      *            rolw	$7, (%rax)
 # CHECK-NEXT:  5      7     1.00    *      *            rorw	$7, (%rax)
 # CHECK-NEXT:  3      3     1.50                        rolw	%cl, %di
@@ -1369,8 +1369,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      2     1.00                        rorl	%edi
 # CHECK-NEXT:  5      7     1.00    *      *            roll	(%rax)
 # CHECK-NEXT:  5      7     1.00    *      *            rorl	(%rax)
-# CHECK-NEXT:  2      2     1.00                        roll	$7, %edi
-# CHECK-NEXT:  2      2     1.00                        rorl	$7, %edi
+# CHECK-NEXT:  1      1     0.50                        roll	$7, %edi
+# CHECK-NEXT:  1      1     0.50                        rorl	$7, %edi
 # CHECK-NEXT:  5      7     1.00    *      *            roll	$7, (%rax)
 # CHECK-NEXT:  5      7     1.00    *      *            rorl	$7, (%rax)
 # CHECK-NEXT:  3      3     1.50                        roll	%cl, %edi
@@ -1381,8 +1381,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      2     1.00                        rorq	%rdi
 # CHECK-NEXT:  5      7     1.00    *      *            rolq	(%rax)
 # CHECK-NEXT:  5      7     1.00    *      *            rorq	(%rax)
-# CHECK-NEXT:  2      2     1.00                        rolq	$7, %rdi
-# CHECK-NEXT:  2      2     1.00                        rorq	$7, %rdi
+# CHECK-NEXT:  1      1     0.50                        rolq	$7, %rdi
+# CHECK-NEXT:  1      1     0.50                        rorq	$7, %rdi
 # CHECK-NEXT:  5      7     1.00    *      *            rolq	$7, (%rax)
 # CHECK-NEXT:  5      7     1.00    *      *            rorq	$7, (%rax)
 # CHECK-NEXT:  3      3     1.50                        rolq	%cl, %rdi
@@ -1693,7 +1693,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT: 60.00   -     593.00 326.50 269.33 269.33 214.00 294.00 649.50 85.33
+# CHECK-NEXT: 60.00   -     589.00 326.50 269.33 269.33 214.00 294.00 645.50 85.33
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -2143,8 +2143,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     rorb	%dil
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rolb	(%rax)
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rorb	(%rax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     rolb	$7, %dil
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     rorb	$7, %dil
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     rolb	$7, %dil
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     rorb	$7, %dil
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rolb	$7, (%rax)
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rorb	$7, (%rax)
 # CHECK-NEXT:  -      -     1.50    -      -      -      -      -     1.50    -     rolb	%cl, %dil
@@ -2155,8 +2155,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     rorw	%di
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rolw	(%rax)
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rorw	(%rax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     rolw	$7, %di
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     rorw	$7, %di
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     rolw	$7, %di
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     rorw	$7, %di
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rolw	$7, (%rax)
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rorw	$7, (%rax)
 # CHECK-NEXT:  -      -     1.50    -      -      -      -      -     1.50    -     rolw	%cl, %di
@@ -2167,8 +2167,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     rorl	%edi
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   roll	(%rax)
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rorl	(%rax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     roll	$7, %edi
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     rorl	$7, %edi
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     roll	$7, %edi
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     rorl	$7, %edi
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   roll	$7, (%rax)
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rorl	$7, (%rax)
 # CHECK-NEXT:  -      -     1.50    -      -      -      -      -     1.50    -     roll	%cl, %edi
@@ -2179,8 +2179,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     rorq	%rdi
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rolq	(%rax)
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rorq	(%rax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     rolq	$7, %rdi
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     1.00    -     rorq	$7, %rdi
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     rolq	$7, %rdi
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     rorq	$7, %rdi
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rolq	$7, (%rax)
 # CHECK-NEXT:  -      -     1.00    -     0.83   0.83   1.00    -     1.00   0.33   rorq	$7, (%rax)
 # CHECK-NEXT:  -      -     1.50    -      -      -      -      -     1.50    -     rolq	%cl, %rdi

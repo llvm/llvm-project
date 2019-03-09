@@ -37,6 +37,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 using namespace llvm;
 
 static bool eliminateUnreachableBlock(Function &F) {
@@ -46,26 +47,16 @@ static bool eliminateUnreachableBlock(Function &F) {
   for (BasicBlock *BB : depth_first_ext(&F, Reachable))
     (void)BB/* Mark all reachable blocks */;
 
-  // Loop over all dead blocks, remembering them and deleting all instructions
-  // in them.
+  // Collect all dead blocks.
   std::vector<BasicBlock*> DeadBlocks;
   for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I)
     if (!Reachable.count(&*I)) {
       BasicBlock *BB = &*I;
       DeadBlocks.push_back(BB);
-      while (PHINode *PN = dyn_cast<PHINode>(BB->begin())) {
-        PN->replaceAllUsesWith(Constant::getNullValue(PN->getType()));
-        BB->getInstList().pop_front();
-      }
-      for (succ_iterator SI = succ_begin(BB), E = succ_end(BB); SI != E; ++SI)
-        (*SI)->removePredecessor(BB);
-      BB->dropAllReferences();
     }
 
-  // Actually remove the blocks now.
-  for (unsigned i = 0, e = DeadBlocks.size(); i != e; ++i) {
-    DeadBlocks[i]->eraseFromParent();
-  }
+  // Delete the dead blocks.
+  DeleteDeadBlocks(DeadBlocks);
 
   return !DeadBlocks.empty();
 }

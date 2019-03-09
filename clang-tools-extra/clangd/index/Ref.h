@@ -16,6 +16,7 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <set>
 #include <utility>
 
 namespace clang {
@@ -67,6 +68,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Ref &);
 /// Filenames are deduplicated.
 class RefSlab {
 public:
+  // Refs are stored in order.
   using value_type = std::pair<SymbolID, llvm::ArrayRef<Ref>>;
   using const_iterator = std::vector<value_type>::const_iterator;
   using iterator = const_iterator;
@@ -99,7 +101,7 @@ public:
   private:
     llvm::BumpPtrAllocator Arena;
     llvm::UniqueStringSaver UniqueStrings; // Contents on the arena.
-    llvm::DenseMap<SymbolID, std::vector<Ref>> Refs;
+    llvm::DenseMap<SymbolID, std::set<Ref>> Refs;
   };
 
 private:

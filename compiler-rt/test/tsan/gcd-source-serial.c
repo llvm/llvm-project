@@ -3,6 +3,9 @@
 
 // REQUIRES: dispatch
 
+// TODO(yln): fails on one of our bots, need to investigate
+// REQUIRES: disabled
+
 #include <dispatch/dispatch.h>
 
 #include <stdio.h>

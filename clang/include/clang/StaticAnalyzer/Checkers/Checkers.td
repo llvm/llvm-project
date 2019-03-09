@@ -94,6 +94,8 @@ def Debug : Package<"debug">;
 
 def CloneDetectionAlpha : Package<"clone">, ParentPackage<Alpha>;
 
+def NonDeterminismAlpha : Package<"nondeterminism">, ParentPackage<Alpha>;
+
 //===----------------------------------------------------------------------===//
 // Core Checkers.
 //===----------------------------------------------------------------------===//
@@ -1043,3 +1045,15 @@ def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
   Documentation<NotDocumented>;
 
 } // end optin.portability
+
+//===----------------------------------------------------------------------===//
+// NonDeterminism checkers.
+//===----------------------------------------------------------------------===//
+
+let ParentPackage = NonDeterminismAlpha in {
+
+def PointerSortingChecker : Checker<"PointerSorting">,
+  HelpText<"Check for non-determinism caused by sorting of pointers">,
+  Documentation<HasDocumentation>;
+
+} // end alpha.nondeterminism

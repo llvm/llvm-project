@@ -98,12 +98,6 @@ static unsigned getNumOperandsNoGlue(SDNode *Node) {
   return N;
 }
 
-static SDValue findChainOperand(SDNode *Load) {
-  SDValue LastOp = Load->getOperand(getNumOperandsNoGlue(Load) - 1);
-  assert(LastOp.getValueType() == MVT::Other && "Chain missing from load node");
-  return LastOp;
-}
-
 /// Returns true if both nodes have the same value for the given
 ///        operand \p Op, or if both nodes do not have this operand.
 static bool nodesHaveSameOperandValue(SDNode *N0, SDNode* N1, unsigned OpName) {
@@ -167,11 +161,7 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
       return false;
 
     // Check base reg.
-    if (Load0->getOperand(1) != Load1->getOperand(1))
-      return false;
-
-    // Check chain.
-    if (findChainOperand(Load0) != findChainOperand(Load1))
+    if (Load0->getOperand(0) != Load1->getOperand(0))
       return false;
 
     // Skip read2 / write2 variants for simplicity.
@@ -181,8 +171,8 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
         AMDGPU::getNamedOperandIdx(Opc1, AMDGPU::OpName::data1) != -1)
       return false;
 
-    Offset0 = cast<ConstantSDNode>(Load0->getOperand(2))->getZExtValue();
-    Offset1 = cast<ConstantSDNode>(Load1->getOperand(2))->getZExtValue();
+    Offset0 = cast<ConstantSDNode>(Load0->getOperand(1))->getZExtValue();
+    Offset1 = cast<ConstantSDNode>(Load1->getOperand(1))->getZExtValue();
     return true;
   }
 
@@ -206,10 +196,6 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
     if (!Load0Offset || !Load1Offset)
       return false;
 
-    // Check chain.
-    if (findChainOperand(Load0) != findChainOperand(Load1))
-      return false;
-
     Offset0 = Load0Offset->getZExtValue();
     Offset1 = Load1Offset->getZExtValue();
     return true;
@@ -220,7 +206,6 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
 
     // MUBUF and MTBUF have vaddr at different indices.
     if (!nodesHaveSameOperandValue(Load0, Load1, AMDGPU::OpName::soffset) ||
-        findChainOperand(Load0) != findChainOperand(Load1) ||
         !nodesHaveSameOperandValue(Load0, Load1, AMDGPU::OpName::vaddr) ||
         !nodesHaveSameOperandValue(Load0, Load1, AMDGPU::OpName::srsrc))
       return false;
@@ -232,7 +217,7 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
       return false;
 
     // getNamedOperandIdx returns the index for MachineInstrs.  Since they
-    // inlcude the output in the operand list, but SDNodes don't, we need to
+    // include the output in the operand list, but SDNodes don't, we need to
     // subtract the index by one.
     --OffIdx0;
     --OffIdx1;

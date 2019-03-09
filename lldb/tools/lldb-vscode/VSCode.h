@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBBreakpoint.h"
@@ -43,6 +44,7 @@
 
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
+#include "IOStream.h"
 #include "SourceBreakpoint.h"
 #include "SourceReference.h"
 
@@ -62,8 +64,8 @@ typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
 struct VSCode {
-  FILE *in;
-  FILE *out;
+  InputStream input;
+  OutputStream output;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
   lldb::SBAttachInfo attach_info;
@@ -94,8 +96,6 @@ struct VSCode {
   ~VSCode();
   VSCode(const VSCode &rhs) = delete;
   void operator=(const VSCode &rhs) = delete;
-  void CloseInputStream();
-  void CloseOutputStream();
   int64_t GetLineForPC(int64_t sourceReference, lldb::addr_t pc) const;
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
   ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);

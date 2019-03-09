@@ -46,6 +46,7 @@ set(SCUDO_HEADERS
   list.h
   mutex.h
   platform.h
+  stats.h
   vector.h)
 
 if(COMPILER_RT_HAS_SCUDO_STANDALONE)

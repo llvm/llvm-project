@@ -1,6 +1,7 @@
 ; Test that the memcmp library call simplifier works correctly.
 ;
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -instcombine -S | FileCheck --check-prefix=CHECK --check-prefix=NOBCMP %s
+; RUN: opt < %s -instcombine -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefix=CHECK --check-prefix=BCMP %s
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n8:16:32:64"
 
@@ -127,6 +128,24 @@ define i1 @test_simplify9(i16 %x, i16 %y) {
   %xptr = bitcast i16* %x.addr to i8*
   %yptr = bitcast i16* %y.addr to i8*
   %call = call i32 @memcmp(i8* %xptr, i8* %yptr, i32 2)
+  %cmp = icmp eq i32 %call, 0
+  ret i1 %cmp
+}
+
+; Check memcmp(mem1, mem2, size)==0 -> bcmp(mem1, mem2, size)==0
+
+define i1 @test_simplify10(i8* %mem1, i8* %mem2, i32 %size) {
+; NOBCMP-LABEL: @test_simplify10(
+; NOBCMP-NEXT:    [[CALL:%.*]] = call i32 @memcmp(i8* %mem1, i8* %mem2, i32 %size)
+; NOBCMP-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; NOBCMP-NEXT:    ret i1 [[CMP]]
+;
+; BCMP-LABEL: @test_simplify10(
+; BCMP-NEXT:    [[CALL:%.*]] = call i32 @bcmp(i8* %mem1, i8* %mem2, i32 %size)
+; BCMP-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; BCMP-NEXT:    ret i1 [[CMP]]
+;
+  %call = call i32 @memcmp(i8* %mem1, i8* %mem2, i32 %size)
   %cmp = icmp eq i32 %call, 0
   ret i1 %cmp
 }

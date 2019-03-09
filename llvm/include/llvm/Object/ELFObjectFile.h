@@ -41,6 +41,9 @@
 namespace llvm {
 namespace object {
 
+constexpr int NumElfSymbolTypes = 8;
+extern const llvm::EnumEntry<unsigned> ElfSymbolTypes[NumElfSymbolTypes];
+
 class elf_symbol_iterator;
 
 class ELFObjectFileBase : public ObjectFile {
@@ -147,6 +150,16 @@ public:
 
   uint8_t getELFType() const {
     return getObject()->getSymbolELFType(getRawDataRefImpl());
+  }
+
+  StringRef getELFTypeName() const {
+    uint8_t Type = getELFType();
+    for (auto &EE : ElfSymbolTypes) {
+      if (EE.Value == Type) {
+        return EE.AltName;
+      }
+    }
+    return "";
   }
 };
 

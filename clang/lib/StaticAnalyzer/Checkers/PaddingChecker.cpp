@@ -16,6 +16,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -348,8 +349,9 @@ void ento::registerPaddingChecker(CheckerManager &Mgr) {
   auto *Checker = Mgr.registerChecker<PaddingChecker>();
   Checker->AllowedPad = Mgr.getAnalyzerOptions()
           .getCheckerIntegerOption(Checker, "AllowedPad", 24);
-  assert(Checker->AllowedPad >= 0 &&
-         "AllowedPad option should be non-negative");
+  if (Checker->AllowedPad < 0)
+    Mgr.reportInvalidCheckerOptionValue(
+        Checker, "AllowedPad", "a non-negative value");
 }
 
 bool ento::shouldRegisterPaddingChecker(const LangOptions &LO) {

@@ -29,6 +29,7 @@
 #pragma section(".lprfd$Z", read, write)
 #pragma section(".lprfc$A", read, write)
 #pragma section(".lprfc$Z", read, write)
+#pragma section(".lorderfile$A", read, write)
 #pragma section(".lprfnd$A", read, write)
 #pragma section(".lprfnd$Z", read, write)
 #endif
@@ -41,6 +42,7 @@ const char COMPILER_RT_SECTION(".lprfn$Z") NamesEnd = '\0';
 
 uint64_t COMPILER_RT_SECTION(".lprfc$A") CountersStart;
 uint64_t COMPILER_RT_SECTION(".lprfc$Z") CountersEnd;
+uint32_t COMPILER_RT_SECTION(".lorderfile$A") OrderFileStart;
 
 ValueProfNode COMPILER_RT_SECTION(".lprfnd$A") VNodesStart;
 ValueProfNode COMPILER_RT_SECTION(".lprfnd$Z") VNodesEnd;
@@ -55,6 +57,7 @@ const char *__llvm_profile_end_names(void) { return &NamesEnd; }
 
 uint64_t *__llvm_profile_begin_counters(void) { return &CountersStart + 1; }
 uint64_t *__llvm_profile_end_counters(void) { return &CountersEnd; }
+uint32_t *__llvm_profile_begin_orderfile(void) { return &OrderFileStart; }
 
 ValueProfNode *__llvm_profile_begin_vnodes(void) { return &VNodesStart + 1; }
 ValueProfNode *__llvm_profile_end_vnodes(void) { return &VNodesEnd; }
