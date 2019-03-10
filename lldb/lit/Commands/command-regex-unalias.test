@@ -2,7 +2,7 @@
 # RUN: %lldb -s %s 2>&1 | FileCheck %s
 
 command regex 'Help__'
-# CHECK: Enter one of more sed substitution commands in the form
+# CHECK: Enter one or more sed substitution commands in the form
 # We need to leave a new line after to end the regex.
 s/^$/help/
 
