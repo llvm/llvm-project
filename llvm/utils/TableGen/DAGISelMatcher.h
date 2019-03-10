@@ -770,6 +770,7 @@ public:
 private:
   void printImpl(raw_ostream &OS, unsigned indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
+  bool isContradictoryImpl(const Matcher *M) const override;
 };
 
 /// CheckImmAllZerosVMatcher - This check if the current node is an build vector
@@ -785,6 +786,7 @@ public:
 private:
   void printImpl(raw_ostream &OS, unsigned indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
+  bool isContradictoryImpl(const Matcher *M) const override;
 };
 
 /// CheckFoldableChainNodeMatcher - This checks to see if the current node

@@ -4,9 +4,12 @@
 #include <unistd.h>
 #include <signal.h>
 
+volatile int sem = 0;
+
 static void bar() {
   char F = 'b';
-  kill(getpid(), SIGSEGV); // Frame bar
+  sem = 1;
+  while (1) continue; // Frame bar
 }
 
 static void foo(void (*boomer)()) {
@@ -28,5 +31,7 @@ int main(int argc, char **argv) {
   stack = malloc(ssize);
   _lwp_makecontext(&uc, lwp_main, NULL, NULL, stack, ssize);
   _lwp_create(&uc, 0, &lid);
+  while (sem != 1) continue;
+  kill(getpid(), SIGSEGV);
   _lwp_wait(lid, NULL);
 }

@@ -21876,11 +21876,31 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                    SelectionDAG &DAG) const {
   // Helper to detect if the operand is CUR_DIRECTION rounding mode.
   auto isRoundModeCurDirection = [](SDValue Rnd) {
-    if (!isa<ConstantSDNode>(Rnd))
-      return false;
+    if (auto *C = dyn_cast<ConstantSDNode>(Rnd))
+      return C->getZExtValue() == X86::STATIC_ROUNDING::CUR_DIRECTION;
 
-    unsigned Round = cast<ConstantSDNode>(Rnd)->getZExtValue();
-    return Round == X86::STATIC_ROUNDING::CUR_DIRECTION;
+    return false;
+  };
+  auto isRoundModeSAE = [](SDValue Rnd) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Rnd))
+      return C->getZExtValue() == X86::STATIC_ROUNDING::NO_EXC;
+
+    return false;
+  };
+  auto isRoundModeSAEToX = [](SDValue Rnd) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Rnd)) {
+      unsigned Round = C->getZExtValue();
+      if (Round & X86::STATIC_ROUNDING::NO_EXC) {
+        // Clear the NO_EXC bit and check remaining bits.
+        Round ^= X86::STATIC_ROUNDING::NO_EXC;
+        return Round == X86::STATIC_ROUNDING::TO_NEAREST_INT ||
+               Round == X86::STATIC_ROUNDING::TO_NEG_INF ||
+               Round == X86::STATIC_ROUNDING::TO_POS_INF ||
+               Round == X86::STATIC_ROUNDING::TO_ZERO;
+      }
+    }
+
+    return false;
   };
 
   SDLoc dl(Op);
@@ -21896,10 +21916,11 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(2);
-        if (!isRoundModeCurDirection(Rnd)) {
+        if (isRoundModeSAEToX(Rnd))
           return DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
                              Op.getOperand(1), Rnd);
-        }
+        if (!isRoundModeCurDirection(Rnd))
+          return SDValue();
       }
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Op.getOperand(1));
     }
@@ -21912,10 +21933,11 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(3);
-        if (!isRoundModeCurDirection(Rnd)) {
+        if (isRoundModeSAEToX(Rnd))
           return DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
                              Op.getOperand(1), Src2, Rnd);
-        }
+        if (!isRoundModeCurDirection(Rnd))
+          return SDValue();
       }
 
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
@@ -21936,11 +21958,12 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(4);
-        if (!isRoundModeCurDirection(Rnd)) {
+        if (isRoundModeSAEToX(Rnd))
           return DAG.getNode(IntrWithRoundingModeOpcode,
                              dl, Op.getValueType(),
                              Src1, Src2, Src3, Rnd);
-        }
+        if (!isRoundModeCurDirection(Rnd))
+          return SDValue();
       }
 
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
@@ -21977,12 +22000,13 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(4);
-        if (!isRoundModeCurDirection(Rnd)) {
+        if (isRoundModeSAEToX(Rnd))
           return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
                                       dl, Op.getValueType(),
                                       Src, Rnd),
                                       Mask, PassThru, Subtarget, DAG);
-        }
+        if (!isRoundModeCurDirection(Rnd))
+          return SDValue();
       }
       return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src),
                                   Mask, PassThru, Subtarget, DAG);
@@ -22000,10 +22024,12 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       if (Op.getNumOperands() == (5U + HasRounding)) {
         if (HasRounding) {
           SDValue Rnd = Op.getOperand(5);
-          if (!isRoundModeCurDirection(Rnd))
+          if (isRoundModeSAEToX(Rnd))
             return getScalarMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
                                                     dl, VT, Src1, Src2, Rnd),
                                         Mask, passThru, Subtarget, DAG);
+          if (!isRoundModeCurDirection(Rnd))
+            return SDValue();
         }
         return getScalarMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src1,
                                                 Src2),
@@ -22015,35 +22041,27 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue RoundingMode = Op.getOperand(5);
       if (HasRounding) {
         SDValue Sae = Op.getOperand(6);
-        if (!isRoundModeCurDirection(Sae))
+        if (isRoundModeSAE(Sae))
           return getScalarMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
                                                   dl, VT, Src1, Src2,
                                                   RoundingMode, Sae),
                                       Mask, passThru, Subtarget, DAG);
+        if (!isRoundModeCurDirection(Sae))
+          return SDValue();
       }
       return getScalarMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src1,
                                               Src2, RoundingMode),
                                   Mask, passThru, Subtarget, DAG);
     }
     case INTR_TYPE_SCALAR_MASK_RM: {
+      assert(Op.getNumOperands() == 6 && "Unexpected number of operands");
       SDValue Src1 = Op.getOperand(1);
       SDValue Src2 = Op.getOperand(2);
       SDValue Src0 = Op.getOperand(3);
       SDValue Mask = Op.getOperand(4);
-      // There are 2 kinds of intrinsics in this group:
-      // (1) With suppress-all-exceptions (sae) or rounding mode- 6 operands
-      // (2) With rounding mode and sae - 7 operands.
-      if (Op.getNumOperands() == 6) {
-        SDValue Sae  = Op.getOperand(5);
-        return getScalarMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src1, Src2,
-                                                Sae),
-                                    Mask, Src0, Subtarget, DAG);
-      }
-      assert(Op.getNumOperands() == 7 && "Unexpected intrinsic form");
-      SDValue RoundingMode  = Op.getOperand(5);
-      SDValue Sae  = Op.getOperand(6);
+      SDValue Rnd  = Op.getOperand(5);
       return getScalarMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src1, Src2,
-                                              RoundingMode, Sae),
+                                              Rnd),
                                   Mask, Src0, Subtarget, DAG);
     }
     case INTR_TYPE_2OP_MASK: {
@@ -22058,12 +22076,13 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(5);
-        if (!isRoundModeCurDirection(Rnd)) {
+        if (isRoundModeSAEToX(Rnd))
           return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
                                       dl, Op.getValueType(),
                                       Src1, Src2, Rnd),
                                       Mask, PassThru, Subtarget, DAG);
-        }
+        if (!isRoundModeCurDirection(Rnd))
+          return SDValue();
       }
       // TODO: Intrinsics should have fast-math-flags to propagate.
       return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,Src1,Src2),
@@ -22097,10 +22116,12 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(6);
-        if (!isRoundModeCurDirection(Rnd))
+        if (isRoundModeSAEToX(Rnd))
           return getScalarMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
                                                   dl, VT, Src1, Src2, Src3, Rnd),
                                       Mask, PassThru, Subtarget, DAG);
+        if (!isRoundModeCurDirection(Rnd))
+          return SDValue();
       }
       return getScalarMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src1,
                                               Src2, Src3),
@@ -22119,12 +22140,13 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(6);
-        if (!isRoundModeCurDirection(Rnd)) {
+        if (isRoundModeSAEToX(Rnd))
           return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
                                       dl, Op.getValueType(),
                                       Src1, Src2, Src3, Rnd),
                                       Mask, PassThru, Subtarget, DAG);
-        }
+        if (!isRoundModeCurDirection(Rnd))
+          return SDValue();
       }
       return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,
                                               Src1, Src2, Src3),
@@ -22177,17 +22199,16 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       // First, we check if the intrinsic may have non-default rounding mode,
       // (IntrData->Opc1 != 0), then we check the rounding mode operand.
       if (IntrData->Opc1 != 0) {
-        SDValue Rnd = Op.getOperand(4);
-        if (!isRoundModeCurDirection(Rnd))
-          Cmp = DAG.getNode(IntrData->Opc1, dl, MaskVT, Op.getOperand(1),
-                            Op.getOperand(2), CC, Rnd);
+        SDValue Sae = Op.getOperand(4);
+        if (isRoundModeSAE(Sae))
+          return DAG.getNode(IntrData->Opc1, dl, MaskVT, Op.getOperand(1),
+                             Op.getOperand(2), CC, Sae);
+        if (!isRoundModeCurDirection(Sae))
+          return SDValue();
       }
       //default rounding mode
-      if (!Cmp.getNode())
-        Cmp = DAG.getNode(IntrData->Opc0, dl, MaskVT, Op.getOperand(1),
+      return DAG.getNode(IntrData->Opc0, dl, MaskVT, Op.getOperand(1),
                           Op.getOperand(2), CC);
-
-      return Cmp;
     }
     case CMP_MASK_SCALAR_CC: {
       SDValue Src1 = Op.getOperand(1);
@@ -22197,9 +22218,11 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
       SDValue Cmp;
       if (IntrData->Opc1 != 0) {
-        SDValue Rnd = Op.getOperand(5);
-        if (!isRoundModeCurDirection(Rnd))
-          Cmp = DAG.getNode(IntrData->Opc1, dl, MVT::v1i1, Src1, Src2, CC, Rnd);
+        SDValue Sae = Op.getOperand(5);
+        if (isRoundModeSAE(Sae))
+          Cmp = DAG.getNode(IntrData->Opc1, dl, MVT::v1i1, Src1, Src2, CC, Sae);
+        else if (!isRoundModeCurDirection(Sae))
+          return SDValue();
       }
       //default rounding mode
       if (!Cmp.getNode())
@@ -22262,9 +22285,11 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       if (isRoundModeCurDirection(Sae))
         FCmp = DAG.getNode(X86ISD::FSETCCM, dl, MVT::v1i1, LHS, RHS,
                            DAG.getConstant(CondVal, dl, MVT::i8));
-      else
+      else if (isRoundModeSAE(Sae))
         FCmp = DAG.getNode(X86ISD::FSETCCM_RND, dl, MVT::v1i1, LHS, RHS,
                            DAG.getConstant(CondVal, dl, MVT::i8), Sae);
+      else
+        return SDValue();
       // Need to fill with zeros to ensure the bitcast will produce zeroes
       // for the upper bits. An EXTRACT_ELEMENT here wouldn't guarantee that.
       SDValue Ins = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i1,
