@@ -14,10 +14,10 @@
 #include "clang/Serialization/ModuleManager.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/Module.h"
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "llvm/ADT/STLExtras.h"
@@ -118,6 +118,8 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     // contents, but we can't check that.)
     ExpectedModTime = 0;
   }
+  // Note: ExpectedSize and ExpectedModTime will be 0 for MK_ImplicitModule
+  // when using an ASTFileSignature.
   if (lookupModuleFile(FileName, ExpectedSize, ExpectedModTime, Entry)) {
     ErrorStr = "module file out of date";
     return OutOfDate;
@@ -159,15 +161,21 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Load the contents of the module
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
     // The buffer was already provided for us.
-    NewModule->Buffer = &PCMCache->addBuffer(FileName, std::move(Buffer));
+    NewModule->Buffer = &ModuleCache->addBuiltPCM(FileName, std::move(Buffer));
     // Since the cached buffer is reused, it is safe to close the file
     // descriptor that was opened while stat()ing the PCM in
     // lookupModuleFile() above, it won't be needed any longer.
     Entry->closeFile();
-  } else if (llvm::MemoryBuffer *Buffer = PCMCache->lookupBuffer(FileName)) {
+  } else if (llvm::MemoryBuffer *Buffer =
+                 getModuleCache().lookupPCM(FileName)) {
     NewModule->Buffer = Buffer;
     // As above, the file descriptor is no longer needed.
     Entry->closeFile();
+  } else if (getModuleCache().shouldBuildPCM(FileName)) {
+    // Report that the module is out of date, since we tried (and failed) to
+    // import it earlier.
+    Entry->closeFile();
+    return OutOfDate;
   } else {
     // Open the AST file.
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf((std::error_code()));
@@ -185,7 +193,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
       return Missing;
     }
 
-    NewModule->Buffer = &PCMCache->addBuffer(FileName, std::move(*Buf));
+    NewModule->Buffer = &getModuleCache().addPCM(FileName, std::move(*Buf));
   }
 
   // Initialize the stream.
@@ -197,7 +205,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
                                           ExpectedSignature, ErrorStr)) {
     // Try to remove the buffer.  If it can't be removed, then it was already
     // validated by this process.
-    if (!PCMCache->tryToRemoveBuffer(NewModule->FileName))
+    if (!getModuleCache().tryToDropPCM(NewModule->FileName))
       FileMgr.invalidateCache(NewModule->File);
     return OutOfDate;
   }
@@ -262,17 +270,6 @@ void ModuleManager::removeModules(
         mod->setASTFile(nullptr);
       }
     }
-
-    // Files that didn't make it through ReadASTCore successfully will be
-    // rebuilt (or there was an error). Invalidate them so that we can load the
-    // new files that will be renamed over the old ones.
-    //
-    // The PCMCache tracks whether the module was successfully loaded in another
-    // thread/context; in that case, it won't need to be rebuilt (and we can't
-    // safely invalidate it anyway).
-    if (LoadedSuccessfully.count(&*victim) == 0 &&
-        !PCMCache->tryToRemoveBuffer(victim->FileName))
-      FileMgr.invalidateCache(victim->File);
   }
 
   // Delete the modules.
@@ -327,11 +324,12 @@ void ModuleManager::moduleFileAccepted(ModuleFile *MF) {
   ModulesInCommonWithGlobalIndex.push_back(MF);
 }
 
-ModuleManager::ModuleManager(FileManager &FileMgr, MemoryBufferCache &PCMCache,
+ModuleManager::ModuleManager(FileManager &FileMgr,
+                             InMemoryModuleCache &ModuleCache,
                              const PCHContainerReader &PCHContainerRdr,
-                             const HeaderSearch& HeaderSearchInfo)
-    : FileMgr(FileMgr), PCMCache(&PCMCache), PCHContainerRdr(PCHContainerRdr),
-      HeaderSearchInfo(HeaderSearchInfo) {}
+                             const HeaderSearch &HeaderSearchInfo)
+    : FileMgr(FileMgr), ModuleCache(&ModuleCache),
+      PCHContainerRdr(PCHContainerRdr), HeaderSearchInfo(HeaderSearchInfo) {}
 
 ModuleManager::~ModuleManager() { delete FirstVisitState; }
 
