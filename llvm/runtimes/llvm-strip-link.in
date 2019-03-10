@@ -19,7 +19,7 @@ link_dir = os.path.join(install_dir, 'lib', 'debug', '.build-id')
 
 sys.exit(subprocess.call([
     llvm_objcopy,
-    '--strip-sections',
+    '--strip-all',
     '--build-id-link-dir=' + link_dir,
     '--build-id-link-input=.debug',
     '--build-id-link-output=',

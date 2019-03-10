@@ -940,19 +940,19 @@ static bool CC_RISCV(const DataLayout &DL, unsigned ValNo, MVT ValVT, MVT LocVT,
   unsigned XLen = DL.getLargestLegalIntTypeSizeInBits();
   assert(XLen == 32 || XLen == 64);
   MVT XLenVT = XLen == 32 ? MVT::i32 : MVT::i64;
-  if (ValVT == MVT::f32) {
-    LocVT = XLenVT;
-    LocInfo = CCValAssign::BCvt;
-  }
-  if (XLen == 64 && ValVT == MVT::f64) {
-    LocVT = MVT::i64;
-    LocInfo = CCValAssign::BCvt;
-  }
 
   // Any return value split in to more than two values can't be returned
   // directly.
   if (IsRet && ValNo > 1)
     return true;
+
+  if (ValVT == MVT::f32) {
+    LocVT = XLenVT;
+    LocInfo = CCValAssign::BCvt;
+  } else if (XLen == 64 && ValVT == MVT::f64) {
+    LocVT = MVT::i64;
+    LocInfo = CCValAssign::BCvt;
+  }
 
   // If this is a variadic argument, the RISC-V calling convention requires
   // that it is assigned an 'even' or 'aligned' register if it has 8-byte
