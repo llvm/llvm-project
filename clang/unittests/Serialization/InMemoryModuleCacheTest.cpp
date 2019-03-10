@@ -71,12 +71,15 @@ TEST(InMemoryModuleCacheTest, addBuiltPCM) {
 }
 
 TEST(InMemoryModuleCacheTest, tryToDropPCM) {
-  auto B = getBuffer(1);
-  auto *RawB = B.get();
+  auto B1 = getBuffer(1);
+  auto B2 = getBuffer(2);
+  auto *RawB1 = B1.get();
+  auto *RawB2 = B2.get();
+  ASSERT_NE(RawB1, RawB2);
 
   InMemoryModuleCache Cache;
   EXPECT_EQ(InMemoryModuleCache::Unknown, Cache.getPCMState("B"));
-  EXPECT_EQ(RawB, &Cache.addPCM("B", std::move(B)));
+  EXPECT_EQ(RawB1, &Cache.addPCM("B", std::move(B1)));
   EXPECT_FALSE(Cache.tryToDropPCM("B"));
   EXPECT_EQ(nullptr, Cache.lookupPCM("B"));
   EXPECT_EQ(InMemoryModuleCache::ToBuild, Cache.getPCMState("B"));
@@ -90,17 +93,13 @@ TEST(InMemoryModuleCacheTest, tryToDropPCM) {
   EXPECT_DEATH(Cache.finalizePCM("B"), "Trying to finalize a dropped PCM");
 #endif
 
-  B = getBuffer(2);
-  ASSERT_NE(RawB, B.get());
-  RawB = B.get();
-
   // Add a new one.
-  EXPECT_EQ(RawB, &Cache.addBuiltPCM("B", std::move(B)));
+  EXPECT_EQ(RawB2, &Cache.addBuiltPCM("B", std::move(B2)));
   EXPECT_TRUE(Cache.isPCMFinal("B"));
 
   // Can try to drop again, but this should error and do nothing.
   EXPECT_TRUE(Cache.tryToDropPCM("B"));
-  EXPECT_EQ(RawB, Cache.lookupPCM("B"));
+  EXPECT_EQ(RawB2, Cache.lookupPCM("B"));
 }
 
 TEST(InMemoryModuleCacheTest, finalizePCM) {
