@@ -345,7 +345,10 @@ def svn_push_one_rev(svn_repo, rev, dry_run):
     # Now we're ready to commit.
     commit_msg = git('show', '--pretty=%B', '--quiet', rev)
     if not dry_run:
-        log(svn(svn_repo, 'commit', '-m', commit_msg, '--force-interactive'))
+        commit_args = ['commit', '-m', commit_msg]
+        if '--force-interactive' in svn(svn_repo, 'commit', '--help'):
+            commit_args.append('--force-interactive')
+        log(svn(svn_repo, *commit_args))
         log('Committed %s to svn.' % rev)
     else:
         log("Would have committed %s to svn, if this weren't a dry run." % rev)
