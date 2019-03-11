@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wattributes %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wattributes -fpascal-strings %s
 
 typedef long NSInteger;
 typedef unsigned long NSUInteger;
@@ -55,6 +55,19 @@ void testEnum(void *p) {
   id box = @(myen);
   box = @(ME_foo);
   box = @(*(enum ForwE*)p); // expected-error {{incomplete type 'enum ForwE' used in a boxed expression}}
+}
+
+@interface NSString
+@end
+
+void testStringLiteral() {
+  NSString *s;
+  s = @("abc");
+  s = @(u8"abc");
+  s = @(u"abc"); // expected-error {{illegal type 'unsigned short *' used in a boxed expression}}
+  s = @(U"abc"); // expected-error {{illegal type 'unsigned int *' used in a boxed expression}}
+  s = @(L"abc"); // expected-error {{illegal type 'int *' used in a boxed expression}}
+  s = @("\pabc"); // expected-error {{illegal type 'unsigned char *' used in a boxed expression}}
 }
 
 // rdar://13333205
