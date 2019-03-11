@@ -76,7 +76,7 @@ bool lldb_private::ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
     ++rev_it;
   }
 
-  // Posix-style of LLDB detected.
+  // We found a non-framework build of LLDB
   if (rev_it == r_end)
     return DefaultComputeClangResourceDirectory(lldb_shlib_spec, file_spec,
                                                 verify);
