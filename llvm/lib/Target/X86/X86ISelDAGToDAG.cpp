@@ -497,7 +497,7 @@ namespace {
 static bool isLegalMaskCompare(SDNode *N, const X86Subtarget *Subtarget) {
   unsigned Opcode = N->getOpcode();
   if (Opcode == X86ISD::CMPM || Opcode == ISD::SETCC ||
-      Opcode == X86ISD::CMPM_RND || Opcode == X86ISD::VFPCLASS) {
+      Opcode == X86ISD::CMPM_SAE || Opcode == X86ISD::VFPCLASS) {
     // We can get 256-bit 8 element types here without VLX being enabled. When
     // this happens we will use 512-bit operations and the mask will not be
     // zero extended.
@@ -509,7 +509,7 @@ static bool isLegalMaskCompare(SDNode *N, const X86Subtarget *Subtarget) {
   }
   // Scalar opcodes use 128 bit registers, but aren't subject to the VLX check.
   if (Opcode == X86ISD::VFPCLASSS || Opcode == X86ISD::FSETCCM ||
-      Opcode == X86ISD::FSETCCM_RND)
+      Opcode == X86ISD::FSETCCM_SAE)
     return true;
 
   return false;

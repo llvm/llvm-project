@@ -92,7 +92,7 @@ lldb::IOHandlerSP REPL::GetIOHandler() {
   return m_io_handler_sp;
 }
 
-void REPL::IOHandlerActivated(IOHandler &io_handler) {
+void REPL::IOHandlerActivated(IOHandler &io_handler, bool interactive) {
   lldb::ProcessSP process_sp = m_target.GetProcessSP();
   if (process_sp && process_sp->IsAlive())
     return;

@@ -58,10 +58,6 @@ public:
     const Triple &TT = getTargetTriple();
     return (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le);
   };
-
-  bool isMachineVerifierClean() const override {
-    return false;
-  }
 };
 } // end namespace llvm
 
