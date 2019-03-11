@@ -44,6 +44,10 @@ SBInstructionList::~SBInstructionList() {}
 
 bool SBInstructionList::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBInstructionList, IsValid);
+  return this->operator bool();
+}
+SBInstructionList::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBInstructionList, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

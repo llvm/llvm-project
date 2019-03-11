@@ -106,6 +106,10 @@ SBVariablesOptions::~SBVariablesOptions() = default;
 
 bool SBVariablesOptions::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBVariablesOptions, IsValid);
+  return this->operator bool();
+}
+SBVariablesOptions::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBVariablesOptions, operator bool);
 
   return m_opaque_up != nullptr;
 }

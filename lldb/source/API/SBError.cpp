@@ -139,6 +139,10 @@ int SBError::SetErrorStringWithFormat(const char *format, ...) {
 
 bool SBError::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBError, IsValid);
+  return this->operator bool();
+}
+SBError::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBError, operator bool);
 
   return m_opaque_up != NULL;
 }

@@ -30,6 +30,8 @@ public:
 
   ~SBTypeSynthetic();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   bool IsClassCode();

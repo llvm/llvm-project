@@ -60,6 +60,10 @@ operator=(const SBCommandReturnObject &rhs) {
 
 bool SBCommandReturnObject::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandReturnObject, IsValid);
+  return this->operator bool();
+}
+SBCommandReturnObject::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandReturnObject, operator bool);
 
   return m_opaque_up != nullptr;
 }

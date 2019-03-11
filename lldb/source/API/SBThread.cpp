@@ -115,6 +115,10 @@ lldb::SBQueue SBThread::GetQueue() const {
 
 bool SBThread::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThread, IsValid);
+  return this->operator bool();
+}
+SBThread::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThread, operator bool);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);

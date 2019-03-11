@@ -64,6 +64,10 @@ const SBFileSpec &SBFileSpec::operator=(const SBFileSpec &rhs) {
 
 bool SBFileSpec::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFileSpec, IsValid);
+  return this->operator bool();
+}
+SBFileSpec::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFileSpec, operator bool);
 
   return m_opaque_up->operator bool();
 }

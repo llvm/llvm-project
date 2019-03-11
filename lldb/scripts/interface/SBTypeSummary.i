@@ -18,6 +18,8 @@ namespace lldb {
         
         bool
         IsValid ();
+
+        explicit operator bool() const;
         
         lldb::LanguageType
         GetLanguage ();
@@ -57,6 +59,8 @@ namespace lldb {
         
         bool
         IsValid() const;
+
+        explicit operator bool() const;
         
         bool
         IsEqualTo (lldb::SBTypeSummary &rhs);

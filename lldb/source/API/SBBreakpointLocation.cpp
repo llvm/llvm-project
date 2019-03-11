@@ -65,6 +65,10 @@ BreakpointLocationSP SBBreakpointLocation::GetSP() const {
 
 bool SBBreakpointLocation::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBreakpointLocation, IsValid);
+  return this->operator bool();
+}
+SBBreakpointLocation::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBreakpointLocation, operator bool);
 
   return bool(GetSP());
 }

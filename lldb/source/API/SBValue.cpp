@@ -243,6 +243,10 @@ SBValue::~SBValue() {}
 
 bool SBValue::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBValue, IsValid);
+  return this->operator bool();
+}
+SBValue::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBValue, operator bool);
 
   // If this function ever changes to anything that does more than just check
   // if the opaque shared pointer is non NULL, then we need to update all "if

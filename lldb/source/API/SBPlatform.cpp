@@ -287,6 +287,10 @@ SBPlatform::~SBPlatform() {}
 
 bool SBPlatform::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBPlatform, IsValid);
+  return this->operator bool();
+}
+SBPlatform::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBPlatform, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

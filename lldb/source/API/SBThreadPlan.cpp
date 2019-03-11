@@ -97,6 +97,10 @@ lldb_private::ThreadPlan *SBThreadPlan::get() {
 
 bool SBThreadPlan::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadPlan, IsValid);
+  return this->operator bool();
+}
+SBThreadPlan::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadPlan, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

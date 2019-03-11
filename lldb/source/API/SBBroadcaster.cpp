@@ -139,6 +139,10 @@ void SBBroadcaster::reset(Broadcaster *broadcaster, bool owns) {
 
 bool SBBroadcaster::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBroadcaster, IsValid);
+  return this->operator bool();
+}
+SBBroadcaster::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBroadcaster, operator bool);
 
   return m_opaque_ptr != NULL;
 }

@@ -44,6 +44,10 @@ SBTypeCategory::~SBTypeCategory() {}
 
 bool SBTypeCategory::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeCategory, IsValid);
+  return this->operator bool();
+}
+SBTypeCategory::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeCategory, operator bool);
 
   return (m_opaque_sp.get() != NULL);
 }

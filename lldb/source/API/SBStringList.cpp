@@ -51,6 +51,10 @@ const lldb_private::StringList &SBStringList::operator*() const {
 
 bool SBStringList::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStringList, IsValid);
+  return this->operator bool();
+}
+SBStringList::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStringList, operator bool);
 
   return (m_opaque_up != NULL);
 }

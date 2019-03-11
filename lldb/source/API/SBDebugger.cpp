@@ -294,6 +294,10 @@ void SBDebugger::MemoryPressureDetected() {
 
 bool SBDebugger::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBDebugger, IsValid);
+  return this->operator bool();
+}
+SBDebugger::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBDebugger, operator bool);
 
   return m_opaque_sp.get() != nullptr;
 }

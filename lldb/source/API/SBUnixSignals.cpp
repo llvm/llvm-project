@@ -59,6 +59,10 @@ void SBUnixSignals::Clear() {
 
 bool SBUnixSignals::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBUnixSignals, IsValid);
+  return this->operator bool();
+}
+SBUnixSignals::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBUnixSignals, operator bool);
 
   return static_cast<bool>(GetSP());
 }

@@ -37,6 +37,10 @@ SBTypeSummaryOptions::~SBTypeSummaryOptions() {}
 
 bool SBTypeSummaryOptions::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBTypeSummaryOptions, IsValid);
+  return this->operator bool();
+}
+SBTypeSummaryOptions::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSummaryOptions, operator bool);
 
   return m_opaque_up.get();
 }
@@ -193,6 +197,10 @@ SBTypeSummary::~SBTypeSummary() {}
 
 bool SBTypeSummary::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSummary, IsValid);
+  return this->operator bool();
+}
+SBTypeSummary::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSummary, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

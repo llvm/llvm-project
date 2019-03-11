@@ -104,6 +104,10 @@ void SBTraceOptions::setMetaDataBufferSize(uint64_t size) {
 
 bool SBTraceOptions::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBTraceOptions, IsValid);
+  return this->operator bool();
+}
+SBTraceOptions::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTraceOptions, operator bool);
 
   if (m_traceoptions_sp)
     return true;

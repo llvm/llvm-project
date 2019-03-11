@@ -170,6 +170,10 @@ const char *SBTarget::GetBroadcasterClassName() {
 
 bool SBTarget::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTarget, IsValid);
+  return this->operator bool();
+}
+SBTarget::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTarget, operator bool);
 
   return m_opaque_sp.get() != NULL && m_opaque_sp->IsValid();
 }

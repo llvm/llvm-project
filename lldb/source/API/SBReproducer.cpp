@@ -63,6 +63,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBAddress &,
                          SBAddress, operator=,(const lldb::SBAddress &));
     LLDB_REGISTER_METHOD_CONST(bool, SBAddress, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBAddress, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBAddress, Clear, ());
     LLDB_REGISTER_METHOD(void, SBAddress, SetAddress,
                          (lldb::SBSection, lldb::addr_t));
@@ -130,6 +131,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBBlock &,
                          SBBlock, operator=,(const lldb::SBBlock &));
     LLDB_REGISTER_METHOD_CONST(bool, SBBlock, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBBlock, operator bool, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBBlock, IsInlined, ());
     LLDB_REGISTER_METHOD_CONST(const char *, SBBlock, GetInlinedName, ());
     LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBBlock,
@@ -166,6 +168,7 @@ SBRegistry::SBRegistry() {
                          SBBreakpoint, operator!=,(const lldb::SBBreakpoint &));
     LLDB_REGISTER_METHOD_CONST(lldb::break_id_t, SBBreakpoint, GetID, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBBreakpoint, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBBreakpoint, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBBreakpoint, ClearAllBreakpointSites, ());
     LLDB_REGISTER_METHOD(lldb::SBBreakpointLocation, SBBreakpoint,
                          FindLocationByAddress, (lldb::addr_t));
@@ -255,6 +258,7 @@ SBRegistry::SBRegistry() {
         const lldb::SBBreakpointLocation &,
         SBBreakpointLocation, operator=,(const lldb::SBBreakpointLocation &));
     LLDB_REGISTER_METHOD_CONST(bool, SBBreakpointLocation, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBBreakpointLocation, operator bool, ());
     LLDB_REGISTER_METHOD(lldb::SBAddress, SBBreakpointLocation, GetAddress, ());
     LLDB_REGISTER_METHOD(lldb::addr_t, SBBreakpointLocation, GetLoadAddress,
                          ());
@@ -315,6 +319,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(
         bool, SBBreakpointName, operator!=,(const lldb::SBBreakpointName &));
     LLDB_REGISTER_METHOD_CONST(bool, SBBreakpointName, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBBreakpointName, operator bool, ());
     LLDB_REGISTER_METHOD_CONST(const char *, SBBreakpointName, GetName, ());
     LLDB_REGISTER_METHOD(void, SBBreakpointName, SetEnabled, (bool));
     LLDB_REGISTER_METHOD(bool, SBBreakpointName, IsEnabled, ());
@@ -377,6 +382,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(bool, SBBroadcaster, RemoveListener,
                          (const lldb::SBListener &, uint32_t));
     LLDB_REGISTER_METHOD_CONST(bool, SBBroadcaster, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBBroadcaster, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBBroadcaster, Clear, ());
     LLDB_REGISTER_METHOD_CONST(
         bool, SBBroadcaster, operator==,(const lldb::SBBroadcaster &));
@@ -423,6 +429,7 @@ SBRegistry::SBRegistry() {
         const lldb::SBCommandInterpreter &,
         SBCommandInterpreter, operator=,(const lldb::SBCommandInterpreter &));
     LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreter, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreter, operator bool, ());
     LLDB_REGISTER_METHOD(bool, SBCommandInterpreter, CommandExists,
                          (const char *));
     LLDB_REGISTER_METHOD(bool, SBCommandInterpreter, AliasExists,
@@ -499,6 +506,7 @@ SBRegistry::SBRegistry() {
                           const char *, const char *));
     LLDB_REGISTER_CONSTRUCTOR(SBCommand, ());
     LLDB_REGISTER_METHOD(bool, SBCommand, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBCommand, operator bool, ());
     LLDB_REGISTER_METHOD(const char *, SBCommand, GetName, ());
     LLDB_REGISTER_METHOD(const char *, SBCommand, GetHelp, ());
     LLDB_REGISTER_METHOD(const char *, SBCommand, GetHelpLong, ());
@@ -527,6 +535,7 @@ SBRegistry::SBRegistry() {
         const lldb::SBCommandReturnObject &,
         SBCommandReturnObject, operator=,(const lldb::SBCommandReturnObject &));
     LLDB_REGISTER_METHOD_CONST(bool, SBCommandReturnObject, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBCommandReturnObject, operator bool, ());
     LLDB_REGISTER_METHOD(const char *, SBCommandReturnObject, GetOutput, ());
     LLDB_REGISTER_METHOD(const char *, SBCommandReturnObject, GetError, ());
     LLDB_REGISTER_METHOD(size_t, SBCommandReturnObject, GetOutputSize, ());
@@ -567,6 +576,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_CONSTRUCTOR(SBCommunication, ());
     LLDB_REGISTER_CONSTRUCTOR(SBCommunication, (const char *));
     LLDB_REGISTER_METHOD_CONST(bool, SBCommunication, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBCommunication, operator bool, ());
     LLDB_REGISTER_METHOD(bool, SBCommunication, GetCloseOnEOF, ());
     LLDB_REGISTER_METHOD(void, SBCommunication, SetCloseOnEOF, (bool));
     LLDB_REGISTER_METHOD(lldb::ConnectionStatus, SBCommunication, Connect,
@@ -607,6 +617,7 @@ SBRegistry::SBRegistry() {
                          (uint32_t, const lldb::SBFileSpec &, bool));
     LLDB_REGISTER_METHOD(lldb::LanguageType, SBCompileUnit, GetLanguage, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBCompileUnit, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBCompileUnit, operator bool, ());
     LLDB_REGISTER_METHOD_CONST(
         bool, SBCompileUnit, operator==,(const lldb::SBCompileUnit &));
     LLDB_REGISTER_METHOD_CONST(
@@ -620,6 +631,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBData &,
                          SBData, operator=,(const lldb::SBData &));
     LLDB_REGISTER_METHOD(bool, SBData, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBData, operator bool, ());
     LLDB_REGISTER_METHOD(uint8_t, SBData, GetAddressByteSize, ());
     LLDB_REGISTER_METHOD(void, SBData, SetAddressByteSize, (uint8_t));
     LLDB_REGISTER_METHOD(void, SBData, Clear, ());
@@ -700,6 +712,7 @@ SBRegistry::SBRegistry() {
                                 (lldb::SBDebugger &));
     LLDB_REGISTER_STATIC_METHOD(void, SBDebugger, MemoryPressureDetected, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBDebugger, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBDebugger, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBDebugger, SetAsync, (bool));
     LLDB_REGISTER_METHOD(bool, SBDebugger, GetAsync, ());
     LLDB_REGISTER_METHOD(void, SBDebugger, SkipLLDBInitFiles, (bool));
@@ -835,6 +848,7 @@ SBRegistry::SBRegistry() {
         const lldb::SBDeclaration &,
         SBDeclaration, operator=,(const lldb::SBDeclaration &));
     LLDB_REGISTER_METHOD_CONST(bool, SBDeclaration, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBDeclaration, operator bool, ());
     LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBDeclaration, GetFileSpec,
                                ());
     LLDB_REGISTER_METHOD_CONST(uint32_t, SBDeclaration, GetLine, ());
@@ -865,6 +879,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(void, SBError, SetErrorToGenericError, ());
     LLDB_REGISTER_METHOD(void, SBError, SetErrorString, (const char *));
     LLDB_REGISTER_METHOD_CONST(bool, SBError, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBError, operator bool, ());
     LLDB_REGISTER_METHOD(bool, SBError, GetDescription, (lldb::SBStream &));
   }
   {
@@ -886,6 +901,7 @@ SBRegistry::SBRegistry() {
                          (const lldb::SBBroadcaster &));
     LLDB_REGISTER_METHOD(void, SBEvent, Clear, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBEvent, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBEvent, operator bool, ());
     LLDB_REGISTER_STATIC_METHOD(const char *, SBEvent, GetCStringFromEvent,
                                 (const lldb::SBEvent &));
     LLDB_REGISTER_METHOD(bool, SBEvent, GetDescription, (lldb::SBStream &));
@@ -976,6 +992,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBFileSpec &,
                          SBFileSpec, operator=,(const lldb::SBFileSpec &));
     LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, operator bool, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, Exists, ());
     LLDB_REGISTER_METHOD(bool, SBFileSpec, ResolveExecutableLocation, ());
     LLDB_REGISTER_STATIC_METHOD(int, SBFileSpec, ResolvePath,
@@ -1015,6 +1032,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBFrame &,
                          SBFrame, operator=,(const lldb::SBFrame &));
     LLDB_REGISTER_METHOD_CONST(bool, SBFrame, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBFrame, operator bool, ());
     LLDB_REGISTER_METHOD_CONST(lldb::SBSymbolContext, SBFrame, GetSymbolContext,
                                (uint32_t));
     LLDB_REGISTER_METHOD_CONST(lldb::SBModule, SBFrame, GetModule, ());
@@ -1076,6 +1094,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBFunction &,
                          SBFunction, operator=,(const lldb::SBFunction &));
     LLDB_REGISTER_METHOD_CONST(bool, SBFunction, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBFunction, operator bool, ());
     LLDB_REGISTER_METHOD_CONST(const char *, SBFunction, GetName, ());
     LLDB_REGISTER_METHOD_CONST(const char *, SBFunction, GetDisplayName, ());
     LLDB_REGISTER_METHOD_CONST(const char *, SBFunction, GetMangledName, ());
@@ -1115,6 +1134,7 @@ SBRegistry::SBRegistry() {
         const lldb::SBInstruction &,
         SBInstruction, operator=,(const lldb::SBInstruction &));
     LLDB_REGISTER_METHOD(bool, SBInstruction, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBInstruction, operator bool, ());
     LLDB_REGISTER_METHOD(lldb::SBAddress, SBInstruction, GetAddress, ());
     LLDB_REGISTER_METHOD(const char *, SBInstruction, GetMnemonic,
                          (lldb::SBTarget));
@@ -1145,6 +1165,7 @@ SBRegistry::SBRegistry() {
         const lldb::SBInstructionList &,
         SBInstructionList, operator=,(const lldb::SBInstructionList &));
     LLDB_REGISTER_METHOD_CONST(bool, SBInstructionList, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBInstructionList, operator bool, ());
     LLDB_REGISTER_METHOD(size_t, SBInstructionList, GetSize, ());
     LLDB_REGISTER_METHOD(lldb::SBInstruction, SBInstructionList,
                          GetInstructionAtIndex, (uint32_t));
@@ -1229,6 +1250,7 @@ SBRegistry::SBRegistry() {
                                ());
     LLDB_REGISTER_METHOD_CONST(lldb::SBAddress, SBLineEntry, GetEndAddress, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBLineEntry, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBLineEntry, operator bool, ());
     LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBLineEntry, GetFileSpec, ());
     LLDB_REGISTER_METHOD_CONST(uint32_t, SBLineEntry, GetLine, ());
     LLDB_REGISTER_METHOD_CONST(uint32_t, SBLineEntry, GetColumn, ());
@@ -1248,6 +1270,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBListener &,
                          SBListener, operator=,(const lldb::SBListener &));
     LLDB_REGISTER_METHOD_CONST(bool, SBListener, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBListener, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBListener, AddEvent, (const lldb::SBEvent &));
     LLDB_REGISTER_METHOD(void, SBListener, Clear, ());
     LLDB_REGISTER_METHOD(uint32_t, SBListener, StartListeningForEventClass,
@@ -1330,6 +1353,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBModule &,
                          SBModule, operator=,(const lldb::SBModule &));
     LLDB_REGISTER_METHOD_CONST(bool, SBModule, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBModule, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBModule, Clear, ());
     LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBModule, GetFileSpec, ());
     LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBModule, GetPlatformFileSpec,
@@ -1398,6 +1422,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBModuleSpec &,
                          SBModuleSpec, operator=,(const lldb::SBModuleSpec &));
     LLDB_REGISTER_METHOD_CONST(bool, SBModuleSpec, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBModuleSpec, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBModuleSpec, Clear, ());
     LLDB_REGISTER_METHOD(lldb::SBFileSpec, SBModuleSpec, GetFileSpec, ());
     LLDB_REGISTER_METHOD(void, SBModuleSpec, SetFileSpec,
@@ -1478,6 +1503,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_CONSTRUCTOR(SBPlatform, ());
     LLDB_REGISTER_CONSTRUCTOR(SBPlatform, (const char *));
     LLDB_REGISTER_METHOD_CONST(bool, SBPlatform, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBPlatform, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBPlatform, Clear, ());
     LLDB_REGISTER_METHOD(const char *, SBPlatform, GetName, ());
     LLDB_REGISTER_METHOD(const char *, SBPlatform, GetWorkingDirectory, ());
@@ -1525,6 +1551,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const char *, SBProcess, GetShortPluginName, ());
     LLDB_REGISTER_METHOD(void, SBProcess, Clear, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBProcess, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBProcess, operator bool, ());
     LLDB_REGISTER_METHOD(bool, SBProcess, RemoteLaunch,
                          (const char **, const char **, const char *,
                           const char *, const char *, const char *, uint32_t,
@@ -1645,6 +1672,7 @@ SBRegistry::SBRegistry() {
         lldb::SBProcessInfo &,
         SBProcessInfo, operator=,(const lldb::SBProcessInfo &));
     LLDB_REGISTER_METHOD_CONST(bool, SBProcessInfo, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBProcessInfo, operator bool, ());
     LLDB_REGISTER_METHOD(const char *, SBProcessInfo, GetName, ());
     LLDB_REGISTER_METHOD(lldb::SBFileSpec, SBProcessInfo, GetExecutableFile,
                          ());
@@ -1666,6 +1694,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBQueue &,
                          SBQueue, operator=,(const lldb::SBQueue &));
     LLDB_REGISTER_METHOD_CONST(bool, SBQueue, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBQueue, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBQueue, Clear, ());
     LLDB_REGISTER_METHOD_CONST(lldb::queue_id_t, SBQueue, GetQueueID, ());
     LLDB_REGISTER_METHOD_CONST(uint32_t, SBQueue, GetIndexID, ());
@@ -1683,6 +1712,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_CONSTRUCTOR(SBQueueItem, ());
     LLDB_REGISTER_CONSTRUCTOR(SBQueueItem, (const lldb::QueueItemSP &));
     LLDB_REGISTER_METHOD_CONST(bool, SBQueueItem, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBQueueItem, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBQueueItem, Clear, ());
     LLDB_REGISTER_METHOD(void, SBQueueItem, SetQueueItem,
                          (const lldb::QueueItemSP &));
@@ -1699,6 +1729,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBSection &,
                          SBSection, operator=,(const lldb::SBSection &));
     LLDB_REGISTER_METHOD_CONST(bool, SBSection, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBSection, operator bool, ());
     LLDB_REGISTER_METHOD(const char *, SBSection, GetName, ());
     LLDB_REGISTER_METHOD(lldb::SBSection, SBSection, GetParent, ());
     LLDB_REGISTER_METHOD(lldb::SBSection, SBSection, FindSubSection,
@@ -1741,6 +1772,7 @@ SBRegistry::SBRegistry() {
   {
     LLDB_REGISTER_CONSTRUCTOR(SBStream, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBStream, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBStream, operator bool, ());
     LLDB_REGISTER_METHOD(const char *, SBStream, GetData, ());
     LLDB_REGISTER_METHOD(size_t, SBStream, GetSize, ());
     LLDB_REGISTER_METHOD(void, SBStream, RedirectToFile, (const char *, bool));
@@ -1754,6 +1786,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBStringList &,
                          SBStringList, operator=,(const lldb::SBStringList &));
     LLDB_REGISTER_METHOD_CONST(bool, SBStringList, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBStringList, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBStringList, AppendString, (const char *));
     LLDB_REGISTER_METHOD(void, SBStringList, AppendList, (const char **, int));
     LLDB_REGISTER_METHOD(void, SBStringList, AppendList,
@@ -1778,6 +1811,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(lldb::SBError, SBStructuredData, SetFromJSON,
                          (lldb::SBStream &));
     LLDB_REGISTER_METHOD_CONST(bool, SBStructuredData, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBStructuredData, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBStructuredData, Clear, ());
     LLDB_REGISTER_METHOD_CONST(lldb::SBError, SBStructuredData, GetAsJSON,
                                (lldb::SBStream &));
@@ -1806,6 +1840,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(const lldb::SBSymbol &,
                          SBSymbol, operator=,(const lldb::SBSymbol &));
     LLDB_REGISTER_METHOD_CONST(bool, SBSymbol, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBSymbol, operator bool, ());
     LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetName, ());
     LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetDisplayName, ());
     LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetMangledName, ());
@@ -1834,6 +1869,7 @@ SBRegistry::SBRegistry() {
         const lldb::SBSymbolContext &,
         SBSymbolContext, operator=,(const lldb::SBSymbolContext &));
     LLDB_REGISTER_METHOD_CONST(bool, SBSymbolContext, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBSymbolContext, operator bool, ());
     LLDB_REGISTER_METHOD(lldb::SBModule, SBSymbolContext, GetModule, ());
     LLDB_REGISTER_METHOD(lldb::SBCompileUnit, SBSymbolContext, GetCompileUnit,
                          ());
@@ -1872,6 +1908,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(void, SBSymbolContextList, Append,
                          (lldb::SBSymbolContextList &));
     LLDB_REGISTER_METHOD_CONST(bool, SBSymbolContextList, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBSymbolContextList, operator bool, ());
     LLDB_REGISTER_METHOD(bool, SBSymbolContextList, GetDescription,
                          (lldb::SBStream &));
   }
@@ -1893,6 +1930,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_STATIC_METHOD(const char *, SBTarget, GetBroadcasterClassName,
                                 ());
     LLDB_REGISTER_METHOD_CONST(bool, SBTarget, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTarget, operator bool, ());
     LLDB_REGISTER_METHOD(lldb::SBProcess, SBTarget, GetProcess, ());
     LLDB_REGISTER_METHOD(lldb::SBPlatform, SBTarget, GetPlatform, ());
     LLDB_REGISTER_METHOD_CONST(lldb::SBDebugger, SBTarget, GetDebugger, ());
@@ -2123,6 +2161,7 @@ SBRegistry::SBRegistry() {
                          SBThread, operator=,(const lldb::SBThread &));
     LLDB_REGISTER_METHOD_CONST(lldb::SBQueue, SBThread, GetQueue, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBThread, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBThread, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBThread, Clear, ());
     LLDB_REGISTER_METHOD(lldb::StopReason, SBThread, GetStopReason, ());
     LLDB_REGISTER_METHOD(size_t, SBThread, GetStopReasonDataCount, ());
@@ -2220,6 +2259,7 @@ SBRegistry::SBRegistry() {
         const lldb::SBThreadCollection &,
         SBThreadCollection, operator=,(const lldb::SBThreadCollection &));
     LLDB_REGISTER_METHOD_CONST(bool, SBThreadCollection, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBThreadCollection, operator bool, ());
     LLDB_REGISTER_METHOD(size_t, SBThreadCollection, GetSize, ());
     LLDB_REGISTER_METHOD(lldb::SBThread, SBThreadCollection, GetThreadAtIndex,
                          (size_t));
@@ -2233,6 +2273,7 @@ SBRegistry::SBRegistry() {
                          SBThreadPlan, operator=,(const lldb::SBThreadPlan &));
     LLDB_REGISTER_METHOD(lldb_private::ThreadPlan *, SBThreadPlan, get, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBThreadPlan, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBThreadPlan, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBThreadPlan, Clear, ());
     LLDB_REGISTER_METHOD(lldb::StopReason, SBThreadPlan, GetStopReason, ());
     LLDB_REGISTER_METHOD(size_t, SBThreadPlan, GetStopReasonDataCount, ());
@@ -2281,6 +2322,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(lldb::user_id_t, SBTrace, GetTraceUID, ());
     LLDB_REGISTER_CONSTRUCTOR(SBTrace, ());
     LLDB_REGISTER_METHOD(bool, SBTrace, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTrace, operator bool, ());
   }
   {
     LLDB_REGISTER_CONSTRUCTOR(SBTraceOptions, ());
@@ -2298,6 +2340,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(void, SBTraceOptions, setMetaDataBufferSize,
                          (uint64_t));
     LLDB_REGISTER_METHOD(bool, SBTraceOptions, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTraceOptions, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBTraceOptions, setThreadID, (lldb::tid_t));
     LLDB_REGISTER_METHOD(lldb::tid_t, SBTraceOptions, getThreadID, ());
   }
@@ -2309,6 +2352,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(lldb::SBType &,
                          SBType, operator=,(const lldb::SBType &));
     LLDB_REGISTER_METHOD_CONST(bool, SBType, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBType, operator bool, ());
     LLDB_REGISTER_METHOD(uint64_t, SBType, GetByteSize, ());
     LLDB_REGISTER_METHOD(bool, SBType, IsPointerType, ());
     LLDB_REGISTER_METHOD(bool, SBType, IsArrayType, ());
@@ -2362,6 +2406,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_CONSTRUCTOR(SBTypeList, ());
     LLDB_REGISTER_CONSTRUCTOR(SBTypeList, (const lldb::SBTypeList &));
     LLDB_REGISTER_METHOD(bool, SBTypeList, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeList, operator bool, ());
     LLDB_REGISTER_METHOD(lldb::SBTypeList &,
                          SBTypeList, operator=,(const lldb::SBTypeList &));
     LLDB_REGISTER_METHOD(void, SBTypeList, Append, (lldb::SBType));
@@ -2372,6 +2417,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(lldb::SBTypeMember &,
                          SBTypeMember, operator=,(const lldb::SBTypeMember &));
     LLDB_REGISTER_METHOD_CONST(bool, SBTypeMember, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeMember, operator bool, ());
     LLDB_REGISTER_METHOD(const char *, SBTypeMember, GetName, ());
     LLDB_REGISTER_METHOD(lldb::SBType, SBTypeMember, GetType, ());
     LLDB_REGISTER_METHOD(uint64_t, SBTypeMember, GetOffsetInBytes, ());
@@ -2387,6 +2433,7 @@ SBRegistry::SBRegistry() {
         lldb::SBTypeMemberFunction &,
         SBTypeMemberFunction, operator=,(const lldb::SBTypeMemberFunction &));
     LLDB_REGISTER_METHOD_CONST(bool, SBTypeMemberFunction, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeMemberFunction, operator bool, ());
     LLDB_REGISTER_METHOD(const char *, SBTypeMemberFunction, GetName, ());
     LLDB_REGISTER_METHOD(const char *, SBTypeMemberFunction, GetDemangledName,
                          ());
@@ -2407,6 +2454,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_CONSTRUCTOR(SBTypeCategory, ());
     LLDB_REGISTER_CONSTRUCTOR(SBTypeCategory, (const lldb::SBTypeCategory &));
     LLDB_REGISTER_METHOD_CONST(bool, SBTypeCategory, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeCategory, operator bool, ());
     LLDB_REGISTER_METHOD(bool, SBTypeCategory, GetEnabled, ());
     LLDB_REGISTER_METHOD(void, SBTypeCategory, SetEnabled, (bool));
     LLDB_REGISTER_METHOD(const char *, SBTypeCategory, GetName, ());
@@ -2477,6 +2525,7 @@ SBRegistry::SBRegistry() {
         lldb::SBTypeEnumMember &,
         SBTypeEnumMember, operator=,(const lldb::SBTypeEnumMember &));
     LLDB_REGISTER_METHOD_CONST(bool, SBTypeEnumMember, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeEnumMember, operator bool, ());
     LLDB_REGISTER_METHOD(const char *, SBTypeEnumMember, GetName, ());
     LLDB_REGISTER_METHOD(int64_t, SBTypeEnumMember, GetValueAsSigned, ());
     LLDB_REGISTER_METHOD(uint64_t, SBTypeEnumMember, GetValueAsUnsigned, ());
@@ -2485,6 +2534,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_CONSTRUCTOR(SBTypeEnumMemberList,
                               (const lldb::SBTypeEnumMemberList &));
     LLDB_REGISTER_METHOD(bool, SBTypeEnumMemberList, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeEnumMemberList, operator bool, ());
     LLDB_REGISTER_METHOD(
         lldb::SBTypeEnumMemberList &,
         SBTypeEnumMemberList, operator=,(const lldb::SBTypeEnumMemberList &));
@@ -2501,6 +2551,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_CONSTRUCTOR(SBTypeFilter, (uint32_t));
     LLDB_REGISTER_CONSTRUCTOR(SBTypeFilter, (const lldb::SBTypeFilter &));
     LLDB_REGISTER_METHOD_CONST(bool, SBTypeFilter, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeFilter, operator bool, ());
     LLDB_REGISTER_METHOD(uint32_t, SBTypeFilter, GetOptions, ());
     LLDB_REGISTER_METHOD(void, SBTypeFilter, SetOptions, (uint32_t));
     LLDB_REGISTER_METHOD(bool, SBTypeFilter, GetDescription,
@@ -2526,6 +2577,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_CONSTRUCTOR(SBTypeFormat, (const char *, uint32_t));
     LLDB_REGISTER_CONSTRUCTOR(SBTypeFormat, (const lldb::SBTypeFormat &));
     LLDB_REGISTER_METHOD_CONST(bool, SBTypeFormat, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeFormat, operator bool, ());
     LLDB_REGISTER_METHOD(lldb::Format, SBTypeFormat, GetFormat, ());
     LLDB_REGISTER_METHOD(const char *, SBTypeFormat, GetTypeName, ());
     LLDB_REGISTER_METHOD(uint32_t, SBTypeFormat, GetOptions, ());
@@ -2547,6 +2599,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_CONSTRUCTOR(SBTypeNameSpecifier,
                               (const lldb::SBTypeNameSpecifier &));
     LLDB_REGISTER_METHOD_CONST(bool, SBTypeNameSpecifier, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeNameSpecifier, operator bool, ());
     LLDB_REGISTER_METHOD(const char *, SBTypeNameSpecifier, GetName, ());
     LLDB_REGISTER_METHOD(lldb::SBType, SBTypeNameSpecifier, GetType, ());
     LLDB_REGISTER_METHOD(bool, SBTypeNameSpecifier, IsRegex, ());
@@ -2567,6 +2620,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_CONSTRUCTOR(SBTypeSummaryOptions,
                               (const lldb::SBTypeSummaryOptions &));
     LLDB_REGISTER_METHOD(bool, SBTypeSummaryOptions, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeSummaryOptions, operator bool, ());
     LLDB_REGISTER_METHOD(lldb::LanguageType, SBTypeSummaryOptions, GetLanguage,
                          ());
     LLDB_REGISTER_METHOD(lldb::TypeSummaryCapping, SBTypeSummaryOptions,
@@ -2588,6 +2642,7 @@ SBRegistry::SBRegistry() {
                                 CreateWithScriptCode, (const char *, uint32_t));
     LLDB_REGISTER_CONSTRUCTOR(SBTypeSummary, (const lldb::SBTypeSummary &));
     LLDB_REGISTER_METHOD_CONST(bool, SBTypeSummary, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeSummary, operator bool, ());
     LLDB_REGISTER_METHOD(bool, SBTypeSummary, IsFunctionCode, ());
     LLDB_REGISTER_METHOD(bool, SBTypeSummary, IsFunctionName, ());
     LLDB_REGISTER_METHOD(bool, SBTypeSummary, IsSummaryString, ());
@@ -2618,6 +2673,7 @@ SBRegistry::SBRegistry() {
                                 CreateWithScriptCode, (const char *, uint32_t));
     LLDB_REGISTER_CONSTRUCTOR(SBTypeSynthetic, (const lldb::SBTypeSynthetic &));
     LLDB_REGISTER_METHOD_CONST(bool, SBTypeSynthetic, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBTypeSynthetic, operator bool, ());
     LLDB_REGISTER_METHOD(bool, SBTypeSynthetic, IsClassCode, ());
     LLDB_REGISTER_METHOD(bool, SBTypeSynthetic, IsClassName, ());
     LLDB_REGISTER_METHOD(const char *, SBTypeSynthetic, GetData, ());
@@ -2645,6 +2701,7 @@ SBRegistry::SBRegistry() {
         SBUnixSignals, operator=,(const lldb::SBUnixSignals &));
     LLDB_REGISTER_METHOD(void, SBUnixSignals, Clear, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBUnixSignals, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBUnixSignals, operator bool, ());
     LLDB_REGISTER_METHOD_CONST(const char *, SBUnixSignals, GetSignalAsCString,
                                (int32_t));
     LLDB_REGISTER_METHOD_CONST(int32_t, SBUnixSignals, GetSignalNumberFromName,
@@ -2668,6 +2725,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(lldb::SBValue &,
                          SBValue, operator=,(const lldb::SBValue &));
     LLDB_REGISTER_METHOD(bool, SBValue, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBValue, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBValue, Clear, ());
     LLDB_REGISTER_METHOD(lldb::SBError, SBValue, GetError, ());
     LLDB_REGISTER_METHOD(lldb::user_id_t, SBValue, GetID, ());
@@ -2775,6 +2833,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_CONSTRUCTOR(SBValueList, ());
     LLDB_REGISTER_CONSTRUCTOR(SBValueList, (const lldb::SBValueList &));
     LLDB_REGISTER_METHOD_CONST(bool, SBValueList, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBValueList, operator bool, ());
     LLDB_REGISTER_METHOD(void, SBValueList, Clear, ());
     LLDB_REGISTER_METHOD(const lldb::SBValueList &,
                          SBValueList, operator=,(const lldb::SBValueList &));
@@ -2797,6 +2856,7 @@ SBRegistry::SBRegistry() {
         lldb::SBVariablesOptions &,
         SBVariablesOptions, operator=,(const lldb::SBVariablesOptions &));
     LLDB_REGISTER_METHOD_CONST(bool, SBVariablesOptions, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBVariablesOptions, operator bool, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBVariablesOptions, GetIncludeArguments,
                                ());
     LLDB_REGISTER_METHOD(void, SBVariablesOptions, SetIncludeArguments, (bool));
@@ -2828,6 +2888,7 @@ SBRegistry::SBRegistry() {
                          SBWatchpoint, operator=,(const lldb::SBWatchpoint &));
     LLDB_REGISTER_METHOD(lldb::watch_id_t, SBWatchpoint, GetID, ());
     LLDB_REGISTER_METHOD_CONST(bool, SBWatchpoint, IsValid, ());
+    LLDB_REGISTER_METHOD_CONST(bool, SBWatchpoint, operator bool, ());
     LLDB_REGISTER_METHOD(lldb::SBError, SBWatchpoint, GetError, ());
     LLDB_REGISTER_METHOD(int32_t, SBWatchpoint, GetHardwareIndex, ());
     LLDB_REGISTER_METHOD(lldb::addr_t, SBWatchpoint, GetWatchAddress, ());

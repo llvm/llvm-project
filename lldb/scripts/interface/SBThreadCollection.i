@@ -25,6 +25,8 @@ public:
     
     bool
     IsValid () const;
+
+    explicit operator bool() const;
     
     size_t
     GetSize ();

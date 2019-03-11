@@ -87,6 +87,10 @@ SBValueList::~SBValueList() {}
 
 bool SBValueList::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBValueList, IsValid);
+  return this->operator bool();
+}
+SBValueList::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBValueList, operator bool);
 
   return (m_opaque_up != NULL);
 }

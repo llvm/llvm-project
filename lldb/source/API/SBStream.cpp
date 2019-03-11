@@ -29,6 +29,10 @@ SBStream::~SBStream() {}
 
 bool SBStream::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStream, IsValid);
+  return this->operator bool();
+}
+SBStream::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStream, operator bool);
 
   return (m_opaque_up != NULL);
 }

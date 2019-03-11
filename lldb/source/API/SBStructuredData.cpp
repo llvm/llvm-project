@@ -74,6 +74,10 @@ lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
 
 bool SBStructuredData::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStructuredData, IsValid);
+  return this->operator bool();
+}
+SBStructuredData::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStructuredData, operator bool);
 
   return m_impl_up->IsValid();
 }

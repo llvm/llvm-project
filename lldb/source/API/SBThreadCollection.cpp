@@ -62,6 +62,10 @@ const lldb::ThreadCollectionSP &SBThreadCollection::operator*() const {
 
 bool SBThreadCollection::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadCollection, IsValid);
+  return this->operator bool();
+}
+SBThreadCollection::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadCollection, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

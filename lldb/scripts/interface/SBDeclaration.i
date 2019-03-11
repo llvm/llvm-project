@@ -23,6 +23,8 @@ namespace lldb {
         
         bool
         IsValid () const;
+
+        explicit operator bool() const;
         
         lldb::SBFileSpec
         GetFileSpec () const;

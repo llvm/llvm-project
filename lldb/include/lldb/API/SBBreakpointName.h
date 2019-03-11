@@ -39,6 +39,8 @@ public:
 
   bool operator!=(const lldb::SBBreakpointName &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
   
   const char *GetName() const;

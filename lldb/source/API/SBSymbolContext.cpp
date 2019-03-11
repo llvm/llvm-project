@@ -58,6 +58,10 @@ void SBSymbolContext::SetSymbolContext(const SymbolContext *sc_ptr) {
 
 bool SBSymbolContext::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSymbolContext, IsValid);
+  return this->operator bool();
+}
+SBSymbolContext::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSymbolContext, operator bool);
 
   return m_opaque_up != NULL;
 }

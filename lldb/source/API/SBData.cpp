@@ -59,6 +59,10 @@ const lldb::DataExtractorSP &SBData::operator*() const { return m_opaque_sp; }
 
 bool SBData::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBData, IsValid);
+  return this->operator bool();
+}
+SBData::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBData, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

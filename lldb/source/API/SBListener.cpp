@@ -52,6 +52,10 @@ SBListener::~SBListener() {}
 
 bool SBListener::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBListener, IsValid);
+  return this->operator bool();
+}
+SBListener::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBListener, operator bool);
 
   return m_opaque_sp != nullptr;
 }

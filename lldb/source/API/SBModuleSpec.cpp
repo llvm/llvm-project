@@ -42,6 +42,10 @@ SBModuleSpec::~SBModuleSpec() {}
 
 bool SBModuleSpec::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModuleSpec, IsValid);
+  return this->operator bool();
+}
+SBModuleSpec::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModuleSpec, operator bool);
 
   return m_opaque_up->operator bool();
 }
