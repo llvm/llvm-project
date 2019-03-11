@@ -1,0 +1,99 @@
+# UNSUPPORTED: system-windows, system-freebsd
+
+# This tests that stepping continues to work when replaying a reproducer.
+
+# RUN: %clang %S/Inputs/stepping.c -O0 -g -o %t.out
+# RUN: grep -v '#' %s > %t.in
+
+# RUN: %lldb -x -b -s %t.in --capture %t.repro %t.out | FileCheck %s --check-prefix CHECK
+# RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK
+
+# Set breakpoints in a,b and c and verify we stop there when stepping.
+
+breakpoint set -f stepping.c -l 28
+# CHECK: Breakpoint 1: {{.*}} stepping.c:28
+
+breakpoint set -f stepping.c -l 10
+# CHECK: Breakpoint 2: {{.*}} stepping.c:10
+
+breakpoint set -f stepping.c -l 19
+# CHECK: Breakpoint 3: {{.*}} stepping.c:19
+
+breakpoint set -f stepping.c -l 23
+# CHECK: Breakpoint 4: {{.*}} stepping.c:23
+
+run
+# CHECK: Process {{.*}} stopped
+# CHECK: stop reason = breakpoint 1.1
+
+next
+# CHECK: Process {{.*}} stopped
+# CHECK: stop reason = breakpoint 2.1
+
+next
+# CHECK: Process {{.*}} stopped
+# CHECK: stop reason = breakpoint 3.1
+
+next
+# CHECK: Process {{.*}} stopped
+# CHECK: stop reason = breakpoint 4.1
+
+bt
+# CHECK: frame #0: {{.*}}`c
+# CHECK: frame #1: {{.*}}`b
+# CHECK: frame #2: {{.*}}`a
+
+# Continue and stop resulting from the step overs.
+
+cont
+# CHECK: Process {{.*}} resuming
+# CHECK: Process {{.*}} stopped
+# CHECK: stop reason = step over
+cont
+# CHECK: Process {{.*}} resuming
+# CHECK: Process {{.*}} stopped
+# CHECK: stop reason = step over
+cont
+# CHECK: Process {{.*}} resuming
+# CHECK: Process {{.*}} stopped
+# CHECK: stop reason = step over
+
+breakpoint disable 1
+# CHECK: 1 breakpoints disabled.
+
+breakpoint disable 2
+# CHECK: 1 breakpoints disabled.
+
+breakpoint disable 3
+# CHECK: 1 breakpoints disabled.
+
+breakpoint disable 4
+# CHECK: 1 breakpoints disabled.
+
+# Continue to line 48.
+
+next
+# CHECK: stop reason = step over
+next
+# CHECK: stop reason = step over
+
+# Step into c.
+thread step-in
+# CHECK: stop reason = step in
+thread step-in
+# CHECK: stop reason = step in
+thread step-in
+# CHECK: stop reason = step in
+thread step-in
+# CHECK: stop reason = step in
+thread step-in
+# CHECK: stop reason = step in
+
+# Finally continue until the end.
+
+cont
+# CHECK: Process {{.*}} resuming
+# CHECK: Process {{.*}} exited with status = 0
+
+# Generate the reproducer.
+reproducer generate

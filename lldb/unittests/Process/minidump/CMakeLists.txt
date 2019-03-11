@@ -1,5 +1,6 @@
 add_lldb_unittest(LLDBMinidumpTests
   MinidumpParserTest.cpp
+  RegisterContextMinidumpTest.cpp
 
   LINK_LIBS
     lldbCore
@@ -8,6 +9,7 @@ add_lldb_unittest(LLDBMinidumpTests
     lldbPluginProcessUtility
     lldbPluginProcessMinidump
     lldbUtilityHelpers
+    LLVMTestingSupport
   LINK_COMPONENTS
     Support
   )

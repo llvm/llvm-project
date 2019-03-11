@@ -163,6 +163,13 @@ private:
                    LLT PartTy, ArrayRef<unsigned> PartRegs,
                    LLT LeftoverTy = LLT(), ArrayRef<unsigned> LeftoverRegs = {});
 
+  /// Perform generic multiplication of values held in multiple registers.
+  /// Generated instructions use only types NarrowTy and i1.
+  /// Destination can be same or two times size of the source.
+  void multiplyRegisters(SmallVectorImpl<unsigned> &DstRegs,
+                         ArrayRef<unsigned> Src1Regs,
+                         ArrayRef<unsigned> Src2Regs, LLT NarrowTy);
+
   LegalizeResult fewerElementsVectorImplicitDef(MachineInstr &MI,
                                                 unsigned TypeIdx, LLT NarrowTy);
 
@@ -186,6 +193,12 @@ private:
   LegalizeResult
   fewerElementsVectorSelect(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
+  LegalizeResult fewerElementsVectorPhi(MachineInstr &MI,
+                                        unsigned TypeIdx, LLT NarrowTy);
+
+  LegalizeResult moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
+                                       LLT MoreTy);
+
   LegalizeResult
   reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
@@ -193,7 +206,7 @@ private:
                                              LLT HalfTy, LLT ShiftAmtTy);
 
   LegalizeResult narrowScalarShift(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LegalizeResult narrowScalarMul(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult narrowScalarMul(MachineInstr &MI, LLT Ty);
   LegalizeResult narrowScalarExtract(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarInsert(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 

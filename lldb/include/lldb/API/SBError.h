@@ -46,27 +46,30 @@ public:
   int SetErrorStringWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   bool GetDescription(lldb::SBStream &description);
 
 protected:
-  friend class SBCommandReturnObject;
-  friend class SBData;
-  friend class SBDebugger;
-  friend class SBCommunication;
-  friend class SBHostOS;
-  friend class SBPlatform;
-  friend class SBProcess;
-  friend class SBStructuredData;
-  friend class SBThread;
-  friend class SBTrace;
-  friend class SBTarget;
-  friend class SBValue;
-  friend class SBWatchpoint;
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
   friend class SBBreakpointName;
+  friend class SBCommandReturnObject;
+  friend class SBCommunication;
+  friend class SBData;
+  friend class SBDebugger;
+  friend class SBHostOS;
+  friend class SBPlatform;
+  friend class SBProcess;
+  friend class SBReproducer;
+  friend class SBStructuredData;
+  friend class SBTarget;
+  friend class SBThread;
+  friend class SBTrace;
+  friend class SBValue;
+  friend class SBWatchpoint;
 
   lldb_private::Status *get();
 

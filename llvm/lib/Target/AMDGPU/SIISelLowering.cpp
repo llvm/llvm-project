@@ -1862,7 +1862,6 @@ SDValue SITargetLowering::LowerFormalArguments(
   const Function &Fn = MF.getFunction();
   FunctionType *FType = MF.getFunction().getFunctionType();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   if (Subtarget->isAmdHsaOS() && AMDGPU::isShader(CallConv)) {
     DiagnosticInfoUnsupported NoGraphicsHSA(
@@ -1870,11 +1869,6 @@ SDValue SITargetLowering::LowerFormalArguments(
     DAG.getContext()->diagnose(NoGraphicsHSA);
     return DAG.getEntryNode();
   }
-
-  // Create stack objects that are used for emitting debugger prologue if
-  // "amdgpu-debugger-emit-prologue" attribute was specified.
-  if (ST.debuggerEmitPrologue())
-    createDebuggerPrologueStackObjects(MF);
 
   SmallVector<ISD::InputArg, 16> Splits;
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -2917,7 +2911,7 @@ static MachineBasicBlock::iterator emitLoadM0FromVGPRLoop(
         .addImm(Offset);
     }
     unsigned IdxMode = IsIndirectSrc ?
-      VGPRIndexMode::SRC0_ENABLE : VGPRIndexMode::DST_ENABLE;
+      AMDGPU::VGPRIndexMode::SRC0_ENABLE : AMDGPU::VGPRIndexMode::DST_ENABLE;
     MachineInstr *SetOn =
       BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
       .addReg(IdxReg, RegState::Kill)
@@ -3048,7 +3042,7 @@ static bool setM0ToIndexFromSGPR(const SIInstrInfo *TII,
 
   if (UseGPRIdxMode) {
     unsigned IdxMode = IsIndirectSrc ?
-      VGPRIndexMode::SRC0_ENABLE : VGPRIndexMode::DST_ENABLE;
+      AMDGPU::VGPRIndexMode::SRC0_ENABLE : AMDGPU::VGPRIndexMode::DST_ENABLE;
     if (Offset == 0) {
       MachineInstr *SetOn =
           BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
@@ -3960,32 +3954,6 @@ unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
   // break, if_break, else_break are all only used as inputs to loop, not
   // directly as branch conditions.
   return 0;
-}
-
-void SITargetLowering::createDebuggerPrologueStackObjects(
-    MachineFunction &MF) const {
-  // Create stack objects that are used for emitting debugger prologue.
-  //
-  // Debugger prologue writes work group IDs and work item IDs to scratch memory
-  // at fixed location in the following format:
-  //   offset 0:  work group ID x
-  //   offset 4:  work group ID y
-  //   offset 8:  work group ID z
-  //   offset 16: work item ID x
-  //   offset 20: work item ID y
-  //   offset 24: work item ID z
-  SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  int ObjectIdx = 0;
-
-  // For each dimension:
-  for (unsigned i = 0; i < 3; ++i) {
-    // Create fixed stack object for work group ID.
-    ObjectIdx = MF.getFrameInfo().CreateFixedObject(4, i * 4, true);
-    Info->setDebuggerWorkGroupIDStackObjectIndex(i, ObjectIdx);
-    // Create fixed stack object for work item ID.
-    ObjectIdx = MF.getFrameInfo().CreateFixedObject(4, i * 4 + 16, true);
-    Info->setDebuggerWorkItemIDStackObjectIndex(i, ObjectIdx);
-  }
 }
 
 bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
@@ -8509,7 +8477,8 @@ SDValue SITargetLowering::reassociateScalarOps(SDNode *N,
 
   // If either operand is constant this will conflict with
   // DAGCombiner::ReassociateOps().
-  if (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(Op0) ||
+      DAG.isConstantIntBuildVectorOrConstantInt(Op1))
     return SDValue();
 
   SDLoc SL(N);
@@ -8616,14 +8585,10 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  unsigned Opc = LHS.getOpcode();
-  if (Opc != ISD::SUBCARRY)
-    std::swap(RHS, LHS);
-
   if (LHS.getOpcode() == ISD::SUBCARRY) {
     // sub (subcarry x, 0, cc), y => subcarry x, y, cc
     auto C = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
-    if (!C || C->getZExtValue() != 0)
+    if (!C || !C->isNullValue())
       return SDValue();
     SDValue Args[] = { LHS.getOperand(0), RHS, LHS.getOperand(2) };
     return DAG.getNode(ISD::SUBCARRY, SDLoc(N), LHS->getVTList(), Args);
@@ -9401,51 +9366,6 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
 
     Ops.push_back(ImpDef.getValue(1));
     return DAG.getMachineNode(Opcode, SDLoc(Node), Node->getVTList(), Ops);
-  }
-  case AMDGPU::FLAT_LOAD_UBYTE_D16_HI:
-  case AMDGPU::FLAT_LOAD_SBYTE_D16_HI:
-  case AMDGPU::FLAT_LOAD_SHORT_D16_HI:
-  case AMDGPU::GLOBAL_LOAD_UBYTE_D16_HI:
-  case AMDGPU::GLOBAL_LOAD_SBYTE_D16_HI:
-  case AMDGPU::GLOBAL_LOAD_SHORT_D16_HI:
-  case AMDGPU::DS_READ_U16_D16_HI:
-  case AMDGPU::DS_READ_I8_D16_HI:
-  case AMDGPU::DS_READ_U8_D16_HI:
-  case AMDGPU::BUFFER_LOAD_SHORT_D16_HI_OFFSET:
-  case AMDGPU::BUFFER_LOAD_UBYTE_D16_HI_OFFSET:
-  case AMDGPU::BUFFER_LOAD_SBYTE_D16_HI_OFFSET:
-  case AMDGPU::BUFFER_LOAD_SHORT_D16_HI_OFFEN:
-  case AMDGPU::BUFFER_LOAD_UBYTE_D16_HI_OFFEN:
-  case AMDGPU::BUFFER_LOAD_SBYTE_D16_HI_OFFEN: {
-    // For these loads that write to the HI part of a register,
-    // we should chain them to the op that writes to the LO part
-    // of the register to maintain the order.
-    unsigned NumOps = Node->getNumOperands();
-    SDValue OldChain = Node->getOperand(NumOps-1);
-
-    if (OldChain.getValueType() != MVT::Other)
-      break;
-
-    // Look for the chain to replace to.
-    SDValue Lo = Node->getOperand(NumOps-2);
-    SDNode *LoNode = Lo.getNode();
-    if (LoNode->getNumValues() == 1 ||
-        LoNode->getValueType(LoNode->getNumValues() - 1) != MVT::Other)
-      break;
-
-    SDValue NewChain = Lo.getValue(LoNode->getNumValues() - 1);
-    if (NewChain == OldChain) // Already replaced.
-      break;
-
-    SmallVector<SDValue, 16> Ops;
-    for (unsigned I = 0; I < NumOps-1; ++I)
-      Ops.push_back(Node->getOperand(I));
-    // Repalce the Chain.
-    Ops.push_back(NewChain);
-    MachineSDNode *NewNode = DAG.getMachineNode(Opcode, SDLoc(Node),
-                                                Node->getVTList(), Ops);
-    DAG.setNodeMemRefs(NewNode, Node->memoperands());
-    return NewNode;
   }
   default:
     break;

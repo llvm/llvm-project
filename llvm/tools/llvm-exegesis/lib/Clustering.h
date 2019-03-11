@@ -29,7 +29,8 @@ public:
   // for more explanations on the algorithm.
   static llvm::Expected<InstructionBenchmarkClustering>
   create(const std::vector<InstructionBenchmark> &Points, size_t MinPts,
-         double Epsilon, llvm::Optional<unsigned> NumOpcodes = llvm::None);
+         double AnalysisClusteringEpsilon,
+         llvm::Optional<unsigned> NumOpcodes = llvm::None);
 
   class ClusterId {
   public:
@@ -103,7 +104,8 @@ public:
 
   // Returns true if the given point is within a distance Epsilon of each other.
   bool isNeighbour(const std::vector<BenchmarkMeasure> &P,
-                   const std::vector<BenchmarkMeasure> &Q) const {
+                   const std::vector<BenchmarkMeasure> &Q,
+                   const double EpsilonSquared_) const {
     double DistanceSquared = 0.0;
     for (size_t I = 0, E = P.size(); I < E; ++I) {
       const auto Diff = P[I].PerInstructionValue - Q[I].PerInstructionValue;
@@ -114,7 +116,8 @@ public:
 
 private:
   InstructionBenchmarkClustering(
-      const std::vector<InstructionBenchmark> &Points, double EpsilonSquared);
+      const std::vector<InstructionBenchmark> &Points,
+      double AnalysisClusteringEpsilonSquared);
 
   llvm::Error validateAndSetup();
   void dbScan(size_t MinPts);
@@ -122,7 +125,7 @@ private:
   void rangeQuery(size_t Q, std::vector<size_t> &Scratchpad) const;
 
   const std::vector<InstructionBenchmark> &Points_;
-  const double EpsilonSquared_;
+  const double AnalysisClusteringEpsilonSquared_;
   int NumDimensions_ = 0;
   // ClusterForPoint_[P] is the cluster id for Points[P].
   std::vector<ClusterId> ClusterIdForPoint_;

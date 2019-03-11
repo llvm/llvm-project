@@ -35,10 +35,8 @@ CompilerType::CompilerType(TypeSystem *type_system,
 CompilerType::CompilerType(clang::ASTContext *ast, clang::QualType qual_type)
     : m_type(qual_type.getAsOpaquePtr()),
       m_type_system(ClangASTContext::GetASTContext(ast)) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   if (m_type)
     assert(m_type_system != nullptr);
-#endif
 }
 
 CompilerType::~CompilerType() {}
@@ -553,7 +551,7 @@ lldb::BasicType CompilerType::GetBasicTypeEnumeration() const {
 
 void CompilerType::ForEachEnumerator(
     std::function<bool(const CompilerType &integer_type,
-                       const ConstString &name,
+                       ConstString name,
                        const llvm::APSInt &value)> const &callback) const {
   if (IsValid())
     return m_type_system->ForEachEnumerator(m_type, callback);
@@ -801,6 +799,15 @@ void CompilerType::DumpTypeDescription(Stream *s) const {
     m_type_system->DumpTypeDescription(m_type, s);
   }
 }
+
+#ifndef NDEBUG
+LLVM_DUMP_METHOD void CompilerType::dump() const {
+  if (IsValid())
+    m_type_system->dump(m_type);
+  else
+    llvm::errs() << "<invalid>\n";
+}
+#endif
 
 bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
                                     lldb::offset_t data_byte_offset,

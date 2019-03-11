@@ -37,8 +37,13 @@ protected:
     auto &r = repro::Reproducer::Instance();
     if (auto generator = r.GetGenerator()) {
       generator->Keep();
+    } else if (r.GetLoader()) {
+      // Make this operation a NOP in replay mode.
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      return result.Succeeded();
     } else {
       result.AppendErrorWithFormat("Unable to get the reproducer generator");
+      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 

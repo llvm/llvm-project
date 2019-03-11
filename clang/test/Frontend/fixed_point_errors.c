@@ -233,8 +233,20 @@ void CheckSuffixOnIntegerLiterals() {
                          // expected-warning@-1{{type specifier missing, defaults to 'int'}}
 }
 
+// Ok conversions
+int i_const = -2.5hk;
+_Sat short _Accum sat_sa_const2 = 256.0k;
+_Sat unsigned short _Accum sat_usa_const = -1.0hk;
+short _Accum sa_const3 = 2;
+short _Accum sa_const4 = -2;
+
 // Overflow
 short _Accum sa_const = 256.0k;   // expected-warning{{implicit conversion from 256.0 cannot fit within the range of values for 'short _Accum'}}
 short _Fract sf_const = 1.0hk;    // expected-warning{{implicit conversion from 1.0 cannot fit within the range of values for 'short _Fract'}}
 unsigned _Accum ua_const = -1.0k; // expected-warning{{implicit conversion from -1.0 cannot fit within the range of values for 'unsigned _Accum'}}
 short _Accum sa_const2 = 128.0k + 128.0k; // expected-warning{{implicit conversion from 256.0 cannot fit within the range of values for 'short _Accum'}}
+short s_const = 65536.0lk;                // expected-warning{{implicit conversion from 65536.0 cannot fit within the range of values for 'short'}}
+unsigned u_const = -2.5hk;                // expected-warning{{implicit conversion from -2.5 cannot fit within the range of values for 'unsigned int'}}
+char c_const = 256.0uk;                   // expected-warning{{implicit conversion from 256.0 cannot fit within the range of values for 'char'}}
+short _Accum sa_const5 = 256;             // expected-warning{{implicit conversion from 256 cannot fit within the range of values for 'short _Accum'}}
+unsigned short _Accum usa_const2 = -2;    // expected-warning{{implicit conversion from -2 cannot fit within the range of values for 'unsigned short _Accum'}}

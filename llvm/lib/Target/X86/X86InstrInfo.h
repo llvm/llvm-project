@@ -592,7 +592,8 @@ private:
   MachineInstr *convertToThreeAddressWithLEA(unsigned MIOpc,
                                              MachineFunction::iterator &MFI,
                                              MachineInstr &MI,
-                                             LiveVariables *LV) const;
+                                             LiveVariables *LV,
+                                             bool Is8BitOp) const;
 
   /// Handles memory folding for special case instructions, for instance those
   /// requiring custom manipulation of the address.

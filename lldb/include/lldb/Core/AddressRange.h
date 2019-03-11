@@ -28,7 +28,7 @@ class Target;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class AddressRange AddressRange.h "lldb/Core/AddressRange.h"
+/// \class AddressRange AddressRange.h "lldb/Core/AddressRange.h"
 /// A section + offset based address range class.
 //----------------------------------------------------------------------
 class AddressRange {
@@ -47,14 +47,14 @@ public:
   /// Initialize the address with the supplied \a section, \a offset and \a
   /// byte_size.
   ///
-  /// @param[in] section
+  /// \param[in] section
   ///     A section pointer to a valid lldb::Section, or NULL if the
   ///     address doesn't have a section or will get resolved later.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset in bytes into \a section.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The size in bytes of the address range.
   //------------------------------------------------------------------
   AddressRange(const lldb::SectionSP &section, lldb::addr_t offset,
@@ -66,13 +66,13 @@ public:
   /// Initialize and resolve the address with the supplied virtual address \a
   /// file_addr, and byte size \a byte_size.
   ///
-  /// @param[in] file_addr
+  /// \param[in] file_addr
   ///     A virtual address.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The size in bytes of the address range.
   ///
-  /// @param[in] section_list
+  /// \param[in] section_list
   ///     A list of sections, one of which may contain the \a vaddr.
   //------------------------------------------------------------------
   AddressRange(lldb::addr_t file_addr, lldb::addr_t byte_size,
@@ -84,10 +84,10 @@ public:
   /// Initialize by copying the section offset address in \a so_addr, and
   /// setting the byte size to \a byte_size.
   ///
-  /// @param[in] so_addr
+  /// \param[in] so_addr
   ///     A section offset address object.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The size in bytes of the address range.
   //------------------------------------------------------------------
   AddressRange(const Address &so_addr, lldb::addr_t byte_size);
@@ -110,10 +110,10 @@ public:
   //------------------------------------------------------------------
   /// Check if a section offset address is contained in this range.
   ///
-  /// @param[in] so_addr
+  /// \param[in] so_addr
   ///     A section offset address object reference.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a so_addr is contained in this range,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -123,10 +123,10 @@ public:
   //------------------------------------------------------------------
   /// Check if a section offset address is contained in this range.
   ///
-  /// @param[in] so_addr_ptr
+  /// \param[in] so_addr_ptr
   ///     A section offset address object pointer.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a so_addr is contained in this range,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -137,10 +137,10 @@ public:
   /// Check if a section offset \a so_addr when represented as a file address
   /// is contained within this object's file address range.
   ///
-  /// @param[in] so_addr
+  /// \param[in] so_addr
   ///     A section offset address object reference.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if both \a this and \a so_addr have
   ///     resolvable file address values and \a so_addr is contained
   ///     in the address range, \b false otherwise.
@@ -151,10 +151,10 @@ public:
   /// Check if the resolved file address \a file_addr is contained within this
   /// object's file address range.
   ///
-  /// @param[in] so_addr
+  /// \param[in] so_addr
   ///     A section offset address object reference.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if both \a this has a resolvable file
   ///     address value and \a so_addr is contained in the address
   ///     range, \b false otherwise.
@@ -165,10 +165,10 @@ public:
   /// Check if a section offset \a so_addr when represented as a load address
   /// is contained within this object's load address range.
   ///
-  /// @param[in] so_addr
+  /// \param[in] so_addr
   ///     A section offset address object reference.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if both \a this and \a so_addr have
   ///     resolvable load address values and \a so_addr is contained
   ///     in the address range, \b false otherwise.
@@ -179,10 +179,10 @@ public:
   /// Check if the resolved load address \a load_addr is contained within this
   /// object's load address range.
   ///
-  /// @param[in] so_addr
+  /// \param[in] so_addr
   ///     A section offset address object reference.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if both \a this has a resolvable load
   ///     address value and \a so_addr is contained in the address
   ///     range, \b false otherwise.
@@ -197,19 +197,19 @@ public:
   /// range, and \a style lets the user choose how the base address gets
   /// displayed.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   ///
-  /// @param[in] style
+  /// \param[in] style
   ///     The display style for the address.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the address was able to be displayed.
   ///     File and load addresses may be unresolved and it may not be
   ///     possible to display a valid value, \b false will be returned
   ///     in such cases.
   ///
-  /// @see Address::DumpStyle
+  /// \see Address::DumpStyle
   //------------------------------------------------------------------
   bool
   Dump(Stream *s, Target *target, Address::DumpStyle style,
@@ -224,7 +224,7 @@ public:
   /// The debug description contains verbose internal state such and pointer
   /// values, reference counts, etc.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   //------------------------------------------------------------------
   void DumpDebug(Stream *s) const;
@@ -232,7 +232,7 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the base address of the range.
   ///
-  /// @return
+  /// \return
   ///     A reference to the base address object.
   //------------------------------------------------------------------
   Address &GetBaseAddress() { return m_base_addr; }
@@ -240,7 +240,7 @@ public:
   //------------------------------------------------------------------
   /// Get const accessor for the base address of the range.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the base address object.
   //------------------------------------------------------------------
   const Address &GetBaseAddress() const { return m_base_addr; }
@@ -248,7 +248,7 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the byte size of this range.
   ///
-  /// @return
+  /// \return
   ///     The size in bytes of this address range.
   //------------------------------------------------------------------
   lldb::addr_t GetByteSize() const { return m_byte_size; }
@@ -256,7 +256,7 @@ public:
   //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object occupies in memory.
   //------------------------------------------------------------------
   size_t MemorySize() const {
@@ -268,7 +268,7 @@ public:
   //------------------------------------------------------------------
   /// Set accessor for the byte size of this range.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The new size in bytes of this address range.
   //------------------------------------------------------------------
   void SetByteSize(lldb::addr_t byte_size) { m_byte_size = byte_size; }

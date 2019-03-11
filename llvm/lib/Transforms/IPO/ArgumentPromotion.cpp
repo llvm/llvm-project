@@ -216,8 +216,10 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   Function *NF = Function::Create(NFTy, F->getLinkage(), F->getAddressSpace(),
                                   F->getName());
   NF->copyAttributesFrom(F);
-  NF->copyMetadata(F, 0);
-  F->clearMetadata();
+
+  // Patch the pointer to LLVM function in debug info descriptor.
+  NF->setSubprogram(F->getSubprogram());
+  F->setSubprogram(nullptr);
 
   LLVM_DEBUG(dbgs() << "ARG PROMOTION:  Promoting to:" << *NF << "\n"
                     << "From: " << *F);
@@ -472,7 +474,6 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     std::advance(I2, ArgIndices.size());
   }
 
-  assert(F->isDeclaration());
   return NF;
 }
 

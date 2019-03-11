@@ -382,8 +382,8 @@ unsigned RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       .addMBB(&DestBB, RISCVII::MO_LO);
 
   RS->enterBasicBlockEnd(MBB);
-  unsigned Scav = RS->scavengeRegisterBackwards(
-      RISCV::GPRRegClass, MachineBasicBlock::iterator(LuiMI), false, 0);
+  unsigned Scav = RS->scavengeRegisterBackwards(RISCV::GPRRegClass,
+                                                LuiMI.getIterator(), false, 0);
   MRI.replaceRegWith(ScratchReg, Scav);
   MRI.clearVirtRegs();
   RS->setRegUsed(Scav);

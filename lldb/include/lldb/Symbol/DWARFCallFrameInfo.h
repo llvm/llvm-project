@@ -13,12 +13,11 @@
 #include <mutex>
 
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Utility/Flags.h"
-
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Utility/Flags.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/VMRange.h"
 #include "lldb/lldb-private.h"
 
@@ -60,7 +59,7 @@ public:
   // functions in the Module.  But the eh_frame can help to give the addresses
   // of these stripped symbols, at least.
   //
-  // @param[out] function_info
+  // \param[out] function_info
   //      A vector provided by the caller is filled out.  May be empty if no
   //      FDEs/no eh_frame
   //      is present in this Module.

@@ -109,8 +109,10 @@ MapOutOfBandToToken(CMICmnMIOutOfBandRecord::OutOfBand_e veType) {
 //--
 static CMIUtilString
 BuildAsyncRecord(CMICmnMIOutOfBandRecord::OutOfBand_e veType) {
-  return CMIUtilString::Format("%s%s", MapOutOfBandToToken(veType),
-                               MapOutOfBandToText(veType));
+  auto Token = MapOutOfBandToToken(veType);
+  auto Text = MapOutOfBandToText(veType);
+  return CMIUtilString::Format("%s%s", CMIUtilString::WithNullAsEmpty(Token),
+                               CMIUtilString::WithNullAsEmpty(Text));
 }
 
 //++

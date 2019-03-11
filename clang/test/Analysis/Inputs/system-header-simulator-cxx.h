@@ -822,3 +822,26 @@ extern char *__cxa_demangle(const char *mangled_name,
                             int *status);
 }}
 namespace abi = __cxxabiv1;
+
+namespace std {
+  template<class ForwardIt>
+  bool is_sorted(ForwardIt first, ForwardIt last);
+
+  template <class RandomIt>
+  void nth_element(RandomIt first, RandomIt nth, RandomIt last);
+
+  template<class RandomIt>
+  void partial_sort(RandomIt first, RandomIt middle, RandomIt last);
+
+  template<class RandomIt>
+  void sort (RandomIt first, RandomIt last);
+
+  template<class RandomIt>
+  void stable_sort(RandomIt first, RandomIt last);
+
+  template<class BidirIt, class UnaryPredicate>
+  BidirIt partition(BidirIt first, BidirIt last, UnaryPredicate p);
+
+  template<class BidirIt, class UnaryPredicate>
+  BidirIt stable_partition(BidirIt first, BidirIt last, UnaryPredicate p);
+}

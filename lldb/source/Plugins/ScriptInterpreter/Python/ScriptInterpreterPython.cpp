@@ -156,7 +156,7 @@ public:
     if (m_was_already_initialized) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
       LLDB_LOGV(log, "Releasing PyGILState. Returning to state = {0}locked",
-                m_was_already_initialized == PyGILState_UNLOCKED ? "un" : "");
+                m_gil_state == PyGILState_UNLOCKED ? "un" : "");
       PyGILState_Release(m_gil_state);
     } else {
       // We initialized the threads in this function, just unlock the GIL.
@@ -180,6 +180,18 @@ private:
   }
 
   void InitializeThreadsPrivate() {
+// Since Python 3.7 `Py_Initialize` calls `PyEval_InitThreads` inside itself,
+// so there is no way to determine whether the embedded interpreter
+// was already initialized by some external code. `PyEval_ThreadsInitialized`
+// would always return `true` and `PyGILState_Ensure/Release` flow would be
+// executed instead of unlocking GIL with `PyEval_SaveThread`. When
+// an another thread calls `PyGILState_Ensure` it would get stuck in deadlock.
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 7) || (PY_MAJOR_VERSION > 3)
+// The only case we should go further and acquire the GIL: it is unlocked.
+    if (PyGILState_Check())
+      return;
+#endif
+
     if (PyEval_ThreadsInitialized()) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
 
@@ -430,7 +442,7 @@ lldb_private::ConstString ScriptInterpreterPython::GetPluginName() {
 
 uint32_t ScriptInterpreterPython::GetPluginVersion() { return 1; }
 
-void ScriptInterpreterPython::IOHandlerActivated(IOHandler &io_handler) {
+void ScriptInterpreterPython::IOHandlerActivated(IOHandler &io_handler, bool interactive) {
   const char *instructions = nullptr;
 
   switch (m_active_io_handler) {
@@ -451,7 +463,7 @@ def function (frame, bp_loc, internal_dict):
 
   if (instructions) {
     StreamFileSP output_sp(io_handler.GetOutputStreamFile());
-    if (output_sp) {
+    if (output_sp && interactive) {
       output_sp->PutCString(instructions);
       output_sp->Flush();
     }

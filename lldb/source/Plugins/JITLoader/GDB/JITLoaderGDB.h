@@ -54,7 +54,7 @@ public:
 
 private:
   lldb::addr_t GetSymbolAddress(lldb_private::ModuleList &module_list,
-                                const lldb_private::ConstString &name,
+                                lldb_private::ConstString name,
                                 lldb::SymbolType symbol_type) const;
 
   void SetJITBreakpoint(lldb_private::ModuleList &module_list);

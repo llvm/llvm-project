@@ -514,6 +514,10 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
       s->Printf("DW_OP_GNU_addr_index(0x%" PRIx64 ")",
                 m_data.GetULEB128(&offset));
       break;
+    case DW_OP_addrx:
+      s->Printf("DW_OP_addrx(0x%" PRIx64 ")",
+                m_data.GetULEB128(&offset));
+      break;
     case DW_OP_GNU_const_index: // 0xfc
       s->Printf("DW_OP_GNU_const_index(0x%" PRIx64 ")",
                 m_data.GetULEB128(&offset));
@@ -877,6 +881,7 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
     return 8;
 
   // All opcodes that have a single ULEB (signed or unsigned) argument
+  case DW_OP_addrx:           // 0xa1 1 ULEB128 index
   case DW_OP_constu:          // 0x10 1 ULEB128 constant
   case DW_OP_consts:          // 0x11 1 SLEB128 constant
   case DW_OP_plus_uconst:     // 0x23 1 ULEB128 addend
@@ -957,7 +962,7 @@ lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(uint32_t op_addr_idx,
         return op_file_addr;
       else
         ++curr_op_addr_idx;
-    } else if (op == DW_OP_GNU_addr_index) {
+    } else if (op == DW_OP_GNU_addr_index || op == DW_OP_addrx) {
       uint64_t index = m_data.GetULEB128(&offset);
       if (curr_op_addr_idx == op_addr_idx) {
         if (!m_dwarf_cu) {
@@ -2902,13 +2907,14 @@ bool DWARFExpression::Evaluate(
     } break;
 
     //----------------------------------------------------------------------
-    // OPCODE: DW_OP_GNU_addr_index
+    // OPCODE: DW_OP_addrx (DW_OP_GNU_addr_index is the legacy name.)
     // OPERANDS: 1
     //      ULEB128: index to the .debug_addr section
     // DESCRIPTION: Pushes an address to the stack from the .debug_addr
     // section with the base address specified by the DW_AT_addr_base attribute
     // and the 0 based index is the ULEB128 encoded index.
     //----------------------------------------------------------------------
+    case DW_OP_addrx:
     case DW_OP_GNU_addr_index: {
       if (!dwarf_cu) {
         if (error_ptr)
@@ -3194,6 +3200,7 @@ static bool print_dwarf_exp_op(Stream &s, const DataExtractor &data,
   case DW_OP_call_ref:
     size = dwarf_ref_size;
     break;
+  case DW_OP_addrx:
   case DW_OP_piece:
   case DW_OP_plus_uconst:
   case DW_OP_regx:

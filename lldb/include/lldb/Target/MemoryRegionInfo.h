@@ -10,9 +10,9 @@
 #ifndef lldb_MemoryRegionInfo_h
 #define lldb_MemoryRegionInfo_h
 
-#include "lldb/Core/RangeMap.h"
-#include "llvm/Support/FormatProviders.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RangeMap.h"
+#include "llvm/Support/FormatProviders.h"
 
 namespace lldb_private {
 class MemoryRegionInfo {
@@ -44,7 +44,7 @@ public:
 
   OptionalBool GetMapped() const { return m_mapped; }
 
-  const ConstString &GetName() const { return m_name; }
+  ConstString GetName() const { return m_name; }
 
   void SetReadable(OptionalBool val) { m_read = val; }
 

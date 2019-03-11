@@ -23,6 +23,7 @@ class CreateAfterAttachTestCase(TestBase):
     # Occasionally hangs on Windows, may be same as other issues.
     @skipIfWindows
     @skipIfiOSSimulator
+    @expectedFailureNetBSD
     def test_create_after_attach_with_popen(self):
         """Test thread creation after process attach."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
@@ -33,6 +34,7 @@ class CreateAfterAttachTestCase(TestBase):
     @skipIfRemote
     @skipIfWindows  # Windows doesn't have fork.
     @skipIfiOSSimulator
+    @expectedFailureNetBSD
     def test_create_after_attach_with_fork(self):
         """Test thread creation after process attach."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))

@@ -9,8 +9,8 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-LABEL: demote:
 ; CHECK-NEXT: .functype demote (f32) -> (f32){{$}}
 ; CHECK-NEXT: local.get	$push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: i32.call	$push[[L1:[0-9]+]]=, __gnu_f2h_ieee@FUNCTION, $pop[[L0]]{{$}}
-; CHECK-NEXT: f32.call	$push[[L2:[0-9]+]]=, __gnu_h2f_ieee@FUNCTION, $pop[[L1]]{{$}}
+; CHECK-NEXT: i32.call	$push[[L1:[0-9]+]]=, __gnu_f2h_ieee, $pop[[L0]]{{$}}
+; CHECK-NEXT: f32.call	$push[[L2:[0-9]+]]=, __gnu_h2f_ieee, $pop[[L1]]{{$}}
 ; CHECK-NEXT: return  	$pop[[L2]]{{$}}
 define half @demote(float %f) {
     %t = fptrunc float %f to half

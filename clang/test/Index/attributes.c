@@ -14,6 +14,12 @@ enum __attribute((flag_enum)) FlagEnum {
 
 void convergent_fn() __attribute__((convergent));
 
+int warn_unused_result_fn() __attribute__((warn_unused_result));
+
+struct __attribute__((warn_unused)) WarnUnused {
+  int b;
+};
+
 // CHECK: attributes.c:3:32: StructDecl=Test2:3:32 (Definition) Extent=[3:1 - 5:2]
 // CHECK: attributes.c:3:23: attribute(packed)=packed Extent=[3:23 - 3:29]
 // CHECK: attributes.c:4:8: FieldDecl=a:4:8 (Definition) Extent=[4:3 - 4:9] [access=public]
@@ -29,3 +35,7 @@ void convergent_fn() __attribute__((convergent));
 // CHECK: attributes.c:12:3: EnumConstantDecl=Foo:12:3 (Definition) Extent=[12:3 - 12:6]
 // CHECK: attributes.c:15:6: FunctionDecl=convergent_fn:15:6 Extent=[15:1 - 15:49]
 // CHECK: attributes.c:15:37: attribute(convergent)= Extent=[15:37 - 15:47]
+// CHECK: attributes.c:17:5: FunctionDecl=warn_unused_result_fn:17:5 Extent=[17:1 - 17:64]
+// CHECK: attributes.c:17:44: attribute(warn_unused_result)= Extent=[17:44 - 17:62]
+// CHECK: attributes.c:19:37: StructDecl=WarnUnused:19:37 (Definition) Extent=[19:1 - 21:2]
+// CHECK: attributes.c:19:23: attribute(warn_unused)= Extent=[19:23 - 19:34]

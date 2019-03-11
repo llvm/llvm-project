@@ -368,9 +368,6 @@ TEST_F(DocumentSymbolsTest, BasicSymbols) {
       // Namespace alias
       namespace baz = bar;
 
-      // FIXME: using declaration is not supported as the IndexAction will ignore
-      // implicit declarations (the implicit using shadow declaration) by default,
-      // and there is no way to customize this behavior at the moment.
       using bar::v2;
       } // namespace foo
     )");
@@ -415,7 +412,7 @@ TEST_F(DocumentSymbolsTest, BasicSymbols) {
                                           Children()))),
                      AllOf(WithName("baz"), WithKind(SymbolKind::Namespace),
                            Children()),
-                     AllOf(WithName("v2"), WithKind(SymbolKind::Variable))))}));
+                     AllOf(WithName("v2"), WithKind(SymbolKind::Namespace))))}));
 }
 
 TEST_F(DocumentSymbolsTest, DeclarationDefinition) {

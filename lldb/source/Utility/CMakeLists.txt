@@ -64,6 +64,7 @@ add_lldb_library(lldbUtility
   Log.cpp
   Logging.cpp
   NameMatches.cpp
+  ProcessInfo.cpp
   RegisterValue.cpp
   RegularExpression.cpp
   Reproducer.cpp
@@ -85,6 +86,7 @@ add_lldb_library(lldbUtility
   TildeExpressionResolver.cpp
   Timer.cpp
   UserID.cpp
+  UserIDResolver.cpp
   UriParser.cpp
   UUID.cpp
   VASprintf.cpp

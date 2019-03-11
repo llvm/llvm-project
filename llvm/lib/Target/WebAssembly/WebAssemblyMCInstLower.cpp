@@ -122,13 +122,8 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(MCSymbol *Sym,
                                                      int64_t Offset,
                                                      bool IsFunc, bool IsGlob,
                                                      bool IsEvent) const {
-  MCSymbolRefExpr::VariantKind VK =
-      IsFunc ? MCSymbolRefExpr::VK_WebAssembly_FUNCTION
-             : IsGlob ? MCSymbolRefExpr::VK_WebAssembly_GLOBAL
-                      : IsEvent ? MCSymbolRefExpr::VK_WebAssembly_EVENT
-                                : MCSymbolRefExpr::VK_None;
-
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, VK, Ctx);
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
 
   if (Offset != 0) {
     if (IsFunc)

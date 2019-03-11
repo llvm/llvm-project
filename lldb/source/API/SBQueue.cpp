@@ -8,6 +8,7 @@
 
 #include <inttypes.h>
 
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBQueue.h"
 
 #include "lldb/API/SBProcess.h"
@@ -18,7 +19,6 @@
 #include "lldb/Target/Queue.h"
 #include "lldb/Target/QueueItem.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -70,10 +70,6 @@ public:
     if (queue_sp) {
       result = queue_sp->GetID();
     }
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-    if (log)
-      log->Printf("SBQueue(%p)::GetQueueID () => 0x%" PRIx64,
-                  static_cast<const void *>(this), result);
     return result;
   }
 
@@ -83,10 +79,6 @@ public:
     if (queue_sp) {
       result = queue_sp->GetIndexID();
     }
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-    if (log)
-      log->Printf("SBQueueImpl(%p)::GetIndexID () => %d",
-                  static_cast<const void *>(this), result);
     return result;
   }
 
@@ -96,12 +88,6 @@ public:
     if (queue_sp.get()) {
       name = queue_sp->GetName();
     }
-
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-    if (log)
-      log->Printf("SBQueueImpl(%p)::GetName () => %s",
-                  static_cast<const void *>(this), name ? name : "NULL");
-
     return name;
   }
 
@@ -231,12 +217,18 @@ private:
 };
 }
 
-SBQueue::SBQueue() : m_opaque_sp(new QueueImpl()) {}
+SBQueue::SBQueue() : m_opaque_sp(new QueueImpl()) {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBQueue);
+}
 
 SBQueue::SBQueue(const QueueSP &queue_sp)
-    : m_opaque_sp(new QueueImpl(queue_sp)) {}
+    : m_opaque_sp(new QueueImpl(queue_sp)) {
+  LLDB_RECORD_CONSTRUCTOR(SBQueue, (const lldb::QueueSP &), queue_sp);
+}
 
 SBQueue::SBQueue(const SBQueue &rhs) {
+  LLDB_RECORD_CONSTRUCTOR(SBQueue, (const lldb::SBQueue &), rhs);
+
   if (&rhs == this)
     return;
 
@@ -244,6 +236,9 @@ SBQueue::SBQueue(const SBQueue &rhs) {
 }
 
 const lldb::SBQueue &SBQueue::operator=(const lldb::SBQueue &rhs) {
+  LLDB_RECORD_METHOD(const lldb::SBQueue &,
+                     SBQueue, operator=,(const lldb::SBQueue &), rhs);
+
   m_opaque_sp = rhs.m_opaque_sp;
   return *this;
 }
@@ -251,18 +246,18 @@ const lldb::SBQueue &SBQueue::operator=(const lldb::SBQueue &rhs) {
 SBQueue::~SBQueue() {}
 
 bool SBQueue::IsValid() const {
-  bool is_valid = m_opaque_sp->IsValid();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBQueue(0x%" PRIx64 ")::IsValid() == %s",
-                m_opaque_sp->GetQueueID(), is_valid ? "true" : "false");
-  return is_valid;
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueue, IsValid);
+  return this->operator bool();
+}
+SBQueue::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueue, operator bool);
+
+  return m_opaque_sp->IsValid();
 }
 
 void SBQueue::Clear() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBQueue(0x%" PRIx64 ")::Clear()", m_opaque_sp->GetQueueID());
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBQueue, Clear);
+
   m_opaque_sp->Clear();
 }
 
@@ -271,76 +266,65 @@ void SBQueue::SetQueue(const QueueSP &queue_sp) {
 }
 
 lldb::queue_id_t SBQueue::GetQueueID() const {
-  lldb::queue_id_t qid = m_opaque_sp->GetQueueID();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBQueue(0x%" PRIx64 ")::GetQueueID() == 0x%" PRIx64,
-                m_opaque_sp->GetQueueID(), (uint64_t)qid);
-  return qid;
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::queue_id_t, SBQueue, GetQueueID);
+
+  return m_opaque_sp->GetQueueID();
 }
 
 uint32_t SBQueue::GetIndexID() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBQueue, GetIndexID);
+
   uint32_t index_id = m_opaque_sp->GetIndexID();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBQueue(0x%" PRIx64 ")::GetIndexID() == 0x%" PRIx32,
-                m_opaque_sp->GetQueueID(), index_id);
   return index_id;
 }
 
 const char *SBQueue::GetName() const {
-  const char *name = m_opaque_sp->GetName();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBQueue(0x%" PRIx64 ")::GetName() == %s",
-                m_opaque_sp->GetQueueID(), name ? name : "");
-  return name;
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBQueue, GetName);
+
+  return m_opaque_sp->GetName();
 }
 
 uint32_t SBQueue::GetNumThreads() {
-  uint32_t numthreads = m_opaque_sp->GetNumThreads();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBQueue(0x%" PRIx64 ")::GetNumThreads() == %d",
-                m_opaque_sp->GetQueueID(), numthreads);
-  return numthreads;
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBQueue, GetNumThreads);
+
+  return m_opaque_sp->GetNumThreads();
 }
 
 SBThread SBQueue::GetThreadAtIndex(uint32_t idx) {
+  LLDB_RECORD_METHOD(lldb::SBThread, SBQueue, GetThreadAtIndex, (uint32_t),
+                     idx);
+
   SBThread th = m_opaque_sp->GetThreadAtIndex(idx);
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBQueue(0x%" PRIx64 ")::GetThreadAtIndex(%d)",
-                m_opaque_sp->GetQueueID(), idx);
-  return th;
+  return LLDB_RECORD_RESULT(th);
 }
 
 uint32_t SBQueue::GetNumPendingItems() {
-  uint32_t pending_items = m_opaque_sp->GetNumPendingItems();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBQueue(0x%" PRIx64 ")::GetNumPendingItems() == %d",
-                m_opaque_sp->GetQueueID(), pending_items);
-  return pending_items;
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBQueue, GetNumPendingItems);
+
+  return m_opaque_sp->GetNumPendingItems();
 }
 
 SBQueueItem SBQueue::GetPendingItemAtIndex(uint32_t idx) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBQueue(0x%" PRIx64 ")::GetPendingItemAtIndex(%d)",
-                m_opaque_sp->GetQueueID(), idx);
-  return m_opaque_sp->GetPendingItemAtIndex(idx);
+  LLDB_RECORD_METHOD(lldb::SBQueueItem, SBQueue, GetPendingItemAtIndex,
+                     (uint32_t), idx);
+
+  return LLDB_RECORD_RESULT(m_opaque_sp->GetPendingItemAtIndex(idx));
 }
 
 uint32_t SBQueue::GetNumRunningItems() {
-  uint32_t running_items = m_opaque_sp->GetNumRunningItems();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBQueue(0x%" PRIx64 ")::GetNumRunningItems() == %d",
-                m_opaque_sp->GetQueueID(), running_items);
-  return running_items;
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBQueue, GetNumRunningItems);
+
+  return m_opaque_sp->GetNumRunningItems();
 }
 
-SBProcess SBQueue::GetProcess() { return m_opaque_sp->GetProcess(); }
+SBProcess SBQueue::GetProcess() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBProcess, SBQueue, GetProcess);
 
-lldb::QueueKind SBQueue::GetKind() { return m_opaque_sp->GetKind(); }
+  return LLDB_RECORD_RESULT(m_opaque_sp->GetProcess());
+}
+
+lldb::QueueKind SBQueue::GetKind() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::QueueKind, SBQueue, GetKind);
+
+  return m_opaque_sp->GetKind();
+}

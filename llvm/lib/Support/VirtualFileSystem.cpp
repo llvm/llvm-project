@@ -66,19 +66,19 @@ Status::Status(const file_status &Status)
       User(Status.getUser()), Group(Status.getGroup()), Size(Status.getSize()),
       Type(Status.type()), Perms(Status.permissions()) {}
 
-Status::Status(StringRef Name, UniqueID UID, sys::TimePoint<> MTime,
+Status::Status(const Twine &Name, UniqueID UID, sys::TimePoint<> MTime,
                uint32_t User, uint32_t Group, uint64_t Size, file_type Type,
                perms Perms)
-    : Name(Name), UID(UID), MTime(MTime), User(User), Group(Group), Size(Size),
-      Type(Type), Perms(Perms) {}
+    : Name(Name.str()), UID(UID), MTime(MTime), User(User), Group(Group),
+      Size(Size), Type(Type), Perms(Perms) {}
 
-Status Status::copyWithNewName(const Status &In, StringRef NewName) {
+Status Status::copyWithNewName(const Status &In, const Twine &NewName) {
   return Status(NewName, In.getUniqueID(), In.getLastModificationTime(),
                 In.getUser(), In.getGroup(), In.getSize(), In.getType(),
                 In.getPermissions());
 }
 
-Status Status::copyWithNewName(const file_status &In, StringRef NewName) {
+Status Status::copyWithNewName(const file_status &In, const Twine &NewName) {
   return Status(NewName, In.getUniqueID(), In.getLastModificationTime(),
                 In.getUser(), In.getGroup(), In.getSize(), In.type(),
                 In.permissions());
@@ -288,7 +288,7 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
   if (std::error_code EC =
           sys::fs::status(adjustPath(Path, Storage), RealStatus))
     return EC;
-  return Status::copyWithNewName(RealStatus, Path.str());
+  return Status::copyWithNewName(RealStatus, Path);
 }
 
 ErrorOr<std::unique_ptr<File>>
@@ -553,7 +553,7 @@ public:
   /// Return the \p Status for this node. \p RequestedName should be the name
   /// through which the caller referred to this node. It will override
   /// \p Status::Name in the return value, to mimic the behavior of \p RealFile.
-  Status getStatus(StringRef RequestedName) const {
+  Status getStatus(const Twine &RequestedName) const {
     return Status::copyWithNewName(Stat, RequestedName);
   }
   llvm::MemoryBuffer *getBuffer() const { return Buffer.get(); }
@@ -627,7 +627,7 @@ public:
   /// Return the \p Status for this node. \p RequestedName should be the name
   /// through which the caller referred to this node. It will override
   /// \p Status::Name in the return value, to mimic the behavior of \p RealFile.
-  Status getStatus(StringRef RequestedName) const {
+  Status getStatus(const Twine &RequestedName) const {
     return Status::copyWithNewName(Stat, RequestedName);
   }
   InMemoryNode *getChild(StringRef Name) {
@@ -661,7 +661,7 @@ public:
 };
 
 namespace {
-Status getNodeStatus(const InMemoryNode *Node, StringRef RequestedName) {
+Status getNodeStatus(const InMemoryNode *Node, const Twine &RequestedName) {
   if (auto Dir = dyn_cast<detail::InMemoryDirectory>(Node))
     return Dir->getStatus(RequestedName);
   if (auto File = dyn_cast<detail::InMemoryFile>(Node))
@@ -859,7 +859,7 @@ bool InMemoryFileSystem::addHardLink(const Twine &FromPath,
 llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
   auto Node = lookupInMemoryNode(*this, Root.get(), Path);
   if (Node)
-    return detail::getNodeStatus(*Node, Path.str());
+    return detail::getNodeStatus(*Node, Path);
   return Node.getError();
 }
 
@@ -1675,7 +1675,7 @@ static Status getRedirectedFileStatus(const Twine &Path, bool UseExternalNames,
                                       Status ExternalStatus) {
   Status S = ExternalStatus;
   if (!UseExternalNames)
-    S = Status::copyWithNewName(S, Path.str());
+    S = Status::copyWithNewName(S, Path);
   S.IsVFSMapped = true;
   return S;
 }
@@ -1692,7 +1692,7 @@ ErrorOr<Status> RedirectingFileSystem::status(const Twine &Path,
     return S;
   } else { // directory
     auto *DE = cast<RedirectingFileSystem::RedirectingDirectoryEntry>(E);
-    return Status::copyWithNewName(DE->getStatus(), Path.str());
+    return Status::copyWithNewName(DE->getStatus(), Path);
   }
 }
 

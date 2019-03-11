@@ -41,7 +41,7 @@ void fi1(atomic_int *i) {
   // CHECK: load atomic i32, i32* %{{[.0-9A-Z_a-z]+}} seq_cst
   x = __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_all_svm_devices);
 
-  // CHECK: load atomic i32, i32* %{{[.0-9A-Z_a-z]+}} syncscope("subgroup") seq_cst
+  // CHECK: load atomic i32, i32* %{{[.0-9A-Z_a-z]+}} syncscope("wavefront") seq_cst
   x = __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_sub_group);
 }
 
@@ -109,7 +109,7 @@ void fi5(atomic_int *i, int scope) {
   // CHECK: load atomic i32, i32* %{{.*}} seq_cst
   // CHECK: br label %[[continue]]
   // CHECK: [[opencl_subgroup]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("subgroup") seq_cst
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("wavefront") seq_cst
   // CHECK: br label %[[continue]]
   // CHECK: [[continue]]:
   int x = __opencl_atomic_load(i, memory_order_seq_cst, scope);
@@ -147,7 +147,7 @@ void fi6(atomic_int *i, int order, int scope) {
   // CHECK: [[MON_ALL]]:
   // CHECK: load atomic i32, i32* %{{.*}} monotonic
   // CHECK: [[MON_SUB]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("subgroup") monotonic
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("wavefront") monotonic
   // CHECK: [[ACQ_WG]]:
   // CHECK: load atomic i32, i32* %{{.*}} syncscope("workgroup") acquire
   // CHECK: [[ACQ_DEV]]:
@@ -155,7 +155,7 @@ void fi6(atomic_int *i, int order, int scope) {
   // CHECK: [[ACQ_ALL]]:
   // CHECK: load atomic i32, i32* %{{.*}} acquire
   // CHECK: [[ACQ_SUB]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("subgroup") acquire
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("wavefront") acquire
   // CHECK: [[SEQ_WG]]:
   // CHECK: load atomic i32, i32* %{{.*}} syncscope("workgroup") seq_cst
   // CHECK: [[SEQ_DEV]]:
@@ -163,7 +163,7 @@ void fi6(atomic_int *i, int order, int scope) {
   // CHECK: [[SEQ_ALL]]:
   // CHECK: load atomic i32, i32* %{{.*}} seq_cst
   // CHECK: [[SEQ_SUB]]:
-  // CHECK: load atomic i32, i32* %{{.*}} syncscope("subgroup") seq_cst
+  // CHECK: load atomic i32, i32* %{{.*}} syncscope("wavefront") seq_cst
   int x = __opencl_atomic_load(i, order, scope);
 }
 

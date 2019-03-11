@@ -33,7 +33,7 @@ typedef enum {
 } PredicateBroadcastType;
 
 //----------------------------------------------------------------------
-/// @class Predicate Predicate.h "lldb/Utility/Predicate.h"
+/// \class Predicate Predicate.h "lldb/Utility/Predicate.h"
 /// A C++ wrapper class for providing threaded access to a value of
 /// type T.
 ///
@@ -58,7 +58,7 @@ public:
   /// Initializes the mutex and condition with their default
   /// constructors, and initializes the value with \a initial_value.
   ///
-  /// @param[in] initial_value
+  /// \param[in] initial_value
   ///     The initial value for our T object.
   //------------------------------------------------------------------
   Predicate(T initial_value)
@@ -77,7 +77,7 @@ public:
   /// Copies the current \a m_value in a thread safe manor and returns
   /// the copied value.
   ///
-  /// @return
+  /// \return
   ///     A copy of the current value.
   //------------------------------------------------------------------
   T GetValue() const {
@@ -92,14 +92,14 @@ public:
   /// Set the contained \a m_value to \a new_value in a thread safe
   /// way and broadcast if needed.
   ///
-  /// @param[in] value
+  /// \param[in] value
   ///     The new value to set.
   ///
-  /// @param[in] broadcast_type
+  /// \param[in] broadcast_type
   ///     A value indicating when and if to broadcast. See the
   ///     PredicateBroadcastType enumeration for details.
   ///
-  /// @see Predicate::Broadcast()
+  /// \see Predicate::Broadcast()
   //------------------------------------------------------------------
   void SetValue(T value, PredicateBroadcastType broadcast_type) {
     std::lock_guard<std::mutex> guard(m_mutex);
@@ -125,15 +125,15 @@ public:
   /// into a wait state. It may be necessary for the calling code to use
   /// additional thread synchronization methods to detect transitory states.
   ///
-  /// @param[in] Cond
+  /// \param[in] Cond
   ///     The condition we want \a m_value satisfy.
   ///
-  /// @param[in] timeout
+  /// \param[in] timeout
   ///     How long to wait for the condition to hold.
   ///
-  /// @return
-  ///     @li m_value if Cond(m_value) is true.
-  ///     @li None otherwise (timeout occurred).
+  /// \return
+  ///     \li m_value if Cond(m_value) is true.
+  ///     \li None otherwise (timeout occurred).
   //------------------------------------------------------------------
   template <typename C>
   llvm::Optional<T> WaitFor(C Cond, const Timeout<std::micro> &timeout) {
@@ -161,15 +161,15 @@ public:
   /// may be necessary for the calling code to use additional thread
   /// synchronization methods to detect transitory states.
   ///
-  /// @param[in] value
+  /// \param[in] value
   ///     The value we want \a m_value to be equal to.
   ///
-  /// @param[in] timeout
+  /// \param[in] timeout
   ///     How long to wait for the condition to hold.
   ///
-  /// @return
-  ///     @li \b true if the \a m_value is equal to \a value
-  ///     @li \b false otherwise (timeout occurred)
+  /// \return
+  ///     \li \b true if the \a m_value is equal to \a value
+  ///     \li \b false otherwise (timeout occurred)
   //------------------------------------------------------------------
   bool WaitForValueEqualTo(T value,
                            const Timeout<std::micro> &timeout = llvm::None) {
@@ -191,15 +191,15 @@ public:
   /// necessary for the calling code to use additional thread
   /// synchronization methods to detect transitory states.
   ///
-  /// @param[in] value
+  /// \param[in] value
   ///     The value we want \a m_value to not be equal to.
   ///
-  /// @param[in] timeout
+  /// \param[in] timeout
   ///     How long to wait for the condition to hold.
   ///
-  /// @return
-  ///     @li m_value if m_value != value
-  ///     @li None otherwise (timeout occurred).
+  /// \return
+  ///     \li m_value if m_value != value
+  ///     \li None otherwise (timeout occurred).
   //------------------------------------------------------------------
   llvm::Optional<T>
   WaitForValueNotEqualTo(T value,

@@ -11,6 +11,7 @@
 
 #include "MCTargetDesc/RISCVFixupKinds.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "Utils/RISCVBaseInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -25,11 +26,17 @@ class RISCVAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
   bool Is64Bit;
   bool ForceRelocs = false;
+  const MCTargetOptions &TargetOptions;
+  RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
 
 public:
-  RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit)
-      : MCAsmBackend(support::little), STI(STI), OSABI(OSABI),
-        Is64Bit(Is64Bit) {}
+  RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
+                  const MCTargetOptions &Options)
+      : MCAsmBackend(support::little), STI(STI), OSABI(OSABI), Is64Bit(Is64Bit),
+        TargetOptions(Options) {
+    TargetABI = RISCVABI::computeTargetABI(
+        STI.getTargetTriple(), STI.getFeatureBits(), Options.getABIName());
+  }
   ~RISCVAsmBackend() override {}
 
   void setForceRelocs() { ForceRelocs = true; }
@@ -118,6 +125,9 @@ public:
 
 
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+
+  const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
+  RISCVABI::ABI getTargetABI() const { return TargetABI; }
 };
 }
 

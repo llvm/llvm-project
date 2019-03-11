@@ -38,3 +38,15 @@ entry:
   store float %8, float* %0, align 4
   ret void
 }
+
+
+define void @bitstore_fold() {
+; CHECK-LABEL: bitstore_fold:
+; CHECK:       # %bb.0: # %BB
+; CHECK-NEXT:    movl $-2, 0
+; CHECK-NEXT:    retq
+BB:
+   store i32 -1, i32* null
+   store i1 false, i1* null
+   ret void
+}

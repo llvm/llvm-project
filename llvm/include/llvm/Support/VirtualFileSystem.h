@@ -58,15 +58,15 @@ public:
 
   Status() = default;
   Status(const llvm::sys::fs::file_status &Status);
-  Status(StringRef Name, llvm::sys::fs::UniqueID UID,
+  Status(const Twine &Name, llvm::sys::fs::UniqueID UID,
          llvm::sys::TimePoint<> MTime, uint32_t User, uint32_t Group,
          uint64_t Size, llvm::sys::fs::file_type Type,
          llvm::sys::fs::perms Perms);
 
   /// Get a copy of a Status with a different name.
-  static Status copyWithNewName(const Status &In, StringRef NewName);
+  static Status copyWithNewName(const Status &In, const Twine &NewName);
   static Status copyWithNewName(const llvm::sys::fs::file_status &In,
-                                StringRef NewName);
+                                const Twine &NewName);
 
   /// Returns the name that should be used for this file or directory.
   StringRef getName() const { return Name; }

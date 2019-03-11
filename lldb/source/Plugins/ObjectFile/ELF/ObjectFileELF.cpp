@@ -16,7 +16,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
@@ -26,6 +25,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
@@ -117,7 +117,7 @@ const elf_word LLDB_NT_GNU_ABI_OS_SOLARIS = 0x02;
 #define NT_METAG_TLS 0x502
 
 //===----------------------------------------------------------------------===//
-/// @class ELFRelocation
+/// \class ELFRelocation
 /// Generic wrapper for ELFRel and ELFRela.
 ///
 /// This helper class allows us to parse both ELFRel and ELFRela relocation
@@ -127,7 +127,7 @@ public:
   /// Constructs an ELFRelocation entry with a personality as given by @p
   /// type.
   ///
-  /// @param type Either DT_REL or DT_RELA.  Any other value is invalid.
+  /// \param type Either DT_REL or DT_RELA.  Any other value is invalid.
   ELFRelocation(unsigned type);
 
   ~ELFRelocation();
@@ -2176,7 +2176,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     if (symbol_type == eSymbolTypeInvalid && symbol.getType() != STT_SECTION) {
       if (symbol_section_sp) {
-        const ConstString &sect_name = symbol_section_sp->GetName();
+        ConstString sect_name = symbol_section_sp->GetName();
         if (sect_name == text_section_name || sect_name == init_section_name ||
             sect_name == fini_section_name || sect_name == ctors_section_name ||
             sect_name == dtors_section_name) {
@@ -2320,7 +2320,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     if (symbol_section_sp && module_section_list &&
         module_section_list != section_list) {
-      const ConstString &sect_name = symbol_section_sp->GetName();
+      ConstString sect_name = symbol_section_sp->GetName();
       auto section_it = section_name_to_section.find(sect_name.GetCString());
       if (section_it == section_name_to_section.end())
         section_it =
@@ -3309,7 +3309,7 @@ ArchSpec ObjectFileELF::GetArchitecture() {
   }
 
   if (CalculateType() == eTypeCoreFile &&
-      m_arch_spec.TripleOSIsUnspecifiedUnknown()) {
+      !m_arch_spec.TripleOSWasSpecified()) {
     // Core files don't have section headers yet they have PT_NOTE program
     // headers that might shed more light on the architecture
     for (const elf::ELFProgramHeader &H : ProgramHeaders()) {

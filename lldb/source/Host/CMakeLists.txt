@@ -37,14 +37,12 @@ add_host_subdirectory(common
   common/NativeWatchpointList.cpp
   common/OptionParser.cpp
   common/PipeBase.cpp
-  common/ProcessInfo.cpp
   common/ProcessLaunchInfo.cpp
   common/ProcessRunLock.cpp
   common/PseudoTerminal.cpp
   common/SocketAddress.cpp
   common/Socket.cpp
   common/StringConvert.cpp
-  common/Symbols.cpp
   common/TaskPool.cpp
   common/TCPSocket.cpp
   common/Terminal.cpp
@@ -95,7 +93,6 @@ else()
     add_subdirectory(macosx/objcxx)
     set(LLDBObjCLibs lldbHostMacOSXObjCXX)
     add_host_subdirectory(macosx
-      macosx/Symbols.cpp
       macosx/cfcpp/CFCBundle.cpp
       macosx/cfcpp/CFCData.cpp
       macosx/cfcpp/CFCMutableArray.cpp
@@ -165,9 +162,6 @@ add_lldb_library(lldbHost
   ${HOST_SOURCES}
 
   LINK_LIBS
-    lldbCore
-    lldbSymbol
-    lldbTarget
     lldbUtility
     ${EXTRA_LIBS}
     ${LLDBObjCLibs}

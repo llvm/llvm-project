@@ -35,6 +35,7 @@ class LoopInfo;
 class MDNode;
 class MemoryDependenceResults;
 class MemorySSAUpdater;
+class PostDominatorTree;
 class ReturnInst;
 class TargetLibraryInfo;
 class Value;
@@ -60,6 +61,12 @@ void DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
 void DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs,
                       DomTreeUpdater *DTU = nullptr,
                       bool KeepOneInputPHIs = false);
+
+/// Delete all basic blocks from \p F that are not reachable from its entry
+/// node. If \p KeepOneInputPHIs is true, one-input Phis in successors of
+/// blocks being deleted will be preserved.
+bool EliminateUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
+                                bool KeepOneInputPHIs = false);
 
 /// We know that BB has one predecessor. If there are any single-entry PHI nodes
 /// in it, fold them away. This handles the case when all entries to the PHI
@@ -103,6 +110,7 @@ void ReplaceInstWithInst(Instruction *From, Instruction *To);
 /// during critical edge splitting.
 struct CriticalEdgeSplittingOptions {
   DominatorTree *DT;
+  PostDominatorTree *PDT;
   LoopInfo *LI;
   MemorySSAUpdater *MSSAU;
   bool MergeIdenticalEdges = false;
@@ -111,8 +119,9 @@ struct CriticalEdgeSplittingOptions {
 
   CriticalEdgeSplittingOptions(DominatorTree *DT = nullptr,
                                LoopInfo *LI = nullptr,
-                               MemorySSAUpdater *MSSAU = nullptr)
-      : DT(DT), LI(LI), MSSAU(MSSAU) {}
+                               MemorySSAUpdater *MSSAU = nullptr,
+                               PostDominatorTree *PDT = nullptr)
+      : DT(DT), PDT(PDT), LI(LI), MSSAU(MSSAU) {}
 
   CriticalEdgeSplittingOptions &setMergeIdenticalEdges() {
     MergeIdenticalEdges = true;

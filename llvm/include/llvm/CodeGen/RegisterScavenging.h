@@ -157,10 +157,15 @@ public:
   /// Returns the scavenged register.
   /// This is deprecated as it depends on the quality of the kill flags being
   /// present; Use scavengeRegisterBackwards() instead!
+  ///
+  /// If \p AllowSpill is false, fail if a spill is required to make the
+  /// register available, and return NoRegister.
   unsigned scavengeRegister(const TargetRegisterClass *RC,
-                            MachineBasicBlock::iterator I, int SPAdj);
-  unsigned scavengeRegister(const TargetRegisterClass *RegClass, int SPAdj) {
-    return scavengeRegister(RegClass, MBBI, SPAdj);
+                            MachineBasicBlock::iterator I, int SPAdj,
+                            bool AllowSpill = true);
+  unsigned scavengeRegister(const TargetRegisterClass *RegClass, int SPAdj,
+                            bool AllowSpill = true) {
+    return scavengeRegister(RegClass, MBBI, SPAdj, AllowSpill);
   }
 
   /// Make a register of the specific register class available from the current
@@ -169,9 +174,13 @@ public:
   /// SPAdj is the stack adjustment due to call frame, it's passed along to
   /// eliminateFrameIndex().
   /// Returns the scavenged register.
+  ///
+  /// If \p AllowSpill is false, fail if a spill is required to make the
+  /// register available, and return NoRegister.
   unsigned scavengeRegisterBackwards(const TargetRegisterClass &RC,
                                      MachineBasicBlock::iterator To,
-                                     bool RestoreAfter, int SPAdj);
+                                     bool RestoreAfter, int SPAdj,
+                                     bool AllowSpill = true);
 
   /// Tell the scavenger a register is used.
   void setRegUsed(unsigned Reg, LaneBitmask LaneMask = LaneBitmask::getAll());

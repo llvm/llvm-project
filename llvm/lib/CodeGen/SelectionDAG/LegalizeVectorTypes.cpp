@@ -606,6 +606,21 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
     case ISD::FP_ROUND:
       Res = ScalarizeVecOp_FP_ROUND(N, OpNo);
       break;
+    case ISD::VECREDUCE_FADD:
+    case ISD::VECREDUCE_FMUL:
+    case ISD::VECREDUCE_ADD:
+    case ISD::VECREDUCE_MUL:
+    case ISD::VECREDUCE_AND:
+    case ISD::VECREDUCE_OR:
+    case ISD::VECREDUCE_XOR:
+    case ISD::VECREDUCE_SMAX:
+    case ISD::VECREDUCE_SMIN:
+    case ISD::VECREDUCE_UMAX:
+    case ISD::VECREDUCE_UMIN:
+    case ISD::VECREDUCE_FMAX:
+    case ISD::VECREDUCE_FMIN:
+      Res = ScalarizeVecOp_VECREDUCE(N);
+      break;
     }
   }
 
@@ -734,6 +749,14 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_FP_ROUND(SDNode *N, unsigned OpNo) {
                             N->getValueType(0).getVectorElementType(), Elt,
                             N->getOperand(1));
   return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Res);
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE(SDNode *N) {
+  SDValue Res = GetScalarizedVector(N->getOperand(0));
+  // Result type may be wider than element type.
+  if (Res.getValueType() != N->getValueType(0))
+    Res = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), N->getValueType(0), Res);
+  return Res;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3868,6 +3891,22 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::TRUNCATE:
     Res = WidenVecOp_Convert(N);
     break;
+
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
+    Res = WidenVecOp_VECREDUCE(N);
+    break;
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -4214,6 +4253,62 @@ SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {
       DAG.getConstant(0, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
 
   return PromoteTargetBoolean(CC, VT);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
+  SDLoc dl(N);
+  SDValue Op = GetWidenedVector(N->getOperand(0));
+  EVT OrigVT = N->getOperand(0).getValueType();
+  EVT WideVT = Op.getValueType();
+  EVT ElemVT = OrigVT.getVectorElementType();
+
+  SDValue NeutralElem;
+  switch (N->getOpcode()) {
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_UMAX:
+    NeutralElem = DAG.getConstant(0, dl, ElemVT);
+    break;
+  case ISD::VECREDUCE_MUL:
+    NeutralElem = DAG.getConstant(1, dl, ElemVT);
+    break;
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_UMIN:
+    NeutralElem = DAG.getAllOnesConstant(dl, ElemVT);
+    break;
+  case ISD::VECREDUCE_SMAX:
+    NeutralElem = DAG.getConstant(
+        APInt::getSignedMinValue(ElemVT.getSizeInBits()), dl, ElemVT);
+    break;
+  case ISD::VECREDUCE_SMIN:
+    NeutralElem = DAG.getConstant(
+        APInt::getSignedMaxValue(ElemVT.getSizeInBits()), dl, ElemVT);
+    break;
+  case ISD::VECREDUCE_FADD:
+    NeutralElem = DAG.getConstantFP(0.0, dl, ElemVT);
+    break;
+  case ISD::VECREDUCE_FMUL:
+    NeutralElem = DAG.getConstantFP(1.0, dl, ElemVT);
+    break;
+  case ISD::VECREDUCE_FMAX:
+    NeutralElem = DAG.getConstantFP(
+        std::numeric_limits<double>::infinity(), dl, ElemVT);
+    break;
+  case ISD::VECREDUCE_FMIN:
+    NeutralElem = DAG.getConstantFP(
+        -std::numeric_limits<double>::infinity(), dl, ElemVT);
+    break;
+  }
+
+  // Pad the vector with the neutral element.
+  unsigned OrigElts = OrigVT.getVectorNumElements();
+  unsigned WideElts = WideVT.getVectorNumElements();
+  for (unsigned Idx = OrigElts; Idx < WideElts; Idx++)
+    Op = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, WideVT, Op, NeutralElem,
+        DAG.getConstant(Idx, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
+
+  return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Op, N->getFlags());
 }
 
 

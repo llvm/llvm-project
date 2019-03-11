@@ -386,3 +386,29 @@ define i128 @addcarry1_not(i128 %n) {
   %2 = add i128 %1, 1
   ret i128 %2
 }
+
+define i128 @addcarry_to_subcarry(i64 %a, i64 %b) {
+; CHECK-LABEL: addcarry_to_subcarry:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    notq %rsi
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movq %rdi, %rcx
+; CHECK-NEXT:    addq %rsi, %rcx
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    addq $1, %rcx
+; CHECK-NEXT:    adcq %rdi, %rax
+; CHECK-NEXT:    setb %cl
+; CHECK-NEXT:    movzbl %cl, %edx
+; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    adcq $0, %rdx
+; CHECK-NEXT:    retq
+  %notb = xor i64 %b, -1
+  %notb128 = zext i64 %notb to i128
+  %a128 = zext i64 %a to i128
+  %sum1 = add i128 %a128, 1
+  %sub1 = add i128 %sum1, %notb128
+  %hi = lshr i128 %sub1, 64
+  %sum2 = add i128 %hi, %a128
+  %sub2 = add i128 %sum2, %notb128
+  ret i128 %sub2
+}

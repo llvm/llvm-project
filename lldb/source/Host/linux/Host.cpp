@@ -19,8 +19,8 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ScopedPrinter.h"
 
-#include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 
 #include "lldb/Host/FileSystem.h"
@@ -42,6 +42,10 @@ enum class ProcessState {
   TracedOrStopped,
   Zombie,
 };
+}
+
+namespace lldb_private {
+class ProcessLaunchInfo;
 }
 
 static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,

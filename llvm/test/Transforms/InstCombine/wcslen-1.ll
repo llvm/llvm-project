@@ -130,9 +130,9 @@ define i64 @test_simplify10(i32 %x) {
 define i64 @test_simplify11(i32 %x) {
 ; CHECK-LABEL: @test_simplify11(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[AND]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i64 9, [[TMP1]]
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw nsw i32 9, [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %and = and i32 %x, 7
   %hello_p = getelementptr inbounds [13 x i32], [13 x i32]* @null_hello_mid, i32 0, i32 %and

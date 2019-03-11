@@ -105,6 +105,22 @@ TEST_P(MappedMemoryTest, AllocAndRelease) {
   EXPECT_FALSE(Memory::releaseMappedMemory(M1));
 }
 
+TEST_P(MappedMemoryTest, AllocAndReleaseHuge) {
+  CHECK_UNSUPPORTED();
+  std::error_code EC;
+  MemoryBlock M1 = Memory::allocateMappedMemory(
+      sizeof(int), nullptr, Flags | Memory::MF_HUGE_HINT, EC);
+  EXPECT_EQ(std::error_code(), EC);
+
+  // Test large/huge memory pages. In the worst case, 4kb pages should be
+  // returned, if large pages aren't available.
+
+  EXPECT_NE((void *)nullptr, M1.base());
+  EXPECT_LE(sizeof(int), M1.size());
+
+  EXPECT_FALSE(Memory::releaseMappedMemory(M1));
+}
+
 TEST_P(MappedMemoryTest, MultipleAllocAndRelease) {
   CHECK_UNSUPPORTED();
   std::error_code EC;

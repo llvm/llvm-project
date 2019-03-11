@@ -544,7 +544,7 @@ Custom SDNodes
 Custom SDNodes should be mapped to Target Pseudos using ``GINodeEquiv``. This
 will cause the instruction selector to import them but you will also need to
 ensure the target pseudo is introduced to the MIR before the instruction
-selector. Any preceeding pass is suitable but the legalizer will be a
+selector. Any preceding pass is suitable but the legalizer will be a
 particularly common choice.
 
 ComplexPatterns

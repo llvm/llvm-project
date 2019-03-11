@@ -38,15 +38,8 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      const llvm::opt::ArgList &Args,
                                      std::vector<StringRef> &Features) {
-  if (const Arg *dAbi = Args.getLastArg(options::OPT_mamdgpu_debugger_abi)) {
-    StringRef value = dAbi->getValue();
-    if (value == "1.0") {
-      Features.push_back("+amdgpu-debugger-insert-nops");
-      Features.push_back("+amdgpu-debugger-emit-prologue");
-    } else {
-      D.Diag(diag::err_drv_clang_unsupported) << dAbi->getAsString(Args);
-    }
-  }
+  if (const Arg *dAbi = Args.getLastArg(options::OPT_mamdgpu_debugger_abi))
+    D.Diag(diag::err_drv_clang_unsupported) << dAbi->getAsString(Args);
 
   handleTargetFeaturesGroup(
     Args, Features, options::OPT_m_amdgpu_Features_Group);

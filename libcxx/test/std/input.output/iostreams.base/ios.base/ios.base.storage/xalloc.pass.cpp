@@ -17,11 +17,9 @@
 
 int main(int, char**)
 {
-    assert(std::ios_base::xalloc() == 0);
-    assert(std::ios_base::xalloc() == 1);
-    assert(std::ios_base::xalloc() == 2);
-    assert(std::ios_base::xalloc() == 3);
-    assert(std::ios_base::xalloc() == 4);
+    int index = std::ios_base::xalloc();
+    for (int i = 0; i < 10000; ++i)
+        assert(std::ios_base::xalloc() == ++index);
 
   return 0;
 }

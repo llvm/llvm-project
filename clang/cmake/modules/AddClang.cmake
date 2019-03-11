@@ -91,6 +91,7 @@ macro(add_clang_library name)
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libclang")
 
       if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+          "clang-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
           NOT LLVM_DISTRIBUTION_COMPONENTS)
         set(export_to_clangtargets EXPORT ClangTargets)
         set_property(GLOBAL PROPERTY CLANG_HAS_EXPORTS True)
@@ -103,7 +104,7 @@ macro(add_clang_library name)
         ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
         RUNTIME DESTINATION bin)
 
-      if (NOT CMAKE_CONFIGURATION_TYPES)
+      if (NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}
                                  DEPENDS ${name}
                                  COMPONENT ${name})
@@ -133,7 +134,7 @@ macro(add_clang_tool name)
   endif()
 
   add_clang_executable(${name} ${ARGN})
-  add_dependencies(${name} clang-headers)
+  add_dependencies(${name} clang-resource-headers)
 
   if (CLANG_BUILD_TOOLS)
     if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
@@ -147,7 +148,7 @@ macro(add_clang_tool name)
       RUNTIME DESTINATION bin
       COMPONENT ${name})
 
-    if(NOT CMAKE_CONFIGURATION_TYPES)
+    if(NOT LLVM_ENABLE_IDE)
       add_llvm_install_targets(install-${name}
                                DEPENDS ${name}
                                COMPONENT ${name})

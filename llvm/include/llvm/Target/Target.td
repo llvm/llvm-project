@@ -121,6 +121,10 @@ class ComposedSubRegIndex<SubRegIndex A, SubRegIndex B>
 // this register class when printing.
 class RegAltNameIndex {
   string Namespace = "";
+
+  // A set to be used if the name for a register is not defined in this set.
+  // This allows creating name sets with only a few alternative names.
+  RegAltNameIndex FallbackRegAltNameIndex = ?;
 }
 def NoRegAltName : RegAltNameIndex;
 
@@ -456,7 +460,11 @@ class Instruction {
   bit isCommutable = 0;     // Is this 3 operand instruction commutable?
   bit isTerminator = 0;     // Is this part of the terminator for a basic block?
   bit isReMaterializable = 0; // Is this instruction re-materializable?
-  bit isPredicable = 0;     // Is this instruction predicable?
+  bit isPredicable = 0;     // 1 means this instruction is predicable
+                            // even if it does not have any operand
+                            // tablegen can identify as a predicate
+  bit isUnpredicable = 0;   // 1 means this instruction is not predicable
+                            // even if it _does_ have a predicate operand
   bit hasDelaySlot = 0;     // Does this instruction have an delay slot?
   bit usesCustomInserter = 0; // Pseudo instr needing special help.
   bit hasPostISelHook = 0;  // To be *adjusted* after isel by target hook.

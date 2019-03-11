@@ -1,4 +1,4 @@
-; RUN: not llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+atomics,+sign-ext | FileCheck %s
 
 ; Currently all wasm atomic memory access instructions are sequentially

@@ -7,15 +7,15 @@ define void @test1(<4 x float>* %F, float* %f) nounwind {
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movaps (%ecx), %xmm0
-; X32-NEXT:    addps %xmm0, %xmm0
+; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    addss %xmm0, %xmm0
 ; X32-NEXT:    movss %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movaps (%rdi), %xmm0
-; X64-NEXT:    addps %xmm0, %xmm0
+; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    addss %xmm0, %xmm0
 ; X64-NEXT:    movss %xmm0, (%rsi)
 ; X64-NEXT:    retq
 entry:

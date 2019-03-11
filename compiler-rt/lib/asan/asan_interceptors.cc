@@ -579,6 +579,11 @@ INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
 }
 #endif  // ASAN_INTERCEPT___CXA_ATEXIT
 
+#if ASAN_INTERCEPT_VFORK
+DEFINE_REAL(int, vfork);
+DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork);
+#endif
+
 // ---------------------- InitializeAsanInterceptors ---------------- {{{1
 namespace __asan {
 void InitializeAsanInterceptors() {
@@ -654,6 +659,10 @@ void InitializeAsanInterceptors() {
   // Intercept atexit function.
 #if ASAN_INTERCEPT___CXA_ATEXIT
   ASAN_INTERCEPT_FUNC(__cxa_atexit);
+#endif
+
+#if ASAN_INTERCEPT_VFORK
+  ASAN_INTERCEPT_FUNC(vfork);
 #endif
 
   InitializePlatformInterceptors();

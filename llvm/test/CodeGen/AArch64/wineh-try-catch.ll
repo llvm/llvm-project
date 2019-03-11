@@ -22,8 +22,8 @@
 ; CHECK:       add     x29, sp, #32
 ; CHECK:       sub     sp, sp, #624
 ; CHECK:       mov     x19, sp
-; CHECK:       orr     x1, xzr, #0xfffffffffffffffe
-; CHECK:       stur    x1, [x19]
+; CHECK:       orr     x0, xzr, #0xfffffffffffffffe
+; CHECK:       stur    x0, [x19]
 
 ; Now check that x is stored at fp - 20.  We check that this is the same
 ; location accessed from the funclet to retrieve x.

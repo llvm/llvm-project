@@ -109,5 +109,21 @@ bb:
   ret void
 }
 
+@var = common hidden local_unnamed_addr addrspace(1) global [4 x i32] zeroinitializer, align 4
+
+; GCN-LABEL: reassoc_i32_ga:
+; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, var@rel32@lo+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, var@rel32@hi+4
+; GCN: s_endpgm
+define amdgpu_kernel void @reassoc_i32_ga(i64 %x) {
+bb:
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %t64 = zext i32 %tid to i64
+  %add1 = getelementptr [4 x i32], [4 x i32] addrspace(1)* @var, i64 0, i64 %t64
+  %add2 = getelementptr i32, i32 addrspace(1)* %add1, i64 %x
+  store volatile i32 1, i32 addrspace(1)* %add2, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.workitem.id.y()

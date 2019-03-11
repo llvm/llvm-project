@@ -128,7 +128,7 @@ public:
 
   virtual const RegisterInfo *GetRegisterInfoArray(uint32_t &count) = 0;
 
-  bool GetRegisterInfoByName(const ConstString &name, RegisterInfo &info);
+  bool GetRegisterInfoByName(ConstString name, RegisterInfo &info);
 
   bool GetRegisterInfoByKind(lldb::RegisterKind reg_kind, uint32_t reg_num,
                              RegisterInfo &info);

@@ -92,7 +92,7 @@ public:
 /// example, throwing calls and guards do not always do this. If we need to know
 /// for sure that some instruction is guaranteed to execute if the given block
 /// is reached, then we need to make sure that there is no implicit control flow
-/// instruction (ICFI) preceeding it. For example, this check is required if we
+/// instruction (ICFI) preceding it. For example, this check is required if we
 /// perform PRE moving non-speculable instruction to other place.
 class ImplicitControlFlowTracking : public InstructionPrecedenceTracking {
 public:

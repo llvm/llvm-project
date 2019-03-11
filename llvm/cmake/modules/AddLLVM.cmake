@@ -633,6 +633,7 @@ macro(add_llvm_library name)
   # config file.
   if (NOT ARG_BUILDTREE_ONLY AND NOT ARG_MODULE)
     set_property( GLOBAL APPEND PROPERTY LLVM_LIBS ${name} )
+    set(in_llvm_libs YES)
   endif()
 
   if (ARG_MODULE AND NOT TARGET ${name})
@@ -644,7 +645,7 @@ macro(add_llvm_library name)
     set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY ${name})
   else()
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "LTO" OR
-        ${name} STREQUAL "OptRemarks" OR
+        ${name} STREQUAL "Remarks" OR
         (LLVM_LINK_LLVM_DYLIB AND ${name} STREQUAL "LLVM"))
       set(install_dir lib${LLVM_LIBDIR_SUFFIX})
       if(ARG_MODULE OR ARG_SHARED OR BUILD_SHARED_LIBS)
@@ -663,6 +664,7 @@ macro(add_llvm_library name)
       endif()
 
       if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+          (in_llvm_libs AND "llvm-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS) OR
           NOT LLVM_DISTRIBUTION_COMPONENTS)
         set(export_to_llvmexports EXPORT LLVMExports)
         set_property(GLOBAL PROPERTY LLVM_HAS_EXPORTS True)

@@ -11,6 +11,7 @@
 #include "Compiler.h"
 #include "Logger.h"
 #include "SourceCode.h"
+#include "Symbol.h"
 #include "Threading.h"
 #include "Trace.h"
 #include "URI.h"
@@ -120,6 +121,7 @@ llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
   } else {
     AbsolutePath = Cmd.Directory;
     llvm::sys::path::append(AbsolutePath, Cmd.Filename);
+    llvm::sys::path::remove_dots(AbsolutePath, true);
   }
   return AbsolutePath;
 }

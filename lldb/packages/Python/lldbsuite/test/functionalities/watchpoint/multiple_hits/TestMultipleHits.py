@@ -23,6 +23,7 @@ class MultipleHitsTestCase(TestBase):
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     @skipIf(bugnumber="llvm.org/pr30758", oslist=["linux"], archs=["arm", "aarch64", "powerpc64le"])
     @skipIfwatchOS
+    @expectedFailureNetBSD
     def test(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

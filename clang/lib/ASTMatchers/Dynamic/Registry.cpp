@@ -147,6 +147,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(caseStmt);
   REGISTER_MATCHER(castExpr);
   REGISTER_MATCHER(characterLiteral);
+  REGISTER_MATCHER(chooseExpr);
   REGISTER_MATCHER(classTemplateDecl);
   REGISTER_MATCHER(classTemplateSpecializationDecl);
   REGISTER_MATCHER(complexType);

@@ -249,7 +249,7 @@ void fn6() {
     int a;
   __asm__(""
             : "=rm"(a), "=rm"(a)
-            : "11m"(a)) // expected-error {{invalid input constraint '11m' in asm}}
+            : "11m"(a)); // expected-error {{invalid input constraint '11m' in asm}}
 }
 
 // PR14269

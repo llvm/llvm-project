@@ -1,0 +1,6 @@
+LLVMRemarkParserCreate
+LLVMRemarkParserGetNext
+LLVMRemarkParserHasError
+LLVMRemarkParserGetErrorMessage
+LLVMRemarkParserDispose
+LLVMRemarkVersion

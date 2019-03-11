@@ -28,7 +28,6 @@ Sections:
     Info:            .text.foo
     Relocations:
       - Offset:          0x0000000000000000
-        Symbol:          ''
         Type:            R_X86_64_NONE
   - Name:            .rela.text.bar
     Type:            SHT_RELA
@@ -36,5 +35,4 @@ Sections:
     Info:            .text.bar
     Relocations:
       - Offset:          0x0000000000000001
-        Symbol:          ''
         Type:            R_X86_64_NONE

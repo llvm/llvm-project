@@ -50,7 +50,6 @@ FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIFixSGPRCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
-FunctionPass *createSIDebuggerInsertNopsPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIFixWWMLivenessPass();
 FunctionPass *createSIFormMemoryClausesPass();
@@ -195,9 +194,6 @@ extern char &SIAnnotateControlFlowPassID;
 
 void initializeSIMemoryLegalizerPass(PassRegistry&);
 extern char &SIMemoryLegalizerID;
-
-void initializeSIDebuggerInsertNopsPass(PassRegistry&);
-extern char &SIDebuggerInsertNopsID;
 
 void initializeSIModeRegisterPass(PassRegistry&);
 extern char &SIModeRegisterID;

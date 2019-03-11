@@ -443,6 +443,31 @@ void tools::AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
           Args.MakeArgString(Twine("-plugin-opt=sample-profile=") + FName));
   }
 
+  auto *CSPGOGenerateArg = Args.getLastArg(options::OPT_fcs_profile_generate,
+                                           options::OPT_fcs_profile_generate_EQ,
+                                           options::OPT_fno_profile_generate);
+  if (CSPGOGenerateArg &&
+      CSPGOGenerateArg->getOption().matches(options::OPT_fno_profile_generate))
+    CSPGOGenerateArg = nullptr;
+
+  auto *ProfileUseArg = getLastProfileUseArg(Args);
+
+  if (CSPGOGenerateArg) {
+    CmdArgs.push_back(Args.MakeArgString("-plugin-opt=cs-profile-generate"));
+    if (CSPGOGenerateArg->getOption().matches(
+            options::OPT_fcs_profile_generate_EQ)) {
+      SmallString<128> Path(CSPGOGenerateArg->getValue());
+      llvm::sys::path::append(Path, "default_%m.profraw");
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("-plugin-opt=cs-profile-path=") + Path));
+    } else
+      CmdArgs.push_back(
+          Args.MakeArgString("-plugin-opt=cs-profile-path=default_%m.profraw"));
+  } else if (ProfileUseArg) {
+    CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=cs-profile-path=") +
+                                         ProfileUseArg->getValue()));
+  }
+
   // Need this flag to turn on new pass manager via Gold plugin.
   if (Args.hasFlag(options::OPT_fexperimental_new_pass_manager,
                    options::OPT_fno_experimental_new_pass_manager,
@@ -688,8 +713,6 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     NonWholeStaticRuntimes.push_back("stats");
     RequiredSymbols.push_back("__sanitizer_stats_register");
   }
-  if (SanArgs.needsEsanRt())
-    StaticRuntimes.push_back("esan");
   if (SanArgs.needsScudoRt()) {
     if (SanArgs.requiresMinimalRuntime()) {
       StaticRuntimes.push_back("scudo_minimal");

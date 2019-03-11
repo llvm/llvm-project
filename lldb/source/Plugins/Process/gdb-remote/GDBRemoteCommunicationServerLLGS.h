@@ -47,7 +47,7 @@ public:
   /// server in a situation where the startup code has been provided
   /// with all the information for a child process to be launched.
   ///
-  /// @return
+  /// \return
   ///     An Status object indicating the success or failure of the
   ///     launch.
   //------------------------------------------------------------------
@@ -59,7 +59,7 @@ public:
   /// This method supports attaching llgs to a process accessible via the
   /// configured Platform.
   ///
-  /// @return
+  /// \return
   ///     An Status object indicating the success or failure of the
   ///     attach operation.
   //------------------------------------------------------------------

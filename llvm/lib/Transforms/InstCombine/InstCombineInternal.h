@@ -592,6 +592,8 @@ private:
   Value *matchSelectFromAndOr(Value *A, Value *B, Value *C, Value *D);
   Value *getSelectCondition(Value *A, Value *B);
 
+  Instruction *foldIntrinsicWithOverflowCommon(IntrinsicInst *II);
+
 public:
   /// Inserts an instruction \p New before instruction \p Old
   ///

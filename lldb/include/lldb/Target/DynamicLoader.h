@@ -45,7 +45,7 @@ class Thread;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class DynamicLoader DynamicLoader.h "lldb/Target/DynamicLoader.h"
+/// \class DynamicLoader DynamicLoader.h "lldb/Target/DynamicLoader.h"
 /// A plug-in interface definition class for dynamic loaders.
 ///
 /// Dynamic loader plug-ins track image (shared library) loading and
@@ -71,11 +71,11 @@ public:
   /// Scans the installed DynamicLoader plug-ins and tries to find an instance
   /// that can be used to track image changes in \a process.
   ///
-  /// @param[in] process
+  /// \param[in] process
   ///     The process for which to try and locate a dynamic loader
   ///     plug-in instance.
   ///
-  /// @param[in] plugin_name
+  /// \param[in] plugin_name
   ///     An optional name of a specific dynamic loader plug-in that
   ///     should be used. If NULL, pick the best plug-in.
   //------------------------------------------------------------------
@@ -128,7 +128,7 @@ public:
   /// DynamicLoader plug-in instances should return this value to ensure
   /// consistent debug session behaviour.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the process should stop when images
   ///     change, \b false if the process should resume.
   //------------------------------------------------------------------
@@ -143,7 +143,7 @@ public:
   /// process stops when images change, but this can be overridden using this
   /// function callback.
   ///
-  /// @param[in] stop
+  /// \param[in] stop
   ///     Boolean value that indicates whether the process should stop
   ///     when images change.
   //------------------------------------------------------------------
@@ -154,10 +154,10 @@ public:
   /// current state of \a thread.
   ///
   ///
-  /// @param[in] stop_others
+  /// \param[in] stop_others
   ///     Whether the plan should be set to stop other threads.
   ///
-  /// @return
+  /// \return
   ///    A pointer to the plan (caller owned) or NULL if we are not at such
   ///    a trampoline.
   //------------------------------------------------------------------
@@ -171,17 +171,17 @@ public:
   /// symbols, you really need to set it on all the equivalent symbols.
   ///
   ///
-  /// @param[in] original_symbol
+  /// \param[in] original_symbol
   ///     The symbol for which we are finding equivalences.
   ///
-  /// @param[in] module_list
+  /// \param[in] module_list
   ///     The set of modules in which to search.
   ///
-  /// @param[out] equivalent_symbols
+  /// \param[out] equivalent_symbols
   ///     The equivalent symbol list - any equivalent symbols found are appended
   ///     to this list.
   ///
-  /// @return
+  /// \return
   ///    Number of equivalent symbols found.
   //------------------------------------------------------------------
   virtual size_t FindEquivalentSymbols(Symbol *original_symbol,
@@ -198,7 +198,7 @@ public:
   /// plug-ins to check any current dyld state to make sure it is an ok time
   /// to load a shared library.
   ///
-  /// @return
+  /// \return
   ///     \b true if it is currently ok to try and load a shared
   ///     library into the process, \b false otherwise.
   //------------------------------------------------------------------
@@ -220,7 +220,7 @@ public:
   /// not reliable enough -- we need to consult those function's hand-written
   /// eh_frame information.
   ///
-  /// @return
+  /// \return
   ///     \b True if the symbol context should use eh_frame instructions
   ///     unconditionally when unwinding from this frame.  Else \b false,
   ///     the normal lldb unwind behavior of only using eh_frame when the
@@ -233,13 +233,13 @@ public:
   //------------------------------------------------------------------
   /// Retrieves the per-module TLS block for a given thread.
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     The module to query TLS data for.
   ///
-  /// @param[in] thread
+  /// \param[in] thread
   ///     The specific thread to query TLS data for.
   ///
-  /// @return
+  /// \return
   ///     If the given thread has TLS data allocated for the
   ///     module, the address of the TLS block. Otherwise
   ///     LLDB_INVALID_ADDRESS is returned.
@@ -250,8 +250,8 @@ public:
     return LLDB_INVALID_ADDRESS;
   }
 
-  /// Locates or creates a module given by @p file and updates/loads the
-  /// resulting module at the virtual base address @p base_addr.
+  /// Locates or creates a module given by \p file and updates/loads the
+  /// resulting module at the virtual base address \p base_addr.
   virtual lldb::ModuleSP LoadModuleAtAddress(const lldb_private::FileSpec &file,
                                              lldb::addr_t link_map_addr,
                                              lldb::addr_t base_addr,
@@ -272,24 +272,24 @@ public:
   /// of the cache - or it may be able to return additional information about
   /// the cache.
   ///
-  /// @param[out] base_address
+  /// \param[out] base_address
   ///     The base address (load address) of the shared cache.
   ///     LLDB_INVALID_ADDRESS if it cannot be determined.
   ///
-  /// @param[out] uuid
+  /// \param[out] uuid
   ///     The UUID of the shared cache, if it can be determined.
   ///     If the UUID cannot be fetched, IsValid() will be false.
   ///
-  /// @param[out] using_shared_cache
+  /// \param[out] using_shared_cache
   ///     If this process is using a shared cache.
   ///     If unknown, eLazyBoolCalculate is returned.
   ///
-  /// @param[out] private_shared_cache
+  /// \param[out] private_shared_cache
   ///     A LazyBool indicating whether this process is using a
   ///     private shared cache.
   ///     If this information cannot be fetched, eLazyBoolCalculate.
   ///
-  /// @return
+  /// \return
   ///     Returns false if this DynamicLoader cannot gather information
   ///     about the shared cache / has no concept of a shared cache.
   //------------------------------------------------------------------
@@ -312,14 +312,14 @@ protected:
   /// accordingly and returns the target executable module.
   lldb::ModuleSP GetTargetExecutable();
 
-  /// Updates the load address of every allocatable section in @p module.
+  /// Updates the load address of every allocatable section in \p module.
   ///
-  /// @param module The module to traverse.
+  /// \param module The module to traverse.
   ///
-  /// @param link_map_addr The virtual address of the link map for the @p
+  /// \param link_map_addr The virtual address of the link map for the @p
   /// module.
   ///
-  /// @param base_addr The virtual base address @p module is loaded at.
+  /// \param base_addr The virtual base address \p module is loaded at.
   virtual void UpdateLoadedSections(lldb::ModuleSP module,
                                     lldb::addr_t link_map_addr,
                                     lldb::addr_t base_addr,
@@ -330,9 +330,9 @@ protected:
   void UpdateLoadedSectionsCommon(lldb::ModuleSP module, lldb::addr_t base_addr,
                                   bool base_addr_is_offset);
 
-  /// Removes the loaded sections from the target in @p module.
+  /// Removes the loaded sections from the target in \p module.
   ///
-  /// @param module The module to traverse.
+  /// \param module The module to traverse.
   virtual void UnloadSections(const lldb::ModuleSP module);
 
   // Utility method so base classes can share implementation of UnloadSections

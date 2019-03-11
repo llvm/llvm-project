@@ -394,10 +394,13 @@ def _SLASH_Zo_ : CLIgnoredFlag<"Zo-">;
 
 // Unsupported:
 
+def _SLASH_await : CLFlag<"await">;
+def _SLASH_constexpr : CLJoined<"constexpr:">;
 def _SLASH_AI : CLJoinedOrSeparate<"AI">;
 def _SLASH_Bt : CLFlag<"Bt">;
 def _SLASH_Bt_plus : CLFlag<"Bt+">;
 def _SLASH_clr : CLJoined<"clr">;
+def _SLASH_d2 : CLJoined<"d2">;
 def _SLASH_doc : CLJoined<"doc">;
 def _SLASH_FA_joined : CLJoined<"FA">;
 def _SLASH_favor : CLJoined<"favor">;
@@ -429,6 +432,9 @@ def _SLASH_Qfast_transcendentals : CLFlag<"Qfast_transcendentals">;
 def _SLASH_QIfist : CLFlag<"QIfist">;
 def _SLASH_Qimprecise_fwaits : CLFlag<"Qimprecise_fwaits">;
 def _SLASH_Qpar : CLFlag<"Qpar">;
+def _SLASH_Qpar_report : CLJoined<"Qpar-report">;
+def _SLASH_Qsafe_fp_loads : CLFlag<"Qsafe_fp_loads">;
+def _SLASH_Qspectre : CLFlag<"Qspectre">;
 def _SLASH_Qvec_report : CLJoined<"Qvec-report">;
 def _SLASH_u : CLFlag<"u">;
 def _SLASH_V : CLFlag<"V">;

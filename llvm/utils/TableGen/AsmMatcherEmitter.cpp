@@ -1473,7 +1473,6 @@ void AsmMatcherInfo::buildInfo() {
   for (const auto &Pair : SubtargetFeatures)
     LLVM_DEBUG(Pair.second.dump());
 #endif // NDEBUG
-  assert(SubtargetFeatures.size() <= 64 && "Too many subtarget features!");
 
   bool HasMnemonicFirst = AsmParser->getValueAsBit("HasMnemonicFirst");
   bool ReportMultipleNearMisses =
@@ -2675,7 +2674,7 @@ static void emitGetSubtargetFeatureName(AsmMatcherInfo &Info, raw_ostream &OS) {
     for (const auto &SF : Info.SubtargetFeatures) {
       const SubtargetFeatureInfo &SFI = SF.second;
       // FIXME: Totally just a placeholder name to get the algorithm working.
-      OS << "  case " << SFI.getEnumName() << ": return \""
+      OS << "  case " << SFI.getEnumBitName() << ": return \""
          << SFI.TheDef->getValueAsString("PredicateName") << "\";\n";
     }
     OS << "  default: return \"(unknown)\";\n";
@@ -2691,7 +2690,10 @@ static std::string GetAliasRequiredFeatures(Record *R,
                                             const AsmMatcherInfo &Info) {
   std::vector<Record*> ReqFeatures = R->getValueAsListOfDefs("Predicates");
   std::string Result;
-  unsigned NumFeatures = 0;
+
+  if (ReqFeatures.empty())
+    return Result;
+
   for (unsigned i = 0, e = ReqFeatures.size(); i != e; ++i) {
     const SubtargetFeatureInfo *F = Info.getSubtargetFeature(ReqFeatures[i]);
 
@@ -2699,15 +2701,12 @@ static std::string GetAliasRequiredFeatures(Record *R,
       PrintFatalError(R->getLoc(), "Predicate '" + ReqFeatures[i]->getName() +
                     "' is not marked as an AssemblerPredicate!");
 
-    if (NumFeatures)
-      Result += '|';
+    if (i)
+      Result += " && ";
 
-    Result += F->getEnumName();
-    ++NumFeatures;
+    Result += "Features.test(" + F->getEnumBitName() + ')';
   }
 
-  if (NumFeatures > 1)
-    Result = '(' + Result + ')';
   return Result;
 }
 
@@ -2763,7 +2762,7 @@ static void emitMnemonicAliasVariant(raw_ostream &OS,const AsmMatcherInfo &Info,
 
       if (!MatchCode.empty())
         MatchCode += "else ";
-      MatchCode += "if ((Features & " + FeatureMask + ") == "+FeatureMask+")\n";
+      MatchCode += "if (" + FeatureMask + ")\n";
       MatchCode += "  Mnemonic = \"";
       MatchCode += R->getValueAsString("ToMnemonic");
       MatchCode += "\";\n";
@@ -2798,7 +2797,7 @@ static bool emitMnemonicAliases(raw_ostream &OS, const AsmMatcherInfo &Info,
   if (Aliases.empty()) return false;
 
   OS << "static void applyMnemonicAliases(StringRef &Mnemonic, "
-    "uint64_t Features, unsigned VariantID) {\n";
+    "const FeatureBitset &Features, unsigned VariantID) {\n";
   OS << "  switch (VariantID) {\n";
   unsigned VariantCount = Target.getAsmParserVariantCount();
   for (unsigned VC = 0; VC != VariantCount; ++VC) {
@@ -2823,7 +2822,9 @@ static bool emitMnemonicAliases(raw_ostream &OS, const AsmMatcherInfo &Info,
 static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
                               const AsmMatcherInfo &Info, StringRef ClassName,
                               StringToOffsetTable &StringTable,
-                              unsigned MaxMnemonicIndex, bool HasMnemonicFirst) {
+                              unsigned MaxMnemonicIndex,
+                              unsigned MaxFeaturesIndex,
+                              bool HasMnemonicFirst) {
   unsigned MaxMask = 0;
   for (const OperandMatchEntry &OMI : Info.OperandMatchInfo) {
     MaxMask |= OMI.OperandMask;
@@ -2832,14 +2833,14 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
   // Emit the static custom operand parsing table;
   OS << "namespace {\n";
   OS << "  struct OperandMatchEntry {\n";
-  OS << "    " << getMinimalTypeForEnumBitfield(Info.SubtargetFeatures.size())
-               << " RequiredFeatures;\n";
   OS << "    " << getMinimalTypeForRange(MaxMnemonicIndex)
                << " Mnemonic;\n";
+  OS << "    " << getMinimalTypeForRange(MaxMask)
+               << " OperandMask;\n";
   OS << "    " << getMinimalTypeForRange(std::distance(
                       Info.Classes.begin(), Info.Classes.end())) << " Class;\n";
-  OS << "    " << getMinimalTypeForRange(MaxMask)
-               << " OperandMask;\n\n";
+  OS << "    " << getMinimalTypeForRange(MaxFeaturesIndex)
+               << " RequiredFeaturesIdx;\n\n";
   OS << "    StringRef getMnemonic() const {\n";
   OS << "      return StringRef(MnemonicTable + Mnemonic + 1,\n";
   OS << "                       MnemonicTable[Mnemonic]);\n";
@@ -2865,29 +2866,18 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
   OS << "static const OperandMatchEntry OperandMatchTable["
      << Info.OperandMatchInfo.size() << "] = {\n";
 
-  OS << "  /* Operand List Mask, Mnemonic, Operand Class, Features */\n";
+  OS << "  /* Operand List Mnemonic, Mask, Operand Class, Features */\n";
   for (const OperandMatchEntry &OMI : Info.OperandMatchInfo) {
     const MatchableInfo &II = *OMI.MI;
 
     OS << "  { ";
 
-    // Write the required features mask.
-    if (!II.RequiredFeatures.empty()) {
-      for (unsigned i = 0, e = II.RequiredFeatures.size(); i != e; ++i) {
-        if (i) OS << "|";
-        OS << II.RequiredFeatures[i]->getEnumName();
-      }
-    } else
-      OS << "0";
-
     // Store a pascal-style length byte in the mnemonic.
     std::string LenMnemonic = char(II.Mnemonic.size()) + II.Mnemonic.str();
-    OS << ", " << StringTable.GetOrAddStringOffset(LenMnemonic, false)
+    OS << StringTable.GetOrAddStringOffset(LenMnemonic, false)
        << " /* " << II.Mnemonic << " */, ";
 
-    OS << OMI.CI->Name;
-
-    OS << ", " << OMI.OperandMask;
+    OS << OMI.OperandMask;
     OS << " /* ";
     bool printComma = false;
     for (int i = 0, e = 31; i !=e; ++i)
@@ -2897,7 +2887,17 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
         OS << i;
         printComma = true;
       }
-    OS << " */";
+    OS << " */, ";
+
+    OS << OMI.CI->Name;
+
+    // Write the required features mask.
+    OS << ", AMFBS";
+    if (II.RequiredFeatures.empty())
+      OS << "_None";
+    else
+      for (unsigned i = 0, e = II.RequiredFeatures.size(); i != e; ++i)
+        OS << '_' << II.RequiredFeatures[i]->TheDef->getName();
 
     OS << " },\n";
   }
@@ -2933,7 +2933,7 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit code to get the available features.
   OS << "  // Get the current feature set.\n";
-  OS << "  uint64_t AvailableFeatures = getAvailableFeatures();\n\n";
+  OS << "  const FeatureBitset &AvailableFeatures = getAvailableFeatures();\n\n";
 
   OS << "  // Get the next operand index.\n";
   OS << "  unsigned NextOpNum = Operands.size()"
@@ -2967,8 +2967,10 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit check that the required features are available.
   OS << "    // check if the available features match\n";
+  OS << "    const FeatureBitset &RequiredFeatures = "
+        "FeatureBitsets[it->RequiredFeaturesIdx];\n";
   OS << "    if (!ParseForAllFeatures && (AvailableFeatures & "
-        "it->RequiredFeatures) != it->RequiredFeatures)\n";
+        "RequiredFeatures) != RequiredFeatures)\n";
   OS << "        continue;\n\n";
 
   // Emit check to ensure the operand number matches.
@@ -3034,7 +3036,8 @@ static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
 static void emitMnemonicSpellChecker(raw_ostream &OS, CodeGenTarget &Target,
                                      unsigned VariantCount) {
   OS << "static std::string " << Target.getName()
-     << "MnemonicSpellCheck(StringRef S, uint64_t FBS, unsigned VariantID) {\n";
+     << "MnemonicSpellCheck(StringRef S, const FeatureBitset &FBS,"
+     << " unsigned VariantID) {\n";
   if (!VariantCount)
     OS <<  "  return \"\";";
   else {
@@ -3055,7 +3058,9 @@ static void emitMnemonicSpellChecker(raw_ostream &OS, CodeGenTarget &Target,
     OS << "  }\n\n";
     OS << "  for (auto I = Start; I < End; I++) {\n";
     OS << "    // Ignore unsupported instructions.\n";
-    OS << "    if ((FBS & I->RequiredFeatures) != I->RequiredFeatures)\n";
+    OS << "    const FeatureBitset &RequiredFeatures = "
+          "FeatureBitsets[I->RequiredFeaturesIdx];\n";
+    OS << "    if ((FBS & RequiredFeatures) != RequiredFeatures)\n";
     OS << "      continue;\n";
     OS << "\n";
     OS << "    StringRef T = I->getMnemonic();\n";
@@ -3101,6 +3106,14 @@ static void emitMatchClassKindNames(std::forward_list<ClassInfo> &Infos,
   OS << "  llvm_unreachable(\"unhandled MatchClassKind!\");\n";
   OS << "}\n\n";
   OS << "#endif // NDEBUG\n";
+}
+
+static std::string
+getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
+  std::string Name = "AMFBS";
+  for (const auto &Feature : FeatureBitset)
+    Name += ("_" + Feature->getName()).str();
+  return Name;
 }
 
 void AsmMatcherEmitter::run(raw_ostream &OS) {
@@ -3174,7 +3187,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "#undef GET_ASSEMBLER_HEADER\n";
   OS << "  // This should be included into the middle of the declaration of\n";
   OS << "  // your subclasses implementation of MCTargetAsmParser.\n";
-  OS << "  uint64_t ComputeAvailableFeatures(const FeatureBitset& FB) const;\n";
+  OS << "  FeatureBitset ComputeAvailableFeatures(const FeatureBitset& FB) const;\n";
   if (HasOptionalOperands) {
     OS << "  void convertToMCInst(unsigned Kind, MCInst &Inst, "
        << "unsigned Opcode,\n"
@@ -3192,9 +3205,21 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (ReportMultipleNearMisses)
     OS << "                                SmallVectorImpl<NearMissInfo> *NearMisses,\n";
   else
-    OS << "                                uint64_t &ErrorInfo,\n";
+    OS << "                                uint64_t &ErrorInfo,\n"
+       << "                                FeatureBitset &MissingFeatures,\n";
   OS << "                                bool matchingInlineAsm,\n"
      << "                                unsigned VariantID = 0);\n";
+  if (!ReportMultipleNearMisses)
+    OS << "  unsigned MatchInstructionImpl(const OperandVector &Operands,\n"
+       << "                                MCInst &Inst,\n"
+       << "                                uint64_t &ErrorInfo,\n"
+       << "                                bool matchingInlineAsm,\n"
+       << "                                unsigned VariantID = 0) {\n"
+       << "    FeatureBitset MissingFeatures;\n"
+       << "    return MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,\n"
+       << "                                matchingInlineAsm, VariantID);\n"
+       << "  }\n\n";
+
 
   if (!Info.OperandMatchInfo.empty()) {
     OS << "  OperandMatchResultTy MatchOperandParserImpl(\n";
@@ -3219,7 +3244,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "#undef GET_REGISTER_MATCHER\n\n";
 
   // Emit the subtarget feature enumeration.
-  SubtargetFeatureInfo::emitSubtargetFeatureFlagEnumeration(
+  SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(
       Info.SubtargetFeatures, OS);
 
   // Emit the function to match a register name to number.
@@ -3300,6 +3325,56 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   StringTable.EmitString(OS);
   OS << ";\n\n";
 
+  std::vector<std::vector<Record *>> FeatureBitsets;
+  for (const auto &MI : Info.Matchables) {
+    if (MI->RequiredFeatures.empty())
+      continue;
+    FeatureBitsets.emplace_back();
+    for (unsigned I = 0, E = MI->RequiredFeatures.size(); I != E; ++I)
+      FeatureBitsets.back().push_back(MI->RequiredFeatures[I]->TheDef);
+  }
+
+  llvm::sort(FeatureBitsets, [&](const std::vector<Record *> &A,
+                                 const std::vector<Record *> &B) {
+    if (A.size() < B.size())
+      return true;
+    if (A.size() > B.size())
+      return false;
+    for (const auto &Pair : zip(A, B)) {
+      if (std::get<0>(Pair)->getName() < std::get<1>(Pair)->getName())
+        return true;
+      if (std::get<0>(Pair)->getName() > std::get<1>(Pair)->getName())
+        return false;
+    }
+    return false;
+  });
+  FeatureBitsets.erase(
+      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
+      FeatureBitsets.end());
+  OS << "// Feature bitsets.\n"
+     << "enum : " << getMinimalTypeForRange(FeatureBitsets.size()) << " {\n"
+     << "  AMFBS_None,\n";
+  for (const auto &FeatureBitset : FeatureBitsets) {
+    if (FeatureBitset.empty())
+      continue;
+    OS << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
+  }
+  OS << "};\n\n"
+     << "const static FeatureBitset FeatureBitsets[] {\n"
+     << "  {}, // AMFBS_None\n";
+  for (const auto &FeatureBitset : FeatureBitsets) {
+    if (FeatureBitset.empty())
+      continue;
+    OS << "  {";
+    for (const auto &Feature : FeatureBitset) {
+      const auto &I = Info.SubtargetFeatures.find(Feature);
+      assert(I != Info.SubtargetFeatures.end() && "Didn't import predicate?");
+      OS << I->second.getEnumBitName() << ", ";
+    }
+    OS << "},\n";
+  }
+  OS << "};\n\n";
+
   // Emit the static match table; unused classes get initialized to 0 which is
   // guaranteed to be InvalidMatchClass.
   //
@@ -3317,8 +3392,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    uint16_t Opcode;\n";
   OS << "    " << getMinimalTypeForRange(Info.Matchables.size())
                << " ConvertFn;\n";
-  OS << "    " << getMinimalTypeForEnumBitfield(Info.SubtargetFeatures.size())
-               << " RequiredFeatures;\n";
+  OS << "    " << getMinimalTypeForRange(FeatureBitsets.size())
+               << " RequiredFeaturesIdx;\n";
   OS << "    " << getMinimalTypeForRange(
                       std::distance(Info.Classes.begin(), Info.Classes.end()))
      << " Classes[" << MaxNumOperands << "];\n";
@@ -3363,13 +3438,12 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
          << MI->ConversionFnKind << ", ";
 
       // Write the required features mask.
-      if (!MI->RequiredFeatures.empty()) {
-        for (unsigned i = 0, e = MI->RequiredFeatures.size(); i != e; ++i) {
-          if (i) OS << "|";
-          OS << MI->RequiredFeatures[i]->getEnumName();
-        }
-      } else
-        OS << "0";
+      OS << "AMFBS";
+      if (MI->RequiredFeatures.empty())
+        OS << "_None";
+      else
+        for (unsigned i = 0, e = MI->RequiredFeatures.size(); i != e; ++i)
+          OS << '_' << MI->RequiredFeatures[i]->TheDef->getName();
 
       OS << ", { ";
       for (unsigned i = 0, e = MI->AsmOperands.size(); i != e; ++i) {
@@ -3394,7 +3468,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (ReportMultipleNearMisses)
     OS << "                     SmallVectorImpl<NearMissInfo> *NearMisses,\n";
   else
-    OS << "                     uint64_t &ErrorInfo,\n";
+    OS << "                     uint64_t &ErrorInfo,\n"
+       << "                     FeatureBitset &MissingFeatures,\n";
   OS << "                     bool matchingInlineAsm, unsigned VariantID) {\n";
 
   if (!ReportMultipleNearMisses) {
@@ -3409,7 +3484,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   // Emit code to get the available features.
   OS << "  // Get the current feature set.\n";
-  OS << "  uint64_t AvailableFeatures = getAvailableFeatures();\n\n";
+  OS << "  const FeatureBitset &AvailableFeatures = getAvailableFeatures();\n\n";
 
   OS << "  // Get the instruction mnemonic, which is the first token.\n";
   if (HasMnemonicFirst) {
@@ -3433,7 +3508,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "  bool HadMatchOtherThanFeatures = false;\n";
     OS << "  bool HadMatchOtherThanPredicate = false;\n";
     OS << "  unsigned RetCode = Match_InvalidOperand;\n";
-    OS << "  uint64_t MissingFeatures = ~0ULL;\n";
+    OS << "  MissingFeatures.set();\n";
     OS << "  // Set ErrorInfo to the operand that mismatches if it is\n";
     OS << "  // wrong for all instances of the instruction.\n";
     OS << "  ErrorInfo = ~0ULL;\n";
@@ -3479,9 +3554,10 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "  for (const MatchEntry *it = MnemonicRange.first, "
      << "*ie = MnemonicRange.second;\n";
   OS << "       it != ie; ++it) {\n";
+  OS << "    const FeatureBitset &RequiredFeatures = "
+        "FeatureBitsets[it->RequiredFeaturesIdx];\n";
   OS << "    bool HasRequiredFeatures =\n";
-  OS << "      (AvailableFeatures & it->RequiredFeatures) == "
-        "it->RequiredFeatures;\n";
+  OS << "      (AvailableFeatures & RequiredFeatures) == RequiredFeatures;\n";
   OS << "    DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Trying to match opcode \"\n";
   OS << "                                          << MII.getName(it->Opcode) << \"\\n\");\n";
 
@@ -3640,16 +3716,18 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    if (!HasRequiredFeatures) {\n";
   if (!ReportMultipleNearMisses)
     OS << "      HadMatchOtherThanFeatures = true;\n";
-  OS << "      uint64_t NewMissingFeatures = it->RequiredFeatures & "
+  OS << "      FeatureBitset NewMissingFeatures = RequiredFeatures & "
         "~AvailableFeatures;\n";
-  OS << "      DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Missing target features: \"\n";
-  OS << "                                            << format_hex(NewMissingFeatures, 18)\n";
-  OS << "                                            << \"\\n\");\n";
+  OS << "      DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Missing target features:\";\n";
+  OS << "                       for (unsigned I = 0, E = NewMissingFeatures.size(); I != E; ++I)\n";
+  OS << "                         if (NewMissingFeatures[I])\n";
+  OS << "                           dbgs() << ' ' << I;\n";
+  OS << "                       dbgs() << \"\\n\");\n";
   if (ReportMultipleNearMisses) {
     OS << "      FeaturesNearMiss = NearMissInfo::getMissedFeature(NewMissingFeatures);\n";
   } else {
-    OS << "      if (countPopulation(NewMissingFeatures) <=\n"
-          "          countPopulation(MissingFeatures))\n";
+    OS << "      if (NewMissingFeatures.count() <=\n"
+          "          MissingFeatures.count())\n";
     OS << "        MissingFeatures = NewMissingFeatures;\n";
     OS << "      continue;\n";
   }
@@ -3804,15 +3882,15 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "  // Okay, we had no match.  Try to return a useful error code.\n";
     OS << "  if (HadMatchOtherThanPredicate || !HadMatchOtherThanFeatures)\n";
     OS << "    return RetCode;\n\n";
-    OS << "  // Missing feature matches return which features were missing\n";
-    OS << "  ErrorInfo = MissingFeatures;\n";
+    OS << "  ErrorInfo = 0;\n";
     OS << "  return Match_MissingFeature;\n";
   }
   OS << "}\n\n";
 
   if (!Info.OperandMatchInfo.empty())
     emitCustomOperandParsing(OS, Target, Info, ClassName, StringTable,
-                             MaxMnemonicIndex, HasMnemonicFirst);
+                             MaxMnemonicIndex, FeatureBitsets.size(),
+                             HasMnemonicFirst);
 
   OS << "#endif // GET_MATCHER_IMPLEMENTATION\n\n";
 

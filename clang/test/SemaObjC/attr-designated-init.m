@@ -389,6 +389,19 @@ __attribute__((objc_root_class))
 }
 @end
 
+@interface SubTest1Ext : Test1
+-(instancetype)initWithRequiredParameter:(id)foo NS_DESIGNATED_INITIALIZER;
+@end
+// Mark 'init' as unavailable in the extension to silence warning.
+@interface SubTest1Ext()
+-(instancetype)init NS_UNAVAILABLE;
+@end
+@implementation SubTest1Ext
+-(instancetype)initWithRequiredParameter:(id)foo {
+  return [super init];
+}
+@end
+
 @interface Test2 : NSObject
 @end
 @interface SubTest2 : Test2

@@ -167,6 +167,17 @@ ifeq "$(CC)" "cc"
 endif
 
 #----------------------------------------------------------------------
+# Handle SDKROOT on Darwin
+#----------------------------------------------------------------------
+
+ifeq "$(OS)" "Darwin"
+    ifeq "$(SDKROOT)" ""
+        # We haven't otherwise set the SDKROOT, so set it now to macosx
+        SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+    endif
+endif
+
+#----------------------------------------------------------------------
 # ARCHFLAG is the flag used to tell the compiler which architecture
 # to compile for. The default is the flag that clang accepts.
 #----------------------------------------------------------------------
@@ -248,6 +259,13 @@ endif
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
+
+ifeq "$(OS)" "Darwin"
+	ifneq "$(SDKROOT)" ""
+		CFLAGS += -isysroot "$(SDKROOT)"
+	endif
+endif
+
 ifeq "$(OS)" "Darwin"
 	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
 else
@@ -297,6 +315,11 @@ CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
+ifneq (,$(LLVM_LIBS_DIR))
+	ifeq ($(OS),NetBSD)
+		LDFLAGS += -L$(LLVM_LIBS_DIR) -Wl,-rpath,$(LLVM_LIBS_DIR)
+	endif
+endif
 ifeq (,$(filter $(OS), Windows_NT Android Darwin))
 	ifneq (,$(filter YES,$(ENABLE_THREADS)))
 		LDFLAGS += -pthread
@@ -411,6 +434,15 @@ ifeq (1,$(USE_LIBCPP))
 	else
 		CXXFLAGS += -stdlib=libc++
 		LDFLAGS += -stdlib=libc++
+	endif
+endif
+
+#----------------------------------------------------------------------
+# Additional system libraries
+#----------------------------------------------------------------------
+ifeq (1,$(USE_LIBDL))
+	ifneq ($(OS),NetBSD)
+		LDFLAGS += -ldl
 	endif
 endif
 

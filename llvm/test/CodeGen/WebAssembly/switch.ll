@@ -23,17 +23,17 @@ declare void @foo5()
 ; CHECK: block   {{$}}
 ; CHECK: br_table {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5, 0{{$}}
 ; CHECK: .LBB0_2:
-; CHECK:   call foo0@FUNCTION{{$}}
+; CHECK:   call foo0{{$}}
 ; CHECK: .LBB0_3:
-; CHECK:   call foo1@FUNCTION{{$}}
+; CHECK:   call foo1{{$}}
 ; CHECK: .LBB0_4:
-; CHECK:   call foo2@FUNCTION{{$}}
+; CHECK:   call foo2{{$}}
 ; CHECK: .LBB0_5:
-; CHECK:   call foo3@FUNCTION{{$}}
+; CHECK:   call foo3{{$}}
 ; CHECK: .LBB0_6:
-; CHECK:   call foo4@FUNCTION{{$}}
+; CHECK:   call foo4{{$}}
 ; CHECK: .LBB0_7:
-; CHECK:   call foo5@FUNCTION{{$}}
+; CHECK:   call foo5{{$}}
 ; CHECK: .LBB0_8:
 ; CHECK:   return{{$}}
 define void @bar32(i32 %n) {
@@ -103,17 +103,17 @@ sw.epilog:                                        ; preds = %entry, %sw.bb.5, %s
 ; CHECK: block   {{$}}
 ; CHECK: br_table {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5, 0{{$}}
 ; CHECK: .LBB1_2:
-; CHECK:   call foo0@FUNCTION{{$}}
+; CHECK:   call foo0{{$}}
 ; CHECK: .LBB1_3:
-; CHECK:   call foo1@FUNCTION{{$}}
+; CHECK:   call foo1{{$}}
 ; CHECK: .LBB1_4:
-; CHECK:   call foo2@FUNCTION{{$}}
+; CHECK:   call foo2{{$}}
 ; CHECK: .LBB1_5:
-; CHECK:   call foo3@FUNCTION{{$}}
+; CHECK:   call foo3{{$}}
 ; CHECK: .LBB1_6:
-; CHECK:   call foo4@FUNCTION{{$}}
+; CHECK:   call foo4{{$}}
 ; CHECK: .LBB1_7:
-; CHECK:   call foo5@FUNCTION{{$}}
+; CHECK:   call foo5{{$}}
 ; CHECK: .LBB1_8:
 ; CHECK:   return{{$}}
 define void @bar64(i64 %n) {

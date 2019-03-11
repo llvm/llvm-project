@@ -876,6 +876,8 @@ public:
     case CK_FloatingCast:
     case CK_FixedPointCast:
     case CK_FixedPointToBoolean:
+    case CK_FixedPointToIntegral:
+    case CK_IntegralToFixedPoint:
     case CK_ZeroToOCLOpaqueType:
       return nullptr;
     }
@@ -1611,6 +1613,7 @@ private:
   ConstantLValue VisitConstantExpr(const ConstantExpr *E);
   ConstantLValue VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   ConstantLValue VisitStringLiteral(const StringLiteral *E);
+  ConstantLValue VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   ConstantLValue VisitObjCEncodeExpr(const ObjCEncodeExpr *E);
   ConstantLValue VisitObjCStringLiteral(const ObjCStringLiteral *E);
   ConstantLValue VisitPredefinedExpr(const PredefinedExpr *E);
@@ -1773,10 +1776,24 @@ ConstantLValueEmitter::VisitObjCEncodeExpr(const ObjCEncodeExpr *E) {
   return CGM.GetAddrOfConstantStringFromObjCEncode(E);
 }
 
+static ConstantLValue emitConstantObjCStringLiteral(const StringLiteral *S,
+                                                    QualType T,
+                                                    CodeGenModule &CGM) {
+  auto C = CGM.getObjCRuntime().GenerateConstantString(S);
+  return C.getElementBitCast(CGM.getTypes().ConvertTypeForMem(T));
+}
+
 ConstantLValue
 ConstantLValueEmitter::VisitObjCStringLiteral(const ObjCStringLiteral *E) {
-  auto C = CGM.getObjCRuntime().GenerateConstantString(E->getString());
-  return C.getElementBitCast(CGM.getTypes().ConvertTypeForMem(E->getType()));
+  return emitConstantObjCStringLiteral(E->getString(), E->getType(), CGM);
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  assert(E->isExpressibleAsConstantInitializer() &&
+         "this boxed expression can't be emitted as a compile-time constant");
+  auto *SL = cast<StringLiteral>(E->getSubExpr()->IgnoreParenCasts());
+  return emitConstantObjCStringLiteral(SL, E->getType(), CGM);
 }
 
 ConstantLValue

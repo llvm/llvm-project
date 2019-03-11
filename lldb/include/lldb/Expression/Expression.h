@@ -23,7 +23,7 @@ namespace lldb_private {
 class RecordingMemoryManager;
 
 //----------------------------------------------------------------------
-/// @class Expression Expression.h "lldb/Expression/Expression.h" Encapsulates
+/// \class Expression Expression.h "lldb/Expression/Expression.h" Encapsulates
 /// a single expression for use in lldb
 ///
 /// LLDB uses expressions for various purposes, notably to call functions

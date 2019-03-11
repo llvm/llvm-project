@@ -848,9 +848,6 @@ bool AMDGPUTargetLowering::isNarrowingProfitable(EVT SrcVT, EVT DestVT) const {
 CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
                                                   bool IsVarArg) {
   switch (CC) {
-  case CallingConv::AMDGPU_KERNEL:
-  case CallingConv::SPIR_KERNEL:
-    llvm_unreachable("kernels should not be handled here");
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
@@ -863,8 +860,10 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::Fast:
   case CallingConv::Cold:
     return CC_AMDGPU_Func;
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
   default:
-    report_fatal_error("Unsupported calling convention.");
+    report_fatal_error("Unsupported calling convention for call");
   }
 }
 
@@ -4187,6 +4186,12 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(INTERP_P1LL_F16)
   NODE_NAME_CASE(INTERP_P1LV_F16)
   NODE_NAME_CASE(INTERP_P2_F16)
+  NODE_NAME_CASE(LOAD_D16_HI)
+  NODE_NAME_CASE(LOAD_D16_LO)
+  NODE_NAME_CASE(LOAD_D16_HI_I8)
+  NODE_NAME_CASE(LOAD_D16_HI_U8)
+  NODE_NAME_CASE(LOAD_D16_LO_I8)
+  NODE_NAME_CASE(LOAD_D16_LO_U8)
   NODE_NAME_CASE(STORE_MSKOR)
   NODE_NAME_CASE(LOAD_CONSTANT)
   NODE_NAME_CASE(TBUFFER_STORE_FORMAT)

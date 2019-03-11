@@ -35,7 +35,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
-const ConstString &Breakpoint::GetEventIdentifier() {
+ConstString Breakpoint::GetEventIdentifier() {
   static ConstString g_identifier("event-identifier.breakpoint.changed");
   return g_identifier;
 }
@@ -972,7 +972,7 @@ void Breakpoint::GetResolverDescription(Stream *s) {
     m_resolver_sp->GetDescription(s);
 }
 
-bool Breakpoint::GetMatchingFileLine(const ConstString &filename,
+bool Breakpoint::GetMatchingFileLine(ConstString filename,
                                      uint32_t line_number,
                                      BreakpointLocationCollection &loc_coll) {
   // TODO: To be correct, this method needs to fill the breakpoint location
@@ -1048,12 +1048,12 @@ Breakpoint::BreakpointEventData::BreakpointEventData(
 
 Breakpoint::BreakpointEventData::~BreakpointEventData() = default;
 
-const ConstString &Breakpoint::BreakpointEventData::GetFlavorString() {
+ConstString Breakpoint::BreakpointEventData::GetFlavorString() {
   static ConstString g_flavor("Breakpoint::BreakpointEventData");
   return g_flavor;
 }
 
-const ConstString &Breakpoint::BreakpointEventData::GetFlavor() const {
+ConstString Breakpoint::BreakpointEventData::GetFlavor() const {
   return BreakpointEventData::GetFlavorString();
 }
 

@@ -51,6 +51,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   MallocOverflowSecurityChecker.cpp
   MallocSizeofChecker.cpp
   MmapWriteExecChecker.cpp
+  MIGChecker.cpp
   MoveChecker.cpp
   MPI-Checker/MPIBugReporter.cpp
   MPI-Checker/MPIChecker.cpp
@@ -74,6 +75,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   OSObjectCStyleCast.cpp
   PaddingChecker.cpp
   PointerArithChecker.cpp
+  PointerSortingChecker.cpp
   PointerSubChecker.cpp
   PthreadLockChecker.cpp
   RetainCountChecker/RetainCountChecker.cpp

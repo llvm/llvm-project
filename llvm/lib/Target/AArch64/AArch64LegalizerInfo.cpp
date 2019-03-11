@@ -64,6 +64,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
         return std::make_pair(0, EltTy);
       });
 
+  // HACK: Check that the intrinsic isn't ambiguous.
+  // (See: https://bugs.llvm.org/show_bug.cgi?id=40968)
+  getActionDefinitionsBuilder(G_INTRINSIC)
+    .custom();
+
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s16, s32, s64})
       .clampScalar(0, s16, s64)
@@ -298,10 +303,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
 
   // Select
+  // FIXME: We can probably do a bit better than just scalarizing vector
+  // selects.
   getActionDefinitionsBuilder(G_SELECT)
       .legalFor({{s32, s1}, {s64, s1}, {p0, s1}})
       .clampScalar(0, s32, s64)
-      .widenScalarToNextPow2(0);
+      .widenScalarToNextPow2(0)
+      .scalarize(0);
 
   // Pointer-handling
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
@@ -469,8 +477,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
         // to be the same size as the dest.
         if (DstTy != SrcTy)
           return false;
-        ArrayRef<LLT> SupportedDstTys = {v2s32, v4s32, v2s64};
-        for (auto &Ty : SupportedDstTys) {
+        for (auto &Ty : {v2s32, v4s32, v2s64}) {
           if (DstTy == Ty)
             return true;
         }
@@ -498,9 +505,28 @@ bool AArch64LegalizerInfo::legalizeCustom(MachineInstr &MI,
     return false;
   case TargetOpcode::G_VAARG:
     return legalizeVaArg(MI, MRI, MIRBuilder);
+  case TargetOpcode::G_INTRINSIC:
+    return legalizeIntrinsic(MI, MRI, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");
+}
+
+bool AArch64LegalizerInfo::legalizeIntrinsic(
+    MachineInstr &MI, MachineRegisterInfo &MRI,
+    MachineIRBuilder &MIRBuilder) const {
+  // HACK: Don't allow faddp/addp for now. We don't pass down the type info
+  // necessary to get this right today.
+  //
+  // It looks like addp/faddp is the only intrinsic that's impacted by this.
+  // All other intrinsics fully describe the required types in their names.
+  //
+  // (See: https://bugs.llvm.org/show_bug.cgi?id=40968)
+  const MachineOperand &IntrinOp = MI.getOperand(1);
+  if (IntrinOp.isIntrinsicID() &&
+      IntrinOp.getIntrinsicID() == Intrinsic::aarch64_neon_addp)
+    return false;
+  return true;
 }
 
 bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,

@@ -25,6 +25,8 @@ public:
 
   ~SBInstructionList();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   size_t GetSize();

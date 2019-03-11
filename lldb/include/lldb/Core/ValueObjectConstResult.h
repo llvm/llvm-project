@@ -48,22 +48,22 @@ public:
 
   static lldb::ValueObjectSP
   Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-         const ConstString &name, const DataExtractor &data,
+         ConstString name, const DataExtractor &data,
          lldb::addr_t address = LLDB_INVALID_ADDRESS);
 
   static lldb::ValueObjectSP
   Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-         const ConstString &name, const lldb::DataBufferSP &result_data_sp,
+         ConstString name, const lldb::DataBufferSP &result_data_sp,
          lldb::ByteOrder byte_order, uint32_t addr_size,
          lldb::addr_t address = LLDB_INVALID_ADDRESS);
 
   static lldb::ValueObjectSP
   Create(ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-         const ConstString &name, lldb::addr_t address,
+         ConstString name, lldb::addr_t address,
          AddressType address_type, uint32_t addr_byte_size);
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
-                                    Value &value, const ConstString &name,
+                                    Value &value, ConstString name,
                                     Module *module = nullptr);
 
   // When an expression fails to evaluate, we return an error
@@ -134,23 +134,23 @@ private:
 
   ValueObjectConstResult(ExecutionContextScope *exe_scope,
                          const CompilerType &compiler_type,
-                         const ConstString &name, const DataExtractor &data,
+                         ConstString name, const DataExtractor &data,
                          lldb::addr_t address);
 
   ValueObjectConstResult(ExecutionContextScope *exe_scope,
                          const CompilerType &compiler_type,
-                         const ConstString &name,
+                         ConstString name,
                          const lldb::DataBufferSP &result_data_sp,
                          lldb::ByteOrder byte_order, uint32_t addr_size,
                          lldb::addr_t address);
 
   ValueObjectConstResult(ExecutionContextScope *exe_scope,
                          const CompilerType &compiler_type,
-                         const ConstString &name, lldb::addr_t address,
+                         ConstString name, lldb::addr_t address,
                          AddressType address_type, uint32_t addr_byte_size);
 
   ValueObjectConstResult(ExecutionContextScope *exe_scope, const Value &value,
-                         const ConstString &name, Module *module = nullptr);
+                         ConstString name, Module *module = nullptr);
 
   ValueObjectConstResult(ExecutionContextScope *exe_scope, const Status &error);
 

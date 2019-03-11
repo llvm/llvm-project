@@ -2043,7 +2043,7 @@ void Verifier::verifyFrameRecoverIndices() {
     unsigned MaxRecoveredIndex = Counts.second.second;
     Assert(MaxRecoveredIndex <= EscapedObjectCount,
            "all indices passed to llvm.localrecover must be less than the "
-           "number of arguments passed ot llvm.localescape in the parent "
+           "number of arguments passed to llvm.localescape in the parent "
            "function",
            F);
   }
@@ -3918,7 +3918,7 @@ void Verifier::verifyDominatesUse(Instruction &I, unsigned i) {
   }
 
   // Quick check whether the def has already been encountered in the same block.
-  // PHI nodes are not checked to prevent accepting preceeding PHIs, because PHI
+  // PHI nodes are not checked to prevent accepting preceding PHIs, because PHI
   // uses are defined to happen on the incoming edge, not at the instruction.
   //
   // FIXME: If this operand is a MetadataAsValue (wrapping a LocalAsMetadata)

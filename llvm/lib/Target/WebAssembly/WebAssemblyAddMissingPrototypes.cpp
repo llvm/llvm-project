@@ -86,7 +86,6 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
     // Create a function prototype based on the first call site (first bitcast)
     // that we find.
     FunctionType *NewType = nullptr;
-    Function *NewF = nullptr;
     for (Use &U : F.uses()) {
       LLVM_DEBUG(dbgs() << "prototype-less use: " << F.getName() << "\n");
       LLVM_DEBUG(dbgs() << *U.getUser() << "\n");
@@ -97,10 +96,6 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
             // Create a new function with the correct type
             NewType = DestType;
             LLVM_DEBUG(dbgs() << "found function type: " << *NewType << "\n");
-            NewF = Function::Create(NewType, F.getLinkage(), F.getName() + ".fixed_sig");
-            NewF->setAttributes(F.getAttributes());
-            NewF->removeFnAttr("no-prototype");
-            Replacements.emplace_back(&F, NewF);
           } else if (NewType != DestType) {
             errs() << "warning: prototype-less function used with "
                       "conflicting signatures: "
@@ -116,8 +111,19 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
       LLVM_DEBUG(
           dbgs() << "could not derive a function prototype from usage: " +
                         F.getName() + "\n");
-      continue;
+      // We could not derive a type for this function.  In this case strip
+      // the isVarArg and make it a simple zero-arg function.  This has more
+      // chance of being correct.  The current signature of (...) is illegal in
+      // C since it doesn't have any arguments before the "...", we this at
+      // least makes it possible for this symbol to be resolved by the linker.
+      NewType = FunctionType::get(F.getFunctionType()->getReturnType(), false);
     }
+
+    Function *NewF =
+        Function::Create(NewType, F.getLinkage(), F.getName() + ".fixed_sig");
+    NewF->setAttributes(F.getAttributes());
+    NewF->removeFnAttr("no-prototype");
+    Replacements.emplace_back(&F, NewF);
   }
 
   for (auto &Pair : Replacements) {
@@ -126,7 +132,7 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
     std::string Name = OldF->getName();
     M.getFunctionList().push_back(NewF);
     OldF->replaceAllUsesWith(
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(NewF, OldF->getType()));
+        ConstantExpr::getPointerBitCastOrAddrSpaceCast(NewF, OldF->getType()));
     OldF->eraseFromParent();
     NewF->setName(Name);
   }

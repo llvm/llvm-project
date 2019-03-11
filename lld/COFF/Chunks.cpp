@@ -594,6 +594,40 @@ ArrayRef<uint8_t> SectionChunk::getContents() const {
   return A;
 }
 
+ArrayRef<uint8_t> SectionChunk::consumeDebugMagic() {
+  assert(isCodeView());
+  return consumeDebugMagic(getContents(), SectionName);
+}
+
+ArrayRef<uint8_t> SectionChunk::consumeDebugMagic(ArrayRef<uint8_t> Data,
+                                                  StringRef SectionName) {
+  if (Data.empty())
+    return {};
+
+  // First 4 bytes are section magic.
+  if (Data.size() < 4)
+    fatal("the section is too short: " + SectionName);
+
+  if (!SectionName.startswith(".debug$"))
+    fatal("invalid section: " + SectionName);
+
+  unsigned Magic = support::endian::read32le(Data.data());
+  unsigned ExpectedMagic = SectionName == ".debug$H"
+                               ? DEBUG_HASHES_SECTION_MAGIC
+                               : DEBUG_SECTION_MAGIC;
+  if (Magic != ExpectedMagic)
+    fatal("section: " + SectionName + " has an invalid magic: " + Twine(Magic));
+  return Data.slice(4);
+}
+
+SectionChunk *SectionChunk::findByName(ArrayRef<SectionChunk *> Sections,
+                                       StringRef Name) {
+  for (SectionChunk *C : Sections)
+    if (C->getSectionName() == Name)
+      return C;
+  return nullptr;
+}
+
 void SectionChunk::replace(SectionChunk *Other) {
   Alignment = std::max(Alignment, Other->Alignment);
   Other->Repl = Repl;

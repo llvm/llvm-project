@@ -57,10 +57,10 @@ public:
   /// SBTarget::Launch(...), the target will use the resolved executable
   /// path that was used to create the target.
   ///
-  /// @param[in] exe_file
+  /// \param[in] exe_file
   ///     The override path to use when launching the executable.
   ///
-  /// @param[in] add_as_first_arg
+  /// \param[in] add_as_first_arg
   ///     If true, then the path will be inserted into the argument vector
   ///     prior to launching. Otherwise the argument vector will be left
   ///     alone.

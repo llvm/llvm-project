@@ -3,7 +3,7 @@ executable("llvm-opt-report") {
     "//llvm/lib/Demangle",
     "//llvm/lib/IR",
     "//llvm/lib/Object",
-    "//llvm/lib/OptRemarks",
+    "//llvm/lib/Remarks",
     "//llvm/lib/Support",
   ]
   sources = [

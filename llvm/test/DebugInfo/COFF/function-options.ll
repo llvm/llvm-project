@@ -466,7 +466,7 @@ entry:
   ret void, !dbg !108
 }
 
-attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable }
 
 !llvm.dbg.cu = !{!0}
@@ -492,7 +492,7 @@ attributes #1 = { nounwind readnone speculatable }
 !16 = distinct !DISubprogram(name: "Func_BClass", linkageName: "?Func_BClass@@YA?AVBClass@@AEAV1@@Z", scope: !9, file: !9, line: 12, type: !17, isLocal: false, isDefinition: true, scopeLine: 12, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !17 = !DISubroutineType(types: !18)
 !18 = !{!19, !25}
-!19 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "BClass", file: !9, line: 8, size: 8, flags: DIFlagTypePassByValue, elements: !20, identifier: ".?AVBClass@@")
+!19 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "BClass", file: !9, line: 8, size: 8, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !20, identifier: ".?AVBClass@@")
 !20 = !{!21}
 !21 = !DISubprogram(name: "BClass", scope: !19, file: !9, line: 10, type: !22, isLocal: false, isDefinition: false, scopeLine: 10, flags: DIFlagExplicit | DIFlagPrototyped, isOptimized: false)
 !22 = !DISubroutineType(types: !23)
@@ -516,7 +516,7 @@ attributes #1 = { nounwind readnone speculatable }
 !40 = distinct !DISubprogram(name: "Func_C2Class", linkageName: "?Func_C2Class@@YA?AVC2Class@@AEAV1@@Z", scope: !9, file: !9, line: 24, type: !41, isLocal: false, isDefinition: true, scopeLine: 24, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !41 = !DISubroutineType(types: !42)
 !42 = !{!43, !49}
-!43 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "C2Class", file: !9, line: 20, size: 8, flags: DIFlagTypePassByValue, elements: !44, identifier: ".?AVC2Class@@")
+!43 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "C2Class", file: !9, line: 20, size: 8, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !44, identifier: ".?AVC2Class@@")
 !44 = !{!45}
 !45 = !DISubprogram(name: "~C2Class", scope: !43, file: !9, line: 22, type: !46, isLocal: false, isDefinition: false, scopeLine: 22, flags: DIFlagPublic | DIFlagPrototyped, isOptimized: false)
 !46 = !DISubroutineType(types: !47)
@@ -528,7 +528,7 @@ attributes #1 = { nounwind readnone speculatable }
 !52 = distinct !DISubprogram(name: "Func_DClass", linkageName: "?Func_DClass@@YA?AVDClass@@AEAV1@@Z", scope: !9, file: !9, line: 27, type: !53, isLocal: false, isDefinition: true, scopeLine: 27, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !53 = !DISubroutineType(types: !54)
 !54 = !{!55, !58}
-!55 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "DClass", file: !9, line: 26, size: 8, flags: DIFlagTypePassByValue, elements: !56, identifier: ".?AVDClass@@")
+!55 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "DClass", file: !9, line: 26, size: 8, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !56, identifier: ".?AVDClass@@")
 !56 = !{!57}
 !57 = !DIDerivedType(tag: DW_TAG_inheritance, scope: !55, baseType: !19, flags: DIFlagPublic, extraData: i32 0)
 !58 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: !55, size: 64)
@@ -554,7 +554,7 @@ attributes #1 = { nounwind readnone speculatable }
 !78 = distinct !DISubprogram(name: "Func_BStruct", linkageName: "?Func_BStruct@@YA?AUBStruct@@AEAU1@@Z", scope: !9, file: !9, line: 36, type: !79, isLocal: false, isDefinition: true, scopeLine: 36, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !79 = !DISubroutineType(types: !80)
 !80 = !{!81, !87}
-!81 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "BStruct", file: !9, line: 35, size: 8, flags: DIFlagTypePassByValue, elements: !82, identifier: ".?AUBStruct@@")
+!81 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "BStruct", file: !9, line: 35, size: 8, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !82, identifier: ".?AUBStruct@@")
 !82 = !{!83}
 !83 = !DISubprogram(name: "BStruct", scope: !81, file: !9, line: 35, type: !84, isLocal: false, isDefinition: false, scopeLine: 35, flags: DIFlagPrototyped, isOptimized: false)
 !84 = !DISubroutineType(types: !85)

@@ -63,6 +63,11 @@ class SymbolContext;
 namespace lldb_private {
 class Target;
 }
+namespace lldb_private {
+namespace repro {
+class DataRecorder;
+}
+} // namespace lldb_private
 namespace llvm {
 class raw_ostream;
 }
@@ -70,7 +75,7 @@ class raw_ostream;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Debugger Debugger.h "lldb/Core/Debugger.h"
+/// \class Debugger Debugger.h "lldb/Core/Debugger.h"
 /// A class to manage flag bits.
 ///
 /// Provides a global root objects for the debugger core.
@@ -105,7 +110,7 @@ public:
   static lldb::DebuggerSP FindDebuggerWithID(lldb::user_id_t id);
 
   static lldb::DebuggerSP
-  FindDebuggerWithInstanceName(const ConstString &instance_name);
+  FindDebuggerWithInstanceName(ConstString instance_name);
 
   static size_t GetNumDebuggers();
 
@@ -129,7 +134,10 @@ public:
 
   lldb::StreamFileSP GetErrorFile() { return m_error_file_sp; }
 
-  void SetInputFileHandle(FILE *fh, bool tranfer_ownership);
+  repro::DataRecorder *GetInputRecorder();
+
+  void SetInputFileHandle(FILE *fh, bool tranfer_ownership,
+                          repro::DataRecorder *recorder = nullptr);
 
   void SetOutputFileHandle(FILE *fh, bool tranfer_ownership);
 
@@ -168,7 +176,7 @@ public:
   /// debugger shared instance to control where targets get created and to
   /// allow for tracking and searching for targets based on certain criteria.
   ///
-  /// @return
+  /// \return
   ///     A global shared target list.
   //------------------------------------------------------------------
   TargetList &GetTargetList() { return m_target_list; }
@@ -302,7 +310,7 @@ public:
 
   bool GetNotifyVoid() const;
 
-  const ConstString &GetInstanceName() { return m_instance_name; }
+  ConstString GetInstanceName() { return m_instance_name; }
 
   bool LoadPlugin(const FileSpec &spec, Status &error);
 
@@ -369,6 +377,9 @@ protected:
   lldb::StreamFileSP m_input_file_sp;
   lldb::StreamFileSP m_output_file_sp;
   lldb::StreamFileSP m_error_file_sp;
+
+  /// Used for shadowing the input file when capturing a reproducer.
+  repro::DataRecorder *m_input_recorder;
 
   lldb::BroadcasterManagerSP m_broadcaster_manager_sp; // The debugger acts as a
                                                        // broadcaster manager of

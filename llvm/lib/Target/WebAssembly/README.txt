@@ -14,7 +14,7 @@ can run in browsers and other environments. For more information, see the
 Emscripten documentation in general, and this page in particular:
 
   * https://github.com/kripken/emscripten/wiki/New-WebAssembly-Backend
- 
+
 Rust provides WebAssembly support integrated into Cargo. There are two
 main options:
  - wasm32-unknown-unknown, which provides a relatively minimal environment

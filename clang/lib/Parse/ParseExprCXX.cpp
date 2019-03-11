@@ -1677,20 +1677,21 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
     ExprVector Exprs;
     CommaLocsTy CommaLocs;
 
+    auto RunSignatureHelp = [&]() {
+      QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
+          getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
+          DS.getEndLoc(), Exprs, T.getOpenLocation());
+      CalledSignatureHelp = true;
+      return PreferredType;
+    };
+
     if (Tok.isNot(tok::r_paren)) {
       if (ParseExpressionList(Exprs, CommaLocs, [&] {
-            QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
-                getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
-                DS.getEndLoc(), Exprs, T.getOpenLocation());
-            CalledSignatureHelp = true;
-            Actions.CodeCompleteExpression(getCurScope(), PreferredType);
+            PreferredType.enterFunctionArgument(Tok.getLocation(),
+                                                RunSignatureHelp);
           })) {
-        if (PP.isCodeCompletionReached() && !CalledSignatureHelp) {
-          Actions.ProduceConstructorSignatureHelp(
-              getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
-              DS.getEndLoc(), Exprs, T.getOpenLocation());
-          CalledSignatureHelp = true;
-        }
+        if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+          RunSignatureHelp();
         SkipUntil(tok::r_paren, StopAtSemi);
         return ExprError();
       }
@@ -2846,23 +2847,21 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
     ConstructorLParen = T.getOpenLocation();
     if (Tok.isNot(tok::r_paren)) {
       CommaLocsTy CommaLocs;
+      auto RunSignatureHelp = [&]() {
+        ParsedType TypeRep =
+            Actions.ActOnTypeName(getCurScope(), DeclaratorInfo).get();
+        QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
+            getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
+            DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen);
+        CalledSignatureHelp = true;
+        return PreferredType;
+      };
       if (ParseExpressionList(ConstructorArgs, CommaLocs, [&] {
-            ParsedType TypeRep =
-                Actions.ActOnTypeName(getCurScope(), DeclaratorInfo).get();
-            QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
-                getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
-                DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen);
-            CalledSignatureHelp = true;
-            Actions.CodeCompleteExpression(getCurScope(), PreferredType);
+            PreferredType.enterFunctionArgument(Tok.getLocation(),
+                                                RunSignatureHelp);
           })) {
-        if (PP.isCodeCompletionReached() && !CalledSignatureHelp) {
-          ParsedType TypeRep =
-              Actions.ActOnTypeName(getCurScope(), DeclaratorInfo).get();
-          Actions.ProduceConstructorSignatureHelp(
-              getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
-              DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen);
-          CalledSignatureHelp = true;
-        }
+        if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+          RunSignatureHelp();
         SkipUntil(tok::semi, StopAtSemi | StopBeforeMatch);
         return ExprError();
       }

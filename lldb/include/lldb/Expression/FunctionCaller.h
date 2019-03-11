@@ -23,7 +23,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class FunctionCaller FunctionCaller.h "lldb/Expression/FunctionCaller.h"
+/// \class FunctionCaller FunctionCaller.h "lldb/Expression/FunctionCaller.h"
 /// Encapsulates a function that can be called.
 ///
 /// A given FunctionCaller object can handle a single function signature.
@@ -60,21 +60,21 @@ public:
   //------------------------------------------------------------------
   /// Constructor
   ///
-  /// @param[in] exe_scope
+  /// \param[in] exe_scope
   ///     An execution context scope that gets us at least a target and
   ///     process.
   ///
-  /// @param[in] ast_context
+  /// \param[in] ast_context
   ///     The AST context to evaluate argument types in.
   ///
-  /// @param[in] return_qualtype
+  /// \param[in] return_qualtype
   ///     An opaque Clang QualType for the function result.  Should be
   ///     defined in ast_context.
   ///
-  /// @param[in] function_address
+  /// \param[in] function_address
   ///     The address of the function to call.
   ///
-  /// @param[in] arg_value_list
+  /// \param[in] arg_value_list
   ///     The default values to use when calling this function.  Can
   ///     be overridden using WriteFunctionArguments().
   //------------------------------------------------------------------
@@ -91,15 +91,15 @@ public:
   //------------------------------------------------------------------
   /// Compile the wrapper function
   ///
-  /// @param[in] thread_to_use_sp
+  /// \param[in] thread_to_use_sp
   ///     Compilation might end up calling functions.  Pass in the thread you
   ///     want the compilation to use.  If you pass in an empty ThreadSP it will
   ///     use the currently selected thread.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     The diagnostic manager to report parser errors to.
   ///
-  /// @return
+  /// \return
   ///     The number of errors.
   //------------------------------------------------------------------
   virtual unsigned CompileFunction(lldb::ThreadSP thread_to_use_sp,
@@ -108,19 +108,19 @@ public:
   //------------------------------------------------------------------
   /// Insert the default function wrapper and its default argument struct
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to insert the function and its arguments
   ///     into.
   ///
-  /// @param[in,out] args_addr_ref
+  /// \param[in,out] args_addr_ref
   ///     The address of the structure to write the arguments into.  May
   ///     be LLDB_INVALID_ADDRESS; if it is, a new structure is allocated
   ///     and args_addr_ref is pointed to it.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     The diagnostic manager to report errors to.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   bool InsertFunction(ExecutionContext &exe_ctx, lldb::addr_t &args_addr_ref,
@@ -129,14 +129,14 @@ public:
   //------------------------------------------------------------------
   /// Insert the default function wrapper (using the JIT)
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to insert the function and its arguments
   ///     into.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     The diagnostic manager to report errors to.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   bool WriteFunctionWrapper(ExecutionContext &exe_ctx,
@@ -145,19 +145,19 @@ public:
   //------------------------------------------------------------------
   /// Insert the default function argument struct
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to insert the function and its arguments
   ///     into.
   ///
-  /// @param[in,out] args_addr_ref
+  /// \param[in,out] args_addr_ref
   ///     The address of the structure to write the arguments into.  May
   ///     be LLDB_INVALID_ADDRESS; if it is, a new structure is allocated
   ///     and args_addr_ref is pointed to it.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     The diagnostic manager to report errors to.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   bool WriteFunctionArguments(ExecutionContext &exe_ctx,
@@ -168,22 +168,22 @@ public:
   /// Insert an argument struct with a non-default function address and non-
   /// default argument values
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to insert the function and its arguments
   ///     into.
   ///
-  /// @param[in,out] args_addr_ref
+  /// \param[in,out] args_addr_ref
   ///     The address of the structure to write the arguments into.  May
   ///     be LLDB_INVALID_ADDRESS; if it is, a new structure is allocated
   ///     and args_addr_ref is pointed at it.
   ///
-  /// @param[in] arg_values
+  /// \param[in] arg_values
   ///     The values of the function's arguments.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     The diagnostic manager to report errors to.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   bool WriteFunctionArguments(ExecutionContext &exe_ctx,
@@ -196,10 +196,10 @@ public:
   ///
   /// This is the full version.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The thread & process in which this function will run.
   ///
-  /// @param[in] args_addr_ptr
+  /// \param[in] args_addr_ptr
   ///     If nullptr, the function will take care of allocating & deallocating
   ///     the wrapper
   ///     args structure.  Otherwise, if set to LLDB_INVALID_ADDRESS, a new
@@ -211,16 +211,16 @@ public:
   ///     this should point to an already allocated structure with the values
   ///     already written.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     The diagnostic manager to report errors to.
   ///
-  /// @param[in] options
+  /// \param[in] options
   ///     The options for this expression execution.
   ///
-  /// @param[out] results
+  /// \param[out] results
   ///     The result value will be put here after running the function.
   ///
-  /// @return
+  /// \return
   ///     Returns one of the ExpressionResults enum indicating function call
   ///     status.
   //------------------------------------------------------------------
@@ -233,26 +233,26 @@ public:
   /// Get a thread plan to run the function this FunctionCaller was created
   /// with.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to insert the function and its arguments
   ///     into.
   ///
-  /// @param[in] func_addr
+  /// \param[in] func_addr
   ///     The address of the function in the target process.
   ///
-  /// @param[in] args_addr
+  /// \param[in] args_addr
   ///     The address of the argument struct.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     The diagnostic manager to report errors to.
   ///
-  /// @param[in] stop_others
+  /// \param[in] stop_others
   ///     True if other threads should pause during execution.
   ///
-  /// @param[in] unwind_on_error
+  /// \param[in] unwind_on_error
   ///     True if the thread plan may simply be discarded if an error occurs.
   ///
-  /// @return
+  /// \return
   ///     A ThreadPlan shared pointer for executing the function.
   //------------------------------------------------------------------
   lldb::ThreadPlanSP
@@ -263,16 +263,16 @@ public:
   //------------------------------------------------------------------
   /// Get the result of the function from its struct
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to retrieve the result from.
   ///
-  /// @param[in] args_addr
+  /// \param[in] args_addr
   ///     The address of the argument struct.
   ///
-  /// @param[out] ret_value
+  /// \param[out] ret_value
   ///     The value returned by the function.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   bool FetchFunctionResults(ExecutionContext &exe_ctx, lldb::addr_t args_addr,
@@ -281,11 +281,11 @@ public:
   //------------------------------------------------------------------
   /// Deallocate the arguments structure
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to insert the function and its arguments
   ///     into.
   ///
-  /// @param[in] args_addr
+  /// \param[in] args_addr
   ///     The address of the argument struct.
   //------------------------------------------------------------------
   void DeallocateFunctionResults(ExecutionContext &exe_ctx,

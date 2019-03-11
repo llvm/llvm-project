@@ -938,11 +938,11 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   if (OtherExits.size() > 0) {
     // Generate dedicated exit blocks for the original loop, to preserve
     // LoopSimplifyForm.
-    formDedicatedExitBlocks(L, DT, LI, PreserveLCSSA);
+    formDedicatedExitBlocks(L, DT, LI, nullptr, PreserveLCSSA);
     // Generate dedicated exit blocks for the remainder loop if one exists, to
     // preserve LoopSimplifyForm.
     if (remainderLoop)
-      formDedicatedExitBlocks(remainderLoop, DT, LI, PreserveLCSSA);
+      formDedicatedExitBlocks(remainderLoop, DT, LI, nullptr, PreserveLCSSA);
   }
 
   auto UnrollResult = LoopUnrollResult::Unmodified;

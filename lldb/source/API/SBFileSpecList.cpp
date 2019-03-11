@@ -6,66 +6,86 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <limits.h>
-
-#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFileSpecList.h"
+#include "SBReproducerPrivate.h"
+#include "Utils.h"
+#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
+
+#include <limits.h>
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBFileSpecList::SBFileSpecList() : m_opaque_up(new FileSpecList()) {}
+SBFileSpecList::SBFileSpecList() : m_opaque_up(new FileSpecList()) {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFileSpecList);
+}
 
 SBFileSpecList::SBFileSpecList(const SBFileSpecList &rhs) : m_opaque_up() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  LLDB_RECORD_CONSTRUCTOR(SBFileSpecList, (const lldb::SBFileSpecList &), rhs);
 
-  if (rhs.m_opaque_up)
-    m_opaque_up.reset(new FileSpecList(*(rhs.get())));
 
-  if (log) {
-    log->Printf("SBFileSpecList::SBFileSpecList (const SBFileSpecList "
-                "rhs.ap=%p) => SBFileSpecList(%p)",
-                static_cast<void *>(rhs.m_opaque_up.get()),
-                static_cast<void *>(m_opaque_up.get()));
-  }
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 SBFileSpecList::~SBFileSpecList() {}
 
 const SBFileSpecList &SBFileSpecList::operator=(const SBFileSpecList &rhs) {
-  if (this != &rhs) {
-    m_opaque_up.reset(new lldb_private::FileSpecList(*(rhs.get())));
-  }
+  LLDB_RECORD_METHOD(const lldb::SBFileSpecList &,
+                     SBFileSpecList, operator=,(const lldb::SBFileSpecList &),
+                     rhs);
+
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 
-uint32_t SBFileSpecList::GetSize() const { return m_opaque_up->GetSize(); }
+uint32_t SBFileSpecList::GetSize() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBFileSpecList, GetSize);
+
+  return m_opaque_up->GetSize();
+}
 
 void SBFileSpecList::Append(const SBFileSpec &sb_file) {
+  LLDB_RECORD_METHOD(void, SBFileSpecList, Append, (const lldb::SBFileSpec &),
+                     sb_file);
+
   m_opaque_up->Append(sb_file.ref());
 }
 
 bool SBFileSpecList::AppendIfUnique(const SBFileSpec &sb_file) {
+  LLDB_RECORD_METHOD(bool, SBFileSpecList, AppendIfUnique,
+                     (const lldb::SBFileSpec &), sb_file);
+
   return m_opaque_up->AppendIfUnique(sb_file.ref());
 }
 
-void SBFileSpecList::Clear() { m_opaque_up->Clear(); }
+void SBFileSpecList::Clear() {
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBFileSpecList, Clear);
+
+  m_opaque_up->Clear();
+}
 
 uint32_t SBFileSpecList::FindFileIndex(uint32_t idx, const SBFileSpec &sb_file,
                                        bool full) {
+  LLDB_RECORD_METHOD(uint32_t, SBFileSpecList, FindFileIndex,
+                     (uint32_t, const lldb::SBFileSpec &, bool), idx, sb_file,
+                     full);
+
   return m_opaque_up->FindFileIndex(idx, sb_file.ref(), full);
 }
 
 const SBFileSpec SBFileSpecList::GetFileSpecAtIndex(uint32_t idx) const {
+  LLDB_RECORD_METHOD_CONST(const lldb::SBFileSpec, SBFileSpecList,
+                           GetFileSpecAtIndex, (uint32_t), idx);
+
   SBFileSpec new_spec;
   new_spec.SetFileSpec(m_opaque_up->GetFileSpecAtIndex(idx));
-  return new_spec;
+  return LLDB_RECORD_RESULT(new_spec);
 }
 
 const lldb_private::FileSpecList *SBFileSpecList::operator->() const {
@@ -85,6 +105,9 @@ const lldb_private::FileSpecList &SBFileSpecList::ref() const {
 }
 
 bool SBFileSpecList::GetDescription(SBStream &description) const {
+  LLDB_RECORD_METHOD_CONST(bool, SBFileSpecList, GetDescription,
+                           (lldb::SBStream &), description);
+
   Stream &strm = description.ref();
 
   if (m_opaque_up) {

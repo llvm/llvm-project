@@ -273,11 +273,15 @@ public:
 
   virtual void initialize(SectionTableRef SecTable);
   virtual void finalize();
-  virtual Error removeSectionReferences(const SectionBase *Sec);
+  // Remove references to these sections. The list of sections must be sorted.
+  virtual Error
+  removeSectionReferences(function_ref<bool(const SectionBase *)> ToRemove);
   virtual Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
   virtual void accept(SectionVisitor &Visitor) const = 0;
   virtual void accept(MutableSectionVisitor &Visitor) = 0;
   virtual void markSymbols();
+  virtual void
+  replaceSectionReferences(const DenseMap<SectionBase *, SectionBase *> &);
 };
 
 class Segment {
@@ -334,7 +338,8 @@ public:
 
   void accept(SectionVisitor &Visitor) const override;
   void accept(MutableSectionVisitor &Visitor) override;
-  Error removeSectionReferences(const SectionBase *Sec) override;
+  Error removeSectionReferences(
+      function_ref<bool(const SectionBase *)> ToRemove) override;
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;
 };
@@ -521,7 +526,8 @@ public:
   Symbol *getSymbolByIndex(uint32_t Index);
   void updateSymbols(function_ref<void(Symbol &)> Callable);
 
-  Error removeSectionReferences(const SectionBase *Sec) override;
+  Error removeSectionReferences(
+      function_ref<bool(const SectionBase *)> ToRemove) override;
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;
   void accept(SectionVisitor &Visitor) const override;
@@ -566,14 +572,14 @@ public:
 // that code between the two symbol table types.
 template <class SymTabType>
 class RelocSectionWithSymtabBase : public RelocationSectionBase {
-  SymTabType *Symbols = nullptr;
   void setSymTab(SymTabType *SymTab) { Symbols = SymTab; }
 
 protected:
   RelocSectionWithSymtabBase() = default;
 
+  SymTabType *Symbols = nullptr;
+
 public:
-  Error removeSectionReferences(const SectionBase *Sec) override;
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;
 };
@@ -588,8 +594,12 @@ public:
   void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
   void accept(SectionVisitor &Visitor) const override;
   void accept(MutableSectionVisitor &Visitor) override;
+  Error removeSectionReferences(
+      function_ref<bool(const SectionBase *)> ToRemove) override;
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;
+  void replaceSectionReferences(
+      const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
 
   static bool classof(const SectionBase *S) {
     if (S->Flags & ELF::SHF_ALLOC)
@@ -799,6 +809,11 @@ public:
   SectionTableRef sections() { return SectionTableRef(Sections); }
   ConstRange<SectionBase> sections() const {
     return make_pointee_range(Sections);
+  }
+  SectionBase *findSection(StringRef Name) {
+    auto SecIt =
+        find_if(Sections, [&](const SecPtr &Sec) { return Sec->Name == Name; });
+    return SecIt == Sections.end() ? nullptr : SecIt->get();
   }
   Range<Segment> segments() { return make_pointee_range(Segments); }
   ConstRange<Segment> segments() const { return make_pointee_range(Segments); }

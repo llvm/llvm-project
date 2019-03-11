@@ -47,7 +47,7 @@ public:
   /// each queue.  A serialnum is not reused for a different queue in the
   /// lifetime of that process execution.
   ///
-  /// @return
+  /// \return
   ///     The QueueID for this Queue.
   //------------------------------------------------------------------
   lldb::queue_id_t GetID();
@@ -55,7 +55,7 @@ public:
   //------------------------------------------------------------------
   /// Get the name of this Queue
   ///
-  /// @return
+  /// \return
   ///     The name of the queue, if one is available.
   ///     A NULL pointer is returned if none is available.
   //------------------------------------------------------------------
@@ -72,7 +72,7 @@ public:
   /// maintain similar API to the Thread class, and allow for the
   /// possibility of GetID changing to a different source in the future.
   ///
-  /// @return
+  /// \return
   ///     The IndexID for this queue.
   //------------------------------------------------------------------
   uint32_t GetIndexID();
@@ -84,7 +84,7 @@ public:
   /// a given point in time.  This call returns the list of threads
   /// that are currently executing work for this queue.
   ///
-  /// @return
+  /// \return
   ///     The threads currently performing work for this queue
   //------------------------------------------------------------------
   std::vector<lldb::ThreadSP> GetThreads();
@@ -96,7 +96,7 @@ public:
   /// be done, but has not yet been done.  When the item is going to
   /// be processed it is "dequeued".
   ///
-  /// @return
+  /// \return
   ///     The vector of enqueued items for this queue
   //------------------------------------------------------------------
   const std::vector<lldb::QueueItemSP> &GetPendingItems();
@@ -106,7 +106,7 @@ public:
   //------------------------------------------------------------------
   /// Get the number of work items that this queue is currently running
   ///
-  /// @return
+  /// \return
   ///     The number of work items currently executing.  For a serial
   ///     queue, this will be 0 or 1.  For a concurrent queue, this
   ///     may be any number.
@@ -116,7 +116,7 @@ public:
   //------------------------------------------------------------------
   /// Get the number of work items enqueued on this queue
   ///
-  /// @return
+  /// \return
   ///     The number of work items currently enqueued, waiting to
   ///     execute.
   //------------------------------------------------------------------
@@ -128,7 +128,7 @@ public:
   /// Get the address in the inferior process' memory of this Queue's
   /// dispatch_queue_t structure.
   ///
-  /// @return
+  /// \return
   ///     The address of the dispatch_queue_t structure, if known.
   ///     LLDB_INVALID_ADDRESS will be returned if it is unavailable.
   //------------------------------------------------------------------
@@ -147,7 +147,7 @@ public:
   //------------------------------------------------------------------
   /// Return the kind (serial, concurrent) of this queue
   ///
-  /// @return
+  /// \return
   //      Whether this is a serial or a concurrent queue
   //------------------------------------------------------------------
   lldb::QueueKind GetKind();

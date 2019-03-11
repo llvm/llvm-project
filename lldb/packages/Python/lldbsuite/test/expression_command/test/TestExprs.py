@@ -102,6 +102,7 @@ class BasicExprCommandsTestCase(TestBase):
         # (const char *) $8 = 0x... "/Volumes/data/lldb/svn/trunk/test/expression_command/test/a.out"
 
     @add_test_categories(['pyapi'])
+    @expectedFlakeyNetBSD
     def test_evaluate_expression_python(self):
         """Test SBFrame.EvaluateExpression() API for evaluating an expression."""
         self.build()
@@ -202,6 +203,7 @@ class BasicExprCommandsTestCase(TestBase):
     # rdar://problem/8686536
     # CommandInterpreter::HandleCommand is stripping \'s from input for
     # WantsRawCommand commands
+    @expectedFailureNetBSD
     def test_expr_commands_can_handle_quotes(self):
         """Throw some expression commands with quotes at lldb."""
         self.build()

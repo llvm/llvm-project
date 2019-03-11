@@ -38,8 +38,8 @@ constexpr bool testConstexprSpan(Span s)
         ret = ret &&  (&*(ce-1) == last);
     }
 
-    ret = ret &&  (( e -  s.begin()) == s.size());
-    ret = ret &&  ((ce - s.cbegin()) == s.size());
+    ret = ret &&  (static_cast<size_t>( e -  s.begin()) == s.size());
+    ret = ret &&  (static_cast<size_t>(ce - s.cbegin()) == s.size());
 
     ret = ret &&  (e == ce);
     return ret;
@@ -64,8 +64,8 @@ void testRuntimeSpan(Span s)
         assert( &*(ce-1) == last);
     }
 
-    assert(( e -  s.begin()) == s.size());
-    assert((ce - s.cbegin()) == s.size());
+    assert(static_cast<size_t>( e -  s.begin()) == s.size());
+    assert(static_cast<size_t>(ce - s.cbegin()) == s.size());
 
     assert(e == ce);
 }
@@ -118,7 +118,7 @@ int main(int, char**)
     testRuntimeSpan(std::span<int>(iArr2, 5));
 
     std::string s;
-    testRuntimeSpan(std::span<std::string>(&s, (std::ptrdiff_t) 0));
+    testRuntimeSpan(std::span<std::string>(&s, (std::size_t) 0));
     testRuntimeSpan(std::span<std::string>(&s, 1));
 
   return 0;

@@ -17,9 +17,28 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
+UseOverrideCheck::UseOverrideCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreDestructors(Options.get("IgnoreDestructors", false)),
+      OverrideSpelling(Options.get("OverrideSpelling", "override")),
+      FinalSpelling(Options.get("FinalSpelling", "final")) {}
+
+void UseOverrideCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreDestructors", IgnoreDestructors);
+  Options.store(Opts, "OverrideSpelling", OverrideSpelling);
+  Options.store(Opts, "FinalSpelling", FinalSpelling);
+}
+
 void UseOverrideCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matcher for C++11.
-  if (getLangOpts().CPlusPlus11)
+  if (!getLangOpts().CPlusPlus11)
+    return;
+
+  if (IgnoreDestructors)
+    Finder->addMatcher(
+        cxxMethodDecl(isOverride(), unless(cxxDestructorDecl())).bind("method"),
+        this);
+  else
     Finder->addMatcher(cxxMethodDecl(isOverride()).bind("method"), this);
 }
 
@@ -67,6 +86,8 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Method = Result.Nodes.getNodeAs<FunctionDecl>("method");
   const SourceManager &Sources = *Result.SourceManager;
 
+  ASTContext &Context = *Result.Context;
+
   assert(Method != nullptr);
   if (Method->getInstantiatedFromMemberFunction() != nullptr)
     Method = Method->getInstantiatedFromMemberFunction();
@@ -86,25 +107,24 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
     return; // Nothing to do.
 
   std::string Message;
-
   if (OnlyVirtualSpecified) {
-    Message =
-        "prefer using 'override' or (rarely) 'final' instead of 'virtual'";
+    Message = "prefer using '%0' or (rarely) '%1' instead of 'virtual'";
   } else if (KeywordCount == 0) {
-    Message = "annotate this function with 'override' or (rarely) 'final'";
+    Message = "annotate this function with '%0' or (rarely) '%1'";
   } else {
     StringRef Redundant =
-        HasVirtual ? (HasOverride && HasFinal ? "'virtual' and 'override' are"
+        HasVirtual ? (HasOverride && HasFinal ? "'virtual' and '%0' are"
                                               : "'virtual' is")
-                   : "'override' is";
-    StringRef Correct = HasFinal ? "'final'" : "'override'";
+                   : "'%0' is";
+    StringRef Correct = HasFinal ? "'%1'" : "'%0'";
 
     Message = (llvm::Twine(Redundant) +
                " redundant since the function is already declared " + Correct)
                   .str();
   }
 
-  DiagnosticBuilder Diag = diag(Method->getLocation(), Message);
+  auto Diag = diag(Method->getLocation(), Message)
+              << OverrideSpelling << FinalSpelling;
 
   CharSourceRange FileRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Method->getSourceRange()), Sources,
@@ -121,7 +141,7 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   // Add 'override' on inline declarations that don't already have it.
   if (!HasFinal && !HasOverride) {
     SourceLocation InsertLoc;
-    StringRef ReplacementText = "override ";
+    std::string ReplacementText = OverrideSpelling + " ";
     SourceLocation MethodLoc = Method->getLocation();
 
     for (Token T : Tokens) {
@@ -151,7 +171,7 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
       // end of the declaration of the function, but prefer to put it on the
       // same line as the declaration if the beginning brace for the start of
       // the body falls on the next line.
-      ReplacementText = " override";
+      ReplacementText = " " + OverrideSpelling;
       auto LastTokenIter = std::prev(Tokens.end());
       // When try statement is used instead of compound statement as
       // method body - insert override keyword before it.
@@ -164,23 +184,30 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
       // For declarations marked with "= 0" or "= [default|delete]", the end
       // location will point until after those markings. Therefore, the override
       // keyword shouldn't be inserted at the end, but before the '='.
-      if (Tokens.size() > 2 && (GetText(Tokens.back(), Sources) == "0" ||
-                                Tokens.back().is(tok::kw_default) ||
-                                Tokens.back().is(tok::kw_delete)) &&
+      if (Tokens.size() > 2 &&
+          (GetText(Tokens.back(), Sources) == "0" ||
+           Tokens.back().is(tok::kw_default) ||
+           Tokens.back().is(tok::kw_delete)) &&
           GetText(Tokens[Tokens.size() - 2], Sources) == "=") {
         InsertLoc = Tokens[Tokens.size() - 2].getLocation();
         // Check if we need to insert a space.
         if ((Tokens[Tokens.size() - 2].getFlags() & Token::LeadingSpace) == 0)
-          ReplacementText = " override ";
-      } else if (GetText(Tokens.back(), Sources) == "ABSTRACT") {
+          ReplacementText = " " + OverrideSpelling + " ";
+      } else if (GetText(Tokens.back(), Sources) == "ABSTRACT")
         InsertLoc = Tokens.back().getLocation();
-      }
     }
 
     if (!InsertLoc.isValid()) {
       InsertLoc = FileRange.getEnd();
-      ReplacementText = " override";
+      ReplacementText = " " + OverrideSpelling;
     }
+
+    // If the override macro has been specified just ensure it exists,
+    // if not don't apply a fixit but keep the warning.
+    if (OverrideSpelling != "override" &&
+        !Context.Idents.get(OverrideSpelling).hasMacroDefinition())
+      return;
+
     Diag << FixItHint::CreateInsertion(InsertLoc, ReplacementText);
   }
 

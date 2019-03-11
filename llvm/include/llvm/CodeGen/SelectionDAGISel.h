@@ -143,10 +143,12 @@ public:
     OPC_CheckInteger,
     OPC_CheckChild0Integer, OPC_CheckChild1Integer, OPC_CheckChild2Integer,
     OPC_CheckChild3Integer, OPC_CheckChild4Integer,
-    OPC_CheckCondCode,
+    OPC_CheckCondCode, OPC_CheckChild2CondCode,
     OPC_CheckValueType,
     OPC_CheckComplexPat,
     OPC_CheckAndImm, OPC_CheckOrImm,
+    OPC_CheckImmAllOnesV,
+    OPC_CheckImmAllZerosV,
     OPC_CheckFoldableChainNode,
 
     OPC_EmitInteger,

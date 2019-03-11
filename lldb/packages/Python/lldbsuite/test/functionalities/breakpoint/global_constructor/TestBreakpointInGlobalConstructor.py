@@ -17,6 +17,7 @@ class TestBreakpointInGlobalConstructors(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    @expectedFailureNetBSD
     def test(self):
         self.build()
         self.line_foo = line_number('foo.cpp', '// !BR_foo')

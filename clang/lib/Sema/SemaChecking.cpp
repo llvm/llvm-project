@@ -11018,10 +11018,9 @@ CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
     return;
   }
 
+  // Valid casts involving fixed point types should be accounted for here.
   if (Source->isFixedPointType()) {
-    // TODO: Only CK_FixedPointCast is supported now. The other valid casts
-    // should be accounted for here.
-    if (Target->isFixedPointType()) {
+    if (Target->isUnsaturatedFixedPointType()) {
       Expr::EvalResult Result;
       if (E->EvaluateAsFixedPoint(Result, S.Context,
                                   Expr::SE_AllowSideEffects)) {
@@ -11032,6 +11031,46 @@ CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
           S.DiagRuntimeBehavior(E->getExprLoc(), E,
                                 S.PDiag(diag::warn_impcast_fixed_point_range)
                                     << Value.toString() << T
+                                    << E->getSourceRange()
+                                    << clang::SourceRange(CC));
+          return;
+        }
+      }
+    } else if (Target->isIntegerType()) {
+      Expr::EvalResult Result;
+      if (E->EvaluateAsFixedPoint(Result, S.Context,
+                                  Expr::SE_AllowSideEffects)) {
+        APFixedPoint FXResult = Result.Val.getFixedPoint();
+
+        bool Overflowed;
+        llvm::APSInt IntResult = FXResult.convertToInt(
+            S.Context.getIntWidth(T),
+            Target->isSignedIntegerOrEnumerationType(), &Overflowed);
+
+        if (Overflowed) {
+          S.DiagRuntimeBehavior(E->getExprLoc(), E,
+                                S.PDiag(diag::warn_impcast_fixed_point_range)
+                                    << FXResult.toString() << T
+                                    << E->getSourceRange()
+                                    << clang::SourceRange(CC));
+          return;
+        }
+      }
+    }
+  } else if (Target->isUnsaturatedFixedPointType()) {
+    if (Source->isIntegerType()) {
+      Expr::EvalResult Result;
+      if (E->EvaluateAsInt(Result, S.Context, Expr::SE_AllowSideEffects)) {
+        llvm::APSInt Value = Result.Val.getInt();
+
+        bool Overflowed;
+        APFixedPoint IntResult = APFixedPoint::getFromIntValue(
+            Value, S.Context.getFixedPointSemantics(T), &Overflowed);
+
+        if (Overflowed) {
+          S.DiagRuntimeBehavior(E->getExprLoc(), E,
+                                S.PDiag(diag::warn_impcast_fixed_point_range)
+                                    << Value.toString(/*radix=*/10) << T
                                     << E->getSourceRange()
                                     << clang::SourceRange(CC));
           return;

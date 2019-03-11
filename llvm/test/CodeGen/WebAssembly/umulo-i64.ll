@@ -21,7 +21,7 @@ attributes #0 = { inlinehint }
 attributes #1 = { nounwind readnone speculatable }
 
 ; CHECK-LABEL: wut:
-; CHECK: call     __multi3@FUNCTION, $2, $0, $pop0, $1, $pop7
+; CHECK: call     __multi3, $2, $0, $pop0, $1, $pop7
 ; CHECK: i64.load $0=, 8($2)
 define i1 @wut(i64, i64) {
 start:

@@ -60,13 +60,14 @@ public:
   }
 
   Expected<DILineInfo> symbolizeCode(const std::string &ModuleName,
-                                     uint64_t ModuleOffset,
+                                     object::SectionedAddress ModuleOffset,
                                      StringRef DWPName = "");
-  Expected<DIInliningInfo> symbolizeInlinedCode(const std::string &ModuleName,
-                                                uint64_t ModuleOffset,
-                                                StringRef DWPName = "");
+  Expected<DIInliningInfo>
+  symbolizeInlinedCode(const std::string &ModuleName,
+                       object::SectionedAddress ModuleOffset,
+                       StringRef DWPName = "");
   Expected<DIGlobal> symbolizeData(const std::string &ModuleName,
-                                   uint64_t ModuleOffset);
+                                   object::SectionedAddress ModuleOffset);
   void flush();
 
   static std::string

@@ -71,3 +71,5 @@ define void @foo() {
 define internal void @bar() {
   ret void
 }
+
+declare i32 @baz(...)

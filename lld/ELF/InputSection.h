@@ -51,12 +51,25 @@ public:
 
   unsigned SectionKind : 3;
 
-  // The next two bit fields are only used by InputSectionBase, but we
+  // The next three bit fields are only used by InputSectionBase, but we
   // put them here so the struct packs better.
 
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
   unsigned Live : 1;
+
+  // True if this section has already been placed to a linker script
+  // output section. This is needed because, in a linker script, you
+  // can refer to the same section more than once. For example, in
+  // the following linker script,
+  //
+  //   .foo : { *(.text) }
+  //   .bar : { *(.text) }
+  //
+  // .foo takes all .text sections, and .bar becomes empty. To achieve
+  // this, we need to memorize whether a section has been placed or
+  // not for each input section.
+  unsigned Assigned : 1;
 
   unsigned Bss : 1;
 
@@ -87,8 +100,8 @@ protected:
               uint64_t Entsize, uint64_t Alignment, uint32_t Type,
               uint32_t Info, uint32_t Link)
       : Name(Name), Repl(this), SectionKind(SectionKind), Live(false),
-        Bss(false), KeepUnique(false), Alignment(Alignment), Flags(Flags),
-        Entsize(Entsize), Type(Type), Link(Link), Info(Info) {}
+        Assigned(false), Bss(false), KeepUnique(false), Alignment(Alignment),
+        Flags(Flags), Entsize(Entsize), Type(Type), Link(Link), Info(Info) {}
 };
 
 // This corresponds to a section of an input file.
@@ -104,6 +117,11 @@ public:
                    Kind SectionKind);
 
   static bool classof(const SectionBase *S) { return S->kind() != Output; }
+
+  // Relocations that refer to this section.
+  unsigned NumRelocations : 31;
+  unsigned AreRelocsRela : 1;
+  const void *FirstRelocation = nullptr;
 
   // The file which contains this section. Its dynamic type is always
   // ObjFile<ELFT>, but in order to avoid ELFT, we use InputFile as
@@ -122,29 +140,11 @@ public:
 
   uint64_t getOffsetInFile() const;
 
-  // True if this section has already been placed to a linker script
-  // output section. This is needed because, in a linker script, you
-  // can refer to the same section more than once. For example, in
-  // the following linker script,
-  //
-  //   .foo : { *(.text) }
-  //   .bar : { *(.text) }
-  //
-  // .foo takes all .text sections, and .bar becomes empty. To achieve
-  // this, we need to memorize whether a section has been placed or
-  // not for each input section.
-  bool Assigned = false;
-
   // Input sections are part of an output section. Special sections
   // like .eh_frame and merge sections are first combined into a
   // synthetic section that is then added to an output section. In all
   // cases this points one level up.
   SectionBase *Parent = nullptr;
-
-  // Relocations that refer to this section.
-  const void *FirstRelocation = nullptr;
-  unsigned NumRelocations : 31;
-  unsigned AreRelocsRela : 1;
 
   template <class ELFT> ArrayRef<typename ELFT::Rel> rels() const {
     assert(!AreRelocsRela);

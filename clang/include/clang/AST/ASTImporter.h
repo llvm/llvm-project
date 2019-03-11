@@ -177,15 +177,10 @@ class TypeSourceInfo;
     /// \return Error information (success or error).
     template <typename ImportT>
     LLVM_NODISCARD llvm::Error importInto(ImportT &To, const ImportT &From) {
-      To = Import(From);
-      if (From && !To)
-          return llvm::make_error<ImportError>();
-      return llvm::Error::success();
-      // FIXME: this should be the final code
-      //auto ToOrErr = Import(From);
-      //if (ToOrErr)
-      //  To = *ToOrErr;
-      //return ToOrErr.takeError();
+      auto ToOrErr = Import_New(From);
+      if (ToOrErr)
+        To = *ToOrErr;
+      return ToOrErr.takeError();
     }
 
     /// Import the given type from the "from" context into the "to"
@@ -337,9 +332,9 @@ class TypeSourceInfo;
     ///
     /// \returns The equivalent file ID in the source manager of the "to"
     /// context, or the import error.
-    llvm::Expected<FileID> Import_New(FileID);
+    llvm::Expected<FileID> Import_New(FileID, bool IsBuiltin = false);
     // FIXME: Remove this version.
-    FileID Import(FileID);
+    FileID Import(FileID, bool IsBuiltin = false);
 
     /// Import the given C++ constructor initializer from the "from"
     /// context into the "to" context.

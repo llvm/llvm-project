@@ -17,6 +17,7 @@ class CrashingInferiorTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureNetBSD
     def test_inferior_crashing(self):
         """Test that lldb reliably catches the inferior crashing (command)."""
         self.build()
@@ -56,6 +57,7 @@ class CrashingInferiorTestCase(TestBase):
     # intended IMHO.
     @skipIfLinux
     @skipIfFreeBSD
+    @expectedFailureNetBSD
     def test_inferior_crashing_expr_step_and_expr(self):
         """Test that lldb expressions work before and after stepping after a crash."""
         self.build()

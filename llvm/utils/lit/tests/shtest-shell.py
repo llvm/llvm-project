@@ -96,7 +96,7 @@
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-0.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-0.txt' FAILED ***
-# CEHCK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r" 
 # CHECK: # command output:
 # CHECK: Only in {{.*}}dir1: dir1unique
 # CHECK: Only in {{.*}}dir2: dir2unique
@@ -104,7 +104,7 @@
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-1.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-1.txt' FAILED ***
-# CEHCK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r" 
 # CHECK: # command output:
 # CHECK: *** {{.*}}dir1{{.*}}subdir{{.*}}f01
 # CHECK: --- {{.*}}dir2{{.*}}subdir{{.*}}f01
@@ -114,35 +114,35 @@
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-2.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-2.txt' FAILED ***
-# CEHCK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r" 
 # CHECK: # command output:
 # CHECK: Only in {{.*}}dir2: extrafile
 # CHECK: error: command failed with exit status: 1
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-3.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-3.txt' FAILED ***
-# CEHCK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r" 
 # CHECK: # command output:
 # CHECK: Only in {{.*}}dir1: extra_subdir
 # CHECK: error: command failed with exit status: 1
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-4.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-4.txt' FAILED ***
-# CEHCK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r" 
 # CHECK: # command output:
 # CHECK: File {{.*}}dir1{{.*}}extra_subdir is a directory while file {{.*}}dir2{{.*}}extra_subdir is a regular file
 # CHECK: error: command failed with exit status: 1
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-5.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-5.txt' FAILED ***
-# CEHCK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r" 
 # CHECK: # command output:
 # CHECK: Only in {{.*}}dir1: extra_subdir
 # CHECK: error: command failed with exit status: 1
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-6.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-6.txt' FAILED ***
-# CEHCK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r" 
 # CHECK: # command output:
 # CHECK: File {{.*}}dir1{{.*}}extra_file is a regular empty file while file {{.*}}dir2{{.*}}extra_file is a directory
 # CHECK: error: command failed with exit status: 1
@@ -224,6 +224,7 @@
 # CHECK: Exit Code: 1
 # CHECK: ***
 
+# CHECK: PASS: shtest-shell :: rm-unicode-0.txt
 # CHECK: PASS: shtest-shell :: sequencing-0.txt
 # CHECK: XFAIL: shtest-shell :: sequencing-1.txt
 # CHECK: PASS: shtest-shell :: valid-shell.txt

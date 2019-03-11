@@ -70,6 +70,8 @@ StackPtrConst("ppc-stack-ptr-caller-preserved",
                          "caller preserved registers can be LICM candidates"),
                 cl::init(true), cl::Hidden);
 
+static unsigned offsetMinAlignForOpcode(unsigned OpC);
+
 PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
   : PPCGenRegisterInfo(TM.isPPC64() ? PPC::LR8 : PPC::LR,
                        TM.isPPC64() ? 0 : 1,
@@ -313,6 +315,51 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
+}
+
+bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) const {
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const PPCInstrInfo *InstrInfo =  Subtarget.getInstrInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const std::vector<CalleeSavedInfo> &Info = MFI.getCalleeSavedInfo();
+
+  // If the callee saved info is invalid we have to default to true for safety.
+  if (!MFI.isCalleeSavedInfoValid())
+    return true;
+
+  // We will require the use of X-Forms because the frame is larger than what
+  // can be represented in signed 16 bits that fit in the immediate of a D-Form.
+  // If we need an X-Form then we need a register to store the address offset.
+  unsigned FrameSize = MFI.getStackSize();
+  // Signed 16 bits means that the FrameSize cannot be more than 15 bits.
+  if (FrameSize & ~0x7FFF)
+    return true;
+
+  // The callee saved info is valid so it can be traversed.
+  // Checking for registers that need saving that do not have load or store
+  // forms where the address offset is an immediate.
+  for (unsigned i = 0; i < Info.size(); i++) {
+    int FrIdx = Info[i].getFrameIdx();
+    unsigned Reg = Info[i].getReg();
+
+    unsigned Opcode = InstrInfo->getStoreOpcodeForSpill(Reg);
+    if (!MFI.isFixedObjectIndex(FrIdx)) {
+      // This is not a fixed object. If it requires alignment then we may still
+      // need to use the XForm.
+      if (offsetMinAlignForOpcode(Opcode) > 1)
+        return true;
+    }
+
+    // This is eiher:
+    // 1) A fixed frame index object which we know are aligned so
+    // as long as we have a valid DForm/DSForm/DQForm (non XForm) we don't
+    // need to consider the alignement here.
+    // 2) A not fixed object but in that case we now know that the min required
+    // alignment is no more than 1 based on the previous check.
+    if (InstrInfo->isXFormMemOp(Opcode))
+      return true;
+  }
+  return false;
 }
 
 bool PPCRegisterInfo::isCallerPreservedPhysReg(unsigned PhysReg,
@@ -825,9 +872,7 @@ bool PPCRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
 }
 
 // If the offset must be a multiple of some value, return what that value is.
-static unsigned offsetMinAlign(const MachineInstr &MI) {
-  unsigned OpC = MI.getOpcode();
-
+static unsigned offsetMinAlignForOpcode(unsigned OpC) {
   switch (OpC) {
   default:
     return 1;
@@ -850,6 +895,12 @@ static unsigned offsetMinAlign(const MachineInstr &MI) {
   case PPC::STXV:
     return 16;
   }
+}
+
+// If the offset must be a multiple of some value, return what that value is.
+static unsigned offsetMinAlign(const MachineInstr &MI) {
+  unsigned OpC = MI.getOpcode();
+  return offsetMinAlignForOpcode(OpC);
 }
 
 // Return the OffsetOperandNo given the FIOperandNum (and the instruction).
@@ -1080,7 +1131,7 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   MachineBasicBlock &MBB = *MI->getParent();
   MachineFunction &MF = *MBB.getParent();
   const PPCFrameLowering *TFI = getFrameLowering(MF);
-  unsigned StackEst = TFI->determineFrameLayout(MF, false, true);
+  unsigned StackEst = TFI->determineFrameLayout(MF, true);
 
   // If we likely don't need a stack frame, then we probably don't need a
   // virtual base register either.

@@ -384,8 +384,9 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
 
 /// Emit location lists for \p Unit and update attributes to point to the new
 /// entries.
-void DwarfStreamer::emitLocationsForUnit(const CompileUnit &Unit,
-                                         DWARFContext &Dwarf) {
+void DwarfStreamer::emitLocationsForUnit(
+    const CompileUnit &Unit, DWARFContext &Dwarf,
+    std::function<void(StringRef, SmallVectorImpl<uint8_t> &)> ProcessExpr) {
   const auto &Attributes = Unit.getLocationAttributes();
 
   if (Attributes.empty())
@@ -402,6 +403,7 @@ void DwarfStreamer::emitLocationsForUnit(const CompileUnit &Unit,
   if (auto OrigLowPc = dwarf::toAddress(OrigUnitDie.find(dwarf::DW_AT_low_pc)))
     UnitPcOffset = int64_t(*OrigLowPc) - Unit.getLowPc();
 
+  SmallVector<uint8_t, 32> Buffer;
   for (const auto &Attr : Attributes) {
     uint32_t Offset = Attr.first.get();
     Attr.first.set(LocSectionSize);
@@ -421,9 +423,13 @@ void DwarfStreamer::emitLocationsForUnit(const CompileUnit &Unit,
       Asm->OutStreamer->EmitIntValue(High + LocPcOffset, AddressSize);
       uint64_t Length = Data.getU16(&Offset);
       Asm->OutStreamer->EmitIntValue(Length, 2);
-      // Just copy the bytes over.
+      // Copy the bytes into to the buffer, process them, emit them.
+      Buffer.reserve(Length);
+      Buffer.resize(0);
+      StringRef Input = InputSec.Data.substr(Offset, Length);
+      ProcessExpr(Input, Buffer);
       Asm->OutStreamer->EmitBytes(
-          StringRef(InputSec.Data.substr(Offset, Length)));
+          StringRef((const char *)Buffer.data(), Length));
       Offset += Length;
       LocSectionSize += Length + 2;
     }
@@ -480,11 +486,11 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
       MS->EmitIntValue(dwarf::DW_LNS_extended_op, 1);
       MS->EmitULEB128IntValue(PointerSize + 1);
       MS->EmitIntValue(dwarf::DW_LNE_set_address, 1);
-      MS->EmitIntValue(Row.Address, PointerSize);
+      MS->EmitIntValue(Row.Address.Address, PointerSize);
       LineSectionSize += 2 + PointerSize + getULEB128Size(PointerSize + 1);
       AddressDelta = 0;
     } else {
-      AddressDelta = (Row.Address - Address) / MinInstLength;
+      AddressDelta = (Row.Address.Address - Address) / MinInstLength;
     }
 
     // FIXME: code copied and transformed from MCDwarf.cpp::EmitDwarfLineTable.
@@ -540,7 +546,7 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
       MS->EmitBytes(EncodingOS.str());
       LineSectionSize += EncodingBuffer.size();
       EncodingBuffer.resize(0);
-      Address = Row.Address;
+      Address = Row.Address.Address;
       LastLine = Row.Line;
       RowsSinceLastSequence++;
     } else {

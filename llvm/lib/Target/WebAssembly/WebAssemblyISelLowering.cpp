@@ -174,6 +174,23 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
           setOperationAction(Op, T, Expand);
     }
 
+    // Expand integer operations supported for scalars but not SIMD
+    for (auto Op : {ISD::CTLZ, ISD::CTTZ, ISD::CTPOP, ISD::SDIV, ISD::UDIV,
+                    ISD::SREM, ISD::UREM, ISD::ROTL, ISD::ROTR}) {
+      for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
+        setOperationAction(Op, T, Expand);
+      if (Subtarget->hasUnimplementedSIMD128())
+        setOperationAction(Op, MVT::v2i64, Expand);
+    }
+
+    // Expand float operations supported for scalars but not SIMD
+    for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
+                    ISD::FCOPYSIGN}) {
+      setOperationAction(Op, MVT::v4f32, Expand);
+      if (Subtarget->hasUnimplementedSIMD128())
+        setOperationAction(Op, MVT::v2f64, Expand);
+    }
+
     // Expand additional SIMD ops that V8 hasn't implemented yet
     if (!Subtarget->hasUnimplementedSIMD128()) {
       setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
@@ -341,8 +358,7 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
   F->insert(It, DoneMBB);
 
   // Transfer the remainder of BB and its successor edges to DoneMBB.
-  DoneMBB->splice(DoneMBB->begin(), BB,
-                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  DoneMBB->splice(DoneMBB->begin(), BB, std::next(MI.getIterator()), BB->end());
   DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
 
   BB->addSuccessor(TrueMBB);
@@ -674,13 +690,16 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsVarArg) {
     // Outgoing non-fixed arguments are placed in a buffer. First
     // compute their offsets and the total amount of buffer space needed.
-    for (SDValue Arg :
-         make_range(OutVals.begin() + NumFixedArgs, OutVals.end())) {
+    for (unsigned I = NumFixedArgs; I < Outs.size(); ++I) {
+      const ISD::OutputArg &Out = Outs[I];
+      SDValue &Arg = OutVals[I];
       EVT VT = Arg.getValueType();
       assert(VT != MVT::iPTR && "Legalized args should be concrete");
       Type *Ty = VT.getTypeForEVT(*DAG.getContext());
+      unsigned Align = std::max(Out.Flags.getOrigAlign(),
+                                Layout.getABITypeAlignment(Ty));
       unsigned Offset = CCInfo.AllocateStack(Layout.getTypeAllocSize(Ty),
-                                             Layout.getABITypeAlignment(Ty));
+                                             Align);
       CCInfo.addLoc(CCValAssign::getMem(ArgLocs.size(), VT.getSimpleVT(),
                                         Offset, VT.getSimpleVT(),
                                         CCValAssign::Full));

@@ -5121,10 +5121,11 @@ class N3VCP8F16Q0<string asm, RegisterClass Td, RegisterClass Tn,
   : N3VCP8Q0<op1, op2, 0, op3, (outs Td:$Vd), (ins Tn:$Vn, Tm:$Vm), NoItinerary,
            asm, "f16", "$Vd, $Vn, $Vm", "", []>;
 
-class VFMQ0<string opc, bits<2> S>
+// Vd, Vs, Vs[0-15], Idx[0-1]
+class VFMD<string opc, string type, bits<2> S>
   : N3VLaneCP8<0, S, 0, 1, (outs DPR:$Vd),
-               (ins SPR:$Vn, SPR:$Vm, VectorIndex32:$idx),
-               IIC_VMACD, opc, "f16", "$Vd, $Vn, $Vm$idx", "", []> {
+               (ins SPR:$Vn, SPR_8:$Vm, VectorIndex32:$idx),
+               IIC_VMACD, opc, type, "$Vd, $Vn, $Vm$idx", "", []> {
   bit idx;
   let Inst{3} = idx;
   let Inst{19-16} = Vn{4-1};
@@ -5133,10 +5134,11 @@ class VFMQ0<string opc, bits<2> S>
   let Inst{2-0}   = Vm{3-1};
 }
 
-class VFMQ1<string opc, bits<2> S>
+// Vq, Vd, Vd[0-7], Idx[0-3]
+class VFMQ<string opc, string type, bits<2> S>
   : N3VLaneCP8<0, S, 1, 1, (outs QPR:$Vd),
-               (ins DPR:$Vn, DPR:$Vm, VectorIndex16:$idx),
-               IIC_VMACD, opc, "f16", "$Vd, $Vn, $Vm$idx", "", []> {
+               (ins DPR:$Vn, DPR_8:$Vm, VectorIndex16:$idx),
+               IIC_VMACD, opc, type, "$Vd, $Vn, $Vm$idx", "", []> {
   bits<2> idx;
   let Inst{5} = idx{1};
   let Inst{3} = idx{0};
@@ -5148,10 +5150,10 @@ def VFMALD  : N3VCP8F16Q0<"vfmal", DPR, SPR, SPR, 0b00, 0b10, 1>;
 def VFMSLD  : N3VCP8F16Q0<"vfmsl", DPR, SPR, SPR, 0b01, 0b10, 1>;
 def VFMALQ  : N3VCP8F16Q1<"vfmal", QPR, DPR, DPR, 0b00, 0b10, 1>;
 def VFMSLQ  : N3VCP8F16Q1<"vfmsl", QPR, DPR, DPR, 0b01, 0b10, 1>;
-def VFMALDI : VFMQ0<"vfmal", 0b00>;
-def VFMSLDI : VFMQ0<"vfmsl", 0b01>;
-def VFMALQI : VFMQ1<"vfmal", 0b00>;
-def VFMSLQI : VFMQ1<"vfmsl", 0b01>;
+def VFMALDI : VFMD<"vfmal", "f16", 0b00>;
+def VFMSLDI : VFMD<"vfmsl", "f16", 0b01>;
+def VFMALQI : VFMQ<"vfmal", "f16", 0b00>;
+def VFMSLQI : VFMQ<"vfmsl", "f16", 0b01>;
 }
 } // HasNEON, HasFP16FML
 

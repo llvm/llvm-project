@@ -250,16 +250,22 @@ public:
     __db_c_const_iterator __c_end() const;
     __db_i_const_iterator __i_end() const;
 
+    typedef __c_node*(_InsertConstruct)(void*, void*, __c_node*);
+
+    template <class _Cont>
+    _LIBCPP_INLINE_VISIBILITY static __c_node* __create_C_node(void *__mem, void *__c, __c_node *__next) {
+        return ::new(__mem) _C_node<_Cont>(__c, __next);
+    }
+
     template <class _Cont>
     _LIBCPP_INLINE_VISIBILITY
     void __insert_c(_Cont* __c)
     {
-        __c_node* __n = __insert_c(static_cast<void*>(__c));
-        ::new(__n) _C_node<_Cont>(__n->__c_, __n->__next_);
+        __insert_c(static_cast<void*>(__c), &__create_C_node<_Cont>);
     }
 
     void __insert_i(void* __i);
-    __c_node* __insert_c(void* __c);
+    void __insert_c(void* __c, _InsertConstruct* __fn);
     void __erase_c(void* __c);
 
     void __insert_ic(void* __i, const void* __c);

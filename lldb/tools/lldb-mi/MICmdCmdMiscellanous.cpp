@@ -339,7 +339,9 @@ bool CMICmdCmdListThreadGroups::Acknowledge() {
       const char *pDir = sbTrgt.GetExecutable().GetDirectory();
       const char *pFileName = sbTrgt.GetExecutable().GetFilename();
       const CMIUtilString strFile(
-          CMIUtilString::Format("%s/%s", pDir, pFileName));
+          CMIUtilString::Format("%s/%s",
+                                CMIUtilString::WithNullAsEmpty(pDir),
+                                CMIUtilString::WithNullAsEmpty(pFileName)));
       const CMICmnMIValueConst miValueConst4(strFile);
       const CMICmnMIValueResult miValueResult4("executable", miValueConst4);
       miTuple.Add(miValueResult4);

@@ -424,6 +424,7 @@ ELF-MIPSEL-NEXT: Symbols:
 ELF-MIPSEL-NEXT:   Local:
 ELF-MIPSEL-NEXT:     - Name:            trivial.ll
 ELF-MIPSEL-NEXT:       Type:            STT_FILE
+ELF-MIPSEL-NEXT:       Index:           SHN_ABS
 ELF-MIPSEL-NEXT:     - Name:            '$.str'
 ELF-MIPSEL-NEXT:       Type:            STT_OBJECT
 ELF-MIPSEL-NEXT:       Section:         .rodata.str1.1
@@ -571,6 +572,7 @@ ELF-X86-64-NEXT: Symbols:
 ELF-X86-64-NEXT:   Local:
 ELF-X86-64-NEXT:     - Name:            trivial-object-test.s
 ELF-X86-64-NEXT:       Type:            STT_FILE
+ELF-X86-64-NEXT:       Index:           SHN_ABS
 ELF-X86-64-NEXT:     - Name:            .text
 ELF-X86-64-NEXT:       Type:            STT_SECTION
 ELF-X86-64-NEXT:       Section:         .text
@@ -618,6 +620,7 @@ ELF-AVR-NEXT:       Section:         .data
 ELF-AVR-NEXT:       Value:           0x0000000000800060
 ELF-AVR-NEXT:     - Name:            a.o
 ELF-AVR-NEXT:       Type:            STT_FILE
+ELF-AVR-NEXT:       Index:           SHN_ABS
 ELF-AVR-NEXT:     - Name:            main
 ELF-AVR-NEXT:       Section:         .text
 ELF-AVR-NEXT:   Global:
@@ -627,10 +630,12 @@ ELF-AVR-NEXT:     - Name:            _etext
 ELF-AVR-NEXT:       Section:         .text
 ELF-AVR-NEXT:       Value:           0x0000000000000004
 ELF-AVR-NEXT:     - Name:            __data_load_end
+ELF-AVR-NEXT:       Index:           SHN_ABS
 ELF-AVR-NEXT:       Value:           0x0000000000000004
 ELF-AVR-NEXT:     - Name:            __trampolines_end
 ELF-AVR-NEXT:       Section:         .text
 ELF-AVR-NEXT:     - Name:            __data_load_start
+ELF-AVR-NEXT:       Index:           SHN_ABS
 ELF-AVR-NEXT:       Value:           0x0000000000000004
 ELF-AVR-NEXT:     - Name:            __dtors_end
 ELF-AVR-NEXT:       Section:         .text

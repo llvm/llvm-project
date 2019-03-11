@@ -64,6 +64,7 @@
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
 
@@ -83,7 +84,7 @@ using namespace std::chrono;
 
 class ProcessOptionValueProperties : public OptionValueProperties {
 public:
-  ProcessOptionValueProperties(const ConstString &name)
+  ProcessOptionValueProperties(ConstString name)
       : OptionValueProperties(name) {}
 
   // This constructor is used when creating ProcessOptionValueProperties when
@@ -278,140 +279,6 @@ bool ProcessProperties::GetStopOnExec() const {
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
-void ProcessInstanceInfo::Dump(Stream &s, Platform *platform) const {
-  const char *cstr;
-  if (m_pid != LLDB_INVALID_PROCESS_ID)
-    s.Printf("    pid = %" PRIu64 "\n", m_pid);
-
-  if (m_parent_pid != LLDB_INVALID_PROCESS_ID)
-    s.Printf(" parent = %" PRIu64 "\n", m_parent_pid);
-
-  if (m_executable) {
-    s.Printf("   name = %s\n", m_executable.GetFilename().GetCString());
-    s.PutCString("   file = ");
-    m_executable.Dump(&s);
-    s.EOL();
-  }
-  const uint32_t argc = m_arguments.GetArgumentCount();
-  if (argc > 0) {
-    for (uint32_t i = 0; i < argc; i++) {
-      const char *arg = m_arguments.GetArgumentAtIndex(i);
-      if (i < 10)
-        s.Printf(" arg[%u] = %s\n", i, arg);
-      else
-        s.Printf("arg[%u] = %s\n", i, arg);
-    }
-  }
-
-  s.Format("{0}", m_environment);
-
-  if (m_arch.IsValid()) {
-    s.Printf("   arch = ");
-    m_arch.DumpTriple(s);
-    s.EOL();
-  }
-
-  if (m_uid != UINT32_MAX) {
-    cstr = platform->GetUserName(m_uid);
-    s.Printf("    uid = %-5u (%s)\n", m_uid, cstr ? cstr : "");
-  }
-  if (m_gid != UINT32_MAX) {
-    cstr = platform->GetGroupName(m_gid);
-    s.Printf("    gid = %-5u (%s)\n", m_gid, cstr ? cstr : "");
-  }
-  if (m_euid != UINT32_MAX) {
-    cstr = platform->GetUserName(m_euid);
-    s.Printf("   euid = %-5u (%s)\n", m_euid, cstr ? cstr : "");
-  }
-  if (m_egid != UINT32_MAX) {
-    cstr = platform->GetGroupName(m_egid);
-    s.Printf("   egid = %-5u (%s)\n", m_egid, cstr ? cstr : "");
-  }
-}
-
-void ProcessInstanceInfo::DumpTableHeader(Stream &s, Platform *platform,
-                                          bool show_args, bool verbose) {
-  const char *label;
-  if (show_args || verbose)
-    label = "ARGUMENTS";
-  else
-    label = "NAME";
-
-  if (verbose) {
-    s.Printf("PID    PARENT USER       GROUP      EFF USER   EFF GROUP  TRIPLE "
-             "                  %s\n",
-             label);
-    s.PutCString("====== ====== ========== ========== ========== ========== "
-                 "======================== ============================\n");
-  } else {
-    s.Printf("PID    PARENT USER       TRIPLE                   %s\n", label);
-    s.PutCString("====== ====== ========== ======================== "
-                 "============================\n");
-  }
-}
-
-void ProcessInstanceInfo::DumpAsTableRow(Stream &s, Platform *platform,
-                                         bool show_args, bool verbose) const {
-  if (m_pid != LLDB_INVALID_PROCESS_ID) {
-    const char *cstr;
-    s.Printf("%-6" PRIu64 " %-6" PRIu64 " ", m_pid, m_parent_pid);
-
-    StreamString arch_strm;
-    if (m_arch.IsValid())
-      m_arch.DumpTriple(arch_strm);
-
-    if (verbose) {
-      cstr = platform->GetUserName(m_uid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_uid);
-
-      cstr = platform->GetGroupName(m_gid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_gid);
-
-      cstr = platform->GetUserName(m_euid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_euid);
-
-      cstr = platform->GetGroupName(m_egid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_egid);
-
-      s.Printf("%-24s ", arch_strm.GetData());
-    } else {
-      s.Printf("%-10s %-24s ", platform->GetUserName(m_euid),
-               arch_strm.GetData());
-    }
-
-    if (verbose || show_args) {
-      const uint32_t argc = m_arguments.GetArgumentCount();
-      if (argc > 0) {
-        for (uint32_t i = 0; i < argc; i++) {
-          if (i > 0)
-            s.PutChar(' ');
-          s.PutCString(m_arguments.GetArgumentAtIndex(i));
-        }
-      }
-    } else {
-      s.PutCString(GetName());
-    }
-
-    s.EOL();
-  }
-}
-
 Status ProcessLaunchCommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
@@ -579,89 +446,6 @@ static constexpr OptionDefinition g_process_launch_options[] = {
 
 llvm::ArrayRef<OptionDefinition> ProcessLaunchCommandOptions::GetDefinitions() {
   return llvm::makeArrayRef(g_process_launch_options);
-}
-
-bool ProcessInstanceInfoMatch::NameMatches(const char *process_name) const {
-  if (m_name_match_type == NameMatch::Ignore || process_name == nullptr)
-    return true;
-  const char *match_name = m_match_info.GetName();
-  if (!match_name)
-    return true;
-
-  return lldb_private::NameMatches(process_name, m_name_match_type, match_name);
-}
-
-bool ProcessInstanceInfoMatch::Matches(
-    const ProcessInstanceInfo &proc_info) const {
-  if (!NameMatches(proc_info.GetName()))
-    return false;
-
-  if (m_match_info.ProcessIDIsValid() &&
-      m_match_info.GetProcessID() != proc_info.GetProcessID())
-    return false;
-
-  if (m_match_info.ParentProcessIDIsValid() &&
-      m_match_info.GetParentProcessID() != proc_info.GetParentProcessID())
-    return false;
-
-  if (m_match_info.UserIDIsValid() &&
-      m_match_info.GetUserID() != proc_info.GetUserID())
-    return false;
-
-  if (m_match_info.GroupIDIsValid() &&
-      m_match_info.GetGroupID() != proc_info.GetGroupID())
-    return false;
-
-  if (m_match_info.EffectiveUserIDIsValid() &&
-      m_match_info.GetEffectiveUserID() != proc_info.GetEffectiveUserID())
-    return false;
-
-  if (m_match_info.EffectiveGroupIDIsValid() &&
-      m_match_info.GetEffectiveGroupID() != proc_info.GetEffectiveGroupID())
-    return false;
-
-  if (m_match_info.GetArchitecture().IsValid() &&
-      !m_match_info.GetArchitecture().IsCompatibleMatch(
-          proc_info.GetArchitecture()))
-    return false;
-  return true;
-}
-
-bool ProcessInstanceInfoMatch::MatchAllProcesses() const {
-  if (m_name_match_type != NameMatch::Ignore)
-    return false;
-
-  if (m_match_info.ProcessIDIsValid())
-    return false;
-
-  if (m_match_info.ParentProcessIDIsValid())
-    return false;
-
-  if (m_match_info.UserIDIsValid())
-    return false;
-
-  if (m_match_info.GroupIDIsValid())
-    return false;
-
-  if (m_match_info.EffectiveUserIDIsValid())
-    return false;
-
-  if (m_match_info.EffectiveGroupIDIsValid())
-    return false;
-
-  if (m_match_info.GetArchitecture().IsValid())
-    return false;
-
-  if (m_match_all_users)
-    return false;
-
-  return true;
-}
-
-void ProcessInstanceInfoMatch::Clear() {
-  m_match_info.Clear();
-  m_name_match_type = NameMatch::Ignore;
-  m_match_all_users = false;
 }
 
 ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
@@ -1552,16 +1336,6 @@ StateType Process::GetState() {
   return m_public_state.GetValue();
 }
 
-bool Process::StateChangedIsExternallyHijacked() {
-  if (IsHijackedForEvent(eBroadcastBitStateChanged)) {
-    const char *hijacking_name = GetHijackingListenerName();
-    if (hijacking_name &&
-        strcmp(hijacking_name, "lldb.Process.ResumeSynchronous.hijack"))
-      return true;
-  }
-  return false;
-}
-
 void Process::SetPublicState(StateType new_state, bool restarted) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STATE |
                                                   LIBLLDB_LOG_PROCESS));
@@ -1615,6 +1389,8 @@ Status Process::Resume() {
   return error;
 }
 
+static const char *g_resume_sync_name = "lldb.Process.ResumeSynchronous.hijack";
+
 Status Process::ResumeSynchronous(Stream *stream) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STATE |
                                                   LIBLLDB_LOG_PROCESS));
@@ -1628,7 +1404,7 @@ Status Process::ResumeSynchronous(Stream *stream) {
   }
 
   ListenerSP listener_sp(
-      Listener::MakeListener("lldb.Process.ResumeSynchronous.hijack"));
+      Listener::MakeListener(g_resume_sync_name));
   HijackProcessEvents(listener_sp);
 
   Status error = PrivateResume();
@@ -1650,6 +1426,26 @@ Status Process::ResumeSynchronous(Stream *stream) {
   RestoreProcessEvents();
 
   return error;
+}
+
+bool Process::StateChangedIsExternallyHijacked() {
+  if (IsHijackedForEvent(eBroadcastBitStateChanged)) {
+    const char *hijacking_name = GetHijackingListenerName();
+    if (hijacking_name &&
+        strcmp(hijacking_name, g_resume_sync_name))
+      return true;
+  }
+  return false;
+}
+
+bool Process::StateChangedIsHijackedForSynchronousResume() {
+  if (IsHijackedForEvent(eBroadcastBitStateChanged)) {
+    const char *hijacking_name = GetHijackingListenerName();
+    if (hijacking_name &&
+        strcmp(hijacking_name, g_resume_sync_name) == 0)
+      return true;
+  }
+  return false;
 }
 
 StateType Process::GetPrivateState() { return m_private_state.GetValue(); }
@@ -2723,108 +2519,112 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
   m_process_input_reader.reset();
 
   Module *exe_module = GetTarget().GetExecutableModulePointer();
-  if (exe_module) {
-    char local_exec_file_path[PATH_MAX];
-    char platform_exec_file_path[PATH_MAX];
-    exe_module->GetFileSpec().GetPath(local_exec_file_path,
-                                      sizeof(local_exec_file_path));
-    exe_module->GetPlatformFileSpec().GetPath(platform_exec_file_path,
-                                              sizeof(platform_exec_file_path));
-    if (FileSystem::Instance().Exists(exe_module->GetFileSpec())) {
-      // Install anything that might need to be installed prior to launching.
-      // For host systems, this will do nothing, but if we are connected to a
-      // remote platform it will install any needed binaries
-      error = GetTarget().Install(&launch_info);
-      if (error.Fail())
-        return error;
+  if (!exe_module) {
+    error.SetErrorString("executable module does not exist");
+    return error;
+  }
 
-      if (PrivateStateThreadIsValid())
-        PausePrivateStateThread();
+  char local_exec_file_path[PATH_MAX];
+  char platform_exec_file_path[PATH_MAX];
+  exe_module->GetFileSpec().GetPath(local_exec_file_path,
+                                    sizeof(local_exec_file_path));
+  exe_module->GetPlatformFileSpec().GetPath(platform_exec_file_path,
+                                            sizeof(platform_exec_file_path));
+  if (FileSystem::Instance().Exists(exe_module->GetFileSpec())) {
+    // Install anything that might need to be installed prior to launching.
+    // For host systems, this will do nothing, but if we are connected to a
+    // remote platform it will install any needed binaries
+    error = GetTarget().Install(&launch_info);
+    if (error.Fail())
+      return error;
 
-      error = WillLaunch(exe_module);
-      if (error.Success()) {
-        const bool restarted = false;
-        SetPublicState(eStateLaunching, restarted);
-        m_should_detach = false;
+    if (PrivateStateThreadIsValid())
+      PausePrivateStateThread();
 
-        if (m_public_run_lock.TrySetRunning()) {
-          // Now launch using these arguments.
-          error = DoLaunch(exe_module, launch_info);
-        } else {
-          // This shouldn't happen
-          error.SetErrorString("failed to acquire process run lock");
+    error = WillLaunch(exe_module);
+    if (error.Success()) {
+      const bool restarted = false;
+      SetPublicState(eStateLaunching, restarted);
+      m_should_detach = false;
+
+      if (m_public_run_lock.TrySetRunning()) {
+        // Now launch using these arguments.
+        error = DoLaunch(exe_module, launch_info);
+      } else {
+        // This shouldn't happen
+        error.SetErrorString("failed to acquire process run lock");
+      }
+
+      if (error.Fail()) {
+        if (GetID() != LLDB_INVALID_PROCESS_ID) {
+          SetID(LLDB_INVALID_PROCESS_ID);
+          const char *error_string = error.AsCString();
+          if (error_string == nullptr)
+            error_string = "launch failed";
+          SetExitStatus(-1, error_string);
         }
+      } else {
+        EventSP event_sp;
 
-        if (error.Fail()) {
-          if (GetID() != LLDB_INVALID_PROCESS_ID) {
-            SetID(LLDB_INVALID_PROCESS_ID);
-            const char *error_string = error.AsCString();
-            if (error_string == nullptr)
-              error_string = "launch failed";
-            SetExitStatus(-1, error_string);
-          }
-        } else {
-          EventSP event_sp;
+        // Now wait for the process to launch and return control to us, and then
+        // call DidLaunch:
+        StateType state = WaitForProcessStopPrivate(event_sp, seconds(10));
 
-          // Now wait for the process to launch and return control to us, and then call
-          // DidLaunch:
-          StateType state = WaitForProcessStopPrivate(event_sp, seconds(10));
+        if (state == eStateInvalid || !event_sp) {
+          // We were able to launch the process, but we failed to catch the
+          // initial stop.
+          error.SetErrorString("failed to catch stop after launch");
+          SetExitStatus(0, "failed to catch stop after launch");
+          Destroy(false);
+        } else if (state == eStateStopped || state == eStateCrashed) {
+          DidLaunch();
 
-          if (state == eStateInvalid || !event_sp) {
-            // We were able to launch the process, but we failed to catch the
-            // initial stop.
-            error.SetErrorString("failed to catch stop after launch");
-            SetExitStatus(0, "failed to catch stop after launch");
-            Destroy(false);
-          } else if (state == eStateStopped || state == eStateCrashed) {
-            DidLaunch();
+          DynamicLoader *dyld = GetDynamicLoader();
+          if (dyld)
+            dyld->DidLaunch();
 
-            DynamicLoader *dyld = GetDynamicLoader();
-            if (dyld)
-              dyld->DidLaunch();
+          GetJITLoaders().DidLaunch();
 
-            GetJITLoaders().DidLaunch();
+          SystemRuntime *system_runtime = GetSystemRuntime();
+          if (system_runtime)
+            system_runtime->DidLaunch();
 
-            SystemRuntime *system_runtime = GetSystemRuntime();
-            if (system_runtime)
-              system_runtime->DidLaunch();
+          if (!m_os_up)
+            LoadOperatingSystemPlugin(false);
 
-            if (!m_os_up)
-              LoadOperatingSystemPlugin(false);
+          // We successfully launched the process and stopped, now it the
+          // right time to set up signal filters before resuming.
+          UpdateAutomaticSignalFiltering();
 
-            // We successfully launched the process and stopped, now it the
-            // right time to set up signal filters before resuming.
-            UpdateAutomaticSignalFiltering();
+          // Note, the stop event was consumed above, but not handled. This
+          // was done to give DidLaunch a chance to run. The target is either
+          // stopped or crashed. Directly set the state.  This is done to
+          // prevent a stop message with a bunch of spurious output on thread
+          // status, as well as not pop a ProcessIOHandler.
+          SetPublicState(state, false);
 
-            // Note, the stop event was consumed above, but not handled. This
-            // was done to give DidLaunch a chance to run. The target is either
-            // stopped or crashed. Directly set the state.  This is done to
-            // prevent a stop message with a bunch of spurious output on thread
-            // status, as well as not pop a ProcessIOHandler.
-            SetPublicState(state, false);
+          if (PrivateStateThreadIsValid())
+            ResumePrivateStateThread();
+          else
+            StartPrivateStateThread();
 
-            if (PrivateStateThreadIsValid())
-              ResumePrivateStateThread();
-            else
-              StartPrivateStateThread();
-
-            // Target was stopped at entry as was intended. Need to notify the
-            // listeners about it.
-            if (state == eStateStopped &&
-                launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
-              HandlePrivateEvent(event_sp);
-          } else if (state == eStateExited) {
-            // We exited while trying to launch somehow.  Don't call DidLaunch
-            // as that's not likely to work, and return an invalid pid.
+          // Target was stopped at entry as was intended. Need to notify the
+          // listeners about it.
+          if (state == eStateStopped &&
+              launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
             HandlePrivateEvent(event_sp);
-          }
+        } else if (state == eStateExited) {
+          // We exited while trying to launch somehow.  Don't call DidLaunch
+          // as that's not likely to work, and return an invalid pid.
+          HandlePrivateEvent(event_sp);
         }
       }
-    } else {
-      error.SetErrorStringWithFormat("file doesn't exist: '%s'",
-                                     local_exec_file_path);
     }
+  } else {
+    error.SetErrorStringWithFormat("file doesn't exist: '%s'",
+                                   local_exec_file_path);
   }
+
   return error;
 }
 
@@ -3045,11 +2845,10 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
                 process_name, sizeof(process_name));
             if (num_matches > 1) {
               StreamString s;
-              ProcessInstanceInfo::DumpTableHeader(s, platform_sp.get(), true,
-                                                   false);
+              ProcessInstanceInfo::DumpTableHeader(s, true, false);
               for (size_t i = 0; i < num_matches; i++) {
                 process_infos.GetProcessInfoAtIndex(i).DumpAsTableRow(
-                    s, platform_sp.get(), true, false);
+                    s, platform_sp->GetUserIDResolver(), true, false);
               }
               error.SetErrorStringWithFormat(
                   "more than one process named %s:\n%s", process_name,
@@ -4120,12 +3919,12 @@ Process::ProcessEventData::ProcessEventData(const ProcessSP &process_sp,
 
 Process::ProcessEventData::~ProcessEventData() = default;
 
-const ConstString &Process::ProcessEventData::GetFlavorString() {
+ConstString Process::ProcessEventData::GetFlavorString() {
   static ConstString g_flavor("Process::ProcessEventData");
   return g_flavor;
 }
 
-const ConstString &Process::ProcessEventData::GetFlavor() const {
+ConstString Process::ProcessEventData::GetFlavor() const {
   return ProcessEventData::GetFlavorString();
 }
 
@@ -4260,14 +4059,23 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
         // public resume.
         process_sp->PrivateResume();
       } else {
-        // If we didn't restart, run the Stop Hooks here: They might also
-        // restart the target, so watch for that.
-        process_sp->GetTarget().RunStopHooks();
-        if (process_sp->GetPrivateState() == eStateRunning)
-          SetRestarted(true);
+        bool hijacked = 
+          process_sp->IsHijackedForEvent(eBroadcastBitStateChanged)
+          && !process_sp->StateChangedIsHijackedForSynchronousResume();
+
+        if (!hijacked) {
+          // If we didn't restart, run the Stop Hooks here.
+          // Don't do that if state changed events aren't hooked up to the
+          // public (or SyncResume) broadcasters.  StopHooks are just for 
+          // real public stops.  They might also restart the target, 
+          // so watch for that.
+          process_sp->GetTarget().RunStopHooks();
+          if (process_sp->GetPrivateState() == eStateRunning)
+            SetRestarted(true);
       }
     }
   }
+}
 }
 
 void Process::ProcessEventData::Dump(Stream *s) const {
@@ -4439,7 +4247,7 @@ void Process::BroadcastStructuredData(const StructuredData::ObjectSP &object_sp,
 }
 
 StructuredDataPluginSP
-Process::GetStructuredDataPlugin(const ConstString &type_name) const {
+Process::GetStructuredDataPlugin(ConstString type_name) const {
   auto find_it = m_structured_data_plugin_map.find(type_name);
   if (find_it != m_structured_data_plugin_map.end())
     return find_it->second;
@@ -6063,7 +5871,7 @@ Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
 }
 
 Status
-Process::ConfigureStructuredData(const ConstString &type_name,
+Process::ConfigureStructuredData(ConstString type_name,
                                  const StructuredData::ObjectSP &config_sp) {
   // If you get this, the Process-derived class needs to implement a method to
   // enable an already-reported asynchronous structured data feature. See

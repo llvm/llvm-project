@@ -158,6 +158,70 @@ define i1 @uaddo_i16_increment_noncanonical_3(i16 %x, i16* %p) {
   ret i1 %ov
 }
 
+; The overflow check may be against the input rather than the sum.
+
+define i1 @uaddo_i64_increment_alt(i64 %x, i64* %p) {
+; CHECK-LABEL: @uaddo_i64_increment_alt(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[X:%.*]], i64 1)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
+;
+  %a = add i64 %x, 1
+  store i64 %a, i64* %p
+  %ov = icmp eq i64 %x, -1
+  ret i1 %ov
+}
+
+; Make sure insertion is done correctly based on dominance.
+
+define i1 @uaddo_i64_increment_alt_dom(i64 %x, i64* %p) {
+; CHECK-LABEL: @uaddo_i64_increment_alt_dom(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[X:%.*]], i64 1)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
+;
+  %ov = icmp eq i64 %x, -1
+  %a = add i64 %x, 1
+  store i64 %a, i64* %p
+  ret i1 %ov
+}
+
+; The overflow check may be against the input rather than the sum.
+
+define i1 @uaddo_i64_decrement_alt(i64 %x, i64* %p) {
+; CHECK-LABEL: @uaddo_i64_decrement_alt(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[X:%.*]], i64 -1)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
+;
+  %a = add i64 %x, -1
+  store i64 %a, i64* %p
+  %ov = icmp ne i64 %x, 0
+  ret i1 %ov
+}
+
+; Make sure insertion is done correctly based on dominance.
+
+define i1 @uaddo_i64_decrement_alt_dom(i64 %x, i64* %p) {
+; CHECK-LABEL: @uaddo_i64_decrement_alt_dom(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[X:%.*]], i64 -1)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
+;
+  %ov = icmp ne i64 %x, 0
+  %a = add i64 %x, -1
+  store i64 %a, i64* %p
+  ret i1 %ov
+}
+
 ; No transform for illegal types.
 
 define i1 @uaddo_i42_increment_illegal_type(i42 %x, i42* %p) {
@@ -365,6 +429,31 @@ end:
   store i64 %s, i64* %p
   ret i1 %ov
 }
+
+; Verify that crazy/non-canonical code does not crash.
+
+define void @bar() {
+; CHECK-LABEL: @bar(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 1, -1
+; CHECK-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    unreachable
+;
+  %cmp = icmp eq i64 1, -1
+  %frombool = zext i1 %cmp to i8
+  unreachable
+}
+
+define void @foo() {
+; CHECK-LABEL: @foo(
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 1, 1
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[SUB]] to i32
+; CHECK-NEXT:    unreachable
+;
+  %sub = add nsw i64 1, 1
+  %conv = trunc i64 %sub to i32
+  unreachable
+}
+
 
 ; Check that every instruction inserted by -codegenprepare has a debug location.
 ; DEBUG: CheckModuleDebugify: PASS

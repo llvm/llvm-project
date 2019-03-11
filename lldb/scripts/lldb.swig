@@ -81,6 +81,25 @@ del _to_int
 %enddef
 EMBED_VERSION(SWIG_VERSION)
 
+%pythoncode%{
+# ===================================
+# Iterator for lldb container objects
+# ===================================
+def lldb_iter(obj, getsize, getelem):
+    """A generator adaptor to support iteration for lldb container objects."""
+    size = getattr(obj, getsize)
+    elem = getattr(obj, getelem)
+    for i in range(size()):
+        yield elem(i)
+
+# ==============================================================================
+# The modify-python-lldb.py script is responsible for post-processing this SWIG-
+# generated lldb.py module.  It is responsible for adding support for: iteration
+# protocol: __iter__, rich comparison methods: __eq__ and __ne__, and built-in
+# function len(): __len__.
+# ==============================================================================
+%}
+
 %include "./Python/python-typemaps.swig"
 
 /* C++ headers to be included. */
@@ -202,7 +221,6 @@ EMBED_VERSION(SWIG_VERSION)
 %include "./interface/SBFrame.i"
 %include "./interface/SBFunction.i"
 %include "./interface/SBHostOS.i"
-%include "./interface/SBInitializerOptions.i"
 %include "./interface/SBInstruction.i"
 %include "./interface/SBInstructionList.i"
 %include "./interface/SBLanguageRuntime.i"

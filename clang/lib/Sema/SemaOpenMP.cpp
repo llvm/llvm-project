@@ -147,6 +147,9 @@ private:
     /// Reference to the taskgroup task_reduction reference expression.
     Expr *TaskgroupReductionRef = nullptr;
     llvm::DenseSet<QualType> MappedClassesQualTypes;
+    /// List of globals marked as declare target link in this target region
+    /// (isOpenMPTargetExecutionDirective(Directive) == true).
+    llvm::SmallVector<DeclRefExpr *, 4> DeclareTargetLinkVarDecls;
     SharingMapTy(OpenMPDirectiveKind DKind, DeclarationNameInfo Name,
                  Scope *CurScope, SourceLocation Loc)
         : Directive(DKind), DirectiveName(Name), CurScope(CurScope),
@@ -674,6 +677,31 @@ public:
     return StackElem.MappedClassesQualTypes.count(QT) != 0;
   }
 
+  /// Adds global declare target to the parent target region.
+  void addToParentTargetRegionLinkGlobals(DeclRefExpr *E) {
+    assert(*OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
+               E->getDecl()) == OMPDeclareTargetDeclAttr::MT_Link &&
+           "Expected declare target link global.");
+    if (isStackEmpty())
+      return;
+    auto It = Stack.back().first.rbegin();
+    while (It != Stack.back().first.rend() &&
+           !isOpenMPTargetExecutionDirective(It->Directive))
+      ++It;
+    if (It != Stack.back().first.rend()) {
+      assert(isOpenMPTargetExecutionDirective(It->Directive) &&
+             "Expected target executable directive.");
+      It->DeclareTargetLinkVarDecls.push_back(E);
+    }
+  }
+
+  /// Returns the list of globals with declare target link if current directive
+  /// is target.
+  ArrayRef<DeclRefExpr *> getLinkGlobals() const {
+    assert(isOpenMPTargetExecutionDirective(getCurrentDirective()) &&
+           "Expected target executable directive.");
+    return Stack.back().first.back().DeclareTargetLinkVarDecls;
+  }
 };
 
 bool isImplicitTaskingRegion(OpenMPDirectiveKind DKind) {
@@ -1443,6 +1471,18 @@ void Sema::checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
     DeviceCallGraph[Caller].insert({Callee, Loc});
 }
 
+void Sema::checkOpenMPDeviceExpr(const Expr *E) {
+  assert(getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice &&
+         "OpenMP device compilation mode is expected.");
+  QualType Ty = E->getType();
+  if ((Ty->isFloat16Type() && !Context.getTargetInfo().hasFloat16Type()) ||
+      (Ty->isFloat128Type() && !Context.getTargetInfo().hasFloat128Type()) ||
+      (Ty->isIntegerType() && Context.getTypeSize(Ty) == 128 &&
+       !Context.getTargetInfo().hasInt128Type()))
+    targetDiag(E->getExprLoc(), diag::err_type_unsupported)
+        << Ty << E->getSourceRange();
+}
+
 bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
 
@@ -1896,7 +1936,8 @@ public:
   explicit VarOrFuncDeclFilterCCC(Sema &S) : SemaRef(S) {}
   bool ValidateCandidate(const TypoCorrection &Candidate) override {
     NamedDecl *ND = Candidate.getCorrectionDecl();
-    if (ND && (isa<VarDecl>(ND) || isa<FunctionDecl>(ND))) {
+    if (ND && ((isa<VarDecl>(ND) && ND->getKind() == Decl::Var) ||
+               isa<FunctionDecl>(ND))) {
       return SemaRef.isDeclInScope(ND, SemaRef.getCurLexicalContext(),
                                    SemaRef.getCurScope());
     }
@@ -1908,7 +1949,8 @@ public:
 
 ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
                                          CXXScopeSpec &ScopeSpec,
-                                         const DeclarationNameInfo &Id) {
+                                         const DeclarationNameInfo &Id,
+                                         OpenMPDirectiveKind Kind) {
   LookupResult Lookup(*this, Id, LookupOrdinaryName);
   LookupParsedName(Lookup, CurScope, &ScopeSpec, true);
 
@@ -1941,9 +1983,9 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
 
   // OpenMP [2.9.2, Syntax, C/C++]
   //   Variables must be file-scope, namespace-scope, or static block-scope.
-  if (!VD->hasGlobalStorage()) {
+  if (Kind == OMPD_threadprivate && !VD->hasGlobalStorage()) {
     Diag(Id.getLoc(), diag::err_omp_global_var_arg)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << !VD->isStaticLocal();
+        << getOpenMPDirectiveName(Kind) << !VD->isStaticLocal();
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -1960,7 +2002,7 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
   if (CanonicalVD->getDeclContext()->isTranslationUnit() &&
       !getCurLexicalContext()->isTranslationUnit()) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << VD;
+        << getOpenMPDirectiveName(Kind) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -1975,7 +2017,7 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
   if (CanonicalVD->isStaticDataMember() &&
       !CanonicalVD->getDeclContext()->Equals(getCurLexicalContext())) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << VD;
+        << getOpenMPDirectiveName(Kind) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -1991,7 +2033,7 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
       (!getCurLexicalContext()->isFileContext() ||
        !getCurLexicalContext()->Encloses(CanonicalVD->getDeclContext()))) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << VD;
+        << getOpenMPDirectiveName(Kind) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -2002,10 +2044,10 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
   // OpenMP [2.9.2, Restrictions, C/C++, p.6]
   //   A threadprivate directive for static block-scope variables must appear
   //   in the scope of the variable and not in a nested scope.
-  if (CanonicalVD->isStaticLocal() && CurScope &&
+  if (CanonicalVD->isLocalVarDecl() && CurScope &&
       !isDeclInScope(ND, getCurLexicalContext(), CurScope)) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << VD;
+        << getOpenMPDirectiveName(Kind) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -2017,9 +2059,10 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
   // OpenMP [2.9.2, Restrictions, C/C++, p.2-6]
   //   A threadprivate directive must lexically precede all references to any
   //   of the variables in its list.
-  if (VD->isUsed() && !DSAStack->isThreadPrivate(VD)) {
+  if (Kind == OMPD_threadprivate && VD->isUsed() &&
+      !DSAStack->isThreadPrivate(VD)) {
     Diag(Id.getLoc(), diag::err_omp_var_used)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << VD;
+        << getOpenMPDirectiveName(Kind) << VD;
     return ExprError();
   }
 
@@ -2149,6 +2192,41 @@ Sema::CheckOMPThreadPrivateDecl(SourceLocation Loc, ArrayRef<Expr *> VarList) {
     D->setAccess(AS_public);
   }
   return D;
+}
+
+Sema::DeclGroupPtrTy
+Sema::ActOnOpenMPAllocateDirective(SourceLocation Loc, ArrayRef<Expr *> VarList,
+                                   DeclContext *Owner) {
+  SmallVector<Expr *, 8> Vars;
+  for (Expr *RefExpr : VarList) {
+    auto *DE = cast<DeclRefExpr>(RefExpr);
+    auto *VD = cast<VarDecl>(DE->getDecl());
+
+    // Check if this is a TLS variable or global register.
+    if (VD->getTLSKind() != VarDecl::TLS_None ||
+        VD->hasAttr<OMPThreadPrivateDeclAttr>() ||
+        (VD->getStorageClass() == SC_Register && VD->hasAttr<AsmLabelAttr>() &&
+         !VD->isLocalVarDecl()))
+      continue;
+    // Do not apply for parameters.
+    if (isa<ParmVarDecl>(VD))
+      continue;
+
+    Vars.push_back(RefExpr);
+    VD->addAttr(
+        OMPAllocateDeclAttr::CreateImplicit(Context, DE->getSourceRange()));
+    if (ASTMutationListener *ML = Context.getASTMutationListener())
+      ML->DeclarationMarkedOpenMPAllocate(VD,
+                                          VD->getAttr<OMPAllocateDeclAttr>());
+  }
+  if (Vars.empty())
+    return nullptr;
+  if (!Owner)
+    Owner = getCurLexicalContext();
+  OMPAllocateDecl *D = OMPAllocateDecl::Create(Context, Owner, Loc, Vars);
+  D->setAccess(AS_public);
+  Owner->addDecl(D);
+  return DeclGroupPtrTy::make(DeclGroupRef(D));
 }
 
 Sema::DeclGroupPtrTy
@@ -2364,8 +2442,18 @@ public:
       // Define implicit data-sharing attributes for task.
       DVar = Stack->getImplicitDSA(VD, /*FromParent=*/false);
       if (isOpenMPTaskingDirective(DKind) && DVar.CKind != OMPC_shared &&
-          !Stack->isLoopControlVariable(VD).first)
+          !Stack->isLoopControlVariable(VD).first) {
         ImplicitFirstprivate.push_back(E);
+        return;
+      }
+
+      // Store implicitly used globals with declare target link for parent
+      // target.
+      if (!isOpenMPTargetExecutionDirective(DKind) && Res &&
+          *Res == OMPDeclareTargetDeclAttr::MT_Link) {
+        Stack->addToParentTargetRegionLinkGlobals(E);
+        return;
+      }
     }
   }
   void VisitMemberExpr(MemberExpr *E) {
@@ -2523,7 +2611,13 @@ public:
   }
 
   DSAAttrChecker(DSAStackTy *S, Sema &SemaRef, CapturedStmt *CS)
-      : Stack(S), SemaRef(SemaRef), ErrorFound(false), CS(CS) {}
+      : Stack(S), SemaRef(SemaRef), ErrorFound(false), CS(CS) {
+    // Process declare target link variables for the target directives.
+    if (isOpenMPTargetExecutionDirective(S->getCurrentDirective())) {
+      for (DeclRefExpr *E : Stack->getLinkGlobals())
+        Visit(E);
+    }
+  }
 };
 } // namespace
 
@@ -2851,6 +2945,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     break;
   }
   case OMPD_threadprivate:
+  case OMPD_allocate:
   case OMPD_taskyield:
   case OMPD_barrier:
   case OMPD_taskwait:
@@ -3707,6 +3802,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_threadprivate:
+  case OMPD_allocate:
   case OMPD_declare_reduction:
   case OMPD_declare_mapper:
   case OMPD_declare_simd:
@@ -8386,6 +8482,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -8470,6 +8567,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
       // Do not capture if-clause expressions.
       break;
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8537,6 +8635,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8605,6 +8704,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8670,6 +8770,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8736,6 +8837,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_parallel:
     case OMPD_parallel_sections:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8801,6 +8903,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_parallel:
     case OMPD_parallel_sections:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8865,6 +8968,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8916,6 +9020,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -9239,6 +9344,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -9416,6 +9522,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -9633,6 +9740,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_depend:
   case OMPC_device:
@@ -9802,10 +9910,12 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
                                DepLinMapLoc, ColonLoc, VarList, Locs);
     break;
   case OMPC_to:
-    Res = ActOnOpenMPToClause(VarList, Locs);
+    Res = ActOnOpenMPToClause(VarList, ReductionOrMapperIdScopeSpec,
+                              ReductionOrMapperId, Locs);
     break;
   case OMPC_from:
-    Res = ActOnOpenMPFromClause(VarList, Locs);
+    Res = ActOnOpenMPFromClause(VarList, ReductionOrMapperIdScopeSpec,
+                                ReductionOrMapperId, Locs);
     break;
   case OMPC_use_device_ptr:
     Res = ActOnOpenMPUseDevicePtrClause(VarList, Locs);
@@ -9827,6 +9937,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_read:
   case OMPC_write:
   case OMPC_update:
@@ -13140,17 +13251,23 @@ struct MappableVarListInfo {
 static void checkMappableExpressionList(
     Sema &SemaRef, DSAStackTy *DSAS, OpenMPClauseKind CKind,
     MappableVarListInfo &MVLI, SourceLocation StartLoc,
+    CXXScopeSpec &MapperIdScopeSpec, DeclarationNameInfo MapperId,
+    ArrayRef<Expr *> UnresolvedMappers,
     OpenMPMapClauseKind MapType = OMPC_MAP_unknown,
-    bool IsMapTypeImplicit = false, CXXScopeSpec *MapperIdScopeSpec = nullptr,
-    const DeclarationNameInfo *MapperId = nullptr,
-    ArrayRef<Expr *> UnresolvedMappers = llvm::None) {
+    bool IsMapTypeImplicit = false) {
   // We only expect mappable expressions in 'to', 'from', and 'map' clauses.
   assert((CKind == OMPC_map || CKind == OMPC_to || CKind == OMPC_from) &&
          "Unexpected clause kind with mappable expressions!");
-  assert(
-      ((CKind == OMPC_map && MapperIdScopeSpec && MapperId) ||
-       (CKind != OMPC_map && !MapperIdScopeSpec && !MapperId)) &&
-      "Map clauses and only map clauses have user-defined mapper identifiers.");
+
+  // If the identifier of user-defined mapper is not specified, it is "default".
+  // We do not change the actual name in this clause to distinguish whether a
+  // mapper is specified explicitly, i.e., it is not explicitly specified when
+  // MapperId.getName() is empty.
+  if (!MapperId.getName() || MapperId.getName().isEmpty()) {
+    auto &DeclNames = SemaRef.getASTContext().DeclarationNames;
+    MapperId.setName(DeclNames.getIdentifier(
+        &SemaRef.getASTContext().Idents.get("default")));
+  }
 
   // Iterators to find the current unresolved mapper expression.
   auto UMIt = UnresolvedMappers.begin(), UMEnd = UnresolvedMappers.end();
@@ -13183,17 +13300,13 @@ static void checkMappableExpressionList(
     if (VE->isValueDependent() || VE->isTypeDependent() ||
         VE->isInstantiationDependent() ||
         VE->containsUnexpandedParameterPack()) {
-      if (CKind == OMPC_map) {
-        // Try to find the associated user-defined mapper.
-        ExprResult ER = buildUserDefinedMapperRef(
-            SemaRef, DSAS->getCurScope(), *MapperIdScopeSpec, *MapperId,
-            VE->getType().getCanonicalType(), UnresolvedMapper);
-        if (ER.isInvalid())
-          continue;
-        MVLI.UDMapperList.push_back(ER.get());
-      } else {
-        MVLI.UDMapperList.push_back(nullptr);
-      }
+      // Try to find the associated user-defined mapper.
+      ExprResult ER = buildUserDefinedMapperRef(
+          SemaRef, DSAS->getCurScope(), MapperIdScopeSpec, MapperId,
+          VE->getType().getCanonicalType(), UnresolvedMapper);
+      if (ER.isInvalid())
+        continue;
+      MVLI.UDMapperList.push_back(ER.get());
       // We can only analyze this information once the missing information is
       // resolved.
       MVLI.ProcessedVarList.push_back(RE);
@@ -13225,17 +13338,13 @@ static void checkMappableExpressionList(
     if (const auto *TE = dyn_cast<CXXThisExpr>(BE)) {
       // Add store "this" pointer to class in DSAStackTy for future checking
       DSAS->addMappedClassesQualTypes(TE->getType());
-      if (CKind == OMPC_map) {
-        // Try to find the associated user-defined mapper.
-        ExprResult ER = buildUserDefinedMapperRef(
-            SemaRef, DSAS->getCurScope(), *MapperIdScopeSpec, *MapperId,
-            VE->getType().getCanonicalType(), UnresolvedMapper);
-        if (ER.isInvalid())
-          continue;
-        MVLI.UDMapperList.push_back(ER.get());
-      } else {
-        MVLI.UDMapperList.push_back(nullptr);
-      }
+      // Try to find the associated user-defined mapper.
+      ExprResult ER = buildUserDefinedMapperRef(
+          SemaRef, DSAS->getCurScope(), MapperIdScopeSpec, MapperId,
+          VE->getType().getCanonicalType(), UnresolvedMapper);
+      if (ER.isInvalid())
+        continue;
+      MVLI.UDMapperList.push_back(ER.get());
       // Skip restriction checking for variable or field declarations
       MVLI.ProcessedVarList.push_back(RE);
       MVLI.VarComponents.resize(MVLI.VarComponents.size() + 1);
@@ -13352,17 +13461,15 @@ static void checkMappableExpressionList(
           continue;
         }
       }
-
-      // Try to find the associated user-defined mapper.
-      ExprResult ER = buildUserDefinedMapperRef(
-          SemaRef, DSAS->getCurScope(), *MapperIdScopeSpec, *MapperId,
-          Type.getCanonicalType(), UnresolvedMapper);
-      if (ER.isInvalid())
-        continue;
-      MVLI.UDMapperList.push_back(ER.get());
-    } else {
-      MVLI.UDMapperList.push_back(nullptr);
     }
+
+    // Try to find the associated user-defined mapper.
+    ExprResult ER = buildUserDefinedMapperRef(
+        SemaRef, DSAS->getCurScope(), MapperIdScopeSpec, MapperId,
+        Type.getCanonicalType(), UnresolvedMapper);
+    if (ER.isInvalid())
+      continue;
+    MVLI.UDMapperList.push_back(ER.get());
 
     // Save the current expression.
     MVLI.ProcessedVarList.push_back(RE);
@@ -13410,17 +13517,10 @@ OMPClause *Sema::ActOnOpenMPMapClause(
     ++Count;
   }
 
-  // If the identifier of user-defined mapper is not specified, it is "default".
-  if (!MapperId.getName() || MapperId.getName().isEmpty()) {
-    auto &DeclNames = getASTContext().DeclarationNames;
-    MapperId.setName(
-        DeclNames.getIdentifier(&getASTContext().Idents.get("default")));
-  }
-
   MappableVarListInfo MVLI(VarList);
   checkMappableExpressionList(*this, DSAStack, OMPC_map, MVLI, Locs.StartLoc,
-                              MapType, IsMapTypeImplicit, &MapperIdScopeSpec,
-                              &MapperId, UnresolvedMappers);
+                              MapperIdScopeSpec, MapperId, UnresolvedMappers,
+                              MapType, IsMapTypeImplicit);
 
   // We need to produce a map clause even if we don't have variables so that
   // other diagnostics related with non-existing map clauses are accurate.
@@ -14169,25 +14269,37 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
 }
 
 OMPClause *Sema::ActOnOpenMPToClause(ArrayRef<Expr *> VarList,
-                                     const OMPVarListLocTy &Locs) {
+                                     CXXScopeSpec &MapperIdScopeSpec,
+                                     DeclarationNameInfo &MapperId,
+                                     const OMPVarListLocTy &Locs,
+                                     ArrayRef<Expr *> UnresolvedMappers) {
   MappableVarListInfo MVLI(VarList);
-  checkMappableExpressionList(*this, DSAStack, OMPC_to, MVLI, Locs.StartLoc);
+  checkMappableExpressionList(*this, DSAStack, OMPC_to, MVLI, Locs.StartLoc,
+                              MapperIdScopeSpec, MapperId, UnresolvedMappers);
   if (MVLI.ProcessedVarList.empty())
     return nullptr;
 
-  return OMPToClause::Create(Context, Locs, MVLI.ProcessedVarList,
-                             MVLI.VarBaseDeclarations, MVLI.VarComponents);
+  return OMPToClause::Create(
+      Context, Locs, MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
+      MVLI.VarComponents, MVLI.UDMapperList,
+      MapperIdScopeSpec.getWithLocInContext(Context), MapperId);
 }
 
 OMPClause *Sema::ActOnOpenMPFromClause(ArrayRef<Expr *> VarList,
-                                       const OMPVarListLocTy &Locs) {
+                                       CXXScopeSpec &MapperIdScopeSpec,
+                                       DeclarationNameInfo &MapperId,
+                                       const OMPVarListLocTy &Locs,
+                                       ArrayRef<Expr *> UnresolvedMappers) {
   MappableVarListInfo MVLI(VarList);
-  checkMappableExpressionList(*this, DSAStack, OMPC_from, MVLI, Locs.StartLoc);
+  checkMappableExpressionList(*this, DSAStack, OMPC_from, MVLI, Locs.StartLoc,
+                              MapperIdScopeSpec, MapperId, UnresolvedMappers);
   if (MVLI.ProcessedVarList.empty())
     return nullptr;
 
-  return OMPFromClause::Create(Context, Locs, MVLI.ProcessedVarList,
-                               MVLI.VarBaseDeclarations, MVLI.VarComponents);
+  return OMPFromClause::Create(
+      Context, Locs, MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
+      MVLI.VarComponents, MVLI.UDMapperList,
+      MapperIdScopeSpec.getWithLocInContext(Context), MapperId);
 }
 
 OMPClause *Sema::ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,

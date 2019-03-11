@@ -13,6 +13,7 @@
 #include "SourceCode.h"
 #include "Trace.h"
 #include "index/Index.h"
+#include "index/Symbol.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -23,6 +24,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
@@ -67,6 +69,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_incomplete_type:
   case diag::err_incomplete_member_access:
   case diag::err_incomplete_base_class:
+  case diag::err_incomplete_nested_name_spec:
     // Incomplete type diagnostics should have a QualType argument for the
     // incomplete type.
     for (unsigned Idx = 0; Idx < Info.getNumArgs(); ++Idx) {

@@ -2013,22 +2013,24 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c)
         base::__sz() += __c.__sz();
         __c.__sz() = 0;
 #if _LIBCPP_DEBUG_LEVEL >= 2
-        __libcpp_db* __db = __get_db();
-        __c_node* __cn1 = __db->__find_c_and_lock(this);
-        __c_node* __cn2 = __db->__find_c(&__c);
-        for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
-        {
-            --__ip;
-            iterator* __i = static_cast<iterator*>((*__ip)->__i_);
-            if (__i->__ptr_ != __c.__end_as_link())
+        if (&__c != this) {
+            __libcpp_db* __db = __get_db();
+            __c_node* __cn1 = __db->__find_c_and_lock(this);
+            __c_node* __cn2 = __db->__find_c(&__c);
+            for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
             {
-                __cn1->__add(*__ip);
-                (*__ip)->__c_ = __cn1;
-                if (--__cn2->end_ != __ip)
-                    memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
+                --__ip;
+                iterator* __i = static_cast<iterator*>((*__ip)->__i_);
+                if (__i->__ptr_ != __c.__end_as_link())
+                {
+                    __cn1->__add(*__ip);
+                    (*__ip)->__c_ = __cn1;
+                    if (--__cn2->end_ != __ip)
+                        memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
+                }
             }
+            __db->unlock();
         }
-        __db->unlock();
 #endif
     }
 }
@@ -2056,22 +2058,24 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __i)
         --__c.__sz();
         ++base::__sz();
 #if _LIBCPP_DEBUG_LEVEL >= 2
-        __libcpp_db* __db = __get_db();
-        __c_node* __cn1 = __db->__find_c_and_lock(this);
-        __c_node* __cn2 = __db->__find_c(&__c);
-        for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
-        {
-            --__ip;
-            iterator* __j = static_cast<iterator*>((*__ip)->__i_);
-            if (__j->__ptr_ == __f)
+        if (&__c != this) {
+            __libcpp_db* __db = __get_db();
+            __c_node* __cn1 = __db->__find_c_and_lock(this);
+            __c_node* __cn2 = __db->__find_c(&__c);
+            for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
             {
-                __cn1->__add(*__ip);
-                (*__ip)->__c_ = __cn1;
-                if (--__cn2->end_ != __ip)
-                    memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
+                --__ip;
+                iterator* __j = static_cast<iterator*>((*__ip)->__i_);
+                if (__j->__ptr_ == __f)
+                {
+                    __cn1->__add(*__ip);
+                    (*__ip)->__c_ = __cn1;
+                    if (--__cn2->end_ != __ip)
+                        memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
+                }
             }
+            __db->unlock();
         }
-        __db->unlock();
 #endif
     }
 }
@@ -2110,26 +2114,28 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
         base::__unlink_nodes(__first, __last);
         __link_nodes(__p.__ptr_, __first, __last);
 #if _LIBCPP_DEBUG_LEVEL >= 2
-        __libcpp_db* __db = __get_db();
-        __c_node* __cn1 = __db->__find_c_and_lock(this);
-        __c_node* __cn2 = __db->__find_c(&__c);
-        for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
-        {
-            --__ip;
-            iterator* __j = static_cast<iterator*>((*__ip)->__i_);
-            for (__link_pointer __k = __f.__ptr_;
-                                          __k != __l.__ptr_; __k = __k->__next_)
+        if (&__c != this) {
+            __libcpp_db* __db = __get_db();
+            __c_node* __cn1 = __db->__find_c_and_lock(this);
+            __c_node* __cn2 = __db->__find_c(&__c);
+            for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
             {
-                if (__j->__ptr_ == __k)
+                --__ip;
+                iterator* __j = static_cast<iterator*>((*__ip)->__i_);
+                for (__link_pointer __k = __f.__ptr_;
+                                              __k != __l.__ptr_; __k = __k->__next_)
                 {
-                    __cn1->__add(*__ip);
-                    (*__ip)->__c_ = __cn1;
-                    if (--__cn2->end_ != __ip)
-                        memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
+                    if (__j->__ptr_ == __k)
+                    {
+                        __cn1->__add(*__ip);
+                        (*__ip)->__c_ = __cn1;
+                        if (--__cn2->end_ != __ip)
+                            memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
+                    }
                 }
             }
+            __db->unlock();
         }
-        __db->unlock();
 #endif
     }
 }

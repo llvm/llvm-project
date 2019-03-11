@@ -110,7 +110,7 @@ public:
                        lldb_private::SymbolContextList &sc_list) override;
 
   uint32_t
-  FindGlobalVariables(const lldb_private::ConstString &name,
+  FindGlobalVariables(lldb_private::ConstString name,
                       const lldb_private::CompilerDeclContext *parent_decl_ctx,
                       uint32_t max_matches,
                       lldb_private::VariableList &variables) override;
@@ -120,7 +120,7 @@ public:
                                lldb_private::VariableList &variables) override;
 
   uint32_t
-  FindFunctions(const lldb_private::ConstString &name,
+  FindFunctions(lldb_private::ConstString name,
                 const lldb_private::CompilerDeclContext *parent_decl_ctx,
                 lldb::FunctionNameType name_type_mask, bool include_inlines,
                 bool append, lldb_private::SymbolContextList &sc_list) override;
@@ -136,7 +136,7 @@ public:
   void AddSymbols(lldb_private::Symtab &symtab) override;
 
   uint32_t
-  FindTypes(const lldb_private::ConstString &name,
+  FindTypes(lldb_private::ConstString name,
             const lldb_private::CompilerDeclContext *parent_decl_ctx,
             bool append, uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
@@ -158,7 +158,7 @@ public:
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   lldb_private::CompilerDeclContext FindNamespace(
-      const lldb_private::ConstString &name,
+      lldb_private::ConstString name,
       const lldb_private::CompilerDeclContext *parent_decl_ctx) override;
 
   lldb_private::ConstString GetPluginName() override;

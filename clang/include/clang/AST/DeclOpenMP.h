@@ -405,6 +405,73 @@ public:
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == OMPRequires; }
 };
+
+/// This represents '#pragma omp allocate ...' directive.
+/// For example, in the following, the default allocator is used for both 'a'
+/// and 'A::b':
+///
+/// \code
+/// int a;
+/// #pragma omp allocate(a)
+/// struct A {
+///   static int b;
+/// #pragma omp allocate(b)
+/// };
+/// \endcode
+///
+class OMPAllocateDecl final
+    : public Decl,
+      private llvm::TrailingObjects<OMPAllocateDecl, Expr *> {
+  friend class ASTDeclReader;
+  friend TrailingObjects;
+
+  /// Number of variable within the allocate directive.
+  unsigned NumVars = 0;
+
+  virtual void anchor();
+
+  OMPAllocateDecl(Kind DK, DeclContext *DC, SourceLocation L)
+      : Decl(DK, DC, L) {}
+
+  ArrayRef<const Expr *> getVars() const {
+    return llvm::makeArrayRef(getTrailingObjects<Expr *>(), NumVars);
+  }
+
+  MutableArrayRef<Expr *> getVars() {
+    return MutableArrayRef<Expr *>(getTrailingObjects<Expr *>(), NumVars);
+  }
+
+  void setVars(ArrayRef<Expr *> VL);
+
+public:
+  static OMPAllocateDecl *Create(ASTContext &C, DeclContext *DC,
+                                 SourceLocation L, ArrayRef<Expr *> VL);
+  static OMPAllocateDecl *CreateDeserialized(ASTContext &C, unsigned ID,
+                                             unsigned N);
+
+  typedef MutableArrayRef<Expr *>::iterator varlist_iterator;
+  typedef ArrayRef<const Expr *>::iterator varlist_const_iterator;
+  typedef llvm::iterator_range<varlist_iterator> varlist_range;
+  typedef llvm::iterator_range<varlist_const_iterator> varlist_const_range;
+
+  unsigned varlist_size() const { return NumVars; }
+  bool varlist_empty() const { return NumVars == 0; }
+
+  varlist_range varlists() {
+    return varlist_range(varlist_begin(), varlist_end());
+  }
+  varlist_const_range varlists() const {
+    return varlist_const_range(varlist_begin(), varlist_end());
+  }
+  varlist_iterator varlist_begin() { return getVars().begin(); }
+  varlist_iterator varlist_end() { return getVars().end(); }
+  varlist_const_iterator varlist_begin() const { return getVars().begin(); }
+  varlist_const_iterator varlist_end() const { return getVars().end(); }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == OMPAllocate; }
+};
+
 } // end namespace clang
 
 #endif

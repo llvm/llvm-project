@@ -164,7 +164,7 @@ struct Configuration {
   std::map<std::string, int> AlignComm;
 
   // Used for /failifmismatch.
-  std::map<StringRef, StringRef> MustMatch;
+  std::map<StringRef, std::pair<StringRef, std::string>> MustMatch;
 
   // Used for /alternatename.
   std::map<StringRef, StringRef> AlternateNames;
@@ -185,6 +185,7 @@ struct Configuration {
   uint32_t MajorOSVersion = 6;
   uint32_t MinorOSVersion = 0;
   uint32_t Timestamp = 0;
+  uint32_t FunctionPadMin = 0;
   bool DynamicBase = true;
   bool AllowBind = true;
   bool NxCompat = true;

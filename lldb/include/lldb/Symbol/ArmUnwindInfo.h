@@ -9,12 +9,11 @@
 #ifndef liblldb_ArmUnwindInfo_h_
 #define liblldb_ArmUnwindInfo_h_
 
-#include <vector>
-
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
+#include <vector>
 
 /*
  * Unwind information reader and parser for the ARM exception handling ABI

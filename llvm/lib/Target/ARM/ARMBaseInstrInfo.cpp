@@ -2542,6 +2542,7 @@ bool ARMBaseInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
     return true;
   case ARM::CMPrr:
   case ARM::t2CMPrr:
+  case ARM::tCMPr:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = MI.getOperand(1).getReg();
     CmpMask = ~0;
@@ -2618,28 +2619,62 @@ inline static ARMCC::CondCodes getCmpToAddCondition(ARMCC::CondCodes CC) {
 /// This function can be extended later on.
 inline static bool isRedundantFlagInstr(const MachineInstr *CmpI,
                                         unsigned SrcReg, unsigned SrcReg2,
-                                        int ImmValue, const MachineInstr *OI) {
+                                        int ImmValue, const MachineInstr *OI,
+                                        bool &IsThumb1) {
   if ((CmpI->getOpcode() == ARM::CMPrr || CmpI->getOpcode() == ARM::t2CMPrr) &&
       (OI->getOpcode() == ARM::SUBrr || OI->getOpcode() == ARM::t2SUBrr) &&
       ((OI->getOperand(1).getReg() == SrcReg &&
         OI->getOperand(2).getReg() == SrcReg2) ||
        (OI->getOperand(1).getReg() == SrcReg2 &&
-        OI->getOperand(2).getReg() == SrcReg)))
+        OI->getOperand(2).getReg() == SrcReg))) {
+    IsThumb1 = false;
     return true;
+  }
+
+  if (CmpI->getOpcode() == ARM::tCMPr && OI->getOpcode() == ARM::tSUBrr &&
+      ((OI->getOperand(2).getReg() == SrcReg &&
+        OI->getOperand(3).getReg() == SrcReg2) ||
+       (OI->getOperand(2).getReg() == SrcReg2 &&
+        OI->getOperand(3).getReg() == SrcReg))) {
+    IsThumb1 = true;
+    return true;
+  }
 
   if ((CmpI->getOpcode() == ARM::CMPri || CmpI->getOpcode() == ARM::t2CMPri) &&
       (OI->getOpcode() == ARM::SUBri || OI->getOpcode() == ARM::t2SUBri) &&
       OI->getOperand(1).getReg() == SrcReg &&
-      OI->getOperand(2).getImm() == ImmValue)
+      OI->getOperand(2).getImm() == ImmValue) {
+    IsThumb1 = false;
     return true;
+  }
+
+  if (CmpI->getOpcode() == ARM::tCMPi8 &&
+      (OI->getOpcode() == ARM::tSUBi8 || OI->getOpcode() == ARM::tSUBi3) &&
+      OI->getOperand(2).getReg() == SrcReg &&
+      OI->getOperand(3).getImm() == ImmValue) {
+    IsThumb1 = true;
+    return true;
+  }
 
   if ((CmpI->getOpcode() == ARM::CMPrr || CmpI->getOpcode() == ARM::t2CMPrr) &&
       (OI->getOpcode() == ARM::ADDrr || OI->getOpcode() == ARM::t2ADDrr ||
        OI->getOpcode() == ARM::ADDri || OI->getOpcode() == ARM::t2ADDri) &&
       OI->getOperand(0).isReg() && OI->getOperand(1).isReg() &&
       OI->getOperand(0).getReg() == SrcReg &&
-      OI->getOperand(1).getReg() == SrcReg2)
+      OI->getOperand(1).getReg() == SrcReg2) {
+    IsThumb1 = false;
     return true;
+  }
+
+  if (CmpI->getOpcode() == ARM::tCMPr &&
+      (OI->getOpcode() == ARM::tADDi3 || OI->getOpcode() == ARM::tADDi8 ||
+       OI->getOpcode() == ARM::tADDrr) &&
+      OI->getOperand(0).getReg() == SrcReg &&
+      OI->getOperand(2).getReg() == SrcReg2) {
+    IsThumb1 = true;
+    return true;
+  }
+
   return false;
 }
 
@@ -2657,6 +2692,17 @@ static bool isOptimizeCompareCandidate(MachineInstr *MI, bool &IsThumb1) {
   case ARM::tSUBi3:
   case ARM::tSUBi8:
   case ARM::tMUL:
+  case ARM::tADC:
+  case ARM::tSBC:
+  case ARM::tRSB:
+  case ARM::tAND:
+  case ARM::tORR:
+  case ARM::tEOR:
+  case ARM::tBIC:
+  case ARM::tMVN:
+  case ARM::tASRri:
+  case ARM::tASRrr:
+  case ARM::tROR:
     IsThumb1 = true;
     LLVM_FALLTHROUGH;
   case ARM::RSBrr:
@@ -2756,7 +2802,8 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
     // For CMPri w/ CmpValue != 0, a SubAdd may still be a candidate.
     // Thus we cannot return here.
     if (CmpInstr.getOpcode() == ARM::CMPri ||
-        CmpInstr.getOpcode() == ARM::t2CMPri)
+        CmpInstr.getOpcode() == ARM::t2CMPri ||
+        CmpInstr.getOpcode() == ARM::tCMPi8)
       MI = nullptr;
     else
       return false;
@@ -2778,20 +2825,22 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   // CMP. This peephole works on the vregs, so is still in SSA form. As a
   // consequence, the movs won't redefine/kill the MUL operands which would
   // make this reordering illegal.
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
   if (MI && IsThumb1) {
     --I;
-    bool CanReorder = true;
-    const bool HasStmts = I != E;
-    for (; I != E; --I) {
-      if (I->getOpcode() != ARM::tMOVi8) {
-        CanReorder = false;
-        break;
+    if (I != E && !MI->readsRegister(ARM::CPSR, TRI)) {
+      bool CanReorder = true;
+      for (; I != E; --I) {
+        if (I->getOpcode() != ARM::tMOVi8) {
+          CanReorder = false;
+          break;
+        }
       }
-    }
-    if (HasStmts && CanReorder) {
-      MI = MI->removeFromParent();
-      E = CmpInstr;
-      CmpInstr.getParent()->insert(E, MI);
+      if (CanReorder) {
+        MI = MI->removeFromParent();
+        E = CmpInstr;
+        CmpInstr.getParent()->insert(E, MI);
+      }
     }
     I = CmpInstr;
     E = MI;
@@ -2799,12 +2848,13 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
 
   // Check that CPSR isn't set between the comparison instruction and the one we
   // want to change. At the same time, search for SubAdd.
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  bool SubAddIsThumb1 = false;
   do {
     const MachineInstr &Instr = *--I;
 
     // Check whether CmpInstr can be made redundant by the current instruction.
-    if (isRedundantFlagInstr(&CmpInstr, SrcReg, SrcReg2, CmpValue, &Instr)) {
+    if (isRedundantFlagInstr(&CmpInstr, SrcReg, SrcReg2, CmpValue, &Instr,
+                             SubAddIsThumb1)) {
       SubAdd = &*I;
       break;
     }
@@ -2828,7 +2878,7 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   // If we found a SubAdd, use it as it will be closer to the CMP
   if (SubAdd) {
     MI = SubAdd;
-    IsThumb1 = false;
+    IsThumb1 = SubAddIsThumb1;
   }
 
   // We can't use a predicated instruction - it doesn't always write the flags.
@@ -2897,9 +2947,13 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
         // operands will be modified.
         unsigned Opc = SubAdd->getOpcode();
         bool IsSub = Opc == ARM::SUBrr || Opc == ARM::t2SUBrr ||
-                     Opc == ARM::SUBri || Opc == ARM::t2SUBri;
-        if (!IsSub || (SrcReg2 != 0 && SubAdd->getOperand(1).getReg() == SrcReg2 &&
-                       SubAdd->getOperand(2).getReg() == SrcReg)) {
+                     Opc == ARM::SUBri || Opc == ARM::t2SUBri ||
+                     Opc == ARM::tSUBrr || Opc == ARM::tSUBi3 ||
+                     Opc == ARM::tSUBi8;
+        unsigned OpI = Opc != ARM::tSUBrr ? 1 : 2;
+        if (!IsSub ||
+            (SrcReg2 != 0 && SubAdd->getOperand(OpI).getReg() == SrcReg2 &&
+             SubAdd->getOperand(OpI + 1).getReg() == SrcReg)) {
           // VSel doesn't support condition code update.
           if (IsInstrVSel)
             return false;
@@ -2977,9 +3031,10 @@ bool ARMBaseInstrInfo::shouldSink(const MachineInstr &MI) const {
   ++Next;
   unsigned SrcReg, SrcReg2;
   int CmpMask, CmpValue;
+  bool IsThumb1;
   if (Next != MI.getParent()->end() &&
       analyzeCompare(*Next, SrcReg, SrcReg2, CmpMask, CmpValue) &&
-      isRedundantFlagInstr(&*Next, SrcReg, SrcReg2, CmpValue, &MI))
+      isRedundantFlagInstr(&*Next, SrcReg, SrcReg2, CmpValue, &MI, IsThumb1))
     return false;
   return true;
 }

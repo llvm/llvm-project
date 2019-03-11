@@ -1163,8 +1163,8 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    Known = Known.zext(BitWidth);
-    Known.Zero.setBitsFrom(InBits);
+    assert(Known.getBitWidth() == InBits && "Src width has changed?");
+    Known = Known.zext(BitWidth, true /* ExtendedBitsAreKnownZero */);
     break;
   }
   case ISD::SIGN_EXTEND: {
@@ -1217,7 +1217,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    Known = Known.zext(BitWidth);
+    Known = Known.zext(BitWidth, false /* => any extend */);
     break;
   }
   case ISD::TRUNCATE: {
@@ -1312,7 +1312,7 @@ bool TargetLowering::SimplifyDemandedBits(
 
     Known = Known2;
     if (BitWidth > EltBitWidth)
-      Known = Known.zext(BitWidth);
+      Known = Known.zext(BitWidth, false /* => any extend */);
     break;
   }
   case ISD::BITCAST: {
@@ -1712,7 +1712,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Sub = Op.getOperand(1);
     EVT SubVT = Sub.getValueType();
     unsigned NumSubElts = SubVT.getVectorNumElements();
-    const APInt &Idx = cast<ConstantSDNode>(Op.getOperand(2))->getAPIntValue();
+    const APInt &Idx = Op.getConstantOperandAPInt(2);
     if (Idx.ugt(NumElts - NumSubElts))
       break;
     unsigned SubIdx = Idx.getZExtValue();
@@ -2353,14 +2353,9 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   SelectionDAG &DAG = DCI.DAG;
   EVT OpVT = N0.getValueType();
 
-  // These setcc operations always fold.
-  switch (Cond) {
-  default: break;
-  case ISD::SETFALSE:
-  case ISD::SETFALSE2: return DAG.getBoolConstant(false, dl, VT, OpVT);
-  case ISD::SETTRUE:
-  case ISD::SETTRUE2:  return DAG.getBoolConstant(true, dl, VT, OpVT);
-  }
+  // Constant fold or commute setcc.
+  if (SDValue Fold = DAG.FoldSetCC(VT, N0, N1, Cond, dl))
+    return Fold;
 
   // Ensure that the constant occurs on the RHS and fold constant comparisons.
   // TODO: Handle non-splat vector constants. All undef causes trouble.
@@ -2379,8 +2374,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     if (N0.getOpcode() == ISD::SRL && (C1.isNullValue() || C1.isOneValue()) &&
         N0.getOperand(0).getOpcode() == ISD::CTLZ &&
         N0.getOperand(1).getOpcode() == ISD::Constant) {
-      const APInt &ShAmt
-        = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
+      const APInt &ShAmt = N0.getConstantOperandAPInt(1);
       if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
           ShAmt == Log2_32(N0.getValueSizeInBits())) {
         if ((C1 == 0) == (Cond == ISD::SETEQ)) {
@@ -2531,8 +2525,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         // 8 bits, but have to be careful...
         if (Lod->getExtensionType() != ISD::NON_EXTLOAD)
           origWidth = Lod->getMemoryVT().getSizeInBits();
-        const APInt &Mask =
-          cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
+        const APInt &Mask = N0.getConstantOperandAPInt(1);
         for (unsigned width = origWidth / 2; width>=8; width /= 2) {
           APInt newMask = APInt::getLowBitsSet(maskWidth, width);
           for (unsigned offset=0; offset<origWidth/width; offset++) {
@@ -2949,25 +2942,9 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     }
   }
 
-  if (isa<ConstantFPSDNode>(N0.getNode())) {
-    // Constant fold or commute setcc.
-    SDValue O = DAG.FoldSetCC(VT, N0, N1, Cond, dl);
-    if (O.getNode()) return O;
-  } else if (auto *CFP = dyn_cast<ConstantFPSDNode>(N1.getNode())) {
-    // If the RHS of an FP comparison is a constant, simplify it away in
-    // some cases.
-    if (CFP->getValueAPF().isNaN()) {
-      // If an operand is known to be a nan, we can fold it.
-      switch (ISD::getUnorderedFlavor(Cond)) {
-      default: llvm_unreachable("Unknown flavor!");
-      case 0:  // Known false.
-        return DAG.getBoolConstant(false, dl, VT, OpVT);
-      case 1:  // Known true.
-        return DAG.getBoolConstant(true, dl, VT, OpVT);
-      case 2:  // Undefined.
-        return DAG.getUNDEF(VT);
-      }
-    }
+  if (!isa<ConstantFPSDNode>(N0) && isa<ConstantFPSDNode>(N1)) {
+    auto *CFP = cast<ConstantFPSDNode>(N1);
+    assert(!CFP->getValueAPF().isNaN() && "Unexpected NaN value");
 
     // Otherwise, we know the RHS is not a NaN.  Simplify the node to drop the
     // constant if knowing that the operand is non-nan is enough.  We prefer to
@@ -5395,10 +5372,8 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   EVT VT = LHS.getValueType();
   SDLoc dl(Node);
 
-  assert(LHS.getValueType().isInteger() && "Expected operands to be integers");
-  assert(RHS.getValueType().isInteger() && "Expected operands to be integers");
-  assert(LHS.getValueType() == RHS.getValueType() &&
-         "Expected both operands to be the same type");
+  assert(VT == RHS.getValueType() && "Expected operands to be the same type");
+  assert(VT.isInteger() && "Expected operands to be integers");
 
   // usub.sat(a, b) -> umax(a, b) - b
   if (Opcode == ISD::USUBSAT && isOperationLegalOrCustom(ISD::UMAX, VT)) {
@@ -5432,35 +5407,30 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   }
 
   unsigned BitWidth = LHS.getScalarValueSizeInBits();
-  EVT ResultType = LHS.getValueType();
-  EVT BoolVT =
-      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ResultType);
-  SDValue Result =
-      DAG.getNode(OverflowOp, dl, DAG.getVTList(ResultType, BoolVT), LHS, RHS);
+  EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue Result = DAG.getNode(OverflowOp, dl, DAG.getVTList(VT, BoolVT),
+                               LHS, RHS);
   SDValue SumDiff = Result.getValue(0);
   SDValue Overflow = Result.getValue(1);
-  SDValue Zero = DAG.getConstant(0, dl, ResultType);
+  SDValue Zero = DAG.getConstant(0, dl, VT);
+  SDValue AllOnes = DAG.getAllOnesConstant(dl, VT);
 
   if (Opcode == ISD::UADDSAT) {
-    // Just need to check overflow for SatMax.
-    APInt MaxVal = APInt::getMaxValue(BitWidth);
-    SDValue SatMax = DAG.getConstant(MaxVal, dl, ResultType);
-    return DAG.getSelect(dl, ResultType, Overflow, SatMax, SumDiff);
+    // Overflow ? 0xffff.... : (LHS + RHS)
+    return DAG.getSelect(dl, VT, Overflow, AllOnes, SumDiff);
   } else if (Opcode == ISD::USUBSAT) {
-    // Just need to check overflow for SatMin.
-    APInt MinVal = APInt::getMinValue(BitWidth);
-    SDValue SatMin = DAG.getConstant(MinVal, dl, ResultType);
-    return DAG.getSelect(dl, ResultType, Overflow, SatMin, SumDiff);
+    // Overflow ? 0 : (LHS - RHS)
+    return DAG.getSelect(dl, VT, Overflow, Zero, SumDiff);
   } else {
     // SatMax -> Overflow && SumDiff < 0
     // SatMin -> Overflow && SumDiff >= 0
     APInt MinVal = APInt::getSignedMinValue(BitWidth);
     APInt MaxVal = APInt::getSignedMaxValue(BitWidth);
-    SDValue SatMin = DAG.getConstant(MinVal, dl, ResultType);
-    SDValue SatMax = DAG.getConstant(MaxVal, dl, ResultType);
+    SDValue SatMin = DAG.getConstant(MinVal, dl, VT);
+    SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
     SDValue SumNeg = DAG.getSetCC(dl, BoolVT, SumDiff, Zero, ISD::SETLT);
-    Result = DAG.getSelect(dl, ResultType, SumNeg, SatMax, SatMin);
-    return DAG.getSelect(dl, ResultType, Overflow, Result, SumDiff);
+    Result = DAG.getSelect(dl, VT, SumNeg, SatMax, SatMin);
+    return DAG.getSelect(dl, VT, Overflow, Result, SumDiff);
   }
 }
 
@@ -5646,4 +5616,62 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
   assert(RType.getSizeInBits() == Overflow.getValueSizeInBits() &&
          "Unexpected result type for S/UMULO legalization");
   return true;
+}
+
+SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  bool NoNaN = Node->getFlags().hasNoNaNs();
+  unsigned BaseOpcode = 0;
+  switch (Node->getOpcode()) {
+  default: llvm_unreachable("Expected VECREDUCE opcode");
+  case ISD::VECREDUCE_FADD: BaseOpcode = ISD::FADD; break;
+  case ISD::VECREDUCE_FMUL: BaseOpcode = ISD::FMUL; break;
+  case ISD::VECREDUCE_ADD:  BaseOpcode = ISD::ADD; break;
+  case ISD::VECREDUCE_MUL:  BaseOpcode = ISD::MUL; break;
+  case ISD::VECREDUCE_AND:  BaseOpcode = ISD::AND; break;
+  case ISD::VECREDUCE_OR:   BaseOpcode = ISD::OR; break;
+  case ISD::VECREDUCE_XOR:  BaseOpcode = ISD::XOR; break;
+  case ISD::VECREDUCE_SMAX: BaseOpcode = ISD::SMAX; break;
+  case ISD::VECREDUCE_SMIN: BaseOpcode = ISD::SMIN; break;
+  case ISD::VECREDUCE_UMAX: BaseOpcode = ISD::UMAX; break;
+  case ISD::VECREDUCE_UMIN: BaseOpcode = ISD::UMIN; break;
+  case ISD::VECREDUCE_FMAX:
+    BaseOpcode = NoNaN ? ISD::FMAXNUM : ISD::FMAXIMUM;
+    break;
+  case ISD::VECREDUCE_FMIN:
+    BaseOpcode = NoNaN ? ISD::FMINNUM : ISD::FMINIMUM;
+    break;
+  }
+
+  SDValue Op = Node->getOperand(0);
+  EVT VT = Op.getValueType();
+
+  // Try to use a shuffle reduction for power of two vectors.
+  if (VT.isPow2VectorType()) {
+    while (VT.getVectorNumElements() > 1) {
+      EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+      if (!isOperationLegalOrCustom(BaseOpcode, HalfVT))
+        break;
+
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = DAG.SplitVector(Op, dl);
+      Op = DAG.getNode(BaseOpcode, dl, HalfVT, Lo, Hi);
+      VT = HalfVT;
+    }
+  }
+
+  EVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+
+  SmallVector<SDValue, 8> Ops;
+  DAG.ExtractVectorElements(Op, Ops, 0, NumElts);
+
+  SDValue Res = Ops[0];
+  for (unsigned i = 1; i < NumElts; i++)
+    Res = DAG.getNode(BaseOpcode, dl, EltVT, Res, Ops[i], Node->getFlags());
+
+  // Result type may be wider than element type.
+  if (EltVT != Node->getValueType(0))
+    Res = DAG.getNode(ISD::ANY_EXTEND, dl, Node->getValueType(0), Res);
+  return Res;
 }

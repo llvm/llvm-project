@@ -23,7 +23,7 @@ class Stream;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class FileSpecList FileSpecList.h "lldb/Core/FileSpecList.h"
+/// \class FileSpecList FileSpecList.h "lldb/Core/FileSpecList.h"
 /// A file collection class.
 ///
 /// A class that contains a mutable list of FileSpec objects.
@@ -56,10 +56,10 @@ public:
   ///
   /// Replace the file list in this object with the file list from \a rhs.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     A file list object to copy.
   ///
-  /// @return
+  /// \return
   ///     A const reference to this object.
   //------------------------------------------------------------------
   FileSpecList &operator=(const FileSpecList &rhs) = default;
@@ -72,7 +72,7 @@ public:
   ///
   /// Appends \a file to the end of the file list.
   ///
-  /// @param[in] file
+  /// \param[in] file
   ///     A new file to append to this file list.
   //------------------------------------------------------------------
   void Append(const FileSpec &file);
@@ -83,10 +83,10 @@ public:
   /// Appends \a file to the end of the file list if it doesn't already exist
   /// in the file list.
   ///
-  /// @param[in] file
+  /// \param[in] file
   ///     A new file to append to this file list.
   ///
-  /// @return
+  /// \return
   ///     \b true if the file was appended, \b false otherwise.
   //------------------------------------------------------------------
   bool AppendIfUnique(const FileSpec &file);
@@ -99,7 +99,7 @@ public:
   //------------------------------------------------------------------
   /// Dumps the file list to the supplied stream pointer "s".
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream that will be used to dump the object description.
   //------------------------------------------------------------------
   void Dump(Stream *s, const char *separator_cstr = "\n") const;
@@ -110,16 +110,16 @@ public:
   /// Find the index of the file in the file spec list that matches \a file
   /// starting \a idx entries into the file spec list.
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     An index into the file list.
   ///
-  /// @param[in] file
+  /// \param[in] file
   ///     The file specification to search for.
   ///
-  /// @param[in] full
+  /// \param[in] full
   ///     Should FileSpec::Equal be called with "full" true or false.
   ///
-  /// @return
+  /// \return
   ///     The index of the file that matches \a file if it is found,
   ///     else UINT32_MAX is returned.
   //------------------------------------------------------------------
@@ -132,10 +132,10 @@ public:
   /// FileSpec object will be returned. The file objects that are returned can
   /// be tested using FileSpec::operator void*().
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     An index into the file list.
   ///
-  /// @return
+  /// \return
   ///     A copy of the FileSpec object at index \a idx. If \a idx
   ///     is out of range, then an empty FileSpec object will be
   ///     returned.
@@ -148,10 +148,10 @@ public:
   /// Gets a file from the file list. The file objects that are returned can
   /// be tested using FileSpec::operator void*().
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     An index into the file list.
   ///
-  /// @return
+  /// \return
   ///     A pointer to a contained FileSpec object at index \a idx.
   ///     If \a idx is out of range, then an NULL is returned.
   //------------------------------------------------------------------
@@ -164,10 +164,10 @@ public:
   /// the size in bytes of this object, not any shared string values it may
   /// refer to.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object occupies in memory.
   ///
-  /// @see ConstString::StaticMemorySize ()
+  /// \see ConstString::StaticMemorySize ()
   //------------------------------------------------------------------
   size_t MemorySize() const;
 
@@ -176,7 +176,7 @@ public:
   //------------------------------------------------------------------
   /// Get the number of files in the file list.
   ///
-  /// @return
+  /// \return
   ///     The number of files in the file spec list.
   //------------------------------------------------------------------
   size_t GetSize() const;

@@ -321,13 +321,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       NewMap[MBBMap[Src]] = MBBMap[Dst];
     }
     EHInfo.EHPadUnwindMap = std::move(NewMap);
-    NewMap.clear();
-    for (auto &KV : EHInfo.ThrowUnwindMap) {
-      const auto *Src = KV.first.get<const BasicBlock *>();
-      const auto *Dst = KV.second.get<const BasicBlock *>();
-      NewMap[MBBMap[Src]] = MBBMap[Dst];
-    }
-    EHInfo.ThrowUnwindMap = std::move(NewMap);
   }
 }
 
@@ -400,7 +393,7 @@ FunctionLoweringInfo::GetLiveOutRegInfo(unsigned Reg, unsigned BitWidth) {
 
   if (BitWidth > LOI->Known.getBitWidth()) {
     LOI->NumSignBits = 1;
-    LOI->Known = LOI->Known.zextOrTrunc(BitWidth);
+    LOI->Known = LOI->Known.zext(BitWidth, false /* => any extend */);
   }
 
   return LOI;

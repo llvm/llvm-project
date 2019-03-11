@@ -141,12 +141,25 @@ class APFixedPoint {
     return APFixedPoint(Val << Amt, Sema);
   }
 
+  /// Return the integral part of this fixed point number, rounded towards
+  /// zero. (-2.5k -> -2)
   llvm::APSInt getIntPart() const {
     if (Val < 0 && Val != -Val) // Cover the case when we have the min val
       return -(-Val >> getScale());
     else
       return Val >> getScale();
   }
+
+  /// Return the integral part of this fixed point number, rounded towards
+  /// zero. The value is stored into an APSInt with the provided width and sign.
+  /// If the overflow parameter is provided, and the integral value is not able
+  /// to be fully stored in the provided width and sign, the overflow parameter
+  /// is set to true.
+  ///
+  /// If the overflow parameter is provided, set this value to true or false to
+  /// indicate if this operation results in an overflow.
+  llvm::APSInt convertToInt(unsigned DstWidth, bool DstSign,
+                            bool *Overflow = nullptr) const;
 
   void toString(llvm::SmallVectorImpl<char> &Str) const;
   std::string toString() const {
@@ -174,6 +187,14 @@ class APFixedPoint {
 
   static APFixedPoint getMax(const FixedPointSemantics &Sema);
   static APFixedPoint getMin(const FixedPointSemantics &Sema);
+
+  /// Create an APFixedPoint with a value equal to that of the provided integer,
+  /// and in the same semantics as the provided target semantics. If the value
+  /// is not able to fit in the specified fixed point semantics, and the
+  /// overflow parameter is provided, it is set to true.
+  static APFixedPoint getFromIntValue(const llvm::APSInt &Value,
+                                      const FixedPointSemantics &DstFXSema,
+                                      bool *Overflow = nullptr);
 
 private:
   llvm::APSInt Val;

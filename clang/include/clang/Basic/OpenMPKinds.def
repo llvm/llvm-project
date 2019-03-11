@@ -122,6 +122,12 @@
 #ifndef OPENMP_MAP_MODIFIER_KIND
 #define OPENMP_MAP_MODIFIER_KIND(Name)
 #endif
+#ifndef OPENMP_TO_MODIFIER_KIND
+#define OPENMP_TO_MODIFIER_KIND(Name)
+#endif
+#ifndef OPENMP_FROM_MODIFIER_KIND
+#define OPENMP_FROM_MODIFIER_KIND(Name)
+#endif
 #ifndef OPENMP_DIST_SCHEDULE_KIND
 #define OPENMP_DIST_SCHEDULE_KIND(Name)
 #endif
@@ -238,6 +244,7 @@ OPENMP_DIRECTIVE_EXT(target_teams_distribute, "target teams distribute")
 OPENMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for, "target teams distribute parallel for")
 OPENMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for_simd, "target teams distribute parallel for simd")
 OPENMP_DIRECTIVE_EXT(target_teams_distribute_simd, "target teams distribute simd")
+OPENMP_DIRECTIVE(allocate)
 
 // OpenMP clauses.
 OPENMP_CLAUSE(if, OMPIfClause)
@@ -262,6 +269,7 @@ OPENMP_CLAUSE(ordered, OMPOrderedClause)
 OPENMP_CLAUSE(nowait, OMPNowaitClause)
 OPENMP_CLAUSE(untied, OMPUntiedClause)
 OPENMP_CLAUSE(mergeable, OMPMergeableClause)
+OPENMP_CLAUSE(flush, OMPFlushClause)
 OPENMP_CLAUSE(read, OMPReadClause)
 OPENMP_CLAUSE(write, OMPWriteClause)
 OPENMP_CLAUSE(update, OMPUpdateClause)
@@ -577,6 +585,12 @@ OPENMP_MAP_KIND(release)
 OPENMP_MAP_MODIFIER_KIND(always)
 OPENMP_MAP_MODIFIER_KIND(close)
 OPENMP_MAP_MODIFIER_KIND(mapper)
+
+// Modifiers for 'to' clause.
+OPENMP_TO_MODIFIER_KIND(mapper)
+
+// Modifiers for 'from' clause.
+OPENMP_FROM_MODIFIER_KIND(mapper)
 
 // Clauses allowed for OpenMP directive 'taskloop'.
 OPENMP_TASKLOOP_CLAUSE(if)
@@ -934,6 +948,8 @@ OPENMP_DECLARE_MAPPER_CLAUSE(map)
 #undef OPENMP_FOR_SIMD_CLAUSE
 #undef OPENMP_MAP_KIND
 #undef OPENMP_MAP_MODIFIER_KIND
+#undef OPENMP_TO_MODIFIER_KIND
+#undef OPENMP_FROM_MODIFIER_KIND
 #undef OPENMP_DISTRIBUTE_CLAUSE
 #undef OPENMP_DIST_SCHEDULE_KIND
 #undef OPENMP_DEFAULTMAP_KIND

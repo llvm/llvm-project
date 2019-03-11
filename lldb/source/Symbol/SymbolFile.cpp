@@ -102,7 +102,7 @@ uint32_t SymbolFile::ResolveSymbolContext(const FileSpec &file_spec,
 }
 
 uint32_t
-SymbolFile::FindGlobalVariables(const ConstString &name,
+SymbolFile::FindGlobalVariables(ConstString name,
                                 const CompilerDeclContext *parent_decl_ctx,
                                 uint32_t max_matches, VariableList &variables) {
   return 0;
@@ -114,7 +114,7 @@ uint32_t SymbolFile::FindGlobalVariables(const RegularExpression &regex,
   return 0;
 }
 
-uint32_t SymbolFile::FindFunctions(const ConstString &name,
+uint32_t SymbolFile::FindFunctions(ConstString name,
                                    const CompilerDeclContext *parent_decl_ctx,
                                    lldb::FunctionNameType name_type_mask,
                                    bool include_inlines, bool append,
@@ -139,7 +139,7 @@ void SymbolFile::GetMangledNamesForFunction(
 }
 
 uint32_t SymbolFile::FindTypes(
-    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext *parent_decl_ctx,
     bool append, uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {

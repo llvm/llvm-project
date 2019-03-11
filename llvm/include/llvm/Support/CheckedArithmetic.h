@@ -49,6 +49,15 @@ checkedAdd(T LHS, T RHS) {
   return checkedOp(LHS, RHS, &llvm::APInt::sadd_ov);
 }
 
+/// Subtract two signed integers \p LHS and \p RHS.
+/// \return Optional of sum if no signed overflow occurred,
+/// \c None otherwise.
+template <typename T>
+typename std::enable_if<std::is_signed<T>::value, llvm::Optional<T>>::type
+checkedSub(T LHS, T RHS) {
+  return checkedOp(LHS, RHS, &llvm::APInt::ssub_ov);
+}
+
 /// Multiply two signed integers \p LHS and \p RHS.
 /// \return Optional of product if no signed overflow occurred,
 /// \c None otherwise.

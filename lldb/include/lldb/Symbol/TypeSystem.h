@@ -283,7 +283,7 @@ public:
                                   bool omit_empty_base_classes,
                                   const ExecutionContext *exe_ctx) = 0;
 
-  virtual CompilerType GetBuiltinTypeByName(const ConstString &name);
+  virtual CompilerType GetBuiltinTypeByName(ConstString name);
 
   virtual lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) = 0;
@@ -291,7 +291,7 @@ public:
   virtual void ForEachEnumerator(
       lldb::opaque_compiler_type_t type,
       std::function<bool(const CompilerType &integer_type,
-                         const ConstString &name,
+                         ConstString name,
                          const llvm::APSInt &value)> const &callback) {}
 
   virtual uint32_t GetNumFields(lldb::opaque_compiler_type_t type) = 0;
@@ -355,6 +355,12 @@ public:
   // Dumping types
   //----------------------------------------------------------------------
 
+#ifndef NDEBUG
+  /// Convenience LLVM-style dump method for use in the debugger only.
+  LLVM_DUMP_METHOD virtual void
+  dump(lldb::opaque_compiler_type_t type) const = 0;
+#endif
+  
   virtual void DumpValue(lldb::opaque_compiler_type_t type,
                          ExecutionContext *exe_ctx, Stream *s,
                          lldb::Format format, const DataExtractor &data,

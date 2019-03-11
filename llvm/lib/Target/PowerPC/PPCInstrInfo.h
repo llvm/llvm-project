@@ -128,12 +128,12 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   // If the inst has imm-form and one of its operand is produced by a LI,
   // put the imm into the inst directly and remove the LI if possible.
   bool transformToImmFormFedByLI(MachineInstr &MI, const ImmInstrInfo &III,
-                                 unsigned ConstantOpNo, int64_t Imm) const;
+                                 unsigned ConstantOpNo, MachineInstr &DefMI,
+                                 int64_t Imm) const;
   // If the inst has imm-form and one of its operand is produced by an
   // add-immediate, try to transform it when possible.
   bool transformToImmFormFedByAdd(MachineInstr &MI, const ImmInstrInfo &III,
-                                  unsigned ConstantOpNo,
-                                  MachineInstr &DefMI,
+                                  unsigned ConstantOpNo, MachineInstr &DefMI,
                                   bool KillDefMI) const;
   // Try to find that, if the instruction 'MI' contains any operand that
   // could be forwarded from some inst that feeds it. If yes, return the
@@ -158,8 +158,8 @@ class PPCInstrInfo : public PPCGenInstrInfo {
                                  int64_t &Imm) const;
   bool isRegElgibleForForwarding(const MachineOperand &RegMO,
                                  const MachineInstr &DefMI,
-                                 const MachineInstr &MI,
-                                 bool KillDefMI) const;
+                                 const MachineInstr &MI, bool KillDefMI,
+                                 bool &IsFwdFeederRegKilled) const;
   const unsigned *getStoreOpcodesForSpillArray() const;
   const unsigned *getLoadOpcodesForSpillArray() const;
   virtual void anchor();
@@ -411,6 +411,18 @@ public:
 
   bool convertToImmediateForm(MachineInstr &MI,
                               MachineInstr **KilledDef = nullptr) const;
+
+  /// Fixup killed/dead flag for register \p RegNo between instructions [\p
+  /// StartMI, \p EndMI]. Some PostRA transformations may violate register
+  /// killed/dead flags semantics, this function can be called to fix up. Before
+  /// calling this function,
+  /// 1. Ensure that \p RegNo liveness is killed after instruction \p EndMI.
+  /// 2. Ensure that there is no new definition between (\p StartMI, \p EndMI)
+  ///    and possible definition for \p RegNo is \p StartMI or \p EndMI.
+  /// 3. Ensure that all instructions between [\p StartMI, \p EndMI] are in same
+  ///    basic block.
+  void fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
+                         unsigned RegNo) const;
   void replaceInstrWithLI(MachineInstr &MI, const LoadImmediateInfo &LII) const;
   void replaceInstrOperandWithImm(MachineInstr &MI, unsigned OpNo,
                                   int64_t Imm) const;

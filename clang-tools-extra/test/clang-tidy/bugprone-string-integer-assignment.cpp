@@ -11,7 +11,13 @@ struct basic_string {
 
 typedef basic_string<char> string;
 typedef basic_string<wchar_t> wstring;
+
+int tolower(int i);
+int toupper(int i);
 }
+
+int tolower(int i);
+int toupper(int i);
 
 typedef int MyArcaneChar;
 
@@ -47,7 +53,17 @@ int main() {
 
   std::basic_string<MyArcaneChar> as;
   as = 6;
-// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: an integer is interpreted as a chara
-// CHECK-FIXES: {{^}}  as = 6;{{$}}
+  as = static_cast<MyArcaneChar>(6);
+  as = 'a';
 
+  s += toupper(x);
+  s += tolower(x);
+  s += std::tolower(x);
+
+  // Likely character expressions.
+  s += x & 0xff;
+  s += 0xff & x;
+
+  s += 'a' + (x % 26);
+  s += (x % 10) + 'b';
 }

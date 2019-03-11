@@ -1743,6 +1743,8 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::CXXTypeidExprClass:
   case Expr::CXXUuidofExprClass:
     return true;
+  case Expr::ObjCBoxedExprClass:
+    return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
     return IsStringLiteralCall(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
@@ -5794,6 +5796,8 @@ public:
   bool VisitObjCStringLiteral(const ObjCStringLiteral *E)
       { return Success(E); }
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+    if (E->isExpressibleAsConstantInitializer())
+      return Success(E);
     if (Info.noteFailure())
       EvaluateIgnoredValue(Info, E->getSubExpr());
     return Error(E);
@@ -9144,6 +9148,22 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     return Success(CCR::Equal, E);
   }
 
+  if (LHSTy->isFixedPointType() || RHSTy->isFixedPointType()) {
+    APFixedPoint LHSFX(Info.Ctx.getFixedPointSemantics(LHSTy));
+    APFixedPoint RHSFX(Info.Ctx.getFixedPointSemantics(RHSTy));
+
+    bool LHSOK = EvaluateFixedPointOrInteger(E->getLHS(), LHSFX, Info);
+    if (!LHSOK && !Info.noteFailure())
+      return false;
+    if (!EvaluateFixedPointOrInteger(E->getRHS(), RHSFX, Info) || !LHSOK)
+      return false;
+    if (LHSFX < RHSFX)
+      return Success(CCR::Less, E);
+    if (LHSFX > RHSFX)
+      return Success(CCR::Greater, E);
+    return Success(CCR::Equal, E);
+  }
+
   if (LHSTy->isAnyComplexType() || RHSTy->isAnyComplexType()) {
     ComplexValue LHS, RHS;
     bool LHSOK;
@@ -9760,6 +9780,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_AddressSpaceConversion:
   case CK_IntToOCLSampler:
   case CK_FixedPointCast:
+  case CK_IntegralToFixedPoint:
     llvm_unreachable("invalid cast kind for integral value");
 
   case CK_BitCast:
@@ -9792,6 +9813,19 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (BoolResult && E->getCastKind() == CK_BooleanToSignedIntegral)
       IntResult = (uint64_t)-1;
     return Success(IntResult, E);
+  }
+
+  case CK_FixedPointToIntegral: {
+    APFixedPoint Src(Info.Ctx.getFixedPointSemantics(SrcType));
+    if (!EvaluateFixedPoint(SubExpr, Src, Info))
+      return false;
+    bool Overflowed;
+    llvm::APSInt Result = Src.convertToInt(
+        Info.Ctx.getIntWidth(DestType),
+        DestType->isSignedIntegerOrEnumerationType(), &Overflowed);
+    if (Overflowed && !HandleOverflow(Info, E, Result, DestType))
+      return false;
+    return Success(Result, E);
   }
 
   case CK_FixedPointToBoolean: {
@@ -9842,13 +9876,12 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return true;
     }
 
-    uint64_t V;
-    if (LV.isNullPointer())
-      V = Info.Ctx.getTargetNullPointerValue(SrcType);
-    else
-      V = LV.getLValueOffset().getQuantity();
+    APSInt AsInt;
+    APValue V;
+    LV.moveInto(V);
+    if (!V.toIntegralConstant(AsInt, SrcType, Info.Ctx))
+      llvm_unreachable("Can't cast this!");
 
-    APSInt AsInt = Info.Ctx.MakeIntValue(V, SrcType);
     return Success(HandleIntToIntCast(Info, E, DestType, SrcType, AsInt), E);
   }
 
@@ -9953,6 +9986,20 @@ bool FixedPointExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (Overflowed && !HandleOverflow(Info, E, Result, DestType))
       return false;
     return Success(Result, E);
+  }
+  case CK_IntegralToFixedPoint: {
+    APSInt Src;
+    if (!EvaluateInteger(SubExpr, Src, Info))
+      return false;
+
+    bool Overflowed;
+    APFixedPoint IntResult = APFixedPoint::getFromIntValue(
+        Src, Info.Ctx.getFixedPointSemantics(DestType), &Overflowed);
+
+    if (Overflowed && !HandleOverflow(Info, E, IntResult, DestType))
+      return false;
+
+    return Success(IntResult, E);
   }
   case CK_NoOp:
   case CK_LValueToRValue:
@@ -10355,6 +10402,8 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_IntToOCLSampler:
   case CK_FixedPointCast:
   case CK_FixedPointToBoolean:
+  case CK_FixedPointToIntegral:
+  case CK_IntegralToFixedPoint:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_LValueToRValue:
@@ -11082,6 +11131,7 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
                                   const ASTContext &Ctx) const {
   EvalInfo::EvaluationMode EM = EvalInfo::EM_ConstantExpression;
   EvalInfo Info(Ctx, Result, EM);
+  Info.InConstantContext = true;
   if (!::Evaluate(Result.Val, Info, this))
     return false;
 
@@ -11722,6 +11772,7 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
                                     const Expr *This) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpressionUnevaluated);
+  Info.InConstantContext = true;
 
   LValue ThisVal;
   const LValue *ThisPtr = nullptr;
@@ -11805,6 +11856,7 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
 
   EvalInfo Info(FD->getASTContext(), Status,
                 EvalInfo::EM_PotentialConstantExpressionUnevaluated);
+  Info.InConstantContext = true;
 
   // Fabricate a call stack frame to give the arguments a plausible cover story.
   ArrayRef<const Expr*> Args;

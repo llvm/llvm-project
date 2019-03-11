@@ -18,4 +18,15 @@ Sections:
       - Offset:          0x1
         Symbol:          .debug_foo
         Type:            R_X86_64_32
+      - Offset:          0x2
+        Symbol:          .notdebug_foo
+        Type:            R_X86_64_32
+Symbols:
+  Global:
+    - Name:    .debug_foo
+      Type:    STT_SECTION
+      Section: .debug_foo
+    - Name:    .notdebug_foo
+      Type:    STT_SECTION
+      Section: .notdebug_foo
 ...

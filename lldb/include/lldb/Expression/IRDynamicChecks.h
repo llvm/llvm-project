@@ -31,7 +31,7 @@ class ExecutionContext;
 class Stream;
 
 //----------------------------------------------------------------------
-/// @class DynamicCheckerFunctions IRDynamicChecks.h
+/// \class DynamicCheckerFunctions IRDynamicChecks.h
 /// "lldb/Expression/IRDynamicChecks.h" Encapsulates dynamic check functions
 /// used by expressions.
 ///
@@ -61,13 +61,13 @@ public:
   /// Install the utility functions into a process.  This binds the instance
   /// of DynamicCheckerFunctions to that process.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     A diagnostic manager to report errors to.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to install the functions into.
   ///
-  /// @return
+  /// \return
   ///     True on success; false on failure, or if the functions have
   ///     already been installed.
   //------------------------------------------------------------------
@@ -81,7 +81,7 @@ public:
 };
 
 //----------------------------------------------------------------------
-/// @class IRDynamicChecks IRDynamicChecks.h
+/// \class IRDynamicChecks IRDynamicChecks.h
 /// "lldb/Expression/IRDynamicChecks.h" Adds dynamic checks to a user-entered
 /// expression to reduce its likelihood of crashing
 ///
@@ -97,13 +97,13 @@ public:
   //------------------------------------------------------------------
   /// Constructor
   ///
-  /// @param[in] checker_functions
+  /// \param[in] checker_functions
   ///     The checker functions for the target process.
   ///
-  /// @param[in] func_name
+  /// \param[in] func_name
   ///     The name of the function to prepare for execution in the target.
   ///
-  /// @param[in] decl_map
+  /// \param[in] decl_map
   ///     The mapping used to look up entities in the target process. In
   ///     this case, used to find objc_msgSend
   //------------------------------------------------------------------
@@ -118,12 +118,12 @@ public:
   //------------------------------------------------------------------
   /// Run this IR transformer on a single module
   ///
-  /// @param[in] M
+  /// \param[in] M
   ///     The module to run on.  This module is searched for the function
   ///     $__lldb_expr, and that function is passed to the passes one by
   ///     one.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise
   //------------------------------------------------------------------
   bool runOnModule(llvm::Module &M) override;
@@ -149,13 +149,13 @@ private:
   //------------------------------------------------------------------
   /// The top-level pass implementation
   ///
-  /// @param[in] M
+  /// \param[in] M
   ///     The module currently being processed.
   ///
-  /// @param[in] BB
+  /// \param[in] BB
   ///     The basic block currently being processed.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise
   //------------------------------------------------------------------
   bool FindDataLoads(llvm::Module &M, llvm::BasicBlock &BB);

@@ -38,7 +38,7 @@ class ValueObjectConstResultChild : public ValueObjectChild {
 public:
   ValueObjectConstResultChild(ValueObject &parent,
                               const CompilerType &compiler_type,
-                              const ConstString &name, uint32_t byte_size,
+                              ConstString name, uint32_t byte_size,
                               int32_t byte_offset, uint32_t bitfield_bit_size,
                               uint32_t bitfield_bit_offset, bool is_base_class,
                               bool is_deref_of_parent,

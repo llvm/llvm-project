@@ -103,10 +103,10 @@ public:
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index) override;
 
-  lldb::ValueObjectSP GetChildMemberWithName(const ConstString &name,
+  lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
                                              bool can_create) override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
 protected:
   bool UpdateValue() override;

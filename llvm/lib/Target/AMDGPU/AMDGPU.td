@@ -579,24 +579,6 @@ def FeatureISAVersion9_0_9 : FeatureSet<
    FeatureCodeObjectV3]>;
 
 //===----------------------------------------------------------------------===//
-// Debugger related subtarget features.
-//===----------------------------------------------------------------------===//
-
-def FeatureDebuggerInsertNops : SubtargetFeature<
-  "amdgpu-debugger-insert-nops",
-  "DebuggerInsertNops",
-  "true",
-  "Insert one nop instruction for each high level source statement"
->;
-
-def FeatureDebuggerEmitPrologue : SubtargetFeature<
-  "amdgpu-debugger-emit-prologue",
-  "DebuggerEmitPrologue",
-  "true",
-  "Emit debugger prologue"
->;
-
-//===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {
   let guessInstructionProperties = 1;
@@ -709,7 +691,7 @@ def HasPackedD16VMem : Predicate<"!Subtarget->hasUnpackedD16VMem()">,
   AssemblerPredicate<"!FeatureUnpackedD16VMem">;
 
 def D16PreservesUnusedBits :
-  Predicate<"Subtarget->hasD16LoadStore() && !Subtarget->isSRAMECCEnabled()">,
+  Predicate<"Subtarget->d16PreservesUnusedBits()">,
   AssemblerPredicate<"FeatureGFX9Insts,!FeatureSRAMECC">;
 
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
@@ -721,16 +703,12 @@ def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9
 def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarry()">,
   AssemblerPredicate<"FeatureAddNoCarryInsts">;
 
-def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">,
-  AssemblerPredicate<"!FeatureAddNoCarryInsts">;
+def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">;
 
 def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
   AssemblerPredicate<"Feature16BitInsts">;
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<"FeatureVOP3P">;
-
-def NotHasVOP3PInsts : Predicate<"!Subtarget->hasVOP3PInsts()">,
-  AssemblerPredicate<"!FeatureVOP3P">;
 
 def HasSDWA : Predicate<"Subtarget->hasSDWA()">,
   AssemblerPredicate<"FeatureSDWA,FeatureVolcanicIslands">;

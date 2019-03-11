@@ -11257,6 +11257,11 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
           << Culprit->getSourceRange();
       }
     }
+
+    if (auto *E = dyn_cast<ExprWithCleanups>(Init))
+      if (auto *BE = dyn_cast<BlockExpr>(E->getSubExpr()->IgnoreParens()))
+        if (VDecl->hasLocalStorage())
+          BE->getBlockDecl()->setCanAvoidCopyToHeap();
   } else if (VDecl->isStaticDataMember() && !VDecl->isInline() &&
              VDecl->getLexicalDeclContext()->isRecord()) {
     // This is an in-class initialization for a static data member, e.g.,
@@ -13116,7 +13121,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   sema::AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
 
-  if (getLangOpts().CoroutinesTS && getCurFunction()->isCoroutine())
+  if (getLangOpts().Coroutines && getCurFunction()->isCoroutine())
     CheckCompletedCoroutineBody(FD, Body);
 
   // Do not call PopExpressionEvaluationContext() if it is a lambda because one

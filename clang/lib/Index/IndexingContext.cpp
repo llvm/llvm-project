@@ -44,6 +44,10 @@ bool IndexingContext::shouldIndexParametersInDeclarations() const {
   return IndexOpts.IndexParametersInDeclarations;
 }
 
+bool IndexingContext::shouldIndexTemplateParameters() const {
+  return IndexOpts.IndexTemplateParameters;
+}
+
 bool IndexingContext::handleDecl(const Decl *D,
                                  SymbolRoleSet Roles,
                                  ArrayRef<SymbolRelation> Relations) {
@@ -76,8 +80,11 @@ bool IndexingContext::handleReference(const NamedDecl *D, SourceLocation Loc,
   if (!shouldIndexFunctionLocalSymbols() && isFunctionLocalSymbol(D))
     return true;
 
-  if (isa<NonTypeTemplateParmDecl>(D) || isa<TemplateTypeParmDecl>(D))
+  if (!shouldIndexTemplateParameters() &&
+      (isa<NonTypeTemplateParmDecl>(D) || isa<TemplateTypeParmDecl>(D) ||
+       isa<TemplateTemplateParmDecl>(D))) {
     return true;
+  }
 
   return handleDeclOccurrence(D, Loc, /*IsRef=*/true, Parent, Roles, Relations,
                               RefE, RefD, DC);
@@ -325,6 +332,7 @@ static bool shouldReportOccurrenceForSystemDeclOnlyMode(
       case SymbolRole::RelationCalledBy:
       case SymbolRole::RelationContainedBy:
       case SymbolRole::RelationSpecializationOf:
+      case SymbolRole::NameReference:
         return true;
       }
       llvm_unreachable("Unsupported SymbolRole value!");

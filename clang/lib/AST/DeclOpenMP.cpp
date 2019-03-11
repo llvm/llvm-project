@@ -53,6 +53,36 @@ void OMPThreadPrivateDecl::setVars(ArrayRef<Expr *> VL) {
 }
 
 //===----------------------------------------------------------------------===//
+// OMPAllocateDecl Implementation.
+//===----------------------------------------------------------------------===//
+
+void OMPAllocateDecl::anchor() { }
+
+OMPAllocateDecl *OMPAllocateDecl::Create(ASTContext &C, DeclContext *DC,
+                                         SourceLocation L,
+                                         ArrayRef<Expr *> VL) {
+  OMPAllocateDecl *D = new (C, DC, additionalSizeToAlloc<Expr *>(VL.size()))
+      OMPAllocateDecl(OMPAllocate, DC, L);
+  D->NumVars = VL.size();
+  D->setVars(VL);
+  return D;
+}
+
+OMPAllocateDecl *OMPAllocateDecl::CreateDeserialized(ASTContext &C, unsigned ID,
+                                                     unsigned N) {
+  OMPAllocateDecl *D = new (C, ID, additionalSizeToAlloc<Expr *>(N))
+      OMPAllocateDecl(OMPAllocate, nullptr, SourceLocation());
+  D->NumVars = N;
+  return D;
+}
+
+void OMPAllocateDecl::setVars(ArrayRef<Expr *> VL) {
+  assert(VL.size() == NumVars &&
+         "Number of variables is not the same as the preallocated buffer");
+  std::uninitialized_copy(VL.begin(), VL.end(), getTrailingObjects<Expr *>());
+}
+
+//===----------------------------------------------------------------------===//
 // OMPRequiresDecl Implementation.
 //===----------------------------------------------------------------------===//
 

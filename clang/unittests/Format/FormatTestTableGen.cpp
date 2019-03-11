@@ -51,5 +51,9 @@ TEST_F(FormatTestTableGen, FormatStringBreak) {
                "               \"very long help string\">;\n");
 }
 
+TEST_F(FormatTestTableGen, NoSpacesInSquareBracketLists) {
+  verifyFormat("def flag : Flag<[\"-\", \"--\"], \"foo\">;\n");
+}
+
 } // namespace format
 } // end namespace clang

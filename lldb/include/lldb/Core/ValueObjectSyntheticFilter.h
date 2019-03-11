@@ -62,10 +62,10 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx, bool can_create) override;
 
-  lldb::ValueObjectSP GetChildMemberWithName(const ConstString &name,
+  lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
                                              bool can_create) override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
   lldb::ValueObjectSP
   GetDynamicValue(lldb::DynamicValueType valueType) override;

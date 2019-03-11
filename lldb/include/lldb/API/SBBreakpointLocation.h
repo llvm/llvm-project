@@ -27,6 +27,8 @@ public:
 
   break_id_t GetID();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   lldb::SBAddress GetAddress();

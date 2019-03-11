@@ -217,13 +217,17 @@ static bool isAddressExpression(const Value &V) {
   if (!isa<Operator>(V))
     return false;
 
-  switch (cast<Operator>(V).getOpcode()) {
+  const Operator &Op = cast<Operator>(V);
+  switch (Op.getOpcode()) {
   case Instruction::PHI:
+    assert(Op.getType()->isPointerTy());
+    return true;
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast:
   case Instruction::GetElementPtr:
-  case Instruction::Select:
     return true;
+  case Instruction::Select:
+    return Op.getType()->isPointerTy();
   default:
     return false;
   }

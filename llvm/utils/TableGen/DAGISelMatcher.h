@@ -66,10 +66,13 @@ public:
     CheckInteger,         // Fail if wrong val.
     CheckChildInteger,    // Fail if child is wrong val.
     CheckCondCode,        // Fail if not condcode.
+    CheckChild2CondCode,  // Fail if child is wrong condcode.
     CheckValueType,
     CheckComplexPat,
     CheckAndImm,
     CheckOrImm,
+    CheckImmAllOnesV,
+    CheckImmAllZerosV,
     CheckFoldableChainNode,
 
     // Node creation/emisssion.
@@ -121,9 +124,12 @@ public:
     case CheckInteger:
     case CheckChildInteger:
     case CheckCondCode:
+    case CheckChild2CondCode:
     case CheckValueType:
     case CheckAndImm:
     case CheckOrImm:
+    case CheckImmAllOnesV:
+    case CheckImmAllZerosV:
     case CheckFoldableChainNode:
       return true;
     }
@@ -625,6 +631,27 @@ private:
   }
 };
 
+/// CheckChild2CondCodeMatcher - This checks to see if child 2 node is a
+/// CondCodeSDNode with the specified condition, if not it fails to match.
+class CheckChild2CondCodeMatcher : public Matcher {
+  StringRef CondCodeName;
+public:
+  CheckChild2CondCodeMatcher(StringRef condcodename)
+    : Matcher(CheckChild2CondCode), CondCodeName(condcodename) {}
+
+  StringRef getCondCodeName() const { return CondCodeName; }
+
+  static bool classof(const Matcher *N) {
+    return N->getKind() == CheckChild2CondCode;
+  }
+
+private:
+  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  bool isEqualImpl(const Matcher *M) const override {
+    return cast<CheckChild2CondCodeMatcher>(M)->CondCodeName == CondCodeName;
+  }
+};
+
 /// CheckValueTypeMatcher - This checks to see if the current node is a
 /// VTSDNode with the specified type, if not it fails to match.
 class CheckValueTypeMatcher : public Matcher {
@@ -728,6 +755,38 @@ private:
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckOrImmMatcher>(M)->Value == Value;
   }
+};
+
+/// CheckImmAllOnesVMatcher - This check if the current node is an build vector
+/// of all ones.
+class CheckImmAllOnesVMatcher : public Matcher {
+public:
+  CheckImmAllOnesVMatcher() : Matcher(CheckImmAllOnesV) {}
+
+  static bool classof(const Matcher *N) {
+    return N->getKind() == CheckImmAllOnesV;
+  }
+
+private:
+  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  bool isEqualImpl(const Matcher *M) const override { return true; }
+  bool isContradictoryImpl(const Matcher *M) const override;
+};
+
+/// CheckImmAllZerosVMatcher - This check if the current node is an build vector
+/// of all zeros.
+class CheckImmAllZerosVMatcher : public Matcher {
+public:
+  CheckImmAllZerosVMatcher() : Matcher(CheckImmAllZerosV) {}
+
+  static bool classof(const Matcher *N) {
+    return N->getKind() == CheckImmAllZerosV;
+  }
+
+private:
+  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  bool isEqualImpl(const Matcher *M) const override { return true; }
+  bool isContradictoryImpl(const Matcher *M) const override;
 };
 
 /// CheckFoldableChainNodeMatcher - This checks to see if the current node
