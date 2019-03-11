@@ -85,7 +85,7 @@ public:
   //------------------------------------------------------------------
   // IOHandler::Delegate functions
   //------------------------------------------------------------------
-  void IOHandlerActivated(IOHandler &io_handler) override;
+  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override;
 
   bool IOHandlerInterrupt(IOHandler &io_handler) override;
 

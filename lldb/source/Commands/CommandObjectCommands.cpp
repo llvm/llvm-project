@@ -975,10 +975,10 @@ a number follows 'f':"
   ~CommandObjectCommandsAddRegex() override = default;
 
 protected:
-  void IOHandlerActivated(IOHandler &io_handler) override {
+  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
     StreamFileSP output_sp(io_handler.GetOutputStreamFile());
-    if (output_sp) {
-      output_sp->PutCString("Enter one of more sed substitution commands in "
+    if (output_sp && interactive) {
+      output_sp->PutCString("Enter one or more sed substitution commands in "
                             "the form: 's/<regex>/<subst>/'.\nTerminate the "
                             "substitution list with an empty line.\n");
       output_sp->Flush();
@@ -1634,9 +1634,9 @@ protected:
     ScriptedCommandSynchronicity m_synchronicity;
   };
 
-  void IOHandlerActivated(IOHandler &io_handler) override {
+  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
     StreamFileSP output_sp(io_handler.GetOutputStreamFile());
-    if (output_sp) {
+    if (output_sp && interactive) {
       output_sp->PutCString(g_python_command_instructions);
       output_sp->Flush();
     }
