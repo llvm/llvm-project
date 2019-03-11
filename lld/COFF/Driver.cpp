@@ -18,6 +18,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Timer.h"
@@ -1523,6 +1524,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Config->OutputFile.empty()) {
     Config->OutputFile =
         getOutputPath((*Args.filtered(OPT_INPUT).begin())->getValue());
+  }
+
+  // Fail early if an output file is not writable.
+  if (auto E = tryCreateFile(Config->OutputFile)) {
+    error("cannot open output file " + Config->OutputFile + ": " + E.message());
+    return;
   }
 
   if (ShouldCreatePDB) {

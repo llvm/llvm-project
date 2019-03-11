@@ -30,6 +30,7 @@ set_property(SOURCE Version.cpp APPEND PROPERTY
 add_lld_library(lldCommon
   Args.cpp
   ErrorHandler.cpp
+  Filesystem.cpp
   Memory.cpp
   Reproduce.cpp
   Strings.cpp

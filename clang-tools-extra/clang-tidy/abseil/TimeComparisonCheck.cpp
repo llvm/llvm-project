@@ -1,4 +1,5 @@
-//===--- DurationComparisonCheck.cpp - clang-tidy -------------------------===//
+//===--- TimeComparisonCheck.cpp - clang-tidy
+//--------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DurationComparisonCheck.h"
+#include "TimeComparisonCheck.h"
 #include "DurationRewriter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -18,35 +19,36 @@ namespace clang {
 namespace tidy {
 namespace abseil {
 
-void DurationComparisonCheck::registerMatchers(MatchFinder *Finder) {
-  auto Matcher = expr(comparisonOperatorWithCallee(functionDecl(
-                          functionDecl(DurationConversionFunction())
-                              .bind("function_decl"))))
-                     .bind("binop");
+void TimeComparisonCheck::registerMatchers(MatchFinder *Finder) {
+  auto Matcher =
+      expr(comparisonOperatorWithCallee(functionDecl(
+               functionDecl(TimeConversionFunction()).bind("function_decl"))))
+          .bind("binop");
 
   Finder->addMatcher(Matcher, this);
 }
 
-void DurationComparisonCheck::check(const MatchFinder::MatchResult &Result) {
+void TimeComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Binop = Result.Nodes.getNodeAs<BinaryOperator>("binop");
 
-  llvm::Optional<DurationScale> Scale = getScaleForDurationInverse(
+  llvm::Optional<DurationScale> Scale = getScaleForTimeInverse(
       Result.Nodes.getNodeAs<FunctionDecl>("function_decl")->getName());
   if (!Scale)
+    return;
+
+  if (isInMacro(Result, Binop->getLHS()) || isInMacro(Result, Binop->getRHS()))
     return;
 
   // In most cases, we'll only need to rewrite one of the sides, but we also
   // want to handle the case of rewriting both sides. This is much simpler if
   // we unconditionally try and rewrite both, and let the rewriter determine
   // if nothing needs to be done.
-  if (isInMacro(Result, Binop->getLHS()) || isInMacro(Result, Binop->getRHS()))
-    return;
   std::string LhsReplacement =
-      rewriteExprFromNumberToDuration(Result, *Scale, Binop->getLHS());
+      rewriteExprFromNumberToTime(Result, *Scale, Binop->getLHS());
   std::string RhsReplacement =
-      rewriteExprFromNumberToDuration(Result, *Scale, Binop->getRHS());
+      rewriteExprFromNumberToTime(Result, *Scale, Binop->getRHS());
 
-  diag(Binop->getBeginLoc(), "perform comparison in the duration domain")
+  diag(Binop->getBeginLoc(), "perform comparison in the time domain")
       << FixItHint::CreateReplacement(Binop->getSourceRange(),
                                       (llvm::Twine(LhsReplacement) + " " +
                                        Binop->getOpcodeStr() + " " +

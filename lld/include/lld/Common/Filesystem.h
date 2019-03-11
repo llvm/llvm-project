@@ -6,17 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_ELF_FILESYSTEM_H
-#define LLD_ELF_FILESYSTEM_H
+#ifndef LLD_FILESYSTEM_H
+#define LLD_FILESYSTEM_H
 
 #include "lld/Common/LLVM.h"
 #include <system_error>
 
 namespace lld {
-namespace elf {
 void unlinkAsync(StringRef Path);
 std::error_code tryCreateFile(StringRef Path);
-} // namespace elf
 } // namespace lld
 
 #endif

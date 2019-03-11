@@ -24,7 +24,6 @@
 
 #include "Driver.h"
 #include "Config.h"
-#include "Filesystem.h"
 #include "ICF.h"
 #include "InputFiles.h"
 #include "InputSection.h"
@@ -40,6 +39,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"

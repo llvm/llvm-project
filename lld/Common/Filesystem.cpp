@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Filesystem.h"
-#include "Config.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Threads.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -22,9 +21,7 @@
 #include <thread>
 
 using namespace llvm;
-
 using namespace lld;
-using namespace lld::elf;
 
 // Removes a given file asynchronously. This is a performance hack,
 // so remove this when operating systems are improved.
@@ -41,7 +38,7 @@ using namespace lld::elf;
 //
 // This function spawns a background thread to remove the file.
 // The calling thread returns almost immediately.
-void elf::unlinkAsync(StringRef Path) {
+void lld::unlinkAsync(StringRef Path) {
 // Removing a file is async on windows.
 #if defined(_WIN32)
   sys::fs::remove(Path);
@@ -93,7 +90,7 @@ void elf::unlinkAsync(StringRef Path) {
 // FileOutputBuffer doesn't touch a desitnation file until commit()
 // is called. We use that class without calling commit() to predict
 // if the given file is writable.
-std::error_code elf::tryCreateFile(StringRef Path) {
+std::error_code lld::tryCreateFile(StringRef Path) {
   if (Path.empty())
     return std::error_code();
   if (Path == "-")
