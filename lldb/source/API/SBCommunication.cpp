@@ -157,7 +157,7 @@ bool SBCommunication::ReadThreadIsRunning() {
 
 bool SBCommunication::SetReadThreadBytesReceivedCallback(
     ReadThreadBytesReceived callback, void *callback_baton) {
-  LLDB_RECORD_DUMMY(bool, SBCommunication, void *,
+  LLDB_RECORD_DUMMY(bool, SBCommunication, SetReadThreadBytesReceivedCallback,
                     (lldb::SBCommunication::ReadThreadBytesReceived, void *),
                     callback, callback_baton);
 

@@ -34,7 +34,7 @@ inline void log_append(llvm::raw_string_ostream &ss, const T &t) {
 
 template <typename T>
 inline void log_append(llvm::raw_string_ostream &ss, const T *t) {
-  ss << t;
+  ss << reinterpret_cast<const void *>(t);
 }
 
 template <>
