@@ -142,6 +142,8 @@ namespace rdf {
         unsigned Nest, unsigned MaxNest);
   };
 
+  raw_ostream &operator<<(raw_ostream &OS, const Print<Liveness::RefMap> &P);
+
 } // end namespace rdf
 
 } // end namespace llvm

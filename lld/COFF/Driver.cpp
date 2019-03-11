@@ -1081,6 +1081,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->Incremental = true;
   }
 
+  // Handle /demangle
+  Config->Demangle = Args.hasFlag(OPT_demangle, OPT_demangle_no);
+
   // Handle /debugtype
   Config->DebugTypes = parseDebugTypes(Args);
 

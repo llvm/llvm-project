@@ -319,14 +319,11 @@ static unsigned getReciprocalPredBlockProb() { return 2; }
 
 /// A helper function that adds a 'fast' flag to floating-point operations.
 static Value *addFastMathFlag(Value *V) {
-  if (isa<FPMathOperator>(V))
-    cast<Instruction>(V)->setFastMathFlags(FastMathFlags::getFast());
-  return V;
-}
-
-static Value *addFastMathFlag(Value *V, FastMathFlags FMF) {
-  if (isa<FPMathOperator>(V))
-    cast<Instruction>(V)->setFastMathFlags(FMF);
+  if (isa<FPMathOperator>(V)) {
+    FastMathFlags Flags;
+    Flags.setFast();
+    cast<Instruction>(V)->setFastMathFlags(Flags);
+  }
   return V;
 }
 
@@ -3615,8 +3612,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
       // Floating point operations had to be 'fast' to enable the reduction.
       ReducedPartRdx = addFastMathFlag(
           Builder.CreateBinOp((Instruction::BinaryOps)Op, RdxPart,
-                              ReducedPartRdx, "bin.rdx"),
-          RdxDesc.getFastMathFlags());
+                              ReducedPartRdx, "bin.rdx"));
     else
       ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
                                       RdxPart);

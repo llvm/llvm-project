@@ -57,7 +57,6 @@ static cl::opt<unsigned> MaxRecNest("rdf-liveness-max-rec", cl::init(25),
 namespace llvm {
 namespace rdf {
 
-  template<>
   raw_ostream &operator<< (raw_ostream &OS, const Print<Liveness::RefMap> &P) {
     OS << '{';
     for (auto &I : P.Obj) {

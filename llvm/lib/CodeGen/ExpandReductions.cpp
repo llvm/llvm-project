@@ -118,11 +118,9 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
     }
     if (!TTI->shouldExpandReduction(II))
       continue;
-    FastMathFlags FMF =
-        isa<FPMathOperator>(II) ? II->getFastMathFlags() : FastMathFlags{};
     Value *Rdx =
         IsOrdered ? getOrderedReduction(Builder, Acc, Vec, getOpcode(ID), MRK)
-                  : getShuffleReduction(Builder, Vec, getOpcode(ID), MRK, FMF);
+                  : getShuffleReduction(Builder, Vec, getOpcode(ID), MRK);
     II->replaceAllUsesWith(Rdx);
     II->eraseFromParent();
     Changed = true;
