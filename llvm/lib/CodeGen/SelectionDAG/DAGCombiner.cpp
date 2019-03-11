@@ -2399,8 +2399,10 @@ SDValue DAGCombiner::visitADDC(SDNode *N) {
   return SDValue();
 }
 
-static SDValue flipBoolean(SDValue V, const SDLoc &DL, EVT VT,
+static SDValue flipBoolean(SDValue V, const SDLoc &DL,
                            SelectionDAG &DAG, const TargetLowering &TLI) {
+  EVT VT = V.getValueType();
+
   SDValue Cst;
   switch (TLI.getBooleanContents(VT)) {
   case TargetLowering::ZeroOrOneBooleanContent:
@@ -2477,7 +2479,7 @@ SDValue DAGCombiner::visitADDO(SDNode *N) {
       SDValue Sub = DAG.getNode(ISD::USUBO, DL, N->getVTList(),
                                 DAG.getConstant(0, DL, VT), N0.getOperand(0));
       return CombineTo(N, Sub,
-                       flipBoolean(Sub.getValue(1), DL, CarryVT, DAG, TLI));
+                       flipBoolean(Sub.getValue(1), DL, DAG, TLI));
     }
 
     if (SDValue Combined = visitUADDOLike(N0, N1, N))
@@ -2571,7 +2573,7 @@ SDValue DAGCombiner::visitADDCARRY(SDNode *N) {
                                 DAG.getConstant(0, DL, N0.getValueType()),
                                 N0.getOperand(0), B);
       return CombineTo(N, Sub,
-                       flipBoolean(Sub.getValue(1), DL, CarryVT, DAG, TLI));
+                       flipBoolean(Sub.getValue(1), DL, DAG, TLI));
     }
   }
 

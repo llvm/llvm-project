@@ -1049,7 +1049,7 @@ bool CodeGenPrepare::simplifyOffsetableRelocate(Instruction &I) {
   return MadeChange;
 }
 
-/// SinkCast - Sink the specified cast instruction into its user blocks
+/// Sink the specified cast instruction into its user blocks.
 static bool SinkCast(CastInst *CI) {
   BasicBlock *DefBB = CI->getParent();
 
@@ -1421,7 +1421,7 @@ static bool sinkAndCmp0Expression(Instruction *AndI,
   for (auto *U : AndI->users()) {
     Instruction *User = cast<Instruction>(U);
 
-    // Only sink for and mask feeding icmp with 0.
+    // Only sink 'and' feeding icmp with 0.
     if (!isa<ICmpInst>(User))
       return false;
 

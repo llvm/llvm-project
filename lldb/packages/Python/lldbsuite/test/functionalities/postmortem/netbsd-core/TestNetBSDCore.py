@@ -206,11 +206,10 @@ class NetBSD2LWPProcessSigCoreTestCase(NetBSDCoreCommonTestCase):
         thread = process.GetSelectedThread()
         self.assertTrue(thread)
         self.assertEqual(thread.GetThreadID(), 2)
-        self.assertEqual(thread.GetThreadID(), 2)
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
         self.assertEqual(thread.GetStopReasonDataCount(), 1)
         self.assertEqual(thread.GetStopReasonDataAtIndex(0), signal.SIGSEGV)
-        backtrace = ["_kill", "bar", "foo", "lwp_main"]
+        backtrace = ["bar", "foo", "lwp_main"]
         self.check_backtrace(thread, filename, backtrace)
 
         # thread 1 should have the same signal
@@ -219,8 +218,7 @@ class NetBSD2LWPProcessSigCoreTestCase(NetBSDCoreCommonTestCase):
         self.assertEqual(thread.GetStopReasonDataCount(), 1)
         self.assertEqual(thread.GetStopReasonDataAtIndex(0), signal.SIGSEGV)
 
-    @skipIf  # TODO: fails with non-netbsd libc
     @skipIfLLVMTargetMissing("X86")
     def test_amd64(self):
         """Test double-threaded amd64 core dump where process is signalled."""
-        self.do_test("2lwp_process_SIGSEGV.amd64", pid=141, region_count=24)
+        self.do_test("2lwp_process_SIGSEGV.amd64", pid=665, region_count=24)

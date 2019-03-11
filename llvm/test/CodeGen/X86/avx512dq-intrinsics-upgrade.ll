@@ -587,7 +587,7 @@ define <8 x double>@test_int_x86_avx512_mask_cvt_qq2pd_512(<8 x i64> %x0, <8 x d
 ; X64-NEXT:    vaddpd %zmm0, %zmm1, %zmm0 # encoding: [0x62,0xf1,0xf5,0x48,0x58,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x double> @llvm.x86.avx512.mask.cvtqq2pd.512(<8 x i64> %x0, <8 x double> %x1, i8 %x2, i32 4)
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.cvtqq2pd.512(<8 x i64> %x0, <8 x double> %x1, i8 -1, i32 0)
+  %res1 = call <8 x double> @llvm.x86.avx512.mask.cvtqq2pd.512(<8 x i64> %x0, <8 x double> %x1, i8 -1, i32 8)
   %res2 = fadd <8 x double> %res, %res1
   ret <8 x double> %res2
 }
@@ -611,7 +611,7 @@ define <8 x float> @test_int_x86_avx512_mask_cvt_qq2ps_512(<8 x i64> %x0, <8 x f
 ; X64-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # encoding: [0xc5,0xf4,0x58,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.avx512.mask.cvtqq2ps.512(<8 x i64> %x0, <8 x float> %x1, i8 %x2, i32 4)
-  %res1 = call <8 x float> @llvm.x86.avx512.mask.cvtqq2ps.512(<8 x i64> %x0, <8 x float> %x1, i8 -1, i32 0)
+  %res1 = call <8 x float> @llvm.x86.avx512.mask.cvtqq2ps.512(<8 x i64> %x0, <8 x float> %x1, i8 -1, i32 8)
   %res2 = fadd <8 x float> %res, %res1
   ret <8 x float> %res2
 }
@@ -635,7 +635,7 @@ define <8 x double> @test_int_x86_avx512_mask_cvt_uqq2pd_512(<8 x i64> %x0, <8 x
 ; X64-NEXT:    vaddpd %zmm0, %zmm1, %zmm0 # encoding: [0x62,0xf1,0xf5,0x48,0x58,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x double> @llvm.x86.avx512.mask.cvtuqq2pd.512(<8 x i64> %x0, <8 x double> %x1, i8 %x2, i32 4)
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.cvtuqq2pd.512(<8 x i64> %x0, <8 x double> %x1, i8 -1, i32 0)
+  %res1 = call <8 x double> @llvm.x86.avx512.mask.cvtuqq2pd.512(<8 x i64> %x0, <8 x double> %x1, i8 -1, i32 8)
   %res2 = fadd <8 x double> %res, %res1
   ret <8 x double> %res2
 }
@@ -659,7 +659,7 @@ define <8 x float> @test_int_x86_avx512_mask_cvt_uqq2ps_512(<8 x i64> %x0, <8 x 
 ; X64-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # encoding: [0xc5,0xf4,0x58,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.avx512.mask.cvtuqq2ps.512(<8 x i64> %x0, <8 x float> %x1, i8 %x2, i32 4)
-  %res1 = call <8 x float> @llvm.x86.avx512.mask.cvtuqq2ps.512(<8 x i64> %x0, <8 x float> %x1, i8 -1, i32 0)
+  %res1 = call <8 x float> @llvm.x86.avx512.mask.cvtuqq2ps.512(<8 x i64> %x0, <8 x float> %x1, i8 -1, i32 8)
   %res2 = fadd <8 x float> %res, %res1
   ret <8 x float> %res2
 }
