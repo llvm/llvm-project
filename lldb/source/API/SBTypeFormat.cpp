@@ -44,6 +44,10 @@ SBTypeFormat::~SBTypeFormat() {}
 
 bool SBTypeFormat::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFormat, IsValid);
+  return this->operator bool();
+}
+SBTypeFormat::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFormat, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

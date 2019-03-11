@@ -62,6 +62,8 @@ public:
 
   static void MemoryPressureDetected();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   void Clear();

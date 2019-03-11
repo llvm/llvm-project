@@ -28,6 +28,8 @@ public:
 
   ~SBValue();
 
+  explicit operator bool() const;
+
   bool IsValid();
 
   void Clear();

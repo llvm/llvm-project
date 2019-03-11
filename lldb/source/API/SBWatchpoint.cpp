@@ -62,6 +62,10 @@ watch_id_t SBWatchpoint::GetID() {
 
 bool SBWatchpoint::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBWatchpoint, IsValid);
+  return this->operator bool();
+}
+SBWatchpoint::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBWatchpoint, operator bool);
 
   return bool(m_opaque_wp.lock());
 }

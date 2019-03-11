@@ -50,6 +50,10 @@ void SBProcessInfo::SetProcessInfo(const ProcessInstanceInfo &proc_info_ref) {
 
 bool SBProcessInfo::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBProcessInfo, IsValid);
+  return this->operator bool();
+}
+SBProcessInfo::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBProcessInfo, operator bool);
 
   return m_opaque_up != nullptr;
 }

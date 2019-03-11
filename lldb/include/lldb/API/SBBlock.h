@@ -28,6 +28,8 @@ public:
 
   bool IsInlined() const;
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const char *GetInlinedName() const;

@@ -31,6 +31,8 @@ public:
 
   ~SBModule();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   void Clear();

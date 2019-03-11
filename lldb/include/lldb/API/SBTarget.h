@@ -55,6 +55,8 @@ public:
 
   const lldb::SBTarget &operator=(const lldb::SBTarget &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   static bool EventIsTargetEvent(const lldb::SBEvent &event);

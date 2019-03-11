@@ -24,6 +24,8 @@ public:
 
   const lldb::SBSection &operator=(const lldb::SBSection &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const char *GetName();

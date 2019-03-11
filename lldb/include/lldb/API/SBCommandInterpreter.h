@@ -87,6 +87,8 @@ public:
 
   static bool EventIsCommandInterpreterEvent(const lldb::SBEvent &event);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   bool CommandExists(const char *cmd);
@@ -271,6 +273,8 @@ public:
 class SBCommand {
 public:
   SBCommand();
+
+  explicit operator bool() const;
 
   bool IsValid();
 

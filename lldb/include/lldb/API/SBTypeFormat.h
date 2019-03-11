@@ -28,6 +28,8 @@ public:
 
   ~SBTypeFormat();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   lldb::Format GetFormat();
