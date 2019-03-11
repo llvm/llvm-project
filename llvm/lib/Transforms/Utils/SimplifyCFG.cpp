@@ -2214,7 +2214,8 @@ static bool FoldCondBranchOnPHI(BranchInst *BI, const DataLayout &DL,
     BasicBlock *EdgeBB =
         BasicBlock::Create(BB->getContext(), RealDest->getName() + ".critedge",
                            RealDest->getParent(), RealDest);
-    BranchInst::Create(RealDest, EdgeBB);
+    BranchInst *CritEdgeBranch = BranchInst::Create(RealDest, EdgeBB);
+    CritEdgeBranch->setDebugLoc(BI->getDebugLoc());
 
     // Update PHI nodes.
     AddPredecessorToBlock(RealDest, EdgeBB, BB);
