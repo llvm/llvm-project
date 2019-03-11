@@ -71,11 +71,12 @@ template <typename... Ts> inline std::string log_args(const Ts &... ts) {
   Register<Class * Signature>(&construct<Class Signature>::doit, "", #Class,   \
                               #Class, #Signature)
 #define LLDB_REGISTER_METHOD(Result, Class, Method, Signature)                 \
-  Register(&invoke<Result(Class::*) Signature>::method<&Class::Method>::doit,  \
-           #Result, #Class, #Method, #Signature)
+  Register(                                                                    \
+      &invoke<Result(Class::*) Signature>::method<(&Class::Method)>::doit,     \
+      #Result, #Class, #Method, #Signature)
 #define LLDB_REGISTER_METHOD_CONST(Result, Class, Method, Signature)           \
   Register(&invoke<Result(Class::*)                                            \
-                       Signature const>::method_const<&Class::Method>::doit,   \
+                       Signature const>::method_const<(&Class::Method)>::doit, \
            #Result, #Class, #Method, #Signature)
 #define LLDB_REGISTER_STATIC_METHOD(Result, Class, Method, Signature)          \
   Register<Result Signature>(static_cast<Result(*) Signature>(&Class::Method), \
@@ -113,8 +114,8 @@ template <typename... Ts> inline std::string log_args(const Ts &... ts) {
     sb_recorder.emplace(data.GetSerializer(), data.GetRegistry(),              \
                         LLVM_PRETTY_FUNCTION);                                 \
     sb_recorder->Record(                                                       \
-        &lldb_private::repro::invoke<Result(                                   \
-            Class::*) Signature>::method<&Class::Method>::doit,                \
+        &lldb_private::repro::invoke<Result(Class::*) Signature>::method<(     \
+            &Class::Method)>::doit,                                            \
         this, __VA_ARGS__);                                                    \
   }
 
@@ -128,7 +129,7 @@ template <typename... Ts> inline std::string log_args(const Ts &... ts) {
                         LLVM_PRETTY_FUNCTION);                                 \
     sb_recorder->Record(                                                       \
         &lldb_private::repro::invoke<Result(                                   \
-            Class::*) Signature const>::method_const<&Class::Method>::doit,    \
+            Class::*) Signature const>::method_const<(&Class::Method)>::doit,  \
         this, __VA_ARGS__);                                                    \
   }
 
@@ -141,7 +142,7 @@ template <typename... Ts> inline std::string log_args(const Ts &... ts) {
     sb_recorder.emplace(data.GetSerializer(), data.GetRegistry(),              \
                         LLVM_PRETTY_FUNCTION);                                 \
     sb_recorder->Record(&lldb_private::repro::invoke<Result (                  \
-                            Class::*)()>::method<&Class::Method>::doit,        \
+                            Class::*)()>::method<(&Class::Method)>::doit,      \
                         this);                                                 \
   }
 
@@ -155,7 +156,7 @@ template <typename... Ts> inline std::string log_args(const Ts &... ts) {
                         LLVM_PRETTY_FUNCTION);                                 \
     sb_recorder->Record(                                                       \
         &lldb_private::repro::invoke<Result (                                  \
-            Class::*)() const>::method_const<&Class::Method>::doit,            \
+            Class::*)() const>::method_const<(&Class::Method)>::doit,          \
         this);                                                                 \
   }
 
