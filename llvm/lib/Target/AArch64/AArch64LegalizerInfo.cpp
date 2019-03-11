@@ -64,6 +64,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
         return std::make_pair(0, EltTy);
       });
 
+  // HACK: Check that the intrinsic isn't ambiguous.
+  // (See: https://bugs.llvm.org/show_bug.cgi?id=40968)
+  getActionDefinitionsBuilder(G_INTRINSIC)
+    .custom();
+
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s16, s32, s64})
       .clampScalar(0, s16, s64)
@@ -500,9 +505,28 @@ bool AArch64LegalizerInfo::legalizeCustom(MachineInstr &MI,
     return false;
   case TargetOpcode::G_VAARG:
     return legalizeVaArg(MI, MRI, MIRBuilder);
+  case TargetOpcode::G_INTRINSIC:
+    return legalizeIntrinsic(MI, MRI, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");
+}
+
+bool AArch64LegalizerInfo::legalizeIntrinsic(
+    MachineInstr &MI, MachineRegisterInfo &MRI,
+    MachineIRBuilder &MIRBuilder) const {
+  // HACK: Don't allow faddp/addp for now. We don't pass down the type info
+  // necessary to get this right today.
+  //
+  // It looks like addp/faddp is the only intrinsic that's impacted by this.
+  // All other intrinsics fully describe the required types in their names.
+  //
+  // (See: https://bugs.llvm.org/show_bug.cgi?id=40968)
+  const MachineOperand &IntrinOp = MI.getOperand(1);
+  if (IntrinOp.isIntrinsicID() &&
+      IntrinOp.getIntrinsicID() == Intrinsic::aarch64_neon_addp)
+    return false;
+  return true;
 }
 
 bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,

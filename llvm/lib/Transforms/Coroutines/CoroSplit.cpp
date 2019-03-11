@@ -1426,9 +1426,7 @@ namespace {
 static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
   PrettyStackTraceFunction prettyStackTrace(F);
 
-  // The suspend-crossing algorithm in buildCoroutineFrame get tripped
-  // up by uses in unreachable blocks, so remove them as a first pass.
-  removeUnreachableBlocks(F);
+  EliminateUnreachableBlocks(F);
 
   coro::Shape Shape(F);
   if (!Shape.CoroBegin)

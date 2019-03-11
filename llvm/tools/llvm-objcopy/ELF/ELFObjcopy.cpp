@@ -232,27 +232,24 @@ static void replaceDebugSections(
     const CopyConfig &Config, Object &Obj, SectionPred &RemovePred,
     function_ref<bool(const SectionBase &)> shouldReplace,
     function_ref<SectionBase *(const SectionBase *)> addSection) {
+  // Build a list of the debug sections we are going to replace.
+  // We can't call `addSection` while iterating over sections,
+  // because it would mutate the sections array.
   SmallVector<SectionBase *, 13> ToReplace;
-  SmallVector<RelocationSection *, 13> RelocationSections;
-  for (auto &Sec : Obj.sections()) {
-    if (RelocationSection *R = dyn_cast<RelocationSection>(&Sec)) {
-      if (shouldReplace(*R->getSection()))
-        RelocationSections.push_back(R);
-      continue;
-    }
-
+  for (auto &Sec : Obj.sections())
     if (shouldReplace(Sec))
       ToReplace.push_back(&Sec);
-  }
 
-  for (SectionBase *S : ToReplace) {
-    SectionBase *NewSection = addSection(S);
+  // Build a mapping from original section to a new one.
+  DenseMap<SectionBase *, SectionBase *> FromTo;
+  for (SectionBase *S : ToReplace)
+    FromTo[S] = addSection(S);
 
-    for (RelocationSection *RS : RelocationSections) {
-      if (RS->getSection() == S)
-        RS->setSection(NewSection);
-    }
-  }
+  // Now we want to update the target sections of relocation
+  // sections. Also we will update the relocations themselves
+  // to update the symbol references.
+  for (auto &Sec : Obj.sections())
+    Sec.replaceSectionReferences(FromTo);
 
   RemovePred = [shouldReplace, RemovePred](const SectionBase &Sec) {
     return shouldReplace(Sec) || RemovePred(Sec);

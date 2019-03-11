@@ -57,7 +57,8 @@
 
 # CHECK-FLAGS: Relocations [
 # CHECK-FLAGS-NEXT:   .rela.debug_foo {
-# CHECK-FLAGS-NEXT:     0x1 R_X86_64_32 - 0x0
+# CHECK-FLAGS-NEXT:     0x1 R_X86_64_32 .zdebug_foo 0x0
+# CHECK-FLAGS-NEXT:     0x2 R_X86_64_32 .notdebug_foo 0x0
 # CHECK-FLAGS-NEXT:   }
 # CHECK-FLAGS-NEXT: ]
 

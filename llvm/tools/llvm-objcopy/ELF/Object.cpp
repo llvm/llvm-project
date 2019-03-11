@@ -62,6 +62,8 @@ Error SectionBase::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
 void SectionBase::initialize(SectionTableRef SecTable) {}
 void SectionBase::finalize() {}
 void SectionBase::markSymbols() {}
+void SectionBase::replaceSectionReferences(
+    const DenseMap<SectionBase *, SectionBase *> &) {}
 
 template <class ELFT> void ELFWriter<ELFT>::writeShdr(const SectionBase &Sec) {
   uint8_t *B = Buf.getBufferStart();
@@ -632,6 +634,19 @@ Error RelocationSection::removeSymbols(
 void RelocationSection::markSymbols() {
   for (const Relocation &Reloc : Relocations)
     Reloc.RelocSymbol->Referenced = true;
+}
+
+void RelocationSection::replaceSectionReferences(
+    const DenseMap<SectionBase *, SectionBase *> &FromTo) {
+  // Update the target section if it was replaced.
+  if (SectionBase *To = FromTo.lookup(SecToApplyRel))
+    SecToApplyRel = To;
+
+  // Change the sections where symbols are defined in if their
+  // original sections were replaced.
+  for (const Relocation &R : Relocations)
+    if (SectionBase *To = FromTo.lookup(R.RelocSymbol->DefinedIn))
+      R.RelocSymbol->DefinedIn = To;
 }
 
 void SectionWriter::visit(const DynamicRelocationSection &Sec) {

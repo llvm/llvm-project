@@ -294,12 +294,13 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     }
   }
 
-  bool HasVectorValue = false;
-  for (SDNode::value_iterator J = Node->value_begin(), E = Node->value_end();
-       J != E;
-       ++J)
-    HasVectorValue |= J->isVector();
-  if (!HasVectorValue)
+  bool HasVectorValueOrOp = false;
+  for (auto J = Node->value_begin(), E = Node->value_end(); J != E; ++J)
+    HasVectorValueOrOp |= J->isVector();
+  for (const SDValue &Op : Node->op_values())
+    HasVectorValueOrOp |= Op.getValueType().isVector();
+
+  if (!HasVectorValueOrOp)
     return TranslateLegalizeResults(Op, Result);
 
   TargetLowering::LegalizeAction Action = TargetLowering::Legal;
@@ -441,6 +442,19 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
@@ -816,6 +830,20 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
   case ISD::STRICT_FROUND:
   case ISD::STRICT_FTRUNC:
     return ExpandStrictFPOp(Op);
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
+    return TLI.expandVecReduce(Op.getNode(), DAG);
   default:
     return DAG.UnrollVectorOp(Op.getNode());
   }

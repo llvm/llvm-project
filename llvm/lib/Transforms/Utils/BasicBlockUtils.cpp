@@ -110,6 +110,28 @@ void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs, DomTreeUpdater *DTU,
       BB->eraseFromParent();
 }
 
+bool llvm::EliminateUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
+                                      bool KeepOneInputPHIs) {
+  df_iterator_default_set<BasicBlock*> Reachable;
+
+  // Mark all reachable blocks.
+  for (BasicBlock *BB : depth_first_ext(&F, Reachable))
+    (void)BB/* Mark all reachable blocks */;
+
+  // Collect all dead blocks.
+  std::vector<BasicBlock*> DeadBlocks;
+  for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I)
+    if (!Reachable.count(&*I)) {
+      BasicBlock *BB = &*I;
+      DeadBlocks.push_back(BB);
+    }
+
+  // Delete the dead blocks.
+  DeleteDeadBlocks(DeadBlocks, DTU, KeepOneInputPHIs);
+
+  return !DeadBlocks.empty();
+}
+
 void llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
                                    MemoryDependenceResults *MemDep) {
   if (!isa<PHINode>(BB->begin())) return;

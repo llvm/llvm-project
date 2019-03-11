@@ -1970,7 +1970,7 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
   case ISD::SETUO:
   case ISD::SETUEQ:
   case ISD::SETUNE:
-    assert(!N1.getValueType().isInteger() && "Illegal setcc for integer!");
+    assert(!OpVT.isInteger() && "Illegal setcc for integer!");
     break;
   }
 
@@ -1994,71 +1994,83 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
       }
     }
   }
-  if (ConstantFPSDNode *N1C = dyn_cast<ConstantFPSDNode>(N1)) {
-    if (ConstantFPSDNode *N2C = dyn_cast<ConstantFPSDNode>(N2)) {
-      APFloat::cmpResult R = N1C->getValueAPF().compare(N2C->getValueAPF());
-      switch (Cond) {
-      default: break;
-      case ISD::SETEQ:  if (R==APFloat::cmpUnordered)
-                          return getUNDEF(VT);
-                        LLVM_FALLTHROUGH;
-      case ISD::SETOEQ: return getBoolConstant(R==APFloat::cmpEqual, dl, VT,
-                                               OpVT);
-      case ISD::SETNE:  if (R==APFloat::cmpUnordered)
-                          return getUNDEF(VT);
-                        LLVM_FALLTHROUGH;
-      case ISD::SETONE: return getBoolConstant(R==APFloat::cmpGreaterThan ||
-                                               R==APFloat::cmpLessThan, dl, VT,
-                                               OpVT);
-      case ISD::SETLT:  if (R==APFloat::cmpUnordered)
-                          return getUNDEF(VT);
-                        LLVM_FALLTHROUGH;
-      case ISD::SETOLT: return getBoolConstant(R==APFloat::cmpLessThan, dl, VT,
-                                               OpVT);
-      case ISD::SETGT:  if (R==APFloat::cmpUnordered)
-                          return getUNDEF(VT);
-                        LLVM_FALLTHROUGH;
-      case ISD::SETOGT: return getBoolConstant(R==APFloat::cmpGreaterThan, dl,
-                                               VT, OpVT);
-      case ISD::SETLE:  if (R==APFloat::cmpUnordered)
-                          return getUNDEF(VT);
-                        LLVM_FALLTHROUGH;
-      case ISD::SETOLE: return getBoolConstant(R==APFloat::cmpLessThan ||
-                                               R==APFloat::cmpEqual, dl, VT,
-                                               OpVT);
-      case ISD::SETGE:  if (R==APFloat::cmpUnordered)
-                          return getUNDEF(VT);
-                        LLVM_FALLTHROUGH;
-      case ISD::SETOGE: return getBoolConstant(R==APFloat::cmpGreaterThan ||
-                                           R==APFloat::cmpEqual, dl, VT, OpVT);
-      case ISD::SETO:   return getBoolConstant(R!=APFloat::cmpUnordered, dl, VT,
-                                               OpVT);
-      case ISD::SETUO:  return getBoolConstant(R==APFloat::cmpUnordered, dl, VT,
-                                               OpVT);
-      case ISD::SETUEQ: return getBoolConstant(R==APFloat::cmpUnordered ||
-                                               R==APFloat::cmpEqual, dl, VT,
-                                               OpVT);
-      case ISD::SETUNE: return getBoolConstant(R!=APFloat::cmpEqual, dl, VT,
-                                               OpVT);
-      case ISD::SETULT: return getBoolConstant(R==APFloat::cmpUnordered ||
-                                               R==APFloat::cmpLessThan, dl, VT,
-                                               OpVT);
-      case ISD::SETUGT: return getBoolConstant(R==APFloat::cmpGreaterThan ||
-                                               R==APFloat::cmpUnordered, dl, VT,
-                                               OpVT);
-      case ISD::SETULE: return getBoolConstant(R!=APFloat::cmpGreaterThan, dl,
-                                               VT, OpVT);
-      case ISD::SETUGE: return getBoolConstant(R!=APFloat::cmpLessThan, dl, VT,
-                                               OpVT);
-      }
-    } else {
-      // Ensure that the constant occurs on the RHS.
-      ISD::CondCode SwappedCond = ISD::getSetCCSwappedOperands(Cond);
-      MVT CompVT = N1.getValueType().getSimpleVT();
-      if (!TLI->isCondCodeLegal(SwappedCond, CompVT))
-        return SDValue();
 
-      return getSetCC(dl, VT, N2, N1, SwappedCond);
+  auto *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
+  auto *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
+
+  if (N1CFP && N2CFP) {
+    APFloat::cmpResult R = N1CFP->getValueAPF().compare(N2CFP->getValueAPF());
+    switch (Cond) {
+    default: break;
+    case ISD::SETEQ:  if (R==APFloat::cmpUnordered)
+                        return getUNDEF(VT);
+                      LLVM_FALLTHROUGH;
+    case ISD::SETOEQ: return getBoolConstant(R==APFloat::cmpEqual, dl, VT,
+                                             OpVT);
+    case ISD::SETNE:  if (R==APFloat::cmpUnordered)
+                        return getUNDEF(VT);
+                      LLVM_FALLTHROUGH;
+    case ISD::SETONE: return getBoolConstant(R==APFloat::cmpGreaterThan ||
+                                             R==APFloat::cmpLessThan, dl, VT,
+                                             OpVT);
+    case ISD::SETLT:  if (R==APFloat::cmpUnordered)
+                        return getUNDEF(VT);
+                      LLVM_FALLTHROUGH;
+    case ISD::SETOLT: return getBoolConstant(R==APFloat::cmpLessThan, dl, VT,
+                                             OpVT);
+    case ISD::SETGT:  if (R==APFloat::cmpUnordered)
+                        return getUNDEF(VT);
+                      LLVM_FALLTHROUGH;
+    case ISD::SETOGT: return getBoolConstant(R==APFloat::cmpGreaterThan, dl,
+                                             VT, OpVT);
+    case ISD::SETLE:  if (R==APFloat::cmpUnordered)
+                        return getUNDEF(VT);
+                      LLVM_FALLTHROUGH;
+    case ISD::SETOLE: return getBoolConstant(R==APFloat::cmpLessThan ||
+                                             R==APFloat::cmpEqual, dl, VT,
+                                             OpVT);
+    case ISD::SETGE:  if (R==APFloat::cmpUnordered)
+                        return getUNDEF(VT);
+                      LLVM_FALLTHROUGH;
+    case ISD::SETOGE: return getBoolConstant(R==APFloat::cmpGreaterThan ||
+                                         R==APFloat::cmpEqual, dl, VT, OpVT);
+    case ISD::SETO:   return getBoolConstant(R!=APFloat::cmpUnordered, dl, VT,
+                                             OpVT);
+    case ISD::SETUO:  return getBoolConstant(R==APFloat::cmpUnordered, dl, VT,
+                                             OpVT);
+    case ISD::SETUEQ: return getBoolConstant(R==APFloat::cmpUnordered ||
+                                             R==APFloat::cmpEqual, dl, VT,
+                                             OpVT);
+    case ISD::SETUNE: return getBoolConstant(R!=APFloat::cmpEqual, dl, VT,
+                                             OpVT);
+    case ISD::SETULT: return getBoolConstant(R==APFloat::cmpUnordered ||
+                                             R==APFloat::cmpLessThan, dl, VT,
+                                             OpVT);
+    case ISD::SETUGT: return getBoolConstant(R==APFloat::cmpGreaterThan ||
+                                             R==APFloat::cmpUnordered, dl, VT,
+                                             OpVT);
+    case ISD::SETULE: return getBoolConstant(R!=APFloat::cmpGreaterThan, dl,
+                                             VT, OpVT);
+    case ISD::SETUGE: return getBoolConstant(R!=APFloat::cmpLessThan, dl, VT,
+                                             OpVT);
+    }
+  } else if (N1CFP && OpVT.isSimple()) {
+    // Ensure that the constant occurs on the RHS.
+    ISD::CondCode SwappedCond = ISD::getSetCCSwappedOperands(Cond);
+    if (!TLI->isCondCodeLegal(SwappedCond, OpVT.getSimpleVT()))
+      return SDValue();
+    return getSetCC(dl, VT, N2, N1, SwappedCond);
+  } else if (N2CFP && N2CFP->getValueAPF().isNaN()) {
+    // If an operand is known to be a nan, we can fold it.
+    switch (ISD::getUnorderedFlavor(Cond)) {
+    default:
+      llvm_unreachable("Unknown flavor!");
+    case 0: // Known false.
+      return getBoolConstant(false, dl, VT, OpVT);
+    case 1: // Known true.
+      return getBoolConstant(true, dl, VT, OpVT);
+    case 2: // Undefined.
+      return getUNDEF(VT);
     }
   }
 

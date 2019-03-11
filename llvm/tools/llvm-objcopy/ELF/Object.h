@@ -280,6 +280,8 @@ public:
   virtual void accept(SectionVisitor &Visitor) const = 0;
   virtual void accept(MutableSectionVisitor &Visitor) = 0;
   virtual void markSymbols();
+  virtual void
+  replaceSectionReferences(const DenseMap<SectionBase *, SectionBase *> &);
 };
 
 class Segment {
@@ -596,6 +598,8 @@ public:
       function_ref<bool(const SectionBase *)> ToRemove) override;
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;
+  void replaceSectionReferences(
+      const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
 
   static bool classof(const SectionBase *S) {
     if (S->Flags & ELF::SHF_ALLOC)
