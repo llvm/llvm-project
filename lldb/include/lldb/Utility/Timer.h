@@ -18,7 +18,7 @@ namespace lldb_private {
 class Stream;
 
 //----------------------------------------------------------------------
-/// @class Timer Timer.h "lldb/Utility/Timer.h"
+/// \class Timer Timer.h "lldb/Utility/Timer.h"
 /// A timer class that simplifies common timing metrics.
 //----------------------------------------------------------------------
 

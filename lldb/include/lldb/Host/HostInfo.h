@@ -10,7 +10,7 @@
 #define lldb_Host_HostInfo_h_
 
 //----------------------------------------------------------------------
-/// @class HostInfo HostInfo.h "lldb/Host/HostInfo.h"
+/// \class HostInfo HostInfo.h "lldb/Host/HostInfo.h"
 /// A class that provides host computer information.
 ///
 /// HostInfo is a class that answers information about the host operating

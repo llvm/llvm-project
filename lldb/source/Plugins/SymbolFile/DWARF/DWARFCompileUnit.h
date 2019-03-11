@@ -21,7 +21,7 @@ public:
   //------------------------------------------------------------------
   /// Get the data that contains the DIE information for this unit.
   ///
-  /// @return
+  /// \return
   ///   The correct data (.debug_types for DWARF 4 and earlier, and
   ///   .debug_info for DWARF 5 and later) for the DIE information in
   ///   this unit.
@@ -31,7 +31,7 @@ public:
   //------------------------------------------------------------------
   /// Get the size in bytes of the header.
   ///
-  /// @return
+  /// \return
   ///     Byte size of the compile unit header
   //------------------------------------------------------------------
   uint32_t GetHeaderByteSize() const override;

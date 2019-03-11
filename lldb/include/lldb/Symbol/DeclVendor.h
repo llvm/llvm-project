@@ -35,17 +35,17 @@ public:
   /// Look up the set of Decls that the DeclVendor currently knows about
   /// matching a given name.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name to look for.
   ///
-  /// @param[in] append
+  /// \param[in] append
   ///     If true, FindDecls will clear "decls" when it starts.
   ///
-  /// @param[in] max_matches
+  /// \param[in] max_matches
   ///     The maximum number of Decls to return.  UINT32_MAX means "as
   ///     many as possible."
   ///
-  /// @return
+  /// \return
   ///     The number of Decls added to decls; will not exceed
   ///     max_matches.
   //------------------------------------------------------------------
@@ -57,7 +57,7 @@ public:
   /// Interface for ExternalASTMerger.  Returns an ImporterSource 
   /// allowing type completion.
   ///
-  /// @return
+  /// \return
   ///     An ImporterSource for this DeclVendor.
   //------------------------------------------------------------------
   virtual clang::ExternalASTMerger::ImporterSource GetImporterSource() = 0;

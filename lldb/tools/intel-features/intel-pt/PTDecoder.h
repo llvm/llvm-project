@@ -30,7 +30,7 @@ class Decoder;
 namespace ptdecoder {
 
 //----------------------------------------------------------------------
-/// @class PTInstruction
+/// \class PTInstruction
 /// Represents an assembly instruction containing raw
 ///     instruction bytes, instruction address along with information
 ///     regarding execution flow context and Intel(R) Processor Trace
@@ -52,18 +52,18 @@ public:
   //------------------------------------------------------------------
   /// Get raw bytes of the instruction in the buffer.
   ///
-  /// @param[out] buf
+  /// \param[out] buf
   ///     The buffer where the raw bytes will be written. This buffer should be
   ///     allocated by the caller of this API. Providing an unallocated buffer
   ///     is an error. In case of errors, the content of the buffer is not
   ///     valid.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     Number of raw bytes to be written to @buf. Atleast @size bytes of
   ///     memory should be allocated to @buf otherwise the behaviour of the API
   ///     is undefined. Providing 0 for this argument is an error.
   ///
-  /// @return
+  /// \return
   ///     Number of bytes of the instruction actually written to @buf if API
   ///     succeeds. In case of errors, total number of raw bytes of the
   ///     instruction is returned.
@@ -82,7 +82,7 @@ private:
 };
 
 //---------------------------------------------------------------------------
-/// @class PTInstructionList
+/// \class PTInstructionList
 /// Represents a list of assembly instructions. Each instruction is of
 ///     type PTInstruction.
 //---------------------------------------------------------------------------
@@ -111,7 +111,7 @@ private:
 };
 
 //----------------------------------------------------------------------
-/// @class PTTraceOptions
+/// \class PTTraceOptions
 /// Provides configuration options like trace type, trace buffer size,
 ///     meta data buffer size along with other Intel(R) Processor Trace
 ///     specific options.
@@ -137,7 +137,7 @@ public:
   /// 64-bit unsigned integer in hex format. For "Name", please refer to
   /// SBProcess::StartTrace API description for setting SBTraceOptions.
   ///
-  /// @return
+  /// \return
   ///     A string formatted as json text {"Name":Value,"Name":Value}
   //------------------------------------------------------------------
   lldb::SBStructuredData GetTraceParams(lldb::SBError &error);
@@ -151,7 +151,7 @@ private:
 };
 
 //----------------------------------------------------------------------
-/// @class PTDecoder
+/// \class PTDecoder
 /// This class makes use of Intel(R) Processor Trace hardware feature
 ///     (implememted inside LLDB) to gather trace data for an inferior (being
 ///     debugged with LLDB) to provide meaningful information out of it.
@@ -176,11 +176,11 @@ public:
   /// Start Intel(R) Processor Trace on a thread or complete process with
   /// Intel(R) Processor Trace specific configuration options
   ///
-  /// @param[in] sbprocess
+  /// \param[in] sbprocess
   ///     A valid process on which this operation will be performed. An error is
   ///     returned in case of an invalid process.
   ///
-  /// @param[in] sbtraceoptions
+  /// \param[in] sbtraceoptions
   ///     Contains thread id information and configuration options:
   ///
   ///     For tracing a single thread, provide a valid thread id. If sbprocess
@@ -209,7 +209,7 @@ public:
   ///     be started by user. The actual used configuration options can be
   ///     obtained from GetProcessorTraceInfo() API.
   ///
-  /// @param[out] sberror
+  /// \param[out] sberror
   ///     An error with the failure reason if API fails. Else success.
   //------------------------------------------------------------------
   void StartProcessorTrace(lldb::SBProcess &sbprocess,
@@ -219,17 +219,17 @@ public:
   //------------------------------------------------------------------
   /// Stop Intel(R) Processor Trace on a thread or complete process.
   ///
-  /// @param[in] sbprocess
+  /// \param[in] sbprocess
   ///     A valid process on which this operation will be performed. An error is
   ///     returned in case of an invalid process.
   ///
-  /// @param[in] tid
+  /// \param[in] tid
   ///     Case 1: To stop tracing a single thread, provide a valid thread id. If
   ///     sbprocess doesn't contain the thread tid, error will be returned.
   ///     Case 2: To stop tracing complete process, use
   ///     lldb::LLDB_INVALID_THREAD_ID.
   ///
-  /// @param[out] sberror
+  /// \param[out] sberror
   ///     An error with the failure reason if API fails. Else success.
   //------------------------------------------------------------------
   void StopProcessorTrace(lldb::SBProcess &sbprocess, lldb::SBError &sberror,
@@ -239,15 +239,15 @@ public:
   /// Get instruction log containing the execution flow for a thread of a
   /// process in terms of assembly instructions executed.
   ///
-  /// @param[in] sbprocess
+  /// \param[in] sbprocess
   ///     A valid process on which this operation will be performed. An error is
   ///     returned in case of an invalid process.
   ///
-  /// @param[in] tid
+  /// \param[in] tid
   ///     A valid thread id of the thread for which instruction log is desired.
   ///     If sbprocess doesn't contain the thread tid, error will be returned.
   ///
-  /// @param[in] count
+  /// \param[in] count
   ///     The number of instructions requested by the user to be returned from
   ///     the complete instruction log. Complete instruction log refers to all
   ///     the assembly instructions obtained after decoding the complete raw
@@ -257,17 +257,17 @@ public:
   ///     The number of instructions actually returned are dependent on 'count'
   ///     and 'offset' parameters of this API.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset in the complete instruction log from where 'count' number
   ///     of instructions are requested by the user. offset is counted from the
   ///     end of of this complete instruction log (which means the last executed
   ///     instruction is at offset 0 (zero)).
   ///
-  /// @param[out] result_list
+  /// \param[out] result_list
   ///     Depending upon 'count' and 'offset' values, list will be overwritten
   ///     with the new instructions.
   ///
-  /// @param[out] sberror
+  /// \param[out] sberror
   ///     An error with the failure reason if API fails. Else success.
   //------------------------------------------------------------------
   void GetInstructionLogAtOffset(lldb::SBProcess &sbprocess, lldb::tid_t tid,
@@ -280,21 +280,21 @@ public:
   /// process. The information contains the actual configuration options with
   /// which the trace was started for this thread.
   ///
-  /// @param[in] sbprocess
+  /// \param[in] sbprocess
   ///     A valid process on which this operation will be performed. An error is
   ///     returned in case of an invalid process.
   ///
-  /// @param[in] tid
+  /// \param[in] tid
   ///     A valid thread id of the thread for which the trace specific
   ///     information is required. If sbprocess doesn't contain the thread tid,
   ///     an error will be returned.
   ///
-  /// @param[out] options
+  /// \param[out] options
   ///     Contains actual configuration options (they may be different to the
   ///     ones with which tracing was asked to be started for this thread during
   ///     StartProcessorTrace() API call).
   ///
-  /// @param[out] sberror
+  /// \param[out] sberror
   ///     An error with the failure reason if API fails. Else success.
   //------------------------------------------------------------------
   void GetProcessorTraceInfo(lldb::SBProcess &sbprocess, lldb::tid_t tid,

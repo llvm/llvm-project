@@ -36,7 +36,7 @@ public:
   //------------------------------------------------------------------
   /// Gets the host target triple as a const string.
   ///
-  /// @return
+  /// \return
   ///     A const string object containing the host target triple.
   //------------------------------------------------------------------
   static llvm::StringRef GetTargetTriple();
@@ -44,7 +44,7 @@ public:
   //------------------------------------------------------------------
   /// Gets the host architecture.
   ///
-  /// @return
+  /// \return
   ///     A const architecture object that represents the host
   ///     architecture.
   //------------------------------------------------------------------

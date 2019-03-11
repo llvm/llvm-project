@@ -44,7 +44,7 @@ public:
   /// that is running LLDB. This can differ from the path on the
   /// platform since we might be doing remote debugging.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the file specification object.
   //------------------------------------------------------------------
   lldb::SBFileSpec GetFileSpec() const;
@@ -61,7 +61,7 @@ public:
   /// '/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib'
   /// The file could also be cached in a local developer kit directory.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the file specification object.
   //------------------------------------------------------------------
   lldb::SBFileSpec GetPlatformFileSpec() const;
@@ -77,7 +77,7 @@ public:
   /// the target will install this module on the remote platform prior
   /// to launching.
   ///
-  /// @return
+  /// \return
   ///     A file specification object.
   //------------------------------------------------------------------
   lldb::SBFileSpec GetRemoteInstallFileSpec();
@@ -97,7 +97,7 @@ public:
   /// or "./usr/lib", then the install path will be resolved using
   /// the platform's current working directory as the base path.
   ///
-  /// @param[in] file
+  /// \param[in] file
   ///     A file specification object.
   //------------------------------------------------------------------
   bool SetRemoteInstallFileSpec(lldb::SBFileSpec &file);
@@ -134,11 +134,11 @@ public:
   /// Find compile units related to *this module and passed source
   /// file.
   ///
-  /// @param[in] sb_file_spec
+  /// \param[in] sb_file_spec
   ///     A lldb::SBFileSpec object that contains source file
   ///     specification.
   ///
-  /// @return
+  /// \return
   ///     A lldb::SBSymbolContextList that gets filled in with all of
   ///     the symbol contexts for all the matches.
   //------------------------------------------------------------------
@@ -161,17 +161,17 @@ public:
   //------------------------------------------------------------------
   /// Find functions by name.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the function we are looking for.
   ///
-  /// @param[in] name_type_mask
+  /// \param[in] name_type_mask
   ///     A logical OR of one or more FunctionNameType enum bits that
   ///     indicate what kind of names should be used when doing the
   ///     lookup. Bits include fully qualified names, base names,
   ///     C++ methods, or ObjC selectors.
   ///     See FunctionNameType for more details.
   ///
-  /// @return
+  /// \return
   ///     A lldb::SBSymbolContextList that gets filled in with all of
   ///     the symbol contexts for all the matches.
   //------------------------------------------------------------------
@@ -182,17 +182,17 @@ public:
   //------------------------------------------------------------------
   /// Find global and static variables by name.
   ///
-  /// @param[in] target
+  /// \param[in] target
   ///     A valid SBTarget instance representing the debuggee.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the global or static variable we are looking
   ///     for.
   ///
-  /// @param[in] max_matches
+  /// \param[in] max_matches
   ///     Allow the number of matches to be limited to \a max_matches.
   ///
-  /// @return
+  /// \return
   ///     A list of matched variables in an SBValueList.
   //------------------------------------------------------------------
   lldb::SBValueList FindGlobalVariables(lldb::SBTarget &target,
@@ -201,14 +201,14 @@ public:
   //------------------------------------------------------------------
   /// Find the first global (or static) variable by name.
   ///
-  /// @param[in] target
+  /// \param[in] target
   ///     A valid SBTarget instance representing the debuggee.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the global or static variable we are looking
   ///     for.
   ///
-  /// @return
+  /// \return
   ///     An SBValue that gets filled in with the found variable (if any).
   //------------------------------------------------------------------
   lldb::SBValue FindFirstGlobalVariable(lldb::SBTarget &target,
@@ -227,10 +227,10 @@ public:
   ///
   /// For DWARF debug info, the type ID is the DIE offset.
   ///
-  /// @param[in] uid
+  /// \param[in] uid
   ///     The type user ID.
   ///
-  /// @return
+  /// \return
   ///     An SBType for the given type ID, or an empty SBType if the
   ///     type was not found.
   //------------------------------------------------------------------
@@ -242,14 +242,14 @@ public:
   /// Get all types matching \a type_mask from debug info in this
   /// module.
   ///
-  /// @param[in] type_mask
+  /// \param[in] type_mask
   ///     A bitfield that consists of one or more bits logically OR'ed
   ///     together from the lldb::TypeClass enumeration. This allows
   ///     you to request only structure types, or only class, struct
   ///     and union types. Passing in lldb::eTypeClassAny will return
   ///     all types found in the debug information for this module.
   ///
-  /// @return
+  /// \return
   ///     A list of types in this module that match \a type_mask
   //------------------------------------------------------------------
   lldb::SBTypeList GetTypes(uint32_t type_mask = lldb::eTypeClassAny);
@@ -268,7 +268,7 @@ public:
   /// function with a value of \a versions and \a num_versions that
   /// has enough storage to store some or all version numbers.
   ///
-  /// @param[out] versions
+  /// \param[out] versions
   ///     A pointer to an array of uint32_t types that is \a num_versions
   ///     long. If this value is NULL, the return value will indicate
   ///     how many version numbers are required for a subsequent call
@@ -279,7 +279,7 @@ public:
   ///     will be filled with \a num_versions UINT32_MAX values
   ///     and zero will be returned.
   ///
-  /// @param[in] num_versions
+  /// \param[in] num_versions
   ///     The maximum number of entries to fill into \a versions. If
   ///     this value is zero, then the return value will indicate
   ///     how many version numbers there are in total so another call
@@ -289,7 +289,7 @@ public:
   ///     numbers in this object file, only \a num_versions will be
   ///     filled into \a versions (if \a versions is non-NULL).
   ///
-  /// @return
+  /// \return
   ///     This function always returns the number of version numbers
   ///     that this object file has regardless of the number of
   ///     version numbers that were copied into \a versions.
@@ -304,7 +304,7 @@ public:
   /// like '/usr/lib/liba.dylib' then debug information can be located
   /// in folder like '/usr/lib/liba.dylib.dSYM/'.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the file specification object.
   //------------------------------------------------------------------
   lldb::SBFileSpec GetSymbolFileSpec() const;

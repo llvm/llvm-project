@@ -30,7 +30,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ClangExpressionDeclMap ClangExpressionDeclMap.h
+/// \class ClangExpressionDeclMap ClangExpressionDeclMap.h
 /// "lldb/Expression/ClangExpressionDeclMap.h" Manages named entities that are
 /// defined in LLDB's debug information.
 ///
@@ -61,19 +61,19 @@ public:
   ///
   /// Initializes class variables.
   ///
-  /// @param[in] keep_result_in_memory
+  /// \param[in] keep_result_in_memory
   ///     If true, inhibits the normal deallocation of the memory for
   ///     the result persistent variable, and instead marks the variable
   ///     as persisting.
   ///
-  /// @param[in] delegate
+  /// \param[in] delegate
   ///     If non-NULL, use this delegate to report result values.  This
   ///     allows the client ClangUserExpression to report a result.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to use when parsing.
   ///
-  /// @param[in] ctx_obj
+  /// \param[in] ctx_obj
   ///     If not empty, then expression is evaluated in context of this object.
   ///     See the comment to `UserExpression::Evaluate` for details.
   //------------------------------------------------------------------
@@ -91,15 +91,15 @@ public:
   //------------------------------------------------------------------
   /// Enable the state needed for parsing and IR transformation.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to use when finding types for variables.
   ///     Also used to find a "scratch" AST context to store result types.
   ///
-  /// @param[in] materializer
+  /// \param[in] materializer
   ///     If non-NULL, the materializer to populate with information about
   ///     the variables to use
   ///
-  /// @return
+  /// \return
   ///     True if parsing is possible; false if it is unsafe to continue.
   //------------------------------------------------------------------
   bool WillParse(ExecutionContext &exe_ctx, Materializer *materializer);
@@ -110,7 +110,7 @@ public:
   /// [Used by ClangExpressionParser] For each variable that had an unknown
   ///     type at the beginning of parsing, determine its final type now.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   bool ResolveUnknownTypes();
@@ -124,17 +124,17 @@ public:
   /// [Used by IRForTarget] Add a variable to the list of persistent
   ///     variables for the process.
   ///
-  /// @param[in] decl
+  /// \param[in] decl
   ///     The Clang declaration for the persistent variable, used for
   ///     lookup during parsing.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the persistent variable, usually $something.
   ///
-  /// @param[in] type
+  /// \param[in] type
   ///     The type of the variable, in the Clang parser's context.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   bool AddPersistentVariable(const clang::NamedDecl *decl,
@@ -145,22 +145,22 @@ public:
   /// [Used by IRForTarget] Add a variable to the struct that needs to
   ///     be materialized each time the expression runs.
   ///
-  /// @param[in] decl
+  /// \param[in] decl
   ///     The Clang declaration for the variable.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the variable.
   ///
-  /// @param[in] value
+  /// \param[in] value
   ///     The LLVM IR value for this variable.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     The size of the variable in bytes.
   ///
-  /// @param[in] alignment
+  /// \param[in] alignment
   ///     The required alignment of the variable in bytes.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   bool AddValueToStruct(const clang::NamedDecl *decl, ConstString name,
@@ -171,7 +171,7 @@ public:
   /// [Used by IRForTarget] Finalize the struct, laying out the position of
   /// each object in it.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   bool DoStructLayout();
@@ -180,16 +180,16 @@ public:
   /// [Used by IRForTarget] Get general information about the laid-out struct
   /// after DoStructLayout() has been called.
   ///
-  /// @param[out] num_elements
+  /// \param[out] num_elements
   ///     The number of elements in the struct.
   ///
-  /// @param[out] size
+  /// \param[out] size
   ///     The size of the struct, in bytes.
   ///
-  /// @param[out] alignment
+  /// \param[out] alignment
   ///     The alignment of the struct, in bytes.
   ///
-  /// @return
+  /// \return
   ///     True if the information could be retrieved; false otherwise.
   //------------------------------------------------------------------
   bool GetStructInfo(uint32_t &num_elements, size_t &size,
@@ -199,31 +199,31 @@ public:
   /// [Used by IRForTarget] Get specific information about one field of the
   /// laid-out struct after DoStructLayout() has been called.
   ///
-  /// @param[out] decl
+  /// \param[out] decl
   ///     The parsed Decl for the field, as generated by ClangASTSource
   ///     on ClangExpressionDeclMap's behalf.  In the case of the result
   ///     value, this will have the name $__lldb_result even if the
   ///     result value ends up having the name $1.  This is an
   ///     implementation detail of IRForTarget.
   ///
-  /// @param[out] value
+  /// \param[out] value
   ///     The IR value for the field (usually a GlobalVariable).  In
   ///     the case of the result value, this will have the correct
   ///     name ($1, for instance).  This is an implementation detail
   ///     of IRForTarget.
   ///
-  /// @param[out] offset
+  /// \param[out] offset
   ///     The offset of the field from the beginning of the struct.
   ///     As long as the struct is aligned according to its required
   ///     alignment, this offset will align the field correctly.
   ///
-  /// @param[out] name
+  /// \param[out] name
   ///     The name of the field as used in materialization.
   ///
-  /// @param[in] index
+  /// \param[in] index
   ///     The index of the field about which information is requested.
   ///
-  /// @return
+  /// \return
   ///     True if the information could be retrieved; false otherwise.
   //------------------------------------------------------------------
   bool GetStructElement(const clang::NamedDecl *&decl, llvm::Value *&value,
@@ -233,14 +233,14 @@ public:
   //------------------------------------------------------------------
   /// [Used by IRForTarget] Get information about a function given its Decl.
   ///
-  /// @param[in] decl
+  /// \param[in] decl
   ///     The parsed Decl for the Function, as generated by ClangASTSource
   ///     on ClangExpressionDeclMap's behalf.
   ///
-  /// @param[out] ptr
+  /// \param[out] ptr
   ///     The absolute address of the function in the target.
   ///
-  /// @return
+  /// \return
   ///     True if the information could be retrieved; false otherwise.
   //------------------------------------------------------------------
   bool GetFunctionInfo(const clang::NamedDecl *decl, uint64_t &ptr);
@@ -249,22 +249,22 @@ public:
   /// [Used by IRForTarget] Get the address of a symbol given nothing but its
   /// name.
   ///
-  /// @param[in] target
+  /// \param[in] target
   ///     The target to find the symbol in.  If not provided,
   ///     then the current parsing context's Target.
   ///
-  /// @param[in] process
+  /// \param[in] process
   ///     The process to use.  For Objective-C symbols, the process's
   ///     Objective-C language runtime may be queried if the process
   ///     is non-NULL.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the symbol.
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     The module to limit the search to. This can be NULL
   ///
-  /// @return
+  /// \return
   ///     Valid load address for the symbol
   //------------------------------------------------------------------
   lldb::addr_t GetSymbolAddress(Target &target, Process *process,
@@ -278,13 +278,13 @@ public:
   //------------------------------------------------------------------
   /// [Used by IRInterpreter] Get basic target information.
   ///
-  /// @param[out] byte_order
+  /// \param[out] byte_order
   ///     The byte order of the target.
   ///
-  /// @param[out] address_byte_size
+  /// \param[out] address_byte_size
   ///     The size of a pointer in bytes.
   ///
-  /// @return
+  /// \return
   ///     True if the information could be determined; false
   ///     otherwise.
   //------------------------------------------------------------------
@@ -304,10 +304,10 @@ public:
   /// [Used by ClangASTSource] Find all entities matching a given name, using
   /// a NameSearchContext to make Decls for them.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     The NameSearchContext that can construct Decls for this name.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   void FindExternalVisibleDecls(NameSearchContext &context) override;
@@ -316,20 +316,20 @@ public:
   /// Find all entities matching a given name in a given module/namespace,
   /// using a NameSearchContext to make Decls for them.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     The NameSearchContext that can construct Decls for this name.
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     If non-NULL, the module to query.
   ///
-  /// @param[in] namespace_decl
+  /// \param[in] namespace_decl
   ///     If valid and module is non-NULL, the parent namespace.
   ///
-  /// @param[in] current_id
+  /// \param[in] current_id
   ///     The ID for the current FindExternalVisibleDecls invocation,
   ///     for logging purposes.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   void FindExternalVisibleDecls(NameSearchContext &context,
@@ -446,24 +446,24 @@ private:
   //------------------------------------------------------------------
   /// Given a target, find a variable that matches the given name and type.
   ///
-  /// @param[in] target
+  /// \param[in] target
   ///     The target to use as a basis for finding the variable.
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     If non-NULL, the module to search.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name as a plain C string.
   ///
-  /// @param[in] namespace_decl
+  /// \param[in] namespace_decl
   ///     If non-NULL and module is non-NULL, the parent namespace.
   ///
-  /// @param[in] type
+  /// \param[in] type
   ///     The required type for the variable.  This function may be called
   ///     during parsing, in which case we don't know its type; hence the
   ///     default.
   ///
-  /// @return
+  /// \return
   ///     The LLDB Variable found, or NULL if none was found.
   //------------------------------------------------------------------
   lldb::VariableSP FindGlobalVariable(Target &target, lldb::ModuleSP &module,
@@ -475,26 +475,26 @@ private:
   /// Get the value of a variable in a given execution context and return the
   /// associated Types if needed.
   ///
-  /// @param[in] var
+  /// \param[in] var
   ///     The variable to evaluate.
   ///
-  /// @param[out] var_location
+  /// \param[out] var_location
   ///     The variable location value to fill in
   ///
-  /// @param[out] found_type
+  /// \param[out] found_type
   ///     The type of the found value, as it was found in the user process.
   ///     This is only useful when the variable is being inspected on behalf
   ///     of the parser, hence the default.
   ///
-  /// @param[out] parser_type
+  /// \param[out] parser_type
   ///     The type of the found value, as it was copied into the parser's
   ///     AST context.  This is only useful when the variable is being
   ///     inspected on behalf of the parser, hence the default.
   ///
-  /// @param[in] decl
+  /// \param[in] decl
   ///     The Decl to be looked up.
   ///
-  /// @return
+  /// \return
   ///     Return true if the value was successfully filled in.
   //------------------------------------------------------------------
   bool GetVariableValue(lldb::VariableSP &var,
@@ -506,13 +506,13 @@ private:
   /// Use the NameSearchContext to generate a Decl for the given LLDB
   /// Variable, and put it in the Tuple list.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     The NameSearchContext to use when constructing the Decl.
   ///
-  /// @param[in] var
+  /// \param[in] var
   ///     The LLDB Variable that needs a Decl.
   ///
-  /// @param[in] valobj
+  /// \param[in] valobj
   ///     The LLDB ValueObject for that variable.
   //------------------------------------------------------------------
   void AddOneVariable(NameSearchContext &context, lldb::VariableSP var,
@@ -522,13 +522,13 @@ private:
   /// Use the NameSearchContext to generate a Decl for the given persistent
   /// variable, and put it in the list of found entities.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     The NameSearchContext to use when constructing the Decl.
   ///
-  /// @param[in] pvar
+  /// \param[in] pvar
   ///     The persistent variable that needs a Decl.
   ///
-  /// @param[in] current_id
+  /// \param[in] current_id
   ///     The ID of the current invocation of FindExternalVisibleDecls
   ///     for logging purposes.
   //------------------------------------------------------------------
@@ -540,10 +540,10 @@ private:
   /// Use the NameSearchContext to generate a Decl for the given LLDB symbol
   /// (treated as a variable), and put it in the list of found entities.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     The NameSearchContext to use when constructing the Decl.
   ///
-  /// @param[in] var
+  /// \param[in] var
   ///     The LLDB Variable that needs a Decl.
   //------------------------------------------------------------------
   void AddOneGenericVariable(NameSearchContext &context, const Symbol &symbol,
@@ -554,14 +554,14 @@ private:
   /// (Functions are not placed in the Tuple list.)  Can handle both fully
   /// typed functions and generic functions.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     The NameSearchContext to use when constructing the Decl.
   ///
-  /// @param[in] fun
+  /// \param[in] fun
   ///     The Function that needs to be created.  If non-NULL, this is
   ///     a fully-typed function.
   ///
-  /// @param[in] sym
+  /// \param[in] sym
   ///     The Symbol that corresponds to a function that needs to be
   ///     created with generic type (unitptr_t foo(...)).
   //------------------------------------------------------------------
@@ -571,10 +571,10 @@ private:
   //------------------------------------------------------------------
   /// Use the NameSearchContext to generate a Decl for the given register.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     The NameSearchContext to use when constructing the Decl.
   ///
-  /// @param[in] reg_info
+  /// \param[in] reg_info
   ///     The information corresponding to that register.
   //------------------------------------------------------------------
   void AddOneRegister(NameSearchContext &context, const RegisterInfo *reg_info,
@@ -584,10 +584,10 @@ private:
   /// Use the NameSearchContext to generate a Decl for the given type.  (Types
   /// are not placed in the Tuple list.)
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     The NameSearchContext to use when constructing the Decl.
   ///
-  /// @param[in] type
+  /// \param[in] type
   ///     The type that needs to be created.
   //------------------------------------------------------------------
   void AddOneType(NameSearchContext &context, const TypeFromUser &type,
@@ -597,10 +597,10 @@ private:
   /// Generate a Decl for "*this" and add a member function declaration to it
   /// for the expression, then report it.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     The NameSearchContext to use when constructing the Decl.
   ///
-  /// @param[in] type
+  /// \param[in] type
   ///     The type for *this.
   //------------------------------------------------------------------
   void AddThisType(NameSearchContext &context, const TypeFromUser &type,
@@ -610,14 +610,14 @@ private:
   /// Move a type out of the current ASTContext into another, but make sure to
   /// export all components of the type also.
   ///
-  /// @param[in] target
+  /// \param[in] target
   ///     The ClangASTContext to move to.
-  /// @param[in] source
+  /// \param[in] source
   ///     The ClangASTContext to move from.  This is assumed to be going away.
-  /// @param[in] parser_type
+  /// \param[in] parser_type
   ///     The type as it appears in the source context.
   ///
-  /// @return
+  /// \return
   ///     Returns the moved type, or an empty type if there was a problem.
   //------------------------------------------------------------------
   TypeFromUser DeportType(ClangASTContext &target, ClangASTContext &source,

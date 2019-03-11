@@ -180,7 +180,7 @@ void SBExpressionOptions::SetLanguage(lldb::LanguageType language) {
 void SBExpressionOptions::SetCancelCallback(
     lldb::ExpressionCancelCallback callback, void *baton) {
   LLDB_RECORD_DUMMY(void, SBExpressionOptions, SetCancelCallback,
-                    (lldb::ExpressionCancelCallback, void *), callback, baton);
+                    (void *, void *), callback, baton);
 
   m_opaque_up->SetCancelCallback(callback, baton);
 }

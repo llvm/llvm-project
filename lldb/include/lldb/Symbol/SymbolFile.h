@@ -85,7 +85,7 @@ public:
   /// for "void SymbolFile::InitializeObject()" which will get called
   /// on the SymbolFile object with the best set of abilities.
   ///
-  /// @return
+  /// \return
   ///     A uint32_t mask containing bits from the SymbolFile::Abilities
   ///     enumeration. Any bits that are set represent an ability that
   ///     this symbol plug-in can parse from the object file.

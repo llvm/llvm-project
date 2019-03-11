@@ -16,7 +16,7 @@
 namespace lldb_private {
 
 ///------------------------------------------------------------------------------
-/// @class RegisterInfoInterface
+/// \class RegisterInfoInterface
 ///
 /// RegisterInfo interface to patch RegisterInfo structure for archs.
 ///------------------------------------------------------------------------------

@@ -17,7 +17,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class BreakpointList BreakpointList.h "lldb/Breakpoint/BreakpointList.h"
+/// \class BreakpointList BreakpointList.h "lldb/Breakpoint/BreakpointList.h"
 /// This class manages a list of breakpoints.
 //----------------------------------------------------------------------
 
@@ -35,10 +35,10 @@ public:
   //------------------------------------------------------------------
   /// Add the breakpoint \a bp_sp to the list.
   ///
-  /// @param[in] bp_sp
+  /// \param[in] bp_sp
   ///   Shared pointer to the breakpoint that will get added to the list.
   ///
-  /// @result
+  /// \result
   ///   Returns breakpoint id.
   //------------------------------------------------------------------
   lldb::break_id_t Add(lldb::BreakpointSP &bp_sp, bool notify);
@@ -52,10 +52,10 @@ public:
   /// Returns a shared pointer to the breakpoint with id \a breakID.  Const
   /// version.
   ///
-  /// @param[in] breakID
+  /// \param[in] breakID
   ///   The breakpoint ID to seek for.
   ///
-  /// @result
+  /// \result
   ///   A shared pointer to the breakpoint.  May contain a NULL pointer if the
   ///   breakpoint doesn't exist.
   //------------------------------------------------------------------
@@ -64,10 +64,10 @@ public:
   //------------------------------------------------------------------
   /// Returns a shared pointer to the breakpoint with index \a i.
   ///
-  /// @param[in] i
+  /// \param[in] i
   ///   The breakpoint index to seek for.
   ///
-  /// @result
+  /// \result
   ///   A shared pointer to the breakpoint.  May contain a NULL pointer if the
   ///   breakpoint doesn't exist.
   //------------------------------------------------------------------
@@ -76,10 +76,10 @@ public:
   //------------------------------------------------------------------
   /// Find all the breakpoints with a given name
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///   The breakpoint name for which to search.
   ///
-  /// @result
+  /// \result
   ///   \bfalse if the input name was not a legal breakpoint name.
   //------------------------------------------------------------------
   bool FindBreakpointsByName(const char *name, BreakpointList &matching_bps);
@@ -87,7 +87,7 @@ public:
   //------------------------------------------------------------------
   /// Returns the number of elements in this breakpoint list.
   ///
-  /// @result
+  /// \result
   ///   The number of elements.
   //------------------------------------------------------------------
   size_t GetSize() const {
@@ -98,10 +98,10 @@ public:
   //------------------------------------------------------------------
   /// Removes the breakpoint given by \b breakID from this list.
   ///
-  /// @param[in] breakID
+  /// \param[in] breakID
   ///   The breakpoint index to remove.
   ///
-  /// @result
+  /// \result
   ///   \b true if the breakpoint \a breakID was in the list.
   //------------------------------------------------------------------
   bool Remove(lldb::break_id_t breakID, bool notify);
@@ -117,7 +117,7 @@ public:
   /// This is typically used after the process calls exec, or anytime the
   /// architecture of the target changes.
   ///
-  /// @param[in] arch
+  /// \param[in] arch
   ///     If valid, check the module in each breakpoint to make sure
   ///     they are compatible, otherwise, ignore architecture.
   //------------------------------------------------------------------
@@ -144,13 +144,13 @@ public:
   /// modules in \a module_list.  \a added says whether the module was loaded
   /// or unloaded.
   ///
-  /// @param[in] module_list
+  /// \param[in] module_list
   ///   The module list that has changed.
   ///
-  /// @param[in] load
+  /// \param[in] load
   ///   \b true if the modules are loaded, \b false if unloaded.
   ///
-  /// @param[in] delete_locations
+  /// \param[in] delete_locations
   ///   If \a load is \b false, then delete breakpoint locations when
   ///   when updating breakpoints.
   //------------------------------------------------------------------
@@ -165,7 +165,7 @@ public:
   //------------------------------------------------------------------
   /// Sets the passed in Locker to hold the Breakpoint List mutex.
   ///
-  /// @param[in] locker
+  /// \param[in] locker
   ///   The locker object that is set.
   //------------------------------------------------------------------
   void GetListMutex(std::unique_lock<std::recursive_mutex> &lock);

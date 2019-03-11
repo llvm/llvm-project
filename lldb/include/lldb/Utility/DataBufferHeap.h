@@ -19,7 +19,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class DataBufferHeap DataBufferHeap.h "lldb/Core/DataBufferHeap.h"
+/// \class DataBufferHeap DataBufferHeap.h "lldb/Core/DataBufferHeap.h"
 /// A subclass of DataBuffer that stores a data buffer on the heap.
 ///
 /// This class keeps its data in a heap based buffer that is owned by the
@@ -43,10 +43,10 @@ public:
   ///
   /// Initialize this class with \a n bytes and fills the buffer with \a ch.
   ///
-  /// @param[in] n
+  /// \param[in] n
   ///     The number of bytes that heap based buffer should contain.
   ///
-  /// @param[in] ch
+  /// \param[in] ch
   ///     The character to use when filling the buffer initially.
   //------------------------------------------------------------------
   DataBufferHeap(lldb::offset_t n, uint8_t ch);
@@ -54,10 +54,10 @@ public:
   //------------------------------------------------------------------
   /// Construct by making a copy of \a src_len bytes from \a src.
   ///
-  /// @param[in] src
+  /// \param[in] src
   ///     A pointer to the data to copy.
   ///
-  /// @param[in] src_len
+  /// \param[in] src_len
   ///     The number of bytes in \a src to copy.
   //------------------------------------------------------------------
   DataBufferHeap(const void *src, lldb::offset_t src_len);
@@ -71,17 +71,17 @@ public:
   ~DataBufferHeap() override;
 
   //------------------------------------------------------------------
-  /// @copydoc DataBuffer::GetBytes()
+  /// \copydoc DataBuffer::GetBytes()
   //------------------------------------------------------------------
   uint8_t *GetBytes() override;
 
   //------------------------------------------------------------------
-  /// @copydoc DataBuffer::GetBytes() const
+  /// \copydoc DataBuffer::GetBytes() const
   //------------------------------------------------------------------
   const uint8_t *GetBytes() const override;
 
   //------------------------------------------------------------------
-  /// @copydoc DataBuffer::GetByteSize() const
+  /// \copydoc DataBuffer::GetByteSize() const
   //------------------------------------------------------------------
   lldb::offset_t GetByteSize() const override;
 
@@ -92,11 +92,11 @@ public:
   /// This can be used prior to copying data into the buffer. Note that this
   /// zero-initializes up to \p byte_size bytes.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The new size in bytes that this data buffer should attempt
   ///     to resize itself to.
   ///
-  /// @return
+  /// \return
   ///     The size in bytes after that this heap buffer was
   ///     successfully resized to.
   //------------------------------------------------------------------
@@ -107,10 +107,10 @@ public:
   ///
   /// Copies the data in \a src into an internal buffer.
   ///
-  /// @param[in] src
+  /// \param[in] src
   ///     A pointer to the data to copy.
   ///
-  /// @param[in] src_len
+  /// \param[in] src_len
   ///     The number of bytes in \a src to copy.
   //------------------------------------------------------------------
   void CopyData(const void *src, lldb::offset_t src_len);

@@ -273,7 +273,7 @@ void Status::SetErrorString(llvm::StringRef err_str) {
 //------------------------------------------------------------------
 /// Set the current error string to a formatted error string.
 ///
-/// @param format
+/// \param format
 ///     A printf style format string
 //------------------------------------------------------------------
 int Status::SetErrorStringWithFormat(const char *format, ...) {

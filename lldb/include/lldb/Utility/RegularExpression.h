@@ -49,7 +49,7 @@ class StringRef;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class RegularExpression RegularExpression.h
+/// \class RegularExpression RegularExpression.h
 /// "lldb/Utility/RegularExpression.h"
 /// A C++ wrapper class for regex.
 ///
@@ -125,11 +125,11 @@ public:
   /// after the regular expression is compiled. Any previously compiled
   /// regular expression contained in this object will be freed.
   ///
-  /// @param[in] re
+  /// \param[in] re
   ///     A NULL terminated C string that represents the regular
   ///     expression to compile.
   ///
-  /// @return
+  /// \return
   ///     \b true if the regular expression compiles successfully,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -145,15 +145,15 @@ public:
   /// indicate the number of regmatch_t values that are present in \a
   /// match_ptr.
   ///
-  /// @param[in] string
+  /// \param[in] string
   ///     The string to match against the compile regular expression.
   ///
-  /// @param[in] match
+  /// \param[in] match
   ///     A pointer to a RegularExpression::Match structure that was
   ///     properly initialized with the desired number of maximum
   ///     matches, or nullptr if no parenthesized matching is needed.
   ///
-  /// @return
+  /// \return
   ///     \b true if \a string matches the compiled regular
   ///     expression, \b false otherwise.
   //------------------------------------------------------------------
@@ -176,7 +176,7 @@ public:
   /// Returns the text that was used to compile the current regular
   /// expression.
   ///
-  /// @return
+  /// \return
   ///     The NULL terminated C string that was used to compile the
   ///     current regular expression
   //------------------------------------------------------------------
@@ -187,7 +187,7 @@ public:
   ///
   /// Test if this object contains a valid regular expression.
   ///
-  /// @return
+  /// \return
   ///     \b true if the regular expression compiled and is ready
   ///     for execution, \b false otherwise.
   //------------------------------------------------------------------

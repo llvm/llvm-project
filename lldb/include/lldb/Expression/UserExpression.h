@@ -24,7 +24,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class UserExpression UserExpression.h "lldb/Expression/UserExpression.h"
+/// \class UserExpression UserExpression.h "lldb/Expression/UserExpression.h"
 /// Encapsulates a one-time expression for use in lldb.
 ///
 /// LLDB uses expressions for various purposes, notably to call functions
@@ -41,19 +41,19 @@ public:
   //------------------------------------------------------------------
   /// Constructor
   ///
-  /// @param[in] expr
+  /// \param[in] expr
   ///     The expression to parse.
   ///
-  /// @param[in] expr_prefix
+  /// \param[in] expr_prefix
   ///     If non-nullptr, a C string containing translation-unit level
   ///     definitions to be included when the expression is parsed.
   ///
-  /// @param[in] language
+  /// \param[in] language
   ///     If not eLanguageTypeUnknown, a language to use when parsing
   ///     the expression.  Currently restricted to those languages
   ///     supported by Clang.
   ///
-  /// @param[in] desired_type
+  /// \param[in] desired_type
   ///     If not eResultTypeAny, the type to use for the expression
   ///     result.
   //------------------------------------------------------------------
@@ -70,22 +70,22 @@ public:
   //------------------------------------------------------------------
   /// Parse the expression
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     A diagnostic manager to report parse errors and warnings to.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to use when looking up entities that
   ///     are needed for parsing (locations of functions, types of
   ///     variables, persistent variables, etc.)
   ///
-  /// @param[in] execution_policy
+  /// \param[in] execution_policy
   ///     Determines whether interpretation is possible or mandatory.
   ///
-  /// @param[in] keep_result_in_memory
+  /// \param[in] keep_result_in_memory
   ///     True if the resulting persistent variable should reside in
   ///     target memory, if applicable.
   ///
-  /// @return
+  /// \return
   ///     True on success (no errors); false otherwise.
   //------------------------------------------------------------------
   virtual bool Parse(DiagnosticManager &diagnostic_manager,
@@ -97,22 +97,22 @@ public:
   /// Attempts to find possible command line completions for the given
   /// (possible incomplete) user expression.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to use when looking up entities that
   ///     are needed for parsing and completing (locations of functions, types
   ///     of variables, persistent variables, etc.)
   ///
-  /// @param[out] request
+  /// \param[out] request
   ///     The completion request to fill out. The completion should be a string
   ///     that would complete the current token at the cursor position.
   ///     Note that the string in the list replaces the current token
   ///     in the command line.
   ///
-  /// @param[in] complete_pos
+  /// \param[in] complete_pos
   ///     The position of the cursor inside the user expression string.
   ///     The completion process starts on the token that the cursor is in.
   ///
-  /// @return
+  /// \return
   ///     True if we added any completion results to the output;
   ///     false otherwise.
   //------------------------------------------------------------------
@@ -129,28 +129,28 @@ public:
   /// Execute the parsed expression by callinng the derived class's DoExecute
   /// method.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     A diagnostic manager to report errors to.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to use when looking up entities that
   ///     are needed for parsing (locations of variables, etc.)
   ///
-  /// @param[in] options
+  /// \param[in] options
   ///     Expression evaluation options.
   ///
-  /// @param[in] shared_ptr_to_me
+  /// \param[in] shared_ptr_to_me
   ///     This is a shared pointer to this UserExpression.  This is
   ///     needed because Execute can push a thread plan that will hold onto
   ///     the UserExpression for an unbounded period of time.  So you
   ///     need to give the thread plan a reference to this object that can
   ///     keep it alive.
   ///
-  /// @param[in] result
+  /// \param[in] result
   ///     A pointer to direct at the persistent variable in which the
   ///     expression's result is stored.
   ///
-  /// @return
+  /// \return
   ///     A Process::Execution results value.
   //------------------------------------------------------------------
   lldb::ExpressionResults Execute(DiagnosticManager &diagnostic_manager,
@@ -162,24 +162,24 @@ public:
   //------------------------------------------------------------------
   /// Apply the side effects of the function to program state.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     A diagnostic manager to report errors to.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to use when looking up entities that
   ///     are needed for parsing (locations of variables, etc.)
   ///
-  /// @param[in] result
+  /// \param[in] result
   ///     A pointer to direct at the persistent variable in which the
   ///     expression's result is stored.
   ///
-  /// @param[in] function_stack_pointer
+  /// \param[in] function_stack_pointer
   ///     A pointer to the base of the function's stack frame.  This
   ///     is used to determine whether the expression result resides in
   ///     memory that will still be valid, or whether it needs to be
   ///     treated as homeless for the purpose of future expressions.
   ///
-  /// @return
+  /// \return
   ///     A Process::Execution results value.
   //------------------------------------------------------------------
   virtual bool FinalizeJITExecution(
@@ -239,36 +239,36 @@ public:
   /// Evaluate one expression in the scratch context of the target passed in
   /// the exe_ctx and return its result.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to use when evaluating the expression.
   ///
-  /// @param[in] options
+  /// \param[in] options
   ///     Expression evaluation options.  N.B. The language in the
   ///     evaluation options will be used to determine the language used for
   ///     expression evaluation.
   ///
-  /// @param[in] expr_cstr
+  /// \param[in] expr_cstr
   ///     A C string containing the expression to be evaluated.
   ///
-  /// @param[in] expr_prefix
+  /// \param[in] expr_prefix
   ///     If non-nullptr, a C string containing translation-unit level
   ///     definitions to be included when the expression is parsed.
   ///
-  /// @param[in,out] result_valobj_sp
+  /// \param[in,out] result_valobj_sp
   ///      If execution is successful, the result valobj is placed here.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     Filled in with an error in case the expression evaluation
   ///     fails to parse, run, or evaluated.
   ///
-  /// @param[out] fixed_expression
+  /// \param[out] fixed_expression
   ///     If non-nullptr, the fixed expression is copied into the provided
   ///     string.
   ///
-  /// @param[out] jit_module_sp_ptr
+  /// \param[out] jit_module_sp_ptr
   ///     If non-nullptr, used to persist the generated IR module.
   ///
-  /// @param[in] ctx_obj
+  /// \param[in] ctx_obj
   ///     If specified, then the expression will be evaluated in the context of
   ///     this object. It means that the context object's address will be
   ///     treated as `this` for the expression (the expression will be
@@ -278,7 +278,7 @@ public:
   ///     Currently there is a limitation: the context object must be located
   ///     in the debuggee process' memory (and have the load address).
   ///
-  /// @result
+  /// \result
   ///      A Process::ExpressionResults value.  eExpressionCompleted for
   ///      success.
   //------------------------------------------------------------------

@@ -141,13 +141,11 @@ SBError SBInputReader::Initialize(
                               unsigned long),
     void *a, lldb::InputReaderGranularity b, char const *c, char const *d,
     bool e) {
-  LLDB_RECORD_DUMMY(
-      lldb::SBError, SBInputReader, Initialize,
-      (lldb::SBDebugger &,
-       unsigned long (*)(void *, lldb::SBInputReader *, lldb::InputReaderAction,
-                         const char *, unsigned long),
-       void *, lldb::InputReaderGranularity, const char *, const char *, bool),
-      sb_debugger, callback, a, b, c, d, e);
+  LLDB_RECORD_DUMMY(lldb::SBError, SBInputReader, Initialize,
+                    (lldb::SBDebugger &, void *, void *,
+                     lldb::InputReaderGranularity, const char *, const char *,
+                     bool),
+                    sb_debugger, callback, a, b, c, d, e);
 
   return SBError();
 }
@@ -239,8 +237,7 @@ SBDebugger SBDebugger::Create(bool source_init_files,
 
 {
   LLDB_RECORD_DUMMY(lldb::SBDebugger, SBDebugger, Create,
-                    (bool, lldb::LogOutputCallback, void *), source_init_files,
-                    callback, baton);
+                    (bool, void *, void *), source_init_files, callback, baton);
 
   SBDebugger debugger;
 
@@ -1536,8 +1533,8 @@ bool SBDebugger::EnableLog(const char *channel, const char **categories) {
 
 void SBDebugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
                                     void *baton) {
-  LLDB_RECORD_DUMMY(void, SBDebugger, SetLoggingCallback,
-                    (lldb::LogOutputCallback, void *), log_callback, baton);
+  LLDB_RECORD_DUMMY(void, SBDebugger, SetLoggingCallback, (void *, void *),
+                    log_callback, baton);
 
   if (m_opaque_sp) {
     return m_opaque_sp->SetLoggingCallback(log_callback, baton);
