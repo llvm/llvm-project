@@ -4380,7 +4380,6 @@ static bool hasUndefRegUpdate(unsigned Opcode, bool ForLoadFold = false) {
   case X86::VCVTSI2SDZrr:
   case X86::VCVTSI2SDZrm:
   case X86::VCVTSI2SDZrr_Int:
-  case X86::VCVTSI2SDZrrb_Int:
   case X86::VCVTSI2SDZrm_Int:
   case X86::VCVTSI642SDZrr:
   case X86::VCVTSI642SDZrm:
