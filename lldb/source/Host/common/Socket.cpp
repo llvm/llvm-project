@@ -259,8 +259,8 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
       llvm::StringRef("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)"));
   RegularExpression::Match regex_match(2);
   if (g_regex.Execute(host_and_port, &regex_match)) {
-    if (regex_match.GetMatchAtIndex(host_and_port.data(), 1, host_str) &&
-        regex_match.GetMatchAtIndex(host_and_port.data(), 2, port_str)) {
+    if (regex_match.GetMatchAtIndex(host_and_port, 1, host_str) &&
+        regex_match.GetMatchAtIndex(host_and_port, 2, port_str)) {
       // IPv6 addresses are wrapped in [] when specified with ports
       if (host_str.front() == '[' && host_str.back() == ']')
         host_str = host_str.substr(1, host_str.size() - 2);
@@ -283,9 +283,7 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
   // integer, representing a port with an empty host.
   host_str.clear();
   port_str.clear();
-  bool ok = false;
-  port = StringConvert::ToUInt32(host_and_port.data(), UINT32_MAX, 10, &ok);
-  if (ok && port < UINT16_MAX) {
+  if (to_integer(host_and_port, port, 10) && port < UINT16_MAX) {
     port_str = host_and_port;
     if (error_ptr)
       error_ptr->Clear();
