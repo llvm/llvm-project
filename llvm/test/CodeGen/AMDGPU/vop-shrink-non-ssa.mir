@@ -17,7 +17,7 @@ body:             |
     %0 = V_MOV_B32_e32 123, implicit $exec
     %1 = V_MOV_B32_e32 456, implicit $exec
     %2, $vcc = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 # GCN-LABEL: name: fold_partially_defined_superreg{{$}}
@@ -35,6 +35,6 @@ body:             |
     undef %3.sub0 = V_MOV_B32_e32 123, implicit $exec, implicit-def %3
     %1 = V_MOV_B32_e32 456, implicit $exec
     %2, $vcc = V_ADD_I32_e64 %3.sub0, %1, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

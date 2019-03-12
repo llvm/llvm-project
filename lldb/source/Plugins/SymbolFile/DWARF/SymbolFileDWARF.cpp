@@ -2239,7 +2239,7 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext *decl_ctx,
       CompilerDeclContext actual_decl_ctx =
           dwarf_ast->GetDeclContextContainingUIDFromDWARF(die);
       if (actual_decl_ctx)
-        return actual_decl_ctx == *decl_ctx;
+        return decl_ctx->IsContainedInLookup(actual_decl_ctx);
     }
   }
   return false;

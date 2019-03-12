@@ -28,7 +28,7 @@ namespace lldb_private {
 class IRExecutionUnit;
 
 //----------------------------------------------------------------------
-/// @class ClangExpressionParser ClangExpressionParser.h
+/// \class ClangExpressionParser ClangExpressionParser.h
 /// "lldb/Expression/ClangExpressionParser.h" Encapsulates an instance of
 /// Clang that can parse expressions.
 ///
@@ -45,12 +45,12 @@ public:
   ///
   /// Initializes class variables.
   ///
-  /// @param[in] exe_scope,
+  /// \param[in] exe_scope,
   ///     If non-NULL, an execution context scope that can help to
   ///     correctly create an expression with a valid process for
   ///     optional tuning Objective-C runtime support. Can be NULL.
   ///
-  /// @param[in] expr
+  /// \param[in] expr
   ///     The expression to be parsed.
   //------------------------------------------------------------------
   ClangExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
@@ -68,10 +68,10 @@ public:
   /// Parse a single expression and convert it to IR using Clang.  Don't wrap
   /// the expression in anything at all.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     The diagnostic manager to report errors to.
   ///
-  /// @return
+  /// \return
   ///     The number of errors encountered during parsing.  0 means
   ///     success.
   //------------------------------------------------------------------
@@ -83,36 +83,36 @@ public:
   /// Ready an already-parsed expression for execution, possibly evaluating it
   /// statically.
   ///
-  /// @param[out] func_addr
+  /// \param[out] func_addr
   ///     The address to which the function has been written.
   ///
-  /// @param[out] func_end
+  /// \param[out] func_end
   ///     The end of the function's allocated memory region.  (func_addr
   ///     and func_end do not delimit an allocated region; the allocated
   ///     region may begin before func_addr.)
   ///
-  /// @param[in] execution_unit_sp
+  /// \param[in] execution_unit_sp
   ///     After parsing, ownership of the execution unit for
   ///     for the expression is handed to this shared pointer.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to write the function into.
   ///
-  /// @param[out] evaluated_statically
+  /// \param[out] evaluated_statically
   ///     Set to true if the expression could be interpreted statically;
   ///     untouched otherwise.
   ///
-  /// @param[out] const_result
+  /// \param[out] const_result
   ///     If the result of the expression is constant, and the
   ///     expression has no side effects, this is set to the result of the
   ///     expression.
   ///
-  /// @param[in] execution_policy
+  /// \param[in] execution_policy
   ///     Determines whether the expression must be JIT-compiled, must be
   ///     evaluated statically, or whether this decision may be made
   ///     opportunistically.
   ///
-  /// @return
+  /// \return
   ///     An error code indicating the success or failure of the operation.
   ///     Test with Success().
   //------------------------------------------------------------------
@@ -125,13 +125,13 @@ public:
   //------------------------------------------------------------------
   /// Run all static initializers for an execution unit.
   ///
-  /// @param[in] execution_unit_sp
+  /// \param[in] execution_unit_sp
   ///     The execution unit.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to use when running them.  Thread can't be null.
   ///
-  /// @return
+  /// \return
   ///     The error code indicating the
   //------------------------------------------------------------------
   Status RunStaticInitializers(lldb::IRExecutionUnitSP &execution_unit_sp,
@@ -140,10 +140,10 @@ public:
   //------------------------------------------------------------------
   /// Returns a string representing current ABI.
   ///
-  /// @param[in] target_arch
+  /// \param[in] target_arch
   ///     The target architecture.
   ///
-  /// @return
+  /// \return
   ///     A string representing target ABI for the current architecture.
   //-------------------------------------------------------------------
   std::string GetClangTargetABI(const ArchSpec &target_arch);
@@ -152,23 +152,23 @@ private:
   //------------------------------------------------------------------
   /// Parses the expression.
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     The diagnostic manager that should receive the diagnostics
   ///     from the parsing process.
   ///
-  /// @param[in] completion
+  /// \param[in] completion
   ///     The completion consumer that should be used during parsing
   ///     (or a nullptr if no consumer should be attached).
   ///
-  /// @param[in] completion_line
+  /// \param[in] completion_line
   ///     The line in which the completion marker should be placed.
   ///     The first line is represented by the value 0.
   ///
-  /// @param[in] completion_column
+  /// \param[in] completion_column
   ///     The column in which the completion marker should be placed.
   ///     The first column is represented by the value 0.
   ///
-  /// @return
+  /// \return
   ///    The number of parsing errors.
   //-------------------------------------------------------------------
   unsigned ParseInternal(DiagnosticManager &diagnostic_manager,

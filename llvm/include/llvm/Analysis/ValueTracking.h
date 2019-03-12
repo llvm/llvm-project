@@ -460,6 +460,11 @@ class Value;
   bool isOverflowIntrinsicNoWrap(const IntrinsicInst *II,
                                  const DominatorTree &DT);
 
+
+  /// Determine the possible constant range of an integer or vector of integer
+  /// value. This is intended as a cheap, non-recursive check.
+  ConstantRange computeConstantRange(const Value *V, bool UseInstrInfo = true);
+
   /// Return true if this function can prove that the instruction I will
   /// always transfer execution to one of its successors (including the next
   /// instruction that follows within a basic block). E.g. this is not

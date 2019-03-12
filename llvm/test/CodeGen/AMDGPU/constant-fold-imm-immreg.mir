@@ -55,7 +55,7 @@ body:             |
     %9 = S_AND_B32 killed %7, killed %8, implicit-def dead $scc
     %10 = COPY %9
     BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -158,7 +158,7 @@ body:             |
     %31 = V_AND_B32_e64 %34, %34, implicit $exec
     FLAT_STORE_DWORD %37, %31, 0, 0, 0, implicit $exec, implicit $flat_scr
 
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -220,7 +220,7 @@ body:             |
     %12 = S_LSHL_B32 killed %5, 12, implicit-def dead $scc
     %13 = COPY %12
     BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -361,7 +361,7 @@ body:             |
     %28 = V_LSHL_B32_e32 %27, %6, implicit $exec
     FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit $exec, implicit $flat_scr
 
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -420,7 +420,7 @@ body:             |
     %12 = S_ASHR_I32 killed %5, 12, implicit-def dead $scc
     %13 = COPY %12
     BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 
@@ -569,7 +569,7 @@ body:             |
     %28 = V_ASHR_I32_e32 %27, %35, implicit $exec
     FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit $exec, implicit $flat_scr
 
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -628,7 +628,7 @@ body:             |
     %12 = S_LSHR_B32 killed %5, 12, implicit-def dead $scc
     %13 = COPY %12
     BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -778,7 +778,7 @@ body:             |
     %28 = V_LSHR_B32_e32 %27, %35, implicit $exec
     FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit $exec, implicit $flat_scr
 
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -788,7 +788,7 @@ body:             |
 # GCN-LABEL: name: undefined_vreg_operand{{$}}
 # GCN: bb.0
 # GCN-NEXT: FLAT_STORE_DWORD undef %3:vreg_64, undef %1:vgpr_32,
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 name: undefined_vreg_operand
 tracksRegLiveness: true
 registers:
@@ -801,7 +801,7 @@ body:             |
     %0 = V_MOV_B32_e32 0, implicit $exec
     %2 = V_XOR_B32_e64 killed %0, undef %1, implicit $exec
     FLAT_STORE_DWORD undef %3, %2, 0, 0, 0, implicit $exec, implicit $flat_scr
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -828,13 +828,13 @@ body:             |
   bb.3:
     liveins: $vcc
     SI_END_CF %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    S_ENDPGM implicit $vcc
+    S_ENDPGM 0, implicit $vcc
 
 ...
 ---
 # GCN-LABEL: name: constant_fold_lshl_or_reg0_immreg_reg{{$}}
 # GCN: %2:vgpr_32 = COPY $vgpr0, implicit $exec
-# GCN-NEXT: S_ENDPGM implicit %2
+# GCN-NEXT: S_ENDPGM 0, implicit %2
 
 name: constant_fold_lshl_or_reg0_immreg_reg
 alignment:       0
@@ -851,7 +851,7 @@ body:             |
   %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   %1:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
   %2:vgpr_32 = V_LSHL_OR_B32 %0,%1, $vgpr0, implicit $exec
-  S_ENDPGM implicit %2
+  S_ENDPGM 0, implicit %2
 
 ...
 
@@ -859,7 +859,7 @@ body:             |
 
 # GCN-LABEL: name: constant_fold_lshl_or_reg0_immreg_imm{{$}}
 # GCN: %2:vgpr_32 = V_MOV_B32_e32 10, implicit $exec
-# GCN-NEXT: S_ENDPGM implicit %2
+# GCN-NEXT: S_ENDPGM 0, implicit %2
 
 name: constant_fold_lshl_or_reg0_immreg_imm
 alignment:       0
@@ -875,7 +875,7 @@ body:             |
   %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   %1:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
   %2:vgpr_32 = V_LSHL_OR_B32 %0, %1, 10, implicit $exec
-  S_ENDPGM implicit %2
+  S_ENDPGM 0, implicit %2
 
 ...
 
@@ -883,7 +883,7 @@ body:             |
 
 # GCN-LABEL: name: constant_fold_lshl_or_reg0_immreg_immreg{{$}}
 # GCN: %3:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec, implicit $exec
-# GCN-NEXT: S_ENDPGM implicit %3
+# GCN-NEXT: S_ENDPGM 0, implicit %3
 
 name: constant_fold_lshl_or_reg0_immreg_immreg
 alignment:       0
@@ -900,6 +900,6 @@ body:             |
   %1:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
   %2:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
   %3:vgpr_32 = V_LSHL_OR_B32 %0, %1, %2, implicit $exec
-  S_ENDPGM implicit %3
+  S_ENDPGM 0, implicit %3
 
 ...

@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+let UseNamedOperandTable = 1 in
 multiclass ATOMIC_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                     list<dag> pattern_r, string asmstr_r = "",
                     string asmstr_s = "", bits<32> atomic_op = -1> {
@@ -810,9 +811,9 @@ multiclass WebAssemblyTerRMW<WebAssemblyRegClass rc, string name,
   defm "" :
     ATOMIC_I<(outs rc:$dst),
              (ins P2Align:$p2align, offset32_op:$off, I32:$addr, rc:$exp,
-                  rc:$new),
+                  rc:$new_),
              (outs), (ins P2Align:$p2align, offset32_op:$off), [],
-             !strconcat(name, "\t$dst, ${off}(${addr})${p2align}, $exp, $new"),
+             !strconcat(name, "\t$dst, ${off}(${addr})${p2align}, $exp, $new_"),
              !strconcat(name, "\t${off}${p2align}"), atomic_op>;
 }
 

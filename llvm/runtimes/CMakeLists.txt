@@ -318,6 +318,14 @@ else() # if this is included from LLVM's CMake
     list(APPEND runtime_names ${projName})
   endforeach()
 
+  if(LLVM_RUNTIME_BUILD_ID_LINK_TARGETS)
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/llvm-strip-link.in
+      ${CMAKE_CURRENT_BINARY_DIR}/llvm-strip-link
+      @ONLY
+    )
+  endif()
+
   function(runtime_default_target)
     cmake_parse_arguments(ARG "" "" "DEPENDS;PREFIXES" ${ARGN})
 
@@ -425,6 +433,10 @@ else() # if this is included from LLVM's CMake
         list(APPEND ${name}_extra_args "-D${new_name}=${${variableName}}")
       endif()
     endforeach()
+
+    if(target IN_LIST LLVM_RUNTIME_BUILD_ID_LINK_TARGETS)
+      list(APPEND EXTRA_ARGS STRIP_TOOL ${CMAKE_CURRENT_BINARY_DIR}/llvm-strip-link)
+    endif()
 
     llvm_ExternalProject_Add(runtimes-${name}
                              ${CMAKE_CURRENT_SOURCE_DIR}

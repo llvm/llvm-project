@@ -19,7 +19,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ClangPersistentVariables ClangPersistentVariables.h
+/// \class ClangPersistentVariables ClangPersistentVariables.h
 /// "lldb/Expression/ClangPersistentVariables.h" Manages persistent values
 /// that need to be preserved between expression invocations.
 ///

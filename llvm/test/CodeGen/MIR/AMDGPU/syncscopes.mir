@@ -95,6 +95,6 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr5, implicit $exec, implicit killed $sgpr4_sgpr5, implicit $sgpr4_sgpr5, implicit $exec
     $vgpr2 = V_MOV_B32_e32 killed $sgpr8, implicit $exec, implicit $exec
     FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, -1, 0, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("wavefront") seq_cst 4 into %ir.wavefront_out)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

@@ -88,6 +88,10 @@ void SBSymbolContextList::Append(SBSymbolContextList &sc_list) {
 
 bool SBSymbolContextList::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSymbolContextList, IsValid);
+  return this->operator bool();
+}
+SBSymbolContextList::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSymbolContextList, operator bool);
 
   return m_opaque_up != NULL;
 }

@@ -22,6 +22,8 @@ public:
 
   SBProcessInfo &operator=(const SBProcessInfo &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const char *GetName();

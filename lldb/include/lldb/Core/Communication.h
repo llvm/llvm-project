@@ -38,7 +38,7 @@ class Status;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Communication Communication.h "lldb/Core/Communication.h" An
+/// \class Communication Communication.h "lldb/Core/Communication.h" An
 /// abstract communications class.
 ///
 /// Communication is an class that handles data communication between two data
@@ -59,8 +59,8 @@ namespace lldb_private {
 /// "eBroadcastBit" below).
 ///
 /// There are two modes in which communications can occur:
-///     @li single-threaded
-///     @li multi-threaded
+///     \li single-threaded
+///     \li multi-threaded
 ///
 /// In single-threaded mode, all reads and writes happen synchronously on the
 /// calling thread.
@@ -119,7 +119,7 @@ public:
   /// Construct the Communication object with the specified name for the
   /// Broadcaster that this object inherits from.
   ///
-  /// @param[in] broadcaster_name
+  /// \param[in] broadcaster_name
   ///     The name of the broadcaster object.  This name should be as
   ///     complete as possible to uniquely identify this object. The
   ///     broadcaster name can be updated after the connect function
@@ -140,37 +140,37 @@ public:
   /// Connect using the current connection by passing \a url to its connect
   /// function. string.
   ///
-  /// @param[in] url
+  /// \param[in] url
   ///     A string that contains all information needed by the
   ///     subclass to connect to another client.
   ///
-  /// @return
+  /// \return
   ///     \b True if the connect succeeded, \b false otherwise. The
   ///     internal error object should be filled in with an
   ///     appropriate value based on the result of this function.
   ///
-  /// @see Status& Communication::GetError ();
-  /// @see bool Connection::Connect (const char *url);
+  /// \see Status& Communication::GetError ();
+  /// \see bool Connection::Connect (const char *url);
   //------------------------------------------------------------------
   lldb::ConnectionStatus Connect(const char *url, Status *error_ptr);
 
   //------------------------------------------------------------------
   /// Disconnect the communications connection if one is currently connected.
   ///
-  /// @return
+  /// \return
   ///     \b True if the disconnect succeeded, \b false otherwise. The
   ///     internal error object should be filled in with an
   ///     appropriate value based on the result of this function.
   ///
-  /// @see Status& Communication::GetError ();
-  /// @see bool Connection::Disconnect ();
+  /// \see Status& Communication::GetError ();
+  /// \see bool Connection::Disconnect ();
   //------------------------------------------------------------------
   lldb::ConnectionStatus Disconnect(Status *error_ptr = nullptr);
 
   //------------------------------------------------------------------
   /// Check if the connection is valid.
   ///
-  /// @return
+  /// \return
   ///     \b True if this object is currently connected, \b false
   ///     otherwise.
   //------------------------------------------------------------------
@@ -193,21 +193,21 @@ public:
   /// event. If this function consumes all of the bytes in the cache, it will
   /// reset the \a eBroadcastBitReadThreadGotBytes event bit.
   ///
-  /// @param[in] dst
+  /// \param[in] dst
   ///     A destination buffer that must be at least \a dst_len bytes
   ///     long.
   ///
-  /// @param[in] dst_len
+  /// \param[in] dst_len
   ///     The number of bytes to attempt to read, and also the max
   ///     number of bytes that can be placed into \a dst.
   ///
-  /// @param[in] timeout
+  /// \param[in] timeout
   ///     A timeout value or llvm::None for no timeout.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes actually read.
   ///
-  /// @see size_t Connection::Read (void *, size_t);
+  /// \see size_t Connection::Read (void *, size_t);
   //------------------------------------------------------------------
   size_t Read(void *dst, size_t dst_len, const Timeout<std::micro> &timeout,
               lldb::ConnectionStatus &status, Status *error_ptr);
@@ -218,15 +218,15 @@ public:
   ///
   /// Subclasses must override this function.
   ///
-  /// @param[in] src
+  /// \param[in] src
   ///     A source buffer that must be at least \a src_len bytes
   ///     long.
   ///
-  /// @param[in] src_len
+  /// \param[in] src_len
   ///     The number of bytes to attempt to write, and also the
   ///     number of bytes are currently available in \a src.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes actually Written.
   //------------------------------------------------------------------
   size_t Write(const void *src, size_t src_len, lldb::ConnectionStatus &status,
@@ -240,10 +240,10 @@ public:
   /// connection without any interruption to the client. It also allows the
   /// Communication class to be subclassed for packet based communication.
   ///
-  /// @param[in] connection
+  /// \param[in] connection
   ///     A connection that this class will own and destroy.
   ///
-  /// @see
+  /// \see
   ///     class Connection
   //------------------------------------------------------------------
   void SetConnection(Connection *connection);
@@ -264,12 +264,12 @@ public:
   /// default action of caching the bytes and broadcasting a \b
   /// eBroadcastBitReadThreadGotBytes event.
   ///
-  /// @return
+  /// \return
   ///     \b True if the read thread was successfully started, \b
   ///     false otherwise.
   ///
-  /// @see size_t Connection::Read (void *, size_t);
-  /// @see void Communication::AppendBytesToCache (const uint8_t * bytes,
+  /// \see size_t Connection::Read (void *, size_t);
+  /// \see void Communication::AppendBytesToCache (const uint8_t * bytes,
   ///                                              size_t len, bool broadcast);
   //------------------------------------------------------------------
   virtual bool StartReadThread(Status *error_ptr = nullptr);
@@ -277,7 +277,7 @@ public:
   //------------------------------------------------------------------
   /// Stops the read thread by cancelling it.
   ///
-  /// @return
+  /// \return
   ///     \b True if the read thread was successfully canceled, \b
   ///     false otherwise.
   //------------------------------------------------------------------
@@ -287,7 +287,7 @@ public:
   //------------------------------------------------------------------
   /// Checks if there is a currently running read thread.
   ///
-  /// @return
+  /// \return
   ///     \b True if the read thread is running, \b false otherwise.
   //------------------------------------------------------------------
   bool ReadThreadIsRunning();
@@ -298,13 +298,13 @@ public:
   /// is received it will append the available data to the internal cache and
   /// broadcast a \b eBroadcastBitReadThreadGotBytes event.
   ///
-  /// @param[in] comm_ptr
+  /// \param[in] comm_ptr
   ///     A pointer to an instance of this class.
   ///
-  /// @return
+  /// \return
   ///     \b NULL.
   ///
-  /// @see void Communication::ReadThreadGotBytes (const uint8_t *, size_t);
+  /// \see void Communication::ReadThreadGotBytes (const uint8_t *, size_t);
   //------------------------------------------------------------------
   static lldb::thread_result_t ReadThread(lldb::thread_arg_t comm_ptr);
 
@@ -367,11 +367,11 @@ protected:
   /// of the \a eBroadcastBitReadThreadGotBytes event by setting \a broadcast
   /// to false.
   ///
-  /// @param[in] src
+  /// \param[in] src
   ///     A source buffer that must be at least \a src_len bytes
   ///     long.
   ///
-  /// @param[in] src_len
+  /// \param[in] src_len
   ///     The number of bytes to append to the cache.
   //------------------------------------------------------------------
   virtual void AppendBytesToCache(const uint8_t *src, size_t src_len,
@@ -383,16 +383,16 @@ protected:
   /// data cache, the \b eBroadcastBitReadThreadGotBytes event will be reset
   /// to signify no more bytes are available.
   ///
-  /// @param[in] dst
+  /// \param[in] dst
   ///     A destination buffer that must be at least \a dst_len bytes
   ///     long.
   ///
-  /// @param[in] dst_len
+  /// \param[in] dst_len
   ///     The number of bytes to attempt to read from the cache,
   ///     and also the max number of bytes that can be placed into
   ///     \a dst.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes extracted from the data cache.
   //------------------------------------------------------------------
   size_t GetCachedBytes(void *dst, size_t dst_len);

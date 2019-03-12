@@ -245,5 +245,5 @@ body:             |
     GLOBAL_STORE_DWORDX2 %11, %78, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_CMPSWAP_X2 %11, %80, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
-    S_ENDPGM
+    S_ENDPGM 0
 ...

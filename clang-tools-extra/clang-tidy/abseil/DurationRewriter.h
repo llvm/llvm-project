@@ -124,6 +124,16 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
       "::absl::ToUnixMillis", "::absl::ToUnixMicros", "::absl::ToUnixNanos"));
 }
 
+AST_MATCHER_FUNCTION_P(ast_matchers::internal::Matcher<Stmt>,
+                       comparisonOperatorWithCallee,
+                       ast_matchers::internal::Matcher<Decl>, funcDecl) {
+  using namespace clang::ast_matchers;
+  return binaryOperator(
+      anyOf(hasOperatorName(">"), hasOperatorName(">="), hasOperatorName("=="),
+            hasOperatorName("<="), hasOperatorName("<")),
+      hasEitherOperand(ignoringImpCasts(callExpr(callee(funcDecl)))));
+}
+
 } // namespace abseil
 } // namespace tidy
 } // namespace clang

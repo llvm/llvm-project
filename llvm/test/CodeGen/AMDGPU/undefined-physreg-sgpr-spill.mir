@@ -74,7 +74,7 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr2_sgpr3, $sgpr4_sgpr5
 
     $vcc = COPY $vgpr1
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -138,6 +138,6 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr2_sgpr3, $sgpr4_sgpr5
 
     $vcc = COPY $vgpr1
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

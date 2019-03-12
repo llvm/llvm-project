@@ -33,7 +33,7 @@ template <typename T> class SmallVectorImpl;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class DataExtractor DataExtractor.h "lldb/Core/DataExtractor.h" An data
+/// \class DataExtractor DataExtractor.h "lldb/Core/DataExtractor.h" An data
 /// extractor class.
 ///
 /// DataExtractor is a class that can extract data (swapping if needed) from a
@@ -44,12 +44,12 @@ namespace lldb_private {
 /// unique position in the shared data and extract data from different
 /// offsets.
 ///
-/// @see DataBuffer
+/// \see DataBuffer
 //----------------------------------------------------------------------
 class DataExtractor {
 public:
   //------------------------------------------------------------------
-  /// @typedef DataExtractor::Type
+  /// \typedef DataExtractor::Type
   /// Type enumerations used in the dump routines.
   //------------------------------------------------------------------
   typedef enum {
@@ -76,19 +76,19 @@ public:
   /// This constructor allows us to use data that is owned by the caller. The
   /// data must stay around as long as this object is valid.
   ///
-  /// @param[in] data
+  /// \param[in] data
   ///     A pointer to caller owned data.
   ///
-  /// @param[in] data_length
+  /// \param[in] data_length
   ///     The length in bytes of \a data.
   ///
-  /// @param[in] byte_order
+  /// \param[in] byte_order
   ///     A byte order of the data that we are extracting from.
   ///
-  /// @param[in] addr_size
+  /// \param[in] addr_size
   ///     A new address byte size value.
   ///
-  /// @param[in] target_byte_size
+  /// \param[in] target_byte_size
   ///     A size of a target byte in 8-bit host bytes
   //------------------------------------------------------------------
   DataExtractor(const void *data, lldb::offset_t data_length,
@@ -103,16 +103,16 @@ public:
   /// the data lives as long as anyone still has a valid shared pointer to the
   /// data in \a data_sp.
   ///
-  /// @param[in] data_sp
+  /// \param[in] data_sp
   ///     A shared pointer to data.
   ///
-  /// @param[in] byte_order
+  /// \param[in] byte_order
   ///     A byte order of the data that we are extracting from.
   ///
-  /// @param[in] addr_size
+  /// \param[in] addr_size
   ///     A new address byte size value.
   ///
-  /// @param[in] target_byte_size
+  /// \param[in] target_byte_size
   ///     A size of a target byte in 8-bit host bytes
   //------------------------------------------------------------------
   DataExtractor(const lldb::DataBufferSP &data_sp, lldb::ByteOrder byte_order,
@@ -130,16 +130,16 @@ public:
   /// are not \a length bytes available in \a data starting at \a offset, the
   /// length will be truncated to contain as many bytes as possible.
   ///
-  /// @param[in] data
+  /// \param[in] data
   ///     Another DataExtractor object that contains data.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset into \a data at which the subset starts.
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The length in bytes of the subset of data.
   ///
-  /// @param[in] target_byte_size
+  /// \param[in] target_byte_size
   ///     A size of a target byte in 8-bit host bytes
   //------------------------------------------------------------------
   DataExtractor(const DataExtractor &data, lldb::offset_t offset,
@@ -154,10 +154,10 @@ public:
   /// this object. If \a rhs contains shared data, a reference to that shared
   /// data will be added.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     Another DataExtractor object to copy.
   ///
-  /// @return
+  /// \return
   ///     A const reference to this object.
   //------------------------------------------------------------------
   const DataExtractor &operator=(const DataExtractor &rhs);
@@ -188,32 +188,32 @@ public:
   /// the beginning of each line and can be offset by base address \a
   /// base_addr. \a num_per_line objects will be displayed on each line.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to dump the output to. If nullptr the output will
   ///     be dumped to Log().
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset into the data at which to start dumping.
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The number of bytes to dump.
   ///
-  /// @param[in] base_addr
+  /// \param[in] base_addr
   ///     The base address that gets added to the offset displayed on
   ///     each line.
   ///
-  /// @param[in] num_per_line
+  /// \param[in] num_per_line
   ///     The number of \a type objects to display on each line.
   ///
-  /// @param[in] type
+  /// \param[in] type
   ///     The type of objects to use when dumping data from this
   ///     object. See DataExtractor::Type.
   ///
-  /// @param[in] type_format
+  /// \param[in] type_format
   ///     The optional format to use for the \a type objects. If this
   ///     is nullptr, the default format for the \a type will be used.
   ///
-  /// @return
+  /// \return
   ///     The offset at which dumping ended.
   //------------------------------------------------------------------
   lldb::offset_t PutToLog(Log *log, lldb::offset_t offset,
@@ -228,22 +228,22 @@ public:
   /// data in the requested byte order (\a dst_byte_order) and place the
   /// results in \a dst. \a dst must be at least \a length bytes long.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset in bytes into the contained data at which to
   ///     start extracting.
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The number of bytes to extract.
   ///
-  /// @param[in] dst_byte_order
+  /// \param[in] dst_byte_order
   ///     A byte order of the data that we want when the value in
   ///     copied to \a dst.
   ///
-  /// @param[out] dst
+  /// \param[out] dst
   ///     The buffer that will receive the extracted value if there
   ///     are enough bytes available in the current data.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that were extracted which will be \a
   ///     length when the value is successfully extracted, or zero
   ///     if there aren't enough bytes at the specified offset.
@@ -259,14 +259,14 @@ public:
   /// m_addr_size member variable and should be set correctly prior to
   /// extracting any address values.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     The extracted address value.
   //------------------------------------------------------------------
   uint64_t GetAddress(lldb::offset_t *offset_ptr) const;
@@ -278,7 +278,7 @@ public:
   ///
   /// Return the size in bytes of any address values this object will extract.
   ///
-  /// @return
+  /// \return
   ///     The size in bytes of address values that will be extracted.
   //------------------------------------------------------------------
   uint32_t GetAddressByteSize() const { return m_addr_size; }
@@ -286,7 +286,7 @@ public:
   //------------------------------------------------------------------
   /// Get the number of bytes contained in this object.
   ///
-  /// @return
+  /// \return
   ///     The total number of bytes of data this object refers to.
   //------------------------------------------------------------------
   uint64_t GetByteSize() const { return m_end - m_start; }
@@ -299,14 +299,14 @@ public:
   /// extracted and the \a offset_ptr will be updated with the offset of the
   /// byte that follows the NULL terminator byte.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     A pointer to the C string value in the data. If the offset
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the C string is out of bounds,
@@ -323,14 +323,14 @@ public:
   /// will be updated with the offset of the byte that follows the fixed
   /// length field.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     A pointer to the C string value in the data. If the offset
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the field is out of bounds, or if
@@ -346,18 +346,18 @@ public:
   /// pointed to by \a offset_ptr will not be updated and nullptr will be
   /// returned.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The optional length of a string to extract. If the value is
   ///     zero, a NULL terminated C string will be extracted.
   ///
-  /// @return
+  /// \return
   ///     A pointer to the bytes in this object's data if the offset
   ///     and length are valid, or nullptr otherwise.
   //------------------------------------------------------------------
@@ -371,16 +371,16 @@ public:
   //------------------------------------------------------------------
   /// Copy \a length bytes from \a *offset, without swapping bytes.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset into this data from which to start copying
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The length of the data to copy from this object
   ///
-  /// @param[out] dst
+  /// \param[out] dst
   ///     The buffer to place the output data.
   ///
-  /// @return
+  /// \return
   ///     Returns the number of bytes that were copied, or zero if
   ///     anything goes wrong.
   //------------------------------------------------------------------
@@ -399,29 +399,29 @@ public:
   /// order of this object and the \a dst_byte_order. This can be very handy
   /// when say copying a partial data value into a register.
   ///
-  /// @param[in] src_offset
+  /// \param[in] src_offset
   ///     The offset into this data from which to start copying an
   ///     endian entity
   ///
-  /// @param[in] src_len
+  /// \param[in] src_len
   ///     The length of the endian data to copy from this object
   ///     into the \a dst object
   ///
-  /// @param[out] dst
+  /// \param[out] dst
   ///     The buffer where to place the endian data. The data might
   ///     need to be byte swapped (and appropriately padded with
   ///     zeroes if \a src_len != \a dst_len) if \a dst_byte_order
   ///     does not match the byte order in this object.
   ///
-  /// @param[in] dst_len
+  /// \param[in] dst_len
   ///     The length number of bytes that the endian value will
   ///     occupy is \a dst.
   ///
-  /// @param[in] byte_order
+  /// \param[in] byte_order
   ///     The byte order that the endian value should be in the \a dst
   ///     buffer.
   ///
-  /// @return
+  /// \return
   ///     Returns the number of bytes that were copied, or zero if
   ///     anything goes wrong.
   //------------------------------------------------------------------
@@ -433,7 +433,7 @@ public:
   //------------------------------------------------------------------
   /// Get the data end pointer.
   ///
-  /// @return
+  /// \return
   ///     Returns a pointer to the next byte contained in this
   ///     object's data, or nullptr of there is no data in this object.
   //------------------------------------------------------------------
@@ -444,7 +444,7 @@ public:
   ///
   /// Get the offset of the first byte of data in the shared data (if any).
   ///
-  /// @return
+  /// \return
   ///     If this object contains shared data, this function returns
   ///     the offset in bytes into that shared data, zero otherwise.
   //------------------------------------------------------------------
@@ -453,7 +453,7 @@ public:
   //------------------------------------------------------------------
   /// Get the data start pointer.
   ///
-  /// @return
+  /// \return
   ///     Returns a pointer to the first byte contained in this
   ///     object's data, or nullptr of there is no data in this object.
   //------------------------------------------------------------------
@@ -464,14 +464,14 @@ public:
   ///
   /// Extract a single float value.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     The floating value that was extracted, or zero on failure.
   //------------------------------------------------------------------
   float GetFloat(lldb::offset_t *offset_ptr) const;
@@ -488,17 +488,17 @@ public:
   /// byte_size argument. \a byte_size must have a value >= 1 and <= 4 since
   /// the return value is only 32 bits wide.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The size in byte of the integer to extract.
   ///
-  /// @return
+  /// \return
   ///     The integer value that was extracted, or zero on failure.
   //------------------------------------------------------------------
   uint32_t GetMaxU32(lldb::offset_t *offset_ptr, size_t byte_size) const;
@@ -512,17 +512,17 @@ public:
   /// equal to one and less than or equal to eight since the return value is
   /// 64 bits wide.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The size in byte of the integer to extract.
   ///
-  /// @return
+  /// \return
   ///     The unsigned integer value that was extracted, or zero on
   ///     failure.
   //------------------------------------------------------------------
@@ -540,17 +540,17 @@ public:
   /// have a value greater than or equal to one and less than or equal to
   /// eight since the return value is 64 bits wide.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The size in byte of the integer to extract.
   ///
-  /// @return
+  /// \return
   ///     The sign extended signed integer value that was extracted,
   ///     or zero on failure.
   //------------------------------------------------------------------
@@ -567,28 +567,28 @@ public:
   /// equal to one and less than or equal to 8 since the return value is 64
   /// bits wide.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The size in byte of the integer to extract.
   ///
-  /// @param[in] bitfield_bit_size
+  /// \param[in] bitfield_bit_size
   ///     The size in bits of the bitfield value to extract, or zero
   ///     to just extract the entire integer value.
   ///
-  /// @param[in] bitfield_bit_offset
+  /// \param[in] bitfield_bit_offset
   ///     The bit offset of the bitfield value in the extracted
   ///     integer.  For little-endian data, this is the offset of
   ///     the LSB of the bitfield from the LSB of the integer.
   ///     For big-endian data, this is the offset of the MSB of the
   ///     bitfield from the MSB of the integer.
   ///
-  /// @return
+  /// \return
   ///     The unsigned bitfield integer value that was extracted, or
   ///     zero on failure.
   //------------------------------------------------------------------
@@ -607,28 +607,28 @@ public:
   /// have a value greater than or equal to one and less than or equal to
   /// eight since the return value is 64 bits wide.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The size in bytes of the integer to extract.
   ///
-  /// @param[in] bitfield_bit_size
+  /// \param[in] bitfield_bit_size
   ///     The size in bits of the bitfield value to extract, or zero
   ///     to just extract the entire integer value.
   ///
-  /// @param[in] bitfield_bit_offset
+  /// \param[in] bitfield_bit_offset
   ///     The bit offset of the bitfield value in the extracted
   ///     integer.  For little-endian data, this is the offset of
   ///     the LSB of the bitfield from the LSB of the integer.
   ///     For big-endian data, this is the offset of the MSB of the
   ///     bitfield from the MSB of the integer.
   ///
-  /// @return
+  /// \return
   ///     The signed bitfield integer value that was extracted, or
   ///     zero on failure.
   //------------------------------------------------------------------
@@ -644,14 +644,14 @@ public:
   /// m_addr_size member variable and should be set correctly prior to
   /// extracting any pointer values.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     The extracted pointer value as a 64 integer.
   //------------------------------------------------------------------
   uint64_t GetPointer(lldb::offset_t *offset_ptr) const;
@@ -659,7 +659,7 @@ public:
   //------------------------------------------------------------------
   /// Get the current byte order value.
   ///
-  /// @return
+  /// \return
   ///     The current byte order value from this object's internal
   ///     state.
   //------------------------------------------------------------------
@@ -671,14 +671,14 @@ public:
   /// Extract a single uint8_t from the binary data at the offset pointed to
   /// by \a offset_ptr, and advance the offset on success.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     The extracted uint8_t value.
   //------------------------------------------------------------------
   uint8_t GetU8(lldb::offset_t *offset_ptr) const;
@@ -701,21 +701,21 @@ public:
   /// pointed to by \a offset_ptr, and advance the offset on success. The
   /// extracted values are copied into \a dst.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @param[out] dst
+  /// \param[out] dst
   ///     A buffer to copy \a count uint8_t values into. \a dst must
   ///     be large enough to hold all requested data.
   ///
-  /// @param[in] count
+  /// \param[in] count
   ///     The number of uint8_t values to extract.
   ///
-  /// @return
+  /// \return
   ///     \a dst if all values were properly extracted and copied,
   ///     nullptr otherwise.
   //------------------------------------------------------------------
@@ -727,14 +727,14 @@ public:
   /// Extract a single uint16_t from the binary data at the offset pointed to
   /// by \a offset_ptr, and update the offset on success.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     The extracted uint16_t value.
   //------------------------------------------------------------------
   uint16_t GetU16(lldb::offset_t *offset_ptr) const;
@@ -746,21 +746,21 @@ public:
   /// pointed to by \a offset_ptr, and advance the offset on success. The
   /// extracted values are copied into \a dst.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @param[out] dst
+  /// \param[out] dst
   ///     A buffer to copy \a count uint16_t values into. \a dst must
   ///     be large enough to hold all requested data.
   ///
-  /// @param[in] count
+  /// \param[in] count
   ///     The number of uint16_t values to extract.
   ///
-  /// @return
+  /// \return
   ///     \a dst if all values were properly extracted and copied,
   ///     nullptr otherwise.
   //------------------------------------------------------------------
@@ -772,14 +772,14 @@ public:
   /// Extract a single uint32_t from the binary data at the offset pointed to
   /// by \a offset_ptr, and update the offset on success.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     The extracted uint32_t value.
   //------------------------------------------------------------------
   uint32_t GetU32(lldb::offset_t *offset_ptr) const;
@@ -791,21 +791,21 @@ public:
   /// pointed to by \a offset_ptr, and advance the offset on success. The
   /// extracted values are copied into \a dst.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @param[out] dst
+  /// \param[out] dst
   ///     A buffer to copy \a count uint32_t values into. \a dst must
   ///     be large enough to hold all requested data.
   ///
-  /// @param[in] count
+  /// \param[in] count
   ///     The number of uint32_t values to extract.
   ///
-  /// @return
+  /// \return
   ///     \a dst if all values were properly extracted and copied,
   ///     nullptr otherwise.
   //------------------------------------------------------------------
@@ -817,14 +817,14 @@ public:
   /// Extract a single uint64_t from the binary data at the offset pointed to
   /// by \a offset_ptr, and update the offset on success.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     The extracted uint64_t value.
   //------------------------------------------------------------------
   uint64_t GetU64(lldb::offset_t *offset_ptr) const;
@@ -836,21 +836,21 @@ public:
   /// pointed to by \a offset_ptr, and advance the offset on success. The
   /// extracted values are copied into \a dst.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @param[out] dst
+  /// \param[out] dst
   ///     A buffer to copy \a count uint64_t values into. \a dst must
   ///     be large enough to hold all requested data.
   ///
-  /// @param[in] count
+  /// \param[in] count
   ///     The number of uint64_t values to extract.
   ///
-  /// @return
+  /// \return
   ///     \a dst if all values were properly extracted and copied,
   ///     nullptr otherwise.
   //------------------------------------------------------------------
@@ -864,14 +864,14 @@ public:
   /// offset_ptr will be updated with the offset of the byte following the
   /// last extracted byte.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     The extracted signed integer value.
   //------------------------------------------------------------------
   int64_t GetSLEB128(lldb::offset_t *offset_ptr) const;
@@ -884,14 +884,14 @@ public:
   /// offset_ptr will be updated with the offset of the byte following the
   /// last extracted byte.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     The extracted unsigned integer value.
   //------------------------------------------------------------------
   uint64_t GetULEB128(lldb::offset_t *offset_ptr) const;
@@ -905,10 +905,10 @@ public:
   /// sure the entire string lies within the bounds of this object's data,
   /// only \a offset is verified to be a valid offset.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     An offset into the data.
   ///
-  /// @return
+  /// \return
   ///     A non-nullptr C string pointer if \a offset is a valid offset,
   ///     nullptr otherwise.
   //------------------------------------------------------------------
@@ -920,7 +920,7 @@ public:
   /// Returns a pointer to \a length bytes at \a offset as long as there are
   /// \a length bytes available starting at \a offset.
   ///
-  /// @return
+  /// \return
   ///     A non-nullptr data pointer if \a offset is a valid offset and
   ///     there are \a length bytes available at that offset, nullptr
   ///     otherwise.
@@ -937,7 +937,7 @@ public:
   /// Set the size in bytes that will be used when extracting any address and
   /// pointer values from data contained in this object.
   ///
-  /// @param[in] addr_size
+  /// \param[in] addr_size
   ///     The size in bytes to use when extracting addresses.
   //------------------------------------------------------------------
   void SetAddressByteSize(uint32_t addr_size) {
@@ -955,16 +955,16 @@ public:
   /// subset of this object's data, is valid. If \a bytes is nullptr, or \a
   /// length is zero, this object will contain no data.
   ///
-  /// @param[in] bytes
+  /// \param[in] bytes
   ///     A pointer to caller owned data.
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The length in bytes of \a bytes.
   ///
-  /// @param[in] byte_order
+  /// \param[in] byte_order
   ///     A byte order of the data that we are extracting from.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object now contains.
   //------------------------------------------------------------------
   lldb::offset_t SetData(const void *bytes, lldb::offset_t length,
@@ -982,16 +982,16 @@ public:
   /// are not \a length bytes available in \a data starting at \a offset, the
   /// length will be truncated to contains as many bytes as possible.
   ///
-  /// @param[in] data
+  /// \param[in] data
   ///     Another DataExtractor object that contains data.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset into \a data at which the subset starts.
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The length in bytes of the subset of \a data.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object now contains.
   //------------------------------------------------------------------
   lldb::offset_t SetData(const DataExtractor &data, lldb::offset_t offset,
@@ -1009,16 +1009,16 @@ public:
   /// bytes available in \a data starting at \a offset, the length will be
   /// truncated to contains as many bytes as possible.
   ///
-  /// @param[in] data_sp
+  /// \param[in] data_sp
   ///     A shared pointer to data.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset into \a data_sp at which the subset starts.
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The length in bytes of the subset of \a data_sp.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object now contains.
   //------------------------------------------------------------------
   lldb::offset_t SetData(const lldb::DataBufferSP &data_sp,
@@ -1031,7 +1031,7 @@ public:
   /// Sets the byte order of the data to extract. Extracted values will be
   /// swapped if necessary when decoding.
   ///
-  /// @param[in] byte_order
+  /// \param[in] byte_order
   ///     The byte order value to use when extracting data.
   //------------------------------------------------------------------
   void SetByteOrder(lldb::ByteOrder byte_order) { m_byte_order = byte_order; }
@@ -1044,14 +1044,14 @@ public:
   /// to by \a offset_ptr will be updated with the offset of the byte
   /// following the last extracted byte.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   //      The number of bytes consumed during the extraction.
   //------------------------------------------------------------------
   uint32_t Skip_LEB128(lldb::offset_t *offset_ptr) const;
@@ -1059,7 +1059,7 @@ public:
   //------------------------------------------------------------------
   /// Test the validity of \a offset.
   ///
-  /// @return
+  /// \return
   ///     \b true if \a offset is a valid offset into the data in this
   ///     object, \b false otherwise.
   //------------------------------------------------------------------
@@ -1070,7 +1070,7 @@ public:
   //------------------------------------------------------------------
   /// Test the availability of \a length bytes of data from \a offset.
   ///
-  /// @return
+  /// \return
   ///     \b true if \a offset is a valid offset and there are \a
   ///     length bytes available at that offset, \b false otherwise.
   //------------------------------------------------------------------

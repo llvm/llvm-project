@@ -237,6 +237,16 @@ void CheckFoldableChainNodeMatcher::printImpl(raw_ostream &OS,
   OS.indent(indent) << "CheckFoldableChainNode\n";
 }
 
+void CheckImmAllOnesVMatcher::printImpl(raw_ostream &OS,
+                                        unsigned indent) const {
+  OS.indent(indent) << "CheckAllOnesV\n";
+}
+
+void CheckImmAllZerosVMatcher::printImpl(raw_ostream &OS,
+                                         unsigned indent) const {
+  OS.indent(indent) << "CheckAllZerosV\n";
+}
+
 void EmitIntegerMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "EmitInteger " << Val << " VT=" << getEnumName(VT)
                     << '\n';
@@ -402,3 +412,12 @@ bool CheckValueTypeMatcher::isContradictoryImpl(const Matcher *M) const {
   return false;
 }
 
+bool CheckImmAllOnesVMatcher::isContradictoryImpl(const Matcher *M) const {
+  // AllZeros is contradictory.
+  return isa<CheckImmAllZerosVMatcher>(M);
+}
+
+bool CheckImmAllZerosVMatcher::isContradictoryImpl(const Matcher *M) const {
+  // AllOnes is contradictory.
+  return isa<CheckImmAllOnesVMatcher>(M);
+}

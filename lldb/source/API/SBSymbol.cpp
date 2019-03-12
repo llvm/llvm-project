@@ -45,6 +45,10 @@ void SBSymbol::SetSymbol(lldb_private::Symbol *lldb_object_ptr) {
 
 bool SBSymbol::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSymbol, IsValid);
+  return this->operator bool();
+}
+SBSymbol::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSymbol, operator bool);
 
   return m_opaque_ptr != NULL;
 }

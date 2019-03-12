@@ -55,9 +55,9 @@ public:
   /// breakpoint and location and returns a BreakpointID filled out with
   /// the proper id and location.
   ///
-  /// @param[in] input
+  /// \param[in] input
   ///     A string containing JUST the breakpoint description.
-  /// @return
+  /// \return
   ///     If \p input was not a valid breakpoint ID string, returns
   ///     \b llvm::None.  Otherwise returns a BreakpointID with members filled
   ///     out accordingly.
@@ -70,12 +70,12 @@ public:
   /// If it is a mal-formed breakpoint name, error will be set to an appropriate
   /// error string.
   ///
-  /// @param[in] input
+  /// \param[in] input
   ///     A string containing JUST the breakpoint description.
-  /// @param[out] error
+  /// \param[out] error
   ///     If the name is a well-formed breakpoint name, set to success,
   ///     otherwise set to an error.
-  /// @return
+  /// \return
   ///     \b true if the name is a breakpoint name (as opposed to an ID or
   ///     range) false otherwise.
   //------------------------------------------------------------------
@@ -86,10 +86,10 @@ public:
   /// a string containing the canonical description for the breakpoint
   /// or breakpoint location.
   ///
-  /// @param[out] break_id
+  /// \param[out] break_id
   ///     This is the break id.
   ///
-  /// @param[out] break_loc_id
+  /// \param[out] break_loc_id
   ///     This is breakpoint location id, or LLDB_INVALID_BREAK_ID is no
   ///     location is to be specified.
   //------------------------------------------------------------------

@@ -116,10 +116,6 @@ bool StackSizeIsUnlimited() {
   return (stack_size == RLIM_INFINITY);
 }
 
-uptr GetStackSizeLimitInBytes() {
-  return (uptr)getlim(RLIMIT_STACK);
-}
-
 void SetStackSizeLimitInBytes(uptr limit) {
   setlim(RLIMIT_STACK, (rlim_t)limit);
   CHECK(!StackSizeIsUnlimited());

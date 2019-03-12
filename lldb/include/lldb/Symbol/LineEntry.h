@@ -16,7 +16,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class LineEntry LineEntry.h "lldb/Symbol/LineEntry.h"
+/// \class LineEntry LineEntry.h "lldb/Symbol/LineEntry.h"
 /// A line table entry class.
 //----------------------------------------------------------------------
 struct LineEntry {
@@ -46,30 +46,30 @@ struct LineEntry {
   /// Dump a description of the contents of this object to the supplied stream
   /// \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   ///
-  /// @param[in] comp_unit
+  /// \param[in] comp_unit
   ///     The compile unit object that contains the support file
   ///     list so the line entry can dump the file name (since this
   ///     object contains a file index into the support file list).
   ///
-  /// @param[in] show_file
+  /// \param[in] show_file
   ///     If \b true, display the filename with the line entry which
   ///     requires that the compile unit object \a comp_unit be a
   ///     valid pointer.
   ///
-  /// @param[in] style
+  /// \param[in] style
   ///     The display style for the section offset address.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the address was able to be displayed
   ///     using \a style. File and load addresses may be unresolved
   ///     and it may not be possible to display a valid address value.
   ///     Returns \b false if the address was not able to be properly
   ///     dumped.
   ///
-  /// @see Address::DumpStyle
+  /// \see Address::DumpStyle
   //------------------------------------------------------------------
   bool Dump(Stream *s, Target *target, bool show_file, Address::DumpStyle style,
             Address::DumpStyle fallback_style, bool show_range) const;
@@ -81,15 +81,15 @@ struct LineEntry {
   /// Dumps information specific to a process that stops at this line entry to
   /// the supplied stream \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   ///
-  /// @param[in] comp_unit
+  /// \param[in] comp_unit
   ///     The compile unit object that contains the support file
   ///     list so the line entry can dump the file name (since this
   ///     object contains a file index into the support file list).
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the file and line were properly dumped,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -98,7 +98,7 @@ struct LineEntry {
   //------------------------------------------------------------------
   /// Check if a line entry object is valid.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the line entry contains a valid section
   ///     offset address, file index, and line number, \b false
   ///     otherwise.
@@ -108,16 +108,16 @@ struct LineEntry {
   //------------------------------------------------------------------
   /// Compare two LineEntry objects.
   ///
-  /// @param[in] lhs
+  /// \param[in] lhs
   ///     The Left Hand Side const LineEntry object reference.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     The Right Hand Side const LineEntry object reference.
   ///
-  /// @return
-  ///     @li -1 if lhs < rhs
-  ///     @li 0 if lhs == rhs
-  ///     @li 1 if lhs > rhs
+  /// \return
+  ///     \li -1 if lhs < rhs
+  ///     \li 0 if lhs == rhs
+  ///     \li 1 if lhs > rhs
   //------------------------------------------------------------------
   static int Compare(const LineEntry &lhs, const LineEntry &rhs);
 
@@ -142,7 +142,7 @@ struct LineEntry {
   /// range of contiuous LineEntries with line #0 will be included in the
   /// complete range.
   ///
-  /// @return
+  /// \return
   ///     The contiguous AddressRange for this source line.
   //------------------------------------------------------------------
   AddressRange GetSameLineContiguousAddressRange() const;
@@ -150,7 +150,7 @@ struct LineEntry {
   //------------------------------------------------------------------
   /// Apply file mappings from target.source-map to the LineEntry's file.
   ///
-  /// @param[in] target_sp
+  /// \param[in] target_sp
   ///     Shared pointer to the target this LineEntry belongs to.
   //------------------------------------------------------------------
 
@@ -185,13 +185,13 @@ struct LineEntry {
 //------------------------------------------------------------------
 /// Less than operator.
 ///
-/// @param[in] lhs
+/// \param[in] lhs
 ///     The Left Hand Side const LineEntry object reference.
 ///
-/// @param[in] rhs
+/// \param[in] rhs
 ///     The Right Hand Side const LineEntry object reference.
 ///
-/// @return
+/// \return
 ///     Returns \b true if lhs < rhs, false otherwise.
 //------------------------------------------------------------------
 bool operator<(const LineEntry &lhs, const LineEntry &rhs);

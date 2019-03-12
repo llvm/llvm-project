@@ -105,6 +105,10 @@ if (LIBCXXABI_USE_LLVM_UNWINDER)
 endif()
 
 # Setup flags.
+if (NOT WIN32)
+  add_flags_if_supported(-fPIC)
+endif()
+
 add_link_flags_if_supported(-nodefaultlibs)
 
 if (LIBCXX_TARGETING_MSVC)

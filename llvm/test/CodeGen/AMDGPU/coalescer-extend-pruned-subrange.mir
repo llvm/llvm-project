@@ -31,7 +31,7 @@ body: |
     %15:sreg_64_xexec = V_CMP_EQ_U32_e64 0, %14, implicit $exec
     %16:vgpr_32 = V_CNDMASK_B32_e64 0, 1, %15, implicit $exec
     BUFFER_STORE_DWORD_OFFEN_exact %16, undef %17:vgpr_32, undef %18:sreg_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into constant-pool, align 1, addrspace 4)
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.2:
     successors: %bb.3, %bb.4

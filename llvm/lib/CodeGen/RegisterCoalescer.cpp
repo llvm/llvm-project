@@ -3277,8 +3277,9 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
 bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {
   if (LI.valnos.size() < LargeIntervalSizeThreshold)
     return false;
-  if (LargeLIVisitCounter[LI.reg] < LargeIntervalFreqThreshold) {
-    LargeLIVisitCounter[LI.reg]++;
+  auto &Counter = LargeLIVisitCounter[LI.reg];
+  if (Counter < LargeIntervalFreqThreshold) {
+    Counter++;
     return false;
   }
   return true;

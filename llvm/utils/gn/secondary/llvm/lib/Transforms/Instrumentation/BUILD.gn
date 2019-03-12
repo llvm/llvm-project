@@ -14,7 +14,6 @@ static_library("Instrumentation") {
     "CGProfile.cpp",
     "ControlHeightReduction.cpp",
     "DataFlowSanitizer.cpp",
-    "EfficiencySanitizer.cpp",
     "GCOVProfiling.cpp",
     "HWAddressSanitizer.cpp",
     "IndirectCallPromotion.cpp",

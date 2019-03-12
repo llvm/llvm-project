@@ -94,6 +94,10 @@ SBInstruction::~SBInstruction() {}
 
 bool SBInstruction::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBInstruction, IsValid);
+  return this->operator bool();
+}
+SBInstruction::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBInstruction, operator bool);
 
   return m_opaque_sp && m_opaque_sp->IsValid();
 }

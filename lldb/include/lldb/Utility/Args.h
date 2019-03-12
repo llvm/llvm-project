@@ -21,7 +21,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Args Args.h "lldb/Utility/Args.h"
+/// \class Args Args.h "lldb/Utility/Args.h"
 /// A command line argument class.
 ///
 /// The Args class is designed to be fed a command line. The command line is
@@ -57,11 +57,11 @@ public:
   //------------------------------------------------------------------
   /// Construct with an option command string.
   ///
-  /// @param[in] command
+  /// \param[in] command
   ///     A NULL terminated command that will be copied and split up
   ///     into arguments.
   ///
-  /// @see Args::SetCommandString(llvm::StringRef)
+  /// \see Args::SetCommandString(llvm::StringRef)
   //------------------------------------------------------------------
   Args(llvm::StringRef command = llvm::StringRef());
 
@@ -86,10 +86,10 @@ public:
   ///
   /// If label_name is nullptr, the dump operation is skipped.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump all arguments in the argument
   ///     vector.
-  /// @param[in] label_name
+  /// \param[in] label_name
   ///     The label_name to use as the label printed for each
   ///     entry of the args like so:
   ///       {label_name}[{index}]={value}
@@ -102,13 +102,13 @@ public:
   /// The command string will be copied and split up into arguments that can
   /// be accessed via the accessor functions.
   ///
-  /// @param[in] command
+  /// \param[in] command
   ///     A command StringRef that will be copied and split up
   ///     into arguments.
   ///
-  /// @see Args::GetArgumentCount() const
-  /// @see Args::GetArgumentAtIndex (size_t) const @see
-  /// Args::GetArgumentVector () @see Args::Shift () @see Args::Unshift (const
+  /// \see Args::GetArgumentCount() const
+  /// \see Args::GetArgumentAtIndex (size_t) const @see
+  /// Args::GetArgumentVector () \see Args::Shift () \see Args::Unshift (const
   /// char *)
   //------------------------------------------------------------------
   void SetCommandString(llvm::StringRef command);
@@ -120,7 +120,7 @@ public:
   //------------------------------------------------------------------
   /// Gets the number of arguments left in this command object.
   ///
-  /// @return
+  /// \return
   ///     The number or arguments in this object.
   //------------------------------------------------------------------
   size_t GetArgumentCount() const;
@@ -130,7 +130,7 @@ public:
   /// Gets the NULL terminated C string argument pointer for the argument at
   /// index \a idx.
   ///
-  /// @return
+  /// \return
   ///     The NULL terminated C string argument pointer if \a idx is a
   ///     valid argument index, NULL otherwise.
   //------------------------------------------------------------------
@@ -157,7 +157,7 @@ public:
   ///         int main (int argc, const char **argv);
   ///     \endcode
   ///
-  /// @return
+  /// \return
   ///     An array of NULL terminated C string argument pointers that
   ///     also has a terminating NULL C string pointer
   //------------------------------------------------------------------
@@ -173,7 +173,7 @@ public:
   ///         int main (int argc, const char **argv);
   ///     \endcode
   ///
-  /// @return
+  /// \return
   ///     An array of NULL terminate C string argument pointers that
   ///     also has a terminating NULL C string pointer
   //------------------------------------------------------------------
@@ -191,10 +191,10 @@ public:
   //------------------------------------------------------------------
   /// Appends a new argument to the end of the list argument list.
   ///
-  /// @param[in] arg_cstr
+  /// \param[in] arg_cstr
   ///     The new argument as a NULL terminated C string.
   ///
-  /// @param[in] quote_char
+  /// \param[in] quote_char
   ///     If the argument was originally quoted, put in the quote char here.
   //------------------------------------------------------------------
   void AppendArgument(llvm::StringRef arg_str, char quote_char = '\0');
@@ -206,16 +206,16 @@ public:
   //------------------------------------------------------------------
   /// Insert the argument value at index \a idx to \a arg_cstr.
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     The index of where to insert the argument.
   ///
-  /// @param[in] arg_cstr
+  /// \param[in] arg_cstr
   ///     The new argument as a NULL terminated C string.
   ///
-  /// @param[in] quote_char
+  /// \param[in] quote_char
   ///     If the argument was originally quoted, put in the quote char here.
   ///
-  /// @return
+  /// \return
   ///     The NULL terminated C string of the copy of \a arg_cstr.
   //------------------------------------------------------------------
   void InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
@@ -225,13 +225,13 @@ public:
   /// Replaces the argument value at index \a idx to \a arg_cstr if \a idx is
   /// a valid argument index.
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     The index of the argument that will have its value replaced.
   ///
-  /// @param[in] arg_cstr
+  /// \param[in] arg_cstr
   ///     The new argument as a NULL terminated C string.
   ///
-  /// @param[in] quote_char
+  /// \param[in] quote_char
   ///     If the argument was originally quoted, put in the quote char here.
   //------------------------------------------------------------------
   void ReplaceArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
@@ -241,7 +241,7 @@ public:
   /// Deletes the argument value at index
   /// if \a idx is a valid argument index.
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     The index of the argument that will have its value replaced.
   ///
   //------------------------------------------------------------------
@@ -268,7 +268,7 @@ public:
   /// by calling Args::GetArgumentAtIndex (size_t) const first and copying the
   /// returned value before calling Args::Shift().
   ///
-  /// @see Args::GetArgumentAtIndex (size_t) const
+  /// \see Args::GetArgumentAtIndex (size_t) const
   //------------------------------------------------------------------
   void Shift();
 
@@ -278,10 +278,10 @@ public:
   ///
   /// A copy \a arg_cstr will be made.
   ///
-  /// @param[in] arg_cstr
+  /// \param[in] arg_cstr
   ///     The argument to push on the front of the argument stack.
   ///
-  /// @param[in] quote_char
+  /// \param[in] quote_char
   ///     If the argument was originally quoted, put in the quote char here.
   //------------------------------------------------------------------
   void Unshift(llvm::StringRef arg_str, char quote_char = '\0');
@@ -358,7 +358,7 @@ private:
 };
 
 //----------------------------------------------------------------------
-/// @class OptionsWithRaw Args.h "lldb/Utility/Args.h"
+/// \class OptionsWithRaw Args.h "lldb/Utility/Args.h"
 /// A pair of an option list with a 'raw' string as a suffix.
 ///
 /// This class works similar to Args, but handles the case where we have a
@@ -376,7 +376,7 @@ private:
 /// All strings not matching the above format as considered to be just a raw
 /// string without any options.
 ///
-/// @see Args
+/// \see Args
 //----------------------------------------------------------------------
 class OptionsWithRaw {
 public:
@@ -385,7 +385,7 @@ public:
   ///
   /// See the class description for a description of the input format.
   ///
-  /// @param[in] argument_string
+  /// \param[in] argument_string
   ///     The string that should be parsed.
   //------------------------------------------------------------------
   explicit OptionsWithRaw(llvm::StringRef argument_string);

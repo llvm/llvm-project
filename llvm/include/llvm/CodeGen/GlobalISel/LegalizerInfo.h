@@ -1055,6 +1055,8 @@ public:
                                const MachineRegisterInfo &MRI) const;
 
   bool isLegal(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
+  bool isLegalOrCustom(const MachineInstr &MI,
+                       const MachineRegisterInfo &MRI) const;
 
   virtual bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &MIRBuilder,

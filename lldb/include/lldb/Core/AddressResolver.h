@@ -25,7 +25,7 @@ class Stream;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class AddressResolver AddressResolver.h "lldb/Core/AddressResolver.h"
+/// \class AddressResolver AddressResolver.h "lldb/Core/AddressResolver.h"
 /// This class works with SearchFilter to resolve function names and source
 /// file locations to their concrete addresses.
 //----------------------------------------------------------------------

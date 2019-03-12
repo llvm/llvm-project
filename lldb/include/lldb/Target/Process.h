@@ -367,7 +367,7 @@ inline bool operator!=(const ProcessModID &lhs, const ProcessModID &rhs) {
 }
 
 //----------------------------------------------------------------------
-/// @class Process Process.h "lldb/Target/Process.h"
+/// \class Process Process.h "lldb/Target/Process.h"
 /// A plug-in interface definition class for debugging a process.
 //----------------------------------------------------------------------
 class Process : public std::enable_shared_from_this<Process>,
@@ -429,7 +429,7 @@ public:
 /// A notification structure that can be used by clients to listen
 /// for changes in a process's lifetime.
 ///
-/// @see RegisterNotificationCallbacks (const Notifications&) @see
+/// \see RegisterNotificationCallbacks (const Notifications&) @see
 /// UnregisterNotificationCallbacks (const Notifications&)
 //------------------------------------------------------------------
 #ifndef SWIG
@@ -554,15 +554,15 @@ public:
   /// Process plug-in interface and returns the first instance that can debug
   /// the file.
   ///
-  /// @param[in] module_sp
+  /// \param[in] module_sp
   ///     The module shared pointer that this process will debug.
   ///
-  /// @param[in] plugin_name
+  /// \param[in] plugin_name
   ///     If nullptr, select the best plug-in for the binary. If non-nullptr
   ///     then look for a plugin whose PluginInfo's name matches
   ///     this string.
   ///
-  /// @see Process::CanDebug ()
+  /// \see Process::CanDebug ()
   //------------------------------------------------------------------
   static lldb::ProcessSP FindPlugin(lldb::TargetSP target_sp,
                                     llvm::StringRef plugin_name,
@@ -600,7 +600,7 @@ public:
   /// \a module. If the Process plug-in instance can debug a file on the
   /// current system, it should return \b true.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if this Process plug-in instance can
   ///     debug the executable, \b false otherwise.
   //------------------------------------------------------------------
@@ -618,7 +618,7 @@ public:
   //------------------------------------------------------------------
   /// Return whether this object is valid (i.e. has not been finalized.)
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if this Process has not been finalized
   ///     and \b false otherwise.
   //------------------------------------------------------------------
@@ -633,7 +633,7 @@ public:
   ///
   ///     (lldb) process command <args>
   ///
-  /// @return
+  /// \return
   ///     A CommandObject which can be one of the concrete subclasses
   ///     of CommandObject like CommandObjectRaw, CommandObjectParsed,
   ///     or CommandObjectMultiword.
@@ -653,11 +653,11 @@ public:
   /// launching. If DoLaunch returns \b true, then Process::DidLaunch() will
   /// be called.
   ///
-  /// @param[in] launch_info
+  /// \param[in] launch_info
   ///     Details regarding the environment, STDIN/STDOUT/STDERR
   ///     redirection, working path, etc. related to the requested launch.
   ///
-  /// @return
+  /// \return
   ///     An error object. Call GetID() to get the process ID if
   ///     the error object is success.
   //------------------------------------------------------------------
@@ -693,14 +693,14 @@ public:
   /// Get the cached UtilityFunction that assists in loading binary images
   /// into the process.
   ///
-  /// @param[in] platform
+  /// \param[in] platform
   ///     The platform fetching the UtilityFunction.
-  /// @param[in] factory
+  /// \param[in] factory
   ///     A function that will be called only once per-process in a
   ///     thread-safe way to create the UtilityFunction if it has not
   ///     been initialized yet.
   ///
-  /// @return
+  /// \return
   ///     The cached utility function or null if the platform is not the
   ///     same as the target's platform.
   //------------------------------------------------------------------
@@ -724,7 +724,7 @@ public:
   //
   // The default action is to return an empty data buffer.
   //
-  // @return
+  // \return
   //    A data buffer containing the contents of the AUXV data.
   //------------------------------------------------------------------
   virtual const lldb::DataBufferSP GetAuxvData();
@@ -736,7 +736,7 @@ public:
   /// plug-ins can use this function if they can't determine the current
   /// shared library load state.
   ///
-  /// @return
+  /// \return
   ///    The number of shared libraries that were loaded
   //------------------------------------------------------------------
   virtual size_t LoadModules() { return 0; }
@@ -750,7 +750,7 @@ public:
   //------------------------------------------------------------------
   /// Get the system runtime plug-in for this process.
   ///
-  /// @return
+  /// \return
   ///   Returns a pointer to the SystemRuntime plugin for this Process
   ///   if one is available.  Else returns nullptr.
   //------------------------------------------------------------------
@@ -765,10 +765,10 @@ public:
   /// char *) will be called to actually do the attach. If DoAttach returns \b
   /// true, then Process::DidAttach() will be called.
   ///
-  /// @param[in] pid
+  /// \param[in] pid
   ///     The process ID that we should attempt to attach to.
   ///
-  /// @return
+  /// \return
   ///     Returns \a pid if attaching was successful, or
   ///     LLDB_INVALID_PROCESS_ID if attaching fails.
   //------------------------------------------------------------------
@@ -777,15 +777,15 @@ public:
   //------------------------------------------------------------------
   /// Attach to a remote system via a URL
   ///
-  /// @param[in] strm
+  /// \param[in] strm
   ///     A stream where output intended for the user
   ///     (if the driver has a way to display that) generated during
   ///     the connection.  This may be nullptr if no output is needed.A
   ///
-  /// @param[in] remote_url
+  /// \param[in] remote_url
   ///     The URL format that we are connecting to.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   virtual Status ConnectRemote(Stream *strm, llvm::StringRef remote_url);
@@ -803,7 +803,7 @@ public:
   /// opposed to the DynamicLoader interface) to ensure that remote debugging
   /// can take advantage of this functionality.
   ///
-  /// @return
+  /// \return
   ///     The address of the dynamic loader information, or
   ///     LLDB_INVALID_ADDRESS if this is not supported by this
   ///     interface.
@@ -832,11 +832,11 @@ public:
 /// Clients can register notification callbacks by filling out a
 /// Process::Notifications structure and calling this function.
 ///
-/// @param[in] callbacks
+/// \param[in] callbacks
 ///     A structure that contains the notification baton and
 ///     callback functions.
 ///
-/// @see Process::Notifications
+/// \see Process::Notifications
 //------------------------------------------------------------------
 #ifndef SWIG
   void RegisterNotificationCallbacks(const Process::Notifications &callbacks);
@@ -848,15 +848,15 @@ public:
 /// Clients can unregister notification callbacks by passing a copy of the
 /// original baton and callbacks in \a callbacks.
 ///
-/// @param[in] callbacks
+/// \param[in] callbacks
 ///     A structure that contains the notification baton and
 ///     callback functions.
 ///
-/// @return
+/// \return
 ///     Returns \b true if the notification callbacks were
 ///     successfully removed from the process, \b false otherwise.
 ///
-/// @see Process::Notifications
+/// \see Process::Notifications
 //------------------------------------------------------------------
 #ifndef SWIG
   bool UnregisterNotificationCallbacks(const Process::Notifications &callbacks);
@@ -885,12 +885,12 @@ public:
   /// use PrivateResume (though you should only do that from inside the
   /// Process class.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   ///
-  /// @see Thread:Resume()
-  /// @see Thread:Step()
-  /// @see Thread:Suspend()
+  /// \see Thread:Resume()
+  /// \see Thread:Step()
+  /// \see Thread:Suspend()
   //------------------------------------------------------------------
   Status Resume();
 
@@ -904,13 +904,13 @@ public:
   /// GetInterrupted will be broadcast.  If false, we will halt the process
   /// with no events generated by the halt.
   ///
-  /// @param[in] clear_thread_plans
+  /// \param[in] clear_thread_plans
   ///     If true, when the process stops, clear all thread plans.
   ///
-  /// @param[in] use_run_lock
+  /// \param[in] use_run_lock
   ///     Whether to release the run lock after the stop.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.  If the error is empty, the process is
   ///     halted.
   ///     otherwise the halt has failed.
@@ -922,10 +922,10 @@ public:
   ///
   /// This function is not meant to be overridden by Process subclasses.
   ///
-  /// @param[in] keep_stopped
+  /// \param[in] keep_stopped
   ///     If true, don't resume the process on detach.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   Status Detach(bool keep_stopped);
@@ -936,7 +936,7 @@ public:
   ///
   /// This function is not meant to be overridden by Process subclasses.
   ///
-  /// @param[in] force_kill
+  /// \param[in] force_kill
   ///     Whether lldb should force a kill (instead of a detach) from
   ///     the inferior process.  Normally if lldb launched a binary and
   ///     Destory is called, lldb kills it.  If lldb attached to a
@@ -944,7 +944,7 @@ public:
   ///     this behavior needs to be over-ridden, this is the bool that
   ///     can be used.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   Status Destroy(bool force_kill);
@@ -954,7 +954,7 @@ public:
   ///
   /// This function is not meant to be overridden by Process subclasses.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   Status Signal(int signal);
@@ -972,7 +972,7 @@ public:
   ///
   /// Allow Process plug-ins to execute some code before attaching a process.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   virtual Status WillAttachToProcessWithID(lldb::pid_t pid) { return Status(); }
@@ -982,7 +982,7 @@ public:
   ///
   /// Allow Process plug-ins to execute some code before attaching a process.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   virtual Status WillAttachToProcessWithName(const char *process_name,
@@ -993,15 +993,15 @@ public:
   //------------------------------------------------------------------
   /// Attach to a remote system via a URL
   ///
-  /// @param[in] strm
+  /// \param[in] strm
   ///     A stream where output intended for the user
   ///     (if the driver has a way to display that) generated during
   ///     the connection.  This may be nullptr if no output is needed.A
   ///
-  /// @param[in] remote_url
+  /// \param[in] remote_url
   ///     The URL format that we are connecting to.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   virtual Status DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
@@ -1013,14 +1013,14 @@ public:
   //------------------------------------------------------------------
   /// Attach to an existing process using a process ID.
   ///
-  /// @param[in] pid
+  /// \param[in] pid
   ///     The process ID that we should attempt to attach to.
   ///
-  /// @param[in] attach_info
+  /// \param[in] attach_info
   ///     Information on how to do the attach. For example, GetUserID()
   ///     will return the uid to attach as.
   ///
-  /// @return
+  /// \return
   ///     Returns a successful Status attaching was successful, or
   ///     an appropriate (possibly platform-specific) error code if
   ///     attaching fails.
@@ -1038,14 +1038,14 @@ public:
   //------------------------------------------------------------------
   /// Attach to an existing process using a partial process name.
   ///
-  /// @param[in] process_name
+  /// \param[in] process_name
   ///     The name of the process to attach to.
   ///
-  /// @param[in] attach_info
+  /// \param[in] attach_info
   ///     Information on how to do the attach. For example, GetUserID()
   ///     will return the uid to attach as.
   ///
-  /// @return
+  /// \return
   ///     Returns a successful Status attaching was successful, or
   ///     an appropriate (possibly platform-specific) error code if
   ///     attaching fails.
@@ -1061,7 +1061,7 @@ public:
   //------------------------------------------------------------------
   /// Called after attaching a process.
   ///
-  /// @param[in] process_arch
+  /// \param[in] process_arch
   ///     If you can figure out the process architecture after attach, fill it
   ///     in here.
   ///
@@ -1091,7 +1091,7 @@ public:
   ///
   /// Allow Process plug-ins to execute some code before launching a process.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   virtual Status WillLaunch(Module *module) { return Status(); }
@@ -1103,15 +1103,15 @@ public:
   /// file as the file to launch. Launch details are provided in \a
   /// launch_info.
   ///
-  /// @param[in] exe_module
+  /// \param[in] exe_module
   ///     The module from which to extract the file specification and
   ///     launch.
   ///
-  /// @param[in] launch_info
+  /// \param[in] launch_info
   ///     Details (e.g. arguments, stdio redirection, etc.) for the
   ///     requested launch.
   ///
-  /// @return
+  /// \return
   ///     An Status instance indicating success or failure of the
   ///     operation.
   //------------------------------------------------------------------
@@ -1135,7 +1135,7 @@ public:
   ///
   /// Allow Process plug-ins to execute some code before resuming a process.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   virtual Status WillResume() { return Status(); }
@@ -1149,13 +1149,13 @@ public:
   /// process is resumed. If no run control action is given to a thread it
   /// will be resumed by default.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the process successfully resumes using
   ///     the thread run control actions, \b false otherwise.
   ///
-  /// @see Thread:Resume()
-  /// @see Thread:Step()
-  /// @see Thread:Suspend()
+  /// \see Thread:Resume()
+  /// \see Thread:Step()
+  /// \see Thread:Suspend()
   //------------------------------------------------------------------
   virtual Status DoResume() {
     Status error;
@@ -1177,7 +1177,7 @@ public:
   ///
   /// Allow Process plug-ins to execute some code before halting a process.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   virtual Status WillHalt() { return Status(); }
@@ -1191,11 +1191,11 @@ public:
   /// Otherwise, you must generate the event manually. This function is called
   /// from the context of the private state thread.
   ///
-  /// @param[out] caused_stop
+  /// \param[out] caused_stop
   ///     If true, then this Halt caused the stop, otherwise, the
   ///     process was already stopped.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the process successfully halts, \b false
   ///     otherwise.
   //------------------------------------------------------------------
@@ -1220,7 +1220,7 @@ public:
   /// Allow Process plug-ins to execute some code before detaching from a
   /// process.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   virtual Status WillDetach() { return Status(); }
@@ -1228,7 +1228,7 @@ public:
   //------------------------------------------------------------------
   /// Detaches from a running or stopped process.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the process successfully detaches, \b
   ///     false otherwise.
   //------------------------------------------------------------------
@@ -1256,7 +1256,7 @@ public:
   /// Allow Process plug-ins to execute some code before sending a signal to a
   /// process.
   ///
-  /// @return
+  /// \return
   ///     Returns no error if it is safe to proceed with a call to
   ///     Process::DoSignal(int), otherwise an error describing what
   ///     prevents the signal from being sent.
@@ -1266,7 +1266,7 @@ public:
   //------------------------------------------------------------------
   /// Sends a process a UNIX signal \a signal.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   virtual Status DoSignal(int signal) {
@@ -1316,7 +1316,7 @@ public:
   /// platform that might itself be running natively, but have different
   /// heuristics for figuring out which OS is is emulating.
   ///
-  /// @return
+  /// \return
   ///     Returns the version tuple of the host OS. In case of failure an empty
   ///     VersionTuple is returner.
   //------------------------------------------------------------------
@@ -1325,7 +1325,7 @@ public:
   //------------------------------------------------------------------
   /// Get the target object pointer for this module.
   ///
-  /// @return
+  /// \return
   ///     A Target object pointer to the target that owns this
   ///     module.
   //------------------------------------------------------------------
@@ -1334,7 +1334,7 @@ public:
   //------------------------------------------------------------------
   /// Get the const target object pointer for this module.
   ///
-  /// @return
+  /// \return
   ///     A const Target object pointer to the target that owns this
   ///     module.
   //------------------------------------------------------------------
@@ -1355,10 +1355,10 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the current process state.
   ///
-  /// @return
+  /// \return
   ///     The current state of the process.
   ///
-  /// @see lldb::StateType
+  /// \see lldb::StateType
   //------------------------------------------------------------------
   lldb::StateType GetState();
 
@@ -1399,17 +1399,17 @@ public:
   /// memory and return a concise summary sufficient for the DynamicLoader
   /// plugin.
   ///
-  /// @param [in] image_list_address
+  /// \param [in] image_list_address
   ///     The address where the table of shared libraries is stored in memory,
   ///     if that is appropriate for this platform.  Else this may be
   ///     passed as LLDB_INVALID_ADDRESS.
   ///
-  /// @param [in] image_count
+  /// \param [in] image_count
   ///     The number of shared libraries that are present in this process, if
   ///     that is appropriate for this platofrm  Else this may be passed as
   ///     LLDB_INVALID_ADDRESS.
   ///
-  /// @return
+  /// \return
   ///     A StructureDataSP object which, if non-empty, will contain the
   ///     information the DynamicLoader needs to get the initial scan of
   ///     solibs resolved.
@@ -1453,7 +1453,7 @@ public:
   /// Prints a async warning message to the user one time per Module where a
   /// function is found that was compiled with optimization, per Process.
   ///
-  /// @param [in] sc
+  /// \param [in] sc
   ///     A SymbolContext with eSymbolContextFunction and eSymbolContextModule
   ///     pre-computed.
   //------------------------------------------------------------------
@@ -1465,7 +1465,7 @@ public:
   //------------------------------------------------------------------
   /// Get the exit status for a process.
   ///
-  /// @return
+  /// \return
   ///     The process's return code, or -1 if the current process
   ///     state is not eStateExited.
   //------------------------------------------------------------------
@@ -1474,7 +1474,7 @@ public:
   //------------------------------------------------------------------
   /// Get a textual description of what the process exited.
   ///
-  /// @return
+  /// \return
   ///     The textual description of why the process exited, or nullptr
   ///     if there is no description available.
   //------------------------------------------------------------------
@@ -1485,7 +1485,7 @@ public:
   //------------------------------------------------------------------
   /// Get the Modification ID of the process.
   ///
-  /// @return
+  /// \return
   ///     The modification ID of the process.
   //------------------------------------------------------------------
   ProcessModID GetModID() const { return m_mod_id; }
@@ -1518,17 +1518,17 @@ public:
   /// Setting this will cause a eStateExited event to be posted to the process
   /// event queue.
   ///
-  /// @param[in] exit_status
+  /// \param[in] exit_status
   ///     The value for the process's return code.
   ///
-  /// @see lldb::StateType
+  /// \see lldb::StateType
   //------------------------------------------------------------------
   virtual bool SetExitStatus(int exit_status, const char *cstr);
 
   //------------------------------------------------------------------
   /// Check if a process is still alive.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the process is still valid, \b false
   ///     otherwise.
   //------------------------------------------------------------------
@@ -1541,7 +1541,7 @@ public:
   /// user can reconstruct the "state" by simply re-running the debugger on
   /// the core file.
   ///
-  /// @return
+  /// \return
   //      true if the user should be warned about detaching from this process.
   //------------------------------------------------------------------
   virtual bool WarnBeforeDetach() const { return true; }
@@ -1553,24 +1553,24 @@ public:
   /// requested when memory requests are too large. This class will break up
   /// the memory requests and keep advancing the arguments along as needed.
   ///
-  /// @param[in] vm_addr
+  /// \param[in] vm_addr
   ///     A virtual load address that indicates where to start reading
   ///     memory from.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     The number of bytes to read.
   ///
-  /// @param[out] buf
+  /// \param[out] buf
   ///     A byte buffer that is at least \a size bytes long that
   ///     will receive the memory bytes.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error that indicates the success or failure of this
   ///     operation. If error indicates success (error.Success()),
   ///     then the value returned can be trusted, otherwise zero
   ///     will be returned.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that were actually read into \a buf.
   ///     Zero is returned in the case of an error.
   //------------------------------------------------------------------
@@ -1587,24 +1587,24 @@ public:
   /// subclasses should implement Process::DoReadMemory (lldb::addr_t, size_t,
   /// void *).
   ///
-  /// @param[in] vm_addr
+  /// \param[in] vm_addr
   ///     A virtual load address that indicates where to start reading
   ///     memory from.
   ///
-  /// @param[out] buf
+  /// \param[out] buf
   ///     A byte buffer that is at least \a size bytes long that
   ///     will receive the memory bytes.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     The number of bytes to read.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error that indicates the success or failure of this
   ///     operation. If error indicates success (error.Success()),
   ///     then the value returned can be trusted, otherwise zero
   ///     will be returned.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that were actually read into \a buf. If
   ///     the returned number is greater than zero, yet less than \a
   ///     size, then this function will get called again with \a
@@ -1624,23 +1624,23 @@ public:
   /// terminated, and that no more than (max_bytes - type_width) bytes will be
   /// read.
   ///
-  /// @param[in] vm_addr
+  /// \param[in] vm_addr
   ///     The virtual load address to start the memory read.
   ///
-  /// @param[in] str
+  /// \param[in] str
   ///     A character buffer containing at least max_bytes.
   ///
-  /// @param[in] max_bytes
+  /// \param[in] max_bytes
   ///     The maximum number of bytes to read.
   ///
-  /// @param[in] error
+  /// \param[in] error
   ///     The error status of the read operation.
   ///
-  /// @param[in] type_width
+  /// \param[in] type_width
   ///     The size of the null terminator (1 to 4 bytes per
   ///     character).  Defaults to 1.
   ///
-  /// @return
+  /// \return
   ///     The error status or the number of bytes prior to the null terminator.
   //------------------------------------------------------------------
   size_t ReadStringFromMemory(lldb::addr_t vm_addr, char *str, size_t max_bytes,
@@ -1668,22 +1668,22 @@ public:
   /// Reads an unsigned integer of the specified byte size from process
   /// memory.
   ///
-  /// @param[in] load_addr
+  /// \param[in] load_addr
   ///     A load address of the integer to read.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The size in byte of the integer to read.
   ///
-  /// @param[in] fail_value
+  /// \param[in] fail_value
   ///     The value to return if we fail to read an integer.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error that indicates the success or failure of this
   ///     operation. If error indicates success (error.Success()),
   ///     then the value returned can be trusted, otherwise zero
   ///     will be returned.
   ///
-  /// @return
+  /// \return
   ///     The unsigned integer that was read from the process memory
   ///     space. If the integer was smaller than a uint64_t, any
   ///     unused upper bytes will be zero filled. If the process
@@ -1706,21 +1706,21 @@ public:
   //------------------------------------------------------------------
   /// Actually do the writing of memory to a process.
   ///
-  /// @param[in] vm_addr
+  /// \param[in] vm_addr
   ///     A virtual load address that indicates where to start writing
   ///     memory to.
   ///
-  /// @param[in] buf
+  /// \param[in] buf
   ///     A byte buffer that is at least \a size bytes long that
   ///     contains the data to write.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     The number of bytes to write.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error value in case the memory write fails.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that were actually written.
   //------------------------------------------------------------------
   virtual size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
@@ -1741,14 +1741,14 @@ public:
   /// extra space will be padded with zeros and the scalar value will be
   /// placed in the least significant bytes in memory.
   ///
-  /// @param[in] vm_addr
+  /// \param[in] vm_addr
   ///     A virtual load address that indicates where to start writing
   ///     memory to.
   ///
-  /// @param[in] scalar
+  /// \param[in] scalar
   ///     The scalar to write to the debugged process.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     This value can be smaller or larger than the scalar value
   ///     itself. If \a size is smaller than the size of \a scalar,
   ///     the least significant bytes in \a scalar will be used. If
@@ -1756,10 +1756,10 @@ public:
   ///     the extra space will be padded with zeros. If \a size is
   ///     set to UINT32_MAX, then the size of \a scalar will be used.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error value in case the memory write fails.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that were actually written.
   //------------------------------------------------------------------
   size_t WriteScalarToMemory(lldb::addr_t vm_addr, const Scalar &scalar,
@@ -1780,18 +1780,18 @@ public:
   /// subclasses should implement Process::DoWriteMemory (lldb::addr_t,
   /// size_t, void *).
   ///
-  /// @param[in] vm_addr
+  /// \param[in] vm_addr
   ///     A virtual load address that indicates where to start writing
   ///     memory to.
   ///
-  /// @param[in] buf
+  /// \param[in] buf
   ///     A byte buffer that is at least \a size bytes long that
   ///     contains the data to write.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     The number of bytes to write.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that were actually written.
   //------------------------------------------------------------------
   // TODO: change this to take an ArrayRef<uint8_t>
@@ -1805,10 +1805,10 @@ public:
   /// can't rely on the generic function calling mechanism, since that
   /// requires this function.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     The size of the allocation requested.
   ///
-  /// @return
+  /// \return
   ///     The address of the allocated buffer in the process, or
   ///     LLDB_INVALID_ADDRESS if the allocation failed.
   //------------------------------------------------------------------
@@ -1830,19 +1830,19 @@ public:
   /// can't rely on the generic function calling mechanism, since that
   /// requires this function.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     The size of the allocation requested.
   ///
-  /// @param[in] permissions
+  /// \param[in] permissions
   ///     Or together any of the lldb::Permissions bits.  The permissions on
   ///     a given memory allocation can't be changed after allocation.  Note
   ///     that a block that isn't set writable can still be written on from
   ///     lldb,
   ///     just not by the process itself.
   ///
-  /// @param[in,out] error
+  /// \param[in,out] error
   ///     An error object to fill in if things go wrong.
-  /// @return
+  /// \return
   ///     The address of the allocated buffer in the process, or
   ///     LLDB_INVALID_ADDRESS if the allocation failed.
   //------------------------------------------------------------------
@@ -1856,19 +1856,19 @@ public:
   /// can't rely on the generic function calling mechanism, since that
   /// requires this function.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     The size of the allocation requested.
   ///
-  /// @param[in] permissions
+  /// \param[in] permissions
   ///     Or together any of the lldb::Permissions bits.  The permissions on
   ///     a given memory allocation can't be changed after allocation.  Note
   ///     that a block that isn't set writable can still be written on from
   ///     lldb,
   ///     just not by the process itself.
   ///
-  /// @param[in/out] error
+  /// \param[in/out] error
   ///     An error object to fill in if things go wrong.
-  /// @return
+  /// \return
   ///     The address of the allocated buffer in the process, or
   ///     LLDB_INVALID_ADDRESS if the allocation failed.
   //------------------------------------------------------------------
@@ -1879,13 +1879,13 @@ public:
   //------------------------------------------------------------------
   /// Resolve dynamically loaded indirect functions.
   ///
-  /// @param[in] address
+  /// \param[in] address
   ///     The load address of the indirect function to resolve.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error value in case the resolve fails.
   ///
-  /// @return
+  /// \return
   ///     The address of the resolved function.
   ///     LLDB_INVALID_ADDRESS if the resolution failed.
   //------------------------------------------------------------------
@@ -1909,13 +1909,13 @@ public:
   /// GetMemoryRegionInfo will only return an error if it is unimplemented for
   /// the current process.
   ///
-  /// @param[in] load_addr
+  /// \param[in] load_addr
   ///     The load address to query the range_info for.
   ///
-  /// @param[out] range_info
+  /// \param[out] range_info
   ///     An range_info value containing the details of the range.
   ///
-  /// @return
+  /// \return
   ///     An error value.
   //------------------------------------------------------------------
   virtual Status GetMemoryRegionInfo(lldb::addr_t load_addr,
@@ -1928,11 +1928,11 @@ public:
   //------------------------------------------------------------------
   /// Obtain all the mapped memory regions within this process.
   ///
-  /// @param[out] region_list
+  /// \param[out] region_list
   ///     A vector to contain MemoryRegionInfo objects for all mapped
   ///     ranges.
   ///
-  /// @return
+  /// \return
   ///     An error value.
   //------------------------------------------------------------------
   virtual Status
@@ -1965,16 +1965,16 @@ public:
   /// of memory at a given address or whether that page is
   /// readable/writable/executable by the process.
   ///
-  /// @param[in] load_addr
+  /// \param[in] load_addr
   ///     The address of interest in the process.
   ///
-  /// @param[out] permissions
+  /// \param[out] permissions
   ///     If this call returns successfully, this bitmask will have
   ///     its Permissions bits set to indicate whether the region is
   ///     readable/writable/executable.  If this call fails, the
   ///     bitmask values are undefined.
   ///
-  /// @return
+  /// \return
   ///     Returns true if it was able to determine the attributes of the
   ///     memory region.  False if not.
   //------------------------------------------------------------------
@@ -1985,7 +1985,7 @@ public:
   /// Determines whether executing JIT-compiled code in this process is
   /// possible.
   ///
-  /// @return
+  /// \return
   ///     True if execution of JIT code is possible; false otherwise.
   //------------------------------------------------------------------
   bool CanJIT();
@@ -1993,7 +1993,7 @@ public:
   //------------------------------------------------------------------
   /// Sets whether executing JIT-compiled code in this process is possible.
   ///
-  /// @param[in] can_jit
+  /// \param[in] can_jit
   ///     True if execution of JIT code is possible; false otherwise.
   //------------------------------------------------------------------
   void SetCanJIT(bool can_jit);
@@ -2002,7 +2002,7 @@ public:
   /// Determines whether executing function calls using the interpreter is
   /// possible for this process.
   ///
-  /// @return
+  /// \return
   ///     True if possible; false otherwise.
   //------------------------------------------------------------------
   bool CanInterpretFunctionCalls() { return m_can_interpret_function_calls; }
@@ -2011,7 +2011,7 @@ public:
   /// Sets whether executing function calls using the interpreter is possible
   /// for this process.
   ///
-  /// @param[in] can_interpret_function_calls
+  /// \param[in] can_interpret_function_calls
   ///     True if possible; false otherwise.
   //------------------------------------------------------------------
   void SetCanInterpretFunctionCalls(bool can_interpret_function_calls) {
@@ -2022,7 +2022,7 @@ public:
   /// Sets whether executing code in this process is possible. This could be
   /// either through JIT or interpreting.
   ///
-  /// @param[in] can_run_code
+  /// \param[in] can_run_code
   ///     True if execution of code is possible; false otherwise.
   //------------------------------------------------------------------
   void SetCanRunCode(bool can_run_code);
@@ -2033,11 +2033,11 @@ public:
   /// This function will deallocate memory in the process's address space that
   /// was allocated with AllocateMemory.
   ///
-  /// @param[in] ptr
+  /// \param[in] ptr
   ///     A return value from AllocateMemory, pointing to the memory you
   ///     want to deallocate.
   ///
-  /// @return
+  /// \return
   ///     \btrue if the memory was deallocated, \bfalse otherwise.
   //------------------------------------------------------------------
   virtual Status DoDeallocateMemory(lldb::addr_t ptr) {
@@ -2054,11 +2054,11 @@ public:
   /// This function will deallocate memory in the process's address space that
   /// was allocated with AllocateMemory.
   ///
-  /// @param[in] ptr
+  /// \param[in] ptr
   ///     A return value from AllocateMemory, pointing to the memory you
   ///     want to deallocate.
   ///
-  /// @return
+  /// \return
   ///     \btrue if the memory was deallocated, \bfalse otherwise.
   //------------------------------------------------------------------
   Status DeallocateMemory(lldb::addr_t ptr);
@@ -2080,14 +2080,14 @@ public:
   /// Events will be queued indicating that there is STDOUT available that can
   /// be retrieved using this function.
   ///
-  /// @param[out] buf
+  /// \param[out] buf
   ///     A buffer that will receive any STDOUT bytes that are
   ///     currently available.
   ///
-  /// @param[in] buf_size
+  /// \param[in] buf_size
   ///     The size in bytes for the buffer \a buf.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes written into \a buf. If this value is
   ///     equal to \a buf_size, another call to this function should
   ///     be made to retrieve more STDOUT data.
@@ -2111,14 +2111,14 @@ public:
   /// Events will be queued indicating that there is STDERR available that can
   /// be retrieved using this function.
   ///
-  /// @param[in] buf
+  /// \param[in] buf
   ///     A buffer that will receive any STDERR bytes that are
   ///     currently available.
   ///
-  /// @param[out] buf_size
+  /// \param[out] buf_size
   ///     The size in bytes for the buffer \a buf.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes written into \a buf. If this value is
   ///     equal to \a buf_size, another call to this function should
   ///     be made to retrieve more STDERR data.
@@ -2134,13 +2134,13 @@ public:
   /// process was launched without supplying a valid file path
   ///    for STDIN.
   ///
-  /// @param[in] buf
+  /// \param[in] buf
   ///     A buffer that contains the data to write to the process's STDIN.
   ///
-  /// @param[in] buf_size
+  /// \param[in] buf_size
   ///     The size in bytes for the buffer \a buf.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes written into \a buf. If this value is
   ///     less than \a buf_size, another call to this function should
   ///     be made to write the rest of the data.
@@ -2153,14 +2153,14 @@ public:
   //------------------------------------------------------------------
   /// Get any available profile data.
   ///
-  /// @param[out] buf
+  /// \param[out] buf
   ///     A buffer that will receive any profile data bytes that are
   ///     currently available.
   ///
-  /// @param[out] buf_size
+  /// \param[out] buf_size
   ///     The size in bytes for the buffer \a buf.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes written into \a buf. If this value is
   ///     equal to \a buf_size, another call to this function should
   ///     be made to retrieve more profile data.
@@ -2300,7 +2300,7 @@ public:
   /// The main purpose of this is to implement an interlock waiting for
   /// HandlePrivateEvent to push an IOHandler.
   ///
-  /// @param[in] timeout
+  /// \param[in] timeout
   ///     The maximum time length to wait for the process to transition to the
   ///     eStateRunning state.
   //--------------------------------------------------------------------------------------
@@ -2315,20 +2315,20 @@ public:
   /// Centralize the code that handles and prints descriptions for process
   /// state changes.
   ///
-  /// @param[in] event_sp
+  /// \param[in] event_sp
   ///     The process state changed event
   ///
-  /// @param[in] stream
+  /// \param[in] stream
   ///     The output stream to get the state change description
   ///
-  /// @param[in,out] pop_process_io_handler
+  /// \param[in,out] pop_process_io_handler
   ///     If this value comes in set to \b true, then pop the Process IOHandler
   ///     if needed.
   ///     Else this variable will be set to \b true or \b false to indicate if
   ///     the process
   ///     needs to have its process IOHandler popped.
   ///
-  /// @return
+  /// \return
   ///     \b true if the event describes a process state changed event, \b false
   ///     otherwise.
   //--------------------------------------------------------------------------------------
@@ -2361,10 +2361,10 @@ public:
   /// WaitFor* calls above.  Be sure to call RestoreProcessEvents when you are
   /// done.
   ///
-  /// @param[in] listener
+  /// \param[in] listener
   ///     This is the new listener to whom all process events will be delivered.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the new listener could be installed,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -2410,7 +2410,7 @@ public:
   /// can immediately suspend it, and keep executing only the one thread you
   /// intend.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if we were able to start up the notification
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -2419,7 +2419,7 @@ public:
   //------------------------------------------------------------------
   /// Call this to turn off the stop & notice new threads mode.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if we were able to start up the notification
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -2496,17 +2496,17 @@ public:
   /// if they support platforms where the Platform object can't get the module
   /// spec for all module.
   ///
-  /// @param[in] module_file_spec
+  /// \param[in] module_file_spec
   ///     The file name of the module to get specification for.
   ///
-  /// @param[in] arch
+  /// \param[in] arch
   ///     The architecture of the module to get specification for.
   ///
-  /// @param[out] module_spec
+  /// \param[out] module_spec
   ///     The fetched module specification if the return value is
   ///     \b true, unchanged otherwise.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the module spec fetched successfully,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -2521,14 +2521,14 @@ public:
   /// The load address is defined as the address of the first memory region
   /// what contains data mapped from the specified file.
   ///
-  /// @param[in] file
+  /// \param[in] file
   ///     The name of the file whose load address we are looking for
   ///
-  /// @param[out] is_loaded
+  /// \param[out] is_loaded
   ///     \b True if the file is loaded into the memory and false
   ///     otherwise.
   ///
-  /// @param[out] load_addr
+  /// \param[out] load_addr
   ///     The load address of the file if it is loaded into the
   ///     processes address space, LLDB_INVALID_ADDRESS otherwise.
   //------------------------------------------------------------------
@@ -2552,15 +2552,15 @@ public:
   /// and continue the process to there, yielding significant performance
   /// benefits over instruction stepping.
   ///
-  /// @param[in] default_stop_addr
+  /// \param[in] default_stop_addr
   ///     The address of the instruction where lldb would put a
   ///     breakpoint normally.
   ///
-  /// @param[in] range_bounds
+  /// \param[in] range_bounds
   ///     The range which the breakpoint must be contained within.
   ///     Typically a source line.
   ///
-  /// @return
+  /// \return
   ///     The address of the next branch instruction, or the end of
   ///     the range provided in range_bounds.  If there are any
   ///     problems with the disassembly or getting the instructions,
@@ -2580,11 +2580,11 @@ public:
   /// StructuredDataPlugin implementations will call this to configure a
   /// feature that has been reported as being supported.
   ///
-  /// @param[in] type_name
+  /// \param[in] type_name
   ///     The StructuredData type name as previously discovered by
   ///     the Process-derived instance.
   ///
-  /// @param[in] config
+  /// \param[in] config
   ///     Configuration data for the feature being enabled.  This config
   ///     data, which may be null, will be passed along to the feature
   ///     to process.  The feature will dictate whether this is a dictionary,
@@ -2592,7 +2592,7 @@ public:
   ///     set up properly before it can be enabled, then the config should
   ///     also take an enable/disable flag.
   ///
-  /// @return
+  /// \return
   ///     Returns the result of attempting to configure the feature.
   //------------------------------------------------------------------
   virtual Status
@@ -2607,10 +2607,10 @@ public:
   /// will come in on the structured data event bit
   /// (eBroadcastBitStructuredData).
   ///
-  /// @param[in] object_sp
+  /// \param[in] object_sp
   ///     The structured data object to broadcast.
   ///
-  /// @param[in] plugin_sp
+  /// \param[in] plugin_sp
   ///     The plugin that will be reported in the event's plugin
   ///     parameter.
   //------------------------------------------------------------------
@@ -2625,7 +2625,7 @@ public:
   /// debugged process monitor claims that the feature is supported. This is
   /// one way to tell whether a feature is available.
   ///
-  /// @return
+  /// \return
   ///     The plugin if one is available for the specified feature;
   ///     otherwise, returns an empty shared pointer.
   //------------------------------------------------------------------
@@ -2704,7 +2704,7 @@ protected:
   /// The "private" side of resuming a process.  This doesn't alter the state
   /// of m_run_lock, but just causes the process to resume.
   ///
-  /// @return
+  /// \return
   ///     An Status object describing the success or failure of the resume.
   //------------------------------------------------------------------
   Status PrivateResume();
@@ -2731,15 +2731,15 @@ protected:
   /// that the warning strings are all centralized in Process, instead of
   /// calling PrintWarning() directly.
   ///
-  /// @param [in] warning_type
+  /// \param [in] warning_type
   ///     One of the types defined in Process::Warnings.
   ///
-  /// @param [in] repeat_key
+  /// \param [in] repeat_key
   ///     A pointer value used to ensure that the warning is only printed once.
   ///     May be nullptr, indicating that the warning is printed unconditionally
   ///     every time.
   ///
-  /// @param [in] fmt
+  /// \param [in] fmt
   ///     printf style format string
   //------------------------------------------------------------------
   void PrintWarning(uint64_t warning_type, const void *repeat_key,
@@ -2821,7 +2821,7 @@ protected:
   /// named 'type', with a value that equals the relevant type name string
   /// (one of the values in \b supported_type_names).
   ///
-  /// @param[in] supported_type_names
+  /// \param[in] supported_type_names
   ///     An array of zero or more type names.  Each must be unique.
   ///     For each entry in the list, a StructuredDataPlugin will be
   ///     searched for that supports the structured data type name.
@@ -2836,7 +2836,7 @@ protected:
   /// key named 'type' that stores a string value.  The string value must be
   /// the name of the structured data feature that knows how to handle it.
   ///
-  /// @param[in] object_sp
+  /// \param[in] object_sp
   ///     When non-null and pointing to a dictionary, the 'type'
   ///     key's string value is used to look up the plugin that
   ///     was registered for that structured data type.  It then
@@ -2849,7 +2849,7 @@ protected:
   ///                                   const StructuredData::ObjectSP
   ///                                   &object_sp)
   ///
-  /// @return
+  /// \return
   ///     True if the structured data was routed to a plugin; otherwise,
   ///     false.
   //------------------------------------------------------------------
@@ -3082,10 +3082,10 @@ private:
   /// again. There is only one place where this call should be called,
   /// HandlePrivateEvent. Don't call it from anywhere else...
   ///
-  /// @param[in] event_ptr
+  /// \param[in] event_ptr
   ///     This is the event we are handling.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the event should be reported to the
   ///     user, \b false otherwise.
   //------------------------------------------------------------------

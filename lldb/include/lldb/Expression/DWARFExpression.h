@@ -22,7 +22,7 @@ class DWARFUnit;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class DWARFExpression DWARFExpression.h
+/// \class DWARFExpression DWARFExpression.h
 /// "lldb/Expression/DWARFExpression.h" Encapsulates a DWARF location
 /// expression and interprets it.
 ///
@@ -53,14 +53,14 @@ public:
   //------------------------------------------------------------------
   /// Constructor
   ///
-  /// @param[in] data
+  /// \param[in] data
   ///     A data extractor configured to read the DWARF location expression's
   ///     bytecode.
   ///
-  /// @param[in] data_offset
+  /// \param[in] data_offset
   ///     The offset of the location expression in the extractor.
   ///
-  /// @param[in] data_length
+  /// \param[in] data_length
   ///     The byte length of the location expression.
   //------------------------------------------------------------------
   DWARFExpression(lldb::ModuleSP module, const DataExtractor &data,
@@ -80,20 +80,20 @@ public:
   //------------------------------------------------------------------
   /// Print the description of the expression to a stream
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to print to.
   ///
-  /// @param[in] level
+  /// \param[in] level
   ///     The level of verbosity to use.
   ///
-  /// @param[in] location_list_base_addr
+  /// \param[in] location_list_base_addr
   ///     If this is a location list based expression, this is the
   ///     address of the object that owns it. NOTE: this value is
   ///     different from the DWARF version of the location list base
   ///     address which is compile unit relative. This base address
   ///     is the address of the object that owns the location list.
   ///
-  /// @param[in] abi
+  /// \param[in] abi
   ///     An optional ABI plug-in that can be used to resolve register
   ///     names.
   //------------------------------------------------------------------
@@ -113,13 +113,13 @@ public:
   //------------------------------------------------------------------
   /// Search for a load address in the location list
   ///
-  /// @param[in] process
+  /// \param[in] process
   ///     The process to use when resolving the load address
   ///
-  /// @param[in] addr
+  /// \param[in] addr
   ///     The address to resolve
   ///
-  /// @return
+  /// \return
   ///     True if IsLocationList() is true and the address was found;
   ///     false otherwise.
   //------------------------------------------------------------------
@@ -139,15 +139,15 @@ public:
   /// static variable since there is no other indication from DWARF debug
   /// info.
   ///
-  /// @param[in] op_addr_idx
+  /// \param[in] op_addr_idx
   ///     The DW_OP_addr index to retrieve in case there is more than
   ///     one DW_OP_addr opcode in the location byte stream.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     If the location stream contains unknown DW_OP opcodes or the
   ///     data is missing, \a error will be set to \b true.
   ///
-  /// @return
+  /// \return
   ///     LLDB_INVALID_ADDRESS if the location doesn't contain a
   ///     DW_OP_addr for \a op_addr_idx, otherwise a valid file address
   //------------------------------------------------------------------
@@ -168,7 +168,7 @@ public:
   /// Make the expression parser read its location information from a given
   /// data source.  Does not change the offset and length
   ///
-  /// @param[in] data
+  /// \param[in] data
   ///     A data extractor configured to read the DWARF location expression's
   ///     bytecode.
   //------------------------------------------------------------------
@@ -178,17 +178,17 @@ public:
   /// Make the expression parser read its location information from a given
   /// data source
   ///
-  /// @param[in] module_sp
+  /// \param[in] module_sp
   ///     The module that defines the DWARF expression.
   ///
-  /// @param[in] data
+  /// \param[in] data
   ///     A data extractor configured to read the DWARF location expression's
   ///     bytecode.
   ///
-  /// @param[in] data_offset
+  /// \param[in] data_offset
   ///     The offset of the location expression in the extractor.
   ///
-  /// @param[in] data_length
+  /// \param[in] data_length
   ///     The byte length of the location expression.
   //------------------------------------------------------------------
   void SetOpcodeData(lldb::ModuleSP module_sp, const DataExtractor &data,
@@ -207,17 +207,17 @@ public:
   /// though we are copying the data, it shouldn't amount to that much for the
   /// variables we end up parsing.
   ///
-  /// @param[in] module_sp
+  /// \param[in] module_sp
   ///     The module that defines the DWARF expression.
   ///
-  /// @param[in] data
+  /// \param[in] data
   ///     A data extractor configured to read and copy the DWARF
   ///     location expression's bytecode.
   ///
-  /// @param[in] data_offset
+  /// \param[in] data_offset
   ///     The offset of the location expression in the extractor.
   ///
-  /// @param[in] data_length
+  /// \param[in] data_length
   ///     The byte length of the location expression.
   //------------------------------------------------------------------
   void CopyOpcodeData(lldb::ModuleSP module_sp, const DataExtractor &data,
@@ -233,7 +233,7 @@ public:
   //------------------------------------------------------------------
   /// Tells the expression that it refers to a location list.
   ///
-  /// @param[in] slide
+  /// \param[in] slide
   ///     This value should be a slide that is applied to any values
   ///     in the location list data so the values become zero based
   ///     offsets into the object that owns the location list. We need
@@ -250,7 +250,7 @@ public:
   //------------------------------------------------------------------
   /// Set the call-frame-info style register kind
   ///
-  /// @param[in] reg_kind
+  /// \param[in] reg_kind
   ///     The register kind.
   //------------------------------------------------------------------
   void SetRegisterKind(lldb::RegisterKind reg_kind);
@@ -277,59 +277,59 @@ public:
   //------------------------------------------------------------------
   /// Evaluate a DWARF location expression in a particular context
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context in which to evaluate the location
   ///     expression.  The location expression may access the target's
   ///     memory, especially if it comes from the expression parser.
   ///
-  /// @param[in] opcode_ctx
+  /// \param[in] opcode_ctx
   ///     The module which defined the expression.
   ///
-  /// @param[in] opcodes
+  /// \param[in] opcodes
   ///     This is a static method so the opcodes need to be provided
   ///     explicitly.
   ///
-  /// @param[in] expr_locals
+  /// \param[in] expr_locals
   ///     If the location expression was produced by the expression parser,
   ///     the list of local variables referenced by the DWARF expression.
   ///     This list should already have been populated during parsing;
   ///     the DWARF expression refers to variables by index.  Can be NULL if
   ///     the location expression uses no locals.
   ///
-  /// @param[in] decl_map
+  /// \param[in] decl_map
   ///     If the location expression was produced by the expression parser,
   ///     the list of external variables referenced by the location
   ///     expression.  Can be NULL if the location expression uses no
   ///     external variables.
   ///
-  ///  @param[in] reg_ctx
+  ///  \param[in] reg_ctx
   ///     An optional parameter which provides a RegisterContext for use
   ///     when evaluating the expression (i.e. for fetching register values).
   ///     Normally this will come from the ExecutionContext's StackFrame but
   ///     in the case where an expression needs to be evaluated while building
   ///     the stack frame list, this short-cut is available.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset of the location expression in the data extractor.
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The length in bytes of the location expression.
   ///
-  /// @param[in] reg_set
+  /// \param[in] reg_set
   ///     The call-frame-info style register kind.
   ///
-  /// @param[in] initial_value_ptr
+  /// \param[in] initial_value_ptr
   ///     A value to put on top of the interpreter stack before evaluating
   ///     the expression, if the expression is parametrized.  Can be NULL.
   ///
-  /// @param[in] result
+  /// \param[in] result
   ///     A value into which the result of evaluating the expression is
   ///     to be placed.
   ///
-  /// @param[in] error_ptr
+  /// \param[in] error_ptr
   ///     If non-NULL, used to report errors in expression evaluation.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.  If error_ptr is non-NULL,
   ///     details of the failure are provided through it.
   //------------------------------------------------------------------
@@ -369,19 +369,19 @@ protected:
   //------------------------------------------------------------------
   /// Pretty-prints the location expression to a stream
   ///
-  /// @param[in] stream
+  /// \param[in] stream
   ///     The stream to use for pretty-printing.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset into the data buffer of the opcodes to be printed.
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The length in bytes of the opcodes to be printed.
   ///
-  /// @param[in] level
+  /// \param[in] level
   ///     The level of detail to use in pretty-printing.
   ///
-  /// @param[in] abi
+  /// \param[in] abi
   ///     An optional ABI plug-in that can be used to resolve register
   ///     names.
   //------------------------------------------------------------------

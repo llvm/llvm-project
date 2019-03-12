@@ -80,6 +80,10 @@ SBModule::~SBModule() {}
 
 bool SBModule::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModule, IsValid);
+  return this->operator bool();
+}
+SBModule::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModule, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

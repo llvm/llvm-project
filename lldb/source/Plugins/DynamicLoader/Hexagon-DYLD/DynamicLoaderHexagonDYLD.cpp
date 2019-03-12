@@ -243,9 +243,9 @@ void DynamicLoaderHexagonDYLD::UpdateLoadedSections(ModuleSP module,
   }
 }
 
-/// Removes the loaded sections from the target in @p module.
+/// Removes the loaded sections from the target in \p module.
 ///
-/// @param module The module to traverse.
+/// \param module The module to traverse.
 void DynamicLoaderHexagonDYLD::UnloadSections(const ModuleSP module) {
   Target &target = m_process->GetTarget();
   const SectionList *sections = GetSectionListFromModule(module);

@@ -68,6 +68,8 @@ public:
     bool
     IsValid() const;
 
+    explicit operator bool() const;
+
     lldb::SBTarget
     GetTarget() const;
 

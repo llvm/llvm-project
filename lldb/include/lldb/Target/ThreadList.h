@@ -116,7 +116,7 @@ public:
   /// will return false for WillResume, and then the process will not be
   /// restarted.
   ///
-  /// @return
+  /// \return
   ///    \b true instructs the process to resume normally,
   ///    \b false means start & stopped events will be generated, but
   ///    the process will not actually run.  The thread must then return

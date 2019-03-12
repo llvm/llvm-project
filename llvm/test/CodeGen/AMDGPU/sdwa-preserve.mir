@@ -96,7 +96,7 @@ body:             |
     %11:vgpr_32 = V_AND_B32_e64 %3, killed %10, implicit $exec
     %17:vgpr_32 = V_MOV_B32_sdwa 0, %4, 0, 5, 2, 4, implicit $exec, implicit %11(tied-def 0)
     FLAT_STORE_DWORD %0, %17, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -139,6 +139,6 @@ body:             |
     %11:vgpr_32 = V_AND_B32_e64 %3, killed %10, implicit $exec
     %17:vgpr_32 = V_MOV_B32_sdwa 0, %4, 0, 5, 2, 4, implicit $exec, implicit %11(tied-def 0)
     FLAT_STORE_DWORD %0, %17, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

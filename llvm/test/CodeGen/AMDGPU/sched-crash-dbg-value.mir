@@ -329,6 +329,6 @@ body:             |
     dead $sgpr30_sgpr31 = SI_CALL %127, @func, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit $vgpr0, implicit $vgpr1_vgpr2, implicit killed $vgpr3
     ADJCALLSTACKDOWN 0, 0, implicit-def $sgpr32, implicit $sgpr32
     %128:vreg_64, dead %129:sreg_64 = V_MAD_I64_I32 %20, %34, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

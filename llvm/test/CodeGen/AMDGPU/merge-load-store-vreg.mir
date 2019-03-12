@@ -73,7 +73,7 @@ body:             |
     S_BRANCH %bb.2
 
   bb.1:
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.2:
     %1:sreg_64_xexec = V_CMP_NE_U32_e64 %0, 0, implicit $exec
@@ -108,7 +108,7 @@ body:             |
     S_BRANCH %bb.2
 
   bb.1:
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.2:
     %1:sreg_64_xexec = V_CMP_NE_U32_e64 %0.sub0, 0, implicit $exec
@@ -139,7 +139,7 @@ body:             |
     S_BRANCH %bb.2
 
   bb.1:
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.2:
     %1:sreg_64_xexec = V_CMP_NE_U32_e64 %0.sub0, 0, implicit $exec

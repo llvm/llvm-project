@@ -62,6 +62,8 @@ Error SectionBase::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
 void SectionBase::initialize(SectionTableRef SecTable) {}
 void SectionBase::finalize() {}
 void SectionBase::markSymbols() {}
+void SectionBase::replaceSectionReferences(
+    const DenseMap<SectionBase *, SectionBase *> &) {}
 
 template <class ELFT> void ELFWriter<ELFT>::writeShdr(const SectionBase &Sec) {
   uint8_t *B = Buf.getBufferStart();
@@ -634,6 +636,19 @@ void RelocationSection::markSymbols() {
     Reloc.RelocSymbol->Referenced = true;
 }
 
+void RelocationSection::replaceSectionReferences(
+    const DenseMap<SectionBase *, SectionBase *> &FromTo) {
+  // Update the target section if it was replaced.
+  if (SectionBase *To = FromTo.lookup(SecToApplyRel))
+    SecToApplyRel = To;
+
+  // Change the sections where symbols are defined in if their
+  // original sections were replaced.
+  for (const Relocation &R : Relocations)
+    if (SectionBase *To = FromTo.lookup(R.RelocSymbol->DefinedIn))
+      R.RelocSymbol->DefinedIn = To;
+}
+
 void SectionWriter::visit(const DynamicRelocationSection &Sec) {
   llvm::copy(Sec.Contents,
             Out.getBufferStart() + Sec.Offset);
@@ -886,9 +901,7 @@ template <class ELFT> void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
 template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
   uint32_t Index = 0;
   for (const auto &Phdr : unwrapOrError(ElfFile.program_headers())) {
-    ArrayRef<uint8_t> Data{ElfFile.base() + Phdr.p_offset,
-                           (size_t)Phdr.p_filesz};
-    Segment &Seg = Obj.addSegment(Data);
+    Segment &Seg = Obj.addSegment();
     Seg.Type = Phdr.p_type;
     Seg.Flags = Phdr.p_flags;
     Seg.OriginalOffset = Phdr.p_offset;

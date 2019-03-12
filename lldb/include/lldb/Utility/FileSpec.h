@@ -38,7 +38,7 @@ template <typename T> class SmallVectorImpl;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class FileSpec FileSpec.h "lldb/Host/FileSpec.h"
+/// \class FileSpec FileSpec.h "lldb/Host/FileSpec.h"
 /// A file utility class.
 ///
 /// A file specification class that divides paths up into a directory
@@ -67,13 +67,13 @@ public:
   /// \a path is not nullptr or empty, this function will call
   /// FileSpec::SetFile (const char *path).
   ///
-  /// @param[in] path
+  /// \param[in] path
   ///     The full or partial path to a file.
   ///
-  /// @param[in] style
+  /// \param[in] style
   ///     The style of the path
   ///
-  /// @see FileSpec::SetFile (const char *path)
+  /// \see FileSpec::SetFile (const char *path)
   //------------------------------------------------------------------
   explicit FileSpec(llvm::StringRef path, Style style = Style::native);
 
@@ -84,7 +84,7 @@ public:
   ///
   /// Makes a copy of the uniqued directory and filename strings from \a rhs.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     A const FileSpec object reference to copy.
   //------------------------------------------------------------------
   FileSpec(const FileSpec &rhs);
@@ -95,7 +95,7 @@ public:
   /// Makes a copy of the uniqued directory and filename strings from \a rhs
   /// if it is not nullptr.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     A const FileSpec object pointer to copy if non-nullptr.
   //------------------------------------------------------------------
   FileSpec(const FileSpec *rhs);
@@ -114,10 +114,10 @@ public:
   ///
   /// Makes a copy of the uniqued directory and filename strings from \a rhs.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     A const FileSpec object reference to assign to this object.
   ///
-  /// @return
+  /// \return
   ///     A const reference to this object.
   //------------------------------------------------------------------
   const FileSpec &operator=(const FileSpec &rhs);
@@ -127,11 +127,11 @@ public:
   ///
   /// Tests if this object is equal to \a rhs.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     A const FileSpec object reference to compare this object
   ///     to.
   ///
-  /// @return
+  /// \return
   ///     \b true if this object is equal to \a rhs, \b false
   ///     otherwise.
   //------------------------------------------------------------------
@@ -142,11 +142,11 @@ public:
   ///
   /// Tests if this object is not equal to \a rhs.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     A const FileSpec object reference to compare this object
   ///     to.
   ///
-  /// @return
+  /// \return
   ///     \b true if this object is equal to \a rhs, \b false
   ///     otherwise.
   //------------------------------------------------------------------
@@ -157,11 +157,11 @@ public:
   ///
   /// Tests if this object is less than \a rhs.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     A const FileSpec object reference to compare this object
   ///     to.
   ///
-  /// @return
+  /// \return
   ///     \b true if this object is less than \a rhs, \b false
   ///     otherwise.
   //------------------------------------------------------------------
@@ -173,13 +173,13 @@ public:
   /// This allows code to check a FileSpec object to see if it contains
   /// anything valid using code such as:
   ///
-  /// @code
+  /// \code
   /// FileSpec file_spec(...);
   /// if (file_spec)
   /// { ...
-  /// @endcode
+  /// \endcode
   ///
-  /// @return
+  /// \return
   ///     A pointer to this object if either the directory or filename
   ///     is valid, nullptr otherwise.
   //------------------------------------------------------------------
@@ -191,13 +191,13 @@ public:
   /// This allows code to check a FileSpec object to see if it is invalid
   /// using code such as:
   ///
-  /// @code
+  /// \code
   /// FileSpec file_spec(...);
   /// if (!file_spec)
   /// { ...
-  /// @endcode
+  /// \endcode
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the object has an empty directory and
   ///     filename, \b false otherwise.
   //------------------------------------------------------------------
@@ -220,23 +220,23 @@ public:
   /// to only contain a filename and it can match FileSpec objects that have
   /// matching filenames with different paths.
   ///
-  /// @param[in] lhs
+  /// \param[in] lhs
   ///     A const reference to the Left Hand Side object to compare.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     A const reference to the Right Hand Side object to compare.
   ///
-  /// @param[in] full
+  /// \param[in] full
   ///     If true, then both the directory and filenames will have to
   ///     match for a compare to return zero (equal to). If false
   ///     and either directory from \a lhs or \a rhs is empty, then
   ///     only the filename will be compared, else a full comparison
   ///     is done.
   ///
-  /// @return
-  ///     @li -1 if \a lhs is less than \a rhs
-  ///     @li 0 if \a lhs is equal to \a rhs
-  ///     @li 1 if \a lhs is greater than \a rhs
+  /// \return
+  ///     \li -1 if \a lhs is less than \a rhs
+  ///     \li 0 if \a lhs is equal to \a rhs
+  ///     \li 1 if \a lhs is greater than \a rhs
   //------------------------------------------------------------------
   static int Compare(const FileSpec &lhs, const FileSpec &rhs, bool full);
 
@@ -252,7 +252,7 @@ public:
   //------------------------------------------------------------------
   /// Case sensitivity of path.
   ///
-  /// @return
+  /// \return
   ///     \b true if the file path is case sensitive (POSIX), false
   ///		if case insensitive (Windows).
   //------------------------------------------------------------------
@@ -265,7 +265,7 @@ public:
   /// valid directory name, it will be displayed followed by a directory
   /// delimiter, and the filename.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   //------------------------------------------------------------------
   void Dump(Stream *s) const;
@@ -275,7 +275,7 @@ public:
   //------------------------------------------------------------------
   /// Directory string get accessor.
   ///
-  /// @return
+  /// \return
   ///     A reference to the directory string object.
   //------------------------------------------------------------------
   ConstString &GetDirectory();
@@ -283,7 +283,7 @@ public:
   //------------------------------------------------------------------
   /// Directory string const get accessor.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the directory string object.
   //------------------------------------------------------------------
   ConstString GetDirectory() const;
@@ -291,7 +291,7 @@ public:
   //------------------------------------------------------------------
   /// Filename string get accessor.
   ///
-  /// @return
+  /// \return
   ///     A reference to the filename string object.
   //------------------------------------------------------------------
   ConstString &GetFilename();
@@ -299,7 +299,7 @@ public:
   //------------------------------------------------------------------
   /// Filename string const get accessor.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the filename string object.
   //------------------------------------------------------------------
   ConstString GetFilename() const;
@@ -308,7 +308,7 @@ public:
   /// Returns true if the filespec represents an implementation source file
   /// (files with a ".c", ".cpp", ".m", ".mm" (many more) extension).
   ///
-  /// @return
+  /// \return
   ///     \b true if the filespec represents an implementation source
   ///     file, \b false otherwise.
   //------------------------------------------------------------------
@@ -317,7 +317,7 @@ public:
   //------------------------------------------------------------------
   /// Returns true if the filespec represents a relative path.
   ///
-  /// @return
+  /// \return
   ///     \b true if the filespec represents a relative path,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -326,7 +326,7 @@ public:
   //------------------------------------------------------------------
   /// Returns true if the filespec represents an absolute path.
   ///
-  /// @return
+  /// \return
   ///     \b true if the filespec represents an absolute path,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -345,13 +345,13 @@ public:
   /// Extract the directory and path into a fixed buffer. This is needed as
   /// the directory and path are stored in separate string values.
   ///
-  /// @param[out] path
+  /// \param[out] path
   ///     The buffer in which to place the extracted full path.
   ///
-  /// @param[in] max_path_length
+  /// \param[in] max_path_length
   ///     The maximum length of \a path.
   ///
-  /// @return
+  /// \return
   ///     Returns the number of characters that would be needed to
   ///     properly copy the full path into \a path. If the returned
   ///     number is less than \a max_path_length, then the path is
@@ -367,7 +367,7 @@ public:
   ///
   /// Extract the directory and path into a std::string, which is returned.
   ///
-  /// @return
+  /// \return
   ///     Returns a std::string with the directory and filename
   ///     concatenated.
   //------------------------------------------------------------------
@@ -380,7 +380,7 @@ public:
   ///
   /// Extract the directory and path into an llvm::SmallVectorImpl<>
   ///
-  /// @return
+  /// \return
   ///     Returns a std::string with the directory and filename
   ///     concatenated.
   //------------------------------------------------------------------
@@ -395,7 +395,7 @@ public:
   /// filename has no extension, ConstString(nullptr) is returned. The dot
   /// ('.') character is not returned as part of the extension
   ///
-  /// @return
+  /// \return
   ///     Returns the extension of the file as a ConstString object.
   //------------------------------------------------------------------
   ConstString GetFileNameExtension() const;
@@ -407,7 +407,7 @@ public:
   /// without the extension part (e.g. for a file named "foo.bar", "foo" is
   /// returned)
   ///
-  /// @return
+  /// \return
   ///     Returns the filename without extension
   ///     as a ConstString object.
   //------------------------------------------------------------------
@@ -420,10 +420,10 @@ public:
   /// the size in bytes of this object, not any shared string values it may
   /// refer to.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object occupies in memory.
   ///
-  /// @see ConstString::StaticMemorySize ()
+  /// \see ConstString::StaticMemorySize ()
   //------------------------------------------------------------------
   size_t MemorySize() const;
 
@@ -434,10 +434,10 @@ public:
   /// split up into a directory and filename and stored as uniqued string
   /// values for quick comparison and efficient memory usage.
   ///
-  /// @param[in] path
+  /// \param[in] path
   ///     A full, partial, or relative path to a file.
   ///
-  /// @param[in] resolve_path
+  /// \param[in] resolve_path
   ///     If \b true, then we will try to resolve links the path using
   ///     the static FileSpec::Resolve.
   //------------------------------------------------------------------
@@ -456,7 +456,7 @@ public:
   /// we don't try and resolve it later, or try and resolve a path that has
   /// already been resolved.
   ///
-  /// @param[in] is_resolved
+  /// \param[in] is_resolved
   ///     A boolean value that will replace the current value that
   ///     indicates if the paths in this object have been resolved.
   //------------------------------------------------------------------
@@ -475,7 +475,7 @@ public:
   /// Removes the last path component by replacing the current path with its
   /// parent. When the current path has no parent, this is a no-op.
   ///
-  /// @return
+  /// \return
   ///     A boolean value indicating whether the path was updated.
   //------------------------------------------------------------------
   bool RemoveLastPathComponent();

@@ -1,0 +1,32 @@
+# RUN: llc -mtriple aarch64-unknown-unknown -O0 -start-before=legalizer -pass-remarks-missed=gisel* %s -o - 2>&1 | FileCheck %s
+#
+# Check that we fall back on @llvm.aarch64.neon.addp and ensure that we get the
+# correct instruction.
+# https://bugs.llvm.org/show_bug.cgi?id=40968
+
+--- |
+  define <2 x float> @foo(<2 x float> %v1, <2 x float> %v2) {
+  entry:
+    %v3 = call <2 x float> @llvm.aarch64.neon.addp.v2f32(<2 x float> %v1, <2 x float> %v2)
+    ret <2 x float> %v3
+  }
+  declare <2 x float> @llvm.aarch64.neon.addp.v2f32(<2 x float>, <2 x float>)
+...
+---
+name:            foo
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $d0, $d1
+    ; CHECK: remark:
+    ; CHECK-SAME: unable to legalize instruction: %2:_(<2 x s32>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.addp), %0:_(<2 x s32>), %1:_(<2 x s32>)
+    ; CHECK: faddp
+    ; CHECK-NOT: addp
+    %0:_(<2 x s32>) = COPY $d0
+    %1:_(<2 x s32>) = COPY $d1
+    %2:_(<2 x s32>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.addp), %0(<2 x s32>), %1(<2 x s32>)
+    $d0 = COPY %2(<2 x s32>)
+    RET_ReallyLR implicit $d0
+
+...

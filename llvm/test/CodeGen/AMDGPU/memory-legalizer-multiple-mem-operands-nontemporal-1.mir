@@ -154,6 +154,6 @@ body:             |
     $vgpr2 = V_MOV_B32_e32 killed $sgpr5, implicit $exec, implicit $sgpr4_sgpr5, implicit $exec
     S_WAITCNT 3952
     FLAT_STORE_DWORD killed $vgpr1_vgpr2, killed $vgpr0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.out)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

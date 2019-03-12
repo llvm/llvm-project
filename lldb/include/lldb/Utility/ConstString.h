@@ -24,7 +24,7 @@ class raw_ostream;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ConstString ConstString.h "lldb/Utility/ConstString.h"
+/// \class ConstString ConstString.h "lldb/Utility/ConstString.h"
 /// A uniqued constant string class.
 ///
 /// Provides an efficient way to store strings as uniqued strings. After the
@@ -51,7 +51,7 @@ public:
   ///
   /// Copies the string value in \a rhs into this object.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     Another string object to copy.
   //------------------------------------------------------------------
   ConstString(const ConstString &rhs) : m_string(rhs.m_string) {}
@@ -65,7 +65,7 @@ public:
   /// C string already exists in the global string pool. If it doesn't
   /// exist, it is added to the string pool.
   ///
-  /// @param[in] cstr
+  /// \param[in] cstr
   ///     A NULL terminated C string to add to the string pool.
   //------------------------------------------------------------------
   explicit ConstString(const char *cstr);
@@ -78,14 +78,14 @@ public:
   /// be truncated. This allows substrings to be created without the need to
   /// NULL terminate the string as it is passed into this function.
   ///
-  /// @param[in] cstr
+  /// \param[in] cstr
   ///     A pointer to the first character in the C string. The C
   ///     string can be NULL terminated in a buffer that contains
   ///     more characters than the length of the string, or the
   ///     string can be part of another string and a new substring
   ///     can be created.
   ///
-  /// @param[in] max_cstr_len
+  /// \param[in] max_cstr_len
   ///     The max length of \a cstr. If the string length of \a cstr
   ///     is less than \a max_cstr_len, then the string will be
   ///     truncated. If the string length of \a cstr is greater than
@@ -113,7 +113,7 @@ public:
     /// Two C strings are equal when they are contained in ConstString objects
     /// when their pointer values are equal to each other.
     ///
-    /// @return
+    /// \return
     ///     Returns \b true if the C string in \a lhs is equal to
     ///     the C string value in \a rhs, \b false otherwise.
     //--------------------------------------------------------------
@@ -128,13 +128,13 @@ public:
   /// This allows code to check a ConstString object to see if it contains a
   /// valid string using code such as:
   ///
-  /// @code
+  /// \code
   /// ConstString str(...);
   /// if (str)
   /// { ...
-  /// @endcode
+  /// \endcode
   ///
-  /// @return
+  /// \return
   ///     /b True this object contains a valid non-empty C string, \b
   ///     false otherwise.
   //------------------------------------------------------------------
@@ -145,10 +145,10 @@ public:
   ///
   /// Assigns the string in this object with the value from \a rhs.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     Another string object to copy into this object.
   ///
-  /// @return
+  /// \return
   ///     A const reference to this object.
   //------------------------------------------------------------------
   ConstString operator=(ConstString rhs) {
@@ -163,12 +163,12 @@ public:
   /// operation is very fast as it results in a pointer comparison since all
   /// strings are in a uniqued in a global string pool.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     Another string object to compare this object to.
   ///
-  /// @return
-  ///     @li \b true if this object is equal to \a rhs.
-  ///     @li \b false if this object is not equal to \a rhs.
+  /// \return
+  ///     \li \b true if this object is equal to \a rhs.
+  ///     \li \b false if this object is not equal to \a rhs.
   //------------------------------------------------------------------
   bool operator==(ConstString rhs) const {
     // We can do a pointer compare to compare these strings since they must
@@ -183,12 +183,12 @@ public:
   /// operation is very fast as it results in a pointer comparison since all
   /// strings are in a uniqued in a global string pool.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     Another string object to compare this object to.
   ///
-  /// @return
-  ///     @li \b true if this object is not equal to \a rhs.
-  ///     @li \b false if this object is equal to \a rhs.
+  /// \return
+  ///     \li \b true if this object is not equal to \a rhs.
+  ///     \li \b false if this object is equal to \a rhs.
   //------------------------------------------------------------------
   bool operator!=(ConstString rhs) const {
     return m_string != rhs.m_string;
@@ -204,7 +204,7 @@ public:
   ///
   /// If \a value_if_empty is nullptr, then nullptr will be returned.
   ///
-  /// @return
+  /// \return
   ///     Returns \a value_if_empty if the string is empty, otherwise
   ///     the C string value contained in this object.
   //------------------------------------------------------------------
@@ -215,7 +215,7 @@ public:
   //------------------------------------------------------------------
   /// Get the string value as a llvm::StringRef
   ///
-  /// @return
+  /// \return
   ///     Returns a new llvm::StringRef object filled in with the
   ///     needed data.
   //------------------------------------------------------------------
@@ -231,7 +231,7 @@ public:
   /// function will always return nullptr if the string is not valid. So this
   /// function is a direct accessor to the string pointer value.
   ///
-  /// @return
+  /// \return
   ///     Returns nullptr the string is invalid, otherwise the C string
   ///     value contained in this object.
   //------------------------------------------------------------------
@@ -243,7 +243,7 @@ public:
   /// The string pool stores the length of the string, so we can avoid calling
   /// strlen() on the pointer value with this function.
   ///
-  /// @return
+  /// \return
   ///     Returns the number of bytes that this string occupies in
   ///     memory, not including the NULL termination byte.
   //------------------------------------------------------------------
@@ -265,19 +265,19 @@ public:
   /// in a pointer comparison since all strings are in a uniqued in a global
   /// string pool.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     The Left Hand Side const ConstString object reference.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     The Right Hand Side const ConstString object reference.
   ///
-  /// @param[in] case_sensitive
+  /// \param[in] case_sensitive
   ///     Case sensitivity. If true, case sensitive equality
   ///     will be tested, otherwise character case will be ignored
   ///
-  /// @return
-  ///     @li \b true if this object is equal to \a rhs.
-  ///     @li \b false if this object is not equal to \a rhs.
+  /// \return
+  ///     \li \b true if this object is equal to \a rhs.
+  ///     \li \b false if this object is not equal to \a rhs.
   //------------------------------------------------------------------
   static bool Equals(ConstString lhs, ConstString rhs,
                      const bool case_sensitive = true);
@@ -293,20 +293,20 @@ public:
   /// it is much more efficient. Also if you want string inequality, use the
   /// != operator for the same reasons.
   ///
-  /// @param[in] lhs
+  /// \param[in] lhs
   ///     The Left Hand Side const ConstString object reference.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     The Right Hand Side const ConstString object reference.
   ///
-  /// @param[in] case_sensitive
+  /// \param[in] case_sensitive
   ///     Case sensitivity of compare. If true, case sensitive compare
   ///     will be performed, otherwise character case will be ignored
   ///
-  /// @return
-  ///     @li -1 if lhs < rhs
-  ///     @li 0 if lhs == rhs
-  ///     @li 1 if lhs > rhs
+  /// \return
+  ///     \li -1 if lhs < rhs
+  ///     \li 0 if lhs == rhs
+  ///     \li 1 if lhs > rhs
   //------------------------------------------------------------------
   static int Compare(ConstString lhs, ConstString rhs,
                      const bool case_sensitive = true);
@@ -318,10 +318,10 @@ public:
   /// empty, print \a value_if_empty to the stream instead. If \a
   /// value_if_empty is nullptr, then nothing will be dumped to the stream.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream that will be used to dump the object description.
   ///
-  /// @param[in] value_if_empty
+  /// \param[in] value_if_empty
   ///     The value to dump if the string is empty. If nullptr, nothing
   ///     will be output to the stream.
   //------------------------------------------------------------------
@@ -330,7 +330,7 @@ public:
   //------------------------------------------------------------------
   /// Dump the object debug description to a stream.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream that will be used to dump the object description.
   //------------------------------------------------------------------
   void DumpDebug(Stream *s) const;
@@ -338,18 +338,18 @@ public:
   //------------------------------------------------------------------
   /// Test for empty string.
   ///
-  /// @return
-  ///     @li \b true if the contained string is empty.
-  ///     @li \b false if the contained string is not empty.
+  /// \return
+  ///     \li \b true if the contained string is empty.
+  ///     \li \b false if the contained string is not empty.
   //------------------------------------------------------------------
   bool IsEmpty() const { return m_string == nullptr || m_string[0] == '\0'; }
 
   //------------------------------------------------------------------
   /// Test for null string.
   ///
-  /// @return
-  ///     @li \b true if there is no string associated with this instance.
-  ///     @li \b false if there is a string associated with this instance.
+  /// \return
+  ///     \li \b true if there is no string associated with this instance.
+  ///     \li \b false if there is a string associated with this instance.
   //------------------------------------------------------------------
   bool IsNull() const { return m_string == nullptr; }
 
@@ -363,7 +363,7 @@ public:
   /// current entry and returns the existing value. If it doesn't exist, it is
   /// added to the string pool.
   ///
-  /// @param[in] cstr
+  /// \param[in] cstr
   ///     A NULL terminated C string to add to the string pool.
   //------------------------------------------------------------------
   void SetCString(const char *cstr);
@@ -380,10 +380,10 @@ public:
   /// demangler over and over on the same strings and then trying to unique
   /// them.
   ///
-  /// @param[in] demangled
+  /// \param[in] demangled
   ///     The demangled string to correlate with the \a mangled name.
   ///
-  /// @param[in] mangled
+  /// \param[in] mangled
   ///     The already uniqued mangled ConstString to correlate the
   ///     soon to be uniqued version of \a demangled.
   //------------------------------------------------------------------
@@ -401,11 +401,11 @@ public:
   /// demangler over and over on the same strings and then trying to unique
   /// them.
   ///
-  /// @param[in] counterpart
+  /// \param[in] counterpart
   ///     A reference to a ConstString object that might get filled in
   ///     with the demangled/mangled counterpart.
   ///
-  /// @return
+  /// \return
   ///     /b True if \a counterpart was filled in with the counterpart
   ///     /b false otherwise.
   //------------------------------------------------------------------
@@ -423,10 +423,10 @@ public:
   /// current entry and returns the existing value. If it doesn't exist, it is
   /// added to the string pool.
   ///
-  /// @param[in] cstr
+  /// \param[in] cstr
   ///     A NULL terminated C string to add to the string pool.
   ///
-  /// @param[in] cstr_len
+  /// \param[in] cstr_len
   ///     The maximum length of the C string.
   //------------------------------------------------------------------
   void SetCStringWithLength(const char *cstr, size_t cstr_len);
@@ -446,10 +446,10 @@ public:
   /// the size in bytes of this object, which does not include any the shared
   /// string values it may refer to.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object occupies in memory.
   ///
-  /// @see ConstString::StaticMemorySize ()
+  /// \see ConstString::StaticMemorySize ()
   //------------------------------------------------------------------
   size_t MemorySize() const { return sizeof(ConstString); }
 
@@ -459,7 +459,7 @@ public:
   /// Reports the size in bytes of all shared C string values, containers and
   /// any other values as a byte size for the entire string pool.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that the global string pool occupies
   ///     in memory.
   //------------------------------------------------------------------

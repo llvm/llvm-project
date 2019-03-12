@@ -45,7 +45,7 @@ class UnwindPlan;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class EmulateInstruction EmulateInstruction.h
+/// \class EmulateInstruction EmulateInstruction.h
 /// "lldb/Core/EmulateInstruction.h"
 /// A class that allows emulation of CPU opcodes.
 ///

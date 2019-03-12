@@ -32,6 +32,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -457,7 +458,7 @@ Init *BitsInit::resolveReferences(Resolver &R) const {
 }
 
 IntInit *IntInit::get(int64_t V) {
-  static DenseMap<int64_t, IntInit*> ThePool;
+  static std::map<int64_t, IntInit*> ThePool;
 
   IntInit *&I = ThePool[V];
   if (!I) I = new(Allocator) IntInit(V);

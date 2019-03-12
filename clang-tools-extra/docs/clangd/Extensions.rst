@@ -2,6 +2,8 @@
 Protocol extensions
 ===================
 
+.. contents::
+
 clangd supports some features that are not in the official
 `Language Server Protocol specification
 <https://microsoft.github.io/language-server-protocol/specification>`__.

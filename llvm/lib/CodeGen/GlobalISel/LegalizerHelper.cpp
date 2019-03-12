@@ -535,7 +535,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     return Legalized;
   }
   case TargetOpcode::G_MUL:
-    return narrowScalarMul(MI, TypeIdx, NarrowTy);
+  case TargetOpcode::G_UMULH:
+    return narrowScalarMul(MI, NarrowTy);
   case TargetOpcode::G_EXTRACT:
     return narrowScalarExtract(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_INSERT:
@@ -2544,51 +2545,103 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   }
 }
 
+void LegalizerHelper::multiplyRegisters(SmallVectorImpl<unsigned> &DstRegs,
+                                        ArrayRef<unsigned> Src1Regs,
+                                        ArrayRef<unsigned> Src2Regs,
+                                        LLT NarrowTy) {
+  MachineIRBuilder &B = MIRBuilder;
+  unsigned SrcParts = Src1Regs.size();
+  unsigned DstParts = DstRegs.size();
+
+  unsigned DstIdx = 0; // Low bits of the result.
+  unsigned FactorSum =
+      B.buildMul(NarrowTy, Src1Regs[DstIdx], Src2Regs[DstIdx]).getReg(0);
+  DstRegs[DstIdx] = FactorSum;
+
+  unsigned CarrySumPrevDstIdx;
+  SmallVector<unsigned, 4> Factors;
+
+  for (DstIdx = 1; DstIdx < DstParts; DstIdx++) {
+    // Collect low parts of muls for DstIdx.
+    for (unsigned i = DstIdx + 1 < SrcParts ? 0 : DstIdx - SrcParts + 1;
+         i <= std::min(DstIdx, SrcParts - 1); ++i) {
+      MachineInstrBuilder Mul =
+          B.buildMul(NarrowTy, Src1Regs[DstIdx - i], Src2Regs[i]);
+      Factors.push_back(Mul.getReg(0));
+    }
+    // Collect high parts of muls from previous DstIdx.
+    for (unsigned i = DstIdx < SrcParts ? 0 : DstIdx - SrcParts;
+         i <= std::min(DstIdx - 1, SrcParts - 1); ++i) {
+      MachineInstrBuilder Umulh =
+          B.buildUMulH(NarrowTy, Src1Regs[DstIdx - 1 - i], Src2Regs[i]);
+      Factors.push_back(Umulh.getReg(0));
+    }
+    // Add CarrySum from additons calculated for previous DstIdx.
+    if (DstIdx != 1) {
+      Factors.push_back(CarrySumPrevDstIdx);
+    }
+
+    unsigned CarrySum = 0;
+    // Add all factors and accumulate all carries into CarrySum.
+    if (DstIdx != DstParts - 1) {
+      MachineInstrBuilder Uaddo =
+          B.buildUAddo(NarrowTy, LLT::scalar(1), Factors[0], Factors[1]);
+      FactorSum = Uaddo.getReg(0);
+      CarrySum = B.buildZExt(NarrowTy, Uaddo.getReg(1)).getReg(0);
+      for (unsigned i = 2; i < Factors.size(); ++i) {
+        MachineInstrBuilder Uaddo =
+            B.buildUAddo(NarrowTy, LLT::scalar(1), FactorSum, Factors[i]);
+        FactorSum = Uaddo.getReg(0);
+        MachineInstrBuilder Carry = B.buildZExt(NarrowTy, Uaddo.getReg(1));
+        CarrySum = B.buildAdd(NarrowTy, CarrySum, Carry).getReg(0);
+      }
+    } else {
+      // Since value for the next index is not calculated, neither is CarrySum.
+      FactorSum = B.buildAdd(NarrowTy, Factors[0], Factors[1]).getReg(0);
+      for (unsigned i = 2; i < Factors.size(); ++i)
+        FactorSum = B.buildAdd(NarrowTy, FactorSum, Factors[i]).getReg(0);
+    }
+
+    CarrySumPrevDstIdx = CarrySum;
+    DstRegs[DstIdx] = FactorSum;
+    Factors.clear();
+  }
+}
+
 LegalizerHelper::LegalizeResult
-LegalizerHelper::narrowScalarMul(MachineInstr &MI, unsigned TypeIdx, LLT NewTy) {
+LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
   unsigned DstReg = MI.getOperand(0).getReg();
-  unsigned Src0 = MI.getOperand(1).getReg();
-  unsigned Src1 = MI.getOperand(2).getReg();
+  unsigned Src1 = MI.getOperand(1).getReg();
+  unsigned Src2 = MI.getOperand(2).getReg();
+
   LLT Ty = MRI.getType(DstReg);
   if (Ty.isVector())
     return UnableToLegalize;
 
-  unsigned Size = Ty.getSizeInBits();
-  unsigned NewSize = Size / 2;
-  if (Size != 2 * NewSize)
+  unsigned SrcSize = MRI.getType(Src1).getSizeInBits();
+  unsigned DstSize = Ty.getSizeInBits();
+  unsigned NarrowSize = NarrowTy.getSizeInBits();
+  if (DstSize % NarrowSize != 0 || SrcSize % NarrowSize != 0)
     return UnableToLegalize;
 
-  LLT HalfTy = LLT::scalar(NewSize);
-  // TODO: if HalfTy != NewTy, handle the breakdown all at once?
+  unsigned NumDstParts = DstSize / NarrowSize;
+  unsigned NumSrcParts = SrcSize / NarrowSize;
+  bool IsMulHigh = MI.getOpcode() == TargetOpcode::G_UMULH;
+  unsigned DstTmpParts = NumDstParts * (IsMulHigh ? 2 : 1);
 
-  unsigned ShiftAmt = MRI.createGenericVirtualRegister(Ty);
-  unsigned Lo = MRI.createGenericVirtualRegister(HalfTy);
-  unsigned Hi = MRI.createGenericVirtualRegister(HalfTy);
-  unsigned ExtLo = MRI.createGenericVirtualRegister(Ty);
-  unsigned ExtHi = MRI.createGenericVirtualRegister(Ty);
-  unsigned ShiftedHi = MRI.createGenericVirtualRegister(Ty);
+  SmallVector<unsigned, 2> Src1Parts, Src2Parts, DstTmpRegs;
+  extractParts(Src1, NarrowTy, NumSrcParts, Src1Parts);
+  extractParts(Src2, NarrowTy, NumSrcParts, Src2Parts);
+  DstTmpRegs.resize(DstTmpParts);
+  multiplyRegisters(DstTmpRegs, Src1Parts, Src2Parts, NarrowTy);
 
-  SmallVector<unsigned, 2> Src0Parts;
-  SmallVector<unsigned, 2> Src1Parts;
-
-  extractParts(Src0, HalfTy, 2, Src0Parts);
-  extractParts(Src1, HalfTy, 2, Src1Parts);
-
-  MIRBuilder.buildMul(Lo, Src0Parts[0], Src1Parts[0]);
-
-  // TODO: Use smulh or umulh depending on what the target has.
-  MIRBuilder.buildUMulH(Hi, Src0Parts[1], Src1Parts[1]);
-
-  MIRBuilder.buildConstant(ShiftAmt, NewSize);
-  MIRBuilder.buildAnyExt(ExtHi, Hi);
-  MIRBuilder.buildShl(ShiftedHi, ExtHi, ShiftAmt);
-
-  MIRBuilder.buildZExt(ExtLo, Lo);
-  MIRBuilder.buildOr(DstReg, ExtLo, ShiftedHi);
+  // Take only high half of registers if this is high mul.
+  ArrayRef<unsigned> DstRegs(
+      IsMulHigh ? &DstTmpRegs[DstTmpParts / 2] : &DstTmpRegs[0], NumDstParts);
+  MIRBuilder.buildMerge(DstReg, DstRegs);
   MI.eraseFromParent();
   return Legalized;
 }
-
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::narrowScalarExtract(MachineInstr &MI, unsigned TypeIdx,

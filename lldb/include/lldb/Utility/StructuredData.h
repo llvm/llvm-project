@@ -36,7 +36,7 @@ class Stream;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class StructuredData StructuredData.h "lldb/Utility/StructuredData.h"
+/// \class StructuredData StructuredData.h "lldb/Utility/StructuredData.h"
 /// A class which can hold structured data
 ///
 /// The StructuredData class is designed to hold the data from a JSON or plist

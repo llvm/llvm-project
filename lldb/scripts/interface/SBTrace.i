@@ -27,6 +27,8 @@ public:
 
   lldb::user_id_t GetTraceUID();
 
+  explicit operator bool() const;
+
   bool IsValid();
 
 };

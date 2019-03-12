@@ -147,6 +147,9 @@ private:
     /// Reference to the taskgroup task_reduction reference expression.
     Expr *TaskgroupReductionRef = nullptr;
     llvm::DenseSet<QualType> MappedClassesQualTypes;
+    /// List of globals marked as declare target link in this target region
+    /// (isOpenMPTargetExecutionDirective(Directive) == true).
+    llvm::SmallVector<DeclRefExpr *, 4> DeclareTargetLinkVarDecls;
     SharingMapTy(OpenMPDirectiveKind DKind, DeclarationNameInfo Name,
                  Scope *CurScope, SourceLocation Loc)
         : Directive(DKind), DirectiveName(Name), CurScope(CurScope),
@@ -674,6 +677,31 @@ public:
     return StackElem.MappedClassesQualTypes.count(QT) != 0;
   }
 
+  /// Adds global declare target to the parent target region.
+  void addToParentTargetRegionLinkGlobals(DeclRefExpr *E) {
+    assert(*OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
+               E->getDecl()) == OMPDeclareTargetDeclAttr::MT_Link &&
+           "Expected declare target link global.");
+    if (isStackEmpty())
+      return;
+    auto It = Stack.back().first.rbegin();
+    while (It != Stack.back().first.rend() &&
+           !isOpenMPTargetExecutionDirective(It->Directive))
+      ++It;
+    if (It != Stack.back().first.rend()) {
+      assert(isOpenMPTargetExecutionDirective(It->Directive) &&
+             "Expected target executable directive.");
+      It->DeclareTargetLinkVarDecls.push_back(E);
+    }
+  }
+
+  /// Returns the list of globals with declare target link if current directive
+  /// is target.
+  ArrayRef<DeclRefExpr *> getLinkGlobals() const {
+    assert(isOpenMPTargetExecutionDirective(getCurrentDirective()) &&
+           "Expected target executable directive.");
+    return Stack.back().first.back().DeclareTargetLinkVarDecls;
+  }
 };
 
 bool isImplicitTaskingRegion(OpenMPDirectiveKind DKind) {
@@ -2414,8 +2442,18 @@ public:
       // Define implicit data-sharing attributes for task.
       DVar = Stack->getImplicitDSA(VD, /*FromParent=*/false);
       if (isOpenMPTaskingDirective(DKind) && DVar.CKind != OMPC_shared &&
-          !Stack->isLoopControlVariable(VD).first)
+          !Stack->isLoopControlVariable(VD).first) {
         ImplicitFirstprivate.push_back(E);
+        return;
+      }
+
+      // Store implicitly used globals with declare target link for parent
+      // target.
+      if (!isOpenMPTargetExecutionDirective(DKind) && Res &&
+          *Res == OMPDeclareTargetDeclAttr::MT_Link) {
+        Stack->addToParentTargetRegionLinkGlobals(E);
+        return;
+      }
     }
   }
   void VisitMemberExpr(MemberExpr *E) {
@@ -2573,7 +2611,13 @@ public:
   }
 
   DSAAttrChecker(DSAStackTy *S, Sema &SemaRef, CapturedStmt *CS)
-      : Stack(S), SemaRef(SemaRef), ErrorFound(false), CS(CS) {}
+      : Stack(S), SemaRef(SemaRef), ErrorFound(false), CS(CS) {
+    // Process declare target link variables for the target directives.
+    if (isOpenMPTargetExecutionDirective(S->getCurrentDirective())) {
+      for (DeclRefExpr *E : Stack->getLinkGlobals())
+        Visit(E);
+    }
+  }
 };
 } // namespace
 

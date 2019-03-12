@@ -63,11 +63,11 @@ public:
   /// features, and if that happens, there is a single plugin instance
   /// created covering all of the mapped features for a given process.
   ///
-  /// @param[in] type_name
+  /// \param[in] type_name
   ///     The name of the feature tag supported by a process.
   ///     e.g. "darwin-log".
   ///
-  /// @return
+  /// \return
   ///     true if the plugin supports the feature; otherwise, false.
   // -------------------------------------------------------------------------
   virtual bool SupportsStructuredDataType(ConstString type_name) = 0;
@@ -83,17 +83,17 @@ public:
   /// value.  This is the manner in which the data is routed to the proper
   /// plugin instance.
   ///
-  /// @param[in] process
+  /// \param[in] process
   ///     The process instance that just received the structured data.
   ///     This will always be the same process for a given instance of
   ///     a plugin.
   ///
-  /// @param[in] type_name
+  /// \param[in] type_name
   ///     The name of the feature tag for the asynchronous structured data.
   ///     Note this data will also be present in the \b object_sp dictionary
   ///     under the string value with key "type".
   ///
-  /// @param[in] object_sp
+  /// \param[in] object_sp
   ///     A shared pointer to the structured data that arrived.  This must
   ///     be a dictionary.  The only key required is the aforementioned
   ///     key named "type" that must be a string value containing the
@@ -112,13 +112,13 @@ public:
   /// nothing will be printed; otherwise, a newline will be added to the end
   /// when displayed.
   ///
-  /// @param[in] object_sp
+  /// \param[in] object_sp
   ///     A shared pointer to the structured data to format.
   ///
-  /// @param[in] stream
+  /// \param[in] stream
   ///     The stream where the structured data should be pretty printed.
   ///
-  /// @return
+  /// \return
   ///     The error if formatting the object contents failed; otherwise,
   ///     success.
   // -------------------------------------------------------------------------
@@ -132,7 +132,7 @@ public:
   /// their functionality.  It allows retrieval of this state without
   /// requiring a cast.
   ///
-  /// @param[in] type_name
+  /// \param[in] type_name
   ///     The name of the feature tag for the asynchronous structured data.
   ///     This is needed for plugins that support more than one feature.
   // -------------------------------------------------------------------------
@@ -146,12 +146,12 @@ public:
   /// if they have any behavior they want to enable/modify based on loaded
   /// modules.
   ///
-  /// @param[in] process
+  /// \param[in] process
   ///     The process that just was notified of modules having been loaded.
   ///     This will always be the same process for a given instance of
   ///     a plugin.
   ///
-  /// @param[in] module_list
+  /// \param[in] module_list
   ///     The list of modules that the process registered as having just
   ///     loaded.  See \b Process::ModulesDidLoad(...).
   // -------------------------------------------------------------------------
@@ -171,7 +171,7 @@ protected:
   /// StructuredDataPlugin derived classes are available for this debugger.
   /// If this has already happened, this call is a no-op.
   ///
-  /// @param[in] debugger
+  /// \param[in] debugger
   ///     The Debugger instance for which we're creating the required shared
   ///     components for the StructuredDataPlugin derived classes.
   // -------------------------------------------------------------------------

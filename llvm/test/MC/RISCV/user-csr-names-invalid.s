@@ -1,7 +1,5 @@
-# RUN: not llvm-mc -triple riscv32 < %s 2>&1 \
-# RUN:  | FileCheck -check-prefix=CHECK-NEED-F %s
 # RUN: not llvm-mc -triple riscv64 < %s 2>&1 \
-# RUN:  | FileCheck -check-prefixes=CHECK-NEED-RV32,CHECK-NEED-F %s
+# RUN:  | FileCheck -check-prefixes=CHECK-NEED-RV32 %s
 
 # These user mode CSR register names are RV32 only.
 
@@ -38,10 +36,3 @@ csrrs t1, hpmcounter28h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system re
 csrrs t1, hpmcounter29h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
 csrrs t1, hpmcounter30h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
 csrrs t1, hpmcounter31h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
-
-# These user mode CSR register names require F extension.
-
-csrrs t1, fflags, zero # CHECK-NEED-F: :[[@LINE]]:11: error: system register use requires an option to be enabled
-csrrs t1, frm, zero # CHECK-NEED-F: :[[@LINE]]:11: error: system register use requires an option to be enabled
-csrrs t1, fcsr, zero # CHECK-NEED-F: :[[@LINE]]:11: error: system register use requires an option to be enabled
-

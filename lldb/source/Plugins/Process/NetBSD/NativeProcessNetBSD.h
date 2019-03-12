@@ -18,7 +18,7 @@
 
 namespace lldb_private {
 namespace process_netbsd {
-/// @class NativeProcessNetBSD
+/// \class NativeProcessNetBSD
 /// Manages communication with the inferior (debugee) process.
 ///
 /// Upon construction, this class prepares and launches an inferior process

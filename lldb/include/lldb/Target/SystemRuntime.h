@@ -23,7 +23,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class SystemRuntime SystemRuntime.h "lldb/Target/SystemRuntime.h"
+/// \class SystemRuntime SystemRuntime.h "lldb/Target/SystemRuntime.h"
 /// A plug-in interface definition class for system runtimes.
 ///
 /// The system runtime plugins can collect information from the system
@@ -49,7 +49,7 @@ public:
   /// Scans the installed SystemRuntime plugins and tries to find an instance
   /// that can be used to track image changes in \a process.
   ///
-  /// @param[in] process
+  /// \param[in] process
   ///     The process for which to try and locate a system runtime
   ///     plugin instance.
   //------------------------------------------------------------------
@@ -118,7 +118,7 @@ public:
   /// libdispatch queue origin.  If there is none, then request the pthread
   /// origin.
   ///
-  /// @return
+  /// \return
   ///   A vector of ConstStrings with names like "pthread" or "libdispatch".
   ///   An empty vector may be returned if no thread origin extended
   ///   backtrace capabilities are available.
@@ -136,14 +136,14 @@ public:
   /// There may be a chain of thread-origins; it may be informative to the end
   /// user to query the returned ThreadSP for its origins as well.
   ///
-  /// @param [in] thread
+  /// \param [in] thread
   ///   The thread to examine.
   ///
-  /// @param [in] type
+  /// \param [in] type
   ///   The type of thread origin being requested.  The types supported
   ///   are returned from SystemRuntime::GetExtendedBacktraceTypes.
   ///
-  /// @return
+  /// \return
   ///   A ThreadSP which will have a StackList of frames.  This Thread will
   ///   not appear in the Process' list of current threads.  Normal thread
   ///   operations like stepping will not be available.  This is a historical
@@ -164,14 +164,14 @@ public:
   /// This method will report a thread backtrace of the function that enqueued
   /// it originally, if possible.
   ///
-  /// @param [in] queue_item_sp
+  /// \param [in] queue_item_sp
   ///     The QueueItem that we are getting an extended backtrace for.
   ///
-  /// @param [in] type
+  /// \param [in] type
   ///     The type of extended backtrace to fetch.  The types supported
   ///     are returned from SystemRuntime::GetExtendedBacktraceTypes.
   ///
-  /// @return
+  /// \return
   ///     If an extended backtrace is available, it is returned.  Else
   ///     an empty ThreadSP is returned.
   //------------------------------------------------------------------
@@ -188,7 +188,7 @@ public:
   /// When process execution is paused, the SystemRuntime may be called to
   /// fill in the list of Queues that currently exist.
   ///
-  /// @param [out] queue_list
+  /// \param [out] queue_list
   ///     This QueueList will be cleared, and any queues that currently exist
   ///     will be added.  An empty QueueList will be returned if no queues
   ///     exist or if this Systemruntime does not support libdispatch queues.
@@ -204,10 +204,10 @@ public:
   /// dispatch_queue_t structure. Given the address of the dispatch_queue_t
   /// structure for a thread, get the queue name and return it.
   ///
-  /// @param [in] dispatch_qaddr
+  /// \param [in] dispatch_qaddr
   ///     The address of the dispatch_qaddr pointer for this thread.
   ///
-  /// @return
+  /// \return
   ///     The string of this queue's name.  An empty string is returned if the
   ///     name could not be found.
   //------------------------------------------------------------------
@@ -226,10 +226,10 @@ public:
   /// dispatch_queue_t structure. Given the address of the dispatch_queue_t
   /// structure for a thread, get the queue ID and return it.
   ///
-  /// @param [in] dispatch_qaddr
+  /// \param [in] dispatch_qaddr
   ///     The address of the dispatch_qaddr pointer for this thread.
   ///
-  /// @return
+  /// \return
   ///     The queue ID, or if it could not be retrieved, LLDB_INVALID_QUEUE_ID.
   //------------------------------------------------------------------
   virtual lldb::queue_id_t
@@ -246,10 +246,10 @@ public:
   /// the thread's dispatch_qaddr, find the libdispatch_queue_t address and
   /// return it.
   ///
-  /// @param [in] dispatch_qaddr
+  /// \param [in] dispatch_qaddr
   ///     The address of the dispatch_qaddr pointer for this thread.
   ///
-  /// @return
+  /// \return
   ///     The libdispatch_queue_t address, or LLDB_INVALID_ADDRESS if
   ///     unavailable/not found.
   //------------------------------------------------------------------
@@ -265,7 +265,7 @@ public:
   /// eQueueKindConcurrent, indicating that this queue processes work items
   /// serially or concurrently.
   ///
-  /// @return
+  /// \return
   ///     The Queue kind, if it could be read, else eQueueKindUnknown.
   //------------------------------------------------------------------
   virtual lldb::QueueKind GetQueueKind(lldb::addr_t dispatch_qaddr) {
@@ -279,7 +279,7 @@ public:
   /// retrieve the list of pending work items for the specified Queue and add
   /// it to the Queue.
   ///
-  /// @param [in] queue
+  /// \param [in] queue
   ///     The queue of interest.
   //------------------------------------------------------------------
   virtual void PopulatePendingItemsForQueue(lldb_private::Queue *queue) {}
@@ -291,10 +291,10 @@ public:
   /// details; when the remaining fields are needed, they will be fetched by
   /// call this method.
   ///
-  /// @param [in] queue_item
+  /// \param [in] queue_item
   ///   The QueueItem that we will be completing.
   ///
-  /// @param [in] item_ref
+  /// \param [in] item_ref
   ///     The item_ref token that is needed to retrieve the rest of the
   ///     information about the QueueItem.
   //------------------------------------------------------------------
@@ -306,7 +306,7 @@ public:
   /// information debugserver  may need when constructing the
   /// jThreadExtendedInfo packet.
   ///
-  /// @param [out] dict
+  /// \param [out] dict
   ///     Dictionary to which key-value pairs should be added; they will
   ///     be sent to the remote gdb server stub as arguments in the
   ///     jThreadExtendedInfo request.
@@ -320,10 +320,10 @@ public:
   /// this method gives a way for it to flag that the expression should not be
   /// run.
   ///
-  /// @param [in] thread_sp
+  /// \param [in] thread_sp
   ///     The thread we want to run the expression on.
   ///
-  /// @return
+  /// \return
   ///     True will be returned if there are no known problems with running an
   ///     expression on this thread.  False means that the inferior function
   ///     call should not be made on this thread.

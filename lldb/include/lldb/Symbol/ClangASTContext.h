@@ -354,11 +354,13 @@ public:
   //------------------------------------------------------------------
 
   clang::NamespaceDecl *
-  GetUniqueNamespaceDeclaration(const char *name, clang::DeclContext *decl_ctx);
+  GetUniqueNamespaceDeclaration(const char *name, clang::DeclContext *decl_ctx,
+                                bool is_inline = false);
 
   static clang::NamespaceDecl *
   GetUniqueNamespaceDeclaration(clang::ASTContext *ast, const char *name,
-                                clang::DeclContext *decl_ctx);
+                                clang::DeclContext *decl_ctx,
+                                bool is_inline = false);
 
   //------------------------------------------------------------------
   // Function Types
@@ -505,6 +507,9 @@ public:
                                 lldb::LanguageType *language_ptr,
                                 bool *is_instance_method_ptr,
                                 ConstString *language_object_name_ptr) override;
+
+  bool DeclContextIsContainedInLookup(void *opaque_decl_ctx,
+                                      void *other_opaque_decl_ctx) override;
 
   //----------------------------------------------------------------------
   // Clang specific clang::DeclContext functions

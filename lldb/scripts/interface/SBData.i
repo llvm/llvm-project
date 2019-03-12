@@ -31,6 +31,8 @@ public:
     bool
     IsValid();
 
+    explicit operator bool() const;
+
     size_t
     GetByteSize ();
 

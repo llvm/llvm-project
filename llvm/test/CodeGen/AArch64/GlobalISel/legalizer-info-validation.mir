@@ -151,7 +151,7 @@
 # DEBUG:      .. the first uncovered type index: 1, OK
 #
 # DEBUG-NEXT: G_INTRINSIC (opcode {{[0-9]+}}): 0 type indices
-# DEBUG:      .. type index coverage check SKIPPED: no rules defined
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_INTRINSIC_W_SIDE_EFFECTS (opcode {{[0-9]+}}): 0 type indices
 # DEBUG:      .. type index coverage check SKIPPED: no rules defined

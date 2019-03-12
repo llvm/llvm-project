@@ -24,6 +24,8 @@ public:
     bool
     IsValid() const;
 
+    explicit operator bool() const;
+
     const char *
     GetName ();
     
@@ -78,6 +80,8 @@ public:
     
     bool
     IsValid() const;
+
+    explicit operator bool() const;
     
     const char *
     GetName ();
@@ -195,6 +199,8 @@ public:
 
     bool
     IsValid();
+
+    explicit operator bool() const;
 
     uint64_t
     GetByteSize();
@@ -486,6 +492,8 @@ public:
 
     bool
     IsValid();
+
+    explicit operator bool() const;
 
     void
     Append (lldb::SBType type);

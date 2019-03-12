@@ -132,6 +132,9 @@ public:
       void *opaque_decl_ctx, lldb::LanguageType *language_ptr,
       bool *is_instance_method_ptr, ConstString *language_object_name_ptr) = 0;
 
+  virtual bool DeclContextIsContainedInLookup(void *opaque_decl_ctx,
+                                              void *other_opaque_decl_ctx) = 0;
+
   //----------------------------------------------------------------------
   // Tests
   //----------------------------------------------------------------------

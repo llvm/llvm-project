@@ -31,5 +31,5 @@ stack:
 
 body: |
   bb.0:
-    S_ENDPGM
+    S_ENDPGM 0
 ...

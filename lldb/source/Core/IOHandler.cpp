@@ -331,7 +331,7 @@ IOHandlerEditline::~IOHandlerEditline() {
 
 void IOHandlerEditline::Activate() {
   IOHandler::Activate();
-  m_delegate.IOHandlerActivated(*this);
+  m_delegate.IOHandlerActivated(*this, GetIsInteractive());
 }
 
 void IOHandlerEditline::Deactivate() {
