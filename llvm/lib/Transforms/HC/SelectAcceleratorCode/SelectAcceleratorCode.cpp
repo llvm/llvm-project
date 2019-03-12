@@ -30,6 +30,10 @@
 
 using namespace llvm;
 
+static cl::opt<bool> EnableFunctionCalls(
+     "sac-enable-function-calls", cl::init(false), cl::Hidden,
+     cl::desc("Enable function calls"));
+
 namespace {
 class SelectAcceleratorCode : public ModulePass {
     SmallPtrSet<const Function*, 8u> HCCallees_;
@@ -130,7 +134,7 @@ public:
         // invalidated appropriately by other passes.
         for (auto&& F : M.functions()) {
             if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL) {
-                 auto Tmp = HCCallees_.insert(M.getFunction(F.getName()));
+                auto Tmp = HCCallees_.insert(M.getFunction(F.getName()));
                 if (Tmp.second) findAllHCCallees_(F, M);
             }
         }
@@ -143,13 +147,16 @@ public:
 
         Modified = eraseDeadAliases_(M) || Modified;
 
-        for (auto&& F : M.functions()) Modified = !alwaysInline_(F) || Modified;
+        if (!EnableFunctionCalls)
+            for (auto&& F : M.functions()) Modified = !alwaysInline_(F) || Modified;
 
         return Modified;
     }
 
     bool doFinalization(Module& M) override
     {
+        if(EnableFunctionCalls) return false;
+
         const auto It = std::find_if(M.begin(), M.end(), [](Function& F) {
             return !isInlineViable(F) && !F.isIntrinsic();
         });
