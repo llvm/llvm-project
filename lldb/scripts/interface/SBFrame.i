@@ -59,6 +59,8 @@ public:
     bool
     IsValid() const;
 
+    explicit operator bool() const;
+
     uint32_t
     GetFrameID () const;
 

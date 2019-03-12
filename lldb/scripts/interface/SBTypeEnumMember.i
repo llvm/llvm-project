@@ -25,6 +25,8 @@ public:
     bool
     IsValid() const;
 
+    explicit operator bool() const;
+
     int64_t
     GetValueAsSigned();
 
@@ -89,6 +91,8 @@ public:
 
     bool
     IsValid();
+
+    explicit operator bool() const;
 
     void
     Append (SBTypeEnumMember entry);

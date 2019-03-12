@@ -116,7 +116,7 @@ private:
   /// Given a SymbolContext, determines if this is a trap handler function
   /// aka asynchronous signal handler.
   ///
-  /// @return
+  /// \return
   ///     Returns true if the SymbolContext is a trap handler.
   //------------------------------------------------------------------
   bool IsTrapHandlerSymbol(lldb_private::Process *process,
@@ -163,7 +163,7 @@ private:
   /// better.  This is mostly helping to work around problems where the
   /// assembly language inspection fails on hand-written assembly code.
   ///
-  /// @return
+  /// \return
   ///     Returns true if a fallback unwindplan was found & was installed.
   //------------------------------------------------------------------
   bool TryFallbackUnwindPlan();

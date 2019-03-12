@@ -103,7 +103,7 @@ static std::string PrintValue(llvm::Value *V, bool truncate = false) {
 }
 
 //----------------------------------------------------------------------
-/// @class Instrumenter IRDynamicChecks.cpp
+/// \class Instrumenter IRDynamicChecks.cpp
 /// Finds and instruments individual LLVM IR instructions
 ///
 /// When instrumenting LLVM IR, it is frequently desirable to first search for
@@ -135,7 +135,7 @@ public:
   //------------------------------------------------------------------
   /// Constructor
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     The module being instrumented.
   //------------------------------------------------------------------
   Instrumenter(llvm::Module &module, DynamicCheckerFunctions &checker_functions)
@@ -147,10 +147,10 @@ public:
   //------------------------------------------------------------------
   /// Inspect a function to find instructions to instrument
   ///
-  /// @param[in] function
+  /// \param[in] function
   ///     The function to inspect.
   ///
-  /// @return
+  /// \return
   ///     True on success; false on error.
   //------------------------------------------------------------------
   bool Inspect(llvm::Function &function) { return InspectFunction(function); }
@@ -158,7 +158,7 @@ public:
   //------------------------------------------------------------------
   /// Instrument all the instructions found by Inspect()
   ///
-  /// @return
+  /// \return
   ///     True on success; false on error.
   //------------------------------------------------------------------
   bool Instrument() {
@@ -176,10 +176,10 @@ protected:
   //------------------------------------------------------------------
   /// Add instrumentation to a single instruction
   ///
-  /// @param[in] inst
+  /// \param[in] inst
   ///     The instruction to be instrumented.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   virtual bool InstrumentInstruction(llvm::Instruction *inst) = 0;
@@ -187,7 +187,7 @@ protected:
   //------------------------------------------------------------------
   /// Register a single instruction to be instrumented
   ///
-  /// @param[in] inst
+  /// \param[in] inst
   ///     The instruction to be instrumented.
   //------------------------------------------------------------------
   void RegisterInstruction(llvm::Instruction &i) {
@@ -198,10 +198,10 @@ protected:
   /// Determine whether a single instruction is interesting to instrument,
   /// and, if so, call RegisterInstruction
   ///
-  /// @param[in] i
+  /// \param[in] i
   ///     The instruction to be inspected.
   ///
-  /// @return
+  /// \return
   ///     False if there was an error scanning; true otherwise.
   //------------------------------------------------------------------
   virtual bool InspectInstruction(llvm::Instruction &i) { return true; }
@@ -209,10 +209,10 @@ protected:
   //------------------------------------------------------------------
   /// Scan a basic block to see if any instructions are interesting
   ///
-  /// @param[in] bb
+  /// \param[in] bb
   ///     The basic block to be inspected.
   ///
-  /// @return
+  /// \return
   ///     False if there was an error scanning; true otherwise.
   //------------------------------------------------------------------
   virtual bool InspectBasicBlock(llvm::BasicBlock &bb) {
@@ -228,10 +228,10 @@ protected:
   //------------------------------------------------------------------
   /// Scan a function to see if any instructions are interesting
   ///
-  /// @param[in] f
+  /// \param[in] f
   ///     The function to be inspected.
   ///
-  /// @return
+  /// \return
   ///     False if there was an error scanning; true otherwise.
   //------------------------------------------------------------------
   virtual bool InspectFunction(llvm::Function &f) {
@@ -248,10 +248,10 @@ protected:
   /// Build a function pointer for a function with signature void
   /// (*)(uint8_t*) with a given address
   ///
-  /// @param[in] start_address
+  /// \param[in] start_address
   ///     The address of the function.
   ///
-  /// @return
+  /// \return
   ///     The function pointer, for use in a CallInst.
   //------------------------------------------------------------------
   llvm::FunctionCallee BuildPointerValidatorFunc(lldb::addr_t start_address) {
@@ -273,10 +273,10 @@ protected:
   /// Build a function pointer for a function with signature void
   /// (*)(uint8_t*, uint8_t*) with a given address
   ///
-  /// @param[in] start_address
+  /// \param[in] start_address
   ///     The address of the function.
   ///
-  /// @return
+  /// \return
   ///     The function pointer, for use in a CallInst.
   //------------------------------------------------------------------
   llvm::FunctionCallee BuildObjectCheckerFunc(lldb::addr_t start_address) {

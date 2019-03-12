@@ -47,7 +47,7 @@ static inline bool isprint8(int ch) {
 }
 
 //----------------------------------------------------------------------
-/// @class Options Options.h "lldb/Interpreter/Options.h"
+/// \class Options Options.h "lldb/Interpreter/Options.h"
 /// A command line option parsing protocol class.
 ///
 /// Options is designed to be subclassed to contain all needed options for a
@@ -76,8 +76,8 @@ public:
   //------------------------------------------------------------------
   /// Get the option definitions to use when parsing Args options.
   ///
-  /// @see Args::ParseOptions (Options&)
-  /// @see man getopt_long_only
+  /// \see Args::ParseOptions (Options&)
+  /// \see man getopt_long_only
   //------------------------------------------------------------------
   Option *GetLongOptions();
 
@@ -149,21 +149,21 @@ public:
   //------------------------------------------------------------------
   /// Set the value of an option.
   ///
-  /// @param[in] option_idx
+  /// \param[in] option_idx
   ///     The index into the "struct option" array that was returned
   ///     by Options::GetLongOptions().
   ///
-  /// @param[in] option_arg
+  /// \param[in] option_arg
   ///     The argument value for the option that the user entered, or
   ///     nullptr if there is no argument for the current option.
   ///
-  /// @param[in] execution_context
+  /// \param[in] execution_context
   ///     The execution context to use for evaluating the option.
   ///     May be nullptr if the option is to be evaluated outside any
   ///     particular context.
   ///
-  /// @see Args::ParseOptions (Options&)
-  /// @see man getopt_long_only
+  /// \see Args::ParseOptions (Options&)
+  /// \see man getopt_long_only
   //------------------------------------------------------------------
   virtual Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                                 ExecutionContext *execution_context) = 0;
@@ -172,17 +172,17 @@ public:
   /// Handles the generic bits of figuring out whether we are in an option,
   /// and if so completing it.
   ///
-  /// @param[in/out] request
+  /// \param[in/out] request
   ///    The completion request that we need to act upon.
   ///
-  /// @param[in] interpreter
+  /// \param[in] interpreter
   ///     The interpreter that's doing the completing.
   ///
   /// FIXME: This is the wrong return value, since we also need to
   /// make a distinction between total number of matches, and the window the
   /// user wants returned.
   ///
-  /// @return
+  /// \return
   ///     \btrue if we were in an option, \bfalse otherwise.
   //------------------------------------------------------------------
   bool HandleOptionCompletion(lldb_private::CompletionRequest &request,
@@ -193,17 +193,17 @@ public:
   /// Handles the generic bits of figuring out whether we are in an option,
   /// and if so completing it.
   ///
-  /// @param[in/out] request
+  /// \param[in/out] request
   ///    The completion request that we need to act upon.
   ///
-  /// @param[in] interpreter
+  /// \param[in] interpreter
   ///    The command interpreter doing the completion.
   ///
   /// FIXME: This is the wrong return value, since we also need to
   /// make a distinction between total number of matches, and the window the
   /// user wants returned.
   ///
-  /// @return
+  /// \return
   ///     \btrue if we were in an option, \bfalse otherwise.
   //------------------------------------------------------------------
   virtual bool
@@ -289,7 +289,7 @@ public:
   /// Append all options from \a group using the exact same option groups that
   /// each option is defined with.
   ///
-  /// @param[in] group
+  /// \param[in] group
   ///     A group of options to take option values from and copy their
   ///     definitions into this class.
   //----------------------------------------------------------------------
@@ -302,18 +302,18 @@ public:
   /// "src_mask" set. After the option definition is copied into the options
   /// definitions in this class, set the usage_mask to "dst_mask".
   ///
-  /// @param[in] group
+  /// \param[in] group
   ///     A group of options to take option values from and copy their
   ///     definitions into this class.
   ///
-  /// @param[in] src_mask
+  /// \param[in] src_mask
   ///     When copying options from \a group, you might only want some of
   ///     the options to be appended to this group. This mask allows you
   ///     to control which options from \a group get added. It also allows
   ///     you to specify the same options from \a group multiple times
   ///     for different option sets.
   ///
-  /// @param[in] dst_mask
+  /// \param[in] dst_mask
   ///     Set the usage mask for any copied options to \a dst_mask after
   ///     copying the option definition.
   //----------------------------------------------------------------------

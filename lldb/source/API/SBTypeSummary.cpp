@@ -37,6 +37,10 @@ SBTypeSummaryOptions::~SBTypeSummaryOptions() {}
 
 bool SBTypeSummaryOptions::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBTypeSummaryOptions, IsValid);
+  return this->operator bool();
+}
+SBTypeSummaryOptions::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSummaryOptions, operator bool);
 
   return m_opaque_up.get();
 }
@@ -159,6 +163,11 @@ SBTypeSummary SBTypeSummary::CreateWithScriptCode(const char *data,
 SBTypeSummary SBTypeSummary::CreateWithCallback(FormatCallback cb,
                                                 uint32_t options,
                                                 const char *description) {
+  LLDB_RECORD_DUMMY(
+      lldb::SBTypeSummary, SBTypeSummary, CreateWithCallback,
+      (lldb::SBTypeSummary::FormatCallback, uint32_t, const char *), cb,
+      options, description);
+
   SBTypeSummary retval;
   if (cb) {
     retval.SetSP(TypeSummaryImplSP(new CXXFunctionSummaryFormat(
@@ -188,6 +197,10 @@ SBTypeSummary::~SBTypeSummary() {}
 
 bool SBTypeSummary::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSummary, IsValid);
+  return this->operator bool();
+}
+SBTypeSummary::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSummary, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

@@ -215,8 +215,7 @@ bool ClangExpressionSourceCode::GetText(
     bool static_method, 
     const EvaluateExpressionOptions &options,
     ExecutionContext &exe_ctx,
-    bool add_locals) const {
-
+    bool add_locals, llvm::ArrayRef<std::string> modules) const {
   const char *target_specific_defines = "typedef signed char BOOL;\n";
   std::string module_macros;
 
@@ -321,6 +320,15 @@ bool ClangExpressionSourceCode::GetText(
       break;
     }
 
+    // Generate a list of @import statements that will import the specified
+    // module into our expression.
+    std::string module_imports;
+    for (const std::string &module : modules) {
+      module_imports.append("@import ");
+      module_imports.append(module);
+      module_imports.append(";\n");
+    }
+
     StreamString wrap_stream;
 
     wrap_stream.Printf("%s\n%s\n%s\n%s\n%s\n", module_macros.c_str(),
@@ -346,28 +354,31 @@ bool ClangExpressionSourceCode::GetText(
     default:
       break;
     case lldb::eLanguageTypeC:
-      wrap_stream.Printf("void                           \n"
+      wrap_stream.Printf("%s"
+                         "void                           \n"
                          "%s(void *$__lldb_arg)          \n"
                          "{                              \n"
                          "    %s;                        \n"
                          "%s"
                          "}                              \n",
-                         m_name.c_str(), lldb_local_var_decls.GetData(),
-                         tagged_body.c_str());
+                         module_imports.c_str(), m_name.c_str(),
+                         lldb_local_var_decls.GetData(), tagged_body.c_str());
       break;
     case lldb::eLanguageTypeC_plus_plus:
-      wrap_stream.Printf("void                                   \n"
+      wrap_stream.Printf("%s"
+                         "void                                   \n"
                          "$__lldb_class::%s(void *$__lldb_arg)   \n"
                          "{                                      \n"
                          "    %s;                                \n"
                          "%s"
                          "}                                      \n",
-                         m_name.c_str(), lldb_local_var_decls.GetData(),
-                         tagged_body.c_str());
+                         module_imports.c_str(), m_name.c_str(),
+                         lldb_local_var_decls.GetData(), tagged_body.c_str());
       break;
     case lldb::eLanguageTypeObjC:
       if (static_method) {
         wrap_stream.Printf(
+            "%s"
             "@interface $__lldb_objc_class ($__lldb_category)        \n"
             "+(void)%s:(void *)$__lldb_arg;                          \n"
             "@end                                                    \n"
@@ -377,9 +388,11 @@ bool ClangExpressionSourceCode::GetText(
             "%s"
             "}                                                       \n"
             "@end                                                    \n",
-            m_name.c_str(), m_name.c_str(), tagged_body.c_str());
+            module_imports.c_str(), m_name.c_str(), m_name.c_str(),
+            tagged_body.c_str());
       } else {
         wrap_stream.Printf(
+            "%s"
             "@interface $__lldb_objc_class ($__lldb_category)       \n"
             "-(void)%s:(void *)$__lldb_arg;                         \n"
             "@end                                                   \n"
@@ -389,7 +402,8 @@ bool ClangExpressionSourceCode::GetText(
             "%s"
             "}                                                      \n"
             "@end                                                   \n",
-            m_name.c_str(), m_name.c_str(), tagged_body.c_str());
+            module_imports.c_str(), m_name.c_str(), m_name.c_str(),
+            tagged_body.c_str());
       }
       break;
     }

@@ -21,12 +21,12 @@ public:
   SBInputReader() = default;
   ~SBInputReader() = default;
 
-  SBError Initialize(lldb::SBDebugger &,
-                     unsigned long (*)(void *, lldb::SBInputReader *,
-                                       lldb::InputReaderAction, char const *,
-                                       unsigned long),
-                     void *, lldb::InputReaderGranularity, char const *,
-                     char const *, bool);
+  SBError Initialize(lldb::SBDebugger &sb_debugger,
+                     unsigned long (*callback)(void *, lldb::SBInputReader *,
+                                               lldb::InputReaderAction,
+                                               char const *, unsigned long),
+                     void *a, lldb::InputReaderGranularity b, char const *c,
+                     char const *d, bool e);
   void SetIsDone(bool);
   bool IsActive() const;
 };
@@ -61,6 +61,8 @@ public:
   static void Destroy(lldb::SBDebugger &debugger);
 
   static void MemoryPressureDetected();
+
+  explicit operator bool() const;
 
   bool IsValid() const;
 
@@ -149,7 +151,7 @@ public:
 
   /// Get the name and description of one of the available platforms.
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     Zero-based index of the platform for which info should be retrieved,
   ///     must be less than the value returned by GetNumAvailablePlatforms().
   lldb::SBStructuredData GetAvailablePlatformInfoAtIndex(uint32_t idx);

@@ -18,7 +18,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class IRMemoryMap IRMemoryMap.h "lldb/Expression/IRMemoryMap.h"
+/// \class IRMemoryMap IRMemoryMap.h "lldb/Expression/IRMemoryMap.h"
 /// Encapsulates memory that may exist in the process but must
 ///     also be available in the host process.
 ///

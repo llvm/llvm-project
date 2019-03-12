@@ -304,21 +304,21 @@ public:
   /// callbacks for debugger initialization and Process launch info
   /// filtering and manipulation.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///    The name of the plugin.
   ///
-  /// @param[in] description
+  /// \param[in] description
   ///    A description string for the plugin.
   ///
-  /// @param[in] create_callback
+  /// \param[in] create_callback
   ///    The callback that will be invoked to create an instance of
   ///    the callback.  This may not be nullptr.
   ///
-  /// @param[in] debugger_init_callback
+  /// \param[in] debugger_init_callback
   ///    An optional callback that will be made when a Debugger
   ///    instance is initialized.
   ///
-  /// @param[in] filter_callback
+  /// \param[in] filter_callback
   ///    An optional callback that will be invoked before LLDB
   ///    launches a process for debugging.  The callback must
   ///    do the following:
@@ -330,7 +330,7 @@ public:
   ///       plugin if, for instance, additional environment variables
   ///       are needed to support the feature when enabled.
   ///
-  /// @return
+  /// \return
   ///    Returns true upon success; otherwise, false.
   //------------------------------------------------------------------
   static bool

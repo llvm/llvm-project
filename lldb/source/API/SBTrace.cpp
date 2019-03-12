@@ -8,7 +8,6 @@
 
 #include "SBReproducerPrivate.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/Log.h"
 
 #include "lldb/API/SBTrace.h"
 #include "lldb/API/SBTraceOptions.h"
@@ -27,8 +26,11 @@ lldb::ProcessSP SBTrace::GetSP() const { return m_opaque_wp.lock(); }
 
 size_t SBTrace::GetTraceData(SBError &error, void *buf, size_t size,
                              size_t offset, lldb::tid_t thread_id) {
+  LLDB_RECORD_DUMMY(size_t, SBTrace, GetTraceData,
+                    (lldb::SBError &, void *, size_t, size_t, lldb::tid_t),
+                    error, buf, size, offset, thread_id);
+
   ProcessSP process_sp(GetSP());
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   llvm::MutableArrayRef<uint8_t> buffer(static_cast<uint8_t *>(buf), size);
   error.Clear();
 
@@ -37,25 +39,25 @@ size_t SBTrace::GetTraceData(SBError &error, void *buf, size_t size,
   } else {
     error.SetError(
         process_sp->GetData(GetTraceUID(), thread_id, buffer, offset));
-    LLDB_LOG(log, "SBTrace::bytes_read - {0}", buffer.size());
   }
   return buffer.size();
 }
 
 size_t SBTrace::GetMetaData(SBError &error, void *buf, size_t size,
                             size_t offset, lldb::tid_t thread_id) {
+  LLDB_RECORD_DUMMY(size_t, SBTrace, GetMetaData,
+                    (lldb::SBError &, void *, size_t, size_t, lldb::tid_t),
+                    error, buf, size, offset, thread_id);
+
   ProcessSP process_sp(GetSP());
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   llvm::MutableArrayRef<uint8_t> buffer(static_cast<uint8_t *>(buf), size);
   error.Clear();
 
   if (!process_sp) {
     error.SetErrorString("invalid process");
   } else {
-
     error.SetError(
         process_sp->GetMetaData(GetTraceUID(), thread_id, buffer, offset));
-    LLDB_LOG(log, "SBTrace::bytes_read - {0}", buffer.size());
   }
   return buffer.size();
 }
@@ -114,6 +116,10 @@ void SBTrace::SetSP(const ProcessSP &process_sp) { m_opaque_wp = process_sp; }
 
 bool SBTrace::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBTrace, IsValid);
+  return this->operator bool();
+}
+SBTrace::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTrace, operator bool);
 
   if (!m_trace_impl_sp)
     return false;

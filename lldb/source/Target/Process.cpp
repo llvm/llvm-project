@@ -2647,108 +2647,112 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
   m_process_input_reader.reset();
 
   Module *exe_module = GetTarget().GetExecutableModulePointer();
-  if (exe_module) {
-    char local_exec_file_path[PATH_MAX];
-    char platform_exec_file_path[PATH_MAX];
-    exe_module->GetFileSpec().GetPath(local_exec_file_path,
-                                      sizeof(local_exec_file_path));
-    exe_module->GetPlatformFileSpec().GetPath(platform_exec_file_path,
-                                              sizeof(platform_exec_file_path));
-    if (FileSystem::Instance().Exists(exe_module->GetFileSpec())) {
-      // Install anything that might need to be installed prior to launching.
-      // For host systems, this will do nothing, but if we are connected to a
-      // remote platform it will install any needed binaries
-      error = GetTarget().Install(&launch_info);
-      if (error.Fail())
-        return error;
+  if (!exe_module) {
+    error.SetErrorString("executable module does not exist");
+    return error;
+  }
 
-      if (PrivateStateThreadIsValid())
-        PausePrivateStateThread();
+  char local_exec_file_path[PATH_MAX];
+  char platform_exec_file_path[PATH_MAX];
+  exe_module->GetFileSpec().GetPath(local_exec_file_path,
+                                    sizeof(local_exec_file_path));
+  exe_module->GetPlatformFileSpec().GetPath(platform_exec_file_path,
+                                            sizeof(platform_exec_file_path));
+  if (FileSystem::Instance().Exists(exe_module->GetFileSpec())) {
+    // Install anything that might need to be installed prior to launching.
+    // For host systems, this will do nothing, but if we are connected to a
+    // remote platform it will install any needed binaries
+    error = GetTarget().Install(&launch_info);
+    if (error.Fail())
+      return error;
 
-      error = WillLaunch(exe_module);
-      if (error.Success()) {
-        const bool restarted = false;
-        SetPublicState(eStateLaunching, restarted);
-        m_should_detach = false;
+    if (PrivateStateThreadIsValid())
+      PausePrivateStateThread();
 
-        if (m_public_run_lock.TrySetRunning()) {
-          // Now launch using these arguments.
-          error = DoLaunch(exe_module, launch_info);
-        } else {
-          // This shouldn't happen
-          error.SetErrorString("failed to acquire process run lock");
+    error = WillLaunch(exe_module);
+    if (error.Success()) {
+      const bool restarted = false;
+      SetPublicState(eStateLaunching, restarted);
+      m_should_detach = false;
+
+      if (m_public_run_lock.TrySetRunning()) {
+        // Now launch using these arguments.
+        error = DoLaunch(exe_module, launch_info);
+      } else {
+        // This shouldn't happen
+        error.SetErrorString("failed to acquire process run lock");
+      }
+
+      if (error.Fail()) {
+        if (GetID() != LLDB_INVALID_PROCESS_ID) {
+          SetID(LLDB_INVALID_PROCESS_ID);
+          const char *error_string = error.AsCString();
+          if (error_string == nullptr)
+            error_string = "launch failed";
+          SetExitStatus(-1, error_string);
         }
+      } else {
+        EventSP event_sp;
 
-        if (error.Fail()) {
-          if (GetID() != LLDB_INVALID_PROCESS_ID) {
-            SetID(LLDB_INVALID_PROCESS_ID);
-            const char *error_string = error.AsCString();
-            if (error_string == nullptr)
-              error_string = "launch failed";
-            SetExitStatus(-1, error_string);
-          }
-        } else {
-          EventSP event_sp;
+        // Now wait for the process to launch and return control to us, and then
+        // call DidLaunch:
+        StateType state = WaitForProcessStopPrivate(event_sp, seconds(10));
 
-          // Now wait for the process to launch and return control to us, and then call
-          // DidLaunch:
-          StateType state = WaitForProcessStopPrivate(event_sp, seconds(10));
+        if (state == eStateInvalid || !event_sp) {
+          // We were able to launch the process, but we failed to catch the
+          // initial stop.
+          error.SetErrorString("failed to catch stop after launch");
+          SetExitStatus(0, "failed to catch stop after launch");
+          Destroy(false);
+        } else if (state == eStateStopped || state == eStateCrashed) {
+          DidLaunch();
 
-          if (state == eStateInvalid || !event_sp) {
-            // We were able to launch the process, but we failed to catch the
-            // initial stop.
-            error.SetErrorString("failed to catch stop after launch");
-            SetExitStatus(0, "failed to catch stop after launch");
-            Destroy(false);
-          } else if (state == eStateStopped || state == eStateCrashed) {
-            DidLaunch();
+          DynamicLoader *dyld = GetDynamicLoader();
+          if (dyld)
+            dyld->DidLaunch();
 
-            DynamicLoader *dyld = GetDynamicLoader();
-            if (dyld)
-              dyld->DidLaunch();
+          GetJITLoaders().DidLaunch();
 
-            GetJITLoaders().DidLaunch();
+          SystemRuntime *system_runtime = GetSystemRuntime();
+          if (system_runtime)
+            system_runtime->DidLaunch();
 
-            SystemRuntime *system_runtime = GetSystemRuntime();
-            if (system_runtime)
-              system_runtime->DidLaunch();
+          if (!m_os_up)
+            LoadOperatingSystemPlugin(false);
 
-            if (!m_os_up)
-              LoadOperatingSystemPlugin(false);
+          // We successfully launched the process and stopped, now it the
+          // right time to set up signal filters before resuming.
+          UpdateAutomaticSignalFiltering();
 
-            // We successfully launched the process and stopped, now it the
-            // right time to set up signal filters before resuming.
-            UpdateAutomaticSignalFiltering();
+          // Note, the stop event was consumed above, but not handled. This
+          // was done to give DidLaunch a chance to run. The target is either
+          // stopped or crashed. Directly set the state.  This is done to
+          // prevent a stop message with a bunch of spurious output on thread
+          // status, as well as not pop a ProcessIOHandler.
+          SetPublicState(state, false);
 
-            // Note, the stop event was consumed above, but not handled. This
-            // was done to give DidLaunch a chance to run. The target is either
-            // stopped or crashed. Directly set the state.  This is done to
-            // prevent a stop message with a bunch of spurious output on thread
-            // status, as well as not pop a ProcessIOHandler.
-            SetPublicState(state, false);
+          if (PrivateStateThreadIsValid())
+            ResumePrivateStateThread();
+          else
+            StartPrivateStateThread();
 
-            if (PrivateStateThreadIsValid())
-              ResumePrivateStateThread();
-            else
-              StartPrivateStateThread();
-
-            // Target was stopped at entry as was intended. Need to notify the
-            // listeners about it.
-            if (state == eStateStopped &&
-                launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
-              HandlePrivateEvent(event_sp);
-          } else if (state == eStateExited) {
-            // We exited while trying to launch somehow.  Don't call DidLaunch
-            // as that's not likely to work, and return an invalid pid.
+          // Target was stopped at entry as was intended. Need to notify the
+          // listeners about it.
+          if (state == eStateStopped &&
+              launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
             HandlePrivateEvent(event_sp);
-          }
+        } else if (state == eStateExited) {
+          // We exited while trying to launch somehow.  Don't call DidLaunch
+          // as that's not likely to work, and return an invalid pid.
+          HandlePrivateEvent(event_sp);
         }
       }
-    } else {
-      error.SetErrorStringWithFormat("file doesn't exist: '%s'",
-                                     local_exec_file_path);
     }
+  } else {
+    error.SetErrorStringWithFormat("file doesn't exist: '%s'",
+                                   local_exec_file_path);
   }
+
   return error;
 }
 

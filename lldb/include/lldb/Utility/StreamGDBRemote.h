@@ -29,13 +29,13 @@ public:
   //------------------------------------------------------------------
   /// Output a block of data to the stream performing GDB-remote escaping.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     A block of data.
   ///
-  /// @param[in] src_len
+  /// \param[in] src_len
   ///     The amount of data to write.
   ///
-  /// @return
+  /// \return
   ///     Number of bytes written.
   //------------------------------------------------------------------
   // TODO: Convert this function to take ArrayRef<uint8_t>

@@ -25,6 +25,8 @@ public:
 
   ~SBFunction();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const char *GetName() const;

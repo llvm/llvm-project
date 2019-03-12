@@ -27,15 +27,8 @@ typedef uint64_t dw_addr_t; // Dwarf address define that must be big enough for
                             // any addresses in the compile units that get
                             // parsed
 
-#ifdef DWARFUTILS_DWARF64
-#define DWARF_REF_ADDR_SIZE 8
-typedef uint64_t dw_offset_t; // Dwarf Debug Information Entry offset for any
-                              // offset into the file
-#else
-#define DWARF_REF_ADDR_SIZE 4
 typedef uint32_t dw_offset_t; // Dwarf Debug Information Entry offset for any
                               // offset into the file
-#endif
 
 /* Constants */
 #define DW_INVALID_OFFSET (~(dw_offset_t)0)

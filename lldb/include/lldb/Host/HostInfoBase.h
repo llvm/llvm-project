@@ -36,7 +36,7 @@ public:
   //------------------------------------------------------------------
   /// Gets the host target triple as a const string.
   ///
-  /// @return
+  /// \return
   ///     A const string object containing the host target triple.
   //------------------------------------------------------------------
   static llvm::StringRef GetTargetTriple();
@@ -44,7 +44,7 @@ public:
   //------------------------------------------------------------------
   /// Gets the host architecture.
   ///
-  /// @return
+  /// \return
   ///     A const architecture object that represents the host
   ///     architecture.
   //------------------------------------------------------------------
@@ -100,6 +100,9 @@ public:
   /// ArchSpec object.
   //---------------------------------------------------------------------------
   static ArchSpec GetAugmentedArchSpec(llvm::StringRef triple);
+
+  static bool ComputePathRelativeToLibrary(FileSpec &file_spec,
+                                           llvm::StringRef dir);
 
 protected:
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);

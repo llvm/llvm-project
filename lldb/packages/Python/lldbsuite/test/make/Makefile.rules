@@ -307,7 +307,12 @@ else
 	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
 endif
 
-CFLAGS += -I$(SRCDIR) -include $(THIS_FILE_DIR)test_common.h -I$(THIS_FILE_DIR)
+CFLAGS += -I$(SRCDIR) -I$(THIS_FILE_DIR)
+
+ifndef NO_TEST_COMMON_H
+  CFLAGS += -include $(THIS_FILE_DIR)test_common.h
+endif
+
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 SWIFTFLAGS += $(TRIPLE_SWIFTFLAGS)
 SWIFTFLAGS += $(SWIFTFLAGS_EXTRAS)
@@ -340,7 +345,11 @@ endif
 SWIFT_MODULE_CACHE_FLAGS ?= -module-cache-path $(CLANG_MODULE_CACHE_DIR)
 SWIFTFLAGS += $(SWIFT_MODULE_CACHE_FLAGS)
 
-MANDATORY_MODULE_BUILD_CFLAGS := -fmodules -gmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)
+MODULE_BASE_FLAGS := -fmodules -gmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)
+MANDATORY_MODULE_BUILD_CFLAGS := $(MODULE_BASE_FLAGS) -gmodules
+# Build flags for building with C++ modules.
+# -glldb is necessary for emitting information about what modules were imported.
+MANDATORY_CXXMODULE_BUILD_CFLAGS := $(MODULE_BASE_FLAGS) -fcxx-modules -glldb
 
 ifeq "$(OS)" "Darwin"
 	MANDATORY_MODULE_BUILD_CFLAGS += -fcxx-modules

@@ -206,14 +206,14 @@ public:
   // -------------------------------------------------------------------------
   /// Return keyed value as bool
   ///
-  /// @param[in] key
+  /// \param[in] key
   ///     The value of the key to lookup
   ///
-  /// @param[out] value
+  /// \param[out] value
   ///     The value of the key as a bool.  Undefined if the key doesn't
   ///     exist or if the key is not either true or false.
   ///
-  /// @return
+  /// \return
   ///     true if the key existed as was a bool value; false otherwise.
   ///     Note the return value is *not* the value of the bool, use
   ///     \b value for that.

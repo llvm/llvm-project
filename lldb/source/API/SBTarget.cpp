@@ -62,7 +62,6 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
 
@@ -172,6 +171,10 @@ const char *SBTarget::GetBroadcasterClassName() {
 
 bool SBTarget::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTarget, IsValid);
+  return this->operator bool();
+}
+SBTarget::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTarget, operator bool);
 
   return m_opaque_sp.get() != NULL && m_opaque_sp->IsValid();
 }
@@ -186,12 +189,6 @@ SBProcess SBTarget::GetProcess() {
     process_sp = target_sp->GetProcessSP();
     sb_process.SetSP(process_sp);
   }
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBTarget(%p)::GetProcess () => SBProcess(%p)",
-                static_cast<void *>(target_sp.get()),
-                static_cast<void *>(process_sp.get()));
 
   return LLDB_RECORD_RESULT(sb_process);
 }
@@ -333,22 +330,9 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
                      listener, argv, envp, stdin_path, stdout_path, stderr_path,
                      working_directory, launch_flags, stop_at_entry, error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBProcess sb_process;
   ProcessSP process_sp;
   TargetSP target_sp(GetSP());
-
-  if (log)
-    log->Printf("SBTarget(%p)::Launch (argv=%p, envp=%p, stdin=%s, stdout=%s, "
-                "stderr=%s, working-dir=%s, launch_flags=0x%x, "
-                "stop_at_entry=%i, &error (%p))...",
-                static_cast<void *>(target_sp.get()), static_cast<void *>(argv),
-                static_cast<void *>(envp), stdin_path ? stdin_path : "NULL",
-                stdout_path ? stdout_path : "NULL",
-                stderr_path ? stderr_path : "NULL",
-                working_directory ? working_directory : "NULL", launch_flags,
-                stop_at_entry, static_cast<void *>(error.get()));
 
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
@@ -409,13 +393,6 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
     error.SetErrorString("SBTarget is invalid");
   }
 
-  log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API);
-  if (log)
-    log->Printf("SBTarget(%p)::Launch (...) => SBProcess(%p), SBError(%s)",
-                static_cast<void *>(target_sp.get()),
-                static_cast<void *>(sb_process.GetSP().get()),
-                error.GetCString());
-
   return LLDB_RECORD_RESULT(sb_process);
 }
 
@@ -424,14 +401,9 @@ SBProcess SBTarget::Launch(SBLaunchInfo &sb_launch_info, SBError &error) {
                      (lldb::SBLaunchInfo &, lldb::SBError &), sb_launch_info,
                      error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
-
-  if (log)
-    log->Printf("SBTarget(%p)::Launch (launch_info, error)...",
-                static_cast<void *>(target_sp.get()));
 
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
@@ -470,12 +442,6 @@ SBProcess SBTarget::Launch(SBLaunchInfo &sb_launch_info, SBError &error) {
     error.SetErrorString("SBTarget is invalid");
   }
 
-  log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API);
-  if (log)
-    log->Printf("SBTarget(%p)::Launch (...) => SBProcess(%p)",
-                static_cast<void *>(target_sp.get()),
-                static_cast<void *>(sb_process.GetSP().get()));
-
   return LLDB_RECORD_RESULT(sb_process);
 }
 
@@ -484,14 +450,8 @@ lldb::SBProcess SBTarget::Attach(SBAttachInfo &sb_attach_info, SBError &error) {
                      (lldb::SBAttachInfo &, lldb::SBError &), sb_attach_info,
                      error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
-
-  if (log)
-    log->Printf("SBTarget(%p)::Attach (sb_attach_info, error)...",
-                static_cast<void *>(target_sp.get()));
 
   if (target_sp) {
     ProcessAttachInfo &attach_info = sb_attach_info.ref();
@@ -506,11 +466,6 @@ lldb::SBProcess SBTarget::Attach(SBAttachInfo &sb_attach_info, SBError &error) {
         } else {
           error.ref().SetErrorStringWithFormat(
               "no process found with process ID %" PRIu64, attach_pid);
-          if (log) {
-            log->Printf("SBTarget(%p)::Attach (...) => error %s",
-                        static_cast<void *>(target_sp.get()),
-                        error.GetCString());
-          }
           return LLDB_RECORD_RESULT(sb_process);
         }
       }
@@ -521,11 +476,6 @@ lldb::SBProcess SBTarget::Attach(SBAttachInfo &sb_attach_info, SBError &error) {
   } else {
     error.SetErrorString("SBTarget is invalid");
   }
-
-  if (log)
-    log->Printf("SBTarget(%p)::Attach (...) => SBProcess(%p)",
-                static_cast<void *>(target_sp.get()),
-                static_cast<void *>(sb_process.GetSP().get()));
 
   return LLDB_RECORD_RESULT(sb_process);
 }
@@ -539,14 +489,8 @@ lldb::SBProcess SBTarget::AttachToProcessWithID(
                      (lldb::SBListener &, lldb::pid_t, lldb::SBError &),
                      listener, pid, error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
-
-  if (log)
-    log->Printf("SBTarget(%p)::%s (listener, pid=%" PRId64 ", error)...",
-                static_cast<void *>(target_sp.get()), __FUNCTION__, pid);
 
   if (target_sp) {
     ProcessAttachInfo attach_info;
@@ -564,10 +508,6 @@ lldb::SBProcess SBTarget::AttachToProcessWithID(
   } else
     error.SetErrorString("SBTarget is invalid");
 
-  if (log)
-    log->Printf("SBTarget(%p)::%s (...) => SBProcess(%p)",
-                static_cast<void *>(target_sp.get()), __FUNCTION__,
-                static_cast<void *>(sb_process.GetSP().get()));
   return LLDB_RECORD_RESULT(sb_process);
 }
 
@@ -581,15 +521,8 @@ lldb::SBProcess SBTarget::AttachToProcessWithName(
                      (lldb::SBListener &, const char *, bool, lldb::SBError &),
                      listener, name, wait_for, error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
-
-  if (log)
-    log->Printf("SBTarget(%p)::%s (listener, name=%s, wait_for=%s, error)...",
-                static_cast<void *>(target_sp.get()), __FUNCTION__, name,
-                wait_for ? "true" : "false");
 
   if (name && target_sp) {
     ProcessAttachInfo attach_info;
@@ -604,10 +537,6 @@ lldb::SBProcess SBTarget::AttachToProcessWithName(
   } else
     error.SetErrorString("SBTarget is invalid");
 
-  if (log)
-    log->Printf("SBTarget(%p)::%s (...) => SBProcess(%p)",
-                static_cast<void *>(target_sp.get()), __FUNCTION__,
-                static_cast<void *>(sb_process.GetSP().get()));
   return LLDB_RECORD_RESULT(sb_process);
 }
 
@@ -619,16 +548,9 @@ lldb::SBProcess SBTarget::ConnectRemote(SBListener &listener, const char *url,
       (lldb::SBListener &, const char *, const char *, lldb::SBError &),
       listener, url, plugin_name, error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBProcess sb_process;
   ProcessSP process_sp;
   TargetSP target_sp(GetSP());
-
-  if (log)
-    log->Printf("SBTarget(%p)::ConnectRemote (listener, url=%s, "
-                "plugin_name=%s, error)...",
-                static_cast<void *>(target_sp.get()), url, plugin_name);
 
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
@@ -649,10 +571,6 @@ lldb::SBProcess SBTarget::ConnectRemote(SBListener &listener, const char *url,
     error.SetErrorString("SBTarget is invalid");
   }
 
-  if (log)
-    log->Printf("SBTarget(%p)::ConnectRemote (...) => SBProcess(%p)",
-                static_cast<void *>(target_sp.get()),
-                static_cast<void *>(process_sp.get()));
   return LLDB_RECORD_RESULT(sb_process);
 }
 
@@ -665,13 +583,6 @@ SBFileSpec SBTarget::GetExecutable() {
     Module *exe_module = target_sp->GetExecutableModulePointer();
     if (exe_module)
       exe_file_spec.SetFileSpec(exe_module->GetFileSpec());
-  }
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    log->Printf("SBTarget(%p)::GetExecutable () => SBFileSpec(%p)",
-                static_cast<void *>(target_sp.get()),
-                static_cast<const void *>(exe_file_spec.get()));
   }
 
   return LLDB_RECORD_RESULT(exe_file_spec);
@@ -773,6 +684,10 @@ SBTarget::ResolveSymbolContextForAddress(const SBAddress &addr,
 
 size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
                             lldb::SBError &error) {
+  LLDB_RECORD_DUMMY(size_t, SBTarget, ReadMemory,
+                    (const lldb::SBAddress, void *, size_t, lldb::SBError &),
+                    addr, buf, size, error);
+
   SBError sb_error;
   size_t bytes_read = 0;
   TargetSP target_sp(GetSP());
@@ -838,8 +753,6 @@ SBBreakpoint SBTarget::BreakpointCreateByLocation(
                       lldb::addr_t, lldb::SBFileSpecList &),
                      sb_file_spec, line, column, offset, sb_module_list);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
   if (target_sp && line != 0) {
@@ -859,17 +772,6 @@ SBBreakpoint SBTarget::BreakpointCreateByLocation(
         skip_prologue, internal, hardware, move_to_nearest_code);
   }
 
-  if (log) {
-    SBStream sstr;
-    sb_bp.GetDescription(sstr);
-    char path[PATH_MAX];
-    sb_file_spec->GetPath(path, sizeof(path));
-    log->Printf("SBTarget(%p)::BreakpointCreateByLocation ( %s:%u ) => "
-                "SBBreakpoint(%p): %s",
-                static_cast<void *>(target_sp.get()), path, line,
-                static_cast<void *>(sb_bp.GetSP().get()), sstr.GetData());
-  }
-
   return LLDB_RECORD_RESULT(sb_bp);
 }
 
@@ -877,8 +779,6 @@ SBBreakpoint SBTarget::BreakpointCreateByName(const char *symbol_name,
                                               const char *module_name) {
   LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByName,
                      (const char *, const char *), symbol_name, module_name);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -901,12 +801,6 @@ SBBreakpoint SBTarget::BreakpointCreateByName(const char *symbol_name,
           offset, skip_prologue, internal, hardware);
     }
   }
-
-  if (log)
-    log->Printf("SBTarget(%p)::BreakpointCreateByName (symbol=\"%s\", "
-                "module=\"%s\") => SBBreakpoint(%p)",
-                static_cast<void *>(target_sp.get()), symbol_name, module_name,
-                static_cast<void *>(sb_bp.GetSP().get()));
 
   return LLDB_RECORD_RESULT(sb_bp);
 }
@@ -950,8 +844,6 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
                      symbol_name, name_type_mask, symbol_language, module_list,
                      comp_unit_list);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
   if (target_sp && symbol_name && symbol_name[0]) {
@@ -964,12 +856,6 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
                                         symbol_name, mask, symbol_language, 0,
                                         skip_prologue, internal, hardware);
   }
-
-  if (log)
-    log->Printf("SBTarget(%p)::BreakpointCreateByName (symbol=\"%s\", "
-                "name_type: %d) => SBBreakpoint(%p)",
-                static_cast<void *>(target_sp.get()), symbol_name,
-                name_type_mask, static_cast<void *>(sb_bp.GetSP().get()));
 
   return LLDB_RECORD_RESULT(sb_bp);
 }
@@ -1015,8 +901,6 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByNames(
                      symbol_names, num_names, name_type_mask, symbol_language,
                      offset, module_list, comp_unit_list);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
   if (target_sp && num_names > 0) {
@@ -1028,24 +912,6 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByNames(
     sb_bp = target_sp->CreateBreakpoint(
         module_list.get(), comp_unit_list.get(), symbol_names, num_names, mask,
         symbol_language, offset, skip_prologue, internal, hardware);
-  }
-
-  if (log) {
-    log->Printf("SBTarget(%p)::BreakpointCreateByName (symbols={",
-                static_cast<void *>(target_sp.get()));
-    for (uint32_t i = 0; i < num_names; i++) {
-      char sep;
-      if (i < num_names - 1)
-        sep = ',';
-      else
-        sep = '}';
-      if (symbol_names[i] != NULL)
-        log->Printf("\"%s\"%c ", symbol_names[i], sep);
-      else
-        log->Printf("\"<NULL>\"%c ", sep);
-    }
-    log->Printf("name_type: %d) => SBBreakpoint(%p)", name_type_mask,
-                static_cast<void *>(sb_bp.GetSP().get()));
   }
 
   return LLDB_RECORD_RESULT(sb_bp);
@@ -1089,7 +955,6 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByRegex(
        const lldb::SBFileSpecList &),
       symbol_name_regex, symbol_language, module_list, comp_unit_list);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -1105,20 +970,12 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByRegex(
         skip_prologue, internal, hardware);
   }
 
-  if (log)
-    log->Printf("SBTarget(%p)::BreakpointCreateByRegex (symbol_regex=\"%s\") "
-                "=> SBBreakpoint(%p)",
-                static_cast<void *>(target_sp.get()), symbol_name_regex,
-                static_cast<void *>(sb_bp.GetSP().get()));
-
   return LLDB_RECORD_RESULT(sb_bp);
 }
 
 SBBreakpoint SBTarget::BreakpointCreateByAddress(addr_t address) {
   LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByAddress,
                      (lldb::addr_t), address);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -1128,13 +985,6 @@ SBBreakpoint SBTarget::BreakpointCreateByAddress(addr_t address) {
     sb_bp = target_sp->CreateBreakpoint(address, false, hardware);
   }
 
-  if (log)
-    log->Printf("SBTarget(%p)::BreakpointCreateByAddress (address=%" PRIu64
-                ") => SBBreakpoint(%p)",
-                static_cast<void *>(target_sp.get()),
-                static_cast<uint64_t>(address),
-                static_cast<void *>(sb_bp.GetSP().get()));
-
   return LLDB_RECORD_RESULT(sb_bp);
 }
 
@@ -1142,15 +992,9 @@ SBBreakpoint SBTarget::BreakpointCreateBySBAddress(SBAddress &sb_address) {
   LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateBySBAddress,
                      (lldb::SBAddress &), sb_address);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
   if (!sb_address.IsValid()) {
-    if (log)
-      log->Printf("SBTarget(%p)::BreakpointCreateBySBAddress called with "
-                  "invalid address",
-                  static_cast<void *>(target_sp.get()));
     return LLDB_RECORD_RESULT(sb_bp);
   }
 
@@ -1158,15 +1002,6 @@ SBBreakpoint SBTarget::BreakpointCreateBySBAddress(SBAddress &sb_address) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     const bool hardware = false;
     sb_bp = target_sp->CreateBreakpoint(sb_address.ref(), false, hardware);
-  }
-
-  if (log) {
-    SBStream s;
-    sb_address.GetDescription(s);
-    log->Printf("SBTarget(%p)::BreakpointCreateBySBAddress (address=%s) => "
-                "SBBreakpoint(%p)",
-                static_cast<void *>(target_sp.get()), s.GetData(),
-                static_cast<void *>(sb_bp.GetSP().get()));
   }
 
   return LLDB_RECORD_RESULT(sb_bp);
@@ -1219,8 +1054,6 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateBySourceRegex(
                       const lldb::SBFileSpecList &, const lldb::SBStringList &),
                      source_regex, module_list, source_file_list, func_names);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
   if (target_sp && source_regex && source_regex[0]) {
@@ -1237,12 +1070,6 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateBySourceRegex(
         module_list.get(), source_file_list.get(), func_names_set, regexp,
         false, hardware, move_to_nearest_code);
   }
-
-  if (log)
-    log->Printf("SBTarget(%p)::BreakpointCreateByRegex (source_regex=\"%s\") "
-                "=> SBBreakpoint(%p)",
-                static_cast<void *>(target_sp.get()), source_regex,
-                static_cast<void *>(sb_bp.GetSP().get()));
 
   return LLDB_RECORD_RESULT(sb_bp);
 }
@@ -1262,8 +1089,6 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
   LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateForException,
                      (lldb::LanguageType, bool, bool), language, catch_bp,
                      throw_bp);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -1290,14 +1115,6 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
     }
   }
 
-  if (log)
-    log->Printf("SBTarget(%p)::BreakpointCreateForException (Language: %s, catch: "
-                "%s throw: %s) => SBBreakpoint(%p)",
-                static_cast<void *>(target_sp.get()),
-                Language::GetNameForLanguageType(language),
-                catch_bp ? "on" : "off", throw_bp ? "on" : "off",
-                static_cast<void *>(sb_bp.GetSP().get()));
-
   return LLDB_RECORD_RESULT(sb_bp);
 }
 
@@ -1311,14 +1128,12 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateFromScript(
        const lldb::SBFileSpecList &, bool),
       class_name, extra_args, module_list, file_list, request_hardware);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     Status error;
-    
+
     StructuredData::ObjectSP obj_sp = extra_args.m_impl_up->GetObjectSP();
     sb_bp =
         target_sp->CreateScriptedBreakpoint(class_name,
@@ -1329,12 +1144,6 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateFromScript(
                                             obj_sp,
                                             &error);
   }
-  if (log)
-    log->Printf("SBTarget(%p)::BreakpointCreateFromScript (class name: %s) "
-                " => SBBreakpoint(%p)",
-                static_cast<void *>(target_sp.get()),
-                class_name,
-                static_cast<void *>(sb_bp.GetSP().get()));
 
   return LLDB_RECORD_RESULT(sb_bp);
 }
@@ -1367,19 +1176,12 @@ bool SBTarget::BreakpointDelete(break_id_t bp_id) {
   LLDB_RECORD_METHOD(bool, SBTarget, BreakpointDelete, (lldb::break_id_t),
                      bp_id);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   bool result = false;
   TargetSP target_sp(GetSP());
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     result = target_sp->RemoveBreakpointByID(bp_id);
   }
-
-  if (log)
-    log->Printf("SBTarget(%p)::BreakpointDelete (bp_id=%d) => %i",
-                static_cast<void *>(target_sp.get()),
-                static_cast<uint32_t>(bp_id), result);
 
   return result;
 }
@@ -1388,20 +1190,12 @@ SBBreakpoint SBTarget::FindBreakpointByID(break_id_t bp_id) {
   LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, FindBreakpointByID,
                      (lldb::break_id_t), bp_id);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBBreakpoint sb_breakpoint;
   TargetSP target_sp(GetSP());
   if (target_sp && bp_id != LLDB_INVALID_BREAK_ID) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     sb_breakpoint = target_sp->GetBreakpointByID(bp_id);
   }
-
-  if (log)
-    log->Printf(
-        "SBTarget(%p)::FindBreakpointByID (bp_id=%d) => SBBreakpoint(%p)",
-        static_cast<void *>(target_sp.get()), static_cast<uint32_t>(bp_id),
-        static_cast<void *>(sb_breakpoint.GetSP().get()));
 
   return LLDB_RECORD_RESULT(sb_breakpoint);
 }
@@ -1602,7 +1396,6 @@ bool SBTarget::DeleteWatchpoint(watch_id_t wp_id) {
   LLDB_RECORD_METHOD(bool, SBTarget, DeleteWatchpoint, (lldb::watch_id_t),
                      wp_id);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   bool result = false;
   TargetSP target_sp(GetSP());
@@ -1613,11 +1406,6 @@ bool SBTarget::DeleteWatchpoint(watch_id_t wp_id) {
     result = target_sp->RemoveWatchpointByID(wp_id);
   }
 
-  if (log)
-    log->Printf("SBTarget(%p)::WatchpointDelete (wp_id=%d) => %i",
-                static_cast<void *>(target_sp.get()),
-                static_cast<uint32_t>(wp_id), result);
-
   return result;
 }
 
@@ -1625,7 +1413,6 @@ SBWatchpoint SBTarget::FindWatchpointByID(lldb::watch_id_t wp_id) {
   LLDB_RECORD_METHOD(lldb::SBWatchpoint, SBTarget, FindWatchpointByID,
                      (lldb::watch_id_t), wp_id);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBWatchpoint sb_watchpoint;
   lldb::WatchpointSP watchpoint_sp;
@@ -1638,12 +1425,6 @@ SBWatchpoint SBTarget::FindWatchpointByID(lldb::watch_id_t wp_id) {
     sb_watchpoint.SetSP(watchpoint_sp);
   }
 
-  if (log)
-    log->Printf(
-        "SBTarget(%p)::FindWatchpointByID (bp_id=%d) => SBWatchpoint(%p)",
-        static_cast<void *>(target_sp.get()), static_cast<uint32_t>(wp_id),
-        static_cast<void *>(watchpoint_sp.get()));
-
   return LLDB_RECORD_RESULT(sb_watchpoint);
 }
 
@@ -1653,8 +1434,6 @@ lldb::SBWatchpoint SBTarget::WatchAddress(lldb::addr_t addr, size_t size,
   LLDB_RECORD_METHOD(lldb::SBWatchpoint, SBTarget, WatchAddress,
                      (lldb::addr_t, size_t, bool, bool, lldb::SBError &), addr,
                      size, read, write, error);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBWatchpoint sb_watchpoint;
   lldb::WatchpointSP watchpoint_sp;
@@ -1682,13 +1461,6 @@ lldb::SBWatchpoint SBTarget::WatchAddress(lldb::addr_t addr, size_t size,
     error.SetError(cw_error);
     sb_watchpoint.SetSP(watchpoint_sp);
   }
-
-  if (log)
-    log->Printf("SBTarget(%p)::WatchAddress (addr=0x%" PRIx64
-                ", 0x%u) => SBWatchpoint(%p)",
-                static_cast<void *>(target_sp.get()), addr,
-                static_cast<uint32_t>(size),
-                static_cast<void *>(watchpoint_sp.get()));
 
   return LLDB_RECORD_RESULT(sb_watchpoint);
 }
@@ -1738,16 +1510,6 @@ SBValue SBTarget::CreateValueFromAddress(const char *name, SBAddress addr,
                                                              exe_ctx, ast_type);
   }
   sb_value.SetSP(new_value_sp);
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (new_value_sp)
-      log->Printf("SBTarget(%p)::CreateValueFromAddress => \"%s\"",
-                  static_cast<void *>(m_opaque_sp.get()),
-                  new_value_sp->GetName().AsCString());
-    else
-      log->Printf("SBTarget(%p)::CreateValueFromAddress => NULL",
-                  static_cast<void *>(m_opaque_sp.get()));
-  }
   return LLDB_RECORD_RESULT(sb_value);
 }
 
@@ -1768,16 +1530,6 @@ lldb::SBValue SBTarget::CreateValueFromData(const char *name, lldb::SBData data,
                                                           exe_ctx, ast_type);
   }
   sb_value.SetSP(new_value_sp);
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (new_value_sp)
-      log->Printf("SBTarget(%p)::CreateValueFromData => \"%s\"",
-                  static_cast<void *>(m_opaque_sp.get()),
-                  new_value_sp->GetName().AsCString());
-    else
-      log->Printf("SBTarget(%p)::CreateValueFromData => NULL",
-                  static_cast<void *>(m_opaque_sp.get()));
-  }
   return LLDB_RECORD_RESULT(sb_value);
 }
 
@@ -1795,16 +1547,6 @@ lldb::SBValue SBTarget::CreateValueFromExpression(const char *name,
         ValueObject::CreateValueObjectFromExpression(name, expr, exe_ctx);
   }
   sb_value.SetSP(new_value_sp);
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (new_value_sp)
-      log->Printf("SBTarget(%p)::CreateValueFromExpression => \"%s\"",
-                  static_cast<void *>(m_opaque_sp.get()),
-                  new_value_sp->GetName().AsCString());
-    else
-      log->Printf("SBTarget(%p)::CreateValueFromExpression => NULL",
-                  static_cast<void *>(m_opaque_sp.get()));
-  }
   return LLDB_RECORD_RESULT(sb_value);
 }
 
@@ -1838,11 +1580,6 @@ void SBTarget::AppendImageSearchPath(const char *from, const char *to,
   if (!csTo)
     return error.SetErrorString("<to> path can't be empty");
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBTarget(%p)::%s: '%s' -> '%s'",
-                static_cast<void *>(target_sp.get()),  __FUNCTION__,
-                from, to);
   target_sp->GetImageSearchPathList().Append(csFrom, csTo, true);
 }
 
@@ -1910,8 +1647,6 @@ bool SBTarget::AddModule(lldb::SBModule &module) {
 uint32_t SBTarget::GetNumModules() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBTarget, GetNumModules);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   uint32_t num = 0;
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1919,21 +1654,11 @@ uint32_t SBTarget::GetNumModules() const {
     num = target_sp->GetImages().GetSize();
   }
 
-  if (log)
-    log->Printf("SBTarget(%p)::GetNumModules () => %d",
-                static_cast<void *>(target_sp.get()), num);
-
   return num;
 }
 
 void SBTarget::Clear() {
   LLDB_RECORD_METHOD_NO_ARGS(void, SBTarget, Clear);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf("SBTarget(%p)::Clear ()",
-                static_cast<void *>(m_opaque_sp.get()));
 
   m_opaque_sp.reset();
 }
@@ -2023,8 +1748,6 @@ SBModule SBTarget::GetModuleAtIndex(uint32_t idx) {
   LLDB_RECORD_METHOD(lldb::SBModule, SBTarget, GetModuleAtIndex, (uint32_t),
                      idx);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBModule sb_module;
   ModuleSP module_sp;
   TargetSP target_sp(GetSP());
@@ -2033,11 +1756,6 @@ SBModule SBTarget::GetModuleAtIndex(uint32_t idx) {
     module_sp = target_sp->GetImages().GetModuleAtIndex(idx);
     sb_module.SetSP(module_sp);
   }
-
-  if (log)
-    log->Printf("SBTarget(%p)::GetModuleAtIndex (idx=%d) => SBModule(%p)",
-                static_cast<void *>(target_sp.get()), idx,
-                static_cast<void *>(module_sp.get()));
 
   return LLDB_RECORD_RESULT(sb_module);
 }
@@ -2055,15 +1773,10 @@ SBBroadcaster SBTarget::GetBroadcaster() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBBroadcaster, SBTarget,
                                    GetBroadcaster);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   TargetSP target_sp(GetSP());
   SBBroadcaster broadcaster(target_sp.get(), false);
 
-  if (log)
-    log->Printf("SBTarget(%p)::GetBroadcaster () => SBBroadcaster(%p)",
-                static_cast<void *>(target_sp.get()),
-                static_cast<void *>(broadcaster.get()));
 
   return LLDB_RECORD_RESULT(broadcaster);
 }
@@ -2407,6 +2120,10 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
 lldb::SBInstructionList SBTarget::GetInstructions(lldb::SBAddress base_addr,
                                                   const void *buf,
                                                   size_t size) {
+  LLDB_RECORD_DUMMY(lldb::SBInstructionList, SBTarget, GetInstructions,
+                    (lldb::SBAddress, const void *, size_t), base_addr, buf,
+                    size);
+
   return GetInstructionsWithFlavor(base_addr, NULL, buf, size);
 }
 
@@ -2414,6 +2131,11 @@ lldb::SBInstructionList
 SBTarget::GetInstructionsWithFlavor(lldb::SBAddress base_addr,
                                     const char *flavor_string, const void *buf,
                                     size_t size) {
+  LLDB_RECORD_DUMMY(lldb::SBInstructionList, SBTarget,
+                    GetInstructionsWithFlavor,
+                    (lldb::SBAddress, const char *, const void *, size_t),
+                    base_addr, flavor_string, buf, size);
+
   SBInstructionList sb_instructions;
 
   TargetSP target_sp(GetSP());
@@ -2436,6 +2158,9 @@ SBTarget::GetInstructionsWithFlavor(lldb::SBAddress base_addr,
 lldb::SBInstructionList SBTarget::GetInstructions(lldb::addr_t base_addr,
                                                   const void *buf,
                                                   size_t size) {
+  LLDB_RECORD_DUMMY(lldb::SBInstructionList, SBTarget, GetInstructions,
+                    (lldb::addr_t, const void *, size_t), base_addr, buf, size);
+
   return GetInstructionsWithFlavor(ResolveLoadAddress(base_addr), NULL, buf,
                                    size);
 }
@@ -2444,6 +2169,11 @@ lldb::SBInstructionList
 SBTarget::GetInstructionsWithFlavor(lldb::addr_t base_addr,
                                     const char *flavor_string, const void *buf,
                                     size_t size) {
+  LLDB_RECORD_DUMMY(lldb::SBInstructionList, SBTarget,
+                    GetInstructionsWithFlavor,
+                    (lldb::addr_t, const char *, const void *, size_t),
+                    base_addr, flavor_string, buf, size);
+
   return GetInstructionsWithFlavor(ResolveLoadAddress(base_addr), flavor_string,
                                    buf, size);
 }
@@ -2648,7 +2378,6 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
                      (const char *, const lldb::SBExpressionOptions &), expr,
                      options);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 #if !defined(LLDB_DISABLE_PYTHON)
   Log *expr_log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 #endif
@@ -2659,17 +2388,12 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
   StackFrame *frame = NULL;
   if (target_sp) {
     if (expr == NULL || expr[0] == '\0') {
-      if (log)
-        log->Printf(
-            "SBTarget::EvaluateExpression called with an empty expression");
       return LLDB_RECORD_RESULT(expr_result);
     }
 
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     ExecutionContext exe_ctx(m_opaque_sp.get());
 
-    if (log)
-      log->Printf("SBTarget()::EvaluateExpression (expr=\"%s\")...", expr);
 
     frame = exe_ctx.GetFramePtr();
     Target *target = exe_ctx.GetTargetPtr();
@@ -2689,10 +2413,6 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
           target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
 
       expr_result.SetSP(expr_value_sp, options.GetFetchDynamicValue());
-    } else {
-      if (log)
-        log->Printf("SBTarget::EvaluateExpression () => error: could not "
-                    "reconstruct frame object for this SBTarget.");
     }
   }
 #ifndef LLDB_DISABLE_PYTHON
@@ -2700,12 +2420,6 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
     expr_log->Printf("** [SBTarget::EvaluateExpression] Expression result is "
                      "%s, summary %s **",
                      expr_result.GetValue(), expr_result.GetSummary());
-
-  if (log)
-    log->Printf("SBTarget(%p)::EvaluateExpression (expr=\"%s\") => SBValue(%p) "
-                "(execution result=%d)",
-                static_cast<void *>(frame), expr,
-                static_cast<void *>(expr_value_sp.get()), exe_results);
 #endif
 
   return LLDB_RECORD_RESULT(expr_result);

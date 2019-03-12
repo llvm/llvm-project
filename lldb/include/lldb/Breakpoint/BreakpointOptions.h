@@ -21,7 +21,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class BreakpointOptions BreakpointOptions.h
+/// \class BreakpointOptions BreakpointOptions.h
 /// "lldb/Breakpoint/BreakpointOptions.h" Class that manages the options on a
 /// breakpoint or breakpoint location.
 //----------------------------------------------------------------------
@@ -103,13 +103,13 @@ public:
   /// This constructor allows you to specify all the breakpoint options except
   /// the callback.  That one is more complicated, and better to do by hand.
   ///
-  /// @param[in] condition
+  /// \param[in] condition
   ///    The expression which if it evaluates to \b true if we are to stop
   ///
-  /// @param[in] enabled
+  /// \param[in] enabled
   ///    Is this breakpoint enabled.
   ///
-  /// @param[in] ignore
+  /// \param[in] ignore
   ///    How many breakpoint hits we should ignore before stopping.
   ///
   //------------------------------------------------------------------
@@ -182,13 +182,13 @@ public:
   //------------------------------------------------------------------
   /// Adds a callback to the breakpoint option set.
   ///
-  /// @param[in] callback
+  /// \param[in] callback
   ///    The function to be called when the breakpoint gets hit.
   ///
-  /// @param[in] baton_sp
+  /// \param[in] baton_sp
   ///    A baton which will get passed back to the callback when it is invoked.
   ///
-  /// @param[in] synchronous
+  /// \param[in] synchronous
   ///    Whether this is a synchronous or asynchronous callback.  See discussion
   ///    above.
   //------------------------------------------------------------------
@@ -202,10 +202,10 @@ public:
   //------------------------------------------------------------------
   /// Returns the command line commands for the callback on this breakpoint.
   ///
-  /// @param[out] command_list
+  /// \param[out] command_list
   ///    The commands will be appended to this list.
   ///
-  /// @return
+  /// \return
   ///    \btrue if the command callback is a command-line callback,
   ///    \bfalse otherwise.
   //------------------------------------------------------------------
@@ -222,7 +222,7 @@ public:
   //------------------------------------------------------------------
   /// Use this function to invoke the callback for a specific stop.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///    The context in which the callback is to be invoked.  This includes the
   ///    stop event, the
   ///    execution context of the stop (since you might hit the same breakpoint
@@ -230,13 +230,13 @@ public:
   ///    whether we are currently executing synchronous or asynchronous
   ///    callbacks.
   ///
-  /// @param[in] break_id
+  /// \param[in] break_id
   ///    The breakpoint ID that owns this option set.
   ///
-  /// @param[in] break_loc_id
+  /// \param[in] break_loc_id
   ///    The breakpoint location ID that owns this option set.
   ///
-  /// @return
+  /// \return
   ///     The callback return value.
   //------------------------------------------------------------------
   bool InvokeCallback(StoppointCallbackContext *context,
@@ -246,7 +246,7 @@ public:
   /// Used in InvokeCallback to tell whether it is the right time to run this
   /// kind of callback.
   ///
-  /// @return
+  /// \return
   ///     The synchronicity of our callback.
   //------------------------------------------------------------------
   bool IsCallbackSynchronous() const { return m_callback_is_synchronous; }
@@ -254,7 +254,7 @@ public:
   //------------------------------------------------------------------
   /// Fetch the baton from the callback.
   ///
-  /// @return
+  /// \return
   ///     The baton.
   //------------------------------------------------------------------
   Baton *GetBaton();
@@ -262,7 +262,7 @@ public:
   //------------------------------------------------------------------
   /// Fetch  a const version of the baton from the callback.
   ///
-  /// @return
+  /// \return
   ///     The baton.
   //------------------------------------------------------------------
   const Baton *GetBaton() const;
@@ -273,7 +273,7 @@ public:
   //------------------------------------------------------------------
   /// Set the breakpoint option's condition.
   ///
-  /// @param[in] condition
+  /// \param[in] condition
   ///    The condition expression to evaluate when the breakpoint is hit.
   //------------------------------------------------------------------
   void SetCondition(const char *condition);
@@ -281,7 +281,7 @@ public:
   //------------------------------------------------------------------
   /// Return a pointer to the text of the condition expression.
   ///
-  /// @return
+  /// \return
   ///    A pointer to the condition expression text, or nullptr if no
   //     condition has been set.
   //------------------------------------------------------------------
@@ -293,7 +293,7 @@ public:
 
   //------------------------------------------------------------------
   /// Check the Enable/Disable state.
-  /// @return
+  /// \return
   ///     \b true if the breakpoint is enabled, \b false if disabled.
   //------------------------------------------------------------------
   bool IsEnabled() const { return m_enabled; }
@@ -308,7 +308,7 @@ public:
 
   //------------------------------------------------------------------
   /// Check the auto-continue state.
-  /// @return
+  /// \return
   ///     \b true if the breakpoint is set to auto-continue, \b false otherwise.
   //------------------------------------------------------------------
   bool IsAutoContinue() const { return m_auto_continue; }
@@ -323,7 +323,7 @@ public:
 
   //------------------------------------------------------------------
   /// Check the One-shot state.
-  /// @return
+  /// \return
   ///     \b true if the breakpoint is one-shot, \b false otherwise.
   //------------------------------------------------------------------
   bool IsOneShot() const { return m_one_shot; }
@@ -338,7 +338,7 @@ public:
 
   //------------------------------------------------------------------
   /// Set the breakpoint to ignore the next \a count breakpoint hits.
-  /// @param[in] count
+  /// \param[in] count
   ///    The number of breakpoint hits to ignore.
   //------------------------------------------------------------------
 
@@ -349,7 +349,7 @@ public:
 
   //------------------------------------------------------------------
   /// Return the current Ignore Count.
-  /// @return
+  /// \return
   ///     The number of breakpoint hits to be ignored.
   //------------------------------------------------------------------
   uint32_t GetIgnoreCount() const { return m_ignore_count; }
@@ -357,7 +357,7 @@ public:
   //------------------------------------------------------------------
   /// Return the current thread spec for this option. This will return nullptr
   /// if the no thread specifications have been set for this Option yet.
-  /// @return
+  /// \return
   ///     The thread specification pointer for this option, or nullptr if none
   ///     has
   ///     been set yet.
@@ -388,7 +388,7 @@ public:
                            lldb::user_id_t break_loc_id);
 
   //------------------------------------------------------------------
-  /// Set a callback based on BreakpointOptions::CommandData. @param[in]
+  /// Set a callback based on BreakpointOptions::CommandData. \param[in]
   /// cmd_data
   ///     A UP holding the new'ed CommandData object.
   ///     The breakpoint will take ownership of pointer held by this object.

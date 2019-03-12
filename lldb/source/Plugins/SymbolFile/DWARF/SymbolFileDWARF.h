@@ -50,7 +50,6 @@ class DWARFDebugInfoEntry;
 class DWARFDebugLine;
 class DWARFDebugRangesBase;
 class DWARFDeclContext;
-class DWARFDIECollection;
 class DWARFFormValue;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;

@@ -3653,6 +3653,9 @@ static constexpr PropertyDefinition g_properties[] = {
     {"use-all-compiler-flags", OptionValue::eTypeBoolean, false, true, nullptr,
      {}, "Try to use compiler flags for all modules when setting up the "
          "Swift expression parser, not just the main executable."},
+    {"import-std-module", OptionValue::eTypeBoolean, false, false,
+     nullptr, {},
+     "Import the C++ std module to improve debugging STL containers."},
     {"auto-apply-fixits", OptionValue::eTypeBoolean, false, true, nullptr,
      {}, "Automatically apply fix-it hints to expressions."},
     {"notify-about-fixits", OptionValue::eTypeBoolean, false, true, nullptr,
@@ -3796,6 +3799,7 @@ enum {
   ePropertySwiftModuleSearchPaths,
   ePropertyAutoImportClangModules,
   ePropertyUseAllCompilerFlags,
+  ePropertyImportStdModule,
   ePropertyAutoApplyFixIts,
   ePropertyNotifyAboutFixIts,
   ePropertySaveObjects,
@@ -4269,6 +4273,11 @@ bool TargetProperties::GetUseAllCompilerFlags() const {
   const uint32_t idx = ePropertyUseAllCompilerFlags;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       NULL, idx, g_properties[idx].default_uint_value != 0);
+
+bool TargetProperties::GetEnableImportStdModule() const {
+  const uint32_t idx = ePropertyImportStdModule;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetEnableAutoApplyFixIts() const {

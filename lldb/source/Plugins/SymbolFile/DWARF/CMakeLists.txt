@@ -22,7 +22,6 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   DWARFDeclContext.cpp
   DWARFDefines.cpp
   DWARFDIE.cpp
-  DWARFDIECollection.cpp
   DWARFFormValue.cpp
   DWARFIndex.cpp
   DWARFUnit.cpp

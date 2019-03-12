@@ -2,6 +2,8 @@
 module lldb_API {
   requires cplusplus
 
+  textual header "Utility/ReproducerInstrumentation.h"
+
   umbrella "API"
   module * { export * }
 }
@@ -136,5 +138,4 @@ module lldb_Utility {
   module lldb_public { header "lldb-public.h" export * }
   module lldb_types { header "lldb-types.h" export * }
   module lldb_versioning { header "lldb-versioning.h" export * }
-
 }

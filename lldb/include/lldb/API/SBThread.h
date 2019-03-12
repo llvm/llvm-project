@@ -39,6 +39,8 @@ public:
 
   lldb::SBQueue GetQueue() const;
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   void Clear();

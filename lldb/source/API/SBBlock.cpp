@@ -21,7 +21,6 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -49,6 +48,10 @@ SBBlock::~SBBlock() { m_opaque_ptr = NULL; }
 
 bool SBBlock::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBlock, IsValid);
+  return this->operator bool();
+}
+SBBlock::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBlock, operator bool);
 
   return m_opaque_ptr != NULL;
 }

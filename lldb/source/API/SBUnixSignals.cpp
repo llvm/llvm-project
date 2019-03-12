@@ -11,7 +11,6 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/UnixSignals.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/lldb-defines.h"
 
 #include "lldb/API/SBUnixSignals.h"
@@ -60,6 +59,10 @@ void SBUnixSignals::Clear() {
 
 bool SBUnixSignals::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBUnixSignals, IsValid);
+  return this->operator bool();
+}
+SBUnixSignals::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBUnixSignals, operator bool);
 
   return static_cast<bool>(GetSP());
 }
@@ -98,13 +101,7 @@ bool SBUnixSignals::SetShouldSuppress(int32_t signo, bool value) {
   LLDB_RECORD_METHOD(bool, SBUnixSignals, SetShouldSuppress, (int32_t, bool),
                      signo, value);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   auto signals_sp = GetSP();
-
-  if (log) {
-    log->Printf("SBUnixSignals(%p)::SetShouldSuppress (signo=%d, value=%d)",
-                static_cast<void *>(signals_sp.get()), signo, value);
-  }
 
   if (signals_sp)
     return signals_sp->SetShouldSuppress(signo, value);
@@ -126,13 +123,7 @@ bool SBUnixSignals::SetShouldStop(int32_t signo, bool value) {
   LLDB_RECORD_METHOD(bool, SBUnixSignals, SetShouldStop, (int32_t, bool), signo,
                      value);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   auto signals_sp = GetSP();
-
-  if (log) {
-    log->Printf("SBUnixSignals(%p)::SetShouldStop (signo=%d, value=%d)",
-                static_cast<void *>(signals_sp.get()), signo, value);
-  }
 
   if (signals_sp)
     return signals_sp->SetShouldStop(signo, value);
@@ -154,13 +145,7 @@ bool SBUnixSignals::SetShouldNotify(int32_t signo, bool value) {
   LLDB_RECORD_METHOD(bool, SBUnixSignals, SetShouldNotify, (int32_t, bool),
                      signo, value);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   auto signals_sp = GetSP();
-
-  if (log) {
-    log->Printf("SBUnixSignals(%p)::SetShouldNotify (signo=%d, value=%d)",
-                static_cast<void *>(signals_sp.get()), signo, value);
-  }
 
   if (signals_sp)
     return signals_sp->SetShouldNotify(signo, value);

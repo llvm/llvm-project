@@ -22,7 +22,6 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
@@ -39,14 +38,6 @@ SBBreakpointLocation::SBBreakpointLocation(
     : m_opaque_wp(break_loc_sp) {
   LLDB_RECORD_CONSTRUCTOR(SBBreakpointLocation,
                           (const lldb::BreakpointLocationSP &), break_loc_sp);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log) {
-    SBStream sstr;
-    GetDescription(sstr, lldb::eDescriptionLevelBrief);
-    LLDB_LOG(log, "location = {0} ({1})", break_loc_sp.get(), sstr.GetData());
-  }
 }
 
 SBBreakpointLocation::SBBreakpointLocation(const SBBreakpointLocation &rhs)
@@ -74,6 +65,10 @@ BreakpointLocationSP SBBreakpointLocation::GetSP() const {
 
 bool SBBreakpointLocation::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBreakpointLocation, IsValid);
+  return this->operator bool();
+}
+SBBreakpointLocation::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBreakpointLocation, operator bool);
 
   return bool(GetSP());
 }
@@ -216,10 +211,7 @@ void SBBreakpointLocation::SetScriptCallbackFunction(
   LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetScriptCallbackFunction,
                      (const char *), callback_function_name);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointLocationSP loc_sp = GetSP();
-  LLDB_LOG(log, "location = {0}, callback = {1}", loc_sp.get(),
-           callback_function_name);
 
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -240,10 +232,7 @@ SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
   LLDB_RECORD_METHOD(lldb::SBError, SBBreakpointLocation, SetScriptCallbackBody,
                      (const char *), callback_body_text);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointLocationSP loc_sp = GetSP();
-  LLDB_LOG(log, "location = {0}: callback body:\n{1}", loc_sp.get(),
-           callback_body_text);
 
   SBError sb_error;
   if (loc_sp) {
@@ -452,7 +441,6 @@ SBBreakpoint SBBreakpointLocation::GetBreakpoint() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBBreakpoint, SBBreakpointLocation,
                              GetBreakpoint);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointLocationSP loc_sp = GetSP();
 
   SBBreakpoint sb_bp;
@@ -462,11 +450,5 @@ SBBreakpoint SBBreakpointLocation::GetBreakpoint() {
     sb_bp = loc_sp->GetBreakpoint().shared_from_this();
   }
 
-  if (log) {
-    SBStream sstr;
-    sb_bp.GetDescription(sstr);
-    LLDB_LOG(log, "location = {0}, breakpoint = {1} ({2})", loc_sp.get(),
-             sb_bp.GetSP().get(), sstr.GetData());
-  }
   return LLDB_RECORD_RESULT(sb_bp);
 }

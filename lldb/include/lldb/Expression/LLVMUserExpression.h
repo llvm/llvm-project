@@ -20,7 +20,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class LLVMUserExpression LLVMUserExpression.h
+/// \class LLVMUserExpression LLVMUserExpression.h
 /// "lldb/Expression/LLVMUserExpression.h" Encapsulates a one-time expression
 /// for use in lldb.
 ///

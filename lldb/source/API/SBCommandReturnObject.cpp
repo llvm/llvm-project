@@ -13,7 +13,6 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 
 using namespace lldb;
@@ -61,6 +60,10 @@ operator=(const SBCommandReturnObject &rhs) {
 
 bool SBCommandReturnObject::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandReturnObject, IsValid);
+  return this->operator bool();
+}
+SBCommandReturnObject::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandReturnObject, operator bool);
 
   return m_opaque_up != nullptr;
 }
@@ -68,22 +71,12 @@ bool SBCommandReturnObject::IsValid() const {
 const char *SBCommandReturnObject::GetOutput() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBCommandReturnObject, GetOutput);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   if (m_opaque_up) {
     llvm::StringRef output = m_opaque_up->GetOutputData();
     ConstString result(output.empty() ? llvm::StringRef("") : output);
 
-    if (log)
-      log->Printf("SBCommandReturnObject(%p)::GetOutput () => \"%s\"",
-                  static_cast<void *>(m_opaque_up.get()), result.AsCString());
-
     return result.AsCString();
   }
-
-  if (log)
-    log->Printf("SBCommandReturnObject(%p)::GetOutput () => nullptr",
-                static_cast<void *>(m_opaque_up.get()));
 
   return nullptr;
 }
@@ -91,21 +84,11 @@ const char *SBCommandReturnObject::GetOutput() {
 const char *SBCommandReturnObject::GetError() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBCommandReturnObject, GetError);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   if (m_opaque_up) {
     llvm::StringRef output = m_opaque_up->GetErrorData();
     ConstString result(output.empty() ? llvm::StringRef("") : output);
-    if (log)
-      log->Printf("SBCommandReturnObject(%p)::GetError () => \"%s\"",
-                  static_cast<void *>(m_opaque_up.get()), result.AsCString());
-
     return result.AsCString();
   }
-
-  if (log)
-    log->Printf("SBCommandReturnObject(%p)::GetError () => nullptr",
-                static_cast<void *>(m_opaque_up.get()));
 
   return nullptr;
 }

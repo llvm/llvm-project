@@ -442,7 +442,7 @@ lldb_private::ConstString ScriptInterpreterPython::GetPluginName() {
 
 uint32_t ScriptInterpreterPython::GetPluginVersion() { return 1; }
 
-void ScriptInterpreterPython::IOHandlerActivated(IOHandler &io_handler) {
+void ScriptInterpreterPython::IOHandlerActivated(IOHandler &io_handler, bool interactive) {
   const char *instructions = nullptr;
 
   switch (m_active_io_handler) {
@@ -463,7 +463,7 @@ def function (frame, bp_loc, internal_dict):
 
   if (instructions) {
     StreamFileSP output_sp(io_handler.GetOutputStreamFile());
-    if (output_sp) {
+    if (output_sp && interactive) {
       output_sp->PutCString(instructions);
       output_sp->Flush();
     }

@@ -459,7 +459,7 @@ public:
   //----------------------------------------------------------------------
   // IOHandlerDelegate
   //----------------------------------------------------------------------
-  void IOHandlerActivated(IOHandler &io_handler) override;
+  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override;
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override;

@@ -234,8 +234,7 @@ public:
     return HasChildren() ? this + 1 : NULL;
   }
 
-  void GetDeclContextDIEs(DWARFUnit *cu,
-                          DWARFDIECollection &decl_context_dies) const;
+  std::vector<DWARFDIE> GetDeclContextDIEs(DWARFUnit *cu) const;
 
   void GetDWARFDeclContext(SymbolFileDWARF *dwarf2Data, DWARFUnit *cu,
                            DWARFDeclContext &dwarf_decl_ctx) const;

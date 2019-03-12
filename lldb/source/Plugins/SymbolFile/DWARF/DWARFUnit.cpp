@@ -17,7 +17,6 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
-#include "DWARFDIECollection.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "LogChannelDWARF.h"
@@ -60,8 +59,7 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   // parse
   const DWARFDataExtractor &data = GetData();
   DWARFFormValue::FixedFormSizes fixed_form_sizes =
-      DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize(),
-                                                      IsDWARF64());
+      DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize());
   if (offset < GetNextCompileUnitOffset() &&
       m_first_die.FastExtract(data, this, fixed_form_sizes, &offset)) {
     AddUnitDIE(m_first_die);
@@ -186,8 +184,7 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   die_index_stack.push_back(0);
   bool prev_die_had_children = false;
   DWARFFormValue::FixedFormSizes fixed_form_sizes =
-      DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize(),
-                                                      IsDWARF64());
+      DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize());
   while (offset < next_cu_offset &&
          die.FastExtract(data, this, fixed_form_sizes, &offset)) {
     const bool null_die = die.IsNULL();
@@ -400,23 +397,22 @@ DWARFDIE DWARFUnit::LookupAddress(const dw_addr_t address) {
 }
 
 size_t DWARFUnit::AppendDIEsWithTag(const dw_tag_t tag,
-				    DWARFDIECollection &dies,
-				    uint32_t depth) const {
-  size_t old_size = dies.Size();
+                                    std::vector<DWARFDIE> &dies,
+                                    uint32_t depth) const {
+  size_t old_size = dies.size();
   {
     llvm::sys::ScopedReader lock(m_die_array_mutex);
     DWARFDebugInfoEntry::const_iterator pos;
     DWARFDebugInfoEntry::const_iterator end = m_die_array.end();
     for (pos = m_die_array.begin(); pos != end; ++pos) {
       if (pos->Tag() == tag)
-        dies.Append(DWARFDIE(this, &(*pos)));
+        dies.emplace_back(this, &(*pos));
     }
   }
 
   // Return the number of DIEs added to the collection
-  return dies.Size() - old_size;
+  return dies.size() - old_size;
 }
-
 
 lldb::user_id_t DWARFUnit::GetID() const {
   dw_offset_t local_id =
@@ -571,8 +567,7 @@ TypeSystem *DWARFUnit::GetTypeSystem() {
 }
 
 DWARFFormValue::FixedFormSizes DWARFUnit::GetFixedFormSizes() {
-  return DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize(),
-                                                         IsDWARF64());
+  return DWARFFormValue::GetFixedFormSizesForAddressSize(GetAddressByteSize());
 }
 
 void DWARFUnit::SetBaseAddress(dw_addr_t base_addr) { m_base_addr = base_addr; }
@@ -621,12 +616,6 @@ uint8_t DWARFUnit::GetAddressByteSize(const DWARFUnit *cu) {
   if (cu)
     return cu->GetAddressByteSize();
   return DWARFUnit::GetDefaultAddressSize();
-}
-
-bool DWARFUnit::IsDWARF64(const DWARFUnit *cu) {
-  if (cu)
-    return cu->IsDWARF64();
-  return false;
 }
 
 uint8_t DWARFUnit::GetDefaultAddressSize() { return 4; }

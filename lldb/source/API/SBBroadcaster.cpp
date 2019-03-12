@@ -8,7 +8,6 @@
 
 #include "SBReproducerPrivate.h"
 #include "lldb/Utility/Broadcaster.h"
-#include "lldb/Utility/Log.h"
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBEvent.h"
@@ -26,15 +25,10 @@ SBBroadcaster::SBBroadcaster(const char *name)
   LLDB_RECORD_CONSTRUCTOR(SBBroadcaster, (const char *), name);
 
   m_opaque_ptr = m_opaque_sp.get();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  LLDB_LOGV(log, "(name=\"{0}\") => SBBroadcaster({1})", name, m_opaque_ptr);
 }
 
 SBBroadcaster::SBBroadcaster(lldb_private::Broadcaster *broadcaster, bool owns)
     : m_opaque_sp(owns ? broadcaster : NULL), m_opaque_ptr(broadcaster) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  LLDB_LOGV(log, "(broadcaster={0}, owns={1}) => SBBroadcaster({2})",
-            broadcaster, owns, m_opaque_ptr);
 }
 
 SBBroadcaster::SBBroadcaster(const SBBroadcaster &rhs)
@@ -60,13 +54,6 @@ void SBBroadcaster::BroadcastEventByType(uint32_t event_type, bool unique) {
   LLDB_RECORD_METHOD(void, SBBroadcaster, BroadcastEventByType,
                      (uint32_t, bool), event_type, unique);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf("SBBroadcaster(%p)::BroadcastEventByType (event_type=0x%8.8x, "
-                "unique=%i)",
-                static_cast<void *>(m_opaque_ptr), event_type, unique);
-
   if (m_opaque_ptr == NULL)
     return;
 
@@ -79,14 +66,6 @@ void SBBroadcaster::BroadcastEventByType(uint32_t event_type, bool unique) {
 void SBBroadcaster::BroadcastEvent(const SBEvent &event, bool unique) {
   LLDB_RECORD_METHOD(void, SBBroadcaster, BroadcastEvent,
                      (const lldb::SBEvent &, bool), event, unique);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf(
-        "SBBroadcaster(%p)::BroadcastEventByType (SBEvent(%p), unique=%i)",
-        static_cast<void *>(m_opaque_ptr), static_cast<void *>(event.get()),
-        unique);
 
   if (m_opaque_ptr == NULL)
     return;
@@ -104,12 +83,6 @@ void SBBroadcaster::AddInitialEventsToListener(const SBListener &listener,
                      (const lldb::SBListener &, uint32_t), listener,
                      requested_events);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBBroadcaster(%p)::AddInitialEventsToListener "
-                "(SBListener(%p), event_mask=0x%8.8x)",
-                static_cast<void *>(m_opaque_ptr),
-                static_cast<void *>(listener.get()), requested_events);
   if (m_opaque_ptr)
     m_opaque_ptr->AddInitialEventsToListener(listener.m_opaque_sp,
                                              requested_events);
@@ -166,6 +139,10 @@ void SBBroadcaster::reset(Broadcaster *broadcaster, bool owns) {
 
 bool SBBroadcaster::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBroadcaster, IsValid);
+  return this->operator bool();
+}
+SBBroadcaster::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBroadcaster, operator bool);
 
   return m_opaque_ptr != NULL;
 }

@@ -20,7 +20,7 @@ namespace lldb_private {
 class HostNativeThreadBase;
 
 //----------------------------------------------------------------------
-/// @class HostInfo HostInfo.h "lldb/Host/HostThread.h"
+/// \class HostInfo HostInfo.h "lldb/Host/HostThread.h"
 /// A class that represents a thread running inside of a process on the
 ///        local machine.
 ///

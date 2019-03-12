@@ -87,6 +87,8 @@ public:
 
   static bool EventIsCommandInterpreterEvent(const lldb::SBEvent &event);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   bool CommandExists(const char *cmd);
@@ -206,10 +208,10 @@ public:
   /// terminal, so this function allows GUI programs to emulate this
   /// functionality.
   ///
-  /// @param[in] ch
+  /// \param[in] ch
   ///     The character that was typed along with the control key
   ///
-  /// @return
+  /// \return
   ///     The string that should be written into the file handle that is
   ///     feeding the input stream for the debugger, or nullptr if there is
   ///     no string for this control key.
@@ -271,6 +273,8 @@ public:
 class SBCommand {
 public:
   SBCommand();
+
+  explicit operator bool() const;
 
   bool IsValid();
 

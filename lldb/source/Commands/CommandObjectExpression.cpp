@@ -643,6 +643,29 @@ void CommandObjectExpression::GetMultilineExpression() {
   debugger.PushIOHandler(io_handler_sp);
 }
 
+static EvaluateExpressionOptions
+GetExprOptions(ExecutionContext &ctx,
+               CommandObjectExpression::CommandOptions command_options) {
+  command_options.OptionParsingStarting(&ctx);
+
+  // Default certain settings for REPL regardless of the global settings.
+  command_options.unwind_on_error = false;
+  command_options.ignore_breakpoints = false;
+  command_options.debug = false;
+
+  EvaluateExpressionOptions expr_options;
+  expr_options.SetUnwindOnError(command_options.unwind_on_error);
+  expr_options.SetIgnoreBreakpoints(command_options.ignore_breakpoints);
+  expr_options.SetTryAllThreads(command_options.try_all_threads);
+
+  if (command_options.timeout > 0)
+    expr_options.SetTimeout(std::chrono::microseconds(command_options.timeout));
+  else
+    expr_options.SetTimeout(llvm::None);
+
+  return expr_options;
+}
+
 bool CommandObjectExpression::DoExecute(llvm::StringRef command,
                                         CommandReturnObject &result) {
   m_fixed_expression.clear();
@@ -709,7 +732,8 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
 
           if (repl_sp) {
             if (initialize) {
-              repl_sp->SetCommandOptions(m_command_options);
+              repl_sp->SetEvaluateOptions(
+                  GetExprOptions(exe_ctx, m_command_options));
               repl_sp->SetFormatOptions(m_format_options);
               repl_sp->SetValueObjectDisplayOptions(m_varobj_options);
             }

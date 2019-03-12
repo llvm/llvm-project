@@ -23,7 +23,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Mangled Mangled.h "lldb/Core/Mangled.h"
+/// \class Mangled Mangled.h "lldb/Core/Mangled.h"
 /// A class that handles mangled names.
 ///
 /// Designed to handle mangled names. The demangled version of any names will
@@ -61,10 +61,10 @@ public:
   /// Constructor with an optional string and a boolean indicating if it is
   /// the mangled version.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The already const name to copy into this object.
   ///
-  /// @param[in] is_mangled
+  /// \param[in] is_mangled
   ///     If \b true then \a name is a mangled name, if \b false then
   ///     \a name is demangled.
   //----------------------------------------------------------------------
@@ -77,7 +77,7 @@ public:
   /// Constructor with an optional string and auto-detect if \a name is
   /// mangled or not.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The already const name to copy into this object.
   //----------------------------------------------------------------------
   explicit Mangled(ConstString name);
@@ -98,13 +98,13 @@ public:
   /// This allows code to check a Mangled object to see if it contains a valid
   /// mangled name using code such as:
   ///
-  /// @code
+  /// \code
   /// Mangled mangled(...);
   /// if (mangled)
   /// { ...
-  /// @endcode
+  /// \endcode
   ///
-  /// @return
+  /// \return
   ///     A pointer to this object if either the mangled or unmangled
   ///     name is set, NULL otherwise.
   //----------------------------------------------------------------------
@@ -116,13 +116,13 @@ public:
   /// This allows code to check a Mangled object to see if it contains an
   /// empty mangled name using code such as:
   ///
-  /// @code
+  /// \code
   /// Mangled mangled(...);
   /// if (!mangled)
   /// { ...
-  /// @endcode
+  /// \endcode
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the object has an empty mangled and
   ///     unmangled name, \b false otherwise.
   //----------------------------------------------------------------------
@@ -138,16 +138,16 @@ public:
   ///
   /// Compares the Mangled::GetName() string in \a lhs and \a rhs.
   ///
-  /// @param[in] lhs
+  /// \param[in] lhs
   ///     A const reference to the Left Hand Side object to compare.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     A const reference to the Right Hand Side object to compare.
   ///
-  /// @return
-  ///     @li -1 if \a lhs is less than \a rhs
-  ///     @li 0 if \a lhs is equal to \a rhs
-  ///     @li 1 if \a lhs is greater than \a rhs
+  /// \return
+  ///     \li -1 if \a lhs is less than \a rhs
+  ///     \li 0 if \a lhs is equal to \a rhs
+  ///     \li 1 if \a lhs is greater than \a rhs
   //----------------------------------------------------------------------
   static int Compare(const Mangled &lhs, const Mangled &rhs);
 
@@ -157,7 +157,7 @@ public:
   /// Dump a Mangled object to stream \a s. We don't force our demangled name
   /// to be computed currently (we don't use the accessor).
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   //----------------------------------------------------------------------
   void Dump(Stream *s) const;
@@ -165,7 +165,7 @@ public:
   //----------------------------------------------------------------------
   /// Dump a debug description of this object to a Stream \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   //----------------------------------------------------------------------
   void DumpDebug(Stream *s) const;
@@ -173,7 +173,7 @@ public:
   //----------------------------------------------------------------------
   /// Demangled name get accessor.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the demangled name string object.
   //----------------------------------------------------------------------
   ConstString GetDemangledName(lldb::LanguageType language,
@@ -182,7 +182,7 @@ public:
   //----------------------------------------------------------------------
   /// Display demangled name get accessor.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the display demangled name string object.
   //----------------------------------------------------------------------
   ConstString GetDisplayDemangledName(lldb::LanguageType language) const;
@@ -194,7 +194,7 @@ public:
   //----------------------------------------------------------------------
   /// Mangled name get accessor.
   ///
-  /// @return
+  /// \return
   ///     A reference to the mangled name string object.
   //----------------------------------------------------------------------
   ConstString &GetMangledName() { return m_mangled; }
@@ -202,7 +202,7 @@ public:
   //----------------------------------------------------------------------
   /// Mangled name get accessor.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the mangled name string object.
   //----------------------------------------------------------------------
   ConstString GetMangledName() const { return m_mangled; }
@@ -210,10 +210,10 @@ public:
   //----------------------------------------------------------------------
   /// Best name get accessor.
   ///
-  /// @param[in] preference
+  /// \param[in] preference
   ///     Which name would you prefer to get?
   ///
-  /// @return
+  /// \return
   ///     A const reference to the preferred name string object if this
   ///     object has a valid name of that kind, else a const reference to the
   ///     other name is returned.
@@ -224,10 +224,10 @@ public:
   //----------------------------------------------------------------------
   /// Check if "name" matches either the mangled or demangled name.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     A name to match against both strings.
   ///
-  /// @return
+  /// \return
   ///     \b True if \a name matches either name, \b false otherwise.
   //----------------------------------------------------------------------
   bool NameMatches(ConstString name, lldb::LanguageType language) const {
@@ -245,10 +245,10 @@ public:
   /// the size in bytes of this object, not any shared string values it may
   /// refer to.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object occupies in memory.
   ///
-  /// @see ConstString::StaticMemorySize ()
+  /// \see ConstString::StaticMemorySize ()
   //----------------------------------------------------------------------
   size_t MemorySize() const;
 
@@ -258,10 +258,10 @@ public:
   /// If \a is_mangled is \b true, then the mangled named is set to \a name,
   /// else the demangled name is set to \a name.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The already const version of the name for this object.
   ///
-  /// @param[in] is_mangled
+  /// \param[in] is_mangled
   ///     If \b true then \a name is a mangled name, if \b false then
   ///     \a name is demangled.
   //----------------------------------------------------------------------
@@ -273,7 +273,7 @@ public:
   /// This version auto detects if the string is mangled by inspecting the
   /// string value and looking for common mangling prefixes.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The already const version of the name for this object.
   //----------------------------------------------------------------------
   void SetValue(ConstString name);
@@ -290,7 +290,7 @@ public:
   /// aren't mangled and it isn't clear what language the name represents
   /// (there will be no mangled name).
   ///
-  /// @return
+  /// \return
   ///     The language for the mangled/demangled name, eLanguageTypeUnknown
   ///     if there is no mangled or demangled counterpart.
   //----------------------------------------------------------------------
@@ -312,15 +312,15 @@ public:
   /// This function is thread-safe when used with different \a context
   /// instances in different threads.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     The context for this function. A single instance can be stack-
   ///     allocated in the caller's frame and used for multiple calls.
   ///
-  /// @param[in] skip_mangled_name
+  /// \param[in] skip_mangled_name
   ///     A filtering function for skipping entities based on name and mangling
   ///     scheme. This can be null if unused.
   ///
-  /// @return
+  /// \return
   ///     True on success, false otherwise.
   //----------------------------------------------------------------------
   bool DemangleWithRichManglingInfo(RichManglingContext &context,

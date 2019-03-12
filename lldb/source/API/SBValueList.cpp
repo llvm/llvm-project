@@ -11,7 +11,6 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Core/ValueObjectList.h"
-#include "lldb/Utility/Log.h"
 
 #include <vector>
 
@@ -75,36 +74,23 @@ SBValueList::SBValueList() : m_opaque_up() {
 SBValueList::SBValueList(const SBValueList &rhs) : m_opaque_up() {
   LLDB_RECORD_CONSTRUCTOR(SBValueList, (const lldb::SBValueList &), rhs);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   if (rhs.IsValid())
     m_opaque_up.reset(new ValueListImpl(*rhs));
-
-  if (log) {
-    log->Printf(
-        "SBValueList::SBValueList (rhs.ap=%p) => this.ap = %p",
-        static_cast<void *>(rhs.IsValid() ? rhs.m_opaque_up.get() : NULL),
-        static_cast<void *>(m_opaque_up.get()));
-  }
 }
 
 SBValueList::SBValueList(const ValueListImpl *lldb_object_ptr) : m_opaque_up() {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   if (lldb_object_ptr)
     m_opaque_up.reset(new ValueListImpl(*lldb_object_ptr));
-
-  if (log) {
-    log->Printf("SBValueList::SBValueList (lldb_object_ptr=%p) => this.ap = %p",
-                static_cast<const void *>(lldb_object_ptr),
-                static_cast<void *>(m_opaque_up.get()));
-  }
 }
 
 SBValueList::~SBValueList() {}
 
 bool SBValueList::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBValueList, IsValid);
+  return this->operator bool();
+}
+SBValueList::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBValueList, operator bool);
 
   return (m_opaque_up != NULL);
 }
@@ -167,24 +153,10 @@ SBValue SBValueList::GetValueAtIndex(uint32_t idx) const {
   LLDB_RECORD_METHOD_CONST(lldb::SBValue, SBValueList, GetValueAtIndex,
                            (uint32_t), idx);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  // if (log)
-  //    log->Printf ("SBValueList::GetValueAtIndex (uint32_t idx) idx = %d",
-  //    idx);
 
   SBValue sb_value;
   if (m_opaque_up)
     sb_value = m_opaque_up->GetValueAtIndex(idx);
-
-  if (log) {
-    SBStream sstr;
-    sb_value.GetDescription(sstr);
-    log->Printf("SBValueList::GetValueAtIndex (this.ap=%p, idx=%d) => SBValue "
-                "(this.sp = %p, '%s')",
-                static_cast<void *>(m_opaque_up.get()), idx,
-                static_cast<void *>(sb_value.GetSP().get()), sstr.GetData());
-  }
 
   return LLDB_RECORD_RESULT(sb_value);
 }
@@ -192,18 +164,9 @@ SBValue SBValueList::GetValueAtIndex(uint32_t idx) const {
 uint32_t SBValueList::GetSize() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBValueList, GetSize);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  // if (log)
-  //    log->Printf ("SBValueList::GetSize ()");
-
   uint32_t size = 0;
   if (m_opaque_up)
     size = m_opaque_up->GetSize();
-
-  if (log)
-    log->Printf("SBValueList::GetSize (this.ap=%p) => %d",
-                static_cast<void *>(m_opaque_up.get()), size);
 
   return size;
 }

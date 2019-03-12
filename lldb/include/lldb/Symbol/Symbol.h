@@ -206,9 +206,9 @@ public:
     m_contains_linker_annotations = b;
   }
   //------------------------------------------------------------------
-  /// @copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
+  /// \copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
   ///
-  /// @see SymbolContextScope
+  /// \see SymbolContextScope
   //------------------------------------------------------------------
   void CalculateSymbolContext(SymbolContext *sc) override;
 
@@ -217,9 +217,9 @@ public:
   Symbol *CalculateSymbolContextSymbol() override;
 
   //------------------------------------------------------------------
-  /// @copydoc SymbolContextScope::DumpSymbolContext(Stream*)
+  /// \copydoc SymbolContextScope::DumpSymbolContext(Stream*)
   ///
-  /// @see SymbolContextScope
+  /// \see SymbolContextScope
   //------------------------------------------------------------------
   void DumpSymbolContext(Stream *s) override;
 

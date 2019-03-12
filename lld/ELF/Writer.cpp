@@ -10,7 +10,6 @@
 #include "AArch64ErrataFix.h"
 #include "CallGraphSort.h"
 #include "Config.h"
-#include "Filesystem.h"
 #include "LinkerScript.h"
 #include "MapFile.h"
 #include "OutputSections.h"
@@ -19,6 +18,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
@@ -1792,7 +1792,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   finalizeSynthetic(In.ShStrTab);
   finalizeSynthetic(In.StrTab);
   finalizeSynthetic(In.VerDef);
-  finalizeSynthetic(In.DynStrTab);
   finalizeSynthetic(In.Got);
   finalizeSynthetic(In.MipsGot);
   finalizeSynthetic(In.IgotPlt);

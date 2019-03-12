@@ -144,13 +144,18 @@ size_t InputSectionBase::getSize() const {
 
 void InputSectionBase::uncompress() const {
   size_t Size = UncompressedSize;
-  UncompressedBuf.reset(new char[Size]);
+  char *UncompressedBuf;
+  {
+    static std::mutex Mu;
+    std::lock_guard<std::mutex> Lock(Mu);
+    UncompressedBuf = BAlloc.Allocate<char>(Size);
+  }
 
-  if (Error E =
-          zlib::uncompress(toStringRef(RawData), UncompressedBuf.get(), Size))
+  if (Error E = zlib::uncompress(toStringRef(RawData), UncompressedBuf, Size))
     fatal(toString(this) +
           ": uncompress failed: " + llvm::toString(std::move(E)));
-  RawData = makeArrayRef((uint8_t *)UncompressedBuf.get(), Size);
+  RawData = makeArrayRef((uint8_t *)UncompressedBuf, Size);
+  UncompressedSize = -1;
 }
 
 uint64_t InputSectionBase::getOffsetInFile() const {
@@ -1062,7 +1067,7 @@ template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
 
   // If this is a compressed section, uncompress section contents directly
   // to the buffer.
-  if (UncompressedSize >= 0 && !UncompressedBuf) {
+  if (UncompressedSize >= 0) {
     size_t Size = UncompressedSize;
     if (Error E = zlib::uncompress(toStringRef(RawData),
                                    (char *)(Buf + OutSecOff), Size))

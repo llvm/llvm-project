@@ -15,7 +15,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Listener.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
@@ -28,12 +27,6 @@ SBListener::SBListener() : m_opaque_sp(), m_unused_ptr(NULL) {
 SBListener::SBListener(const char *name)
     : m_opaque_sp(Listener::MakeListener(name)), m_unused_ptr(nullptr) {
   LLDB_RECORD_CONSTRUCTOR(SBListener, (const char *), name);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf("SBListener::SBListener (name=\"%s\") => SBListener(%p)", name,
-                static_cast<void *>(m_opaque_sp.get()));
 }
 
 SBListener::SBListener(const SBListener &rhs)
@@ -59,6 +52,10 @@ SBListener::~SBListener() {}
 
 bool SBListener::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBListener, IsValid);
+  return this->operator bool();
+}
+SBListener::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBListener, operator bool);
 
   return m_opaque_sp != nullptr;
 }
@@ -127,36 +124,6 @@ uint32_t SBListener::StartListeningForEvents(const SBBroadcaster &broadcaster,
         m_opaque_sp->StartListeningForEvents(broadcaster.get(), event_mask);
   }
 
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API);
-  if (log) {
-    StreamString sstr_requested;
-    StreamString sstr_acquired;
-
-    Broadcaster *lldb_broadcaster = broadcaster.get();
-    if (lldb_broadcaster) {
-      const bool got_requested_names =
-          lldb_broadcaster->GetEventNames(sstr_requested, event_mask, false);
-      const bool got_acquired_names = lldb_broadcaster->GetEventNames(
-          sstr_acquired, acquired_event_mask, false);
-      log->Printf("SBListener(%p)::StartListeneingForEvents "
-                  "(SBBroadcaster(%p): %s, event_mask=0x%8.8x%s%s%s) => "
-                  "0x%8.8x%s%s%s",
-                  static_cast<void *>(m_opaque_sp.get()),
-                  static_cast<void *>(lldb_broadcaster),
-                  lldb_broadcaster->GetBroadcasterName().GetCString(),
-                  event_mask, got_requested_names ? " (" : "",
-                  sstr_requested.GetData(), got_requested_names ? ")" : "",
-                  acquired_event_mask, got_acquired_names ? " (" : "",
-                  sstr_acquired.GetData(), got_acquired_names ? ")" : "");
-    } else {
-      log->Printf("SBListener(%p)::StartListeneingForEvents "
-                  "(SBBroadcaster(%p), event_mask=0x%8.8x) => 0x%8.8x",
-                  static_cast<void *>(m_opaque_sp.get()),
-                  static_cast<void *>(lldb_broadcaster), event_mask,
-                  acquired_event_mask);
-    }
-  }
-
   return acquired_event_mask;
 }
 
@@ -176,20 +143,6 @@ bool SBListener::WaitForEvent(uint32_t timeout_secs, SBEvent &event) {
   LLDB_RECORD_METHOD(bool, SBListener, WaitForEvent,
                      (uint32_t, lldb::SBEvent &), timeout_secs, event);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (timeout_secs == UINT32_MAX) {
-      log->Printf("SBListener(%p)::WaitForEvent (timeout_secs=INFINITE, "
-                  "SBEvent(%p))...",
-                  static_cast<void *>(m_opaque_sp.get()),
-                  static_cast<void *>(event.get()));
-    } else {
-      log->Printf(
-          "SBListener(%p)::WaitForEvent (timeout_secs=%d, SBEvent(%p))...",
-          static_cast<void *>(m_opaque_sp.get()), timeout_secs,
-          static_cast<void *>(event.get()));
-    }
-  }
   bool success = false;
 
   if (m_opaque_sp) {
@@ -206,19 +159,6 @@ bool SBListener::WaitForEvent(uint32_t timeout_secs, SBEvent &event) {
     }
   }
 
-  if (log) {
-    if (timeout_secs == UINT32_MAX) {
-      log->Printf("SBListener(%p)::WaitForEvent (timeout_secs=INFINITE, "
-                  "SBEvent(%p)) => %i",
-                  static_cast<void *>(m_opaque_sp.get()),
-                  static_cast<void *>(event.get()), success);
-    } else {
-      log->Printf(
-          "SBListener(%p)::WaitForEvent (timeout_secs=%d, SBEvent(%p)) => %i",
-          static_cast<void *>(m_opaque_sp.get()), timeout_secs,
-          static_cast<void *>(event.get()), success);
-    }
-  }
   if (!success)
     event.reset(NULL);
   return success;

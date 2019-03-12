@@ -136,6 +136,9 @@ public:
       void *opaque_decl_ctx, lldb::LanguageType *language_ptr,
       bool *is_instance_method_ptr, ConstString *language_object_name_ptr) = 0;
 
+  virtual bool DeclContextIsContainedInLookup(void *opaque_decl_ctx,
+                                              void *other_opaque_decl_ctx) = 0;
+
   //----------------------------------------------------------------------
   // Tests
   //----------------------------------------------------------------------
@@ -391,6 +394,12 @@ public:
   // Dumping types
   //----------------------------------------------------------------------
 
+#ifndef NDEBUG
+  /// Convenience LLVM-style dump method for use in the debugger only.
+  LLVM_DUMP_METHOD virtual void
+  dump(lldb::opaque_compiler_type_t type) const = 0;
+#endif
+  
   virtual void DumpValue(lldb::opaque_compiler_type_t type,
                          ExecutionContext *exe_ctx, Stream *s,
                          lldb::Format format, const DataExtractor &data,

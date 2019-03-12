@@ -29,6 +29,8 @@ public:
 
   lldb::SBAddress GetEndAddress() const;
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   lldb::SBFileSpec GetFileSpec() const;

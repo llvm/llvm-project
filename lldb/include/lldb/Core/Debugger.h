@@ -75,7 +75,7 @@ class raw_ostream;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Debugger Debugger.h "lldb/Core/Debugger.h"
+/// \class Debugger Debugger.h "lldb/Core/Debugger.h"
 /// A class to manage flag bits.
 ///
 /// Provides a global root objects for the debugger core.
@@ -176,7 +176,7 @@ public:
   /// debugger shared instance to control where targets get created and to
   /// allow for tracking and searching for targets based on certain criteria.
   ///
-  /// @return
+  /// \return
   ///     A global shared target list.
   //------------------------------------------------------------------
   TargetList &GetTargetList() { return m_target_list; }

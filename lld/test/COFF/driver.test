@@ -15,3 +15,7 @@ LIBHELP: OVERVIEW: LLVM Lib
 
 # RUN: not lld-link /WX /lib 2>&1 | FileCheck -check-prefix=LIBBAD %s
 LIBBAD: ignoring /lib since it's not the first argument
+
+# RUN: yaml2obj < %p/Inputs/hello32.yaml > %t.obj
+# RUN: not lld-link /out:/ %t.obj 2>&1 | FileCheck -check-prefix=DIR %s
+DIR: cannot open output file

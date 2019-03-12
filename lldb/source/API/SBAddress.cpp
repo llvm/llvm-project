@@ -16,7 +16,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
@@ -72,6 +71,10 @@ bool lldb::operator==(const SBAddress &lhs, const SBAddress &rhs) {
 
 bool SBAddress::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBAddress, IsValid);
+  return this->operator bool();
+}
+SBAddress::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBAddress, operator bool);
 
   return m_opaque_up != NULL && m_opaque_up->IsValid();
 }
@@ -111,8 +114,6 @@ lldb::addr_t SBAddress::GetLoadAddress(const SBTarget &target) const {
   LLDB_RECORD_METHOD_CONST(lldb::addr_t, SBAddress, GetLoadAddress,
                            (const lldb::SBTarget &), target);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   lldb::addr_t addr = LLDB_INVALID_ADDRESS;
   TargetSP target_sp(target.GetSP());
   if (target_sp) {
@@ -120,16 +121,6 @@ lldb::addr_t SBAddress::GetLoadAddress(const SBTarget &target) const {
       std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
       addr = m_opaque_up->GetLoadAddress(target_sp.get());
     }
-  }
-
-  if (log) {
-    if (addr == LLDB_INVALID_ADDRESS)
-      log->Printf(
-          "SBAddress::GetLoadAddress (SBTarget(%p)) => LLDB_INVALID_ADDRESS",
-          static_cast<void *>(target_sp.get()));
-    else
-      log->Printf("SBAddress::GetLoadAddress (SBTarget(%p)) => 0x%" PRIx64,
-                  static_cast<void *>(target_sp.get()), addr);
   }
 
   return addr;

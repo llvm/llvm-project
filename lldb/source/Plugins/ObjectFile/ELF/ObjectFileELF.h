@@ -33,14 +33,14 @@ struct ELFNote {
   /// Parse an ELFNote entry from the given DataExtractor starting at position
   /// \p offset.
   ///
-  /// @param[in] data
+  /// \param[in] data
   ///    The DataExtractor to read from.
   ///
-  /// @param[in,out] offset
+  /// \param[in,out] offset
   ///    Pointer to an offset in the data.  On return the offset will be
   ///    advanced by the number of bytes read.
   ///
-  /// @return
+  /// \return
   ///    True if the ELFRel entry was successfully read and false otherwise.
   bool Parse(const lldb_private::DataExtractor &data, lldb::offset_t *offset);
 
@@ -50,7 +50,7 @@ struct ELFNote {
 };
 
 //------------------------------------------------------------------------------
-/// @class ObjectFileELF
+/// \class ObjectFileELF
 /// Generic ELF object file reader.
 ///
 /// This class provides a generic ELF (32/64 bit) reader plugin implementing
@@ -330,7 +330,7 @@ private:
   /// Returns the section header with the given id or NULL.
   const ELFSectionHeaderInfo *GetSectionHeaderByIndex(lldb::user_id_t id);
 
-  /// @name  ELF header dump routines
+  /// \name  ELF header dump routines
   //@{
   static void DumpELFHeader(lldb_private::Stream *s,
                             const elf::ELFHeader &header);
@@ -342,7 +342,7 @@ private:
                                    elf::elf_half e_type);
   //@}
 
-  /// @name ELF program header dump routines
+  /// \name ELF program header dump routines
   //@{
   void DumpELFProgramHeaders(lldb_private::Stream *s);
 
@@ -356,7 +356,7 @@ private:
                                            elf::elf_word p_flags);
   //@}
 
-  /// @name ELF section header dump routines
+  /// \name ELF section header dump routines
   //@{
   void DumpELFSectionHeaders(lldb_private::Stream *s);
 

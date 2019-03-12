@@ -51,7 +51,7 @@ public:
   /// Return the object that the parser should allow to access ASTs.
   /// May be NULL if the ASTs do not need to be transformed.
   ///
-  /// @param[in] passthrough
+  /// \param[in] passthrough
   ///     The ASTConsumer that the returned transformer should send
   ///     the ASTs to after transformation.
   //------------------------------------------------------------------

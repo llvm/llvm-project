@@ -57,13 +57,13 @@ public:
   ///
   /// This allows code to check a OptionValueBoolean in conditions.
   ///
-  /// @code
+  /// \code
   /// OptionValueBoolean bool_value(...);
   /// if (bool_value)
   /// { ...
-  /// @endcode
+  /// \endcode
   ///
-  /// @return
+  /// \return
   ///     /b True this object contains a valid namespace decl, \b
   ///     false otherwise.
   //------------------------------------------------------------------

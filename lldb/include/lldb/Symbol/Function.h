@@ -20,7 +20,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class FunctionInfo Function.h "lldb/Symbol/Function.h"
+/// \class FunctionInfo Function.h "lldb/Symbol/Function.h"
 /// A class that contains generic function information.
 ///
 /// This provides generic function information that gets reused between inline
@@ -32,12 +32,12 @@ public:
   /// Construct with the function method name and optional declaration
   /// information.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     A C string name for the method name for this function. This
   ///     value should not be the mangled named, but the simple method
   ///     name.
   ///
-  /// @param[in] decl_ptr
+  /// \param[in] decl_ptr
   ///     Optional declaration information that describes where the
   ///     function was declared. This can be NULL.
   //------------------------------------------------------------------
@@ -47,11 +47,11 @@ public:
   /// Construct with the function method name and optional declaration
   /// information.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     A name for the method name for this function. This value
   ///     should not be the mangled named, but the simple method name.
   ///
-  /// @param[in] decl_ptr
+  /// \param[in] decl_ptr
   ///     Optional declaration information that describes where the
   ///     function was declared. This can be NULL.
   //------------------------------------------------------------------
@@ -70,16 +70,16 @@ public:
   /// First compares the method names, and if equal, then compares the
   /// declaration information.
   ///
-  /// @param[in] lhs
+  /// \param[in] lhs
   ///     The Left Hand Side const FunctionInfo object reference.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     The Right Hand Side const FunctionInfo object reference.
   ///
-  /// @return
-  ///     @li -1 if lhs < rhs
-  ///     @li 0 if lhs == rhs
-  ///     @li 1 if lhs > rhs
+  /// \return
+  ///     \li -1 if lhs < rhs
+  ///     \li 0 if lhs == rhs
+  ///     \li 1 if lhs > rhs
   //------------------------------------------------------------------
   static int Compare(const FunctionInfo &lhs, const FunctionInfo &rhs);
 
@@ -89,7 +89,7 @@ public:
   /// Dump a description of the contents of this object to the supplied stream
   /// \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   //------------------------------------------------------------------
   void Dump(Stream *s, bool show_fullpaths) const;
@@ -97,7 +97,7 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the declaration information.
   ///
-  /// @return
+  /// \return
   ///     A reference to the declaration object.
   //------------------------------------------------------------------
   Declaration &GetDeclaration();
@@ -105,7 +105,7 @@ public:
   //------------------------------------------------------------------
   /// Get const accessor for the declaration information.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the declaration object.
   //------------------------------------------------------------------
   const Declaration &GetDeclaration() const;
@@ -113,7 +113,7 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the method name.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the method name object.
   //------------------------------------------------------------------
   ConstString GetName() const;
@@ -121,12 +121,12 @@ public:
   //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object occupies in memory.
   ///     The returned value does not include the bytes for any
   ///     shared string values.
   ///
-  /// @see ConstString::StaticMemorySize ()
+  /// \see ConstString::StaticMemorySize ()
   //------------------------------------------------------------------
   virtual size_t MemorySize() const;
 
@@ -140,7 +140,7 @@ protected:
 };
 
 //----------------------------------------------------------------------
-/// @class InlineFunctionInfo Function.h "lldb/Symbol/Function.h"
+/// \class InlineFunctionInfo Function.h "lldb/Symbol/Function.h"
 /// A class that describes information for an inlined function.
 //----------------------------------------------------------------------
 class InlineFunctionInfo : public FunctionInfo {
@@ -149,20 +149,20 @@ public:
   /// Construct with the function method name, mangled name, and optional
   /// declaration information.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     A C string name for the method name for this function. This
   ///     value should not be the mangled named, but the simple method
   ///     name.
   ///
-  /// @param[in] mangled
+  /// \param[in] mangled
   ///     A C string name for the mangled name for this function. This
   ///     value can be NULL if there is no mangled information.
   ///
-  /// @param[in] decl_ptr
+  /// \param[in] decl_ptr
   ///     Optional declaration information that describes where the
   ///     function was declared. This can be NULL.
   ///
-  /// @param[in] call_decl_ptr
+  /// \param[in] call_decl_ptr
   ///     Optional calling location declaration information that
   ///     describes from where this inlined function was called.
   //------------------------------------------------------------------
@@ -174,19 +174,19 @@ public:
   /// Construct with the function method name, mangled name, and optional
   /// declaration information.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     A name for the method name for this function. This value
   ///     should not be the mangled named, but the simple method name.
   ///
-  /// @param[in] mangled
+  /// \param[in] mangled
   ///     A name for the mangled name for this function. This value
   ///     can be empty if there is no mangled information.
   ///
-  /// @param[in] decl_ptr
+  /// \param[in] decl_ptr
   ///     Optional declaration information that describes where the
   ///     function was declared. This can be NULL.
   ///
-  /// @param[in] call_decl_ptr
+  /// \param[in] call_decl_ptr
   ///     Optional calling location declaration information that
   ///     describes from where this inlined function was called.
   //------------------------------------------------------------------
@@ -205,18 +205,18 @@ public:
   /// First compares the FunctionInfo objects, and if equal, compares the
   /// mangled names.
   ///
-  /// @param[in] lhs
+  /// \param[in] lhs
   ///     The Left Hand Side const InlineFunctionInfo object
   ///     reference.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     The Right Hand Side const InlineFunctionInfo object
   ///     reference.
   ///
-  /// @return
-  ///     @li -1 if lhs < rhs
-  ///     @li 0 if lhs == rhs
-  ///     @li 1 if lhs > rhs
+  /// \return
+  ///     \li -1 if lhs < rhs
+  ///     \li 0 if lhs == rhs
+  ///     \li 1 if lhs > rhs
   //------------------------------------------------------------------
   int Compare(const InlineFunctionInfo &lhs, const InlineFunctionInfo &rhs);
 
@@ -226,7 +226,7 @@ public:
   /// Dump a description of the contents of this object to the supplied stream
   /// \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   //------------------------------------------------------------------
   void Dump(Stream *s, bool show_fullpaths) const;
@@ -240,7 +240,7 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the call site declaration information.
   ///
-  /// @return
+  /// \return
   ///     A reference to the declaration object.
   //------------------------------------------------------------------
   Declaration &GetCallSite();
@@ -248,7 +248,7 @@ public:
   //------------------------------------------------------------------
   /// Get const accessor for the call site declaration information.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the declaration object.
   //------------------------------------------------------------------
   const Declaration &GetCallSite() const;
@@ -256,7 +256,7 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the mangled name object.
   ///
-  /// @return
+  /// \return
   ///     A reference to the mangled name object.
   //------------------------------------------------------------------
   Mangled &GetMangled();
@@ -264,7 +264,7 @@ public:
   //------------------------------------------------------------------
   /// Get const accessor for the mangled name object.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the mangled name object.
   //------------------------------------------------------------------
   const Mangled &GetMangled() const;
@@ -272,12 +272,12 @@ public:
   //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object occupies in memory.
   ///     The returned value does not include the bytes for any
   ///     shared string values.
   ///
-  /// @see ConstString::StaticMemorySize ()
+  /// \see ConstString::StaticMemorySize ()
   //------------------------------------------------------------------
   size_t MemorySize() const override;
 
@@ -293,7 +293,7 @@ private:
 class Function;
 
 //----------------------------------------------------------------------
-/// @class CallEdge Function.h "lldb/Symbol/Function.h"
+/// \class CallEdge Function.h "lldb/Symbol/Function.h"
 ///
 /// Represent a call made within a Function. This can be used to find a path
 /// in the call graph between two functions.
@@ -349,7 +349,7 @@ private:
 };
 
 //----------------------------------------------------------------------
-/// @class Function Function.h "lldb/Symbol/Function.h"
+/// \class Function Function.h "lldb/Symbol/Function.h"
 /// A class that describes a function.
 ///
 /// Functions belong to CompileUnit objects (Function::m_comp_unit), have
@@ -361,8 +361,8 @@ private:
 /// (Function::m_type), and contains lexical blocks (Function::m_blocks).
 ///
 /// The function information is split into a few pieces:
-///     @li The concrete instance information
-///     @li The abstract information
+///     \li The concrete instance information
+///     \li The abstract information
 ///
 /// The abstract information is found in the function type (Type) that
 /// describes a function information, return type and parameter types.
@@ -376,30 +376,30 @@ public:
   /// Construct with a compile unit, function UID, function type UID, optional
   /// mangled name, function type, and a section offset based address range.
   ///
-  /// @param[in] comp_unit
+  /// \param[in] comp_unit
   ///     The compile unit to which this function belongs.
   ///
-  /// @param[in] func_uid
+  /// \param[in] func_uid
   ///     The UID for this function. This value is provided by the
   ///     SymbolFile plug-in and can be any value that allows
   ///     the plug-in to quickly find and parse more detailed
   ///     information when and if more information is needed.
   ///
-  /// @param[in] func_type_uid
+  /// \param[in] func_type_uid
   ///     The type UID for the function Type to allow for lazy type
   ///     parsing from the debug information.
   ///
-  /// @param[in] mangled
+  /// \param[in] mangled
   ///     The optional mangled name for this function. If empty, there
   ///     is no mangled information.
   ///
-  /// @param[in] func_type
+  /// \param[in] func_type
   ///     The optional function type. If NULL, the function type will
   ///     be parsed on demand when accessed using the
   ///     Function::GetType() function by asking the SymbolFile
   ///     plug-in to get the type for \a func_type_uid.
   ///
-  /// @param[in] range
+  /// \param[in] range
   ///     The section offset based address for this function.
   ///
   /// @param[in] can_throw
@@ -416,9 +416,9 @@ public:
   ~Function() override;
 
   //------------------------------------------------------------------
-  /// @copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
+  /// \copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
   ///
-  /// @see SymbolContextScope
+  /// \see SymbolContextScope
   //------------------------------------------------------------------
   void CalculateSymbolContext(SymbolContext *sc) override;
 
@@ -437,10 +437,10 @@ public:
   /// line table if that fails.  So there may NOT be a line table entry for
   /// this source file/line combo.
   ///
-  /// @param[out] source_file
+  /// \param[out] source_file
   ///     The source file.
   ///
-  /// @param[out] line_no
+  /// \param[out] line_no
   ///     The line number.
   //------------------------------------------------------------------
   void GetStartLineSourceInfo(FileSpec &source_file, uint32_t &line_no);
@@ -450,10 +450,10 @@ public:
   /// function.
   ///
   ///
-  /// @param[out] source_file
+  /// \param[out] source_file
   ///     The source file.
   ///
-  /// @param[out] line_no
+  /// \param[out] line_no
   ///     The line number.
   //------------------------------------------------------------------
   void GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no);
@@ -473,18 +473,18 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the block list.
   ///
-  /// @return
+  /// \return
   ///     The block list object that describes all lexical blocks
   ///     in the function.
   ///
-  /// @see BlockList
+  /// \see BlockList
   //------------------------------------------------------------------
   Block &GetBlock(bool can_create);
 
   //------------------------------------------------------------------
   /// Get accessor for the compile unit that owns this function.
   ///
-  /// @return
+  /// \return
   ///     A compile unit object pointer.
   //------------------------------------------------------------------
   CompileUnit *GetCompileUnit();
@@ -492,7 +492,7 @@ public:
   //------------------------------------------------------------------
   /// Get const accessor for the compile unit that owns this function.
   ///
-  /// @return
+  /// \return
   ///     A const compile unit object pointer.
   //------------------------------------------------------------------
   const CompileUnit *GetCompileUnit() const;
@@ -502,7 +502,7 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the frame base location.
   ///
-  /// @return
+  /// \return
   ///     A location expression that describes the function frame
   ///     base.
   //------------------------------------------------------------------
@@ -511,7 +511,7 @@ public:
   //------------------------------------------------------------------
   /// Get const accessor for the frame base location.
   ///
-  /// @return
+  /// \return
   ///     A const compile unit object pointer.
   //------------------------------------------------------------------
   const DWARFExpression &GetFrameBaseExpression() const { return m_frame_base; }
@@ -527,7 +527,7 @@ public:
   //------------------------------------------------------------------
   /// Get the DeclContext for this function, if available.
   ///
-  /// @return
+  /// \return
   ///     The DeclContext, or NULL if none exists.
   //------------------------------------------------------------------
   CompilerDeclContext GetDeclContext();
@@ -536,7 +536,7 @@ public:
   /// Get accessor for the type that describes the function return value type,
   /// and parameter types.
   ///
-  /// @return
+  /// \return
   ///     A type object pointer.
   //------------------------------------------------------------------
   Type *GetType();
@@ -545,7 +545,7 @@ public:
   /// Get const accessor for the type that describes the function return value
   /// type, and parameter types.
   ///
-  /// @return
+  /// \return
   ///     A const type object pointer.
   //------------------------------------------------------------------
   const Type *GetType() const;
@@ -557,7 +557,7 @@ public:
   /// "prologue" instructions include any instructions given line number 0
   /// immediately following the prologue end.
   ///
-  /// @return
+  /// \return
   ///     The size of the prologue.
   //------------------------------------------------------------------
   uint32_t GetPrologueByteSize();
@@ -568,31 +568,31 @@ public:
   /// Dump a description of the contents of this object to the supplied stream
   /// \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   ///
-  /// @param[in] show_context
+  /// \param[in] show_context
   ///     If \b true, variables will dump their symbol context
   ///     information.
   //------------------------------------------------------------------
   void Dump(Stream *s, bool show_context) const;
 
   //------------------------------------------------------------------
-  /// @copydoc SymbolContextScope::DumpSymbolContext(Stream*)
+  /// \copydoc SymbolContextScope::DumpSymbolContext(Stream*)
   ///
-  /// @see SymbolContextScope
+  /// \see SymbolContextScope
   //------------------------------------------------------------------
   void DumpSymbolContext(Stream *s) override;
 
   //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object occupies in memory.
   ///     The returned value does not include the bytes for any
   ///     shared string values.
   ///
-  /// @see ConstString::StaticMemorySize ()
+  /// \see ConstString::StaticMemorySize ()
   //------------------------------------------------------------------
   size_t MemorySize() const;
 
@@ -606,7 +606,7 @@ public:
   /// would expect them, stepping through the source lines in the function may
   /// appear strange, etc.
   ///
-  /// @return
+  /// \return
   ///     Returns 'true' if this function was compiled with
   ///     optimization.  'false' indicates that either the optimization
   ///     is unknown, or this function was built without optimization.
@@ -624,7 +624,7 @@ public:
   /// If stopped in a top-level function, LLDB will expose global variables
   /// as-if locals in the 'frame variable' command
   ///
-  /// @return
+  /// \return
   ///     Returns 'true' if this function is a top-level function,
   ///     'false' otherwise.
   //------------------------------------------------------------------

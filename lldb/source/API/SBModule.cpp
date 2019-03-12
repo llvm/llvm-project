@@ -26,7 +26,6 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
@@ -82,6 +81,10 @@ SBModule::~SBModule() {}
 
 bool SBModule::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModule, IsValid);
+  return this->operator bool();
+}
+SBModule::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModule, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }
@@ -95,17 +98,10 @@ void SBModule::Clear() {
 SBFileSpec SBModule::GetFileSpec() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFileSpec, SBModule, GetFileSpec);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBFileSpec file_spec;
   ModuleSP module_sp(GetSP());
   if (module_sp)
     file_spec.SetFileSpec(module_sp->GetFileSpec());
-
-  if (log)
-    log->Printf("SBModule(%p)::GetFileSpec () => SBFileSpec(%p)",
-                static_cast<void *>(module_sp.get()),
-                static_cast<const void *>(file_spec.get()));
 
   return LLDB_RECORD_RESULT(file_spec);
 }
@@ -114,17 +110,11 @@ lldb::SBFileSpec SBModule::GetPlatformFileSpec() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFileSpec, SBModule,
                                    GetPlatformFileSpec);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBFileSpec file_spec;
   ModuleSP module_sp(GetSP());
   if (module_sp)
     file_spec.SetFileSpec(module_sp->GetPlatformFileSpec());
-
-  if (log)
-    log->Printf("SBModule(%p)::GetPlatformFileSpec () => SBFileSpec(%p)",
-                static_cast<void *>(module_sp.get()),
-                static_cast<const void *>(file_spec.get()));
 
   return LLDB_RECORD_RESULT(file_spec);
 }
@@ -134,7 +124,6 @@ bool SBModule::SetPlatformFileSpec(const lldb::SBFileSpec &platform_file) {
                      (const lldb::SBFileSpec &), platform_file);
 
   bool result = false;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   ModuleSP module_sp(GetSP());
   if (module_sp) {
@@ -142,11 +131,6 @@ bool SBModule::SetPlatformFileSpec(const lldb::SBFileSpec &platform_file) {
     result = true;
   }
 
-  if (log)
-    log->Printf("SBModule(%p)::SetPlatformFileSpec (SBFileSpec(%p (%s)) => %i",
-                static_cast<void *>(module_sp.get()),
-                static_cast<const void *>(platform_file.get()),
-                platform_file->GetPath().c_str(), result);
   return result;
 }
 
@@ -176,30 +160,17 @@ bool SBModule::SetRemoteInstallFileSpec(lldb::SBFileSpec &file) {
 const uint8_t *SBModule::GetUUIDBytes() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const uint8_t *, SBModule, GetUUIDBytes);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   const uint8_t *uuid_bytes = NULL;
   ModuleSP module_sp(GetSP());
   if (module_sp)
     uuid_bytes = module_sp->GetUUID().GetBytes().data();
 
-  if (log) {
-    if (uuid_bytes) {
-      StreamString s;
-      module_sp->GetUUID().Dump(&s);
-      log->Printf("SBModule(%p)::GetUUIDBytes () => %s",
-                  static_cast<void *>(module_sp.get()), s.GetData());
-    } else
-      log->Printf("SBModule(%p)::GetUUIDBytes () => NULL",
-                  static_cast<void *>(module_sp.get()));
-  }
   return uuid_bytes;
 }
 
 const char *SBModule::GetUUIDString() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBModule, GetUUIDString);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   const char *uuid_cstr = NULL;
   ModuleSP module_sp(GetSP());
@@ -212,15 +183,9 @@ const char *SBModule::GetUUIDString() const {
   }
 
   if (uuid_cstr && uuid_cstr[0]) {
-    if (log)
-      log->Printf("SBModule(%p)::GetUUIDString () => %s",
-                  static_cast<void *>(module_sp.get()), uuid_cstr);
     return uuid_cstr;
   }
 
-  if (log)
-    log->Printf("SBModule(%p)::GetUUIDString () => NULL",
-                static_cast<void *>(module_sp.get()));
   return NULL;
 }
 

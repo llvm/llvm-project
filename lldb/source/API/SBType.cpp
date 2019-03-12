@@ -16,7 +16,6 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/APSInt.h"
@@ -108,6 +107,10 @@ const TypeImpl &SBType::ref() const {
 
 bool SBType::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBType, IsValid);
+  return this->operator bool();
+}
+SBType::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBType, operator bool);
 
   if (m_opaque_sp.get() == NULL)
     return false;
@@ -583,6 +586,10 @@ SBTypeList::SBTypeList(const SBTypeList &rhs)
 
 bool SBTypeList::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBTypeList, IsValid);
+  return this->operator bool();
+}
+SBTypeList::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeList, operator bool);
 
   return (m_opaque_up != NULL);
 }
@@ -652,6 +659,10 @@ lldb::SBTypeMember &SBTypeMember::operator=(const lldb::SBTypeMember &rhs) {
 
 bool SBTypeMember::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeMember, IsValid);
+  return this->operator bool();
+}
+SBTypeMember::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeMember, operator bool);
 
   return m_opaque_up.get();
 }
@@ -777,6 +788,10 @@ operator=(const lldb::SBTypeMemberFunction &rhs) {
 
 bool SBTypeMemberFunction::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeMemberFunction, IsValid);
+  return this->operator bool();
+}
+SBTypeMemberFunction::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeMemberFunction, operator bool);
 
   return m_opaque_sp.get();
 }

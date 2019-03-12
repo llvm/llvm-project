@@ -15,7 +15,6 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/AnsiTerminal.h"
 
@@ -29,12 +28,6 @@ REPL::REPL(LLVMCastKind kind, Target &target) : m_target(target), m_kind(kind) {
   auto exe_ctx = debugger.GetCommandInterpreter().GetExecutionContext();
   m_format_options.OptionParsingStarting(&exe_ctx);
   m_varobj_options.OptionParsingStarting(&exe_ctx);
-  m_command_options.OptionParsingStarting(&exe_ctx);
-
-  // Default certain settings for REPL regardless of the global settings.
-  m_command_options.unwind_on_error = false;
-  m_command_options.ignore_breakpoints = false;
-  m_command_options.debug = false;
 }
 
 REPL::~REPL() = default;
@@ -99,7 +92,7 @@ lldb::IOHandlerSP REPL::GetIOHandler() {
   return m_io_handler_sp;
 }
 
-void REPL::IOHandlerActivated(IOHandler &io_handler) {
+void REPL::IOHandlerActivated(IOHandler &io_handler, bool interactive) {
   lldb::ProcessSP process_sp = m_target.GetProcessSP();
   if (process_sp && process_sp->IsAlive())
     return;
@@ -276,13 +269,10 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 
       const bool colorize_err = error_sp->GetFile().GetIsTerminalWithColors();
 
-      EvaluateExpressionOptions expr_options;
+      EvaluateExpressionOptions expr_options = m_expr_options;
       expr_options.SetCoerceToId(m_varobj_options.use_objc);
-      expr_options.SetUnwindOnError(m_command_options.unwind_on_error);
-      expr_options.SetIgnoreBreakpoints(m_command_options.ignore_breakpoints);
       expr_options.SetKeepInMemory(true);
       expr_options.SetUseDynamic(m_varobj_options.use_dynamic);
-      expr_options.SetTryAllThreads(m_command_options.try_all_threads);
       expr_options.SetGenerateDebugInfo(true);
       expr_options.SetREPLEnabled(true);
       expr_options.SetTrapExceptions(false);

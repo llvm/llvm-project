@@ -871,6 +871,15 @@ void CompilerType::DumpTypeDescription(Stream *s) const {
   }
 }
 
+#ifndef NDEBUG
+LLVM_DUMP_METHOD void CompilerType::dump() const {
+  if (IsValid())
+    m_type_system->dump(m_type);
+  else
+    llvm::errs() << "<invalid>\n";
+}
+#endif
+
 bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
                                     lldb::offset_t data_byte_offset,
                                     size_t data_byte_size,

@@ -6,6 +6,7 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
   ASTDumper.cpp
   ASTResultSynthesizer.cpp
   ASTStructExtractor.cpp
+  ASTUtils.cpp
   ClangASTSource.cpp
   ClangExpressionDeclMap.cpp
   ClangExpressionParser.cpp

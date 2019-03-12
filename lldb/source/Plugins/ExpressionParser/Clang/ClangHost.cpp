@@ -18,9 +18,6 @@
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#if !defined(_WIN32)
-#include "lldb/Host/posix/HostInfoPosix.h"
-#endif
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 
@@ -28,12 +25,6 @@
 
 using namespace lldb_private;
 
-#if defined(_WIN32)
-static bool ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
-                                          FileSpec &file_spec, bool verify) {
-  return false;
-}
-#else
 static bool VerifyClangPath(const llvm::Twine &clang_path) {
   if (FileSystem::Instance().IsDirectory(clang_path))
     return true;
@@ -63,11 +54,10 @@ static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
   llvm::sys::path::append(clang_dir, relative_path);
   if (!verify || VerifyClangPath(clang_dir)) {
     file_spec.GetDirectory().SetString(clang_dir);
-    FileSystem::Instance().Resolve(file_spec);
     return true;
   }
 
-  return HostInfoPosix::ComputePathRelativeToLibrary(file_spec, relative_path);
+  return HostInfo::ComputePathRelativeToLibrary(file_spec, relative_path);
 }
 
 bool lldb_private::ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
@@ -88,7 +78,7 @@ bool lldb_private::ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
     ++rev_it;
   }
 
-  // Posix-style of LLDB detected.
+  // We found a non-framework build of LLDB
   if (rev_it == r_end)
     return DefaultComputeClangResourceDirectory(lldb_shlib_spec, file_spec,
                                                 verify);
@@ -141,7 +131,6 @@ bool lldb_private::ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
   return true;
 #endif // __APPLE__
 }
-#endif // _WIN32
 
 FileSpec lldb_private::GetClangResourceDir() {
   static FileSpec g_cached_resource_dir;

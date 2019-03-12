@@ -1,0 +1,30 @@
+# UNSUPPORTED: system-windows, system-freebsd
+
+# This tests that image list works when replaying. We arbitrarily assume
+# there's at least two entries and compare that they're identical.
+
+# RUN: %clang %S/Inputs/stepping.c -g -o %t.out
+
+# RUN: rm -rf %t.txt
+
+# RUN: echo "CAPTURE" >> %t.txt
+# RUN: %lldb -x -b  --capture --capture-path %t.repro \
+# RUN:    -o 'run' \
+# RUN:    -o 'image list' \
+# RUN:    -o 'reproducer generate' \
+# RUN:    %t.out >> %t.txt 2>&1
+
+# RUN: echo "REPLAY" >> %t.txt
+# RUN: %lldb -x -b --replay %t.repro >> %t.txt 2>&1
+
+# RUN: cat %t.txt | FileCheck %s
+
+# CHECK: CAPTURE
+# CHECK: image list
+# CHECK: [  0] [[ZERO:.*]]
+# CHECK: [  1] [[ONE:.*]]
+
+# CHECK: REPLAY
+# CHECK: image list
+# CHECK: [  0] {{.*}}[[ZERO]]
+# CHECK: [  1] {{.*}}[[ONE]]

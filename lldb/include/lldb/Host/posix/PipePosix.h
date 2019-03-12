@@ -15,7 +15,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class PipePosix PipePosix.h "lldb/Host/posix/PipePosix.h"
+/// \class PipePosix PipePosix.h "lldb/Host/posix/PipePosix.h"
 /// A posix-based implementation of Pipe, a class that abtracts
 ///        unix style pipes.
 ///

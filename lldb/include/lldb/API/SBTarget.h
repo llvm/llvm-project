@@ -55,6 +55,8 @@ public:
 
   const lldb::SBTarget &operator=(const lldb::SBTarget &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   static bool EventIsTargetEvent(const lldb::SBEvent &event);
@@ -73,7 +75,7 @@ public:
   //------------------------------------------------------------------
   /// Sets whether we should collect statistics on lldb or not.
   ///
-  /// @param[in] v
+  /// \param[in] v
   ///     A boolean to control the collection.
   //------------------------------------------------------------------
   void SetCollectingStats(bool v);
@@ -81,7 +83,7 @@ public:
   //------------------------------------------------------------------
   /// Returns whether statistics collection are enabled.
   ///
-  /// @return
+  /// \return
   ///     true if statistics are currently being collected, false
   ///     otherwise.
   //------------------------------------------------------------------
@@ -90,7 +92,7 @@ public:
   //------------------------------------------------------------------
   /// Returns a dump of the collected statistics.
   ///
-  /// @return
+  /// \return
   ///     A SBStructuredData with the statistics collected.
   //------------------------------------------------------------------
   lldb::SBStructuredData GetStatistics();
@@ -101,7 +103,7 @@ public:
   /// After return, the platform object should be checked for
   /// validity.
   ///
-  /// @return
+  /// \return
   ///     A platform object.
   //------------------------------------------------------------------
   lldb::SBPlatform GetPlatform();
@@ -116,7 +118,7 @@ public:
   /// have an install location set, it will be installed in the remote
   /// platform's working directory.
   ///
-  /// @return
+  /// \return
   ///     An error describing anything that went wrong during
   ///     installation.
   //------------------------------------------------------------------
@@ -132,47 +134,47 @@ public:
   /// optionally re-directed to \a stdin_path, \a stdout_path, and
   /// \a stderr_path.
   ///
-  /// @param[in] listener
+  /// \param[in] listener
   ///     An optional listener that will receive all process events.
   ///     If \a listener is valid then \a listener will listen to all
   ///     process events. If not valid, then this target's debugger
   ///     (SBTarget::GetDebugger()) will listen to all process events.
   ///
-  /// @param[in] argv
+  /// \param[in] argv
   ///     The argument array.
   ///
-  /// @param[in] envp
+  /// \param[in] envp
   ///     The environment array.
   ///
-  /// @param[in] stdin_path
+  /// \param[in] stdin_path
   ///     The path to use when re-directing the STDIN of the new
   ///     process. If all stdXX_path arguments are nullptr, a pseudo
   ///     terminal will be used.
   ///
-  /// @param[in] stdout_path
+  /// \param[in] stdout_path
   ///     The path to use when re-directing the STDOUT of the new
   ///     process. If all stdXX_path arguments are nullptr, a pseudo
   ///     terminal will be used.
   ///
-  /// @param[in] stderr_path
+  /// \param[in] stderr_path
   ///     The path to use when re-directing the STDERR of the new
   ///     process. If all stdXX_path arguments are nullptr, a pseudo
   ///     terminal will be used.
   ///
-  /// @param[in] working_directory
+  /// \param[in] working_directory
   ///     The working directory to have the child process run in
   ///
-  /// @param[in] launch_flags
+  /// \param[in] launch_flags
   ///     Some launch options specified by logical OR'ing
   ///     lldb::LaunchFlags enumeration values together.
   ///
-  /// @param[in] stop_at_entry
+  /// \param[in] stop_at_entry
   ///     If false do not stop the inferior at the entry point.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error object. Contains the reason if there is some failure.
   ///
-  /// @return
+  /// \return
   ///      A process object for the newly created process.
   //------------------------------------------------------------------
   lldb::SBProcess Launch(SBListener &listener, char const **argv,
@@ -188,13 +190,13 @@ public:
   //------------------------------------------------------------------
   /// Launch a new process with sensible defaults.
   ///
-  /// @param[in] argv
+  /// \param[in] argv
   ///     The argument array.
   ///
-  /// @param[in] envp
+  /// \param[in] envp
   ///     The environment array.
   ///
-  /// @param[in] working_directory
+  /// \param[in] working_directory
   ///     The working directory to have the child process run in
   ///
   /// Default: listener
@@ -208,7 +210,7 @@ public:
   /// Default: stderr_path
   ///     A pseudo terminal will be used.
   ///
-  /// @return
+  /// \return
   ///      A process object for the newly created process.
   //------------------------------------------------------------------
   SBProcess LaunchSimple(const char **argv, const char **envp,
@@ -221,19 +223,19 @@ public:
   //------------------------------------------------------------------
   /// Attach to process with pid.
   ///
-  /// @param[in] listener
+  /// \param[in] listener
   ///     An optional listener that will receive all process events.
   ///     If \a listener is valid then \a listener will listen to all
   ///     process events. If not valid, then this target's debugger
   ///     (SBTarget::GetDebugger()) will listen to all process events.
   ///
-  /// @param[in] pid
+  /// \param[in] pid
   ///     The process ID to attach to.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error explaining what went wrong if attach fails.
   ///
-  /// @return
+  /// \return
   ///      A process object for the attached process.
   //------------------------------------------------------------------
   lldb::SBProcess AttachToProcessWithID(SBListener &listener, lldb::pid_t pid,
@@ -242,22 +244,22 @@ public:
   //------------------------------------------------------------------
   /// Attach to process with name.
   ///
-  /// @param[in] listener
+  /// \param[in] listener
   ///     An optional listener that will receive all process events.
   ///     If \a listener is valid then \a listener will listen to all
   ///     process events. If not valid, then this target's debugger
   ///     (SBTarget::GetDebugger()) will listen to all process events.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     Basename of process to attach to.
   ///
-  /// @param[in] wait_for
+  /// \param[in] wait_for
   ///     If true wait for a new instance of 'name' to be launched.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error explaining what went wrong if attach fails.
   ///
-  /// @return
+  /// \return
   ///      A process object for the attached process.
   //------------------------------------------------------------------
   lldb::SBProcess AttachToProcessWithName(SBListener &listener,
@@ -267,22 +269,22 @@ public:
   //------------------------------------------------------------------
   /// Connect to a remote debug server with url.
   ///
-  /// @param[in] listener
+  /// \param[in] listener
   ///     An optional listener that will receive all process events.
   ///     If \a listener is valid then \a listener will listen to all
   ///     process events. If not valid, then this target's debugger
   ///     (SBTarget::GetDebugger()) will listen to all process events.
   ///
-  /// @param[in] url
+  /// \param[in] url
   ///     The url to connect to, e.g., 'connect://localhost:12345'.
   ///
-  /// @param[in] plugin_name
+  /// \param[in] plugin_name
   ///     The plugin name to be used; can be nullptr.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error explaining what went wrong if the connect fails.
   ///
-  /// @return
+  /// \return
   ///      A process object for the connected process.
   //------------------------------------------------------------------
   lldb::SBProcess ConnectRemote(SBListener &listener, const char *url,
@@ -318,11 +320,11 @@ public:
   /// Find compile units related to *this target and passed source
   /// file.
   ///
-  /// @param[in] sb_file_spec
+  /// \param[in] sb_file_spec
   ///     A lldb::SBFileSpec object that contains source file
   ///     specification.
   ///
-  /// @return
+  /// \return
   ///     A lldb::SBSymbolContextList that gets filled in with all of
   ///     the symbol contexts for all the matches.
   //------------------------------------------------------------------
@@ -338,7 +340,7 @@ public:
   //------------------------------------------------------------------
   /// Architecture data byte width accessor
   ///
-  /// @return
+  /// \return
   /// The size in 8-bit (host) bytes of a minimum addressable
   /// unit from the Architecture's data bus
   //------------------------------------------------------------------
@@ -347,7 +349,7 @@ public:
   //------------------------------------------------------------------
   /// Architecture code byte width accessor
   ///
-  /// @return
+  /// \return
   /// The size in 8-bit (host) bytes of a minimum addressable
   /// unit from the Architecture's code bus
   //------------------------------------------------------------------
@@ -356,14 +358,14 @@ public:
   //------------------------------------------------------------------
   /// Set the base load address for a module section.
   ///
-  /// @param[in] section
+  /// \param[in] section
   ///     The section whose base load address will be set within this
   ///     target.
   ///
-  /// @param[in] section_base_addr
+  /// \param[in] section_base_addr
   ///     The base address for the section.
   ///
-  /// @return
+  /// \return
   ///      An error to indicate success, fail, and any reason for
   ///     failure.
   //------------------------------------------------------------------
@@ -373,11 +375,11 @@ public:
   //------------------------------------------------------------------
   /// Clear the base load address for a module section.
   ///
-  /// @param[in] section
+  /// \param[in] section
   ///     The section whose base load address will be cleared within
   ///     this target.
   ///
-  /// @return
+  /// \return
   ///      An error to indicate success, fail, and any reason for
   ///     failure.
   //------------------------------------------------------------------
@@ -392,14 +394,14 @@ public:
   /// this function will allow you to easily and quickly slide all
   /// module sections.
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     The module to load.
   ///
-  /// @param[in] sections_offset
+  /// \param[in] sections_offset
   ///     An offset that will be applied to all section file addresses
   ///     (the virtual addresses found in the object file itself).
   ///
-  /// @return
+  /// \return
   ///     An error to indicate success, fail, and any reason for
   ///     failure.
   //------------------------------------------------------------------
@@ -409,10 +411,10 @@ public:
   //------------------------------------------------------------------
   /// Clear the section base load addresses for all sections in a module.
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     The module to unload.
   ///
-  /// @return
+  /// \return
   ///     An error to indicate success, fail, and any reason for
   ///     failure.
   //------------------------------------------------------------------
@@ -421,17 +423,17 @@ public:
   //------------------------------------------------------------------
   /// Find functions by name.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the function we are looking for.
   ///
-  /// @param[in] name_type_mask
+  /// \param[in] name_type_mask
   ///     A logical OR of one or more FunctionNameType enum bits that
   ///     indicate what kind of names should be used when doing the
   ///     lookup. Bits include fully qualified names, base names,
   ///     C++ methods, or ObjC selectors.
   ///     See FunctionNameType for more details.
   ///
-  /// @return
+  /// \return
   ///     A lldb::SBSymbolContextList that gets filled in with all of
   ///     the symbol contexts for all the matches.
   //------------------------------------------------------------------
@@ -442,14 +444,14 @@ public:
   //------------------------------------------------------------------
   /// Find global and static variables by name.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the global or static variable we are looking
   ///     for.
   ///
-  /// @param[in] max_matches
+  /// \param[in] max_matches
   ///     Allow the number of matches to be limited to \a max_matches.
   ///
-  /// @return
+  /// \return
   ///     A list of matched variables in an SBValueList.
   //------------------------------------------------------------------
   lldb::SBValueList FindGlobalVariables(const char *name, uint32_t max_matches);
@@ -457,11 +459,11 @@ public:
   //------------------------------------------------------------------
   /// Find the first global (or static) variable by name.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the global or static variable we are looking
   ///     for.
   ///
-  /// @return
+  /// \return
   ///     An SBValue that gets filled in with the found variable (if any).
   //------------------------------------------------------------------
   lldb::SBValue FindFirstGlobalVariable(const char *name);
@@ -469,16 +471,16 @@ public:
   //------------------------------------------------------------------
   /// Find global and static variables by pattern.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The pattern to search for global or static variables
   ///
-  /// @param[in] max_matches
+  /// \param[in] max_matches
   ///     Allow the number of matches to be limited to \a max_matches.
   ///
-  /// @param[in] matchtype
+  /// \param[in] matchtype
   ///     The match type to use.
   ///
-  /// @return
+  /// \return
   ///     A list of matched variables in an SBValueList.
   //------------------------------------------------------------------
   lldb::SBValueList FindGlobalVariables(const char *name, uint32_t max_matches,
@@ -487,16 +489,16 @@ public:
   //------------------------------------------------------------------
   /// Find global functions by their name with pattern matching.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The pattern to search for global or static variables
   ///
-  /// @param[in] max_matches
+  /// \param[in] max_matches
   ///     Allow the number of matches to be limited to \a max_matches.
   ///
-  /// @param[in] matchtype
+  /// \param[in] matchtype
   ///     The match type to use.
   ///
-  /// @return
+  /// \return
   ///     A list of matched variables in an SBValueList.
   //------------------------------------------------------------------
   lldb::SBSymbolContextList FindGlobalFunctions(const char *name,
@@ -508,10 +510,10 @@ public:
   //------------------------------------------------------------------
   /// Resolve a current file address into a section offset address.
   ///
-  /// @param[in] file_addr
+  /// \param[in] file_addr
   ///     The file address to resolve.
   ///
-  /// @return
+  /// \return
   ///     An SBAddress which will be valid if...
   //------------------------------------------------------------------
   lldb::SBAddress ResolveFileAddress(lldb::addr_t file_addr);
@@ -519,11 +521,11 @@ public:
   //------------------------------------------------------------------
   /// Resolve a current load address into a section offset address.
   ///
-  /// @param[in] vm_addr
+  /// \param[in] vm_addr
   ///     A virtual address from the current process state that is to
   ///     be translated into a section offset address.
   ///
-  /// @return
+  /// \return
   ///     An SBAddress which will be valid if \a vm_addr was
   ///     successfully resolved into a section offset address, or an
   ///     invalid SBAddress if \a vm_addr doesn't resolve to a section
@@ -535,7 +537,7 @@ public:
   /// Resolve a current load address into a section offset address
   /// using the process stop ID to identify a time in the past.
   ///
-  /// @param[in] stop_id
+  /// \param[in] stop_id
   ///     Each time a process stops, the process stop ID integer gets
   ///     incremented. These stop IDs are used to identify past times
   ///     and can be used in history objects as a cheap way to store
@@ -543,11 +545,11 @@ public:
   ///     UINT32_MAX will always resolve the address using the
   ///     currently loaded sections.
   ///
-  /// @param[in] vm_addr
+  /// \param[in] vm_addr
   ///     A virtual address from the current process state that is to
   ///     be translated into a section offset address.
   ///
-  /// @return
+  /// \return
   ///     An SBAddress which will be valid if \a vm_addr was
   ///     successfully resolved into a section offset address, or an
   ///     invalid SBAddress if \a vm_addr doesn't resolve to a section
@@ -565,20 +567,20 @@ public:
   /// files. For a target whose bytes are sized as a multiple of host
   /// bytes, the data read back will preserve the target's byte order.
   ///
-  /// @param[in] addr
+  /// \param[in] addr
   ///     A target address to read from.
   ///
-  /// @param[out] buf
+  /// \param[out] buf
   ///     The buffer to read memory into.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     The maximum number of host bytes to read in the buffer passed
   ///     into this call
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     Status information is written here if the memory read fails.
   ///
-  /// @return
+  /// \return
   ///     The amount of data read in host bytes.
   //------------------------------------------------------------------
   size_t ReadMemory(const SBAddress addr, void *buf, size_t size,
@@ -695,24 +697,24 @@ public:
   //------------------------------------------------------------------
   /// Create a breakpoint using a scripted resolver.
   ///
-  /// @param[in] class_name
+  /// \param[in] class_name
   ///    This is the name of the class that implements a scripted resolver.
   ///
-  /// @param[in] extra_args
+  /// \param[in] extra_args
   ///    This is an SBStructuredData object that will get passed to the
   ///    constructor of the class in class_name.  You can use this to 
   ///    reuse the same class, parametrizing with entries from this 
   ///    dictionary.
   ///
-  /// @param module_list
+  /// \param module_list
   ///    If this is non-empty, this will be used as the module filter in the 
   ///    SearchFilter created for this breakpoint.
   ///
-  /// @param file_list
+  /// \param file_list
   ///    If this is non-empty, this will be used as the comp unit filter in the 
   ///    SearchFilter created for this breakpoint.
   ///
-  /// @return
+  /// \return
   ///     An SBBreakpoint that will set locations based on the logic in the
   ///     resolver's search callback.
   //------------------------------------------------------------------
@@ -727,13 +729,13 @@ public:
   /// Read breakpoints from source_file and return the newly created
   /// breakpoints in bkpt_list.
   ///
-  /// @param[in] source_file
+  /// \param[in] source_file
   ///    The file from which to read the breakpoints.
   ///
-  /// @param[out] new_bps
+  /// \param[out] new_bps
   ///    A list of the newly created breakpoints.
   ///
-  /// @return
+  /// \return
   ///     An SBError detailing any errors in reading in the breakpoints.
   //------------------------------------------------------------------
   lldb::SBError BreakpointsCreateFromFile(SBFileSpec &source_file,
@@ -743,17 +745,17 @@ public:
   /// Read breakpoints from source_file and return the newly created
   /// breakpoints in bkpt_list.
   ///
-  /// @param[in] source_file
+  /// \param[in] source_file
   ///    The file from which to read the breakpoints.
   ///
-  /// @param[in] matching_names
+  /// \param[in] matching_names
   ///    Only read in breakpoints whose names match one of the names in this
   ///    list.
   ///
-  /// @param[out] new_bps
+  /// \param[out] new_bps
   ///    A list of the newly created breakpoints.
   ///
-  /// @return
+  /// \return
   ///     An SBError detailing any errors in reading in the breakpoints.
   //------------------------------------------------------------------
   lldb::SBError BreakpointsCreateFromFile(SBFileSpec &source_file,
@@ -763,10 +765,10 @@ public:
   //------------------------------------------------------------------
   /// Write breakpoints to dest_file.
   ///
-  /// @param[in] dest_file
+  /// \param[in] dest_file
   ///    The file to which to write the breakpoints.
   ///
-  /// @return
+  /// \return
   ///     An SBError detailing any errors in writing in the breakpoints.
   //------------------------------------------------------------------
   lldb::SBError BreakpointsWriteToFile(SBFileSpec &dest_file);
@@ -774,18 +776,18 @@ public:
   //------------------------------------------------------------------
   /// Write breakpoints listed in bkpt_list to dest_file.
   ///
-  /// @param[in] dest_file
+  /// \param[in] dest_file
   ///    The file to which to write the breakpoints.
   ///
-  /// @param[in] bkpt_list
+  /// \param[in] bkpt_list
   ///    Only write breakpoints from this list.
   ///
-  /// @param[in] append
+  /// \param[in] append
   ///    If \btrue, append the breakpoints in bkpt_list to the others
   ///    serialized in dest_file.  If dest_file doesn't exist, then a new
   ///    file will be created and the breakpoints in bkpt_list written to it.
   ///
-  /// @return
+  /// \return
   ///     An SBError detailing any errors in writing in the breakpoints.
   //------------------------------------------------------------------
   lldb::SBError BreakpointsWriteToFile(SBFileSpec &dest_file,

@@ -62,23 +62,23 @@ public:
   /// memory that needs to be freed, pass in the address and size and it will
   /// be freed before getting the list of queues.
   ///
-  /// @param [in] thread
+  /// \param [in] thread
   ///     The thread to run this plan on.
   ///
-  /// @param [in] page_to_free
+  /// \param [in] page_to_free
   ///     An address of an inferior process vm page that needs to be
   ///     deallocated,
   ///     LLDB_INVALID_ADDRESS if this is not needed.
   ///
-  /// @param [in] page_to_free_size
+  /// \param [in] page_to_free_size
   ///     The size of the vm page that needs to be deallocated if an address was
   ///     passed in to page_to_free.
   ///
-  /// @param [out] error
+  /// \param [out] error
   ///     This object will be updated with the error status / error string from
   ///     any failures encountered.
   ///
-  /// @returns
+  /// \returns
   ///     The result of the inferior function call execution.  If there was a
   ///     failure of any kind while getting
   ///     the information, the queues_buffer_ptr value will be

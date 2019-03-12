@@ -173,7 +173,6 @@ class ProcessLaunchTestCase(TestBase):
         if not success:
             self.fail(err_msg)
 
-    @expectedFailureNetBSD
     def test_environment_with_special_char(self):
         """Test that environment variables containing '*' and '}' are handled correctly by the inferior."""
         source = 'print_env.cpp'
