@@ -260,9 +260,7 @@ void DWARFDebugRngLists::Extract(SymbolFileDWARF *dwarf2Data) {
   lldb::offset_t offset = 0;
 
   uint64_t length = data.GetU32(&offset);
-  bool isDwarf64 = (length == 0xffffffff);
-  if (isDwarf64)
-    length = data.GetU64(&offset);
+  // FIXME: Handle DWARF64.
   lldb::offset_t end = offset + length;
 
   // Check version.
@@ -279,7 +277,7 @@ void DWARFDebugRngLists::Extract(SymbolFileDWARF *dwarf2Data) {
 
   uint32_t offsetsAmount = data.GetU32(&offset);
   for (uint32_t i = 0; i < offsetsAmount; ++i)
-    Offsets.push_back(data.GetMaxU64(&offset, isDwarf64 ? 8 : 4));
+    Offsets.push_back(data.GetMaxU64(&offset, 4));
 
   lldb::offset_t listOffset = offset;
   std::vector<RngListEntry> rangeList;

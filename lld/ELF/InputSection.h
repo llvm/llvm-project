@@ -133,7 +133,7 @@ public:
   }
 
   ArrayRef<uint8_t> data() const {
-    if (UncompressedSize >= 0 && !UncompressedBuf)
+    if (UncompressedSize >= 0)
       uncompress();
     return RawData;
   }
@@ -210,10 +210,11 @@ protected:
 
   mutable ArrayRef<uint8_t> RawData;
 
-  // A pointer that owns uncompressed data if a section is compressed by zlib.
-  // Since the feature is not used often, this is usually a nullptr.
-  mutable std::unique_ptr<char[]> UncompressedBuf;
-  int64_t UncompressedSize = -1;
+  // This field stores the uncompressed size of the compressed data in RawData,
+  // or -1 if RawData is not compressed (either because the section wasn't
+  // compressed in the first place, or because we ended up uncompressing it).
+  // Since the feature is not used often, this is usually -1.
+  mutable int64_t UncompressedSize = -1;
 };
 
 // SectionPiece represents a piece of splittable section contents.

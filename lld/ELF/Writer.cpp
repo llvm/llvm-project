@@ -1792,7 +1792,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   finalizeSynthetic(In.ShStrTab);
   finalizeSynthetic(In.StrTab);
   finalizeSynthetic(In.VerDef);
-  finalizeSynthetic(In.DynStrTab);
   finalizeSynthetic(In.Got);
   finalizeSynthetic(In.MipsGot);
   finalizeSynthetic(In.IgotPlt);
