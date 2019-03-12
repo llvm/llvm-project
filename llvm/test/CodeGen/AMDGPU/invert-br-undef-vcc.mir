@@ -81,6 +81,6 @@ body:             |
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.out)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

@@ -27,3 +27,6 @@ Sections:
       - Offset:          0
         Symbol:          main
         Type:            0xFF
+Symbols:
+  Global:
+    - Name: main

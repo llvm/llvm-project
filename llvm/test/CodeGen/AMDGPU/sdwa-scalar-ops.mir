@@ -210,7 +210,7 @@ body:             |
     S_BRANCH %bb.2.bb2
 
   bb.1.bb1:
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.2.bb2:
     successors: %bb.1.bb1(0x04000000), %bb.2.bb2(0x7c000000)
@@ -373,7 +373,7 @@ body:             |
     S_BRANCH %bb.2.bb2
 
   bb.1.bb1:
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.2.bb2:
     successors: %bb.1.bb1(0x04000000), %bb.2.bb2(0x7c000000)

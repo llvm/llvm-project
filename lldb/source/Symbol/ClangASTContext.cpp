@@ -1893,9 +1893,8 @@ ClangASTContext::GetNumBaseClasses(const CXXRecordDecl *cxx_record_decl,
 
 #pragma mark Namespace Declarations
 
-NamespaceDecl *
-ClangASTContext::GetUniqueNamespaceDeclaration(const char *name,
-                                               DeclContext *decl_ctx) {
+NamespaceDecl *ClangASTContext::GetUniqueNamespaceDeclaration(
+    const char *name, DeclContext *decl_ctx, bool is_inline) {
   NamespaceDecl *namespace_decl = nullptr;
   ASTContext *ast = getASTContext();
   TranslationUnitDecl *translation_unit_decl = ast->getTranslationUnitDecl();
@@ -1913,7 +1912,7 @@ ClangASTContext::GetUniqueNamespaceDeclaration(const char *name,
     }
 
     namespace_decl =
-        NamespaceDecl::Create(*ast, decl_ctx, false, SourceLocation(),
+        NamespaceDecl::Create(*ast, decl_ctx, is_inline, SourceLocation(),
                               SourceLocation(), &identifier_info, nullptr);
 
     decl_ctx->addDecl(namespace_decl);
@@ -1954,12 +1953,13 @@ ClangASTContext::GetUniqueNamespaceDeclaration(const char *name,
 }
 
 NamespaceDecl *ClangASTContext::GetUniqueNamespaceDeclaration(
-    clang::ASTContext *ast, const char *name, clang::DeclContext *decl_ctx) {
+    clang::ASTContext *ast, const char *name, clang::DeclContext *decl_ctx,
+    bool is_inline) {
   ClangASTContext *ast_ctx = ClangASTContext::GetASTContext(ast);
   if (ast_ctx == nullptr)
     return nullptr;
 
-  return ast_ctx->GetUniqueNamespaceDeclaration(name, decl_ctx);
+  return ast_ctx->GetUniqueNamespaceDeclaration(name, decl_ctx, is_inline);
 }
 
 clang::BlockDecl *
@@ -10261,6 +10261,23 @@ bool ClangASTContext::DeclContextIsClassMethod(
       }
     }
   }
+  return false;
+}
+
+bool ClangASTContext::DeclContextIsContainedInLookup(
+    void *opaque_decl_ctx, void *other_opaque_decl_ctx) {
+  auto *decl_ctx = (clang::DeclContext *)opaque_decl_ctx;
+  auto *other = (clang::DeclContext *)other_opaque_decl_ctx;
+
+  do {
+    // A decl context always includes its own contents in its lookup.
+    if (decl_ctx == other)
+      return true;
+
+    // If we have an inline namespace, then the lookup of the parent context
+    // also includes the inline namespace contents.
+  } while (other->isInlineNamespace() && (other = other->getParent()));
+
   return false;
 }
 

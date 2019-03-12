@@ -1209,6 +1209,17 @@ void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
   O << ')';
 }
 
+void AMDGPUInstPrinter::printEndpgm(const MCInst *MI, unsigned OpNo,
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
+  uint16_t Imm = MI->getOperand(OpNo).getImm();
+  if (Imm == 0) {
+    return;
+  }
+
+  O << formatDec(Imm);
+}
+
 #include "AMDGPUGenAsmWriter.inc"
 
 void R600InstPrinter::printInst(const MCInst *MI, raw_ostream &O,

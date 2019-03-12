@@ -22,6 +22,7 @@ import contextlib
 import errno
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -198,7 +199,18 @@ def clean_svn(svn_repo):
         if not line.startswith('?'):
             continue
         filename = line[1:].strip()
-        os.remove(os.path.join(svn_repo, filename))
+        filepath = os.path.abspath(os.path.join(svn_repo, filename))
+        abs_svn_repo = os.path.abspath(svn_repo)
+        # Safety check that the directory we are about to delete is
+        # actually within our svn staging dir.
+        if not filepath.startswith(abs_svn_repo):
+            die("Path to clean (%s) is not in svn staging dir (%s)"
+                % (filepath, abs_svn_repo))
+
+        if os.path.isdir(filepath):
+            shutil.rmtree(filepath)
+        else:
+            os.remove(filepath)
 
 
 def svn_init(svn_root):

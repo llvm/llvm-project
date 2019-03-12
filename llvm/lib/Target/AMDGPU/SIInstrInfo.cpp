@@ -1137,9 +1137,13 @@ void SIInstrInfo::insertReturn(MachineBasicBlock &MBB) const {
 
   if (MBB.succ_empty()) {
     bool HasNoTerminator = MBB.getFirstTerminator() == MBB.end();
-    if (HasNoTerminator)
-      BuildMI(MBB, MBB.end(), DebugLoc(),
-              get(Info->returnsVoid() ? AMDGPU::S_ENDPGM : AMDGPU::SI_RETURN_TO_EPILOG));
+    if (HasNoTerminator) {
+      if (Info->returnsVoid()) {
+        BuildMI(MBB, MBB.end(), DebugLoc(), get(AMDGPU::S_ENDPGM)).addImm(0);
+      } else {
+        BuildMI(MBB, MBB.end(), DebugLoc(), get(AMDGPU::SI_RETURN_TO_EPILOG));
+      }
+    }
   }
 }
 

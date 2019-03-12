@@ -55,7 +55,7 @@ body:             |
 
     $vgpr4 = V_MAC_F32_e32 killed $vgpr0, killed $vgpr3, killed $vgpr4, implicit $exec
     EXP_DONE 12, killed $vgpr4, undef $vgpr0, undef $vgpr0, undef $vgpr0, 0, 0, 15, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 
@@ -89,5 +89,5 @@ body: |
 
   bb.6:
     S_CBRANCH_SCC1 %bb.0, implicit $scc
-    S_ENDPGM
+    S_ENDPGM 0
 ...

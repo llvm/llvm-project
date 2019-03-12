@@ -366,7 +366,7 @@ body:             |
 # GCN-NEXT: dead %3:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 0, implicit $exec, implicit $flat_scr
 # GCN-NEXT: FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
 # GCN-NEXT: FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
-# GCN-NEXT: S_ENDPGM
+# GCN-NEXT: S_ENDPGM 0
 
 ---
 name:            atomic
@@ -384,5 +384,5 @@ body:             |
     %3:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 0, implicit $exec, implicit $flat_scr
     FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
     FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
-    S_ENDPGM
+    S_ENDPGM 0
 ...

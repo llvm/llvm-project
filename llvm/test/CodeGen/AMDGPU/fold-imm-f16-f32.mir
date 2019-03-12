@@ -162,7 +162,7 @@ body:             |
     %12 = V_MOV_B32_e32 1065353216, implicit $exec
     %13 = V_ADD_F16_e64 0, killed %11, 0, %12, 0, 0, implicit $exec
     BUFFER_STORE_SHORT_OFFSET killed %13, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -229,7 +229,7 @@ body:             |
     %15 = V_ADD_F16_e64 0, killed %12, 0, killed %13, 0, 0, implicit $exec
     BUFFER_STORE_SHORT_OFFSET killed %14, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
     BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -297,7 +297,7 @@ body:             |
     %16 = V_ADD_F32_e64 0, killed %13, 0, killed %14, 0, 0, implicit $exec
     BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
     BUFFER_STORE_DWORD_OFFSET killed %16, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `float addrspace(1)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -370,7 +370,7 @@ body:             |
     BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
     BUFFER_STORE_SHORT_OFFSET killed %16, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
     BUFFER_STORE_DWORD_OFFSET killed %17, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `float addrspace(1)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -434,7 +434,7 @@ body:             |
     %15 = V_ADD_F16_e64 0, killed %12, 0, killed %13, 0, 0, implicit $exec
     BUFFER_STORE_SHORT_OFFSET killed %14, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
     BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -504,7 +504,7 @@ body:             |
     BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
     BUFFER_STORE_SHORT_OFFSET killed %16, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
     BUFFER_STORE_DWORD_OFFSET killed %17, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `float addrspace(1)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -571,7 +571,7 @@ body:             |
     %15 = V_ADD_F32_e64 0, %12, 0, %13, 0, 0, implicit $exec
     BUFFER_STORE_DWORD_OFFSET killed %14, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `float addrspace(1)* undef`)
     BUFFER_STORE_DWORD_OFFSET killed %15, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `float addrspace(1)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -638,7 +638,7 @@ body:             |
     %15 = V_ADD_F16_e64 0, %12, 0, %13, 0, 0, implicit $exec
     BUFFER_STORE_SHORT_OFFSET killed %14, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
     BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -704,6 +704,6 @@ body:             |
     %15 = V_ADD_F16_e64 0, %12, 0, %13, 0, 0, implicit $exec
     BUFFER_STORE_DWORD_OFFSET killed %14, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `float addrspace(1)* undef`)
     BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 2 into `half addrspace(1)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

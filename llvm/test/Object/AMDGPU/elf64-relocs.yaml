@@ -38,43 +38,30 @@ Sections:
     AddressAlign:    0x08
     Relocations:
       - Offset:          0x0
-        Symbol:          s0
         Type:            R_AMDGPU_NONE
       - Offset:          0x2
-        Symbol:          s1
         Type:            R_AMDGPU_ABS32_LO
       - Offset:          0x4
-        Symbol:          s2
         Type:            R_AMDGPU_ABS32_HI
       - Offset:          0x6
-        Symbol:          s3
         Type:            R_AMDGPU_ABS64
       - Offset:          0x8
-        Symbol:          s4
         Type:            R_AMDGPU_REL32
       - Offset:          0x10
-        Symbol:          s5
         Type:            R_AMDGPU_REL64
       - Offset:          0x12
-        Symbol:          s6
         Type:            R_AMDGPU_ABS32
       - Offset:          0x14
-        Symbol:          s7
         Type:            R_AMDGPU_GOTPCREL
       - Offset:          0x16
-        Symbol:          s8
         Type:            R_AMDGPU_GOTPCREL32_LO
       - Offset:          0x18
-        Symbol:          s9
         Type:            R_AMDGPU_GOTPCREL32_HI
       - Offset:          0x20
-        Symbol:          s10
         Type:            R_AMDGPU_REL32_LO
       - Offset:          0x22
-        Symbol:          s11
         Type:            R_AMDGPU_REL32_HI
       - Offset:          0x24
-        Symbol:          s12
         Type:            R_AMDGPU_RELATIVE64
 
 Symbols:

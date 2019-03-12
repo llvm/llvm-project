@@ -180,5 +180,5 @@ body: |
     successors: %bb.21(0x80000000)
 
   bb.21:
-    S_ENDPGM
+    S_ENDPGM 0
 ...

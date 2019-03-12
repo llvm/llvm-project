@@ -76,6 +76,21 @@ public:
                      ConstString *language_object_name_ptr);
 
   //----------------------------------------------------------------------
+  /// Check if the given other decl context is contained in the lookup
+  /// of this decl context (for example because the other context is a nested
+  /// inline namespace).
+  ///
+  /// @param[in] other
+  ///     The other decl context for which we should check if it is contained
+  ///     in the lookoup of this context.
+  ///
+  /// @return
+  ///     Returns true iff the other decl context is contained in the lookup
+  ///     of this decl context.
+  //----------------------------------------------------------------------
+  bool IsContainedInLookup(CompilerDeclContext other) const;
+
+  //----------------------------------------------------------------------
   // Accessors
   //----------------------------------------------------------------------
 

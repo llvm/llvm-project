@@ -492,7 +492,7 @@ done:
 %struct.foo = type { [3 x float], [3 x float] }
 
 ; OPT-LABEL: @sink_ds_address(
-; OPT: getelementptr i8,
+; OPT: getelementptr inbounds i8,
 
 ; GCN-LABEL: {{^}}sink_ds_address:
 ; GCN: s_load_dword [[SREG1:s[0-9]+]],

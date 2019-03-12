@@ -157,6 +157,6 @@ body:             |
 
   bb.4:
     EXP 32, undef %53, undef %54, killed %46, undef %55, 0, 0, 15, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
