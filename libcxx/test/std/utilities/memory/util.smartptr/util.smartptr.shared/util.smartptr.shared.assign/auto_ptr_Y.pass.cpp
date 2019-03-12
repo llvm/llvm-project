@@ -14,6 +14,8 @@
 
 // template<class Y> shared_ptr& operator=(auto_ptr<Y>&& r);
 
+#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <memory>
 #include <type_traits>
 #include <cassert>
