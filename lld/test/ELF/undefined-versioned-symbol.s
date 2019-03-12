@@ -17,19 +17,19 @@
 // CHECK-NEXT:   Relocation {
 // CHECK-NEXT:     Offset: 0x1000
 // CHECK-NEXT:     Type: R_X86_64_64 (1)
-// CHECK-NEXT:     Symbol: basename (1)
+// CHECK-NEXT:     Symbol: basename@FBSD_1.1 (1)
 // CHECK-NEXT:     Addend: 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Relocation {
 // CHECK-NEXT:     Offset: 0x1008
 // CHECK-NEXT:     Type: R_X86_64_64 (1)
-// CHECK-NEXT:     Symbol: basename (2)
+// CHECK-NEXT:     Symbol: basename@FBSD_1.0 (2)
 // CHECK-NEXT:     Addend: 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Relocation {
 // CHECK-NEXT:     Offset: 0x1010
 // CHECK-NEXT:     Type: R_X86_64_64 (1)
-// CHECK-NEXT:     Symbol: basename (3)
+// CHECK-NEXT:     Symbol: basename@FBSD_1.1 (3)
 // CHECK-NEXT:     Addend: 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: }

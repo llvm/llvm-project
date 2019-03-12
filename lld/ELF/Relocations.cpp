@@ -676,8 +676,14 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
     return false;
 
-  std::string Msg =
-      "undefined symbol: " + toString(Sym) + "\n>>> referenced by ";
+  std::string Msg = "undefined ";
+  if (Sym.Visibility == STV_INTERNAL)
+    Msg += "internal ";
+  else if (Sym.Visibility == STV_HIDDEN)
+    Msg += "hidden ";
+  else if (Sym.Visibility == STV_PROTECTED)
+    Msg += "protected ";
+  Msg += "symbol: " + toString(Sym) + "\n>>> referenced by ";
 
   std::string Src = Sec.getSrcMsg(Sym, Offset);
   if (!Src.empty())

@@ -52,9 +52,14 @@ public:
   ///
   /// \param[in] expr
   ///     The expression to be parsed.
+  ///
+  /// @param[in] include_directories
+  ///     List of include directories that should be used when parsing the
+  ///     expression.
   //------------------------------------------------------------------
   ClangExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
-                        bool generate_debug_info);
+                        bool generate_debug_info,
+                        std::vector<ConstString> include_directories = {});
 
   //------------------------------------------------------------------
   /// Destructor
@@ -187,6 +192,8 @@ private:
   LLDBPreprocessorCallbacks *m_pp_callbacks; ///< Called when the preprocessor
                                              ///encounters module imports
   std::unique_ptr<ClangASTContext> m_ast_context;
+
+  std::vector<ConstString> m_include_directories;
 };
 }
 

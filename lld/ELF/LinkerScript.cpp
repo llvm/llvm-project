@@ -636,7 +636,6 @@ static OutputSection *addInputSec(StringMap<OutputSection *> &Map,
 
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections() {
-  unsigned End = SectionCommands.size();
   StringMap<OutputSection *> Map;
   std::vector<OutputSection *> V;
 
@@ -651,8 +650,7 @@ void LinkerScript::addOrphanSections() {
     else if (Config->OrphanHandling == OrphanHandlingPolicy::Warn)
       warn(toString(S) + " is being placed in '" + Name + "'");
 
-    if (OutputSection *Sec =
-            findByName(makeArrayRef(SectionCommands).slice(0, End), Name)) {
+    if (OutputSection *Sec = findByName(SectionCommands, Name)) {
       Sec->addSection(cast<InputSection>(S));
       return;
     }

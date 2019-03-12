@@ -2,10 +2,11 @@
 
 # This tests that stepping continues to work when replaying a reproducer.
 
+# RUN: rm -rf %t.repro
 # RUN: %clang %S/Inputs/stepping.c -O0 -g -o %t.out
 # RUN: grep -v '#' %s > %t.in
 
-# RUN: %lldb -x -b -s %t.in --capture %t.repro %t.out | FileCheck %s --check-prefix CHECK
+# RUN: %lldb -x -b -s %t.in --capture --capture-path %t.repro %t.out | FileCheck %s --check-prefix CHECK
 # RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK
 
 # Set breakpoints in a,b and c and verify we stop there when stepping.

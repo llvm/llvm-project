@@ -32,6 +32,7 @@
 #include "DynamicLoaderDarwinKernel.h"
 
 #include <memory>
+#include <algorithm>
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
 #ifdef ENABLE_DEBUG_PRINTF
@@ -1288,7 +1289,8 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
     }
   }
 
-  int failed_to_load_kexts = 0;
+  // Build up a list of <kext-name, uuid> for any kexts that fail to load
+  std::vector<std::pair<std::string, UUID>> kexts_failed_to_load;
   if (number_of_new_kexts_being_added > 0) {
     ModuleList loaded_module_list;
 
@@ -1296,10 +1298,15 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
     for (uint32_t new_kext = 0; new_kext < num_of_new_kexts; new_kext++) {
       if (to_be_added[new_kext]) {
         KextImageInfo &image_info = kext_summaries[new_kext];
+        bool kext_successfully_added = true;
         if (load_kexts) {
           if (!image_info.LoadImageUsingMemoryModule(m_process)) {
-            failed_to_load_kexts++;
+            kexts_failed_to_load.push_back(
+                 std::pair<std::string, UUID>(
+                     kext_summaries[new_kext].GetName(), 
+                     kext_summaries[new_kext].GetUUID()));
             image_info.LoadImageAtFileAddress(m_process);
+            kext_successfully_added = false;
           }
         }
 
@@ -1309,8 +1316,12 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
             m_process->GetStopID() == image_info.GetProcessStopId())
           loaded_module_list.AppendIfNeeded(image_info.GetModule());
 
-        if (s && load_kexts)
-          s->Printf(".");
+        if (s && load_kexts) {
+          if (kext_successfully_added)
+            s->Printf(".");
+          else
+            s->Printf("-");
+        }
 
         if (log)
           kext_summaries[new_kext].PutToLog(log);
@@ -1344,11 +1355,25 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
   }
 
   if (s && load_kexts) {
-    s->Printf(" done.");
-    if (failed_to_load_kexts > 0 && number_of_new_kexts_being_added > 0)
-      s->Printf("  Failed to load %d of %d kexts.", failed_to_load_kexts,
+    s->Printf(" done.\n");
+    if (kexts_failed_to_load.size() > 0 && number_of_new_kexts_being_added > 0) {
+      s->Printf("Failed to load %d of %d kexts:\n", 
+                (int) kexts_failed_to_load.size(),
                 number_of_new_kexts_being_added);
-    s->Printf("\n");
+      // print a sorted list of <kext-name, uuid> kexts which failed to load
+      int longest_name = 0;
+      std::sort(kexts_failed_to_load.begin(), kexts_failed_to_load.end());
+      for (const auto &ku : kexts_failed_to_load) {
+        if (ku.first.size() > longest_name)
+          longest_name = ku.first.size();
+      }
+      for (const auto &ku : kexts_failed_to_load) {
+        std::string uuid;
+        if (ku.second.IsValid())
+          uuid = ku.second.GetAsString();
+        s->Printf (" %-*s %s\n", longest_name, ku.first.c_str(), uuid.c_str());
+      }
+    }
     s->Flush();
   }
 

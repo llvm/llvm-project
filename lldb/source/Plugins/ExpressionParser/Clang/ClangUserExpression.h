@@ -167,6 +167,8 @@ public:
   lldb::ExpressionVariableSP
   GetResultAfterDematerialization(ExecutionContextScope *exe_scope) override;
 
+  bool DidImportCxxModules() const { return m_imported_cpp_modules; }
+
 private:
   //------------------------------------------------------------------
   /// Populate m_in_cplusplus_method and m_in_objectivec_method based on the
@@ -180,8 +182,10 @@ private:
                     lldb::addr_t struct_address,
                     DiagnosticManager &diagnostic_manager) override;
 
+  std::vector<std::string> GetModulesToImport(ExecutionContext &exe_ctx);
   void UpdateLanguageForExpr(DiagnosticManager &diagnostic_manager,
-                             ExecutionContext &exe_ctx);
+                             ExecutionContext &exe_ctx,
+                             std::vector<std::string> modules_to_import);
   bool SetupPersistentState(DiagnosticManager &diagnostic_manager,
                                    ExecutionContext &exe_ctx);
   bool PrepareForParsing(DiagnosticManager &diagnostic_manager,
@@ -206,6 +210,8 @@ private:
 
   /// The language type of the current expression.
   lldb::LanguageType m_expr_lang = lldb::eLanguageTypeUnknown;
+  /// The include directories that should be used when parsing the expression.
+  std::vector<ConstString> m_include_directories;
 
   /// The absolute character position in the transformed source code where the
   /// user code (as typed by the user) starts. If the variable is empty, then we
@@ -216,6 +222,9 @@ private:
   /// The object (if any) in which context the expression is evaluated.
   /// See the comment to `UserExpression::Evaluate` for details.
   ValueObject *m_ctx_obj;
+
+  /// True iff this expression explicitly imported C++ modules.
+  bool m_imported_cpp_modules = false;
 };
 
 } // namespace lldb_private
