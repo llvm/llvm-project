@@ -1,0 +1,50 @@
+
+####################
+#
+#        NOTES
+#
+####################
+
+##    def send_human(self, text, delay_min = 0, delay_max = 1):
+##        pass
+##    def spawn2(self, command, args):
+##        """return pid, fd_stdio, fd_stderr
+##        """
+##        pass
+
+
+# Reason for double fork:
+# http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC15
+# Reason for ptys:
+# http://www.erlenstar.demon.co.uk/unix/faq_4.html#SEC52
+
+# Nonblocking on Win32?
+# Research this as a way to maybe make pipe work for Win32.
+# http://groups.google.com/groups?q=setraw+tty&hl=en&selm=uvgpvisvk.fsf%40roundpoint.com&rnum=7
+# 
+#    if istty:
+#        if os.name=='posix':
+#            import tty
+#            tty.setraw(sys.stdin.fileno())
+#        elif os.name=='nt':
+#            import win32file, win32con
+#            hstdin = win32file._get_osfhandle(sys.stdin.fileno())
+#            modes = (win32file.GetConsoleMode(hstdin)
+#                     & ~(win32con.ENABLE_LINE_INPUT
+#                         |win32con.ENABLE_ECHO_INPUT))
+#            win32file.SetConsoleMode(hstdin, modes)
+
+# Basic documentation:
+#       Explain use of lists of patterns and return index.
+#       Explain exceptions for non-handled special cases like EOF
+
+# Test bad fork
+# Test ENOENT. In other words, no more TTY devices.
+
+#GLOBAL_SIGCHLD_RECEIVED = 0
+#def childdied (signum, frame):
+#    print 'Signal handler called with signal', signum
+#    frame.f_globals['pexpect'].GLOBAL_SIGCHLD_RECEIVED = 1
+#    print str(frame.f_globals['pexpect'].GLOBAL_SIGCHLD_RECEIVED)
+#    GLOBAL_SIGCHLD_RECEIVED = 1
+

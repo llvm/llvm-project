@@ -1,0 +1,8 @@
+
+The best way to run these tests is from the directory above this one. Run:
+
+    py.test
+
+To run a specific test file:
+
+    py.test tests/test_constructor.py
