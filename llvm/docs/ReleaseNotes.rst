@@ -173,6 +173,26 @@ Changes to the PowerPC Target
 * Enabled llvm-exegesis latency mode for PPC
 
 
+Changes to the SystemZ Target
+-----------------------------
+
+* A number of bugs related to C/C++ language vector extension support were
+  fixed: the ``-mzvector`` option now actually enables the ``__vector`` and
+  ``__bool`` keywords, the ``vec_step`` intrinsic now works, and the
+  ``vec_insert_and_zero`` and ``vec_orc`` intrinsics now generate correct code.
+
+* The ``__float128`` keyword, which had been accidentally enabled in some
+  earlier releases, is now no longer supported.  On SystemZ, the ``long double``
+  data type itself already uses the IEEE 128-bit floating-point format.
+
+* When the compiler inlines ``strcmp`` or ``memcmp``, the generated code no
+  longer returns ``INT_MIN`` as the negative result value under any
+  circumstances.
+
+* Various code-gen improvements, in particular related to improved
+  auto-vectorization, inlining, and instruction scheduling.
+
+
 Changes to the X86 Target
 -------------------------
 
