@@ -104,6 +104,8 @@ public:
     RM_Disabled,
   };
 
+  enum FileType { FT_Object, FT_Static, FT_Shared };
+
 private:
   friend class RegisterEffectiveTriple;
 
@@ -371,11 +373,11 @@ public:
 
   virtual std::string getCompilerRT(const llvm::opt::ArgList &Args,
                                     StringRef Component,
-                                    bool Shared = false) const;
+                                    FileType Type = ToolChain::FT_Static) const;
 
-  const char *getCompilerRTArgString(const llvm::opt::ArgList &Args,
-                                     StringRef Component,
-                                     bool Shared = false) const;
+  const char *
+  getCompilerRTArgString(const llvm::opt::ArgList &Args, StringRef Component,
+                         FileType Type = ToolChain::FT_Static) const;
 
   // Returns <ResourceDir>/lib/<OSName>/<arch>.  This is used by runtimes (such
   // as OpenMP) to find arch-specific libraries.

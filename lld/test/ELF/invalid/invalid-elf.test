@@ -1,13 +1,20 @@
 # REQUIRES: x86
-# RUN: llvm-mc %s -o %t -filetype=obj -triple x86_64-pc-linux
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc %s -o %t/simple.o -filetype=obj -triple x86_64-pc-linux
+# RUN: echo > %t/empty.o
+# RUN: llvm-ar cr %t/not-elf.a %t/empty.o
 
-# RUN: not ld.lld %t %p/Inputs/data-encoding.a -o %t2 2>&1 | \
+# RUN: not ld.lld %t/simple.o %t/not-elf.a -o %t2 2>&1 | \
+# RUN:   FileCheck --check-prefix=NOT-ELF %s
+# NOT-ELF: not-elf.a(empty.o): not an ELF file
+
+# RUN: not ld.lld %t/simple.o %p/Inputs/data-encoding.a -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-DATA-ENC %s
-# INVALID-DATA-ENC: test.o: invalid data encoding
+# INVALID-DATA-ENC: data-encoding.a(test.o): corrupted ELF file: invalid data encoding
 
-# RUN: not ld.lld %t %p/Inputs/file-class.a -o %t2 2>&1 | \
+# RUN: not ld.lld %t/simple.o %p/Inputs/file-class.a -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-FILE-CLASS %s
-# INVALID-FILE-CLASS: test.o: invalid file class
+# INVALID-FILE-CLASS: file-class.a(test.o): corrupted ELF file: invalid file class
 
 # RUN: not ld.lld %p/Inputs/binding.elf -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-BINDING %s

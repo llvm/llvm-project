@@ -535,7 +535,8 @@ static void addSanitizerRuntime(const ToolChain &TC, const ArgList &Args,
   // Wrap any static runtimes that must be forced into executable in
   // whole-archive.
   if (IsWhole) CmdArgs.push_back("--whole-archive");
-  CmdArgs.push_back(TC.getCompilerRTArgString(Args, Sanitizer, IsShared));
+  CmdArgs.push_back(TC.getCompilerRTArgString(
+      Args, Sanitizer, IsShared ? ToolChain::FT_Shared : ToolChain::FT_Static));
   if (IsWhole) CmdArgs.push_back("--no-whole-archive");
 
   if (IsShared) {
