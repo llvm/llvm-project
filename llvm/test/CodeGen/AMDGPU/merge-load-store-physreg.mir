@@ -62,7 +62,7 @@ body:             |
     %12:sgpr_32 = S_ADDC_U32 %10, 0, implicit-def dead $scc, implicit $scc
 
     %3:vgpr_32 = DS_READ_B32 %1, 64, 0, implicit $m0, implicit $exec :: (load 4 from %ir.ptr.64)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 
@@ -111,6 +111,6 @@ body:             |
     %11:sgpr_32 = S_ADDC_U32 %10, 0, implicit-def dead $scc, implicit $scc
 
     %3:vgpr_32 = DS_READ_B32 %1, 64, 0, implicit $m0, implicit $exec :: (load 4 from %ir.ptr.64)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

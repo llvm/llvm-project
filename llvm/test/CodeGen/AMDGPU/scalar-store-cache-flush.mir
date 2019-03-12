@@ -49,7 +49,7 @@
 # CHECK: bb.0:
 # CHECK-NEXT: S_STORE_DWORD
 # CHECK-NEXT: S_DCACHE_WB
-# CHECK-NEXT: S_ENDPGM
+# CHECK-NEXT: S_ENDPGM 0
 
 name: basic_insert_dcache_wb
 tracksRegLiveness: false
@@ -57,7 +57,7 @@ tracksRegLiveness: false
 body: |
   bb.0:
     S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # Already has an explicitly requested flush after the last store.
@@ -65,7 +65,7 @@ body: |
 # CHECK: bb.0:
 # CHECK-NEXT: S_STORE_DWORD
 # CHECK-NEXT: S_DCACHE_WB
-# CHECK-NEXT: S_ENDPGM
+# CHECK-NEXT: S_ENDPGM 0
 
 name: explicit_flush_after
 tracksRegLiveness: false
@@ -74,7 +74,7 @@ body: |
   bb.0:
     S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
     S_DCACHE_WB
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # Already has an explicitly requested flush before the last store.
@@ -83,7 +83,7 @@ body: |
 # CHECK-NEXT: S_DCACHE_WB
 # CHECK-NEXT: S_STORE_DWORD
 # CHECK-NEXT: S_DCACHE_WB
-# CHECK-NEXT: S_ENDPGM
+# CHECK-NEXT: S_ENDPGM 0
 
 name: explicit_flush_before
 tracksRegLiveness: false
@@ -92,30 +92,30 @@ body: |
   bb.0:
     S_DCACHE_WB
     S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # CHECK-LABEL: no_scalar_store
 # CHECK: bb.0
-# CHECK-NEXT: S_ENDPGM
+# CHECK-NEXT: S_ENDPGM 0
 name: no_scalar_store
 tracksRegLiveness: false
 
 body: |
   bb.0:
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 
 # CHECK-LABEL: name: multi_block_store
 # CHECK: bb.0:
 # CHECK-NEXT: S_STORE_DWORD
 # CHECK-NEXT: S_DCACHE_WB
-# CHECK-NEXT: S_ENDPGM
+# CHECK-NEXT: S_ENDPGM 0
 
 # CHECK: bb.1:
 # CHECK-NEXT: S_STORE_DWORD
 # CHECK-NEXT: S_DCACHE_WB
-# CHECK-NEXT: S_ENDPGM
+# CHECK-NEXT: S_ENDPGM 0
 
 name: multi_block_store
 tracksRegLiveness: false
@@ -123,11 +123,11 @@ tracksRegLiveness: false
 body: |
   bb.0:
     S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.1:
     S_STORE_DWORD_SGPR undef $sgpr4, undef $sgpr6_sgpr7, undef $m0, 0
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ...
 
@@ -137,23 +137,23 @@ body: |
 # CHECK-LABEL: name: one_block_store
 # CHECK: bb.0:
 # CHECK-NEXT: S_DCACHE_WB
-# CHECK-NEXT: S_ENDPGM
+# CHECK-NEXT: S_ENDPGM 0
 
 # CHECK: bb.1:
 # CHECK-NEXT: S_STORE_DWORD
 # CHECK-NEXT: S_DCACHE_WB
-# CHECK-NEXT: S_ENDPGM
+# CHECK-NEXT: S_ENDPGM 0
 
 name: one_block_store
 tracksRegLiveness: false
 
 body: |
   bb.0:
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.1:
     S_STORE_DWORD_SGPR undef $sgpr4, undef $sgpr6_sgpr7, undef $m0, 0
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # CHECK-LABEL: name: si_return

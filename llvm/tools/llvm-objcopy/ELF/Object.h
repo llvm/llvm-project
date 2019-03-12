@@ -312,10 +312,6 @@ public:
   uint32_t Index;
   uint64_t OriginalOffset;
   Segment *ParentSegment = nullptr;
-  ArrayRef<uint8_t> Contents;
-
-  explicit Segment(ArrayRef<uint8_t> Data) : Contents(Data) {}
-  Segment() {}
 
   const SectionBase *firstSection() const {
     if (!Sections.empty())
@@ -827,8 +823,8 @@ public:
     Ptr->Index = Sections.size();
     return *Ptr;
   }
-  Segment &addSegment(ArrayRef<uint8_t> Data) {
-    Segments.emplace_back(llvm::make_unique<Segment>(Data));
+  Segment &addSegment() {
+    Segments.emplace_back(llvm::make_unique<Segment>());
     return *Segments.back();
   }
 };

@@ -67,7 +67,7 @@ body:             |
     %24 = V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $exec
     %26 = COPY %29
     BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -138,7 +138,7 @@ body:             |
     %24 = V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 2, implicit $exec
     %26 = COPY %29
     BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -209,7 +209,7 @@ body:             |
     %24 = V_MAD_F32 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $exec
     %26 = COPY %29
     BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -280,6 +280,6 @@ body:             |
     %24 = V_MAD_F32 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit $exec
     %26 = COPY %29
     BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

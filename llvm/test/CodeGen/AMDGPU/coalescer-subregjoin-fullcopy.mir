@@ -156,7 +156,7 @@ body: |
     %54:vreg_128 = COPY killed %38
     %55:vgpr_32 = V_FMA_F32 0, killed %54.sub1, 0, target-flags(amdgpu-gotprel32-lo) 1056964608, 0, 1056964608, 0, 0, implicit $exec
     EXP 1, undef %56:vgpr_32, killed %55, undef %57:vgpr_32, undef %58:vgpr_32, -1, 0, 15, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.18:
     successors: %bb.7(0x80000000)

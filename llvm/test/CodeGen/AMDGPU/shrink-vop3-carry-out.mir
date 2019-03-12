@@ -86,7 +86,7 @@ body:             |
     %29, %9 = V_ADD_I32_e64 %19, %17, implicit $exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -170,7 +170,7 @@ body:             |
     %29, %9 = V_SUB_I32_e64 %19, %17, implicit $exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -254,7 +254,7 @@ body:             |
     %29, %9 = V_SUBREV_I32_e64 %19, %17, implicit $exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 %29, %28, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -338,7 +338,7 @@ body:             |
     %29, $vcc = V_ADDC_U32_e64 %19, %17, %9, implicit $exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed $vcc, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -423,7 +423,7 @@ body:             |
     %29, $vcc = V_ADDC_U32_e64 %19, %17, $vcc, implicit $exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed $vcc, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 
@@ -507,6 +507,6 @@ body:             |
     %29, $vcc = V_ADDC_U32_e64 %19, %17, undef $vcc, implicit $exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed $vcc, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

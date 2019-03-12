@@ -901,9 +901,7 @@ template <class ELFT> void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
 template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
   uint32_t Index = 0;
   for (const auto &Phdr : unwrapOrError(ElfFile.program_headers())) {
-    ArrayRef<uint8_t> Data{ElfFile.base() + Phdr.p_offset,
-                           (size_t)Phdr.p_filesz};
-    Segment &Seg = Obj.addSegment(Data);
+    Segment &Seg = Obj.addSegment();
     Seg.Type = Phdr.p_type;
     Seg.Flags = Phdr.p_flags;
     Seg.OriginalOffset = Phdr.p_offset;

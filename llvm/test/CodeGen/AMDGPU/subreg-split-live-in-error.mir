@@ -278,5 +278,5 @@ body: |
     %68:vgpr_32 = V_MUL_F32_e32 0, %4, implicit $exec
     %69:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, undef %70:vgpr_32, 0, %68, 0, 0, implicit $exec
     EXP 0, undef %71:vgpr_32, %69, undef %72:vgpr_32, undef %73:vgpr_32, -1, -1, 15, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...

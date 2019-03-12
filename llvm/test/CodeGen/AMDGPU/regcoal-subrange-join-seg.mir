@@ -234,6 +234,6 @@ body:             |
   bb.34:
 
   bb.35:
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

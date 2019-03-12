@@ -37,7 +37,7 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   if (Val)
     return false;
 
-  MIRBuilder.buildInstr(AMDGPU::S_ENDPGM);
+  MIRBuilder.buildInstr(AMDGPU::S_ENDPGM).addImm(0);
   return true;
 }
 
