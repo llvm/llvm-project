@@ -39,3 +39,5 @@ add_clang_subdirectory(libclang)
 
 add_clang_subdirectory(clang-refactor-test)
 
+# Support building the TAPI project as Clang tool.
+add_llvm_external_project(tapi)
