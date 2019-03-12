@@ -45,6 +45,7 @@
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Driver/Util.h"
 #include "swift/Frontend/Frontend.h"
+#include "swift/Frontend/ParseableInterfaceModuleLoader.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/IDE/Utils.h"
 #include "swift/IRGen/Linking.h"
