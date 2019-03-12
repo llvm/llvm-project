@@ -238,8 +238,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
               m_language_flags |= eLanguageFlagIsClass;
           }
 
-          swift::Type object_type =
-              GetSwiftType(self_type)->getWithoutSpecifierType();
+          swift::Type object_type = GetSwiftType(self_type);
 
           if (object_type.getPointer() &&
               (object_type.getPointer() != self_type.GetOpaqueQualType()))

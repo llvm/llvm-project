@@ -1676,7 +1676,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
   AddressType address_type;
   lldb::addr_t class_metadata_ptr = in_value.GetPointerValue(&address_type);
   if (auto objc_runtime = GetObjCRuntime()) {
-    if (objc_runtime->IsTaggedPointer(class_metadata_ptr)) {
+    if (!IsTaggedPointer(class_metadata_ptr, in_value.GetCompilerType()) &&
+        objc_runtime->IsTaggedPointer(class_metadata_ptr)) {
       Value::ValueType value_type;
       return objc_runtime->GetDynamicTypeAndAddress(
           in_value, use_dynamic, class_type_or_name, address, value_type,
@@ -2693,8 +2694,8 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
   return ret;
 }
 
-bool SwiftLanguageRuntime::FixupReference(lldb::addr_t &addr,
-                                          CompilerType type) {
+bool SwiftLanguageRuntime::IsTaggedPointer(lldb::addr_t addr,
+                                           CompilerType type) {
   swift::CanType swift_can_type = GetCanonicalSwiftType(type);
   switch (swift_can_type->getKind()) {
   case swift::TypeKind::UnownedStorage: {
@@ -2710,51 +2711,70 @@ bool SwiftLanguageRuntime::FixupReference(lldb::addr_t &addr,
     // may be necessary to check for the version of the Swift runtime
     // (or indirectly by looking at the version of the remote
     // operating system) to determine how to interpret references.
-    if (triple.isOSDarwin()) {
+    if (triple.isOSDarwin())
       // Check whether this is a reference to an Objective-C object.
-      if ((addr & 1) == 0) {
-        // This is a Swift object, no further processing necessary.
+      if ((addr & 1) == 1)
         return true;
-      }
+  }
+  default:
+    break;
+  }
+  return false;
+}
 
-      Status error;
-      if (!m_process)
-        return false;
+std::pair<lldb::addr_t, bool>
+SwiftLanguageRuntime::FixupPointerValue(lldb::addr_t addr, CompilerType type) {
+  // Check for an unowned Darwin Objective-C reference.
+  if (IsTaggedPointer(addr, type)) {
+    // Clear the discriminator bit to get at the pointer to Objective-C object.
+    bool needs_deref = true;
+    return {addr & ~1ULL, needs_deref};
+  }
 
-      // Clear the discriminator bit to get at the pointer to the struct.
-      addr &= ~1ULL;
-      size_t ptr_size = m_process->GetAddressByteSize();
+  // Adjust the pointer to strip away the spare bits.
+  Target &target = m_process->GetTarget();
+  llvm::Triple triple = target.GetArchitecture().GetTriple();
+  switch (triple.getArch()) {
+  case llvm::Triple::ArchType::aarch64:
+    return {addr & ~SWIFT_ABI_ARM64_SWIFT_SPARE_BITS_MASK, false};
+  case llvm::Triple::ArchType::arm:
+    return {addr & ~SWIFT_ABI_ARM_SWIFT_SPARE_BITS_MASK, false};
+  case llvm::Triple::ArchType::x86:
+    return {addr & ~SWIFT_ABI_I386_SWIFT_SPARE_BITS_MASK, false};
+  case llvm::Triple::ArchType::x86_64:
+    return {addr & ~SWIFT_ABI_X86_64_SWIFT_SPARE_BITS_MASK, false};
+  case llvm::Triple::ArchType::systemz:
+    return {addr & ~SWIFT_ABI_S390X_SWIFT_SPARE_BITS_MASK, false};
+  default:
+    break;
+  }
+  return {addr, false};
+}
 
-      // Read the pointer to the Objective-C object.
-      target.ReadMemory(addr & ~1ULL, false, &addr, ptr_size, error);
+/// This allows a language runtime to adjust references depending on the type.
+lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
+                                                CompilerType type,
+                                                Status &error) {
+  swift::CanType swift_can_type = GetCanonicalSwiftType(type);
+  switch (swift_can_type->getKind()) {
+  case swift::TypeKind::UnownedStorage: {
+    // Peek into the reference to see whether it needs an extra deref.
+    // If yes, return the fixed-up address we just read.
+    Target &target = m_process->GetTarget();
+    size_t ptr_size = m_process->GetAddressByteSize();
+    lldb::addr_t refd_addr = LLDB_INVALID_ADDRESS;
+    target.ReadMemory(addr, false, &refd_addr, ptr_size, error);
+    if (error.Success()) {
+      bool extra_deref;
+      std::tie(refd_addr, extra_deref) = FixupPointerValue(refd_addr, type);
+      if (extra_deref)
+        return refd_addr;
     }
   }
   default:
-    // Adjust the pointer to strip away the spare bits.
-    Target &target = m_process->GetTarget();
-    llvm::Triple triple = target.GetArchitecture().GetTriple();
-    switch (triple.getArch()) {
-    case llvm::Triple::ArchType::aarch64:
-      addr &= ~SWIFT_ABI_ARM64_SWIFT_SPARE_BITS_MASK;
-      break;
-    case llvm::Triple::ArchType::arm:
-      addr &= ~SWIFT_ABI_ARM_SWIFT_SPARE_BITS_MASK;
-      break;
-    case llvm::Triple::ArchType::x86:
-      addr &= ~SWIFT_ABI_I386_SWIFT_SPARE_BITS_MASK;
-      break;
-    case llvm::Triple::ArchType::x86_64:
-      addr &= ~SWIFT_ABI_X86_64_SWIFT_SPARE_BITS_MASK;
-      break;
-    case llvm::Triple::ArchType::systemz:
-      addr &= ~SWIFT_ABI_S390X_SWIFT_SPARE_BITS_MASK;
-      break;
-    default:
-      break;
-    }
     break;
   }
-  return true;
+  return addr;
 }
 
 bool SwiftLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {

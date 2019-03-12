@@ -312,7 +312,13 @@ public:
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) override;
 
-  virtual bool FixupReference(lldb::addr_t &addr, CompilerType type) override;
+  /// \return true if this is a Swift tagged pointer (as opposed to an
+  /// Objective-C tagged pointer).
+  bool IsTaggedPointer(lldb::addr_t addr, CompilerType type);
+  virtual std::pair<lldb::addr_t, bool>
+  FixupPointerValue(lldb::addr_t addr, CompilerType type) override;
+  virtual lldb::addr_t FixupAddress(lldb::addr_t addr, CompilerType type,
+                                    Status &error) override;
 
   bool IsRuntimeSupportValue(ValueObject &valobj) override;
 

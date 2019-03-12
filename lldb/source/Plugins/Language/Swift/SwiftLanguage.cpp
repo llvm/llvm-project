@@ -801,8 +801,21 @@ SwiftLanguage::GetHardcodedSynthetics() {
             ProcessSP process_sp(valobj.GetProcessSP());
             if (!process_sp)
               return nullptr;
+            // If this is a Swift tagged pointer, the Objective-C data
+            // formatters may incorrectly classify it as an
+            // Objective-C tagged pointer.
+            AddressType address_type;
+            lldb::addr_t ptr = valobj.GetPointerValue(&address_type);
+            SwiftLanguageRuntime *swift_runtime =
+                process_sp->GetSwiftLanguageRuntime();
+            if (!swift_runtime)
+              return nullptr;
+            if (swift_runtime->IsTaggedPointer(ptr, valobj.GetCompilerType()))
+              return nullptr;
             ObjCLanguageRuntime *objc_runtime =
                 process_sp->GetObjCLanguageRuntime();
+            if (!objc_runtime)
+              return nullptr;
             ObjCLanguageRuntime::ClassDescriptorSP valobj_descriptor_sp =
                 objc_runtime->GetClassDescriptor(valobj);
             if (valobj_descriptor_sp) {
