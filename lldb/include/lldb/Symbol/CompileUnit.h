@@ -22,7 +22,7 @@
 
 namespace lldb_private {
 //----------------------------------------------------------------------
-/// @class CompileUnit CompileUnit.h "lldb/Symbol/CompileUnit.h"
+/// \class CompileUnit CompileUnit.h "lldb/Symbol/CompileUnit.h"
 /// A class that describes a compilation unit.
 ///
 /// A representation of a compilation unit, or compiled source file.
@@ -47,34 +47,34 @@ public:
   /// convert into a FileSpec, the SymbolFile plug-in supplied \a uid, and the
   /// source language type.
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     The parent module that owns this compile unit. This value
   ///     must be a valid pointer value.
   ///
-  /// @param[in] user_data
+  /// \param[in] user_data
   ///     User data where the SymbolFile parser can store data.
   ///
-  /// @param[in] pathname
+  /// \param[in] pathname
   ///     The path to the source file for this compile unit.
   ///
-  /// @param[in] uid
+  /// \param[in] uid
   ///     The user ID of the compile unit. This value is supplied by
   ///     the SymbolFile plug-in and should be a value that allows
   ///     the SymbolFile plug-in to easily locate and parse additional
   ///     information for the compile unit.
   ///
-  /// @param[in] language
+  /// \param[in] language
   ///     A language enumeration type that describes the main language
   ///     of this compile unit.
   ///
-  /// @param[in] is_optimized
+  /// \param[in] is_optimized
   ///     A value that can initialized with eLazyBoolYes, eLazyBoolNo
   ///     or eLazyBoolCalculate. If set to eLazyBoolCalculate, then
   ///     an extra call into SymbolVendor will be made to calculate if
   ///     the compile unit is optimized will be made when
   ///     CompileUnit::GetIsOptimized() is called.
   ///
-  /// @see lldb::LanguageType
+  /// \see lldb::LanguageType
   //------------------------------------------------------------------
   CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
               const char *pathname, lldb::user_id_t uid,
@@ -87,35 +87,35 @@ public:
   /// convert into a FileSpec, the SymbolFile plug-in supplied \a uid, and the
   /// source language type.
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     The parent module that owns this compile unit. This value
   ///     must be a valid pointer value.
   ///
-  /// @param[in] user_data
+  /// \param[in] user_data
   ///     User data where the SymbolFile parser can store data.
   ///
-  /// @param[in] file_spec
+  /// \param[in] file_spec
   ///     The file specification for the source file of this compile
   ///     unit.
   ///
-  /// @param[in] uid
+  /// \param[in] uid
   ///     The user ID of the compile unit. This value is supplied by
   ///     the SymbolFile plug-in and should be a value that allows
   ///     the plug-in to easily locate and parse
   ///     additional information for the compile unit.
   ///
-  /// @param[in] language
+  /// \param[in] language
   ///     A language enumeration type that describes the main language
   ///     of this compile unit.
   ///
-  /// @param[in] is_optimized
+  /// \param[in] is_optimized
   ///     A value that can initialized with eLazyBoolYes, eLazyBoolNo
   ///     or eLazyBoolCalculate. If set to eLazyBoolCalculate, then
   ///     an extra call into SymbolVendor will be made to calculate if
   ///     the compile unit is optimized will be made when
   ///     CompileUnit::GetIsOptimized() is called.
   ///
-  /// @see lldb::LanguageType
+  /// \see lldb::LanguageType
   //------------------------------------------------------------------
   CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
               const FileSpec &file_spec, lldb::user_id_t uid,
@@ -132,15 +132,15 @@ public:
   /// Typically called by the SymbolFile plug-ins as they partially parse the
   /// debug information.
   ///
-  /// @param[in] function_sp
+  /// \param[in] function_sp
   ///     A shared pointer to the Function object.
   //------------------------------------------------------------------
   void AddFunction(lldb::FunctionSP &function_sp);
 
   //------------------------------------------------------------------
-  /// @copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
+  /// \copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
   ///
-  /// @see SymbolContextScope
+  /// \see SymbolContextScope
   //------------------------------------------------------------------
   void CalculateSymbolContext(SymbolContext *sc) override;
 
@@ -149,9 +149,9 @@ public:
   CompileUnit *CalculateSymbolContextCompileUnit() override;
 
   //------------------------------------------------------------------
-  /// @copydoc SymbolContextScope::DumpSymbolContext(Stream*)
+  /// \copydoc SymbolContextScope::DumpSymbolContext(Stream*)
   ///
-  /// @see SymbolContextScope
+  /// \see SymbolContextScope
   //------------------------------------------------------------------
   void DumpSymbolContext(Stream *s) override;
 
@@ -170,9 +170,9 @@ public:
   /// This provides raw access to the function shared pointer list and will not
   /// cause the SymbolFile plug-in to parse any unparsed functions.
   ///
-  /// @note Prefer using FindFunctionByUID over this if possible.
+  /// \note Prefer using FindFunctionByUID over this if possible.
   ///
-  /// @param[in] lambda
+  /// \param[in] lambda
   ///     The lambda that should be applied to every function. The lambda can
   ///     return true if the iteration should be aborted earlier.
   //------------------------------------------------------------------
@@ -182,10 +182,10 @@ public:
   //------------------------------------------------------------------
   /// Dump the compile unit contents to the stream \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   ///
-  /// @param[in] show_context
+  /// \param[in] show_context
   ///     If \b true, variables will dump their symbol context
   ///     information.
   //------------------------------------------------------------------
@@ -204,27 +204,27 @@ public:
   /// file and line by starting with \a start_idx equal to zero, and calling
   /// this function back with the return value + 1.
   ///
-  /// @param[in] start_idx
+  /// \param[in] start_idx
   ///     The zero based index at which to start looking for matches.
   ///
-  /// @param[in] line
+  /// \param[in] line
   ///     The line number to search for.
   ///
-  /// @param[in] file_spec_ptr
+  /// \param[in] file_spec_ptr
   ///     If non-NULL search for entries that match this file spec,
   ///     else if NULL, search for line entries that match the compile
   ///     unit file.
   ///
-  /// @param[in] exact
+  /// \param[in] exact
   ///     If \btrue match only if there is a line table entry for this line
   ///     number.
   ///     If \bfalse, find the line table entry equal to or after this line
   ///     number.
   ///
-  /// @param[out] line_entry
+  /// \param[out] line_entry
   ///     If non-NULL, a copy of the line entry that was found.
   ///
-  /// @return
+  /// \return
   ///     The zero based index of a matching line entry, or UINT32_MAX
   ///     if no matching line entry is found.
   //------------------------------------------------------------------
@@ -239,7 +239,7 @@ public:
   /// use this function to determine if the line table has be parsed yet.
   /// Clients use this function to get the line table from a compile unit.
   ///
-  /// @return
+  /// \return
   ///     The line table object pointer, or NULL if this line table
   ///     hasn't been parsed yet.
   //------------------------------------------------------------------
@@ -253,7 +253,7 @@ public:
   /// The support file list is used by the line table, and any objects that
   /// have valid Declaration objects.
   ///
-  /// @return
+  /// \return
   ///     A support file list object.
   //------------------------------------------------------------------
   FileSpecList &GetSupportFiles();
@@ -264,7 +264,7 @@ public:
   /// This reports all the imports that the compile unit made, including the
   /// current module.
   ///
-  /// @return
+  /// \return
   ///     A list of imported module names.
   //------------------------------------------------------------------
   const std::vector<SourceModule> &GetImportedModules();
@@ -275,7 +275,7 @@ public:
   /// SymbolFile plug-ins can store user data to internal state or objects to
   /// quickly allow them to parse more information for a given object.
   ///
-  /// @return
+  /// \return
   ///     The user data stored with the CompileUnit when it was
   ///     constructed.
   //------------------------------------------------------------------
@@ -288,14 +288,14 @@ public:
   /// variable list will contain all global and static variables that were
   /// defined at the compile unit level.
   ///
-  /// @param[in] can_create
+  /// \param[in] can_create
   ///     If \b true, the variable list will be parsed on demand. If
   ///     \b false, the current variable list will be returned even
   ///     if it contains a NULL VariableList object (typically
   ///     called by dumping routines that want to display only what
   ///     has currently been parsed).
   ///
-  /// @return
+  /// \return
   ///     A shared pointer to a variable list, that can contain NULL
   ///     VariableList pointer if there are no global or static
   ///     variables.
@@ -308,13 +308,13 @@ public:
   /// Typically used by SymbolFile plug-ins when partially parsing the debug
   /// information to see if the function has been parsed yet.
   ///
-  /// @param[in] uid
+  /// \param[in] uid
   ///     The user ID of the function to find. This value is supplied
   ///     by the SymbolFile plug-in and should be a value that
   ///     allows the plug-in to easily locate and parse additional
   ///     information in the function.
   ///
-  /// @return
+  /// \return
   ///     A shared pointer to the function object that might contain
   ///     a NULL Function pointer.
   //------------------------------------------------------------------
@@ -327,7 +327,7 @@ public:
   /// hands ownership of the line table to this object. The compile unit owns
   /// the line table object and will delete the object when it is deleted.
   ///
-  /// @param[in] line_table
+  /// \param[in] line_table
   ///     A line table object pointer that this object now owns.
   //------------------------------------------------------------------
   void SetLineTable(LineTable *line_table);
@@ -340,7 +340,7 @@ public:
   /// Called by the SymbolFile plug-ins after they have parsed the variable
   /// lists and are ready to hand ownership of the list over to this object.
   ///
-  /// @param[in] variable_list_sp
+  /// \param[in] variable_list_sp
   ///     A shared pointer to a VariableList.
   //------------------------------------------------------------------
   void SetVariableList(lldb::VariableListSP &variable_list_sp);
@@ -351,28 +351,28 @@ public:
   /// Given a file in \a file_spec, and a line number, find all instances and
   /// append them to the supplied symbol context list \a sc_list.
   ///
-  /// @param[in] file_spec
+  /// \param[in] file_spec
   ///     A file specification. If \a file_spec contains no directory
   ///     information, only the basename will be used when matching
   ///     contexts. If the directory in \a file_spec is valid, a
   ///     complete file specification match will be performed.
   ///
-  /// @param[in] line
+  /// \param[in] line
   ///     The line number to match against the compile unit's line
   ///     tables.
   ///
-  /// @param[in] check_inlines
+  /// \param[in] check_inlines
   ///     If \b true this function will also match any inline
   ///     file and line matches. If \b false, the compile unit's
   ///     file specification must match \a file_spec for any matches
   ///     to be returned.
   ///
-  /// @param[in] exact
+  /// \param[in] exact
   ///     If true, only resolve the context if \a line exists in the line table.
   ///     If false, resolve the context to the closest line greater than \a line
   ///     in the line table.
   ///
-  /// @param[in] resolve_scope
+  /// \param[in] resolve_scope
   ///     For each matching line entry, this bitfield indicates what
   ///     values within each SymbolContext that gets added to \a
   ///     sc_list will be resolved. See the SymbolContext::Scope
@@ -380,14 +380,14 @@ public:
   ///     resolved. Only SymbolContext entries that can be resolved
   ///     using a LineEntry base address will be able to be resolved.
   ///
-  /// @param[out] sc_list
+  /// \param[out] sc_list
   ///     A SymbolContext list class that will get any matching
   ///     entries appended to.
   ///
-  /// @return
+  /// \return
   ///     The number of new matches that were added to \a sc_list.
   ///
-  /// @see enum SymbolContext::Scope
+  /// \see enum SymbolContext::Scope
   //------------------------------------------------------------------
   uint32_t ResolveSymbolContext(const FileSpec &file_spec, uint32_t line,
                                 bool check_inlines, bool exact,
@@ -402,7 +402,7 @@ public:
   /// would expect them, stepping through the source lines in the function may
   /// appear strange, etc.
   ///
-  /// @return
+  /// \return
   ///     Returns 'true' if this compile unit was compiled with
   ///     optimization.  'false' indicates that either the optimization
   ///     is unknown, or this compile unit was built without optimization.

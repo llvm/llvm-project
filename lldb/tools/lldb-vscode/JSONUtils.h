@@ -21,13 +21,13 @@ namespace lldb_vscode {
 /// string is valid UTF8. If not, first call llvm::json::fixUTF8
 /// before emplacing.
 ///
-/// @param[in] obj
+/// \param[in] obj
 ///     A JSON object that we will attempt to emplace the value in
 ///
-/// @param[in] key
+/// \param[in] key
 ///     The key to use when emplacing the value
 ///
-/// @param[in] str
+/// \param[in] str
 ///     The string to emplace
 //------------------------------------------------------------------
 void EmplaceSafeString(llvm::json::Object &obj, llvm::StringRef key,
@@ -36,10 +36,10 @@ void EmplaceSafeString(llvm::json::Object &obj, llvm::StringRef key,
 //------------------------------------------------------------------
 /// Extract simple values as a string.
 ///
-/// @param[in] value
+/// \param[in] value
 ///     A JSON value to extract the string from.
 ///
-/// @return
+/// \return
 ///     A llvm::StringRef that contains the string value, or an empty
 ///     string if \a value isn't a string.
 //------------------------------------------------------------------
@@ -49,13 +49,13 @@ llvm::StringRef GetAsString(const llvm::json::Value &value);
 /// Extract the string value for the specified key from the
 /// specified object.
 ///
-/// @param[in] obj
+/// \param[in] obj
 ///     A JSON object that we will attempt to extract the value from
 ///
-/// @param[in] key
+/// \param[in] key
 ///     The key to use when extracting the value
 ///
-/// @return
+/// \return
 ///     A llvm::StringRef that contains the string value for the
 ///     specified \a key, or an empty string if there is no key that
 ///     matches or if the value is not a string.
@@ -67,13 +67,13 @@ llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key);
 /// Extract the unsigned integer value for the specified key from
 /// the specified object.
 ///
-/// @param[in] obj
+/// \param[in] obj
 ///     A JSON object that we will attempt to extract the value from
 ///
-/// @param[in] key
+/// \param[in] key
 ///     The key to use when extracting the value
 ///
-/// @return
+/// \return
 ///     The unsigned integer value for the specified \a key, or
 ///     \a fail_value  if there is no key that matches or if the
 ///     value is not an integer.
@@ -87,13 +87,13 @@ uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
 /// Extract the boolean value for the specified key from the
 /// specified object.
 ///
-/// @param[in] obj
+/// \param[in] obj
 ///     A JSON object that we will attempt to extract the value from
 ///
-/// @param[in] key
+/// \param[in] key
 ///     The key to use when extracting the value
 ///
-/// @return
+/// \return
 ///     The boolean value for the specified \a key, or \a fail_value
 ///     if there is no key that matches or if the value is not a
 ///     boolean value of an integer.
@@ -107,13 +107,13 @@ bool GetBoolean(const llvm::json::Object *obj, llvm::StringRef key,
 /// Extract the signed integer for the specified key from the
 /// specified object.
 ///
-/// @param[in] obj
+/// \param[in] obj
 ///     A JSON object that we will attempt to extract the value from
 ///
-/// @param[in] key
+/// \param[in] key
 ///     The key to use when extracting the value
 ///
-/// @return
+/// \return
 ///     The signed integer value for the specified \a key, or
 ///     \a fail_value if there is no key that matches or if the
 ///     value is not an integer.
@@ -126,13 +126,13 @@ int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
 //------------------------------------------------------------------
 /// Check if the specified key exists in the specified object.
 ///
-/// @param[in] obj
+/// \param[in] obj
 ///     A JSON object that we will attempt to extract the value from
 ///
-/// @param[in] key
+/// \param[in] key
 ///     The key to check for
 ///
-/// @return
+/// \return
 ///     \b True if the key exists in the \a obj, \b False otherwise.
 //------------------------------------------------------------------
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key);
@@ -145,13 +145,13 @@ bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key);
 /// strings. Any NULL, array or objects values in the array will be
 /// ignored.
 ///
-/// @param[in] obj
+/// \param[in] obj
 ///     A JSON object that we will attempt to extract the array from
 ///
-/// @param[in] key
+/// \param[in] key
 ///     The key to use when extracting the value
 ///
-/// @return
+/// \return
 ///     An array of string values for the specified \a key, or
 ///     \a fail_value if there is no key that matches or if the
 ///     value is not an array or all items in the array are not
@@ -168,10 +168,10 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
 /// \a request, "command" set to the "command" from \a request,
 /// and "success" set to true.
 ///
-/// @param[in] request
+/// \param[in] request
 ///     The request object received from a call to VSCode::ReadJSON().
 ///
-/// @param[in,out] response
+/// \param[in,out] response
 ///     An empty llvm::json::Object object that will be filled
 ///     in as noted in description.
 //------------------------------------------------------------------
@@ -190,15 +190,15 @@ void FillResponse(const llvm::json::Object &request,
 /// the address of the type if it has an address.
 ///
 ///
-/// @param[in] v
+/// \param[in] v
 ///     A lldb::SBValue object to extract the string value from
 ///
 ///
-/// @param[in] object
+/// \param[in] object
 ///     The object to place the value object into
 ///
 ///
-/// @param[in] key
+/// \param[in] key
 ///     The key name to use when inserting the value object we create
 //----------------------------------------------------------------------
 void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
@@ -208,11 +208,11 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
 /// Converts \a bp to a JSON value and appends all locations to the
 /// \a breakpoints array.
 ///
-/// @param[in] bp
+/// \param[in] bp
 ///     A LLDB breakpoint object which will get all locations extracted
 ///     and converted into a JSON objects in the \a breakpoints array
 ///
-/// @param[in] breakpoints
+/// \param[in] breakpoints
 ///     A JSON array that will get a llvm::json::Value for \a bp
 ///     appended to it.
 //----------------------------------------------------------------------
@@ -222,10 +222,10 @@ void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints);
 /// Converts breakpoint location to a Visual Studio Code "Breakpoint"
 /// JSON object and appends it to the \a breakpoints array.
 ///
-/// @param[in] bp_loc
+/// \param[in] bp_loc
 ///     A LLDB breakpoint location object to convert into a JSON value
 ///
-/// @return
+/// \return
 ///     A "Breakpoint" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 //----------------------------------------------------------------------
@@ -234,10 +234,10 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpointLocation &bp_loc);
 //----------------------------------------------------------------------
 /// Create a "Event" JSON object using \a event_name as the event name
 ///
-/// @param[in] event_name
+/// \param[in] event_name
 ///     The string value to use for the "event" key in the JSON object.
 ///
-/// @return
+/// \return
 ///     A "Event" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 //----------------------------------------------------------------------
@@ -247,10 +247,10 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 /// Create a "ExceptionBreakpointsFilter" JSON object as described in
 /// the Visual Studio Code debug adaptor definition.
 ///
-/// @param[in] bp
+/// \param[in] bp
 ///     The exception breakppoint object to use
 ///
-/// @return
+/// \return
 ///     A "ExceptionBreakpointsFilter" JSON object with that follows
 ///     the formal JSON definition outlined by Microsoft.
 //----------------------------------------------------------------------
@@ -261,19 +261,19 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 /// Create a "Scope" JSON object as described in the Visual Studio Code
 /// debug adaptor definition.
 ///
-/// @param[in] name
+/// \param[in] name
 ///     The value to place into the "name" key
 //
-/// @param[in] variablesReference
+/// \param[in] variablesReference
 ///     The value to place into the "variablesReference" key
 //
-/// @param[in] namedVariables
+/// \param[in] namedVariables
 ///     The value to place into the "namedVariables" key
 //
-/// @param[in] expensive
+/// \param[in] expensive
 ///     The value to place into the "expensive" key
 ///
-/// @return
+/// \return
 ///     A "Scope" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 //----------------------------------------------------------------------
@@ -285,11 +285,11 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 /// Create a "Source" JSON object as described in the Visual Studio Code
 /// debug adaptor definition.
 ///
-/// @param[in] line_entry
+/// \param[in] line_entry
 ///     The LLDB line table to use when populating out the "Source"
 ///     object
 ///
-/// @return
+/// \return
 ///     A "Source" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 //----------------------------------------------------------------------
@@ -308,15 +308,15 @@ llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry);
 /// within the source referred to by "sourceReference" will be filled
 /// in.
 ///
-/// @param[in] frame
+/// \param[in] frame
 ///     The LLDB stack frame to use when populating out the "Source"
 ///     object.
 ///
-/// @param[out] disasm_line
+/// \param[out] disasm_line
 ///     The line within the "sourceReference" file that the PC from
 ///     \a frame matches.
 ///
-/// @return
+/// \return
 ///     A "Source" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 //----------------------------------------------------------------------
@@ -333,11 +333,11 @@ llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line);
 ///   "line" - the source file line number as an integer
 ///   "column" - the source file column number as an integer
 ///
-/// @param[in] frame
+/// \param[in] frame
 ///     The LLDB stack frame to use when populating out the "StackFrame"
 ///     object.
 ///
-/// @return
+/// \return
 ///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 //----------------------------------------------------------------------
@@ -353,11 +353,11 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame);
 ///            thread index ID along with the string name of the thread
 ///            from the OS if it has a name.
 ///
-/// @param[in] thread
+/// \param[in] thread
 ///     The LLDB thread to use when populating out the "Thread"
 ///     object.
 ///
-/// @return
+/// \return
 ///     A "Thread" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 //----------------------------------------------------------------------
@@ -378,11 +378,11 @@ llvm::json::Value CreateThread(lldb::SBThread &thread);
 ///   "allThreadsStopped" - set to True to indicate that all threads
 ///                         stop when any thread stops.
 ///
-/// @param[in] thread
+/// \param[in] thread
 ///     The LLDB thread to use when populating out the "StoppedEvent"
 ///     object.
 ///
-/// @return
+/// \return
 ///     A "StoppedEvent" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 //----------------------------------------------------------------------
@@ -407,25 +407,25 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
 ///   "evaluateName" - The name of the variable to use in expressions
 ///                    as a string.
 ///
-/// @param[in] v
+/// \param[in] v
 ///     The LLDB value to use when populating out the "Variable"
 ///     object.
 ///
-/// @param[in] variablesReference
+/// \param[in] variablesReference
 ///     The variable reference. Zero if this value isn't structured
 ///     and has no children, non-zero if it does have children and
 ///     might be asked to expand itself.
 ///
-/// @param[in] varID
+/// \param[in] varID
 ///     A unique variable identifier to help in properly identifying
 ///     variables with the same name. This is an extension to the
 ///     VS protocol.
 ///
-/// @param[in] format_hex
+/// \param[in] format_hex
 ///     It set to true the variable will be formatted as hex in
 ///     the "value" key value pair for the value of the variable.
 ///
-/// @return
+/// \return
 ///     A "Variable" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 //----------------------------------------------------------------------

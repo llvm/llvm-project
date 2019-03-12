@@ -29,7 +29,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ClangUserExpression ClangUserExpression.h
+/// \class ClangUserExpression ClangUserExpression.h
 /// "lldb/Expression/ClangUserExpression.h" Encapsulates a single expression
 /// for use with Clang
 ///
@@ -68,7 +68,7 @@ public:
     /// Return the object that the parser should allow to access ASTs. May be
     /// NULL if the ASTs do not need to be transformed.
     ///
-    /// @param[in] passthrough
+    /// \param[in] passthrough
     ///     The ASTConsumer that the returned transformer should send
     ///     the ASTs to after transformation.
     //------------------------------------------------------------------
@@ -91,23 +91,23 @@ public:
   //------------------------------------------------------------------
   /// Constructor
   ///
-  /// @param[in] expr
+  /// \param[in] expr
   ///     The expression to parse.
   ///
-  /// @param[in] expr_prefix
+  /// \param[in] expr_prefix
   ///     If non-NULL, a C string containing translation-unit level
   ///     definitions to be included when the expression is parsed.
   ///
-  /// @param[in] language
+  /// \param[in] language
   ///     If not eLanguageTypeUnknown, a language to use when parsing
   ///     the expression.  Currently restricted to those languages
   ///     supported by Clang.
   ///
-  /// @param[in] desired_type
+  /// \param[in] desired_type
   ///     If not eResultTypeAny, the type to use for the expression
   ///     result.
   ///
-  /// @param[in] ctx_obj
+  /// \param[in] ctx_obj
   ///     The object (if any) in which context the expression
   ///     must be evaluated. For details see the comment to
   ///     `UserExpression::Evaluate`.
@@ -123,22 +123,22 @@ public:
   //------------------------------------------------------------------
   /// Parse the expression
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     A diagnostic manager to report parse errors and warnings to.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to use when looking up entities that
   ///     are needed for parsing (locations of functions, types of
   ///     variables, persistent variables, etc.)
   ///
-  /// @param[in] execution_policy
+  /// \param[in] execution_policy
   ///     Determines whether interpretation is possible or mandatory.
   ///
-  /// @param[in] keep_result_in_memory
+  /// \param[in] keep_result_in_memory
   ///     True if the resulting persistent variable should reside in
   ///     target memory, if applicable.
   ///
-  /// @return
+  /// \return
   ///     True on success (no errors); false otherwise.
   //------------------------------------------------------------------
   bool Parse(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,

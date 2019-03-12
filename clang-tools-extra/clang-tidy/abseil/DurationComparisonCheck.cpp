@@ -19,14 +19,10 @@ namespace tidy {
 namespace abseil {
 
 void DurationComparisonCheck::registerMatchers(MatchFinder *Finder) {
-  auto Matcher =
-      binaryOperator(anyOf(hasOperatorName(">"), hasOperatorName(">="),
-                           hasOperatorName("=="), hasOperatorName("<="),
-                           hasOperatorName("<")),
-                     hasEitherOperand(ignoringImpCasts(callExpr(
-                         callee(functionDecl(DurationConversionFunction())
-                                    .bind("function_decl"))))))
-          .bind("binop");
+  auto Matcher = expr(comparisonOperatorWithCallee(functionDecl(
+                          functionDecl(DurationConversionFunction())
+                              .bind("function_decl"))))
+                     .bind("binop");
 
   Finder->addMatcher(Matcher, this);
 }

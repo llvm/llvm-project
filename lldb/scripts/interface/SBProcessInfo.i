@@ -25,6 +25,8 @@ public:
     bool
     IsValid ();
 
+    explicit operator bool() const;
+
     const char *
     GetName ();
 

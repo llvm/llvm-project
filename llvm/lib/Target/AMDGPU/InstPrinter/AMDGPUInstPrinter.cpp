@@ -1097,7 +1097,7 @@ void AMDGPUInstPrinter::printSwizzle(const MCInst *MI, unsigned OpNo,
   if ((Imm & QUAD_PERM_ENC_MASK) == QUAD_PERM_ENC) {
 
     O << "swizzle(" << IdSymbolic[ID_QUAD_PERM];
-    for (auto i = 0; i < LANE_NUM; ++i) {
+    for (unsigned I = 0; I < LANE_NUM; ++I) {
       O << ",";
       O << formatDec(Imm & LANE_MASK);
       Imm >>= LANE_SHIFT;

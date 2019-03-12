@@ -40,31 +40,10 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 using namespace llvm;
 
-static bool eliminateUnreachableBlock(Function &F) {
-  df_iterator_default_set<BasicBlock*> Reachable;
-
-  // Mark all reachable blocks.
-  for (BasicBlock *BB : depth_first_ext(&F, Reachable))
-    (void)BB/* Mark all reachable blocks */;
-
-  // Collect all dead blocks.
-  std::vector<BasicBlock*> DeadBlocks;
-  for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I)
-    if (!Reachable.count(&*I)) {
-      BasicBlock *BB = &*I;
-      DeadBlocks.push_back(BB);
-    }
-
-  // Delete the dead blocks.
-  DeleteDeadBlocks(DeadBlocks);
-
-  return !DeadBlocks.empty();
-}
-
 namespace {
 class UnreachableBlockElimLegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override {
-    return eliminateUnreachableBlock(F);
+    return llvm::EliminateUnreachableBlocks(F);
   }
 
 public:
@@ -89,7 +68,7 @@ FunctionPass *llvm::createUnreachableBlockEliminationPass() {
 
 PreservedAnalyses UnreachableBlockElimPass::run(Function &F,
                                                 FunctionAnalysisManager &AM) {
-  bool Changed = eliminateUnreachableBlock(F);
+  bool Changed = llvm::EliminateUnreachableBlocks(F);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;

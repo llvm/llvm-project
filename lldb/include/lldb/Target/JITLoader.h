@@ -17,7 +17,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class JITLoader JITLoader.h "lldb/Target/JITLoader.h"
+/// \class JITLoader JITLoader.h "lldb/Target/JITLoader.h"
 /// A plug-in interface definition class for JIT loaders.
 ///
 /// Plugins of this kind listen for code generated at runtime in the target.
@@ -34,7 +34,7 @@ public:
   /// Scans the installed DynamicLoader plug-ins and tries to find all
   /// applicable instances for the current process.
   ///
-  /// @param[in] process
+  /// \param[in] process
   ///     The process for which to try and locate a JIT loader
   ///     plug-in instance.
   ///

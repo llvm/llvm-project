@@ -206,17 +206,17 @@ public:
   /// Read the section data from the object file that the section
   /// resides in.
   ///
-  /// @param[in] dst
+  /// \param[in] dst
   ///     Where to place the data
   ///
-  /// @param[in] dst_len
+  /// \param[in] dst_len
   ///     How many bytes of section data to read
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset in bytes within this section's data at which to
   ///     start copying data from.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes read from the section, or zero if the
   ///     section has no data or \a offset is not a valid offset
   ///     in this section.
@@ -231,10 +231,10 @@ public:
   /// object file is on disk, it will shared the mmap data for the
   /// entire object file.
   ///
-  /// @param[in] data
+  /// \param[in] data
   ///     Where to place the data, address byte size, and byte order
   ///
-  /// @return
+  /// \return
   ///     The number of bytes read from the section, or zero if the
   ///     section has no data or \a offset is not a valid offset
   ///     in this section.

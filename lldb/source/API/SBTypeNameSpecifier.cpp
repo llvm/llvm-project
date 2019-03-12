@@ -49,6 +49,10 @@ SBTypeNameSpecifier::~SBTypeNameSpecifier() {}
 
 bool SBTypeNameSpecifier::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeNameSpecifier, IsValid);
+  return this->operator bool();
+}
+SBTypeNameSpecifier::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeNameSpecifier, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

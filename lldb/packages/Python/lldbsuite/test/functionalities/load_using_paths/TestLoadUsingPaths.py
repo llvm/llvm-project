@@ -42,6 +42,7 @@ class LoadUsingPathsTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @not_remote_testsuite_ready
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @expectedFlakeyNetBSD
     def test_load_using_paths(self):
         """Test that we can load a module by providing a set of search paths."""
         if self.platformIsDarwin():

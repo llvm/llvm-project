@@ -145,6 +145,8 @@ public:
     bool
     IsValid() const;
 
+    explicit operator bool() const;
+
     const char *
     GetIOHandlerControlSequence(char ch);
 

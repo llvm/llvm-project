@@ -17,7 +17,7 @@
 #include <vector>
 
 //----------------------------------------------------------------------
-/// @class JSONGenerator JSONGenerator.h
+/// \class JSONGenerator JSONGenerator.h
 /// A class which can construct structured data for the sole purpose
 /// of printing it in JSON format.
 ///

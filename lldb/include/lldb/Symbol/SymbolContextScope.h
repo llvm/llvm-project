@@ -14,7 +14,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class SymbolContextScope SymbolContextScope.h
+/// \class SymbolContextScope SymbolContextScope.h
 /// "lldb/Symbol/SymbolContextScope.h" Inherit from this if your object is
 /// part of a symbol context
 ///        and can reconstruct its symbol context.
@@ -26,11 +26,11 @@ namespace lldb_private {
 /// complete SymbolContext object in the object.
 ///
 /// Examples of these objects include:
-///     @li Module
-///     @li CompileUnit
-///     @li Function
-///     @li Block
-///     @li Symbol
+///     \li Module
+///     \li CompileUnit
+///     \li Function
+///     \li Block
+///     \li Symbol
 ///
 /// Other objects can store a "SymbolContextScope *" using any pointers to one
 /// of the above objects. This allows clients to hold onto a pointer that
@@ -40,7 +40,7 @@ namespace lldb_private {
 ///
 /// Example objects include that currently use "SymbolContextScope *" objects
 /// include:
-///     @li Variable objects that can reconstruct where they are scoped
+///     \li Variable objects that can reconstruct where they are scoped
 ///         by making sure the SymbolContextScope * comes from the scope
 ///         in which the variable was declared. If a variable is a global,
 ///         the appropriate CompileUnit * will be used when creating the
@@ -48,9 +48,9 @@ namespace lldb_private {
 ///         in which the variable is defined. Function arguments can use
 ///         the Function object as their scope. The SymbolFile parsers
 ///         will set these correctly as the variables are parsed.
-///     @li Type objects that know exactly in which scope they
+///     \li Type objects that know exactly in which scope they
 ///         originated much like the variables above.
-///     @li StackID objects that are able to know that if the CFA
+///     \li StackID objects that are able to know that if the CFA
 ///         (stack pointer at the beginning of a function) and the
 ///         start PC for the function/symbol and the SymbolContextScope
 ///         pointer (a unique pointer that identifies a symbol context
@@ -74,7 +74,7 @@ public:
   /// function calls that require a symbol context can be made for the given
   /// object.
   ///
-  /// @param[out] sc
+  /// \param[out] sc
   ///     A symbol context object pointer that gets filled in.
   //------------------------------------------------------------------
   virtual void CalculateSymbolContext(SymbolContext *sc) = 0;
@@ -98,7 +98,7 @@ public:
   /// function is widely used in the DumpDebug and verbose output for lldb
   /// objects.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object's symbol context.
   //------------------------------------------------------------------
   virtual void DumpSymbolContext(Stream *s) = 0;

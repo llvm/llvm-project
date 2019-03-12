@@ -50,6 +50,10 @@ SBTypeEnumMember &SBTypeEnumMember::operator=(const SBTypeEnumMember &rhs) {
 
 bool SBTypeEnumMember::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeEnumMember, IsValid);
+  return this->operator bool();
+}
+SBTypeEnumMember::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeEnumMember, operator bool);
 
   return m_opaque_sp.get();
 }
@@ -120,6 +124,10 @@ SBTypeEnumMemberList::SBTypeEnumMemberList(const SBTypeEnumMemberList &rhs)
 
 bool SBTypeEnumMemberList::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBTypeEnumMemberList, IsValid);
+  return this->operator bool();
+}
+SBTypeEnumMemberList::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeEnumMemberList, operator bool);
 
   return (m_opaque_up != NULL);
 }

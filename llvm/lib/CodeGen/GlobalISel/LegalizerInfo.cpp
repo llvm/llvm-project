@@ -59,10 +59,30 @@ raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
 }
 
 #ifndef NDEBUG
+// Make sure the rule won't (trivially) loop forever.
+static bool hasNoSimpleLoops(const LegalizeRule &Rule, const LegalityQuery &Q,
+                             const std::pair<unsigned, LLT> &Mutation) {
+  switch (Rule.getAction()) {
+  case Custom:
+  case Lower:
+  case MoreElements:
+  case FewerElements:
+    break;
+  default:
+    return Q.Types[Mutation.first] != Mutation.second;
+  }
+  return true;
+}
+
 // Make sure the returned mutation makes sense for the match type.
 static bool mutationIsSane(const LegalizeRule &Rule,
                            const LegalityQuery &Q,
                            std::pair<unsigned, LLT> Mutation) {
+  // If the user wants a custom mutation, then we can't really say much about
+  // it. Return true, and trust that they're doing the right thing.
+  if (Rule.getAction() == Custom)
+    return true;
+
   const unsigned TypeIdx = Mutation.first;
   const LLT OldTy = Q.Types[TypeIdx];
   const LLT NewTy = Mutation.second;
@@ -133,12 +153,7 @@ LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
                         << Mutation.first << ", " << Mutation.second << "\n");
       assert(mutationIsSane(Rule, Query, Mutation) &&
              "legality mutation invalid for match");
-
-      assert((Query.Types[Mutation.first] != Mutation.second ||
-              Rule.getAction() == Lower ||
-              Rule.getAction() == MoreElements ||
-              Rule.getAction() == FewerElements) &&
-             "Simple loop detected");
+      assert(hasNoSimpleLoops(Rule, Query, Mutation) && "Simple loop detected");
       return {Rule.getAction(), Mutation.first, Mutation.second};
     } else
       LLVM_DEBUG(dbgs() << ".. no match\n");
@@ -435,6 +450,14 @@ bool LegalizerInfo::isLegal(const MachineInstr &MI,
   return getAction(MI, MRI).Action == Legal;
 }
 
+bool LegalizerInfo::isLegalOrCustom(const MachineInstr &MI,
+                                    const MachineRegisterInfo &MRI) const {
+  auto Action = getAction(MI, MRI).Action;
+  // If the action is custom, it may not necessarily modify the instruction,
+  // so we have to assume it's legal.
+  return Action == Legal || Action == Custom;
+}
+
 bool LegalizerInfo::legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
                                    MachineIRBuilder &MIRBuilder,
                                    GISelChangeObserver &Observer) const {
@@ -644,7 +667,8 @@ const MachineInstr *llvm::machineFunctionIsIllegal(const MachineFunction &MF) {
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     for (const MachineBasicBlock &MBB : MF)
       for (const MachineInstr &MI : MBB)
-        if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI))
+        if (isPreISelGenericOpcode(MI.getOpcode()) &&
+            !MLI->isLegalOrCustom(MI, MRI))
           return &MI;
   }
   return nullptr;

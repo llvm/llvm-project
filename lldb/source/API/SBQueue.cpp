@@ -247,6 +247,10 @@ SBQueue::~SBQueue() {}
 
 bool SBQueue::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueue, IsValid);
+  return this->operator bool();
+}
+SBQueue::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueue, operator bool);
 
   return m_opaque_sp->IsValid();
 }

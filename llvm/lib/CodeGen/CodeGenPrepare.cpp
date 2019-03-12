@@ -1180,6 +1180,17 @@ static bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
     bool MathDominates = DT.dominates(BO, Cmp);
     if (!MathDominates && !DT.dominates(Cmp, BO))
       return false;
+
+    // Check that the insertion doesn't create a value that is live across more
+    // than two blocks, so to minimise the increase in register pressure.
+    if (BO->getParent() != Cmp->getParent()) {
+      BasicBlock *Dominator = MathDominates ? BO->getParent() : Cmp->getParent();
+      BasicBlock *Dominated = MathDominates ? Cmp->getParent() : BO->getParent();
+      auto Successors = successors(Dominator);
+      if (llvm::find(Successors, Dominated) == Successors.end())
+        return false;
+    }
+
     InsertPt = MathDominates ? cast<Instruction>(BO) : cast<Instruction>(Cmp);
   }
 

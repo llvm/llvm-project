@@ -13,7 +13,7 @@
 #include "lldb/lldb-types.h"
 
 //----------------------------------------------------------------------
-/// @class HostInfo HostInfo.h "lldb/Host/HostProcess.h"
+/// \class HostInfo HostInfo.h "lldb/Host/HostProcess.h"
 /// A class that represents a running process on the host machine.
 ///
 /// HostProcess allows querying and manipulation of processes running on the

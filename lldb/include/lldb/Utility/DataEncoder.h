@@ -22,14 +22,14 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class DataEncoder DataEncoder.h "lldb/Core/DataEncoder.h" An binary data
+/// \class DataEncoder DataEncoder.h "lldb/Core/DataEncoder.h" An binary data
 /// encoding class.
 ///
 /// DataEncoder is a class that can encode binary data (swapping if needed) to
 /// a data buffer. The data buffer can be caller owned, or can be shared data
 /// that can be shared between multiple DataEncoder or DataEncoder instances.
 ///
-/// @see DataBuffer
+/// \see DataBuffer
 //----------------------------------------------------------------------
 class DataEncoder {
 public:
@@ -46,16 +46,16 @@ public:
   /// This constructor allows us to use data that is owned by the caller. The
   /// data must stay around as long as this object is valid.
   ///
-  /// @param[in] data
+  /// \param[in] data
   ///     A pointer to caller owned data.
   ///
-  /// @param[in] data_length
+  /// \param[in] data_length
   ///     The length in bytes of \a data.
   ///
-  /// @param[in] byte_order
+  /// \param[in] byte_order
   ///     A byte order of the data that we are extracting from.
   ///
-  /// @param[in] addr_size
+  /// \param[in] addr_size
   ///     A new address byte size value.
   //------------------------------------------------------------------
   DataEncoder(void *data, uint32_t data_length, lldb::ByteOrder byte_order,
@@ -69,13 +69,13 @@ public:
   /// the data lives as long as anyone still has a valid shared pointer to the
   /// data in \a data_sp.
   ///
-  /// @param[in] data_sp
+  /// \param[in] data_sp
   ///     A shared pointer to data.
   ///
-  /// @param[in] byte_order
+  /// \param[in] byte_order
   ///     A byte order of the data that we are extracting from.
   ///
-  /// @param[in] addr_size
+  /// \param[in] addr_size
   ///     A new address byte size value.
   //------------------------------------------------------------------
   DataEncoder(const lldb::DataBufferSP &data_sp, lldb::ByteOrder byte_order,
@@ -103,7 +103,7 @@ public:
   ///
   /// Return the size in bytes of any address values this object will extract.
   ///
-  /// @return
+  /// \return
   ///     The size in bytes of address values that will be extracted.
   //------------------------------------------------------------------
   uint8_t GetAddressByteSize() const { return m_addr_size; }
@@ -111,7 +111,7 @@ public:
   //------------------------------------------------------------------
   /// Get the number of bytes contained in this object.
   ///
-  /// @return
+  /// \return
   ///     The total number of bytes of data this object refers to.
   //------------------------------------------------------------------
   size_t GetByteSize() const { return m_end - m_start; }
@@ -119,7 +119,7 @@ public:
   //------------------------------------------------------------------
   /// Get the data end pointer.
   ///
-  /// @return
+  /// \return
   ///     Returns a pointer to the next byte contained in this
   ///     object's data, or NULL of there is no data in this object.
   //------------------------------------------------------------------
@@ -132,7 +132,7 @@ public:
   ///
   /// Get the offset of the first byte of data in the shared data (if any).
   ///
-  /// @return
+  /// \return
   ///     If this object contains shared data, this function returns
   ///     the offset in bytes into that shared data, zero otherwise.
   //------------------------------------------------------------------
@@ -141,7 +141,7 @@ public:
   //------------------------------------------------------------------
   /// Get the current byte order value.
   ///
-  /// @return
+  /// \return
   ///     The current byte order value from this object's internal
   ///     state.
   //------------------------------------------------------------------
@@ -150,7 +150,7 @@ public:
   //------------------------------------------------------------------
   /// Get the data start pointer.
   ///
-  /// @return
+  /// \return
   ///     Returns a pointer to the first byte contained in this
   ///     object's data, or NULL of there is no data in this object.
   //------------------------------------------------------------------
@@ -161,14 +161,14 @@ public:
   //------------------------------------------------------------------
   /// Encode unsigned integer values into the data at \a offset.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset within the contained data at which to put the
   ///     data.
   ///
-  /// @param[in] value
+  /// \param[in] value
   ///     The value to encode into the data.
   ///
-  /// @return
+  /// \return
   ///     The next offset in the bytes of this data if the data
   ///     was successfully encoded, UINT32_MAX if the encoding failed.
   //------------------------------------------------------------------
@@ -188,19 +188,19 @@ public:
   /// into the existing data. There must be enough room in the data, else
   /// UINT32_MAX will be returned to indicate that encoding failed.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset within the contained data at which to put the
   ///     encoded integer.
   ///
-  /// @param[in] byte_size
+  /// \param[in] byte_size
   ///     The size in byte of the integer to encode.
   ///
-  /// @param[in] value
+  /// \param[in] value
   ///     The integer value to write. The least significant bytes of
   ///     the integer value will be written if the size is less than
   ///     8 bytes.
   ///
-  /// @return
+  /// \return
   ///     The next offset in the bytes of this data if the integer
   ///     was successfully encoded, UINT32_MAX if the encoding failed.
   //------------------------------------------------------------------
@@ -209,17 +209,17 @@ public:
   //------------------------------------------------------------------
   /// Encode an arbitrary number of bytes.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset in bytes into the contained data at which to
   ///     start encoding.
   ///
-  /// @param[in] src
+  /// \param[in] src
   ///     The buffer that contains the bytes to encode.
   ///
-  /// @param[in] src_len
+  /// \param[in] src_len
   ///     The number of bytes to encode.
   ///
-  /// @return
+  /// \return
   ///     The next valid offset within data if the put operation
   ///     was successful, else UINT32_MAX to indicate the put failed.
   //------------------------------------------------------------------
@@ -235,14 +235,14 @@ public:
   /// m_addr_size member variable and should be set correctly prior to
   /// extracting any address values.
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     The next valid offset within data if the put operation
   ///     was successful, else UINT32_MAX to indicate the put failed.
   //------------------------------------------------------------------
@@ -253,14 +253,14 @@ public:
   ///
   /// Encodes a C string into the existing data including the terminating
   ///
-  /// @param[in,out] offset_ptr
+  /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
-  /// @return
+  /// \return
   ///     A pointer to the C string value in the data. If the offset
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the C string is out of bounds,
@@ -276,7 +276,7 @@ public:
   /// Set the size in bytes that will be used when extracting any address and
   /// pointer values from data contained in this object.
   ///
-  /// @param[in] addr_size
+  /// \param[in] addr_size
   ///     The size in bytes to use when extracting addresses.
   //------------------------------------------------------------------
   void SetAddressByteSize(uint8_t addr_size) { m_addr_size = addr_size; }
@@ -289,16 +289,16 @@ public:
   /// subset of this object's data, is valid. If \a bytes is NULL, or \a
   /// length is zero, this object will contain no data.
   ///
-  /// @param[in] bytes
+  /// \param[in] bytes
   ///     A pointer to caller owned data.
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The length in bytes of \a bytes.
   ///
-  /// @param[in] byte_order
+  /// \param[in] byte_order
   ///     A byte order of the data that we are extracting from.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object now contains.
   //------------------------------------------------------------------
   uint32_t SetData(void *bytes, uint32_t length, lldb::ByteOrder byte_order);
@@ -315,16 +315,16 @@ public:
   /// bytes available in \a data starting at \a offset, the length will be
   /// truncated to contains as many bytes as possible.
   ///
-  /// @param[in] data_sp
+  /// \param[in] data_sp
   ///     A shared pointer to data.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset into \a data_sp at which the subset starts.
   ///
-  /// @param[in] length
+  /// \param[in] length
   ///     The length in bytes of the subset of \a data_sp.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object now contains.
   //------------------------------------------------------------------
   uint32_t SetData(const lldb::DataBufferSP &data_sp, uint32_t offset = 0,
@@ -336,7 +336,7 @@ public:
   /// Sets the byte order of the data to extract. Extracted values will be
   /// swapped if necessary when decoding.
   ///
-  /// @param[in] byte_order
+  /// \param[in] byte_order
   ///     The byte order value to use when extracting data.
   //------------------------------------------------------------------
   void SetByteOrder(lldb::ByteOrder byte_order) { m_byte_order = byte_order; }
@@ -344,7 +344,7 @@ public:
   //------------------------------------------------------------------
   /// Test the validity of \a offset.
   ///
-  /// @return
+  /// \return
   ///     \b true if \a offset is a valid offset into the data in this
   ///     object, \b false otherwise.
   //------------------------------------------------------------------
@@ -353,7 +353,7 @@ public:
   //------------------------------------------------------------------
   /// Test the availability of \a length bytes of data from \a offset.
   ///
-  /// @return
+  /// \return
   ///     \b true if \a offset is a valid offset and there are \a
   ///     length bytes available at that offset, \b false otherwise.
   //------------------------------------------------------------------

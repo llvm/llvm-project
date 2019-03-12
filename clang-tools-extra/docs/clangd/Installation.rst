@@ -2,6 +2,8 @@
 Getting started with clangd
 ===========================
 
+.. contents::
+
 .. role:: raw-html(raw)
    :format: html
 

@@ -22,7 +22,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class BreakpointSite BreakpointSite.h "lldb/Breakpoint/BreakpointSite.h"
+/// \class BreakpointSite BreakpointSite.h "lldb/Breakpoint/BreakpointSite.h"
 /// Class that manages the actual breakpoint that will be inserted into the
 /// running program.
 ///
@@ -105,7 +105,7 @@ public:
   //------------------------------------------------------------------
   /// Sets whether the current breakpoint site is enabled or not
   ///
-  /// @param[in] enabled
+  /// \param[in] enabled
   ///    \b true if the breakpoint is enabled, \b false otherwise.
   //------------------------------------------------------------------
   void SetEnabled(bool enabled);
@@ -114,10 +114,10 @@ public:
   /// Enquires of the breakpoint locations that produced this breakpoint site
   /// whether we should stop at this location.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///    This contains the information about this stop.
   ///
-  /// @return
+  /// \return
   ///    \b true if we should stop, \b false otherwise.
   //------------------------------------------------------------------
   bool ShouldStop(StoppointCallbackContext *context) override;
@@ -125,7 +125,7 @@ public:
   //------------------------------------------------------------------
   /// Standard Dump method
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///    The stream to dump this output.
   //------------------------------------------------------------------
   void Dump(Stream *s) const override;
@@ -134,7 +134,7 @@ public:
   /// The "Owners" are the breakpoint locations that share this breakpoint
   /// site. The method adds the \a owner to this breakpoint site's owner list.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///    \a owner is the Breakpoint Location to add.
   //------------------------------------------------------------------
   void AddOwner(const lldb::BreakpointLocationSP &owner);
@@ -143,7 +143,7 @@ public:
   /// This method returns the number of breakpoint locations currently located
   /// at this breakpoint site.
   ///
-  /// @return
+  /// \return
   ///    The number of owners.
   //------------------------------------------------------------------
   size_t GetNumberOfOwners();
@@ -154,9 +154,9 @@ public:
   /// GetNumberOfOwners() - 1 so you can use this method to iterate over the
   /// owners
   ///
-  /// @param[in] index
+  /// \param[in] index
   ///     The index in the list of owners for which you wish the owner location.
-  /// @return
+  /// \return
   ///    A shared pointer to the breakpoint location at that index.
   //------------------------------------------------------------------
   lldb::BreakpointLocationSP GetOwnerAtIndex(size_t idx);
@@ -165,11 +165,11 @@ public:
   /// This method copies the breakpoint site's owners into a new collection.
   /// It does this while the owners mutex is locked.
   ///
-  /// @param[out] out_collection
+  /// \param[out] out_collection
   ///    The BreakpointLocationCollection into which to put the owners
   ///    of this breakpoint site.
   ///
-  /// @return
+  /// \return
   ///    The number of elements copied into out_collection.
   //------------------------------------------------------------------
   size_t CopyOwnersList(BreakpointLocationCollection &out_collection);
@@ -179,7 +179,7 @@ public:
   /// specifiers, and if yes, is \a thread contained in any of these
   /// specifiers.
   ///
-  /// @param[in] thread
+  /// \param[in] thread
   ///     The thread against which to test.
   ///
   /// return
@@ -194,24 +194,24 @@ public:
   /// BreakpointSite::Dump(Stream *) to get information about the breakpoint
   /// site itself.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to print the description.
   ///
-  /// @param[in] level
+  /// \param[in] level
   ///     The description level that indicates the detail level to
   ///     provide.
   ///
-  /// @see lldb::DescriptionLevel
+  /// \see lldb::DescriptionLevel
   //------------------------------------------------------------------
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
 
   //------------------------------------------------------------------
   /// Tell whether a breakpoint has a location at this site.
   ///
-  /// @param[in] bp_id
+  /// \param[in] bp_id
   ///     The breakpoint id to query.
   ///
-  /// @result
+  /// \result
   ///     \b true if bp_id has a location that is at this site,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -221,7 +221,7 @@ public:
   /// Tell whether ALL the breakpoints in the location collection are
   /// internal.
   ///
-  /// @result
+  /// \result
   ///     \b true if all breakpoint locations are owned by internal breakpoints,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -245,7 +245,7 @@ private:
   /// The method removes the owner at \a break_loc_id from this breakpoint
   /// list.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///    \a break_loc_id is the Breakpoint Location to remove.
   //------------------------------------------------------------------
   size_t RemoveOwner(lldb::break_id_t break_id, lldb::break_id_t break_loc_id);

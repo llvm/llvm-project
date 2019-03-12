@@ -156,7 +156,9 @@ release of Clang. Users of the build system should adjust accordingly.
 - In 8.0.0 and below, the install-clang-headers target would install clang's
   resource directory headers. This installation is now performed by the
   install-clang-resource-headers target. Users of the old install-clang-headers
-  target should switch to the new install-clang-resource-headers target.
+  target should switch to the new install-clang-resource-headers target. The
+  install-clang-headers target now installs clang's API headers (corresponding
+  to its libraries), which is consistent with the install-llvm-headers target.
 
 -  ...
 

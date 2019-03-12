@@ -18,6 +18,7 @@ Clang-Tidy Checks
    abseil-redundant-strcat-calls
    abseil-str-cat-append
    abseil-string-find-startswith
+   abseil-time-comparison
    abseil-time-subtraction
    abseil-upgrade-duration-conversions
    android-cloexec-accept

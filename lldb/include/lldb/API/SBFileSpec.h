@@ -28,6 +28,8 @@ public:
 
   const SBFileSpec &operator=(const lldb::SBFileSpec &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   bool Exists() const;

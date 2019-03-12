@@ -101,13 +101,13 @@ namespace {
 //------------------------------------------------------------------
 /// Safely get a character at the specified index.
 ///
-/// @param[in] path
+/// \param[in] path
 ///     A full, partial, or relative path to a file.
 ///
-/// @param[in] i
+/// \param[in] i
 ///     An index into path which may or may not be valid.
 ///
-/// @return
+/// \return
 ///   The character at index \a i if the index is valid, or 0 if
 ///   the index is not valid.
 //------------------------------------------------------------------
@@ -130,10 +130,10 @@ inline char safeCharAtIndex(const llvm::StringRef &path, size_t i) {
 /// need normalization since we aren't trying to resolve the path,
 /// we are just trying to remove redundant things from the path.
 ///
-/// @param[in] path
+/// \param[in] path
 ///     A full, partial, or relative path to a file.
 ///
-/// @return
+/// \return
 ///   Returns \b true if the path needs to be normalized.
 //------------------------------------------------------------------
 bool needsNormalization(const llvm::StringRef &path) {
@@ -531,7 +531,7 @@ bool FileSpec::RemoveLastPathComponent() {
 /// file (files with a ".c", ".cpp", ".m", ".mm" (many more)
 /// extension).
 ///
-/// @return
+/// \return
 ///     \b true if the filespec represents an implementation source
 ///     file, \b false otherwise.
 //------------------------------------------------------------------

@@ -74,6 +74,10 @@ SBAddress SBLineEntry::GetEndAddress() const {
 
 bool SBLineEntry::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBLineEntry, IsValid);
+  return this->operator bool();
+}
+SBLineEntry::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBLineEntry, operator bool);
 
   return m_opaque_up.get() && m_opaque_up->IsValid();
 }

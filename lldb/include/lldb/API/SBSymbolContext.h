@@ -29,6 +29,8 @@ public:
 
   ~SBSymbolContext();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const lldb::SBSymbolContext &operator=(const lldb::SBSymbolContext &rhs);

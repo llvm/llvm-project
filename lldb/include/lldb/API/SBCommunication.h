@@ -37,6 +37,8 @@ public:
   SBCommunication(const char *broadcaster_name);
   ~SBCommunication();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   lldb::SBBroadcaster GetBroadcaster();

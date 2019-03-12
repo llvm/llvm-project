@@ -46,6 +46,10 @@ SBFunction::~SBFunction() { m_opaque_ptr = NULL; }
 
 bool SBFunction::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFunction, IsValid);
+  return this->operator bool();
+}
+SBFunction::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFunction, operator bool);
 
   return m_opaque_ptr != NULL;
 }

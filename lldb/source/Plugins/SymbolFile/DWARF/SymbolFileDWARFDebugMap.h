@@ -336,10 +336,10 @@ protected:
   //------------------------------------------------------------------
   /// Convert \a addr from a .o file address, to an executable address.
   ///
-  /// @param[in] addr
+  /// \param[in] addr
   ///     A section offset address from a .o file
   ///
-  /// @return
+  /// \return
   ///     Returns true if \a addr was converted to be an executable
   ///     section/offset address, false otherwise.
   //------------------------------------------------------------------
@@ -348,13 +348,13 @@ protected:
   //------------------------------------------------------------------
   /// Convert a .o file "file address" to an executable "file address".
   ///
-  /// @param[in] oso_symfile
+  /// \param[in] oso_symfile
   ///     The DWARF symbol file that contains \a oso_file_addr
   ///
-  /// @param[in] oso_file_addr
+  /// \param[in] oso_file_addr
   ///     A .o file "file address" to convert.
   ///
-  /// @return
+  /// \return
   ///     LLDB_INVALID_ADDRESS if \a oso_file_addr is not in the
   ///     linked executable, otherwise a valid "file address" from the
   ///     linked executable that contains the debug map.
@@ -367,13 +367,13 @@ protected:
   /// for a .o file represented by \a oso_symfile, link a new line table
   /// and return it.
   ///
-  /// @param[in] oso_symfile
+  /// \param[in] oso_symfile
   ///     The DWARF symbol file that produced the \a line_table
   ///
-  /// @param[in] addr
+  /// \param[in] addr
   ///     A section offset address from a .o file
   ///
-  /// @return
+  /// \return
   ///     Returns a valid line table full of linked addresses, or NULL
   ///     if none of the line table addresses exist in the main
   ///     executable.

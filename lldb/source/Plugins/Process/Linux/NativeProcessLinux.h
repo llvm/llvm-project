@@ -29,7 +29,7 @@ class Status;
 class Scalar;
 
 namespace process_linux {
-/// @class NativeProcessLinux
+/// \class NativeProcessLinux
 /// Manages communication with the inferior (debugee) process.
 ///
 /// Upon construction, this class prepares and launches an inferior process
@@ -182,7 +182,7 @@ private:
   NativeThreadLinux &AddThread(lldb::tid_t thread_id);
 
   /// Writes a siginfo_t structure corresponding to the given thread ID to the
-  /// memory region pointed to by @p siginfo.
+  /// memory region pointed to by \p siginfo.
   Status GetSignalInfo(lldb::tid_t tid, void *siginfo);
 
   /// Writes the raw event message code (vis-a-vis PTRACE_GETEVENTMSG)

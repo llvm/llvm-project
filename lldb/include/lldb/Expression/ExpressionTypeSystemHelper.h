@@ -15,7 +15,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ExpressionTypeSystemHelper ExpressionTypeSystemHelper.h
+/// \class ExpressionTypeSystemHelper ExpressionTypeSystemHelper.h
 /// "lldb/Expression/ExpressionTypeSystemHelper.h"
 /// A helper object that the Expression can pass to its ExpressionParser
 /// to provide generic information that

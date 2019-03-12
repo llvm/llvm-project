@@ -4650,7 +4650,7 @@ static bool HaveBmi() {
   U4 a = 0, b = 0, c = 0, d = 0;
   asm("cpuid\n\t" : "=a"(a), "=D"(b), "=c"(c), "=d"(d) : "a"(7));
   const U4 kBmi12Mask = (1U<<3) | (1U<<8);
-  return b | kBmi12Mask;
+  return b & kBmi12Mask;
 }
 
 __attribute__((target("bmi,bmi2")))

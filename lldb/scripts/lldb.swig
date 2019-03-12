@@ -95,9 +95,8 @@ def lldb_iter(obj, getsize, getelem):
 # ==============================================================================
 # The modify-python-lldb.py script is responsible for post-processing this SWIG-
 # generated lldb.py module.  It is responsible for adding support for: iteration
-# protocol: __iter__, rich comparison methods: __eq__ and __ne__, truth value
-# testing (and built-in operation bool()): __nonzero__, and built-in function
-# len(): __len__.
+# protocol: __iter__, rich comparison methods: __eq__ and __ne__, and built-in
+# function len(): __len__.
 # ==============================================================================
 %}
 

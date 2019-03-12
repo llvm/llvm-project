@@ -471,7 +471,6 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
   }
   if (IsX86_64) {
     Res |= SanitizerKind::DataFlow;
-    Res |= SanitizerKind::Efficiency;
     Res |= SanitizerKind::Fuzzer;
     Res |= SanitizerKind::FuzzerNoLink;
     Res |= SanitizerKind::HWAddress;

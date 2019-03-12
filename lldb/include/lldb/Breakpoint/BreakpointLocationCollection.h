@@ -26,11 +26,11 @@ public:
   //------------------------------------------------------------------
   /// Add the breakpoint \a bp_loc_sp to the list.
   ///
-  /// @param[in] bp_sp
+  /// \param[in] bp_sp
   ///     Shared pointer to the breakpoint location that will get added
   ///     to the list.
   ///
-  /// @result
+  /// \result
   ///     Returns breakpoint location id.
   //------------------------------------------------------------------
   void Add(const lldb::BreakpointLocationSP &bp_loc_sp);
@@ -39,13 +39,13 @@ public:
   /// Removes the breakpoint location given by \b breakID from this
   /// list.
   ///
-  /// @param[in] break_id
+  /// \param[in] break_id
   ///     The breakpoint index to remove.
   ///
-  /// @param[in] break_loc_id
+  /// \param[in] break_loc_id
   ///     The breakpoint location index in break_id to remove.
   ///
-  /// @result
+  /// \result
   ///     \b true if the breakpoint was in the list.
   //------------------------------------------------------------------
   bool Remove(lldb::break_id_t break_id, lldb::break_id_t break_loc_id);
@@ -54,13 +54,13 @@ public:
   /// Returns a shared pointer to the breakpoint location with id \a
   /// breakID.
   ///
-  /// @param[in] break_id
+  /// \param[in] break_id
   ///     The breakpoint  ID to seek for.
   ///
-  /// @param[in] break_loc_id
+  /// \param[in] break_loc_id
   ///     The breakpoint location ID in \a break_id to seek for.
   ///
-  /// @result
+  /// \result
   ///     A shared pointer to the breakpoint.  May contain a NULL
   ///     pointer if the breakpoint doesn't exist.
   //------------------------------------------------------------------
@@ -71,13 +71,13 @@ public:
   /// Returns a shared pointer to the breakpoint location with id \a
   /// breakID, const version.
   ///
-  /// @param[in] breakID
+  /// \param[in] breakID
   ///     The breakpoint location ID to seek for.
   ///
-  /// @param[in] break_loc_id
+  /// \param[in] break_loc_id
   ///     The breakpoint location ID in \a break_id to seek for.
   ///
-  /// @result
+  /// \result
   ///     A shared pointer to the breakpoint.  May contain a NULL
   ///     pointer if the breakpoint doesn't exist.
   //------------------------------------------------------------------
@@ -88,10 +88,10 @@ public:
   /// Returns a shared pointer to the breakpoint location with index
   /// \a i.
   ///
-  /// @param[in] i
+  /// \param[in] i
   ///     The breakpoint location index to seek for.
   ///
-  /// @result
+  /// \result
   ///     A shared pointer to the breakpoint.  May contain a NULL
   ///     pointer if the breakpoint doesn't exist.
   //------------------------------------------------------------------
@@ -101,10 +101,10 @@ public:
   /// Returns a shared pointer to the breakpoint location with index
   /// \a i, const version.
   ///
-  /// @param[in] i
+  /// \param[in] i
   ///     The breakpoint location index to seek for.
   ///
-  /// @result
+  /// \result
   ///     A shared pointer to the breakpoint.  May contain a NULL
   ///     pointer if the breakpoint doesn't exist.
   //------------------------------------------------------------------
@@ -113,7 +113,7 @@ public:
   //------------------------------------------------------------------
   /// Returns the number of elements in this breakpoint location list.
   ///
-  /// @result
+  /// \result
   ///     The number of elements.
   //------------------------------------------------------------------
   size_t GetSize() const { return m_break_loc_collection.size(); }
@@ -122,13 +122,13 @@ public:
   /// Enquires of all the breakpoint locations in this list whether
   /// we should stop at a hit at \a breakID.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///    This contains the information about this stop.
   ///
-  /// @param[in] breakID
+  /// \param[in] breakID
   ///    This break ID that we hit.
   ///
-  /// @return
+  /// \return
   ///    \b true if we should stop, \b false otherwise.
   //------------------------------------------------------------------
   bool ShouldStop(StoppointCallbackContext *context);
@@ -137,14 +137,14 @@ public:
   /// Print a description of the breakpoint locations in this list
   /// to the stream \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to print the description.
   ///
-  /// @param[in] level
+  /// \param[in] level
   ///     The description level that indicates the detail level to
   ///     provide.
   ///
-  /// @see lldb::DescriptionLevel
+  /// \see lldb::DescriptionLevel
   //------------------------------------------------------------------
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
 
@@ -153,7 +153,7 @@ public:
   /// thread specifiers, and if yes, is \a thread_id contained in any
   /// of these specifiers.
   ///
-  /// @param[in] thread
+  /// \param[in] thread
   ///     The thread against which to test.
   ///
   /// return
@@ -165,7 +165,7 @@ public:
   //------------------------------------------------------------------
   /// Tell whether ALL the breakpoints in the location collection are internal.
   ///
-  /// @result
+  /// \result
   ///     \b true if all breakpoint locations are owned by internal breakpoints,
   ///     \b false otherwise.
   //------------------------------------------------------------------

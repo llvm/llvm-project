@@ -40,6 +40,10 @@ SBQueueItem::~SBQueueItem() { m_queue_item_sp.reset(); }
 
 bool SBQueueItem::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueueItem, IsValid);
+  return this->operator bool();
+}
+SBQueueItem::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueueItem, operator bool);
 
   return m_queue_item_sp.get() != NULL;
 }

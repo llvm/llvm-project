@@ -188,6 +188,10 @@ lldb::LanguageType SBCompileUnit::GetLanguage() {
 
 bool SBCompileUnit::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCompileUnit, IsValid);
+  return this->operator bool();
+}
+SBCompileUnit::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCompileUnit, operator bool);
 
   return m_opaque_ptr != NULL;
 }

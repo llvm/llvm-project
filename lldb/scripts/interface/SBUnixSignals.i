@@ -26,6 +26,8 @@ public:
     bool
     IsValid () const;
 
+    explicit operator bool() const;
+
     const char *
     GetSignalAsCString (int32_t signo) const;
 

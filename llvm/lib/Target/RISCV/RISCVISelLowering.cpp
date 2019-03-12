@@ -813,8 +813,8 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   F->insert(I, IfFalseMBB);
   F->insert(I, TailMBB);
   // Move all remaining instructions to TailMBB.
-  TailMBB->splice(TailMBB->begin(), HeadMBB,
-                  std::next(MachineBasicBlock::iterator(MI)), HeadMBB->end());
+  TailMBB->splice(TailMBB->begin(), HeadMBB, std::next(MI.getIterator()),
+                  HeadMBB->end());
   // Update machine-CFG edges by transferring all successors of the current
   // block to the new block which will contain the Phi node for the select.
   TailMBB->transferSuccessorsAndUpdatePHIs(HeadMBB);

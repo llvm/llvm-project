@@ -38,7 +38,7 @@ public:
   //------------------------------------------------------------------
   /// Get the number of libdispatch queues that are available
   ///
-  /// @return
+  /// \return
   ///     The number of queues that are stored in the QueueList.
   //------------------------------------------------------------------
   uint32_t GetSize();
@@ -46,9 +46,9 @@ public:
   //------------------------------------------------------------------
   /// Get the Queue at a given index number
   ///
-  /// @param [in] idx
+  /// \param [in] idx
   ///     The index number (0-based) of the queue.
-  /// @return
+  /// \return
   ///     The Queue at that index number.
   //------------------------------------------------------------------
   lldb::QueueSP GetQueueAtIndex(uint32_t idx);
@@ -61,7 +61,7 @@ public:
   //------------------------------------------------------------------
   /// Iterate over the list of queues
   ///
-  /// @return
+  /// \return
   ///     An Iterable object which can be used to loop over the queues
   ///     that exist.
   //------------------------------------------------------------------
@@ -75,7 +75,7 @@ public:
   //------------------------------------------------------------------
   /// Add a Queue to the QueueList
   ///
-  /// @param [in] queue
+  /// \param [in] queue
   ///     Used by the SystemRuntime to populate the QueueList
   //------------------------------------------------------------------
   void AddQueue(lldb::QueueSP queue);
@@ -83,10 +83,10 @@ public:
   //------------------------------------------------------------------
   /// Find a queue in the QueueList by QueueID
   ///
-  /// @param [in] qid
+  /// \param [in] qid
   ///     The QueueID (same as returned by Thread::GetQueueID()) to find.
   ///
-  /// @return
+  /// \return
   ///     A QueueSP to the queue requested, if it is present in the QueueList.
   ///     An empty QueueSP will be returned if this queue was not found.
   //------------------------------------------------------------------
@@ -95,13 +95,13 @@ public:
   //------------------------------------------------------------------
   /// Find a queue in the QueueList by IndexID
   ///
-  /// @param [in] index_id
+  /// \param [in] index_id
   ///     Find a queue by IndexID.  This is an integer associated with each
   ///     unique queue seen during a debug session and will not be reused
   ///     for a different queue.  Unlike the QueueID, a 64-bit value, this
   ///     will tend to be an integral value like 1 or 7.
   ///
-  /// @return
+  /// \return
   ///     A QueueSP to the queue requested, if it is present in the QueueList.
   ///     An empty QueueSP will be returned if this queue was not found.
   //------------------------------------------------------------------

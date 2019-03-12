@@ -25,20 +25,20 @@ class PDBSymbolData;
 //------------------------------------------------------------------------------
 /// Converts a location information from a PDB symbol to a DWARF expression
 ///
-/// @param[in] module
+/// \param[in] module
 ///     The module \a symbol belongs to.
 ///
-/// @param[in] symbol
+/// \param[in] symbol
 ///     The symbol with a location information to convert.
 ///
-/// @param[in] ranges
+/// \param[in] ranges
 ///     Ranges where this variable is valid.
 ///
-/// @param[out] is_constant
+/// \param[out] is_constant
 ///     Set to \b true if the result expression is a constant value data,
 ///     and \b false if it is a DWARF bytecode.
 ///
-/// @return
+/// \return
 ///     The DWARF expression corresponding to the location data of \a symbol.
 //------------------------------------------------------------------------------
 lldb_private::DWARFExpression

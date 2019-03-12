@@ -377,7 +377,7 @@ void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   State.Bundle = &MI;
   State.Index = 0;
   size_t Last = HexagonMCInstrInfo::bundleSize(HMB) - 1;
-  uint64_t Features = computeAvailableFeatures(STI.getFeatureBits());
+  FeatureBitset Features = computeAvailableFeatures(STI.getFeatureBits());
 
   for (auto &I : HexagonMCInstrInfo::bundleInstructions(HMB)) {
     MCInst &HMI = const_cast<MCInst &>(*I.getInst());

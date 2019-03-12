@@ -157,7 +157,4 @@ source_set("sources") {
     "sanitizer_win_dll_thunk.h",
     "sanitizer_win_weak_interception.h",
   ]
-  if (current_cpu == "x64") {
-    sources += [ "sanitizer_linux_x86_64.S" ]
-  }
 }

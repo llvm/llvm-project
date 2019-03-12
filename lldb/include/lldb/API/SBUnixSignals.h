@@ -26,6 +26,8 @@ public:
 
   void Clear();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const char *GetSignalAsCString(int32_t signo) const;

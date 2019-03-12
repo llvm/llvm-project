@@ -20,7 +20,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class BreakpointResolver BreakpointResolver.h
+/// \class BreakpointResolver BreakpointResolver.h
 /// "lldb/Breakpoint/BreakpointResolver.h" This class works with SearchFilter
 /// to resolve logical breakpoints to their of concrete breakpoint locations.
 //----------------------------------------------------------------------
@@ -45,12 +45,12 @@ public:
   /// to make sense.  It can be constructed without a breakpoint, but you have
   /// to call SetBreakpoint before ResolveBreakpoint.
   ///
-  /// @param[in] bkpt
+  /// \param[in] bkpt
   ///   The breakpoint that owns this resolver.
-  /// @param[in] resolverType
+  /// \param[in] resolverType
   ///   The concrete breakpoint resolver type for this breakpoint.
   ///
-  /// @result
+  /// \result
   ///   Returns breakpoint location id.
   //------------------------------------------------------------------
   BreakpointResolver(Breakpoint *bkpt, unsigned char resolverType,
@@ -65,7 +65,7 @@ public:
   //------------------------------------------------------------------
   /// This sets the breakpoint for this resolver.
   ///
-  /// @param[in] bkpt
+  /// \param[in] bkpt
   ///   The breakpoint that owns this resolver.
   //------------------------------------------------------------------
   void SetBreakpoint(Breakpoint *bkpt);
@@ -75,7 +75,7 @@ public:
   /// currently set for this breakpoint will have their offset adjusted when
   /// this is called.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///   The offset to add to all locations.
   //------------------------------------------------------------------
   void SetOffset(lldb::addr_t offset);
@@ -85,7 +85,7 @@ public:
   /// currently set for this breakpoint will have their offset adjusted when
   /// this is called.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///   The offset to add to all locations.
   //------------------------------------------------------------------
   lldb::addr_t GetOffset() const { return m_offset; }
@@ -94,7 +94,7 @@ public:
   /// In response to this method the resolver scans all the modules in the
   /// breakpoint's target, and adds any new locations it finds.
   ///
-  /// @param[in] filter
+  /// \param[in] filter
   ///   The filter that will manage the search for this resolver.
   //------------------------------------------------------------------
   virtual void ResolveBreakpoint(SearchFilter &filter);
@@ -103,7 +103,7 @@ public:
   /// In response to this method the resolver scans the modules in the module
   /// list \a modules, and adds any new locations it finds.
   ///
-  /// @param[in] filter
+  /// \param[in] filter
   ///   The filter that will manage the search for this resolver.
   //------------------------------------------------------------------
   virtual void ResolveBreakpointInModules(SearchFilter &filter,
@@ -112,7 +112,7 @@ public:
   //------------------------------------------------------------------
   /// Prints a canonical description for the breakpoint to the stream \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///   Stream to which the output is copied.
   //------------------------------------------------------------------
   void GetDescription(Stream *s) override = 0;

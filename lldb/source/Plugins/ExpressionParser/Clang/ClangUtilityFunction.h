@@ -23,7 +23,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ClangUtilityFunction ClangUtilityFunction.h
+/// \class ClangUtilityFunction ClangUtilityFunction.h
 /// "lldb/Expression/ClangUtilityFunction.h" Encapsulates a single expression
 /// for use with Clang
 ///
@@ -58,7 +58,7 @@ public:
     /// Return the object that the parser should allow to access ASTs. May be
     /// NULL if the ASTs do not need to be transformed.
     ///
-    /// @param[in] passthrough
+    /// \param[in] passthrough
     ///     The ASTConsumer that the returned transformer should send
     ///     the ASTs to after transformation.
     //------------------------------------------------------------------
@@ -73,10 +73,10 @@ public:
   //------------------------------------------------------------------
   /// Constructor
   ///
-  /// @param[in] text
+  /// \param[in] text
   ///     The text of the function.  Must be a full translation unit.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the function, as used in the text.
   //------------------------------------------------------------------
   ClangUtilityFunction(ExecutionContextScope &exe_scope, const char *text,

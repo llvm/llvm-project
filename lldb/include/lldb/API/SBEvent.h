@@ -35,6 +35,8 @@ public:
 
   const SBEvent &operator=(const lldb::SBEvent &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const char *GetDataFlavor();

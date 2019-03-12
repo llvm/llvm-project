@@ -48,6 +48,10 @@ SBSection::~SBSection() {}
 
 bool SBSection::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSection, IsValid);
+  return this->operator bool();
+}
+SBSection::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSection, operator bool);
 
   SectionSP section_sp(GetSP());
   return section_sp && section_sp->GetModule().get() != NULL;

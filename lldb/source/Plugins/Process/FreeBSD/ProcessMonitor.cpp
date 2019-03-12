@@ -196,7 +196,7 @@ static bool EnsureFDFlags(int fd, int flags, Status &error) {
 }
 
 //------------------------------------------------------------------------------
-/// @class Operation
+/// \class Operation
 /// Represents a ProcessMonitor operation.
 ///
 /// Under FreeBSD, it is not possible to ptrace() from any other thread but
@@ -214,7 +214,7 @@ public:
 };
 
 //------------------------------------------------------------------------------
-/// @class ReadOperation
+/// \class ReadOperation
 /// Implements ProcessMonitor::ReadMemory.
 class ReadOperation : public Operation {
 public:
@@ -240,7 +240,7 @@ void ReadOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class WriteOperation
+/// \class WriteOperation
 /// Implements ProcessMonitor::WriteMemory.
 class WriteOperation : public Operation {
 public:
@@ -266,7 +266,7 @@ void WriteOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class ReadRegOperation
+/// \class ReadRegOperation
 /// Implements ProcessMonitor::ReadRegisterValue.
 class ReadRegOperation : public Operation {
 public:
@@ -306,7 +306,7 @@ void ReadRegOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class WriteRegOperation
+/// \class WriteRegOperation
 /// Implements ProcessMonitor::WriteRegisterValue.
 class WriteRegOperation : public Operation {
 public:
@@ -339,7 +339,7 @@ void WriteRegOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class ReadDebugRegOperation
+/// \class ReadDebugRegOperation
 /// Implements ProcessMonitor::ReadDebugRegisterValue.
 class ReadDebugRegOperation : public Operation {
 public:
@@ -374,7 +374,7 @@ void ReadDebugRegOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class WriteDebugRegOperation
+/// \class WriteDebugRegOperation
 /// Implements ProcessMonitor::WriteDebugRegisterValue.
 class WriteDebugRegOperation : public Operation {
 public:
@@ -407,7 +407,7 @@ void WriteDebugRegOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class ReadGPROperation
+/// \class ReadGPROperation
 /// Implements ProcessMonitor::ReadGPR.
 class ReadGPROperation : public Operation {
 public:
@@ -434,7 +434,7 @@ void ReadGPROperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class ReadFPROperation
+/// \class ReadFPROperation
 /// Implements ProcessMonitor::ReadFPR.
 class ReadFPROperation : public Operation {
 public:
@@ -457,7 +457,7 @@ void ReadFPROperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class WriteGPROperation
+/// \class WriteGPROperation
 /// Implements ProcessMonitor::WriteGPR.
 class WriteGPROperation : public Operation {
 public:
@@ -480,7 +480,7 @@ void WriteGPROperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class WriteFPROperation
+/// \class WriteFPROperation
 /// Implements ProcessMonitor::WriteFPR.
 class WriteFPROperation : public Operation {
 public:
@@ -503,7 +503,7 @@ void WriteFPROperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class ResumeOperation
+/// \class ResumeOperation
 /// Implements ProcessMonitor::Resume.
 class ResumeOperation : public Operation {
 public:
@@ -534,7 +534,7 @@ void ResumeOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class SingleStepOperation
+/// \class SingleStepOperation
 /// Implements ProcessMonitor::SingleStep.
 class SingleStepOperation : public Operation {
 public:
@@ -562,7 +562,7 @@ void SingleStepOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class LwpInfoOperation
+/// \class LwpInfoOperation
 /// Implements ProcessMonitor::GetLwpInfo.
 class LwpInfoOperation : public Operation {
 public:
@@ -591,7 +591,7 @@ void LwpInfoOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class ThreadSuspendOperation
+/// \class ThreadSuspendOperation
 /// Implements ProcessMonitor::ThreadSuspend.
 class ThreadSuspendOperation : public Operation {
 public:
@@ -611,7 +611,7 @@ void ThreadSuspendOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class EventMessageOperation
+/// \class EventMessageOperation
 /// Implements ProcessMonitor::GetEventMessage.
 class EventMessageOperation : public Operation {
 public:
@@ -641,7 +641,7 @@ void EventMessageOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class KillOperation
+/// \class KillOperation
 /// Implements ProcessMonitor::Kill.
 class KillOperation : public Operation {
 public:
@@ -663,7 +663,7 @@ void KillOperation::Execute(ProcessMonitor *monitor) {
 }
 
 //------------------------------------------------------------------------------
-/// @class DetachOperation
+/// \class DetachOperation
 /// Implements ProcessMonitor::Detach.
 class DetachOperation : public Operation {
 public:

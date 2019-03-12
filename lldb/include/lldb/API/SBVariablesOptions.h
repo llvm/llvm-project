@@ -26,6 +26,8 @@ public:
 
   ~SBVariablesOptions();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   bool GetIncludeArguments() const;
