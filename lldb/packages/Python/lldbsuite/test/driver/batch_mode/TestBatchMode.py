@@ -45,14 +45,13 @@ class DriverBatchModeTest (TestBase):
         self.build()
         self.setTearDownCleanup()
 
-        self.runCmd("log enable lldb expr")
-        
         import pexpect
         exe = self.getBuildArtifact("a.out")
+        module_cache = self.getBuildArtifact("module.cache")
         prompt = "(lldb) "
 
         # Pass CRASH so the process will crash and stop in batch mode.
-        run_commands = ' -b -o "break set -n main" -o "run" -o "continue" -k "frame var touch_me_not"'
+        run_commands = ' -b -o "settings set symbols.clang-modules-cache-path %s" -o "break set -n main" -o "run" -o "continue" -k "frame var touch_me_not"' % module_cache
         self.child = pexpect.spawn(
             '%s %s %s %s -- CRASH' %
             (lldbtest_config.lldbExec, self.lldbOption, run_commands, exe))
@@ -87,14 +86,13 @@ class DriverBatchModeTest (TestBase):
         self.build()
         self.setTearDownCleanup()
 
-        self.runCmd("log enable lldb expr")
-        
         import pexpect
         exe = self.getBuildArtifact("a.out")
+        module_cache = self.getBuildArtifact("module.cache")
         prompt = "(lldb) "
 
         # Now do it again, and make sure if we don't crash, we quit:
-        run_commands = ' -b -o "break set -n main" -o "run" -o "continue" '
+        run_commands = ' -b -o "settings set symbols.clang-modules-cache-path %s" -o "break set -n main" -o "run" -o "continue" '%module_cache
         self.child = pexpect.spawn(
             '%s %s %s %s -- NOCRASH' %
             (lldbtest_config.lldbExec, self.lldbOption, run_commands, exe))
@@ -133,10 +131,9 @@ class DriverBatchModeTest (TestBase):
         self.build()
         self.setTearDownCleanup()
 
-        self.runCmd("log enable lldb expr")
-        
         import pexpect
         exe = self.getBuildArtifact("a.out")
+        module_cache = self.getBuildArtifact("module.cache")
         prompt = "(lldb) "
 
         # Finally, start up the process by hand, attach to it, and wait for its completion.
@@ -162,8 +159,8 @@ class DriverBatchModeTest (TestBase):
 
         self.victim.expect("Waiting")
 
-        run_commands = ' -b -o "process attach -p %d" -o "breakpoint set --file %s -p \'Stop here to unset keep_waiting\' -N keep_waiting" -o "continue" -o "break delete keep_waiting" -o "expr keep_waiting = 0" -o "continue" ' % (
-            victim_pid, self.source)
+        run_commands = ' -b  -o "settings set symbols.clang-modules-cache-path %s" -o "process attach -p %d" -o "breakpoint set --file %s -p \'Stop here to unset keep_waiting\' -N keep_waiting" -o "continue" -o "break delete keep_waiting" -o "expr keep_waiting = 0" -o "continue" ' % (
+            module_cache, victim_pid, self.source)
         self.child = pexpect.spawn(
             '%s %s %s %s' %
             (lldbtest_config.lldbExec,

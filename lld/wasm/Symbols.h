@@ -249,6 +249,21 @@ public:
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedDataKind;
   }
+
+  // Undefined data symbols are imported as wasm globals so also have a global
+  // index.
+  uint32_t getGlobalIndex() const {
+    assert(GlobalIndex != INVALID_INDEX);
+    return GlobalIndex;
+  }
+  void setGlobalIndex(uint32_t Index) {
+    assert(GlobalIndex == INVALID_INDEX);
+    GlobalIndex = Index;
+  }
+  bool hasGlobalIndex() const { return GlobalIndex != INVALID_INDEX; }
+
+protected:
+  uint32_t GlobalIndex = INVALID_INDEX;
 };
 
 class GlobalSymbol : public Symbol {
