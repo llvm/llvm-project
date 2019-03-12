@@ -23,7 +23,7 @@ body: |
     $vgpr2 = V_MOV_B32_e32 $sgpr10, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
     $vgpr3 = V_MOV_B32_e32 $sgpr11, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $exec
     S_NOP 0, implicit killed $sgpr6_sgpr7, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 # CHECK-LABEL: name: func0
 # CHECK-DAG: $sgpr10 = S_MOV_B32 5
@@ -42,4 +42,4 @@ body: |
 # CHECK: $vgpr2 = V_MOV_B32_e32 $sgpr10, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
 # CHECK: $vgpr3 = V_MOV_B32_e32 killed $sgpr11, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $exec
 # CHECK: S_NOP 0, implicit killed $sgpr6_sgpr7, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3
-# CHECK: S_ENDPGM
+# CHECK: S_ENDPGM 0

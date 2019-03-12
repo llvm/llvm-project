@@ -161,6 +161,10 @@ void SBEvent::reset(Event *event_ptr) {
 
 bool SBEvent::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBEvent, IsValid);
+  return this->operator bool();
+}
+SBEvent::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBEvent, operator bool);
 
   // Do NOT use m_opaque_ptr directly!!! Must use the SBEvent::get() accessor.
   // See comments in SBEvent::get()....

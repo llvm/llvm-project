@@ -110,7 +110,7 @@ body:             |
     liveins: $sgpr2_sgpr3
 
     $exec = S_OR_B64 $exec, killed $sgpr2_sgpr3, implicit-def $scc
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 

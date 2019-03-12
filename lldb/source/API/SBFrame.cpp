@@ -91,6 +91,10 @@ void SBFrame::SetFrameSP(const StackFrameSP &lldb_object_sp) {
 
 bool SBFrame::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFrame, IsValid);
+  return this->operator bool();
+}
+SBFrame::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFrame, operator bool);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);

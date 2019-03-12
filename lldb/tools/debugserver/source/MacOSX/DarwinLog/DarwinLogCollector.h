@@ -32,7 +32,7 @@ public:
   //------------------------------------------------------------------
   /// Return whether the os_log and activity tracing SPI is available.
   ///
-  /// @return \b true if the activity stream support is available,
+  /// \return \b true if the activity stream support is available,
   /// \b false otherwise.
   //------------------------------------------------------------------
   static bool IsSupported();
@@ -41,7 +41,7 @@ public:
   /// Return a log function suitable for DNBLog to use as the internal
   /// logging function.
   ///
-  /// @return a DNBLog-style logging function if IsSupported() returns
+  /// \return a DNBLog-style logging function if IsSupported() returns
   ///      true; otherwise, returns nullptr.
   //------------------------------------------------------------------
   static DNBCallbackLog GetLogFunction();

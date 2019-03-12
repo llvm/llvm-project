@@ -41,7 +41,7 @@ public:
   //------------------------------------------------------------------
   /// Get the kind of work item this is
   ///
-  /// @return
+  /// \return
   ///     The type of work item that this QueueItem object
   ///     represents.  eQueueItemKindUnknown may be returned.
   //------------------------------------------------------------------
@@ -50,7 +50,7 @@ public:
   //------------------------------------------------------------------
   /// Set the type of work item this is
   ///
-  /// @param [in] item_kind
+  /// \param [in] item_kind
   ///     Set the kind of this work item object.
   //------------------------------------------------------------------
   void SetKind(lldb::QueueItemKind item_kind);
@@ -59,7 +59,7 @@ public:
   /// Get the code address that will be executed when this work item
   /// is executed.
   ///
-  /// @return
+  /// \return
   ///     The address that will be invoked when this work item is
   ///     executed.  Not all types of QueueItems will have an
   ///     address associated with them; check that the returned
@@ -72,7 +72,7 @@ public:
   //------------------------------------------------------------------
   /// Set the work item address for this object
   ///
-  /// @param [in] addr
+  /// \param [in] addr
   ///     The address that will be invoked when this work item
   ///     is executed.
   //------------------------------------------------------------------
@@ -84,7 +84,7 @@ public:
   /// If the weak pointer to the parent Queue cannot be revivified,
   /// it is invalid.
   ///
-  /// @return
+  /// \return
   ///     True if this object is valid.
   //------------------------------------------------------------------
   bool IsValid() { return m_queue_wp.lock() != nullptr; }
@@ -95,11 +95,11 @@ public:
   /// If the backtrace/thread information was collected when this item
   /// was enqueued, this call will provide it.
   ///
-  /// @param [in] type
+  /// \param [in] type
   ///     The type of extended backtrace being requested, e.g. "libdispatch"
   ///     or "pthread".
   ///
-  /// @return
+  /// \return
   ///     A thread shared pointer which will have a reference to an extended
   ///     thread if one was available.
   //------------------------------------------------------------------

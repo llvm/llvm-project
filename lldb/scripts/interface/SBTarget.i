@@ -80,6 +80,8 @@ public:
     bool
     IsValid() const;
 
+    explicit operator bool() const;
+
     static bool
     EventIsTargetEvent (const lldb::SBEvent &event);
 

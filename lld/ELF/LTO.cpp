@@ -104,6 +104,9 @@ static lto::Config createConfig() {
   C.DebugPassManager = Config->LTODebugPassManager;
   C.DwoDir = Config->DwoDir;
 
+  C.CSIRProfile = Config->LTOCSProfileFile;
+  C.RunCSIRInstr = Config->LTOCSProfileGenerate;
+
   if (Config->EmitLLVM) {
     C.PostInternalizeModuleHook = [](size_t Task, const Module &M) {
       if (std::unique_ptr<raw_fd_ostream> OS = openFile(Config->OutputFile))

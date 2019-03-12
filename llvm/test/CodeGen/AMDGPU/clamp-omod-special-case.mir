@@ -59,7 +59,7 @@ body:             |
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $exec
     %21 = V_MAX_F32_e64 0, killed %20, 0, killed %20, 0, 0, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -121,7 +121,7 @@ body:             |
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $exec
     %21 = V_MAX_F32_e64 0, killed %20, 0, killed %20, 1, 3, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # Don't fold a mul that looks like an omod if itself has omod set
@@ -184,7 +184,7 @@ body:             |
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $exec
     %21 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 0, 3, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -249,7 +249,7 @@ body:             |
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $exec
     %21 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 1, 0, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 
@@ -326,7 +326,7 @@ body:             |
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $exec
     %21 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 0, 3, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -391,7 +391,7 @@ body:             |
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $exec
     %21 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 1, 0, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---

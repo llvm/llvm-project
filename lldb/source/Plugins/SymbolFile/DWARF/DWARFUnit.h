@@ -66,14 +66,14 @@ public:
   /// this DWARFUnit. It could be .debug_info or .debug_types
   /// depending on where the data for this unit originates.
   ///
-  /// @return
+  /// \return
   ///   The correct data for the DIE information in this unit.
   //------------------------------------------------------------------
   virtual const lldb_private::DWARFDataExtractor &GetData() const = 0;
   //------------------------------------------------------------------
   /// Get the size in bytes of the compile unit header.
   ///
-  /// @return
+  /// \return
   ///     Byte size of the compile unit header
   //------------------------------------------------------------------
   virtual uint32_t GetHeaderByteSize() const = 0;
@@ -86,7 +86,7 @@ public:
   /// In DWARF32 this is just 4 bytes, and DWARF64 it is 12 where 4
   /// are 0xFFFFFFFF followed by the actual 64 bit length.
   ///
-  /// @return
+  /// \return
   ///     Byte size of the compile unit header length field
   //------------------------------------------------------------------
   size_t GetLengthByteSize() const { return IsDWARF64() ? 12 : 4; }

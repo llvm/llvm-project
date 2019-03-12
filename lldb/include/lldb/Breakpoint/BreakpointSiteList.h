@@ -18,7 +18,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class BreakpointSiteList BreakpointSiteList.h
+/// \class BreakpointSiteList BreakpointSiteList.h
 /// "lldb/Breakpoint/BreakpointSiteList.h" Class that manages lists of
 /// BreakpointSite shared pointers.
 //----------------------------------------------------------------------
@@ -42,16 +42,16 @@ public:
   //------------------------------------------------------------------
   /// Add a BreakpointSite to the list.
   ///
-  /// @param[in] bp_site_sp
+  /// \param[in] bp_site_sp
   ///    A shared pointer to a breakpoint site being added to the list.
   ///
-  /// @return
+  /// \return
   ///    The ID of the BreakpointSite in the list.
   //------------------------------------------------------------------
   lldb::break_id_t Add(const lldb::BreakpointSiteSP &bp_site_sp);
 
   //------------------------------------------------------------------
-  /// Standard Dump routine, doesn't do anything at present. @param[in] s
+  /// Standard Dump routine, doesn't do anything at present. \param[in] s
   ///     Stream into which to dump the description.
   //------------------------------------------------------------------
   void Dump(Stream *s) const;
@@ -59,10 +59,10 @@ public:
   //------------------------------------------------------------------
   /// Returns a shared pointer to the breakpoint site at address \a addr.
   ///
-  /// @param[in] addr
+  /// \param[in] addr
   ///     The address to look for.
   ///
-  /// @result
+  /// \result
   ///     A shared pointer to the breakpoint site. May contain a NULL
   ///     pointer if no breakpoint site exists with a matching address.
   //------------------------------------------------------------------
@@ -71,10 +71,10 @@ public:
   //------------------------------------------------------------------
   /// Returns a shared pointer to the breakpoint site with id \a breakID.
   ///
-  /// @param[in] breakID
+  /// \param[in] breakID
   ///   The breakpoint site ID to seek for.
   ///
-  /// @result
+  /// \result
   ///   A shared pointer to the breakpoint site.  May contain a NULL pointer if
   ///   the
   ///   breakpoint doesn't exist.
@@ -85,10 +85,10 @@ public:
   /// Returns a shared pointer to the breakpoint site with id \a breakID -
   /// const version.
   ///
-  /// @param[in] breakID
+  /// \param[in] breakID
   ///   The breakpoint site ID to seek for.
   ///
-  /// @result
+  /// \result
   ///   A shared pointer to the breakpoint site.  May contain a NULL pointer if
   ///   the
   ///   breakpoint doesn't exist.
@@ -99,10 +99,10 @@ public:
   /// Returns the breakpoint site id to the breakpoint site at address \a
   /// addr.
   ///
-  /// @param[in] addr
+  /// \param[in] addr
   ///   The address to match.
   ///
-  /// @result
+  /// \result
   ///   The ID of the breakpoint site, or LLDB_INVALID_BREAK_ID.
   //------------------------------------------------------------------
   lldb::break_id_t FindIDByAddress(lldb::addr_t addr);
@@ -111,13 +111,13 @@ public:
   /// Returns whether the breakpoint site \a bp_site_id has \a bp_id
   //  as one of its owners.
   ///
-  /// @param[in] bp_site_id
+  /// \param[in] bp_site_id
   ///   The breakpoint site id to query.
   ///
-  /// @param[in] bp_id
+  /// \param[in] bp_id
   ///   The breakpoint id to look for in \a bp_site_id.
   ///
-  /// @result
+  /// \result
   ///   True if \a bp_site_id exists in the site list AND \a bp_id is one of the
   ///   owners of that site.
   //------------------------------------------------------------------
@@ -129,10 +129,10 @@ public:
   //------------------------------------------------------------------
   /// Removes the breakpoint site given by \b breakID from this list.
   ///
-  /// @param[in] breakID
+  /// \param[in] breakID
   ///   The breakpoint site index to remove.
   ///
-  /// @result
+  /// \result
   ///   \b true if the breakpoint site \a breakID was in the list.
   //------------------------------------------------------------------
   bool Remove(lldb::break_id_t breakID);
@@ -140,10 +140,10 @@ public:
   //------------------------------------------------------------------
   /// Removes the breakpoint site at address \a addr from this list.
   ///
-  /// @param[in] addr
+  /// \param[in] addr
   ///   The address from which to remove a breakpoint site.
   ///
-  /// @result
+  /// \result
   ///   \b true if \a addr had a breakpoint site to remove from the list.
   //------------------------------------------------------------------
   bool RemoveByAddress(lldb::addr_t addr);
@@ -158,13 +158,13 @@ public:
   /// Enquires of the breakpoint site on in this list with ID \a breakID
   /// whether we should stop for the breakpoint or not.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///    This contains the information about this stop.
   ///
-  /// @param[in] breakID
+  /// \param[in] breakID
   ///    This break ID that we hit.
   ///
-  /// @return
+  /// \return
   ///    \b true if we should stop, \b false otherwise.
   //------------------------------------------------------------------
   bool ShouldStop(StoppointCallbackContext *context, lldb::break_id_t breakID);
@@ -172,7 +172,7 @@ public:
   //------------------------------------------------------------------
   /// Returns the number of elements in the list.
   ///
-  /// @result
+  /// \result
   ///   The number of elements.
   //------------------------------------------------------------------
   size_t GetSize() const {

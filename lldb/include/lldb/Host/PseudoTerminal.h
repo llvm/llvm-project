@@ -17,7 +17,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class PseudoTerminal PseudoTerminal.h "lldb/Host/PseudoTerminal.h"
+/// \class PseudoTerminal PseudoTerminal.h "lldb/Host/PseudoTerminal.h"
 /// A pseudo terminal helper class.
 ///
 /// The pseudo terminal class abstracts the use of pseudo terminals on the
@@ -72,14 +72,14 @@ public:
   /// PseudoTerminal::ReleaseMasterFileDescriptor() @li
   /// PseudoTerminal::ReleaseSaveFileDescriptor()
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An pointer to an error that can describe any errors that
   ///     occur. This can be NULL if no error status is desired.
   ///
-  /// @return
-  ///     @li \b Parent process: a child process ID that is greater
+  /// \return
+  ///     \li \b Parent process: a child process ID that is greater
   ///         than zero, or -1 if the fork fails.
-  ///     @li \b Child process: zero.
+  ///     \li \b Child process: zero.
   //------------------------------------------------------------------
   lldb::pid_t Fork(char *error_str, size_t error_len);
 
@@ -91,11 +91,11 @@ public:
   /// PseudoTerminal::ReleaseMasterFileDescriptor() if this object should
   /// release ownership of the slave file descriptor.
   ///
-  /// @return
+  /// \return
   ///     The master file descriptor, or PseudoTerminal::invalid_fd
   ///     if the master file  descriptor is not currently valid.
   ///
-  /// @see PseudoTerminal::ReleaseMasterFileDescriptor()
+  /// \see PseudoTerminal::ReleaseMasterFileDescriptor()
   //------------------------------------------------------------------
   int GetMasterFileDescriptor() const;
 
@@ -107,11 +107,11 @@ public:
   /// PseudoTerminal::ReleaseSlaveFileDescriptor() if this object should
   /// release ownership of the slave file descriptor.
   ///
-  /// @return
+  /// \return
   ///     The slave file descriptor, or PseudoTerminal::invalid_fd
   ///     if the slave file descriptor is not currently valid.
   ///
-  /// @see PseudoTerminal::ReleaseSlaveFileDescriptor()
+  /// \see PseudoTerminal::ReleaseSlaveFileDescriptor()
   //------------------------------------------------------------------
   int GetSlaveFileDescriptor() const;
 
@@ -121,11 +121,11 @@ public:
   /// A master pseudo terminal should already be valid prior to
   /// calling this function.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An pointer to an error that can describe any errors that
   ///     occur. This can be NULL if no error status is desired.
   ///
-  /// @return
+  /// \return
   ///     The name of the slave pseudo terminal as a NULL terminated
   ///     C. This string that comes from static memory, so a copy of
   ///     the string should be made as subsequent calls can change
@@ -133,7 +133,7 @@ public:
   ///     a valid master pseudo terminal opened or if the call to
   ///     \c ptsname() fails.
   ///
-  /// @see PseudoTerminal::OpenFirstAvailableMaster()
+  /// \see PseudoTerminal::OpenFirstAvailableMaster()
   //------------------------------------------------------------------
   const char *GetSlaveName(char *error_str, size_t error_len) const;
 
@@ -151,20 +151,20 @@ public:
   /// If this object still has a valid master file descriptor when its
   /// destructor is called, it will close it.
   ///
-  /// @param[in] oflag
+  /// \param[in] oflag
   ///     Flags to use when calling \c posix_openpt(\a oflag).
   ///     A value of "O_RDWR|O_NOCTTY" is suggested.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An pointer to an error that can describe any errors that
   ///     occur. This can be NULL if no error status is desired.
   ///
-  /// @return
-  ///     @li \b true when the master files descriptor is
+  /// \return
+  ///     \li \b true when the master files descriptor is
   ///         successfully opened.
-  ///     @li \b false if anything goes wrong.
+  ///     \li \b false if anything goes wrong.
   ///
-  /// @see PseudoTerminal::GetMasterFileDescriptor() @see
+  /// \see PseudoTerminal::GetMasterFileDescriptor() @see
   /// PseudoTerminal::ReleaseMasterFileDescriptor()
   //------------------------------------------------------------------
   bool OpenFirstAvailableMaster(int oflag, char *error_str, size_t error_len);
@@ -183,19 +183,19 @@ public:
   /// If this object still has a valid slave file descriptor when its
   /// destructor is called, it will close it.
   ///
-  /// @param[in] oflag
+  /// \param[in] oflag
   ///     Flags to use when calling \c open(\a oflag).
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An pointer to an error that can describe any errors that
   ///     occur. This can be NULL if no error status is desired.
   ///
-  /// @return
-  ///     @li \b true when the master files descriptor is
+  /// \return
+  ///     \li \b true when the master files descriptor is
   ///         successfully opened.
-  ///     @li \b false if anything goes wrong.
+  ///     \li \b false if anything goes wrong.
   ///
-  /// @see PseudoTerminal::OpenFirstAvailableMaster() @see
+  /// \see PseudoTerminal::OpenFirstAvailableMaster() @see
   /// PseudoTerminal::GetSlaveFileDescriptor() @see
   /// PseudoTerminal::ReleaseSlaveFileDescriptor()
   //------------------------------------------------------------------
@@ -209,7 +209,7 @@ public:
   /// descriptor if the ownership isn't released using this call and the
   /// master file descriptor has been opened.
   ///
-  /// @return
+  /// \return
   ///     The master file descriptor, or PseudoTerminal::invalid_fd
   ///     if the mast file descriptor is not currently valid.
   //------------------------------------------------------------------
@@ -223,7 +223,7 @@ public:
   /// descriptor if the ownership isn't released using this call and the slave
   /// file descriptor has been opened.
   ///
-  /// @return
+  /// \return
   ///     The slave file descriptor, or PseudoTerminal::invalid_fd
   ///     if the slave file descriptor is not currently valid.
   //------------------------------------------------------------------

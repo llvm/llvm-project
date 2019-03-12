@@ -52,6 +52,6 @@ body:             |
     %7 = COPY %5
     %6 = DS_READ_B32 %7, 0, 0, implicit $m0, implicit $exec
     DS_WRITE_B32 %7, %6, 4, 0, implicit killed $m0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

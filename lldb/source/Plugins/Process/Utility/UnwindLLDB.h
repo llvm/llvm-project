@@ -101,7 +101,7 @@ protected:
   /// into an array of ConstStrings before it can be used - we only want
   /// to do that once per thread so it's here in the UnwindLLDB object.
   ///
-  /// @return
+  /// \return
   ///     Vector of ConstStrings of trap handler function names.  May be
   ///     empty.
   //------------------------------------------------------------------

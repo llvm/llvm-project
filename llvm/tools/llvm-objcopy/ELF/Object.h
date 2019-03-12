@@ -280,6 +280,8 @@ public:
   virtual void accept(SectionVisitor &Visitor) const = 0;
   virtual void accept(MutableSectionVisitor &Visitor) = 0;
   virtual void markSymbols();
+  virtual void
+  replaceSectionReferences(const DenseMap<SectionBase *, SectionBase *> &);
 };
 
 class Segment {
@@ -310,10 +312,6 @@ public:
   uint32_t Index;
   uint64_t OriginalOffset;
   Segment *ParentSegment = nullptr;
-  ArrayRef<uint8_t> Contents;
-
-  explicit Segment(ArrayRef<uint8_t> Data) : Contents(Data) {}
-  Segment() {}
 
   const SectionBase *firstSection() const {
     if (!Sections.empty())
@@ -596,6 +594,8 @@ public:
       function_ref<bool(const SectionBase *)> ToRemove) override;
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;
+  void replaceSectionReferences(
+      const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
 
   static bool classof(const SectionBase *S) {
     if (S->Flags & ELF::SHF_ALLOC)
@@ -823,8 +823,8 @@ public:
     Ptr->Index = Sections.size();
     return *Ptr;
   }
-  Segment &addSegment(ArrayRef<uint8_t> Data) {
-    Segments.emplace_back(llvm::make_unique<Segment>(Data));
+  Segment &addSegment() {
+    Segments.emplace_back(llvm::make_unique<Segment>());
     return *Segments.back();
   }
 };

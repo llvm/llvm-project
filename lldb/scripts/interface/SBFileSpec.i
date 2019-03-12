@@ -45,6 +45,8 @@ public:
     bool
     IsValid() const;
 
+    explicit operator bool() const;
+
     bool
     Exists () const;
 

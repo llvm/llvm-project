@@ -296,6 +296,7 @@ getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src, unsigned Op,
 Value *getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
                            RecurrenceDescriptor::MinMaxRecurrenceKind
                                MinMaxKind = RecurrenceDescriptor::MRK_Invalid,
+                           FastMathFlags FMF = FastMathFlags(),
                            ArrayRef<Value *> RedOps = None);
 
 /// Create a target reduction of the given vector. The reduction operation
@@ -308,6 +309,7 @@ Value *createSimpleTargetReduction(IRBuilder<> &B,
                                    unsigned Opcode, Value *Src,
                                    TargetTransformInfo::ReductionFlags Flags =
                                        TargetTransformInfo::ReductionFlags(),
+                                   FastMathFlags FMF = FastMathFlags(),
                                    ArrayRef<Value *> RedOps = None);
 
 /// Create a generic target reduction using a recurrence descriptor \p Desc

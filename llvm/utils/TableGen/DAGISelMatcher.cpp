@@ -414,14 +414,10 @@ bool CheckValueTypeMatcher::isContradictoryImpl(const Matcher *M) const {
 
 bool CheckImmAllOnesVMatcher::isContradictoryImpl(const Matcher *M) const {
   // AllZeros is contradictory.
-  if (const auto *CIAZVM = dyn_cast<CheckImmAllZerosVMatcher>(M))
-    return true;
-  return false;
+  return isa<CheckImmAllZerosVMatcher>(M);
 }
 
 bool CheckImmAllZerosVMatcher::isContradictoryImpl(const Matcher *M) const {
   // AllOnes is contradictory.
-  if (const auto *CIAOVM = dyn_cast<CheckImmAllOnesVMatcher>(M))
-    return true;
-  return false;
+  return isa<CheckImmAllOnesVMatcher>(M);
 }

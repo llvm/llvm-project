@@ -56,7 +56,7 @@ public:
 };
 
 //----------------------------------------------------------------------
-/// @class CompletionRequest CompletionRequest.h
+/// \class CompletionRequest CompletionRequest.h
 ///   "lldb/Utility/ArgCompletionRequest.h"
 ///
 /// Contains all information necessary to complete an incomplete command
@@ -69,22 +69,22 @@ public:
   //----------------------------------------------------------
   /// Constructs a completion request.
   ///
-  /// @param [in] command_line
+  /// \param [in] command_line
   ///     The command line the user has typed at this point.
   ///
-  /// @param [in] raw_cursor_pos
+  /// \param [in] raw_cursor_pos
   ///     The position of the cursor in the command line string. Index 0 means
   ///     the cursor is at the start of the line. The completion starts from
   ///     this cursor position.
   ///
-  /// @param [in] match_start_point
-  /// @param [in] max_return_elements
+  /// \param [in] match_start_point
+  /// \param [in] max_return_elements
   ///     If there is a match that is expensive to compute, these are here to
   ///     allow you to compute the completions in  batches.  Start the
   ///     completion from match_start_point, and return match_return_elements
   ///     elements.
   ///
-  /// @param [out] result
+  /// \param [out] result
   ///     The CompletionResult that will be filled with the results after this
   ///     request has been handled.
   //----------------------------------------------------------
@@ -121,8 +121,8 @@ public:
   /// the suggested completion is stored, so the given string can be free'd
   /// afterwards.
   ///
-  /// @param match The suggested completion.
-  /// @param match An optional description of the completion string. The
+  /// \param match The suggested completion.
+  /// \param match An optional description of the completion string. The
   ///     description will be displayed to the user alongside the completion.
   void AddCompletion(llvm::StringRef completion,
                      llvm::StringRef description = "") {
@@ -133,7 +133,7 @@ public:
   ///
   /// \param completions The list of completions.
   ///
-  /// @see AddCompletion
+  /// \see AddCompletion
   void AddCompletions(const StringList &completions) {
     for (std::size_t i = 0; i < completions.GetSize(); ++i)
       AddCompletion(completions.GetStringAtIndex(i));
@@ -146,7 +146,7 @@ public:
   /// \param completions The list of completions.
   /// \param completions The list of descriptions.
   ///
-  /// @see AddCompletion
+  /// \see AddCompletion
   void AddCompletions(const StringList &completions,
                       const StringList &descriptions) {
     lldbassert(completions.GetSize() == descriptions.GetSize());

@@ -51,6 +51,8 @@ public:
 
   void Clear();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   lldb::SBTarget GetTarget() const;
@@ -135,7 +137,7 @@ public:
   /// this is typically the same as if you called "getpid()" in the
   /// process.
   ///
-  /// @return
+  /// \return
   ///     Returns LLDB_INVALID_PROCESS_ID if this object does not
   ///     contain a valid process object, or if the process has not
   ///     been launched. Returns a valid process ID if the process is
@@ -151,7 +153,7 @@ public:
   /// create a process with the same process ID, there needs to be a
   /// way to tell two process instances apart.
   ///
-  /// @return
+  /// \return
   ///     Returns a non-zero integer ID if this object contains a
   ///     valid process object, zero if this object does not contain
   ///     a valid process object.
@@ -186,10 +188,10 @@ public:
   /// Note that it wasn't fully implemented and tracks only the stop
   /// event for the last natural stop ID.
   ///
-  /// @param [in] stop_id
+  /// \param [in] stop_id
   ///   The ID of the stop event to return.
   ///
-  /// @return
+  /// \return
   ///   The stop event corresponding to stop ID.
   //------------------------------------------------------------------
   lldb::SBEvent GetStopEventForStopID(uint32_t stop_id);
@@ -237,7 +239,7 @@ public:
   //------------------------------------------------------------------
   /// Start Tracing with the given SBTraceOptions.
   ///
-  /// @param[in] options
+  /// \param[in] options
   ///     Class containing trace options like trace buffer size, meta
   ///     data buffer size, TraceType and any custom parameters
   ///     {formatted as a JSON Dictionary}. In case of errors in
@@ -252,10 +254,10 @@ public:
   ///     parameters, only the parameters recognized by the target
   ///     would be used and others would be ignored.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error explaining what went wrong.
   ///
-  /// @return
+  /// \return
   ///     A SBTrace instance, which should be used
   ///     to get the trace data or other trace related operations.
   //------------------------------------------------------------------
@@ -266,15 +268,15 @@ public:
   //------------------------------------------------------------------
   /// Load a shared library into this process.
   ///
-  /// @param[in] remote_image_spec
+  /// \param[in] remote_image_spec
   ///     The path for the shared library on the target what you want
   ///     to load.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error object that gets filled in with any errors that
   ///     might occur when trying to load the shared library.
   ///
-  /// @return
+  /// \return
   ///     A token that represents the shared library that can be
   ///     later used to unload the shared library. A value of
   ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
@@ -285,24 +287,24 @@ public:
   //------------------------------------------------------------------
   /// Load a shared library into this process.
   ///
-  /// @param[in] local_image_spec
+  /// \param[in] local_image_spec
   ///     The file spec that points to the shared library that you
   ///     want to load if the library is located on the host. The
   ///     library will be copied over to the location specified by
   ///     remote_image_spec or into the current working directory with
   ///     the same filename if the remote_image_spec isn't specified.
   ///
-  /// @param[in] remote_image_spec
+  /// \param[in] remote_image_spec
   ///     If local_image_spec is specified then the location where the
   ///     library should be copied over from the host. If
   ///     local_image_spec isn't specified, then the path for the
   ///     shared library on the target what you want to load.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error object that gets filled in with any errors that
   ///     might occur when trying to load the shared library.
   ///
-  /// @return
+  /// \return
   ///     A token that represents the shared library that can be
   ///     later used to unload the shared library. A value of
   ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
@@ -317,25 +319,25 @@ public:
   /// library name and a list of paths, searching along the list of
   /// paths till you find a matching library.
   ///
-  /// @param[in] image_spec
+  /// \param[in] image_spec
   ///     The name of the shared library that you want to load.  
   ///     If image_spec is a relative path, the relative path will be
   ///     appended to the search paths.
   ///     If the image_spec is an absolute path, just the basename is used.
   ///
-  /// @param[in] paths
+  /// \param[in] paths
   ///     A list of paths to search for the library whose basename is 
   ///     local_spec.
   ///
-  /// @param[out] loaded_path
+  /// \param[out] loaded_path
   ///     If the library was found along the paths, this will store the
   ///     full path to the found library.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error object that gets filled in with any errors that
   ///     might occur when trying to search for the shared library.
   ///
-  /// @return
+  /// \return
   ///     A token that represents the shared library that can be
   ///     later passed to UnloadImage. A value of
   ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
@@ -359,7 +361,7 @@ public:
   /// or the work item was enqueued to it (in the case of a libdispatch
   /// queue).
   ///
-  /// @return
+  /// \return
   ///   The number of thread-origin extended backtrace types that may be
   ///   available.
   //------------------------------------------------------------------
@@ -369,13 +371,13 @@ public:
   /// Return the name of one of the thread-origin extended backtrace
   /// methods.
   ///
-  /// @param [in] idx
+  /// \param [in] idx
   ///   The index of the name to return.  They will be returned in
   ///   the order that the user will most likely want to see them.
   ///   e.g. if the type at index 0 is not available for a thread,
   ///   see if the type at index 1 provides an extended backtrace.
   ///
-  /// @return
+  /// \return
   ///   The name at that index.
   //------------------------------------------------------------------
   const char *GetExtendedBacktraceTypeAtIndex(uint32_t idx);
@@ -392,14 +394,14 @@ public:
   /// region that contains it in the supplied SBMemoryRegionInfo object.
   /// To iterate over all memory regions use GetMemoryRegionList.
   ///
-  /// @param[in] load_addr
+  /// \param[in] load_addr
   ///     The address to be queried.
   ///
-  /// @param[out] region_info
+  /// \param[out] region_info
   ///     A reference to an SBMemoryRegionInfo object that will contain
   ///     the details of the memory region containing load_addr.
   ///
-  /// @return
+  /// \return
   ///     An error object describes any errors that occurred while
   ///     querying load_addr.
   //------------------------------------------------------------------
@@ -409,7 +411,7 @@ public:
   //------------------------------------------------------------------
   /// Return the list of memory regions within the process.
   ///
-  /// @return
+  /// \return
   ///     A list of all witin the process memory regions.
   //------------------------------------------------------------------
   lldb::SBMemoryRegionInfoList GetMemoryRegions();

@@ -218,18 +218,18 @@ public:
   /// This function determines how much indentation should be added
   /// or removed to match the recommended amount for the final line.
   ///
-  /// @param[in] io_handler
+  /// \param[in] io_handler
   ///     The IOHandler that responsible for input.
   ///
-  /// @param[in] lines
+  /// \param[in] lines
   ///     The current input up to the line to be corrected.  Lines
   ///     following the line containing the cursor are not included.
   ///
-  /// @param[in] cursor_position
+  /// \param[in] cursor_position
   ///     The number of characters preceding the cursor on the final
   ///     line at the time.
   ///
-  /// @return
+  /// \return
   ///     Returns an integer describing the number of spaces needed
   ///     to correct the indentation level.  Positive values indicate
   ///     that spaces should be added, while negative values represent
@@ -260,14 +260,14 @@ public:
   /// Called to determine whether typing enter after the last line in
   /// \a lines should end input.  This function will not be called on
   /// IOHandler objects that are getting single lines.
-  /// @param[in] io_handler
+  /// \param[in] io_handler
   ///     The IOHandler that responsible for updating the lines.
   ///
-  /// @param[in] lines
+  /// \param[in] lines
   ///     The current multi-line content.  May be altered to provide
   ///     alternative input when complete.
   ///
-  /// @return
+  /// \return
   ///     Return an boolean to indicate whether input is complete,
   ///     true indicates that no additional input is necessary, while
   ///     false indicates that more input is required.

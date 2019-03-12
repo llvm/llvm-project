@@ -18,7 +18,7 @@
 
 namespace lldb_private {
 
-/// @class RecognizedStackFrame
+/// \class RecognizedStackFrame
 ///
 /// This class provides extra information about a stack frame that was
 /// provided by a specific stack frame recognizer. Right now, this class only
@@ -39,7 +39,7 @@ protected:
   lldb::ValueObjectListSP m_arguments;
 };
 
-/// @class StackFrameRecognizer
+/// \class StackFrameRecognizer
 ///
 /// A base class for frame recognizers. Subclasses (actual frame recognizers)
 /// should implement RecognizeFrame to provide a RecognizedStackFrame for a
@@ -61,7 +61,7 @@ public:
 
 #ifndef LLDB_DISABLE_PYTHON
 
-/// @class ScriptedStackFrameRecognizer
+/// \class ScriptedStackFrameRecognizer
 ///
 /// Python implementation for frame recognizers. An instance of this class
 /// tracks a particular Python classobject, which will be asked to recognize
@@ -92,7 +92,7 @@ private:
 
 #endif
 
-/// @class StackFrameRecognizerManager
+/// \class StackFrameRecognizerManager
 ///
 /// Static class that provides a registry of known stack frame recognizers.
 /// Has static methods to add, enumerate, remove, query and invoke recognizers.
@@ -124,7 +124,7 @@ public:
   static lldb::RecognizedStackFrameSP RecognizeFrame(lldb::StackFrameSP frame);
 };
 
-/// @class ValueObjectRecognizerSynthesizedValue
+/// \class ValueObjectRecognizerSynthesizedValue
 ///
 /// ValueObject subclass that presents the passed ValueObject as a recognized
 /// value with the specified ValueType. Frame recognizers should return

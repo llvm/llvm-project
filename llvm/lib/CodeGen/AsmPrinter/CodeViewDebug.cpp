@@ -699,6 +699,8 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
     return SourceLanguage::Java;
   case dwarf::DW_LANG_D:
     return SourceLanguage::D;
+  case dwarf::DW_LANG_Swift:
+    return SourceLanguage::Swift;
   default:
     // There's no CodeView representation for this language, and CV doesn't
     // have an "unknown" option for the language field, so we'll use MASM,

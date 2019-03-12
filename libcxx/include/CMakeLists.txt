@@ -183,7 +183,6 @@ if(LIBCXX_INSTALL_SUPPORT_HEADERS)
     support/xlocale/__nop_locale_mgmt.h
     support/xlocale/__posix_l_fallback.h
     support/xlocale/__strtonum_fallback.h
-    support/xlocale/xlocale.h
     )
 endif()
 

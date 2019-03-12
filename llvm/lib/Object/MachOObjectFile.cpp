@@ -918,6 +918,10 @@ static Error checkLinkerOptCommand(const MachOObjectFile &Obj,
     if (left > 0) {
       i++;
       uint32_t NullPos = StringRef(string, left).find('\0');
+      if (0xffffffff == NullPos)
+        return malformedError("load command " + Twine(LoadCommandIndex) +
+                              " LC_LINKER_OPTION string #" + Twine(i) +
+                              " is not NULL terminated");
       uint32_t len = std::min(NullPos, left) + 1;
       string += len;
       left -= len;

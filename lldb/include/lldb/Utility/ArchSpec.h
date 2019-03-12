@@ -23,7 +23,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ArchSpec ArchSpec.h "lldb/Utility/ArchSpec.h" An architecture
+/// \class ArchSpec ArchSpec.h "lldb/Utility/ArchSpec.h" An architecture
 /// specification class.
 ///
 /// A class designed to be created from a cpu type and subtype, a
@@ -275,9 +275,9 @@ public:
   //------------------------------------------------------------------
   /// Assignment operator.
   ///
-  /// @param[in] rhs another ArchSpec object to copy.
+  /// \param[in] rhs another ArchSpec object to copy.
   ///
-  /// @return A const reference to this object.
+  /// \return A const reference to this object.
   //------------------------------------------------------------------
   const ArchSpec &operator=(const ArchSpec &rhs);
 
@@ -294,7 +294,7 @@ public:
   //------------------------------------------------------------------
   /// Returns a static string representing the current architecture.
   ///
-  /// @return A static string corresponding to the current
+  /// \return A static string corresponding to the current
   ///         architecture.
   //------------------------------------------------------------------
   const char *GetArchitectureName() const;
@@ -302,7 +302,7 @@ public:
   //-----------------------------------------------------------------
   /// if MIPS architecture return true.
   ///
-  ///  @return a boolean value.
+  ///  \return a boolean value.
   //-----------------------------------------------------------------
   bool IsMIPS() const;
 
@@ -310,7 +310,7 @@ public:
   /// Returns a string representing current architecture as a target CPU for
   /// tools like compiler, disassembler etc.
   ///
-  /// @return A string representing target CPU for the current
+  /// \return A string representing target CPU for the current
   ///         architecture.
   //------------------------------------------------------------------
   std::string GetClangTargetCPU() const;
@@ -318,7 +318,7 @@ public:
   //------------------------------------------------------------------
   /// Return a string representing target application ABI.
   ///
-  /// @return A string representing target application ABI.
+  /// \return A string representing target application ABI.
   //------------------------------------------------------------------
   std::string GetTargetABI() const;
 
@@ -332,14 +332,14 @@ public:
   //------------------------------------------------------------------
   /// Returns the size in bytes of an address of the current architecture.
   ///
-  /// @return The byte size of an address of the current architecture.
+  /// \return The byte size of an address of the current architecture.
   //------------------------------------------------------------------
   uint32_t GetAddressByteSize() const;
 
   //------------------------------------------------------------------
   /// Returns a machine family for the current architecture.
   ///
-  /// @return An LLVM arch type.
+  /// \return An LLVM arch type.
   //------------------------------------------------------------------
   llvm::Triple::ArchType GetMachine() const;
 
@@ -348,7 +348,7 @@ public:
   ///
   /// This will be something like "ubuntu", "fedora", etc. on Linux.
   ///
-  /// @return A ConstString ref containing the distribution id,
+  /// \return A ConstString ref containing the distribution id,
   ///         potentially empty.
   //------------------------------------------------------------------
   ConstString GetDistributionId() const;
@@ -364,7 +364,7 @@ public:
   //------------------------------------------------------------------
   /// Tests if this ArchSpec is valid.
   ///
-  /// @return True if the current architecture is valid, false
+  /// \return True if the current architecture is valid, false
   ///         otherwise.
   //------------------------------------------------------------------
   bool IsValid() const {
@@ -398,17 +398,17 @@ public:
   //------------------------------------------------------------------
   /// Change the architecture object type, CPU type and OS type.
   ///
-  /// @param[in] arch_type The object type of this ArchSpec.
+  /// \param[in] arch_type The object type of this ArchSpec.
   ///
-  /// @param[in] cpu The required CPU type.
+  /// \param[in] cpu The required CPU type.
   ///
-  /// @param[in] os The optional OS type
+  /// \param[in] os The optional OS type
   /// The default value of 0 was chosen to from the ELF spec value
   /// ELFOSABI_NONE.  ELF is the only one using this parameter.  If another
   /// format uses this parameter and 0 does not work, use a value over
   /// 255 because in the ELF header this is value is only a byte.
   ///
-  /// @return True if the object, and CPU were successfully set.
+  /// \return True if the object, and CPU were successfully set.
   ///
   /// As a side effect, the vendor value is usually set to unknown. The
   /// exceptions are
@@ -437,7 +437,7 @@ public:
   //------------------------------------------------------------------
   /// Returns the byte order for the architecture specification.
   ///
-  /// @return The endian enumeration for the current endianness of
+  /// \return The endian enumeration for the current endianness of
   ///     the architecture specification
   //------------------------------------------------------------------
   lldb::ByteOrder GetByteOrder() const;
@@ -465,7 +465,7 @@ public:
   //------------------------------------------------------------------
   /// Architecture data byte width accessor
   ///
-  /// @return the size in 8-bit (host) bytes of a minimum addressable unit
+  /// \return the size in 8-bit (host) bytes of a minimum addressable unit
   /// from the Architecture's data bus
   //------------------------------------------------------------------
   uint32_t GetDataByteSize() const;
@@ -473,7 +473,7 @@ public:
   //------------------------------------------------------------------
   /// Architecture code byte width accessor
   ///
-  /// @return the size in 8-bit (host) bytes of a minimum addressable unit
+  /// \return the size in 8-bit (host) bytes of a minimum addressable unit
   /// from the Architecture's code bus
   //------------------------------------------------------------------
   uint32_t GetCodeByteSize() const;
@@ -481,14 +481,14 @@ public:
   //------------------------------------------------------------------
   /// Architecture triple accessor.
   ///
-  /// @return A triple describing this ArchSpec.
+  /// \return A triple describing this ArchSpec.
   //------------------------------------------------------------------
   llvm::Triple &GetTriple() { return m_triple; }
 
   //------------------------------------------------------------------
   /// Architecture triple accessor.
   ///
-  /// @return A triple describing this ArchSpec.
+  /// \return A triple describing this ArchSpec.
   //------------------------------------------------------------------
   const llvm::Triple &GetTriple() const { return m_triple; }
 
@@ -504,7 +504,7 @@ public:
   /// to further resolve the CPU type and subtype, endian characteristics,
   /// etc.
   ///
-  /// @return A triple describing this ArchSpec.
+  /// \return A triple describing this ArchSpec.
   //------------------------------------------------------------------
   bool SetTriple(const llvm::Triple &triple);
 
@@ -513,7 +513,7 @@ public:
   //------------------------------------------------------------------
   /// Returns the default endianness of the architecture.
   ///
-  /// @return The endian enumeration for the default endianness of
+  /// \return The endian enumeration for the default endianness of
   ///         the architecture.
   //------------------------------------------------------------------
   lldb::ByteOrder GetDefaultEndian() const;
@@ -522,7 +522,7 @@ public:
   /// Returns true if 'char' is a signed type by default in the architecture
   /// false otherwise
   ///
-  /// @return True if 'char' is a signed type by default on the
+  /// \return True if 'char' is a signed type by default on the
   ///         architecture and false otherwise.
   //------------------------------------------------------------------
   bool CharIsSignedByDefault() const;
@@ -532,7 +532,7 @@ public:
   /// match between them. e.g. armv7s is not an exact match with armv7 - this
   /// would return false
   ///
-  /// @return true if the two ArchSpecs match.
+  /// \return true if the two ArchSpecs match.
   //------------------------------------------------------------------
   bool IsExactMatch(const ArchSpec &rhs) const;
 
@@ -541,7 +541,7 @@ public:
   /// match between them. e.g. armv7s is compatible with armv7 - this method
   /// would return true
   ///
-  /// @return true if the two ArchSpecs are compatible
+  /// \return true if the two ArchSpecs are compatible
   //------------------------------------------------------------------
   bool IsCompatibleMatch(const ArchSpec &rhs) const;
 
@@ -562,7 +562,7 @@ public:
   /// (especially common with these embedded processors), we may not have
   /// those things easily accessible.
   ///
-  /// @return true if this is an arm ArchSpec which can only execute Thumb
+  /// \return true if this is an arm ArchSpec which can only execute Thumb
   ///         instructions
   //------------------------------------------------------------------
   bool IsAlwaysThumbInstructions() const;
@@ -593,15 +593,15 @@ protected:
 };
 
 //------------------------------------------------------------------
-/// @fn bool operator< (const ArchSpec& lhs, const ArchSpec& rhs) Less than
+/// \fn bool operator< (const ArchSpec& lhs, const ArchSpec& rhs) Less than
 /// operator.
 ///
 /// Tests two ArchSpec objects to see if \a lhs is less than \a rhs.
 ///
-/// @param[in] lhs The Left Hand Side ArchSpec object to compare. @param[in]
+/// \param[in] lhs The Left Hand Side ArchSpec object to compare. \param[in]
 /// rhs The Left Hand Side ArchSpec object to compare.
 ///
-/// @return true if \a lhs is less than \a rhs
+/// \return true if \a lhs is less than \a rhs
 //------------------------------------------------------------------
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
 bool operator==(const ArchSpec &lhs, const ArchSpec &rhs);

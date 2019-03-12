@@ -160,7 +160,7 @@ body:             |
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -197,7 +197,7 @@ body:             |
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -234,7 +234,7 @@ body:             |
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -275,7 +275,7 @@ body:             |
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -313,7 +313,7 @@ body:             |
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -357,7 +357,7 @@ body:             |
     $sgpr2 = S_MOV_B32 -1
     $sgpr3 = S_MOV_B32 61440
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -396,7 +396,7 @@ body:             |
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 
@@ -435,7 +435,7 @@ body:             |
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -472,7 +472,7 @@ body:             |
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -509,7 +509,7 @@ body:             |
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -548,5 +548,5 @@ body:             |
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...

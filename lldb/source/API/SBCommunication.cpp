@@ -34,6 +34,10 @@ SBCommunication::~SBCommunication() {
 
 bool SBCommunication::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommunication, IsValid);
+  return this->operator bool();
+}
+SBCommunication::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommunication, operator bool);
 
   return m_opaque != NULL;
 }

@@ -338,6 +338,17 @@ using unaligned_int32_t =
 using unaligned_int64_t =
     detail::packed_endian_specific_integral<int64_t, native, unaligned>;
 
+template <typename T>
+using little_t = detail::packed_endian_specific_integral<T, little, unaligned>;
+template <typename T>
+using big_t = detail::packed_endian_specific_integral<T, big, unaligned>;
+
+template <typename T>
+using aligned_little_t =
+    detail::packed_endian_specific_integral<T, little, aligned>;
+template <typename T>
+using aligned_big_t = detail::packed_endian_specific_integral<T, big, aligned>;
+
 namespace endian {
 
 template <typename T> inline T read(const void *P, endianness E) {

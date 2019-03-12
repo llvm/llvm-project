@@ -72,11 +72,11 @@ private:
   // Interface for friend classes
   // -----------------------------------------------------------------
 
-  /// Resumes the thread.  If @p signo is anything but
+  /// Resumes the thread.  If \p signo is anything but
   /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
   Status Resume(uint32_t signo);
 
-  /// Single steps the thread.  If @p signo is anything but
+  /// Single steps the thread.  If \p signo is anything but
   /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
   Status SingleStep(uint32_t signo);
 
@@ -121,7 +121,7 @@ private:
   // -------------------------------------------------------------------------
   /// Return the mach thread port number for this thread.
   ///
-  /// @return
+  /// \return
   ///     The mach port number for this thread.  Returns NULL_THREAD
   ///     when the thread is invalid.
   // -------------------------------------------------------------------------

@@ -15,7 +15,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class ExecutionContextScope ExecutionContextScope.h
-/// "lldb/Symbol/ExecutionContextScope.h" Inherit from this if your object can
+/// "lldb/Target/ExecutionContextScope.h" Inherit from this if your object can
 /// reconstruct its
 ///        execution context.
 ///
@@ -50,7 +50,7 @@ public:
   /// so function calls that require a execution context can be made for the
   /// given object.
   ///
-  /// @param[out] exe_ctx
+  /// \param[out] exe_ctx
   ///     A reference to an execution context object that gets filled
   ///     in.
   //------------------------------------------------------------------

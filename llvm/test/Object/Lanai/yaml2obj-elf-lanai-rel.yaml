@@ -35,22 +35,16 @@ Sections:
         Symbol:          main
         Type:            R_LANAI_32
       - Offset:          0x4
-        Symbol:          a
         Type:            R_LANAI_NONE
       - Offset:          0x8
-        Symbol:          b
         Type:            R_LANAI_21
       - Offset:          0xC
-        Symbol:          c
         Type:            R_LANAI_21_F
       - Offset:          0x10
-        Symbol:          d
         Type:            R_LANAI_25
       - Offset:          0x14
-        Symbol:          e
         Type:            R_LANAI_HI16
       - Offset:          0x18
-        Symbol:          f
         Type:            R_LANAI_LO16
 
 

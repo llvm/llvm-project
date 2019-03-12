@@ -157,10 +157,6 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   // assembly.
   if (Dialect == InlineAsm::AD_Intel)
     Parser->getLexer().setLexMasmIntegers(true);
-  if (MF) {
-    const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-    TAP->SetFrameRegister(TRI->getFrameRegister(*MF));
-  }
 
   emitInlineAsmStart();
   // Don't implicitly switch to the text section before the asm.
@@ -527,11 +523,6 @@ void AsmPrinter::EmitInlineAsm(const MachineInstr *MI) const {
   else
     EmitMSInlineAsmStr(AsmStr, MI, MMI, InlineAsmVariant, AP, LocCookie, OS);
 
-  // Reset SanitizeAddress based on the function's attribute.
-  MCTargetOptions MCOptions = TM.Options.MCOptions;
-  MCOptions.SanitizeAddress =
-      MF->getFunction().hasFnAttribute(Attribute::SanitizeAddress);
-
   // Emit warnings if we use reserved registers on the clobber list, as
   // that might give surprising results.
   std::vector<std::string> RestrRegs;
@@ -570,7 +561,7 @@ void AsmPrinter::EmitInlineAsm(const MachineInstr *MI) const {
     SrcMgr.PrintMessage(Loc, SourceMgr::DK_Note, Note);
   }
 
-  EmitInlineAsm(OS.str(), getSubtargetInfo(), MCOptions, LocMD,
+  EmitInlineAsm(OS.str(), getSubtargetInfo(), TM.Options.MCOptions, LocMD,
                 MI->getInlineAsmDialect());
 
   // Emit the #NOAPP end marker.  This has to happen even if verbose-asm isn't

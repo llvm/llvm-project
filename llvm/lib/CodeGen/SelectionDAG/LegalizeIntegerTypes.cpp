@@ -172,6 +172,18 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
     Res = PromoteIntRes_AtomicCmpSwap(cast<AtomicSDNode>(N), ResNo);
     break;
+
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+    Res = PromoteIntRes_VECREDUCE(N);
+    break;
   }
 
   // If the result is null then the sub-method took care of registering it.
@@ -1107,6 +1119,16 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::UMULFIX: Res = PromoteIntOp_MULFIX(N); break;
 
   case ISD::FPOWI: Res = PromoteIntOp_FPOWI(N); break;
+
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN: Res = PromoteIntOp_VECREDUCE(N); break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1483,6 +1505,39 @@ SDValue DAGTypeLegalizer::PromoteIntOp_FPOWI(SDNode *N) {
   return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op), 0);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_VECREDUCE(SDNode *N) {
+  SDLoc dl(N);
+  SDValue Op;
+  switch (N->getOpcode()) {
+  default: llvm_unreachable("Expected integer vector reduction");
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+    Op = GetPromotedInteger(N->getOperand(0));
+    break;
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+    Op = SExtPromotedInteger(N->getOperand(0));
+    break;
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+    Op = ZExtPromotedInteger(N->getOperand(0));
+    break;
+  }
+
+  EVT EltVT = Op.getValueType().getVectorElementType();
+  EVT VT = N->getValueType(0);
+  if (VT.bitsGE(EltVT))
+    return DAG.getNode(N->getOpcode(), SDLoc(N), VT, Op);
+
+  // Result size must be >= element size. If this is not the case after
+  // promotion, also promote the result type and then truncate.
+  SDValue Reduce = DAG.getNode(N->getOpcode(), dl, EltVT, Op);
+  return DAG.getNode(ISD::TRUNCATE, dl, VT, Reduce);
+}
+
 //===----------------------------------------------------------------------===//
 //  Integer Result Expansion
 //===----------------------------------------------------------------------===//
@@ -1624,6 +1679,16 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::USUBSAT: ExpandIntRes_ADDSUBSAT(N, Lo, Hi); break;
   case ISD::SMULFIX:
   case ISD::UMULFIX: ExpandIntRes_MULFIX(N, Lo, Hi); break;
+
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN: ExpandIntRes_VECREDUCE(N, Lo, Hi); break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -3172,6 +3237,14 @@ void DAGTypeLegalizer::ExpandIntRes_ATOMIC_LOAD(SDNode *N,
   ReplaceValueWith(SDValue(N, 1), Swap.getValue(2));
 }
 
+void DAGTypeLegalizer::ExpandIntRes_VECREDUCE(SDNode *N,
+                                              SDValue &Lo, SDValue &Hi) {
+  // TODO For VECREDUCE_(AND|OR|XOR) we could split the vector and calculate
+  // both halves independently.
+  SDValue Res = TLI.expandVecReduce(N, DAG);
+  SplitInteger(Res, Lo, Hi);
+}
+
 //===----------------------------------------------------------------------===//
 //  Integer Operand Expansion
 //===----------------------------------------------------------------------===//
@@ -3838,6 +3911,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_INSERT_VECTOR_ELT(SDNode *N) {
     NOutVTElem, N->getOperand(1));
   return DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, NOutVT,
     V0, ConvElem, N->getOperand(2));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VECREDUCE(SDNode *N) {
+  // The VECREDUCE result size may be larger than the element size, so
+  // we can simply change the result type.
+  SDLoc dl(N);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N) {

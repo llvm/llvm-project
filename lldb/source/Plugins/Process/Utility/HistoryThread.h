@@ -23,7 +23,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class HistoryThread HistoryThread.h "HistoryThread.h"
+/// \class HistoryThread HistoryThread.h "HistoryThread.h"
 /// A thread object representing a backtrace from a previous point in the
 /// process execution
 ///

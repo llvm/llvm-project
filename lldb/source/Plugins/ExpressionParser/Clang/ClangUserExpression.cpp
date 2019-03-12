@@ -622,18 +622,18 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 /// Converts an absolute position inside a given code string into
 /// a column/line pair.
 ///
-/// @param[in] abs_pos
+/// \param[in] abs_pos
 ///     A absolute position in the code string that we want to convert
 ///     to a column/line pair.
 ///
-/// @param[in] code
+/// \param[in] code
 ///     A multi-line string usually representing source code.
 ///
-/// @param[out] line
+/// \param[out] line
 ///     The line in the code that contains the given absolute position.
 ///     The first line in the string is indexed as 1.
 ///
-/// @param[out] column
+/// \param[out] column
 ///     The column in the line that contains the absolute position.
 ///     The first character in a line is indexed as 0.
 //------------------------------------------------------------------

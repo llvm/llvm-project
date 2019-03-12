@@ -119,6 +119,10 @@ void SBProcess::Clear() {
 
 bool SBProcess::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBProcess, IsValid);
+  return this->operator bool();
+}
+SBProcess::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBProcess, operator bool);
 
   ProcessSP process_sp(m_opaque_wp.lock());
   return ((bool)process_sp && process_sp->IsValid());

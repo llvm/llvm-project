@@ -208,18 +208,21 @@ public:
   /// This is the most basic query for estimating call cost: it only knows the
   /// function type and (potentially) the number of arguments at the call site.
   /// The latter is only interesting for varargs function types.
-  int getCallCost(FunctionType *FTy, int NumArgs = -1) const;
+  int getCallCost(FunctionType *FTy, int NumArgs = -1,
+                  const User *U = nullptr) const;
 
   /// Estimate the cost of calling a specific function when lowered.
   ///
   /// This overload adds the ability to reason about the particular function
   /// being called in the event it is a library call with special lowering.
-  int getCallCost(const Function *F, int NumArgs = -1) const;
+  int getCallCost(const Function *F, int NumArgs = -1,
+                  const User *U = nullptr) const;
 
   /// Estimate the cost of calling a specific function when lowered.
   ///
   /// This overload allows specifying a set of candidate argument values.
-  int getCallCost(const Function *F, ArrayRef<const Value *> Arguments) const;
+  int getCallCost(const Function *F, ArrayRef<const Value *> Arguments,
+                  const User *U = nullptr) const;
 
   /// \returns A value by which our inlining threshold should be multiplied.
   /// This is primarily used to bump up the inlining threshold wholesale on
@@ -233,13 +236,15 @@ public:
   ///
   /// Mirrors the \c getCallCost method but uses an intrinsic identifier.
   int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<Type *> ParamTys) const;
+                       ArrayRef<Type *> ParamTys,
+                       const User *U = nullptr) const;
 
   /// Estimate the cost of an intrinsic when lowered.
   ///
   /// Mirrors the \c getCallCost method but uses an intrinsic identifier.
   int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<const Value *> Arguments) const;
+                       ArrayRef<const Value *> Arguments,
+                       const User *U = nullptr) const;
 
   /// \return The estimated number of case clusters when lowering \p 'SI'.
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
@@ -1038,15 +1043,16 @@ public:
   virtual int getGEPCost(Type *PointeeType, const Value *Ptr,
                          ArrayRef<const Value *> Operands) = 0;
   virtual int getExtCost(const Instruction *I, const Value *Src) = 0;
-  virtual int getCallCost(FunctionType *FTy, int NumArgs) = 0;
-  virtual int getCallCost(const Function *F, int NumArgs) = 0;
+  virtual int getCallCost(FunctionType *FTy, int NumArgs, const User *U) = 0;
+  virtual int getCallCost(const Function *F, int NumArgs, const User *U) = 0;
   virtual int getCallCost(const Function *F,
-                          ArrayRef<const Value *> Arguments) = 0;
+                          ArrayRef<const Value *> Arguments, const User *U) = 0;
   virtual unsigned getInliningThresholdMultiplier() = 0;
   virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                               ArrayRef<Type *> ParamTys) = 0;
+                               ArrayRef<Type *> ParamTys, const User *U) = 0;
   virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                               ArrayRef<const Value *> Arguments) = 0;
+                               ArrayRef<const Value *> Arguments,
+                               const User *U) = 0;
   virtual unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
                                                     unsigned &JTSize) = 0;
   virtual int
@@ -1239,26 +1245,27 @@ public:
   int getExtCost(const Instruction *I, const Value *Src) override {
     return Impl.getExtCost(I, Src);
   }
-  int getCallCost(FunctionType *FTy, int NumArgs) override {
-    return Impl.getCallCost(FTy, NumArgs);
+  int getCallCost(FunctionType *FTy, int NumArgs, const User *U) override {
+    return Impl.getCallCost(FTy, NumArgs, U);
   }
-  int getCallCost(const Function *F, int NumArgs) override {
-    return Impl.getCallCost(F, NumArgs);
+  int getCallCost(const Function *F, int NumArgs, const User *U) override {
+    return Impl.getCallCost(F, NumArgs, U);
   }
   int getCallCost(const Function *F,
-                  ArrayRef<const Value *> Arguments) override {
-    return Impl.getCallCost(F, Arguments);
+                  ArrayRef<const Value *> Arguments, const User *U) override {
+    return Impl.getCallCost(F, Arguments, U);
   }
   unsigned getInliningThresholdMultiplier() override {
     return Impl.getInliningThresholdMultiplier();
   }
   int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<Type *> ParamTys) override {
-    return Impl.getIntrinsicCost(IID, RetTy, ParamTys);
+                       ArrayRef<Type *> ParamTys, const User *U = nullptr) override {
+    return Impl.getIntrinsicCost(IID, RetTy, ParamTys, U);
   }
   int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<const Value *> Arguments) override {
-    return Impl.getIntrinsicCost(IID, RetTy, Arguments);
+                       ArrayRef<const Value *> Arguments,
+                       const User *U = nullptr) override {
+    return Impl.getIntrinsicCost(IID, RetTy, Arguments, U);
   }
   int getUserCost(const User *U, ArrayRef<const Value *> Operands) override {
     return Impl.getUserCost(U, Operands);

@@ -21,7 +21,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -45,7 +45,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -69,7 +69,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -93,7 +93,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -117,7 +117,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -141,7 +141,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -165,7 +165,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -189,7 +189,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -213,7 +213,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -237,7 +237,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -261,7 +261,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -285,7 +285,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -309,7 +309,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -333,7 +333,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -357,7 +357,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -381,7 +381,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -405,7 +405,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -429,7 +429,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -453,7 +453,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -477,7 +477,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
     FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into `i32* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -488,7 +488,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_singlethread_unordered
 body:             |
@@ -499,7 +499,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("singlethread") unordered 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -510,7 +510,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_singlethread_monotonic
 body:             |
@@ -521,7 +521,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("singlethread") monotonic 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -532,7 +532,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_singlethread_release
 body:             |
@@ -543,7 +543,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("singlethread") release 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -554,7 +554,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_singlethread_seq_cst
 body:             |
@@ -565,7 +565,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("singlethread") seq_cst 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -576,7 +576,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_wavefront_unordered
 body:             |
@@ -587,7 +587,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("wavefront") unordered 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -598,7 +598,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_wavefront_monotonic
 body:             |
@@ -609,7 +609,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("wavefront") monotonic 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -620,7 +620,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_wavefront_release
 body:             |
@@ -631,7 +631,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("wavefront") release 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -642,7 +642,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_wavefront_seq_cst
 body:             |
@@ -653,7 +653,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("wavefront") seq_cst 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -664,7 +664,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_workgroup_unordered
 body:             |
@@ -675,7 +675,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("workgroup") unordered 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -686,7 +686,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_workgroup_monotonic
 body:             |
@@ -697,7 +697,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("workgroup") monotonic 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -708,7 +708,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_workgroup_release
 body:             |
@@ -719,7 +719,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("workgroup") release 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -730,7 +730,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_workgroup_seq_cst
 body:             |
@@ -741,7 +741,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("workgroup") seq_cst 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -752,7 +752,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_agent_unordered
 body:             |
@@ -763,8 +763,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("agent") unordered 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
-
+    S_ENDPGM 0
 ...
 ---
 
@@ -774,7 +773,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_agent_monotonic
 body:             |
@@ -785,7 +784,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("agent") monotonic 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -796,7 +795,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_agent_release
 body:             |
@@ -807,7 +806,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("agent") release 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -818,7 +817,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_agent_seq_cst
 body:             |
@@ -829,7 +828,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("agent") seq_cst 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -840,7 +839,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_system_unordered
 body:             |
@@ -851,7 +850,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store unordered 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -862,7 +861,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_system_monotonic
 body:             |
@@ -873,7 +872,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store monotonic 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -884,7 +883,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_system_release
 body:             |
@@ -895,7 +894,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store release 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -906,7 +905,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRITE_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            store_system_seq_cst
 body:             |
@@ -917,7 +916,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     DS_WRITE_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store seq_cst 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -928,7 +927,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRXCHG_RTN_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            atomicrmw_singlethread_unordered
 body:             |
@@ -939,7 +938,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     $vgpr2 = DS_WRXCHG_RTN_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("singlethread") unordered 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -950,7 +949,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRXCHG_RTN_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            atomicrmw_singlethread_monotonic
 body:             |
@@ -961,7 +960,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     $vgpr2 = DS_WRXCHG_RTN_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("singlethread") monotonic 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -972,7 +971,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRXCHG_RTN_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            atomicrmw_singlethread_acquire
 body:             |
@@ -983,7 +982,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     $vgpr2 = DS_WRXCHG_RTN_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("singlethread") acquire 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -994,7 +993,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRXCHG_RTN_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            atomicrmw_singlethread_release
 body:             |
@@ -1005,7 +1004,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     $vgpr2 = DS_WRXCHG_RTN_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("singlethread") release 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -1016,7 +1015,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRXCHG_RTN_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            atomicrmw_singlethread_acq_rel
 body:             |
@@ -1027,7 +1026,7 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     $vgpr2 = DS_WRXCHG_RTN_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("singlethread") acq_rel 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -1038,7 +1037,7 @@ body:             |
 # GCN-NOT:   S_WAITCNT
 # GCN:       DS_WRXCHG_RTN_B32
 # GCN-NOT:   S_WAITCNT
-# GCN:       S_ENDPGM
+# GCN:       S_ENDPGM 0
 
 name:            atomicrmw_singlethread_seq_cst
 body:             |
@@ -1049,6 +1048,6 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     $vgpr2 = DS_WRXCHG_RTN_B32 killed renamable $vgpr0, killed renamable $vgpr1, 0, 1, implicit $m0, implicit $exec :: (volatile store syncscope("singlethread") seq_cst 4 into `i32 addrspace(2)* undef`)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

@@ -88,11 +88,11 @@ public:
   /// Sends a GDB remote protocol 'A' packet that delivers program
   /// arguments to the remote server.
   ///
-  /// @param[in] argv
+  /// \param[in] argv
   ///     A NULL terminated array of const C strings to use as the
   ///     arguments.
   ///
-  /// @return
+  /// \return
   ///     Zero if the response was "OK", a positive value if the
   ///     the response was "Exx" where xx are two hex digits, or
   ///     -1 if the call is unsupported or any other unexpected
@@ -107,11 +107,11 @@ public:
   /// multiple times in a row in order to pass on the desired
   /// environment that the inferior should be launched with.
   ///
-  /// @param[in] name_equal_value
+  /// \param[in] name_equal_value
   ///     A NULL terminated C string that contains a single environment
   ///     in the format "NAME=VALUE".
   ///
-  /// @return
+  /// \return
   ///     Zero if the response was "OK", a positive value if the
   ///     the response was "Exx" where xx are two hex digits, or
   ///     -1 if the call is unsupported or any other unexpected
@@ -128,15 +128,15 @@ public:
   //------------------------------------------------------------------
   /// Sends a "vAttach:PID" where PID is in hex.
   ///
-  /// @param[in] pid
+  /// \param[in] pid
   ///     A process ID for the remote gdb server to attach to.
   ///
-  /// @param[out] response
+  /// \param[out] response
   ///     The response received from the gdb server. If the return
   ///     value is zero, \a response will contain a stop reply
   ///     packet.
   ///
-  /// @return
+  /// \return
   ///     Zero if the attach was successful, or an error indicating
   ///     an error code.
   //------------------------------------------------------------------
@@ -146,13 +146,13 @@ public:
   /// Sends a GDB remote protocol 'I' packet that delivers stdin
   /// data to the remote process.
   ///
-  /// @param[in] data
+  /// \param[in] data
   ///     A pointer to stdin data.
   ///
-  /// @param[in] data_len
+  /// \param[in] data_len
   ///     The number of bytes available at \a data.
   ///
-  /// @return
+  /// \return
   ///     Zero if the attach was successful, or an error indicating
   ///     an error code.
   //------------------------------------------------------------------
@@ -162,10 +162,10 @@ public:
   /// Sets the path to use for stdin/out/err for a process
   /// that will be launched with the 'A' packet.
   ///
-  /// @param[in] path
+  /// \param[in] path
   ///     The path to use for stdin/out/err
   ///
-  /// @return
+  /// \return
   ///     Zero if the for success, or an error code for failure.
   //------------------------------------------------------------------
   int SetSTDIN(const FileSpec &file_spec);
@@ -176,10 +176,10 @@ public:
   /// Sets the disable ASLR flag to \a enable for a process that will
   /// be launched with the 'A' packet.
   ///
-  /// @param[in] enable
+  /// \param[in] enable
   ///     A boolean value indicating whether to disable ASLR or not.
   ///
-  /// @return
+  /// \return
   ///     Zero if the for success, or an error code for failure.
   //------------------------------------------------------------------
   int SetDisableASLR(bool enable);
@@ -188,10 +188,10 @@ public:
   /// Sets the DetachOnError flag to \a enable for the process controlled by the
   /// stub.
   ///
-  /// @param[in] enable
+  /// \param[in] enable
   ///     A boolean value indicating whether to detach on error or not.
   ///
-  /// @return
+  /// \return
   ///     Zero if the for success, or an error code for failure.
   //------------------------------------------------------------------
   int SetDetachOnError(bool enable);
@@ -203,10 +203,10 @@ public:
   /// implements the platform, it will change the current working
   /// directory for the platform process.
   ///
-  /// @param[in] working_dir
+  /// \param[in] working_dir
   ///     The path to a directory to use when launching our process
   ///
-  /// @return
+  /// \return
   ///     Zero if the for success, or an error code for failure.
   //------------------------------------------------------------------
   int SetWorkingDir(const FileSpec &working_dir);
@@ -215,10 +215,10 @@ public:
   /// Gets the current working directory of a remote platform GDB
   /// server.
   ///
-  /// @param[out] working_dir
+  /// \param[out] working_dir
   ///     The current working directory on the remote platform.
   ///
-  /// @return
+  /// \return
   ///     Boolean for success
   //------------------------------------------------------------------
   bool GetWorkingDir(FileSpec &working_dir);
@@ -462,7 +462,7 @@ public:
   /// packet.  The response is the complete string payload returned
   /// to the client.
   ///
-  /// @return
+  /// \return
   ///     The string returned by the server to the qSupported query.
   //------------------------------------------------------------------
   const std::string &GetServerSupportedFeatures() const {
@@ -485,7 +485,7 @@ public:
   /// A plugin indicates whether it knows how to handle a type_name.
   /// If so, it can be used to process the async JSON packet.
   ///
-  /// @return
+  /// \return
   ///     The string returned by the server to the qSupported query.
   //------------------------------------------------------------------
   lldb_private::StructuredData::Array *GetSupportedStructuredDataPlugins();
@@ -493,7 +493,7 @@ public:
   //------------------------------------------------------------------
   /// Configure a StructuredData feature on the remote end.
   ///
-  /// @see \b Process::ConfigureStructuredData(...) for details.
+  /// \see \b Process::ConfigureStructuredData(...) for details.
   //------------------------------------------------------------------
   Status
   ConfigureRemoteStructuredData(ConstString type_name,

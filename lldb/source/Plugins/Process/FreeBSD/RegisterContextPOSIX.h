@@ -14,7 +14,7 @@
 #include "lldb/Utility/ArchSpec.h"
 
 //------------------------------------------------------------------------------
-/// @class POSIXBreakpointProtocol
+/// \class POSIXBreakpointProtocol
 ///
 /// Extends RegisterClass with a few virtual operations useful on POSIX.
 class POSIXBreakpointProtocol {
@@ -27,7 +27,7 @@ public:
   /// implementation simply returns true for architectures which do not
   /// require any update.
   ///
-  /// @return
+  /// \return
   ///    True if the operation succeeded and false otherwise.
   virtual bool UpdateAfterBreakpoint() = 0;
 

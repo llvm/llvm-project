@@ -119,7 +119,7 @@ public:
 };
 
 //----------------------------------------------------------------------
-/// @class ExpressionVariableList ExpressionVariable.h
+/// \class ExpressionVariableList ExpressionVariable.h
 /// "lldb/Expression/ExpressionVariable.h"
 /// A list of variable references.
 ///
@@ -163,10 +163,10 @@ public:
   //----------------------------------------------------------------------
   /// Finds a variable by name in the list.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the requested variable.
   ///
-  /// @return
+  /// \return
   ///     The variable requested, or nullptr if that variable is not in the
   ///     list.
   //----------------------------------------------------------------------

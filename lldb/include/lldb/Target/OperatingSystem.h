@@ -17,7 +17,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class OperatingSystem OperatingSystem.h "lldb/Target/OperatingSystem.h"
+/// \class OperatingSystem OperatingSystem.h "lldb/Target/OperatingSystem.h"
 /// A plug-in interface definition class for halted OS helpers.
 ///
 /// Halted OS plug-ins can be used by any process to locate and create
@@ -35,11 +35,11 @@ public:
   /// Scans the installed OperatingSystem plug-ins and tries to find an
   /// instance that matches the current target triple and executable.
   ///
-  /// @param[in] process
+  /// \param[in] process
   ///     The process for which to try and locate a halted OS
   ///     plug-in instance.
   ///
-  /// @param[in] plugin_name
+  /// \param[in] plugin_name
   ///     An optional name of a specific halted OS plug-in that
   ///     should be used. If NULL, pick the best plug-in.
   //------------------------------------------------------------------

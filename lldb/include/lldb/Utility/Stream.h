@@ -24,7 +24,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Stream Stream.h "lldb/Utility/Stream.h"
+/// \class Stream Stream.h "lldb/Utility/Stream.h"
 /// A stream class that can stream formatted output to a file.
 //----------------------------------------------------------------------
 class Stream {
@@ -39,11 +39,11 @@ public:
 
   /// Utility class for counting the bytes that were written to a stream in a
   /// certain time span.
-  /// @example
+  /// \example
   ///   ByteDelta delta(*this);
   ///   WriteDataToStream("foo");
   ///   return *delta;
-  /// @endcode
+  /// \endcode
   class ByteDelta {
     Stream *m_stream;
     /// Bytes we have written so far when ByteDelta was created.
@@ -104,13 +104,13 @@ public:
   ///
   /// Appends \a src_len characters from the buffer \a src to the stream.
   ///
-  /// @param[in] src
+  /// \param[in] src
   ///     A buffer containing at least \a src_len bytes of data.
   ///
-  /// @param[in] src_len
+  /// \param[in] src_len
   ///     A number of bytes to append to the stream.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that were appended to the stream.
   //------------------------------------------------------------------
   size_t Write(const void *src, size_t src_len) {
@@ -132,10 +132,10 @@ public:
   /// Sets the byte order of the data to extract. Extracted values will be
   /// swapped if necessary when decoding.
   ///
-  /// @param[in] byte_order
+  /// \param[in] byte_order
   ///     The byte order value to use when extracting data.
   ///
-  /// @return
+  /// \return
   ///     The old byte order value.
   //------------------------------------------------------------------
   lldb::ByteOrder SetByteOrder(lldb::ByteOrder byte_order);
@@ -144,13 +144,13 @@ public:
   /// Format a C string from a printf style format and variable arguments and
   /// encode and append the resulting C string as hex bytes.
   ///
-  /// @param[in] format
+  /// \param[in] format
   ///     A printf style format string.
   ///
-  /// @param[in] ...
+  /// \param[in] ...
   ///     Any additional arguments needed for the printf format string.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that were appended to the stream.
   //------------------------------------------------------------------
   size_t PrintfAsRawHex8(const char *format, ...)
@@ -159,10 +159,10 @@ public:
   //------------------------------------------------------------------
   /// Append an uint8_t value in the hexadecimal format to the stream.
   ///
-  /// @param[in] uvalue
+  /// \param[in] uvalue
   ///     The value to append.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that were appended to the stream.
   //------------------------------------------------------------------
   size_t PutHex8(uint8_t uvalue);
@@ -208,10 +208,10 @@ public:
   //------------------------------------------------------------------
   /// Output a NULL terminated C string \a cstr to the stream \a s.
   ///
-  /// @param[in] cstr
+  /// \param[in] cstr
   ///     A NULL terminated C string.
   ///
-  /// @return
+  /// \return
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   //------------------------------------------------------------------
@@ -222,10 +222,10 @@ public:
   //------------------------------------------------------------------
   /// Output a pointer value \a p to the stream \a s.
   ///
-  /// @param[in] p
+  /// \param[in] p
   ///     A void pointer.
   ///
-  /// @return
+  /// \return
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   //------------------------------------------------------------------
@@ -234,10 +234,10 @@ public:
   //------------------------------------------------------------------
   /// Output a character \a ch to the stream \a s.
   ///
-  /// @param[in] ch
+  /// \param[in] ch
   ///     A printable character value.
   ///
-  /// @return
+  /// \return
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   //------------------------------------------------------------------
@@ -246,10 +246,10 @@ public:
   //------------------------------------------------------------------
   /// Output a uint8_t \a uval to the stream \a s.
   ///
-  /// @param[in] uval
+  /// \param[in] uval
   ///     A uint8_t value.
   ///
-  /// @return
+  /// \return
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   //------------------------------------------------------------------
@@ -258,10 +258,10 @@ public:
   //------------------------------------------------------------------
   /// Output a uint16_t \a uval to the stream \a s.
   ///
-  /// @param[in] uval
+  /// \param[in] uval
   ///     A uint16_t value.
   ///
-  /// @return
+  /// \return
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   //------------------------------------------------------------------
@@ -270,10 +270,10 @@ public:
   //------------------------------------------------------------------
   /// Output a uint32_t \a uval to the stream \a s.
   ///
-  /// @param[in] uval
+  /// \param[in] uval
   ///     A uint32_t value.
   ///
-  /// @return
+  /// \return
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   //------------------------------------------------------------------
@@ -282,10 +282,10 @@ public:
   //------------------------------------------------------------------
   /// Output a uint64_t \a uval to the stream \a s.
   ///
-  /// @param[in] uval
+  /// \param[in] uval
   ///     A uint64_t value.
   ///
-  /// @return
+  /// \return
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   //------------------------------------------------------------------
@@ -294,10 +294,10 @@ public:
   //------------------------------------------------------------------
   /// Output a int8_t \a sval to the stream \a s.
   ///
-  /// @param[in] sval
+  /// \param[in] sval
   ///     A int8_t value.
   ///
-  /// @return
+  /// \return
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   //------------------------------------------------------------------
@@ -306,10 +306,10 @@ public:
   //------------------------------------------------------------------
   /// Output a int16_t \a sval to the stream \a s.
   ///
-  /// @param[in] sval
+  /// \param[in] sval
   ///     A int16_t value.
   ///
-  /// @return
+  /// \return
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   //------------------------------------------------------------------
@@ -318,10 +318,10 @@ public:
   //------------------------------------------------------------------
   /// Output a int32_t \a sval to the stream \a s.
   ///
-  /// @param[in] sval
+  /// \param[in] sval
   ///     A int32_t value.
   ///
-  /// @return
+  /// \return
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   //------------------------------------------------------------------
@@ -330,10 +330,10 @@ public:
   //------------------------------------------------------------------
   /// Output a int64_t \a sval to the stream \a s.
   ///
-  /// @param[in] sval
+  /// \param[in] sval
   ///     A int64_t value.
   ///
-  /// @return
+  /// \return
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   //------------------------------------------------------------------
@@ -345,16 +345,16 @@ public:
   /// Put an address \a addr out to the stream with optional \a prefix and \a
   /// suffix strings.
   ///
-  /// @param[in] addr
+  /// \param[in] addr
   ///     An address value.
   ///
-  /// @param[in] addr_size
+  /// \param[in] addr_size
   ///     Size in bytes of the address, used for formatting.
   ///
-  /// @param[in] prefix
+  /// \param[in] prefix
   ///     A prefix C string. If nullptr, no prefix will be output.
   ///
-  /// @param[in] suffix
+  /// \param[in] suffix
   ///     A suffix C string. If nullptr, no suffix will be output.
   //------------------------------------------------------------------
   void Address(uint64_t addr, uint32_t addr_size, const char *prefix = nullptr,
@@ -366,19 +366,19 @@ public:
   /// Put an address range \a lo_addr - \a hi_addr out to the stream with
   /// optional \a prefix and \a suffix strings.
   ///
-  /// @param[in] lo_addr
+  /// \param[in] lo_addr
   ///     The start address of the address range.
   ///
-  /// @param[in] hi_addr
+  /// \param[in] hi_addr
   ///     The end address of the address range.
   ///
-  /// @param[in] addr_size
+  /// \param[in] addr_size
   ///     Size in bytes of the address, used for formatting.
   ///
-  /// @param[in] prefix
+  /// \param[in] prefix
   ///     A prefix C string. If nullptr, no prefix will be output.
   ///
-  /// @param[in] suffix
+  /// \param[in] suffix
   ///     A suffix C string. If nullptr, no suffix will be output.
   //------------------------------------------------------------------
   void AddressRange(uint64_t lo_addr, uint64_t hi_addr, uint32_t addr_size,
@@ -389,7 +389,7 @@ public:
   ///
   /// Print a C string \a cstr to the stream.
   ///
-  /// @param[in] cstr
+  /// \param[in] cstr
   ///     The string to be output to the stream.
   //------------------------------------------------------------------
   size_t PutCString(llvm::StringRef cstr);
@@ -402,7 +402,7 @@ public:
   //------------------------------------------------------------------
   /// Get the address size in bytes.
   ///
-  /// @return
+  /// \return
   ///     The size of an address in bytes that is used when outputting
   ///     address and pointer values to the stream.
   //------------------------------------------------------------------
@@ -411,7 +411,7 @@ public:
   //------------------------------------------------------------------
   /// The flags accessor.
   ///
-  /// @return
+  /// \return
   ///     A reference to the Flags member variable.
   //------------------------------------------------------------------
   Flags &GetFlags();
@@ -419,7 +419,7 @@ public:
   //------------------------------------------------------------------
   /// The flags const accessor.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the Flags member variable.
   //------------------------------------------------------------------
   const Flags &GetFlags() const;
@@ -427,7 +427,7 @@ public:
   //------------------------------------------------------------------
   //// The byte order accessor.
   ////
-  //// @return
+  //// \return
   ////     The byte order.
   //------------------------------------------------------------------
   lldb::ByteOrder GetByteOrder() const;
@@ -435,7 +435,7 @@ public:
   //------------------------------------------------------------------
   /// Get the current indentation level.
   ///
-  /// @return
+  /// \return
   ///     The current indentation level as an integer.
   //------------------------------------------------------------------
   int GetIndentLevel() const;
@@ -446,7 +446,7 @@ public:
   /// Indent the current line using the current indentation level and print an
   /// optional string following the indentation spaces.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     A C string to print following the indentation. If nullptr, just
   ///     output the indentation characters.
   //------------------------------------------------------------------
@@ -469,10 +469,10 @@ public:
   /// Put an offset \a uval out to the stream using the printf format in \a
   /// format.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The offset value.
   ///
-  /// @param[in] format
+  /// \param[in] format
   ///     The printf style format to use when outputting the offset.
   //------------------------------------------------------------------
   void Offset(uint32_t offset, const char *format = "0x%8.8x: ");
@@ -482,10 +482,10 @@ public:
   ///
   /// Print some formatted output to the stream.
   ///
-  /// @param[in] format
+  /// \param[in] format
   ///     A printf style format string.
   ///
-  /// @param[in] ...
+  /// \param[in] ...
   ///     Variable arguments that are needed for the printf style
   ///     format string \a format.
   //------------------------------------------------------------------
@@ -503,10 +503,10 @@ public:
   /// Print a double quoted NULL terminated C string to the stream using the
   /// printf format in \a format.
   ///
-  /// @param[in] cstr
+  /// \param[in] cstr
   ///     A NULL terminated C string value.
   ///
-  /// @param[in] format
+  /// \param[in] format
   ///     The optional C string format that can be overridden.
   //------------------------------------------------------------------
   void QuotedCString(const char *cstr, const char *format = "\"%s\"");
@@ -514,7 +514,7 @@ public:
   //------------------------------------------------------------------
   /// Set the address size in bytes.
   ///
-  /// @param[in] addr_size
+  /// \param[in] addr_size
   ///     The new size in bytes of an address to use when outputting
   ///     address and pointer values.
   //------------------------------------------------------------------
@@ -523,7 +523,7 @@ public:
   //------------------------------------------------------------------
   /// Set the current indentation level.
   ///
-  /// @param[in] level
+  /// \param[in] level
   ///     The new indentation level.
   //------------------------------------------------------------------
   void SetIndentLevel(int level);
@@ -534,7 +534,7 @@ public:
   /// Put an SLEB128 \a uval out to the stream using the printf format in \a
   /// format.
   ///
-  /// @param[in] uval
+  /// \param[in] uval
   ///     A uint64_t value that was extracted as a SLEB128 value.
   //------------------------------------------------------------------
   size_t PutSLEB128(int64_t uval);
@@ -545,7 +545,7 @@ public:
   /// Put an ULEB128 \a uval out to the stream using the printf format in \a
   /// format.
   ///
-  /// @param[in] uval
+  /// \param[in] uval
   ///     A uint64_t value that was extracted as a ULEB128 value.
   //------------------------------------------------------------------
   size_t PutULEB128(uint64_t uval);
@@ -575,19 +575,19 @@ protected:
   ///
   /// Appends \a src_len characters from the buffer \a src to the stream.
   ///
-  /// @param[in] src
+  /// \param[in] src
   ///     A buffer containing at least \a src_len bytes of data.
   ///
-  /// @param[in] src_len
+  /// \param[in] src_len
   ///     A number of bytes to append to the stream.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that were appended to the stream.
   //------------------------------------------------------------------
   virtual size_t WriteImpl(const void *src, size_t src_len) = 0;
 
   //----------------------------------------------------------------------
-  /// @class RawOstreamForward Stream.h "lldb/Utility/Stream.h"
+  /// \class RawOstreamForward Stream.h "lldb/Utility/Stream.h"
   /// This is a wrapper class that exposes a raw_ostream interface that just
   /// forwards to an LLDB stream, allowing to reuse LLVM algorithms that take
   /// a raw_ostream within the LLDB code base.

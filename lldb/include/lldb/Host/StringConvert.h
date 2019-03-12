@@ -18,7 +18,7 @@ namespace lldb_private {
 namespace StringConvert {
 
 //----------------------------------------------------------------------
-/// @namespace StringConvert StringConvert.h "lldb/Host/StringConvert.h"
+/// \namespace StringConvert StringConvert.h "lldb/Host/StringConvert.h"
 /// Utility classes for converting strings into Integers
 //----------------------------------------------------------------------
 

@@ -187,6 +187,12 @@ public:
 
   FastMathFlags() = default;
 
+  static FastMathFlags getFast() {
+    FastMathFlags FMF;
+    FMF.setFast();
+    return FMF;
+  }
+
   bool any() const { return Flags != 0; }
   bool none() const { return Flags == 0; }
   bool all() const { return Flags == ~0U; }

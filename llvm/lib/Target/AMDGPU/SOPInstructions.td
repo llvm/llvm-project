@@ -866,9 +866,7 @@ def S_NOP : SOPP <0x00000000, (ins i16imm:$simm16), "s_nop $simm16">;
 
 let isTerminator = 1 in {
 
-def S_ENDPGM : SOPP <0x00000001, (ins), "s_endpgm",
-  [(AMDGPUendpgm)]> {
-  let simm16 = 0;
+def S_ENDPGM : SOPP <0x00000001, (ins EndpgmImm:$simm16), "s_endpgm $simm16"> {
   let isBarrier = 1;
   let isReturn = 1;
 }
@@ -1043,6 +1041,11 @@ def : GCNPat <
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
 //===----------------------------------------------------------------------===//
+
+def : GCNPat <
+  (AMDGPUendpgm),
+    (S_ENDPGM (i16 0))
+>;
 
 def : GCNPat <
   (i64 (ctpop i64:$src)),

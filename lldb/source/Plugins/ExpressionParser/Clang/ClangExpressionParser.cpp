@@ -551,7 +551,7 @@ ClangExpressionParser::~ClangExpressionParser() {}
 namespace {
 
 //----------------------------------------------------------------------
-/// @class CodeComplete
+/// \class CodeComplete
 ///
 /// A code completion consumer for the clang Sema that is responsible for
 /// creating the completion suggestions when a user requests completion
@@ -629,15 +629,15 @@ class CodeComplete : public CodeCompleteConsumer {
 
 public:
   /// Constructs a CodeComplete consumer that can be attached to a Sema.
-  /// @param[out] matches
+  /// \param[out] matches
   ///    The list of matches that the lldb completion API expects as a result.
   ///    This may already contain matches, so it's only allowed to append
   ///    to this variable.
-  /// @param[out] expr
+  /// \param[out] expr
   ///    The whole expression string that we are currently parsing. This
   ///    string needs to be equal to the input the user typed, and NOT the
   ///    final code that Clang is parsing.
-  /// @param[out] position
+  /// \param[out] position
   ///    The character position of the user cursor in the `expr` parameter.
   ///
   CodeComplete(CompletionRequest &request, clang::LangOptions ops,

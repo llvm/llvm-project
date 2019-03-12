@@ -27,6 +27,6 @@ body:             |
     renamable $vgpr0 = V_INTERP_MOV_F32 2, 0, 0, implicit $m0, implicit $exec
     renamable $sgpr0 = S_MOV_B32 0
 
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

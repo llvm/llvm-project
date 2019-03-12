@@ -27,7 +27,7 @@ class IRMemoryMap;
 }
 
 //----------------------------------------------------------------------
-/// @class IRInterpreter IRInterpreter.h "lldb/Expression/IRInterpreter.h"
+/// \class IRInterpreter IRInterpreter.h "lldb/Expression/IRInterpreter.h"
 /// Attempt to interpret the function's code if it does not require
 ///        running the target.
 ///

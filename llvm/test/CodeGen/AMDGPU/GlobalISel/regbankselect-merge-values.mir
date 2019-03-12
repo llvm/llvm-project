@@ -14,12 +14,12 @@ body: |
     ; CHECK: [[EXTRACT:%[0-9]+]]:sgpr(s32) = G_EXTRACT [[COPY]](s64), 0
     ; CHECK: [[EXTRACT1:%[0-9]+]]:sgpr(s32) = G_EXTRACT [[COPY]](s64), 32
     ; CHECK: [[MV:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[EXTRACT]](s32), [[EXTRACT1]](s32)
-    ; CHECK: S_ENDPGM implicit [[MV]](s64)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_EXTRACT %0, 0
     %2:_(s32) = G_EXTRACT %0, 32
     %3:_(s64) = G_MERGE_VALUES %1, %2
-    S_ENDPGM implicit %3
+    S_ENDPGM 0, implicit %3
 ...
 
 ---
@@ -34,11 +34,11 @@ body: |
     ; CHECK: [[EXTRACT:%[0-9]+]]:vgpr(s32) = G_EXTRACT [[COPY]](s64), 0
     ; CHECK: [[EXTRACT1:%[0-9]+]]:vgpr(s32) = G_EXTRACT [[COPY]](s64), 32
     ; CHECK: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[EXTRACT]](s32), [[EXTRACT1]](s32)
-    ; CHECK: S_ENDPGM implicit [[MV]](s64)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_EXTRACT %0, 0
     %2:_(s32) = G_EXTRACT %0, 32
     %3:_(s64) = G_MERGE_VALUES %1, %2
-    S_ENDPGM implicit %3
+    S_ENDPGM 0, implicit %3
 ...
 

@@ -133,8 +133,7 @@ class ELFState {
   const ELFYAML::Object &Doc;
 
   bool buildSectionIndex();
-  bool buildSymbolIndex(std::size_t &StartIndex,
-                        const std::vector<ELFYAML::Symbol> &Symbols);
+  bool buildSymbolIndex(const ELFYAML::LocalGlobalWeakSymbols &);
   void initELFHeader(Elf_Ehdr &Header);
   void initProgramHeaders(std::vector<Elf_Phdr> &PHeaders);
   bool initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
@@ -531,11 +530,14 @@ ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 
   for (const auto &Rel : Section.Relocations) {
     unsigned SymIdx = 0;
-    // Some special relocation, R_ARM_v4BX for instance, does not have
-    // an external reference.  So it ignores the return value of lookup()
-    // here.
-    if (Rel.Symbol)
-      SymN2I.lookup(*Rel.Symbol, SymIdx);
+    // If a relocation references a symbol, try to look one up in the symbol
+    // table. If it is not there, treat the value as a symbol index.
+    if (Rel.Symbol && SymN2I.lookup(*Rel.Symbol, SymIdx) &&
+        !to_integer(*Rel.Symbol, SymIdx)) {
+      WithColor::error() << "Unknown symbol referenced: '" << *Rel.Symbol
+                         << "' at YAML section '" << Section.Name << "'.\n";
+      return false;
+    }
 
     if (IsRela) {
       Elf_Rela REntry;
@@ -779,16 +781,19 @@ template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
 }
 
 template <class ELFT>
-bool
-ELFState<ELFT>::buildSymbolIndex(std::size_t &StartIndex,
-                                 const std::vector<ELFYAML::Symbol> &Symbols) {
-  for (const auto &Sym : Symbols) {
-    ++StartIndex;
-    if (Sym.Name.empty())
-      continue;
-    if (SymN2I.addName(Sym.Name, StartIndex)) {
-      WithColor::error() << "Repeated symbol name: '" << Sym.Name << "'.\n";
-      return false;
+bool ELFState<ELFT>::buildSymbolIndex(
+    const ELFYAML::LocalGlobalWeakSymbols &Symbols) {
+  std::size_t I = 0;
+  for (const std::vector<ELFYAML::Symbol> &V :
+       {Symbols.Local, Symbols.Global, Symbols.Weak}) {
+    for (const auto &Sym : V) {
+      ++I;
+      if (Sym.Name.empty())
+        continue;
+      if (SymN2I.addName(Sym.Name, I)) {
+        WithColor::error() << "Repeated symbol name: '" << Sym.Name << "'.\n";
+        return false;
+      }
     }
   }
   return true;
@@ -846,10 +851,7 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, const ELFYAML::Object &Doc) {
   if (!State.buildSectionIndex())
     return 1;
 
-  std::size_t StartSymIndex = 0;
-  if (!State.buildSymbolIndex(StartSymIndex, Doc.Symbols.Local) ||
-      !State.buildSymbolIndex(StartSymIndex, Doc.Symbols.Global) ||
-      !State.buildSymbolIndex(StartSymIndex, Doc.Symbols.Weak))
+  if (!State.buildSymbolIndex(Doc.Symbols))
     return 1;
 
   Elf_Ehdr Header;

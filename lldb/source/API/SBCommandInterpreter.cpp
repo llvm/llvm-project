@@ -201,6 +201,10 @@ operator=(const SBCommandInterpreter &rhs) {
 
 bool SBCommandInterpreter::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreter, IsValid);
+  return this->operator bool();
+}
+SBCommandInterpreter::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreter, operator bool);
 
   return m_opaque_ptr != nullptr;
 }
@@ -685,6 +689,10 @@ SBCommand::SBCommand(lldb::CommandObjectSP cmd_sp) : m_opaque_sp(cmd_sp) {}
 
 bool SBCommand::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommand, IsValid);
+  return this->operator bool();
+}
+SBCommand::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommand, operator bool);
 
   return m_opaque_sp.get() != nullptr;
 }

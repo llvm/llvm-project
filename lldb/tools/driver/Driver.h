@@ -38,7 +38,7 @@ public:
 
   /// Runs the main loop.
   ///
-  /// @return The exit code that the process should return.
+  /// \return The exit code that the process should return.
   int MainLoop();
 
   lldb::SBError ProcessArgs(const llvm::opt::InputArgList &args, bool &exiting);

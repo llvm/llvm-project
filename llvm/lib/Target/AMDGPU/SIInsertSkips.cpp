@@ -176,7 +176,7 @@ bool SIInsertSkips::skipIfDead(MachineInstr &MI, MachineBasicBlock &NextBB) {
     .addImm(0); // en
 
   // ... and terminate wavefront.
-  BuildMI(*SkipBB, Insert, DL, TII->get(AMDGPU::S_ENDPGM));
+  BuildMI(*SkipBB, Insert, DL, TII->get(AMDGPU::S_ENDPGM)).addImm(0);
 
   return true;
 }

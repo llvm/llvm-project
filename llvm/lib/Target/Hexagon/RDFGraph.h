@@ -924,10 +924,6 @@ namespace rdf {
     return MM;
   }
 
-  template <typename T> struct Print;
-  template <typename T>
-  raw_ostream &operator<< (raw_ostream &OS, const Print<T> &P);
-
   template <typename T>
   struct Print {
     Print(const T &x, const DataFlowGraph &g) : Obj(x), G(g) {}
@@ -941,6 +937,29 @@ namespace rdf {
     PrintNode(const NodeAddr<T> &x, const DataFlowGraph &g)
       : Print<NodeAddr<T>>(x, g) {}
   };
+
+  raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterRef> &P);
+  raw_ostream &operator<<(raw_ostream &OS, const Print<NodeId> &P);
+  raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<DefNode *>> &P);
+  raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<UseNode *>> &P);
+  raw_ostream &operator<<(raw_ostream &OS,
+                          const Print<NodeAddr<PhiUseNode *>> &P);
+  raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<RefNode *>> &P);
+  raw_ostream &operator<<(raw_ostream &OS, const Print<NodeList> &P);
+  raw_ostream &operator<<(raw_ostream &OS, const Print<NodeSet> &P);
+  raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<PhiNode *>> &P);
+  raw_ostream &operator<<(raw_ostream &OS,
+                          const Print<NodeAddr<StmtNode *>> &P);
+  raw_ostream &operator<<(raw_ostream &OS,
+                          const Print<NodeAddr<InstrNode *>> &P);
+  raw_ostream &operator<<(raw_ostream &OS,
+                          const Print<NodeAddr<BlockNode *>> &P);
+  raw_ostream &operator<<(raw_ostream &OS,
+                          const Print<NodeAddr<FuncNode *>> &P);
+  raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterSet> &P);
+  raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterAggr> &P);
+  raw_ostream &operator<<(raw_ostream &OS,
+                          const Print<DataFlowGraph::DefStack> &P);
 
 } // end namespace rdf
 
