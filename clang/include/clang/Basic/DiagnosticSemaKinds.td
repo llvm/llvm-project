@@ -923,6 +923,9 @@ def err_inconsistent_ivar_count : Error<
   "inconsistent number of instance variables specified">;
 def warn_undef_method_impl : Warning<"method definition for %0 not found">,
   InGroup<DiagGroup<"incomplete-implementation">>;
+def warn_objc_boxing_invalid_utf8_string : Warning<
+  "string is ill-formed as UTF-8 and will become a null %0 when boxed">,
+  InGroup<ObjCBoxing>;
 
 def warn_conflicting_overriding_ret_types : Warning<
   "conflicting return type in "

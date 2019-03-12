@@ -139,6 +139,12 @@ public:
     return BoxingMethod;
   }
 
+  // Indicates whether this boxed expression can be emitted as a compile-time
+  // constant.
+  bool isExpressibleAsConstantInitializer() const {
+    return !BoxingMethod && SubExpr;
+  }
+
   SourceLocation getAtLoc() const { return Range.getBegin(); }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
