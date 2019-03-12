@@ -665,6 +665,21 @@ void TargetLoweringBase::initActions() {
 
     // For most targets @llvm.get.dynamic.area.offset just returns 0.
     setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);
+
+    // Vector reduction default to expand.
+    setOperationAction(ISD::VECREDUCE_FADD, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_FMUL, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_ADD, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_MUL, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_AND, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_OR, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_XOR, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_SMAX, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_SMIN, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_UMAX, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_UMIN, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_FMAX, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_FMIN, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.

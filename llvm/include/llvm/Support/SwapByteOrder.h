@@ -17,6 +17,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <cstddef>
+#include <type_traits>
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #include <stdlib.h>
 #endif
@@ -113,6 +114,13 @@ inline double getSwappedBytes(double C) {
   in.d = C;
   out.i = SwapByteOrder_64(in.i);
   return out.d;
+}
+
+template <typename T>
+inline typename std::enable_if<std::is_enum<T>::value, T>::type
+getSwappedBytes(T C) {
+  return static_cast<T>(
+      getSwappedBytes(static_cast<typename std::underlying_type<T>::type>(C)));
 }
 
 template<typename T>

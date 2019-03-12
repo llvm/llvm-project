@@ -777,6 +777,8 @@ static void relocateInstructionBefore(CoroBeginInst *CoroBegin, Function &F) {
 }
 
 static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
+  EliminateUnreachableBlocks(F);
+
   coro::Shape Shape(F);
   if (!Shape.CoroBegin)
     return;

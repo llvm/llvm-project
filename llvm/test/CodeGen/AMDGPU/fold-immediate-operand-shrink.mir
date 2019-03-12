@@ -12,11 +12,11 @@ body:             |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN: [[V_ADD_I32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_I32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN: S_ENDPGM implicit [[V_ADD_I32_e32_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_ADD_I32_e32_]]
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32, %3:sreg_64 = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 
@@ -31,11 +31,11 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
     ; GCN: [[V_ADD_I32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_I32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN: S_ENDPGM implicit [[V_ADD_I32_e32_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_ADD_I32_e32_]]
     %0:vgpr_32 = IMPLICIT_DEF
     %1:sreg_32_xm0 = S_MOV_B32 12345
     %2:vgpr_32, %3:sreg_64 = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 ---
@@ -49,11 +49,11 @@ body:             |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN: [[V_ADD_I32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_I32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN: S_ENDPGM implicit [[V_ADD_I32_e32_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_ADD_I32_e32_]]
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32, %3:sreg_64 = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 ---
@@ -71,11 +71,11 @@ body:             |
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
     ; GCN: [[DEF:%[0-9]+]]:sreg_32_xm0 = IMPLICIT_DEF
     ; GCN: [[V_ADD_I32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_I32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_I32_e64 [[DEF]], [[V_MOV_B32_e32_]], implicit $exec
-    ; GCN: S_ENDPGM implicit [[V_ADD_I32_e64_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_ADD_I32_e64_]]
     %0:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
     %1:sreg_32_xm0 = IMPLICIT_DEF
     %2:vgpr_32, %3:sreg_64 = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 
@@ -90,11 +90,11 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:sreg_32_xm0 = IMPLICIT_DEF
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
     ; GCN: [[V_ADD_I32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_I32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_I32_e64 [[V_MOV_B32_e32_]], [[DEF]], implicit $exec
-    ; GCN: S_ENDPGM implicit [[V_ADD_I32_e64_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_ADD_I32_e64_]]
     %0:sreg_32_xm0 = IMPLICIT_DEF
     %1:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
     %2:vgpr_32, %3:sreg_64 = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 
@@ -110,12 +110,12 @@ body:             |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN: [[V_ADD_I32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_I32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_I32_e64 [[S_MOV_B32_]], [[DEF]], implicit $exec
-    ; GCN: S_ENDPGM implicit [[V_ADD_I32_e64_]], implicit $vcc
+    ; GCN: S_ENDPGM 0, implicit [[V_ADD_I32_e64_]], implicit $vcc
     $vcc = S_MOV_B64 -1
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32, %3:sreg_64 = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2, implicit $vcc
+    S_ENDPGM 0, implicit %2, implicit $vcc
 
 ...
 
@@ -134,7 +134,7 @@ body:             |
   ; GCN:   [[V_ADD_I32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_I32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_I32_e64 [[S_MOV_B32_]], [[DEF]], implicit $exec
   ; GCN: bb.1:
   ; GCN:   liveins: $vcc
-  ; GCN:   S_ENDPGM implicit [[V_ADD_I32_e64_]], implicit $vcc
+  ; GCN:   S_ENDPGM 0, implicit [[V_ADD_I32_e64_]], implicit $vcc
   bb.0:
     successors: %bb.1
     $vcc = S_MOV_B64 -1
@@ -144,7 +144,7 @@ body:             |
 
   bb.1:
     liveins: $vcc
-    S_ENDPGM implicit %2, implicit $vcc
+    S_ENDPGM 0, implicit %2, implicit $vcc
 
 ...
 ---
@@ -161,7 +161,7 @@ body:             |
   ; GCN:   [[V_ADD_I32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_I32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_I32_e64 [[S_MOV_B32_]], [[DEF]], implicit $exec
   ; GCN: bb.1:
   ; GCN:   liveins: $vcc_lo
-  ; GCN:   S_ENDPGM implicit [[V_ADD_I32_e64_]], implicit $vcc_lo
+  ; GCN:   S_ENDPGM 0, implicit [[V_ADD_I32_e64_]], implicit $vcc_lo
   bb.0:
     successors: %bb.1
     $vcc = S_MOV_B64 -1
@@ -171,7 +171,7 @@ body:             |
 
   bb.1:
     liveins: $vcc_lo
-    S_ENDPGM implicit %2, implicit $vcc_lo
+    S_ENDPGM 0, implicit %2, implicit $vcc_lo
 
 ...
 ---
@@ -191,7 +191,7 @@ body:             |
   ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
   ; GCN:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN:   [[V_ADD_I32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_I32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_I32_e64 [[S_MOV_B32_]], [[DEF]], implicit $exec
-  ; GCN:   S_ENDPGM implicit [[V_ADD_I32_e64_]], implicit $vcc_lo
+  ; GCN:   S_ENDPGM 0, implicit [[V_ADD_I32_e64_]], implicit $vcc_lo
   bb.0:
     successors: %bb.1
     $vcc = S_MOV_B64 -1
@@ -201,7 +201,7 @@ body:             |
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32, %3:sreg_64 = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2, implicit $vcc_lo
+    S_ENDPGM 0, implicit %2, implicit $vcc_lo
 
 ...
 ---
@@ -222,7 +222,7 @@ body:             |
   ; GCN:   [[V_ADD_I32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_I32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_I32_e64 [[S_MOV_B32_]], [[DEF]], implicit $exec
   ; GCN: bb.2:
   ; GCN:   liveins: $vcc_hi
-  ; GCN:   S_ENDPGM implicit [[V_ADD_I32_e64_]], implicit $vcc_hi
+  ; GCN:   S_ENDPGM 0, implicit [[V_ADD_I32_e64_]], implicit $vcc_hi
   bb.0:
     successors: %bb.1
     $vcc_hi = S_MOV_B32 -1
@@ -236,7 +236,7 @@ body:             |
   bb.2:
     liveins: $vcc_hi
 
-    S_ENDPGM implicit %2, implicit $vcc_hi
+    S_ENDPGM 0, implicit %2, implicit $vcc_hi
 
 ...
 
@@ -251,11 +251,11 @@ body:             |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN: [[V_SUBREV_I32_e32_:%[0-9]+]]:vgpr_32 = V_SUBREV_I32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN: S_ENDPGM implicit [[V_SUBREV_I32_e32_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_SUBREV_I32_e32_]]
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32, %3:sreg_64 = V_SUB_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 
@@ -270,11 +270,11 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
     ; GCN: [[V_SUB_I32_e32_:%[0-9]+]]:vgpr_32 = V_SUB_I32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN: S_ENDPGM implicit [[V_SUB_I32_e32_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_SUB_I32_e32_]]
     %0:vgpr_32 = IMPLICIT_DEF
     %1:sreg_32_xm0 = S_MOV_B32 12345
     %2:vgpr_32, %3:sreg_64 = V_SUB_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 
@@ -289,11 +289,11 @@ body:             |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN: [[V_SUB_I32_e32_:%[0-9]+]]:vgpr_32 = V_SUB_I32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN: S_ENDPGM implicit [[V_SUB_I32_e32_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_SUB_I32_e32_]]
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32, %3:sreg_64 = V_SUBREV_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 
@@ -308,11 +308,11 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
     ; GCN: [[V_SUBREV_I32_e32_:%[0-9]+]]:vgpr_32 = V_SUBREV_I32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN: S_ENDPGM implicit [[V_SUBREV_I32_e32_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_SUBREV_I32_e32_]]
     %0:vgpr_32 = IMPLICIT_DEF
     %1:sreg_32_xm0 = S_MOV_B32 12345
     %2:vgpr_32, %3:sreg_64 = V_SUBREV_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 
@@ -331,7 +331,7 @@ body:             |
   ; GCN:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN:   [[V_ADD_I32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_I32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
   ; GCN: bb.1:
-  ; GCN:   S_ENDPGM implicit [[V_ADD_I32_e32_]]
+  ; GCN:   S_ENDPGM 0, implicit [[V_ADD_I32_e32_]]
   bb.0:
     successors: %bb.1
 
@@ -372,7 +372,7 @@ body:             |
     S_NOP 0
 
   bb.1:
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 
@@ -392,7 +392,7 @@ body:             |
   ; GCN:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN:   [[V_ADD_I32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_I32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
   ; GCN: bb.1:
-  ; GCN:   S_ENDPGM implicit [[V_ADD_I32_e32_]]
+  ; GCN:   S_ENDPGM 0, implicit [[V_ADD_I32_e32_]]
   bb.0:
     successors: %bb.1
 
@@ -404,7 +404,7 @@ body:             |
     S_NOP 0
 
   bb.1:
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 ---
@@ -449,7 +449,7 @@ body:             |
     ; GCN: DBG_VALUE $noreg, 0
     ; GCN: DBG_VALUE $noreg, 0
     ; GCN: [[V_ADD_I32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_I32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN: S_ENDPGM implicit [[V_ADD_I32_e32_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_ADD_I32_e32_]]
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF
     DBG_VALUE $noreg, 0
@@ -481,7 +481,7 @@ body:             |
     DBG_VALUE $noreg, 0
     DBG_VALUE $noreg, 0
     %2:vgpr_32, %3:sreg_64 = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...
 ---
@@ -526,7 +526,7 @@ body:             |
     ; GCN: DBG_VALUE $noreg, 0
     ; GCN: DBG_VALUE $noreg, 0
     ; GCN: DBG_VALUE $noreg, 0
-    ; GCN: S_ENDPGM implicit [[V_ADD_I32_e32_]]
+    ; GCN: S_ENDPGM 0, implicit [[V_ADD_I32_e32_]]
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF
     S_NOP 0
@@ -587,6 +587,6 @@ body:             |
     DBG_VALUE $noreg, 0
     DBG_VALUE $noreg, 0
     $vcc = S_MOV_B64 0
-    S_ENDPGM implicit %2
+    S_ENDPGM 0, implicit %2
 
 ...

@@ -141,7 +141,7 @@ body:             |
 
   bb.2.bb2:
     SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -247,7 +247,7 @@ body:             |
 
   bb.2.bb2:
     SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 ---
@@ -336,6 +336,6 @@ body:             |
 
   bb.2.bb2:
     SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

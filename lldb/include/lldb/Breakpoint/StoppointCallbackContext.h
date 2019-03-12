@@ -15,7 +15,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class StoppointCallbackContext StoppointCallbackContext.h
+/// \class StoppointCallbackContext StoppointCallbackContext.h
 /// "lldb/Breakpoint/StoppointCallbackContext.h" Class holds the information
 /// that a breakpoint callback needs to evaluate this stop.
 //----------------------------------------------------------------------

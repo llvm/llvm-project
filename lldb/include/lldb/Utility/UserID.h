@@ -18,7 +18,7 @@ class Stream;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class UserID UserID.h "lldb/Core/UserID.h"
+/// \class UserID UserID.h "lldb/Core/UserID.h"
 /// A mix in class that contains a generic user ID.
 ///
 /// UserID is designed as a mix in class that can contain an integer based
@@ -53,7 +53,7 @@ struct UserID {
   //------------------------------------------------------------------
   /// Get accessor for the user ID.
   ///
-  /// @return
+  /// \return
   ///     The user ID.
   //------------------------------------------------------------------
   lldb::user_id_t GetID() const { return m_uid; }
@@ -61,7 +61,7 @@ struct UserID {
   //------------------------------------------------------------------
   /// Set accessor for the user ID.
   ///
-  /// @param[in] uid
+  /// \param[in] uid
   ///     The new user ID.
   //------------------------------------------------------------------
   void SetID(lldb::user_id_t uid) { m_uid = uid; }

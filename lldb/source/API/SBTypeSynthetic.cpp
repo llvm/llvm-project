@@ -57,6 +57,10 @@ SBTypeSynthetic::~SBTypeSynthetic() {}
 
 bool SBTypeSynthetic::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSynthetic, IsValid);
+  return this->operator bool();
+}
+SBTypeSynthetic::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSynthetic, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

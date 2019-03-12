@@ -54,6 +54,10 @@ SBDeclaration::~SBDeclaration() {}
 
 bool SBDeclaration::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBDeclaration, IsValid);
+  return this->operator bool();
+}
+SBDeclaration::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBDeclaration, operator bool);
 
   return m_opaque_up.get() && m_opaque_up->IsValid();
 }

@@ -116,6 +116,10 @@ void SBTrace::SetSP(const ProcessSP &process_sp) { m_opaque_wp = process_sp; }
 
 bool SBTrace::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBTrace, IsValid);
+  return this->operator bool();
+}
+SBTrace::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTrace, operator bool);
 
   if (!m_trace_impl_sp)
     return false;

@@ -32,6 +32,8 @@ public:
 
   lldb::tid_t getThreadID();
 
+  explicit operator bool() const;
+
   bool IsValid();
 };
 }

@@ -72,13 +72,13 @@ public:
   /// does NOT stat the file system so it can be used in tight loops
   /// where debug info is being parsed.
   ///
-  /// @param[in] path
+  /// \param[in] path
   ///     The original source file path to try and remap.
   ///
-  /// @param[out] new_path
+  /// \param[out] new_path
   ///     The newly remapped filespec that is may or may not exist.
   ///
-  /// @return
+  /// \return
   ///     /b true if \a path was successfully located and \a new_path
   ///     is filled in with a new source path, \b false otherwise.
   //------------------------------------------------------------------
@@ -96,13 +96,13 @@ public:
   /// or are even on the local file system, so use this function
   /// sparingly (not in a tight debug info parsing loop).
   ///
-  /// @param[in] orig_spec
+  /// \param[in] orig_spec
   ///     The original source file path to try and remap.
   ///
-  /// @param[out] new_spec
+  /// \param[out] new_spec
   ///     The newly remapped filespec that is guaranteed to exist.
   ///
-  /// @return
+  /// \return
   ///     /b true if \a orig_spec was successfully located and
   ///     \a new_spec is filled in with an existing file spec,
   ///     \b false otherwise.

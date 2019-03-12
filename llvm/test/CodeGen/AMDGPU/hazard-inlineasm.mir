@@ -18,7 +18,7 @@ body: |
   bb.0:
    FLAT_STORE_DWORDX4 $vgpr49_vgpr50, $vgpr26_vgpr27_vgpr28_vgpr29, 0, 0, 0, implicit $exec, implicit $flat_scr
    INLINEASM &"v_mad_u64_u32 $0, $1, $2, $3, $4", 0, 2621450, def $vgpr26_vgpr27, 2818058, def dead $sgpr14_sgpr15, 589833, $sgpr12, 327689, killed $vgpr51, 2621449, $vgpr46_vgpr47
-   S_ENDPGM
+   S_ENDPGM 0
 ...
 
 

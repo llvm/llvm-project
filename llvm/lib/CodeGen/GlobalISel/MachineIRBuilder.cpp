@@ -350,6 +350,13 @@ MachineInstrBuilder MachineIRBuilder::buildStore(unsigned Val, unsigned Addr,
       .addMemOperand(&MMO);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildUAddo(const DstOp &Res,
+                                                 const DstOp &CarryOut,
+                                                 const SrcOp &Op0,
+                                                 const SrcOp &Op1) {
+  return buildInstr(TargetOpcode::G_UADDO, {Res, CarryOut}, {Op0, Op1});
+}
+
 MachineInstrBuilder MachineIRBuilder::buildUAdde(const DstOp &Res,
                                                  const DstOp &CarryOut,
                                                  const SrcOp &Op0,

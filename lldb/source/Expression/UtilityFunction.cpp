@@ -32,10 +32,10 @@ using namespace lldb;
 //------------------------------------------------------------------
 /// Constructor
 ///
-/// @param[in] text
+/// \param[in] text
 ///     The text of the function.  Must be a full translation unit.
 ///
-/// @param[in] name
+/// \param[in] name
 ///     The name of the function, as used in the text.
 //------------------------------------------------------------------
 UtilityFunction::UtilityFunction(ExecutionContextScope &exe_scope,

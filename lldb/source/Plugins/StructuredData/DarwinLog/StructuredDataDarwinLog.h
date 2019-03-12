@@ -42,7 +42,7 @@ public:
   /// that controls if we always enable it for newly created/attached
   /// processes.
   ///
-  /// @return
+  /// \return
   ///      True if DarwinLog support is/will be enabled for existing or
   ///      newly launched/attached processes.
   // -------------------------------------------------------------------------

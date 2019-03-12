@@ -18,7 +18,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class BreakpointResolverName BreakpointResolverName.h
+/// \class BreakpointResolverName BreakpointResolverName.h
 /// "lldb/Breakpoint/BreakpointResolverName.h" This class sets breakpoints on
 /// a given function name, either by exact match or by regular expression.
 //----------------------------------------------------------------------

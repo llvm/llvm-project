@@ -26,7 +26,7 @@ class Module;
 class UUID;
 
 //----------------------------------------------------------------------
-/// @class ModuleCache ModuleCache.h "lldb/Target/ModuleCache.h"
+/// \class ModuleCache ModuleCache.h "lldb/Target/ModuleCache.h"
 /// A module cache class.
 ///
 /// Caches locally modules that are downloaded from remote targets. Each

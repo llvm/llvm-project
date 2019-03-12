@@ -29,6 +29,8 @@ public:
 
   const lldb::SBAddress &operator=(const lldb::SBAddress &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   void Clear();

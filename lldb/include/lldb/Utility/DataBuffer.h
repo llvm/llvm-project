@@ -20,7 +20,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class DataBuffer DataBuffer.h "lldb/Core/DataBuffer.h"
+/// \class DataBuffer DataBuffer.h "lldb/Core/DataBuffer.h"
 /// A pure virtual protocol class for abstracted data buffers.
 ///
 /// DataBuffer is an abstract class that gets packaged into a shared pointer
@@ -57,7 +57,7 @@ public:
   //------------------------------------------------------------------
   /// Get a pointer to the data.
   ///
-  /// @return
+  /// \return
   ///     A pointer to the bytes owned by this object, or NULL if the
   ///     object contains no bytes.
   //------------------------------------------------------------------
@@ -66,7 +66,7 @@ public:
   //------------------------------------------------------------------
   /// Get a const pointer to the data.
   ///
-  /// @return
+  /// \return
   ///     A const pointer to the bytes owned by this object, or NULL
   ///     if the object contains no bytes.
   //------------------------------------------------------------------
@@ -75,7 +75,7 @@ public:
   //------------------------------------------------------------------
   /// Get the number of bytes in the data buffer.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes this object currently contains.
   //------------------------------------------------------------------
   virtual lldb::offset_t GetByteSize() const = 0;

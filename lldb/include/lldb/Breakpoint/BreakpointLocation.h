@@ -21,7 +21,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class BreakpointLocation BreakpointLocation.h
+/// \class BreakpointLocation BreakpointLocation.h
 /// "lldb/Breakpoint/BreakpointLocation.h" Class that manages one unique (by
 /// address) instance of a logical breakpoint.
 //----------------------------------------------------------------------
@@ -45,19 +45,19 @@ public:
   ~BreakpointLocation() override;
 
   //------------------------------------------------------------------
-  /// Gets the load address for this breakpoint location @return
+  /// Gets the load address for this breakpoint location \return
   ///     Returns breakpoint location load address, \b
   ///     LLDB_INVALID_ADDRESS if not yet set.
   //------------------------------------------------------------------
   lldb::addr_t GetLoadAddress() const override;
 
   //------------------------------------------------------------------
-  /// Gets the Address for this breakpoint location @return
+  /// Gets the Address for this breakpoint location \return
   ///     Returns breakpoint location Address.
   //------------------------------------------------------------------
   Address &GetAddress();
   //------------------------------------------------------------------
-  /// Gets the Breakpoint that created this breakpoint location @return
+  /// Gets the Breakpoint that created this breakpoint location \return
   ///     Returns the owning breakpoint.
   //------------------------------------------------------------------
   Breakpoint &GetBreakpoint();
@@ -71,7 +71,7 @@ public:
   /// Side Effects: This may evaluate the breakpoint condition, and run the
   /// callback.  So this command may do a considerable amount of work.
   ///
-  /// @return
+  /// \return
   ///     \b true if this breakpoint location thinks we should stop,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -89,7 +89,7 @@ public:
   //------------------------------------------------------------------
   /// Check the Enable/Disable state.
   ///
-  /// @return
+  /// \return
   ///     \b true if the breakpoint is enabled, \b false if disabled.
   //------------------------------------------------------------------
   bool IsEnabled() const;
@@ -102,7 +102,7 @@ public:
   //------------------------------------------------------------------
   /// Check the AutoContinue state.
   ///
-  /// @return
+  /// \return
   ///     \b true if the breakpoint is set to auto-continue, \b false if not.
   //------------------------------------------------------------------
   bool IsAutoContinue() const;
@@ -110,7 +110,7 @@ public:
   //------------------------------------------------------------------
   /// Return the current Ignore Count.
   ///
-  /// @return
+  /// \return
   ///     The number of breakpoint hits to be ignored.
   //------------------------------------------------------------------
   uint32_t GetIgnoreCount();
@@ -118,7 +118,7 @@ public:
   //------------------------------------------------------------------
   /// Set the breakpoint to ignore the next \a count breakpoint hits.
   ///
-  /// @param[in] count
+  /// \param[in] count
   ///    The number of breakpoint hits to ignore.
   //------------------------------------------------------------------
   void SetIgnoreCount(uint32_t n);
@@ -129,14 +129,14 @@ public:
   /// The callback will return a bool indicating whether the target should
   /// stop at this breakpoint or not.
   ///
-  /// @param[in] callback
+  /// \param[in] callback
   ///     The method that will get called when the breakpoint is hit.
   ///
-  /// @param[in] callback_baton_sp
+  /// \param[in] callback_baton_sp
   ///     A shared pointer to a Baton that provides the void * needed
   ///     for the callback.
   ///
-  /// @see lldb_private::Baton
+  /// \see lldb_private::Baton
   //------------------------------------------------------------------
   void SetCallback(BreakpointHitCallback callback,
                    const lldb::BatonSP &callback_baton_sp, bool is_synchronous);
@@ -149,7 +149,7 @@ public:
   //------------------------------------------------------------------
   /// Set the breakpoint location's condition.
   ///
-  /// @param[in] condition
+  /// \param[in] condition
   ///    The condition expression to evaluate when the breakpoint is hit.
   //------------------------------------------------------------------
   void SetCondition(const char *condition);
@@ -157,7 +157,7 @@ public:
   //------------------------------------------------------------------
   /// Return a pointer to the text of the condition expression.
   ///
-  /// @return
+  /// \return
   ///    A pointer to the condition expression text, or nullptr if no
   //     condition has been set.
   //------------------------------------------------------------------
@@ -168,7 +168,7 @@ public:
   //------------------------------------------------------------------
   /// Set the valid thread to be checked when the breakpoint is hit.
   ///
-  /// @param[in] thread_id
+  /// \param[in] thread_id
   ///    If this thread hits the breakpoint, we stop, otherwise not.
   //------------------------------------------------------------------
   void SetThreadID(lldb::tid_t thread_id);
@@ -194,7 +194,7 @@ public:
   //------------------------------------------------------------------
   /// Try to resolve the breakpoint site for this location.
   ///
-  /// @return
+  /// \return
   ///     \b true if we were successful at setting a breakpoint site,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -204,14 +204,14 @@ public:
   /// Clear this breakpoint location's breakpoint site - for instance when
   /// disabling the breakpoint.
   ///
-  /// @return
+  /// \return
   ///     \b true if there was a breakpoint site to be cleared, \b false
   ///     otherwise.
   //------------------------------------------------------------------
   bool ClearBreakpointSite();
 
   //------------------------------------------------------------------
-  /// Return whether this breakpoint location has a breakpoint site. @return
+  /// Return whether this breakpoint location has a breakpoint site. \return
   ///     \b true if there was a breakpoint site for this breakpoint
   ///     location, \b false otherwise.
   //------------------------------------------------------------------
@@ -226,14 +226,14 @@ public:
   //------------------------------------------------------------------
   /// Print a description of this breakpoint location to the stream \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to print the description.
   ///
-  /// @param[in] level
+  /// \param[in] level
   ///     The description level that indicates the detail level to
   ///     provide.
   ///
-  /// @see lldb::DescriptionLevel
+  /// \see lldb::DescriptionLevel
   //------------------------------------------------------------------
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
 
@@ -248,7 +248,7 @@ public:
   /// It will create a copy of the containing breakpoint's options if that
   /// hasn't been done already
   ///
-  /// @return
+  /// \return
   ///    A pointer to the breakpoint options.
   //------------------------------------------------------------------
   BreakpointOptions *GetLocationOptions();
@@ -258,9 +258,9 @@ public:
   /// This will return the options that have a setting for the specified
   /// BreakpointOptions kind.
   ///
-  /// @param[in] kind
+  /// \param[in] kind
   ///     The particular option you are looking up.
-  /// @return
+  /// \return
   ///     A pointer to the containing breakpoint's options if this
   ///     location doesn't have its own copy.
   //------------------------------------------------------------------
@@ -274,13 +274,13 @@ public:
   ///
   /// Meant to be used by the BreakpointLocation class.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///    Described the breakpoint event.
   ///
-  /// @param[in] bp_loc_id
+  /// \param[in] bp_loc_id
   ///    Which breakpoint location hit this breakpoint.
   ///
-  /// @return
+  /// \return
   ///     \b true if the target should stop at this breakpoint and \b
   ///     false not.
   //------------------------------------------------------------------
@@ -290,7 +290,7 @@ public:
   /// Returns whether we should resolve Indirect functions in setting the
   /// breakpoint site for this location.
   ///
-  /// @return
+  /// \return
   ///     \b true if the breakpoint SITE for this location should be set on the
   ///     resolved location for Indirect functions.
   //------------------------------------------------------------------
@@ -302,7 +302,7 @@ public:
   /// Returns whether the address set in the breakpoint site for this location
   /// was found by resolving an indirect symbol.
   ///
-  /// @return
+  /// \return
   ///     \b true or \b false as given in the description above.
   //------------------------------------------------------------------
   bool IsIndirect() { return m_is_indirect; }
@@ -313,7 +313,7 @@ public:
   /// Returns whether the address set in the breakpoint location was re-routed
   /// to the target of a re-exported symbol.
   ///
-  /// @return
+  /// \return
   ///     \b true or \b false as given in the description above.
   //------------------------------------------------------------------
   bool IsReExported() { return m_is_reexported; }
@@ -325,10 +325,10 @@ public:
   /// locations". This is used when modules changed to determine if a Location
   /// in the old module might be the "same as" the input location.
   ///
-  /// @param[in] location
+  /// \param[in] location
   ///    The location to compare against.
   ///
-  /// @return
+  /// \return
   ///     \b true or \b false as given in the description above.
   //------------------------------------------------------------------
   bool EquivalentToLocation(BreakpointLocation &location);
@@ -342,10 +342,10 @@ protected:
   //------------------------------------------------------------------
   /// Set the breakpoint site for this location to \a bp_site_sp.
   ///
-  /// @param[in] bp_site_sp
+  /// \param[in] bp_site_sp
   ///      The breakpoint site we are setting for this location.
   ///
-  /// @return
+  /// \return
   ///     \b true if we were successful at setting the breakpoint site,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -371,17 +371,17 @@ private:
   //------------------------------------------------------------------
   /// Constructor.
   ///
-  /// @param[in] owner
+  /// \param[in] owner
   ///     A back pointer to the breakpoint that owns this location.
   ///
-  /// @param[in] addr
+  /// \param[in] addr
   ///     The Address defining this location.
   ///
-  /// @param[in] tid
+  /// \param[in] tid
   ///     The thread for which this breakpoint location is valid, or
   ///     LLDB_INVALID_THREAD_ID if it is valid for all threads.
   ///
-  /// @param[in] hardware
+  /// \param[in] hardware
   ///     \b true if a hardware breakpoint is requested.
   //------------------------------------------------------------------
 

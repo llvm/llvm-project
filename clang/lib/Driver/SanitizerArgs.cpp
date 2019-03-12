@@ -401,31 +401,24 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::HWAddress,
                      SanitizerKind::Address | SanitizerKind::Thread |
                          SanitizerKind::Memory | SanitizerKind::KernelAddress),
-      std::make_pair(SanitizerKind::Efficiency,
-                     SanitizerKind::Address | SanitizerKind::HWAddress |
-                         SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress),
       std::make_pair(SanitizerKind::Scudo,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress |
-                         SanitizerKind::Efficiency),
+                         SanitizerKind::Memory | SanitizerKind::KernelAddress),
       std::make_pair(SanitizerKind::SafeStack,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress |
-                         SanitizerKind::Efficiency),
+                         SanitizerKind::Memory | SanitizerKind::KernelAddress),
       std::make_pair(SanitizerKind::KernelHWAddress,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::Leak | SanitizerKind::Thread |
                          SanitizerKind::Memory | SanitizerKind::KernelAddress |
-                         SanitizerKind::Efficiency | SanitizerKind::SafeStack),
+                         SanitizerKind::SafeStack),
       std::make_pair(SanitizerKind::KernelMemory,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::Leak | SanitizerKind::Thread |
                          SanitizerKind::Memory | SanitizerKind::KernelAddress |
-                         SanitizerKind::Efficiency | SanitizerKind::Scudo |
-                         SanitizerKind::SafeStack)};
+                         SanitizerKind::Scudo | SanitizerKind::SafeStack)};
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
 
@@ -1010,10 +1003,6 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
     // Special case: don't accept -fsanitize=all.
     if (A->getOption().matches(options::OPT_fsanitize_EQ) &&
         0 == strcmp("all", Value))
-      Kind = SanitizerMask();
-    // Similarly, don't accept -fsanitize=efficiency-all.
-    else if (A->getOption().matches(options::OPT_fsanitize_EQ) &&
-        0 == strcmp("efficiency-all", Value))
       Kind = SanitizerMask();
     else
       Kind = parseSanitizerValue(Value, /*AllowGroups=*/true);

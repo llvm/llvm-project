@@ -42,7 +42,7 @@ protected:
 };
 
 //----------------------------------------------------------------------
-/// @class State Terminal.h "lldb/Host/Terminal.h"
+/// \class State Terminal.h "lldb/Host/Terminal.h"
 /// A terminal state saving/restoring class.
 ///
 /// This class can be used to remember the terminal state for a file
@@ -67,14 +67,14 @@ public:
   /// "save_process_group" is true, attempt to save the process group info for
   /// the TTY.
   ///
-  /// @param[in] fd
+  /// \param[in] fd
   ///     The file descriptor to save the state of.
   ///
-  /// @param[in] save_process_group
+  /// \param[in] save_process_group
   ///     If \b true, save the process group settings, else do not
   ///     save the process group settings for a TTY.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a fd describes a TTY and if the state
   ///     was able to be saved, \b false otherwise.
   //------------------------------------------------------------------
@@ -86,7 +86,7 @@ public:
   /// Restore the state of the TTY using the cached values from a previous
   /// call to TerminalState::Save(int,bool).
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the TTY state was successfully restored,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -95,7 +95,7 @@ public:
   //------------------------------------------------------------------
   /// Test for valid cached TTY state information.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if this object has valid saved TTY state
   ///     settings that can be used to restore a previous state,
   ///     \b false otherwise.
@@ -108,7 +108,7 @@ protected:
   //------------------------------------------------------------------
   /// Test if tflags is valid.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a m_tflags is valid and can be restored,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -117,7 +117,7 @@ protected:
   //------------------------------------------------------------------
   /// Test if ttystate is valid.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a m_ttystate is valid and can be
   ///     restored, \b false otherwise.
   //------------------------------------------------------------------
@@ -126,7 +126,7 @@ protected:
   //------------------------------------------------------------------
   /// Test if the process group information is valid.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a m_process_group is valid and can be
   ///     restored, \b false otherwise.
   //------------------------------------------------------------------
@@ -145,7 +145,7 @@ protected:
 };
 
 //----------------------------------------------------------------------
-/// @class TerminalStateSwitcher Terminal.h "lldb/Host/Terminal.h"
+/// \class TerminalStateSwitcher Terminal.h "lldb/Host/Terminal.h"
 /// A TTY state switching class.
 ///
 /// This class can be used to remember 2 TTY states for a given file
@@ -166,7 +166,7 @@ public:
   //------------------------------------------------------------------
   /// Get the number of possible states to save.
   ///
-  /// @return
+  /// \return
   ///     The number of states that this TTY switcher object contains.
   //------------------------------------------------------------------
   uint32_t GetNumberOfStates() const;
@@ -174,7 +174,7 @@ public:
   //------------------------------------------------------------------
   /// Restore the TTY state for state at index \a idx.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the TTY state was successfully restored,
   ///     \b false otherwise.
   //------------------------------------------------------------------
@@ -185,17 +185,17 @@ public:
   /// state is saved for the file descriptor \a fd and the process group
   /// information will also be saved if requested by \a save_process_group.
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     The index into the state array where the state should be
   ///     saved.
   ///
-  /// @param[in] fd
+  /// \param[in] fd
   ///     The file descriptor for which to save the settings.
   ///
-  /// @param[in] save_process_group
+  /// \param[in] save_process_group
   ///     If \b true, save the process group information for the TTY.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the save was successful, \b false
   ///     otherwise.
   //------------------------------------------------------------------

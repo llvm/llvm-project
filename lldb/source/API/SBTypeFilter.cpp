@@ -35,6 +35,10 @@ SBTypeFilter::~SBTypeFilter() {}
 
 bool SBTypeFilter::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFilter, IsValid);
+  return this->operator bool();
+}
+SBTypeFilter::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFilter, operator bool);
 
   return m_opaque_sp.get() != NULL;
 }

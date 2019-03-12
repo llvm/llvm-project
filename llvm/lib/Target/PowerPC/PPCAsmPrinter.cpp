@@ -96,6 +96,9 @@ public:
 
     void EmitInstruction(const MachineInstr *MI) override;
 
+    /// This function is for PrintAsmOperand and PrintAsmMemoryOperand,
+    /// invoked by EmitMSInlineAsmStr and EmitGCCInlineAsmStr only.
+    /// The \p MI would be INLINEASM ONLY.
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
 
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -164,8 +167,9 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
 
   switch (MO.getType()) {
   case MachineOperand::MO_Register: {
-    unsigned Reg = PPCInstrInfo::getRegNumForOperand(MI->getDesc(),
-                                                     MO.getReg(), OpNo);
+    // The MI is INLINEASM ONLY and UseVSXReg is always false.
+    unsigned Reg =
+        PPCInstrInfo::getRegNumForOperand(MI->getDesc(), MO.getReg(), OpNo);
 
     const char *RegName = PPCInstPrinter::getRegisterName(Reg);
 

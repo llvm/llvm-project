@@ -60,7 +60,7 @@ body: |
     $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
     $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.flat16)
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # There is only a single fallthrough successor block, so there's no
@@ -84,7 +84,7 @@ body: |
   bb.1:
     $vgpr3_vgpr4 = V_LSHLREV_B64 4, $vgpr7_vgpr8, implicit $exec
     FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    S_ENDPGM
+    S_ENDPGM 0
 ...
 ---
 # The block has a single predecessor with a single successor, but it
@@ -95,7 +95,7 @@ body: |
 
 # CHECK: bb.1
 # CHECK-NEXT: FLAT_STORE_DWORD
-# CHECK-NEXT: S_ENDPGM
+# CHECK-NEXT: S_ENDPGM 0
 
 # CHECK: bb.2:
 # CHECK-NEXT: V_LSHLREV_B64
@@ -111,10 +111,10 @@ body: |
 
   bb.1:
     FLAT_STORE_DWORD $vgpr8_vgpr9, $vgpr10, 0, 0, 0, implicit $exec, implicit $flat_scr
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.2:
      $vgpr3_vgpr4 = V_LSHLREV_B64 4, $vgpr7_vgpr8, implicit $exec
     FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    S_ENDPGM
+    S_ENDPGM 0
 ...

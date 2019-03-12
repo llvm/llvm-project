@@ -687,11 +687,15 @@ public:
     _LIBCPP_INLINE_VISIBILITY constexpr optional(optional&&) = default;
     _LIBCPP_INLINE_VISIBILITY constexpr optional(nullopt_t) noexcept {}
 
-    template <class... _Args, class = enable_if_t<
-        is_constructible_v<value_type, _Args...>>
+    template <class _InPlaceT, class... _Args, class = enable_if_t<
+        __lazy_and<
+            is_same<_InPlaceT, in_place_t>,
+            is_constructible<value_type, _Args...>
+            >::value
+        >
     >
     _LIBCPP_INLINE_VISIBILITY
-    constexpr explicit optional(in_place_t, _Args&&... __args)
+    constexpr explicit optional(_InPlaceT, _Args&&... __args)
         : __base(in_place, _VSTD::forward<_Args>(__args)...) {}
 
     template <class _Up, class... _Args, class = enable_if_t<

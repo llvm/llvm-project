@@ -398,6 +398,7 @@ namespace {
     SDValue visitMSCATTER(SDNode *N);
     SDValue visitFP_TO_FP16(SDNode *N);
     SDValue visitFP16_TO_FP(SDNode *N);
+    SDValue visitVECREDUCE(SDNode *N);
 
     SDValue visitFADDForFMACombine(SDNode *N);
     SDValue visitFSUBForFMACombine(SDNode *N);
@@ -1592,6 +1593,19 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::MSTORE:             return visitMSTORE(N);
   case ISD::FP_TO_FP16:         return visitFP_TO_FP16(N);
   case ISD::FP16_TO_FP:         return visitFP16_TO_FP(N);
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:     return visitVECREDUCE(N);
   }
   return SDValue();
 }
@@ -2399,8 +2413,10 @@ SDValue DAGCombiner::visitADDC(SDNode *N) {
   return SDValue();
 }
 
-static SDValue flipBoolean(SDValue V, const SDLoc &DL, EVT VT,
+static SDValue flipBoolean(SDValue V, const SDLoc &DL,
                            SelectionDAG &DAG, const TargetLowering &TLI) {
+  EVT VT = V.getValueType();
+
   SDValue Cst;
   switch (TLI.getBooleanContents(VT)) {
   case TargetLowering::ZeroOrOneBooleanContent:
@@ -2477,7 +2493,7 @@ SDValue DAGCombiner::visitADDO(SDNode *N) {
       SDValue Sub = DAG.getNode(ISD::USUBO, DL, N->getVTList(),
                                 DAG.getConstant(0, DL, VT), N0.getOperand(0));
       return CombineTo(N, Sub,
-                       flipBoolean(Sub.getValue(1), DL, CarryVT, DAG, TLI));
+                       flipBoolean(Sub.getValue(1), DL, DAG, TLI));
     }
 
     if (SDValue Combined = visitUADDOLike(N0, N1, N))
@@ -2571,7 +2587,7 @@ SDValue DAGCombiner::visitADDCARRY(SDNode *N) {
                                 DAG.getConstant(0, DL, N0.getValueType()),
                                 N0.getOperand(0), B);
       return CombineTo(N, Sub,
-                       flipBoolean(Sub.getValue(1), DL, CarryVT, DAG, TLI));
+                       flipBoolean(Sub.getValue(1), DL, DAG, TLI));
     }
   }
 
@@ -18300,6 +18316,24 @@ SDValue DAGCombiner::visitFP16_TO_FP(SDNode *N) {
       return DAG.getNode(ISD::FP16_TO_FP, SDLoc(N), N->getValueType(0),
                          N0.getOperand(0));
     }
+  }
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitVECREDUCE(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N0.getValueType();
+
+  // VECREDUCE over 1-element vector is just an extract.
+  if (VT.getVectorNumElements() == 1) {
+    SDLoc dl(N);
+    SDValue Res = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, dl, VT.getVectorElementType(), N0,
+        DAG.getConstant(0, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
+    if (Res.getValueType() != N->getValueType(0))
+      Res = DAG.getNode(ISD::ANY_EXTEND, dl, N->getValueType(0), Res);
+    return Res;
   }
 
   return SDValue();

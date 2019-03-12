@@ -213,6 +213,8 @@ protected:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printHwreg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
+  void printEndpgm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
 };
 
 class R600InstPrinter : public MCInstPrinter {

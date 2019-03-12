@@ -20,7 +20,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class UtilityFunction UtilityFunction.h
+/// \class UtilityFunction UtilityFunction.h
 /// "lldb/Expression/UtilityFunction.h" Encapsulates a bit of source code that
 /// provides a function that is callable
 ///
@@ -34,10 +34,10 @@ public:
   //------------------------------------------------------------------
   /// Constructor
   ///
-  /// @param[in] text
+  /// \param[in] text
   ///     The text of the function.  Must be a full translation unit.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the function, as used in the text.
   //------------------------------------------------------------------
   UtilityFunction(ExecutionContextScope &exe_scope, const char *text,
@@ -48,13 +48,13 @@ public:
   //------------------------------------------------------------------
   /// Install the utility function into a process
   ///
-  /// @param[in] diagnostic_manager
+  /// \param[in] diagnostic_manager
   ///     A diagnostic manager to print parse errors and warnings to.
   ///
-  /// @param[in] exe_ctx
+  /// \param[in] exe_ctx
   ///     The execution context to install the utility function to.
   ///
-  /// @return
+  /// \return
   ///     True on success (no errors); false otherwise.
   //------------------------------------------------------------------
   virtual bool Install(DiagnosticManager &diagnostic_manager,
@@ -66,10 +66,10 @@ public:
   /// Especially useful if the function dereferences nullptr to indicate a
   /// failed assert.
   ///
-  /// @param[in] pc
+  /// \param[in] pc
   ///     The program counter to check.
   ///
-  /// @return
+  /// \return
   ///     True if the program counter falls within the function's bounds;
   ///     false if not (or the function is not JIT compiled)
   //------------------------------------------------------------------

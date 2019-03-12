@@ -37,10 +37,13 @@ int maini1() {
   {
     a = c;
   }
+#pragma omp target
+#pragma omp teams
+  c = a;
   return 0;
 }
 
-// DEVICE: define weak void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-7]](i32* dereferenceable{{[^,]*}}
+// DEVICE: define weak void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-10]](i32* dereferenceable{{[^,]*}}
 // DEVICE: [[C_REF:%.+]] = load i32*, i32** @c_decl_tgt_link_ptr,
 // DEVICE: [[C:%.+]] = load i32, i32* [[C_REF]],
 // DEVICE: store i32 [[C]], i32* %
@@ -59,9 +62,10 @@ int maini1() {
 // HOST: [[BP0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BASEPTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // HOST: [[P0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // HOST: call i32 @__tgt_target(i64 -1, i8* @{{[^,]+}}, i32 2, i8** [[BP0]], i8** [[P0]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[SIZES]], i{{[0-9]+}} 0, i{{[0-9]+}} 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPTYPES]], i{{[0-9]+}} 0, i{{[0-9]+}} 0))
-// HOST: call void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-26]](i32* %{{[^,]+}})
+// HOST: call void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-29]](i32* %{{[^,]+}})
+// HOST: call i32 @__tgt_target_teams(i64 -1, i8* @.__omp_offloading_{{.+}}_l40.region_id, i32 2, {{.+}})
 
-// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-28]](i32* dereferenceable{{.*}})
+// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-32]](i32* dereferenceable{{.*}})
 // HOST: [[C:%.*]] = load i32, i32* @c,
 // HOST: store i32 [[C]], i32* %
 

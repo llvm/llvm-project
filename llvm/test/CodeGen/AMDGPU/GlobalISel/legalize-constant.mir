@@ -32,9 +32,9 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_s1
     ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK: S_ENDPGM implicit [[C]](s1)
+    ; CHECK: S_ENDPGM 0, implicit [[C]](s1)
     %1:_(s1) = G_CONSTANT i1 0
-    S_ENDPGM implicit %1
+    S_ENDPGM 0, implicit %1
 ...
 
 ---

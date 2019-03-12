@@ -800,7 +800,7 @@ public:
   /// pointers, references, arrays and more. Again, it does so without
   /// doing any expensive type completion.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the ValueObject might have children, or \b
   ///     false otherwise.
   //------------------------------------------------------------------

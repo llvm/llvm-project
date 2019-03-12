@@ -91,16 +91,6 @@ len_def = "    def __len__(self): return self.%s()"
 eq_def = "    def __eq__(self, other): return isinstance(other, %s) and %s"
 ne_def = "    def __ne__(self, other): return not self.__eq__(other)"
 
-# Called to implement truth value testing and the built-in operation bool();
-# Note that Python 2 uses __nonzero__(), whereas Python 3 uses __bool__()
-# should return False or True, or their integer equivalents 0 or 1.
-# Delegate to self.IsValid() if it is defined for the current lldb object.
-
-if six.PY2:
-    nonzero_def = "    def __nonzero__(self): return self.IsValid()"
-else:
-    nonzero_def = "    def __bool__(self): return self.IsValid()"
-
 # A convenience iterator for SBSymbol!
 symbol_in_section_iter_def = '''
     def symbol_in_section_iter(self, section):
@@ -331,11 +321,6 @@ for line in content.splitlines():
     # """GetName(self) -> char""".
     if one_liner_docstring_pattern.match(line):
         line = char_to_str_xform(line)
-
-    # Look for 'def IsValid(*args):', and once located, add implementation
-    # of truth value testing for this object by delegation.
-    if isvalid_pattern.search(line):
-        new_content.add_line(nonzero_def)
 
     # Pass the original line of content to new_content.
     new_content.add_line(line)

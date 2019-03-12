@@ -71,6 +71,10 @@ bool lldb::operator==(const SBAddress &lhs, const SBAddress &rhs) {
 
 bool SBAddress::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBAddress, IsValid);
+  return this->operator bool();
+}
+SBAddress::operator bool() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBAddress, operator bool);
 
   return m_opaque_up != NULL && m_opaque_up->IsValid();
 }

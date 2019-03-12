@@ -61,7 +61,7 @@ define <16 x float> @test5(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-NEXT:    retq
 entry:
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %sub.i, i32 2) #2
+  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %sub.i, i32 10) #2
   ret <16 x float> %0
 }
 
@@ -71,7 +71,7 @@ define <16 x float> @test6(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-NEXT:    vfmadd213ps {ru-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 entry:
-  %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 2) #2
+  %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 10) #2
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %0
   ret <16 x float> %sub.i
 }
@@ -238,7 +238,7 @@ define <16 x float> @test14(<16 x float> %a, <16 x float> %b, <16 x float> %c, i
 ; KNL-NEXT:    vpxord {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 entry:
-  %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask, i32 2) #2
+  %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask, i32 10) #2
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %0
   ret <16 x float> %sub.i
 }
@@ -266,9 +266,9 @@ define <16 x float> @test15(<16 x float> %a, <16 x float> %b, <16 x float> %c, i
 entry:
   %bc = bitcast i16 %mask to <16 x i1>
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %a
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %sub.i, <16 x float> %b, <16 x float> %c, i32 2)
+  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %sub.i, <16 x float> %b, <16 x float> %c, i32 10)
   %sel = select <16 x i1> %bc, <16 x float> %0, <16 x float> %sub.i
-  %1 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %sel, <16 x float> %sub.i, <16 x float> %c, i32 1)
+  %1 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %sel, <16 x float> %sub.i, <16 x float> %c, i32 9)
   %sel2 = select <16 x i1> %bc, <16 x float> %1, <16 x float> %sel
   ret <16 x float> %sel2
 }
@@ -286,7 +286,7 @@ define <16 x float> @test16(<16 x float> %a, <16 x float> %b, <16 x float> %c, i
 ; KNL-NEXT:    vfmsubadd132ps {rd-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; KNL-NEXT:    retq
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
-  %res = call <16 x float> @llvm.x86.avx512.vfmaddsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %sub.i, i32 1)
+  %res = call <16 x float> @llvm.x86.avx512.vfmaddsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %sub.i, i32 9)
   %bc = bitcast i16 %mask to <16 x i1>
   %sel = select <16 x i1> %bc, <16 x float> %res, <16 x float> %a
   ret <16 x float> %sel

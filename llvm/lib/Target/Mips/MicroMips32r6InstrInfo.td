@@ -1039,7 +1039,7 @@ class TRUNC_L_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"trunc.l.d", FGR64Opnd,
 class TRUNC_W_S_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"trunc.w.s", FGR32Opnd,
                                                     FGR32Opnd, II_TRUNC>;
 class TRUNC_W_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"trunc.w.d", FGR32Opnd,
-                                                    AFGR64Opnd, II_TRUNC>;
+                                                    FGR64Opnd, II_TRUNC>;
 class SQRT_S_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"sqrt.s", FGR32Opnd, FGR32Opnd,
                                                  II_SQRT_S, fsqrt>;
 class SQRT_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"sqrt.d", AFGR64Opnd, AFGR64Opnd,
@@ -1749,6 +1749,8 @@ def : MipsPat<(f32 fpimm0), (MTC1_MMR6 ZERO)>, ISA_MICROMIPS32R6;
 def : MipsPat<(f32 fpimm0neg), (FNEG_S_MMR6 (MTC1_MMR6 ZERO))>, ISA_MICROMIPS32R6;
 def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
               (TRUNC_W_D_MMR6 FGR64Opnd:$src)>, ISA_MICROMIPS32R6;
+def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+              (TRUNC_W_S_MMR6 FGR32Opnd:$src)>, ISA_MICROMIPS32R6;
 
 def : MipsPat<(and GPRMM16:$src, immZExtAndi16:$imm),
               (ANDI16_MMR6 GPRMM16:$src, immZExtAndi16:$imm)>,

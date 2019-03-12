@@ -38,9 +38,6 @@ public:
     AsmInstrumentationAddress
   };
 
-  /// Enables AddressSanitizer instrumentation at machine level.
-  bool SanitizeAddress : 1;
-
   bool MCRelaxAll : 1;
   bool MCNoExecStack : 1;
   bool MCFatalWarnings : 1;

@@ -24,13 +24,13 @@ namespace lldb_private {
 class SymbolContextScope;
 
 //----------------------------------------------------------------------
-/// @class SymbolContext SymbolContext.h "lldb/Symbol/SymbolContext.h" Defines
+/// \class SymbolContext SymbolContext.h "lldb/Symbol/SymbolContext.h" Defines
 /// a symbol context baton that can be handed other debug core functions.
 ///
 /// Many debugger functions require a context when doing lookups. This class
 /// provides a common structure that can be used as the result of a query that
 /// can contain a single result. Examples of such queries include
-///     @li Looking up a load address.
+///     \li Looking up a load address.
 //----------------------------------------------------------------------
 class SymbolContext {
 public:
@@ -46,7 +46,7 @@ public:
   /// Construct with an object that knows how to reconstruct its symbol
   /// context.
   ///
-  /// @param[in] sc_scope
+  /// \param[in] sc_scope
   ///     A symbol context scope object that knows how to reconstruct
   ///     it's context.
   //------------------------------------------------------------------
@@ -58,22 +58,22 @@ public:
   ///
   /// Initialize all pointer to the specified values.
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     A Module pointer to the module for this context.
   ///
-  /// @param[in] comp_unit
+  /// \param[in] comp_unit
   ///     A CompileUnit pointer to the compile unit for this context.
   ///
-  /// @param[in] function
+  /// \param[in] function
   ///     A Function pointer to the function for this context.
   ///
-  /// @param[in] block
+  /// \param[in] block
   ///     A Block pointer to the deepest block for this context.
   ///
-  /// @param[in] line_entry
+  /// \param[in] line_entry
   ///     A LineEntry pointer to the line entry for this context.
   ///
-  /// @param[in] symbol
+  /// \param[in] symbol
   ///     A Symbol pointer to the symbol for this context.
   //------------------------------------------------------------------
   explicit SymbolContext(const lldb::TargetSP &target_sp,
@@ -95,7 +95,7 @@ public:
   ///
   /// Makes a copy of the another SymbolContext object \a rhs.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     A const SymbolContext object reference to copy.
   //------------------------------------------------------------------
   SymbolContext(const SymbolContext &rhs);
@@ -108,10 +108,10 @@ public:
   /// Copies the address value from another SymbolContext object \a rhs into
   /// \a this object.
   ///
-  /// @param[in] rhs
+  /// \param[in] rhs
   ///     A const SymbolContext object reference to copy.
   ///
-  /// @return
+  /// \return
   ///     A const SymbolContext object reference to \a this.
   //------------------------------------------------------------------
   const SymbolContext &operator=(const SymbolContext &rhs);
@@ -130,7 +130,7 @@ public:
   /// Dump a description of the contents of this object to the supplied stream
   /// \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   //------------------------------------------------------------------
   void Dump(Stream *s, Target *target) const;
@@ -145,33 +145,33 @@ public:
   /// is available, that will be output. Else just the address at which the
   /// target was stopped will be displayed.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   ///
-  /// @param[in] so_addr
+  /// \param[in] so_addr
   ///     The resolved section offset address.
   ///
-  /// @param[in] show_fullpaths
+  /// \param[in] show_fullpaths
   ///     When printing file paths (with the Module), whether the
   ///     base name of the Module should be printed or the full path.
   ///
-  /// @param[in] show_module
+  /// \param[in] show_module
   ///     Whether the module name should be printed followed by a
   ///     grave accent "`" character.
   ///
-  /// @param[in] show_inlined_frames
+  /// \param[in] show_inlined_frames
   ///     If a given pc is in inlined function(s), whether the inlined
   ///     functions should be printed on separate lines in addition to
   ///     the concrete function containing the pc.
   ///
-  /// @param[in] show_function_arguments
+  /// \param[in] show_function_arguments
   ///     If false, this method will try to elide the function argument
   ///     types when printing the function name.  This may be ambiguous
   ///     for languages that have function overloading - but it may
   ///     make the "function name" too long to include all the argument
   ///     types.
   ///
-  /// @param[in] show_function_name
+  /// \param[in] show_function_name
   ///     Normally this should be true - the function/symbol name should
   ///     be printed.  In disassembly formatting, where we want a format
   ///     like "<*+36>", this should be false and "*" will be printed
@@ -196,17 +196,17 @@ public:
   ///     - symbol address range if symbol is not nullptr and
   ///     eSymbolContextSymbol is set in \a scope
   ///
-  /// @param[in] scope
+  /// \param[in] scope
   ///     A mask of symbol context bits telling this function which
   ///     address ranges it can use when trying to extract one from
   ///     the valid (non-nullptr) symbol context classes.
   ///
-  /// @param[in] range_idx
+  /// \param[in] range_idx
   ///     The address range index to grab. Since many functions and
   ///     blocks are not always contiguous, they may have more than
   ///     one address range.
   ///
-  /// @param[in] use_inline_block_range
+  /// \param[in] use_inline_block_range
   ///     If \a scope has the eSymbolContextBlock bit set, and there
   ///     is a valid block in the symbol context, return the block
   ///     address range for the containing inline function block, not
@@ -214,11 +214,11 @@ public:
   ///     for the address range of the inlined function block, not
   ///     the deepest lexical block.
   ///
-  /// @param[out] range
+  /// \param[out] range
   ///     An address range object that will be filled in if \b true
   ///     is returned.
   ///
-  /// @return
+  /// \return
   ///     \b True if this symbol context contains items that describe
   ///     an address range, \b false otherwise.
   //------------------------------------------------------------------
@@ -238,15 +238,15 @@ public:
   ///     - non-extern symbol in the target
   /// It is an error if the highest-priority result is ambiguous.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the symbol to search for.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error that will be populated with a message if there was an
   ///     ambiguous result.  The error will not be populated if no result
   ///     was found.
   ///
-  /// @return
+  /// \return
   ///     The symbol that was found, or \b nullptr if none was found.
   //------------------------------------------------------------------
   const Symbol *FindBestGlobalDataSymbol(ConstString name, Status &error);
@@ -275,7 +275,7 @@ public:
   /// represented by this symbol context (whether the function is an inline
   /// function or not).
   ///
-  /// @return
+  /// \return
   ///     The block object pointer that defines the function that is
   ///     represented by this symbol context object, nullptr otherwise.
   //------------------------------------------------------------------
@@ -285,18 +285,18 @@ public:
   /// If this symbol context represents a function that is a method, return
   /// true and provide information about the method.
   ///
-  /// @param[out] language
+  /// \param[out] language
   ///     If \b true is returned, the language for the method.
   ///
-  /// @param[out] is_instance_method
+  /// \param[out] is_instance_method
   ///     If \b true is returned, \b true if this is a instance method,
   ///     \b false if this is a static/class function.
   ///
-  /// @param[out] language_object_name
+  /// \param[out] language_object_name
   ///     If \b true is returned, the name of the artificial variable
   ///     for the language ("this" for C++, "self" for ObjC).
   ///
-  /// @return
+  /// \return
   ///     \b True if this symbol context represents a function that
   ///     is a method of a class, \b false otherwise.
   //------------------------------------------------------------------
@@ -316,12 +316,12 @@ public:
   /// For instance, if the symbol context contains an inlined block, it will
   /// return the inlined function name.
   ///
-  /// @param[in] prefer_mangled
+  /// \param[in] prefer_mangled
   ///    if \btrue, then the mangled name will be returned if there
   ///    is one.  Otherwise the unmangled name will be returned if it
   ///    is available.
   ///
-  /// @return
+  /// \return
   ///     The name of the function represented by this symbol context.
   //------------------------------------------------------------------
   ConstString GetFunctionName(
@@ -338,12 +338,12 @@ public:
   /// table information for the symbol context. it will return the inlined
   /// function name.
   ///
-  /// @param[in] prefer_mangled
+  /// \param[in] prefer_mangled
   ///    if \btrue, then the mangled name will be returned if there
   ///    is one.  Otherwise the unmangled name will be returned if it
   ///    is available.
   ///
-  /// @return
+  /// \return
   ///     The name of the function represented by this symbol context.
   //------------------------------------------------------------------
   LineEntry GetFunctionStartLineEntry() const;
@@ -354,16 +354,16 @@ public:
   /// For instance, if the symbol context contains an inlined block, it will
   /// return the inlined function name.
   ///
-  /// @param[in] curr_frame_pc
+  /// \param[in] curr_frame_pc
   ///    The address within the block of this object.
   ///
-  /// @param[out] next_frame_sc
+  /// \param[out] next_frame_sc
   ///     A new symbol context that does what the title says it does.
   ///
-  /// @param[out] next_frame_addr
+  /// \param[out] next_frame_addr
   ///     This is what you should report as the PC in \a next_frame_sc.
   ///
-  /// @return
+  /// \return
   ///     \b true if this SymbolContext specifies a block contained in an
   ///     inlined block.  If this returns \b true, \a next_frame_sc and
   ///     \a next_frame_addr will be filled in correctly.
@@ -429,14 +429,14 @@ private:
 };
 
 //----------------------------------------------------------------------
-/// @class SymbolContextList SymbolContext.h "lldb/Symbol/SymbolContext.h"
+/// \class SymbolContextList SymbolContext.h "lldb/Symbol/SymbolContext.h"
 /// Defines a list of symbol context objects.
 ///
 /// This class provides a common structure that can be used to contain the
 /// result of a query that can contain a multiple results. Examples of such
 /// queries include:
-///     @li Looking up a function by name.
-///     @li Finding all addresses for a specified file and line number.
+///     \li Looking up a function by name.
+///     \li Finding all addresses for a specified file and line number.
 //----------------------------------------------------------------------
 class SymbolContextList {
 public:
@@ -455,7 +455,7 @@ public:
   //------------------------------------------------------------------
   /// Append a new symbol context to the list.
   ///
-  /// @param[in] sc
+  /// \param[in] sc
   ///     A symbol context to append to the list.
   //------------------------------------------------------------------
   void Append(const SymbolContext &sc);
@@ -480,7 +480,7 @@ public:
   /// Dump a description of the contents of each symbol context in the list to
   /// the supplied stream \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   //------------------------------------------------------------------
   void Dump(Stream *s, Target *target) const;
@@ -491,13 +491,13 @@ public:
   /// Dump a description of the contents of each symbol context in the list to
   /// the supplied stream \a s.
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     The zero based index into the symbol context list.
   ///
-  /// @param[out] sc
+  /// \param[out] sc
   ///     A reference to the symbol context to fill in.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a idx was a valid index into this
   ///     symbol context list and \a sc was filled in, \b false
   ///     otherwise.
@@ -510,10 +510,10 @@ public:
   /// The index \a idx must be a valid index, no error checking will be done
   /// to ensure that it is valid.
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     The zero based index into the symbol context list.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the symbol context to fill in.
   //------------------------------------------------------------------
   SymbolContext &operator[](size_t idx) { return m_symbol_contexts[idx]; }
@@ -527,7 +527,7 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for a symbol context list size.
   ///
-  /// @return
+  /// \return
   ///     Returns the number of symbol context objects in the list.
   //------------------------------------------------------------------
   uint32_t GetSize() const;

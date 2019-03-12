@@ -33,6 +33,8 @@ public:
     bool
     IsValid () const;
 
+    explicit operator bool() const;
+
     uint32_t
     StartListeningForEventClass (SBDebugger &debugger,
                                  const char *broadcaster_class, 

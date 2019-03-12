@@ -167,6 +167,17 @@ ifeq "$(CC)" "cc"
 endif
 
 #----------------------------------------------------------------------
+# Handle SDKROOT on Darwin
+#----------------------------------------------------------------------
+
+ifeq "$(OS)" "Darwin"
+    ifeq "$(SDKROOT)" ""
+        # We haven't otherwise set the SDKROOT, so set it now to macosx
+        SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+    endif
+endif
+
+#----------------------------------------------------------------------
 # ARCHFLAG is the flag used to tell the compiler which architecture
 # to compile for. The default is the flag that clang accepts.
 #----------------------------------------------------------------------
@@ -248,6 +259,13 @@ endif
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
+
+ifeq "$(OS)" "Darwin"
+	ifneq "$(SDKROOT)" ""
+		CFLAGS += -isysroot "$(SDKROOT)"
+	endif
+endif
+
 ifeq "$(OS)" "Darwin"
 	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
 else

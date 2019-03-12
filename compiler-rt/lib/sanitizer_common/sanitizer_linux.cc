@@ -128,12 +128,6 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 # define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
 #endif
 
-#if defined(__x86_64__) || SANITIZER_MIPS64
-extern "C" {
-extern void internal_sigreturn();
-}
-#endif
-
 // Note : FreeBSD had implemented both
 // Linux and OpenBSD apis, available from
 // future 12.x version most likely
@@ -837,24 +831,6 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
   }
   return result;
 }
-
-// Invokes sigaction via a raw syscall with a restorer, but does not support
-// all platforms yet.
-// We disable for Go simply because we have not yet added to buildgo.sh.
-#if (defined(__x86_64__) || SANITIZER_MIPS64) && !SANITIZER_GO
-int internal_sigaction_syscall(int signum, const void *act, void *oldact) {
-  if (act == nullptr)
-    return internal_sigaction_norestorer(signum, act, oldact);
-  __sanitizer_sigaction u_adjust;
-  internal_memcpy(&u_adjust, act, sizeof(u_adjust));
-#if !SANITIZER_ANDROID || !SANITIZER_MIPS32
-  if (u_adjust.sa_restorer == nullptr) {
-    u_adjust.sa_restorer = internal_sigreturn;
-  }
-#endif
-  return internal_sigaction_norestorer(signum, (const void *)&u_adjust, oldact);
-}
-#endif  // defined(__x86_64__) && !SANITIZER_GO
 #endif  // SANITIZER_LINUX
 
 uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,

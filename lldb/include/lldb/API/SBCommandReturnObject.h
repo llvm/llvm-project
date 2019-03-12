@@ -32,6 +32,8 @@ public:
 
   lldb_private::CommandReturnObject *Release();
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const char *GetOutput();

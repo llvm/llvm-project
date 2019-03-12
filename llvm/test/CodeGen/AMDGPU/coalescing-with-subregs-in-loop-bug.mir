@@ -93,6 +93,6 @@ body: |
     undef %32.sub0:vreg_128 = COPY killed %31.sub0
     %32.sub2:vreg_128 = COPY %33
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %32:vreg_128
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

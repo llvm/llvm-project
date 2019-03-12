@@ -72,6 +72,6 @@ body:             |
     %10.sub1 = V_ADDC_U32_e32 %9.sub1, %2, implicit-def dead $vcc, implicit killed $vcc, implicit $exec
     FLAT_STORE_DWORD %9, %5, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.gep2)
     FLAT_STORE_DWORD %10, %6, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.gep4)
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

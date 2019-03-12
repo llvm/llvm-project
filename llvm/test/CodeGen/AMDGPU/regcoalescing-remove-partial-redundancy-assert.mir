@@ -191,9 +191,9 @@ body:             |
     S_BRANCH %bb.29
   
   bb.33:
-    S_ENDPGM
+    S_ENDPGM 0
   
   bb.34:
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

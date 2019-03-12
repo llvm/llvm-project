@@ -47,8 +47,8 @@ struct HighlightStyle {
     void Apply(Stream &s, llvm::StringRef value) const;
 
     /// Sets the prefix and suffix strings.
-    /// @param prefix
-    /// @param suffix
+    /// \param prefix
+    /// \param suffix
     void Set(llvm::StringRef prefix, llvm::StringRef suffix);
   };
 

@@ -118,11 +118,23 @@ void MipsLLVMToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
 
 std::string MipsLLVMToolChain::getCompilerRT(const ArgList &Args,
                                              StringRef Component,
-                                             bool Shared) const {
+                                             FileType Type) const {
   SmallString<128> Path(getDriver().ResourceDir);
   llvm::sys::path::append(Path, SelectedMultilib.osSuffix(), "lib" + LibSuffix,
                           getOS());
-  llvm::sys::path::append(Path, Twine("libclang_rt." + Component + "-" +
-                                      "mips" + (Shared ? ".so" : ".a")));
+  const char *Suffix;
+  switch (Type) {
+  case ToolChain::FT_Object:
+    Suffix = ".o";
+    break;
+  case ToolChain::FT_Static:
+    Suffix = ".a";
+    break;
+  case ToolChain::FT_Shared:
+    Suffix = ".so";
+    break;
+  }
+  llvm::sys::path::append(
+      Path, Twine("libclang_rt." + Component + "-" + "mips" + Suffix));
   return Path.str();
 }

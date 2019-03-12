@@ -100,8 +100,6 @@ __hwasan_tag_mismatch:
 .Lfunc_end0:
   .size __hwasan_tag_mismatch, .Lfunc_end0-__hwasan_tag_mismatch
 
-.addrsig
-
 #endif  // defined(__aarch64__)
 
 // We do not need executable stack.

@@ -17,7 +17,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class BreakpointResolverFileRegex BreakpointResolverFileRegex.h
+/// \class BreakpointResolverFileRegex BreakpointResolverFileRegex.h
 /// "lldb/Breakpoint/BreakpointResolverFileRegex.h" This class sets
 /// breakpoints by file and line.  Optionally, it will look for inlined
 /// instances of the file and line specification.

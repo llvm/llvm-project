@@ -159,9 +159,10 @@ enum SourceLanguage : uint8_t {
   MSIL = 0x0f,
   HLSL = 0x10,
 
-  /// The DMD compiler emits 'D' for the CV source language. Microsoft doesn't
-  /// have an enumerator for it yet.
+  /// The DMD & Swift compilers emit 'D' and 'S', respectively, for the CV
+  /// source language. Microsoft does not have enumerators for them yet.
   D = 'D',
+  Swift = 'S',
 };
 
 /// These values correspond to the CV_call_e enumeration, and are documented

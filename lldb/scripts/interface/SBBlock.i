@@ -30,6 +30,8 @@ public:
     bool
     IsValid () const;
 
+    explicit operator bool() const;
+
     %feature("docstring", "
     Get the function name if this block represents an inlined function;
     otherwise, return None.

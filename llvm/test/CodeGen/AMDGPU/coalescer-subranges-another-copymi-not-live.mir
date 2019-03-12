@@ -129,5 +129,5 @@ body:             |
     %29:vgpr_32 = V_ADD_F32_e32 0, killed %28, implicit $exec
     $m0 = S_MOV_B32 -1
     DS_WRITE_B32 undef %30:vgpr_32, killed %29, 0, 0, implicit $m0, implicit $exec :: (store 4 into `i32 addrspace(3)* undef`, addrspace 3)
-    S_ENDPGM
+    S_ENDPGM 0
 ...

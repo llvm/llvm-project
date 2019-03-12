@@ -23,7 +23,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Block Block.h "lldb/Symbol/Block.h"
+/// \class Block Block.h "lldb/Symbol/Block.h"
 /// A class that describes a single lexical block.
 ///
 /// A Function object owns a BlockList object which owns one or more
@@ -52,7 +52,7 @@ public:
   /// \a block_list is used to represent the parent, sibling, and child block
   /// information and also allows for partial parsing at the block level.
   ///
-  /// @param[in] uid
+  /// \param[in] uid
   ///     The UID for a given block. This value is given by the
   ///     SymbolFile plug-in and can be any value that helps the
   ///     SymbolFile plug-in to match this block back to the debug
@@ -60,13 +60,13 @@ public:
   ///     depth parsing. Common values would be the index into a
   ///     table, or an offset into the debug information.
   ///
-  /// @param[in] depth
+  /// \param[in] depth
   ///     The integer depth of this block in the block list hierarchy.
   ///
-  /// @param[in] block_list
+  /// \param[in] block_list
   ///     The block list that this object belongs to.
   ///
-  /// @see BlockList
+  /// \see BlockList
   //------------------------------------------------------------------
   Block(lldb::user_id_t uid);
 
@@ -78,7 +78,7 @@ public:
   //------------------------------------------------------------------
   /// Add a child to this object.
   ///
-  /// @param[in] child_block_sp
+  /// \param[in] child_block_sp
   ///     A shared pointer to a child block that will get added to
   ///     this block.
   //------------------------------------------------------------------
@@ -87,11 +87,11 @@ public:
   //------------------------------------------------------------------
   /// Add a new offset range to this block.
   ///
-  /// @param[in] start_offset
+  /// \param[in] start_offset
   ///     An offset into this Function's address range that
   ///     describes the start address of a range for this block.
   ///
-  /// @param[in] end_offset
+  /// \param[in] end_offset
   ///     An offset into this Function's address range that
   ///     describes the end address of a range for this block.
   //------------------------------------------------------------------
@@ -100,9 +100,9 @@ public:
   void FinalizeRanges();
 
   //------------------------------------------------------------------
-  /// @copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
+  /// \copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
   ///
-  /// @see SymbolContextScope
+  /// \see SymbolContextScope
   //------------------------------------------------------------------
   void CalculateSymbolContext(SymbolContext *sc) override;
 
@@ -117,10 +117,10 @@ public:
   //------------------------------------------------------------------
   /// Check if an offset is in one of the block offset ranges.
   ///
-  /// @param[in] range_offset
+  /// \param[in] range_offset
   ///     An offset into the Function's address range.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a range_offset falls in one of this
   ///     block's ranges, \b false otherwise.
   //------------------------------------------------------------------
@@ -129,10 +129,10 @@ public:
   //------------------------------------------------------------------
   /// Check if a offset range is in one of the block offset ranges.
   ///
-  /// @param[in] range
+  /// \param[in] range
   ///     An offset range into the Function's address range.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a range falls in one of this
   ///     block's ranges, \b false otherwise.
   //------------------------------------------------------------------
@@ -141,10 +141,10 @@ public:
   //------------------------------------------------------------------
   /// Check if this object contains "block" as a child block at any depth.
   ///
-  /// @param[in] block
+  /// \param[in] block
   ///     A potential child block.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a block is a child of this block, \b
   ///     false otherwise.
   //------------------------------------------------------------------
@@ -153,29 +153,29 @@ public:
   //------------------------------------------------------------------
   /// Dump the block contents.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   ///
-  /// @param[in] base_addr
+  /// \param[in] base_addr
   ///     The resolved start address of the Function's address
   ///     range. This should be resolved as the file or load address
   ///     prior to passing the value into this function for dumping.
   ///
-  /// @param[in] depth
+  /// \param[in] depth
   ///     Limit the number of levels deep that this function should
   ///     print as this block can contain child blocks. Specify
   ///     INT_MAX to dump all child blocks.
   ///
-  /// @param[in] show_context
+  /// \param[in] show_context
   ///     If \b true, variables will dump their context information.
   //------------------------------------------------------------------
   void Dump(Stream *s, lldb::addr_t base_addr, int32_t depth,
             bool show_context) const;
 
   //------------------------------------------------------------------
-  /// @copydoc SymbolContextScope::DumpSymbolContext(Stream*)
+  /// \copydoc SymbolContextScope::DumpSymbolContext(Stream*)
   ///
-  /// @see SymbolContextScope
+  /// \see SymbolContextScope
   //------------------------------------------------------------------
   void DumpSymbolContext(Stream *s) override;
 
@@ -187,7 +187,7 @@ public:
   //------------------------------------------------------------------
   /// Get the parent block.
   ///
-  /// @return
+  /// \return
   ///     The parent block pointer, or nullptr if this block has no
   ///     parent.
   //------------------------------------------------------------------
@@ -196,7 +196,7 @@ public:
   //------------------------------------------------------------------
   /// Get the inlined block that contains this block.
   ///
-  /// @return
+  /// \return
   ///     If this block contains inlined function info, it will return
   ///     this block, else parent blocks will be searched to see if
   ///     any contain this block. nullptr will be returned if this block
@@ -207,7 +207,7 @@ public:
   //------------------------------------------------------------------
   /// Get the inlined parent block for this block.
   ///
-  /// @return
+  /// \return
   ///     The parent block pointer, or nullptr if this block has no
   ///     parent.
   //------------------------------------------------------------------
@@ -216,7 +216,7 @@ public:
   //------------------------------------------------------------------
   /// Get the sibling block for this block.
   ///
-  /// @return
+  /// \return
   ///     The sibling block pointer, or nullptr if this block has no
   ///     sibling.
   //------------------------------------------------------------------
@@ -225,7 +225,7 @@ public:
   //------------------------------------------------------------------
   /// Get the first child block.
   ///
-  /// @return
+  /// \return
   ///     The first child block pointer, or nullptr if this block has no
   ///     children.
   //------------------------------------------------------------------
@@ -236,12 +236,12 @@ public:
   //------------------------------------------------------------------
   /// Get the variable list for this block only.
   ///
-  /// @param[in] can_create
+  /// \param[in] can_create
   ///     If \b true, the variables can be parsed if they already
   ///     haven't been, else the current state of the block will be
   ///     returned.
   ///
-  /// @return
+  /// \return
   ///     A variable list shared pointer that contains all variables
   ///     for this block.
   //------------------------------------------------------------------
@@ -251,24 +251,24 @@ public:
   /// Get the variable list for this block and optionally all child blocks if
   /// \a get_child_variables is \b true.
   ///
-  /// @param[in] get_child_variables
+  /// \param[in] get_child_variables
   ///     If \b true, all variables from all child blocks will be
   ///     added to the variable list.
   ///
-  /// @param[in] can_create
+  /// \param[in] can_create
   ///     If \b true, the variables can be parsed if they already
   ///     haven't been, else the current state of the block will be
   ///     returned. Passing \b true for this parameter can be used
   ///     to see the current state of what has been parsed up to this
   ///     point.
   ///
-  /// @param[in] add_inline_child_block_variables
+  /// \param[in] add_inline_child_block_variables
   ///     If this is \b false, no child variables of child blocks
   ///     that are inlined functions will be gotten. If \b true then
   ///     all child variables will be added regardless of whether they
   ///     come from inlined functions or not.
   ///
-  /// @return
+  /// \return
   ///     A variable list shared pointer that contains all variables
   ///     for this block.
   //------------------------------------------------------------------
@@ -281,27 +281,27 @@ public:
   /// Appends the variables from this block, and optionally from all parent
   /// blocks, to \a variable_list.
   ///
-  /// @param[in] can_create
+  /// \param[in] can_create
   ///     If \b true, the variables can be parsed if they already
   ///     haven't been, else the current state of the block will be
   ///     returned. Passing \b true for this parameter can be used
   ///     to see the current state of what has been parsed up to this
   ///     point.
   ///
-  /// @param[in] get_parent_variables
+  /// \param[in] get_parent_variables
   ///     If \b true, all variables from all parent blocks will be
   ///     added to the variable list.
   ///
-  /// @param[in] stop_if_block_is_inlined_function
+  /// \param[in] stop_if_block_is_inlined_function
   ///     If \b true, all variables from all parent blocks will be
   ///     added to the variable list until there are no parent blocks
   ///     or the parent block has inlined function info.
   ///
-  /// @param[in,out] variable_list
+  /// \param[in,out] variable_list
   ///     All variables in this block, and optionally all parent
   ///     blocks will be added to this list.
   ///
-  /// @return
+  /// \return
   ///     The number of variable that were appended to \a
   ///     variable_list.
   //------------------------------------------------------------------
@@ -313,7 +313,7 @@ public:
   //------------------------------------------------------------------
   /// Get const accessor for any inlined function information.
   ///
-  /// @return
+  /// \return
   ///     A const pointer to any inlined function information, or nullptr
   ///     if this is a regular block.
   //------------------------------------------------------------------
@@ -325,7 +325,7 @@ public:
   /// Get the symbol file which contains debug info for this block's
   /// symbol context module.
   ///
-  /// @return A pointer to the symbol file or nullptr.
+  /// \return A pointer to the symbol file or nullptr.
   //------------------------------------------------------------------
   SymbolFile *GetSymbolFile();
 
@@ -337,7 +337,7 @@ public:
   /// Returns the cost of this object plus any owned objects from the ranges,
   /// variables, and inline function information.
   ///
-  /// @return
+  /// \return
   ///     The number of bytes that this object occupies in memory.
   //------------------------------------------------------------------
   size_t MemorySize() const;
@@ -345,21 +345,21 @@ public:
   //------------------------------------------------------------------
   /// Set accessor for any inlined function information.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The method name for the inlined function. This value should
   ///     not be nullptr.
   ///
-  /// @param[in] mangled
+  /// \param[in] mangled
   ///     The mangled method name for the inlined function. This can
   ///     be nullptr if there is no mangled name for an inlined function
   ///     or if the name is the same as \a name.
   ///
-  /// @param[in] decl_ptr
+  /// \param[in] decl_ptr
   ///     A optional pointer to declaration information for the
   ///     inlined function information. This value can be nullptr to
   ///     indicate that no declaration information is available.
   ///
-  /// @param[in] call_decl_ptr
+  /// \param[in] call_decl_ptr
   ///     Optional calling location declaration information that
   ///     describes from where this inlined function was called.
   //------------------------------------------------------------------
@@ -377,7 +377,7 @@ public:
   /// Called by the SymbolFile plug-ins after they have parsed the variable
   /// lists and are ready to hand ownership of the list over to this object.
   ///
-  /// @param[in] variable_list_sp
+  /// \param[in] variable_list_sp
   ///     A shared pointer to a VariableList.
   //------------------------------------------------------------------
   void SetVariableList(lldb::VariableListSP &variable_list_sp) {

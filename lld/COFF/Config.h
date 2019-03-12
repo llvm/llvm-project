@@ -90,6 +90,7 @@ struct Configuration {
   bool NoEntry = false;
   std::string OutputFile;
   std::string ImportName;
+  bool Demangle = true;
   bool DoGC = true;
   bool DoICF = true;
   bool TailMerge;

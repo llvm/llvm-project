@@ -183,7 +183,8 @@ std::unique_ptr<FrontendAction> createStaticIndexingAction(
       index::IndexingOptions::SystemSymbolFilterKind::All;
   Opts.CollectIncludePath = true;
   Opts.CountReferences = true;
-  Opts.Origin = SymbolOrigin::Static;
+  if (Opts.Origin == SymbolOrigin::Unknown)
+    Opts.Origin = SymbolOrigin::Static;
   Opts.StoreAllDocumentation = false;
   if (RefsCallback != nullptr) {
     Opts.RefFilter = RefKind::All;

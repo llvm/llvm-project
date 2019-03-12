@@ -28,6 +28,8 @@ public:
 
   bool IsInlined() const;
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const char *GetInlinedName() const;
@@ -61,7 +63,7 @@ public:
   //------------------------------------------------------------------
   /// Get the inlined block that contains this block.
   ///
-  /// @return
+  /// \return
   ///     If this block is inlined, it will return this block, else
   ///     parent blocks will be searched to see if any contain this
   ///     block and are themselves inlined. An invalid SBBlock will
