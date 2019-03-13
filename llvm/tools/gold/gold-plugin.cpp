@@ -205,8 +205,9 @@ namespace options {
   /// Statistics output filename.
   static std::string stats_file;
 
-  // Optimization remarks filename and hotness options
+  // Optimization remarks filename, accepted passes and hotness options
   static std::string OptRemarksFilename;
+  static std::string OptRemarksFilter;
   static bool OptRemarksWithHotness = false;
 
   // Context sensitive PGO options.
@@ -285,6 +286,8 @@ namespace options {
       dwo_dir = opt.substr(strlen("dwo_dir="));
     } else if (opt.startswith("opt-remarks-filename=")) {
       OptRemarksFilename = opt.substr(strlen("opt-remarks-filename="));
+    } else if (opt.startswith("opt-remarks-passes=")) {
+      OptRemarksFilter = opt.substr(strlen("opt-remarks-passes="));
     } else if (opt == "opt-remarks-with-hotness") {
       OptRemarksWithHotness = true;
     } else if (opt.startswith("stats-file=")) {
@@ -908,6 +911,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
 
   // Set up optimization remarks handling.
   Conf.RemarksFilename = options::OptRemarksFilename;
+  Conf.RemarksPasses = options::OptRemarksFilter;
   Conf.RemarksWithHotness = options::OptRemarksWithHotness;
 
   // Use new pass manager if set in driver

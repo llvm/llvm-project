@@ -60,8 +60,13 @@ class DarwinNSLogOutputTestCase(TestBase):
 
         # So that the child gets torn down after the test.
         import pexpect
-        self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec,
-                                                 self.lldbOption, exe))
+        import sys
+        if sys.version_info.major == 3:
+          self.child = pexpect.spawnu('%s %s %s' % (lldbtest_config.lldbExec,
+                                                    self.lldbOption, exe))
+        else:
+          self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec,
+                                                   self.lldbOption, exe))
         child = self.child
 
         # Turn on logging for what the child sends back.

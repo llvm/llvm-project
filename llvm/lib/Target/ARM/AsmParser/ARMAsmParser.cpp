@@ -5594,6 +5594,9 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
   case MCObjectFileInfo::IsWasm:
     CurrentFormat = WASM;
     break;
+  case MCObjectFileInfo::IsXCOFF:
+    llvm_unreachable("unexpected object format");
+    break;
   }
 
   if (~Prefix->SupportedFormats & CurrentFormat) {

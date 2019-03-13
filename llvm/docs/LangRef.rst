@@ -1178,6 +1178,13 @@ Currently, only the following parameter attributes are defined:
     does not alias any other memory visible within a function and that a
     ``swifterror`` alloca passed as an argument does not escape.
 
+``immarg``
+    This indicates the parameter is required to be an immediate
+    value. This must be a trivial immediate integer or floating-point
+    constant. Undef or constant expressions are not valid. This is
+    only valid on intrinsic declarations and cannot be applied to a
+    call site or arbitrary function.
+
 .. _gc:
 
 Garbage Collector Strategy Names

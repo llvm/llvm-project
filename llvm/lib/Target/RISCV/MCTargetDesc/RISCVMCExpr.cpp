@@ -49,14 +49,22 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup() const {
   if (!AUIPCSRE)
     return nullptr;
 
-  const auto *DF =
-      dyn_cast_or_null<MCDataFragment>(AUIPCSRE->findAssociatedFragment());
+  const MCSymbol *AUIPCSymbol = &AUIPCSRE->getSymbol();
+  const auto *DF = dyn_cast_or_null<MCDataFragment>(AUIPCSymbol->getFragment());
+
   if (!DF)
     return nullptr;
 
-  const MCSymbol *AUIPCSymbol = &AUIPCSRE->getSymbol();
+  uint64_t Offset = AUIPCSymbol->getOffset();
+  if (DF->getContents().size() == Offset) {
+    DF = dyn_cast_or_null<MCDataFragment>(DF->getNextNode());
+    if (!DF)
+      return nullptr;
+    Offset = 0;
+  }
+
   for (const MCFixup &F : DF->getFixups()) {
-    if (F.getOffset() != AUIPCSymbol->getOffset())
+    if (F.getOffset() != Offset)
       continue;
 
     switch ((unsigned)F.getKind()) {

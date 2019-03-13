@@ -115,7 +115,7 @@ class DataRecorder {
 public:
   DataRecorder(FileSpec filename, std::error_code &ec)
       : m_filename(std::move(filename)),
-        m_os(m_filename.GetPath(), ec, llvm::sys::fs::F_Text) {}
+        m_os(m_filename.GetPath(), ec, llvm::sys::fs::F_Text), m_record(true) {}
 
   static llvm::Expected<std::unique_ptr<DataRecorder>>
   Create(FileSpec filename);
@@ -128,9 +128,15 @@ public:
 
   const FileSpec &GetFilename() { return m_filename; }
 
+  void Stop() {
+    assert(m_record);
+    m_record = false;
+  }
+
 private:
   FileSpec m_filename;
   llvm::raw_fd_ostream m_os;
+  bool m_record;
 };
 
 struct CommandInfo {

@@ -1614,9 +1614,10 @@ DEF_TRAVERSE_DECL(OMPDeclareMapperDecl, {
 DEF_TRAVERSE_DECL(OMPCapturedExprDecl, { TRY_TO(TraverseVarHelper(D)); })
 
 DEF_TRAVERSE_DECL(OMPAllocateDecl, {
-  for (auto *I : D->varlists()) {
+  for (auto *I : D->varlists())
     TRY_TO(TraverseStmt(I));
-  }
+  for (auto *C : D->clauselists())
+    TRY_TO(TraverseOMPClause(C));
 })
 
 // A helper method for TemplateDecl's children.
@@ -2823,6 +2824,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPClauseWithPostUpdate(
     OMPClauseWithPostUpdate *Node) {
   TRY_TO(VisitOMPClauseWithPreInit(Node));
   TRY_TO(TraverseStmt(Node->getPostUpdateExpr()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPAllocatorClause(
+    OMPAllocatorClause *C) {
+  TRY_TO(TraverseStmt(C->getAllocator()));
   return true;
 }
 

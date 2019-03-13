@@ -1254,7 +1254,7 @@ void ASTStmtReader::VisitObjCAtFinallyStmt(ObjCAtFinallyStmt *S) {
 }
 
 void ASTStmtReader::VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *S) {
-  VisitStmt(S);
+  VisitStmt(S); // FIXME: no test coverage.
   S->setSubStmt(Record.readSubStmt());
   S->setAtLoc(ReadSourceLocation());
 }
@@ -1274,14 +1274,14 @@ void ASTStmtReader::VisitObjCAtTryStmt(ObjCAtTryStmt *S) {
 }
 
 void ASTStmtReader::VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *S) {
-  VisitStmt(S);
+  VisitStmt(S); // FIXME: no test coverage.
   S->setSynchExpr(Record.readSubStmt());
   S->setSynchBody(Record.readSubStmt());
   S->setAtSynchronizedLoc(ReadSourceLocation());
 }
 
 void ASTStmtReader::VisitObjCAtThrowStmt(ObjCAtThrowStmt *S) {
-  VisitStmt(S);
+  VisitStmt(S); // FIXME: no test coverage.
   S->setThrowExpr(Record.readSubStmt());
   S->setThrowLoc(ReadSourceLocation());
 }

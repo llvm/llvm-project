@@ -275,6 +275,12 @@ static cl::opt<std::string>
                     cl::desc("YAML output filename for pass remarks"),
                     cl::value_desc("filename"));
 
+static cl::opt<std::string>
+    RemarksPasses("pass-remarks-filter",
+                  cl::desc("Only record optimization remarks from passes whose "
+                           "names match the given regular expression"),
+                  cl::value_desc("regex"));
+
 cl::opt<PGOKind>
     PGOKindFlag("pgo-kind", cl::init(NoPGO), cl::Hidden,
                 cl::desc("The kind of profile guided optimization"),
@@ -566,6 +572,12 @@ int main(int argc, char **argv) {
     }
     Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
         RemarksFilename, OptRemarkFile->os()));
+
+    if (!RemarksPasses.empty())
+      if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses)) {
+        errs() << E << '\n';
+        return 1;
+      }
   }
 
   // Load the input module...

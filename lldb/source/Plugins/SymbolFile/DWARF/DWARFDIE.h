@@ -14,8 +14,6 @@
 
 class DWARFDIE : public DWARFBaseDIE {
 public:
-  class ElaboratingDIEIterator;
-
   using DWARFBaseDIE::DWARFBaseDIE;
 
   //----------------------------------------------------------------------
@@ -32,8 +30,6 @@ public:
 
   DWARFDIE
   GetContainingDWOModuleDIE() const;
-
-  inline llvm::iterator_range<ElaboratingDIEIterator> elaborating_dies() const;
 
   //----------------------------------------------------------------------
   // Accessing information about a DIE
@@ -85,7 +81,7 @@ public:
   //----------------------------------------------------------------------
   // DeclContext related functions
   //----------------------------------------------------------------------
-  void GetDeclContextDIEs(DWARFDIECollection &decl_context_dies) const;
+  std::vector<DWARFDIE> GetDeclContextDIEs() const;
 
   void GetDWARFDeclContext(DWARFDeclContext &dwarf_decl_ctx) const;
 
@@ -120,59 +116,5 @@ public:
 
   lldb_private::CompilerDeclContext GetContainingDeclContext() const;
 };
-
-/// Iterate through all DIEs elaborating (i.e. reachable by a chain of
-/// DW_AT_specification and DW_AT_abstract_origin attributes) a given DIE. For
-/// convenience, the starting die is included in the sequence as the first
-/// item.
-class DWARFDIE::ElaboratingDIEIterator
-    : public std::iterator<std::input_iterator_tag, DWARFDIE> {
-
-  // The operating invariant is: top of m_worklist contains the "current" item
-  // and the rest of the list are items yet to be visited. An empty worklist
-  // means we've reached the end.
-  // Infinite recursion is prevented by maintaining a list of seen DIEs.
-  // Container sizes are optimized for the case of following DW_AT_specification
-  // and DW_AT_abstract_origin just once.
-  llvm::SmallVector<DWARFDIE, 2> m_worklist;
-  llvm::SmallSet<lldb::user_id_t, 3> m_seen;
-
-  void Next();
-
-public:
-  /// An iterator starting at die d.
-  explicit ElaboratingDIEIterator(DWARFDIE d) : m_worklist(1, d) {}
-
-  /// End marker
-  ElaboratingDIEIterator() {}
-
-  const DWARFDIE &operator*() const { return m_worklist.back(); }
-  ElaboratingDIEIterator &operator++() {
-    Next();
-    return *this;
-  }
-  ElaboratingDIEIterator operator++(int) {
-    ElaboratingDIEIterator I = *this;
-    Next();
-    return I;
-  }
-
-  friend bool operator==(const ElaboratingDIEIterator &a,
-                         const ElaboratingDIEIterator &b) {
-    if (a.m_worklist.empty() || b.m_worklist.empty())
-      return a.m_worklist.empty() == b.m_worklist.empty();
-    return a.m_worklist.back() == b.m_worklist.back();
-  }
-  friend bool operator!=(const ElaboratingDIEIterator &a,
-                         const ElaboratingDIEIterator &b) {
-    return !(a == b);
-  }
-};
-
-llvm::iterator_range<DWARFDIE::ElaboratingDIEIterator>
-DWARFDIE::elaborating_dies() const {
-  return llvm::make_range(ElaboratingDIEIterator(*this),
-                          ElaboratingDIEIterator());
-}
 
 #endif // SymbolFileDWARF_DWARFDIE_h_

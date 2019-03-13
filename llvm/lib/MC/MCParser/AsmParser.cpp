@@ -710,6 +710,9 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   case MCObjectFileInfo::IsWasm:
     PlatformParser.reset(createWasmAsmParser());
     break;
+  case MCObjectFileInfo::IsXCOFF:
+    // TODO: Need to implement createXCOFFAsmParser for XCOFF format.
+    break;
   }
 
   PlatformParser->Initialize(*this);

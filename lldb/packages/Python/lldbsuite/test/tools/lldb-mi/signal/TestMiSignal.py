@@ -50,6 +50,12 @@ class MiSignalTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-exec-continue")
         self.expect("\^running")
 
+        # There's a chance that lldb didn't resume the process, we send an interruput but
+        # the process is not running yet. Give it some time to restart. 5 seconds ought to
+        # be enough for every modern CPU out there.
+        import time
+        time.sleep(5)
+
         # Test that Ctrl+C can interrupt an execution
         self.child.sendintr()  # FIXME: here uses self.child directly
         self.expect(

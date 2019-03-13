@@ -504,7 +504,6 @@ struct AttributeComparator {
     CodeGenIntrinsic::ModRefBehavior LK = L->ModRef;
     CodeGenIntrinsic::ModRefBehavior RK = R->ModRef;
     if (LK != RK) return (LK > RK);
-
     // Order by argument attributes.
     // This is reliable because each side is already sorted internally.
     return (L->ArgumentAttributes < R->ArgumentAttributes);
@@ -610,6 +609,12 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
             if (addComma)
               OS << ",";
             OS << "Attribute::ReadNone";
+            addComma = true;
+            break;
+          case CodeGenIntrinsic::ImmArg:
+            if (addComma)
+              OS << ',';
+            OS << "Attribute::ImmArg";
             addComma = true;
             break;
           }

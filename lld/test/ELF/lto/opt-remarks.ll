@@ -8,6 +8,9 @@
 ; RUN:  %t.o -o %t -shared
 ; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
 ; RUN: cat %t.hot.yaml | FileCheck %s -check-prefix=YAML-HOT
+; RUN: ld.lld --opt-remarks-filename %t1.yaml --opt-remarks-passes inline %t.o \
+; RUN: -o /dev/null -shared
+; RUN: cat %t1.yaml | FileCheck %s -check-prefix=YAML-PASSES
 
 ; Check that @tinkywinky is inlined after optimizations.
 ; CHECK-LABEL: define i32 @main
@@ -47,6 +50,8 @@
 ; YAML-HOT-NEXT:   - Threshold:       '337'
 ; YAML-HOT-NEXT:   - String:          ')'
 ; YAML-HOT-NEXT: ...
+
+; YAML-PASSES: Pass:            inline
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-scei-ps4"

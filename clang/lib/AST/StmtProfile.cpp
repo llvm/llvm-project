@@ -457,6 +457,11 @@ void OMPClauseProfiler::VisitOMPSimdlenClause(const OMPSimdlenClause *C) {
     Profiler->VisitStmt(C->getSimdlen());
 }
 
+void OMPClauseProfiler::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
+  if (C->getAllocator())
+    Profiler->VisitStmt(C->getAllocator());
+}
+
 void OMPClauseProfiler::VisitOMPCollapseClause(const OMPCollapseClause *C) {
   if (C->getNumForLoops())
     Profiler->VisitStmt(C->getNumForLoops());

@@ -19,6 +19,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleBuilder.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Preprocessor.h"
@@ -279,6 +280,12 @@ namespace clang {
 
         Ctx.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
             CodeGenOpts.OptRecordFile, OptRecordFile->os()));
+
+        if (!CodeGenOpts.OptRecordPasses.empty())
+          if (Error E = Ctx.getRemarkStreamer()->setFilter(
+                  CodeGenOpts.OptRecordPasses))
+            Diags.Report(diag::err_drv_optimization_remark_pattern)
+                << toString(std::move(E)) << CodeGenOpts.OptRecordPasses;
 
         if (CodeGenOpts.getProfileUse() != CodeGenOptions::ProfileNone)
           Ctx.setDiagnosticsHotnessRequested(true);

@@ -5,18 +5,18 @@
 target triple = "wasm32-unknown-unknown"
 
 @data = hidden global i32 2, align 4
-@indirect_func = local_unnamed_addr global void ()* @foo, align 4
+@indirect_func = local_unnamed_addr global i32 ()* @foo, align 4
 @indirect_func_external = local_unnamed_addr global void ()* @func_external, align 4
 
-define default void @foo() {
+define default i32 @foo() {
 entry:
   ; To ensure we use __stack_pointer
   %ptr = alloca i32
   %0 = load i32, i32* @data, align 4
   %1 = load i32, i32* @data_external, align 4
-  %2 = load void ()*, void ()** @indirect_func, align 4
-  call void %2()
-  ret void
+  %2 = load i32 ()*, i32 ()** @indirect_func, align 4
+  call i32 %2()
+  ret i32 %1
 }
 
 declare void @func_external()
@@ -60,6 +60,15 @@ declare void @func_external()
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         GlobalType:      I32
 ; CHECK-NEXT:         GlobalMutable:   false
+; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           data_external
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         GlobalType:      I32
+; CHECK-NEXT:         GlobalMutable:   true
+; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           func_external
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         SigIndex:        1
 
 ; check for elem segment initialized with __table_base global as offset
 

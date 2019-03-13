@@ -6,7 +6,7 @@
 # XFAIL: system-netbsd
 # UNSUPPORTED: system-windows
 # This test is flakey and hangs on windows periodically: llvm.org/pr38373
-# UNSUPPORTED: system-linux
+# UNSUPPORTED: system-linux, system-darwin
 
 thread list
 break set -f stop-hook-threads.cpp -p "Set break point at this line"

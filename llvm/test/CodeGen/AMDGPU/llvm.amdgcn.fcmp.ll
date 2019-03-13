@@ -8,14 +8,6 @@ declare float @llvm.fabs.f32(float) #0
 declare i64 @llvm.amdgcn.fcmp.f16(half, half, i32) #0
 declare half @llvm.fabs.f16(half) #0
 
-; GCN-LABEL: {{^}}v_fcmp_f32_dynamic_cc:
-; GCN: s_endpgm
-define amdgpu_kernel void @v_fcmp_f32_dynamic_cc(i64 addrspace(1)* %out, float %src0, float %src1, i32 %cc) {
-  %result = call i64 @llvm.amdgcn.fcmp.f32(float %src0, float %src1, i32 %cc)
-  store i64 %result, i64 addrspace(1)* %out
-  ret void
-}
-
 ; GCN-LABEL: {{^}}v_fcmp_f32_oeq_with_fabs:
 ; GCN: v_cmp_eq_f32_e64 {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}}, |{{v[0-9]+}}|
 define amdgpu_kernel void @v_fcmp_f32_oeq_with_fabs(i64 addrspace(1)* %out, float %src, float %a) {

@@ -6,18 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Frontend/FrontendAction.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -251,6 +253,42 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
   EXPECT_EQ("use of undeclared identifier 'foo'; did you mean 'moo'?",
             TDC->Error.str().str());
   EXPECT_EQ("This is a note", TDC->Note.str().str());
+}
+
+TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
+  // Create a temporary file for writing out the PCH that will be cleaned up.
+  int PCHFD;
+  llvm::SmallString<128> PCHFilename;
+  ASSERT_FALSE(
+      llvm::sys::fs::createTemporaryFile("test.h", "pch", PCHFD, PCHFilename));
+  llvm::ToolOutputFile PCHFile(PCHFilename, PCHFD);
+
+  for (bool ShouldCache : {false, true}) {
+    auto Invocation = std::make_shared<CompilerInvocation>();
+    Invocation->getLangOpts()->CacheGeneratedPCH = ShouldCache;
+    Invocation->getPreprocessorOpts().addRemappedFile(
+        "test.h",
+        MemoryBuffer::getMemBuffer("int foo(void) { return 1; }\n").release());
+    Invocation->getFrontendOpts().Inputs.push_back(
+        FrontendInputFile("test.h", InputKind::C));
+    Invocation->getFrontendOpts().OutputFile = StringRef(PCHFilename);
+    Invocation->getFrontendOpts().ProgramAction = frontend::GeneratePCH;
+    Invocation->getTargetOpts().Triple = "x86_64-apple-darwin19.0.0";
+    CompilerInstance Compiler;
+    Compiler.setInvocation(std::move(Invocation));
+    Compiler.createDiagnostics();
+
+    GeneratePCHAction TestAction;
+    ASSERT_TRUE(Compiler.ExecuteAction(TestAction));
+
+    // Check whether the PCH was cached.
+    if (ShouldCache)
+      EXPECT_EQ(InMemoryModuleCache::Final,
+                Compiler.getModuleCache().getPCMState(PCHFilename));
+    else
+      EXPECT_EQ(InMemoryModuleCache::Unknown,
+                Compiler.getModuleCache().getPCMState(PCHFilename));
+  }
 }
 
 } // anonymous namespace

@@ -1078,17 +1078,7 @@ define i64 @sbfe_offset_32_width_32_i64(i64 %src) {
 ; llvm.amdgcn.exp
 ; --------------------------------------------------------------------
 
-declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind inaccessiblememonly
-
-; Make sure no crashing on invalid variable params
-; CHECK-LABEL: @exp_invalid_inputs(
-; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 %en, float 1.000000e+00, float 2.000000e+00, float 5.000000e-01, float 4.000000e+00, i1 true, i1 false)
-; CHECK: call void @llvm.amdgcn.exp.f32(i32 %tgt, i32 15, float 1.000000e+00, float 2.000000e+00, float 5.000000e-01, float 4.000000e+00, i1 true, i1 false)
-define void @exp_invalid_inputs(i32 %tgt, i32 %en) {
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 %en, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
-  call void @llvm.amdgcn.exp.f32(i32 %tgt, i32 15, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
-  ret void
-}
+declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) nounwind inaccessiblememonly
 
 ; CHECK-LABEL: @exp_disabled_inputs_to_undef(
 ; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 1.000000e+00, float undef, float undef, float undef, i1 true, i1 false)
@@ -1136,16 +1126,7 @@ define void @exp_disabled_inputs_to_undef(float %x, float %y, float %z, float %w
 ; llvm.amdgcn.exp.compr
 ; --------------------------------------------------------------------
 
-declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) nounwind inaccessiblememonly
-
-; CHECK-LABEL: @exp_compr_invalid_inputs(
-; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 %en, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> <half 0xH3800, half 0xH4400>, i1 true, i1 false)
-; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 %tgt, i32 5, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> <half 0xH3800, half 0xH4400>, i1 true, i1 false)
-define void @exp_compr_invalid_inputs(i32 %tgt, i32 %en) {
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 %en, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 %tgt, i32 5, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
-  ret void
-}
+declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg) nounwind inaccessiblememonly
 
 ; CHECK-LABEL: @exp_compr_disabled_inputs_to_undef(
 ; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> undef, <2 x half> undef, i1 true, i1 false)
@@ -1404,17 +1385,9 @@ define float @fmed3_0_1_undef_f32() {
 ; llvm.amdgcn.icmp
 ; --------------------------------------------------------------------
 
-declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) nounwind readnone convergent
-declare i64 @llvm.amdgcn.icmp.i64(i64, i64, i32) nounwind readnone convergent
-declare i64 @llvm.amdgcn.icmp.i1(i1, i1, i32) nounwind readnone convergent
-
-; Make sure there's no crash for invalid input
-; CHECK-LABEL: @invalid_nonconstant_icmp_code(
-; CHECK: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 %c)
-define i64 @invalid_nonconstant_icmp_code(i32 %a, i32 %b, i32 %c) {
-  %result = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 %c)
-  ret i64 %result
-}
+declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32 immarg) nounwind readnone convergent
+declare i64 @llvm.amdgcn.icmp.i64(i64, i64, i32 immarg) nounwind readnone convergent
+declare i64 @llvm.amdgcn.icmp.i1(i1, i1, i32 immarg) nounwind readnone convergent
 
 ; CHECK-LABEL: @invalid_icmp_code(
 ; CHECK: %under = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 31)
@@ -2012,15 +1985,7 @@ define i64 @fold_icmp_i1_ne_0_icmp_ult_i16(i16 %a, i16 %b) {
 ; llvm.amdgcn.fcmp
 ; --------------------------------------------------------------------
 
-declare i64 @llvm.amdgcn.fcmp.f32(float, float, i32) nounwind readnone convergent
-
-; Make sure there's no crash for invalid input
-; CHECK-LABEL: @invalid_nonconstant_fcmp_code(
-; CHECK: call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 %c)
-define i64 @invalid_nonconstant_fcmp_code(float %a, float %b, i32 %c) {
-  %result = call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 %c)
-  ret i64 %result
-}
+declare i64 @llvm.amdgcn.fcmp.f32(float, float, i32 immarg) nounwind readnone convergent
 
 ; CHECK-LABEL: @invalid_fcmp_code(
 ; CHECK: %under = call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 -1)
