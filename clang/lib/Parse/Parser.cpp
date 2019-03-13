@@ -592,10 +592,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
     ConsumeAnnotationToken();
     return false;
 
-  case tok::annot_pragma_attribute:
-    HandlePragmaAttribute();
-    return false;
-
   case tok::eof:
     // Late template parsing can begin.
     if (getLangOpts().DelayedTemplateParsing)
@@ -706,6 +702,9 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     return nullptr;
   case tok::annot_pragma_dump:
     HandlePragmaDump();
+    return nullptr;
+  case tok::annot_pragma_attribute:
+    HandlePragmaAttribute();
     return nullptr;
   case tok::semi:
     // Either a C++11 empty-declaration or attribute-declaration.
