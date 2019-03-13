@@ -97,6 +97,7 @@ static lto::Config createConfig() {
 
   // Set up optimization remarks if we've been asked to.
   C.RemarksFilename = Config->OptRemarksFilename;
+  C.RemarksPasses = Config->OptRemarksPasses;
   C.RemarksWithHotness = Config->OptRemarksWithHotness;
 
   C.SampleProfile = Config->LTOSampleProfile;

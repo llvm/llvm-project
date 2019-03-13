@@ -18,7 +18,6 @@ class DWARFAttributes;
 class DWARFUnit;
 class DWARFDebugInfoEntry;
 class DWARFDeclContext;
-class DWARFDIECollection;
 class SymbolFileDWARF;
 
 class DWARFBaseDIE {

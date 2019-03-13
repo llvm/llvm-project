@@ -8,7 +8,7 @@
 # RUN: rm -rf %t.txt
 
 # RUN: echo "CAPTURE" >> %t.txt
-# RUN: %lldb -x -b  --capture %t.repro \
+# RUN: %lldb -x -b  --capture --capture-path %t.repro \
 # RUN:    -o 'run' \
 # RUN:    -o 'image list' \
 # RUN:    -o 'reproducer generate' \

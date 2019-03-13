@@ -94,6 +94,7 @@
 		2689006713353E0E00698AC0 /* ASTDumper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4906FD4012F2255300A2A77C /* ASTDumper.cpp */; };
 		2689006813353E0E00698AC0 /* ASTResultSynthesizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49A8A39F11D568A300AD3B68 /* ASTResultSynthesizer.cpp */; };
 		2689006913353E0E00698AC0 /* ASTStructExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 491193501226386000578B7F /* ASTStructExtractor.cpp */; };
+		4C0B95802238342C0026C840 /* ASTUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0B957E2238342C0026C840 /* ASTUtils.cpp */; };
 		8CF02AEA19DCC02100B14BE0 /* ASanRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8CF02AE519DCBF8400B14BE0 /* ASanRuntime.cpp */; };
 		257906641BD5AFD000178368 /* Acceptor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 257906621BD5AFD000178368 /* Acceptor.cpp */; };
 		257906651BD5AFD000178368 /* Acceptor.h in Headers */ = {isa = PBXBuildFile; fileRef = 257906631BD5AFD000178368 /* Acceptor.h */; };
@@ -1427,6 +1428,8 @@
 		49A8A3A311D568BF00AD3B68 /* ASTResultSynthesizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ASTResultSynthesizer.h; path = ExpressionParser/Clang/ASTResultSynthesizer.h; sourceTree = "<group>"; };
 		491193501226386000578B7F /* ASTStructExtractor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ASTStructExtractor.cpp; path = ExpressionParser/Clang/ASTStructExtractor.cpp; sourceTree = "<group>"; };
 		4911934B1226383D00578B7F /* ASTStructExtractor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ASTStructExtractor.h; path = ExpressionParser/Clang/ASTStructExtractor.h; sourceTree = "<group>"; };
+		4C0B957E2238342C0026C840 /* ASTUtils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ASTUtils.cpp; path = ExpressionParser/Clang/ASTUtils.cpp; sourceTree = "<group>"; };
+		4C0B957F2238342C0026C840 /* ASTUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ASTUtils.h; path = ExpressionParser/Clang/ASTUtils.h; sourceTree = "<group>"; };
 		8CF02AE519DCBF8400B14BE0 /* ASanRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ASanRuntime.cpp; sourceTree = "<group>"; };
 		8CF02AE619DCBF8400B14BE0 /* ASanRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASanRuntime.h; sourceTree = "<group>"; };
 		257906621BD5AFD000178368 /* Acceptor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Acceptor.cpp; path = "tools/lldb-server/Acceptor.cpp"; sourceTree = "<group>"; };
@@ -6252,6 +6255,8 @@
 				49A8A39F11D568A300AD3B68 /* ASTResultSynthesizer.cpp */,
 				4911934B1226383D00578B7F /* ASTStructExtractor.h */,
 				491193501226386000578B7F /* ASTStructExtractor.cpp */,
+				4C0B957E2238342C0026C840 /* ASTUtils.cpp */,
+				4C0B957F2238342C0026C840 /* ASTUtils.h */,
 				49307AB111DEA4F20081F992 /* IRForTarget.h */,
 				49307AAD11DEA4D90081F992 /* IRForTarget.cpp */,
 				4984BA0F1B978C3E008658D4 /* ClangExpressionVariable.h */,
@@ -8084,6 +8089,7 @@
 				236124A51986B4E2004EFC37 /* Socket.cpp in Sources */,
 				3FDFDDBF199D345E009756A7 /* FileCache.cpp in Sources */,
 				AF1729D7182C907200E0AB97 /* HistoryUnwind.cpp in Sources */,
+				4C0B95802238342C0026C840 /* ASTUtils.cpp in Sources */,
 				AF77E0A11A033D360096C0EA /* RegisterContextFreeBSD_powerpc.cpp in Sources */,
 				26764CA01E48F528008D3573 /* RegularExpression.cpp in Sources */,
 				2689003B13353E0400698AC0 /* EmulateInstruction.cpp in Sources */,

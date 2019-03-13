@@ -100,6 +100,13 @@
 // || `[0x10000000000000, 0x11ffffffffffff]` || LowShadow  ||
 // || `[0x00000000000000, 0x0fffffffffffff]` || LowMem     ||
 //
+// Default Linux/SPARC64 (52-bit VMA) mapping:
+// || `[0x8000000000000, 0xfffffffffffff]` || HighMem    ||
+// || `[0x1080000000000, 0x207ffffffffff]` || HighShadow ||
+// || `[0x0090000000000, 0x107ffffffffff]` || ShadowGap  ||
+// || `[0x0080000000000, 0x008ffffffffff]` || LowShadow  ||
+// || `[0x0000000000000, 0x007ffffffffff]` || LowMem     ||
+//
 // Shadow mapping on FreeBSD/x86-64 with SHADOW_OFFSET == 0x400000000000:
 // || `[0x500000000000, 0x7fffffffffff]` || HighMem    ||
 // || `[0x4a0000000000, 0x4fffffffffff]` || HighShadow ||
@@ -162,6 +169,7 @@ static const u64 kMIPS32_ShadowOffset32 = 0x0aaa0000;
 static const u64 kMIPS64_ShadowOffset64 = 1ULL << 37;
 static const u64 kPPC64_ShadowOffset64 = 1ULL << 44;
 static const u64 kSystemZ_ShadowOffset64 = 1ULL << 52;
+static const u64 kSPARC64_ShadowOffset64 = 1ULL << 43;  // 0x80000000000
 static const u64 kFreeBSD_ShadowOffset32 = 1ULL << 30;  // 0x40000000
 static const u64 kFreeBSD_ShadowOffset64 = 1ULL << 46;  // 0x400000000000
 static const u64 kNetBSD_ShadowOffset32 = 1ULL << 30;  // 0x40000000
@@ -224,6 +232,8 @@ static const u64 kMyriadCacheBitMask32 = 0x40000000ULL;
 #   define SHADOW_OFFSET kDefaultShadowOffset64
 #  elif defined(__mips64)
 #   define SHADOW_OFFSET kMIPS64_ShadowOffset64
+#elif defined(__sparc__)
+#define SHADOW_OFFSET kSPARC64_ShadowOffset64
 #  elif SANITIZER_WINDOWS64
 #   define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
 #  else
@@ -270,6 +280,8 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 
 #if SANITIZER_MYRIAD2
 #include "asan_mapping_myriad.h"
+#elif defined(__sparc__) && SANITIZER_WORDSIZE == 64
+#include "asan_mapping_sparc64.h"
 #else
 #define MEM_TO_SHADOW(mem) (((mem) >> SHADOW_SCALE) + (SHADOW_OFFSET))
 

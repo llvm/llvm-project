@@ -18,7 +18,6 @@
 #include "lldb/Utility/Stream.h"
 
 #include "DWARFUnit.h"
-#include "DWARFDIECollection.h"
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
@@ -108,7 +107,7 @@ bool DWARFDebugInfoEntry::FastExtract(
             if (cu->GetVersion() <= 2)
               form_size = cu->GetAddressByteSize();
             else
-              form_size = cu->IsDWARF64() ? 8 : 4;
+              form_size = 4;
             break;
 
           // 0 sized form
@@ -173,10 +172,7 @@ bool DWARFDebugInfoEntry::FastExtract(
 
           case DW_FORM_strp:
           case DW_FORM_sec_offset:
-            if (cu->IsDWARF64())
-              debug_info_data.GetU64(&offset);
-            else
-              debug_info_data.GetU32(&offset);
+            debug_info_data.GetU32(&offset);
             break;
 
           case DW_FORM_implicit_const:
@@ -290,7 +286,7 @@ bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
                 if (cu->GetVersion() <= 2)
                   form_size = cu->GetAddressByteSize();
                 else
-                  form_size = cu->IsDWARF64() ? 8 : 4;
+                  form_size = 4;
                 break;
 
               // 0 sized form
@@ -342,10 +338,7 @@ bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
 
               case DW_FORM_strp:
               case DW_FORM_sec_offset:
-                if (cu->IsDWARF64())
-                  debug_info_data.GetU64(&offset);
-                else
-                  debug_info_data.GetU32(&offset);
+                debug_info_data.GetU32(&offset);
                 break;
 
               default:
@@ -802,7 +795,7 @@ size_t DWARFDebugInfoEntry::GetAttributes(
 
     if (fixed_form_sizes.Empty())
       fixed_form_sizes = DWARFFormValue::GetFixedFormSizesForAddressSize(
-          cu->GetAddressByteSize(), cu->IsDWARF64());
+          cu->GetAddressByteSize());
 
     const uint32_t num_attributes = abbrevDecl->NumAttributes();
     for (uint32_t i = 0; i < num_attributes; ++i) {
@@ -1381,11 +1374,11 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
   }
 }
 
-void DWARFDebugInfoEntry::GetDeclContextDIEs(
-    DWARFUnit *cu, DWARFDIECollection &decl_context_dies) const {
+std::vector<DWARFDIE>
+DWARFDebugInfoEntry::GetDeclContextDIEs(DWARFUnit *cu) const {
 
   DWARFDIE die(cu, const_cast<DWARFDebugInfoEntry *>(this));
-  die.GetDeclContextDIEs(decl_context_dies);
+  return die.GetDeclContextDIEs();
 }
 
 void DWARFDebugInfoEntry::GetDWARFDeclContext(

@@ -59,20 +59,26 @@ void OMPThreadPrivateDecl::setVars(ArrayRef<Expr *> VL) {
 void OMPAllocateDecl::anchor() { }
 
 OMPAllocateDecl *OMPAllocateDecl::Create(ASTContext &C, DeclContext *DC,
-                                         SourceLocation L,
-                                         ArrayRef<Expr *> VL) {
-  OMPAllocateDecl *D = new (C, DC, additionalSizeToAlloc<Expr *>(VL.size()))
+                                         SourceLocation L, ArrayRef<Expr *> VL,
+                                         ArrayRef<OMPClause *> CL) {
+  OMPAllocateDecl *D = new (
+      C, DC, additionalSizeToAlloc<Expr *, OMPClause *>(VL.size(), CL.size()))
       OMPAllocateDecl(OMPAllocate, DC, L);
   D->NumVars = VL.size();
   D->setVars(VL);
+  D->NumClauses = CL.size();
+  D->setClauses(CL);
   return D;
 }
 
 OMPAllocateDecl *OMPAllocateDecl::CreateDeserialized(ASTContext &C, unsigned ID,
-                                                     unsigned N) {
-  OMPAllocateDecl *D = new (C, ID, additionalSizeToAlloc<Expr *>(N))
-      OMPAllocateDecl(OMPAllocate, nullptr, SourceLocation());
-  D->NumVars = N;
+                                                     unsigned NVars,
+                                                     unsigned NClauses) {
+  OMPAllocateDecl *D =
+      new (C, ID, additionalSizeToAlloc<Expr *, OMPClause *>(NVars, NClauses))
+          OMPAllocateDecl(OMPAllocate, nullptr, SourceLocation());
+  D->NumVars = NVars;
+  D->NumClauses = NClauses;
   return D;
 }
 
@@ -80,6 +86,13 @@ void OMPAllocateDecl::setVars(ArrayRef<Expr *> VL) {
   assert(VL.size() == NumVars &&
          "Number of variables is not the same as the preallocated buffer");
   std::uninitialized_copy(VL.begin(), VL.end(), getTrailingObjects<Expr *>());
+}
+
+void OMPAllocateDecl::setClauses(ArrayRef<OMPClause *> CL) {
+  assert(CL.size() == NumClauses &&
+         "Number of variables is not the same as the preallocated buffer");
+  std::uninitialized_copy(CL.begin(), CL.end(),
+                          getTrailingObjects<OMPClause *>());
 }
 
 //===----------------------------------------------------------------------===//

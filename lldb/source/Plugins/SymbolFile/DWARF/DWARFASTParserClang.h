@@ -21,11 +21,12 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 
+#include <vector>
+
 namespace lldb_private {
 class CompileUnit;
 }
 class DWARFDebugInfoEntry;
-class DWARFDIECollection;
 class SymbolFileDWARF;
 
 class DWARFASTParserClang : public DWARFASTParser {
@@ -85,7 +86,7 @@ protected:
       const lldb::LanguageType class_language,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       std::vector<int> &member_accessibilities,
-      DWARFDIECollection &member_function_dies,
+      std::vector<DWARFDIE> &member_function_dies,
       DelayedPropertyList &delayed_properties,
       lldb::AccessType &default_accessibility, bool &is_a_class,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
@@ -117,7 +118,7 @@ protected:
   bool CopyUniqueClassMethodTypes(const DWARFDIE &src_class_die,
                                   const DWARFDIE &dst_class_die,
                                   lldb_private::Type *class_type,
-                                  DWARFDIECollection &failures);
+                                  std::vector<DWARFDIE> &failures);
 
   clang::DeclContext *GetCachedClangDeclContextForDIE(const DWARFDIE &die);
 

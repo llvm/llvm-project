@@ -28,6 +28,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
+// Include the auto-generated portion of the assembly writer.
+#define PRINT_ALIAS_INSTR
 #include "X86GenAsmWriter1.inc"
 
 void X86IntelInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
@@ -43,7 +45,7 @@ void X86IntelInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   if (MI->getOpcode() == X86::DATA16_PREFIX &&
       STI.getFeatureBits()[X86::Mode16Bit]) {
     OS << "\tdata32";
-  } else
+  } else if (!printAliasInstr(MI, OS))
     printInstruction(MI, OS);
 
   // Next always print the annotation.

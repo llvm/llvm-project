@@ -1198,6 +1198,7 @@ void ASTStmtWriter::VisitObjCForCollectionStmt(ObjCForCollectionStmt *S) {
 }
 
 void ASTStmtWriter::VisitObjCAtCatchStmt(ObjCAtCatchStmt *S) {
+  VisitStmt(S);
   Record.AddStmt(S->getCatchBody());
   Record.AddDeclRef(S->getCatchParamDecl());
   Record.AddSourceLocation(S->getAtCatchLoc());
@@ -1206,18 +1207,21 @@ void ASTStmtWriter::VisitObjCAtCatchStmt(ObjCAtCatchStmt *S) {
 }
 
 void ASTStmtWriter::VisitObjCAtFinallyStmt(ObjCAtFinallyStmt *S) {
+  VisitStmt(S);
   Record.AddStmt(S->getFinallyBody());
   Record.AddSourceLocation(S->getAtFinallyLoc());
   Code = serialization::STMT_OBJC_FINALLY;
 }
 
 void ASTStmtWriter::VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *S) {
+  VisitStmt(S); // FIXME: no test coverage.
   Record.AddStmt(S->getSubStmt());
   Record.AddSourceLocation(S->getAtLoc());
   Code = serialization::STMT_OBJC_AUTORELEASE_POOL;
 }
 
 void ASTStmtWriter::VisitObjCAtTryStmt(ObjCAtTryStmt *S) {
+  VisitStmt(S);
   Record.push_back(S->getNumCatchStmts());
   Record.push_back(S->getFinallyStmt() != nullptr);
   Record.AddStmt(S->getTryBody());
@@ -1230,6 +1234,7 @@ void ASTStmtWriter::VisitObjCAtTryStmt(ObjCAtTryStmt *S) {
 }
 
 void ASTStmtWriter::VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *S) {
+  VisitStmt(S); // FIXME: no test coverage.
   Record.AddStmt(S->getSynchExpr());
   Record.AddStmt(S->getSynchBody());
   Record.AddSourceLocation(S->getAtSynchronizedLoc());
@@ -1237,6 +1242,7 @@ void ASTStmtWriter::VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *S) {
 }
 
 void ASTStmtWriter::VisitObjCAtThrowStmt(ObjCAtThrowStmt *S) {
+  VisitStmt(S); // FIXME: no test coverage.
   Record.AddStmt(S->getThrowExpr());
   Record.AddSourceLocation(S->getThrowLoc());
   Code = serialization::STMT_OBJC_AT_THROW;

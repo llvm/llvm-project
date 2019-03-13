@@ -7,12 +7,12 @@ bb:
   store i64 %arg, i64* %tmp, align 8
   %tmp1 = load i64, i64* %tmp, align 8
   %tmp2 = load i64, i64* %tmp, align 8
-  %tmp3 = call i64 @llvm.expect.i64(i64 %tmp1, i64 %tmp2)
+  %tmp3 = call i64 @llvm.expect.i64(i64 %tmp1, i64 123)
   ret i64 %tmp3
 }
 
 ; Function Attrs: nounwind readnone
-declare i64 @llvm.expect.i64(i64, i64)
+declare i64 @llvm.expect.i64(i64, i64 immarg)
 
 
 !llvm.module.flags = !{!0}

@@ -962,6 +962,7 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&FaultingMI, *I))
       MI.addOperand(MaybeOperand.getValue());
 
+  OutStreamer->AddComment("on-fault: " + HandlerLabel->getName());
   OutStreamer->EmitInstruction(MI, getSubtargetInfo());
 }
 

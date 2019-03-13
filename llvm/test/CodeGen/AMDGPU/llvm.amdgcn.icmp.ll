@@ -6,15 +6,6 @@ declare i64 @llvm.amdgcn.icmp.i64(i64, i64, i32) #0
 declare i64 @llvm.amdgcn.icmp.i16(i16, i16, i32) #0
 declare i64 @llvm.amdgcn.icmp.i1(i1, i1, i32) #0
 
-; No crash on invalid input
-; GCN-LABEL: {{^}}v_icmp_i32_dynamic_cc:
-; GCN: s_endpgm
-define amdgpu_kernel void @v_icmp_i32_dynamic_cc(i64 addrspace(1)* %out, i32 %src, i32 %cc) {
-  %result = call i64 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 %cc)
-  store i64 %result, i64 addrspace(1)* %out
-  ret void
-}
-
 ; GCN-LABEL: {{^}}v_icmp_i32_eq:
 ; GCN: v_cmp_eq_u32_e64
 define amdgpu_kernel void @v_icmp_i32_eq(i64 addrspace(1)* %out, i32 %src) {
@@ -181,15 +172,6 @@ define amdgpu_kernel void @v_icmp_i64_sle(i64 addrspace(1)* %out, i64 %src) {
   ret void
 }
 
-; GCN-LABEL: {{^}}v_icmp_i16_dynamic_cc:
-; GCN: s_endpgm
-define amdgpu_kernel void @v_icmp_i16_dynamic_cc(i64 addrspace(1)* %out, i16 %src, i32 %cc) {
-  %result = call i64 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 %cc)
-  store i64 %result, i64 addrspace(1)* %out
-  ret void
-}
-
-; GCN-LABEL: {{^}}v_icmp_i16_eq:
 ; VI: v_cmp_eq_u16_e64
 
 ; SI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x64

@@ -153,6 +153,10 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
   if (isa<CallBrInst>(TI) && SuccNum > 0)
     return nullptr;
 
+  if (Options.IgnoreUnreachableDests &&
+      isa<UnreachableInst>(DestBB->getFirstNonPHIOrDbgOrLifetime()))
+    return nullptr;
+
   // Create a new basic block, linking it into the CFG.
   BasicBlock *NewBB = BasicBlock::Create(TI->getContext(),
                       TIBB->getName() + "." + DestBB->getName() + "_crit_edge");

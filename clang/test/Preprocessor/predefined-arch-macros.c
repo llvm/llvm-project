@@ -294,6 +294,24 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_PENTIUM4M_M64
 // CHECK_PENTIUM4M_M64: error: {{.*}}
 
+// RUN: %clang -march=yonah -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_YONAH_M32
+// CHECK_YONAH_M32: #define __MMX__ 1
+// CHECK_YONAH_M32: #define __SSE2__ 1
+// CHECK_YONAH_M32: #define __SSE3__ 1
+// CHECK_YONAH_M32: #define __SSE__ 1
+// CHECK_YONAH_M32: #define __i386 1
+// CHECK_YONAH_M32: #define __i386__ 1
+// CHECK_YONAH_M32: #define __nocona 1
+// CHECK_YONAH_M32: #define __nocona__ 1
+// CHECK_YONAH_M32: #define __tune_nocona__ 1
+// CHECK_YONAH_M32: #define i386 1
+// RUN: not %clang -march=yonah -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_YONAH_M64
+// CHECK_YONAH_M64: error: {{.*}}
+
 // RUN: %clang -march=prescott -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_PRESCOTT_M32

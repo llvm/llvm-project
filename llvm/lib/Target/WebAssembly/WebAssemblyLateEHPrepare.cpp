@@ -21,7 +21,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "wasm-exception-prepare"
+#define DEBUG_TYPE "wasm-late-eh-prepare"
 
 namespace {
 class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
@@ -185,9 +185,12 @@ bool WebAssemblyLateEHPrepare::addCatches(MachineFunction &MF) {
   for (auto &MBB : MF) {
     if (MBB.isEHPad()) {
       Changed = true;
+      auto InsertPos = MBB.begin();
+      if (InsertPos->isEHLabel()) // EH pad starts with an EH label
+        ++InsertPos;
       unsigned DstReg =
           MRI.createVirtualRegister(&WebAssembly::EXCEPT_REFRegClass);
-      BuildMI(MBB, MBB.begin(), MBB.begin()->getDebugLoc(),
+      BuildMI(MBB, InsertPos, MBB.begin()->getDebugLoc(),
               TII.get(WebAssembly::CATCH), DstReg);
     }
   }
@@ -255,7 +258,11 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
   for (auto *Extract : ExtractInstrs) {
     MachineBasicBlock *EHPad = getMatchingEHPad(Extract);
     assert(EHPad && "No matching EH pad for extract_exception");
-    MachineInstr *Catch = &*EHPad->begin();
+    auto CatchPos = EHPad->begin();
+    if (CatchPos->isEHLabel()) // EH pad starts with an EH label
+      ++CatchPos;
+    MachineInstr *Catch = &*CatchPos;
+
     if (Catch->getNextNode() != Extract)
       EHPad->insert(Catch->getNextNode(), Extract->removeFromParent());
 
@@ -359,8 +366,10 @@ bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
     // with leaf functions, and we don't restore __stack_pointer in leaf
     // functions anyway.
     auto InsertPos = MBB.begin();
-    if (MBB.begin()->getOpcode() == WebAssembly::CATCH)
-      InsertPos++;
+    if (InsertPos->isEHLabel()) // EH pad starts with an EH label
+      ++InsertPos;
+    if (InsertPos->getOpcode() == WebAssembly::CATCH)
+      ++InsertPos;
     FrameLowering->writeSPToGlobal(WebAssembly::SP32, MF, MBB, InsertPos,
                                    MBB.begin()->getDebugLoc());
   }

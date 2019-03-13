@@ -1114,12 +1114,6 @@ bool FileCheckString::CheckNext(const SourceMgr &SM, StringRef Buffer) const {
       Twine(Pat.getCheckTy() == Check::CheckEmpty ? "-EMPTY" : "-NEXT");
 
   // Count the number of newlines between the previous match and this one.
-  assert(Buffer.data() !=
-             SM.getMemoryBuffer(SM.FindBufferContainingLoc(
-                                    SMLoc::getFromPointer(Buffer.data())))
-                 ->getBufferStart() &&
-         "CHECK-NEXT and CHECK-EMPTY can't be the first check in a file");
-
   const char *FirstNewLine = nullptr;
   unsigned NumNewLines = CountNumNewlinesBetween(Buffer, FirstNewLine);
 
@@ -1155,12 +1149,6 @@ bool FileCheckString::CheckSame(const SourceMgr &SM, StringRef Buffer) const {
     return false;
 
   // Count the number of newlines between the previous match and this one.
-  assert(Buffer.data() !=
-             SM.getMemoryBuffer(SM.FindBufferContainingLoc(
-                                    SMLoc::getFromPointer(Buffer.data())))
-                 ->getBufferStart() &&
-         "CHECK-SAME can't be the first check in a file");
-
   const char *FirstNewLine = nullptr;
   unsigned NumNewLines = CountNumNewlinesBetween(Buffer, FirstNewLine);
 

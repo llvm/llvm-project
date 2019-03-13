@@ -2940,6 +2940,15 @@ SBRegistry::SBRegistry() {
   }
 }
 
+const char *SBReproducer::Capture() {
+  static std::string error;
+  if (auto e = Reproducer::Initialize(ReproducerMode::Capture, llvm::None)) {
+    error = llvm::toString(std::move(e));
+    return error.c_str();
+  }
+  return nullptr;
+}
+
 const char *SBReproducer::Capture(const char *path) {
   static std::string error;
   if (auto e =

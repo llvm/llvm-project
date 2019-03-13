@@ -99,6 +99,7 @@ struct Configuration {
   llvm::StringRef MapFile;
   llvm::StringRef OutputFile;
   llvm::StringRef OptRemarksFilename;
+  llvm::StringRef OptRemarksPasses;
   llvm::StringRef ProgName;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;

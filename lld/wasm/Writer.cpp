@@ -198,6 +198,9 @@ void Writer::createImportSection() {
     if (auto *FunctionSym = dyn_cast<FunctionSymbol>(Sym)) {
       Import.Kind = WASM_EXTERNAL_FUNCTION;
       Import.SigIndex = lookupType(*FunctionSym->Signature);
+    } else if (auto *DataSym = dyn_cast<UndefinedData>(Sym)) {
+      Import.Kind = WASM_EXTERNAL_GLOBAL;
+      Import.Global = {WASM_TYPE_I32, true};
     } else if (auto *GlobalSym = dyn_cast<GlobalSymbol>(Sym)) {
       Import.Kind = WASM_EXTERNAL_GLOBAL;
       Import.Global = *GlobalSym->getGlobalType();
@@ -851,13 +854,15 @@ void Writer::calculateImports() {
   for (Symbol *Sym : Symtab->getSymbols()) {
     if (!Sym->isUndefined())
       continue;
-    if (isa<DataSymbol>(Sym))
-      continue;
     if (Sym->isWeak() && !Config->Relocatable)
       continue;
     if (!Sym->isLive())
       continue;
     if (!Sym->IsUsedInRegularObj)
+      continue;
+    // In relocatable output we don't generate imports for data symbols.
+    // These live only in the symbol table.
+    if (Config->Relocatable && isa<DataSymbol>(Sym))
       continue;
 
     LLVM_DEBUG(dbgs() << "import: " << Sym->getName() << "\n");
@@ -866,6 +871,8 @@ void Writer::calculateImports() {
       F->setFunctionIndex(NumImportedFunctions++);
     else if (auto *G = dyn_cast<GlobalSymbol>(Sym))
       G->setGlobalIndex(NumImportedGlobals++);
+    else if (auto *D = dyn_cast<UndefinedData>(Sym))
+      D->setGlobalIndex(NumImportedGlobals++);
     else
       cast<EventSymbol>(Sym)->setEventIndex(NumImportedEvents++);
   }
