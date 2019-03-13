@@ -101,9 +101,16 @@ public:
                                          ValueObject &static_value) = 0;
 
   /// This allows a language runtime to adjust references depending on the type.
-  /// \return true on success.
-  virtual bool FixupReference(lldb::addr_t &addr, CompilerType type) {
-    return true;
+  /// \return true if the resulting address needs to be dereferenced.
+  virtual std::pair<lldb::addr_t, bool> FixupPointerValue(lldb::addr_t addr,
+                                                          CompilerType type) {
+    return {addr, false};
+  }
+
+  /// This allows a language runtime to adjust references depending on the type.
+  virtual lldb::addr_t FixupAddress(lldb::addr_t addr, CompilerType type,
+                                    Status &error) {
+    return addr;
   }
 
   virtual void SetExceptionBreakpoints() {}
@@ -182,7 +189,7 @@ protected:
 
 private:
   DISALLOW_COPY_AND_ASSIGN(LanguageRuntime);
-};
+  };
 
 } // namespace lldb_private
 

@@ -28,6 +28,9 @@ class TestSwiftUnknownSelf(lldbtest.TestBase):
         if not broken:
             lldbutil.check_variable(self, m_base_string, summary='"hello"')
         lldbutil.check_variable(self, m_string, summary='"world"')
+        # Also check the expression evaluator.
+        self.expect("expr self", substrs=["hello", "world"])
+        self.expect("fr v self", substrs=["hello", "world"])
 
     
     @swiftTest
