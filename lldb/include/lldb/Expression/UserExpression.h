@@ -36,6 +36,11 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class UserExpression : public Expression {
 public:
+  /// LLVM-style RTTI support.
+  static bool classof(const Expression *E) {
+    return E->getKind() == eKindUserExpression;
+  }
+  
   enum { kDefaultTimeout = 500000u };
 
   //------------------------------------------------------------------
@@ -60,7 +65,8 @@ public:
   UserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
                  llvm::StringRef prefix, lldb::LanguageType language,
                  ResultType desired_type,
-                 const EvaluateExpressionOptions &options);
+                 const EvaluateExpressionOptions &options,
+                 ExpressionKind kind);
 
   //------------------------------------------------------------------
   /// Destructor

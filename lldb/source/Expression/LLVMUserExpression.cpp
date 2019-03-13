@@ -41,8 +41,10 @@ LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
                                        llvm::StringRef prefix,
                                        lldb::LanguageType language,
                                        ResultType desired_type,
-                                       const EvaluateExpressionOptions &options)
-    : UserExpression(exe_scope, expr, prefix, language, desired_type, options),
+                                       const EvaluateExpressionOptions &options,
+                                       ExpressionKind kind)
+    : UserExpression(exe_scope, expr, prefix, language, desired_type, options,
+                     kind),
       m_stack_frame_bottom(LLDB_INVALID_ADDRESS),
       m_stack_frame_top(LLDB_INVALID_ADDRESS), m_allow_cxx(false),
       m_allow_objc(false), m_transformed_text(), m_execution_unit_sp(), 

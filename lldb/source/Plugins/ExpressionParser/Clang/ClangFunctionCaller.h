@@ -61,6 +61,11 @@ class ClangExpressionParser;
 class ClangFunctionCaller : public FunctionCaller {
   friend class ASTStructExtractor;
 
+  /// LLVM-style RTTI support.
+  static bool classof(const Expression *E) {
+    return E->getKind() == eKindClangFunctionCaller;
+  }
+
   class ClangFunctionCallerHelper : public ClangExpressionHelper {
   public:
     ClangFunctionCallerHelper(ClangFunctionCaller &owner) : m_owner(owner) {}

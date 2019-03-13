@@ -64,7 +64,7 @@ ClangUserExpression::ClangUserExpression(
     ResultType desired_type, const EvaluateExpressionOptions &options,
     ValueObject *ctx_obj)
     : LLVMUserExpression(exe_scope, expr, prefix, language, desired_type,
-                         options),
+                         options, eKindClangUserExpression),
       m_type_system_helper(*m_target_wp.lock(), options.GetExecutionPolicy() ==
                                                     eExecutionPolicyTopLevel),
       m_result_delegate(exe_scope.CalculateTarget()), m_ctx_obj(ctx_obj) {
