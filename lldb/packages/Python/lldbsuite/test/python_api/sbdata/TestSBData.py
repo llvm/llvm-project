@@ -74,10 +74,6 @@ class SBDataAPICase(TestBase):
             print(foobar)
 
         data = foobar.GetPointeeData(0, 2)
-
-        if self.TraceOn():
-            print(data)
-
         offset = 0
         error = lldb.SBError()
 
