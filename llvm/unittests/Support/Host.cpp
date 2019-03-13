@@ -249,6 +249,7 @@ CPU part	: 0x0a1
             "tsv110");
 }
 
+#if defined(__APPLE__) || defined(_AIX)
 static bool runAndGetCommandOutput(
     const char *ExePath, ArrayRef<llvm::StringRef> argv,
     std::unique_ptr<char[]> &Buffer, off_t &Size) {
@@ -288,6 +289,7 @@ TEST_F(HostTest, DummyRunAndGetCommandOutputUse) {
   // disabled.
   (void) runAndGetCommandOutput;
 }
+#endif
 
 #if defined(__APPLE__)
 TEST_F(HostTest, getMacOSHostVersion) {

@@ -325,6 +325,12 @@ public:
       PtrDiffType = SignedInt;
       IntPtrType = SignedInt;
       break;
+    case llvm::Triple::AIX:
+      SizeType = UnsignedLong;
+      PtrDiffType = SignedLong;
+      IntPtrType = SignedLong;
+      SuitableAlign = 64;
+      break;
     default:
       break;
     }
@@ -333,6 +339,8 @@ public:
     case llvm::Triple::FreeBSD:
     case llvm::Triple::NetBSD:
     case llvm::Triple::OpenBSD:
+    // FIXME: -mlong-double-128 is not yet supported on AIX.
+    case llvm::Triple::AIX:
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
       break;
@@ -372,6 +380,12 @@ public:
     case llvm::Triple::FreeBSD:
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+      break;
+    case llvm::Triple::AIX:
+      // FIXME: -mlong-double-128 is not yet supported on AIX.
+      LongDoubleWidth = LongDoubleAlign = 64;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+      SuitableAlign = 64;
       break;
     default:
       break;
@@ -429,6 +443,21 @@ public:
     HasAlignMac68kSupport = true;
     resetDataLayout("E-m:o-i64:64-n32:64");
   }
+};
+
+class LLVM_LIBRARY_VISIBILITY AIXPPC32TargetInfo :
+  public AIXTargetInfo<PPC32TargetInfo> {
+public:
+  using AIXTargetInfo::AIXTargetInfo;
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
+};
+
+class LLVM_LIBRARY_VISIBILITY AIXPPC64TargetInfo :
+  public AIXTargetInfo<PPC64TargetInfo> {
+public:
+  using AIXTargetInfo::AIXTargetInfo;
 };
 
 } // namespace targets

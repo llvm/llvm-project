@@ -69,7 +69,7 @@ static const unsigned GPRDecoderTable[] = {
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                            uint64_t Address,
                                            const void *Decoder) {
-  if (RegNo > sizeof(GPRDecoderTable))
+  if (RegNo > array_lengthof(GPRDecoderTable))
     return MCDisassembler::Fail;
 
   // We must define our own mapping from RegNo to register identifier.
@@ -94,7 +94,7 @@ static const unsigned FPR32DecoderTable[] = {
 static DecodeStatus DecodeFPR32RegisterClass(MCInst &Inst, uint64_t RegNo,
                                              uint64_t Address,
                                              const void *Decoder) {
-  if (RegNo > sizeof(FPR32DecoderTable))
+  if (RegNo > array_lengthof(FPR32DecoderTable))
     return MCDisassembler::Fail;
 
   // We must define our own mapping from RegNo to register identifier.
@@ -130,7 +130,7 @@ static const unsigned FPR64DecoderTable[] = {
 static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
                                              uint64_t Address,
                                              const void *Decoder) {
-  if (RegNo > sizeof(FPR64DecoderTable))
+  if (RegNo > array_lengthof(FPR64DecoderTable))
     return MCDisassembler::Fail;
 
   // We must define our own mapping from RegNo to register identifier.

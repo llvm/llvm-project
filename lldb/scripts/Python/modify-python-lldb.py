@@ -143,7 +143,6 @@ e = {'SBAddress': ['GetFileAddress', 'GetModule'],
      'SBWatchpoint': ['GetID'],
      'SBFileSpec': ['GetFilename', 'GetDirectory'],
      'SBModule': ['GetFileSpec', 'GetUUIDString'],
-     'SBType': ['GetByteSize', 'GetName']
      }
 
 

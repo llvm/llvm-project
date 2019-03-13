@@ -1708,29 +1708,25 @@ define <8 x double> @broadcast_v8f64_v2f64_0uuu0101(<2 x double>* %vp) {
 ; X32-AVX-LABEL: broadcast_v8f64_v2f64_0uuu0101:
 ; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX-NEXT:    vmovaps (%eax), %xmm0
-; X32-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
+; X32-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X32-AVX-NEXT:    vmovaps %ymm0, %ymm1
 ; X32-AVX-NEXT:    retl
 ;
 ; X32-AVX512-LABEL: broadcast_v8f64_v2f64_0uuu0101:
 ; X32-AVX512:       # %bb.0:
 ; X32-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512-NEXT:    vmovaps (%eax), %xmm0
-; X32-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; X32-AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; X32-AVX512-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X32-AVX512-NEXT:    retl
 ;
 ; X64-AVX-LABEL: broadcast_v8f64_v2f64_0uuu0101:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
+; X64-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-AVX-NEXT:    vmovaps %ymm0, %ymm1
 ; X64-AVX-NEXT:    retq
 ;
 ; X64-AVX512-LABEL: broadcast_v8f64_v2f64_0uuu0101:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; X64-AVX512-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X64-AVX512-NEXT:    retq
   %vec = load <2 x double>, <2 x double>* %vp
   %res = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 0, i32 1, i32 0, i32 1>

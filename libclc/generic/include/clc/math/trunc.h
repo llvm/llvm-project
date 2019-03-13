@@ -1,9 +1,7 @@
-#undef trunc
-#define trunc __clc_trunc
+#define __CLC_BODY <clc/math/unary_decl.inc>
+#define __CLC_FUNCTION trunc
 
-#define __CLC_FUNCTION __clc_trunc
-#define __CLC_INTRINSIC "llvm.trunc"
-#include <clc/math/unary_intrin.inc>
+#include <clc/math/gentype.inc>
 
+#undef __CLC_BODY
 #undef __CLC_FUNCTION
-#undef __CLC_INTRINSIC

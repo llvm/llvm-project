@@ -173,9 +173,9 @@ entry:
 ; Setup frame pointer
 ; CHECK:       add r7, sp, #8
 ; Register varargs stored via FP
-; CHECK:       str r3, [r7, #16]
-; CHECK-NEXT:  str r2, [r7, #12]
-; CHECK-NEXT:  str r1, [r7, #8]
+; CHECK-DAG:  str r3, [r7, #16]
+; CHECK-DAG:  str r2, [r7, #12]
+; CHECK-DAG:  str r1, [r7, #8]
 
 ; Moving SP, access via SP
 ; int test_args_moving_sp(int a, int b, int c, int d, int e) {

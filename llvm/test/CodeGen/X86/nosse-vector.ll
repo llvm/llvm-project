@@ -146,7 +146,7 @@ define void @sitofp_4i64_4f32_mem(<4 x i64>* %p0, <4 x float>* %p1) nounwind {
 ; X32-NEXT:    subl $48, %esp
 ; X32-NEXT:    movl 8(%ebp), %eax
 ; X32-NEXT:    movl 24(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl 28(%eax), %ecx
 ; X32-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl 16(%eax), %esi
@@ -163,7 +163,7 @@ define void @sitofp_4i64_4f32_mem(<4 x i64>* %p0, <4 x float>* %p1) nounwind {
 ; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl 12(%ebp), %eax
 ; X32-NEXT:    fildll {{[0-9]+}}(%esp)
@@ -277,10 +277,10 @@ define void @add_2i64_mem(<2 x i64>* %p0, <2 x i64>* %p1, <2 x i64>* %p2) nounwi
 ; X32-NEXT:    adcl 4(%ecx), %edx
 ; X32-NEXT:    addl 8(%ecx), %edi
 ; X32-NEXT:    adcl 12(%ecx), %esi
-; X32-NEXT:    movl %esi, 12(%eax)
 ; X32-NEXT:    movl %edi, 8(%eax)
-; X32-NEXT:    movl %edx, 4(%eax)
+; X32-NEXT:    movl %esi, 12(%eax)
 ; X32-NEXT:    movl %ebx, (%eax)
+; X32-NEXT:    movl %edx, 4(%eax)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx

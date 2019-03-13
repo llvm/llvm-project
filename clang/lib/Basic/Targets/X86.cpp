@@ -214,11 +214,12 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "ssse3", true);
     setFeatureEnabledImpl(Features, "sahf", true);
     LLVM_FALLTHROUGH;
+  case CK_Nocona:
+    setFeatureEnabledImpl(Features, "cx16", true);
+    LLVM_FALLTHROUGH;
   case CK_Yonah:
   case CK_Prescott:
-  case CK_Nocona:
     setFeatureEnabledImpl(Features, "sse3", true);
-    setFeatureEnabledImpl(Features, "cx16", true);
     LLVM_FALLTHROUGH;
   case CK_PentiumM:
   case CK_Pentium4:

@@ -245,8 +245,8 @@ define void @add8i32(<8 x i32>* %ret, <8 x i32>* %bp) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups (%rsi), %xmm0
 ; CHECK-NEXT:    vmovups 16(%rsi), %xmm1
-; CHECK-NEXT:    vmovups %xmm0, (%rdi)
 ; CHECK-NEXT:    vmovups %xmm1, 16(%rdi)
+; CHECK-NEXT:    vmovups %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
 ;
 ; CHECK_O0-LABEL: add8i32:
@@ -290,8 +290,8 @@ define void @add4i64a16(<4 x i64>* %ret, <4 x i64>* %bp) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rsi), %xmm0
 ; CHECK-NEXT:    vmovaps 16(%rsi), %xmm1
-; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
 ; CHECK-NEXT:    vmovaps %xmm1, 16(%rdi)
+; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
 ;
 ; CHECK_O0-LABEL: add4i64a16:
