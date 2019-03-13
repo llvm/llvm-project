@@ -44,6 +44,7 @@ public:
     eKindUserExpression,
     eKindLLVMUserExpression,
     eKindClangUserExpression,
+    eKindSwiftUserExpression,
     eKindUtilityFunction,
     eKindClangUtilityFunction,
   };

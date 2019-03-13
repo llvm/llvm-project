@@ -40,6 +40,10 @@ class SwiftExpressionParser;
 //----------------------------------------------------------------------
 class SwiftUserExpression : public LLVMUserExpression {
 public:
+  /// LLVM-style RTTI support.
+  static bool classof(const Expression *E) {
+    return E->getKind() == eKindSwiftUserExpression;
+  }
   enum { kDefaultTimeout = 500000u };
 
   class SwiftUserExpressionHelper : public ExpressionTypeSystemHelper {
