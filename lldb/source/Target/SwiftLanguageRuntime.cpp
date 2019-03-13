@@ -1223,21 +1223,25 @@ public:
 
   swift::remote::RemoteAddress
   getSymbolAddress(const std::string &name) override {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-
+    lldbassert(!name.empty());
     if (name.empty())
       return swift::remote::RemoteAddress(nullptr);
 
-    if (log)
-      log->Printf("[MemoryReader] asked to retrieve address of symbol %s",
-                  name.c_str());
+    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+	     "[MemoryReader] asked to retrieve the address of symbol {0}",
+	     name);
 
     ConstString name_cs(name.c_str(), name.size());
     SymbolContextList sc_list;
-    if (m_process->GetTarget().GetImages().FindSymbolsWithNameAndType(
+    if (!m_process->GetTarget().GetImages().FindSymbolsWithNameAndType(
             name_cs, lldb::eSymbolTypeAny, sc_list)) {
-      SymbolContext sym_ctx;
-      // Remove undefined symbols from the list:
+      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+	       "[MemoryReader] symbol resoution failed {0}", name);
+      return swift::remote::RemoteAddress(nullptr);
+    }
+
+    SymbolContext sym_ctx;
+    // Remove undefined symbols from the list:
       size_t num_sc_matches = sc_list.GetSize();
       if (num_sc_matches > 1) {
         SymbolContextList tmp_sc_list(sc_list);
@@ -1250,22 +1254,38 @@ public:
           }
         }
       }
-      if (sc_list.GetSize() == 1 && sc_list.GetContextAtIndex(0, sym_ctx)) {
-        if (sym_ctx.symbol) {
-          auto load_addr =
-              sym_ctx.symbol->GetLoadAddress(&m_process->GetTarget());
-          if (log)
-            log->Printf("[MemoryReader] symbol resolved to 0x%" PRIx64,
-                        load_addr);
-          return swift::remote::RemoteAddress(load_addr);
+
+      // Empty list, resolution failed.
+      if (sc_list.GetSize() == 0) {
+        LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                 "[MemoryReader] symbol resoution failed {0}", name);
+        return swift::remote::RemoteAddress(nullptr);
+      }
+
+      // If there's a single symbol, then we're golden. If there's more than
+      // a symbol, then just make sure all of them agree on the value.
+      Status error;
+      auto sym = sc_list.GetContextAtIndex(0, sym_ctx);
+      auto load_addr = sym_ctx.symbol->GetLoadAddress(&m_process->GetTarget());
+      uint64_t sym_value = m_process->GetTarget().ReadUnsignedIntegerFromMemory(
+          load_addr, false, m_process->GetAddressByteSize(), 0, error);
+      for (unsigned i = 1; i < sc_list.GetSize(); ++i) {
+        auto other_sym = sc_list.GetContextAtIndex(i, sym_ctx);
+        auto other_load_addr =
+            sym_ctx.symbol->GetLoadAddress(&m_process->GetTarget());
+        uint64_t other_sym_value =
+            m_process->GetTarget().ReadUnsignedIntegerFromMemory(
+                load_addr, false, m_process->GetAddressByteSize(), 0, error);
+        if (sym_value != other_sym_value) {
+          LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                   "[MemoryReader] symbol resoution failed {0}", name);
+          return swift::remote::RemoteAddress(nullptr);
         }
       }
+      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+               "[MemoryReader] symbol resolved to {0}", load_addr);
+      return swift::remote::RemoteAddress(load_addr);
     }
-
-    if (log)
-      log->Printf("[MemoryReader] symbol resolution failed");
-    return swift::remote::RemoteAddress(nullptr);
-  }
 
   bool readBytes(swift::remote::RemoteAddress address, uint8_t *dest,
                   uint64_t size) override {
@@ -2281,8 +2301,8 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
   return ret;
 }
 
-bool SwiftLanguageRuntime::FixupReference(lldb::addr_t &addr,
-                                          CompilerType type) {
+bool SwiftLanguageRuntime::IsTaggedPointer(lldb::addr_t addr,
+                                           CompilerType type) {
   swift::CanType swift_can_type = GetCanonicalSwiftType(type);
   switch (swift_can_type->getKind()) {
   case swift::TypeKind::UnownedStorage: {
@@ -2298,54 +2318,72 @@ bool SwiftLanguageRuntime::FixupReference(lldb::addr_t &addr,
     // may be necessary to check for the version of the Swift runtime
     // (or indirectly by looking at the version of the remote
     // operating system) to determine how to interpret references.
-    if (triple.isOSDarwin()) {
+    if (triple.isOSDarwin())
       // Check whether this is a reference to an Objective-C object.
-      if ((addr & 1) == 0) {
-        // This is a Swift object, no further processing necessary.
+      if ((addr & 1) == 1)
         return true;
-      }
+  }
+  default:
+    break;
+  }
+  return false;
+}
 
-      Status error;
-      if (!m_process)
-        return false;
+std::pair<lldb::addr_t, bool>
+SwiftLanguageRuntime::FixupPointerValue(lldb::addr_t addr, CompilerType type) {
+  // Check for an unowned Darwin Objective-C reference.
+  if (IsTaggedPointer(addr, type)) {
+    // Clear the discriminator bit to get at the pointer to Objective-C object.
+    bool needs_deref = true;
+    return {addr & ~1ULL, needs_deref};
+  }
 
-      // Clear the discriminator bit to get at the pointer to the struct.
-      addr &= ~1ULL;
-      size_t ptr_size = m_process->GetAddressByteSize();
+  // Adjust the pointer to strip away the spare bits.
+  Target &target = m_process->GetTarget();
+  llvm::Triple triple = target.GetArchitecture().GetTriple();
+  switch (triple.getArch()) {
+  case llvm::Triple::ArchType::aarch64:
+    return {addr & ~SWIFT_ABI_ARM64_SWIFT_SPARE_BITS_MASK, false};
+  case llvm::Triple::ArchType::arm:
+    return {addr & ~SWIFT_ABI_ARM_SWIFT_SPARE_BITS_MASK, false};
+  case llvm::Triple::ArchType::x86:
+    return {addr & ~SWIFT_ABI_I386_SWIFT_SPARE_BITS_MASK, false};
+  case llvm::Triple::ArchType::x86_64:
+    return {addr & ~SWIFT_ABI_X86_64_SWIFT_SPARE_BITS_MASK, false};
+  case llvm::Triple::ArchType::systemz:
+    return {addr & ~SWIFT_ABI_S390X_SWIFT_SPARE_BITS_MASK, false};
+  case llvm::Triple::ArchType::ppc64le:
+    return { addr & ~SWIFT_ABI_POWERPC64_SWIFT_SPARE_BITS_MASK, false};
+  default:
+    break;
+  }
+  return {addr, false};
+}
 
-      // Read the pointer to the Objective-C object.
-      target.ReadMemory(addr & ~1ULL, false, &addr, ptr_size, error);
+/// This allows a language runtime to adjust references depending on the type.
+lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
+                                                CompilerType type,
+                                                Status &error) {
+  swift::CanType swift_can_type = GetCanonicalSwiftType(type);
+  switch (swift_can_type->getKind()) {
+  case swift::TypeKind::UnownedStorage: {
+    // Peek into the reference to see whether it needs an extra deref.
+    // If yes, return the fixed-up address we just read.
+    Target &target = m_process->GetTarget();
+    size_t ptr_size = m_process->GetAddressByteSize();
+    lldb::addr_t refd_addr = LLDB_INVALID_ADDRESS;
+    target.ReadMemory(addr, false, &refd_addr, ptr_size, error);
+    if (error.Success()) {
+      bool extra_deref;
+      std::tie(refd_addr, extra_deref) = FixupPointerValue(refd_addr, type);
+      if (extra_deref)
+        return refd_addr;
     }
   }
   default:
-    // Adjust the pointer to strip away the spare bits.
-    Target &target = m_process->GetTarget();
-    llvm::Triple triple = target.GetArchitecture().GetTriple();
-    switch (triple.getArch()) {
-    case llvm::Triple::ArchType::aarch64:
-      addr &= ~SWIFT_ABI_ARM64_SWIFT_SPARE_BITS_MASK;
-      break;
-    case llvm::Triple::ArchType::arm:
-      addr &= ~SWIFT_ABI_ARM_SWIFT_SPARE_BITS_MASK;
-      break;
-    case llvm::Triple::ArchType::x86:
-      addr &= ~SWIFT_ABI_I386_SWIFT_SPARE_BITS_MASK;
-      break;
-    case llvm::Triple::ArchType::x86_64:
-      addr &= ~SWIFT_ABI_X86_64_SWIFT_SPARE_BITS_MASK;
-      break;
-    case llvm::Triple::ArchType::systemz:
-      addr &= ~SWIFT_ABI_S390X_SWIFT_SPARE_BITS_MASK;
-      break;
-    case llvm::Triple::ArchType::ppc64le:
-      addr &= ~SWIFT_ABI_POWERPC64_SWIFT_SPARE_BITS_MASK;
-      break;
-    default:
-      break;
-    }
     break;
   }
-  return true;
+  return addr;
 }
 
 bool SwiftLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {

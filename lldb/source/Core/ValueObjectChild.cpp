@@ -137,9 +137,17 @@ bool ValueObjectChild::UpdateValue() {
         if (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer))
           if (auto process_sp = GetProcessSP())
             if (auto runtime = process_sp->GetLanguageRuntime(
-                    parent_type.GetMinimumLanguage()))
-              if (!runtime->FixupReference(addr, parent_type))
-                m_error.SetErrorString("reference fixup failed.");
+                    parent_type.GetMinimumLanguage())) {
+              bool deref;
+              std::tie(addr, deref) =
+                  runtime->FixupPointerValue(addr, parent_type);
+              if (deref) {
+                // Read the pointer to the Objective-C object.
+                Target &target = process_sp->GetTarget();
+                size_t ptr_size = process_sp->GetAddressByteSize();
+                target.ReadMemory(addr, false, &addr, ptr_size, m_error);
+              }
+            }
         // END Swift
 
         m_value.GetScalar() = addr;
