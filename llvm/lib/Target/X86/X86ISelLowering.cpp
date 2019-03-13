@@ -34389,6 +34389,24 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG) {
   if (VT != MVT::f32 && VT != MVT::f64)
     return SDValue();
 
+  // Vector FP selects don't fit the pattern of FP math ops (because the
+  // condition has a different type and we have to change the opcode), so deal
+  // with those here.
+  if (Vec.getOpcode() == ISD::VSELECT &&
+      Vec.getOperand(0).getOpcode() == ISD::SETCC &&
+      Vec.getOperand(0).getOperand(0).getValueType() == VecVT) {
+    // ext (sel Cond, X, Y), 0 --> sel (ext Cond, 0), (ext X, 0), (ext Y, 0)
+    SDLoc DL(ExtElt);
+    SDValue Ext0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                               Vec.getOperand(0).getValueType().getScalarType(),
+                               Vec.getOperand(0), Index);
+    SDValue Ext1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
+                               Vec.getOperand(1), Index);
+    SDValue Ext2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
+                               Vec.getOperand(2), Index);
+    return DAG.getNode(ISD::SELECT, DL, VT, Ext0, Ext1, Ext2);
+  }
+
   // TODO: This switch could include FNEG and the x86-specific FP logic ops
   // (FAND, FANDN, FOR, FXOR). But that may require enhancements to avoid 
   // missed load folding and fma+fneg combining.

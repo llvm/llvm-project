@@ -1312,6 +1312,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache) {
 Expected<std::unique_ptr<ToolOutputFile>>
 lto::setupOptimizationRemarks(LLVMContext &Context,
                               StringRef LTORemarksFilename,
+                              StringRef LTORemarksPasses,
                               bool LTOPassRemarksWithHotness, int Count) {
   if (LTOPassRemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
@@ -1329,6 +1330,11 @@ lto::setupOptimizationRemarks(LLVMContext &Context,
     return errorCodeToError(EC);
   Context.setRemarkStreamer(
       llvm::make_unique<RemarkStreamer>(Filename, DiagnosticFile->os()));
+
+  if (!LTORemarksPasses.empty())
+    if (Error E = Context.getRemarkStreamer()->setFilter(LTORemarksPasses))
+      return std::move(E);
+
   DiagnosticFile->keep();
   return std::move(DiagnosticFile);
 }

@@ -1,0 +1,7 @@
+#include "libc_header.h"
+
+namespace std {
+  int myabs(int i) {
+    return i < 0 ? -i : i;
+  }
+}

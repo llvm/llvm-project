@@ -421,12 +421,21 @@ public:
 ///
 class OMPAllocateDecl final
     : public Decl,
-      private llvm::TrailingObjects<OMPAllocateDecl, Expr *> {
+      private llvm::TrailingObjects<OMPAllocateDecl, Expr *, OMPClause *> {
   friend class ASTDeclReader;
   friend TrailingObjects;
 
   /// Number of variable within the allocate directive.
   unsigned NumVars = 0;
+  /// Number of clauses associated with the allocate directive.
+  unsigned NumClauses = 0;
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return NumVars;
+  }
+  size_t numTrailingObjects(OverloadToken<OMPClause *>) const {
+    return NumClauses;
+  }
 
   virtual void anchor();
 
@@ -443,19 +452,41 @@ class OMPAllocateDecl final
 
   void setVars(ArrayRef<Expr *> VL);
 
+  /// Returns an array of immutable clauses associated with this directive.
+  ArrayRef<OMPClause *> getClauses() const {
+    return llvm::makeArrayRef(getTrailingObjects<OMPClause *>(), NumClauses);
+  }
+
+  /// Returns an array of clauses associated with this directive.
+  MutableArrayRef<OMPClause *> getClauses() {
+    return MutableArrayRef<OMPClause *>(getTrailingObjects<OMPClause *>(),
+                                        NumClauses);
+  }
+
+  /// Sets an array of clauses to this requires declaration
+  void setClauses(ArrayRef<OMPClause *> CL);
+
 public:
   static OMPAllocateDecl *Create(ASTContext &C, DeclContext *DC,
-                                 SourceLocation L, ArrayRef<Expr *> VL);
+                                 SourceLocation L, ArrayRef<Expr *> VL,
+                                 ArrayRef<OMPClause *> CL);
   static OMPAllocateDecl *CreateDeserialized(ASTContext &C, unsigned ID,
-                                             unsigned N);
+                                             unsigned NVars, unsigned NClauses);
 
   typedef MutableArrayRef<Expr *>::iterator varlist_iterator;
   typedef ArrayRef<const Expr *>::iterator varlist_const_iterator;
   typedef llvm::iterator_range<varlist_iterator> varlist_range;
   typedef llvm::iterator_range<varlist_const_iterator> varlist_const_range;
+  using clauselist_iterator = MutableArrayRef<OMPClause *>::iterator;
+  using clauselist_const_iterator = ArrayRef<const OMPClause *>::iterator;
+  using clauselist_range = llvm::iterator_range<clauselist_iterator>;
+  using clauselist_const_range = llvm::iterator_range<clauselist_const_iterator>;
+
 
   unsigned varlist_size() const { return NumVars; }
   bool varlist_empty() const { return NumVars == 0; }
+  unsigned clauselist_size() const { return NumClauses; }
+  bool clauselist_empty() const { return NumClauses == 0; }
 
   varlist_range varlists() {
     return varlist_range(varlist_begin(), varlist_end());
@@ -467,6 +498,21 @@ public:
   varlist_iterator varlist_end() { return getVars().end(); }
   varlist_const_iterator varlist_begin() const { return getVars().begin(); }
   varlist_const_iterator varlist_end() const { return getVars().end(); }
+
+  clauselist_range clauselists() {
+    return clauselist_range(clauselist_begin(), clauselist_end());
+  }
+  clauselist_const_range clauselists() const {
+    return clauselist_const_range(clauselist_begin(), clauselist_end());
+  }
+  clauselist_iterator clauselist_begin() { return getClauses().begin(); }
+  clauselist_iterator clauselist_end() { return getClauses().end(); }
+  clauselist_const_iterator clauselist_begin() const {
+    return getClauses().begin();
+  }
+  clauselist_const_iterator clauselist_end() const {
+    return getClauses().end();
+  }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == OMPAllocate; }

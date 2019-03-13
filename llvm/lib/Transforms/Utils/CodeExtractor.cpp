@@ -798,6 +798,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::SwiftSelf:
       case Attribute::WriteOnly:
       case Attribute::ZExt:
+      case Attribute::ImmArg:
       case Attribute::EndAttrKinds:
         continue;
       // Those attributes should be safe to propagate to the extracted function.

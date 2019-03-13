@@ -10,7 +10,6 @@
 
 #include "DWARFASTParserClang.h"
 #include "DWARFDIE.h"
-#include "DWARFDIECollection.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDeclContext.h"
 #include "DWARFDefines.h"
@@ -1393,7 +1392,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                         DIERef(class_type->GetID(), dwarf));
                   }
                   if (class_type_die) {
-                    DWARFDIECollection failures;
+                    std::vector<DWARFDIE> failures;
 
                     CopyUniqueClassMethodTypes(decl_ctx_die, class_type_die,
                                                class_type, failures);
@@ -2194,7 +2193,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
         std::vector<int> member_accessibilities;
         bool is_a_class = false;
         // Parse members and base classes first
-        DWARFDIECollection member_function_dies;
+        std::vector<DWARFDIE> member_function_dies;
 
         DelayedPropertyList delayed_properties;
         ParseChildMembers(sc, die, clang_type, class_language, bases,
@@ -2203,12 +2202,8 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
                           layout_info);
 
         // Now parse any methods if there were any...
-        size_t num_functions = member_function_dies.Size();
-        if (num_functions > 0) {
-          for (size_t i = 0; i < num_functions; ++i) {
-            dwarf->ResolveType(member_function_dies.GetDIEAtIndex(i));
-          }
-        }
+        for (const DWARFDIE &die : member_function_dies)
+          dwarf->ResolveType(die);
 
         if (class_language == eLanguageTypeObjC) {
           ConstString class_name(clang_type.GetTypeName());
@@ -2677,7 +2672,7 @@ bool DWARFASTParserClang::ParseChildMembers(
     CompilerType &class_clang_type, const LanguageType class_language,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     std::vector<int> &member_accessibilities,
-    DWARFDIECollection &member_function_dies,
+    std::vector<DWARFDIE> &member_function_dies,
     DelayedPropertyList &delayed_properties, AccessType &default_accessibility,
     bool &is_a_class, ClangASTImporter::LayoutInfo &layout_info) {
   if (!parent_die)
@@ -3176,7 +3171,7 @@ bool DWARFASTParserClang::ParseChildMembers(
 
     case DW_TAG_subprogram:
       // Let the type parsing code handle this one for us.
-      member_function_dies.Append(die);
+      member_function_dies.push_back(die);
       break;
 
     case DW_TAG_inheritance: {
@@ -3872,7 +3867,7 @@ void DWARFASTParserClang::LinkDeclContextToDIE(clang::DeclContext *decl_ctx,
 
 bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
     const DWARFDIE &src_class_die, const DWARFDIE &dst_class_die,
-    lldb_private::Type *class_type, DWARFDIECollection &failures) {
+    lldb_private::Type *class_type, std::vector<DWARFDIE> &failures) {
   if (!class_type || !src_class_die || !dst_class_die)
     return false;
   if (src_class_die.Tag() != dst_class_die.Tag())
@@ -4077,7 +4072,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
             log->Printf("warning: couldn't find a match for 0x%8.8x",
                         dst_die.GetOffset());
 
-          failures.Append(dst_die);
+          failures.push_back(dst_die);
         }
       }
     }
@@ -4142,9 +4137,9 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
                     "method '%s'",
                     dst_die.GetOffset(), dst_name_artificial.GetCString());
 
-      failures.Append(dst_die);
+      failures.push_back(dst_die);
     }
   }
 
-  return (failures.Size() != 0);
+  return !failures.empty();
 }

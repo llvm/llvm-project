@@ -331,6 +331,7 @@ static void setConfigs(opt::InputArgList &Args) {
       "--thinlto-cache-policy: invalid cache policy");
   Config->ThinLTOJobs = args::getInteger(Args, OPT_thinlto_jobs, -1u);
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
+  LLVM_DEBUG(errorHandler().Verbose = true);
   ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
 
   Config->InitialMemory = args::getInteger(Args, OPT_initial_memory, 0);

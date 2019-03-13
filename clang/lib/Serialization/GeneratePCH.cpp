@@ -24,12 +24,14 @@ PCHGenerator::PCHGenerator(
     const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
     StringRef OutputFile, StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-    bool AllowASTWithErrors, bool IncludeTimestamps)
+    bool AllowASTWithErrors, bool IncludeTimestamps,
+    bool ShouldCacheASTInMemory)
     : PP(PP), OutputFile(OutputFile), isysroot(isysroot.str()),
       SemaPtr(nullptr), Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
       Writer(Stream, this->Buffer->Data, ModuleCache, Extensions,
              IncludeTimestamps),
-      AllowASTWithErrors(AllowASTWithErrors) {
+      AllowASTWithErrors(AllowASTWithErrors),
+      ShouldCacheASTInMemory(ShouldCacheASTInMemory) {
   this->Buffer->IsComplete = false;
 }
 
@@ -61,7 +63,8 @@ void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
       Writer.WriteAST(*SemaPtr, OutputFile, Module, isysroot,
                       // For serialization we are lenient if the errors were
                       // only warn-as-error kind.
-                      PP.getDiagnostics().hasUncompilableErrorOccurred());
+                      PP.getDiagnostics().hasUncompilableErrorOccurred(),
+                      ShouldCacheASTInMemory);
 
   Buffer->IsComplete = true;
 }

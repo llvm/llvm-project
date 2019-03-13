@@ -96,6 +96,9 @@ struct Config {
   /// Optimization remarks file path.
   std::string RemarksFilename = "";
 
+  /// Optimization remarks pass filter.
+  std::string RemarksPasses = "";
+
   /// Whether to emit optimization remarks with hotness informations.
   bool RemarksWithHotness = false;
 

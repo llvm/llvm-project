@@ -281,6 +281,21 @@ public:
 
   virtual bool SetRemoteWorkingDirectory(const FileSpec &working_dir);
 
+  //------------------------------------------------------------------
+  /// Retrieve the system include directories on this platform for the
+  /// given language.
+  ///
+  /// \param[in] lang
+  ///     The language for which the include directories should be queried.
+  ///
+  /// \param[out] directories
+  ///     The include directories for this system.
+  //------------------------------------------------------------------
+  virtual std::vector<std::string>
+  GetSystemIncludeDirectories(lldb::LanguageType lang) {
+    return {};
+  }
+
   virtual UserIDResolver &GetUserIDResolver() = 0;
 
   //------------------------------------------------------------------

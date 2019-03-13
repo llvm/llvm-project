@@ -6,11 +6,9 @@
 define float @floatundisf(i64 %a) {
 ; CHECK-LABEL: floatundisf:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_2
-; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xxlxor f1, f1, f1
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB0_2: # %sw.epilog
+; CHECK-NEXT:    bclr 12, 4*cr5+lt, 0
+; CHECK-NEXT:  # %bb.1: # %sw.epilog
 ; CHECK-NEXT:    addi r3, r3, 1
 ; CHECK-NEXT:    li r5, 2
 ; CHECK-NEXT:    andis. r4, r3, 1024

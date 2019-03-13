@@ -85,6 +85,12 @@ cl::opt<std::string>
                        cl::desc("Output filename for pass remarks"),
                        cl::value_desc("filename"));
 
+cl::opt<std::string>
+    LTORemarksPasses("lto-pass-remarks-filter",
+                     cl::desc("Only record optimization remarks from passes "
+                              "whose names match the given regular expression"),
+                     cl::value_desc("regex"));
+
 cl::opt<bool> LTOPassRemarksWithHotness(
     "lto-pass-remarks-with-hotness",
     cl::desc("With PGO, include profile count in optimization remarks"),
@@ -505,7 +511,7 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
     return false;
 
   auto DiagFileOrErr = lto::setupOptimizationRemarks(
-      Context, LTORemarksFilename, LTOPassRemarksWithHotness);
+      Context, LTORemarksFilename, LTORemarksPasses, LTOPassRemarksWithHotness);
   if (!DiagFileOrErr) {
     errs() << "Error: " << toString(DiagFileOrErr.takeError()) << "\n";
     report_fatal_error("Can't get an output file for the remarks");

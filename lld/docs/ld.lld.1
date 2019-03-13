@@ -329,6 +329,9 @@ Set the text and data sections to be readable and writable.
 .It Fl -opt-remarks-filename Ar file
 Write optimization remarks in YAML format to
 .Ar file .
+.It Fl -opt-remarks-passes Ar pass-regex
+Filter optimization remarks by only allowing the passes matching
+.Ar pass-regex .
 .It Fl -opt-remarks-with-hotness
 Include hotness information in the optimization remarks file.
 .It Fl -orphan-handling Ns = Ns Ar mode

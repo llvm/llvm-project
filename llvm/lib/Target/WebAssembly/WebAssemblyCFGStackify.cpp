@@ -543,6 +543,11 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
       for (const auto &MI : reverse(*Header)) {
         if (MI.isCall()) {
           AfterSet.insert(&MI);
+          // Possibly throwing calls are usually wrapped by EH_LABEL
+          // instructions. We don't want to split them and the call.
+          if (MI.getIterator() != Header->begin() &&
+              std::prev(MI.getIterator())->isEHLabel())
+            AfterSet.insert(&*std::prev(MI.getIterator()));
           break;
         }
       }
