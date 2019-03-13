@@ -56,9 +56,6 @@ class DriverBatchModeTest (TestBase):
             '%s %s %s %s -- CRASH' %
             (lldbtest_config.lldbExec, self.lldbOption, run_commands, exe))
         child = self.child
-        # Turn on logging for what the child sends back.
-        if self.TraceOn():
-            child.logfile_read = sys.stdout
 
         # We should see the "run":
         self.expect_string("run")
@@ -97,9 +94,6 @@ class DriverBatchModeTest (TestBase):
             '%s %s %s %s -- NOCRASH' %
             (lldbtest_config.lldbExec, self.lldbOption, run_commands, exe))
         child = self.child
-        # Turn on logging for what the child sends back.
-        if self.TraceOn():
-            child.logfile_read = sys.stdout
 
         # We should see the "run":
         self.expect_string("run")
@@ -148,9 +142,6 @@ class DriverBatchModeTest (TestBase):
 
         self.addTearDownHook(self.closeVictim)
 
-        if self.TraceOn():
-            self.victim.logfile_read = sys.stdout
-
         self.victim.expect("PID: ([0-9]+) END")
         if self.victim.match is None:
             self.fail("Couldn't get the target PID.")
@@ -169,9 +160,6 @@ class DriverBatchModeTest (TestBase):
              exe))
 
         child = self.child
-        # Turn on logging for what the child sends back.
-        if self.TraceOn():
-            child.logfile_read = sys.stdout
 
         # We should see the "run":
         self.expect_string("attach")
