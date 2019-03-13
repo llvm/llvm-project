@@ -95,6 +95,22 @@ Changes to the LLVM IR
   <SpeculativeLoadHardening.html>`_ must be enabled for the function body.
 
 
+Changes to the JIT APIs
+-----------------------
+
+The ORC (On Request Compilation) JIT APIs have been updated to support
+concurrent compilation. The existing (non-concurrent) ORC layer classes and
+related APIs are deprecated, have been renamed with a "Legacy" prefix (e.g.
+LegacyIRCompileLayer). The deprecated clasess will be removed in LLVM 9.
+
+An example JIT stack using the concurrent ORC APIs, called LLJIT, has been
+added (see include/llvm/ExecutionEngine/Orc/LLJIT.h). The lli tool has been
+updated to use LLJIT.
+
+MCJIT and ExecutionEngine continue to be supported, though ORC should be
+preferred for new projects.
+
+
 Changes to the AArch64 Target
 -----------------------------
 
