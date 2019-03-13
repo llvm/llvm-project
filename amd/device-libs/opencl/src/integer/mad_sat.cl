@@ -65,16 +65,15 @@ mad_sat(long a, long b, long c)
     long b1 = b >> 32;
     ulong s0 = a0*b0;
     long t = a1*b0 + (s0 >> 32);
-    long s1 = t & 0xffffffffL;
+    long s1 = a0*b1 + (t & 0xffffffffL);
     long s2 = t >> 32;
-    s1 = a0*b1 + s1;
     long lo = (s1 << 32) | (s0 & 0xffffffffL);
     long hi = a1*b1 + s2 + (s1 >> 32);
 
     t = lo + c;
-    hi += (c > 0L) & (0x7fffffffffffffffL - c < lo);
-    hi -= (c < 1L) & ((long)0x8000000000000000L - c > lo);
+    hi += ((ulong)0xffffffffffffffffUL - (ulong)c < (ulong)lo);
     lo = t;
+    hi -= c < 0L;
 
     lo = (hi < 0L) & ((hi != -1L) | (lo >= 0L)) ? 0x8000000000000000L : lo;
     lo = (hi >= 0L) & ((hi > 0L) | (lo < 0L)) ? 0x7fffffffffffffffL : lo;
