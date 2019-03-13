@@ -146,5 +146,5 @@ define void @tests.lifetime.start.end() {
 ; CHECK: declare i32 @llvm.objectsize.i32.p0i8
 
 
-; CHECK: declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-; CHECK: declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+; CHECK: declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+; CHECK: declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)

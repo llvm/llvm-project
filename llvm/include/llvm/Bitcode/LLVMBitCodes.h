@@ -605,6 +605,7 @@ enum AttributeKindCodes {
   ATTR_KIND_OPT_FOR_FUZZING = 57,
   ATTR_KIND_SHADOWCALLSTACK = 58,
   ATTR_KIND_SPECULATIVE_LOAD_HARDENING = 59,
+  ATTR_KIND_IMMARG = 60
 };
 
 enum ComdatSelectionKindCodes {

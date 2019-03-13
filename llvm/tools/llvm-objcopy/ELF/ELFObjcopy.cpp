@@ -520,35 +520,31 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
       }
     }
   }
-
-  if (!Config.AddSection.empty()) {
-    for (const auto &Flag : Config.AddSection) {
-      std::pair<StringRef, StringRef> SecPair = Flag.split("=");
-      StringRef SecName = SecPair.first;
-      StringRef File = SecPair.second;
-      ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-          MemoryBuffer::getFile(File);
-      if (!BufOrErr)
-        return createFileError(File, errorCodeToError(BufOrErr.getError()));
-      std::unique_ptr<MemoryBuffer> Buf = std::move(*BufOrErr);
-      ArrayRef<uint8_t> Data(
-          reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
-          Buf->getBufferSize());
-      OwnedDataSection &NewSection =
-          Obj.addSection<OwnedDataSection>(SecName, Data);
-      if (SecName.startswith(".note") && SecName != ".note.GNU-stack")
-        NewSection.Type = SHT_NOTE;
-    }
+  
+  for (const auto &Flag : Config.AddSection) {
+    std::pair<StringRef, StringRef> SecPair = Flag.split("=");
+    StringRef SecName = SecPair.first;
+    StringRef File = SecPair.second;
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+        MemoryBuffer::getFile(File);
+    if (!BufOrErr)
+      return createFileError(File, errorCodeToError(BufOrErr.getError()));
+    std::unique_ptr<MemoryBuffer> Buf = std::move(*BufOrErr);
+    ArrayRef<uint8_t> Data(
+        reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
+        Buf->getBufferSize());
+    OwnedDataSection &NewSection =
+        Obj.addSection<OwnedDataSection>(SecName, Data);
+    if (SecName.startswith(".note") && SecName != ".note.GNU-stack")
+      NewSection.Type = SHT_NOTE;
   }
 
-  if (!Config.DumpSection.empty()) {
-    for (const auto &Flag : Config.DumpSection) {
-      std::pair<StringRef, StringRef> SecPair = Flag.split("=");
-      StringRef SecName = SecPair.first;
-      StringRef File = SecPair.second;
-      if (Error E = dumpSectionToFile(SecName, File, Obj))
-        return createFileError(Config.InputFilename, std::move(E));
-    }
+  for (const auto &Flag : Config.DumpSection) {
+    std::pair<StringRef, StringRef> SecPair = Flag.split("=");
+    StringRef SecName = SecPair.first;
+    StringRef File = SecPair.second;
+    if (Error E = dumpSectionToFile(SecName, File, Obj))
+      return createFileError(Config.InputFilename, std::move(E));
   }
 
   if (!Config.AddGnuDebugLink.empty())

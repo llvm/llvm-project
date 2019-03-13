@@ -1008,16 +1008,16 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
     // Add a new memory operand for this FI.
     assert(MFI.getObjectOffset(FI) != -1);
 
-    auto Flags = MachineMemOperand::MOLoad;
-    if (MI->getOpcode() == TargetOpcode::STATEPOINT) {
-      Flags |= MachineMemOperand::MOStore;
-      Flags |= MachineMemOperand::MOVolatile;
+    // Note: STATEPOINT MMOs are added during SelectionDAG.  STACKMAP, and
+    // PATCHPOINT should be updated to do the same. (TODO)
+    if (MI->getOpcode() != TargetOpcode::STATEPOINT) {
+      auto Flags = MachineMemOperand::MOLoad;
+      MachineMemOperand *MMO = MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, FI), Flags,
+          MF.getDataLayout().getPointerSize(), MFI.getObjectAlignment(FI));
+      MIB->addMemOperand(MF, MMO);
     }
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(MF, FI), Flags,
-        MF.getDataLayout().getPointerSize(), MFI.getObjectAlignment(FI));
-    MIB->addMemOperand(MF, MMO);
-
+    
     // Replace the instruction and update the operand index.
     MBB->insert(MachineBasicBlock::iterator(MI), MIB);
     OperIdx += (MIB->getNumOperands() - MI->getNumOperands()) - 1;

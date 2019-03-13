@@ -155,7 +155,7 @@ define i1 @fcmp_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 define float @select_fcmp_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z, <4 x float> %w) nounwind {
 ; CHECK-LABEL: select_fcmp_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpneq_oqps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vcmpneq_oqss %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp one <4 x float> %x, %y
@@ -167,9 +167,8 @@ define float @select_fcmp_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z, 
 define double @select_fcmp_v4f64(<4 x double> %x, <4 x double> %y, <4 x double> %z, <4 x double> %w) nounwind {
 ; CHECK-LABEL: select_fcmp_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpnltpd %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    vblendvpd %ymm0, %ymm2, %ymm3, %ymm0
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vcmpnltsd %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vblendvpd %xmm0, %xmm2, %xmm3, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %c = fcmp ule <4 x double> %x, %y

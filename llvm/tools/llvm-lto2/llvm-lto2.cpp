@@ -101,6 +101,12 @@ static cl::opt<bool> OptRemarksWithHotness(
              "Has effect only if -pass-remarks-output is specified."));
 
 static cl::opt<std::string>
+    OptRemarksPasses("pass-remarks-filter",
+                     cl::desc("Only record optimization remarks from passes "
+                              "whose names match the given regular expression"),
+                     cl::value_desc("regex"));
+
+static cl::opt<std::string>
     SamplePGOFile("lto-sample-profile-file",
                   cl::desc("Specify a SamplePGO profile file"));
 
@@ -220,6 +226,7 @@ static int run(int argc, char **argv) {
 
   // Optimization remarks.
   Conf.RemarksFilename = OptRemarksOutput;
+  Conf.RemarksPasses = OptRemarksPasses;
   Conf.RemarksWithHotness = OptRemarksWithHotness;
 
   Conf.SampleProfile = SamplePGOFile;

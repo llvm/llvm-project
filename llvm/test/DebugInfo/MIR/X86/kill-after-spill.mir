@@ -124,9 +124,6 @@
   declare i8* @memset(i8*, i32, i64) local_unnamed_addr
 
   ; Function Attrs: nounwind readnone speculatable
-  declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1) #1
-
-  ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
   ; Function Attrs: nounwind
