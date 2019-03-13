@@ -609,6 +609,8 @@ def arcmt_migrate : Flag<["-"], "arcmt-migrate">,
 
 def opt_record_file : Separate<["-"], "opt-record-file">,
   HelpText<"File name to use for YAML optimization record output">;
+def opt_record_passes : Separate<["-"], "opt-record-passes">,
+  HelpText<"Only record remark information for passes whose names match the given regular expression">;
 
 def print_stats : Flag<["-"], "print-stats">,
   HelpText<"Print performance metrics and statistics">;

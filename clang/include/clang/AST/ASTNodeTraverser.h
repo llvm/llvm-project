@@ -396,6 +396,8 @@ public:
   void VisitOMPAllocateDecl(const OMPAllocateDecl *D) {
     for (const auto *E : D->varlists())
       Visit(E);
+    for (const auto *C : D->clauselists())
+      Visit(C);
   }
 
   template <typename SpecializationDecl>

@@ -12,7 +12,6 @@ matrix:
     - env:
         - LABEL="make gcc LLVM-3.9"
         - LLVM_VERSION=3.9
-        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
@@ -27,7 +26,6 @@ matrix:
     - env:
         - LABEL="make gcc LLVM-4.0"
         - LLVM_VERSION=4.0
-        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
@@ -42,7 +40,6 @@ matrix:
     - env:
         - LABEL="make gcc LLVM-5.0"
         - LLVM_VERSION=5.0
-        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
@@ -57,7 +54,6 @@ matrix:
     - env:
         - LABEL="make gcc LLVM-6.0"
         - LLVM_VERSION=6.0
-        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
         # llvm passes -Werror=date-time which is only supported in gcc-4.9+
         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
@@ -76,10 +72,8 @@ matrix:
     - env:
         - LABEL="make gcc LLVM-7"
         - LLVM_VERSION=7
-        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
-        # llvm passes -Werror=date-time which is only supported in gcc-4.9+
-        - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
+        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
       addons:
         apt:
           sources:
@@ -88,15 +82,13 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - libedit-dev
-            # LLVM-7 needs libstdc++4.9
-            - g++-4.9
+            - g++-6
             # From sources above
             - llvm-7-dev
             - clang-7
     - env:
         - LABEL="cmake gcc LLVM-3.9"
         - LLVM_VERSION=3.9
-        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
@@ -111,7 +103,6 @@ matrix:
     - env:
         - LABEL="cmake gcc LLVM-4.0"
         - LLVM_VERSION=4.0
-        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
@@ -126,7 +117,6 @@ matrix:
     - env:
         - LABEL="cmake gcc LLVM-5.0"
         - LLVM_VERSION=5.0
-        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
@@ -141,7 +131,6 @@ matrix:
     - env:
         - LABEL="cmake gcc LLVM-6.0"
         - LLVM_VERSION=6.0
-        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
         # llvm passes -Werror=date-time which is only supported in gcc-4.9+
         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
@@ -160,10 +149,8 @@ matrix:
     - env:
         - LABEL="cmake gcc LLVM-7"
         - LLVM_VERSION=7
-        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
-        # llvm passes -Werror=date-time which is only supported in gcc-4.9+
-        - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
+        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
       addons:
         apt:
           sources:
@@ -172,14 +159,14 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - libedit-dev
-            # LLVM-7 needs libstdc++4.9
-            - g++-4.9
+            - g++-6
             # From sources above
             - llvm-7-dev
             - clang-7
 
 before_install:
     - eval "${MATRIX_EVAL}"
+    - export LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
 
 script:
   - if $(echo $LABEL | grep cmake > /dev/null) ; then

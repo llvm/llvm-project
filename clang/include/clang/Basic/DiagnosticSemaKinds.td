@@ -9221,6 +9221,8 @@ def note_omp_invalid_subscript_on_this_ptr_map : Note <
   "expected 'this' subscript expression on map clause to be 'this[0]'">;
 def err_omp_invalid_map_this_expr : Error <
   "invalid 'this' expression on 'map' clause">;
+def err_implied_omp_allocator_handle_t_not_found : Error<
+  "omp_allocator_handle_t type not found; include <omp.h>">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

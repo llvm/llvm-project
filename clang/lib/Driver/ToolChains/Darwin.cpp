@@ -487,6 +487,14 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(Args.MakeArgString(Opt));
       }
     }
+
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
+      CmdArgs.push_back("-mllvm");
+      std::string Passes =
+          std::string("-lto-pass-remarks-filter=") + A->getValue();
+      CmdArgs.push_back(Args.MakeArgString(Passes));
+    }
   }
 
   // Propagate the -moutline flag to the linker in LTO.

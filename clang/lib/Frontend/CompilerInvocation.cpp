@@ -1218,6 +1218,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   if (!Opts.OptRecordFile.empty())
     NeedLocTracking = true;
 
+  if (Arg *A = Args.getLastArg(OPT_opt_record_passes)) {
+    Opts.OptRecordPasses = A->getValue();
+    NeedLocTracking = true;
+  }
+
   if (Arg *A = Args.getLastArg(OPT_Rpass_EQ)) {
     Opts.OptimizationRemarkPattern =
         GenerateOptimizationRemarkRegex(Diags, Args, A);

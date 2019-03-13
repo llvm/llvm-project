@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -S -o /dev/null %s -O2 -dwarf-column-info 2>&1 | FileCheck -allow-empty -check-prefix=NO_REMARK %s
 // RUN: %clang_cc1 -triple arm64-apple-ios -S -o /dev/null %s -O2 -dwarf-column-info -opt-record-file %t.yaml
 // RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -S -o /dev/null %s -O2 -dwarf-column-info -opt-record-file %t.yaml -opt-record-passes asm-printer
+// RUN: cat %t.yaml | FileCheck -check-prefix=PASSES %s
 
 void bar(float);
 
@@ -15,15 +17,15 @@ void foo(float *p, int i) {
   }
 }
 
-// REMARK: opt-record-MIR.c:10:11: remark: {{.}} spills {{.}} reloads generated in loop
+// REMARK: opt-record-MIR.c:{{[1-9][0-9]*}}:{{[1-9][0-9]*}}: remark: {{.}} spills {{.}} reloads generated in loop
 // NO_REMARK-NOT: remark:
 
 // YAML: --- !Missed
 // YAML: Pass:            regalloc
 // YAML: Name:            LoopSpillReload
 // YAML: DebugLoc:        { File: {{[^,]+}},
-// YAML:                    Line: 10,
-// YAML:                    Column: 11 }
+// YAML:                    Line: {{[1-9][0-9]*}}
+// YAML:                    Column: {{[1-9][0-9]*}} }
 // YAML: Function:        foo
 // YAML: Args:
 // YAML:   - NumSpills:       '{{.}}'
@@ -32,3 +34,6 @@ void foo(float *p, int i) {
 // YAML:   - String:          ' reloads '
 // YAML:   - String:          generated
 // YAML: ...
+
+// PASSES: Pass:            asm-printer
+// PASSES-NOT: regalloc

@@ -1749,9 +1749,13 @@ void ASTDeclWriter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
 
 void ASTDeclWriter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
   Record.push_back(D->varlist_size());
+  Record.push_back(D->clauselist_size());
   VisitDecl(D);
   for (auto *I : D->varlists())
     Record.AddStmt(I);
+  OMPClauseWriter ClauseWriter(Record);
+  for (OMPClause *C : D->clauselists())
+    ClauseWriter.writeClause(C);
   Code = serialization::DECL_OMP_ALLOCATE;
 }
 

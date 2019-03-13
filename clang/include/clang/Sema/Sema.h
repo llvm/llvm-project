@@ -8847,6 +8847,8 @@ public:
   //
 private:
   void *VarDataSharingAttributesStack;
+  /// omp_allocator_handle_t type.
+  QualType OMPAllocatorHandleT;
   /// Number of nested '#pragma omp declare target' directives.
   unsigned DeclareTargetNestingLevel = 0;
   /// Initialization of data-sharing attributes stack.
@@ -8958,6 +8960,7 @@ public:
   /// Called on well-formed '#pragma omp allocate'.
   DeclGroupPtrTy ActOnOpenMPAllocateDirective(SourceLocation Loc,
                                               ArrayRef<Expr *> VarList,
+                                              ArrayRef<OMPClause *> Clauses,
                                               DeclContext *Owner = nullptr);
   /// Called on well-formed '#pragma omp requires'.
   DeclGroupPtrTy ActOnOpenMPRequiresDirective(SourceLocation Loc,
@@ -9313,6 +9316,11 @@ public:
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc);
+  /// Called on well-formed 'allocator' clause.
+  OMPClause *ActOnOpenMPAllocatorClause(Expr *Allocator,
+                                        SourceLocation StartLoc,
+                                        SourceLocation LParenLoc,
+                                        SourceLocation EndLoc);
   /// Called on well-formed 'if' clause.
   OMPClause *ActOnOpenMPIfClause(OpenMPDirectiveKind NameModifier,
                                  Expr *Condition, SourceLocation StartLoc,

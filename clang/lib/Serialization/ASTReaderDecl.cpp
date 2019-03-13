@@ -2639,12 +2639,19 @@ void ASTDeclReader::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
 void ASTDeclReader::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
   VisitDecl(D);
   unsigned NumVars = D->varlist_size();
+  unsigned NumClauses = D->clauselist_size();
   SmallVector<Expr *, 16> Vars;
   Vars.reserve(NumVars);
   for (unsigned i = 0; i != NumVars; ++i) {
     Vars.push_back(Record.readExpr());
   }
   D->setVars(Vars);
+  SmallVector<OMPClause *, 8> Clauses;
+  Clauses.reserve(NumClauses);
+  OMPClauseReader ClauseReader(Record);
+  for (unsigned I = 0; I != NumClauses; ++I)
+    Clauses.push_back(ClauseReader.readClause());
+  D->setClauses(Clauses);
 }
 
 void ASTDeclReader::VisitOMPRequiresDecl(OMPRequiresDecl * D) {
@@ -3882,9 +3889,12 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   case DECL_OMP_THREADPRIVATE:
     D = OMPThreadPrivateDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
-  case DECL_OMP_ALLOCATE:
-    D = OMPAllocateDecl::CreateDeserialized(Context, ID, Record.readInt());
+  case DECL_OMP_ALLOCATE: {
+    unsigned NumVars = Record.readInt();
+    unsigned NumClauses = Record.readInt();
+    D = OMPAllocateDecl::CreateDeserialized(Context, ID, NumVars, NumClauses);
     break;
+  }
   case DECL_OMP_REQUIRES:
     D = OMPRequiresDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
@@ -4485,8 +4495,8 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       break;
 
     case UPD_DECL_MARKED_OPENMP_ALLOCATE:
-      D->addAttr(OMPAllocateDeclAttr::CreateImplicit(Reader.getContext(),
-                                                     ReadSourceRange()));
+      D->addAttr(OMPAllocateDeclAttr::CreateImplicit(
+          Reader.getContext(), Record.readExpr(), ReadSourceRange()));
       break;
 
     case UPD_DECL_EXPORTED: {

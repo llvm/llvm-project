@@ -2168,6 +2168,10 @@ void OMPClauseEnqueue::VisitOMPSimdlenClause(const OMPSimdlenClause *C) {
   Visitor->AddStmt(C->getSimdlen());
 }
 
+void OMPClauseEnqueue::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
+  Visitor->AddStmt(C->getAllocator());
+}
+
 void OMPClauseEnqueue::VisitOMPCollapseClause(const OMPCollapseClause *C) {
   Visitor->AddStmt(C->getNumForLoops());
 }

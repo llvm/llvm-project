@@ -12,14 +12,17 @@
 #if !defined(PASS1)
 #define PASS1
 
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+
 int a;
 // CHECK: int a;
 
 #elif !defined(PASS2)
 #define PASS2
 
-#pragma omp allocate(a)
-// CHECK: #pragma omp allocate(a)
+#pragma omp allocate(a) allocator(omp_default_mem_alloc)
+// CHECK: #pragma omp allocate(a) allocator(omp_default_mem_alloc)
 
 #else
 

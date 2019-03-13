@@ -5065,8 +5065,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_apple_pragma_pack, false))
     CmdArgs.push_back("-fapple-pragma-pack");
 
+  // Remarks can be enabled with any of the `-f.*optimization-record.*` flags.
   if (Args.hasFlag(options::OPT_fsave_optimization_record,
                    options::OPT_foptimization_record_file_EQ,
+                   options::OPT_fno_save_optimization_record, false) ||
+      Args.hasFlag(options::OPT_foptimization_record_passes_EQ,
                    options::OPT_fno_save_optimization_record, false)) {
     CmdArgs.push_back("-opt-record-file");
 
@@ -5100,6 +5103,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
       llvm::sys::path::replace_extension(F, "opt.yaml");
       CmdArgs.push_back(Args.MakeArgString(F));
+    }
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
+      CmdArgs.push_back("-opt-record-passes");
+      CmdArgs.push_back(A->getValue());
     }
   }
 
