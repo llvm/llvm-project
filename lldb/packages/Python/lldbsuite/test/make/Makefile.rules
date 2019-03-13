@@ -750,15 +750,21 @@ endif
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
 ifeq "$(OS)" "Darwin"
-LD_SWIFT_FLAGS=-Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
-	  -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@)
+DYLIB_SWIFT_FLAGS=  \
+	 -Xlinker -dylib \
+         -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
+	 -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@) \
+	 $(LD_EXTRAS)
+else
+DYLIB_SWIFT_FLAGS=$(LD_EXTRAS)
 endif
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
 	@echo "### Linking dynamic library $(DYLIB_NAME)"
 ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
-	$(SWIFTC) -emit-library $(LD_SWIFT_FLAGS) $(LD_EXTRAS) -o $@ $(patsubst %.swiftmodule.o,,$^)
+	$(SWIFTC) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ \
+            $(patsubst %.swiftmodule.o,,$^)
 else
-	$(SWIFTC) -emit-library $(LD_SWIFT_FLAGS) $(LD_EXTRAS) -o $@ $^
+	$(SWIFTC) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $^
 endif
 else
 $(DYLIB_OBJECTS) : CFLAGS += -DCOMPILING_LLDB_TEST_DLL
