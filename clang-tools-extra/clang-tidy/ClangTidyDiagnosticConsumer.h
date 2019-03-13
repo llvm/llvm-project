@@ -138,7 +138,7 @@ public:
 
   /// \brief Returns the name of the clang-tidy check which produced this
   /// diagnostic ID.
-  StringRef getCheckName(unsigned DiagnosticID) const;
+  std::string getCheckName(unsigned DiagnosticID) const;
 
   /// \brief Returns \c true if the check is enabled for the \c CurrentFile.
   ///

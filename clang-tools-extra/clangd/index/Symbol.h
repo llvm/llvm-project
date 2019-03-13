@@ -37,7 +37,7 @@ struct Symbol {
   /// The ID of the symbol.
   SymbolID ID;
   /// The symbol information, like symbol kind.
-  index::SymbolInfo SymInfo;
+  index::SymbolInfo SymInfo = index::SymbolInfo();
   /// The unqualified name of the symbol, e.g. "bar" (for ns::bar).
   llvm::StringRef Name;
   /// The containing namespace. e.g. "" (global), "ns::" (top-level namespace).
