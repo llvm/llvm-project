@@ -10,6 +10,7 @@
 #define liblldb_ExpressionSourceCode_h
 
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/ArrayRef.h"
 
 #include <string>
 

@@ -129,6 +129,8 @@ public:
 
   bool GetEnableAutoImportClangModules() const;
 
+  bool GetEnableImportStdModule() const;
+
   bool GetEnableAutoApplyFixIts() const;
 
   bool GetEnableNotifyAboutFixIts() const;

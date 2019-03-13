@@ -29,7 +29,6 @@ DWARFUnitSP DWARFCompileUnit::Extract(SymbolFileDWARF *dwarf2Data,
     dw_offset_t abbr_offset;
     const DWARFDebugAbbrev *abbr = dwarf2Data->DebugAbbrev();
     cu_sp->m_length = debug_info.GetDWARFInitialLength(offset_ptr);
-    cu_sp->m_is_dwarf64 = debug_info.IsDWARF64();
     cu_sp->m_version = debug_info.GetU16(offset_ptr);
 
     if (cu_sp->m_version == 5) {
@@ -74,7 +73,7 @@ void DWARFCompileUnit::Dump(Stream *s) const {
 
 uint32_t DWARFCompileUnit::GetHeaderByteSize() const {
   if (m_version < 5)
-    return m_is_dwarf64 ? 23 : 11;
+    return 11;
 
   switch (m_unit_type) {
   case llvm::dwarf::DW_UT_compile:

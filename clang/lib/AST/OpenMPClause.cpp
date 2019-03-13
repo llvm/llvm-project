@@ -73,6 +73,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_final:
   case OMPC_safelen:
   case OMPC_simdlen:
+  case OMPC_allocator:
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_shared:
@@ -145,6 +146,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_num_threads:
   case OMPC_safelen:
   case OMPC_simdlen:
+  case OMPC_allocator:
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_shared:
@@ -1083,6 +1085,12 @@ void OMPClausePrinter::VisitOMPSafelenClause(OMPSafelenClause *Node) {
 void OMPClausePrinter::VisitOMPSimdlenClause(OMPSimdlenClause *Node) {
   OS << "simdlen(";
   Node->getSimdlen()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPAllocatorClause(OMPAllocatorClause *Node) {
+  OS << "allocator(";
+  Node->getAllocator()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
 }
 

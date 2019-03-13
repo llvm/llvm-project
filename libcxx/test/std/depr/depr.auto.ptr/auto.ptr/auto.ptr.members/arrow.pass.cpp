@@ -14,6 +14,8 @@
 
 // REQUIRES: c++98 || c++03 || c++11 || c++14
 
+#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <memory>
 #include <cassert>
 

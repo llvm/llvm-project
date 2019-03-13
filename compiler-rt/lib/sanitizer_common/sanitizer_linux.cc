@@ -1030,6 +1030,8 @@ uptr GetMaxVirtualAddress() {
   return (1ULL << 40) - 1;  // 0x000000ffffffffffUL;
 # elif defined(__s390x__)
   return (1ULL << 53) - 1;  // 0x001fffffffffffffUL;
+#elif defined(__sparc__)
+  return ~(uptr)0;
 # else
   return (1ULL << 47) - 1;  // 0x00007fffffffffffUL;
 # endif
@@ -1821,10 +1823,20 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
   u64 esr;
   if (!Aarch64GetESR(ucontext, &esr)) return UNKNOWN;
   return esr & ESR_ELx_WNR ? WRITE : READ;
-#elif SANITIZER_SOLARIS && defined(__sparc__)
+#elif defined(__sparc__)
   // Decode the instruction to determine the access type.
   // From OpenSolaris $SRC/uts/sun4/os/trap.c (get_accesstype).
+#if SANITIZER_SOLARIS
   uptr pc = ucontext->uc_mcontext.gregs[REG_PC];
+#else
+  // Historical BSDism here.
+  struct sigcontext *scontext = (struct sigcontext *)context;
+#if defined(__arch64__)
+  uptr pc = scontext->sigc_regs.tpc;
+#else
+  uptr pc = scontext->si_regs.pc;
+#endif
+#endif
   u32 instr = *(u32 *)pc;
   return (instr >> 21) & 1 ? WRITE: READ;
 #else
@@ -1915,28 +1927,27 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   // pointer, but GCC always uses r31 when we need a frame pointer.
   *bp = ucontext->uc_mcontext.regs->gpr[PT_R31];
 #elif defined(__sparc__)
-  ucontext_t *ucontext = (ucontext_t*)context;
-  uptr *stk_ptr;
-# if defined(__sparcv9) || defined (__arch64__)
-# ifndef MC_PC
-#  define MC_PC REG_PC
-# endif
-# ifndef MC_O6
-#  define MC_O6 REG_O6
+#if defined(__arch64__) || defined(__sparcv9)
+#define STACK_BIAS 2047
+#else
+#define STACK_BIAS 0
 # endif
 # if SANITIZER_SOLARIS
-#  define mc_gregs gregs
-# endif
-  *pc = ucontext->uc_mcontext.mc_gregs[MC_PC];
-  *sp = ucontext->uc_mcontext.mc_gregs[MC_O6];
-  stk_ptr = (uptr *) (*sp + 2047);
-  *bp = stk_ptr[15];
-# else
+  ucontext_t *ucontext = (ucontext_t *)context;
   *pc = ucontext->uc_mcontext.gregs[REG_PC];
-  *sp = ucontext->uc_mcontext.gregs[REG_O6];
-  stk_ptr = (uptr *) *sp;
-  *bp = stk_ptr[15];
+  *sp = ucontext->uc_mcontext.gregs[REG_O6] + STACK_BIAS;
+#else
+  // Historical BSDism here.
+  struct sigcontext *scontext = (struct sigcontext *)context;
+#if defined(__arch64__)
+  *pc = scontext->sigc_regs.tpc;
+  *sp = scontext->sigc_regs.u_regs[14] + STACK_BIAS;
+#else
+  *pc = scontext->si_regs.pc;
+  *sp = scontext->si_regs.u_regs[14];
+#endif
 # endif
+  *bp = (uptr)((uhwptr *)*sp)[14] + STACK_BIAS;
 #elif defined(__mips__)
   ucontext_t *ucontext = (ucontext_t*)context;
   *pc = ucontext->uc_mcontext.pc;

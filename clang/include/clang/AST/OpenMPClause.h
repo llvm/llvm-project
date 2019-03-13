@@ -243,6 +243,58 @@ public:
   }
 };
 
+/// This represents 'allocator' clause in the '#pragma omp ...'
+/// directive.
+///
+/// \code
+/// #pragma omp allocate(a) allocator(omp_default_mem_alloc)
+/// \endcode
+/// In this example directive '#pragma omp allocate' has simple 'allocator'
+/// clause with the allocator 'omp_default_mem_alloc'.
+class OMPAllocatorClause : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Expression with the allocator.
+  Stmt *Allocator = nullptr;
+
+  /// Set allocator.
+  void setAllocator(Expr *A) { Allocator = A; }
+
+public:
+  /// Build 'allocator' clause with the given allocator.
+  ///
+  /// \param A Allocator.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPAllocatorClause(Expr *A, SourceLocation StartLoc, SourceLocation LParenLoc,
+                     SourceLocation EndLoc)
+      : OMPClause(OMPC_allocator, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        Allocator(A) {}
+
+  /// Build an empty clause.
+  OMPAllocatorClause()
+      : OMPClause(OMPC_allocator, SourceLocation(), SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns allocator.
+  Expr *getAllocator() const { return cast_or_null<Expr>(Allocator); }
+
+  child_range children() { return child_range(&Allocator, &Allocator + 1); }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_allocator;
+  }
+};
+
 /// This represents 'if' clause in the '#pragma omp ...' directive.
 ///
 /// \code

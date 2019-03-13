@@ -9,4 +9,4 @@ define void @callit(i8* %ptr) {
 }
 
 declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1)
-; CHECK: declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1, i1)
+; CHECK: declare i64 @llvm.objectsize.i64.p0i8(i8*, i1 immarg, i1 immarg, i1 immarg)

@@ -130,6 +130,9 @@ def ReadOnly : EnumAttr<"readonly">;
 /// Return value is always equal to this argument.
 def Returned : EnumAttr<"returned">;
 
+/// Parameter is required to be a trivial constant.
+def ImmArg : EnumAttr<"immarg">;
+
 /// Function can return twice.
 def ReturnsTwice : EnumAttr<"returns_twice">;
 

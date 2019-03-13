@@ -12,6 +12,8 @@
 
 // auto_ptr(auto_ptr& a) throw();
 
+#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <memory>
 #include <cassert>
 

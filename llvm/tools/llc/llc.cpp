@@ -148,6 +148,12 @@ static cl::opt<std::string>
                     cl::desc("YAML output filename for pass remarks"),
                     cl::value_desc("filename"));
 
+static cl::opt<std::string>
+    RemarksPasses("pass-remarks-filter",
+                  cl::desc("Only record optimization remarks from passes whose "
+                           "names match the given regular expression"),
+                  cl::value_desc("regex"));
+
 namespace {
 static ManagedStatic<std::vector<std::string>> RunPassNames;
 
@@ -336,6 +342,12 @@ int main(int argc, char **argv) {
     }
     Context.setRemarkStreamer(
         llvm::make_unique<RemarkStreamer>(RemarksFilename, YamlFile->os()));
+
+    if (!RemarksPasses.empty())
+      if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses)) {
+        WithColor::error(errs(), argv[0]) << E << '\n';
+        return 1;
+      }
   }
 
   if (InputLanguage != "" && InputLanguage != "ir" &&

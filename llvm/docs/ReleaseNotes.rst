@@ -58,6 +58,10 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
+* Added ``immarg`` parameter attribute. This indicates an intrinsic
+  parameter is required to be a simple constant. This annotation must
+  be accurate to avoid possible miscompiles.
+
 
 Changes to the ARM Backend
 --------------------------

@@ -188,6 +188,9 @@
 #ifndef OPENMP_DECLARE_MAPPER_CLAUSE
 #define OPENMP_DECLARE_MAPPER_CLAUSE(Name)
 #endif
+#ifndef OPENMP_ALLOCATE_CLAUSE
+# define OPENMP_ALLOCATE_CLAUSE(Name)
+#endif
 
 // OpenMP directives.
 OPENMP_DIRECTIVE(threadprivate)
@@ -247,6 +250,7 @@ OPENMP_DIRECTIVE_EXT(target_teams_distribute_simd, "target teams distribute simd
 OPENMP_DIRECTIVE(allocate)
 
 // OpenMP clauses.
+OPENMP_CLAUSE(allocator, OMPAllocatorClause)
 OPENMP_CLAUSE(if, OMPIfClause)
 OPENMP_CLAUSE(final, OMPFinalClause)
 OPENMP_CLAUSE(num_threads, OMPNumThreadsClause)
@@ -488,6 +492,9 @@ OPENMP_REQUIRES_CLAUSE(unified_shared_memory)
 OPENMP_REQUIRES_CLAUSE(reverse_offload)
 OPENMP_REQUIRES_CLAUSE(dynamic_allocators)
 OPENMP_REQUIRES_CLAUSE(atomic_default_mem_order)
+
+// Clauses allowed for OpenMP directive 'allocate'.
+OPENMP_ALLOCATE_CLAUSE(allocator)
 
 // Modifiers for 'atomic_default_mem_order' clause.
 OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(seq_cst)
@@ -910,6 +917,7 @@ OPENMP_TASKGROUP_CLAUSE(task_reduction)
 // Clauses allowed for OpenMP directive 'declare mapper'.
 OPENMP_DECLARE_MAPPER_CLAUSE(map)
 
+#undef OPENMP_ALLOCATE_CLAUSE
 #undef OPENMP_DECLARE_MAPPER_CLAUSE
 #undef OPENMP_TASKGROUP_CLAUSE
 #undef OPENMP_TASKLOOP_SIMD_CLAUSE

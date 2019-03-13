@@ -19,15 +19,6 @@ define <4 x i32> @umul_v4i32_0(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <4 x i32> @umul_v4i32_1(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX-LABEL: umul_v4i32_1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1]
-; AVX-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
-; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
     %x = call { <4 x i32>, <4 x i1> } @llvm.umul.with.overflow.v4i32(<4 x i32> %a, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
     %y = extractvalue { <4 x i32>, <4 x i1> } %x, 0
@@ -54,14 +45,8 @@ define <4 x i32> @umul_v4i32_2(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <4 x i32> @umul_v4i32_8(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX-LABEL: umul_v4i32_8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [8,8,8,8]
-; AVX-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
-; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm2
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm2, %xmm2
 ; AVX-NEXT:    vpslld $3, %xmm0, %xmm0
 ; AVX-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
@@ -75,14 +60,8 @@ define <4 x i32> @umul_v4i32_8(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <4 x i32> @umul_v4i32_2pow31(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX-LABEL: umul_v4i32_2pow31:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [2147483648,2147483648,2147483648,2147483648]
-; AVX-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
-; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm2
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm2, %xmm2
 ; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
@@ -108,15 +87,6 @@ define <4 x i32> @smul_v4i32_0(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <4 x i32> @smul_v4i32_1(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX-LABEL: smul_v4i32_1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1]
-; AVX-NEXT:    vpmuldq %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpmuldq %xmm3, %xmm0, %xmm3
-; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; AVX-NEXT:    vpsrad $31, %xmm0, %xmm3
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
     %x = call { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32> %a, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
     %y = extractvalue { <4 x i32>, <4 x i1> } %x, 0
@@ -148,16 +118,10 @@ define <4 x i32> @smul_v4i32_2(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <4 x i32> @smul_v4i32_8(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX-LABEL: smul_v4i32_8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [8,8,8,8]
-; AVX-NEXT:    vpmuldq %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpmuldq %xmm3, %xmm0, %xmm3
-; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; AVX-NEXT:    vpslld $3, %xmm0, %xmm0
-; AVX-NEXT:    vpsrad $31, %xmm0, %xmm3
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpslld $3, %xmm0, %xmm2
+; AVX-NEXT:    vpsrad $3, %xmm2, %xmm3
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm3, %xmm0
+; AVX-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX-NEXT:    retq
     %x = call { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32> %a, <4 x i32> <i32 8, i32 8, i32 8, i32 8>)
     %y = extractvalue { <4 x i32>, <4 x i1> } %x, 0
@@ -169,15 +133,9 @@ define <4 x i32> @smul_v4i32_8(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <4 x i32> @smul_v4i32_2pow31(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX-LABEL: smul_v4i32_2pow31:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [2147483648,2147483648,2147483648,2147483648]
-; AVX-NEXT:    vpmuldq %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpmuldq %xmm3, %xmm0, %xmm3
-; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
+; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm2
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm2, %xmm2
 ; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX-NEXT:    vpsrad $31, %xmm0, %xmm3
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
     %x = call { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32> %a, <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>)

@@ -535,7 +535,7 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
       isAsynchronousEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     return false;
   if (Options.CoverageType >= SanitizerCoverageOptions::SCK_Edge)
-    SplitAllCriticalEdges(F);
+    SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions().setIgnoreUnreachableDests());
   SmallVector<Instruction *, 8> IndirCalls;
   SmallVector<BasicBlock *, 16> BlocksToInstrument;
   SmallVector<Instruction *, 8> CmpTraceTargets;

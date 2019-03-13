@@ -1,0 +1,24 @@
+# Show that yaml2obj rejects a symbol reference from a relocation if the symbol
+# does not exist.
+
+# RUN: not yaml2obj %s -o %t 2>&1 | FileCheck %s
+
+# CHECK: Unknown symbol referenced: 'does_not_exist' at YAML section '.rela.text'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .rela.text
+    Type: SHT_RELA
+    Info: .text
+    Link: .symtab
+    Relocations:
+      - Type: R_X86_64_PC32
+        Offset: 0
+        Symbol: does_not_exist

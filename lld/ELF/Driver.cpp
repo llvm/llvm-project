@@ -818,6 +818,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->OFormatBinary = isOutputFormatBinary(Args);
   Config->Omagic = Args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   Config->OptRemarksFilename = Args.getLastArgValue(OPT_opt_remarks_filename);
+  Config->OptRemarksPasses = Args.getLastArgValue(OPT_opt_remarks_passes);
   Config->OptRemarksWithHotness = Args.hasArg(OPT_opt_remarks_with_hotness);
   Config->Optimize = args::getInteger(Args, OPT_O, 1);
   Config->OrphanHandling = getOrphanHandling(Args);

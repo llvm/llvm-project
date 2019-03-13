@@ -50,3 +50,6 @@ Sections:
       - Offset:          0x0000000000000008
         Symbol:          x
         Type:            R_X86_64_64
+Symbols:
+  Global:
+    - Name: x

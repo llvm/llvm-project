@@ -530,11 +530,14 @@ ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 
   for (const auto &Rel : Section.Relocations) {
     unsigned SymIdx = 0;
-    // Some special relocation, R_ARM_v4BX for instance, does not have
-    // an external reference.  So it ignores the return value of lookup()
-    // here.
-    if (Rel.Symbol)
-      SymN2I.lookup(*Rel.Symbol, SymIdx);
+    // If a relocation references a symbol, try to look one up in the symbol
+    // table. If it is not there, treat the value as a symbol index.
+    if (Rel.Symbol && SymN2I.lookup(*Rel.Symbol, SymIdx) &&
+        !to_integer(*Rel.Symbol, SymIdx)) {
+      WithColor::error() << "Unknown symbol referenced: '" << *Rel.Symbol
+                         << "' at YAML section '" << Section.Name << "'.\n";
+      return false;
+    }
 
     if (IsRela) {
       Elf_Rela REntry;

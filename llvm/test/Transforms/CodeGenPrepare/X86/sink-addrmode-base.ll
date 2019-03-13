@@ -41,7 +41,7 @@ if.then:
   br label %fallthrough
 
 fallthrough:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   %b = phi i64* [%b1, %entry], [%b2, %if.then]
   %c = phi i32* [%c1, %entry], [%c2, %if.then]
   %v = load i32, i32* %c, align 4
@@ -111,7 +111,7 @@ if.then:
   br label %fallthrough
 
 fallthrough:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   %b = phi i64* [%b1, %entry], [%b2, %if.then]
   %c = phi i32* [%c1, %entry], [%c2, %if.then]
   %v = load i32, i32* %c, align 4
@@ -199,7 +199,7 @@ if.then:
   br label %fallthrough
 
 fallthrough:
-; CHECK: getelementptr i8, {{.+}} 40
+; CHECK: getelementptr inbounds i8, {{.+}} 40
   %c = phi i32* [%c3, %loop], [%c2, %if.then]
   %b = phi i64* [%b3, %loop], [%b2, %if.then]
   %v = load volatile i32, i32* %c, align 4

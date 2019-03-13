@@ -332,6 +332,15 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case PPC::ADDIStocHA:
   case PPC::ADDItocL:
   case PPC::LOAD_STACK_GUARD:
+  case PPC::XXLXORz:
+  case PPC::XXLXORspz:
+  case PPC::XXLXORdpz:
+  case PPC::V_SET0B:
+  case PPC::V_SET0H:
+  case PPC::V_SET0:
+  case PPC::V_SETALLONESB:
+  case PPC::V_SETALLONESH:
+  case PPC::V_SETALLONES:
     return true;
   }
   return false;
