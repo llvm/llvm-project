@@ -654,7 +654,7 @@ def LWGP_MM : LoadGPMM16<"lw", GPRMM16Opnd, II_LW, mem_mm_gp_simm7_lsl2>,
                          LOAD_GP_FM_MM16<0x19>, ISA_MICROMIPS;
 def LWSP_MM : LoadSPMM16<"lw", GPR32Opnd, II_LW, mem_mm_sp_imm5_lsl2>,
               LOAD_STORE_SP_FM_MM16<0x12>, ISA_MICROMIPS;
-def SWSP_MM : StoreSPMM16<"sw", GPR32Opnd, II_SW, mem_mm_sp_imm5_lsl2>,
+def SWSP_MM : StoreSPMM16<"swsp", GPR32Opnd, II_SW, mem_mm_sp_imm5_lsl2>,
               LOAD_STORE_SP_FM_MM16<0x32>, ISA_MICROMIPS32_NOT_MIPS32R6;
 def ADDIUR1SP_MM : AddImmUR1SP<"addiur1sp", GPRMM16Opnd>, ADDIUR1SP_FM_MM16,
                    ISA_MICROMIPS;
@@ -694,6 +694,10 @@ def BREAK16_MM : BrkSdbbp16MM<"break16", II_BREAK>, BRKSDBBP16_FM_MM<0x28>,
 def SDBBP16_MM : BrkSdbbp16MM<"sdbbp16", II_SDBBP>, BRKSDBBP16_FM_MM<0x2C>,
                  ISA_MICROMIPS32_NOT_MIPS32R6;
 
+class WaitMM<string opstr> :
+  InstSE<(outs), (ins uimm10:$code_), !strconcat(opstr, "\t$code_"), [],
+         II_WAIT, FrmOther, opstr>;
+
 let DecoderNamespace = "MicroMips" in {
   /// Load and Store Instructions - multiple
   def SWM16_MM : StoreMultMM16<"swm16", II_SWM>, LWM_FM_MM16<0x5>,
@@ -706,13 +710,7 @@ let DecoderNamespace = "MicroMips" in {
   def CTC2_MM : InstSE<(outs COP2Opnd:$impl), (ins GPR32Opnd:$rt),
                        "ctc2\t$rt, $impl", [], II_CTC2, FrmFR, "ctc2">,
                 POOL32A_CFTC2_FM_MM<0b1101110100>, ISA_MICROMIPS;
-}
 
-class WaitMM<string opstr> :
-  InstSE<(outs), (ins uimm10:$code_), !strconcat(opstr, "\t$code_"), [],
-         II_WAIT, FrmOther, opstr>;
-
-let DecoderNamespace = "MicroMips" in {
   /// Compact Branch Instructions
   def BEQZC_MM : CompactBranchMM<"beqzc", brtarget_mm, seteq, GPR32Opnd>,
                  COMPACT_BRANCH_FM_MM<0x7>, ISA_MICROMIPS32_NOT_MIPS32R6;
@@ -822,8 +820,7 @@ let DecoderNamespace = "MicroMips" in {
     def SW_MM  : Store<"sw", GPR32Opnd, null_frag, II_SW>, MMRel,
                  LW_FM_MM<0x3e>, ISA_MICROMIPS;
   }
-}
-let DecoderNamespace = "MicroMips" in {
+
   let DecoderMethod = "DecodeMemMMImm9" in {
     def LBE_MM  : MMRel, Load<"lbe", GPR32Opnd, null_frag, II_LBE>,
                   POOL32C_LHUE_FM_MM<0x18, 0x6, 0x4>, ISA_MICROMIPS, ASE_EVA;
@@ -881,8 +878,7 @@ let DecoderNamespace = "MicroMips" in {
   def SWR_MM : MMRel, StoreLeftRightMM<"swr", MipsSWR, GPR32Opnd, mem_mm_12,
                                        II_SWR>, LWL_FM_MM<0x9>,
                ISA_MICROMIPS32_NOT_MIPS32R6;
-}
-let DecoderNamespace = "MicroMips" in {
+
   /// Load and Store Instructions - multiple
   def SWM32_MM  : StoreMultMM<"swm32", II_SWM>, LWM_FM_MM<0xd>, ISA_MICROMIPS;
   def LWM32_MM  : LoadMultMM<"lwm32", II_LWM>, LWM_FM_MM<0x5>, ISA_MICROMIPS;
@@ -1139,9 +1135,7 @@ let DecoderNamespace = "MicroMips" in {
   def LWU_MM : MMRel, LoadMM<"lwu", GPR32Opnd, zextloadi32, II_LWU,
                              mem_simm12>, LL_FM_MM<0xe>,
                ISA_MICROMIPS32_NOT_MIPS32R6;
-}
 
-let DecoderNamespace = "MicroMips" in {
   def MFGC0_MM    : MMRel, MfCop0MM<"mfgc0", GPR32Opnd, COP0Opnd, II_MFGC0>,
                     POOL32A_MFTC0_FM_MM<0b10011, 0b111100>,
                     ISA_MICROMIPS32R5, ASE_VIRT;
@@ -1204,7 +1198,7 @@ def : MipsPat<(atomic_load_32 addr:$a), (LW_MM addr:$a)>, ISA_MICROMIPS;
 def : MipsPat<(i32 immLi16:$imm),
               (LI16_MM immLi16:$imm)>, ISA_MICROMIPS;
 
-defm :  MaterializeImms<i32, ZERO, ADDiu_MM, LUi_MM, ORi_MM>, ISA_MICROMIPS;
+defm : MaterializeImms<i32, ZERO, ADDiu_MM, LUi_MM, ORi_MM>, ISA_MICROMIPS;
 
 def : MipsPat<(not GPRMM16:$in),
               (NOT16_MM GPRMM16:$in)>, ISA_MICROMIPS;
@@ -1453,3 +1447,6 @@ def : MipsInstAlias<"mtgc0 $rt, $rs",
 def : MipsInstAlias<"mthgc0 $rt, $rs",
                     (MTHGC0_MM COP0Opnd:$rs, GPR32Opnd:$rt, 0), 0>,
                     ISA_MICROMIPS32R5, ASE_VIRT;
+def : MipsInstAlias<"sw $rt, $offset",
+                    (SWSP_MM GPR32Opnd:$rt, mem_mm_sp_imm5_lsl2:$offset), 1>,
+                    ISA_MICROMIPS;

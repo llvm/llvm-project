@@ -1258,6 +1258,11 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::Wasm,
             Triple("wasm64-unknown-wasi-musl-wasm").getObjectFormat());
 
+  EXPECT_EQ(Triple::XCOFF, Triple("powerpc-ibm-aix").getObjectFormat());
+  EXPECT_EQ(Triple::XCOFF, Triple("powerpc64-ibm-aix").getObjectFormat());
+  EXPECT_EQ(Triple::XCOFF, Triple("powerpc---xcoff").getObjectFormat());
+  EXPECT_EQ(Triple::XCOFF, Triple("powerpc64---xcoff").getObjectFormat());
+
   Triple MSVCNormalized(Triple::normalize("i686-pc-windows-msvc-elf"));
   EXPECT_EQ(Triple::ELF, MSVCNormalized.getObjectFormat());
 
@@ -1276,6 +1281,9 @@ TEST(TripleTest, FileFormat) {
 
   T.setObjectFormat(Triple::MachO);
   EXPECT_EQ(Triple::MachO, T.getObjectFormat());
+
+  T.setObjectFormat(Triple::XCOFF);
+  EXPECT_EQ(Triple::XCOFF, T.getObjectFormat());
 }
 
 TEST(TripleTest, NormalizeWindows) {

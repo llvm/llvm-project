@@ -24,11 +24,11 @@
 # BAD-LMA-LABEL: Program Headers:
 # BAD-LMA-NEXT:  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # BAD-LMA-NEXT:  LOAD           0x001000 0x0000000000000000 0x0000000000000000 0x000100 0x000100 R E 0x1000
+# BAD-LMA-NEXT:  LOAD           0x001100 0x0000000000000100 0x0000000000000100 0x000070 0x000070 RW  0x1000
 # BAD-LMA-NEXT:  LOAD           0x002000 0x0000000000008000 0x0000000000008000 0x000100 0x000100 RW  0x1000
-# BAD-LMA-NEXT:  LOAD           0x002800 0x0000000000008800 0x0000000000008080 0x000170 0x000170 RW  0x1000
 # BAD-LMA-LABEL: Section to Segment mapping:
-# BAD-LMA:  01     .sec1
-# BAD-LMA:  02     .sec2 .dynamic
+# BAD-LMA:  01     .text .dynamic
+# BAD-LMA:  02     .sec1
 
 # Now try a script where the virtual memory addresses overlap but ensure that the
 # load addresses don't:
@@ -50,11 +50,11 @@
 # BAD-VADDR-LABEL: Program Headers:
 # BAD-VADDR-NEXT:  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # BAD-VADDR-NEXT:  LOAD           0x001000 0x0000000000000000 0x0000000000000000 0x000100 0x000100 R E 0x1000
+# BAD-VADDR-NEXT:  LOAD           0x001100 0x0000000000000100 0x0000000000000100 0x000070 0x000070 RW  0x1000
 # BAD-VADDR-NEXT:  LOAD           0x002000 0x0000000000008000 0x0000000000008000 0x000100 0x000100 RW  0x1000
-# BAD-VADDR-NEXT:  LOAD           0x003020 0x0000000000008020 0x0000000000008800 0x000170 0x000170 RW  0x1000
 # BAD-VADDR-LABEL: Section to Segment mapping:
-# BAD-VADDR:  01     .sec1
-# BAD-VADDR:  02     .sec2 .dynamic
+# BAD-VADDR:  01     .text .dynamic
+# BAD-VADDR:  02     .sec1
 
 # Finally check the case where both LMA and vaddr overlap
 
@@ -66,8 +66,8 @@
 # RUN: not ld.lld -o %t.so --script %t-both-overlap.script %t.o -shared 2>&1 | FileCheck %s -check-prefix BOTH-OVERLAP-ERR
 
 # BOTH-OVERLAP-ERR:      error: section .sec1 file range overlaps with .sec2
-# BOTH-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x2000, 0x20FF]
-# BOTH-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x2040, 0x213F]
+# BOTH-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x9000, 0x90FF]
+# BOTH-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x9040, 0x913F]
 # BOTH-OVERLAP-ERR:      error: section .sec1 virtual address range overlaps with .sec2
 # BOTH-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000, 0x80FF]
 # BOTH-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8040, 0x813F]
@@ -93,14 +93,14 @@
 
 # RUN: llvm-readobj -sections -program-headers -elf-output-style=GNU %t.so | FileCheck %s -check-prefix BAD-BOTH
 # BAD-BOTH-LABEL: Section Headers:
-# BAD-BOTH: .sec1             PROGBITS        0000000000008000 002000 000100 00  WA  0   0  1
-# BAD-BOTH: .sec2             PROGBITS        0000000000008040 002040 000100 00  WA  0   0  1
+# BAD-BOTH: .sec1             PROGBITS        0000000000008000 009000 000100 00  WA  0   0  1
+# BAD-BOTH: .sec2             PROGBITS        0000000000008040 009040 000100 00  WA  0   0  1
 # BAD-BOTH-LABEL: Program Headers:
 # BAD-BOTH-NEXT:  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # BAD-BOTH-NEXT:  LOAD 0x001000 0x0000000000000000 0x0000000000000000 0x000100 0x000100 R E 0x1000
-# BAD-BOTH-NEXT:  LOAD           0x002000 0x0000000000008000 0x0000000000008000 0x0001b0 0x0001b0 RW  0x1000
+# BAD-BOTH-NEXT:  LOAD           0x001100 0x0000000000000100 0x0000000000000100 0x008040 0x008040 RW  0x1000
 # BAD-BOTH-LABEL: Section to Segment mapping:
-# BAD-BOTH:   01     .sec1 .sec2 .dynamic
+# BAD-BOTH:   01     .text .dynamic .sec1 .sec2
 
 .section        .first_sec,"aw",@progbits
 .rept 0x100

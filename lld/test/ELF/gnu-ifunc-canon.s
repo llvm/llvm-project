@@ -69,17 +69,17 @@
 // Make sure the static relocations look right, both with and without headers.
 // DUMP: Contents of section .plt:
 // DUMP-NEXT: 201010
-// DUMP: Contents of section .data:
-// DUMP-NEXT: 202000 10102000 00000000 11102000 00000000
 // DUMP: Contents of section .got:
-// DUMP-NEXT: 203000 10102000 00000000
+// DUMP-NEXT: 202000 10102000 00000000
+// DUMP: Contents of section .data:
+// DUMP-NEXT: 203000 10102000 00000000 11102000 00000000
 
 // DUMP2: Contents of section .plt:
 // DUMP2-NEXT: 201010
-// DUMP2: Contents of section .data:
-// DUMP2-NEXT: 202000 40102000 00000000 41102000 00000000
 // DUMP2: Contents of section .got:
-// DUMP2-NEXT: 203000 40102000 00000000
+// DUMP2-NEXT: 202000 40102000 00000000
+// DUMP2: Contents of section .data:
+// DUMP2-NEXT: 203000 40102000 00000000 41102000 00000000
 
 lea ifunc@gotpcrel(%rip), %rbx
 

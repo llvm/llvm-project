@@ -33,6 +33,8 @@ declare void @func_external()
 ; CHECK-NEXT:     MemoryAlignment: 2
 ; CHECK-NEXT:     TableSize:       2
 ; CHECK-NEXT:     TableAlignment:  0
+; CHECK-NEXT:     Needed:          []
+; CHECK-NEXT:   - Type:            TYPE
 
 ; check for import of __table_base and __memory_base globals
 

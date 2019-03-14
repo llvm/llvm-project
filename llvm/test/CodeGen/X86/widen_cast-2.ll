@@ -21,9 +21,9 @@ define void @convert(<7 x i32>* %dst, <14 x i16>* %src) nounwind {
 ; CHECK-NEXT:    movdqa 16(%edx,%eax), %xmm2
 ; CHECK-NEXT:    psubw %xmm0, %xmm1
 ; CHECK-NEXT:    psubw %xmm0, %xmm2
-; CHECK-NEXT:    pextrd $2, %xmm2, 24(%ecx,%eax)
-; CHECK-NEXT:    pextrd $1, %xmm2, 20(%ecx,%eax)
 ; CHECK-NEXT:    movd %xmm2, 16(%ecx,%eax)
+; CHECK-NEXT:    pextrd $1, %xmm2, 20(%ecx,%eax)
+; CHECK-NEXT:    pextrd $2, %xmm2, 24(%ecx,%eax)
 ; CHECK-NEXT:    movdqa %xmm1, (%ecx,%eax)
 ; CHECK-NEXT:    incl (%esp)
 ; CHECK-NEXT:    cmpl $3, (%esp)

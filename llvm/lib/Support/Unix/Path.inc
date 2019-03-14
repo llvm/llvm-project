@@ -107,7 +107,11 @@ test_dir(char ret[PATH_MAX], const char *dir, const char *bin)
   struct stat sb;
   char fullpath[PATH_MAX];
 
-  snprintf(fullpath, PATH_MAX, "%s/%s", dir, bin);
+  int chars = snprintf(fullpath, PATH_MAX, "%s/%s", dir, bin);
+  // We cannot write PATH_MAX characters because the string will be terminated
+  // with a null character. Fail if truncation happened.
+  if (chars >= PATH_MAX)
+    return 1;
   if (!realpath(fullpath, ret))
     return 1;
   if (stat(fullpath, &sb) != 0)

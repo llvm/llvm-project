@@ -14,13 +14,13 @@ define void @test_simple(i32 %n, ...) {
 ; CHECK: adrp x[[VA_LIST_HI:[0-9]+]], var
 ; CHECK: add x[[VA_LIST:[0-9]+]], {{x[0-9]+}}, :lo12:var
 
-; CHECK: stp x1, x2, [sp, #[[GR_BASE:[0-9]+]]]
+; CHECK-DAG: stp x6, x7, [sp, #
 ; ... omit middle ones ...
-; CHECK: str x7, [sp, #
+; CHECK-DAG: str x1, [sp, #[[GR_BASE:[0-9]+]]]
 
-; CHECK: stp q0, q1, [sp]
+; CHECK-DAG: stp q0, q1, [sp]
 ; ... omit middle ones ...
-; CHECK: stp q6, q7, [sp, #
+; CHECK-DAG: stp q6, q7, [sp, #
 
 ; CHECK: str [[STACK_TOP]], [x[[VA_LIST]]]
 
@@ -50,13 +50,13 @@ define void @test_fewargs(i32 %n, i32 %n1, i32 %n2, float %m, ...) {
 ; CHECK: adrp x[[VA_LIST_HI:[0-9]+]], var
 ; CHECK: add x[[VA_LIST:[0-9]+]], {{x[0-9]+}}, :lo12:var
 
-; CHECK: stp x3, x4, [sp, #[[GR_BASE:[0-9]+]]]
+; CHECK-DAG: stp x6, x7, [sp, #
 ; ... omit middle ones ...
-; CHECK: str x7, [sp, #
+; CHECK-DAG: str x3, [sp, #[[GR_BASE:[0-9]+]]]
 
-; CHECK: stp q1, q2, [sp]
+; CHECK-DAG: stp q6, q7, [sp, #80]
 ; ... omit middle ones ...
-; CHECK: str q7, [sp, #
+; CHECK-DAG: str q1, [sp]
 
 ; CHECK: str [[STACK_TOP]], [x[[VA_LIST]]]
 
@@ -95,10 +95,13 @@ define void @test_nospare([8 x i64], [8 x float], ...) {
 ; __stack field should point just past them.
 define void @test_offsetstack([8 x i64], [2 x i64], [3 x float], ...) {
 ; CHECK-LABEL: test_offsetstack:
-; CHECK: stp {{q[0-9]+}}, {{q[0-9]+}}, [sp, #-80]!
-; CHECK: add [[STACK_TOP:x[0-9]+]], sp, #96
-; CHECK: add x[[VAR:[0-9]+]], {{x[0-9]+}}, :lo12:var
-; CHECK: str [[STACK_TOP]], [x[[VAR]]]
+
+; CHECK-DAG: stp {{q[0-9]+}}, {{q[0-9]+}}, [sp, #48]
+; CHECK-DAG: stp {{q[0-9]+}}, {{q[0-9]+}}, [sp, #16]
+; CHECK-DAG: str {{q[0-9]+}}, [sp]
+; CHECK-DAG: add [[STACK_TOP:x[0-9]+]], sp, #96
+; CHECK-DAG: add x[[VAR:[0-9]+]], {{x[0-9]+}}, :lo12:var
+; CHECK-DAG: str [[STACK_TOP]], [x[[VAR]]]
 
   %addr = bitcast %va_list* @var to i8*
   call void @llvm.va_start(i8* %addr)

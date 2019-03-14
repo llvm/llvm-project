@@ -64,6 +64,23 @@ struct PACKED X5 {
   short r;
 };
 
+// CHECK: Type: struct X6
+struct __attribute__((aligned(16))) X6 {
+  int x;
+  int y;
+  virtual ~X6();
+};
+
+// CHECK: Type: struct X7
+struct X7 {
+  int z;
+};
+
+// CHECK: Type: struct X8
+struct X8 : X6, virtual X7 {
+  char c;
+};
+
 void use_structs() {
   X0 x0s[sizeof(X0)];
   X1 x1s[sizeof(X1)];
@@ -71,7 +88,9 @@ void use_structs() {
   X3 x3s[sizeof(X3)];
   X4 x4s[sizeof(X4)];
   X5 x5s[sizeof(X5)];
+  X6 x6s[sizeof(X6)];
+  X7 x7s[sizeof(X7)];
+  X8 x8s[sizeof(X8)];
   x4s[1].a = 1;
   x5s[1].a = 17;
 }
-

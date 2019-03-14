@@ -28,8 +28,7 @@ define i64 @test_lshr_i64_imm1(i64 %arg1) {
 ; X64-LABEL: test_lshr_i64_imm1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq $1, %rcx
-; X64-NEXT:    shrq %cl, %rax
+; X64-NEXT:    shrq %rax
 ; X64-NEXT:    retq
   %res = lshr i64 %arg1, 1
   ret i64 %res
@@ -62,8 +61,7 @@ define i32 @test_lshr_i32_imm1(i32 %arg1) {
 ; X64-LABEL: test_lshr_i32_imm1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl $1, %ecx
-; X64-NEXT:    shrl %cl, %eax
+; X64-NEXT:    shrl %eax
 ; X64-NEXT:    retq
   %res = lshr i32 %arg1, 1
   ret i32 %res
@@ -101,8 +99,7 @@ define i16 @test_lshr_i16_imm1(i32 %arg1) {
 ; X64-LABEL: test_lshr_i16_imm1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movw $1, %cx
-; X64-NEXT:    shrw %cl, %ax
+; X64-NEXT:    shrw %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %a = trunc i32 %arg1 to i16

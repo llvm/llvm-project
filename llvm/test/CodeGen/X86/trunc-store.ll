@@ -21,18 +21,18 @@
 ;       if (b) n++;
 ;     }
 ;     if (n)
-;	for (;;)
-;	  ;
+;       for (;;)
+;       ;
 ;   }
 ; }
 
-define void @fn1() {
+define void @fn1(i64 %a0) {
 ; CHECK-LABEL: fn1:
 ; CHECK:       # %bb.0: # %for.cond
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpq $8, %rax
+; CHECK-NEXT:    cmpq $8, %rdi
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %middle.block
 ; CHECK-NEXT:    retq
@@ -47,7 +47,7 @@ vector.body:                                      ; preds = %vector.body, %for.c
   %x73 = icmp ne i4 %x72, 0
   %x74 = select i1 %x73, i32 %x44, i32 undef
   %x84 = select i1 undef, i32 undef, i32 %x74
-  %x88 = icmp eq i64 undef, 8
+  %x88 = icmp eq i64 %a0, 8
   br i1 %x88, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body

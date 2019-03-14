@@ -26,6 +26,7 @@ using namespace llvm;
 #define DEBUG_TYPE "reset-machine-function"
 
 STATISTIC(NumFunctionsReset, "Number of functions reset");
+STATISTIC(NumFunctionsVisited, "Number of functions visited");
 
 namespace {
   class ResetMachineFunction : public MachineFunctionPass {
@@ -50,6 +51,7 @@ namespace {
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
+      ++NumFunctionsVisited;
       // No matter what happened, whether we successfully selected the function
       // or not, nothing is going to use the vreg types after us. Make sure they
       // disappear.

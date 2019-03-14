@@ -324,6 +324,7 @@ Error WasmObjectFile::parseSection(WasmSection &Sec) {
 
 Error WasmObjectFile::parseDylinkSection(ReadContext &Ctx) {
   // See https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
+  HasDylinkSection = true;
   DylinkInfo.MemorySize = readVaruint32(Ctx);
   DylinkInfo.MemoryAlignment = readVaruint32(Ctx);
   DylinkInfo.TableSize = readVaruint32(Ctx);

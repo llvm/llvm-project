@@ -438,6 +438,7 @@ std::string ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
 #include "llvm/BinaryFormat/DynamicTags.def"
 #undef HEXAGON_DYNAMIC_TAG
     }
+    break;
 
   case ELF::EM_MIPS:
     switch (Type) {
@@ -445,6 +446,7 @@ std::string ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
 #include "llvm/BinaryFormat/DynamicTags.def"
 #undef MIPS_DYNAMIC_TAG
     }
+    break;
 
   case ELF::EM_PPC64:
     switch (Type) {
@@ -452,6 +454,7 @@ std::string ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
 #include "llvm/BinaryFormat/DynamicTags.def"
 #undef PPC64_DYNAMIC_TAG
     }
+    break;
   }
 #undef DYNAMIC_TAG
   switch (Type) {

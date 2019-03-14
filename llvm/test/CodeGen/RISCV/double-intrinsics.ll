@@ -109,32 +109,32 @@ define double @sincos_f64(double %a) nounwind {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -32
 ; RV32IFD-NEXT:    sw ra, 28(sp)
-; RV32IFD-NEXT:    sw s1, 24(sp)
-; RV32IFD-NEXT:    sw s2, 20(sp)
-; RV32IFD-NEXT:    sw s3, 16(sp)
-; RV32IFD-NEXT:    sw s4, 12(sp)
-; RV32IFD-NEXT:    mv s2, a1
+; RV32IFD-NEXT:    sw s0, 24(sp)
+; RV32IFD-NEXT:    sw s1, 20(sp)
+; RV32IFD-NEXT:    sw s2, 16(sp)
+; RV32IFD-NEXT:    sw s3, 12(sp)
+; RV32IFD-NEXT:    mv s0, a1
 ; RV32IFD-NEXT:    mv s1, a0
 ; RV32IFD-NEXT:    call sin
-; RV32IFD-NEXT:    mv s3, a0
-; RV32IFD-NEXT:    mv s4, a1
+; RV32IFD-NEXT:    mv s2, a0
+; RV32IFD-NEXT:    mv s3, a1
 ; RV32IFD-NEXT:    mv a0, s1
-; RV32IFD-NEXT:    mv a1, s2
+; RV32IFD-NEXT:    mv a1, s0
 ; RV32IFD-NEXT:    call cos
 ; RV32IFD-NEXT:    sw a0, 0(sp)
 ; RV32IFD-NEXT:    sw a1, 4(sp)
 ; RV32IFD-NEXT:    fld ft0, 0(sp)
-; RV32IFD-NEXT:    sw s3, 0(sp)
-; RV32IFD-NEXT:    sw s4, 4(sp)
+; RV32IFD-NEXT:    sw s2, 0(sp)
+; RV32IFD-NEXT:    sw s3, 4(sp)
 ; RV32IFD-NEXT:    fld ft1, 0(sp)
 ; RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
 ; RV32IFD-NEXT:    fsd ft0, 0(sp)
 ; RV32IFD-NEXT:    lw a0, 0(sp)
 ; RV32IFD-NEXT:    lw a1, 4(sp)
-; RV32IFD-NEXT:    lw s4, 12(sp)
-; RV32IFD-NEXT:    lw s3, 16(sp)
-; RV32IFD-NEXT:    lw s2, 20(sp)
-; RV32IFD-NEXT:    lw s1, 24(sp)
+; RV32IFD-NEXT:    lw s3, 12(sp)
+; RV32IFD-NEXT:    lw s2, 16(sp)
+; RV32IFD-NEXT:    lw s1, 20(sp)
+; RV32IFD-NEXT:    lw s0, 24(sp)
 ; RV32IFD-NEXT:    lw ra, 28(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 32
 ; RV32IFD-NEXT:    ret
@@ -143,19 +143,19 @@ define double @sincos_f64(double %a) nounwind {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -32
 ; RV64IFD-NEXT:    sd ra, 24(sp)
-; RV64IFD-NEXT:    sd s1, 16(sp)
-; RV64IFD-NEXT:    sd s2, 8(sp)
-; RV64IFD-NEXT:    mv s1, a0
+; RV64IFD-NEXT:    sd s0, 16(sp)
+; RV64IFD-NEXT:    sd s1, 8(sp)
+; RV64IFD-NEXT:    mv s0, a0
 ; RV64IFD-NEXT:    call sin
-; RV64IFD-NEXT:    mv s2, a0
-; RV64IFD-NEXT:    mv a0, s1
+; RV64IFD-NEXT:    mv s1, a0
+; RV64IFD-NEXT:    mv a0, s0
 ; RV64IFD-NEXT:    call cos
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
-; RV64IFD-NEXT:    fmv.d.x ft1, s2
+; RV64IFD-NEXT:    fmv.d.x ft1, s1
 ; RV64IFD-NEXT:    fadd.d ft0, ft1, ft0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
-; RV64IFD-NEXT:    ld s2, 8(sp)
-; RV64IFD-NEXT:    ld s1, 16(sp)
+; RV64IFD-NEXT:    ld s1, 8(sp)
+; RV64IFD-NEXT:    ld s0, 16(sp)
 ; RV64IFD-NEXT:    ld ra, 24(sp)
 ; RV64IFD-NEXT:    addi sp, sp, 32
 ; RV64IFD-NEXT:    ret

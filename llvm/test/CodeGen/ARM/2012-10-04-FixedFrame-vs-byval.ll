@@ -7,8 +7,8 @@
 declare i32 @printf(i8*, ...)
 
 ; CHECK-LABEL:     test_byval_usage_scheduling:
-; CHECK:       str     r3, [sp, #12]
-; CHECK:       str     r2, [sp, #8]
+; CHECK-DAG:   str     r3, [sp, #12]
+; CHECK-DAG:   str     r2, [sp, #8]
 ; CHECK:       vldr    d16, [sp, #8]
 define void @test_byval_usage_scheduling(i32 %n1, i32 %n2, %struct_t* byval %val) nounwind {
 entry:

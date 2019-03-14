@@ -872,13 +872,6 @@ uint32_t DWARFDebugLine::LineTable::findRowInSeq(
   if (RowPos == LastRow) {
     return Seq.LastRowIndex - 1;
   }
-  // In some cases, e.g. first instruction in a function, the compiler generates
-  // two entries, both with the same address. We want the last one.
-  while (RowPos + 1 < LastRow &&
-         RowPos->Address.Address == (RowPos + 1)->Address.Address) {
-    ++RowPos;
-  }
-  assert(RowPos < LastRow);
   assert(Seq.SectionIndex == RowPos->Address.SectionIndex);
   uint32_t Index = Seq.FirstRowIndex + (RowPos - FirstRow);
   if (RowPos->Address.Address > Address.Address) {

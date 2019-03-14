@@ -492,8 +492,8 @@ ClangExpressionParser::ClangExpressionParser(
   // long time parsing and importing debug information.
   lang_opts.SpellChecking = false;
 
-  auto &clang_expr = *static_cast<ClangUserExpression *>(&m_expr);
-  if (clang_expr.DidImportCxxModules()) {
+  auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
+  if (clang_expr && clang_expr->DidImportCxxModules()) {
     LLDB_LOG(log, "Adding lang options for importing C++ modules");
 
     lang_opts.Modules = true;

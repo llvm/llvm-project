@@ -1245,6 +1245,7 @@ void request_launch(const llvm::json::Object &request) {
           response, "message",
           llvm::formatv("Could not load program '{0}'.", program).str());
       g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+      return;
     }
   }
 

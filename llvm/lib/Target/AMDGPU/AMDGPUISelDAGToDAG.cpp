@@ -199,7 +199,6 @@ private:
   bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   SDValue getHi16Elt(SDValue In) const;
-  bool SelectHi16Elt(SDValue In, SDValue &Src) const;
 
   void SelectADD_SUB_I64(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);
@@ -2213,35 +2212,6 @@ SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
     return Src;
 
   return SDValue();
-}
-
-// TODO: Can we identify things like v_mad_mixhi_f16?
-bool AMDGPUDAGToDAGISel::SelectHi16Elt(SDValue In, SDValue &Src) const {
-  if (In.isUndef()) {
-    Src = In;
-    return true;
-  }
-
-  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(In)) {
-    SDLoc SL(In);
-    SDValue K = CurDAG->getTargetConstant(C->getZExtValue() << 16, SL, MVT::i32);
-    MachineSDNode *MovK = CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32,
-                                                 SL, MVT::i32, K);
-    Src = SDValue(MovK, 0);
-    return true;
-  }
-
-  if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(In)) {
-    SDLoc SL(In);
-    SDValue K = CurDAG->getTargetConstant(
-      C->getValueAPF().bitcastToAPInt().getZExtValue() << 16, SL, MVT::i32);
-    MachineSDNode *MovK = CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32,
-                                                 SL, MVT::i32, K);
-    Src = SDValue(MovK, 0);
-    return true;
-  }
-
-  return isExtractHiElt(In, Src);
 }
 
 bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {

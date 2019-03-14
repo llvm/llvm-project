@@ -20,20 +20,20 @@ define i32 @ebpf_filter(%struct.__sk_buff* nocapture readnone %ebpf_packet) #0 s
 ; CHECK: *(u64 *)(r10 - 8) = r1
 
 ; CHECK: r1 = 0
-; CHECK: *(u16 *)(r10 + 24) = r1
-; CHECK: *(u16 *)(r10 + 22) = r1
-; CHECK: *(u16 *)(r10 + 20) = r1
-; CHECK: *(u16 *)(r10 + 18) = r1
-; CHECK: *(u16 *)(r10 + 16) = r1
-; CHECK: *(u16 *)(r10 + 14) = r1
-; CHECK: *(u16 *)(r10 + 12) = r1
-; CHECK: *(u16 *)(r10 + 10) = r1
-; CHECK: *(u16 *)(r10 + 8) = r1
-; CHECK: *(u16 *)(r10 + 6) = r1
-; CHECK: *(u16 *)(r10 + 4) = r1
-; CHECK: *(u16 *)(r10 + 2) = r1
-; CHECK: *(u16 *)(r10 + 0) = r1
-; CHECK: *(u16 *)(r10 + 26) = r1
+; CHECK-DAG: *(u16 *)(r10 + 24) = r1
+; CHECK-DAG: *(u16 *)(r10 + 22) = r1
+; CHECK-DAG: *(u16 *)(r10 + 20) = r1
+; CHECK-DAG: *(u16 *)(r10 + 18) = r1
+; CHECK-DAG: *(u16 *)(r10 + 16) = r1
+; CHECK-DAG: *(u16 *)(r10 + 14) = r1
+; CHECK-DAG: *(u16 *)(r10 + 12) = r1
+; CHECK-DAG: *(u16 *)(r10 + 10) = r1
+; CHECK-DAG: *(u16 *)(r10 + 8) = r1
+; CHECK-DAG: *(u16 *)(r10 + 6) = r1
+; CHECK-DAG: *(u16 *)(r10 + 4) = r1
+; CHECK-DAG: *(u16 *)(r10 + 2) = r1
+; CHECK-DAG: *(u16 *)(r10 + 0) = r1
+; CHECK-DAG: *(u16 *)(r10 + 26) = r1
 
 ; CHECK: r2 = r10
 ; CHECK: r2 += -8

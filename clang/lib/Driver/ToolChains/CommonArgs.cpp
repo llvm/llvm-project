@@ -464,8 +464,12 @@ void tools::AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
       CmdArgs.push_back(
           Args.MakeArgString("-plugin-opt=cs-profile-path=default_%m.profraw"));
   } else if (ProfileUseArg) {
+    SmallString<128> Path(
+        ProfileUseArg->getNumValues() == 0 ? "" : ProfileUseArg->getValue());
+    if (Path.empty() || llvm::sys::fs::is_directory(Path))
+      llvm::sys::path::append(Path, "default.profdata");
     CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=cs-profile-path=") +
-                                         ProfileUseArg->getValue()));
+                                         Path));
   }
 
   // Need this flag to turn on new pass manager via Gold plugin.

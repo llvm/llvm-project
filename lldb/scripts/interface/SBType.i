@@ -322,6 +322,10 @@ public:
     uint32_t
     GetTypeFlags ();
 
+    bool operator==(lldb::SBType &rhs);
+
+    bool operator!=(lldb::SBType &rhs);
+
     %pythoncode %{
         def template_arg_array(self):
             num_args = self.num_template_args

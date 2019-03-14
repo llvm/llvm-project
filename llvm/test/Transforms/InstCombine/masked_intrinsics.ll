@@ -54,7 +54,7 @@ define void @store_zeromask(<2 x double>* %ptr, <2 x double> %val)  {
 ; CHECK-LABEL: @store_zeromask(
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> %val, <2 x double>* %ptr, i32 3, <2 x i1> zeroinitializer)
+  call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> %val, <2 x double>* %ptr, i32 4, <2 x i1> zeroinitializer)
   ret void
 
 }

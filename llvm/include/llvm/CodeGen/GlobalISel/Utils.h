@@ -89,8 +89,25 @@ void reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                         const char *PassName, StringRef Msg,
                         const MachineInstr &MI);
 
+/// If \p VReg is defined by a G_CONSTANT fits in int64_t
+/// returns it.
 Optional<int64_t> getConstantVRegVal(unsigned VReg,
                                      const MachineRegisterInfo &MRI);
+/// Simple struct used to hold a constant integer value and a virtual
+/// register.
+struct ValueAndVReg {
+  int64_t Value;
+  unsigned VReg;
+};
+/// If \p VReg is defined by a statically evaluable chain of
+/// instructions rooted on a G_CONSTANT (\p LookThroughInstrs == true)
+/// and that constant fits in int64_t, returns its value as well as
+/// the virtual register defined by this G_CONSTANT.
+/// When \p LookThroughInstrs == false, this function behaves like
+/// getConstantVRegVal.
+Optional<ValueAndVReg>
+getConstantVRegValWithLookThrough(unsigned VReg, const MachineRegisterInfo &MRI,
+                                  bool LookThroughInstrs = true);
 const ConstantFP* getConstantFPVRegVal(unsigned VReg,
                                        const MachineRegisterInfo &MRI);
 

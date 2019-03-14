@@ -61,11 +61,11 @@ define void @test_emergency_spill_slot(i32 %a) nounwind {
 ; RV32I-FPELIM-NEXT:    lui a1, 98
 ; RV32I-FPELIM-NEXT:    addi a1, a1, -1396
 ; RV32I-FPELIM-NEXT:    add a1, sp, a1
-; RV32I-FPELIM-NEXT:    sw s1, 0(a1)
+; RV32I-FPELIM-NEXT:    sw s0, 0(a1)
 ; RV32I-FPELIM-NEXT:    lui a1, 98
 ; RV32I-FPELIM-NEXT:    addi a1, a1, -1400
 ; RV32I-FPELIM-NEXT:    add a1, sp, a1
-; RV32I-FPELIM-NEXT:    sw s2, 0(a1)
+; RV32I-FPELIM-NEXT:    sw s1, 0(a1)
 ; RV32I-FPELIM-NEXT:    lui a1, 78
 ; RV32I-FPELIM-NEXT:    addi a1, a1, 512
 ; RV32I-FPELIM-NEXT:    addi a2, sp, 8
@@ -80,11 +80,11 @@ define void @test_emergency_spill_slot(i32 %a) nounwind {
 ; RV32I-FPELIM-NEXT:    lui a0, 98
 ; RV32I-FPELIM-NEXT:    addi a0, a0, -1400
 ; RV32I-FPELIM-NEXT:    add a0, sp, a0
-; RV32I-FPELIM-NEXT:    lw s2, 0(a0)
+; RV32I-FPELIM-NEXT:    lw s1, 0(a0)
 ; RV32I-FPELIM-NEXT:    lui a0, 98
 ; RV32I-FPELIM-NEXT:    addi a0, a0, -1396
 ; RV32I-FPELIM-NEXT:    add a0, sp, a0
-; RV32I-FPELIM-NEXT:    lw s1, 0(a0)
+; RV32I-FPELIM-NEXT:    lw s0, 0(a0)
 ; RV32I-FPELIM-NEXT:    lui a0, 98
 ; RV32I-FPELIM-NEXT:    addi a0, a0, -1392
 ; RV32I-FPELIM-NEXT:    add sp, sp, a0
