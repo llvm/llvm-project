@@ -1,4 +1,4 @@
-# REQUIRES: darwin
+# REQUIRES: system-darwin
 
 # This tests that RemoteAST querying the dynamic type of a variable
 # doesn't import any modules into a module SwiftASTContext that

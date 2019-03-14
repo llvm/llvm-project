@@ -284,8 +284,7 @@ static llvm::StringRef getAvailabilityName(llvm::Triple::OSType os) {
 bool ExpressionSourceCode::GetText(
     std::string &text, lldb::LanguageType wrapping_language,
     uint32_t language_flags, const EvaluateExpressionOptions &options,
-    const Expression::SwiftGenericInfo &generic_info, ExecutionContext &exe_ctx,
-    uint32_t &first_body_line) const {
+    ExecutionContext &exe_ctx, uint32_t &first_body_line) const {
   first_body_line = 0;
 
   const char *target_specific_defines = "typedef signed char BOOL;\n";
@@ -510,9 +509,8 @@ bool ExpressionSourceCode::GetText(
       localOptions.SetPreparePlaygroundStubFunctions(need_to_declare_log_functions);
 
       SwiftASTManipulator::WrapExpression(wrap_stream, m_body.c_str(),
-                                          language_flags, localOptions, generic_info,
-                                          os_vers.str(),
-                                          first_body_line);
+                                          language_flags, localOptions,
+                                          os_vers.str(), first_body_line);
     }
     }
 

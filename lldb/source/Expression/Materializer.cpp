@@ -475,15 +475,6 @@ public:
     // In the case where the value is of Swift generic type, unbox it.
     CompilerType valobj_type = valobj_sp->GetCompilerType();
 
-    if (m_is_generic) {
-      auto dyn_obj = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
-      if (dyn_obj) {
-        // Update the type to refer to the dynamic type.
-        valobj_sp = dyn_obj;
-        valobj_type = valobj_sp->GetCompilerType();
-      }
-    }
-
     if (m_is_reference) {
       DataExtractor valobj_extractor;
       Status extract_error;
