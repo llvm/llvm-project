@@ -368,4 +368,4 @@ project-wide index to clangd.  There are two ways to do this.
   Then you can pass generated index file to clangd using
   `-index-file=/path/to/index_file`.  *Note that clangd-indexer isn't
   included alongside clangd in the Debian clang-tools package. You will
-  likely have to build clangd from source to use this option.*
+  likely have to build it from source to use this option.*

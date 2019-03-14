@@ -19,13 +19,13 @@ define i64 @callee_float_in_regs(i64 %a, float %b) nounwind {
 ; RV64I-FPELIM:       # %bb.0:
 ; RV64I-FPELIM-NEXT:    addi sp, sp, -16
 ; RV64I-FPELIM-NEXT:    sd ra, 8(sp)
-; RV64I-FPELIM-NEXT:    sd s1, 0(sp)
-; RV64I-FPELIM-NEXT:    mv s1, a0
+; RV64I-FPELIM-NEXT:    sd s0, 0(sp)
+; RV64I-FPELIM-NEXT:    mv s0, a0
 ; RV64I-FPELIM-NEXT:    slli a0, a1, 32
 ; RV64I-FPELIM-NEXT:    srli a0, a0, 32
 ; RV64I-FPELIM-NEXT:    call __fixsfdi
-; RV64I-FPELIM-NEXT:    add a0, s1, a0
-; RV64I-FPELIM-NEXT:    ld s1, 0(sp)
+; RV64I-FPELIM-NEXT:    add a0, s0, a0
+; RV64I-FPELIM-NEXT:    ld s0, 0(sp)
 ; RV64I-FPELIM-NEXT:    ld ra, 8(sp)
 ; RV64I-FPELIM-NEXT:    addi sp, sp, 16
 ; RV64I-FPELIM-NEXT:    ret

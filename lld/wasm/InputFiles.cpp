@@ -44,8 +44,13 @@ Optional<MemoryBufferRef> lld::wasm::readFile(StringRef Path) {
 
 InputFile *lld::wasm::createObjectFile(MemoryBufferRef MB) {
   file_magic Magic = identify_magic(MB.getBuffer());
-  if (Magic == file_magic::wasm_object)
+  if (Magic == file_magic::wasm_object) {
+    std::unique_ptr<Binary> Bin = check(createBinary(MB));
+    auto *Obj = cast<WasmObjectFile>(Bin.get());
+    if (Obj->isSharedObject())
+      return make<SharedFile>(MB);
     return make<ObjFile>(MB);
+  }
 
   if (Magic == file_magic::bitcode)
     return make<BitcodeFile>(MB);

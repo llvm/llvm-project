@@ -102,14 +102,14 @@ public:
 
     int64_t getFPModifiersOperand() const {
       int64_t Operand = 0;
-      Operand |= Abs ? SISrcMods::ABS : 0;
-      Operand |= Neg ? SISrcMods::NEG : 0;
+      Operand |= Abs ? SISrcMods::ABS : 0u;
+      Operand |= Neg ? SISrcMods::NEG : 0u;
       return Operand;
     }
 
     int64_t getIntModifiersOperand() const {
       int64_t Operand = 0;
-      Operand |= Sext ? SISrcMods::SEXT : 0;
+      Operand |= Sext ? SISrcMods::SEXT : 0u;
       return Operand;
     }
 

@@ -13,12 +13,12 @@ target triple = "i386-apple-macosx10.13.0"
 @d = external local_unnamed_addr global i32, align 4
 
 ; Function Attrs: norecurse nounwind optsize ssp
-define void @pr32610() local_unnamed_addr #0 {
+define void @pr32610(i32 %a0, i32 %a1) local_unnamed_addr #0 {
 entry:
   %0 = load i32, i32* getelementptr ([1 x i32], [1 x i32]* @b, i32 0, i32 undef), align 4, !tbaa !1
-  %cmp = icmp eq i32 undef, %0
+  %cmp = icmp eq i32 %a0, %0
   %conv = zext i1 %cmp to i32
-  %tobool1.i = icmp ne i32 undef, 0
+  %tobool1.i = icmp ne i32 %a1, 0
   %or.cond.i = and i1 %cmp, %tobool1.i
   %cond.i = select i1 %or.cond.i, i32 %conv, i32 1
   store i32 %cond.i, i32* @c, align 4, !tbaa !1

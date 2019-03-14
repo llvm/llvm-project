@@ -752,8 +752,8 @@ entry:
 ; GCN: buffer_store_dword v33, off, s[0:3], s5 offset:12 ; 4-byte Folded Spill
 ; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:4
 ; GCN: buffer_load_dword v33, off, s[0:3], s5 offset:8
-; GCN: buffer_store_dword v33, off, s[0:3], s5 offset:8
 ; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:4
+; GCN: buffer_store_dword v33, off, s[0:3], s5 offset:8
 ; GCN: s_getpc_b64
 ; GCN: buffer_load_dword v33, off, s[0:3], s5 offset:12 ; 4-byte Folded Reload
 ; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:16 ; 4-byte Folded Reload

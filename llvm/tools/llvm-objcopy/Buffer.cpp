@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Buffer.h"
-#include "llvm-objcopy.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"

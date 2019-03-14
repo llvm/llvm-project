@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CopyConfig.h"
-#include "llvm-objcopy.h"
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Optional.h"
@@ -205,7 +204,7 @@ parseSetSectionFlagValue(StringRef FlagValue) {
   return SFU;
 }
 
-static NewSymbolInfo parseNewSymbolInfo(StringRef FlagValue) {
+static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
   // Parse value given with --add-symbol option and create the
   // new symbol if possible. The value format for --add-symbol is:
   //
@@ -231,24 +230,28 @@ static NewSymbolInfo parseNewSymbolInfo(StringRef FlagValue) {
   StringRef Value;
   std::tie(SI.SymbolName, Value) = FlagValue.split('=');
   if (Value.empty())
-    error("bad format for --add-symbol, missing '=' after '" + SI.SymbolName +
-          "'");
+    return createStringError(
+        errc::invalid_argument,
+        "bad format for --add-symbol, missing '=' after '%s'",
+        SI.SymbolName.str().c_str());
 
   if (Value.contains(':')) {
     std::tie(SI.SectionName, Value) = Value.split(':');
     if (SI.SectionName.empty() || Value.empty())
-      error(
+      return createStringError(
+          errc::invalid_argument,
           "bad format for --add-symbol, missing section name or symbol value");
   }
 
   SmallVector<StringRef, 6> Flags;
   Value.split(Flags, ',');
   if (Flags[0].getAsInteger(0, SI.Value))
-    error("bad symbol value: '" + Flags[0] + "'");
+    return createStringError(errc::invalid_argument, "bad symbol value: '%s'",
+                             Flags[0].str().c_str());
 
-  typedef std::function<void(void)> Functor;
-  size_t NumFlags = Flags.size();
-  for (size_t I = 1; I < NumFlags; ++I)
+  using Functor = std::function<void(void)>;
+  SmallVector<StringRef, 6> UnsupportedFlags;
+  for (size_t I = 1, NumFlags = Flags.size(); I < NumFlags; ++I)
     static_cast<Functor>(
         StringSwitch<Functor>(Flags[I])
             .CaseLower("global", [&SI] { SI.Bind = ELF::STB_GLOBAL; })
@@ -269,9 +272,12 @@ static NewSymbolInfo parseNewSymbolInfo(StringRef FlagValue) {
             .CaseLower("synthetic", [] {})
             .CaseLower("unique-object", [] {})
             .StartsWithLower("before", [] {})
-            .Default([&] {
-              error("unsupported flag '" + Flags[I] + "' for --add-symbol");
-            }))();
+            .Default([&] { UnsupportedFlags.push_back(Flags[I]); }))();
+  if (!UnsupportedFlags.empty())
+    return createStringError(errc::invalid_argument,
+                             "unsupported flag%s for --add-symbol: '%s'",
+                             UnsupportedFlags.size() > 1 ? "s" : "",
+                             join(UnsupportedFlags, "', '").c_str());
   return SI;
 }
 
@@ -616,8 +622,12 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbol))
     Config.SymbolsToKeep.emplace_back(Arg->getValue(), UseRegex);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_add_symbol))
-    Config.SymbolsToAdd.push_back(parseNewSymbolInfo(Arg->getValue()));
+  for (auto Arg : InputArgs.filtered(OBJCOPY_add_symbol)) {
+    Expected<NewSymbolInfo> NSI = parseNewSymbolInfo(Arg->getValue());
+    if (!NSI)
+      return NSI.takeError();
+    Config.SymbolsToAdd.push_back(*NSI);
+  }
 
   Config.DeterministicArchives = InputArgs.hasFlag(
       OBJCOPY_enable_deterministic_archives,

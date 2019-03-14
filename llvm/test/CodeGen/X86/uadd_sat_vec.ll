@@ -460,10 +460,10 @@ define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind 
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vpaddusw (%rsi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddusw 16(%rsi), %xmm1, %xmm1
-; AVX1-NEXT:    vmovq %xmm1, 16(%rdx)
+; AVX1-NEXT:    vpaddusw (%rsi), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1-NEXT:    vmovq %xmm1, 16(%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v12i16:

@@ -3004,13 +3004,10 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   if (N0 == N1) {
     // The sext(setcc()) => setcc() optimization relies on the appropriate
     // constant being emitted.
+    assert(!N0.getValueType().isInteger() &&
+           "Integer types should be handled by FoldSetCC");
 
     bool EqTrue = ISD::isTrueWhenEqual(Cond);
-
-    // We can always fold X == X for integer setcc's.
-    if (N0.getValueType().isInteger())
-      return DAG.getBoolConstant(EqTrue, dl, VT, OpVT);
-
     unsigned UOF = ISD::getUnorderedFlavor(Cond);
     if (UOF == 2) // FP operators that are undefined on NaNs.
       return DAG.getBoolConstant(EqTrue, dl, VT, OpVT);

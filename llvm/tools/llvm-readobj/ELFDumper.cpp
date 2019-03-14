@@ -3917,28 +3917,23 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
   switch (NoteType) {
   default:
     return {"", ""};
-  case ELF::NT_AMDGPU_METADATA:
+  case ELF::NT_AMDGPU_METADATA: {
     auto MsgPackString =
         StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
-    msgpack::Reader MsgPackReader(MsgPackString);
-    auto OptMsgPackNodeOrErr = msgpack::Node::read(MsgPackReader);
-    if (errorToBool(OptMsgPackNodeOrErr.takeError()))
+    msgpack::Document MsgPackDoc;
+    if (!MsgPackDoc.readFromBlob(MsgPackString, /*Multi=*/false))
       return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
-    auto &OptMsgPackNode = *OptMsgPackNodeOrErr;
-    if (!OptMsgPackNode)
-      return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
-    auto &MsgPackNode = *OptMsgPackNode;
 
     AMDGPU::HSAMD::V3::MetadataVerifier Verifier(true);
-    if (!Verifier.verify(*MsgPackNode))
+    if (!Verifier.verify(MsgPackDoc.getRoot()))
       return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
 
     std::string HSAMetadataString;
     raw_string_ostream StrOS(HSAMetadataString);
-    yaml::Output YOut(StrOS);
-    YOut << MsgPackNode;
+    MsgPackDoc.toYAML(StrOS);
 
     return {"AMDGPU Metadata", StrOS.str()};
+  }
   }
 }
 

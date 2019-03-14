@@ -1098,14 +1098,34 @@ void IteratorChecker::verifyMatch(CheckerContext &C, const SVal &Iter,
   // Verify match between a container and the container of an iterator
   Cont = Cont->getMostDerivedObjectRegion();
 
+  if (const auto *ContSym = Cont->getSymbolicBase()) {
+    if (isa<SymbolConjured>(ContSym->getSymbol()))
+      return;
+  }
+
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Iter);
-  if (Pos && Pos->getContainer() != Cont) {
+  if (!Pos)
+    return;
+
+  const auto *IterCont = Pos->getContainer();
+
+  // Skip symbolic regions based on conjured symbols. Two conjured symbols
+  // may or may not be the same. For example, the same function can return
+  // the same or a different container but we get different conjured symbols
+  // for each call. This may cause false positives so omit them from the check.
+  if (const auto *ContSym = IterCont->getSymbolicBase()) {
+    if (isa<SymbolConjured>(ContSym->getSymbol()))
+      return;
+  }
+
+  if (IterCont != Cont) {
     auto *N = C.generateNonFatalErrorNode(State);
     if (!N) {
       return;
     }
-    reportMismatchedBug("Container accessed using foreign iterator argument.", Iter, Cont, C, N);
+    reportMismatchedBug("Container accessed using foreign iterator argument.",
+                        Iter, Cont, C, N);
   }
 }
 
@@ -1114,8 +1134,31 @@ void IteratorChecker::verifyMatch(CheckerContext &C, const SVal &Iter1,
   // Verify match between the containers of two iterators
   auto State = C.getState();
   const auto *Pos1 = getIteratorPosition(State, Iter1);
+  if (!Pos1)
+    return;
+
+  const auto *IterCont1 = Pos1->getContainer();
+
+  // Skip symbolic regions based on conjured symbols. Two conjured symbols
+  // may or may not be the same. For example, the same function can return
+  // the same or a different container but we get different conjured symbols
+  // for each call. This may cause false positives so omit them from the check.
+  if (const auto *ContSym = IterCont1->getSymbolicBase()) {
+    if (isa<SymbolConjured>(ContSym->getSymbol()))
+      return;
+  }
+
   const auto *Pos2 = getIteratorPosition(State, Iter2);
-  if (Pos1 && Pos2 && Pos1->getContainer() != Pos2->getContainer()) {
+  if (!Pos2)
+    return;
+
+  const auto *IterCont2 = Pos2->getContainer();
+  if (const auto *ContSym = IterCont2->getSymbolicBase()) {
+    if (isa<SymbolConjured>(ContSym->getSymbol()))
+      return;
+  }
+
+  if (IterCont1 != IterCont2) {
     auto *N = C.generateNonFatalErrorNode(State);
     if (!N)
       return;

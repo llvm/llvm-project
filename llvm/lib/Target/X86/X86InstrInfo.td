@@ -2094,7 +2094,7 @@ def CMPXCHG8B : I<0xC7, MRM1m, (outs), (ins i64mem:$dst),
 let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX] in
 def CMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$dst),
                     "cmpxchg16b\t$dst", []>,
-                    TB, Requires<[HasCmpxchg16b, In64BitMode]>;
+                    TB, Requires<[HasCmpxchg16b]>;
 } // SchedRW, mayLoad, mayStore, hasSideEffects
 
 

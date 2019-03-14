@@ -4,7 +4,7 @@
 
 @var_580 = external local_unnamed_addr global i8, align 1
 
-define void @foo() {
+define void @foo(i8 %a0) {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movsbl var_580, %eax
@@ -23,7 +23,7 @@ define void @foo() {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB0_1: # %if.then11
 entry:
-  %tmp = icmp ugt i8 undef, 60
+  %tmp = icmp ugt i8 %a0, 60
   %phitmp = zext i1 %tmp to i16
   br label %if.end
 

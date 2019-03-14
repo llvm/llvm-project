@@ -33,6 +33,11 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class LLVMUserExpression : public UserExpression {
 public:
+  /// LLVM-style RTTI support.
+  static bool classof(const Expression *E) {
+    return E->getKind() == eKindLLVMUserExpression;
+  }
+
   // The IRPasses struct is filled in by a runtime after an expression is
   // compiled and can be used to to run fixups/analysis passes as required.
   // EarlyPasses are run on the generated module before lldb runs its own IR
@@ -48,7 +53,8 @@ public:
   LLVMUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
                      llvm::StringRef prefix, lldb::LanguageType language,
                      ResultType desired_type,
-                     const EvaluateExpressionOptions &options);
+                     const EvaluateExpressionOptions &options,
+                     ExpressionKind kind);
   ~LLVMUserExpression() override;
 
   bool FinalizeJITExecution(

@@ -859,8 +859,8 @@ define void @btr_64_dont_fold(i64* %x, i64 %n) {
 ; X86-NEXT:  .LBB33_2:
 ; X86-NEXT:    notl %esi
 ; X86-NEXT:    notl %edx
-; X86-NEXT:    andl %esi, 4(%eax)
 ; X86-NEXT:    andl %edx, (%eax)
+; X86-NEXT:    andl %esi, 4(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -899,8 +899,8 @@ define void @bts_64_dont_fold(i64* %x, i64 %n) {
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB34_2:
-; X86-NEXT:    orl %esi, 4(%eax)
 ; X86-NEXT:    orl %edx, (%eax)
+; X86-NEXT:    orl %esi, 4(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -938,8 +938,8 @@ define void @btc_64_dont_fold(i64* %x, i64 %n) {
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB35_2:
-; X86-NEXT:    xorl %esi, 4(%eax)
 ; X86-NEXT:    xorl %edx, (%eax)
+; X86-NEXT:    xorl %esi, 4(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl

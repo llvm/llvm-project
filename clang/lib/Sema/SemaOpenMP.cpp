@@ -10958,35 +10958,37 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
     }
   }
   // Perform ADL.
-  argumentDependentLookup(SemaRef, ReductionId, Loc, Ty, Lookups);
-  if (auto *VD = filterLookupForUDReductionAndMapper<ValueDecl *>(
-          Lookups, [&SemaRef, Ty](ValueDecl *D) -> ValueDecl * {
-            if (!D->isInvalidDecl() &&
-                SemaRef.Context.hasSameType(D->getType(), Ty))
-              return D;
-            return nullptr;
-          }))
-    return SemaRef.BuildDeclRefExpr(VD, VD->getType().getNonReferenceType(),
-                                    VK_LValue, Loc);
-  if (auto *VD = filterLookupForUDReductionAndMapper<ValueDecl *>(
-          Lookups, [&SemaRef, Ty, Loc](ValueDecl *D) -> ValueDecl * {
-            if (!D->isInvalidDecl() &&
-                SemaRef.IsDerivedFrom(Loc, Ty, D->getType()) &&
-                !Ty.isMoreQualifiedThan(D->getType()))
-              return D;
-            return nullptr;
-          })) {
-    CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                       /*DetectVirtual=*/false);
-    if (SemaRef.IsDerivedFrom(Loc, Ty, VD->getType(), Paths)) {
-      if (!Paths.isAmbiguous(SemaRef.Context.getCanonicalType(
-              VD->getType().getUnqualifiedType()))) {
-        if (SemaRef.CheckBaseClassAccess(Loc, VD->getType(), Ty, Paths.front(),
-                                         /*DiagID=*/0) !=
-            Sema::AR_inaccessible) {
-          SemaRef.BuildBasePathArray(Paths, BasePath);
-          return SemaRef.BuildDeclRefExpr(
-              VD, VD->getType().getNonReferenceType(), VK_LValue, Loc);
+  if (SemaRef.getLangOpts().CPlusPlus) {
+    argumentDependentLookup(SemaRef, ReductionId, Loc, Ty, Lookups);
+    if (auto *VD = filterLookupForUDReductionAndMapper<ValueDecl *>(
+            Lookups, [&SemaRef, Ty](ValueDecl *D) -> ValueDecl * {
+              if (!D->isInvalidDecl() &&
+                  SemaRef.Context.hasSameType(D->getType(), Ty))
+                return D;
+              return nullptr;
+            }))
+      return SemaRef.BuildDeclRefExpr(VD, VD->getType().getNonReferenceType(),
+                                      VK_LValue, Loc);
+    if (auto *VD = filterLookupForUDReductionAndMapper<ValueDecl *>(
+            Lookups, [&SemaRef, Ty, Loc](ValueDecl *D) -> ValueDecl * {
+              if (!D->isInvalidDecl() &&
+                  SemaRef.IsDerivedFrom(Loc, Ty, D->getType()) &&
+                  !Ty.isMoreQualifiedThan(D->getType()))
+                return D;
+              return nullptr;
+            })) {
+      CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
+                         /*DetectVirtual=*/false);
+      if (SemaRef.IsDerivedFrom(Loc, Ty, VD->getType(), Paths)) {
+        if (!Paths.isAmbiguous(SemaRef.Context.getCanonicalType(
+                VD->getType().getUnqualifiedType()))) {
+          if (SemaRef.CheckBaseClassAccess(
+                  Loc, VD->getType(), Ty, Paths.front(),
+                  /*DiagID=*/0) != Sema::AR_inaccessible) {
+            SemaRef.BuildBasePathArray(Paths, BasePath);
+            return SemaRef.BuildDeclRefExpr(
+                VD, VD->getType().getNonReferenceType(), VK_LValue, Loc);
+          }
         }
       }
     }

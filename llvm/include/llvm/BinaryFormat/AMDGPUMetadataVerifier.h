@@ -16,7 +16,7 @@
 #ifndef LLVM_BINARYFORMAT_AMDGPUMETADATAVERIFIER_H
 #define LLVM_BINARYFORMAT_AMDGPUMETADATAVERIFIER_H
 
-#include "llvm/BinaryFormat/MsgPackTypes.h"
+#include "llvm/BinaryFormat/MsgPackDocument.h"
 
 namespace llvm {
 namespace AMDGPU {
@@ -33,22 +33,22 @@ namespace V3 {
 class MetadataVerifier {
   bool Strict;
 
-  bool verifyScalar(msgpack::Node &Node, msgpack::ScalarNode::ScalarKind SKind,
-                    function_ref<bool(msgpack::ScalarNode &)> verifyValue = {});
-  bool verifyInteger(msgpack::Node &Node);
-  bool verifyArray(msgpack::Node &Node,
-                   function_ref<bool(msgpack::Node &)> verifyNode,
+  bool verifyScalar(msgpack::DocNode &Node, msgpack::Type SKind,
+                    function_ref<bool(msgpack::DocNode &)> verifyValue = {});
+  bool verifyInteger(msgpack::DocNode &Node);
+  bool verifyArray(msgpack::DocNode &Node,
+                   function_ref<bool(msgpack::DocNode &)> verifyNode,
                    Optional<size_t> Size = None);
-  bool verifyEntry(msgpack::MapNode &MapNode, StringRef Key, bool Required,
-                   function_ref<bool(msgpack::Node &)> verifyNode);
+  bool verifyEntry(msgpack::MapDocNode &MapNode, StringRef Key, bool Required,
+                   function_ref<bool(msgpack::DocNode &)> verifyNode);
   bool
-  verifyScalarEntry(msgpack::MapNode &MapNode, StringRef Key, bool Required,
-                    msgpack::ScalarNode::ScalarKind SKind,
-                    function_ref<bool(msgpack::ScalarNode &)> verifyValue = {});
-  bool verifyIntegerEntry(msgpack::MapNode &MapNode, StringRef Key,
+  verifyScalarEntry(msgpack::MapDocNode &MapNode, StringRef Key, bool Required,
+                    msgpack::Type SKind,
+                    function_ref<bool(msgpack::DocNode &)> verifyValue = {});
+  bool verifyIntegerEntry(msgpack::MapDocNode &MapNode, StringRef Key,
                           bool Required);
-  bool verifyKernelArgs(msgpack::Node &Node);
-  bool verifyKernel(msgpack::Node &Node);
+  bool verifyKernelArgs(msgpack::DocNode &Node);
+  bool verifyKernel(msgpack::DocNode &Node);
 
 public:
   /// Construct a MetadataVerifier, specifying whether it will operate in \p
@@ -58,7 +58,7 @@ public:
   /// Verify given HSA metadata.
   ///
   /// \returns True when successful, false when metadata is invalid.
-  bool verify(msgpack::Node &HSAMetadataRoot);
+  bool verify(msgpack::DocNode &HSAMetadataRoot);
 };
 
 } // end namespace V3

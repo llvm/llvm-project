@@ -19,7 +19,7 @@ define void @PR22524({ float, float }* %arg) {
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    mulss %xmm0, %xmm1
-; CHECK-NEXT:    movq $0, (%rdi)
+; CHECK-NEXT:    movl $0, (%rdi)
 ; CHECK-NEXT:    movss %xmm1, 4(%rdi)
 ; CHECK-NEXT:    retq
 entry:

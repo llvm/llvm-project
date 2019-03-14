@@ -1568,13 +1568,6 @@ def PassObjectSize : InheritableParamAttr {
   let Documentation = [PassObjectSizeDocs];
 }
 
-def FortifyStdLib : InheritableAttr {
-  let Spellings = [Clang<"fortify_stdlib">];
-  let Args = [IntArgument<"Type">, IntArgument<"Flag">];
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [FortifyStdLibDocs];
-}
-
 // Nullability type attributes.
 def TypeNonNull : TypeAttr {
   let Spellings = [Keyword<"_Nonnull">];

@@ -5,10 +5,10 @@ entry:
 ; CHECK: str     x30, [sp, #-80]!
 ; CHECK: add     x8, sp, #24
 ; CHECK: add     x0, sp, #24
-; CHECK: stp     x6, x7, [sp, #64]
-; CHECK: stp     x4, x5, [sp, #48]
-; CHECK: stp     x2, x3, [sp, #32]
-; CHECK: str     x1, [sp, #24]
+; CHECK: stp     x1, x2, [sp, #24]
+; CHECK: stp     x3, x4, [sp, #40]
+; CHECK: stp     x5, x6, [sp, #56]
+; CHECK: str     x7, [sp, #72]
 ; CHECK: str     x8, [sp, #8]
 ; CHECK: bl      other_func
 ; CHECK: ldr     x30, [sp], #80
