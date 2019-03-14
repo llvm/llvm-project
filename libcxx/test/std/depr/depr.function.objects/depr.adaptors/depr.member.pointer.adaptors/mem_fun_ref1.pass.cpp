@@ -14,6 +14,8 @@
 //   mem_fun1_ref_t<S,T,A>
 //   mem_fun_ref(S (T::*f)(A));
 
+#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <functional>
 #include <cassert>
 
