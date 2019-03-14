@@ -862,10 +862,10 @@ public:
         _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         explicit basic_string(const _Tp& __t, const allocator_type& __a);
 
-    template<class _InputIterator>
+    template<class _InputIterator, class = typename enable_if<__is_input_iterator<_InputIterator>::value>::type>
         _LIBCPP_INLINE_VISIBILITY
         basic_string(_InputIterator __first, _InputIterator __last);
-    template<class _InputIterator>
+    template<class _InputIterator, class = typename enable_if<__is_input_iterator<_InputIterator>::value>::type>
         _LIBCPP_INLINE_VISIBILITY
         basic_string(_InputIterator __first, _InputIterator __last, const allocator_type& __a);
 #ifndef _LIBCPP_CXX03_LANG
@@ -2077,7 +2077,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(_ForwardIterator __first, _For
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-template<class _InputIterator>
+template<class _InputIterator, class>
 inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(_InputIterator __first, _InputIterator __last)
 {
@@ -2088,7 +2088,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(_InputIterator __first, 
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-template<class _InputIterator>
+template<class _InputIterator, class>
 inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(_InputIterator __first, _InputIterator __last,
                                                         const allocator_type& __a)
