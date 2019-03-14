@@ -375,8 +375,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(CXXSyntheticChildren);
 };
 
-#ifndef LLDB_DISABLE_PYTHON
-
 class ScriptedSyntheticChildren : public SyntheticChildren {
   std::string m_python_class;
   std::string m_python_code;
@@ -452,7 +450,6 @@ public:
 private:
   DISALLOW_COPY_AND_ASSIGN(ScriptedSyntheticChildren);
 };
-#endif
 } // namespace lldb_private
 
 #endif // lldb_TypeSynthetic_h_

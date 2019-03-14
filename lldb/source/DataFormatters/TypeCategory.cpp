@@ -19,9 +19,7 @@ TypeCategoryImpl::TypeCategoryImpl(
     : m_format_cont("format", "regex-format", clist),
       m_summary_cont("summary", "regex-summary", clist),
       m_filter_cont("filter", "regex-filter", clist),
-#ifndef LLDB_DISABLE_PYTHON
       m_synth_cont("synth", "regex-synth", clist),
-#endif
       m_validator_cont("validator", "regex-validator", clist), m_enabled(false),
       m_change_listener(clist), m_mutex(), m_name(name), m_languages() {
   for (const lldb::LanguageType lang : langs)
