@@ -66,7 +66,7 @@ class Bucket {
 public:
   virtual ~Bucket() = default;
   /// Returns a randomized version of the bucket.
-  virtual SmallVector<FieldDecl *, 64> randomize(std::default_random_engine &rng);
+  virtual SmallVector<FieldDecl *, 64> randomize(std::mt19937_64 &rng);
   /// Checks if an added element would fit in a cache line.
   virtual bool canFit(size_t size) const;
   /// Adds a field to the bucket.
@@ -86,7 +86,7 @@ protected:
 /// exceed the size of a cache line.
 class BitfieldRun : public Bucket {
 public:
-  virtual SmallVector<FieldDecl *, 64> randomize(std::default_random_engine &rng) override;
+  virtual SmallVector<FieldDecl *, 64> randomize(std::mt19937_64 &rng) override;
   virtual bool canFit(size_t size) const override;
   virtual bool isBitfieldRun() const override;
 };
@@ -94,7 +94,7 @@ public:
 // FIXME: Is there a way to detect this? (i.e. on 32bit system vs 64?)
 const size_t CACHE_LINE = 64;
 
-SmallVector<FieldDecl *, 64> Bucket::randomize(std::default_random_engine &rng) {
+SmallVector<FieldDecl *, 64> Bucket::randomize(std::mt19937_64 &rng) {
   std::shuffle(std::begin(fields), std::end(fields), rng);
   return fields;
 }
@@ -128,7 +128,7 @@ bool Bucket::full() const {
 
 bool Bucket::empty() const { return size == 0; }
 
-SmallVector<FieldDecl *, 64> BitfieldRun::randomize(std::default_random_engine &rng) {
+SmallVector<FieldDecl *, 64> BitfieldRun::randomize(std::mt19937_64 &rng) {
   // Keep bit fields adjacent, we will not scramble them.
   return fields;
 }

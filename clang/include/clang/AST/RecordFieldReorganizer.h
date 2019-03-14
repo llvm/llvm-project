@@ -51,7 +51,7 @@ protected:
                           SmallVector<Decl *, 64> &NewOrder) override;
 private:
   std::seed_seq Seq;
-  std::default_random_engine rng;
+  std::mt19937_64 rng;
 };
 
 } // namespace clang
