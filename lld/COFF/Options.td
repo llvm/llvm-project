@@ -174,6 +174,7 @@ defm threads: B<"threads",
 def lldmap : F<"lldmap">;
 def lldmap_file : Joined<["/", "-"], "lldmap:">;
 def show_timing : F<"time">;
+def summary : F<"summary">;
 
 //==============================================================================
 // The flags below do nothing. They are defined only for link.exe compatibility.

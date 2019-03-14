@@ -1,11 +1,9 @@
 // RUN: %clang_tsan %s -o %t
 // RUN: %deflake %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: dispatch
-
 #include <dispatch/dispatch.h>
 
-#include "test.h"
+#include "../test.h"
 
 long global;
 
