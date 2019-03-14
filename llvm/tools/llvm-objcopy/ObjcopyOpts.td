@@ -103,10 +103,9 @@ defm set_section_flags
          "rom, share, contents, merge, strings.">,
       MetaVarName<"section=flag1[,flag2,...]">;
 
-def strip_all
-    : Flag<["-", "--"], "strip-all">,
-      HelpText<
-          "Remove non-allocated sections other than .gnu.warning* sections">;
+def strip_all : Flag<["-", "--"], "strip-all">,
+                HelpText<"Remove non-allocated sections outside segments. "
+                         ".gnu.warning* sections are not removed">;
 def S : Flag<["-"], "S">, Alias<strip_all>;
 def strip_all_gnu : Flag<["-", "--"], "strip-all-gnu">,
                     HelpText<"Compatible with GNU objcopy's --strip-all">;
@@ -116,13 +115,15 @@ def g : Flag<["-"], "g">, Alias<strip_debug>,
         HelpText<"Alias for --strip-debug">;
 def strip_dwo : Flag<["-", "--"], "strip-dwo">,
                 HelpText<"Remove all DWARF .dwo sections from file">;
-def strip_sections : Flag<["-", "--"], "strip-sections">,
-                     HelpText<"Remove all section headers">;
-def strip_non_alloc : Flag<["-", "--"], "strip-non-alloc">,
-                      HelpText<"Remove all non-allocated sections">;
+def strip_sections
+    : Flag<["-", "--"], "strip-sections">,
+      HelpText<"Remove all section headers and all sections not in segments">;
+def strip_non_alloc
+    : Flag<["-", "--"], "strip-non-alloc">,
+      HelpText<"Remove all non-allocated sections outside segments">;
 def strip_unneeded : Flag<["-", "--"], "strip-unneeded">,
                      HelpText<"Remove all symbols not needed by relocations">;
-defm strip_unneeded_symbol 
+defm strip_unneeded_symbol
     : Eq<"strip-unneeded-symbol",
          "Remove symbol <symbol> if it is not needed by relocations">,
       MetaVarName<"symbol">;

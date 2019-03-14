@@ -9,7 +9,7 @@
 
 # CHECK:  Name          Size   VMA
 # CHECK:  .rela.plt   00000030 0000000000000210
-# CHECK:  .got.plt    00000010 0000000000002000
+# CHECK:  .got.plt    00000010 0000000000003000
 
 # TAGS:      Relocations [
 # TAGS-NEXT:   Section {{.*}} .rela.plt {
@@ -21,7 +21,7 @@
 # TAGS:   Tag                Type                 Name/Value
 # TAGS:   0x0000000000000017 JMPREL               0x210
 # TAGS:   0x0000000000000002 PLTRELSZ             48
-# TAGS:   0x0000000000000003 PLTGOT               0x2000
+# TAGS:   0x0000000000000003 PLTGOT               0x3000
 # TAGS:   0x0000000000000014 PLTREL               RELA
 
 .text

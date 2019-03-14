@@ -35,13 +35,13 @@ main:
 # CHECK-NEXT:    1000c:	c0 03 5f d6 	ret
 # CHECK-NEXT: Disassembly of section .plt:
 # CHECK-NEXT: 0000000000010010 myfunc:
-# CHECK-NEXT:    10010:	90 00 00 90 	adrp	x16, #65536
+# CHECK-NEXT:    10010:	10 01 00 90 	adrp	x16, #131072
 # CHECK-NEXT:    10014:	11 02 40 f9 	ldr	x17, [x16]
 # CHECK-NEXT:    10018:	10 02 00 91 	add	x16, x16, #0
 # CHECK-NEXT:    1001c:	20 02 1f d6 	br	x17
 
 # CHECK-RELOCS: Relocations [
 # CHECK-RELOCS-NEXT:   Section {{.*}} .rela.plt {
-# CHECK-RELOCS-NEXT:     0x20000 R_AARCH64_IRELATIVE - 0x10000
+# CHECK-RELOCS-NEXT:     0x30000 R_AARCH64_IRELATIVE - 0x10000
 # CHECK-RELOCS-NEXT:   }
 # CHECK-RELOCS-NEXT: ]

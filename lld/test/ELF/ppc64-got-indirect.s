@@ -81,35 +81,35 @@ glob:
 # r3 = r2 - 32760 = 0x10030008 -> .toc entry for glob.
 
 # CHECK: _start:
-# CHECK-NEXT: 10010000:  {{.*}}   addis 2, 12, 3
+# CHECK-NEXT: 10010000:  {{.*}}   addis 2, 12, 2
 # CHECK-NEXT: 10010004:  {{.*}}   addi 2, 2, -32768
 # CHECK-NEXT: 10010008:  {{.*}}   nop
 # CHECK-NEXT: 1001000c:  {{.*}}   ld 3, -32760(2)
 # CHECK: 1001001c:  {{.*}}   lwa 3, 0(3)
 
-# CHECK-LE: Disassembly of section .data:
-# CHECK-LE-NEXT: glob:
-# CHECK-LE-NEXT: 10020000:       37 00 00 00
-
 # CHECK-LE: Disassembly of section .got:
 # CHECK-LE-NEXT: .got:
-# CHECK-LE-NEXT: 10030000:       00 80 03 10
-# CHECK-LE-NEXT: 10030004:       00 00 00 00
+# CHECK-LE-NEXT: 10020000:       00 80 02 10
+# CHECK-LE-NEXT: 10020004:       00 00 00 00
 
 # Verify that .toc comes right after .got
 # CHECK-LE: Disassembly of section .toc:
-# CHECK-LE: 10030008:       00 00 02 10
+# CHECK-LE: 10020008:       00 00 03 10
 
-# CHECK-BE: Disassembly of section .data:
-# CHECK-BE-NEXT: glob:
-# CHECK-BE-NEXT: 10020000:       00 00 00 37
+# CHECK-LE: Disassembly of section .data:
+# CHECK-LE-NEXT: glob:
+# CHECK-LE-NEXT: 10030000:       37 00 00 00
 
 # CHECK-BE: Disassembly of section .got:
 # CHECK-BE-NEXT: .got:
-# CHECK-BE-NEXT: 10030000:       00 00 00 00
-# CHECK-BE-NEXT: 10030004:       10 03 80 00
+# CHECK-BE-NEXT: 10020000:       00 00 00 00
+# CHECK-BE-NEXT: 10020004:       10 02 80 00
 
 # Verify that .toc comes right after .got
 # CHECK-BE: Disassembly of section .toc:
-# CHECK-BE: 10030008:       00 00 00 00
-# CHECK-BE: 1003000c:       10 02 00 00
+# CHECK-BE: 10020008:       00 00 00 00
+# CHECK-BE: 1002000c:       10 03 00 00
+
+# CHECK-BE: Disassembly of section .data:
+# CHECK-BE-NEXT: glob:
+# CHECK-BE-NEXT: 10030000:       00 00 00 37

@@ -1232,6 +1232,26 @@ TEST_P(ImportExpr, DependentSizedArrayType) {
           has(fieldDecl(hasType(dependentSizedArrayType())))))));
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportBeginLocOfDeclRefExpr) {
+  Decl *FromTU = getTuDecl(
+      "class A { public: static int X; }; void f() { (void)A::X; }", Lang_CXX);
+  auto From = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("f")));
+  ASSERT_TRUE(From);
+  ASSERT_TRUE(
+      cast<CStyleCastExpr>(cast<CompoundStmt>(From->getBody())->body_front())
+          ->getSubExpr()
+          ->getBeginLoc()
+          .isValid());
+  FunctionDecl *To = Import(From, Lang_CXX);
+  ASSERT_TRUE(To);
+  ASSERT_TRUE(
+      cast<CStyleCastExpr>(cast<CompoundStmt>(To->getBody())->body_front())
+          ->getSubExpr()
+          ->getBeginLoc()
+          .isValid());
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase,
        ImportOfTemplatedDeclOfClassTemplateDecl) {
   Decl *FromTU = getTuDecl("template<class X> struct S{};", Lang_CXX);

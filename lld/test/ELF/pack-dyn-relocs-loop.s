@@ -18,15 +18,15 @@
 // CHECK-NEXT:    ]
 // CHECK-NEXT:    Address: 0x210
 // CHECK-NEXT:    Offset: 0x210
-// CHECK-NEXT:    Size: 21
+// CHECK-NEXT:    Size: 22
 
 // CHECK:         Name: x (43)
 // CHECK-NEXT:    Type: SHT_PROGBITS (0x1)
 // CHECK-NEXT:    Flags [ (0x2)
 // CHECK-NEXT:      SHF_ALLOC (0x2)
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x225
-// CHECK-NEXT:    Offset: 0x225
+// CHECK-NEXT:    Address: 0x226
+// CHECK-NEXT:    Offset: 0x226
 // CHECK-NEXT:    Size: 64980
 
 // CHECK:         Name: barr (45)
@@ -38,14 +38,14 @@
 // CHECK-NEXT:    Offset: 0xFFFA
 // CHECK-NEXT:    Size: 0
 
-// CHECK:         Name: foo (62)
+// CHECK:         Name: foo (71)
 // CHECK-NEXT:    Type: SHT_PROGBITS (0x1)
 // CHECK-NEXT:    Flags [ (0x3)
 // CHECK-NEXT:      SHF_ALLOC (0x2)
 // CHECK-NEXT:      SHF_WRITE (0x1)
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x10004
-// CHECK-NEXT:    Offset: 0x10004
+// CHECK-NEXT:    Address: 0x20004
+// CHECK-NEXT:    Offset: 0x20004
 // CHECK-NEXT:    Size: 12
 
 

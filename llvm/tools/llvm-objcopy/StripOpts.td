@@ -31,10 +31,9 @@ def preserve_dates : Flag<["-", "--"], "preserve-dates">,
                      HelpText<"Preserve access and modification timestamps">;
 def p : Flag<["-"], "p">, Alias<preserve_dates>;
 
-def strip_all
-    : Flag<["-", "--"], "strip-all">,
-      HelpText<
-          "Remove non-allocated sections other than .gnu.warning* sections">;
+def strip_all : Flag<["-", "--"], "strip-all">,
+                HelpText<"Remove non-allocated sections outside segments. "
+                         ".gnu.warning* sections are not removed">;
 def s : Flag<["-"], "s">, Alias<strip_all>;
 
 def strip_all_gnu : Flag<["-", "--"], "strip-all-gnu">,

@@ -863,8 +863,8 @@ public:
     mapOptionalWithContext(Key, Val, Ctx);
   }
 
-  template <typename T>
-  void mapOptional(const char *Key, T &Val, const T &Default) {
+  template <typename T, typename DefaultT>
+  void mapOptional(const char *Key, T &Val, const DefaultT &Default) {
     EmptyContext Ctx;
     mapOptionalWithContext(Key, Val, Default, Ctx);
   }
@@ -890,10 +890,13 @@ public:
     this->processKey(Key, Val, false, Ctx);
   }
 
-  template <typename T, typename Context>
-  void mapOptionalWithContext(const char *Key, T &Val, const T &Default,
+  template <typename T, typename Context, typename DefaultT>
+  void mapOptionalWithContext(const char *Key, T &Val, const DefaultT &Default,
                               Context &Ctx) {
-    this->processKeyWithDefault(Key, Val, Default, false, Ctx);
+    static_assert(std::is_convertible<DefaultT, T>::value,
+                  "Default type must be implicitly convertible to value type!");
+    this->processKeyWithDefault(Key, Val, static_cast<const T &>(Default),
+                                false, Ctx);
   }
 
 private:
