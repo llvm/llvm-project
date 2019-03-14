@@ -7,16 +7,17 @@
 ; CHECK: ---
 ; CHECK:  amdhsa.kernels:
 
-; CHECK: - .max_flat_workgroup_size:    256
-; CHECK:   .kernarg_segment_size:       24
-; CHECK:   .private_segment_fixed_size: 0
-; CHECK:   .wavefront_size:             64
-; CHECK:   .symbol:     test.kd
-; CHECK:   .name:       test
-; CHECK:   .sgpr_count:                 8
-; CHECK:   .kernarg_segment_align:      8
-; CHECK:   .vgpr_count:                 6
-; CHECK:   .group_segment_fixed_size:   0
+; CHECK:   - .args:           
+; CHECK:     .group_segment_fixed_size: 0
+; CHECK:     .kernarg_segment_align: 8
+; CHECK:     .kernarg_segment_size: 24
+; CHECK:     .max_flat_workgroup_size: 256
+; CHECK:     .name:           test
+; CHECK:     .private_segment_fixed_size: 0
+; CHECK:     .sgpr_count:     8
+; CHECK:     .symbol:         test.kd
+; CHECK:     .vgpr_count:     6
+; CHECK:     .wavefront_size: 64
 define amdgpu_kernel void @test(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
@@ -29,11 +30,11 @@ entry:
   ret void
 }
 
-; CHECK:   .symbol:     num_spilled_sgprs.kd
 ; CHECK:   .name:       num_spilled_sgprs
 ; GFX700:   .sgpr_spill_count: 40
 ; GFX803:   .sgpr_spill_count: 24
 ; GFX900:   .sgpr_spill_count: 24
+; CHECK:   .symbol:     num_spilled_sgprs.kd
 define amdgpu_kernel void @num_spilled_sgprs(
     i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, [8 x i32],
     i32 addrspace(1)* %out2, i32 addrspace(1)* %out3, [8 x i32],
@@ -67,8 +68,8 @@ entry:
   ret void
 }
 
-; CHECK:   .symbol:     num_spilled_vgprs.kd
 ; CHECK:   .name:       num_spilled_vgprs
+; CHECK:   .symbol:     num_spilled_vgprs.kd
 ; CHECK:   .vgpr_spill_count: 14
 define amdgpu_kernel void @num_spilled_vgprs() #1 {
   %val0 = load volatile float, float addrspace(1)* @var

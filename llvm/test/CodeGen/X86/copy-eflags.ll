@@ -299,17 +299,18 @@ bb1:
 ; Use a particular instruction pattern in order to lower to the post-RA pseudo
 ; used to lower SETB into an SBB pattern in order to make sure that kind of
 ; usage of a copied EFLAGS continues to work.
-define void @PR37431(i32* %arg1, i8* %arg2, i8* %arg3, i32 %x) nounwind {
+define void @PR37431(i32* %arg1, i8* %arg2, i8* %arg3, i32 %arg4, i64 %arg5) nounwind {
 ; X32-LABEL: PR37431:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl (%eax), %eax
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    sarl $31, %ecx
-; X32-NEXT:    cmpl %eax, %eax
-; X32-NEXT:    sbbl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl (%ecx), %ecx
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    sarl $31, %edx
+; X32-NEXT:    cmpl %ecx, {{[0-9]+}}(%esp)
+; X32-NEXT:    sbbl %edx, %eax
 ; X32-NEXT:    setb %cl
 ; X32-NEXT:    sbbb %dl, %dl
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -329,26 +330,26 @@ define void @PR37431(i32* %arg1, i8* %arg2, i8* %arg3, i32 %x) nounwind {
 ; X64-LABEL: PR37431:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    movq %rdx, %r8
+; X64-NEXT:    movq %rdx, %r9
 ; X64-NEXT:    movslq (%rdi), %rdx
-; X64-NEXT:    cmpq %rdx, %rax
+; X64-NEXT:    cmpq %rdx, %r8
 ; X64-NEXT:    sbbb %cl, %cl
-; X64-NEXT:    cmpq %rdx, %rax
+; X64-NEXT:    cmpq %rdx, %r8
 ; X64-NEXT:    movb %cl, (%rsi)
 ; X64-NEXT:    sbbl %ecx, %ecx
 ; X64-NEXT:    cltd
 ; X64-NEXT:    idivl %ecx
-; X64-NEXT:    movb %dl, (%r8)
+; X64-NEXT:    movb %dl, (%r9)
 ; X64-NEXT:    retq
 entry:
   %tmp = load i32, i32* %arg1
   %tmp1 = sext i32 %tmp to i64
-  %tmp2 = icmp ugt i64 %tmp1, undef
+  %tmp2 = icmp ugt i64 %tmp1, %arg5
   %tmp3 = zext i1 %tmp2 to i8
   %tmp4 = sub i8 0, %tmp3
   store i8 %tmp4, i8* %arg2
   %tmp5 = sext i8 %tmp4 to i32
-  %tmp6 = srem i32 %x, %tmp5
+  %tmp6 = srem i32 %arg4, %tmp5
   %tmp7 = trunc i32 %tmp6 to i8
   store i8 %tmp7, i8* %arg3
   ret void

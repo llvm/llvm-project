@@ -775,17 +775,17 @@ define i32 @caller_small_scalar_ret() nounwind {
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -16
 ; RV32I-FPELIM-NEXT:    sw ra, 12(sp)
-; RV32I-FPELIM-NEXT:    sw s1, 8(sp)
+; RV32I-FPELIM-NEXT:    sw s0, 8(sp)
 ; RV32I-FPELIM-NEXT:    lui a0, 56
-; RV32I-FPELIM-NEXT:    addi s1, a0, 580
+; RV32I-FPELIM-NEXT:    addi s0, a0, 580
 ; RV32I-FPELIM-NEXT:    call callee_small_scalar_ret
-; RV32I-FPELIM-NEXT:    xor a1, a1, s1
+; RV32I-FPELIM-NEXT:    xor a1, a1, s0
 ; RV32I-FPELIM-NEXT:    lui a2, 200614
 ; RV32I-FPELIM-NEXT:    addi a2, a2, 647
 ; RV32I-FPELIM-NEXT:    xor a0, a0, a2
 ; RV32I-FPELIM-NEXT:    or a0, a0, a1
 ; RV32I-FPELIM-NEXT:    seqz a0, a0
-; RV32I-FPELIM-NEXT:    lw s1, 8(sp)
+; RV32I-FPELIM-NEXT:    lw s0, 8(sp)
 ; RV32I-FPELIM-NEXT:    lw ra, 12(sp)
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 16
 ; RV32I-FPELIM-NEXT:    ret

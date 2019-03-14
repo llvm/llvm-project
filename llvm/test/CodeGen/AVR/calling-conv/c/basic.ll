@@ -66,24 +66,24 @@ define void @ret_void_args_i64(i64 %a) {
 
 ; CHECK-LABEL: ret_void_args_i64_i64
 define void @ret_void_args_i64_i64(i64 %a, i64 %b) {
-  ; CHECK:      sts     11, r25
-  ; CHECK-NEXT: sts     10, r24
-  ; CHECK-NEXT: sts     9, r23
-  ; CHECK-NEXT: sts     8, r22
-  ; CHECK-NEXT: sts     7, r21
-  ; CHECK-NEXT: sts     6, r20
-  ; CHECK-NEXT: sts     5, r19
-  ; CHECK-NEXT: sts     4, r18
+  ; CHECK-DAG:  sts     11, r25
+  ; CHECK-DAG: sts     10, r24
+  ; CHECK-DAG: sts     9, r23
+  ; CHECK-DAG: sts     8, r22
+  ; CHECK-DAG: sts     7, r21
+  ; CHECK-DAG: sts     6, r20
+  ; CHECK-DAG: sts     5, r19
+  ; CHECK-DAG: sts     4, r18
   store volatile i64 %a, i64* inttoptr (i64 4 to i64*)
 
-  ; CHECK-NEXT: sts     11, r17
-  ; CHECK-NEXT: sts     10, r16
-  ; CHECK-NEXT: sts     9, r15
-  ; CHECK-NEXT: sts     8, r14
-  ; CHECK-NEXT: sts     7, r13
-  ; CHECK-NEXT: sts     6, r12
-  ; CHECK-NEXT: sts     5, r11
-  ; CHECK-NEXT: sts     4, r10
+  ; CHECK-DAG: sts     11, r17
+  ; CHECK-DAG: sts     10, r16
+  ; CHECK-DAG: sts     9, r15
+  ; CHECK-DAG: sts     8, r14
+  ; CHECK-DAG: sts     7, r13
+  ; CHECK-DAG: sts     6, r12
+  ; CHECK-DAG: sts     5, r11
+  ; CHECK-DAG: sts     4, r10
   store volatile i64 %b, i64* inttoptr (i64 4 to i64*)
   ret void
 }

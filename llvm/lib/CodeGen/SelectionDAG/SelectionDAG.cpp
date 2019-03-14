@@ -1974,6 +1974,10 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
     break;
   }
 
+  // We can always fold X == X for integer setcc's.
+  if (N1 == N2 && OpVT.isInteger())
+    return getBoolConstant(ISD::isTrueWhenEqual(Cond), dl, VT, OpVT);
+
   if (ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2)) {
     const APInt &C2 = N2C->getAPIntValue();
     if (ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1)) {

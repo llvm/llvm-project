@@ -534,8 +534,8 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -48
 ; RV32I-FPELIM-NEXT:    sw ra, 12(sp)
-; RV32I-FPELIM-NEXT:    sw s1, 8(sp)
-; RV32I-FPELIM-NEXT:    mv s1, a1
+; RV32I-FPELIM-NEXT:    sw s0, 8(sp)
+; RV32I-FPELIM-NEXT:    mv s0, a1
 ; RV32I-FPELIM-NEXT:    sw a7, 44(sp)
 ; RV32I-FPELIM-NEXT:    sw a6, 40(sp)
 ; RV32I-FPELIM-NEXT:    sw a5, 36(sp)
@@ -562,11 +562,11 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32I-FPELIM-NEXT:    andi a0, a0, -4
 ; RV32I-FPELIM-NEXT:    addi a3, a0, 4
 ; RV32I-FPELIM-NEXT:    sw a3, 4(sp)
-; RV32I-FPELIM-NEXT:    add a1, a1, s1
+; RV32I-FPELIM-NEXT:    add a1, a1, s0
 ; RV32I-FPELIM-NEXT:    add a1, a1, a2
 ; RV32I-FPELIM-NEXT:    lw a0, 0(a0)
 ; RV32I-FPELIM-NEXT:    add a0, a1, a0
-; RV32I-FPELIM-NEXT:    lw s1, 8(sp)
+; RV32I-FPELIM-NEXT:    lw s0, 8(sp)
 ; RV32I-FPELIM-NEXT:    lw ra, 12(sp)
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 48
 ; RV32I-FPELIM-NEXT:    ret

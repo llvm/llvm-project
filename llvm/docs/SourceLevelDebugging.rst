@@ -391,6 +391,131 @@ inside of subprogram ``!4`` described above.
 The scope information attached with each instruction provides a straightforward
 way to find instructions covered by a scope.
 
+Object lifetime in optimized code
+=================================
+
+In the example above, every variable assignment uniquely corresponds to a
+memory store to the variable's position on the stack. However in heavily
+optimized code LLVM promotes most variables into SSA values, which can
+eventually be placed in physical registers or memory locations. To track SSA
+values through compilation, when objects are promoted to SSA values an
+``llvm.dbg.value`` intrinsic is created for each assignment, recording the
+variable's new location. Compared with the ``llvm.dbg.declare`` intrinsic:
+
+* A dbg.value terminates the effect of any preceeding dbg.values for (any
+  overlapping fragments of) the specified variable.
+* The dbg.value's position in the IR defines where in the instruction stream
+  the variable's value changes.
+* Operands can be constants, indicating the variable is assigned a
+  constant value.
+
+Care must be taken to update ``llvm.dbg.value`` intrinsics when optimization
+passes alter or move instructions and blocks -- the developer could observe such
+changes reflected in the value of variables when debugging the program. For any
+execution of the optimized program, the set of variable values presented to the
+developer by the debugger should not show a state that would never have existed
+in the execution of the unoptimized program, given the same input. Doing so
+risks misleading the developer by reporting a state that does not exist,
+damaging their understanding of the optimized program and undermining their
+trust in the debugger.
+
+Sometimes perfectly preserving variable locations is not possible, often when a
+redundant calculation is optimized out. In such cases, a ``llvm.dbg.value``
+with operand ``undef`` should be used, to terminate earlier variable locations
+and let the debugger present ``optimized out`` to the developer. Withholding
+these potentially stale variable values from the developer diminishes the
+amount of available debug information, but increases the reliability of the
+remaining information.
+ 
+To illustrate some potential issues, consider the following example:
+
+.. code-block:: llvm
+
+  define i32 @foo(i32 %bar, i1 %cond) {
+  entry:
+    call @llvm.dbg.value(metadata i32 0, metadata !1, metadata !2)
+    br i1 %cond, label %truebr, label %falsebr
+  truebr:
+    %tval = add i32 %bar, 1
+    call @llvm.dbg.value(metadata i32 %tval, metadata !1, metadata !2)
+    %g1 = call i32 @gazonk()
+    br label %exit
+  falsebr:
+    %fval = add i32 %bar, 2
+    call @llvm.dbg.value(metadata i32 %fval, metadata !1, metadata !2)
+    %g2 = call i32 @gazonk()
+    br label %exit
+  exit:
+    %merge = phi [ %tval, %truebr ], [ %fval, %falsebr ]
+    %g = phi [ %g1, %truebr ], [ %g2, %falsebr ]
+    call @llvm.dbg.value(metadata i32 %merge, metadata !1, metadata !2)
+    call @llvm.dbg.value(metadata i32 %g, metadata !3, metadata !2)
+    %plusten = add i32 %merge, 10
+    %toret = add i32 %plusten, %g
+    call @llvm.dbg.value(metadata i32 %toret, metadata !1, metadata !2)
+    ret i32 %toret
+  }
+
+Containing two source-level variables in ``!1`` and ``!3``. The function could,
+perhaps, be optimized into the following code:
+
+.. code-block:: llvm
+
+  define i32 @foo(i32 %bar, i1 %cond) {
+  entry:
+    %g = call i32 @gazonk()
+    %addoper = select i1 %cond, i32 11, i32 12
+    %plusten = add i32 %bar, %addoper
+    %toret = add i32 %plusten, %g
+    ret i32 %toret
+  }
+
+What ``llvm.dbg.value`` intrinsics should be placed to represent the original variable
+locations in this code? Unfortunately the the second, third and fourth
+dbg.values for ``!1`` in the source function have had their operands
+(%tval, %fval, %merge) optimized out. Assuming we cannot recover them, we
+might consider this placement of dbg.values:
+
+.. code-block:: llvm
+
+  define i32 @foo(i32 %bar, i1 %cond) {
+  entry:
+    call @llvm.dbg.value(metadata i32 0, metadata !1, metadata !2)
+    %g = call i32 @gazonk()
+    call @llvm.dbg.value(metadata i32 %g, metadata !3, metadata !2)
+    %addoper = select i1 %cond, i32 11, i32 12
+    %plusten = add i32 %bar, %addoper
+    %toret = add i32 %plusten, %g
+    call @llvm.dbg.value(metadata i32 %toret, metadata !1, metadata !2)
+    ret i32 %toret
+  }
+
+However, this will cause ``!3`` to have the return value of ``@gazonk()`` at
+the same time as ``!1`` has the constant value zero -- a pair of assignments
+that never occurred in the unoptimized program. To avoid this, we must terminate
+the range that ``!1`` has the constant value assignment by inserting an undef
+dbg.value before the dbg.value for ``!3``:
+
+.. code-block:: llvm
+
+  define i32 @foo(i32 %bar, i1 %cond) {
+  entry:
+    call @llvm.dbg.value(metadata i32 0, metadata !1, metadata !2)
+    %g = call i32 @gazonk()
+    call @llvm.dbg.value(metadata i32 undef, metadata !1, metadata !2)
+    call @llvm.dbg.value(metadata i32 %g, metadata !3, metadata !2)
+    %addoper = select i1 %cond, i32 11, i32 12
+    %plusten = add i32 %bar, %addoper
+    %toret = add i32 %plusten, %g
+    call @llvm.dbg.value(metadata i32 %toret, metadata !1, metadata !2)
+    ret i32 %toret
+  }
+
+In general, if any dbg.value has its operand optimized out and cannot be
+recovered, then an undef dbg.value is necessary to terminate earlier variable
+locations. Additional undef dbg.values may be necessary when the debugger can
+observe re-ordering of assignments.
+
 .. _ccxx_frontend:
 
 C/C++ front-end specific debug information

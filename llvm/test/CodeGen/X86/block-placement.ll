@@ -349,7 +349,7 @@ loop.body5:
   br label %loop.body3
 }
 
-define void @unnatural_cfg2() {
+define void @unnatural_cfg2(i32* %p0, i32 %a0) {
 ; Test that we can handle a loop with a nested natural loop *and* an unnatural
 ; loop. This was reduced from a crash on block placement when run over
 ; single-source GCC.
@@ -369,7 +369,7 @@ entry:
   br label %loop.header
 
 loop.header:
-  %comp0 = icmp eq i32* undef, null
+  %comp0 = icmp eq i32* %p0, null
   br i1 %comp0, label %bail, label %loop.body1
 
 loop.body1:
@@ -388,7 +388,7 @@ loop.body3:
 loop.inner1.begin:
   %valphi = phi i32* [ %val2, %loop.inner1.end ], [ %val1, %loop.body3 ], [ %val0, %loop.body1 ]
   %castval = bitcast i32* %valphi to i32*
-  %comp1 = icmp eq i32 undef, 48
+  %comp1 = icmp eq i32 %a0, 48
   br i1 %comp1, label %loop.inner1.end, label %loop.body4
 
 loop.inner1.end:
@@ -401,14 +401,14 @@ loop.body4.dead:
   br label %loop.body4
 
 loop.body4:
-  %comp2 = icmp ult i32 undef, 3
+  %comp2 = icmp ult i32 %a0, 3
   br i1 %comp2, label %loop.inner2.begin, label %loop.end
 
 loop.inner2.begin:
   br i1 false, label %loop.end, label %loop.inner2.end
 
 loop.inner2.end:
-  %comp3 = icmp eq i32 undef, 1769472
+  %comp3 = icmp eq i32 %a0, 1769472
   br i1 %comp3, label %loop.end, label %loop.inner2.begin
 
 loop.end:
