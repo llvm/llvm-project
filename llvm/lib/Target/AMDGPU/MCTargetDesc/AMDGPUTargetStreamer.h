@@ -10,7 +10,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUTARGETSTREAMER_H
 
 #include "AMDKernelCodeT.h"
-#include "llvm/BinaryFormat/MsgPackTypes.h"
+#include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDGPUMetadata.h"
@@ -64,8 +64,7 @@ public:
   /// the \p HSAMetadata structure is updated with the correct types.
   ///
   /// \returns True on success, false on failure.
-  virtual bool EmitHSAMetadata(std::shared_ptr<msgpack::Node> &HSAMetadata,
-                               bool Strict) = 0;
+  virtual bool EmitHSAMetadata(msgpack::Document &HSAMetadata, bool Strict) = 0;
 
   /// \returns True on success, false on failure.
   virtual bool EmitHSAMetadata(const AMDGPU::HSAMD::Metadata &HSAMetadata) = 0;
@@ -105,8 +104,7 @@ public:
   bool EmitISAVersion(StringRef IsaVersionString) override;
 
   /// \returns True on success, false on failure.
-  bool EmitHSAMetadata(std::shared_ptr<msgpack::Node> &HSAMetadata,
-                       bool Strict) override;
+  bool EmitHSAMetadata(msgpack::Document &HSAMetadata, bool Strict) override;
 
   /// \returns True on success, false on failure.
   bool EmitHSAMetadata(const AMDGPU::HSAMD::Metadata &HSAMetadata) override;
@@ -149,8 +147,7 @@ public:
   bool EmitISAVersion(StringRef IsaVersionString) override;
 
   /// \returns True on success, false on failure.
-  bool EmitHSAMetadata(std::shared_ptr<msgpack::Node> &HSAMetadata,
-                       bool Strict) override;
+  bool EmitHSAMetadata(msgpack::Document &HSAMetadata, bool Strict) override;
 
   /// \returns True on success, false on failure.
   bool EmitHSAMetadata(const AMDGPU::HSAMD::Metadata &HSAMetadata) override;

@@ -183,18 +183,68 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
 
 Optional<int64_t> llvm::getConstantVRegVal(unsigned VReg,
                                            const MachineRegisterInfo &MRI) {
-  MachineInstr *MI = MRI.getVRegDef(VReg);
-  if (MI->getOpcode() != TargetOpcode::G_CONSTANT)
+  Optional<ValueAndVReg> ValAndVReg =
+      getConstantVRegValWithLookThrough(VReg, MRI, /*LookThroughInstrs*/ false);
+  assert((!ValAndVReg || ValAndVReg->VReg == VReg) &&
+         "Value found while looking through instrs");
+  if (!ValAndVReg)
+    return None;
+  return ValAndVReg->Value;
+}
+
+Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
+    unsigned VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs) {
+  SmallVector<std::pair<unsigned, unsigned>, 4> SeenOpcodes;
+  MachineInstr *MI;
+  while ((MI = MRI.getVRegDef(VReg)) &&
+         MI->getOpcode() != TargetOpcode::G_CONSTANT && LookThroughInstrs) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+      SeenOpcodes.push_back(std::make_pair(
+          MI->getOpcode(),
+          MRI.getType(MI->getOperand(0).getReg()).getSizeInBits()));
+      VReg = MI->getOperand(1).getReg();
+      break;
+    case TargetOpcode::COPY:
+      VReg = MI->getOperand(1).getReg();
+      if (TargetRegisterInfo::isPhysicalRegister(VReg))
+        return None;
+      break;
+    default:
+      return None;
+    }
+  }
+  if (!MI || MI->getOpcode() != TargetOpcode::G_CONSTANT ||
+      (!MI->getOperand(1).isImm() && !MI->getOperand(1).isCImm()))
     return None;
 
-  if (MI->getOperand(1).isImm())
-    return MI->getOperand(1).getImm();
+  const MachineOperand &CstVal = MI->getOperand(1);
+  unsigned BitWidth = MRI.getType(MI->getOperand(0).getReg()).getSizeInBits();
+  APInt Val = CstVal.isImm() ? APInt(BitWidth, CstVal.getImm())
+                             : CstVal.getCImm()->getValue();
+  assert(Val.getBitWidth() == BitWidth &&
+         "Value bitwidth doesn't match definition type");
+  while (!SeenOpcodes.empty()) {
+    std::pair<unsigned, unsigned> OpcodeAndSize = SeenOpcodes.pop_back_val();
+    switch (OpcodeAndSize.first) {
+    case TargetOpcode::G_TRUNC:
+      Val = Val.trunc(OpcodeAndSize.second);
+      break;
+    case TargetOpcode::G_SEXT:
+      Val = Val.sext(OpcodeAndSize.second);
+      break;
+    case TargetOpcode::G_ZEXT:
+      Val = Val.zext(OpcodeAndSize.second);
+      break;
+    }
+  }
 
-  if (MI->getOperand(1).isCImm() &&
-      MI->getOperand(1).getCImm()->getBitWidth() <= 64)
-    return MI->getOperand(1).getCImm()->getSExtValue();
+  if (Val.getBitWidth() > 64)
+    return None;
 
-  return None;
+  return ValueAndVReg{Val.getSExtValue(), VReg};
 }
 
 const llvm::ConstantFP* llvm::getConstantFPVRegVal(unsigned VReg,

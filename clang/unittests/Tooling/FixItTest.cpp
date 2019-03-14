@@ -13,6 +13,7 @@
 using namespace clang;
 
 using tooling::fixit::getText;
+using tooling::fixit::getExtendedText;
 using tooling::fixit::createRemoval;
 using tooling::fixit::createReplacement;
 
@@ -75,6 +76,34 @@ TEST(FixItTest, getTextWithMacro) {
   };
   Visitor.runOver("#define FOO(x, y) (void)x; (void)y; foo(x, y);\n"
                   "void foo(int x, int y) { FOO(x,y) }");
+}
+
+TEST(FixItTest, getExtendedText) {
+  CallsVisitor Visitor;
+
+  Visitor.OnCall = [](CallExpr *CE, ASTContext *Context) {
+    EXPECT_EQ("foo(x, y);",
+              getExtendedText(*CE, tok::TokenKind::semi, *Context));
+
+    Expr *P0 = CE->getArg(0);
+    Expr *P1 = CE->getArg(1);
+    EXPECT_EQ("x", getExtendedText(*P0, tok::TokenKind::semi, *Context));
+    EXPECT_EQ("x,", getExtendedText(*P0, tok::TokenKind::comma, *Context));
+    EXPECT_EQ("y", getExtendedText(*P1, tok::TokenKind::semi, *Context));
+  };
+  Visitor.runOver("void foo(int x, int y) { foo(x, y); }");
+  Visitor.runOver("void foo(int x, int y) { if (true) foo(x, y); }");
+  Visitor.runOver("int foo(int x, int y) { if (true) return 3 + foo(x, y); }");
+  Visitor.runOver("void foo(int x, int y) { for (foo(x, y);;) ++x; }");
+  Visitor.runOver(
+      "bool foo(int x, int y) { for (;foo(x, y);) x = 1; return true; }");
+
+  Visitor.OnCall = [](CallExpr *CE, ASTContext *Context) {
+    EXPECT_EQ("foo()", getExtendedText(*CE, tok::TokenKind::semi, *Context));
+  };
+  Visitor.runOver("bool foo() { if (foo()) return true; return false; }");
+  Visitor.runOver("void foo() { int x; for (;; foo()) ++x; }");
+  Visitor.runOver("int foo() { return foo() + 3; }");
 }
 
 TEST(FixItTest, createRemoval) {

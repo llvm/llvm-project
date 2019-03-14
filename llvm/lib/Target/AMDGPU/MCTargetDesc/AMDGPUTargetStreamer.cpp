@@ -18,7 +18,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/BinaryFormat/MsgPackTypes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
@@ -51,12 +50,10 @@ bool AMDGPUTargetStreamer::EmitHSAMetadataV2(StringRef HSAMetadataString) {
 }
 
 bool AMDGPUTargetStreamer::EmitHSAMetadataV3(StringRef HSAMetadataString) {
-  std::shared_ptr<msgpack::Node> HSAMetadataRoot;
-  yaml::Input YIn(HSAMetadataString);
-  YIn >> HSAMetadataRoot;
-  if (YIn.error())
+  msgpack::Document HSAMetadataDoc;
+  if (!HSAMetadataDoc.fromYAML(HSAMetadataString))
     return false;
-  return EmitHSAMetadata(HSAMetadataRoot, false);
+  return EmitHSAMetadata(HSAMetadataDoc, false);
 }
 
 StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
@@ -213,15 +210,14 @@ bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
 }
 
 bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
-    std::shared_ptr<msgpack::Node> &HSAMetadataRoot, bool Strict) {
+    msgpack::Document &HSAMetadataDoc, bool Strict) {
   V3::MetadataVerifier Verifier(Strict);
-  if (!Verifier.verify(*HSAMetadataRoot))
+  if (!Verifier.verify(HSAMetadataDoc.getRoot()))
     return false;
 
   std::string HSAMetadataString;
   raw_string_ostream StrOS(HSAMetadataString);
-  yaml::Output YOut(StrOS);
-  YOut << HSAMetadataRoot;
+  HSAMetadataDoc.toYAML(StrOS);
 
   OS << '\t' << V3::AssemblerDirectiveBegin << '\n';
   OS << StrOS.str() << '\n';
@@ -481,16 +477,14 @@ bool AMDGPUTargetELFStreamer::EmitISAVersion(StringRef IsaVersionString) {
   return true;
 }
 
-bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
-    std::shared_ptr<msgpack::Node> &HSAMetadataRoot, bool Strict) {
+bool AMDGPUTargetELFStreamer::EmitHSAMetadata(msgpack::Document &HSAMetadataDoc,
+                                              bool Strict) {
   V3::MetadataVerifier Verifier(Strict);
-  if (!Verifier.verify(*HSAMetadataRoot))
+  if (!Verifier.verify(HSAMetadataDoc.getRoot()))
     return false;
 
   std::string HSAMetadataString;
-  raw_string_ostream StrOS(HSAMetadataString);
-  msgpack::Writer MPWriter(StrOS);
-  HSAMetadataRoot->write(MPWriter);
+  HSAMetadataDoc.writeToBlob(HSAMetadataString);
 
   // Create two labels to mark the beginning and end of the desc field
   // and a MCExpr to calculate the size of the desc field.
@@ -504,7 +498,7 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
   EmitNote(ElfNote::NoteNameV3, DescSZ, ELF::NT_AMDGPU_METADATA,
            [&](MCELFStreamer &OS) {
              OS.EmitLabel(DescBegin);
-             OS.EmitBytes(StrOS.str());
+             OS.EmitBytes(HSAMetadataString);
              OS.EmitLabel(DescEnd);
            });
   return true;

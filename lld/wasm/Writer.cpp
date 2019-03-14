@@ -28,6 +28,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Path.h"
 
 #include <cstdarg>
 #include <map>
@@ -502,7 +503,9 @@ void Writer::createDylinkSection() {
   writeUleb128(OS, MemAlign, "MemAlign");
   writeUleb128(OS, IndirectFunctions.size(), "TableSize");
   writeUleb128(OS, 0, "TableAlign");
-  writeUleb128(OS, 0, "Needed");  // TODO: Support "needed" shared libraries
+  writeUleb128(OS, Symtab->SharedFiles.size(), "Needed");
+  for (auto *SO : Symtab->SharedFiles)
+    writeStr(OS, llvm::sys::path::filename(SO->getName()), "so name");
 }
 
 // Create the custom "linking" section containing linker metadata.

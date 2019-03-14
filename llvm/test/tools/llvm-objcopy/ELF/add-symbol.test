@@ -20,7 +20,8 @@
 # RUN: not llvm-objcopy --add-symbol='test=:0' %t %t5 2>&1 | FileCheck %s --check-prefix=ERR2
 # RUN: not llvm-objcopy --add-symbol='test=foo:' %t %t6 2>&1 | FileCheck %s --check-prefix=ERR2
 # RUN: not llvm-objcopy --add-symbol='test=0,cool' %t %t7 2>&1 | FileCheck %s --check-prefix=ERR3
-# RUN: not llvm-objcopy --add-symbol='test=xyz' %t %t8 2>&1 | FileCheck %s --check-prefix=ERR4
+# RUN: not llvm-objcopy --add-symbol='test=0,foo,bar' %t %t8 2>&1 | FileCheck %s --check-prefix=ERR4
+# RUN: not llvm-objcopy --add-symbol='test=xyz' %t %t9 2>&1 | FileCheck %s --check-prefix=ERR5
 
 !ELF
 FileHeader:
@@ -71,6 +72,7 @@ ProgramHeaders:
 
 # ERR1: error: bad format for --add-symbol, missing '=' after 'test'
 # ERR2: error: bad format for --add-symbol, missing section name or symbol value
-# ERR3: error: unsupported flag 'cool' for --add-symbol
-# ERR4: error: bad symbol value: 'xyz'
+# ERR3: error: unsupported flag for --add-symbol: 'cool'
+# ERR4: error: unsupported flags for --add-symbol: 'foo', 'bar'
+# ERR5: error: bad symbol value: 'xyz'
 

@@ -57,6 +57,11 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class FunctionCaller : public Expression {
 public:
+  /// LLVM-style RTTI support.
+  static bool classof(const Expression *E) {
+    return E->getKind() == eKindFunctionCaller;
+  }
+  
   //------------------------------------------------------------------
   /// Constructor
   ///

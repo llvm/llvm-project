@@ -18,12 +18,20 @@ namespace tooling {
 namespace fixit {
 
 namespace internal {
-StringRef getText(SourceRange Range, const ASTContext &Context) {
-  return Lexer::getSourceText(CharSourceRange::getTokenRange(Range),
-                              Context.getSourceManager(),
+StringRef getText(CharSourceRange Range, const ASTContext &Context) {
+  return Lexer::getSourceText(Range, Context.getSourceManager(),
                               Context.getLangOpts());
 }
-} // end namespace internal
+
+CharSourceRange maybeExtendRange(CharSourceRange Range, tok::TokenKind Next,
+                                 ASTContext &Context) {
+  Optional<Token> Tok = Lexer::findNextToken(
+      Range.getEnd(), Context.getSourceManager(), Context.getLangOpts());
+  if (!Tok || !Tok->is(Next))
+    return Range;
+  return CharSourceRange::getTokenRange(Range.getBegin(), Tok->getLocation());
+}
+} // namespace internal
 
 } // end namespace fixit
 } // end namespace tooling

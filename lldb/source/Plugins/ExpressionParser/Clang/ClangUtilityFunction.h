@@ -36,6 +36,11 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class ClangUtilityFunction : public UtilityFunction {
 public:
+  /// LLVM-style RTTI support.
+  static bool classof(const Expression *E) {
+    return E->getKind() == eKindClangUtilityFunction;
+  }
+
   class ClangUtilityFunctionHelper : public ClangExpressionHelper {
   public:
     ClangUtilityFunctionHelper() {}

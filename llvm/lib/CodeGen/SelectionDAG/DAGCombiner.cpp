@@ -1709,7 +1709,7 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
   if (OptLevel == CodeGenOpt::None)
     return SDValue();
 
-  // If this is used only a single token factor, we should make sure we have a
+  // If the sole user is a token factor, we should make sure we have a
   // chance to merge them together. This prevents TF chains from inhibiting
   // optimizations.
   if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::TokenFactor)
