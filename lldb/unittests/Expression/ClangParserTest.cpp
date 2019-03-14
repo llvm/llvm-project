@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/Version.h"
+
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Host/FileSystem.h"
@@ -29,32 +31,48 @@ struct ClangHostTest : public testing::Test {
 };
 } // namespace
 
-#ifdef __APPLE__
-static std::string ComputeClangDir(std::string lldb_shlib_path,
-                                   bool verify = false) {
+static std::string ComputeClangResourceDir(std::string lldb_shlib_path,
+                                           bool verify = false) {
   FileSpec clang_dir;
   FileSpec lldb_shlib_spec(lldb_shlib_path);
-  ComputeClangDirectory(lldb_shlib_spec, clang_dir, verify);
+  ComputeClangResourceDirectory(lldb_shlib_spec, clang_dir, verify);
   return clang_dir.GetPath();
 }
 
+TEST_F(ClangHostTest, ComputeClangResourceDirectory) {
+#if !defined(_WIN32)
+  std::string path_to_liblldb = "/foo/bar/lib/";
+  std::string path_to_clang_dir = "/foo/bar/lib/lldb/clang";
+#else
+  std::string path_to_liblldb = "C:\\foo\\bar\\lib";
+  std::string path_to_clang_dir = "C:\\foo\\bar\\lib\\lldb\\clang";
+#endif
+  EXPECT_EQ(ComputeClangResourceDir(path_to_liblldb), path_to_clang_dir);
+
+  // The path doesn't really exist, so setting verify to true should make
+  // ComputeClangResourceDir to not give you path_to_clang_dir.
+  EXPECT_NE(ComputeClangResourceDir(path_to_liblldb, true),
+            ComputeClangResourceDir(path_to_liblldb));
+}
+
+#if defined(__APPLE__)
 TEST_F(ClangHostTest, MacOSX) {
   // This returns whatever the POSIX fallback returns.
   std::string posix = "/usr/lib/liblldb.dylib";
-  EXPECT_FALSE(ComputeClangDir(posix).empty());
+  EXPECT_FALSE(ComputeClangResourceDir(posix).empty());
 
   std::string build =
       "/lldb-macosx-x86_64/Library/Frameworks/LLDB.framework/Versions/A";
   std::string build_clang =
       "/lldb-macosx-x86_64/Library/Frameworks/LLDB.framework/Resources/Clang";
-  EXPECT_EQ(ComputeClangDir(build), build_clang);
+  EXPECT_EQ(ComputeClangResourceDir(build), build_clang);
 
   std::string xcode = "/Applications/Xcode.app/Contents/SharedFrameworks/"
                       "LLDB.framework/Versions/A";
   std::string xcode_clang =
       "/Applications/Xcode.app/Contents/Developer/Toolchains/"
       "XcodeDefault.xctoolchain/usr/lib/swift/clang";
-  EXPECT_EQ(ComputeClangDir(xcode), xcode_clang);
+  EXPECT_EQ(ComputeClangResourceDir(xcode), xcode_clang);
 
   std::string toolchain =
       "/Applications/Xcode.app/Contents/Developer/Toolchains/"
@@ -63,17 +81,17 @@ TEST_F(ClangHostTest, MacOSX) {
   std::string toolchain_clang =
       "/Applications/Xcode.app/Contents/Developer/Toolchains/"
       "Swift-4.1-development-snapshot.xctoolchain/usr/lib/swift/clang";
-  EXPECT_EQ(ComputeClangDir(toolchain), toolchain_clang);
+  EXPECT_EQ(ComputeClangResourceDir(toolchain), toolchain_clang);
 
   std::string cltools = "/Library/Developer/CommandLineTools/Library/"
                         "PrivateFrameworks/LLDB.framework";
   std::string cltools_clang =
       "/Library/Developer/CommandLineTools/Library/PrivateFrameworks/"
       "LLDB.framework/Resources/Clang";
-  EXPECT_EQ(ComputeClangDir(cltools), cltools_clang);
+  EXPECT_EQ(ComputeClangResourceDir(cltools), cltools_clang);
 
   // Test that a bogus path is detected.
-  EXPECT_NE(ComputeClangDir(GetInputFilePath(xcode), true),
-            ComputeClangDir(GetInputFilePath(xcode)));
+  EXPECT_NE(ComputeClangResourceDir(GetInputFilePath(xcode), true),
+            ComputeClangResourceDir(GetInputFilePath(xcode)));
 }
-#endif
+#endif // __APPLE__

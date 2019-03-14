@@ -25,7 +25,8 @@ class TestPaths(TestBase):
                           lldb.ePathTypePythonDir,
                           lldb.ePathTypeLLDBSystemPlugins,
                           lldb.ePathTypeLLDBUserPlugins,
-                          lldb.ePathTypeLLDBTempSystemDir]
+                          lldb.ePathTypeLLDBTempSystemDir,
+                          lldb.ePathTypeClangDir]
 
         for path_type in dir_path_types:
             f = lldb.SBHostOS.GetLLDBPath(path_type)
