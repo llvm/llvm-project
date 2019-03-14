@@ -58,13 +58,6 @@ DataVisualization::GetSyntheticChildren(ValueObject &valobj,
 }
 #endif
 
-#ifndef LLDB_DISABLE_PYTHON
-lldb::SyntheticChildrenSP DataVisualization::GetSyntheticChildrenForType(
-    lldb::TypeNameSpecifierImplSP type_sp) {
-  return GetFormatManager().GetSyntheticChildrenForType(type_sp);
-}
-#endif
-
 lldb::TypeFilterImplSP
 DataVisualization::GetFilterForType(lldb::TypeNameSpecifierImplSP type_sp) {
   return GetFormatManager().GetFilterForType(type_sp);
