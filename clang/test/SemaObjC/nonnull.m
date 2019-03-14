@@ -125,3 +125,9 @@ void PR18795_helper() {
 }
 
 void (^PR23117)(int *) = ^(int *p1) __attribute__((nonnull(1))) {};
+
+typedef int *intptr;
+#pragma clang assume_nonnull begin
+intptr a, b;
+intptr c, (*d)();
+#pragma clang assume_nonnull end
