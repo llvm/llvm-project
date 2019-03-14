@@ -115,7 +115,6 @@ int main(int, char**)
     signed_test<int16_t>();
     signed_test<int32_t>();
     signed_test<int64_t>();
-    signed_test<__int128_t>();
 
     unsigned_test<unsigned char>();
     unsigned_test<unsigned short>();
@@ -127,7 +126,11 @@ int main(int, char**)
     unsigned_test<uint16_t>();
     unsigned_test<uint32_t>();
     unsigned_test<uint64_t>();
+
+#ifndef _LIBCPP_HAS_NO_INT128
     unsigned_test<__uint128_t>();
+    signed_test<__int128_t>();
+#endif
 
 //     int_test<char>();
     signed_test<ptrdiff_t>();
