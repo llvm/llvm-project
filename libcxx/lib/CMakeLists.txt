@@ -234,7 +234,7 @@ if (LIBCXX_ENABLE_STATIC)
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "c++"
   )
-  cxx_set_common_defines(cxx_shared)
+  cxx_set_common_defines(cxx_static)
 
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
     append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility=hidden)
