@@ -1,15 +1,13 @@
 // RUN: %clang_tsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: dispatch
-
 // TODO(yln): Deadlocks while gcd-apply.mm does not. What's the difference
 //            between C and Obj-C compiler?
 // REQUIRES: disable
 
 #include <dispatch/dispatch.h>
 
-#include "test.h"
+#include "../test.h"
 
 long global;
 long array[2];
