@@ -381,20 +381,6 @@ FormatManager::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
 }
 #endif
 
-#ifndef LLDB_DISABLE_PYTHON
-lldb::SyntheticChildrenSP FormatManager::GetSyntheticChildrenForType(
-    lldb::TypeNameSpecifierImplSP type_sp) {
-  if (!type_sp)
-    return lldb::SyntheticChildrenSP();
-  lldb::TypeFilterImplSP filter_sp = GetFilterForType(type_sp);
-  lldb::ScriptedSyntheticChildrenSP synth_sp = GetSyntheticForType(type_sp);
-  if (filter_sp->GetRevision() > synth_sp->GetRevision())
-    return lldb::SyntheticChildrenSP(filter_sp.get());
-  else
-    return lldb::SyntheticChildrenSP(synth_sp.get());
-}
-#endif
-
 lldb::TypeValidatorImplSP
 FormatManager::GetValidatorForType(lldb::TypeNameSpecifierImplSP type_sp) {
   if (!type_sp)
