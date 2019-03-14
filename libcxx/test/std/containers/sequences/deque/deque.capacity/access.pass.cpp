@@ -19,11 +19,13 @@
 //
 //       reference back();
 // const_reference back() const;
+// libc++ marks these as 'noexcept'
 
 #include <deque>
 #include <cassert>
 
 #include "min_allocator.h"
+#include "test_macros.h"
 
 template <class C>
 C
@@ -50,7 +52,10 @@ make(int size, int start = 0 )
 int main(int, char**)
 {
     {
-        std::deque<int> c = make<std::deque<int> >(10);
+        typedef std::deque<int> C;
+        C c = make<std::deque<int> >(10);
+        LIBCPP_ASSERT_NOEXCEPT(c[0]);
+        ASSERT_SAME_TYPE(C::reference, decltype(c[0]));
         for (int i = 0; i < 10; ++i)
             assert(c[i] == i);
         for (int i = 0; i < 10; ++i)
@@ -59,7 +64,10 @@ int main(int, char**)
         assert(c.back() == 9);
     }
     {
-        const std::deque<int> c = make<std::deque<int> >(10);
+        typedef std::deque<int> C;
+        const C c = make<std::deque<int> >(10);
+        LIBCPP_ASSERT_NOEXCEPT(c[0]);
+        ASSERT_SAME_TYPE(C::const_reference, decltype(c[0]));
         for (int i = 0; i < 10; ++i)
             assert(c[i] == i);
         for (int i = 0; i < 10; ++i)
@@ -69,7 +77,10 @@ int main(int, char**)
     }
 #if TEST_STD_VER >= 11
     {
-        std::deque<int, min_allocator<int>> c = make<std::deque<int, min_allocator<int>> >(10);
+        typedef std::deque<int, min_allocator<int>> C;
+        C c = make<std::deque<int, min_allocator<int>> >(10);
+        LIBCPP_ASSERT_NOEXCEPT(c[0]);
+        ASSERT_SAME_TYPE(C::reference, decltype(c[0]));
         for (int i = 0; i < 10; ++i)
             assert(c[i] == i);
         for (int i = 0; i < 10; ++i)
@@ -78,7 +89,10 @@ int main(int, char**)
         assert(c.back() == 9);
     }
     {
-        const std::deque<int, min_allocator<int>> c = make<std::deque<int, min_allocator<int>> >(10);
+        typedef std::deque<int, min_allocator<int>> C;
+        const C c = make<std::deque<int, min_allocator<int>> >(10);
+        LIBCPP_ASSERT_NOEXCEPT(c[0]);
+        ASSERT_SAME_TYPE(C::const_reference, decltype(c[0]));
         for (int i = 0; i < 10; ++i)
             assert(c[i] == i);
         for (int i = 0; i < 10; ++i)
