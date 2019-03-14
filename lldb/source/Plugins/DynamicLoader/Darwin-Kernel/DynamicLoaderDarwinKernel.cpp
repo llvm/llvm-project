@@ -767,24 +767,24 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
 
   Target &target = process->GetTarget();
 
-  // If we don't have / can't create a memory module for this kext, don't try
-  // to load it - we won't have the correct segment load addresses.
-  if (!ReadMemoryModule(process)) {
-    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
-    if (log)
-      log->Printf("Unable to read '%s' from memory at address 0x%" PRIx64
-                  " to get the segment load addresses.",
-                  m_name.c_str(), m_load_address);
-    return false;
+  // kexts will have a uuid from the table.
+  // for the kernel, we'll need to read the load commands out of memory to get it.
+  if (m_uuid.IsValid() == false) {
+    if (ReadMemoryModule(process) == false) {
+      Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+      if (log)
+        log->Printf("Unable to read '%s' from memory at address 0x%" PRIx64
+                    " to get the segment load addresses.",
+                    m_name.c_str(), m_load_address);
+      return false;
+    }
   }
 
-  bool uuid_is_valid = m_uuid.IsValid();
-
-  if (IsKernel() && uuid_is_valid && m_memory_module_sp.get()) {
+  if (IsKernel() && m_uuid.IsValid()) {
     Stream *s = target.GetDebugger().GetOutputFile().get();
     if (s) {
       s->Printf("Kernel UUID: %s\n",
-                m_memory_module_sp->GetUUID().GetAsString().c_str());
+                m_uuid.GetAsString().c_str());
       s->Printf("Load Address: 0x%" PRIx64 "\n", m_load_address);
     }
   }
@@ -796,7 +796,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     m_module_sp = target_images.FindModule(m_uuid);
 
     // Search for the kext on the local filesystem via the UUID
-    if (!m_module_sp && uuid_is_valid) {
+    if (!m_module_sp && m_uuid.IsValid()) {
       ModuleSpec module_spec;
       module_spec.GetUUID() = m_uuid;
       module_spec.GetArchitecture() = target.GetArchitecture();
@@ -858,13 +858,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     // images. If we also have a memory module, require that they have matching
     // UUIDs
     if (m_module_sp) {
-      bool uuid_match_ok = true;
-      if (m_memory_module_sp) {
-        if (m_module_sp->GetUUID() != m_memory_module_sp->GetUUID()) {
-          uuid_match_ok = false;
-        }
-      }
-      if (uuid_match_ok) {
+      if (m_uuid.IsValid() && m_module_sp->GetUUID() == m_uuid) {
         target.GetImages().AppendIfNeeded(m_module_sp);
         if (IsKernel() &&
             target.GetExecutableModulePointer() != m_module_sp.get()) {
@@ -873,6 +867,11 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       }
     }
   }
+
+  // If we've found a binary, read the load commands out of memory so we
+  // can set the segment load addresses.
+  if (m_module_sp)
+    ReadMemoryModule (process);
 
   static ConstString g_section_name_LINKEDIT("__LINKEDIT");
 
