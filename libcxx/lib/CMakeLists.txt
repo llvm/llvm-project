@@ -207,6 +207,7 @@ if (LIBCXX_ENABLE_SHARED)
       OUTPUT_NAME   "c++"
       VERSION       "${LIBCXX_ABI_VERSION}.0"
       SOVERSION     "${LIBCXX_ABI_VERSION}"
+      DEFINE_SYMBOL ""
   )
   cxx_set_common_defines(cxx_shared)
 
