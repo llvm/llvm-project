@@ -1,4 +1,4 @@
-# REQUIRES: darwin
+# REQUIRES: system-darwin
 
 # This testcase causes the scratch context to get destroyed by a
 # conflict that is triggered via dynamic type resolution. The conflict

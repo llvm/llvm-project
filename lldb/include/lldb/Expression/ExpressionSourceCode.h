@@ -43,7 +43,6 @@ public:
   bool GetText(std::string &text, lldb::LanguageType wrapping_language,
                uint32_t language_flags,
                const EvaluateExpressionOptions &options,
-               const Expression::SwiftGenericInfo &generic_info,
                ExecutionContext &exe_ctx, uint32_t &first_body_line) const;
 
   static bool

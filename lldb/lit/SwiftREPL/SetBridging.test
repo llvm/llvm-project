@@ -1,6 +1,6 @@
 // -*- mode: swift; -*-
 // Test formatters on bridged sets in the REPL.
-// REQUIRES: darwin
+// REQUIRES: system-darwin
 // RUN: %lldb --repl < %s | FileCheck %s --check-prefix=SET
 
 import Foundation

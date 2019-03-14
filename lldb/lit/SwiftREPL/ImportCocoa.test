@@ -1,5 +1,5 @@
 // Test that importing Cocoa works.
-// REQUIRES: darwin
+// REQUIRES: system-darwin
 
 // RUN: %lldb --repl < %s 2>&1 | FileCheck %s
 

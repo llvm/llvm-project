@@ -141,7 +141,6 @@ public:
   static void WrapExpression(Stream &wrapped_stream, const char *text,
                              uint32_t language_flags,
                              const EvaluateExpressionOptions &options,
-                             const Expression::SwiftGenericInfo &generic_info,
                              llvm::StringRef os_version,
                              uint32_t &first_body_line);
 
