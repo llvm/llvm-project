@@ -50,13 +50,13 @@
 
 // SYMBOL: Symbol {
 // SYMBOL:   Name: __stop_zed1
-// SYMBOL:   Value: 0x2010
+// SYMBOL:   Value: 0x3010
 // SYMBOL:   STV_PROTECTED
 // SYMBOL:   Section: zed1
 // SYMBOL: }
 // SYMBOL: Symbol {
 // SYMBOL:   Name: __stop_zed2
-// SYMBOL:   Value: 0x2020
+// SYMBOL:   Value: 0x3020
 // SYMBOL:   STV_PROTECTED
 // SYMBOL:   Section: zed2
 // SYMBOL: }

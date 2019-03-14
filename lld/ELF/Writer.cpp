@@ -725,16 +725,15 @@ static bool isRelroSection(const OutputSection *Sec) {
 // * It is easy to check if a give branch was taken.
 // * It is easy two see how similar two ranks are (see getRankProximity).
 enum RankFlags {
-  RF_NOT_ADDR_SET = 1 << 18,
-  RF_NOT_ALLOC = 1 << 17,
-  RF_NOT_INTERP = 1 << 16,
-  RF_NOT_NOTE = 1 << 15,
-  RF_WRITE = 1 << 14,
-  RF_EXEC_WRITE = 1 << 13,
-  RF_EXEC = 1 << 12,
-  RF_RODATA = 1 << 11,
-  RF_NON_TLS_BSS = 1 << 10,
-  RF_NON_TLS_BSS_RO = 1 << 9,
+  RF_NOT_ADDR_SET = 1 << 17,
+  RF_NOT_ALLOC = 1 << 16,
+  RF_NOT_INTERP = 1 << 15,
+  RF_NOT_NOTE = 1 << 14,
+  RF_WRITE = 1 << 13,
+  RF_EXEC_WRITE = 1 << 12,
+  RF_EXEC = 1 << 11,
+  RF_RODATA = 1 << 10,
+  RF_NOT_RELRO = 1 << 9,
   RF_NOT_TLS = 1 << 8,
   RF_BSS = 1 << 7,
   RF_PPC_NOT_TOCBSS = 1 << 6,
@@ -803,37 +802,26 @@ static unsigned getSectionRank(const OutputSection *Sec) {
     Rank |= RF_RODATA;
   }
 
+  // Place RelRo sections first. After considering SHT_NOBITS below, the
+  // ordering is PT_LOAD(PT_GNU_RELRO(.data.rel.ro .bss.rel.ro) | .data .bss),
+  // where | marks where page alignment happens. An alternative ordering is
+  // PT_LOAD(.data | PT_GNU_RELRO( .data.rel.ro .bss.rel.ro) | .bss), but it may
+  // waste more bytes due to 2 alignment places.
+  if (!isRelroSection(Sec))
+    Rank |= RF_NOT_RELRO;
+
   // If we got here we know that both A and B are in the same PT_LOAD.
-
-  bool IsTls = Sec->Flags & SHF_TLS;
-  bool IsNoBits = Sec->Type == SHT_NOBITS;
-
-  // The first requirement we have is to put (non-TLS) nobits sections last. The
-  // reason is that the only thing the dynamic linker will see about them is a
-  // p_memsz that is larger than p_filesz. Seeing that it zeros the end of the
-  // PT_LOAD, so that has to correspond to the nobits sections.
-  bool IsNonTlsNoBits = IsNoBits && !IsTls;
-  if (IsNonTlsNoBits)
-    Rank |= RF_NON_TLS_BSS;
-
-  // We place nobits RelRo sections before plain r/w ones, and non-nobits RelRo
-  // sections after r/w ones, so that the RelRo sections are contiguous.
-  bool IsRelRo = isRelroSection(Sec);
-  if (IsNonTlsNoBits && !IsRelRo)
-    Rank |= RF_NON_TLS_BSS_RO;
-  if (!IsNonTlsNoBits && IsRelRo)
-    Rank |= RF_NON_TLS_BSS_RO;
 
   // The TLS initialization block needs to be a single contiguous block in a R/W
   // PT_LOAD, so stick TLS sections directly before the other RelRo R/W
-  // sections. The TLS NOBITS sections are placed here as they don't take up
-  // virtual address space in the PT_LOAD.
-  if (!IsTls)
+  // sections. Since p_filesz can be less than p_memsz, place NOBITS sections
+  // after PROGBITS.
+  if (!(Sec->Flags & SHF_TLS))
     Rank |= RF_NOT_TLS;
 
-  // Within the TLS initialization block, the non-nobits sections need to appear
-  // first.
-  if (IsNoBits)
+  // Within TLS sections, or within other RelRo sections, or within non-RelRo
+  // sections, place non-NOBITS sections first.
+  if (Sec->Type == SHT_NOBITS)
     Rank |= RF_BSS;
 
   // Some architectures have additional ordering restrictions for sections

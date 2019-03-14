@@ -52,7 +52,7 @@ _start:
 // DSO-NEXT:     1020:       04 e0 2d e5     str     lr, [sp, #-4]!
 // (0x1024 + 8) + (0 RoR 12) + (0 RoR 20) + (0xfdc) = 0x2008 = .got.plt[3]
 // DSO-NEXT:     1024:       00 e6 8f e2     add     lr, pc, #0, #12
-// DSO-NEXT:     1028:       00 ea 8e e2     add     lr, lr, #0, #20
+// DSO-NEXT:     1028:       01 ea 8e e2     add     lr, lr, #4096
 // DSO-NEXT:     102c:       dc ff be e5     ldr     pc, [lr, #4060]!
 // DSO: $d:
 // DSO-NEXT:     1030:       d4 d4 d4 d4     .word   0xd4d4d4d4
@@ -62,21 +62,21 @@ _start:
 // DSO: $a:
 // (0x1040 + 8) + (0 RoR 12) + (0 RoR 20) + (0xfc4) = 0x200c
 // DSO-NEXT:     1040:       00 c6 8f e2     add     r12, pc, #0, #12
-// DSO-NEXT:     1044:       00 ca 8c e2     add     r12, r12, #0, #20
+// DSO-NEXT:     1044:       01 ca 8c e2     add     r12, r12, #4096
 // DSO-NEXT:     1048:       c4 ff bc e5     ldr     pc, [r12, #4036]!
 // DSO: $d:
 // DSO-NEXT:     104c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO: $a:
 // (0x1050 + 8) + (0 RoR 12) + (0 RoR 20) + (0xfb8) = 0x2010
 // DSO-NEXT:     1050:       00 c6 8f e2     add     r12, pc, #0, #12
-// DSO-NEXT:     1054:       00 ca 8c e2     add     r12, r12, #0, #20
+// DSO-NEXT:     1054:       01 ca 8c e2     add     r12, r12, #4096
 // DSO-NEXT:     1058:       b8 ff bc e5     ldr     pc, [r12, #4024]!
 // DSO: $d:
 // DSO-NEXT:     105c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO: $a:
 // (0x1060 + 8) + (0 RoR 12) + (0 RoR 20) + (0xfac) = 0x2014
 // DSO-NEXT:     1060:       00 c6 8f e2     add     r12, pc, #0, #12
-// DSO-NEXT:     1064:       00 ca 8c e2     add     r12, r12, #0, #20
+// DSO-NEXT:     1064:       01 ca 8c e2     add     r12, r12, #4096
 // DSO-NEXT:     1068:       ac ff bc e5     ldr     pc, [r12, #4012]!
 // DSO: $d:
 // DSO-NEXT:     106c:       d4 d4 d4 d4     .word   0xd4d4d4d4
@@ -88,7 +88,7 @@ _start:
 // DSOREL-NEXT:      SHF_ALLOC
 // DSOREL-NEXT:      SHF_WRITE
 // DSOREL-NEXT:    ]
-// DSOREL-NEXT:    Address: 0x2000
+// DSOREL-NEXT:    Address: 0x3000
 // DSOREL-NEXT:    Offset:
 // DSOREL-NEXT:    Size: 24
 // DSOREL-NEXT:    Link:
@@ -97,9 +97,9 @@ _start:
 // DSOREL-NEXT:    EntrySize:
 // DSOREL:  Relocations [
 // DSOREL-NEXT:  Section {{.*}} .rel.plt {
-// DSOREL-NEXT:    0x200C R_ARM_JUMP_SLOT func1 0x0
-// DSOREL-NEXT:    0x2010 R_ARM_JUMP_SLOT func2 0x0
-// DSOREL-NEXT:    0x2014 R_ARM_JUMP_SLOT func3 0x0
+// DSOREL-NEXT:    0x300C R_ARM_JUMP_SLOT func1 0x0
+// DSOREL-NEXT:    0x3010 R_ARM_JUMP_SLOT func2 0x0
+// DSOREL-NEXT:    0x3014 R_ARM_JUMP_SLOT func3 0x0
 
 // Test a large separation between the .plt and .got.plt
 // The .got.plt and .plt displacement is large but still within the range

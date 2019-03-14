@@ -4,8 +4,8 @@
 // RUN: llvm-readelf -S %t.so | FileCheck %s -check-prefix=SECTION
 // RUN: llvm-objdump -d %t.so | FileCheck %s
 
-// SECTION: .dynamic DYNAMIC 0000000000003000
-// SECTION: .got PROGBITS 0000000000003070 003070 000000
+// SECTION: .dynamic DYNAMIC 0000000000002000
+// SECTION: .got PROGBITS 0000000000002070 002070 000000
 
 // All the _GLOBAL_OFFSET_TABLE_ occurrences below refer to the address
 // of GOT base, not the address of the symbol _GLOBAL_OFFSET_TABLE_. These
@@ -20,9 +20,9 @@
 // extern long _DYNAMIC[] __attribute__((visibility("hidden")));
 // long* dynamic() { return _DYNAMIC; }
 
-// 0x3070 (.got end) - 0x1007 = 8297
-// 0x3000 (_DYNAMIC) - 0x3070 (.got end) = -112
-// CHECK:      1000: {{.*}} leaq 8297(%rip), %rdx
+// 0x2070 (.got end) - 0x1007 = 4201
+// 0x2000 (_DYNAMIC) - 0x2070 (.got end) = -112
+// CHECK:      1000: {{.*}} leaq 4201(%rip), %rdx
 // CHECK-NEXT: 1007: {{.*}} movabsq $-112, %rax
 .global dynamic
 dynamic:
