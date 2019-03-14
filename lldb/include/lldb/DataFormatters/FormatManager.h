@@ -129,11 +129,6 @@ public:
   GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp);
 #endif
 
-#ifndef LLDB_DISABLE_PYTHON
-  lldb::SyntheticChildrenSP
-  GetSyntheticChildrenForType(lldb::TypeNameSpecifierImplSP type_sp);
-#endif
-
   lldb::TypeValidatorImplSP
   GetValidatorForType(lldb::TypeNameSpecifierImplSP type_sp);
 
