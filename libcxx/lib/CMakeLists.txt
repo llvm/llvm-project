@@ -166,14 +166,7 @@ if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
   endif()
 endif()
 
-split_list(LIBCXX_COMPILE_FLAGS)
-split_list(LIBCXX_LINK_FLAGS)
-
-macro(cxx_object_library name)
-  cmake_parse_arguments(ARGS "" "" "DEFINES;FLAGS" ${ARGN})
-
-  # Add an object library that contains the compiled source files.
-  add_library(${name} OBJECT ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+function(cxx_set_common_defines name)
   if(LIBCXX_CXX_ABI_HEADER_TARGET)
     add_dependencies(${name} ${LIBCXX_CXX_ABI_HEADER_TARGET})
   endif()
@@ -199,50 +192,28 @@ macro(cxx_object_library name)
                                  # in printf, scanf.
                                  _CRT_STDIO_ISO_WIDE_SPECIFIERS)
   endif()
+endfunction()
 
-  if(ARGS_DEFINES)
-    target_compile_definitions(${name} PRIVATE ${ARGS_DEFINES})
-  endif()
-
-  set_target_properties(${name}
-    PROPERTIES
-      COMPILE_FLAGS ${LIBCXX_COMPILE_FLAGS}
-  )
-
-  if(ARGS_FLAGS)
-    target_compile_options(${name} PRIVATE ${ARGS_FLAGS})
-  endif()
-endmacro()
-
-if(LIBCXX_HERMETIC_STATIC_LIBRARY)
-  append_flags_if_supported(CXX_STATIC_OBJECTS_FLAGS -fvisibility=hidden)
-  append_flags_if_supported(CXX_STATIC_OBJECTS_FLAGS -fvisibility-global-new-delete-hidden)
-  cxx_object_library(cxx_static_objects
-    DEFINES _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS
-    FLAGS ${CXX_STATIC_OBJECTS_FLAGS})
-  cxx_object_library(cxx_shared_objects)
-  set(cxx_static_sources $<TARGET_OBJECTS:cxx_static_objects>)
-  set(cxx_shared_sources $<TARGET_OBJECTS:cxx_shared_objects>)
-else()
-  cxx_object_library(cxx_objects)
-  set(cxx_static_sources $<TARGET_OBJECTS:cxx_objects>)
-  set(cxx_shared_sources $<TARGET_OBJECTS:cxx_objects>)
-endif()
+split_list(LIBCXX_COMPILE_FLAGS)
+split_list(LIBCXX_LINK_FLAGS)
 
 # Build the shared library.
 if (LIBCXX_ENABLE_SHARED)
-  add_library(cxx_shared SHARED ${cxx_shared_sources})
+  add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxx_shared)
   endif()
   target_link_libraries(cxx_shared PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
     PROPERTIES
+      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "c++"
       VERSION       "${LIBCXX_ABI_VERSION}.0"
       SOVERSION     "${LIBCXX_ABI_VERSION}"
   )
+  cxx_set_common_defines(cxx_shared)
+
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
   if (LIBCXX_INSTALL_SHARED_LIBRARY)
     list(APPEND LIBCXX_INSTALL_TARGETS "cxx_shared")
@@ -258,14 +229,24 @@ endif()
 
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
-  add_library(cxx_static STATIC ${cxx_static_sources})
+  add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_link_libraries(cxx_static PRIVATE ${LIBCXX_LIBRARIES})
   set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
   set_target_properties(cxx_static
     PROPERTIES
+      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "c++"
   )
+  cxx_set_common_defines(cxx_shared)
+
+  if (LIBCXX_HERMETIC_STATIC_LIBRARY)
+    append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility=hidden)
+    append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
+    target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
+    target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+  endif()
+
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
   if (LIBCXX_INSTALL_STATIC_LIBRARY)
     list(APPEND LIBCXX_INSTALL_TARGETS "cxx_static")
