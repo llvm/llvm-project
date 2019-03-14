@@ -413,10 +413,12 @@ private:
     if (I[1]->First->isOneOf(tok::semi, tok::kw_if, tok::kw_for, tok::kw_while,
                              TT_LineComment))
       return 0;
-    // Only inline simple if's (no nested if or else).
-    if (I + 2 != E && Line.startsWith(tok::kw_if) &&
-        I[2]->First->is(tok::kw_else))
-      return 0;
+    // Only inline simple if's (no nested if or else), unless specified
+    if (Style.AllowShortIfStatementsOnASingleLine != FormatStyle::SIS_Always) {
+      if (I + 2 != E && Line.startsWith(tok::kw_if) &&
+          I[2]->First->is(tok::kw_else))
+        return 0;
+    }
     return 1;
   }
 

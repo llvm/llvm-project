@@ -473,12 +473,13 @@ struct St {
   ~St() {}
 };
 
-void array_func(int n, float a[n], St s[2]) {
+void array_func(int n, float a[n], St s[2], int(& p)[1]) {
 // ARRAY: call i8* @__kmpc_omp_task_alloc(
 // ARRAY: call i32 @__kmpc_omp_task(
 // ARRAY: store float** %{{.+}}, float*** %{{.+}},
 // ARRAY: store %struct.St** %{{.+}}, %struct.St*** %{{.+}},
-#pragma omp task firstprivate(a, s)
+// ARRAY: store [1 x i32]* %{{.+}}, [1 x i32]** %{{.+}},
+#pragma omp task firstprivate(a, s, p)
   ;
 }
 #endif

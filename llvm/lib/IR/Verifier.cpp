@@ -4500,11 +4500,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
            Call);
 
     Value *Ptr = Call.getArgOperand(0);
-    // Value *Alignment = Call.getArgOperand(1);
+    ConstantInt *Alignment = cast<ConstantInt>(Call.getArgOperand(1));
     Value *Mask = Call.getArgOperand(2);
     Value *PassThru = Call.getArgOperand(3);
     Assert(Mask->getType()->isVectorTy(), "masked_load: mask must be vector",
            Call);
+    Assert(Alignment->getValue().isPowerOf2(),
+           "masked_load: alignment must be a power of 2", Call);
 
     // DataTy is the overloaded type
     Type *DataTy = cast<PointerType>(Ptr->getType())->getElementType();
@@ -4520,10 +4522,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::masked_store: {
     Value *Val = Call.getArgOperand(0);
     Value *Ptr = Call.getArgOperand(1);
-    // Value *Alignment = Call.getArgOperand(2);
+    ConstantInt *Alignment = cast<ConstantInt>(Call.getArgOperand(2));
     Value *Mask = Call.getArgOperand(3);
     Assert(Mask->getType()->isVectorTy(), "masked_store: mask must be vector",
            Call);
+    Assert(Alignment->getValue().isPowerOf2(),
+           "masked_store: alignment must be a power of 2", Call);
 
     // DataTy is the overloaded type
     Type *DataTy = cast<PointerType>(Ptr->getType())->getElementType();

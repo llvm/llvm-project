@@ -3697,10 +3697,6 @@ public:
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);
 
-  RValue emitFortifiedStdLibCall(CodeGenFunction &CGF, const CallExpr *CE,
-                                 unsigned BuiltinID, unsigned BOSType,
-                                 unsigned Flag);
-
   RValue emitRotate(const CallExpr *E, bool IsRotateRight);
 
   /// Emit IR for __builtin_os_log_format.

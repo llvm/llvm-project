@@ -113,8 +113,7 @@ multiclass ABSS_MMM<string opstr, InstrItinClass Itin,
                 ISA_MICROMIPS, FGR_32 {
     string DecoderNamespace = "MicroMips";
   }
-  // FIXME: This needs to be part of the instruction mapping tables.
-  def _D64_MM : ABSS_FT<opstr, FGR64Opnd, FGR64Opnd, Itin, OpNode>,
+  def _D64_MM : StdMMR6Rel, ABSS_FT<opstr, FGR64Opnd, FGR64Opnd, Itin, OpNode>,
                 ISA_MICROMIPS, FGR_64 {
     string DecoderNamespace = "MicroMipsFP64";
   }

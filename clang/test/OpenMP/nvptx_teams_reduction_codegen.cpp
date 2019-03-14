@@ -28,7 +28,7 @@
 // CHECK-DAG: {{@__omp_offloading_.+l47}}_exec_mode = weak constant i8 1
 // CHECK-DAG: {{@__omp_offloading_.+l54}}_exec_mode = weak constant i8 0
 
-// CHECK-DAG: [[TEAMS_RED_BUFFER:@.+]] = common global [[TEAMS_REDUCE_UNION_TY]] zeroinitializer
+// CHECK-DAG: [[TEAMS_RED_BUFFER:@.+]] = internal global [[TEAMS_REDUCE_UNION_TY]] zeroinitializer
 
 template<typename tx>
 tx ftemplate(int n) {

@@ -98,7 +98,7 @@ TEST_F(FormatTestSelective, ReformatsMovedLines) {
 }
 
 TEST_F(FormatTestSelective, FormatsIfWithoutCompoundStatement) {
-  Style.AllowShortIfStatementsOnASingleLine = true;
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
   EXPECT_EQ("if (a) return;", format("if(a)\nreturn;", 7, 1));
   EXPECT_EQ("if (a) return; // comment",
             format("if(a)\nreturn; // comment", 20, 1));

@@ -152,6 +152,25 @@ define i1 @fcmp_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
   ret i1 %r
 }
 
+; If we do the fcmp transform late, make sure we have the right types.
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=13700
+
+define void @extsetcc(<4 x float> %x) {
+; CHECK-LABEL: extsetcc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vcmpnleps %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vextractps $0, %xmm0, %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    movb %al, (%rax)
+; CHECK-NEXT:    retq
+  %cmp = fcmp ult <4 x float> %x, zeroinitializer
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %e = extractelement <4 x i1> %cmp, i1 0
+  store i1 %e, i1* undef
+  ret void
+}
+
 define float @select_fcmp_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z, <4 x float> %w) nounwind {
 ; CHECK-LABEL: select_fcmp_v4f32:
 ; CHECK:       # %bb.0:

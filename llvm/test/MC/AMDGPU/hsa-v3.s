@@ -249,29 +249,29 @@ v_mov_b32_e32 v16, s3
       .max_flat_workgroup_size: 256
 .end_amdgpu_metadata
 
-// ASM: .amdgpu_metadata
-// ASM:    amdhsa.kernels:
-// ASM:  - .sgpr_count:     14
-// ASM:    .max_flat_workgroup_size: 256
-// ASM:    .symbol:         'amd_kernel_code_t_test_all@kd'
-// ASM:    .kernarg_segment_size: 8
-// ASM:    .group_segment_fixed_size: 16
-// ASM:    .private_segment_fixed_size: 32
-// ASM:    .vgpr_count:     40
-// ASM:    .kernarg_segment_align: 64
-// ASM:    .wavefront_size: 128
-// ASM:    .name:           amd_kernel_code_t_test_all
-// ASM:  - .sgpr_count:     14
-// ASM:    .max_flat_workgroup_size: 256
-// ASM:    .symbol:         'amd_kernel_code_t_minimal@kd'
-// ASM:    .kernarg_segment_size: 8
-// ASM:    .group_segment_fixed_size: 16
-// ASM:    .private_segment_fixed_size: 32
-// ASM:    .vgpr_count:     40
-// ASM:    .kernarg_segment_align: 64
-// ASM:    .wavefront_size: 128
-// ASM:    .name:           amd_kernel_code_t_minimal
-// ASM:    amdhsa.version:
-// ASM-NEXT: - 3
-// ASM-NEXT: - 0
-// ASM: .end_amdgpu_metadata
+// ASM:      	.amdgpu_metadata
+// ASM:      amdhsa.kernels:  
+// ASM:        - .group_segment_fixed_size: 16
+// ASM:          .kernarg_segment_align: 64
+// ASM:          .kernarg_segment_size: 8
+// ASM:          .max_flat_workgroup_size: 256
+// ASM:          .name:           amd_kernel_code_t_test_all
+// ASM:          .private_segment_fixed_size: 32
+// ASM:          .sgpr_count:     14
+// ASM:          .symbol:         'amd_kernel_code_t_test_all@kd'
+// ASM:          .vgpr_count:     40
+// ASM:          .wavefront_size: 128
+// ASM:        - .group_segment_fixed_size: 16
+// ASM:          .kernarg_segment_align: 64
+// ASM:          .kernarg_segment_size: 8
+// ASM:          .max_flat_workgroup_size: 256
+// ASM:          .name:           amd_kernel_code_t_minimal
+// ASM:          .private_segment_fixed_size: 32
+// ASM:          .sgpr_count:     14
+// ASM:          .symbol:         'amd_kernel_code_t_minimal@kd'
+// ASM:          .vgpr_count:     40
+// ASM:          .wavefront_size: 128
+// ASM:      amdhsa.version:  
+// ASM-NEXT:   - 3
+// ASM-NEXT:   - 0
+// ASM:      	.end_amdgpu_metadata

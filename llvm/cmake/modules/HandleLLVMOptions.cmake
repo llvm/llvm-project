@@ -135,12 +135,32 @@ if(APPLE)
   set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-flat_namespace -Wl,-undefined -Wl,suppress")
 endif()
 
+if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  if(NOT LLVM_BUILD_32_BITS)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "XL")
+      append("-q64" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+    else()
+      append("-maix64" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+    endif()
+    set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> -X64 qc <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> -X64 q  <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -X64 <TARGET>")
+    set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -X64 <TARGET>")
+  endif()
+  # -fPIC does not enable the large code model for GCC on AIX but does for XL.
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    append("-mcmodel=large" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "XL")
+    # XL generates a small number of relocations not of the large model, -bbigtoc is needed.
+    append("-Wl,-bbigtoc"
+           CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  endif()
+endif()
+
 # Pass -Wl,-z,defs. This makes sure all symbols are defined. Otherwise a DSO
 # build might work on ELF but fail on MachO/COFF.
-if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR WIN32 OR CYGWIN OR
-        ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" OR
-	${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD" OR
-	${CMAKE_SYSTEM_NAME} MATCHES "DragonFly") AND
+if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin|FreeBSD|OpenBSD|DragonFly|AIX" OR
+        WIN32 OR CYGWIN) AND
    NOT LLVM_USE_SANITIZER)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
 endif()
@@ -220,8 +240,9 @@ if( LLVM_ENABLE_PIC )
   endif()
 endif()
 
-if(NOT WIN32 AND NOT CYGWIN)
+if(NOT WIN32 AND NOT CYGWIN AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
   # MinGW warns if -fvisibility-inlines-hidden is used.
+  # GCC on AIX warns if -fvisibility-inlines-hidden is used.
   check_cxx_compiler_flag("-fvisibility-inlines-hidden" SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG)
   append_if(SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG "-fvisibility-inlines-hidden" CMAKE_CXX_FLAGS)
 endif()

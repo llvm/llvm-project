@@ -17,12 +17,12 @@ define i32 @callee_float_in_regs(i32 %a, float %b) nounwind {
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -16
 ; RV32I-FPELIM-NEXT:    sw ra, 12(sp)
-; RV32I-FPELIM-NEXT:    sw s1, 8(sp)
-; RV32I-FPELIM-NEXT:    mv s1, a0
+; RV32I-FPELIM-NEXT:    sw s0, 8(sp)
+; RV32I-FPELIM-NEXT:    mv s0, a0
 ; RV32I-FPELIM-NEXT:    mv a0, a1
 ; RV32I-FPELIM-NEXT:    call __fixsfsi
-; RV32I-FPELIM-NEXT:    add a0, s1, a0
-; RV32I-FPELIM-NEXT:    lw s1, 8(sp)
+; RV32I-FPELIM-NEXT:    add a0, s0, a0
+; RV32I-FPELIM-NEXT:    lw s0, 8(sp)
 ; RV32I-FPELIM-NEXT:    lw ra, 12(sp)
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 16
 ; RV32I-FPELIM-NEXT:    ret

@@ -2,8 +2,9 @@ add_llvm_library(LLVMBinaryFormat
   AMDGPUMetadataVerifier.cpp
   Dwarf.cpp
   Magic.cpp
+  MsgPackDocument.cpp
+  MsgPackDocumentYAML.cpp
   MsgPackReader.cpp
-  MsgPackTypes.cpp
   MsgPackWriter.cpp
   Wasm.cpp
 

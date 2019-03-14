@@ -16,13 +16,13 @@
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #0
 
-define void @pr38743() #1 align 2 {
+define void @pr38743(i32 %a0) #1 align 2 {
 ; CHECK-LABEL: pr38743:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    cmpl $3, %eax
+; CHECK-NEXT:    cmpl $3, %edi
 ; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %bb
-; CHECK-NEXT:    cmpl $1, %eax
+; CHECK-NEXT:    cmpl $1, %edi
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %bb5
 ; CHECK-NEXT:    movzwl .str.17+{{.*}}(%rip), %eax
@@ -56,7 +56,7 @@ define void @pr38743() #1 align 2 {
 bb:
   %tmp = alloca %0, align 16
   %tmp1 = bitcast %0* %tmp to i8*
-  switch i32 undef, label %bb11 [
+  switch i32 %a0, label %bb11 [
     i32 1, label %bb2
     i32 4, label %bb5
     i32 2, label %bb5

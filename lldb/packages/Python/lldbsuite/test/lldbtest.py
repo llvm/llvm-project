@@ -1874,6 +1874,11 @@ class TestBase(Base):
         # differ in the debug info, which is not being hashed.
         self.runCmd('settings set symbols.enable-external-lookup false')
 
+        # Make sure that a sanitizer LLDB's environment doesn't get passed on.
+        if (('DYLD_INSERT_LIBRARIES' in os.environ) and
+            'libclang_rt.asan' in os.environ['DYLD_INSERT_LIBRARIES']):
+            self.runCmd('settings set target.env-vars DYLD_INSERT_LIBRARIES=')
+        
         if "LLDB_MAX_LAUNCH_COUNT" in os.environ:
             self.maxLaunchCount = int(os.environ["LLDB_MAX_LAUNCH_COUNT"])
 

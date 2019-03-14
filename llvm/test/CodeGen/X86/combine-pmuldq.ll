@@ -131,13 +131,13 @@ define <8 x i64> @combine_zext_pmuludq_256(<8 x i32> %a) {
   ret <8 x i64> %2
 }
 
-define void @PR39398() {
+define void @PR39398(i32 %a0) {
 ; SSE-LABEL: PR39398:
 ; SSE:       # %bb.0: # %bb
 ; SSE-NEXT:    .p2align 4, 0x90
 ; SSE-NEXT:  .LBB5_1: # %bb10
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE-NEXT:    cmpl $232, %eax
+; SSE-NEXT:    cmpl $232, %edi
 ; SSE-NEXT:    jne .LBB5_1
 ; SSE-NEXT:  # %bb.2: # %bb34
 ; SSE-NEXT:    retq
@@ -147,7 +147,7 @@ define void @PR39398() {
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB5_1: # %bb10
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX-NEXT:    cmpl $232, %eax
+; AVX-NEXT:    cmpl $232, %edi
 ; AVX-NEXT:    jne .LBB5_1
 ; AVX-NEXT:  # %bb.2: # %bb34
 ; AVX-NEXT:    retq
@@ -168,7 +168,7 @@ bb10:                                             ; preds = %bb10, %bb
   %tmp27 = select <4 x i1> undef, <4 x i64> zeroinitializer, <4 x i64> %tmp25
   %tmp28 = add <4 x i64> zeroinitializer, %tmp26
   %tmp29 = add <4 x i64> zeroinitializer, %tmp27
-  %tmp33 = icmp eq i32 undef, 232
+  %tmp33 = icmp eq i32 %a0, 232
   br i1 %tmp33, label %bb34, label %bb10
 
 bb34:                                             ; preds = %bb10

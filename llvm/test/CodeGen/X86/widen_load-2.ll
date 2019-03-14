@@ -47,8 +47,8 @@ define void @add3i32_2(%i32vec3*  sret %ret, %i32vec3* %ap, %i32vec3* %bp)  {
 ; X86-NEXT:    pinsrd $1, 4(%ecx), %xmm1
 ; X86-NEXT:    pinsrd $2, 8(%ecx), %xmm1
 ; X86-NEXT:    paddd %xmm0, %xmm1
-; X86-NEXT:    pextrd $2, %xmm1, 8(%eax)
 ; X86-NEXT:    pextrd $1, %xmm1, 4(%eax)
+; X86-NEXT:    pextrd $2, %xmm1, 8(%eax)
 ; X86-NEXT:    movd %xmm1, (%eax)
 ; X86-NEXT:    retl $4
 ;
@@ -81,9 +81,9 @@ define void @add7i32(%i32vec7*  sret %ret, %i32vec7* %ap, %i32vec7* %bp)  {
 ; X86-NEXT:    movdqa 16(%edx), %xmm1
 ; X86-NEXT:    paddd (%ecx), %xmm0
 ; X86-NEXT:    paddd 16(%ecx), %xmm1
-; X86-NEXT:    pextrd $2, %xmm1, 24(%eax)
-; X86-NEXT:    pextrd $1, %xmm1, 20(%eax)
 ; X86-NEXT:    movd %xmm1, 16(%eax)
+; X86-NEXT:    pextrd $1, %xmm1, 20(%eax)
+; X86-NEXT:    pextrd $2, %xmm1, 24(%eax)
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl $4
 ;
@@ -94,8 +94,8 @@ define void @add7i32(%i32vec7*  sret %ret, %i32vec7* %ap, %i32vec7* %bp)  {
 ; X64-NEXT:    movdqa 16(%rsi), %xmm1
 ; X64-NEXT:    paddd (%rdx), %xmm0
 ; X64-NEXT:    paddd 16(%rdx), %xmm1
-; X64-NEXT:    pextrd $2, %xmm1, 24(%rdi)
 ; X64-NEXT:    movq %xmm1, 16(%rdi)
+; X64-NEXT:    pextrd $2, %xmm1, 24(%rdi)
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
 	%a = load %i32vec7, %i32vec7* %ap, align 16
@@ -116,10 +116,10 @@ define void @add12i32(%i32vec12*  sret %ret, %i32vec12* %ap, %i32vec12* %bp)  {
 ; X86-NEXT:    movdqa (%edx), %xmm1
 ; X86-NEXT:    movdqa 16(%edx), %xmm2
 ; X86-NEXT:    paddd (%ecx), %xmm1
-; X86-NEXT:    paddd 16(%ecx), %xmm2
 ; X86-NEXT:    paddd 32(%ecx), %xmm0
-; X86-NEXT:    movdqa %xmm0, 32(%eax)
+; X86-NEXT:    paddd 16(%ecx), %xmm2
 ; X86-NEXT:    movdqa %xmm2, 16(%eax)
+; X86-NEXT:    movdqa %xmm0, 32(%eax)
 ; X86-NEXT:    movdqa %xmm1, (%eax)
 ; X86-NEXT:    retl $4
 ;
@@ -130,10 +130,10 @@ define void @add12i32(%i32vec12*  sret %ret, %i32vec12* %ap, %i32vec12* %bp)  {
 ; X64-NEXT:    movdqa 16(%rsi), %xmm1
 ; X64-NEXT:    movdqa 32(%rsi), %xmm2
 ; X64-NEXT:    paddd (%rdx), %xmm0
-; X64-NEXT:    paddd 16(%rdx), %xmm1
 ; X64-NEXT:    paddd 32(%rdx), %xmm2
-; X64-NEXT:    movdqa %xmm2, 32(%rdi)
+; X64-NEXT:    paddd 16(%rdx), %xmm1
 ; X64-NEXT:    movdqa %xmm1, 16(%rdi)
+; X64-NEXT:    movdqa %xmm2, 32(%rdi)
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
 	%a = load %i32vec12, %i32vec12* %ap, align 16
@@ -225,8 +225,8 @@ define void @add12i16(%i16vec12* nocapture sret %ret, %i16vec12* %ap, %i16vec12*
 ; X86-NEXT:    movdqa 16(%edx), %xmm1
 ; X86-NEXT:    paddw (%ecx), %xmm0
 ; X86-NEXT:    paddw 16(%ecx), %xmm1
-; X86-NEXT:    pextrd $1, %xmm1, 20(%eax)
 ; X86-NEXT:    movd %xmm1, 16(%eax)
+; X86-NEXT:    pextrd $1, %xmm1, 20(%eax)
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl $4
 ;
@@ -258,10 +258,10 @@ define void @add18i16(%i16vec18* nocapture sret %ret, %i16vec18* %ap, %i16vec18*
 ; X86-NEXT:    movdqa (%edx), %xmm1
 ; X86-NEXT:    movdqa 16(%edx), %xmm2
 ; X86-NEXT:    paddw (%ecx), %xmm1
-; X86-NEXT:    paddw 16(%ecx), %xmm2
 ; X86-NEXT:    paddw 32(%ecx), %xmm0
-; X86-NEXT:    movd %xmm0, 32(%eax)
+; X86-NEXT:    paddw 16(%ecx), %xmm2
 ; X86-NEXT:    movdqa %xmm2, 16(%eax)
+; X86-NEXT:    movd %xmm0, 32(%eax)
 ; X86-NEXT:    movdqa %xmm1, (%eax)
 ; X86-NEXT:    retl $4
 ;
@@ -272,10 +272,10 @@ define void @add18i16(%i16vec18* nocapture sret %ret, %i16vec18* %ap, %i16vec18*
 ; X64-NEXT:    movdqa 16(%rsi), %xmm1
 ; X64-NEXT:    movdqa 32(%rsi), %xmm2
 ; X64-NEXT:    paddw (%rdx), %xmm0
-; X64-NEXT:    paddw 16(%rdx), %xmm1
 ; X64-NEXT:    paddw 32(%rdx), %xmm2
-; X64-NEXT:    movd %xmm2, 32(%rdi)
+; X64-NEXT:    paddw 16(%rdx), %xmm1
 ; X64-NEXT:    movdqa %xmm1, 16(%rdi)
+; X64-NEXT:    movd %xmm2, 32(%rdi)
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
 	%a = load %i16vec18, %i16vec18* %ap, align 16
@@ -331,11 +331,11 @@ define void @add31i8(%i8vec31* nocapture sret %ret, %i8vec31* %ap, %i8vec31* %bp
 ; X86-NEXT:    movdqa 16(%edx), %xmm1
 ; X86-NEXT:    paddb (%ecx), %xmm0
 ; X86-NEXT:    paddb 16(%ecx), %xmm1
-; X86-NEXT:    pextrb $14, %xmm1, 30(%eax)
-; X86-NEXT:    pextrw $6, %xmm1, 28(%eax)
-; X86-NEXT:    pextrd $2, %xmm1, 24(%eax)
-; X86-NEXT:    pextrd $1, %xmm1, 20(%eax)
 ; X86-NEXT:    movd %xmm1, 16(%eax)
+; X86-NEXT:    pextrd $1, %xmm1, 20(%eax)
+; X86-NEXT:    pextrd $2, %xmm1, 24(%eax)
+; X86-NEXT:    pextrw $6, %xmm1, 28(%eax)
+; X86-NEXT:    pextrb $14, %xmm1, 30(%eax)
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl $4
 ;
@@ -346,10 +346,10 @@ define void @add31i8(%i8vec31* nocapture sret %ret, %i8vec31* %ap, %i8vec31* %bp
 ; X64-NEXT:    movdqa 16(%rsi), %xmm1
 ; X64-NEXT:    paddb (%rdx), %xmm0
 ; X64-NEXT:    paddb 16(%rdx), %xmm1
-; X64-NEXT:    pextrb $14, %xmm1, 30(%rdi)
-; X64-NEXT:    pextrw $6, %xmm1, 28(%rdi)
-; X64-NEXT:    pextrd $2, %xmm1, 24(%rdi)
 ; X64-NEXT:    movq %xmm1, 16(%rdi)
+; X64-NEXT:    pextrd $2, %xmm1, 24(%rdi)
+; X64-NEXT:    pextrw $6, %xmm1, 28(%rdi)
+; X64-NEXT:    pextrb $14, %xmm1, 30(%rdi)
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
 	%a = load %i8vec31, %i8vec31* %ap, align 16

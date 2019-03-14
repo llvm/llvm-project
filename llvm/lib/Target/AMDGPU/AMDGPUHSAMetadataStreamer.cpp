@@ -489,20 +489,16 @@ void MetadataStreamerV3::dump(StringRef HSAMetadataString) const {
 void MetadataStreamerV3::verify(StringRef HSAMetadataString) const {
   errs() << "AMDGPU HSA Metadata Parser Test: ";
 
-  std::shared_ptr<msgpack::Node> FromHSAMetadataString =
-      std::make_shared<msgpack::MapNode>();
+  msgpack::Document FromHSAMetadataString;
 
-  yaml::Input YIn(HSAMetadataString);
-  YIn >> FromHSAMetadataString;
-  if (YIn.error()) {
+  if (!FromHSAMetadataString.fromYAML(HSAMetadataString)) {
     errs() << "FAIL\n";
     return;
   }
 
   std::string ToHSAMetadataString;
   raw_string_ostream StrOS(ToHSAMetadataString);
-  yaml::Output YOut(StrOS);
-  YOut << FromHSAMetadataString;
+  FromHSAMetadataString.toYAML(StrOS);
 
   errs() << (HSAMetadataString == StrOS.str() ? "PASS" : "FAIL") << '\n';
   if (HSAMetadataString != ToHSAMetadataString) {
@@ -636,23 +632,23 @@ std::string MetadataStreamerV3::getTypeName(Type *Ty, bool Signed) const {
   }
 }
 
-std::shared_ptr<msgpack::ArrayNode>
+msgpack::ArrayDocNode
 MetadataStreamerV3::getWorkGroupDimensions(MDNode *Node) const {
-  auto Dims = std::make_shared<msgpack::ArrayNode>();
+  auto Dims = HSAMetadataDoc->getArrayNode();
   if (Node->getNumOperands() != 3)
     return Dims;
 
   for (auto &Op : Node->operands())
-    Dims->push_back(std::make_shared<msgpack::ScalarNode>(
-        mdconst::extract<ConstantInt>(Op)->getZExtValue()));
+    Dims.push_back(Dims.getDocument()->getNode(
+        uint64_t(mdconst::extract<ConstantInt>(Op)->getZExtValue())));
   return Dims;
 }
 
 void MetadataStreamerV3::emitVersion() {
-  auto Version = std::make_shared<msgpack::ArrayNode>();
-  Version->push_back(std::make_shared<msgpack::ScalarNode>(V3::VersionMajor));
-  Version->push_back(std::make_shared<msgpack::ScalarNode>(V3::VersionMinor));
-  getRootMetadata("amdhsa.version") = std::move(Version);
+  auto Version = HSAMetadataDoc->getArrayNode();
+  Version.push_back(Version.getDocument()->getNode(VersionMajor));
+  Version.push_back(Version.getDocument()->getNode(VersionMinor));
+  getRootMetadata("amdhsa.version") = Version;
 }
 
 void MetadataStreamerV3::emitPrintf(const Module &Mod) {
@@ -660,16 +656,16 @@ void MetadataStreamerV3::emitPrintf(const Module &Mod) {
   if (!Node)
     return;
 
-  auto Printf = std::make_shared<msgpack::ArrayNode>();
+  auto Printf = HSAMetadataDoc->getArrayNode();
   for (auto Op : Node->operands())
     if (Op->getNumOperands())
-      Printf->push_back(std::make_shared<msgpack::ScalarNode>(
-          cast<MDString>(Op->getOperand(0))->getString()));
-  getRootMetadata("amdhsa.printf") = std::move(Printf);
+      Printf.push_back(Printf.getDocument()->getNode(
+          cast<MDString>(Op->getOperand(0))->getString(), /*Copy=*/true));
+  getRootMetadata("amdhsa.printf") = Printf;
 }
 
 void MetadataStreamerV3::emitKernelLanguage(const Function &Func,
-                                            msgpack::MapNode &Kern) {
+                                            msgpack::MapDocNode Kern) {
   // TODO: What about other languages?
   auto Node = Func.getParent()->getNamedMetadata("opencl.ocl.version");
   if (!Node || !Node->getNumOperands())
@@ -678,50 +674,53 @@ void MetadataStreamerV3::emitKernelLanguage(const Function &Func,
   if (Op0->getNumOperands() <= 1)
     return;
 
-  Kern[".language"] = std::make_shared<msgpack::ScalarNode>("OpenCL C");
-  auto LanguageVersion = std::make_shared<msgpack::ArrayNode>();
-  LanguageVersion->push_back(std::make_shared<msgpack::ScalarNode>(
+  Kern[".language"] = Kern.getDocument()->getNode("OpenCL C");
+  auto LanguageVersion = Kern.getDocument()->getArrayNode();
+  LanguageVersion.push_back(Kern.getDocument()->getNode(
       mdconst::extract<ConstantInt>(Op0->getOperand(0))->getZExtValue()));
-  LanguageVersion->push_back(std::make_shared<msgpack::ScalarNode>(
+  LanguageVersion.push_back(Kern.getDocument()->getNode(
       mdconst::extract<ConstantInt>(Op0->getOperand(1))->getZExtValue()));
-  Kern[".language_version"] = std::move(LanguageVersion);
+  Kern[".language_version"] = LanguageVersion;
 }
 
 void MetadataStreamerV3::emitKernelAttrs(const Function &Func,
-                                         msgpack::MapNode &Kern) {
+                                         msgpack::MapDocNode Kern) {
 
   if (auto Node = Func.getMetadata("reqd_work_group_size"))
     Kern[".reqd_workgroup_size"] = getWorkGroupDimensions(Node);
   if (auto Node = Func.getMetadata("work_group_size_hint"))
     Kern[".workgroup_size_hint"] = getWorkGroupDimensions(Node);
   if (auto Node = Func.getMetadata("vec_type_hint")) {
-    Kern[".vec_type_hint"] = std::make_shared<msgpack::ScalarNode>(getTypeName(
-        cast<ValueAsMetadata>(Node->getOperand(0))->getType(),
-        mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue()));
+    Kern[".vec_type_hint"] = Kern.getDocument()->getNode(
+        getTypeName(
+            cast<ValueAsMetadata>(Node->getOperand(0))->getType(),
+            mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue()),
+        /*Copy=*/true);
   }
   if (Func.hasFnAttribute("runtime-handle")) {
-    Kern[".device_enqueue_symbol"] = std::make_shared<msgpack::ScalarNode>(
-        Func.getFnAttribute("runtime-handle").getValueAsString().str());
+    Kern[".device_enqueue_symbol"] = Kern.getDocument()->getNode(
+        Func.getFnAttribute("runtime-handle").getValueAsString().str(),
+        /*Copy=*/true);
   }
 }
 
 void MetadataStreamerV3::emitKernelArgs(const Function &Func,
-                                        msgpack::MapNode &Kern) {
+                                        msgpack::MapDocNode Kern) {
   unsigned Offset = 0;
-  auto Args = std::make_shared<msgpack::ArrayNode>();
+  auto Args = HSAMetadataDoc->getArrayNode();
   for (auto &Arg : Func.args())
-    emitKernelArg(Arg, Offset, *Args);
+    emitKernelArg(Arg, Offset, Args);
 
-  emitHiddenKernelArgs(Func, Offset, *Args);
+  emitHiddenKernelArgs(Func, Offset, Args);
 
   // TODO: What about other languages?
   if (Func.getParent()->getNamedMetadata("opencl.ocl.version")) {
     auto &DL = Func.getParent()->getDataLayout();
     auto Int64Ty = Type::getInt64Ty(Func.getContext());
 
-    emitKernelArg(DL, Int64Ty, "hidden_global_offset_x", Offset, *Args);
-    emitKernelArg(DL, Int64Ty, "hidden_global_offset_y", Offset, *Args);
-    emitKernelArg(DL, Int64Ty, "hidden_global_offset_z", Offset, *Args);
+    emitKernelArg(DL, Int64Ty, "hidden_global_offset_x", Offset, Args);
+    emitKernelArg(DL, Int64Ty, "hidden_global_offset_y", Offset, Args);
+    emitKernelArg(DL, Int64Ty, "hidden_global_offset_z", Offset, Args);
 
     auto Int8PtrTy =
         Type::getInt8PtrTy(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
@@ -729,26 +728,26 @@ void MetadataStreamerV3::emitKernelArgs(const Function &Func,
     // Emit "printf buffer" argument if printf is used, otherwise emit dummy
     // "none" argument.
     if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
-      emitKernelArg(DL, Int8PtrTy, "hidden_printf_buffer", Offset, *Args);
+      emitKernelArg(DL, Int8PtrTy, "hidden_printf_buffer", Offset, Args);
     else
-      emitKernelArg(DL, Int8PtrTy, "hidden_none", Offset, *Args);
+      emitKernelArg(DL, Int8PtrTy, "hidden_none", Offset, Args);
 
     // Emit "default queue" and "completion action" arguments if enqueue kernel
     // is used, otherwise emit dummy "none" arguments.
     if (Func.hasFnAttribute("calls-enqueue-kernel")) {
-      emitKernelArg(DL, Int8PtrTy, "hidden_default_queue", Offset, *Args);
-      emitKernelArg(DL, Int8PtrTy, "hidden_completion_action", Offset, *Args);
+      emitKernelArg(DL, Int8PtrTy, "hidden_default_queue", Offset, Args);
+      emitKernelArg(DL, Int8PtrTy, "hidden_completion_action", Offset, Args);
     } else {
-      emitKernelArg(DL, Int8PtrTy, "hidden_none", Offset, *Args);
-      emitKernelArg(DL, Int8PtrTy, "hidden_none", Offset, *Args);
+      emitKernelArg(DL, Int8PtrTy, "hidden_none", Offset, Args);
+      emitKernelArg(DL, Int8PtrTy, "hidden_none", Offset, Args);
     }
   }
 
-  Kern[".args"] = std::move(Args);
+  Kern[".args"] = Args;
 }
 
 void MetadataStreamerV3::emitKernelArg(const Argument &Arg, unsigned &Offset,
-                                       msgpack::ArrayNode &Args) {
+                                       msgpack::ArrayDocNode Args) {
   auto Func = Arg.getParent();
   auto ArgNo = Arg.getArgNo();
   const MDNode *Node;
@@ -805,36 +804,35 @@ void MetadataStreamerV3::emitKernelArg(const Argument &Arg, unsigned &Offset,
 
 void MetadataStreamerV3::emitKernelArg(const DataLayout &DL, Type *Ty,
                                        StringRef ValueKind, unsigned &Offset,
-                                       msgpack::ArrayNode &Args,
+                                       msgpack::ArrayDocNode Args,
                                        unsigned PointeeAlign, StringRef Name,
                                        StringRef TypeName,
                                        StringRef BaseTypeName,
                                        StringRef AccQual, StringRef TypeQual) {
-  auto ArgPtr = std::make_shared<msgpack::MapNode>();
-  auto &Arg = *ArgPtr;
+  auto Arg = Args.getDocument()->getMapNode();
 
   if (!Name.empty())
-    Arg[".name"] = std::make_shared<msgpack::ScalarNode>(Name);
+    Arg[".name"] = Arg.getDocument()->getNode(Name, /*Copy=*/true);
   if (!TypeName.empty())
-    Arg[".type_name"] = std::make_shared<msgpack::ScalarNode>(TypeName);
+    Arg[".type_name"] = Arg.getDocument()->getNode(TypeName, /*Copy=*/true);
   auto Size = DL.getTypeAllocSize(Ty);
   auto Align = DL.getABITypeAlignment(Ty);
-  Arg[".size"] = std::make_shared<msgpack::ScalarNode>(Size);
+  Arg[".size"] = Arg.getDocument()->getNode(Size);
   Offset = alignTo(Offset, Align);
-  Arg[".offset"] = std::make_shared<msgpack::ScalarNode>(Offset);
+  Arg[".offset"] = Arg.getDocument()->getNode(Offset);
   Offset += Size;
-  Arg[".value_kind"] = std::make_shared<msgpack::ScalarNode>(ValueKind);
+  Arg[".value_kind"] = Arg.getDocument()->getNode(ValueKind, /*Copy=*/true);
   Arg[".value_type"] =
-      std::make_shared<msgpack::ScalarNode>(getValueType(Ty, BaseTypeName));
+      Arg.getDocument()->getNode(getValueType(Ty, BaseTypeName), /*Copy=*/true);
   if (PointeeAlign)
-    Arg[".pointee_align"] = std::make_shared<msgpack::ScalarNode>(PointeeAlign);
+    Arg[".pointee_align"] = Arg.getDocument()->getNode(PointeeAlign);
 
   if (auto PtrTy = dyn_cast<PointerType>(Ty))
     if (auto Qualifier = getAddressSpaceQualifier(PtrTy->getAddressSpace()))
-      Arg[".address_space"] = std::make_shared<msgpack::ScalarNode>(*Qualifier);
+      Arg[".address_space"] = Arg.getDocument()->getNode(*Qualifier, /*Copy=*/true);
 
   if (auto AQ = getAccessQualifier(AccQual))
-    Arg[".access"] = std::make_shared<msgpack::ScalarNode>(*AQ);
+    Arg[".access"] = Arg.getDocument()->getNode(*AQ, /*Copy=*/true);
 
   // TODO: Emit Arg[".actual_access"].
 
@@ -842,21 +840,21 @@ void MetadataStreamerV3::emitKernelArg(const DataLayout &DL, Type *Ty,
   TypeQual.split(SplitTypeQuals, " ", -1, false);
   for (StringRef Key : SplitTypeQuals) {
     if (Key == "const")
-      Arg[".is_const"] = std::make_shared<msgpack::ScalarNode>(true);
+      Arg[".is_const"] = Arg.getDocument()->getNode(true);
     else if (Key == "restrict")
-      Arg[".is_restrict"] = std::make_shared<msgpack::ScalarNode>(true);
+      Arg[".is_restrict"] = Arg.getDocument()->getNode(true);
     else if (Key == "volatile")
-      Arg[".is_volatile"] = std::make_shared<msgpack::ScalarNode>(true);
+      Arg[".is_volatile"] = Arg.getDocument()->getNode(true);
     else if (Key == "pipe")
-      Arg[".is_pipe"] = std::make_shared<msgpack::ScalarNode>(true);
+      Arg[".is_pipe"] = Arg.getDocument()->getNode(true);
   }
 
-  Args.push_back(std::move(ArgPtr));
+  Args.push_back(Arg);
 }
 
 void MetadataStreamerV3::emitHiddenKernelArgs(const Function &Func,
                                               unsigned &Offset,
-                                              msgpack::ArrayNode &Args) {
+                                              msgpack::ArrayDocNode Args) {
   int HiddenArgNumBytes =
       getIntegerAttribute(Func, "amdgpu-implicitarg-num-bytes", 0);
 
@@ -898,54 +896,52 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const Function &Func,
   }
 }
 
-std::shared_ptr<msgpack::MapNode>
+msgpack::MapDocNode
 MetadataStreamerV3::getHSAKernelProps(const MachineFunction &MF,
                                       const SIProgramInfo &ProgramInfo) const {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   const Function &F = MF.getFunction();
 
-  auto HSAKernelProps = std::make_shared<msgpack::MapNode>();
-  auto &Kern = *HSAKernelProps;
+  auto Kern = HSAMetadataDoc->getMapNode();
 
   unsigned MaxKernArgAlign;
-  Kern[".kernarg_segment_size"] = std::make_shared<msgpack::ScalarNode>(
+  Kern[".kernarg_segment_size"] = Kern.getDocument()->getNode(
       STM.getKernArgSegmentSize(F, MaxKernArgAlign));
   Kern[".group_segment_fixed_size"] =
-      std::make_shared<msgpack::ScalarNode>(ProgramInfo.LDSSize);
+      Kern.getDocument()->getNode(ProgramInfo.LDSSize);
   Kern[".private_segment_fixed_size"] =
-      std::make_shared<msgpack::ScalarNode>(ProgramInfo.ScratchSize);
+      Kern.getDocument()->getNode(ProgramInfo.ScratchSize);
   Kern[".kernarg_segment_align"] =
-      std::make_shared<msgpack::ScalarNode>(std::max(uint32_t(4), MaxKernArgAlign));
+      Kern.getDocument()->getNode(std::max(uint32_t(4), MaxKernArgAlign));
   Kern[".wavefront_size"] =
-      std::make_shared<msgpack::ScalarNode>(STM.getWavefrontSize());
-  Kern[".sgpr_count"] = std::make_shared<msgpack::ScalarNode>(ProgramInfo.NumSGPR);
-  Kern[".vgpr_count"] = std::make_shared<msgpack::ScalarNode>(ProgramInfo.NumVGPR);
+      Kern.getDocument()->getNode(STM.getWavefrontSize());
+  Kern[".sgpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumSGPR);
+  Kern[".vgpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumVGPR);
   Kern[".max_flat_workgroup_size"] =
-      std::make_shared<msgpack::ScalarNode>(MFI.getMaxFlatWorkGroupSize());
+      Kern.getDocument()->getNode(MFI.getMaxFlatWorkGroupSize());
   Kern[".sgpr_spill_count"] =
-      std::make_shared<msgpack::ScalarNode>(MFI.getNumSpilledSGPRs());
+      Kern.getDocument()->getNode(MFI.getNumSpilledSGPRs());
   Kern[".vgpr_spill_count"] =
-      std::make_shared<msgpack::ScalarNode>(MFI.getNumSpilledVGPRs());
+      Kern.getDocument()->getNode(MFI.getNumSpilledVGPRs());
 
-  return HSAKernelProps;
+  return Kern;
 }
 
 bool MetadataStreamerV3::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
-  return TargetStreamer.EmitHSAMetadata(getHSAMetadataRoot(), true);
+  return TargetStreamer.EmitHSAMetadata(*HSAMetadataDoc, true);
 }
 
 void MetadataStreamerV3::begin(const Module &Mod) {
   emitVersion();
   emitPrintf(Mod);
-  getRootMetadata("amdhsa.kernels").reset(new msgpack::ArrayNode());
+  getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
 }
 
 void MetadataStreamerV3::end() {
   std::string HSAMetadataString;
   raw_string_ostream StrOS(HSAMetadataString);
-  yaml::Output YOut(StrOS);
-  YOut << HSAMetadataRoot;
+  HSAMetadataDoc->toYAML(StrOS);
 
   if (DumpHSAMetadata)
     dump(StrOS.str());
@@ -956,25 +952,24 @@ void MetadataStreamerV3::end() {
 void MetadataStreamerV3::emitKernel(const MachineFunction &MF,
                                     const SIProgramInfo &ProgramInfo) {
   auto &Func = MF.getFunction();
-  auto KernelProps = getHSAKernelProps(MF, ProgramInfo);
+  auto Kern = getHSAKernelProps(MF, ProgramInfo);
 
   assert(Func.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
          Func.getCallingConv() == CallingConv::SPIR_KERNEL);
 
-  auto &KernelsNode = getRootMetadata("amdhsa.kernels");
-  auto Kernels = cast<msgpack::ArrayNode>(KernelsNode.get());
+  auto Kernels =
+      getRootMetadata("amdhsa.kernels").getArray(/*Convert=*/true);
 
   {
-    auto &Kern = *KernelProps;
-    Kern[".name"] = std::make_shared<msgpack::ScalarNode>(Func.getName());
-    Kern[".symbol"] = std::make_shared<msgpack::ScalarNode>(
-        (Twine(Func.getName()) + Twine(".kd")).str());
+    Kern[".name"] = Kern.getDocument()->getNode(Func.getName());
+    Kern[".symbol"] = Kern.getDocument()->getNode(
+        (Twine(Func.getName()) + Twine(".kd")).str(), /*Copy=*/true);
     emitKernelLanguage(Func, Kern);
     emitKernelAttrs(Func, Kern);
     emitKernelArgs(Func, Kern);
   }
 
-  Kernels->push_back(std::move(KernelProps));
+  Kernels.push_back(Kern);
 }
 
 } // end namespace HSAMD
