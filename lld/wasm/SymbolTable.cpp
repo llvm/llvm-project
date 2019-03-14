@@ -37,6 +37,8 @@ void SymbolTable::addFile(InputFile *File) {
     BitcodeFiles.push_back(F);
   else if (auto *F = dyn_cast<ObjFile>(File))
     ObjectFiles.push_back(F);
+  else if (auto *F = dyn_cast<SharedFile>(File))
+    SharedFiles.push_back(F);
 }
 
 // This function is where all the optimizations of link-time

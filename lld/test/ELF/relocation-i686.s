@@ -55,7 +55,7 @@ movl bar@GOT, %eax
 // ADDR-NEXT:   SHF_ALLOC
 // ADDR-NEXT:   SHF_WRITE
 // ADDR-NEXT: ]
-// ADDR-NEXT: Address: 0x403078
+// ADDR-NEXT: Address: 0x402078
 // ADDR-NEXT: Offset:
 // ADDR-NEXT: Size: 8
 
@@ -63,11 +63,11 @@ movl bar@GOT, %eax
 R_386_GOTPC:
  movl $_GLOBAL_OFFSET_TABLE_, %eax
 
-// 0x402078 + 8 - 0x401014 = 4204
+// 0x402078 + 8 - 0x401014 = 8300
 
 // CHECK:      Disassembly of section .R_386_GOTPC:
 // CHECK-NEXT: R_386_GOTPC:
-// CHECK-NEXT:   401014:  {{.*}} movl  $8300, %eax
+// CHECK-NEXT:   401014:  {{.*}} movl  $4204, %eax
 
 .section .dynamic_reloc, "ax",@progbits
  call bar

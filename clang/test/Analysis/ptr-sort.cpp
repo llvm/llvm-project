@@ -1,12 +1,13 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.nondeterminism.PointerSorting %s -analyzer-output=text -verify
+// RUN: %clang_analyze_cc1 %s -analyzer-output=text -verify \
+// RUN: -analyzer-checker=core,alpha.nondeterminism.PointerSorting
 
 #include "Inputs/system-header-simulator-cxx.h"
 
-bool f (int x) { return true; }
-bool g (int *x) { return true; }
+bool f(int x) { return true; }
+bool g(int *x) { return true; }
 
 void PointerSorting() {
-  int a = 1, b = 2, c = 3;
+  int a = 1, b = 2;
   std::vector<int> V1 = {a, b};
   std::vector<int *> V2 = {&a, &b};
 

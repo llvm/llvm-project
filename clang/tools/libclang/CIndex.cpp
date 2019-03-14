@@ -5484,6 +5484,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
       return cxstring::createRef("attribute(warn_unused)");
   case CXCursor_WarnUnusedResultAttr:
       return cxstring::createRef("attribute(warn_unused_result)");
+  case CXCursor_AlignedAttr:
+      return cxstring::createRef("attribute(aligned)");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");

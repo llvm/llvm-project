@@ -40,6 +40,11 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class ClangUserExpression : public LLVMUserExpression {
 public:
+  /// LLVM-style RTTI support.
+  static bool classof(const Expression *E) {
+    return E->getKind() == eKindClangUserExpression;
+  }
+
   enum { kDefaultTimeout = 500000u };
 
   class ClangUserExpressionHelper : public ClangExpressionHelper {

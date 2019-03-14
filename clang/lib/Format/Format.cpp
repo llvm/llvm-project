@@ -961,7 +961,7 @@ FormatStyle getNoStyle() {
 bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
                         FormatStyle *Style) {
   if (Name.equals_lower("llvm")) {
-    *Style = getLLVMStyle();
+    *Style = getLLVMStyle(Language);
   } else if (Name.equals_lower("chromium")) {
     *Style = getChromiumStyle(Language);
   } else if (Name.equals_lower("mozilla")) {

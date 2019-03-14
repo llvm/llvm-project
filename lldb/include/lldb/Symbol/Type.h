@@ -256,14 +256,10 @@ public:
   explicit operator bool() const { return IsValid(); }
 
   bool operator==(const TypePair &rhs) const {
-    return compiler_type == rhs.compiler_type &&
-           type_sp.get() == rhs.type_sp.get();
+    return compiler_type == rhs.compiler_type;
   }
 
-  bool operator!=(const TypePair &rhs) const {
-    return compiler_type != rhs.compiler_type ||
-           type_sp.get() != rhs.type_sp.get();
-  }
+  bool operator!=(const TypePair &rhs) const { return !(*this == rhs); }
 
   void Clear() {
     compiler_type.Clear();

@@ -6994,31 +6994,6 @@ static void handleObjCExternallyRetainedAttr(Sema &S, Decl *D,
   handleSimpleAttribute<ObjCExternallyRetainedAttr>(S, D, AL);
 }
 
-static void handleFortifyStdLib(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto *FD = cast<FunctionDecl>(D);
-  unsigned VariantID = Builtin::getFortifiedVariantFunction(FD->getBuiltinID());
-  if (VariantID == 0) {
-    S.Diag(D->getLocation(), diag::err_fortify_std_lib_bad_decl);
-    return;
-  }
-
-  uint32_t BOSType, Flag;
-  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), BOSType, 0, true) ||
-      !checkUInt32Argument(S, AL, AL.getArgAsExpr(1), Flag, 1, true))
-    return;
-
-  if (BOSType > 3) {
-    S.Diag(AL.getArgAsExpr(0)->getBeginLoc(),
-           diag::err_attribute_argument_out_of_range)
-        << AL << 0 << 3;
-    return;
-  }
-
-  D->addAttr(::new (S.getASTContext()) FortifyStdLibAttr(
-      AL.getLoc(), S.getASTContext(), BOSType, Flag,
-      AL.getAttributeSpellingListIndex()));
-}
-
 static void handleMIGServerRoutineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Check that the return type is a `typedef int kern_return_t` or a typedef
   // around it, because otherwise MIG convention checks make no sense.
@@ -7797,10 +7772,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
 
   case ParsedAttr::AT_ObjCExternallyRetained:
     handleObjCExternallyRetainedAttr(S, D, AL);
-    break;
-
-  case ParsedAttr::AT_FortifyStdLib:
-    handleFortifyStdLib(S, D, AL);
     break;
 
   case ParsedAttr::AT_MIGServerRoutine:

@@ -33,6 +33,7 @@ class InputFile {
 public:
   enum Kind {
     ObjectKind,
+    SharedKind,
     ArchiveKind,
     BitcodeKind,
   };
@@ -129,6 +130,16 @@ private:
   std::unique_ptr<WasmObjectFile> WasmObj;
 };
 
+// .so file.
+class SharedFile : public InputFile {
+public:
+  explicit SharedFile(MemoryBufferRef M) : InputFile(SharedKind, M) {}
+  static bool classof(const InputFile *F) { return F->kind() == SharedKind; }
+
+  void parse() override {}
+};
+
+// .bc file
 class BitcodeFile : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef M) : InputFile(BitcodeKind, M) {}

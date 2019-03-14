@@ -31,6 +31,11 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class UtilityFunction : public Expression {
 public:
+  /// LLVM-style RTTI support.
+  static bool classof(const Expression *E) {
+    return E->getKind() == eKindUtilityFunction;
+  }
+  
   //------------------------------------------------------------------
   /// Constructor
   ///
@@ -41,7 +46,7 @@ public:
   ///     The name of the function, as used in the text.
   //------------------------------------------------------------------
   UtilityFunction(ExecutionContextScope &exe_scope, const char *text,
-                  const char *name);
+                  const char *name, ExpressionKind kind);
 
   ~UtilityFunction() override;
 

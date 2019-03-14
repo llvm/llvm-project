@@ -41,7 +41,17 @@ int temp; // expected-note 6 {{'temp' declared here}}
 #pragma omp declare reduction(fun8 : long : omp_out += omp_in) initializer(omp_priv = 23)) // expected-warning {{extra tokens at the end of '#pragma omp declare reduction' are ignored}} expected-error {{redefinition of user-defined reduction for type 'long'}}
 #pragma omp declare reduction(fun9 : long : omp_out += omp_in) initializer(omp_priv = )    // expected-error {{expected expression}}
 
+struct S {
+  int s;
+};
+#pragma omp declare reduction(+: struct S: omp_out.s += omp_in.s) // initializer(omp_priv = { .s = 0 })
+
 int fun(int arg) {
+  struct S s;// expected-note {{'s' defined here}}
+  s.s = 0;
+#pragma omp parallel for reduction(+ : s) // expected-error {{list item of type 'struct S' is not valid for specified reduction operation: unable to provide default initialization value}}
+  for (arg = 0; arg < 10; ++arg)
+    s.s += arg;
 #pragma omp declare reduction(red : int : omp_out++)
   {
 #pragma omp declare reduction(red : int : omp_out++) // expected-note {{previous definition is here}}

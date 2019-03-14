@@ -38,7 +38,7 @@ __aeabi_unwind_cpp_pr0:
 
 // CHECK: Relocations [
 // CHECK-NEXT:   Section {{.*}} .rel.plt {
-// CHECK-NEXT:     0x200C R_ARM_JUMP_SLOT __gxx_personality_v0
+// CHECK-NEXT:     0x300C R_ARM_JUMP_SLOT __gxx_personality_v0
 
 // CHECK-EXTAB: Contents of section .ARM.extab:
 // 0x0210 + 0x0e20 = 0x1030 = __gxx_personality_v0(PLT)

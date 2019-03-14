@@ -4896,8 +4896,6 @@ def ext_ms_forward_ref_enum : ExtWarn<
 def ext_forward_ref_enum_def : Extension<
   "redeclaration of already-defined enum %0 is a GNU extension">,
   InGroup<GNURedeclaredEnum>;
-def err_fortify_std_lib_bad_decl : Error<
-  "'fortify_stdlib' attribute applied to an unknown function">;
 
 def err_redefinition_of_enumerator : Error<"redefinition of enumerator %0">;
 def err_duplicate_member : Error<"duplicate member %0">;
