@@ -1563,7 +1563,7 @@ __DEVICE__ double j1(double __a) { return __nv_j1(__a); }
 __DEVICE__ float j1f(float __a) { return __nv_j1f(__a); }
 __DEVICE__ double jn(int __n, double __a) { return __nv_jn(__n, __a); }
 __DEVICE__ float jnf(int __n, float __a) { return __nv_jnf(__n, __a); }
-#if defined(__LP64__)
+#if defined(__LP64__) || defined(_WIN64)
 __DEVICE__ long labs(long __a) { return llabs(__a); };
 #else
 __DEVICE__ long labs(long __a) { return __nv_abs(__a); };
@@ -1597,7 +1597,7 @@ __DEVICE__ float logbf(float __a) { return __nv_logbf(__a); }
 __DEVICE__ float logf(float __a) {
   return __FAST_OR_SLOW(__nv_fast_logf, __nv_logf)(__a);
 }
-#if defined(__LP64__)
+#if defined(__LP64__) || defined(_WIN64)
 __DEVICE__ long lrint(double __a) { return llrint(__a); }
 __DEVICE__ long lrintf(float __a) { return __float2ll_rn(__a); }
 __DEVICE__ long lround(double __a) { return llround(__a); }

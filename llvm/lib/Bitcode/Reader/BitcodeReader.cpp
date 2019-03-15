@@ -5482,14 +5482,11 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       // ownership.
       AS->setModulePath(getThisModule()->first());
 
-      GlobalValue::GUID AliaseeGUID =
-          getValueInfoFromValueId(AliaseeID).first.getGUID();
-      auto AliaseeInModule =
-          TheIndex.findSummaryInModule(AliaseeGUID, ModulePath);
+      auto AliaseeVI = getValueInfoFromValueId(AliaseeID).first;
+      auto AliaseeInModule = TheIndex.findSummaryInModule(AliaseeVI, ModulePath);
       if (!AliaseeInModule)
         return error("Alias expects aliasee summary to be parsed");
-      AS->setAliasee(AliaseeInModule);
-      AS->setAliaseeGUID(AliaseeGUID);
+      AS->setAliasee(AliaseeVI, AliaseeInModule);
 
       auto GUID = getValueInfoFromValueId(ValueID);
       AS->setOriginalName(GUID.second);
@@ -5592,12 +5589,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       LastSeenSummary = AS.get();
       AS->setModulePath(ModuleIdMap[ModuleId]);
 
-      auto AliaseeGUID =
-          getValueInfoFromValueId(AliaseeValueId).first.getGUID();
-      auto AliaseeInModule =
-          TheIndex.findSummaryInModule(AliaseeGUID, AS->modulePath());
-      AS->setAliasee(AliaseeInModule);
-      AS->setAliaseeGUID(AliaseeGUID);
+      auto AliaseeVI = getValueInfoFromValueId(AliaseeValueId).first;
+      auto AliaseeInModule = TheIndex.findSummaryInModule(AliaseeVI, AS->modulePath());
+      AS->setAliasee(AliaseeVI, AliaseeInModule);
 
       ValueInfo VI = getValueInfoFromValueId(ValueID).first;
       LastSeenGUID = VI.getGUID();

@@ -33353,6 +33353,38 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     }
     break;
   }
+  case X86ISD::PINSRB:
+  case X86ISD::PINSRW: {
+    SDValue Vec = Op.getOperand(0);
+    SDValue Scl = Op.getOperand(1);
+    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    MVT VecVT = Vec.getSimpleValueType();
+
+    if (CIdx && CIdx->getAPIntValue().ult(VecVT.getVectorNumElements())) {
+      unsigned Idx = CIdx->getZExtValue();
+      if (!OriginalDemandedElts[Idx])
+        return TLO.CombineTo(Op, Vec);
+
+      KnownBits KnownVec;
+      APInt DemandedVecElts(OriginalDemandedElts);
+      DemandedVecElts.clearBit(Idx);
+      if (SimplifyDemandedBits(Vec, OriginalDemandedBits, DemandedVecElts,
+                               KnownVec, TLO, Depth + 1))
+        return true;
+
+      KnownBits KnownScl;
+      unsigned NumSclBits = Scl.getScalarValueSizeInBits();
+      APInt DemandedSclBits = OriginalDemandedBits.zext(NumSclBits);
+      if (SimplifyDemandedBits(Scl, DemandedSclBits, KnownScl, TLO, Depth + 1))
+        return true;
+
+      KnownScl = KnownScl.trunc(VecVT.getScalarSizeInBits());
+      Known.One = KnownVec.One & KnownScl.One;
+      Known.Zero = KnownVec.Zero & KnownScl.Zero;
+      return false;
+    }
+    break;
+  }
   case X86ISD::PCMPGT:
     // icmp sgt(0, R) == ashr(R, BitWidth-1).
     // iff we only need the sign bit then we can use R directly.
@@ -36527,10 +36559,21 @@ static SDValue combineVectorShiftVar(SDNode *N, SelectionDAG &DAG,
           X86ISD::VSRL == N->getOpcode()) &&
          "Unexpected shift opcode");
   EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
 
   // Shift zero -> zero.
-  if (ISD::isBuildVectorAllZeros(N->getOperand(0).getNode()))
+  if (ISD::isBuildVectorAllZeros(N0.getNode()))
     return DAG.getConstant(0, SDLoc(N), VT);
+
+  // Detect constant shift amounts.
+  APInt UndefElts;
+  SmallVector<APInt, 32> EltBits;
+  if (getTargetConstantBitsFromNode(N1, 64, UndefElts, EltBits, true, false)) {
+    unsigned X86Opc = getTargetVShiftUniformOpcode(N->getOpcode(), false);
+    return getTargetVShiftByConstNode(X86Opc, SDLoc(N), VT.getSimpleVT(), N0,
+                                      EltBits[0].getZExtValue(), DAG);
+  }
 
   APInt KnownUndef, KnownZero;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -36623,11 +36666,16 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const X86Subtarget &Subtarget) {
-  assert(
-      ((N->getOpcode() == X86ISD::PINSRB && N->getValueType(0) == MVT::v16i8) ||
-       (N->getOpcode() == X86ISD::PINSRW &&
-        N->getValueType(0) == MVT::v8i16)) &&
-      "Unexpected vector insertion");
+  EVT VT = N->getValueType(0);
+  assert(((N->getOpcode() == X86ISD::PINSRB && VT == MVT::v16i8) ||
+          (N->getOpcode() == X86ISD::PINSRW && VT == MVT::v8i16)) &&
+         "Unexpected vector insertion");
+
+  unsigned NumBitsPerElt = VT.getScalarSizeInBits();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedBits(SDValue(N, 0),
+                               APInt::getAllOnesValue(NumBitsPerElt), DCI))
+    return SDValue(N, 0);
 
   // Attempt to combine PINSRB/PINSRW patterns to a shuffle.
   SDValue Op(N, 0);

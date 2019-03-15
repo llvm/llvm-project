@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 get_filename_component(CHANGE_NAMESPACE_SOURCE_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../change-namespace REALPATH)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../clang-change-namespace REALPATH)
 include_directories(
   ${CHANGE_NAMESPACE_SOURCE_DIR}
   )

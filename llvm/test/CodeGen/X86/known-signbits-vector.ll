@@ -244,12 +244,12 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ;
 ; X64-LABEL: signbits_ashr_sext_sextinreg_and_extract_sitofp:
 ; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    vpsrlq $61, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,8]
 ; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    vmovq %rax, %xmm1
+; X64-NEXT:    vmovq %rdi, %xmm1
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovq %xmm0, %rax
 ; X64-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0

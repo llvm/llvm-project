@@ -168,7 +168,7 @@ scanEhFrameSection(EhInputSection &EH,
 // Some sections are used directly by the loader, so they should never be
 // garbage-collected. This function returns true if a given section is such
 // section.
-template <class ELFT> static bool isReserved(InputSectionBase *Sec) {
+static bool isReserved(InputSectionBase *Sec) {
   switch (Sec->Type) {
   case SHT_FINI_ARRAY:
   case SHT_INIT_ARRAY:
@@ -250,7 +250,7 @@ template <class ELFT> static void doGcSections() {
     if (Sec->Flags & SHF_LINK_ORDER)
       continue;
 
-    if (isReserved<ELFT>(Sec) || Script->shouldKeep(Sec)) {
+    if (isReserved(Sec) || Script->shouldKeep(Sec)) {
       Enqueue(Sec, 0);
     } else if (isValidCIdentifier(Sec->Name)) {
       CNamedSections[Saver.save("__start_" + Sec->Name)].push_back(Sec);

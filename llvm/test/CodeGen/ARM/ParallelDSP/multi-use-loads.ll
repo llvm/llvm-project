@@ -1,4 +1,7 @@
 ; RUN: llc -O3 -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s | FileCheck %s
+; RUN: llc -O3 -mtriple=armeb-arm-eabi -mcpu=cortex-m33 < %s | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
+
+; CHECK-UNSUPPORTED-NOT: smlad
 
 ; CHECK-LABEL: add_user
 ; CHECK: %for.body
