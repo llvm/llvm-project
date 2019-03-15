@@ -39,6 +39,7 @@ if(APPLE)
   add_weak_symbols("sanitizer_common" LINK_FLAGS)
 else()
   set(LINK_FLAGS "-fsanitize=thread;-lstdc++;-lm")
+  list(APPEND LINK_FLAGS ${COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS})
 endif()
 
 set(TSAN_RTL_HEADERS)
