@@ -18,6 +18,8 @@ class ObjCCheckerTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    NO_DEBUG_INFO_TESTCASE = True
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -77,3 +79,16 @@ class ObjCCheckerTestCase(TestBase):
         # Make sure the error is helpful:
         err_string = expr_error.GetCString()
         self.assertTrue("selector" in err_string)
+
+        #
+        # Check that we correctly insert the checker for an
+        # ObjC method with the struct return convention.
+        # Getting this wrong would cause us to call the checker
+        # with the wrong arguments, and the checker would crash
+        # So I'm just checking "expression runs successfully" here:
+        #
+        expr_value = frame.EvaluateExpression("[my_simple getBigStruct]", False)
+        expr_error = expr_value.GetError()
+        
+        self.assertTrue(expr_error.Success())
+        
