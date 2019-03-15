@@ -965,7 +965,10 @@ void request_evaluate(const llvm::json::Object &request) {
       value = frame.EvaluateExpression(expression.data());
     if (value.GetError().Fail()) {
       response["success"] = llvm::json::Value(false);
-      const char *error_cstr = value.GetError().GetCString();
+      // This error object must live until we're done with the pointer returned
+      // by GetCString().
+      lldb::SBError error = value.GetError();
+      const char *error_cstr = error.GetCString();
       if (error_cstr && error_cstr[0])
         EmplaceSafeString(response, "message", std::string(error_cstr));
       else

@@ -1945,6 +1945,29 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   Load->add(Out::ElfHeader);
   Load->add(Out::ProgramHeaders);
 
+  // PT_GNU_RELRO includes all sections that should be marked as
+  // read-only by dynamic linker after proccessing relocations.
+  // Current dynamic loaders only support one PT_GNU_RELRO PHDR, give
+  // an error message if more than one PT_GNU_RELRO PHDR is required.
+  PhdrEntry *RelRo = make<PhdrEntry>(PT_GNU_RELRO, PF_R);
+  bool InRelroPhdr = false;
+  OutputSection *RelroEnd = nullptr;
+  for (OutputSection *Sec : OutputSections) {
+    if (!needsPtLoad(Sec))
+      continue;
+    if (isRelroSection(Sec)) {
+      InRelroPhdr = true;
+      if (!RelroEnd)
+        RelRo->add(Sec);
+      else
+        error("section: " + Sec->Name + " is not contiguous with other relro" +
+              " sections");
+    } else if (InRelroPhdr) {
+      InRelroPhdr = false;
+      RelroEnd = Sec;
+    }
+  }
+
   for (OutputSection *Sec : OutputSections) {
     if (!(Sec->Flags & SHF_ALLOC))
       break;
@@ -1962,8 +1985,8 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
     if (((Sec->LMAExpr ||
           (Sec->LMARegion && (Sec->LMARegion != Load->FirstSec->LMARegion))) &&
          Load->LastSec != Out::ProgramHeaders) ||
-        Sec->MemRegion != Load->FirstSec->MemRegion || Flags != NewFlags) {
-
+        Sec->MemRegion != Load->FirstSec->MemRegion || Flags != NewFlags ||
+        Sec == RelroEnd) {
       Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;
     }
@@ -1983,28 +2006,6 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   if (OutputSection *Sec = In.Dynamic->getParent())
     AddHdr(PT_DYNAMIC, Sec->getPhdrFlags())->add(Sec);
 
-  // PT_GNU_RELRO includes all sections that should be marked as
-  // read-only by dynamic linker after proccessing relocations.
-  // Current dynamic loaders only support one PT_GNU_RELRO PHDR, give
-  // an error message if more than one PT_GNU_RELRO PHDR is required.
-  PhdrEntry *RelRo = make<PhdrEntry>(PT_GNU_RELRO, PF_R);
-  bool InRelroPhdr = false;
-  bool IsRelroFinished = false;
-  for (OutputSection *Sec : OutputSections) {
-    if (!needsPtLoad(Sec))
-      continue;
-    if (isRelroSection(Sec)) {
-      InRelroPhdr = true;
-      if (!IsRelroFinished)
-        RelRo->add(Sec);
-      else
-        error("section: " + Sec->Name + " is not contiguous with other relro" +
-              " sections");
-    } else if (InRelroPhdr) {
-      InRelroPhdr = false;
-      IsRelroFinished = true;
-    }
-  }
   if (RelRo->FirstSec)
     Ret.push_back(RelRo);
 
