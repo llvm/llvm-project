@@ -722,12 +722,13 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
       // These are not retain. They just return something and retain it.
       return None;
     }
-    if (cocoa::isRefType(ResultTy, "CF", FName) ||
-        cocoa::isRefType(ResultTy, "CG", FName) ||
-        cocoa::isRefType(ResultTy, "CV", FName))
-      if (isRetain(FD, FName) || isAutorelease(FD, FName) ||
-          isMakeCollectable(FName))
-        return BehaviorSummary::Identity;
+    if (CE->getNumArgs() == 1 &&
+        (cocoa::isRefType(ResultTy, "CF", FName) ||
+         cocoa::isRefType(ResultTy, "CG", FName) ||
+         cocoa::isRefType(ResultTy, "CV", FName)) &&
+        (isRetain(FD, FName) || isAutorelease(FD, FName) ||
+         isMakeCollectable(FName)))
+      return BehaviorSummary::Identity;
 
     // safeMetaCast is called by OSDynamicCast.
     // We assume that OSDynamicCast is either an identity (cast is OK,

@@ -348,9 +348,13 @@
 
 // NOTBM-NOT: #define __TBM__ 1
 
-// RUN: %clang -target i386-unknown-unknown -march=pentiumpro -mcx16 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=MCX16 %s
+// RUN: %clang -target i386-unknown-unknown -march=pentiumpro -mcx16 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=MCX16-32 %s
 
-// MCX16: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 1
+// MCX16-32-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 1
+
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mcx16 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=MCX16-64 %s
+
+// MCX16-64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mprfchw -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=PRFCHW %s
 

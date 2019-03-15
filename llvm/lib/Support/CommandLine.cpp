@@ -874,6 +874,13 @@ void cl::TokenizeWindowsCommandLine(StringRef Src, StringSaver &Saver,
     // QUOTED state means that it's reading a token quoted by double quotes.
     if (State == QUOTED) {
       if (C == '"') {
+        if (I < (E - 1) && Src[I + 1] == '"') {
+          // Consecutive double-quotes inside a quoted string implies one
+          // double-quote.
+          Token.push_back('"');
+          I = I + 1;
+          continue;
+        }
         State = UNQUOTED;
         continue;
       }

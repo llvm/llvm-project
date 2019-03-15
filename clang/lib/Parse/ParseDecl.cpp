@@ -3889,6 +3889,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 /// ParseStructDeclaration - Parse a struct declaration without the terminating
 /// semicolon.
 ///
+/// Note that a struct declaration refers to a declaration in a struct,
+/// not to the declaration of a struct.
+///
 ///       struct-declaration:
 /// [C2x]   attributes-specifier-seq[opt]
 ///           specifier-qualifier-list struct-declarator-list

@@ -213,7 +213,15 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     // understand the LLVM bitcode file. It is a pretty common error, so
     // we'll handle it as if it had a symbol table.
     if (!File->isEmpty() && !File->hasSymbolTable()) {
-      for (const auto &P : getArchiveMembers(MBRef))
+      // Check if all members are bitcode files. If not, ignore, which is the
+      // default action without the LTO hack described above.
+      for (const std::pair<MemoryBufferRef, uint64_t> &P :
+           getArchiveMembers(MBRef))
+        if (identify_magic(P.first.getBuffer()) != file_magic::bitcode)
+          return;
+
+      for (const std::pair<MemoryBufferRef, uint64_t> &P :
+           getArchiveMembers(MBRef))
         Files.push_back(make<LazyObjFile>(P.first, Path, P.second));
       return;
     }

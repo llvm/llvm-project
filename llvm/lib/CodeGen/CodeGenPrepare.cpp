@@ -1267,8 +1267,12 @@ static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
 static bool combineToUSubWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
                                       const DataLayout &DL, DominatorTree &DT,
                                       bool &ModifiedDT) {
-  // Convert (A u> B) to (A u< B) to simplify pattern matching.
+  // We are not expecting non-canonical/degenerate code. Just bail out.
   Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
+  if (isa<Constant>(A) && isa<Constant>(B))
+    return false;
+
+  // Convert (A u> B) to (A u< B) to simplify pattern matching.
   ICmpInst::Predicate Pred = Cmp->getPredicate();
   if (Pred == ICmpInst::ICMP_UGT) {
     std::swap(A, B);

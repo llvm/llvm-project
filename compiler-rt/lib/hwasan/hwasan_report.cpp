@@ -439,23 +439,29 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 
 // See the frame breakdown defined in __hwasan_tag_mismatch (from
 // hwasan_tag_mismatch_aarch64.S).
-static const char *kDoubleSpace = "  ";
-static const char *kSingleSpace = " ";
 void ReportRegisters(uptr *frame, uptr pc) {
-  Printf("Registers where the failure occurred (pc %p):", pc);
+  Printf("Registers where the failure occurred (pc %p):\n", pc);
 
-  for (unsigned i = 0; i <= 30; i++) {
-    if (i % 4 == 0)
-      Printf("\n  ");
-
-    // Note - manually inserting a double or single space here based on the
-    // number of digits in the register name, as our sanitizer Printf does not
-    // support padding where the content is left aligned (i.e. the format
-    // specifier "%-2d" will CHECK fail).
-    Printf("  x%d%s%016llx", i, (i < 10) ? kDoubleSpace : kSingleSpace,
-           frame[i]);
-  }
-  Printf("\n");
+  // We explicitly print a single line (4 registers/line) each iteration to
+  // reduce the amount of logcat error messages printed. Each Printf() will
+  // result in a new logcat line, irrespective of whether a newline is present,
+  // and so we wish to reduce the number of Printf() calls we have to make.
+  Printf("    x0  %016llx  x1  %016llx  x2  %016llx  x3  %016llx\n",
+       frame[0], frame[1], frame[2], frame[3]);
+  Printf("    x4  %016llx  x5  %016llx  x6  %016llx  x7  %016llx\n",
+       frame[4], frame[5], frame[6], frame[7]);
+  Printf("    x8  %016llx  x9  %016llx  x10 %016llx  x11 %016llx\n",
+       frame[8], frame[9], frame[10], frame[11]);
+  Printf("    x12 %016llx  x13 %016llx  x14 %016llx  x15 %016llx\n",
+       frame[12], frame[13], frame[14], frame[15]);
+  Printf("    x16 %016llx  x17 %016llx  x18 %016llx  x19 %016llx\n",
+       frame[16], frame[17], frame[18], frame[19]);
+  Printf("    x20 %016llx  x21 %016llx  x22 %016llx  x23 %016llx\n",
+       frame[20], frame[21], frame[22], frame[23]);
+  Printf("    x24 %016llx  x25 %016llx  x26 %016llx  x27 %016llx\n",
+       frame[24], frame[25], frame[26], frame[27]);
+  Printf("    x28 %016llx  x29 %016llx  x30 %016llx\n",
+       frame[28], frame[29], frame[30]);
 }
 
 }  // namespace __hwasan

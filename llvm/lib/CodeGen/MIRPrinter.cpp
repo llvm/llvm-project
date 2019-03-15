@@ -215,6 +215,11 @@ void MIRPrinter::print(const MachineFunction &MF) {
     convert(YamlMF, *ConstantPool);
   if (const auto *JumpTableInfo = MF.getJumpTableInfo())
     convert(MST, YamlMF.JumpTableInfo, *JumpTableInfo);
+
+  const TargetMachine &TM = MF.getTarget();
+  YamlMF.MachineFuncInfo =
+      std::unique_ptr<yaml::MachineFunctionInfo>(TM.convertFuncInfoToYAML(MF));
+
   raw_string_ostream StrOS(YamlMF.Body.Value.Value);
   bool IsNewlineNeeded = false;
   for (const auto &MBB : MF) {

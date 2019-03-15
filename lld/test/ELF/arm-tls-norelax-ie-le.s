@@ -38,4 +38,4 @@ x2:
 
 // CHECK: Contents of section .got:
 // x1 at offset 0x20 from TP, x2 at offset 0x24 from TP. Offsets include TCB size of 0x20
-// CHECK-NEXT: 13064 20000000 24000000
+// CHECK-NEXT: 12064 20000000 24000000

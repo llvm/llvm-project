@@ -725,6 +725,7 @@ Expected<DriverConfig> parseStripOptions(ArrayRef<const char *> ArgsArr) {
   Config.StripUnneeded = InputArgs.hasArg(STRIP_strip_unneeded);
   Config.StripAll = InputArgs.hasArg(STRIP_strip_all);
   Config.StripAllGNU = InputArgs.hasArg(STRIP_strip_all_gnu);
+  Config.OnlyKeepDebug = InputArgs.hasArg(STRIP_only_keep_debug);
   Config.KeepFileSymbols = InputArgs.hasArg(STRIP_keep_file_symbols);
 
   for (auto Arg : InputArgs.filtered(STRIP_keep_section))

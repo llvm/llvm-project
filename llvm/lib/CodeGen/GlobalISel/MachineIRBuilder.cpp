@@ -609,13 +609,13 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(unsigned Res, unsigned Src,
 }
 
 MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
-                                                     unsigned Res,
+                                                     ArrayRef<unsigned> ResultRegs,
                                                      bool HasSideEffects) {
   auto MIB =
       buildInstr(HasSideEffects ? TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS
                                 : TargetOpcode::G_INTRINSIC);
-  if (Res)
-    MIB.addDef(Res);
+  for (unsigned ResultReg : ResultRegs)
+    MIB.addDef(ResultReg);
   MIB.addIntrinsicID(ID);
   return MIB;
 }

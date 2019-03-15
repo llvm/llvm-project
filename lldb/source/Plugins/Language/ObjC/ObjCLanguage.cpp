@@ -285,7 +285,6 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
   objc_category_sp->GetTypeSummariesContainer()->Add(ConstString("BOOL *"),
                                                      ObjC_BOOL_summary);
 
-#ifndef LLDB_DISABLE_PYTHON
   // we need to skip pointers here since we are special casing a SEL* when
   // retrieving its value
   objc_flags.SetSkipPointers(true);
@@ -317,7 +316,6 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                   lldb_private::formatters::ObjCClassSyntheticFrontEndCreator,
                   "Class synthetic children", ConstString("Class"),
                   class_synth_flags);
-#endif // LLDB_DISABLE_PYTHON
 
   objc_flags.SetSkipPointers(false);
   objc_flags.SetCascades(true);
@@ -383,7 +381,6 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
 
   appkit_flags.SetDontShowChildren(false);
 
-#ifndef LLDB_DISABLE_PYTHON
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSArraySummaryProvider,
       "NSArray summary provider", ConstString("NSArray"), appkit_flags);
@@ -840,7 +837,6 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                 lldb_private::formatters::CFBitVectorSummaryProvider,
                 "CFBitVector summary provider",
                 ConstString("__CFMutableBitVector"), appkit_flags);
-#endif // LLDB_DISABLE_PYTHON
 }
 
 static void LoadCoreMediaFormatters(TypeCategoryImplSP objc_category_sp) {
@@ -856,11 +852,9 @@ static void LoadCoreMediaFormatters(TypeCategoryImplSP objc_category_sp) {
       .SetSkipPointers(false)
       .SetSkipReferences(false);
 
-#ifndef LLDB_DISABLE_PYTHON
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::CMTimeSummaryProvider,
                 "CMTime summary provider", ConstString("CMTime"), cm_flags);
-#endif // LLDB_DISABLE_PYTHON
 }
 
 lldb::TypeCategoryImplSP ObjCLanguage::GetFormatters() {

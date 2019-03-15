@@ -18,14 +18,14 @@ int main() {
   return 0;
 }
 
-// CHECK: @"\01l_OBJC_PROTOCOL_$_P0" = weak hidden global
-// CHECK: @"\01l_OBJC_LABEL_PROTOCOL_$_P0" = weak hidden global
+// CHECK: @"_OBJC_PROTOCOL_$_P0" = weak hidden global
+// CHECK: @"_OBJC_LABEL_PROTOCOL_$_P0" = weak hidden global
 // CHECK: @"\01l_OBJC_CLASS_PROTOCOLS_$_A" = private global
 // CHECK: @"\01l_OBJC_PROTOCOL_REFERENCE_$_P0" = weak hidden global
 
 // CHECK: llvm.used = appending global [3 x i8*]
-// CHECK-SAME: "\01l_OBJC_PROTOCOL_$_P0"
-// CHECK-SAME: "\01l_OBJC_LABEL_PROTOCOL_$_P0"
+// CHECK-SAME: "_OBJC_PROTOCOL_$_P0"
+// CHECK-SAME: "_OBJC_LABEL_PROTOCOL_$_P0"
 // CHECK-SAME: "\01l_OBJC_PROTOCOL_REFERENCE_$_P0"
 
 // CHECK: llvm.compiler.used = appending global [7 x i8*]

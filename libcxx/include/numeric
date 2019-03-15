@@ -133,6 +133,10 @@ template <class M, class N>
 template <class M, class N>
     constexpr common_type_t<M,N> lcm(M m, N n);    // C++17
 
+integer         midpoint(integer a, integer b);                  // C++20
+pointer         midpoint(pointer a, pointer b);                  // C++20
+floating_point  midpoint(floating_point a, floating_point b);    // C++20
+
 }  // std
 
 */
@@ -518,6 +522,37 @@ lcm(_Tp __m, _Up __n)
 }
 
 #endif /* _LIBCPP_STD_VER > 14 */
+
+#if _LIBCPP_STD_VER > 17
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<is_integral_v<_Tp> && !is_same_v<bool, _Tp>, _Tp>
+midpoint(_Tp __a, _Tp __b) noexcept
+_LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+{
+    using _Up = std::make_unsigned_t<_Tp>;
+
+    int __sign = 1;
+    _Up __m = __a;
+    _Up __M = __b;
+    if (__a > __b)
+    {
+        __sign = -1;
+        __m = __b;
+        __M = __a;
+    }
+     return __a + __sign * _Tp(_Up(__M-__m) >> 1);
+}
+
+
+template <class _TPtr>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<is_pointer_v<_TPtr>, _TPtr>
+midpoint(_TPtr __a, _TPtr __b) noexcept
+{
+    return __a + _VSTD::midpoint(ptrdiff_t(0), __b - __a);
+}
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

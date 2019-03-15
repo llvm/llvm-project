@@ -7,51 +7,51 @@
 define i64 @test(i32 signext %a, i32 signext %b) {
 ; MMR2-LABEL: test:
 ; MMR2:       # %bb.0: # %entry
-; MMR2-NEXT:    li16 $2, 0 # <MCInst #1701 LI16_MM
+; MMR2-NEXT:    li16 $2, 0 # <MCInst #{{[0-9]+}} LI16_MM
 ; MMR2-NEXT:    # <MCOperand Reg:321>
 ; MMR2-NEXT:    # <MCOperand Imm:0>>
-; MMR2-NEXT:    li16 $3, 1 # <MCInst #1701 LI16_MM
+; MMR2-NEXT:    li16 $3, 1 # <MCInst #{{[0-9]+}} LI16_MM
 ; MMR2-NEXT:    # <MCOperand Reg:322>
 ; MMR2-NEXT:    # <MCOperand Imm:1>>
-; MMR2-NEXT:    mtlo $3 # <MCInst #2009 MTLO_MM
+; MMR2-NEXT:    mtlo $3 # <MCInst #{{[0-9]+}} MTLO_MM
 ; MMR2-NEXT:    # <MCOperand Reg:322>>
-; MMR2-NEXT:    mthi $2 # <MCInst #2002 MTHI_MM
+; MMR2-NEXT:    mthi $2 # <MCInst #{{[0-9]+}} MTHI_MM
 ; MMR2-NEXT:    # <MCOperand Reg:321>>
-; MMR2-NEXT:    madd $4, $5 # <MCInst #1775 MADD
+; MMR2-NEXT:    madd $4, $5 # <MCInst #{{[0-9]+}} MADD
 ; MMR2-NEXT:    # <MCOperand Reg:22>
 ; MMR2-NEXT:    # <MCOperand Reg:23>>
-; MMR2-NEXT:    mflo16 $2 # <MCInst #1861 MFLO16_MM
+; MMR2-NEXT:    mflo16 $2 # <MCInst #{{[0-9]+}} MFLO16_MM
 ; MMR2-NEXT:    # <MCOperand Reg:321>>
-; MMR2-NEXT:    mfhi16 $3 # <MCInst #1855 MFHI16_MM
+; MMR2-NEXT:    mfhi16 $3 # <MCInst #{{[0-9]+}} MFHI16_MM
 ; MMR2-NEXT:    # <MCOperand Reg:322>>
-; MMR2-NEXT:    jrc $ra # <MCInst #1633 JRC16_MM
+; MMR2-NEXT:    jrc $ra # <MCInst #{{[0-9]+}} JRC16_MM
 ; MMR2-NEXT:    # <MCOperand Reg:19>>
 ;
 ; MMR2-DSP-LABEL: test:
 ; MMR2-DSP:       # %bb.0: # %entry
-; MMR2-DSP-NEXT:    li16 $2, 0 # <MCInst #1701 LI16_MM
+; MMR2-DSP-NEXT:    li16 $2, 0 # <MCInst #{{[0-9]+}} LI16_MM
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:321>
 ; MMR2-DSP-NEXT:    # <MCOperand Imm:0>>
-; MMR2-DSP-NEXT:    li16 $3, 1 # <MCInst #1701 LI16_MM
+; MMR2-DSP-NEXT:    li16 $3, 1 # <MCInst #{{[0-9]+}} LI16_MM
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:322>
 ; MMR2-DSP-NEXT:    # <MCOperand Imm:1>>
-; MMR2-DSP-NEXT:    mtlo $3, $ac0 # <MCInst #2007 MTLO_DSP
+; MMR2-DSP-NEXT:    mtlo $3, $ac0 # <MCInst #{{[0-9]+}} MTLO_DSP
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:291>
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:322>>
-; MMR2-DSP-NEXT:    mthi $2, $ac0 # <MCInst #2000 MTHI_DSP
+; MMR2-DSP-NEXT:    mthi $2, $ac0 # <MCInst #{{[0-9]+}} MTHI_DSP
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:253>
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:321>>
-; MMR2-DSP-NEXT:    madd $ac0, $4, $5 # <MCInst #1793 MADD_DSP
+; MMR2-DSP-NEXT:    madd $ac0, $4, $5 # <MCInst #{{[0-9]+}} MADD_DSP
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:26>
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:22>
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:23>
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:26>>
-; MMR2-DSP-NEXT:    mflo $2, $ac0 # <MCInst #1863 MFLO_DSP
+; MMR2-DSP-NEXT:    mflo $2, $ac0 # <MCInst #{{[0-9]+}} MFLO_DSP
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:321>
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:26>>
-; MMR2-DSP-NEXT:    jr $ra # <MCInst #1640 JR_MM
+; MMR2-DSP-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:19>>
-; MMR2-DSP-NEXT:    mfhi $3, $ac0 # <MCInst #1857 MFHI_DSP
+; MMR2-DSP-NEXT:    mfhi $3, $ac0 # <MCInst #{{[0-9]+}} MFHI_DSP
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:322>
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:26>>
 entry:
