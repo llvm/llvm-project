@@ -1394,10 +1394,20 @@ static bool LocalBaseObj(ImmutableCallSite &CS, const DataLayout &DL,
 // Examine the uses of a Instruction AI to determine if it is used in a subtask.
 // This method assumes that AI is an allocation instruction, i.e., either an
 // AllocaInst or an AllocationFn.
-static bool MightHaveDetachedUse(const Instruction *AI, const TaskInfo &TI) {
+static bool MightHaveDetachedUse(const Value *V, const TaskInfo &TI) {
   // Get the task for this allocation.
-  const Task *AllocTask = TI.getTaskFor(AI->getParent());
-  assert(AllocTask && "Null task for instruction.");
+  const Task *AllocTask = nullptr;
+  if (const Instruction *I = dyn_cast<Instruction>(V))
+    AllocTask = TI.getTaskFor(I->getParent());
+  else if (const Argument *A = dyn_cast<Argument>(V))
+    AllocTask = TI.getTaskFor(&A->getParent()->getEntryBlock());
+
+  // assert(AllocTask && "Null task for instruction.");
+  if (!AllocTask) {
+    LLVM_DEBUG(dbgs() << "MightHaveDetachedUse: No task found for given value "
+               << *V << "\n");
+    return false;
+  }
 
   if (AllocTask->isSerial())
     // Alloc AI cannot be used in a subtask if its enclosing task is serial.
@@ -1407,7 +1417,7 @@ static bool MightHaveDetachedUse(const Instruction *AI, const TaskInfo &TI) {
   SmallSet<const Use *, 20> Visited;
 
   // Add all uses of AI to the worklist.
-  for (const Use &U : AI->uses()) {
+  for (const Use &U : V->uses()) {
     Visited.insert(&U);
     Worklist.push_back(&U);
   }
@@ -1486,7 +1496,7 @@ static bool PossibleRaceByCapture(Value *Addr, const DataLayout &DL,
     }
 
     // If the base object might have a detached use, return true.
-    if (MightHaveDetachedUse(cast<Instruction>(BaseObj), TI))
+    if (MightHaveDetachedUse(BaseObj, TI))
       return true;
   }
 
