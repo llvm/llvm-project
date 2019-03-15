@@ -317,7 +317,7 @@ PreservedAnalyses TapirToTargetPass::run(Module &M, ModuleAnalysisManager &AM) {
   bool Changed = false;
   TapirTargetID TargetID = TLI.getTapirTarget();
   Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC,
-                               getTapirTargetFromID(TargetID)).run();
+                               getTapirTargetFromID(M, TargetID)).run();
 
   if (Changed)
     return PreservedAnalyses::none();
@@ -379,7 +379,7 @@ bool LowerTapirToTarget::runOnModule(Module &M) {
 
   bool Changed = false;
   Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC,
-                               getTapirTargetFromID(TargetID)).run();
+                               getTapirTargetFromID(M, TargetID)).run();
   return Changed;
 }
 

@@ -1189,11 +1189,11 @@ static const StringRef stack_frame_name = "__cilkrts_sf";
 static const StringRef worker8_name = "__cilkrts_wc8";
 
 /// Create the __cilkrts_stack_frame for the spawning function.
-static AllocaInst *CreateStackFrame(Function &F) {
+static AllocaInst *CreateStackFrame(Module &M, Function &F) {
   // assert(!LookupStackFrame(F) && "already created the stack frame");
 
-  LLVMContext &Ctx = F.getContext();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
   Type *SFTy = StackFrameBuilder::get(Ctx);
 
   // Instruction *I = F.getEntryBlock().getFirstNonPHIOrDbgOrLifetime();
@@ -1213,14 +1213,12 @@ static AllocaInst *CreateStackFrame(Function &F) {
 }
 
 static Value *GetOrInitCilkStackFrame(
-    Function &F, ValueToValueMapTy &DetachCtxToStackFrame,
+    Module &M, Function &F, ValueToValueMapTy &DetachCtxToStackFrame,
     bool Helper, bool instrument = false) {
   if (DetachCtxToStackFrame.count(&F))
     return DetachCtxToStackFrame[&F];
 
-  Module *M = F.getParent();
-
-  AllocaInst *SF = CreateStackFrame(F);
+  AllocaInst *SF = CreateStackFrame(M, F);
   DetachCtxToStackFrame[&F] = SF;
   BasicBlock::iterator InsertPt = ++SF->getIterator();
   IRBuilder<> IRB(&(F.getEntryBlock()), InsertPt);
@@ -1246,9 +1244,9 @@ static Value *GetOrInitCilkStackFrame(
   // }
   Value *Args[1] = { SF };
   if (Helper || fastCilk)
-    IRB.CreateCall(CILKRTS_FUNC(enter_frame_fast_1, *M), Args);
+    IRB.CreateCall(CILKRTS_FUNC(enter_frame_fast_1, M), Args);
   else
-    IRB.CreateCall(CILKRTS_FUNC(enter_frame_1, *M), Args);
+    IRB.CreateCall(CILKRTS_FUNC(enter_frame_1, M), Args);
 
   // if (instrument) {
   //   Value* end_args[2] = { SF, StackSave };
@@ -1258,7 +1256,7 @@ static Value *GetOrInitCilkStackFrame(
   EscapeEnumerator EE(F, "cilkabi_epilogue", false);
   while (IRBuilder<> *AtExit = EE.Next()) {
     if (isa<ReturnInst>(AtExit->GetInsertPoint()))
-      AtExit->CreateCall(GetCilkParentEpilogue(*M, instrument), Args, "");
+      AtExit->CreateCall(GetCilkParentEpilogue(M, instrument), Args, "");
     else if (ResumeInst *RI = dyn_cast<ResumeInst>(AtExit->GetInsertPoint())) {
       // /*
       //   sf.flags = sf.flags | CILK_FRAME_EXCEPTING;
@@ -1285,7 +1283,7 @@ static Value *GetOrInitCilkStackFrame(
         if (sf->flags)
           __cilkrts_leave_frame(&sf);
       */
-      AtExit->CreateCall(GetCilkParentEpilogue(*M, instrument), Args, "");
+      AtExit->CreateCall(GetCilkParentEpilogue(M, instrument), Args, "");
     }
   }
 
@@ -1293,11 +1291,10 @@ static Value *GetOrInitCilkStackFrame(
 }
 
 static bool makeFunctionDetachable(
-    Function &Extracted, ValueToValueMapTy &DetachCtxToStackFrame,
+    Module &M, Function &Extracted, ValueToValueMapTy &DetachCtxToStackFrame,
     bool instrument = false) {
-  Module *M = Extracted.getParent();
-  LLVMContext& Ctx = M->getContext();
-  const DataLayout& DL = M->getDataLayout();
+  LLVMContext& Ctx = M.getContext();
+  const DataLayout& DL = M.getDataLayout();
   /*
     __cilkrts_stack_frame sf;
     __cilkrts_enter_frame_fast_1(&sf);
@@ -1305,7 +1302,7 @@ static bool makeFunctionDetachable(
     *x = f(y);
   */
 
-  AllocaInst *SF = CreateStackFrame(Extracted);
+  AllocaInst *SF = CreateStackFrame(M, Extracted);
   DetachCtxToStackFrame[&Extracted] = SF;
   assert(SF && "Error creating Cilk stack frame in helper.");
   Value *args[1] = { SF };
@@ -1332,7 +1329,7 @@ static bool makeFunctionDetachable(
   //   IRB.CreateCall(CILK_CSI_FUNC(enter_helper_begin, *M), begin_args);
   // }
 
-  IRB.CreateCall(CILKRTS_FUNC(enter_frame_fast_1, *M), args);
+  IRB.CreateCall(CILKRTS_FUNC(enter_frame_fast_1, M), args);
 
   // if (instrument) {
   //   Value *end_args[2] = { SF, StackSave };
@@ -1344,7 +1341,7 @@ static bool makeFunctionDetachable(
     // if (instrument)
     //   IRB.CreateCall(CILK_CSI_FUNC(detach_begin, *M), args);
 
-    IRB.CreateCall(CILKRTS_FUNC(detach, *M), args);
+    IRB.CreateCall(CILKRTS_FUNC(detach, M), args);
 
     // if (instrument)
     //   IRB.CreateCall(CILK_CSI_FUNC(detach_end, *M));
@@ -1353,7 +1350,7 @@ static bool makeFunctionDetachable(
   EscapeEnumerator EE(Extracted, "cilkabi_epilogue", false);
   while (IRBuilder<> *AtExit = EE.Next()) {
     if (isa<ReturnInst>(AtExit->GetInsertPoint()))
-      AtExit->CreateCall(GetCilkParentEpilogue(*M, instrument), args, "");
+      AtExit->CreateCall(GetCilkParentEpilogue(M, instrument), args, "");
     else if (ResumeInst *RI = dyn_cast<ResumeInst>(AtExit->GetInsertPoint())) {
       /*
         sf.flags = sf.flags | CILK_FRAME_EXCEPTING;
@@ -1380,7 +1377,7 @@ static bool makeFunctionDetachable(
         if (sf->flags)
           __cilkrts_leave_frame(&sf);
       */
-      AtExit->CreateCall(GetCilkParentEpilogue(*M, instrument), args, "");
+      AtExit->CreateCall(GetCilkParentEpilogue(M, instrument), args, "");
     }
   }
 
@@ -1396,11 +1393,10 @@ static bool makeFunctionDetachable(
 /// This computation is inserted into the preheader of the loop.
 Value *CilkABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
   Value *Limit = GrainsizeCall->getArgOperand(0);
-  Module *M = GrainsizeCall->getModule();
   IRBuilder<> Builder(GrainsizeCall);
 
   // Get 8 * workers
-  Value *Workers = Builder.CreateCall(CILKRTS_FUNC(get_nworkers, *M));
+  Value *Workers = Builder.CreateCall(CILKRTS_FUNC(get_nworkers, M));
   Value *WorkersX8 = Builder.CreateIntCast(
       Builder.CreateMul(Workers, ConstantInt::get(Workers->getType(), 8)),
       Limit->getType(), false);
@@ -1421,10 +1417,9 @@ Value *CilkABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
 }
 
 void CilkABI::lowerSync(SyncInst &SI) {
-  Function &Fn = *(SI.getParent()->getParent());
-  Module &M = *(Fn.getParent());
+  Function &Fn = *(SI.getFunction());
 
-  Value *SF = GetOrInitCilkStackFrame(Fn, DetachCtxToStackFrame,
+  Value *SF = GetOrInitCilkStackFrame(M, Fn, DetachCtxToStackFrame,
                                       /*isFast*/false, false);
   Value *args[] = { SF };
   assert(args[0] && "sync used in function without frame!");
@@ -1445,11 +1440,11 @@ void CilkABI::lowerSync(SyncInst &SI) {
 }
 
 void CilkABI::processOutlinedTask(Function &F) {
-  makeFunctionDetachable(F, DetachCtxToStackFrame, false);
+  makeFunctionDetachable(M, F, DetachCtxToStackFrame, false);
 }
 
 void CilkABI::processSpawner(Function &F) {
-  GetOrInitCilkStackFrame(F, DetachCtxToStackFrame,
+  GetOrInitCilkStackFrame(M, F, DetachCtxToStackFrame,
                           /*isFast=*/false, false);
 
   // Mark this function as stealable.
@@ -1460,8 +1455,7 @@ void CilkABI::processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) {
   Instruction *ReplStart = TOI.ReplStart;
   Instruction *ReplCall = TOI.ReplCall;
 
-  Function &F = *ReplCall->getParent()->getParent();
-  Module &M = *F.getParent();
+  Function &F = *ReplCall->getFunction();
   assert(DetachCtxToStackFrame.count(&F) &&
          "No frame found for spawning task.");
   Value *SF = DetachCtxToStackFrame[&F];

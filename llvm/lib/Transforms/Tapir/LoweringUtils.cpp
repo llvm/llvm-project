@@ -34,15 +34,15 @@ static cl::opt<bool> StructTaskArgs(
     "use-struct-for-task-args", cl::init(false), cl::Hidden,
     cl::desc("Use a struct to store arguments for detached tasks"));
 
-TapirTarget *llvm::getTapirTargetFromID(TapirTargetID ID) {
+TapirTarget *llvm::getTapirTargetFromID(Module &M, TapirTargetID ID) {
   switch (ID) {
   case TapirTargetID::Cilk:
-    return new CilkABI();
+    return new CilkABI(M);
   case TapirTargetID::OpenMP:
-    return new OpenMPABI();
+    return new OpenMPABI(M);
   case TapirTargetID::CilkR:
   case TapirTargetID::Cheetah:
-    return new CilkRABI();
+    return new CilkRABI(M);
   case TapirTargetID::None:
   case TapirTargetID::Serial:
     return nullptr;

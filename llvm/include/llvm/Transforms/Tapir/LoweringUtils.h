@@ -161,8 +161,11 @@ Function *extractDetachBodyToFunction(DetachInst &Detach,
 
 /// Abstract class for a parallel-runtime-system target for Tapir lowering.
 class TapirTarget {
+protected:
+  Module &M;
 public:
-  virtual ~TapirTarget() {};
+  TapirTarget(Module &M) : M(M) {}
+  virtual ~TapirTarget() {}
   virtual Value *lowerGrainsizeCall(CallInst *GrainsizeCall) = 0;
   virtual void lowerSync(SyncInst &inst) = 0;
 
@@ -176,7 +179,7 @@ public:
   virtual void processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) = 0;
 };
 
-TapirTarget *getTapirTargetFromID(TapirTargetID TargetID);
+TapirTarget *getTapirTargetFromID(Module &M, TapirTargetID TargetID);
 
 }  // end namepsace llvm
 

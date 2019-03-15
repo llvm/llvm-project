@@ -22,7 +22,7 @@ class Value;
 class CilkRABI : public TapirTarget {
   ValueToValueMapTy DetachCtxToStackFrame;
 public:
-  CilkRABI() {}
+  CilkRABI(Module &M) : TapirTarget(M) {}
   ~CilkRABI() { DetachCtxToStackFrame.clear(); }
   Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
   void lowerSync(SyncInst &inst) override final;

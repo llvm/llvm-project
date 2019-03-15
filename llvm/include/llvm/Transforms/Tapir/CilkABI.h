@@ -43,7 +43,7 @@ protected:
 class CilkABI : public TapirTarget {
   ValueToValueMapTy DetachCtxToStackFrame;
 public:
-  CilkABI() {}
+  CilkABI(Module &M) : TapirTarget(M) {}
   ~CilkABI() { DetachCtxToStackFrame.clear(); }
   Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
   void lowerSync(SyncInst &inst) override final;
