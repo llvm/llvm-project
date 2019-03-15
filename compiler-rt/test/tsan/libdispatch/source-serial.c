@@ -1,8 +1,6 @@
 // RUN: %clang_tsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: dispatch
-
 // TODO(yln): fails on one of our bots, need to investigate
 // REQUIRES: disabled
 
