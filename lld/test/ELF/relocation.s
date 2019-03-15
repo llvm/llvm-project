@@ -113,7 +113,7 @@ R_X86_64_64:
  .quad R_X86_64_64
 
 // CHECK:      Contents of section .R_X86_64_64:
-// CHECK-NEXT:   2002c0 c0022000 00000000
+// CHECK-NEXT:   2002f8 f8022000 00000000
 
 .section .R_X86_64_GOTPCREL,"a",@progbits
 .global R_X86_64_GOTPCREL
@@ -122,7 +122,7 @@ R_X86_64_GOTPCREL:
 
 // 0x2020F0(.got) - 0x2002c8(.R_X86_64_GOTPCREL) = 0x1e28
 // CHECK:      Contents of section .R_X86_64_GOTPCREL
-// CHECK-NEXT:   2002c8 281e0000
+// CHECK-NEXT:   200300 f01d0000
 
 .section .R_X86_64_GOT32,"a",@progbits
 .global R_X86_64_GOT32

@@ -1763,6 +1763,20 @@ struct CIEKey {
         IsSimple(Frame.IsSimple), RAReg(Frame.RAReg),
         IsBKeyFrame(Frame.IsBKeyFrame) {}
 
+  StringRef PersonalityName() const {
+    if (!Personality)
+      return StringRef();
+    return Personality->getName();
+  }
+
+  bool operator<(const CIEKey &Other) const {
+    return std::make_tuple(PersonalityName(), PersonalityEncoding, LsdaEncoding,
+                           IsSignalFrame, IsSimple, RAReg) <
+           std::make_tuple(Other.PersonalityName(), Other.PersonalityEncoding,
+                           Other.LsdaEncoding, Other.IsSignalFrame,
+                           Other.IsSimple, Other.RAReg);
+  }
+
   const MCSymbol *Personality;
   unsigned PersonalityEncoding;
   unsigned LsdaEncoding;
@@ -1840,7 +1854,17 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
 
   const MCSymbol *DummyDebugKey = nullptr;
   bool CanOmitDwarf = MOFI->getOmitDwarfIfHaveCompactUnwind();
-  for (auto I = FrameArray.begin(), E = FrameArray.end(); I != E;) {
+  // Sort the FDEs by their corresponding CIE before we emit them.
+  // This isn't technically necessary according to the DWARF standard,
+  // but the Android libunwindstack rejects eh_frame sections where
+  // an FDE refers to a CIE other than the closest previous CIE.
+  std::vector<MCDwarfFrameInfo> FrameArrayX(FrameArray.begin(), FrameArray.end());
+  std::stable_sort(
+      FrameArrayX.begin(), FrameArrayX.end(),
+      [&](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) -> bool {
+        return CIEKey(X) < CIEKey(Y);
+      });
+  for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
     const MCDwarfFrameInfo &Frame = *I;
     ++I;
     if (CanOmitDwarf && Frame.CompactUnwindEncoding !=

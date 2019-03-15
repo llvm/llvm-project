@@ -1,0 +1,10 @@
+# Test that llvm-cov export produces function data by default and that it can be
+# turned off with a flag.
+
+RUN: llvm-cov export %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata 2>&1 | FileCheck %s
+RUN: llvm-cov export %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -skip-functions 2>&1 | FileCheck -check-prefix=SKIP-FUNCTIONS %s
+
+CHECK: "functions":[
+SKIP-FUNCTIONS-NOT: "functions":[
+
+

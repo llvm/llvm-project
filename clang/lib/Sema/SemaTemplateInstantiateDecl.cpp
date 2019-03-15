@@ -3804,25 +3804,25 @@ static bool addInstantiatedParametersToScope(Sema &S, FunctionDecl *Function,
     Scope.MakeInstantiatedLocalArgPack(PatternParam);
     Optional<unsigned> NumArgumentsInExpansion
       = S.getNumArgumentsInExpansion(PatternParam->getType(), TemplateArgs);
-    assert(NumArgumentsInExpansion &&
-           "should only be called when all template arguments are known");
-    QualType PatternType =
-        PatternParam->getType()->castAs<PackExpansionType>()->getPattern();
-    for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg) {
-      ParmVarDecl *FunctionParam = Function->getParamDecl(FParamIdx);
-      FunctionParam->setDeclName(PatternParam->getDeclName());
-      if (!PatternDecl->getType()->isDependentType()) {
-        Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(S, Arg);
-        QualType T = S.SubstType(PatternType, TemplateArgs,
-                                 FunctionParam->getLocation(),
-                                 FunctionParam->getDeclName());
-        if (T.isNull())
-          return true;
-        FunctionParam->setType(T);
-      }
+    if (NumArgumentsInExpansion) {
+      QualType PatternType =
+          PatternParam->getType()->castAs<PackExpansionType>()->getPattern();
+      for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg) {
+        ParmVarDecl *FunctionParam = Function->getParamDecl(FParamIdx);
+        FunctionParam->setDeclName(PatternParam->getDeclName());
+        if (!PatternDecl->getType()->isDependentType()) {
+          Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(S, Arg);
+          QualType T = S.SubstType(PatternType, TemplateArgs,
+                                   FunctionParam->getLocation(),
+                                   FunctionParam->getDeclName());
+          if (T.isNull())
+            return true;
+          FunctionParam->setType(T);
+        }
 
-      Scope.InstantiatedLocalPackArg(PatternParam, FunctionParam);
-      ++FParamIdx;
+        Scope.InstantiatedLocalPackArg(PatternParam, FunctionParam);
+        ++FParamIdx;
+      }
     }
   }
 

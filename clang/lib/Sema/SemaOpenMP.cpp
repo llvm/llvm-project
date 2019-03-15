@@ -4758,8 +4758,7 @@ DeclRefExpr *OpenMPIterationSpaceChecker::buildCounterVar(
       Captures.insert(std::make_pair(LCRef, Ref));
     return Ref;
   }
-  return buildDeclRefExpr(SemaRef, VD, VD->getType().getNonReferenceType(),
-                          DefaultLoc);
+  return cast<DeclRefExpr>(LCRef);
 }
 
 Expr *OpenMPIterationSpaceChecker::buildPrivateCounterVar() const {

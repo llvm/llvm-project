@@ -63,6 +63,11 @@ def keep_file_symbols : Flag<["-", "--"], "keep-file-symbols">,
 
 def K : JoinedOrSeparate<["-"], "K">, Alias<keep_symbol>;
 
+def only_keep_debug
+    : Flag<["-", "--"], "only-keep-debug">,
+      HelpText<"Clear sections that would not be stripped by --strip-debug. "
+               "Currently only implemented for COFF.">;
+
 def discard_locals : Flag<["-", "--"], "discard-locals">,
                      HelpText<"Remove compiler-generated local symbols, (e.g. "
                               "symbols starting with .L)">;

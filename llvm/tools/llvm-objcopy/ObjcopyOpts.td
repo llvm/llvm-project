@@ -206,9 +206,12 @@ def N : JoinedOrSeparate<["-"], "N">, Alias<strip_symbol>;
 defm keep_symbol : Eq<"keep-symbol", "Do not remove symbol <symbol>">,
                    MetaVarName<"symbol">;
 def K : JoinedOrSeparate<["-"], "K">, Alias<keep_symbol>;
+
 def only_keep_debug
     : Flag<["-", "--"], "only-keep-debug">,
-      HelpText<"Currently ignored. Only for compatibility with GNU objcopy.">;
+      HelpText<"Clear sections that would not be stripped by --strip-debug. "
+               "Currently only implemented for COFF.">;
+
 def keep_file_symbols : Flag<["-", "--"], "keep-file-symbols">,
                         HelpText<"Do not remove file symbols">;
 defm dump_section

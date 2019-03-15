@@ -2026,6 +2026,23 @@ define i32 @split_load(i64* %p) {
 ;; A collection of simple memory forwarding tests.  Nothing particular
 ;; interesting semantic wise, just demonstrating obvious missed transforms.
 
+@Zero = constant i64 0
+
+; TODO: should return constant
+define i64 @constant_folding(i64* %p) {
+; CHECK-O0-LABEL: constant_folding:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: constant_folding:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* %p unordered, align 8
+  ret i64 %v
+}
+
 ; Legal to forward and fold (TODO)
 define i64 @load_forwarding(i64* %p) {
 ; CHECK-O0-LABEL: load_forwarding:
@@ -2170,5 +2187,106 @@ define i64 @nofold_stfence(i64* %p) {
   ret i64 %ret
 }
 
+;; Next, test how well we can fold invariant loads.
 
+@Constant = external constant i64
+
+define i64 @fold_constant(i64 %arg) {
+; CHECK-O0-LABEL: fold_constant:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    addq Constant, %rdi
+; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: fold_constant:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq %rdi, %rax
+; CHECK-O3-NEXT:    addq {{.*}}(%rip), %rax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* @Constant unordered, align 8
+  %ret = add i64 %v, %arg
+  ret i64 %ret
+}
+
+define i64 @fold_constant_clobber(i64* %p, i64 %arg) {
+; CHECK-O0-LABEL: fold_constant_clobber:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-O0-NEXT:    movq $5, (%rdi)
+; CHECK-O0-NEXT:    addq %rsi, %rax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: fold_constant_clobber:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-O3-NEXT:    movq $5, (%rdi)
+; CHECK-O3-NEXT:    addq %rsi, %rax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* @Constant unordered, align 8
+  store i64 5, i64* %p
+  %ret = add i64 %v, %arg
+  ret i64 %ret
+}
+
+define i64 @fold_constant_fence(i64 %arg) {
+; CHECK-O0-LABEL: fold_constant_fence:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-O0-NEXT:    mfence
+; CHECK-O0-NEXT:    addq %rdi, %rax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: fold_constant_fence:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-O3-NEXT:    mfence
+; CHECK-O3-NEXT:    addq %rdi, %rax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* @Constant unordered, align 8
+  fence seq_cst
+  %ret = add i64 %v, %arg
+  ret i64 %ret
+}
+
+define i64 @fold_invariant_clobber(i64* %p, i64 %arg) {
+; CHECK-O0-LABEL: fold_invariant_clobber:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    movq $5, (%rdi)
+; CHECK-O0-NEXT:    addq %rsi, %rax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: fold_invariant_clobber:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    movq $5, (%rdi)
+; CHECK-O3-NEXT:    addq %rsi, %rax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* %p unordered, align 8, !invariant.load !{}
+  store i64 5, i64* %p
+  %ret = add i64 %v, %arg
+  ret i64 %ret
+}
+
+
+define i64 @fold_invariant_fence(i64* %p, i64 %arg) {
+; CHECK-O0-LABEL: fold_invariant_fence:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    mfence
+; CHECK-O0-NEXT:    addq %rsi, %rdi
+; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: fold_invariant_fence:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    mfence
+; CHECK-O3-NEXT:    addq %rsi, %rax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* %p unordered, align 8, !invariant.load !{}
+  fence seq_cst
+  %ret = add i64 %v, %arg
+  ret i64 %ret
+}
 

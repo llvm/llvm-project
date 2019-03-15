@@ -185,11 +185,18 @@ TEST(CommandLineTest, TokenizeGNUCommandLine) {
                            array_lengthof(Output));
 }
 
-TEST(CommandLineTest, TokenizeWindowsCommandLine) {
+TEST(CommandLineTest, TokenizeWindowsCommandLine1) {
   const char Input[] = "a\\b c\\\\d e\\\\\"f g\" h\\\"i j\\\\\\\"k \"lmn\" o pqr "
                       "\"st \\\"u\" \\v";
   const char *const Output[] = { "a\\b", "c\\\\d", "e\\f g", "h\"i", "j\\\"k",
                                  "lmn", "o", "pqr", "st \"u", "\\v" };
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input, Output,
+                           array_lengthof(Output));
+}
+
+TEST(CommandLineTest, TokenizeWindowsCommandLine2) {
+  const char Input[] = "clang -c -DFOO=\"\"\"ABC\"\"\" x.cpp";
+  const char *const Output[] = { "clang", "-c", "-DFOO=\"ABC\"", "x.cpp"};
   testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input, Output,
                            array_lengthof(Output));
 }

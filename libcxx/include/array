@@ -190,9 +190,9 @@ struct _LIBCPP_TEMPLATE_VIS array
 
     // element access:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    reference operator[](size_type __n)             {return __elems_[__n];}
+    reference operator[](size_type __n)             _NOEXCEPT {return __elems_[__n];}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-    const_reference operator[](size_type __n) const {return __elems_[__n];}
+    const_reference operator[](size_type __n) const _NOEXCEPT {return __elems_[__n];}
 
     _LIBCPP_CONSTEXPR_AFTER_CXX14       reference at(size_type __n);
     _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference at(size_type __n) const;
@@ -303,13 +303,13 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
 
     // element access:
     _LIBCPP_INLINE_VISIBILITY
-    reference operator[](size_type) {
+    reference operator[](size_type) _NOEXCEPT {
       _LIBCPP_ASSERT(false, "cannot call array<T, 0>::operator[] on a zero-sized array");
       _LIBCPP_UNREACHABLE();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-    const_reference operator[](size_type) const {
+    const_reference operator[](size_type) const _NOEXCEPT {
       _LIBCPP_ASSERT(false, "cannot call array<T, 0>::operator[] on a zero-sized array");
       _LIBCPP_UNREACHABLE();
     }

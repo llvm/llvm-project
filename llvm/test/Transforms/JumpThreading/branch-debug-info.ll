@@ -10,7 +10,7 @@ define void @test0(i32 %i) {
   br i1 %c0, label %left, label %right
 
  left:
-  br i1 %c0, label %left, label %right
+  br i1 %c0, label %left, label %right ; "line 3" to -debugify
 
  right:
   ret void
@@ -27,7 +27,7 @@ define void @test1(i32 %i, i32 %len) {
 
  left:
   %c1 = icmp ult i32 %i, %len
-  br i1 %c1, label %right, label %left0
+  br i1 %c1, label %right, label %left0 ; "line 9" to -debugify
 
  left0:
   ret void
@@ -36,6 +36,6 @@ define void @test1(i32 %i, i32 %len) {
   ret void
 }
 
-; CHECK-DAG: ![[DBG0]] = !DILocation(
-; CHECK-DAG: ![[DBG1]] = !DILocation(
+; CHECK-DAG: ![[DBG0]] = !DILocation(line: 3,
+; CHECK-DAG: ![[DBG1]] = !DILocation(line: 9,
 

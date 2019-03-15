@@ -76,7 +76,7 @@
 # DEBUG:      .. type index coverage check SKIPPED: no rules defined
 #
 # DEBUG-NEXT: G_CONCAT_VECTORS (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. type index coverage check SKIPPED: no rules defined
+# DEBUG:      .. the first uncovered type index: 2, OK
 #
 # DEBUG-NEXT: G_PTRTOINT (opcode {{[0-9]+}}): 2 type indices
 # DEBUG:      .. the first uncovered type index: 2, OK
@@ -199,7 +199,7 @@
 # DEBUG:      .. the first uncovered type index: 2, OK
 #
 # DEBUG-NEXT: G_UADDO (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. type index coverage check SKIPPED: no rules defined
+# DEBUG:      .. the first uncovered type index: 2, OK
 #
 # DEBUG-NEXT: G_UADDE (opcode {{[0-9]+}}): 2 type indices
 # DEBUG:      .. the first uncovered type index: 2, OK
@@ -307,7 +307,7 @@
 # DEBUG:      .. type index coverage check SKIPPED: no rules defined
 #
 # DEBUG-NEXT: G_INSERT_VECTOR_ELT (opcode {{[0-9]+}}): 3 type indices
-# DEBUG:      .. type index coverage check SKIPPED: no rules defined
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_EXTRACT_VECTOR_ELT (opcode {{[0-9]+}}): 3 type indices
 # DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected

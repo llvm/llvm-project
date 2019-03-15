@@ -1635,12 +1635,8 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     case Intrinsic::amdgcn_struct_buffer_load_format:
       return simplifyAMDGCNMemoryIntrinsicDemanded(II, DemandedElts);
     default: {
-      if (getAMDGPUImageDMaskIntrinsic(II->getIntrinsicID())) {
-        assert(cast<ConstantInt>(
-                 II->getArgOperand(
-                   II->getNumOperands() - 2))->getZExtValue() == 0);
+      if (getAMDGPUImageDMaskIntrinsic(II->getIntrinsicID()))
         return simplifyAMDGCNMemoryIntrinsicDemanded(II, DemandedElts, 0);
-      }
 
       break;
     }
