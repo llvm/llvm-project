@@ -10,7 +10,9 @@
 #define liblldb_DWARFAbbreviationDeclaration_h_
 
 #include "DWARFAttribute.h"
+#include "DWARFDefines.h"
 #include "SymbolFileDWARF.h"
+#include "llvm/Support/Error.h"
 
 class DWARFAbbreviationDeclaration {
 public:
@@ -44,10 +46,18 @@ public:
     return m_attributes[idx].get_form();
   }
   uint32_t FindAttributeIndex(dw_attr_t attr) const;
-  bool Extract(const lldb_private::DWARFDataExtractor &data,
-               lldb::offset_t *offset_ptr);
-  bool Extract(const lldb_private::DWARFDataExtractor &data,
-               lldb::offset_t *offset_ptr, dw_uleb128_t code);
+
+  /// Extract one abbreviation declaration and all of its associated attributes.
+  /// Possible return values:
+  ///   DWARFEnumState::Complete - the extraction completed successfully.  This
+  ///       was the last abbrev decl in a sequence, and the user should not call
+  ///       this function again.
+  ///   DWARFEnumState::MoreItems - the extraction completed successfully.  The
+  ///       user should call this function again to retrieve the next decl.
+  ///   llvm::Error - A parsing error occurred.  The debug info is malformed.
+  llvm::Expected<lldb_private::DWARFEnumState>
+  extract(const lldb_private::DWARFDataExtractor &data,
+          lldb::offset_t *offset_ptr);
   bool IsValid();
   void Dump(lldb_private::Stream *s) const;
   bool operator==(const DWARFAbbreviationDeclaration &rhs) const;

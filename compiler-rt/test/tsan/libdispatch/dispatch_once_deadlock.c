@@ -3,8 +3,6 @@
 // RUN: %clang_tsan %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: dispatch
-
 #include <dispatch/dispatch.h>
 
 #include <pthread.h>

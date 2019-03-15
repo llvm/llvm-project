@@ -285,3 +285,10 @@ There is also an additional -analyzer-stats flag, which enables various
 statistics within the analyzer engine. Note the Stats checker (which produces at
 least one bug report per function) may actually change the values reported by
 -analyzer-stats.
+
+Output testing checkers
+=======================
+
+- debug.ReportStmts reports a warning at **every** statement, making it a very
+  useful tool for testing thoroughly bug report construction and output
+  emission.

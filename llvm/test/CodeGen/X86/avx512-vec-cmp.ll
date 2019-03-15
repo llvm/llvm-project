@@ -1108,3 +1108,22 @@ define i16 @pcmpeq_mem_2(<16 x i32> %a, <16 x i32>* %b) {
   %cast = bitcast <16 x i1> %cmp to i16
   ret i16 %cast
 }
+
+; Don't let a degenerate case trigger an infinite loop.
+; This should get simplified before it even exists as a vselect node,
+; but that does not happen as of this change.
+
+define <2 x i64> @PR41066(<2 x i64> %t0, <2 x double> %x, <2 x double> %y) {
+; AVX512-LABEL: PR41066:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x57,0xc0]
+; AVX512-NEXT:    retq ## encoding: [0xc3]
+;
+; SKX-LABEL: PR41066:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vxorps %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x57,0xc0]
+; SKX-NEXT:    retq ## encoding: [0xc3]
+  %t1 = fcmp ogt <2 x double> %x, %y
+  %t2 = select <2 x i1> %t1, <2 x i64> <i64 undef, i64 0>, <2 x i64> zeroinitializer
+  ret <2 x i64> %t2
+}

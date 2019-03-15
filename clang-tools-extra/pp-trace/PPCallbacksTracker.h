@@ -134,6 +134,9 @@ public:
                      llvm::ArrayRef<int> Ids) override;
   void PragmaWarningPush(clang::SourceLocation Loc, int Level) override;
   void PragmaWarningPop(clang::SourceLocation Loc) override;
+  void PragmaExecCharsetPush(clang::SourceLocation Loc,
+                             clang::StringRef Str) override;
+  void PragmaExecCharsetPop(clang::SourceLocation Loc) override;
   void MacroExpands(const clang::Token &MacroNameTok,
                     const clang::MacroDefinition &MD, clang::SourceRange Range,
                     const clang::MacroArgs *Args) override;

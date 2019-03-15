@@ -53,6 +53,8 @@
 
 name: basic_insert_dcache_wb
 tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
 
 body: |
   bb.0:
@@ -69,6 +71,8 @@ body: |
 
 name: explicit_flush_after
 tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
 
 body: |
   bb.0:
@@ -87,6 +91,8 @@ body: |
 
 name: explicit_flush_before
 tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
 
 body: |
   bb.0:
@@ -100,6 +106,8 @@ body: |
 # CHECK-NEXT: S_ENDPGM 0
 name: no_scalar_store
 tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
 
 body: |
   bb.0:
@@ -119,6 +127,8 @@ body: |
 
 name: multi_block_store
 tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
 
 body: |
   bb.0:
@@ -146,6 +156,8 @@ body: |
 
 name: one_block_store
 tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
 
 body: |
   bb.0:
@@ -165,6 +177,8 @@ body: |
 
 name: si_return
 tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
 
 body: |
   bb.0:

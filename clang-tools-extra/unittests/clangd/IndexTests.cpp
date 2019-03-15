@@ -13,6 +13,8 @@
 #include "index/Index.h"
 #include "index/MemIndex.h"
 #include "index/Merge.h"
+#include "index/Symbol.h"
+#include "clang/Index/IndexSymbol.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -179,6 +181,41 @@ TEST(MemIndexTest, Lookup) {
   EXPECT_THAT(lookup(*I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::xyz"));
   EXPECT_THAT(lookup(*I, SymbolID("ns::nonono")), UnorderedElementsAre());
+}
+
+TEST(MemIndexTest, TemplateSpecialization) {
+  SymbolSlab::Builder B;
+
+  Symbol S = symbol("TempSpec");
+  S.ID = SymbolID("0");
+  B.insert(S);
+
+  S = symbol("TempSpec");
+  S.ID = SymbolID("1");
+  S.SymInfo.Properties = static_cast<index::SymbolPropertySet>(
+      index::SymbolProperty::TemplateSpecialization);
+  B.insert(S);
+
+  S = symbol("TempSpec");
+  S.ID = SymbolID("2");
+  S.SymInfo.Properties = static_cast<index::SymbolPropertySet>(
+      index::SymbolProperty::TemplatePartialSpecialization);
+  B.insert(S);
+
+  auto I = MemIndex::build(std::move(B).build(), RefSlab());
+  FuzzyFindRequest Req;
+  Req.Query = "TempSpec";
+  Req.AnyScope = true;
+
+  std::vector<Symbol> Symbols;
+  I->fuzzyFind(Req, [&Symbols](const Symbol &Sym) { Symbols.push_back(Sym); });
+  EXPECT_EQ(Symbols.size(), 1U);
+  EXPECT_FALSE(Symbols.front().SymInfo.Properties &
+               static_cast<index::SymbolPropertySet>(
+                   index::SymbolProperty::TemplateSpecialization));
+  EXPECT_FALSE(Symbols.front().SymInfo.Properties &
+               static_cast<index::SymbolPropertySet>(
+                   index::SymbolProperty::TemplatePartialSpecialization));
 }
 
 TEST(MergeIndexTest, Lookup) {

@@ -2334,11 +2334,56 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
   if (V.isUnknown() || !V.getAs<nonloc::CompoundVal>())
     return bindAggregate(B, R, UnknownVal());
 
+  // The raw CompoundVal is essentially a symbolic InitListExpr: an (immutable)
+  // list of other values. It appears pretty much only when there's an actual
+  // initializer list expression in the program, and the analyzer tries to
+  // unwrap it as soon as possible.
+  // This code is where such unwrap happens: when the compound value is put into
+  // the object that it was supposed to initialize (it's an *initializer* list,
+  // after all), instead of binding the whole value to the whole object, we bind
+  // sub-values to sub-objects. Sub-values may themselves be compound values,
+  // and in this case the procedure becomes recursive.
+  // FIXME: The annoying part about compound values is that they don't carry
+  // any sort of information about which value corresponds to which sub-object.
+  // It's simply a list of values in the middle of nowhere; we expect to match
+  // them to sub-objects, essentially, "by index": first value binds to
+  // the first field, second value binds to the second field, etc.
+  // It would have been much safer to organize non-lazy compound values as
+  // a mapping from fields/bases to values.
   const nonloc::CompoundVal& CV = V.castAs<nonloc::CompoundVal>();
   nonloc::CompoundVal::iterator VI = CV.begin(), VE = CV.end();
 
-  RecordDecl::field_iterator FI, FE;
   RegionBindingsRef NewB(B);
+
+  // In C++17 aggregates may have base classes, handle those as well.
+  // They appear before fields in the initializer list / compound value.
+  if (const auto *CRD = dyn_cast<CXXRecordDecl>(RD)) {
+    assert(CRD->isAggregate() &&
+           "Non-aggregates are constructed with a constructor!");
+
+    for (const auto &B : CRD->bases()) {
+      // (Multiple inheritance is fine though.)
+      assert(!B.isVirtual() && "Aggregates cannot have virtual base classes!");
+
+      if (VI == VE)
+        break;
+
+      QualType BTy = B.getType();
+      assert(BTy->isStructureOrClassType() && "Base classes must be classes!");
+
+      const CXXRecordDecl *BRD = BTy->getAsCXXRecordDecl();
+      assert(BRD && "Base classes must be C++ classes!");
+
+      const CXXBaseObjectRegion *BR =
+          MRMgr.getCXXBaseObjectRegion(BRD, R, /*IsVirtual=*/false);
+
+      NewB = bindStruct(NewB, BR, *VI);
+
+      ++VI;
+    }
+  }
+
+  RecordDecl::field_iterator FI, FE;
 
   for (FI = RD->field_begin(), FE = RD->field_end(); FI != FE; ++FI) {
 

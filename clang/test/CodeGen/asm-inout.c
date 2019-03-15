@@ -46,3 +46,12 @@ __m64 test5(__m64 __A, __m64 __B) {
   asm ("pmulhuw %1, %0\n\t" : "+y" (__A) : "y" (__B));
   return __A;
 }
+
+// CHECK: @test6
+int test6(void) {
+  typedef unsigned char __attribute__((vector_size(8))) _m64u8;
+  _m64u8 __attribute__((aligned(16))) Mu8_0, __attribute__((aligned(16))) Mu8_1;
+  // CHECK: call x86_mmx asm "nop", "=y,0,~{dirflag},~{fpsr},~{flags}"(x86_mmx %1)
+  asm ("nop" : "=y"(Mu8_1 ) : "0"(Mu8_0 ));
+  return 0;
+}

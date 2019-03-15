@@ -660,14 +660,23 @@ const DWARFDataExtractor &SymbolFileDWARF::get_gnu_debugaltlink() {
 }
 
 DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
-  if (m_abbr == NULL) {
-    const DWARFDataExtractor &debug_abbrev_data = get_debug_abbrev_data();
-    if (debug_abbrev_data.GetByteSize() > 0) {
-      m_abbr.reset(new DWARFDebugAbbrev());
-      if (m_abbr)
-        m_abbr->Parse(debug_abbrev_data);
-    }
+  if (m_abbr)
+    return m_abbr.get();
+
+  const DWARFDataExtractor &debug_abbrev_data = get_debug_abbrev_data();
+  if (debug_abbrev_data.GetByteSize() == 0)
+    return nullptr;
+
+  auto abbr = llvm::make_unique<DWARFDebugAbbrev>();
+  llvm::Error error = abbr->parse(debug_abbrev_data);
+  if (error) {
+    Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "Unable to read .debug_abbrev section: {0}");
+    return nullptr;
   }
+
+  m_abbr = std::move(abbr);
   return m_abbr.get();
 }
 

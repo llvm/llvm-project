@@ -42,4 +42,4 @@ __aeabi_unwind_cpp_pr0:
 
 // CHECK-EXTAB: Contents of section .ARM.extab:
 // 0x0210 + 0x0e20 = 0x1030 = __gxx_personality_v0(PLT)
-// CHECK-EXTAB-NEXT:  0210 200e0000 b0b0b000 00000000
+// CHECK-EXTAB-NEXT:  0230 000e0000 b0b0b000 00000000

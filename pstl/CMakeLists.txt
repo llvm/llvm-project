@@ -16,7 +16,7 @@ math(EXPR VERSION_MINOR "${PARALLELSTL_VERSION_SOURCE} % 100")
 
 project(ParallelSTL VERSION ${VERSION_MAJOR}.${VERSION_MINOR} LANGUAGES CXX)
 
-option(PARALLELSTL_USE_PARALLEL_POLICIES "Enable parallel policies" ON)
+option(PARALLELSTL_USE_PARALLEL_POLICIES "Enable parallel policies" OFF)
 set(PARALLELSTL_BACKEND "tbb" CACHE STRING "Threading backend; defaults to TBB")
 
 include(CMakePackageConfigHelpers)

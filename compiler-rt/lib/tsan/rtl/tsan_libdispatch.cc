@@ -11,25 +11,16 @@
 // Support for intercepting libdispatch (GCD).
 //===----------------------------------------------------------------------===//
 
-#include "sanitizer_common/sanitizer_platform.h"
-
 #include "sanitizer_common/sanitizer_common.h"
 #include "interception/interception.h"
 #include "tsan_interceptors.h"
-#include "tsan_platform.h"
 #include "tsan_rtl.h"
 
-#include <Block.h>
-#include <dispatch/dispatch.h>
-
-// DISPATCH_NOESCAPE is only defined on Apple platforms with at least Xcode 8.
-#ifndef DISPATCH_NOESCAPE
-#define DISPATCH_NOESCAPE
-#endif
-
-typedef long long_t;  // NOLINT
+#include "BlocksRuntime/Block.h"
+#include "tsan_dispatch_defs.h"
 
 namespace __tsan {
+  typedef u16 uint16_t;
 
 typedef struct {
   dispatch_queue_t queue;
@@ -322,9 +313,12 @@ TSAN_INTERCEPTOR(long_t, dispatch_group_wait, dispatch_group_t group,
   return result;
 }
 
+// Used, but not intercepted.
+extern "C" void dispatch_group_enter(dispatch_group_t group);
+
 TSAN_INTERCEPTOR(void, dispatch_group_leave, dispatch_group_t group) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_group_leave, group);
-  // Acquired in the group noticifaction callback in dispatch_group_notify[_f].
+  // Acquired in the group notification callback in dispatch_group_notify[_f].
   Release(thr, pc, (uptr)group);
   REAL(dispatch_group_leave)(group);
 }
@@ -334,10 +328,10 @@ TSAN_INTERCEPTOR(void, dispatch_group_async, dispatch_group_t group,
   SCOPED_TSAN_INTERCEPTOR(dispatch_group_async, group, queue, block);
   dispatch_retain(group);
   dispatch_group_enter(group);
-  __block dispatch_block_t block_copy = (dispatch_block_t)_Block_copy(block);
+  __block dispatch_block_t block_copy = (dispatch_block_t)Block_copy(block);
   WRAP(dispatch_async)(queue, ^(void) {
     block_copy();
-    _Block_release(block_copy);
+    Block_release(block_copy);
     WRAP(dispatch_group_leave)(group);
     dispatch_release(group);
   });

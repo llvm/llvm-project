@@ -823,7 +823,7 @@ namespace yaml {
       io.mapRequired("f1", c.f1);
       io.mapRequired("f2", c.f2);
       io.mapRequired("f3", c.f3);
-      io.mapOptional("f4", c.f4, MyFlags(flagRound));
+      io.mapOptional("f4", c.f4, flagRound);
      }
   };
 }
@@ -1327,8 +1327,8 @@ namespace yaml {
     static void mapping(IO &io, TotalSeconds &secs) {
       MappingNormalization<NormalizedSeconds, TotalSeconds> keys(io, secs);
 
-      io.mapOptional("hours",    keys->hours,    (uint32_t)0);
-      io.mapOptional("minutes",  keys->minutes,  (uint8_t)0);
+      io.mapOptional("hours", keys->hours, 0);
+      io.mapOptional("minutes", keys->minutes, 0);
       io.mapRequired("seconds",  keys->seconds);
     }
   };

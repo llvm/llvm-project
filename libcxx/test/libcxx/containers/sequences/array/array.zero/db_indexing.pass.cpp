@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+// XFAIL:*
 // UNSUPPORTED: libcpp-no-exceptions
 // MODULES_DEFINES: _LIBCPP_DEBUG=1
 // MODULES_DEFINES: _LIBCPP_DEBUG_USE_EXCEPTIONS

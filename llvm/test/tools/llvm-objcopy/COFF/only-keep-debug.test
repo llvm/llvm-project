@@ -3,6 +3,10 @@ RUN: yaml2obj %p/Inputs/only-keep-sections.yaml > %t.in.exe
 RUN: llvm-objcopy --only-keep-debug %t.in.exe %t.out.exe
 RUN: llvm-readobj --sections %t.out.exe | FileCheck %s --check-prefix=SECTIONS
 RUN: llvm-objdump -t %t.out.exe | FileCheck %s --check-prefix=SYMBOLS
+# Run llvm-strip with --strip-symbol on a non-existent symbol to prevent
+# defaulting to --strip-all.
+RUN: llvm-strip --only-keep-debug --strip-symbol foo %t.in.exe -o %t-strip.out.exe
+RUN: cmp %t.out.exe %t-strip.out.exe
 
 Check that all non-debug/buildid sections with IMAGE_SCN_CNT_CODE
 or IMAGE_SCN_CNT_INITIALIZED_DATA are truncated, and no others.
