@@ -2402,6 +2402,17 @@ define amdgpu_ps float @extract_elt0_tfe_image_load_1d_v4f32i32_i32(i32 %s, <8 x
 
 declare {<4 x float>, i32} @llvm.amdgcn.image.load.1d.sl_v4f32i32s.i32(i32, i32, <8 x i32>, i32, i32) #1
 
+; CHECK: @tfe_check_assert(
+; CHECK: %data = call float @llvm.amdgcn.image.load.2d.f32.i32(i32 1, i32 undef, i32 undef, <8 x i32> undef, i32 0, i32 1)
+; CHECK-NEXT: ret float %data
+define amdgpu_hs float @tfe_check_assert() #0 {
+  %data = call nsz <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 15, i32 undef, i32 undef, <8 x i32> undef, i32 0, i32 1) #2
+  %elt0 = extractelement <4 x float> %data, i32 0
+  ret float %elt0
+}
+
+declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #1
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
 

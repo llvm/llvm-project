@@ -670,6 +670,37 @@ a C/C++ front-end would generate the following descriptors:
   ...
   }
 
+Fortran specific debug information
+==================================
+
+Fortran function information
+----------------------------
+
+There are a few DWARF attributes defined to support client debugging of Fortran programs.  LLVM can generate (or omit) the appropriate DWARF attributes for the prefix-specs of ELEMENTAL, PURE, IMPURE, RECURSIVE, and NON_RECURSIVE.  This is done by using the spFlags values: DISPFlagElemental, DISPFlagPure, and DISPFlagRecursive.
+
+.. code-block:: fortran
+
+  elemental function elem_func(a)
+
+a Fortran front-end would generate the following descriptors:
+
+.. code-block:: text
+
+  !11 = distinct !DISubprogram(name: "subroutine2", scope: !1, file: !1,
+          line: 5, type: !8, scopeLine: 6,
+          spFlags: DISPFlagDefinition | DISPFlagElemental, unit: !0,
+          retainedNodes: !2)
+
+and this will materialize an additional DWARF attribute as:
+
+.. code-block:: text
+
+  DW_TAG_subprogram [3]  
+     DW_AT_low_pc [DW_FORM_addr]     (0x0000000000000010 ".text")
+     DW_AT_high_pc [DW_FORM_data4]   (0x00000001)
+     ...
+     DW_AT_elemental [DW_FORM_flag_present]  (true)
+
 Debugging information format
 ============================
 

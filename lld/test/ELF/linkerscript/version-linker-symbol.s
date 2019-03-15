@@ -11,7 +11,7 @@
 # CHECK-NEXT: Binding: Global
 # CHECK-NEXT: Type: None
 # CHECK-NEXT: Other: 0
-# CHECK-NEXT: Section: .dynamic
+# CHECK-NEXT: Section: .data
 
 # CHECK:      Name: foo@@VER1
 # CHECK-NEXT: Value: 0

@@ -102,15 +102,6 @@ def : LoadPatGlobalAddr<i64, load, LOAD_I64>;
 def : LoadPatGlobalAddr<f32, load, LOAD_F32>;
 def : LoadPatGlobalAddr<f64, load, LOAD_F64>;
 
-class LoadPatExternalSym<ValueType ty, PatFrag kind, NI inst> :
-  Pat<(ty (kind (add I32:$addr, (WebAssemblywrapper texternalsym:$off)))),
-      (inst 0, texternalsym:$off, I32:$addr)>;
-def : LoadPatExternalSym<i32, load, LOAD_I32>;
-def : LoadPatExternalSym<i64, load, LOAD_I64>;
-def : LoadPatExternalSym<f32, load, LOAD_F32>;
-def : LoadPatExternalSym<f64, load, LOAD_F64>;
-
-
 // Select loads with just a constant offset.
 class LoadPatOffsetOnly<ValueType ty, PatFrag kind, NI inst> :
   Pat<(ty (kind imm:$off)), (inst 0, imm:$off, (CONST_I32 0))>;
@@ -128,14 +119,6 @@ def : LoadPatGlobalAddrOffOnly<i32, load, LOAD_I32>;
 def : LoadPatGlobalAddrOffOnly<i64, load, LOAD_I64>;
 def : LoadPatGlobalAddrOffOnly<f32, load, LOAD_F32>;
 def : LoadPatGlobalAddrOffOnly<f64, load, LOAD_F64>;
-
-class LoadPatExternSymOffOnly<ValueType ty, PatFrag kind, NI inst> :
-  Pat<(ty (kind (WebAssemblywrapper texternalsym:$off))),
-      (inst 0, texternalsym:$off, (CONST_I32 0))>;
-def : LoadPatExternSymOffOnly<i32, load, LOAD_I32>;
-def : LoadPatExternSymOffOnly<i64, load, LOAD_I64>;
-def : LoadPatExternSymOffOnly<f32, load, LOAD_F32>;
-def : LoadPatExternSymOffOnly<f64, load, LOAD_F64>;
 
 // Extending load.
 defm LOAD8_S_I32 : WebAssemblyLoad<I32, "i32.load8_s", 0x2c>;
@@ -196,18 +179,6 @@ def : LoadPatGlobalAddr<i64, zextloadi16, LOAD16_U_I64>;
 def : LoadPatGlobalAddr<i64, sextloadi32, LOAD32_S_I64>;
 def : LoadPatGlobalAddr<i64, zextloadi32, LOAD32_U_I64>;
 
-def : LoadPatExternalSym<i32, sextloadi8, LOAD8_S_I32>;
-def : LoadPatExternalSym<i32, zextloadi8, LOAD8_U_I32>;
-def : LoadPatExternalSym<i32, sextloadi16, LOAD16_S_I32>;
-def : LoadPatExternalSym<i32, zextloadi16, LOAD16_U_I32>;
-def : LoadPatExternalSym<i64, sextloadi8, LOAD8_S_I64>;
-def : LoadPatExternalSym<i64, zextloadi8, LOAD8_U_I64>;
-def : LoadPatExternalSym<i64, sextloadi16, LOAD16_S_I64>;
-def : LoadPatExternalSym<i64, zextloadi16, LOAD16_U_I64>;
-def : LoadPatExternalSym<i64, sextloadi32, LOAD32_S_I64>;
-def : LoadPatExternalSym<i64, zextloadi32, LOAD32_U_I64>;
-
-
 // Select extending loads with just a constant offset.
 def : LoadPatOffsetOnly<i32, sextloadi8, LOAD8_S_I32>;
 def : LoadPatOffsetOnly<i32, zextloadi8, LOAD8_U_I32>;
@@ -231,17 +202,6 @@ def : LoadPatGlobalAddrOffOnly<i64, sextloadi16, LOAD16_S_I64>;
 def : LoadPatGlobalAddrOffOnly<i64, zextloadi16, LOAD16_U_I64>;
 def : LoadPatGlobalAddrOffOnly<i64, sextloadi32, LOAD32_S_I64>;
 def : LoadPatGlobalAddrOffOnly<i64, zextloadi32, LOAD32_U_I64>;
-
-def : LoadPatExternSymOffOnly<i32, sextloadi8, LOAD8_S_I32>;
-def : LoadPatExternSymOffOnly<i32, zextloadi8, LOAD8_U_I32>;
-def : LoadPatExternSymOffOnly<i32, sextloadi16, LOAD16_S_I32>;
-def : LoadPatExternSymOffOnly<i32, zextloadi16, LOAD16_U_I32>;
-def : LoadPatExternSymOffOnly<i64, sextloadi8, LOAD8_S_I64>;
-def : LoadPatExternSymOffOnly<i64, zextloadi8, LOAD8_U_I64>;
-def : LoadPatExternSymOffOnly<i64, sextloadi16, LOAD16_S_I64>;
-def : LoadPatExternSymOffOnly<i64, zextloadi16, LOAD16_U_I64>;
-def : LoadPatExternSymOffOnly<i64, sextloadi32, LOAD32_S_I64>;
-def : LoadPatExternSymOffOnly<i64, zextloadi32, LOAD32_U_I64>;
 
 // Resolve "don't care" extending loads to zero-extending loads. This is
 // somewhat arbitrary, but zero-extending is conceptually simpler.
@@ -269,11 +229,6 @@ def : LoadPatGlobalAddr<i32, extloadi16, LOAD16_U_I32>;
 def : LoadPatGlobalAddr<i64, extloadi8, LOAD8_U_I64>;
 def : LoadPatGlobalAddr<i64, extloadi16, LOAD16_U_I64>;
 def : LoadPatGlobalAddr<i64, extloadi32, LOAD32_U_I64>;
-def : LoadPatExternalSym<i32, extloadi8, LOAD8_U_I32>;
-def : LoadPatExternalSym<i32, extloadi16, LOAD16_U_I32>;
-def : LoadPatExternalSym<i64, extloadi8, LOAD8_U_I64>;
-def : LoadPatExternalSym<i64, extloadi16, LOAD16_U_I64>;
-def : LoadPatExternalSym<i64, extloadi32, LOAD32_U_I64>;
 
 // Select "don't care" extending loads with just a constant offset.
 def : LoadPatOffsetOnly<i32, extloadi8, LOAD8_U_I32>;
@@ -286,11 +241,6 @@ def : LoadPatGlobalAddrOffOnly<i32, extloadi16, LOAD16_U_I32>;
 def : LoadPatGlobalAddrOffOnly<i64, extloadi8, LOAD8_U_I64>;
 def : LoadPatGlobalAddrOffOnly<i64, extloadi16, LOAD16_U_I64>;
 def : LoadPatGlobalAddrOffOnly<i64, extloadi32, LOAD32_U_I64>;
-def : LoadPatExternSymOffOnly<i32, extloadi8, LOAD8_U_I32>;
-def : LoadPatExternSymOffOnly<i32, extloadi16, LOAD16_U_I32>;
-def : LoadPatExternSymOffOnly<i64, extloadi8, LOAD8_U_I64>;
-def : LoadPatExternSymOffOnly<i64, extloadi16, LOAD16_U_I64>;
-def : LoadPatExternSymOffOnly<i64, extloadi32, LOAD32_U_I64>;
 
 // Defines atomic and non-atomic stores, regular and truncating
 multiclass WebAssemblyStore<WebAssemblyRegClass rc, string Name, int Opcode> {
@@ -341,14 +291,6 @@ def : StorePatGlobalAddr<i64, store, STORE_I64>;
 def : StorePatGlobalAddr<f32, store, STORE_F32>;
 def : StorePatGlobalAddr<f64, store, STORE_F64>;
 
-class StorePatExternalSym<ValueType ty, PatFrag kind, NI inst> :
-  Pat<(kind ty:$val, (add I32:$addr, (WebAssemblywrapper texternalsym:$off))),
-      (inst 0, texternalsym:$off, I32:$addr, ty:$val)>;
-def : StorePatExternalSym<i32, store, STORE_I32>;
-def : StorePatExternalSym<i64, store, STORE_I64>;
-def : StorePatExternalSym<f32, store, STORE_F32>;
-def : StorePatExternalSym<f64, store, STORE_F64>;
-
 // Select stores with just a constant offset.
 class StorePatOffsetOnly<ValueType ty, PatFrag kind, NI inst> :
   Pat<(kind ty:$val, imm:$off), (inst 0, imm:$off, (CONST_I32 0), ty:$val)>;
@@ -364,14 +306,6 @@ def : StorePatGlobalAddrOffOnly<i32, store, STORE_I32>;
 def : StorePatGlobalAddrOffOnly<i64, store, STORE_I64>;
 def : StorePatGlobalAddrOffOnly<f32, store, STORE_F32>;
 def : StorePatGlobalAddrOffOnly<f64, store, STORE_F64>;
-
-class StorePatExternSymOffOnly<ValueType ty, PatFrag kind, NI inst> :
-  Pat<(kind ty:$val, (WebAssemblywrapper texternalsym:$off)),
-      (inst 0, texternalsym:$off, (CONST_I32 0), ty:$val)>;
-def : StorePatExternSymOffOnly<i32, store, STORE_I32>;
-def : StorePatExternSymOffOnly<i64, store, STORE_I64>;
-def : StorePatExternSymOffOnly<f32, store, STORE_F32>;
-def : StorePatExternSymOffOnly<f64, store, STORE_F64>;
 
 // Truncating store.
 defm STORE8_I32 : WebAssemblyStore<I32, "i32.store8", 0x3a>;
@@ -404,11 +338,6 @@ def : StorePatGlobalAddr<i32, truncstorei16, STORE16_I32>;
 def : StorePatGlobalAddr<i64, truncstorei8, STORE8_I64>;
 def : StorePatGlobalAddr<i64, truncstorei16, STORE16_I64>;
 def : StorePatGlobalAddr<i64, truncstorei32, STORE32_I64>;
-def : StorePatExternalSym<i32, truncstorei8, STORE8_I32>;
-def : StorePatExternalSym<i32, truncstorei16, STORE16_I32>;
-def : StorePatExternalSym<i64, truncstorei8, STORE8_I64>;
-def : StorePatExternalSym<i64, truncstorei16, STORE16_I64>;
-def : StorePatExternalSym<i64, truncstorei32, STORE32_I64>;
 
 // Select truncating stores with just a constant offset.
 def : StorePatOffsetOnly<i32, truncstorei8, STORE8_I32>;
@@ -421,11 +350,6 @@ def : StorePatGlobalAddrOffOnly<i32, truncstorei16, STORE16_I32>;
 def : StorePatGlobalAddrOffOnly<i64, truncstorei8, STORE8_I64>;
 def : StorePatGlobalAddrOffOnly<i64, truncstorei16, STORE16_I64>;
 def : StorePatGlobalAddrOffOnly<i64, truncstorei32, STORE32_I64>;
-def : StorePatExternSymOffOnly<i32, truncstorei8, STORE8_I32>;
-def : StorePatExternSymOffOnly<i32, truncstorei16, STORE16_I32>;
-def : StorePatExternSymOffOnly<i64, truncstorei8, STORE8_I64>;
-def : StorePatExternSymOffOnly<i64, truncstorei16, STORE16_I64>;
-def : StorePatExternSymOffOnly<i64, truncstorei32, STORE32_I64>;
 
 // Current memory size.
 defm MEMORY_SIZE_I32 : I<(outs I32:$dst), (ins i32imm:$flags),

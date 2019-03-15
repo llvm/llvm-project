@@ -102,7 +102,7 @@ public:
       Z3_dec_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
     ID.AddInteger(
         Z3_get_ast_id(Context.Context, reinterpret_cast<Z3_ast>(Sort)));
   }

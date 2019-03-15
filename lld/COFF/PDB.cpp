@@ -180,6 +180,9 @@ public:
   /// Write the PDB to disk and store the Guid generated for it in *Guid.
   void commit(codeview::GUID *Guid);
 
+  // Print statistics regarding the final PDB
+  void printStats();
+
 private:
   BumpPtrAllocator Alloc;
 
@@ -222,6 +225,11 @@ private:
   /// List of TypeServer PDBs which cannot be loaded.
   /// Cached to prevent repeated load attempts.
   std::map<codeview::GUID, std::string> MissingTypeServerPDBs;
+
+  // For statistics
+  uint64_t GlobalSymbols = 0;
+  uint64_t ModuleSymbols = 0;
+  uint64_t PublicSymbols = 0;
 };
 
 class DebugSHandler {
@@ -1041,9 +1049,11 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
         // adding the symbol to the module since we may need to get the next
         // symbol offset, and writing to the module's symbol stream will update
         // that offset.
-        if (symbolGoesInGlobalsStream(Sym, Scopes.empty()))
+        if (symbolGoesInGlobalsStream(Sym, Scopes.empty())) {
           addGlobalSymbol(Builder.getGsiBuilder(),
                           File->ModuleDBI->getModuleIndex(), CurSymOffset, Sym);
+          ++GlobalSymbols;
+        }
 
         if (symbolGoesInModuleStream(Sym, Scopes.empty())) {
           // Add symbols to the module in bulk. If this symbol is contiguous
@@ -1057,6 +1067,7 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
             BulkSymbols = RecordBytes;
           }
           CurSymOffset += Sym.length();
+          ++ModuleSymbols;
         }
         return Error::success();
       }));
@@ -1339,6 +1350,7 @@ void PDBLinker::addObjectsToPDB() {
   });
 
   if (!Publics.empty()) {
+    PublicSymbols = Publics.size();
     // Sort the public symbols and add them to the stream.
     parallelSort(Publics, [](const PublicSym32 &L, const PublicSym32 &R) {
       return L.Name < R.Name;
@@ -1346,6 +1358,33 @@ void PDBLinker::addObjectsToPDB() {
     for (const PublicSym32 &Pub : Publics)
       GsiBuilder.addPublicSymbol(Pub);
   }
+}
+
+void PDBLinker::printStats() {
+  if (!Config->ShowSummary)
+    return;
+
+  SmallString<256> Buffer;
+  raw_svector_ostream Stream(Buffer);
+
+  Stream << center_justify("Summary", 80) << '\n'
+         << std::string(80, '-') << '\n';
+
+  auto Print = [&](uint64_t V, StringRef S) {
+    Stream << format_decimal(V, 15) << " " << S << '\n';
+  };
+
+  Print(ObjFile::Instances.size(),
+        "Input OBJ files (expanded from all cmd-line inputs)");
+  Print(TypeServerIndexMappings.size(), "PDB type server dependencies");
+  Print(PrecompTypeIndexMappings.size(), "Precomp OBJ dependencies");
+  Print(getTypeTable().size() + getIDTable().size(), "Merged TPI records");
+  Print(PDBStrTab.size(), "Output PDB strings");
+  Print(GlobalSymbols, "Global symbol records");
+  Print(ModuleSymbols, "Module symbol records");
+  Print(PublicSymbols, "Public symbol records");
+
+  message(Buffer);
 }
 
 void PDBLinker::addNatvisFiles() {
@@ -1493,6 +1532,10 @@ void coff::createPDB(SymbolTable *Symtab,
   codeview::GUID Guid;
   PDB.commit(&Guid);
   memcpy(&BuildId->PDB70.Signature, &Guid, 16);
+
+  T2.stop();
+  T1.stop();
+  PDB.printStats();
 }
 
 void PDBLinker::initialize(llvm::codeview::DebugInfo *BuildId) {

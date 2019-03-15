@@ -857,8 +857,8 @@ bool ClangExpressionParser::Complete(CompletionRequest &request, unsigned line,
   // To actually get the raw user input here, we have to cast our expression to
   // the LLVMUserExpression which exposes the right API. This should never fail
   // as we always have a ClangUserExpression whenever we call this.
-  LLVMUserExpression &llvm_expr = *static_cast<LLVMUserExpression *>(&m_expr);
-  CodeComplete CC(request, m_compiler->getLangOpts(), llvm_expr.GetUserText(),
+  ClangUserExpression *llvm_expr = cast<ClangUserExpression>(&m_expr);
+  CodeComplete CC(request, m_compiler->getLangOpts(), llvm_expr->GetUserText(),
                   typed_pos);
   // We don't need a code generator for parsing.
   m_code_generator.reset();

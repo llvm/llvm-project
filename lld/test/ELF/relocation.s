@@ -16,28 +16,13 @@
 // SEC-NEXT: Offset: 0x1030
 // SEC-NEXT: Size: 48
 
-// SEC:        Name: .got.plt
-// SEC-NEXT:   Type: SHT_PROGBITS
-// SEC-NEXT:   Flags [
-// SEC-NEXT:     SHF_ALLOC
-// SEC-NEXT:     SHF_WRITE
-// SEC-NEXT:   ]
-// SEC-NEXT:   Address: 0x202000
-// SEC-NEXT:   Offset: 0x2000
-// SEC-NEXT:   Size: 40
-// SEC-NEXT:   Link: 0
-// SEC-NEXT:   Info: 0
-// SEC-NEXT:   AddressAlignment: 8
-// SEC-NEXT:   EntrySize: 0
-// SEC-NEXT:   }
-
 // SEC:         Name: .got
 // SEC-NEXT:   Type: SHT_PROGBITS
 // SEC-NEXT:   Flags [
 // SEC-NEXT:     SHF_ALLOC
 // SEC-NEXT:     SHF_WRITE
 // SEC-NEXT:   ]
-// SEC-NEXT:   Address: 0x2030F0
+// SEC-NEXT:   Address: 0x2020F0
 // SEC-NEXT:   Offset:
 // SEC-NEXT:   Size: 8
 // SEC-NEXT:   Link: 0
@@ -45,6 +30,21 @@
 // SEC-NEXT:   AddressAlignment: 8
 // SEC-NEXT:   EntrySize: 0
 // SEC-NEXT: }
+
+// SEC:        Name: .got.plt
+// SEC-NEXT:   Type: SHT_PROGBITS
+// SEC-NEXT:   Flags [
+// SEC-NEXT:     SHF_ALLOC
+// SEC-NEXT:     SHF_WRITE
+// SEC-NEXT:   ]
+// SEC-NEXT:   Address: 0x203000
+// SEC-NEXT:   Offset: 0x3000
+// SEC-NEXT:   Size: 40
+// SEC-NEXT:   Link: 0
+// SEC-NEXT:   Info: 0
+// SEC-NEXT:   AddressAlignment: 8
+// SEC-NEXT:   EntrySize: 0
+// SEC-NEXT:   }
 
 .section       .text,"ax",@progbits,unique,1
 .global _start
@@ -113,16 +113,16 @@ R_X86_64_64:
  .quad R_X86_64_64
 
 // CHECK:      Contents of section .R_X86_64_64:
-// CHECK-NEXT:   2002c0 c0022000 00000000
+// CHECK-NEXT:   2002f8 f8022000 00000000
 
 .section .R_X86_64_GOTPCREL,"a",@progbits
 .global R_X86_64_GOTPCREL
 R_X86_64_GOTPCREL:
  .long zed@gotpcrel
 
-// 0x2030F0(.got) - 0x2002c8(.R_X86_64_GOTPCREL) = 0x2e28
+// 0x2020F0(.got) - 0x2002c8(.R_X86_64_GOTPCREL) = 0x1e28
 // CHECK:      Contents of section .R_X86_64_GOTPCREL
-// CHECK-NEXT:   2002c8 282e0000
+// CHECK-NEXT:   200300 f01d0000
 
 .section .R_X86_64_GOT32,"a",@progbits
 .global R_X86_64_GOT32

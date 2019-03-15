@@ -1994,10 +1994,22 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
   case Intrinsic::fshl:
   case Intrinsic::fshr: {
+    // Canonicalize a shift amount constant operand to be modulo the bit-width.
+    unsigned BitWidth = II->getType()->getScalarSizeInBits();
+    Constant *ShAmtC;
+    if (match(II->getArgOperand(2), m_Constant(ShAmtC)) &&
+        !isa<ConstantExpr>(ShAmtC) && !ShAmtC->containsConstantExpression()) {
+      Constant *WidthC = ConstantInt::get(II->getType(), BitWidth);
+      Constant *ModuloC = ConstantExpr::getURem(ShAmtC, WidthC);
+      if (ModuloC != ShAmtC) {
+        II->setArgOperand(2, ModuloC);
+        return II;
+      }
+    }
+
     const APInt *SA;
     if (match(II->getArgOperand(2), m_APInt(SA))) {
       Value *Op0 = II->getArgOperand(0), *Op1 = II->getArgOperand(1);
-      unsigned BitWidth = SA->getBitWidth();
       uint64_t ShiftAmt = SA->urem(BitWidth);
       assert(ShiftAmt != 0 && "SimplifyCall should have handled zero shift");
       // Normalize to funnel shift left.
@@ -2020,7 +2032,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // The shift amount (operand 2) of a funnel shift is modulo the bitwidth,
     // so only the low bits of the shift amount are demanded if the bitwidth is
     // a power-of-2.
-    unsigned BitWidth = II->getType()->getScalarSizeInBits();
     if (!isPowerOf2_32(BitWidth))
       break;
     APInt Op2Demanded = APInt::getLowBitsSet(BitWidth, Log2_32_Ceil(BitWidth));

@@ -34559,11 +34559,15 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
 
   assert(CondVT.isVector() && "Vector select expects a vector selector!");
 
-  bool TValIsAllZeros = ISD::isBuildVectorAllZeros(LHS.getNode());
   // Check if the first operand is all zeros and Cond type is vXi1.
   // This situation only applies to avx512.
-  if (TValIsAllZeros  && Subtarget.hasAVX512() && Cond.hasOneUse() &&
-      CondVT.getVectorElementType() == MVT::i1) {
+  // TODO: Use isNullOrNullSplat() to distinguish constants with undefs?
+  // TODO: Can we assert that both operands are not zeros (because that should
+  //       get simplified at node creation time)?
+  bool TValIsAllZeros = ISD::isBuildVectorAllZeros(LHS.getNode());
+  bool FValIsAllZeros = ISD::isBuildVectorAllZeros(RHS.getNode());
+  if (TValIsAllZeros && !FValIsAllZeros && Subtarget.hasAVX512() &&
+      Cond.hasOneUse() && CondVT.getVectorElementType() == MVT::i1) {
     // Invert the cond to not(cond) : xor(op,allones)=not(op)
     SDValue CondNew = DAG.getNOT(DL, Cond, CondVT);
     // Vselect cond, op1, op2 = Vselect not(cond), op2, op1
@@ -34578,11 +34582,9 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
   if (CondVT.getScalarSizeInBits() != VT.getScalarSizeInBits())
     return SDValue();
 
-  bool TValIsAllOnes = ISD::isBuildVectorAllOnes(LHS.getNode());
-  bool FValIsAllZeros = ISD::isBuildVectorAllZeros(RHS.getNode());
-
   // Try to invert the condition if true value is not all 1s and false value is
   // not all 0s. Only do this if the condition has one use.
+  bool TValIsAllOnes = ISD::isBuildVectorAllOnes(LHS.getNode());
   if (!TValIsAllOnes && !FValIsAllZeros && Cond.hasOneUse() &&
       // Check if the selector will be produced by CMPP*/PCMP*.
       Cond.getOpcode() == ISD::SETCC &&

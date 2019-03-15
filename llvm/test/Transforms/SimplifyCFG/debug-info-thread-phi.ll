@@ -19,7 +19,7 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.then, %entry
   store i32 1, i32* %bb, align 4
-  br i1 %tobool, label %if.then.1, label %if.end.1
+  br i1 %tobool, label %if.then.1, label %if.end.1 ; "line 10" to -debugify
 
 if.then.1:                                        ; preds = %if.end
   call void @foo()
@@ -35,4 +35,4 @@ for.end:                                          ; preds = %if.end.1
 
 declare void @foo()
 
-; CHECK: ![[DBG]] = !DILocation(
+; CHECK: ![[DBG]] = !DILocation(line: 10,

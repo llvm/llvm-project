@@ -85,11 +85,14 @@ HANDLE_DISP_FLAG(2u, PureVirtual)
 HANDLE_DISP_FLAG((1u << 2), LocalToUnit)
 HANDLE_DISP_FLAG((1u << 3), Definition)
 HANDLE_DISP_FLAG((1u << 4), Optimized)
+HANDLE_DISP_FLAG((1u << 5), Pure)
+HANDLE_DISP_FLAG((1u << 6), Elemental)
+HANDLE_DISP_FLAG((1u << 7), Recursive)
 
 #ifdef DISP_FLAG_LARGEST_NEEDED
 // Intended to be used with ADT/BitmaskEnum.h.
 // NOTE: Always must be equal to largest flag, check this when adding new flags.
-HANDLE_DISP_FLAG((1 << 4), Largest)
+HANDLE_DISP_FLAG((1 << 7), Largest)
 #undef DISP_FLAG_LARGEST_NEEDED
 #endif
 

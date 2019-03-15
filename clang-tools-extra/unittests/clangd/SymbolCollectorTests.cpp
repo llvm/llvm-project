@@ -392,17 +392,25 @@ TEST_F(SymbolCollectorTest, FileLocal) {
 
 TEST_F(SymbolCollectorTest, Template) {
   Annotations Header(R"(
-    // Template is indexed, specialization and instantiation is not.
-    template <class T> struct [[Tmpl]] {T $xdecl[[x]] = 0;};
-    template <> struct Tmpl<int> {};
-    extern template struct Tmpl<float>;
-    template struct Tmpl<double>;
+    // Primary template and explicit specialization are indexed, instantiation
+    // is not.
+    template <class T, class U> struct [[Tmpl]] {T $xdecl[[x]] = 0;};
+    template <> struct $specdecl[[Tmpl]]<int, bool> {};
+    template <class U> struct $partspecdecl[[Tmpl]]<bool, U> {};
+    extern template struct Tmpl<float, bool>;
+    template struct Tmpl<double, bool>;
   )");
   runSymbolCollector(Header.code(), /*Main=*/"");
   EXPECT_THAT(Symbols,
-              UnorderedElementsAreArray(
-                  {AllOf(QName("Tmpl"), DeclRange(Header.range())),
-                   AllOf(QName("Tmpl::x"), DeclRange(Header.range("xdecl")))}));
+              UnorderedElementsAre(
+                  AllOf(QName("Tmpl"), DeclRange(Header.range()),
+                        ForCodeCompletion(true)),
+                  AllOf(QName("Tmpl"), DeclRange(Header.range("specdecl")),
+                        ForCodeCompletion(false)),
+                  AllOf(QName("Tmpl"), DeclRange(Header.range("partspecdecl")),
+                        ForCodeCompletion(false)),
+                  AllOf(QName("Tmpl::x"), DeclRange(Header.range("xdecl")),
+                        ForCodeCompletion(false))));
 }
 
 TEST_F(SymbolCollectorTest, ObjCSymbols) {

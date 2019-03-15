@@ -2343,7 +2343,7 @@ define float @test_floor_f32(float %x) {
 }
 
 ; CHECK-LABEL: name: test_llvm.aarch64.neon.ld3.v4i32.p0i32
-; CHECK: %1:_(s384) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld3), %0(p0) :: (load 48 from %ir.ptr, align 64)
+; CHECK: %1:_(<4 x s32>), %2:_(<4 x s32>), %3:_(<4 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld3), %0(p0) :: (load 48 from %ir.ptr, align 64)
 define void @test_llvm.aarch64.neon.ld3.v4i32.p0i32(i32* %ptr) {
   %arst = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld3.v4i32.p0i32(i32* %ptr)
   ret void

@@ -21,6 +21,7 @@ public:
 template <typename T> Duration operator*(Duration lhs, T rhs);
 template <typename T> Duration operator*(T lhs, Duration rhs);
 template <typename T> Duration operator/(Duration lhs, T rhs);
+int64_t operator/(Duration lhs, Duration rhs);
 
 class Time{};
 
@@ -85,5 +86,7 @@ inline Time operator+(Time lhs, Duration rhs);
 inline Time operator+(Duration lhs, Time rhs);
 inline Time operator-(Time lhs, Duration rhs);
 inline Duration operator-(Time lhs, Time rhs);
+
+double FDivDuration(Duration num, Duration den);
 
 }  // namespace absl

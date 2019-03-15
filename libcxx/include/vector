@@ -664,27 +664,27 @@ public:
     void reserve(size_type __n);
     void shrink_to_fit() _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY reference       operator[](size_type __n);
-    _LIBCPP_INLINE_VISIBILITY const_reference operator[](size_type __n) const;
+    _LIBCPP_INLINE_VISIBILITY reference       operator[](size_type __n) _NOEXCEPT;
+    _LIBCPP_INLINE_VISIBILITY const_reference operator[](size_type __n) const _NOEXCEPT;
     reference       at(size_type __n);
     const_reference at(size_type __n) const;
 
-    _LIBCPP_INLINE_VISIBILITY reference       front()
+    _LIBCPP_INLINE_VISIBILITY reference       front() _NOEXCEPT
     {
         _LIBCPP_ASSERT(!empty(), "front() called for empty vector");
         return *this->__begin_;
     }
-    _LIBCPP_INLINE_VISIBILITY const_reference front() const
+    _LIBCPP_INLINE_VISIBILITY const_reference front() const _NOEXCEPT
     {
         _LIBCPP_ASSERT(!empty(), "front() called for empty vector");
         return *this->__begin_;
     }
-    _LIBCPP_INLINE_VISIBILITY reference       back()
+    _LIBCPP_INLINE_VISIBILITY reference       back() _NOEXCEPT
     {
         _LIBCPP_ASSERT(!empty(), "back() called for empty vector");
         return *(this->__end_ - 1);
     }
-    _LIBCPP_INLINE_VISIBILITY const_reference back()  const
+    _LIBCPP_INLINE_VISIBILITY const_reference back()  const _NOEXCEPT
     {
         _LIBCPP_ASSERT(!empty(), "back() called for empty vector");
         return *(this->__end_ - 1);
@@ -1537,7 +1537,7 @@ vector<_Tp, _Allocator>::end() const _NOEXCEPT
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 typename vector<_Tp, _Allocator>::reference
-vector<_Tp, _Allocator>::operator[](size_type __n)
+vector<_Tp, _Allocator>::operator[](size_type __n) _NOEXCEPT
 {
     _LIBCPP_ASSERT(__n < size(), "vector[] index out of bounds");
     return this->__begin_[__n];
@@ -1546,7 +1546,7 @@ vector<_Tp, _Allocator>::operator[](size_type __n)
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 typename vector<_Tp, _Allocator>::const_reference
-vector<_Tp, _Allocator>::operator[](size_type __n) const
+vector<_Tp, _Allocator>::operator[](size_type __n) const _NOEXCEPT
 {
     _LIBCPP_ASSERT(__n < size(), "vector[] index out of bounds");
     return this->__begin_[__n];

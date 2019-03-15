@@ -892,15 +892,15 @@ static std::string getMacroNameAndPrintExpansion(
 
     // If this token is a macro that should be expanded inside the current
     // macro.
-    if (const MacroInfo *MI =
-                         getMacroInfoForLocation(PP, SM, II, T.getLocation())) {
+    if (getMacroInfoForLocation(PP, SM, II, T.getLocation())) {
       getMacroNameAndPrintExpansion(Printer, T.getLocation(), PP, Info.Args,
                                     AlreadyProcessedTokens);
 
       // If this is a function-like macro, skip its arguments, as
       // getExpandedMacro() already printed them. If this is the case, let's
       // first jump to the '(' token.
-      if (MI->getNumParams() != 0)
+      auto N = std::next(It);
+      if (N != E && N->is(tok::l_paren))
         It = getMatchingRParen(++It, E);
       continue;
     }
@@ -928,7 +928,16 @@ static std::string getMacroNameAndPrintExpansion(
 
         getMacroNameAndPrintExpansion(Printer, ArgIt->getLocation(), PP,
                                       Info.Args, AlreadyProcessedTokens);
-        if (MI->getNumParams() != 0)
+        // Peek the next token if it is a tok::l_paren. This way we can decide
+        // if this is the application or just a reference to a function maxro
+        // symbol:
+        //
+        // #define apply(f) ...
+        // #define func(x) ...
+        // apply(func)
+        // apply(func(42))
+        auto N = std::next(ArgIt);
+        if (N != ArgEnd && N->is(tok::l_paren))
           ArgIt = getMatchingRParen(++ArgIt, ArgEnd);
       }
       continue;
@@ -990,8 +999,16 @@ static MacroNameAndArgs getMacroNameAndArgs(SourceLocation ExpanLoc,
     return { MacroName, MI, {} };
 
   RawLexer.LexFromRawLexer(TheTok);
-  assert(TheTok.is(tok::l_paren) &&
-         "The token after the macro's identifier token should be '('!");
+  // When this is a token which expands to another macro function then its
+  // parentheses are not at its expansion locaiton. For example:
+  //
+  // #define foo(x) int bar() { return x; }
+  // #define apply_zero(f) f(0)
+  // apply_zero(foo)
+  //               ^
+  //               This is not a tok::l_paren, but foo is a function.
+  if (TheTok.isNot(tok::l_paren))
+    return { MacroName, MI, {} };
 
   MacroArgMap Args;
 

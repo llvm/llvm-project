@@ -374,7 +374,9 @@ void BackgroundIndex::buildIndex() {
     // extra index build.
     reset(
         IndexedSymbols.buildIndex(IndexType::Heavy, DuplicateHandling::Merge));
-    log("BackgroundIndex: rebuilt symbol index.");
+    log("BackgroundIndex: rebuilt symbol index with estimated memory {0} "
+        "bytes.",
+        estimateMemoryUsage());
   }
 }
 
@@ -603,8 +605,10 @@ BackgroundIndex::loadShards(std::vector<std::string> ChangedFiles) {
     }
   }
   vlog("Loaded all shards");
-  reset(IndexedSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge));
-
+  reset(IndexedSymbols.buildIndex(IndexType::Heavy, DuplicateHandling::Merge));
+  vlog("BackgroundIndex: built symbol index with estimated memory {0} "
+       "bytes.",
+       estimateMemoryUsage());
   return NeedsReIndexing;
 }
 

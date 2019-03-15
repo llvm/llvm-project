@@ -15,13 +15,18 @@ Sections:
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     AddressAlign:    0x0000000000001000
     Content:         "DEADBEEF"
+  - Name:            .non_alloc_in_segment
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Content:         "CAFEBABE"
 ProgramHeaders:
 - Type: PT_LOAD
   Flags: [ PF_X, PF_R ]
   Sections:
     - Section: .text
+    - Section: .non_alloc_in_segment
 
-#DATA: 0010000 de ad be ef
+#DATA: 0010000 de ad be ef ca fe ba be
 
 #CHECK: ElfHeader {
 #CHECK-NEXT:  Ident {
@@ -55,8 +60,8 @@ ProgramHeaders:
 #CHECK-NEXT:    Offset: 0x1000
 #CHECK-NEXT:    VirtualAddress: 0x0
 #CHECK-NEXT:    PhysicalAddress: 0x0
-#CHECK-NEXT:    FileSize: 4
-#CHECK-NEXT:    MemSize: 4
+#CHECK-NEXT:    FileSize: 8
+#CHECK-NEXT:    MemSize: 8
 #CHECK-NEXT:    Flags [ (0x5)
 #CHECK-NEXT:      PF_R (0x4)
 #CHECK-NEXT:      PF_X (0x1)

@@ -41,11 +41,12 @@ define void @test2() {
 ; it preserves the original DebugLocation.
 ; DEBUGLOC-LABEL: @test2(
 ; DEBUGLOC: {{.*}} = alloca {{.*}} !dbg ![[DbgLoc:[0-9]+]]
+; DEBUGLOC-LABEL: }
 ;
-; DEBUGLOC: ![[DbgLoc]] = !DILocation(
+; DEBUGLOC: ![[DbgLoc]] = !DILocation(line: 9,
 
 entry:
-  %a = alloca { i8, i8, i8, i8 }, align 2
+  %a = alloca { i8, i8, i8, i8 }, align 2      ; "line 9" to -debugify
   %gep1 = getelementptr { i8, i8, i8, i8 }, { i8, i8, i8, i8 }* %a, i32 0, i32 1
   %cast1 = bitcast i8* %gep1 to i16*
   store volatile i16 0, i16* %cast1

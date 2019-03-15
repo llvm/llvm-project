@@ -88,6 +88,7 @@ def : GINodeEquiv<G_CTLZ_ZERO_UNDEF, ctlz_zero_undef>;
 def : GINodeEquiv<G_CTTZ_ZERO_UNDEF, cttz_zero_undef>;
 def : GINodeEquiv<G_CTPOP, ctpop>;
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
+def : GINodeEquiv<G_CONCAT_VECTORS, concat_vectors>;
 def : GINodeEquiv<G_FCEIL, fceil>;
 def : GINodeEquiv<G_FCOS, fcos>;
 def : GINodeEquiv<G_FSIN, fsin>;

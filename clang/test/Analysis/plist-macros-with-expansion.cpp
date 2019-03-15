@@ -451,3 +451,21 @@ void recursiveMacroUser() {
     1 / value; // expected-warning{{Division by zero}}
                // expected-warning@-1{{expression result unused}}
 }
+
+#define FOO(x) int foo() { return x; }
+#define APPLY_ZERO1(function) function(0)
+
+APPLY_ZERO1(FOO)
+void useZeroApplier1() { (void)(1 / foo()); } // expected-warning{{Division by zero}}
+
+// CHECK: <key>name</key><string>APPLY_ZERO1</string>
+// CHECK-NEXT: <key>expansion</key><string>int foo() { return x; }(0)</string>
+
+#define BAR(x) int bar() { return x; }
+#define APPLY_ZERO2 BAR(0)
+
+APPLY_ZERO2
+void useZeroApplier2() { (void)(1 / bar()); } // expected-warning{{Division by zero}}
+
+// CHECK: <key>name</key><string>APPLY_ZERO2</string>
+// CHECK-NEXT: <key>expansion</key><string>int bar() { return 0; }</string>

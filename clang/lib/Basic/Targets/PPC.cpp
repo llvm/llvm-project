@@ -100,7 +100,9 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_CALL_LINUX", "1");
 
   // Subtarget options.
-  Builder.defineMacro("__NATURAL_ALIGNMENT__");
+  if (!getTriple().isOSAIX()){
+    Builder.defineMacro("__NATURAL_ALIGNMENT__");
+  }
   Builder.defineMacro("__REGISTER_PREFIX__", "");
 
   // FIXME: Should be controlled by command line option.

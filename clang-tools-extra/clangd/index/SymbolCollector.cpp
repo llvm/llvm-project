@@ -221,13 +221,6 @@ RefKind toRefKind(index::SymbolRoleSet Roles) {
   return static_cast<RefKind>(static_cast<unsigned>(RefKind::All) & Roles);
 }
 
-template <class T> bool explicitTemplateSpecialization(const NamedDecl &ND) {
-  if (const auto *TD = dyn_cast<T>(&ND))
-    if (TD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
-      return true;
-  return false;
-}
-
 } // namespace
 
 SymbolCollector::SymbolCollector(Options Opts) : Opts(std::move(Opts)) {}
@@ -279,10 +272,6 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
     if (!isa<RecordDecl>(DeclCtx))
       return false;
   }
-  if (explicitTemplateSpecialization<FunctionDecl>(ND) ||
-      explicitTemplateSpecialization<CXXRecordDecl>(ND) ||
-      explicitTemplateSpecialization<VarDecl>(ND))
-    return false;
 
   // Avoid indexing internal symbols in protobuf generated headers.
   if (isPrivateProtoDecl(ND))

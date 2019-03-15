@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MIParser.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "MILexer.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"

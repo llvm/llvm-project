@@ -9607,13 +9607,22 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
     assert(Info->getStackPtrOffsetReg() != Info->getFrameOffsetReg());
     assert(!TRI->isSubRegister(Info->getScratchRSrcReg(),
                                Info->getStackPtrOffsetReg()));
-    MRI.replaceRegWith(AMDGPU::SP_REG, Info->getStackPtrOffsetReg());
+    if (Info->getStackPtrOffsetReg() != AMDGPU::SP_REG)
+      MRI.replaceRegWith(AMDGPU::SP_REG, Info->getStackPtrOffsetReg());
   }
 
-  MRI.replaceRegWith(AMDGPU::PRIVATE_RSRC_REG, Info->getScratchRSrcReg());
-  MRI.replaceRegWith(AMDGPU::FP_REG, Info->getFrameOffsetReg());
-  MRI.replaceRegWith(AMDGPU::SCRATCH_WAVE_OFFSET_REG,
-                     Info->getScratchWaveOffsetReg());
+  // We need to worry about replacing the default register with itself in case
+  // of MIR testcases missing the MFI.
+  if (Info->getScratchRSrcReg() != AMDGPU::PRIVATE_RSRC_REG)
+    MRI.replaceRegWith(AMDGPU::PRIVATE_RSRC_REG, Info->getScratchRSrcReg());
+
+  if (Info->getFrameOffsetReg() != AMDGPU::FP_REG)
+    MRI.replaceRegWith(AMDGPU::FP_REG, Info->getFrameOffsetReg());
+
+  if (Info->getScratchWaveOffsetReg() != AMDGPU::SCRATCH_WAVE_OFFSET_REG) {
+    MRI.replaceRegWith(AMDGPU::SCRATCH_WAVE_OFFSET_REG,
+                       Info->getScratchWaveOffsetReg());
+  }
 
   Info->limitOccupancy(MF);
 

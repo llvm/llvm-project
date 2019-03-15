@@ -8092,8 +8092,11 @@ ASTImporter::Import_New(NestedNameSpecifierLoc FromNNS) {
 
     case NestedNameSpecifier::TypeSpec:
     case NestedNameSpecifier::TypeSpecWithTemplate: {
+      SourceLocation ToTLoc;
+      if (Error Err = importInto(ToTLoc, NNS.getTypeLoc().getBeginLoc()))
+        return std::move(Err);
       TypeSourceInfo *TSI = getToContext().getTrivialTypeSourceInfo(
-            QualType(Spec->getAsType(), 0));
+            QualType(Spec->getAsType(), 0), ToTLoc);
       Builder.Extend(getToContext(), ToLocalBeginLoc, TSI->getTypeLoc(),
                      ToLocalEndLoc);
       break;

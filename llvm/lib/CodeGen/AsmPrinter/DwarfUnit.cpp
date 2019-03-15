@@ -1267,6 +1267,12 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   if (SP->isMainSubprogram())
     addFlag(SPDie, dwarf::DW_AT_main_subprogram);
+  if (SP->isPure())
+    addFlag(SPDie, dwarf::DW_AT_pure);
+  if (SP->isElemental())
+    addFlag(SPDie, dwarf::DW_AT_elemental);
+  if (SP->isRecursive())
+    addFlag(SPDie, dwarf::DW_AT_recursive);
 }
 
 void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
