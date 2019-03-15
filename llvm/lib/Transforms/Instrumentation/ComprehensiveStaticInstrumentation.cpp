@@ -32,6 +32,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/CSI.h"
@@ -94,6 +95,11 @@ static cl::opt<std::string>
                               "optimized compile-time instrumentation"),
                      cl::Hidden);
 
+static cl::opt<std::string> ClToolLibrary(
+    "csi-tool-library", cl::init(""),
+    cl::desc("Path to the tool library file for compile-time instrumentation"),
+    cl::Hidden);
+
 static cl::opt<std::string> ClConfigurationFilename(
     "csi-config-filename", cl::init(""),
     cl::desc("Path to the configuration file for surgical instrumentation"),
@@ -106,6 +112,9 @@ static cl::opt<InstrumentationConfigMode> ClConfigurationMode(
                clEnumValN(InstrumentationConfigMode::BLACKLIST, "blacklist",
                           "Use configuration file as a blacklist")),
     cl::desc("Specifies how to interpret the configuration file"), cl::Hidden);
+
+static size_t numPassRuns = 0;
+bool IsFirstRun() { return numPassRuns == 0; }
 
 namespace {
 
@@ -235,8 +244,12 @@ bool CSIImpl::run() {
 
   collectUnitFEDTables();
   collectUnitSizeTables();
+
   finalizeCsi();
 
+  if (IsFirstRun() && Options.jitMode) {
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently(ClToolLibrary.c_str());
+  }
   linkInToolFromBitcode(ClToolBitcode);
   linkInToolFromBitcode(ClRuntimeBitcode);
 
@@ -270,6 +283,7 @@ ForensicTable::ForensicTable(Module &M, StringRef BaseIdName) {
   LLVMContext &C = M.getContext();
   IntegerType *Int64Ty = IntegerType::get(C, 64);
   IdCounter = 0;
+
   BaseId = M.getGlobalVariable(BaseIdName, true);
   if (NULL == BaseId)
     BaseId = new GlobalVariable(M, Int64Ty, false, GlobalValue::InternalLinkage,
@@ -1532,6 +1546,7 @@ void CSIImpl::initializeCsi() {
   InitCallsiteToFunction = M.getOrInsertFunction(CsiInitCallsiteToFunctionName,
                                                  FnType);
   assert(InitCallsiteToFunction);
+
   InitCallsiteToFunction->setLinkage(GlobalValue::InternalLinkage);
 
   /*
@@ -1671,9 +1686,13 @@ void CSIImpl::finalizeCsi() {
   LLVMContext &C = M.getContext();
 
   // Add CSI global constructor, which calls unit init.
-  Function *Ctor =
-      Function::Create(FunctionType::get(Type::getVoidTy(C), false),
-                       GlobalValue::InternalLinkage, CsiRtUnitCtorName, &M);
+  Function *Ctor = (Function *)M.getOrInsertFunction(
+      CsiRtUnitCtorName, FunctionType::get(Type::getVoidTy(C), false));
+
+  if (!Options.jitMode) {
+    Ctor->setLinkage(llvm::GlobalValue::LinkageTypes::InternalLinkage);
+  }
+
   BasicBlock *CtorBB = BasicBlock::Create(C, "", Ctor);
   IRBuilder<> IRB(ReturnInst::Create(C, CtorBB));
 
@@ -1683,12 +1702,16 @@ void CSIImpl::finalizeCsi() {
 
   CallInst *Call = createRTUnitInitCall(IRB);
 
-  // Add the constructor to the global list
-  appendToGlobalCtors(M, Ctor, CsiUnitCtorPriority);
+  // Add the constructor to the global list if we're doing AOT compilation.
+  // In JIT mode, we rely on the JIT compiler to call the constructor as
+  // a self-standing function.
+  if (Options.jitMode) {
+    appendToGlobalCtors(M, Ctor, CsiUnitCtorPriority);
 
-  CallGraphNode *CNCtor = CG->getOrInsertFunction(Ctor);
-  CallGraphNode *CNFunc = CG->getOrInsertFunction(RTUnitInit);
-  CNCtor->addCalledFunction(Call, CNFunc);
+    CallGraphNode *CNCtor = CG->getOrInsertFunction(Ctor);
+    CallGraphNode *CNFunc = CG->getOrInsertFunction(RTUnitInit);
+    CNCtor->addCalledFunction(Call, CNFunc);
+  }
 }
 
 void llvm::CSIImpl::linkInToolFromBitcode(const std::string &bitcodePath) {
@@ -1742,7 +1765,6 @@ void llvm::CSIImpl::linkInToolFromBitcode(const std::string &bitcodePath) {
     }
 
     llvm::Linker linker(M);
-
     linker.linkInModule(std::move(toolModule),
                         llvm::Linker::Flags::LinkOnlyNeeded);
 
@@ -1758,6 +1780,7 @@ void llvm::CSIImpl::linkInToolFromBitcode(const std::string &bitcodePath) {
     }
     for (auto &functionName : functions) {
       auto function = M.getFunction(functionName);
+
       if (function && !function->isDeclaration() && !function->hasComdat()) {
         function->setLinkage(
             GlobalValue::LinkageTypes::AvailableExternallyLinkage);
@@ -1929,7 +1952,6 @@ void CSIImpl::instrumentFunction(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F))
     return;
 
-  // TODO: This needs to be fixed.
   setupCalls(F);
 
   setupBlocks(F, TLI);
@@ -2050,7 +2072,7 @@ void CSIImpl::instrumentFunction(Function &F) {
       instrumentFree(I);
   }
 
-  if (Options.Interpose) {
+  if (Options.Interpose && Config->DoesAnyFunctionRequireInterposition()) {
     for (Instruction *I : AllCalls)
       interposeCall(I);
   }
@@ -2163,8 +2185,9 @@ bool ComprehensiveStaticInstrumentationLegacyPass::runOnModule(Module &M) {
 
   bool res = CSIImpl(M, CG, GetDomTree, GetTaskInfo, TLI, Options).run();
 
-  llvm::errs() << "Verifying module\n";
   verifyModule(M, &llvm::errs());
+
+  numPassRuns++;
 
   return res;
 }

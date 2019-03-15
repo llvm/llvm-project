@@ -98,6 +98,10 @@ public:
     return interposedFunctions.find(functionName) != interposedFunctions.end();
   }
 
+  virtual bool DoesAnyFunctionRequireInterposition() {
+    return interposedFunctions.size() > 0;
+  }
+
   virtual bool DoesFunctionRequireInstrumentationForPoint(
       const StringRef &functionName, const InstrumentationPoint &point) {
     if (targetFunctions.size() == 0)
@@ -139,6 +143,8 @@ public:
       const StringRef &functionName, const InstrumentationPoint &point) {
     return true;
   }
+
+  virtual bool DoesAnyFunctionRequireInterposition() { return false; }
 
   virtual bool DoesFunctionRequireInterposition(const StringRef &functionName) {
     return false;
