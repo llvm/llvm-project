@@ -31,7 +31,6 @@
 namespace lld {
 namespace elf {
 class Defined;
-class SharedSymbol;
 
 class SyntheticSection : public InputSection {
 public:
@@ -418,7 +417,6 @@ public:
 
   uint64_t getOffset() const;
   uint32_t getSymIndex() const;
-  const InputSectionBase *getInputSec() const { return InputSec; }
 
   // Computes the addend of the dynamic relocation. Note that this is not the
   // same as the Addend member variable as it also includes the symbol address

@@ -30,13 +30,6 @@ std::string toString(const elf::InputFile *);
 
 namespace elf {
 
-class ArchiveFile;
-class BitcodeFile;
-class BssSection;
-class InputFile;
-class LazyObjFile;
-template <class ELFT> class ObjFile;
-class OutputSection;
 template <class ELFT> class SharedFile;
 
 // This is a StringRef-like container that doesn't run strlen().
