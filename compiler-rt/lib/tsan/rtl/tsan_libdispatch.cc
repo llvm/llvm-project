@@ -22,7 +22,6 @@
 
 #include <Block.h>
 #include <dispatch/dispatch.h>
-#include <pthread.h>
 
 // DISPATCH_NOESCAPE is only defined on Apple platforms with at least Xcode 8.
 #ifndef DISPATCH_NOESCAPE
