@@ -18,7 +18,6 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -58,15 +57,6 @@ const char *SBFunction::GetName() const {
   if (m_opaque_ptr)
     cstr = m_opaque_ptr->GetName().AsCString();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (cstr)
-      log->Printf("SBFunction(%p)::GetName () => \"%s\"",
-                  static_cast<void *>(m_opaque_ptr), cstr);
-    else
-      log->Printf("SBFunction(%p)::GetName () => NULL",
-                  static_cast<void *>(m_opaque_ptr));
-  }
   return cstr;
 }
 
@@ -79,15 +69,6 @@ const char *SBFunction::GetDisplayName() const {
                .GetDisplayDemangledName(m_opaque_ptr->GetLanguage())
                .AsCString();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (cstr)
-      log->Printf("SBFunction(%p)::GetDisplayName () => \"%s\"",
-                  static_cast<void *>(m_opaque_ptr), cstr);
-    else
-      log->Printf("SBFunction(%p)::GetDisplayName () => NULL",
-                  static_cast<void *>(m_opaque_ptr));
-  }
   return cstr;
 }
 
@@ -97,15 +78,6 @@ const char *SBFunction::GetMangledName() const {
   const char *cstr = NULL;
   if (m_opaque_ptr)
     cstr = m_opaque_ptr->GetMangled().GetMangledName().AsCString();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    if (cstr)
-      log->Printf("SBFunction(%p)::GetMangledName () => \"%s\"",
-                  static_cast<void *>(m_opaque_ptr), cstr);
-    else
-      log->Printf("SBFunction(%p)::GetMangledName () => NULL",
-                  static_cast<void *>(m_opaque_ptr));
-  }
   return cstr;
 }
 

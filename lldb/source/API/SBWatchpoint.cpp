@@ -19,7 +19,6 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
@@ -32,14 +31,6 @@ SBWatchpoint::SBWatchpoint() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBWatchpoint); }
 SBWatchpoint::SBWatchpoint(const lldb::WatchpointSP &wp_sp)
     : m_opaque_wp(wp_sp) {
   LLDB_RECORD_CONSTRUCTOR(SBWatchpoint, (const lldb::WatchpointSP &), wp_sp);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log) {
-    SBStream sstr;
-    GetDescription(sstr, lldb::eDescriptionLevelBrief);
-    LLDB_LOG(log, "watchpoint = {0} ({1})", wp_sp.get(), sstr.GetData());
-  }
 }
 
 SBWatchpoint::SBWatchpoint(const SBWatchpoint &rhs)
@@ -60,21 +51,11 @@ SBWatchpoint::~SBWatchpoint() {}
 watch_id_t SBWatchpoint::GetID() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::watch_id_t, SBWatchpoint, GetID);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   watch_id_t watch_id = LLDB_INVALID_WATCH_ID;
   lldb::WatchpointSP watchpoint_sp(GetSP());
   if (watchpoint_sp)
     watch_id = watchpoint_sp->GetID();
-
-  if (log) {
-    if (watch_id == LLDB_INVALID_WATCH_ID)
-      log->Printf("SBWatchpoint(%p)::GetID () => LLDB_INVALID_WATCH_ID",
-                  static_cast<void *>(watchpoint_sp.get()));
-    else
-      log->Printf("SBWatchpoint(%p)::GetID () => %u",
-                  static_cast<void *>(watchpoint_sp.get()), watch_id);
-  }
 
   return watch_id;
 }
@@ -183,11 +164,6 @@ uint32_t SBWatchpoint::GetHitCount() {
         watchpoint_sp->GetTarget().GetAPIMutex());
     count = watchpoint_sp->GetHitCount();
   }
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBWatchpoint(%p)::GetHitCount () => %u",
-                static_cast<void *>(watchpoint_sp.get()), count);
 
   return count;
 }

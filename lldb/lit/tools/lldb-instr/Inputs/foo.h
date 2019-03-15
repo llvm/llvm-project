@@ -13,4 +13,5 @@ struct Foo {
   static Foo H();
   void I() const;
   Bar J() const;
+  Bar K(void *v) const;
 };
