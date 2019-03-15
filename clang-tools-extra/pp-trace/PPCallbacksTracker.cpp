@@ -297,6 +297,22 @@ void PPCallbacksTracker::PragmaWarningPop(clang::SourceLocation Loc) {
   appendArgument("Loc", Loc);
 }
 
+// Callback invoked when a #pragma execution_character_set(push) directive
+// is read.
+void PPCallbacksTracker::PragmaExecCharsetPush(clang::SourceLocation Loc,
+                                               clang::StringRef Str) {
+  beginCallback("PragmaExecCharsetPush");
+  appendArgument("Loc", Loc);
+  appendArgument("Charset", Str);
+}
+
+// Callback invoked when a #pragma execution_character_set(pop) directive
+// is read.
+void PPCallbacksTracker::PragmaExecCharsetPop(clang::SourceLocation Loc) {
+  beginCallback("PragmaExecCharsetPop");
+  appendArgument("Loc", Loc);
+}
+
 // Called by Preprocessor::HandleMacroExpandedIdentifier when a
 // macro invocation is found.
 void
