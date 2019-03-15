@@ -64,11 +64,11 @@ int main(int, char**)
         typedef double T;
         typedef std::array<T, 0> C;
         C c = {};
-        LIBCPP_ASSERT_NOEXCEPT(c[0]);
-        ASSERT_SAME_TYPE(C::reference, decltype(c[0]));
         C const& cc = c;
-        static_assert((std::is_same<decltype(c[0]), T &>::value), "");
-        static_assert((std::is_same<decltype(cc[0]), const T &>::value), "");
+        LIBCPP_ASSERT_NOEXCEPT(c[0]);
+        LIBCPP_ASSERT_NOEXCEPT(cc[0]);
+        ASSERT_SAME_TYPE(C::reference, decltype(c[0]));
+        ASSERT_SAME_TYPE(C::const_reference, decltype(cc[0]));
         if (c.size() > (0)) { // always false
           C::reference r1 = c[0];
           C::const_reference r2 = cc[0];
@@ -80,11 +80,11 @@ int main(int, char**)
         typedef double T;
         typedef std::array<const T, 0> C;
         C c = {{}};
-        LIBCPP_ASSERT_NOEXCEPT(c[0]);
-        ASSERT_SAME_TYPE(C::reference, decltype(c[0]));
         C const& cc = c;
-        static_assert((std::is_same<decltype(c[0]), const T &>::value), "");
-        static_assert((std::is_same<decltype(cc[0]), const T &>::value), "");
+        LIBCPP_ASSERT_NOEXCEPT(c[0]);
+        LIBCPP_ASSERT_NOEXCEPT(cc[0]);
+        ASSERT_SAME_TYPE(C::reference, decltype(c[0]));
+        ASSERT_SAME_TYPE(C::const_reference, decltype(cc[0]));
         if (c.size() > (0)) { // always false
           C::reference r1 = c[0];
           C::const_reference r2 = cc[0];
