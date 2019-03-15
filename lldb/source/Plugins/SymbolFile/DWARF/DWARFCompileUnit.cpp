@@ -10,6 +10,7 @@
 
 #include "SymbolFileDWARF.h"
 #include "lldb/Utility/Stream.h"
+#include "llvm/Object/Error.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -17,50 +18,64 @@ using namespace lldb_private;
 DWARFCompileUnit::DWARFCompileUnit(SymbolFileDWARF *dwarf2Data)
     : DWARFUnit(dwarf2Data) {}
 
-DWARFUnitSP DWARFCompileUnit::Extract(SymbolFileDWARF *dwarf2Data,
-                                      const DWARFDataExtractor &debug_info,
-                                      lldb::offset_t *offset_ptr) {
+llvm::Expected<DWARFUnitSP>
+DWARFCompileUnit::extract(SymbolFileDWARF *dwarf2Data,
+                          const DWARFDataExtractor &debug_info,
+                          lldb::offset_t *offset_ptr) {
+  assert(debug_info.ValidOffset(*offset_ptr));
+
   // std::make_shared would require the ctor to be public.
   std::shared_ptr<DWARFCompileUnit> cu_sp(new DWARFCompileUnit(dwarf2Data));
 
   cu_sp->m_offset = *offset_ptr;
 
-  if (debug_info.ValidOffset(*offset_ptr)) {
-    dw_offset_t abbr_offset;
-    const DWARFDebugAbbrev *abbr = dwarf2Data->DebugAbbrev();
-    cu_sp->m_length = debug_info.GetDWARFInitialLength(offset_ptr);
-    cu_sp->m_version = debug_info.GetU16(offset_ptr);
+  dw_offset_t abbr_offset;
+  const DWARFDebugAbbrev *abbr = dwarf2Data->DebugAbbrev();
+  if (!abbr)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "No debug_abbrev data");
 
-    if (cu_sp->m_version == 5) {
-      cu_sp->m_unit_type = debug_info.GetU8(offset_ptr);
-      cu_sp->m_addr_size = debug_info.GetU8(offset_ptr);
-      abbr_offset = debug_info.GetDWARFOffset(offset_ptr);
+  cu_sp->m_length = debug_info.GetDWARFInitialLength(offset_ptr);
+  cu_sp->m_version = debug_info.GetU16(offset_ptr);
 
-      if (cu_sp->m_unit_type == llvm::dwarf::DW_UT_skeleton)
-        cu_sp->m_dwo_id = debug_info.GetU64(offset_ptr);
-    } else {
-      abbr_offset = debug_info.GetDWARFOffset(offset_ptr);
-      cu_sp->m_addr_size = debug_info.GetU8(offset_ptr);
-    }
+  if (cu_sp->m_version == 5) {
+    cu_sp->m_unit_type = debug_info.GetU8(offset_ptr);
+    cu_sp->m_addr_size = debug_info.GetU8(offset_ptr);
+    abbr_offset = debug_info.GetDWARFOffset(offset_ptr);
 
-    bool length_OK =
-        debug_info.ValidOffset(cu_sp->GetNextCompileUnitOffset() - 1);
-    bool version_OK = SymbolFileDWARF::SupportedVersion(cu_sp->m_version);
-    bool abbr_offset_OK =
-        dwarf2Data->get_debug_abbrev_data().ValidOffset(abbr_offset);
-    bool addr_size_OK = (cu_sp->m_addr_size == 4) || (cu_sp->m_addr_size == 8);
-
-    if (length_OK && version_OK && addr_size_OK && abbr_offset_OK &&
-        abbr != NULL) {
-      cu_sp->m_abbrevs = abbr->GetAbbreviationDeclarationSet(abbr_offset);
-      return cu_sp;
-    }
-
-    // reset the offset to where we tried to parse from if anything went wrong
-    *offset_ptr = cu_sp->m_offset;
+    if (cu_sp->m_unit_type == llvm::dwarf::DW_UT_skeleton)
+      cu_sp->m_dwo_id = debug_info.GetU64(offset_ptr);
+  } else {
+    abbr_offset = debug_info.GetDWARFOffset(offset_ptr);
+    cu_sp->m_addr_size = debug_info.GetU8(offset_ptr);
   }
 
-  return nullptr;
+  bool length_OK =
+      debug_info.ValidOffset(cu_sp->GetNextCompileUnitOffset() - 1);
+  bool version_OK = SymbolFileDWARF::SupportedVersion(cu_sp->m_version);
+  bool abbr_offset_OK =
+      dwarf2Data->get_debug_abbrev_data().ValidOffset(abbr_offset);
+  bool addr_size_OK = (cu_sp->m_addr_size == 4) || (cu_sp->m_addr_size == 8);
+
+  if (!length_OK)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "Invalid compile unit length");
+  if (!version_OK)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "Unsupported compile unit version");
+  if (!abbr_offset_OK)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "Abbreviation offset for compile unit is not valid");
+  if (!addr_size_OK)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "Invalid compile unit address size");
+
+  cu_sp->m_abbrevs = abbr->GetAbbreviationDeclarationSet(abbr_offset);
+  if (!cu_sp->m_abbrevs)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "No abbrev exists at the specified offset.");
+
+  return cu_sp;
 }
 
 void DWARFCompileUnit::Dump(Stream *s) const {
