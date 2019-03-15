@@ -50,7 +50,7 @@ _start:
 // DSO-NEXT: Disassembly of section .plt:
 // DSO-NEXT: $a:
 // DSO-NEXT:     1020:       04 e0 2d e5     str     lr, [sp, #-4]!
-// (0x1024 + 8) + (0 RoR 12) + (0 RoR 20) + (0xfdc) = 0x2008 = .got.plt[3]
+// (0x1024 + 8) + (0 RoR 12) + 4096 + (0xfdc) = 0x3008 = .got.plt[3]
 // DSO-NEXT:     1024:       00 e6 8f e2     add     lr, pc, #0, #12
 // DSO-NEXT:     1028:       01 ea 8e e2     add     lr, lr, #4096
 // DSO-NEXT:     102c:       dc ff be e5     ldr     pc, [lr, #4060]!
@@ -60,21 +60,21 @@ _start:
 // DSO-NEXT:     1038:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO-NEXT:     103c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO: $a:
-// (0x1040 + 8) + (0 RoR 12) + (0 RoR 20) + (0xfc4) = 0x200c
+// (0x1040 + 8) + (0 RoR 12) + 4096 + (0xfc4) = 0x300c
 // DSO-NEXT:     1040:       00 c6 8f e2     add     r12, pc, #0, #12
 // DSO-NEXT:     1044:       01 ca 8c e2     add     r12, r12, #4096
 // DSO-NEXT:     1048:       c4 ff bc e5     ldr     pc, [r12, #4036]!
 // DSO: $d:
 // DSO-NEXT:     104c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO: $a:
-// (0x1050 + 8) + (0 RoR 12) + (0 RoR 20) + (0xfb8) = 0x2010
+// (0x1050 + 8) + (0 RoR 12) + 4096 + (0xfb8) = 0x3010
 // DSO-NEXT:     1050:       00 c6 8f e2     add     r12, pc, #0, #12
 // DSO-NEXT:     1054:       01 ca 8c e2     add     r12, r12, #4096
 // DSO-NEXT:     1058:       b8 ff bc e5     ldr     pc, [r12, #4024]!
 // DSO: $d:
 // DSO-NEXT:     105c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO: $a:
-// (0x1060 + 8) + (0 RoR 12) + (0 RoR 20) + (0xfac) = 0x2014
+// (0x1060 + 8) + (0 RoR 12) + 4096 + (0xfac) = 0x3014
 // DSO-NEXT:     1060:       00 c6 8f e2     add     r12, pc, #0, #12
 // DSO-NEXT:     1064:       01 ca 8c e2     add     r12, r12, #4096
 // DSO-NEXT:     1068:       ac ff bc e5     ldr     pc, [r12, #4012]!

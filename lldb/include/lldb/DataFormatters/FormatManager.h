@@ -124,10 +124,8 @@ public:
   lldb::TypeFilterImplSP
   GetFilterForType(lldb::TypeNameSpecifierImplSP type_sp);
 
-#ifndef LLDB_DISABLE_PYTHON
   lldb::ScriptedSyntheticChildrenSP
   GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp);
-#endif
 
   lldb::TypeValidatorImplSP
   GetValidatorForType(lldb::TypeNameSpecifierImplSP type_sp);
@@ -138,10 +136,8 @@ public:
   lldb::TypeSummaryImplSP GetSummaryFormat(ValueObject &valobj,
                                            lldb::DynamicValueType use_dynamic);
 
-#ifndef LLDB_DISABLE_PYTHON
   lldb::SyntheticChildrenSP
   GetSyntheticChildren(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
-#endif
 
   lldb::TypeValidatorImplSP GetValidator(ValueObject &valobj,
                                          lldb::DynamicValueType use_dynamic);

@@ -4211,7 +4211,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   auto inferPointerNullability =
       [&](SimplePointerKind pointerKind, SourceLocation pointerLoc,
           SourceLocation pointerEndLoc,
-          ParsedAttributesView &attrs) -> ParsedAttr * {
+          ParsedAttributesView &attrs, AttributePool &Pool) -> ParsedAttr * {
     // We've seen a pointer.
     if (NumPointersRemaining > 0)
       --NumPointersRemaining;
@@ -4225,11 +4225,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       ParsedAttr::Syntax syntax = inferNullabilityCS
                                       ? ParsedAttr::AS_ContextSensitiveKeyword
                                       : ParsedAttr::AS_Keyword;
-      ParsedAttr *nullabilityAttr =
-          state.getDeclarator().getAttributePool().create(
-              S.getNullabilityKeyword(*inferNullability),
-              SourceRange(pointerLoc), nullptr, SourceLocation(), nullptr, 0,
-              syntax);
+      ParsedAttr *nullabilityAttr = Pool.create(
+          S.getNullabilityKeyword(*inferNullability), SourceRange(pointerLoc),
+          nullptr, SourceLocation(), nullptr, 0, syntax);
 
       attrs.addAtEnd(nullabilityAttr);
 
@@ -4288,7 +4286,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         if (auto *attr = inferPointerNullability(
                 pointerKind, D.getDeclSpec().getTypeSpecTypeLoc(),
                 D.getDeclSpec().getEndLoc(),
-                D.getMutableDeclSpec().getAttributes())) {
+                D.getMutableDeclSpec().getAttributes(),
+                D.getMutableDeclSpec().getAttributePool())) {
           T = state.getAttributedType(
               createNullabilityAttr(Context, *attr, *inferNullability), T, T);
         }
@@ -4328,7 +4327,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Handle pointer nullability.
       inferPointerNullability(SimplePointerKind::BlockPointer, DeclType.Loc,
-                              DeclType.EndLoc, DeclType.getAttrs());
+                              DeclType.EndLoc, DeclType.getAttrs(),
+                              state.getDeclarator().getAttributePool());
 
       T = S.BuildBlockPointerType(T, D.getIdentifierLoc(), Name);
       if (DeclType.Cls.TypeQuals || LangOpts.OpenCL) {
@@ -4350,7 +4350,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Handle pointer nullability
       inferPointerNullability(SimplePointerKind::Pointer, DeclType.Loc,
-                              DeclType.EndLoc, DeclType.getAttrs());
+                              DeclType.EndLoc, DeclType.getAttrs(),
+                              state.getDeclarator().getAttributePool());
 
       if (LangOpts.ObjC && T->getAs<ObjCObjectType>()) {
         T = Context.getObjCObjectPointerType(T);
@@ -4882,7 +4883,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Handle pointer nullability.
       inferPointerNullability(SimplePointerKind::MemberPointer, DeclType.Loc,
-                              DeclType.EndLoc, DeclType.getAttrs());
+                              DeclType.EndLoc, DeclType.getAttrs(),
+                              state.getDeclarator().getAttributePool());
 
       if (SS.isInvalid()) {
         // Avoid emitting extra errors if we already errored on the scope.

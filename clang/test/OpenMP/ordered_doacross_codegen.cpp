@@ -16,6 +16,17 @@ extern int n;
 int a[10], b[10], c[10], d[10];
 void foo();
 
+// CHECK-LABEL:bar
+void bar() {
+  int i,j;
+// CHECK: call void @__kmpc_doacross_init(
+// CHECK: call void @__kmpc_doacross_fini(
+#pragma omp parallel for ordered(2)
+  for (i = 0; i < n; ++i)
+  for (j = 0; j < n; ++j)
+    a[i] = b[i] + 1;
+}
+
 // CHECK-LABEL: @main()
 int main() {
   int i;
@@ -35,7 +46,7 @@ int main() {
 // CHECK: call void @__kmpc_doacross_init([[IDENT]], i32 [[GTID]], i32 1, i8* [[CAST]])
 // CHECK: call void @__kmpc_for_static_init_4(
 #pragma omp for ordered(1)
-  for (i = 0; i < n; ++i) {
+  for (int i = 0; i < n; ++i) {
     a[i] = b[i] + 1;
     foo();
 // CHECK: invoke void [[FOO:.+]](

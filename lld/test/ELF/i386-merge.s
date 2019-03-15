@@ -9,7 +9,7 @@
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_MERGE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x158
+// CHECK-NEXT: Address: 0x178
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size:
 // CHECK-NEXT: Link:
@@ -35,7 +35,7 @@
 // CHECK-NEXT: AddressAlignment: 1
 // CHECK-NEXT: EntrySize: 0
 // CHECK-NEXT: SectionData (
-// CHECK-NEXT:   0000: 58010000 |
+// CHECK-NEXT:   0000: 78010000 |
 // CHECK-NEXT: )
 
 // The content of .data should be the address of .mysec.

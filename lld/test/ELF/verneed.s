@@ -16,8 +16,8 @@
 # CHECK-NEXT:     Flags [ (0x2)
 # CHECK-NEXT:       SHF_ALLOC (0x2)
 # CHECK-NEXT:     ]
-# CHECK-NEXT:     Address: 0x2001C8
-# CHECK-NEXT:     Offset: 0x1C8
+# CHECK-NEXT:     Address: 0x200200
+# CHECK-NEXT:     Offset: 0x200
 # CHECK-NEXT:     Size: 96
 # CHECK-NEXT:     Link: [[DYNSTR:.*]]
 # CHECK-NEXT:     Info: 1
@@ -47,7 +47,7 @@
 # CHECK-NEXT:      SHF_ALLOC (0x2)
 # CHECK-NEXT:    ]
 # CHECK-NEXT:    Address: [[VERNEED:.*]]
-# CHECK-NEXT:    Offset: 0x230
+# CHECK-NEXT:    Offset: 0x268
 # CHECK-NEXT:    Size: 80
 # CHECK-NEXT:    Link: 5
 # CHECK-NEXT:    Info: 2
@@ -60,8 +60,8 @@
 # CHECK-NEXT:     Flags [ (0x2)
 # CHECK-NEXT:       SHF_ALLOC (0x2)
 # CHECK-NEXT:     ]
-# CHECK-NEXT:     Address: 0x2002A8
-# CHECK-NEXT:     Offset: 0x2A8
+# CHECK-NEXT:     Address: 0x2002E0
+# CHECK-NEXT:     Offset: 0x2E0
 # CHECK-NEXT:     Size: 47
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
