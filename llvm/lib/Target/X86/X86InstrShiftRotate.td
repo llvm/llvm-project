@@ -585,16 +585,16 @@ def ROR64ri  : RIi8<0xC1, MRM1r, (outs GR64:$dst),
 // Rotate by 1
 def ROR8r1   : I<0xD0, MRM1r, (outs GR8 :$dst), (ins GR8 :$src1),
                  "ror{b}\t$dst",
-                 [(set GR8:$dst, (rotl GR8:$src1, (i8 1)))]>;
+                 [(set GR8:$dst, (rotr GR8:$src1, (i8 1)))]>;
 def ROR16r1  : I<0xD1, MRM1r, (outs GR16:$dst), (ins GR16:$src1),
                  "ror{w}\t$dst",
-                 [(set GR16:$dst, (rotl GR16:$src1, (i8 1)))]>, OpSize16;
+                 [(set GR16:$dst, (rotr GR16:$src1, (i8 1)))]>, OpSize16;
 def ROR32r1  : I<0xD1, MRM1r, (outs GR32:$dst), (ins GR32:$src1),
                  "ror{l}\t$dst",
-                 [(set GR32:$dst, (rotl GR32:$src1, (i8 1)))]>, OpSize32;
+                 [(set GR32:$dst, (rotr GR32:$src1, (i8 1)))]>, OpSize32;
 def ROR64r1  : RI<0xD1, MRM1r, (outs GR64:$dst), (ins GR64:$src1),
                   "ror{q}\t$dst",
-                  [(set GR64:$dst, (rotl GR64:$src1, (i8 1)))]>;
+                  [(set GR64:$dst, (rotr GR64:$src1, (i8 1)))]>;
 } // Constraints = "$src = $dst", SchedRW
 
 let Uses = [CL], SchedRW = [WriteRotateCLLd, WriteRMW] in {
@@ -633,18 +633,18 @@ def ROR64mi  : RIi8<0xC1, MRM1m, (outs), (ins i64mem:$dst, u8imm:$src),
 // Rotate by 1
 def ROR8m1   : I<0xD0, MRM1m, (outs), (ins i8mem :$dst),
                  "ror{b}\t$dst",
-                 [(store (rotl (loadi8 addr:$dst), (i8 1)), addr:$dst)]>;
+                 [(store (rotr (loadi8 addr:$dst), (i8 1)), addr:$dst)]>;
 def ROR16m1  : I<0xD1, MRM1m, (outs), (ins i16mem:$dst),
                  "ror{w}\t$dst",
-                 [(store (rotl (loadi16 addr:$dst), (i8 1)), addr:$dst)]>,
+                 [(store (rotr (loadi16 addr:$dst), (i8 1)), addr:$dst)]>,
                  OpSize16;
 def ROR32m1  : I<0xD1, MRM1m, (outs), (ins i32mem:$dst),
                  "ror{l}\t$dst",
-                 [(store (rotl (loadi32 addr:$dst), (i8 1)), addr:$dst)]>,
+                 [(store (rotr (loadi32 addr:$dst), (i8 1)), addr:$dst)]>,
                  OpSize32;
 def ROR64m1  : RI<0xD1, MRM1m, (outs), (ins i64mem:$dst),
                  "ror{q}\t$dst",
-                 [(store (rotl (loadi64 addr:$dst), (i8 1)), addr:$dst)]>,
+                 [(store (rotr (loadi64 addr:$dst), (i8 1)), addr:$dst)]>,
                  Requires<[In64BitMode]>;
 } // SchedRW
 

@@ -103,12 +103,6 @@ bb8:                                              ; preds = %bb3
   %35 = add i8 %33, 87
   %iftmp.5.0.7 = select i1 %32, i8 %34, i8 %35
   store volatile i8 %iftmp.5.0.7, i8* %p8, align 1
-  ; CHECK: umull [[REGISTER:lr|r[0-9]+]],
-  ; CHECK-NOT: [[REGISTER]],
-  ; CHECK: {{lr|r[0-9]+}}, {{lr|r[0-9]+$}}
-  ; CHECK: umull [[REGISTER:lr|r[0-9]+]],
-  ; CHECK-NOT: [[REGISTER]],
-  ; CHECK: {{lr|r[0-9]+}}, {{lr|r[0-9]+$}}
   %36 = udiv i32 %2, 100000000
   %37 = urem i32 %36, 10
   %38 = icmp ult i32 %37, 10

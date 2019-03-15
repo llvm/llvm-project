@@ -792,7 +792,7 @@ static void addPltEntry(PltSection *Plt, GotPltSection *GotPlt,
       {Type, GotPlt, Sym.getGotPltOffset(), !Sym.IsPreemptible, &Sym, 0});
 }
 
-template <class ELFT> static void addGotEntry(Symbol &Sym) {
+static void addGotEntry(Symbol &Sym) {
   In.Got->addEntry(Sym);
 
   RelExpr Expr = Sym.isTls() ? R_TLS : R_ABS;
@@ -1102,7 +1102,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
         In.MipsGot->addEntry(*Sec.File, Sym, Addend, Expr);
       } else if (!Sym.isInGot()) {
-        addGotEntry<ELFT>(Sym);
+        addGotEntry(Sym);
       }
     }
   } else {
@@ -1211,7 +1211,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
         // We don't need to worry about creating a MIPS GOT here because ifuncs
         // aren't a thing on MIPS.
         Sym.GotInIgot = false;
-        addGotEntry<ELFT>(Sym);
+        addGotEntry(Sym);
       }
     }
   }

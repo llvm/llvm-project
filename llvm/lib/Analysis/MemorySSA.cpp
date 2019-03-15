@@ -1194,9 +1194,7 @@ class MemorySSA::OptimizeUses {
 public:
   OptimizeUses(MemorySSA *MSSA, MemorySSAWalker *Walker, AliasAnalysis *AA,
                DominatorTree *DT)
-      : MSSA(MSSA), Walker(Walker), AA(AA), DT(DT) {
-    Walker = MSSA->getWalker();
-  }
+      : MSSA(MSSA), Walker(Walker), AA(AA), DT(DT) {}
 
   void optimizeUses();
 

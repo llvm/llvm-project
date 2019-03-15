@@ -514,7 +514,7 @@ define i32 @fshr1(i32 %x) nounwind {
 ; X86-LABEL: fshr1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    rorl $1, %eax
+; X86-NEXT:    rorl %eax
 ; X86-NEXT:    retl
 ;
 ; SHLD-LABEL: fshr1:
@@ -531,7 +531,7 @@ define i32 @fshr1(i32 %x) nounwind {
 ; X64-LABEL: fshr1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    rorl $1, %eax
+; X64-NEXT:    rorl %eax
 ; X64-NEXT:    retq
 ;
 ; SHLD64-LABEL: fshr1:

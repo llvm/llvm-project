@@ -205,13 +205,13 @@ define i8 @rotr_i8_const_shift1(i8 %x) nounwind {
 ; X32-SSE2-LABEL: rotr_i8_const_shift1:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-SSE2-NEXT:    rorb $1, %al
+; X32-SSE2-NEXT:    rorb %al
 ; X32-SSE2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: rotr_i8_const_shift1:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    movl %edi, %eax
-; X64-AVX2-NEXT:    rorb $1, %al
+; X64-AVX2-NEXT:    rorb %al
 ; X64-AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-AVX2-NEXT:    retq
   %f = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 1)

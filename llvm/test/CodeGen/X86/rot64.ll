@@ -303,7 +303,7 @@ define i64 @fshr1(i64 %x) nounwind {
 ; X64-LABEL: fshr1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    rorq $1, %rax
+; X64-NEXT:    rorq %rax
 ; X64-NEXT:    retq
 ;
 ; SHLD-LABEL: fshr1:

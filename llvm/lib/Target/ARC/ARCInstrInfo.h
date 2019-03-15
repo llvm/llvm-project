@@ -81,6 +81,16 @@ public:
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
+
+  bool isPostIncrement(const MachineInstr &MI) const override;
+
+  // ARC-specific
+  bool isPreIncrement(const MachineInstr &MI) const;
+
+  virtual bool getBaseAndOffsetPosition(const MachineInstr &MI,
+                                        unsigned &BasePos,
+                                        unsigned &OffsetPos) const override;
+
   // Emit code before MBBI to load immediate value into physical register Reg.
   // Returns an iterator to the new instruction.
   MachineBasicBlock::iterator loadImmediate(MachineBasicBlock &MBB,

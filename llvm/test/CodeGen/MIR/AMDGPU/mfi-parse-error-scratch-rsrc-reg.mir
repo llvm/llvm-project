@@ -1,0 +1,12 @@
+# RUN: not llc -march=amdgcn -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# CHECK: :7:21: expected a named register
+# CHECK: scratchRSrcReg:  ''
+---
+name: empty_scratch_rsrc_reg
+machineFunctionInfo:
+  scratchRSrcReg:  ''
+body:             |
+  bb.0:
+
+    S_ENDPGM
+...

@@ -123,7 +123,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH}).legalFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_UADDE, G_USUBE, G_SADDO, G_SSUBO})
+  getActionDefinitionsBuilder({G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO})
       .legalFor({{s32, s1}, {s64, s1}});
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMA, G_FMUL, G_FDIV, G_FNEG})
@@ -450,6 +450,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
                VecTy == v2s64 || VecTy == v2s32;
       });
 
+  getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
+      .legalIf([=](const LegalityQuery &Query) {
+        const LLT &VecTy = Query.Types[0];
+        // TODO: Support destination sizes of < 128 bits.
+        // TODO: Support s8 and s16
+        return VecTy == v4s32 || VecTy == v2s64;
+      });
+
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .legalFor({{v4s16, s16},
                  {v8s16, s16},
@@ -491,6 +499,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       })
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64);
+
+  getActionDefinitionsBuilder(G_CONCAT_VECTORS)
+      .legalFor({{v4s32, v2s32}, {v8s16, v4s16}});
 
   computeTables();
   verify(*ST.getInstrInfo());

@@ -1,9 +1,14 @@
 # RUN: yaml2obj %s > %t
-# RUN: cp %t %t1
 # RUN: llvm-objcopy --strip-all-gnu %t %t2
 # RUN: llvm-strip --strip-all-gnu %t -o %t3
 # RUN: llvm-readobj --file-headers --sections %t2 | FileCheck %s
 # RUN: cmp %t2 %t3
+
+# Show that the debug section in a segment was removed, to match GNU.
+# First validate that the offset in use is correct.
+# RUN: llvm-objcopy %t %t4
+# RUN: od -t x1 -N 4 -j 120 %t4 | FileCheck %s --check-prefix=COPY-BYTES
+# RUN: od -t x1 -N 4 -j 120 %t2 | FileCheck %s --check-prefix=STRIP-BYTES
 
 !ELF
 FileHeader:
@@ -12,6 +17,10 @@ FileHeader:
   Type:            ET_REL
   Machine:         EM_X86_64
 Sections:
+  - Name:            .debug_in_segment
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Content:         "deadbeef"
   - Name:            .dynstr
     Type:            SHT_STRTAB
     Flags:           [ SHF_ALLOC ]
@@ -45,6 +54,11 @@ Sections:
   - Name:            .rela.text
     Type:            SHT_RELA
     Info:            .text
+ProgramHeaders:
+  # Use an arbitrary segment type to show that the segment type is unimportant.
+  - Type: 0x61234567
+    Sections:
+      - Section: .debug_in_segment
 
 # CHECK: SectionHeaderCount: 8
 
@@ -55,3 +69,6 @@ Sections:
 # CHECK:      Name: .comment
 # CHECK:      Name: .random_section_name
 # CHECK:      Name: .shstrtab
+
+# COPY-BYTES:  de ad be ef
+# STRIP-BYTES: 00 00 00 00
