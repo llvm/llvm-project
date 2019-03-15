@@ -55,6 +55,8 @@ GDBRemoteCommunicationReplayServer::~GDBRemoteCommunicationReplayServer() {
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
     Timeout<std::micro> timeout, Status &error, bool &interrupt, bool &quit) {
+  std::lock_guard<std::recursive_mutex> guard(m_async_thread_state_mutex);
+
   StringExtractorGDBRemote packet;
   PacketResult packet_result = WaitForPacketNoLock(packet, timeout, false);
 
