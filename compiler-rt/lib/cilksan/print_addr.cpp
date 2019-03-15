@@ -57,8 +57,8 @@ public:
 static std::vector<ProcMapping_t> *proc_maps = NULL;
 
 // declared in cilksan.cpp
-extern uint64_t stack_low_addr;
-extern uint64_t stack_high_addr;
+extern uintptr_t stack_low_addr;
+extern uintptr_t stack_high_addr;
 
 void read_proc_maps(void) {
   if (proc_maps) return;

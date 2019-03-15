@@ -27,8 +27,12 @@ FILE *err_io;
 
 extern CilkSanImpl_t CilkSanImpl;
 
+// declared in cilksan.cpp
+extern uintptr_t stack_low_addr;
+extern uintptr_t stack_high_addr;
+
 // Defined in print_addr.cpp
-extern void read_proc_maps();
+// extern void read_proc_maps();
 extern void delete_proc_maps();
 extern void print_addr(FILE *f, void *a);
 // declared in cilksan; for debugging only
@@ -127,7 +131,7 @@ CilkSanImpl_t::~CilkSanImpl_t() {
 }
 
 static void init_internal() {
-  read_proc_maps();
+  // read_proc_maps();
   if (ERROR_FILE) {
     FILE *tmp = fopen(ERROR_FILE, "w+");
     if (tmp) err_io = tmp;
@@ -213,6 +217,11 @@ CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
       first_call = false;
     }
   }
+
+  if (stack_high_addr < (uintptr_t)sp)
+    stack_high_addr = (uintptr_t)sp;
+  if (stack_low_addr > (uintptr_t)sp)
+    stack_low_addr = (uintptr_t)sp;
 
   if (!should_check())
     return;
@@ -317,6 +326,9 @@ CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
                             void *sp) {
   if (!should_check())
     return;
+
+  if (stack_low_addr > (uintptr_t)sp)
+    stack_low_addr = (uintptr_t)sp;
 
   CheckingRAII nocheck;
   DBG_TRACE(DEBUG_CALLBACK, "__csan_task(%ld, %ld)\n",
@@ -474,6 +486,9 @@ void __csi_after_alloca(const csi_id_t alloca_id, const void *addr,
   cilksan_assert(TOOL_INITIALIZED);
   if (!should_check())
     return;
+
+  if (stack_low_addr > (uintptr_t)addr)
+    stack_low_addr = (uintptr_t)addr;
 
   CheckingRAII nocheck;
   // Record the PC for this alloca

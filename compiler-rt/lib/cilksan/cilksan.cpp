@@ -71,8 +71,8 @@ PBag_t::FreeNode_t *PBag_t::free_list = nullptr;
 // Code to handle references to the stack.
 
 // Range of stack used by the process
-uint64_t stack_low_addr = 0;
-uint64_t stack_high_addr = 0;
+uintptr_t stack_low_addr = (uintptr_t)-1;
+uintptr_t stack_high_addr = 0;
 
 // Helper function to check if an address is in the stack.
 static inline bool is_on_stack(uintptr_t addr) {
@@ -621,7 +621,7 @@ void CilkSanImpl_t::init() {
   DBG_TRACE(DEBUG_CALLBACK, "cilksan_init()\n");
   std::cout << "cilksan_init() version 19\n";
 
-  cilksan_assert(stack_high_addr != 0 && stack_low_addr != 0);
+  // cilksan_assert(stack_high_addr != 0 && stack_low_addr != 0);
 
   // these are true upon creation of the stack
   cilksan_assert(frame_stack.size() == 1);
