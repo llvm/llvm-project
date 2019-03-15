@@ -1165,28 +1165,15 @@ enum cons_type {
   ct_pdo_ordered,
   ct_psections,
   ct_psingle,
-
-  /* the following must be left in order and not split up */
-  ct_taskq,
-  ct_task, // really task inside non-ordered taskq, considered worksharing type
-  ct_task_ordered, /* really task inside ordered taskq, considered a worksharing
-                      type */
-  /* the preceding must be left in order and not split up */
-
   ct_critical,
   ct_ordered_in_parallel,
   ct_ordered_in_pdo,
-  ct_ordered_in_taskq,
   ct_master,
   ct_reduce,
   ct_barrier
 };
 
-/* test to see if we are in a taskq construct */
-#define IS_CONS_TYPE_TASKQ(ct)                                                 \
-  (((int)(ct)) >= ((int)ct_taskq) && ((int)(ct)) <= ((int)ct_task_ordered))
-#define IS_CONS_TYPE_ORDERED(ct)                                               \
-  ((ct) == ct_pdo_ordered || (ct) == ct_task_ordered)
+#define IS_CONS_TYPE_ORDERED(ct) ((ct) == ct_pdo_ordered)
 
 struct cons_data {
   ident_t const *ident;
@@ -1259,163 +1246,6 @@ typedef struct kmp_cpuinfo {
 typedef int kmp_itt_mark_t;
 #define KMP_ITT_DEBUG 0
 #endif /* USE_ITT_BUILD */
-
-/* Taskq data structures */
-
-#define HIGH_WATER_MARK(nslots) (((nslots)*3) / 4)
-// num thunks that each thread can simultaneously execute from a task queue
-#define __KMP_TASKQ_THUNKS_PER_TH 1
-
-/* flags for taskq_global_flags, kmp_task_queue_t tq_flags, kmpc_thunk_t
-   th_flags  */
-
-#define TQF_IS_ORDERED 0x0001 // __kmpc_taskq interface, taskq ordered
-//  __kmpc_taskq interface, taskq with lastprivate list
-#define TQF_IS_LASTPRIVATE 0x0002
-#define TQF_IS_NOWAIT 0x0004 // __kmpc_taskq interface, end taskq nowait
-// __kmpc_taskq interface, use heuristics to decide task queue size
-#define TQF_HEURISTICS 0x0008
-
-// __kmpc_taskq interface, reserved for future use
-#define TQF_INTERFACE_RESERVED1 0x0010
-// __kmpc_taskq interface, reserved for future use
-#define TQF_INTERFACE_RESERVED2 0x0020
-// __kmpc_taskq interface, reserved for future use
-#define TQF_INTERFACE_RESERVED3 0x0040
-// __kmpc_taskq interface, reserved for future use
-#define TQF_INTERFACE_RESERVED4 0x0080
-
-#define TQF_INTERFACE_FLAGS 0x00ff // all the __kmpc_taskq interface flags
-// internal/read by instrumentation; only used with TQF_IS_LASTPRIVATE
-#define TQF_IS_LAST_TASK 0x0100
-// internal use only; this thunk->th_task is the taskq_task
-#define TQF_TASKQ_TASK 0x0200
-// internal use only; must release worker threads once ANY queued task
-// exists (global)
-#define TQF_RELEASE_WORKERS 0x0400
-// internal use only; notify workers that master has finished enqueuing tasks
-#define TQF_ALL_TASKS_QUEUED 0x0800
-// internal use only: this queue encountered in parallel context: not serialized
-#define TQF_PARALLEL_CONTEXT 0x1000
-// internal use only; this queue is on the freelist and not in use
-#define TQF_DEALLOCATED 0x2000
-
-#define TQF_INTERNAL_FLAGS 0x3f00 // all the internal use only flags
-
-typedef struct KMP_ALIGN_CACHE kmpc_aligned_int32_t {
-  kmp_int32 ai_data;
-} kmpc_aligned_int32_t;
-
-typedef struct KMP_ALIGN_CACHE kmpc_aligned_queue_slot_t {
-  struct kmpc_thunk_t *qs_thunk;
-} kmpc_aligned_queue_slot_t;
-
-typedef struct kmpc_task_queue_t {
-  /* task queue linkage fields for n-ary tree of queues (locked with global
-     taskq_tree_lck) */
-  kmp_lock_t tq_link_lck; /* lock for child link, child next/prev links and
-                             child ref counts */
-  union {
-    struct kmpc_task_queue_t *tq_parent; // pointer to parent taskq, not locked
-    // for taskq internal freelists, locked with global taskq_freelist_lck
-    struct kmpc_task_queue_t *tq_next_free;
-  } tq;
-  // pointer to linked-list of children, locked by tq's tq_link_lck
-  volatile struct kmpc_task_queue_t *tq_first_child;
-  // next child in linked-list, locked by parent tq's tq_link_lck
-  struct kmpc_task_queue_t *tq_next_child;
-  // previous child in linked-list, locked by parent tq's tq_link_lck
-  struct kmpc_task_queue_t *tq_prev_child;
-  // reference count of threads with access to this task queue
-  volatile kmp_int32 tq_ref_count;
-  /* (other than the thread executing the kmpc_end_taskq call) */
-  /* locked by parent tq's tq_link_lck */
-
-  /* shared data for task queue */
-  /* per-thread array of pointers to shared variable structures */
-  struct kmpc_aligned_shared_vars_t *tq_shareds;
-  /* only one array element exists for all but outermost taskq */
-
-  /* bookkeeping for ordered task queue */
-  kmp_uint32 tq_tasknum_queuing; // ordered task # assigned while queuing tasks
-  // ordered number of next task to be served (executed)
-  volatile kmp_uint32 tq_tasknum_serving;
-
-  /* thunk storage management for task queue */
-  kmp_lock_t tq_free_thunks_lck; /* lock for thunk freelist manipulation */
-  // thunk freelist, chained via th.th_next_free
-  struct kmpc_thunk_t *tq_free_thunks;
-  // space allocated for thunks for this task queue
-  struct kmpc_thunk_t *tq_thunk_space;
-
-  /* data fields for queue itself */
-  kmp_lock_t tq_queue_lck; /* lock for [de]enqueue operations: tq_queue,
-                              tq_head, tq_tail, tq_nfull */
-  /* array of queue slots to hold thunks for tasks */
-  kmpc_aligned_queue_slot_t *tq_queue;
-  volatile struct kmpc_thunk_t *tq_taskq_slot; /* special slot for taskq task
-                                                  thunk, occupied if not NULL */
-  kmp_int32 tq_nslots; /* # of tq_thunk_space thunks alloc'd (not incl.
-                          tq_taskq_slot space)  */
-  kmp_int32 tq_head; // enqueue puts item here (index into tq_queue array)
-  kmp_int32 tq_tail; // dequeue takes item from here (index into tq_queue array)
-  volatile kmp_int32 tq_nfull; // # of occupied entries in task queue right now
-  kmp_int32 tq_hiwat; /* high-water mark for tq_nfull and queue scheduling  */
-  volatile kmp_int32 tq_flags; /*  TQF_xxx  */
-
-  /* bookkeeping for outstanding thunks */
-
-  /* per-thread array for # of regular thunks currently being executed */
-  struct kmpc_aligned_int32_t *tq_th_thunks;
-  kmp_int32 tq_nproc; /* number of thunks in the th_thunks array */
-
-  /* statistics library bookkeeping */
-  ident_t *tq_loc; /*  source location information for taskq directive */
-} kmpc_task_queue_t;
-
-typedef void (*kmpc_task_t)(kmp_int32 global_tid, struct kmpc_thunk_t *thunk);
-
-/*  sizeof_shareds passed as arg to __kmpc_taskq call  */
-typedef struct kmpc_shared_vars_t { /* aligned during dynamic allocation */
-  kmpc_task_queue_t *sv_queue; /* (pointers to) shared vars */
-} kmpc_shared_vars_t;
-
-typedef struct KMP_ALIGN_CACHE kmpc_aligned_shared_vars_t {
-  volatile struct kmpc_shared_vars_t *ai_data;
-} kmpc_aligned_shared_vars_t;
-
-/* sizeof_thunk passed as arg to kmpc_taskq call */
-typedef struct kmpc_thunk_t { /* aligned during dynamic allocation */
-  union { /* field used for internal freelists too */
-    kmpc_shared_vars_t *th_shareds;
-    struct kmpc_thunk_t *th_next_free; /* freelist of individual thunks within
-                                          queue, head at tq_free_thunks */
-  } th;
-  kmpc_task_t th_task; /* taskq_task if flags & TQF_TASKQ_TASK */
-  struct kmpc_thunk_t *th_encl_thunk; /* pointer to dynamically enclosing thunk
-                                         on this thread's call stack */
-  // TQF_xxx(tq_flags interface plus possible internal flags)
-  kmp_int32 th_flags;
-
-  kmp_int32 th_status;
-  kmp_uint32 th_tasknum; /* task number assigned in order of queuing, used for
-                            ordered sections */
-  /* private vars */
-} kmpc_thunk_t;
-
-typedef struct KMP_ALIGN_CACHE kmp_taskq {
-  int tq_curr_thunk_capacity;
-
-  kmpc_task_queue_t *tq_root;
-  kmp_int32 tq_global_flags;
-
-  kmp_lock_t tq_freelist_lck;
-  kmpc_task_queue_t *tq_freelist;
-
-  kmpc_thunk_t **tq_curr_thunk;
-} kmp_taskq_t;
-
-/* END Taskq data structures */
 
 typedef kmp_int32 kmp_critical_name[8];
 
@@ -2770,7 +2600,6 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   std::atomic<kmp_int32> t_cancel_request;
 #endif
   int t_master_active; // save on fork, restore on join
-  kmp_taskq_t t_taskq; // this team's task queue
   void *t_copypriv_data; // team specific pointer to copyprivate data array
 #if KMP_OS_WINDOWS
   std::atomic<kmp_uint32> t_copyin_counter;
@@ -3775,24 +3604,6 @@ KMP_EXPORT void __kmpc_copyprivate(ident_t *loc, kmp_int32 global_tid,
 extern void KMPC_SET_NUM_THREADS(int arg);
 extern void KMPC_SET_DYNAMIC(int flag);
 extern void KMPC_SET_NESTED(int flag);
-
-/* Taskq interface routines */
-KMP_EXPORT kmpc_thunk_t *__kmpc_taskq(ident_t *loc, kmp_int32 global_tid,
-                                      kmpc_task_t taskq_task,
-                                      size_t sizeof_thunk,
-                                      size_t sizeof_shareds, kmp_int32 flags,
-                                      kmpc_shared_vars_t **shareds);
-KMP_EXPORT void __kmpc_end_taskq(ident_t *loc, kmp_int32 global_tid,
-                                 kmpc_thunk_t *thunk);
-KMP_EXPORT kmp_int32 __kmpc_task(ident_t *loc, kmp_int32 global_tid,
-                                 kmpc_thunk_t *thunk);
-KMP_EXPORT void __kmpc_taskq_task(ident_t *loc, kmp_int32 global_tid,
-                                  kmpc_thunk_t *thunk, kmp_int32 status);
-KMP_EXPORT void __kmpc_end_taskq_task(ident_t *loc, kmp_int32 global_tid,
-                                      kmpc_thunk_t *thunk);
-KMP_EXPORT kmpc_thunk_t *__kmpc_task_buffer(ident_t *loc, kmp_int32 global_tid,
-                                            kmpc_thunk_t *taskq_thunk,
-                                            kmpc_task_t task);
 
 /* OMP 3.0 tasking interface routines */
 KMP_EXPORT kmp_int32 __kmpc_omp_task(ident_t *loc_ref, kmp_int32 gtid,

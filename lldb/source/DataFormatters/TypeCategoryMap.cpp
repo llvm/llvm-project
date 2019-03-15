@@ -249,7 +249,6 @@ TypeCategoryMap::GetSummaryFormat(FormattersMatchData &match_data) {
   return lldb::TypeSummaryImplSP();
 }
 
-#ifndef LLDB_DISABLE_PYTHON
 lldb::SyntheticChildrenSP
 TypeCategoryMap::GetSyntheticChildren(FormattersMatchData &match_data) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
@@ -291,7 +290,6 @@ TypeCategoryMap::GetSyntheticChildren(FormattersMatchData &match_data) {
                 "empty SP");
   return lldb::SyntheticChildrenSP();
 }
-#endif
 
 lldb::TypeValidatorImplSP
 TypeCategoryMap::GetValidator(FormattersMatchData &match_data) {

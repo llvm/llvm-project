@@ -34,11 +34,9 @@ DWARFAbbreviationDeclaration::extract(const DWARFDataExtractor &data,
 
   m_attributes.clear();
   m_tag = data.GetULEB128(offset_ptr);
-  if (m_tag == DW_TAG_null) {
-    // FIXME: According to the DWARF spec this may actually be malformed.
-    // Should this return an error instead?
-    return DWARFEnumState::Complete;
-  }
+  if (m_tag == DW_TAG_null)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "abbrev decl requires non-null tag.");
 
   m_has_children = data.GetU8(offset_ptr);
 

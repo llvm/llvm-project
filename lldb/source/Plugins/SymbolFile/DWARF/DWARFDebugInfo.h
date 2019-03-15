@@ -12,11 +12,12 @@
 #include <map>
 #include <vector>
 
-#include "DWARFUnit.h"
 #include "DWARFDIE.h"
+#include "DWARFUnit.h"
 #include "SymbolFileDWARF.h"
 #include "lldb/Core/STLUtils.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/Error.h"
 
 typedef std::multimap<const char *, dw_offset_t, CStringCompareFunctionObject>
     CStringToDIEMap;
@@ -50,7 +51,7 @@ public:
         (1 << 2) // Show all parent DIEs when dumping single DIEs
   };
 
-  DWARFDebugAranges &GetCompileUnitAranges();
+  llvm::Expected<DWARFDebugAranges &> GetCompileUnitAranges();
 
 protected:
   static bool OffsetLessThanCompileUnitOffset(dw_offset_t offset,
