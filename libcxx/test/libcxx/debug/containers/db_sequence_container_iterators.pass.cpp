@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: *
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // UNSUPPORTED: libcpp-no-exceptions, libcpp-no-if-constexpr
 // MODULES_DEFINES: _LIBCPP_DEBUG=1
