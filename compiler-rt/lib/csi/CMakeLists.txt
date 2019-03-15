@@ -12,12 +12,17 @@ set(CSI_SOURCES csirt.c)
 
 foreach (arch ${CSI_SUPPORTED_ARCH})
   add_compiler_rt_runtime(clang_rt.csi
+    SHARED
+    ARCHS ${arch}
+    SOURCES ${CSI_SOURCES}
+    CFLAGS ${CSI_RTL_CFLAGS}
+    PARENT_TARGET csi)
+  add_compiler_rt_runtime(clang_rt.csi
     STATIC
     ARCHS ${arch}
     SOURCES ${CSI_SOURCES}
-    CFLAGS ${CSI_RTL_CFLAGS})
-  add_dependencies(csi
-    clang_rt.csi-${arch})
+    CFLAGS ${CSI_RTL_CFLAGS}
+    PARENT_TARGET csi)
 endforeach()
 
 add_dependencies(compiler-rt csi)

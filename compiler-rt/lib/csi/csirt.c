@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-
+#include <string.h>
+#include <stdatomic.h>
 #include <csi/csi.h>
 
 // Compile-time assert the property structs are 64 bits.
@@ -24,9 +25,18 @@ static_assert(sizeof(free_prop_t) == 8, "Size of free_prop_t is not 64 bits.");
 // A FED table is a flat list of FED entries, indexed by a CSI
 // ID. Each FED table has its own private ID space.
 typedef struct {
-    int64_t num_entries;
+    uint64_t num_entries;
     source_loc_t *entries;
 } fed_table_t;
+
+// A FED table index is an array of pointers to equally-sized FED
+// tables.
+typedef struct {
+  uint64_t num_tables;
+  uint64_t capacity;
+  uint64_t num_total_entries;
+  fed_table_t *tables;
+} fed_table_index_t;
 
 // Types of FED tables that we maintain across all units.
 typedef enum {
@@ -127,12 +137,18 @@ const char *free_str[] =
   };
 
 // ------------------------------------------------------------------------
+// Constants
+// ------------------------------------------------------------------------
+static const uint64_t NUM_ELEMENTS_PER_TABLE = ((uint64_t)1) << 16;
+static const uint64_t DEFAULT_NUM_POINTERS_TO_TABLES = ((uint64_t)1) << 8;
+
+// ------------------------------------------------------------------------
 // Globals
 // ------------------------------------------------------------------------
 
-// The list of FED tables. This is indexed by a value of
+// The list of FED table indices. This is indexed by a value of
 // 'fed_type_t'.
-static fed_table_t *fed_tables = NULL;
+static fed_table_index_t *fed_tables = NULL;
 
 // Initially false, set to true once the first unit is initialized,
 // which results in the FED list being initialized.
@@ -154,47 +170,80 @@ static bool csi_init_called = false;
 // Private function definitions
 // ------------------------------------------------------------------------
 
+// NOTE: All functions modifying the FED tables and the index are NOT thread 
+// safe and MUST be protected by a mutex.
+
+// Append a table to the index, which is resized if necessary.
+static fed_table_t *
+allocate_new_table_and_append_to_index(fed_table_index_t *index) {
+  if (index->capacity == index->num_tables) {
+    fed_table_t *old_tables = index->tables;
+    fed_table_t *new_tables =
+        (fed_table_t *)calloc(sizeof(fed_table_t), index->capacity * 2);
+    memcpy(index->tables, old_tables, sizeof(fed_table_t) * index->capacity);
+
+    index->capacity = index->capacity * 2;
+    index->tables = new_tables;
+    // Unfortunately, we cannot free the old tables, in case they are being
+    // accessed.
+  }
+
+  // Now we are guaranteed to have space for another table in the index.
+  fed_table_t *new_table = &index->tables[index->num_tables];
+  new_table->num_entries = 0;
+  new_table->entries =
+      (source_loc_t *)malloc(sizeof(source_loc_t) * NUM_ELEMENTS_PER_TABLE);
+  index->num_tables++;
+
+  return new_table;
+}
+
 // Initialize the FED tables list, indexed by a value of type
 // fed_type_t. This is called once, by the first unit to load.
 static void initialize_fed_tables() {
-    fed_tables = (fed_table_t *)malloc(NUM_FED_TYPES * sizeof(fed_table_t));
+    fed_tables = (fed_table_index_t *)malloc(NUM_FED_TYPES * sizeof(fed_table_index_t));
     assert(fed_tables != NULL);
     for (unsigned i = 0; i < NUM_FED_TYPES; i++) {
-        fed_table_t table;
-        table.num_entries = 0;
-        table.entries = NULL;
-        fed_tables[i] = table;
+        fed_table_index_t *index = fed_tables + i;
+        index->num_tables = 0;
+        index->num_total_entries = 0;
+        index->capacity = DEFAULT_NUM_POINTERS_TO_TABLES;
+        index->tables = (fed_table_t *)calloc(sizeof(fed_table_t),
+                                             index->capacity);
+
+        allocate_new_table_and_append_to_index(index);
     }
     fed_tables_initialized = true;
 }
 
-// Ensure that the FED table of the given type has enough memory
-// allocated to add a new unit's entries.
-static void ensure_fed_table_capacity(fed_type_t fed_type,
-                                      int64_t num_new_entries) {
-    if (!fed_tables_initialized) {
-        initialize_fed_tables();
-    }
-    fed_table_t *table = &fed_tables[fed_type];
-    int64_t total_num_entries = table->num_entries + num_new_entries;
-    if (total_num_entries > 0) {
-        table->entries =
-          (source_loc_t *)realloc(table->entries,
-                                  total_num_entries * sizeof(source_loc_t));
-        table->num_entries = total_num_entries;
-        assert(table->entries != NULL);
-    }
+static inline int is_table_full(const fed_table_t *table) {
+  return table->num_entries == NUM_ELEMENTS_PER_TABLE;
+}
+
+static inline fed_table_t* get_table_for_insertion(fed_table_index_t *index) {
+  return &index->tables[index->num_tables - 1];
+}
+
+static inline void add_entry_to_table(fed_table_t *table,
+    const source_loc_t *fed_entry) {
+  assert(!is_table_full(table));
+  table->entries[table->num_entries] = *fed_entry;
+  table->num_entries++;
 }
 
 // Add a new FED table of the given type.
-static inline void add_fed_table(fed_type_t fed_type, int64_t num_entries,
+static inline void add_fed_table(fed_type_t fed_type, uint64_t num_entries,
                                  const source_loc_t *fed_entries) {
-    ensure_fed_table_capacity(fed_type, num_entries);
-    fed_table_t *table = &fed_tables[fed_type];
-    csi_id_t base = table->num_entries - num_entries;
-    for (csi_id_t i = 0; i < num_entries; i++) {
-        table->entries[base + i] = fed_entries[i];
+    fed_table_index_t *index = &fed_tables[fed_type];
+    fed_table_t * table = get_table_for_insertion(index);
+    for (uint64_t i = 0; i < num_entries; i++) {
+      if (is_table_full(table)) {
+        table = allocate_new_table_and_append_to_index(index);
+      }
+      add_entry_to_table(table, fed_entries + i);
     }
+
+    index->num_total_entries += num_entries;
 }
 
 // The unit-local counter pointed to by 'fed_id_base' keeps track of
@@ -202,23 +251,34 @@ static inline void add_fed_table(fed_type_t fed_type, int64_t num_entries,
 // a private ID space per FED type). The "base" ID value is the global
 // ID that corresponds to the unit's local ID 0. This function stores
 // the correct value into a unit's base ID.
-static inline void update_ids(fed_type_t fed_type, int64_t num_entries,
+static inline void update_ids(fed_type_t fed_type, uint64_t num_entries,
                               csi_id_t *fed_id_base) {
-    fed_table_t *table = &fed_tables[fed_type];
+    fed_table_index_t *index = &fed_tables[fed_type];
     // The base ID is the current number of FED entries before adding
     // the new FED table.
-    *fed_id_base = table->num_entries - num_entries;
+    *fed_id_base = index->num_total_entries - num_entries;
+}
+
+static inline fed_table_t *get_table_for_id(const fed_table_index_t *index,
+    const csi_id_t csi_id) {
+    return index->tables + (csi_id / NUM_ELEMENTS_PER_TABLE);
+}
+
+static inline source_loc_t *get_entry_for_table(const fed_table_t* table,
+    const csi_id_t csi_id) {
+    assert(table->entries != NULL);
+    return table->entries + (csi_id % NUM_ELEMENTS_PER_TABLE);
 }
 
 // Return the FED entry of the given type, corresponding to the given
 // CSI ID.
 static inline const source_loc_t *get_fed_entry(fed_type_t fed_type,
                                                 const csi_id_t csi_id) {
-    // TODO(ddoucet): threadsafety
-    fed_table_t *table = &fed_tables[fed_type];
-    if (csi_id < table->num_entries) {
-        assert(table->entries != NULL);
-        return &table->entries[csi_id];
+    fed_table_index_t *index = &fed_tables[fed_type];
+   
+    if (csi_id < 0 || (uint64_t)csi_id < index->num_total_entries) {
+        fed_table_t *table = get_table_for_id(index, csi_id);
+        return get_entry_for_table(table, csi_id);
     } else {
         return NULL;
     }
@@ -315,6 +375,8 @@ static inline instrumentation_counts_t compute_inst_counts(unit_fed_table_t *uni
     return counts;
 }
 
+_Atomic int32_t lock = 0;
+
 // A call to this is inserted by the CSI compiler pass, and occurs
 // before main().
 CSIRT_API void __csirt_unit_init(
@@ -329,6 +391,17 @@ CSIRT_API void __csirt_unit_init(
     if (!csi_init_called) {
         __csi_init();
         csi_init_called = true;
+    }
+
+    int32_t acquired = 0;
+    while (!atomic_compare_exchange_strong(&lock, &acquired, 1)) {
+      acquired = 0;
+    }
+
+    assert(lock == acquired == 1);
+
+    if (!fed_tables_initialized) {
+      initialize_fed_tables();
     }
 
     // Add all FED tables from the new unit
@@ -352,6 +425,11 @@ CSIRT_API void __csirt_unit_init(
 
     // Reset disable flag.
     // __csi_disable_instrumentation = false;
+
+    acquired = 1;
+    assert(lock == acquired);
+    int res = atomic_compare_exchange_strong(&lock, &acquired, 0);
+    assert(res);
 }
 
 CSIRT_API
