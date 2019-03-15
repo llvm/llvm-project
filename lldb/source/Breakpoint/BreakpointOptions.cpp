@@ -253,55 +253,50 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
 
   const char *key = GetKey(OptionNames::EnabledState);
   bool success;
-  if (key) {
+  if (key && options_dict.HasKey(key)) {
     success = options_dict.GetValueForKeyAsBoolean(key, enabled);
     if (!success) {
-      error.SetErrorStringWithFormat("%s key is not a boolean.",
-                                   GetKey(OptionNames::EnabledState));
+      error.SetErrorStringWithFormat("%s key is not a boolean.", key);
       return nullptr;
     }
     set_options.Set(eEnabled);
   }
 
   key = GetKey(OptionNames::OneShotState);
-  if (key) {
+  if (key && options_dict.HasKey(key)) {
     success = options_dict.GetValueForKeyAsBoolean(key, one_shot);
     if (!success) {
-      error.SetErrorStringWithFormat("%s key is not a boolean.",
-                                     GetKey(OptionNames::OneShotState));
+      error.SetErrorStringWithFormat("%s key is not a boolean.", key);
       return nullptr;
       }
       set_options.Set(eOneShot);
   }
   
   key = GetKey(OptionNames::AutoContinue);
-  if (key) {
+  if (key && options_dict.HasKey(key)) {
     success = options_dict.GetValueForKeyAsBoolean(key, auto_continue);
     if (!success) {
-      error.SetErrorStringWithFormat("%s key is not a boolean.",
-                                     GetKey(OptionNames::AutoContinue));
+      error.SetErrorStringWithFormat("%s key is not a boolean.", key);
       return nullptr;
       }
       set_options.Set(eAutoContinue);
   }
   
   key = GetKey(OptionNames::IgnoreCount);
-  if (key) {
+  if (key && options_dict.HasKey(key)) {
     success = options_dict.GetValueForKeyAsInteger(key, ignore_count);
     if (!success) {
-      error.SetErrorStringWithFormat("%s key is not an integer.",
-                                     GetKey(OptionNames::IgnoreCount));
+      error.SetErrorStringWithFormat("%s key is not an integer.", key);
       return nullptr;
     }
     set_options.Set(eIgnoreCount);
   }
 
   key = GetKey(OptionNames::ConditionText);
-  if (key) {
+  if (key && options_dict.HasKey(key)) {
     success = options_dict.GetValueForKeyAsString(key, condition_ref);
     if (!success) {
-      error.SetErrorStringWithFormat("%s key is not an string.",
-                                     GetKey(OptionNames::ConditionText));
+      error.SetErrorStringWithFormat("%s key is not an string.", key);
       return nullptr;
     }
     set_options.Set(eCondition);
