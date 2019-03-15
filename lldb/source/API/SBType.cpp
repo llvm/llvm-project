@@ -16,7 +16,6 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/APSInt.h"

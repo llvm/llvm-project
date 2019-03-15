@@ -100,6 +100,19 @@ static std::string GetRecordConstructorMacro(StringRef Class,
   return OS.str();
 }
 
+static std::string GetRecordDummyMacro(StringRef Result, StringRef Class,
+                                       StringRef Method, StringRef Signature,
+                                       StringRef Values) {
+  assert(!Values.empty());
+  std::string Macro;
+  llvm::raw_string_ostream OS(Macro);
+
+  OS << "LLDB_RECORD_DUMMY(" << Result << ", " << Class << ", " << Method;
+  OS << ", (" << Signature << "), " << Values << ");\n\n";
+
+  return OS.str();
+}
+
 static std::string GetRegisterConstructorMacro(StringRef Class,
                                                StringRef Signature) {
   std::string Macro;
@@ -170,24 +183,21 @@ public:
     PrintingPolicy Policy(Context.getLangOpts());
     Policy.Bool = true;
 
+    // Unsupported signatures get a dummy macro.
+    bool ShouldInsertDummy = false;
+
     // Collect the functions parameter types and names.
     std::vector<std::string> ParamTypes;
     std::vector<std::string> ParamNames;
     for (auto *P : Decl->parameters()) {
       QualType T = P->getType();
-
-      // Currently we don't support functions that have function pointers as an
-      // argument.
-      if (T->isFunctionPointerType())
-        return false;
-
-      // Currently we don't support functions that have void pointers as an
-      // argument.
-      if (T->isVoidPointerType())
-        return false;
-
       ParamTypes.push_back(T.getAsString(Policy));
       ParamNames.push_back(P->getNameAsString());
+
+      // Currently we don't support functions that have void pointers or
+      // function pointers as an argument, in which case we insert a dummy
+      // macro.
+      ShouldInsertDummy |= T->isFunctionPointerType() || T->isVoidPointerType();
     }
 
     // Convert the two lists to string for the macros.
@@ -199,7 +209,13 @@ public:
 
     // Construct the macros.
     std::string Macro;
-    if (isa<CXXConstructorDecl>(Decl)) {
+    if (ShouldInsertDummy) {
+      // Don't insert a register call for dummy macros.
+      Macro = GetRecordDummyMacro(
+          ReturnType.getAsString(Policy), Record->getNameAsString(),
+          Decl->getNameAsString(), ParamTypesStr, ParamNamesStr);
+
+    } else if (isa<CXXConstructorDecl>(Decl)) {
       llvm::outs() << GetRegisterConstructorMacro(Record->getNameAsString(),
                                                   ParamTypesStr);
 
@@ -229,7 +245,7 @@ public:
 
     // If the function returns a class or struct, we need to wrap its return
     // statement(s).
-    if (ReturnType->isStructureOrClassType()) {
+    if (!ShouldInsertDummy && ReturnType->isStructureOrClassType()) {
       SBReturnVisitor Visitor(MyRewriter);
       Visitor.TraverseDecl(Decl);
     }
