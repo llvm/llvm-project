@@ -56,9 +56,10 @@ void lld::exitLld(int val) {
   if (errorHandler().outputBuffer)
     errorHandler().outputBuffer->discard();
 
-  // Dealloc/destroy ManagedStatic variables before calling
-  // _exit(). In a non-LTO build, this is a nop. In an LTO
-  // build allows us to get the output of -time-passes.
+  // Dealloc/destroy ManagedStatic variables before calling _exit().
+  // In an LTO build, allows us to get the output of -time-passes.
+  // Ensures that the thread pool for the parallel algorithms is stopped to
+  // avoid intermittent crashes on Windows when exiting.
   llvm_shutdown();
 
   lld::outs().flush();
