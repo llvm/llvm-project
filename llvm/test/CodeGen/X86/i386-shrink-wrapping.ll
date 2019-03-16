@@ -19,8 +19,7 @@ target triple = "i386-apple-macosx10.5"
 ; CHECK-LABEL: eflagsLiveInPrologue:
 ;
 ; DISABLE: pushl
-; DISABLE-NEXT: pushl
-; DISABLE-NEXT: subl $20, %esp
+; DISABLE-NEXT: subl $8, %esp
 ;
 ; CHECK: movl L_a$non_lazy_ptr, [[A:%[a-z]+]]
 ; CHECK-NEXT: cmpl $0, ([[A]])
@@ -40,35 +39,26 @@ target triple = "i386-apple-macosx10.5"
 ; The for.end block is split to accomadate the different selects.
 ; We are interested in the one with the call, so skip until the branch.
 ; CHECK: [[FOREND_LABEL]]:
-; CHECK-NEXT: xorl
+
+; ENABLE: pushl
+; ENABLE-NEXT: subl $8, %esp
+
+; CHECK: xorl [[CMOVE_VAL:%edx]], [[CMOVE_VAL]]
 ; CHECK-NEXT: cmpb $0, _d
-; CHECK-NEXT: movl $0, %edx
-; CHECK-NEXT: jne [[CALL_LABEL:LBB[0-9_]+]]
-;
-; CHECK: movb $6, %dl
-;
-; CHECK: [[CALL_LABEL]]
-;
-; ENABLE-NEXT: pushl
-; ENABLE-NEXT: pushl
-; We must not use sub here otherwise we will clobber the eflags.
-; ENABLE-NEXT: leal -20(%esp), %esp
-;
-; CHECK-NEXT: L_e$non_lazy_ptr, [[E:%[a-z]+]]
-; CHECK-NEXT: movb %dl, ([[E]])
-; CHECK-NEXT: movzbl %dl, [[CONV:%[a-z]+]]
-; CHECK-NEXT: movl $6, [[CONV:%[a-z]+]]
+; CHECK-NEXT: movl $6, [[IMM_VAL:%ecx]]
 ; The eflags is used in the next instruction.
 ; If that instruction disappear, we are not exercising the bug
 ; anymore.
-; CHECK-NEXT: cmovnel {{%[a-z]+}}, [[CONV]]
-;
-; Skip all the crust of vaarg lowering.
+; CHECK-NEXT: cmovnel [[CMOVE_VAL]], [[IMM_VAL]]
+
+; CHECK-NEXT: L_e$non_lazy_ptr, [[E:%[a-z]+]]
+; CHECK-NEXT: movb %cl, ([[E]])
+; CHECK-NEXT: leal 1(%ecx), %esi
+
 ; CHECK: calll _varfunc
 ; Set the return value to 0.
 ; CHECK-NEXT: xorl %eax, %eax
-; CHECK-NEXT: addl $20, %esp
-; CHECK-NEXT: popl
+; CHECK-NEXT: addl $8, %esp
 ; CHECK-NEXT: popl
 ; CHECK-NEXT: retl
 define i32 @eflagsLiveInPrologue() #0 {

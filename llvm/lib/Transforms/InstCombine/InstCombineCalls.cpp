@@ -1908,8 +1908,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (Changed) return II;
   }
 
-  // For vector result intrinsics, use the generic demanded vector support to
-  // simplify any operands before moving on to the per-intrinsic rules.    
+  // For vector result intrinsics, use the generic demanded vector support.
   if (II->getType()->isVectorTy()) {
     auto VWidth = II->getType()->getVectorNumElements();
     APInt UndefElts(VWidth, 0);

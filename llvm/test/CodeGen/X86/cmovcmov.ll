@@ -325,26 +325,11 @@ define void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 ; CMOV-LABEL: no_cascade_opt:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    cmpl %edx, %esi
-; CMOV-NEXT:    movb $20, %al
-; CMOV-NEXT:    movb $20, %dl
-; CMOV-NEXT:    jge .LBB7_1
-; CMOV-NEXT:  # %bb.2: # %entry
-; CMOV-NEXT:    jle .LBB7_3
-; CMOV-NEXT:  .LBB7_4: # %entry
+; CMOV-NEXT:    movl $20, %eax
+; CMOV-NEXT:    cmovll %eax, %ecx
+; CMOV-NEXT:    cmovlel %ecx, %eax
 ; CMOV-NEXT:    testl %edi, %edi
-; CMOV-NEXT:    jne .LBB7_5
-; CMOV-NEXT:  .LBB7_6: # %entry
-; CMOV-NEXT:    movb %al, {{.*}}(%rip)
-; CMOV-NEXT:    retq
-; CMOV-NEXT:  .LBB7_1: # %entry
-; CMOV-NEXT:    movl %ecx, %edx
-; CMOV-NEXT:    jg .LBB7_4
-; CMOV-NEXT:  .LBB7_3: # %entry
-; CMOV-NEXT:    movl %edx, %eax
-; CMOV-NEXT:    testl %edi, %edi
-; CMOV-NEXT:    je .LBB7_6
-; CMOV-NEXT:  .LBB7_5: # %entry
-; CMOV-NEXT:    movl %edx, %eax
+; CMOV-NEXT:    cmovnel %ecx, %eax
 ; CMOV-NEXT:    movb %al, {{.*}}(%rip)
 ; CMOV-NEXT:    retq
 ;

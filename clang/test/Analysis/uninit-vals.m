@@ -164,7 +164,8 @@ void PR14765_test() {
                                            // expected-note@-1{{TRUE}}
 
   testObj->origin = makePoint(0.0, 0.0);
-  if (testObj->size > 0) { ; } // expected-note{{Taking false branch}}
+  if (testObj->size > 0) { ; } // expected-note{{Assuming the condition is false}}
+                               // expected-note@-1{{Taking false branch}}
 
   // FIXME: Assigning to 'testObj->origin' kills the default binding for the
   // whole region, meaning that we've forgotten that testObj->size should also
@@ -218,10 +219,14 @@ void PR14765_test_int() {
                                                // expected-note@-1{{TRUE}}
 
   testObj->origin = makeIntPoint(1, 2);
-  if (testObj->size > 0) { ; } // expected-note{{Taking false branch}}
+  if (testObj->size > 0) { ; } // expected-note{{Assuming the condition is false}}
                                // expected-note@-1{{Taking false branch}}
-                               // expected-note@-2{{Taking false branch}}
+                               // expected-note@-2{{Assuming the condition is false}}
                                // expected-note@-3{{Taking false branch}}
+                               // expected-note@-4{{Assuming the condition is false}}
+                               // expected-note@-5{{Taking false branch}}
+                               // expected-note@-6{{Assuming the condition is false}}
+                               // expected-note@-7{{Taking false branch}}
 
   // FIXME: Assigning to 'testObj->origin' kills the default binding for the
   // whole region, meaning that we've forgotten that testObj->size should also

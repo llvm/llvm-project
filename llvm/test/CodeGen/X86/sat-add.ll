@@ -10,12 +10,9 @@
 define i8 @unsigned_sat_constant_i8_using_min(i8 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i8_using_min:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:    cmpb $-43, %al
-; ANY-NEXT:    jb .LBB0_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movb $-43, %al
-; ANY-NEXT:  .LBB0_2:
+; ANY-NEXT:    cmpb $-43, %dil
+; ANY-NEXT:    movl $213, %eax
+; ANY-NEXT:    cmovbl %edi, %eax
 ; ANY-NEXT:    addb $42, %al
 ; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
@@ -29,11 +26,10 @@ define i8 @unsigned_sat_constant_i8_using_cmp_sum(i8 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i8_using_cmp_sum:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    addb $42, %dil
-; ANY-NEXT:    movb $-1, %al
-; ANY-NEXT:    jb .LBB1_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:  .LBB1_2:
+; ANY-NEXT:    movzbl %dil, %ecx
+; ANY-NEXT:    movl $255, %eax
+; ANY-NEXT:    cmovael %ecx, %eax
+; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
   %a = add i8 %x, 42
   %c = icmp ugt i8 %x, %a
@@ -45,11 +41,10 @@ define i8 @unsigned_sat_constant_i8_using_cmp_notval(i8 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i8_using_cmp_notval:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    addb $42, %dil
-; ANY-NEXT:    movb $-1, %al
-; ANY-NEXT:    jb .LBB2_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:  .LBB2_2:
+; ANY-NEXT:    movzbl %dil, %ecx
+; ANY-NEXT:    movl $255, %eax
+; ANY-NEXT:    cmovael %ecx, %eax
+; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
   %a = add i8 %x, 42
   %c = icmp ugt i8 %x, -43
@@ -183,14 +178,11 @@ define i64 @unsigned_sat_constant_i64_using_cmp_notval(i64 %x) {
 define i8 @unsigned_sat_variable_i8_using_min(i8 %x, i8 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i8_using_min:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:    movl %esi, %ecx
-; ANY-NEXT:    notb %cl
-; ANY-NEXT:    cmpb %cl, %al
-; ANY-NEXT:    jb .LBB12_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movl %ecx, %eax
-; ANY-NEXT:  .LBB12_2:
+; ANY-NEXT:    movl %esi, %eax
+; ANY-NEXT:    notb %al
+; ANY-NEXT:    cmpb %al, %dil
+; ANY-NEXT:    movzbl %al, %eax
+; ANY-NEXT:    cmovbl %edi, %eax
 ; ANY-NEXT:    addb %sil, %al
 ; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
@@ -205,11 +197,10 @@ define i8 @unsigned_sat_variable_i8_using_cmp_sum(i8 %x, i8 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i8_using_cmp_sum:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    addb %sil, %dil
-; ANY-NEXT:    movb $-1, %al
-; ANY-NEXT:    jb .LBB13_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:  .LBB13_2:
+; ANY-NEXT:    movzbl %dil, %ecx
+; ANY-NEXT:    movl $255, %eax
+; ANY-NEXT:    cmovael %ecx, %eax
+; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
   %a = add i8 %x, %y
   %c = icmp ugt i8 %x, %a
@@ -220,15 +211,15 @@ define i8 @unsigned_sat_variable_i8_using_cmp_sum(i8 %x, i8 %y) {
 define i8 @unsigned_sat_variable_i8_using_cmp_notval(i8 %x, i8 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i8_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movl %esi, %eax
-; ANY-NEXT:    notb %al
-; ANY-NEXT:    cmpb %al, %dil
-; ANY-NEXT:    movb $-1, %al
-; ANY-NEXT:    ja .LBB14_2
-; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    addb %sil, %dil
-; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:  .LBB14_2:
+; ANY-NEXT:    # kill: def $esi killed $esi def $rsi
+; ANY-NEXT:    # kill: def $edi killed $edi def $rdi
+; ANY-NEXT:    leal (%rdi,%rsi), %eax
+; ANY-NEXT:    notb %sil
+; ANY-NEXT:    cmpb %sil, %dil
+; ANY-NEXT:    movzbl %al, %ecx
+; ANY-NEXT:    movl $255, %eax
+; ANY-NEXT:    cmovbel %ecx, %eax
+; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
   %noty = xor i8 %y, -1
   %a = add i8 %x, %y

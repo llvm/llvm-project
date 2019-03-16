@@ -86,6 +86,9 @@ struct ProgramHeader {
   llvm::yaml::Hex64 VAddr;
   llvm::yaml::Hex64 PAddr;
   Optional<llvm::yaml::Hex64> Align;
+  Optional<llvm::yaml::Hex64> FileSize;
+  Optional<llvm::yaml::Hex64> MemSize;
+  Optional<llvm::yaml::Hex64> Offset;
   std::vector<SectionName> Sections;
 };
 

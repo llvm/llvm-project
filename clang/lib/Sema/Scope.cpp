@@ -166,7 +166,9 @@ void Scope::dumpImpl(raw_ostream &OS) const {
       {SEHExceptScope, "SEHExceptScope"},
       {SEHFilterScope, "SEHFilterScope"},
       {CompoundStmtScope, "CompoundStmtScope"},
-      {ClassInheritanceScope, "ClassInheritanceScope"}};
+      {ClassInheritanceScope, "ClassInheritanceScope"},
+      {CatchScope, "CatchScope"},
+  };
 
   for (auto Info : FlagInfo) {
     if (Flags & Info.first) {

@@ -765,10 +765,6 @@ void TypeAndOrName::Clear() {
 
 bool TypeAndOrName::HasName() const { return (bool)m_type_name; }
 
-bool TypeAndOrName::HasTypeSP() const {
-  return m_type_pair.GetTypeSP().get() != nullptr;
-}
-
 bool TypeAndOrName::HasCompilerType() const {
   return m_type_pair.GetCompilerType().IsValid();
 }
@@ -832,7 +828,7 @@ void TypeImpl::SetType(const CompilerType &compiler_type,
 }
 
 void TypeImpl::SetType(const TypePair &pair, const CompilerType &dynamic) {
-  m_module_wp = pair.GetModule();
+  m_module_wp.reset();
   m_static_type = pair;
   m_dynamic_type = dynamic;
 }

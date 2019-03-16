@@ -82,12 +82,22 @@ void X86InstPrinterCommon::printXOPCC(const MCInst *MI, unsigned Op,
 
 void X86InstPrinterCommon::printRoundingControl(const MCInst *MI, unsigned Op,
                                                 raw_ostream &O) {
-  int64_t Imm = MI->getOperand(Op).getImm() & 0x3;
+  int64_t Imm = MI->getOperand(Op).getImm();
   switch (Imm) {
-  case 0: O << "{rn-sae}"; break;
-  case 1: O << "{rd-sae}"; break;
-  case 2: O << "{ru-sae}"; break;
-  case 3: O << "{rz-sae}"; break;
+  default:
+    llvm_unreachable("Invalid rounding control!");
+  case X86::TO_NEAREST_INT:
+    O << "{rn-sae}";
+    break;
+  case X86::TO_NEG_INF:
+    O << "{rd-sae}";
+    break;
+  case X86::TO_POS_INF:
+    O << "{ru-sae}";
+    break;
+  case X86::TO_ZERO:
+    O << "{rz-sae}";
+    break;
   }
 }
 

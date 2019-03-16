@@ -1,9 +1,41 @@
 include(CMakeCheckCompilerFlagCommonPatterns)
 
-# This function takes an OS and a list of architectures and identifies the
-# subset of the architectures list that the installed toolchain can target.
+# Test compiler can compile simple C/C++/Objective-C program without invoking
+# the linker.
+#
+# try_compile_only(
+#   OUTPUT_VAR
+#   [SOURCE source_text]
+#   [FLAGS flag_0 [ flag_1 ]]
+# )
+#
+# OUTPUT_VAR - The variable name to store the result. The result is a boolean
+#              `True` or `False`.
+#
+# SOURCE     - Optional. If specified use source the source text string
+#              specified. If not specified source code will be used that is C,
+#              C++, and Objective-C compatible.
+#
+# FLAGS      - Optional. If specified pass the one or more specified flags to
+#              the compiler.
+#
+# EXAMPLES:
+#
+# try_compile_only(HAS_F_NO_RTTI FLAGS "-fno-rtti")
+#
+# try_compile_only(HAS_CXX_AUTO_TYPE_DECL
+#   SOURCE "int foo(int x) { auto y = x + 1; return y;}"
+#   FLAGS "-x" "c++" "-std=c++11" "-Werror=c++11-extensions"
+# )
+#
 function(try_compile_only output)
+  # NOTE: `SOURCE` needs to be a multi-argument because source code
+  # often contains semicolons which happens to be CMake's list separator
+  # which confuses `cmake_parse_arguments()`.
   cmake_parse_arguments(ARG "" "" "SOURCE;FLAGS" ${ARGN})
+  if (ARG_UNPARSED_ARGUMENTS)
+    message(FATAL_ERROR "Unexpected arguments \"${ARG_UNPARSED_ARGUMENTS}\"")
+  endif()
   if(NOT ARG_SOURCE)
     set(ARG_SOURCE "int foo(int x, int y) { return x + y; }\n")
   endif()

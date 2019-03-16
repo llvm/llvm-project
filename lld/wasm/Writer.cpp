@@ -66,6 +66,7 @@ private:
 
   void createCtorFunction();
   void calculateInitFunctions();
+  void processRelocations(InputChunk *Chunk);
   void assignIndexes();
   void calculateImports();
   void calculateExports();
@@ -1018,6 +1019,43 @@ void Writer::calculateTypes() {
     registerType(E->Signature);
 }
 
+void Writer::processRelocations(InputChunk *Chunk) {
+  if (!Chunk->Live)
+    return;
+  ObjFile *File = Chunk->File;
+  ArrayRef<WasmSignature> Types = File->getWasmObj()->types();
+  for (const WasmRelocation &Reloc : Chunk->getRelocations()) {
+    switch (Reloc.Type) {
+    case R_WASM_TABLE_INDEX_I32:
+    case R_WASM_TABLE_INDEX_SLEB: {
+      FunctionSymbol *Sym = File->getFunctionSymbol(Reloc.Index);
+      if (Sym->hasTableIndex() || !Sym->hasFunctionIndex())
+        continue;
+      Sym->setTableIndex(TableBase + IndirectFunctions.size());
+      IndirectFunctions.emplace_back(Sym);
+      break;
+    }
+    case R_WASM_TYPE_INDEX_LEB:
+      // Mark target type as live
+      File->TypeMap[Reloc.Index] = registerType(Types[Reloc.Index]);
+      File->TypeIsUsed[Reloc.Index] = true;
+      break;
+    case R_WASM_MEMORY_ADDR_SLEB:
+    case R_WASM_MEMORY_ADDR_I32:
+    case R_WASM_MEMORY_ADDR_LEB: {
+      DataSymbol *DataSym = File->getDataSymbol(Reloc.Index);
+      if (!Config->Relocatable && !isa<DefinedData>(DataSym) &&
+          !DataSym->isWeak())
+        error(File->getName() +
+              ": relocation of type R_WASM_MEMORY_ADDR_* "
+              "against undefined data symbol: " +
+              DataSym->getName());
+      break;
+    }
+    }
+  }
+}
+
 void Writer::assignIndexes() {
   assert(InputFunctions.empty());
   uint32_t FunctionIndex = NumImportedFunctions;
@@ -1037,36 +1075,14 @@ void Writer::assignIndexes() {
       AddDefinedFunction(Func);
   }
 
-  uint32_t TableIndex = TableBase;
-  auto HandleRelocs = [&](InputChunk *Chunk) {
-    if (!Chunk->Live)
-      return;
-    ObjFile *File = Chunk->File;
-    ArrayRef<WasmSignature> Types = File->getWasmObj()->types();
-    for (const WasmRelocation &Reloc : Chunk->getRelocations()) {
-      if (Reloc.Type == R_WASM_TABLE_INDEX_I32 ||
-          Reloc.Type == R_WASM_TABLE_INDEX_SLEB) {
-        FunctionSymbol *Sym = File->getFunctionSymbol(Reloc.Index);
-        if (Sym->hasTableIndex() || !Sym->hasFunctionIndex())
-          continue;
-        Sym->setTableIndex(TableIndex++);
-        IndirectFunctions.emplace_back(Sym);
-      } else if (Reloc.Type == R_WASM_TYPE_INDEX_LEB) {
-        // Mark target type as live
-        File->TypeMap[Reloc.Index] = registerType(Types[Reloc.Index]);
-        File->TypeIsUsed[Reloc.Index] = true;
-      }
-    }
-  };
-
   for (ObjFile *File : Symtab->ObjectFiles) {
     LLVM_DEBUG(dbgs() << "Handle relocs: " << File->getName() << "\n");
     for (InputChunk *Chunk : File->Functions)
-      HandleRelocs(Chunk);
+      processRelocations(Chunk);
     for (InputChunk *Chunk : File->Segments)
-      HandleRelocs(Chunk);
+      processRelocations(Chunk);
     for (auto &P : File->CustomSections)
-      HandleRelocs(P);
+      processRelocations(P);
   }
 
   assert(InputGlobals.empty());

@@ -352,7 +352,7 @@ exit:
 ; CHECK-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}:
 ; CHECK-NEXT: loop
 declare void @bar()
-define void @test3(i32 %w)  {
+define void @test3(i32 %w, i32 %x)  {
 entry:
   br i1 undef, label %outer.ph, label %exit
 
@@ -360,14 +360,14 @@ outer.ph:
   br label %outer
 
 outer:
-  %tobool = icmp eq i32 undef, 0
+  %tobool = icmp eq i32 %x, 0
   br i1 %tobool, label %inner, label %unreachable
 
 unreachable:
   unreachable
 
 inner:
-  %c = icmp eq i32 undef, %w
+  %c = icmp eq i32 %x, %w
   br i1 %c, label %if.end, label %inner
 
 exit:

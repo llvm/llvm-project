@@ -227,8 +227,8 @@
     __kmpc_end_ordered                      125
     __kmpc_end_serialized_parallel          126
     __kmpc_end_single                       127
-    __kmpc_end_taskq                        128
-    __kmpc_end_taskq_task                   129
+#    __kmpc_end_taskq                        128
+#    __kmpc_end_taskq_task                   129
     __kmpc_flush                            130
     __kmpc_for_static_fini                  135
     __kmpc_for_static_init_4                136
@@ -245,10 +245,10 @@
     __kmpc_push_num_threads                 148
     __kmpc_serialized_parallel              150
     __kmpc_single                           151
-    __kmpc_task                             152
-    __kmpc_task_buffer                      153
-    __kmpc_taskq                            154
-    __kmpc_taskq_task                       155
+#    __kmpc_task                             152
+#    __kmpc_task_buffer                      153
+#    __kmpc_taskq                            154
+#    __kmpc_taskq_task                       155
     __kmpc_threadprivate                    156
     __kmpc_threadprivate_cached             157
     __kmpc_threadprivate_register           158

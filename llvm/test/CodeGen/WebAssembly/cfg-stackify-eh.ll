@@ -33,7 +33,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:     call      __cxa_end_catch
 ; CHECK:     br        1                               # 1: down to label0
 ; CHECK:   end_block                                   # label3:
-; CHECK:   call      __cxa_rethrow
+; CHECK:   rethrow   {{.*}}                            # to caller
 ; CHECK: end_try                                       # label0:
 define void @test0() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
@@ -67,7 +67,7 @@ catch:                                            ; preds = %catch.fallthrough
   catchret from %1 to label %try.cont
 
 rethrow:                                          ; preds = %catch.fallthrough
-  call void @__cxa_rethrow() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
   unreachable
 
 try.cont:                                         ; preds = %entry, %catch, %catch2
@@ -108,21 +108,19 @@ try.cont:                                         ; preds = %entry, %catch, %cat
 ; CHECK:               br        2                     # 2: down to label9
 ; CHECK:             catch
 ; CHECK:               call      __cxa_end_catch
-; CHECK:               rethrow                         # down to catch3
+; CHECK:               rethrow   {{.*}}                # down to catch3
 ; CHECK:             end_try
 ; CHECK:           end_block                           # label11:
-; CHECK:           call      __cxa_rethrow
-; CHECK:           unreachable
+; CHECK:           rethrow   {{.*}}                    # down to catch3
 ; CHECK:         catch     {{.*}}                      # catch3:
 ; CHECK:           call      __cxa_end_catch
-; CHECK:           rethrow                             # to caller
+; CHECK:           rethrow   {{.*}}                    # to caller
 ; CHECK:         end_try                               # label9:
 ; CHECK:         call      __cxa_end_catch
 ; CHECK:         br        2                           # 2: down to label6
 ; CHECK:       end_try
 ; CHECK:     end_block                                 # label7:
-; CHECK:     call      __cxa_rethrow
-; CHECK:     unreachable
+; CHECK:     rethrow   {{.*}}                          # to caller
 ; CHECK:   end_block                                   # label6:
 ; CHECK:   call      __cxa_end_catch
 ; CHECK: end_try
@@ -172,7 +170,7 @@ invoke.cont8:                                     ; preds = %catch6
   catchret from %9 to label %try.cont
 
 rethrow5:                                         ; preds = %catch.start3
-  invoke void @__cxa_rethrow() [ "funclet"(token %9) ]
+  invoke void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %9) ]
           to label %unreachable unwind label %ehcleanup9
 
 try.cont:                                         ; preds = %catch, %invoke.cont8
@@ -180,7 +178,7 @@ try.cont:                                         ; preds = %catch, %invoke.cont
   catchret from %1 to label %try.cont11
 
 rethrow:                                          ; preds = %catch.start
-  call void @__cxa_rethrow() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
   unreachable
 
 try.cont11:                                       ; preds = %entry, %try.cont
@@ -229,7 +227,7 @@ unreachable:                                      ; preds = %rethrow5
 ; CHECK:             call      __clang_call_terminate
 ; CHECK:             unreachable
 ; CHECK:           end_try
-; CHECK:           rethrow                             # to caller
+; CHECK:           rethrow   {{.*}}                    # to caller
 ; CHECK:         end_try
 ; CHECK:       end_block                               # label17:
 ; CHECK:       call      __cxa_end_catch
@@ -293,9 +291,9 @@ declare void @bar()
 declare i32 @__gxx_wasm_personality_v0(...)
 declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
+declare void @llvm.wasm.rethrow.in.catch()
 declare i32 @llvm.eh.typeid.for(i8*)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
-declare void @__cxa_rethrow()
 declare void @__clang_call_terminate(i8*)
 declare void @_ZSt9terminatev()
