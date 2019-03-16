@@ -8,27 +8,29 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test(<4 x i64> %a, <4 x x86_fp80> %b, <8 x x86_fp80>* %c) local_unnamed_addr {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpextrq $1, %xmm0, %r8
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
+; CHECK-NEXT:    vmovq %xmm1, %r8
+; CHECK-NEXT:    vmovq %xmm0, %r9
+; CHECK-NEXT:    vpextrq $1, %xmm1, %r10
+; CHECK-NEXT:    vpextrq $1, %xmm0, %r11
 ; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,3]
-; CHECK-NEXT:    vmovq %xmm1, %r9
-; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; CHECK-NEXT:    vmovq %xmm2, %rdx
-; CHECK-NEXT:    vpextrq $1, %xmm1, %rsi
-; CHECK-NEXT:    vpextrq $1, %xmm2, %rax
+; CHECK-NEXT:    vmovq %xmm1, %rax
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, %rcx
-; CHECK-NEXT:    negq %rcx
+; CHECK-NEXT:    vpextrq $1, %xmm1, %rdx
+; CHECK-NEXT:    vpextrq $1, %xmm0, %rsi
+; CHECK-NEXT:    cmpq %rsi, %rdx
 ; CHECK-NEXT:    fld1
 ; CHECK-NEXT:    fldz
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    fcmove %st(2), %st
-; CHECK-NEXT:    cmpq %rax, %rsi
+; CHECK-NEXT:    cmpq %rcx, %rax
 ; CHECK-NEXT:    fld %st(1)
 ; CHECK-NEXT:    fcmove %st(3), %st
-; CHECK-NEXT:    cmpq %rdx, %r9
+; CHECK-NEXT:    cmpq %r11, %r10
 ; CHECK-NEXT:    fld %st(2)
 ; CHECK-NEXT:    fcmove %st(4), %st
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    cmpq %r8, %rax
+; CHECK-NEXT:    cmpq %r9, %r8
 ; CHECK-NEXT:    fxch %st(3)
 ; CHECK-NEXT:    fcmove %st(4), %st
 ; CHECK-NEXT:    fstp %st(4)
@@ -40,12 +42,11 @@ define void @test(<4 x i64> %a, <4 x x86_fp80> %b, <8 x x86_fp80>* %c) local_unn
 ; CHECK-NEXT:    fstpt 30(%rdi)
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt 10(%rdi)
+; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fadd %st, %st(0)
 ; CHECK-NEXT:    fstpt 60(%rdi)
-; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fadd %st, %st(0)
 ; CHECK-NEXT:    fstpt 40(%rdi)
-; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fadd %st, %st(0)
 ; CHECK-NEXT:    fstpt 20(%rdi)
 ; CHECK-NEXT:    fadd %st, %st(0)

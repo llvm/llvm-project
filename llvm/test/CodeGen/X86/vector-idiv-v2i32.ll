@@ -618,37 +618,28 @@ define void @test_sdiv_pow2_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X86-NEXT:    psrad $31, %xmm0
-; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,3,2,3]
-; X86-NEXT:    movdqa %xmm1, %xmm0
-; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1,1,3]
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [31,0,31,0]
-; X86-NEXT:    movdqa {{.*#+}} xmm3 = [0,2147483648,0,2147483648]
-; X86-NEXT:    movdqa %xmm3, %xmm4
-; X86-NEXT:    psrlq %xmm2, %xmm4
-; X86-NEXT:    movl $31, %ecx
-; X86-NEXT:    movd %ecx, %xmm5
-; X86-NEXT:    psrlq %xmm5, %xmm3
-; X86-NEXT:    movsd {{.*#+}} xmm3 = xmm4[0],xmm3[1]
-; X86-NEXT:    movdqa %xmm0, %xmm4
-; X86-NEXT:    psrlq %xmm2, %xmm4
-; X86-NEXT:    psrlq %xmm5, %xmm0
-; X86-NEXT:    movsd {{.*#+}} xmm0 = xmm4[0],xmm0[1]
-; X86-NEXT:    xorpd %xmm3, %xmm0
-; X86-NEXT:    psubq %xmm3, %xmm0
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
-; X86-NEXT:    psrlq $29, %xmm0
-; X86-NEXT:    paddq %xmm1, %xmm0
-; X86-NEXT:    psllq $32, %xmm0
-; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,3,2,3]
-; X86-NEXT:    psrad $31, %xmm0
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-NEXT:    psrlq $3, %xmm1
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; X86-NEXT:    psrad $31, %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; X86-NEXT:    psrlq $31, %xmm2
+; X86-NEXT:    movsd {{.*#+}} xmm2 = xmm2[0,1]
+; X86-NEXT:    movapd {{.*#+}} xmm1 = [2.1219957909652723E-314,2.1219957909652723E-314]
+; X86-NEXT:    xorpd %xmm1, %xmm2
+; X86-NEXT:    psubq %xmm1, %xmm2
+; X86-NEXT:    pand {{\.LCPI.*}}, %xmm2
+; X86-NEXT:    psrlq $29, %xmm2
+; X86-NEXT:    paddq %xmm0, %xmm2
+; X86-NEXT:    psllq $32, %xmm2
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,3,2,3]
+; X86-NEXT:    psrad $31, %xmm2
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,3,2,3]
+; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    psrlq $3, %xmm0
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-NEXT:    movq %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

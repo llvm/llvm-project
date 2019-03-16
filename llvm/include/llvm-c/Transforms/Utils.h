@@ -38,6 +38,9 @@ void LLVMAddLowerSwitchPass(LLVMPassManagerRef PM);
 /** See llvm::createPromoteMemoryToRegisterPass function. */
 void LLVMAddPromoteMemoryToRegisterPass(LLVMPassManagerRef PM);
 
+/** See llvm::createAddDiscriminatorsPass function. */
+void LLVMAddAddDiscriminatorsPass(LLVMPassManagerRef PM);
+
 /**
  * @}
  */

@@ -35,7 +35,6 @@ static Expected<object::SectionRef>
 getSecNameOrIndexAsSecRef(const object::ObjectFile *Obj, StringRef SecName) {
   char *StrPtr;
   long SectionIndex = strtol(SecName.data(), &StrPtr, 10);
-  object::SectionRef Section;
   long SecIndex;
   if (Obj->isELF())
     SecIndex = 0;

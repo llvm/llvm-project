@@ -405,7 +405,6 @@ define <2 x i64> @v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-NEXT:    add v1.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    bic v1.16b, v1.16b, v0.16b
-; CHECK-NEXT:    bic v0.4s, #0
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %z = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> %x, <2 x i64> %y)
@@ -420,9 +419,7 @@ define <4 x i64> @v4i64(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; CHECK-NEXT:    cmhi v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    cmhi v1.2d, v1.2d, v3.2d
 ; CHECK-NEXT:    bic v2.16b, v2.16b, v0.16b
-; CHECK-NEXT:    bic v0.4s, #0
 ; CHECK-NEXT:    bic v3.16b, v3.16b, v1.16b
-; CHECK-NEXT:    bic v1.4s, #0
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    orr v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    ret
@@ -442,13 +439,9 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; CHECK-NEXT:    cmhi v2.2d, v2.2d, v6.2d
 ; CHECK-NEXT:    cmhi v3.2d, v3.2d, v7.2d
 ; CHECK-NEXT:    bic v4.16b, v4.16b, v0.16b
-; CHECK-NEXT:    bic v0.4s, #0
 ; CHECK-NEXT:    bic v5.16b, v5.16b, v1.16b
-; CHECK-NEXT:    bic v1.4s, #0
 ; CHECK-NEXT:    bic v6.16b, v6.16b, v2.16b
-; CHECK-NEXT:    bic v2.4s, #0
 ; CHECK-NEXT:    bic v7.16b, v7.16b, v3.16b
-; CHECK-NEXT:    bic v3.4s, #0
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v4.16b
 ; CHECK-NEXT:    orr v1.16b, v1.16b, v5.16b
 ; CHECK-NEXT:    orr v2.16b, v2.16b, v6.16b

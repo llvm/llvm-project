@@ -379,11 +379,10 @@ define i8 @sel_67_neg125(i32 %x) {
 ; CHECK-LABEL: sel_67_neg125:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl $42, %edi
-; CHECK-NEXT:    movb $67, %al
-; CHECK-NEXT:    jg .LBB31_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    movb $-125, %al
-; CHECK-NEXT:  .LBB31_2:
+; CHECK-NEXT:    movl $67, %ecx
+; CHECK-NEXT:    movl $131, %eax
+; CHECK-NEXT:    cmovgl %ecx, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
   %sel = select i1 %cmp, i8 67, i8 -125

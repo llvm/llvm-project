@@ -26,6 +26,7 @@ namespace llvm {
 
 class Pass;
 class PassInstrumentationCallbacks;
+class raw_ostream;
 
 /// If -time-passes has been specified, report the timings immediately and then
 /// reset the timers to zero.
@@ -62,18 +63,18 @@ class TimePassesHandler {
   /// Stack of currently active timers.
   SmallVector<Timer *, 8> TimerStack;
 
+  /// Custom output stream to print timing information into.
+  /// By default (== nullptr) we emit time report into the stream controlled by
+  /// -info-output-file.
+  raw_ostream *OutStream = nullptr;
+
   bool Enabled;
 
 public:
   TimePassesHandler(bool Enabled = TimePassesIsEnabled);
 
   /// Destructor handles the print action if it has not been handled before.
-  ~TimePassesHandler() {
-    // First destroying the timers from TimingData, which deploys all their
-    // collected data into the TG time group member, which later prints itself
-    // when being destroyed.
-    TimingData.clear();
-  }
+  ~TimePassesHandler() { print(); }
 
   /// Prints out timing information and then resets the timers.
   void print();
@@ -83,6 +84,9 @@ public:
   void operator=(const TimePassesHandler &) = delete;
 
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+  /// Set a custom output stream for subsequent reporting.
+  void setOutStream(raw_ostream &OutStream);
 
 private:
   /// Dumps information for running/triggered timers, useful for debugging

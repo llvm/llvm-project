@@ -181,7 +181,16 @@ Timer &TimePassesHandler::getPassTimer(StringRef PassID) {
 TimePassesHandler::TimePassesHandler(bool Enabled)
     : TG("pass", "... Pass execution timing report ..."), Enabled(Enabled) {}
 
-void TimePassesHandler::print() { TG.print(*CreateInfoOutputFile()); }
+void TimePassesHandler::setOutStream(raw_ostream &Out) {
+  OutStream = &Out;
+}
+
+void TimePassesHandler::print() {
+  if (!Enabled)
+    return;
+  TG.print(OutStream ? *OutStream : *CreateInfoOutputFile());
+  TG.clear();
+}
 
 LLVM_DUMP_METHOD void TimePassesHandler::dump() const {
   dbgs() << "Dumping timers for " << getTypeName<TimePassesHandler>()

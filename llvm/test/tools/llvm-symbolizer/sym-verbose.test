@@ -19,8 +19,8 @@ RUN: llvm-symbolizer -verbose -print-address -obj=%p/Inputs/discrim < %p/Inputs/
 #CHECK-NEXT: foo
 #CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
 #CHECK-NEXT: Function start line: 4
-#CHECK-NEXT: Line: 9
-#CHECK-NEXT: Column: 0
+#CHECK-NEXT: Line: 5
+#CHECK-NEXT: Column: 7
 #CHECK-NEXT: main
 #CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
 #CHECK-NEXT: Function start line: 9

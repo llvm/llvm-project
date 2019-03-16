@@ -532,10 +532,6 @@ static void __kmp_print_team_storage_map(const char *header, kmp_team_t *team,
                                &team->t.t_disp_buffer[num_disp_buff],
                                sizeof(dispatch_shared_info_t) * num_disp_buff,
                                "%s_%d.t_disp_buffer", header, team_id);
-
-  __kmp_print_storage_map_gtid(-1, &team->t.t_taskq, &team->t.t_copypriv_data,
-                               sizeof(kmp_taskq_t), "%s_%d.t_taskq", header,
-                               team_id);
 }
 
 static void __kmp_init_allocator() {
@@ -4523,8 +4519,6 @@ static void __kmp_initialize_team(kmp_team_t *team, int new_nproc,
 
   team->t.t_ordered.dt.t_value = 0;
   team->t.t_master_active = FALSE;
-
-  memset(&team->t.t_taskq, '\0', sizeof(kmp_taskq_t));
 
 #ifdef KMP_DEBUG
   team->t.t_copypriv_data = NULL; /* not necessary, but nice for debugging */

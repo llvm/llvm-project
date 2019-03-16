@@ -248,8 +248,7 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,8]
 ; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    vmovq %rax, %xmm1
+; X64-NEXT:    vmovd %edi, %xmm1
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovq %xmm0, %rax
 ; X64-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0

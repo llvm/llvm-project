@@ -819,6 +819,9 @@ void MappingTraits<ELFYAML::ProgramHeader>::mapping(
   IO.mapOptional("VAddr", Phdr.VAddr, Hex64(0));
   IO.mapOptional("PAddr", Phdr.PAddr, Hex64(0));
   IO.mapOptional("Align", Phdr.Align);
+  IO.mapOptional("FileSize", Phdr.FileSize);
+  IO.mapOptional("MemSize", Phdr.MemSize);
+  IO.mapOptional("Offset", Phdr.Offset);
 }
 
 namespace {

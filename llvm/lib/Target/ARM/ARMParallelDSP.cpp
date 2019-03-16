@@ -201,6 +201,12 @@ namespace {
         return false;
       }
 
+      // We need a preheader as getIncomingValueForBlock assumes there is one.
+      if (!TheLoop->getLoopPreheader()) {
+        LLVM_DEBUG(dbgs() << "No preheader found, bailing out\n");
+        return false;
+      }
+
       Function &F = *Header->getParent();
       M = F.getParent();
       DL = &M->getDataLayout();
@@ -216,6 +222,12 @@ namespace {
 
       if (!ST->hasDSP()) {
         LLVM_DEBUG(dbgs() << "DSP extension not enabled: not running pass "
+                             "ARMParallelDSP\n");
+        return false;
+      }
+
+      if (!ST->isLittle()) {
+        LLVM_DEBUG(dbgs() << "Only supporting little endian: not running pass "
                              "ARMParallelDSP\n");
         return false;
       }
@@ -453,12 +465,6 @@ static void MatchReductions(Function &F, Loop *TheLoop, BasicBlock *Header,
   const bool HasFnNoNaNAttr =
     F.getFnAttribute("no-nans-fp-math").getValueAsString() == "true";
   const BasicBlock *Latch = TheLoop->getLoopLatch();
-
-  // We need a preheader as getIncomingValueForBlock assumes there is one.
-  if (!TheLoop->getLoopPreheader()) {
-    LLVM_DEBUG(dbgs() << "No preheader found, bailing out\n");
-    return;
-  }
 
   for (PHINode &Phi : Header->phis()) {
     const auto *Ty = Phi.getType();

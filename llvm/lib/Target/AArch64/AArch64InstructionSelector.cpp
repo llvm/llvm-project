@@ -471,21 +471,16 @@ static bool isValidCopy(const MachineInstr &I, const RegisterBank &DstBank,
 /// CopyReg (From class) = COPY SrcReg
 /// SubRegCopy (To class) = COPY CopyReg:SubReg
 /// Dst = COPY SubRegCopy
-static bool selectSubregisterCopy(MachineInstr &I, const TargetInstrInfo &TII,
-                                  MachineRegisterInfo &MRI,
+static bool selectSubregisterCopy(MachineInstr &I, MachineRegisterInfo &MRI,
                                   const RegisterBankInfo &RBI, unsigned SrcReg,
                                   const TargetRegisterClass *From,
                                   const TargetRegisterClass *To,
                                   unsigned SubReg) {
-  unsigned CopyReg = MRI.createVirtualRegister(From);
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::COPY), CopyReg)
-      .addUse(SrcReg);
-  unsigned SubRegCopy = MRI.createVirtualRegister(To);
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
-          SubRegCopy)
-      .addUse(CopyReg, 0, SubReg);
+  MachineIRBuilder MIB(I);
+  auto Copy = MIB.buildCopy({From}, {SrcReg});
+  auto SubRegCopy = MIB.buildCopy({To}, {Copy}, SubReg);
   MachineOperand &RegOp = I.getOperand(1);
-  RegOp.setReg(SubRegCopy);
+  RegOp.setReg(SubRegCopy.getReg(0));
 
   // It's possible that the destination register won't be constrained. Make
   // sure that happens.
@@ -567,8 +562,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
         }
 
         // Now, insert a subregister copy using the new register class.
-        selectSubregisterCopy(I, TII, MRI, RBI, SrcReg, SubregRC, DstRC,
-                              SubReg);
+        selectSubregisterCopy(I, MRI, RBI, SrcReg, SubregRC, DstRC, SubReg);
         return CheckCopy();
       }
 
@@ -948,6 +942,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   LLT Ty =
       I.getOperand(0).isReg() ? MRI.getType(I.getOperand(0).getReg()) : LLT{};
 
+  MachineIRBuilder MIB(I);
+
   switch (Opcode) {
   case TargetOpcode::G_BRCOND: {
     if (Ty.getSizeInBits() > 32) {
@@ -1063,11 +1059,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       const unsigned DefGPRReg = MRI.createVirtualRegister(&GPRRC);
       MachineOperand &RegOp = I.getOperand(0);
       RegOp.setReg(DefGPRReg);
-
-      BuildMI(MBB, std::next(I.getIterator()), I.getDebugLoc(),
-              TII.get(AArch64::COPY))
-          .addDef(DefReg)
-          .addUse(DefGPRReg);
+      MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
+      MIB.buildCopy({DefReg}, {DefGPRReg});
 
       if (!RBI.constrainGenericRegister(DefReg, FPRRC, MRI)) {
         LLVM_DEBUG(dbgs() << "Failed to constrain G_FCONSTANT def operand\n");
@@ -1110,10 +1103,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     }
 
     unsigned DstReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
-    BuildMI(MBB, std::next(I.getIterator()), I.getDebugLoc(),
-            TII.get(AArch64::COPY))
-        .addDef(I.getOperand(0).getReg())
-        .addUse(DstReg, 0, AArch64::sub_32);
+    MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
+    MIB.buildCopy({I.getOperand(0).getReg()}, {DstReg}, AArch64::sub_32);
     RBI.constrainGenericRegister(I.getOperand(0).getReg(),
                                  AArch64::GPR32RegClass, MRI);
     I.getOperand(0).setReg(DstReg);
@@ -1947,12 +1938,9 @@ MachineInstr *AArch64InstructionSelector::emitExtractVectorElt(
     DstReg = MRI.createVirtualRegister(DstRC);
   // If the lane index is 0, we just use a subregister COPY.
   if (LaneIdx == 0) {
-    auto CopyMI =
-        BuildMI(MIRBuilder.getMBB(), MIRBuilder.getInsertPt(),
-                MIRBuilder.getDL(), TII.get(TargetOpcode::COPY), *DstReg)
-            .addUse(VecReg, 0, ExtractSubReg);
+    auto Copy = MIRBuilder.buildCopy({*DstReg}, {VecReg}, ExtractSubReg);
     RBI.constrainGenericRegister(*DstReg, *DstRC, MRI);
-    return &*CopyMI;
+    return &*Copy;
   }
 
   // Lane copies require 128-bit wide registers. If we're dealing with an
@@ -2073,6 +2061,8 @@ bool AArch64InstructionSelector::selectUnmergeValues(
   if (!NarrowTy.isScalar())
     return selectSplitVectorUnmerge(I, MRI);
 
+  MachineIRBuilder MIB(I);
+
   // Choose a lane copy opcode and subregister based off of the size of the
   // vector's elements.
   unsigned CopyOpc = 0;
@@ -2125,10 +2115,8 @@ bool AArch64InstructionSelector::selectUnmergeValues(
   //
   // Perform the first copy separately as a subregister copy.
   unsigned CopyTo = I.getOperand(0).getReg();
-  MachineInstr &FirstCopy =
-      *BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::COPY), CopyTo)
-           .addUse(InsertRegs[0], 0, ExtractSubReg);
-  constrainSelectedInstRegOperands(FirstCopy, TII, TRI, RBI);
+  auto FirstCopy = MIB.buildCopy({CopyTo}, {InsertRegs[0]}, ExtractSubReg);
+  constrainSelectedInstRegOperands(*FirstCopy, TII, TRI, RBI);
 
   // Now, perform the remaining copies as vector lane copies.
   unsigned LaneIdx = 1;
@@ -2399,9 +2387,8 @@ bool AArch64InstructionSelector::selectShuffleVector(
         {Concat->getOperand(0).getReg(), IndexLoad->getOperand(0).getReg()});
     constrainSelectedInstRegOperands(*TBL1, TII, TRI, RBI);
 
-    auto Copy = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                        TII.get(TargetOpcode::COPY), I.getOperand(0).getReg())
-                    .addUse(TBL1->getOperand(0).getReg(), 0, AArch64::dsub);
+    auto Copy =
+        MIRBuilder.buildCopy({I.getOperand(0).getReg()}, {TBL1}, AArch64::dsub);
     RBI.constrainGenericRegister(Copy.getReg(0), AArch64::FPR64RegClass, MRI);
     I.eraseFromParent();
     return true;
@@ -2551,11 +2538,7 @@ bool AArch64InstructionSelector::selectBuildVector(
     unsigned Reg = MRI.createVirtualRegister(RC);
     unsigned DstReg = I.getOperand(0).getReg();
 
-    // MIRBuilder doesn't let us create uses with subregs & flags, so use
-    // BuildMI here instead.
-    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
-            DstReg)
-        .addUse(DstVec, 0, SubReg);
+    MIRBuilder.buildCopy({DstReg}, {DstVec}, SubReg);
     MachineOperand &RegOp = I.getOperand(1);
     RegOp.setReg(Reg);
     RBI.constrainGenericRegister(DstReg, *RC, MRI);

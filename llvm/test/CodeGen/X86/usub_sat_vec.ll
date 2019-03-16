@@ -498,22 +498,20 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; SSE-LABEL: v1i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    subb (%rsi), %al
-; SSE-NEXT:    jae .LBB13_2
-; SSE-NEXT:  # %bb.1:
-; SSE-NEXT:    xorl %eax, %eax
-; SSE-NEXT:  .LBB13_2:
+; SSE-NEXT:    movzbl %al, %eax
+; SSE-NEXT:    cmovbl %ecx, %eax
 ; SSE-NEXT:    movb %al, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v1i8:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movb (%rdi), %al
+; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    subb (%rsi), %al
-; AVX-NEXT:    jae .LBB13_2
-; AVX-NEXT:  # %bb.1:
-; AVX-NEXT:    xorl %eax, %eax
-; AVX-NEXT:  .LBB13_2:
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    cmovbl %ecx, %eax
 ; AVX-NEXT:    movb %al, (%rdx)
 ; AVX-NEXT:    retq
   %x = load <1 x i8>, <1 x i8>* %px

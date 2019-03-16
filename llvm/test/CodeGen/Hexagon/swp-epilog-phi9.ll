@@ -12,7 +12,7 @@
 ; CHECK: [[REG0]] = add(r{{[0-9]+}},#8)
 
 ; Function Attrs: nounwind
-define void @f0(i16* nocapture readonly %a0) #0 {
+define void @f0(i16* nocapture readonly %a0, i32 %a1) #0 {
 b0:
   %v0 = alloca [129 x i32], align 8
   br i1 undef, label %b1, label %b3
@@ -37,7 +37,7 @@ b2:                                               ; preds = %b2, %b1
   %v13 = add i32 %v5, 1
   %v14 = getelementptr inbounds i32, i32* %v3, i32 2
   %v15 = getelementptr inbounds i16, i16* %v1, i32 2
-  %v16 = icmp slt i32 %v13, undef
+  %v16 = icmp slt i32 %v13, %a1
   br i1 %v16, label %b2, label %b3
 
 b3:                                               ; preds = %b2, %b0

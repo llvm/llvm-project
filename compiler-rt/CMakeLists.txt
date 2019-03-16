@@ -182,7 +182,26 @@ option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
 pythonize_bool(COMPILER_RT_DEBUG)
 
 option(COMPILER_RT_INTERCEPT_LIBDISPATCH
-  "Support interception of libdispatch (GCD). Requires '-fblocks'." OFF)
+  "Support interception of libdispatch (GCD). Requires '-fblocks'" OFF)
+option(COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH
+  "Library search path for blocks runtime (-lBlocksRuntime)" "")
+option(COMPILER_RT_LIBDISPATCH_LIBRARY_PATH
+  "Library search path for libdispatch (-ldispatch)" "")
+if (COMPILER_RT_INTERCEPT_LIBDISPATCH)
+  set(COMPILER_RT_INTERCEPT_LIBDISPATCH_CFLAGS -fblocks)
+  set(COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS)
+  if (COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH)
+    list(APPEND COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS
+        -L${COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH}
+        -Wl,-rpath=${COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH})
+  endif()
+  if (COMPILER_RT_LIBDISPATCH_LIBRARY_PATH)
+    list(APPEND COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS
+        -L${COMPILER_RT_LIBDISPATCH_LIBRARY_PATH}
+        -Wl,-rpath=${COMPILER_RT_LIBDISPATCH_LIBRARY_PATH})
+  endif()
+  list(APPEND COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS -lBlocksRuntime -ldispatch)
+endif()
 if (APPLE) # Always enable on Apple platforms.
   set(COMPILER_RT_INTERCEPT_LIBDISPATCH ON)
 endif()
