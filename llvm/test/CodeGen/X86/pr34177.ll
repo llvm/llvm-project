@@ -8,29 +8,23 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test(<4 x i64> %a, <4 x x86_fp80> %b, <8 x x86_fp80>* %c) local_unnamed_addr {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
-; CHECK-NEXT:    vmovq %xmm1, %r8
-; CHECK-NEXT:    vmovq %xmm0, %r9
-; CHECK-NEXT:    vpextrq $1, %xmm1, %r10
-; CHECK-NEXT:    vpextrq $1, %xmm0, %r11
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,3]
-; CHECK-NEXT:    vmovq %xmm1, %rax
+; CHECK-NEXT:    vmovq %xmm0, %rax
+; CHECK-NEXT:    vpextrq $1, %xmm0, %rcx
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vmovq %xmm0, %rcx
-; CHECK-NEXT:    vpextrq $1, %xmm1, %rdx
+; CHECK-NEXT:    vmovq %xmm0, %rdx
 ; CHECK-NEXT:    vpextrq $1, %xmm0, %rsi
-; CHECK-NEXT:    cmpq %rsi, %rdx
+; CHECK-NEXT:    cmpq $3, %rsi
 ; CHECK-NEXT:    fld1
 ; CHECK-NEXT:    fldz
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    fcmove %st(2), %st
-; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    cmpq $2, %rdx
 ; CHECK-NEXT:    fld %st(1)
 ; CHECK-NEXT:    fcmove %st(3), %st
-; CHECK-NEXT:    cmpq %r11, %r10
+; CHECK-NEXT:    cmpq $1, %rcx
 ; CHECK-NEXT:    fld %st(2)
 ; CHECK-NEXT:    fcmove %st(4), %st
-; CHECK-NEXT:    cmpq %r9, %r8
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    fxch %st(3)
 ; CHECK-NEXT:    fcmove %st(4), %st
 ; CHECK-NEXT:    fstp %st(4)

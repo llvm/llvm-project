@@ -2,16 +2,16 @@
 ; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 
 ; Source code:
-;   static volatile char a;
+;   static volatile char a = 3;
 ;   int foo() {
-;     static volatile short b;
+;     static volatile short b = 4;
 ;     return a + b;
 ;   }
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
-@foo.b = internal global i16 0, align 2, !dbg !0
-@a = internal global i8 0, align 1, !dbg !10
+@foo.b = internal global i16 4, align 2, !dbg !0
+@a = internal global i8 3, align 1, !dbg !10
 
 ; Function Attrs: norecurse nounwind
 define dso_local i32 @foo() local_unnamed_addr #0 !dbg !2 {
@@ -31,7 +31,7 @@ define dso_local i32 @foo() local_unnamed_addr #0 !dbg !2 {
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   164
 ; CHECK-NEXT:        .long   164
-; CHECK-NEXT:        .long   76
+; CHECK-NEXT:        .long   77
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_FUNC_PROTO(id = 1)
 ; CHECK-NEXT:        .long   218103808               # 0xd000000
 ; CHECK-NEXT:        .long   2
@@ -90,7 +90,7 @@ define dso_local i32 @foo() local_unnamed_addr #0 !dbg !2 {
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .byte   97                      # string offset=69
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  ".bss"                  # string offset=71
+; CHECK-NEXT:        .ascii  ".data"                 # string offset=71
 ; CHECK-NEXT:        .byte   0
 
 attributes #0 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
