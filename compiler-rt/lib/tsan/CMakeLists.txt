@@ -72,10 +72,7 @@ endif()
 
 if(COMPILER_RT_INTERCEPT_LIBDISPATCH)
   list(APPEND TSAN_SOURCES rtl/tsan_libdispatch.cc)
-  # Libdispatch support for non-Apple platforms requires '-fblocks'.
-  if (NOT APPLE)
-    list(APPEND TSAN_RTL_CFLAGS "-fblocks")
-  endif()
+  list(APPEND TSAN_RTL_CFLAGS ${COMPILER_RT_INTERCEPT_LIBDISPATCH_CFLAGS})
 endif()
 
 set(TSAN_HEADERS

@@ -10,12 +10,14 @@
 #define SymbolFileDWARF_DWARFCompileUnit_h_
 
 #include "DWARFUnit.h"
+#include "llvm/Support/Error.h"
 
 class DWARFCompileUnit : public DWARFUnit {
 public:
-  static DWARFUnitSP Extract(SymbolFileDWARF *dwarf2Data,
-                             const lldb_private::DWARFDataExtractor &debug_info,
-                             lldb::offset_t *offset_ptr);
+  static llvm::Expected<DWARFUnitSP>
+  extract(SymbolFileDWARF *dwarf2Data,
+          const lldb_private::DWARFDataExtractor &debug_info,
+          lldb::offset_t *offset_ptr);
   void Dump(lldb_private::Stream *s) const override;
 
   //------------------------------------------------------------------

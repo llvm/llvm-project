@@ -247,35 +247,26 @@ define void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, i8* %ptr1, i32* %
 ;
 ; X64-LABEL: PR37100:
 ; X64:       # %bb.0: # %bb
-; X64-NEXT:    movq %rdx, %r11
+; X64-NEXT:    movq %rdx, %rsi
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
-; X64-NEXT:    jmp .LBB3_1
+; X64-NEXT:    movzbl %cl, %r11d
 ; X64-NEXT:    .p2align 4, 0x90
-; X64-NEXT:  .LBB3_5: # %bb1
-; X64-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; X64-NEXT:    movl %r10d, %eax
-; X64-NEXT:    cltd
-; X64-NEXT:    idivl %esi
 ; X64-NEXT:  .LBB3_1: # %bb1
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movsbq %dil, %rax
-; X64-NEXT:    xorl %esi, %esi
-; X64-NEXT:    cmpq %rax, %r11
-; X64-NEXT:    setl %sil
-; X64-NEXT:    negl %esi
-; X64-NEXT:    cmpq %rax, %r11
-; X64-NEXT:    jl .LBB3_3
-; X64-NEXT:  # %bb.2: # %bb1
-; X64-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; X64-NEXT:    movl %ecx, %edi
-; X64-NEXT:  .LBB3_3: # %bb1
-; X64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    cmpq %rax, %rsi
+; X64-NEXT:    setl %cl
+; X64-NEXT:    negl %ecx
+; X64-NEXT:    cmpq %rax, %rsi
+; X64-NEXT:    movzbl %al, %edi
+; X64-NEXT:    cmovgel %r11d, %edi
 ; X64-NEXT:    movb %dil, (%r8)
-; X64-NEXT:    jl .LBB3_5
-; X64-NEXT:  # %bb.4: # %bb1
-; X64-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; X64-NEXT:    movl (%r9), %esi
-; X64-NEXT:    jmp .LBB3_5
+; X64-NEXT:    cmovgel (%r9), %ecx
+; X64-NEXT:    movl %r10d, %eax
+; X64-NEXT:    cltd
+; X64-NEXT:    idivl %ecx
+; X64-NEXT:    jmp .LBB3_1
 bb:
   br label %bb1
 

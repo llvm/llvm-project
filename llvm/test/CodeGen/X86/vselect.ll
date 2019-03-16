@@ -567,11 +567,10 @@ define <2 x i64> @shrunkblend_nonvselectuse(<2 x i1> %cond, <2 x i64> %a, <2 x i
 define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; SSE2-LABEL: simplify_select:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE2-NEXT:    psllq $63, %xmm0
 ; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-NEXT:    movq %rdi, %xmm1
+; SSE2-NEXT:    movd %edi, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,1,0,1]
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm1[0]
@@ -582,15 +581,13 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ;
 ; SSE41-LABEL: simplify_select:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
-; SSE41-NEXT:    movq %rdi, %xmm0
+; SSE41-NEXT:    movd %edi, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: simplify_select:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX1-NEXT:    vmovq %rdi, %xmm0
+; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;

@@ -1119,4 +1119,291 @@ TEST(ConstantRange, MakeGuaranteedNoWrapRegionMulSignedRange) {
   }
 }
 
+#define EXPECT_MAY_OVERFLOW(op) \
+  EXPECT_EQ(ConstantRange::OverflowResult::MayOverflow, (op))
+#define EXPECT_ALWAYS_OVERFLOWS(op) \
+  EXPECT_EQ(ConstantRange::OverflowResult::AlwaysOverflows, (op))
+#define EXPECT_NEVER_OVERFLOWS(op) \
+  EXPECT_EQ(ConstantRange::OverflowResult::NeverOverflows, (op))
+
+TEST_F(ConstantRangeTest, UnsignedAddOverflow) {
+  // Ill-defined - may overflow is a conservative result.
+  EXPECT_MAY_OVERFLOW(Some.unsignedAddMayOverflow(Empty));
+  EXPECT_MAY_OVERFLOW(Empty.unsignedAddMayOverflow(Some));
+
+  // Never overflow despite one full/wrap set.
+  ConstantRange Zero(APInt::getNullValue(16));
+  EXPECT_NEVER_OVERFLOWS(Full.unsignedAddMayOverflow(Zero));
+  EXPECT_NEVER_OVERFLOWS(Wrap.unsignedAddMayOverflow(Zero));
+  EXPECT_NEVER_OVERFLOWS(Zero.unsignedAddMayOverflow(Full));
+  EXPECT_NEVER_OVERFLOWS(Zero.unsignedAddMayOverflow(Wrap));
+
+  // But usually full/wrap always may overflow.
+  EXPECT_MAY_OVERFLOW(Full.unsignedAddMayOverflow(One));
+  EXPECT_MAY_OVERFLOW(Wrap.unsignedAddMayOverflow(One));
+  EXPECT_MAY_OVERFLOW(One.unsignedAddMayOverflow(Full));
+  EXPECT_MAY_OVERFLOW(One.unsignedAddMayOverflow(Wrap));
+
+  ConstantRange A(APInt(16, 0xfd00), APInt(16, 0xfe00));
+  ConstantRange B1(APInt(16, 0x0100), APInt(16, 0x0201));
+  ConstantRange B2(APInt(16, 0x0100), APInt(16, 0x0202));
+  EXPECT_NEVER_OVERFLOWS(A.unsignedAddMayOverflow(B1));
+  EXPECT_MAY_OVERFLOW(A.unsignedAddMayOverflow(B2));
+  EXPECT_NEVER_OVERFLOWS(B1.unsignedAddMayOverflow(A));
+  EXPECT_MAY_OVERFLOW(B2.unsignedAddMayOverflow(A));
+
+  ConstantRange C1(APInt(16, 0x0299), APInt(16, 0x0400));
+  ConstantRange C2(APInt(16, 0x0300), APInt(16, 0x0400));
+  EXPECT_MAY_OVERFLOW(A.unsignedAddMayOverflow(C1));
+  EXPECT_ALWAYS_OVERFLOWS(A.unsignedAddMayOverflow(C2));
+  EXPECT_MAY_OVERFLOW(C1.unsignedAddMayOverflow(A));
+  EXPECT_ALWAYS_OVERFLOWS(C2.unsignedAddMayOverflow(A));
+}
+
+TEST_F(ConstantRangeTest, UnsignedSubOverflow) {
+  // Ill-defined - may overflow is a conservative result.
+  EXPECT_MAY_OVERFLOW(Some.unsignedSubMayOverflow(Empty));
+  EXPECT_MAY_OVERFLOW(Empty.unsignedSubMayOverflow(Some));
+
+  // Never overflow despite one full/wrap set.
+  ConstantRange Zero(APInt::getNullValue(16));
+  ConstantRange Max(APInt::getAllOnesValue(16));
+  EXPECT_NEVER_OVERFLOWS(Full.unsignedSubMayOverflow(Zero));
+  EXPECT_NEVER_OVERFLOWS(Wrap.unsignedSubMayOverflow(Zero));
+  EXPECT_NEVER_OVERFLOWS(Max.unsignedSubMayOverflow(Full));
+  EXPECT_NEVER_OVERFLOWS(Max.unsignedSubMayOverflow(Wrap));
+
+  // But usually full/wrap always may overflow.
+  EXPECT_MAY_OVERFLOW(Full.unsignedSubMayOverflow(One));
+  EXPECT_MAY_OVERFLOW(Wrap.unsignedSubMayOverflow(One));
+  EXPECT_MAY_OVERFLOW(One.unsignedSubMayOverflow(Full));
+  EXPECT_MAY_OVERFLOW(One.unsignedSubMayOverflow(Wrap));
+
+  ConstantRange A(APInt(16, 0x0000), APInt(16, 0x0100));
+  ConstantRange B(APInt(16, 0x0100), APInt(16, 0x0200));
+  EXPECT_NEVER_OVERFLOWS(B.unsignedSubMayOverflow(A));
+  EXPECT_ALWAYS_OVERFLOWS(A.unsignedSubMayOverflow(B));
+
+  ConstantRange A1(APInt(16, 0x0000), APInt(16, 0x0101));
+  ConstantRange B1(APInt(16, 0x0100), APInt(16, 0x0201));
+  EXPECT_NEVER_OVERFLOWS(B1.unsignedSubMayOverflow(A1));
+  EXPECT_MAY_OVERFLOW(A1.unsignedSubMayOverflow(B1));
+
+  ConstantRange A2(APInt(16, 0x0000), APInt(16, 0x0102));
+  ConstantRange B2(APInt(16, 0x0100), APInt(16, 0x0202));
+  EXPECT_MAY_OVERFLOW(B2.unsignedSubMayOverflow(A2));
+  EXPECT_MAY_OVERFLOW(A2.unsignedSubMayOverflow(B2));
+}
+
+TEST_F(ConstantRangeTest, SignedAddOverflow) {
+  // Ill-defined - may overflow is a conservative result.
+  EXPECT_MAY_OVERFLOW(Some.signedAddMayOverflow(Empty));
+  EXPECT_MAY_OVERFLOW(Empty.signedAddMayOverflow(Some));
+
+  // Never overflow despite one full/wrap set.
+  ConstantRange Zero(APInt::getNullValue(16));
+  EXPECT_NEVER_OVERFLOWS(Full.signedAddMayOverflow(Zero));
+  EXPECT_NEVER_OVERFLOWS(Wrap.signedAddMayOverflow(Zero));
+  EXPECT_NEVER_OVERFLOWS(Zero.signedAddMayOverflow(Full));
+  EXPECT_NEVER_OVERFLOWS(Zero.signedAddMayOverflow(Wrap));
+
+  // But usually full/wrap always may overflow.
+  EXPECT_MAY_OVERFLOW(Full.signedAddMayOverflow(One));
+  EXPECT_MAY_OVERFLOW(Wrap.signedAddMayOverflow(One));
+  EXPECT_MAY_OVERFLOW(One.signedAddMayOverflow(Full));
+  EXPECT_MAY_OVERFLOW(One.signedAddMayOverflow(Wrap));
+
+  ConstantRange A(APInt(16, 0x7d00), APInt(16, 0x7e00));
+  ConstantRange B1(APInt(16, 0x0100), APInt(16, 0x0201));
+  ConstantRange B2(APInt(16, 0x0100), APInt(16, 0x0202));
+  EXPECT_NEVER_OVERFLOWS(A.signedAddMayOverflow(B1));
+  EXPECT_MAY_OVERFLOW(A.signedAddMayOverflow(B2));
+  ConstantRange B3(APInt(16, 0x8000), APInt(16, 0x0201));
+  ConstantRange B4(APInt(16, 0x8000), APInt(16, 0x0202));
+  EXPECT_NEVER_OVERFLOWS(A.signedAddMayOverflow(B3));
+  EXPECT_MAY_OVERFLOW(A.signedAddMayOverflow(B4));
+  ConstantRange B5(APInt(16, 0x0299), APInt(16, 0x0400));
+  ConstantRange B6(APInt(16, 0x0300), APInt(16, 0x0400));
+  EXPECT_MAY_OVERFLOW(A.signedAddMayOverflow(B5));
+  EXPECT_ALWAYS_OVERFLOWS(A.signedAddMayOverflow(B6));
+
+  ConstantRange C(APInt(16, 0x8200), APInt(16, 0x8300));
+  ConstantRange D1(APInt(16, 0xfe00), APInt(16, 0xff00));
+  ConstantRange D2(APInt(16, 0xfd99), APInt(16, 0xff00));
+  EXPECT_NEVER_OVERFLOWS(C.signedAddMayOverflow(D1));
+  EXPECT_MAY_OVERFLOW(C.signedAddMayOverflow(D2));
+  ConstantRange D3(APInt(16, 0xfe00), APInt(16, 0x8000));
+  ConstantRange D4(APInt(16, 0xfd99), APInt(16, 0x8000));
+  EXPECT_NEVER_OVERFLOWS(C.signedAddMayOverflow(D3));
+  EXPECT_MAY_OVERFLOW(C.signedAddMayOverflow(D4));
+  ConstantRange D5(APInt(16, 0xfc00), APInt(16, 0xfd02));
+  ConstantRange D6(APInt(16, 0xfc00), APInt(16, 0xfd01));
+  EXPECT_MAY_OVERFLOW(C.signedAddMayOverflow(D5));
+  EXPECT_ALWAYS_OVERFLOWS(C.signedAddMayOverflow(D6));
+
+  ConstantRange E(APInt(16, 0xff00), APInt(16, 0x0100));
+  EXPECT_NEVER_OVERFLOWS(E.signedAddMayOverflow(E));
+  ConstantRange F(APInt(16, 0xf000), APInt(16, 0x7000));
+  EXPECT_MAY_OVERFLOW(F.signedAddMayOverflow(F));
+}
+
+TEST_F(ConstantRangeTest, SignedSubOverflow) {
+  // Ill-defined - may overflow is a conservative result.
+  EXPECT_MAY_OVERFLOW(Some.signedSubMayOverflow(Empty));
+  EXPECT_MAY_OVERFLOW(Empty.signedSubMayOverflow(Some));
+
+  // Never overflow despite one full/wrap set.
+  ConstantRange Zero(APInt::getNullValue(16));
+  EXPECT_NEVER_OVERFLOWS(Full.signedSubMayOverflow(Zero));
+  EXPECT_NEVER_OVERFLOWS(Wrap.signedSubMayOverflow(Zero));
+
+  // But usually full/wrap always may overflow.
+  EXPECT_MAY_OVERFLOW(Full.signedSubMayOverflow(One));
+  EXPECT_MAY_OVERFLOW(Wrap.signedSubMayOverflow(One));
+  EXPECT_MAY_OVERFLOW(One.signedSubMayOverflow(Full));
+  EXPECT_MAY_OVERFLOW(One.signedSubMayOverflow(Wrap));
+
+  ConstantRange A(APInt(16, 0x7d00), APInt(16, 0x7e00));
+  ConstantRange B1(APInt(16, 0xfe00), APInt(16, 0xff00));
+  ConstantRange B2(APInt(16, 0xfd99), APInt(16, 0xff00));
+  EXPECT_NEVER_OVERFLOWS(A.signedSubMayOverflow(B1));
+  EXPECT_MAY_OVERFLOW(A.signedSubMayOverflow(B2));
+  ConstantRange B3(APInt(16, 0xfc00), APInt(16, 0xfd02));
+  ConstantRange B4(APInt(16, 0xfc00), APInt(16, 0xfd01));
+  EXPECT_MAY_OVERFLOW(A.signedSubMayOverflow(B3));
+  EXPECT_ALWAYS_OVERFLOWS(A.signedSubMayOverflow(B4));
+
+  ConstantRange C(APInt(16, 0x8200), APInt(16, 0x8300));
+  ConstantRange D1(APInt(16, 0x0100), APInt(16, 0x0201));
+  ConstantRange D2(APInt(16, 0x0100), APInt(16, 0x0202));
+  EXPECT_NEVER_OVERFLOWS(C.signedSubMayOverflow(D1));
+  EXPECT_MAY_OVERFLOW(C.signedSubMayOverflow(D2));
+  ConstantRange D3(APInt(16, 0x0299), APInt(16, 0x0400));
+  ConstantRange D4(APInt(16, 0x0300), APInt(16, 0x0400));
+  EXPECT_MAY_OVERFLOW(C.signedSubMayOverflow(D3));
+  EXPECT_ALWAYS_OVERFLOWS(C.signedSubMayOverflow(D4));
+
+  ConstantRange E(APInt(16, 0xff00), APInt(16, 0x0100));
+  EXPECT_NEVER_OVERFLOWS(E.signedSubMayOverflow(E));
+  ConstantRange F(APInt(16, 0xf000), APInt(16, 0x7001));
+  EXPECT_MAY_OVERFLOW(F.signedSubMayOverflow(F));
+}
+
+template<typename Fn1, typename Fn2>
+static void TestOverflowExhaustive(Fn1 OverflowFn, Fn2 MayOverflowFn) {
+  // Constant range overflow checks are tested exhaustively on 4-bit numbers.
+  unsigned Bits = 4;
+  unsigned Max = 1 << Bits;
+  for (unsigned Lo1 = 0; Lo1 < Max; Lo1++) {
+    for (unsigned Hi1 = 0; Hi1 < Max; Hi1++) {
+      // Enforce ConstantRange invariant.
+      if (Lo1 == Hi1 && Lo1 != 0 && Lo1 != Max - 1)
+        continue;
+
+      ConstantRange CR1(APInt(Bits, Lo1), APInt(Bits, Hi1));
+      unsigned Size1 = CR1.getSetSize().getLimitedValue();
+
+      for (unsigned Lo2 = 0; Lo2 < Max; Lo2++) {
+        for (unsigned Hi2 = 0; Hi2 < Max; Hi2++) {
+          // Enforce ConstantRange invariant.
+          if (Lo2 == Hi2 && Lo2 != 0 && Lo2 != Max - 1)
+            continue;
+
+          ConstantRange CR2(APInt(Bits, Lo2), APInt(Bits, Hi2));
+          unsigned Size2 = CR2.getSetSize().getLimitedValue();
+
+          // Loop over all N1 in CR1 and N2 in CR2 and check whether any of the
+          // operations have overflow / have no overflow. These loops are based
+          // on Size1/Size2 to properly handle empty/full ranges.
+          bool RangeHasOverflow = false;
+          bool RangeHasNoOverflow = false;
+          APInt N1(Bits, Lo1);
+          for (unsigned I1 = 0; I1 < Size1; ++I1, ++N1) {
+            APInt N2(Bits, Lo2);
+            for (unsigned I2 = 0; I2 < Size2; ++I2, ++N2) {
+              assert(CR1.contains(N1));
+              assert(CR2.contains(N2));
+
+              if (OverflowFn(N1, N2))
+                RangeHasOverflow = true;
+              else
+                RangeHasNoOverflow = true;
+            }
+          }
+
+          ConstantRange::OverflowResult OR = MayOverflowFn(CR1, CR2);
+          switch (OR) {
+            case ConstantRange::OverflowResult::AlwaysOverflows:
+              EXPECT_TRUE(RangeHasOverflow);
+              EXPECT_FALSE(RangeHasNoOverflow);
+              break;
+            case ConstantRange::OverflowResult::NeverOverflows:
+              EXPECT_FALSE(RangeHasOverflow);
+              EXPECT_TRUE(RangeHasNoOverflow);
+              break;
+            case ConstantRange::OverflowResult::MayOverflow:
+              // We return MayOverflow for empty sets as a conservative result,
+              // but of course neither the RangeHasOverflow nor the
+              // RangeHasNoOverflow flags will be set.
+              if (CR1.isEmptySet() || CR2.isEmptySet())
+                break;
+
+              EXPECT_TRUE(RangeHasOverflow);
+              EXPECT_TRUE(RangeHasNoOverflow);
+              break;
+          }
+        }
+      }
+    }
+  }
+}
+
+TEST_F(ConstantRangeTest, UnsignedAddOverflowExhautive) {
+  TestOverflowExhaustive(
+      [](const APInt &N1, const APInt &N2) {
+        bool Overflow;
+        (void) N1.uadd_ov(N2, Overflow);
+        return Overflow;
+      },
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.unsignedAddMayOverflow(CR2);
+      });
+}
+
+TEST_F(ConstantRangeTest, UnsignedSubOverflowExhautive) {
+  TestOverflowExhaustive(
+      [](const APInt &N1, const APInt &N2) {
+        bool Overflow;
+        (void) N1.usub_ov(N2, Overflow);
+        return Overflow;
+      },
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.unsignedSubMayOverflow(CR2);
+      });
+}
+
+TEST_F(ConstantRangeTest, SignedAddOverflowExhautive) {
+  TestOverflowExhaustive(
+      [](const APInt &N1, const APInt &N2) {
+        bool Overflow;
+        (void) N1.sadd_ov(N2, Overflow);
+        return Overflow;
+      },
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.signedAddMayOverflow(CR2);
+      });
+}
+
+TEST_F(ConstantRangeTest, SignedSubOverflowExhautive) {
+  TestOverflowExhaustive(
+      [](const APInt &N1, const APInt &N2) {
+        bool Overflow;
+        (void) N1.ssub_ov(N2, Overflow);
+        return Overflow;
+      },
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.signedSubMayOverflow(CR2);
+      });
+}
+
 }  // anonymous namespace

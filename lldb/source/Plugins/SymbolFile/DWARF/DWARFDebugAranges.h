@@ -11,6 +11,7 @@
 
 #include "DWARFDebugArangeSet.h"
 #include "lldb/Utility/RangeMap.h"
+#include "llvm/Support/Error.h"
 #include <list>
 
 class SymbolFileDWARF;
@@ -28,7 +29,8 @@ public:
 
   void Clear() { m_aranges.Clear(); }
 
-  bool Extract(const lldb_private::DWARFDataExtractor &debug_aranges_data);
+  llvm::Error
+  extract(const lldb_private::DWARFDataExtractor &debug_aranges_data);
 
   bool Generate(SymbolFileDWARF *dwarf2Data);
 

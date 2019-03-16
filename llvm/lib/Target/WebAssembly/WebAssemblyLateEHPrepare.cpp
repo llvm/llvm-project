@@ -30,9 +30,9 @@ class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  bool removeUnnecessaryUnreachables(MachineFunction &MF);
-  bool replaceFuncletReturns(MachineFunction &MF);
   bool addCatches(MachineFunction &MF);
+  bool replaceFuncletReturns(MachineFunction &MF);
+  bool removeUnnecessaryUnreachables(MachineFunction &MF);
   bool addExceptionExtraction(MachineFunction &MF);
   bool restoreStackPointer(MachineFunction &MF);
 
@@ -108,39 +108,35 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   bool Changed = false;
+  if (MF.getFunction().hasPersonalityFn()) {
+    Changed |= addCatches(MF);
+    Changed |= replaceFuncletReturns(MF);
+  }
   Changed |= removeUnnecessaryUnreachables(MF);
-  if (!MF.getFunction().hasPersonalityFn())
-    return Changed;
-  Changed |= replaceFuncletReturns(MF);
-  Changed |= addCatches(MF);
-  Changed |= addExceptionExtraction(MF);
-  Changed |= restoreStackPointer(MF);
+  if (MF.getFunction().hasPersonalityFn()) {
+    Changed |= addExceptionExtraction(MF);
+    Changed |= restoreStackPointer(MF);
+  }
   return Changed;
 }
 
-bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
-    MachineFunction &MF) {
+// Add catch instruction to beginning of catchpads and cleanuppads.
+bool WebAssemblyLateEHPrepare::addCatches(MachineFunction &MF) {
   bool Changed = false;
+  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   for (auto &MBB : MF) {
-    for (auto &MI : MBB) {
-      if (MI.getOpcode() != WebAssembly::THROW &&
-          MI.getOpcode() != WebAssembly::RETHROW)
-        continue;
+    if (MBB.isEHPad()) {
       Changed = true;
-
-      // The instruction after the throw should be an unreachable or a branch to
-      // another BB that should eventually lead to an unreachable. Delete it
-      // because throw itself is a terminator, and also delete successors if
-      // any.
-      MBB.erase(std::next(MI.getIterator()), MBB.end());
-      SmallVector<MachineBasicBlock *, 8> Succs(MBB.succ_begin(),
-                                                MBB.succ_end());
-      for (auto *Succ : Succs)
-        MBB.removeSuccessor(Succ);
-      eraseDeadBBsAndChildren(Succs);
+      auto InsertPos = MBB.begin();
+      if (InsertPos->isEHLabel()) // EH pad starts with an EH label
+        ++InsertPos;
+      unsigned DstReg =
+          MRI.createVirtualRegister(&WebAssembly::EXCEPT_REFRegClass);
+      BuildMI(MBB, InsertPos, MBB.begin()->getDebugLoc(),
+              TII.get(WebAssembly::CATCH), DstReg);
     }
   }
-
   return Changed;
 }
 
@@ -177,23 +173,29 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
   return Changed;
 }
 
-// Add catch instruction to beginning of catchpads and cleanuppads.
-bool WebAssemblyLateEHPrepare::addCatches(MachineFunction &MF) {
+bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
+    MachineFunction &MF) {
   bool Changed = false;
-  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   for (auto &MBB : MF) {
-    if (MBB.isEHPad()) {
+    for (auto &MI : MBB) {
+      if (MI.getOpcode() != WebAssembly::THROW &&
+          MI.getOpcode() != WebAssembly::RETHROW)
+        continue;
       Changed = true;
-      auto InsertPos = MBB.begin();
-      if (InsertPos->isEHLabel()) // EH pad starts with an EH label
-        ++InsertPos;
-      unsigned DstReg =
-          MRI.createVirtualRegister(&WebAssembly::EXCEPT_REFRegClass);
-      BuildMI(MBB, InsertPos, MBB.begin()->getDebugLoc(),
-              TII.get(WebAssembly::CATCH), DstReg);
+
+      // The instruction after the throw should be an unreachable or a branch to
+      // another BB that should eventually lead to an unreachable. Delete it
+      // because throw itself is a terminator, and also delete successors if
+      // any.
+      MBB.erase(std::next(MI.getIterator()), MBB.end());
+      SmallVector<MachineBasicBlock *, 8> Succs(MBB.succ_begin(),
+                                                MBB.succ_end());
+      for (auto *Succ : Succs)
+        MBB.removeSuccessor(Succ);
+      eraseDeadBBsAndChildren(Succs);
     }
   }
+
   return Changed;
 }
 

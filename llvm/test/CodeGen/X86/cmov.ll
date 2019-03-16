@@ -91,23 +91,21 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    movb {{.*}}(%rip), %cl
 ; CHECK-NEXT:  .LBB3_2: # %func_4.exit.i
 ; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    testb %dl, %dl
 ; CHECK-NEXT:    setne %bl
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    je .LBB3_4
-; CHECK-NEXT:  # %bb.3: # %func_4.exit.i
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:  .LBB3_4: # %func_4.exit.i
+; CHECK-NEXT:    movzbl %al, %ecx
+; CHECK-NEXT:    cmovnel %esi, %ecx
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB3_7
-; CHECK-NEXT:  # %bb.5: # %func_4.exit.i
+; CHECK-NEXT:    je .LBB3_5
+; CHECK-NEXT:  # %bb.3: # %func_4.exit.i
 ; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB3_7
-; CHECK-NEXT:  # %bb.6: # %bb.i.i
+; CHECK-NEXT:    jne .LBB3_5
+; CHECK-NEXT:  # %bb.4: # %bb.i.i
 ; CHECK-NEXT:    movb {{.*}}(%rip), %cl
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:  .LBB3_7: # %func_1.exit
+; CHECK-NEXT:  .LBB3_5: # %func_1.exit
 ; CHECK-NEXT:    movb %cl, {{.*}}(%rip)
 ; CHECK-NEXT:    movzbl %cl, %esi
 ; CHECK-NEXT:    movl $_2E_str, %edi
@@ -193,14 +191,9 @@ entry:
 define i8 @test7(i1 inreg %c, i8 inreg %a, i8 inreg %b) nounwind {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB6_1
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB6_1:
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovel %edx, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %d = select i1 %c, i8 %a, i8 %b

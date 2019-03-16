@@ -44,8 +44,8 @@ public:
                  uint8_t seg_size);
   void AddDescriptor(const DWARFDebugArangeSet::Descriptor &range);
   void Compact();
-  bool Extract(const lldb_private::DWARFDataExtractor &data,
-               lldb::offset_t *offset_ptr);
+  llvm::Error extract(const lldb_private::DWARFDataExtractor &data,
+                      lldb::offset_t *offset_ptr);
   void Dump(lldb_private::Stream *s) const;
   dw_offset_t GetCompileUnitDIEOffset() const { return m_header.cu_offset; }
   dw_offset_t GetOffsetOfNextEntry() const;

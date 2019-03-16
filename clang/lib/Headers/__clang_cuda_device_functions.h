@@ -520,8 +520,8 @@ __DEVICE__ unsigned int __sad(int __a, int __b, unsigned int __c) {
 __DEVICE__ float __saturatef(float __a) { return __nv_saturatef(__a); }
 __DEVICE__ int __signbitd(double __a) { return __nv_signbitd(__a); }
 __DEVICE__ int __signbitf(float __a) { return __nv_signbitf(__a); }
-__DEVICE__ void __sincosf(float __a, float *__sptr, float *__cptr) {
-  return __nv_fast_sincosf(__a, __sptr, __cptr);
+__DEVICE__ void __sincosf(float __a, float *__s, float *__c) {
+  return __nv_fast_sincosf(__a, __s, __c);
 }
 __DEVICE__ float __sinf(float __a) { return __nv_fast_sinf(__a); }
 __DEVICE__ int __syncthreads_and(int __a) { return __nvvm_bar0_and(__a); }
@@ -1713,17 +1713,17 @@ __DEVICE__ float scalblnf(float __a, long __b) {
   return scalbnf(__a, (int)__b);
 }
 __DEVICE__ double sin(double __a) { return __nv_sin(__a); }
-__DEVICE__ void sincos(double __a, double *__sptr, double *__cptr) {
-  return __nv_sincos(__a, __sptr, __cptr);
+__DEVICE__ void sincos(double __a, double *__s, double *__c) {
+  return __nv_sincos(__a, __s, __c);
 }
-__DEVICE__ void sincosf(float __a, float *__sptr, float *__cptr) {
-  return __FAST_OR_SLOW(__nv_fast_sincosf, __nv_sincosf)(__a, __sptr, __cptr);
+__DEVICE__ void sincosf(float __a, float *__s, float *__c) {
+  return __FAST_OR_SLOW(__nv_fast_sincosf, __nv_sincosf)(__a, __s, __c);
 }
-__DEVICE__ void sincospi(double __a, double *__sptr, double *__cptr) {
-  return __nv_sincospi(__a, __sptr, __cptr);
+__DEVICE__ void sincospi(double __a, double *__s, double *__c) {
+  return __nv_sincospi(__a, __s, __c);
 }
-__DEVICE__ void sincospif(float __a, float *__sptr, float *__cptr) {
-  return __nv_sincospif(__a, __sptr, __cptr);
+__DEVICE__ void sincospif(float __a, float *__s, float *__c) {
+  return __nv_sincospif(__a, __s, __c);
 }
 __DEVICE__ float sinf(float __a) {
   return __FAST_OR_SLOW(__nv_fast_sinf, __nv_sinf)(__a);

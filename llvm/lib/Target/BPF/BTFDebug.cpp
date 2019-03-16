@@ -751,7 +751,7 @@ void BTFDebug::endModule() {
   const Module *M = MMI->getModule();
   for (const GlobalVariable &Global : M->globals()) {
     // Ignore external globals for now.
-    if (Global.hasExternalLinkage())
+    if (!Global.hasInitializer() && Global.hasExternalLinkage())
       continue;
 
     SmallVector<DIGlobalVariableExpression *, 1> GVs;

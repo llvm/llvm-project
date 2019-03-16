@@ -23,6 +23,40 @@ define <2 x i1> @PR1738_vec_undef(<2 x double> %x, <2 x double> %y) {
   ret <2 x i1> %or
 }
 
+define i1 @PR41069(float %a, float %b, float %c, float %d) {
+; CHECK-LABEL: @PR41069(
+; CHECK-NEXT:    [[ORD1:%.*]] = fcmp ord float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ORD2:%.*]] = fcmp ord float [[C:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD1]], [[ORD2]]
+; CHECK-NEXT:    [[ORD3:%.*]] = fcmp ord float [[D:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[AND]], [[ORD3]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ord1 = fcmp ord float %a, %b
+  %ord2 = fcmp ord float %c, 0.0
+  %and = and i1 %ord1, %ord2
+  %ord3 = fcmp ord float %d, 0.0
+  %r = and i1 %and, %ord3
+  ret i1 %r
+}
+
+define <2 x i1> @PR41069_vec(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d) {
+; CHECK-LABEL: @PR41069_vec(
+; CHECK-NEXT:    [[ORD1:%.*]] = fcmp ord <2 x double> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ORD2:%.*]] = fcmp ord <2 x double> [[C:%.*]], <double 0.000000e+00, double undef>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[ORD1]], [[ORD2]]
+; CHECK-NEXT:    [[ORD3:%.*]] = fcmp ord <2 x double> [[D:%.*]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[AND]], [[ORD3]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %ord1 = fcmp ord <2 x double> %a, %b
+  %ord2 = fcmp ord <2 x double> %c, <double 0.0, double undef>
+  %and = and <2 x i1> %ord1, %ord2
+  %ord3 = fcmp ord <2 x double> %d, zeroinitializer
+  %r = and <2 x i1> %and, %ord3
+  ret <2 x i1> %r
+}
+
 define i1 @PR15737(float %a, double %b) {
 ; CHECK-LABEL: @PR15737(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[A:%.*]], 0.000000e+00
