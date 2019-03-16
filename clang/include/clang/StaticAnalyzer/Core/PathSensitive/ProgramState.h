@@ -588,11 +588,15 @@ public:
   ProgramStateRef getPersistentStateWithGDM(ProgramStateRef FromState,
                                            ProgramStateRef GDMState);
 
-  bool haveEqualEnvironments(ProgramStateRef S1, ProgramStateRef S2) {
+  bool haveEqualConstraints(ProgramStateRef S1, ProgramStateRef S2) const {
+    return ConstraintMgr->haveEqualConstraints(S1, S2);
+  }
+
+  bool haveEqualEnvironments(ProgramStateRef S1, ProgramStateRef S2) const {
     return S1->Env == S2->Env;
   }
 
-  bool haveEqualStores(ProgramStateRef S1, ProgramStateRef S2) {
+  bool haveEqualStores(ProgramStateRef S1, ProgramStateRef S2) const {
     return S1->store == S2->store;
   }
 

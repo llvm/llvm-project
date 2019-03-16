@@ -85,6 +85,8 @@ struct paddedpacked { char c; int i; } __attribute__((packed));
 // PATTERN: @__const.test_paddedpackedarray_custom.custom = private unnamed_addr constant %struct.paddedpackedarray { [2 x %struct.paddedpacked] [%struct.paddedpacked <{ i8 42, i32 13371337 }>, %struct.paddedpacked <{ i8 43, i32 13371338 }>] }, align 1
 // ZERO: @__const.test_paddedpackedarray_custom.custom = private unnamed_addr constant %struct.paddedpackedarray { [2 x %struct.paddedpacked] [%struct.paddedpacked <{ i8 42, i32 13371337 }>, %struct.paddedpacked <{ i8 43, i32 13371338 }>] }, align 1
 struct paddedpackedarray { struct paddedpacked p[2]; };
+// PATTERN-O0: @__const.test_unpackedinpacked_uninit.uninit = private unnamed_addr constant <{ { i8, [3 x i8], i32 }, i8 }> <{ { i8, [3 x i8], i32 } { i8 -86, [3 x i8] c"\AA\AA\AA", i32 -1431655766 }, i8 -86 }>, align 1
+struct unpackedinpacked { padded a; char b; } __attribute__((packed));
 // PATTERN-O0: @__const.test_paddednested_uninit.uninit = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 -86, [3 x i8] c"\AA\AA\AA", i32 -1431655766 }, { i8, [3 x i8], i32 } { i8 -86, [3 x i8] c"\AA\AA\AA", i32 -1431655766 } }, align 4
 // PATTERN: @__const.test_paddednested_custom.custom = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 42, [3 x i8] c"\AA\AA\AA", i32 13371337 }, { i8, [3 x i8], i32 } { i8 43, [3 x i8] c"\AA\AA\AA", i32 13371338 } }, align 4
 // ZERO: @__const.test_paddednested_custom.custom = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, { i8, [3 x i8], i32 } { i8 43, [3 x i8] zeroinitializer, i32 13371338 } }, align 4
@@ -777,6 +779,10 @@ TEST_CUSTOM(paddedpackedarray, paddedpackedarray, { {{ 42, 13371337 }, { 43, 133
 // CHECK-NEXT:  bitcast
 // CHECK-NEXT:  call void @llvm.memcpy{{.*}}({{.*}}@__const.test_paddedpackedarray_custom.custom
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
+
+TEST_UNINIT(unpackedinpacked, unpackedinpacked);
+// CHECK-LABEL: @test_unpackedinpacked_uninit()
+// PATTERN-O0:  call void @llvm.memcpy{{.*}}, i64 9, i1 false)
 
 TEST_UNINIT(paddednested, paddednested);
 // CHECK-LABEL: @test_paddednested_uninit()
