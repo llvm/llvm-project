@@ -141,7 +141,7 @@ __device__ float __nv_fast_log10f(float __a);
 __device__ float __nv_fast_log2f(float __a);
 __device__ float __nv_fast_logf(float __a);
 __device__ float __nv_fast_powf(float __a, float __b);
-__device__ void __nv_fast_sincosf(float __a, float *__sptr, float *__cptr);
+__device__ void __nv_fast_sincosf(float __a, float *__s, float *__c);
 __device__ float __nv_fast_sinf(float __a);
 __device__ float __nv_fast_tanf(float __a);
 __device__ double __nv_fdim(double __a, double __b);
