@@ -51,7 +51,7 @@ else()
   endif()
 
   include(FindPackageHandleStandardArgs)
-  find_package_handle_standard_args(libedit
+  find_package_handle_standard_args(LibEdit
                                     REQUIRED_VARS
                                       libedit_INCLUDE_DIRS
                                       libedit_LIBRARIES

@@ -1460,6 +1460,16 @@ sub ShellEscape {
 }
 
 ##----------------------------------------------------------------------------##
+# FindXcrun - searches for the 'xcrun' executable. Returns "" if not found.
+##----------------------------------------------------------------------------##
+
+sub FindXcrun {
+  my $xcrun = `which xcrun`;
+  chomp $xcrun;
+  return $xcrun;
+}
+
+##----------------------------------------------------------------------------##
 # FindClang - searches for 'clang' executable.
 ##----------------------------------------------------------------------------##
 
@@ -1468,6 +1478,16 @@ sub FindClang {
     $Clang = Cwd::realpath("$RealBin/bin/clang") if (-f "$RealBin/bin/clang");
     if (!defined $Clang || ! -x $Clang) {
       $Clang = Cwd::realpath("$RealBin/clang") if (-f "$RealBin/clang");
+      if (!defined $Clang || ! -x $Clang) {
+        # When an Xcode toolchain is present, look for a clang in the sibling bin
+        # of the parent of the bin directory. So if scan-build is at
+        # $TOOLCHAIN/usr/local/bin/scan-build look for clang at
+        # $TOOLCHAIN/usr/bin/clang.
+        my $has_xcode_toolchain = FindXcrun() ne "";
+        if ($has_xcode_toolchain && -f "$RealBin/../../bin/clang") {
+          $Clang = Cwd::realpath("$RealBin/../../bin/clang");
+        }
+      }
     }
     if (!defined $Clang || ! -x $Clang) {
       return "error: Cannot find an executable 'clang' relative to" .
@@ -1477,8 +1497,7 @@ sub FindClang {
   }
   else {
     if ($Options{AnalyzerDiscoveryMethod} =~ /^[Xx]code$/) {
-      my $xcrun = `which xcrun`;
-      chomp $xcrun;
+      my $xcrun = FindXcrun();
       if ($xcrun eq "") {
         return "Cannot find 'xcrun' to find 'clang' for analysis.\n";
       }

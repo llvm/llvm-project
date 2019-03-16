@@ -139,12 +139,6 @@ public:
     return nullptr;
   }
 
-  lldb::TypeSP GetTypeSP() {
-    if (m_type.m_type_pair.IsValid())
-      return m_type.m_type_pair.GetTypeSP();
-    return lldb::TypeSP();
-  }
-
   CompilerType GetCompilerType() {
     if (m_type.m_type_pair.IsValid())
       return m_type.m_type_pair.GetCompilerType();

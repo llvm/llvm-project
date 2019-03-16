@@ -5,16 +5,12 @@
 define <2 x i64> @t1(<2 x i64> %b1, <2 x i64> %c) nounwind  {
 ; X32-LABEL: t1:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl $14, %eax
-; X32-NEXT:    movd %eax, %xmm1
-; X32-NEXT:    psrlw %xmm1, %xmm0
+; X32-NEXT:    psrlw $14, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t1:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $14, %eax
-; X64-NEXT:    movd %eax, %xmm1
-; X64-NEXT:    psrlw %xmm1, %xmm0
+; X64-NEXT:    psrlw $14, %xmm0
 ; X64-NEXT:    retq
 	%tmp1 = bitcast <2 x i64> %b1 to <8 x i16>
 	%tmp2 = tail call <8 x i16> @llvm.x86.sse2.psrl.w( <8 x i16> %tmp1, <8 x i16> bitcast (<4 x i32> < i32 14, i32 undef, i32 undef, i32 undef > to <8 x i16>) ) nounwind readnone

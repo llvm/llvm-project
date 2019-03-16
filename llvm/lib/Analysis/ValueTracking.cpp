@@ -4064,6 +4064,26 @@ llvm::computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
   return OverflowResult::MayOverflow;
 }
 
+/// Convert ConstantRange OverflowResult into ValueTracking OverflowResult.
+static OverflowResult mapOverflowResult(ConstantRange::OverflowResult OR) {
+  switch (OR) {
+    case ConstantRange::OverflowResult::MayOverflow:
+      return OverflowResult::MayOverflow;
+    case ConstantRange::OverflowResult::AlwaysOverflows:
+      return OverflowResult::AlwaysOverflows;
+    case ConstantRange::OverflowResult::NeverOverflows:
+      return OverflowResult::NeverOverflows;
+  }
+  llvm_unreachable("Unknown OverflowResult");
+}
+
+static ConstantRange constantRangeFromKnownBits(const KnownBits &Known) {
+  if (Known.isUnknown())
+    return ConstantRange(Known.getBitWidth(), /* full */ true);
+
+  return ConstantRange(Known.One, ~Known.Zero + 1);
+}
+
 OverflowResult llvm::computeOverflowForUnsignedAdd(
     const Value *LHS, const Value *RHS, const DataLayout &DL,
     AssumptionCache *AC, const Instruction *CxtI, const DominatorTree *DT,
@@ -4072,16 +4092,9 @@ OverflowResult llvm::computeOverflowForUnsignedAdd(
                                         nullptr, UseInstrInfo);
   KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT,
                                         nullptr, UseInstrInfo);
-
-  // a + b overflows iff a > ~b. Determine whether this is never/always true
-  // based on the min/max values achievable under the known bits constraint.
-  APInt MinLHS = LHSKnown.One, MaxLHS = ~LHSKnown.Zero;
-  APInt MinInvRHS = RHSKnown.Zero, MaxInvRHS = ~RHSKnown.One;
-  if (MaxLHS.ule(MinInvRHS))
-    return OverflowResult::NeverOverflows;
-  if (MinLHS.ugt(MaxInvRHS))
-    return OverflowResult::AlwaysOverflows;
-  return OverflowResult::MayOverflow;
+  ConstantRange LHSRange = constantRangeFromKnownBits(LHSKnown);
+  ConstantRange RHSRange = constantRangeFromKnownBits(RHSKnown);
+  return mapOverflowResult(LHSRange.unsignedAddMayOverflow(RHSRange));
 }
 
 /// Return true if we can prove that adding the two values of the
@@ -4195,16 +4208,9 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
                                                    const DominatorTree *DT) {
   KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT);
   KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
-
-  // a - b overflows iff a < b. Determine whether this is never/always true
-  // based on the min/max values achievable under the known bits constraint.
-  APInt MinLHS = LHSKnown.One, MaxLHS = ~LHSKnown.Zero;
-  APInt MinRHS = RHSKnown.One, MaxRHS = ~RHSKnown.Zero;
-  if (MinLHS.uge(MaxRHS))
-    return OverflowResult::NeverOverflows;
-  if (MaxLHS.ult(MinRHS))
-    return OverflowResult::AlwaysOverflows;
-  return OverflowResult::MayOverflow;
+  ConstantRange LHSRange = constantRangeFromKnownBits(LHSKnown);
+  ConstantRange RHSRange = constantRangeFromKnownBits(RHSKnown);
+  return mapOverflowResult(LHSRange.unsignedSubMayOverflow(RHSRange));
 }
 
 OverflowResult llvm::computeOverflowForSignedSub(const Value *LHS,

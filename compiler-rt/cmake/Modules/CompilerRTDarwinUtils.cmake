@@ -93,7 +93,7 @@ function(darwin_test_archs os valid_archs)
    
     set(arch_linker_flags "-arch ${arch} ${os_linker_flags}")
     if(TEST_COMPILE_ONLY)
-      try_compile_only(CAN_TARGET_${os}_${arch} -v -arch ${arch} ${DARWIN_${os}_CFLAGS})
+      try_compile_only(CAN_TARGET_${os}_${arch} FLAGS -v -arch ${arch} ${DARWIN_${os}_CFLAGS})
     else()
       set(SAVED_CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${arch_linker_flags}")

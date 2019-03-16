@@ -235,16 +235,15 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
   if (!class_type_or_name)
     return false;
 
-  TypeSP type_sp = class_type_or_name.GetTypeSP();
+  CompilerType type = class_type_or_name.GetCompilerType();
   // There can only be one type with a given name, so we've just found
   // duplicate definitions, and this one will do as well as any other. We
   // don't consider something to have a dynamic type if it is the same as
   // the static type.  So compare against the value we were handed.
-  if (!type_sp)
+  if (!type)
     return true;
 
-  if (ClangASTContext::AreTypesSame(in_value.GetCompilerType(),
-                                    type_sp->GetForwardCompilerType())) {
+  if (ClangASTContext::AreTypesSame(in_value.GetCompilerType(), type)) {
     // The dynamic type we found was the same type, so we don't have a
     // dynamic type here...
     return false;

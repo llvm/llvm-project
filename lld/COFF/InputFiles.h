@@ -99,7 +99,6 @@ public:
 
 private:
   std::unique_ptr<Archive> File;
-  std::string Filename;
   llvm::DenseSet<uint64_t> Seen;
 };
 

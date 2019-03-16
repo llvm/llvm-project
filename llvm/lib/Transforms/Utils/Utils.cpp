@@ -54,3 +54,6 @@ void LLVMAddPromoteMemoryToRegisterPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createPromoteMemoryToRegisterPass());
 }
 
+void LLVMAddAddDiscriminatorsPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createAddDiscriminatorsPass());
+}

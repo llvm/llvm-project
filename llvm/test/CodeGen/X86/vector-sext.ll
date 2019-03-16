@@ -2151,7 +2151,7 @@ define <8 x i16> @load_sext_8i1_to_8i16(<8 x i1> *%ptr) {
 ; SSE41-NEXT:    shlq $57, %rcx
 ; SSE41-NEXT:    sarq $63, %rcx
 ; SSE41-NEXT:    pinsrw $6, %ecx, %xmm0
-; SSE41-NEXT:    shrq $7, %rax
+; SSE41-NEXT:    shrl $7, %eax
 ; SSE41-NEXT:    pinsrw $7, %eax, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2186,7 +2186,7 @@ define <8 x i16> @load_sext_8i1_to_8i16(<8 x i1> *%ptr) {
 ; AVX1-NEXT:    shlq $57, %rcx
 ; AVX1-NEXT:    sarq $63, %rcx
 ; AVX1-NEXT:    vpinsrw $6, %ecx, %xmm0, %xmm0
-; AVX1-NEXT:    shrq $7, %rax
+; AVX1-NEXT:    shrl $7, %eax
 ; AVX1-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -2221,7 +2221,7 @@ define <8 x i16> @load_sext_8i1_to_8i16(<8 x i1> *%ptr) {
 ; AVX2-NEXT:    shlq $57, %rcx
 ; AVX2-NEXT:    sarq $63, %rcx
 ; AVX2-NEXT:    vpinsrw $6, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    shrq $7, %rax
+; AVX2-NEXT:    shrl $7, %eax
 ; AVX2-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
@@ -3068,7 +3068,7 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ; SSE41-NEXT:    sarq $63, %rcx
 ; SSE41-NEXT:    pinsrb $6, %ecx, %xmm0
 ; SSE41-NEXT:    movsbq %al, %rcx
-; SSE41-NEXT:    shrq $7, %rcx
+; SSE41-NEXT:    shrl $7, %ecx
 ; SSE41-NEXT:    pinsrb $7, %ecx, %xmm0
 ; SSE41-NEXT:    movq %rax, %rcx
 ; SSE41-NEXT:    shlq $55, %rcx
@@ -3098,7 +3098,7 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ; SSE41-NEXT:    shlq $49, %rcx
 ; SSE41-NEXT:    sarq $63, %rcx
 ; SSE41-NEXT:    pinsrb $14, %ecx, %xmm0
-; SSE41-NEXT:    shrq $15, %rax
+; SSE41-NEXT:    shrl $15, %eax
 ; SSE41-NEXT:    pinsrb $15, %eax, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -3134,7 +3134,7 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ; AVX1-NEXT:    sarq $63, %rcx
 ; AVX1-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
 ; AVX1-NEXT:    movsbq %al, %rcx
-; AVX1-NEXT:    shrq $7, %rcx
+; AVX1-NEXT:    shrl $7, %ecx
 ; AVX1-NEXT:    vpinsrb $7, %ecx, %xmm0, %xmm0
 ; AVX1-NEXT:    movq %rax, %rcx
 ; AVX1-NEXT:    shlq $55, %rcx
@@ -3164,7 +3164,7 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ; AVX1-NEXT:    shlq $49, %rcx
 ; AVX1-NEXT:    sarq $63, %rcx
 ; AVX1-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
-; AVX1-NEXT:    shrq $15, %rax
+; AVX1-NEXT:    shrl $15, %eax
 ; AVX1-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -3200,7 +3200,7 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ; AVX2-NEXT:    sarq $63, %rcx
 ; AVX2-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
 ; AVX2-NEXT:    movsbq %al, %rcx
-; AVX2-NEXT:    shrq $7, %rcx
+; AVX2-NEXT:    shrl $7, %ecx
 ; AVX2-NEXT:    vpinsrb $7, %ecx, %xmm0, %xmm0
 ; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    shlq $55, %rcx
@@ -3230,7 +3230,7 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ; AVX2-NEXT:    shlq $49, %rcx
 ; AVX2-NEXT:    sarq $63, %rcx
 ; AVX2-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    shrq $15, %rax
+; AVX2-NEXT:    shrl $15, %eax
 ; AVX2-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
@@ -3688,7 +3688,7 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; AVX1-NEXT:    movq %rax, %r11
 ; AVX1-NEXT:    movq %rax, %r14
 ; AVX1-NEXT:    movq %rax, %r15
-; AVX1-NEXT:    movq %rax, %r9
+; AVX1-NEXT:    movl %eax, %r9d
 ; AVX1-NEXT:    movq %rax, %r12
 ; AVX1-NEXT:    movq %rax, %r13
 ; AVX1-NEXT:    movq %rax, %rbx
@@ -3715,7 +3715,7 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; AVX1-NEXT:    shlq $49, %r15
 ; AVX1-NEXT:    sarq $63, %r15
 ; AVX1-NEXT:    vpinsrw $6, %r15d, %xmm0, %xmm0
-; AVX1-NEXT:    shrq $15, %r9
+; AVX1-NEXT:    shrl $15, %r9d
 ; AVX1-NEXT:    vpinsrw $7, %r9d, %xmm0, %xmm0
 ; AVX1-NEXT:    shlq $63, %r13
 ; AVX1-NEXT:    sarq $63, %r13
@@ -3738,7 +3738,7 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; AVX1-NEXT:    shlq $57, %rsi
 ; AVX1-NEXT:    sarq $63, %rsi
 ; AVX1-NEXT:    vpinsrw $6, %esi, %xmm1, %xmm1
-; AVX1-NEXT:    shrq $7, %rbp
+; AVX1-NEXT:    shrl $7, %ebp
 ; AVX1-NEXT:    vpinsrw $7, %ebp, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    popq %rbx
@@ -3785,7 +3785,7 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; AVX2-NEXT:    movq %rax, %r11
 ; AVX2-NEXT:    movq %rax, %r14
 ; AVX2-NEXT:    movq %rax, %r15
-; AVX2-NEXT:    movq %rax, %r9
+; AVX2-NEXT:    movl %eax, %r9d
 ; AVX2-NEXT:    movq %rax, %r12
 ; AVX2-NEXT:    movq %rax, %r13
 ; AVX2-NEXT:    movq %rax, %rbx
@@ -3812,7 +3812,7 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; AVX2-NEXT:    shlq $49, %r15
 ; AVX2-NEXT:    sarq $63, %r15
 ; AVX2-NEXT:    vpinsrw $6, %r15d, %xmm0, %xmm0
-; AVX2-NEXT:    shrq $15, %r9
+; AVX2-NEXT:    shrl $15, %r9d
 ; AVX2-NEXT:    vpinsrw $7, %r9d, %xmm0, %xmm0
 ; AVX2-NEXT:    shlq $63, %r13
 ; AVX2-NEXT:    sarq $63, %r13
@@ -3835,7 +3835,7 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; AVX2-NEXT:    shlq $57, %rsi
 ; AVX2-NEXT:    sarq $63, %rsi
 ; AVX2-NEXT:    vpinsrw $6, %esi, %xmm1, %xmm1
-; AVX2-NEXT:    shrq $7, %rbp
+; AVX2-NEXT:    shrl $7, %ebp
 ; AVX2-NEXT:    vpinsrw $7, %ebp, %xmm1, %xmm1
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    popq %rbx
@@ -4408,7 +4408,7 @@ define <32 x i8> @load_sext_32i1_to_32i8(<32 x i1> *%ptr) nounwind readnone {
 ; SSE41-NEXT:    sarq $63, %rcx
 ; SSE41-NEXT:    pinsrb $6, %ecx, %xmm0
 ; SSE41-NEXT:    movsbq %al, %rcx
-; SSE41-NEXT:    shrq $7, %rcx
+; SSE41-NEXT:    shrl $7, %ecx
 ; SSE41-NEXT:    pinsrb $7, %ecx, %xmm0
 ; SSE41-NEXT:    movq %rax, %rcx
 ; SSE41-NEXT:    shlq $55, %rcx
@@ -4438,7 +4438,7 @@ define <32 x i8> @load_sext_32i1_to_32i8(<32 x i1> *%ptr) nounwind readnone {
 ; SSE41-NEXT:    shlq $49, %rcx
 ; SSE41-NEXT:    sarq $63, %rcx
 ; SSE41-NEXT:    pinsrb $14, %ecx, %xmm0
-; SSE41-NEXT:    shrq $15, %rax
+; SSE41-NEXT:    shrl $15, %eax
 ; SSE41-NEXT:    pinsrb $15, %eax, %xmm0
 ; SSE41-NEXT:    movswq 2(%rdi), %rax
 ; SSE41-NEXT:    movq %rax, %rcx
@@ -4470,7 +4470,7 @@ define <32 x i8> @load_sext_32i1_to_32i8(<32 x i1> *%ptr) nounwind readnone {
 ; SSE41-NEXT:    sarq $63, %rcx
 ; SSE41-NEXT:    pinsrb $6, %ecx, %xmm1
 ; SSE41-NEXT:    movsbq %al, %rcx
-; SSE41-NEXT:    shrq $7, %rcx
+; SSE41-NEXT:    shrl $7, %ecx
 ; SSE41-NEXT:    pinsrb $7, %ecx, %xmm1
 ; SSE41-NEXT:    movq %rax, %rcx
 ; SSE41-NEXT:    shlq $55, %rcx
@@ -4500,7 +4500,7 @@ define <32 x i8> @load_sext_32i1_to_32i8(<32 x i1> *%ptr) nounwind readnone {
 ; SSE41-NEXT:    shlq $49, %rcx
 ; SSE41-NEXT:    sarq $63, %rcx
 ; SSE41-NEXT:    pinsrb $14, %ecx, %xmm1
-; SSE41-NEXT:    shrq $15, %rax
+; SSE41-NEXT:    shrl $15, %eax
 ; SSE41-NEXT:    pinsrb $15, %eax, %xmm1
 ; SSE41-NEXT:    retq
 ;
@@ -4613,7 +4613,7 @@ define <32 x i8> @load_sext_32i1_to_32i8(<32 x i1> *%ptr) nounwind readnone {
 ; AVX1-NEXT:    shlq $57, %r10
 ; AVX1-NEXT:    sarq $63, %r10
 ; AVX1-NEXT:    vpinsrb $6, %r10d, %xmm1, %xmm1
-; AVX1-NEXT:    shrq $7, %r11
+; AVX1-NEXT:    shrl $7, %r11d
 ; AVX1-NEXT:    vpinsrb $7, %r11d, %xmm1, %xmm1
 ; AVX1-NEXT:    shlq $55, %r9
 ; AVX1-NEXT:    sarq $63, %r9
@@ -4636,7 +4636,7 @@ define <32 x i8> @load_sext_32i1_to_32i8(<32 x i1> *%ptr) nounwind readnone {
 ; AVX1-NEXT:    shlq $49, %rdx
 ; AVX1-NEXT:    sarq $63, %rdx
 ; AVX1-NEXT:    vpinsrb $14, %edx, %xmm1, %xmm1
-; AVX1-NEXT:    shrq $15, %rax
+; AVX1-NEXT:    shrl $15, %eax
 ; AVX1-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    popq %rbx
@@ -4756,7 +4756,7 @@ define <32 x i8> @load_sext_32i1_to_32i8(<32 x i1> *%ptr) nounwind readnone {
 ; AVX2-NEXT:    shlq $57, %r10
 ; AVX2-NEXT:    sarq $63, %r10
 ; AVX2-NEXT:    vpinsrb $6, %r10d, %xmm1, %xmm1
-; AVX2-NEXT:    shrq $7, %r11
+; AVX2-NEXT:    shrl $7, %r11d
 ; AVX2-NEXT:    vpinsrb $7, %r11d, %xmm1, %xmm1
 ; AVX2-NEXT:    shlq $55, %r9
 ; AVX2-NEXT:    sarq $63, %r9
@@ -4779,7 +4779,7 @@ define <32 x i8> @load_sext_32i1_to_32i8(<32 x i1> *%ptr) nounwind readnone {
 ; AVX2-NEXT:    shlq $49, %rdx
 ; AVX2-NEXT:    sarq $63, %rdx
 ; AVX2-NEXT:    vpinsrb $14, %edx, %xmm1, %xmm1
-; AVX2-NEXT:    shrq $15, %rax
+; AVX2-NEXT:    shrl $15, %eax
 ; AVX2-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    popq %rbx

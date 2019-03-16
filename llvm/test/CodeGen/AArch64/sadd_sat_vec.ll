@@ -153,15 +153,14 @@ define <8 x i16> @v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; CHECK-NEXT:    add v2.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    cmge v1.8h, v1.8h, #0
 ; CHECK-NEXT:    cmge v0.8h, v0.8h, #0
-; CHECK-NEXT:    cmge v4.8h, v2.8h, #0
-; CHECK-NEXT:    movi v3.8h, #128, lsl #8
-; CHECK-NEXT:    cmeq v1.8h, v0.8h, v1.8h
-; CHECK-NEXT:    cmeq v0.8h, v0.8h, v4.8h
+; CHECK-NEXT:    cmge v5.8h, v2.8h, #0
 ; CHECK-NEXT:    cmlt v4.8h, v2.8h, #0
-; CHECK-NEXT:    bic v3.16b, v3.16b, v4.16b
-; CHECK-NEXT:    bic v4.8h, #128, lsl #8
+; CHECK-NEXT:    cmeq v1.8h, v0.8h, v1.8h
+; CHECK-NEXT:    cmeq v0.8h, v0.8h, v5.8h
+; CHECK-NEXT:    mvni v3.8h, #128, lsl #8
+; CHECK-NEXT:    mvn v5.16b, v4.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    orr v3.16b, v4.16b, v3.16b
+; CHECK-NEXT:    bsl v3.16b, v4.16b, v5.16b
 ; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    bsl v0.16b, v3.16b, v2.16b
 ; CHECK-NEXT:    ret
@@ -173,32 +172,31 @@ define <16 x i16> @v16i16(<16 x i16> %x, <16 x i16> %y) nounwind {
 ; CHECK-LABEL: v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v4.8h, v0.8h, v2.8h
+; CHECK-NEXT:    cmlt v16.8h, v4.8h, #0
+; CHECK-NEXT:    mvni v6.8h, #128, lsl #8
+; CHECK-NEXT:    add v7.8h, v1.8h, v3.8h
+; CHECK-NEXT:    mvn v17.16b, v16.16b
+; CHECK-NEXT:    bsl v6.16b, v16.16b, v17.16b
+; CHECK-NEXT:    cmlt v16.8h, v7.8h, #0
+; CHECK-NEXT:    mvni v5.8h, #128, lsl #8
+; CHECK-NEXT:    mvn v17.16b, v16.16b
+; CHECK-NEXT:    bsl v5.16b, v16.16b, v17.16b
 ; CHECK-NEXT:    cmge v2.8h, v2.8h, #0
 ; CHECK-NEXT:    cmge v0.8h, v0.8h, #0
-; CHECK-NEXT:    add v6.8h, v1.8h, v3.8h
 ; CHECK-NEXT:    cmge v16.8h, v4.8h, #0
-; CHECK-NEXT:    movi v5.8h, #128, lsl #8
 ; CHECK-NEXT:    cmge v3.8h, v3.8h, #0
 ; CHECK-NEXT:    cmge v1.8h, v1.8h, #0
-; CHECK-NEXT:    cmlt v7.8h, v4.8h, #0
 ; CHECK-NEXT:    cmeq v2.8h, v0.8h, v2.8h
 ; CHECK-NEXT:    cmeq v0.8h, v0.8h, v16.8h
-; CHECK-NEXT:    cmge v16.8h, v6.8h, #0
+; CHECK-NEXT:    cmge v16.8h, v7.8h, #0
 ; CHECK-NEXT:    cmeq v3.8h, v1.8h, v3.8h
 ; CHECK-NEXT:    cmeq v1.8h, v1.8h, v16.8h
-; CHECK-NEXT:    bic v16.16b, v5.16b, v7.16b
-; CHECK-NEXT:    bic v7.8h, #128, lsl #8
-; CHECK-NEXT:    orr v7.16b, v7.16b, v16.16b
-; CHECK-NEXT:    cmlt v16.8h, v6.8h, #0
-; CHECK-NEXT:    bic v5.16b, v5.16b, v16.16b
-; CHECK-NEXT:    bic v16.8h, #128, lsl #8
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    orr v5.16b, v16.16b, v5.16b
 ; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    and v1.16b, v3.16b, v1.16b
-; CHECK-NEXT:    bsl v0.16b, v7.16b, v4.16b
-; CHECK-NEXT:    bsl v1.16b, v5.16b, v6.16b
+; CHECK-NEXT:    bsl v0.16b, v6.16b, v4.16b
+; CHECK-NEXT:    bsl v1.16b, v5.16b, v7.16b
 ; CHECK-NEXT:    ret
   %z = call <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16> %x, <16 x i16> %y)
   ret <16 x i16> %z
@@ -207,59 +205,58 @@ define <16 x i16> @v16i16(<16 x i16> %x, <16 x i16> %y) nounwind {
 define <32 x i16> @v32i16(<32 x i16> %x, <32 x i16> %y) nounwind {
 ; CHECK-LABEL: v32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v18.8h, v1.8h, v5.8h
-; CHECK-NEXT:    cmge v5.8h, v5.8h, #0
-; CHECK-NEXT:    cmge v1.8h, v1.8h, #0
-; CHECK-NEXT:    add v19.8h, v2.8h, v6.8h
-; CHECK-NEXT:    cmge v24.8h, v18.8h, #0
 ; CHECK-NEXT:    add v16.8h, v0.8h, v4.8h
-; CHECK-NEXT:    cmge v6.8h, v6.8h, #0
-; CHECK-NEXT:    cmge v2.8h, v2.8h, #0
-; CHECK-NEXT:    add v20.8h, v3.8h, v7.8h
-; CHECK-NEXT:    cmeq v5.8h, v1.8h, v5.8h
-; CHECK-NEXT:    cmeq v1.8h, v1.8h, v24.8h
-; CHECK-NEXT:    cmge v24.8h, v19.8h, #0
-; CHECK-NEXT:    movi v17.8h, #128, lsl #8
-; CHECK-NEXT:    cmge v7.8h, v7.8h, #0
-; CHECK-NEXT:    cmge v3.8h, v3.8h, #0
-; CHECK-NEXT:    cmlt v21.8h, v16.8h, #0
-; CHECK-NEXT:    cmeq v6.8h, v2.8h, v6.8h
-; CHECK-NEXT:    cmeq v2.8h, v2.8h, v24.8h
-; CHECK-NEXT:    cmge v24.8h, v20.8h, #0
+; CHECK-NEXT:    cmlt v24.8h, v16.8h, #0
+; CHECK-NEXT:    mvni v18.8h, #128, lsl #8
+; CHECK-NEXT:    add v19.8h, v1.8h, v5.8h
+; CHECK-NEXT:    mvn v25.16b, v24.16b
+; CHECK-NEXT:    bsl v18.16b, v24.16b, v25.16b
+; CHECK-NEXT:    cmlt v24.8h, v19.8h, #0
+; CHECK-NEXT:    mvni v20.8h, #128, lsl #8
+; CHECK-NEXT:    add v21.8h, v2.8h, v6.8h
+; CHECK-NEXT:    mvn v25.16b, v24.16b
+; CHECK-NEXT:    bsl v20.16b, v24.16b, v25.16b
+; CHECK-NEXT:    cmlt v24.8h, v21.8h, #0
+; CHECK-NEXT:    mvni v22.8h, #128, lsl #8
+; CHECK-NEXT:    add v23.8h, v3.8h, v7.8h
+; CHECK-NEXT:    mvn v25.16b, v24.16b
+; CHECK-NEXT:    bsl v22.16b, v24.16b, v25.16b
+; CHECK-NEXT:    cmlt v24.8h, v23.8h, #0
+; CHECK-NEXT:    mvni v17.8h, #128, lsl #8
+; CHECK-NEXT:    mvn v25.16b, v24.16b
+; CHECK-NEXT:    bsl v17.16b, v24.16b, v25.16b
 ; CHECK-NEXT:    cmge v4.8h, v4.8h, #0
 ; CHECK-NEXT:    cmge v0.8h, v0.8h, #0
-; CHECK-NEXT:    cmge v22.8h, v16.8h, #0
-; CHECK-NEXT:    cmlt v23.8h, v18.8h, #0
+; CHECK-NEXT:    cmge v24.8h, v16.8h, #0
+; CHECK-NEXT:    cmge v5.8h, v5.8h, #0
+; CHECK-NEXT:    cmge v1.8h, v1.8h, #0
+; CHECK-NEXT:    cmeq v4.8h, v0.8h, v4.8h
+; CHECK-NEXT:    cmeq v0.8h, v0.8h, v24.8h
+; CHECK-NEXT:    cmge v24.8h, v19.8h, #0
+; CHECK-NEXT:    cmge v6.8h, v6.8h, #0
+; CHECK-NEXT:    cmge v2.8h, v2.8h, #0
+; CHECK-NEXT:    cmeq v5.8h, v1.8h, v5.8h
+; CHECK-NEXT:    cmeq v1.8h, v1.8h, v24.8h
+; CHECK-NEXT:    cmge v24.8h, v21.8h, #0
+; CHECK-NEXT:    cmge v7.8h, v7.8h, #0
+; CHECK-NEXT:    cmge v3.8h, v3.8h, #0
+; CHECK-NEXT:    cmeq v6.8h, v2.8h, v6.8h
+; CHECK-NEXT:    cmeq v2.8h, v2.8h, v24.8h
+; CHECK-NEXT:    cmge v24.8h, v23.8h, #0
 ; CHECK-NEXT:    cmeq v7.8h, v3.8h, v7.8h
 ; CHECK-NEXT:    cmeq v3.8h, v3.8h, v24.8h
-; CHECK-NEXT:    bic v24.16b, v17.16b, v21.16b
-; CHECK-NEXT:    bic v21.8h, #128, lsl #8
-; CHECK-NEXT:    cmeq v4.8h, v0.8h, v4.8h
-; CHECK-NEXT:    cmeq v0.8h, v0.8h, v22.8h
-; CHECK-NEXT:    cmlt v22.8h, v19.8h, #0
-; CHECK-NEXT:    orr v21.16b, v21.16b, v24.16b
-; CHECK-NEXT:    bic v24.16b, v17.16b, v23.16b
-; CHECK-NEXT:    bic v23.8h, #128, lsl #8
-; CHECK-NEXT:    orr v23.16b, v23.16b, v24.16b
-; CHECK-NEXT:    bic v24.16b, v17.16b, v22.16b
-; CHECK-NEXT:    bic v22.8h, #128, lsl #8
-; CHECK-NEXT:    orr v22.16b, v22.16b, v24.16b
-; CHECK-NEXT:    cmlt v24.8h, v20.8h, #0
-; CHECK-NEXT:    bic v17.16b, v17.16b, v24.16b
-; CHECK-NEXT:    bic v24.8h, #128, lsl #8
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
 ; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v3.16b, v3.16b
-; CHECK-NEXT:    orr v17.16b, v24.16b, v17.16b
 ; CHECK-NEXT:    and v0.16b, v4.16b, v0.16b
 ; CHECK-NEXT:    and v1.16b, v5.16b, v1.16b
 ; CHECK-NEXT:    and v2.16b, v6.16b, v2.16b
 ; CHECK-NEXT:    and v3.16b, v7.16b, v3.16b
-; CHECK-NEXT:    bsl v0.16b, v21.16b, v16.16b
-; CHECK-NEXT:    bsl v1.16b, v23.16b, v18.16b
-; CHECK-NEXT:    bsl v2.16b, v22.16b, v19.16b
-; CHECK-NEXT:    bsl v3.16b, v17.16b, v20.16b
+; CHECK-NEXT:    bsl v0.16b, v18.16b, v16.16b
+; CHECK-NEXT:    bsl v1.16b, v20.16b, v19.16b
+; CHECK-NEXT:    bsl v2.16b, v22.16b, v21.16b
+; CHECK-NEXT:    bsl v3.16b, v17.16b, v23.16b
 ; CHECK-NEXT:    ret
   %z = call <32 x i16> @llvm.sadd.sat.v32i16(<32 x i16> %x, <32 x i16> %y)
   ret <32 x i16> %z
@@ -316,15 +313,14 @@ define void @v4i8(<4 x i8>* %px, <4 x i8>* %py, <4 x i8>* %pz) nounwind {
 ; CHECK-NEXT:    add v3.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    cmge v1.4h, v1.4h, #0
 ; CHECK-NEXT:    cmge v0.4h, v0.4h, #0
-; CHECK-NEXT:    cmge v4.4h, v3.4h, #0
-; CHECK-NEXT:    movi v2.4h, #128, lsl #8
-; CHECK-NEXT:    cmeq v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmeq v0.4h, v0.4h, v4.4h
+; CHECK-NEXT:    cmge v5.4h, v3.4h, #0
 ; CHECK-NEXT:    cmlt v4.4h, v3.4h, #0
-; CHECK-NEXT:    bic v2.8b, v2.8b, v4.8b
-; CHECK-NEXT:    bic v4.4h, #128, lsl #8
+; CHECK-NEXT:    cmeq v1.4h, v0.4h, v1.4h
+; CHECK-NEXT:    cmeq v0.4h, v0.4h, v5.4h
+; CHECK-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-NEXT:    mvn v5.8b, v4.8b
 ; CHECK-NEXT:    mvn v0.8b, v0.8b
-; CHECK-NEXT:    orr v2.8b, v4.8b, v2.8b
+; CHECK-NEXT:    bsl v2.8b, v4.8b, v5.8b
 ; CHECK-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
 ; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
@@ -354,15 +350,14 @@ define void @v2i8(<2 x i8>* %px, <2 x i8>* %py, <2 x i8>* %pz) nounwind {
 ; CHECK-NEXT:    add v3.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    cmge v2.2s, v2.2s, #0
 ; CHECK-NEXT:    cmge v0.2s, v0.2s, #0
-; CHECK-NEXT:    cmge v4.2s, v3.2s, #0
-; CHECK-NEXT:    movi v1.2s, #128, lsl #24
-; CHECK-NEXT:    cmeq v2.2s, v0.2s, v2.2s
-; CHECK-NEXT:    cmeq v0.2s, v0.2s, v4.2s
+; CHECK-NEXT:    cmge v5.2s, v3.2s, #0
 ; CHECK-NEXT:    cmlt v4.2s, v3.2s, #0
-; CHECK-NEXT:    bic v1.8b, v1.8b, v4.8b
-; CHECK-NEXT:    bic v4.2s, #128, lsl #24
+; CHECK-NEXT:    cmeq v2.2s, v0.2s, v2.2s
+; CHECK-NEXT:    cmeq v0.2s, v0.2s, v5.2s
+; CHECK-NEXT:    mvni v1.2s, #128, lsl #24
+; CHECK-NEXT:    mvn v5.8b, v4.8b
 ; CHECK-NEXT:    mvn v0.8b, v0.8b
-; CHECK-NEXT:    orr v1.8b, v4.8b, v1.8b
+; CHECK-NEXT:    bsl v1.8b, v4.8b, v5.8b
 ; CHECK-NEXT:    and v0.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    bsl v0.8b, v1.8b, v3.8b
 ; CHECK-NEXT:    ushr v0.2s, v0.2s, #24
@@ -383,18 +378,17 @@ define void @v4i16(<4 x i16>* %px, <4 x i16>* %py, <4 x i16>* %pz) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    movi v2.4h, #128, lsl #8
+; CHECK-NEXT:    mvni v2.4h, #128, lsl #8
 ; CHECK-NEXT:    add v3.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    cmge v1.4h, v1.4h, #0
 ; CHECK-NEXT:    cmge v0.4h, v0.4h, #0
-; CHECK-NEXT:    cmge v4.4h, v3.4h, #0
-; CHECK-NEXT:    cmeq v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmeq v0.4h, v0.4h, v4.4h
+; CHECK-NEXT:    cmge v5.4h, v3.4h, #0
 ; CHECK-NEXT:    cmlt v4.4h, v3.4h, #0
-; CHECK-NEXT:    bic v2.8b, v2.8b, v4.8b
-; CHECK-NEXT:    bic v4.4h, #128, lsl #8
+; CHECK-NEXT:    cmeq v1.4h, v0.4h, v1.4h
+; CHECK-NEXT:    cmeq v0.4h, v0.4h, v5.4h
+; CHECK-NEXT:    mvn v5.8b, v4.8b
 ; CHECK-NEXT:    mvn v0.8b, v0.8b
-; CHECK-NEXT:    orr v2.8b, v4.8b, v2.8b
+; CHECK-NEXT:    bsl v2.8b, v4.8b, v5.8b
 ; CHECK-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
 ; CHECK-NEXT:    str d0, [x2]
@@ -422,15 +416,14 @@ define void @v2i16(<2 x i16>* %px, <2 x i16>* %py, <2 x i16>* %pz) nounwind {
 ; CHECK-NEXT:    add v3.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    cmge v2.2s, v2.2s, #0
 ; CHECK-NEXT:    cmge v0.2s, v0.2s, #0
-; CHECK-NEXT:    cmge v4.2s, v3.2s, #0
-; CHECK-NEXT:    movi v1.2s, #128, lsl #24
-; CHECK-NEXT:    cmeq v2.2s, v0.2s, v2.2s
-; CHECK-NEXT:    cmeq v0.2s, v0.2s, v4.2s
+; CHECK-NEXT:    cmge v5.2s, v3.2s, #0
 ; CHECK-NEXT:    cmlt v4.2s, v3.2s, #0
-; CHECK-NEXT:    bic v1.8b, v1.8b, v4.8b
-; CHECK-NEXT:    bic v4.2s, #128, lsl #24
+; CHECK-NEXT:    cmeq v2.2s, v0.2s, v2.2s
+; CHECK-NEXT:    cmeq v0.2s, v0.2s, v5.2s
+; CHECK-NEXT:    mvni v1.2s, #128, lsl #24
+; CHECK-NEXT:    mvn v5.8b, v4.8b
 ; CHECK-NEXT:    mvn v0.8b, v0.8b
-; CHECK-NEXT:    orr v1.8b, v4.8b, v1.8b
+; CHECK-NEXT:    bsl v1.8b, v4.8b, v5.8b
 ; CHECK-NEXT:    and v0.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    bsl v0.8b, v1.8b, v3.8b
 ; CHECK-NEXT:    ushr v0.2s, v0.2s, #16
@@ -470,37 +463,36 @@ define <12 x i8> @v12i8(<12 x i8> %x, <12 x i8> %y) nounwind {
 define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind {
 ; CHECK-LABEL: v12i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q2, q0, [x0]
-; CHECK-NEXT:    ldp q3, q1, [x1]
-; CHECK-NEXT:    movi v4.8h, #128, lsl #8
-; CHECK-NEXT:    add v5.8h, v0.8h, v1.8h
-; CHECK-NEXT:    cmge v1.8h, v1.8h, #0
-; CHECK-NEXT:    cmge v0.8h, v0.8h, #0
-; CHECK-NEXT:    add v6.8h, v2.8h, v3.8h
-; CHECK-NEXT:    cmge v16.8h, v5.8h, #0
-; CHECK-NEXT:    cmge v3.8h, v3.8h, #0
-; CHECK-NEXT:    cmge v2.8h, v2.8h, #0
-; CHECK-NEXT:    cmlt v7.8h, v5.8h, #0
-; CHECK-NEXT:    cmeq v1.8h, v0.8h, v1.8h
-; CHECK-NEXT:    cmeq v0.8h, v0.8h, v16.8h
-; CHECK-NEXT:    cmge v16.8h, v6.8h, #0
-; CHECK-NEXT:    cmeq v3.8h, v2.8h, v3.8h
-; CHECK-NEXT:    cmeq v2.8h, v2.8h, v16.8h
-; CHECK-NEXT:    bic v16.16b, v4.16b, v7.16b
-; CHECK-NEXT:    bic v7.8h, #128, lsl #8
-; CHECK-NEXT:    orr v7.16b, v7.16b, v16.16b
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q3, q2, [x1]
+; CHECK-NEXT:    mvni v5.8h, #128, lsl #8
+; CHECK-NEXT:    mvni v4.8h, #128, lsl #8
+; CHECK-NEXT:    add v6.8h, v1.8h, v2.8h
 ; CHECK-NEXT:    cmlt v16.8h, v6.8h, #0
-; CHECK-NEXT:    bic v4.16b, v4.16b, v16.16b
-; CHECK-NEXT:    bic v16.8h, #128, lsl #8
+; CHECK-NEXT:    add v7.8h, v0.8h, v3.8h
+; CHECK-NEXT:    mvn v17.16b, v16.16b
+; CHECK-NEXT:    bsl v5.16b, v16.16b, v17.16b
+; CHECK-NEXT:    cmlt v16.8h, v7.8h, #0
+; CHECK-NEXT:    mvn v17.16b, v16.16b
+; CHECK-NEXT:    bsl v4.16b, v16.16b, v17.16b
+; CHECK-NEXT:    cmge v2.8h, v2.8h, #0
+; CHECK-NEXT:    cmge v1.8h, v1.8h, #0
+; CHECK-NEXT:    cmge v16.8h, v6.8h, #0
+; CHECK-NEXT:    cmge v3.8h, v3.8h, #0
+; CHECK-NEXT:    cmge v0.8h, v0.8h, #0
+; CHECK-NEXT:    cmeq v2.8h, v1.8h, v2.8h
+; CHECK-NEXT:    cmeq v1.8h, v1.8h, v16.8h
+; CHECK-NEXT:    cmge v16.8h, v7.8h, #0
+; CHECK-NEXT:    cmeq v3.8h, v0.8h, v3.8h
+; CHECK-NEXT:    cmeq v0.8h, v0.8h, v16.8h
+; CHECK-NEXT:    mvn v1.16b, v1.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
-; CHECK-NEXT:    orr v4.16b, v16.16b, v4.16b
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    and v1.16b, v3.16b, v2.16b
-; CHECK-NEXT:    bsl v0.16b, v7.16b, v5.16b
-; CHECK-NEXT:    bsl v1.16b, v4.16b, v6.16b
-; CHECK-NEXT:    str q1, [x2]
-; CHECK-NEXT:    str d0, [x2, #16]
+; CHECK-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-NEXT:    bsl v1.16b, v5.16b, v6.16b
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v7.16b
+; CHECK-NEXT:    str q0, [x2]
+; CHECK-NEXT:    str d1, [x2, #16]
 ; CHECK-NEXT:    ret
   %x = load <12 x i16>, <12 x i16>* %px
   %y = load <12 x i16>, <12 x i16>* %py
@@ -541,18 +533,17 @@ define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr h0, [x0]
 ; CHECK-NEXT:    ldr h1, [x1]
-; CHECK-NEXT:    movi v2.4h, #128, lsl #8
+; CHECK-NEXT:    mvni v2.4h, #128, lsl #8
 ; CHECK-NEXT:    add v3.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    cmge v1.4h, v1.4h, #0
 ; CHECK-NEXT:    cmge v0.4h, v0.4h, #0
-; CHECK-NEXT:    cmge v4.4h, v3.4h, #0
-; CHECK-NEXT:    cmeq v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmeq v0.4h, v0.4h, v4.4h
+; CHECK-NEXT:    cmge v5.4h, v3.4h, #0
 ; CHECK-NEXT:    cmlt v4.4h, v3.4h, #0
-; CHECK-NEXT:    bic v2.8b, v2.8b, v4.8b
-; CHECK-NEXT:    bic v4.4h, #128, lsl #8
+; CHECK-NEXT:    cmeq v1.4h, v0.4h, v1.4h
+; CHECK-NEXT:    cmeq v0.4h, v0.4h, v5.4h
+; CHECK-NEXT:    mvn v5.8b, v4.8b
 ; CHECK-NEXT:    mvn v0.8b, v0.8b
-; CHECK-NEXT:    orr v2.8b, v4.8b, v2.8b
+; CHECK-NEXT:    bsl v2.8b, v4.8b, v5.8b
 ; CHECK-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
 ; CHECK-NEXT:    str h0, [x2]
@@ -618,15 +609,14 @@ define <2 x i32> @v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; CHECK-NEXT:    add v2.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    cmge v1.2s, v1.2s, #0
 ; CHECK-NEXT:    cmge v0.2s, v0.2s, #0
-; CHECK-NEXT:    cmge v4.2s, v2.2s, #0
-; CHECK-NEXT:    movi v3.2s, #128, lsl #24
-; CHECK-NEXT:    cmeq v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    cmeq v0.2s, v0.2s, v4.2s
+; CHECK-NEXT:    cmge v5.2s, v2.2s, #0
 ; CHECK-NEXT:    cmlt v4.2s, v2.2s, #0
-; CHECK-NEXT:    bic v3.8b, v3.8b, v4.8b
-; CHECK-NEXT:    bic v4.2s, #128, lsl #24
+; CHECK-NEXT:    cmeq v1.2s, v0.2s, v1.2s
+; CHECK-NEXT:    cmeq v0.2s, v0.2s, v5.2s
+; CHECK-NEXT:    mvni v3.2s, #128, lsl #24
+; CHECK-NEXT:    mvn v5.8b, v4.8b
 ; CHECK-NEXT:    mvn v0.8b, v0.8b
-; CHECK-NEXT:    orr v3.8b, v4.8b, v3.8b
+; CHECK-NEXT:    bsl v3.8b, v4.8b, v5.8b
 ; CHECK-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    bsl v0.8b, v3.8b, v2.8b
 ; CHECK-NEXT:    ret
@@ -640,15 +630,14 @@ define <4 x i32> @v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-NEXT:    add v2.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    cmge v1.4s, v1.4s, #0
 ; CHECK-NEXT:    cmge v0.4s, v0.4s, #0
-; CHECK-NEXT:    cmge v4.4s, v2.4s, #0
-; CHECK-NEXT:    movi v3.4s, #128, lsl #24
-; CHECK-NEXT:    cmeq v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, v4.4s
+; CHECK-NEXT:    cmge v5.4s, v2.4s, #0
 ; CHECK-NEXT:    cmlt v4.4s, v2.4s, #0
-; CHECK-NEXT:    bic v3.16b, v3.16b, v4.16b
-; CHECK-NEXT:    bic v4.4s, #128, lsl #24
+; CHECK-NEXT:    cmeq v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, v5.4s
+; CHECK-NEXT:    mvni v3.4s, #128, lsl #24
+; CHECK-NEXT:    mvn v5.16b, v4.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    orr v3.16b, v4.16b, v3.16b
+; CHECK-NEXT:    bsl v3.16b, v4.16b, v5.16b
 ; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    bsl v0.16b, v3.16b, v2.16b
 ; CHECK-NEXT:    ret
@@ -660,32 +649,31 @@ define <8 x i32> @v8i32(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; CHECK-LABEL: v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v4.4s, v0.4s, v2.4s
+; CHECK-NEXT:    cmlt v16.4s, v4.4s, #0
+; CHECK-NEXT:    mvni v6.4s, #128, lsl #24
+; CHECK-NEXT:    add v7.4s, v1.4s, v3.4s
+; CHECK-NEXT:    mvn v17.16b, v16.16b
+; CHECK-NEXT:    bsl v6.16b, v16.16b, v17.16b
+; CHECK-NEXT:    cmlt v16.4s, v7.4s, #0
+; CHECK-NEXT:    mvni v5.4s, #128, lsl #24
+; CHECK-NEXT:    mvn v17.16b, v16.16b
+; CHECK-NEXT:    bsl v5.16b, v16.16b, v17.16b
 ; CHECK-NEXT:    cmge v2.4s, v2.4s, #0
 ; CHECK-NEXT:    cmge v0.4s, v0.4s, #0
-; CHECK-NEXT:    add v6.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    cmge v16.4s, v4.4s, #0
-; CHECK-NEXT:    movi v5.4s, #128, lsl #24
 ; CHECK-NEXT:    cmge v3.4s, v3.4s, #0
 ; CHECK-NEXT:    cmge v1.4s, v1.4s, #0
-; CHECK-NEXT:    cmlt v7.4s, v4.4s, #0
 ; CHECK-NEXT:    cmeq v2.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, v16.4s
-; CHECK-NEXT:    cmge v16.4s, v6.4s, #0
+; CHECK-NEXT:    cmge v16.4s, v7.4s, #0
 ; CHECK-NEXT:    cmeq v3.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    cmeq v1.4s, v1.4s, v16.4s
-; CHECK-NEXT:    bic v16.16b, v5.16b, v7.16b
-; CHECK-NEXT:    bic v7.4s, #128, lsl #24
-; CHECK-NEXT:    orr v7.16b, v7.16b, v16.16b
-; CHECK-NEXT:    cmlt v16.4s, v6.4s, #0
-; CHECK-NEXT:    bic v5.16b, v5.16b, v16.16b
-; CHECK-NEXT:    bic v16.4s, #128, lsl #24
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    orr v5.16b, v16.16b, v5.16b
 ; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    and v1.16b, v3.16b, v1.16b
-; CHECK-NEXT:    bsl v0.16b, v7.16b, v4.16b
-; CHECK-NEXT:    bsl v1.16b, v5.16b, v6.16b
+; CHECK-NEXT:    bsl v0.16b, v6.16b, v4.16b
+; CHECK-NEXT:    bsl v1.16b, v5.16b, v7.16b
 ; CHECK-NEXT:    ret
   %z = call <8 x i32> @llvm.sadd.sat.v8i32(<8 x i32> %x, <8 x i32> %y)
   ret <8 x i32> %z
@@ -694,59 +682,58 @@ define <8 x i32> @v8i32(<8 x i32> %x, <8 x i32> %y) nounwind {
 define <16 x i32> @v16i32(<16 x i32> %x, <16 x i32> %y) nounwind {
 ; CHECK-LABEL: v16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v18.4s, v1.4s, v5.4s
-; CHECK-NEXT:    cmge v5.4s, v5.4s, #0
-; CHECK-NEXT:    cmge v1.4s, v1.4s, #0
-; CHECK-NEXT:    add v19.4s, v2.4s, v6.4s
-; CHECK-NEXT:    cmge v24.4s, v18.4s, #0
 ; CHECK-NEXT:    add v16.4s, v0.4s, v4.4s
-; CHECK-NEXT:    cmge v6.4s, v6.4s, #0
-; CHECK-NEXT:    cmge v2.4s, v2.4s, #0
-; CHECK-NEXT:    add v20.4s, v3.4s, v7.4s
-; CHECK-NEXT:    cmeq v5.4s, v1.4s, v5.4s
-; CHECK-NEXT:    cmeq v1.4s, v1.4s, v24.4s
-; CHECK-NEXT:    cmge v24.4s, v19.4s, #0
-; CHECK-NEXT:    movi v17.4s, #128, lsl #24
-; CHECK-NEXT:    cmge v7.4s, v7.4s, #0
-; CHECK-NEXT:    cmge v3.4s, v3.4s, #0
-; CHECK-NEXT:    cmlt v21.4s, v16.4s, #0
-; CHECK-NEXT:    cmeq v6.4s, v2.4s, v6.4s
-; CHECK-NEXT:    cmeq v2.4s, v2.4s, v24.4s
-; CHECK-NEXT:    cmge v24.4s, v20.4s, #0
+; CHECK-NEXT:    cmlt v24.4s, v16.4s, #0
+; CHECK-NEXT:    mvni v18.4s, #128, lsl #24
+; CHECK-NEXT:    add v19.4s, v1.4s, v5.4s
+; CHECK-NEXT:    mvn v25.16b, v24.16b
+; CHECK-NEXT:    bsl v18.16b, v24.16b, v25.16b
+; CHECK-NEXT:    cmlt v24.4s, v19.4s, #0
+; CHECK-NEXT:    mvni v20.4s, #128, lsl #24
+; CHECK-NEXT:    add v21.4s, v2.4s, v6.4s
+; CHECK-NEXT:    mvn v25.16b, v24.16b
+; CHECK-NEXT:    bsl v20.16b, v24.16b, v25.16b
+; CHECK-NEXT:    cmlt v24.4s, v21.4s, #0
+; CHECK-NEXT:    mvni v22.4s, #128, lsl #24
+; CHECK-NEXT:    add v23.4s, v3.4s, v7.4s
+; CHECK-NEXT:    mvn v25.16b, v24.16b
+; CHECK-NEXT:    bsl v22.16b, v24.16b, v25.16b
+; CHECK-NEXT:    cmlt v24.4s, v23.4s, #0
+; CHECK-NEXT:    mvni v17.4s, #128, lsl #24
+; CHECK-NEXT:    mvn v25.16b, v24.16b
+; CHECK-NEXT:    bsl v17.16b, v24.16b, v25.16b
 ; CHECK-NEXT:    cmge v4.4s, v4.4s, #0
 ; CHECK-NEXT:    cmge v0.4s, v0.4s, #0
-; CHECK-NEXT:    cmge v22.4s, v16.4s, #0
-; CHECK-NEXT:    cmlt v23.4s, v18.4s, #0
+; CHECK-NEXT:    cmge v24.4s, v16.4s, #0
+; CHECK-NEXT:    cmge v5.4s, v5.4s, #0
+; CHECK-NEXT:    cmge v1.4s, v1.4s, #0
+; CHECK-NEXT:    cmeq v4.4s, v0.4s, v4.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, v24.4s
+; CHECK-NEXT:    cmge v24.4s, v19.4s, #0
+; CHECK-NEXT:    cmge v6.4s, v6.4s, #0
+; CHECK-NEXT:    cmge v2.4s, v2.4s, #0
+; CHECK-NEXT:    cmeq v5.4s, v1.4s, v5.4s
+; CHECK-NEXT:    cmeq v1.4s, v1.4s, v24.4s
+; CHECK-NEXT:    cmge v24.4s, v21.4s, #0
+; CHECK-NEXT:    cmge v7.4s, v7.4s, #0
+; CHECK-NEXT:    cmge v3.4s, v3.4s, #0
+; CHECK-NEXT:    cmeq v6.4s, v2.4s, v6.4s
+; CHECK-NEXT:    cmeq v2.4s, v2.4s, v24.4s
+; CHECK-NEXT:    cmge v24.4s, v23.4s, #0
 ; CHECK-NEXT:    cmeq v7.4s, v3.4s, v7.4s
 ; CHECK-NEXT:    cmeq v3.4s, v3.4s, v24.4s
-; CHECK-NEXT:    bic v24.16b, v17.16b, v21.16b
-; CHECK-NEXT:    bic v21.4s, #128, lsl #24
-; CHECK-NEXT:    cmeq v4.4s, v0.4s, v4.4s
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, v22.4s
-; CHECK-NEXT:    cmlt v22.4s, v19.4s, #0
-; CHECK-NEXT:    orr v21.16b, v21.16b, v24.16b
-; CHECK-NEXT:    bic v24.16b, v17.16b, v23.16b
-; CHECK-NEXT:    bic v23.4s, #128, lsl #24
-; CHECK-NEXT:    orr v23.16b, v23.16b, v24.16b
-; CHECK-NEXT:    bic v24.16b, v17.16b, v22.16b
-; CHECK-NEXT:    bic v22.4s, #128, lsl #24
-; CHECK-NEXT:    orr v22.16b, v22.16b, v24.16b
-; CHECK-NEXT:    cmlt v24.4s, v20.4s, #0
-; CHECK-NEXT:    bic v17.16b, v17.16b, v24.16b
-; CHECK-NEXT:    bic v24.4s, #128, lsl #24
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
 ; CHECK-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-NEXT:    mvn v3.16b, v3.16b
-; CHECK-NEXT:    orr v17.16b, v24.16b, v17.16b
 ; CHECK-NEXT:    and v0.16b, v4.16b, v0.16b
 ; CHECK-NEXT:    and v1.16b, v5.16b, v1.16b
 ; CHECK-NEXT:    and v2.16b, v6.16b, v2.16b
 ; CHECK-NEXT:    and v3.16b, v7.16b, v3.16b
-; CHECK-NEXT:    bsl v0.16b, v21.16b, v16.16b
-; CHECK-NEXT:    bsl v1.16b, v23.16b, v18.16b
-; CHECK-NEXT:    bsl v2.16b, v22.16b, v19.16b
-; CHECK-NEXT:    bsl v3.16b, v17.16b, v20.16b
+; CHECK-NEXT:    bsl v0.16b, v18.16b, v16.16b
+; CHECK-NEXT:    bsl v1.16b, v20.16b, v19.16b
+; CHECK-NEXT:    bsl v2.16b, v22.16b, v21.16b
+; CHECK-NEXT:    bsl v3.16b, v17.16b, v23.16b
 ; CHECK-NEXT:    ret
   %z = call <16 x i32> @llvm.sadd.sat.v16i32(<16 x i32> %x, <16 x i32> %y)
   ret <16 x i32> %z

@@ -1136,11 +1136,8 @@ define void @clamp_i8(i32 %src, i8* %dst) {
 ; GENERIC-NEXT:    movl $127, %eax
 ; GENERIC-NEXT:    cmovlel %edi, %eax
 ; GENERIC-NEXT:    cmpl $-128, %eax
-; GENERIC-NEXT:    movb $-128, %cl
-; GENERIC-NEXT:    jl LBB21_2
-; GENERIC-NEXT:  ## %bb.1:
-; GENERIC-NEXT:    movl %eax, %ecx
-; GENERIC-NEXT:  LBB21_2:
+; GENERIC-NEXT:    movl $128, %ecx
+; GENERIC-NEXT:    cmovgel %eax, %ecx
 ; GENERIC-NEXT:    movb %cl, (%rsi)
 ; GENERIC-NEXT:    retq
 ;
@@ -1148,30 +1145,24 @@ define void @clamp_i8(i32 %src, i8* %dst) {
 ; ATOM:       ## %bb.0:
 ; ATOM-NEXT:    cmpl $127, %edi
 ; ATOM-NEXT:    movl $127, %eax
-; ATOM-NEXT:    movb $-128, %cl
+; ATOM-NEXT:    movl $128, %ecx
 ; ATOM-NEXT:    cmovlel %edi, %eax
 ; ATOM-NEXT:    cmpl $-128, %eax
-; ATOM-NEXT:    jl LBB21_2
-; ATOM-NEXT:  ## %bb.1:
-; ATOM-NEXT:    movl %eax, %ecx
-; ATOM-NEXT:  LBB21_2:
+; ATOM-NEXT:    cmovgel %eax, %ecx
 ; ATOM-NEXT:    movb %cl, (%rsi)
 ; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: clamp_i8:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; ATHLON-NEXT:    cmpl $127, %edx
-; ATHLON-NEXT:    movl $127, %ecx
-; ATHLON-NEXT:    cmovlel %edx, %ecx
-; ATHLON-NEXT:    cmpl $-128, %ecx
-; ATHLON-NEXT:    movb $-128, %dl
-; ATHLON-NEXT:    jl LBB21_2
-; ATHLON-NEXT:  ## %bb.1:
-; ATHLON-NEXT:    movl %ecx, %edx
-; ATHLON-NEXT:  LBB21_2:
-; ATHLON-NEXT:    movb %dl, (%eax)
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    cmpl $127, %ecx
+; ATHLON-NEXT:    movl $127, %edx
+; ATHLON-NEXT:    cmovlel %ecx, %edx
+; ATHLON-NEXT:    cmpl $-128, %edx
+; ATHLON-NEXT:    movl $128, %ecx
+; ATHLON-NEXT:    cmovgel %edx, %ecx
+; ATHLON-NEXT:    movb %cl, (%eax)
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: clamp_i8:

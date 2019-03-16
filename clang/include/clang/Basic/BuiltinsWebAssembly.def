@@ -37,7 +37,7 @@ BUILTIN(__builtin_wasm_max_f64, "ddd", "nc")
 
 // Exception handling builtins.
 TARGET_BUILTIN(__builtin_wasm_throw, "vUiv*", "r", "exception-handling")
-TARGET_BUILTIN(__builtin_wasm_rethrow, "v", "r", "exception-handling")
+TARGET_BUILTIN(__builtin_wasm_rethrow_in_catch, "v", "r", "exception-handling")
 
 // Atomic wait and notify.
 BUILTIN(__builtin_wasm_atomic_wait_i32, "ii*iLLi", "n")

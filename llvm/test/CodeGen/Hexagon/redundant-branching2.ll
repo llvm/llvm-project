@@ -13,7 +13,7 @@ target triple = "hexagon-unknown--elf"
 declare void @f0() #0
 
 ; Function Attrs: nounwind
-define void @f1(i8* %a0, i32 %a1, i8* %a2, i32* %a3) #0 {
+define void @f1(i8* %a0, i32 %a1, i8* %a2, i32* %a3, i32 %a4) #0 {
 b0:
   br i1 undef, label %b8, label %b1
 
@@ -24,7 +24,7 @@ b1:                                               ; preds = %b0
 b2:                                               ; preds = %b1
   %v0 = getelementptr inbounds i8, i8* %a0, i32 undef
   %v1 = sub i32 0, %a1
-  %v2 = icmp eq i32 undef, undef
+  %v2 = icmp eq i32 %a1, %a4
   br label %b3
 
 b3:                                               ; preds = %b6, %b2
@@ -61,7 +61,7 @@ b6:                                               ; preds = %b5, %b4
   %v24 = add nuw nsw i32 %v23, %v19
   %v25 = add nsw i32 %v24, 0
   store i32 %v25, i32* %a3, align 4
-  %v26 = icmp eq i32 %v5, undef
+  %v26 = icmp eq i32 %v5, %a4
   br i1 %v26, label %b7, label %b3
 
 b7:                                               ; preds = %b6

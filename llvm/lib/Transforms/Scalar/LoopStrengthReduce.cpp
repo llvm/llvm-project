@@ -4423,7 +4423,9 @@ void LSRInstance::NarrowSearchSpaceByDetectingSupersets() {
              I = F.BaseRegs.begin(), E = F.BaseRegs.end(); I != E; ++I) {
           if (const SCEVConstant *C = dyn_cast<SCEVConstant>(*I)) {
             Formula NewF = F;
-            NewF.BaseOffset += C->getValue()->getSExtValue();
+            //FIXME: Formulas should store bitwidth to do wrapping properly.
+            //       See PR41034.
+            NewF.BaseOffset += (uint64_t)C->getValue()->getSExtValue();
             NewF.BaseRegs.erase(NewF.BaseRegs.begin() +
                                 (I - F.BaseRegs.begin()));
             if (LU.HasFormulaWithSameRegs(NewF)) {

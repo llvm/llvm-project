@@ -512,10 +512,22 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   LLT Ty = MRI.getType(DefReg);
   const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
 
+  assert(I.hasOneMemOperand());
   auto &MemOp = **I.memoperands_begin();
-  if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
-    LLVM_DEBUG(dbgs() << "Atomic load/store not supported yet\n");
-    return false;
+  if (MemOp.isAtomic()) {
+    // Note: for unordered operations, we rely on the fact the appropriate MMO
+    // is already on the instruction we're mutating, and thus we don't need to
+    // make any changes.  So long as we select an opcode which is capable of
+    // loading or storing the appropriate size atomically, the rest of the
+    // backend is required to respect the MMO state. 
+    if (!MemOp.isUnordered()) {
+      LLVM_DEBUG(dbgs() << "Atomic ordering not supported yet\n");
+      return false;
+    }
+    if (MemOp.getAlignment() < Ty.getSizeInBits()/8) {
+      LLVM_DEBUG(dbgs() << "Unaligned atomics not supported yet\n");
+      return false;
+    }
   }
 
   unsigned NewOpc = getLoadStoreOp(Ty, RB, Opc, MemOp.getAlignment());

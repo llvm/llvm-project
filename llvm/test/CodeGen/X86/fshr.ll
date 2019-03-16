@@ -36,19 +36,17 @@ define i8 @var_shift_i8(i8 %x, i8 %y, i8 %z) nounwind {
 ;
 ; X64-LABEL: var_shift_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    andb $7, %dl
+; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shrb %cl, %sil
+; X64-NEXT:    shrb %cl, %al
 ; X64-NEXT:    movb $8, %cl
 ; X64-NEXT:    subb %dl, %cl
 ; X64-NEXT:    shlb %cl, %dil
+; X64-NEXT:    orb %al, %dil
+; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    testb %dl, %dl
-; X64-NEXT:    je .LBB0_2
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    orb %sil, %dil
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:  .LBB0_2:
+; X64-NEXT:    cmovel %esi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %tmp = tail call i8 @llvm.fshr.i8(i8 %x, i8 %y, i8 %z)

@@ -403,11 +403,9 @@ void ARMPassConfig::addIRPasses() {
 
   TargetPassConfig::addIRPasses();
 
-  // Run the parallel DSP pass and its helpers.
-  if (getOptLevel() == CodeGenOpt::Aggressive) {
-    addPass(createEarlyCSEPass());
+  // Run the parallel DSP pass.
+  if (getOptLevel() == CodeGenOpt::Aggressive) 
     addPass(createARMParallelDSPPass());
-  }
 
   // Match interleaved memory accesses to ldN/stN intrinsics.
   if (TM->getOptLevel() != CodeGenOpt::None)

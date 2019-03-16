@@ -519,6 +519,19 @@ bool TargetLowering::SimplifyDemandedBits(
 
   KnownBits Known2, KnownOut;
   switch (Op.getOpcode()) {
+  case ISD::SCALAR_TO_VECTOR: {
+    if (!DemandedElts[0])
+      return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
+
+    KnownBits SrcKnown;
+    SDValue Src = Op.getOperand(0);
+    unsigned SrcBitWidth = Src.getScalarValueSizeInBits();
+    APInt SrcDemandedBits = DemandedBits.zextOrSelf(SrcBitWidth);
+    if (SimplifyDemandedBits(Src, SrcDemandedBits, SrcKnown, TLO, Depth + 1))
+      return true;
+    Known = SrcKnown.zextOrTrunc(BitWidth, false);
+    break;
+  }
   case ISD::BUILD_VECTOR:
     // Collect the known bits that are shared by every constant vector element.
     Known.Zero.setAllBits(); Known.One.setAllBits();

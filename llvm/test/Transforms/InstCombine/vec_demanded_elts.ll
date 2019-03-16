@@ -620,10 +620,7 @@ define i32* @gep_splat_both(i32* %base, i64 %idx) {
 
 define <2 x i32*> @gep_all_lanes_undef(i32* %base, i64 %idx) {;
 ; CHECK-LABEL: @gep_all_lanes_undef(
-; CHECK-NEXT:    [[BASEVEC:%.*]] = insertelement <2 x i32*> undef, i32* [[BASE:%.*]], i32 0
-; CHECK-NEXT:    [[IDXVEC:%.*]] = insertelement <2 x i64> undef, i64 [[IDX:%.*]], i32 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x i32*> [[BASEVEC]], <2 x i64> [[IDXVEC]]
-; CHECK-NEXT:    ret <2 x i32*> [[GEP]]
+; CHECK-NEXT:    ret <2 x i32*> undef
 ;
   %basevec = insertelement <2 x i32*> undef, i32* %base, i32 0
   %idxvec = insertelement <2 x i64> undef, i64 %idx, i32 1
@@ -641,4 +638,3 @@ define i32* @gep_demanded_lane_undef(i32* %base, i64 %idx) {
   %ee = extractelement <2 x i32*> %gep, i32 1
   ret i32* %ee
 }
-

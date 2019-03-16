@@ -35,6 +35,15 @@ define <2 x double> @load_undefmask(<2 x double>* %ptr, <2 x double> %passthru) 
 
 }
 
+define <2 x double> @load_cemask(<2 x double>* %ptr, <2 x double> %passthru)  {
+; CHECK-LABEL: @load_cemask(
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* [[PTR:%.*]], i32 2, <2 x i1> <i1 true, i1 false>, <2 x double> [[PASSTHRU:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[RES]]
+;
+  %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %ptr, i32 2, <2 x i1> <i1 1, i1 trunc (i32 0 to i1)>, <2 x double> %passthru)
+  ret <2 x double> %res
+}
+
 define <2 x double> @load_lane0(<2 x double>* %ptr, double %pt)  {
 ; CHECK-LABEL: @load_lane0(
 ; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
@@ -48,7 +57,6 @@ define <2 x double> @load_lane0(<2 x double>* %ptr, double %pt)  {
   ret <2 x double> %res
 
 }
-
 
 define void @store_zeromask(<2 x double>* %ptr, <2 x double> %val)  {
 ; CHECK-LABEL: @store_zeromask(
@@ -67,6 +75,19 @@ define void @store_onemask(<2 x double>* %ptr, <2 x double> %val)  {
   call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> %val, <2 x double>* %ptr, i32 4, <2 x i1> <i1 1, i1 1>)
   ret void
 
+}
+
+define void @store_demandedelts(<2 x double>* %ptr, double %val)  {
+; CHECK-LABEL: @store_demandedelts(
+; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i32 0
+; CHECK-NEXT:    [[VALVEC2:%.*]] = shufflevector <2 x double> [[VALVEC1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> [[VALVEC2]], <2 x double>* [[PTR:%.*]], i32 4, <2 x i1> <i1 true, i1 false>)
+; CHECK-NEXT:    ret void
+;
+  %valvec1 = insertelement <2 x double> undef, double %val, i32 0
+  %valvec2 = insertelement <2 x double> %valvec1, double %val, i32 1
+  call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> %valvec2, <2 x double>* %ptr, i32 4, <2 x i1> <i1 true, i1 false>)
+  ret void
 }
 
 define <2 x double> @gather_zeromask(<2 x double*> %ptrs, <2 x double> %passthru)  {
@@ -114,3 +135,17 @@ define void @scatter_zeromask(<2 x double*> %ptrs, <2 x double> %val)  {
 
 }
 
+define void @scatter_demandedelts(double* %ptr, double %val)  {
+; CHECK-LABEL: @scatter_demandedelts(
+; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, double* [[PTR:%.*]], <2 x i64> <i64 0, i64 1>
+; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i32 0
+; CHECK-NEXT:    [[VALVEC2:%.*]] = shufflevector <2 x double> [[VALVEC1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> [[VALVEC2]], <2 x double*> [[PTRS]], i32 8, <2 x i1> <i1 true, i1 false>)
+; CHECK-NEXT:    ret void
+;
+  %ptrs = getelementptr double, double* %ptr, <2 x i64> <i64 0, i64 1>
+  %valvec1 = insertelement <2 x double> undef, double %val, i32 0
+  %valvec2 = insertelement <2 x double> %valvec1, double %val, i32 1
+  call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> %valvec2, <2 x double*> %ptrs, i32 8, <2 x i1> <i1 true, i1 false>)
+  ret void
+}

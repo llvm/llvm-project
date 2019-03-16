@@ -28,10 +28,8 @@ static char const *cons_text_c[] = {
     "\"sections\"",
     "work-sharing", /* this is not called "single" because of lowering of
                        "sections" pragmas */
-    "\"taskq\"", "\"taskq\"", "\"taskq ordered\"", "\"critical\"",
-    "\"ordered\"", /* in PARALLEL */
+    "\"critical\"", "\"ordered\"", /* in PARALLEL */
     "\"ordered\"", /* in PDO */
-    "\"ordered\"", /* in TASKQ */
     "\"master\"", "\"reduce\"", "\"barrier\""};
 
 #define get_src(ident) ((ident) == NULL ? NULL : (ident)->psource)
@@ -214,9 +212,7 @@ void __kmp_check_workshare(int gtid, enum cons_type ct, ident_t const *ident) {
   if (p->stack_top >= p->stack_size) {
     __kmp_expand_cons_stack(gtid, p);
   }
-  if (p->w_top > p->p_top &&
-      !(IS_CONS_TYPE_TASKQ(p->stack_data[p->w_top].type) &&
-        IS_CONS_TYPE_TASKQ(ct))) {
+  if (p->w_top > p->p_top) {
     // We are already in a WORKSHARE construct for this PARALLEL region.
     __kmp_error_construct2(kmp_i18n_msg_CnsInvalidNesting, ct, ident,
                            &p->stack_data[p->w_top]);
@@ -257,8 +253,7 @@ __kmp_check_sync( int gtid, enum cons_type ct, ident_t const * ident, kmp_user_l
   if (p->stack_top >= p->stack_size)
     __kmp_expand_cons_stack(gtid, p);
 
-  if (ct == ct_ordered_in_parallel || ct == ct_ordered_in_pdo ||
-      ct == ct_ordered_in_taskq) {
+  if (ct == ct_ordered_in_parallel || ct == ct_ordered_in_pdo) {
     if (p->w_top <= p->p_top) {
 /* we are not in a worksharing construct */
 #ifdef BUILD_PARALLEL_ORDERED
@@ -270,13 +265,8 @@ __kmp_check_sync( int gtid, enum cons_type ct, ident_t const * ident, kmp_user_l
     } else {
       /* inside a WORKSHARING construct for this PARALLEL region */
       if (!IS_CONS_TYPE_ORDERED(p->stack_data[p->w_top].type)) {
-        if (p->stack_data[p->w_top].type == ct_taskq) {
-          __kmp_error_construct2(kmp_i18n_msg_CnsNotInTaskConstruct, ct, ident,
-                                 &p->stack_data[p->w_top]);
-        } else {
-          __kmp_error_construct2(kmp_i18n_msg_CnsNoOrderedClause, ct, ident,
-                                 &p->stack_data[p->w_top]);
-        }
+        __kmp_error_construct2(kmp_i18n_msg_CnsNoOrderedClause, ct, ident,
+                               &p->stack_data[p->w_top]);
       }
     }
     if (p->s_top > p->p_top && p->s_top > p->w_top) {
@@ -288,10 +278,8 @@ __kmp_check_sync( int gtid, enum cons_type ct, ident_t const * ident, kmp_user_l
 
       if (stack_type == ct_critical ||
           ((stack_type == ct_ordered_in_parallel ||
-            stack_type == ct_ordered_in_pdo ||
-            stack_type ==
-                ct_ordered_in_taskq) && /* C doesn't allow named ordered;
-                                           ordered in ordered gets error */
+            stack_type == ct_ordered_in_pdo) &&
+           /* C doesn't allow named ordered; ordered in ordered gets error */
            p->stack_data[index].ident != NULL &&
            (p->stack_data[index].ident->flags & KMP_IDENT_KMPC))) {
         /* we are in ORDERED which is inside an ORDERED or CRITICAL construct */
@@ -399,9 +387,8 @@ enum cons_type __kmp_pop_workshare(int gtid, enum cons_type ct,
 
   if (tos != p->w_top ||
       (p->stack_data[tos].type != ct &&
-       // below are two exceptions to the rule that construct types must match
-       !(p->stack_data[tos].type == ct_pdo_ordered && ct == ct_pdo) &&
-       !(p->stack_data[tos].type == ct_task_ordered && ct == ct_task))) {
+       // below is the exception to the rule that construct types must match
+       !(p->stack_data[tos].type == ct_pdo_ordered && ct == ct_pdo))) {
     __kmp_check_null_func();
     __kmp_error_construct2(kmp_i18n_msg_CnsExpectedEnd, ct, ident,
                            &p->stack_data[tos]);
