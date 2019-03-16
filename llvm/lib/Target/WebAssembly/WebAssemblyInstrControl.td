@@ -144,7 +144,13 @@ defm THROW : I<(outs), (ins event_op:$tag, variable_ops),
                (outs), (ins event_op:$tag),
                [(WebAssemblythrow (WebAssemblywrapper texternalsym:$tag))],
                "throw   \t$tag", "throw   \t$tag", 0x08>;
-defm RETHROW : NRI<(outs), (ins), [(int_wasm_rethrow)], "rethrow", 0x09>;
+defm RETHROW : I<(outs), (ins EXCEPT_REF:$exn), (outs), (ins),
+                 [], "rethrow \t$exn", "rethrow", 0x09>;
+// Pseudo instruction to be the lowering target of int_wasm_rethrow_in_catch
+// intrinsic. Will be converted to the real rethrow instruction later.
+let isPseudo = 1 in
+defm RETHROW_IN_CATCH : NRI<(outs), (ins), [(int_wasm_rethrow_in_catch)],
+                            "rethrow_in_catch", 0>;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
 // Region within which an exception is caught: try / end_try

@@ -161,9 +161,17 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
       Changed = true;
       break;
     }
-    case WebAssembly::CLEANUPRET: {
-      // Replace a cleanupret with a rethrow
-      BuildMI(MBB, TI, TI->getDebugLoc(), TII.get(WebAssembly::RETHROW));
+    case WebAssembly::CLEANUPRET:
+    case WebAssembly::RETHROW_IN_CATCH: {
+      // Replace a cleanupret/rethrow_in_catch with a rethrow
+      auto *EHPad = getMatchingEHPad(TI);
+      auto CatchPos = EHPad->begin();
+      if (CatchPos->isEHLabel()) // EH pad starts with an EH label
+        ++CatchPos;
+      MachineInstr *Catch = &*CatchPos;
+      unsigned ExnReg = Catch->getOperand(0).getReg();
+      BuildMI(MBB, TI, TI->getDebugLoc(), TII.get(WebAssembly::RETHROW))
+          .addReg(ExnReg);
       TI->eraseFromParent();
       Changed = true;
       break;
@@ -191,7 +199,8 @@ bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
       SmallVector<MachineBasicBlock *, 8> Succs(MBB.succ_begin(),
                                                 MBB.succ_end());
       for (auto *Succ : Succs)
-        MBB.removeSuccessor(Succ);
+        if (!Succ->isEHPad())
+          MBB.removeSuccessor(Succ);
       eraseDeadBBsAndChildren(Succs);
     }
   }
@@ -337,7 +346,7 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
       BuildMI(ElseMBB, DL, TII.get(WebAssembly::UNREACHABLE));
 
     } else {
-      BuildMI(ElseMBB, DL, TII.get(WebAssembly::RETHROW));
+      BuildMI(ElseMBB, DL, TII.get(WebAssembly::RETHROW)).addReg(ExnReg);
       if (EHInfo->hasEHPadUnwindDest(EHPad))
         ElseMBB->addSuccessor(EHInfo->getEHPadUnwindDest(EHPad));
     }

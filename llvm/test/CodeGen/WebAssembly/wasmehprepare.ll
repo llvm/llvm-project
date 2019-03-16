@@ -54,7 +54,7 @@ catch:                                            ; preds = %catch.start
 ; CHECK-NEXT:  call i8* @__cxa_begin_catch(i8* %[[EXN]])
 
 rethrow:                                          ; preds = %catch.start
-  call void @__cxa_rethrow() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
   unreachable
 
 try.cont:                                         ; preds = %entry, %catch
@@ -125,7 +125,7 @@ catch4:                                           ; preds = %catch.start3
   catchret from %6 to label %try.cont7
 
 rethrow:                                          ; preds = %catch.start3
-  call void @__cxa_rethrow() [ "funclet"(token %6) ]
+  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %6) ]
   unreachable
 
 try.cont7:                                        ; preds = %try.cont, %catch4
@@ -189,7 +189,7 @@ catch6:                                           ; preds = %catch.start3
   catchret from %7 to label %try.cont
 
 rethrow5:                                         ; preds = %catch.start3
-  invoke void @__cxa_rethrow() [ "funclet"(token %7) ]
+  invoke void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %7) ]
           to label %unreachable unwind label %ehcleanup
 
 try.cont:                                         ; preds = %catch, %catch6
@@ -197,7 +197,7 @@ try.cont:                                         ; preds = %catch, %catch6
   catchret from %1 to label %try.cont9
 
 rethrow:                                          ; preds = %catch.start
-  call void @__cxa_rethrow() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
   unreachable
 
 try.cont9:                                        ; preds = %entry, %try.cont
@@ -392,34 +392,6 @@ merge:                                            ; preds = %bb.true.0, %bb.fals
   ret i32 0
 }
 
-; Tests if instructions after a call to @llvm.wasm.rethrow are deleted and the
-; BB's dead children are deleted.
-
-; CHECK-LABEL: @test6
-define i32 @test6(i1 %b, i8* %p) {
-entry:
-  br i1 %b, label %bb.true, label %bb.false
-
-; CHECK:      bb.true:
-; CHECK-NEXT:   call void @llvm.wasm.rethrow()
-; CHECK-NEXT:   unreachable
-bb.true:                                          ; preds = %entry
-  call void @llvm.wasm.rethrow()
-  br label %bb.true.0
-
-; CHECK-NOT:  bb.true.0
-bb.true.0:                                        ; preds = %bb.true
-  br label %merge
-
-; CHECK:      bb.false
-bb.false:                                         ; preds = %entry
-  br label %merge
-
-; CHECK:      merge
-merge:                                            ; preds = %bb.true.0, %bb.false
-  ret i32 0
-}
-
 declare void @foo()
 declare void @bar(i32)
 declare %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* returned)
@@ -428,10 +400,9 @@ declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
 declare i32 @llvm.eh.typeid.for(i8*)
 declare void @llvm.wasm.throw(i32, i8*)
-declare void @llvm.wasm.rethrow()
+declare void @llvm.wasm.rethrow.in.catch()
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
-declare void @__cxa_rethrow()
 declare void @__clang_call_terminate(i8*)
 
 ; CHECK-DAG: declare void @llvm.wasm.landingpad.index(token, i32)

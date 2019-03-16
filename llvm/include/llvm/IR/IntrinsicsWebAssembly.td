@@ -41,7 +41,7 @@ def int_wasm_trunc_saturate_unsigned : Intrinsic<[llvm_anyint_ty],
 // throw / rethrow
 def int_wasm_throw : Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty],
                                [Throws, IntrNoReturn]>;
-def int_wasm_rethrow : Intrinsic<[], [], [Throws, IntrNoReturn]>;
+def int_wasm_rethrow_in_catch : Intrinsic<[], [], [Throws, IntrNoReturn]>;
 
 // Since wasm does not use landingpad instructions, these instructions return
 // exception pointer and selector values until we lower them in WasmEHPrepare.
