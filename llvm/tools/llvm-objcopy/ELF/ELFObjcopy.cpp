@@ -229,7 +229,7 @@ static bool isCompressable(const SectionBase &Section) {
 }
 
 static void replaceDebugSections(
-    const CopyConfig &Config, Object &Obj, SectionPred &RemovePred,
+    Object &Obj, SectionPred &RemovePred,
     function_ref<bool(const SectionBase &)> shouldReplace,
     function_ref<SectionBase *(const SectionBase *)> addSection) {
   // Build a list of the debug sections we are going to replace.
@@ -483,14 +483,14 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
   }
 
   if (Config.CompressionType != DebugCompressionType::None)
-    replaceDebugSections(Config, Obj, RemovePred, isCompressable,
+    replaceDebugSections(Obj, RemovePred, isCompressable,
                          [&Config, &Obj](const SectionBase *S) {
                            return &Obj.addSection<CompressedSection>(
                                *S, Config.CompressionType);
                          });
   else if (Config.DecompressDebugSections)
     replaceDebugSections(
-        Config, Obj, RemovePred,
+        Obj, RemovePred,
         [](const SectionBase &S) { return isa<CompressedSection>(&S); },
         [&Obj](const SectionBase *S) {
           auto CS = cast<CompressedSection>(S);

@@ -1986,8 +1986,7 @@ define <16 x i8> @PR31364(i8* nocapture readonly %a, i8* nocapture readonly %b) 
 ; SSSE3-NEXT:    movzbl (%rsi), %ecx
 ; SSSE3-NEXT:    shll $8, %ecx
 ; SSSE3-NEXT:    orl %eax, %ecx
-; SSSE3-NEXT:    movzwl %cx, %eax
-; SSSE3-NEXT:    movd %eax, %xmm0
+; SSSE3-NEXT:    movd %ecx, %xmm0
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1],zero,xmm0[1,1,1,1,1,0,0,0]
 ; SSSE3-NEXT:    retq
 ;

@@ -107,7 +107,7 @@ protected:
   Buffer &Out;
 
 public:
-  virtual ~SectionWriter(){};
+  virtual ~SectionWriter() = default;
 
   void visit(const Section &Sec) override;
   void visit(const OwnedDataSection &Sec) override;

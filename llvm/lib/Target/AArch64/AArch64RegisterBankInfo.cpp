@@ -720,10 +720,13 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
 
     // Get the instruction that defined the source operand reg, and check if
-    // it's a floating point operation.
+    // it's a floating point operation. Or, if it's a type like s16 which
+    // doesn't have a exact size gpr register class.
     MachineInstr *DefMI = MRI.getVRegDef(VReg);
     unsigned DefOpc = DefMI->getOpcode();
-    if (isPreISelGenericFloatingPointOpcode(DefOpc)) {
+    const LLT SrcTy = MRI.getType(VReg);
+    if (isPreISelGenericFloatingPointOpcode(DefOpc) ||
+        SrcTy.getSizeInBits() < 32) {
       // Have a floating point op.
       // Make sure every operand gets mapped to a FPR register class.
       unsigned NumOperands = MI.getNumOperands();

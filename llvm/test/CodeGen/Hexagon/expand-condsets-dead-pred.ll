@@ -2,7 +2,7 @@
 ; REQUIRES: asserts
 
 ; Check for some output (as opposed to a crash).
-; CHECK: loop0
+; CHECK: fred
 
 target triple = "hexagon"
 

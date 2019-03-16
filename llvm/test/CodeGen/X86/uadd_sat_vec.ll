@@ -499,11 +499,9 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movb (%rdi), %al
 ; SSE-NEXT:    addb (%rsi), %al
-; SSE-NEXT:    movb $-1, %cl
-; SSE-NEXT:    jb .LBB13_2
-; SSE-NEXT:  # %bb.1:
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:  .LBB13_2:
+; SSE-NEXT:    movzbl %al, %eax
+; SSE-NEXT:    movl $255, %ecx
+; SSE-NEXT:    cmovael %eax, %ecx
 ; SSE-NEXT:    movb %cl, (%rdx)
 ; SSE-NEXT:    retq
 ;
@@ -511,11 +509,9 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movb (%rdi), %al
 ; AVX-NEXT:    addb (%rsi), %al
-; AVX-NEXT:    movb $-1, %cl
-; AVX-NEXT:    jb .LBB13_2
-; AVX-NEXT:  # %bb.1:
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:  .LBB13_2:
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    movl $255, %ecx
+; AVX-NEXT:    cmovael %eax, %ecx
 ; AVX-NEXT:    movb %cl, (%rdx)
 ; AVX-NEXT:    retq
   %x = load <1 x i8>, <1 x i8>* %px

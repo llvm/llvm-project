@@ -33,7 +33,6 @@
 ; CHECK:      Scalarize Masked Memory Intrinsics
 ; CHECK:      Expand reduction intrinsics
 ; CHECK:      Dominator Tree Construction
-; CHECK:      Early CSE
 ; CHECK:      Natural Loop Information
 ; CHECK:      Scalar Evolution Analysis
 ; CHECK:      Basic Alias Analysis (stateless AA impl)

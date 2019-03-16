@@ -4570,6 +4570,31 @@ bool ARMBaseInstrInfo::verifyInstruction(const MachineInstr &MI,
     ErrInfo = "Pseudo flag setting opcodes only exist in Selection DAG";
     return false;
   }
+  if (MI.getOpcode() == ARM::tMOVr && !Subtarget.hasV6Ops()) {
+    // Make sure we don't generate a lo-lo mov that isn't supported.
+    if (!ARM::hGPRRegClass.contains(MI.getOperand(0).getReg()) &&
+        !ARM::hGPRRegClass.contains(MI.getOperand(1).getReg())) {
+      ErrInfo = "Non-flag-setting Thumb1 mov is v6-only";
+      return false;
+    }
+  }
+  if (MI.getOpcode() == ARM::tPUSH ||
+      MI.getOpcode() == ARM::tPOP ||
+      MI.getOpcode() == ARM::tPOP_RET) {
+    for (int i = 2, e = MI.getNumOperands(); i < e; ++i) {
+      if (MI.getOperand(i).isImplicit() ||
+          !MI.getOperand(i).isReg())
+        continue;
+      unsigned Reg = MI.getOperand(i).getReg();
+      if (Reg < ARM::R0 || Reg > ARM::R7) {
+        if (!(MI.getOpcode() == ARM::tPUSH && Reg == ARM::LR) &&
+            !(MI.getOpcode() == ARM::tPOP_RET && Reg == ARM::PC)) {
+          ErrInfo = "Unsupported register in Thumb1 push/pop";
+          return false;
+        }
+      }
+    }
+  }
   return true;
 }
 

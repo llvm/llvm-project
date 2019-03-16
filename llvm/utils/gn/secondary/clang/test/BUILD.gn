@@ -120,6 +120,7 @@ group("test") {
     "//clang/utils/TableGen:clang-tblgen",
     "//clang/utils/hmaptool",
     "//llvm/tools/llc",
+    "//llvm/tools/llvm-as",
     "//llvm/tools/llvm-bcanalyzer",
     "//llvm/tools/llvm-cat",
     "//llvm/tools/llvm-config",

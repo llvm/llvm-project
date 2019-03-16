@@ -101,8 +101,7 @@ template <class T, class Context> struct MappingContextTraits {
 ///           io.enumCase(value, "green", cGreen);
 ///         }
 ///       };
-template<typename T>
-struct ScalarEnumerationTraits {
+template <typename T, typename Enable = void> struct ScalarEnumerationTraits {
   // Must provide:
   // static void enumeration(IO &io, T &value);
 };
@@ -118,8 +117,7 @@ struct ScalarEnumerationTraits {
 ///          io.bitSetCase(value, "round", flagRound);
 ///        }
 ///      };
-template<typename T>
-struct ScalarBitSetTraits {
+template <typename T, typename Enable = void> struct ScalarBitSetTraits {
   // Must provide:
   // static void bitset(IO &io, T &value);
 };
@@ -145,8 +143,7 @@ enum class QuotingType { None, Single, Double };
 ///      }
 ///      static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
 ///    };
-template<typename T>
-struct ScalarTraits {
+template <typename T, typename Enable = void> struct ScalarTraits {
   // Must provide:
   //
   // Function to write the value as a string:
@@ -980,7 +977,7 @@ yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
   bool DoClear;
   if ( io.beginBitSetScalar(DoClear) ) {
     if ( DoClear )
-      Val = static_cast<T>(0);
+      Val = T();
     ScalarBitSetTraits<T>::bitset(io, Val);
     io.endBitSetScalar();
   }
@@ -1245,12 +1242,14 @@ struct ScalarTraits<double> {
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
-// For endian types, we just use the existing ScalarTraits for the underlying
-// type.  This way endian aware types are supported whenever a ScalarTraits
-// is defined for the underlying type.
+// For endian types, we use existing scalar Traits class for the underlying
+// type.  This way endian aware types are supported whenever the traits are
+// defined for the underlying type.
 template <typename value_type, support::endianness endian, size_t alignment>
-struct ScalarTraits<support::detail::packed_endian_specific_integral<
-    value_type, endian, alignment>> {
+struct ScalarTraits<
+    support::detail::packed_endian_specific_integral<value_type, endian,
+                                                     alignment>,
+    typename std::enable_if<has_ScalarTraits<value_type>::value>::type> {
   using endian_type =
       support::detail::packed_endian_specific_integral<value_type, endian,
                                                        alignment>;
@@ -1268,6 +1267,38 @@ struct ScalarTraits<support::detail::packed_endian_specific_integral<
 
   static QuotingType mustQuote(StringRef Str) {
     return ScalarTraits<value_type>::mustQuote(Str);
+  }
+};
+
+template <typename value_type, support::endianness endian, size_t alignment>
+struct ScalarEnumerationTraits<
+    support::detail::packed_endian_specific_integral<value_type, endian,
+                                                     alignment>,
+    typename std::enable_if<
+        has_ScalarEnumerationTraits<value_type>::value>::type> {
+  using endian_type =
+      support::detail::packed_endian_specific_integral<value_type, endian,
+                                                       alignment>;
+
+  static void enumeration(IO &io, endian_type &E) {
+    value_type V = E;
+    ScalarEnumerationTraits<value_type>::enumeration(io, V);
+    E = V;
+  }
+};
+
+template <typename value_type, support::endianness endian, size_t alignment>
+struct ScalarBitSetTraits<
+    support::detail::packed_endian_specific_integral<value_type, endian,
+                                                     alignment>,
+    typename std::enable_if<has_ScalarBitSetTraits<value_type>::value>::type> {
+  using endian_type =
+      support::detail::packed_endian_specific_integral<value_type, endian,
+                                                       alignment>;
+  static void bitset(IO &io, endian_type &E) {
+    value_type V = E;
+    ScalarBitSetTraits<value_type>::bitset(io, V);
+    E = V;
   }
 };
 

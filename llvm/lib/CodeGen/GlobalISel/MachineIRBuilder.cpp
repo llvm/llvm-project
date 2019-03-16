@@ -242,8 +242,11 @@ MachineInstrBuilder MachineIRBuilder::buildBrIndirect(unsigned Tgt) {
 }
 
 MachineInstrBuilder MachineIRBuilder::buildCopy(const DstOp &Res,
-                                                const SrcOp &Op) {
-  return buildInstr(TargetOpcode::COPY, Res, Op);
+                                                const SrcOp &Op,
+                                                unsigned Subreg) {
+  auto Copy = buildInstr(TargetOpcode::COPY, Res, Op);
+  Copy->getOperand(1).setSubReg(Subreg);
+  return Copy;
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
@@ -913,9 +916,6 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
   case TargetOpcode::COPY:
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(SrcOps.size() == 1 && "Invalid Srcs");
-    assert(DstOps[0].getLLTTy(*getMRI()) == LLT() ||
-           SrcOps[0].getLLTTy(*getMRI()) == LLT() ||
-           DstOps[0].getLLTTy(*getMRI()) == SrcOps[0].getLLTTy(*getMRI()));
     break;
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_ICMP: {

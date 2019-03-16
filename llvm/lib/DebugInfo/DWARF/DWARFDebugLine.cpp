@@ -869,17 +869,36 @@ uint32_t DWARFDebugLine::LineTable::findRowInSeq(
   RowIter LastRow = Rows.begin() + Seq.LastRowIndex;
   LineTable::RowIter RowPos = std::lower_bound(
       FirstRow, LastRow, Row, DWARFDebugLine::Row::orderByAddress);
-  if (RowPos == LastRow) {
-    return Seq.LastRowIndex - 1;
-  }
+  // Since Address is in Seq, FirstRow <= RowPos < LastRow.
+  assert(FirstRow <= RowPos && RowPos < LastRow);
   assert(Seq.SectionIndex == RowPos->Address.SectionIndex);
-  uint32_t Index = Seq.FirstRowIndex + (RowPos - FirstRow);
-  if (RowPos->Address.Address > Address.Address) {
-    if (RowPos == FirstRow)
-      return UnknownRowIndex;
-    else
-      Index--;
+  if (RowPos->Address.Address != Address.Address) {
+    // lower_bound either lands on the RowPos with the same Address
+    // as the queried one, or on the first that's larger.
+    assert(RowPos->Address.Address > Address.Address);
+    // We know RowPos can't be FirstRow, in this case,
+    // because the queried Address is in Seq. So if it were
+    // FirstRow, then RowPos->Address.Address == Address.Address,
+    // and we wouldn't be here.
+    assert(RowPos != FirstRow);
+    --RowPos;
   }
+  // In some cases, e.g. first instruction in a function, the compiler generates
+  // two entries, both with the same address. We want the last one.
+  // There are 2 cases wrt. RowPos and the addresses in records before/after it:
+  // 1) RowPos's address is the one we looked for. In this case, we want to
+  // skip any potential empty ranges.
+  // 2) RowPos's address is less than the one we looked for. In that case, we
+  // arrived here by finding the first range with a greater address,
+  // then decrementing 1. If the address of this range is part of a sequence of
+  // empty ones, it is the last one.
+  // In either case, the loop below lands on the correct RowPos.
+  while (RowPos->Address.Address == (RowPos + 1)->Address.Address) {
+    ++RowPos;
+  }
+
+  assert(RowPos < LastRow);
+  uint32_t Index = Seq.FirstRowIndex + (RowPos - FirstRow);
   return Index;
 }
 

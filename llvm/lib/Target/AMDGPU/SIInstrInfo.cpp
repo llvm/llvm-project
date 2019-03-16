@@ -4320,8 +4320,10 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst,
     for (unsigned i = Inst.getNumOperands() - 1; i > 0; --i) {
       MachineOperand &Op = Inst.getOperand(i);
       if (Op.isReg() && Op.getReg() == AMDGPU::SCC) {
+        // Only propagate through live-def of SCC.
+        if (Op.isDef() && !Op.isDead())
+          addSCCDefUsersToVALUWorklist(Op, Inst, Worklist);
         Inst.RemoveOperand(i);
-        addSCCDefUsersToVALUWorklist(Inst, Worklist);
       }
     }
 
@@ -5014,19 +5016,23 @@ void SIInstrInfo::movePackToVALU(SetVectorType &Worklist,
   addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
 }
 
-void SIInstrInfo::addSCCDefUsersToVALUWorklist(
-    MachineInstr &SCCDefInst, SetVectorType &Worklist) const {
+void SIInstrInfo::addSCCDefUsersToVALUWorklist(MachineOperand &Op,
+                                               MachineInstr &SCCDefInst,
+                                               SetVectorType &Worklist) const {
+  // Ensure that def inst defines SCC, which is still live.
+  assert(Op.isReg() && Op.getReg() == AMDGPU::SCC && Op.isDef() &&
+         !Op.isDead() && Op.getParent() == &SCCDefInst);
   // This assumes that all the users of SCC are in the same block
   // as the SCC def.
-  for (MachineInstr &MI :
-       make_range(MachineBasicBlock::iterator(SCCDefInst),
-                      SCCDefInst.getParent()->end())) {
+  for (MachineInstr &MI : // Skip the def inst itself.
+       make_range(std::next(MachineBasicBlock::iterator(SCCDefInst)),
+                  SCCDefInst.getParent()->end())) {
+    // Check if SCC is used first.
+    if (MI.findRegisterUseOperandIdx(AMDGPU::SCC, false, &RI) != -1)
+      Worklist.insert(&MI);
     // Exit if we find another SCC def.
     if (MI.findRegisterDefOperandIdx(AMDGPU::SCC, false, false, &RI) != -1)
       return;
-
-    if (MI.findRegisterUseOperandIdx(AMDGPU::SCC, false, &RI) != -1)
-      Worklist.insert(&MI);
   }
 }
 
