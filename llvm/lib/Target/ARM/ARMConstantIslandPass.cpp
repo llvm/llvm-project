@@ -1835,6 +1835,16 @@ bool ARMConstantIslands::optimizeThumb2Instructions() {
   return MadeChange;
 }
 
+static bool registerDefinedBetween(unsigned Reg,
+                                   MachineBasicBlock::iterator From,
+                                   MachineBasicBlock::iterator To,
+                                   const TargetRegisterInfo *TRI) {
+  for (auto I = From; I != To; ++I)
+    if (I->modifiesRegister(Reg, TRI))
+      return true;
+  return false;
+}
+
 bool ARMConstantIslands::optimizeThumb2Branches() {
   bool MadeChange = false;
 
@@ -1899,32 +1909,56 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
     // because the cmp will be eliminated.
     unsigned BrOffset = getOffsetOf(Br.MI) + 4 - 2;
     unsigned DestOffset = BBInfo[DestBB->getNumber()].Offset;
-    if (BrOffset < DestOffset && (DestOffset - BrOffset) <= 126) {
-      MachineBasicBlock::iterator CmpMI = Br.MI;
-      if (CmpMI != Br.MI->getParent()->begin()) {
-        --CmpMI;
-        if (CmpMI->getOpcode() == ARM::tCMPi8) {
-          unsigned Reg = CmpMI->getOperand(0).getReg();
-          Pred = getInstrPredicate(*CmpMI, PredReg);
-          if (Pred == ARMCC::AL &&
-              CmpMI->getOperand(1).getImm() == 0 &&
-              isARMLowRegister(Reg)) {
-            MachineBasicBlock *MBB = Br.MI->getParent();
-            LLVM_DEBUG(dbgs() << "Fold: " << *CmpMI << " and: " << *Br.MI);
-            MachineInstr *NewBR =
-              BuildMI(*MBB, CmpMI, Br.MI->getDebugLoc(), TII->get(NewOpc))
-              .addReg(Reg).addMBB(DestBB,Br.MI->getOperand(0).getTargetFlags());
-            CmpMI->eraseFromParent();
-            Br.MI->eraseFromParent();
-            Br.MI = NewBR;
-            BBInfo[MBB->getNumber()].Size -= 2;
-            adjustBBOffsetsAfter(MBB);
-            ++NumCBZ;
-            MadeChange = true;
-          }
-        }
-      }
+    if (BrOffset >= DestOffset || (DestOffset - BrOffset) > 126)
+      continue;
+
+    // Search backwards to the instruction that defines CSPR
+    auto *TRI = STI->getRegisterInfo();
+    MachineBasicBlock::iterator CmpMI = Br.MI;
+    while (CmpMI != Br.MI->getParent()->begin()) {
+      --CmpMI;
+      if (CmpMI->modifiesRegister(ARM::CPSR, TRI))
+        break;
     }
+
+    // Check that this inst is a CMP r[0-7], #0 and that the register
+    // is not redefined between the cmp and the br.
+    if (CmpMI->getOpcode() != ARM::tCMPi8)
+      continue;
+    unsigned Reg = CmpMI->getOperand(0).getReg();
+    Pred = getInstrPredicate(*CmpMI, PredReg);
+    if (Pred != ARMCC::AL || CmpMI->getOperand(1).getImm() != 0)
+      continue;
+    if (registerDefinedBetween(Reg, CmpMI->getNextNode(), Br.MI, TRI))
+      continue;
+
+    // Check for Kill flags on Reg. If they are present remove them and set kill
+    // on the new CBZ.
+    MachineBasicBlock::iterator KillMI = Br.MI;
+    bool RegKilled = false;
+    do {
+      --KillMI;
+      if (KillMI->killsRegister(Reg, TRI)) {
+        KillMI->clearRegisterKills(Reg, TRI);
+        RegKilled = true;
+        break;
+      }
+    } while (KillMI != CmpMI);
+
+    // Create the new CBZ/CBNZ
+    MachineBasicBlock *MBB = Br.MI->getParent();
+    LLVM_DEBUG(dbgs() << "Fold: " << *CmpMI << " and: " << *Br.MI);
+    MachineInstr *NewBR =
+        BuildMI(*MBB, Br.MI, Br.MI->getDebugLoc(), TII->get(NewOpc))
+            .addReg(Reg, getKillRegState(RegKilled))
+            .addMBB(DestBB, Br.MI->getOperand(0).getTargetFlags());
+    CmpMI->eraseFromParent();
+    Br.MI->eraseFromParent();
+    Br.MI = NewBR;
+    BBInfo[MBB->getNumber()].Size -= 2;
+    adjustBBOffsetsAfter(MBB);
+    ++NumCBZ;
+    MadeChange = true;
   }
 
   return MadeChange;
@@ -2082,16 +2116,6 @@ static void RemoveDeadAddBetweenLEAAndJT(MachineInstr *LEAMI,
   LLVM_DEBUG(dbgs() << "Removing Dead Add: " << *RemovableAdd);
   RemovableAdd->eraseFromParent();
   DeadSize += 4;
-}
-
-static bool registerDefinedBetween(unsigned Reg,
-                                   MachineBasicBlock::iterator From,
-                                   MachineBasicBlock::iterator To,
-                                   const TargetRegisterInfo *TRI) {
-  for (auto I = From; I != To; ++I)
-    if (I->modifiesRegister(Reg, TRI))
-      return true;
-  return false;
 }
 
 /// optimizeThumb2JumpTables - Use tbb / tbh instructions to generate smaller

@@ -5426,9 +5426,20 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   SDValue AllOnes = DAG.getAllOnesConstant(dl, VT);
 
   if (Opcode == ISD::UADDSAT) {
+    if (getBooleanContents(VT) == ZeroOrNegativeOneBooleanContent) {
+      // (LHS + RHS) | OverflowMask
+      SDValue OverflowMask = DAG.getSExtOrTrunc(Overflow, dl, VT);
+      return DAG.getNode(ISD::OR, dl, VT, SumDiff, OverflowMask);
+    }
     // Overflow ? 0xffff.... : (LHS + RHS)
     return DAG.getSelect(dl, VT, Overflow, AllOnes, SumDiff);
   } else if (Opcode == ISD::USUBSAT) {
+    if (getBooleanContents(VT) == ZeroOrNegativeOneBooleanContent) {
+      // (LHS - RHS) & ~OverflowMask
+      SDValue OverflowMask = DAG.getSExtOrTrunc(Overflow, dl, VT);
+      SDValue Not = DAG.getNOT(dl, OverflowMask, VT);
+      return DAG.getNode(ISD::AND, dl, VT, SumDiff, Not);
+    }
     // Overflow ? 0 : (LHS - RHS)
     return DAG.getSelect(dl, VT, Overflow, Zero, SumDiff);
   } else {

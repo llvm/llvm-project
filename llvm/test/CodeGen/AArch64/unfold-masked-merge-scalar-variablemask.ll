@@ -359,8 +359,7 @@ define i32 @in_constant_varx_mone(i32 %x, i32 %y, i32 %mask) {
 define i32 @out_constant_varx_mone_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: out_constant_varx_mone_invmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic w8, w0, w2
-; CHECK-NEXT:    orr w0, w8, w2
+; CHECK-NEXT:    orr w0, w0, w2
 ; CHECK-NEXT:    ret
   %notmask = xor i32 %mask, -1
   %mx = and i32 %notmask, %x
@@ -442,8 +441,7 @@ define i32 @in_constant_varx_42_invmask(i32 %x, i32 %y, i32 %mask) {
 define i32 @out_constant_mone_vary(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: out_constant_mone_vary:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic w8, w1, w2
-; CHECK-NEXT:    orr w0, w2, w8
+; CHECK-NEXT:    orr w0, w1, w2
 ; CHECK-NEXT:    ret
   %notmask = xor i32 %mask, -1
   %mx = and i32 %mask, -1
