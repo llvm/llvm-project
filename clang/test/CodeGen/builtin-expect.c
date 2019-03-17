@@ -78,3 +78,20 @@ int switch_cond(int x) {
   return 0;
 }
 
+int variable_expected(int stuff) {
+// ALL-LABEL: define i32 @variable_expected(
+// O1: call i64 @llvm.expect.i64(i64 {{%.*}}, i64 {{%.*}})
+// O0-NOT: @llvm.expect
+
+  int res = 0;
+
+  switch (__builtin_expect(stuff, stuff)) {
+  case 0:
+    res = 1;
+    break;
+  default:
+    break;
+  }
+
+  return res;
+}
