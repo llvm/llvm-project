@@ -1,10 +1,8 @@
 /*  reducer_list.h                  -*- C++ -*-
  *
- *  @copyright
- *  Copyright (C) 2009-2013, Intel Corporation
+ *  Copyright (C) 2009-2018, Intel Corporation
  *  All rights reserved.
  *  
- *  @copyright
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
  *  are met:
@@ -19,7 +17,6 @@
  *      contributors may be used to endorse or promote products derived
  *      from this software without specific prior written permission.
  *  
- *  @copyright
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -32,12 +29,26 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
  *  WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ *  
+ *  *********************************************************************
+ *  
+ *  PLEASE NOTE: This file is a downstream copy of a file maintained in
+ *  a repository at cilkplus.org. Changes made to this file that are not
+ *  submitted through the contribution process detailed at
+ *  http://www.cilkplus.org/submit-cilk-contribution will be lost the next
+ *  time that a new version is released. Changes only submitted to the
+ *  GNU compiler collection or posted to the git repository at
+ *  https://bitbucket.org/intelcilkruntime/intel-cilk-runtime are
+ *  not tracked.
+ *  
+ *  We welcome your contributions to this open source project. Thank you
+ *  for your assistance in helping us improve Cilk Plus.
  */
 
 /** @file reducer_list.h
  *
- *  @brief Defines classes for doing parallel list creation by appending or
- *  prepending.
+ *  @brief Defines classes for parallel list creation by appending or
+ *  prepending reducers.
  *
  *  @ingroup ReducersList
  *
@@ -52,19 +63,19 @@
 
 /** @defgroup ReducersList List Reducers
  *
- *  List append and prepend reducers allow the creation of a standard list by
+ *  List-append and list-prepend reducers create standard lists by
  *  concatenating a set of lists or values in parallel.
  *
  *  @ingroup Reducers
  *
- *  You should be familiar with @ref pagereducers "Cilk reducers", described in
- *  file `reducers.md`, and particularly with @ref reducers_using, before trying
- *  to use the information in this file.
+ *  You should be familiar with @ref pagereducers "Intel(R) Cilk(TM) Plus reducers"
+ *  (from file `reducers.md`) and particularly with @ref reducers_using, before
+ *  trying to use the information in this file.
  *
  *  @section redlist_usage Usage Example
  *
  *      // Create a list containing the labels of the nodes of a tree in
- *      // “inorder” (left subtree, root, right subtree).
+ *      // "inorder" (left subtree, root, right subtree).
  *
  *      struct Tree { Tree* left; Tree* right; string label; ... };
  *
@@ -72,8 +83,8 @@
  *      cilk::reducer< cilk::op_list_append<string> > xr(cilk::move_in(x));
  *      collect_labels(tree, xr);
  *      xr.move_out(x);
- *      
- *      void collect_labels(Tree* node, 
+ *
+ *      void collect_labels(Tree* node,
  *                          cilk::reducer< cilk::op_list_append<string> >& xr)
  *      {
  *          if (node) {
@@ -88,39 +99,39 @@
  *
  *  @subsection redlist_monoid_values Value Set
  *
- *  The value set of a list reducer is the set of values of the class 
- *  `std::list<Type, Allocator>`, which we refer to as “the reducer’s list 
- *  type”.
+ *  The __value set__ of a list reducer is the set of values of the class
+ *  `std::list<Type, Allocator>`, which we refer to as the reducer's _list
+ *  type_.
  *
  *  @subsection redlist_monoid_operator Operator
  *
- *  The operator of a list append reducer is defined as
+ *  The operator of a list-append reducer is defined as
  *
  *      x CAT y == (every element of x, followed by every element of y)
  *
- *  The operator of a list prepend reducer is defined as
+ *  The operator of a list-prepend reducer is defined as
  *
  *      x RCAT y == (every element of y, followed by every element of x)
  *
  *  @subsection redlist_monoid_identity Identity
  *
- *  The identity value of a list reducer is the empty list, which is the value 
+ *  The identity value of a list reducer is the empty list, which is the value
  *  of the expression `std::list<Type, Allocator>([allocator])`.
  *
  *  @section redlist_operations Operations
  *
- *  In the operation descriptions below, the type name `List` refers to the 
- *  reducer’s string type, `std::list<Type, Allocator>`.
+ *  In the operation descriptions below, the type name `List` refers to the
+ *  reducer's string type, `std::list<Type, Allocator>`.
  *
  *  @subsection redlist_constructors Constructors
  *
- *  Any argument list which is valid for a `std::list` constructor is valid for 
+ *  Any argument list which is valid for a `std::list` constructor is valid for
  *  a list reducer constructor. The usual move-in constructor is also provided:
  *
  *      reducer(move_in(List& variable))
  *
- *  A list reducer with no constructor arguments, or with only an allocator 
- *  argument, will initially contain the identity value, an empty list. 
+ *  A list reducer with no constructor arguments, or with only an allocator
+ *  argument, will initially contain the identity value, an empty list.
  *
  *  @subsection redlist_get_set Set and Get
  *
@@ -131,19 +142,19 @@
  *
  *  @subsection redlist_view_ops View Operations
  *
- *  The view of a list append reducer provides the following member functions:
+ *  The view of a list-append reducer provides the following member functions:
  *
- *      void push_back(const Type& element) 
- *      void insert_back(List::size_type n, const Type& element) 
+ *      void push_back(const Type& element)
+ *      void insert_back(List::size_type n, const Type& element)
  *      template <typename Iter> void insert_back(Iter first, Iter last)
  *      void splice_back(List& x)
  *      void splice_back(List& x, List::iterator i)
  *      void splice_back(List& x, List::iterator first, List::iterator last)
- *  
- *  The view of a list prepend reducer provides the following member functions:
  *
- *      void push_front(const Type& element) 
- *      void insert_front(List::size_type n, const Type& element) 
+ *  The view of a list-prepend reducer provides the following member functions:
+ *
+ *      void push_front(const Type& element)
+ *      void insert_front(List::size_type n, const Type& element)
  *      template <typename Iter> void insert_front(Iter first, Iter last)
  *      void splice_front(List& x)
  *      void splice_front(List& x, List::iterator i)
@@ -151,26 +162,26 @@
  *
  *  The `push_back` and `push_front` functions are the same as the
  *  corresponding `std::list` functions. The `insert_back`, `splice_back`,
- *  `insert_front`, and `splice_front` functions are the same as the 
+ *  `insert_front`, and `splice_front` functions are the same as the
  *  `std::list` `insert` and `splice` functions, with the first parameter
  *  fixed to the end or beginning of the list, respectively.
  *
  *  @section redlist_performance Performance Considerations
  *
- *  An efficient reducer requires that combining the values of two views (using 
+ *  An efficient reducer requires that combining the values of two views (using
  *  the view `reduce()` function) be a constant-time operations. Two lists can
  *  be merged in constant time using the `splice()` function if they have the
  *  same allocator. Therefore, the lists for new views are created (by the view
  *  identity constructor) using the same allocator as the list that was created
  *  when the reducer was constructed.
  *
- *  The performance of adding elements to a list reducer depends on the view 
+ *  The performance of adding elements to a list reducer depends on the view
  *  operations that are used:
  *
  *  *   The `push` functions add a single element to the list, and therefore
  *      take constant time.
  *  *   An `insert` function that inserts _N_ elements adds each of them
- *      individually, and therefore takes _O(N)_ time. 
+ *      individually, and therefore takes _O(N)_ time.
  *  *   A `splice` function that inserts _N_ elements just adjusts a couple of
  *      pointers, and therefore takes constant time, _if the splice is from a
  *      list with the same allocator as the reducer_. Otherwise, it is
@@ -183,7 +194,7 @@
  *  The reducer `move_in` and `move_out` functions do a constant-time `swap` if
  *  the variable has the same allocator as the reducer, and a linear-time copy
  *  otherwise.
- *  
+ *
  *  Note that the allocator of a list reducer is determined when the reducer is
  *  constructed. The following two examples may have very different behavior:
  *
@@ -199,16 +210,16 @@
  *      reducer2.move_out(a_list);
  *
  *  *   `reducer1` will be constructed with the same allocator as `a_list`,
- *      because the list was was specified in the constructor. The `move_in`
- *      and`move_out` can therefore be done with a `swap` in constant time.
+ *      because the list was specified in the constructor. The `move_in`
+ *      and `move_out` can therefore be done with a `swap` in constant time.
  *  *   `reducer2` will be constructed with a _default_ allocator,
- *      “`Allocator()`”, which may or may not be the same as the allocator of
+ *      "`Allocator()`", which may or may not be the same as the allocator of
  *      `a_list`. Therefore, the `move_in` and `move_out` may have to be done
  *      with a copy in _O(N)_ time.
- *  
+ *
  *  (All instances of an allocator type with no internal state (like
- *  `std::allocator`) are “the same”. You only need to worry about the “same
- *  allocator” issue when you create list reducers with custom allocator types.)
+ *  `std::allocator`) are "the same". You only need to worry about the "same
+ *  allocator" issue when you create list reducers with custom allocator types.)
  *
  *  @section redlist_types Type and Operator Requirements
  *
@@ -223,11 +234,11 @@ namespace internal {
 /** @ingroup ReducersList */
 //@{
 
-/** Base class for list append and prepend view classes.
+/** Base class for list-append and prepend view classes.
  *
  *  @note   This class provides the definitions that are required for a class
  *          that will be used as the parameter of a @ref list_monoid_base
- *          specialization. 
+ *          specialization.
  *
  *  @tparam Type        The list element type (not the list type).
  *  @tparam Allocator   The list's allocator class.
@@ -250,31 +261,31 @@ public:
     /** @name Monoid support.
      */
     //@{
-    
+
     /// Required by @ref monoid_with_view
     typedef list_type   value_type;
 
     /// Required by @ref list_monoid_base
     Allocator get_allocator() const
-    { 
-        return m_value.get_allocator(); 
+    {
+        return m_value.get_allocator();
     }
-    
+
     //@}
-    
-    
+
+
     /** @name Constructors.
      */
     //@{
-    
+
     /// Standard list constructor.
     explicit list_view_base(const Allocator& a = Allocator()) : m_value(a) {}
     explicit list_view_base(
-        typename list_type::size_type n, 
-        const Type& value = Type(), 
+        typename list_type::size_type n,
+        const Type& value = Type(),
         const Allocator& a = Allocator() ) : m_value(n, value, a) {}
-    template <typename Iter> 
-    list_view_base(Iter first, Iter last, const Allocator& a = Allocator()) : 
+    template <typename Iter>
+    list_view_base(Iter first, Iter last, const Allocator& a = Allocator()) :
         m_value(first, last, a) {}
     list_view_base(const list_type& list) : m_value(list) {}
 
@@ -284,13 +295,13 @@ public:
     {
         m_value.swap(w.value());
     }
-    
+
     //@}
-    
+
     /** @name Reducer support.
      */
     //@{
-    
+
     /// Required by reducer::move_in()
     void view_move_in(value_type& v)
     {
@@ -302,7 +313,7 @@ public:
             m_value = v;
         v.clear();
     }
-    
+
     /// Required by reducer::move_out()
     void view_move_out(value_type& v)
     {
@@ -314,43 +325,46 @@ public:
             v = m_value;
         m_value.clear();
     }
-    
+
     /// Required by reducer::set_value()
     void view_set_value(const value_type& v) { m_value = v; }
 
     /// Required by reducer::get_value()
     value_type const& view_get_value()     const { return m_value; }
-    
+
+    /// Type returned by view_get_value.
+    typedef value_type const& return_type_for_get_value;
+
     // Required by legacy wrapper get_reference()
     value_type      & view_get_reference()       { return m_value; }
     value_type const& view_get_reference() const { return m_value; }
-    
+
     //@}
 };
 
 
-/** Base class for list append and prepend monoid classes.
+/** Base class for list-append and prepend monoid classes.
  *
  *  The key to efficient reducers is that the `identity` operation, which
  * creates a new per-strand view, and the `reduce` operation, which combines
  *  two per-strand views, must be constant-time operations. Two lists can be
  *  concatenated in constant time only if they have the same allocator.
  *  Therefore, all the per-strand list accumulator variables must be created
- *   with the same allocator as the leftmost view list. 
+ *   with the same allocator as the leftmost view list.
  *
  *  This means that a list reduction monoid must have a copy of the allocator
- *  of the leftmost view’s list, so that it can use it in the `identity`
+ *  of the leftmost view's list, so that it can use it in the `identity`
  *  operation. This, in turn, requires that list reduction monoids have a
  *  specialized `construct()` function, which constructs the leftmost view
- *  before the monoid, and then passes the leftmost view’s allocator to the
+ *  before the monoid, and then passes the leftmost view's allocator to the
  *  monoid constructor.
  *
- *  @tparam View    The list append or prepend view class.
+ *  @tparam View    The list-append or prepend view class.
  *  @tparam Align   If `false` (the default), reducers instantiated on this
- *                  monoid will be naturally aligned (the Cilk library 1.0
+ *                  monoid will be naturally aligned (the Intel Cilk Plus library 1.0
  *                  behavior). If `true`, reducers instantiated on this monoid
- *                  will be cache-aligned for binary compatibility with 
- *                  reducers in Cilk library version 0.9.
+ *                  will be cache-aligned for binary compatibility with
+ *                  reducers in Intel Cilk Plus library version 0.9.
  *
  *  @see ReducersList
  *  @see list_view_base
@@ -360,15 +374,15 @@ class list_monoid_base : public monoid_with_view<View, Align>
 {
     typedef typename View::value_type           list_type;
     typedef typename list_type::allocator_type  allocator_type;
+    typedef provisional_guard<View>             view_guard;
+
     allocator_type                              m_allocator;
-    
-    using monoid_base<list_type, View>::provisional;
-    
+
 public:
 
     /** Constructor.
      *
-     *  There is no default constructor for list monoids, because the allocator 
+     *  There is no default constructor for list monoids, because the allocator
      *  must always be specified.
      *
      *  @param  allocator   The list allocator to be used when
@@ -377,7 +391,7 @@ public:
     list_monoid_base(const allocator_type& allocator = allocator_type()) :
         m_allocator(allocator) {}
 
-    /** Create an identity view.
+    /** Creates an identity view.
      *
      *  List view identity constructors take the list allocator as an argument.
      *
@@ -385,12 +399,12 @@ public:
      *              will be constructed.
      */
     void identity(View *v) const { ::new((void*) v) View(m_allocator); }
-    
+
     /** @name construct functions
      *
-     *  All `construct()` functions first construct the leftmost view, using 
+     *  All `construct()` functions first construct the leftmost view, using
      *  the optional @a x1, @a x2, and @a x3 arguments that were passed in from
-     *  the reducer constructor. They then call the view’s `get_allocator()`
+     *  the reducer constructor. They then call the view's `get_allocator()`
      *  function to get the list allocator from its contained list, and pass it
      *  to the monoid constructor.
      */
@@ -398,24 +412,33 @@ public:
 
     template <typename Monoid>
     static void construct(Monoid* monoid, View* view)
-        { provisional( new ((void*)view) View() ).confirm_if( 
-            new ((void*)monoid) Monoid(view->get_allocator()) ); }
+    {
+        view_guard vg( new((void*) view) View() );
+        vg.confirm_if( new((void*) monoid) Monoid(view->get_allocator()) ); 
+    }
 
     template <typename Monoid, typename T1>
     static void construct(Monoid* monoid, View* view, const T1& x1)
-        { provisional( new ((void*)view) View(x1) ).confirm_if( 
-            new ((void*)monoid) Monoid(view->get_allocator()) ); }
+    {
+        view_guard vg( new((void*) view) View(x1) );
+        vg.confirm_if( new((void*) monoid) Monoid(view->get_allocator()) ); 
+    }
 
     template <typename Monoid, typename T1, typename T2>
-    static void construct(Monoid* monoid, View* view, const T1& x1, const T2& x2)
-        { provisional( new ((void*)view) View(x1, x2) ).confirm_if( 
-            new ((void*)monoid) Monoid(view->get_allocator()) ); }
+    static void construct(Monoid* monoid, View* view,
+                          const T1& x1, const T2& x2)
+    {
+        view_guard vg( new((void*) view) View(x1, x2) );
+        vg.confirm_if( new((void*) monoid) Monoid(view->get_allocator()) ); 
+    }
 
     template <typename Monoid, typename T1, typename T2, typename T3>
-    static void construct(Monoid* monoid, View* view, const T1& x1, const T2& x2, 
-                            const T3& x3)
-        { provisional( new ((void*)view) View(x1, x2, x3) ).confirm_if( 
-            new ((void*)monoid) Monoid(view->get_allocator()) ); }
+    static void construct(Monoid* monoid, View* view,
+                          const T1& x1, const T2& x2, const T3& x3)
+    {
+        view_guard vg( new((void*) view) View(x1, x2, x3) );
+        vg.confirm_if( new((void*) monoid) Monoid(view->get_allocator()) ); 
+    }
 
     //@}
 };
@@ -428,17 +451,17 @@ public:
 /** @ingroup ReducersList */
 //@{
 
-/** The list append reducer view class.
+/** The list-append reducer view class.
  *
- *  This is the view class for reducers created with 
+ *  This is the view class for reducers created with
  *  `cilk::reducer< cilk::op_list_append<Type, Allocator> >`. It holds the
  *  accumulator variable for the reduction, and allows only append operations
  *  to be performed on it.
  *
- *  @note   The reducer “dereference” operation (`reducer::operator *()`) 
- *          yields a reference to the view. Thus, for example, the view class’s
+ *  @note   The reducer "dereference" operation (`reducer::operator *()`)
+ *          yields a reference to the view. Thus, for example, the view class's
  *          `push_back` operation would be used in an expression like
- *          `r->push_back(a)`, where `r` is a list append reducer variable.
+ *          `r->push_back(a)`, where `r` is a list-append reducer variable.
  *
  *  @tparam Type        The list element type (not the list type).
  *  @tparam Allocator   The list allocator type.
@@ -446,14 +469,14 @@ public:
  *  @see ReducersList
  *  @see op_list_append
  */
-template <class Type, 
+template <class Type,
           class Allocator = typename std::list<Type>::allocator_type>
 class op_list_append_view : public internal::list_view_base<Type, Allocator>
 {
     typedef internal::list_view_base<Type, Allocator>   base;
     typedef std::list<Type, Allocator>                  list_type;
     typedef typename list_type::iterator                iterator;
-    
+
     iterator end() { return this->m_value.end(); }
 
 public:
@@ -467,40 +490,40 @@ public:
      *  forms, as well as the reducer move_in constructor form.
      */
     //@{
-    
+
     op_list_append_view() : base() {}
-    
+
     template <typename T1>
     op_list_append_view(const T1& x1) : base(x1) {}
-    
+
     template <typename T1, typename T2>
     op_list_append_view(const T1& x1, const T2& x2) : base(x1, x2) {}
-    
+
     template <typename T1, typename T2, typename T3>
-    op_list_append_view(const T1& x1, const T2& x2, const T3& x3) : 
+    op_list_append_view(const T1& x1, const T2& x2, const T3& x3) :
         base(x1, x2, x3) {}
 
-    //@}    
+    //@}
 
     /** @name View modifier operations.
      */
     //@{
-    
-    /** Add an element at the end of the list.
+
+    /** Adds an element at the end of the list.
      *
      *  This is equivalent to `list.push_back(element)`
      */
-    void push_back(const Type& element) 
+    void push_back(const Type& element)
         { this->m_value.push_back(element); }
 
-    /** Insert elements at the end of the list.
+    /** Inserts elements at the end of the list.
      *
      *  This is equivalent to `list.insert(list.end(), n, element)`
      */
-    void insert_back(typename list_type::size_type n, const Type& element) 
+    void insert_back(typename list_type::size_type n, const Type& element)
         { this->m_value.insert(end(), n, element); }
 
-    /** Insert elements at the end of the list.
+    /** Inserts elements at the end of the list.
      *
      *  This is equivalent to `list.insert(list.end(), first, last)`
      */
@@ -508,7 +531,7 @@ public:
     void insert_back(Iter first, Iter last)
         { this->m_value.insert(end(), first, last); }
 
-    /** Splice elements at the end of the list.
+    /** Splices elements at the end of the list.
      *
      *  This is equivalent to `list.splice(list.end(), x)`
      */
@@ -521,7 +544,7 @@ public:
         }
     }
 
-    /** Splice elements at the end of the list.
+    /** Splices elements at the end of the list.
      *
      *  This is equivalent to `list.splice(list.end(), x, i)`
      */
@@ -534,7 +557,7 @@ public:
         }
     }
 
-    /** Splice elements at the end of the list.
+    /** Splices elements at the end of the list.
      *
      *  This is equivalent to `list.splice(list.end(), x, first, last)`
      */
@@ -546,14 +569,14 @@ public:
             x.erase(first, last);
         }
     }
-    
+
     //@}
 
-    /** Reduction operation.
+    /** Reduces the views of two strands.
      *
      *  This function is invoked by the @ref op_list_append monoid to combine
-     *  the views of two strands when the right strand merges with the left 
-     *  one. It appends the value contained in the right-strand view to the 
+     *  the views of two strands when the right strand merges with the left
+     *  one. It appends the value contained in the right-strand view to the
      *  value contained in the left-strand view, and leaves the value in the
      *  right-strand view undefined.
      *
@@ -572,17 +595,17 @@ public:
 };
 
 
-/** The list prepend reducer view class.
+/** The list-prepend reducer view class.
  *
- *  This is the view class for reducers created with 
+ *  This is the view class for reducers created with
  *  `cilk::reducer< cilk::op_list_prepend<Type, Allocator> >`. It holds the
  *  accumulator variable for the reduction, and allows only prepend operations
  *  to be performed on it.
  *
- *  @note   The reducer “dereference” operation (`reducer::operator *()`) 
- *          yields a reference to the view. Thus, for example, the view class’s
+ *  @note   The reducer "dereference" operation (`reducer::operator *()`)
+ *          yields a reference to the view. Thus, for example, the view class's
  *          `push_front` operation would be used in an expression like
- *          `r->push_front(a)`, where `r` is a list prepend reducer variable.
+ *          `r->push_front(a)`, where `r` is a list-prepend reducer variable.
  *
  *  @tparam Type        The list element type (not the list type).
  *  @tparam Allocator   The list allocator type.
@@ -590,14 +613,14 @@ public:
  *  @see ReducersList
  *  @see op_list_prepend
  */
-template <class Type, 
+template <class Type,
           class Allocator = typename std::list<Type>::allocator_type>
 class op_list_prepend_view : public internal::list_view_base<Type, Allocator>
 {
     typedef internal::list_view_base<Type, Allocator>   base;
     typedef std::list<Type, Allocator>                  list_type;
     typedef typename list_type::iterator                iterator;
-    
+
     iterator begin() { return this->m_value.begin(); }
 
 public:
@@ -612,40 +635,40 @@ public:
      *
      */
     //@{
-    
+
     op_list_prepend_view() : base() {}
-    
+
     template <typename T1>
     op_list_prepend_view(const T1& x1) : base(x1) {}
-    
+
     template <typename T1, typename T2>
     op_list_prepend_view(const T1& x1, const T2& x2) : base(x1, x2) {}
-    
+
     template <typename T1, typename T2, typename T3>
-    op_list_prepend_view(const T1& x1, const T2& x2, const T3& x3) : 
+    op_list_prepend_view(const T1& x1, const T2& x2, const T3& x3) :
         base(x1, x2, x3) {}
 
-    //@}    
+    //@}
 
     /** @name View modifier operations.
      */
     //@{
-    
-    /** Add an element at the beginning of the list.
+
+    /** Adds an element at the beginning of the list.
      *
      *  This is equivalent to `list.push_front(element)`
      */
-    void push_front(const Type& element) 
+    void push_front(const Type& element)
         { this->m_value.push_front(element); }
 
-    /** Insert elements at the beginning of the list.
+    /** Inserts elements at the beginning of the list.
      *
      *  This is equivalent to `list.insert(list.begin(), n, element)`
      */
-    void insert_front(typename list_type::size_type n, const Type& element) 
+    void insert_front(typename list_type::size_type n, const Type& element)
         { this->m_value.insert(begin(), n, element); }
 
-    /** Insert elements at the beginning of the list.
+    /** Inserts elements at the beginning of the list.
      *
      *  This is equivalent to `list.insert(list.begin(), first, last)`
      */
@@ -653,7 +676,7 @@ public:
     void insert_front(Iter first, Iter last)
         { this->m_value.insert(begin(), first, last); }
 
-    /** Splice elements at the beginning of the list.
+    /** Splices elements at the beginning of the list.
      *
      *  This is equivalent to `list.splice(list.begin(), x)`
      */
@@ -666,7 +689,7 @@ public:
         }
     }
 
-    /** Splice elements at the beginning of the list.
+    /** Splices elements at the beginning of the list.
      *
      *  This is equivalent to `list.splice(list.begin(), x, i)`
      */
@@ -679,7 +702,7 @@ public:
         }
     }
 
-    /** Splice elements at the beginning of the list.
+    /** Splices elements at the beginning of the list.
      *
      *  This is equivalent to `list.splice(list.begin(), x, first, last)`
      */
@@ -691,14 +714,14 @@ public:
             x.erase(first, last);
         }
     }
-    
+
     //@}
 
-    /** Reduction operation.
+    /** Reduces the views of two strands.
      *
      *  This function is invoked by the @ref op_list_prepend monoid to combine
-     *  the views of two strands when the right strand merges with the left 
-     *  one. It prepends the value contained in the right-strand view to the 
+     *  the views of two strands when the right strand merges with the left
+     *  one. It prepends the value contained in the right-strand view to the
      *  value contained in the left-strand view, and leaves the value in the
      *  right-strand view undefined.
      *
@@ -722,8 +745,8 @@ public:
 
 
 
-/** Monoid class for list append reductions. Instantiate the cilk::reducer
- *  template class with a op_list_append monoid to create a list append reducer
+/** Monoid class for list-append reductions. Instantiate the cilk::reducer
+ *  template class with a op_list_append monoid to create a list-append reducer
  *  class. For example, to create a list of strings:
  *
  *      cilk::reducer< cilk::op_list_append<std::string> > r;
@@ -731,29 +754,29 @@ public:
  *  @tparam Type    The list element type (not the list type).
  *  @tparam Alloc   The list allocator type.
  *  @tparam Align   If `false` (the default), reducers instantiated on this
- *                  monoid will be naturally aligned (the Cilk library 1.0
+ *                  monoid will be naturally aligned (the Intel Cilk Plus library 1.0
  *                  behavior). If `true`, reducers instantiated on this monoid
- *                  will be cache-aligned for binary compatibility with 
- *                  reducers in Cilk library version 0.9.
+ *                  will be cache-aligned for binary compatibility with
+ *                  reducers in Intel Cilk Plus library version 0.9.
  *
  *  @see ReducersList
  *  @see op_list_append_view
  */
-template <typename Type, 
+template <typename Type,
           typename Allocator = typename std::list<Type>::allocator_type,
           bool Align = false>
-struct op_list_append : 
-    public internal::list_monoid_base<op_list_append_view<Type, Allocator>, Align> 
+struct op_list_append :
+    public internal::list_monoid_base<op_list_append_view<Type, Allocator>, Align>
 {
     /// Construct with default allocator.
     op_list_append() {}
     /// Construct with specified allocator.
-    op_list_append(const Allocator& alloc) : 
+    op_list_append(const Allocator& alloc) :
         internal::list_monoid_base<op_list_append_view<Type, Allocator>, Align>(alloc) {}
 };
 
-/** Monoid class for list prepend reductions. Instantiate the cilk::reducer
- *  template class with a op_list_prepend monoid to create a list prepend
+/** Monoid class for list-prepend reductions. Instantiate the cilk::reducer
+ *  template class with a op_list_prepend monoid to create a list-prepend
  *  reducer class. For example, to create a list of strings:
  *
  *      cilk::reducer< cilk::op_list_prepend<std::string> > r;
@@ -761,45 +784,45 @@ struct op_list_append :
  *  @tparam Type    The list element type (not the list type).
  *  @tparam Alloc   The list allocator type.
  *  @tparam Align   If `false` (the default), reducers instantiated on this
- *                  monoid will be naturally aligned (the Cilk library 1.0
+ *                  monoid will be naturally aligned (the Intel Cilk Plus library 1.0
  *                  behavior). If `true`, reducers instantiated on this monoid
- *                  will be cache-aligned for binary compatibility with 
- *                  reducers in Cilk library version 0.9.
+ *                  will be cache-aligned for binary compatibility with
+ *                  reducers in Intel Cilk Plus library version 0.9.
  *
  *  @see ReducersList
  *  @see op_list_prepend_view
  */
-template <typename Type, 
+template <typename Type,
           typename Allocator = typename std::list<Type>::allocator_type,
           bool Align = false>
-struct op_list_prepend : 
-    public internal::list_monoid_base<op_list_prepend_view<Type, Allocator>, Align> 
+struct op_list_prepend :
+    public internal::list_monoid_base<op_list_prepend_view<Type, Allocator>, Align>
 {
     /// Construct with default allocator.
     op_list_prepend() {}
     /// Construct with specified allocator.
-    op_list_prepend(const Allocator& alloc) : 
+    op_list_prepend(const Allocator& alloc) :
         internal::list_monoid_base<op_list_prepend_view<Type, Allocator>, Align>(alloc) {}
 };
 
 
-/** Deprecated list append reducer wrapper class.
+/** Deprecated list-append reducer wrapper class.
  *
- *  reducer_list_append is the same as 
+ *  reducer_list_append is the same as
  *  @ref reducer<@ref op_list_append>, except that reducer_list_append is a
- *  proxy for the contained view, so that accumulator variable update 
+ *  proxy for the contained view, so that accumulator variable update
  *  operations can be applied directly to the reducer. For example, an element
  *  is appended to a `reducer<%op_list_append>` with `r->push_back(a)`, but an
  *  element can be appended to a `%reducer_list_append` with `r.push_back(a)`.
  *
  *  @deprecated Users are strongly encouraged to use `reducer<monoid>`
- *              reducers rather than the old wrappers like reducer_list_append. 
+ *              reducers rather than the old wrappers like reducer_list_append.
  *              The `reducer<monoid>` reducers show the reducer/monoid/view
  *              architecture more clearly, are more consistent in their
  *              implementation, and present a simpler model for new
  *              user-implemented reducers.
  *
- *  @note   Implicit conversions are provided between `%reducer_list_append` 
+ *  @note   Implicit conversions are provided between `%reducer_list_append`
  *          and `reducer<%op_list_append>`. This allows incremental code
  *          conversion: old code that used `%reducer_list_append` can pass a
  *          `%reducer_list_append` to a converted function that now expects a
@@ -814,20 +837,20 @@ struct op_list_prepend :
  *  @see ReducersList
  */
 template <class Type, class Allocator = std::allocator<Type> >
-class reducer_list_append : 
+class reducer_list_append :
     public reducer<op_list_append<Type, Allocator, true> >
 {
     typedef reducer<op_list_append<Type, Allocator, true> > base;
     using base::view;
 public:
 
-    /// The reducer’s list type.
+    /// The reducer's list type.
     typedef typename base::value_type list_type;
 
-    /// The list’s element type.
+    /// The list's element type.
     typedef Type list_value_type;
 
-    /// The reducer’s primitive component type.
+    /// The reducer's primitive component type.
     typedef Type basic_value_type;
 
     /// The monoid type.
@@ -836,18 +859,18 @@ public:
     /** @name Constructors
      */
     //@{
-    
-    /** Construct a reducer with an empty list.
+
+    /** Constructs a reducer with an empty list.
      */
     reducer_list_append() {}
 
-    /** Construct a reducer with a specified initial list value.
+    /** Constructs a reducer with a specified initial list value.
      */
-    reducer_list_append(const std::list<Type, Allocator> &initial_value) : 
+    reducer_list_append(const std::list<Type, Allocator> &initial_value) :
         base(initial_value) {}
-        
+
     //@}
-        
+
 
     /** @name Forwarded functions
      *  @details Functions that update the contained accumulator variable are
@@ -856,25 +879,25 @@ public:
 
     /// @copydoc op_list_append_view::push_back(const Type&)
     void push_back(const Type& element) { view().push_back(element); }
-    
+
     //@}
 
-    /** Allow mutable access to the list within the current view.
-     * 
+    /** Allows mutable access to the list within the current view.
+     *
      *  @warning    If this method is called before the parallel calculation is
      *              complete, the list returned by this method will be a partial
      *              result.
-     * 
+     *
      *  @returns    A mutable reference to the list within the current view.
      */
     list_type &get_reference() { return view().view_get_reference(); }
 
-    /** Allow read-only access to the list within the current view.
-     * 
+    /** Allows read-only access to the list within the current view.
+     *
      *  @warning    If this method is called before the parallel calculation is
      *              complete, the list returned by this method will be a partial
      *              result.
-     * 
+     *
      *  @returns    A const reference to the list within the current view.
      */
     list_type const &get_reference() const { return view().view_get_reference(); }
@@ -903,12 +926,12 @@ public:
     reducer_list_append*       operator->()       { return this; }
     reducer_list_append const* operator->() const { return this; }
     //@}
-    
+
     /** @name Upcast
-     *  @details In Cilk library 0.9, reducers were always cache-aligned. In
-     *  library  1.0, reducer cache alignment is optional. By default, reducers
-     *  are unaligned (i.e., just naturally aligned), but legacy wrappers
-     *  inherit from cache-aligned reducers for binary compatibility.
+     *  @details In Intel Cilk Plus library 0.9, reducers were always cache-aligned.
+     *  In library  1.0, reducer cache alignment is optional. By default,
+     *  reducers are unaligned (i.e., just naturally aligned), but legacy
+     *  wrappers inherit from cache-aligned reducers for binary compatibility.
      *
      *  This means that a wrapper will automatically be upcast to its aligned
      *  reducer base class. The following conversion operators provide
@@ -923,18 +946,18 @@ public:
     }
     operator const reducer< op_list_append<Type, Allocator, false> >& () const
     {
-        return *reinterpret_cast< 
-            const reducer< op_list_append<Type, Allocator, false> >* 
+        return *reinterpret_cast<
+            const reducer< op_list_append<Type, Allocator, false> >*
             >(this);
     }
     //@}
-    
+
 };
 
 
-/** Deprecated list prepend reducer wrapper class.
+/** Deprecated list-prepend reducer wrapper class.
  *
- *  reducer_list_prepend is the same as 
+ *  reducer_list_prepend is the same as
  *  @ref reducer<@ref op_list_prepend>, except that reducer_list_prepend is a
  *  proxy for the contained view, so that accumulator variable update operations
  *  can be applied directly to the reducer. For example, an element is prepended
@@ -942,13 +965,13 @@ public:
  *  prepended to a `reducer_list_prepend` with `r.push_back(a)`.
  *
  *  @deprecated Users are strongly encouraged to use `reducer<monoid>`
- *              reducers rather than the old wrappers like reducer_list_prepend. 
+ *              reducers rather than the old wrappers like reducer_list_prepend.
  *              The `reducer<monoid>` reducers show the reducer/monoid/view
  *              architecture more clearly, are more consistent in their
  *              implementation, and present a simpler model for new
  *              user-implemented reducers.
  *
- *  @note   Implicit conversions are provided between `%reducer_list_prepend` 
+ *  @note   Implicit conversions are provided between `%reducer_list_prepend`
  *          and `reducer<%op_list_prepend>`. This allows incremental code
  *          conversion: old code that used `%reducer_list_prepend` can pass a
  *          `%reducer_list_prepend` to a converted function that now expects a
@@ -963,22 +986,22 @@ public:
  *  @see ReducersList
  */
 template <class Type, class Allocator = std::allocator<Type> >
-class reducer_list_prepend : 
+class reducer_list_prepend :
     public reducer<op_list_prepend<Type, Allocator, true> >
 {
     typedef reducer<op_list_prepend<Type, Allocator, true> > base;
     using base::view;
 public:
 
-    /** The reducer’s list type.
+    /** The reducer's list type.
      */
     typedef typename base::value_type list_type;
 
-    /** The list’s element type.
+    /** The list's element type.
      */
     typedef Type list_value_type;
 
-    /** The reducer’s primitive component type.
+    /** The reducer's primitive component type.
      */
     typedef Type basic_value_type;
 
@@ -989,45 +1012,45 @@ public:
     /** @name Constructors
      */
     //@{
-    
-    /** Construct a reducer with an empty list.
+
+    /** Constructs a reducer with an empty list.
      */
     reducer_list_prepend() {}
 
-    /** Construct a reducer with a specified initial list value.
+    /** Constructs a reducer with a specified initial list value.
      */
-    reducer_list_prepend(const std::list<Type, Allocator> &initial_value) : 
+    reducer_list_prepend(const std::list<Type, Allocator> &initial_value) :
         base(initial_value) {}
-        
+
     //@}
 
     /** @name Forwarded functions
      *  @details Functions that update the contained accumulator variable are
-     *  simply forwarded to the contained @ref op_and_view. 
+     *  simply forwarded to the contained @ref op_and_view.
      */
     //@{
 
     /// @copydoc op_list_prepend_view::push_front(const Type&)
     void push_front(const Type& element) { view().push_front(element); }
-    
+
     //@}
 
-    /** Allow mutable access to the list within the current view.
-     * 
+    /** Allows mutable access to the list within the current view.
+     *
      *  @warning    If this method is called before the parallel calculation is
      *              complete, the list returned by this method will be a partial
      *              result.
-     * 
+     *
      *  @returns    A mutable reference to the list within the current view.
      */
     list_type &get_reference() { return view().view_get_reference(); }
 
-    /** Allow read-only access to the list within the current view.
-     * 
+    /** Allows read-only access to the list within the current view.
+     *
      *  @warning    If this method is called before the parallel calculation is
      *              complete, the list returned by this method will be a partial
      *              result.
-     * 
+     *
      *  @returns    A const reference to the list within the current view.
      */
     list_type const &get_reference() const { return view().view_get_reference(); }
@@ -1055,12 +1078,12 @@ public:
     reducer_list_prepend*       operator->()       { return this; }
     reducer_list_prepend const* operator->() const { return this; }
     //@}
-    
+
     /** @name Upcast
-     *  @details In Cilk library 0.9, reducers were always cache-aligned. In
-     *  library  1.0, reducer cache alignment is optional. By default, reducers
-     *  are unaligned (i.e., just naturally aligned), but legacy wrappers
-     *  inherit from cache-aligned reducers for binary compatibility.
+     *  @details In Intel Cilk Plus library 0.9, reducers were always cache-aligned.
+     *  In library 1.0, reducer cache alignment is optional. By default,
+     *  reducers are unaligned (i.e., just naturally aligned), but legacy
+     *  wrappers inherit from cache-aligned reducers for binary compatibility.
      *
      *  This means that a wrapper will automatically be upcast to its aligned
      *  reducer base class. The following conversion operators provide
@@ -1070,17 +1093,17 @@ public:
     operator reducer< op_list_prepend<Type, Allocator, false> >& ()
     {
         return *reinterpret_cast<
-            reducer< op_list_prepend<Type, Allocator, false> >* 
+            reducer< op_list_prepend<Type, Allocator, false> >*
             >(this);
     }
     operator const reducer< op_list_prepend<Type, Allocator, false> >& () const
     {
         return *reinterpret_cast<
-            const reducer< op_list_prepend<Type, Allocator, false> >* 
+            const reducer< op_list_prepend<Type, Allocator, false> >*
             >(this);
     }
     //@}
-    
+
 };
 
 /// @cond internal
@@ -1105,7 +1128,7 @@ struct legacy_reducer_downcast<reducer<op_list_append<Type, Allocator, Align> > 
  *
  *  This specialization of the @ref legacy_reducer_downcast template class
  *  defined in reducer.h causes the
- *  `reducer< op_list_prepend<Type, Allocator> >` class to have an 
+ *  `reducer< op_list_prepend<Type, Allocator> >` class to have an
  *  `operator reducer_list_prepend<Type, Allocator>& ()` conversion operator
  *  that statically downcasts the `reducer<op_list_prepend>` to the
  *  corresponding `reducer_list_prepend` type. (The reverse conversion, from

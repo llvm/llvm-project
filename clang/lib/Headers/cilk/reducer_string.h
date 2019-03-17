@@ -1,10 +1,8 @@
 /*  reducer_string.h                  -*- C++ -*-
  *
- *  @copyright
- *  Copyright (C) 2009-2013, Intel Corporation
+ *  Copyright (C) 2009-2018, Intel Corporation
  *  All rights reserved.
  *  
- *  @copyright
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
  *  are met:
@@ -19,7 +17,6 @@
  *      contributors may be used to endorse or promote products derived
  *      from this software without specific prior written permission.
  *  
- *  @copyright
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -32,6 +29,20 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
  *  WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ *  
+ *  *********************************************************************
+ *  
+ *  PLEASE NOTE: This file is a downstream copy of a file maintained in
+ *  a repository at cilkplus.org. Changes made to this file that are not
+ *  submitted through the contribution process detailed at
+ *  http://www.cilkplus.org/submit-cilk-contribution will be lost the next
+ *  time that a new version is released. Changes only submitted to the
+ *  GNU compiler collection or posted to the git repository at
+ *  https://bitbucket.org/intelcilkruntime/intel-cilk-runtime are
+ *  not tracked.
+ *  
+ *  We welcome your contributions to this open source project. Thank you
+ *  for your assistance in helping us improve Cilk Plus.
  */
 
 /** @file reducer_string.h
@@ -52,14 +63,14 @@
 
 /** @defgroup ReducersString String Reducers
  *
- *  String reducers allow the creation of a string by concatenating a set of 
+ *  String reducers allow the creation of a string by concatenating a set of
  *  strings or characters in parallel.
  *
  *  @ingroup Reducers
  *
- *  You should be familiar with @ref pagereducers "Cilk reducers", described in
- *  file reducers.md, and particularly with @ref reducers_using, before trying
- *  to use the information in this file.
+ *  You should be familiar with @ref pagereducers "Intel(R) Cilk(TM) Plus reducers",
+ *  described in file reducers.md, and particularly with @ref reducers_using,
+ *  before trying to use the information in this file.
  *
  *  @section redstring_usage Usage Example
  *
@@ -79,24 +90,24 @@
  *  @subsection redstring_monoid_values Value Set
  *
  *  The value set of a string reducer is the set of values of the class
- *  `std::basic_string<Char, Traits, Alloc>`, which we refer to as “the
- *  reducer’s string type”.
+ *  `std::basic_string<Char, Traits, Alloc>`, which we refer to as "the
+ *  reducer's string type".
  *
  *  @subsection redstring_monoid_operator Operator
  *
- *  The operator of a string reducer is the string concatenation operator, 
- *  defined by the “`+`” binary operator on the reducer’s string type.
+ *  The operator of a string reducer is the string concatenation operator,
+ *  defined by the "`+`" binary operator on the reducer's string type.
  *
  *  @subsection redstring_monoid_identity Identity
  *
- *  The identity value of a string reducer is the empty string, which is the 
+ *  The identity value of a string reducer is the empty string, which is the
  *  value of the expression
  *  `std::basic_string<Char, Traits, Alloc>([allocator])`.
  *
  *  @section redstring_operations Operations
  *
  *  In the operation descriptions below, the type name `String` refers to the
- *  reducer’s string type, `std::basic_string<Char, Traits, Alloc>`.
+ *  reducer's string type, `std::basic_string<Char, Traits, Alloc>`.
  *
  *  @subsection redstring_constructors Constructors
  *
@@ -151,8 +162,8 @@
  *  the string computation.
  *
  *  The strings for new views are created (by the view identity constructor)
- *  using the same allocator as the string that was created when the reducer 
- *  was constructed. Note that this allocator is determined when the reducer is 
+ *  using the same allocator as the string that was created when the reducer
+ *  was constructed. Note that this allocator is determined when the reducer is
  *  constructed. The following two examples may have very different behavior:
  *
  *      string<Char, Traits, Allocator> a_string;
@@ -166,7 +177,7 @@
  *      ... parallel computation ...
  *      reducer2.move_out(a_string);
  *
- *  *   `reducer1` will be constructed with the same allocator as `a_string`, 
+ *  *   `reducer1` will be constructed with the same allocator as `a_string`,
  *      because the string was specified in the constructor. The `move_in`
  *      and `move_out` can therefore be done with a `swap` in constant time.
  *  *   `reducer2` will be constructed with a _default_ allocator of type
@@ -175,8 +186,8 @@
  *      in _O(N)_ time.
  *
  *  (All instances of an allocator type with no internal state (like
- *  `std::allocator`) are “the same”. You only need to worry about the “same
- *  allocator” issue when you create string reducers with custom allocator
+ *  `std::allocator`) are "the same". You only need to worry about the "same
+ *  allocator" issue when you create string reducers with custom allocator
  *  types.)
  *
  *  @section redstring_types Type and Operator Requirements
@@ -192,12 +203,12 @@ namespace cilk {
 /** The string append reducer view class.
  *
  *  This is the view class for reducers created with
- *  `cilk::reducer< cilk::op_basic_string<Type, Traits, Allocator> >`. It holds
+ *  `cilk::reducer< cilk::op_basic_string<Char, Traits, Allocator> >`. It holds
  *  the accumulator variable for the reduction, and allows only append
  *  operations to be performed on it.
  *
- *  @note   The reducer “dereference” operation (`reducer::operator *()`) 
- *          yields a reference to the view. Thus, for example, the view class’s
+ *  @note   The reducer "dereference" operation (`reducer::operator *()`)
+ *          yields a reference to the view. Thus, for example, the view class's
  *          `append` operation would be used in an expression like
  *          `r->append(a)`, where `r` is a string append reducer variable.
  *
@@ -215,7 +226,7 @@ class op_basic_string_view
     typedef std::list<string_type>                  list_type;
     typedef typename string_type::size_type         size_type;
 
-    // The view's value is represented by a list of strings and a single 
+    // The view's value is represented by a list of strings and a single
     // string. The value is the concatenation of the strings in the list with
     // the single string at the end. All string operations apply to the single
     // string; reduce operations cause lists of partial strings from multiple
@@ -224,7 +235,7 @@ class op_basic_string_view
     mutable string_type                             m_string;
     mutable list_type                               m_list;
 
-    // Before returning the value of the reducer, concatenate all the strings 
+    // Before returning the value of the reducer, concatenate all the strings
     // in the list with the single string.
     //
     void flatten() const
@@ -263,11 +274,11 @@ public:
         return m_string.get_allocator();
     }
 
-    /** Reduction operation.
+    /** Reduces the views of two strands.
      *
      *  This function is invoked by the @ref op_basic_string monoid to combine
-     *  the views of two strands when the right strand merges with the left 
-     *  one. It appends the value contained in the right-strand view to the 
+     *  the views of two strands when the right strand merges with the left
+     *  one. It appends the value contained in the right-strand view to the
      *  value contained in the left-strand view, and leaves the value in the
      *  right-strand view undefined.
      *
@@ -294,7 +305,7 @@ public:
 
     //@}
 
-    /** @name Pass constructor arguments through to the string constructor.
+    /** @name Passes constructor arguments to the string constructor.
      */
     //@{
 
@@ -351,16 +362,18 @@ public:
         m_string.clear();
     }
 
-    void view_set_value(const string_type& s) 
+    void view_set_value(const string_type& s)
         { m_list.clear(); m_string = s; }
 
-    string_type const& view_get_value()     const 
+    string_type const& view_get_value()     const
         { flatten(); return m_string; }
 
-    string_type      & view_get_reference()       
+    typedef string_type const& return_type_for_get_value;
+
+    string_type      & view_get_reference()
         { flatten(); return m_string; }
 
-    string_type const& view_get_reference() const 
+    string_type const& view_get_reference() const
         { flatten(); return m_string; }
 
     //@}
@@ -403,10 +416,10 @@ public:
  *  @tparam Traits  The character traits type.
  *  @tparam Alloc   The string allocator type.
  *  @tparam Align   If `false` (the default), reducers instantiated on this
- *                  monoid will be naturally aligned (the Cilk library 1.0
+ *                  monoid will be naturally aligned (the Intel Cilk Plus library 1.0
  *                  behavior). If `true`, reducers instantiated on this monoid
- *                  will be cache-aligned for binary compatibility with 
- *                  reducers in Cilk library version 0.9.
+ *                  will be cache-aligned for binary compatibility with
+ *                  reducers in Intel Cilk Plus library version 0.9.
  *
  *  @see ReducersString
  *  @see op_basic_string_view
@@ -418,11 +431,13 @@ template<typename Char,
          typename Traits = std::char_traits<Char>,
          typename Alloc = std::allocator<Char>,
          bool     Align = false>
-class op_basic_string : 
+class op_basic_string :
     public monoid_with_view< op_basic_string_view<Char, Traits, Alloc>, Align >
 {
     typedef monoid_with_view< op_basic_string_view<Char, Traits, Alloc>, Align >
             base;
+    typedef provisional_guard<typename base::view_type> view_guard;
+
     Alloc m_allocator;
 
 public:
@@ -442,7 +457,7 @@ public:
     op_basic_string(const Alloc& allocator = Alloc()) : m_allocator(allocator)
     {}
 
-    /** Create an identity view.
+    /** Creates an identity view.
      *
      *  String view identity constructors take the string allocator as an
      *  argument.
@@ -450,48 +465,67 @@ public:
      *  @param v    The address of the uninitialized memory in which the view
      *              will be constructed.
      */
-    void identity(view_type *v) const { ::new((void*) v) view_type(m_allocator); }
+    void identity(view_type *v) const
+        { ::new((void*) v) view_type(m_allocator); }
 
     /** @name Construct functions
      *
      *  A string append reduction monoid must have a copy of the allocator of
-     *  the leftmost view’s string, so that it can use it in the `identity`
+     *  the leftmost view's string, so that it can use it in the `identity`
      *  operation. This, in turn, requires that string reduction monoids have a
      *  specialized `construct()` function.
      *
      *  All string reducer monoid `construct()` functions first construct the
      *  leftmost view, using the arguments that were passed in from the reducer
-     *  constructor. They then call the view’s `get_allocator()` function to
+     *  constructor. They then call the view's `get_allocator()` function to
      *  get the string allocator from the string in the leftmost view, and pass
      *  that to the monoid constructor.
      */
     //@{
 
     static void construct(op_basic_string* monoid, view_type* view)
-        { provisional( new ((void*)view) view_type() ).confirm_if(
-            new ((void*)monoid) op_basic_string(view->get_allocator()) ); }
+    {
+        view_guard vg( new((void*) view) view_type() );
+        vg.confirm_if(
+            new((void*) monoid) op_basic_string(view->get_allocator()) ); 
+    }
 
     template <typename T1>
-    static void construct(op_basic_string* monoid, view_type* view, const T1& x1)
-        { provisional( new ((void*)view) view_type(x1) ).confirm_if(
-            new ((void*)monoid) op_basic_string(view->get_allocator()) ); }
+    static void construct(op_basic_string* monoid, view_type* view,
+                          const T1& x1)
+    {
+        view_guard vg( new((void*) view) view_type(x1) );
+        vg.confirm_if(
+            new((void*) monoid) op_basic_string(view->get_allocator()) ); 
+    }
 
     template <typename T1, typename T2>
-    static void construct(op_basic_string* monoid, view_type* view, const T1& x1, const T2& x2)
-        { provisional( new ((void*)view) view_type(x1, x2) ).confirm_if(
-            new ((void*)monoid) op_basic_string(view->get_allocator()) ); }
+    static void construct(op_basic_string* monoid, view_type* view,
+                          const T1& x1, const T2& x2)
+    {
+        view_guard vg( new((void*) view) view_type(x1, x2) );
+        vg.confirm_if(
+            new((void*) monoid) op_basic_string(view->get_allocator()) ); 
+    }
 
     template <typename T1, typename T2, typename T3>
-    static void construct(op_basic_string* monoid, view_type* view, const T1& x1, const T2& x2,
-                            const T3& x3)
-        { provisional( new ((void*)view) view_type(x1, x2, x3) ).confirm_if(
-            new ((void*)monoid) op_basic_string(view->get_allocator()) ); }
+    static void construct(op_basic_string* monoid, view_type* view,
+                          const T1& x1, const T2& x2, const T3& x3)
+    {
+        view_guard vg( new((void*) view) view_type(x1, x2, x3) );
+        vg.confirm_if(
+            new((void*) monoid) op_basic_string(view->get_allocator()) ); 
+    }
 
     template <typename T1, typename T2, typename T3, typename T4>
-    static void construct(op_basic_string* monoid, view_type* view, const T1& x1, const T2& x2,
-                            const T3& x3, const T4& x4)
-        { provisional( new ((void*)view) view_type(x1, x2, x3, x4) ).confirm_if(
-            new ((void*)monoid) op_basic_string(view->get_allocator()) ); }
+    static void construct(op_basic_string* monoid, view_type* view,
+                          const T1& x1, const T2& x2, const T3& x3,
+                          const T4& x4)
+    {
+        view_guard vg( new((void*) view) view_type(x1, x2, x3, x4) );
+        vg.confirm_if(
+            new((void*) monoid) op_basic_string(view->get_allocator()) ); 
+    }
 
     //@}
 };
@@ -500,7 +534,7 @@ public:
 /** Convenience typedef for 8-bit strings
  */
 typedef op_basic_string<char> op_string;
-    
+
 /** Convenience typedef for 16-bit strings
  */
 typedef op_basic_string<wchar_t> op_wstring;
@@ -516,13 +550,13 @@ typedef op_basic_string<wchar_t> op_wstring;
  *  with `r.push_back(a)`.
  *
  *  @deprecated Users are strongly encouraged to use `reducer<monoid>`
- *              reducers rather than the old wrappers like reducer_basic_string. 
+ *              reducers rather than the old wrappers like reducer_basic_string.
  *              The `reducer<monoid>` reducers show the reducer/monoid/view
  *              architecture more clearly, are more consistent in their
  *              implementation, and present a simpler model for new
  *              user-implemented reducers.
  *
- *  @note   Implicit conversions are provided between `%reducer_basic_string` 
+ *  @note   Implicit conversions are provided between `%reducer_basic_string`
  *          and `reducer<%op_basic_string>`. This allows incremental code
  *          conversion: old code that used `%reducer_basic_string` can pass a
  *          `%reducer_basic_string` to a converted function that now expects a
@@ -540,17 +574,17 @@ typedef op_basic_string<wchar_t> op_wstring;
 template<typename Char,
          typename Traits = std::char_traits<Char>,
          typename Alloc = std::allocator<Char> >
-class reducer_basic_string : 
+class reducer_basic_string :
     public reducer< op_basic_string<Char, Traits, Alloc, true> >
 {
     typedef reducer< op_basic_string<Char, Traits, Alloc, true> > base;
     using base::view;
 public:
 
-    /// The reducer’s string type.
+    /// The reducer's string type.
     typedef typename base::value_type       string_type;
 
-    /// The reducer’s primitive component type.
+    /// The reducer's primitive component type.
     typedef Char                            basic_value_type;
 
     /// The string size type.
@@ -566,7 +600,7 @@ public:
     /** @name Constructors
      */
     //@{
-    
+
     /** @name Forward constructor calls to the base class.
      *
      *  All basic_string constructor forms are supported.
@@ -575,15 +609,15 @@ public:
     reducer_basic_string() {}
 
     template <typename T1>
-    reducer_basic_string(const T1& x1) : 
+    reducer_basic_string(const T1& x1) :
         base(x1) {}
 
     template <typename T1, typename T2>
-    reducer_basic_string(const T1& x1, const T2& x2) : 
+    reducer_basic_string(const T1& x1, const T2& x2) :
         base(x1, x2) {}
 
     template <typename T1, typename T2, typename T3>
-    reducer_basic_string(const T1& x1, const T2& x2, const T3& x3) : 
+    reducer_basic_string(const T1& x1, const T2& x2, const T3& x3) :
         base(x1, x2, x3) {}
 
     template <typename T1, typename T2, typename T3, typename T4>
@@ -591,18 +625,18 @@ public:
         base(x1, x2, x3, x4) {}
     //@}
 
-    /** Allow mutable access to the string within the current view.
+    /** Allows mutable access to the string within the current view.
      *
-     *  @warning    If this method is called before the parallel calculation is 
+     *  @warning    If this method is called before the parallel calculation is
      *              complete, the string returned by this method will be a
      *              partial result.
      *
      *  @returns    A mutable reference to the string within the current view.
      */
-    string_type &get_reference() 
+    string_type &get_reference()
         { return view().view_get_reference(); }
 
-    /** Allow read-only access to the string within the current view.
+    /** Allows read-only access to the string within the current view.
      *
      *  @warning    If this method is called before the parallel calculation is
      *              complete, the string returned by this method will be a
@@ -610,10 +644,10 @@ public:
      *
      *  @returns    A const reference to the string within the current view.
      */
-    string_type const &get_reference() const 
+    string_type const &get_reference() const
         { return view().view_get_reference(); }
 
-    /** @name Append to the string.
+    /** @name Appends to the string.
      *
      *  These operations are simply forwarded to the view.
      */
@@ -629,7 +663,7 @@ public:
     void append(size_type count, Char ch)
         { view().append(count, ch); }
 
-    // Append to the string
+    // Appends to the string
     reducer_basic_string<Char, Traits, Alloc> &operator+=(Char ch)
         { view() += ch; return *this; }
     reducer_basic_string<Char, Traits, Alloc> &operator+=(const Char *ptr)
@@ -664,10 +698,10 @@ public:
     //@}
 
     /** @name Upcast
-     *  @details In Cilk library 0.9, reducers were always cache-aligned. In
-     *  library  1.0, reducer cache alignment is optional. By default, reducers
-     *  are unaligned (i.e., just naturally aligned), but legacy wrappers
-     *  inherit from cache-aligned reducers for binary compatibility.
+     *  @details In Intel Cilk Plus library 0.9, reducers were always cache-aligned.
+     *  In library 1.0, reducer cache alignment is optional. By default,
+     *  reducers are unaligned (i.e., just naturally aligned), but legacy
+     *  wrappers inherit from cache-aligned reducers for binary compatibility.
      *
      *  This means that a wrapper will automatically be upcast to its aligned
      *  reducer base class. The following conversion operators provide
@@ -676,14 +710,14 @@ public:
     //@{
     operator reducer< op_basic_string<Char, Traits, Alloc, false> >& ()
     {
-        return *reinterpret_cast< reducer< 
-            op_basic_string<Char, Traits, Alloc, false> >* 
+        return *reinterpret_cast< reducer<
+            op_basic_string<Char, Traits, Alloc, false> >*
         >(this);
     }
     operator const reducer< op_basic_string<Char, Traits, Alloc, false> >& () const
     {
         return *reinterpret_cast< const reducer<
-            op_basic_string<Char, Traits, Alloc, false> >* 
+            op_basic_string<Char, Traits, Alloc, false> >*
         >(this);
     }
     //@}
@@ -703,11 +737,11 @@ typedef reducer_basic_string<wchar_t> reducer_wstring;
 /// @cond internal
 /** Metafunction specialization for reducer conversion.
  *
- *  This specialization of the @ref legacy_reducer_downcast template class 
+ *  This specialization of the @ref legacy_reducer_downcast template class
  *  defined in reducer.h causes the `reducer< op_basic_string<Char> >` class to
  *  have an `operator reducer_basic_string<Char>& ()` conversion operator that
  *  statically downcasts the `reducer<op_basic_string>` to the corresponding
- *  `reducer_basic_string` type. (The reverse conversion, from 
+ *  `reducer_basic_string` type. (The reverse conversion, from
  *  `reducer_basic_string` to `reducer<op_basic_string>`, is just an upcast,
  *  which is provided for free by the language.)
  *

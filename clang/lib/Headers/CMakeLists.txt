@@ -120,6 +120,15 @@ set(files
   xsaveoptintrin.h
   xsavesintrin.h
   xtestintrin.h
+  )
+
+set(cuda_wrapper_files
+  cuda_wrappers/algorithm
+  cuda_wrappers/complex
+  cuda_wrappers/new
+)
+
+set(cilk_header_files
   cilk/cilk.h
   cilk/cilk_api.h
   cilk/cilk_api_linux.h
@@ -142,21 +151,7 @@ set(files
   cilk/reducer_opxor.h
   cilk/reducer_ostream.h
   cilk/reducer_string.h
-  cilktools/cilkscreen.h
-  cilktools/cilkview.h
-  cilktools/fake_mutex.h
-  cilktools/lock_guard.h
-  internal/abi.h
-  internal/cilk_fake.h
-  internal/cilk_version.h
-  internal/metacall.h
-  internal/rev.mk
-  )
-
-set(cuda_wrapper_files
-  cuda_wrappers/algorithm
-  cuda_wrappers/complex
-  cuda_wrappers/new
+  cilk/reducer_vector.h
 )
 
 set(ppc_wrapper_files
@@ -201,7 +196,7 @@ endfunction(clang_generate_header)
 
 
 # Copy header files from the source directory to the build directory
-foreach( f ${files} ${cuda_wrapper_files} ${ppc_wrapper_files} ${openmp_wrapper_files})
+foreach( f ${files} ${cuda_wrapper_files} ${ppc_wrapper_files} ${openmp_wrapper_files} ${cilk_header_files})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
 
@@ -236,6 +231,11 @@ install(
 install(
   FILES ${openmp_wrapper_files}
   DESTINATION ${header_install_dir}/openmp_wrappers
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${cilk_header_files}
+  DESTINATION ${header_install_dir}/cilk
   COMPONENT clang-resource-headers)
 
 if (NOT LLVM_ENABLE_IDE)

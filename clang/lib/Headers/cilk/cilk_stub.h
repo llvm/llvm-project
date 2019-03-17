@@ -1,10 +1,8 @@
 /*  cilk_stub.h                  -*-C++-*-
  *
- *  @copyright
- *  Copyright (C) 2009-2013, Intel Corporation
+ *  Copyright (C) 2009-2018, Intel Corporation
  *  All rights reserved.
  *  
- *  @copyright
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
  *  are met:
@@ -19,7 +17,6 @@
  *      contributors may be used to endorse or promote products derived
  *      from this software without specific prior written permission.
  *  
- *  @copyright
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -32,13 +29,27 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
  *  WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ *  
+ *  *********************************************************************
+ *  
+ *  PLEASE NOTE: This file is a downstream copy of a file maintained in
+ *  a repository at cilkplus.org. Changes made to this file that are not
+ *  submitted through the contribution process detailed at
+ *  http://www.cilkplus.org/submit-cilk-contribution will be lost the next
+ *  time that a new version is released. Changes only submitted to the
+ *  GNU compiler collection or posted to the git repository at
+ *  https://bitbucket.org/intelcilkruntime/intel-cilk-runtime are
+ *  not tracked.
+ *  
+ *  We welcome your contributions to this open source project. Thank you
+ *  for your assistance in helping us improve Cilk Plus.
  *
  */
 
 #ifndef INCLUDED_CILK_STUB_DOT_H
 #define INCLUDED_CILK_STUB_DOT_H
 
-/* Definitions for creating a serialization from a Cilk program.
+/* Definitions for creating a serialization from an Intel(R) Cilk(TM) Plus program.
  * These definitions are suitable for use by a compiler that is not
  * Cilk-enabled.
  */
@@ -47,9 +58,14 @@
 #undef __cilk
 #define CILK_STUB
 
-/* Replace Cilk keywords with serial equivalents */
+/* Replace Intel Cilk keywords with serial equivalents */
 #define _Cilk_spawn
 #define _Cilk_sync
 #define _Cilk_for for
+
+/* Replace simd-loop keywords with serial equivalents */
+#define _Simd
+#define _Safelen(...)
+#define _Reduction(...)
 
 #endif /* ! defined(INCLUDED_CILK_STUB_DOT_H) */

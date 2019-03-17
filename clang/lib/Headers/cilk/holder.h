@@ -1,9 +1,7 @@
 /*
- *  @copyright
- *  Copyright (C) 2011-2013, Intel Corporation
+ *  Copyright (C) 2011-2018, Intel Corporation
  *  All rights reserved.
  *  
- *  @copyright
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
  *  are met:
@@ -18,7 +16,6 @@
  *      contributors may be used to endorse or promote products derived
  *      from this software without specific prior written permission.
  *  
- *  @copyright
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -31,6 +28,20 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
  *  WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ *  
+ *  *********************************************************************
+ *  
+ *  PLEASE NOTE: This file is a downstream copy of a file maintained in
+ *  a repository at cilkplus.org. Changes made to this file that are not
+ *  submitted through the contribution process detailed at
+ *  http://www.cilkplus.org/submit-cilk-contribution will be lost the next
+ *  time that a new version is released. Changes only submitted to the
+ *  GNU compiler collection or posted to the git repository at
+ *  https://bitbucket.org/intelcilkruntime/intel-cilk-runtime are
+ *  not tracked.
+ *  
+ *  We welcome your contributions to this open source project. Thank you
+ *  for your assistance in helping us improve Cilk Plus.
  *
  */
 
@@ -60,8 +71,8 @@
  * common variable where it is not necessary to preserve changes from
  * different parallel strands.  In effect, a holder acts a bit like
  * thread-local storage, but has qualities that work better with the
- * fork-join structure of Cilk.  In particular, a holder has the following
- * qualities:
+ * fork-join structure of Intel(R) Cilk(TM) Plus.  In particular, a holder has the
+ * following qualities:
  *
  * - The view of a holder before the first spawn within a function is the same
  *   as the view after each sync (as in the case of a reducer).
@@ -220,7 +231,7 @@
  * same as the view on entry to 'h'.  More importantly, the view of the holder
  * within the recursive call to 'compute' is the same as the view on entry to
  * 'h', even if a different worker is executing the recursive call.  Thus, the
- * holder view within a Cilk program has useful qualities not found in
+ * holder view within a Intel Cilk Plus program has useful qualities not found in
  * thread-local storage.
  */
 

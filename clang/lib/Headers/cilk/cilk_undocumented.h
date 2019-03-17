@@ -1,9 +1,7 @@
 /*
- *  @copyright
- *  Copyright (C) 2009-2013, Intel Corporation
+ *  Copyright (C) 2009-2018, Intel Corporation
  *  All rights reserved.
  *  
- *  @copyright
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
  *  are met:
@@ -18,7 +16,6 @@
  *      contributors may be used to endorse or promote products derived
  *      from this software without specific prior written permission.
  *  
- *  @copyright
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -31,6 +28,20 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
  *  WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ *  
+ *  *********************************************************************
+ *  
+ *  PLEASE NOTE: This file is a downstream copy of a file maintained in
+ *  a repository at cilkplus.org. Changes made to this file that are not
+ *  submitted through the contribution process detailed at
+ *  http://www.cilkplus.org/submit-cilk-contribution will be lost the next
+ *  time that a new version is released. Changes only submitted to the
+ *  GNU compiler collection or posted to the git repository at
+ *  https://bitbucket.org/intelcilkruntime/intel-cilk-runtime are
+ *  not tracked.
+ *  
+ *  We welcome your contributions to this open source project. Thank you
+ *  for your assistance in helping us improve Cilk Plus.
  *
  ******************************************************************************
  *
@@ -83,7 +94,7 @@ CILK_EXPORT __CILKRTS_NOTHROW
 void *__cilkrts_get_sf(void);
 
 /**
- * Returns the size of stacks created by Cilk.
+ * Returns the size of stacks created by Intel(R) Cilk(TM) Plus.
  */
 CILK_EXPORT __CILKRTS_NOTHROW
 size_t __cilkrts_get_stack_size(void);
@@ -94,9 +105,6 @@ size_t __cilkrts_get_stack_size(void);
  */
 CILK_EXPORT __CILKRTS_NOTHROW
 void __cilkrts_dump_stats(void);
-
-CILK_EXPORT __CILKRTS_NOTHROW
-int __cilkrts_irml_version(void);
 
 struct __cilk_tbb_unwatch_thunk;
 struct __cilk_tbb_stack_op_thunk;

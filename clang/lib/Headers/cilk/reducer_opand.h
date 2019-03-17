@@ -1,10 +1,8 @@
 /*  reducer_opand.h                  -*- C++ -*-
  *
- *  @copyright
- *  Copyright (C) 2009-2013, Intel Corporation
+ *  Copyright (C) 2009-2018, Intel Corporation
  *  All rights reserved.
  *  
- *  @copyright
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
  *  are met:
@@ -19,7 +17,6 @@
  *      contributors may be used to endorse or promote products derived
  *      from this software without specific prior written permission.
  *  
- *  @copyright
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -32,11 +29,25 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
  *  WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ *  
+ *  *********************************************************************
+ *  
+ *  PLEASE NOTE: This file is a downstream copy of a file maintained in
+ *  a repository at cilkplus.org. Changes made to this file that are not
+ *  submitted through the contribution process detailed at
+ *  http://www.cilkplus.org/submit-cilk-contribution will be lost the next
+ *  time that a new version is released. Changes only submitted to the
+ *  GNU compiler collection or posted to the git repository at
+ *  https://bitbucket.org/intelcilkruntime/intel-cilk-runtime are
+ *  not tracked.
+ *  
+ *  We welcome your contributions to this open source project. Thank you
+ *  for your assistance in helping us improve Cilk Plus.
  */
 
 /** @file reducer_opand.h
  *
- *  @brief Defines classes for doing parallel bitwise and reductions.
+ *  @brief Defines classes for doing parallel bitwise AND reductions.
  *
  *  @ingroup ReducersAnd
  *
@@ -48,16 +59,16 @@
 
 #include <cilk/reducer.h>
 
-/** @defgroup ReducersAnd Bitwise And Reducers
+/** @defgroup ReducersAnd Bitwise AND Reducers
  *
- *  Bitwise and reducers allow the computation of the bitwise and of a set of
+ *  Bitwise AND reducers allow the computation of the bitwise AND of a set of
  *  values in parallel.
  *
  *  @ingroup Reducers
  *
- *  You should be familiar with @ref pagereducers "Cilk reducers", described in
- *  file `reducers.md`, and particularly with @ref reducers_using, before trying
- *  to use the information in this file.
+ *  You should be familiar with @ref pagereducers "Intel(R) Cilk(TM) Plus reducers",
+ *  described in file `reducers.md`, and particularly with @ref reducers_using,
+ *  before trying to use the information in this file.
  *
  *  @section redopand_usage Usage Example
  *
@@ -72,19 +83,18 @@
  *
  *  @subsection redopand_monoid_values Value Set
  *
- *  The value set of a bitwise and reducer is the set of values of `Type`, 
+ *  The value set of a bitwise AND reducer is the set of values of `Type`,
  *  which is expected to be a builtin integer type which has a representation
  *  as a sequence of bits (or something like it, such as `bool` or
  *  `std::bitset`).
  *
  *  @subsection redopand_monoid_operator Operator
  *
- *  The operator of a bitwise and reducer is the bitwise and operator, defined
- *  by the “`&`” binary operator on `Type`.
+ *  The bitwise AND operator is defined by the "`&`" binary operator on `Type`.
  *
  *  @subsection redopand_monoid_identity Identity
  *
- *  The identity value of the reducer is the value whose representation 
+ *  The identity value of the reducer is the value whose representation
  *  contains all 1-bits. This is expected to be the value of the expression
  *  `~Type()` (i.e., the bitwise negation operator applied to the default value
  *  of the value type).
@@ -106,7 +116,7 @@
  *
  *  @subsection redopand_initial Initial Values
  *
- *  If a bitwise and reducer is constructed without an explicit initial value,
+ *  If a bitwise AND reducer is constructed without an explicit initial value,
  *  then its initial value will be its identity value, as long as `Type`
  *  satisfies the requirements of @ref redopand_types.
  *
@@ -121,17 +131,17 @@
  *  `Type` must be `Copy Constructible`, `Default Constructible`, and
  *  `Assignable`.
  *
- *  The operator “`&=`” must be defined on `Type`, with `x &= a` having the 
+ *  The operator "`&=`" must be defined on `Type`, with `x &= a` having the
  *  same meaning as `x = x & a`.
  *
  *  The expression `~ Type()` must be a valid expression which yields the
  *  identity value (the value of `Type` whose representation consists of all
  *  1-bits).
  *
- *  @section redopand_in_c Bitwise And Reducers in C
+ *  @section redopand_in_c Bitwise AND Reducers in C
  *
  *  The @ref CILK_C_REDUCER_OPAND and @ref CILK_C_REDUCER_OPAND_TYPE macros can
- *  be used to do bitwise and reductions in C. For example:
+ *  be used to do bitwise AND reductions in C. For example:
  *
  *      CILK_C_REDUCER_OPAND(r, uint, ~0);
  *      CILK_C_REGISTER_REDUCER(r);
@@ -148,14 +158,14 @@
 
 namespace cilk {
 
-/** The bitwise and reducer view class.
+/** The bitwise AND reducer view class.
  *
- *  This is the view class for reducers created with 
- *  `cilk::reducer< cilk::op_and<Type> >`. It holds the accumulator variable 
- *  for the reduction, and allows only `and` operations to be performed on it.
+ *  This is the view class for reducers created with
+ *  `cilk::reducer< cilk::op_and<Type> >`. It holds the accumulator variable
+ *  for the reduction, and allows only AND operations to be performed on it.
  *
- *  @note   The reducer “dereference” operation (`reducer::operator *()`)
- *          yields a reference to the view. Thus, for example, the view class’s
+ *  @note   The reducer "dereference" operation (`reducer::operator *()`)
+ *          yields a reference to the view. Thus, for example, the view class's
  *          `&=` operation would be used in an expression like `*r &= a`, where
  *          `r` is an opmod reducer variable.
  *
@@ -172,18 +182,18 @@ template <typename Type>
 class op_and_view : public scalar_view<Type>
 {
     typedef scalar_view<Type> base;
-    
+
 public:
     /** Class to represent the right-hand side of `*reducer = *reducer & value`.
      *
      *  The only assignment operator for the op_and_view class takes an
-     *  rhs_proxy as its operand. This results in the syntactic restriction 
+     *  rhs_proxy as its operand. This results in the syntactic restriction
      *  that the only expressions that can be assigned to an op_and_view are
-     *  ones which generate an rhs_proxy — that is, expressions of the form
+     *  ones which generate an rhs_proxy - that is, expressions of the form
      *  `op_and_view & value ... & value`.
      *
      *  @warning
-     *  The lhs and rhs views in such an assignment must be the same; 
+     *  The lhs and rhs views in such an assignment must be the same;
      *  otherwise, the behavior will be undefined. (I.e., `v1 = v1 & x` is
      *  legal; `v1 = v2 & x` is illegal.)  This condition will be checked with
      *  a runtime assertion when compiled in debug mode.
@@ -205,12 +215,12 @@ public:
         rhs_proxy();                            // Disable default constructor
 
     public:
-        /** Bitwise and with an additional rhs value. If `v` is an op_and_view
+        /** Bitwise AND with an additional `rhs` value. If `v` is an op_and_view
          *  and `a1` is a value, then the expression `v & a1` invokes the
-         *  view’s `operator&()` to create an rhs_proxy for `(v, a1)`; then
-         *  `v & a1 & a2` invokes the rhs_proxy’s `operator&()` to create a new
+         *  view's `operator&()` to create an rhs_proxy for `(v, a1)`; then
+         *  `v & a1 & a2` invokes the rhs_proxy's `operator&()` to create a new
          *  rhs_proxy for `(v, a1&a2)`. This allows the right-hand side of an
-         *  assignment to be not just `view & value`, but 
+         *  assignment to be not just `view & value`, but
          *  `view & value & value ... & value`. The effect is that
          *
          *      v = v & a1 & a2 ... & an;
@@ -231,13 +241,13 @@ public:
     /** Construct with a specified initial value.
      */
     explicit op_and_view(const Type& v) : base(v) {}
-    
-    
-    /** Reduction operation.
+
+
+    /** Reduces the views of two strands.
      *
      *  This function is invoked by the @ref op_and monoid to combine the views
      *  of two strands when the right strand merges with the left one. It
-     *  “ands” the value contained in the left-strand view with the value
+     *  "ANDs" the value contained in the left-strand view with the value
      *  contained in the right-strand view, and leaves the value in the
      *  right-strand view undefined.
      *
@@ -248,25 +258,25 @@ public:
      *          reduce operation.
      */
     void reduce(op_and_view* right) { this->m_value &= right->m_value; }
-    
+
     /** @name Accumulator variable updates.
      *
-     *  These functions support the various syntaxes for “anding” the
+     *  These functions support the various syntaxes for "ANDing" the
      *  accumulator variable contained in the view with some value.
      */
-    //@{
+    ///@{
 
-    /** And the accumulator variable with @a x.
+    /** Performs AND between the accumulator variable and @a x.
      */
     op_and_view& operator&=(const Type& x) { this->m_value &= x; return *this; }
 
-    /** Create an object representing `*this & x`.
+    /** Creates an object representing `*this & x`.
      *
      *  @see rhs_proxy
      */
     rhs_proxy operator&(const Type& x) const { return rhs_proxy(this, x); }
 
-    /** Assign the result of a `view & value` expression to the view. Note that
+    /** Assigns the result of a `view & value` expression to the view. Note that
      *  this is the only assignment operator for this class.
      *
      *  @see rhs_proxy
@@ -276,23 +286,23 @@ public:
         this->m_value &= rhs.m_value;
         return *this;
     }
-    
-    //@}
+
+    ///@}
 };
 
-/** Monoid class for bitwise and reductions. Instantiate the cilk::reducer
- *  template class with an op_and monoid to create a bitwise and reducer
- *  class. For example, to compute the bitwise and of a set of `unsigned long`
+/** Monoid class for bitwise AND reductions. Instantiate the cilk::reducer
+ *  template class with an op_and monoid to create a bitwise AND reducer
+ *  class. For example, to compute the bitwise AND of a set of `unsigned long`
  *  values:
  *
  *      cilk::reducer< cilk::op_and<unsigned long> > r;
  *
  *  @tparam Type    The reducer value type.
  *  @tparam Align   If `false` (the default), reducers instantiated on this
- *                  monoid will be naturally aligned (the Cilk library 1.0
+ *                  monoid will be naturally aligned (the Intel Cilk Plus library 1.0
  *                  behavior). If `true`, reducers instantiated on this monoid
- *                  will be cache-aligned for binary compatibility with 
- *                  reducers in Cilk library version 0.9.
+ *                  will be cache-aligned for binary compatibility with
+ *                  reducers in Intel Cilk Plus library version 0.9.
  *
  *  @see ReducersAnd
  *  @see op_and_view
@@ -302,22 +312,22 @@ public:
 template <typename Type, bool Align = false>
 struct op_and : public monoid_with_view<op_and_view<Type>, Align> {};
 
-/** Deprecated bitwise and reducer class.
+/** Deprecated bitwise AND reducer class.
  *
  *  reducer_opand is the same as @ref reducer<@ref op_and>, except that
  *  reducer_opand is a proxy for the contained view, so that accumulator
  *  variable update operations can be applied directly to the reducer. For
- *  example, a value is anded with  a `reducer<%op_and>` with `*r &= a`, but a
- *  value can be anded with a `%reducer_opand` with `r &= a`.
+ *  example, a value is "ANDed" with  a `reducer<%op_and>` with `*r &= a`, but a
+ *  value can be "ANDed" with a `%reducer_opand` with `r &= a`.
  *
  *  @deprecated Users are strongly encouraged to use `reducer<monoid>`
- *              reducers rather than the old wrappers like reducer_opand. 
+ *              reducers rather than the old wrappers like reducer_opand.
  *              The `reducer<monoid>` reducers show the reducer/monoid/view
  *              architecture more clearly, are more consistent in their
  *              implementation, and present a simpler model for new
  *              user-implemented reducers.
  *
- *  @note   Implicit conversions are provided between `%reducer_opand` 
+ *  @note   Implicit conversions are provided between `%reducer_opand`
  *          and `reducer<%op_and>`. This allows incremental code
  *          conversion: old code that used `%reducer_opand` can pass a
  *          `%reducer_opand` to a converted function that now expects a
@@ -341,20 +351,20 @@ class reducer_opand : public reducer< op_and<Type, true> >
 public:
     /// The view type for the reducer.
     typedef typename base::view_type        view_type;
-    
-    /// The view’s rhs proxy type.
+
+    /// The view's rhs proxy type.
     typedef typename view_type::rhs_proxy   rhs_proxy;
-    
+
     /// The view type for the reducer.
     typedef view_type                       View;
 
     /// The monoid type for the reducer.
     typedef typename base::monoid_type      Monoid;
-    
+
     /** @name Constructors
      */
-    //@{
-    
+    ///@{
+
     /** Default constructor.
      *
      *  Constructs the wrapper with the default initial value of `Type()`
@@ -367,13 +377,13 @@ public:
      *  Constructs the wrapper with a specified initial value.
      */
     explicit reducer_opand(const Type& initial_value) : base(initial_value) {}
-    
-    //@}
+
+    ///@}
 
     /** @name Forwarded functions
      *  @details Functions that update the contained accumulator variable are
      *  simply forwarded to the contained @ref op_and_view. */
-    //@{
+    ///@{
 
     /// @copydoc op_and_view::operator&=(const Type&)
     reducer_opand& operator&=(const Type& x)
@@ -381,26 +391,26 @@ public:
         view() &= x;
         return *this;
     }
-    
+
     // The legacy definition of reducer_opand::operator&() has different
     // behavior and a different return type than this definition. The legacy
     // version is defined as a member function, so this new version is defined
-    // as a free function to give it a different signature, so that they won’t 
+    // as a free function to give it a different signature, so that they won't
     // end up sharing a single object file entry.
-    
+
     /// @copydoc op_and_view::operator&(const Type&) const
     friend rhs_proxy operator&(const reducer_opand& r, const Type& x)
-    { 
-        return r.view() & x; 
+    {
+        return r.view() & x;
     }
 
     /// @copydoc op_and_view::operator=(const rhs_proxy&)
-    reducer_opand& operator=(const rhs_proxy& temp) 
-    { 
+    reducer_opand& operator=(const rhs_proxy& temp)
+    {
         view() = temp;
-        return *this; 
+        return *this;
     }
-    //@}
+    ///@}
 
     /** @name Dereference
      *  @details Dereferencing a wrapper is a no-op. It simply returns the
@@ -419,25 +429,25 @@ public:
      *                  // operator &= is a wrapper member function that
      *                  // calls the corresponding view function
      */
-    //@{
+    ///@{
     reducer_opand&       operator*()       { return *this; }
     reducer_opand const& operator*() const { return *this; }
 
     reducer_opand*       operator->()       { return this; }
     reducer_opand const* operator->() const { return this; }
-    //@}
-    
+    ///@}
+
     /** @name Upcast
-     *  @details In Cilk library 0.9, reducers were always cache-aligned. In
-     *  library  1.0, reducer cache alignment is optional. By default, reducers
-     *  are unaligned (i.e., just naturally aligned), but legacy wrappers
-     *  inherit from cache-aligned reducers for binary compatibility.
+     *  @details In Intel Cilk Plus library 0.9, reducers were always cache-aligned.
+     *  In library 1.0, reducer cache alignment is optional. By default,
+     *  reducers are unaligned (i.e., just naturally aligned), but legacy
+     *  wrappers inherit from cache-aligned reducers for binary compatibility.
      *
      *  This means that a wrapper will automatically be upcast to its aligned
      *  reducer base class. The following conversion operators provide
      *  pseudo-upcasts to the corresponding unaligned reducer class.
      */
-    //@{
+    ///@{
     operator reducer< op_and<Type, false> >& ()
     {
         return *reinterpret_cast< reducer< op_and<Type, false> >* >(this);
@@ -446,14 +456,14 @@ public:
     {
         return *reinterpret_cast< const reducer< op_and<Type, false> >* >(this);
     }
-    //@}
+    ///@}
 };
 
 /// @cond internal
 /** Metafunction specialization for reducer conversion.
  *
- *  This specialization of the @ref legacy_reducer_downcast template class 
- *  defined in reducer.h causes the `reducer< op_and<Type> >` class to have an 
+ *  This specialization of the @ref legacy_reducer_downcast template class
+ *  defined in reducer.h causes the `reducer< op_and<Type> >` class to have an
  *  `operator reducer_opand<Type>& ()` conversion operator that statically
  *  downcasts the `reducer<op_and>` to the corresponding `reducer_opand` type.
  *  (The reverse conversion, from `reducer_opand` to `reducer<op_and>`, is just
@@ -475,7 +485,7 @@ struct legacy_reducer_downcast<reducer<op_and<Type, Align> > >
 
 /** @ingroup ReducersAdd
  */
-//@{
+///@{
 
 /** @name C language reducer macros
  *
@@ -483,13 +493,13 @@ struct legacy_reducer_downcast<reducer<op_and<Type, Align> > >
  *
  *  @see @ref page_reducers_in_c
  */
- //@{
- 
+ ///@{
+
 __CILKRTS_BEGIN_EXTERN_C
 
-/** Opand reducer type name.
+/** Declares `opand` reducer type name.
  *
- *  This macro expands into the identifier which is the name of the op_and 
+ *  This macro expands into the identifier which is the name of the op_and
  *  reducer type for a specified numeric type.
  *
  *  @param  tn  The @ref reducers_c_type_names "numeric type name" specifying
@@ -501,7 +511,7 @@ __CILKRTS_BEGIN_EXTERN_C
 #define CILK_C_REDUCER_OPAND_TYPE(tn)                                         \
     __CILKRTS_MKIDENT(cilk_c_reducer_opand_,tn)
 
-/** Declare an op_and reducer object.
+/** Declares an op_and reducer object.
  *
  *  This macro expands into a declaration of an op_and reducer object for a
  *  specified numeric type. For example:
@@ -526,29 +536,29 @@ __CILKRTS_BEGIN_EXTERN_C
 
 /// @cond internal
 
-/** Declare the op_and reducer functions for a numeric type.
+/** Declares the op_and reducer functions for a numeric type.
  *
  *  This macro expands into external function declarations for functions which
  *  implement the reducer functionality for the op_and reducer type for a
  *  specified numeric type.
  *
  *  @param  t   The value type of the reducer.
- *  @param  tn  The value “type name” identifier, used to construct the reducer
+ *  @param  tn  The value "type name" identifier, used to construct the reducer
  *              type name, function names, etc.
  */
 #define CILK_C_REDUCER_OPAND_DECLARATION(t,tn)                             \
     typedef CILK_C_DECLARE_REDUCER(t) CILK_C_REDUCER_OPAND_TYPE(tn);       \
     __CILKRTS_DECLARE_REDUCER_REDUCE(cilk_c_reducer_opand,tn,l,r);         \
     __CILKRTS_DECLARE_REDUCER_IDENTITY(cilk_c_reducer_opand,tn);
- 
-/** Define the op_and reducer functions for a numeric type.
+
+/** Defines the op_and reducer functions for a numeric type.
  *
  *  This macro expands into function definitions for functions which implement
  *  the reducer functionality for the op_and reducer type for a specified
  *  numeric type.
  *
  *  @param  t   The value type of the reducer.
- *  @param  tn  The value “type name” identifier, used to construct the reducer
+ *  @param  tn  The value "type name" identifier, used to construct the reducer
  *              type name, function names, etc.
  */
 #define CILK_C_REDUCER_OPAND_DEFINITION(t,tn)                              \
@@ -557,10 +567,10 @@ __CILKRTS_BEGIN_EXTERN_C
         { *(t*)l &= *(t*)r; }                                              \
     __CILKRTS_DECLARE_REDUCER_IDENTITY(cilk_c_reducer_opand,tn)            \
         { *(t*)v = ~((t)0); }
- 
-//@{
-/** @def CILK_C_REDUCER_OPAND_INSTANCE 
- *  @brief Declare or define implementation functions for a reducer type.
+
+///@{
+/** @def CILK_C_REDUCER_OPAND_INSTANCE
+ *  @brief Declares or defines implementation functions for a reducer type.
  *
  *  In the runtime source file c_reducers.c, the macro `CILK_C_DEFINE_REDUCERS`
  *  will be defined, and this macro will generate reducer implementation
@@ -574,9 +584,9 @@ __CILKRTS_BEGIN_EXTERN_C
 #   define CILK_C_REDUCER_OPAND_INSTANCE(t,tn)  \
         CILK_C_REDUCER_OPAND_DECLARATION(t,tn)
 #endif
-//@}
+///@}
 
-/*  Declare or define an instance of the reducer type and its functions for
+/*  Declares or defines an instance of the reducer type and its functions for
  *  each numeric type.
  */
 CILK_C_REDUCER_OPAND_INSTANCE(char,                 char)
@@ -597,8 +607,8 @@ CILK_C_REDUCER_OPAND_INSTANCE(unsigned long long,   ulonglong)
 
 __CILKRTS_END_EXTERN_C
 
-//@}
+///@}
 
-//@}
+///@}
 
 #endif /*  REDUCER_OPAND_H_INCLUDED */
