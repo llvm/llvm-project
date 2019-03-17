@@ -1716,7 +1716,7 @@ void CSIImpl::finalizeCsi() {
   // Add the constructor to the global list if we're doing AOT compilation.
   // In JIT mode, we rely on the JIT compiler to call the constructor as
   // a self-standing function.
-  if (Options.jitMode) {
+  if (!Options.jitMode) {
     appendToGlobalCtors(M, Ctor, CsiUnitCtorPriority);
 
     CallGraphNode *CNCtor = CG->getOrInsertFunction(Ctor);
