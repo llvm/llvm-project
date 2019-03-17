@@ -1115,7 +1115,9 @@ void CSIImpl::instrumentAlloca(Instruction *I) {
   uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
   Value *SizeVal = IRB.getInt64(Size);
   if (AI->isArrayAllocation())
-    SizeVal = IRB.CreateMul(SizeVal, AI->getArraySize());
+    SizeVal = IRB.CreateMul(SizeVal,
+                            IRB.CreateZExtOrBitCast(AI->getArraySize(),
+                                                    IRB.getInt64Ty()));
 
   insertHookCall(I, CsiBeforeAlloca, {CsiId, SizeVal, PropVal});
   BasicBlock::iterator Iter(I);

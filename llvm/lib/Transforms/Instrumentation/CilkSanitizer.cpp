@@ -1116,15 +1116,15 @@ static bool DependenceMightRace(
   // Find the spindle that dominates both instructions.
   Spindle *DomSpindle = TI.getSpindleFor(
       DT.findNearestCommonDominator(Src->getParent(), Dst->getParent()));
-  // Find the loop depth of that spindle.
-  unsigned MaxLoopDepthToCheck = LI.getLoopDepth(DomSpindle->getEntry());
-  // It's possible that Src or Dst appears to have a smaller loop depth than the
-  // entry of DomSpindle.  For example, LoopInfo might not consider Src or Dst
-  // part of a loop if they belong to blocks terminated by unreachable.
-  if (MaxLoopDepthToCheck > LI.getLoopDepth(Src->getParent()))
-    MaxLoopDepthToCheck = LI.getLoopDepth(Src->getParent());
-  if (MaxLoopDepthToCheck > LI.getLoopDepth(Dst->getParent()))
-    MaxLoopDepthToCheck = LI.getLoopDepth(Dst->getParent());
+  // Find the deepest loop that contains both Src and Dst.
+  Loop *CommonLoop = LI.getLoopFor(DomSpindle->getEntry());
+  unsigned MaxLoopDepthToCheck = CommonLoop ? CommonLoop->getLoopDepth() : 0;
+  while (MaxLoopDepthToCheck &&
+         (!CommonLoop->contains(Src->getParent()) ||
+          !CommonLoop->contains(Dst->getParent()))) {
+    CommonLoop = CommonLoop->getParentLoop();
+    MaxLoopDepthToCheck--;
+  }
 
   // Check if dependence does not depend on looping.
   if (0 == MaxLoopDepthToCheck)
@@ -2583,7 +2583,9 @@ bool CilkSanitizerImpl::instrumentAlloca(Instruction *I) {
   uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
   Value *SizeVal = IRB.getInt64(Size);
   if (AI->isArrayAllocation())
-    SizeVal = IRB.CreateMul(SizeVal, AI->getArraySize());
+    SizeVal = IRB.CreateMul(SizeVal,
+                            IRB.CreateZExtOrBitCast(AI->getArraySize(),
+                                                    IRB.getInt64Ty()));
 
   BasicBlock::iterator Iter(I);
   Iter++;
