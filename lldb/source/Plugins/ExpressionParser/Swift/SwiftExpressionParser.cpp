@@ -1271,6 +1271,21 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   invocation.getFrontendOptions().ModuleName = expr_name_buf;
   invocation.getIRGenOptions().ModuleName = expr_name_buf;
 
+  auto should_use_prestable_abi = [&]() {
+    lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
+    if (!this_frame_sp)
+      return false;
+    lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
+    if (!process_sp)
+      return false;
+    auto *runtime = process_sp->GetSwiftLanguageRuntime();
+    return !runtime->IsABIStable();
+    return true;
+  };
+
+  invocation.getLangOptions().UseDarwinPreStableABIBit =
+      should_use_prestable_abi();
+
   swift::SourceFileKind source_file_kind = swift::SourceFileKind::Library;
 
   if (playground || repl) {
