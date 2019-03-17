@@ -188,7 +188,7 @@ static void setInstrumentationDebugLoc(Instruction *Instrumented,
     if (Instrumented->getDebugLoc()) {
       Call->setDebugLoc(Instrumented->getDebugLoc());
     } else {
-      LLVMContext &C = Instrumented->getFunction()->getParent()->getContext();
+      LLVMContext &C = Instrumented->getContext();
       Call->setDebugLoc(DILocation::get(C, 0, 0, Subprog));
     }
   }
@@ -203,7 +203,7 @@ static void setInstrumentationDebugLoc(BasicBlock &Instrumented,
     if (const DILocation *FirstDebugLoc = getFirstDebugLoc(Instrumented))
       Call->setDebugLoc(FirstDebugLoc);
     else {
-      LLVMContext &C = Instrumented.getParent()->getParent()->getContext();
+      LLVMContext &C = Instrumented.getContext();
       Call->setDebugLoc(DILocation::get(C, 0, 0, Subprog));
     }
   }
@@ -369,7 +369,11 @@ Constant *SizeTable::insertIntoModule(Module &M) const {
 
 uint64_t FrontEndDataTable::add(const Function &F) {
   uint64_t ID = getId(&F);
-  add(ID, F.getSubprogram());
+  if (F.getSubprogram())
+    add(ID, F.getSubprogram());
+  else
+    add(ID, -1, -1, F.getName(), F.getParent()->getName(),
+        F.getName());
   return ID;
 }
 
@@ -382,7 +386,12 @@ uint64_t FrontEndDataTable::add(const BasicBlock &BB) {
 uint64_t FrontEndDataTable::add(const Instruction &I,
                                 const StringRef &RealName) {
   uint64_t ID = getId(&I);
-  add(ID, I.getDebugLoc(), RealName);
+  if (auto DL = I.getDebugLoc())
+    add(ID, DL, RealName);
+  else {
+    add(ID, -1, -1, I.getFunction()->getName(), I.getModule()->getName(),
+        I.getName());
+  }
   return ID;
 }
 

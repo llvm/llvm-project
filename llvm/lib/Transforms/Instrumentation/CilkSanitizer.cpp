@@ -512,7 +512,7 @@ uint64_t ObjectTable::add(Instruction &I, Value *Obj) {
         return ID;
       }
     }
-    add(ID);
+    add(ID, -1, "", "", Obj->getName());
     return ID;
   }
 
@@ -540,7 +540,7 @@ uint64_t ObjectTable::add(Instruction &I, Value *Obj) {
     }
   }
 
-  add(ID);
+  add(ID, -1, "", "", Obj->getName());
   return ID;
 }
 
