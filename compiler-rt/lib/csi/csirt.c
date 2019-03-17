@@ -394,9 +394,7 @@ CSIRT_API void __csirt_unit_init(
     }
 
     int32_t acquired = 0;
-    while (!atomic_compare_exchange_strong(&lock, &acquired, 1)) {
-      acquired = 0;
-    }
+    while (!(acquired = atomic_compare_exchange_strong(&lock, &acquired, 1))) {}
 
     assert(lock == acquired == 1);
 
