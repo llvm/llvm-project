@@ -178,6 +178,32 @@ option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
 # COMPILER_RT_DEBUG_PYBOOL is used by lit.common.configured.in.
 pythonize_bool(COMPILER_RT_DEBUG)
 
+option(COMPILER_RT_INTERCEPT_LIBDISPATCH
+  "Support interception of libdispatch (GCD). Requires '-fblocks'" OFF)
+option(COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH
+  "Library search path for blocks runtime (-lBlocksRuntime)" "")
+option(COMPILER_RT_LIBDISPATCH_LIBRARY_PATH
+  "Library search path for libdispatch (-ldispatch)" "")
+if (COMPILER_RT_INTERCEPT_LIBDISPATCH)
+  set(COMPILER_RT_INTERCEPT_LIBDISPATCH_CFLAGS -fblocks)
+  set(COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS)
+  if (COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH)
+    list(APPEND COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS
+        -L${COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH}
+        -Wl,-rpath=${COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH})
+  endif()
+  if (COMPILER_RT_LIBDISPATCH_LIBRARY_PATH)
+    list(APPEND COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS
+        -L${COMPILER_RT_LIBDISPATCH_LIBRARY_PATH}
+        -Wl,-rpath=${COMPILER_RT_LIBDISPATCH_LIBRARY_PATH})
+  endif()
+  list(APPEND COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS -lBlocksRuntime -ldispatch)
+endif()
+if (APPLE) # Always enable on Apple platforms.
+  set(COMPILER_RT_INTERCEPT_LIBDISPATCH ON)
+endif()
+pythonize_bool(COMPILER_RT_INTERCEPT_LIBDISPATCH)
+
 if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
   # libc++/libc++abi.
