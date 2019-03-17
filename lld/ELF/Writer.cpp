@@ -1042,7 +1042,6 @@ static bool shouldSkip(BaseCommand *Cmd) {
 // We want to place orphan sections so that they share as much
 // characteristics with their neighbors as possible. For example, if
 // both are rw, or both are tls.
-template <typename ELFT>
 static std::vector<BaseCommand *>::iterator
 findOrphanPos(std::vector<BaseCommand *>::iterator B,
               std::vector<BaseCommand *>::iterator E) {
@@ -1367,7 +1366,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   I = FirstSectionOrDotAssignment;
 
   while (NonScriptI != E) {
-    auto Pos = findOrphanPos<ELFT>(I, NonScriptI);
+    auto Pos = findOrphanPos(I, NonScriptI);
     OutputSection *Orphan = cast<OutputSection>(*NonScriptI);
 
     // As an optimization, find all sections with the same sort rank
