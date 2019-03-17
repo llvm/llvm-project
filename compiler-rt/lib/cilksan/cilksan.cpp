@@ -76,7 +76,7 @@ uintptr_t stack_high_addr = 0;
 
 // Helper function to check if an address is in the stack.
 static inline bool is_on_stack(uintptr_t addr) {
-  cilksan_assert(stack_high_addr != stack_low_addr);
+  // cilksan_assert(stack_high_addr != stack_low_addr);
   return (addr <= stack_high_addr && addr >= stack_low_addr);
 }
 

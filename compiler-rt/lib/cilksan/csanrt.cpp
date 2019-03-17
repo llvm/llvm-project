@@ -379,12 +379,12 @@ void __csirt_unit_init(const char * const name,
   }
 
   int32_t acquired = 0;
-  while (!lock.compare_exchange_strong(
-      acquired, 1, std::memory_order::memory_order_seq_cst)) {
-    acquired = 0;
+  while (!(acquired = lock.compare_exchange_strong(
+               acquired, 1, std::memory_order::memory_order_seq_cst))) {
+    // acquired = 0;
   }
 
-  std::cout << "Acquired lock\n";
+  std::cout << "Acquired lock: lock = " << lock << ", acquired = " << acquired << "\n";
 
   assert(lock == acquired == 1);
 
