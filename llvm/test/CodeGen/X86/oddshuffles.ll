@@ -1767,3 +1767,57 @@ define <2 x double> @wrongorder(<4 x double> %A, <8 x double>* %P) #0 {
   %m4 = shufflevector <8 x double> %m3, <8 x double> undef, <2 x i32> <i32 2, i32 0>
   ret <2 x double> %m4
 }
+
+define void @PR41097() {
+; SSE2-LABEL: PR41097:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movzwl (%rax), %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,1,3,4,5,6,7]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
+; SSE2-NEXT:    psrad $24, %xmm0
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    movdqu %xmm0, (%rax)
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: PR41097:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,3,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE42-NEXT:    pmovsxbd %xmm0, %xmm0
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; SSE42-NEXT:    movdqu %xmm0, (%rax)
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: PR41097:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,3,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpmovsxbd %xmm0, %xmm0
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX-NEXT:    vmovdqu %xmm0, (%rax)
+; AVX-NEXT:    retq
+;
+; XOP-LABEL: PR41097:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; XOP-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,3,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpmovsxbd %xmm0, %xmm0
+; XOP-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; XOP-NEXT:    vmovdqu %xmm0, (%rax)
+; XOP-NEXT:    retq
+  %wide.vec = load <6 x i8>, <6 x i8>* undef, align 1
+  %strided.vec = shufflevector <6 x i8> %wide.vec, <6 x i8> undef, <2 x i32> <i32 0, i32 3>
+  %tmp = sext <2 x i8> %strided.vec to <2 x i32>
+  %tmp7 = zext <2 x i32> %tmp to <2 x i64>
+  store <2 x i64> %tmp7, <2 x i64>* undef, align 8
+  ret void
+}

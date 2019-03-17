@@ -44,10 +44,10 @@ void throw(unsigned int tag, void *obj) {
   // WEBASSEMBLY64: call void @llvm.wasm.throw(i32 %{{.*}}, i8* %{{.*}})
 }
 
-void rethrow(void) {
-  return __builtin_wasm_rethrow();
-  // WEBASSEMBLY32: call void @llvm.wasm.rethrow()
-  // WEBASSEMBLY64: call void @llvm.wasm.rethrow()
+void rethrow_in_catch(void) {
+  return __builtin_wasm_rethrow_in_catch();
+  // WEBASSEMBLY32: call void @llvm.wasm.rethrow.in.catch()
+  // WEBASSEMBLY64: call void @llvm.wasm.rethrow.in.catch()
 }
 
 int atomic_wait_i32(int *addr, int expected, long long timeout) {

@@ -153,6 +153,37 @@ public:
   void emitType(MCStreamer &OS);
 };
 
+/// Handle variable instances
+class BTFKindVar : public BTFTypeBase {
+  StringRef Name;
+  uint32_t Info;
+
+public:
+  BTFKindVar(StringRef VarName, uint32_t TypeId, uint32_t VarInfo);
+  uint32_t getSize() { return BTFTypeBase::getSize() + 4; }
+  void completeType(BTFDebug &BDebug);
+  void emitType(MCStreamer &OS);
+};
+
+/// Handle data sections
+class BTFKindDataSec : public BTFTypeBase {
+  AsmPrinter *Asm;
+  std::string Name;
+  std::vector<std::tuple<uint32_t, const MCSymbol *, uint32_t>> Vars;
+
+public:
+  BTFKindDataSec(AsmPrinter *AsmPrt, std::string SecName);
+  uint32_t getSize() {
+    return BTFTypeBase::getSize() + BTF::BTFDataSecVarSize * Vars.size();
+  }
+  void addVar(uint32_t Id, const MCSymbol *Sym, uint32_t Size) {
+    Vars.push_back(std::make_tuple(Id, Sym, Size));
+  }
+  std::string getName() { return Name; }
+  void completeType(BTFDebug &BDebug);
+  void emitType(MCStreamer &OS);
+};
+
 /// String table.
 class BTFStringTable {
   /// String table size in bytes.
@@ -201,11 +232,13 @@ class BTFDebug : public DebugHandlerBase {
   std::unordered_map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
   std::unordered_map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   StringMap<std::vector<std::string>> FileContent;
+  std::unordered_map<std::string, std::unique_ptr<BTFKindDataSec>>
+      DataSecEntries;
 
   /// Add types to TypeEntries.
   /// @{
   /// Add types to TypeEntries and DIToIdMap.
-  void addType(std::unique_ptr<BTFTypeBase> TypeEntry, const DIType *Ty);
+  uint32_t addType(std::unique_ptr<BTFTypeBase> TypeEntry, const DIType *Ty);
   /// Add types to TypeEntries only and return type id.
   uint32_t addType(std::unique_ptr<BTFTypeBase> TypeEntry);
   /// @}
@@ -213,17 +246,20 @@ class BTFDebug : public DebugHandlerBase {
   /// IR type visiting functions.
   /// @{
   void visitTypeEntry(const DIType *Ty);
-  void visitBasicType(const DIBasicType *BTy);
+  void visitTypeEntry(const DIType *Ty, uint32_t &TypeId);
+  void visitBasicType(const DIBasicType *BTy, uint32_t &TypeId);
   void visitSubroutineType(
       const DISubroutineType *STy, bool ForSubprog,
       const std::unordered_map<uint32_t, StringRef> &FuncArgNames,
       uint32_t &TypeId);
-  void visitFwdDeclType(const DICompositeType *CTy, bool IsUnion);
-  void visitCompositeType(const DICompositeType *CTy);
-  void visitStructType(const DICompositeType *STy, bool IsStruct);
-  void visitArrayType(const DICompositeType *ATy);
-  void visitEnumType(const DICompositeType *ETy);
-  void visitDerivedType(const DIDerivedType *DTy);
+  void visitFwdDeclType(const DICompositeType *CTy, bool IsUnion,
+                        uint32_t &TypeId);
+  void visitCompositeType(const DICompositeType *CTy, uint32_t &TypeId);
+  void visitStructType(const DICompositeType *STy, bool IsStruct,
+                       uint32_t &TypeId);
+  void visitArrayType(const DICompositeType *ATy, uint32_t &TypeId);
+  void visitEnumType(const DICompositeType *ETy, uint32_t &TypeId);
+  void visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId);
   /// @}
 
   /// Get the file content for the subprogram. Certain lines of the file
@@ -233,6 +269,9 @@ class BTFDebug : public DebugHandlerBase {
   /// Construct a line info.
   void constructLineInfo(const DISubprogram *SP, MCSymbol *Label, uint32_t Line,
                          uint32_t Column);
+
+  /// Generate types and variables for globals.
+  void processGlobals(void);
 
   /// Emit common header of .BTF and .BTF.ext sections.
   void emitCommonHeader();

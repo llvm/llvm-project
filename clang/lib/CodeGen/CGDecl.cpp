@@ -1113,7 +1113,7 @@ static llvm::Constant *constStructWithPadding(CodeGenModule &CGM,
   }
   if (NestedIntact && Values.size() == STy->getNumElements())
     return constant;
-  return llvm::ConstantStruct::getAnon(Values);
+  return llvm::ConstantStruct::getAnon(Values, STy->isPacked());
 }
 
 /// Replace all padding bytes in a given constant with either a pattern byte or
