@@ -54,6 +54,12 @@ const char *expected_out = \
 "\ts_endpgm                                                   // 000000000120: BF810000 \n";
 
 const char *expected_log = \
+"amd_comgr_do_action:\n"
+"\taction_kind: AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE\n"
+"\tisa_name: amdgcn-amd-amdhsa--gfx803\n"
+"\taction_options: -file-headers -invalid-option\n"
+"\taction_path: \n"
+"\tlanguage: AMD_COMGR_LANGUAGE_NONE\n"
 ": Unknown command line argument '-invalid-option'.  Try: ' -help'\n"
 ": Did you mean '-print-all-options'?\n";
 

@@ -258,6 +258,56 @@ static bool symbol_info_is_valid(amd_comgr_symbol_info_t attr) {
   return false;
 }
 
+static StringRef GetActionKindName(amd_comgr_action_kind_t ActionKind) {
+  switch (ActionKind) {
+  case AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR:
+    return "AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR";
+  case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
+    return "AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS";
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC:
+    return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC";
+  case AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES:
+    return "AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES";
+  case AMD_COMGR_ACTION_LINK_BC_TO_BC:
+    return "AMD_COMGR_ACTION_LINK_BC_TO_BC";
+  case AMD_COMGR_ACTION_OPTIMIZE_BC_TO_BC:
+    return "AMD_COMGR_ACTION_OPTIMIZE_BC_TO_BC";
+  case AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE:
+    return "AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE";
+  case AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY:
+    return "AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY";
+  case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE:
+    return "AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE";
+  case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
+    return "AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE";
+  case AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE:
+    return "AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE";
+  case AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE:
+    return "AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE";
+  case AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE:
+    return "AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE";
+  case AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE:
+    return "AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE";
+  default:
+    return "UNKNOWN_ACTION_KIND";
+  }
+}
+
+static StringRef GetLanguageName(amd_comgr_language_t Language) {
+  switch (Language) {
+  case AMD_COMGR_LANGUAGE_NONE:
+    return "AMD_COMGR_LANGUAGE_NONE";
+  case AMD_COMGR_LANGUAGE_OPENCL_1_2:
+    return "AMD_COMGR_LANGUAGE_OPENCL_1_2";
+  case AMD_COMGR_LANGUAGE_OPENCL_2_0:
+    return "AMD_COMGR_LANGUAGE_OPENCL_2_0";
+  case AMD_COMGR_LANGUAGE_HC:
+    return "AMD_COMGR_LANGUAGE_HC";
+  default:
+    return "UNKNOWN_LANGUAGE";
+  }
+}
+
 amd_comgr_status_t COMGR::SetCStr(char *&Dest, StringRef Src, size_t *Size) {
   free(Dest);
   Dest = reinterpret_cast<char *>(malloc(Src.size() + 1));
@@ -1020,6 +1070,15 @@ amd_comgr_do_action(
 
   std::string Log;
   raw_string_ostream LogS(Log);
+
+  if (actioninfop->logging) {
+    LogS << "amd_comgr_do_action:\n"
+         << "\taction_kind: " << GetActionKindName(action_kind) << '\n'
+         << "\tisa_name: " << actioninfop->isa_name << '\n'
+         << "\taction_options: " << actioninfop->action_options << '\n'
+         << "\taction_path: " << actioninfop->action_path << '\n'
+         << "\tlanguage: " << GetLanguageName(actioninfop->language) << '\n';
+  }
 
   amd_comgr_status_t ActionStatus;
   switch (action_kind) {

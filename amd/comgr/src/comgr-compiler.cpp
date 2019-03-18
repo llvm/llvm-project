@@ -592,6 +592,12 @@ amd_comgr_status_t InProcessDriver::Execute(ArrayRef<const char *> Args) {
 
     ClearLLVMOptions();
 
+    DiagOS << "COMGR::InProcessDriver::Execute argv:";
+    for (auto &Arg : Argv)
+      if (Arg)
+        DiagOS << " \"" << Arg << '\"';
+    DiagOS << '\n';
+
     if (Argv[1] == StringRef("-cc1")) {
       std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
       Clang->createDiagnostics(DiagClient, /* ShouldOwnClient */ false);
