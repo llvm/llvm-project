@@ -370,37 +370,35 @@ def anymem : X86MemOperand<"printanymem">;
 // restrict to only unsized memory.
 def opaquemem : X86MemOperand<"printopaquemem">;
 
-def i8mem   : X86MemOperand<"printi8mem",   X86Mem8AsmOperand>;
-def i16mem  : X86MemOperand<"printi16mem",  X86Mem16AsmOperand>;
-def i32mem  : X86MemOperand<"printi32mem",  X86Mem32AsmOperand>;
-def i64mem  : X86MemOperand<"printi64mem",  X86Mem64AsmOperand>;
-def i128mem : X86MemOperand<"printi128mem", X86Mem128AsmOperand>;
-def i256mem : X86MemOperand<"printi256mem", X86Mem256AsmOperand>;
-def i512mem : X86MemOperand<"printi512mem", X86Mem512AsmOperand>;
-def f32mem  : X86MemOperand<"printf32mem",  X86Mem32AsmOperand>;
-def f64mem  : X86MemOperand<"printf64mem",  X86Mem64AsmOperand>;
-def f80mem  : X86MemOperand<"printf80mem",  X86Mem80AsmOperand>;
-def f128mem : X86MemOperand<"printf128mem", X86Mem128AsmOperand>;
-def f256mem : X86MemOperand<"printf256mem", X86Mem256AsmOperand>;
-def f512mem : X86MemOperand<"printf512mem", X86Mem512AsmOperand>;
-
-def v512mem : X86VMemOperand<VR512, "printf512mem", X86Mem512AsmOperand>;
+def i8mem   : X86MemOperand<"printbytemem",   X86Mem8AsmOperand>;
+def i16mem  : X86MemOperand<"printwordmem",  X86Mem16AsmOperand>;
+def i32mem  : X86MemOperand<"printdwordmem",  X86Mem32AsmOperand>;
+def i64mem  : X86MemOperand<"printqwordmem",  X86Mem64AsmOperand>;
+def i128mem : X86MemOperand<"printxmmwordmem", X86Mem128AsmOperand>;
+def i256mem : X86MemOperand<"printymmwordmem", X86Mem256AsmOperand>;
+def i512mem : X86MemOperand<"printzmmwordmem", X86Mem512AsmOperand>;
+def f32mem  : X86MemOperand<"printdwordmem",  X86Mem32AsmOperand>;
+def f64mem  : X86MemOperand<"printqwordmem",  X86Mem64AsmOperand>;
+def f80mem  : X86MemOperand<"printtbytemem",  X86Mem80AsmOperand>;
+def f128mem : X86MemOperand<"printxmmwordmem", X86Mem128AsmOperand>;
+def f256mem : X86MemOperand<"printymmwordmem", X86Mem256AsmOperand>;
+def f512mem : X86MemOperand<"printzmmwordmem", X86Mem512AsmOperand>;
 
 // Gather mem operands
-def vx64mem  : X86VMemOperand<VR128,  "printi64mem",  X86Mem64_RC128Operand>;
-def vx128mem : X86VMemOperand<VR128,  "printi128mem", X86Mem128_RC128Operand>;
-def vx256mem : X86VMemOperand<VR128,  "printi256mem", X86Mem256_RC128Operand>;
-def vy128mem : X86VMemOperand<VR256,  "printi128mem", X86Mem128_RC256Operand>;
-def vy256mem : X86VMemOperand<VR256,  "printi256mem", X86Mem256_RC256Operand>;
+def vx64mem  : X86VMemOperand<VR128,  "printqwordmem",  X86Mem64_RC128Operand>;
+def vx128mem : X86VMemOperand<VR128,  "printxmmwordmem", X86Mem128_RC128Operand>;
+def vx256mem : X86VMemOperand<VR128,  "printymmwordmem", X86Mem256_RC128Operand>;
+def vy128mem : X86VMemOperand<VR256,  "printxmmwordmem", X86Mem128_RC256Operand>;
+def vy256mem : X86VMemOperand<VR256,  "printymmwordmem", X86Mem256_RC256Operand>;
 
-def vx64xmem  : X86VMemOperand<VR128X, "printi64mem",  X86Mem64_RC128XOperand>;
-def vx128xmem : X86VMemOperand<VR128X, "printi128mem", X86Mem128_RC128XOperand>;
-def vx256xmem : X86VMemOperand<VR128X, "printi256mem", X86Mem256_RC128XOperand>;
-def vy128xmem : X86VMemOperand<VR256X, "printi128mem", X86Mem128_RC256XOperand>;
-def vy256xmem : X86VMemOperand<VR256X, "printi256mem", X86Mem256_RC256XOperand>;
-def vy512xmem : X86VMemOperand<VR256X, "printi512mem", X86Mem512_RC256XOperand>;
-def vz256mem  : X86VMemOperand<VR512,  "printi256mem", X86Mem256_RC512Operand>;
-def vz512mem  : X86VMemOperand<VR512,  "printi512mem", X86Mem512_RC512Operand>;
+def vx64xmem  : X86VMemOperand<VR128X, "printqwordmem",  X86Mem64_RC128XOperand>;
+def vx128xmem : X86VMemOperand<VR128X, "printxmmwordmem", X86Mem128_RC128XOperand>;
+def vx256xmem : X86VMemOperand<VR128X, "printymmwordmem", X86Mem256_RC128XOperand>;
+def vy128xmem : X86VMemOperand<VR256X, "printxmmwordmem", X86Mem128_RC256XOperand>;
+def vy256xmem : X86VMemOperand<VR256X, "printymmwordmem", X86Mem256_RC256XOperand>;
+def vy512xmem : X86VMemOperand<VR256X, "printzmmwordmem", X86Mem512_RC256XOperand>;
+def vz256mem  : X86VMemOperand<VR512,  "printymmwordmem", X86Mem256_RC512Operand>;
+def vz512mem  : X86VMemOperand<VR512,  "printzmmwordmem", X86Mem512_RC512Operand>;
 
 // A version of i8mem for use on x86-64 and x32 that uses a NOREX GPR instead
 // of a plain GPR, so that it doesn't potentially require a REX prefix.
@@ -408,7 +406,7 @@ def ptr_rc_norex : PointerLikeRegClass<2>;
 def ptr_rc_norex_nosp : PointerLikeRegClass<3>;
 
 def i8mem_NOREX : Operand<iPTR> {
-  let PrintMethod = "printi8mem";
+  let PrintMethod = "printbytemem";
   let MIOperandInfo = (ops ptr_rc_norex, i8imm, ptr_rc_norex_nosp, i32imm,
                        SEGMENT_REG);
   let ParserMatchClass = X86Mem8AsmOperand;
@@ -423,7 +421,7 @@ def ptr_rc_tailcall : PointerLikeRegClass<4>;
 // allowed to use callee-saved registers since they must be scheduled
 // after callee-saved register are popped.
 def i32mem_TC : Operand<i32> {
-  let PrintMethod = "printi32mem";
+  let PrintMethod = "printdwordmem";
   let MIOperandInfo = (ops ptr_rc_tailcall, i8imm, ptr_rc_tailcall,
                        i32imm, SEGMENT_REG);
   let ParserMatchClass = X86Mem32AsmOperand;
@@ -434,7 +432,7 @@ def i32mem_TC : Operand<i32> {
 // allowed to use callee-saved registers since they must be scheduled
 // after callee-saved register are popped.
 def i64mem_TC : Operand<i64> {
-  let PrintMethod = "printi64mem";
+  let PrintMethod = "printqwordmem";
   let MIOperandInfo = (ops ptr_rc_tailcall, i8imm,
                        ptr_rc_tailcall, i32imm, SEGMENT_REG);
   let ParserMatchClass = X86Mem64AsmOperand;
@@ -609,16 +607,6 @@ def SSECC : Operand<i8> {
 
 def AVXCC : Operand<i8> {
   let PrintMethod = "printSSEAVXCC";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def AVX512ICC : Operand<i8> {
-  let PrintMethod = "printSSEAVXCC";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def XOPCC : Operand<i8> {
-  let PrintMethod = "printXOPCC";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 

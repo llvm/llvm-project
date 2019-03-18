@@ -4237,6 +4237,17 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::XOR64_FP:
   case X86::XOR32_FP:
     return expandXorFP(MIB, *this);
+  case X86::ADD8rr_DB:    MIB->setDesc(get(X86::OR8rr));    break;
+  case X86::ADD16rr_DB:   MIB->setDesc(get(X86::OR16rr));   break;
+  case X86::ADD32rr_DB:   MIB->setDesc(get(X86::OR32rr));   break;
+  case X86::ADD64rr_DB:   MIB->setDesc(get(X86::OR64rr));   break;
+  case X86::ADD8ri_DB:    MIB->setDesc(get(X86::OR8ri));    break;
+  case X86::ADD16ri_DB:   MIB->setDesc(get(X86::OR16ri));   break;
+  case X86::ADD32ri_DB:   MIB->setDesc(get(X86::OR32ri));   break;
+  case X86::ADD64ri32_DB: MIB->setDesc(get(X86::OR64ri32)); break;
+  case X86::ADD16ri8_DB:  MIB->setDesc(get(X86::OR16ri8));  break;
+  case X86::ADD32ri8_DB:  MIB->setDesc(get(X86::OR32ri8));  break;
+  case X86::ADD64ri8_DB:  MIB->setDesc(get(X86::OR64ri8));  break;
   }
   return false;
 }

@@ -306,8 +306,9 @@ static StringRef getGPUOrDefault(const Triple &TT, StringRef GPU) {
   if (!GPU.empty())
     return GPU;
 
+  // Need to default to a target with flat support for HSA.
   if (TT.getArch() == Triple::amdgcn)
-    return "generic";
+    return TT.getOS() == Triple::AMDHSA ? "generic-hsa" : "generic";
 
   return "r600";
 }

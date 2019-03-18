@@ -294,6 +294,9 @@ public:
     // The default action for one element vectors is to scalarize
     if (VT.getVectorNumElements() == 1)
       return TypeScalarizeVector;
+    // The default action for an odd-width vector is to widen.
+    if (!VT.isPow2VectorType())
+      return TypeWidenVector;
     // The default action for other vectors is to promote
     return TypePromoteInteger;
   }
