@@ -1085,7 +1085,6 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
   Log *expr_log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 #endif
 
-  ExpressionResults exe_results = eExpressionSetupError;
   SBValue expr_result;
 
   if (expr == nullptr || expr[0] == '\0') {
@@ -1118,8 +1117,7 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
               frame_description.GetData());
         }
 
-        exe_results = target->EvaluateExpression(expr, frame, expr_value_sp,
-                                                 options.ref());
+        target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
         expr_result.SetSP(expr_value_sp, options.GetFetchDynamicValue());
       }
     }
