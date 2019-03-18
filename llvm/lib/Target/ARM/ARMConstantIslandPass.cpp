@@ -1912,12 +1912,16 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
     if (BrOffset >= DestOffset || (DestOffset - BrOffset) > 126)
       continue;
 
-    // Search backwards to the instruction that defines CSPR
+    // Search backwards to the instruction that defines CSPR. This may or not
+    // be a CMP, we check that after this loop. If we find an instruction that
+    // reads cpsr, we need to keep the original cmp.
     auto *TRI = STI->getRegisterInfo();
     MachineBasicBlock::iterator CmpMI = Br.MI;
     while (CmpMI != Br.MI->getParent()->begin()) {
       --CmpMI;
       if (CmpMI->modifiesRegister(ARM::CPSR, TRI))
+        break;
+      if (CmpMI->readsRegister(ARM::CPSR, TRI))
         break;
     }
 

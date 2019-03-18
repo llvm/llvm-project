@@ -12154,11 +12154,11 @@ static SDValue PerformVCVTCombine(SDNode *N, SelectionDAG &DAG,
   MVT IntTy = N->getSimpleValueType(0).getVectorElementType();
   uint32_t IntBits = IntTy.getSizeInBits();
   unsigned NumLanes = Op.getValueType().getVectorNumElements();
-  if (FloatBits != 32 || IntBits > 32 || NumLanes > 4) {
+  if (FloatBits != 32 || IntBits > 32 || (NumLanes != 4 && NumLanes != 2)) {
     // These instructions only exist converting from f32 to i32. We can handle
     // smaller integers by generating an extra truncate, but larger ones would
-    // be lossy. We also can't handle more then 4 lanes, since these intructions
-    // only support v2i32/v4i32 types.
+    // be lossy. We also can't handle anything other than 2 or 4 lanes, since
+    // these intructions only support v2i32/v4i32 types.
     return SDValue();
   }
 
@@ -12212,11 +12212,11 @@ static SDValue PerformVDIVCombine(SDNode *N, SelectionDAG &DAG,
   MVT IntTy = Op.getOperand(0).getSimpleValueType().getVectorElementType();
   uint32_t IntBits = IntTy.getSizeInBits();
   unsigned NumLanes = Op.getValueType().getVectorNumElements();
-  if (FloatBits != 32 || IntBits > 32 || NumLanes > 4) {
+  if (FloatBits != 32 || IntBits > 32 || (NumLanes != 4 && NumLanes != 2)) {
     // These instructions only exist converting from i32 to f32. We can handle
     // smaller integers by generating an extra extend, but larger ones would
-    // be lossy. We also can't handle more then 4 lanes, since these intructions
-    // only support v2i32/v4i32 types.
+    // be lossy. We also can't handle anything other than 2 or 4 lanes, since
+    // these intructions only support v2i32/v4i32 types.
     return SDValue();
   }
 

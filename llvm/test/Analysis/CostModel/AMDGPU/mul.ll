@@ -19,11 +19,24 @@ define amdgpu_kernel void @mul_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> add
 }
 
 ; CHECK: 'mul_v3i32'
-; CHECK: estimated cost of 9 for {{.*}} mul <3 x i32>
+; Allow for 12 when v3i32 is illegal and TargetLowering thinks it needs widening,
+; and 9 when it is legal.
+; CHECK: estimated cost of {{9|12}} for {{.*}} mul <3 x i32>
 define amdgpu_kernel void @mul_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(1)* %vaddr, <3 x i32> %b) #0 {
   %vec = load <3 x i32>, <3 x i32> addrspace(1)* %vaddr
   %mul = mul <3 x i32> %vec, %b
   store <3 x i32> %mul, <3 x i32> addrspace(1)* %out
+  ret void
+}
+
+; CHECK: 'mul_v5i32'
+; Allow for 24 when v5i32 is illegal and TargetLowering thinks it needs widening,
+; and 15 when it is legal.
+; CHECK: estimated cost of {{15|24}} for {{.*}} mul <5 x i32>
+define amdgpu_kernel void @mul_v5i32(<5 x i32> addrspace(1)* %out, <5 x i32> addrspace(1)* %vaddr, <5 x i32> %b) #0 {
+  %vec = load <5 x i32>, <5 x i32> addrspace(1)* %vaddr
+  %mul = mul <5 x i32> %vec, %b
+  store <5 x i32> %mul, <5 x i32> addrspace(1)* %out
   ret void
 }
 
