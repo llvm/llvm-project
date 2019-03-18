@@ -2378,9 +2378,7 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
                      (const char *, const lldb::SBExpressionOptions &), expr,
                      options);
 
-#if !defined(LLDB_DISABLE_PYTHON)
   Log *expr_log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-#endif
   SBValue expr_result;
   ExpressionResults exe_results = eExpressionSetupError;
   ValueObjectSP expr_value_sp;
@@ -2415,13 +2413,10 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
       expr_result.SetSP(expr_value_sp, options.GetFetchDynamicValue());
     }
   }
-#ifndef LLDB_DISABLE_PYTHON
   if (expr_log)
     expr_log->Printf("** [SBTarget::EvaluateExpression] Expression result is "
                      "%s, summary %s **",
                      expr_result.GetValue(), expr_result.GetSummary());
-#endif
-
   return LLDB_RECORD_RESULT(expr_result);
 }
 
