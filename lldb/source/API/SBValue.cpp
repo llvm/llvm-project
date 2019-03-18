@@ -558,7 +558,6 @@ lldb::SBTypeFilter SBValue::GetTypeFilter() {
   return LLDB_RECORD_RESULT(filter);
 }
 
-#ifndef LLDB_DISABLE_PYTHON
 lldb::SBTypeSynthetic SBValue::GetTypeSynthetic() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBTypeSynthetic, SBValue, GetTypeSynthetic);
 
@@ -578,7 +577,6 @@ lldb::SBTypeSynthetic SBValue::GetTypeSynthetic() {
   }
   return LLDB_RECORD_RESULT(synthetic);
 }
-#endif
 
 lldb::SBValue SBValue::CreateChildAtOffset(const char *name, uint32_t offset,
                                            SBType type) {
