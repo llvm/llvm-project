@@ -689,13 +689,13 @@ let IntrProperties = [IntrInaccessibleMemOnly] in {
                                                        llvm_metadata_ty ]>;
 }
 // FIXME: Add intrinsics for fcmp, fptrunc, fpext, fptoui and fptosi.
-// FIXME: Add intrinsics for fabs and copysign? 
+// FIXME: Add intrinsics for fabs and copysign?
 
 
 //===------------------------- Expect Intrinsics --------------------------===//
 //
 def int_expect : Intrinsic<[llvm_anyint_ty],
-  [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, ImmArg<1>]>;
+  [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
 
 //===-------------------- Bit Manipulation Intrinsics ---------------------===//
 //

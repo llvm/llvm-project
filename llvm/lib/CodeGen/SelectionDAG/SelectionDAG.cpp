@@ -9127,6 +9127,15 @@ SelectionDAG::SplitVector(const SDValue &N, const SDLoc &DL, const EVT &LoVT,
   return std::make_pair(Lo, Hi);
 }
 
+/// Widen the vector up to the next power of two using INSERT_SUBVECTOR.
+SDValue SelectionDAG::WidenVector(const SDValue &N, const SDLoc &DL) {
+  EVT VT = N.getValueType();
+  EVT WideVT = EVT::getVectorVT(*getContext(), VT.getVectorElementType(),
+                                NextPowerOf2(VT.getVectorNumElements()));
+  return getNode(ISD::INSERT_SUBVECTOR, DL, WideVT, getUNDEF(WideVT), N,
+                 getConstant(0, DL, TLI->getVectorIdxTy(getDataLayout())));
+}
+
 void SelectionDAG::ExtractVectorElements(SDValue Op,
                                          SmallVectorImpl<SDValue> &Args,
                                          unsigned Start, unsigned Count) {

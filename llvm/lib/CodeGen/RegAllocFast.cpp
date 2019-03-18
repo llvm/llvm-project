@@ -566,7 +566,8 @@ void RegAllocFast::allocVirtReg(MachineInstr &MI, LiveReg &LR, unsigned Hint) {
 
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   LLVM_DEBUG(dbgs() << "Search register for " << printReg(VirtReg)
-                    << " in class " << TRI->getRegClassName(&RC) << '\n');
+                    << " in class " << TRI->getRegClassName(&RC)
+                    << " with hint " << printReg(Hint, TRI) << '\n');
 
   // Take hint when possible.
   if (TargetRegisterInfo::isPhysicalRegister(Hint) &&

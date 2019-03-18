@@ -38,6 +38,15 @@ define amdgpu_kernel void @extractelement_v4i32(i32 addrspace(1)* %out, <4 x i32
   ret void
 }
 
+; GCN: 'extractelement_v5i32'
+; GCN: estimated cost of 0 for {{.*}} extractelement <5 x i32>
+define amdgpu_kernel void @extractelement_v5i32(i32 addrspace(1)* %out, <5 x i32> addrspace(1)* %vaddr) {
+  %vec = load <5 x i32>, <5 x i32> addrspace(1)* %vaddr
+  %elt = extractelement <5 x i32> %vec, i32 1
+  store i32 %elt, i32 addrspace(1)* %out
+  ret void
+}
+
 ; GCN: 'extractelement_v8i32'
 ; GCN: estimated cost of 0 for {{.*}} extractelement <8 x i32>
 define amdgpu_kernel void @extractelement_v8i32(i32 addrspace(1)* %out, <8 x i32> addrspace(1)* %vaddr) {

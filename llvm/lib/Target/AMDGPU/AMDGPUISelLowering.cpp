@@ -1008,9 +1008,10 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
       if (MemVT.isVector() && MemVT.getVectorNumElements() == 1)
         MemVT = MemVT.getScalarType();
 
-      if (MemVT.isExtended()) {
-        // This should really only happen if we have vec3 arguments
-        assert(MemVT.isVector() && MemVT.getVectorNumElements() == 3);
+      // Round up vec3/vec5 argument.
+      if (MemVT.isVector() && !MemVT.isPow2VectorType()) {
+        assert(MemVT.getVectorNumElements() == 3 ||
+               MemVT.getVectorNumElements() == 5);
         MemVT = MemVT.getPow2VectorType(State.getContext());
       }
 

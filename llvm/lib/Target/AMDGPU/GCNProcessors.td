@@ -12,6 +12,10 @@ def : ProcessorModel<"generic", NoSchedModel,
   [FeatureWavefrontSize64]
 >;
 
+def : ProcessorModel<"generic-hsa", NoSchedModel,
+  [FeatureWavefrontSize64, FeatureFlatAddressSpace]
+>;
+
 //===------------------------------------------------------------===//
 // GCN GFX6 (Southern Islands (SI)).
 //===------------------------------------------------------------===//
