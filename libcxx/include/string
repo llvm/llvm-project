@@ -1236,9 +1236,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void swap(basic_string& __str)
 #if _LIBCPP_STD_VER >= 14
-        _NOEXCEPT_DEBUG;
+        _NOEXCEPT;
 #else
-        _NOEXCEPT_DEBUG_(!__alloc_traits::propagate_on_container_swap::value ||
+        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value);
 #endif
 
@@ -3295,9 +3295,9 @@ inline
 void
 basic_string<_CharT, _Traits, _Allocator>::swap(basic_string& __str)
 #if _LIBCPP_STD_VER >= 14
-        _NOEXCEPT_DEBUG
+        _NOEXCEPT
 #else
-        _NOEXCEPT_DEBUG_(!__alloc_traits::propagate_on_container_swap::value ||
+        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value)
 #endif
 {

@@ -7,31 +7,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-no-exceptions
 // MODULES_DEFINES: _LIBCPP_DEBUG=1
-// MODULES_DEFINES: _LIBCPP_DEBUG_USE_EXCEPTIONS
 
 // Can't test the system lib because this test enables debug mode
 // UNSUPPORTED: with_system_cxx_lib
 
-// Test that defining _LIBCPP_DEBUG_USE_EXCEPTIONS causes _LIBCPP_ASSERT
-// to throw on failure.
-
 #define _LIBCPP_DEBUG 1
-#define _LIBCPP_DEBUG_USE_EXCEPTIONS
 
 #include <cstdlib>
-#include <exception>
+#include <string>
 #include <type_traits>
 #include <__debug>
 #include <cassert>
 
+void my_debug_function(std::__libcpp_debug_info const& info) {
+  assert(info.__msg_ == std::string("foo"));
+  std::exit(0);
+}
+
 int main(int, char**)
 {
-  try {
-    _LIBCPP_ASSERT(false, "foo");
-    assert(false);
-  } catch (...) {}
-
-  return 0;
+  std::__libcpp_set_debug_function(&my_debug_function);
+  _LIBCPP_ASSERT(false, "foo");
+  return 1;
 }
