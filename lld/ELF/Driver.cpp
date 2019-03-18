@@ -1235,7 +1235,6 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &Args) {
 // A special library name "ALL" means all archive files.
 //
 // This is not a popular option, but some programs such as bionic libc use it.
-template <class ELFT>
 static void excludeLibs(opt::InputArgList &Args) {
   DenseSet<StringRef> Libs = getExcludeLibs(Args);
   bool All = Libs.count("ALL");
@@ -1555,7 +1554,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle the -exclude-libs option.
   if (Args.hasArg(OPT_exclude_libs))
-    excludeLibs<ELFT>(Args);
+    excludeLibs(Args);
 
   // Create ElfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.

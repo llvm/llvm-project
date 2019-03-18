@@ -3831,8 +3831,15 @@ SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
     return Res;
   }
 
-  InOp1 = GetWidenedVector(InOp1);
-  SDValue InOp2 = GetWidenedVector(N->getOperand(1));
+  // If the inputs also widen, handle them directly. Otherwise widen by hand.
+  SDValue InOp2 = N->getOperand(1);
+  if (getTypeAction(InVT) == TargetLowering::TypeWidenVector) {
+    InOp1 = GetWidenedVector(InOp1);
+    InOp2 = GetWidenedVector(InOp2);
+  } else {
+    InOp1 = DAG.WidenVector(InOp1, SDLoc(N));
+    InOp2 = DAG.WidenVector(InOp2, SDLoc(N));
+  }
 
   // Assume that the input and output will be widen appropriately.  If not,
   // we will have to unroll it at some point.
@@ -3875,6 +3882,7 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::MGATHER:            Res = WidenVecOp_MGATHER(N, OpNo); break;
   case ISD::MSCATTER:           Res = WidenVecOp_MSCATTER(N, OpNo); break;
   case ISD::SETCC:              Res = WidenVecOp_SETCC(N); break;
+  case ISD::VSELECT:            Res = WidenVecOp_VSELECT(N); break;
   case ISD::FCOPYSIGN:          Res = WidenVecOp_FCOPYSIGN(N); break;
 
   case ISD::ANY_EXTEND:
@@ -4311,6 +4319,24 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
   return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Op, N->getFlags());
 }
 
+SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {
+  // This only gets called in the case that the left and right inputs and
+  // result are of a legal odd vector type, and the condition is illegal i1 of
+  // the same odd width that needs widening.
+  EVT VT = N->getValueType(0);
+  assert(VT.isVector() && !VT.isPow2VectorType() && isTypeLegal(VT));
+
+  SDValue Cond = GetWidenedVector(N->getOperand(0));
+  SDValue LeftIn = DAG.WidenVector(N->getOperand(1), SDLoc(N));
+  SDValue RightIn = DAG.WidenVector(N->getOperand(2), SDLoc(N));
+  SDLoc DL(N);
+
+  SDValue Select = DAG.getNode(N->getOpcode(), DL, LeftIn.getValueType(), Cond,
+                               LeftIn, RightIn);
+  return DAG.getNode(
+      ISD::EXTRACT_SUBVECTOR, DL, VT, Select,
+      DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
+}
 
 //===----------------------------------------------------------------------===//
 // Vector Widening Utilities

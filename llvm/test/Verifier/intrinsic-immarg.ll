@@ -65,15 +65,6 @@ define void @objectsize(i8* %ptr, i1 %a, i1 %b, i1 %c) {
   ret void
 }
 
-declare i8 @llvm.expect.i8(i8, i8)
-define i8 @expect(i8 %arg0, i8 %arg1) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i8 %arg1
-  ; CHECK-NEXT: %ret = call i8 @llvm.expect.i8(i8 %arg0, i8 %arg1)
-  %ret = call i8 @llvm.expect.i8(i8 %arg0, i8 %arg1)
-  ret i8 %ret
-}
-
 declare i64 @llvm.smul.fix.i64(i64, i64, i32)
 define i64 @smul_fix(i64 %arg0, i64 %arg1, i32 %arg2) {
   ; CHECK: immarg operand has non-immediate parameter

@@ -1588,6 +1588,9 @@ public:
     return SplitVector(N->getOperand(OpNo), SDLoc(N));
   }
 
+  /// Widen the vector up to the next power of two using INSERT_SUBVECTOR.
+  SDValue WidenVector(const SDValue &N, const SDLoc &DL);
+
   /// Append the extracted elements from Start to Count out of the vector Op
   /// in Args. If Count is 0, all of the elements will be extracted.
   void ExtractVectorElements(SDValue Op, SmallVectorImpl<SDValue> &Args,
