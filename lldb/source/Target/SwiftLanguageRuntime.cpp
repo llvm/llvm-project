@@ -182,6 +182,10 @@ SwiftLanguageRuntime::SwiftLanguageRuntime(Process *process)
   SetupABIBit();
 }
 
+bool SwiftLanguageRuntime::IsABIStable() {
+  return _swift_classIsSwiftMask == 2;
+}
+
 static llvm::Optional<lldb::addr_t>
 FindSymbolForSwiftObject(Target &target, ConstString object,
                          const SymbolType sym_type) {
