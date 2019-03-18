@@ -26,6 +26,7 @@ class TestSwiftReturns(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @decorators.swiftTest
+    @decorators.skipIfDarwin # rdar://problem/48924409
     @decorators.skipIfLinux  # bugs.swift.org/SR-841
     @decorators.expectedFailureAll(
         oslist=["ios"],
