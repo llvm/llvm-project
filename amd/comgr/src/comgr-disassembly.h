@@ -53,7 +53,7 @@ class Target;
 
 namespace COMGR {
 
-typedef size_t (*ReadMemoryCallback)(uint64_t, char *, size_t, void *);
+typedef uint64_t (*ReadMemoryCallback)(uint64_t, char *, uint64_t, void *);
 typedef void (*PrintInstructionCallback)(const char *, void *);
 typedef void (*PrintAddressAnnotationCallback)(uint64_t, void *);
 
@@ -104,7 +104,7 @@ struct DisassemblyInfo {
          amd_comgr_disassembly_info_t *DisassemblyInfoT);
 
   amd_comgr_status_t DisassembleInstruction(uint64_t Address, void *UserData,
-                                            size_t &Size);
+                                            uint64_t &Size);
 
   ReadMemoryCallback ReadMemory;
   PrintInstructionCallback PrintInstruction;

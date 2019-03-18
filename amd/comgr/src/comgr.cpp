@@ -101,7 +101,7 @@ static amd_comgr_status_t print_entry(amd_comgr_metadata_node_t key,
     *indent += 1;
     status = amd_comgr_get_metadata_list_size(value, &size);
     assert(status == AMD_COMGR_STATUS_SUCCESS);
-    printf("LIST %s %ld entries = \n", keybuf, size);
+    printf("LIST %s %zu entries = \n", keybuf, size);
     for (size_t i=0; i<size; i++) {
       status = amd_comgr_index_list_metadata(value, i, &son);
       assert(status == AMD_COMGR_STATUS_SUCCESS);
@@ -115,7 +115,7 @@ static amd_comgr_status_t print_entry(amd_comgr_metadata_node_t key,
     *indent += 1;
     status = amd_comgr_get_metadata_map_size(value, &size);
     assert(status == AMD_COMGR_STATUS_SUCCESS);
-    printf("MAP %ld entries = \n", size);
+    printf("MAP %zu entries = \n", size);
     status = amd_comgr_iterate_map_metadata(value, print_entry, data);
     assert(status == AMD_COMGR_STATUS_SUCCESS);
     *indent = *indent > 0 ? *indent-1 : 0;
@@ -401,13 +401,13 @@ void AMD_NOINLINE
 DataObject::dump() {
   printf("Data Kind: %d\n", data_kind);
   printf("Name: %s\n", name);
-  printf("Size: %ld\n", size);
+  printf("Size: %zu\n", size);
   printf("Refcount: %d\n", refcount);
 }
 
 void AMD_NOINLINE
 DataSet::dump() {
-  printf("Total data objects: %ld\n", data_objects.size());
+  printf("Total data objects: %zu\n", data_objects.size());
   int i = 0;
   for (DataObject *datap: data_objects) {
     printf("--- Data %d ---\n", i++);
@@ -1506,10 +1506,10 @@ amd_comgr_symbol_get_info(
 amd_comgr_status_t AMD_API
 amd_comgr_create_disassembly_info(
     const char *isa_name,
-    size_t (*read_memory_callback)(
+    uint64_t (*read_memory_callback)(
       uint64_t from,
       char *to,
-      size_t size,
+      uint64_t size,
       void *user_data),
     void (*print_instruction_callback)(
       const char *instruction,
@@ -1551,7 +1551,7 @@ amd_comgr_destroy_disassembly_info(
 
 amd_comgr_status_t AMD_API amd_comgr_disassemble_instruction(
     amd_comgr_disassembly_info_t disassembly_info, uint64_t address,
-    void *user_data, size_t *size) {
+    void *user_data, uint64_t *size) {
 
   DisassemblyInfo *DI = DisassemblyInfo::Convert(disassembly_info);
   if (!DI || !size)

@@ -82,8 +82,8 @@ size_t instructions_idx = 0;
 const size_t BR_INSTRUCTION_IDX = 3;
 const size_t BR_INSTRUCTION_ADDR = 40;
 
-size_t read_memory_callback(uint64_t from, char *to, size_t size,
-                          void *user_data) {
+uint64_t read_memory_callback(uint64_t from, char *to, uint64_t size,
+                              void *user_data) {
   check_user_data(user_data);
   if (from >= sizeof(program))
     return 0;
@@ -125,8 +125,8 @@ int main(int argc, char *argv[]) {
       &print_instruction_callback, &print_address_callback, &disassembly_info);
   checkError(status, "amd_comgr_create_disassembly_info");
 
-  size_t addr = 0;
-  size_t size = 0;
+  uint64_t addr = 0;
+  uint64_t size = 0;
   while (status == AMD_COMGR_STATUS_SUCCESS && addr < sizeof(program)) {
     status = amd_comgr_disassemble_instruction(disassembly_info, addr,
                                                (void *)&USER_DATA, &size);

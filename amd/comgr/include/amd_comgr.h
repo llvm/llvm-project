@@ -1812,10 +1812,10 @@ amd_comgr_symbol_get_info(
 amd_comgr_status_t AMD_API
 amd_comgr_create_disassembly_info(
   const char *isa_name,
-  size_t (*read_memory_callback)(
+  uint64_t (*read_memory_callback)(
     uint64_t from,
     char *to,
-    size_t size,
+    uint64_t size,
     void *user_data),
   void (*print_instruction_callback)(
     const char *instruction,
@@ -1871,7 +1871,7 @@ amd_comgr_disassemble_instruction(
   amd_comgr_disassembly_info_t disassembly_info,
   uint64_t address,
   void *user_data,
-  size_t *size);
+  uint64_t *size);
 
 /** @} */
 

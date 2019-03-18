@@ -118,11 +118,11 @@ DisassemblyInfo::Create(const TargetIdentifier &Ident,
 
 amd_comgr_status_t DisassemblyInfo::DisassembleInstruction(uint64_t Address,
                                                            void *UserData,
-                                                           size_t &Size) {
-  size_t ReadSize = MAI->getMaxInstLength();
+                                                           uint64_t &Size) {
+  uint64_t ReadSize = MAI->getMaxInstLength();
   SmallVector<uint8_t, 16> Buffer(ReadSize);
 
-  size_t ActualSize = ReadMemory(
+  uint64_t ActualSize = ReadMemory(
       Address, reinterpret_cast<char *>(Buffer.data()), ReadSize, UserData);
   if (!ActualSize || ActualSize > ReadSize)
     return AMD_COMGR_STATUS_ERROR;
