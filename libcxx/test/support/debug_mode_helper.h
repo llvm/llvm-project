@@ -15,7 +15,7 @@
 
 #include <ciso646>
 #ifndef _LIBCPP_VERSION
-#error This header may only be used for libc++ tests"
+#error "This header may only be used for libc++ tests"
 #endif
 
 #include <__debug>
@@ -42,9 +42,9 @@ struct DebugInfoMatcher {
   static constexpr const char* any_file = "*";
   static constexpr const char* any_msg = "*";
 
-  constexpr DebugInfoMatcher() : is_empty(true), msg(any_msg), file(any_file), line(any_line) { }
+  constexpr DebugInfoMatcher() : is_empty(true), msg(any_msg, __builtin_strlen(any_msg)), file(any_file, __builtin_strlen(any_file)), line(any_line) { }
   constexpr DebugInfoMatcher(const char* msg, const char* file = any_file, int line = any_line)
-    : is_empty(false), msg(msg), file(file), line(line) {}
+    : is_empty(false), msg(msg, __builtin_strlen(msg)), file(file, __builtin_strlen(file)), line(line) {}
 
   bool Matches(std::__libcpp_debug_info const& got) const {
     assert(!empty() && "empty matcher");
