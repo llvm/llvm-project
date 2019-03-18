@@ -62,7 +62,7 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
       !MI->getOperand(MI->getNumOperands() - 1).isImm())
     return false;
 
-  unsigned Imm = MI->getOperand(MI->getNumOperands() - 1).getImm();
+  int64_t Imm = MI->getOperand(MI->getNumOperands() - 1).getImm();
 
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 

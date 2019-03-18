@@ -1300,6 +1300,12 @@ void Module::SectionFileAddressesChanged() {
     sym_vendor->SectionFileAddressesChanged();
 }
 
+UnwindTable &Module::GetUnwindTable() {
+  if (!m_unwind_table)
+    m_unwind_table.emplace(*this);
+  return *m_unwind_table;
+}
+
 SectionList *Module::GetUnifiedSectionList() {
   if (!m_sections_up)
     m_sections_up = llvm::make_unique<SectionList>();
@@ -1445,6 +1451,10 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
         // Cleare the current symtab as we are going to replace it with a new
         // one
         obj_file->ClearSymtab();
+
+        // Clear the unwind table too, as that may also be affected by the
+        // symbol file information.
+        m_unwind_table.reset();
 
         // The symbol file might be a directory bundle ("/tmp/a.out.dSYM")
         // instead of a full path to the symbol file within the bundle

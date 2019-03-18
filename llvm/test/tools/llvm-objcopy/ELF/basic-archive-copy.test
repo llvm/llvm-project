@@ -88,7 +88,7 @@ Symbols:
 # CHECK-NEXT: ]
 # CHECK-NEXT: Address:
 # CHECK-NEXT: Offset:
-# CHECK-NEXT: Size: 6
+# CHECK-NEXT: Size: 5
 
 # CHECK:      Name: .shstrtab
 # CHECK-NEXT: Type: SHT_STRTAB

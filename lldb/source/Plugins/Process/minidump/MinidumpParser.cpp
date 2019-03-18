@@ -162,7 +162,7 @@ UUID MinidumpParser::GetModuleUUID(const MinidumpModule *module) {
     return UUID();
 
   const CvSignature cv_signature =
-      static_cast<CvSignature>(static_cast<const uint32_t>(*signature));
+      static_cast<CvSignature>(static_cast<uint32_t>(*signature));
 
   if (cv_signature == CvSignature::Pdb70) {
     // PDB70 record
@@ -263,9 +263,8 @@ ArchSpec MinidumpParser::GetArchitecture() {
   llvm::Triple triple;
   triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
 
-  const MinidumpCPUArchitecture arch =
-      static_cast<const MinidumpCPUArchitecture>(
-          static_cast<const uint32_t>(system_info->processor_arch));
+  const MinidumpCPUArchitecture arch = static_cast<MinidumpCPUArchitecture>(
+      static_cast<uint32_t>(system_info->processor_arch));
 
   switch (arch) {
   case MinidumpCPUArchitecture::X86:
@@ -285,8 +284,8 @@ ArchSpec MinidumpParser::GetArchitecture() {
     break;
   }
 
-  const MinidumpOSPlatform os = static_cast<const MinidumpOSPlatform>(
-      static_cast<const uint32_t>(system_info->platform_id));
+  const MinidumpOSPlatform os = static_cast<MinidumpOSPlatform>(
+      static_cast<uint32_t>(system_info->platform_id));
 
   // TODO add all of the OSes that Minidump/breakpad distinguishes?
   switch (os) {

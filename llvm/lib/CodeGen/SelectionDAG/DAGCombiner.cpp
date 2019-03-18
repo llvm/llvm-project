@@ -18934,14 +18934,13 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   auto *N3C = dyn_cast<ConstantSDNode>(N3.getNode());
 
   // Determine if the condition we're dealing with is constant.
-  SDValue SCC = SimplifySetCC(getSetCCResultType(CmpOpVT), N0, N1, CC, DL,
-                              false);
-  if (SCC.getNode()) AddToWorklist(SCC.getNode());
-
-  if (auto *SCCC = dyn_cast_or_null<ConstantSDNode>(SCC.getNode())) {
-    // fold select_cc true, x, y -> x
-    // fold select_cc false, x, y -> y
-    return !SCCC->isNullValue() ? N2 : N3;
+  if (SDValue SCC = DAG.FoldSetCC(VT, N0, N1, CC, DL)) {
+    AddToWorklist(SCC.getNode());
+    if (auto *SCCC = dyn_cast<ConstantSDNode>(SCC)) {
+      // fold select_cc true, x, y -> x
+      // fold select_cc false, x, y -> y
+      return !(SCCC->isNullValue()) ? N2 : N3;
+    }
   }
 
   if (SDValue V =
