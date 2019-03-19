@@ -40,8 +40,6 @@ public:
   llvm::Error extract(const lldb_private::DWARFDataExtractor &data,
                       lldb::offset_t *offset_ptr);
   // void Encode(BinaryStreamBuf& debug_abbrev_buf) const;
-  dw_uleb128_t
-  AppendAbbrevDeclSequential(const DWARFAbbreviationDeclaration &abbrevDecl);
   void GetUnsupportedForms(std::set<dw_form_t> &invalid_forms) const;
 
   const DWARFAbbreviationDeclaration *

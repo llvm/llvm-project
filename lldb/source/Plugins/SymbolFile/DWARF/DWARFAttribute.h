@@ -26,8 +26,6 @@ public:
     m_attr = attr;
     m_form = form;
   }
-  void set_attr(dw_attr_t attr) { m_attr = attr; }
-  void set_form(dw_form_t form) { m_form = form; }
   dw_attr_t get_attr() const { return m_attr; }
   dw_form_t get_form() const { return m_form; }
   void get(dw_attr_t &attr, dw_form_t &form,
@@ -70,8 +68,6 @@ public:
   uint64_t FormValueAsUnsignedAtIndex(uint32_t i, uint64_t fail_value) const;
   uint64_t FormValueAsUnsigned(dw_attr_t attr, uint64_t fail_value) const;
   uint32_t FindAttributeIndex(dw_attr_t attr) const;
-  bool ContainsAttribute(dw_attr_t attr) const;
-  bool RemoveAttribute(dw_attr_t attr);
   void Clear() { m_infos.clear(); }
   size_t Size() const { return m_infos.size(); }
 

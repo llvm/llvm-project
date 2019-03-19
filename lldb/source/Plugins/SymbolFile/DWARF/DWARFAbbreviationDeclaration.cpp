@@ -85,5 +85,5 @@ DWARFAbbreviationDeclaration::FindAttributeIndex(dw_attr_t attr) const {
 bool DWARFAbbreviationDeclaration::
 operator==(const DWARFAbbreviationDeclaration &rhs) const {
   return Tag() == rhs.Tag() && HasChildren() == rhs.HasChildren() &&
-         Attributes() == rhs.Attributes();
+         m_attributes == rhs.m_attributes;
 }

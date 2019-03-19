@@ -56,15 +56,6 @@ uint64_t DWARFBaseDIE::GetAttributeValueAsUnsigned(const dw_attr_t attr,
     return fail_value;
 }
 
-int64_t DWARFBaseDIE::GetAttributeValueAsSigned(const dw_attr_t attr,
-                                            int64_t fail_value) const {
-  if (IsValid())
-    return m_die->GetAttributeValueAsSigned(GetDWARF(), GetCU(), attr,
-                                            fail_value);
-  else
-    return fail_value;
-}
-
 uint64_t DWARFBaseDIE::GetAttributeValueAsReference(const dw_attr_t attr,
                                                 uint64_t fail_value) const {
   if (IsValid())
@@ -119,13 +110,6 @@ lldb_private::CompileUnit *DWARFBaseDIE::GetLLDBCompileUnit() const {
 dw_offset_t DWARFBaseDIE::GetOffset() const {
   if (IsValid())
     return m_die->GetOffset();
-  else
-    return DW_INVALID_OFFSET;
-}
-
-dw_offset_t DWARFBaseDIE::GetCompileUnitRelativeOffset() const {
-  if (IsValid())
-    return m_die->GetOffset() - m_cu->GetOffset();
   else
     return DW_INVALID_OFFSET;
 }

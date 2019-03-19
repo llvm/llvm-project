@@ -61,7 +61,7 @@ DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
 
     const uint32_t num_descriptors = set.NumDescriptors();
     if (num_descriptors > 0) {
-      const dw_offset_t cu_offset = set.GetCompileUnitDIEOffset();
+      const dw_offset_t cu_offset = set.GetHeader().cu_offset;
 
       for (uint32_t i = 0; i < num_descriptors; ++i) {
         const DWARFDebugArangeSet::Descriptor &descriptor =
@@ -71,26 +71,8 @@ DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
       }
     }
     set.Clear();
-  }
-  return llvm::ErrorSuccess();
-}
-
-//----------------------------------------------------------------------
-// Generate
-//----------------------------------------------------------------------
-bool DWARFDebugAranges::Generate(SymbolFileDWARF *dwarf2Data) {
-  Clear();
-  DWARFDebugInfo *debug_info = dwarf2Data->DebugInfo();
-  if (debug_info) {
-    uint32_t cu_idx = 0;
-    const uint32_t num_compile_units = dwarf2Data->GetNumCompileUnits();
-    for (cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-      DWARFUnit *cu = debug_info->GetCompileUnitAtIndex(cu_idx);
-      if (cu)
-        cu->BuildAddressRangeTable(dwarf2Data, this);
     }
-  }
-  return !IsEmpty();
+    return llvm::ErrorSuccess();
 }
 
 void DWARFDebugAranges::Dump(Log *log) const {

@@ -75,25 +75,6 @@ DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(
   return NULL;
 }
 
-//----------------------------------------------------------------------
-// DWARFAbbreviationDeclarationSet::AppendAbbrevDeclSequential()
-//
-// Append an abbreviation declaration with a sequential code for O(n) lookups.
-// Handy when creating an DWARFAbbreviationDeclarationSet.
-//----------------------------------------------------------------------
-dw_uleb128_t DWARFAbbreviationDeclarationSet::AppendAbbrevDeclSequential(
-    const DWARFAbbreviationDeclaration &abbrevDecl) {
-  // Get the next abbreviation code based on our current array size
-  dw_uleb128_t code = m_decls.size() + 1;
-
-  // Push the new declaration on the back
-  m_decls.push_back(abbrevDecl);
-
-  // Update the code for this new declaration
-  m_decls.back().SetCode(code);
-
-  return code; // return the new abbreviation code!
-}
 
 //----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::GetUnsupportedForms()

@@ -32,16 +32,10 @@ public:
   llvm::Error
   extract(const lldb_private::DWARFDataExtractor &debug_aranges_data);
 
-  bool Generate(SymbolFileDWARF *dwarf2Data);
-
   // Use append range multiple times and then call sort
   void AppendRange(dw_offset_t cu_offset, dw_addr_t low_pc, dw_addr_t high_pc);
 
   void Sort(bool minimize);
-
-  const Range *RangeAtIndex(uint32_t idx) const {
-    return m_aranges.GetEntryAtIndex(idx);
-  }
 
   void Dump(lldb_private::Log *log) const;
 

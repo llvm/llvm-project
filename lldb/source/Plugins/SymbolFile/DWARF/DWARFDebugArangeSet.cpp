@@ -34,103 +34,6 @@ void DWARFDebugArangeSet::Clear() {
   m_arange_descriptors.clear();
 }
 
-void DWARFDebugArangeSet::SetHeader(uint16_t version, uint32_t cu_offset,
-                                    uint8_t addr_size, uint8_t seg_size) {
-  m_header.version = version;
-  m_header.cu_offset = cu_offset;
-  m_header.addr_size = addr_size;
-  m_header.seg_size = seg_size;
-}
-
-void DWARFDebugArangeSet::Compact() {
-  if (m_arange_descriptors.empty())
-    return;
-
-  // Iterate through all arange descriptors and combine any ranges that overlap
-  // or have matching boundaries. The m_arange_descriptors are assumed to be in
-  // ascending order after being built by adding descriptors using the
-  // AddDescriptor method.
-  uint32_t i = 0;
-  while (i + 1 < m_arange_descriptors.size()) {
-    if (m_arange_descriptors[i].end_address() >=
-        m_arange_descriptors[i + 1].address) {
-      // The current range ends at or exceeds the start of the next address
-      // range. Compute the max end address between the two and use that to
-      // make the new length.
-      const dw_addr_t max_end_addr =
-          std::max(m_arange_descriptors[i].end_address(),
-                   m_arange_descriptors[i + 1].end_address());
-      m_arange_descriptors[i].length =
-          max_end_addr - m_arange_descriptors[i].address;
-      // Now remove the next entry as it was just combined with the previous
-      // one.
-      m_arange_descriptors.erase(m_arange_descriptors.begin() + i + 1);
-    } else {
-      // Discontiguous address range, just proceed to the next one.
-      ++i;
-    }
-  }
-}
-//----------------------------------------------------------------------
-// Compare function DWARFDebugArangeSet::Descriptor structures
-//----------------------------------------------------------------------
-static bool DescriptorLessThan(const DWARFDebugArangeSet::Descriptor &range1,
-                               const DWARFDebugArangeSet::Descriptor &range2) {
-  return range1.address < range2.address;
-}
-
-//----------------------------------------------------------------------
-// Add a range descriptor and keep things sorted so we can easily compact the
-// ranges before being saved or used.
-//----------------------------------------------------------------------
-void DWARFDebugArangeSet::AddDescriptor(
-    const DWARFDebugArangeSet::Descriptor &range) {
-  if (m_arange_descriptors.empty()) {
-    m_arange_descriptors.push_back(range);
-    return;
-  }
-
-  DescriptorIter end = m_arange_descriptors.end();
-  DescriptorIter pos =
-      lower_bound(m_arange_descriptors.begin(), end, range, DescriptorLessThan);
-  const dw_addr_t range_end_addr = range.end_address();
-  if (pos != end) {
-    const dw_addr_t found_end_addr = pos->end_address();
-    if (range.address < pos->address) {
-      if (range_end_addr < pos->address) {
-        // Non-contiguous entries, add this one before the found entry
-        m_arange_descriptors.insert(pos, range);
-      } else if (range_end_addr == pos->address) {
-        // The top end of 'range' is the lower end of the entry pointed to by
-        // 'pos'. We can combine range with the entry we found by setting the
-        // starting address and increasing the length since they don't overlap.
-        pos->address = range.address;
-        pos->length += range.length;
-      } else {
-        // We can combine these two and make sure the largest end address is
-        // used to make end address.
-        pos->address = range.address;
-        pos->length = std::max(found_end_addr, range_end_addr) - pos->address;
-      }
-    } else if (range.address == pos->address) {
-      pos->length = std::max(pos->length, range.length);
-    }
-  } else {
-    // NOTE: 'pos' points to entry past the end which is ok for insert,
-    // don't use otherwise!!!
-    const dw_addr_t max_addr = m_arange_descriptors.back().end_address();
-    if (max_addr < range.address) {
-      // Non-contiguous entries, add this one before the found entry
-      m_arange_descriptors.insert(pos, range);
-    } else if (max_addr == range.address) {
-      m_arange_descriptors.back().length += range.length;
-    } else {
-      m_arange_descriptors.back().length = std::max(max_addr, range_end_addr) -
-                                           m_arange_descriptors.back().address;
-    }
-  }
-}
-
 llvm::Error DWARFDebugArangeSet::extract(const DWARFDataExtractor &data,
                                          lldb::offset_t *offset_ptr) {
   assert(data.ValidOffset(*offset_ptr));
@@ -213,10 +116,6 @@ llvm::Error DWARFDebugArangeSet::extract(const DWARFDataExtractor &data,
 
   return llvm::make_error<llvm::object::GenericBinaryError>(
       "arange descriptors not terminated by null entry");
-}
-
-dw_offset_t DWARFDebugArangeSet::GetOffsetOfNextEntry() const {
-  return m_offset + m_header.length + 4;
 }
 
 class DescriptorContainsAddress {

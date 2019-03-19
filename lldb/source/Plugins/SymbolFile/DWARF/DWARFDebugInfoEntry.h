@@ -74,8 +74,7 @@ public:
                    const DWARFFormValue::FixedFormSizes &fixed_form_sizes,
                    lldb::offset_t *offset_ptr);
 
-  bool Extract(SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
-               lldb::offset_t *offset_ptr);
+  bool Extract(const DWARFUnit *cu, lldb::offset_t *offset_ptr);
 
   bool LookupAddress(const dw_addr_t address, SymbolFileDWARF *dwarf2Data,
                      const DWARFUnit *cu,
@@ -107,11 +106,6 @@ public:
   uint64_t GetAttributeValueAsReference(
       SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
       const dw_attr_t attr, uint64_t fail_value,
-      bool check_specification_or_abstract_origin = false) const;
-
-  int64_t GetAttributeValueAsSigned(
-      SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
-      const dw_attr_t attr, int64_t fail_value,
       bool check_specification_or_abstract_origin = false) const;
 
   uint64_t GetAttributeValueAsAddress(
@@ -258,10 +252,6 @@ public:
   void SetSiblingIndex(uint32_t idx) { m_sibling_idx = idx; }
 
   void SetParentIndex(uint32_t idx) { m_parent_idx = idx; }
-
-  static void
-  DumpDIECollection(lldb_private::Stream &strm,
-                    DWARFDebugInfoEntry::collection &die_collection);
 
 protected:
   dw_offset_t

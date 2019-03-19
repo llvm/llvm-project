@@ -243,7 +243,6 @@ private:
   }
 
   void AddUnitDIE(const DWARFDebugInfoEntry &cu_die);
-  void ExtractDIEsEndCheck(lldb::offset_t offset) const;
 
   void ComputeCompDirAndGuessPathStyle();
 
