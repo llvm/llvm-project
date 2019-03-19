@@ -451,7 +451,9 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgBaseType(const DIBasicType *BT) {
   ConstantInt *Size = getUInt(M, BT->getSizeInBits());
   Ops[SizeIdx] = SPIRVWriter->transValue(Size, nullptr)->getId();
   auto Encoding = static_cast<dwarf::TypeKind>(BT->getEncoding());
-  Ops[EncodingIdx] = SPIRV::DbgEncodingMap::map(Encoding);
+  SPIRVDebug::EncodingTag EncTag = SPIRVDebug::Unspecified;
+  SPIRV::DbgEncodingMap::find(Encoding, &EncTag);
+  Ops[EncodingIdx] = EncTag;
   return BM->addDebugInfo(SPIRVDebug::TypeBasic, getVoidTy(), Ops);
 }
 
@@ -786,7 +788,11 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgFunction(const DISubprogram *Func) {
   Ops[SourceIdx] = getSource(Func)->getId();
   Ops[LineIdx] = Func->getLine();
   Ops[ColumnIdx] = 0; // This version of DISubprogram has no column number
-  Ops[ParentIdx] = getScope(Func->getScope())->getId();
+  auto Scope = Func->getScope();
+  if (Scope && isa<DIFile>(Scope))
+    Ops[ParentIdx] = SPIRVCU->getId();
+  else
+    Ops[ParentIdx] = getScope(Scope)->getId();
   Ops[LinkageNameIdx] = BM->getString(Func->getLinkageName())->getId();
   Ops[FlagsIdx] = transDebugFlags(Func);
 
@@ -799,15 +805,14 @@ SPIRVEntry *LLVMToSPIRVDbgTran::transDbgFunction(const DISubprogram *Func) {
     Ops.resize(MinOperandCount);
     Ops[ScopeLineIdx] = Func->getScopeLine();
 
-    llvm::Function *F = M->getFunction(Func->getName());
-    if (!F)
-      F = M->getFunction(Func->getLinkageName());
-    if (F) {
-      SPIRVValue *SPIRVFunc = SPIRVWriter->getTranslatedValue(F);
-      assert(SPIRVFunc && "All function must be already translated");
-      Ops[FunctionIdIdx] = SPIRVFunc->getId();
-    } else {
-      Ops[FunctionIdIdx] = getDebugInfoNoneId();
+    Ops[FunctionIdIdx] = getDebugInfoNoneId();
+    for (const llvm::Function &F : M->functions()) {
+      if (Func->describes(&F)) {
+        SPIRVValue *SPIRVFunc = SPIRVWriter->getTranslatedValue(&F);
+        assert(SPIRVFunc && "All function must be already translated");
+        Ops[FunctionIdIdx] = SPIRVFunc->getId();
+        break;
+      }
     }
 
     if (DISubprogram *FuncDecl = Func->getDeclaration())

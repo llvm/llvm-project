@@ -55,9 +55,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -75,8 +73,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils.h" // loop-simplify pass
 
 #include <cstdlib>
@@ -738,9 +734,12 @@ SPIRVValue *LLVMToSPIRV::transValueWithoutDecoration(Value *V,
       }
       Inst->dropAllReferences();
     }
+    // Translate initializer first.
+    SPIRVValue *BVarInit =
+        (Init && !isa<UndefValue>(Init)) ? transValue(Init, nullptr) : nullptr;
+
     auto BVar = static_cast<SPIRVVariable *>(BM->addVariable(
-        transType(Ty), GV->isConstant(), transLinkageType(GV),
-        (Init && !isa<UndefValue>(Init)) ? transValue(Init, nullptr) : nullptr,
+        transType(Ty), GV->isConstant(), transLinkageType(GV), BVarInit,
         GV->getName(),
         SPIRSPIRVAddrSpaceMap::map(
             static_cast<SPIRAddressSpace>(Ty->getAddressSpace())),
@@ -1125,6 +1124,7 @@ SPIRVValue *LLVMToSPIRV::transIntrinsicInst(IntrinsicInst *II,
     // For llvm.fmuladd.* fusion is not guaranteed. If a fused multiply-add
     // is required the corresponding llvm.fma.* intrinsic function should be
     // used instead.
+    BB->getParent()->setContractedFMulAddFound();
     SPIRVType *Ty = transType(II->getType());
     SPIRVValue *Mul =
         BM->addBinaryInst(OpFMul, Ty, transValue(II->getArgOperand(0), BB),
@@ -1330,7 +1330,7 @@ void LLVMToSPIRV::mutateFuncArgType(
 }
 
 void LLVMToSPIRV::transFunction(Function *I) {
-  transFunctionDecl(I);
+  SPIRVFunction *BF = transFunctionDecl(I);
   // Creating all basic blocks before creating any instruction.
   for (auto &FI : *I) {
     transValue(&FI, nullptr);
@@ -1341,6 +1341,12 @@ void LLVMToSPIRV::transFunction(Function *I) {
     for (auto &BI : FI) {
       transValue(&BI, BB, false);
     }
+  }
+
+  if (BF->getModule()->isEntryPoint(spv::ExecutionModelKernel, BF->getId()) &&
+      BF->shouldFPContractBeDisabled()) {
+    BF->addExecutionMode(BF->getModule()->add(
+        new SPIRVExecutionMode(BF, spv::ExecutionModeContractionOff)));
   }
 }
 
@@ -1689,7 +1695,7 @@ void addPassesForSPIRV(legacy::PassManager &PassMgr) {
   PassMgr.add(createSPIRVLowerMemmove());
 }
 
-bool llvm::writeSpirv(Module *M, llvm::raw_ostream &OS, std::string &ErrMsg) {
+bool llvm::writeSpirv(Module *M, std::ostream &OS, std::string &ErrMsg) {
   std::unique_ptr<SPIRVModule> BM(SPIRVModule::createSPIRVModule());
   legacy::PassManager PassMgr;
   addPassesForSPIRV(PassMgr);

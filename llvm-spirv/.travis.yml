@@ -21,10 +21,10 @@ addons:
       key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
     - ubuntu-toolchain-r-test
     packages:
-    - llvm-8-tools
-    - llvm-8-dev
-    - clang-format-8
-    - clang-tidy-8
+    - llvm-9-tools
+    - llvm-9-dev
+    - clang-format-9
+    - clang-tidy-9
 
 compiler:
   - gcc
@@ -80,7 +80,7 @@ script:
           -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
           -DBUILD_SHARED_LIBS=${SHARED_LIBS} \
           -DLLVM_BUILD_TOOLS=ON \
-          -DLLVM_EXTERNAL_LIT="/usr/lib/llvm-8/build/utils/lit/lit.py" \
+          -DLLVM_EXTERNAL_LIT="/usr/lib/llvm-9/build/utils/lit/lit.py" \
           -DLLVM_INCLUDE_TESTS=ON \
           -DCMAKE_INSTALL_PREFIX=../install/ \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
@@ -99,7 +99,7 @@ script:
     fi
   - if [ $CHECK_FORMAT == "1" ]; then
       cd ..;
-      ln -s /usr/share/clang/clang-format-8/clang-format-diff.py utils/;
+      ln -s /usr/share/clang/clang-format-9/clang-format-diff.py utils/;
       ./utils/check_code_format.sh;
     elif [ $CHECK_TIDY == "1" ]; then
       cd ..;
@@ -112,8 +112,11 @@ script:
 after_success:
   # Create tarball for deployment
   - if [[ "${BUILD_EXTERNAL}" == "1" && "${SHARED_LIBS}" == "ON" && "${repo_token}" != "" ]]; then
-      export TARBALL=SPIRV-LLVM-Translator-$(date +%F)-${TRAVIS_OS_NAME}-${BUILD_TYPE}.zip;
-      cd ../install && find . -print | zip -@ ${TARBALL};
+      export TAG=dev-build;
+      export TARBALL=SPIRV-LLVM-Translator-${TAG}-${TRAVIS_OS_NAME}-${BUILD_TYPE}.zip;
+      cd ../install;
+      echo ${TRAVIS_COMMIT} > version.txt;
+      find . -print | zip -@ ${TARBALL};
     fi
 
 before_deploy:
@@ -121,7 +124,7 @@ before_deploy:
   # Travis CI relies on the tag name to push to the correct release.
   - git config --global user.name "Travis CI"
   - git config --global user.email "builds@travis-ci.org"
-  - git tag -f latest_build
+  - git tag -f ${TAG}
   - git push -f https://${repo_token}@github.com/${TRAVIS_REPO_SLUG} --tags
 
 deploy:
@@ -131,6 +134,7 @@ deploy:
     branch: master
     condition: ${BUILD_EXTERNAL} == 1 && ${SHARED_LIBS} == ON && ${repo_token}
   file: ${TARBALL}
+  name: Latest development build $(date -u +'%F %R %Z')
   skip_cleanup: true
   overwrite: true
   prerelease: true

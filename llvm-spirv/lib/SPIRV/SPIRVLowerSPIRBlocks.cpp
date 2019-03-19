@@ -42,12 +42,9 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -60,8 +57,6 @@
 #include "llvm/PassSupport.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 #include <iostream>
@@ -106,7 +101,10 @@ public:
 
   bool runOnModule(Module &Module) override {
     M = &Module;
-    lowerBlockBind();
+    if (!lowerBlockBind()) {
+      // There are no SPIR2 blocks in the module.
+      return false;
+    }
     lowerGetBlockInvoke();
     lowerGetBlockContext();
     eraseUselessGlobalVars();

@@ -36,31 +36,32 @@
 target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
 target triple = "spir-unknown-unknown"
 
-%opencl.image2d_t = type opaque
+%opencl.image2d_ro_t = type opaque
+%opencl.sampler_t = type opaque
 
 ; Function Attrs: nounwind
-define spir_kernel void @sample_kernel_read(<4 x float> addrspace(1)* %results, %opencl.image2d_t addrspace(1)* %image, i32 %imageSampler, <2 x float> %coord, <2 x float> %dx, <2 x float> %dy) #0 !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3 !kernel_arg_base_type !4 !kernel_arg_type_qual !5 {
+define spir_kernel void @sample_kernel_read(<4 x float> addrspace(1)* %results, %opencl.image2d_ro_t addrspace(1)* %image, %opencl.sampler_t* %imageSampler, <2 x float> %coord, <2 x float> %dx, <2 x float> %dy) #0 !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3 !kernel_arg_base_type !4 !kernel_arg_type_qual !5 {
 entry:
-  %call = call spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_f(%opencl.image2d_t addrspace(1)* %image, i32 %imageSampler, <2 x float> %coord)
-; CHECK-LLVM: call spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_f(%opencl.image2d_t addrspace(1)* %image, i32 %imageSampler, <2 x float> %coord)
+  %call = call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %image, %opencl.sampler_t* %imageSampler, <2 x float> %coord)
+; CHECK-LLVM: call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %image, %opencl.sampler_t* %imageSampler, <2 x float> %coord)
 
   store <4 x float> %call, <4 x float> addrspace(1)* %results, align 16
-  %call1 = call spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_ff(%opencl.image2d_t addrspace(1)* %image, i32 %imageSampler, <2 x float> %coord, float 0x40091EB860000000)
-; CHECK-LLVM: call spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_ff(%opencl.image2d_t addrspace(1)* %image, i32 %imageSampler, <2 x float> %coord, float 0x40091EB860000000)
+  %call1 = call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_ff(%opencl.image2d_ro_t addrspace(1)* %image, %opencl.sampler_t* %imageSampler, <2 x float> %coord, float 0x40091EB860000000)
+; CHECK-LLVM: call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_ff(%opencl.image2d_ro_t addrspace(1)* %image, %opencl.sampler_t* %imageSampler, <2 x float> %coord, float 0x40091EB860000000)
 
   store <4 x float> %call1, <4 x float> addrspace(1)* %results, align 16
-  %call2 = call spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_fDv2_fDv2_f(%opencl.image2d_t addrspace(1)* %image, i32 %imageSampler, <2 x float> %coord, <2 x float> %dx, <2 x float> %dy)
-; CHECK-LLVM: call spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_fS_S_(%opencl.image2d_t addrspace(1)* %image, i32 %imageSampler, <2 x float> %coord, <2 x float> %dx, <2 x float> %dy)
+  %call2 = call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_fDv2_fDv2_f(%opencl.image2d_ro_t addrspace(1)* %image, %opencl.sampler_t* %imageSampler, <2 x float> %coord, <2 x float> %dx, <2 x float> %dy)
+; CHECK-LLVM: call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_fS_S_(%opencl.image2d_ro_t addrspace(1)* %image, %opencl.sampler_t* %imageSampler, <2 x float> %coord, <2 x float> %dx, <2 x float> %dy)
 
   store <4 x float> %call2, <4 x float> addrspace(1)* %results, align 16
   ret void
 }
 
-declare spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_f(%opencl.image2d_t addrspace(1)*, i32, <2 x float>) #1
+declare spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)*, %opencl.sampler_t*, <2 x float>) #1
 
-declare spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_ff(%opencl.image2d_t addrspace(1)*, i32, <2 x float>, float) #1
+declare spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_ff(%opencl.image2d_ro_t addrspace(1)*, %opencl.sampler_t*, <2 x float>, float) #1
 
-declare spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_fDv2_fDv2_f(%opencl.image2d_t addrspace(1)*, i32, <2 x float>, <2 x float>, <2 x float>) #1
+declare spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_fDv2_fDv2_f(%opencl.image2d_ro_t addrspace(1)*, %opencl.sampler_t*, <2 x float>, <2 x float>, <2 x float>) #1
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

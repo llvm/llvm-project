@@ -242,7 +242,8 @@ private:
   std::string transOCLImageTypeAccessQualifier(SPIRV::SPIRVTypeImage *ST);
   std::string transOCLPipeTypeAccessQualifier(SPIRV::SPIRVTypePipe *ST);
 
-  Value *oclTransConstantSampler(SPIRV::SPIRVConstantSampler *BCS);
+  Value *oclTransConstantSampler(SPIRV::SPIRVConstantSampler *BCS,
+                                 BasicBlock *BB);
   Value *oclTransConstantPipeStorage(SPIRV::SPIRVConstantPipeStorage *BCPS);
   void setName(llvm::Value *V, SPIRVValue *BV);
   void setLLVMLoopMetadata(SPIRVLoopMerge *LM, BranchInst *BI);

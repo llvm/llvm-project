@@ -51,7 +51,6 @@
 #include "SPIRVValue.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -61,13 +60,11 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -97,11 +94,6 @@ cl::opt<bool> SPIRVGenKernelArgNameMD(
     "spirv-gen-kernel-arg-name-md", cl::init(false),
     cl::desc("Enable generating OpenCL kernel argument name "
              "metadata"));
-
-cl::opt<bool> SPIRVGenImgTypeAccQualPostfix(
-    "spirv-gen-image-type-acc-postfix", cl::init(false),
-    cl::desc("Enable generating access qualifier postfix"
-             " in OpenCL image type names"));
 
 // Prefix for placeholder global variable name.
 const char *KPlaceholderPrefix = "placeholder.";
@@ -333,8 +325,7 @@ Type *SPIRVToLLVM::transFPType(SPIRVType *T) {
 std::string SPIRVToLLVM::transOCLImageTypeName(SPIRV::SPIRVTypeImage *ST) {
   std::string Name = std::string(kSPR2TypeName::OCLPrefix) +
                      rmap<std::string>(ST->getDescriptor());
-  if (SPIRVGenImgTypeAccQualPostfix)
-    SPIRVToLLVM::insertImageNameAccessQualifier(ST, Name);
+  SPIRVToLLVM::insertImageNameAccessQualifier(ST, Name);
   return Name;
 }
 
@@ -418,8 +409,6 @@ Type *SPIRVToLLVM::transType(SPIRVType *T, bool IsClassMember) {
       llvm_unreachable("Unsupported image type");
     return nullptr;
   }
-  case OpTypeSampler:
-    return mapType(T, Type::getInt32Ty(*Context));
   case OpTypeSampledImage: {
     auto ST = static_cast<SPIRVTypeSampledImage *>(T);
     return mapType(
@@ -597,7 +586,10 @@ void SPIRVToLLVM::setLLVMLoopMetadata(SPIRVLoopMerge *LM, BranchInst *BI) {
 
 void SPIRVToLLVM::insertImageNameAccessQualifier(SPIRV::SPIRVTypeImage *ST,
                                                  std::string &Name) {
-  std::string QName = rmap<std::string>(ST->getAccessQualifier());
+  SPIRVAccessQualifierKind Acc = ST->hasAccessQualifier()
+                                     ? ST->getAccessQualifier()
+                                     : AccessQualifierReadOnly;
+  std::string QName = rmap<std::string>(Acc);
   // transform: read_only -> ro, write_only -> wo, read_write -> rw
   QName = QName.substr(0, 1) + QName.substr(QName.find("_") + 1, 1) + "_";
   assert(!Name.empty() && "image name should not be empty");
@@ -807,6 +799,20 @@ bool SPIRVToLLVM::postProcessOCLBuiltinWithArrayArguments(
   return true;
 }
 
+static char getTypeSuffix(Type *T) {
+  char Suffix;
+
+  Type *ST = T->getScalarType();
+  if (ST->isHalfTy())
+    Suffix = 'h';
+  else if (ST->isFloatTy())
+    Suffix = 'f';
+  else
+    Suffix = 'i';
+
+  return Suffix;
+}
+
 // ToDo: Handle unsigned integer return type. May need spec change.
 Instruction *SPIRVToLLVM::postProcessOCLReadImage(SPIRVInstruction *BI,
                                                   CallInst *CI,
@@ -818,7 +824,7 @@ Instruction *SPIRVToLLVM::postProcessOCLReadImage(SPIRVInstruction *BI,
   if (isOCLImageType(
           (cast<CallInst>(CI->getOperand(0)))->getArgOperand(0)->getType(),
           &ImageTypeName))
-    IsDepthImage = ImageTypeName.endswith("depth_t");
+    IsDepthImage = ImageTypeName.contains("_depth_");
   return mutateCallInstOCL(
       M, CI,
       [=](CallInst *, std::vector<Value *> &Args, llvm::Type *&RetTy) {
@@ -849,7 +855,7 @@ Instruction *SPIRVToLLVM::postProcessOCLReadImage(SPIRVInstruction *BI,
           T = VT->getElementType();
         RetTy = IsDepthImage ? T : CI->getType();
         return std::string(kOCLBuiltinName::SampledReadImage) +
-               (T->isFloatingPointTy() ? 'f' : 'i');
+               getTypeSuffix(T);
       },
       [=](CallInst *NewCI) -> Instruction * {
         if (IsDepthImage)
@@ -882,8 +888,7 @@ SPIRVToLLVM::postProcessOCLWriteImage(SPIRVInstruction *BI, CallInst *CI,
           else
             std::swap(Args[2], Args[3]);
         }
-        return std::string(kOCLBuiltinName::WriteImage) +
-               (T->isFPOrFPVectorTy() ? 'f' : 'i');
+        return std::string(kOCLBuiltinName::WriteImage) + getTypeSuffix(T);
       },
       &Attrs);
 }
@@ -940,10 +945,8 @@ Value *SPIRVToLLVM::mapValue(SPIRVValue *BV, Value *V) {
            "A value is translated twice");
     // Replaces placeholders for PHI nodes
     LD->replaceAllUsesWith(V);
-    LD->dropAllReferences();
-    LD->removeFromParent();
-    Placeholder->dropAllReferences();
-    Placeholder->removeFromParent();
+    LD->eraseFromParent();
+    Placeholder->eraseFromParent();
   }
   ValueMap[BV] = V;
   return V;
@@ -1006,11 +1009,20 @@ void SPIRVToLLVM::transGeneratorMD() {
       .done();
 }
 
-Value *SPIRVToLLVM::oclTransConstantSampler(SPIRV::SPIRVConstantSampler *BCS) {
+Value *SPIRVToLLVM::oclTransConstantSampler(SPIRV::SPIRVConstantSampler *BCS,
+                                            BasicBlock *BB) {
+  auto *SamplerT =
+      getOrCreateOpaquePtrType(M, OCLOpaqueTypeOpCodeMap::rmap(OpTypeSampler),
+                               getOCLOpaqueTypeAddrSpace(BCS->getOpCode()));
+  auto *I32Ty = IntegerType::getInt32Ty(*Context);
+  auto *FTy = FunctionType::get(SamplerT, {I32Ty}, false);
+
+  FunctionCallee Func = M->getOrInsertFunction(SAMPLER_INIT, FTy);
+
   auto Lit = (BCS->getAddrMode() << 1) | BCS->getNormalized() |
              ((BCS->getFilterMode() + 1) << 4);
-  auto Ty = IntegerType::getInt32Ty(*Context);
-  return ConstantInt::get(Ty, Lit);
+
+  return CallInst::Create(Func, {ConstantInt::get(I32Ty, Lit)}, "", BB);
 }
 
 Value *SPIRVToLLVM::oclTransConstantPipeStorage(
@@ -1146,7 +1158,7 @@ Value *SPIRVToLLVM::transValueWithoutDecoration(SPIRVValue *BV, Function *F,
 
   case OpConstantSampler: {
     auto BCS = static_cast<SPIRVConstantSampler *>(BV);
-    return mapValue(BV, oclTransConstantSampler(BCS));
+    return mapValue(BV, oclTransConstantSampler(BCS, BB));
   }
 
   case OpConstantPipeStorage: {
@@ -1667,10 +1679,6 @@ Value *SPIRVToLLVM::transValueWithoutDecoration(SPIRVValue *BV, Function *F,
     return mapValue(
         BV, transSPIRVBuiltinFromInst(static_cast<SPIRVInstruction *>(BV), BB));
   }
-
-    SPIRVDBG(spvdbgs() << "Cannot translate " << *BV << '\n';)
-    llvm_unreachable("Translation of SPIRV instruction not implemented");
-    return NULL;
   }
 }
 
@@ -2066,8 +2074,14 @@ std::string SPIRVToLLVM::getOCLBuiltinName(SPIRVInstruction *BI) {
   }
   if (T && T->isTypeVector())
     T = T->getVectorComponentType();
-  if (T)
-    Name += T->isTypeFloat() ? 'f' : 'i';
+  if (T) {
+    if (T->isTypeFloat(16))
+      Name += 'h';
+    else if (T->isTypeFloat(32))
+      Name += 'f';
+    else
+      Name += 'i';
+  }
 
   return Name;
 }
@@ -2232,11 +2246,27 @@ static bool transKernelArgTypeMedataFromString(LLVMContext *Ctx,
   std::string ArgTypeStr =
       (*ArgTypeStrIt)->getStr().substr(ArgTypePrefix.size());
   std::vector<Metadata *> TypeMDs;
-  std::string::size_type Start = 0, End = 0;
-  while ((Start = ArgTypeStr.find(',', End)) != std::string::npos) {
-    TypeMDs.push_back(MDString::get(*Ctx, ArgTypeStr.substr(End, Start - End)));
-    End = ++Start;
+
+  int CountBraces = 0;
+  std::string::size_type Start = 0;
+
+  for (std::string::size_type I = 0; I < ArgTypeStr.length(); I++) {
+    switch (ArgTypeStr[I]) {
+    case '<':
+      CountBraces++;
+      break;
+    case '>':
+      CountBraces--;
+      break;
+    case ',':
+      if (CountBraces == 0) {
+        TypeMDs.push_back(
+            MDString::get(*Ctx, ArgTypeStr.substr(Start, I - Start)));
+        Start = I + 1;
+      }
+    }
   }
+
   Kernel->setMetadata(SPIR_MD_KERNEL_ARG_TYPE, MDNode::get(*Ctx, TypeMDs));
   return true;
 }
@@ -2508,6 +2538,7 @@ CallInst *SPIRVToLLVM::transOCLBarrier(BasicBlock *BB, SPIRVWord ExecScope,
     Func->setCallingConv(CallingConv::SPIR_FUNC);
     if (isFuncNoUnwind())
       Func->addFnAttr(Attribute::NoUnwind);
+    Func->addFnAttr(Attribute::NoDuplicate);
   }
 
   return CallInst::Create(Func, Arg, "", BB);

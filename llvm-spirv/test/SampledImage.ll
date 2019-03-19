@@ -36,34 +36,34 @@ target triple = "spir-unknown-unknown"
 ; CHECK-SPIRV: Function {{.*}} [[sample_kernel]]
 ; CHECK-SPIRV: FunctionParameter {{.*}} [[InputImage:[0-9]+]]
 ; CHECK-SPIRV: FunctionParameter [[TypeSampler]] [[argSampl:[0-9]+]]
-; CHECK-LLVM: define spir_kernel void @sample_kernel(%opencl.image2d_t addrspace(1)* %input, <2 x float> %coords, <4 x float> addrspace(1)* nocapture %results, i32 %argSampl)
+; CHECK-LLVM: define spir_kernel void @sample_kernel(%opencl.image2d_ro_t addrspace(1)* %input, <2 x float> %coords, <4 x float> addrspace(1)* nocapture %results, %opencl.sampler_t* %argSampl)
 define spir_kernel void @sample_kernel(%opencl.image2d_ro_t addrspace(1)* %input, <2 x float> %coords, <4 x float> addrspace(1)* nocapture %results, %opencl.sampler_t addrspace(2)* %argSampl) local_unnamed_addr #0 !kernel_arg_addr_space !5 !kernel_arg_access_qual !6 !kernel_arg_type !7 !kernel_arg_base_type !8 !kernel_arg_type_qual !9 {
 entry:
   %0 = tail call %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 32) #2
 
 ; CHECK-SPIRV: SampledImage [[SampledImageTy]] [[SampledImage1:[0-9]+]] [[InputImage]] [[ConstSampler1]]
 ; CHECK-SPIRV: ImageSampleExplicitLod {{.*}} [[SampledImage1]]
-; CHECK-LLVM:  call spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_f(%opencl.image2d_t addrspace(1)* %input, i32 32, <2 x float> %coords)
+; CHECK-LLVM:  call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t* %0, <2 x float> %coords)
   %call = tail call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t addrspace(2)* %0, <2 x float> %coords) #3
   store <4 x float> %call, <4 x float> addrspace(1)* %results, align 16, !tbaa !12
 
 ; CHECK-SPIRV: SampledImage [[SampledImageTy]] [[SampledImage2:[0-9]+]] [[InputImage]] [[argSampl]]
 ; CHECK-SPIRV: ImageSampleExplicitLod {{.*}} [[SampledImage2]]
-; CHECK-LLVM:   call spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_f(%opencl.image2d_t addrspace(1)* %input, i32 %argSampl, <2 x float> %coords)
+; CHECK-LLVM:   call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t* %argSampl, <2 x float> %coords)
   %call1 = tail call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t addrspace(2)* %argSampl, <2 x float> %coords) #3
   store <4 x float> %call1, <4 x float> addrspace(1)* %results, align 16, !tbaa !12
   %1 = tail call %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 22) #2
 
 ; CHECK-SPIRV: SampledImage [[SampledImageTy]] [[SampledImage3:[0-9]+]] [[InputImage]] [[ConstSampler2]]
 ; CHECK-SPIRV: ImageSampleExplicitLod {{.*}} [[SampledImage3]]
-; CHECK-LLVM: call spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_f(%opencl.image2d_t addrspace(1)* %input, i32 22, <2 x float> %coords)
+; CHECK-LLVM: call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t* %{{[0-9]+}}, <2 x float> %coords)
   %call2 = tail call spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)* %input, %opencl.sampler_t addrspace(2)* %1, <2 x float> %coords) #3
   store <4 x float> %call2, <4 x float> addrspace(1)* %results, align 16, !tbaa !12
   ret void
 }
 
 ; Function Attrs: convergent nounwind readonly
-; CHECK-LLVM: declare spir_func <4 x float> @_Z11read_imagef11ocl_image2d11ocl_samplerDv2_f(%opencl.image2d_t addrspace(1)*, i32, <2 x float>)
+; CHECK-LLVM: declare spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)*, %opencl.sampler_t*, <2 x float>)
 declare spir_func <4 x float> @_Z11read_imagef14ocl_image2d_ro11ocl_samplerDv2_f(%opencl.image2d_ro_t addrspace(1)*, %opencl.sampler_t addrspace(2)*, <2 x float>) local_unnamed_addr #1
 
 declare %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32) local_unnamed_addr

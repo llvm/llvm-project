@@ -40,13 +40,8 @@
 #ifndef SPIRV_LIBSPIRV_SPIRVUTIL_H
 #define SPIRV_LIBSPIRV_SPIRVUTIL_H
 
-#ifdef _SPIRV_LLVM_API
-#include "llvm/Support/raw_ostream.h"
-#define spv_ostream llvm::raw_ostream
-#else
 #include <ostream>
 #define spv_ostream std::ostream
-#endif
 
 #include <algorithm>
 #include <cassert>

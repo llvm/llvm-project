@@ -30,18 +30,42 @@ static const char *PrimitiveNames[PRIMITIVE_NUM] = {
     "double",
     "void",
     "...",
-    "image1d_t",
-    "image1d_array_t",
-    "image1d_buffer_t",
-    "image2d_t",
-    "image2d_array_t",
-    "image3d_t",
-    "image2d_msaa_t",
-    "image2d_array_msaa_t",
-    "image2d_msaa_depth_t",
-    "image2d_array_msaa_depth_t",
-    "image2d_depth_t",
-    "image2d_array_depth_t",
+    "image1d_ro_t",
+    "image1d_array_ro_t",
+    "image1d_buffer_ro_t",
+    "image2d_ro_t",
+    "image2d_array_ro_t",
+    "image2d_depth_ro_t",
+    "image2d_array_depth_ro_t",
+    "image2d_msaa_ro_t",
+    "image2d_array_msaa_ro_t",
+    "image2d_msaa_depth_ro_t",
+    "image2d_array_msaa_depth_ro_t",
+    "image3d_ro_t",
+    "image1d_wo_t",
+    "image1d_array_wo_t",
+    "image1d_buffer_wo_t",
+    "image2d_wo_t",
+    "image2d_array_wo_t",
+    "image2d_depth_wo_t",
+    "image2d_array_depth_wo_t",
+    "image2d_msaa_wo_t",
+    "image2d_array_msaa_wo_t",
+    "image2d_msaa_depth_wo_t",
+    "image2d_array_msaa_depth_wo_t",
+    "image3d_wo_t",
+    "image1d_rw_t",
+    "image1d_array_rw_t",
+    "image1d_buffer_rw_t",
+    "image2d_rw_t",
+    "image2d_array_rw_t",
+    "image2d_depth_rw_t",
+    "image2d_array_depth_rw_t",
+    "image2d_msaa_rw_t",
+    "image2d_array_msaa_rw_t",
+    "image2d_msaa_depth_rw_t",
+    "image2d_array_msaa_depth_rw_t",
+    "image3d_rw_t",
     "event_t",
     "pipe_ro_t",
     "pipe_wo_t",
@@ -56,42 +80,66 @@ static const char *PrimitiveNames[PRIMITIVE_NUM] = {
     "memory_scope"};
 
 const char *MangledTypes[PRIMITIVE_NUM] = {
-    "b",                           // BOOL
-    "h",                           // UCHAR
-    "c",                           // CHAR
-    "t",                           // USHORT
-    "s",                           // SHORT
-    "j",                           // UINT
-    "i",                           // INT
-    "m",                           // ULONG
-    "l",                           // LONG
-    "Dh",                          // HALF
-    "f",                           // FLOAT
-    "d",                           // DOUBLE
-    "v",                           // VOID
-    "z",                           // VarArg
-    "11ocl_image1d",               // PRIMITIVE_IMAGE_1D_T
-    "16ocl_image1darray",          // PRIMITIVE_IMAGE_1D_ARRAY_T
-    "17ocl_image1dbuffer",         // PRIMITIVE_IMAGE_1D_BUFFER_T
-    "11ocl_image2d",               // PRIMITIVE_IMAGE_2D_T
-    "16ocl_image2darray",          // PRIMITIVE_IMAGE_2D_ARRAY_T
-    "11ocl_image3d",               // PRIMITIVE_IMAGE_3D_T
-    "15ocl_image2dmsaa",           // PRIMITIVE_IMAGE_2D_MSAA_T
-    "20ocl_image2darraymsaa",      // PRIMITIVE_IMAGE_2D_ARRAY_MSAA_T
-    "20ocl_image2dmsaadepth",      // PRIMITIVE_IMAGE_2D_MSAA_DEPTH_T
-    "25ocl_image2darraymsaadepth", // PRIMITIVE_IMAGE_2D_ARRAY_MSAA_DEPTH_T
-    "16ocl_image2ddepth",          // PRIMITIVE_IMAGE_2D_DEPTH_T
-    "21ocl_image2darraydepth",     // PRIMITIVE_IMAGE_2D_ARRAY_DEPTH_T
-    "9ocl_event",                  // PRIMITIVE_EVENT_T
-    "11ocl_pipe_ro",               // PRIMITIVE_PIPE_RO_T
-    "11ocl_pipe_wo",               // PRIMITIVE_PIPE_WO_T
-    "13ocl_reserveid",             // PRIMITIVE_RESERVE_ID_T
-    "9ocl_queue",                  // PRIMITIVE_QUEUE_T
-    "9ndrange_t",                  // PRIMITIVE_NDRANGE_T
-    "12ocl_clkevent",              // PRIMITIVE_CLK_EVENT_T
-    "11ocl_sampler",               // PRIMITIVE_SAMPLER_T
-    "i",                           // PRIMITIVE_KERNEL_ENQUEUE_FLAGS_T
-    "i",                           // PRIMITIVE_CLK_PROFILING_INFO
+    "b",                                 // BOOL
+    "h",                                 // UCHAR
+    "c",                                 // CHAR
+    "t",                                 // USHORT
+    "s",                                 // SHORT
+    "j",                                 // UINT
+    "i",                                 // INT
+    "m",                                 // ULONG
+    "l",                                 // LONG
+    "Dh",                                // HALF
+    "f",                                 // FLOAT
+    "d",                                 // DOUBLE
+    "v",                                 // VOID
+    "z",                                 // VarArg
+    "14ocl_image1d_ro",                  // PRIMITIVE_IMAGE1D_RO_T
+    "20ocl_image1d_array_ro",            // PRIMITIVE_IMAGE1D_ARRAY_RO_T
+    "21ocl_image1d_buffer_ro",           // PRIMITIVE_IMAGE1D_BUFFER_RO_T
+    "14ocl_image2d_ro",                  // PRIMITIVE_IMAGE2D_RO_T
+    "20ocl_image2d_array_ro",            // PRIMITIVE_IMAGE2D_ARRAY_RO_T
+    "20ocl_image2d_depth_ro",            // PRIMITIVE_IMAGE2D_DEPTH_RO_T
+    "26ocl_image2d_array_depth_ro",      // PRIMITIVE_IMAGE2D_ARRAY_DEPTH_RO_T
+    "19ocl_image2d_msaa_ro",             // PRIMITIVE_IMAGE2D_MSAA_RO_T
+    "25ocl_image2d_array_msaa_ro",       // PRIMITIVE_IMAGE2D_ARRAY_MSAA_RO_T
+    "25ocl_image2d_msaa_depth_ro",       // PRIMITIVE_IMAGE2D_MSAA_DEPTH_RO_T
+    "31ocl_image2d_array_msaa_depth_ro", // PRIMITIVE_IMAGE2D_ARRAY_MSAA_DEPTH_RO_T
+    "14ocl_image3d_ro",                  // PRIMITIVE_IMAGE3D_RO_T
+    "14ocl_image1d_wo",                  // PRIMITIVE_IMAGE1D_WO_T
+    "20ocl_image1d_array_wo",            // PRIMITIVE_IMAGE1D_ARRAY_WO_T
+    "21ocl_image1d_buffer_wo",           // PRIMITIVE_IMAGE1D_BUFFER_WO_T
+    "14ocl_image2d_wo",                  // PRIMITIVE_IMAGE2D_WO_T
+    "20ocl_image2d_array_wo",            // PRIMITIVE_IMAGE2D_ARRAY_WO_T
+    "20ocl_image2d_depth_wo",            // PRIMITIVE_IMAGE2D_DEPTH_WO_T
+    "26ocl_image2d_array_depth_wo",      // PRIMITIVE_IMAGE2D_ARRAY_DEPTH_WO_T
+    "19ocl_image2d_msaa_wo",             // PRIMITIVE_IMAGE2D_MSAA_WO_T
+    "25ocl_image2d_array_msaa_wo",       // PRIMITIVE_IMAGE2D_ARRAY_MSAA_WO_T
+    "25ocl_image2d_msaa_depth_wo",       // PRIMITIVE_IMAGE2D_MSAA_DEPTH_WO_T
+    "31ocl_image2d_array_msaa_depth_wo", // PRIMITIVE_IMAGE2D_ARRAY_MSAA_DEPTH_WO_T
+    "14ocl_image3d_wo",                  // PRIMITIVE_IMAGE3D_WO_T
+    "14ocl_image1d_rw",                  // PRIMITIVE_IMAGE1D_RW_T
+    "20ocl_image1d_array_rw",            // PRIMITIVE_IMAGE1D_ARRAY_RW_T
+    "21ocl_image1d_buffer_rw",           // PRIMITIVE_IMAGE1D_BUFFER_RW_T
+    "14ocl_image2d_rw",                  // PRIMITIVE_IMAGE2D_RW_T
+    "20ocl_image2d_array_rw",            // PRIMITIVE_IMAGE2D_ARRAY_RW_T
+    "20ocl_image2d_depth_rw",            // PRIMITIVE_IMAGE2D_DEPTH_RW_T
+    "26ocl_image2d_array_depth_rw",      // PRIMITIVE_IMAGE2D_ARRAY_DEPTH_RW_T
+    "19ocl_image2d_msaa_rw",             // PRIMITIVE_IMAGE2D_MSAA_RW_T
+    "25ocl_image2d_array_msaa_rw",       // PRIMITIVE_IMAGE2D_ARRAY_MSAA_RW_T
+    "25ocl_image2d_msaa_depth_rw",       // PRIMITIVE_IMAGE2D_MSAA_DEPTH_RW_T
+    "31ocl_image2d_array_msaa_depth_rw", // PRIMITIVE_IMAGE2D_ARRAY_MSAA_DEPTH_RW_T
+    "14ocl_image3d_rw",                  // PRIMITIVE_IMAGE3D_RW_T
+    "9ocl_event",                        // PRIMITIVE_EVENT_T
+    "11ocl_pipe_ro",                     // PRIMITIVE_PIPE_RO_T
+    "11ocl_pipe_wo",                     // PRIMITIVE_PIPE_WO_T
+    "13ocl_reserveid",                   // PRIMITIVE_RESERVE_ID_T
+    "9ocl_queue",                        // PRIMITIVE_QUEUE_T
+    "9ndrange_t",                        // PRIMITIVE_NDRANGE_T
+    "12ocl_clkevent",                    // PRIMITIVE_CLK_EVENT_T
+    "11ocl_sampler",                     // PRIMITIVE_SAMPLER_T
+    "i",                                 // PRIMITIVE_KERNEL_ENQUEUE_FLAGS_T
+    "i",                                 // PRIMITIVE_CLK_PROFILING_INFO
 #if defined(SPIRV_SPIR20_MANGLING_REQUIREMENTS)
     "i", // PRIMITIVE_MEMORY_ORDER
     "i", // PRIMITIVE_MEMORY_SCOPE
@@ -126,18 +174,42 @@ static const SPIRversion PrimitiveSupportedVersions[PRIMITIVE_NUM] = {
     SPIR12, // DOUBLE
     SPIR12, // VOID
     SPIR12, // VarArg
-    SPIR12, // PRIMITIVE_IMAGE_1D_T
-    SPIR12, // PRIMITIVE_IMAGE_1D_ARRAY_T
-    SPIR12, // PRIMITIVE_IMAGE_1D_BUFFER_T
-    SPIR12, // PRIMITIVE_IMAGE_2D_T
-    SPIR12, // PRIMITIVE_IMAGE_2D_ARRAY_T
-    SPIR12, // PRIMITIVE_IMAGE_3D_T
-    SPIR12, // PRIMITIVE_IMAGE_2D_MSAA_T
-    SPIR12, // PRIMITIVE_IMAGE_2D_ARRAY_MSAA_T
-    SPIR12, // PRIMITIVE_IMAGE_2D_MSAA_DEPTH_T
-    SPIR12, // PRIMITIVE_IMAGE_2D_ARRAY_MSAA_DEPTH_T
-    SPIR12, // PRIMITIVE_IMAGE_2D_DEPTH_T
-    SPIR12, // PRIMITIVE_IMAGE_2D_ARRAY_DEPTH_T
+    SPIR12, // PRIMITIVE_IMAGE1D_RO_T
+    SPIR12, // PRIMITIVE_IMAGE1D_ARRAY_RO_T
+    SPIR12, // PRIMITIVE_IMAGE1D_BUFFER_RO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_RO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_RO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_DEPTH_RO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_DEPTH_RO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_MSAA_RO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_MSAA_RO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_MSAA_DEPTH_RO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_MSAA_DEPTH_RO_T
+    SPIR12, // PRIMITIVE_IMAGE3D_RO_T
+    SPIR12, // PRIMITIVE_IMAGE1D_WO_T
+    SPIR12, // PRIMITIVE_IMAGE1D_ARRAY_WO_T
+    SPIR12, // PRIMITIVE_IMAGE1D_BUFFER_WO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_WO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_WO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_DEPTH_WO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_DEPTH_WO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_MSAA_WO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_MSAA_WO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_MSAA_DEPTH_WO_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_MSAA_DEPTH_WO_T
+    SPIR12, // PRIMITIVE_IMAGE3D_WO_T
+    SPIR12, // PRIMITIVE_IMAGE1D_RW_T
+    SPIR12, // PRIMITIVE_IMAGE1D_ARRAY_RW_T
+    SPIR12, // PRIMITIVE_IMAGE1D_BUFFER_RW_T
+    SPIR12, // PRIMITIVE_IMAGE2D_RW_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_RW_T
+    SPIR12, // PRIMITIVE_IMAGE2D_DEPTH_RW_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_DEPTH_RW_T
+    SPIR12, // PRIMITIVE_IMAGE2D_MSAA_RW_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_MSAA_RW_T
+    SPIR12, // PRIMITIVE_IMAGE2D_MSAA_DEPTH_RW_T
+    SPIR12, // PRIMITIVE_IMAGE2D_ARRAY_MSAA_DEPTH_RW_T
+    SPIR12, // PRIMITIVE_IMAGE3D_RW_T
     SPIR12, // PRIMITIVE_EVENT_T
     SPIR20, // PRIMITIVE_PIPE_RO_T
     SPIR20, // PRIMITIVE_PIPE_WO_T

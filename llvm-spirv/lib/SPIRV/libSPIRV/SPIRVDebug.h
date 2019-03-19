@@ -41,9 +41,6 @@
 #define SPIRV_LIBSPIRV_SPIRVDEBUG_H
 
 #include "SPIRVUtil.h"
-#ifdef _SPIRV_LLVM_API
-#include "llvm/Support/Debug.h"
-#endif
 #include <iostream>
 
 namespace SPIRV {
@@ -67,11 +64,7 @@ extern bool SPIRVDbgAssertOnError;
 
 // Output stream for SPIRV debug information.
 inline spv_ostream &spvdbgs() {
-#ifdef _SPIRV_LLVM_API
-  return llvm::dbgs();
-#else
   return std::cerr;
-#endif
 }
 
 #else

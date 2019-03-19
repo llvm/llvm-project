@@ -35,7 +35,6 @@ add_lit_testsuite(check-llvm-spirv "Running the LLVM-SPIRV regression tests"
     --verbose
   DEPENDS
     ${LLVM_SPIRV_TEST_DEPS}
-    llvm-config
     llvm-spirv
 )
 

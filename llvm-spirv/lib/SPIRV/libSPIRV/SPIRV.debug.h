@@ -431,8 +431,8 @@ enum {
 };
 static std::map<ExpressionOpCode, unsigned> OpCountMap {
   { Deref,      1 },
-  { Plus,       2 },
-  { Minus,      2 },
+  { Plus,       1 },
+  { Minus,      1 },
   { PlusUconst, 2 },
   { BitPiece,   3 },
   { Swap,       1 },

@@ -56,7 +56,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <functional>
 #include <sstream>
@@ -627,6 +626,7 @@ CallInst *mutateCallInst(
   }
   auto NewCI = addCallInst(M, NewName, CI->getType(), Args, Attrs, CI, Mangle,
                            InstName, TakeFuncName);
+  NewCI->setDebugLoc(CI->getDebugLoc());
   LLVM_DEBUG(dbgs() << " => " << *NewCI << '\n');
   CI->replaceAllUsesWith(NewCI);
   CI->eraseFromParent();
@@ -653,6 +653,7 @@ Instruction *mutateCallInst(
                            InstName + ".tmp", TakeFuncName);
   auto NewI = RetMutate(NewCI);
   NewI->takeName(CI);
+  NewI->setDebugLoc(CI->getDebugLoc());
   LLVM_DEBUG(dbgs() << " => " << *NewI << '\n');
   CI->replaceAllUsesWith(NewI);
   CI->eraseFromParent();
@@ -914,22 +915,54 @@ bool isDecoratedSPIRVFunc(const Function *F, std::string *UndecoratedName) {
 /// Get TypePrimitiveEnum for special OpenCL type except opencl.block.
 SPIR::TypePrimitiveEnum getOCLTypePrimitiveEnum(StringRef TyName) {
   return StringSwitch<SPIR::TypePrimitiveEnum>(TyName)
-      .Case("opencl.image1d_t", SPIR::PRIMITIVE_IMAGE_1D_T)
-      .Case("opencl.image1d_array_t", SPIR::PRIMITIVE_IMAGE_1D_ARRAY_T)
-      .Case("opencl.image1d_buffer_t", SPIR::PRIMITIVE_IMAGE_1D_BUFFER_T)
-      .Case("opencl.image2d_t", SPIR::PRIMITIVE_IMAGE_2D_T)
-      .Case("opencl.image2d_array_t", SPIR::PRIMITIVE_IMAGE_2D_ARRAY_T)
-      .Case("opencl.image3d_t", SPIR::PRIMITIVE_IMAGE_3D_T)
-      .Case("opencl.image2d_msaa_t", SPIR::PRIMITIVE_IMAGE_2D_MSAA_T)
-      .Case("opencl.image2d_array_msaa_t",
-            SPIR::PRIMITIVE_IMAGE_2D_ARRAY_MSAA_T)
-      .Case("opencl.image2d_msaa_depth_t",
-            SPIR::PRIMITIVE_IMAGE_2D_MSAA_DEPTH_T)
-      .Case("opencl.image2d_array_msaa_depth_t",
-            SPIR::PRIMITIVE_IMAGE_2D_ARRAY_MSAA_DEPTH_T)
-      .Case("opencl.image2d_depth_t", SPIR::PRIMITIVE_IMAGE_2D_DEPTH_T)
-      .Case("opencl.image2d_array_depth_t",
-            SPIR::PRIMITIVE_IMAGE_2D_ARRAY_DEPTH_T)
+      .Case("opencl.image1d_ro_t", SPIR::PRIMITIVE_IMAGE1D_RO_T)
+      .Case("opencl.image1d_array_ro_t", SPIR::PRIMITIVE_IMAGE1D_ARRAY_RO_T)
+      .Case("opencl.image1d_buffer_ro_t", SPIR::PRIMITIVE_IMAGE1D_BUFFER_RO_T)
+      .Case("opencl.image2d_ro_t", SPIR::PRIMITIVE_IMAGE2D_RO_T)
+      .Case("opencl.image2d_array_ro_t", SPIR::PRIMITIVE_IMAGE2D_ARRAY_RO_T)
+      .Case("opencl.image2d_depth_ro_t", SPIR::PRIMITIVE_IMAGE2D_DEPTH_RO_T)
+      .Case("opencl.image2d_array_depth_ro_t",
+            SPIR::PRIMITIVE_IMAGE2D_ARRAY_DEPTH_RO_T)
+      .Case("opencl.image2d_msaa_ro_t", SPIR::PRIMITIVE_IMAGE2D_MSAA_RO_T)
+      .Case("opencl.image2d_array_msaa_ro_t",
+            SPIR::PRIMITIVE_IMAGE2D_ARRAY_MSAA_RO_T)
+      .Case("opencl.image2d_msaa_depth_ro_t",
+            SPIR::PRIMITIVE_IMAGE2D_MSAA_DEPTH_RO_T)
+      .Case("opencl.image2d_array_msaa_depth_ro_t",
+            SPIR::PRIMITIVE_IMAGE2D_ARRAY_MSAA_DEPTH_RO_T)
+      .Case("opencl.image3d_ro_t", SPIR::PRIMITIVE_IMAGE3D_RO_T)
+      .Case("opencl.image1d_wo_t", SPIR::PRIMITIVE_IMAGE1D_WO_T)
+      .Case("opencl.image1d_array_wo_t", SPIR::PRIMITIVE_IMAGE1D_ARRAY_WO_T)
+      .Case("opencl.image1d_buffer_wo_t", SPIR::PRIMITIVE_IMAGE1D_BUFFER_WO_T)
+      .Case("opencl.image2d_wo_t", SPIR::PRIMITIVE_IMAGE2D_WO_T)
+      .Case("opencl.image2d_array_wo_t", SPIR::PRIMITIVE_IMAGE2D_ARRAY_WO_T)
+      .Case("opencl.image2d_depth_wo_t", SPIR::PRIMITIVE_IMAGE2D_DEPTH_WO_T)
+      .Case("opencl.image2d_array_depth_wo_t",
+            SPIR::PRIMITIVE_IMAGE2D_ARRAY_DEPTH_WO_T)
+      .Case("opencl.image2d_msaa_wo_t", SPIR::PRIMITIVE_IMAGE2D_MSAA_WO_T)
+      .Case("opencl.image2d_array_msaa_wo_t",
+            SPIR::PRIMITIVE_IMAGE2D_ARRAY_MSAA_WO_T)
+      .Case("opencl.image2d_msaa_depth_wo_t",
+            SPIR::PRIMITIVE_IMAGE2D_MSAA_DEPTH_WO_T)
+      .Case("opencl.image2d_array_msaa_depth_wo_t",
+            SPIR::PRIMITIVE_IMAGE2D_ARRAY_MSAA_DEPTH_WO_T)
+      .Case("opencl.image3d_wo_t", SPIR::PRIMITIVE_IMAGE3D_WO_T)
+      .Case("opencl.image1d_rw_t", SPIR::PRIMITIVE_IMAGE1D_RW_T)
+      .Case("opencl.image1d_array_rw_t", SPIR::PRIMITIVE_IMAGE1D_ARRAY_RW_T)
+      .Case("opencl.image1d_buffer_rw_t", SPIR::PRIMITIVE_IMAGE1D_BUFFER_RW_T)
+      .Case("opencl.image2d_rw_t", SPIR::PRIMITIVE_IMAGE2D_RW_T)
+      .Case("opencl.image2d_array_rw_t", SPIR::PRIMITIVE_IMAGE2D_ARRAY_RW_T)
+      .Case("opencl.image2d_depth_rw_t", SPIR::PRIMITIVE_IMAGE2D_DEPTH_RW_T)
+      .Case("opencl.image2d_array_depth_rw_t",
+            SPIR::PRIMITIVE_IMAGE2D_ARRAY_DEPTH_RW_T)
+      .Case("opencl.image2d_msaa_rw_t", SPIR::PRIMITIVE_IMAGE2D_MSAA_RW_T)
+      .Case("opencl.image2d_array_msaa_rw_t",
+            SPIR::PRIMITIVE_IMAGE2D_ARRAY_MSAA_RW_T)
+      .Case("opencl.image2d_msaa_depth_rw_t",
+            SPIR::PRIMITIVE_IMAGE2D_MSAA_DEPTH_RW_T)
+      .Case("opencl.image2d_array_msaa_depth_rw_t",
+            SPIR::PRIMITIVE_IMAGE2D_ARRAY_MSAA_DEPTH_RW_T)
+      .Case("opencl.image3d_rw_t", SPIR::PRIMITIVE_IMAGE3D_RW_T)
       .Case("opencl.event_t", SPIR::PRIMITIVE_EVENT_T)
       .Case("opencl.pipe_ro_t", SPIR::PRIMITIVE_PIPE_RO_T)
       .Case("opencl.pipe_wo_t", SPIR::PRIMITIVE_PIPE_WO_T)
@@ -1028,9 +1061,7 @@ static SPIR::RefParamType transTypeDesc(Type *Ty,
     } else if (auto StructTy = dyn_cast<StructType>(ET)) {
       LLVM_DEBUG(dbgs() << "ptr to struct: " << *Ty << '\n');
       auto TyName = StructTy->getStructName();
-      if (TyName.startswith(kSPR2TypeName::ImagePrefix) ||
-          TyName.startswith(kSPR2TypeName::PipeRO) ||
-          TyName.startswith(kSPR2TypeName::PipeWO)) {
+      if (TyName.startswith(kSPR2TypeName::OCLPrefix)) {
         auto DelimPos = TyName.find_first_of(kSPR2TypeName::Delimiter,
                                              strlen(kSPR2TypeName::OCLPrefix));
         if (DelimPos != StringRef::npos)

@@ -58,7 +58,6 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/raw_ostream.h"
 
 #ifndef _SPIRV_SUPPORT_TEXT_FMT
 #define _SPIRV_SUPPORT_TEXT_FMT
@@ -137,11 +136,16 @@ static int convertLLVMToSPIRV() {
           (SPIRV::SPIRVUseTextFormat ? kExt::SpirvText : kExt::SpirvBinary);
   }
 
-  llvm::StringRef OutFile(OutputFile);
-  std::error_code EC;
   std::string Err;
-  llvm::raw_fd_ostream OFS(OutFile, EC, llvm::sys::fs::F_None);
-  if (!writeSpirv(M.get(), OFS, Err)) {
+  bool Success = false;
+  if (OutputFile != "-") {
+    std::ofstream OutFile(OutputFile);
+    Success = writeSpirv(M.get(), OutFile, Err);
+  } else {
+    Success = writeSpirv(M.get(), std::cout, Err);
+  }
+
+  if (!Success) {
     errs() << "Fails to save LLVM as SPIRV: " << Err << '\n';
     return -1;
   }
@@ -204,7 +208,7 @@ static int convertSPIRV() {
     }
   }
 
-  auto Action = [&](llvm::raw_ostream &OFS) {
+  auto Action = [&](std::ostream &OFS) {
     std::string Err;
     if (!SPIRV::convertSpirv(IFS, OFS, Err, ToBinary, ToText)) {
       errs() << "Fails to convert SPIR-V : " << Err << '\n';
@@ -213,12 +217,10 @@ static int convertSPIRV() {
     return 0;
   };
   if (OutputFile != "-") {
-    std::error_code EC;
-    llvm::raw_fd_ostream OFS(llvm::StringRef(OutputFile), EC,
-                             llvm::sys::fs::F_None);
+    std::ofstream OFS(OutputFile);
     return Action(OFS);
   } else
-    return Action(outs());
+    return Action(std::cout);
 }
 #endif
 
