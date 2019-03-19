@@ -26,6 +26,10 @@ int main(int, char**)
     typedef std::string S;
     S s("0123456789");
     const S& cs = s;
+    ASSERT_SAME_TYPE(decltype( s[0]), typename S::reference);
+    ASSERT_SAME_TYPE(decltype(cs[0]), typename S::const_reference);
+    LIBCPP_ASSERT_NOEXCEPT(    s[0]);
+    LIBCPP_ASSERT_NOEXCEPT(   cs[0]);
     for (S::size_type i = 0; i < cs.size(); ++i)
     {
         assert(s[i] == static_cast<char>('0' + i));
@@ -40,6 +44,10 @@ int main(int, char**)
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     S s("0123456789");
     const S& cs = s;
+    ASSERT_SAME_TYPE(decltype( s[0]), typename S::reference);
+    ASSERT_SAME_TYPE(decltype(cs[0]), typename S::const_reference);
+    LIBCPP_ASSERT_NOEXCEPT(    s[0]);
+    LIBCPP_ASSERT_NOEXCEPT(   cs[0]);
     for (S::size_type i = 0; i < cs.size(); ++i)
     {
         assert(s[i] == static_cast<char>('0' + i));

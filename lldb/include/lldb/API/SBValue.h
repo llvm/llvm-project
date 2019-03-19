@@ -112,9 +112,7 @@ public:
 
   lldb::SBTypeFilter GetTypeFilter();
 
-#ifndef LLDB_DISABLE_PYTHON
   lldb::SBTypeSynthetic GetTypeSynthetic();
-#endif
 
   lldb::SBValue GetChildAtIndex(uint32_t idx);
 

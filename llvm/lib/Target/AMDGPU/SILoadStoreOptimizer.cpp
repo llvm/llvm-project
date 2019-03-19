@@ -723,7 +723,8 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI) {
 
     TII->getAddNoCarry(*MBB, CI.Paired, DL, BaseReg)
         .addReg(ImmReg)
-        .addReg(AddrReg->getReg(), 0, BaseSubReg);
+        .addReg(AddrReg->getReg(), 0, BaseSubReg)
+        .addImm(0); // clamp bit
     BaseSubReg = 0;
   }
 
@@ -816,7 +817,8 @@ SILoadStoreOptimizer::mergeWrite2Pair(CombineInfo &CI) {
 
     TII->getAddNoCarry(*MBB, CI.Paired, DL, BaseReg)
         .addReg(ImmReg)
-        .addReg(AddrReg->getReg(), 0, BaseSubReg);
+        .addReg(AddrReg->getReg(), 0, BaseSubReg)
+        .addImm(0); // clamp bit
     BaseSubReg = 0;
   }
 
@@ -1144,7 +1146,8 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
     BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_I32_e64), DestSub0)
       .addReg(CarryReg, RegState::Define)
       .addReg(Addr.Base.LoReg, 0, Addr.Base.LoSubReg)
-    .add(OffsetLo);
+      .add(OffsetLo)
+      .addImm(0); // clamp bit
   (void)LoHalf;
   LLVM_DEBUG(dbgs() << "    "; LoHalf->dump(););
 
@@ -1153,7 +1156,8 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
     .addReg(DeadCarryReg, RegState::Define | RegState::Dead)
     .addReg(Addr.Base.HiReg, 0, Addr.Base.HiSubReg)
     .add(OffsetHi)
-    .addReg(CarryReg, RegState::Kill);
+    .addReg(CarryReg, RegState::Kill)
+    .addImm(0); // clamp bit
   (void)HiHalf;
   LLVM_DEBUG(dbgs() << "    "; HiHalf->dump(););
 

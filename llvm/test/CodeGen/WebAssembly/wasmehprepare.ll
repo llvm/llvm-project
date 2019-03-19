@@ -405,6 +405,6 @@ declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare void @__clang_call_terminate(i8*)
 
-; CHECK-DAG: declare void @llvm.wasm.landingpad.index(token, i32)
+; CHECK-DAG: declare void @llvm.wasm.landingpad.index(token, i32 immarg)
 ; CHECK-DAG: declare i8* @llvm.wasm.lsda()
 ; CHECK-DAG: declare i32 @_Unwind_CallPersonality(i8*)

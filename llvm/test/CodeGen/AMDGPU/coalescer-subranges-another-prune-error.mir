@@ -74,7 +74,7 @@ body:             |
     %29.sub0:vreg_128 = COPY %1
     %30:sreg_64 = V_CMP_NE_U32_e64 0, %28, implicit $exec
     %31:sreg_64_xexec = V_CMP_EQ_U32_e64 0, %28, implicit $exec
-    dead %32:vgpr_32 = V_CNDMASK_B32_e64 0, -1, killed %31, implicit $exec
+    dead %32:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %31, implicit $exec
     %33:vreg_128 = COPY %29
     %33.sub1:vreg_128 = COPY undef %32
     %34:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec

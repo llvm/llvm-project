@@ -171,6 +171,10 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
   if (!Sel || Sel->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
     return AMDGPU::NoRegister;
 
+  if (TII->hasModifiersSet(*Sel, AMDGPU::OpName::src0_modifiers) ||
+      TII->hasModifiersSet(*Sel, AMDGPU::OpName::src0_modifiers))
+    return AMDGPU::NoRegister;
+
   Op1 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src0);
   Op2 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src1);
   MachineOperand *CC = TII->getNamedOperand(*Sel, AMDGPU::OpName::src2);

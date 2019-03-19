@@ -172,9 +172,9 @@ else()
   set(LIBCXX_CXX_ABI_LIBNAME "${LIBCXX_CXX_ABI}")
 endif()
 
-# Use a static copy of the ABI library when linking libc++. This option
-# cannot be used with LIBCXX_ENABLE_ABI_LINKER_SCRIPT.
-option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY "Statically link the ABI library" OFF)
+option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY
+  "Use a static copy of the ABI library when linking libc++.
+   This option cannot be used with LIBCXX_ENABLE_ABI_LINKER_SCRIPT." OFF)
 
 cmake_dependent_option(LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY
   "Statically link the ABI library to static library" ON

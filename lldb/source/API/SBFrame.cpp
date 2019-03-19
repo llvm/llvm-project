@@ -1080,9 +1080,7 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
                      (const char *, const lldb::SBExpressionOptions &), expr,
                      options);
 
-#ifndef LLDB_DISABLE_PYTHON
   Log *expr_log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-#endif
 
   SBValue expr_result;
 
@@ -1122,12 +1120,10 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
     }
   }
 
-#ifndef LLDB_DISABLE_PYTHON
   if (expr_log)
     expr_log->Printf("** [SBFrame::EvaluateExpression] Expression result is "
                      "%s, summary %s **",
                      expr_result.GetValue(), expr_result.GetSummary());
-#endif
 
   return LLDB_RECORD_RESULT(expr_result);
 }

@@ -294,12 +294,6 @@ FastISel *WebAssemblyTargetLowering::createFastISel(
   return WebAssembly::createFastISel(FuncInfo, LibInfo);
 }
 
-bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
-    const GlobalAddressSDNode * /*GA*/) const {
-  // All offsets can be folded.
-  return true;
-}
-
 MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
                                                       EVT VT) const {
   unsigned BitWidth = NextPowerOf2(VT.getSizeInBits() - 1);

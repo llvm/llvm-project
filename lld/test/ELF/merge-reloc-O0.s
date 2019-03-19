@@ -16,7 +16,7 @@
 # CHECK-NEXT: Size: 16
 # CHECK-NEXT: Link:
 # CHECK-NEXT: Info:
-# CHECK-NEXT: AddressAlignment: 8
+# CHECK-NEXT: AddressAlignment: 1
 # CHECK-NEXT: EntrySize: 8
 # CHECK-NEXT: SectionData (
 # CHECK-NEXT:   0000: 41000000 00000000 42000000 00000000
@@ -33,7 +33,7 @@
 # CHECK-NEXT: Size: 8
 # CHECK-NEXT: Link:
 # CHECK-NEXT: Info:
-# CHECK-NEXT: AddressAlignment: 4
+# CHECK-NEXT: AddressAlignment: 1
 # CHECK-NEXT: EntrySize: 4
 # CHECK-NEXT: SectionData (
 # CHECK-NEXT:   0000: 41000000 42000000

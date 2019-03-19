@@ -5653,6 +5653,36 @@ static void setLimitsForIntrinsic(const IntrinsicInst &II, APInt &Lower,
   }
 }
 
+static void setLimitsForSelectPattern(const SelectInst &SI, APInt &Lower,
+                                      APInt &Upper) {
+  const Value *LHS, *RHS;
+  SelectPatternResult R = matchSelectPattern(&SI, LHS, RHS);
+  if (R.Flavor == SPF_UNKNOWN)
+    return;
+
+  unsigned BitWidth = SI.getType()->getScalarSizeInBits();
+
+  // matchSelectPattern() returns the negation part of an abs pattern in RHS.
+  // If the negate has an NSW flag, abs(INT_MIN) is undefined. Without that
+  // constraint, we can't make a contiguous range for the result of abs.
+  if (R.Flavor == SelectPatternFlavor::SPF_ABS &&
+      cast<Instruction>(RHS)->hasNoSignedWrap()) {
+    // The result of abs(X) is >= 0 (with nsw).
+    Lower = APInt::getNullValue(BitWidth);
+    Upper = APInt::getSignedMaxValue(BitWidth) + 1;
+    return;
+  }
+
+  if (R.Flavor == SelectPatternFlavor::SPF_NABS) {
+    // The result of -abs(X) is <= 0.
+    Lower = APInt::getSignedMinValue(BitWidth);
+    Upper = APInt(BitWidth, 1);
+    return;
+  }
+
+  // TODO Handle min/max flavors.
+}
+
 ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo) {
   assert(V->getType()->isIntOrIntVectorTy() && "Expected integer instruction");
 
@@ -5664,6 +5694,8 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo) {
     setLimitsForBinOp(*BO, Lower, Upper, IIQ);
   else if (auto *II = dyn_cast<IntrinsicInst>(V))
     setLimitsForIntrinsic(*II, Lower, Upper);
+  else if (auto *SI = dyn_cast<SelectInst>(V))
+    setLimitsForSelectPattern(*SI, Lower, Upper);
 
   ConstantRange CR = Lower != Upper ? ConstantRange(Lower, Upper)
                                     : ConstantRange(BitWidth, true);

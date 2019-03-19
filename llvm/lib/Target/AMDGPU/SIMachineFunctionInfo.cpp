@@ -323,8 +323,10 @@ MCPhysReg SIMachineFunctionInfo::getNextSystemSGPR() const {
 static yaml::StringValue regToString(unsigned Reg,
                                      const TargetRegisterInfo &TRI) {
   yaml::StringValue Dest;
-  raw_string_ostream OS(Dest.Value);
-  OS << printReg(Reg, &TRI);
+  {
+    raw_string_ostream OS(Dest.Value);
+    OS << printReg(Reg, &TRI);
+  }
   return Dest;
 }
 

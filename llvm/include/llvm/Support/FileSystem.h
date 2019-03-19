@@ -764,11 +764,32 @@ enum OpenFlags : unsigned {
   OF_UpdateAtime = 16,
 };
 
+/// Create a potentially unique file name but does not create it.
+///
+/// Generates a unique path suitable for a temporary file but does not
+/// open or create the file. The name is based on \a Model with '%'
+/// replaced by a random char in [0-9a-f]. If \a MakeAbsolute is true
+/// then the system's temp directory is prepended first. If \a MakeAbsolute
+/// is false the current directory will be used instead.
+///
+/// This function does not check if the file exists. If you want to be sure
+/// that the file does not yet exist, you should use use enough '%' characters
+/// in your model to ensure this. Each '%' gives 4-bits of entropy so you can
+/// use 32 of them to get 128 bits of entropy.
+///
+/// Example: clang-%%-%%-%%-%%-%%.s => clang-a0-b1-c2-d3-e4.s
+///
+/// @param Model Name to base unique path off of.
+/// @param ResultPath Set to the file's path.
+/// @param MakeAbsolute Whether to use the system temp directory.
+void createUniquePath(const Twine &Model, SmallVectorImpl<char> &ResultPath,
+                      bool MakeAbsolute);
+
 /// Create a uniquely named file.
 ///
 /// Generates a unique path suitable for a temporary file and then opens it as a
-/// file. The name is based on \a model with '%' replaced by a random char in
-/// [0-9a-f]. If \a model is not an absolute path, the temporary file will be
+/// file. The name is based on \a Model with '%' replaced by a random char in
+/// [0-9a-f]. If \a Model is not an absolute path, the temporary file will be
 /// created in the current directory.
 ///
 /// Example: clang-%%-%%-%%-%%-%%.s => clang-a0-b1-c2-d3-e4.s

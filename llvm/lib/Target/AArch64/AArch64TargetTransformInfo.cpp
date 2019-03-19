@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64ExpandImm.h"
 #include "AArch64TargetTransformInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -49,8 +50,9 @@ int AArch64TTIImpl::getIntImmCost(int64_t Val) {
     Val = ~Val;
 
   // Calculate how many moves we will need to materialize this constant.
-  unsigned LZ = countLeadingZeros((uint64_t)Val);
-  return (64 - LZ + 15) / 16;
+  SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
+  AArch64_IMM::expandMOVImm(Val, 64, Insn);
+  return Insn.size();
 }
 
 /// Calculate the cost of materializing the given constant.

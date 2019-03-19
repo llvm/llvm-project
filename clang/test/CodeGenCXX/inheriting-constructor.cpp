@@ -270,15 +270,6 @@ namespace inalloca_virt {
   // WIN32: call void @llvm.stackrestore(
   // WIN32: br
   //
-  // WIN32: store i32 0, i32* %[[IS_MOST_DERIVED_ADDR:.*]]
-  // WIN32: %[[IS_MOST_DERIVED:.*]] = load i32, i32* %[[IS_MOST_DERIVED_ADDR]]
-  // WIN32: %[[IS_MOST_DERIVED_i1:.*]] = icmp ne i32 %[[IS_MOST_DERIVED]], 0
-  // WIN32: br i1 %[[IS_MOST_DERIVED_i1]]
-  //
-  // Note: this block is unreachable.
-  // WIN32: store {{.*}} @"??_8B@inalloca_virt@@7B@"
-  // WIN32: br
-  //
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(
   // WIN32: call {{.*}} @"??1Q@@QAE@XZ"(
@@ -294,11 +285,6 @@ namespace inalloca_virt {
   // WIN64: br i1
   // WIN64: store {{.*}} @"??_8C@inalloca_virt@@7B@"
   // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(%{{.*}}, %{{.*}}* %[[ARG1]], i32 2, %{{.*}}* %[[ARG3]], %{{.*}} %[[TMP]])
-  // WIN64: br
-  // WIN64: br i1
-  // (Unreachable block)
-  // WIN64: store {{.*}} @"??_8B@inalloca_virt@@7B@"
-  // WIN64: br
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call void @"??1Q@@QEAA@XZ"({{.*}}* %[[TMP]])

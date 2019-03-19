@@ -303,7 +303,7 @@ int f18() {
   i18.j = 11;
   i18.s2 = strdup("hello");
   char input[100] = {3};
-  memcpy(i18.s1, input, 100);
+  memcpy(i18.s1, input, 100); // expected-warning {{'memcpy' will always overflow; destination buffer has size 24, but size argument is 100}}
   clang_analyzer_eval(i18.s1[0] == 1); // expected-warning{{UNKNOWN}}\
   expected-warning{{Potential leak of memory pointed to by 'i18.s2'}}
   clang_analyzer_eval(i18.s1[1] == 2); // expected-warning{{UNKNOWN}}
@@ -534,7 +534,7 @@ int f262() {
   struct aa a262 = {{1, 2, 3, 4}, 0};
   a262.s2 = strdup("hello");
   char input[] = {'a', 'b', 'c', 'd'};
-  memcpy(a262.s1, input, -1);
+  memcpy(a262.s1, input, -1); // expected-warning{{'memcpy' will always overflow; destination buffer has size 16, but size argument is 18446744073709551615}}
   clang_analyzer_eval(a262.s1[0] == 1); // expected-warning{{UNKNOWN}}\
   expected-warning{{Potential leak of memory pointed to by 'a262.s2'}}
   clang_analyzer_eval(a262.s1[1] == 1); // expected-warning{{UNKNOWN}}

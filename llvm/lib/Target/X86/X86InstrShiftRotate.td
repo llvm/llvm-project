@@ -472,17 +472,19 @@ def ROL64rCL : RI<0xD3, MRM0r, (outs GR64:$dst), (ins GR64:$src1),
 
 def ROL8ri   : Ii8<0xC0, MRM0r, (outs GR8 :$dst), (ins GR8 :$src1, u8imm:$src2),
                    "rol{b}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR8:$dst, (rotl GR8:$src1, (i8 imm:$src2)))]>;
+                   [(set GR8:$dst, (rotl GR8:$src1, (i8 relocImm:$src2)))]>;
 def ROL16ri  : Ii8<0xC1, MRM0r, (outs GR16:$dst), (ins GR16:$src1, u8imm:$src2),
                    "rol{w}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR16:$dst, (rotl GR16:$src1, (i8 imm:$src2)))]>, OpSize16;
+                   [(set GR16:$dst, (rotl GR16:$src1, (i8 relocImm:$src2)))]>,
+                   OpSize16;
 def ROL32ri  : Ii8<0xC1, MRM0r, (outs GR32:$dst), (ins GR32:$src1, u8imm:$src2),
                    "rol{l}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR32:$dst, (rotl GR32:$src1, (i8 imm:$src2)))]>, OpSize32;
+                   [(set GR32:$dst, (rotl GR32:$src1, (i8 relocImm:$src2)))]>,
+                   OpSize32;
 def ROL64ri  : RIi8<0xC1, MRM0r, (outs GR64:$dst),
                     (ins GR64:$src1, u8imm:$src2),
                     "rol{q}\t{$src2, $dst|$dst, $src2}",
-                    [(set GR64:$dst, (rotl GR64:$src1, (i8 imm:$src2)))]>;
+                    [(set GR64:$dst, (rotl GR64:$src1, (i8 relocImm:$src2)))]>;
 
 // Rotate by 1
 def ROL8r1   : I<0xD0, MRM0r, (outs GR8 :$dst), (ins GR8 :$src1),

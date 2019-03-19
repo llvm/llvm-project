@@ -647,9 +647,9 @@ protected:
 
     void swap(__list_imp& __c)
 #if _LIBCPP_STD_VER >= 14
-        _NOEXCEPT_DEBUG;
+        _NOEXCEPT;
 #else
-        _NOEXCEPT_DEBUG_(!__alloc_traits::propagate_on_container_swap::value ||
+        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value);
 #endif
 
@@ -769,9 +769,9 @@ template <class _Tp, class _Alloc>
 void
 __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
 #if _LIBCPP_STD_VER >= 14
-        _NOEXCEPT_DEBUG
+        _NOEXCEPT
 #else
-        _NOEXCEPT_DEBUG_(!__alloc_traits::propagate_on_container_swap::value ||
+        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value)
 #endif
 {
@@ -1038,9 +1038,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void swap(list& __c)
 #if _LIBCPP_STD_VER >= 14
-        _NOEXCEPT_DEBUG
+        _NOEXCEPT
 #else
-        _NOEXCEPT_DEBUG_(!__node_alloc_traits::propagate_on_container_swap::value ||
+        _NOEXCEPT_(!__node_alloc_traits::propagate_on_container_swap::value ||
                    __is_nothrow_swappable<__node_allocator>::value)
 #endif
         {base::swap(__c);}
