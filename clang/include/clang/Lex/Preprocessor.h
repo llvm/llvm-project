@@ -1273,6 +1273,9 @@ public:
   /// Lex the next token for this preprocessor.
   void Lex(Token &Result);
 
+  /// Lex a token, forming a header-name token if possible.
+  bool LexHeaderName(Token &Result, bool AllowConcatenation = true);
+
   void LexAfterModuleImport(Token &Result);
 
   void makeModuleVisible(Module *M, SourceLocation Loc);
@@ -1865,22 +1868,6 @@ public:
 
   /// Return true if we're in the top-level file, not in a \#include.
   bool isInPrimaryFile() const;
-
-  /// Handle cases where the \#include name is expanded
-  /// from a macro as multiple tokens, which need to be glued together.
-  ///
-  /// This occurs for code like:
-  /// \code
-  ///    \#define FOO <x/y.h>
-  ///    \#include FOO
-  /// \endcode
-  /// because in this case, "<x/y.h>" is returned as 7 tokens, not one.
-  ///
-  /// This code concatenates and consumes tokens up to the '>' token.  It
-  /// returns false if the > was found, otherwise it returns true if it finds
-  /// and consumes the EOD marker.
-  bool ConcatenateIncludeName(SmallString<128> &FilenameBuffer,
-                              SourceLocation &End);
 
   /// Lex an on-off-switch (C99 6.10.6p2) and verify that it is
   /// followed by EOD.  Return true if the token is not a valid on-off-switch.

@@ -1046,7 +1046,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     return isLegalGlobalAddressingMode(AM);
 
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
-      AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+      AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+      AS == AMDGPUAS::BUFFER_FAT_POINTER) {
     // If the offset isn't a multiple of 4, it probably isn't going to be
     // correctly aligned.
     // FIXME: Can we get the real alignment here?
@@ -3436,11 +3437,15 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), SrcCondCopy)
       .addReg(SrcCond);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstLo)
+      .addImm(0)
       .addReg(Src0, 0, AMDGPU::sub0)
+      .addImm(0)
       .addReg(Src1, 0, AMDGPU::sub0)
       .addReg(SrcCondCopy);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstHi)
+      .addImm(0)
       .addReg(Src0, 0, AMDGPU::sub1)
+      .addImm(0)
       .addReg(Src1, 0, AMDGPU::sub1)
       .addReg(SrcCondCopy);
 

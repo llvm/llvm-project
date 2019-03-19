@@ -69,7 +69,7 @@ body: |
     %18:vgpr_32 = V_MIN_F32_e32 1065353216, killed %17, implicit $exec
     %19:sreg_64_xexec = V_CMP_NEQ_F32_e64 0, 1065353216, 0, killed %18, 0, implicit $exec
     %20:vgpr_32 = V_MOV_B32_e32 2143289344, implicit $exec
-    %21:vgpr_32 = V_CNDMASK_B32_e64 0, killed %20, killed %19, implicit $exec
+    %21:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, killed %20, killed %19, implicit $exec
     %22:sreg_64 = V_CMP_LT_F32_e64 0, 0, 0, killed %21, 0, implicit $exec
     %23:sreg_64 = COPY $exec, implicit-def $exec
     %24:sreg_64 = S_AND_B64 %23, %22, implicit-def dead $scc

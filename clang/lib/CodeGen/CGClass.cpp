@@ -526,8 +526,7 @@ static bool BaseInitializerUsesThis(ASTContext &C, const Expr *Init) {
 
 static void EmitBaseInitializer(CodeGenFunction &CGF,
                                 const CXXRecordDecl *ClassDecl,
-                                CXXCtorInitializer *BaseInit,
-                                CXXCtorType CtorType) {
+                                CXXCtorInitializer *BaseInit) {
   assert(BaseInit->isBaseInitializer() &&
          "Must have base initializer!");
 
@@ -538,10 +537,6 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
     cast<CXXRecordDecl>(BaseType->getAs<RecordType>()->getDecl());
 
   bool isBaseVirtual = BaseInit->isBaseVirtual();
-
-  // The base constructor doesn't construct virtual bases.
-  if (CtorType == Ctor_Base && isBaseVirtual)
-    return;
 
   // If the initializer for the base (other than the constructor
   // itself) accesses 'this' in any way, we need to initialize the
@@ -1264,24 +1259,37 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
   CXXConstructorDecl::init_const_iterator B = CD->init_begin(),
                                           E = CD->init_end();
 
+  // Virtual base initializers first, if any. They aren't needed if:
+  // - This is a base ctor variant
+  // - There are no vbases
+  // - The class is abstract, so a complete object of it cannot be constructed
+  //
+  // The check for an abstract class is necessary because sema may not have
+  // marked virtual base destructors referenced.
+  bool ConstructVBases = CtorType != Ctor_Base &&
+                         ClassDecl->getNumVBases() != 0 &&
+                         !ClassDecl->isAbstract();
+
+  // In the Microsoft C++ ABI, there are no constructor variants. Instead, the
+  // constructor of a class with virtual bases takes an additional parameter to
+  // conditionally construct the virtual bases. Emit that check here.
   llvm::BasicBlock *BaseCtorContinueBB = nullptr;
-  if (ClassDecl->getNumVBases() &&
+  if (ConstructVBases &&
       !CGM.getTarget().getCXXABI().hasConstructorVariants()) {
-    // The ABIs that don't have constructor variants need to put a branch
-    // before the virtual base initialization code.
     BaseCtorContinueBB =
-      CGM.getCXXABI().EmitCtorCompleteObjectHandler(*this, ClassDecl);
+        CGM.getCXXABI().EmitCtorCompleteObjectHandler(*this, ClassDecl);
     assert(BaseCtorContinueBB);
   }
 
   llvm::Value *const OldThis = CXXThisValue;
-  // Virtual base initializers first.
   for (; B != E && (*B)->isBaseInitializer() && (*B)->isBaseVirtual(); B++) {
+    if (!ConstructVBases)
+      continue;
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
       CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
-    EmitBaseInitializer(*this, ClassDecl, *B, CtorType);
+    EmitBaseInitializer(*this, ClassDecl, *B);
   }
 
   if (BaseCtorContinueBB) {
@@ -1298,7 +1306,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
       CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
-    EmitBaseInitializer(*this, ClassDecl, *B, CtorType);
+    EmitBaseInitializer(*this, ClassDecl, *B);
   }
 
   CXXThisValue = OldThis;

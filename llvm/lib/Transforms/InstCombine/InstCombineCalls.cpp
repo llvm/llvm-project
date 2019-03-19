@@ -2006,39 +2006,33 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         II->setArgOperand(2, ModuloC);
         return II;
       }
-      // Canonicalize rotate right by constant to rotate left. This is not
-      // entirely arbitrary. For historical reasons, the backend may recognize
-      // rotate left patterns but miss rotate right patterns.
-      if (II->getIntrinsicID() == Intrinsic::fshr && Op0 == Op1) {
-        // fshr X, X, C --> fshl X, X, (BitWidth - C)
-        assert(ConstantExpr::getICmp(ICmpInst::ICMP_UGT, WidthC, ShAmtC) ==
-               ConstantInt::getTrue(CmpInst::makeCmpResultType(Ty)) &&
-               "Shift amount expected to be modulo bitwidth");
+      assert(ConstantExpr::getICmp(ICmpInst::ICMP_UGT, WidthC, ShAmtC) ==
+                 ConstantInt::getTrue(CmpInst::makeCmpResultType(Ty)) &&
+             "Shift amount expected to be modulo bitwidth");
+
+      // Canonicalize funnel shift right by constant to funnel shift left. This
+      // is not entirely arbitrary. For historical reasons, the backend may
+      // recognize rotate left patterns but miss rotate right patterns.
+      if (II->getIntrinsicID() == Intrinsic::fshr) {
+        // fshr X, Y, C --> fshl X, Y, (BitWidth - C)
         Constant *LeftShiftC = ConstantExpr::getSub(WidthC, ShAmtC);
         Module *Mod = II->getModule();
         Function *Fshl = Intrinsic::getDeclaration(Mod, Intrinsic::fshl, Ty);
-        return CallInst::Create(Fshl, { Op0, Op0, LeftShiftC });
+        return CallInst::Create(Fshl, { Op0, Op1, LeftShiftC });
       }
-    }
+      assert(II->getIntrinsicID() == Intrinsic::fshl &&
+             "All funnel shifts by simple constants should go left");
 
-    const APInt *SA;
-    if (match(II->getArgOperand(2), m_APInt(SA))) {
-      uint64_t ShiftAmt = SA->urem(BitWidth);
-      assert(ShiftAmt != 0 && "SimplifyCall should have handled zero shift");
-      // Normalize to funnel shift left.
-      if (II->getIntrinsicID() == Intrinsic::fshr)
-        ShiftAmt = BitWidth - ShiftAmt;
+      // fshl(X, 0, C) --> shl X, C
+      // fshl(X, undef, C) --> shl X, C
+      if (match(Op1, m_ZeroInt()) || match(Op1, m_Undef()))
+        return BinaryOperator::CreateShl(Op0, ShAmtC);
 
-      // fshl(X, 0, C) -> shl X, C
-      // fshl(X, undef, C) -> shl X, C
-      if (match(Op1, m_Zero()) || match(Op1, m_Undef()))
-        return BinaryOperator::CreateShl(Op0, ConstantInt::get(Ty, ShiftAmt));
-
-      // fshl(0, X, C) -> lshr X, (BW-C)
-      // fshl(undef, X, C) -> lshr X, (BW-C)
-      if (match(Op0, m_Zero()) || match(Op0, m_Undef()))
-        return BinaryOperator::CreateLShr(
-            Op1, ConstantInt::get(Ty, BitWidth - ShiftAmt));
+      // fshl(0, X, C) --> lshr X, (BW-C)
+      // fshl(undef, X, C) --> lshr X, (BW-C)
+      if (match(Op0, m_ZeroInt()) || match(Op0, m_Undef()))
+        return BinaryOperator::CreateLShr(Op1,
+                                          ConstantExpr::getSub(WidthC, ShAmtC));
     }
 
     // The shift amount (operand 2) of a funnel shift is modulo the bitwidth,

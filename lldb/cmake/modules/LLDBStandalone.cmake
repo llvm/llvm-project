@@ -23,7 +23,12 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(LLVM_MAIN_INCLUDE_DIR ${LLVM_MAIN_INCLUDE_DIR} CACHE PATH "Path to llvm/include")
   set(LLVM_LIBRARY_DIR ${LLVM_LIBRARY_DIR} CACHE PATH "Path to llvm/lib")
   set(LLVM_BINARY_DIR ${LLVM_BINARY_DIR} CACHE PATH "Path to LLVM build tree")
-  set(LLVM_DEFAULT_EXTERNAL_LIT ${LLVM_TOOLS_BINARY_DIR}/llvm-lit CACHE PATH "Path to llvm-lit")
+
+  set(lit_file_name "llvm-lit")
+  if(CMAKE_HOST_WIN32 AND NOT CYGWIN)
+    set(lit_file_name "${lit_file_name}.py")
+  endif()
+  set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_TOOLS_BINARY_DIR}/${lit_file_name}" CACHE PATH "Path to llvm-lit")
 
   if(CMAKE_CROSSCOMPILING)
     set(LLVM_NATIVE_BUILD "${LLDB_PATH_TO_LLVM_BUILD}/NATIVE")

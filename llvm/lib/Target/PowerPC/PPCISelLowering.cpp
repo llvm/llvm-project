@@ -14322,7 +14322,8 @@ void PPCTargetLowering::insertSSPDeclarations(Module &M) const {
     return TargetLowering::insertSSPDeclarations(M);
 }
 
-bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
+bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
   if (!VT.isSimple() || !Subtarget.hasVSX())
     return false;
 

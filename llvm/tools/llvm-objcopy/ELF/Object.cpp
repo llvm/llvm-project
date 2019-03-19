@@ -297,16 +297,16 @@ void CompressedSection::accept(MutableSectionVisitor &Visitor) {
   Visitor.visit(*this);
 }
 
-void StringTableSection::addString(StringRef Name) {
-  StrTabBuilder.add(Name);
-  Size = StrTabBuilder.getSize();
-}
+void StringTableSection::addString(StringRef Name) { StrTabBuilder.add(Name); }
 
 uint32_t StringTableSection::findIndex(StringRef Name) const {
   return StrTabBuilder.getOffset(Name);
 }
 
-void StringTableSection::finalize() { StrTabBuilder.finalize(); }
+void StringTableSection::prepareForLayout() {
+  StrTabBuilder.finalize();
+  Size = StrTabBuilder.getSize();
+}
 
 void SectionWriter::visit(const StringTableSection &Sec) {
   Sec.StrTabBuilder.write(Out.getBufferStart() + Sec.Offset);
@@ -468,9 +468,6 @@ void SymbolTableSection::initialize(SectionTableRef SecTable) {
 }
 
 void SymbolTableSection::finalize() {
-  // Make sure SymbolNames is finalized before getting name indexes.
-  SymbolNames->finalize();
-
   uint32_t MaxLocalIndex = 0;
   for (auto &Sym : Symbols) {
     Sym->NameIndex = SymbolNames->findIndex(Sym->Name);
@@ -1612,11 +1609,14 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
   if (Obj.SymbolTable != nullptr)
     Obj.SymbolTable->prepareForLayout();
 
+  // Now that all strings are added we want to finalize string table builders,
+  // because that affects section sizes which in turn affects section offsets.
+  for (auto &Sec : Obj.sections())
+    if (auto StrTab = dyn_cast<StringTableSection>(&Sec))
+      StrTab->prepareForLayout();
+
   assignOffsets();
 
-  // Finalize SectionNames first so that we can assign name indexes.
-  if (Obj.SectionNames != nullptr)
-    Obj.SectionNames->finalize();
   // Finally now that all offsets and indexes have been set we can finalize any
   // remaining issues.
   uint64_t Offset = Obj.SHOffset + sizeof(Elf_Shdr);

@@ -548,8 +548,12 @@ let SubtargetPredicate = isGFX9 in {
     def S_LSHL4_ADD_U32 : SOP2_32<"s_lshl4_add_u32">;
   } // End Defs = [SCC]
 
-  def S_MUL_HI_U32 : SOP2_32<"s_mul_hi_u32">;
-  def S_MUL_HI_I32 : SOP2_32<"s_mul_hi_i32">;
+  let isCommutable = 1 in {
+    def S_MUL_HI_U32 : SOP2_32<"s_mul_hi_u32",
+      [(set i32:$sdst, (UniformBinFrag<mulhu> SSrc_b32:$src0, SSrc_b32:$src1))]>;
+    def S_MUL_HI_I32 : SOP2_32<"s_mul_hi_i32",
+      [(set i32:$sdst, (UniformBinFrag<mulhs> SSrc_b32:$src0, SSrc_b32:$src1))]>;
+  }
 }
 
 //===----------------------------------------------------------------------===//

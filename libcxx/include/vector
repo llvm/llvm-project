@@ -779,9 +779,9 @@ public:
 
     void swap(vector&)
 #if _LIBCPP_STD_VER >= 14
-        _NOEXCEPT_DEBUG;
+        _NOEXCEPT;
 #else
-        _NOEXCEPT_DEBUG_(!__alloc_traits::propagate_on_container_swap::value ||
+        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value);
 #endif
 
@@ -2064,9 +2064,9 @@ template <class _Tp, class _Allocator>
 void
 vector<_Tp, _Allocator>::swap(vector& __x)
 #if _LIBCPP_STD_VER >= 14
-    _NOEXCEPT_DEBUG
+    _NOEXCEPT
 #else
-    _NOEXCEPT_DEBUG_(!__alloc_traits::propagate_on_container_swap::value ||
+    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                 __is_nothrow_swappable<allocator_type>::value)
 #endif
 {

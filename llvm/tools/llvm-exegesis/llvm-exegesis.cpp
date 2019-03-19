@@ -40,24 +40,33 @@
 namespace llvm {
 namespace exegesis {
 
+static cl::OptionCategory Options("llvm-exegesis options");
+static cl::OptionCategory BenchmarkOptions("llvm-exegesis benchmark options");
+static cl::OptionCategory AnalysisOptions("llvm-exegesis analysis options");
+
 static cl::opt<int> OpcodeIndex("opcode-index",
                                 cl::desc("opcode to measure, by index"),
-                                cl::init(0));
+                                cl::cat(BenchmarkOptions), cl::init(0));
 
 static cl::opt<std::string>
     OpcodeNames("opcode-name",
                 cl::desc("comma-separated list of opcodes to measure, by name"),
-                cl::init(""));
+                cl::cat(BenchmarkOptions), cl::init(""));
 
 static cl::opt<std::string> SnippetsFile("snippets-file",
                                          cl::desc("code snippets to measure"),
+                                         cl::cat(BenchmarkOptions),
                                          cl::init(""));
 
-static cl::opt<std::string> BenchmarkFile("benchmarks-file", cl::desc(""),
-                                          cl::init(""));
+static cl::opt<std::string>
+    BenchmarkFile("benchmarks-file",
+                  cl::desc("File to read (analysis mode) or write "
+                           "(latency/uops/inverse_throughput modes) benchmark "
+                           "results. “-” uses stdin/stdout."),
+                  cl::cat(Options), cl::init(""));
 
 static cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
-    "mode", cl::desc("the mode to run"),
+    "mode", cl::desc("the mode to run"), cl::cat(BenchmarkOptions),
     cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency, "latency",
                           "Instruction Latency"),
                clEnumValN(exegesis::InstructionBenchmark::InverseThroughput,
@@ -73,33 +82,36 @@ static cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
 static cl::opt<unsigned>
     NumRepetitions("num-repetitions",
                    cl::desc("number of time to repeat the asm snippet"),
-                   cl::init(10000));
+                   cl::cat(BenchmarkOptions), cl::init(10000));
 
 static cl::opt<bool> IgnoreInvalidSchedClass(
     "ignore-invalid-sched-class",
     cl::desc("ignore instructions that do not define a sched class"),
-    cl::init(false));
+    cl::cat(BenchmarkOptions), cl::init(false));
 
 static cl::opt<unsigned> AnalysisNumPoints(
     "analysis-numpoints",
-    cl::desc("minimum number of points in an analysis cluster"), cl::init(3));
+    cl::desc("minimum number of points in an analysis cluster"),
+    cl::cat(AnalysisOptions), cl::init(3));
 
 static cl::opt<float> AnalysisClusteringEpsilon(
     "analysis-clustering-epsilon",
-    cl::desc("dbscan epsilon for benchmark point clustering"), cl::init(0.1));
+    cl::desc("dbscan epsilon for benchmark point clustering"),
+    cl::cat(AnalysisOptions), cl::init(0.1));
 
 static cl::opt<float> AnalysisInconsistencyEpsilon(
     "analysis-inconsistency-epsilon",
     cl::desc("epsilon for detection of when the cluster is different from the "
              "LLVM schedule profile values"),
-    cl::init(0.1));
+    cl::cat(AnalysisOptions), cl::init(0.1));
 
 static cl::opt<std::string>
     AnalysisClustersOutputFile("analysis-clusters-output-file", cl::desc(""),
-                               cl::init(""));
+                               cl::cat(AnalysisOptions), cl::init(""));
 static cl::opt<std::string>
     AnalysisInconsistenciesOutputFile("analysis-inconsistencies-output-file",
-                                      cl::desc(""), cl::init(""));
+                                      cl::desc(""), cl::cat(AnalysisOptions),
+                                      cl::init(""));
 
 static cl::opt<bool> AnalysisDisplayUnstableOpcodes(
     "analysis-display-unstable-clusters",
@@ -108,13 +120,12 @@ static cl::opt<bool> AnalysisDisplayUnstableOpcodes(
              "if the measured performance characteristics are different. by "
              "default all such opcodes are filtered out. this flag will "
              "instead show only such unstable opcodes"),
-    cl::init(false));
+    cl::cat(AnalysisOptions), cl::init(false));
 
-static cl::opt<std::string>
-    CpuName("mcpu",
-            cl::desc(
-                "cpu name to use for pfm counters, leave empty to autodetect"),
-            cl::init(""));
+static cl::opt<std::string> CpuName(
+    "mcpu",
+    cl::desc("cpu name to use for pfm counters, leave empty to autodetect"),
+    cl::cat(Options), cl::init(""));
 
 static ExitOnError ExitOnErr;
 

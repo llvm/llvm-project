@@ -482,11 +482,14 @@ void Preprocessor::HandlePragmaSystemHeader(Token &SysHeaderTok) {
 /// HandlePragmaDependency - Handle \#pragma GCC dependency "foo" blah.
 void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
   Token FilenameTok;
-  CurPPLexer->LexIncludeFilename(FilenameTok);
-
-  // If the token kind is EOD, the error has already been diagnosed.
-  if (FilenameTok.is(tok::eod))
+  if (LexHeaderName(FilenameTok, /*AllowConcatenation*/false))
     return;
+
+  // If the next token wasn't a header-name, diagnose the error.
+  if (!FilenameTok.isOneOf(tok::angle_string_literal, tok::string_literal)) {
+    Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
+    return;
+  }
 
   // Reserve a buffer to get the spelling.
   SmallString<128> FilenameBuffer;
@@ -662,24 +665,14 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
 
   // We expect either a quoted string literal, or a bracketed name
   Token SourceFilenameTok;
-  CurPPLexer->LexIncludeFilename(SourceFilenameTok);
-  if (SourceFilenameTok.is(tok::eod)) {
-    // The diagnostic has already been handled
+  if (LexHeaderName(SourceFilenameTok))
     return;
-  }
 
   StringRef SourceFileName;
   SmallString<128> FileNameBuffer;
   if (SourceFilenameTok.is(tok::string_literal) ||
       SourceFilenameTok.is(tok::angle_string_literal)) {
     SourceFileName = getSpelling(SourceFilenameTok, FileNameBuffer);
-  } else if (SourceFilenameTok.is(tok::less)) {
-    // This could be a path instead of just a name
-    FileNameBuffer.push_back('<');
-    SourceLocation End;
-    if (ConcatenateIncludeName(FileNameBuffer, End))
-      return; // Diagnostic already emitted
-    SourceFileName = FileNameBuffer;
   } else {
     Diag(Tok, diag::warn_pragma_include_alias_expected_filename);
     return;
@@ -694,23 +687,13 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
   }
 
   Token ReplaceFilenameTok;
-  CurPPLexer->LexIncludeFilename(ReplaceFilenameTok);
-  if (ReplaceFilenameTok.is(tok::eod)) {
-    // The diagnostic has already been handled
+  if (LexHeaderName(ReplaceFilenameTok))
     return;
-  }
 
   StringRef ReplaceFileName;
   if (ReplaceFilenameTok.is(tok::string_literal) ||
       ReplaceFilenameTok.is(tok::angle_string_literal)) {
     ReplaceFileName = getSpelling(ReplaceFilenameTok, FileNameBuffer);
-  } else if (ReplaceFilenameTok.is(tok::less)) {
-    // This could be a path instead of just a name
-    FileNameBuffer.push_back('<');
-    SourceLocation End;
-    if (ConcatenateIncludeName(FileNameBuffer, End))
-      return; // Diagnostic already emitted
-    ReplaceFileName = FileNameBuffer;
   } else {
     Diag(Tok, diag::warn_pragma_include_alias_expected_filename);
     return;

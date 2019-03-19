@@ -12,8 +12,6 @@
 
 #include "lldb/API/SBDefines.h"
 
-#ifndef LLDB_DISABLE_PYTHON
-
 namespace lldb {
 
 class LLDB_API SBTypeSynthetic {
@@ -78,7 +76,5 @@ protected:
 };
 
 } // namespace lldb
-
-#endif // LLDB_DISABLE_PYTHON
 
 #endif // LLDB_SBTypeSynthetic_h_

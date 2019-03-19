@@ -2981,16 +2981,20 @@ FunctionDecl::setPreviousDeclaration(FunctionDecl *PrevDecl) {
 
 FunctionDecl *FunctionDecl::getCanonicalDecl() { return getFirstDecl(); }
 
-/// Returns a value indicating whether this function
-/// corresponds to a builtin function.
+/// Returns a value indicating whether this function corresponds to a builtin
+/// function.
 ///
-/// The function corresponds to a built-in function if it is
-/// declared at translation scope or within an extern "C" block and
-/// its name matches with the name of a builtin. The returned value
-/// will be 0 for functions that do not correspond to a builtin, a
-/// value of type \c Builtin::ID if in the target-independent range
-/// \c [1,Builtin::First), or a target-specific builtin value.
-unsigned FunctionDecl::getBuiltinID() const {
+/// The function corresponds to a built-in function if it is declared at
+/// translation scope or within an extern "C" block and its name matches with
+/// the name of a builtin. The returned value will be 0 for functions that do
+/// not correspond to a builtin, a value of type \c Builtin::ID if in the
+/// target-independent range \c [1,Builtin::First), or a target-specific builtin
+/// value.
+///
+/// \param ConsiderWrapperFunctions If true, we should consider wrapper
+/// functions as their wrapped builtins. This shouldn't be done in general, but
+/// it's useful in Sema to diagnose calls to wrappers based on their semantics.
+unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
   if (!getIdentifier())
     return 0;
 
@@ -3018,7 +3022,7 @@ unsigned FunctionDecl::getBuiltinID() const {
 
   // If the function is marked "overloadable", it has a different mangled name
   // and is not the C library function.
-  if (hasAttr<OverloadableAttr>())
+  if (!ConsiderWrapperFunctions && hasAttr<OverloadableAttr>())
     return 0;
 
   if (!Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
@@ -3029,7 +3033,7 @@ unsigned FunctionDecl::getBuiltinID() const {
   // function or whether it just has the same name.
 
   // If this is a static function, it's not a builtin.
-  if (getStorageClass() == SC_Static)
+  if (!ConsiderWrapperFunctions && getStorageClass() == SC_Static)
     return 0;
 
   // OpenCL v1.2 s6.9.f - The library functions defined in

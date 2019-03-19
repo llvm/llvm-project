@@ -14413,7 +14413,8 @@ bool ARM::isBitFieldInvertedMask(unsigned v) {
 /// isFPImmLegal - Returns true if the target can instruction select the
 /// specified FP immediate natively. If false, the legalizer will
 /// materialize the FP immediate as a load from a constant pool.
-bool ARMTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
+bool ARMTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
   if (!Subtarget->hasVFP3())
     return false;
   if (VT == MVT::f16 && Subtarget->hasFullFP16())

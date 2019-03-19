@@ -1011,7 +1011,8 @@ namespace llvm {
     /// Returns true if the target can instruction select the
     /// specified FP immediate natively. If false, the legalizer will
     /// materialize the FP immediate as a load from a constant pool.
-    bool isFPImmLegal(const APFloat &Imm, EVT VT) const override;
+    bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                      bool ForCodeSize) const override;
 
     /// Targets can use this to indicate that they only support *some*
     /// VECTOR_SHUFFLE operations, those with specific masks. By default, if a

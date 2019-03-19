@@ -1088,13 +1088,13 @@ static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
 }
 
 static pdb::SectionContrib createSectionContrib(const Chunk *C, uint32_t Modi) {
-  OutputSection *OS = C->getOutputSection();
+  OutputSection *OS = C ? C->getOutputSection() : nullptr;
   pdb::SectionContrib SC;
   memset(&SC, 0, sizeof(SC));
-  SC.ISect = OS->SectionIndex;
-  SC.Off = C->getRVA() - OS->getRVA();
-  SC.Size = C->getSize();
-  if (auto *SecChunk = dyn_cast<SectionChunk>(C)) {
+  SC.ISect = OS ? OS->SectionIndex : llvm::pdb::kInvalidStreamIndex;
+  SC.Off = C && OS ? C->getRVA() - OS->getRVA() : 0;
+  SC.Size = C ? C->getSize() : -1;
+  if (auto *SecChunk = dyn_cast_or_null<SectionChunk>(C)) {
     SC.Characteristics = SecChunk->Header->Characteristics;
     SC.Imod = SecChunk->File->ModuleDBI->getModuleIndex();
     ArrayRef<uint8_t> Contents = SecChunk->getContents();
@@ -1104,7 +1104,7 @@ static pdb::SectionContrib createSectionContrib(const Chunk *C, uint32_t Modi) {
     CRC.update(CharContents);
     SC.DataCrc = CRC.getCRC();
   } else {
-    SC.Characteristics = OS->Header.Characteristics;
+    SC.Characteristics = OS ? OS->Header.Characteristics : 0;
     // FIXME: When we start creating DBI for import libraries, use those here.
     SC.Imod = Modi;
   }
@@ -1588,6 +1588,13 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
       Builder.getDbiBuilder().addSectionContrib(SC);
     }
   }
+
+  // The * Linker * first section contrib is only used along with /INCREMENTAL,
+  // to provide trampolines thunks for incremental function patching. Set this
+  // as "unused" because LLD doesn't support /INCREMENTAL link.
+  pdb::SectionContrib SC =
+      createSectionContrib(nullptr, llvm::pdb::kInvalidStreamIndex);
+  LinkerModule.setFirstSectionContrib(SC);
 
   // Add Section Map stream.
   ArrayRef<object::coff_section> Sections = {

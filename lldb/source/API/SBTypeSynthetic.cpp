@@ -17,8 +17,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#ifndef LLDB_DISABLE_PYTHON
-
 SBTypeSynthetic::SBTypeSynthetic() : m_opaque_sp() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeSynthetic);
 }
@@ -212,5 +210,3 @@ bool SBTypeSynthetic::CopyOnWrite_Impl() {
 
   return true;
 }
-
-#endif // LLDB_DISABLE_PYTHON
