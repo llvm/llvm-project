@@ -39,6 +39,7 @@ template <unsigned PointerSize> struct RuntimeTarget;
 
 namespace reflection {
 template <typename T> class ReflectionContext;
+class TypeInfo;
 }
 
 namespace remoteAST {
@@ -279,6 +280,13 @@ public:
   FixupPointerValue(lldb::addr_t addr, CompilerType type) override;
   virtual lldb::addr_t FixupAddress(lldb::addr_t addr, CompilerType type,
                                     Status &error) override;
+
+  /// Ask Remote Mirrors for the type info about a Swift type.
+  const swift::reflection::TypeInfo *GetTypeInfo(CompilerType type);
+  virtual bool IsStoredInlineInBuffer(CompilerType type) override;
+
+  /// Ask Remote Mirrors for the size of a Swift type.
+  llvm::Optional<uint64_t> GetBitSize(CompilerType type);
 
   bool IsRuntimeSupportValue(ValueObject &valobj) override;
 

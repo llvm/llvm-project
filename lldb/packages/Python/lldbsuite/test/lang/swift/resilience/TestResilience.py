@@ -38,7 +38,6 @@ class TestResilience(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.skipIf(debug_info=decorators.no_match("dsym"))
     def test_cross_module_extension_a_a(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
@@ -46,7 +45,6 @@ class TestResilience(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.skipIf(debug_info=decorators.no_match("dsym"))
     def test_cross_module_extension_a_b(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
@@ -54,7 +52,6 @@ class TestResilience(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.skipIf(debug_info=decorators.no_match("dsym"))
     def test_cross_module_extension_b_a(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
@@ -62,7 +59,6 @@ class TestResilience(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.skipIf(debug_info=decorators.no_match("dsym"))
     def test_cross_module_extension_b_b(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
@@ -78,8 +74,8 @@ class TestResilience(TestBase):
 
         execute_command("ln -sf " + self.getBuildArtifact("libmod." + exe_flavor + ".dylib") + " " + self.getBuildArtifact("libmod.dylib"))
         execute_command("ln -sf " + self.getBuildArtifact("libmod." + exe_flavor + ".dylib.dSYM") + " " + self.getBuildArtifact("libmod.dylib.dSYM"))
+        execute_command("ln -sf " + self.getBuildArtifact("mod." + exe_flavor + ".o") + " " + self.getBuildArtifact("mod.o"))
 
-        execute_command("ln -sf " + self.getBuildArtifact("mod." + exe_flavor + ".swiftdoc") + " " + self.getBuildArtifact("mod.swiftdoc"))
         execute_command("ln -sf " + self.getBuildArtifact("mod." + exe_flavor + ".swiftmodule") + " " + self.getBuildArtifact("mod.swiftmodule"))
 
     def cleanupSymlinks(self):
@@ -92,6 +88,14 @@ class TestResilience(TestBase):
             self.getBuildArtifact("mod.swiftdoc") + " " +
             self.getBuildArtifact("mod.swiftmodule"))
 
+    def check_global(self, symbol_name, substrs):
+        self.expect("target var " + symbol_name,
+                    DATA_TYPES_DISPLAYED_CORRECTLY,
+                    substrs=substrs)
+        self.expect("expr " + symbol_name,
+                    DATA_TYPES_DISPLAYED_CORRECTLY,
+                    substrs=substrs)
+
     def doTestWithFlavor(self, exe_flavor, mod_flavor):
         self.createSymlinks(exe_flavor, mod_flavor)
 
@@ -100,16 +104,45 @@ class TestResilience(TestBase):
 
         source_name = "main.swift"
         source_spec = lldb.SBFileSpec(source_name)
-        _, process, _, breakpoint = lldbutil.run_to_source_breakpoint(
+        target, process, _, breakpoint = lldbutil.run_to_source_breakpoint(
             self, "break here", source_spec, exe_name=exe_path)
+        dylib_breakpoint = target.BreakpointCreateByName("fA")
 
-        self.assertTrue(breakpoint.GetNumLocations() > 1, VALID_BREAKPOINT)
+        # main.swift
+        self.check_global("g_main_b", ["world"])
+        self.check_global("g_main_s", ["a = 1"])
+        self.check_global("g_main_t", ["a = 1", "a = 1"])
+        self.check_global("g_main_nested_t", ["a = 1"])
+        self.check_global("g_main_c", ["a = 1"])
+        self.check_global("g_main_nested_c", ["a = 1"])
 
-        # FIXME: this should work with all flavors!
-        if exe_flavor == "a":
-            self.expect("target var global", DATA_TYPES_DISPLAYED_CORRECTLY,
-                        substrs=["a = 1"])
+        # Test defining global variables in the expression evaluator.
+        self.expect("expr -- var $g_main_b = g_main_b; $g_main_b",
+                    substrs=["world"])
+        self.expect("expr -- var $g_main_s = S(); $g_main_s", substrs=["a = 1"])
+        self.expect("expr -- var $g_main_t = (S(), S()); $g_main_t",
+                    substrs=["a = 1", "a = 1"])
+        self.expect("expr -- var $g_main_c = g_main_c; $g_main_c",
+                    substrs=["a = 1"])
+
+        threads = lldbutil.continue_to_breakpoint(process, dylib_breakpoint)
+        self.assertTrue(len(threads) == 1)
+        
+        # Test global variable inside the module defining S.
+        self.check_global("g_b", ["hello"])
+        self.check_global("g_s", ["a = 1"])
+        self.check_global("g_t", ["a = 1", "a = 1"])
+        self.check_global("g_c", ["a = 1"])
+        # Test defining global variables in the expression evaluator
+        # inside the module defining S.
+        self.expect("expr -- var $g_b = g_b; $g_b", substrs=["hello"])
+        self.expect("expr -- var $g_s = S(); $g_s", substrs=["a = 1"])
+        self.expect("expr -- var $g_t = (S(), S()); $g_t",
+                    substrs=["a = 1", "a = 1"])
+        self.expect("expr -- var $g_c = g_c; $g_c", substrs=["a = 1"])
         threads = lldbutil.continue_to_breakpoint(process, breakpoint)
+
+        # Back in main.swift
         self.assertTrue(len(threads) == 1)
         frame = threads[0].frames[0]
         

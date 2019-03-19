@@ -395,6 +395,8 @@ public:
 
   const swift::irgen::FixedTypeInfo *GetSwiftFixedTypeInfo(void *type);
 
+  bool IsFixedSize(CompilerType compiler_type);
+
   DWARFASTParser *GetDWARFParser() override;
 
   //----------------------------------------------------------------------
