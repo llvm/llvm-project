@@ -167,6 +167,7 @@ echo "@@@@@@"
 echo "@@@ Running tests for libc++ @@@"
 "${LIBCXX_BUILD_DIR}/bin/llvm-lit" -sv "${LIBCXX_ROOT}/test" \
                                    --param=enable_experimental=false \
+                                   --param=enable_filesystem=false \
                                    ${LIT_ARCH_STRING} \
                                    --param=cxx_under_test="${CXX}" \
                                    --param=cxx_headers="${LIBCXX_INSTALL_DIR}/include/c++/v1" \

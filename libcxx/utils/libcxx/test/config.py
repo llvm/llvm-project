@@ -332,6 +332,8 @@ class Configuration(object):
             # FIXME this is a hack.
             if self.get_lit_conf('enable_experimental') is None:
                 self.config.enable_experimental = 'true'
+            if self.get_lit_conf('enable_filesystem') is None:
+                self.config.enable_filesystem = 'true'
 
     def configure_use_clang_verify(self):
         '''If set, run clang with -verify on failing tests.'''
@@ -705,6 +707,10 @@ class Configuration(object):
           self.cxx.compile_flags += ['-D_LIBCPP_ABI_UNSTABLE']
 
     def configure_filesystem_compile_flags(self):
+        enable_fs = self.get_lit_bool('enable_filesystem', default=False)
+        if not enable_fs:
+            return
+        self.config.available_features.add('c++filesystem')
         static_env = os.path.join(self.libcxx_src_root, 'test', 'std',
                                   'input.output', 'filesystems', 'Inputs', 'static_test_env')
         static_env = os.path.realpath(static_env)
@@ -742,8 +748,12 @@ class Configuration(object):
             self.configure_link_flags_abi_library()
             self.configure_extra_library_flags()
         elif self.cxx_stdlib_under_test == 'libstdc++':
-            self.config.available_features.add('c++experimental')
-            self.cxx.link_flags += ['-lstdc++fs', '-lm', '-pthread']
+            enable_fs = self.get_lit_bool('enable_filesystem',
+                                          default=False)
+            if enable_fs:
+                self.config.available_features.add('c++experimental')
+                self.cxx.link_flags += ['-lstdc++fs']
+            self.cxx.link_flags += ['-lm', '-pthread']
         elif self.cxx_stdlib_under_test == 'msvc':
             # FIXME: Correctly setup debug/release flags here.
             pass
@@ -793,6 +803,10 @@ class Configuration(object):
         if libcxx_experimental:
             self.config.available_features.add('c++experimental')
             self.cxx.link_flags += ['-lc++experimental']
+        libcxx_fs = self.get_lit_bool('enable_filesystem', default=False)
+        if libcxx_fs:
+            self.config.available_features.add('c++fs')
+            self.cxx.link_flags += ['-lc++fs']
         if self.link_shared:
             self.cxx.link_flags += ['-lc++']
         else:
