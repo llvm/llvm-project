@@ -62,8 +62,7 @@ define half @load_half(half* %fptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    movzwl %ax, %edi
+; CHECK-NEXT:    movzwl (%rdi), %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -75,8 +74,7 @@ define half @load_half(half* %fptr) {
 define float @load_float(float* %fptr) {
 ; CHECK-LABEL: load_float:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    movd (%rdi), %xmm0
 ; CHECK-NEXT:    retq
   %v = load atomic float, float* %fptr unordered, align 4
   ret float %v
@@ -85,8 +83,7 @@ define float @load_float(float* %fptr) {
 define double @load_double(double* %fptr) {
 ; CHECK-LABEL: load_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq %rax, %xmm0
+; CHECK-NEXT:    movq (%rdi), %xmm0
 ; CHECK-NEXT:    retq
   %v = load atomic double, double* %fptr unordered, align 8
   ret double %v

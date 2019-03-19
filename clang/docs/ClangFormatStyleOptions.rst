@@ -365,10 +365,47 @@ the configuration (without a prefix: ``Auto``).
       };
       void f() { bar(); }
 
+**AllowShortIfStatementsOnASingleLine** (``ShortIfStyle``)
+  Dependent on the value, ``if (a) return 0;`` can be put on a
+  single line.
 
+  Possible values:
 
-**AllowShortIfStatementsOnASingleLine** (``bool``)
-  If ``true``, ``if (a) return;`` can be put on a single line.
+  * ``SIS_Never`` (in configuration: ``Never``)
+    Do not allow short if functions.
+
+    .. code-block:: c++
+
+       if (a)
+         return;
+       else
+         return;
+
+  * ``SIS_WithoutElse`` (in configuration: ``WithoutElse``)
+    Allow short if functions on the same line, as long as else
+    is not a compound statement.
+
+    .. code-block:: c++
+
+       if (a) return;
+       else
+         return;
+
+       if (a)
+         return;
+       else {
+         return;
+       }
+
+  * ``SIS_Always`` (in configuration: ``Always``)
+    Allow short if statements even if the else is a compound statement.
+
+    .. code-block:: c++
+
+       if (a) return;
+       else {
+          return;
+       }
 
 **AllowShortLoopsOnASingleLine** (``bool``)
   If ``true``, ``while (true) continue;`` can be put on a single
@@ -925,19 +962,28 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      try {
+      try
+      {
         foo();
       }
-      catch () {
+      catch ()
+      {
       }
       void foo() { bar(); }
-      class foo {
+      class foo
+      {
       };
-      if (foo()) {
+      if (foo())
+      {
       }
-      else {
+      else
+      {
       }
-      enum X : int { A, B };
+      enum X : int
+      {
+        A,
+        B
+      };
 
   * ``BS_GNU`` (in configuration: ``GNU``)
     Always break before braces and add an extra level of indentation to

@@ -54,8 +54,7 @@ public:
   ScopedExtractDIEs ExtractDIEsScoped();
 
   DWARFDIE LookupAddress(const dw_addr_t address);
-  size_t AppendDIEsWithTag(const dw_tag_t tag,
-                           DWARFDIECollection &matching_dies,
+  size_t AppendDIEsWithTag(const dw_tag_t tag, std::vector<DWARFDIE> &dies,
                            uint32_t depth = UINT32_MAX) const;
   bool Verify(lldb_private::Stream *s) const;
   virtual void Dump(lldb_private::Stream *s) const = 0;
@@ -66,14 +65,14 @@ public:
   /// this DWARFUnit. It could be .debug_info or .debug_types
   /// depending on where the data for this unit originates.
   ///
-  /// @return
+  /// \return
   ///   The correct data for the DIE information in this unit.
   //------------------------------------------------------------------
   virtual const lldb_private::DWARFDataExtractor &GetData() const = 0;
   //------------------------------------------------------------------
   /// Get the size in bytes of the compile unit header.
   ///
-  /// @return
+  /// \return
   ///     Byte size of the compile unit header
   //------------------------------------------------------------------
   virtual uint32_t GetHeaderByteSize() const = 0;
@@ -83,14 +82,13 @@ public:
   //------------------------------------------------------------------
   /// Get the size in bytes of the length field in the header.
   ///
-  /// In DWARF32 this is just 4 bytes, and DWARF64 it is 12 where 4
-  /// are 0xFFFFFFFF followed by the actual 64 bit length.
+  /// In DWARF32 this is just 4 bytes
   ///
-  /// @return
+  /// \return
   ///     Byte size of the compile unit header length field
   //------------------------------------------------------------------
-  size_t GetLengthByteSize() const { return IsDWARF64() ? 12 : 4; }
-  
+  size_t GetLengthByteSize() const { return 4; }
+
   bool ContainsDIEOffset(dw_offset_t die_offset) const {
     return die_offset >= GetFirstDIEOffset() &&
            die_offset < GetNextCompileUnitOffset();
@@ -136,8 +134,6 @@ public:
 
   static uint8_t GetAddressByteSize(const DWARFUnit *cu);
 
-  static bool IsDWARF64(const DWARFUnit *cu);
-
   static uint8_t GetDefaultAddressSize();
 
   void *GetUserData() const;
@@ -163,8 +159,6 @@ public:
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
   lldb::LanguageType GetLanguageType();
-
-  bool IsDWARF64() const { return m_is_dwarf64; }
 
   bool GetIsOptimized();
 
@@ -214,7 +208,6 @@ protected:
   uint32_t m_producer_version_minor = 0;
   uint32_t m_producer_version_update = 0;
   lldb::LanguageType m_language_type = lldb::eLanguageTypeUnknown;
-  bool m_is_dwarf64 = false;
   lldb_private::LazyBool m_is_optimized = lldb_private::eLazyBoolCalculate;
   llvm::Optional<lldb_private::FileSpec> m_comp_dir;
   dw_addr_t m_addr_base = 0;   // Value of DW_AT_addr_base

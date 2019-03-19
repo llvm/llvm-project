@@ -23,6 +23,6 @@ body:             |
     %16:sgpr_128 = REG_SEQUENCE killed %vreg123_0, %subreg.sub0, %vreg123_1, %subreg.sub1, %vreg123_2, %subreg.sub2, %vreg123_3, %subreg.sub3
 
     BUFFER_STORE_DWORD_ADDR64 %vreg123_1, %27, killed %16, 0, 0, 0, 0, 0, implicit $exec
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...

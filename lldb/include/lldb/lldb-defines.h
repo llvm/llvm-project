@@ -152,7 +152,7 @@
 #if defined(__cplusplus)
 
 //----------------------------------------------------------------------
-/// @def DISALLOW_COPY_AND_ASSIGN(TypeName)
+/// \def DISALLOW_COPY_AND_ASSIGN(TypeName)
 ///     Macro definition for easily disallowing copy constructor and
 ///     assignment operators in C++ classes.
 //----------------------------------------------------------------------

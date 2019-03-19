@@ -286,6 +286,14 @@ public:
   void enterCondition(Sema &S, SourceLocation Tok);
   void enterReturn(Sema &S, SourceLocation Tok);
   void enterVariableInit(SourceLocation Tok, Decl *D);
+  /// Computing a type for the function argument may require running
+  /// overloading, so we postpone its computation until it is actually needed.
+  ///
+  /// Clients should be very careful when using this funciton, as it stores a
+  /// function_ref, clients should make sure all calls to get() with the same
+  /// location happen while function_ref is alive.
+  void enterFunctionArgument(SourceLocation Tok,
+                             llvm::function_ref<QualType()> ComputeType);
 
   void enterParenExpr(SourceLocation Tok, SourceLocation LParLoc);
   void enterUnary(Sema &S, SourceLocation Tok, tok::TokenKind OpKind,
@@ -297,8 +305,12 @@ public:
   void enterTypeCast(SourceLocation Tok, QualType CastType);
 
   QualType get(SourceLocation Tok) const {
-    if (Tok == ExpectedLoc)
+    if (Tok != ExpectedLoc)
+      return QualType();
+    if (!Type.isNull())
       return Type;
+    if (ComputeType)
+      return ComputeType();
     return QualType();
   }
 
@@ -307,6 +319,9 @@ private:
   SourceLocation ExpectedLoc;
   /// Expected type for a token starting at ExpectedLoc.
   QualType Type;
+  /// A function to compute expected type at ExpectedLoc. It is only considered
+  /// if Type is null.
+  llvm::function_ref<QualType()> ComputeType;
 };
 
 /// Sema - This implements semantic analysis and AST building for C.
@@ -8659,6 +8674,16 @@ public:
   void AddXConsumedAttr(Decl *D, SourceRange SR, unsigned SpellingIndex,
                         RetainOwnershipKind K, bool IsTemplateInstantiation);
 
+  /// addAMDGPUFlatWorkGroupSizeAttr - Adds an amdgpu_flat_work_group_size
+  /// attribute to a particular declaration.
+  void addAMDGPUFlatWorkGroupSizeAttr(SourceRange AttrRange, Decl *D, Expr *Min,
+                                      Expr *Max, unsigned SpellingListIndex);
+
+  /// addAMDGPUWavePersEUAttr - Adds an amdgpu_waves_per_eu attribute to a
+  /// particular declaration.
+  void addAMDGPUWavesPerEUAttr(SourceRange AttrRange, Decl *D, Expr *Min,
+                               Expr *Max, unsigned SpellingListIndex);
+
   bool checkNSReturnsRetainedReturnType(SourceLocation loc, QualType type);
 
   //===--------------------------------------------------------------------===//
@@ -8756,6 +8781,8 @@ public:
   //
 private:
   void *VarDataSharingAttributesStack;
+  /// omp_allocator_handle_t type.
+  QualType OMPAllocatorHandleT;
   /// Number of nested '#pragma omp declare target' directives.
   unsigned DeclareTargetNestingLevel = 0;
   /// Initialization of data-sharing attributes stack.
@@ -8779,6 +8806,10 @@ private:
 
   /// Check whether we're allowed to call Callee from the current function.
   void checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee);
+
+  /// Check if the expression is allowed to be used in expressions for the
+  /// OpenMP devices.
+  void checkOpenMPDeviceExpr(const Expr *E);
 
   /// Checks if a type or a declaration is disabled due to the owning extension
   /// being disabled, and emits diagnostic messages if it is disabled.
@@ -8850,9 +8881,9 @@ public:
   // OpenMP directives and clauses.
   /// Called on correct id-expression from the '#pragma omp
   /// threadprivate'.
-  ExprResult ActOnOpenMPIdExpression(Scope *CurScope,
-                                     CXXScopeSpec &ScopeSpec,
-                                     const DeclarationNameInfo &Id);
+  ExprResult ActOnOpenMPIdExpression(Scope *CurScope, CXXScopeSpec &ScopeSpec,
+                                     const DeclarationNameInfo &Id,
+                                     OpenMPDirectiveKind Kind);
   /// Called on well-formed '#pragma omp threadprivate'.
   DeclGroupPtrTy ActOnOpenMPThreadprivateDirective(
                                      SourceLocation Loc,
@@ -8860,6 +8891,11 @@ public:
   /// Builds a new OpenMPThreadPrivateDecl and checks its correctness.
   OMPThreadPrivateDecl *CheckOMPThreadPrivateDecl(SourceLocation Loc,
                                                   ArrayRef<Expr *> VarList);
+  /// Called on well-formed '#pragma omp allocate'.
+  DeclGroupPtrTy ActOnOpenMPAllocateDirective(SourceLocation Loc,
+                                              ArrayRef<Expr *> VarList,
+                                              ArrayRef<OMPClause *> Clauses,
+                                              DeclContext *Owner = nullptr);
   /// Called on well-formed '#pragma omp requires'.
   DeclGroupPtrTy ActOnOpenMPRequiresDirective(SourceLocation Loc,
                                               ArrayRef<OMPClause *> ClauseList);
@@ -9214,6 +9250,11 @@ public:
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc);
+  /// Called on well-formed 'allocator' clause.
+  OMPClause *ActOnOpenMPAllocatorClause(Expr *Allocator,
+                                        SourceLocation StartLoc,
+                                        SourceLocation LParenLoc,
+                                        SourceLocation EndLoc);
   /// Called on well-formed 'if' clause.
   OMPClause *ActOnOpenMPIfClause(OpenMPDirectiveKind NameModifier,
                                  Expr *Condition, SourceLocation StartLoc,
@@ -9280,7 +9321,7 @@ public:
                                        SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
-  
+
   OMPClause *ActOnOpenMPSingleExprWithArgClause(
       OpenMPClauseKind Kind, ArrayRef<unsigned> Arguments, Expr *Expr,
       SourceLocation StartLoc, SourceLocation LParenLoc,
@@ -9335,7 +9376,7 @@ public:
   /// Called on well-formed 'unified_address' clause.
   OMPClause *ActOnOpenMPUnifiedSharedMemoryClause(SourceLocation StartLoc,
                                                   SourceLocation EndLoc);
-  
+
   /// Called on well-formed 'reverse_offload' clause.
   OMPClause *ActOnOpenMPReverseOffloadClause(SourceLocation StartLoc,
                                              SourceLocation EndLoc);
@@ -9471,11 +9512,16 @@ public:
       SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation MLoc,
       SourceLocation KindLoc, SourceLocation EndLoc);
   /// Called on well-formed 'to' clause.
-  OMPClause *ActOnOpenMPToClause(ArrayRef<Expr *> VarList,
-                                 const OMPVarListLocTy &Locs);
+  OMPClause *
+  ActOnOpenMPToClause(ArrayRef<Expr *> VarList, CXXScopeSpec &MapperIdScopeSpec,
+                      DeclarationNameInfo &MapperId,
+                      const OMPVarListLocTy &Locs,
+                      ArrayRef<Expr *> UnresolvedMappers = llvm::None);
   /// Called on well-formed 'from' clause.
-  OMPClause *ActOnOpenMPFromClause(ArrayRef<Expr *> VarList,
-                                   const OMPVarListLocTy &Locs);
+  OMPClause *ActOnOpenMPFromClause(
+      ArrayRef<Expr *> VarList, CXXScopeSpec &MapperIdScopeSpec,
+      DeclarationNameInfo &MapperId, const OMPVarListLocTy &Locs,
+      ArrayRef<Expr *> UnresolvedMappers = llvm::None);
   /// Called on well-formed 'use_device_ptr' clause.
   OMPClause *ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
                                            const OMPVarListLocTy &Locs);
@@ -10189,6 +10235,8 @@ public:
 
     DeviceDiagBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
                       FunctionDecl *Fn, Sema &S);
+    DeviceDiagBuilder(DeviceDiagBuilder &&D);
+    DeviceDiagBuilder(const DeviceDiagBuilder &) = default;
     ~DeviceDiagBuilder();
 
     /// Convertible to bool: True if we immediately emitted an error, false if
@@ -10208,8 +10256,9 @@ public:
                                                const T &Value) {
       if (Diag.ImmediateDiag.hasValue())
         *Diag.ImmediateDiag << Value;
-      else if (Diag.PartialDiag.hasValue())
-        *Diag.PartialDiag << Value;
+      else if (Diag.PartialDiagId.hasValue())
+        Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second
+            << Value;
       return Diag;
     }
 
@@ -10223,7 +10272,7 @@ public:
     // Invariant: At most one of these Optionals has a value.
     // FIXME: Switch these to a Variant once that exists.
     llvm::Optional<SemaDiagnosticBuilder> ImmediateDiag;
-    llvm::Optional<PartialDiagnostic> PartialDiag;
+    llvm::Optional<unsigned> PartialDiagId;
   };
 
   /// Indicate that this function (and thus everything it transtively calls)
@@ -10628,6 +10677,7 @@ private:
 
   ExprResult CheckBuiltinFunctionCall(FunctionDecl *FDecl,
                                       unsigned BuiltinID, CallExpr *TheCall);
+  void checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD, CallExpr *TheCall);
 
   bool CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall,
                                     unsigned MaxWidth);

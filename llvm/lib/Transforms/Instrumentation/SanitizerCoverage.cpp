@@ -454,12 +454,12 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
                                   const DominatorTree *DT,
                                   const PostDominatorTree *PDT,
                                   const SanitizerCoverageOptions &Options) {
-  // Don't insert coverage for unreachable blocks: we will never call
-  // __sanitizer_cov() for them, so counting them in
+  // Don't insert coverage for blocks containing nothing but unreachable: we
+  // will never call __sanitizer_cov() for them, so counting them in
   // NumberOfInstrumentedBlocks() might complicate calculation of code coverage
   // percentage. Also, unreachable instructions frequently have no debug
   // locations.
-  if (isa<UnreachableInst>(BB->getTerminator()))
+  if (isa<UnreachableInst>(BB->getFirstNonPHIOrDbgOrLifetime()))
     return false;
 
   // Don't insert coverage into blocks without a valid insertion point
@@ -535,7 +535,7 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
       isAsynchronousEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     return false;
   if (Options.CoverageType >= SanitizerCoverageOptions::SCK_Edge)
-    SplitAllCriticalEdges(F);
+    SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions().setIgnoreUnreachableDests());
   SmallVector<Instruction *, 8> IndirCalls;
   SmallVector<BasicBlock *, 16> BlocksToInstrument;
   SmallVector<Instruction *, 8> CmpTraceTargets;

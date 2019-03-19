@@ -120,9 +120,9 @@ private:
   void addUsersToMoveToVALUWorklist(unsigned Reg, MachineRegisterInfo &MRI,
                                     SetVectorType &Worklist) const;
 
-  void
-  addSCCDefUsersToVALUWorklist(MachineInstr &SCCDefInst,
-                               SetVectorType &Worklist) const;
+  void addSCCDefUsersToVALUWorklist(MachineOperand &Op,
+                                    MachineInstr &SCCDefInst,
+                                    SetVectorType &Worklist) const;
 
   const TargetRegisterClass *
   getDestEquivalentVGPRClass(const MachineInstr &Inst) const;

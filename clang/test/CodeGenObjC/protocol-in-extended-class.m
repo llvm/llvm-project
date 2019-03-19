@@ -24,6 +24,6 @@
  }
 @end
 
-// CHECK-LP64: l_OBJC_PROTOCOL_$_ExtendedProtocol:
+// CHECK-LP64: __OBJC_PROTOCOL_$_ExtendedProtocol:
 
 // CHECK-LP32: L_OBJC_PROTOCOL_ExtendedProtocol:

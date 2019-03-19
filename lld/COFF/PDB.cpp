@@ -15,6 +15,7 @@
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Timer.h"
+#include "lld/Common/Threads.h"
 #include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
@@ -52,7 +53,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JamCRC.h"
-#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <memory>
@@ -180,6 +180,9 @@ public:
   /// Write the PDB to disk and store the Guid generated for it in *Guid.
   void commit(codeview::GUID *Guid);
 
+  // Print statistics regarding the final PDB
+  void printStats();
+
 private:
   BumpPtrAllocator Alloc;
 
@@ -222,6 +225,11 @@ private:
   /// List of TypeServer PDBs which cannot be loaded.
   /// Cached to prevent repeated load attempts.
   std::map<codeview::GUID, std::string> MissingTypeServerPDBs;
+
+  // For statistics
+  uint64_t GlobalSymbols = 0;
+  uint64_t ModuleSymbols = 0;
+  uint64_t PublicSymbols = 0;
 };
 
 class DebugSHandler {
@@ -308,30 +316,6 @@ static void pdbMakeAbsolute(SmallVectorImpl<char> &FileName) {
   FileName = std::move(AbsoluteFileName);
 }
 
-static SectionChunk *findByName(ArrayRef<SectionChunk *> Sections,
-                                StringRef Name) {
-  for (SectionChunk *C : Sections)
-    if (C->getSectionName() == Name)
-      return C;
-  return nullptr;
-}
-
-static ArrayRef<uint8_t> consumeDebugMagic(ArrayRef<uint8_t> Data,
-                                           StringRef SecName) {
-  // First 4 bytes are section magic.
-  if (Data.size() < 4)
-    fatal(SecName + " too short");
-  if (support::endian::read32le(Data.data()) != COFF::DEBUG_SECTION_MAGIC)
-    fatal(SecName + " has an invalid magic");
-  return Data.slice(4);
-}
-
-static ArrayRef<uint8_t> getDebugSection(ObjFile *File, StringRef SecName) {
-  if (SectionChunk *Sec = findByName(File->getDebugChunks(), SecName))
-    return consumeDebugMagic(Sec->getContents(), SecName);
-  return {};
-}
-
 // A COFF .debug$H section is currently a clang extension.  This function checks
 // if a .debug$H section is in a format that we expect / understand, so that we
 // can ignore any sections which are coincidentally also named .debug$H but do
@@ -349,7 +333,8 @@ static bool canUseDebugH(ArrayRef<uint8_t> DebugH) {
 }
 
 static Optional<ArrayRef<uint8_t>> getDebugH(ObjFile *File) {
-  SectionChunk *Sec = findByName(File->getDebugChunks(), ".debug$H");
+  SectionChunk *Sec =
+      SectionChunk::findByName(File->getDebugChunks(), ".debug$H");
   if (!Sec)
     return llvm::None;
   ArrayRef<uint8_t> Contents = Sec->getContents();
@@ -381,51 +366,17 @@ static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
   });
 }
 
-// OBJs usually start their symbol stream with a S_OBJNAME record. This record
-// also contains the signature/key of the current PCH session. The signature
-// must be same for all objects which depend on the precompiled object.
-// Recompiling the precompiled headers will generate a new PCH key and thus
-// invalidate all the dependent objects.
-static uint32_t extractPCHSignature(ObjFile *File) {
-  auto DbgIt = find_if(File->getDebugChunks(), [](SectionChunk *C) {
-    return C->getSectionName() == ".debug$S";
-  });
-  if (!DbgIt)
-    return 0;
-
-  ArrayRef<uint8_t> Contents =
-      consumeDebugMagic((*DbgIt)->getContents(), ".debug$S");
-  DebugSubsectionArray Subsections;
-  BinaryStreamReader Reader(Contents, support::little);
-  ExitOnErr(Reader.readArray(Subsections, Contents.size()));
-
-  for (const DebugSubsectionRecord &SS : Subsections) {
-    if (SS.kind() != DebugSubsectionKind::Symbols)
-      continue;
-
-    // If it's there, the S_OBJNAME record shall come first in the stream.
-    Expected<CVSymbol> Sym = readSymbolFromStream(SS.getRecordData(), 0);
-    if (!Sym) {
-      consumeError(Sym.takeError());
-      continue;
-    }
-    if (auto ObjName = SymbolDeserializer::deserializeAs<ObjNameSym>(Sym.get()))
-      return ObjName->Signature;
-  }
-  return 0;
-}
-
 Expected<const CVIndexMap &>
 PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
   ScopedTimer T(TypeMergingTimer);
 
   bool IsPrecompiledHeader = false;
 
-  ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
+  ArrayRef<uint8_t> Data = File->getDebugSection(".debug$T");
   if (Data.empty()) {
     // Try again, Microsoft precompiled headers use .debug$P instead of
     // .debug$T
-    Data = getDebugSection(File, ".debug$P");
+    Data = File->getDebugSection(".debug$P");
     IsPrecompiledHeader = true;
   }
   if (Data.empty())
@@ -434,7 +385,7 @@ PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
   // Precompiled headers objects need to save the index map for further
   // reference by other objects which use the precompiled headers.
   if (IsPrecompiledHeader) {
-    uint32_t PCHSignature = extractPCHSignature(File);
+    uint32_t PCHSignature = File->PCHSignature.getValueOr(0);
     if (PCHSignature == 0)
       fatal("No signature found for the precompiled headers OBJ (" +
             File->getName() + ")");
@@ -1098,9 +1049,11 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
         // adding the symbol to the module since we may need to get the next
         // symbol offset, and writing to the module's symbol stream will update
         // that offset.
-        if (symbolGoesInGlobalsStream(Sym, Scopes.empty()))
+        if (symbolGoesInGlobalsStream(Sym, Scopes.empty())) {
           addGlobalSymbol(Builder.getGsiBuilder(),
                           File->ModuleDBI->getModuleIndex(), CurSymOffset, Sym);
+          ++GlobalSymbols;
+        }
 
         if (symbolGoesInModuleStream(Sym, Scopes.empty())) {
           // Add symbols to the module in bulk. If this symbol is contiguous
@@ -1114,6 +1067,7 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
             BulkSymbols = RecordBytes;
           }
           CurSymOffset += Sym.length();
+          ++ModuleSymbols;
         }
         return Error::success();
       }));
@@ -1134,13 +1088,13 @@ static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
 }
 
 static pdb::SectionContrib createSectionContrib(const Chunk *C, uint32_t Modi) {
-  OutputSection *OS = C->getOutputSection();
+  OutputSection *OS = C ? C->getOutputSection() : nullptr;
   pdb::SectionContrib SC;
   memset(&SC, 0, sizeof(SC));
-  SC.ISect = OS->SectionIndex;
-  SC.Off = C->getRVA() - OS->getRVA();
-  SC.Size = C->getSize();
-  if (auto *SecChunk = dyn_cast<SectionChunk>(C)) {
+  SC.ISect = OS ? OS->SectionIndex : llvm::pdb::kInvalidStreamIndex;
+  SC.Off = C && OS ? C->getRVA() - OS->getRVA() : 0;
+  SC.Size = C ? C->getSize() : -1;
+  if (auto *SecChunk = dyn_cast_or_null<SectionChunk>(C)) {
     SC.Characteristics = SecChunk->Header->Characteristics;
     SC.Imod = SecChunk->File->ModuleDBI->getModuleIndex();
     ArrayRef<uint8_t> Contents = SecChunk->getContents();
@@ -1150,7 +1104,7 @@ static pdb::SectionContrib createSectionContrib(const Chunk *C, uint32_t Modi) {
     CRC.update(CharContents);
     SC.DataCrc = CRC.getCRC();
   } else {
-    SC.Characteristics = OS->Header.Characteristics;
+    SC.Characteristics = OS ? OS->Header.Characteristics : 0;
     // FIXME: When we start creating DBI for import libraries, use those here.
     SC.Imod = Modi;
   }
@@ -1176,7 +1130,7 @@ translateStringTableIndex(uint32_t ObjIndex,
 void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
   DebugSubsectionArray Subsections;
 
-  ArrayRef<uint8_t> RelocatedDebugContents = consumeDebugMagic(
+  ArrayRef<uint8_t> RelocatedDebugContents = SectionChunk::consumeDebugMagic(
       relocateDebugChunk(Linker.Alloc, DebugS), DebugS.getSectionName());
 
   BinaryStreamReader Reader(RelocatedDebugContents, support::little);
@@ -1396,14 +1350,41 @@ void PDBLinker::addObjectsToPDB() {
   });
 
   if (!Publics.empty()) {
+    PublicSymbols = Publics.size();
     // Sort the public symbols and add them to the stream.
-    sort(parallel::par, Publics.begin(), Publics.end(),
-         [](const PublicSym32 &L, const PublicSym32 &R) {
-           return L.Name < R.Name;
-         });
+    parallelSort(Publics, [](const PublicSym32 &L, const PublicSym32 &R) {
+      return L.Name < R.Name;
+    });
     for (const PublicSym32 &Pub : Publics)
       GsiBuilder.addPublicSymbol(Pub);
   }
+}
+
+void PDBLinker::printStats() {
+  if (!Config->ShowSummary)
+    return;
+
+  SmallString<256> Buffer;
+  raw_svector_ostream Stream(Buffer);
+
+  Stream << center_justify("Summary", 80) << '\n'
+         << std::string(80, '-') << '\n';
+
+  auto Print = [&](uint64_t V, StringRef S) {
+    Stream << format_decimal(V, 15) << " " << S << '\n';
+  };
+
+  Print(ObjFile::Instances.size(),
+        "Input OBJ files (expanded from all cmd-line inputs)");
+  Print(TypeServerIndexMappings.size(), "PDB type server dependencies");
+  Print(PrecompTypeIndexMappings.size(), "Precomp OBJ dependencies");
+  Print(getTypeTable().size() + getIDTable().size(), "Merged TPI records");
+  Print(PDBStrTab.size(), "Output PDB strings");
+  Print(GlobalSymbols, "Global symbol records");
+  Print(ModuleSymbols, "Module symbol records");
+  Print(PublicSymbols, "Public symbol records");
+
+  message(Buffer);
 }
 
 void PDBLinker::addNatvisFiles() {
@@ -1551,6 +1532,10 @@ void coff::createPDB(SymbolTable *Symtab,
   codeview::GUID Guid;
   PDB.commit(&Guid);
   memcpy(&BuildId->PDB70.Signature, &Guid, 16);
+
+  T2.stop();
+  T1.stop();
+  PDB.printStats();
 }
 
 void PDBLinker::initialize(llvm::codeview::DebugInfo *BuildId) {
@@ -1603,6 +1588,13 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
       Builder.getDbiBuilder().addSectionContrib(SC);
     }
   }
+
+  // The * Linker * first section contrib is only used along with /INCREMENTAL,
+  // to provide trampolines thunks for incremental function patching. Set this
+  // as "unused" because LLD doesn't support /INCREMENTAL link.
+  pdb::SectionContrib SC =
+      createSectionContrib(nullptr, llvm::pdb::kInvalidStreamIndex);
+  LinkerModule.setFirstSectionContrib(SC);
 
   // Add Section Map stream.
   ArrayRef<object::coff_section> Sections = {
@@ -1676,7 +1668,7 @@ static bool findLineTable(const SectionChunk *C, uint32_t Addr,
     }
 
     ArrayRef<uint8_t> Contents =
-        consumeDebugMagic(DbgC->getContents(), ".debug$S");
+        SectionChunk::consumeDebugMagic(DbgC->getContents(), ".debug$S");
     DebugSubsectionArray Subsections;
     BinaryStreamReader Reader(Contents, support::little);
     ExitOnErr(Reader.readArray(Subsections, Contents.size()));

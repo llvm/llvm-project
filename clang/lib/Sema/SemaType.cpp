@@ -1433,7 +1433,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
   case DeclSpec::TST_int128:
-    if (!S.Context.getTargetInfo().hasInt128Type())
+    if (!S.Context.getTargetInfo().hasInt128Type() &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__int128";
     if (DS.getTypeSpecSign() == DeclSpec::TSS_unsigned)
@@ -1445,7 +1446,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // CUDA host and device may have different _Float16 support, therefore
     // do not diagnose _Float16 usage to avoid false alarm.
     // ToDo: more precise diagnostics for CUDA.
-    if (!S.Context.getTargetInfo().hasFloat16Type() && !S.getLangOpts().CUDA)
+    if (!S.Context.getTargetInfo().hasFloat16Type() && !S.getLangOpts().CUDA &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "_Float16";
     Result = Context.Float16Ty;
@@ -1459,7 +1461,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Context.DoubleTy;
     break;
   case DeclSpec::TST_float128:
-    if (!S.Context.getTargetInfo().hasFloat128Type())
+    if (!S.Context.getTargetInfo().hasFloat128Type() &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__float128";
     Result = Context.Float128Ty;
@@ -2250,15 +2253,13 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
   }
 
   if (T->isVariableArrayType() && !Context.getTargetInfo().isVLASupported()) {
-    if (getLangOpts().CUDA) {
-      // CUDA device code doesn't support VLAs.
-      CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget();
-    } else if (!getLangOpts().OpenMP ||
-               shouldDiagnoseTargetSupportFromOpenMP()) {
-      // Some targets don't support VLAs.
-      Diag(Loc, diag::err_vla_unsupported);
-      return QualType();
-    }
+    // CUDA device code and some other targets don't support VLAs.
+    targetDiag(Loc, (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+                        ? diag::err_cuda_vla
+                        : diag::err_vla_unsupported)
+        << ((getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+                ? CurrentCUDATarget()
+                : CFT_InvalidTarget);
   }
 
   // If this is not C99, extwarn about VLA's and C99 array size modifiers.
@@ -4220,7 +4221,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   auto inferPointerNullability =
       [&](SimplePointerKind pointerKind, SourceLocation pointerLoc,
           SourceLocation pointerEndLoc,
-          ParsedAttributesView &attrs) -> ParsedAttr * {
+          ParsedAttributesView &attrs, AttributePool &Pool) -> ParsedAttr * {
     // We've seen a pointer.
     if (NumPointersRemaining > 0)
       --NumPointersRemaining;
@@ -4234,11 +4235,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       ParsedAttr::Syntax syntax = inferNullabilityCS
                                       ? ParsedAttr::AS_ContextSensitiveKeyword
                                       : ParsedAttr::AS_Keyword;
-      ParsedAttr *nullabilityAttr =
-          state.getDeclarator().getAttributePool().create(
-              S.getNullabilityKeyword(*inferNullability),
-              SourceRange(pointerLoc), nullptr, SourceLocation(), nullptr, 0,
-              syntax);
+      ParsedAttr *nullabilityAttr = Pool.create(
+          S.getNullabilityKeyword(*inferNullability), SourceRange(pointerLoc),
+          nullptr, SourceLocation(), nullptr, 0, syntax);
 
       attrs.addAtEnd(nullabilityAttr);
 
@@ -4297,7 +4296,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         if (auto *attr = inferPointerNullability(
                 pointerKind, D.getDeclSpec().getTypeSpecTypeLoc(),
                 D.getDeclSpec().getEndLoc(),
-                D.getMutableDeclSpec().getAttributes())) {
+                D.getMutableDeclSpec().getAttributes(),
+                D.getMutableDeclSpec().getAttributePool())) {
           T = state.getAttributedType(
               createNullabilityAttr(Context, *attr, *inferNullability), T, T);
         }
@@ -4337,7 +4337,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Handle pointer nullability.
       inferPointerNullability(SimplePointerKind::BlockPointer, DeclType.Loc,
-                              DeclType.EndLoc, DeclType.getAttrs());
+                              DeclType.EndLoc, DeclType.getAttrs(),
+                              state.getDeclarator().getAttributePool());
 
       T = S.BuildBlockPointerType(T, D.getIdentifierLoc(), Name);
       if (DeclType.Cls.TypeQuals || LangOpts.OpenCL) {
@@ -4359,7 +4360,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Handle pointer nullability
       inferPointerNullability(SimplePointerKind::Pointer, DeclType.Loc,
-                              DeclType.EndLoc, DeclType.getAttrs());
+                              DeclType.EndLoc, DeclType.getAttrs(),
+                              state.getDeclarator().getAttributePool());
 
       if (LangOpts.ObjC && T->getAs<ObjCObjectType>()) {
         T = Context.getObjCObjectPointerType(T);
@@ -4584,7 +4586,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         if (FTI.isVariadic &&
             !(D.getIdentifier() &&
               ((D.getIdentifier()->getName() == "printf" &&
-                LangOpts.OpenCLVersion >= 120) ||
+                (LangOpts.OpenCLCPlusPlus || LangOpts.OpenCLVersion >= 120)) ||
                D.getIdentifier()->getName().startswith("__")))) {
           S.Diag(D.getIdentifierLoc(), diag::err_opencl_variadic_function);
           D.setInvalidType(true);
@@ -4891,7 +4893,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Handle pointer nullability.
       inferPointerNullability(SimplePointerKind::MemberPointer, DeclType.Loc,
-                              DeclType.EndLoc, DeclType.getAttrs());
+                              DeclType.EndLoc, DeclType.getAttrs(),
+                              state.getDeclarator().getAttributePool());
 
       if (SS.isInvalid()) {
         // Avoid emitting extra errors if we already errored on the scope.

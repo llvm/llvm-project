@@ -460,10 +460,10 @@ define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind 
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vpsubsw (%rsi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpsubsw 16(%rsi), %xmm1, %xmm1
-; AVX1-NEXT:    vmovq %xmm1, 16(%rdx)
+; AVX1-NEXT:    vpsubsw (%rsi), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1-NEXT:    vmovq %xmm1, 16(%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v12i16:
@@ -499,32 +499,30 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movb (%rdi), %cl
 ; SSE-NEXT:    movb (%rsi), %dil
+; SSE-NEXT:    xorl %esi, %esi
 ; SSE-NEXT:    movl %ecx, %eax
 ; SSE-NEXT:    subb %dil, %al
 ; SSE-NEXT:    setns %sil
+; SSE-NEXT:    addl $127, %esi
 ; SSE-NEXT:    subb %dil, %cl
-; SSE-NEXT:    jno .LBB13_2
-; SSE-NEXT:  # %bb.1:
-; SSE-NEXT:    addb $127, %sil
-; SSE-NEXT:    movl %esi, %ecx
-; SSE-NEXT:  .LBB13_2:
-; SSE-NEXT:    movb %cl, (%rdx)
+; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    cmovol %esi, %eax
+; SSE-NEXT:    movb %al, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v1i8:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movb (%rdi), %cl
 ; AVX-NEXT:    movb (%rsi), %dil
+; AVX-NEXT:    xorl %esi, %esi
 ; AVX-NEXT:    movl %ecx, %eax
 ; AVX-NEXT:    subb %dil, %al
 ; AVX-NEXT:    setns %sil
+; AVX-NEXT:    addl $127, %esi
 ; AVX-NEXT:    subb %dil, %cl
-; AVX-NEXT:    jno .LBB13_2
-; AVX-NEXT:  # %bb.1:
-; AVX-NEXT:    addb $127, %sil
-; AVX-NEXT:    movl %esi, %ecx
-; AVX-NEXT:  .LBB13_2:
-; AVX-NEXT:    movb %cl, (%rdx)
+; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    cmovol %esi, %eax
+; AVX-NEXT:    movb %al, (%rdx)
 ; AVX-NEXT:    retq
   %x = load <1 x i8>, <1 x i8>* %px
   %y = load <1 x i8>, <1 x i8>* %py

@@ -27,6 +27,9 @@ extern uint64_t
 COMPILER_RT_VISIBILITY
 extern uint64_t
     CountersEnd __asm("section$end$__DATA$" INSTR_PROF_CNTS_SECT_NAME);
+COMPILER_RT_VISIBILITY
+extern uint32_t
+    OrderFileStart __asm("section$start$__DATA$" INSTR_PROF_ORDERFILE_SECT_NAME);
 
 COMPILER_RT_VISIBILITY
 extern ValueProfNode
@@ -49,6 +52,8 @@ COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_begin_counters(void) { return &CountersStart; }
 COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_end_counters(void) { return &CountersEnd; }
+COMPILER_RT_VISIBILITY
+uint32_t *__llvm_profile_begin_orderfile(void) { return &OrderFileStart; }
 
 COMPILER_RT_VISIBILITY
 ValueProfNode *__llvm_profile_begin_vnodes(void) {

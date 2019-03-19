@@ -203,11 +203,14 @@ public:
     return true;
   }
 
-  virtual DILineInfo getLineInfoForAddress(uint64_t Address,
+  virtual DILineInfo getLineInfoForAddress(
+      object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
-  virtual DILineInfoTable getLineInfoForAddressRange(uint64_t Address,
-      uint64_t Size, DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
-  virtual DIInliningInfo getInliningInfoForAddress(uint64_t Address,
+  virtual DILineInfoTable getLineInfoForAddressRange(
+      object::SectionedAddress Address, uint64_t Size,
+      DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
+  virtual DIInliningInfo getInliningInfoForAddress(
+      object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
 
 private:

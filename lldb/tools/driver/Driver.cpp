@@ -13,6 +13,7 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBLanguageRuntime.h"
+#include "lldb/API/SBReproducer.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 
@@ -848,6 +849,38 @@ EXAMPLES:
   llvm::outs() << examples;
 }
 
+llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
+  if (auto *replay_path = input_args.getLastArg(OPT_replay)) {
+    if (const char *error = SBReproducer::Replay(replay_path->getValue())) {
+      WithColor::error() << "reproducer replay failed: " << error << '\n';
+      return 1;
+    }
+    return 0;
+  }
+
+  bool capture = input_args.hasArg(OPT_capture);
+  auto *capture_path = input_args.getLastArg(OPT_capture_path);
+
+  if (capture || capture_path) {
+    if (capture_path) {
+      if (!capture)
+        WithColor::warning() << "-capture-path specified without -capture\n";
+      if (const char *error = SBReproducer::Capture(capture_path->getValue())) {
+        WithColor::error() << "reproducer capture failed: " << error << '\n';
+        return 1;
+      }
+    } else {
+      const char *error = SBReproducer::Capture();
+      if (error) {
+        WithColor::error() << "reproducer capture failed: " << error << '\n';
+        return 1;
+      }
+    }
+  }
+
+  return llvm::None;
+}
+
 int
 #ifdef _MSC_VER
 wmain(int argc, wchar_t const *wargv[])
@@ -888,26 +921,16 @@ main(int argc, char const *argv[])
                          << '\n';
   }
 
-  SBInitializerOptions options;
-  if (auto *arg = input_args.getLastArg(OPT_capture)) {
-    auto arg_value = arg->getValue();
-    options.SetReproducerPath(arg_value);
-    options.SetCaptureReproducer(true);
+  if (auto exit_code = InitializeReproducer(input_args)) {
+    return *exit_code;
   }
 
-  if (auto *arg = input_args.getLastArg(OPT_replay)) {
-    auto arg_value = arg->getValue();
-    options.SetReplayReproducer(true);
-    options.SetReproducerPath(arg_value);
-  }
-
-  SBError error = SBDebugger::Initialize(options);
+  SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
     WithColor::error() << "initialization failed: " << error.GetCString()
                        << '\n';
     return 1;
   }
-
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
 
   signal(SIGINT, sigint_handler);

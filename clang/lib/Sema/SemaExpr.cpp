@@ -2660,10 +2660,15 @@ Sema::PerformObjectMemberConversion(Expr *From,
   bool PointerConversions = false;
   if (isa<FieldDecl>(Member)) {
     DestRecordType = Context.getCanonicalType(Context.getTypeDeclType(RD));
+    auto FromPtrType = FromType->getAs<PointerType>();
+    DestRecordType = Context.getAddrSpaceQualType(
+        DestRecordType, FromPtrType
+                            ? FromType->getPointeeType().getAddressSpace()
+                            : FromType.getAddressSpace());
 
-    if (FromType->getAs<PointerType>()) {
+    if (FromPtrType) {
       DestType = Context.getPointerType(DestRecordType);
-      FromRecordType = FromType->getPointeeType();
+      FromRecordType = FromPtrType->getPointeeType();
       PointerConversions = true;
     } else {
       DestType = DestRecordType;
@@ -2993,7 +2998,6 @@ ExprResult Sema::BuildDeclarationNameExpr(
 
     // These shouldn't make it here.
     case Decl::ObjCAtDefsField:
-    case Decl::ObjCIvar:
       llvm_unreachable("forming non-member reference to ivar?");
 
     // Enum constants are always r-values and never references.
@@ -3011,6 +3015,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
     // exist in the high-level semantics.
     case Decl::Field:
     case Decl::IndirectField:
+    case Decl::ObjCIvar:
       assert(getLangOpts().CPlusPlus &&
              "building reference to field in C?");
 
@@ -5926,6 +5931,8 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     if (CheckFunctionCall(FDecl, TheCall, Proto))
       return ExprError();
 
+    checkFortifiedBuiltinMemoryFunction(FDecl, TheCall);
+
     if (BuiltinID)
       return CheckBuiltinFunctionCall(FDecl, BuiltinID, TheCall);
   } else if (NDecl) {
@@ -6152,6 +6159,7 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
     case Type::STK_Bool:
       return CK_FixedPointToBoolean;
     case Type::STK_Integral:
+      return CK_FixedPointToIntegral;
     case Type::STK_Floating:
     case Type::STK_IntegralComplex:
     case Type::STK_FloatingComplex:
@@ -6196,10 +6204,7 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
     case Type::STK_MemberPointer:
       llvm_unreachable("member pointer type in C");
     case Type::STK_FixedPoint:
-      Diag(Src.get()->getExprLoc(),
-           diag::err_unimplemented_conversion_with_fixed_point_type)
-          << SrcTy;
-      return CK_IntegralCast;
+      return CK_IntegralToFixedPoint;
     }
     llvm_unreachable("Should have returned before this");
 
@@ -12432,6 +12437,14 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     }
   }
 
+  // Diagnose operations on the unsupported types for OpenMP device compilation.
+  if (getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice) {
+    if (Opc != BO_Assign && Opc != BO_Comma) {
+      checkOpenMPDeviceExpr(LHSExpr);
+      checkOpenMPDeviceExpr(RHSExpr);
+    }
+  }
+
   switch (Opc) {
   case BO_Assign:
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType());
@@ -12443,6 +12456,25 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     if (!ResultTy.isNull()) {
       DiagnoseSelfAssignment(*this, LHS.get(), RHS.get(), OpLoc, true);
       DiagnoseSelfMove(LHS.get(), RHS.get(), OpLoc);
+
+      // Avoid copying a block to the heap if the block is assigned to a local
+      // auto variable that is declared in the same scope as the block. This
+      // optimization is unsafe if the local variable is declared in an outer
+      // scope. For example:
+      //
+      // BlockTy b;
+      // {
+      //   b = ^{...};
+      // }
+      // // It is unsafe to invoke the block here if it wasn't copied to the
+      // // heap.
+      // b();
+
+      if (auto *BE = dyn_cast<BlockExpr>(RHS.get()->IgnoreParens()))
+        if (auto *DRE = dyn_cast<DeclRefExpr>(LHS.get()->IgnoreParens()))
+          if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+            if (VD->hasLocalStorage() && getCurScope()->isDeclScope(VD))
+              BE->getBlockDecl()->setCanAvoidCopyToHeap();
     }
     RecordModifiableNonNullParam(*this, LHS.get());
     break;
@@ -13008,6 +13040,13 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                        << Input.get()->getSourceRange());
     }
   }
+  // Diagnose operations on the unsupported types for OpenMP device compilation.
+  if (getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice) {
+    if (UnaryOperator::isIncrementDecrementOp(Opc) ||
+        UnaryOperator::isArithmeticOp(Opc))
+      checkOpenMPDeviceExpr(InputExpr);
+  }
+
   switch (Opc) {
   case UO_PreInc:
   case UO_PreDec:
@@ -13909,6 +13948,11 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
     }
   }
 
+  // NVPTX does not support va_arg expression.
+  if (getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice &&
+      Context.getTargetInfo().getTriple().isNVPTX())
+    targetDiag(E->getBeginLoc(), diag::err_va_arg_in_device);
+
   // It might be a __builtin_ms_va_list. (But don't ever mark a va_arg()
   // as Microsoft ABI on an actual Microsoft platform, where
   // __builtin_ms_va_list and __builtin_va_list are the same.)
@@ -14759,6 +14803,9 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   const FunctionProtoType *FPT = Func->getType()->getAs<FunctionProtoType>();
   if (FPT && isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
     ResolveExceptionSpec(Loc, FPT);
+
+  if (getLangOpts().CUDA)
+    CheckCUDACall(Loc, Func);
 
   // If we don't need to mark the function as used, and we don't need to
   // try to provide a definition, there's nothing more to do.

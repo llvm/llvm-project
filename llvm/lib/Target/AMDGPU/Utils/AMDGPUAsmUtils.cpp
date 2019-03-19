@@ -85,5 +85,18 @@ const char* const IdSymbolic[] = {
 };
 
 } // namespace Swizzle
+
+namespace VGPRIndexMode {
+
+// This must be in sync with llvm::AMDGPU::VGPRIndexMode::Id enum members, see SIDefines.h.
+const char* const IdSymbolic[] = {
+  "SRC0",
+  "SRC1",
+  "SRC2",
+  "DST",
+};
+
+} // namespace VGPRIndexMode
+
 } // namespace AMDGPU
 } // namespace llvm

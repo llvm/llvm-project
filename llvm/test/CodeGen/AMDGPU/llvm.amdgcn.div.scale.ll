@@ -395,41 +395,6 @@ define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(float addrspace(1)
   ret void
 }
 
-; Undefined selector gets deleted
-; SI-LABEL: {{^}}test_div_scale_f32_val_undef_undef:
-; SI-NOT: v_div_scale
-define amdgpu_kernel void @test_div_scale_f32_val_undef_undef(float addrspace(1)* %out) #0 {
-  %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float 8.0, float undef, i1 undef)
-  %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
-  ret void
-}
-
-; SI-LABEL: {{^}}test_div_scale_f32_undef_undef_undef:
-; SI-NOT: v_div_scale
-define amdgpu_kernel void @test_div_scale_f32_undef_undef_undef(float addrspace(1)* %out) #0 {
-  %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float undef, float undef, i1 undef)
-  %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
-  ret void
-}
-
-; SI-LABEL: {{^}}test_div_scale_f32_val_val_undef:
-; SI-NOT: v_div_scale
-define amdgpu_kernel void @test_div_scale_f32_val_val_undef(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
-
-  %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 undef)
-  %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
-  ret void
-}
-
 ; SI-LABEL: {{^}}test_div_scale_f64_val_undef_val:
 ; SI-DAG: s_mov_b32 s[[K_LO:[0-9]+]], 0{{$}}
 ; SI-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0x40200000

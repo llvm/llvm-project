@@ -74,12 +74,6 @@ protected:
                                                  StringRef InFile) override;
 };
 
-class DeclContextPrintAction : public ASTFrontendAction {
-protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef InFile) override;
-};
-
 class GeneratePCHAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,

@@ -42,13 +42,6 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_win.cc
   )
 
-if(UNIX AND NOT APPLE AND NOT OS_NAME MATCHES "SunOS")
-  list(APPEND SANITIZER_SOURCES_NOTERMINATION
-    sanitizer_linux_x86_64.S)
-  list(APPEND SANITIZER_SOURCES_NOTERMINATION
-    sanitizer_linux_mips64.S)
-endif()
-
 set(SANITIZER_SOURCES
   ${SANITIZER_SOURCES_NOTERMINATION} sanitizer_termination.cc)
 
@@ -126,6 +119,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_common_interceptors.inc
   sanitizer_common_interceptors_format.inc
   sanitizer_common_interceptors_ioctl.inc
+  sanitizer_common_interceptors_vfork_aarch64.inc.S
   sanitizer_common_interface.inc
   sanitizer_common_interface_posix.inc
   sanitizer_common_syscalls.inc
@@ -208,19 +202,6 @@ append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=570
                SANITIZER_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                SANITIZER_CFLAGS)
-
-if (LLVM_ENABLE_PEDANTIC AND UNIX AND NOT APPLE)
-  # With -pedantic, our .S files raise warnings about empty macro arguments
-  # from __USER_LABEL_PREFIX__ being an empty arg to GLUE().  Unfortunately,
-  # there is no simple way to test for an empty define, nor to disable just
-  # that warning or to disable -pedantic.  There is also no simple way to
-  # remove -pedantic from just this file (we'd have to remove from
-  # CMAKE_C*_FLAGS and re-add as a source property to all the non-.S files).
-  set_source_files_properties(sanitizer_linux_x86_64.S
-    PROPERTIES COMPILE_FLAGS "-w")
-  set_source_files_properties(sanitizer_linux_mips64.S
-    PROPERTIES COMPILE_FLAGS "-w")
-endif ()
 
 if(APPLE)
   set(OS_OPTION OS ${SANITIZER_COMMON_SUPPORTED_OS})

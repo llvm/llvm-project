@@ -58,8 +58,6 @@ private:
   void optimizeAtomic(Instruction &I, Instruction::BinaryOps Op,
                       unsigned ValIdx, bool ValDivergent) const;
 
-  void setConvergent(CallInst *const CI) const;
-
 public:
   static char ID;
 
@@ -253,7 +251,6 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
   CallInst *const Ballot =
       B.CreateIntrinsic(Intrinsic::amdgcn_icmp, {B.getInt32Ty()},
                         {B.getInt32(1), B.getInt32(0), B.getInt32(33)});
-  setConvergent(Ballot);
 
   // We need to know how many lanes are active within the wavefront that are
   // below us. If we counted each lane linearly starting from 0, a lane is
@@ -281,13 +278,11 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
     // correctly contribute to the final result.
     CallInst *const SetInactive =
         B.CreateIntrinsic(Intrinsic::amdgcn_set_inactive, Ty, {V, Identity});
-    setConvergent(SetInactive);
 
     CallInst *const FirstDPP =
         B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Ty,
                           {Identity, SetInactive, B.getInt32(DPP_WF_SR1),
                            B.getInt32(0xf), B.getInt32(0xf), B.getFalse()});
-    setConvergent(FirstDPP);
     NewV = FirstDPP;
 
     const unsigned Iters = 7;
@@ -305,13 +300,12 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
           Intrinsic::amdgcn_update_dpp, Ty,
           {Identity, UpdateValue, B.getInt32(DPPCtrl[Idx]),
            B.getInt32(RowMask[Idx]), B.getInt32(BankMask[Idx]), B.getFalse()});
-      setConvergent(DPP);
 
       NewV = B.CreateBinOp(Op, NewV, DPP);
     }
 
     LaneOffset = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, NewV);
-    NewV = B.CreateBinOp(Op, NewV, SetInactive);
+    NewV = B.CreateBinOp(Op, SetInactive, NewV);
 
     // Read the value from the last lane, which has accumlated the values of
     // each active lane in the wavefront. This will be our new value with which
@@ -322,10 +316,8 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
           B.CreateTrunc(B.CreateLShr(NewV, B.getInt64(32)), B.getInt32Ty());
       CallInst *const ReadLaneLo = B.CreateIntrinsic(
           Intrinsic::amdgcn_readlane, {}, {ExtractLo, B.getInt32(63)});
-      setConvergent(ReadLaneLo);
       CallInst *const ReadLaneHi = B.CreateIntrinsic(
           Intrinsic::amdgcn_readlane, {}, {ExtractHi, B.getInt32(63)});
-      setConvergent(ReadLaneHi);
       Value *const PartialInsert = B.CreateInsertElement(
           UndefValue::get(VecTy), ReadLaneLo, B.getInt32(0));
       Value *const Insert =
@@ -334,7 +326,6 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
     } else if (TyBitWidth == 32) {
       CallInst *const ReadLane = B.CreateIntrinsic(Intrinsic::amdgcn_readlane,
                                                    {}, {NewV, B.getInt32(63)});
-      setConvergent(ReadLane);
       NewV = ReadLane;
     } else {
       llvm_unreachable("Unhandled atomic bit width");
@@ -398,20 +389,16 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
         B.CreateTrunc(B.CreateLShr(PHI, B.getInt64(32)), B.getInt32Ty());
     CallInst *const ReadFirstLaneLo =
         B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractLo);
-    setConvergent(ReadFirstLaneLo);
     CallInst *const ReadFirstLaneHi =
         B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractHi);
-    setConvergent(ReadFirstLaneHi);
     Value *const PartialInsert = B.CreateInsertElement(
         UndefValue::get(VecTy), ReadFirstLaneLo, B.getInt32(0));
     Value *const Insert =
         B.CreateInsertElement(PartialInsert, ReadFirstLaneHi, B.getInt32(1));
     BroadcastI = B.CreateBitCast(Insert, Ty);
   } else if (TyBitWidth == 32) {
-    CallInst *const ReadFirstLane =
-        B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, PHI);
-    setConvergent(ReadFirstLane);
-    BroadcastI = ReadFirstLane;
+
+    BroadcastI = B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, PHI);
   } else {
     llvm_unreachable("Unhandled atomic bit width");
   }
@@ -437,10 +424,6 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
 
   // And delete the original.
   I.eraseFromParent();
-}
-
-void AMDGPUAtomicOptimizer::setConvergent(CallInst *const CI) const {
-  CI->addAttribute(AttributeList::FunctionIndex, Attribute::Convergent);
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPUAtomicOptimizer, DEBUG_TYPE,

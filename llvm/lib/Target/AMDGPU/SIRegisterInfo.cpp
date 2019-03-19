@@ -334,7 +334,8 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
 
   TII->getAddNoCarry(*MBB, Ins, DL, BaseReg)
     .addReg(OffsetReg, RegState::Kill)
-    .addReg(FIReg);
+    .addReg(FIReg)
+    .addImm(0); // clamp bit
 }
 
 void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
@@ -564,7 +565,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
     // We don't have access to the register scavenger if this function is called
     // during  PEI::scavengeFrameVirtualRegs().
     if (RS)
-      SOffset = RS->FindUnusedReg(&AMDGPU::SGPR_32RegClass);
+      SOffset = RS->scavengeRegister(&AMDGPU::SGPR_32RegClass, 0, false);
 
     if (SOffset == AMDGPU::NoRegister) {
       // There are no free SGPRs, and since we are in the process of spilling
@@ -1108,7 +1109,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           if (AMDGPU::isInlinableLiteral32(Offset, ST.hasInv2PiInlineImm())) {
             TII->getAddNoCarry(*MBB, MI, DL, ResultReg)
               .addImm(Offset)
-              .addReg(ScaledReg, RegState::Kill);
+              .addReg(ScaledReg, RegState::Kill)
+              .addImm(0); // clamp bit
           } else {
             unsigned ConstOffsetReg
               = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
@@ -1117,7 +1119,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               .addImm(Offset);
             TII->getAddNoCarry(*MBB, MI, DL, ResultReg)
               .addReg(ConstOffsetReg, RegState::Kill)
-              .addReg(ScaledReg, RegState::Kill);
+              .addReg(ScaledReg, RegState::Kill)
+              .addImm(0); // clamp bit
           }
         }
 
@@ -1587,6 +1590,7 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
   if (!RB)
     return nullptr;
 
+  Size = PowerOf2Ceil(Size);
   switch (Size) {
   case 32:
     return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :
@@ -1600,6 +1604,12 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
   case 128:
     return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_128RegClass :
                                                   &AMDGPU::SReg_128RegClass;
+  case 256:
+    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_256RegClass :
+                                                  &AMDGPU::SReg_256RegClass;
+  case 512:
+    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_512RegClass :
+                                                  &AMDGPU::SReg_512RegClass;
   default:
     llvm_unreachable("not implemented");
   }

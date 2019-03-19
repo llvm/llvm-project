@@ -78,22 +78,22 @@ define void @test_variadic_alloca(i64 %n, ...) {
 ; CHECK: stp     x29, x30, [sp, #-16]!
 ; CHECK: mov     x29, sp
 ; CHECK: sub     sp, sp, #192
-; CHECK: stp     q6, q7, [x29, #-96]
+; CHECK-DAG: stp     q6, q7, [x29, #-96]
 ; [...]
-; CHECK: stp     q0, q1, [x29, #-192]
+; CHECK-DAG: stp     q0, q1, [x29, #-192]
 
-; CHECK: stp     x6, x7, [x29, #-16]
+; CHECK-DAG: stp     x5, x6, [x29, #-24]
 ; [...]
-; CHECK: stp     x2, x3, [x29, #-48]
+; CHECK-DAG: stp     x1, x2, [x29, #-56]
 
 ; CHECK-NOFP-ARM64: stp     x29, x30, [sp, #-16]!
 ; CHECK-NOFP-ARM64: mov     x29, sp
 ; CHECK-NOFP-ARM64: sub     sp, sp, #64
-; CHECK-NOFP-ARM64: stp     x6, x7, [x29, #-16]
+; CHECK-NOFP-ARM64-DAG: stp     x5, x6, [x29, #-24]
 ; [...]
-; CHECK-NOFP-ARM64: stp     x4, x5, [x29, #-32]
+; CHECK-NOFP-ARM64-DAG: stp     x3, x4, [x29, #-40]
 ; [...]
-; CHECK-NOFP-ARM64: stp     x2, x3, [x29, #-48]
+; CHECK-NOFP-ARM64-DAG: stp     x1, x2, [x29, #-56]
 ; [...]
 ; CHECK-NOFP-ARM64: mov     x8, sp
 

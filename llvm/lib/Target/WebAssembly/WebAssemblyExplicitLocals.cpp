@@ -96,7 +96,7 @@ static unsigned getDropOpcode(const TargetRegisterClass *RC) {
 }
 
 /// Get the appropriate local.get opcode for the given register class.
-static unsigned getGetLocalOpcode(const TargetRegisterClass *RC) {
+static unsigned getLocalGetOpcode(const TargetRegisterClass *RC) {
   if (RC == &WebAssembly::I32RegClass)
     return WebAssembly::LOCAL_GET_I32;
   if (RC == &WebAssembly::I64RegClass)
@@ -113,7 +113,7 @@ static unsigned getGetLocalOpcode(const TargetRegisterClass *RC) {
 }
 
 /// Get the appropriate local.set opcode for the given register class.
-static unsigned getSetLocalOpcode(const TargetRegisterClass *RC) {
+static unsigned getLocalSetOpcode(const TargetRegisterClass *RC) {
   if (RC == &WebAssembly::I32RegClass)
     return WebAssembly::LOCAL_SET_I32;
   if (RC == &WebAssembly::I64RegClass)
@@ -130,7 +130,7 @@ static unsigned getSetLocalOpcode(const TargetRegisterClass *RC) {
 }
 
 /// Get the appropriate local.tee opcode for the given register class.
-static unsigned getTeeLocalOpcode(const TargetRegisterClass *RC) {
+static unsigned getLocalTeeOpcode(const TargetRegisterClass *RC) {
   if (RC == &WebAssembly::I32RegClass)
     return WebAssembly::LOCAL_TEE_I32;
   if (RC == &WebAssembly::I64RegClass)
@@ -245,7 +245,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         if (!MFI.isVRegStackified(OldReg)) {
           unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
           unsigned NewReg = MRI.createVirtualRegister(RC);
-          unsigned Opc = getGetLocalOpcode(RC);
+          unsigned Opc = getLocalGetOpcode(RC);
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Opc), NewReg)
               .addImm(LocalId);
           MI.getOperand(2).setReg(NewReg);
@@ -255,7 +255,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         // Replace the TEE with a LOCAL_TEE.
         unsigned LocalId =
             getLocalId(Reg2Local, CurLocal, MI.getOperand(1).getReg());
-        unsigned Opc = getTeeLocalOpcode(RC);
+        unsigned Opc = getLocalTeeOpcode(RC);
         BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Opc),
                 MI.getOperand(0).getReg())
             .addImm(LocalId)
@@ -274,7 +274,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         if (!MFI.isVRegStackified(OldReg)) {
           const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
           unsigned NewReg = MRI.createVirtualRegister(RC);
-          auto InsertPt = std::next(MachineBasicBlock::iterator(&MI));
+          auto InsertPt = std::next(MI.getIterator());
           if (MI.getOpcode() == WebAssembly::IMPLICIT_DEF) {
             MI.eraseFromParent();
             Changed = true;
@@ -289,7 +289,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
             Drop->getOperand(0).setIsKill();
           } else {
             unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
-            unsigned Opc = getSetLocalOpcode(RC);
+            unsigned Opc = getLocalSetOpcode(RC);
             BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
                 .addImm(LocalId)
                 .addReg(NewReg);
@@ -346,7 +346,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
         const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
         unsigned NewReg = MRI.createVirtualRegister(RC);
-        unsigned Opc = getGetLocalOpcode(RC);
+        unsigned Opc = getLocalGetOpcode(RC);
         InsertPt =
             BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc), NewReg)
                 .addImm(LocalId);

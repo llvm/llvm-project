@@ -119,7 +119,7 @@ bool ObjCLanguage::MethodName::SetName(const char *name, bool strict) {
   return SetName(llvm::StringRef(name), strict);
 }
 
-const ConstString &ObjCLanguage::MethodName::GetClassName() {
+ConstString ObjCLanguage::MethodName::GetClassName() {
   if (!m_class) {
     if (IsValid(false)) {
       const char *full = m_full.GetCString();
@@ -145,7 +145,7 @@ const ConstString &ObjCLanguage::MethodName::GetClassName() {
   return m_class;
 }
 
-const ConstString &ObjCLanguage::MethodName::GetClassNameWithCategory() {
+ConstString ObjCLanguage::MethodName::GetClassNameWithCategory() {
   if (!m_class_category) {
     if (IsValid(false)) {
       const char *full = m_full.GetCString();
@@ -168,7 +168,7 @@ const ConstString &ObjCLanguage::MethodName::GetClassNameWithCategory() {
   return m_class_category;
 }
 
-const ConstString &ObjCLanguage::MethodName::GetSelector() {
+ConstString ObjCLanguage::MethodName::GetSelector() {
   if (!m_selector) {
     if (IsValid(false)) {
       const char *full = m_full.GetCString();
@@ -183,7 +183,7 @@ const ConstString &ObjCLanguage::MethodName::GetSelector() {
   return m_selector;
 }
 
-const ConstString &ObjCLanguage::MethodName::GetCategory() {
+ConstString ObjCLanguage::MethodName::GetCategory() {
   if (!m_category_is_valid && !m_category) {
     if (IsValid(false)) {
       m_category_is_valid = true;
@@ -232,7 +232,7 @@ size_t ObjCLanguage::MethodName::GetFullNames(std::vector<ConstString> &names,
     StreamString strm;
     const bool is_class_method = m_type == eTypeClassMethod;
     const bool is_instance_method = m_type == eTypeInstanceMethod;
-    const ConstString &category = GetCategory();
+    ConstString category = GetCategory();
     if (is_class_method || is_instance_method) {
       names.push_back(m_full);
       if (category) {
@@ -241,8 +241,8 @@ size_t ObjCLanguage::MethodName::GetFullNames(std::vector<ConstString> &names,
         names.emplace_back(strm.GetString());
       }
     } else {
-      const ConstString &class_name = GetClassName();
-      const ConstString &selector = GetSelector();
+      ConstString class_name = GetClassName();
+      ConstString selector = GetSelector();
       strm.Printf("+[%s %s]", class_name.GetCString(), selector.GetCString());
       names.emplace_back(strm.GetString());
       strm.Clear();
@@ -285,7 +285,6 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
   objc_category_sp->GetTypeSummariesContainer()->Add(ConstString("BOOL *"),
                                                      ObjC_BOOL_summary);
 
-#ifndef LLDB_DISABLE_PYTHON
   // we need to skip pointers here since we are special casing a SEL* when
   // retrieving its value
   objc_flags.SetSkipPointers(true);
@@ -317,7 +316,6 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                   lldb_private::formatters::ObjCClassSyntheticFrontEndCreator,
                   "Class synthetic children", ConstString("Class"),
                   class_synth_flags);
-#endif // LLDB_DISABLE_PYTHON
 
   objc_flags.SetSkipPointers(false);
   objc_flags.SetCascades(true);
@@ -383,7 +381,6 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
 
   appkit_flags.SetDontShowChildren(false);
 
-#ifndef LLDB_DISABLE_PYTHON
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSArraySummaryProvider,
       "NSArray summary provider", ConstString("NSArray"), appkit_flags);
@@ -840,7 +837,6 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                 lldb_private::formatters::CFBitVectorSummaryProvider,
                 "CFBitVector summary provider",
                 ConstString("__CFMutableBitVector"), appkit_flags);
-#endif // LLDB_DISABLE_PYTHON
 }
 
 static void LoadCoreMediaFormatters(TypeCategoryImplSP objc_category_sp) {
@@ -856,11 +852,9 @@ static void LoadCoreMediaFormatters(TypeCategoryImplSP objc_category_sp) {
       .SetSkipPointers(false)
       .SetSkipReferences(false);
 
-#ifndef LLDB_DISABLE_PYTHON
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::CMTimeSummaryProvider,
                 "CMTime summary provider", ConstString("CMTime"), cm_flags);
-#endif // LLDB_DISABLE_PYTHON
 }
 
 lldb::TypeCategoryImplSP ObjCLanguage::GetFormatters() {

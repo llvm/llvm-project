@@ -713,18 +713,21 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         return false;
       }
 
-      // Intrinsics such as powi,cttz and ctlz are legal to vectorize if the
-      // second argument is the same (i.e. loop invariant)
-      if (CI && hasVectorInstrinsicScalarOpd(
-                    getVectorIntrinsicIDForCall(CI, TLI), 1)) {
+      // Some intrinsics have scalar arguments and should be same in order for
+      // them to be vectorized (i.e. loop invariant).
+      if (CI) {
         auto *SE = PSE.getSE();
-        if (!SE->isLoopInvariant(PSE.getSCEV(CI->getOperand(1)), TheLoop)) {
-          ORE->emit(createMissedAnalysis("CantVectorizeIntrinsic", CI)
-                    << "intrinsic instruction cannot be vectorized");
-          LLVM_DEBUG(dbgs()
-                     << "LV: Found unvectorizable intrinsic " << *CI << "\n");
-          return false;
-        }
+        Intrinsic::ID IntrinID = getVectorIntrinsicIDForCall(CI, TLI);
+        for (unsigned i = 0, e = CI->getNumArgOperands(); i != e; ++i)
+          if (hasVectorInstrinsicScalarOpd(IntrinID, i)) {
+            if (!SE->isLoopInvariant(PSE.getSCEV(CI->getOperand(i)), TheLoop)) {
+              ORE->emit(createMissedAnalysis("CantVectorizeIntrinsic", CI)
+                        << "intrinsic instruction cannot be vectorized");
+              LLVM_DEBUG(dbgs() << "LV: Found unvectorizable intrinsic " << *CI
+                                << "\n");
+              return false;
+            }
+          }
       }
 
       // Check that the instruction return type is vectorizable.

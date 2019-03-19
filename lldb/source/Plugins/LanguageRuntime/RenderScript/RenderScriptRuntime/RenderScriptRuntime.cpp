@@ -592,7 +592,7 @@ struct RenderScriptRuntime::Element {
       array_size;        // Number of items in array, only needed for structs
   ConstString type_name; // Name of type, only needed for structs
 
-  static const ConstString &
+  static ConstString 
   GetFallbackStructName(); // Print this as the type name of a struct Element
                            // If we can't resolve the actual struct name
 
@@ -692,7 +692,7 @@ struct RenderScriptRuntime::AllocationDetails {
   }
 };
 
-const ConstString &RenderScriptRuntime::Element::GetFallbackStructName() {
+ConstString RenderScriptRuntime::Element::GetFallbackStructName() {
   static const ConstString FallbackStructName("struct");
   return FallbackStructName;
 }
@@ -2363,7 +2363,7 @@ void RenderScriptRuntime::FindStructTypeName(Element &elem,
                     size_diff);
 
       for (uint32_t i = 0; i < size_diff; ++i) {
-        const ConstString &name = elem.children[num_children + i].type_name;
+        ConstString name = elem.children[num_children + i].type_name;
         if (strcmp(name.AsCString(), "#rs_padding") < 0)
           found = false;
       }
@@ -3594,7 +3594,7 @@ void RenderScriptRuntime::SetBreakAllKernels(bool do_break, TargetSP target) {
 // Given the name of a kernel this function creates a breakpoint using our own
 // breakpoint resolver, and returns the Breakpoint shared pointer.
 BreakpointSP
-RenderScriptRuntime::CreateKernelBreakpoint(const ConstString &name) {
+RenderScriptRuntime::CreateKernelBreakpoint(ConstString name) {
   Log *log(
       GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_BREAKPOINTS));
 
@@ -3622,7 +3622,7 @@ RenderScriptRuntime::CreateKernelBreakpoint(const ConstString &name) {
 }
 
 BreakpointSP
-RenderScriptRuntime::CreateReductionBreakpoint(const ConstString &name,
+RenderScriptRuntime::CreateReductionBreakpoint(ConstString name,
                                                int kernel_types) {
   Log *log(
       GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_BREAKPOINTS));
@@ -3863,7 +3863,7 @@ bool RenderScriptRuntime::PlaceBreakpointOnKernel(TargetSP target,
 }
 
 BreakpointSP
-RenderScriptRuntime::CreateScriptGroupBreakpoint(const ConstString &name,
+RenderScriptRuntime::CreateScriptGroupBreakpoint(ConstString name,
                                                  bool stop_on_all) {
   Log *log(
       GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_BREAKPOINTS));
@@ -3893,7 +3893,7 @@ RenderScriptRuntime::CreateScriptGroupBreakpoint(const ConstString &name,
 
 bool RenderScriptRuntime::PlaceBreakpointOnScriptGroup(TargetSP target,
                                                        Stream &strm,
-                                                       const ConstString &name,
+                                                       ConstString name,
                                                        bool multi) {
   InitSearchFilter(target);
   BreakpointSP bp = CreateScriptGroupBreakpoint(name, multi);

@@ -73,7 +73,6 @@ else()
     kmp_settings.cpp
     kmp_str.cpp
     kmp_tasking.cpp
-    kmp_taskq.cpp
     kmp_threadprivate.cpp
     kmp_utility.cpp
     kmp_barrier.cpp
@@ -330,4 +329,3 @@ if(${LIBOMP_FORTRAN_MODULES})
     DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
   )
 endif()
-

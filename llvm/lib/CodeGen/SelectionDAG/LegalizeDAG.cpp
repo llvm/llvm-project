@@ -1140,6 +1140,22 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                     cast<MaskedStoreSDNode>(Node)->getValue().getValueType());
     break;
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
+    Action = TLI.getOperationAction(
+        Node->getOpcode(), Node->getOperand(0).getValueType());
+    break;
   default:
     if (Node->getOpcode() >= ISD::BUILTIN_OP_END) {
       Action = TargetLowering::Legal;
@@ -2493,16 +2509,12 @@ SDValue SelectionDAGLegalize::ExpandBITREVERSE(SDValue Op, const SDLoc &dl) {
   // TODO: We can easily support i4/i2 legal types if any target ever does.
   if (Sz >= 8 && isPowerOf2_32(Sz)) {
     // Create the masks - repeating the pattern every byte.
-    APInt MaskHi4(Sz, 0), MaskHi2(Sz, 0), MaskHi1(Sz, 0);
-    APInt MaskLo4(Sz, 0), MaskLo2(Sz, 0), MaskLo1(Sz, 0);
-    for (unsigned J = 0; J != Sz; J += 8) {
-      MaskHi4 = MaskHi4 | (0xF0ull << J);
-      MaskLo4 = MaskLo4 | (0x0Full << J);
-      MaskHi2 = MaskHi2 | (0xCCull << J);
-      MaskLo2 = MaskLo2 | (0x33ull << J);
-      MaskHi1 = MaskHi1 | (0xAAull << J);
-      MaskLo1 = MaskLo1 | (0x55ull << J);
-    }
+    APInt MaskHi4 = APInt::getSplat(Sz, APInt(8, 0xF0));
+    APInt MaskHi2 = APInt::getSplat(Sz, APInt(8, 0xCC));
+    APInt MaskHi1 = APInt::getSplat(Sz, APInt(8, 0xAA));
+    APInt MaskLo4 = APInt::getSplat(Sz, APInt(8, 0x0F));
+    APInt MaskLo2 = APInt::getSplat(Sz, APInt(8, 0x33));
+    APInt MaskLo1 = APInt::getSplat(Sz, APInt(8, 0x55));
 
     // BSWAP if the type is wider than a single byte.
     Tmp = (Sz > 8 ? DAG.getNode(ISD::BSWAP, dl, VT, Op) : Op);
@@ -3080,7 +3092,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(Node);
     // Check to see if this FP immediate is already legal.
     // If this is a legal constant, turn it into a TargetConstantFP node.
-    if (!TLI.isFPImmLegal(CFP->getValueAPF(), Node->getValueType(0)))
+    if (!TLI.isFPImmLegal(CFP->getValueAPF(), Node->getValueType(0),
+                          DAG.getMachineFunction().getFunction().optForSize()))
       Results.push_back(ExpandConstantFP(CFP, true));
     break;
   }
@@ -3261,12 +3274,24 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::SSUBO: {
     SDValue LHS = Node->getOperand(0);
     SDValue RHS = Node->getOperand(1);
-    SDValue Sum = DAG.getNode(Node->getOpcode() == ISD::SADDO ?
-                              ISD::ADD : ISD::SUB, dl, LHS.getValueType(),
-                              LHS, RHS);
+    bool IsAdd = Node->getOpcode() == ISD::SADDO;
+
+    SDValue Sum = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, dl,
+                              LHS.getValueType(), LHS, RHS);
     Results.push_back(Sum);
+
     EVT ResultType = Node->getValueType(1);
     EVT OType = getSetCCResultType(Node->getValueType(0));
+
+    // If SADDSAT/SSUBSAT is legal, compare results to detect overflow.
+    unsigned OpcSat = IsAdd ? ISD::SADDSAT : ISD::SSUBSAT;
+    if (TLI.isOperationLegalOrCustom(OpcSat, LHS.getValueType())) {
+      SDValue Sat = DAG.getNode(OpcSat, dl, LHS.getValueType(), LHS, RHS);
+      SDValue SetCC = DAG.getSetCC(dl, OType, Sum, Sat, ISD::SETNE);
+      Results.push_back(
+          DAG.getBoolExtOrTrunc(SetCC, dl, ResultType, ResultType));
+      break;
+    }
 
     SDValue Zero = DAG.getConstant(0, dl, LHS.getValueType());
 
@@ -3281,8 +3306,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue LHSSign = DAG.getSetCC(dl, OType, LHS, Zero, ISD::SETGE);
     SDValue RHSSign = DAG.getSetCC(dl, OType, RHS, Zero, ISD::SETGE);
     SDValue SignsMatch = DAG.getSetCC(dl, OType, LHSSign, RHSSign,
-                                      Node->getOpcode() == ISD::SADDO ?
-                                      ISD::SETEQ : ISD::SETNE);
+                                      IsAdd ? ISD::SETEQ : ISD::SETNE);
 
     SDValue SumSign = DAG.getSetCC(dl, OType, Sum, Zero, ISD::SETGE);
     SDValue SumSignNE = DAG.getSetCC(dl, OType, LHSSign, SumSign, ISD::SETNE);
@@ -3296,6 +3320,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue LHS = Node->getOperand(0);
     SDValue RHS = Node->getOperand(1);
     bool IsAdd = Node->getOpcode() == ISD::UADDO;
+
     // If ADD/SUBCARRY is legal, use that instead.
     unsigned OpcCarry = IsAdd ? ISD::ADDCARRY : ISD::SUBCARRY;
     if (TLI.isOperationLegalOrCustom(OpcCarry, Node->getValueType(0))) {
@@ -3594,6 +3619,21 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     ReplaceNode(SDValue(Node, 0), Result);
     break;
   }
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
+    Results.push_back(TLI.expandVecReduce(Node, DAG));
+    break;
   case ISD::GLOBAL_OFFSET_TABLE:
   case ISD::GlobalAddress:
   case ISD::GlobalTLSAddress:

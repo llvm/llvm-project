@@ -582,7 +582,7 @@ static void dumpArchive(const Archive *Arc, ScopedPrinter &Writer) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
     if (!ChildOrErr) {
       if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError())) {
-        reportError(Arc->getFileName(), ChildOrErr.takeError());
+        reportError(Arc->getFileName(), std::move(E));
       }
       continue;
     }
@@ -688,7 +688,7 @@ static void registerReadelfAliases() {
     StringRef ArgName = OptEntry.getKey();
     cl::Option *Option = OptEntry.getValue();
     if (ArgName.size() == 1)
-      Option->setFormattingFlag(cl::Grouping);
+      apply(Option, cl::Grouping);
   }
 }
 

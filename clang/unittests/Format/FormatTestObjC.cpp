@@ -1329,6 +1329,34 @@ TEST_F(FormatTestObjC, AlwaysBreakBeforeMultilineStrings) {
                "           @\"fffff\"];");
 }
 
+TEST_F(FormatTestObjC, DisambiguatesCallsFromCppLambdas) {
+  verifyFormat("x = ([a foo:bar] && b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] + b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] + !b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] + ~b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] - b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] / b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] % b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] | b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] || b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] && b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] == b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] != b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] <= b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] >= b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] << b->c == 'd');");
+  verifyFormat("x = ([a foo:bar] ? b->c == 'd' : 'e');");
+  // FIXME: The following are wrongly classified as C++ lambda expressions.
+  // For example this code:
+  //   x = ([a foo:bar] & b->c == 'd');
+  // is formatted as:
+  //   x = ([a foo:bar] & b -> c == 'd');
+  // verifyFormat("x = ([a foo:bar] & b->c == 'd');");
+  // verifyFormat("x = ([a foo:bar] > b->c == 'd');");
+  // verifyFormat("x = ([a foo:bar] < b->c == 'd');");
+  // verifyFormat("x = ([a foo:bar] >> b->c == 'd');");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

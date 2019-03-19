@@ -4,9 +4,8 @@
 ; combine and a generic insert_vector_elt combine.
 
 ; GCN-LABEL: {{^}}combine_loop:
-; GCN: flat_load_ushort
+; GCN: flat_load_short_d16_hi
 ; GCN: flat_store_short
-; GCN: v_lshlrev_b32_e32 v{{[0-9]+}}, 16,
 define amdgpu_kernel void @combine_loop(i16* %arg) #0 {
 bb:
   br label %bb1

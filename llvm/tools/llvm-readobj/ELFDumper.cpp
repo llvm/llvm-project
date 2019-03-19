@@ -814,6 +814,16 @@ std::string ELFDumper<ELFT>::getFullSymbolName(const Elf_Sym *Symbol,
                                                bool IsDynamic) const {
   std::string SymbolName =
       maybeDemangle(unwrapOrError(Symbol->getName(StrTable)));
+
+  if (SymbolName.empty() && Symbol->getType() == ELF::STT_SECTION) {
+    unsigned SectionIndex;
+    StringRef SectionName;
+    Elf_Sym_Range Syms =
+        unwrapOrError(ObjF->getELFFile()->symbols(DotSymtabSec));
+    getSectionNameIndex(Symbol, Syms.begin(), SectionName, SectionIndex);
+    return SectionName;
+  }
+
   if (!IsDynamic)
     return SymbolName;
 
@@ -1103,16 +1113,6 @@ static const EnumEntry<unsigned> ElfSymbolVisibilities[] = {
     {"INTERNAL",  "INTERNAL",  ELF::STV_INTERNAL},
     {"HIDDEN",    "HIDDEN",    ELF::STV_HIDDEN},
     {"PROTECTED", "PROTECTED", ELF::STV_PROTECTED}};
-
-static const EnumEntry<unsigned> ElfSymbolTypes[] = {
-    {"None",      "NOTYPE",  ELF::STT_NOTYPE},
-    {"Object",    "OBJECT",  ELF::STT_OBJECT},
-    {"Function",  "FUNC",    ELF::STT_FUNC},
-    {"Section",   "SECTION", ELF::STT_SECTION},
-    {"File",      "FILE",    ELF::STT_FILE},
-    {"Common",    "COMMON",  ELF::STT_COMMON},
-    {"TLS",       "TLS",     ELF::STT_TLS},
-    {"GNU_IFunc", "IFUNC",   ELF::STT_GNU_IFUNC}};
 
 static const EnumEntry<unsigned> AMDGPUSymbolTypes[] = {
   { "AMDGPU_HSA_KERNEL",            ELF::STT_AMDGPU_HSA_KERNEL }
@@ -1730,6 +1730,7 @@ static const EnumEntry<unsigned> ElfDynamicDTFlags1[] = {
   LLVM_READOBJ_DT_FLAG_ENT(DF_1, CONFALT),
   LLVM_READOBJ_DT_FLAG_ENT(DF_1, ENDFILTEE),
   LLVM_READOBJ_DT_FLAG_ENT(DF_1, DISPRELDNE),
+  LLVM_READOBJ_DT_FLAG_ENT(DF_1, DISPRELPND),
   LLVM_READOBJ_DT_FLAG_ENT(DF_1, NODIRECT),
   LLVM_READOBJ_DT_FLAG_ENT(DF_1, IGNMULDEF),
   LLVM_READOBJ_DT_FLAG_ENT(DF_1, NOKSYMS),
@@ -1865,6 +1866,9 @@ void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
   case DT_AUXILIARY:
     printLibrary(OS, "Auxiliary library", getDynamicString(Value));
     break;
+  case DT_USED:
+    printLibrary(OS, "Not needed object", getDynamicString(Value));
+    break;
   case DT_FILTER:
     printLibrary(OS, "Filter library", getDynamicString(Value));
     break;
@@ -1889,12 +1893,8 @@ void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
 
 template<class ELFT>
 void ELFDumper<ELFT>::printUnwindInfo() {
-  const unsigned Machine = ObjF->getELFFile()->getHeader()->e_machine;
-  if (Machine == EM_386 || Machine == EM_X86_64) {
-    DwarfCFIEH::PrinterContext<ELFT> Ctx(W, ObjF);
-    return Ctx.printUnwindInformation();
-  }
-  W.startLine() << "UnwindInfo not implemented.\n";
+  DwarfCFIEH::PrinterContext<ELFT> Ctx(W, ObjF);
+  Ctx.printUnwindInformation();
 }
 
 namespace {
@@ -1904,44 +1904,39 @@ template <> void ELFDumper<ELF32LE>::printUnwindInfo() {
   const unsigned Machine = Obj->getHeader()->e_machine;
   if (Machine == EM_ARM) {
     ARM::EHABI::PrinterContext<ELF32LE> Ctx(W, Obj, DotSymtabSec);
-    return Ctx.PrintUnwindInformation();
+    Ctx.PrintUnwindInformation();
   }
-  W.startLine() << "UnwindInfo not implemented.\n";
+  DwarfCFIEH::PrinterContext<ELF32LE> Ctx(W, ObjF);
+  Ctx.printUnwindInformation();
 }
 
 } // end anonymous namespace
 
 template<class ELFT>
 void ELFDumper<ELFT>::printDynamicTable() {
-  auto I = dynamic_table().begin();
-  auto E = dynamic_table().end();
+  // A valid .dynamic section contains an array of entries terminated with
+  // a DT_NULL entry. However, sometimes the section content may continue
+  // past the DT_NULL entry, so to dump the section correctly, we first find
+  // the end of the entries by iterating over them.
+  size_t Size = 0;
+  Elf_Dyn_Range DynTableEntries = dynamic_table();
+  for (; Size < DynTableEntries.size();)
+    if (DynTableEntries[Size++].getTag() == DT_NULL)
+      break;
 
-  if (I == E)
-    return;
-
-  --E;
-  while (I != E && E->getTag() == ELF::DT_NULL)
-    --E;
-  if (E->getTag() != ELF::DT_NULL)
-    ++E;
-  ++E;
-
-  ptrdiff_t Total = std::distance(I, E);
-  if (Total == 0)
+  if (!Size)
     return;
 
   raw_ostream &OS = W.getOStream();
-  W.startLine() << "DynamicSection [ (" << Total << " entries)\n";
+  W.startLine() << "DynamicSection [ (" << Size << " entries)\n";
 
   bool Is64 = ELFT::Is64Bits;
-
   W.startLine()
      << "  Tag" << (Is64 ? "                " : "        ") << "Type"
      << "                 " << "Name/Value\n";
-  while (I != E) {
-    const Elf_Dyn &Entry = *I;
+  for (size_t I = 0; I < Size; ++I) {
+    const Elf_Dyn &Entry = DynTableEntries[I];
     uintX_t Tag = Entry.getTag();
-    ++I;
     W.startLine() << "  " << format_hex(Tag, Is64 ? 18 : 10, opts::Output != opts::GNU) << " "
                   << format("%-21s", getTypeString(ObjF->getELFFile()->getHeader()->e_machine, Tag));
     printValue(Tag, Entry.getVal());
@@ -2711,7 +2706,8 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
     TargetName = unwrapOrError(Obj->getSectionName(Sec));
   } else if (Sym) {
     StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*SymTab));
-    TargetName = maybeDemangle(unwrapOrError(Sym->getName(StrTable)));
+    TargetName = this->dumper()->getFullSymbolName(
+        Sym, StrTable, SymTab->sh_type == SHT_DYNSYM /* IsDynamic */);
   }
 
   unsigned Width = ELFT::Is64Bits ? 16 : 8;
@@ -2725,15 +2721,18 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
     printField(F);
 
   std::string Addend;
-  if (Sym && IsRela) {
-    if (R.r_addend < 0)
-      Addend = " - ";
-    else
-      Addend = " + ";
-  }
+  if (IsRela) {
+    int64_t RelAddend = R.r_addend;
+    if (Sym) {
+      if (R.r_addend < 0) {
+        Addend = " - ";
+        RelAddend = std::abs(RelAddend);
+      } else
+        Addend = " + ";
+    }
 
-  if (IsRela)
-    Addend += to_hexString(std::abs(R.r_addend), false);
+    Addend += to_hexString(RelAddend, false);
+  }
   OS << Addend << "\n";
 }
 
@@ -2829,7 +2828,21 @@ template <class ELFT> void GNUStyle<ELFT>::printRelocations(const ELFO *Obj) {
     OS << "\nThere are no relocations in this file.\n";
 }
 
-std::string getSectionTypeString(unsigned Arch, unsigned Type) {
+// Print the offset of a particular section from anyone of the ranges:
+// [SHT_LOOS, SHT_HIOS], [SHT_LOPROC, SHT_HIPROC], [SHT_LOUSER, SHT_HIUSER].
+// If 'Type' does not fall within any of those ranges, then a string is
+// returned as '<unknown>' followed by the type value.
+static std::string getSectionTypeOffsetString(unsigned Type) {
+  if (Type >= SHT_LOOS && Type <= SHT_HIOS)
+    return "LOOS+0x" + to_hexString(Type - SHT_LOOS);
+  else if (Type >= SHT_LOPROC && Type <= SHT_HIPROC)
+    return "LOPROC+0x" + to_hexString(Type - SHT_LOPROC);
+  else if (Type >= SHT_LOUSER && Type <= SHT_HIUSER)
+    return "LOUSER+0x" + to_hexString(Type - SHT_LOUSER);
+  return "0x" + to_hexString(Type) + ": <unknown>";
+}
+
+static std::string getSectionTypeString(unsigned Arch, unsigned Type) {
   using namespace ELF;
 
   switch (Arch) {
@@ -2860,10 +2873,10 @@ std::string getSectionTypeString(unsigned Arch, unsigned Type) {
       return "MIPS_REGINFO";
     case SHT_MIPS_OPTIONS:
       return "MIPS_OPTIONS";
+    case SHT_MIPS_DWARF:
+      return "MIPS_DWARF";
     case SHT_MIPS_ABIFLAGS:
       return "MIPS_ABIFLAGS";
-    case SHT_MIPS_DWARF:
-      return "SHT_MIPS_DWARF";
     }
     break;
   }
@@ -2902,6 +2915,10 @@ std::string getSectionTypeString(unsigned Arch, unsigned Type) {
     return "GROUP";
   case SHT_SYMTAB_SHNDX:
     return "SYMTAB SECTION INDICES";
+  case SHT_ANDROID_REL:
+    return "ANDROID_REL";
+  case SHT_ANDROID_RELA:
+    return "ANDROID_RELA";
   case SHT_RELR:
   case SHT_ANDROID_RELR:
     return "RELR";
@@ -2925,7 +2942,7 @@ std::string getSectionTypeString(unsigned Arch, unsigned Type) {
   case SHT_GNU_versym:
     return "VERSYM";
   default:
-    return "";
+    return getSectionTypeOffsetString(Type);
   }
   return "";
 }
@@ -3365,17 +3382,18 @@ void GNUStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela R,
   for (auto &Field : Fields)
     printField(Field);
 
-  int64_t RelAddend = R.r_addend;
   std::string Addend;
-  if (!SymbolName.empty() && IsRela) {
-    if (R.r_addend < 0)
-      Addend = " - ";
-    else
-      Addend = " + ";
+  if (IsRela) {
+    int64_t RelAddend = R.r_addend;
+    if (!SymbolName.empty()) {
+      if (R.r_addend < 0) {
+        Addend = " - ";
+        RelAddend = std::abs(RelAddend);
+      } else
+        Addend = " + ";
+    }
+    Addend += to_string(format_hex_no_prefix(RelAddend, 1));
   }
-
-  if (IsRela)
-    Addend += to_string(format_hex_no_prefix(std::abs(RelAddend), 1));
   OS << Addend << "\n";
 }
 
@@ -3899,28 +3917,23 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
   switch (NoteType) {
   default:
     return {"", ""};
-  case ELF::NT_AMDGPU_METADATA:
+  case ELF::NT_AMDGPU_METADATA: {
     auto MsgPackString =
         StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
-    msgpack::Reader MsgPackReader(MsgPackString);
-    auto OptMsgPackNodeOrErr = msgpack::Node::read(MsgPackReader);
-    if (errorToBool(OptMsgPackNodeOrErr.takeError()))
+    msgpack::Document MsgPackDoc;
+    if (!MsgPackDoc.readFromBlob(MsgPackString, /*Multi=*/false))
       return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
-    auto &OptMsgPackNode = *OptMsgPackNodeOrErr;
-    if (!OptMsgPackNode)
-      return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
-    auto &MsgPackNode = *OptMsgPackNode;
 
     AMDGPU::HSAMD::V3::MetadataVerifier Verifier(true);
-    if (!Verifier.verify(*MsgPackNode))
+    if (!Verifier.verify(MsgPackDoc.getRoot()))
       return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
 
     std::string HSAMetadataString;
     raw_string_ostream StrOS(HSAMetadataString);
-    yaml::Output YOut(StrOS);
-    YOut << MsgPackNode;
+    MsgPackDoc.toYAML(StrOS);
 
     return {"AMDGPU Metadata", StrOS.str()};
+  }
   }
 }
 
@@ -4276,7 +4289,8 @@ void LLVMStyle<ELFT>::printRelocation(const ELFO *Obj, Elf_Rela Rel,
     TargetName = unwrapOrError(Obj->getSectionName(Sec));
   } else if (Sym) {
     StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*SymTab));
-    TargetName = maybeDemangle(unwrapOrError(Sym->getName(StrTable)));
+    TargetName = this->dumper()->getFullSymbolName(
+        Sym, StrTable, SymTab->sh_type == SHT_DYNSYM /* IsDynamic */);
   }
 
   if (opts::ExpandRelocs) {

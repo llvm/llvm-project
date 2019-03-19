@@ -51,7 +51,7 @@ bool TypeFilterImpl::SetExpressionPathAtIndex(size_t i,
 }
 
 size_t
-TypeFilterImpl::FrontEnd::GetIndexOfChildWithName(const ConstString &name) {
+TypeFilterImpl::FrontEnd::GetIndexOfChildWithName(ConstString name) {
   const char *name_cstr = name.GetCString();
   if (name_cstr) {
     for (size_t i = 0; i < filter->GetCount(); i++) {
@@ -125,8 +125,6 @@ lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromData(
   return valobj_sp;
 }
 
-#ifndef LLDB_DISABLE_PYTHON
-
 ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
                                               ValueObject &backend)
     : SyntheticChildrenFrontEnd(backend), m_python_class(pclass),
@@ -188,7 +186,7 @@ bool ScriptedSyntheticChildren::FrontEnd::MightHaveChildren() {
 }
 
 size_t ScriptedSyntheticChildren::FrontEnd::GetIndexOfChildWithName(
-    const ConstString &name) {
+    ConstString name) {
   if (!m_wrapper_sp || m_interpreter == NULL)
     return UINT32_MAX;
   return m_interpreter->GetIndexOfChildWithName(m_wrapper_sp,
@@ -218,5 +216,3 @@ std::string ScriptedSyntheticChildren::GetDescription() {
 
   return sstr.GetString();
 }
-
-#endif // #ifndef LLDB_DISABLE_PYTHON

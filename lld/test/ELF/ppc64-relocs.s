@@ -160,11 +160,11 @@ _start:
 
 # DATALE: Disassembly of section .rodata:
 # DATALE: .rodata:
-# DATALE: 10000190: b8 fe 00 00
+# DATALE: 100001c8: 80 fe 00 00
 
 # DATABE: Disassembly of section .rodata:
 # DATABE: .rodata:
-# DATABE: 10000190: 00 00 fe b8
+# DATABE: 100001c8: 00 00 fe 80
 
 # Address of rodata + value stored at rodata entry
 # should equal address of LBB0_2.
@@ -194,11 +194,11 @@ __foo:
 # 0x100001aa + 0xfeae = 0x10010058
 # DATALE: Disassembly of section .eh_frame:
 # DATALE: .eh_frame:
-# DATALE: 100001a8: {{.*}} ae fe
+# DATALE: 100001d0: {{.*}} 00 00
 
 # DATABE: Disassembly of section .eh_frame:
 # DATABE: .eh_frame:
-# DATABE: 100001b0: fe ae {{.*}}
+# DATABE: 100001e8: fe 76 {{.*}}
 
 # CHECK: __foo
 # CHECK-NEXT: 10010058: {{.*}} li 3, 0

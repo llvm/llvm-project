@@ -25,6 +25,8 @@ public:
   const lldb::SBSymbolContextList &
   operator=(const lldb::SBSymbolContextList &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   uint32_t GetSize() const;

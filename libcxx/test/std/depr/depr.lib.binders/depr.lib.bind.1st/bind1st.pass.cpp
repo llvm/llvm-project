@@ -13,6 +13,8 @@
 //   binder1st<Fn>
 //   bind1st(const Fn& fn, const T& x);
 
+#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <functional>
 #include <cassert>
 

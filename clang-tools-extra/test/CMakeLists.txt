@@ -59,7 +59,7 @@ set(CLANG_TOOLS_TEST_DEPS
   # For the clang-tidy libclang integration test.
   c-index-test
   # clang-tidy tests require it.
-  clang-headers
+  clang-resource-headers
 
   clang-tidy
 )

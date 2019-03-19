@@ -294,12 +294,13 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     }
   }
 
-  bool HasVectorValue = false;
-  for (SDNode::value_iterator J = Node->value_begin(), E = Node->value_end();
-       J != E;
-       ++J)
-    HasVectorValue |= J->isVector();
-  if (!HasVectorValue)
+  bool HasVectorValueOrOp = false;
+  for (auto J = Node->value_begin(), E = Node->value_end(); J != E; ++J)
+    HasVectorValueOrOp |= J->isVector();
+  for (const SDValue &Op : Node->op_values())
+    HasVectorValueOrOp |= Op.getValueType().isVector();
+
+  if (!HasVectorValueOrOp)
     return TranslateLegalizeResults(Op, Result);
 
   TargetLowering::LegalizeAction Action = TargetLowering::Legal;
@@ -441,6 +442,19 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
@@ -654,23 +668,21 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
       LoadChains.push_back(ScalarLoad.getValue(1));
     }
 
-    // Extract bits, pack and extend/trunc them into destination type.
-    unsigned SrcEltBits = SrcEltVT.getSizeInBits();
-    SDValue SrcEltBitMask = DAG.getConstant((1U << SrcEltBits) - 1, dl, WideVT);
-
     unsigned BitOffset = 0;
     unsigned WideIdx = 0;
     unsigned WideBits = WideVT.getSizeInBits();
 
-    for (unsigned Idx = 0; Idx != NumElem; ++Idx) {
-      SDValue Lo, Hi, ShAmt;
+    // Extract bits, pack and extend/trunc them into destination type.
+    unsigned SrcEltBits = SrcEltVT.getSizeInBits();
+    SDValue SrcEltBitMask = DAG.getConstant(
+        APInt::getLowBitsSet(WideBits, SrcEltBits), dl, WideVT);
 
-      if (BitOffset < WideBits) {
-        ShAmt = DAG.getConstant(
-            BitOffset, dl, TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
-        Lo = DAG.getNode(ISD::SRL, dl, WideVT, LoadVals[WideIdx], ShAmt);
-        Lo = DAG.getNode(ISD::AND, dl, WideVT, Lo, SrcEltBitMask);
-      }
+    for (unsigned Idx = 0; Idx != NumElem; ++Idx) {
+      assert(BitOffset < WideBits && "Unexpected offset!");
+
+      SDValue ShAmt = DAG.getConstant(
+          BitOffset, dl, TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
+      SDValue Lo = DAG.getNode(ISD::SRL, dl, WideVT, LoadVals[WideIdx], ShAmt);
 
       BitOffset += SrcEltBits;
       if (BitOffset >= WideBits) {
@@ -680,13 +692,13 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
           ShAmt = DAG.getConstant(
               SrcEltBits - BitOffset, dl,
               TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
-          Hi = DAG.getNode(ISD::SHL, dl, WideVT, LoadVals[WideIdx], ShAmt);
-          Hi = DAG.getNode(ISD::AND, dl, WideVT, Hi, SrcEltBitMask);
+          SDValue Hi =
+              DAG.getNode(ISD::SHL, dl, WideVT, LoadVals[WideIdx], ShAmt);
+          Lo = DAG.getNode(ISD::OR, dl, WideVT, Lo, Hi);
         }
       }
 
-      if (Hi.getNode())
-        Lo = DAG.getNode(ISD::OR, dl, WideVT, Lo, Hi);
+      Lo = DAG.getNode(ISD::AND, dl, WideVT, Lo, SrcEltBitMask);
 
       switch (ExtType) {
       default: llvm_unreachable("Unknown extended-load op!");
@@ -818,6 +830,20 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
   case ISD::STRICT_FROUND:
   case ISD::STRICT_FTRUNC:
     return ExpandStrictFPOp(Op);
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
+    return TLI.expandVecReduce(Op.getNode(), DAG);
   default:
     return DAG.UnrollVectorOp(Op.getNode());
   }

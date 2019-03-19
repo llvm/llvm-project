@@ -194,23 +194,67 @@ static bool parseCommand(StringRef InputString, bool &IsData,
   return !StringRef(pos, offset_length).getAsInteger(0, ModuleOffset);
 }
 
+// This routine returns section index for an address.
+// Assumption: would work ambiguously for object files which have sections not
+// assigned to an address(since the same address could belong to various
+// sections).
+static uint64_t getModuleSectionIndexForAddress(const std::string &ModuleName,
+                                                uint64_t Address) {
+
+  // following ModuleName processing was copied from
+  // LLVMSymbolizer::getOrCreateModuleInfo().
+  // it needs to be refactored to avoid code duplication.
+  std::string BinaryName = ModuleName;
+  size_t ColonPos = ModuleName.find_last_of(':');
+  // Verify that substring after colon form a valid arch name.
+  if (ColonPos != std::string::npos) {
+    std::string ArchStr = ModuleName.substr(ColonPos + 1);
+    if (Triple(ArchStr).getArch() != Triple::UnknownArch) {
+      BinaryName = ModuleName.substr(0, ColonPos);
+    }
+  }
+
+  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(BinaryName);
+
+  if (error(BinaryOrErr))
+    return object::SectionedAddress::UndefSection;
+
+  Binary &Binary = *BinaryOrErr->getBinary();
+
+  if (ObjectFile *O = dyn_cast<ObjectFile>(&Binary)) {
+    for (SectionRef Sec : O->sections()) {
+      if (!Sec.isText() || Sec.isVirtual())
+        continue;
+
+      if (Address >= Sec.getAddress() &&
+          Address <= Sec.getAddress() + Sec.getSize()) {
+        return Sec.getIndex();
+      }
+    }
+  }
+
+  return object::SectionedAddress::UndefSection;
+}
+
 static void symbolizeInput(StringRef InputString, LLVMSymbolizer &Symbolizer,
                            DIPrinter &Printer) {
   bool IsData = false;
   std::string ModuleName;
-  uint64_t ModuleOffset = 0;
-  if (!parseCommand(StringRef(InputString), IsData, ModuleName, ModuleOffset)) {
+  uint64_t Offset = 0;
+  if (!parseCommand(StringRef(InputString), IsData, ModuleName, Offset)) {
     outs() << InputString;
     return;
   }
 
   if (ClPrintAddress) {
     outs() << "0x";
-    outs().write_hex(ModuleOffset);
+    outs().write_hex(Offset);
     StringRef Delimiter = ClPrettyPrint ? ": " : "\n";
     outs() << Delimiter;
   }
-  ModuleOffset -= ClAdjustVMA;
+  Offset -= ClAdjustVMA;
+  object::SectionedAddress ModuleOffset = {
+      Offset, getModuleSectionIndexForAddress(ModuleName, Offset)};
   if (IsData) {
     auto ResOrErr = Symbolizer.symbolizeData(ModuleName, ModuleOffset);
     Printer << (error(ResOrErr) ? DIGlobal() : ResOrErr.get());

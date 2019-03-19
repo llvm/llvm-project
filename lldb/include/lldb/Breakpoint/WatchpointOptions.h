@@ -19,7 +19,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class WatchpointOptions WatchpointOptions.h
+/// \class WatchpointOptions WatchpointOptions.h
 /// "lldb/Breakpoint/WatchpointOptions.h" Class that manages the options on a
 /// watchpoint.
 //----------------------------------------------------------------------
@@ -40,14 +40,14 @@ public:
   //------------------------------------------------------------------
   /// This constructor allows you to specify all the watchpoint options.
   ///
-  /// @param[in] callback
+  /// \param[in] callback
   ///    This is the plugin for some code that gets run, returns \b true if we
   ///    are to stop.
   ///
-  /// @param[in] baton
+  /// \param[in] baton
   ///    Client data that will get passed to the callback.
   ///
-  /// @param[in] thread_id
+  /// \param[in] thread_id
   ///    Only stop if \a thread_id hits the watchpoint.
   //------------------------------------------------------------------
   WatchpointOptions(WatchpointHitCallback callback, void *baton,
@@ -93,13 +93,13 @@ public:
   //------------------------------------------------------------------
   /// Adds a callback to the watchpoint option set.
   ///
-  /// @param[in] callback
+  /// \param[in] callback
   ///    The function to be called when the watchpoint gets hit.
   ///
-  /// @param[in] baton_sp
+  /// \param[in] baton_sp
   ///    A baton which will get passed back to the callback when it is invoked.
   ///
-  /// @param[in] synchronous
+  /// \param[in] synchronous
   ///    Whether this is a synchronous or asynchronous callback.  See discussion
   ///    above.
   //------------------------------------------------------------------
@@ -117,7 +117,7 @@ public:
   //------------------------------------------------------------------
   /// Use this function to invoke the callback for a specific stop.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///    The context in which the callback is to be invoked.  This includes the
   ///    stop event, the
   ///    execution context of the stop (since you might hit the same watchpoint
@@ -125,10 +125,10 @@ public:
   ///    whether we are currently executing synchronous or asynchronous
   ///    callbacks.
   ///
-  /// @param[in] watch_id
+  /// \param[in] watch_id
   ///    The watchpoint ID that owns this option set.
   ///
-  /// @return
+  /// \return
   ///     The callback return value.
   //------------------------------------------------------------------
   bool InvokeCallback(StoppointCallbackContext *context,
@@ -138,7 +138,7 @@ public:
   /// Used in InvokeCallback to tell whether it is the right time to run this
   /// kind of callback.
   ///
-  /// @return
+  /// \return
   ///     The synchronicity of our callback.
   //------------------------------------------------------------------
   bool IsCallbackSynchronous() { return m_callback_is_synchronous; }
@@ -146,7 +146,7 @@ public:
   //------------------------------------------------------------------
   /// Fetch the baton from the callback.
   ///
-  /// @return
+  /// \return
   ///     The baton.
   //------------------------------------------------------------------
   Baton *GetBaton();
@@ -154,7 +154,7 @@ public:
   //------------------------------------------------------------------
   /// Fetch  a const version of the baton from the callback.
   ///
-  /// @return
+  /// \return
   ///     The baton.
   //------------------------------------------------------------------
   const Baton *GetBaton() const;
@@ -162,7 +162,7 @@ public:
   //------------------------------------------------------------------
   /// Return the current thread spec for this option. This will return nullptr
   /// if the no thread specifications have been set for this Option yet.
-  /// @return
+  /// \return
   ///     The thread specification pointer for this option, or nullptr if none
   ///     has
   ///     been set yet.
@@ -192,7 +192,7 @@ public:
 
   //------------------------------------------------------------------
   /// This is the default empty callback.
-  /// @return
+  /// \return
   ///     The thread id for which the watchpoint hit will stop,
   ///     LLDB_INVALID_THREAD_ID for all threads.
   //------------------------------------------------------------------

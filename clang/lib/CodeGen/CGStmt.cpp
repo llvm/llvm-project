@@ -1838,8 +1838,15 @@ llvm::Value* CodeGenFunction::EmitAsmInput(
   // (immediate or symbolic), try to emit it as such.
   if (!Info.allowsRegister() && !Info.allowsMemory()) {
     if (Info.requiresImmediateConstant()) {
-      llvm::APSInt AsmConst = InputExpr->EvaluateKnownConstInt(getContext());
-      return llvm::ConstantInt::get(getLLVMContext(), AsmConst);
+      Expr::EvalResult EVResult;
+      InputExpr->EvaluateAsRValue(EVResult, getContext(), true);
+
+      llvm::APSInt IntResult;
+      if (!EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
+                                           getContext()))
+        llvm_unreachable("Invalid immediate constant!");
+
+      return llvm::ConstantInt::get(getLLVMContext(), IntResult);
     }
 
     Expr::EvalResult Result;
@@ -1932,6 +1939,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   std::vector<llvm::Value*> InOutArgs;
   std::vector<llvm::Type*> InOutArgTypes;
 
+  // Keep track of out constraints for tied input operand.
+  std::vector<std::string> OutputConstraints;
+
   // An inline asm can be marked readonly if it meets the following conditions:
   //  - it doesn't have any sideeffects
   //  - it doesn't clobber memory
@@ -1954,7 +1964,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     OutputConstraint = AddVariableConstraints(OutputConstraint, *OutExpr,
                                               getTarget(), CGM, S,
                                               Info.earlyClobber());
-
+    OutputConstraints.push_back(OutputConstraint);
     LValue Dest = EmitLValue(OutExpr);
     if (!Constraints.empty())
       Constraints += ',';
@@ -2072,6 +2082,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         InputConstraint, *InputExpr->IgnoreParenNoopCasts(getContext()),
         getTarget(), CGM, S, false /* No EarlyClobber */);
 
+    std::string ReplaceConstraint (InputConstraint);
     llvm::Value *Arg = EmitAsmInput(Info, InputExpr, Constraints);
 
     // If this input argument is tied to a larger output result, extend the
@@ -2099,9 +2110,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
           Arg = Builder.CreateFPExt(Arg, OutputTy);
         }
       }
+      // Deal with the tied operands' constraint code in adjustInlineAsmType.
+      ReplaceConstraint = OutputConstraints[Output];
     }
     if (llvm::Type* AdjTy =
-              getTargetHooks().adjustInlineAsmType(*this, InputConstraint,
+          getTargetHooks().adjustInlineAsmType(*this, ReplaceConstraint,
                                                    Arg->getType()))
       Arg = Builder.CreateBitCast(Arg, AdjTy);
     else

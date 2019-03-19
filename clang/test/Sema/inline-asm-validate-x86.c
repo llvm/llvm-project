@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple i686 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple x86_64 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64 -fsyntax-only -verify -DAMD64 %s
 
 void I(int i, int j) {
   static const int BelowMin = -1;
@@ -55,6 +55,8 @@ void K(int i, int j) {
 void L(int i, int j) {
   static const int Invalid1 = 1;
   static const int Invalid2 = 42;
+  static const int Invalid3 = 0;
+  static const long long Invalid4 = 0x1000000ff;
   static const int Valid1 = 0xff;
   static const int Valid2 = 0xffff;
   static const int Valid3 = 0xffffffff;
@@ -67,6 +69,12 @@ void L(int i, int j) {
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "L"(Invalid2)); // expected-error{{value '42' out of range for constraint 'L'}}
+  __asm__("xorl %0,%2"
+          : "=r"(i)
+          : "0"(i), "L"(Invalid3)); // expected-error{{value '0' out of range for constraint 'L'}}
+  __asm__("xorl %0,%2"
+          : "=r"(i)
+          : "0"(i), "L"(Invalid4)); // expected-error{{value '4294967551' out of range for constraint 'L'}}
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "L"(Valid1)); // expected-no-error
@@ -129,3 +137,21 @@ void O(int i, int j) {
           : "0"(i), "O"(64)); // expected-no-error
 }
 
+void pr40890(void) {
+  struct s {
+    int a, b;
+  };
+  static struct s s;
+  // This null pointer can be used as an integer constant expression.
+  __asm__ __volatile__("\n#define S_A abcd%0\n" : : "n"(&((struct s*)0)->a));
+  // This offset-from-null pointer can be used as an integer constant expression.
+  __asm__ __volatile__("\n#define S_B abcd%0\n" : : "n"(&((struct s*)0)->b));
+  // This pointer cannot be used as an integer constant expression.
+  __asm__ __volatile__("\n#define GLOBAL_A abcd%0\n" : : "n"(&s.a)); // expected-error{{constraint 'n' expects an integer constant expression}}
+  // Floating-point is also not okay.
+  __asm__ __volatile__("\n#define PI abcd%0\n" : : "n"(3.14f)); // expected-error{{constraint 'n' expects an integer constant expression}}
+#ifdef AMD64
+  // This arbitrary pointer is fine.
+  __asm__ __volatile__("\n#define BEEF abcd%0\n" : : "n"((int*)0xdeadbeeeeeef));
+#endif
+}

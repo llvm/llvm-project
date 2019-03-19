@@ -50,6 +50,10 @@ extern "C" {
   // does would cause false reports.
   void __hwasan_handle_longjmp(const void *sp_dst);
 
+  // Set memory tag for the part of the current thread stack below sp_dst to
+  // zero. Call this in vfork() before returning in the parent process.
+  void __hwasan_handle_vfork(const void *sp_dst);
+
   // Libc hook for thread creation. Should be called in the child thread before
   // any instrumented code.
   void __hwasan_thread_enter();
@@ -64,6 +68,10 @@ extern "C" {
 
   // Print one-line report about the memory usage of the current process.
   void __hwasan_print_memory_usage();
+
+  /* Returns the offset of the first byte in the memory range that can not be
+   * accessed through the pointer in x, or -1 if the whole range is good. */
+  intptr_t __hwasan_test_shadow(const volatile void *x, size_t size);
 
   int __sanitizer_posix_memalign(void **memptr, size_t alignment, size_t size);
   void * __sanitizer_memalign(size_t alignment, size_t size);

@@ -70,8 +70,7 @@ public:
                          const Timeout<std::micro> &timeout) override;
 
   const char *GetHostname() override;
-  const char *GetUserName(uint32_t uid) override;
-  const char *GetGroupName(uint32_t gid) override;
+  UserIDResolver &GetUserIDResolver() override;
   lldb_private::Environment GetEnvironment() override;
 
   bool IsConnected() const override;

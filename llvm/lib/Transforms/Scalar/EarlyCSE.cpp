@@ -1102,7 +1102,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         // At the moment, we don't remove ordered stores, but do remove
         // unordered atomic stores.  There's no special requirement (for
         // unordered atomics) about removing atomic stores only in favor of
-        // other atomic stores since we we're going to execute the non-atomic
+        // other atomic stores since we were going to execute the non-atomic
         // one anyway and the atomic one might never have become visible.
         if (LastStore) {
           ParseMemoryInst LastStoreMemInst(LastStore, TTI);
@@ -1169,8 +1169,7 @@ bool EarlyCSE::run() {
       CurrentGeneration, DT.getRootNode(),
       DT.getRootNode()->begin(), DT.getRootNode()->end()));
 
-  // Save the current generation.
-  unsigned LiveOutGeneration = CurrentGeneration;
+  assert(!CurrentGeneration && "Create a new EarlyCSE instance to rerun it.");
 
   // Process the stack.
   while (!nodesToProcess.empty()) {
@@ -1201,9 +1200,6 @@ bool EarlyCSE::run() {
       nodesToProcess.pop_back();
     }
   } // while (!nodes...)
-
-  // Reset the current generation.
-  CurrentGeneration = LiveOutGeneration;
 
   return Changed;
 }

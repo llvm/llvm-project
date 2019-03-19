@@ -859,8 +859,8 @@ define void @btr_64_dont_fold(i64* %x, i64 %n) {
 ; X86-NEXT:  .LBB33_2:
 ; X86-NEXT:    notl %esi
 ; X86-NEXT:    notl %edx
-; X86-NEXT:    andl %esi, 4(%eax)
 ; X86-NEXT:    andl %edx, (%eax)
+; X86-NEXT:    andl %esi, 4(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -899,8 +899,8 @@ define void @bts_64_dont_fold(i64* %x, i64 %n) {
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB34_2:
-; X86-NEXT:    orl %esi, 4(%eax)
 ; X86-NEXT:    orl %edx, (%eax)
+; X86-NEXT:    orl %esi, 4(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -938,8 +938,8 @@ define void @btc_64_dont_fold(i64* %x, i64 %n) {
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB35_2:
-; X86-NEXT:    xorl %esi, 4(%eax)
 ; X86-NEXT:    xorl %edx, (%eax)
+; X86-NEXT:    xorl %esi, 4(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -955,7 +955,6 @@ define i32 @btr_32_mask_zeros(i32 %x, i32 %n) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shlb $2, %sil
-; X64-NEXT:    andb $28, %sil
 ; X64-NEXT:    btrl %esi, %eax
 ; X64-NEXT:    retq
 ;
@@ -964,7 +963,6 @@ define i32 @btr_32_mask_zeros(i32 %x, i32 %n) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    shlb $2, %cl
-; X86-NEXT:    andb $28, %cl
 ; X86-NEXT:    btrl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = shl i32 %n, 2
@@ -980,7 +978,6 @@ define i32 @bts_32_mask_zeros(i32 %x, i32 %n) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shlb $2, %sil
-; X64-NEXT:    andb $28, %sil
 ; X64-NEXT:    btsl %esi, %eax
 ; X64-NEXT:    retq
 ;
@@ -989,7 +986,6 @@ define i32 @bts_32_mask_zeros(i32 %x, i32 %n) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    shlb $2, %cl
-; X86-NEXT:    andb $28, %cl
 ; X86-NEXT:    btsl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = shl i32 %n, 2
@@ -1004,7 +1000,6 @@ define i32 @btc_32_mask_zeros(i32 %x, i32 %n) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shlb $2, %sil
-; X64-NEXT:    andb $28, %sil
 ; X64-NEXT:    btcl %esi, %eax
 ; X64-NEXT:    retq
 ;
@@ -1013,7 +1008,6 @@ define i32 @btc_32_mask_zeros(i32 %x, i32 %n) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    shlb $2, %cl
-; X86-NEXT:    andb $28, %cl
 ; X86-NEXT:    btcl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = shl i32 %n, 2
@@ -1028,23 +1022,18 @@ define i64 @btr_64_mask_zeros(i64 %x, i64 %n) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shlb $2, %sil
-; X64-NEXT:    andb $60, %sil
 ; X64-NEXT:    btrq %rsi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: btr_64_mask_zeros:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; X86-NEXT:    shlb $2, %ch
-; X86-NEXT:    movb %ch, %cl
-; X86-NEXT:    andb $60, %cl
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    shlb $2, %cl
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    shldl %cl, %eax, %edx
-; X86-NEXT:    movb %ch, %cl
-; X86-NEXT:    andb $28, %cl
 ; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    testb $32, %ch
+; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    je .LBB39_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %eax, %edx
@@ -1068,23 +1057,18 @@ define i64 @bts_64_mask_zeros(i64 %x, i64 %n) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shlb $2, %sil
-; X64-NEXT:    andb $60, %sil
 ; X64-NEXT:    btsq %rsi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: bts_64_mask_zeros:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; X86-NEXT:    shlb $2, %ch
-; X86-NEXT:    movb %ch, %cl
-; X86-NEXT:    andb $60, %cl
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    shlb $2, %cl
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    shldl %cl, %eax, %edx
-; X86-NEXT:    movb %ch, %cl
-; X86-NEXT:    andb $28, %cl
 ; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    testb $32, %ch
+; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    je .LBB40_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %eax, %edx
@@ -1105,23 +1089,18 @@ define i64 @btc_64_mask_zeros(i64 %x, i64 %n) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shlb $2, %sil
-; X64-NEXT:    andb $60, %sil
 ; X64-NEXT:    btcq %rsi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: btc_64_mask_zeros:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; X86-NEXT:    shlb $2, %ch
-; X86-NEXT:    movb %ch, %cl
-; X86-NEXT:    andb $60, %cl
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    shlb $2, %cl
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    shldl %cl, %eax, %edx
-; X86-NEXT:    movb %ch, %cl
-; X86-NEXT:    andb $28, %cl
 ; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    testb $32, %ch
+; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    je .LBB41_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %eax, %edx

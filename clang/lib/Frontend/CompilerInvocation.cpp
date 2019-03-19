@@ -551,7 +551,7 @@ static void parseSanitizerKinds(StringRef FlagName,
                                 DiagnosticsEngine &Diags, SanitizerSet &S) {
   for (const auto &Sanitizer : Sanitizers) {
     SanitizerMask K = parseSanitizerValue(Sanitizer, /*AllowGroups=*/false);
-    if (K == 0)
+    if (K == SanitizerMask())
       Diags.Report(diag::err_drv_invalid_value) << FlagName << Sanitizer;
     else
       S.set(K, true);
@@ -588,6 +588,7 @@ static void setPGOInstrumentor(CodeGenOptions &Opts, ArgList &Args,
                    .Case("none", CodeGenOptions::ProfileNone)
                    .Case("clang", CodeGenOptions::ProfileClangInstr)
                    .Case("llvm", CodeGenOptions::ProfileIRInstr)
+                   .Case("csllvm", CodeGenOptions::ProfileCSIRInstr)
                    .Default(~0U);
   if (I == ~0U) {
     Diags.Report(diag::err_drv_invalid_pgo_instrumentor) << A->getAsString(Args)
@@ -610,9 +611,12 @@ static void setPGOUseInstrumentor(CodeGenOptions &Opts,
   }
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader =
     std::move(ReaderOrErr.get());
-  if (PGOReader->isIRLevelProfile())
-    Opts.setProfileUse(CodeGenOptions::ProfileIRInstr);
-  else
+  if (PGOReader->isIRLevelProfile()) {
+    if (PGOReader->hasCSIRLevelProfile())
+      Opts.setProfileUse(CodeGenOptions::ProfileCSIRInstr);
+    else
+      Opts.setProfileUse(CodeGenOptions::ProfileIRInstr);
+  } else
     Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
 }
 
@@ -1213,6 +1217,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.OptRecordFile = Args.getLastArgValue(OPT_opt_record_file);
   if (!Opts.OptRecordFile.empty())
     NeedLocTracking = true;
+
+  if (Arg *A = Args.getLastArg(OPT_opt_record_passes)) {
+    Opts.OptRecordPasses = A->getValue();
+    NeedLocTracking = true;
+  }
 
   if (Arg *A = Args.getLastArg(OPT_Rpass_EQ)) {
     Opts.OptimizationRemarkPattern =
@@ -2577,7 +2586,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
   Opts.BlocksRuntimeOptional = Args.hasArg(OPT_fblocks_runtime_optional);
-  Opts.CoroutinesTS = Args.hasArg(OPT_fcoroutines_ts);
+  Opts.Coroutines = Opts.CPlusPlus2a || Args.hasArg(OPT_fcoroutines_ts);
 
   // Enable [[]] attributes in C++11 by default.
   Opts.DoubleSquareBracketAttributes =
@@ -2878,6 +2887,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(diag::err_drv_omp_host_ir_file_not_found)
           << Opts.OMPHostIRFile;
   }
+
+  Opts.SYCLIsDevice = Args.hasArg(options::OPT_fsycl_is_device);
 
   // Set CUDA mode for OpenMP target NVPTX if specified in options
   Opts.OpenMPCUDAMode = Opts.OpenMPIsDevice && T.isNVPTX() &&

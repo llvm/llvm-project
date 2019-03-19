@@ -13,7 +13,6 @@
 #include "Protocol.h"
 #include "Logger.h"
 #include "URI.h"
-#include "index/Index.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"

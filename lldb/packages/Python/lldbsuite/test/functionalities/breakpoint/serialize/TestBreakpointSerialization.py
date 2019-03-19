@@ -17,6 +17,7 @@ from lldbsuite.test import lldbutil
 class BreakpointSerialization(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(['pyapi'])
     def test_resolvers(self):
@@ -194,6 +195,11 @@ class BreakpointSerialization(TestBase):
         bkpt = self.orig_target.BreakpointCreateByName("blubby", lldb.eFunctionNameTypeAuto, empty_module_list, empty_cu_list)
         bkpt.SetIgnoreCount(10)
         bkpt.SetThreadName("grubby")
+        source_bps.Append(bkpt)
+
+        bkpt = self.orig_target.BreakpointCreateByName("blubby", lldb.eFunctionNameTypeAuto, empty_module_list, empty_cu_list)
+        bkpt.SetCondition("gonna remove this")
+        bkpt.SetCondition("")
         source_bps.Append(bkpt)
 
         bkpt = self.orig_target.BreakpointCreateByName("blubby", lldb.eFunctionNameTypeFull, empty_module_list,empty_cu_list)

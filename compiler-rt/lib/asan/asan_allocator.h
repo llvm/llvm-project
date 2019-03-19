@@ -133,10 +133,14 @@ const uptr kAllocatorSpace =  ~(uptr)0;
 const uptr kAllocatorSize  =  0x2000000000ULL;  // 128G.
 typedef VeryCompactSizeClassMap SizeClassMap;
 # elif defined(__aarch64__)
-// AArch64/SANITIZER_CAN_USER_ALLOCATOR64 is only for 42-bit VMA
+// AArch64/SANITIZER_CAN_USE_ALLOCATOR64 is only for 42-bit VMA
 // so no need to different values for different VMA.
 const uptr kAllocatorSpace =  0x10000000000ULL;
 const uptr kAllocatorSize  =  0x10000000000ULL;  // 3T.
+typedef DefaultSizeClassMap SizeClassMap;
+#elif defined(__sparc__)
+const uptr kAllocatorSpace = ~(uptr)0;
+const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;
 # elif SANITIZER_WINDOWS
 const uptr kAllocatorSpace = ~(uptr)0;

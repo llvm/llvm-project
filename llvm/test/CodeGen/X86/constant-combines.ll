@@ -19,7 +19,7 @@ define void @PR22524({ float, float }* %arg) {
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    mulss %xmm0, %xmm1
-; CHECK-NEXT:    movq $0, (%rdi)
+; CHECK-NEXT:    movl $0, (%rdi)
 ; CHECK-NEXT:    movss %xmm1, 4(%rdi)
 ; CHECK-NEXT:    retq
 entry:
@@ -37,4 +37,16 @@ entry:
   store i32 %6, i32* %9, align 4
   store float %8, float* %0, align 4
   ret void
+}
+
+
+define void @bitstore_fold() {
+; CHECK-LABEL: bitstore_fold:
+; CHECK:       # %bb.0: # %BB
+; CHECK-NEXT:    movl $-2, 0
+; CHECK-NEXT:    retq
+BB:
+   store i32 -1, i32* null
+   store i1 false, i1* null
+   ret void
 }

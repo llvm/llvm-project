@@ -54,7 +54,7 @@ cl:                                               ; preds = %sw.bb, %entry
 ; CHECK-NOT: %{{[0-9]+}}  = load %struct.bt*, %struct.bt** %bw
 
 ; CHECK: %[[I1:[0-9]+]] = bitcast %struct.az* %[[I0]] to i8*
-; CHECK-NEXT: %sunkaddr = getelementptr i8, i8* %[[I1]], i64 8
+; CHECK-NEXT: %sunkaddr = getelementptr inbounds i8, i8* %[[I1]], i64 8
 ; CHECK-NEXT: %[[I2:[0-9]+]] = bitcast i8* %sunkaddr to %struct.bt**
 ; CHECK-NEXT: %{{[0-9]+}} = load %struct.bt*, %struct.bt** %[[I2]]
 ; CHECK-NEXT: tail call void (i8*, ...) @a

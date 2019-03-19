@@ -10,7 +10,6 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
-#include "X86AsmInstrumentation.h"
 #include "X86AsmParserCommon.h"
 #include "X86Operand.h"
 #include "llvm/ADT/STLExtras.h"
@@ -70,7 +69,6 @@ static const char OpPrecedence[] = {
 
 class X86AsmParser : public MCTargetAsmParser {
   ParseInstructionInfo *InstInfo;
-  std::unique_ptr<X86AsmInstrumentation> Instrumentation;
   bool Code16GCC;
 
 private:
@@ -89,13 +87,14 @@ private:
   }
 
   unsigned MatchInstruction(const OperandVector &Operands, MCInst &Inst,
-                            uint64_t &ErrorInfo, bool matchingInlineAsm,
-                            unsigned VariantID = 0) {
+                            uint64_t &ErrorInfo, FeatureBitset &MissingFeatures,
+                            bool matchingInlineAsm, unsigned VariantID = 0) {
     // In Code16GCC mode, match as 32-bit.
     if (Code16GCC)
       SwitchMode(X86::Mode32Bit);
     unsigned rv = MatchInstructionImpl(Operands, Inst, ErrorInfo,
-                                       matchingInlineAsm, VariantID);
+                                       MissingFeatures, matchingInlineAsm,
+                                       VariantID);
     if (Code16GCC)
       SwitchMode(X86::Mode16Bit);
     return rv;
@@ -874,7 +873,7 @@ private:
   void MatchFPUWaitAlias(SMLoc IDLoc, X86Operand &Op, OperandVector &Operands,
                          MCStreamer &Out, bool MatchingInlineAsm);
 
-  bool ErrorMissingFeature(SMLoc IDLoc, uint64_t ErrorInfo,
+  bool ErrorMissingFeature(SMLoc IDLoc, const FeatureBitset &MissingFeatures,
                            bool MatchingInlineAsm);
 
   bool MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -913,7 +912,7 @@ private:
     MCSubtargetInfo &STI = copySTI();
     FeatureBitset AllModes({X86::Mode64Bit, X86::Mode32Bit, X86::Mode16Bit});
     FeatureBitset OldMode = STI.getFeatureBits() & AllModes;
-    uint64_t FB = ComputeAvailableFeatures(
+    FeatureBitset FB = ComputeAvailableFeatures(
       STI.ToggleFeature(OldMode.flip(mode)));
     setAvailableFeatures(FB);
 
@@ -950,13 +949,9 @@ public:
 
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
-    Instrumentation.reset(
-        CreateX86AsmInstrumentation(Options, Parser.getContext(), STI));
   }
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-
-  void SetFrameRegister(unsigned RegNo) override;
 
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
@@ -1190,10 +1185,6 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
 
   Parser.Lex(); // Eat identifier token.
   return false;
-}
-
-void X86AsmParser::SetFrameRegister(unsigned RegNo) {
-  Instrumentation->SetInitialFrameRegister(RegNo);
 }
 
 std::unique_ptr<X86Operand> X86AsmParser::DefaultMemSIOperand(SMLoc Loc) {
@@ -2327,13 +2318,15 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       PatchedName != "setb" && PatchedName != "setnb")
     PatchedName = PatchedName.substr(0, Name.size()-1);
 
+  unsigned ComparisonCode = ~0U;
+
   // FIXME: Hack to recognize cmp<comparison code>{ss,sd,ps,pd}.
   if ((PatchedName.startswith("cmp") || PatchedName.startswith("vcmp")) &&
       (PatchedName.endswith("ss") || PatchedName.endswith("sd") ||
        PatchedName.endswith("ps") || PatchedName.endswith("pd"))) {
     bool IsVCMP = PatchedName[0] == 'v';
     unsigned CCIdx = IsVCMP ? 4 : 3;
-    unsigned ComparisonCode = StringSwitch<unsigned>(
+    unsigned CC = StringSwitch<unsigned>(
       PatchedName.slice(CCIdx, PatchedName.size() - 2))
       .Case("eq",       0x00)
       .Case("eq_oq",    0x00)
@@ -2383,26 +2376,29 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       .Case("gt_oq",    0x1E)
       .Case("true_us",  0x1F)
       .Default(~0U);
-    if (ComparisonCode != ~0U && (IsVCMP || ComparisonCode < 8)) {
+    if (CC != ~0U && (IsVCMP || CC < 8)) {
+      if (PatchedName.endswith("ss"))
+        PatchedName = IsVCMP ? "vcmpss" : "cmpss";
+      else if (PatchedName.endswith("sd"))
+        PatchedName = IsVCMP ? "vcmpsd" : "cmpsd";
+      else if (PatchedName.endswith("ps"))
+        PatchedName = IsVCMP ? "vcmpps" : "cmpps";
+      else if (PatchedName.endswith("pd"))
+        PatchedName = IsVCMP ? "vcmppd" : "cmppd";
+      else
+        llvm_unreachable("Unexpecte suffix!");
 
-      Operands.push_back(X86Operand::CreateToken(PatchedName.slice(0, CCIdx),
-                                                 NameLoc));
-
-      const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
-                                                   getParser().getContext());
-      Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
-
-      PatchedName = PatchedName.substr(PatchedName.size() - 2);
+      ComparisonCode = CC;
     }
   }
 
   // FIXME: Hack to recognize vpcmp<comparison code>{ub,uw,ud,uq,b,w,d,q}.
   if (PatchedName.startswith("vpcmp") &&
-      (PatchedName.endswith("b") || PatchedName.endswith("w") ||
-       PatchedName.endswith("d") || PatchedName.endswith("q"))) {
-    unsigned CCIdx = PatchedName.drop_back().back() == 'u' ? 2 : 1;
-    unsigned ComparisonCode = StringSwitch<unsigned>(
-      PatchedName.slice(5, PatchedName.size() - CCIdx))
+      (PatchedName.back() == 'b' || PatchedName.back() == 'w' ||
+       PatchedName.back() == 'd' || PatchedName.back() == 'q')) {
+    unsigned SuffixSize = PatchedName.drop_back().back() == 'u' ? 2 : 1;
+    unsigned CC = StringSwitch<unsigned>(
+      PatchedName.slice(5, PatchedName.size() - SuffixSize))
       .Case("eq",    0x0) // Only allowed on unsigned. Checked below.
       .Case("lt",    0x1)
       .Case("le",    0x2)
@@ -2412,24 +2408,26 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       .Case("nle",   0x6)
       //.Case("true",  0x7) // Not a documented alias.
       .Default(~0U);
-    if (ComparisonCode != ~0U && (ComparisonCode != 0 || CCIdx == 2)) {
-      Operands.push_back(X86Operand::CreateToken("vpcmp", NameLoc));
-
-      const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
-                                                   getParser().getContext());
-      Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
-
-      PatchedName = PatchedName.substr(PatchedName.size() - CCIdx);
+    if (CC != ~0U && (CC != 0 || SuffixSize == 2)) {
+      switch (PatchedName.back()) {
+      default: llvm_unreachable("Unexpected character!");
+      case 'b': PatchedName = SuffixSize == 2 ? "vpcmpub" : "vpcmpb"; break;
+      case 'w': PatchedName = SuffixSize == 2 ? "vpcmpuw" : "vpcmpw"; break;
+      case 'd': PatchedName = SuffixSize == 2 ? "vpcmpud" : "vpcmpd"; break;
+      case 'q': PatchedName = SuffixSize == 2 ? "vpcmpuq" : "vpcmpq"; break;
+      }
+      // Set up the immediate to push into the operands later.
+      ComparisonCode = CC;
     }
   }
 
   // FIXME: Hack to recognize vpcom<comparison code>{ub,uw,ud,uq,b,w,d,q}.
   if (PatchedName.startswith("vpcom") &&
-      (PatchedName.endswith("b") || PatchedName.endswith("w") ||
-       PatchedName.endswith("d") || PatchedName.endswith("q"))) {
-    unsigned CCIdx = PatchedName.drop_back().back() == 'u' ? 2 : 1;
-    unsigned ComparisonCode = StringSwitch<unsigned>(
-      PatchedName.slice(5, PatchedName.size() - CCIdx))
+      (PatchedName.back() == 'b' || PatchedName.back() == 'w' ||
+       PatchedName.back() == 'd' || PatchedName.back() == 'q')) {
+    unsigned SuffixSize = PatchedName.drop_back().back() == 'u' ? 2 : 1;
+    unsigned CC = StringSwitch<unsigned>(
+      PatchedName.slice(5, PatchedName.size() - SuffixSize))
       .Case("lt",    0x0)
       .Case("le",    0x1)
       .Case("gt",    0x2)
@@ -2439,14 +2437,16 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       .Case("false", 0x6)
       .Case("true",  0x7)
       .Default(~0U);
-    if (ComparisonCode != ~0U) {
-      Operands.push_back(X86Operand::CreateToken("vpcom", NameLoc));
-
-      const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
-                                                   getParser().getContext());
-      Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
-
-      PatchedName = PatchedName.substr(PatchedName.size() - CCIdx);
+    if (CC != ~0U) {
+      switch (PatchedName.back()) {
+      default: llvm_unreachable("Unexpected character!");
+      case 'b': PatchedName = SuffixSize == 2 ? "vpcomub" : "vpcomb"; break;
+      case 'w': PatchedName = SuffixSize == 2 ? "vpcomuw" : "vpcomw"; break;
+      case 'd': PatchedName = SuffixSize == 2 ? "vpcomud" : "vpcomd"; break;
+      case 'q': PatchedName = SuffixSize == 2 ? "vpcomuq" : "vpcomq"; break;
+      }
+      // Set up the immediate to push into the operands later.
+      ComparisonCode = CC;
     }
   }
 
@@ -2519,6 +2519,13 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   Operands.push_back(X86Operand::CreateToken(PatchedName, NameLoc));
 
+  // Push the immediate if we extracted one from the mnemonic.
+  if (ComparisonCode != ~0U && !isParsingIntelSyntax()) {
+    const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
+                                                 getParser().getContext());
+    Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
+  }
+
   // This does the actual operand parsing.  Don't parse any more if we have a
   // prefix juxtaposed with an operation like "lock incl 4(%rax)", because we
   // just want to parse the "lock" as the first instruction and the "incl" as
@@ -2551,6 +2558,13 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         (getLexer().is(AsmToken::LCurly) || getLexer().is(AsmToken::RCurly));
     if (getLexer().isNot(AsmToken::EndOfStatement) && !CurlyAsEndOfStatement)
       return TokError("unexpected token in argument list");
+  }
+
+  // Push the immediate if we extracted one from the mnemonic.
+  if (ComparisonCode != ~0U && isParsingIntelSyntax()) {
+    const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
+                                                 getParser().getContext());
+    Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
   }
 
   // Consume the EndOfStatement or the prefix separator Slash
@@ -2865,8 +2879,7 @@ static const char *getSubtargetFeatureName(uint64_t Val);
 
 void X86AsmParser::EmitInstruction(MCInst &Inst, OperandVector &Operands,
                                    MCStreamer &Out) {
-  Instrumentation->InstrumentAndEmitInstruction(
-      Inst, Operands, getContext(), MII, Out);
+  Out.EmitInstruction(Inst, getSTI());
 }
 
 bool X86AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -2906,17 +2919,16 @@ void X86AsmParser::MatchFPUWaitAlias(SMLoc IDLoc, X86Operand &Op,
   }
 }
 
-bool X86AsmParser::ErrorMissingFeature(SMLoc IDLoc, uint64_t ErrorInfo,
+bool X86AsmParser::ErrorMissingFeature(SMLoc IDLoc,
+                                       const FeatureBitset &MissingFeatures,
                                        bool MatchingInlineAsm) {
-  assert(ErrorInfo && "Unknown missing feature!");
+  assert(MissingFeatures.any() && "Unknown missing feature!");
   SmallString<126> Msg;
   raw_svector_ostream OS(Msg);
   OS << "instruction requires:";
-  uint64_t Mask = 1;
-  for (unsigned i = 0; i < (sizeof(ErrorInfo)*8-1); ++i) {
-    if (ErrorInfo & Mask)
-      OS << ' ' << getSubtargetFeatureName(ErrorInfo & Mask);
-    Mask <<= 1;
+  for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i) {
+    if (MissingFeatures[i])
+      OS << ' ' << getSubtargetFeatureName(i);
   }
   return Error(IDLoc, OS.str(), SMRange(), MatchingInlineAsm);
 }
@@ -2953,8 +2965,9 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
     Inst.setFlags(Prefixes);
 
   // First, try a direct match.
-  switch (MatchInstruction(Operands, Inst, ErrorInfo, MatchingInlineAsm,
-                           isParsingIntelSyntax())) {
+  FeatureBitset MissingFeatures;
+  switch (MatchInstruction(Operands, Inst, ErrorInfo, MissingFeatures,
+                           MatchingInlineAsm, isParsingIntelSyntax())) {
   default: llvm_unreachable("Unexpected match result!");
   case Match_Success:
     if (!MatchingInlineAsm && validateInstruction(Inst, Operands))
@@ -2972,7 +2985,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
     Opcode = Inst.getOpcode();
     return false;
   case Match_MissingFeature:
-    return ErrorMissingFeature(IDLoc, ErrorInfo, MatchingInlineAsm);
+    return ErrorMissingFeature(IDLoc, MissingFeatures, MatchingInlineAsm);
   case Match_InvalidOperand:
     WasOriginallyInvalidOperand = true;
     break;
@@ -3002,16 +3015,17 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   // Check for the various suffix matches.
   uint64_t ErrorInfoIgnore;
-  uint64_t ErrorInfoMissingFeature = 0; // Init suppresses compiler warnings.
+  FeatureBitset ErrorInfoMissingFeatures; // Init suppresses compiler warnings.
   unsigned Match[4];
 
   for (unsigned I = 0, E = array_lengthof(Match); I != E; ++I) {
     Tmp.back() = Suffixes[I];
     Match[I] = MatchInstruction(Operands, Inst, ErrorInfoIgnore,
-                                MatchingInlineAsm, isParsingIntelSyntax());
+                                MissingFeatures, MatchingInlineAsm,
+                                isParsingIntelSyntax());
     // If this returned as a missing feature failure, remember that.
     if (Match[I] == Match_MissingFeature)
-      ErrorInfoMissingFeature = ErrorInfoIgnore;
+      ErrorInfoMissingFeatures = MissingFeatures;
   }
 
   // Restore the old token.
@@ -3088,8 +3102,8 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   // missing feature.
   if (std::count(std::begin(Match), std::end(Match),
                  Match_MissingFeature) == 1) {
-    ErrorInfo = ErrorInfoMissingFeature;
-    return ErrorMissingFeature(IDLoc, ErrorInfoMissingFeature,
+    ErrorInfo = Match_MissingFeature;
+    return ErrorMissingFeature(IDLoc, ErrorInfoMissingFeatures,
                                MatchingInlineAsm);
   }
 
@@ -3153,7 +3167,8 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
 
   SmallVector<unsigned, 8> Match;
-  uint64_t ErrorInfoMissingFeature = 0;
+  FeatureBitset ErrorInfoMissingFeatures;
+  FeatureBitset MissingFeatures;
 
   // If unsized push has immediate operand we should default the default pointer
   // size for the size.
@@ -3173,7 +3188,7 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
         Op.setTokenValue(Tmp);
         // Do match in ATT mode to allow explicit suffix usage.
         Match.push_back(MatchInstruction(Operands, Inst, ErrorInfo,
-                                         MatchingInlineAsm,
+                                         MissingFeatures, MatchingInlineAsm,
                                          false /*isParsingIntelSyntax()*/));
         Op.setTokenValue(Base);
       }
@@ -3190,13 +3205,14 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
       uint64_t ErrorInfoIgnore;
       unsigned LastOpcode = Inst.getOpcode();
       unsigned M = MatchInstruction(Operands, Inst, ErrorInfoIgnore,
-                                    MatchingInlineAsm, isParsingIntelSyntax());
+                                    MissingFeatures, MatchingInlineAsm,
+                                    isParsingIntelSyntax());
       if (Match.empty() || LastOpcode != Inst.getOpcode())
         Match.push_back(M);
 
       // If this returned as a missing feature failure, remember that.
       if (Match.back() == Match_MissingFeature)
-        ErrorInfoMissingFeature = ErrorInfoIgnore;
+        ErrorInfoMissingFeatures = MissingFeatures;
     }
 
     // Restore the size of the unsized memory operand if we modified it.
@@ -3208,10 +3224,11 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   // matching with the unsized operand.
   if (Match.empty()) {
     Match.push_back(MatchInstruction(
-        Operands, Inst, ErrorInfo, MatchingInlineAsm, isParsingIntelSyntax()));
+        Operands, Inst, ErrorInfo, MissingFeatures, MatchingInlineAsm,
+        isParsingIntelSyntax()));
     // If this returned as a missing feature failure, remember that.
     if (Match.back() == Match_MissingFeature)
-      ErrorInfoMissingFeature = ErrorInfo;
+      ErrorInfoMissingFeatures = MissingFeatures;
   }
 
   // Restore the size of the unsized memory operand if we modified it.
@@ -3233,7 +3250,8 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
       UnsizedMemOp->getMemFrontendSize()) {
     UnsizedMemOp->Mem.Size = UnsizedMemOp->getMemFrontendSize();
     unsigned M = MatchInstruction(
-        Operands, Inst, ErrorInfo, MatchingInlineAsm, isParsingIntelSyntax());
+        Operands, Inst, ErrorInfo, MissingFeatures, MatchingInlineAsm,
+        isParsingIntelSyntax());
     if (M == Match_Success)
       NumSuccessfulMatches = 1;
 
@@ -3273,8 +3291,8 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   // missing feature.
   if (std::count(std::begin(Match), std::end(Match),
                  Match_MissingFeature) == 1) {
-    ErrorInfo = ErrorInfoMissingFeature;
-    return ErrorMissingFeature(IDLoc, ErrorInfoMissingFeature,
+    ErrorInfo = Match_MissingFeature;
+    return ErrorMissingFeature(IDLoc, ErrorInfoMissingFeatures,
                                MatchingInlineAsm);
   }
 

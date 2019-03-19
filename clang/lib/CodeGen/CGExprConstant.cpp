@@ -876,6 +876,8 @@ public:
     case CK_FloatingCast:
     case CK_FixedPointCast:
     case CK_FixedPointToBoolean:
+    case CK_FixedPointToIntegral:
+    case CK_IntegralToFixedPoint:
     case CK_ZeroToOCLOpaqueType:
       return nullptr;
     }
@@ -1611,6 +1613,7 @@ private:
   ConstantLValue VisitConstantExpr(const ConstantExpr *E);
   ConstantLValue VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   ConstantLValue VisitStringLiteral(const StringLiteral *E);
+  ConstantLValue VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   ConstantLValue VisitObjCEncodeExpr(const ObjCEncodeExpr *E);
   ConstantLValue VisitObjCStringLiteral(const ObjCStringLiteral *E);
   ConstantLValue VisitPredefinedExpr(const PredefinedExpr *E);
@@ -1695,31 +1698,20 @@ ConstantLValueEmitter::tryEmitAbsolute(llvm::Type *destTy) {
   auto offset = getOffset();
 
   // If we're producing a pointer, this is easy.
-  if (auto destPtrTy = cast<llvm::PointerType>(destTy)) {
-    if (Value.isNullPointer()) {
-      // FIXME: integer offsets from non-zero null pointers.
-      return CGM.getNullPointer(destPtrTy, DestType);
-    }
-
-    // Convert the integer to a pointer-sized integer before converting it
-    // to a pointer.
-    // FIXME: signedness depends on the original integer type.
-    auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
-    llvm::Constant *C = offset;
-    C = llvm::ConstantExpr::getIntegerCast(getOffset(), intptrTy,
-                                           /*isSigned*/ false);
-    C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);
-    return C;
+  auto destPtrTy = cast<llvm::PointerType>(destTy);
+  if (Value.isNullPointer()) {
+    // FIXME: integer offsets from non-zero null pointers.
+    return CGM.getNullPointer(destPtrTy, DestType);
   }
 
-  // Otherwise, we're basically returning an integer constant.
-
-  // FIXME: this does the wrong thing with ptrtoint of a null pointer,
-  // but since we don't know the original pointer type, there's not much
-  // we can do about it.
-
-  auto C = getOffset();
-  C = llvm::ConstantExpr::getIntegerCast(C, destTy, /*isSigned*/ false);
+  // Convert the integer to a pointer-sized integer before converting it
+  // to a pointer.
+  // FIXME: signedness depends on the original integer type.
+  auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
+  llvm::Constant *C = offset;
+  C = llvm::ConstantExpr::getIntegerCast(getOffset(), intptrTy,
+                                         /*isSigned*/ false);
+  C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);
   return C;
 }
 
@@ -1773,10 +1765,24 @@ ConstantLValueEmitter::VisitObjCEncodeExpr(const ObjCEncodeExpr *E) {
   return CGM.GetAddrOfConstantStringFromObjCEncode(E);
 }
 
+static ConstantLValue emitConstantObjCStringLiteral(const StringLiteral *S,
+                                                    QualType T,
+                                                    CodeGenModule &CGM) {
+  auto C = CGM.getObjCRuntime().GenerateConstantString(S);
+  return C.getElementBitCast(CGM.getTypes().ConvertTypeForMem(T));
+}
+
 ConstantLValue
 ConstantLValueEmitter::VisitObjCStringLiteral(const ObjCStringLiteral *E) {
-  auto C = CGM.getObjCRuntime().GenerateConstantString(E->getString());
-  return C.getElementBitCast(CGM.getTypes().ConvertTypeForMem(E->getType()));
+  return emitConstantObjCStringLiteral(E->getString(), E->getType(), CGM);
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  assert(E->isExpressibleAsConstantInitializer() &&
+         "this boxed expression can't be emitted as a compile-time constant");
+  auto *SL = cast<StringLiteral>(E->getSubExpr()->IgnoreParenCasts());
+  return emitConstantObjCStringLiteral(SL, E->getType(), CGM);
 }
 
 ConstantLValue

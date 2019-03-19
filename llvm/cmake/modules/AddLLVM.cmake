@@ -221,13 +221,19 @@ function(add_link_opts target_name)
       elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,-z -Wl,discard-unused=sections")
-      elseif(NOT WIN32 AND NOT LLVM_LINKER_IS_GOLD AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD")
+      elseif(NOT WIN32 AND NOT LLVM_LINKER_IS_GOLD AND
+             NOT ${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD|AIX")
         # Object files are compiled with -ffunction-data-sections.
         # Versions of bfd ld < 2.23.1 have a bug in --gc-sections that breaks
         # tools that use plugins. Always pass --gc-sections once we require
         # a newer linker.
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,--gc-sections")
+      endif()
+    else() #LLVM_NO_DEAD_STRIP
+      if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                     LINK_FLAGS " -Wl,-bnogc")
       endif()
     endif()
   endif()
@@ -633,6 +639,7 @@ macro(add_llvm_library name)
   # config file.
   if (NOT ARG_BUILDTREE_ONLY AND NOT ARG_MODULE)
     set_property( GLOBAL APPEND PROPERTY LLVM_LIBS ${name} )
+    set(in_llvm_libs YES)
   endif()
 
   if (ARG_MODULE AND NOT TARGET ${name})
@@ -644,7 +651,7 @@ macro(add_llvm_library name)
     set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY ${name})
   else()
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "LTO" OR
-        ${name} STREQUAL "OptRemarks" OR
+        ${name} STREQUAL "Remarks" OR
         (LLVM_LINK_LLVM_DYLIB AND ${name} STREQUAL "LLVM"))
       set(install_dir lib${LLVM_LIBDIR_SUFFIX})
       if(ARG_MODULE OR ARG_SHARED OR BUILD_SHARED_LIBS)
@@ -663,6 +670,7 @@ macro(add_llvm_library name)
       endif()
 
       if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+          (in_llvm_libs AND "llvm-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS) OR
           NOT LLVM_DISTRIBUTION_COMPONENTS)
         set(export_to_llvmexports EXPORT LLVMExports)
         set_property(GLOBAL PROPERTY LLVM_HAS_EXPORTS True)
@@ -1303,7 +1311,7 @@ function(get_llvm_lit_path base_dir file_name)
         set(${base_dir} ${LIT_BASE_DIR} PARENT_SCOPE)
         return()
       else()
-        message(WARN "LLVM_EXTERNAL_LIT set to ${LLVM_EXTERNAL_LIT}, but the path does not exist.")
+        message(WARNING "LLVM_EXTERNAL_LIT set to ${LLVM_EXTERNAL_LIT}, but the path does not exist.")
       endif()
     endif()
   endif()

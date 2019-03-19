@@ -30,7 +30,6 @@ OMPClause::child_range OMPClause::children() {
 #define OPENMP_CLAUSE(Name, Class)                                             \
   case OMPC_##Name:                                                            \
     return static_cast<Class *>(this)->children();
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   }
   llvm_unreachable("unknown OMPClause");
@@ -74,6 +73,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_final:
   case OMPC_safelen:
   case OMPC_simdlen:
+  case OMPC_allocator:
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_shared:
@@ -85,6 +85,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -145,6 +146,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_num_threads:
   case OMPC_safelen:
   case OMPC_simdlen:
+  case OMPC_allocator:
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_shared:
@@ -156,6 +158,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -845,11 +848,11 @@ OMPMapClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPMapClause(Sizes);
 }
 
-OMPToClause *OMPToClause::Create(const ASTContext &C,
-                                 const OMPVarListLocTy &Locs,
-                                 ArrayRef<Expr *> Vars,
-                                 ArrayRef<ValueDecl *> Declarations,
-                                 MappableExprComponentListsRef ComponentLists) {
+OMPToClause *OMPToClause::Create(
+    const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
+    ArrayRef<ValueDecl *> Declarations,
+    MappableExprComponentListsRef ComponentLists, ArrayRef<Expr *> UDMapperRefs,
+    NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId) {
   OMPMappableExprListSizeTy Sizes;
   Sizes.NumVars = Vars.size();
   Sizes.NumUniqueDeclarations = getUniqueDeclarationsTotalNumber(Declarations);
@@ -857,8 +860,8 @@ OMPToClause *OMPToClause::Create(const ASTContext &C,
   Sizes.NumComponents = getComponentsTotalNumber(ComponentLists);
 
   // We need to allocate:
-  // NumVars x Expr* - we have an original list expression for each clause list
-  // entry.
+  // 2 x NumVars x Expr* - we have an original list expression and an associated
+  // user-defined mapper for each clause list entry.
   // NumUniqueDeclarations x ValueDecl* - unique base declarations associated
   // with each component list.
   // (NumUniqueDeclarations + NumComponentLists) x unsigned - we specify the
@@ -869,13 +872,14 @@ OMPToClause *OMPToClause::Create(const ASTContext &C,
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
 
-  OMPToClause *Clause = new (Mem) OMPToClause(Locs, Sizes);
+  auto *Clause = new (Mem) OMPToClause(UDMQualifierLoc, MapperId, Locs, Sizes);
 
   Clause->setVarRefs(Vars);
+  Clause->setUDMapperRefs(UDMapperRefs);
   Clause->setClauseInfo(Declarations, ComponentLists);
   return Clause;
 }
@@ -885,16 +889,17 @@ OMPToClause *OMPToClause::CreateEmpty(const ASTContext &C,
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
   return new (Mem) OMPToClause(Sizes);
 }
 
-OMPFromClause *
-OMPFromClause::Create(const ASTContext &C, const OMPVarListLocTy &Locs,
-                      ArrayRef<Expr *> Vars, ArrayRef<ValueDecl *> Declarations,
-                      MappableExprComponentListsRef ComponentLists) {
+OMPFromClause *OMPFromClause::Create(
+    const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
+    ArrayRef<ValueDecl *> Declarations,
+    MappableExprComponentListsRef ComponentLists, ArrayRef<Expr *> UDMapperRefs,
+    NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId) {
   OMPMappableExprListSizeTy Sizes;
   Sizes.NumVars = Vars.size();
   Sizes.NumUniqueDeclarations = getUniqueDeclarationsTotalNumber(Declarations);
@@ -902,8 +907,8 @@ OMPFromClause::Create(const ASTContext &C, const OMPVarListLocTy &Locs,
   Sizes.NumComponents = getComponentsTotalNumber(ComponentLists);
 
   // We need to allocate:
-  // NumVars x Expr* - we have an original list expression for each clause list
-  // entry.
+  // 2 x NumVars x Expr* - we have an original list expression and an associated
+  // user-defined mapper for each clause list entry.
   // NumUniqueDeclarations x ValueDecl* - unique base declarations associated
   // with each component list.
   // (NumUniqueDeclarations + NumComponentLists) x unsigned - we specify the
@@ -914,13 +919,15 @@ OMPFromClause::Create(const ASTContext &C, const OMPVarListLocTy &Locs,
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
 
-  OMPFromClause *Clause = new (Mem) OMPFromClause(Locs, Sizes);
+  auto *Clause =
+      new (Mem) OMPFromClause(UDMQualifierLoc, MapperId, Locs, Sizes);
 
   Clause->setVarRefs(Vars);
+  Clause->setUDMapperRefs(UDMapperRefs);
   Clause->setClauseInfo(Declarations, ComponentLists);
   return Clause;
 }
@@ -931,7 +938,7 @@ OMPFromClause::CreateEmpty(const ASTContext &C,
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
   return new (Mem) OMPFromClause(Sizes);
@@ -1078,6 +1085,12 @@ void OMPClausePrinter::VisitOMPSafelenClause(OMPSafelenClause *Node) {
 void OMPClausePrinter::VisitOMPSimdlenClause(OMPSimdlenClause *Node) {
   OS << "simdlen(";
   Node->getSimdlen()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPAllocatorClause(OMPAllocatorClause *Node) {
+  OS << "allocator(";
+  Node->getAllocator()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
 }
 
@@ -1444,7 +1457,19 @@ void OMPClausePrinter::VisitOMPMapClause(OMPMapClause *Node) {
 void OMPClausePrinter::VisitOMPToClause(OMPToClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "to";
-    VisitOMPClauseList(Node, '(');
+    DeclarationNameInfo MapperId = Node->getMapperIdInfo();
+    if (MapperId.getName() && !MapperId.getName().isEmpty()) {
+      OS << '(';
+      OS << "mapper(";
+      NestedNameSpecifier *MapperNNS =
+          Node->getMapperQualifierLoc().getNestedNameSpecifier();
+      if (MapperNNS)
+        MapperNNS->print(OS, Policy);
+      OS << MapperId << "):";
+      VisitOMPClauseList(Node, ' ');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
     OS << ")";
   }
 }
@@ -1452,7 +1477,19 @@ void OMPClausePrinter::VisitOMPToClause(OMPToClause *Node) {
 void OMPClausePrinter::VisitOMPFromClause(OMPFromClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "from";
-    VisitOMPClauseList(Node, '(');
+    DeclarationNameInfo MapperId = Node->getMapperIdInfo();
+    if (MapperId.getName() && !MapperId.getName().isEmpty()) {
+      OS << '(';
+      OS << "mapper(";
+      NestedNameSpecifier *MapperNNS =
+          Node->getMapperQualifierLoc().getNestedNameSpecifier();
+      if (MapperNNS)
+        MapperNNS->print(OS, Policy);
+      OS << MapperId << "):";
+      VisitOMPClauseList(Node, ' ');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
     OS << ")";
   }
 }

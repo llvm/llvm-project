@@ -152,11 +152,19 @@ multiclass SM_Pseudo_Discards<string opName> {
   def _SGPR : SM_Discard_Pseudo <opName, (ins SReg_64:$sbase, SReg_32:$offset), 0>;
 }
 
-class SM_Time_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
+class SM_Time_Pseudo<string opName, SDPatternOperator node = null_frag> : SM_Pseudo<
   opName, (outs SReg_64_XEXEC:$sdst), (ins),
   " $sdst", [(set i64:$sdst, (node))]> {
   let hasSideEffects = 1;
-  let mayStore = 0;
+
+  // FIXME: This should be definitively mayStore = 0. TableGen
+  // brokenly tries to infer these based on the intrinsic properties
+  // corresponding to the IR attributes. The target intrinsics are
+  // considered as writing to memory for IR dependency purposes, but
+  // those can be modeled with hasSideEffects here. These also end up
+  // inferring differently for llvm.readcyclecounter and the amdgcn
+  // intrinsics.
+  let mayStore = ?;
   let mayLoad = 1;
   let has_sbase = 0;
   let has_offset = 0;

@@ -31,6 +31,8 @@ pythonize_bool(LIBOMP_HAVE_LIBM)
 pythonize_bool(LIBOMP_HAVE_LIBATOMIC)
 
 add_openmp_testsuite(check-libomp "Running libomp tests" ${CMAKE_CURRENT_BINARY_DIR} DEPENDS omp)
+# Add target check-ompt, but make sure to not add the tests twice to check-openmp.
+set(EXCLUDE_FROM_ALL True)
 add_openmp_testsuite(check-ompt "Running OMPT tests" ${CMAKE_CURRENT_BINARY_DIR}/ompt DEPENDS omp)
 
 # Configure the lit.site.cfg.in file

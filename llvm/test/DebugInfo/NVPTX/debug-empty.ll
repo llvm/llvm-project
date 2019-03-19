@@ -1,6 +1,7 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 
 ; CHECK: .target sm_{{[0-9]+$}}
+; CHECK: .section .debug_loc { }
 ; CHECK-NOT: }
 
 !llvm.dbg.cu = !{!0}

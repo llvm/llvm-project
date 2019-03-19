@@ -92,7 +92,7 @@ class VariableList;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Module Module.h "lldb/Core/Module.h"
+/// \class Module Module.h "lldb/Core/Module.h"
 /// A class that describes an executable image and its associated
 ///        object and symbol files.
 ///
@@ -129,20 +129,20 @@ public:
   /// Clients that wish to share modules with other targets should use
   /// ModuleList::GetSharedModule().
   ///
-  /// @param[in] file_spec
+  /// \param[in] file_spec
   ///     The file specification for the on disk representation of
   ///     this executable image.
   ///
-  /// @param[in] arch
+  /// \param[in] arch
   ///     The architecture to set as the current architecture in
   ///     this module.
   ///
-  /// @param[in] object_name
+  /// \param[in] object_name
   ///     The name of an object in a module used to extract a module
   ///     within a module (.a files and modules that contain multiple
   ///     architectures).
   ///
-  /// @param[in] object_offset
+  /// \param[in] object_offset
   ///     The offset within an existing module used to extract a
   ///     module within a module (.a files and modules that contain
   ///     multiple architectures).
@@ -190,23 +190,23 @@ public:
   /// address for all top level sections to be the section file address +
   /// offset.
   ///
-  /// @param[in] target
+  /// \param[in] target
   ///     The target in which to apply the section load addresses.
   ///
-  /// @param[in] value
+  /// \param[in] value
   ///     if \a value_is_offset is true, then value is the offset to
   ///     apply to all file addresses for all top level sections in
   ///     the object file as each section load address is being set.
   ///     If \a value_is_offset is false, then "value" is the new
   ///     absolute base address for the image.
   ///
-  /// @param[in] value_is_offset
+  /// \param[in] value_is_offset
   ///     If \b true, then \a value is an offset to apply to each
   ///     file address of each top level section.
   ///     If \b false, then \a value is the image base address that
   ///     will be used to rigidly slide all loadable sections.
   ///
-  /// @param[out] changed
+  /// \param[out] changed
   ///     If any section load addresses were changed in \a target,
   ///     then \a changed will be set to \b true. Else \a changed
   ///     will be set to false. This allows this function to be
@@ -215,7 +215,7 @@ public:
   ///     be false and no module updated notification will need to
   ///     be sent out.
   ///
-  /// @return
+  /// \return
   ///     /b True if any sections were successfully loaded in \a target,
   ///     /b false otherwise.
   //------------------------------------------------------------------
@@ -223,9 +223,9 @@ public:
                       bool &changed);
 
   //------------------------------------------------------------------
-  /// @copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
+  /// \copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
   ///
-  /// @see SymbolContextScope
+  /// \see SymbolContextScope
   //------------------------------------------------------------------
   void CalculateSymbolContext(SymbolContext *sc) override;
 
@@ -251,7 +251,7 @@ public:
   /// There are many places where logging wants to log this fully qualified
   /// specification, so we centralize this functionality here.
   ///
-  /// @return
+  /// \return
   ///     The object path + object name if there is one.
   //------------------------------------------------------------------
   std::string GetSpecificationDescription() const;
@@ -264,39 +264,39 @@ public:
   /// to this point at which this function is called, so this is a good way to
   /// see what has been parsed in a module.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   //------------------------------------------------------------------
   void Dump(Stream *s);
 
   //------------------------------------------------------------------
-  /// @copydoc SymbolContextScope::DumpSymbolContext(Stream*)
+  /// \copydoc SymbolContextScope::DumpSymbolContext(Stream*)
   ///
-  /// @see SymbolContextScope
+  /// \see SymbolContextScope
   //------------------------------------------------------------------
   void DumpSymbolContext(Stream *s) override;
 
   //------------------------------------------------------------------
   /// Find a symbol in the object file's symbol table.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the symbol that we are looking for.
   ///
-  /// @param[in] symbol_type
+  /// \param[in] symbol_type
   ///     If set to eSymbolTypeAny, find a symbol of any type that
   ///     has a name that matches \a name. If set to any other valid
   ///     SymbolType enumeration value, then search only for
   ///     symbols that match \a symbol_type.
   ///
-  /// @return
+  /// \return
   ///     Returns a valid symbol pointer if a symbol was found,
   ///     nullptr otherwise.
   //------------------------------------------------------------------
   const Symbol *FindFirstSymbolWithNameAndType(
-      const ConstString &name,
+      ConstString name,
       lldb::SymbolType symbol_type = lldb::eSymbolTypeAny);
 
-  size_t FindSymbolsWithNameAndType(const ConstString &name,
+  size_t FindSymbolsWithNameAndType(ConstString name,
                                     lldb::SymbolType symbol_type,
                                     SymbolContextList &sc_list);
 
@@ -307,21 +307,21 @@ public:
   //------------------------------------------------------------------
   /// Find a function symbols in the object file's symbol table.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the symbol that we are looking for.
   ///
-  /// @param[in] name_type_mask
+  /// \param[in] name_type_mask
   ///     A mask that has one or more bitwise OR'ed values from the
   ///     lldb::FunctionNameType enumeration type that indicate what
   ///     kind of names we are looking for.
   ///
-  /// @param[out] sc_list
+  /// \param[out] sc_list
   ///     A list to append any matching symbol contexts to.
   ///
-  /// @return
+  /// \return
   ///     The number of symbol contexts that were added to \a sc_list
   //------------------------------------------------------------------
-  size_t FindFunctionSymbols(const ConstString &name, uint32_t name_type_mask,
+  size_t FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
                              SymbolContextList &sc_list);
 
   //------------------------------------------------------------------
@@ -330,19 +330,19 @@ public:
   /// Finds all compile units that match \a path in all of the modules and
   /// returns the results in \a sc_list.
   ///
-  /// @param[in] path
+  /// \param[in] path
   ///     The name of the function we are looking for.
   ///
-  /// @param[in] append
+  /// \param[in] append
   ///     If \b true, then append any compile units that were found
   ///     to \a sc_list. If \b false, then the \a sc_list is cleared
   ///     and the contents of \a sc_list are replaced.
   ///
-  /// @param[out] sc_list
+  /// \param[out] sc_list
   ///     A symbol context list that gets filled in with all of the
   ///     matches.
   ///
-  /// @return
+  /// \return
   ///     The number of matches added to \a sc_list.
   //------------------------------------------------------------------
   size_t FindCompileUnits(const FileSpec &path, bool append,
@@ -355,30 +355,30 @@ public:
   /// representing the inlined function, and the function will be the
   /// containing function.  If it is not inlined, then the block will be NULL.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the compile unit we are looking for.
   ///
-  /// @param[in] namespace_decl
+  /// \param[in] namespace_decl
   ///     If valid, a namespace to search in.
   ///
-  /// @param[in] name_type_mask
+  /// \param[in] name_type_mask
   ///     A bit mask of bits that indicate what kind of names should
   ///     be used when doing the lookup. Bits include fully qualified
   ///     names, base names, C++ methods, or ObjC selectors.
   ///     See FunctionNameType for more details.
   ///
-  /// @param[in] append
+  /// \param[in] append
   ///     If \b true, any matches will be appended to \a sc_list, else
   ///     matches replace the contents of \a sc_list.
   ///
-  /// @param[out] sc_list
+  /// \param[out] sc_list
   ///     A symbol context list that gets filled in with all of the
   ///     matches.
   ///
-  /// @return
+  /// \return
   ///     The number of matches added to \a sc_list.
   //------------------------------------------------------------------
-  size_t FindFunctions(const ConstString &name,
+  size_t FindFunctions(ConstString name,
                        const CompilerDeclContext *parent_decl_ctx,
                        lldb::FunctionNameType name_type_mask, bool symbols_ok,
                        bool inlines_ok, bool append,
@@ -391,18 +391,18 @@ public:
   /// representing the inlined function, and the function will be the
   /// containing function.  If it is not inlined, then the block will be NULL.
   ///
-  /// @param[in] regex
+  /// \param[in] regex
   ///     A regular expression to use when matching the name.
   ///
-  /// @param[in] append
+  /// \param[in] append
   ///     If \b true, any matches will be appended to \a sc_list, else
   ///     matches replace the contents of \a sc_list.
   ///
-  /// @param[out] sc_list
+  /// \param[out] sc_list
   ///     A symbol context list that gets filled in with all of the
   ///     matches.
   ///
-  /// @return
+  /// \return
   ///     The number of matches added to \a sc_list.
   //------------------------------------------------------------------
   size_t FindFunctions(const RegularExpression &regex, bool symbols_ok,
@@ -412,24 +412,24 @@ public:
   //------------------------------------------------------------------
   /// Find addresses by file/line
   ///
-  /// @param[in] target_sp
+  /// \param[in] target_sp
   ///     The target the addresses are desired for.
   ///
-  /// @param[in] file
+  /// \param[in] file
   ///     Source file to locate.
   ///
-  /// @param[in] line
+  /// \param[in] line
   ///     Source line to locate.
   ///
-  /// @param[in] function
+  /// \param[in] function
   ///	    Optional filter function. Addresses within this function will be
   ///     added to the 'local' list. All others will be added to the 'extern'
   ///     list.
   ///
-  /// @param[out] output_local
+  /// \param[out] output_local
   ///     All matching addresses within 'function'
   ///
-  /// @param[out] output_extern
+  /// \param[out] output_extern
   ///     All matching addresses not within 'function'
   void FindAddressesForLine(const lldb::TargetSP target_sp,
                             const FileSpec &file, uint32_t line,
@@ -440,41 +440,41 @@ public:
   //------------------------------------------------------------------
   /// Find global and static variables by name.
   ///
-  /// @param[in] name
+  /// \param[in] name
   ///     The name of the global or static variable we are looking
   ///     for.
   ///
-  /// @param[in] parent_decl_ctx
+  /// \param[in] parent_decl_ctx
   ///     If valid, a decl context that results must exist within
   ///
-  /// @param[in] max_matches
+  /// \param[in] max_matches
   ///     Allow the number of matches to be limited to \a
   ///     max_matches. Specify UINT32_MAX to get all possible matches.
   ///
-  /// @param[in] variable_list
+  /// \param[in] variable_list
   ///     A list of variables that gets the matches appended to.
   ///
-  /// @return
+  /// \return
   ///     The number of matches added to \a variable_list.
   //------------------------------------------------------------------
-  size_t FindGlobalVariables(const ConstString &name,
+  size_t FindGlobalVariables(ConstString name,
                              const CompilerDeclContext *parent_decl_ctx,
                              size_t max_matches, VariableList &variable_list);
 
   //------------------------------------------------------------------
   /// Find global and static variables by regular expression.
   ///
-  /// @param[in] regex
+  /// \param[in] regex
   ///     A regular expression to use when matching the name.
   ///
-  /// @param[in] max_matches
+  /// \param[in] max_matches
   ///     Allow the number of matches to be limited to \a
   ///     max_matches. Specify UINT32_MAX to get all possible matches.
   ///
-  /// @param[in] variable_list
+  /// \param[in] variable_list
   ///     A list of variables that gets the matches appended to.
   ///
-  /// @return
+  /// \return
   ///     The number of matches added to \a variable_list.
   //------------------------------------------------------------------
   size_t FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
@@ -498,57 +498,57 @@ public:
   /// have to specify complete scoping on all expressions, but it also allows
   /// for exact matching when required.
   ///
-  /// @param[in] type_name
+  /// \param[in] type_name
   ///     The name of the type we are looking for that is a fully
   ///     or partially qualified type name.
   ///
-  /// @param[in] exact_match
+  /// \param[in] exact_match
   ///     If \b true, \a type_name is fully qualified and must match
   ///     exactly. If \b false, \a type_name is a partially qualified
   ///     name where the leading namespaces or classes can be
   ///     omitted to make finding types that a user may type
   ///     easier.
   ///
-  /// @param[out] type_list
+  /// \param[out] type_list
   ///     A type list gets populated with any matches.
   ///
-  /// @return
+  /// \return
   ///     The number of matches added to \a type_list.
   //------------------------------------------------------------------
   size_t
-  FindTypes(const ConstString &type_name, bool exact_match, size_t max_matches,
+  FindTypes(ConstString type_name, bool exact_match, size_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeList &types);
 
   lldb::TypeSP FindFirstType(const SymbolContext &sc,
-                             const ConstString &type_name, bool exact_match);
+                             ConstString type_name, bool exact_match);
 
   //------------------------------------------------------------------
   /// Find types by name that are in a namespace. This function is used by the
   /// expression parser when searches need to happen in an exact namespace
   /// scope.
   ///
-  /// @param[in] type_name
+  /// \param[in] type_name
   ///     The name of a type within a namespace that should not include
   ///     any qualifying namespaces (just a type basename).
   ///
-  /// @param[in] namespace_decl
+  /// \param[in] namespace_decl
   ///     The namespace declaration that this type must exist in.
   ///
-  /// @param[out] type_list
+  /// \param[out] type_list
   ///     A type list gets populated with any matches.
   ///
-  /// @return
+  /// \return
   ///     The number of matches added to \a type_list.
   //------------------------------------------------------------------
-  size_t FindTypesInNamespace(const ConstString &type_name,
+  size_t FindTypesInNamespace(ConstString type_name,
                               const CompilerDeclContext *parent_decl_ctx,
                               size_t max_matches, TypeList &type_list);
 
   //------------------------------------------------------------------
   /// Get const accessor for the module architecture.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the architecture object.
   //------------------------------------------------------------------
   const ArchSpec &GetArchitecture() const;
@@ -560,7 +560,7 @@ public:
   /// running LLDB. This can differ from the path on the platform since we
   /// might be doing remote debugging.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the file specification object.
   //------------------------------------------------------------------
   const FileSpec &GetFileSpec() const { return m_file; }
@@ -576,7 +576,7 @@ public:
   /// "/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib" The
   /// file could also be cached in a local developer kit directory.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the file specification object.
   //------------------------------------------------------------------
   const FileSpec &GetPlatformFileSpec() const {
@@ -617,7 +617,7 @@ public:
   /// Tells whether this module is capable of being the main executable for a
   /// process.
   ///
-  /// @return
+  /// \return
   ///     \b true if it is, \b false otherwise.
   //------------------------------------------------------------------
   bool IsExecutable();
@@ -627,10 +627,10 @@ public:
   /// call doesn't distinguish between whether the module is loaded by the
   /// dynamic loader, or by a "target module add" type call.
   ///
-  /// @param[in] target
+  /// \param[in] target
   ///    The target to check whether this is loaded in.
   ///
-  /// @return
+  /// \return
   ///     \b true if it is, \b false otherwise.
   //------------------------------------------------------------------
   bool IsLoadedInTarget(Target *target);
@@ -641,7 +641,7 @@ public:
   //------------------------------------------------------------------
   /// Get the number of compile units for this module.
   ///
-  /// @return
+  /// \return
   ///     The number of compile units that the symbol vendor plug-in
   ///     finds.
   //------------------------------------------------------------------
@@ -649,7 +649,7 @@ public:
 
   lldb::CompUnitSP GetCompileUnitAtIndex(size_t idx);
 
-  const ConstString &GetObjectName() const;
+  ConstString GetObjectName() const;
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
@@ -659,7 +659,7 @@ public:
   /// If the object file has not been located or parsed yet, this function
   /// will find the best ObjectFile plug-in that can parse Module::m_file.
   ///
-  /// @return
+  /// \return
   ///     If Module::m_file does not exist, or no plug-in was found
   ///     that can parse the file, or the object file doesn't contain
   ///     the current architecture in Module::m_arch, nullptr will be
@@ -677,7 +677,7 @@ public:
   /// If the symbol vendor has not been loaded yet, this function will return
   /// the section list for the object file.
   ///
-  /// @return
+  /// \return
   ///     Unified module section list.
   //------------------------------------------------------------------
   virtual SectionList *GetSectionList();
@@ -702,11 +702,11 @@ public:
   /// requested.  Specifically, we do not create FuncUnwinders objects for
   /// functions until they are needed.
   ///
-  /// @return
+  /// \return
   ///     Returns the unwind table for this module. If this object has no
   ///     associated object file, an empty UnwindTable is returned.
   //------------------------------------------------------------------
-  UnwindTable &GetUnwindTable() { return m_unwind_table; }
+  UnwindTable &GetUnwindTable();
 
   llvm::VersionTuple GetVersion();
 
@@ -719,7 +719,7 @@ public:
   /// enable the ObjectFile plugins to read the header of the object file
   /// without going back to the process.
   ///
-  /// @return
+  /// \return
   ///     The object file loaded from memory or nullptr, if the operation
   ///     failed (see the `error` for more information in that case).
   //------------------------------------------------------------------
@@ -732,7 +732,7 @@ public:
   /// If the symbol vendor file has not been located yet, this function will
   /// find the best SymbolVendor plug-in that can use the current object file.
   ///
-  /// @return
+  /// \return
   ///     If this module does not have a valid object file, or no
   ///     plug-in can be found that can use the object file, nullptr will
   ///     be returned, else a valid symbol vendor plug-in interface
@@ -746,7 +746,7 @@ public:
   //------------------------------------------------------------------
   /// Get accessor the type list for this module.
   ///
-  /// @return
+  /// \return
   ///     A valid type list pointer, or nullptr if there is no valid
   ///     symbol vendor for this module.
   //------------------------------------------------------------------
@@ -759,7 +759,7 @@ public:
   /// the file format, an MD5 checksum of the entire file, or slice of the
   /// file for the current architecture should be used.
   ///
-  /// @return
+  /// \return
   ///     A const pointer to the internal copy of the UUID value in
   ///     this module if this module has a valid UUID value, NULL
   ///     otherwise.
@@ -796,10 +796,10 @@ public:
   /// line entry.  Use the return value to determine which of these properties
   /// have been modified.
   ///
-  /// @param[in] so_addr
+  /// \param[in] so_addr
   ///     A load address to resolve.
   ///
-  /// @param[in] resolve_scope
+  /// \param[in] resolve_scope
   ///     The scope that should be resolved (see SymbolContext::Scope).
   ///     A combination of flags from the enumeration SymbolContextItem
   ///     requesting a resolution depth.  Note that the flags that are
@@ -808,18 +808,18 @@ public:
   ///     eSymbolContextModule, and eSymbolContextFunction requires
   ///     eSymbolContextSymbol.
   ///
-  /// @param[out] sc
+  /// \param[out] sc
   ///     The SymbolContext that is modified based on symbol resolution.
   ///
-  /// @param[in] resolve_tail_call_address
+  /// \param[in] resolve_tail_call_address
   ///     Determines if so_addr should resolve to a symbol in the case
   ///     of a function whose last instruction is a call.  In this case,
   ///     the PC can be one past the address range of the function.
   ///
-  /// @return
+  /// \return
   ///     The scope that has been resolved (see SymbolContext::Scope).
   ///
-  /// @see SymbolContext::Scope
+  /// \see SymbolContext::Scope
   //------------------------------------------------------------------
   uint32_t ResolveSymbolContextForAddress(
       const Address &so_addr, lldb::SymbolContextItem resolve_scope,
@@ -837,34 +837,34 @@ public:
   /// to only what is needed -- typically the module, compile unit, line table
   /// and line table entry are sufficient.
   ///
-  /// @param[in] file_path
+  /// \param[in] file_path
   ///     A path to a source file to match. If \a file_path does not
   ///     specify a directory, then this query will match all files
   ///     whose base filename matches. If \a file_path does specify
   ///     a directory, the fullpath to the file must match.
   ///
-  /// @param[in] line
+  /// \param[in] line
   ///     The source line to match, or zero if just the compile unit
   ///     should be resolved.
   ///
-  /// @param[in] check_inlines
+  /// \param[in] check_inlines
   ///     Check for inline file and line number matches. This option
   ///     should be used sparingly as it will cause all line tables
   ///     for every compile unit to be parsed and searched for
   ///     matching inline file entries.
   ///
-  /// @param[in] resolve_scope
+  /// \param[in] resolve_scope
   ///     The scope that should be resolved (see
   ///     SymbolContext::Scope).
   ///
-  /// @param[out] sc_list
+  /// \param[out] sc_list
   ///     A symbol context list that gets matching symbols contexts
   ///     appended to.
   ///
-  /// @return
+  /// \return
   ///     The number of matches that were added to \a sc_list.
   ///
-  /// @see SymbolContext::Scope
+  /// \see SymbolContext::Scope
   //------------------------------------------------------------------
   uint32_t ResolveSymbolContextForFilePath(
       const char *file_path, uint32_t line, bool check_inlines,
@@ -882,42 +882,42 @@ public:
   /// to only what is needed -- typically the module, compile unit, line table
   /// and line table entry are sufficient.
   ///
-  /// @param[in] file_spec
+  /// \param[in] file_spec
   ///     A file spec to a source file to match. If \a file_path does
   ///     not specify a directory, then this query will match all
   ///     files whose base filename matches. If \a file_path does
   ///     specify a directory, the fullpath to the file must match.
   ///
-  /// @param[in] line
+  /// \param[in] line
   ///     The source line to match, or zero if just the compile unit
   ///     should be resolved.
   ///
-  /// @param[in] check_inlines
+  /// \param[in] check_inlines
   ///     Check for inline file and line number matches. This option
   ///     should be used sparingly as it will cause all line tables
   ///     for every compile unit to be parsed and searched for
   ///     matching inline file entries.
   ///
-  /// @param[in] resolve_scope
+  /// \param[in] resolve_scope
   ///     The scope that should be resolved (see
   ///     SymbolContext::Scope).
   ///
-  /// @param[out] sc_list
+  /// \param[out] sc_list
   ///     A symbol context list that gets filled in with all of the
   ///     matches.
   ///
-  /// @return
+  /// \return
   ///     A integer that contains SymbolContext::Scope bits set for
   ///     each item that was successfully resolved.
   ///
-  /// @see SymbolContext::Scope
+  /// \see SymbolContext::Scope
   //------------------------------------------------------------------
   uint32_t ResolveSymbolContextsForFileSpec(
       const FileSpec &file_spec, uint32_t line, bool check_inlines,
       lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list);
 
   void SetFileSpecAndObjectName(const FileSpec &file,
-                                const ConstString &object_name);
+                                ConstString object_name);
 
   bool GetIsDynamicLinkEditor();
 
@@ -973,13 +973,13 @@ public:
   /// if the remappings are on a network file system, so use this function
   /// sparingly (not in a tight debug info parsing loop).
   ///
-  /// @param[in] orig_spec
+  /// \param[in] orig_spec
   ///     The original source file path to try and remap.
   ///
-  /// @param[out] new_spec
+  /// \param[out] new_spec
   ///     The newly remapped filespec that is guaranteed to exist.
   ///
-  /// @return
+  /// \return
   ///     /b true if \a orig_spec was successfully located and
   ///     \a new_spec is filled in with an existing file spec,
   ///     \b false otherwise.
@@ -993,13 +993,13 @@ public:
   /// stat the file system so it can be used in tight loops where debug info
   /// is being parsed.
   ///
-  /// @param[in] path
+  /// \param[in] path
   ///     The original source file path to try and remap.
   ///
-  /// @param[out] new_path
+  /// \param[out] new_path
   ///     The newly remapped filespec that is may or may not exist.
   ///
-  /// @return
+  /// \return
   ///     /b true if \a path was successfully located and \a new_path
   ///     is filled in with a new source path, \b false otherwise.
   //------------------------------------------------------------------
@@ -1007,7 +1007,7 @@ public:
   bool RemapSourceFile(const char *, std::string &) const = delete;
 
   //----------------------------------------------------------------------
-  /// @class LookupInfo Module.h "lldb/Core/Module.h"
+  /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.
   ///
   /// Users can type a wide variety of partial names when setting breakpoints
@@ -1036,16 +1036,16 @@ public:
           m_name_type_mask(lldb::eFunctionNameTypeNone),
           m_match_name_after_lookup(false) {}
 
-    LookupInfo(const ConstString &name, lldb::FunctionNameType name_type_mask,
+    LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
                lldb::LanguageType language);
 
-    const ConstString &GetName() const { return m_name; }
+    ConstString GetName() const { return m_name; }
 
-    void SetName(const ConstString &name) { m_name = name; }
+    void SetName(ConstString name) { m_name = name; }
 
-    const ConstString &GetLookupName() const { return m_lookup_name; }
+    ConstString GetLookupName() const { return m_lookup_name; }
 
-    void SetLookupName(const ConstString &name) { m_lookup_name = name; }
+    void SetLookupName(ConstString name) { m_lookup_name = name; }
 
     lldb::FunctionNameType GetNameTypeMask() const { return m_name_type_mask; }
 
@@ -1105,8 +1105,9 @@ protected:
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    ///parser for this module as it may or may
                                    ///not be shared with the SymbolFile
-  UnwindTable m_unwind_table{*this}; ///< Table of FuncUnwinders objects created
-                                     /// for this Module's functions
+  llvm::Optional<UnwindTable> m_unwind_table; ///< Table of FuncUnwinders
+                                              /// objects created for this
+                                              /// Module's functions
   lldb::SymbolVendorUP
       m_symfile_up; ///< A pointer to the symbol vendor for this module.
   std::vector<lldb::SymbolVendorUP>
@@ -1140,30 +1141,30 @@ protected:
   /// indicates what clients wish to resolve and can be used to limit the
   /// scope of what is parsed.
   ///
-  /// @param[in] vm_addr
+  /// \param[in] vm_addr
   ///     The load virtual address to resolve.
   ///
-  /// @param[in] vm_addr_is_file_addr
+  /// \param[in] vm_addr_is_file_addr
   ///     If \b true, \a vm_addr is a file address, else \a vm_addr
   ///     if a load address.
   ///
-  /// @param[in] resolve_scope
+  /// \param[in] resolve_scope
   ///     The scope that should be resolved (see
   ///     SymbolContext::Scope).
   ///
-  /// @param[out] so_addr
+  /// \param[out] so_addr
   ///     The section offset based address that got resolved if
   ///     any bits are returned.
   ///
-  /// @param[out] sc
+  /// \param[out] sc
   //      The symbol context that has objects filled in. Each bit
   ///     in the \a resolve_scope pertains to a member in the \a sc.
   ///
-  /// @return
+  /// \return
   ///     A integer that contains SymbolContext::Scope bits set for
   ///     each item that was successfully resolved.
   ///
-  /// @see SymbolContext::Scope
+  /// \see SymbolContext::Scope
   //------------------------------------------------------------------
   uint32_t ResolveSymbolContextForAddress(lldb::addr_t vm_addr,
                                           bool vm_addr_is_file_addr,
@@ -1188,7 +1189,7 @@ private:
   Module(); // Only used internally by CreateJITModule ()
 
   size_t FindTypes_Impl(
-      const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+      ConstString name, const CompilerDeclContext *parent_decl_ctx,
       bool append, size_t max_matches,
       llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
       TypeMap &types);

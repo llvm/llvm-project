@@ -158,8 +158,11 @@ public:
 
 /// This structure contains most locations needed for by an OMPVarListClause.
 struct OMPVarListLocTy {
+  /// Starting location of the clause (the clause keyword).
   SourceLocation StartLoc;
+  /// Location of '('.
   SourceLocation LParenLoc;
+  /// Ending location of the clause.
   SourceLocation EndLoc;
   OMPVarListLocTy() = default;
   OMPVarListLocTy(SourceLocation StartLoc, SourceLocation LParenLoc,
@@ -237,6 +240,58 @@ public:
     return llvm::makeArrayRef(
         static_cast<const T *>(this)->template getTrailingObjects<Expr *>(),
         NumVars);
+  }
+};
+
+/// This represents 'allocator' clause in the '#pragma omp ...'
+/// directive.
+///
+/// \code
+/// #pragma omp allocate(a) allocator(omp_default_mem_alloc)
+/// \endcode
+/// In this example directive '#pragma omp allocate' has simple 'allocator'
+/// clause with the allocator 'omp_default_mem_alloc'.
+class OMPAllocatorClause : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Expression with the allocator.
+  Stmt *Allocator = nullptr;
+
+  /// Set allocator.
+  void setAllocator(Expr *A) { Allocator = A; }
+
+public:
+  /// Build 'allocator' clause with the given allocator.
+  ///
+  /// \param A Allocator.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPAllocatorClause(Expr *A, SourceLocation StartLoc, SourceLocation LParenLoc,
+                     SourceLocation EndLoc)
+      : OMPClause(OMPC_allocator, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        Allocator(A) {}
+
+  /// Build an empty clause.
+  OMPAllocatorClause()
+      : OMPClause(OMPC_allocator, SourceLocation(), SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns allocator.
+  Expr *getAllocator() const { return cast_or_null<Expr>(Allocator); }
+
+  child_range children() { return child_range(&Allocator, &Allocator + 1); }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_allocator;
   }
 };
 
@@ -3609,9 +3664,13 @@ protected:
 /// This structure contains all sizes needed for by an
 /// OMPMappableExprListClause.
 struct OMPMappableExprListSizeTy {
+  /// Number of expressions listed.
   unsigned NumVars;
+  /// Number of unique base declarations.
   unsigned NumUniqueDeclarations;
+  /// Number of component lists.
   unsigned NumComponentLists;
+  /// Total number of expression components.
   unsigned NumComponents;
   OMPMappableExprListSizeTy() = default;
   OMPMappableExprListSizeTy(unsigned NumVars, unsigned NumUniqueDeclarations,
@@ -4969,6 +5028,9 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
 
   /// Build clause with number of variables \a NumVars.
   ///
+  /// \param MapperQualifierLoc C++ nested name specifier for the associated
+  /// user-defined mapper.
+  /// \param MapperIdInfo The identifier of associated user-defined mapper.
   /// \param Locs Locations needed to build a mappable clause. It includes 1)
   /// StartLoc: starting location of the clause (the clause keyword); 2)
   /// LParenLoc: location of '('; 3) EndLoc: ending location of the clause.
@@ -4977,9 +5039,12 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
   /// NumUniqueDeclarations: number of unique base declarations in this clause;
   /// 3) NumComponentLists: number of component lists in this clause; and 4)
   /// NumComponents: total number of expression components in the clause.
-  explicit OMPToClause(const OMPVarListLocTy &Locs,
+  explicit OMPToClause(NestedNameSpecifierLoc MapperQualifierLoc,
+                       DeclarationNameInfo MapperIdInfo,
+                       const OMPVarListLocTy &Locs,
                        const OMPMappableExprListSizeTy &Sizes)
-      : OMPMappableExprListClause(OMPC_to, Locs, Sizes) {}
+      : OMPMappableExprListClause(OMPC_to, Locs, Sizes, &MapperQualifierLoc,
+                                  &MapperIdInfo) {}
 
   /// Build an empty clause.
   ///
@@ -4994,7 +5059,9 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
   /// Define the sizes of each trailing object array except the last one. This
   /// is required for TrailingObjects to work properly.
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
-    return varlist_size();
+    // There are varlist_size() of expressions, and varlist_size() of
+    // user-defined mappers.
+    return 2 * varlist_size();
   }
   size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
     return getUniqueDeclarationsNum();
@@ -5013,10 +5080,18 @@ public:
   /// \param Vars The original expression used in the clause.
   /// \param Declarations Declarations used in the clause.
   /// \param ComponentLists Component lists used in the clause.
+  /// \param UDMapperRefs References to user-defined mappers associated with
+  /// expressions used in the clause.
+  /// \param UDMQualifierLoc C++ nested name specifier for the associated
+  /// user-defined mapper.
+  /// \param MapperId The identifier of associated user-defined mapper.
   static OMPToClause *Create(const ASTContext &C, const OMPVarListLocTy &Locs,
                              ArrayRef<Expr *> Vars,
                              ArrayRef<ValueDecl *> Declarations,
-                             MappableExprComponentListsRef ComponentLists);
+                             MappableExprComponentListsRef ComponentLists,
+                             ArrayRef<Expr *> UDMapperRefs,
+                             NestedNameSpecifierLoc UDMQualifierLoc,
+                             DeclarationNameInfo MapperId);
 
   /// Creates an empty clause with the place for \a NumVars variables.
   ///
@@ -5059,6 +5134,9 @@ class OMPFromClause final
 
   /// Build clause with number of variables \a NumVars.
   ///
+  /// \param MapperQualifierLoc C++ nested name specifier for the associated
+  /// user-defined mapper.
+  /// \param MapperIdInfo The identifier of associated user-defined mapper.
   /// \param Locs Locations needed to build a mappable clause. It includes 1)
   /// StartLoc: starting location of the clause (the clause keyword); 2)
   /// LParenLoc: location of '('; 3) EndLoc: ending location of the clause.
@@ -5067,9 +5145,12 @@ class OMPFromClause final
   /// NumUniqueDeclarations: number of unique base declarations in this clause;
   /// 3) NumComponentLists: number of component lists in this clause; and 4)
   /// NumComponents: total number of expression components in the clause.
-  explicit OMPFromClause(const OMPVarListLocTy &Locs,
+  explicit OMPFromClause(NestedNameSpecifierLoc MapperQualifierLoc,
+                         DeclarationNameInfo MapperIdInfo,
+                         const OMPVarListLocTy &Locs,
                          const OMPMappableExprListSizeTy &Sizes)
-      : OMPMappableExprListClause(OMPC_from, Locs, Sizes) {}
+      : OMPMappableExprListClause(OMPC_from, Locs, Sizes, &MapperQualifierLoc,
+                                  &MapperIdInfo) {}
 
   /// Build an empty clause.
   ///
@@ -5084,7 +5165,9 @@ class OMPFromClause final
   /// Define the sizes of each trailing object array except the last one. This
   /// is required for TrailingObjects to work properly.
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
-    return varlist_size();
+    // There are varlist_size() of expressions, and varlist_size() of
+    // user-defined mappers.
+    return 2 * varlist_size();
   }
   size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
     return getUniqueDeclarationsNum();
@@ -5103,10 +5186,18 @@ public:
   /// \param Vars The original expression used in the clause.
   /// \param Declarations Declarations used in the clause.
   /// \param ComponentLists Component lists used in the clause.
+  /// \param UDMapperRefs References to user-defined mappers associated with
+  /// expressions used in the clause.
+  /// \param UDMQualifierLoc C++ nested name specifier for the associated
+  /// user-defined mapper.
+  /// \param MapperId The identifier of associated user-defined mapper.
   static OMPFromClause *Create(const ASTContext &C, const OMPVarListLocTy &Locs,
                                ArrayRef<Expr *> Vars,
                                ArrayRef<ValueDecl *> Declarations,
-                               MappableExprComponentListsRef ComponentLists);
+                               MappableExprComponentListsRef ComponentLists,
+                               ArrayRef<Expr *> UDMapperRefs,
+                               NestedNameSpecifierLoc UDMQualifierLoc,
+                               DeclarationNameInfo MapperId);
 
   /// Creates an empty clause with the place for \a NumVars variables.
   ///
@@ -5382,7 +5473,6 @@ public:
 
 #define OPENMP_CLAUSE(Name, Class)                              \
   RetTy Visit ## Class (PTR(Class) S) { DISPATCH(Class); }
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
 
   RetTy Visit(PTR(OMPClause) S) {
@@ -5391,7 +5481,6 @@ public:
     default: llvm_unreachable("Unknown clause kind!");
 #define OPENMP_CLAUSE(Name, Class)                              \
     case OMPC_ ## Name : return Visit ## Class(static_cast<PTR(Class)>(S));
-    OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
     }
   }
@@ -5423,7 +5512,6 @@ public:
       : OS(OS), Policy(Policy) {}
 
 #define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *S);
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
 };
 

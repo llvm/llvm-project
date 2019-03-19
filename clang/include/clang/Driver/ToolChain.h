@@ -104,6 +104,8 @@ public:
     RM_Disabled,
   };
 
+  enum FileType { FT_Object, FT_Static, FT_Shared };
+
 private:
   friend class RegisterEffectiveTriple;
 
@@ -371,11 +373,11 @@ public:
 
   virtual std::string getCompilerRT(const llvm::opt::ArgList &Args,
                                     StringRef Component,
-                                    bool Shared = false) const;
+                                    FileType Type = ToolChain::FT_Static) const;
 
-  const char *getCompilerRTArgString(const llvm::opt::ArgList &Args,
-                                     StringRef Component,
-                                     bool Shared = false) const;
+  const char *
+  getCompilerRTArgString(const llvm::opt::ArgList &Args, StringRef Component,
+                         FileType Type = ToolChain::FT_Static) const;
 
   // Returns <ResourceDir>/lib/<OSName>/<arch>.  This is used by runtimes (such
   // as OpenMP) to find arch-specific libraries.
@@ -453,9 +455,7 @@ public:
   virtual bool SupportsEmbeddedBitcode() const { return false; }
 
   /// getThreadModel() - Which thread model does this target use?
-  virtual std::string getThreadModel(const llvm::opt::ArgList &) const {
-    return "posix";
-  }
+  virtual std::string getThreadModel() const { return "posix"; }
 
   /// isThreadModelSupported() - Does this target support a thread model?
   virtual bool isThreadModelSupported(const StringRef Model) const;
@@ -565,7 +565,9 @@ public:
   virtual SanitizerMask getSupportedSanitizers() const;
 
   /// Return sanitizers which are enabled by default.
-  virtual SanitizerMask getDefaultSanitizers() const { return 0; }
+  virtual SanitizerMask getDefaultSanitizers() const {
+    return SanitizerMask();
+  }
 };
 
 /// Set a ToolChain's effective triple. Reset it when the registration object

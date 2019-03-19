@@ -205,9 +205,14 @@ namespace options {
   /// Statistics output filename.
   static std::string stats_file;
 
-  // Optimization remarks filename and hotness options
+  // Optimization remarks filename, accepted passes and hotness options
   static std::string OptRemarksFilename;
+  static std::string OptRemarksFilter;
   static bool OptRemarksWithHotness = false;
+
+  // Context sensitive PGO options.
+  static std::string cs_profile_path;
+  static bool cs_pgo_gen = false;
 
   static void process_plugin_option(const char *opt_)
   {
@@ -268,7 +273,11 @@ namespace options {
     } else if (opt == "disable-verify") {
       DisableVerify = true;
     } else if (opt.startswith("sample-profile=")) {
-      sample_profile= opt.substr(strlen("sample-profile="));
+      sample_profile = opt.substr(strlen("sample-profile="));
+    } else if (opt == "cs-profile-generate") {
+      cs_pgo_gen = true;
+    } else if (opt.startswith("cs-profile-path=")) {
+      cs_profile_path = opt.substr(strlen("cs-profile-path="));
     } else if (opt == "new-pass-manager") {
       new_pass_manager = true;
     } else if (opt == "debug-pass-manager") {
@@ -277,6 +286,8 @@ namespace options {
       dwo_dir = opt.substr(strlen("dwo_dir="));
     } else if (opt.startswith("opt-remarks-filename=")) {
       OptRemarksFilename = opt.substr(strlen("opt-remarks-filename="));
+    } else if (opt.startswith("opt-remarks-passes=")) {
+      OptRemarksFilter = opt.substr(strlen("opt-remarks-passes="));
     } else if (opt == "opt-remarks-with-hotness") {
       OptRemarksWithHotness = true;
     } else if (opt.startswith("stats-file=")) {
@@ -892,10 +903,15 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   if (!options::sample_profile.empty())
     Conf.SampleProfile = options::sample_profile;
 
+  if (!options::cs_profile_path.empty())
+    Conf.CSIRProfile = options::cs_profile_path;
+  Conf.RunCSIRInstr = options::cs_pgo_gen;
+
   Conf.DwoDir = options::dwo_dir;
 
   // Set up optimization remarks handling.
   Conf.RemarksFilename = options::OptRemarksFilename;
+  Conf.RemarksPasses = options::OptRemarksFilter;
   Conf.RemarksWithHotness = options::OptRemarksWithHotness;
 
   // Use new pass manager if set in driver

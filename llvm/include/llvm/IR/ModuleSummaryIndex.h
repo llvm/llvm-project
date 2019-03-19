@@ -380,25 +380,35 @@ public:
 
 /// Alias summary information.
 class AliasSummary : public GlobalValueSummary {
+  ValueInfo AliaseeValueInfo;
+
+  /// This is the Aliasee in the same module as alias (could get from VI, trades
+  /// memory for time). Note that this pointer may be null (and the value info
+  /// empty) when we have a distributed index where the alias is being imported
+  /// (as a copy of the aliasee), but the aliasee is not.
   GlobalValueSummary *AliaseeSummary;
-  // AliaseeGUID is only set and accessed when we are building a combined index
-  // via the BitcodeReader.
-  GlobalValue::GUID AliaseeGUID;
 
 public:
   AliasSummary(GVFlags Flags)
       : GlobalValueSummary(AliasKind, Flags, ArrayRef<ValueInfo>{}),
-        AliaseeSummary(nullptr), AliaseeGUID(0) {}
+        AliaseeSummary(nullptr) {}
 
   /// Check if this is an alias summary.
   static bool classof(const GlobalValueSummary *GVS) {
     return GVS->getSummaryKind() == AliasKind;
   }
 
-  void setAliasee(GlobalValueSummary *Aliasee) { AliaseeSummary = Aliasee; }
-  void setAliaseeGUID(GlobalValue::GUID GUID) { AliaseeGUID = GUID; }
+  void setAliasee(ValueInfo &AliaseeVI, GlobalValueSummary *Aliasee) {
+    AliaseeValueInfo = AliaseeVI;
+    AliaseeSummary = Aliasee;
+  }
 
-  bool hasAliasee() const { return !!AliaseeSummary; }
+  bool hasAliasee() const {
+    assert(!!AliaseeSummary == (AliaseeValueInfo &&
+                                !AliaseeValueInfo.getSummaryList().empty()) &&
+           "Expect to have both aliasee summary and summary list or neither");
+    return !!AliaseeSummary;
+  }
 
   const GlobalValueSummary &getAliasee() const {
     assert(AliaseeSummary && "Unexpected missing aliasee summary");
@@ -409,10 +419,13 @@ public:
     return const_cast<GlobalValueSummary &>(
                          static_cast<const AliasSummary *>(this)->getAliasee());
   }
-  bool hasAliaseeGUID() const { return AliaseeGUID != 0; }
-  const GlobalValue::GUID &getAliaseeGUID() const {
-    assert(AliaseeGUID && "Unexpected missing aliasee GUID");
-    return AliaseeGUID;
+  ValueInfo getAliaseeVI() const {
+    assert(AliaseeValueInfo && "Unexpected missing aliasee");
+    return AliaseeValueInfo;
+  }
+  GlobalValue::GUID getAliaseeGUID() const {
+    assert(AliaseeValueInfo && "Unexpected missing aliasee");
+    return AliaseeValueInfo.getGUID();
   }
 };
 
@@ -1043,22 +1056,28 @@ public:
       OidGuidMap[OrigGUID] = ValueGUID;
   }
 
+  /// Find the summary for ValueInfo \p VI in module \p ModuleId, or nullptr if
+  /// not found.
+  GlobalValueSummary *findSummaryInModule(ValueInfo VI, StringRef ModuleId) const {
+    auto SummaryList = VI.getSummaryList();
+    auto Summary =
+        llvm::find_if(SummaryList,
+                      [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                        return Summary->modulePath() == ModuleId;
+                      });
+    if (Summary == SummaryList.end())
+      return nullptr;
+    return Summary->get();
+  }
+
   /// Find the summary for global \p GUID in module \p ModuleId, or nullptr if
   /// not found.
   GlobalValueSummary *findSummaryInModule(GlobalValue::GUID ValueGUID,
                                           StringRef ModuleId) const {
     auto CalleeInfo = getValueInfo(ValueGUID);
-    if (!CalleeInfo) {
+    if (!CalleeInfo)
       return nullptr; // This function does not have a summary
-    }
-    auto Summary =
-        llvm::find_if(CalleeInfo.getSummaryList(),
-                      [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
-                        return Summary->modulePath() == ModuleId;
-                      });
-    if (Summary == CalleeInfo.getSummaryList().end())
-      return nullptr;
-    return Summary->get();
+    return findSummaryInModule(CalleeInfo, ModuleId);
   }
 
   /// Returns the first GlobalValueSummary for \p GV, asserting that there
@@ -1169,8 +1188,16 @@ public:
 
   /// Collect for each module the list of Summaries it defines (GUID ->
   /// Summary).
-  void collectDefinedGVSummariesPerModule(
-      StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries) const;
+  template <class Map>
+  void
+  collectDefinedGVSummariesPerModule(Map &ModuleToDefinedGVSummaries) const {
+    for (auto &GlobalList : *this) {
+      auto GUID = GlobalList.first;
+      for (auto &Summary : GlobalList.second.SummaryList) {
+        ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
+      }
+    }
+  }
 
   /// Print to an output stream.
   void print(raw_ostream &OS, bool IsForDebug = false) const;

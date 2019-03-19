@@ -44,7 +44,7 @@ entry:
 ; CHECK: sub sp, sp, #96
 ; CHECK: stp x29, x30, [sp, #16]
 ; CHECK: add x29, sp, #16
-; CHECK: str x1, [x29, #24]
+; CHECK: stp x1, x2, [x29, #24]
 ; CHECK: add x1, x29, #8
 ; CHECK: ldp x29, x30, [sp, #16]
 ; CHECK: add sp, sp, #96

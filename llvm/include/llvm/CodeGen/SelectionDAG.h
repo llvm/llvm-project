@@ -572,6 +572,9 @@ public:
                       bool isTarget = false, bool isOpaque = false);
   SDValue getIntPtrConstant(uint64_t Val, const SDLoc &DL,
                             bool isTarget = false);
+  SDValue getShiftAmountConstant(uint64_t Val, EVT VT, const SDLoc &DL,
+                                 bool LegalTypes = true);
+
   SDValue getTargetConstant(uint64_t Val, const SDLoc &DL, EVT VT,
                             bool isOpaque = false) {
     return getConstant(Val, DL, VT, true, isOpaque);
@@ -1016,6 +1019,12 @@ public:
                               ArrayRef<SDValue> Ops, EVT MemVT,
                               MachineMemOperand *MMO);
 
+  /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
+  /// (`IsStart==false`) the lifetime of the portion of `FrameIndex` between
+  /// offsets `Offset` and `Offset + Size`.
+  SDValue getLifetimeNode(bool IsStart, const SDLoc &dl, SDValue Chain,
+                          int FrameIndex, int64_t Size, int64_t Offset = -1);
+
   /// Create a MERGE_VALUES node from the given operands.
   SDValue getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl);
 
@@ -1398,6 +1407,11 @@ public:
                                        ArrayRef<SDValue> Ops,
                                        const SDNodeFlags Flags = SDNodeFlags());
 
+  /// Fold floating-point operations with 2 operands when both operands are
+  /// constants and/or undefined.
+  SDValue foldConstantFPMath(unsigned Opcode, const SDLoc &DL, EVT VT,
+                             SDValue N1, SDValue N2);
+
   /// Constant fold a setcc to true or false.
   SDValue FoldSetCC(EVT VT, SDValue N1, SDValue N2, ISD::CondCode Cond,
                     const SDLoc &dl);
@@ -1573,6 +1587,9 @@ public:
   {
     return SplitVector(N->getOperand(OpNo), SDLoc(N));
   }
+
+  /// Widen the vector up to the next power of two using INSERT_SUBVECTOR.
+  SDValue WidenVector(const SDValue &N, const SDLoc &DL);
 
   /// Append the extracted elements from Start to Count out of the vector Op
   /// in Args. If Count is 0, all of the elements will be extracted.

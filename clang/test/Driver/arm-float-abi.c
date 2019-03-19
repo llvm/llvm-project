@@ -4,3 +4,13 @@
 
 // ARMV7-ERROR: unsupported option '-mfloat-abi=hard' for target 'thumbv7'
 // NOERROR-NOT: unsupported option
+
+// RUN: %clang -target armv7-linux-androideabi21 %s -### -c 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM7-ANDROID %s
+// CHECK-ARM7-ANDROID-NOT: "-target-feature" "+soft-float"
+// CHECK-ARM7-ANDROID: "-target-feature" "+soft-float-abi"
+
+// RUN: %clang -target armv8-linux-androideabi21 %s -### -c 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM8-ANDROID %s
+// CHECK-ARM8-ANDROID-NOT: "-target-feature" "+soft-float"
+// CHECK-ARM8-ANDROID: "-target-feature" "+soft-float-abi"

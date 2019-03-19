@@ -81,6 +81,7 @@ class ArrayTypesTestCase(TestBase):
             VARIABLES_DISPLAYED_CORRECTLY,
             startstr='(long [6])')
 
+    @expectedFailureNetBSD
     @add_test_categories(['pyapi'])
     def test_and_python_api(self):
         """Use Python APIs to inspect variables with array types."""

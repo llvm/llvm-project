@@ -34,31 +34,31 @@ class Stream;
 /// same start offset, format and size, yet differing \a
 /// item_bit_size and \a item_bit_offset values.
 ///
-/// @param[in] s
+/// \param[in] s
 ///     The stream to dump the output to. This value can not be nullptr.
 ///
-/// @param[in] offset
+/// \param[in] offset
 ///     The offset into the data at which to start dumping.
 ///
-/// @param[in] item_format
+/// \param[in] item_format
 ///     The format to use when dumping each item.
 ///
-/// @param[in] item_byte_size
+/// \param[in] item_byte_size
 ///     The byte size of each item.
 ///
-/// @param[in] item_count
+/// \param[in] item_count
 ///     The number of items to dump.
 ///
-/// @param[in] num_per_line
+/// \param[in] num_per_line
 ///     The number of items to display on each line.
 ///
-/// @param[in] base_addr
+/// \param[in] base_addr
 ///     The base address that gets added to the offset displayed on
 ///     each line if the value is valid. Is \a base_addr is
 ///     LLDB_INVALID_ADDRESS then no address values will be prepended
 ///     to any lines.
 ///
-/// @param[in] item_bit_size
+/// \param[in] item_bit_size
 ///     If the value to display is a bitfield, this value should
 ///     be the number of bits that the bitfield item has within the
 ///     item's byte size value. This function will need to be called
@@ -67,7 +67,7 @@ class Stream;
 ///     exist within the same integer value. If the items being
 ///     displayed are not bitfields, this value should be zero.
 ///
-/// @param[in] item_bit_offset
+/// \param[in] item_bit_offset
 ///     If the value to display is a bitfield, this value should
 ///     be the offset in bits, or shift right amount, that the
 ///     bitfield item occupies within the item's byte size value.
@@ -77,7 +77,7 @@ class Stream;
 ///     same integer value. If the items being displayed are not
 ///     bitfields, this value should be zero.
 ///
-/// @return
+/// \return
 ///     The offset at which dumping ended.
 //------------------------------------------------------------------
 lldb::offset_t

@@ -32,17 +32,19 @@ RISCVRegisterInfo::RISCVRegisterInfo(unsigned HwMode)
 
 const MCPhysReg *
 RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
+  auto &Subtarget = MF->getSubtarget<RISCVSubtarget>();
   if (MF->getFunction().hasFnAttribute("interrupt")) {
-    if (MF->getSubtarget<RISCVSubtarget>().hasStdExtD())
+    if (Subtarget.hasStdExtD())
       return CSR_XLEN_F64_Interrupt_SaveList;
-    if (MF->getSubtarget<RISCVSubtarget>().hasStdExtF())
+    if (Subtarget.hasStdExtF())
       return CSR_XLEN_F32_Interrupt_SaveList;
     return CSR_Interrupt_SaveList;
   }
-  return CSR_SaveList;
+  return CSR_ILP32_LP64_SaveList;
 }
 
 BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
+  const TargetFrameLowering *TFI = getFrameLowering(MF);
   BitVector Reserved(getNumRegs());
 
   // Use markSuperRegs to ensure any register aliases are also reserved
@@ -51,7 +53,8 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, RISCV::X2); // sp
   markSuperRegs(Reserved, RISCV::X3); // gp
   markSuperRegs(Reserved, RISCV::X4); // tp
-  markSuperRegs(Reserved, RISCV::X8); // fp
+  if (TFI->hasFP(MF))
+    markSuperRegs(Reserved, RISCV::X8); // fp
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
@@ -116,12 +119,13 @@ unsigned RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 const uint32_t *
 RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
                                         CallingConv::ID /*CC*/) const {
+  auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   if (MF.getFunction().hasFnAttribute("interrupt")) {
-    if (MF.getSubtarget<RISCVSubtarget>().hasStdExtD())
+    if (Subtarget.hasStdExtD())
       return CSR_XLEN_F64_Interrupt_RegMask;
-    if (MF.getSubtarget<RISCVSubtarget>().hasStdExtF())
+    if (Subtarget.hasStdExtF())
       return CSR_XLEN_F32_Interrupt_RegMask;
     return CSR_Interrupt_RegMask;
   }
-  return CSR_RegMask;
+  return CSR_ILP32_LP64_RegMask;
 }

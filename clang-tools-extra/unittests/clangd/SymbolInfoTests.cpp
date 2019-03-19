@@ -167,7 +167,8 @@ TEST(SymbolInfoTests, All) {
         )cpp",
               {CreateExpectedSymbolDetails("foo", "", "c:@F@foo#"),
                CreateExpectedSymbolDetails("foo", "", "c:@F@foo#b#"),
-               CreateExpectedSymbolDetails("foo", "", "c:@F@foo#I#")}},
+               CreateExpectedSymbolDetails("foo", "", "c:@F@foo#I#"),
+               CreateExpectedSymbolDetails("foo", "bar::", "c:@N@bar@UD@foo")}},
           {
               R"cpp( // Multiple symbols returned - implicit conversion
           struct foo {};
@@ -180,12 +181,8 @@ TEST(SymbolInfoTests, All) {
             func_baz1(f^f);
           }
         )cpp",
-              {
-                  CreateExpectedSymbolDetails(
-                      "ff", "func_baz2", "c:TestTU.cpp@218@F@func_baz2#@ff"),
-                  CreateExpectedSymbolDetails(
-                      "bar", "bar::", "c:@S@bar@F@bar#&1$@S@foo#"),
-              }},
+              {CreateExpectedSymbolDetails(
+                  "ff", "func_baz2", "c:TestTU.cpp@218@F@func_baz2#@ff")}},
           {
               R"cpp( // Type reference - declaration
           struct foo;

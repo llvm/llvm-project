@@ -32,7 +32,7 @@ public:
   ~ValueObjectCast() override;
 
   static lldb::ValueObjectSP Create(ValueObject &parent,
-                                    const ConstString &name,
+                                    ConstString name,
                                     const CompilerType &cast_type);
 
   uint64_t GetByteSize() override;
@@ -52,7 +52,7 @@ public:
   }
 
 protected:
-  ValueObjectCast(ValueObject &parent, const ConstString &name,
+  ValueObjectCast(ValueObject &parent, ConstString name,
                   const CompilerType &cast_type);
 
   bool UpdateValue() override;

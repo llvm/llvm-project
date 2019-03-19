@@ -16,6 +16,7 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Threads.h"
 #include "lld/Common/Timer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1096,8 +1097,7 @@ void Writer::mergeSections() {
 // Visits all sections to initialize their relocation targets.
 void Writer::readRelocTargets() {
   for (OutputSection *Sec : OutputSections)
-    for_each(parallel::par, Sec->Chunks.begin(), Sec->Chunks.end(),
-             [&](Chunk *C) { C->readRelocTargets(); });
+    parallelForEach(Sec->Chunks, [&](Chunk *C) { C->readRelocTargets(); });
 }
 
 // Visits all sections to assign incremental, non-overlapping RVAs and
@@ -1117,7 +1117,18 @@ void Writer::assignAddresses() {
       addBaserels();
     uint64_t RawSize = 0, VirtualSize = 0;
     Sec->Header.VirtualAddress = RVA;
+
+    // If /FUNCTIONPADMIN is used, functions are padded in order to create a
+    // hotpatchable image.
+    const bool IsCodeSection =
+        (Sec->Header.Characteristics & IMAGE_SCN_CNT_CODE) &&
+        (Sec->Header.Characteristics & IMAGE_SCN_MEM_READ) &&
+        (Sec->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE);
+    uint32_t Padding = IsCodeSection ? Config->FunctionPadMin : 0;
+
     for (Chunk *C : Sec->Chunks) {
+      if (Padding && C->isHotPatchable())
+        VirtualSize += Padding;
       VirtualSize = alignTo(VirtualSize, C->Alignment);
       C->setRVA(RVA + VirtualSize);
       C->OutputSectionOff = VirtualSize;
@@ -1379,19 +1390,47 @@ static void addSymbolToRVASet(SymbolRVASet &RVASet, Defined *S) {
 // symbol in an executable section.
 static void maybeAddAddressTakenFunction(SymbolRVASet &AddressTakenSyms,
                                          Symbol *S) {
-  auto *D = dyn_cast_or_null<DefinedCOFF>(S);
-
-  // Ignore undefined symbols and references to non-functions (e.g. globals and
-  // labels).
-  if (!D ||
-      D->getCOFFSymbol().getComplexType() != COFF::IMAGE_SYM_DTYPE_FUNCTION)
+  if (!S)
     return;
 
-  // Mark the symbol as address taken if it's in an executable section.
-  Chunk *RefChunk = D->getChunk();
-  OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
-  if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
-    addSymbolToRVASet(AddressTakenSyms, D);
+  switch (S->kind()) {
+  case Symbol::DefinedLocalImportKind:
+  case Symbol::DefinedImportDataKind:
+    // Defines an __imp_ pointer, so it is data, so it is ignored.
+    break;
+  case Symbol::DefinedCommonKind:
+    // Common is always data, so it is ignored.
+    break;
+  case Symbol::DefinedAbsoluteKind:
+  case Symbol::DefinedSyntheticKind:
+    // Absolute is never code, synthetic generally isn't and usually isn't
+    // determinable.
+    break;
+  case Symbol::LazyKind:
+  case Symbol::UndefinedKind:
+    // Undefined symbols resolve to zero, so they don't have an RVA. Lazy
+    // symbols shouldn't have relocations.
+    break;
+
+  case Symbol::DefinedImportThunkKind:
+    // Thunks are always code, include them.
+    addSymbolToRVASet(AddressTakenSyms, cast<Defined>(S));
+    break;
+
+  case Symbol::DefinedRegularKind: {
+    // This is a regular, defined, symbol from a COFF file. Mark the symbol as
+    // address taken if the symbol type is function and it's in an executable
+    // section.
+    auto *D = cast<DefinedRegular>(S);
+    if (D->getCOFFSymbol().getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION) {
+      Chunk *RefChunk = D->getChunk();
+      OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
+      if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
+        addSymbolToRVASet(AddressTakenSyms, D);
+    }
+    break;
+  }
+  }
 }
 
 // Visit all relocations from all section contributions of this object file and
@@ -1602,8 +1641,7 @@ void Writer::writeSections() {
     // ADD instructions).
     if (Sec->Header.Characteristics & IMAGE_SCN_CNT_CODE)
       memset(SecBuf, 0xCC, Sec->getRawSize());
-    for_each(parallel::par, Sec->Chunks.begin(), Sec->Chunks.end(),
-             [&](Chunk *C) { C->writeTo(SecBuf); });
+    parallelForEach(Sec->Chunks, [&](Chunk *C) { C->writeTo(SecBuf); });
   }
 }
 
@@ -1671,14 +1709,16 @@ void Writer::sortExceptionTable() {
   uint8_t *End = BufAddr(LastPdata) + LastPdata->getSize();
   if (Config->Machine == AMD64) {
     struct Entry { ulittle32_t Begin, End, Unwind; };
-    sort(parallel::par, (Entry *)Begin, (Entry *)End,
-         [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
+    parallelSort(
+        MutableArrayRef<Entry>((Entry *)Begin, (Entry *)End),
+        [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
     return;
   }
   if (Config->Machine == ARMNT || Config->Machine == ARM64) {
     struct Entry { ulittle32_t Begin, Unwind; };
-    sort(parallel::par, (Entry *)Begin, (Entry *)End,
-         [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
+    parallelSort(
+        MutableArrayRef<Entry>((Entry *)Begin, (Entry *)End),
+        [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
     return;
   }
   errs() << "warning: don't know how to handle .pdata.\n";

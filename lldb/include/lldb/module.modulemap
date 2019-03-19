@@ -2,6 +2,8 @@
 module lldb_API {
   requires cplusplus
 
+  textual header "Utility/ReproducerInstrumentation.h"
+
   umbrella "API"
   module * { export * }
 }
@@ -39,7 +41,6 @@ module lldb_Host {
   module PipeBase { header "Host/PipeBase.h" export * }
   module Pipe { header "Host/Pipe.h" export * }
   module PosixApi { header "Host/PosixApi.h" export * }
-  module ProcessInfo { header "Host/ProcessInfo.h" export * }
   module ProcessLauncher { header "Host/ProcessLauncher.h" export * }
   module ProcessLaunchInfo { header "Host/ProcessLaunchInfo.h" export * }
   module ProcessRunLock { header "Host/ProcessRunLock.h" export * }
@@ -48,7 +49,6 @@ module lldb_Host {
   module SocketAddress { header "Host/SocketAddress.h" export * }
   module Socket { header "Host/Socket.h" export * }
   module StringConvert { textual header "Host/StringConvert.h" export * }
-  module Symbols { header "Host/Symbols.h" export * }
   module TaskPool { header "Host/TaskPool.h" export * }
   module Terminal { header "Host/Terminal.h" export * }
   module ThreadLauncher { header "Host/ThreadLauncher.h" export * }
@@ -138,5 +138,4 @@ module lldb_Utility {
   module lldb_public { header "lldb-public.h" export * }
   module lldb_types { header "lldb-types.h" export * }
   module lldb_versioning { header "lldb-versioning.h" export * }
-
 }

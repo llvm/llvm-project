@@ -30,6 +30,8 @@ public:
     bool
     IsValid();
 
+    explicit operator bool() const;
+
     SBError
     GetError();
 

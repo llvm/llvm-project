@@ -129,11 +129,7 @@ public:
   //===--------------------------------------------------------------------===//
   // Misc. lexing methods.
 
-  /// After the preprocessor has parsed a \#include, lex and
-  /// (potentially) macro expand the filename.
-  ///
-  /// If the sequence parsed is not lexically legal, emit a diagnostic and
-  /// return a result EOD token.
+  /// Lex a token, producing a header-name token if possible.
   void LexIncludeFilename(Token &FilenameTok);
 
   /// Inform the lexer whether or not we are currently lexing a

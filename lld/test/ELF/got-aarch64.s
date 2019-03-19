@@ -10,7 +10,7 @@
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x30090
+// CHECK-NEXT: Address: 0x20090
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 8
 // CHECK-NEXT: Link: 0
@@ -19,7 +19,7 @@
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:     0x30090 R_AARCH64_GLOB_DAT dat 0x0
+// CHECK-NEXT:     0x20090 R_AARCH64_GLOB_DAT dat 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -27,7 +27,7 @@
 // 0x20098 & 0xff8 = 0x98 = 152
 
 // DISASM: main:
-// DISASM-NEXT:   10000:  00 01 00 90   adrp  x0, #131072
+// DISASM-NEXT:   10000:  80 00 00 90   adrp  x0, #65536
 // DISASM-NEXT:   10004: 00 48 40 f9   ldr x0, [x0, #144]
 
 .global main,foo,dat

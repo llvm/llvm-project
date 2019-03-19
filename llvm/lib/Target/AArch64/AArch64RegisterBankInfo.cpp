@@ -689,7 +689,27 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     break;
   }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+    // Destination and source need to be FPRs.
+    OpRegBankIdx[0] = PMI_FirstFPR;
+    OpRegBankIdx[1] = PMI_FirstFPR;
 
+    // Index needs to be a GPR.
+    OpRegBankIdx[2] = PMI_FirstGPR;
+    break;
+  case TargetOpcode::G_INSERT_VECTOR_ELT:
+    OpRegBankIdx[0] = PMI_FirstFPR;
+    OpRegBankIdx[1] = PMI_FirstFPR;
+
+    // The element may be either a GPR or FPR. Preserve that behaviour.
+    if (getRegBank(MI.getOperand(2).getReg(), MRI, TRI) == &AArch64::FPRRegBank)
+      OpRegBankIdx[2] = PMI_FirstFPR;
+    else
+      OpRegBankIdx[2] = PMI_FirstGPR;
+
+    // Index needs to be a GPR.
+    OpRegBankIdx[3] = PMI_FirstGPR;
+    break;
   case TargetOpcode::G_BUILD_VECTOR:
     // If the first source operand belongs to a FPR register bank, then make
     // sure that we preserve that.
@@ -700,10 +720,13 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
 
     // Get the instruction that defined the source operand reg, and check if
-    // it's a floating point operation.
+    // it's a floating point operation. Or, if it's a type like s16 which
+    // doesn't have a exact size gpr register class.
     MachineInstr *DefMI = MRI.getVRegDef(VReg);
     unsigned DefOpc = DefMI->getOpcode();
-    if (isPreISelGenericFloatingPointOpcode(DefOpc)) {
+    const LLT SrcTy = MRI.getType(VReg);
+    if (isPreISelGenericFloatingPointOpcode(DefOpc) ||
+        SrcTy.getSizeInBits() < 32) {
       // Have a floating point op.
       // Make sure every operand gets mapped to a FPR register class.
       unsigned NumOperands = MI.getNumOperands();

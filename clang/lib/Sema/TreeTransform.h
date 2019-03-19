@@ -691,7 +691,6 @@ public:
 #define OPENMP_CLAUSE(Name, Class)                        \
   LLVM_ATTRIBUTE_NOINLINE \
   OMPClause *Transform ## Class(Class *S);
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
 
   /// Build a new qualified type given its unqualified type and type location.
@@ -1555,6 +1554,16 @@ public:
     return getSema().ActOnOpenMPSimdlenClause(Len, StartLoc, LParenLoc, EndLoc);
   }
 
+  /// Build a new OpenMP 'allocator' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPAllocatorClause(Expr *A, SourceLocation StartLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPAllocatorClause(A, StartLoc, LParenLoc, EndLoc);
+  }
+
   /// Build a new OpenMP 'collapse' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -1902,8 +1911,12 @@ public:
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
   OMPClause *RebuildOMPToClause(ArrayRef<Expr *> VarList,
-                                const OMPVarListLocTy &Locs) {
-    return getSema().ActOnOpenMPToClause(VarList, Locs);
+                                CXXScopeSpec &MapperIdScopeSpec,
+                                DeclarationNameInfo &MapperId,
+                                const OMPVarListLocTy &Locs,
+                                ArrayRef<Expr *> UnresolvedMappers) {
+    return getSema().ActOnOpenMPToClause(VarList, MapperIdScopeSpec, MapperId,
+                                         Locs, UnresolvedMappers);
   }
 
   /// Build a new OpenMP 'from' clause.
@@ -1911,8 +1924,12 @@ public:
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
   OMPClause *RebuildOMPFromClause(ArrayRef<Expr *> VarList,
-                                  const OMPVarListLocTy &Locs) {
-    return getSema().ActOnOpenMPFromClause(VarList, Locs);
+                                  CXXScopeSpec &MapperIdScopeSpec,
+                                  DeclarationNameInfo &MapperId,
+                                  const OMPVarListLocTy &Locs,
+                                  ArrayRef<Expr *> UnresolvedMappers) {
+    return getSema().ActOnOpenMPFromClause(VarList, MapperIdScopeSpec, MapperId,
+                                           Locs, UnresolvedMappers);
   }
 
   /// Build a new OpenMP 'use_device_ptr' clause.
@@ -3315,7 +3332,6 @@ OMPClause *TreeTransform<Derived>::TransformOMPClause(OMPClause *S) {
 #define OPENMP_CLAUSE(Name, Class)                                             \
   case OMPC_ ## Name :                                                         \
     return getDerived().Transform ## Class(cast<Class>(S));
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   }
 
@@ -8339,6 +8355,16 @@ TreeTransform<Derived>::TransformOMPSafelenClause(OMPSafelenClause *C) {
 
 template <typename Derived>
 OMPClause *
+TreeTransform<Derived>::TransformOMPAllocatorClause(OMPAllocatorClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getAllocator());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPAllocatorClause(
+      E.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
 TreeTransform<Derived>::TransformOMPSimdlenClause(OMPSimdlenClause *C) {
   ExprResult E = getDerived().TransformExpr(C->getSimdlen());
   if (E.isInvalid())
@@ -8811,34 +8837,37 @@ TreeTransform<Derived>::TransformOMPDeviceClause(OMPDeviceClause *C) {
                                              C->getLParenLoc(), C->getEndLoc());
 }
 
-template <typename Derived>
-OMPClause *TreeTransform<Derived>::TransformOMPMapClause(OMPMapClause *C) {
-  llvm::SmallVector<Expr *, 16> Vars;
+template <typename Derived, class T>
+bool transformOMPMappableExprListClause(
+    TreeTransform<Derived> &TT, OMPMappableExprListClause<T> *C,
+    llvm::SmallVectorImpl<Expr *> &Vars, CXXScopeSpec &MapperIdScopeSpec,
+    DeclarationNameInfo &MapperIdInfo,
+    llvm::SmallVectorImpl<Expr *> &UnresolvedMappers) {
+  // Transform expressions in the list.
   Vars.reserve(C->varlist_size());
   for (auto *VE : C->varlists()) {
-    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    ExprResult EVar = TT.getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
-      return nullptr;
+      return true;
     Vars.push_back(EVar.get());
   }
+  // Transform mapper scope specifier and identifier.
   NestedNameSpecifierLoc QualifierLoc;
   if (C->getMapperQualifierLoc()) {
-    QualifierLoc = getDerived().TransformNestedNameSpecifierLoc(
+    QualifierLoc = TT.getDerived().TransformNestedNameSpecifierLoc(
         C->getMapperQualifierLoc());
     if (!QualifierLoc)
-      return nullptr;
+      return true;
   }
-  CXXScopeSpec MapperIdScopeSpec;
   MapperIdScopeSpec.Adopt(QualifierLoc);
-  DeclarationNameInfo MapperIdInfo = C->getMapperIdInfo();
+  MapperIdInfo = C->getMapperIdInfo();
   if (MapperIdInfo.getName()) {
-    MapperIdInfo = getDerived().TransformDeclarationNameInfo(MapperIdInfo);
+    MapperIdInfo = TT.getDerived().TransformDeclarationNameInfo(MapperIdInfo);
     if (!MapperIdInfo.getName())
-      return nullptr;
+      return true;
   }
   // Build a list of all candidate OMPDeclareMapperDecls, which is provided by
   // the previous user-defined mapper lookup in dependent environment.
-  llvm::SmallVector<Expr *, 16> UnresolvedMappers;
   for (auto *E : C->mapperlists()) {
     // Transform all the decls.
     if (E) {
@@ -8846,18 +8875,31 @@ OMPClause *TreeTransform<Derived>::TransformOMPMapClause(OMPMapClause *C) {
       UnresolvedSet<8> Decls;
       for (auto *D : ULE->decls()) {
         NamedDecl *InstD =
-            cast<NamedDecl>(getDerived().TransformDecl(E->getExprLoc(), D));
+            cast<NamedDecl>(TT.getDerived().TransformDecl(E->getExprLoc(), D));
         Decls.addDecl(InstD, InstD->getAccess());
       }
       UnresolvedMappers.push_back(UnresolvedLookupExpr::Create(
-          SemaRef.Context, /*NamingClass=*/nullptr,
-          MapperIdScopeSpec.getWithLocInContext(SemaRef.Context), MapperIdInfo,
-          /*ADL=*/false, ULE->isOverloaded(), Decls.begin(), Decls.end()));
+          TT.getSema().Context, /*NamingClass=*/nullptr,
+          MapperIdScopeSpec.getWithLocInContext(TT.getSema().Context),
+          MapperIdInfo, /*ADL=*/true, ULE->isOverloaded(), Decls.begin(),
+          Decls.end()));
     } else {
       UnresolvedMappers.push_back(nullptr);
     }
   }
+  return false;
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPMapClause(OMPMapClause *C) {
   OMPVarListLocTy Locs(C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+  llvm::SmallVector<Expr *, 16> Vars;
+  CXXScopeSpec MapperIdScopeSpec;
+  DeclarationNameInfo MapperIdInfo;
+  llvm::SmallVector<Expr *, 16> UnresolvedMappers;
+  if (transformOMPMappableExprListClause<Derived, OMPMapClause>(
+          *this, C, Vars, MapperIdScopeSpec, MapperIdInfo, UnresolvedMappers))
+    return nullptr;
   return getDerived().RebuildOMPMapClause(
       C->getMapTypeModifiers(), C->getMapTypeModifiersLoc(), MapperIdScopeSpec,
       MapperIdInfo, C->getMapType(), C->isImplicitMapType(), C->getMapLoc(),
@@ -8942,30 +8984,30 @@ TreeTransform<Derived>::TransformOMPDefaultmapClause(OMPDefaultmapClause *C) {
 
 template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPToClause(OMPToClause *C) {
-  llvm::SmallVector<Expr *, 16> Vars;
-  Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
-    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
-    if (EVar.isInvalid())
-      return 0;
-    Vars.push_back(EVar.get());
-  }
   OMPVarListLocTy Locs(C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
-  return getDerived().RebuildOMPToClause(Vars, Locs);
+  llvm::SmallVector<Expr *, 16> Vars;
+  CXXScopeSpec MapperIdScopeSpec;
+  DeclarationNameInfo MapperIdInfo;
+  llvm::SmallVector<Expr *, 16> UnresolvedMappers;
+  if (transformOMPMappableExprListClause<Derived, OMPToClause>(
+          *this, C, Vars, MapperIdScopeSpec, MapperIdInfo, UnresolvedMappers))
+    return nullptr;
+  return getDerived().RebuildOMPToClause(Vars, MapperIdScopeSpec, MapperIdInfo,
+                                         Locs, UnresolvedMappers);
 }
 
 template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPFromClause(OMPFromClause *C) {
-  llvm::SmallVector<Expr *, 16> Vars;
-  Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
-    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
-    if (EVar.isInvalid())
-      return 0;
-    Vars.push_back(EVar.get());
-  }
   OMPVarListLocTy Locs(C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
-  return getDerived().RebuildOMPFromClause(Vars, Locs);
+  llvm::SmallVector<Expr *, 16> Vars;
+  CXXScopeSpec MapperIdScopeSpec;
+  DeclarationNameInfo MapperIdInfo;
+  llvm::SmallVector<Expr *, 16> UnresolvedMappers;
+  if (transformOMPMappableExprListClause<Derived, OMPFromClause>(
+          *this, C, Vars, MapperIdScopeSpec, MapperIdInfo, UnresolvedMappers))
+    return nullptr;
+  return getDerived().RebuildOMPFromClause(
+      Vars, MapperIdScopeSpec, MapperIdInfo, Locs, UnresolvedMappers);
 }
 
 template <typename Derived>

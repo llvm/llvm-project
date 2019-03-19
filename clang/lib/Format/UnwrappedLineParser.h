@@ -76,8 +76,7 @@ class UnwrappedLineParser {
 public:
   UnwrappedLineParser(const FormatStyle &Style,
                       const AdditionalKeywords &Keywords,
-                      unsigned FirstStartColumn,
-                      ArrayRef<FormatToken *> Tokens,
+                      unsigned FirstStartColumn, ArrayRef<FormatToken *> Tokens,
                       UnwrappedLineConsumer &Callback);
 
   void parse();

@@ -9,6 +9,7 @@
 def GPRIdxModeMatchClass : AsmOperandClass {
   let Name = "GPRIdxMode";
   let PredicateMethod = "isGPRIdxMode";
+  let ParserMethod = "parseGPRIdxMode";
   let RenderMethod = "addImmOperands";
 }
 
@@ -76,10 +77,13 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps> :
   let Inst{31-23} = 0x17d; //encoding;
 }
 
-class SOP1_32 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs SReg_32:$sdst), (ins SSrc_b32:$src0),
-  "$sdst, $src0", pattern
->;
+class SOP1_32 <string opName, list<dag> pattern=[], bit tied_in = 0> : SOP1_Pseudo <
+  opName, (outs SReg_32:$sdst),
+  !if(tied_in, (ins SSrc_b32:$src0, SReg_32:$sdst_in),
+               (ins SSrc_b32:$src0)),
+  "$sdst, $src0", pattern> {
+  let Constraints = !if(tied_in, "$sdst = $sdst_in", "");
+}
 
 // 32-bit input, no output.
 class SOP1_0_32 <string opName, list<dag> pattern = []> : SOP1_Pseudo <
@@ -106,10 +110,13 @@ class SOP1_32_64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
 >;
 
 // 32-bit input, 64-bit output.
-class SOP1_64_32 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs SReg_64:$sdst), (ins SSrc_b32:$src0),
-  "$sdst, $src0", pattern
->;
+class SOP1_64_32 <string opName, list<dag> pattern=[], bit tied_in = 0> : SOP1_Pseudo <
+  opName, (outs SReg_64:$sdst),
+  !if(tied_in, (ins SSrc_b32:$src0, SReg_64:$sdst_in),
+               (ins SSrc_b32:$src0)),
+  "$sdst, $src0", pattern> {
+  let Constraints = !if(tied_in, "$sdst = $sdst_in", "");
+}
 
 // no input, 64-bit output.
 class SOP1_64_0 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
@@ -189,10 +196,10 @@ def S_SEXT_I32_I16 : SOP1_32 <"s_sext_i32_i16",
   [(set i32:$sdst, (sext_inreg i32:$src0, i16))]
 >;
 
-def S_BITSET0_B32 : SOP1_32    <"s_bitset0_b32">;
-def S_BITSET0_B64 : SOP1_64_32 <"s_bitset0_b64">;
-def S_BITSET1_B32 : SOP1_32    <"s_bitset1_b32">;
-def S_BITSET1_B64 : SOP1_64_32 <"s_bitset1_b64">;
+def S_BITSET0_B32 : SOP1_32    <"s_bitset0_b32", [], 1>;
+def S_BITSET0_B64 : SOP1_64_32 <"s_bitset0_b64", [], 1>;
+def S_BITSET1_B32 : SOP1_32    <"s_bitset1_b32", [], 1>;
+def S_BITSET1_B64 : SOP1_64_32 <"s_bitset1_b64", [], 1>;
 def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64",
   [(set i64:$sdst, (int_amdgcn_s_getpc))]
 >;
@@ -541,8 +548,12 @@ let SubtargetPredicate = isGFX9 in {
     def S_LSHL4_ADD_U32 : SOP2_32<"s_lshl4_add_u32">;
   } // End Defs = [SCC]
 
-  def S_MUL_HI_U32 : SOP2_32<"s_mul_hi_u32">;
-  def S_MUL_HI_I32 : SOP2_32<"s_mul_hi_i32">;
+  let isCommutable = 1 in {
+    def S_MUL_HI_U32 : SOP2_32<"s_mul_hi_u32",
+      [(set i32:$sdst, (UniformBinFrag<mulhu> SSrc_b32:$src0, SSrc_b32:$src1))]>;
+    def S_MUL_HI_I32 : SOP2_32<"s_mul_hi_i32",
+      [(set i32:$sdst, (UniformBinFrag<mulhs> SSrc_b32:$src0, SSrc_b32:$src1))]>;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -859,9 +870,7 @@ def S_NOP : SOPP <0x00000000, (ins i16imm:$simm16), "s_nop $simm16">;
 
 let isTerminator = 1 in {
 
-def S_ENDPGM : SOPP <0x00000001, (ins), "s_endpgm",
-  [(AMDGPUendpgm)]> {
-  let simm16 = 0;
+def S_ENDPGM : SOPP <0x00000001, (ins EndpgmImm:$simm16), "s_endpgm $simm16"> {
   let isBarrier = 1;
   let isReturn = 1;
 }
@@ -1036,6 +1045,11 @@ def : GCNPat <
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
 //===----------------------------------------------------------------------===//
+
+def : GCNPat <
+  (AMDGPUendpgm),
+    (S_ENDPGM (i16 0))
+>;
 
 def : GCNPat <
   (i64 (ctpop i64:$src)),

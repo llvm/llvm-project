@@ -1260,7 +1260,7 @@ public:
 
     void swap(__hash_table& __u)
 #if _LIBCPP_STD_VER <= 11
-        _NOEXCEPT_DEBUG_(
+        _NOEXCEPT_(
             __is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value
             && (!allocator_traits<__pointer_allocator>::propagate_on_container_swap::value
                   || __is_nothrow_swappable<__pointer_allocator>::value)
@@ -1268,7 +1268,7 @@ public:
                   || __is_nothrow_swappable<__node_allocator>::value)
             );
 #else
-     _NOEXCEPT_DEBUG_(__is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value);
+     _NOEXCEPT_(__is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value);
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
@@ -2807,7 +2807,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
 #if _LIBCPP_STD_VER <= 11
-    _NOEXCEPT_DEBUG_(
+    _NOEXCEPT_(
         __is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value
         && (!allocator_traits<__pointer_allocator>::propagate_on_container_swap::value
               || __is_nothrow_swappable<__pointer_allocator>::value)
@@ -2815,7 +2815,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
               || __is_nothrow_swappable<__node_allocator>::value)
             )
 #else
-  _NOEXCEPT_DEBUG_(__is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value)
+  _NOEXCEPT_(__is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value)
 #endif
 {
     _LIBCPP_ASSERT(__node_traits::propagate_on_container_swap::value ||

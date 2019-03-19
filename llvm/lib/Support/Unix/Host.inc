@@ -49,6 +49,23 @@ static std::string updateTripleOSVersion(std::string TargetTripleString) {
     TargetTripleString += "-darwin";
     TargetTripleString += getOSVersion();
   }
+  // On AIX, the AIX version and release should be that of the current host
+  // unless if the version has already been specified.
+  if (Triple(LLVM_HOST_TRIPLE).getOS() == Triple::AIX) {
+    Triple TT(TargetTripleString);
+    if (TT.getOS() == Triple::AIX && !TT.getOSMajorVersion()) {
+      struct utsname name;
+      if (uname(&name) != -1) {
+        std::string NewOSName = Triple::getOSTypeName(Triple::AIX);
+        NewOSName += name.version;
+        NewOSName += '.';
+        NewOSName += name.release;
+        NewOSName += ".0.0";
+        TT.setOSName(NewOSName);
+        return TT.str();
+      }
+    }
+  }
   return TargetTripleString;
 }
 

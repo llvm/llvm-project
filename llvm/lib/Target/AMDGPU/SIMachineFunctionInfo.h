@@ -15,13 +15,14 @@
 
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUMachineFunction.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -78,9 +79,58 @@ public:
   }
 };
 
+namespace yaml {
+
+struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
+  uint64_t ExplicitKernArgSize = 0;
+  unsigned MaxKernArgAlign = 0;
+  unsigned LDSSize = 0;
+  bool IsEntryFunction = false;
+  bool NoSignedZerosFPMath = false;
+  bool MemoryBound = false;
+  bool WaveLimiter = false;
+
+  StringValue ScratchRSrcReg = "$private_rsrc_reg";
+  StringValue ScratchWaveOffsetReg = "$scratch_wave_offset_reg";
+  StringValue FrameOffsetReg = "$fp_reg";
+  StringValue StackPtrOffsetReg = "$sp_reg";
+
+  SIMachineFunctionInfo() = default;
+  SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
+                        const TargetRegisterInfo &TRI);
+
+  void mappingImpl(yaml::IO &YamlIO) override;
+  ~SIMachineFunctionInfo() = default;
+};
+
+template <> struct MappingTraits<SIMachineFunctionInfo> {
+  static void mapping(IO &YamlIO, SIMachineFunctionInfo &MFI) {
+    YamlIO.mapOptional("explicitKernArgSize", MFI.ExplicitKernArgSize,
+                       UINT64_C(0));
+    YamlIO.mapOptional("maxKernArgAlign", MFI.MaxKernArgAlign, 0u);
+    YamlIO.mapOptional("ldsSize", MFI.LDSSize, 0u);
+    YamlIO.mapOptional("isEntryFunction", MFI.IsEntryFunction, false);
+    YamlIO.mapOptional("noSignedZerosFPMath", MFI.NoSignedZerosFPMath, false);
+    YamlIO.mapOptional("memoryBound", MFI.MemoryBound, false);
+    YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
+    YamlIO.mapOptional("scratchRSrcReg", MFI.ScratchRSrcReg,
+                       StringValue("$private_rsrc_reg"));
+    YamlIO.mapOptional("scratchWaveOffsetReg", MFI.ScratchWaveOffsetReg,
+                       StringValue("$scratch_wave_offset_reg"));
+    YamlIO.mapOptional("frameOffsetReg", MFI.FrameOffsetReg,
+                       StringValue("$fp_reg"));
+    YamlIO.mapOptional("stackPtrOffsetReg", MFI.StackPtrOffsetReg,
+                       StringValue("$sp_reg"));
+  }
+};
+
+} // end namespace yaml
+
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
+  friend class GCNTargetMachine;
+
   unsigned TIDReg = AMDGPU::NoRegister;
 
   // Registers that may be reserved for spilling purposes. These may be the same
@@ -122,12 +172,6 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // A pair of default/requested minimum/maximum number of waves per execution
   // unit. Minimum - first, maximum - second.
   std::pair<unsigned, unsigned> WavesPerEU = {0, 0};
-
-  // Stack object indices for work group IDs.
-  std::array<int, 3> DebuggerWorkGroupIDStackObjectIndices = {{0, 0, 0}};
-
-  // Stack object indices for work item IDs.
-  std::array<int, 3> DebuggerWorkItemIDStackObjectIndices = {{0, 0, 0}};
 
   DenseMap<const Value *,
            std::unique_ptr<const AMDGPUBufferPseudoSourceValue>> BufferPSVs;
@@ -224,6 +268,8 @@ private:
 
 public:
   SIMachineFunctionInfo(const MachineFunction &MF);
+
+  bool initializeBaseYamlFields(const yaml::SIMachineFunctionInfo &YamlMFI);
 
   ArrayRef<SpilledReg> getSGPRToVGPRSpills(int FrameIndex) const {
     auto I = SGPRToVGPRSpills.find(FrameIndex);
@@ -562,30 +608,6 @@ public:
   /// \returns Default/requested maximum number of waves per execution unit.
   unsigned getMaxWavesPerEU() const {
     return WavesPerEU.second;
-  }
-
-  /// \returns Stack object index for \p Dim's work group ID.
-  int getDebuggerWorkGroupIDStackObjectIndex(unsigned Dim) const {
-    assert(Dim < 3);
-    return DebuggerWorkGroupIDStackObjectIndices[Dim];
-  }
-
-  /// Sets stack object index for \p Dim's work group ID to \p ObjectIdx.
-  void setDebuggerWorkGroupIDStackObjectIndex(unsigned Dim, int ObjectIdx) {
-    assert(Dim < 3);
-    DebuggerWorkGroupIDStackObjectIndices[Dim] = ObjectIdx;
-  }
-
-  /// \returns Stack object index for \p Dim's work item ID.
-  int getDebuggerWorkItemIDStackObjectIndex(unsigned Dim) const {
-    assert(Dim < 3);
-    return DebuggerWorkItemIDStackObjectIndices[Dim];
-  }
-
-  /// Sets stack object index for \p Dim's work item ID to \p ObjectIdx.
-  void setDebuggerWorkItemIDStackObjectIndex(unsigned Dim, int ObjectIdx) {
-    assert(Dim < 3);
-    DebuggerWorkItemIDStackObjectIndices[Dim] = ObjectIdx;
   }
 
   /// \returns SGPR used for \p Dim's work group ID.

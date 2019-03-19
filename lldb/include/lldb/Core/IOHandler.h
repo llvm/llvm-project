@@ -13,6 +13,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Predicate.h"
+#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-defines.h"
@@ -58,7 +59,8 @@ public:
   IOHandler(Debugger &debugger, IOHandler::Type type,
             const lldb::StreamFileSP &input_sp,
             const lldb::StreamFileSP &output_sp,
-            const lldb::StreamFileSP &error_sp, uint32_t flags);
+            const lldb::StreamFileSP &error_sp, uint32_t flags,
+            repro::DataRecorder *data_recorder);
 
   virtual ~IOHandler();
 
@@ -169,6 +171,7 @@ protected:
   lldb::StreamFileSP m_input_sp;
   lldb::StreamFileSP m_output_sp;
   lldb::StreamFileSP m_error_sp;
+  repro::DataRecorder *m_data_recorder;
   Predicate<bool> m_popped;
   Flags m_flags;
   Type m_type;
@@ -197,7 +200,7 @@ public:
 
   virtual ~IOHandlerDelegate() = default;
 
-  virtual void IOHandlerActivated(IOHandler &io_handler) {}
+  virtual void IOHandlerActivated(IOHandler &io_handler, bool interactive) {}
 
   virtual void IOHandlerDeactivated(IOHandler &io_handler) {}
 
@@ -215,18 +218,18 @@ public:
   /// This function determines how much indentation should be added
   /// or removed to match the recommended amount for the final line.
   ///
-  /// @param[in] io_handler
+  /// \param[in] io_handler
   ///     The IOHandler that responsible for input.
   ///
-  /// @param[in] lines
+  /// \param[in] lines
   ///     The current input up to the line to be corrected.  Lines
   ///     following the line containing the cursor are not included.
   ///
-  /// @param[in] cursor_position
+  /// \param[in] cursor_position
   ///     The number of characters preceding the cursor on the final
   ///     line at the time.
   ///
-  /// @return
+  /// \return
   ///     Returns an integer describing the number of spaces needed
   ///     to correct the indentation level.  Positive values indicate
   ///     that spaces should be added, while negative values represent
@@ -257,14 +260,14 @@ public:
   /// Called to determine whether typing enter after the last line in
   /// \a lines should end input.  This function will not be called on
   /// IOHandler objects that are getting single lines.
-  /// @param[in] io_handler
+  /// \param[in] io_handler
   ///     The IOHandler that responsible for updating the lines.
   ///
-  /// @param[in] lines
+  /// \param[in] lines
   ///     The current multi-line content.  May be altered to provide
   ///     alternative input when complete.
   ///
-  /// @return
+  /// \return
   ///     Return an boolean to indicate whether input is complete,
   ///     true indicates that no additional input is necessary, while
   ///     false indicates that more input is required.
@@ -343,7 +346,8 @@ public:
                     uint32_t line_number_start, // If non-zero show line numbers
                                                 // starting at
                                                 // 'line_number_start'
-                    IOHandlerDelegate &delegate);
+                    IOHandlerDelegate &delegate,
+                    repro::DataRecorder *data_recorder);
 
   IOHandlerEditline(Debugger &debugger, IOHandler::Type type,
                     const lldb::StreamFileSP &input_sp,
@@ -355,7 +359,8 @@ public:
                     uint32_t line_number_start, // If non-zero show line numbers
                                                 // starting at
                                                 // 'line_number_start'
-                    IOHandlerDelegate &delegate);
+                    IOHandlerDelegate &delegate,
+                    repro::DataRecorder *data_recorder);
 
   IOHandlerEditline(Debugger &, IOHandler::Type, const char *, const char *,
                     const char *, bool, bool, uint32_t,

@@ -84,7 +84,7 @@ define void @indirect_use_10_vgpr() #0 {
 
 ; GCN-LABEL: {{^}}indirect_2_level_use_10_vgpr:
 ; GCN: is_dynamic_callstack = 0
-; GCN: ; NumVgprs: 10
+; GCN: ; NumVgprs: 33
 define amdgpu_kernel void @indirect_2_level_use_10_vgpr() #0 {
   call void @indirect_use_10_vgpr()
   ret void
@@ -225,6 +225,6 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 }
 
 
-attributes #0 = { nounwind norecurse }
+attributes #0 = { nounwind noinline norecurse }
 attributes #1 = { nounwind noinline norecurse }
 attributes #2 = { nounwind noinline }

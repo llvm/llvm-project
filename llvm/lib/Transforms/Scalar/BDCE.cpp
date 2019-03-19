@@ -41,14 +41,17 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
          "Trivializing a non-integer value?");
 
   // Initialize the worklist with eligible direct users.
+  SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<Instruction *, 16> WorkList;
   for (User *JU : I->users()) {
     // If all bits of a user are demanded, then we know that nothing below that
     // in the def-use chain needs to be changed.
     auto *J = dyn_cast<Instruction>(JU);
     if (J && J->getType()->isIntOrIntVectorTy() &&
-        !DB.getDemandedBits(J).isAllOnesValue())
+        !DB.getDemandedBits(J).isAllOnesValue()) {
+      Visited.insert(J);
       WorkList.push_back(J);
+    }
 
     // Note that we need to check for non-int types above before asking for
     // demanded bits. Normally, the only way to reach an instruction with an
@@ -61,7 +64,6 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
   }
 
   // DFS through subsequent users while tracking visits to avoid cycles.
-  SmallPtrSet<Instruction *, 16> Visited;
   while (!WorkList.empty()) {
     Instruction *J = WorkList.pop_back_val();
 
@@ -72,13 +74,11 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
     // 1. llvm.assume demands its operand, so trivializing can't change it.
     // 2. range metadata only applies to memory accesses which demand all bits.
 
-    Visited.insert(J);
-
     for (User *KU : J->users()) {
       // If all bits of a user are demanded, then we know that nothing below
       // that in the def-use chain needs to be changed.
       auto *K = dyn_cast<Instruction>(KU);
-      if (K && !Visited.count(K) && K->getType()->isIntOrIntVectorTy() &&
+      if (K && Visited.insert(K).second && K->getType()->isIntOrIntVectorTy() &&
           !DB.getDemandedBits(K).isAllOnesValue())
         WorkList.push_back(K);
     }

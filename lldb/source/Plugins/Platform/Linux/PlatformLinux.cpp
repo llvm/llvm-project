@@ -263,6 +263,25 @@ bool PlatformLinux::CanDebugProcess() {
   }
 }
 
+std::vector<std::string>
+PlatformLinux::GetSystemIncludeDirectories(lldb::LanguageType lang) {
+  std::string sys_root = GetSDKRootDirectory().AsCString("");
+  switch (lang) {
+  case lldb::eLanguageTypeC:
+  case lldb::eLanguageTypeC89:
+  case lldb::eLanguageTypeC99:
+  case lldb::eLanguageTypeC11:
+  case lldb::eLanguageTypeC_plus_plus:
+  case lldb::eLanguageTypeC_plus_plus_03:
+  case lldb::eLanguageTypeC_plus_plus_11:
+  case lldb::eLanguageTypeC_plus_plus_14:
+  case lldb::eLanguageTypeObjC_plus_plus:
+    return {sys_root + "/usr/include/"};
+  default:
+    return {};
+  }
+}
+
 // For local debugging, Linux will override the debug logic to use llgs-launch
 // rather than lldb-launch, llgs-attach.  This differs from current lldb-
 // launch, debugserver-attach approach on MacOSX.

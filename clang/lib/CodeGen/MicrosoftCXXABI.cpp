@@ -735,7 +735,7 @@ public:
         CGM.CreateRuntimeFunction(FTy, "_CxxThrowException");
     // _CxxThrowException is stdcall on 32-bit x86 platforms.
     if (CGM.getTarget().getTriple().getArch() == llvm::Triple::x86) {
-      if (auto *Fn = cast<llvm::Function>(Throw.getCallee()))
+      if (auto *Fn = dyn_cast<llvm::Function>(Throw.getCallee()))
         Fn->setCallingConv(llvm::CallingConv::X86_StdCall);
     }
     return Throw;

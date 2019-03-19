@@ -136,7 +136,7 @@ LANGOPT(Freestanding, 1, 0, "freestanding implementation")
 LANGOPT(NoBuiltin         , 1, 0, "disable builtin functions")
 LANGOPT(NoMathBuiltin     , 1, 0, "disable math builtin functions")
 LANGOPT(GNUAsm            , 1, 1, "GNU-style inline assembly")
-LANGOPT(CoroutinesTS      , 1, 0, "C++ coroutines TS")
+LANGOPT(Coroutines        , 1, 0, "C++20 coroutines")
 LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods")
 LANGOPT(RelaxedTemplateTemplateArgs, 1, 0, "C++17 relaxed matching of template template arguments")
 
@@ -154,6 +154,7 @@ BENIGN_ENUM_LANGOPT(CompilingModule, CompilingModuleKind, 2, CMK_None,
                     "compiling a module interface")
 BENIGN_LANGOPT(CompilingPCH, 1, 0, "building a pch")
 BENIGN_LANGOPT(BuildingPCHWithObjectFile, 1, 0, "building a pch which has a corresponding object file")
+BENIGN_LANGOPT(CacheGeneratedPCH, 1, 0, "cache generated PCH files in memory")
 COMPATIBLE_LANGOPT(ModulesDeclUse    , 1, 0, "require declaration of module uses")
 BENIGN_LANGOPT(ModulesSearchAll  , 1, 1, "searching even non-imported modules to find unresolved references")
 COMPATIBLE_LANGOPT(ModulesStrictDeclUse, 1, 0, "requiring declaration of module uses and all headers to be in modules")
@@ -216,6 +217,8 @@ LANGOPT(CUDAAllowVariadicFunctions, 1, 0, "allowing variadic functions in CUDA d
 LANGOPT(CUDAHostDeviceConstexpr, 1, 1, "treating unattributed constexpr functions as __host__ __device__")
 LANGOPT(CUDADeviceApproxTranscendentals, 1, 0, "using approximate transcendental functions")
 LANGOPT(GPURelocatableDeviceCode, 1, 0, "generate relocatable device code")
+
+LANGOPT(SYCLIsDevice      , 1, 0, "Generate code for SYCL device")
 
 LANGOPT(SizedDeallocation , 1, 0, "sized deallocation")
 LANGOPT(AlignedAllocation , 1, 0, "aligned allocation")

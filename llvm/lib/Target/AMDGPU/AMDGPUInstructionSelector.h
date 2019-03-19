@@ -65,8 +65,10 @@ private:
   bool selectCOPY(MachineInstr &I) const;
   bool selectG_CONSTANT(MachineInstr &I) const;
   bool selectG_ADD(MachineInstr &I) const;
+  bool selectG_EXTRACT(MachineInstr &I) const;
   bool selectG_GEP(MachineInstr &I) const;
   bool selectG_IMPLICIT_DEF(MachineInstr &I) const;
+  bool selectG_INSERT(MachineInstr &I) const;
   bool selectG_INTRINSIC(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
   bool selectG_INTRINSIC_W_SIDE_EFFECTS(MachineInstr &I,
                                         CodeGenCoverage &CoverageInfo) const;

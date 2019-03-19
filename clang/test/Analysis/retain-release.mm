@@ -503,3 +503,15 @@ void test_cxx_method_escaping(S *s) {
 }
 
 }
+
+namespace yet_another_unexpected_signature_crash {
+
+CFTypeRef CFSomethingSomethingRetain();
+CFTypeRef CFSomethingSomethingAutorelease();
+
+void foo() {
+  CFSomethingSomethingRetain(); // no-crash
+  CFSomethingSomethingAutorelease(); // no-crash
+}
+
+}

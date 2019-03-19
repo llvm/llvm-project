@@ -5,18 +5,20 @@
 target triple = "wasm32-unknown-unknown"
 
 @data = hidden global i32 2, align 4
-@indirect_func = local_unnamed_addr global void ()* @foo, align 4
+@indirect_func = local_unnamed_addr global i32 ()* @foo, align 4
 @indirect_func_external = local_unnamed_addr global void ()* @func_external, align 4
 
-define default void @foo() {
+define default i32 @foo() {
 entry:
   ; To ensure we use __stack_pointer
   %ptr = alloca i32
   %0 = load i32, i32* @data, align 4
-  %1 = load i32, i32* @data_external, align 4
-  %2 = load void ()*, void ()** @indirect_func, align 4
-  call void %2()
-  ret void
+  ; TODO(sbc): Re-enable once the codegen supports generating the correct
+  ; relocation type when referencing external data in shared libraries.
+  ; %1 = load i32, i32* @data_external, align 4
+  %1 = load i32 ()*, i32 ()** @indirect_func, align 4
+  call i32 %1()
+  ret i32 %0
 }
 
 declare void @func_external()
@@ -29,10 +31,12 @@ declare void @func_external()
 ; CHECK:      Sections:
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            dylink
-; CHECK-NEXT:     MemorySize:      8
+; CHECK-NEXT:     MemorySize:      12
 ; CHECK-NEXT:     MemoryAlignment: 2
 ; CHECK-NEXT:     TableSize:       2
 ; CHECK-NEXT:     TableAlignment:  0
+; CHECK-NEXT:     Needed:          []
+; CHECK-NEXT:   - Type:            TYPE
 
 ; check for import of __table_base and __memory_base globals
 
@@ -60,6 +64,15 @@ declare void @func_external()
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         GlobalType:      I32
 ; CHECK-NEXT:         GlobalMutable:   false
+; XCHECK-NEXT:       - Module:          env
+; XCHECK-NEXT:         Field:           data_external
+; XCHECK-NEXT:         Kind:            GLOBAL
+; XCHECK-NEXT:         GlobalType:      I32
+; XCHECK-NEXT:         GlobalMutable:   true
+; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           func_external
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         SigIndex:        1
 
 ; check for elem segment initialized with __table_base global as offset
 
@@ -68,7 +81,7 @@ declare void @func_external()
 ; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          GLOBAL_GET
 ; CHECK-NEXT:           Index:           2
-; CHECK-NEXT:         Functions:       [ 2, 0 ]
+; CHECK-NEXT:         Functions:       [ 1, 0 ]
 
 ; check the data segment initialized with __memory_base global as offset
 
@@ -79,4 +92,4 @@ declare void @func_external()
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          GLOBAL_GET
 ; CHECK-NEXT:           Index:           1
-; CHECK-NEXT:         Content:         '0000000001000000'
+; CHECK-NEXT:         Content:         '020000000000000001000000'

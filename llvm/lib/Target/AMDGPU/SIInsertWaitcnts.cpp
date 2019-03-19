@@ -68,10 +68,10 @@ DEBUG_COUNTER(ForceLgkmCounter, DEBUG_TYPE"-forcelgkm",
 DEBUG_COUNTER(ForceVMCounter, DEBUG_TYPE"-forcevm",
               "Force emit s_waitcnt vmcnt(0) instrs");
 
-static cl::opt<unsigned> ForceEmitZeroFlag(
+static cl::opt<bool> ForceEmitZeroFlag(
   "amdgpu-waitcnt-forcezero",
   cl::desc("Force all waitcnt instrs to be emitted as s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
-  cl::init(0), cl::Hidden);
+  cl::init(false), cl::Hidden);
 
 namespace {
 

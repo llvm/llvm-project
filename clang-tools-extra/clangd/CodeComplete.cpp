@@ -34,6 +34,7 @@
 #include "Trace.h"
 #include "URI.h"
 #include "index/Index.h"
+#include "index/Symbol.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/LangOptions.h"
@@ -48,6 +49,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -526,7 +528,7 @@ struct SpecifiedScope {
     std::set<std::string> Results;
     for (llvm::StringRef AS : AccessibleScopes)
       Results.insert(
-          ((UnresolvedQualifier ? *UnresolvedQualifier : "") + AS).str());
+          (AS + (UnresolvedQualifier ? *UnresolvedQualifier : "")).str());
     return {Results.begin(), Results.end()};
   }
 };
@@ -570,16 +572,15 @@ getQueryScopes(CodeCompletionContext &CCContext, const Sema &CCSema,
   }
 
   // Unresolved qualifier.
-  // FIXME: When Sema can resolve part of a scope chain (e.g.
-  // "known::unknown::id"), we should expand the known part ("known::") rather
-  // than treating the whole thing as unknown.
-  SpecifiedScope Info;
-  Info.AccessibleScopes.push_back(""); // global namespace
+  SpecifiedScope Info = GetAllAccessibleScopes(CCContext);
+  Info.AccessibleScopes.push_back(""); // Make sure global scope is included.
 
-  Info.UnresolvedQualifier =
+  llvm::StringRef SpelledSpecifier =
       Lexer::getSourceText(CharSourceRange::getCharRange((*SS)->getRange()),
-                           CCSema.SourceMgr, clang::LangOptions())
-          .ltrim("::");
+                           CCSema.SourceMgr, clang::LangOptions());
+  if (SpelledSpecifier.consume_front("::"))
+    Info.AccessibleScopes = {""};
+  Info.UnresolvedQualifier = SpelledSpecifier;
   // Sema excludes the trailing "::".
   if (!Info.UnresolvedQualifier->empty())
     *Info.UnresolvedQualifier += "::";
@@ -1509,6 +1510,13 @@ private:
   }
 };
 
+template <class T> bool isExplicitTemplateSpecialization(const NamedDecl &ND) {
+  if (const auto *TD = dyn_cast<T>(&ND))
+    if (TD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+      return true;
+  return false;
+}
+
 } // namespace
 
 clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
@@ -1602,6 +1610,13 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
     };
     return false;
   };
+  // We only complete symbol's name, which is the same as the name of the
+  // *primary* template in case of template specializations.
+  if (isExplicitTemplateSpecialization<FunctionDecl>(ND) ||
+      isExplicitTemplateSpecialization<CXXRecordDecl>(ND) ||
+      isExplicitTemplateSpecialization<VarDecl>(ND))
+    return false;
+
   if (InTopLevelScope(ND))
     return true;
 

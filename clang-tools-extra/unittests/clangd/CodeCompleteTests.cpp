@@ -17,6 +17,7 @@
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestIndex.h"
+#include "TestTU.h"
 #include "index/MemIndex.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/Error.h"
@@ -1094,8 +1095,10 @@ TEST(CompletionTest, UnresolvedQualifierIdQuery) {
       } // namespace ns
   )cpp");
 
-  EXPECT_THAT(Requests, ElementsAre(Field(&FuzzyFindRequest::Scopes,
-                                          UnorderedElementsAre("bar::"))));
+  EXPECT_THAT(Requests,
+              ElementsAre(Field(
+                  &FuzzyFindRequest::Scopes,
+                  UnorderedElementsAre("a::bar::", "ns::bar::", "bar::"))));
 }
 
 TEST(CompletionTest, UnresolvedNestedQualifierIdQuery) {
@@ -2312,6 +2315,55 @@ TEST(CompletionTest, WorksWithNullType) {
     }
   )cpp");
   EXPECT_THAT(R.Completions, ElementsAre(Named("loopVar")));
+}
+
+TEST(CompletionTest, UsingDecl) {
+  const char *Header(R"cpp(
+    void foo(int);
+    namespace std {
+      using ::foo;
+    })cpp");
+  const char *Source(R"cpp(
+    void bar() {
+      std::^;
+    })cpp");
+  auto Index = TestTU::withHeaderCode(Header).index();
+  clangd::CodeCompleteOptions Opts;
+  Opts.Index = Index.get();
+  Opts.AllScopes = true;
+  auto R = completions(Source, {}, Opts);
+  EXPECT_THAT(R.Completions,
+              ElementsAre(AllOf(Scope("std::"), Named("foo"),
+                                Kind(CompletionItemKind::Reference))));
+}
+
+TEST(CompletionTest, ScopeIsUnresolved) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(R"cpp(
+    namespace a {
+    void f() { b::X^ }
+    }
+  )cpp",
+                             {cls("a::b::XYZ")}, Opts);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Named("XYZ"))));
+}
+
+TEST(CompletionTest, NestedScopeIsUnresolved) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(R"cpp(
+    namespace a {
+    namespace b {}
+    void f() { b::c::X^ }
+    }
+  )cpp",
+                             {cls("a::b::c::XYZ")}, Opts);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Named("XYZ"))));
 }
 
 } // namespace

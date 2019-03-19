@@ -65,8 +65,8 @@ define float @signbits_ashr_extract_sitofp_0(<2 x i64> %a0) nounwind {
 ; X32-LABEL: signbits_ashr_extract_sitofp_0:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:    vextractps $1, %xmm0, %eax
-; X32-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -248,8 +248,7 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,8]
 ; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    vmovq %rax, %xmm1
+; X64-NEXT:    vmovd %edi, %xmm1
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovq %xmm0, %rax
 ; X64-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0

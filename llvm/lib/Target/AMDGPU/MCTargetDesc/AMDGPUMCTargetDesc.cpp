@@ -20,6 +20,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -103,6 +104,35 @@ static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                  std::move(Emitter), RelaxAll);
 }
 
+namespace {
+
+class AMDGPUMCInstrAnalysis : public MCInstrAnalysis {
+public:
+  explicit AMDGPUMCInstrAnalysis(const MCInstrInfo *Info)
+      : MCInstrAnalysis(Info) {}
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    if (Inst.getNumOperands() == 0 || !Inst.getOperand(0).isImm() ||
+        Info->get(Inst.getOpcode()).OpInfo[0].OperandType !=
+            MCOI::OPERAND_PCREL)
+      return false;
+
+    int64_t Imm = Inst.getOperand(0).getImm();
+    // Our branches take a simm16, but we need two extra bits to account for
+    // the factor of 4.
+    APInt SignedOffset(18, Imm * 4, true);
+    Target = (SignedOffset.sext(64) + Addr + Size).getZExtValue();
+    return true;
+  }
+};
+
+} // end anonymous namespace
+
+static MCInstrAnalysis *createAMDGPUMCInstrAnalysis(const MCInstrInfo *Info) {
+  return new AMDGPUMCInstrAnalysis(Info);
+}
+
 extern "C" void LLVMInitializeAMDGPUTargetMC() {
 
   TargetRegistry::RegisterMCInstrInfo(getTheGCNTarget(), createAMDGPUMCInstrInfo);
@@ -113,6 +143,7 @@ extern "C" void LLVMInitializeAMDGPUTargetMC() {
     TargetRegistry::RegisterMCRegInfo(*T, createAMDGPUMCRegisterInfo);
     TargetRegistry::RegisterMCSubtargetInfo(*T, createAMDGPUMCSubtargetInfo);
     TargetRegistry::RegisterMCInstPrinter(*T, createAMDGPUMCInstPrinter);
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createAMDGPUMCInstrAnalysis);
     TargetRegistry::RegisterMCAsmBackend(*T, createAMDGPUAsmBackend);
     TargetRegistry::RegisterELFStreamer(*T, createMCStreamer);
   }

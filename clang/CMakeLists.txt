@@ -388,6 +388,7 @@ include_directories(BEFORE
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/clang include/clang-c
     DESTINATION include
+    COMPONENT clang-headers
     FILES_MATCHING
     PATTERN "*.def"
     PATTERN "*.h"
@@ -397,11 +398,22 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/clang
     DESTINATION include
+    COMPONENT clang-headers
     FILES_MATCHING
     PATTERN "CMakeFiles" EXCLUDE
     PATTERN "*.inc"
     PATTERN "*.h"
     )
+
+  # Installing the headers needs to depend on generating any public
+  # tablegen'd headers.
+  add_custom_target(clang-headers DEPENDS clang-tablegen-targets)
+  set_target_properties(clang-headers PROPERTIES FOLDER "Misc")
+  if(NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-clang-headers
+                             DEPENDS clang-headers
+                             COMPONENT clang-headers)
+  endif()
 
   install(PROGRAMS utils/bash-autocomplete.sh
     DESTINATION share/clang
@@ -666,6 +678,8 @@ if (CLANG_ENABLE_BOOTSTRAP)
     LLVM_VERSION_SUFFIX
     LLVM_BINUTILS_INCDIR
     CLANG_REPOSITORY_STRING
+    CMAKE_C_COMPILER_LAUNCHER
+    CMAKE_CXX_COMPILER_LAUNCHER
     CMAKE_MAKE_PROGRAM
     CMAKE_OSX_ARCHITECTURES
     LLVM_ENABLE_PROJECTS

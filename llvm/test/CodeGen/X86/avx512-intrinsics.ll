@@ -809,9 +809,9 @@ define <4 x float> @test_sqrt_ss(<4 x float> %a0, <4 x float> %a1, <4 x float> %
 ; X86-NEXT:    vaddps %xmm0, %xmm2, %xmm0
 ; X86-NEXT:    retl
   %res0 = call <4 x float> @llvm.x86.avx512.mask.sqrt.ss(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 4)
-  %res1 = call <4 x float> @llvm.x86.avx512.mask.sqrt.ss(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 1)
-  %res2 = call <4 x float> @llvm.x86.avx512.mask.sqrt.ss(<4 x float>%a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 %mask, i32 2)
-  %res3 = call <4 x float> @llvm.x86.avx512.mask.sqrt.ss(<4 x float>%a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 -1, i32 3)
+  %res1 = call <4 x float> @llvm.x86.avx512.mask.sqrt.ss(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 9)
+  %res2 = call <4 x float> @llvm.x86.avx512.mask.sqrt.ss(<4 x float>%a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 %mask, i32 10)
+  %res3 = call <4 x float> @llvm.x86.avx512.mask.sqrt.ss(<4 x float>%a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 -1, i32 11)
 
   %res.1 = fadd <4 x float> %res0, %res1
   %res.2 = fadd <4 x float> %res2, %res3
@@ -849,9 +849,9 @@ define <2 x double> @test_sqrt_sd(<2 x double> %a0, <2 x double> %a1, <2 x doubl
 ; X86-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
 ; X86-NEXT:    retl
   %res0 = call <2 x double> @llvm.x86.avx512.mask.sqrt.sd(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 4)
-  %res1 = call <2 x double> @llvm.x86.avx512.mask.sqrt.sd(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 1)
-  %res2 = call <2 x double> @llvm.x86.avx512.mask.sqrt.sd(<2 x double>%a0, <2 x double> %a1, <2 x double> zeroinitializer, i8 %mask, i32 2)
-  %res3 = call <2 x double> @llvm.x86.avx512.mask.sqrt.sd(<2 x double>%a0, <2 x double> %a1, <2 x double> zeroinitializer, i8 -1, i32 3)
+  %res1 = call <2 x double> @llvm.x86.avx512.mask.sqrt.sd(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 9)
+  %res2 = call <2 x double> @llvm.x86.avx512.mask.sqrt.sd(<2 x double>%a0, <2 x double> %a1, <2 x double> zeroinitializer, i8 %mask, i32 10)
+  %res3 = call <2 x double> @llvm.x86.avx512.mask.sqrt.sd(<2 x double>%a0, <2 x double> %a1, <2 x double> zeroinitializer, i8 -1, i32 11)
 
   %res.1 = fadd <2 x double> %res0, %res1
   %res.2 = fadd <2 x double> %res2, %res3
@@ -942,8 +942,8 @@ define i32 @test_x86_avx512_cvtsd2usi32(<2 x double> %a0) {
 ; CHECK-NEXT:    ret{{[l|q]}}
 
   %res = call i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double> %a0, i32 4)
-  %res1 = call i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double> %a0, i32 3)
-  %res2 = call i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double> %a0, i32 1)
+  %res1 = call i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double> %a0, i32 11)
+  %res2 = call i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double> %a0, i32 9)
   %res3 = add i32 %res, %res1
   %res4 = add i32 %res3, %res2
   ret i32 %res4
@@ -961,8 +961,8 @@ define i32 @test_x86_avx512_cvtsd2si32(<2 x double> %a0) {
 ; CHECK-NEXT:    ret{{[l|q]}}
 
   %res = call i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double> %a0, i32 4)
-  %res1 = call i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double> %a0, i32 3)
-  %res2 = call i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double> %a0, i32 1)
+  %res1 = call i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double> %a0, i32 11)
+  %res2 = call i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double> %a0, i32 9)
   %res3 = add i32 %res, %res1
   %res4 = add i32 %res3, %res2
   ret i32 %res4
@@ -980,8 +980,8 @@ define i32 @test_x86_avx512_cvtss2usi32(<4 x float> %a0) {
 ; CHECK-NEXT:    ret{{[l|q]}}
 
   %res = call i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float> %a0, i32 4)
-  %res1 = call i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float> %a0, i32 3)
-  %res2 = call i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float> %a0, i32 1)
+  %res1 = call i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float> %a0, i32 11)
+  %res2 = call i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float> %a0, i32 9)
   %res3 = add i32 %res, %res1
   %res4 = add i32 %res3, %res2
   ret i32 %res4
@@ -999,8 +999,8 @@ define i32 @test_x86_avx512_cvtss2si32(<4 x float> %a0) {
 ; CHECK-NEXT:    ret{{[l|q]}}
 
   %res = call i32 @llvm.x86.avx512.vcvtss2si32(<4 x float> %a0, i32 4)
-  %res1 = call i32 @llvm.x86.avx512.vcvtss2si32(<4 x float> %a0, i32 3)
-  %res2 = call i32 @llvm.x86.avx512.vcvtss2si32(<4 x float> %a0, i32 1)
+  %res1 = call i32 @llvm.x86.avx512.vcvtss2si32(<4 x float> %a0, i32 11)
+  %res2 = call i32 @llvm.x86.avx512.vcvtss2si32(<4 x float> %a0, i32 9)
   %res3 = add i32 %res, %res1
   %res4 = add i32 %res3, %res2
   ret i32 %res4
@@ -1192,7 +1192,7 @@ define <16 x float> @test_vsubps_rn(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsubps {rn-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   ret <16 x float> %1
 }
 
@@ -1201,7 +1201,7 @@ define <16 x float> @test_vsubps_rd(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsubps {rd-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   ret <16 x float> %1
 }
 
@@ -1210,7 +1210,7 @@ define <16 x float> @test_vsubps_ru(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsubps {ru-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   ret <16 x float> %1
 }
 
@@ -1219,7 +1219,7 @@ define <16 x float> @test_vsubps_rz(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsubps {rz-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   ret <16 x float> %1
 }
 
@@ -1228,7 +1228,7 @@ define <16 x float> @test_vmulps_rn(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmulps {rn-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   ret <16 x float> %1
 }
 
@@ -1237,7 +1237,7 @@ define <16 x float> @test_vmulps_rd(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmulps {rd-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   ret <16 x float> %1
 }
 
@@ -1246,7 +1246,7 @@ define <16 x float> @test_vmulps_ru(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmulps {ru-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   ret <16 x float> %1
 }
 
@@ -1255,7 +1255,7 @@ define <16 x float> @test_vmulps_rz(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmulps {rz-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   ret <16 x float> %1
 }
 
@@ -1272,7 +1272,7 @@ define <16 x float> @test_vmulps_mask_rn(<16 x float> %a0, <16 x float> %a1, i16
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vmulps {rn-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1290,7 +1290,7 @@ define <16 x float> @test_vmulps_mask_rd(<16 x float> %a0, <16 x float> %a1, i16
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vmulps {rd-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1308,7 +1308,7 @@ define <16 x float> @test_vmulps_mask_ru(<16 x float> %a0, <16 x float> %a1, i16
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vmulps {ru-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1326,7 +1326,7 @@ define <16 x float> @test_vmulps_mask_rz(<16 x float> %a0, <16 x float> %a1, i16
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vmulps {rz-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1347,7 +1347,7 @@ define <16 x float> @test_vmulps_mask_passthru_rn(<16 x float> %a0, <16 x float>
 ; X86-NEXT:    vmulps {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %passthru
   ret <16 x float> %3
@@ -1367,7 +1367,7 @@ define <16 x float> @test_vmulps_mask_passthru_rd(<16 x float> %a0, <16 x float>
 ; X86-NEXT:    vmulps {rd-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %passthru
   ret <16 x float> %3
@@ -1387,7 +1387,7 @@ define <16 x float> @test_vmulps_mask_passthru_ru(<16 x float> %a0, <16 x float>
 ; X86-NEXT:    vmulps {ru-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %passthru
   ret <16 x float> %3
@@ -1407,7 +1407,7 @@ define <16 x float> @test_vmulps_mask_passthru_rz(<16 x float> %a0, <16 x float>
 ; X86-NEXT:    vmulps {rz-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %passthru
   ret <16 x float> %3
@@ -1427,7 +1427,7 @@ define <8 x double> @test_vmulpd_mask_rn(<8 x double> %a0, <8 x double> %a1, i8 
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmulpd {rn-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> %a0, <8 x double> %a1, i32 0)
+  %1 = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> %a0, <8 x double> %a1, i32 8)
   %2 = bitcast i8 %mask to <8 x i1>
   %3 = select <8 x i1> %2, <8 x double> %1, <8 x double> zeroinitializer
   ret <8 x double> %3
@@ -1446,7 +1446,7 @@ define <8 x double> @test_vmulpd_mask_rd(<8 x double> %a0, <8 x double> %a1, i8 
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmulpd {rd-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> %a0, <8 x double> %a1, i32 1)
+  %1 = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> %a0, <8 x double> %a1, i32 9)
   %2 = bitcast i8 %mask to <8 x i1>
   %3 = select <8 x i1> %2, <8 x double> %1, <8 x double> zeroinitializer
   ret <8 x double> %3
@@ -1465,7 +1465,7 @@ define <8 x double> @test_vmulpd_mask_ru(<8 x double> %a0, <8 x double> %a1, i8 
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmulpd {ru-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> %a0, <8 x double> %a1, i32 2)
+  %1 = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> %a0, <8 x double> %a1, i32 10)
   %2 = bitcast i8 %mask to <8 x i1>
   %3 = select <8 x i1> %2, <8 x double> %1, <8 x double> zeroinitializer
   ret <8 x double> %3
@@ -1484,7 +1484,7 @@ define <8 x double> @test_vmulpd_mask_rz(<8 x double> %a0, <8 x double> %a1, i8 
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmulpd {rz-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> %a0, <8 x double> %a1, i32 3)
+  %1 = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> %a0, <8 x double> %a1, i32 11)
   %2 = bitcast i8 %mask to <8 x i1>
   %3 = select <8 x i1> %2, <8 x double> %1, <8 x double> zeroinitializer
   ret <8 x double> %3
@@ -1502,7 +1502,7 @@ define <16 x float> @test_mm512_maskz_add_round_ps_rn_sae(<16 x float> %a0, <16 
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vaddps {rn-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1520,7 +1520,7 @@ define <16 x float> @test_mm512_maskz_add_round_ps_rd_sae(<16 x float> %a0, <16 
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vaddps {rd-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1538,7 +1538,7 @@ define <16 x float> @test_mm512_maskz_add_round_ps_ru_sae(<16 x float> %a0, <16 
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vaddps {ru-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1556,7 +1556,7 @@ define <16 x float> @test_mm512_maskz_add_round_ps_rz_sae(<16 x float> %a0, <16 
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vaddps {rz-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1594,7 +1594,7 @@ define <16 x float> @test_mm512_mask_add_round_ps_rn_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vaddps {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -1614,7 +1614,7 @@ define <16 x float> @test_mm512_mask_add_round_ps_rd_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vaddps {rd-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -1634,7 +1634,7 @@ define <16 x float> @test_mm512_mask_add_round_ps_ru_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vaddps {ru-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -1654,7 +1654,7 @@ define <16 x float> @test_mm512_mask_add_round_ps_rz_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vaddps {rz-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -1685,7 +1685,7 @@ define <16 x float> @test_mm512_add_round_ps_rn_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddps {rn-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   ret <16 x float> %1
 }
 
@@ -1694,7 +1694,7 @@ define <16 x float> @test_mm512_add_round_ps_rd_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddps {rd-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   ret <16 x float> %1
 }
 
@@ -1703,7 +1703,7 @@ define <16 x float> @test_mm512_add_round_ps_ru_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddps {ru-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   ret <16 x float> %1
 }
 
@@ -1712,7 +1712,7 @@ define <16 x float> @test_mm512_add_round_ps_rz_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddps {rz-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   ret <16 x float> %1
 }
 
@@ -1740,7 +1740,7 @@ define <16 x float> @test_mm512_mask_sub_round_ps_rn_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vsubps {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -1760,7 +1760,7 @@ define <16 x float> @test_mm512_mask_sub_round_ps_rd_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vsubps {rd-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -1780,7 +1780,7 @@ define <16 x float> @test_mm512_mask_sub_round_ps_ru_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vsubps {ru-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -1800,7 +1800,7 @@ define <16 x float> @test_mm512_mask_sub_round_ps_rz_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vsubps {rz-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -1831,7 +1831,7 @@ define <16 x float> @test_mm512_sub_round_ps_rn_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsubps {rn-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   ret <16 x float> %1
 }
 
@@ -1840,7 +1840,7 @@ define <16 x float> @test_mm512_sub_round_ps_rd_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsubps {rd-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   ret <16 x float> %1
 }
 
@@ -1849,7 +1849,7 @@ define <16 x float> @test_mm512_sub_round_ps_ru_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsubps {ru-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   ret <16 x float> %1
 }
 
@@ -1858,7 +1858,7 @@ define <16 x float> @test_mm512_sub_round_ps_rz_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsubps {rz-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   ret <16 x float> %1
 }
 
@@ -1883,7 +1883,7 @@ define <16 x float> @test_mm512_maskz_div_round_ps_rn_sae(<16 x float> %a0, <16 
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vdivps {rn-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1901,7 +1901,7 @@ define <16 x float> @test_mm512_maskz_div_round_ps_rd_sae(<16 x float> %a0, <16 
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vdivps {rd-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1919,7 +1919,7 @@ define <16 x float> @test_mm512_maskz_div_round_ps_ru_sae(<16 x float> %a0, <16 
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vdivps {ru-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1937,7 +1937,7 @@ define <16 x float> @test_mm512_maskz_div_round_ps_rz_sae(<16 x float> %a0, <16 
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vdivps {rz-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
   ret <16 x float> %3
@@ -1975,7 +1975,7 @@ define <16 x float> @test_mm512_mask_div_round_ps_rn_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vdivps {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -1995,7 +1995,7 @@ define <16 x float> @test_mm512_mask_div_round_ps_rd_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vdivps {rd-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -2015,7 +2015,7 @@ define <16 x float> @test_mm512_mask_div_round_ps_ru_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vdivps {ru-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -2035,7 +2035,7 @@ define <16 x float> @test_mm512_mask_div_round_ps_rz_sae(<16 x float> %a0, <16 x
 ; X86-NEXT:    vdivps {rz-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; X86-NEXT:    vmovaps %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   %2 = bitcast i16 %mask to <16 x i1>
   %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %src
   ret <16 x float> %3
@@ -2066,7 +2066,7 @@ define <16 x float> @test_mm512_div_round_ps_rn_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivps {rn-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 8)
   ret <16 x float> %1
 }
 
@@ -2075,7 +2075,7 @@ define <16 x float> @test_mm512_div_round_ps_rd_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivps {rd-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 1)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 9)
   ret <16 x float> %1
 }
 
@@ -2084,7 +2084,7 @@ define <16 x float> @test_mm512_div_round_ps_ru_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivps {ru-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 2)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 10)
   ret <16 x float> %1
 }
 
@@ -2093,7 +2093,7 @@ define <16 x float> @test_mm512_div_round_ps_rz_sae(<16 x float> %a0, <16 x floa
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivps {rz-sae}, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 3)
+  %1 = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> %a0, <16 x float> %a1, i32 11)
   ret <16 x float> %1
 }
 
@@ -2314,7 +2314,7 @@ define <4 x float> @test_mask_add_ss_rn(<4 x float> %a0, <4 x float> %a1, <4 x f
 ; X86-NEXT:    vaddss {rn-sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; X86-NEXT:    vmovaps %xmm2, %xmm0
 ; X86-NEXT:    retl
-  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 0)
+  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 8)
   ret <4 x float> %res
 }
 
@@ -2333,7 +2333,7 @@ define <4 x float> @test_mask_add_ss_rd(<4 x float> %a0, <4 x float> %a1, <4 x f
 ; X86-NEXT:    vaddss {rd-sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; X86-NEXT:    vmovaps %xmm2, %xmm0
 ; X86-NEXT:    retl
-  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 1)
+  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 9)
   ret <4 x float> %res
 }
 
@@ -2352,7 +2352,7 @@ define <4 x float> @test_mask_add_ss_ru(<4 x float> %a0, <4 x float> %a1, <4 x f
 ; X86-NEXT:    vaddss {ru-sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; X86-NEXT:    vmovaps %xmm2, %xmm0
 ; X86-NEXT:    retl
-  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 2)
+  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 10)
   ret <4 x float> %res
 }
 
@@ -2371,7 +2371,7 @@ define <4 x float> @test_mask_add_ss_rz(<4 x float> %a0, <4 x float> %a1, <4 x f
 ; X86-NEXT:    vaddss {rz-sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; X86-NEXT:    vmovaps %xmm2, %xmm0
 ; X86-NEXT:    retl
-  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 3)
+  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 11)
   ret <4 x float> %res
 }
 
@@ -2407,7 +2407,7 @@ define <4 x float> @test_maskz_add_ss_rn(<4 x float> %a0, <4 x float> %a1, i8 %m
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vaddss {rn-sae}, %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 %mask, i32 0)
+  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 %mask, i32 8)
   ret <4 x float> %res
 }
 
@@ -2416,7 +2416,7 @@ define <4 x float> @test_add_ss_rn(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddss {rn-sae}, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 -1, i32 0)
+  %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 -1, i32 8)
   ret <4 x float> %res
 }
 
@@ -2485,7 +2485,7 @@ define <2 x double> @test_mask_add_sd_rn(<2 x double> %a0, <2 x double> %a1, <2 
 ; X86-NEXT:    vaddsd {rn-sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; X86-NEXT:    vmovapd %xmm2, %xmm0
 ; X86-NEXT:    retl
-  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 0)
+  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 8)
   ret <2 x double> %res
 }
 
@@ -2504,7 +2504,7 @@ define <2 x double> @test_mask_add_sd_rd(<2 x double> %a0, <2 x double> %a1, <2 
 ; X86-NEXT:    vaddsd {rd-sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; X86-NEXT:    vmovapd %xmm2, %xmm0
 ; X86-NEXT:    retl
-  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 1)
+  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 9)
   ret <2 x double> %res
 }
 
@@ -2523,7 +2523,7 @@ define <2 x double> @test_mask_add_sd_ru(<2 x double> %a0, <2 x double> %a1, <2 
 ; X86-NEXT:    vaddsd {ru-sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; X86-NEXT:    vmovapd %xmm2, %xmm0
 ; X86-NEXT:    retl
-  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 2)
+  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 10)
   ret <2 x double> %res
 }
 
@@ -2542,7 +2542,7 @@ define <2 x double> @test_mask_add_sd_rz(<2 x double> %a0, <2 x double> %a1, <2 
 ; X86-NEXT:    vaddsd {rz-sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; X86-NEXT:    vmovapd %xmm2, %xmm0
 ; X86-NEXT:    retl
-  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 3)
+  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 11)
   ret <2 x double> %res
 }
 
@@ -2578,7 +2578,7 @@ define <2 x double> @test_maskz_add_sd_rn(<2 x double> %a0, <2 x double> %a1, i8
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vaddsd {rn-sae}, %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> zeroinitializer, i8 %mask, i32 0)
+  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> zeroinitializer, i8 %mask, i32 8)
   ret <2 x double> %res
 }
 
@@ -2587,7 +2587,7 @@ define <2 x double> @test_add_sd_rn(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddsd {rn-sae}, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> zeroinitializer, i8 -1, i32 0)
+  %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> zeroinitializer, i8 -1, i32 8)
   ret <2 x double> %res
 }
 
@@ -2921,7 +2921,7 @@ define <4 x float> @test_x86_avx512_cvtsi2ss32(<4 x float> %a, i32 %b) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcvtsi2ssl %eax, {rz-sae}, %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %res = call <4 x float> @llvm.x86.avx512.cvtsi2ss32(<4 x float> %a, i32 %b, i32 3) ; <<<4 x float>> [#uses=1]
+  %res = call <4 x float> @llvm.x86.avx512.cvtsi2ss32(<4 x float> %a, i32 %b, i32 11) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
 declare <4 x float> @llvm.x86.avx512.cvtsi2ss32(<4 x float>, i32, i32) nounwind readnone
@@ -2937,7 +2937,7 @@ define <4 x float> @test_x86_avx512__mm_cvt_roundu32_ss (<4 x float> %a, i32 %b)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcvtusi2ssl %eax, {rd-sae}, %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %res = call <4 x float> @llvm.x86.avx512.cvtusi2ss(<4 x float> %a, i32 %b, i32 1) ; <<<4 x float>> [#uses=1]
+  %res = call <4 x float> @llvm.x86.avx512.cvtusi2ss(<4 x float> %a, i32 %b, i32 9) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
 
@@ -2955,7 +2955,7 @@ define <4 x float> @test_x86_avx512__mm_cvt_roundu32_ss_mem(<4 x float> %a, i32*
 ; X86-NEXT:    vcvtusi2ssl %eax, {rd-sae}, %xmm0, %xmm0
 ; X86-NEXT:    retl
   %b = load i32, i32* %ptr
-  %res = call <4 x float> @llvm.x86.avx512.cvtusi2ss(<4 x float> %a, i32 %b, i32 1) ; <<<4 x float>> [#uses=1]
+  %res = call <4 x float> @llvm.x86.avx512.cvtusi2ss(<4 x float> %a, i32 %b, i32 9) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
 
@@ -3266,8 +3266,8 @@ define <8 x double>@test_int_x86_avx512_mask_scalef_pd_512(<8 x double> %x0, <8 
 ; X86-NEXT:    vscalefpd {rn-sae}, %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %res = call <8 x double> @llvm.x86.avx512.mask.scalef.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3, i32 3)
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.scalef.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 -1, i32 0)
+  %res = call <8 x double> @llvm.x86.avx512.mask.scalef.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3, i32 11)
+  %res1 = call <8 x double> @llvm.x86.avx512.mask.scalef.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 -1, i32 8)
   %res2 = fadd <8 x double> %res, %res1
   ret <8 x double> %res2
 }
@@ -3289,8 +3289,8 @@ define <16 x float>@test_int_x86_avx512_mask_scalef_ps_512(<16 x float> %x0, <16
 ; X86-NEXT:    vscalefps {rn-sae}, %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    vaddps %zmm0, %zmm2, %zmm0
 ; X86-NEXT:    retl
-  %res = call <16 x float> @llvm.x86.avx512.mask.scalef.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3, i32 2)
-  %res1 = call <16 x float> @llvm.x86.avx512.mask.scalef.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 -1, i32 0)
+  %res = call <16 x float> @llvm.x86.avx512.mask.scalef.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3, i32 10)
+  %res1 = call <16 x float> @llvm.x86.avx512.mask.scalef.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 -1, i32 8)
   %res2 = fadd <16 x float> %res, %res1
   ret <16 x float> %res2
 }
@@ -4164,7 +4164,7 @@ define <16 x float>@test_int_x86_avx512_mask_cvt_dq2ps_512(<16 x i32> %x0, <16 x
   %cvt = sitofp <16 x i32> %x0 to <16 x float>
   %1 = bitcast i16 %x2 to <16 x i1>
   %2 = select <16 x i1> %1, <16 x float> %cvt, <16 x float> %x1
-  %3 = call <16 x float> @llvm.x86.avx512.sitofp.round.v16f32.v16i32(<16 x i32> %x0, i32 0)
+  %3 = call <16 x float> @llvm.x86.avx512.sitofp.round.v16f32.v16i32(<16 x i32> %x0, i32 8)
   %res2 = fadd <16 x float> %2, %3
   ret <16 x float> %res2
 }
@@ -4189,7 +4189,7 @@ define <8 x i32>@test_int_x86_avx512_mask_cvt_pd2dq_512(<8 x double> %x0, <8 x i
 ; X86-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
   %res = call <8 x i32> @llvm.x86.avx512.mask.cvtpd2dq.512(<8 x double> %x0, <8 x i32> %x1, i8 %x2, i32 4)
-  %res1 = call <8 x i32> @llvm.x86.avx512.mask.cvtpd2dq.512(<8 x double> %x0, <8 x i32> %x1, i8 -1, i32 0)
+  %res1 = call <8 x i32> @llvm.x86.avx512.mask.cvtpd2dq.512(<8 x double> %x0, <8 x i32> %x1, i8 -1, i32 8)
   %res2 = add <8 x i32> %res, %res1
   ret <8 x i32> %res2
 }
@@ -4214,7 +4214,7 @@ define <8 x float>@test_int_x86_avx512_mask_cvt_pd2ps_512(<8 x double> %x0, <8 x
 ; X86-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
   %res = call <8 x float> @llvm.x86.avx512.mask.cvtpd2ps.512(<8 x double> %x0, <8 x float> %x1, i8 %x2, i32 4)
-  %res1 = call <8 x float> @llvm.x86.avx512.mask.cvtpd2ps.512(<8 x double> %x0, <8 x float> %x1, i8 -1, i32 2)
+  %res1 = call <8 x float> @llvm.x86.avx512.mask.cvtpd2ps.512(<8 x double> %x0, <8 x float> %x1, i8 -1, i32 10)
   %res2 = fadd <8 x float> %res, %res1
   ret <8 x float> %res2
 }
@@ -4238,8 +4238,8 @@ define <8 x i32>@test_int_x86_avx512_mask_cvt_pd2udq_512(<8 x double> %x0, <8 x 
 ; X86-NEXT:    vcvtpd2udq {rn-sae}, %zmm0, %ymm0
 ; X86-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
-  %res = call <8 x i32> @llvm.x86.avx512.mask.cvtpd2udq.512(<8 x double> %x0, <8 x i32> %x1, i8 %x2, i32 2)
-  %res1 = call <8 x i32> @llvm.x86.avx512.mask.cvtpd2udq.512(<8 x double> %x0, <8 x i32> %x1, i8 -1, i32 0)
+  %res = call <8 x i32> @llvm.x86.avx512.mask.cvtpd2udq.512(<8 x double> %x0, <8 x i32> %x1, i8 %x2, i32 10)
+  %res1 = call <8 x i32> @llvm.x86.avx512.mask.cvtpd2udq.512(<8 x double> %x0, <8 x i32> %x1, i8 -1, i32 8)
   %res2 = add <8 x i32> %res, %res1
   ret <8 x i32> %res2
 }
@@ -4262,8 +4262,8 @@ define <16 x i32>@test_int_x86_avx512_mask_cvt_ps2dq_512(<16 x float> %x0, <16 x
 ; X86-NEXT:    vcvtps2dq {rn-sae}, %zmm0, %zmm0
 ; X86-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; X86-NEXT:    retl
-  %res = call <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512(<16 x float> %x0, <16 x i32> %x1, i16 %x2, i32 2)
-  %res1 = call <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512(<16 x float> %x0, <16 x i32> %x1, i16 -1, i32 0)
+  %res = call <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512(<16 x float> %x0, <16 x i32> %x1, i16 %x2, i32 10)
+  %res1 = call <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512(<16 x float> %x0, <16 x i32> %x1, i16 -1, i32 8)
   %res2 = add <16 x i32> %res, %res1
   ret <16 x i32> %res2
 }
@@ -4311,8 +4311,8 @@ define <16 x i32>@test_int_x86_avx512_mask_cvt_ps2udq_512(<16 x float> %x0, <16 
 ; X86-NEXT:    vcvtps2udq {rn-sae}, %zmm0, %zmm0
 ; X86-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; X86-NEXT:    retl
-  %res = call <16 x i32> @llvm.x86.avx512.mask.cvtps2udq.512(<16 x float> %x0, <16 x i32> %x1, i16 %x2, i32 2)
-  %res1 = call <16 x i32> @llvm.x86.avx512.mask.cvtps2udq.512(<16 x float> %x0, <16 x i32> %x1, i16 -1, i32 0)
+  %res = call <16 x i32> @llvm.x86.avx512.mask.cvtps2udq.512(<16 x float> %x0, <16 x i32> %x1, i16 %x2, i32 10)
+  %res1 = call <16 x i32> @llvm.x86.avx512.mask.cvtps2udq.512(<16 x float> %x0, <16 x i32> %x1, i16 -1, i32 8)
   %res2 = add <16 x i32> %res, %res1
   ret <16 x i32> %res2
 }
@@ -4363,7 +4363,7 @@ define <16 x float>@test_int_x86_avx512_mask_cvt_udq2ps_512(<16 x i32> %x0, <16 
   %cvt = uitofp <16 x i32> %x0 to <16 x float>
   %1 = bitcast i16 %x2 to <16 x i1>
   %2 = select <16 x i1> %1, <16 x float> %cvt, <16 x float> %x1
-  %3 = call <16 x float> @llvm.x86.avx512.uitofp.round.v16f32.v16i32(<16 x i32> %x0, i32 0)
+  %3 = call <16 x float> @llvm.x86.avx512.uitofp.round.v16f32.v16i32(<16 x i32> %x0, i32 8)
   %res2 = fadd <16 x float> %2, %3
   ret <16 x float> %res2
 }
@@ -4990,7 +4990,7 @@ define <4 x float>@test_int_x86_avx512_mask_cvt_sd2ss_round(<4 x float> %x0,<2 x
 ; X86-NEXT:    vcvtsd2ss {rn-sae}, %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vaddps %xmm0, %xmm2, %xmm0
 ; X86-NEXT:    retl
-  %res = call <4 x float> @llvm.x86.avx512.mask.cvtsd2ss.round(<4 x float> %x0, <2 x double> %x1, <4 x float> %x2, i8 %x3, i32 3)
+  %res = call <4 x float> @llvm.x86.avx512.mask.cvtsd2ss.round(<4 x float> %x0, <2 x double> %x1, <4 x float> %x2, i8 %x3, i32 11)
   %res1 = call <4 x float> @llvm.x86.avx512.mask.cvtsd2ss.round(<4 x float> %x0, <2 x double> %x1, <4 x float> %x2, i8 -1, i32 8)
   %res2 = fadd <4 x float> %res, %res1
   ret <4 x float> %res2
@@ -5712,12 +5712,12 @@ define <2 x double>@test_int_x86_avx512_mask_vfmadd_sd(<2 x double> %x0, <2 x do
   %14 = extractelement <2 x double> %x0, i64 0
   %15 = extractelement <2 x double> %x1, i64 0
   %16 = extractelement <2 x double> %x2, i64 0
-  %17 = call double @llvm.x86.avx512.vfmadd.f64(double %14, double %15, double %16, i32 3)
+  %17 = call double @llvm.x86.avx512.vfmadd.f64(double %14, double %15, double %16, i32 11)
   %18 = insertelement <2 x double> %x0, double %17, i64 0
   %19 = extractelement <2 x double> %x0, i64 0
   %20 = extractelement <2 x double> %x1, i64 0
   %21 = extractelement <2 x double> %x2, i64 0
-  %22 = call double @llvm.x86.avx512.vfmadd.f64(double %19, double %20, double %21, i32 3)
+  %22 = call double @llvm.x86.avx512.vfmadd.f64(double %19, double %20, double %21, i32 11)
   %23 = bitcast i8 %x3 to <8 x i1>
   %24 = extractelement <8 x i1> %23, i64 0
   %25 = select i1 %24, double %22, double %19
@@ -5775,12 +5775,12 @@ define <4 x float>@test_int_x86_avx512_mask_vfmadd_ss(<4 x float> %x0, <4 x floa
   %14 = extractelement <4 x float> %x0, i64 0
   %15 = extractelement <4 x float> %x1, i64 0
   %16 = extractelement <4 x float> %x2, i64 0
-  %17 = call float @llvm.x86.avx512.vfmadd.f32(float %14, float %15, float %16, i32 3)
+  %17 = call float @llvm.x86.avx512.vfmadd.f32(float %14, float %15, float %16, i32 11)
   %18 = insertelement <4 x float> %x0, float %17, i64 0
   %19 = extractelement <4 x float> %x0, i64 0
   %20 = extractelement <4 x float> %x1, i64 0
   %21 = extractelement <4 x float> %x2, i64 0
-  %22 = call float @llvm.x86.avx512.vfmadd.f32(float %19, float %20, float %21, i32 3)
+  %22 = call float @llvm.x86.avx512.vfmadd.f32(float %19, float %20, float %21, i32 11)
   %23 = bitcast i8 %x3 to <8 x i1>
   %24 = extractelement <8 x i1> %23, i64 0
   %25 = select i1 %24, float %22, float %19
@@ -5821,7 +5821,7 @@ define <2 x double>@test_int_x86_avx512_maskz_vfmadd_sd(<2 x double> %x0, <2 x d
   %9 = extractelement <2 x double> %x0, i64 0
   %10 = extractelement <2 x double> %x1, i64 0
   %11 = extractelement <2 x double> %x2, i64 0
-  %12 = call double @llvm.x86.avx512.vfmadd.f64(double %9, double %10, double %11, i32 3)
+  %12 = call double @llvm.x86.avx512.vfmadd.f64(double %9, double %10, double %11, i32 11)
   %13 = bitcast i8 %x3 to <8 x i1>
   %14 = extractelement <8 x i1> %13, i64 0
   %15 = select i1 %14, double %12, double 0.000000e+00
@@ -5857,7 +5857,7 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss(<4 x float> %x0, <4 x flo
   %9 = extractelement <4 x float> %x0, i64 0
   %10 = extractelement <4 x float> %x1, i64 0
   %11 = extractelement <4 x float> %x2, i64 0
-  %12 = call float @llvm.x86.avx512.vfmadd.f32(float %9, float %10, float %11, i32 3)
+  %12 = call float @llvm.x86.avx512.vfmadd.f32(float %9, float %10, float %11, i32 11)
   %13 = bitcast i8 %x3 to <8 x i1>
   %14 = extractelement <8 x i1> %13, i64 0
   %15 = select i1 %14, float %12, float 0.000000e+00
@@ -5913,12 +5913,12 @@ define <2 x double>@test_int_x86_avx512_mask3_vfmadd_sd(<2 x double> %x0, <2 x d
   %14 = extractelement <2 x double> %x0, i64 0
   %15 = extractelement <2 x double> %x1, i64 0
   %16 = extractelement <2 x double> %x2, i64 0
-  %17 = call double @llvm.x86.avx512.vfmadd.f64(double %14, double %15, double %16, i32 3)
+  %17 = call double @llvm.x86.avx512.vfmadd.f64(double %14, double %15, double %16, i32 11)
   %18 = insertelement <2 x double> %x2, double %17, i64 0
   %19 = extractelement <2 x double> %x0, i64 0
   %20 = extractelement <2 x double> %x1, i64 0
   %21 = extractelement <2 x double> %x2, i64 0
-  %22 = call double @llvm.x86.avx512.vfmadd.f64(double %19, double %20, double %21, i32 3)
+  %22 = call double @llvm.x86.avx512.vfmadd.f64(double %19, double %20, double %21, i32 11)
   %23 = bitcast i8 %x3 to <8 x i1>
   %24 = extractelement <8 x i1> %23, i64 0
   %25 = select i1 %24, double %22, double %21
@@ -5976,12 +5976,12 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss(<4 x float> %x0, <4 x flo
   %14 = extractelement <4 x float> %x0, i64 0
   %15 = extractelement <4 x float> %x1, i64 0
   %16 = extractelement <4 x float> %x2, i64 0
-  %17 = call float @llvm.x86.avx512.vfmadd.f32(float %14, float %15, float %16, i32 3)
+  %17 = call float @llvm.x86.avx512.vfmadd.f32(float %14, float %15, float %16, i32 11)
   %18 = insertelement <4 x float> %x2, float %17, i64 0
   %19 = extractelement <4 x float> %x0, i64 0
   %20 = extractelement <4 x float> %x1, i64 0
   %21 = extractelement <4 x float> %x2, i64 0
-  %22 = call float @llvm.x86.avx512.vfmadd.f32(float %19, float %20, float %21, i32 3)
+  %22 = call float @llvm.x86.avx512.vfmadd.f32(float %19, float %20, float %21, i32 11)
   %23 = bitcast i8 %x3 to <8 x i1>
   %24 = extractelement <8 x i1> %23, i64 0
   %25 = select i1 %24, float %22, float %21
@@ -6220,14 +6220,14 @@ define <2 x double>@test_int_x86_avx512_mask3_vfmsub_sd(<2 x double> %x0, <2 x d
   %19 = extractelement <2 x double> %x0, i64 0
   %20 = extractelement <2 x double> %x1, i64 0
   %21 = extractelement <2 x double> %18, i64 0
-  %22 = call double @llvm.x86.avx512.vfmadd.f64(double %19, double %20, double %21, i32 3)
+  %22 = call double @llvm.x86.avx512.vfmadd.f64(double %19, double %20, double %21, i32 11)
   %23 = extractelement <2 x double> %x2, i64 0
   %24 = insertelement <2 x double> %x2, double %22, i64 0
   %25 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %x2
   %26 = extractelement <2 x double> %x0, i64 0
   %27 = extractelement <2 x double> %x1, i64 0
   %28 = extractelement <2 x double> %25, i64 0
-  %29 = call double @llvm.x86.avx512.vfmadd.f64(double %26, double %27, double %28, i32 3)
+  %29 = call double @llvm.x86.avx512.vfmadd.f64(double %26, double %27, double %28, i32 11)
   %30 = extractelement <2 x double> %x2, i64 0
   %31 = bitcast i8 %x3 to <8 x i1>
   %32 = extractelement <8 x i1> %31, i64 0
@@ -6291,14 +6291,14 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmsub_ss(<4 x float> %x0, <4 x flo
   %19 = extractelement <4 x float> %x0, i64 0
   %20 = extractelement <4 x float> %x1, i64 0
   %21 = extractelement <4 x float> %18, i64 0
-  %22 = call float @llvm.x86.avx512.vfmadd.f32(float %19, float %20, float %21, i32 3)
+  %22 = call float @llvm.x86.avx512.vfmadd.f32(float %19, float %20, float %21, i32 11)
   %23 = extractelement <4 x float> %x2, i64 0
   %24 = insertelement <4 x float> %x2, float %22, i64 0
   %25 = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %x2
   %26 = extractelement <4 x float> %x0, i64 0
   %27 = extractelement <4 x float> %x1, i64 0
   %28 = extractelement <4 x float> %25, i64 0
-  %29 = call float @llvm.x86.avx512.vfmadd.f32(float %26, float %27, float %28, i32 3)
+  %29 = call float @llvm.x86.avx512.vfmadd.f32(float %26, float %27, float %28, i32 11)
   %30 = extractelement <4 x float> %x2, i64 0
   %31 = bitcast i8 %x3 to <8 x i1>
   %32 = extractelement <8 x i1> %31, i64 0
@@ -6365,7 +6365,7 @@ define <2 x double>@test_int_x86_avx512_mask3_vfnmsub_sd(<2 x double> %x0, <2 x 
   %22 = extractelement <2 x double> %20, i64 0
   %23 = extractelement <2 x double> %x1, i64 0
   %24 = extractelement <2 x double> %21, i64 0
-  %25 = call double @llvm.x86.avx512.vfmadd.f64(double %22, double %23, double %24, i32 3)
+  %25 = call double @llvm.x86.avx512.vfmadd.f64(double %22, double %23, double %24, i32 11)
   %26 = extractelement <2 x double> %x2, i64 0
   %27 = insertelement <2 x double> %x2, double %25, i64 0
   %28 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %x0
@@ -6373,7 +6373,7 @@ define <2 x double>@test_int_x86_avx512_mask3_vfnmsub_sd(<2 x double> %x0, <2 x 
   %30 = extractelement <2 x double> %28, i64 0
   %31 = extractelement <2 x double> %x1, i64 0
   %32 = extractelement <2 x double> %29, i64 0
-  %33 = call double @llvm.x86.avx512.vfmadd.f64(double %30, double %31, double %32, i32 3)
+  %33 = call double @llvm.x86.avx512.vfmadd.f64(double %30, double %31, double %32, i32 11)
   %34 = extractelement <2 x double> %x2, i64 0
   %35 = bitcast i8 %x3 to <8 x i1>
   %36 = extractelement <8 x i1> %35, i64 0
@@ -6440,7 +6440,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfnmsub_ss(<4 x float> %x0, <4 x fl
   %22 = extractelement <4 x float> %20, i64 0
   %23 = extractelement <4 x float> %x1, i64 0
   %24 = extractelement <4 x float> %21, i64 0
-  %25 = call float @llvm.x86.avx512.vfmadd.f32(float %22, float %23, float %24, i32 3)
+  %25 = call float @llvm.x86.avx512.vfmadd.f32(float %22, float %23, float %24, i32 11)
   %26 = extractelement <4 x float> %x2, i64 0
   %27 = insertelement <4 x float> %x2, float %25, i64 0
   %28 = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %x0
@@ -6448,7 +6448,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfnmsub_ss(<4 x float> %x0, <4 x fl
   %30 = extractelement <4 x float> %28, i64 0
   %31 = extractelement <4 x float> %x1, i64 0
   %32 = extractelement <4 x float> %29, i64 0
-  %33 = call float @llvm.x86.avx512.vfmadd.f32(float %30, float %31, float %32, i32 3)
+  %33 = call float @llvm.x86.avx512.vfmadd.f32(float %30, float %31, float %32, i32 11)
   %34 = extractelement <4 x float> %x2, i64 0
   %35 = bitcast i8 %x3 to <8 x i1>
   %36 = extractelement <8 x i1> %35, i64 0

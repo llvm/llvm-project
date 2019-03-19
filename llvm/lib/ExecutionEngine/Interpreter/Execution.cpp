@@ -2112,7 +2112,7 @@ void Interpreter::run() {
     // Track the number of dynamic instructions executed.
     ++NumDynamicInsts;
 
-    LLVM_DEBUG(dbgs() << "About to interpret: " << I);
+    LLVM_DEBUG(dbgs() << "About to interpret: " << I << "\n");
     visit(I);   // Dispatch to one of the visit* methods...
   }
 }

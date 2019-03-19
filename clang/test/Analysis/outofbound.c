@@ -2,7 +2,7 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix \
 // RUN:   -analyzer-checker=alpha.security.ArrayBound \
-// RUN:   -analyzer-config unix:Optimistic=true
+// RUN:   -analyzer-config unix.DynamicMemoryModeling:Optimistic=true
 
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);

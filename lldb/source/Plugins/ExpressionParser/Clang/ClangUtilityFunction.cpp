@@ -9,6 +9,7 @@
 #include "ClangUtilityFunction.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionParser.h"
+#include "ClangExpressionSourceCode.h"
 
 #include <stdio.h>
 #if HAVE_SYS_TYPES_H
@@ -18,7 +19,6 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -32,28 +32,32 @@ using namespace lldb_private;
 //------------------------------------------------------------------
 /// Constructor
 ///
-/// @param[in] text
+/// \param[in] text
 ///     The text of the function.  Must be a full translation unit.
 ///
-/// @param[in] name
+/// \param[in] name
 ///     The name of the function, as used in the text.
 //------------------------------------------------------------------
 ClangUtilityFunction::ClangUtilityFunction(ExecutionContextScope &exe_scope,
                                            const char *text, const char *name)
-    : UtilityFunction(exe_scope, text, name) {}
+    : UtilityFunction(exe_scope, text, name, eKindClangUtilityFunction) {
+  m_function_text.assign(ClangExpressionSourceCode::g_expression_prefix);
+  if (text && text[0])
+    m_function_text.append(text);
+}
 
 ClangUtilityFunction::~ClangUtilityFunction() {}
 
 //------------------------------------------------------------------
 /// Install the utility function into a process
 ///
-/// @param[in] diagnostic_manager
+/// \param[in] diagnostic_manager
 ///     A diagnostic manager to report errors and warnings to.
 ///
-/// @param[in] exe_ctx
+/// \param[in] exe_ctx
 ///     The execution context to install the utility function to.
 ///
-/// @return
+/// \return
 ///     True on success (no errors); false otherwise.
 //------------------------------------------------------------------
 bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,

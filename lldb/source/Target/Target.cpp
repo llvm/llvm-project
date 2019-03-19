@@ -701,7 +701,7 @@ void Target::AddBreakpointName(BreakpointName *bp_name) {
   m_breakpoint_names.insert(std::make_pair(bp_name->GetName(), bp_name));
 }
 
-BreakpointName *Target::FindBreakpointName(const ConstString &name, 
+BreakpointName *Target::FindBreakpointName(ConstString name, 
                                            bool can_create, 
                                            Status &error)
 {
@@ -726,7 +726,7 @@ BreakpointName *Target::FindBreakpointName(const ConstString &name,
 }
 
 void
-Target::DeleteBreakpointName(const ConstString &name)
+Target::DeleteBreakpointName(ConstString name)
 {
   BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
   
@@ -739,7 +739,7 @@ Target::DeleteBreakpointName(const ConstString &name)
 }
 
 void Target::RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
-                                const ConstString &name)
+                                ConstString name)
 {
   bp_sp->RemoveName(name.AsCString());
 }
@@ -2401,12 +2401,11 @@ ExpressionResults Target::EvaluateExpression(
   } else {
     llvm::StringRef prefix = GetExpressionPrefixContents();
     Status error;
-    execution_results = UserExpression::Evaluate(exe_ctx, options, expr, prefix,
-                                                 result_valobj_sp, error,
-                                                 0, // Line Number
-                                                 fixed_expression,
-                                                 nullptr, // Module
-                                                 ctx_obj);
+    execution_results =
+        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
+                                 result_valobj_sp, error, fixed_expression,
+                                 nullptr, // Module
+                                 ctx_obj);
   }
 
   m_suppress_stop_hooks = old_suppress_value;
@@ -2415,7 +2414,7 @@ ExpressionResults Target::EvaluateExpression(
 }
 
 lldb::ExpressionVariableSP
-Target::GetPersistentVariable(const ConstString &name) {
+Target::GetPersistentVariable(ConstString name) {
   lldb::ExpressionVariableSP variable_sp;
   m_scratch_type_system_map.ForEach(
       [name, &variable_sp](TypeSystem *type_system) -> bool {
@@ -2431,7 +2430,7 @@ Target::GetPersistentVariable(const ConstString &name) {
   return variable_sp;
 }
 
-lldb::addr_t Target::GetPersistentSymbol(const ConstString &name) {
+lldb::addr_t Target::GetPersistentSymbol(ConstString name) {
   lldb::addr_t address = LLDB_INVALID_ADDRESS;
 
   m_scratch_type_system_map.ForEach(
@@ -2554,12 +2553,14 @@ void Target::RunStopHooks() {
 
   StopHookCollection::iterator pos, end = m_stop_hooks.end();
 
-  // If there aren't any active stop hooks, don't bother either:
+  // If there aren't any active stop hooks, don't bother either.
+  // Also see if any of the active hooks want to auto-continue.
   bool any_active_hooks = false;
-  for (pos = m_stop_hooks.begin(); pos != end; pos++) {
-    if ((*pos).second->IsActive()) {
+  bool auto_continue = false;
+  for (auto hook : m_stop_hooks) {
+    if (hook.second->IsActive()) {
       any_active_hooks = true;
-      break;
+      auto_continue |= hook.second->GetAutoContinue();
     }
   }
   if (!any_active_hooks)
@@ -2595,6 +2596,7 @@ void Target::RunStopHooks() {
   bool hooks_ran = false;
   bool print_hook_header = (m_stop_hooks.size() != 1);
   bool print_thread_header = (num_exe_ctx != 1);
+  bool did_restart = false;
 
   for (pos = m_stop_hooks.begin(); keep_going && pos != end; pos++) {
     // result.Clear();
@@ -2639,10 +2641,13 @@ void Target::RunStopHooks() {
         options.SetPrintResults(true);
         options.SetAddToHistory(false);
 
+        // Force Async:
+        bool old_async = GetDebugger().GetAsyncExecution();
+        GetDebugger().SetAsyncExecution(true);
         GetDebugger().GetCommandInterpreter().HandleCommands(
             cur_hook_sp->GetCommands(), &exc_ctx_with_reasons[i], options,
             result);
-
+        GetDebugger().SetAsyncExecution(old_async);
         // If the command started the target going again, we should bag out of
         // running the stop hooks.
         if ((result.GetStatus() == eReturnStatusSuccessContinuingNoResult) ||
@@ -2651,13 +2656,19 @@ void Target::RunStopHooks() {
           StopHookCollection::iterator tmp = pos;
           if (++tmp != end)
             result.AppendMessageWithFormat("\nAborting stop hooks, hook %" PRIu64
-                                           " set the program running.\n",
+                                           " set the program running.\n"
+                                           "  Consider using '-G true' to make "
+                                           "stop hooks auto-continue.\n",
                                            cur_hook_sp->GetID());
           keep_going = false;
+          did_restart = true;
         }
       }
     }
   }
+  // Finally, if auto-continue was requested, do it now:
+  if (!did_restart && auto_continue)
+    m_process_sp->PrivateResume();
 
   result.GetImmediateOutputStream()->Flush();
   result.GetImmediateErrorStream()->Flush();
@@ -2914,17 +2925,11 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
       if (state == eStateStopped) {
         if (!launch_info.GetFlags().Test(eLaunchFlagStopAtEntry)) {
           if (synchronous_execution) {
-            error = m_process_sp->PrivateResume();
-            if (error.Success()) {
-              state = m_process_sp->WaitForProcessToStop(
-                  llvm::None, nullptr, true, hijack_listener_sp, stream);
-              const bool must_be_alive =
-                  false; // eStateExited is ok, so this must be false
-              if (!StateIsStoppedState(state, must_be_alive)) {
-                error.SetErrorStringWithFormat("process isn't stopped: %s",
-                                               StateAsCString(state));
-              }
-            }
+            // Now we have handled the stop-from-attach, and we are just switching
+            // to a synchronous resume.  So we should switch to the SyncResume
+            // hijacker.
+            m_process_sp->RestoreProcessEvents();
+            m_process_sp->ResumeSynchronous(stream);
           } else {
             m_process_sp->RestoreProcessEvents();
             error = m_process_sp->PrivateResume();
@@ -3143,12 +3148,13 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
 //--------------------------------------------------------------
 Target::StopHook::StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid)
     : UserID(uid), m_target_sp(target_sp), m_commands(), m_specifier_sp(),
-      m_thread_spec_up(), m_active(true) {}
+      m_thread_spec_up() {}
 
 Target::StopHook::StopHook(const StopHook &rhs)
     : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp),
       m_commands(rhs.m_commands), m_specifier_sp(rhs.m_specifier_sp),
-      m_thread_spec_up(), m_active(rhs.m_active) {
+      m_thread_spec_up(), m_active(rhs.m_active),
+      m_auto_continue(rhs.m_auto_continue) {
   if (rhs.m_thread_spec_up)
     m_thread_spec_up.reset(new ThreadSpec(*rhs.m_thread_spec_up));
 }
@@ -3174,6 +3180,9 @@ void Target::StopHook::GetDescription(Stream *s,
     s->Indent("State: enabled\n");
   else
     s->Indent("State: disabled\n");
+
+  if (m_auto_continue)
+    s->Indent("AutoContinue on\n");
 
   if (m_specifier_sp) {
     s->Indent();
@@ -3318,6 +3327,9 @@ static constexpr PropertyDefinition g_properties[] = {
     {"auto-import-clang-modules", OptionValue::eTypeBoolean, false, true,
      nullptr, {},
      "Automatically load Clang modules referred to by the program."},
+    {"import-std-module", OptionValue::eTypeBoolean, false, false,
+     nullptr, {},
+     "Import the C++ std module to improve debugging STL containers."},
     {"auto-apply-fixits", OptionValue::eTypeBoolean, false, true, nullptr,
      {}, "Automatically apply fix-it hints to expressions."},
     {"notify-about-fixits", OptionValue::eTypeBoolean, false, true, nullptr,
@@ -3456,6 +3468,7 @@ enum {
   ePropertyDebugFileSearchPaths,
   ePropertyClangModuleSearchPaths,
   ePropertyAutoImportClangModules,
+  ePropertyImportStdModule,
   ePropertyAutoApplyFixIts,
   ePropertyNotifyAboutFixIts,
   ePropertySaveObjects,
@@ -3493,7 +3506,7 @@ enum {
 
 class TargetOptionValueProperties : public OptionValueProperties {
 public:
-  TargetOptionValueProperties(const ConstString &name)
+  TargetOptionValueProperties(ConstString name)
       : OptionValueProperties(name), m_target(nullptr), m_got_host_env(false) {}
 
   // This constructor is used when creating TargetOptionValueProperties when it
@@ -3878,6 +3891,12 @@ bool TargetProperties::GetEnableAutoImportClangModules() const {
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
+bool TargetProperties::GetEnableImportStdModule() const {
+  const uint32_t idx = ePropertyImportStdModule;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_properties[idx].default_uint_value != 0);
+}
+
 bool TargetProperties::GetEnableAutoApplyFixIts() const {
   const uint32_t idx = ePropertyAutoApplyFixIts;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
@@ -4197,7 +4216,7 @@ Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp,
 
 Target::TargetEventData::~TargetEventData() = default;
 
-const ConstString &Target::TargetEventData::GetFlavorString() {
+ConstString Target::TargetEventData::GetFlavorString() {
   static ConstString g_flavor("Target::TargetEventData");
   return g_flavor;
 }

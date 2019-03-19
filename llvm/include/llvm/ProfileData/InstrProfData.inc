@@ -265,6 +265,9 @@ INSTR_PROF_SECT_ENTRY(IPSK_vnodes, \
 INSTR_PROF_SECT_ENTRY(IPSK_covmap, \
                       INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON), \
                       INSTR_PROF_COVMAP_COFF, "__LLVM_COV,")
+INSTR_PROF_SECT_ENTRY(IPSK_orderfile, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COFF), "__DATA,")
 
 #undef INSTR_PROF_SECT_ENTRY
 #endif
@@ -635,10 +638,12 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  * version for other variants of profile. We set the lowest bit of the upper 8
  * bits (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentaiton
  * generated profile, and 0 if this is a Clang FE generated profile.
+ * 1 in bit 57 indicates there are context-sensitive records in the profile.
  */
 #define VARIANT_MASKS_ALL 0xff00000000000000ULL
 #define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
 #define VARIANT_MASK_IR_PROF (0x1ULL << 56)
+#define VARIANT_MASK_CSIR_PROF (0x1ULL << 57)
 #define INSTR_PROF_RAW_VERSION_VAR __llvm_profile_raw_version
 #define INSTR_PROF_PROFILE_RUNTIME_VAR __llvm_profile_runtime
 
@@ -654,6 +659,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
 #define INSTR_PROF_COVMAP_COMMON __llvm_covmap
+#define INSTR_PROF_ORDERFILE_COMMON __llvm_orderfile
 /* Windows section names. Because these section names contain dollar characters,
  * they must be quoted.
  */
@@ -663,6 +669,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VALS_COFF ".lprfv$M"
 #define INSTR_PROF_VNODES_COFF ".lprfnd$M"
 #define INSTR_PROF_COVMAP_COFF ".lcovmap$M"
+#define INSTR_PROF_ORDERFILE_COFF ".lorderfile$M"
 
 #ifdef _WIN32
 /* Runtime section names and name strings.  */
@@ -676,6 +683,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Value profile nodes section. */
 #define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_VNODES_COFF
 #define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_COVMAP_COFF
+#define INSTR_PROF_ORDERFILE_SECT_NAME INSTR_PROF_ORDERFILE_COFF
 #else
 /* Runtime section names and name strings.  */
 #define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON)
@@ -688,7 +696,17 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Value profile nodes section. */
 #define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON)
 #define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON)
+/* Order file instrumentation. */
+#define INSTR_PROF_ORDERFILE_SECT_NAME                                         \
+  INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON)
 #endif
+
+#define INSTR_PROF_ORDERFILE_BUFFER_NAME _llvm_order_file_buffer
+#define INSTR_PROF_ORDERFILE_BUFFER_NAME_STR                                   \
+  INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_BUFFER_NAME)
+#define INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME _llvm_order_file_buffer_idx
+#define INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME_STR                               \
+  INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME)
 
 /* Macros to define start/stop section symbol for a given
  * section on Linux. For instance
@@ -723,6 +741,12 @@ typedef struct InstrProfValueData {
 
 #endif /* INSTR_PROF_DATA_INC */
 
+#ifndef INSTR_ORDER_FILE_INC
+// The maximal # of functions: 128*1024 (the buffer size will be 128*4 KB).
+#define INSTR_ORDER_FILE_BUFFER_SIZE 131072
+#define INSTR_ORDER_FILE_BUFFER_BITS 17
+#define INSTR_ORDER_FILE_BUFFER_MASK 0x1ffff
+#endif /* INSTR_ORDER_FILE_INC */
 #else
 #undef INSTR_PROF_DATA_DEFINED
 #endif

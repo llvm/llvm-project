@@ -227,7 +227,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrb_rne(<16 x float> %a0, <16 
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfmadd132ps {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 %mask, i32 0) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 %mask, i32 8) nounwind
   ret <16 x float> %res
 }
 
@@ -237,7 +237,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrb_rtn(<16 x float> %a0, <16 
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfmadd132ps {rd-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 %mask, i32 1) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 %mask, i32 9) nounwind
   ret <16 x float> %res
 }
 
@@ -247,7 +247,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrb_rtp(<16 x float> %a0, <16 
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfmadd132ps {ru-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 %mask, i32 2) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 %mask, i32 10) nounwind
   ret <16 x float> %res
 }
 
@@ -257,7 +257,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrb_rtz(<16 x float> %a0, <16 
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfmadd132ps {rz-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 %mask, i32 3) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 %mask, i32 11) nounwind
   ret <16 x float> %res
 }
 
@@ -276,7 +276,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrbz_rne(<16 x float> %a0, <16
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd213ps {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 -1, i32 0) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 -1, i32 8) nounwind
   ret <16 x float> %res
 }
 
@@ -285,7 +285,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrbz_rtn(<16 x float> %a0, <16
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd213ps {rd-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 -1, i32 1) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 -1, i32 9) nounwind
   ret <16 x float> %res
 }
 
@@ -294,7 +294,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrbz_rtp(<16 x float> %a0, <16
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd213ps {ru-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 -1, i32 2) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 -1, i32 10) nounwind
   ret <16 x float> %res
 }
 
@@ -303,7 +303,7 @@ define <16 x float> @test_mask_round_vfmadd512_ps_rrbz_rtz(<16 x float> %a0, <16
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd213ps {rz-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 -1, i32 3) nounwind
+  %res = call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2, i16 -1, i32 11) nounwind
   ret <16 x float> %res
 }
 
@@ -348,7 +348,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrb_rne(<8 x double> %a0, <8 x
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfmadd132pd {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 0) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 8) nounwind
   ret <8 x double> %res
 }
 
@@ -358,7 +358,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrb_rtn(<8 x double> %a0, <8 x
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfmadd132pd {rd-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 1) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 9) nounwind
   ret <8 x double> %res
 }
 
@@ -368,7 +368,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrb_rtp(<8 x double> %a0, <8 x
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfmadd132pd {ru-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 2) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 10) nounwind
   ret <8 x double> %res
 }
 
@@ -378,7 +378,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrb_rtz(<8 x double> %a0, <8 x
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfmadd132pd {rz-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 3) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 11) nounwind
   ret <8 x double> %res
 }
 
@@ -397,7 +397,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrbz_rne(<8 x double> %a0, <8 
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 0) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 8) nounwind
   ret <8 x double> %res
 }
 
@@ -406,7 +406,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrbz_rtn(<8 x double> %a0, <8 
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd213pd {rd-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 1) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 9) nounwind
   ret <8 x double> %res
 }
 
@@ -415,7 +415,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrbz_rtp(<8 x double> %a0, <8 
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd213pd {ru-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 2) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 10) nounwind
   ret <8 x double> %res
 }
 
@@ -424,7 +424,7 @@ define <8 x double> @test_mask_round_vfmadd512_pd_rrbz_rtz(<8 x double> %a0, <8 
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd213pd {rz-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 3) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 11) nounwind
   ret <8 x double> %res
 }
 
@@ -514,7 +514,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrb_rne(<8 x double> %a0, <8 
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfnmsub132pd {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 0) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 8) nounwind
   ret <8 x double> %res
 }
 
@@ -524,7 +524,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrb_rtn(<8 x double> %a0, <8 
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfnmsub132pd {rd-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 1) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 9) nounwind
   ret <8 x double> %res
 }
 
@@ -534,7 +534,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrb_rtp(<8 x double> %a0, <8 
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfnmsub132pd {ru-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 2) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 10) nounwind
   ret <8 x double> %res
 }
 
@@ -544,7 +544,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrb_rtz(<8 x double> %a0, <8 
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfnmsub132pd {rz-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 3) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 %mask, i32 11) nounwind
   ret <8 x double> %res
 }
 
@@ -563,7 +563,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrbz_rne(<8 x double> %a0, <8
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfnmsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 0) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 8) nounwind
   ret <8 x double> %res
 }
 
@@ -572,7 +572,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrbz_rtn(<8 x double> %a0, <8
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfnmsub213pd {rd-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 1) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 9) nounwind
   ret <8 x double> %res
 }
 
@@ -581,7 +581,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrbz_rtp(<8 x double> %a0, <8
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfnmsub213pd {ru-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 2) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 10) nounwind
   ret <8 x double> %res
 }
 
@@ -590,7 +590,7 @@ define <8 x double> @test_mask_round_vfnmsub512_pd_rrbz_rtz(<8 x double> %a0, <8
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfnmsub213pd {rz-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 3) nounwind
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfnmsub.pd.512(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2, i8 -1, i32 11) nounwind
   ret <8 x double> %res
 }
 

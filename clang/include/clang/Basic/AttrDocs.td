@@ -965,43 +965,6 @@ of the condition.
   }];
 }
 
-def FortifyStdLibDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``fortify_stdlib`` attribute applies to declarations of C stdlib functions
-(memcpy, sprintf, ...), and causes clang to emit calls to their fortified
-variants with ``__builtin_object_size``. This attribute is intended for use
-within standard C library implementations and should not generally be used for
-user applications. For instance:
-
-.. code-block:: c
-
-  __attribute__((fortify_stdlib(0, 0)))
-  int sprintf(char *buf, const char *fmt, ...);
-
-  int main() {
-    char buf[5];
-    sprintf(buf, "%f", 42.0);
-    // Clang generates code equivalent to:
-    // __sprintf_chk(buf, 0, __builtin_object_size(0), "%f", 42.0);
-  }
-
-The first argument to the attribute is the integer `type` argument passed to
-`__builtin_object_size` (you can read more about `__builtin_object_size`
-`here <https://gcc.gnu.org/onlinedocs/gcc-4.8.5/gcc/Object-Size-Checking.html>`_),
-The second argument to this attribute is the flag that the fortified format
-functions accept.
-
-Only a specific set of standard library functions are supported:
-  - memcpy, memmove, memset
-  - stpcpy, strcat, strcpy
-  - strlcat, strlcpy
-  - strncat, strncpy, stpncpy
-  - snprintf, vsnprintf, sprintf, vsprintf
-  - fprintf, vfprintf, printf, vprintf
-}];
-}
-
 def ConvergentDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -3979,13 +3942,13 @@ The ``gnu_inline`` changes the meaning of ``extern inline`` to use GNU inline
 semantics, meaning:
 
 * If any declaration that is declared ``inline`` is not declared ``extern``,
-then the ``inline`` keyword is just a hint. In particular, an out-of-line
-definition is still emitted for a function with external linkage, even if all
-call sites are inlined, unlike in C99 and C++ inline semantics.
+  then the ``inline`` keyword is just a hint. In particular, an out-of-line
+  definition is still emitted for a function with external linkage, even if all
+  call sites are inlined, unlike in C99 and C++ inline semantics.
 
 * If all declarations that are declared ``inline`` are also declared
-``extern``, then the function body is present only for inlining and no
-out-of-line version is emitted.
+  ``extern``, then the function body is present only for inlining and no
+  out-of-line version is emitted.
 
 Some important consequences: ``static inline`` emits an out-of-line
 version if needed, a plain ``inline`` definition emits an out-of-line version

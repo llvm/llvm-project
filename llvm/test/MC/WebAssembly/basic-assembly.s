@@ -26,9 +26,9 @@ test0:
     br_if       0        # 0: down to label0
 .LBB0_1:
     loop        i32      # label1:
-    call        something1@FUNCTION
+    call        something1
     i64.const   1234
-    i32.call    something2@FUNCTION
+    i32.call    something2
     i32.const   0
     call_indirect 0
     i32.const   1
@@ -72,17 +72,24 @@ test0:
     local.set 0
     block       i32
     local.get 0
-    br_on_exn 0, __cpp_exception@EVENT
+    br_on_exn 0, __cpp_exception
     rethrow
 .LBB0_4:
     end_block
     end_try
-    i32.const 0
+    i32.const .L.str
     throw 0
 .LBB0_5:
     #i32.trunc_sat_f32_s
-    global.get  __stack_pointer@GLOBAL
+    global.get  __stack_pointer
     end_function
+
+    .section	.rodata..L.str,"",@
+.L.str:
+    .int8	'H'
+    .asciz	"ello, World!"
+    .size	.L.str, 14
+
     .globaltype	__stack_pointer, i32
 
 # CHECK:           .text
@@ -105,9 +112,9 @@ test0:
 # CHECK-NEXT:      br_if 0            # 0: down to label0
 # CHECK-NEXT:  .LBB0_1:
 # CHECK-NEXT:      loop        i32         # label1:
-# CHECK-NEXT:      call        something1@FUNCTION
+# CHECK-NEXT:      call        something1
 # CHECK-NEXT:      i64.const   1234
-# CHECK-NEXT:      i32.call    something2@FUNCTION
+# CHECK-NEXT:      i32.call    something2
 # CHECK-NEXT:      i32.const   0
 # CHECK-NEXT:      call_indirect 0
 # CHECK-NEXT:      i32.const   1
@@ -149,15 +156,20 @@ test0:
 # CHECK-NEXT:      local.set 0
 # CHECK-NEXT:      block       i32
 # CHECK-NEXT:      local.get 0
-# CHECK-NEXT:      br_on_exn 0, __cpp_exception@EVENT
+# CHECK-NEXT:      br_on_exn 0, __cpp_exception
 # CHECK-NEXT:      rethrow
 # CHECK-NEXT:  .LBB0_4:
 # CHECK-NEXT:      end_block
 # CHECK-NEXT:      end_try
-# CHECK-NEXT:      i32.const 0
+# CHECK-NEXT:      i32.const .L.str
 # CHECK-NEXT:      throw 0
 # CHECK-NEXT:  .LBB0_5:
-# CHECK-NEXT:      global.get  __stack_pointer@GLOBAL
+# CHECK-NEXT:      global.get  __stack_pointer
 # CHECK-NEXT:      end_function
+
+# CHECK:	    .section	.rodata..L.str,"",@
+# CHECK-NEXT:.L.str:
+# CHECK-NEXT:	.int8	72
+# CHECK-NEXT:	.asciz	"ello, World!"
 
 # CHECK:           .globaltype	__stack_pointer, i32

@@ -49,7 +49,7 @@ extern "C" {
     Printf("ERROR: Function \"%s\" not defined.\n", #NAME); \
     exit(1);                                                \
   }                                                         \
-  EXTERNAL_FUNC(NAME, NAME##Def) RETURN_TYPE NAME FUNC_SIG;
+  EXTERNAL_FUNC(NAME, NAME##Def) RETURN_TYPE NAME FUNC_SIG
 
 #include "FuzzerExtFunctions.def"
 

@@ -14,6 +14,7 @@
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
@@ -60,7 +61,12 @@ CodeGenFunction::EmitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   // Get the method.
   const ObjCMethodDecl *BoxingMethod = E->getBoxingMethod();
   const Expr *SubExpr = E->getSubExpr();
-  assert(BoxingMethod && "BoxingMethod is null");
+
+  if (E->isExpressibleAsConstantInitializer()) {
+    ConstantEmitter ConstEmitter(CGM);
+    return ConstEmitter.tryEmitAbstract(E, E->getType());
+  }
+
   assert(BoxingMethod->isClassMethod() && "BoxingMethod must be a class method");
   Selector Sel = BoxingMethod->getSelector();
 
@@ -433,8 +439,9 @@ tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
 
   // Match the exact pattern '[[MyClass alloc] init]'.
   Selector Sel = OME->getSelector();
-  if (!OME->isInstanceMessage() || !OME->getType()->isObjCObjectPointerType() ||
-      !Sel.isUnarySelector() || Sel.getNameForSlot(0) != "init")
+  if (OME->getReceiverKind() != ObjCMessageExpr::Instance ||
+      !OME->getType()->isObjCObjectPointerType() || !Sel.isUnarySelector() ||
+      Sel.getNameForSlot(0) != "init")
     return None;
 
   // Okay, this is '[receiver init]', check if 'receiver' is '[cls alloc]'.
@@ -2870,6 +2877,7 @@ public:
   Result visit(const Expr *e);
   Result visitCastExpr(const CastExpr *e);
   Result visitPseudoObjectExpr(const PseudoObjectExpr *e);
+  Result visitBlockExpr(const BlockExpr *e);
   Result visitBinaryOperator(const BinaryOperator *e);
   Result visitBinAssign(const BinaryOperator *e);
   Result visitBinAssignUnsafeUnretained(const BinaryOperator *e);
@@ -2943,6 +2951,12 @@ ARCExprEmitter<Impl,Result>::visitPseudoObjectExpr(const PseudoObjectExpr *E) {
     opaques[i].unbind(CGF);
 
   return result;
+}
+
+template <typename Impl, typename Result>
+Result ARCExprEmitter<Impl, Result>::visitBlockExpr(const BlockExpr *e) {
+  // The default implementation just forwards the expression to visitExpr.
+  return asImpl().visitExpr(e);
 }
 
 template <typename Impl, typename Result>
@@ -3088,7 +3102,8 @@ Result ARCExprEmitter<Impl,Result>::visit(const Expr *e) {
   // Look through pseudo-object expressions.
   } else if (const PseudoObjectExpr *pseudo = dyn_cast<PseudoObjectExpr>(e)) {
     return asImpl().visitPseudoObjectExpr(pseudo);
-  }
+  } else if (auto *be = dyn_cast<BlockExpr>(e))
+    return asImpl().visitBlockExpr(be);
 
   return asImpl().visitExpr(e);
 }
@@ -3121,6 +3136,15 @@ struct ARCRetainExprEmitter :
   TryEmitResult visitConsumeObject(const Expr *e) {
     llvm::Value *result = CGF.EmitScalarExpr(e);
     return TryEmitResult(result, true);
+  }
+
+  TryEmitResult visitBlockExpr(const BlockExpr *e) {
+    TryEmitResult result = visitExpr(e);
+    // Avoid the block-retain if this is a block literal that doesn't need to be
+    // copied to the heap.
+    if (e->getBlockDecl()->canAvoidCopyToHeap())
+      result.setInt(true);
+    return result;
   }
 
   /// Block extends are net +0.  Naively, we could just recurse on

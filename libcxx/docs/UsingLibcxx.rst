@@ -242,11 +242,11 @@ thread safety annotations.
   purely as an extension. See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>`
   for more information.
 
-**_LIBCPP_ENABLE_DEPRECATION_WARNINGS**:
-  This macro enables warnings when using deprecated components. For example,
-  when compiling in C++11 mode, using `std::auto_ptr` with the macro defined
-  will trigger a warning saying that `std::auto_ptr` is deprecated. By default,
-  this macro is not defined.
+**_LIBCPP_DISABLE_DEPRECATION_WARNINGS**:
+  This macro disables warnings when using deprecated components. For example,
+  using `std::auto_ptr` when compiling in C++11 mode will normally trigger a
+  warning saying that `std::auto_ptr` is deprecated. If the macro is defined,
+  no warning will be emitted. By default, this macro is not defined.
 
 C++17 Specific Configuration Macros
 -----------------------------------

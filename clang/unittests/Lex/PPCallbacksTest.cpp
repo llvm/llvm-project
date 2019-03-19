@@ -13,7 +13,6 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -178,14 +177,13 @@ protected:
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
     TrivialModuleLoader ModLoader;
-    MemoryBufferCache PCMCache;
 
     HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                             Diags, LangOpts, Target.get());
     AddFakeHeader(HeaderInfo, HeaderPath, SystemHeader);
 
     Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                    SourceMgr, PCMCache, HeaderInfo, ModLoader,
+                    SourceMgr, HeaderInfo, ModLoader,
                     /*IILookup =*/nullptr,
                     /*OwnsHeaderSearch =*/false);
     return InclusionDirectiveCallback(PP)->FilenameRange;
@@ -198,14 +196,13 @@ protected:
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
     TrivialModuleLoader ModLoader;
-    MemoryBufferCache PCMCache;
 
     HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                             Diags, LangOpts, Target.get());
     AddFakeHeader(HeaderInfo, HeaderPath, SystemHeader);
 
     Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                    SourceMgr, PCMCache, HeaderInfo, ModLoader,
+                    SourceMgr, HeaderInfo, ModLoader,
                     /*IILookup =*/nullptr,
                     /*OwnsHeaderSearch =*/false);
     return InclusionDirectiveCallback(PP)->FileType;
@@ -233,14 +230,13 @@ protected:
   std::vector<CondDirectiveCallbacks::Result>
   DirectiveExprRange(StringRef SourceText) {
     TrivialModuleLoader ModLoader;
-    MemoryBufferCache PCMCache;
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(SourceText);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
     HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                             Diags, LangOpts, Target.get());
     Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                    SourceMgr, PCMCache, HeaderInfo, ModLoader,
+                    SourceMgr, HeaderInfo, ModLoader,
                     /*IILookup =*/nullptr,
                     /*OwnsHeaderSearch =*/false);
     PP.Initialize(*Target);
@@ -270,12 +266,11 @@ protected:
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
 
     TrivialModuleLoader ModLoader;
-    MemoryBufferCache PCMCache;
     HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                             Diags, OpenCLLangOpts, Target.get());
 
     Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags,
-                    OpenCLLangOpts, SourceMgr, PCMCache, HeaderInfo, ModLoader,
+                    OpenCLLangOpts, SourceMgr, HeaderInfo, ModLoader,
                     /*IILookup =*/nullptr,
                     /*OwnsHeaderSearch =*/false);
     PP.Initialize(*Target);

@@ -33,6 +33,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
@@ -274,6 +275,12 @@ static cl::opt<std::string>
                     cl::desc("YAML output filename for pass remarks"),
                     cl::value_desc("filename"));
 
+static cl::opt<std::string>
+    RemarksPasses("pass-remarks-filter",
+                  cl::desc("Only record optimization remarks from passes whose "
+                           "names match the given regular expression"),
+                  cl::value_desc("regex"));
+
 cl::opt<PGOKind>
     PGOKindFlag("pgo-kind", cl::init(NoPGO), cl::Hidden,
                 cl::desc("The kind of profile guided optimization"),
@@ -286,6 +293,22 @@ cl::opt<PGOKind>
                                       "Use sampled profile to guide PGO.")));
 cl::opt<std::string> ProfileFile("profile-file",
                                  cl::desc("Path to the profile."), cl::Hidden);
+
+cl::opt<CSPGOKind> CSPGOKindFlag(
+    "cspgo-kind", cl::init(NoCSPGO), cl::Hidden,
+    cl::desc("The kind of context sensitive profile guided optimization"),
+    cl::values(
+        clEnumValN(NoCSPGO, "nocspgo", "Do not use CSPGO."),
+        clEnumValN(
+            CSInstrGen, "cspgo-instr-gen-pipeline",
+            "Instrument (context sensitive) the IR to generate profile."),
+        clEnumValN(
+            CSInstrUse, "cspgo-instr-use-pipeline",
+            "Use instrumented (context sensitive) profile to guide PGO.")));
+cl::opt<std::string> CSProfileGenFile(
+    "cs-profilegen-file",
+    cl::desc("Path to the instrumented context sensitive profile."),
+    cl::Hidden);
 
 class OptCustomPassManager : public legacy::PassManager {
   DebugifyStatsMap DIStatsMap;
@@ -391,6 +414,17 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
     break;
   case SampleUse:
     Builder.PGOSampleUse = ProfileFile;
+    break;
+  default:
+    break;
+  }
+
+  switch (CSPGOKindFlag) {
+  case CSInstrGen:
+    Builder.EnablePGOCSInstrGen = true;
+    break;
+  case CSInstrUse:
+    Builder.EnablePGOCSInstrUse = true;
     break;
   default:
     break;
@@ -536,8 +570,14 @@ int main(int argc, char **argv) {
       errs() << EC.message() << '\n';
       return 1;
     }
-    Context.setDiagnosticsOutputFile(
-        llvm::make_unique<yaml::Output>(OptRemarkFile->os()));
+    Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
+        RemarksFilename, OptRemarkFile->os()));
+
+    if (!RemarksPasses.empty())
+      if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses)) {
+        errs() << E << '\n';
+        return 1;
+      }
   }
 
   // Load the input module...
@@ -612,6 +652,11 @@ int main(int argc, char **argv) {
     CPUStr = getCPUStr();
     FeaturesStr = getFeaturesStr();
     Machine = GetTargetMachine(ModuleTriple, CPUStr, FeaturesStr, Options);
+  } else if (ModuleTriple.getArchName() != "unknown" &&
+             ModuleTriple.getArchName() != "") {
+    errs() << argv[0] << ": unrecognized architecture '"
+           << ModuleTriple.getArchName() << "' provided.\n";
+    return 1;
   }
 
   std::unique_ptr<TargetMachine> TM(Machine);

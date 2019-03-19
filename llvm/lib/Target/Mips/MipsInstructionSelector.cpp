@@ -36,6 +36,8 @@ public:
 
 private:
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
+  bool materialize32BitImm(unsigned DestReg, APInt Imm,
+                           MachineIRBuilder &B) const;
 
   const MipsTargetMachine &TM;
   const MipsSubtarget &STI;
@@ -90,6 +92,40 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   return true;
 }
 
+bool MipsInstructionSelector::materialize32BitImm(unsigned DestReg, APInt Imm,
+                                                  MachineIRBuilder &B) const {
+  assert(Imm.getBitWidth() == 32 && "Unsupported immediate size.");
+  // Ori zero extends immediate. Used for values with zeros in high 16 bits.
+  if (Imm.getHiBits(16).isNullValue()) {
+    MachineInstr *Inst = B.buildInstr(Mips::ORi, {DestReg}, {Mips::ZERO})
+                             .addImm(Imm.getLoBits(16).getLimitedValue());
+    return constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
+  }
+  // Lui places immediate in high 16 bits and sets low 16 bits to zero.
+  if (Imm.getLoBits(16).isNullValue()) {
+    MachineInstr *Inst = B.buildInstr(Mips::LUi, {DestReg}, {})
+                             .addImm(Imm.getHiBits(16).getLimitedValue());
+    return constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
+  }
+  // ADDiu sign extends immediate. Used for values with 1s in high 17 bits.
+  if (Imm.isSignedIntN(16)) {
+    MachineInstr *Inst = B.buildInstr(Mips::ADDiu, {DestReg}, {Mips::ZERO})
+                             .addImm(Imm.getLoBits(16).getLimitedValue());
+    return constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
+  }
+  // Values that cannot be materialized with single immediate instruction.
+  unsigned LUiReg = B.getMRI()->createVirtualRegister(&Mips::GPR32RegClass);
+  MachineInstr *LUi = B.buildInstr(Mips::LUi, {LUiReg}, {})
+                          .addImm(Imm.getHiBits(16).getLimitedValue());
+  MachineInstr *ORi = B.buildInstr(Mips::ORi, {DestReg}, {LUiReg})
+                          .addImm(Imm.getLoBits(16).getLimitedValue());
+  if (!constrainSelectedInstRegOperands(*LUi, TII, TRI, RBI))
+    return false;
+  if (!constrainSelectedInstRegOperands(*ORi, TII, TRI, RBI))
+    return false;
+  return true;
+}
+
 /// Returning Opc indicates that we failed to select MIPS instruction opcode.
 static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned MemSizeInBytes) {
   if (Opc == TargetOpcode::G_STORE)
@@ -131,14 +167,47 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     return true;
   }
 
-  if (selectImpl(I, CoverageInfo)) {
+  if (I.getOpcode() == Mips::G_MUL) {
+    MachineInstr *Mul = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::MUL))
+                            .add(I.getOperand(0))
+                            .add(I.getOperand(1))
+                            .add(I.getOperand(2));
+    if (!constrainSelectedInstRegOperands(*Mul, TII, TRI, RBI))
+      return false;
+    Mul->getOperand(3).setIsDead(true);
+    Mul->getOperand(4).setIsDead(true);
+
+    I.eraseFromParent();
     return true;
   }
+
+  if (selectImpl(I, CoverageInfo))
+    return true;
 
   MachineInstr *MI = nullptr;
   using namespace TargetOpcode;
 
   switch (I.getOpcode()) {
+  case G_UMULH: {
+    unsigned PseudoMULTuReg = MRI.createVirtualRegister(&Mips::ACC64RegClass);
+    MachineInstr *PseudoMULTu, *PseudoMove;
+
+    PseudoMULTu = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::PseudoMULTu))
+                      .addDef(PseudoMULTuReg)
+                      .add(I.getOperand(1))
+                      .add(I.getOperand(2));
+    if (!constrainSelectedInstRegOperands(*PseudoMULTu, TII, TRI, RBI))
+      return false;
+
+    PseudoMove = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::PseudoMFHI))
+                     .addDef(I.getOperand(0).getReg())
+                     .addUse(PseudoMULTuReg);
+    if (!constrainSelectedInstRegOperands(*PseudoMove, TII, TRI, RBI))
+      return false;
+
+    I.eraseFromParent();
+    return true;
+  }
   case G_GEP: {
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::ADDu))
              .add(I.getOperand(0))
@@ -233,22 +302,9 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     break;
   }
   case G_CONSTANT: {
-    int Imm = I.getOperand(1).getCImm()->getValue().getLimitedValue();
-    unsigned LUiReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
-    MachineInstr *LUi, *ORi;
-
-    LUi = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LUi))
-              .addDef(LUiReg)
-              .addImm(Imm >> 16);
-
-    ORi = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::ORi))
-              .addDef(I.getOperand(0).getReg())
-              .addUse(LUiReg)
-              .addImm(Imm & 0xFFFF);
-
-    if (!constrainSelectedInstRegOperands(*LUi, TII, TRI, RBI))
-      return false;
-    if (!constrainSelectedInstRegOperands(*ORi, TII, TRI, RBI))
+    MachineIRBuilder B(I);
+    if (!materialize32BitImm(I.getOperand(0).getReg(),
+                             I.getOperand(1).getCImm()->getValue(), B))
       return false;
 
     I.eraseFromParent();

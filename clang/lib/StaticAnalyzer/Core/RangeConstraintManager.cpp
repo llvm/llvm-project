@@ -230,6 +230,11 @@ public:
   // Implementation for interface from ConstraintManager.
   //===------------------------------------------------------------------===//
 
+  bool haveEqualConstraints(ProgramStateRef S1,
+                            ProgramStateRef S2) const override {
+    return S1->get<ConstraintRange>() == S2->get<ConstraintRange>();
+  }
+
   bool canReasonAbout(SVal X) const override;
 
   ConditionTruthVal checkNull(ProgramStateRef State, SymbolRef Sym) override;

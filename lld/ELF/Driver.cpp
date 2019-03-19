@@ -24,7 +24,6 @@
 
 #include "Driver.h"
 #include "Config.h"
-#include "Filesystem.h"
 #include "ICF.h"
 #include "InputFiles.h"
 #include "InputSection.h"
@@ -40,6 +39,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
@@ -213,7 +213,15 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     // understand the LLVM bitcode file. It is a pretty common error, so
     // we'll handle it as if it had a symbol table.
     if (!File->isEmpty() && !File->hasSymbolTable()) {
-      for (const auto &P : getArchiveMembers(MBRef))
+      // Check if all members are bitcode files. If not, ignore, which is the
+      // default action without the LTO hack described above.
+      for (const std::pair<MemoryBufferRef, uint64_t> &P :
+           getArchiveMembers(MBRef))
+        if (identify_magic(P.first.getBuffer()) != file_magic::bitcode)
+          return;
+
+      for (const std::pair<MemoryBufferRef, uint64_t> &P :
+           getArchiveMembers(MBRef))
         Files.push_back(make<LazyObjFile>(P.first, Path, P.second));
       return;
     }
@@ -800,6 +808,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Args.hasArg(OPT_ignore_function_address_equality);
   Config->Init = Args.getLastArgValue(OPT_init, "_init");
   Config->LTOAAPipeline = Args.getLastArgValue(OPT_lto_aa_pipeline);
+  Config->LTOCSProfileGenerate = Args.hasArg(OPT_lto_cs_profile_generate);
+  Config->LTOCSProfileFile = Args.getLastArgValue(OPT_lto_cs_profile_file);
   Config->LTODebugPassManager = Args.hasArg(OPT_lto_debug_pass_manager);
   Config->LTONewPassManager = Args.hasArg(OPT_lto_new_pass_manager);
   Config->LTONewPmPasses = Args.getLastArgValue(OPT_lto_newpm_passes);
@@ -816,6 +826,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->OFormatBinary = isOutputFormatBinary(Args);
   Config->Omagic = Args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   Config->OptRemarksFilename = Args.getLastArgValue(OPT_opt_remarks_filename);
+  Config->OptRemarksPasses = Args.getLastArgValue(OPT_opt_remarks_passes);
   Config->OptRemarksWithHotness = Args.hasArg(OPT_opt_remarks_with_hotness);
   Config->Optimize = args::getInteger(Args, OPT_O, 1);
   Config->OrphanHandling = getOrphanHandling(Args);
@@ -1224,7 +1235,6 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &Args) {
 // A special library name "ALL" means all archive files.
 //
 // This is not a popular option, but some programs such as bionic libc use it.
-template <class ELFT>
 static void excludeLibs(opt::InputArgList &Args) {
   DenseSet<StringRef> Libs = getExcludeLibs(Args);
   bool All = Libs.count("ALL");
@@ -1413,7 +1423,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &Args) {
 // When this function is executed, only InputFiles and symbol table
 // contain pointers to symbol objects. We visit them to replace pointers,
 // so that wrapped symbols are swapped as instructed by the command line.
-template <class ELFT> static void wrapSymbols(ArrayRef<WrappedSymbol> Wrapped) {
+static void wrapSymbols(ArrayRef<WrappedSymbol> Wrapped) {
   DenseMap<Symbol *, Symbol *> Map;
   for (const WrappedSymbol &W : Wrapped) {
     Map[W.Sym] = W.Wrap;
@@ -1443,8 +1453,6 @@ static const char *LibcallRoutineNames[] = {
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Target = getTarget();
-  InX<ELFT>::VerSym = nullptr;
-  InX<ELFT>::VerNeed = nullptr;
 
   Config->MaxPageSize = getMaxPageSize(Args);
   Config->ImageBase = getImageBase(Args);
@@ -1546,7 +1554,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle the -exclude-libs option.
   if (Args.hasArg(OPT_exclude_libs))
-    excludeLibs<ELFT>(Args);
+    excludeLibs(Args);
 
   // Create ElfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
@@ -1591,7 +1599,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Apply symbol renames for -wrap.
   if (!Wrapped.empty())
-    wrapSymbols<ELFT>(Wrapped);
+    wrapSymbols(Wrapped);
 
   // Now that we have a complete list of input files.
   // Beyond this point, no new files are added.

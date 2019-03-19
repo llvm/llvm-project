@@ -25,6 +25,6 @@ func:
  .Lt0: .word   y(TLSGD) + (. - .L0 - 8)
 
 // CHECK: Dynamic Relocations {
-// CHECK-NEXT:   0x13078 R_ARM_TLS_DTPMOD32 y
-// CHECK-NEXT:   0x1307C R_ARM_TLS_DTPOFF32 y
-// CHECK-NEXT:   0x1200C R_ARM_JUMP_SLOT __tls_get_addr
+// CHECK-NEXT:   0x12078 R_ARM_TLS_DTPMOD32 y
+// CHECK-NEXT:   0x1207C R_ARM_TLS_DTPOFF32 y
+// CHECK-NEXT:   0x1300C R_ARM_JUMP_SLOT __tls_get_addr

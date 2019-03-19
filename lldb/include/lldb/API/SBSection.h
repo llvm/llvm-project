@@ -24,6 +24,8 @@ public:
 
   const lldb::SBSection &operator=(const lldb::SBSection &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   const char *GetName();
@@ -61,7 +63,7 @@ public:
   /// i.e. for a section having read and execute permissions, the value
   /// returned is 6
   ///
-  /// @return
+  /// \return
   ///     Returns an unsigned value for Permissions for the section.
   //------------------------------------------------------------------
   uint32_t
@@ -73,7 +75,7 @@ public:
   /// varying minimum addressable unit (i.e. byte) size for their
   /// CODE or DATA buses.
   ///
-  /// @return
+  /// \return
   ///     The number of host (8-bit) bytes needed to hold a target byte
   //------------------------------------------------------------------
   uint32_t GetTargetByteSize();

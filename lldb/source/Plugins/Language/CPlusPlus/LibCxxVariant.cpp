@@ -173,7 +173,7 @@ public:
     Update();
   }
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override {
+  size_t GetIndexOfChildWithName(ConstString name) override {
     return formatters::ExtractIndexFromString(name.GetCString());
   }
 

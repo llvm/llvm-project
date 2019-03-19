@@ -80,16 +80,16 @@ public:
   /// Decode as many UUID bytes (up to 16) as possible from the C
   /// string \a cstr.
   ///
-  /// @param[in] cstr
+  /// \param[in] cstr
   ///     A NULL terminate C string that points at a UUID string value
   ///     (no leading spaces). The string must contain only hex
   ///     characters and optionally can contain the '-' sepearators.
   ///
-  /// @param[in] uuid_bytes
+  /// \param[in] uuid_bytes
   ///     A buffer of bytes that will contain a full or patially
   ///     decoded UUID.
   ///
-  /// @return
+  /// \return
   ///     The original string, with all decoded bytes removed.
   //------------------------------------------------------------------
   static llvm::StringRef

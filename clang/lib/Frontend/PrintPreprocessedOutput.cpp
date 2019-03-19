@@ -143,6 +143,8 @@ public:
                      ArrayRef<int> Ids) override;
   void PragmaWarningPush(SourceLocation Loc, int Level) override;
   void PragmaWarningPop(SourceLocation Loc) override;
+  void PragmaExecCharsetPush(SourceLocation Loc, StringRef Str) override;
+  void PragmaExecCharsetPop(SourceLocation Loc) override;
   void PragmaAssumeNonNullBegin(SourceLocation Loc) override;
   void PragmaAssumeNonNullEnd(SourceLocation Loc) override;
 
@@ -550,6 +552,24 @@ void PrintPPOutputPPCallbacks::PragmaWarningPop(SourceLocation Loc) {
   startNewLineIfNeeded();
   MoveToLine(Loc);
   OS << "#pragma warning(pop)";
+  setEmittedDirectiveOnThisLine();
+}
+
+void PrintPPOutputPPCallbacks::PragmaExecCharsetPush(SourceLocation Loc,
+                                                     StringRef Str) {
+  startNewLineIfNeeded();
+  MoveToLine(Loc);
+  OS << "#pragma character_execution_set(push";
+  if (!Str.empty())
+    OS << ", " << Str;
+  OS << ')';
+  setEmittedDirectiveOnThisLine();
+}
+
+void PrintPPOutputPPCallbacks::PragmaExecCharsetPop(SourceLocation Loc) {
+  startNewLineIfNeeded();
+  MoveToLine(Loc);
+  OS << "#pragma character_execution_set(pop)";
   setEmittedDirectiveOnThisLine();
 }
 

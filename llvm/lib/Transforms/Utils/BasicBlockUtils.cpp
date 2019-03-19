@@ -101,13 +101,35 @@ void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs, DomTreeUpdater *DTU,
   DetatchDeadBlocks(BBs, DTU ? &Updates : nullptr, KeepOneInputPHIs);
 
   if (DTU)
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+    DTU->applyUpdatesPermissive(Updates);
 
   for (BasicBlock *BB : BBs)
     if (DTU)
       DTU->deleteBB(BB);
     else
       BB->eraseFromParent();
+}
+
+bool llvm::EliminateUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
+                                      bool KeepOneInputPHIs) {
+  df_iterator_default_set<BasicBlock*> Reachable;
+
+  // Mark all reachable blocks.
+  for (BasicBlock *BB : depth_first_ext(&F, Reachable))
+    (void)BB/* Mark all reachable blocks */;
+
+  // Collect all dead blocks.
+  std::vector<BasicBlock*> DeadBlocks;
+  for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I)
+    if (!Reachable.count(&*I)) {
+      BasicBlock *BB = &*I;
+      DeadBlocks.push_back(BB);
+    }
+
+  // Delete the dead blocks.
+  DeleteDeadBlocks(DeadBlocks, DTU, KeepOneInputPHIs);
+
+  return !DeadBlocks.empty();
 }
 
 void llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
@@ -186,7 +208,9 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     Updates.push_back({DominatorTree::Delete, PredBB, BB});
     for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
       Updates.push_back({DominatorTree::Delete, BB, *I});
-      Updates.push_back({DominatorTree::Insert, PredBB, *I});
+      // This successor of BB may already have PredBB as a predecessor.
+      if (llvm::find(successors(PredBB), *I) == succ_end(PredBB))
+        Updates.push_back({DominatorTree::Insert, PredBB, *I});
     }
   }
 
@@ -235,7 +259,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
            isa<UnreachableInst>(BB->getTerminator()) &&
            "The successor list of BB isn't empty before "
            "applying corresponding DTU updates.");
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+    DTU->applyUpdatesPermissive(Updates);
     DTU->deleteBB(BB);
   }
 
@@ -721,7 +745,7 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
   UncondBranch->eraseFromParent();
 
   if (DTU)
-    DTU->deleteEdge(Pred, BB);
+    DTU->applyUpdates({{DominatorTree::Delete, Pred, BB}});
 
   return cast<ReturnInst>(NewRet);
 }

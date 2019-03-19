@@ -110,7 +110,7 @@ int main(int, char**)
     testRuntimeSpan(std::span<int>(iArr2, 5));
 
     std::string s;
-    testRuntimeSpan(std::span<std::string>(&s, (std::ptrdiff_t) 0));
+    testRuntimeSpan(std::span<std::string>(&s, (std::size_t) 0));
     testRuntimeSpan(std::span<std::string>(&s, 1));
 
   return 0;

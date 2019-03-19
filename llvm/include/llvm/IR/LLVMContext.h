@@ -35,12 +35,8 @@ template <typename T> class SmallVectorImpl;
 class SMDiagnostic;
 class StringRef;
 class Twine;
-
-namespace yaml {
-
-class Output;
-
-} // end namespace yaml
+class RemarkStreamer;
+class raw_ostream;
 
 namespace SyncScope {
 
@@ -246,16 +242,23 @@ public:
   /// included in optimization diagnostics.
   void setDiagnosticsHotnessThreshold(uint64_t Threshold);
 
-  /// Return the YAML file used by the backend to save optimization
-  /// diagnostics.  If null, diagnostics are not saved in a file but only
-  /// emitted via the diagnostic handler.
-  yaml::Output *getDiagnosticsOutputFile();
-  /// Set the diagnostics output file used for optimization diagnostics.
+  /// Return the streamer used by the backend to save remark diagnostics. If it
+  /// does not exist, diagnostics are not saved in a file but only emitted via
+  /// the diagnostic handler.
+  RemarkStreamer *getRemarkStreamer();
+  const RemarkStreamer *getRemarkStreamer() const;
+
+  /// Set the diagnostics output used for optimization diagnostics.
+  /// This filename may be embedded in a section for tools to find the
+  /// diagnostics whenever they're needed.
   ///
-  /// By default or if invoked with null, diagnostics are not saved in a file
-  /// but only emitted via the diagnostic handler.  Even if an output file is
-  /// set, the handler is invoked for each diagnostic message.
-  void setDiagnosticsOutputFile(std::unique_ptr<yaml::Output> F);
+  /// If a remark streamer is already set, it will be replaced with
+  /// \p RemarkStreamer.
+  ///
+  /// By default, diagnostics are not saved in a file but only emitted via the
+  /// diagnostic handler.  Even if an output file is set, the handler is invoked
+  /// for each diagnostic message.
+  void setRemarkStreamer(std::unique_ptr<RemarkStreamer> RemarkStreamer);
 
   /// Get the prefix that should be printed in front of a diagnostic of
   ///        the given \p Severity

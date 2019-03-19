@@ -48,7 +48,7 @@ public:
   //------------------------------------------------------------------
   /// Sends a process a UNIX signal \a signal.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   virtual Status Signal(int signo) = 0;
@@ -60,7 +60,7 @@ public:
   /// a SIGSTOP to the process via the NativeProcessProtocol::Signal()
   /// operation.
   ///
-  /// @return
+  /// \return
   ///     Returns an error object.
   //------------------------------------------------------------------
   virtual Status Interrupt();
@@ -211,28 +211,28 @@ public:
   /// Note: it is required that the lifetime of the
   /// native_delegate outlive the NativeProcessProtocol.
   ///
-  /// @param[in] native_delegate
+  /// \param[in] native_delegate
   ///     A NativeDelegate impl to be called when certain events
   ///     happen within the NativeProcessProtocol or related threads.
   ///
-  /// @return
+  /// \return
   ///     true if the delegate was registered successfully;
   ///     false if the delegate was already registered.
   ///
-  /// @see NativeProcessProtocol::NativeDelegate.
+  /// \see NativeProcessProtocol::NativeDelegate.
   //------------------------------------------------------------------
   bool RegisterNativeDelegate(NativeDelegate &native_delegate);
 
   //------------------------------------------------------------------
   /// Unregister a native delegate previously registered.
   ///
-  /// @param[in] native_delegate
+  /// \param[in] native_delegate
   ///     A NativeDelegate impl previously registered with this process.
   ///
-  /// @return Returns \b true if the NativeDelegate was
+  /// \return Returns \b true if the NativeDelegate was
   /// successfully removed from the process, \b false otherwise.
   ///
-  /// @see NativeProcessProtocol::NativeDelegate
+  /// \see NativeProcessProtocol::NativeDelegate
   //------------------------------------------------------------------
   bool UnregisterNativeDelegate(NativeDelegate &native_delegate);
 
@@ -248,20 +248,20 @@ public:
     //------------------------------------------------------------------
     /// Launch a process for debugging.
     ///
-    /// @param[in] launch_info
+    /// \param[in] launch_info
     ///     Information required to launch the process.
     ///
-    /// @param[in] native_delegate
+    /// \param[in] native_delegate
     ///     The delegate that will receive messages regarding the
     ///     inferior.  Must outlive the NativeProcessProtocol
     ///     instance.
     ///
-    /// @param[in] mainloop
+    /// \param[in] mainloop
     ///     The mainloop instance with which the process can register
     ///     callbacks. Must outlive the NativeProcessProtocol
     ///     instance.
     ///
-    /// @return
+    /// \return
     ///     A NativeProcessProtocol shared pointer if the operation succeeded or
     ///     an error object if it failed.
     //------------------------------------------------------------------
@@ -272,20 +272,20 @@ public:
     //------------------------------------------------------------------
     /// Attach to an existing process.
     ///
-    /// @param[in] pid
+    /// \param[in] pid
     ///     pid of the process locatable
     ///
-    /// @param[in] native_delegate
+    /// \param[in] native_delegate
     ///     The delegate that will receive messages regarding the
     ///     inferior.  Must outlive the NativeProcessProtocol
     ///     instance.
     ///
-    /// @param[in] mainloop
+    /// \param[in] mainloop
     ///     The mainloop instance with which the process can register
     ///     callbacks. Must outlive the NativeProcessProtocol
     ///     instance.
     ///
-    /// @return
+    /// \return
     ///     A NativeProcessProtocol shared pointer if the operation succeeded or
     ///     an error object if it failed.
     //------------------------------------------------------------------
@@ -298,13 +298,13 @@ public:
   /// StartTracing API for starting a tracing instance with the
   /// TraceOptions on a specific thread or process.
   ///
-  /// @param[in] config
+  /// \param[in] config
   ///     The configuration to use when starting tracing.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     Status indicates what went wrong.
   ///
-  /// @return
+  /// \return
   ///     The API returns a user_id which can be used to get trace
   ///     data, trace configuration or stopping the trace instance.
   ///     The user_id is a key to identify and operate with a tracing
@@ -320,17 +320,17 @@ public:
   //------------------------------------------------------------------
   /// StopTracing API as the name suggests stops a tracing instance.
   ///
-  /// @param[in] traceid
+  /// \param[in] traceid
   ///     The user id of the trace intended to be stopped. Now a
   ///     user_id may map to multiple threads in which case this API
   ///     could be used to stop the tracing for a specific thread by
   ///     supplying its thread id.
   ///
-  /// @param[in] thread
+  /// \param[in] thread
   ///     Thread is needed when the complete process is being traced
   ///     and the user wishes to stop tracing on a particular thread.
   ///
-  /// @return
+  /// \return
   ///     Status indicating what went wrong.
   //------------------------------------------------------------------
   virtual Status StopTrace(lldb::user_id_t traceid,
@@ -342,21 +342,21 @@ public:
   /// This API provides the trace data collected in the form of raw
   /// data.
   ///
-  /// @param[in] traceid thread
+  /// \param[in] traceid thread
   ///     The traceid and thread provide the context for the trace
   ///     instance.
   ///
-  /// @param[in] buffer
+  /// \param[in] buffer
   ///     The buffer provides the destination buffer where the trace
   ///     data would be read to. The buffer should be truncated to the
   ///     filled length by this function.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     There is possibility to read partially the trace data from
   ///     a specified offset where in such cases the buffer provided
   ///     may be smaller than the internal trace collection container.
   ///
-  /// @return
+  /// \return
   ///     The size of the data actually read.
   //------------------------------------------------------------------
   virtual Status GetData(lldb::user_id_t traceid, lldb::tid_t thread,
@@ -378,18 +378,18 @@ public:
   //------------------------------------------------------------------
   /// API to query the TraceOptions for a given user id
   ///
-  /// @param[in] traceid
+  /// \param[in] traceid
   ///     The user id of the tracing instance.
   ///
-  /// @param[in] config
+  /// \param[in] config
   ///     The thread id of the tracing instance, in case configuration
   ///     for a specific thread is needed should be specified in the
   ///     config.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     Status indicates what went wrong.
   ///
-  /// @param[out] config
+  /// \param[out] config
   ///     The actual configuration being used for tracing.
   //------------------------------------------------------------------
   virtual Status GetTraceConfig(lldb::user_id_t traceid, TraceOptions &config) {

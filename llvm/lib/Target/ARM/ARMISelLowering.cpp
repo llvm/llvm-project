@@ -79,6 +79,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -112,6 +113,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "arm-isel"
 
@@ -4174,18 +4176,18 @@ static void checkVSELConstraints(ISD::CondCode CC, ARMCC::CondCodes &CondCode,
   // Start by selecting the GE condition code for opcodes that return true for
   // 'equality'
   if (CC == ISD::SETUGE || CC == ISD::SETOGE || CC == ISD::SETOLE ||
-      CC == ISD::SETULE)
+      CC == ISD::SETULE || CC == ISD::SETGE  || CC == ISD::SETLE)
     CondCode = ARMCC::GE;
 
   // and GT for opcodes that return false for 'equality'.
   else if (CC == ISD::SETUGT || CC == ISD::SETOGT || CC == ISD::SETOLT ||
-           CC == ISD::SETULT)
+           CC == ISD::SETULT || CC == ISD::SETGT  || CC == ISD::SETLT)
     CondCode = ARMCC::GT;
 
   // Since we are constrained to GE/GT, if the opcode contains 'less', we need
   // to swap the compare operands.
   if (CC == ISD::SETOLE || CC == ISD::SETULE || CC == ISD::SETOLT ||
-      CC == ISD::SETULT)
+      CC == ISD::SETULT || CC == ISD::SETLE  || CC == ISD::SETLT)
     swpCmpOps = true;
 
   // Both GT and GE are ordered comparisons, and return false for 'unordered'.
@@ -4211,8 +4213,9 @@ static void checkVSELConstraints(ISD::CondCode CC, ARMCC::CondCodes &CondCode,
   }
 
   // 'unordered or not equal' is 'anything but equal', so use the EQ condition
-  // code and swap the VSEL operands.
-  if (CC == ISD::SETUNE) {
+  // code and swap the VSEL operands. Also do this if we don't care about the
+  // unordered case.
+  if (CC == ISD::SETUNE || CC == ISD::SETNE) {
     CondCode = ARMCC::EQ;
     swpVselOps = true;
   }
@@ -4493,7 +4496,8 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     // inverting the compare condition, swapping 'less' and 'greater') and
     // sometimes need to swap the operands to the VSEL (which inverts the
     // condition in the sense of firing whenever the previous condition didn't)
-    if (Subtarget->hasFPARMv8() && (TrueVal.getValueType() == MVT::f32 ||
+    if (Subtarget->hasFPARMv8() && (TrueVal.getValueType() == MVT::f16 ||
+                                    TrueVal.getValueType() == MVT::f32 ||
                                     TrueVal.getValueType() == MVT::f64)) {
       ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
       if (CondCode == ARMCC::LT || CondCode == ARMCC::LE ||
@@ -4513,12 +4517,15 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   bool InvalidOnQNaN;
   FPCCToARMCC(CC, CondCode, CondCode2, InvalidOnQNaN);
 
-  // Normalize the fp compare. If RHS is zero we keep it there so we match
-  // CMPFPw0 instead of CMPFP.
-  if (Subtarget->hasFPARMv8() && !isFloatingPointZero(RHS) &&
-     (TrueVal.getValueType() == MVT::f16 ||
-      TrueVal.getValueType() == MVT::f32 ||
-      TrueVal.getValueType() == MVT::f64)) {
+  // Normalize the fp compare. If RHS is zero we prefer to keep it there so we
+  // match CMPFPw0 instead of CMPFP, though we don't do this for f16 because we
+  // must use VSEL (limited condition codes), due to not having conditional f16
+  // moves.
+  if (Subtarget->hasFPARMv8() &&
+      !(isFloatingPointZero(RHS) && TrueVal.getValueType() != MVT::f16) &&
+      (TrueVal.getValueType() == MVT::f16 ||
+       TrueVal.getValueType() == MVT::f32 ||
+       TrueVal.getValueType() == MVT::f64)) {
     bool swpCmpOps = false;
     bool swpVselOps = false;
     checkVSELConstraints(CC, CondCode, swpCmpOps, swpVselOps);
@@ -12147,11 +12154,11 @@ static SDValue PerformVCVTCombine(SDNode *N, SelectionDAG &DAG,
   MVT IntTy = N->getSimpleValueType(0).getVectorElementType();
   uint32_t IntBits = IntTy.getSizeInBits();
   unsigned NumLanes = Op.getValueType().getVectorNumElements();
-  if (FloatBits != 32 || IntBits > 32 || NumLanes > 4) {
+  if (FloatBits != 32 || IntBits > 32 || (NumLanes != 4 && NumLanes != 2)) {
     // These instructions only exist converting from f32 to i32. We can handle
     // smaller integers by generating an extra truncate, but larger ones would
-    // be lossy. We also can't handle more then 4 lanes, since these intructions
-    // only support v2i32/v4i32 types.
+    // be lossy. We also can't handle anything other than 2 or 4 lanes, since
+    // these intructions only support v2i32/v4i32 types.
     return SDValue();
   }
 
@@ -12205,11 +12212,11 @@ static SDValue PerformVDIVCombine(SDNode *N, SelectionDAG &DAG,
   MVT IntTy = Op.getOperand(0).getSimpleValueType().getVectorElementType();
   uint32_t IntBits = IntTy.getSizeInBits();
   unsigned NumLanes = Op.getValueType().getVectorNumElements();
-  if (FloatBits != 32 || IntBits > 32 || NumLanes > 4) {
+  if (FloatBits != 32 || IntBits > 32 || (NumLanes != 4 && NumLanes != 2)) {
     // These instructions only exist converting from i32 to f32. We can handle
     // smaller integers by generating an extra extend, but larger ones would
-    // be lossy. We also can't handle more then 4 lanes, since these intructions
-    // only support v2i32/v4i32 types.
+    // be lossy. We also can't handle anything other than 2 or 4 lanes, since
+    // these intructions only support v2i32/v4i32 types.
     return SDValue();
   }
 
@@ -13141,6 +13148,46 @@ bool ARMTargetLowering::isFNegFree(EVT VT) const {
   return false;
 }
 
+/// Check if Ext1 and Ext2 are extends of the same type, doubling the bitwidth
+/// of the vector elements.
+static bool areExtractExts(Value *Ext1, Value *Ext2) {
+  auto areExtDoubled = [](Instruction *Ext) {
+    return Ext->getType()->getScalarSizeInBits() ==
+           2 * Ext->getOperand(0)->getType()->getScalarSizeInBits();
+  };
+
+  if (!match(Ext1, m_ZExtOrSExt(m_Value())) ||
+      !match(Ext2, m_ZExtOrSExt(m_Value())) ||
+      !areExtDoubled(cast<Instruction>(Ext1)) ||
+      !areExtDoubled(cast<Instruction>(Ext2)))
+    return false;
+
+  return true;
+}
+
+/// Check if sinking \p I's operands to I's basic block is profitable, because
+/// the operands can be folded into a target instruction, e.g.
+/// sext/zext can be folded into vsubl.
+bool ARMTargetLowering::shouldSinkOperands(Instruction *I,
+                                           SmallVectorImpl<Use *> &Ops) const {
+  if (!Subtarget->hasNEON() || !I->getType()->isVectorTy())
+    return false;
+
+  switch (I->getOpcode()) {
+  case Instruction::Sub:
+  case Instruction::Add: {
+    if (!areExtractExts(I->getOperand(0), I->getOperand(1)))
+      return false;
+    Ops.push_back(&I->getOperandUse(0));
+    Ops.push_back(&I->getOperandUse(1));
+    return true;
+  }
+  default:
+    return false;
+  }
+  return false;
+}
+
 bool ARMTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   EVT VT = ExtVal.getValueType();
 
@@ -13701,13 +13748,13 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     EVT VT = Op.getValueType();
     const unsigned DstSz = VT.getScalarSizeInBits();
     const unsigned SrcSz = VecVT.getVectorElementType().getSizeInBits();
+    (void)SrcSz;
     assert(SrcSz == Known.getBitWidth());
     assert(DstSz > SrcSz);
     if (Op.getOpcode() == ARMISD::VGETLANEs)
       Known = Known.sext(DstSz);
     else {
-      Known = Known.zext(DstSz);
-      Known.Zero.setBitsFrom(SrcSz);
+      Known = Known.zext(DstSz, true /* extended bits are known zero */);
     }
     assert(DstSz == Known.getBitWidth());
     break;
@@ -14366,7 +14413,8 @@ bool ARM::isBitFieldInvertedMask(unsigned v) {
 /// isFPImmLegal - Returns true if the target can instruction select the
 /// specified FP immediate natively. If false, the legalizer will
 /// materialize the FP immediate as a load from a constant pool.
-bool ARMTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
+bool ARMTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
   if (!Subtarget->hasVFP3())
     return false;
   if (VT == MVT::f16 && Subtarget->hasFullFP16())

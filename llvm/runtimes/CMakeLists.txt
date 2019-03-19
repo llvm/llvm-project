@@ -273,11 +273,11 @@ else() # if this is included from LLVM's CMake
   if(compiler_rt_path)
     if(NOT LLVM_BUILTIN_TARGETS)
       builtin_default_target(${compiler_rt_path}
-        DEPENDS clang-headers)
+        DEPENDS clang-resource-headers)
     else()
       if("default" IN_LIST LLVM_BUILTIN_TARGETS)
         builtin_default_target(${compiler_rt_path}
-          DEPENDS clang-headers)
+          DEPENDS clang-resource-headers)
         list(REMOVE_ITEM LLVM_BUILTIN_TARGETS "default")
       else()
         add_custom_target(builtins)
@@ -287,7 +287,7 @@ else() # if this is included from LLVM's CMake
 
       foreach(target ${LLVM_BUILTIN_TARGETS})
         builtin_register_target(${compiler_rt_path} ${target}
-          DEPENDS clang-headers)
+          DEPENDS clang-resource-headers)
 
         add_dependencies(builtins builtins-${target})
         add_dependencies(install-builtins install-builtins-${target})
@@ -317,6 +317,14 @@ else() # if this is included from LLVM's CMake
     endif()
     list(APPEND runtime_names ${projName})
   endforeach()
+
+  if(LLVM_RUNTIME_BUILD_ID_LINK_TARGETS)
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/llvm-strip-link.in
+      ${CMAKE_CURRENT_BINARY_DIR}/llvm-strip-link
+      @ONLY
+    )
+  endif()
 
   function(runtime_default_target)
     cmake_parse_arguments(ARG "" "" "DEPENDS;PREFIXES" ${ARGN})
@@ -425,6 +433,10 @@ else() # if this is included from LLVM's CMake
         list(APPEND ${name}_extra_args "-D${new_name}=${${variableName}}")
       endif()
     endforeach()
+
+    if(target IN_LIST LLVM_RUNTIME_BUILD_ID_LINK_TARGETS)
+      list(APPEND EXTRA_ARGS STRIP_TOOL ${CMAKE_CURRENT_BINARY_DIR}/llvm-strip-link)
+    endif()
 
     llvm_ExternalProject_Add(runtimes-${name}
                              ${CMAKE_CURRENT_SOURCE_DIR}

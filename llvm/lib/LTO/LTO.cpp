@@ -24,6 +24,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/Linker/IRMover.h"
@@ -1311,6 +1312,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache) {
 Expected<std::unique_ptr<ToolOutputFile>>
 lto::setupOptimizationRemarks(LLVMContext &Context,
                               StringRef LTORemarksFilename,
+                              StringRef LTORemarksPasses,
                               bool LTOPassRemarksWithHotness, int Count) {
   if (LTOPassRemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
@@ -1326,8 +1328,13 @@ lto::setupOptimizationRemarks(LLVMContext &Context,
       llvm::make_unique<ToolOutputFile>(Filename, EC, sys::fs::F_None);
   if (EC)
     return errorCodeToError(EC);
-  Context.setDiagnosticsOutputFile(
-      llvm::make_unique<yaml::Output>(DiagnosticFile->os()));
+  Context.setRemarkStreamer(
+      llvm::make_unique<RemarkStreamer>(Filename, DiagnosticFile->os()));
+
+  if (!LTORemarksPasses.empty())
+    if (Error E = Context.getRemarkStreamer()->setFilter(LTORemarksPasses))
+      return std::move(E);
+
   DiagnosticFile->keep();
   return std::move(DiagnosticFile);
 }

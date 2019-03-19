@@ -853,6 +853,8 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_IntToOCLSampler:
   case CK_FixedPointCast:
   case CK_FixedPointToBoolean:
+  case CK_FixedPointToIntegral:
+  case CK_IntegralToFixedPoint:
     llvm_unreachable("cast kind invalid for aggregate types");
   }
 }

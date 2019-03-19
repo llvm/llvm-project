@@ -20,7 +20,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ProcessRunLock ProcessRunLock.h "lldb/Host/ProcessRunLock.h"
+/// \class ProcessRunLock ProcessRunLock.h "lldb/Host/ProcessRunLock.h"
 /// A class used to prevent the process from starting while other
 /// threads are accessing its data, and prevent access to its data while it is
 /// running.

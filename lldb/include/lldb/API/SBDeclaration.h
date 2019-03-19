@@ -25,6 +25,8 @@ public:
 
   const lldb::SBDeclaration &operator=(const lldb::SBDeclaration &rhs);
 
+  explicit operator bool() const;
+
   bool IsValid() const;
 
   lldb::SBFileSpec GetFileSpec() const;

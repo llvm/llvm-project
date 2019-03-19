@@ -191,7 +191,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; ATHLON-NEXT:    fldl {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    flds LCPI3_0
 ; ATHLON-NEXT:    xorl %ecx, %ecx
-; ATHLON-NEXT:    fucompi %st(1)
+; ATHLON-NEXT:    fucompi %st(1), %st
 ; ATHLON-NEXT:    fstp %st(0)
 ; ATHLON-NEXT:    seta %cl
 ; ATHLON-NEXT:    movsbl (%eax,%ecx,4), %eax
@@ -1088,14 +1088,25 @@ define i8 @test18(i32 %x, i8 zeroext %a, i8 zeroext %b) nounwind {
 }
 
 define i32 @trunc_select_miscompile(i32 %a, i1 zeroext %cc) {
-; CHECK-LABEL: trunc_select_miscompile:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    orb $2, %cl
-; CHECK-NEXT:    ## kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: trunc_select_miscompile:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    ## kill: def $esi killed $esi def $rsi
+; GENERIC-NEXT:    movl %edi, %eax
+; GENERIC-NEXT:    leal 2(%rsi), %ecx
+; GENERIC-NEXT:    ## kill: def $cl killed $cl killed $ecx
+; GENERIC-NEXT:    shll %cl, %eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: trunc_select_miscompile:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    ## kill: def $esi killed $esi def $rsi
+; ATOM-NEXT:    leal 2(%rsi), %ecx
+; ATOM-NEXT:    movl %edi, %eax
+; ATOM-NEXT:    ## kill: def $cl killed $cl killed $ecx
+; ATOM-NEXT:    shll %cl, %eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: trunc_select_miscompile:
 ; ATHLON:       ## %bb.0:
@@ -1125,11 +1136,8 @@ define void @clamp_i8(i32 %src, i8* %dst) {
 ; GENERIC-NEXT:    movl $127, %eax
 ; GENERIC-NEXT:    cmovlel %edi, %eax
 ; GENERIC-NEXT:    cmpl $-128, %eax
-; GENERIC-NEXT:    movb $-128, %cl
-; GENERIC-NEXT:    jl LBB21_2
-; GENERIC-NEXT:  ## %bb.1:
-; GENERIC-NEXT:    movl %eax, %ecx
-; GENERIC-NEXT:  LBB21_2:
+; GENERIC-NEXT:    movl $128, %ecx
+; GENERIC-NEXT:    cmovgel %eax, %ecx
 ; GENERIC-NEXT:    movb %cl, (%rsi)
 ; GENERIC-NEXT:    retq
 ;
@@ -1137,30 +1145,24 @@ define void @clamp_i8(i32 %src, i8* %dst) {
 ; ATOM:       ## %bb.0:
 ; ATOM-NEXT:    cmpl $127, %edi
 ; ATOM-NEXT:    movl $127, %eax
-; ATOM-NEXT:    movb $-128, %cl
+; ATOM-NEXT:    movl $128, %ecx
 ; ATOM-NEXT:    cmovlel %edi, %eax
 ; ATOM-NEXT:    cmpl $-128, %eax
-; ATOM-NEXT:    jl LBB21_2
-; ATOM-NEXT:  ## %bb.1:
-; ATOM-NEXT:    movl %eax, %ecx
-; ATOM-NEXT:  LBB21_2:
+; ATOM-NEXT:    cmovgel %eax, %ecx
 ; ATOM-NEXT:    movb %cl, (%rsi)
 ; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: clamp_i8:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; ATHLON-NEXT:    cmpl $127, %edx
-; ATHLON-NEXT:    movl $127, %ecx
-; ATHLON-NEXT:    cmovlel %edx, %ecx
-; ATHLON-NEXT:    cmpl $-128, %ecx
-; ATHLON-NEXT:    movb $-128, %dl
-; ATHLON-NEXT:    jl LBB21_2
-; ATHLON-NEXT:  ## %bb.1:
-; ATHLON-NEXT:    movl %ecx, %edx
-; ATHLON-NEXT:  LBB21_2:
-; ATHLON-NEXT:    movb %dl, (%eax)
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    cmpl $127, %ecx
+; ATHLON-NEXT:    movl $127, %edx
+; ATHLON-NEXT:    cmovlel %ecx, %edx
+; ATHLON-NEXT:    cmpl $-128, %edx
+; ATHLON-NEXT:    movl $128, %ecx
+; ATHLON-NEXT:    cmovgel %edx, %ecx
+; ATHLON-NEXT:    movb %cl, (%eax)
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: clamp_i8:
@@ -1294,7 +1296,7 @@ define void @test19() {
 ; ATHLON-NEXT:    .p2align 4, 0x90
 ; ATHLON-NEXT:  LBB23_4: ## %CF242
 ; ATHLON-NEXT:    ## =>This Inner Loop Header: Depth=1
-; ATHLON-NEXT:    fucomi %st(0)
+; ATHLON-NEXT:    fucomi %st(0), %st
 ; ATHLON-NEXT:    jp LBB23_4
 ; ATHLON-NEXT:  ## %bb.5: ## %CF244
 ; ATHLON-NEXT:    fstp %st(0)

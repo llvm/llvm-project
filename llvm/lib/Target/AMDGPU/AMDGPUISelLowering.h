@@ -161,7 +161,8 @@ public:
   MVT getVectorIdxTy(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
 
-  bool isFPImmLegal(const APFloat &Imm, EVT VT) const override;
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override;
   bool shouldReduceLoadWidth(SDNode *Load,
                              ISD::LoadExtType ExtType,
@@ -469,6 +470,13 @@ enum NodeType : unsigned {
   KILL,
   DUMMY_CHAIN,
   FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
+  LOAD_D16_HI,
+  LOAD_D16_LO,
+  LOAD_D16_HI_I8,
+  LOAD_D16_HI_U8,
+  LOAD_D16_LO_I8,
+  LOAD_D16_LO_U8,
+
   STORE_MSKOR,
   LOAD_CONSTANT,
   TBUFFER_STORE_FORMAT,

@@ -19,7 +19,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class WatchpointList WatchpointList.h "lldb/Breakpoint/WatchpointList.h"
+/// \class WatchpointList WatchpointList.h "lldb/Breakpoint/WatchpointList.h"
 /// This class is used by Watchpoint to manage a list of watchpoints,
 //  each watchpoint in the list has a unique ID, and is unique by Address as
 //  well.
@@ -46,10 +46,10 @@ public:
   //------------------------------------------------------------------
   /// Add a Watchpoint to the list.
   ///
-  /// @param[in] wp_sp
+  /// \param[in] wp_sp
   ///    A shared pointer to a watchpoint being added to the list.
   ///
-  /// @return
+  /// \return
   ///    The ID of the Watchpoint in the list.
   //------------------------------------------------------------------
   lldb::watch_id_t Add(const lldb::WatchpointSP &wp_sp, bool notify);
@@ -68,10 +68,10 @@ public:
   /// Returns a shared pointer to the watchpoint at address \a addr - const
   /// version.
   ///
-  /// @param[in] addr
+  /// \param[in] addr
   ///     The address to look for.
   ///
-  /// @result
+  /// \result
   ///     A shared pointer to the watchpoint.  May contain a NULL
   ///     pointer if the watchpoint doesn't exist.
   //------------------------------------------------------------------
@@ -81,10 +81,10 @@ public:
   /// Returns a shared pointer to the watchpoint with watchpoint spec \a spec
   /// - const version.
   ///
-  /// @param[in] spec
+  /// \param[in] spec
   ///     The watchpoint spec to look for.
   ///
-  /// @result
+  /// \result
   ///     A shared pointer to the watchpoint.  May contain a NULL
   ///     pointer if the watchpoint doesn't exist.
   //------------------------------------------------------------------
@@ -94,10 +94,10 @@ public:
   /// Returns a shared pointer to the watchpoint with id \a watchID, const
   /// version.
   ///
-  /// @param[in] watchID
+  /// \param[in] watchID
   ///     The watchpoint location ID to seek for.
   ///
-  /// @result
+  /// \result
   ///     A shared pointer to the watchpoint.  May contain a NULL
   ///     pointer if the watchpoint doesn't exist.
   //------------------------------------------------------------------
@@ -106,10 +106,10 @@ public:
   //------------------------------------------------------------------
   /// Returns the watchpoint id to the watchpoint at address \a addr.
   ///
-  /// @param[in] addr
+  /// \param[in] addr
   ///     The address to match.
   ///
-  /// @result
+  /// \result
   ///     The ID of the watchpoint, or LLDB_INVALID_WATCH_ID.
   //------------------------------------------------------------------
   lldb::watch_id_t FindIDByAddress(lldb::addr_t addr);
@@ -118,10 +118,10 @@ public:
   /// Returns the watchpoint id to the watchpoint with watchpoint spec \a
   /// spec.
   ///
-  /// @param[in] spec
+  /// \param[in] spec
   ///     The watchpoint spec to match.
   ///
-  /// @result
+  /// \result
   ///     The ID of the watchpoint, or LLDB_INVALID_WATCH_ID.
   //------------------------------------------------------------------
   lldb::watch_id_t FindIDBySpec(std::string spec);
@@ -129,10 +129,10 @@ public:
   //------------------------------------------------------------------
   /// Returns a shared pointer to the watchpoint with index \a i.
   ///
-  /// @param[in] i
+  /// \param[in] i
   ///     The watchpoint index to seek for.
   ///
-  /// @result
+  /// \result
   ///     A shared pointer to the watchpoint.  May contain a NULL pointer if
   ///     the watchpoint doesn't exist.
   //------------------------------------------------------------------
@@ -142,10 +142,10 @@ public:
   /// Returns a shared pointer to the watchpoint with index \a i, const
   /// version.
   ///
-  /// @param[in] i
+  /// \param[in] i
   ///     The watchpoint index to seek for.
   ///
-  /// @result
+  /// \result
   ///     A shared pointer to the watchpoint.  May contain a NULL pointer if
   ///     the watchpoint location doesn't exist.
   //------------------------------------------------------------------
@@ -154,10 +154,10 @@ public:
   //------------------------------------------------------------------
   /// Removes the watchpoint given by \b watchID from this list.
   ///
-  /// @param[in] watchID
+  /// \param[in] watchID
   ///   The watchpoint ID to remove.
   ///
-  /// @result
+  /// \result
   ///   \b true if the watchpoint \a watchID was in the list.
   //------------------------------------------------------------------
   bool Remove(lldb::watch_id_t watchID, bool notify);
@@ -165,7 +165,7 @@ public:
   //------------------------------------------------------------------
   /// Returns the number hit count of all watchpoints in this list.
   ///
-  /// @result
+  /// \result
   ///     Hit count of all watchpoints in this list.
   //------------------------------------------------------------------
   uint32_t GetHitCount() const;
@@ -174,13 +174,13 @@ public:
   /// Enquires of the watchpoint in this list with ID \a watchID whether we
   /// should stop.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     This contains the information about this stop.
   ///
-  /// @param[in] watchID
+  /// \param[in] watchID
   ///     This watch ID that we hit.
   ///
-  /// @return
+  /// \return
   ///     \b true if we should stop, \b false otherwise.
   //------------------------------------------------------------------
   bool ShouldStop(StoppointCallbackContext *context, lldb::watch_id_t watchID);
@@ -188,7 +188,7 @@ public:
   //------------------------------------------------------------------
   /// Returns the number of elements in this watchpoint list.
   ///
-  /// @result
+  /// \result
   ///     The number of elements.
   //------------------------------------------------------------------
   size_t GetSize() const {
@@ -199,14 +199,14 @@ public:
   //------------------------------------------------------------------
   /// Print a description of the watchpoints in this list to the stream \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to print the description.
   ///
-  /// @param[in] level
+  /// \param[in] level
   ///     The description level that indicates the detail level to
   ///     provide.
   ///
-  /// @see lldb::DescriptionLevel
+  /// \see lldb::DescriptionLevel
   //------------------------------------------------------------------
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
 
@@ -217,7 +217,7 @@ public:
   //------------------------------------------------------------------
   /// Sets the passed in Locker to hold the Watchpoint List mutex.
   ///
-  /// @param[in] locker
+  /// \param[in] locker
   ///   The locker object that is set.
   //------------------------------------------------------------------
   void GetListMutex(std::unique_lock<std::recursive_mutex> &lock);

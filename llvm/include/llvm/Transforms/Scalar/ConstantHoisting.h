@@ -126,7 +126,7 @@ public:
   bool runImpl(Function &F, TargetTransformInfo &TTI, DominatorTree &DT,
                BlockFrequencyInfo *BFI, BasicBlock &Entry);
 
-  void releaseMemory() {
+  void cleanup() {
     ClonedCastMap.clear();
     ConstIntCandVec.clear();
     for (auto MapEntry : ConstGEPCandMap)

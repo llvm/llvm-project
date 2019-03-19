@@ -435,7 +435,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
       OutMI.addOperand(MaybeMCOp.getValue());
 
   // Handle a few special cases to eliminate operand modifiers.
-ReSimplify:
   switch (OutMI.getOpcode()) {
   case X86::LEA64_32r:
   case X86::LEA64r:
@@ -582,19 +581,6 @@ ReSimplify:
       OutMI.setOpcode(Opcode);
     }
     break;
-
-  // These are pseudo-ops for OR to help with the OR->ADD transformation.  We do
-  // this with an ugly goto in case the resultant OR uses EAX and needs the
-  // short form.
-  case X86::ADD16rr_DB:   OutMI.setOpcode(X86::OR16rr);   goto ReSimplify;
-  case X86::ADD32rr_DB:   OutMI.setOpcode(X86::OR32rr);   goto ReSimplify;
-  case X86::ADD64rr_DB:   OutMI.setOpcode(X86::OR64rr);   goto ReSimplify;
-  case X86::ADD16ri_DB:   OutMI.setOpcode(X86::OR16ri);   goto ReSimplify;
-  case X86::ADD32ri_DB:   OutMI.setOpcode(X86::OR32ri);   goto ReSimplify;
-  case X86::ADD64ri32_DB: OutMI.setOpcode(X86::OR64ri32); goto ReSimplify;
-  case X86::ADD16ri8_DB:  OutMI.setOpcode(X86::OR16ri8);  goto ReSimplify;
-  case X86::ADD32ri8_DB:  OutMI.setOpcode(X86::OR32ri8);  goto ReSimplify;
-  case X86::ADD64ri8_DB:  OutMI.setOpcode(X86::OR64ri8);  goto ReSimplify;
 
   // We don't currently select the correct instruction form for instructions
   // which have a short %eax, etc. form. Handle this by custom lowering, for
@@ -960,6 +946,7 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&FaultingMI, *I))
       MI.addOperand(MaybeOperand.getValue());
 
+  OutStreamer->AddComment("on-fault: " + HandlerLabel->getName());
   OutStreamer->EmitInstruction(MI, getSubtargetInfo());
 }
 

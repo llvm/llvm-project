@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Host.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/FileSystem.h"
@@ -248,6 +249,48 @@ CPU part	: 0x0a1
             "tsv110");
 }
 
+#if defined(__APPLE__) || defined(_AIX)
+static bool runAndGetCommandOutput(
+    const char *ExePath, ArrayRef<llvm::StringRef> argv,
+    std::unique_ptr<char[]> &Buffer, off_t &Size) {
+  bool Success = false;
+  [ExePath, argv, &Buffer, &Size, &Success] {
+    using namespace llvm::sys;
+    SmallString<128> TestDirectory;
+    ASSERT_NO_ERROR(fs::createUniqueDirectory("host_test", TestDirectory));
+
+    SmallString<128> OutputFile(TestDirectory);
+    path::append(OutputFile, "out");
+    StringRef OutputPath = OutputFile.str();
+
+    const Optional<StringRef> Redirects[] = {
+        /*STDIN=*/None, /*STDOUT=*/OutputPath, /*STDERR=*/None};
+    int RetCode = ExecuteAndWait(ExePath, argv, /*env=*/llvm::None, Redirects);
+    ASSERT_EQ(0, RetCode);
+
+    int FD = 0;
+    ASSERT_NO_ERROR(fs::openFileForRead(OutputPath, FD));
+    Size = ::lseek(FD, 0, SEEK_END);
+    ASSERT_NE(-1, Size);
+    ::lseek(FD, 0, SEEK_SET);
+    Buffer = llvm::make_unique<char[]>(Size);
+    ASSERT_EQ(::read(FD, Buffer.get(), Size), Size);
+    ::close(FD);
+
+    ASSERT_NO_ERROR(fs::remove(OutputPath));
+    ASSERT_NO_ERROR(fs::remove(TestDirectory.str()));
+    Success = true;
+  }();
+  return Success;
+}
+
+TEST_F(HostTest, DummyRunAndGetCommandOutputUse) {
+  // Suppress defined-but-not-used warnings when the tests using the helper are
+  // disabled.
+  (void) runAndGetCommandOutput;
+}
+#endif
+
 #if defined(__APPLE__)
 TEST_F(HostTest, getMacOSHostVersion) {
   using namespace llvm::sys;
@@ -255,31 +298,14 @@ TEST_F(HostTest, getMacOSHostVersion) {
   if (!HostTriple.isMacOSX())
     return;
 
-  SmallString<128> TestDirectory;
-  ASSERT_NO_ERROR(fs::createUniqueDirectory("host_test", TestDirectory));
-  SmallString<128> OutputFile(TestDirectory);
-  path::append(OutputFile, "out");
-
   const char *SwVersPath = "/usr/bin/sw_vers";
   StringRef argv[] = {SwVersPath, "-productVersion"};
-  StringRef OutputPath = OutputFile.str();
-  const Optional<StringRef> Redirects[] = {/*STDIN=*/None,
-                                           /*STDOUT=*/OutputPath,
-                                           /*STDERR=*/None};
-  int RetCode = ExecuteAndWait(SwVersPath, argv, /*env=*/llvm::None, Redirects);
-  ASSERT_EQ(0, RetCode);
-
-  int FD = 0;
-  ASSERT_NO_ERROR(fs::openFileForRead(OutputPath, FD));
-  off_t Size = ::lseek(FD, 0, SEEK_END);
-  ASSERT_NE(-1, Size);
-  ::lseek(FD, 0, SEEK_SET);
-  std::unique_ptr<char[]> Buffer = llvm::make_unique<char[]>(Size);
-  ASSERT_EQ(::read(FD, Buffer.get(), Size), Size);
-  ::close(FD);
+  std::unique_ptr<char[]> Buffer;
+  off_t Size;
+  ASSERT_EQ(runAndGetCommandOutput(SwVersPath, argv, Buffer, Size), true);
+  StringRef SystemVersion(Buffer.get(), Size);
 
   // Ensure that the two versions match.
-  StringRef SystemVersion(Buffer.get(), Size);
   unsigned SystemMajor, SystemMinor, SystemMicro;
   ASSERT_EQ(llvm::Triple((Twine("x86_64-apple-macos") + SystemVersion))
                 .getMacOSXVersion(SystemMajor, SystemMinor, SystemMicro),
@@ -290,8 +316,52 @@ TEST_F(HostTest, getMacOSHostVersion) {
   // Don't compare the 'Micro' version, as it's always '0' for the 'Darwin'
   // triples.
   ASSERT_EQ(std::tie(SystemMajor, SystemMinor), std::tie(HostMajor, HostMinor));
+}
+#endif
 
-  ASSERT_NO_ERROR(fs::remove(OutputPath));
-  ASSERT_NO_ERROR(fs::remove(TestDirectory.str()));
+#if defined(_AIX)
+TEST_F(HostTest, AIXVersionDetect) {
+  using namespace llvm::sys;
+
+  llvm::Triple HostTriple(getProcessTriple());
+  ASSERT_EQ(HostTriple.getOS(), Triple::AIX);
+
+  llvm::Triple ConfiguredHostTriple(LLVM_HOST_TRIPLE);
+  ASSERT_EQ(ConfiguredHostTriple.getOS(), Triple::AIX);
+
+  const char *ExePath = "/usr/bin/oslevel";
+  StringRef argv[] = {ExePath};
+  std::unique_ptr<char[]> Buffer;
+  off_t Size;
+  ASSERT_EQ(runAndGetCommandOutput(ExePath, argv, Buffer, Size), true);
+  StringRef SystemVersion(Buffer.get(), Size);
+
+  unsigned SystemMajor, SystemMinor, SystemMicro;
+  llvm::Triple((Twine("powerpc-ibm-aix") + SystemVersion))
+      .getOSVersion(SystemMajor, SystemMinor, SystemMicro);
+
+  // Ensure that the host triple version (major) and release (minor) numbers,
+  // unless explicitly configured, match with those of the current system.
+  if (!ConfiguredHostTriple.getOSMajorVersion()) {
+    unsigned HostMajor, HostMinor, HostMicro;
+    HostTriple.getOSVersion(HostMajor, HostMinor, HostMicro);
+    ASSERT_EQ(std::tie(SystemMajor, SystemMinor),
+              std::tie(HostMajor, HostMinor));
+  }
+
+  llvm::Triple TargetTriple(getDefaultTargetTriple());
+  if (TargetTriple.getOS() != Triple::AIX)
+    return;
+
+  // Ensure that the target triple version (major) and release (minor) numbers
+  // match with those of the current system.
+  llvm::Triple ConfiguredTargetTriple(LLVM_DEFAULT_TARGET_TRIPLE);
+  if (ConfiguredTargetTriple.getOSMajorVersion())
+    return; // The version was configured explicitly; skip.
+
+  unsigned TargetMajor, TargetMinor, TargetMicro;
+  TargetTriple.getOSVersion(TargetMajor, TargetMinor, TargetMicro);
+  ASSERT_EQ(std::tie(SystemMajor, SystemMinor),
+            std::tie(TargetMajor, TargetMinor));
 }
 #endif

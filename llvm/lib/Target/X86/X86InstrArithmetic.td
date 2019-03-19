@@ -435,11 +435,10 @@ def X86sub_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
 // TODO: inc/dec is slow for P4, but fast for Pentium-M.
 let Defs = [EFLAGS] in {
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
-let CodeSize = 2 in
+let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def INC8r  : I<0xFE, MRM0r, (outs GR8 :$dst), (ins GR8 :$src1),
                "inc{b}\t$dst",
                [(set GR8:$dst, EFLAGS, (X86add_flag_nocf GR8:$src1, 1))]>;
-let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def INC16r : I<0xFF, MRM0r, (outs GR16:$dst), (ins GR16:$src1),
                "inc{w}\t$dst",
                [(set GR16:$dst, EFLAGS, (X86add_flag_nocf GR16:$src1, 1))]>,
@@ -483,11 +482,10 @@ let Predicates = [UseIncDec, In64BitMode] in {
 } // CodeSize = 2, SchedRW
 
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
-let CodeSize = 2 in
+let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def DEC8r  : I<0xFE, MRM1r, (outs GR8 :$dst), (ins GR8 :$src1),
                "dec{b}\t$dst",
                [(set GR8:$dst, EFLAGS, (X86sub_flag_nocf GR8:$src1, 1))]>;
-let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def DEC16r : I<0xFF, MRM1r, (outs GR16:$dst), (ins GR16:$src1),
                "dec{w}\t$dst",
                [(set GR16:$dst, EFLAGS, (X86sub_flag_nocf GR16:$src1, 1))]>,
@@ -604,16 +602,16 @@ def invalid_node : SDNode<"<<invalid_node>>", SDTIntLeaf,[],"<<invalid_node>>">;
 
 
 def Xi8  : X86TypeInfo<i8, "b", GR8, loadi8, i8mem,
-                       Imm8, i8imm, imm8_su, i8imm, invalid_node,
+                       Imm8, i8imm, relocImm8_su, i8imm, invalid_node,
                        0, OpSizeFixed, 0>;
 def Xi16 : X86TypeInfo<i16, "w", GR16, loadi16, i16mem,
-                       Imm16, i16imm, imm16_su, i16i8imm, i16immSExt8_su,
+                       Imm16, i16imm, relocImm16_su, i16i8imm, i16immSExt8_su,
                        1, OpSize16, 0>;
 def Xi32 : X86TypeInfo<i32, "l", GR32, loadi32, i32mem,
-                       Imm32, i32imm, imm32_su, i32i8imm, i32immSExt8_su,
+                       Imm32, i32imm, relocImm32_su, i32i8imm, i32immSExt8_su,
                        1, OpSize32, 0>;
 def Xi64 : X86TypeInfo<i64, "q", GR64, loadi64, i64mem,
-                       Imm32S, i64i32imm, i64immSExt32_su, i64i8imm, i64immSExt8_su,
+                       Imm32S, i64i32imm, i64relocImmSExt32_su, i64i8imm, i64immSExt8_su,
                        1, OpSizeFixed, 1>;
 
 /// ITy - This instruction base class takes the type info for the instruction.

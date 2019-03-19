@@ -55,25 +55,22 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    shlb $4, %cl
 ; X86-NEXT:    shlb $4, %al
+; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    subb %cl, %al
-; X86-NEXT:    jae .LBB2_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:  .LBB2_2:
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    cmovbl %edx, %eax
 ; X86-NEXT:    shrb $4, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func3:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shlb $4, %sil
-; X64-NEXT:    shlb $4, %al
-; X64-NEXT:    subb %sil, %al
-; X64-NEXT:    jae .LBB2_2
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:  .LBB2_2:
+; X64-NEXT:    shlb $4, %dil
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subb %sil, %dil
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    cmovbl %ecx, %eax
 ; X64-NEXT:    shrb $4, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

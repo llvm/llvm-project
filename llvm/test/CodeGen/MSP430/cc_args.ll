@@ -166,10 +166,10 @@ define void @f_i64_i64(i64 %a, i64 %b) #0 {
 ; CHECK: mov	r13, &g_i64+2
 ; CHECK: mov	r12, &g_i64
   store volatile i64 %a, i64* @g_i64, align 2
-; CHECK: mov	10(r4), &g_i64+6
-; CHECK: mov	8(r4), &g_i64+4
-; CHECK: mov	6(r4), &g_i64+2
-; CHECK: mov	4(r4), &g_i64
+; CHECK-DAG: mov	10(r4), &g_i64+6
+; CHECK-DAG: mov	8(r4), &g_i64+4
+; CHECK-DAG: mov	6(r4), &g_i64+2
+; CHECK-DAG: mov	4(r4), &g_i64
   store volatile i64 %b, i64* @g_i64, align 2
   ret void
 }

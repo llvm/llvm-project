@@ -16,17 +16,15 @@ entry:
 ; CHECK:        - Type:            EXPORT
 ; CHECK:            - Name:            ret32
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           3
+; CHECK-NEXT:         Index:           2
 
 ; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            __wasm_call_ctors
-; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            'unreachable:ret32'
-; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            _start
-; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Name:            ret32
 ; CHECK-NEXT: ...

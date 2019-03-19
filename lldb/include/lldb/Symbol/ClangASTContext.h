@@ -168,9 +168,9 @@ public:
                                    lldb::BasicType type);
 
   static CompilerType GetBasicType(clang::ASTContext *ast,
-                                   const ConstString &name);
+                                   ConstString name);
 
-  static lldb::BasicType GetBasicTypeEnumeration(const ConstString &name);
+  static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
 
   CompilerType GetBuiltinTypeForDWARFEncodingAndBitSize(const char *type_name,
                                                         uint32_t dw_ate,
@@ -211,7 +211,7 @@ public:
 
   template <typename RecordDeclType>
   CompilerType
-  GetTypeForIdentifier(const ConstString &type_name,
+  GetTypeForIdentifier(ConstString type_name,
                        clang::DeclContext *decl_context = nullptr) {
     CompilerType compiler_type;
 
@@ -243,13 +243,13 @@ public:
   }
 
   CompilerType CreateStructForIdentifier(
-      const ConstString &type_name,
+      ConstString type_name,
       const std::initializer_list<std::pair<const char *, CompilerType>>
           &type_fields,
       bool packed = false);
 
   CompilerType GetOrCreateStructForIdentifier(
-      const ConstString &type_name,
+      ConstString type_name,
       const std::initializer_list<std::pair<const char *, CompilerType>>
           &type_fields,
       bool packed = false);
@@ -354,11 +354,13 @@ public:
   //------------------------------------------------------------------
 
   clang::NamespaceDecl *
-  GetUniqueNamespaceDeclaration(const char *name, clang::DeclContext *decl_ctx);
+  GetUniqueNamespaceDeclaration(const char *name, clang::DeclContext *decl_ctx,
+                                bool is_inline = false);
 
   static clang::NamespaceDecl *
   GetUniqueNamespaceDeclaration(clang::ASTContext *ast, const char *name,
-                                clang::DeclContext *decl_ctx);
+                                clang::DeclContext *decl_ctx,
+                                bool is_inline = false);
 
   //------------------------------------------------------------------
   // Function Types
@@ -505,6 +507,9 @@ public:
                                 lldb::LanguageType *language_ptr,
                                 bool *is_instance_method_ptr,
                                 ConstString *language_object_name_ptr) override;
+
+  bool DeclContextIsContainedInLookup(void *opaque_decl_ctx,
+                                      void *other_opaque_decl_ctx) override;
 
   //----------------------------------------------------------------------
   // Clang specific clang::DeclContext functions
@@ -747,19 +752,19 @@ public:
                           bool omit_empty_base_classes,
                           const ExecutionContext *exe_ctx) override;
 
-  CompilerType GetBuiltinTypeByName(const ConstString &name) override;
+  CompilerType GetBuiltinTypeByName(ConstString name) override;
 
   lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override;
 
   static lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type,
-                          const ConstString &name);
+                          ConstString name);
 
   void ForEachEnumerator(
       lldb::opaque_compiler_type_t type,
       std::function<bool(const CompilerType &integer_type,
-                         const ConstString &name,
+                         ConstString name,
                          const llvm::APSInt &value)> const &callback) override;
 
   uint32_t GetNumFields(lldb::opaque_compiler_type_t type) override;
@@ -929,6 +934,13 @@ public:
   //----------------------------------------------------------------------
   // Dumping types
   //----------------------------------------------------------------------
+#ifndef NDEBUG
+  /// Convenience LLVM-style dump method for use in the debugger only.
+  /// In contrast to the other \p Dump() methods this directly invokes
+  /// \p clang::QualType::dump().
+  LLVM_DUMP_METHOD void dump(lldb::opaque_compiler_type_t type) const override;
+#endif
+
   void Dump(Stream &s);
 
   void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,

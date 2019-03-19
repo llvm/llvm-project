@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/Memory.h"
-
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/State.h"
 
 #include <cinttypes>
@@ -147,7 +146,7 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
     }
     AddrRange chunk_range(pos->first, pos->second->GetByteSize());
     if (chunk_range.Contains(read_range)) {
-      memcpy(dst, pos->second->GetBytes() + addr - chunk_range.GetRangeBase(),
+      memcpy(dst, pos->second->GetBytes() + (addr - chunk_range.GetRangeBase()),
              dst_len);
       return dst_len;
     }

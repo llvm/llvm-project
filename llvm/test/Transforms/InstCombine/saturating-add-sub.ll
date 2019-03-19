@@ -230,6 +230,46 @@ define <2 x i8> @test_vector_uadd_neg_nneg(<2 x i8> %a) {
   ret <2 x i8> %r
 }
 
+define i8 @test_scalar_uadd_never_overflows(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_never_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = and i8 [[A:%.*]], -127
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[A_MASKED]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a_masked = and i8 %a, 129
+  %r = call i8 @llvm.uadd.sat.i8(i8 %a_masked, i8 1)
+  ret i8 %r
+}
+
+define <2 x i8> @test_vector_uadd_never_overflows(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_never_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = and <2 x i8> [[A:%.*]], <i8 -127, i8 -127>
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i8> [[A_MASKED]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a_masked = and <2 x i8> %a, <i8 129, i8 129>
+  %r = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a_masked, <2 x i8> <i8 1, i8 1>)
+  ret <2 x i8> %r
+}
+
+define i8 @test_scalar_uadd_always_overflows(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_always_overflows(
+; CHECK-NEXT:    ret i8 -1
+;
+  %a_masked = or i8 %a, 192
+  %r = call i8 @llvm.uadd.sat.i8(i8 %a_masked, i8 64)
+  ret i8 %r
+}
+
+define <2 x i8> @test_vector_uadd_always_overflows(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_always_overflows(
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+;
+  %a_masked = or <2 x i8> %a, <i8 192, i8 192>
+  %r = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a_masked, <2 x i8> <i8 64, i8 64>)
+  ret <2 x i8> %r
+}
+
 ; neg sadd nneg never overflows.
 define i8 @test_scalar_sadd_neg_nneg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_neg_nneg(
@@ -297,6 +337,55 @@ define <2 x i8> @test_vector_sadd_neg_neg(<2 x i8> %a) {
   %a_neg = or <2 x i8> %a, <i8 -128, i8 -128>
   %r = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %a_neg, <2 x i8> <i8 -10, i8 -20>)
   ret <2 x i8> %r
+}
+
+; While this is a no-overflow condition, the nuw flag gets lost due to
+; canonicalization and we can no longer determine this
+define i8 @test_scalar_uadd_sub_nuw_lost_no_ov(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_sub_nuw_lost_no_ov(
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], -10
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B]], i8 9)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = sub nuw i8 %a, 10
+  %r = call i8 @llvm.uadd.sat.i8(i8 %b, i8 9)
+  ret i8 %r
+}
+
+define i8 @test_scalar_uadd_urem_no_ov(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_urem_no_ov(
+; CHECK-NEXT:    [[B:%.*]] = urem i8 [[A:%.*]], 100
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B]], i8 -100)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = urem i8 %a, 100
+  %r = call i8 @llvm.uadd.sat.i8(i8 %b, i8 156)
+  ret i8 %r
+}
+
+define i8 @test_scalar_uadd_urem_may_ov(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_urem_may_ov(
+; CHECK-NEXT:    [[B:%.*]] = urem i8 [[A:%.*]], 100
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B]], i8 -99)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = urem i8 %a, 100
+  %r = call i8 @llvm.uadd.sat.i8(i8 %b, i8 157)
+  ret i8 %r
+}
+
+; We have a constant range for the LHS, but only known bits for the RHS
+define i8 @test_scalar_uadd_urem_known_bits(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_scalar_uadd_urem_known_bits(
+; CHECK-NEXT:    [[AA:%.*]] = udiv i8 -66, [[A:%.*]]
+; CHECK-NEXT:    [[BB:%.*]] = and i8 [[B:%.*]], 63
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[AA]], i8 [[BB]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %aa = udiv i8 190, %a
+  %bb = and i8 %b, 63
+  %r = call i8 @llvm.uadd.sat.i8(i8 %aa, i8 %bb)
+  ret i8 %r
 }
 
 ;
@@ -568,6 +657,46 @@ define <2 x i8> @test_vector_usub_nneg_nneg(<2 x i8> %a) {
   ret <2 x i8> %r
 }
 
+define i8 @test_scalar_usub_never_overflows(i8 %a) {
+; CHECK-LABEL: @test_scalar_usub_never_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = or i8 [[A:%.*]], 64
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A_MASKED]], -10
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a_masked = or i8 %a, 64
+  %r = call i8 @llvm.usub.sat.i8(i8 %a_masked, i8 10)
+  ret i8 %r
+}
+
+define <2 x i8> @test_vector_usub_never_overflows(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_usub_never_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = or <2 x i8> [[A:%.*]], <i8 64, i8 64>
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[A_MASKED]], <i8 -10, i8 -10>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a_masked = or <2 x i8> %a, <i8 64, i8 64>
+  %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a_masked, <2 x i8> <i8 10, i8 10>)
+  ret <2 x i8> %r
+}
+
+define i8 @test_scalar_usub_always_overflows(i8 %a) {
+; CHECK-LABEL: @test_scalar_usub_always_overflows(
+; CHECK-NEXT:    ret i8 0
+;
+  %a_masked = and i8 %a, 64
+  %r = call i8 @llvm.usub.sat.i8(i8 %a_masked, i8 100)
+  ret i8 %r
+}
+
+define <2 x i8> @test_vector_usub_always_overflows(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_usub_always_overflows(
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+;
+  %a_masked = and <2 x i8> %a, <i8 64, i8 64>
+  %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a_masked, <2 x i8> <i8 100, i8 100>)
+  ret <2 x i8> %r
+}
+
 ; neg ssub neg never overflows.
 define i8 @test_scalar_ssub_neg_neg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_ssub_neg_neg(
@@ -634,6 +763,135 @@ define <2 x i8> @test_vector_ssub_neg_nneg(<2 x i8> %a) {
 ;
   %a_neg = or <2 x i8> %a, <i8 -128, i8 -128>
   %r = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %a_neg, <2 x i8> <i8 10, i8 20>)
+  ret <2 x i8> %r
+}
+
+define i8 @test_scalar_usub_add_nuw_no_ov(i8 %a) {
+; CHECK-LABEL: @test_scalar_usub_add_nuw_no_ov(
+; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[A:%.*]], 10
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 9)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = add nuw i8 %a, 10
+  %r = call i8 @llvm.usub.sat.i8(i8 %b, i8 9)
+  ret i8 %r
+}
+
+define i8 @test_scalar_usub_add_nuw_eq(i8 %a) {
+; CHECK-LABEL: @test_scalar_usub_add_nuw_eq(
+; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[A:%.*]], 10
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 10)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = add nuw i8 %a, 10
+  %r = call i8 @llvm.usub.sat.i8(i8 %b, i8 10)
+  ret i8 %r
+}
+
+define i8 @test_scalar_usub_add_nuw_may_ov(i8 %a) {
+; CHECK-LABEL: @test_scalar_usub_add_nuw_may_ov(
+; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[A:%.*]], 10
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 11)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = add nuw i8 %a, 10
+  %r = call i8 @llvm.usub.sat.i8(i8 %b, i8 11)
+  ret i8 %r
+}
+
+define i8 @test_scalar_usub_urem_must_ov(i8 %a) {
+; CHECK-LABEL: @test_scalar_usub_urem_must_ov(
+; CHECK-NEXT:    [[B:%.*]] = urem i8 [[A:%.*]], 10
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 10)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = urem i8 %a, 10
+  %r = call i8 @llvm.usub.sat.i8(i8 %b, i8 10)
+  ret i8 %r
+}
+
+; Like the previous case, the result is always zero here. However, as there's
+; no actual overflow, we won't know about it.
+define i8 @test_scalar_usub_urem_must_zero(i8 %a) {
+; CHECK-LABEL: @test_scalar_usub_urem_must_zero(
+; CHECK-NEXT:    [[B:%.*]] = urem i8 [[A:%.*]], 10
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 9)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = urem i8 %a, 10
+  %r = call i8 @llvm.usub.sat.i8(i8 %b, i8 9)
+  ret i8 %r
+}
+
+; We have a constant range for the LHS, but only known bits for the RHS
+define i8 @test_scalar_usub_add_nuw_known_bits(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_scalar_usub_add_nuw_known_bits(
+; CHECK-NEXT:    [[AA:%.*]] = add nuw i8 [[A:%.*]], 10
+; CHECK-NEXT:    [[BB:%.*]] = and i8 [[B:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[AA]], i8 [[BB]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %aa = add nuw i8 %a, 10
+  %bb = and i8 %b, 7
+  %r = call i8 @llvm.usub.sat.i8(i8 %aa, i8 %bb)
+  ret i8 %r
+}
+
+define i8 @test_scalar_usub_add_nuw_inferred(i8 %a) {
+; CHECK-LABEL: @test_scalar_usub_add_nuw_inferred(
+; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 10)
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[B]], 9
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = call i8 @llvm.usub.sat.i8(i8 %a, i8 10)
+  %r = add i8 %b, 9
+  ret i8 %r
+}
+
+define <2 x i8> @test_vector_usub_add_nuw_no_ov(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_usub_add_nuw_no_ov(
+; CHECK-NEXT:    [[B:%.*]] = add nuw <2 x i8> [[A:%.*]], <i8 10, i8 10>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[B]], <2 x i8> <i8 9, i8 9>)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %b = add nuw <2 x i8> %a, <i8 10, i8 10>
+  %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %b, <2 x i8> <i8 9, i8 9>)
+  ret <2 x i8> %r
+}
+
+; Can be optimized if the usub.sat RHS constant range handles non-splat vectors.
+define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat1(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_usub_add_nuw_no_ov_nonsplat1(
+; CHECK-NEXT:    [[B:%.*]] = add nuw <2 x i8> [[A:%.*]], <i8 10, i8 10>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[B]], <2 x i8> <i8 10, i8 9>)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %b = add nuw <2 x i8> %a, <i8 10, i8 10>
+  %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %b, <2 x i8> <i8 10, i8 9>)
+  ret <2 x i8> %r
+}
+
+; Can be optimized if the add nuw RHS constant range handles non-splat vectors.
+define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat2(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_usub_add_nuw_no_ov_nonsplat2(
+; CHECK-NEXT:    [[B:%.*]] = add nuw <2 x i8> [[A:%.*]], <i8 10, i8 9>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[B]], <2 x i8> <i8 9, i8 9>)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %b = add nuw <2 x i8> %a, <i8 10, i8 9>
+  %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %b, <2 x i8> <i8 9, i8 9>)
+  ret <2 x i8> %r
+}
+
+; Can be optimized if constant range is tracked per-element.
+define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat3(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_usub_add_nuw_no_ov_nonsplat3(
+; CHECK-NEXT:    [[B:%.*]] = add nuw <2 x i8> [[A:%.*]], <i8 10, i8 9>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[B]], <2 x i8> <i8 10, i8 9>)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %b = add nuw <2 x i8> %a, <i8 10, i8 9>
+  %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %b, <2 x i8> <i8 10, i8 9>)
   ret <2 x i8> %r
 }
 
@@ -793,6 +1051,140 @@ define i32 @not_uadd_sat2(i32 %x, i32 %y) {
 ;
   %a = add i32 %x, -2
   %c = icmp ugt i32 %x, 1
+  %r = select i1 %c, i32 %a, i32 -1
+  ret i32 %r
+}
+
+; The add may include a 'not' op rather than the cmp.
+
+define i32 @uadd_sat_not(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_sat_not(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[NOTX]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %notx = xor i32 %x, -1
+  %a = add i32 %notx, %y
+  %c = icmp ult i32 %x, %y
+  %r = select i1 %c, i32 -1, i32 %a
+  ret i32 %r
+}
+
+define i32 @uadd_sat_not_commute_add(i32 %xp, i32 %yp) {
+; CHECK-LABEL: @uadd_sat_not_commute_add(
+; CHECK-NEXT:    [[X:%.*]] = srem i32 42, [[XP:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = urem i32 42, [[YP:%.*]]
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[Y]], [[NOTX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %x = srem i32 42, %xp ; thwart complexity-based-canonicalization
+  %y = urem i32 42, %yp ; thwart complexity-based-canonicalization
+  %notx = xor i32 %x, -1
+  %a = add i32 %y, %notx
+  %c = icmp ult i32 %x, %y
+  %r = select i1 %c, i32 -1, i32 %a
+  ret i32 %r
+}
+
+define i32 @uadd_sat_not_ugt(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_sat_not_ugt(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[NOTX]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %notx = xor i32 %x, -1
+  %a = add i32 %notx, %y
+  %c = icmp ugt i32 %y, %x
+  %r = select i1 %c, i32 -1, i32 %a
+  ret i32 %r
+}
+
+define <2 x i32> @uadd_sat_not_ugt_commute_add(<2 x i32> %x, <2 x i32> %yp) {
+; CHECK-LABEL: @uadd_sat_not_ugt_commute_add(
+; CHECK-NEXT:    [[Y:%.*]] = sdiv <2 x i32> [[YP:%.*]], <i32 2442, i32 4242>
+; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[Y]], [[NOTX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> [[A]]
+; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+;
+  %y = sdiv <2 x i32> %yp, <i32 2442, i32 4242> ; thwart complexity-based-canonicalization
+  %notx = xor <2 x i32> %x, <i32 -1, i32 -1>
+  %a = add <2 x i32> %y, %notx
+  %c = icmp ugt <2 x i32> %y, %x
+  %r = select <2 x i1> %c, <2 x i32> <i32 -1, i32 -1>, <2 x i32> %a
+  ret <2 x i32> %r
+}
+
+define i32 @uadd_sat_not_commute_select(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_sat_not_commute_select(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[NOTX]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %notx = xor i32 %x, -1
+  %a = add i32 %notx, %y
+  %c = icmp ult i32 %y, %x
+  %r = select i1 %c, i32 %a, i32 -1
+  ret i32 %r
+}
+
+define i32 @uadd_sat_not_commute_select_commute_add(i32 %x, i32 %yp) {
+; CHECK-LABEL: @uadd_sat_not_commute_select_commute_add(
+; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 42, [[YP:%.*]]
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y]], [[NOTX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %y = sdiv i32 42, %yp ; thwart complexity-based-canonicalization
+  %notx = xor i32 %x, -1
+  %a = add i32 %y, %notx
+  %c = icmp ult i32 %y, %x
+  %r = select i1 %c, i32 %a, i32 -1
+  ret i32 %r
+}
+
+define <2 x i32> @uadd_sat_not_commute_select_ugt(<2 x i32> %xp, <2 x i32> %yp) {
+; CHECK-LABEL: @uadd_sat_not_commute_select_ugt(
+; CHECK-NEXT:    [[X:%.*]] = urem <2 x i32> <i32 42, i32 -42>, [[XP:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i32> <i32 12, i32 412>, [[YP:%.*]]
+; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i32> [[X]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[Y]], [[NOTX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> [[A]]
+; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+;
+  %x = urem <2 x i32> <i32 42, i32 -42>, %xp ; thwart complexity-based-canonicalization
+  %y = srem <2 x i32> <i32 12, i32 412>, %yp ; thwart complexity-based-canonicalization
+  %notx = xor <2 x i32> %x, <i32 -1, i32 -1>
+  %a = add <2 x i32> %y, %notx
+  %c = icmp ugt <2 x i32> %x, %y
+  %r = select <2 x i1> %c, <2 x i32> %a, <2 x i32> <i32 -1, i32 -1>
+  ret <2 x i32> %r
+}
+
+define i32 @uadd_sat_not_commute_select_ugt_commute_add(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_sat_not_commute_select_ugt_commute_add(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[NOTX]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %notx = xor i32 %x, -1
+  %a = add i32 %notx, %y
+  %c = icmp ugt i32 %x, %y
   %r = select i1 %c, i32 %a, i32 -1
   ret i32 %r
 }

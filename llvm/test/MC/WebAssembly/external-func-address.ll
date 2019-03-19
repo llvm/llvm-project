@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -thread-model=single %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 
@@ -21,11 +21,11 @@ define void @call(i32) {
 }
 
 ; CHECK:      --- !WASM
-; CHECK-NEXT: FileHeader:      
+; CHECK-NEXT: FileHeader:
 ; CHECK-NEXT:   Version:         0x00000001
-; CHECK-NEXT: Sections:        
+; CHECK-NEXT: Sections:
 ; CHECK-NEXT:   - Type:            TYPE
-; CHECK-NEXT:     Signatures:      
+; CHECK-NEXT:     Signatures:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:

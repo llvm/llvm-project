@@ -477,3 +477,180 @@ define void @uaddo1_not(i32 %a, i32* %p0, i1* %p1) {
   store i1 %r1, i1* %p1
   ret void
 }
+
+define i32 @add_to_sub(i32 %a, i32 %b) {
+; X32-LABEL: add_to_sub:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    retl
+;
+; X64-LINUX-LABEL: add_to_sub:
+; X64-LINUX:       # %bb.0:
+; X64-LINUX-NEXT:    movl %esi, %eax
+; X64-LINUX-NEXT:    subl %edi, %eax
+; X64-LINUX-NEXT:    retq
+;
+; X64-WIN32-LABEL: add_to_sub:
+; X64-WIN32:       # %bb.0:
+; X64-WIN32-NEXT:    movl %edx, %eax
+; X64-WIN32-NEXT:    subl %ecx, %eax
+; X64-WIN32-NEXT:    retq
+  %nota = xor i32 %a, -1
+  %add = add i32 %nota, %b
+  %r = add i32 %add, 1
+  ret i32 %r
+}
+
+declare void @bar_i32(i32)
+declare void @bar_i64(i64)
+
+; Make sure we can use sub -128 for add 128 when the flags are used.
+define void @add_i32_128_flag(i32 %x) {
+; X32-LABEL: add_i32_128_flag:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movl $128, %eax
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    je .LBB17_2
+; X32-NEXT:  # %bb.1: # %if.then
+; X32-NEXT:    pushl %eax
+; X32-NEXT:    .cfi_adjust_cfa_offset 4
+; X32-NEXT:    calll bar_i32
+; X32-NEXT:    addl $4, %esp
+; X32-NEXT:    .cfi_adjust_cfa_offset -4
+; X32-NEXT:  .LBB17_2: # %if.end
+; X32-NEXT:    retl
+;
+; X64-LINUX-LABEL: add_i32_128_flag:
+; X64-LINUX:       # %bb.0: # %entry
+; X64-LINUX-NEXT:    subl $-128, %edi
+; X64-LINUX-NEXT:    je .LBB17_1
+; X64-LINUX-NEXT:  # %bb.2: # %if.then
+; X64-LINUX-NEXT:    jmp bar_i32 # TAILCALL
+; X64-LINUX-NEXT:  .LBB17_1: # %if.end
+; X64-LINUX-NEXT:    retq
+;
+; X64-WIN32-LABEL: add_i32_128_flag:
+; X64-WIN32:       # %bb.0: # %entry
+; X64-WIN32-NEXT:    subl $-128, %ecx
+; X64-WIN32-NEXT:    je .LBB17_1
+; X64-WIN32-NEXT:  # %bb.2: # %if.then
+; X64-WIN32-NEXT:    jmp bar_i32 # TAILCALL
+; X64-WIN32-NEXT:  .LBB17_1: # %if.end
+; X64-WIN32-NEXT:    retq
+entry:
+  %add = add i32 %x, 128
+  %tobool = icmp eq i32 %add, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:
+  tail call void @bar_i32(i32 %add)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+; Make sure we can use sub -128 for add 128 when the flags are used.
+define void @add_i64_128_flag(i64 %x) {
+; X32-LABEL: add_i64_128_flag:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl $128, %eax
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    movl %eax, %edx
+; X32-NEXT:    orl %ecx, %edx
+; X32-NEXT:    je .LBB18_2
+; X32-NEXT:  # %bb.1: # %if.then
+; X32-NEXT:    pushl %ecx
+; X32-NEXT:    .cfi_adjust_cfa_offset 4
+; X32-NEXT:    pushl %eax
+; X32-NEXT:    .cfi_adjust_cfa_offset 4
+; X32-NEXT:    calll bar_i64
+; X32-NEXT:    addl $8, %esp
+; X32-NEXT:    .cfi_adjust_cfa_offset -8
+; X32-NEXT:  .LBB18_2: # %if.end
+; X32-NEXT:    retl
+;
+; X64-LINUX-LABEL: add_i64_128_flag:
+; X64-LINUX:       # %bb.0: # %entry
+; X64-LINUX-NEXT:    subq $-128, %rdi
+; X64-LINUX-NEXT:    je .LBB18_1
+; X64-LINUX-NEXT:  # %bb.2: # %if.then
+; X64-LINUX-NEXT:    jmp bar_i64 # TAILCALL
+; X64-LINUX-NEXT:  .LBB18_1: # %if.end
+; X64-LINUX-NEXT:    retq
+;
+; X64-WIN32-LABEL: add_i64_128_flag:
+; X64-WIN32:       # %bb.0: # %entry
+; X64-WIN32-NEXT:    subq $-128, %rcx
+; X64-WIN32-NEXT:    je .LBB18_1
+; X64-WIN32-NEXT:  # %bb.2: # %if.then
+; X64-WIN32-NEXT:    jmp bar_i64 # TAILCALL
+; X64-WIN32-NEXT:  .LBB18_1: # %if.end
+; X64-WIN32-NEXT:    retq
+entry:
+  %add = add i64 %x, 128
+  %tobool = icmp eq i64 %add, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:
+  tail call void @bar_i64(i64 %add)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+; Make sure we can use sub -2147483648 for add 2147483648 when the flags are used.
+define void @add_i64_2147483648_flag(i64 %x) {
+; X32-LABEL: add_i64_2147483648_flag:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    movl %eax, %edx
+; X32-NEXT:    orl %ecx, %edx
+; X32-NEXT:    je .LBB19_2
+; X32-NEXT:  # %bb.1: # %if.then
+; X32-NEXT:    pushl %ecx
+; X32-NEXT:    .cfi_adjust_cfa_offset 4
+; X32-NEXT:    pushl %eax
+; X32-NEXT:    .cfi_adjust_cfa_offset 4
+; X32-NEXT:    calll bar_i64
+; X32-NEXT:    addl $8, %esp
+; X32-NEXT:    .cfi_adjust_cfa_offset -8
+; X32-NEXT:  .LBB19_2: # %if.end
+; X32-NEXT:    retl
+;
+; X64-LINUX-LABEL: add_i64_2147483648_flag:
+; X64-LINUX:       # %bb.0: # %entry
+; X64-LINUX-NEXT:    subq $-2147483648, %rdi # imm = 0x80000000
+; X64-LINUX-NEXT:    je .LBB19_1
+; X64-LINUX-NEXT:  # %bb.2: # %if.then
+; X64-LINUX-NEXT:    jmp bar_i64 # TAILCALL
+; X64-LINUX-NEXT:  .LBB19_1: # %if.end
+; X64-LINUX-NEXT:    retq
+;
+; X64-WIN32-LABEL: add_i64_2147483648_flag:
+; X64-WIN32:       # %bb.0: # %entry
+; X64-WIN32-NEXT:    subq $-2147483648, %rcx # imm = 0x80000000
+; X64-WIN32-NEXT:    je .LBB19_1
+; X64-WIN32-NEXT:  # %bb.2: # %if.then
+; X64-WIN32-NEXT:    jmp bar_i64 # TAILCALL
+; X64-WIN32-NEXT:  .LBB19_1: # %if.end
+; X64-WIN32-NEXT:    retq
+entry:
+  %add = add i64 %x, 2147483648
+  %tobool = icmp eq i64 %add, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:
+  tail call void @bar_i64(i64 %add)
+  br label %if.end
+
+if.end:
+  ret void
+}

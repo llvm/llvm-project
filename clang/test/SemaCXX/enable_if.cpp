@@ -514,3 +514,11 @@ namespace TypeOfFn {
 
   static_assert(is_same<__typeof__(foo)*, decltype(&foo)>::value, "");
 }
+
+namespace InConstantContext {
+void foo(const char *s) __attribute__((enable_if(((void)__builtin_constant_p(*s), true), "trap"))) {}
+
+void test() {
+  InConstantContext::foo("abc");
+}
+} // namespace InConstantContext

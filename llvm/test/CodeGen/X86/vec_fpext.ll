@@ -186,14 +186,14 @@ define void @fpext_frommem8(<8 x float>* %in, <8 x double>* %out) {
 ; X32-SSE:       # %bb.0: # %entry
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
-; X32-SSE-NEXT:    cvtps2pd (%ecx), %xmm0 # encoding: [0x0f,0x5a,0x01]
-; X32-SSE-NEXT:    cvtps2pd 8(%ecx), %xmm1 # encoding: [0x0f,0x5a,0x49,0x08]
-; X32-SSE-NEXT:    cvtps2pd 16(%ecx), %xmm2 # encoding: [0x0f,0x5a,0x51,0x10]
-; X32-SSE-NEXT:    cvtps2pd 24(%ecx), %xmm3 # encoding: [0x0f,0x5a,0x59,0x18]
-; X32-SSE-NEXT:    movups %xmm3, 48(%eax) # encoding: [0x0f,0x11,0x58,0x30]
-; X32-SSE-NEXT:    movups %xmm2, 32(%eax) # encoding: [0x0f,0x11,0x50,0x20]
-; X32-SSE-NEXT:    movups %xmm1, 16(%eax) # encoding: [0x0f,0x11,0x48,0x10]
-; X32-SSE-NEXT:    movups %xmm0, (%eax) # encoding: [0x0f,0x11,0x00]
+; X32-SSE-NEXT:    cvtps2pd 8(%ecx), %xmm0 # encoding: [0x0f,0x5a,0x41,0x08]
+; X32-SSE-NEXT:    cvtps2pd (%ecx), %xmm1 # encoding: [0x0f,0x5a,0x09]
+; X32-SSE-NEXT:    cvtps2pd 24(%ecx), %xmm2 # encoding: [0x0f,0x5a,0x51,0x18]
+; X32-SSE-NEXT:    cvtps2pd 16(%ecx), %xmm3 # encoding: [0x0f,0x5a,0x59,0x10]
+; X32-SSE-NEXT:    movups %xmm3, 32(%eax) # encoding: [0x0f,0x11,0x58,0x20]
+; X32-SSE-NEXT:    movups %xmm2, 48(%eax) # encoding: [0x0f,0x11,0x50,0x30]
+; X32-SSE-NEXT:    movups %xmm1, (%eax) # encoding: [0x0f,0x11,0x08]
+; X32-SSE-NEXT:    movups %xmm0, 16(%eax) # encoding: [0x0f,0x11,0x40,0x10]
 ; X32-SSE-NEXT:    retl # encoding: [0xc3]
 ;
 ; X32-AVX-LABEL: fpext_frommem8:
@@ -218,14 +218,14 @@ define void @fpext_frommem8(<8 x float>* %in, <8 x double>* %out) {
 ;
 ; X64-SSE-LABEL: fpext_frommem8:
 ; X64-SSE:       # %bb.0: # %entry
-; X64-SSE-NEXT:    cvtps2pd (%rdi), %xmm0 # encoding: [0x0f,0x5a,0x07]
-; X64-SSE-NEXT:    cvtps2pd 8(%rdi), %xmm1 # encoding: [0x0f,0x5a,0x4f,0x08]
-; X64-SSE-NEXT:    cvtps2pd 16(%rdi), %xmm2 # encoding: [0x0f,0x5a,0x57,0x10]
-; X64-SSE-NEXT:    cvtps2pd 24(%rdi), %xmm3 # encoding: [0x0f,0x5a,0x5f,0x18]
-; X64-SSE-NEXT:    movups %xmm3, 48(%rsi) # encoding: [0x0f,0x11,0x5e,0x30]
-; X64-SSE-NEXT:    movups %xmm2, 32(%rsi) # encoding: [0x0f,0x11,0x56,0x20]
-; X64-SSE-NEXT:    movups %xmm1, 16(%rsi) # encoding: [0x0f,0x11,0x4e,0x10]
-; X64-SSE-NEXT:    movups %xmm0, (%rsi) # encoding: [0x0f,0x11,0x06]
+; X64-SSE-NEXT:    cvtps2pd 8(%rdi), %xmm0 # encoding: [0x0f,0x5a,0x47,0x08]
+; X64-SSE-NEXT:    cvtps2pd (%rdi), %xmm1 # encoding: [0x0f,0x5a,0x0f]
+; X64-SSE-NEXT:    cvtps2pd 24(%rdi), %xmm2 # encoding: [0x0f,0x5a,0x57,0x18]
+; X64-SSE-NEXT:    cvtps2pd 16(%rdi), %xmm3 # encoding: [0x0f,0x5a,0x5f,0x10]
+; X64-SSE-NEXT:    movups %xmm3, 32(%rsi) # encoding: [0x0f,0x11,0x5e,0x20]
+; X64-SSE-NEXT:    movups %xmm2, 48(%rsi) # encoding: [0x0f,0x11,0x56,0x30]
+; X64-SSE-NEXT:    movups %xmm1, (%rsi) # encoding: [0x0f,0x11,0x0e]
+; X64-SSE-NEXT:    movups %xmm0, 16(%rsi) # encoding: [0x0f,0x11,0x46,0x10]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX-LABEL: fpext_frommem8:

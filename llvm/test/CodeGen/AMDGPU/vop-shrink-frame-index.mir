@@ -50,8 +50,8 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = IMPLICIT_DEF
-    %2, $vcc = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM
+    %2, $vcc = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+    S_ENDPGM 0
 
 ...
 # GCN-LABEL: name: fold_vgpr_fi{{$}}
@@ -71,8 +71,8 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = IMPLICIT_DEF
-    %2, $vcc = V_ADD_I32_e64 %1, %0, implicit $exec
-    S_ENDPGM
+    %2, $vcc = V_ADD_I32_e64 %1, %0, 0, implicit $exec
+    S_ENDPGM 0
 
 ...
 # GCN-LABEL: name: fold_sgpr_fi{{$}}
@@ -93,8 +93,8 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = IMPLICIT_DEF
-    %2, $vcc = V_ADD_I32_e64 %1, %0, implicit $exec
-    S_ENDPGM
+    %2, $vcc = V_ADD_I32_e64 %1, %0, 0, implicit $exec
+    S_ENDPGM 0
 
 ...
 # GCN-LABEL: name: fold_fi_sgpr{{$}}
@@ -115,8 +115,8 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = IMPLICIT_DEF
-    %2, $vcc = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM
+    %2, $vcc = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+    S_ENDPGM 0
 ...
 # TODO: Should probably prefer folding immediate first
 # GCN-LABEL: name: fold_fi_imm{{$}}
@@ -136,8 +136,8 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = V_MOV_B32_e32 999, implicit $exec
-    %2, $vcc = V_ADD_I32_e64 %0, %1, implicit $exec
-    S_ENDPGM
+    %2, $vcc = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+    S_ENDPGM 0
 
 ...
 # GCN-LABEL: name: fold_imm_fi{{$}}
@@ -157,5 +157,5 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = V_MOV_B32_e32 999, implicit $exec
-    %2, $vcc = V_ADD_I32_e64 %1, %0, implicit $exec
-    S_ENDPGM
+    %2, $vcc = V_ADD_I32_e64 %1, %0, 0, implicit $exec
+    S_ENDPGM 0

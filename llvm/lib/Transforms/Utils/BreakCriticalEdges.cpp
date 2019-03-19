@@ -23,6 +23,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -48,10 +49,14 @@ namespace {
     bool runOnFunction(Function &F) override {
       auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
       auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+
+      auto *PDTWP = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>();
+      auto *PDT = PDTWP ? &PDTWP->getPostDomTree() : nullptr;
+
       auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
       auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
       unsigned N =
-          SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(DT, LI));
+          SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(DT, LI, nullptr, PDT));
       NumBroken += N;
       return N > 0;
     }
@@ -148,6 +153,10 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
   if (isa<CallBrInst>(TI) && SuccNum > 0)
     return nullptr;
 
+  if (Options.IgnoreUnreachableDests &&
+      isa<UnreachableInst>(DestBB->getFirstNonPHIOrDbgOrLifetime()))
+    return nullptr;
+
   // Create a new basic block, linking it into the CFG.
   BasicBlock *NewBB = BasicBlock::Create(TI->getContext(),
                       TIBB->getName() + "." + DestBB->getName() + "_crit_edge");
@@ -201,16 +210,17 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
 
   // If we have nothing to update, just return.
   auto *DT = Options.DT;
+  auto *PDT = Options.PDT;
   auto *LI = Options.LI;
   auto *MSSAU = Options.MSSAU;
   if (MSSAU)
     MSSAU->wireOldPredecessorsToNewImmediatePredecessor(
         DestBB, NewBB, {TIBB}, Options.MergeIdenticalEdges);
 
-  if (!DT && !LI)
+  if (!DT && !PDT && !LI)
     return NewBB;
 
-  if (DT) {
+  if (DT || PDT) {
     // Update the DominatorTree.
     //       ---> NewBB -----\
     //      /                 V
@@ -226,7 +236,10 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
     if (llvm::find(successors(TIBB), DestBB) == succ_end(TIBB))
       Updates.push_back({DominatorTree::Delete, TIBB, DestBB});
 
-    DT->applyUpdates(Updates);
+    if (DT)
+      DT->applyUpdates(Updates);
+    if (PDT)
+      PDT->applyUpdates(Updates);
   }
 
   // Update LoopInfo if it is around.

@@ -24,6 +24,8 @@ public:
     bool
     IsValid() const;
 
+    explicit operator bool() const;
+
     const char *
     GetName ();
     
@@ -78,6 +80,8 @@ public:
     
     bool
     IsValid() const;
+
+    explicit operator bool() const;
     
     const char *
     GetName ();
@@ -195,6 +199,8 @@ public:
 
     bool
     IsValid();
+
+    explicit operator bool() const;
 
     uint64_t
     GetByteSize();
@@ -315,6 +321,10 @@ public:
     
     uint32_t
     GetTypeFlags ();
+
+    bool operator==(lldb::SBType &rhs);
+
+    bool operator!=(lldb::SBType &rhs);
 
     %pythoncode %{
         def template_arg_array(self):
@@ -486,6 +496,8 @@ public:
 
     bool
     IsValid();
+
+    explicit operator bool() const;
 
     void
     Append (lldb::SBType type);

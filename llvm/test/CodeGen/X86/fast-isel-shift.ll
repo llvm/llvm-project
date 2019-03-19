@@ -157,8 +157,8 @@ define i64 @ashr_i64(i64 %a, i64 %b) {
 define i8 @shl_imm1_i8(i8 %a) {
 ; CHECK-LABEL: shl_imm1_i8:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shlb $1, %al
+; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (,%rdi,2), %eax
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %c = shl i8 %a, 1

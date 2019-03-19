@@ -98,8 +98,14 @@ public:
   WasmSymbolType getWasmType() const;
   bool isExported() const;
 
-  // True if this symbol was referenced by a regular (non-bitcode) object.
+  // True if the symbol was used for linking and thus need to be added to the
+  // output file's symbol table. This is true for all symbols except for
+  // unreferenced DSO symbols, lazy (archive) symbols, and bitcode symbols that
+  // are unreferenced except by other bitcode objects.
   unsigned IsUsedInRegularObj : 1;
+
+  // True if ths symbol is explicity marked for export (i.e. via the -e/--export
+  // command line flag)
   unsigned ForceExport : 1;
 
   // True if this symbol is specified by --trace-symbol option.
@@ -243,6 +249,21 @@ public:
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedDataKind;
   }
+
+  // Undefined data symbols are imported as wasm globals so also have a global
+  // index.
+  uint32_t getGlobalIndex() const {
+    assert(GlobalIndex != INVALID_INDEX);
+    return GlobalIndex;
+  }
+  void setGlobalIndex(uint32_t Index) {
+    assert(GlobalIndex == INVALID_INDEX);
+    GlobalIndex = Index;
+  }
+  bool hasGlobalIndex() const { return GlobalIndex != INVALID_INDEX; }
+
+protected:
+  uint32_t GlobalIndex = INVALID_INDEX;
 };
 
 class GlobalSymbol : public Symbol {

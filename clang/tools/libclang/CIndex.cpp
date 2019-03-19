@@ -2130,7 +2130,6 @@ public:
   OMPClauseEnqueue(EnqueueVisitor *Visitor) : Visitor(Visitor) { }
 #define OPENMP_CLAUSE(Name, Class)                                             \
   void Visit##Class(const Class *C);
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   void VisitOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
   void VisitOMPClauseWithPostUpdate(const OMPClauseWithPostUpdate *C);
@@ -2167,6 +2166,10 @@ void OMPClauseEnqueue::VisitOMPSafelenClause(const OMPSafelenClause *C) {
 
 void OMPClauseEnqueue::VisitOMPSimdlenClause(const OMPSimdlenClause *C) {
   Visitor->AddStmt(C->getSimdlen());
+}
+
+void OMPClauseEnqueue::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
+  Visitor->AddStmt(C->getAllocator());
 }
 
 void OMPClauseEnqueue::VisitOMPCollapseClause(const OMPCollapseClause *C) {
@@ -3409,7 +3412,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
     Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
 
   if (options & CXTranslationUnit_KeepGoing)
-    Diags->setSuppressAfterFatalError(false);
+    Diags->setFatalsAsError(true);
 
   // Recover resources if we crash before exiting this function.
   llvm::CrashRecoveryContextCleanupRegistrar<DiagnosticsEngine,
@@ -5477,6 +5480,12 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
       return cxstring::createRef("FriendDecl");
   case CXCursor_ConvergentAttr:
       return cxstring::createRef("attribute(convergent)");
+  case CXCursor_WarnUnusedAttr:
+      return cxstring::createRef("attribute(warn_unused)");
+  case CXCursor_WarnUnusedResultAttr:
+      return cxstring::createRef("attribute(warn_unused_result)");
+  case CXCursor_AlignedAttr:
+      return cxstring::createRef("attribute(aligned)");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");
@@ -6230,6 +6239,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::CXXDeductionGuide:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
+  case Decl::OMPAllocate:
   case Decl::OMPDeclareReduction:
   case Decl::OMPDeclareMapper:
   case Decl::OMPRequires:

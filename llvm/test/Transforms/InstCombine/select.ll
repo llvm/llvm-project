@@ -694,8 +694,8 @@ define i32 @test41(i1 %cond, i32 %x, i32 %y) {
 define i32 @test42(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test42(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = sext i1 [[COND]] to i32
-; CHECK-NEXT:    [[C:%.*]] = add i32 [[B]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[COND]] to i32
+; CHECK-NEXT:    [[C:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %b = add i32 %y, -1
@@ -707,8 +707,8 @@ define i32 @test42(i32 %x, i32 %y) {
 define <2 x i32> @test42vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @test42vec(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[B:%.*]] = sext <2 x i1> [[COND]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> [[COND]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = sub <2 x i32> [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %b = add <2 x i32> %y, <i32 -1, i32 -1>

@@ -97,12 +97,16 @@ static lto::Config createConfig() {
 
   // Set up optimization remarks if we've been asked to.
   C.RemarksFilename = Config->OptRemarksFilename;
+  C.RemarksPasses = Config->OptRemarksPasses;
   C.RemarksWithHotness = Config->OptRemarksWithHotness;
 
   C.SampleProfile = Config->LTOSampleProfile;
   C.UseNewPM = Config->LTONewPassManager;
   C.DebugPassManager = Config->LTODebugPassManager;
   C.DwoDir = Config->DwoDir;
+
+  C.CSIRProfile = Config->LTOCSProfileFile;
+  C.RunCSIRInstr = Config->LTOCSProfileGenerate;
 
   if (Config->EmitLLVM) {
     C.PostInternalizeModuleHook = [](size_t Task, const Module &M) {
@@ -276,19 +280,22 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   if (!Config->ThinLTOCacheDir.empty())
     pruneCache(Config->ThinLTOCacheDir, Config->ThinLTOCachePolicy);
 
-  std::vector<InputFile *> Ret;
-  for (unsigned I = 0; I != MaxTasks; ++I) {
-    if (Buf[I].empty())
-      continue;
-    if (Config->SaveTemps) {
-      if (I == 0)
-        saveBuffer(Buf[I], Config->OutputFile + ".lto.o");
-      else
-        saveBuffer(Buf[I], Config->OutputFile + Twine(I) + ".lto.o");
-    }
-    InputFile *Obj = createObjectFile(MemoryBufferRef(Buf[I], "lto.tmp"));
-    Ret.push_back(Obj);
+  if (!Config->LTOObjPath.empty()) {
+    saveBuffer(Buf[0], Config->LTOObjPath);
+    for (unsigned I = 1; I != MaxTasks; ++I)
+      saveBuffer(Buf[I], Config->LTOObjPath + Twine(I));
   }
+
+  if (Config->SaveTemps) {
+    saveBuffer(Buf[0], Config->OutputFile + ".lto.o");
+    for (unsigned I = 1; I != MaxTasks; ++I)
+      saveBuffer(Buf[I], Config->OutputFile + Twine(I) + ".lto.o");
+  }
+
+  std::vector<InputFile *> Ret;
+  for (unsigned I = 0; I != MaxTasks; ++I)
+    if (!Buf[I].empty())
+      Ret.push_back(createObjectFile(MemoryBufferRef(Buf[I], "lto.tmp")));
 
   for (std::unique_ptr<MemoryBuffer> &File : Files)
     if (File)

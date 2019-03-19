@@ -181,6 +181,32 @@ option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
 # COMPILER_RT_DEBUG_PYBOOL is used by lit.common.configured.in.
 pythonize_bool(COMPILER_RT_DEBUG)
 
+option(COMPILER_RT_INTERCEPT_LIBDISPATCH
+  "Support interception of libdispatch (GCD). Requires '-fblocks'" OFF)
+option(COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH
+  "Library search path for blocks runtime (-lBlocksRuntime)" "")
+option(COMPILER_RT_LIBDISPATCH_LIBRARY_PATH
+  "Library search path for libdispatch (-ldispatch)" "")
+if (COMPILER_RT_INTERCEPT_LIBDISPATCH)
+  set(COMPILER_RT_INTERCEPT_LIBDISPATCH_CFLAGS -fblocks)
+  set(COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS)
+  if (COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH)
+    list(APPEND COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS
+        -L${COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH}
+        -Wl,-rpath=${COMPILER_RT_BLOCKS_RUNTIME_LIBRARY_PATH})
+  endif()
+  if (COMPILER_RT_LIBDISPATCH_LIBRARY_PATH)
+    list(APPEND COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS
+        -L${COMPILER_RT_LIBDISPATCH_LIBRARY_PATH}
+        -Wl,-rpath=${COMPILER_RT_LIBDISPATCH_LIBRARY_PATH})
+  endif()
+  list(APPEND COMPILER_RT_INTERCEPT_LIBDISPATCH_LINK_FLAGS -lBlocksRuntime -ldispatch)
+endif()
+if (APPLE) # Always enable on Apple platforms.
+  set(COMPILER_RT_INTERCEPT_LIBDISPATCH ON)
+endif()
+pythonize_bool(COMPILER_RT_INTERCEPT_LIBDISPATCH)
+
 if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
   # libc++/libc++abi.
@@ -375,9 +401,13 @@ if(MSVC)
   # warning from the MS linker complaining that it can't find the 'vc140.pdb'
   # file used by our object library compilations.
   list(APPEND SANITIZER_COMMON_CFLAGS /Z7)
-  llvm_replace_compiler_option(CMAKE_CXX_FLAGS "/Z[i7I]" "/Z7")
-  llvm_replace_compiler_option(CMAKE_CXX_FLAGS_DEBUG "/Z[i7I]" "/Z7")
-  llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/Z[i7I]" "/Z7")
+  foreach(var_to_update
+    CMAKE_CXX_FLAGS
+    CMAKE_CXX_FLAGS_DEBUG
+    CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+    string(REGEX REPLACE "(^| )/Z[i7I]($| )" " /Z7 "
+           "${var_to_update}" "${${var_to_update}}")
+  endforeach()
 elseif(COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG AND NOT COMPILER_RT_DEBUG)
   list(APPEND SANITIZER_COMMON_CFLAGS -gline-tables-only)
 elseif(COMPILER_RT_HAS_G_FLAG)
@@ -405,6 +435,7 @@ append_list_if(MINGW -fms-extensions SANITIZER_COMMON_CFLAGS)
 
 # Set common link flags.
 append_list_if(COMPILER_RT_HAS_NODEFAULTLIBS_FLAG -nodefaultlibs SANITIZER_COMMON_LINK_FLAGS)
+append_list_if(COMPILER_RT_HAS_Z_TEXT -Wl,-z,text SANITIZER_COMMON_LINK_FLAGS)
 
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
   list(APPEND SANITIZER_COMMON_LINK_LIBS ${COMPILER_RT_BUILTINS_LIBRARY})

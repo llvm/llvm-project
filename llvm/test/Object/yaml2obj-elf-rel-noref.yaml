@@ -21,7 +21,6 @@ Sections:
     Info:            .text
     Relocations:     
       - Offset:          0x000000000000000C
-        Symbol:          ''
         Type:            R_ARM_V4BX
   - Name:            .data
     Type:            SHT_PROGBITS

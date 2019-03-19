@@ -3,18 +3,6 @@
 
 declare <4 x float> @llvm.x86.sse41.insertps(<4 x float>, <4 x float>, i8) nounwind readnone
 
-; This should never happen, but make sure we don't crash handling a non-constant immediate byte.
-
-define <4 x float> @insertps_non_const_imm(<4 x float> %v1, <4 x float> %v2, i8 %c) {
-; CHECK-LABEL: @insertps_non_const_imm(
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %v1, <4 x float> %v2, i8 %c)
-; CHECK-NEXT:    ret <4 x float> [[RES]]
-;
-  %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %v1, <4 x float> %v2, i8 %c)
-  ret <4 x float> %res
-
-}
-
 ; If all zero mask bits are set, return a zero regardless of the other control bits.
 
 define <4 x float> @insertps_0x0f(<4 x float> %v1, <4 x float> %v2) {

@@ -1,4 +1,4 @@
-//===- MIRYamlMapping.h - Describes the mapping between MIR and YAML ------===//
+//===- MIRYamlMapping.h - Describe mapping between MIR and YAML--*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,6 +36,7 @@ struct StringValue {
 
   StringValue() = default;
   StringValue(std::string Value) : Value(std::move(Value)) {}
+  StringValue(const char Val[]) : Value(Val) {}
 
   bool operator==(const StringValue &Other) const {
     return Value == Other.Value;
@@ -482,6 +483,20 @@ template <> struct MappingTraits<MachineFrameInfo> {
   }
 };
 
+/// Targets should override this in a way that mirrors the implementation of
+/// llvm::MachineFunctionInfo.
+struct MachineFunctionInfo {
+  virtual ~MachineFunctionInfo() {}
+  virtual void mappingImpl(IO &YamlIO) {}
+};
+
+template <> struct MappingTraits<std::unique_ptr<MachineFunctionInfo>> {
+  static void mapping(IO &YamlIO, std::unique_ptr<MachineFunctionInfo> &MFI) {
+    if (MFI)
+      MFI->mappingImpl(YamlIO);
+  }
+};
+
 struct MachineFunction {
   StringRef Name;
   unsigned Alignment = 0;
@@ -503,6 +518,7 @@ struct MachineFunction {
   std::vector<FixedMachineStackObject> FixedStackObjects;
   std::vector<MachineStackObject> StackObjects;
   std::vector<MachineConstantPoolValue> Constants; /// Constant pool.
+  std::unique_ptr<MachineFunctionInfo> MachineFuncInfo;
   MachineJumpTable JumpTableInfo;
   BlockStringValue Body;
 };
@@ -531,6 +547,7 @@ template <> struct MappingTraits<MachineFunction> {
                        std::vector<MachineStackObject>());
     YamlIO.mapOptional("constants", MF.Constants,
                        std::vector<MachineConstantPoolValue>());
+    YamlIO.mapOptional("machineFunctionInfo", MF.MachineFuncInfo);
     if (!YamlIO.outputting() || !MF.JumpTableInfo.Entries.empty())
       YamlIO.mapOptional("jumpTable", MF.JumpTableInfo, MachineJumpTable());
     YamlIO.mapOptional("body", MF.Body, BlockStringValue());

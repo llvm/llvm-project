@@ -1484,14 +1484,14 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
 
 def AMDGPUFlatWorkGroupSize : InheritableAttr {
   let Spellings = [Clang<"amdgpu_flat_work_group_size", 0>];
-  let Args = [UnsignedArgument<"Min">, UnsignedArgument<"Max">];
+  let Args = [ExprArgument<"Min">, ExprArgument<"Max">];
   let Documentation = [AMDGPUFlatWorkGroupSizeDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
 def AMDGPUWavesPerEU : InheritableAttr {
   let Spellings = [Clang<"amdgpu_waves_per_eu", 0>];
-  let Args = [UnsignedArgument<"Min">, UnsignedArgument<"Max", 1>];
+  let Args = [ExprArgument<"Min">, ExprArgument<"Max", 1>];
   let Documentation = [AMDGPUWavesPerEUDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
@@ -1564,13 +1564,6 @@ def PassObjectSize : InheritableParamAttr {
   let Args = [IntArgument<"Type">];
   let Subjects = SubjectList<[ParmVar]>;
   let Documentation = [PassObjectSizeDocs];
-}
-
-def FortifyStdLib : InheritableAttr {
-  let Spellings = [Clang<"fortify_stdlib">];
-  let Args = [IntArgument<"Type">, IntArgument<"Flag">];
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [FortifyStdLibDocs];
 }
 
 // Nullability type attributes.
@@ -2366,7 +2359,7 @@ def NoSanitize : InheritableAttr {
   let Documentation = [NoSanitizeDocs];
   let AdditionalMembers = [{
     SanitizerMask getMask() const {
-      SanitizerMask Mask = 0;
+      SanitizerMask Mask;
       for (auto SanitizerName : sanitizers()) {
         SanitizerMask ParsedMask =
             parseSanitizerValue(SanitizerName, /*AllowGroups=*/true);
@@ -3150,6 +3143,14 @@ def OMPDeclareTargetDecl : InheritableAttr {
       return llvm::None;
     }
   }];
+}
+
+def OMPAllocateDecl : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Args = [ExprArgument<"Allocator">];
+  let Documentation = [Undocumented];
 }
 
 def InternalLinkage : InheritableAttr {

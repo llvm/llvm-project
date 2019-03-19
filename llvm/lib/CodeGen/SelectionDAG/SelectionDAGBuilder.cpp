@@ -573,7 +573,8 @@ static void getCopyToParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
     unsigned RoundBits = RoundParts * PartBits;
     unsigned OddParts = NumParts - RoundParts;
     SDValue OddVal = DAG.getNode(ISD::SRL, DL, ValueVT, Val,
-                                 DAG.getIntPtrConstant(RoundBits, DL));
+      DAG.getShiftAmountConstant(RoundBits, ValueVT, DL, /*LegalTypes*/false));
+
     getCopyToParts(DAG, DL, OddVal, Parts + RoundParts, OddParts, PartVT, V,
                    CallConv);
 
@@ -1683,6 +1684,8 @@ static void findUnwindDestinations(
 
   if (IsWasmCXX) {
     findWasmUnwindDestinations(FuncInfo, EHPadBB, Prob, UnwindDests);
+    assert(UnwindDests.size() <= 1 &&
+           "There should be at most one unwind destination for wasm");
     return;
   }
 
@@ -2534,6 +2537,12 @@ SelectionDAGBuilder::visitSPDescriptorFailure(StackProtectorDescriptor &SPD) {
   SDValue Chain =
       TLI.makeLibCall(DAG, RTLIB::STACKPROTECTOR_CHECK_FAIL, MVT::isVoid,
                       None, false, getCurSDLoc(), false, false).second;
+  // On PS4, the "return address" must still be within the calling function,
+  // even if it's at the very end, so emit an explicit TRAP here.
+  // Passing 'true' for doesNotReturn above won't generate the trap for us.
+  if (TM.getTargetTriple().isPS4CPU())
+    Chain = DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, Chain);
+
   DAG.setRoot(Chain);
 }
 
@@ -2688,6 +2697,20 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     case Intrinsic::experimental_gc_statepoint:
       LowerStatepoint(ImmutableStatepoint(&I), EHPadBB);
       break;
+    case Intrinsic::wasm_rethrow_in_catch: {
+      // This is usually done in visitTargetIntrinsic, but this intrinsic is
+      // special because it can be invoked, so we manually lower it to a DAG
+      // node here.
+      SmallVector<SDValue, 8> Ops;
+      Ops.push_back(getRoot()); // inchain
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      Ops.push_back(
+          DAG.getTargetConstant(Intrinsic::wasm_rethrow_in_catch, getCurSDLoc(),
+                                TLI.getPointerTy(DAG.getDataLayout())));
+      SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
+      DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
+      break;
+    }
     }
   } else if (I.countOperandBundlesOfType(LLVMContext::OB_deopt)) {
     // Currently we do not lower any intrinsic calls with deopt operand bundles.
@@ -4416,10 +4439,10 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
 
   auto Alignment = DAG.getEVTAlignment(MemVT);
 
-  // FIXME: Volatile isn't really correct; we should keep track of atomic
-  // orderings in the memoperand.
-  auto Flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad |
-               MachineMemOperand::MOStore;
+  auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+  if (I.isVolatile())
+    Flags |= MachineMemOperand::MOVolatile;
+  Flags |= DAG.getTargetLoweringInfo().getMMOFlags(I);
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO =
@@ -4467,12 +4490,10 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   auto MemVT = getValue(I.getValOperand()).getSimpleValueType();
   auto Alignment = DAG.getEVTAlignment(MemVT);
 
-  // For now, atomics are considered to be volatile always, and they are
-  // chained as such.
-  // FIXME: Volatile isn't really correct; we should keep track of atomic
-  // orderings in the memoperand.
-  auto Flags = MachineMemOperand::MOVolatile |
-    MachineMemOperand::MOLoad |  MachineMemOperand::MOStore;
+  auto Flags = MachineMemOperand::MOLoad |  MachineMemOperand::MOStore;
+  if (I.isVolatile())
+    Flags |= MachineMemOperand::MOVolatile;
+  Flags |= DAG.getTargetLoweringInfo().getMMOFlags(I);
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO =
@@ -4517,12 +4538,15 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
       I.getAlignment() < VT.getStoreSize())
     report_fatal_error("Cannot generate unaligned atomic load");
 
+  auto Flags = MachineMemOperand::MOLoad;
+  if (I.isVolatile())
+    Flags |= MachineMemOperand::MOVolatile;
+  Flags |= TLI.getMMOFlags(I);
+
   MachineMemOperand *MMO =
       DAG.getMachineFunction().
       getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
-                           MachineMemOperand::MOVolatile |
-                           MachineMemOperand::MOLoad,
-                           VT.getStoreSize(),
+                           Flags, VT.getStoreSize(),
                            I.getAlignment() ? I.getAlignment() :
                                               DAG.getEVTAlignment(VT),
                            AAMDNodes(), nullptr, SSID, Order);
@@ -4553,11 +4577,10 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
   if (I.getAlignment() < VT.getStoreSize())
     report_fatal_error("Cannot generate unaligned atomic store");
 
-  // For now, atomics are considered to be volatile always, and they are
-  // chained as such.
-  // FIXME: Volatile isn't really correct; we should keep track of atomic
-  // orderings in the memoperand.
-  auto Flags = MachineMemOperand::MOVolatile |  MachineMemOperand::MOStore;
+  auto Flags = MachineMemOperand::MOStore;
+  if (I.isVolatile())
+    Flags |= MachineMemOperand::MOVolatile;
+  Flags |= TLI.getMMOFlags(I);
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO =
@@ -5303,12 +5326,14 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     }
   }
 
-  if (!Op && N.getNode())
+  if (!Op && N.getNode()) {
     // Check if frame index is available.
-    if (LoadSDNode *LNode = dyn_cast<LoadSDNode>(N.getNode()))
+    SDValue LCandidate = peekThroughBitcasts(N);
+    if (LoadSDNode *LNode = dyn_cast<LoadSDNode>(LCandidate.getNode()))
       if (FrameIndexSDNode *FINode =
           dyn_cast<FrameIndexSDNode>(LNode->getBasePtr().getNode()))
         Op = MachineOperand::CreateFI(FINode->getIndex());
+  }
 
   if (!Op) {
     // Check if ValueMap has reg number.
@@ -6373,8 +6398,11 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     if (TM.getOptLevel() == CodeGenOpt::None)
       return nullptr;
 
+    const int64_t ObjectSize =
+        cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
+    Value *const ObjectPtr = I.getArgOperand(1);
     SmallVector<Value *, 4> Allocas;
-    GetUnderlyingObjects(I.getArgOperand(1), Allocas, *DL);
+    GetUnderlyingObjects(ObjectPtr, Allocas, *DL);
 
     for (SmallVectorImpl<Value*>::iterator Object = Allocas.begin(),
            E = Allocas.end(); Object != E; ++Object) {
@@ -6390,15 +6418,13 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       if (SI == FuncInfo.StaticAllocaMap.end())
         return nullptr;
 
-      int FI = SI->second;
-
-      SDValue Ops[2];
-      Ops[0] = getRoot();
-      Ops[1] =
-          DAG.getFrameIndex(FI, TLI.getFrameIndexTy(DAG.getDataLayout()), true);
-      unsigned Opcode = (IsStart ? ISD::LIFETIME_START : ISD::LIFETIME_END);
-
-      Res = DAG.getNode(Opcode, sdl, MVT::Other, Ops);
+      const int FrameIndex = SI->second;
+      int64_t Offset;
+      if (GetPointerBaseWithConstantOffset(
+              ObjectPtr, Offset, DAG.getDataLayout()) != LifetimeObject)
+        Offset = -1; // Cannot determine offset from alloca to lifetime object.
+      Res = DAG.getLifetimeNode(IsStart, sdl, getRoot(), FrameIndex, ObjectSize,
+                                Offset);
       DAG.setRoot(Res);
     }
     return nullptr;

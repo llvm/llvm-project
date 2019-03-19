@@ -138,7 +138,8 @@ void StringConstructorCheck::check(const MatchFinder::MatchResult &Result) {
     }
   } else if (const auto *Ptr = Result.Nodes.getNodeAs<Expr>("from-ptr")) {
     Expr::EvalResult ConstPtr;
-    if (Ptr->EvaluateAsRValue(ConstPtr, Ctx) &&
+    if (!Ptr->isInstantiationDependent() &&
+        Ptr->EvaluateAsRValue(ConstPtr, Ctx) &&
         ((ConstPtr.Val.isInt() && ConstPtr.Val.getInt().isNullValue()) ||
          (ConstPtr.Val.isLValue() && ConstPtr.Val.isNullPointer()))) {
       diag(Loc, "constructing string from nullptr is undefined behaviour");

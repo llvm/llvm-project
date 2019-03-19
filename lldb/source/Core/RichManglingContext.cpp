@@ -34,7 +34,7 @@ void RichManglingContext::ResetProvider(InfoProvider new_provider) {
   m_provider = new_provider;
 }
 
-bool RichManglingContext::FromItaniumName(const ConstString &mangled) {
+bool RichManglingContext::FromItaniumName(ConstString mangled) {
   bool err = m_ipd.partialDemangle(mangled.GetCString());
   if (!err) {
     ResetProvider(ItaniumPartialDemangler);
@@ -53,7 +53,7 @@ bool RichManglingContext::FromItaniumName(const ConstString &mangled) {
   return !err; // true == success
 }
 
-bool RichManglingContext::FromCxxMethodName(const ConstString &demangled) {
+bool RichManglingContext::FromCxxMethodName(ConstString demangled) {
   ResetProvider(PluginCxxLanguage);
   m_cxx_method_parser = new CPlusPlusLanguage::MethodName(demangled);
   return true;

@@ -1498,6 +1498,17 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
             // expression.
             *HasMissingTypename = true;
             return TPResult::Ambiguous;
+          } else {
+            // In MS mode, if HasMissingTypename is not provided, and the tokens
+            // are or the form *) or &) *> or &> &&>, this can't be an expression.
+            // The typename must be missing.
+            if (getLangOpts().MSVCCompat) {
+              if (((Tok.is(tok::amp) || Tok.is(tok::star)) &&
+                   (NextToken().is(tok::r_paren) ||
+                    NextToken().is(tok::greater))) ||
+                  (Tok.is(tok::ampamp) && NextToken().is(tok::greater)))
+                return TPResult::True;
+            }
           }
         } else {
           // Try to resolve the name. If it doesn't exist, assume it was

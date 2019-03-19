@@ -27,6 +27,19 @@ using namespace llvm;
 #include "ARCGenInstrInfo.inc"
 
 #define DEBUG_TYPE "arc-inst-info"
+
+enum AddrIncType {
+    NoAddInc = 0,
+    PreInc   = 1,
+    PostInc  = 2,
+    Scaled   = 3
+};
+
+enum TSFlagsConstants {
+    TSF_AddrModeOff = 0,
+    TSF_AddModeMask = 3
+};
+
 // Pin the vtable to this file.
 void ARCInstrInfo::anchor() {}
 
@@ -394,4 +407,36 @@ unsigned ARCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
   }
   return MI.getDesc().getSize();
+}
+
+bool ARCInstrInfo::isPostIncrement(const MachineInstr &MI) const {
+  const MCInstrDesc &MID = MI.getDesc();
+  const uint64_t F = MID.TSFlags;
+  return ((F >> TSF_AddrModeOff) & TSF_AddModeMask) == PostInc;
+}
+
+bool ARCInstrInfo::isPreIncrement(const MachineInstr &MI) const {
+  const MCInstrDesc &MID = MI.getDesc();
+  const uint64_t F = MID.TSFlags;
+  return ((F >> TSF_AddrModeOff) & TSF_AddModeMask) == PreInc;
+}
+
+bool ARCInstrInfo::getBaseAndOffsetPosition(const MachineInstr &MI,
+                                        unsigned &BasePos,
+                                        unsigned &OffsetPos) const {
+  if (!MI.mayLoad() && !MI.mayStore())
+    return false;
+
+  BasePos = 1;
+  OffsetPos = 2;
+
+  if (isPostIncrement(MI) || isPreIncrement(MI)) {
+    BasePos++;
+    OffsetPos++;
+  }
+
+  if (!MI.getOperand(BasePos).isReg() || !MI.getOperand(OffsetPos).isImm())
+    return false;
+
+  return true;
 }

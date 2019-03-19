@@ -506,6 +506,17 @@ def warn_pragma_warning_expected_number :
   ExtWarn<"#pragma warning expected a warning number">,
   InGroup<UnknownPragmas>;
 
+// - #pragma execution_character_set(...)
+def warn_pragma_exec_charset_expected :
+  ExtWarn<"#pragma execution_character_set expected '%0'">,
+  InGroup<UnknownPragmas>;
+def warn_pragma_exec_charset_spec_invalid :
+  ExtWarn<"#pragma execution_character_set expected 'push' or 'pop'">,
+  InGroup<UnknownPragmas>;
+def warn_pragma_exec_charset_push_invalid :
+   ExtWarn<"#pragma execution_character_set invalid value '%0', only 'UTF-8' is supported">,
+   InGroup<UnknownPragmas>;
+
 def err__Pragma_malformed : Error<
   "_Pragma takes a parenthesized string literal">;
 def err_pragma_message_malformed : Error<

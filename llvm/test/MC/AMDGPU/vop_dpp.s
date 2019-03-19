@@ -599,32 +599,66 @@ v_cndmask_b32_dpp v5, v1, v2, vcc row_shl:15 row_mask:0x0 bank_mask:0x0
 // Check that immideates and scalar regs are not supported
 //===----------------------------------------------------------------------===//
 
-// NOSICI: error:
-// NOVI: error:
-// NOGFX9: error:
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
 v_mov_b32 v0, 1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error:
-// NOVI: error:
-// NOGFX9: error:
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
 v_and_b32 v0, 42, v1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error:
-// NOVI: error:
-// NOGFX9: error:
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
 v_add_f32 v0, v1, 345 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error:
-// NOVI: error:
-// NOGFX9: error:
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
 v_mov_b32 v0, s1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error:
-// NOVI: error:
-// NOGFX9: error:
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
 v_and_b32 v0, s42, v1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
-// NOSICI: error:
-// NOVI: error:
-// NOGFX9: error:
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
 v_add_f32 v0, v1, s45 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+//===----------------------------------------------------------------------===//
+// Validate register size checks (bug 37943)
+//===----------------------------------------------------------------------===//
+
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f32_dpp v5, v[1:2], v2 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f32_dpp v5, v[1:3], v2 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f32_dpp v5, v1, v[1:2] quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f32_dpp v5, v1, v[1:4] quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f16 v1, v[2:3], v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error: not a valid operand
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f16 v1, v3, v[2:3] row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0

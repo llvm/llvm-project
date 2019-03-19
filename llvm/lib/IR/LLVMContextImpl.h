@@ -37,6 +37,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -1226,7 +1227,7 @@ public:
   bool RespectDiagnosticFilters = false;
   bool DiagnosticsHotnessRequested = false;
   uint64_t DiagnosticsHotnessThreshold = 0;
-  std::unique_ptr<yaml::Output> DiagnosticsOutputFile;
+  std::unique_ptr<RemarkStreamer> RemarkDiagStreamer;
 
   LLVMContext::YieldCallbackTy YieldCallback = nullptr;
   void *YieldOpaqueHandle = nullptr;

@@ -43,13 +43,13 @@ namespace pdb {
     void dump(raw_ostream &OS, DIDumpOptions DIDumpOpts) override;
 
     DILineInfo getLineInfoForAddress(
-        uint64_t Address,
+        object::SectionedAddress Address,
         DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
     DILineInfoTable getLineInfoForAddressRange(
-        uint64_t Address, uint64_t Size,
+        object::SectionedAddress Address, uint64_t Size,
         DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
     DIInliningInfo getInliningInfoForAddress(
-        uint64_t Address,
+        object::SectionedAddress Address,
         DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
 
   private:

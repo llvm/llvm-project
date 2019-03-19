@@ -595,6 +595,7 @@ macro(add_custom_libcxx name prefix)
                -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
                -DCMAKE_BUILD_TYPE=Release
+               -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
                -DLLVM_BINARY_DIR=${prefix}
                -DLLVM_LIBRARY_OUTPUT_INTDIR=${prefix}/lib

@@ -245,6 +245,7 @@ class MADDF_D_MMR6_ENC : POOL32F_ARITHF_FM_MMR6<"maddf.d", 1, 0b110111000>;
 class MSUBF_S_MMR6_ENC : POOL32F_ARITHF_FM_MMR6<"msubf.s", 0, 0b111111000>;
 class MSUBF_D_MMR6_ENC : POOL32F_ARITHF_FM_MMR6<"msubf.d", 1, 0b111111000>;
 class FMOV_S_MMR6_ENC : POOL32F_MOV_NEG_FM_MMR6<"mov.s", 0, 0b0000001>;
+class FMOV_D_MMR6_ENC : POOL32F_MOV_NEG_FM_MMR6<"mov.d", 1, 0b0000001>;
 class FNEG_S_MMR6_ENC : POOL32F_MOV_NEG_FM_MMR6<"neg.s", 0, 0b0101101>;
 class MAX_S_MMR6_ENC : POOL32F_MINMAX_FM<"max.s", 0, 0b000001011>;
 class MAX_D_MMR6_ENC : POOL32F_MINMAX_FM<"max.d", 1, 0b000001011>;
@@ -889,6 +890,8 @@ class FMOV_FNEG_MMR6_DESC_BASE<string instr_asm, RegisterOperand DstRC,
 }
 class FMOV_S_MMR6_DESC
   : FMOV_FNEG_MMR6_DESC_BASE<"mov.s", FGR32Opnd, FGR32Opnd, II_MOV_S>;
+class FMOV_D_MMR6_DESC
+  : FMOV_FNEG_MMR6_DESC_BASE<"mov.d", FGR64Opnd, FGR64Opnd, II_MOV_D>;
 class FNEG_S_MMR6_DESC
   : FMOV_FNEG_MMR6_DESC_BASE<"neg.s", FGR32Opnd, FGR32Opnd, II_NEG, fneg>;
 
@@ -1039,7 +1042,7 @@ class TRUNC_L_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"trunc.l.d", FGR64Opnd,
 class TRUNC_W_S_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"trunc.w.s", FGR32Opnd,
                                                     FGR32Opnd, II_TRUNC>;
 class TRUNC_W_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"trunc.w.d", FGR32Opnd,
-                                                    AFGR64Opnd, II_TRUNC>;
+                                                    FGR64Opnd, II_TRUNC>;
 class SQRT_S_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"sqrt.s", FGR32Opnd, FGR32Opnd,
                                                  II_SQRT_S, fsqrt>;
 class SQRT_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"sqrt.d", AFGR64Opnd, AFGR64Opnd,
@@ -1210,7 +1213,7 @@ class SW16_MMR6_DESC : SB16_MMR6_DESC_BASE<"sw16", GPRMM16OpndZero, GPRMM16Opnd,
 class SWSP_MMR6_DESC
     : MicroMipsInst16<(outs), (ins GPR32Opnd:$rt, mem_mm_sp_imm5_lsl2:$offset),
                       !strconcat("sw", "\t$rt, $offset"), [], II_SW, FrmI>,
-      MMR6Arch<"sw"> {
+      MMR6Arch<"swsp"> {
   let DecoderMethod = "DecodeMemMMSPImm5Lsl2";
   let mayStore = 1;
 }
@@ -1460,6 +1463,8 @@ def MSUBF_S_MMR6 : R6MMR6Rel, MSUBF_S_MMR6_ENC, MSUBF_S_MMR6_DESC,
 def MSUBF_D_MMR6 : R6MMR6Rel, MSUBF_D_MMR6_ENC, MSUBF_D_MMR6_DESC,
                    ISA_MICROMIPS32R6;
 def FMOV_S_MMR6 : StdMMR6Rel, FMOV_S_MMR6_ENC, FMOV_S_MMR6_DESC,
+                  ISA_MICROMIPS32R6;
+def FMOV_D_MMR6 : StdMMR6Rel, FMOV_D_MMR6_ENC, FMOV_D_MMR6_DESC,
                   ISA_MICROMIPS32R6;
 def FNEG_S_MMR6 : StdMMR6Rel, FNEG_S_MMR6_ENC, FNEG_S_MMR6_DESC,
                   ISA_MICROMIPS32R6;
@@ -1749,6 +1754,8 @@ def : MipsPat<(f32 fpimm0), (MTC1_MMR6 ZERO)>, ISA_MICROMIPS32R6;
 def : MipsPat<(f32 fpimm0neg), (FNEG_S_MMR6 (MTC1_MMR6 ZERO))>, ISA_MICROMIPS32R6;
 def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
               (TRUNC_W_D_MMR6 FGR64Opnd:$src)>, ISA_MICROMIPS32R6;
+def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+              (TRUNC_W_S_MMR6 FGR32Opnd:$src)>, ISA_MICROMIPS32R6;
 
 def : MipsPat<(and GPRMM16:$src, immZExtAndi16:$imm),
               (ANDI16_MMR6 GPRMM16:$src, immZExtAndi16:$imm)>,

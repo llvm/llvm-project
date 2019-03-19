@@ -1259,7 +1259,9 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     }
     assert(RethrowBlock != WasmCatchStartBlock && RethrowBlock->empty());
     Builder.SetInsertPoint(RethrowBlock);
-    CGM.getCXXABI().emitRethrow(*this, /*isNoReturn=*/true);
+    llvm::Function *RethrowInCatchFn =
+        CGM.getIntrinsic(llvm::Intrinsic::wasm_rethrow_in_catch);
+    EmitNoreturnRuntimeCallOrInvoke(RethrowInCatchFn, {});
   }
 
   EmitBlock(ContBB);

@@ -74,7 +74,7 @@ ConstString Variable::GetName() const {
 
 ConstString Variable::GetUnqualifiedName() const { return m_name; }
 
-bool Variable::NameMatches(const ConstString &name) const {
+bool Variable::NameMatches(ConstString name) const {
   if (m_name == name)
     return true;
   SymbolContext variable_sc;

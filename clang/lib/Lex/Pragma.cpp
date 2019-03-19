@@ -482,11 +482,14 @@ void Preprocessor::HandlePragmaSystemHeader(Token &SysHeaderTok) {
 /// HandlePragmaDependency - Handle \#pragma GCC dependency "foo" blah.
 void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
   Token FilenameTok;
-  CurPPLexer->LexIncludeFilename(FilenameTok);
-
-  // If the token kind is EOD, the error has already been diagnosed.
-  if (FilenameTok.is(tok::eod))
+  if (LexHeaderName(FilenameTok, /*AllowConcatenation*/false))
     return;
+
+  // If the next token wasn't a header-name, diagnose the error.
+  if (!FilenameTok.isOneOf(tok::angle_string_literal, tok::string_literal)) {
+    Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
+    return;
+  }
 
   // Reserve a buffer to get the spelling.
   SmallString<128> FilenameBuffer;
@@ -662,24 +665,14 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
 
   // We expect either a quoted string literal, or a bracketed name
   Token SourceFilenameTok;
-  CurPPLexer->LexIncludeFilename(SourceFilenameTok);
-  if (SourceFilenameTok.is(tok::eod)) {
-    // The diagnostic has already been handled
+  if (LexHeaderName(SourceFilenameTok))
     return;
-  }
 
   StringRef SourceFileName;
   SmallString<128> FileNameBuffer;
   if (SourceFilenameTok.is(tok::string_literal) ||
       SourceFilenameTok.is(tok::angle_string_literal)) {
     SourceFileName = getSpelling(SourceFilenameTok, FileNameBuffer);
-  } else if (SourceFilenameTok.is(tok::less)) {
-    // This could be a path instead of just a name
-    FileNameBuffer.push_back('<');
-    SourceLocation End;
-    if (ConcatenateIncludeName(FileNameBuffer, End))
-      return; // Diagnostic already emitted
-    SourceFileName = FileNameBuffer;
   } else {
     Diag(Tok, diag::warn_pragma_include_alias_expected_filename);
     return;
@@ -694,23 +687,13 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
   }
 
   Token ReplaceFilenameTok;
-  CurPPLexer->LexIncludeFilename(ReplaceFilenameTok);
-  if (ReplaceFilenameTok.is(tok::eod)) {
-    // The diagnostic has already been handled
+  if (LexHeaderName(ReplaceFilenameTok))
     return;
-  }
 
   StringRef ReplaceFileName;
   if (ReplaceFilenameTok.is(tok::string_literal) ||
       ReplaceFilenameTok.is(tok::angle_string_literal)) {
     ReplaceFileName = getSpelling(ReplaceFilenameTok, FileNameBuffer);
-  } else if (ReplaceFilenameTok.is(tok::less)) {
-    // This could be a path instead of just a name
-    FileNameBuffer.push_back('<');
-    SourceLocation End;
-    if (ConcatenateIncludeName(FileNameBuffer, End))
-      return; // Diagnostic already emitted
-    ReplaceFileName = FileNameBuffer;
   } else {
     Diag(Tok, diag::warn_pragma_include_alias_expected_filename);
     return;
@@ -1368,6 +1351,70 @@ struct PragmaWarningHandler : public PragmaHandler {
   }
 };
 
+/// "\#pragma execution_character_set(...)". MSVC supports this pragma only
+/// for "UTF-8". We parse it and ignore it if UTF-8 is provided and warn
+/// otherwise to avoid -Wunknown-pragma warnings.
+struct PragmaExecCharsetHandler : public PragmaHandler {
+  PragmaExecCharsetHandler() : PragmaHandler("execution_character_set") {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                    Token &Tok) override {
+    // Parse things like:
+    // execution_character_set(push, "UTF-8")
+    // execution_character_set(pop)
+    SourceLocation DiagLoc = Tok.getLocation();
+    PPCallbacks *Callbacks = PP.getPPCallbacks();
+
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      PP.Diag(Tok, diag::warn_pragma_exec_charset_expected) << "(";
+      return;
+    }
+
+    PP.Lex(Tok);
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+
+    if (II && II->isStr("push")) {
+      // #pragma execution_character_set( push[ , string ] )
+      PP.Lex(Tok);
+      if (Tok.is(tok::comma)) {
+        PP.Lex(Tok);
+
+        std::string ExecCharset;
+        if (!PP.FinishLexStringLiteral(Tok, ExecCharset,
+                                       "pragma execution_character_set",
+                                       /*MacroExpansion=*/false))
+          return;
+
+        // MSVC supports either of these, but nothing else.
+        if (ExecCharset != "UTF-8" && ExecCharset != "utf-8") {
+          PP.Diag(Tok, diag::warn_pragma_exec_charset_push_invalid) << ExecCharset;
+          return;
+        }
+      }
+      if (Callbacks)
+        Callbacks->PragmaExecCharsetPush(DiagLoc, "UTF-8");
+    } else if (II && II->isStr("pop")) {
+      // #pragma execution_character_set( pop )
+      PP.Lex(Tok);
+      if (Callbacks)
+        Callbacks->PragmaExecCharsetPop(DiagLoc);
+    } else {
+      PP.Diag(Tok, diag::warn_pragma_exec_charset_spec_invalid);
+      return;
+    }
+
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok, diag::warn_pragma_exec_charset_expected) << ")";
+      return;
+    }
+
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::eod))
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma execution_character_set";
+  }
+};
+
 /// PragmaIncludeAliasHandler - "\#pragma include_alias("...")".
 struct PragmaIncludeAliasHandler : public PragmaHandler {
   PragmaIncludeAliasHandler() : PragmaHandler("include_alias") {}
@@ -1823,6 +1870,7 @@ void Preprocessor::RegisterBuiltinPragmas() {
   // MS extensions.
   if (LangOpts.MicrosoftExt) {
     AddPragmaHandler(new PragmaWarningHandler());
+    AddPragmaHandler(new PragmaExecCharsetHandler());
     AddPragmaHandler(new PragmaIncludeAliasHandler());
     AddPragmaHandler(new PragmaHdrstopHandler());
   }

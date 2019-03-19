@@ -12,6 +12,10 @@
 // RUN: %clang -### -S -o FOO -foptimization-record-file=BAR.txt %s 2>&1 | FileCheck %s -check-prefix=CHECK-EQ
 // RUN: %clang -### -S -o FOO -foptimization-record-file=BAR.txt -fno-save-optimization-record %s 2>&1 | FileCheck %s --check-prefix=CHECK-FOPT-DISABLE
 
+// RUN: %clang -### -S -o FOO -fsave-optimization-record -foptimization-record-passes=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-EQ-PASSES
+// RUN: %clang -### -S -o FOO -foptimization-record-passes=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-EQ-PASSES
+// RUN: %clang -### -S -o FOO -foptimization-record-passes=inline -fno-save-optimization-record %s 2>&1 | FileCheck %s --check-prefix=CHECK-FOPT-DISABLE-PASSES
+//
 // CHECK: "-cc1"
 // CHECK: "-opt-record-file" "FOO.opt.yaml"
 
@@ -23,3 +27,8 @@
 // CHECK-EQ: "-opt-record-file" "BAR.txt"
 
 // CHECK-FOPT-DISABLE-NOT: "-fno-save-optimization-record"
+
+// CHECK-EQ-PASSES: "-cc1"
+// CHECK-EQ-PASSES: "-opt-record-passes" "inline"
+
+// CHECK-FOPT-DISABLE-PASSES-NOT: "-fno-save-optimization-record"

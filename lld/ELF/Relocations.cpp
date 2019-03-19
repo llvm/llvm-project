@@ -161,7 +161,6 @@ static unsigned handleMipsTlsRelocation(RelType Type, Symbol &Sym,
 // The pair of GOT entries created are of the form
 // GOT[e0] Module Index (Used to find pointer to TLS block at run-time)
 // GOT[e1] Offset of symbol in TLS block
-template <class ELFT>
 static unsigned handleARMTlsRelocation(RelType Type, Symbol &Sym,
                                        InputSectionBase &C, uint64_t Offset,
                                        int64_t Addend, RelExpr Expr) {
@@ -214,7 +213,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     return 0;
 
   if (Config->EMachine == EM_ARM)
-    return handleARMTlsRelocation<ELFT>(Type, Sym, C, Offset, Addend, Expr);
+    return handleARMTlsRelocation(Type, Sym, C, Offset, Addend, Expr);
   if (Config->EMachine == EM_MIPS)
     return handleMipsTlsRelocation(Type, Sym, C, Offset, Addend, Expr);
 
@@ -676,8 +675,14 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
     return false;
 
-  std::string Msg =
-      "undefined symbol: " + toString(Sym) + "\n>>> referenced by ";
+  std::string Msg = "undefined ";
+  if (Sym.Visibility == STV_INTERNAL)
+    Msg += "internal ";
+  else if (Sym.Visibility == STV_HIDDEN)
+    Msg += "hidden ";
+  else if (Sym.Visibility == STV_PROTECTED)
+    Msg += "protected ";
+  Msg += "symbol: " + toString(Sym) + "\n>>> referenced by ";
 
   std::string Src = Sec.getSrcMsg(Sym, Offset);
   if (!Src.empty())
@@ -786,7 +791,7 @@ static void addPltEntry(PltSection *Plt, GotPltSection *GotPlt,
       {Type, GotPlt, Sym.getGotPltOffset(), !Sym.IsPreemptible, &Sym, 0});
 }
 
-template <class ELFT> static void addGotEntry(Symbol &Sym) {
+static void addGotEntry(Symbol &Sym) {
   In.Got->addEntry(Sym);
 
   RelExpr Expr = Sym.isTls() ? R_TLS : R_ABS;
@@ -1096,7 +1101,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
         In.MipsGot->addEntry(*Sec.File, Sym, Addend, Expr);
       } else if (!Sym.isInGot()) {
-        addGotEntry<ELFT>(Sym);
+        addGotEntry(Sym);
       }
     }
   } else {
@@ -1205,7 +1210,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
         // We don't need to worry about creating a MIPS GOT here because ifuncs
         // aren't a thing on MIPS.
         Sym.GotInIgot = false;
-        addGotEntry<ELFT>(Sym);
+        addGotEntry(Sym);
       }
     }
   }

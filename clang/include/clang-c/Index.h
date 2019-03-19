@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 51
+#define CINDEX_VERSION_MINOR 54
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -2587,7 +2587,10 @@ enum CXCursorKind {
   CXCursor_ObjCBoxable                   = 436,
   CXCursor_FlagEnum                      = 437,
   CXCursor_ConvergentAttr                = 438,
-  CXCursor_LastAttr                      = CXCursor_ConvergentAttr,
+  CXCursor_WarnUnusedAttr                = 439,
+  CXCursor_WarnUnusedResultAttr          = 440,
+  CXCursor_AlignedAttr                   = 441,
+  CXCursor_LastAttr                      = CXCursor_AlignedAttr,
 
   /* Preprocessing */
   CXCursor_PreprocessingDirective        = 500,
@@ -3839,7 +3842,11 @@ enum CXTypeLayoutError {
   /**
    * The Field name is not valid for this record.
    */
-  CXTypeLayoutError_InvalidFieldName = -5
+  CXTypeLayoutError_InvalidFieldName = -5,
+  /**
+   * The type is undeduced.
+   */
+  CXTypeLayoutError_Undeduced = -6
 };
 
 /**

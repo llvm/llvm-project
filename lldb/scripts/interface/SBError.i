@@ -101,6 +101,8 @@ public:
     bool
     IsValid () const;
 
+    explicit operator bool() const;
+
     bool
     GetDescription (lldb::SBStream &description);
     

@@ -140,6 +140,11 @@ const char *AMDGCN::Linker::constructOptCommand(
   }
   OptArgs.push_back("-mtriple=amdgcn-amd-amdhsa");
   OptArgs.push_back(Args.MakeArgString("-mcpu=" + SubArchName));
+
+  for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
+    OptArgs.push_back(A->getValue(0));
+  }
+
   OptArgs.push_back("-o");
   std::string TmpFileName = C.getDriver().GetTemporaryPath(
       OutputFilePrefix.str() + "-optimized", "bc");
@@ -159,7 +164,7 @@ const char *AMDGCN::Linker::constructLlcCommand(
     llvm::StringRef OutputFilePrefix, const char *InputFileName) const {
   // Construct llc command.
   ArgStringList LlcArgs{InputFileName, "-mtriple=amdgcn-amd-amdhsa",
-                        "-filetype=obj",
+                        "-filetype=obj", "-mattr=-code-object-v3",
                         Args.MakeArgString("-mcpu=" + SubArchName)};
 
   // Extract all the -m options
@@ -167,7 +172,7 @@ const char *AMDGCN::Linker::constructLlcCommand(
   handleTargetFeaturesGroup(
     Args, Features, options::OPT_m_amdgpu_Features_Group);
 
-  // Add features to mattr such as code-object-v3 and xnack
+  // Add features to mattr such as xnack
   std::string MAttrString = "-mattr=";
   for(auto OneFeature : Features) {
     MAttrString.append(Args.MakeArgString(OneFeature));
@@ -176,6 +181,10 @@ const char *AMDGCN::Linker::constructLlcCommand(
   }
   if(!Features.empty())
     LlcArgs.push_back(Args.MakeArgString(MAttrString));
+
+  for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
+    LlcArgs.push_back(A->getValue(0));
+  }
 
   // Add output filename
   LlcArgs.push_back("-o");

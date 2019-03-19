@@ -52,6 +52,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -417,7 +418,9 @@ void CodeGenModule::Release() {
     OpenMPRuntime->clear();
   }
   if (PGOReader) {
-    getModule().setProfileSummary(PGOReader->getSummary().getMD(VMContext));
+    getModule().setProfileSummary(
+        PGOReader->getSummary(/* UseCS */ false).getMD(VMContext),
+        llvm::ProfileSummary::PSK_Instr);
     if (PGOStats.hasDiagnostics())
       PGOStats.reportDiagnostics(getDiags(), getCodeGenOpts().MainFileName);
   }
@@ -1048,8 +1051,17 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
 
   // Keep the first result in the case of a mangling collision.
   const auto *ND = cast<NamedDecl>(GD.getDecl());
-  auto Result =
-      Manglings.insert(std::make_pair(getMangledNameImpl(*this, GD, ND), GD));
+  std::string MangledName = getMangledNameImpl(*this, GD, ND);
+
+  // Postfix kernel stub names with .stub to differentiate them from kernel
+  // names in device binaries. This is to facilitate the debugger to find
+  // the correct symbols for kernels in the device binary.
+  if (auto *FD = dyn_cast<FunctionDecl>(GD.getDecl()))
+    if (getLangOpts().HIP && !getLangOpts().CUDAIsDevice &&
+        FD->hasAttr<CUDAGlobalAttr>())
+      MangledName = MangledName + ".stub";
+
+  auto Result = Manglings.insert(std::make_pair(MangledName, GD));
   return MangledDeclNames[CanonicalGD] = Result.first->first();
 }
 
@@ -4394,6 +4406,8 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   switch (Triple.getObjectFormat()) {
   case llvm::Triple::UnknownObjectFormat:
     llvm_unreachable("unknown file format");
+  case llvm::Triple::XCOFF:
+    llvm_unreachable("XCOFF is not yet implemented");
   case llvm::Triple::COFF:
   case llvm::Triple::ELF:
   case llvm::Triple::Wasm:
@@ -4522,7 +4536,8 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
     if (auto GV = *Entry) {
       if (Alignment.getQuantity() > GV->getAlignment())
         GV->setAlignment(Alignment.getQuantity());
-      return ConstantAddress(GV, Alignment);
+      return ConstantAddress(castStringLiteralToDefaultAddressSpace(*this, GV),
+                             Alignment);
     }
   }
 
@@ -4584,7 +4599,8 @@ ConstantAddress CodeGenModule::GetAddrOfConstantCString(
     if (auto GV = *Entry) {
       if (Alignment.getQuantity() > GV->getAlignment())
         GV->setAlignment(Alignment.getQuantity());
-      return ConstantAddress(GV, Alignment);
+      return ConstantAddress(castStringLiteralToDefaultAddressSpace(*this, GV),
+                             Alignment);
     }
   }
 
@@ -5046,6 +5062,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
 
   case Decl::OMPThreadPrivate:
     EmitOMPThreadPrivateDecl(cast<OMPThreadPrivateDecl>(D));
+    break;
+
+  case Decl::OMPAllocate:
     break;
 
   case Decl::OMPDeclareReduction:

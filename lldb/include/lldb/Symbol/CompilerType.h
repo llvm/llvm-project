@@ -302,7 +302,7 @@ public:
 
   lldb::BasicType GetBasicTypeEnumeration() const;
 
-  static lldb::BasicType GetBasicTypeEnumeration(const ConstString &name);
+  static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
 
   //----------------------------------------------------------------------
   // If this type is an enumeration, iterate through all of its enumerators
@@ -311,7 +311,7 @@ public:
   //----------------------------------------------------------------------
   void ForEachEnumerator(
       std::function<bool(const CompilerType &integer_type,
-                         const ConstString &name,
+                         ConstString name,
                          const llvm::APSInt &value)> const &callback) const;
 
   uint32_t GetNumFields() const;
@@ -388,6 +388,13 @@ public:
   //----------------------------------------------------------------------
   // Dumping types
   //----------------------------------------------------------------------
+
+#ifndef NDEBUG
+  /// Convenience LLVM-style dump method for use in the debugger only.
+  /// Don't call this function from actual code.
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+
   void DumpValue(ExecutionContext *exe_ctx, Stream *s, lldb::Format format,
                  const DataExtractor &data, lldb::offset_t data_offset,
                  size_t data_byte_size, uint32_t bitfield_bit_size,

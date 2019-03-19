@@ -162,6 +162,10 @@ enum NodeType : unsigned {
   // Transaction end.  Just the chain operand.  Returns CC value and chain.
   TEND,
 
+  // Create a vector constant by filling byte N of the result with bit
+  // 15-N of the single operand.
+  BYTE_MASK,
+
   // Create a vector constant by replicating an element-sized RISBG-style mask.
   // The first operand specifies the starting set bit and the second operand
   // specifies the ending set bit.  Both operands count from the MSB of the
@@ -396,7 +400,8 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &,
                          EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(EVT VT) const override;
-  bool isFPImmLegal(const APFloat &Imm, EVT VT) const override;
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
@@ -513,9 +518,6 @@ public:
     return true;
   }
 
-  static bool tryBuildVectorByteMask(BuildVectorSDNode *BVN, uint64_t &Mask);
-  static bool analyzeFPImm(const APFloat &Imm, unsigned BitWidth,
-                 unsigned &Start, unsigned &End, const SystemZInstrInfo *TII);
 private:
   const SystemZSubtarget &Subtarget;
 
@@ -641,8 +643,27 @@ private:
                                          MachineBasicBlock *MBB,
                                          unsigned Opcode) const;
 
+  MachineMemOperand::Flags getMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 };
+
+struct SystemZVectorConstantInfo {
+private:
+  APInt IntBits;             // The 128 bits as an integer.
+  APInt SplatBits;           // Smallest splat value.
+  APInt SplatUndef;          // Bits correspoding to undef operands of the BVN.
+  unsigned SplatBitSize = 0;
+  bool isFP128 = false;
+
+public:
+  unsigned Opcode = 0;
+  SmallVector<unsigned, 2> OpVals;
+  MVT VecVT;
+  SystemZVectorConstantInfo(APFloat FPImm);
+  SystemZVectorConstantInfo(BuildVectorSDNode *BVN);
+  bool isVectorConstantLegal(const SystemZSubtarget &Subtarget);
+};
+
 } // end namespace llvm
 
 #endif

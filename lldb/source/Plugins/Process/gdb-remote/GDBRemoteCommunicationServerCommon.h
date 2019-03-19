@@ -138,7 +138,7 @@ protected:
   /// server in a situation where the startup code has been provided
   /// with all the information for a child process to be launched.
   ///
-  /// @return
+  /// \return
   ///     An Status object indicating the success or failure of the
   ///     launch.
   //------------------------------------------------------------------

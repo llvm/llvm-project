@@ -23,6 +23,8 @@ public:
 
   ~SBTypeSummaryOptions();
 
+  explicit operator bool() const;
+
   bool IsValid();
 
   lldb::LanguageType GetLanguage();
@@ -78,6 +80,8 @@ public:
   SBTypeSummary(const lldb::SBTypeSummary &rhs);
 
   ~SBTypeSummary();
+
+  explicit operator bool() const;
 
   bool IsValid() const;
 

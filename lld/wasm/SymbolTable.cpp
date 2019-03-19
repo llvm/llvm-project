@@ -37,6 +37,8 @@ void SymbolTable::addFile(InputFile *File) {
     BitcodeFiles.push_back(F);
   else if (auto *F = dyn_cast<ObjFile>(File))
     ObjectFiles.push_back(F);
+  else if (auto *F = dyn_cast<SharedFile>(File))
+    SharedFiles.push_back(F);
 }
 
 // This function is where all the optimizations of link-time
@@ -191,7 +193,7 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef Name,
   LLVM_DEBUG(dbgs() << "addSyntheticFunction: " << Name << "\n");
   assert(!find(Name));
   SyntheticFunctions.emplace_back(Function);
-  return replaceSymbol<DefinedFunction>(insert(Name, nullptr).first, Name,
+  return replaceSymbol<DefinedFunction>(insertName(Name).first, Name,
                                         Flags, nullptr, Function);
 }
 
@@ -199,7 +201,7 @@ DefinedData *SymbolTable::addSyntheticDataSymbol(StringRef Name,
                                                  uint32_t Flags) {
   LLVM_DEBUG(dbgs() << "addSyntheticDataSymbol: " << Name << "\n");
   assert(!find(Name));
-  return replaceSymbol<DefinedData>(insert(Name, nullptr).first, Name, Flags);
+  return replaceSymbol<DefinedData>(insertName(Name).first, Name, Flags);
 }
 
 DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef Name, uint32_t Flags,
@@ -208,7 +210,7 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef Name, uint32_t Flags,
                     << "\n");
   assert(!find(Name));
   SyntheticGlobals.emplace_back(Global);
-  return replaceSymbol<DefinedGlobal>(insert(Name, nullptr).first, Name, Flags,
+  return replaceSymbol<DefinedGlobal>(insertName(Name).first, Name, Flags,
                                       nullptr, Global);
 }
 
@@ -442,7 +444,7 @@ void SymbolTable::addLazy(ArchiveFile *File, const Archive::Symbol *Sym) {
 
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name, nullptr);
+  std::tie(S, WasInserted) = insertName(Name);
 
   if (WasInserted) {
     replaceSymbol<LazySymbol>(S, Name, 0, File, *Sym);

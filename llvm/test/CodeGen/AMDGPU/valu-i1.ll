@@ -8,7 +8,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 
 ; waitcnt should be inserted after exec modification
-; SI:      v_cmp_lt_i32_e32 vcc, 0,
+; SI:      v_cmp_lt_i32_e32 vcc, 1,
 ; SI-NEXT: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, 0
 ; SI-NEXT: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, 0
 ; SI-NEXT: s_and_saveexec_b64 [[SAVE1:s\[[0-9]+:[0-9]+\]]], vcc
@@ -31,16 +31,16 @@ define amdgpu_kernel void @test_if(i32 %b, i32 addrspace(1)* %src, i32 addrspace
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   switch i32 %tid, label %default [
-    i32 0, label %case0
     i32 1, label %case1
+    i32 2, label %case2
   ]
 
-case0:
+case1:
   %arrayidx1 = getelementptr i32, i32 addrspace(1)* %dst, i32 %b
   store i32 13, i32 addrspace(1)* %arrayidx1, align 4
   br label %end
 
-case1:
+case2:
   %arrayidx5 = getelementptr i32, i32 addrspace(1)* %dst, i32 %b
   store i32 17, i32 addrspace(1)* %arrayidx5, align 4
   br label %end

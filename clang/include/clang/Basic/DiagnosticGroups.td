@@ -351,6 +351,7 @@ def MismatchedReturnTypes : DiagGroup<"mismatched-return-types">;
 def MismatchedTags : DiagGroup<"mismatched-tags">;
 def MissingFieldInitializers : DiagGroup<"missing-field-initializers">;
 def ModuleBuild : DiagGroup<"module-build">;
+def ModuleImport : DiagGroup<"module-import">;
 def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def NewlineEOF : DiagGroup<"newline-eof">;
@@ -403,6 +404,7 @@ def ObjCPointerIntrospectPerformSelector : DiagGroup<"deprecated-objc-pointer-in
 def ObjCPointerIntrospect : DiagGroup<"deprecated-objc-pointer-introspection", [ObjCPointerIntrospectPerformSelector]>;
 def ObjCMultipleMethodNames : DiagGroup<"objc-multiple-method-names">;
 def ObjCFlexibleArray : DiagGroup<"objc-flexible-array">;
+def ObjCBoxing : DiagGroup<"objc-boxing">;
 def OpenCLUnsupportedRGBA: DiagGroup<"opencl-unsupported-rgba">;
 def DeprecatedObjCIsaUsage : DiagGroup<"deprecated-objc-isa-usage">;
 def ExplicitInitializeCall : DiagGroup<"explicit-initialize-call">;
@@ -1052,3 +1054,5 @@ def NoDeref : DiagGroup<"noderef">;
 def CrossTU : DiagGroup<"ctu">;
 
 def CTADMaybeUnsupported : DiagGroup<"ctad-maybe-unsupported">;
+
+def FortifySource : DiagGroup<"fortify-source">;

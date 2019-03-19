@@ -28,11 +28,11 @@ let hasSideEffects = 0 in {
 
   let Defs = [RAX], Uses = [EAX] in // RAX = signext(EAX)
   def CDQE : RI<0x98, RawFrm, (outs), (ins),
-               "{cltq|cdqe}", []>, Sched<[WriteALU]>;
+               "{cltq|cdqe}", []>, Sched<[WriteALU]>, Requires<[In64BitMode]>;
 
   let Defs = [RAX,RDX], Uses = [RAX] in // RDX:RAX = signext(RAX)
   def CQO  : RI<0x99, RawFrm, (outs), (ins),
-                "{cqto|cqo}", []>, Sched<[WriteALU]>;
+                "{cqto|cqo}", []>, Sched<[WriteALU]>, Requires<[In64BitMode]>;
 }
 
 // Sign/Zero extenders

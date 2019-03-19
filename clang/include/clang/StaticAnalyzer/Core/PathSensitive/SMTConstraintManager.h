@@ -220,6 +220,11 @@ public:
     OS << nl;
   }
 
+  bool haveEqualConstraints(ProgramStateRef S1,
+                            ProgramStateRef S2) const override {
+    return S1->get<ConstraintSMT>() == S2->get<ConstraintSMT>();
+  }
+
   bool canReasonAbout(SVal X) const override {
     const TargetInfo &TI = getBasicVals().getContext().getTargetInfo();
 

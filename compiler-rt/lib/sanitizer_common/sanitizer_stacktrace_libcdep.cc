@@ -57,6 +57,8 @@ void StackTrace::Print() const {
 void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,
                                 uptr stack_top, uptr stack_bottom,
                                 bool request_fast_unwind) {
+  // Ensures all call sites get what they requested.
+  CHECK_EQ(request_fast_unwind, WillUseFastUnwind(request_fast_unwind));
   top_frame_bp = (max_depth > 0) ? bp : 0;
   // Avoid doing any work for small max_depth.
   if (max_depth == 0) {
@@ -71,14 +73,14 @@ void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,
   if (!WillUseFastUnwind(request_fast_unwind)) {
 #if SANITIZER_CAN_SLOW_UNWIND
     if (context)
-      SlowUnwindStackWithContext(pc, context, max_depth);
+      UnwindSlow(pc, context, max_depth);
     else
-      SlowUnwindStack(pc, max_depth);
+      UnwindSlow(pc, max_depth);
 #else
     UNREACHABLE("slow unwind requested but not available");
 #endif
   } else {
-    FastUnwindStack(pc, bp, stack_top, stack_bottom, max_depth);
+    UnwindFast(pc, bp, stack_top, stack_bottom, max_depth);
   }
 }
 

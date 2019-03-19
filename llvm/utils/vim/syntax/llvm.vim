@@ -148,6 +148,7 @@ syn keyword llvmKeyword
       \ sspstrong
       \ strictfp
       \ swiftcc
+      \ swiftself
       \ tail
       \ target
       \ thread_local

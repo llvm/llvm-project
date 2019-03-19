@@ -25,6 +25,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/ConvertUTF.h"
 
 using namespace clang;
 using namespace sema;
@@ -523,6 +524,30 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
         QualType NSStringObject = Context.getObjCInterfaceType(NSStringDecl);
         NSStringPointer = Context.getObjCObjectPointerType(NSStringObject);
       }
+
+      // The boxed expression can be emitted as a compile time constant if it is
+      // a string literal whose character encoding is compatible with UTF-8.
+      if (auto *CE = dyn_cast<ImplicitCastExpr>(ValueExpr))
+        if (CE->getCastKind() == CK_ArrayToPointerDecay)
+          if (auto *SL =
+                  dyn_cast<StringLiteral>(CE->getSubExpr()->IgnoreParens())) {
+            assert((SL->isAscii() || SL->isUTF8()) &&
+                   "unexpected character encoding");
+            StringRef Str = SL->getString();
+            const llvm::UTF8 *StrBegin = Str.bytes_begin();
+            const llvm::UTF8 *StrEnd = Str.bytes_end();
+            // Check that this is a valid UTF-8 string.
+            if (llvm::isLegalUTF8String(&StrBegin, StrEnd)) {
+              BoxedType = Context.getAttributedType(
+                  AttributedType::getNullabilityAttrKind(
+                      NullabilityKind::NonNull),
+                  NSStringPointer, NSStringPointer);
+              return new (Context) ObjCBoxedExpr(CE, BoxedType, nullptr, SR);
+            }
+
+            Diag(SL->getBeginLoc(), diag::warn_objc_boxing_invalid_utf8_string)
+                << NSStringPointer << SL->getSourceRange();
+          }
 
       if (!StringWithUTF8StringMethod) {
         IdentifierInfo *II = &Context.Idents.get("stringWithUTF8String");

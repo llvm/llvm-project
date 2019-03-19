@@ -90,16 +90,16 @@ std::string PDBSymbolCompiland::getSourceFileFullPath() const {
   PDB_Lang Lang = Details ? Details->getLanguage() : PDB_Lang::Cpp;
   auto SrcFiles = Session.getSourceFilesForCompiland(*this);
   if (SrcFiles) {
-    bool LangC = (Lang == PDB_Lang::Cpp || Lang == PDB_Lang::C);
     while (auto File = SrcFiles->getNext()) {
       std::string FileName = File->getFileName();
       auto file_extension = sys::path::extension(FileName);
       if (StringSwitch<bool>(file_extension.lower())
-              .Case(".cpp", LangC)
-              .Case(".c", LangC)
-              .Case(".cc", LangC)
-              .Case(".cxx", LangC)
+              .Case(".cpp", Lang == PDB_Lang::Cpp)
+              .Case(".cc", Lang == PDB_Lang::Cpp)
+              .Case(".cxx", Lang == PDB_Lang::Cpp)
+              .Case(".c", Lang == PDB_Lang::C)
               .Case(".asm", Lang == PDB_Lang::Masm)
+              .Case(".swift", Lang == PDB_Lang::Swift)
               .Default(false))
         return File->getFileName();
     }

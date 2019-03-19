@@ -28,7 +28,7 @@ private:
   /// get ahold of of the one and only target list through the
   /// lldb_private::Debugger::GetSharedInstance().GetTargetList().
   ///
-  /// @see static TargetList& lldb_private::Debugger::GetTargetList().
+  /// \see static TargetList& lldb_private::Debugger::GetTargetList().
   //------------------------------------------------------------------
   TargetList(Debugger &debugger);
 
@@ -57,33 +57,33 @@ public:
   /// locate an appropriate target to deliver asynchronous information
   /// to.
   ///
-  /// @param[in] debugger
+  /// \param[in] debugger
   ///     The debugger to associate this target with
   ///
-  /// @param[in] file_spec
+  /// \param[in] file_spec
   ///     The main executable file for a debug target. This value
   ///     can be nullptr and the file can be set later using:
   ///     Target::SetExecutableModule (ModuleSP&)
   ///
-  /// @param[in] triple_cstr
+  /// \param[in] triple_cstr
   ///     A target triple string to be used for the target. This can
   ///     be nullptr if the triple is not known or when attaching to a
   ///     process.
   ///
-  /// @param[in] get_dependent_modules
+  /// \param[in] get_dependent_modules
   ///     Track down the dependent modules for an executable and
   ///     load those into the module list.
   ///
-  /// @param[in] platform_options
+  /// \param[in] platform_options
   ///     A pointer to the platform options to use when creating this
   ///     target. If this value is nullptr, then the currently selected
   ///     platform will be used.
   ///
-  /// @param[out] target_sp
+  /// \param[out] target_sp
   ///     A shared pointer to a target that will be filled in if
   ///     this call is successful.
   ///
-  /// @return
+  /// \return
   ///     An error object that indicates success or failure
   //------------------------------------------------------------------
   Status CreateTarget(Debugger &debugger, llvm::StringRef user_exe_path,
@@ -110,10 +110,10 @@ public:
   /// should be called to release the memory associated with a target
   /// object.
   ///
-  /// @param[in] target_sp
+  /// \param[in] target_sp
   ///     The shared pointer to a target.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the target was successfully removed from
   ///     from this target list, \b false otherwise. The client will
   ///     be left with the last remaining shared pointer to the target
@@ -132,7 +132,7 @@ public:
   /// matches \a exe_file_spec, and whose architecture matches
   /// \a arch_ptr if arch_ptr is not nullptr.
   ///
-  /// @param[in] exe_file_spec
+  /// \param[in] exe_file_spec
   ///     A file spec containing a basename, or a full path (directory
   ///     and basename). If \a exe_file_spec contains only a filename
   ///     (empty GetDirectory() value) then matching will be done
@@ -140,11 +140,11 @@ public:
   ///     compared. If \a exe_file_spec contains a filename and a
   ///     directory, then both must match.
   ///
-  /// @param[in] exe_arch_ptr
+  /// \param[in] exe_arch_ptr
   ///     If not nullptr then the architecture also needs to match, else
   ///     the architectures will be compared.
   ///
-  /// @return
+  /// \return
   ///     A shared pointer to a target object. The returned shared
   ///     pointer will contain nullptr if no target objects have a
   ///     executable whose full or partial path matches
@@ -158,10 +158,10 @@ public:
   /// Find the target that contains a process with process ID \a
   /// pid.
   ///
-  /// @param[in] pid
+  /// \param[in] pid
   ///     The process ID to search our target list for.
   ///
-  /// @return
+  /// \return
   ///     A shared pointer to a target object. The returned shared
   ///     pointer will contain nullptr if no target objects own a process
   ///     with a matching process ID.
@@ -179,12 +179,12 @@ public:
   /// pid and send a LLDB_EVENT_ASYNC_INTERRUPT event to the process's
   /// event queue.
   ///
-  /// @param[in] pid
+  /// \param[in] pid
   ///     The process ID to search our target list for, if \a pid is
   ///     LLDB_INVALID_PROCESS_ID, then the interrupt will be sent to
   ///     all processes.
   ///
-  /// @return
+  /// \return
   ///     The number of async interrupts sent.
   //------------------------------------------------------------------
   uint32_t SendAsyncInterrupt(lldb::pid_t pid = LLDB_INVALID_PROCESS_ID);

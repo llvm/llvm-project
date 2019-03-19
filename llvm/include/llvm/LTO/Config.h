@@ -55,6 +55,9 @@ struct Config {
   /// Disable entirely the optimizer, including importing for ThinLTO
   bool CodeGenOnly = false;
 
+  /// Run PGO context sensitive IR instrumentation.
+  bool RunCSIRInstr = false;
+
   /// If this field is set, the set of passes run in the middle-end optimizer
   /// will be the one specified by the string. Only works with the new pass
   /// manager as the old one doesn't have this ability.
@@ -73,6 +76,9 @@ struct Config {
   /// with this triple.
   std::string DefaultTriple;
 
+  /// Context Sensitive PGO profile path.
+  std::string CSIRProfile;
+
   /// Sample PGO profile path.
   std::string SampleProfile;
 
@@ -89,6 +95,9 @@ struct Config {
 
   /// Optimization remarks file path.
   std::string RemarksFilename = "";
+
+  /// Optimization remarks pass filter.
+  std::string RemarksPasses = "";
 
   /// Whether to emit optimization remarks with hotness informations.
   bool RemarksWithHotness = false;

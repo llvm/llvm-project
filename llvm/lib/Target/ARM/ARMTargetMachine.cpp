@@ -141,6 +141,10 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   // Pointers are 32 bits and aligned to 32 bits.
   Ret += "-p:32:32";
 
+  // Function pointers are aligned to 8 bits (because the LSB stores the
+  // ARM/Thumb state).
+  Ret += "-Fi8";
+
   // ABIs other than APCS have 64 bit integers with natural alignment.
   if (ABI != ARMBaseTargetMachine::ARM_ABI_APCS)
     Ret += "-i64:64";
@@ -399,6 +403,10 @@ void ARMPassConfig::addIRPasses() {
 
   TargetPassConfig::addIRPasses();
 
+  // Run the parallel DSP pass.
+  if (getOptLevel() == CodeGenOpt::Aggressive) 
+    addPass(createARMParallelDSPPass());
+
   // Match interleaved memory accesses to ldN/stN intrinsics.
   if (TM->getOptLevel() != CodeGenOpt::None)
     addPass(createInterleavedAccessPass());
@@ -411,9 +419,6 @@ void ARMPassConfig::addCodeGenPrepare() {
 }
 
 bool ARMPassConfig::addPreISel() {
-  if (getOptLevel() != CodeGenOpt::None)
-    addPass(createARMParallelDSPPass());
-
   if ((TM->getOptLevel() != CodeGenOpt::None &&
        EnableGlobalMerge == cl::BOU_UNSET) ||
       EnableGlobalMerge == cl::BOU_TRUE) {

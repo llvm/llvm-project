@@ -2659,6 +2659,7 @@ inline static bool isRedundantFlagInstr(const MachineInstr *CmpI,
   if ((CmpI->getOpcode() == ARM::CMPrr || CmpI->getOpcode() == ARM::t2CMPrr) &&
       (OI->getOpcode() == ARM::ADDrr || OI->getOpcode() == ARM::t2ADDrr ||
        OI->getOpcode() == ARM::ADDri || OI->getOpcode() == ARM::t2ADDri) &&
+      OI->getOperand(0).isReg() && OI->getOperand(1).isReg() &&
       OI->getOperand(0).getReg() == SrcReg &&
       OI->getOperand(1).getReg() == SrcReg2) {
     IsThumb1 = false;
@@ -2691,6 +2692,17 @@ static bool isOptimizeCompareCandidate(MachineInstr *MI, bool &IsThumb1) {
   case ARM::tSUBi3:
   case ARM::tSUBi8:
   case ARM::tMUL:
+  case ARM::tADC:
+  case ARM::tSBC:
+  case ARM::tRSB:
+  case ARM::tAND:
+  case ARM::tORR:
+  case ARM::tEOR:
+  case ARM::tBIC:
+  case ARM::tMVN:
+  case ARM::tASRri:
+  case ARM::tASRrr:
+  case ARM::tROR:
     IsThumb1 = true;
     LLVM_FALLTHROUGH;
   case ARM::RSBrr:
@@ -2813,20 +2825,22 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   // CMP. This peephole works on the vregs, so is still in SSA form. As a
   // consequence, the movs won't redefine/kill the MUL operands which would
   // make this reordering illegal.
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
   if (MI && IsThumb1) {
     --I;
-    bool CanReorder = true;
-    const bool HasStmts = I != E;
-    for (; I != E; --I) {
-      if (I->getOpcode() != ARM::tMOVi8) {
-        CanReorder = false;
-        break;
+    if (I != E && !MI->readsRegister(ARM::CPSR, TRI)) {
+      bool CanReorder = true;
+      for (; I != E; --I) {
+        if (I->getOpcode() != ARM::tMOVi8) {
+          CanReorder = false;
+          break;
+        }
       }
-    }
-    if (HasStmts && CanReorder) {
-      MI = MI->removeFromParent();
-      E = CmpInstr;
-      CmpInstr.getParent()->insert(E, MI);
+      if (CanReorder) {
+        MI = MI->removeFromParent();
+        E = CmpInstr;
+        CmpInstr.getParent()->insert(E, MI);
+      }
     }
     I = CmpInstr;
     E = MI;
@@ -2834,7 +2848,6 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
 
   // Check that CPSR isn't set between the comparison instruction and the one we
   // want to change. At the same time, search for SubAdd.
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
   bool SubAddIsThumb1 = false;
   do {
     const MachineInstr &Instr = *--I;
@@ -4556,6 +4569,31 @@ bool ARMBaseInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (convertAddSubFlagsOpcode(MI.getOpcode())) {
     ErrInfo = "Pseudo flag setting opcodes only exist in Selection DAG";
     return false;
+  }
+  if (MI.getOpcode() == ARM::tMOVr && !Subtarget.hasV6Ops()) {
+    // Make sure we don't generate a lo-lo mov that isn't supported.
+    if (!ARM::hGPRRegClass.contains(MI.getOperand(0).getReg()) &&
+        !ARM::hGPRRegClass.contains(MI.getOperand(1).getReg())) {
+      ErrInfo = "Non-flag-setting Thumb1 mov is v6-only";
+      return false;
+    }
+  }
+  if (MI.getOpcode() == ARM::tPUSH ||
+      MI.getOpcode() == ARM::tPOP ||
+      MI.getOpcode() == ARM::tPOP_RET) {
+    for (int i = 2, e = MI.getNumOperands(); i < e; ++i) {
+      if (MI.getOperand(i).isImplicit() ||
+          !MI.getOperand(i).isReg())
+        continue;
+      unsigned Reg = MI.getOperand(i).getReg();
+      if (Reg < ARM::R0 || Reg > ARM::R7) {
+        if (!(MI.getOpcode() == ARM::tPUSH && Reg == ARM::LR) &&
+            !(MI.getOpcode() == ARM::tPOP_RET && Reg == ARM::PC)) {
+          ErrInfo = "Unsupported register in Thumb1 push/pop";
+          return false;
+        }
+      }
+    }
   }
   return true;
 }

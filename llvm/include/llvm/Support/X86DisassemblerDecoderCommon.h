@@ -414,9 +414,6 @@ enum OperandEncoding {
   ENUM_ENTRY(TYPE_R32,        "4-byte")                                        \
   ENUM_ENTRY(TYPE_R64,        "8-byte")                                        \
   ENUM_ENTRY(TYPE_IMM,        "immediate operand")                             \
-  ENUM_ENTRY(TYPE_IMM3,       "1-byte immediate operand between 0 and 7")      \
-  ENUM_ENTRY(TYPE_IMM5,       "1-byte immediate operand between 0 and 31")     \
-  ENUM_ENTRY(TYPE_AVX512ICC,  "1-byte immediate operand for AVX512 icmp")      \
   ENUM_ENTRY(TYPE_UIMM8,      "1-byte unsigned immediate operand")             \
   ENUM_ENTRY(TYPE_M,          "Memory operand")                                \
   ENUM_ENTRY(TYPE_MVSIBX,     "Memory operand using XMM index")                \

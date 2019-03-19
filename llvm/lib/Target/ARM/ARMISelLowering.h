@@ -332,6 +332,9 @@ class VectorType;
     bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
     bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
+    bool shouldSinkOperands(Instruction *I,
+                            SmallVectorImpl<Use *> &Ops) const override;
+
     bool isFNegFree(EVT VT) const override;
 
     bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
@@ -478,7 +481,8 @@ class VectorType;
     /// isFPImmLegal - Returns true if the target can instruction select the
     /// specified FP immediate natively. If false, the legalizer will
     /// materialize the FP immediate as a load from a constant pool.
-    bool isFPImmLegal(const APFloat &Imm, EVT VT) const override;
+    bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                      bool ForCodeSize = false) const override;
 
     bool getTgtMemIntrinsic(IntrinsicInfo &Info,
                             const CallInst &I,

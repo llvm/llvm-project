@@ -1310,6 +1310,7 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
     case lltok::kw_sret:
     case lltok::kw_swifterror:
     case lltok::kw_swiftself:
+    case lltok::kw_immarg:
       HaveError |=
         Error(Lex.getLoc(),
               "invalid use of parameter-only attribute on a function");
@@ -1603,6 +1604,7 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_swiftself:       B.addAttribute(Attribute::SwiftSelf); break;
     case lltok::kw_writeonly:       B.addAttribute(Attribute::WriteOnly); break;
     case lltok::kw_zeroext:         B.addAttribute(Attribute::ZExt); break;
+    case lltok::kw_immarg:          B.addAttribute(Attribute::ImmArg); break;
 
     case lltok::kw_alignstack:
     case lltok::kw_alwaysinline:
@@ -1697,6 +1699,7 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
     case lltok::kw_sret:
     case lltok::kw_swifterror:
     case lltok::kw_swiftself:
+    case lltok::kw_immarg:
       HaveError |= Error(Lex.getLoc(), "invalid use of parameter-only attribute");
       break;
 
@@ -7704,10 +7707,6 @@ void LLParser::AddGlobalValueToIndex(
     }
   }
 
-  // Add the summary if one was provided.
-  if (Summary)
-    Index->addGlobalValueSummary(VI, std::move(Summary));
-
   // Resolve forward references from calls/refs
   auto FwdRefVIs = ForwardRefValueInfos.find(ID);
   if (FwdRefVIs != ForwardRefValueInfos.end()) {
@@ -7725,10 +7724,15 @@ void LLParser::AddGlobalValueToIndex(
     for (auto AliaseeRef : FwdRefAliasees->second) {
       assert(!AliaseeRef.first->hasAliasee() &&
              "Forward referencing alias already has aliasee");
-      AliaseeRef.first->setAliasee(VI.getSummaryList().front().get());
+      assert(Summary && "Aliasee must be a definition");
+      AliaseeRef.first->setAliasee(VI, Summary.get());
     }
     ForwardRefAliasees.erase(FwdRefAliasees);
   }
+
+  // Add the summary if one was provided.
+  if (Summary)
+    Index->addGlobalValueSummary(VI, std::move(Summary));
 
   // Save the associated ValueInfo for use in later references by ID.
   if (ID == NumberedValueInfos.size())
@@ -7973,8 +7977,11 @@ bool LLParser::ParseAliasSummary(std::string Name, GlobalValue::GUID GUID,
     auto FwdRef = ForwardRefAliasees.insert(
         std::make_pair(GVId, std::vector<std::pair<AliasSummary *, LocTy>>()));
     FwdRef.first->second.push_back(std::make_pair(AS.get(), Loc));
-  } else
-    AS->setAliasee(AliaseeVI.getSummaryList().front().get());
+  } else {
+    auto Summary = Index->findSummaryInModule(AliaseeVI, ModulePath);
+    assert(Summary && "Aliasee must be a definition");
+    AS->setAliasee(AliaseeVI, Summary);
+  }
 
   AddGlobalValueToIndex(Name, GUID, (GlobalValue::LinkageTypes)GVFlags.Linkage,
                         ID, std::move(AS));

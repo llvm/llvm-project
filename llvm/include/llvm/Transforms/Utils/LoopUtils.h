@@ -59,7 +59,7 @@ BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
 /// predecessors to use a dedicated loop exit block. We update the dominator
 /// tree and loop info if provided, and will preserve LCSSA if requested.
 bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
-                             bool PreserveLCSSA);
+                             MemorySSAUpdater *MSSAU, bool PreserveLCSSA);
 
 /// Ensures LCSSA form for every instruction from the Worklist in the scope of
 /// innermost containing loop.
@@ -296,6 +296,7 @@ getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src, unsigned Op,
 Value *getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
                            RecurrenceDescriptor::MinMaxRecurrenceKind
                                MinMaxKind = RecurrenceDescriptor::MRK_Invalid,
+                           FastMathFlags FMF = FastMathFlags(),
                            ArrayRef<Value *> RedOps = None);
 
 /// Create a target reduction of the given vector. The reduction operation
@@ -308,6 +309,7 @@ Value *createSimpleTargetReduction(IRBuilder<> &B,
                                    unsigned Opcode, Value *Src,
                                    TargetTransformInfo::ReductionFlags Flags =
                                        TargetTransformInfo::ReductionFlags(),
+                                   FastMathFlags FMF = FastMathFlags(),
                                    ArrayRef<Value *> RedOps = None);
 
 /// Create a generic target reduction using a recurrence descriptor \p Desc

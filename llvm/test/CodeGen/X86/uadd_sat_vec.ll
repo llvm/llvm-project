@@ -460,10 +460,10 @@ define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind 
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vpaddusw (%rsi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddusw 16(%rsi), %xmm1, %xmm1
-; AVX1-NEXT:    vmovq %xmm1, 16(%rdx)
+; AVX1-NEXT:    vpaddusw (%rsi), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1-NEXT:    vmovq %xmm1, 16(%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v12i16:
@@ -499,11 +499,9 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movb (%rdi), %al
 ; SSE-NEXT:    addb (%rsi), %al
-; SSE-NEXT:    movb $-1, %cl
-; SSE-NEXT:    jb .LBB13_2
-; SSE-NEXT:  # %bb.1:
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:  .LBB13_2:
+; SSE-NEXT:    movzbl %al, %eax
+; SSE-NEXT:    movl $255, %ecx
+; SSE-NEXT:    cmovael %eax, %ecx
 ; SSE-NEXT:    movb %cl, (%rdx)
 ; SSE-NEXT:    retq
 ;
@@ -511,11 +509,9 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movb (%rdi), %al
 ; AVX-NEXT:    addb (%rsi), %al
-; AVX-NEXT:    movb $-1, %cl
-; AVX-NEXT:    jb .LBB13_2
-; AVX-NEXT:  # %bb.1:
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:  .LBB13_2:
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    movl $255, %ecx
+; AVX-NEXT:    cmovael %eax, %ecx
 ; AVX-NEXT:    movb %cl, (%rdx)
 ; AVX-NEXT:    retq
   %x = load <1 x i8>, <1 x i8>* %px

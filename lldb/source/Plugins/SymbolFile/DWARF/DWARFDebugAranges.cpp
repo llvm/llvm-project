@@ -47,28 +47,33 @@ public:
 //----------------------------------------------------------------------
 // Extract
 //----------------------------------------------------------------------
-bool DWARFDebugAranges::Extract(const DWARFDataExtractor &debug_aranges_data) {
-  if (debug_aranges_data.ValidOffset(0)) {
-    lldb::offset_t offset = 0;
+llvm::Error
+DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
+  assert(debug_aranges_data.ValidOffset(0));
 
-    DWARFDebugArangeSet set;
-    Range range;
-    while (set.Extract(debug_aranges_data, &offset)) {
-      const uint32_t num_descriptors = set.NumDescriptors();
-      if (num_descriptors > 0) {
-        const dw_offset_t cu_offset = set.GetCompileUnitDIEOffset();
+  lldb::offset_t offset = 0;
 
-        for (uint32_t i = 0; i < num_descriptors; ++i) {
-          const DWARFDebugArangeSet::Descriptor &descriptor =
-              set.GetDescriptorRef(i);
-          m_aranges.Append(RangeToDIE::Entry(descriptor.address,
-                                             descriptor.length, cu_offset));
-        }
+  DWARFDebugArangeSet set;
+  Range range;
+  while (debug_aranges_data.ValidOffset(offset)) {
+    llvm::Error error = set.extract(debug_aranges_data, &offset);
+    if (!error)
+      return error;
+
+    const uint32_t num_descriptors = set.NumDescriptors();
+    if (num_descriptors > 0) {
+      const dw_offset_t cu_offset = set.GetCompileUnitDIEOffset();
+
+      for (uint32_t i = 0; i < num_descriptors; ++i) {
+        const DWARFDebugArangeSet::Descriptor &descriptor =
+            set.GetDescriptorRef(i);
+        m_aranges.Append(RangeToDIE::Entry(descriptor.address,
+                                           descriptor.length, cu_offset));
       }
-      set.Clear();
     }
+    set.Clear();
   }
-  return false;
+  return llvm::ErrorSuccess();
 }
 
 //----------------------------------------------------------------------

@@ -120,6 +120,15 @@ TEST_F(FormatTest, MessUp) {
   EXPECT_EQ("a\n#b c d\ne", test::messUp("a\n#b\\\nc\\\nd\ne"));
 }
 
+TEST_F(FormatTest, DefaultLLVMStyleIsCpp) {
+  EXPECT_EQ(FormatStyle::LK_Cpp, getLLVMStyle().Language);
+}
+
+TEST_F(FormatTest, LLVMStyleOverride) {
+  EXPECT_EQ(FormatStyle::LK_Proto,
+            getLLVMStyle(FormatStyle::LK_Proto).Language);
+}
+
 //===----------------------------------------------------------------------===//
 // Basic function tests.
 //===----------------------------------------------------------------------===//
@@ -430,7 +439,8 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatement) {
 
   FormatStyle AllowsMergedIf = getLLVMStyle();
   AllowsMergedIf.AlignEscapedNewlines = FormatStyle::ENAS_Left;
-  AllowsMergedIf.AllowShortIfStatementsOnASingleLine = true;
+  AllowsMergedIf.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_WithoutElse;
   verifyFormat("if (a)\n"
                "  // comment\n"
                "  f();",
@@ -478,6 +488,41 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatement) {
   verifyFormat("if (a)\n  return;", AllowsMergedIf);
 }
 
+TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
+  FormatStyle AllowsMergedIf = getLLVMStyle();
+  AllowsMergedIf.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  AllowsMergedIf.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_WithoutElse;
+  verifyFormat("if (a)\n"
+               "  f();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a)\n"
+               "  f();\n"
+               "else\n"
+               "  g();\n",
+               AllowsMergedIf);
+
+  AllowsMergedIf.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Always;
+
+  verifyFormat("if (a) f();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) f();\n"
+               "else {\n"
+               "  if (a) f();\n"
+               "  else {\n"
+               "    g();\n"
+               "  }\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+}
+
 TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
   FormatStyle AllowsMergedLoops = getLLVMStyle();
   AllowsMergedLoops.AllowShortLoopsOnASingleLine = true;
@@ -506,7 +551,8 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
   AllowSimpleBracedStatements.ColumnLimit = 40;
   AllowSimpleBracedStatements.AllowShortBlocksOnASingleLine = true;
 
-  AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine = true;
+  AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_WithoutElse;
   AllowSimpleBracedStatements.AllowShortLoopsOnASingleLine = true;
 
   AllowSimpleBracedStatements.BreakBeforeBraces = FormatStyle::BS_Custom;
@@ -554,7 +600,8 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
                "};",
                AllowSimpleBracedStatements);
 
-  AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine = false;
+  AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_Never;
   verifyFormat("if (true) {}", AllowSimpleBracedStatements);
   verifyFormat("if (true) {\n"
                "  f();\n"
@@ -579,7 +626,8 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
                "}",
                AllowSimpleBracedStatements);
 
-  AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine = true;
+  AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_WithoutElse;
   AllowSimpleBracedStatements.AllowShortLoopsOnASingleLine = true;
   AllowSimpleBracedStatements.BraceWrapping.AfterControlStatement = true;
 
@@ -616,7 +664,8 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
                "}",
                AllowSimpleBracedStatements);
 
-  AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine = false;
+  AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_Never;
   verifyFormat("if (true) {}", AllowSimpleBracedStatements);
   verifyFormat("if (true)\n"
                "{\n"
@@ -650,7 +699,7 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
 TEST_F(FormatTest, ShortBlocksInMacrosDontMergeWithCodeAfterMacro) {
   FormatStyle Style = getLLVMStyleWithColumns(60);
   Style.AllowShortBlocksOnASingleLine = true;
-  Style.AllowShortIfStatementsOnASingleLine = true;
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
   Style.BreakBeforeBraces = FormatStyle::BS_Allman;
   EXPECT_EQ("#define A                                                  \\\n"
             "  if (HANDLEwernufrnuLwrmviferuvnierv)                     \\\n"
@@ -3148,7 +3197,7 @@ TEST_F(FormatTest, GraciouslyHandleIncorrectPreprocessorConditions) {
 
 TEST_F(FormatTest, FormatsJoinedLinesOnSubsequentRuns) {
   FormatStyle SingleLine = getLLVMStyle();
-  SingleLine.AllowShortIfStatementsOnASingleLine = true;
+  SingleLine.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
   verifyFormat("#if 0\n"
                "#elif 1\n"
                "#endif\n"
@@ -7991,7 +8040,8 @@ TEST_F(FormatTest, FormatHashIfExpressions) {
 
 TEST_F(FormatTest, MergeHandlingInTheFaceOfPreprocessorDirectives) {
   FormatStyle AllowsMergedIf = getGoogleStyle();
-  AllowsMergedIf.AllowShortIfStatementsOnASingleLine = true;
+  AllowsMergedIf.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_WithoutElse;
   verifyFormat("void f() { f(); }\n#error E", AllowsMergedIf);
   verifyFormat("if (true) return 42;\n#error E", AllowsMergedIf);
   verifyFormat("if (true)\n#error E\n  return 42;", AllowsMergedIf);
@@ -9238,6 +9288,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("typedef void (*cb)(int);", NoSpace);
   verifyFormat("T A::operator()();", NoSpace);
   verifyFormat("X A::operator++(T);", NoSpace);
+  verifyFormat("auto lambda = []() { return 0; };", NoSpace);
 
   FormatStyle Space = getLLVMStyle();
   Space.SpaceBeforeParens = FormatStyle::SBPO_Always;
@@ -9285,6 +9336,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("typedef void (*cb) (int);", Space);
   verifyFormat("T A::operator() ();", Space);
   verifyFormat("X A::operator++ (T);", Space);
+  verifyFormat("auto lambda = [] () { return 0; };", Space);
 }
 
 TEST_F(FormatTest, ConfigurableSpacesInParentheses) {
@@ -10414,7 +10466,8 @@ TEST_F(FormatTest, AllmanBraceBreaking) {
   AllmanBraceStyle.ColumnLimit = 80;
 
   FormatStyle BreakBeforeBraceShortIfs = AllmanBraceStyle;
-  BreakBeforeBraceShortIfs.AllowShortIfStatementsOnASingleLine = true;
+  BreakBeforeBraceShortIfs.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_WithoutElse;
   BreakBeforeBraceShortIfs.AllowShortLoopsOnASingleLine = true;
   verifyFormat("void f(bool b)\n"
                "{\n"
@@ -10876,7 +10929,6 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowAllParametersOfDeclarationOnNextLine);
   CHECK_PARSE_BOOL(AllowShortBlocksOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortCaseLabelsOnASingleLine);
-  CHECK_PARSE_BOOL(AllowShortIfStatementsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
   CHECK_PARSE_BOOL(BinPackParameters);
@@ -11138,6 +11190,20 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::NI_Inner);
   CHECK_PARSE("NamespaceIndentation: All", NamespaceIndentation,
               FormatStyle::NI_All);
+
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Always;
+  CHECK_PARSE("AllowShortIfStatementsOnASingleLine: Never",
+              AllowShortIfStatementsOnASingleLine, FormatStyle::SIS_Never);
+  CHECK_PARSE("AllowShortIfStatementsOnASingleLine: WithoutElse",
+              AllowShortIfStatementsOnASingleLine,
+              FormatStyle::SIS_WithoutElse);
+  CHECK_PARSE("AllowShortIfStatementsOnASingleLine: Always",
+              AllowShortIfStatementsOnASingleLine, FormatStyle::SIS_Always);
+  CHECK_PARSE("AllowShortIfStatementsOnASingleLine: false",
+              AllowShortIfStatementsOnASingleLine, FormatStyle::SIS_Never);
+  CHECK_PARSE("AllowShortIfStatementsOnASingleLine: true",
+              AllowShortIfStatementsOnASingleLine,
+              FormatStyle::SIS_WithoutElse);
 
   // FIXME: This is required because parsing a configuration simply overwrites
   // the first N elements of the list instead of resetting it.
@@ -11835,6 +11901,111 @@ TEST_F(FormatTest, FormatsLambdas) {
   verifyGoogleFormat("auto a = [&b, c](D* d) -> D& {};");
   verifyGoogleFormat("auto a = [&b, c](D* d) -> const D* {};");
   verifyFormat("[a, a]() -> a<1> {};");
+  verifyFormat("[]() -> foo<5 + 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 - 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 / 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 * 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 % 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 << 2> { return {}; };");
+  verifyFormat("[]() -> foo<!5> { return {}; };");
+  verifyFormat("[]() -> foo<~5> { return {}; };");
+  verifyFormat("[]() -> foo<5 | 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 || 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 & 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 && 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 == 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 != 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 >= 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 <= 2> { return {}; };");
+  verifyFormat("[]() -> foo<5 < 2> { return {}; };");
+  verifyFormat("[]() -> foo<2 ? 1 : 0> { return {}; };");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 + 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 - 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 / 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 * 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 % 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 << 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<!5> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<~5> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 | 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 || 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 & 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 && 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 == 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 != 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 >= 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 <= 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<5 < 2> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("namespace bar {\n"
+              "// broken:\n"
+              "auto foo{[]() -> foo<2 ? 1 : 0> { return {}; }};\n"
+              "} // namespace bar");
+  verifyFormat("[]() -> a<1> {};");
+  verifyFormat("[]() -> a<1> { ; };");
+  verifyFormat("[]() -> a<1> { ; }();");
+  verifyFormat("[a, a]() -> a<true> {};");
+  verifyFormat("[]() -> a<true> {};");
+  verifyFormat("[]() -> a<true> { ; };");
+  verifyFormat("[]() -> a<true> { ; }();");
+  verifyFormat("[a, a]() -> a<false> {};");
+  verifyFormat("[]() -> a<false> {};");
+  verifyFormat("[]() -> a<false> { ; };");
+  verifyFormat("[]() -> a<false> { ; }();");
+  verifyFormat("auto foo{[]() -> foo<false> { ; }};");
+  verifyFormat("namespace bar {\n"
+               "auto foo{[]() -> foo<false> { ; }};\n"
+               "} // namespace bar");
   verifyFormat("auto aaaaaaaa = [](int i, // break for some reason\n"
                "                   int j) -> int {\n"
                "  return ffffffffffffffffffffffffffffffffffffffffffff(i * j);\n"
@@ -12543,6 +12714,11 @@ TEST(FormatStyle, GetStyleOfFile) {
   auto Style7 = getStyle("file", "/d/.clang-format", "LLVM", "", &FS);
   ASSERT_FALSE((bool)Style7);
   llvm::consumeError(Style7.takeError());
+
+  // Test 8: inferred per-language defaults apply.
+  auto StyleTd = getStyle("file", "x.td", "llvm", "", &FS);
+  ASSERT_TRUE((bool)StyleTd);
+  ASSERT_EQ(*StyleTd, getLLVMStyle(FormatStyle::LK_TableGen));
 }
 
 TEST_F(ReplacementTest, FormatCodeAfterReplacements) {

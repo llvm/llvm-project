@@ -90,6 +90,7 @@ struct Configuration {
   bool NoEntry = false;
   std::string OutputFile;
   std::string ImportName;
+  bool Demangle = true;
   bool DoGC = true;
   bool DoICF = true;
   bool TailMerge;
@@ -101,6 +102,7 @@ struct Configuration {
   bool DebugGHashes = false;
   bool DebugSymtab = false;
   bool ShowTiming = false;
+  bool ShowSummary = false;
   unsigned DebugTypes = static_cast<unsigned>(DebugType::None);
   std::vector<std::string> NatvisFiles;
   llvm::SmallString<128> PDBAltPath;
@@ -164,7 +166,7 @@ struct Configuration {
   std::map<std::string, int> AlignComm;
 
   // Used for /failifmismatch.
-  std::map<StringRef, StringRef> MustMatch;
+  std::map<StringRef, std::pair<StringRef, std::string>> MustMatch;
 
   // Used for /alternatename.
   std::map<StringRef, StringRef> AlternateNames;
@@ -185,6 +187,7 @@ struct Configuration {
   uint32_t MajorOSVersion = 6;
   uint32_t MinorOSVersion = 0;
   uint32_t Timestamp = 0;
+  uint32_t FunctionPadMin = 0;
   bool DynamicBase = true;
   bool AllowBind = true;
   bool NxCompat = true;

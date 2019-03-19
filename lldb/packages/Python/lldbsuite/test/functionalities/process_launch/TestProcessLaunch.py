@@ -85,6 +85,7 @@ class ProcessLaunchTestCase(TestBase):
     # not working?
     @not_remote_testsuite_ready
     @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr20265")
+    @expectedFailureNetBSD
     def test_set_working_dir_nonexisting(self):
         """Test that '-w dir' fails to set the working dir when running the inferior with a dir which doesn't exist."""
         d = {'CXX_SOURCES': 'print_cwd.cpp'}

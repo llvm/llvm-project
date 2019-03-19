@@ -38,16 +38,16 @@ void data_drop() {
   // WEBASSEMBLY64: call void @llvm.wasm.data.drop(i32 3)
 }
 
-void throw(unsigned int tag, void *obj) {
-  return __builtin_wasm_throw(tag, obj);
-  // WEBASSEMBLY32: call void @llvm.wasm.throw(i32 %{{.*}}, i8* %{{.*}})
-  // WEBASSEMBLY64: call void @llvm.wasm.throw(i32 %{{.*}}, i8* %{{.*}})
+void throw(void *obj) {
+  return __builtin_wasm_throw(0, obj);
+  // WEBASSEMBLY32: call void @llvm.wasm.throw(i32 0, i8* %{{.*}})
+  // WEBASSEMBLY64: call void @llvm.wasm.throw(i32 0, i8* %{{.*}})
 }
 
-void rethrow(void) {
-  return __builtin_wasm_rethrow();
-  // WEBASSEMBLY32: call void @llvm.wasm.rethrow()
-  // WEBASSEMBLY64: call void @llvm.wasm.rethrow()
+void rethrow_in_catch(void) {
+  return __builtin_wasm_rethrow_in_catch();
+  // WEBASSEMBLY32: call void @llvm.wasm.rethrow.in.catch()
+  // WEBASSEMBLY64: call void @llvm.wasm.rethrow.in.catch()
 }
 
 int atomic_wait_i32(int *addr, int expected, long long timeout) {

@@ -87,10 +87,14 @@ struct GCOVOptions {
 ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
                                    GCOVOptions::getDefault());
 
-// PGO Instrumention
-ModulePass *createPGOInstrumentationGenLegacyPass();
+// PGO Instrumention. Parameter IsCS indicates if this is the context senstive
+// instrumentation.
+ModulePass *createPGOInstrumentationGenLegacyPass(bool IsCS = false);
 ModulePass *
-createPGOInstrumentationUseLegacyPass(StringRef Filename = StringRef(""));
+createPGOInstrumentationUseLegacyPass(StringRef Filename = StringRef(""),
+                                      bool IsCS = false);
+ModulePass *createPGOInstrumentationGenCreateVarLegacyPass(
+    StringRef CSInstrName = StringRef(""));
 ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false,
                                                      bool SamplePGO = false);
 FunctionPass *createPGOMemOPSizeOptLegacyPass();
@@ -132,15 +136,21 @@ struct InstrProfOptions {
   // Use atomic profile counter increments.
   bool Atomic = false;
 
+  // Use BFI to guide register promotion
+  bool UseBFIInPromotion = false;
+
   // Name of the profile file to use as output
   std::string InstrProfileOutput;
 
   InstrProfOptions() = default;
 };
 
-/// Insert frontend instrumentation based profiling.
+/// Insert frontend instrumentation based profiling. Parameter IsCS indicates if
+// this is the context senstive instrumentation.
 ModulePass *createInstrProfilingLegacyPass(
-    const InstrProfOptions &Options = InstrProfOptions());
+    const InstrProfOptions &Options = InstrProfOptions(), bool IsCS = false);
+
+ModulePass *createInstrOrderFilePass();
 
 FunctionPass *createHWAddressSanitizerPass(bool CompileKernel = false,
                                            bool Recover = false);
@@ -149,21 +159,6 @@ FunctionPass *createHWAddressSanitizerPass(bool CompileKernel = false,
 ModulePass *createDataFlowSanitizerPass(
     const std::vector<std::string> &ABIListFiles = std::vector<std::string>(),
     void *(*getArgTLS)() = nullptr, void *(*getRetValTLS)() = nullptr);
-
-// Options for EfficiencySanitizer sub-tools.
-struct EfficiencySanitizerOptions {
-  enum Type {
-    ESAN_None = 0,
-    ESAN_CacheFrag,
-    ESAN_WorkingSet,
-  } ToolType = ESAN_None;
-
-  EfficiencySanitizerOptions() = default;
-};
-
-// Insert EfficiencySanitizer instrumentation.
-ModulePass *createEfficiencySanitizerPass(
-    const EfficiencySanitizerOptions &Options = EfficiencySanitizerOptions());
 
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {

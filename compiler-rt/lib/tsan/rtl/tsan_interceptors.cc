@@ -2221,6 +2221,7 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define NEED_TLS_GET_ADDR
 #endif
 #undef SANITIZER_INTERCEPT_TLS_GET_ADDR
+#undef SANITIZER_INTERCEPT_PTHREAD_SIGMASK
 
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
@@ -2620,6 +2621,9 @@ static void unreachable() {
 }
 #endif
 
+// Define default implementation since interception of libdispatch  is optional.
+SANITIZER_WEAK_ATTRIBUTE void InitializeLibdispatchInterceptors() {}
+
 void InitializeInterceptors() {
 #if !SANITIZER_MAC
   // We need to setup it early, because functions like dlsym() can call it.
@@ -2637,6 +2641,7 @@ void InitializeInterceptors() {
 
   InitializeCommonInterceptors();
   InitializeSignalInterceptors();
+  InitializeLibdispatchInterceptors();
 
 #if !SANITIZER_MAC
   // We can not use TSAN_INTERCEPT to get setjmp addr,

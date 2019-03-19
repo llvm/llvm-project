@@ -1801,6 +1801,9 @@ public:
     return getFlags() & FlagAllCallsDescribed;
   }
   bool isMainSubprogram() const { return getFlags() & FlagMainSubprogram; }
+  bool isPure() const { return getSPFlags() & SPFlagPure; }
+  bool isElemental() const { return getSPFlags() & SPFlagElemental; }
+  bool isRecursive() const { return getSPFlags() & SPFlagRecursive; }
 
   /// Check if this is reference-qualified.
   ///

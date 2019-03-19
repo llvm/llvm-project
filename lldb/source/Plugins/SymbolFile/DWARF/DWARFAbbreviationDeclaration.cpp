@@ -11,6 +11,8 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/Utility/Stream.h"
 
+#include "llvm/Object/Error.h"
+
 #include "DWARFFormValue.h"
 
 using namespace lldb_private;
@@ -23,41 +25,46 @@ DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration(dw_tag_t tag,
     : m_code(InvalidCode), m_tag(tag), m_has_children(has_children),
       m_attributes() {}
 
-bool DWARFAbbreviationDeclaration::Extract(const DWARFDataExtractor &data,
-                                           lldb::offset_t *offset_ptr) {
-  return Extract(data, offset_ptr, data.GetULEB128(offset_ptr));
-}
+llvm::Expected<DWARFEnumState>
+DWARFAbbreviationDeclaration::extract(const DWARFDataExtractor &data,
+                                      lldb::offset_t *offset_ptr) {
+  m_code = data.GetULEB128(offset_ptr);
+  if (m_code == 0)
+    return DWARFEnumState::Complete;
 
-bool DWARFAbbreviationDeclaration::Extract(const DWARFDataExtractor &data,
-                                           lldb::offset_t *offset_ptr,
-                                           dw_uleb128_t code) {
-  m_code = code;
   m_attributes.clear();
-  if (m_code) {
-    m_tag = data.GetULEB128(offset_ptr);
-    m_has_children = data.GetU8(offset_ptr);
+  m_tag = data.GetULEB128(offset_ptr);
+  if (m_tag == DW_TAG_null)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "abbrev decl requires non-null tag.");
 
-    while (data.ValidOffset(*offset_ptr)) {
-      dw_attr_t attr = data.GetULEB128(offset_ptr);
-      dw_form_t form = data.GetULEB128(offset_ptr);
-      DWARFFormValue::ValueType val;
+  m_has_children = data.GetU8(offset_ptr);
 
-      if (form == DW_FORM_implicit_const)
-        val.value.sval = data.GetULEB128(offset_ptr);
+  while (data.ValidOffset(*offset_ptr)) {
+    dw_attr_t attr = data.GetULEB128(offset_ptr);
+    dw_form_t form = data.GetULEB128(offset_ptr);
 
-      if (attr && form)
-        m_attributes.push_back(DWARFAttribute(attr, form, val));
-      else
-        break;
-    }
+    // This is the last attribute for this abbrev decl, but there may still be
+    // more abbrev decls, so return MoreItems to indicate to the caller that
+    // they should call this function again.
+    if (!attr && !form)
+      return DWARFEnumState::MoreItems;
 
-    return m_tag != 0;
-  } else {
-    m_tag = 0;
-    m_has_children = 0;
+    if (!attr || !form)
+      return llvm::make_error<llvm::object::GenericBinaryError>(
+          "malformed abbreviation declaration attribute");
+
+    DWARFFormValue::ValueType val;
+
+    if (form == DW_FORM_implicit_const)
+      val.value.sval = data.GetULEB128(offset_ptr);
+
+    m_attributes.push_back(DWARFAttribute(attr, form, val));
   }
 
-  return false;
+  return llvm::make_error<llvm::object::GenericBinaryError>(
+      "abbreviation declaration attribute list not terminated with a null "
+      "entry");
 }
 
 void DWARFAbbreviationDeclaration::Dump(Stream *s) const {

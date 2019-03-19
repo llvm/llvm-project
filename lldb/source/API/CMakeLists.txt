@@ -34,7 +34,6 @@ add_lldb_library(liblldb SHARED
   SBFrame.cpp
   SBFunction.cpp
   SBHostOS.cpp
-  SBInitializerOptions.cpp
   SBInstruction.cpp
   SBInstructionList.cpp
   SBLanguageRuntime.cpp
@@ -98,6 +97,10 @@ add_lldb_library(liblldb SHARED
     Support
   )
 
+if (MSVC)
+  set_source_files_properties(SBReproducer.cpp PROPERTIES COMPILE_FLAGS /bigobj)
+endif()
+
 if(lldb_python_wrapper)
   add_dependencies(liblldb swig_wrapper)
 
@@ -150,6 +153,10 @@ else()
     PROPERTIES
     OUTPUT_NAME lldb
   )
+endif()
+
+if (NOT LLDB_BUILT_STANDALONE)
+  add_dependencies(liblldb clang-resource-headers)
 endif()
 
 if(LLDB_BUILD_FRAMEWORK)

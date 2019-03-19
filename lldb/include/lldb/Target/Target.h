@@ -129,6 +129,8 @@ public:
 
   bool GetEnableAutoImportClangModules() const;
 
+  bool GetEnableImportStdModule() const;
+
   bool GetEnableAutoApplyFixIts() const;
 
   bool GetEnableNotifyAboutFixIts() const;
@@ -462,9 +464,9 @@ public:
 
     ~TargetEventData() override;
 
-    static const ConstString &GetFlavorString();
+    static ConstString GetFlavorString();
 
-    const ConstString &GetFlavor() const override {
+    ConstString GetFlavor() const override {
       return TargetEventData::GetFlavorString();
     }
 
@@ -527,7 +529,7 @@ public:
   /// is called, so this is a good way to see what has been parsed
   /// in a target.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   //------------------------------------------------------------------
   void Dump(Stream *s, lldb::DescriptionLevel description_level);
@@ -680,12 +682,12 @@ public:
                            Status &error);
   
   void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp, 
-                                const ConstString &name);
+                                ConstString name);
   
-  BreakpointName *FindBreakpointName(const ConstString &name, bool can_create, 
+  BreakpointName *FindBreakpointName(ConstString name, bool can_create, 
                                      Status &error);
                                      
-  void DeleteBreakpointName(const ConstString &name);
+  void DeleteBreakpointName(ConstString name);
   
   void ConfigureBreakpointName(BreakpointName &bp_name,
                                const BreakpointOptions &options,
@@ -818,14 +820,14 @@ public:
   /// dependent modules that are discovered from the object files, or
   /// discovered at runtime as things are dynamically loaded.
   ///
-  /// @return
+  /// \return
   ///     The shared pointer to the executable module which can
   ///     contains a nullptr Module object if no executable has been
   ///     set.
   ///
-  /// @see DynamicLoader
-  /// @see ObjectFile::GetDependentModules (FileSpecList&)
-  /// @see Process::SetExecutableModule(lldb::ModuleSP&)
+  /// \see DynamicLoader
+  /// \see ObjectFile::GetDependentModules (FileSpecList&)
+  /// \see Process::SetExecutableModule(lldb::ModuleSP&)
   //------------------------------------------------------------------
   lldb::ModuleSP GetExecutableModule();
 
@@ -847,16 +849,16 @@ public:
   /// Process::GetImages() will return the newly found images that
   /// were obtained from all of the object files.
   ///
-  /// @param[in] module_sp
+  /// \param[in] module_sp
   ///     A shared pointer reference to the module that will become
   ///     the main executable for this process.
   ///
-  /// @param[in] load_dependent_files
+  /// \param[in] load_dependent_files
   ///     If \b true then ask the object files to track down any
   ///     known dependent files.
   ///
-  /// @see ObjectFile::GetDependentModules (FileSpecList&)
-  /// @see Process::GetImages()
+  /// \see ObjectFile::GetDependentModules (FileSpecList&)
+  /// \see Process::GetImages()
   //------------------------------------------------------------------
   void SetExecutableModule(
       lldb::ModuleSP &module_sp,
@@ -885,7 +887,7 @@ public:
   /// addresses is each image, and also in images that are loaded by
   /// code.
   ///
-  /// @return
+  /// \return
   ///     A list of Module objects in a module list.
   //------------------------------------------------------------------
   const ModuleList &GetImages() const { return m_images; }
@@ -904,10 +906,10 @@ public:
   /// The target call at present just consults the Platform's call of the
   /// same name.
   ///
-  /// @param[in] module_sp
+  /// \param[in] module_sp
   ///     A shared pointer reference to the module that checked.
   ///
-  /// @return \b true if the module should be excluded, \b false otherwise.
+  /// \return \b true if the module should be excluded, \b false otherwise.
   //------------------------------------------------------------------
   bool ModuleIsExcludedForUnconstrainedSearches(const FileSpec &module_spec);
 
@@ -926,10 +928,10 @@ public:
   /// that they
   /// don't want searched, in addition to or instead of the platform ones.
   ///
-  /// @param[in] module_sp
+  /// \param[in] module_sp
   ///     A shared pointer reference to the module that checked.
   ///
-  /// @return \b true if the module should be excluded, \b false otherwise.
+  /// \return \b true if the module should be excluded, \b false otherwise.
   //------------------------------------------------------------------
   bool
   ModuleIsExcludedForUnconstrainedSearches(const lldb::ModuleSP &module_sp);
@@ -950,17 +952,17 @@ public:
   /// won't be changed. If the input arch_spec is the same as the already set
   /// architecture, this is a no-op.
   ///
-  /// @param[in] arch_spec
+  /// \param[in] arch_spec
   ///     The new architecture.
   ///
-  /// @param[in] set_platform
+  /// \param[in] set_platform
   ///     If \b true, then the platform will be adjusted if the currently
   ///     selected platform is not compatible with the archicture being set.
   ///     If \b false, then just the architecture will be set even if the
   ///     currently selected platform isn't compatible (in case it might be
   ///     manually set following this function call).
   ///
-  /// @return
+  /// \return
   ///     \b true if the architecture was successfully set, \bfalse otherwise.
   //------------------------------------------------------------------
   bool SetArchitecture(const ArchSpec &arch_spec, bool set_platform = false);
@@ -1103,7 +1105,7 @@ public:
   // and the const expression results are available after a process is gone, we
   // provide a way for expressions to be evaluated from the Target itself. If
   // an expression is going to be run, then it should have a frame filled in in
-  // th execution context.
+  // the execution context.
   lldb::ExpressionResults EvaluateExpression(
       llvm::StringRef expression, ExecutionContextScope *exe_scope,
       lldb::ValueObjectSP &result_valobj_sp,
@@ -1111,14 +1113,14 @@ public:
       std::string *fixed_expression = nullptr,
       ValueObject *ctx_obj = nullptr);
 
-  lldb::ExpressionVariableSP GetPersistentVariable(const ConstString &name);
+  lldb::ExpressionVariableSP GetPersistentVariable(ConstString name);
 
   /// Return the next available number for numbered persistent variables.
   unsigned GetNextPersistentVariableIndex() {
     return m_next_persistent_variable_index++;
   }
 
-  lldb::addr_t GetPersistentSymbol(const ConstString &name);
+  lldb::addr_t GetPersistentSymbol(ConstString name);
 
   //------------------------------------------------------------------
   // Target Stop Hooks
@@ -1153,6 +1155,10 @@ public:
 
     void SetIsActive(bool is_active) { m_active = is_active; }
 
+    void SetAutoContinue(bool auto_continue) {m_auto_continue = auto_continue;}
+
+    bool GetAutoContinue() const { return m_auto_continue; }
+
     void GetDescription(Stream *s, lldb::DescriptionLevel level) const;
 
   private:
@@ -1160,7 +1166,8 @@ public:
     StringList m_commands;
     lldb::SymbolContextSpecifierSP m_specifier_sp;
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
-    bool m_active;
+    bool m_active = true;
+    bool m_auto_continue = false;
 
     // Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
     // and fill it with commands, and SetSpecifier to set the specifier shared
@@ -1342,7 +1349,7 @@ private:
   /// TargetList::CreateTarget(const FileSpec*, const ArchSpec*)
   /// so all targets can be tracked from the central target list.
   ///
-  /// @see TargetList::CreateTarget(const FileSpec*, const ArchSpec*)
+  /// \see TargetList::CreateTarget(const FileSpec*, const ArchSpec*)
   //------------------------------------------------------------------
   Target(Debugger &debugger, const ArchSpec &target_arch,
          const lldb::PlatformSP &platform_sp, bool is_dummy_target);

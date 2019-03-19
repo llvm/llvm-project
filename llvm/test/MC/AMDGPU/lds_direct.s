@@ -31,6 +31,9 @@ v_fract_f32_e64 v0, src_lds_direct
 v_cvt_f16_u16 v0, src_lds_direct
 // GFX9: v_cvt_f16_u16_e32 v0, src_lds_direct ; encoding: [0xfe,0x72,0x00,0x7e]
 
+v_readfirstlane_b32 s0, src_lds_direct
+// GFX9: v_readfirstlane_b32 s0, src_lds_direct ; encoding: [0xfe,0x04,0x00,0x7e]
+
 //---------------------------------------------------------------------------//
 // VOP2/3
 //---------------------------------------------------------------------------//
@@ -78,6 +81,9 @@ v_min3_i16 v0, src_lds_direct, v0, v0
 v_max3_f16 v0, src_lds_direct, v0, v0
 // GFX9: v_max3_f16 v0, src_lds_direct, v0, v0 ; encoding: [0x00,0x00,0xf7,0xd1,0xfe,0x00,0x02,0x04]
 
+v_readlane_b32 s0, src_lds_direct, s0
+// GFX9: v_readlane_b32 s0, src_lds_direct, s0 ; encoding: [0x00,0x00,0x89,0xd2,0xfe,0x00,0x00,0x00]
+
 //---------------------------------------------------------------------------//
 // VOP3P
 //---------------------------------------------------------------------------//
@@ -107,10 +113,3 @@ v_cmpx_neq_f32 vcc, src_lds_direct, v0
 
 v_cmp_lt_f16 vcc, lds_direct, v0
 // GFX9: v_cmp_lt_f16_e32 vcc, src_lds_direct, v0 ; encoding: [0xfe,0x00,0x42,0x7c]
-
-//---------------------------------------------------------------------------//
-// FIXME: enable lds_direct for the following opcodes and add tests
-//---------------------------------------------------------------------------//
-
-//v_readfirstlane_b32 s0, src_lds_direct
-//v_readlane_b32 s0, src_lds_direct, s0

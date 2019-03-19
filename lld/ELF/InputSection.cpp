@@ -76,7 +76,7 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
   // no alignment constraits.
   uint32_t V = std::max<uint64_t>(Alignment, 1);
   if (!isPowerOf2_64(V))
-    fatal(toString(File) + ": section sh_addralign is not a power of 2");
+    fatal(toString(this) + ": sh_addralign is not a power of 2");
   this->Alignment = V;
 
   // In ELF, each section can be compressed by zlib, and if compressed,
@@ -144,13 +144,18 @@ size_t InputSectionBase::getSize() const {
 
 void InputSectionBase::uncompress() const {
   size_t Size = UncompressedSize;
-  UncompressedBuf.reset(new char[Size]);
+  char *UncompressedBuf;
+  {
+    static std::mutex Mu;
+    std::lock_guard<std::mutex> Lock(Mu);
+    UncompressedBuf = BAlloc.Allocate<char>(Size);
+  }
 
-  if (Error E =
-          zlib::uncompress(toStringRef(RawData), UncompressedBuf.get(), Size))
+  if (Error E = zlib::uncompress(toStringRef(RawData), UncompressedBuf, Size))
     fatal(toString(this) +
           ": uncompress failed: " + llvm::toString(std::move(E)));
-  RawData = makeArrayRef((uint8_t *)UncompressedBuf.get(), Size);
+  RawData = makeArrayRef((uint8_t *)UncompressedBuf, Size);
+  UncompressedSize = -1;
 }
 
 uint64_t InputSectionBase::getOffsetInFile() const {
@@ -1062,7 +1067,7 @@ template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
 
   // If this is a compressed section, uncompress section contents directly
   // to the buffer.
-  if (UncompressedSize >= 0 && !UncompressedBuf) {
+  if (UncompressedSize >= 0) {
     size_t Size = UncompressedSize;
     if (Error E = zlib::uncompress(toStringRef(RawData),
                                    (char *)(Buf + OutSecOff), Size))

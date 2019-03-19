@@ -158,9 +158,10 @@ public:
   /// (1) to filter trivial false positives or (2) to provide more context so
   /// that non-trivial false positives can be quickly detected by the user.
   bool allowExtraAnalysis(StringRef PassName) const {
-    return (MF.getFunction().getContext().getDiagnosticsOutputFile() ||
-            MF.getFunction().getContext()
-            .getDiagHandlerPtr()->isAnyRemarkEnabled(PassName));
+    return (
+        MF.getFunction().getContext().getRemarkStreamer() ||
+        MF.getFunction().getContext().getDiagHandlerPtr()->isAnyRemarkEnabled(
+            PassName));
   }
 
   /// Take a lambda that returns a remark which will be emitted.  Second
@@ -171,8 +172,11 @@ public:
     // remarks enabled. We can't currently check whether remarks are requested
     // for the calling pass since that requires actually building the remark.
 
-    if (MF.getFunction().getContext().getDiagnosticsOutputFile() ||
-        MF.getFunction().getContext().getDiagHandlerPtr()->isAnyRemarkEnabled()) {
+    if (MF.getFunction().getContext().getRemarkStreamer() ||
+        MF.getFunction()
+            .getContext()
+            .getDiagHandlerPtr()
+            ->isAnyRemarkEnabled()) {
       auto R = RemarkBuilder();
       emit((DiagnosticInfoOptimizationBase &)R);
     }

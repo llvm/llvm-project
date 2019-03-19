@@ -73,11 +73,11 @@ body:             |
     S_BRANCH %bb.2
 
   bb.1:
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.2:
     %1:sreg_64_xexec = V_CMP_NE_U32_e64 %0, 0, implicit $exec
-    %2:vgpr_32 = V_CNDMASK_B32_e64 0, 1, %1, implicit $exec
+    %2:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %1, implicit $exec
     V_CMP_NE_U32_e32 1, %2, implicit-def $vcc, implicit $exec
     DS_WRITE_B32 %0, %0, 1024, 0, implicit $m0, implicit $exec :: (store 4 into %ir.tmp)
     %3:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -108,11 +108,11 @@ body:             |
     S_BRANCH %bb.2
 
   bb.1:
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.2:
     %1:sreg_64_xexec = V_CMP_NE_U32_e64 %0.sub0, 0, implicit $exec
-    %2:vgpr_32 = V_CNDMASK_B32_e64 0, 1, %1, implicit $exec
+    %2:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %1, implicit $exec
     V_CMP_NE_U32_e32 1, %2, implicit-def $vcc, implicit $exec
     DS_WRITE_B32 %0.sub0, %0.sub0, 1024, 0, implicit $m0, implicit $exec :: (store 4 into %ir.tmp)
     undef %3.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
@@ -139,11 +139,11 @@ body:             |
     S_BRANCH %bb.2
 
   bb.1:
-    S_ENDPGM
+    S_ENDPGM 0
 
   bb.2:
     %1:sreg_64_xexec = V_CMP_NE_U32_e64 %0.sub0, 0, implicit $exec
-    %2:vgpr_32 = V_CNDMASK_B32_e64 0, 1, %1, implicit $exec
+    %2:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %1, implicit $exec
     V_CMP_NE_U32_e32 1, %2, implicit-def $vcc, implicit $exec
     DS_WRITE_B32 %0.sub0, %0.sub0, 0, 0, implicit $m0, implicit $exec :: (store 4 into %ir.tmp)
     undef %3.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec

@@ -91,6 +91,7 @@ macro(add_clang_library name)
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libclang")
 
       if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+          "clang-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
           NOT LLVM_DISTRIBUTION_COMPONENTS)
         set(export_to_clangtargets EXPORT ClangTargets)
         set_property(GLOBAL PROPERTY CLANG_HAS_EXPORTS True)
@@ -133,7 +134,7 @@ macro(add_clang_tool name)
   endif()
 
   add_clang_executable(${name} ${ARGN})
-  add_dependencies(${name} clang-headers)
+  add_dependencies(${name} clang-resource-headers)
 
   if (CLANG_BUILD_TOOLS)
     if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR

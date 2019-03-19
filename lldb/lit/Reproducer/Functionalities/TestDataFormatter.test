@@ -1,0 +1,16 @@
+# UNSUPPORTED: system-windows, system-freebsd
+
+# This tests that data formatters continue to work when replaying a reproducer.
+
+# RUN: rm -rf %t.repro
+# RUN: %clangxx %S/Inputs/foo.cpp -g -o %t.out
+
+# RUN: %lldb -x -b -s %S/Inputs/DataFormatter.in --capture --capture-path %t.repro %t.out | FileCheck %s
+# RUN: %lldb --replay %t.repro | FileCheck %s
+
+# CHECK: stop reason = breakpoint 1.1
+# CHECK: (Foo) foo = (m_i = 0, m_d = 0)
+# CHECK: stop reason = step over
+# CHECK: (Foo) foo = (m_i = 1, m_d = 2)
+# CHECK: Process {{.*}} resuming
+# CHECK: Process {{.*}} exited with status = 0

@@ -48,3 +48,16 @@ void VarSizeStackTrace::ReverseOrder() {
 }
 
 }  // namespace __tsan
+
+#if !SANITIZER_GO
+void __sanitizer::BufferedStackTrace::UnwindImpl(
+    uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
+  uptr top = 0;
+  uptr bottom = 0;
+  if (StackTrace::WillUseFastUnwind(request_fast)) {
+    GetThreadStackTopAndBottom(false, &top, &bottom);
+    Unwind(max_depth, pc, bp, nullptr, top, bottom, true);
+  } else
+    Unwind(max_depth, pc, 0, context, 0, 0, false);
+}
+#endif  // SANITIZER_GO

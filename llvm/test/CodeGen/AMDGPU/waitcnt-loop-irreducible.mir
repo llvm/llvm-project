@@ -48,7 +48,7 @@ body:             |
 
   bb.4:
 
-    S_ENDPGM
+    S_ENDPGM 0
 
 ...
 
@@ -67,7 +67,7 @@ body:             |
 # GCN: BUFFER_ATOMIC_ADD_OFFSET_RTN
 # GCN: S_WAITCNT 3952
 # GCN: FLAT_STORE_DWORD
-# GCN: S_ENDPGM
+# GCN: S_ENDPGM 0
 name: irreducible_loop_extended
 
 body: |
@@ -99,5 +99,5 @@ body: |
 
   bb.6:
     FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr
-    S_ENDPGM
+    S_ENDPGM 0
 ...

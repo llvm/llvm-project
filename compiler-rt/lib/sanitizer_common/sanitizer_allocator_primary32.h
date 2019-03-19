@@ -60,6 +60,9 @@ class SizeClassAllocator32 {
       is_same<typename ByteMap::AddressSpaceView, AddressSpaceView>::value,
       "AddressSpaceView type mismatch");
 
+  COMPILER_CHECK(!SANITIZER_SIGN_EXTENDED_ADDRESSES ||
+                 (kSpaceSize & (kSpaceSize - 1)) == 0);
+
   static const bool kRandomShuffleChunks = Params::kFlags &
       SizeClassAllocator32FlagMasks::kRandomShuffleChunks;
   static const bool kUseSeparateSizeClassForBatch = Params::kFlags &
@@ -181,6 +184,8 @@ class SizeClassAllocator32 {
 
   bool PointerIsMine(const void *p) {
     uptr mem = reinterpret_cast<uptr>(p);
+    if (SANITIZER_SIGN_EXTENDED_ADDRESSES)
+      mem &= (kSpaceSize - 1);
     if (mem < kSpaceBeg || mem >= kSpaceBeg + kSpaceSize)
       return false;
     return GetSizeClass(p) != 0;
@@ -273,6 +278,8 @@ class SizeClassAllocator32 {
   COMPILER_CHECK(sizeof(SizeClassInfo) % kCacheLineSize == 0);
 
   uptr ComputeRegionId(uptr mem) {
+    if (SANITIZER_SIGN_EXTENDED_ADDRESSES)
+      mem &= (kSpaceSize - 1);
     const uptr res = mem >> kRegionSizeLog;
     CHECK_LT(res, kNumPossibleRegions);
     return res;

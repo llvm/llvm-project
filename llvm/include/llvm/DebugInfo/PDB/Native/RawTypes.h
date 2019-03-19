@@ -176,7 +176,7 @@ struct DbiStreamHeader {
 };
 static_assert(sizeof(DbiStreamHeader) == 64, "Invalid DbiStreamHeader size!");
 
-/// The header preceeding the File Info Substream of the DBI stream.
+/// The header preceding the File Info Substream of the DBI stream.
 struct FileInfoSubstreamHeader {
   /// Total # of modules, should match number of records in the ModuleInfo
   /// substream.
@@ -207,7 +207,7 @@ struct ModInfoFlags {
   static const uint16_t TypeServerIndexShift = 8;
 };
 
-/// The header preceeding each entry in the Module Info substream of the DBI
+/// The header preceding each entry in the Module Info substream of the DBI
 /// stream.  Corresponds to the type MODI in the reference implementation.
 struct ModuleInfoHeader {
   /// Currently opened module. This field is a pointer in the reference
@@ -272,7 +272,7 @@ struct PublicsStreamHeader {
   support::ulittle32_t NumSections;
 };
 
-// The header preceeding the global TPI stream.
+// The header preceding the global TPI stream.
 // This corresponds to `HDR` in PDB/dbi/tpi.h.
 struct TpiStreamHeader {
   struct EmbeddedBuf {
@@ -300,7 +300,7 @@ struct TpiStreamHeader {
 const uint32_t MinTpiHashBuckets = 0x1000;
 const uint32_t MaxTpiHashBuckets = 0x40000;
 
-/// The header preceeding the global PDB Stream (Stream 1)
+/// The header preceding the global PDB Stream (Stream 1)
 struct InfoStreamHeader {
   support::ulittle32_t Version;
   support::ulittle32_t Signature;
@@ -308,7 +308,7 @@ struct InfoStreamHeader {
   codeview::GUID Guid;
 };
 
-/// The header preceeding the /names stream.
+/// The header preceding the /names stream.
 struct PDBStringTableHeader {
   support::ulittle32_t Signature;   // PDBStringTableSignature
   support::ulittle32_t HashVersion; // 1 or 2

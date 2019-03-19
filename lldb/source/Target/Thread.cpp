@@ -92,7 +92,7 @@ enum {
 
 class ThreadOptionValueProperties : public OptionValueProperties {
 public:
-  ThreadOptionValueProperties(const ConstString &name)
+  ThreadOptionValueProperties(ConstString name)
       : OptionValueProperties(name) {}
 
   // This constructor is used when creating ThreadOptionValueProperties when it
@@ -175,7 +175,7 @@ uint64_t ThreadProperties::GetMaxBacktraceDepth() const {
 // Thread Event Data
 //------------------------------------------------------------------
 
-const ConstString &Thread::ThreadEventData::GetFlavorString() {
+ConstString Thread::ThreadEventData::GetFlavorString() {
   static ConstString g_flavor("Thread::ThreadEventData");
   return g_flavor;
 }

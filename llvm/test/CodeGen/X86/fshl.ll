@@ -36,19 +36,17 @@ define i8 @var_shift_i8(i8 %x, i8 %y, i8 %z) nounwind {
 ;
 ; X64-LABEL: var_shift_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andb $7, %dl
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shlb %cl, %dil
+; X64-NEXT:    shlb %cl, %al
 ; X64-NEXT:    movb $8, %cl
 ; X64-NEXT:    subb %dl, %cl
 ; X64-NEXT:    shrb %cl, %sil
+; X64-NEXT:    orb %al, %sil
+; X64-NEXT:    movzbl %sil, %eax
 ; X64-NEXT:    testb %dl, %dl
-; X64-NEXT:    je .LBB0_2
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    orb %sil, %dil
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:  .LBB0_2:
+; X64-NEXT:    cmovel %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %tmp = tail call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 %z)
@@ -381,10 +379,11 @@ define i8 @const_shift_i8(i8 %x, i8 %y) nounwind {
 ;
 ; X64-LABEL: const_shift_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    shrb %sil
-; X64-NEXT:    shlb $7, %al
-; X64-NEXT:    orb %sil, %al
+; X64-NEXT:    shlb $7, %dil
+; X64-NEXT:    leal (%rdi,%rsi), %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %tmp = tail call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 7)

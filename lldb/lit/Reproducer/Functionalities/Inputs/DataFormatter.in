@@ -1,0 +1,7 @@
+breakpoint set -f foo.cpp -l 11
+run
+frame var foo
+next
+frame var foo
+cont
+reproducer generate

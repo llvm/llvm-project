@@ -170,6 +170,11 @@ void RmDir(const std::string &Path) {
   rmdir(Path.c_str());
 }
 
+const std::string &getDevNull() {
+  static const std::string devNull = "/dev/null";
+  return devNull;
+}
+
 }  // namespace fuzzer
 
 #endif // LIBFUZZER_POSIX

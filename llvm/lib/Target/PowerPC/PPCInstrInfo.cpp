@@ -332,6 +332,15 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case PPC::ADDIStocHA:
   case PPC::ADDItocL:
   case PPC::LOAD_STACK_GUARD:
+  case PPC::XXLXORz:
+  case PPC::XXLXORspz:
+  case PPC::XXLXORdpz:
+  case PPC::V_SET0B:
+  case PPC::V_SET0H:
+  case PPC::V_SET0:
+  case PPC::V_SETALLONESB:
+  case PPC::V_SETALLONESH:
+  case PPC::V_SETALLONES:
     return true;
   }
   return false;
@@ -941,12 +950,16 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   } else if (PPC::G8RCRegClass.contains(SrcReg) &&
              PPC::VSFRCRegClass.contains(DestReg)) {
+    assert(Subtarget.hasDirectMove() &&
+           "Subtarget doesn't support directmove, don't know how to copy.");
     BuildMI(MBB, I, DL, get(PPC::MTVSRD), DestReg).addReg(SrcReg);
     NumGPRtoVSRSpill++;
     getKillRegState(KillSrc);
     return;
   } else if (PPC::VSFRCRegClass.contains(SrcReg) &&
              PPC::G8RCRegClass.contains(DestReg)) {
+    assert(Subtarget.hasDirectMove() &&
+           "Subtarget doesn't support directmove, don't know how to copy.");
     BuildMI(MBB, I, DL, get(PPC::MFVSRD), DestReg).addReg(SrcReg);
     getKillRegState(KillSrc);
     return;
@@ -961,7 +974,6 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     getKillRegState(KillSrc);
     return;
   }
-
 
   unsigned Opc;
   if (PPC::GPRCRegClass.contains(DestReg, SrcReg))
@@ -1065,6 +1077,10 @@ unsigned PPCInstrInfo::getStoreOpcodeForSpill(unsigned Reg,
       OpcodeIndex = SOK_Float8Spill;
     } else if (PPC::F4RCRegClass.contains(Reg)) {
       OpcodeIndex = SOK_Float4Spill;
+    } else if (PPC::SPERCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_SPESpill;
+    } else if (PPC::SPE4RCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_SPE4Spill;
     } else if (PPC::CRRCRegClass.contains(Reg)) {
       OpcodeIndex = SOK_CRSpill;
     } else if (PPC::CRBITRCRegClass.contains(Reg)) {
@@ -1151,6 +1167,10 @@ PPCInstrInfo::getLoadOpcodeForSpill(unsigned Reg,
       OpcodeIndex = SOK_Float8Spill;
     } else if (PPC::F4RCRegClass.contains(Reg)) {
       OpcodeIndex = SOK_Float4Spill;
+    } else if (PPC::SPERCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_SPESpill;
+    } else if (PPC::SPE4RCRegClass.contains(Reg)) {
+      OpcodeIndex = SOK_SPE4Spill;
     } else if (PPC::CRRCRegClass.contains(Reg)) {
       OpcodeIndex = SOK_CRSpill;
     } else if (PPC::CRBITRCRegClass.contains(Reg)) {
@@ -2416,6 +2436,83 @@ const unsigned *PPCInstrInfo::getLoadOpcodesForSpillArray() const {
   return OpcodesForSpill[(Subtarget.hasP9Vector()) ? 1 : 0];
 }
 
+void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
+                                     unsigned RegNo) const {
+  const MachineRegisterInfo &MRI =
+      StartMI.getParent()->getParent()->getRegInfo();
+  if (MRI.isSSA())
+    return;
+
+  // Instructions between [StartMI, EndMI] should be in same basic block.
+  assert((StartMI.getParent() == EndMI.getParent()) &&
+         "Instructions are not in same basic block");
+
+  bool IsKillSet = false;
+
+  auto clearOperandKillInfo = [=] (MachineInstr &MI, unsigned Index) {
+    MachineOperand &MO = MI.getOperand(Index);
+    if (MO.isReg() && MO.isUse() && MO.isKill() &&
+        getRegisterInfo().regsOverlap(MO.getReg(), RegNo))
+      MO.setIsKill(false);
+  };
+
+  // Set killed flag for EndMI.
+  // No need to do anything if EndMI defines RegNo.
+  int UseIndex =
+      EndMI.findRegisterUseOperandIdx(RegNo, false, &getRegisterInfo());
+  if (UseIndex != -1) {
+    EndMI.getOperand(UseIndex).setIsKill(true);
+    IsKillSet = true;
+    // Clear killed flag for other EndMI operands related to RegNo. In some
+    // upexpected cases, killed may be set multiple times for same register
+    // operand in same MI.
+    for (int i = 0, e = EndMI.getNumOperands(); i != e; ++i)
+      if (i != UseIndex)
+        clearOperandKillInfo(EndMI, i);
+  }
+
+  // Walking the inst in reverse order (EndMI -> StartMI].
+  MachineBasicBlock::reverse_iterator It = EndMI;
+  MachineBasicBlock::reverse_iterator E = EndMI.getParent()->rend();
+  // EndMI has been handled above, skip it here.
+  It++;
+  MachineOperand *MO = nullptr;
+  for (; It != E; ++It) {
+    // Skip insturctions which could not be a def/use of RegNo.
+    if (It->isDebugInstr() || It->isPosition())
+      continue;
+
+    // Clear killed flag for all It operands related to RegNo. In some
+    // upexpected cases, killed may be set multiple times for same register
+    // operand in same MI.
+    for (int i = 0, e = It->getNumOperands(); i != e; ++i)
+        clearOperandKillInfo(*It, i);
+
+    // If killed is not set, set killed for its last use or set dead for its def
+    // if no use found.
+    if (!IsKillSet) {
+      if ((MO = It->findRegisterUseOperand(RegNo, false, &getRegisterInfo()))) {
+        // Use found, set it killed.
+        IsKillSet = true;
+        MO->setIsKill(true);
+        continue;
+      } else if ((MO = It->findRegisterDefOperand(RegNo, false, true,
+                                                  &getRegisterInfo()))) {
+        // No use found, set dead for its def.
+        assert(&*It == &StartMI && "No new def between StartMI and EndMI.");
+        MO->setIsDead(true);
+        break;
+      }
+    }
+
+    if ((&*It) == &StartMI)
+      break;
+  }
+  // Ensure RegMo liveness is killed after EndMI.
+  assert((IsKillSet || (MO && MO->isDead())) &&
+         "RegNo should be killed or dead");
+}
+
 // If this instruction has an immediate form and one of its operands is a
 // result of a load-immediate or an add-immediate, convert it to
 // the immediate form if the constant is in range.
@@ -2432,8 +2529,9 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     return false;
   assert(ForwardingOperand < MI.getNumOperands() &&
          "The forwarding operand needs to be valid at this point");
-  bool KillFwdDefMI = !SeenIntermediateUse &&
-    MI.getOperand(ForwardingOperand).isKill();
+  bool IsForwardingOperandKilled = MI.getOperand(ForwardingOperand).isKill();
+  bool KillFwdDefMI = !SeenIntermediateUse && IsForwardingOperandKilled;
+  unsigned ForwardingOperandReg = MI.getOperand(ForwardingOperand).getReg();
   if (KilledDef && KillFwdDefMI)
     *KilledDef = DefMI;
 
@@ -2442,8 +2540,9 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
   // If this is a reg+reg instruction that has a reg+imm form,
   // and one of the operands is produced by an add-immediate,
   // try to convert it.
-  if (HasImmForm && transformToImmFormFedByAdd(MI, III, ForwardingOperand,
-                                               *DefMI, KillFwdDefMI))
+  if (HasImmForm &&
+      transformToImmFormFedByAdd(MI, III, ForwardingOperand, *DefMI,
+                                 KillFwdDefMI))
     return true;
 
   if ((DefMI->getOpcode() != PPC::LI && DefMI->getOpcode() != PPC::LI8) ||
@@ -2458,7 +2557,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
   // If this is a reg+reg instruction that has a reg+imm form,
   // and one of the operands is produced by LI, convert it now.
   if (HasImmForm)
-    return transformToImmFormFedByLI(MI, III, ForwardingOperand, SExtImm);
+    return transformToImmFormFedByLI(MI, III, ForwardingOperand, *DefMI, SExtImm);
 
   bool ReplaceWithLI = false;
   bool Is64BitLI = false;
@@ -2478,6 +2577,8 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
   case PPC::CMPLDI: {
     // Doing this post-RA would require dataflow analysis to reliably find uses
     // of the CR register set by the compare.
+    // No need to fixup killed/dead flag since this transformation is only valid
+    // before RA.
     if (PostRA)
       return false;
     // If a compare-immediate is fed by an immediate and is itself an input of
@@ -2654,6 +2755,14 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     if (KilledDef && SetCR)
       *KilledDef = nullptr;
     replaceInstrWithLI(MI, LII);
+
+    // Fixup killed/dead flag after transformation.
+    // Pattern:
+    // ForwardingOperandReg = LI imm1
+    // y = op2 imm2, ForwardingOperandReg(killed)
+    if (IsForwardingOperandKilled)
+      fixupIsDeadOrKill(*DefMI, MI, ForwardingOperandReg);
+
     LLVM_DEBUG(dbgs() << "With:\n");
     LLVM_DEBUG(MI.dump());
     return true;
@@ -3161,11 +3270,10 @@ bool PPCInstrInfo::isDefMIElgibleForForwarding(MachineInstr &DefMI,
   return isAnImmediateOperand(*ImmMO);
 }
 
-bool PPCInstrInfo::isRegElgibleForForwarding(const MachineOperand &RegMO,
-                                             const MachineInstr &DefMI,
-                                             const MachineInstr &MI,
-                                             bool KillDefMI
-                                             ) const {
+bool PPCInstrInfo::isRegElgibleForForwarding(
+    const MachineOperand &RegMO, const MachineInstr &DefMI,
+    const MachineInstr &MI, bool KillDefMI,
+    bool &IsFwdFeederRegKilled) const {
   // x = addi y, imm
   // ...
   // z = lfdx 0, x   -> z = lfd imm(y)
@@ -3185,6 +3293,8 @@ bool PPCInstrInfo::isRegElgibleForForwarding(const MachineOperand &RegMO,
   for (; It != E; ++It) {
     if (It->modifiesRegister(Reg, &getRegisterInfo()) && (&*It) != &DefMI)
       return false;
+    else if (It->killsRegister(Reg, &getRegisterInfo()) && (&*It) != &DefMI)
+      IsFwdFeederRegKilled = true;
     // Made it to DefMI without encountering a clobber.
     if ((&*It) == &DefMI)
       break;
@@ -3256,11 +3366,9 @@ bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
 // is the literal zero, attempt to forward the source of the add-immediate to
 // the corresponding D-Form instruction with the displacement coming from
 // the immediate being added.
-bool PPCInstrInfo::transformToImmFormFedByAdd(MachineInstr &MI,
-                                              const ImmInstrInfo &III,
-                                              unsigned OpNoForForwarding,
-                                              MachineInstr &DefMI,
-                                              bool KillDefMI) const {
+bool PPCInstrInfo::transformToImmFormFedByAdd(
+    MachineInstr &MI, const ImmInstrInfo &III, unsigned OpNoForForwarding,
+    MachineInstr &DefMI, bool KillDefMI) const {
   //         RegMO ImmMO
   //           |    |
   // x = addi reg, imm  <----- DefMI
@@ -3285,9 +3393,18 @@ bool PPCInstrInfo::transformToImmFormFedByAdd(MachineInstr &MI,
   if (!isImmElgibleForForwarding(*ImmMO, DefMI, III, Imm))
     return false;
 
+  bool IsFwdFeederRegKilled = false;
   // Check if the RegMO can be forwarded to MI.
-  if (!isRegElgibleForForwarding(*RegMO, DefMI, MI, KillDefMI))
+  if (!isRegElgibleForForwarding(*RegMO, DefMI, MI, KillDefMI,
+                                 IsFwdFeederRegKilled))
     return false;
+
+  // Get killed info in case fixup needed after transformation.
+  unsigned ForwardKilledOperandReg = ~0U;
+  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  bool PostRA = !MRI.isSSA();
+  if (PostRA && MI.getOperand(OpNoForForwarding).isKill())
+    ForwardKilledOperandReg = MI.getOperand(OpNoForForwarding).getReg();
 
   // We know that, the MI and DefMI both meet the pattern, and
   // the Imm also meet the requirement with the new Imm-form.
@@ -3339,6 +3456,22 @@ bool PPCInstrInfo::transformToImmFormFedByAdd(MachineInstr &MI,
   // Update the opcode.
   MI.setDesc(get(III.ImmOpcode));
 
+  // Fix up killed/dead flag after transformation.
+  // Pattern 1:
+  // x = ADD KilledFwdFeederReg, imm
+  // n = opn KilledFwdFeederReg(killed), regn
+  // y = XOP 0, x
+  // Pattern 2:
+  // x = ADD reg(killed), imm
+  // y = XOP 0, x
+  if (IsFwdFeederRegKilled || RegMO->isKill())
+    fixupIsDeadOrKill(DefMI, MI, RegMO->getReg());
+  // Pattern 3:
+  // ForwardKilledOperandReg = ADD reg, imm
+  // y = XOP 0, ForwardKilledOperandReg(killed)
+  if (ForwardKilledOperandReg != ~0U)
+    fixupIsDeadOrKill(DefMI, MI, ForwardKilledOperandReg);
+
   LLVM_DEBUG(dbgs() << "With:\n");
   LLVM_DEBUG(MI.dump());
 
@@ -3348,6 +3481,7 @@ bool PPCInstrInfo::transformToImmFormFedByAdd(MachineInstr &MI,
 bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
                                              const ImmInstrInfo &III,
                                              unsigned ConstantOpNo,
+                                             MachineInstr &DefMI,
                                              int64_t Imm) const {
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   bool PostRA = !MRI.isSSA();
@@ -3385,6 +3519,11 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
         ConstantOpNo != PosForOrigZero)
       return false;
   }
+
+  // Get killed info in case fixup needed after transformation.
+  unsigned ForwardKilledOperandReg = ~0U;
+  if (PostRA && MI.getOperand(ConstantOpNo).isKill())
+    ForwardKilledOperandReg = MI.getOperand(ConstantOpNo).getReg();
 
   unsigned Opc = MI.getOpcode();
   bool SpecialShift32 =
@@ -3468,6 +3607,13 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
       }
     }
   }
+
+  // Fix up killed/dead flag after transformation.
+  // Pattern:
+  // ForwardKilledOperandReg = LI imm
+  // y = XOP reg, ForwardKilledOperandReg(killed)
+  if (ForwardKilledOperandReg != ~0U)
+    fixupIsDeadOrKill(DefMI, MI, ForwardKilledOperandReg);
   return true;
 }
 

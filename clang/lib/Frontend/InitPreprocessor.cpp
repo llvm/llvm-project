@@ -547,7 +547,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   // TS features.
   if (LangOpts.ConceptsTS)
     Builder.defineMacro("__cpp_experimental_concepts", "1L");
-  if (LangOpts.CoroutinesTS)
+  if (LangOpts.Coroutines)
     Builder.defineMacro("__cpp_coroutines", "201703L");
 }
 
@@ -1055,6 +1055,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // informs the proper CUDA headers of this choice.
   if (LangOpts.CUDADeviceApproxTranscendentals || LangOpts.FastMath) {
     Builder.defineMacro("__CLANG_CUDA_APPROX_TRANSCENDENTALS__");
+  }
+
+  // Define a macro indicating that the source file is being compiled with a
+  // SYCL device compiler which doesn't produce host binary.
+  if (LangOpts.SYCLIsDevice) {
+    Builder.defineMacro("__SYCL_DEVICE_ONLY__", "1");
   }
 
   // OpenCL definitions.

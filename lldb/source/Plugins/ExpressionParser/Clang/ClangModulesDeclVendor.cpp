@@ -78,7 +78,7 @@ public:
   bool AddModulesForCompileUnit(CompileUnit &cu, ModuleVector &exported_modules,
                                 Stream &error_stream) override;
 
-  uint32_t FindDecls(const ConstString &name, bool append, uint32_t max_matches,
+  uint32_t FindDecls(ConstString name, bool append, uint32_t max_matches,
                      std::vector<clang::NamedDecl *> &decls) override;
 
   void ForEachMacro(const ModuleVector &modules,
@@ -340,7 +340,7 @@ bool ClangModulesDeclVendorImpl::AddModulesForCompileUnit(
 // ClangImporter::lookupValue
 
 uint32_t
-ClangModulesDeclVendorImpl::FindDecls(const ConstString &name, bool append,
+ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
                                       uint32_t max_matches,
                                       std::vector<clang::NamedDecl *> &decls) {
   if (!m_enabled) {
@@ -624,12 +624,21 @@ ClangModulesDeclVendor::Create(Target &target) {
       clang::CompilerInstance::createDiagnostics(new clang::DiagnosticOptions,
                                                  new StoringDiagnosticConsumer);
 
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  if (log)
+    log->PutString("ClangModulesDeclVendor::Create()");
   std::vector<const char *> compiler_invocation_argument_cstrs;
   compiler_invocation_argument_cstrs.reserve(
       compiler_invocation_arguments.size());
   for (const std::string &arg : compiler_invocation_arguments) {
     compiler_invocation_argument_cstrs.push_back(arg.c_str());
+    if (log) {
+      log->PutString("\n  ");
+      log->PutString(arg);
+    }
   }
+  if (log)
+    log->PutString("\n");
 
   std::shared_ptr<clang::CompilerInvocation> invocation =
       clang::createInvocationFromCommandLine(compiler_invocation_argument_cstrs,

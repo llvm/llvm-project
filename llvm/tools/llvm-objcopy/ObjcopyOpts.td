@@ -103,10 +103,9 @@ defm set_section_flags
          "rom, share, contents, merge, strings.">,
       MetaVarName<"section=flag1[,flag2,...]">;
 
-def strip_all
-    : Flag<["-", "--"], "strip-all">,
-      HelpText<
-          "Remove non-allocated sections other than .gnu.warning* sections">;
+def strip_all : Flag<["-", "--"], "strip-all">,
+                HelpText<"Remove non-allocated sections outside segments. "
+                         ".gnu.warning* sections are not removed">;
 def S : Flag<["-"], "S">, Alias<strip_all>;
 def strip_all_gnu : Flag<["-", "--"], "strip-all-gnu">,
                     HelpText<"Compatible with GNU objcopy's --strip-all">;
@@ -116,13 +115,15 @@ def g : Flag<["-"], "g">, Alias<strip_debug>,
         HelpText<"Alias for --strip-debug">;
 def strip_dwo : Flag<["-", "--"], "strip-dwo">,
                 HelpText<"Remove all DWARF .dwo sections from file">;
-def strip_sections : Flag<["-", "--"], "strip-sections">,
-                     HelpText<"Remove all section headers">;
-def strip_non_alloc : Flag<["-", "--"], "strip-non-alloc">,
-                      HelpText<"Remove all non-allocated sections">;
+def strip_sections
+    : Flag<["-", "--"], "strip-sections">,
+      HelpText<"Remove all section headers and all sections not in segments">;
+def strip_non_alloc
+    : Flag<["-", "--"], "strip-non-alloc">,
+      HelpText<"Remove all non-allocated sections outside segments">;
 def strip_unneeded : Flag<["-", "--"], "strip-unneeded">,
                      HelpText<"Remove all symbols not needed by relocations">;
-defm strip_unneeded_symbol 
+defm strip_unneeded_symbol
     : Eq<"strip-unneeded-symbol",
          "Remove symbol <symbol> if it is not needed by relocations">,
       MetaVarName<"symbol">;
@@ -205,9 +206,12 @@ def N : JoinedOrSeparate<["-"], "N">, Alias<strip_symbol>;
 defm keep_symbol : Eq<"keep-symbol", "Do not remove symbol <symbol>">,
                    MetaVarName<"symbol">;
 def K : JoinedOrSeparate<["-"], "K">, Alias<keep_symbol>;
+
 def only_keep_debug
     : Flag<["-", "--"], "only-keep-debug">,
-      HelpText<"Currently ignored. Only for compatibility with GNU objcopy.">;
+      HelpText<"Clear sections that would not be stripped by --strip-debug. "
+               "Currently only implemented for COFF.">;
+
 def keep_file_symbols : Flag<["-", "--"], "keep-file-symbols">,
                         HelpText<"Do not remove file symbols">;
 defm dump_section
@@ -237,3 +241,21 @@ defm build_id_link_output
 def regex
     : Flag<["-", "--"], "regex">,
       HelpText<"Permit regular expressions in name comparison">;
+
+defm set_start : Eq<"set-start", "Set the start address to <addr>. Overrides "
+                    "any previous --change-start or --adjust-start values.">,
+                 MetaVarName<"addr">;
+defm change_start : Eq<"change-start", "Add <incr> to the start address. Can be "                        
+                       "specified multiple times, all values will be applied "
+                       "cumulatively.">,
+                    MetaVarName<"incr">;
+def adjust_start : JoinedOrSeparate<["-", "--"], "adjust-start">,
+                   Alias<change_start>;
+
+defm add_symbol
+    : Eq<"add-symbol", "Add new symbol <name> to .symtab. Accepted flags: "
+         "global, local, weak, default, hidden, file, section, object, "
+         "function, indirect-function. Accepted but ignored for "
+         "compatibility: debug, constructor, warning, indirect, synthetic, "
+         "unique-object, before.">,
+      MetaVarName<"name=[section:]value[,flags]">;

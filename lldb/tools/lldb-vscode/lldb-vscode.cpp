@@ -23,6 +23,7 @@
 #define NOMINMAX
 #include <windows.h>
 #undef GetObject
+#include <io.h>
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -53,7 +54,6 @@ typedef int socklen_t;
 constexpr const char *dev_null_path = "nul";
 
 #else
-typedef int SOCKET;
 constexpr const char *dev_null_path = "/dev/null";
 
 #endif
@@ -68,9 +68,9 @@ enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
 
 enum VSCodeBroadcasterBits { eBroadcastBitStopEventThread = 1u << 0 };
 
-int AcceptConnection(int portno) {
+SOCKET AcceptConnection(int portno) {
   // Accept a socket connection from any host on "portno".
-  int newsockfd = -1;
+  SOCKET newsockfd = -1;
   struct sockaddr_in serv_addr, cli_addr;
   SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) {
@@ -537,7 +537,7 @@ void request_attach(const llvm::json::Object &request) {
     const char *symfile = nullptr;
     g_vsc.target.AddModule(program.data(), target_triple, uuid_cstr, symfile);
     if (error.Fail()) {
-      response.try_emplace("success", false);
+      response["success"] = llvm::json::Value(false);
       EmplaceSafeString(response, "message", std::string(error.GetCString()));
       g_vsc.SendJSON(llvm::json::Value(std::move(response)));
       return;
@@ -589,7 +589,7 @@ void request_attach(const llvm::json::Object &request) {
   }
 
   if (error.Fail()) {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -832,7 +832,7 @@ void request_exceptionInfo(const llvm::json::Object &request) {
     //   uint64_t exc_data = thread.GetStopReasonDataAtIndex(i);
     // }
   } else {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -964,8 +964,11 @@ void request_evaluate(const llvm::json::Object &request) {
     if (value.GetError().Fail())
       value = frame.EvaluateExpression(expression.data());
     if (value.GetError().Fail()) {
-      response.try_emplace("success", false);
-      const char *error_cstr = value.GetError().GetCString();
+      response["success"] = llvm::json::Value(false);
+      // This error object must live until we're done with the pointer returned
+      // by GetCString().
+      lldb::SBError error = value.GetError();
+      const char *error_cstr = error.GetCString();
       if (error_cstr && error_cstr[0])
         EmplaceSafeString(response, "message", std::string(error_cstr));
       else
@@ -1227,21 +1230,25 @@ void request_launch(const llvm::json::Object &request) {
 
   // Grab the name of the program we need to debug and set it as the first
   // argument that will be passed to the program we will debug.
-  const auto program = GetString(arguments, "program");
+  llvm::StringRef program = GetString(arguments, "program");
   if (!program.empty()) {
     lldb::SBFileSpec program_fspec(program.data(), true /*resolve_path*/);
-
     g_vsc.launch_info.SetExecutableFile(program_fspec,
                                         true /*add_as_first_arg*/);
     const char *target_triple = nullptr;
     const char *uuid_cstr = nullptr;
     // Stand alone debug info file if different from executable
     const char *symfile = nullptr;
-    g_vsc.target.AddModule(program.data(), target_triple, uuid_cstr, symfile);
-    if (error.Fail()) {
-      response.try_emplace("success", false);
-      EmplaceSafeString(response, "message", std::string(error.GetCString()));
+    lldb::SBModule module = g_vsc.target.AddModule(
+        program.data(), target_triple, uuid_cstr, symfile);
+    if (!module.IsValid()) {
+      response["success"] = llvm::json::Value(false);
+
+      EmplaceSafeString(
+          response, "message",
+          llvm::formatv("Could not load program '{0}'.", program).str());
       g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+      return;
     }
   }
 
@@ -1277,7 +1284,7 @@ void request_launch(const llvm::json::Object &request) {
   g_vsc.debugger.SetAsync(false);
   g_vsc.target.Launch(g_vsc.launch_info, error);
   if (error.Fail()) {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -1339,7 +1346,7 @@ void request_next(const llvm::json::Object &request) {
     g_vsc.focus_tid = thread.GetThreadID();
     thread.StepOver();
   } else {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -1946,7 +1953,7 @@ void request_source(const llvm::json::Object &request) {
   if (pos != g_vsc.source_map.end()) {
     EmplaceSafeString(body, "content", pos->second.content);
   } else {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -2107,7 +2114,7 @@ void request_stepIn(const llvm::json::Object &request) {
     g_vsc.focus_tid = thread.GetThreadID();
     thread.StepInto();
   } else {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -2161,7 +2168,7 @@ void request_stepOut(const llvm::json::Object &request) {
     g_vsc.focus_tid = thread.GetThreadID();
     thread.StepOut();
   } else {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -2216,7 +2223,7 @@ void request_threads(const llvm::json::Object &request) {
     threads.emplace_back(CreateThread(thread));
   }
   if (threads.size() == 0) {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   llvm::json::Object body;
   body.try_emplace("threads", std::move(threads));
@@ -2410,7 +2417,7 @@ void request_setVariable(const llvm::json::Object &request) {
     } else {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));
     }
-    response.try_emplace("success", success);
+    response["success"] = llvm::json::Value(success);
   }
 
   response.try_emplace("body", std::move(body));
@@ -2635,23 +2642,19 @@ int main(int argc, char *argv[]) {
 #endif
       int portno = atoi(arg);
       printf("Listening on port %i...\n", portno);
-      int socket_fd = AcceptConnection(portno);
+      SOCKET socket_fd = AcceptConnection(portno);
       if (socket_fd >= 0) {
-        // We must open two FILE objects, one for reading and one for writing
-        // the FILE objects have a mutex in them that won't allow reading and
-        // writing to the socket stream.
-        g_vsc.in = fdopen(socket_fd, "r");
-        g_vsc.out = fdopen(socket_fd, "w");
-        if (g_vsc.in == nullptr || g_vsc.out == nullptr) {
-          if (g_vsc.log)
-            *g_vsc.log << "fdopen failed (" << strerror(errno) << ")"
-                       << std::endl;
-          exit(1);
-        }
+        g_vsc.input.descriptor = StreamDescriptor::from_socket(socket_fd, true);
+        g_vsc.output.descriptor =
+            StreamDescriptor::from_socket(socket_fd, false);
       } else {
         exit(1);
       }
     }
+  } else {
+    g_vsc.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
+    g_vsc.output.descriptor =
+        StreamDescriptor::from_file(fileno(stdout), false);
   }
   auto request_handlers = GetRequestHandlers();
   uint32_t packet_idx = 0;

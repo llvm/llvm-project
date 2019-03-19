@@ -19,6 +19,14 @@
     ret <8 x half> %a
   }
 
+  define <2 x float> @test_vecsplit_2v2s32_v4s32(<4 x float> %a) {
+    ret <2 x float> undef
+  }
+
+  define <2 x half> @test_vecsplit_2v2s16_v4s16(<4 x half> %a) {
+    ret <2 x half> undef
+  }
+
 ...
 ---
 name:            test_v2s64_unmerge
@@ -151,4 +159,52 @@ body:             |
     %1:fpr(<8 x s16>) = G_BUILD_VECTOR %2:fpr(s16), %3:fpr(s16), %4:fpr(s16), %5:fpr(s16), %6:fpr(s16), %7:fpr(s16), %8:fpr(s16), %9:fpr(s16)
     $q0 = COPY %1(<8 x s16>)
     RET_ReallyLR implicit $q0
+...
+---
+name:            test_vecsplit_2v2s32_v4s32
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $q0
+    ; CHECK-LABEL: name: test_vecsplit_2v2s32_v4s32
+    ; CHECK: liveins: $q0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
+    ; CHECK: [[CPYi64_:%[0-9]+]]:fpr64 = CPYi64 [[COPY]], 1
+    ; CHECK: $d0 = COPY [[COPY1]]
+    ; CHECK: $d1 = COPY [[CPYi64_]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(<4 x s32>) = COPY $q0
+    %1:fpr(<2 x s32>), %2:fpr(<2 x s32>) = G_UNMERGE_VALUES %0(<4 x s32>)
+    $d0 = COPY %1(<2 x s32>)
+    $d1 = COPY %2(<2 x s32>)
+    RET_ReallyLR implicit $d0
+...
+---
+name:            test_vecsplit_2v2s16_v4s16
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $d0
+    ; CHECK-LABEL: name: test_vecsplit_2v2s16_v4s16
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]].ssub
+    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
+    ; CHECK: [[CPYi32_:%[0-9]+]]:fpr32 = CPYi32 [[INSERT_SUBREG]], 1
+    ; CHECK: $s0 = COPY [[COPY1]]
+    ; CHECK: $s1 = COPY [[CPYi32_]]
+    ; CHECK: RET_ReallyLR implicit $s0
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:fpr(<2 x s16>), %2:fpr(<2 x s16>) = G_UNMERGE_VALUES %0(<4 x s16>)
+    $s0 = COPY %1(<2 x s16>)
+    $s1 = COPY %2(<2 x s16>)
+    RET_ReallyLR implicit $s0
 ...

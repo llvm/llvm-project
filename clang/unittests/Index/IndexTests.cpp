@@ -57,11 +57,14 @@ struct TestSymbol {
   std::string QName;
   Position WrittenPos;
   Position DeclPos;
+  SymbolInfo SymInfo;
+  SymbolRoleSet Roles;
   // FIXME: add more information.
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const TestSymbol &S) {
-  return OS << S.QName << '[' << S.WrittenPos << ']' << '@' << S.DeclPos;
+  return OS << S.QName << '[' << S.WrittenPos << ']' << '@' << S.DeclPos << '('
+            << static_cast<unsigned>(S.SymInfo.Kind) << ')';
 }
 
 class Indexer : public IndexDataConsumer {
@@ -78,18 +81,25 @@ public:
     if (!ND)
       return true;
     TestSymbol S;
+    S.SymInfo = getSymbolInfo(D);
     S.QName = ND->getQualifiedNameAsString();
     S.WrittenPos = Position::fromSourceLocation(Loc, AST->getSourceManager());
     S.DeclPos =
         Position::fromSourceLocation(D->getLocation(), AST->getSourceManager());
+    S.Roles = Roles;
     Symbols.push_back(std::move(S));
     return true;
   }
 
-  bool handleMacroOccurence(const IdentifierInfo *Name, const MacroInfo *,
-                            SymbolRoleSet, SourceLocation) override {
+  bool handleMacroOccurence(const IdentifierInfo *Name, const MacroInfo *MI,
+                            SymbolRoleSet Roles, SourceLocation Loc) override {
     TestSymbol S;
+    S.SymInfo = getSymbolInfoForMacro(*MI);
     S.QName = Name->getName();
+    S.WrittenPos = Position::fromSourceLocation(Loc, AST->getSourceManager());
+    S.DeclPos = Position::fromSourceLocation(MI->getDefinitionLoc(),
+                                             AST->getSourceManager());
+    S.Roles = Roles;
     Symbols.push_back(std::move(S));
     return true;
   }
@@ -140,6 +150,8 @@ using testing::UnorderedElementsAre;
 MATCHER_P(QName, Name, "") { return arg.QName == Name; }
 MATCHER_P(WrittenAt, Pos, "") { return arg.WrittenPos == Pos; }
 MATCHER_P(DeclAt, Pos, "") { return arg.DeclPos == Pos; }
+MATCHER_P(Kind, SymKind, "") { return arg.SymInfo.Kind == SymKind; }
+MATCHER_P(HasRole, Role, "") { return arg.Roles & static_cast<unsigned>(Role); }
 
 TEST(IndexTest, Simple) {
   auto Index = std::make_shared<Indexer>();
@@ -238,6 +250,46 @@ TEST(IndexTest, IndexTypeParmDecls) {
   EXPECT_THAT(Index->Symbols,
               AllOf(Contains(QName("Foo::T")), Contains(QName("Foo::I")),
                     Contains(QName("Foo::C")), Contains(QName("Foo::NoRef"))));
+}
+
+TEST(IndexTest, UsingDecls) {
+  std::string Code = R"cpp(
+    void foo(int bar);
+    namespace std {
+      using ::foo;
+    }
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  IndexingOptions Opts;
+  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  EXPECT_THAT(Index->Symbols,
+              Contains(AllOf(QName("std::foo"), Kind(SymbolKind::Using))));
+}
+
+TEST(IndexTest, Constructors) {
+  std::string Code = R"cpp(
+    struct Foo {
+      Foo(int);
+      ~Foo();
+    };
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  IndexingOptions Opts;
+  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  EXPECT_THAT(
+      Index->Symbols,
+      UnorderedElementsAre(
+          AllOf(QName("Foo"), Kind(SymbolKind::Struct),
+                WrittenAt(Position(2, 12))),
+          AllOf(QName("Foo::Foo"), Kind(SymbolKind::Constructor),
+                WrittenAt(Position(3, 7))),
+          AllOf(QName("Foo"), Kind(SymbolKind::Struct),
+                HasRole(SymbolRole::NameReference), WrittenAt(Position(3, 7))),
+          AllOf(QName("Foo::~Foo"), Kind(SymbolKind::Destructor),
+                WrittenAt(Position(4, 7))),
+          AllOf(QName("Foo"), Kind(SymbolKind::Struct),
+                HasRole(SymbolRole::NameReference),
+                WrittenAt(Position(4, 8)))));
 }
 
 } // namespace

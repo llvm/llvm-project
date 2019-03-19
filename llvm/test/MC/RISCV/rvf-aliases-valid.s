@@ -94,6 +94,13 @@ fmv.x.s a2, fs7
 # CHECK-ALIAS: fmv.w.x ft1, a6
 fmv.s.x ft1, a6
 
+# CHECK-INST: flw ft0, 0(a0)
+# CHECK-ALIAS: flw ft0, 0(a0)
+flw f0, (x10)
+# CHECK-INST: fsw ft0, 0(a0)
+# CHECK-ALIAS: fsw ft0, 0(a0)
+fsw f0, (x10)
+
 ##===----------------------------------------------------------------------===##
 ## Aliases which omit the rounding mode.
 ##===----------------------------------------------------------------------===##

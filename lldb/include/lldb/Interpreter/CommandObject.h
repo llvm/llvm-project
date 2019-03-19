@@ -226,14 +226,14 @@ public:
   /// option. Don't override this method, override HandleArgumentCompletion
   /// instead unless you have special reasons.
   ///
-  /// @param[in/out] request
+  /// \param[in/out] request
   ///    The completion request that needs to be answered.
   ///
   /// FIXME: This is the wrong return value, since we also need to make a
   /// distinction between
   /// total number of matches, and the window the user wants returned.
   ///
-  /// @return
+  /// \return
   ///     \btrue if we were in an option, \bfalse otherwise.
   //------------------------------------------------------------------
   virtual int HandleCompletion(CompletionRequest &request);
@@ -246,14 +246,14 @@ public:
   /// We've constructed the map of options and their arguments as well if that
   /// is helpful for the completion.
   ///
-  /// @param[in/out] request
+  /// \param[in/out] request
   ///    The completion request that needs to be answered.
   ///
   /// FIXME: This is the wrong return value, since we also need to make a
   /// distinction between
   /// total number of matches, and the window the user wants returned.
   ///
-  /// @return
+  /// \return
   ///     The number of completions.
   //------------------------------------------------------------------
   virtual int
@@ -271,7 +271,7 @@ public:
   //------------------------------------------------------------------
   /// The flags accessor.
   ///
-  /// @return
+  /// \return
   ///     A reference to the Flags member variable.
   //------------------------------------------------------------------
   Flags &GetFlags() { return m_flags; }
@@ -279,7 +279,7 @@ public:
   //------------------------------------------------------------------
   /// The flags const accessor.
   ///
-  /// @return
+  /// \return
   ///     A const reference to the Flags member variable.
   //------------------------------------------------------------------
   const Flags &GetFlags() const { return m_flags; }
@@ -287,10 +287,10 @@ public:
   //------------------------------------------------------------------
   /// Get the command that appropriate for a "repeat" of the current command.
   ///
-  /// @param[in] current_command_line
+  /// \param[in] current_command_line
   ///    The complete current command line.
   ///
-  /// @return
+  /// \return
   ///     nullptr if there is no special repeat command - it will use the
   ///     current command line.
   ///     Otherwise a pointer to the command to be repeated.
@@ -371,11 +371,11 @@ protected:
   /// Check the command to make sure anything required by this
   /// command is available.
   ///
-  /// @param[out] result
+  /// \param[out] result
   ///     A command result object, if it is not okay to run the command
   ///     this will be filled in with a suitable error.
   ///
-  /// @return
+  /// \return
   ///     \b true if it is okay to run this command, \b false otherwise.
   //------------------------------------------------------------------
   bool CheckRequirements(CommandReturnObject &result);
