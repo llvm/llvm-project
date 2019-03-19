@@ -976,6 +976,10 @@ public:
       llvm::FunctionType *FnType = nullptr, bool DontDefer = false,
       ForDefinition_t IsForDefinition = NotForDefinition);
 
+  void generateIntelFPGAAnnotation(const Decl *D,
+                                     llvm::SmallString<256> &AnnotStr);
+  void addGlobalIntelFPGAAnnotation(const VarDecl *VD, llvm::GlobalValue *GV);
+
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
   llvm::Constant *getBuiltinLibFunction(const FunctionDecl *FD,

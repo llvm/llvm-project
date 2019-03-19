@@ -2293,6 +2293,23 @@ Address CodeGenFunction::EmitFieldAnnotations(const FieldDecl *D,
   return Address(V, Addr.getAlignment());
 }
 
+Address CodeGenFunction::EmitIntelFPGAFieldAnnotations(const FieldDecl *D,
+                                                       Address Addr,
+                                                       StringRef AnnotStr) {
+  llvm::Value *V = Addr.getPointer();
+  llvm::Type *VTy = V->getType();
+  llvm::Function *F =
+      CGM.getIntrinsic(llvm::Intrinsic::ptr_annotation, CGM.Int8PtrTy);
+  // FIXME Always emit the cast inst so we can differentiate between
+  // annotation on the first field of a struct and annotation on the struct
+  // itself.
+  if (VTy != CGM.Int8PtrTy)
+    V = Builder.CreateBitCast(V, CGM.Int8PtrTy);
+  V = EmitAnnotationCall(F, V, AnnotStr, D->getLocation());
+  V = Builder.CreateBitCast(V, VTy);
+  return Address(V, Addr.getAlignment());
+}
+
 CodeGenFunction::CGCapturedStmtInfo::~CGCapturedStmtInfo() { }
 
 CodeGenFunction::SanitizerScope::SanitizerScope(CodeGenFunction *CGF)

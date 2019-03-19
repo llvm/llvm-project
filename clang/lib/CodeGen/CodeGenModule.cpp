@@ -3512,6 +3512,55 @@ void CodeGenModule::maybeSetTrivialComdat(const Decl &D,
   GO.setComdat(TheModule.getOrInsertComdat(GO.getName()));
 }
 
+void CodeGenModule::generateIntelFPGAAnnotation(
+    const Decl *D, llvm::SmallString<256> &AnnotStr) {
+  llvm::raw_svector_ostream Out(AnnotStr);
+  if (D->hasAttr<IntelFPGARegisterAttr>())
+    Out << "{register:1}";
+  if (auto const *MA = D->getAttr<IntelFPGAMemoryAttr>()) {
+    IntelFPGAMemoryAttr::MemoryKind Kind = MA->getKind();
+    Out << "{memory:";
+    switch (Kind) {
+    case IntelFPGAMemoryAttr::MLAB:
+    case IntelFPGAMemoryAttr::BlockRAM:
+      Out << IntelFPGAMemoryAttr::ConvertMemoryKindToStr(Kind);
+      break;
+    case IntelFPGAMemoryAttr::Default:
+      Out << "DEFAULT";
+      break;
+    }
+    Out << '}';
+  }
+  if (const auto *BWA = D->getAttr<IntelFPGABankWidthAttr>()) {
+    llvm::APSInt BWAInt = BWA->getValue()->EvaluateKnownConstInt(getContext());
+    Out << '{' << BWA->getSpelling() << ':' << BWAInt << '}';
+  }
+  if (const auto *NBA = D->getAttr<IntelFPGANumBanksAttr>()) {
+    llvm::APSInt BWAInt = NBA->getValue()->EvaluateKnownConstInt(getContext());
+    Out << '{' << NBA->getSpelling() << ':' << BWAInt << '}';
+  }
+}
+
+void CodeGenModule::addGlobalIntelFPGAAnnotation(const VarDecl *VD,
+                                                 llvm::GlobalValue *GV) {
+  SmallString<256> AnnotStr;
+  generateIntelFPGAAnnotation(VD, AnnotStr);
+  if (!AnnotStr.empty()) {
+    // Get the globals for file name, annotation, and the line number.
+    llvm::Constant *AnnoGV = EmitAnnotationString(AnnotStr),
+                   *UnitGV = EmitAnnotationUnit(VD->getLocation()),
+                   *LineNoCst = EmitAnnotationLineNo(VD->getLocation());
+
+    llvm::Constant *C =
+        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, Int8PtrTy);
+    // Create the ConstantStruct for the global annotation.
+    llvm::Constant *Fields[4] = {
+        C, llvm::ConstantExpr::getBitCast(AnnoGV, Int8PtrTy),
+        llvm::ConstantExpr::getBitCast(UnitGV, Int8PtrTy), LineNoCst};
+    Annotations.push_back(llvm::ConstantStruct::getAnon(Fields));
+  }
+}
+
 /// Pass IsTentative as true if you want to create a tentative definition.
 void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
                                             bool IsTentative) {
@@ -3637,6 +3686,21 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
   if (D->hasAttr<AnnotateAttr>())
     AddGlobalAnnotations(D, GV);
+
+  // Emit Intel FPGA attribute annotation for a file-scope static variable.
+  if (getLangOpts().SYCLIsDevice)
+    addGlobalIntelFPGAAnnotation(D, GV);
+
+  if (D->getType().isRestrictQualified()) {
+    llvm::LLVMContext &Context = getLLVMContext();
+
+    // Common metadata nodes.
+    llvm::NamedMDNode *GlobalsRestrict =
+        getModule().getOrInsertNamedMetadata("globals.restrict");
+    llvm::Metadata *Args[] = {llvm::ValueAsMetadata::get(GV)};
+    llvm::MDNode *Node = llvm::MDNode::get(Context, Args);
+    GlobalsRestrict->addOperand(Node);
+  }
 
   // Set the llvm linkage type as appropriate.
   llvm::GlobalValue::LinkageTypes Linkage =

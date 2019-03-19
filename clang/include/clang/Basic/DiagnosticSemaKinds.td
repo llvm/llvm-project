@@ -123,6 +123,12 @@ def warn_double_const_requires_fp64 : Warning<
 def err_half_const_requires_fp16 : Error<
   "half precision constant requires cl_khr_fp16">;
 
+// Intel FPGA extensions
+def err_attribute_argument_not_power_of_two : Error<
+  "%0 attribute argument must be a constant power of two greater than zero">;
+def err_intel_fpga_memory_arg_invalid : Error<
+  "%0 attribute requires either no argument or one of: %1">;
+
 // C99 variable-length arrays
 def ext_vla : Extension<"variable length arrays are a C99 feature">,
   InGroup<VLAExtension>;

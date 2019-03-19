@@ -3763,6 +3763,60 @@ static void handleAlignedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                    AL.isPackExpansion());
 }
 
+template <typename AttrType>
+bool Sema::checkRangedIntegralArgument(Expr *E, const AttrType *TmpAttr,
+                                       ExprResult &Result) {
+  llvm::APSInt Value;
+  Result = VerifyIntegerConstantExpression(E, &Value);
+  if (Result.isInvalid())
+    return true;
+
+  if (Value < AttrType::getMinValue() || Value > AttrType::getMaxValue()) {
+    Diag(TmpAttr->getRange().getBegin(),
+         diag::err_attribute_argument_out_of_range)
+        << TmpAttr << AttrType::getMinValue() << AttrType::getMaxValue()
+        << E->getSourceRange();
+    return true;
+  }
+  return false;
+}
+
+template <typename AttrType>
+void Sema::AddOneConstantPowerTwoValueAttr(SourceRange AttrRange, Decl *D,
+                                           Expr *E,
+                                           unsigned SpellingListIndex) {
+  AttrType TmpAttr(AttrRange, Context, E, SpellingListIndex);
+
+  if (!E->isValueDependent()) {
+    ExprResult ICE;
+    if (checkRangedIntegralArgument<AttrType>(E, &TmpAttr, ICE))
+      return;
+    Expr::EvalResult Result;
+    E->EvaluateAsInt(Result, Context);
+    llvm::APSInt Value = Result.Val.getInt();
+    if (!Value.isPowerOf2()) {
+      Diag(AttrRange.getBegin(), diag::err_attribute_argument_not_power_of_two)
+          << &TmpAttr;
+      return;
+    }
+    E = ICE.get();
+  }
+
+  if (!D->hasAttr<IntelFPGAMemoryAttr>())
+    D->addAttr(IntelFPGAMemoryAttr::CreateImplicit(
+        Context, IntelFPGAMemoryAttr::Default));
+
+  // We are adding a user NumBanks, drop any implicit default.
+  if (IntelFPGANumBanksAttr::classof(&TmpAttr)) {
+    if (auto *NBA = D->getAttr<IntelFPGANumBanksAttr>())
+      if (NBA->isImplicit())
+        D->dropAttr<IntelFPGANumBanksAttr>();
+  }
+
+  D->addAttr(::new (Context)
+                 AttrType(AttrRange, Context, E, SpellingListIndex));
+}
+
 void Sema::AddAlignedAttr(SourceRange AttrRange, Decl *D, Expr *E,
                           unsigned SpellingListIndex, bool IsPackExpansion) {
   AlignedAttr TmpAttr(AttrRange, Context, true, E, SpellingListIndex);
@@ -4922,6 +4976,102 @@ static void handleTypeTagForDatatypeAttr(Sema &S, Decl *D,
                                     AL.getLayoutCompatible(),
                                     AL.getMustBeNull(),
                                     AL.getAttributeSpellingListIndex()));
+}
+
+/// Give a warning for duplicate attributes, return true if duplicate.
+template <typename AttrType>
+static bool checkForDuplicateAttribute(Sema &S, Decl *D,
+                                       const ParsedAttr &Attr) {
+  // Give a warning for duplicates but not if it's one we've implicitly added.
+  auto *A = D->getAttr<AttrType>();
+  if (A && !A->isImplicit()) {
+    S.Diag(Attr.getLoc(), diag::warn_duplicate_attribute_exact) << A;
+    return true;
+  }
+  return false;
+}
+
+/// Handle the __memory__ attribute.
+/// This is incompatible with the __register__ attribute.
+static void handleIntelFPGAMemoryAttr(Sema &S, Decl *D,
+                                      const ParsedAttr &Attr) {
+
+  checkForDuplicateAttribute<IntelFPGAMemoryAttr>(S, D, Attr);
+  if (checkAttrMutualExclusion<IntelFPGARegisterAttr>(S, D, Attr))
+    return;
+
+  IntelFPGAMemoryAttr::MemoryKind Kind;
+  if (Attr.getNumArgs() == 0)
+    Kind = IntelFPGAMemoryAttr::Default;
+  else {
+    StringRef Str;
+    if (!S.checkStringLiteralArgumentAttr(Attr, 0, Str))
+      return;
+    if (Str.empty() ||
+        !IntelFPGAMemoryAttr::ConvertStrToMemoryKind(Str, Kind)) {
+      SmallString<256> ValidStrings;
+      IntelFPGAMemoryAttr::generateValidStrings(ValidStrings);
+      S.Diag(Attr.getLoc(), diag::err_intel_fpga_memory_arg_invalid)
+          << Attr << ValidStrings;
+      return;
+    }
+  }
+
+  // We are adding a user memory attribute, drop any implicit default.
+  if (auto *MA = D->getAttr<IntelFPGAMemoryAttr>())
+    if (MA->isImplicit())
+      D->dropAttr<IntelFPGAMemoryAttr>();
+
+  D->addAttr(::new (S.Context) IntelFPGAMemoryAttr(
+      Attr.getRange(), S.Context, Kind, Attr.getAttributeSpellingListIndex()));
+}
+
+/// Check for and diagnose attributes incompatible with register.
+/// return true if any incompatible attributes exist.
+static bool checkIntelFPGARegisterAttrCompatibility(Sema &S, Decl *D,
+                                                    const ParsedAttr &Attr) {
+  bool InCompat = false;
+  if (auto *MA = D->getAttr<IntelFPGAMemoryAttr>())
+    if (!MA->isImplicit() &&
+        checkAttrMutualExclusion<IntelFPGAMemoryAttr>(S, D, Attr))
+      InCompat = true;
+  if (checkAttrMutualExclusion<IntelFPGABankWidthAttr>(S, D, Attr))
+    InCompat = true;
+  if (auto *NBA = D->getAttr<IntelFPGANumBanksAttr>())
+    if (!NBA->isImplicit() &&
+        checkAttrMutualExclusion<IntelFPGANumBanksAttr>(S, D, Attr))
+      InCompat = true;
+
+  return InCompat;
+}
+
+/// Handle the __register__ attribute.
+/// This is incompatible with most of the other memory attributes.
+static void handleIntelFPGARegisterAttr(Sema &S, Decl *D,
+                                        const ParsedAttr &Attr) {
+
+  checkForDuplicateAttribute<IntelFPGARegisterAttr>(S, D, Attr);
+  if (checkIntelFPGARegisterAttrCompatibility(S, D, Attr))
+    return;
+
+  handleSimpleAttribute<IntelFPGARegisterAttr>(S, D, Attr);
+}
+
+/// Handle the bankwidth and numbanks attributes.
+/// These require a single constant power of two greater than zero.
+/// These are incompatible with the register attribute.
+/// The numbanks and bank_bits attributes are related.  If bank_bits exists
+/// when handling numbanks they are checked for consistency.
+template <typename AttrType>
+static void handleOneConstantPowerTwoValueAttr(Sema &S, Decl *D,
+                                               const ParsedAttr &Attr) {
+  checkForDuplicateAttribute<AttrType>(S, D, Attr);
+  if (checkAttrMutualExclusion<IntelFPGARegisterAttr>(S, D, Attr))
+    return;
+
+  S.AddOneConstantPowerTwoValueAttr<AttrType>(
+      Attr.getRange(), D, Attr.getArgAsExpr(0),
+      Attr.getAttributeSpellingListIndex());
 }
 
 static void handleXRayLogArgsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -7272,6 +7422,21 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_TypeTagForDatatype:
     handleTypeTagForDatatypeAttr(S, D, AL);
     break;
+
+  // Intel FPGA specific attributes
+  case ParsedAttr::AT_IntelFPGAMemory:
+    handleIntelFPGAMemoryAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_IntelFPGARegister:
+    handleIntelFPGARegisterAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_IntelFPGABankWidth:
+    handleOneConstantPowerTwoValueAttr<IntelFPGABankWidthAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_IntelFPGANumBanks:
+    handleOneConstantPowerTwoValueAttr<IntelFPGANumBanksAttr>(S, D, AL);
+    break;
+
   case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:
     handleSimpleAttribute<AnyX86NoCallerSavedRegistersAttr>(S, D, AL);
     break;

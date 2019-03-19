@@ -3958,6 +3958,14 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   if (field->hasAttr<AnnotateAttr>())
     addr = EmitFieldAnnotations(field, addr);
 
+  // Emit attribute annotation for a field.
+  if (getLangOpts().SYCLIsDevice) {
+    SmallString<256> AnnotStr;
+    CGM.generateIntelFPGAAnnotation(field, AnnotStr);
+    if (!AnnotStr.empty())
+      addr = EmitIntelFPGAFieldAnnotations(field, addr, AnnotStr);
+  }
+
   LValue LV = MakeAddrLValue(addr, FieldType, FieldBaseInfo, FieldTBAAInfo);
   LV.getQuals().addCVRQualifiers(RecordCVR);
 

@@ -8751,6 +8751,13 @@ public:
   /// attribute to be added (usually because of a pragma).
   void AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD, SourceLocation Loc);
 
+  template <typename AttrType>
+  bool checkRangedIntegralArgument(Expr *E, const AttrType *TmpAttr,
+                                   ExprResult &Result);
+  template <typename AttrType>
+  void AddOneConstantPowerTwoValueAttr(SourceRange AttrRange, Decl *D, Expr *E,
+                                       unsigned SpellingListIndex);
+
   /// AddAlignedAttr - Adds an aligned attribute to a particular declaration.
   void AddAlignedAttr(SourceRange AttrRange, Decl *D, Expr *E,
                       unsigned SpellingListIndex, bool IsPackExpansion);
