@@ -3546,10 +3546,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-aux-triple");
     CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
     CmdArgs.push_back("-disable-llvm-passes");
-    if (Args.hasFlag(options::OPT_fsycl_use_bitcode,
-                     options::OPT_fno_sycl_use_bitcode, true)) {
-      CmdArgs.push_back("-fsycl-use-bitcode");
-    }
     if (Args.hasFlag(options::OPT_fsycl_allow_func_ptr,
                      options::OPT_fno_sycl_allow_func_ptr, false)) {
       CmdArgs.push_back("-fsycl-allow-func-ptr");
@@ -3600,7 +3596,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   } else if (isa<AssembleJobAction>(JA)) {
     if (IsSYCLOffloadDevice && IsSYCLDevice) {
-      CmdArgs.push_back("-emit-spirv");
+      CmdArgs.push_back("-emit-llvm-bc");
     } else {
       CmdArgs.push_back("-emit-obj");
       CollectArgsForIntegratedAssembler(C, Args, CmdArgs, D);
@@ -3643,8 +3639,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_RewrittenLegacyObjC) {
       CmdArgs.push_back("-rewrite-objc");
       rewriteKind = RK_Fragile;
-    } else if (JA.getType() == types::TY_SPIRV) {
-      CmdArgs.push_back("-emit-spirv");
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");
     }
@@ -6428,5 +6422,32 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   llvm::sys::path::append(LlcPath, "llc");
   const char *Llc = C.getArgs().MakeArgString(LlcPath);
   C.addCommand(llvm::make_unique<Command>(JA, *this, Llc, LlcArgs, None));
+}
+
+// Begin SPIRVTranslator
+
+void SPIRVTranslator::ConstructJob(Compilation &C, const JobAction &JA,
+                                  const InputInfo &Output,
+                                  const InputInfoList &Inputs,
+                                  const llvm::opt::ArgList &TCArgs,
+                                  const char *LinkingOutput) const {
+  // Construct llvm-spirv command.
+  assert(isa<SPIRVTranslatorJobAction>(JA) && "Expecting Translator job!");
+
+  // The translator command looks like this:
+  // llvm-spirv -o <file>.spv <file>.bc
+  ArgStringList TranslatorArgs;
+
+  TranslatorArgs.push_back("-o");
+  TranslatorArgs.push_back(Output.getFilename());
+  if (getToolChain().getTriple().isSYCLDeviceEnvironment())
+    TranslatorArgs.push_back("-spirv-no-deref-attr");
+  for (auto I : Inputs) {
+    TranslatorArgs.push_back(I.getFilename());
+  }
+
+  C.addCommand(llvm::make_unique<Command>(JA, *this,
+      TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
+      TranslatorArgs, None));
 }
 

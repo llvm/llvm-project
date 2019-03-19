@@ -70,7 +70,6 @@
 #include "llvm/SYCL/ASFixer.h"
 #include <memory>
 
-#include "LLVMSPIRVLib.h"
 namespace SPIRV {
   extern llvm::cl::opt<bool> SPIRVNoDerefAttr;
 }
@@ -807,7 +806,6 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
 
   bool UsesCodeGen = (Action != Backend_EmitNothing &&
                       Action != Backend_EmitBC &&
-                      Action != Backend_EmitSPIRV &&
                       Action != Backend_EmitLL);
   CreateTargetMachine(UsesCodeGen);
 
@@ -841,6 +839,10 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
     break;
 
   case Backend_EmitBC:
+    if (LangOpts.SYCLIsDevice) {
+      PerModulePasses.add(createASFixerPass());
+      PerModulePasses.add(createDeadCodeEliminationPass());
+    }
     if (CodeGenOpts.PrepareForThinLTO && !CodeGenOpts.DisableLLVMPasses) {
       if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
         ThinLinkOS = openOutputFile(CodeGenOpts.ThinLinkBitcodeFile);
@@ -869,24 +871,6 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
       PerModulePasses.add(createBitcodeWriterPass(
           *OS, CodeGenOpts.EmitLLVMUseLists, EmitLTOSummary));
     }
-    break;
-
-  case Backend_EmitSPIRV:
-    if (LangOpts.SYCLIsDevice) {
-      // TODO: SPIRVNoDerefAttr is not modeled when using the bitcode pass
-      SPIRV::SPIRVNoDerefAttr = true;
-      // TODO: this pass added to work around missing linkonce_odr in SPIR-V
-      PerModulePasses.add(
-          createAlwaysInlinerLegacyPass(true /*InsertLifetimeIntrinsics*/));
-      PerModulePasses.add(createASFixerPass());
-      PerModulePasses.add(createDeadCodeEliminationPass());
-    }
-    if (LangOpts.SYCLUseBitcode)
-      PerModulePasses.add(
-          createBitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists, false));
-    else
-      PerModulePasses.add(createSPIRVWriterPass(*OS));
-
     break;
 
   case Backend_EmitLL:
@@ -1203,6 +1187,10 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     break;
 
   case Backend_EmitBC:
+    if (LangOpts.SYCLIsDevice) {
+      CodeGenPasses.add(createASFixerPass());
+      CodeGenPasses.add(createDeadCodeEliminationPass());
+    }
     if (CodeGenOpts.PrepareForThinLTO && !CodeGenOpts.DisableLLVMPasses) {
       if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
         ThinLinkOS = openOutputFile(CodeGenOpts.ThinLinkBitcodeFile);
@@ -1230,18 +1218,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       MPM.addPass(
           BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists, EmitLTOSummary));
     }
-    break;
-
-  case Backend_EmitSPIRV:
-    if (LangOpts.SYCLIsDevice) {
-      SPIRV::SPIRVNoDerefAttr = true;
-      // TODO: this pass added to work around missing linkonce_odr in SPIR-V
-      CodeGenPasses.add(
-          createAlwaysInlinerLegacyPass(true /*InsertLifetimeIntrinsics*/));
-      CodeGenPasses.add(createASFixerPass());
-      CodeGenPasses.add(createDeadCodeEliminationPass());
-    }
-    CodeGenPasses.add(createSPIRVWriterPass(*OS));
     break;
 
   case Backend_EmitLL:

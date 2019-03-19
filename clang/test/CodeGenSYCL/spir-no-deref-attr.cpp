@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fno-sycl-use-bitcode -triple spir64-unknown-linux-sycldevice -std=c++11 -fsycl-is-device -disable-llvm-passes -S -emit-spirv -x c++ %s -o %t.spv
+// RUN: %clang_cc1 -triple spir64-unknown-linux-sycldevice -std=c++11 -fsycl-is-device -disable-llvm-passes -emit-llvm-bc -x c++ %s -o %t.bc
+// RUN: llvm-spirv -spirv-no-deref-attr %t.bc -o %t.spv
 // RUN: llvm-spirv %t.spv -to-text -o %t.txt
 // RUN: FileCheck < %t.txt %s --check-prefix=CHECK
 

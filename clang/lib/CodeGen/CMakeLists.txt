@@ -24,7 +24,6 @@ set(LLVM_LINK_COMPONENTS
   Target
   TransformUtils
   ASFixer
-  SPIRVLib
   )
 
 # In a standard Clang+LLVM build, we need to generate intrinsics before

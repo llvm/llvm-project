@@ -1190,8 +1190,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  Opts.EmitOpenCLArgMetadata |= Args.hasArg(OPT_emit_spirv);
-
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
     StringRef Val = A->getValue();
     if (Val == "ieee")
@@ -1619,8 +1617,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       Opts.ProgramAction = frontend::EmitAssembly; break;
     case OPT_emit_llvm_bc:
       Opts.ProgramAction = frontend::EmitBC; break;
-    case OPT_emit_spirv:
-      Opts.ProgramAction = frontend::EmitSPIRV; break;
     case OPT_emit_html:
       Opts.ProgramAction = frontend::EmitHTML; break;
     case OPT_emit_llvm:
@@ -2891,8 +2887,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   }
 
   Opts.SYCLIsDevice   = Args.hasArg(options::OPT_fsycl_is_device);
-  Opts.SYCLUseBitcode = Args.hasFlag(options::OPT_fsycl_use_bitcode,
-                                     options::OPT_fno_sycl_use_bitcode, false);
   Opts.SYCLAllowFuncPtr = Args.hasFlag(options::OPT_fsycl_allow_func_ptr,
                                   options::OPT_fno_sycl_allow_func_ptr, false);
 
@@ -3055,7 +3049,6 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::ASTView:
   case frontend::EmitAssembly:
   case frontend::EmitBC:
-  case frontend::EmitSPIRV:
   case frontend::EmitHTML:
   case frontend::EmitLLVM:
   case frontend::EmitLLVMOnly:

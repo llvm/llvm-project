@@ -291,6 +291,12 @@ Tool *ToolChain::getOffloadWrapper() const {
   return OffloadWrapper.get();
 }
 
+Tool *ToolChain::getSPIRVTranslator() const {
+  if (!SPIRVTranslator)
+    SPIRVTranslator.reset(new tools::SPIRVTranslator(*this));
+  return SPIRVTranslator.get();
+}
+
 Tool *ToolChain::getTool(Action::ActionClass AC) const {
   switch (AC) {
   case Action::AssembleJobClass:
@@ -323,6 +329,9 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
 
   case Action::OffloadWrappingJobClass:
     return getOffloadWrapper();
+
+  case Action::SPIRVTranslatorJobClass:
+    return getSPIRVTranslator();
   }
 
   llvm_unreachable("Invalid tool kind.");

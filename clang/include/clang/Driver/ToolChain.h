@@ -130,6 +130,7 @@ private:
   mutable std::unique_ptr<Tool> Link;
   mutable std::unique_ptr<Tool> OffloadBundler;
   mutable std::unique_ptr<Tool> OffloadWrapper;
+  mutable std::unique_ptr<Tool> SPIRVTranslator;
 
   Tool *getClang() const;
   Tool *getAssemble() const;
@@ -137,6 +138,7 @@ private:
   Tool *getClangAs() const;
   Tool *getOffloadBundler() const;
   Tool *getOffloadWrapper() const;
+  Tool *getSPIRVTranslator() const;
 
   mutable std::unique_ptr<SanitizerArgs> SanitizerArguments;
   mutable std::unique_ptr<XRayArgs> XRayArguments;

@@ -836,8 +836,6 @@ GetOutputStream(CompilerInstance &CI, StringRef InFile, BackendAction Action) {
     return CI.createDefaultOutputFile(false, InFile, "ll");
   case Backend_EmitBC:
     return CI.createDefaultOutputFile(true, InFile, "bc");
-  case Backend_EmitSPIRV:
-    return CI.createDefaultOutputFile(true, InFile, "spv");
   case Backend_EmitNothing:
     return nullptr;
   case Backend_EmitMCNull:
@@ -1058,10 +1056,6 @@ EmitAssemblyAction::EmitAssemblyAction(llvm::LLVMContext *_VMContext)
 void EmitBCAction::anchor() { }
 EmitBCAction::EmitBCAction(llvm::LLVMContext *_VMContext)
   : CodeGenAction(Backend_EmitBC, _VMContext) {}
-
-void EmitSPIRVAction::anchor() { }
-EmitSPIRVAction::EmitSPIRVAction(llvm::LLVMContext *_VMContext)
-  : CodeGenAction(Backend_EmitSPIRV, _VMContext) {}
 
 void EmitLLVMAction::anchor() { }
 EmitLLVMAction::EmitLLVMAction(llvm::LLVMContext *_VMContext)
