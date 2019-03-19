@@ -157,6 +157,16 @@ findBuildID(const object::ELFObjectFileBase &In) {
   llvm_unreachable("Bad file format");
 }
 
+template <class... Ts>
+static Error makeStringError(std::error_code EC, const Twine &Msg, Ts&&... Args) {
+  std::string FullMsg = (EC.message() + ": " + Msg).str();
+  return createStringError(EC, FullMsg.c_str(), std::forward<Ts>(Args)...);
+}
+
+#define MODEL_8 "%%%%%%%%"
+#define MODEL_16 MODEL_8 MODEL_8
+#define MODEL_32 (MODEL_16 MODEL_16)
+
 static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
                               StringRef Suffix,
                               ArrayRef<uint8_t> BuildIdBytes) {
@@ -165,19 +175,43 @@ static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
   if (auto EC = sys::fs::create_directories(Path))
     return createFileError(
         Path.str(),
-        createStringError(EC, "cannot create build ID link directory"));
+        makeStringError(EC, "cannot create build ID link directory"));
 
   sys::path::append(Path,
                     llvm::toHex(BuildIdBytes.slice(1), /*LowerCase*/ true));
   Path += Suffix;
-  if (auto EC = sys::fs::create_hard_link(ToLink, Path)) {
-    // Hard linking failed, try to remove the file first if it exists.
-    if (sys::fs::exists(Path))
-      sys::fs::remove(Path);
-    EC = sys::fs::create_hard_link(ToLink, Path);
-    if (EC)
-      return createStringError(EC, "cannot link %s to %s", ToLink.data(),
-                               Path.data());
+  SmallString<128> TmpPath;
+  // create_hard_link races so we need to link to a temporary path but
+  // we want to make sure that we choose a filename that does not exist.
+  // By using 32 model characters we get 128-bits of entropy. It is
+  // unlikely that this string has ever existed before much less exists
+  // on this disk or in the current working directory.
+  // Additionally we prepend the original Path for debugging but also
+  // because it ensures that we're linking within a directory on the same
+  // partition on the same device which is critical. It has the added
+  // win of yet further decreasing the odds of a conflict.
+  sys::fs::createUniquePath(Twine(Path) + "-" + MODEL_32 + ".tmp", TmpPath,
+                            /*MakeAbsolute*/ false);
+  if (auto EC = sys::fs::create_hard_link(ToLink, TmpPath)) {
+    Path.push_back('\0');
+    return makeStringError(EC, "cannot link %s to %s", ToLink.data(),
+                             Path.data());
+  }
+  // We then atomically rename the link into place which will just move the
+  // link. If rename fails something is more seriously wrong so just return
+  // an error.
+  if (auto EC = sys::fs::rename(TmpPath, Path)) {
+    Path.push_back('\0');
+    return makeStringError(EC, "cannot link %s to %s", ToLink.data(),
+                             Path.data());
+  }
+  // If `Path` was already a hard-link to the same underlying file then the
+  // temp file will be left so we need to remove it. Remove will not cause
+  // an error by default if the file is already gone so just blindly remove
+  // it rather than checking.
+  if (auto EC = sys::fs::remove(TmpPath)) {
+    TmpPath.push_back('\0');
+    return makeStringError(EC, "could not remove %s", TmpPath.data());
   }
   return Error::success();
 }

@@ -50,3 +50,43 @@ define void @test_1_999(i8 addrspace(1)* %p, i8 addrspace(999)* %p1) {
 define void @test_999_1(i8 addrspace(999)* %p, i8 addrspace(1)* %p1) {
   ret void
 }
+
+; CHECK: MayAlias:  i8 addrspace(7)* %p, i8* %p1
+define void @test_7_0(i8 addrspace(7)* %p, i8 addrspace(0)* %p1) {
+    ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(1)* %p1, i8 addrspace(7)* %p
+define void @test_7_1(i8 addrspace(7)* %p, i8 addrspace(1)* %p1) {
+    ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(2)* %p1, i8 addrspace(7)* %p
+define void @test_7_2(i8 addrspace(7)* %p, i8 addrspace(2)* %p1) {
+    ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(3)* %p1, i8 addrspace(7)* %p
+define void @test_7_3(i8 addrspace(7)* %p, i8 addrspace(3)* %p1) {
+    ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(4)* %p1, i8 addrspace(7)* %p
+define void @test_7_4(i8 addrspace(7)* %p, i8 addrspace(4)* %p1) {
+    ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(5)* %p1, i8 addrspace(7)* %p
+define void @test_7_5(i8 addrspace(7)* %p, i8 addrspace(5)* %p1) {
+    ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(6)* %p1, i8 addrspace(7)* %p
+define void @test_7_6(i8 addrspace(7)* %p, i8 addrspace(6)* %p1) {
+    ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(7)* %p, i8 addrspace(7)* %p1
+define void @test_7_7(i8 addrspace(7)* %p, i8 addrspace(7)* %p1) {
+    ret void
+}

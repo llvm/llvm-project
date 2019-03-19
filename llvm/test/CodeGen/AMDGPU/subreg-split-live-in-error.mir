@@ -184,7 +184,7 @@ body: |
     %36:vgpr_32 = V_MAC_F32_e32 0, %33, %36, implicit $exec
     %37:vgpr_32 = V_MAD_F32 0, %35, 0, 0, 0, 0, 0, 0, implicit $exec
     %38:sreg_64_xexec = V_CMP_NE_U32_e64 0, %5, implicit $exec
-    %39:vgpr_32 = V_CNDMASK_B32_e64 0, 1, %38, implicit $exec
+    %39:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %38, implicit $exec
     V_CMP_NE_U32_e32 1, %39, implicit-def $vcc, implicit $exec
     $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
     %40:vgpr_32 = V_ADD_F32_e32 %36, %37, implicit $exec

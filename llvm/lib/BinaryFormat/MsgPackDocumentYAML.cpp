@@ -61,7 +61,7 @@ std::string DocNode::toString() const {
     llvm_unreachable("not scalar");
     break;
   }
-  return S;
+  return OS.str();
 }
 
 /// Convert the StringRef and use it to set this DocNode (assuming scalar). If

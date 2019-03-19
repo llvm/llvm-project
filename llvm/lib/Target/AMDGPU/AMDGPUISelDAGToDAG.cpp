@@ -932,7 +932,8 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
     AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
 
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(),
-                       { N->getOperand(0), N->getOperand(1) });
+                       {N->getOperand(0), N->getOperand(1),
+                        CurDAG->getConstant(0, {}, MVT::i1)/*clamp bit*/});
 }
 
 void AMDGPUDAGToDAGISel::SelectFMA_W_CHAIN(SDNode *N) {
@@ -1032,13 +1033,19 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
                                       Zero, Addr.getOperand(1));
 
         if (isDSOffsetLegal(Sub, ByteOffset, 16)) {
-          // FIXME: Select to VOP3 version for with-carry.
-          unsigned SubOp = Subtarget->hasAddNoCarry() ?
-            AMDGPU::V_SUB_U32_e64 : AMDGPU::V_SUB_I32_e32;
+          SmallVector<SDValue, 3> Opnds;
+          Opnds.push_back(Zero);
+          Opnds.push_back(Addr.getOperand(1));
 
-          MachineSDNode *MachineSub
-            = CurDAG->getMachineNode(SubOp, DL, MVT::i32,
-                                     Zero, Addr.getOperand(1));
+          // FIXME: Select to VOP3 version for with-carry.
+          unsigned SubOp = AMDGPU::V_SUB_I32_e32;
+          if (Subtarget->hasAddNoCarry()) {
+            SubOp = AMDGPU::V_SUB_U32_e64;
+            Opnds.push_back(Zero); // clamp bit
+          }
+
+          MachineSDNode *MachineSub =
+              CurDAG->getMachineNode(SubOp, DL, MVT::i32, Opnds);
 
           Base = SDValue(MachineSub, 0);
           Offset = CurDAG->getTargetConstant(ByteOffset, DL, MVT::i16);
@@ -1106,12 +1113,17 @@ bool AMDGPUDAGToDAGISel::SelectDS64Bit4ByteAligned(SDValue Addr, SDValue &Base,
                                       Zero, Addr.getOperand(1));
 
         if (isDSOffsetLegal(Sub, DWordOffset1, 8)) {
-          unsigned SubOp = Subtarget->hasAddNoCarry() ?
-            AMDGPU::V_SUB_U32_e64 : AMDGPU::V_SUB_I32_e32;
+          SmallVector<SDValue, 3> Opnds;
+          Opnds.push_back(Zero);
+          Opnds.push_back(Addr.getOperand(1));
+          unsigned SubOp = AMDGPU::V_SUB_I32_e32;
+          if (Subtarget->hasAddNoCarry()) {
+            SubOp = AMDGPU::V_SUB_U32_e64;
+            Opnds.push_back(Zero); // clamp bit
+          }
 
           MachineSDNode *MachineSub
-            = CurDAG->getMachineNode(SubOp, DL, MVT::i32,
-                                     Zero, Addr.getOperand(1));
+            = CurDAG->getMachineNode(SubOp, DL, MVT::i32, Opnds);
 
           Base = SDValue(MachineSub, 0);
           Offset0 = CurDAG->getTargetConstant(DWordOffset0, DL, MVT::i8);

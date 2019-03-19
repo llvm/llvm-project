@@ -308,7 +308,7 @@ body:             |
   bb.0:
     dead %0:vgpr_32 = V_ADD_I32_e32 12345, undef %1:vgpr_32, implicit-def $vcc, implicit $exec
     %2:sreg_64_xexec = COPY $vcc
-    %3:vgpr_32, dead %4:sreg_64_xexec = V_ADDC_U32_e64 undef %5:vgpr_32, undef %6:vgpr_32, %2, implicit $exec
+    %3:vgpr_32, dead %4:sreg_64_xexec = V_ADDC_U32_e64 undef %5:vgpr_32, undef %6:vgpr_32, %2, 0, implicit $exec
     S_ENDPGM 0, implicit %3
 
 ...

@@ -334,7 +334,8 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
 
   TII->getAddNoCarry(*MBB, Ins, DL, BaseReg)
     .addReg(OffsetReg, RegState::Kill)
-    .addReg(FIReg);
+    .addReg(FIReg)
+    .addImm(0); // clamp bit
 }
 
 void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
@@ -1108,7 +1109,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           if (AMDGPU::isInlinableLiteral32(Offset, ST.hasInv2PiInlineImm())) {
             TII->getAddNoCarry(*MBB, MI, DL, ResultReg)
               .addImm(Offset)
-              .addReg(ScaledReg, RegState::Kill);
+              .addReg(ScaledReg, RegState::Kill)
+              .addImm(0); // clamp bit
           } else {
             unsigned ConstOffsetReg
               = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
@@ -1117,7 +1119,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               .addImm(Offset);
             TII->getAddNoCarry(*MBB, MI, DL, ResultReg)
               .addReg(ConstOffsetReg, RegState::Kill)
-              .addReg(ScaledReg, RegState::Kill);
+              .addReg(ScaledReg, RegState::Kill)
+              .addImm(0); // clamp bit
           }
         }
 

@@ -698,7 +698,7 @@ def : FMADModsPat<V_MAD_F16, AMDGPUfmad_ftz, f16> {
 multiclass SelectPat <ValueType vt, Instruction inst> {
   def : GCNPat <
     (vt (select i1:$src0, vt:$src1, vt:$src2)),
-    (inst $src2, $src1, $src0)
+    (inst (i32 0), $src2, (i32 0), $src1, $src0)
   >;
 }
 
@@ -1104,12 +1104,14 @@ def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
 
 def : GCNPat <
   (i32 (sext i1:$src0)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src0)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                     /*src1mod*/(i32 0), /*src1*/(i32 -1), $src0)
 >;
 
 class Ext32Pat <SDNode ext> : GCNPat <
   (i32 (ext i1:$src0)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src0)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                     /*src1mod*/(i32 0), /*src1*/(i32 1), $src0)
 >;
 
 def : Ext32Pat <zext>;
@@ -1240,8 +1242,9 @@ def : GCNPat <
 class ZExt_i64_i1_Pat <SDNode ext> : GCNPat <
   (i64 (ext i1:$src)),
     (REG_SEQUENCE VReg_64,
-      (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src), sub0,
-      (S_MOV_B32 (i32 0)), sub1)
+      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                         /*src1mod*/(i32 0), /*src1*/(i32 1), $src),
+      sub0, (S_MOV_B32 (i32 0)), sub1)
 >;
 
 
@@ -1259,8 +1262,10 @@ def : GCNPat <
 def : GCNPat <
   (i64 (sext i1:$src)),
   (REG_SEQUENCE VReg_64,
-    (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src), sub0,
-    (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src), sub1)
+    (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                       /*src1mod*/(i32 0), /*src1*/(i32 -1), $src), sub0,
+    (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                       /*src1mod*/(i32 0), /*src1*/(i32 -1), $src), sub1)
 >;
 
 class FPToI1Pat<Instruction Inst, int KOne, ValueType kone_type, ValueType vt, SDPatternOperator fp_to_int> : GCNPat <
@@ -1318,32 +1323,46 @@ def : GCNPat <
 
 def : GCNPat <
   (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_NEG_ONE), $src))
+  (V_CVT_F16_F32_e32 (
+      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
+                        $src))
 >;
 
 def : GCNPat <
   (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_ONE), $src))
+  (V_CVT_F16_F32_e32 (
+      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
+                        $src))
 >;
 
 def : GCNPat <
   (f32 (sint_to_fp i1:$src)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_NEG_ONE), $src)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
+                        $src)
 >;
 
 def : GCNPat <
   (f32 (uint_to_fp i1:$src)),
-  (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_ONE), $src)
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
+                        $src)
 >;
 
 def : GCNPat <
   (f64 (sint_to_fp i1:$src)),
-  (V_CVT_F64_I32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src))
+  (V_CVT_F64_I32_e32 (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                                        /*src1mod*/(i32 0), /*src1*/(i32 -1),
+                                        $src))
 >;
 
 def : GCNPat <
   (f64 (uint_to_fp i1:$src)),
-  (V_CVT_F64_U32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src))
+  (V_CVT_F64_U32_e32 (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                                        /*src1mod*/(i32 0), /*src1*/(i32 1),
+                                        $src))
 >;
 
 //===----------------------------------------------------------------------===//
