@@ -93,6 +93,8 @@ private:
   void onRename(const RenameParams &, Callback<WorkspaceEdit>);
   void onHover(const TextDocumentPositionParams &,
                Callback<llvm::Optional<Hover>>);
+  void onTypeHierarchy(const TypeHierarchyParams &,
+                       Callback<llvm::Optional<TypeHierarchyItem>>);
   void onChangeConfiguration(const DidChangeConfigurationParams &);
   void onSymbolInfo(const TextDocumentPositionParams &,
                     Callback<std::vector<SymbolDetails>>);

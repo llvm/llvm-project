@@ -132,3 +132,32 @@ SBFrame SBExecutionContext::GetFrame() const {
   }
   return LLDB_RECORD_RESULT(sb_frame);
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBExecutionContext>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext,
+                            (const lldb::SBExecutionContext &));
+  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext,
+                            (lldb::ExecutionContextRefSP));
+  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext, (const lldb::SBTarget &));
+  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext, (const lldb::SBProcess &));
+  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext, (lldb::SBThread));
+  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext, (const lldb::SBFrame &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBExecutionContext &,
+      SBExecutionContext, operator=,(const lldb::SBExecutionContext &));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBTarget, SBExecutionContext, GetTarget,
+                             ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBProcess, SBExecutionContext, GetProcess,
+                             ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBThread, SBExecutionContext, GetThread,
+                             ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBFrame, SBExecutionContext, GetFrame, ());
+}
+
+}
+}

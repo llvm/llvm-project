@@ -506,6 +506,23 @@ LLVM_DUMP_METHOD
 void DIELabel::print(raw_ostream &O) const { O << "Lbl: " << Label->getName(); }
 
 //===----------------------------------------------------------------------===//
+// DIEBaseTypeRef Implementation
+//===----------------------------------------------------------------------===//
+
+void DIEBaseTypeRef::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
+  uint64_t Offset = CU->ExprRefedBaseTypes[Index].Die->getOffset();
+  assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
+  AP->EmitULEB128(Offset, nullptr, ULEB128PadSize);
+}
+
+unsigned DIEBaseTypeRef::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
+  return ULEB128PadSize;
+}
+
+LLVM_DUMP_METHOD
+void DIEBaseTypeRef::print(raw_ostream &O) const { O << "BaseTypeRef: " << Index; }
+
+//===----------------------------------------------------------------------===//
 // DIEDelta Implementation
 //===----------------------------------------------------------------------===//
 

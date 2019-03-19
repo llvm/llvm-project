@@ -368,6 +368,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                   {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND,
                    ExecuteCommandParams::CLANGD_APPLY_TWEAK}},
              }},
+            {"typeHierarchyProvider", true},
         }}}});
 }
 
@@ -806,6 +807,13 @@ void ClangdLSPServer::onHover(const TextDocumentPositionParams &Params,
                     std::move(Reply));
 }
 
+void ClangdLSPServer::onTypeHierarchy(
+    const TypeHierarchyParams &Params,
+    Callback<Optional<TypeHierarchyItem>> Reply) {
+  Server->typeHierarchy(Params.textDocument.uri.file(), Params.position,
+                        Params.resolve, Params.direction, std::move(Reply));
+}
+
 void ClangdLSPServer::applyConfiguration(
     const ConfigurationSettings &Settings) {
   // Per-file update to the compilation database.
@@ -885,6 +893,7 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   MsgHandler->bind("workspace/didChangeWatchedFiles", &ClangdLSPServer::onFileEvent);
   MsgHandler->bind("workspace/didChangeConfiguration", &ClangdLSPServer::onChangeConfiguration);
   MsgHandler->bind("textDocument/symbolInfo", &ClangdLSPServer::onSymbolInfo);
+  MsgHandler->bind("textDocument/typeHierarchy", &ClangdLSPServer::onTypeHierarchy);
   // clang-format on
 }
 

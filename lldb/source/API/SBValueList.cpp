@@ -202,3 +202,30 @@ ValueListImpl &SBValueList::ref() {
   CreateIfNeeded();
   return *m_opaque_up;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBValueList>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBValueList, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBValueList, (const lldb::SBValueList &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBValueList, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBValueList, operator bool, ());
+  LLDB_REGISTER_METHOD(void, SBValueList, Clear, ());
+  LLDB_REGISTER_METHOD(const lldb::SBValueList &,
+                       SBValueList, operator=,(const lldb::SBValueList &));
+  LLDB_REGISTER_METHOD(void, SBValueList, Append, (const lldb::SBValue &));
+  LLDB_REGISTER_METHOD(void, SBValueList, Append,
+                       (const lldb::SBValueList &));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBValue, SBValueList, GetValueAtIndex,
+                             (uint32_t));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBValueList, GetSize, ());
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValueList, FindValueObjectByUID,
+                       (lldb::user_id_t));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBValue, SBValueList, GetFirstValueByName,
+                             (const char *));
+}
+
+}
+}

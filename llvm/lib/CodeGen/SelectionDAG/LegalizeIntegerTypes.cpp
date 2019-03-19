@@ -150,6 +150,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::USUBSAT:     Res = PromoteIntRes_ADDSUBSAT(N); break;
   case ISD::SMULFIX:
   case ISD::UMULFIX:     Res = PromoteIntRes_MULFIX(N); break;
+  case ISD::ABS:         Res = PromoteIntRes_ABS(N); break;
 
   case ISD::ATOMIC_LOAD:
     Res = PromoteIntRes_Atomic0(cast<AtomicSDNode>(N)); break;
@@ -939,6 +940,11 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBCARRY(SDNode *N, unsigned ResNo) {
   return SDValue(Res.getNode(), 0);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntRes_ABS(SDNode *N) {
+  SDValue Op0 = SExtPromotedInteger(N->getOperand(0));
+  return DAG.getNode(ISD::ABS, SDLoc(N), Op0.getValueType(), Op0);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntRes_XMULO(SDNode *N, unsigned ResNo) {
   // Promote the overflow bit trivially.
   if (ResNo == 1)
@@ -1582,6 +1588,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::BITREVERSE:  ExpandIntRes_BITREVERSE(N, Lo, Hi); break;
   case ISD::BSWAP:       ExpandIntRes_BSWAP(N, Lo, Hi); break;
   case ISD::Constant:    ExpandIntRes_Constant(N, Lo, Hi); break;
+  case ISD::ABS:         ExpandIntRes_ABS(N, Lo, Hi); break;
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTLZ:        ExpandIntRes_CTLZ(N, Lo, Hi); break;
   case ISD::CTPOP:       ExpandIntRes_CTPOP(N, Lo, Hi); break;
@@ -2340,6 +2347,25 @@ void DAGTypeLegalizer::ExpandIntRes_Constant(SDNode *N,
   Lo = DAG.getConstant(Cst.trunc(NBitWidth), dl, NVT, IsTarget, IsOpaque);
   Hi = DAG.getConstant(Cst.lshr(NBitWidth).trunc(NBitWidth), dl, NVT, IsTarget,
                        IsOpaque);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_ABS(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDLoc dl(N);
+
+  // abs(HiLo) -> (Hi < 0 ? -HiLo : HiLo)
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  SDValue Neg = DAG.getNode(ISD::SUB, dl, VT,
+                            DAG.getConstant(0, dl, VT), N0);
+  SDValue NegLo, NegHi;
+  SplitInteger(Neg, NegLo, NegHi);
+
+  GetExpandedInteger(N0, Lo, Hi);
+  EVT NVT = Lo.getValueType();
+  SDValue HiIsNeg = DAG.getSetCC(dl, getSetCCResultType(NVT),
+                                 DAG.getConstant(0, dl, NVT), Hi, ISD::SETGT);
+  Lo = DAG.getSelect(dl, NVT, HiIsNeg, NegLo, Lo);
+  Hi = DAG.getSelect(dl, NVT, HiIsNeg, NegHi, Hi);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_CTLZ(SDNode *N,

@@ -52,19 +52,8 @@
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
-#include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
-#include "llvm/ADT/PriorityQueue.h"
-#include "llvm/ADT/SCCIterator.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-fix-irreducible-control-flow"
@@ -94,22 +83,27 @@ public:
     calculate();
   }
 
-  bool canReach(MachineBasicBlock *From, MachineBasicBlock *To) {
+  bool canReach(MachineBasicBlock *From, MachineBasicBlock *To) const {
     assert(inRegion(From) && inRegion(To));
-    return Reachable[From].count(To);
+    auto I = Reachable.find(From);
+    if (I == Reachable.end())
+      return false;
+    return I->second.count(To);
   }
 
   // "Loopers" are blocks that are in a loop. We detect these by finding blocks
   // that can reach themselves.
-  const BlockSet &getLoopers() { return Loopers; }
+  const BlockSet &getLoopers() const { return Loopers; }
 
   // Get all blocks that are loop entries.
-  const BlockSet &getLoopEntries() { return LoopEntries; }
+  const BlockSet &getLoopEntries() const { return LoopEntries; }
 
   // Get all blocks that enter a particular loop from outside.
-  const BlockSet &getLoopEnterers(MachineBasicBlock *LoopEntry) {
+  const BlockSet &getLoopEnterers(MachineBasicBlock *LoopEntry) const {
     assert(inRegion(LoopEntry));
-    return LoopEnterers[LoopEntry];
+    auto I = LoopEnterers.find(LoopEntry);
+    assert(I != LoopEnterers.end());
+    return I->second;
   }
 
 private:
@@ -119,7 +113,7 @@ private:
   BlockSet Loopers, LoopEntries;
   DenseMap<MachineBasicBlock *, BlockSet> LoopEnterers;
 
-  bool inRegion(MachineBasicBlock *MBB) { return Blocks.count(MBB); }
+  bool inRegion(MachineBasicBlock *MBB) const { return Blocks.count(MBB); }
 
   // Maps a block to all the other blocks it can reach.
   DenseMap<MachineBasicBlock *, BlockSet> Reachable;
@@ -353,8 +347,8 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
 
   // Add the jump table.
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
-  MachineInstrBuilder MIB = BuildMI(*Dispatch, Dispatch->end(), DebugLoc(),
-                                    TII.get(WebAssembly::BR_TABLE_I32));
+  MachineInstrBuilder MIB =
+      BuildMI(Dispatch, DebugLoc(), TII.get(WebAssembly::BR_TABLE_I32));
 
   // Add the register which will be used to tell the jump table which block to
   // jump to.
@@ -406,11 +400,9 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
 
       // Set the jump table's register of the index of the block we wish to
       // jump to, and jump to the jump table.
-      BuildMI(*Split, Split->end(), DebugLoc(), TII.get(WebAssembly::CONST_I32),
-              Reg)
+      BuildMI(Split, DebugLoc(), TII.get(WebAssembly::CONST_I32), Reg)
           .addImm(Indices[Entry]);
-      BuildMI(*Split, Split->end(), DebugLoc(), TII.get(WebAssembly::BR))
-          .addMBB(Dispatch);
+      BuildMI(Split, DebugLoc(), TII.get(WebAssembly::BR)).addMBB(Dispatch);
       Split->addSuccessor(Dispatch);
       Map[Entry] = Split;
     }

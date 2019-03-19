@@ -3045,8 +3045,15 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     std::swap(LHS, RHS);
     Pred = CmpInst::getSwappedPredicate(Pred);
   }
+  assert(!isa<UndefValue>(LHS) && "Unexpected icmp undef,%X");
 
   Type *ITy = GetCompareTy(LHS); // The return type.
+
+  // For EQ and NE, we can always pick a value for the undef to make the
+  // predicate pass or fail, so we can return undef.
+  // Matches behavior in llvm::ConstantFoldCompareInstruction.
+  if (isa<UndefValue>(RHS) && ICmpInst::isEquality(Pred))
+    return UndefValue::get(ITy);
 
   // icmp X, X -> true/false
   // icmp X, undef -> true/false because undef could be X.

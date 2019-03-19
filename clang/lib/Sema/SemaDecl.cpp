@@ -5964,10 +5964,24 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
   }
 
   if (const InheritableAttr *Attr = getDLLAttr(&ND)) {
+    auto *VD = dyn_cast<VarDecl>(&ND);
+    bool IsAnonymousNS = false;
+    bool IsMicrosoft = S.Context.getTargetInfo().getCXXABI().isMicrosoft();
+    if (VD) {
+      const NamespaceDecl *NS = dyn_cast<NamespaceDecl>(VD->getDeclContext());
+      while (NS && !IsAnonymousNS) {
+        IsAnonymousNS = NS->isAnonymousNamespace();
+        NS = dyn_cast<NamespaceDecl>(NS->getParent());
+      }
+    }
     // dll attributes require external linkage. Static locals may have external
     // linkage but still cannot be explicitly imported or exported.
-    auto *VD = dyn_cast<VarDecl>(&ND);
-    if (!ND.isExternallyVisible() || (VD && VD->isStaticLocal())) {
+    // In Microsoft mode, a variable defined in anonymous namespace must have
+    // external linkage in order to be exported.
+    bool AnonNSInMicrosoftMode = IsAnonymousNS && IsMicrosoft;
+    if ((ND.isExternallyVisible() && AnonNSInMicrosoftMode) ||
+        (!AnonNSInMicrosoftMode &&
+         (!ND.isExternallyVisible() || (VD && VD->isStaticLocal())))) {
       S.Diag(ND.getLocation(), diag::err_attribute_dll_not_extern)
         << &ND << Attr;
       ND.setInvalidDecl();
@@ -11375,6 +11389,14 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
         !(getLangOpts().CPlusPlus && VDecl->isExternC()) &&
         !isTemplateInstantiation(VDecl->getTemplateSpecializationKind()))
       Diag(VDecl->getLocation(), diag::warn_extern_init);
+
+    // In Microsoft C++ mode, a const variable defined in namespace scope has
+    // external linkage by default if the variable is declared with
+    // __declspec(dllexport).
+    if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+        getLangOpts().CPlusPlus && VDecl->getType().isConstQualified() &&
+        VDecl->hasAttr<DLLExportAttr>() && VDecl->getDefinition())
+      VDecl->setStorageClass(SC_Extern);
 
     // C99 6.7.8p4. All file scoped initializers need to be constant.
     if (!getLangOpts().CPlusPlus && !VDecl->isInvalidDecl())

@@ -42,11 +42,11 @@ void AsmPrinter::EmitSLEB128(int64_t Value, const char *Desc) const {
   OutStreamer->EmitSLEB128IntValue(Value);
 }
 
-void AsmPrinter::EmitULEB128(uint64_t Value, const char *Desc) const {
+void AsmPrinter::EmitULEB128(uint64_t Value, const char *Desc, unsigned PadTo) const {
   if (isVerbose() && Desc)
     OutStreamer->AddComment(Desc);
 
-  OutStreamer->EmitULEB128IntValue(Value);
+  OutStreamer->EmitULEB128IntValue(Value, PadTo);
 }
 
 /// Emit something like ".uleb128 Hi-Lo".

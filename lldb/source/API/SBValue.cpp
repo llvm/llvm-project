@@ -1561,3 +1561,130 @@ lldb::SBValue SBValue::Persist() {
   }
   return LLDB_RECORD_RESULT(persisted_sb);
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBValue>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBValue, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBValue, (const lldb::ValueObjectSP &));
+  LLDB_REGISTER_CONSTRUCTOR(SBValue, (const lldb::SBValue &));
+  LLDB_REGISTER_METHOD(lldb::SBValue &,
+                       SBValue, operator=,(const lldb::SBValue &));
+  LLDB_REGISTER_METHOD(bool, SBValue, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBValue, operator bool, ());
+  LLDB_REGISTER_METHOD(void, SBValue, Clear, ());
+  LLDB_REGISTER_METHOD(lldb::SBError, SBValue, GetError, ());
+  LLDB_REGISTER_METHOD(lldb::user_id_t, SBValue, GetID, ());
+  LLDB_REGISTER_METHOD(const char *, SBValue, GetName, ());
+  LLDB_REGISTER_METHOD(const char *, SBValue, GetTypeName, ());
+  LLDB_REGISTER_METHOD(const char *, SBValue, GetDisplayTypeName, ());
+  LLDB_REGISTER_METHOD(size_t, SBValue, GetByteSize, ());
+  LLDB_REGISTER_METHOD(bool, SBValue, IsInScope, ());
+  LLDB_REGISTER_METHOD(const char *, SBValue, GetValue, ());
+  LLDB_REGISTER_METHOD(lldb::ValueType, SBValue, GetValueType, ());
+  LLDB_REGISTER_METHOD(const char *, SBValue, GetObjectDescription, ());
+  LLDB_REGISTER_METHOD(const char *, SBValue, GetTypeValidatorResult, ());
+  LLDB_REGISTER_METHOD(lldb::SBType, SBValue, GetType, ());
+  LLDB_REGISTER_METHOD(bool, SBValue, GetValueDidChange, ());
+  LLDB_REGISTER_METHOD(const char *, SBValue, GetSummary, ());
+  LLDB_REGISTER_METHOD(const char *, SBValue, GetSummary,
+                       (lldb::SBStream &, lldb::SBTypeSummaryOptions &));
+  LLDB_REGISTER_METHOD(const char *, SBValue, GetLocation, ());
+  LLDB_REGISTER_METHOD(bool, SBValue, SetValueFromCString, (const char *));
+  LLDB_REGISTER_METHOD(bool, SBValue, SetValueFromCString,
+                       (const char *, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBTypeFormat, SBValue, GetTypeFormat, ());
+  LLDB_REGISTER_METHOD(lldb::SBTypeSummary, SBValue, GetTypeSummary, ());
+  LLDB_REGISTER_METHOD(lldb::SBTypeFilter, SBValue, GetTypeFilter, ());
+  LLDB_REGISTER_METHOD(lldb::SBTypeSynthetic, SBValue, GetTypeSynthetic, ());
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, CreateChildAtOffset,
+                       (const char *, uint32_t, lldb::SBType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, Cast, (lldb::SBType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, CreateValueFromExpression,
+                       (const char *, const char *));
+  LLDB_REGISTER_METHOD(
+      lldb::SBValue, SBValue, CreateValueFromExpression,
+      (const char *, const char *, lldb::SBExpressionOptions &));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, CreateValueFromAddress,
+                       (const char *, lldb::addr_t, lldb::SBType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, CreateValueFromData,
+                       (const char *, lldb::SBData, lldb::SBType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, GetChildAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, GetChildAtIndex,
+                       (uint32_t, lldb::DynamicValueType, bool));
+  LLDB_REGISTER_METHOD(uint32_t, SBValue, GetIndexOfChildWithName,
+                       (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, GetChildMemberWithName,
+                       (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, GetChildMemberWithName,
+                       (const char *, lldb::DynamicValueType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, GetDynamicValue,
+                       (lldb::DynamicValueType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, GetStaticValue, ());
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, GetNonSyntheticValue, ());
+  LLDB_REGISTER_METHOD(lldb::DynamicValueType, SBValue, GetPreferDynamicValue,
+                       ());
+  LLDB_REGISTER_METHOD(void, SBValue, SetPreferDynamicValue,
+                       (lldb::DynamicValueType));
+  LLDB_REGISTER_METHOD(bool, SBValue, GetPreferSyntheticValue, ());
+  LLDB_REGISTER_METHOD(void, SBValue, SetPreferSyntheticValue, (bool));
+  LLDB_REGISTER_METHOD(bool, SBValue, IsDynamic, ());
+  LLDB_REGISTER_METHOD(bool, SBValue, IsSynthetic, ());
+  LLDB_REGISTER_METHOD(bool, SBValue, IsSyntheticChildrenGenerated, ());
+  LLDB_REGISTER_METHOD(void, SBValue, SetSyntheticChildrenGenerated, (bool));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, GetValueForExpressionPath,
+                       (const char *));
+  LLDB_REGISTER_METHOD(int64_t, SBValue, GetValueAsSigned,
+                       (lldb::SBError &, int64_t));
+  LLDB_REGISTER_METHOD(uint64_t, SBValue, GetValueAsUnsigned,
+                       (lldb::SBError &, uint64_t));
+  LLDB_REGISTER_METHOD(int64_t, SBValue, GetValueAsSigned, (int64_t));
+  LLDB_REGISTER_METHOD(uint64_t, SBValue, GetValueAsUnsigned, (uint64_t));
+  LLDB_REGISTER_METHOD(bool, SBValue, MightHaveChildren, ());
+  LLDB_REGISTER_METHOD(bool, SBValue, IsRuntimeSupportValue, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBValue, GetNumChildren, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBValue, GetNumChildren, (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, Dereference, ());
+  LLDB_REGISTER_METHOD(bool, SBValue, TypeIsPointerType, ());
+  LLDB_REGISTER_METHOD(void *, SBValue, GetOpaqueType, ());
+  LLDB_REGISTER_METHOD(lldb::SBTarget, SBValue, GetTarget, ());
+  LLDB_REGISTER_METHOD(lldb::SBProcess, SBValue, GetProcess, ());
+  LLDB_REGISTER_METHOD(lldb::SBThread, SBValue, GetThread, ());
+  LLDB_REGISTER_METHOD(lldb::SBFrame, SBValue, GetFrame, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::ValueObjectSP, SBValue, GetSP, ());
+  LLDB_REGISTER_METHOD(bool, SBValue, GetExpressionPath, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(bool, SBValue, GetExpressionPath,
+                       (lldb::SBStream &, bool));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBValue, SBValue, EvaluateExpression,
+                             (const char *));
+  LLDB_REGISTER_METHOD_CONST(
+      lldb::SBValue, SBValue, EvaluateExpression,
+      (const char *, const lldb::SBExpressionOptions &));
+  LLDB_REGISTER_METHOD_CONST(
+      lldb::SBValue, SBValue, EvaluateExpression,
+      (const char *, const lldb::SBExpressionOptions &, const char *));
+  LLDB_REGISTER_METHOD(bool, SBValue, GetDescription, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(lldb::Format, SBValue, GetFormat, ());
+  LLDB_REGISTER_METHOD(void, SBValue, SetFormat, (lldb::Format));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, AddressOf, ());
+  LLDB_REGISTER_METHOD(lldb::addr_t, SBValue, GetLoadAddress, ());
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBValue, GetAddress, ());
+  LLDB_REGISTER_METHOD(lldb::SBData, SBValue, GetPointeeData,
+                       (uint32_t, uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBData, SBValue, GetData, ());
+  LLDB_REGISTER_METHOD(bool, SBValue, SetData,
+                       (lldb::SBData &, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBDeclaration, SBValue, GetDeclaration, ());
+  LLDB_REGISTER_METHOD(lldb::SBWatchpoint, SBValue, Watch,
+                       (bool, bool, bool, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBWatchpoint, SBValue, Watch,
+                       (bool, bool, bool));
+  LLDB_REGISTER_METHOD(lldb::SBWatchpoint, SBValue, WatchPointee,
+                       (bool, bool, bool, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBValue, Persist, ());
+}
+
+}
+}

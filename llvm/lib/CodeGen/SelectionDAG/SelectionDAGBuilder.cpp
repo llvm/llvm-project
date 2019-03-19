@@ -3210,6 +3210,8 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
   ISD::NodeType OpCode = Cond.getValueType().isVector() ?
     ISD::VSELECT : ISD::SELECT;
 
+  bool IsUnaryAbs = false;
+
   // Min/max matching is only viable if all output VTs are the same.
   if (is_splat(ValueVTs)) {
     EVT VT = ValueVTs[0];
@@ -3270,10 +3272,16 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
         break;
       }
       break;
+    case SPF_ABS:
+      IsUnaryAbs = true;
+      Opc = ISD::ABS;
+      break;
+    case SPF_NABS:
+      // TODO: we need to produce sub(0, abs(X)).
     default: break;
     }
 
-    if (Opc != ISD::DELETED_NODE &&
+    if (!IsUnaryAbs && Opc != ISD::DELETED_NODE &&
         (TLI.isOperationLegalOrCustom(Opc, VT) ||
          (UseScalarMinMax &&
           TLI.isOperationLegalOrCustom(Opc, VT.getScalarType()))) &&
@@ -3286,15 +3294,30 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       RHSVal = getValue(RHS);
       BaseOps = {};
     }
+
+    if (IsUnaryAbs) {
+      OpCode = Opc;
+      LHSVal = getValue(LHS);
+      BaseOps = {};
+    }
   }
 
-  for (unsigned i = 0; i != NumValues; ++i) {
-    SmallVector<SDValue, 3> Ops(BaseOps.begin(), BaseOps.end());
-    Ops.push_back(SDValue(LHSVal.getNode(), LHSVal.getResNo() + i));
-    Ops.push_back(SDValue(RHSVal.getNode(), RHSVal.getResNo() + i));
-    Values[i] = DAG.getNode(OpCode, getCurSDLoc(),
-                            LHSVal.getNode()->getValueType(LHSVal.getResNo()+i),
-                            Ops);
+  if (IsUnaryAbs) {
+    for (unsigned i = 0; i != NumValues; ++i) {
+      Values[i] =
+          DAG.getNode(OpCode, getCurSDLoc(),
+                      LHSVal.getNode()->getValueType(LHSVal.getResNo() + i),
+                      SDValue(LHSVal.getNode(), LHSVal.getResNo() + i));
+    }
+  } else {
+    for (unsigned i = 0; i != NumValues; ++i) {
+      SmallVector<SDValue, 3> Ops(BaseOps.begin(), BaseOps.end());
+      Ops.push_back(SDValue(LHSVal.getNode(), LHSVal.getResNo() + i));
+      Ops.push_back(SDValue(RHSVal.getNode(), RHSVal.getResNo() + i));
+      Values[i] = DAG.getNode(
+          OpCode, getCurSDLoc(),
+          LHSVal.getNode()->getValueType(LHSVal.getResNo() + i), Ops);
+    }
   }
 
   setValue(&I, DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),

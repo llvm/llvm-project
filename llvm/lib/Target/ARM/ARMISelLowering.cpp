@@ -1207,6 +1207,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setPrefLoopAlignment(Subtarget->getPrefLoopAlignment());
 
   setMinFunctionAlignment(Subtarget->isThumb() ? 1 : 2);
+
+  if (Subtarget->isThumb() || Subtarget->isThumb2())
+    setTargetDAGCombine(ISD::ABS);
 }
 
 bool ARMTargetLowering::useSoftFloat() const {
@@ -8180,6 +8183,10 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   case ISD::INTRINSIC_WO_CHAIN:
     return ReplaceLongIntrinsic(N, Results, DAG);
+  case ISD::ABS:
+     lowerABS(N, Results, DAG);
+     return ;
+
   }
   if (Res.getNode())
     Results.push_back(Res);
@@ -10375,6 +10382,19 @@ static SDValue PerformAddeSubeCombine(SDNode *N,
     return AddCombineTo64bitMLAL(N, DCI, Subtarget);
   }
   return SDValue();
+}
+
+static SDValue PerformABSCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const ARMSubtarget *Subtarget) {
+  SDValue res;
+  SelectionDAG &DAG = DCI.DAG;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  if (!TLI.expandABS(N, res, DAG))
+    return SDValue();
+
+  return res;
 }
 
 /// PerformADDECombine - Target-specific dag combine transform from
@@ -12884,6 +12904,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
   default: break;
+  case ISD::ABS:        return PerformABSCombine(N, DCI, Subtarget);
   case ARMISD::ADDE:    return PerformADDECombine(N, DCI, Subtarget);
   case ARMISD::UMLAL:   return PerformUMLALCombine(N, DCI.DAG, Subtarget);
   case ISD::ADD:        return PerformADDCombine(N, DCI, Subtarget);
@@ -14393,6 +14414,38 @@ SDValue ARMTargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   SDValue SrcVal = Op.getOperand(0);
   return makeLibCall(DAG, LC, Op.getValueType(), SrcVal, /*isSigned*/ false,
                      SDLoc(Op)).first;
+}
+
+void ARMTargetLowering::lowerABS(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                                 SelectionDAG &DAG) const {
+  assert(N->getValueType(0) == MVT::i64 && "Unexpected type (!= i64) on ABS.");
+  MVT HalfT = MVT::i32;
+  SDLoc dl(N);
+  SDValue Hi, Lo, Tmp;
+
+  if (!isOperationLegalOrCustom(ISD::ADDCARRY, HalfT) ||
+      !isOperationLegalOrCustom(ISD::UADDO, HalfT))
+    return ;
+
+  unsigned OpTypeBits = HalfT.getScalarSizeInBits();
+  SDVTList VTList = DAG.getVTList(HalfT, MVT::i1);
+
+  Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HalfT, N->getOperand(0),
+                   DAG.getConstant(0, dl, HalfT));
+  Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HalfT, N->getOperand(0),
+                   DAG.getConstant(1, dl, HalfT));
+
+  Tmp = DAG.getNode(ISD::SRA, dl, HalfT, Hi,
+                    DAG.getConstant(OpTypeBits - 1, dl,
+                    getShiftAmountTy(HalfT, DAG.getDataLayout())));
+  Lo = DAG.getNode(ISD::UADDO, dl, VTList, Tmp, Lo);
+  Hi = DAG.getNode(ISD::ADDCARRY, dl, VTList, Tmp, Hi,
+                   SDValue(Lo.getNode(), 1));
+  Hi = DAG.getNode(ISD::XOR, dl, HalfT, Tmp, Hi);
+  Lo = DAG.getNode(ISD::XOR, dl, HalfT, Tmp, Lo);
+
+  Results.push_back(Lo);
+  Results.push_back(Hi);
 }
 
 bool

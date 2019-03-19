@@ -132,10 +132,32 @@ if(MSVC)
     set(GEN_UNDERSCORE "")
   endif()
 
+  # Set this name here, not used in multi conf loop,
+  # but add script will pick the right one.
+  set(LIBSFILE ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.args)
+
   # Get the full name to the libs so the python script understands them.
   foreach(lib ${LIB_NAMES})
     list(APPEND FULL_LIB_NAMES ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/${lib}.lib)
   endforeach()
+
+  # Need to seperate lib names with newlines.
+  string(REPLACE ";" "\n" FILE_CONTENT "${FULL_LIB_NAMES}")
+
+  if(NOT "${CMAKE_CFG_INTDIR}" STREQUAL ".")
+    foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
+      # Replace the special string with a per config directory.
+      string(REPLACE ${CMAKE_CFG_INTDIR} ${BUILD_MODE} PER_CONF_CONTENT "${FILE_CONTENT}")
+
+      # Write out the full lib names into file to be read by the python script.
+      # One libsfile per build, the add_custom_command should expand
+      # ${CMAKE_CFG_INTDIR} correctly and select the right one.
+      file(WRITE ${CMAKE_BINARY_DIR}/${BUILD_MODE}/libllvm-c.args "${PER_CONF_CONTENT}")
+    endforeach()
+  else()
+    # Write out the full lib names into file to be read by the python script.
+    file(WRITE ${LIBSFILE} "${FILE_CONTENT}")
+  endif()
 
   # Generate the exports file dynamically.
   set(GEN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/gen-msvc-exports.py)
@@ -143,7 +165,7 @@ if(MSVC)
   set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.exports)
 
   add_custom_command(OUTPUT ${LLVM_EXPORTED_SYMBOL_FILE}
-    COMMAND ${PYTHON_EXECUTABLE} ${GEN_SCRIPT} ${FULL_LIB_NAMES} ${GEN_UNDERSCORE} --nm ${LLVM_TOOLS_BINARY_DIR}/llvm-nm -o ${LLVM_EXPORTED_SYMBOL_FILE}
+    COMMAND ${PYTHON_EXECUTABLE} ${GEN_SCRIPT} --libsfile ${LIBSFILE} ${GEN_UNDERSCORE} --nm ${LLVM_TOOLS_BINARY_DIR}/llvm-nm -o ${LLVM_EXPORTED_SYMBOL_FILE}
     DEPENDS ${LIB_NAMES} llvm-nm
     COMMENT "Generating export list for LLVM-C"
     VERBATIM )

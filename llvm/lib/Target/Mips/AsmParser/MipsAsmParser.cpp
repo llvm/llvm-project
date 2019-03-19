@@ -28,6 +28,7 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
+#include "llvm/MC/MCParser/MCAsmParserUtils.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -6803,7 +6804,6 @@ bool MipsAsmParser::parseSetHardFloatDirective() {
 
 bool MipsAsmParser::parseSetAssignment() {
   StringRef Name;
-  const MCExpr *Value;
   MCAsmParser &Parser = getParser();
 
   if (Parser.parseIdentifier(Name))
@@ -6821,16 +6821,15 @@ bool MipsAsmParser::parseSetAssignment() {
     RegisterSets[Name] = Parser.getTok();
     Parser.Lex(); // Eat identifier.
     getContext().getOrCreateSymbol(Name);
-  } else if (!Parser.parseExpression(Value)) {
-    // Parse assignment of an expression including
-    // symbolic registers:
-    //   .set  $tmp, $BB0-$BB1
-    //   .set  r2, $f2
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-    Sym->setVariableValue(Value);
-  } else {
-    return reportParseError("expected valid expression after comma");
+    return false;
   }
+
+  MCSymbol *Sym;
+  const MCExpr *Value;
+  if (MCParserUtils::parseAssignmentExpression(Name, /* allow_redef */ true,
+                                               Parser, Sym, Value))
+    return true;
+  Sym->setVariableValue(Value);
 
   return false;
 }

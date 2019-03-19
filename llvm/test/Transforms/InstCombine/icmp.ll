@@ -67,11 +67,32 @@ define i32 @test4(i32 %X) {
 }
 
 ; PR4837
-define <2 x i1> @test5(<2 x i64> %x) {
-; CHECK-LABEL: @test5(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+define <2 x i1> @test5_eq(<2 x i64> %x) {
+; CHECK-LABEL: @test5_eq(
+; CHECK-NEXT:    ret <2 x i1> undef
 ;
   %V = icmp eq <2 x i64> %x, undef
+  ret <2 x i1> %V
+}
+define <2 x i1> @test5_ne(<2 x i64> %x) {
+; CHECK-LABEL: @test5_ne(
+; CHECK-NEXT:    ret <2 x i1> undef
+;
+  %V = icmp ne <2 x i64> %x, undef
+  ret <2 x i1> %V
+}
+define <2 x i1> @test5_ugt(<2 x i64> %x) {
+; CHECK-LABEL: @test5_ugt(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %V = icmp ugt <2 x i64> %x, undef
+  ret <2 x i1> %V
+}
+define <2 x i1> @test5_zero() {
+; CHECK-LABEL: @test5_zero(
+; CHECK-NEXT:    ret <2 x i1> undef
+;
+  %V = icmp eq <2 x i64> zeroinitializer, undef
   ret <2 x i1> %V
 }
 

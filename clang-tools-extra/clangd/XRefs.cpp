@@ -7,13 +7,16 @@
 //===----------------------------------------------------------------------===//
 #include "XRefs.h"
 #include "AST.h"
+#include "FindSymbols.h"
 #include "Logger.h"
 #include "SourceCode.h"
 #include "URI.h"
 #include "index/Merge.h"
+#include "index/SymbolCollector.h"
 #include "index/SymbolLocation.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/IndexingAction.h"
@@ -824,6 +827,136 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LocatedSymbol &S) {
   if (S.Definition)
     OS << " def=" << *S.Definition;
   return OS;
+}
+
+// FIXME(nridge): Reduce duplication between this function and declToSym().
+static llvm::Optional<TypeHierarchyItem>
+declToTypeHierarchyItem(ASTContext &Ctx, const NamedDecl &ND) {
+  auto &SM = Ctx.getSourceManager();
+
+  SourceLocation NameLoc = findNameLoc(&ND);
+  // getFileLoc is a good choice for us, but we also need to make sure
+  // sourceLocToPosition won't switch files, so we call getSpellingLoc on top of
+  // that to make sure it does not switch files.
+  // FIXME: sourceLocToPosition should not switch files!
+  SourceLocation BeginLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getBeginLoc()));
+  SourceLocation EndLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getEndLoc()));
+  if (NameLoc.isInvalid() || BeginLoc.isInvalid() || EndLoc.isInvalid())
+    return llvm::None;
+
+  Position NameBegin = sourceLocToPosition(SM, NameLoc);
+  Position NameEnd = sourceLocToPosition(
+      SM, Lexer::getLocForEndOfToken(NameLoc, 0, SM, Ctx.getLangOpts()));
+
+  index::SymbolInfo SymInfo = index::getSymbolInfo(&ND);
+  // FIXME: this is not classifying constructors, destructors and operators
+  //        correctly (they're all "methods").
+  SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo.Kind);
+
+  TypeHierarchyItem THI;
+  THI.name = printName(Ctx, ND);
+  THI.kind = SK;
+  THI.deprecated = ND.isDeprecated();
+  THI.range =
+      Range{sourceLocToPosition(SM, BeginLoc), sourceLocToPosition(SM, EndLoc)};
+  THI.selectionRange = Range{NameBegin, NameEnd};
+  if (!THI.range.contains(THI.selectionRange)) {
+    // 'selectionRange' must be contained in 'range', so in cases where clang
+    // reports unrelated ranges we need to reconcile somehow.
+    THI.range = THI.selectionRange;
+  }
+
+  auto FilePath =
+      getCanonicalPath(SM.getFileEntryForID(SM.getFileID(BeginLoc)), SM);
+  auto TUPath = getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
+  if (!FilePath || !TUPath)
+    return llvm::None; // Not useful without a uri.
+  THI.uri = URIForFile::canonicalize(*FilePath, *TUPath);
+
+  return THI;
+}
+
+static Optional<TypeHierarchyItem> getTypeAncestors(const CXXRecordDecl &CXXRD,
+                                                    ASTContext &ASTCtx) {
+  Optional<TypeHierarchyItem> Result = declToTypeHierarchyItem(ASTCtx, CXXRD);
+  if (!Result)
+    return Result;
+
+  Result->parents.emplace();
+
+  for (const CXXRecordDecl *ParentDecl : typeParents(&CXXRD)) {
+    if (Optional<TypeHierarchyItem> ParentSym =
+            getTypeAncestors(*ParentDecl, ASTCtx)) {
+      Result->parents->emplace_back(std::move(*ParentSym));
+    }
+  }
+
+  return Result;
+}
+
+const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos) {
+  ASTContext &ASTCtx = AST.getASTContext();
+  const SourceManager &SourceMgr = ASTCtx.getSourceManager();
+  SourceLocation SourceLocationBeg =
+      getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
+  IdentifiedSymbol Symbols = getSymbolAtPosition(AST, SourceLocationBeg);
+  if (Symbols.Decls.empty())
+    return nullptr;
+
+  const Decl *D = Symbols.Decls[0];
+
+  if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
+    // If this is a variable, use the type of the variable.
+    return VD->getType().getTypePtr()->getAsCXXRecordDecl();
+  }
+
+  if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(D)) {
+    // If this is a method, use the type of the class.
+    return Method->getParent();
+  }
+
+  // We don't handle FieldDecl because it's not clear what behaviour
+  // the user would expect: the enclosing class type (as with a
+  // method), or the field's type (as with a variable).
+
+  return dyn_cast<CXXRecordDecl>(D);
+}
+
+std::vector<const CXXRecordDecl *> typeParents(const CXXRecordDecl *CXXRD) {
+  std::vector<const CXXRecordDecl *> Result;
+
+  for (auto Base : CXXRD->bases()) {
+    const CXXRecordDecl *ParentDecl = nullptr;
+
+    const Type *Type = Base.getType().getTypePtr();
+    if (const RecordType *RT = Type->getAs<RecordType>()) {
+      ParentDecl = RT->getAsCXXRecordDecl();
+    }
+
+    // For now, do not handle dependent bases such as "Base<T>".
+    // We would like to handle them by heuristically choosing the
+    // primary template declaration, but we need to take care to
+    // avoid infinite recursion.
+
+    if (ParentDecl)
+      Result.push_back(ParentDecl);
+  }
+
+  return Result;
+}
+
+llvm::Optional<TypeHierarchyItem>
+getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
+                 TypeHierarchyDirection Direction) {
+  const CXXRecordDecl *CXXRD = findRecordTypeAt(AST, Pos);
+  if (!CXXRD)
+    return llvm::None;
+
+  Optional<TypeHierarchyItem> Result =
+      getTypeAncestors(*CXXRD, AST.getASTContext());
+  // FIXME(nridge): Resolve type descendants if direction is Children or Both,
+  // and ResolveLevels > 0.
+  return Result;
 }
 
 } // namespace clangd

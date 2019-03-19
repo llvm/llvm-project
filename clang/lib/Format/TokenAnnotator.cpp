@@ -3171,6 +3171,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false; // must not break in "module foo { ...}"
     if (Right.is(TT_TemplateString) && Right.closesScope())
       return false;
+    // Don't split tagged template literal so there is a break between the tag
+    // identifier and template string.
+    if (Left.is(tok::identifier) && Right.is(TT_TemplateString)) {
+      return false;
+    }
     if (Left.is(TT_TemplateString) && Left.opensScope())
       return true;
   }

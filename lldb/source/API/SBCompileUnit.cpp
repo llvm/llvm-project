@@ -237,3 +237,42 @@ bool SBCompileUnit::GetDescription(SBStream &description) {
 
   return true;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBCompileUnit>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBCompileUnit, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBCompileUnit, (const lldb::SBCompileUnit &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBCompileUnit &,
+      SBCompileUnit, operator=,(const lldb::SBCompileUnit &));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBCompileUnit, GetFileSpec,
+                             ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBCompileUnit, GetNumLineEntries, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBLineEntry, SBCompileUnit,
+                             GetLineEntryAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBCompileUnit, FindLineEntryIndex,
+                             (uint32_t, uint32_t, lldb::SBFileSpec *));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBCompileUnit, FindLineEntryIndex,
+                             (uint32_t, uint32_t, lldb::SBFileSpec *, bool));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBCompileUnit, GetNumSupportFiles, ());
+  LLDB_REGISTER_METHOD(lldb::SBTypeList, SBCompileUnit, GetTypes, (uint32_t));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBCompileUnit,
+                             GetSupportFileAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBCompileUnit, FindSupportFileIndex,
+                       (uint32_t, const lldb::SBFileSpec &, bool));
+  LLDB_REGISTER_METHOD(lldb::LanguageType, SBCompileUnit, GetLanguage, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBCompileUnit, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBCompileUnit, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(
+      bool, SBCompileUnit, operator==,(const lldb::SBCompileUnit &));
+  LLDB_REGISTER_METHOD_CONST(
+      bool, SBCompileUnit, operator!=,(const lldb::SBCompileUnit &));
+  LLDB_REGISTER_METHOD(bool, SBCompileUnit, GetDescription,
+                       (lldb::SBStream &));
+}
+
+}
+}

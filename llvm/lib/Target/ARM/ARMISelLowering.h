@@ -698,6 +698,8 @@ class VectorType;
     SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+    void lowerABS(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                  SelectionDAG &DAG) const;
 
     unsigned getRegisterByName(const char* RegName, EVT VT,
                                SelectionDAG &DAG) const override;
