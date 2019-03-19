@@ -50,7 +50,6 @@ typedef enum {
   LLVMDIFlagIntroducedVirtual = 1 << 18,
   LLVMDIFlagBitField = 1 << 19,
   LLVMDIFlagNoReturn = 1 << 20,
-  LLVMDIFlagMainSubprogram = 1 << 21,
   LLVMDIFlagTypePassByValue = 1 << 22,
   LLVMDIFlagTypePassByReference = 1 << 23,
   LLVMDIFlagEnumClass = 1 << 24,

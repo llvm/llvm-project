@@ -682,10 +682,12 @@ public:
   /// Emit an entry for the debug loc section. This can be used to
   /// handle an entry that's going to be emitted into the debug loc section.
   void emitDebugLocEntry(ByteStreamer &Streamer,
-                         const DebugLocStream::Entry &Entry);
+                         const DebugLocStream::Entry &Entry,
+                         const DwarfCompileUnit *CU);
 
   /// Emit the location for a debug loc entry, including the size header.
-  void emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry);
+  void emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
+                                 const DwarfCompileUnit *CU);
 
   /// Find the MDNode for the given reference.
   template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {

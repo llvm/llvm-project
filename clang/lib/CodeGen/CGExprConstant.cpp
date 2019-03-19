@@ -1698,31 +1698,20 @@ ConstantLValueEmitter::tryEmitAbsolute(llvm::Type *destTy) {
   auto offset = getOffset();
 
   // If we're producing a pointer, this is easy.
-  if (auto destPtrTy = cast<llvm::PointerType>(destTy)) {
-    if (Value.isNullPointer()) {
-      // FIXME: integer offsets from non-zero null pointers.
-      return CGM.getNullPointer(destPtrTy, DestType);
-    }
-
-    // Convert the integer to a pointer-sized integer before converting it
-    // to a pointer.
-    // FIXME: signedness depends on the original integer type.
-    auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
-    llvm::Constant *C = offset;
-    C = llvm::ConstantExpr::getIntegerCast(getOffset(), intptrTy,
-                                           /*isSigned*/ false);
-    C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);
-    return C;
+  auto destPtrTy = cast<llvm::PointerType>(destTy);
+  if (Value.isNullPointer()) {
+    // FIXME: integer offsets from non-zero null pointers.
+    return CGM.getNullPointer(destPtrTy, DestType);
   }
 
-  // Otherwise, we're basically returning an integer constant.
-
-  // FIXME: this does the wrong thing with ptrtoint of a null pointer,
-  // but since we don't know the original pointer type, there's not much
-  // we can do about it.
-
-  auto C = getOffset();
-  C = llvm::ConstantExpr::getIntegerCast(C, destTy, /*isSigned*/ false);
+  // Convert the integer to a pointer-sized integer before converting it
+  // to a pointer.
+  // FIXME: signedness depends on the original integer type.
+  auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
+  llvm::Constant *C = offset;
+  C = llvm::ConstantExpr::getIntegerCast(getOffset(), intptrTy,
+                                         /*isSigned*/ false);
+  C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);
   return C;
 }
 

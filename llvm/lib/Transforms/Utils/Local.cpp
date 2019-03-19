@@ -1861,21 +1861,10 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
         return None;
 
       bool Signed = *Signedness == DIBasicType::Signedness::Signed;
-
-      if (!Signed) {
-        // In the unsigned case, assume that a debugger will initialize the
-        // high bits to 0 and do a no-op conversion.
-        return Identity(DII);
-      } else {
-        // In the signed case, the high bits are given by sign extension, i.e:
-        //   (To >> (ToBits - 1)) * ((2 ^ FromBits) - 1)
-        // Calculate the high bits and OR them together with the low bits.
-        SmallVector<uint64_t, 8> Ops({dwarf::DW_OP_dup, dwarf::DW_OP_constu,
-                                      (ToBits - 1), dwarf::DW_OP_shr,
-                                      dwarf::DW_OP_lit0, dwarf::DW_OP_not,
-                                      dwarf::DW_OP_mul, dwarf::DW_OP_or});
-        return DIExpression::appendToStack(DII.getExpression(), Ops);
-      }
+      dwarf::TypeKind TK = Signed ? dwarf::DW_ATE_signed : dwarf::DW_ATE_unsigned;
+      SmallVector<uint64_t, 8> Ops({dwarf::DW_OP_LLVM_convert, ToBits, TK,
+                                   dwarf::DW_OP_LLVM_convert, FromBits, TK});
+      return DIExpression::appendToStack(DII.getExpression(), Ops);
     };
     return rewriteDebugUsers(From, To, DomPoint, DT, SignOrZeroExt);
   }

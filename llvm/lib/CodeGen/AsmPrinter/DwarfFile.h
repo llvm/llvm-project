@@ -147,7 +147,7 @@ public:
   void emitUnits(bool UseOffsets);
 
   /// Emit the given unit to its section.
-  void emitUnit(DwarfUnit *U, bool UseOffsets);
+  void emitUnit(DwarfUnit *TheU, bool UseOffsets);
 
   /// Emit a set of abbreviations to the specific section.
   void emitAbbrevs(MCSection *);

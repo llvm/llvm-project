@@ -475,7 +475,8 @@ namespace {
     SDValue reduceBuildVecToShuffle(SDNode *N);
     SDValue createBuildVecShuffle(const SDLoc &DL, SDNode *N,
                                   ArrayRef<int> VectorMask, SDValue VecIn1,
-                                  SDValue VecIn2, unsigned LeftIdx);
+                                  SDValue VecIn2, unsigned LeftIdx,
+                                  bool DidSplitVec);
     SDValue matchVSelectOpSizesWithSetCC(SDNode *Cast);
 
     /// Walk up chain skipping non-aliasing memory nodes,
@@ -16416,7 +16417,7 @@ SDValue DAGCombiner::reduceBuildVecExtToExtBuildVec(SDNode *N) {
 SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
                                            ArrayRef<int> VectorMask,
                                            SDValue VecIn1, SDValue VecIn2,
-                                           unsigned LeftIdx) {
+                                           unsigned LeftIdx, bool DidSplitVec) {
   MVT IdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
   SDValue ZeroIdx = DAG.getConstant(0, DL, IdxTy);
 
@@ -16424,17 +16425,12 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
   EVT InVT1 = VecIn1.getValueType();
   EVT InVT2 = VecIn2.getNode() ? VecIn2.getValueType() : InVT1;
 
-  unsigned Vec2Offset = 0;
   unsigned NumElems = VT.getVectorNumElements();
   unsigned ShuffleNumElems = NumElems;
 
-  // In case both the input vectors are extracted from same base
-  // vector we do not need extra addend (Vec2Offset) while
-  // computing shuffle mask.
-  if (!VecIn2 || !(VecIn1.getOpcode() == ISD::EXTRACT_SUBVECTOR) ||
-      !(VecIn2.getOpcode() == ISD::EXTRACT_SUBVECTOR) ||
-      !(VecIn1.getOperand(0) == VecIn2.getOperand(0)))
-    Vec2Offset = InVT1.getVectorNumElements();
+  // If we artificially split a vector in two already, then the offsets in the
+  // operands will all be based off of VecIn1, even those in VecIn2.
+  unsigned Vec2Offset = DidSplitVec ? 0 : InVT1.getVectorNumElements();
 
   // We can't generate a shuffle node with mismatched input and output types.
   // Try to make the types match the type of the output.
@@ -16693,6 +16689,7 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   // vector, then split the vector efficiently based on the maximum
   // vector access index and adjust the VectorMask and
   // VecIn accordingly.
+  bool DidSplitVec = false;
   if (VecIn.size() == 2) {
     unsigned MaxIndex = 0;
     unsigned NearestPow2 = 0;
@@ -16723,6 +16720,7 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
         VecIn.pop_back();
         VecIn.push_back(VecIn1);
         VecIn.push_back(VecIn2);
+        DidSplitVec = true;
 
         for (unsigned i = 0; i < NumElems; i++) {
           if (VectorMask[i] <= 0)
@@ -16760,7 +16758,7 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
         (LeftIdx + 1) < VecIn.size() ? VecIn[LeftIdx + 1] : SDValue();
 
     if (SDValue Shuffle = createBuildVecShuffle(DL, N, VectorMask, VecLeft,
-                                                VecRight, LeftIdx))
+                                                VecRight, LeftIdx, DidSplitVec))
       Shuffles.push_back(Shuffle);
     else
       return SDValue();
@@ -19045,36 +19043,6 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
                        DAG.getConstant(N2C->getAPIntValue().logBase2(),
                                        SDLoc(Temp),
                                        getShiftAmountTy(Temp.getValueType())));
-  }
-
-  // Check to see if this is an integer abs.
-  // select_cc setg[te] X,  0,  X, -X ->
-  // select_cc setgt    X, -1,  X, -X ->
-  // select_cc setl[te] X,  0, -X,  X ->
-  // select_cc setlt    X,  1, -X,  X ->
-  // Y = sra (X, size(X)-1); xor (add (X, Y), Y)
-  if (N1C) {
-    ConstantSDNode *SubC = nullptr;
-    if (((N1C->isNullValue() && (CC == ISD::SETGT || CC == ISD::SETGE)) ||
-         (N1C->isAllOnesValue() && CC == ISD::SETGT)) &&
-        N0 == N2 && N3.getOpcode() == ISD::SUB && N0 == N3.getOperand(1))
-      SubC = dyn_cast<ConstantSDNode>(N3.getOperand(0));
-    else if (((N1C->isNullValue() && (CC == ISD::SETLT || CC == ISD::SETLE)) ||
-              (N1C->isOne() && CC == ISD::SETLT)) &&
-             N0 == N3 && N2.getOpcode() == ISD::SUB && N0 == N2.getOperand(1))
-      SubC = dyn_cast<ConstantSDNode>(N2.getOperand(0));
-
-    if (SubC && SubC->isNullValue() && CmpOpVT.isInteger()) {
-      SDLoc DL(N0);
-      SDValue Shift = DAG.getNode(ISD::SRA, DL, CmpOpVT, N0,
-                                  DAG.getConstant(CmpOpVT.getSizeInBits() - 1,
-                                                  DL,
-                                                  getShiftAmountTy(CmpOpVT)));
-      SDValue Add = DAG.getNode(ISD::ADD, DL, CmpOpVT, N0, Shift);
-      AddToWorklist(Shift.getNode());
-      AddToWorklist(Add.getNode());
-      return DAG.getNode(ISD::XOR, DL, CmpOpVT, Add, Shift);
-    }
   }
 
   // select_cc seteq X, 0, sizeof(X), ctlz(X) -> ctlz(X)

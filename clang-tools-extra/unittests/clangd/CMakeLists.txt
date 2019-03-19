@@ -46,6 +46,7 @@ add_extra_unittest(ClangdTests
   TestTU.cpp
   ThreadingTests.cpp
   TraceTests.cpp
+  TypeHierarchyTests.cpp
   TweakTests.cpp
   URITests.cpp
   XRefsTests.cpp

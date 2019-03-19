@@ -225,7 +225,7 @@ void DIEHash::hashLocList(const DIELocList &LocList) {
   DwarfDebug &DD = *AP->getDwarfDebug();
   const DebugLocStream &Locs = DD.getDebugLocs();
   for (const auto &Entry : Locs.getEntries(Locs.getList(LocList.getValue())))
-    DD.emitDebugLocEntry(Streamer, Entry);
+    DD.emitDebugLocEntry(Streamer, Entry, nullptr);
 }
 
 // Hash an individual attribute \param Attr based on the type of attribute and
@@ -309,6 +309,7 @@ void DIEHash::hashAttribute(const DIEValue &Value, dwarf::Tag Tag) {
     // FIXME: It's uncertain whether or not we should handle this at the moment.
   case DIEValue::isExpr:
   case DIEValue::isLabel:
+  case DIEValue::isBaseTypeRef:
   case DIEValue::isDelta:
     llvm_unreachable("Add support for additional value types.");
   }

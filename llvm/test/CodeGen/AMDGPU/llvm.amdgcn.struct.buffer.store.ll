@@ -108,6 +108,32 @@ main_body:
   ret void
 }
 
+;CHECK-LABEL: {{^}}struct_buffer_store_byte:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: v_cvt_u32_f32_e32 v{{[0-9]}}, v{{[0-9]}}
+;CHECK-NEXT: buffer_store_byte v{{[0-9]}}, v{{[0-9]}}, s[0:3], 0 idxen
+;CHECK-NEXT: s_endpgm
+define amdgpu_ps void @struct_buffer_store_byte(<4 x i32> inreg %rsrc, float %v1, i32 %index) {
+main_body:
+  %v2 = fptoui float %v1 to i32
+  %v3 = trunc i32 %v2 to i8
+  call void @llvm.amdgcn.struct.buffer.store.i8(i8 %v3, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_store_short:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: v_cvt_u32_f32_e32 v{{[0-9]}}, v{{[0-9]}}
+;CHECK-NEXT: buffer_store_short v{{[0-9]}}, v{{[0-9]}}, s[0:3], 0 idxen
+;CHECK-NEXT: s_endpgm
+define amdgpu_ps void @struct_buffer_store_short(<4 x i32> inreg %rsrc, float %v1, i32 %index) {
+main_body:
+  %v2 = fptoui float %v1 to i32
+  %v3 = trunc i32 %v2 to i16
+  call void @llvm.amdgcn.struct.buffer.store.i16(i16 %v3, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.struct.buffer.store.f32(float, <4 x i32>, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.struct.buffer.store.v2f32(<2 x float>, <4 x i32>, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #0
@@ -115,6 +141,8 @@ declare void @llvm.amdgcn.struct.buffer.store.i32(i32, <4 x i32>, i32, i32, i32,
 declare void @llvm.amdgcn.struct.buffer.store.v2i32(<2 x i32>, <4 x i32>, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.struct.buffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32, i32) #0
 declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32) #1
+declare void @llvm.amdgcn.struct.buffer.store.i8(i8, <4 x i32>, i32, i32, i32, i32) #0
+declare void @llvm.amdgcn.struct.buffer.store.i16(i16, <4 x i32>, i32, i32, i32, i32) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

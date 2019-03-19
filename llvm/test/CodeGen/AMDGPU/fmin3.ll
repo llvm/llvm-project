@@ -118,7 +118,33 @@ entry:
   ret <2 x half> %res
 }
 
+; GCN-LABEL: {{^}}test_fmin3_olt_0_f64:
+; GCN-NOT: v_min3
+define amdgpu_kernel void @test_fmin3_olt_0_f64(double addrspace(1)* %out, double addrspace(1)* %aptr, double addrspace(1)* %bptr, double addrspace(1)* %cptr) #0 {
+  %a = load volatile double, double addrspace(1)* %aptr, align 4
+  %b = load volatile double, double addrspace(1)* %bptr, align 4
+  %c = load volatile double, double addrspace(1)* %cptr, align 4
+  %f0 = call double @llvm.minnum.f64(double %a, double %b)
+  %f1 = call double @llvm.minnum.f64(double %f0, double %c)
+  store double %f1, double addrspace(1)* %out, align 4
+  ret void
+}
+
+; Commute operand of second fmin
+; GCN-LABEL: {{^}}test_fmin3_olt_1_f64:
+; GCN-NOT: v_min3
+define amdgpu_kernel void @test_fmin3_olt_1_f64(double addrspace(1)* %out, double addrspace(1)* %aptr, double addrspace(1)* %bptr, double addrspace(1)* %cptr) #0 {
+  %a = load volatile double, double addrspace(1)* %aptr, align 4
+  %b = load volatile double, double addrspace(1)* %bptr, align 4
+  %c = load volatile double, double addrspace(1)* %cptr, align 4
+  %f0 = call double @llvm.minnum.f64(double %a, double %b)
+  %f1 = call double @llvm.minnum.f64(double %c, double %f0)
+  store double %f1, double addrspace(1)* %out, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare double @llvm.minnum.f64(double, double) #1
 declare float @llvm.minnum.f32(float, float) #1
 declare half @llvm.minnum.f16(half, half) #1
 declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>)
