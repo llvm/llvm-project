@@ -5833,7 +5833,7 @@ static bool BuildAddressSpaceIndex(Sema &S, LangAS &ASIdx,
       return false;
     }
 
-    if (S.LangOpts.SYCLIsDevice && (addrSpace == 4 || addrSpace > 5)) {
+    if (S.LangOpts.SYCLIsDevice && (addrSpace >= 4)) {
       S.Diag(AttrLoc, diag::err_sycl_attribute_address_space_invalid)
           << AddrSpace->getSourceRange();
       return false;
@@ -5846,7 +5846,7 @@ static bool BuildAddressSpaceIndex(Sema &S, LangAS &ASIdx,
       ASIdx =
           [](unsigned AS) {
             switch (AS) {
-            case 5: case 0: return LangAS::sycl_private;
+            case 0: return LangAS::sycl_private;
             case 1: return LangAS::sycl_global;
             case 2: return LangAS::sycl_constant;
             case 3: return LangAS::sycl_local;

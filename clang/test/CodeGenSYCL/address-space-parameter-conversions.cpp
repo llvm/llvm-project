@@ -88,11 +88,11 @@ void usages() {
 
 void usages2() {
   __attribute__((address_space(0))) int *PRIV_NUM;
-  // CHECK-DAG: [[PRIV_NUM:%[a-zA-Z0-9_]+]] = alloca i32 addrspace(5)*
-  __attribute__((address_space(5))) int *PRIV_NUM2;
-  // CHECK-DAG: [[PRIV_NUM2:%[a-zA-Z0-9_]+]] = alloca i32 addrspace(5)*
+  // CHECK-DAG: [[PRIV_NUM:%[a-zA-Z0-9_]+]] = alloca i32*
+  __attribute__((address_space(0))) int *PRIV_NUM2;
+  // CHECK-DAG: [[PRIV_NUM2:%[a-zA-Z0-9_]+]] = alloca i32*
   __private int *PRIV;
-  // CHECK-DAG: [[PRIV:%[a-zA-Z0-9_]+]] = alloca i32 addrspace(5)*
+  // CHECK-DAG: [[PRIV:%[a-zA-Z0-9_]+]] = alloca i32*
   __attribute__((address_space(1))) int *GLOB_NUM;
   // CHECK-DAG: [[GLOB_NUM:%[a-zA-Z0-9_]+]] = alloca i32 addrspace(1)*
   __global int *GLOB;
@@ -107,17 +107,14 @@ void usages2() {
   // CHECK-DAG: [[LOCAL:%[a-zA-Z0-9_]+]] = alloca i32 addrspace(3)*
 
   bar(*PRIV_NUM);
-  // CHECK-DAG: [[PRIV_NUM_LOAD:%[a-zA-Z0-9]+]] = load i32 addrspace(5)*, i32 addrspace(5)** [[PRIV_NUM]]
-  // CHECK-DAG: [[PRIV_NUM_CAST:%[a-zA-Z0-9]+]] = addrspacecast i32 addrspace(5)* [[PRIV_NUM_LOAD]] to i32 addrspace(4)*
-  // CHECK-DAG: call spir_func void @new.[[RAW_REF]](i32 addrspace(4)* [[PRIV_NUM_CAST]])
+  // CHECK-DAG: [[PRIV_NUM_LOAD:%[a-zA-Z0-9]+]] = load i32*, i32** [[PRIV_NUM]]
+  // CHECK-DAG: call spir_func void @[[RAW_REF]](i32* dereferenceable(4) [[PRIV_NUM_LOAD]])
   bar(*PRIV_NUM2);
-  // CHECK-DAG: [[PRIV_NUM2_LOAD:%[a-zA-Z0-9]+]] = load i32 addrspace(5)*, i32 addrspace(5)** [[PRIV_NUM2]]
-  // CHECK-DAG: [[PRIV_NUM2_CAST:%[a-zA-Z0-9]+]] = addrspacecast i32 addrspace(5)* [[PRIV_NUM2_LOAD]] to i32 addrspace(4)*
-  // CHECK-DAG: call spir_func void @new.[[RAW_REF]](i32 addrspace(4)* [[PRIV_NUM2_CAST]])
+  // CHECK-DAG: [[PRIV_NUM2_LOAD:%[a-zA-Z0-9]+]] = load i32*, i32** [[PRIV_NUM2]]
+  // CHECK-DAG: call spir_func void @[[RAW_REF]](i32* dereferenceable(4) [[PRIV_NUM2_LOAD]])
   bar(*PRIV);
-  // CHECK-DAG: [[PRIV_LOAD:%[a-zA-Z0-9]+]] = load i32 addrspace(5)*, i32 addrspace(5)** [[PRIV]]
-  // CHECK-DAG: [[PRIV_CAST:%[a-zA-Z0-9]+]] = addrspacecast i32 addrspace(5)* [[PRIV_LOAD]] to i32 addrspace(4)*
-  // CHECK-DAG: call spir_func void @new.[[RAW_REF]](i32 addrspace(4)* [[PRIV_CAST]])
+  // CHECK-DAG: [[PRIV_LOAD:%[a-zA-Z0-9]+]] = load i32*, i32** [[PRIV]]
+  // CHECK-DAG: call spir_func void @[[RAW_REF]](i32* dereferenceable(4) [[PRIV_LOAD]])
   bar(*GLOB_NUM);
   // CHECK-DAG: [[GLOB_NUM_LOAD:%[a-zA-Z0-9]+]] = load i32 addrspace(1)*, i32 addrspace(1)** [[GLOB_NUM]]
   // CHECK-DAG: [[GLOB_NUM_CAST:%[a-zA-Z0-9]+]] = addrspacecast i32 addrspace(1)* [[GLOB_NUM_LOAD]] to i32 addrspace(4)*

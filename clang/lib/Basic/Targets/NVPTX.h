@@ -36,7 +36,7 @@ static const unsigned NVPTXAddrSpaceMap[] = {
     1, // sycl_global
     3, // sycl_local
     4, // sycl_constant
-    5, // sycl_private
+    0, // sycl_private
     // FIXME: generic has to be added to the target
     0, // sycl_generic
 };

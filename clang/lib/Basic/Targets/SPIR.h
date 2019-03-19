@@ -34,7 +34,7 @@ static const unsigned SPIRAddrSpaceMap[] = {
     1, // sycl_global
     3, // sycl_local
     2, // sycl_constant
-    5, // sycl_private
+    0, // sycl_private
     4, // sycl_generic
 };
 
