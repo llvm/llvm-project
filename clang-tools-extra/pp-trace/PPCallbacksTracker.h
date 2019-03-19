@@ -26,7 +26,9 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/GlobPattern.h"
 #include <string>
 #include <vector>
 
@@ -53,6 +55,8 @@ public:
   std::vector<Argument> Arguments;
 };
 
+using FilterType = std::vector<std::pair<llvm::GlobPattern, bool>>;
+
 /// \brief This class overrides the PPCallbacks class for tracking preprocessor
 ///   activity by means of its callback functions.
 ///
@@ -74,10 +78,10 @@ class PPCallbacksTracker : public clang::PPCallbacks {
 public:
   /// \brief Note that all of the arguments are references, and owned
   /// by the caller.
-  /// \param Ignore - Set of names of callbacks to ignore.
+  /// \param Filters - List of (Glob,Enabled) pairs used to filter callbacks.
   /// \param CallbackCalls - Trace buffer.
   /// \param PP - The preprocessor.  Needed for getting some argument strings.
-  PPCallbacksTracker(llvm::SmallSet<std::string, 4> &Ignore,
+  PPCallbacksTracker(const FilterType &Filters,
                      std::vector<CallbackCall> &CallbackCalls,
                      clang::Preprocessor &PP);
 
@@ -239,8 +243,11 @@ public:
   /// after this object is destructed.
   std::vector<CallbackCall> &CallbackCalls;
 
-  /// \brief Names of callbacks to ignore.
-  llvm::SmallSet<std::string, 4> &Ignore;
+  // List of (Glob,Enabled) pairs used to filter callbacks.
+  const FilterType &Filters;
+
+  // Whether a callback should be printed.
+  llvm::StringMap<bool> CallbackIsEnabled;
 
   /// \brief Inhibit trace while this is set.
   bool DisableTrace;

@@ -113,7 +113,8 @@ public:
   void finish() override;
 
 private:
-  const Symbol *addDeclaration(const NamedDecl &, SymbolID, bool IsMainFileSymbol);
+  const Symbol *addDeclaration(const NamedDecl &, SymbolID,
+                               bool IsMainFileSymbol);
   void addDefinition(const NamedDecl &, const Symbol &DeclSymbol);
 
   // All Symbols collected from the AST.

@@ -326,8 +326,8 @@ bool SymbolCollector::handleDeclOccurence(
 
   // ND is the canonical (i.e. first) declaration. If it's in the main file,
   // then no public declaration was visible, so assume it's main-file only.
-  bool IsMainFileOnly = SM.isWrittenInMainFile(SM.getExpansionLoc(
-    ND->getBeginLoc()));
+  bool IsMainFileOnly =
+      SM.isWrittenInMainFile(SM.getExpansionLoc(ND->getBeginLoc()));
   if (!shouldCollectSymbol(*ND, *ASTCtx, Opts, IsMainFileOnly))
     return true;
   // Do not store references to main-file symbols.
@@ -516,8 +516,7 @@ void SymbolCollector::finish() {
   FilesToIndexCache.clear();
 }
 
-const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
-                                              SymbolID ID,
+const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
                                               bool IsMainFileOnly) {
   auto &Ctx = ND.getASTContext();
   auto &SM = Ctx.getSourceManager();

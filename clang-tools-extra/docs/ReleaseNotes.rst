@@ -132,3 +132,9 @@ Improvements to modularize
 --------------------------
 
 The improvements are...
+
+Improvements to pp-trace
+------------------------
+
+- Added a new option `-callbacks` to filter preprocessor callbacks. It replaces
+  the `-ignore` option.

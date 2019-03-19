@@ -211,6 +211,61 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
   }
 }
 
+SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
+  switch (Kind) {
+  case index::SymbolKind::Unknown:
+    return SymbolKind::Variable;
+  case index::SymbolKind::Module:
+    return SymbolKind::Module;
+  case index::SymbolKind::Namespace:
+    return SymbolKind::Namespace;
+  case index::SymbolKind::NamespaceAlias:
+    return SymbolKind::Namespace;
+  case index::SymbolKind::Macro:
+    return SymbolKind::String;
+  case index::SymbolKind::Enum:
+    return SymbolKind::Enum;
+  case index::SymbolKind::Struct:
+    return SymbolKind::Struct;
+  case index::SymbolKind::Class:
+    return SymbolKind::Class;
+  case index::SymbolKind::Protocol:
+    return SymbolKind::Interface;
+  case index::SymbolKind::Extension:
+    return SymbolKind::Interface;
+  case index::SymbolKind::Union:
+    return SymbolKind::Class;
+  case index::SymbolKind::TypeAlias:
+    return SymbolKind::Class;
+  case index::SymbolKind::Function:
+    return SymbolKind::Function;
+  case index::SymbolKind::Variable:
+    return SymbolKind::Variable;
+  case index::SymbolKind::Field:
+    return SymbolKind::Field;
+  case index::SymbolKind::EnumConstant:
+    return SymbolKind::EnumMember;
+  case index::SymbolKind::InstanceMethod:
+  case index::SymbolKind::ClassMethod:
+  case index::SymbolKind::StaticMethod:
+    return SymbolKind::Method;
+  case index::SymbolKind::InstanceProperty:
+  case index::SymbolKind::ClassProperty:
+  case index::SymbolKind::StaticProperty:
+    return SymbolKind::Property;
+  case index::SymbolKind::Constructor:
+  case index::SymbolKind::Destructor:
+    return SymbolKind::Method;
+  case index::SymbolKind::ConversionFunction:
+    return SymbolKind::Function;
+  case index::SymbolKind::Parameter:
+    return SymbolKind::Variable;
+  case index::SymbolKind::Using:
+    return SymbolKind::Namespace;
+  }
+  llvm_unreachable("invalid symbol kind");
+}
+
 bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R) {
   const llvm::json::Object *O = Params.getAsObject();
   if (!O)
@@ -809,6 +864,66 @@ bool fromJSON(const llvm::json::Value &Params, InitializationOptions &Opts) {
   O.map("compilationDatabasePath", Opts.compilationDatabasePath);
   O.map("fallbackFlags", Opts.fallbackFlags);
   O.map("clangdFileStatus", Opts.FileStatus);
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &E, TypeHierarchyDirection &Out) {
+  auto T = E.getAsInteger();
+  if (!T)
+    return false;
+  if (*T < static_cast<int>(TypeHierarchyDirection::Children) ||
+      *T > static_cast<int>(TypeHierarchyDirection::Both))
+    return false;
+  Out = static_cast<TypeHierarchyDirection>(*T);
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &Params, TypeHierarchyParams &R) {
+  llvm::json::ObjectMapper O(Params);
+  return O && O.map("textDocument", R.textDocument) &&
+         O.map("position", R.position) && O.map("resolve", R.resolve) &&
+         O.map("direction", R.direction);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &O,
+                              const TypeHierarchyItem &I) {
+  return O << I.name << " - " << toJSON(I);
+}
+
+llvm::json::Value toJSON(const TypeHierarchyItem &I) {
+  llvm::json::Object Result{{"name", I.name},
+                            {"kind", static_cast<int>(I.kind)},
+                            {"range", I.range},
+                            {"selectionRange", I.selectionRange},
+                            {"uri", I.uri}};
+
+  if (I.detail)
+    Result["detail"] = I.detail;
+  if (I.deprecated)
+    Result["deprecated"] = I.deprecated;
+  if (I.parents)
+    Result["parents"] = I.parents;
+  if (I.children)
+    Result["children"] = I.children;
+  return std::move(Result);
+}
+
+bool fromJSON(const llvm::json::Value &Params, TypeHierarchyItem &I) {
+  llvm::json::ObjectMapper O(Params);
+
+  // Required fields.
+  if (!(O && O.map("name", I.name) && O.map("kind", I.kind) &&
+        O.map("uri", I.uri) && O.map("range", I.range) &&
+        O.map("selectionRange", I.selectionRange))) {
+    return false;
+  }
+
+  // Optional fields.
+  O.map("detail", I.detail);
+  O.map("deprecated", I.deprecated);
+  O.map("parents", I.parents);
+  O.map("children", I.children);
+
   return true;
 }
 

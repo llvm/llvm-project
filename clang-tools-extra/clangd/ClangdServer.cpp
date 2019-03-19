@@ -362,9 +362,8 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
                               Callback<tooling::Replacements> CB) {
-  auto Action = [Sel](decltype(CB) CB, std::string File,
-                            std::string TweakID,
-                            Expected<InputsAndAST> InpAST) {
+  auto Action = [Sel](decltype(CB) CB, std::string File, std::string TweakID,
+                      Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     auto Selection = tweakSelection(Sel, *InpAST);
@@ -521,6 +520,19 @@ void ClangdServer::findHover(PathRef File, Position Pos,
   };
 
   WorkScheduler.runWithAST("Hover", File, Bind(Action, std::move(CB)));
+}
+
+void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
+                                 TypeHierarchyDirection Direction,
+                                 Callback<Optional<TypeHierarchyItem>> CB) {
+  auto Action = [Pos, Resolve, Direction](decltype(CB) CB,
+                                          Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::getTypeHierarchy(InpAST->AST, Pos, Resolve, Direction));
+  };
+
+  WorkScheduler.runWithAST("Type Hierarchy", File, Bind(Action, std::move(CB)));
 }
 
 tooling::CompileCommand ClangdServer::getCompileCommand(PathRef File) {

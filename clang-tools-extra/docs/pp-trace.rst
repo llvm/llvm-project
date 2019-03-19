@@ -40,12 +40,12 @@ which must follow the <source-file>.
 Command Line Options
 --------------------
 
-.. option:: -ignore <callback-name-list>
+.. option:: -callbacks <comma-separated-globs>
 
-  This option specifies a comma-separated list of names of callbacks
-  that shouldn't be traced. It can be used to eliminate unwanted
-  trace output. The callback names are the name of the actual
-  callback function names in the PPCallbacks class:
+  This option specifies a comma-separated list of globs describing the list of
+  callbacks that should be traced. Globs are processed in order of appearance.
+  Positive globs add matched callbacks to the set, netative globs (those with
+  the '-' prefix) remove callacks from the set.
 
   * FileChanged
   * FileSkipped
