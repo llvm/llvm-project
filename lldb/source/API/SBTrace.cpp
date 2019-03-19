@@ -127,3 +127,21 @@ SBTrace::operator bool() const {
     return false;
   return true;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBTrace>(Registry &R) {
+  LLDB_REGISTER_METHOD(void, SBTrace, StopTrace,
+                       (lldb::SBError &, lldb::tid_t));
+  LLDB_REGISTER_METHOD(void, SBTrace, GetTraceConfig,
+                       (lldb::SBTraceOptions &, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::user_id_t, SBTrace, GetTraceUID, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBTrace, ());
+  LLDB_REGISTER_METHOD(bool, SBTrace, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBTrace, operator bool, ());
+}
+
+}
+}

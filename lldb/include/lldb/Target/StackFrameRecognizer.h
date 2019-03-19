@@ -59,8 +59,6 @@ public:
   virtual ~StackFrameRecognizer(){};
 };
 
-#ifndef LLDB_DISABLE_PYTHON
-
 /// \class ScriptedStackFrameRecognizer
 ///
 /// Python implementation for frame recognizers. An instance of this class
@@ -89,8 +87,6 @@ public:
 private:
   DISALLOW_COPY_AND_ASSIGN(ScriptedStackFrameRecognizer);
 };
-
-#endif
 
 /// \class StackFrameRecognizerManager
 ///

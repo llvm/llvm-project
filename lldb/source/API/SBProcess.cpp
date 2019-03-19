@@ -1272,3 +1272,137 @@ lldb::SBProcessInfo SBProcess::GetProcessInfo() {
   }
   return LLDB_RECORD_RESULT(sb_proc_info);
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBProcess>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBProcess, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBProcess, (const lldb::SBProcess &));
+  LLDB_REGISTER_CONSTRUCTOR(SBProcess, (const lldb::ProcessSP &));
+  LLDB_REGISTER_METHOD(const lldb::SBProcess &,
+                       SBProcess, operator=,(const lldb::SBProcess &));
+  LLDB_REGISTER_STATIC_METHOD(const char *, SBProcess,
+                              GetBroadcasterClassName, ());
+  LLDB_REGISTER_METHOD(const char *, SBProcess, GetPluginName, ());
+  LLDB_REGISTER_METHOD(const char *, SBProcess, GetShortPluginName, ());
+  LLDB_REGISTER_METHOD(void, SBProcess, Clear, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBProcess, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBProcess, operator bool, ());
+  LLDB_REGISTER_METHOD(bool, SBProcess, RemoteLaunch,
+                       (const char **, const char **, const char *,
+                        const char *, const char *, const char *, uint32_t,
+                        bool, lldb::SBError &));
+  LLDB_REGISTER_METHOD(bool, SBProcess, RemoteAttachToProcessWithID,
+                       (lldb::pid_t, lldb::SBError &));
+  LLDB_REGISTER_METHOD(uint32_t, SBProcess, GetNumThreads, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBThread, SBProcess, GetSelectedThread,
+                             ());
+  LLDB_REGISTER_METHOD(lldb::SBThread, SBProcess, CreateOSPluginThread,
+                       (lldb::tid_t, lldb::addr_t));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBTarget, SBProcess, GetTarget, ());
+  LLDB_REGISTER_METHOD(size_t, SBProcess, PutSTDIN, (const char *, size_t));
+  LLDB_REGISTER_METHOD_CONST(size_t, SBProcess, GetSTDOUT, (char *, size_t));
+  LLDB_REGISTER_METHOD_CONST(size_t, SBProcess, GetSTDERR, (char *, size_t));
+  LLDB_REGISTER_METHOD_CONST(size_t, SBProcess, GetAsyncProfileData,
+                             (char *, size_t));
+  LLDB_REGISTER_METHOD(lldb::SBTrace, SBProcess, StartTrace,
+                       (lldb::SBTraceOptions &, lldb::SBError &));
+  LLDB_REGISTER_METHOD_CONST(void, SBProcess, ReportEventState,
+                             (const lldb::SBEvent &, FILE *));
+  LLDB_REGISTER_METHOD(
+      void, SBProcess, AppendEventStateReport,
+      (const lldb::SBEvent &, lldb::SBCommandReturnObject &));
+  LLDB_REGISTER_METHOD(bool, SBProcess, SetSelectedThread,
+                       (const lldb::SBThread &));
+  LLDB_REGISTER_METHOD(bool, SBProcess, SetSelectedThreadByID, (lldb::tid_t));
+  LLDB_REGISTER_METHOD(bool, SBProcess, SetSelectedThreadByIndexID,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBThread, SBProcess, GetThreadAtIndex, (size_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBProcess, GetNumQueues, ());
+  LLDB_REGISTER_METHOD(lldb::SBQueue, SBProcess, GetQueueAtIndex, (size_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBProcess, GetStopID, (bool));
+  LLDB_REGISTER_METHOD(lldb::SBEvent, SBProcess, GetStopEventForStopID,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::StateType, SBProcess, GetState, ());
+  LLDB_REGISTER_METHOD(int, SBProcess, GetExitStatus, ());
+  LLDB_REGISTER_METHOD(const char *, SBProcess, GetExitDescription, ());
+  LLDB_REGISTER_METHOD(lldb::pid_t, SBProcess, GetProcessID, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBProcess, GetUniqueID, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::ByteOrder, SBProcess, GetByteOrder, ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBProcess, GetAddressByteSize, ());
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, Continue, ());
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, Destroy, ());
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, Stop, ());
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, Kill, ());
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, Detach, ());
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, Detach, (bool));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, Signal, (int));
+  LLDB_REGISTER_METHOD(lldb::SBUnixSignals, SBProcess, GetUnixSignals, ());
+  LLDB_REGISTER_METHOD(void, SBProcess, SendAsyncInterrupt, ());
+  LLDB_REGISTER_METHOD(lldb::SBThread, SBProcess, GetThreadByID,
+                       (lldb::tid_t));
+  LLDB_REGISTER_METHOD(lldb::SBThread, SBProcess, GetThreadByIndexID,
+                       (uint32_t));
+  LLDB_REGISTER_STATIC_METHOD(lldb::StateType, SBProcess, GetStateFromEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_STATIC_METHOD(bool, SBProcess, GetRestartedFromEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_STATIC_METHOD(size_t, SBProcess,
+                              GetNumRestartedReasonsFromEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_STATIC_METHOD(const char *, SBProcess,
+                              GetRestartedReasonAtIndexFromEvent,
+                              (const lldb::SBEvent &, size_t));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBProcess, SBProcess, GetProcessFromEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_STATIC_METHOD(bool, SBProcess, GetInterruptedFromEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBStructuredData, SBProcess,
+                              GetStructuredDataFromEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_STATIC_METHOD(bool, SBProcess, EventIsProcessEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_STATIC_METHOD(bool, SBProcess, EventIsStructuredDataEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBBroadcaster, SBProcess, GetBroadcaster,
+                             ());
+  LLDB_REGISTER_STATIC_METHOD(const char *, SBProcess, GetBroadcasterClass,
+                              ());
+  LLDB_REGISTER_METHOD(uint64_t, SBProcess, ReadUnsignedFromMemory,
+                       (lldb::addr_t, uint32_t, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::addr_t, SBProcess, ReadPointerFromMemory,
+                       (lldb::addr_t, lldb::SBError &));
+  LLDB_REGISTER_METHOD(bool, SBProcess, GetDescription, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBProcess,
+                             GetNumSupportedHardwareWatchpoints,
+                             (lldb::SBError &));
+  LLDB_REGISTER_METHOD(uint32_t, SBProcess, LoadImage,
+                       (lldb::SBFileSpec &, lldb::SBError &));
+  LLDB_REGISTER_METHOD(
+      uint32_t, SBProcess, LoadImage,
+      (const lldb::SBFileSpec &, const lldb::SBFileSpec &, lldb::SBError &));
+  LLDB_REGISTER_METHOD(uint32_t, SBProcess, LoadImageUsingPaths,
+                       (const lldb::SBFileSpec &, lldb::SBStringList &,
+                        lldb::SBFileSpec &, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, UnloadImage, (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, SendEventData,
+                       (const char *));
+  LLDB_REGISTER_METHOD(uint32_t, SBProcess, GetNumExtendedBacktraceTypes, ());
+  LLDB_REGISTER_METHOD(const char *, SBProcess,
+                       GetExtendedBacktraceTypeAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBThreadCollection, SBProcess, GetHistoryThreads,
+                       (lldb::addr_t));
+  LLDB_REGISTER_METHOD(bool, SBProcess, IsInstrumentationRuntimePresent,
+                       (lldb::InstrumentationRuntimeType));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, SaveCore, (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, GetMemoryRegionInfo,
+                       (lldb::addr_t, lldb::SBMemoryRegionInfo &));
+  LLDB_REGISTER_METHOD(lldb::SBMemoryRegionInfoList, SBProcess,
+                       GetMemoryRegions, ());
+  LLDB_REGISTER_METHOD(lldb::SBProcessInfo, SBProcess, GetProcessInfo, ());
+}
+
+}
+}
