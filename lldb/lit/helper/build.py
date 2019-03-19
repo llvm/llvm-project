@@ -569,6 +569,8 @@ class MsvcBuilder(Builder):
         args.append('/c')
 
         args.append('/Fo' + obj)
+        if self.toolchain_type == 'clang-cl':
+            args.append('--')
         args.append(source)
 
         return ('compiling', [source], obj,

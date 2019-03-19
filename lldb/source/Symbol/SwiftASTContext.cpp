@@ -2847,8 +2847,7 @@ public:
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
-                        uint32_t last_line = UINT32_MAX,
-                        uint32_t line_offset = 0) {
+                        uint32_t last_line = UINT32_MAX) {
     bool added_one_diagnostic = false;
     for (const RawDiagnostic &diagnostic : m_diagnostics) {
       // We often make expressions and wrap them in some code.  When
@@ -2882,10 +2881,9 @@ public:
                 fixed_description.Printf(
                     "%s", diagnostic.description.substr(start_pos, match_pos)
                               .c_str());
-              fixed_description.Printf("%s:%u:",
-                                       diagnostic.bufferName.str().c_str(),
-                                       diagnostic.line - first_line +
-                                           line_offset + 1);
+              fixed_description.Printf(
+                  "%s:%u:", diagnostic.bufferName.str().c_str(),
+                  diagnostic.line - first_line + 1);
               start_pos = match_pos + match_len;
               match_pos =
                   diagnostic.description.find(match.GetString(), start_pos);
@@ -4680,8 +4678,7 @@ bool SwiftASTContext::SetColorizeDiagnostics(bool b) {
 
 void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                                        uint32_t bufferID, uint32_t first_line,
-                                       uint32_t last_line,
-                                       uint32_t line_offset) {
+                                       uint32_t last_line) {
   // If this is a fatal error, copy the error into the AST context's
   // fatal error field, and then put it to the stream, otherwise just
   // dump the diagnostics to the stream.
@@ -4708,8 +4705,8 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
 
     if (m_diagnostic_consumer_ap.get())
       static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
-          ->PrintDiagnostics(fatal_diagnostics, bufferID, first_line, last_line,
-                             line_offset);
+          ->PrintDiagnostics(fatal_diagnostics, bufferID, first_line,
+                             last_line);
     if (fatal_diagnostics.Diagnostics().size())
       m_fatal_errors.SetErrorString(fatal_diagnostics.GetString().data());
     else
@@ -4729,7 +4726,7 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
     if (m_diagnostic_consumer_ap.get())
       static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
           ->PrintDiagnostics(diagnostic_manager, bufferID, first_line,
-                             last_line, line_offset);
+                             last_line);
   }
 }
 

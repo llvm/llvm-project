@@ -264,7 +264,10 @@ void FileSystem::Resolve(FileSpec &file_spec) {
   Resolve(path);
 
   // Update the FileSpec with the resolved path.
-  file_spec.SetPath(path);
+  if (file_spec.GetFilename().IsEmpty())
+    file_spec.GetDirectory().SetString(path);
+  else
+    file_spec.SetPath(path);
   file_spec.SetIsResolved(true);
 }
 

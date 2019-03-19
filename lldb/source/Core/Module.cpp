@@ -314,6 +314,10 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
           // file's architecture since it might differ in vendor/os if some
           // parts were unknown.
           m_arch = m_objfile_sp->GetArchitecture();
+
+          // Augment the arch with the target's information in case
+          // we are unable to extract the os/environment from memory.
+          m_arch.MergeFrom(process_sp->GetTarget().GetArchitecture());
         } else {
           error.SetErrorString("unable to find suitable object file plug-in");
         }

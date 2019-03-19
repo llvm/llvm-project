@@ -15,6 +15,7 @@ from lldbsuite.test import lldbutil
 
 
 @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+@skipIfDarwin
 class LoadUnloadTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

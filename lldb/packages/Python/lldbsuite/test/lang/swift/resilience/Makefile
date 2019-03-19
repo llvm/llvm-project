@@ -8,7 +8,7 @@ include $(LEVEL)/Makefile.rules
 MACOSX_DEPLOYMENT_TARGET ?= 10.10
 SWIFT_TRIPLE ?= -target x86_64-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)
 
-SWIFTFLAGS += -Xfrontend -enable-resilience $(SWIFT_TRIPLE)
+SWIFTFLAGS += -enable-library-evolution $(SWIFT_TRIPLE)
 
 all: libmod.a.dylib libmod.b.dylib main.a main.b
 
