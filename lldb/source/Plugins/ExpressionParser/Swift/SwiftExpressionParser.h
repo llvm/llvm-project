@@ -83,8 +83,7 @@ public:
   ///     success.
   //------------------------------------------------------------------
   unsigned Parse(DiagnosticManager &diagnostic_manager, uint32_t first_line = 0,
-                 uint32_t last_line = UINT32_MAX,
-                 uint32_t line_offset = 0) override;
+                 uint32_t last_line = UINT32_MAX) override;
 
   //------------------------------------------------------------------
   /// Ready an already-parsed expression for execution, possibly

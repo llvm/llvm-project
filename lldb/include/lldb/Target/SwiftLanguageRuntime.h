@@ -345,6 +345,8 @@ public:
   void WillStartExecutingUserExpression(bool);
   void DidFinishExecutingUserExpression(bool);
 
+  bool IsABIStable();
+
 protected:
   //------------------------------------------------------------------
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
@@ -390,6 +392,7 @@ protected:
   void SetupSwiftError();
   void SetupExclusivity();
   void SetupReflection();
+  void SetupABIBit();
 
   const CompilerType &GetBoxMetadataType();
 

@@ -103,10 +103,11 @@ swift::SILValue SwiftSILManipulator::emitLValueForVariable(
                            swift::LoadOwnershipQualifier::Trivial);
   auto type = var->getDeclContext()->mapTypeIntoContext(
       var->getInterfaceType());
+  auto loweredType = converter.getLoweredRValueType(type);
   swift::PointerToAddressInst *address_of_variable =
       m_builder.createPointerToAddress(
           null_loc, pointer_to_variable,
-          converter.getLoweredType(type).getAddressType(),
+          swift::SILType::getPrimitiveAddressType(loweredType),
           /*isStrict*/ true);
 
   if (info.needs_init) {

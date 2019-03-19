@@ -1271,6 +1271,21 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   invocation.getFrontendOptions().ModuleName = expr_name_buf;
   invocation.getIRGenOptions().ModuleName = expr_name_buf;
 
+  auto should_use_prestable_abi = [&]() {
+    lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
+    if (!this_frame_sp)
+      return false;
+    lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
+    if (!process_sp)
+      return false;
+    auto *runtime = process_sp->GetSwiftLanguageRuntime();
+    return !runtime->IsABIStable();
+    return true;
+  };
+
+  invocation.getLangOptions().UseDarwinPreStableABIBit =
+      should_use_prestable_abi();
+
   swift::SourceFileKind source_file_kind = swift::SourceFileKind::Library;
 
   if (playground || repl) {
@@ -1426,8 +1441,7 @@ bool SwiftExpressionParser::Complete(CompletionRequest &request, unsigned line,
 }
 
 unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
-                                      uint32_t first_line, uint32_t last_line,
-                                      uint32_t line_offset) {
+                                      uint32_t first_line, uint32_t last_line) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   SwiftExpressionParser::SILVariableMap variable_map;
@@ -1437,8 +1451,8 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   unsigned buffer_id = UINT32_MAX;
   auto DiagnoseSwiftASTContextError = [&]() {
     assert(swift_ast_ctx->HasErrors() && "error expected");
-    swift_ast_ctx->PrintDiagnostics(diagnostic_manager, buffer_id,
-                                          first_line, last_line, line_offset);
+    swift_ast_ctx->PrintDiagnostics(diagnostic_manager, buffer_id, first_line,
+                                    last_line);
   };
 
   // In the case of playgrounds, we turn all rewriting functionality off.
