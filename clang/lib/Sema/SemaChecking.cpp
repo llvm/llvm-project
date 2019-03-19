@@ -235,47 +235,6 @@ static bool SemaBuiltinOverflow(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
-static void SemaBuiltinMemChkCall(Sema &S, FunctionDecl *FDecl,
-                                  CallExpr *TheCall, unsigned SizeIdx,
-                                  unsigned DstSizeIdx,
-                                  StringRef LikelyMacroName) {
-  if (TheCall->getNumArgs() <= SizeIdx ||
-      TheCall->getNumArgs() <= DstSizeIdx)
-    return;
-
-  const Expr *SizeArg = TheCall->getArg(SizeIdx);
-  const Expr *DstSizeArg = TheCall->getArg(DstSizeIdx);
-
-  Expr::EvalResult SizeResult, DstSizeResult;
-
-  // find out if both sizes are known at compile time
-  if (!SizeArg->EvaluateAsInt(SizeResult, S.Context) ||
-      !DstSizeArg->EvaluateAsInt(DstSizeResult, S.Context))
-    return;
-
-  llvm::APSInt Size = SizeResult.Val.getInt();
-  llvm::APSInt DstSize = DstSizeResult.Val.getInt();
-
-  if (Size.ule(DstSize))
-    return;
-
-  // Confirmed overflow, so generate the diagnostic.
-  StringRef FunctionName = FDecl->getName();
-  SourceLocation SL = TheCall->getBeginLoc();
-  SourceManager &SM = S.getSourceManager();
-  // If we're in an expansion of a macro whose name corresponds to this builtin,
-  // use the simple macro name and location.
-  if (SL.isMacroID() && Lexer::getImmediateMacroName(SL, SM, S.getLangOpts()) ==
-                            LikelyMacroName) {
-    FunctionName = LikelyMacroName;
-    SL = SM.getImmediateMacroCallerLoc(SL);
-  }
-
-  S.Diag(SL, diag::warn_memcpy_chk_overflow)
-      << FunctionName << DstSize.toString(/*Radix=*/10)
-      << Size.toString(/*Radix=*/10);
-}
-
 static bool SemaBuiltinCallWithStaticChain(Sema &S, CallExpr *BuiltinCall) {
   if (checkArgCount(S, BuiltinCall, 2))
     return true;
@@ -337,6 +296,144 @@ static bool SemaBuiltinCallWithStaticChain(Sema &S, CallExpr *BuiltinCall) {
   BuiltinCall->setArg(1, ChainResult.get());
 
   return false;
+}
+
+/// Check a call to BuiltinID for buffer overflows. If BuiltinID is a
+/// __builtin_*_chk function, then use the object size argument specified in the
+/// source. Otherwise, infer the object size using __builtin_object_size.
+void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
+                                               CallExpr *TheCall) {
+  // FIXME: There are some more useful checks we could be doing here:
+  //  - Analyze the format string of sprintf to see how much of buffer is used.
+  //  - Evaluate strlen of strcpy arguments, use as object size.
+
+  unsigned BuiltinID = FD->getBuiltinID(/*ConsiderWrappers=*/true);
+  if (!BuiltinID)
+    return;
+
+  unsigned DiagID = 0;
+  bool IsChkVariant = false;
+  unsigned SizeIndex, ObjectIndex;
+  switch (BuiltinID) {
+  default:
+    return;
+  case Builtin::BI__builtin___memcpy_chk:
+  case Builtin::BI__builtin___memmove_chk:
+  case Builtin::BI__builtin___memset_chk:
+  case Builtin::BI__builtin___strlcat_chk:
+  case Builtin::BI__builtin___strlcpy_chk:
+  case Builtin::BI__builtin___strncat_chk:
+  case Builtin::BI__builtin___strncpy_chk:
+  case Builtin::BI__builtin___stpncpy_chk:
+  case Builtin::BI__builtin___memccpy_chk: {
+    DiagID = diag::warn_builtin_chk_overflow;
+    IsChkVariant = true;
+    SizeIndex = TheCall->getNumArgs() - 2;
+    ObjectIndex = TheCall->getNumArgs() - 1;
+    break;
+  }
+
+  case Builtin::BI__builtin___snprintf_chk:
+  case Builtin::BI__builtin___vsnprintf_chk: {
+    DiagID = diag::warn_builtin_chk_overflow;
+    IsChkVariant = true;
+    SizeIndex = 1;
+    ObjectIndex = 3;
+    break;
+  }
+
+  case Builtin::BIstrncat:
+  case Builtin::BI__builtin_strncat:
+  case Builtin::BIstrncpy:
+  case Builtin::BI__builtin_strncpy:
+  case Builtin::BIstpncpy:
+  case Builtin::BI__builtin_stpncpy: {
+    // Whether these functions overflow depends on the runtime strlen of the
+    // string, not just the buffer size, so emitting the "always overflow"
+    // diagnostic isn't quite right. We should still diagnose passing a buffer
+    // size larger than the destination buffer though; this is a runtime abort
+    // in _FORTIFY_SOURCE mode, and is quite suspicious otherwise.
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    SizeIndex = TheCall->getNumArgs() - 1;
+    ObjectIndex = 0;
+    break;
+  }
+
+  case Builtin::BImemcpy:
+  case Builtin::BI__builtin_memcpy:
+  case Builtin::BImemmove:
+  case Builtin::BI__builtin_memmove:
+  case Builtin::BImemset:
+  case Builtin::BI__builtin_memset: {
+    DiagID = diag::warn_fortify_source_overflow;
+    SizeIndex = TheCall->getNumArgs() - 1;
+    ObjectIndex = 0;
+    break;
+  }
+  case Builtin::BIsnprintf:
+  case Builtin::BI__builtin_snprintf:
+  case Builtin::BIvsnprintf:
+  case Builtin::BI__builtin_vsnprintf: {
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    SizeIndex = 1;
+    ObjectIndex = 0;
+    break;
+  }
+  }
+
+  llvm::APSInt ObjectSize;
+  // For __builtin___*_chk, the object size is explicitly provided by the caller
+  // (usually using __builtin_object_size). Use that value to check this call.
+  if (IsChkVariant) {
+    Expr::EvalResult Result;
+    Expr *SizeArg = TheCall->getArg(ObjectIndex);
+    if (!SizeArg->EvaluateAsInt(Result, getASTContext()))
+      return;
+    ObjectSize = Result.Val.getInt();
+
+  // Otherwise, try to evaluate an imaginary call to __builtin_object_size.
+  } else {
+    // If the parameter has a pass_object_size attribute, then we should use its
+    // (potentially) more strict checking mode. Otherwise, conservatively assume
+    // type 0.
+    int BOSType = 0;
+    if (const auto *POS =
+            FD->getParamDecl(ObjectIndex)->getAttr<PassObjectSizeAttr>())
+      BOSType = POS->getType();
+
+    Expr *ObjArg = TheCall->getArg(ObjectIndex);
+    uint64_t Result;
+    if (!ObjArg->tryEvaluateObjectSize(Result, getASTContext(), BOSType))
+      return;
+    // Get the object size in the target's size_t width.
+    const TargetInfo &TI = getASTContext().getTargetInfo();
+    unsigned SizeTypeWidth = TI.getTypeWidth(TI.getSizeType());
+    ObjectSize = llvm::APSInt::getUnsigned(Result).extOrTrunc(SizeTypeWidth);
+  }
+
+  // Evaluate the number of bytes of the object that this call will use.
+  Expr::EvalResult Result;
+  Expr *UsedSizeArg = TheCall->getArg(SizeIndex);
+  if (!UsedSizeArg->EvaluateAsInt(Result, getASTContext()))
+    return;
+  llvm::APSInt UsedSize = Result.Val.getInt();
+
+  if (UsedSize.ule(ObjectSize))
+    return;
+
+  StringRef FunctionName = getASTContext().BuiltinInfo.getName(BuiltinID);
+  // Skim off the details of whichever builtin was called to produce a better
+  // diagnostic, as it's unlikley that the user wrote the __builtin explicitly.
+  if (IsChkVariant) {
+    FunctionName = FunctionName.drop_front(std::strlen("__builtin___"));
+    FunctionName = FunctionName.drop_back(std::strlen("_chk"));
+  } else if (FunctionName.startswith("__builtin_")) {
+    FunctionName = FunctionName.drop_front(std::strlen("__builtin_"));
+  }
+
+  Diag(TheCall->getBeginLoc(), DiagID)
+      << FunctionName << ObjectSize.toString(/*Radix=*/10)
+      << UsedSize.toString(/*Radix=*/10);
 }
 
 static bool SemaBuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,
@@ -1302,42 +1399,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     TheCall->setType(Context.IntTy);
     break;
   }
-
-  // check secure string manipulation functions where overflows
-  // are detectable at compile time
-  case Builtin::BI__builtin___memcpy_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "memcpy");
-    break;
-  case Builtin::BI__builtin___memmove_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "memmove");
-    break;
-  case Builtin::BI__builtin___memset_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "memset");
-    break;
-  case Builtin::BI__builtin___strlcat_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "strlcat");
-    break;
-  case Builtin::BI__builtin___strlcpy_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "strlcpy");
-    break;
-  case Builtin::BI__builtin___strncat_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "strncat");
-    break;
-  case Builtin::BI__builtin___strncpy_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "strncpy");
-    break;
-  case Builtin::BI__builtin___stpncpy_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "stpncpy");
-    break;
-  case Builtin::BI__builtin___memccpy_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 3, 4, "memccpy");
-    break;
-  case Builtin::BI__builtin___snprintf_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 1, 3, "snprintf");
-    break;
-  case Builtin::BI__builtin___vsnprintf_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 1, 3, "vsnprintf");
-    break;
   case Builtin::BI__builtin_call_with_static_chain:
     if (SemaBuiltinCallWithStaticChain(*this, TheCall))
       return ExprError();

@@ -22,27 +22,6 @@
 // Basically you put the pp-trace options first, then the source file or files,
 // and then any options you want to pass to the compiler.
 //
-// These are the pp-trace options:
-//
-//    -ignore (callback list)     Don't display output for a comma-separated
-//                                list of callbacks, i.e.:
-//                                  -ignore "FileChanged,InclusionDirective"
-//
-//    -output (file)              Output trace to the given file in a YAML
-//                                format, e.g.:
-//
-//                                  ---
-//                                  - Callback: Name
-//                                    Argument1: Value1
-//                                    Argument2: Value2
-//                                  (etc.)
-//                                  ...
-//
-// Future Directions:
-//
-// 1. Add option opposite to "-ignore" that specifys a comma-separated option
-// list of callbacs.  Perhaps "-only" or "-exclusive".
-//
 //===----------------------------------------------------------------------===//
 
 #include "PPCallbacksTracker.h"
@@ -62,9 +41,11 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/WithColor.h"
 #include <algorithm>
 #include <fstream>
 #include <iterator>
@@ -82,10 +63,12 @@ static cl::list<std::string> SourcePaths(cl::Positional,
                                          cl::desc("<source0> [... <sourceN>]"),
                                          cl::OneOrMore);
 
-// Option to specify a list or one or more callback names to ignore.
-static cl::opt<std::string> IgnoreCallbacks(
-    "ignore", cl::init(""),
-    cl::desc("Ignore callbacks, i.e. \"Callback1, Callback2...\"."));
+static cl::opt<std::string> Callbacks(
+    "callbacks", cl::init("*"),
+    cl::desc("Comma-separated list of globs describing the list of callbacks "
+             "to output. Globs are processed in order of appearance. Globs "
+             "with the '-' prefix remove callbacks from the set. e.g. "
+             "'*,-Macro*'."));
 
 // Option to specify the trace output file name.
 static cl::opt<std::string> OutputFileName(
@@ -103,44 +86,44 @@ namespace {
 // Consumer is responsible for setting up the callbacks.
 class PPTraceConsumer : public ASTConsumer {
 public:
-  PPTraceConsumer(SmallSet<std::string, 4> &Ignore,
+  PPTraceConsumer(const FilterType &Filters,
                   std::vector<CallbackCall> &CallbackCalls, Preprocessor &PP) {
     // PP takes ownership.
-    PP.addPPCallbacks(llvm::make_unique<PPCallbacksTracker>(Ignore,
-                                                            CallbackCalls, PP));
+    PP.addPPCallbacks(
+        llvm::make_unique<PPCallbacksTracker>(Filters, CallbackCalls, PP));
   }
 };
 
 class PPTraceAction : public SyntaxOnlyAction {
 public:
-  PPTraceAction(SmallSet<std::string, 4> &Ignore,
+  PPTraceAction(const FilterType &Filters,
                 std::vector<CallbackCall> &CallbackCalls)
-      : Ignore(Ignore), CallbackCalls(CallbackCalls) {}
+      : Filters(Filters), CallbackCalls(CallbackCalls) {}
 
 protected:
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {
-    return llvm::make_unique<PPTraceConsumer>(Ignore, CallbackCalls,
+    return llvm::make_unique<PPTraceConsumer>(Filters, CallbackCalls,
                                               CI.getPreprocessor());
   }
 
 private:
-  SmallSet<std::string, 4> &Ignore;
+  const FilterType &Filters;
   std::vector<CallbackCall> &CallbackCalls;
 };
 
 class PPTraceFrontendActionFactory : public FrontendActionFactory {
 public:
-  PPTraceFrontendActionFactory(SmallSet<std::string, 4> &Ignore,
+  PPTraceFrontendActionFactory(const FilterType &Filters,
                                std::vector<CallbackCall> &CallbackCalls)
-      : Ignore(Ignore), CallbackCalls(CallbackCalls) {}
+      : Filters(Filters), CallbackCalls(CallbackCalls) {}
 
   PPTraceAction *create() override {
-    return new PPTraceAction(Ignore, CallbackCalls);
+    return new PPTraceAction(Filters, CallbackCalls);
   }
 
 private:
-  SmallSet<std::string, 4> &Ignore;
+  const FilterType &Filters;
   std::vector<CallbackCall> &CallbackCalls;
 };
 } // namespace
@@ -177,14 +160,21 @@ int main(int Argc, const char **Argv) {
   cl::ParseCommandLineOptions(Argc, Argv, "pp-trace.\n");
 
   // Parse the IgnoreCallbacks list into strings.
-  SmallVector<StringRef, 32> IgnoreCallbacksStrings;
-  StringRef(IgnoreCallbacks).split(IgnoreCallbacksStrings, ",",
-                                   /*MaxSplit=*/ -1, /*KeepEmpty=*/false);
-  SmallSet<std::string, 4> Ignore;
-  for (SmallVector<StringRef, 32>::iterator I = IgnoreCallbacksStrings.begin(),
-                                            E = IgnoreCallbacksStrings.end();
-       I != E; ++I)
-    Ignore.insert(*I);
+  SmallVector<StringRef, 32> Patterns;
+  FilterType Filters;
+  StringRef(Callbacks).split(Patterns, ",",
+                             /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (StringRef Pattern : Patterns) {
+    Pattern = Pattern.trim();
+    bool Enabled = !Pattern.consume_front("-");
+    if (Expected<GlobPattern> Pat = GlobPattern::create(Pattern))
+      Filters.emplace_back(std::move(*Pat), Enabled);
+    else {
+      WithColor::error(llvm::errs(), "pp-trace")
+          << toString(Pat.takeError()) << '\n';
+      return 1;
+    }
+  }
 
   // Create the compilation database.
   SmallString<256> PathBuf;
@@ -198,7 +188,7 @@ int main(int Argc, const char **Argv) {
 
   // Create the tool and run the compilation.
   ClangTool Tool(*Compilations, SourcePaths);
-  PPTraceFrontendActionFactory Factory(Ignore, CallbackCalls);
+  PPTraceFrontendActionFactory Factory(Filters, CallbackCalls);
   int HadErrors = Tool.run(&Factory);
 
   // If we had errors, exit early.

@@ -1153,8 +1153,11 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
     return false;
   }
 
-  // Get '('.
-  PP.LexNonComment(Tok);
+  // Get '('. If we don't have a '(', try to form a header-name token.
+  do {
+    if (PP.LexHeaderName(Tok))
+      return false;
+  } while (Tok.getKind() == tok::comment);
 
   // Ensure we have a '('.
   if (Tok.isNot(tok::l_paren)) {
@@ -1163,57 +1166,26 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
     PP.Diag(LParenLoc, diag::err_pp_expected_after) << II << tok::l_paren;
     // If the next token looks like a filename or the start of one,
     // assume it is and process it as such.
-    if (!Tok.is(tok::angle_string_literal) && !Tok.is(tok::string_literal) &&
-        !Tok.is(tok::less))
+    if (!Tok.is(tok::angle_string_literal) && !Tok.is(tok::string_literal))
       return false;
   } else {
     // Save '(' location for possible missing ')' message.
     LParenLoc = Tok.getLocation();
+    if (PP.LexHeaderName(Tok))
+      return false;
+  }
 
-    if (PP.getCurrentLexer()) {
-      // Get the file name.
-      PP.getCurrentLexer()->LexIncludeFilename(Tok);
-    } else {
-      // We're in a macro, so we can't use LexIncludeFilename; just
-      // grab the next token.
-      PP.Lex(Tok);
-    }
+  if (!Tok.isOneOf(tok::angle_string_literal, tok::string_literal)) {
+    PP.Diag(Tok.getLocation(), diag::err_pp_expects_filename);
+    return false;
   }
 
   // Reserve a buffer to get the spelling.
   SmallString<128> FilenameBuffer;
-  StringRef Filename;
-  SourceLocation EndLoc;
-
-  switch (Tok.getKind()) {
-  case tok::eod:
-    // If the token kind is EOD, the error has already been diagnosed.
+  bool Invalid = false;
+  StringRef Filename = PP.getSpelling(Tok, FilenameBuffer, &Invalid);
+  if (Invalid)
     return false;
-
-  case tok::angle_string_literal:
-  case tok::string_literal: {
-    bool Invalid = false;
-    Filename = PP.getSpelling(Tok, FilenameBuffer, &Invalid);
-    if (Invalid)
-      return false;
-    break;
-  }
-
-  case tok::less:
-    // This could be a <foo/bar.h> file coming from a macro expansion.  In this
-    // case, glue the tokens together into FilenameBuffer and interpret those.
-    FilenameBuffer.push_back('<');
-    if (PP.ConcatenateIncludeName(FilenameBuffer, EndLoc)) {
-      // Let the caller know a <eod> was found by changing the Token kind.
-      Tok.setKind(tok::eod);
-      return false;   // Found <eod> but no ">"?  Diagnostic already emitted.
-    }
-    Filename = FilenameBuffer;
-    break;
-  default:
-    PP.Diag(Tok.getLocation(), diag::err_pp_expects_filename);
-    return false;
-  }
 
   SourceLocation FilenameLoc = Tok.getLocation();
 

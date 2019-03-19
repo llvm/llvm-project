@@ -257,21 +257,23 @@ enum TargetIndex {
 namespace AMDGPUAS {
   enum : unsigned {
     // The maximum value for flat, generic, local, private, constant and region.
-    MAX_AMDGPU_ADDRESS = 6,
+    MAX_AMDGPU_ADDRESS = 7,
 
     FLAT_ADDRESS = 0,     ///< Address space for flat memory.
     GLOBAL_ADDRESS = 1,   ///< Address space for global memory (RAT0, VTX0).
     REGION_ADDRESS = 2,   ///< Address space for region memory. (GDS)
 
-    CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2)
+    CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2).
     LOCAL_ADDRESS = 3,    ///< Address space for local memory.
     PRIVATE_ADDRESS = 5,  ///< Address space for private memory.
 
-    CONSTANT_ADDRESS_32BIT = 6, ///< Address space for 32-bit constant memory
+    CONSTANT_ADDRESS_32BIT = 6, ///< Address space for 32-bit constant memory.
 
-    /// Address space for direct addressible parameter memory (CONST0)
+    BUFFER_FAT_POINTER = 7, ///< Address space for 160-bit buffer fat pointers.
+
+    /// Address space for direct addressible parameter memory (CONST0).
     PARAM_D_ADDRESS = 6,
-    /// Address space for indirect addressible parameter memory (VTX1)
+    /// Address space for indirect addressible parameter memory (VTX1).
     PARAM_I_ADDRESS = 7,
 
     // Do not re-order the CONSTANT_BUFFER_* enums.  Several places depend on

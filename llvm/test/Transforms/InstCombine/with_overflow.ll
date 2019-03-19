@@ -468,3 +468,57 @@ define i1 @uadd_res_ult_const_minus_one(i32 %x, i1* %p) nounwind {
   %d = icmp ult i32 %c, -1
   ret i1 %d
 }
+
+define { i32, i1 } @sadd_canonicalize_constant_arg0(i32 %x) nounwind {
+; CHECK-LABEL: @sadd_canonicalize_constant_arg0(
+; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X:%.*]], i32 42)
+; CHECK-NEXT:    ret { i32, i1 } [[A]]
+;
+  %a = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 42, i32 %x)
+  ret { i32, i1 } %a
+}
+
+define { i32, i1 } @uadd_canonicalize_constant_arg0(i32 %x) nounwind {
+; CHECK-LABEL: @uadd_canonicalize_constant_arg0(
+; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 42)
+; CHECK-NEXT:    ret { i32, i1 } [[A]]
+;
+  %a = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 42, i32 %x)
+  ret { i32, i1 } %a
+}
+
+define { i32, i1 } @ssub_no_canonicalize_constant_arg0(i32 %x) nounwind {
+; CHECK-LABEL: @ssub_no_canonicalize_constant_arg0(
+; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 42, i32 [[X:%.*]])
+; CHECK-NEXT:    ret { i32, i1 } [[A]]
+;
+  %a = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 42, i32 %x)
+  ret { i32, i1 } %a
+}
+
+define { i32, i1 } @usub_no_canonicalize_constant_arg0(i32 %x) nounwind {
+; CHECK-LABEL: @usub_no_canonicalize_constant_arg0(
+; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 42, i32 [[X:%.*]])
+; CHECK-NEXT:    ret { i32, i1 } [[A]]
+;
+  %a = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 42, i32 %x)
+  ret { i32, i1 } %a
+}
+
+define { i32, i1 } @smul_canonicalize_constant_arg0(i32 %x) nounwind {
+; CHECK-LABEL: @smul_canonicalize_constant_arg0(
+; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[X:%.*]], i32 42)
+; CHECK-NEXT:    ret { i32, i1 } [[A]]
+;
+  %a = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 42, i32 %x)
+  ret { i32, i1 } %a
+}
+
+define { i32, i1 } @umul_canonicalize_constant_arg0(i32 %x) nounwind {
+; CHECK-LABEL: @umul_canonicalize_constant_arg0(
+; CHECK-NEXT:    [[A:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 42)
+; CHECK-NEXT:    ret { i32, i1 } [[A]]
+;
+  %a = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 42, i32 %x)
+  ret { i32, i1 } %a
+}

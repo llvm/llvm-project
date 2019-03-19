@@ -25,6 +25,10 @@ void
 test(S s)
 {
     const S& cs = s;
+    ASSERT_SAME_TYPE(decltype( s.back()), typename S::reference);
+    ASSERT_SAME_TYPE(decltype(cs.back()), typename S::const_reference);
+    LIBCPP_ASSERT_NOEXCEPT(    s.back());
+    LIBCPP_ASSERT_NOEXCEPT(   cs.back());
     assert(&cs.back() == &cs[cs.size()-1]);
     assert(&s.back() == &s[cs.size()-1]);
     s.back() = typename S::value_type('z');

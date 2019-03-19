@@ -3016,7 +3016,6 @@ void elf::mergeSections() {
     }
 
     StringRef OutsecName = getOutputSectionName(MS);
-    uint32_t Alignment = std::max<uint32_t>(MS->Alignment, MS->Entsize);
 
     auto I = llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
       // While we could create a single synthetic section for two different
@@ -3028,11 +3027,11 @@ void elf::mergeSections() {
       // Using Entsize in here also allows us to propagate it to the synthetic
       // section.
       return Sec->Name == OutsecName && Sec->Flags == MS->Flags &&
-             Sec->Entsize == MS->Entsize && Sec->Alignment == Alignment;
+             Sec->Entsize == MS->Entsize && Sec->Alignment == MS->Alignment;
     });
     if (I == MergeSections.end()) {
       MergeSyntheticSection *Syn =
-          createMergeSynthetic(OutsecName, MS->Type, MS->Flags, Alignment);
+          createMergeSynthetic(OutsecName, MS->Type, MS->Flags, MS->Alignment);
       MergeSections.push_back(Syn);
       I = std::prev(MergeSections.end());
       S = Syn;

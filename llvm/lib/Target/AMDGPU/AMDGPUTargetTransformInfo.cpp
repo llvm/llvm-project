@@ -253,7 +253,8 @@ unsigned GCNTTIImpl::getStoreVectorFactor(unsigned VF, unsigned StoreSize,
 unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   if (AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
       AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
-      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+      AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
     return 512;
   }
 

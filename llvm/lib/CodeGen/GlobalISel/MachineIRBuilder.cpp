@@ -242,11 +242,8 @@ MachineInstrBuilder MachineIRBuilder::buildBrIndirect(unsigned Tgt) {
 }
 
 MachineInstrBuilder MachineIRBuilder::buildCopy(const DstOp &Res,
-                                                const SrcOp &Op,
-                                                unsigned Subreg) {
-  auto Copy = buildInstr(TargetOpcode::COPY, Res, Op);
-  Copy->getOperand(1).setSubReg(Subreg);
-  return Copy;
+                                                const SrcOp &Op) {
+  return buildInstr(TargetOpcode::COPY, Res, Op);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
@@ -915,7 +912,8 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
   }
   case TargetOpcode::COPY:
     assert(DstOps.size() == 1 && "Invalid Dst");
-    assert(SrcOps.size() == 1 && "Invalid Srcs");
+    // If the caller wants to add a subreg source it has to be done separately
+    // so we may not have any SrcOps at this point yet.
     break;
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_ICMP: {

@@ -181,6 +181,67 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   }
 }
 
+void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
+                                            raw_ostream &OS) {
+  OS << (IsVCmp ? "vcmp" : "cmp");
+
+  printSSEAVXCC(MI, MI->getNumOperands() - 1, OS);
+
+  switch (MI->getOpcode()) {
+  default: llvm_unreachable("Unexpected opcode!");
+  case X86::CMPPDrmi:       case X86::CMPPDrri:
+  case X86::VCMPPDrmi:      case X86::VCMPPDrri:
+  case X86::VCMPPDYrmi:     case X86::VCMPPDYrri:
+  case X86::VCMPPDZ128rmi:  case X86::VCMPPDZ128rri:
+  case X86::VCMPPDZ256rmi:  case X86::VCMPPDZ256rri:
+  case X86::VCMPPDZrmi:     case X86::VCMPPDZrri:
+  case X86::VCMPPDZ128rmik: case X86::VCMPPDZ128rrik:
+  case X86::VCMPPDZ256rmik: case X86::VCMPPDZ256rrik:
+  case X86::VCMPPDZrmik:    case X86::VCMPPDZrrik:
+  case X86::VCMPPDZ128rmbi: case X86::VCMPPDZ128rmbik:
+  case X86::VCMPPDZ256rmbi: case X86::VCMPPDZ256rmbik:
+  case X86::VCMPPDZrmbi:    case X86::VCMPPDZrmbik:
+  case X86::VCMPPDZrrib:    case X86::VCMPPDZrribk:
+    OS << "pd\t";
+    break;
+  case X86::CMPPSrmi:       case X86::CMPPSrri:
+  case X86::VCMPPSrmi:      case X86::VCMPPSrri:
+  case X86::VCMPPSYrmi:     case X86::VCMPPSYrri:
+  case X86::VCMPPSZ128rmi:  case X86::VCMPPSZ128rri:
+  case X86::VCMPPSZ256rmi:  case X86::VCMPPSZ256rri:
+  case X86::VCMPPSZrmi:     case X86::VCMPPSZrri:
+  case X86::VCMPPSZ128rmik: case X86::VCMPPSZ128rrik:
+  case X86::VCMPPSZ256rmik: case X86::VCMPPSZ256rrik:
+  case X86::VCMPPSZrmik:    case X86::VCMPPSZrrik:
+  case X86::VCMPPSZ128rmbi: case X86::VCMPPSZ128rmbik:
+  case X86::VCMPPSZ256rmbi: case X86::VCMPPSZ256rmbik:
+  case X86::VCMPPSZrmbi:    case X86::VCMPPSZrmbik:
+  case X86::VCMPPSZrrib:    case X86::VCMPPSZrribk:
+    OS << "ps\t";
+    break;
+  case X86::CMPSDrm:        case X86::CMPSDrr:
+  case X86::CMPSDrm_Int:    case X86::CMPSDrr_Int:
+  case X86::VCMPSDrm:       case X86::VCMPSDrr:
+  case X86::VCMPSDrm_Int:   case X86::VCMPSDrr_Int:
+  case X86::VCMPSDZrm:      case X86::VCMPSDZrr:
+  case X86::VCMPSDZrm_Int:  case X86::VCMPSDZrr_Int:
+  case X86::VCMPSDZrm_Intk: case X86::VCMPSDZrr_Intk:
+  case X86::VCMPSDZrrb_Int: case X86::VCMPSDZrrb_Intk:
+    OS << "sd\t";
+    break;
+  case X86::CMPSSrm:        case X86::CMPSSrr:
+  case X86::CMPSSrm_Int:    case X86::CMPSSrr_Int:
+  case X86::VCMPSSrm:       case X86::VCMPSSrr:
+  case X86::VCMPSSrm_Int:   case X86::VCMPSSrr_Int:
+  case X86::VCMPSSZrm:      case X86::VCMPSSZrr:
+  case X86::VCMPSSZrm_Int:  case X86::VCMPSSZrr_Int:
+  case X86::VCMPSSZrm_Intk: case X86::VCMPSSZrr_Intk:
+  case X86::VCMPSSZrrb_Int: case X86::VCMPSSZrrb_Intk:
+    OS << "ss\t";
+    break;
+  }
+}
+
 void X86InstPrinterCommon::printRoundingControl(const MCInst *MI, unsigned Op,
                                                 raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();

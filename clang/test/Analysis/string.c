@@ -517,12 +517,18 @@ void strncpy_overflow(char *y) {
   char x[4];
   if (strlen(y) == 4)
     strncpy(x, y, 5); // expected-warning{{Size argument is greater than the length of the destination buffer}}
+#ifndef VARIANT
+  // expected-warning@-2{{size argument is too large; destination buffer has size 4, but size argument is 5}}
+#endif
 }
 
 void strncpy_no_overflow(char *y) {
   char x[4];
   if (strlen(y) == 3)
     strncpy(x, y, 5); // expected-warning{{Size argument is greater than the length of the destination buffer}}
+#ifndef VARIANT
+  // expected-warning@-2{{size argument is too large; destination buffer has size 4, but size argument is 5}}
+#endif
 }
 
 void strncpy_no_overflow2(char *y, int n) {
@@ -1247,7 +1253,7 @@ void memset6_char_array_nonnull() {
 void memset8_char_array_nonnull() {
   char str[5] = "abcd";
   clang_analyzer_eval(strlen(str) == 4); // expected-warning{{TRUE}}
-  memset(str, '0', 10);
+  memset(str, '0', 10); // expected-warning{{'memset' will always overflow; destination buffer has size 5, but size argument is 10}}
   clang_analyzer_eval(str[0] != '0');     // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(strlen(str) >= 10); // expected-warning{{TRUE}}
   clang_analyzer_eval(strlen(str) < 10);  // expected-warning{{FALSE}}
@@ -1284,7 +1290,7 @@ void memset12_struct_field() {
   struct POD_memset pod;
   pod.num = 1;
   pod.c = '1';
-  memset(&pod.c, 0, sizeof(struct POD_memset));
+  memset(&pod.c, 0, sizeof(struct POD_memset)); // expected-warning {{'memset' will always overflow; destination buffer has size 4, but size argument is 8}}
   clang_analyzer_eval(pod.num == 0); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(pod.c == 0);   // expected-warning{{UNKNOWN}}
 }

@@ -417,16 +417,18 @@ defm GE_U : SIMDConditionInt<"ge_u", SETUGE, 33>;
 defm GE : SIMDConditionFP<"ge", SETOGE, 69>;
 
 // Lower float comparisons that don't care about NaN to standard WebAssembly
-// float comparisons. These instructions are generated in the target-independent
-// expansion of unordered comparisons and ordered ne.
-def : Pat<(v4i32 (seteq (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
-          (v4i32 (EQ_v4f32 (v4f32 V128:$lhs), (v4f32 V128:$rhs)))>;
-def : Pat<(v4i32 (setne (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
-          (v4i32 (NE_v4f32 (v4f32 V128:$lhs), (v4f32 V128:$rhs)))>;
-def : Pat<(v2i64 (seteq (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
-          (v2i64 (EQ_v2f64 (v2f64 V128:$lhs), (v2f64 V128:$rhs)))>;
-def : Pat<(v2i64 (setne (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
-          (v2i64 (NE_v2f64 (v2f64 V128:$lhs), (v2f64 V128:$rhs)))>;
+// float comparisons. These instructions are generated with nnan and in the
+// target-independent expansion of unordered comparisons and ordered ne.
+foreach nodes = [[seteq, EQ_v4f32], [setne, NE_v4f32], [setlt, LT_v4f32],
+                 [setgt, GT_v4f32], [setle, LE_v4f32], [setge, GE_v4f32]] in
+def : Pat<(v4i32 (nodes[0] (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
+          (v4i32 (nodes[1] (v4f32 V128:$lhs), (v4f32 V128:$rhs)))>;
+
+foreach nodes = [[seteq, EQ_v2f64], [setne, NE_v2f64], [setlt, LT_v2f64],
+                 [setgt, GT_v2f64], [setle, LE_v2f64], [setge, GE_v2f64]] in
+def : Pat<(v2i64 (nodes[0] (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
+          (v2i64 (nodes[1] (v2f64 V128:$lhs), (v2f64 V128:$rhs)))>;
+
 
 //===----------------------------------------------------------------------===//
 // Bitwise operations
