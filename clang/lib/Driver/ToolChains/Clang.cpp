@@ -6376,7 +6376,10 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // The wrapper command looks like this:
   // clang-offload-wrapper
   //   -o=<outputfile>.bc
-  //   -target=sycl-x86_64-pc-linux-gnu <inputfile(s)>.spv
+  //   -host=x86_64-pc-linux-gnu -kind=sycl
+  //   -format=spirv <inputfile1>.spv <manifest1>(optional)
+  //   -format=spirv <inputfile2>.spv <manifest2>(optional)
+  //  ...
   ArgStringList WrapperArgs;
 
   std::string OutTmpName = C.getDriver().GetTemporaryPath("wrapper", "bc");
@@ -6385,19 +6388,22 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   SmallString<128> OutOpt("-o=");
   OutOpt += WrapperFileName;
   WrapperArgs.push_back(C.getArgs().MakeArgString(OutOpt));
+
+  SmallString<128> HostTripleOpt("-host=");
+  HostTripleOpt += getToolChain().getAuxTriple()->str();
+  WrapperArgs.push_back(C.getArgs().MakeArgString(HostTripleOpt));
+
+  // TODO forcing kind and format here is a simplification which assumes wrapper
+  // used only with SYCL and the only device code format is SPIRV (which is true
+  // at this point). Should be fixed together with supporting AOT in the driver.
+  StringRef Kind = Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
+  WrapperArgs.push_back(
+      C.getArgs().MakeArgString(Twine("-kind=") + Twine(Kind)));
+
   for (auto I : Inputs) {
+    WrapperArgs.push_back("-format=spirv");
     WrapperArgs.push_back(I.getFilename());
   }
-
-  SmallString<128> TargetOpt("-target=");
-  TargetOpt += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
-  TargetOpt += '-';
-  TargetOpt += getToolChain().getAuxTriple()->str();
-  WrapperArgs.push_back(C.getArgs().MakeArgString(TargetOpt));
-
-  // For SYCL, do not emit entry tables
-  if (JA.isOffloading(Action::OFK_SYCL))
-    WrapperArgs.push_back("-emit-entry-table=0");
 
   C.addCommand(llvm::make_unique<Command>(JA, *this,
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),

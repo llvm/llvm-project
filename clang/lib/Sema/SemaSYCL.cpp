@@ -1050,9 +1050,12 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
     const size_t N = K.Params.size();
     O << "template <> struct KernelInfo<"
       << eraseAnonNamespace(K.NameType.getAsString()) << "> {\n";
+    O << "  DLL_LOCAL\n";
     O << "  static constexpr const char* getName() { return \"" << K.Name
       << "\"; }\n";
+    O << "  DLL_LOCAL\n";
     O << "  static constexpr unsigned getNumParams() { return " << N << "; }\n";
+    O << "  DLL_LOCAL\n";
     O << "  static constexpr const kernel_param_desc_t& ";
     O << "getParamDesc(unsigned i) {\n";
     O << "    return kernel_signatures[i+" << CurStart << "];\n";
