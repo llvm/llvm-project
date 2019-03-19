@@ -431,10 +431,6 @@ void ClangUserExpression::UpdateLanguageForExpr(
                               m_in_static_method,
                               m_options, exe_ctx,
                               !m_ctx_obj, modules_to_import)) {
-
-    if (!source_code->GetText(m_transformed_text, m_expr_lang,
-                              m_in_static_method, exe_ctx, !m_ctx_obj,
-                              modules_to_import)) {
       diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    "couldn't construct expression body");
       return;
@@ -547,8 +543,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 ExecutionContext &exe_ctx,
                                 lldb_private::ExecutionPolicy execution_policy,
                                 bool keep_result_in_memory,
-                                bool generate_debug_info,
-                                uint32_t line_offset) {
+                                bool generate_debug_info) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   if (!PrepareForParsing(diagnostic_manager, exe_ctx))

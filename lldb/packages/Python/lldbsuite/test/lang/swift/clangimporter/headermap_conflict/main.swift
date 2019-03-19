@@ -16,7 +16,7 @@ func use<T>(_ t: T) {}
 
 func main() {
   let foo = FooToplevel(j: 42)
-  f() // break here
+  f(foo) // break here
   use(foo)
 }
 

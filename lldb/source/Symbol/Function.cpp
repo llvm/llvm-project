@@ -431,10 +431,10 @@ bool Function::IsTopLevelFunction() {
   return result;
 }
 
-ConstString Function::GetDisplayName() const {
+ConstString Function::GetDisplayName(const SymbolContext *sc) const {
   if (!m_mangled)
     return GetName();
-  return m_mangled.GetDisplayDemangledName(GetLanguage());
+  return m_mangled.GetDisplayDemangledName(GetLanguage(), sc);
 }
 
 CompilerDeclContext Function::GetDeclContext() {
@@ -608,16 +608,17 @@ lldb::LanguageType Function::GetLanguage() const {
     return lldb::eLanguageTypeUnknown;
 }
 
-ConstString Function::GetName() const {
+ConstString Function::GetName(const SymbolContext *sc) const {
   LanguageType language = lldb::eLanguageTypeUnknown;
   if (m_comp_unit)
     language = m_comp_unit->GetLanguage();
-  return m_mangled.GetName(language);
+  return m_mangled.GetName(language, Mangled::ePreferDemangled, sc);
 }
 
-ConstString Function::GetNameNoArguments() const {
+ConstString Function::GetNameNoArguments(const SymbolContext *sc) const {
   LanguageType language = lldb::eLanguageTypeUnknown;
   if (m_comp_unit)
     language = m_comp_unit->GetLanguage();
-  return m_mangled.GetName(language, Mangled::ePreferDemangledWithoutArguments);
+  return m_mangled.GetName(language, Mangled::ePreferDemangledWithoutArguments,
+                           sc);
 }

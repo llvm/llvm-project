@@ -475,15 +475,6 @@ public:
     // In the case where the value is of Swift generic type, unbox it.
     CompilerType valobj_type = valobj_sp->GetCompilerType();
 
-    if (m_is_generic) {
-      auto dyn_obj = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
-      if (dyn_obj) {
-        // Update the type to refer to the dynamic type.
-        valobj_sp = dyn_obj;
-        valobj_type = valobj_sp->GetCompilerType();
-      }
-    }
-
     if (m_is_reference) {
       DataExtractor valobj_extractor;
       Status extract_error;
@@ -524,6 +515,18 @@ public:
           is_dynamic_class_type
               ? LLDB_INVALID_ADDRESS
               : valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
+
+      // BEGIN Swift.
+      if (lldb::ProcessSP process_sp =
+          map.GetBestExecutionContextScope()->CalculateProcess())
+        if (auto runtime = process_sp->GetLanguageRuntime(
+                valobj_type.GetMinimumLanguage())) {
+          Status read_error;
+          addr_of_valobj =
+              runtime->FixupAddress(addr_of_valobj, valobj_type, read_error);
+        }
+      // END Swift.
+
       if (addr_of_valobj != LLDB_INVALID_ADDRESS) {
         Status write_error;
         map.WritePointerToMemory(load_addr, addr_of_valobj, write_error);
@@ -946,7 +949,7 @@ public:
     if (lang == lldb::eLanguageTypeSwift)
       // We already acquired the lock in the SwiftUserExpression.
       type_system =
-          target_sp->GetScratchSwiftASTContext(type_system_error, *frame_sp)
+          target_sp->GetScratchSwiftASTContext(type_system_error, *exe_scope)
               .get();
     else
       type_system = target_sp->GetScratchTypeSystemForLanguage(
@@ -963,7 +966,7 @@ public:
     PersistentExpressionState *persistent_state;
     if (lang == lldb::eLanguageTypeSwift)
       persistent_state =
-        target_sp->GetSwiftPersistentExpressionState(*frame_sp);
+        target_sp->GetSwiftPersistentExpressionState(*exe_scope);
     else
       persistent_state = type_system->GetPersistentExpressionState();
 

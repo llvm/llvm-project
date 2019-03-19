@@ -345,8 +345,7 @@ public:
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
-                        uint32_t last_line = UINT32_MAX,
-                        uint32_t line_offset = 0);
+                        uint32_t last_line = UINT32_MAX);
 
   ConstString GetMangledTypeName(swift::TypeBase *);
 
@@ -536,8 +535,7 @@ public:
 
   ConstString GetTypeName(void *type) override;
 
-  ConstString GetDisplayTypeName(void *type,
-                                 lldb::StackFrameSP frame_sp) override;
+  ConstString GetDisplayTypeName(void *type, const SymbolContext *sc) override;
 
   ConstString GetTypeSymbolName(void *type) override;
 
@@ -649,6 +647,12 @@ public:
   //----------------------------------------------------------------------
   // Dumping types
   //----------------------------------------------------------------------
+#ifndef NDEBUG
+  /// Convenience LLVM-style dump method for use in the debugger only.
+  LLVM_DUMP_METHOD virtual void
+  dump(lldb::opaque_compiler_type_t type) const override;
+#endif
+
   void DumpValue(void *type, ExecutionContext *exe_ctx, Stream *s,
                  lldb::Format format, const DataExtractor &data,
                  lldb::offset_t data_offset, size_t data_byte_size,

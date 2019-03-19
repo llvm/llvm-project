@@ -1077,6 +1077,10 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateBySourceRegex(
 lldb::SBBreakpoint
 SBTarget::BreakpointCreateForException(lldb::LanguageType language,
                                        bool catch_bp, bool throw_bp) {
+  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateForException,
+                     (lldb::LanguageType, bool, bool), language, catch_bp,
+                     throw_bp);
+
   SBStringList no_extra_args;
   return BreakpointCreateForException(language, catch_bp, throw_bp,
                                       no_extra_args);
@@ -1087,8 +1091,8 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
                                        bool catch_bp, bool throw_bp,
                                        SBStringList &extra_args) {
   LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateForException,
-                     (lldb::LanguageType, bool, bool), language, catch_bp,
-                     throw_bp);
+                     (lldb::LanguageType, bool, bool, SBStringList &), language,
+                     catch_bp, throw_bp, extra_args);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());

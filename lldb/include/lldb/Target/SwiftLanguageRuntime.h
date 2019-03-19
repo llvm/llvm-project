@@ -198,12 +198,18 @@ public:
   virtual bool GetObjectDescription(Stream &str, Value &value,
                                     ExecutionContextScope *exe_scope) override;
 
-  static std::string DemangleSymbolAsString(const char *symbol,
-                                            bool simplified = false);
+  /// A pair of depth and index.
+  using ArchetypePath = std::pair<uint64_t, uint64_t>;
+  /// Populate a map with the names of all archetypes in a function's generic
+  /// context.
+  static void GetGenericParameterNamesForFunction(
+      const SymbolContext &sc,
+      llvm::DenseMap<ArchetypePath, llvm::StringRef> &dict);
 
-  static std::string DemangleSymbolAsString(const ConstString &symbol, 
-                                            bool simplified = false);
-  
+  static std::string
+  DemangleSymbolAsString(llvm::StringRef symbol, bool simplified = false,
+                         const SymbolContext *sc = nullptr);
+
   // Use these passthrough functions rather than calling into Swift directly,
   // since some day we may want to support more than one swift variant.
   static bool IsSwiftMangledName(const char *name);
@@ -214,50 +220,10 @@ public:
 
   static const std::string GetCurrentMangledName(const char *mangled_name);
 
-  struct SwiftErrorDescriptor {
-  public:
-    struct SwiftBridgeableNativeError {
-    public:
-      lldb::addr_t metadata_location;
-      lldb::addr_t metadata_ptr_value;
-    };
-
-    struct SwiftPureNativeError {
-    public:
-      lldb::addr_t metadata_location;
-      lldb::addr_t payload_ptr;
-    };
-
-    struct SwiftNSError {
-    public:
-      lldb::addr_t instance_ptr_value;
-    };
-
-    enum class Kind {
-      eSwiftBridgeableNative,
-      eSwiftPureNative,
-      eBridged,
-      eNotAnError
-    };
-
-    Kind m_kind;
-    SwiftBridgeableNativeError m_bridgeable_native;
-    SwiftPureNativeError m_pure_native;
-    SwiftNSError m_bridged;
-
-    operator bool() { return m_kind != Kind::eNotAnError; }
-
-    SwiftErrorDescriptor();
-
-    SwiftErrorDescriptor(const SwiftErrorDescriptor &rhs) = default;
-  };
-
   // provide a quick and yet somewhat reasonable guess as to whether
   // this ValueObject represents something that validly conforms
   // to the magic ErrorType protocol
-  virtual bool
-  IsValidErrorValue(ValueObject &in_value,
-                    SwiftErrorDescriptor *out_error_descriptor = nullptr);
+  virtual bool IsValidErrorValue(ValueObject &in_value);
 
   virtual lldb::BreakpointResolverSP
   CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp,
@@ -306,7 +272,13 @@ public:
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) override;
 
-  virtual bool FixupReference(lldb::addr_t &addr, CompilerType type) override;
+  /// \return true if this is a Swift tagged pointer (as opposed to an
+  /// Objective-C tagged pointer).
+  bool IsTaggedPointer(lldb::addr_t addr, CompilerType type);
+  virtual std::pair<lldb::addr_t, bool>
+  FixupPointerValue(lldb::addr_t addr, CompilerType type) override;
+  virtual lldb::addr_t FixupAddress(lldb::addr_t addr, CompilerType type,
+                                    Status &error) override;
 
   bool IsRuntimeSupportValue(ValueObject &valobj) override;
 
@@ -373,6 +345,8 @@ public:
   void WillStartExecutingUserExpression(bool);
   void DidFinishExecutingUserExpression(bool);
 
+  bool IsABIStable();
+
 protected:
   //------------------------------------------------------------------
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
@@ -391,48 +365,21 @@ protected:
                                       Address &address);
 
   bool GetDynamicTypeAndAddress_Protocol(ValueObject &in_value,
+                                         CompilerType protocol_type,
                                          SwiftASTContext &scratch_ctx,
                                          lldb::DynamicValueType use_dynamic,
                                          TypeAndOrName &class_type_or_name,
                                          Address &address);
 
-  bool GetDynamicTypeAndAddress_ErrorType(ValueObject &in_value,
-                                          lldb::DynamicValueType use_dynamic,
-                                          TypeAndOrName &class_type_or_name,
-                                          Address &address);
-
-  bool GetDynamicTypeAndAddress_GenericTypeParam(
-      ValueObject &in_value, SwiftASTContext &scratch_ctx,
-      lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-      Address &address);
-
-  bool GetDynamicTypeAndAddress_Tuple(ValueObject &in_value,
-                                      SwiftASTContext &scratch_ctx,
-                                      lldb::DynamicValueType use_dynamic,
-                                      TypeAndOrName &class_type_or_name,
-                                      Address &address);
-
-  bool GetDynamicTypeAndAddress_Struct(ValueObject &in_value,
+  bool GetDynamicTypeAndAddress_Value(ValueObject &in_value,
                                        CompilerType &bound_type,
                                        lldb::DynamicValueType use_dynamic,
                                        TypeAndOrName &class_type_or_name,
                                        Address &address);
 
-  bool GetDynamicTypeAndAddress_Enum(ValueObject &in_value,
-                                     CompilerType &bound_type,
-                                     lldb::DynamicValueType use_dynamic,
-                                     TypeAndOrName &class_type_or_name,
-                                     Address &address);
-
   bool GetDynamicTypeAndAddress_IndirectEnumCase(
       ValueObject &in_value, lldb::DynamicValueType use_dynamic,
       TypeAndOrName &class_type_or_name, Address &address);
-
-  bool GetDynamicTypeAndAddress_Promise(ValueObject &in_value,
-                                        MetadataPromiseSP promise_sp,
-                                        lldb::DynamicValueType use_dynamic,
-                                        TypeAndOrName &class_type_or_name,
-                                        Address &address);
 
   MetadataPromiseSP GetPromiseForTypeNameAndFrame(const char *type_name,
                                                   StackFrame *frame);
@@ -445,10 +392,15 @@ protected:
   void SetupSwiftError();
   void SetupExclusivity();
   void SetupReflection();
+  void SetupABIBit();
 
   const CompilerType &GetBoxMetadataType();
 
   std::shared_ptr<swift::remote::MemoryReader> GetMemoryReader();
+
+  void PushLocalBuffer(uint64_t local_buffer, uint64_t local_buffer_size);
+
+  void PopLocalBuffer();
 
   std::unordered_set<std::string> m_library_negative_cache; // We have to load
                                                             // swift dependent

@@ -350,7 +350,10 @@ void Symtab::InitNameIndexes() {
 
       // Symbol name strings that didn't match a Mangled::ManglingScheme, are
       // stored in the demangled field.
-      entry.cstring = mangled.GetDemangledName(symbol->GetLanguage());
+      SymbolContext sc;
+      symbol->CalculateSymbolContext(&sc);
+      sc.module_sp = m_objfile->GetModule();
+      entry.cstring = mangled.GetDemangledName(symbol->GetLanguage(), &sc);
       if (entry.cstring) {
         m_name_to_index.Append(entry);
 

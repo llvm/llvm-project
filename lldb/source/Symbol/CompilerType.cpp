@@ -319,9 +319,9 @@ ConstString CompilerType::GetTypeName() const {
 }
 
 ConstString
-CompilerType::GetDisplayTypeName(lldb::StackFrameSP frame_sp) const {
+CompilerType::GetDisplayTypeName(const SymbolContext *sc) const {
   if (IsValid()) {
-    return m_type_system->GetDisplayTypeName(m_type, frame_sp);
+    return m_type_system->GetDisplayTypeName(m_type, sc);
   }
   return ConstString();
 }

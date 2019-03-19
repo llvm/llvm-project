@@ -151,7 +151,7 @@ Status TypeSystem::IsCompatible() {
 }
 
 ConstString TypeSystem::GetDisplayTypeName(void *type,
-                                           lldb::StackFrameSP frame_sp) {
+                                           const SymbolContext *sc) {
   return GetTypeName(type);
 }
 

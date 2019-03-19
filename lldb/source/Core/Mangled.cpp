@@ -441,7 +441,10 @@ ConstString Mangled::GetDemangledName(lldb::LanguageType language,
       if (log)
         log->Printf("demangle swift: %s", mangled_name);
       std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
-          mangled_name));
+          mangled_name, false, sc));
+      // Don't cache the demangled name the function isn't available yet.
+      if (!sc || !sc->function)
+        return ConstString(demangled);
       if (!demangled.empty()) {
         m_demangled.SetStringWithMangledCounterpart(demangled,
 						    m_mangled);
@@ -464,8 +467,8 @@ ConstString Mangled::GetDemangledName(lldb::LanguageType language,
   return m_demangled;
 }
 
-ConstString
-Mangled::GetDisplayDemangledName(lldb::LanguageType language) const {
+ConstString Mangled::GetDisplayDemangledName(lldb::LanguageType language,
+                                             const SymbolContext *sc) const {
   ConstString demangled;
   if (m_mangled) {
     do {
@@ -478,8 +481,9 @@ Mangled::GetDisplayDemangledName(lldb::LanguageType language) const {
               demangled)
             break;
 
-          std::string demangled_std 
-              = SwiftLanguageRuntime::DemangleSymbolAsString(m_mangled, true);
+          std::string demangled_std =
+              SwiftLanguageRuntime::DemangleSymbolAsString(
+                  m_mangled.GetStringRef(), true, sc);
           if (!demangled_std.empty()) {
             demangled.SetCString(demangled_std.c_str());
             display_cache->Insert(mangled, demangled);
@@ -507,11 +511,12 @@ bool Mangled::NameMatches(const RegularExpression &regex,
 // Get the demangled name if there is one, else return the mangled name.
 //----------------------------------------------------------------------
 ConstString Mangled::GetName(lldb::LanguageType language,
-                             Mangled::NamePreference preference) const {
+                             Mangled::NamePreference preference,
+                             const SymbolContext *sc) const {
   if (preference == ePreferMangled && m_mangled)
     return m_mangled;
 
-  ConstString demangled = GetDemangledName(language);
+  ConstString demangled = GetDemangledName(language, sc);
 
   if (preference == ePreferDemangledWithoutArguments) {
     return get_demangled_name_without_arguments(m_mangled, demangled);

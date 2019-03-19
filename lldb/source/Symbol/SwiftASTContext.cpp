@@ -45,6 +45,7 @@
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Driver/Util.h"
 #include "swift/Frontend/Frontend.h"
+#include "swift/Frontend/ParseableInterfaceModuleLoader.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/IDE/Utils.h"
 #include "swift/IRGen/Linking.h"
@@ -1410,6 +1411,7 @@ namespace {
 bool ConsumeIncludeOption(StringRef &arg, StringRef &prefix) {
   static StringRef options[] = {"-I",
                                 "-F",
+                                "-fmodule-map-file=",
                                 "-iquote",
                                 "-idirafter",
                                 "-iframeworkwithsysroot",
@@ -2845,8 +2847,7 @@ public:
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
-                        uint32_t last_line = UINT32_MAX,
-                        uint32_t line_offset = 0) {
+                        uint32_t last_line = UINT32_MAX) {
     bool added_one_diagnostic = false;
     for (const RawDiagnostic &diagnostic : m_diagnostics) {
       // We often make expressions and wrap them in some code.  When
@@ -2880,10 +2881,9 @@ public:
                 fixed_description.Printf(
                     "%s", diagnostic.description.substr(start_pos, match_pos)
                               .c_str());
-              fixed_description.Printf("%s:%u:",
-                                       diagnostic.bufferName.str().c_str(),
-                                       diagnostic.line - first_line +
-                                           line_offset + 1);
+              fixed_description.Printf(
+                  "%s:%u:", diagnostic.bufferName.str().c_str(),
+                  diagnostic.line - first_line + 1);
               start_pos = match_pos + match_len;
               match_pos =
                   diagnostic.description.find(match.GetString(), start_pos);
@@ -4678,8 +4678,7 @@ bool SwiftASTContext::SetColorizeDiagnostics(bool b) {
 
 void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                                        uint32_t bufferID, uint32_t first_line,
-                                       uint32_t last_line,
-                                       uint32_t line_offset) {
+                                       uint32_t last_line) {
   // If this is a fatal error, copy the error into the AST context's
   // fatal error field, and then put it to the stream, otherwise just
   // dump the diagnostics to the stream.
@@ -4706,8 +4705,8 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
 
     if (m_diagnostic_consumer_ap.get())
       static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
-          ->PrintDiagnostics(fatal_diagnostics, bufferID, first_line, last_line,
-                             line_offset);
+          ->PrintDiagnostics(fatal_diagnostics, bufferID, first_line,
+                             last_line);
     if (fatal_diagnostics.Diagnostics().size())
       m_fatal_errors.SetErrorString(fatal_diagnostics.GetString().data());
     else
@@ -4727,7 +4726,7 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
     if (m_diagnostic_consumer_ap.get())
       static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
           ->PrintDiagnostics(diagnostic_manager, bufferID, first_line,
-                             last_line, line_offset);
+                             last_line);
   }
 }
 
@@ -4760,9 +4759,14 @@ void SwiftASTContext::DumpConfiguration(Log *log) {
               m_ast_context_ap->SearchPathOpts.RuntimeResourcePath.c_str());
   log->Printf("  Runtime library path         : %s",
               m_ast_context_ap->SearchPathOpts.RuntimeLibraryPath.c_str());
-  log->Printf(
-      "  Runtime library import path  : %s",
-      m_ast_context_ap->SearchPathOpts.RuntimeLibraryImportPath.c_str());
+  
+  log->Printf("  Runtime library import paths : (%llu items)",
+              (unsigned long long)
+            m_ast_context_ap->SearchPathOpts.RuntimeLibraryImportPaths.size());
+  for (const auto &runtime_import_path :
+       m_ast_context_ap->SearchPathOpts.RuntimeLibraryImportPaths) {
+    log->Printf("    %s", runtime_import_path.c_str());
+  }
 
   log->Printf("  Framework search paths       : (%llu items)",
               (unsigned long long)
@@ -5109,27 +5113,22 @@ bool SwiftASTContext::IsPossibleDynamicType(void *type,
   VALID_OR_RETURN(false);
 
   if (type && check_swift) {
-    // FIXME: use the dynamic_pointee_type.
-    Flags type_flags(GetTypeInfo(type, nullptr));
+    auto can_type = GetCanonicalSwiftType(type);
 
-    if (type_flags.AnySet(eTypeIsGenericTypeParam | eTypeIsClass |
-                          eTypeIsProtocol))
+    if (can_type->getClassOrBoundGenericClass() ||
+        can_type->isAnyExistentialType())
       return true;
 
-    if (type_flags.AnySet(eTypeIsStructUnion | eTypeIsEnumeration |
-                          eTypeIsTuple)) {
-      CompilerType compiler_type(GetCanonicalSwiftType(type));
-      return !SwiftASTContext::IsFullyRealized(compiler_type);
-    }
+    if (can_type->hasArchetype() || can_type->hasTypeParameter())
+      return true;
 
-    auto can_type = GetCanonicalSwiftType(type).getPointer();
-    if (can_type == GetASTContext()->TheRawPointerType.getPointer())
+    if (can_type == GetASTContext()->TheRawPointerType)
       return true;
-    if (can_type == GetASTContext()->TheUnknownObjectType.getPointer())
+    if (can_type == GetASTContext()->TheUnknownObjectType)
       return true;
-    if (can_type == GetASTContext()->TheNativeObjectType.getPointer())
+    if (can_type == GetASTContext()->TheNativeObjectType)
       return true;
-    if (can_type == GetASTContext()->TheBridgeObjectType.getPointer())
+    if (can_type == GetASTContext()->TheBridgeObjectType)
       return true;
   }
 
@@ -5360,47 +5359,31 @@ ConstString SwiftASTContext::GetTypeName(void *type) {
 /// Build a dictionary of Archetype names that appear in \p type.
 static llvm::DenseMap<swift::CanType, swift::Identifier>
 GetArchetypeNames(swift::Type type, swift::ASTContext &ast_ctx,
-                  lldb::StackFrameSP frame_sp) {
+                  const SymbolContext *sc) {
   llvm::DenseMap<swift::CanType, swift::Identifier> dict;
 
   swift::Type swift_type(GetSwiftType(type));
   assert(&swift_type->getASTContext() == &ast_ctx);
-  StackFrame *frame = frame_sp.get();
-  if (!frame)
+  if (!sc)
     return dict;
 
+  llvm::DenseMap<std::pair<uint64_t, uint64_t>, StringRef> names;
+  SwiftLanguageRuntime::GetGenericParameterNamesForFunction(*sc, names);
   swift_type.visit([&](swift::Type type) {
-    if (!type->isTypeParameter())
+    if (!type->isTypeParameter() || dict.count(type->getCanonicalType()))
       return;
-
-    StreamString type_name;
-    if (!SwiftLanguageRuntime::GetAbstractTypeName(type_name, type))
-      return;
-
-    StreamString type_metadata_ptr_var_name;
-    type_metadata_ptr_var_name.Printf("$%s", type_name.GetString());
-    VariableList *var_list = frame->GetVariableList(false);
-    if (!var_list)
-      return;
-
-    VariableSP var_sp(var_list->FindVariable(
-        ConstString(type_metadata_ptr_var_name.GetData())));
-    if (!var_sp)
-      return;
-
-    Type *archetype_type = var_sp->GetType();
-    if (!archetype_type)
-      return;
-
-    ConstString name = archetype_type->GetName();
-    swift::Identifier ident = ast_ctx.getIdentifier(name.GetStringRef());
-    dict.insert({type->getCanonicalType(), ident});
+    auto *param = type->getAs<swift::GenericTypeParamType>();
+    auto it = names.find({param->getDepth(), param->getIndex()});
+    if (it != names.end()) {
+      swift::Identifier ident = ast_ctx.getIdentifier(it->second);
+      dict.insert({type->getCanonicalType(), ident});
+    }
   });
   return dict;
 }
 
 ConstString SwiftASTContext::GetDisplayTypeName(void *type,
-                                                lldb::StackFrameSP frame_sp) {
+                                                const SymbolContext *sc) {
   VALID_OR_RETURN(ConstString("<invalid Swift context>"));
   std::string type_name(GetTypeName(type).AsCString(""));
   if (type) {
@@ -5409,7 +5392,7 @@ ConstString SwiftASTContext::GetDisplayTypeName(void *type,
     print_options.FullyQualifiedTypes = false;
     print_options.SynthesizeSugarOnTypes = true;
     print_options.FullyQualifiedTypesIfAmbiguous = true;
-    auto dict = GetArchetypeNames(swift_type, *GetASTContext(), frame_sp);
+    auto dict = GetArchetypeNames(swift_type, *GetASTContext(), sc);
     print_options.AlternativeTypeNames = &dict;
     type_name = swift_type.getString(print_options);
   }
@@ -7002,26 +6985,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   } break;
 
   case swift::TypeKind::Tuple: {
-    // Dynamic type resolution may actually change(!) the layout of a
-    // tuple, so we need to get the offset from the static (but
-    // archetype-bound) version.
-    auto static_value = valobj->GetStaticValue();
-    auto static_type = static_value->GetCompilerType();
-    auto static_swift_type = GetCanonicalSwiftType(static_type);
-    if (swift::isa<swift::TupleType>(static_swift_type.getPointer()))
-      swift_can_type = static_swift_type;
-    if (swift_can_type->hasTypeParameter()) {
-      if (!exe_ctx)
-        return {};
-      auto *exe_scope = exe_ctx->GetBestExecutionContextScope();
-      auto *frame = exe_scope->CalculateStackFrame().get();
-      auto *runtime = exe_scope->CalculateProcess()->GetSwiftLanguageRuntime();
-      if (!frame || !runtime)
-        return {};
-      auto bound = runtime->DoArchetypeBindingForType(*frame, static_type);
-      swift_can_type = GetCanonicalSwiftType(bound);
-    }
-
     auto tuple_type = cast<swift::TupleType>(swift_can_type);
     if (idx >= tuple_type->getNumElements()) break;
 
@@ -7597,6 +7560,16 @@ bool SwiftASTContext::IsMeaninglessWithoutDynamicResolution(void *type) {
 // Dumping types
 //----------------------------------------------------------------------
 #define DEPTH_INCREMENT 2
+
+#ifndef NDEBUG
+LLVM_DUMP_METHOD void
+SwiftASTContext::dump(lldb::opaque_compiler_type_t type) const {
+  if (!type)
+    return;
+  swift::Type swift_type = GetSwiftType(type);
+  swift_type.dump();
+}
+#endif
 
 void SwiftASTContext::DumpValue(
     void *type, ExecutionContext *exe_ctx, Stream *s, lldb::Format format,

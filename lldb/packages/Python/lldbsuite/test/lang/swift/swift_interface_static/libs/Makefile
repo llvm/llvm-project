@@ -7,7 +7,7 @@ DYLIB_SWIFT_SOURCES := libs/$(BASENAME).swift
 
 # Don't use the default swift flags, as we don't want -g for the libraries in
 # this test.
-SWIFTFLAGS=-Onone -Xfrontend -serialize-debugging-options -enable-parseable-module-interface -parse-as-library
+SWIFTFLAGS=-Onone -Xfrontend -serialize-debugging-options -parse-as-library
 
 # Don't include the wrapped .swiftmodule on Linux to make sure we use
 # the .swiftinterface. The issue here is that if the .swiftmodule is wrapped

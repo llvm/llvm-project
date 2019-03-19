@@ -801,8 +801,21 @@ SwiftLanguage::GetHardcodedSynthetics() {
             ProcessSP process_sp(valobj.GetProcessSP());
             if (!process_sp)
               return nullptr;
+            // If this is a Swift tagged pointer, the Objective-C data
+            // formatters may incorrectly classify it as an
+            // Objective-C tagged pointer.
+            AddressType address_type;
+            lldb::addr_t ptr = valobj.GetPointerValue(&address_type);
+            SwiftLanguageRuntime *swift_runtime =
+                process_sp->GetSwiftLanguageRuntime();
+            if (!swift_runtime)
+              return nullptr;
+            if (swift_runtime->IsTaggedPointer(ptr, valobj.GetCompilerType()))
+              return nullptr;
             ObjCLanguageRuntime *objc_runtime =
                 process_sp->GetObjCLanguageRuntime();
+            if (!objc_runtime)
+              return nullptr;
             ObjCLanguageRuntime::ClassDescriptorSP valobj_descriptor_sp =
                 objc_runtime->GetClassDescriptor(valobj);
             if (valobj_descriptor_sp) {
@@ -1495,7 +1508,7 @@ bool SwiftLanguage::GetFunctionDisplayName(
   case Language::FunctionNameRepresentation::eNameWithNoArgs: {
     if (sc->function) {
       if (sc->function->GetLanguage() == eLanguageTypeSwift) {
-        if (ConstString cs = sc->function->GetDisplayName()) {
+        if (ConstString cs = sc->function->GetDisplayName(sc)) {
           s.Printf("%s", cs.AsCString());
           return true;
         }
@@ -1506,10 +1519,10 @@ bool SwiftLanguage::GetFunctionDisplayName(
   case Language::FunctionNameRepresentation::eNameWithArgs: {
     if (sc->function) {
       if (sc->function->GetLanguage() == eLanguageTypeSwift) {
-        if (const char *cstr = sc->function->GetDisplayName().AsCString()) {
+        if (const char *cstr =
+                sc->function->GetDisplayName(sc).AsCString()) {
           ExecutionContextScope *exe_scope =
               exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
-
           const InlineFunctionInfo *inline_info = NULL;
           VariableListSP variable_list_sp;
           bool get_function_vars = true;

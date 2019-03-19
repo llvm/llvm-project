@@ -3461,15 +3461,18 @@ class SBDebugger(_object):
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBDebugger, name)
     __repr__ = _swig_repr
-    def Initialize(*args):
-        """
-        Initialize()
-        Initialize(SBInitializerOptions options)
-        """
-        return _lldb.SBDebugger_Initialize(*args)
+    def Initialize():
+        """Initialize()"""
+        return _lldb.SBDebugger_Initialize()
 
     if _newclass:Initialize = staticmethod(Initialize)
     __swig_getmethods__["Initialize"] = lambda x: Initialize
+    def InitializeWithErrorHandling():
+        """InitializeWithErrorHandling() -> SBError"""
+        return _lldb.SBDebugger_InitializeWithErrorHandling()
+
+    if _newclass:InitializeWithErrorHandling = staticmethod(InitializeWithErrorHandling)
+    __swig_getmethods__["InitializeWithErrorHandling"] = lambda x: InitializeWithErrorHandling
     def Terminate():
         """Terminate()"""
         return _lldb.SBDebugger_Terminate()
@@ -3897,12 +3900,13 @@ class SBDebugger(_object):
 SBDebugger_swigregister = _lldb.SBDebugger_swigregister
 SBDebugger_swigregister(SBDebugger)
 
-def SBDebugger_Initialize(*args):
-  """
-    Initialize()
-    SBDebugger_Initialize(SBInitializerOptions options)
-    """
-  return _lldb.SBDebugger_Initialize(*args)
+def SBDebugger_Initialize():
+  """SBDebugger_Initialize()"""
+  return _lldb.SBDebugger_Initialize()
+
+def SBDebugger_InitializeWithErrorHandling():
+  """SBDebugger_InitializeWithErrorHandling() -> SBError"""
+  return _lldb.SBDebugger_InitializeWithErrorHandling()
 
 def SBDebugger_Terminate():
   """SBDebugger_Terminate()"""
@@ -5549,38 +5553,6 @@ def SBHostOS_ThreadDetach(*args):
 def SBHostOS_ThreadJoin(*args):
   """SBHostOS_ThreadJoin(thread_t thread, thread_result_t result, SBError err) -> bool"""
   return _lldb.SBHostOS_ThreadJoin(*args)
-
-class SBInitializerOptions(_object):
-    """Proxy of C++ lldb::SBInitializerOptions class"""
-    __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBInitializerOptions, name, value)
-    __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBInitializerOptions, name)
-    __repr__ = _swig_repr
-    def __init__(self, *args): 
-        """
-        __init__(self) -> SBInitializerOptions
-        __init__(self, SBInitializerOptions rhs) -> SBInitializerOptions
-        """
-        this = _lldb.new_SBInitializerOptions(*args)
-        try: self.this.append(this)
-        except: self.this = this
-    __swig_destroy__ = _lldb.delete_SBInitializerOptions
-    __del__ = lambda self : None;
-    def SetCaptureReproducer(self, *args):
-        """SetCaptureReproducer(self, bool b)"""
-        return _lldb.SBInitializerOptions_SetCaptureReproducer(self, *args)
-
-    def SetReplayReproducer(self, *args):
-        """SetReplayReproducer(self, bool b)"""
-        return _lldb.SBInitializerOptions_SetReplayReproducer(self, *args)
-
-    def SetReproducerPath(self, *args):
-        """SetReproducerPath(self, str path)"""
-        return _lldb.SBInitializerOptions_SetReproducerPath(self, *args)
-
-SBInitializerOptions_swigregister = _lldb.SBInitializerOptions_swigregister
-SBInitializerOptions_swigregister(SBInitializerOptions)
 
 class SBInstruction(_object):
     """Proxy of C++ lldb::SBInstruction class"""

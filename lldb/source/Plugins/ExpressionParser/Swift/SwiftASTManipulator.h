@@ -144,7 +144,6 @@ public:
                              bool is_class,
                              bool weak_self,
                              const EvaluateExpressionOptions &options,
-                             const Expression::SwiftGenericInfo &generic_info,
                              llvm::StringRef os_version,
                              uint32_t &first_body_line);
 

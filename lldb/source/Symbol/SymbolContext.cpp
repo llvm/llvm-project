@@ -90,7 +90,7 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
                                     const Address &addr, bool show_fullpaths,
                                     bool show_module, bool show_inlined_frames,
                                     bool show_function_arguments,
-                                    bool show_function_name) const {
+                                    bool show_function_name) {
   bool dumped_something = false;
   if (show_module && module_sp) {
     if (show_fullpaths)
@@ -110,9 +110,9 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
     } else {
       ConstString name;
       if (!show_function_arguments)
-        name = function->GetNameNoArguments();
+        name = function->GetNameNoArguments(this);
       if (!name)
-        name = function->GetName();
+        name = function->GetName(this);
       if (name)
         name.Dump(s);
     }

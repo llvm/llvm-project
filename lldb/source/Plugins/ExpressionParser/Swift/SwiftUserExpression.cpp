@@ -239,8 +239,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
               m_is_class = true;
           }
 
-          swift::Type object_type =
-              GetSwiftType(self_type)->getWithoutSpecifierType();
+          swift::Type object_type = GetSwiftType(self_type);
 
           if (object_type.getPointer() &&
               (object_type.getPointer() != self_type.GetOpaqueQualType()))
@@ -272,59 +271,6 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
           if (log)
             log->Printf("  [SUE::SC] Containing class name: %s",
                         self_type.GetTypeName().AsCString());
-
-          bool is_generic =
-              self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsGeneric);
-          bool is_bound =
-              is_generic && self_type_flags.AllSet(lldb::eTypeIsBound);
-          if (!is_generic || !is_bound)
-            break;
-
-          CompilerType self_unbound_type = self_type.GetUnboundType();
-
-          const size_t num_template_args = self_type.GetNumTemplateArguments();
-          if (log && num_template_args)
-            log->Printf("  [SUE::SC] Class generic arguments:");
-
-          for (size_t ai = 0, ae = num_template_args; ai != ae; ++ai) {
-            CompilerType template_arg_type =
-                self_type.GetGenericArgumentType(ai);
-            ConstString template_arg_name = template_arg_type.GetTypeName();
-
-            if (log) {
-              log->Printf("    [SUE::SC] Argument name: %s",
-                          template_arg_name.AsCString());
-
-              const char *printable_name;
-              CompilerType concrete_type =
-                  GetConcreteType(exe_ctx, frame, template_arg_type);
-              printable_name = concrete_type.GetTypeName().AsCString();
-              log->Printf("    [SUE::SC] Argument type: %s", printable_name);
-            }
-          }
-
-          if (log && self_unbound_type.GetNumTemplateArguments())
-            log->Printf("  [SUE::SC] Class unbound generic arguments:");
-
-          for (size_t ai = 0, ae = self_unbound_type.GetNumTemplateArguments();
-               ai != ae; ++ai) {
-            CompilerType template_arg_type =
-                self_unbound_type.GetGenericArgumentType(ai);
-            ConstString template_arg_name = template_arg_type.GetTypeName();
-
-            if (log)
-              log->Printf("    [SUE::SC] Argument name: %s",
-                          template_arg_name.AsCString());
-
-            CompilerType concrete_type =
-                GetConcreteType(exe_ctx, frame, template_arg_type);
-            if (log)
-              log->Printf("    [SUE::SC] Argument type: %s",
-                          concrete_type.GetTypeName().AsCString());
-
-            m_swift_generic_info.class_bindings.push_back(
-                {template_arg_name.AsCString(), concrete_type});
-          }
         } while (0);
       }
     }
@@ -343,8 +289,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 ExecutionContext &exe_ctx,
                                 lldb_private::ExecutionPolicy execution_policy,
                                 bool keep_result_in_memory,
-                                bool generate_debug_info,
-                                uint32_t line_offset) {
+                                bool generate_debug_info) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   Status err;
@@ -449,7 +394,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   unsigned error_code = m_parser->Parse(
       diagnostic_manager, first_body_line,
-      first_body_line + source_code->GetNumBodyLines(), line_offset);
+      first_body_line + source_code->GetNumBodyLines());
 
   if (error_code == 2) {
     m_fixed_text = m_expr_text;

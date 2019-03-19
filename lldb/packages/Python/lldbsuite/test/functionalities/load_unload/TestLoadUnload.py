@@ -15,6 +15,7 @@ from lldbsuite.test import lldbutil
 
 
 @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+@skipIfDarwin
 class LoadUnloadTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -259,9 +260,8 @@ class LoadUnloadTestCase(TestBase):
         self.expect(
             "process load %s --install=%s" % (localDylibPath, remoteDylibPath),
             "%s loaded correctly" % dylibName,
-            patterns=[
-                'Loading "%s".*ok' % localDylibPath,
-                'Image [0-9]+ loaded'])
+            substrs =[
+                'Loading "%s"...ok' % localDylibPath])
 
         # Search for and match the "Image ([0-9]+) loaded" pattern.
         output = self.res.GetOutput()
@@ -272,6 +272,8 @@ class LoadUnloadTestCase(TestBase):
             if match:
                 break
         index = match.group(1)
+
+        self.assertTrue(match, "Found Image number in output.")
 
         # Now we should have an entry for a_function.
         self.expect(

@@ -414,6 +414,8 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
 }
 
 SBValue SBThread::GetStopReturnValue() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBValue, SBThread, GetStopReturnValue);
+
   bool is_swift_error_value = false;
   SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
   if (is_swift_error_value)
@@ -432,7 +434,7 @@ SBValue SBThread::GetStopErrorValue() {
 }
 
 SBValue SBThread::GetStopReturnOrErrorValue(bool &is_swift_error_value) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  LLDB_RECORD_METHOD(lldb::SBValue, SBThread, GetStopReturnOrErrorValue, (bool&), is_swift_error_value);
   ValueObjectSP return_valobj_sp;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -447,12 +449,6 @@ SBValue SBThread::GetStopReturnOrErrorValue(bool &is_swift_error_value) {
       }
     }
   }
-
-  if (log)
-    log->Printf("SBThread(%p)::GetStopReturnValue () => %s",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                return_valobj_sp.get() ? return_valobj_sp->GetValueAsCString()
-                                       : "<no return value>");
 
   return LLDB_RECORD_RESULT(SBValue(return_valobj_sp));
 }
