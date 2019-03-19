@@ -351,3 +351,42 @@ lldb::SBValueList SBBlock::GetVariables(lldb::SBTarget &target, bool arguments,
   }
   return LLDB_RECORD_RESULT(value_list);
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBBlock>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBBlock, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBBlock, (const lldb::SBBlock &));
+  LLDB_REGISTER_METHOD(const lldb::SBBlock &,
+                       SBBlock, operator=,(const lldb::SBBlock &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBBlock, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBBlock, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBBlock, IsInlined, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBBlock, GetInlinedName, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBBlock,
+                             GetInlinedCallSiteFile, ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBBlock, GetInlinedCallSiteLine, ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBBlock, GetInlinedCallSiteColumn, ());
+  LLDB_REGISTER_METHOD(lldb::SBBlock, SBBlock, GetParent, ());
+  LLDB_REGISTER_METHOD(lldb::SBBlock, SBBlock, GetContainingInlinedBlock, ());
+  LLDB_REGISTER_METHOD(lldb::SBBlock, SBBlock, GetSibling, ());
+  LLDB_REGISTER_METHOD(lldb::SBBlock, SBBlock, GetFirstChild, ());
+  LLDB_REGISTER_METHOD(bool, SBBlock, GetDescription, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(uint32_t, SBBlock, GetNumRanges, ());
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBBlock, GetRangeStartAddress,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBBlock, GetRangeEndAddress,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBBlock, GetRangeIndexForBlockAddress,
+                       (lldb::SBAddress));
+  LLDB_REGISTER_METHOD(
+      lldb::SBValueList, SBBlock, GetVariables,
+      (lldb::SBFrame &, bool, bool, bool, lldb::DynamicValueType));
+  LLDB_REGISTER_METHOD(lldb::SBValueList, SBBlock, GetVariables,
+                       (lldb::SBTarget &, bool, bool, bool));
+}
+
+}
+}

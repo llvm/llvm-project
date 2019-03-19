@@ -175,3 +175,33 @@ bool SBDeclaration::GetDescription(SBStream &description) {
 }
 
 lldb_private::Declaration *SBDeclaration::get() { return m_opaque_up.get(); }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBDeclaration>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBDeclaration, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBDeclaration, (const lldb::SBDeclaration &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBDeclaration &,
+      SBDeclaration, operator=,(const lldb::SBDeclaration &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBDeclaration, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBDeclaration, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBDeclaration, GetFileSpec,
+                             ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBDeclaration, GetLine, ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBDeclaration, GetColumn, ());
+  LLDB_REGISTER_METHOD(void, SBDeclaration, SetFileSpec, (lldb::SBFileSpec));
+  LLDB_REGISTER_METHOD(void, SBDeclaration, SetLine, (uint32_t));
+  LLDB_REGISTER_METHOD(void, SBDeclaration, SetColumn, (uint32_t));
+  LLDB_REGISTER_METHOD_CONST(
+      bool, SBDeclaration, operator==,(const lldb::SBDeclaration &));
+  LLDB_REGISTER_METHOD_CONST(
+      bool, SBDeclaration, operator!=,(const lldb::SBDeclaration &));
+  LLDB_REGISTER_METHOD(bool, SBDeclaration, GetDescription,
+                       (lldb::SBStream &));
+}
+
+}
+}

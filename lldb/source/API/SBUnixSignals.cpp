@@ -171,3 +171,36 @@ int32_t SBUnixSignals::GetSignalAtIndex(int32_t index) const {
 
   return LLDB_INVALID_SIGNAL_NUMBER;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBUnixSignals>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBUnixSignals, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBUnixSignals, (const lldb::SBUnixSignals &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBUnixSignals &,
+      SBUnixSignals, operator=,(const lldb::SBUnixSignals &));
+  LLDB_REGISTER_METHOD(void, SBUnixSignals, Clear, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBUnixSignals, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBUnixSignals, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBUnixSignals, GetSignalAsCString,
+                             (int32_t));
+  LLDB_REGISTER_METHOD_CONST(int32_t, SBUnixSignals, GetSignalNumberFromName,
+                             (const char *));
+  LLDB_REGISTER_METHOD_CONST(bool, SBUnixSignals, GetShouldSuppress,
+                             (int32_t));
+  LLDB_REGISTER_METHOD(bool, SBUnixSignals, SetShouldSuppress,
+                       (int32_t, bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBUnixSignals, GetShouldStop, (int32_t));
+  LLDB_REGISTER_METHOD(bool, SBUnixSignals, SetShouldStop, (int32_t, bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBUnixSignals, GetShouldNotify, (int32_t));
+  LLDB_REGISTER_METHOD(bool, SBUnixSignals, SetShouldNotify, (int32_t, bool));
+  LLDB_REGISTER_METHOD_CONST(int32_t, SBUnixSignals, GetNumSignals, ());
+  LLDB_REGISTER_METHOD_CONST(int32_t, SBUnixSignals, GetSignalAtIndex,
+                             (int32_t));
+}
+
+}
+}

@@ -282,3 +282,41 @@ SBLineEntry SBAddress::GetLineEntry() {
   }
   return LLDB_RECORD_RESULT(sb_line_entry);
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBAddress>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBAddress, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBAddress, (const lldb::SBAddress &));
+  LLDB_REGISTER_CONSTRUCTOR(SBAddress, (lldb::SBSection, lldb::addr_t));
+  LLDB_REGISTER_CONSTRUCTOR(SBAddress, (lldb::addr_t, lldb::SBTarget &));
+  LLDB_REGISTER_METHOD(const lldb::SBAddress &,
+                       SBAddress, operator=,(const lldb::SBAddress &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBAddress, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBAddress, operator bool, ());
+  LLDB_REGISTER_METHOD(void, SBAddress, Clear, ());
+  LLDB_REGISTER_METHOD(void, SBAddress, SetAddress,
+                       (lldb::SBSection, lldb::addr_t));
+  LLDB_REGISTER_METHOD_CONST(lldb::addr_t, SBAddress, GetFileAddress, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::addr_t, SBAddress, GetLoadAddress,
+                             (const lldb::SBTarget &));
+  LLDB_REGISTER_METHOD(void, SBAddress, SetLoadAddress,
+                       (lldb::addr_t, lldb::SBTarget &));
+  LLDB_REGISTER_METHOD(bool, SBAddress, OffsetAddress, (lldb::addr_t));
+  LLDB_REGISTER_METHOD(lldb::SBSection, SBAddress, GetSection, ());
+  LLDB_REGISTER_METHOD(lldb::addr_t, SBAddress, GetOffset, ());
+  LLDB_REGISTER_METHOD(bool, SBAddress, GetDescription, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(lldb::SBModule, SBAddress, GetModule, ());
+  LLDB_REGISTER_METHOD(lldb::SBSymbolContext, SBAddress, GetSymbolContext,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBCompileUnit, SBAddress, GetCompileUnit, ());
+  LLDB_REGISTER_METHOD(lldb::SBFunction, SBAddress, GetFunction, ());
+  LLDB_REGISTER_METHOD(lldb::SBBlock, SBAddress, GetBlock, ());
+  LLDB_REGISTER_METHOD(lldb::SBSymbol, SBAddress, GetSymbol, ());
+  LLDB_REGISTER_METHOD(lldb::SBLineEntry, SBAddress, GetLineEntry, ());
+}
+
+}
+}

@@ -208,3 +208,37 @@ bool SBSymbol::IsSynthetic() {
     return m_opaque_ptr->IsSynthetic();
   return false;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBSymbol>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBSymbol, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBSymbol, (const lldb::SBSymbol &));
+  LLDB_REGISTER_METHOD(const lldb::SBSymbol &,
+                       SBSymbol, operator=,(const lldb::SBSymbol &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBSymbol, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBSymbol, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetName, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetDisplayName, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetMangledName, ());
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBSymbol, operator==,(const lldb::SBSymbol &));
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBSymbol, operator!=,(const lldb::SBSymbol &));
+  LLDB_REGISTER_METHOD(bool, SBSymbol, GetDescription, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBSymbol, GetInstructions,
+                       (lldb::SBTarget));
+  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBSymbol, GetInstructions,
+                       (lldb::SBTarget, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBSymbol, GetStartAddress, ());
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBSymbol, GetEndAddress, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBSymbol, GetPrologueByteSize, ());
+  LLDB_REGISTER_METHOD(lldb::SymbolType, SBSymbol, GetType, ());
+  LLDB_REGISTER_METHOD(bool, SBSymbol, IsExternal, ());
+  LLDB_REGISTER_METHOD(bool, SBSymbol, IsSynthetic, ());
+}
+
+}
+}

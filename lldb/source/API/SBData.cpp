@@ -646,3 +646,79 @@ bool SBData::SetDataFromDoubleArray(double *array, size_t array_len) {
 
   return true;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBData>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBData, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBData, (const lldb::SBData &));
+  LLDB_REGISTER_METHOD(const lldb::SBData &,
+                       SBData, operator=,(const lldb::SBData &));
+  LLDB_REGISTER_METHOD(bool, SBData, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBData, operator bool, ());
+  LLDB_REGISTER_METHOD(uint8_t, SBData, GetAddressByteSize, ());
+  LLDB_REGISTER_METHOD(void, SBData, SetAddressByteSize, (uint8_t));
+  LLDB_REGISTER_METHOD(void, SBData, Clear, ());
+  LLDB_REGISTER_METHOD(size_t, SBData, GetByteSize, ());
+  LLDB_REGISTER_METHOD(lldb::ByteOrder, SBData, GetByteOrder, ());
+  LLDB_REGISTER_METHOD(void, SBData, SetByteOrder, (lldb::ByteOrder));
+  LLDB_REGISTER_METHOD(float, SBData, GetFloat,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(double, SBData, GetDouble,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(long double, SBData, GetLongDouble,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(lldb::addr_t, SBData, GetAddress,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(uint8_t, SBData, GetUnsignedInt8,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(uint16_t, SBData, GetUnsignedInt16,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBData, GetUnsignedInt32,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(uint64_t, SBData, GetUnsignedInt64,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(int8_t, SBData, GetSignedInt8,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(int16_t, SBData, GetSignedInt16,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(int32_t, SBData, GetSignedInt32,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(int64_t, SBData, GetSignedInt64,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(const char *, SBData, GetString,
+                       (lldb::SBError &, lldb::offset_t));
+  LLDB_REGISTER_METHOD(bool, SBData, GetDescription,
+                       (lldb::SBStream &, lldb::addr_t));
+  LLDB_REGISTER_METHOD(bool, SBData, Append, (const lldb::SBData &));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBData, SBData, CreateDataFromCString,
+                              (lldb::ByteOrder, uint32_t, const char *));
+  LLDB_REGISTER_STATIC_METHOD(
+      lldb::SBData, SBData, CreateDataFromUInt64Array,
+      (lldb::ByteOrder, uint32_t, uint64_t *, size_t));
+  LLDB_REGISTER_STATIC_METHOD(
+      lldb::SBData, SBData, CreateDataFromUInt32Array,
+      (lldb::ByteOrder, uint32_t, uint32_t *, size_t));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBData, SBData, CreateDataFromSInt64Array,
+                              (lldb::ByteOrder, uint32_t, int64_t *, size_t));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBData, SBData, CreateDataFromSInt32Array,
+                              (lldb::ByteOrder, uint32_t, int32_t *, size_t));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBData, SBData, CreateDataFromDoubleArray,
+                              (lldb::ByteOrder, uint32_t, double *, size_t));
+  LLDB_REGISTER_METHOD(bool, SBData, SetDataFromCString, (const char *));
+  LLDB_REGISTER_METHOD(bool, SBData, SetDataFromUInt64Array,
+                       (uint64_t *, size_t));
+  LLDB_REGISTER_METHOD(bool, SBData, SetDataFromUInt32Array,
+                       (uint32_t *, size_t));
+  LLDB_REGISTER_METHOD(bool, SBData, SetDataFromSInt64Array,
+                       (int64_t *, size_t));
+  LLDB_REGISTER_METHOD(bool, SBData, SetDataFromSInt32Array,
+                       (int32_t *, size_t));
+  LLDB_REGISTER_METHOD(bool, SBData, SetDataFromDoubleArray,
+                       (double *, size_t));
+}
+
+}
+}

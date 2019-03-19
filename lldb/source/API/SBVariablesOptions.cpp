@@ -234,3 +234,43 @@ SBVariablesOptions::SBVariablesOptions(VariablesOptionsImpl *lldb_object_ptr)
 void SBVariablesOptions::SetOptions(VariablesOptionsImpl *lldb_object_ptr) {
   m_opaque_up.reset(std::move(lldb_object_ptr));
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBVariablesOptions>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBVariablesOptions, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBVariablesOptions,
+                            (const lldb::SBVariablesOptions &));
+  LLDB_REGISTER_METHOD(
+      lldb::SBVariablesOptions &,
+      SBVariablesOptions, operator=,(const lldb::SBVariablesOptions &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBVariablesOptions, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBVariablesOptions, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBVariablesOptions, GetIncludeArguments,
+                             ());
+  LLDB_REGISTER_METHOD(void, SBVariablesOptions, SetIncludeArguments, (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBVariablesOptions,
+                             GetIncludeRecognizedArguments,
+                             (const lldb::SBTarget &));
+  LLDB_REGISTER_METHOD(void, SBVariablesOptions,
+                       SetIncludeRecognizedArguments, (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBVariablesOptions, GetIncludeLocals, ());
+  LLDB_REGISTER_METHOD(void, SBVariablesOptions, SetIncludeLocals, (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBVariablesOptions, GetIncludeStatics, ());
+  LLDB_REGISTER_METHOD(void, SBVariablesOptions, SetIncludeStatics, (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBVariablesOptions, GetInScopeOnly, ());
+  LLDB_REGISTER_METHOD(void, SBVariablesOptions, SetInScopeOnly, (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBVariablesOptions,
+                             GetIncludeRuntimeSupportValues, ());
+  LLDB_REGISTER_METHOD(void, SBVariablesOptions,
+                       SetIncludeRuntimeSupportValues, (bool));
+  LLDB_REGISTER_METHOD_CONST(lldb::DynamicValueType, SBVariablesOptions,
+                             GetUseDynamic, ());
+  LLDB_REGISTER_METHOD(void, SBVariablesOptions, SetUseDynamic,
+                       (lldb::DynamicValueType));
+}
+
+}
+}

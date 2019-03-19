@@ -195,3 +195,40 @@ bool SBTypeEnumMember::GetDescription(
   }
   return true;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBTypeEnumMember>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeEnumMember, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeEnumMember,
+                            (const lldb::SBTypeEnumMember &));
+  LLDB_REGISTER_METHOD(
+      lldb::SBTypeEnumMember &,
+      SBTypeEnumMember, operator=,(const lldb::SBTypeEnumMember &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBTypeEnumMember, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBTypeEnumMember, operator bool, ());
+  LLDB_REGISTER_METHOD(const char *, SBTypeEnumMember, GetName, ());
+  LLDB_REGISTER_METHOD(int64_t, SBTypeEnumMember, GetValueAsSigned, ());
+  LLDB_REGISTER_METHOD(uint64_t, SBTypeEnumMember, GetValueAsUnsigned, ());
+  LLDB_REGISTER_METHOD(lldb::SBType, SBTypeEnumMember, GetType, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeEnumMemberList, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeEnumMemberList,
+                            (const lldb::SBTypeEnumMemberList &));
+  LLDB_REGISTER_METHOD(bool, SBTypeEnumMemberList, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBTypeEnumMemberList, operator bool, ());
+  LLDB_REGISTER_METHOD(
+      lldb::SBTypeEnumMemberList &,
+      SBTypeEnumMemberList, operator=,(const lldb::SBTypeEnumMemberList &));
+  LLDB_REGISTER_METHOD(void, SBTypeEnumMemberList, Append,
+                       (lldb::SBTypeEnumMember));
+  LLDB_REGISTER_METHOD(lldb::SBTypeEnumMember, SBTypeEnumMemberList,
+                       GetTypeEnumMemberAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBTypeEnumMemberList, GetSize, ());
+  LLDB_REGISTER_METHOD(bool, SBTypeEnumMember, GetDescription,
+                       (lldb::SBStream &, lldb::DescriptionLevel));
+}
+
+}
+}

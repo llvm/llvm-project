@@ -473,3 +473,65 @@ bool SBTypeSummary::ChangeSummaryType(bool want_script) {
 
   return true;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBTypeSummaryOptions>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeSummaryOptions, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeSummaryOptions,
+                            (const lldb::SBTypeSummaryOptions &));
+  LLDB_REGISTER_METHOD(bool, SBTypeSummaryOptions, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBTypeSummaryOptions, operator bool, ());
+  LLDB_REGISTER_METHOD(lldb::LanguageType, SBTypeSummaryOptions, GetLanguage,
+                       ());
+  LLDB_REGISTER_METHOD(lldb::TypeSummaryCapping, SBTypeSummaryOptions,
+                       GetCapping, ());
+  LLDB_REGISTER_METHOD(void, SBTypeSummaryOptions, SetLanguage,
+                       (lldb::LanguageType));
+  LLDB_REGISTER_METHOD(void, SBTypeSummaryOptions, SetCapping,
+                       (lldb::TypeSummaryCapping));
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeSummaryOptions,
+                            (const lldb_private::TypeSummaryOptions *));
+}
+
+template <>
+void RegisterMethods<SBTypeSummary>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeSummary, ());
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBTypeSummary, SBTypeSummary,
+                              CreateWithSummaryString,
+                              (const char *, uint32_t));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBTypeSummary, SBTypeSummary,
+                              CreateWithFunctionName,
+                              (const char *, uint32_t));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBTypeSummary, SBTypeSummary,
+                              CreateWithScriptCode, (const char *, uint32_t));
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeSummary, (const lldb::SBTypeSummary &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBTypeSummary, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBTypeSummary, operator bool, ());
+  LLDB_REGISTER_METHOD(bool, SBTypeSummary, IsFunctionCode, ());
+  LLDB_REGISTER_METHOD(bool, SBTypeSummary, IsFunctionName, ());
+  LLDB_REGISTER_METHOD(bool, SBTypeSummary, IsSummaryString, ());
+  LLDB_REGISTER_METHOD(const char *, SBTypeSummary, GetData, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBTypeSummary, GetOptions, ());
+  LLDB_REGISTER_METHOD(void, SBTypeSummary, SetOptions, (uint32_t));
+  LLDB_REGISTER_METHOD(void, SBTypeSummary, SetSummaryString, (const char *));
+  LLDB_REGISTER_METHOD(void, SBTypeSummary, SetFunctionName, (const char *));
+  LLDB_REGISTER_METHOD(void, SBTypeSummary, SetFunctionCode, (const char *));
+  LLDB_REGISTER_METHOD(bool, SBTypeSummary, GetDescription,
+                       (lldb::SBStream &, lldb::DescriptionLevel));
+  LLDB_REGISTER_METHOD(bool, SBTypeSummary, DoesPrintValue, (lldb::SBValue));
+  LLDB_REGISTER_METHOD(
+      lldb::SBTypeSummary &,
+      SBTypeSummary, operator=,(const lldb::SBTypeSummary &));
+  LLDB_REGISTER_METHOD(bool,
+                       SBTypeSummary, operator==,(lldb::SBTypeSummary &));
+  LLDB_REGISTER_METHOD(bool, SBTypeSummary, IsEqualTo,
+                       (lldb::SBTypeSummary &));
+  LLDB_REGISTER_METHOD(bool,
+                       SBTypeSummary, operator!=,(lldb::SBTypeSummary &));
+}
+
+}
+}

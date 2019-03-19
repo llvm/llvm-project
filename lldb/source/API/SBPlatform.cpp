@@ -624,3 +624,95 @@ SBUnixSignals SBPlatform::GetUnixSignals() const {
 
   return LLDB_RECORD_RESULT(SBUnixSignals());
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBPlatformConnectOptions>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBPlatformConnectOptions, (const char *));
+  LLDB_REGISTER_CONSTRUCTOR(SBPlatformConnectOptions,
+                            (const lldb::SBPlatformConnectOptions &));
+  LLDB_REGISTER_METHOD(
+      void,
+      SBPlatformConnectOptions, operator=,(
+                                    const lldb::SBPlatformConnectOptions &));
+  LLDB_REGISTER_METHOD(const char *, SBPlatformConnectOptions, GetURL, ());
+  LLDB_REGISTER_METHOD(void, SBPlatformConnectOptions, SetURL,
+                       (const char *));
+  LLDB_REGISTER_METHOD(bool, SBPlatformConnectOptions, GetRsyncEnabled, ());
+  LLDB_REGISTER_METHOD(void, SBPlatformConnectOptions, EnableRsync,
+                       (const char *, const char *, bool));
+  LLDB_REGISTER_METHOD(void, SBPlatformConnectOptions, DisableRsync, ());
+  LLDB_REGISTER_METHOD(const char *, SBPlatformConnectOptions,
+                       GetLocalCacheDirectory, ());
+  LLDB_REGISTER_METHOD(void, SBPlatformConnectOptions, SetLocalCacheDirectory,
+                       (const char *));
+}
+
+template <>
+void RegisterMethods<SBPlatformShellCommand>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBPlatformShellCommand, (const char *));
+  LLDB_REGISTER_CONSTRUCTOR(SBPlatformShellCommand,
+                            (const lldb::SBPlatformShellCommand &));
+  LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, Clear, ());
+  LLDB_REGISTER_METHOD(const char *, SBPlatformShellCommand, GetCommand, ());
+  LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, SetCommand,
+                       (const char *));
+  LLDB_REGISTER_METHOD(const char *, SBPlatformShellCommand,
+                       GetWorkingDirectory, ());
+  LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, SetWorkingDirectory,
+                       (const char *));
+  LLDB_REGISTER_METHOD(uint32_t, SBPlatformShellCommand, GetTimeoutSeconds,
+                       ());
+  LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, SetTimeoutSeconds,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(int, SBPlatformShellCommand, GetSignal, ());
+  LLDB_REGISTER_METHOD(int, SBPlatformShellCommand, GetStatus, ());
+  LLDB_REGISTER_METHOD(const char *, SBPlatformShellCommand, GetOutput, ());
+}
+
+template <>
+void RegisterMethods<SBPlatform>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBPlatform, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBPlatform, (const char *));
+  LLDB_REGISTER_METHOD_CONST(bool, SBPlatform, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBPlatform, operator bool, ());
+  LLDB_REGISTER_METHOD(void, SBPlatform, Clear, ());
+  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetName, ());
+  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetWorkingDirectory, ());
+  LLDB_REGISTER_METHOD(bool, SBPlatform, SetWorkingDirectory, (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, ConnectRemote,
+                       (lldb::SBPlatformConnectOptions &));
+  LLDB_REGISTER_METHOD(void, SBPlatform, DisconnectRemote, ());
+  LLDB_REGISTER_METHOD(bool, SBPlatform, IsConnected, ());
+  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetTriple, ());
+  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetOSBuild, ());
+  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetOSDescription, ());
+  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetHostname, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBPlatform, GetOSMajorVersion, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBPlatform, GetOSMinorVersion, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBPlatform, GetOSUpdateVersion, ());
+  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Get,
+                       (lldb::SBFileSpec &, lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Put,
+                       (lldb::SBFileSpec &, lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Install,
+                       (lldb::SBFileSpec &, lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Run,
+                       (lldb::SBPlatformShellCommand &));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Launch,
+                       (lldb::SBLaunchInfo &));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Kill, (const lldb::pid_t));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, MakeDirectory,
+                       (const char *, uint32_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBPlatform, GetFilePermissions,
+                       (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, SetFilePermissions,
+                       (const char *, uint32_t));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBUnixSignals, SBPlatform, GetUnixSignals,
+                             ());
+}
+
+}
+}

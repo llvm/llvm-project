@@ -243,3 +243,58 @@ bool SBModuleSpecList::GetDescription(lldb::SBStream &description) {
   m_opaque_up->Dump(description.ref());
   return true;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBModuleSpec>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBModuleSpec, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBModuleSpec, (const lldb::SBModuleSpec &));
+  LLDB_REGISTER_METHOD(const lldb::SBModuleSpec &,
+                       SBModuleSpec, operator=,(const lldb::SBModuleSpec &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBModuleSpec, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBModuleSpec, operator bool, ());
+  LLDB_REGISTER_METHOD(void, SBModuleSpec, Clear, ());
+  LLDB_REGISTER_METHOD(lldb::SBFileSpec, SBModuleSpec, GetFileSpec, ());
+  LLDB_REGISTER_METHOD(void, SBModuleSpec, SetFileSpec,
+                       (const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD(lldb::SBFileSpec, SBModuleSpec, GetPlatformFileSpec,
+                       ());
+  LLDB_REGISTER_METHOD(void, SBModuleSpec, SetPlatformFileSpec,
+                       (const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD(lldb::SBFileSpec, SBModuleSpec, GetSymbolFileSpec, ());
+  LLDB_REGISTER_METHOD(void, SBModuleSpec, SetSymbolFileSpec,
+                       (const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD(const char *, SBModuleSpec, GetObjectName, ());
+  LLDB_REGISTER_METHOD(void, SBModuleSpec, SetObjectName, (const char *));
+  LLDB_REGISTER_METHOD(const char *, SBModuleSpec, GetTriple, ());
+  LLDB_REGISTER_METHOD(void, SBModuleSpec, SetTriple, (const char *));
+  LLDB_REGISTER_METHOD(size_t, SBModuleSpec, GetUUIDLength, ());
+  LLDB_REGISTER_METHOD(bool, SBModuleSpec, GetDescription,
+                       (lldb::SBStream &));
+  LLDB_REGISTER_CONSTRUCTOR(SBModuleSpecList, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBModuleSpecList,
+                            (const lldb::SBModuleSpecList &));
+  LLDB_REGISTER_METHOD(
+      lldb::SBModuleSpecList &,
+      SBModuleSpecList, operator=,(const lldb::SBModuleSpecList &));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBModuleSpecList, SBModuleSpecList,
+                              GetModuleSpecifications, (const char *));
+  LLDB_REGISTER_METHOD(void, SBModuleSpecList, Append,
+                       (const lldb::SBModuleSpec &));
+  LLDB_REGISTER_METHOD(void, SBModuleSpecList, Append,
+                       (const lldb::SBModuleSpecList &));
+  LLDB_REGISTER_METHOD(size_t, SBModuleSpecList, GetSize, ());
+  LLDB_REGISTER_METHOD(lldb::SBModuleSpec, SBModuleSpecList, GetSpecAtIndex,
+                       (size_t));
+  LLDB_REGISTER_METHOD(lldb::SBModuleSpec, SBModuleSpecList,
+                       FindFirstMatchingSpec, (const lldb::SBModuleSpec &));
+  LLDB_REGISTER_METHOD(lldb::SBModuleSpecList, SBModuleSpecList,
+                       FindMatchingSpecs, (const lldb::SBModuleSpec &));
+  LLDB_REGISTER_METHOD(bool, SBModuleSpecList, GetDescription,
+                       (lldb::SBStream &));
+}
+
+}
+}
