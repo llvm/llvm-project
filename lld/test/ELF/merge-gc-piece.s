@@ -10,7 +10,7 @@
 # CHECK-NEXT:   SHF_ALLOC
 # CHECK-NEXT:   SHF_MERGE
 # CHECK-NEXT: ]
-# CHECK-NEXT: Address: 0x200
+# CHECK-NEXT: Address: 0x1FD
 
 # CHECK:      Name: .bar
 # CHECK-NEXT: Type: SHT_PROGBITS
@@ -24,7 +24,7 @@
 # CHECK-NEXT: AddressAlignment:
 # CHECK-NEXT: EntrySize:
 # CHECK-NEXT: SectionData (
-# CHECK-NEXT:   0000: 01020000 00000000 02020000 00000000
+# CHECK-NEXT:   0000: FE010000 00000000 FF010000 00000000
 # CHECK-NEXT: )
 
         .section .foo,"aM",@progbits,8
