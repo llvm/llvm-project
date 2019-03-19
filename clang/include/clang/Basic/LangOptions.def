@@ -219,6 +219,7 @@ LANGOPT(GPURelocatableDeviceCode, 1, 0, "generate relocatable device code")
 
 LANGOPT(SYCLIsDevice      , 1, 0, "Generate code for SYCL device")
 LANGOPT(SYCLUseBitcode    , 1, 0, "Generate bitcode for SYCL")
+LANGOPT(SYCLAllowFuncPtr  , 1, 0, "Allow function pointers in SYCL device code")
 
 LANGOPT(SizedDeallocation , 1, 0, "sized deallocation")
 LANGOPT(AlignedAllocation , 1, 0, "aligned allocation")

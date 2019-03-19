@@ -113,10 +113,9 @@ public:
           SemaRef.AddSyclKernel(Def);
         }
       }
-    } else {
+    } else if (!SemaRef.getLangOpts().SYCLAllowFuncPtr)
       SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict) <<
                    KernelCallFunctionPointer;
-    }
     return true;
   }
 

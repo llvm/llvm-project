@@ -3550,6 +3550,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_fno_sycl_use_bitcode, true)) {
       CmdArgs.push_back("-fsycl-use-bitcode");
     }
+    if (Args.hasFlag(options::OPT_fsycl_allow_func_ptr,
+                     options::OPT_fno_sycl_allow_func_ptr, false)) {
+      CmdArgs.push_back("-fsycl-allow-func-ptr");
+    }
   }
 
   if (IsOpenMPDevice) {

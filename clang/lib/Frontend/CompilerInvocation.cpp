@@ -2893,6 +2893,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.SYCLIsDevice   = Args.hasArg(options::OPT_fsycl_is_device);
   Opts.SYCLUseBitcode = Args.hasFlag(options::OPT_fsycl_use_bitcode,
                                      options::OPT_fno_sycl_use_bitcode, false);
+  Opts.SYCLAllowFuncPtr = Args.hasFlag(options::OPT_fsycl_allow_func_ptr,
+                                  options::OPT_fno_sycl_allow_func_ptr, false);
 
   // Set CUDA mode for OpenMP target NVPTX if specified in options
   Opts.OpenMPCUDAMode = Opts.OpenMPIsDevice && T.isNVPTX() &&
