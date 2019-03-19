@@ -12,6 +12,7 @@
 
 #include "common.h"
 #include "mutex.h"
+#include "string_utils.h"
 
 #include <limits.h> // for PAGE_SIZE
 #include <stdlib.h> // for abort()
@@ -110,10 +111,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags, u64 *Extra) {
         dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);
       return nullptr;
     }
-    uptr N = 0;
-    while (Name[N])
-      N++;
-    _zx_object_set_property(Vmo, ZX_PROP_NAME, Name, N);
+    _zx_object_set_property(Vmo, ZX_PROP_NAME, Name, strlen(Name));
   }
 
   uintptr_t P;
@@ -203,10 +201,7 @@ bool getRandom(void *Buffer, uptr Length, bool Blocking) {
 }
 
 void outputRaw(const char *Buffer) {
-  uptr N = 0;
-  while (Buffer[N])
-    N++;
-  __sanitizer_log_write(Buffer, N);
+  __sanitizer_log_write(Buffer, strlen(Buffer));
 }
 
 void setAbortMessage(const char *Message) {}
