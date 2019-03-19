@@ -430,6 +430,9 @@ bool AtomicExpand::expandAtomicLoadToLL(LoadInst *LI) {
 bool AtomicExpand::expandAtomicLoadToCmpXchg(LoadInst *LI) {
   IRBuilder<> Builder(LI);
   AtomicOrdering Order = LI->getOrdering();
+  if (Order == AtomicOrdering::Unordered)
+    Order = AtomicOrdering::Monotonic;
+
   Value *Addr = LI->getPointerOperand();
   Type *Ty = cast<PointerType>(Addr->getType())->getElementType();
   Constant *DummyVal = Constant::getNullValue(Ty);

@@ -56,6 +56,7 @@ set(SCUDO_UNIT_TEST_SOURCES
   map_test.cc
   mutex_test.cc
   stats_test.cc
+  strings_test.cc
   vector_test.cc
   scudo_unit_test_main.cc)
 

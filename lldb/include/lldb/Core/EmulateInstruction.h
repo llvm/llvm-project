@@ -511,12 +511,12 @@ public:
 
 protected:
   ArchSpec m_arch;
-  void *m_baton;
-  ReadMemoryCallback m_read_mem_callback;
-  WriteMemoryCallback m_write_mem_callback;
-  ReadRegisterCallback m_read_reg_callback;
-  WriteRegisterCallback m_write_reg_callback;
-  lldb::addr_t m_addr;
+  void *m_baton = nullptr;
+  ReadMemoryCallback m_read_mem_callback = &ReadMemoryDefault;
+  WriteMemoryCallback m_write_mem_callback = &WriteMemoryDefault;
+  ReadRegisterCallback m_read_reg_callback = &ReadRegisterDefault;
+  WriteRegisterCallback m_write_reg_callback = &WriteRegisterDefault;
+  lldb::addr_t m_addr = LLDB_INVALID_ADDRESS;
   Opcode m_opcode;
 
 private:

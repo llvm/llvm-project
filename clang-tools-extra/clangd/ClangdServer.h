@@ -184,6 +184,11 @@ public:
   void findHover(PathRef File, Position Pos,
                  Callback<llvm::Optional<Hover>> CB);
 
+  /// Get information about type hierarchy for a given position.
+  void typeHierarchy(PathRef File, Position Pos, int Resolve,
+                     TypeHierarchyDirection Direction,
+                     Callback<llvm::Optional<TypeHierarchyItem>> CB);
+
   /// Retrieve the top symbols from the workspace matching a query.
   void workspaceSymbols(StringRef Query, int Limit,
                         Callback<std::vector<SymbolInformation>> CB);

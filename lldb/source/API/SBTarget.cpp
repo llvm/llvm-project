@@ -2427,3 +2427,250 @@ void SBTarget::SetLaunchInfo(const lldb::SBLaunchInfo &launch_info) {
   if (target_sp)
     m_opaque_sp->SetProcessLaunchInfo(launch_info.ref());
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBTarget>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBTarget, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBTarget, (const lldb::SBTarget &));
+  LLDB_REGISTER_CONSTRUCTOR(SBTarget, (const lldb::TargetSP &));
+  LLDB_REGISTER_METHOD(const lldb::SBTarget &,
+                       SBTarget, operator=,(const lldb::SBTarget &));
+  LLDB_REGISTER_STATIC_METHOD(bool, SBTarget, EventIsTargetEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBTarget, SBTarget, GetTargetFromEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_STATIC_METHOD(uint32_t, SBTarget, GetNumModulesFromEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBModule, SBTarget,
+                              GetModuleAtIndexFromEvent,
+                              (const uint32_t, const lldb::SBEvent &));
+  LLDB_REGISTER_STATIC_METHOD(const char *, SBTarget, GetBroadcasterClassName,
+                              ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBTarget, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBTarget, operator bool, ());
+  LLDB_REGISTER_METHOD(lldb::SBProcess, SBTarget, GetProcess, ());
+  LLDB_REGISTER_METHOD(lldb::SBPlatform, SBTarget, GetPlatform, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBDebugger, SBTarget, GetDebugger, ());
+  LLDB_REGISTER_METHOD(lldb::SBStructuredData, SBTarget, GetStatistics, ());
+  LLDB_REGISTER_METHOD(void, SBTarget, SetCollectingStats, (bool));
+  LLDB_REGISTER_METHOD(bool, SBTarget, GetCollectingStats, ());
+  LLDB_REGISTER_METHOD(lldb::SBProcess, SBTarget, LoadCore, (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBProcess, SBTarget, LoadCore,
+                       (const char *, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBProcess, SBTarget, LaunchSimple,
+                       (const char **, const char **, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBTarget, Install, ());
+  LLDB_REGISTER_METHOD(lldb::SBProcess, SBTarget, Launch,
+                       (lldb::SBListener &, const char **, const char **,
+                        const char *, const char *, const char *,
+                        const char *, uint32_t, bool, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBProcess, SBTarget, Launch,
+                       (lldb::SBLaunchInfo &, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBProcess, SBTarget, Attach,
+                       (lldb::SBAttachInfo &, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBProcess, SBTarget, AttachToProcessWithID,
+                       (lldb::SBListener &, lldb::pid_t, lldb::SBError &));
+  LLDB_REGISTER_METHOD(
+      lldb::SBProcess, SBTarget, AttachToProcessWithName,
+      (lldb::SBListener &, const char *, bool, lldb::SBError &));
+  LLDB_REGISTER_METHOD(
+      lldb::SBProcess, SBTarget, ConnectRemote,
+      (lldb::SBListener &, const char *, const char *, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBFileSpec, SBTarget, GetExecutable, ());
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBTarget, operator==,(const lldb::SBTarget &));
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBTarget, operator!=,(const lldb::SBTarget &));
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBTarget, ResolveLoadAddress,
+                       (lldb::addr_t));
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBTarget, ResolveFileAddress,
+                       (lldb::addr_t));
+  LLDB_REGISTER_METHOD(lldb::SBAddress, SBTarget, ResolvePastLoadAddress,
+                       (uint32_t, lldb::addr_t));
+  LLDB_REGISTER_METHOD(lldb::SBSymbolContext, SBTarget,
+                       ResolveSymbolContextForAddress,
+                       (const lldb::SBAddress &, uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget,
+                       BreakpointCreateByLocation, (const char *, uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget,
+                       BreakpointCreateByLocation,
+                       (const lldb::SBFileSpec &, uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget,
+                       BreakpointCreateByLocation,
+                       (const lldb::SBFileSpec &, uint32_t, lldb::addr_t));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget,
+                       BreakpointCreateByLocation,
+                       (const lldb::SBFileSpec &, uint32_t, lldb::addr_t,
+                        lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget,
+                       BreakpointCreateByLocation,
+                       (const lldb::SBFileSpec &, uint32_t, uint32_t,
+                        lldb::addr_t, lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByName,
+                       (const char *, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByName,
+                       (const char *, const lldb::SBFileSpecList &,
+                        const lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByName,
+                       (const char *, uint32_t, const lldb::SBFileSpecList &,
+                        const lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByName,
+                       (const char *, uint32_t, lldb::LanguageType,
+                        const lldb::SBFileSpecList &,
+                        const lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByNames,
+                       (const char **, uint32_t, uint32_t,
+                        const lldb::SBFileSpecList &,
+                        const lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByNames,
+                       (const char **, uint32_t, uint32_t, lldb::LanguageType,
+                        const lldb::SBFileSpecList &,
+                        const lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByNames,
+                       (const char **, uint32_t, uint32_t, lldb::LanguageType,
+                        lldb::addr_t, const lldb::SBFileSpecList &,
+                        const lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByRegex,
+                       (const char *, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByRegex,
+                       (const char *, const lldb::SBFileSpecList &,
+                        const lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByRegex,
+                       (const char *, lldb::LanguageType,
+                        const lldb::SBFileSpecList &,
+                        const lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget,
+                       BreakpointCreateByAddress, (lldb::addr_t));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget,
+                       BreakpointCreateBySBAddress, (lldb::SBAddress &));
+  LLDB_REGISTER_METHOD(
+      lldb::SBBreakpoint, SBTarget, BreakpointCreateBySourceRegex,
+      (const char *, const lldb::SBFileSpec &, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget,
+                       BreakpointCreateBySourceRegex,
+                       (const char *, const lldb::SBFileSpecList &,
+                        const lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(
+      lldb::SBBreakpoint, SBTarget, BreakpointCreateBySourceRegex,
+      (const char *, const lldb::SBFileSpecList &,
+       const lldb::SBFileSpecList &, const lldb::SBStringList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget,
+                       BreakpointCreateForException,
+                       (lldb::LanguageType, bool, bool));
+  LLDB_REGISTER_METHOD(
+      lldb::SBBreakpoint, SBTarget, BreakpointCreateFromScript,
+      (const char *, lldb::SBStructuredData &, const lldb::SBFileSpecList &,
+       const lldb::SBFileSpecList &, bool));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBTarget, GetNumBreakpoints, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBBreakpoint, SBTarget,
+                             GetBreakpointAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(bool, SBTarget, BreakpointDelete, (lldb::break_id_t));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, FindBreakpointByID,
+                       (lldb::break_id_t));
+  LLDB_REGISTER_METHOD(bool, SBTarget, FindBreakpointsByName,
+                       (const char *, lldb::SBBreakpointList &));
+  LLDB_REGISTER_METHOD(void, SBTarget, GetBreakpointNames,
+                       (lldb::SBStringList &));
+  LLDB_REGISTER_METHOD(void, SBTarget, DeleteBreakpointName, (const char *));
+  LLDB_REGISTER_METHOD(bool, SBTarget, EnableAllBreakpoints, ());
+  LLDB_REGISTER_METHOD(bool, SBTarget, DisableAllBreakpoints, ());
+  LLDB_REGISTER_METHOD(bool, SBTarget, DeleteAllBreakpoints, ());
+  LLDB_REGISTER_METHOD(lldb::SBError, SBTarget, BreakpointsCreateFromFile,
+                       (lldb::SBFileSpec &, lldb::SBBreakpointList &));
+  LLDB_REGISTER_METHOD(
+      lldb::SBError, SBTarget, BreakpointsCreateFromFile,
+      (lldb::SBFileSpec &, lldb::SBStringList &, lldb::SBBreakpointList &));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBTarget, BreakpointsWriteToFile,
+                       (lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBTarget, BreakpointsWriteToFile,
+                       (lldb::SBFileSpec &, lldb::SBBreakpointList &, bool));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBTarget, GetNumWatchpoints, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBWatchpoint, SBTarget,
+                             GetWatchpointAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(bool, SBTarget, DeleteWatchpoint, (lldb::watch_id_t));
+  LLDB_REGISTER_METHOD(lldb::SBWatchpoint, SBTarget, FindWatchpointByID,
+                       (lldb::watch_id_t));
+  LLDB_REGISTER_METHOD(lldb::SBWatchpoint, SBTarget, WatchAddress,
+                       (lldb::addr_t, size_t, bool, bool, lldb::SBError &));
+  LLDB_REGISTER_METHOD(bool, SBTarget, EnableAllWatchpoints, ());
+  LLDB_REGISTER_METHOD(bool, SBTarget, DisableAllWatchpoints, ());
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBTarget, CreateValueFromAddress,
+                       (const char *, lldb::SBAddress, lldb::SBType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBTarget, CreateValueFromData,
+                       (const char *, lldb::SBData, lldb::SBType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBTarget, CreateValueFromExpression,
+                       (const char *, const char *));
+  LLDB_REGISTER_METHOD(bool, SBTarget, DeleteAllWatchpoints, ());
+  LLDB_REGISTER_METHOD(void, SBTarget, AppendImageSearchPath,
+                       (const char *, const char *, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBModule, SBTarget, AddModule,
+                       (const char *, const char *, const char *));
+  LLDB_REGISTER_METHOD(
+      lldb::SBModule, SBTarget, AddModule,
+      (const char *, const char *, const char *, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBModule, SBTarget, AddModule,
+                       (const lldb::SBModuleSpec &));
+  LLDB_REGISTER_METHOD(bool, SBTarget, AddModule, (lldb::SBModule &));
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBTarget, GetNumModules, ());
+  LLDB_REGISTER_METHOD(void, SBTarget, Clear, ());
+  LLDB_REGISTER_METHOD(lldb::SBModule, SBTarget, FindModule,
+                       (const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD(lldb::SBSymbolContextList, SBTarget, FindCompileUnits,
+                       (const lldb::SBFileSpec &));
+  LLDB_REGISTER_METHOD(lldb::ByteOrder, SBTarget, GetByteOrder, ());
+  LLDB_REGISTER_METHOD(const char *, SBTarget, GetTriple, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBTarget, GetDataByteSize, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBTarget, GetCodeByteSize, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBTarget, GetAddressByteSize, ());
+  LLDB_REGISTER_METHOD(lldb::SBModule, SBTarget, GetModuleAtIndex,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(bool, SBTarget, RemoveModule, (lldb::SBModule));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBBroadcaster, SBTarget, GetBroadcaster,
+                             ());
+  LLDB_REGISTER_METHOD(bool, SBTarget, GetDescription,
+                       (lldb::SBStream &, lldb::DescriptionLevel));
+  LLDB_REGISTER_METHOD(lldb::SBSymbolContextList, SBTarget, FindFunctions,
+                       (const char *, uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBSymbolContextList, SBTarget,
+                       FindGlobalFunctions,
+                       (const char *, uint32_t, lldb::MatchType));
+  LLDB_REGISTER_METHOD(lldb::SBType, SBTarget, FindFirstType, (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBType, SBTarget, GetBasicType,
+                       (lldb::BasicType));
+  LLDB_REGISTER_METHOD(lldb::SBTypeList, SBTarget, FindTypes, (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBValueList, SBTarget, FindGlobalVariables,
+                       (const char *, uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBValueList, SBTarget, FindGlobalVariables,
+                       (const char *, uint32_t, lldb::MatchType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBTarget, FindFirstGlobalVariable,
+                       (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBSourceManager, SBTarget, GetSourceManager, ());
+  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBTarget, ReadInstructions,
+                       (lldb::SBAddress, uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBTarget, ReadInstructions,
+                       (lldb::SBAddress, uint32_t, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBTarget, SetSectionLoadAddress,
+                       (lldb::SBSection, lldb::addr_t));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBTarget, ClearSectionLoadAddress,
+                       (lldb::SBSection));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBTarget, SetModuleLoadAddress,
+                       (lldb::SBModule, int64_t));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBTarget, ClearModuleLoadAddress,
+                       (lldb::SBModule));
+  LLDB_REGISTER_METHOD(lldb::SBSymbolContextList, SBTarget, FindSymbols,
+                       (const char *, lldb::SymbolType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBTarget, EvaluateExpression,
+                       (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBTarget, EvaluateExpression,
+                       (const char *, const lldb::SBExpressionOptions &));
+  LLDB_REGISTER_METHOD(lldb::addr_t, SBTarget, GetStackRedZoneSize, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBLaunchInfo, SBTarget, GetLaunchInfo, ());
+  LLDB_REGISTER_METHOD(void, SBTarget, SetLaunchInfo,
+                       (const lldb::SBLaunchInfo &));
+}
+
+}
+}

@@ -1406,12 +1406,33 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     bool HasSPFlags = Record[0] & 4;
-    DISubprogram::DISPFlags SPFlags =
-        HasSPFlags
-            ? static_cast<DISubprogram::DISPFlags>(Record[9])
-            : DISubprogram::toSPFlags(
-                  /*IsLocalToUnit=*/Record[7], /*IsDefinition=*/Record[8],
-                  /*IsOptimized=*/Record[14], /*Virtuality=*/Record[11]);
+
+    DINode::DIFlags Flags;
+    DISubprogram::DISPFlags SPFlags;
+    if (!HasSPFlags)
+      Flags = static_cast<DINode::DIFlags>(Record[11 + 2]);
+    else {
+      Flags = static_cast<DINode::DIFlags>(Record[11]);
+      SPFlags = static_cast<DISubprogram::DISPFlags>(Record[9]);
+    }
+
+    // Support for old metadata when
+    // subprogram specific flags are placed in DIFlags.
+    const unsigned DIFlagMainSubprogram = 1 << 21;
+    bool HasOldMainSubprogramFlag = Flags & DIFlagMainSubprogram;
+    if (HasOldMainSubprogramFlag)
+      // Remove old DIFlagMainSubprogram from DIFlags.
+      // Note: This assumes that any future use of bit 21 defaults to it
+      // being 0.
+      Flags &= ~static_cast<DINode::DIFlags>(DIFlagMainSubprogram);
+
+    if (HasOldMainSubprogramFlag && HasSPFlags)
+      SPFlags |= DISubprogram::SPFlagMainSubprogram;
+    else if (!HasSPFlags)
+      SPFlags = DISubprogram::toSPFlags(
+                    /*IsLocalToUnit=*/Record[7], /*IsDefinition=*/Record[8],
+                    /*IsOptimized=*/Record[14], /*Virtuality=*/Record[11],
+                    /*DIFlagMainSubprogram*/HasOldMainSubprogramFlag);
 
     // All definitions should be distinct.
     IsDistinct = (Record[0] & 1) || (SPFlags & DISubprogram::SPFlagDefinition);
@@ -1455,7 +1476,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          getDITypeRefOrNull(Record[8 + OffsetA]),           // containingType
          Record[10 + OffsetA],                              // virtualIndex
          HasThisAdj ? Record[16 + OffsetB] : 0,             // thisAdjustment
-         static_cast<DINode::DIFlags>(Record[11 + OffsetA]),// flags
+         Flags,                                             // flags
          SPFlags,                                           // SPFlags
          HasUnit ? CUorFn : nullptr,                        // unit
          getMDOrNull(Record[13 + OffsetB]),                 // templateParams

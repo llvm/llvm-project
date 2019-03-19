@@ -322,3 +322,52 @@ void SBListener::reset(ListenerSP listener_sp) {
   m_opaque_sp = listener_sp;
   m_unused_ptr = nullptr;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBListener>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBListener, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBListener, (const char *));
+  LLDB_REGISTER_CONSTRUCTOR(SBListener, (const lldb::SBListener &));
+  LLDB_REGISTER_METHOD(const lldb::SBListener &,
+                       SBListener, operator=,(const lldb::SBListener &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBListener, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBListener, operator bool, ());
+  LLDB_REGISTER_METHOD(void, SBListener, AddEvent, (const lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(void, SBListener, Clear, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBListener, StartListeningForEventClass,
+                       (lldb::SBDebugger &, const char *, uint32_t));
+  LLDB_REGISTER_METHOD(bool, SBListener, StopListeningForEventClass,
+                       (lldb::SBDebugger &, const char *, uint32_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBListener, StartListeningForEvents,
+                       (const lldb::SBBroadcaster &, uint32_t));
+  LLDB_REGISTER_METHOD(bool, SBListener, StopListeningForEvents,
+                       (const lldb::SBBroadcaster &, uint32_t));
+  LLDB_REGISTER_METHOD(bool, SBListener, WaitForEvent,
+                       (uint32_t, lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(
+      bool, SBListener, WaitForEventForBroadcaster,
+      (uint32_t, const lldb::SBBroadcaster &, lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(
+      bool, SBListener, WaitForEventForBroadcasterWithType,
+      (uint32_t, const lldb::SBBroadcaster &, uint32_t, lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(bool, SBListener, PeekAtNextEvent, (lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(bool, SBListener, PeekAtNextEventForBroadcaster,
+                       (const lldb::SBBroadcaster &, lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(
+      bool, SBListener, PeekAtNextEventForBroadcasterWithType,
+      (const lldb::SBBroadcaster &, uint32_t, lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(bool, SBListener, GetNextEvent, (lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(bool, SBListener, GetNextEventForBroadcaster,
+                       (const lldb::SBBroadcaster &, lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(
+      bool, SBListener, GetNextEventForBroadcasterWithType,
+      (const lldb::SBBroadcaster &, uint32_t, lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(bool, SBListener, HandleBroadcastEvent,
+                       (const lldb::SBEvent &));
+}
+
+}
+}

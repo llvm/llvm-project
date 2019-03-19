@@ -22,7 +22,6 @@
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFFormValue.h"
-#include "LogChannelDWARF.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -48,17 +47,10 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
 
   assert(m_dwarf2Data);
 
-  Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_ARANGES));
-
   m_cu_aranges_up = llvm::make_unique<DWARFDebugAranges>();
   const DWARFDataExtractor &debug_aranges_data =
       m_dwarf2Data->get_debug_aranges_data();
   if (debug_aranges_data.GetByteSize() > 0) {
-    if (log)
-      log->Printf(
-          "DWARFDebugInfo::GetCompileUnitAranges() for \"%s\" from "
-          ".debug_aranges",
-          m_dwarf2Data->GetObjectFile()->GetFileSpec().GetPath().c_str());
     llvm::Error error = m_cu_aranges_up->extract(debug_aranges_data);
     if (error)
       return std::move(error);
@@ -74,22 +66,13 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
 
   // Manually build arange data for everything that wasn't in the
   // .debug_aranges table.
-  bool printed = false;
   const size_t num_compile_units = GetNumCompileUnits();
   for (size_t idx = 0; idx < num_compile_units; ++idx) {
     DWARFUnit *cu = GetCompileUnitAtIndex(idx);
 
     dw_offset_t offset = cu->GetOffset();
-    if (cus_with_data.find(offset) == cus_with_data.end()) {
-      if (log) {
-        if (!printed)
-          log->Printf(
-              "DWARFDebugInfo::GetCompileUnitAranges() for \"%s\" by parsing",
-              m_dwarf2Data->GetObjectFile()->GetFileSpec().GetPath().c_str());
-        printed = true;
-      }
+    if (cus_with_data.find(offset) == cus_with_data.end())
       cu->BuildAddressRangeTable(m_dwarf2Data, m_cu_aranges_up.get());
-    }
   }
 
   const bool minimize = true;

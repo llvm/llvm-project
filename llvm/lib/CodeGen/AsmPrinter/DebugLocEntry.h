@@ -148,8 +148,10 @@ public:
   }
 
   /// Lower this entry into a DWARF expression.
-  void finalize(const AsmPrinter &AP, DebugLocStream::ListBuilder &List,
-                const DIBasicType *BT);
+  void finalize(const AsmPrinter &AP,
+                DebugLocStream::ListBuilder &List,
+                const DIBasicType *BT,
+                DwarfCompileUnit &TheCU);
 };
 
 /// Compare two Values for equality.

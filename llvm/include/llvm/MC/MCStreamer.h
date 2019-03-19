@@ -634,7 +634,7 @@ public:
 
   /// Special case of EmitULEB128Value that avoids the client having to
   /// pass in a MCExpr for constant integers.
-  void EmitULEB128IntValue(uint64_t Value);
+  void EmitULEB128IntValue(uint64_t Value, unsigned PadTo = 0);
 
   /// Special case of EmitSLEB128Value that avoids the client having to
   /// pass in a MCExpr for constant integers.

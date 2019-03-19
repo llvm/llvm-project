@@ -10901,7 +10901,7 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
     for (NamedDecl *D : ULE->decls()) {
       if (D == PrevD)
         Lookups.push_back(UnresolvedSet<8>());
-      else if (auto *DRD = cast<OMPDeclareReductionDecl>(D))
+      else if (auto *DRD = dyn_cast<OMPDeclareReductionDecl>(D))
         Lookups.back().addDecl(DRD);
       PrevD = D;
     }

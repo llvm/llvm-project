@@ -4932,6 +4932,10 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
       if (Pred == ICmpInst::ICMP_SGT && match(CmpRHS, ZeroOrAllOnes))
         return {SPF_ABS, SPNB_NA, false};
 
+      // (X >=s 0) ? X : -X or (X >=s 1) ? X : -X --> ABS(X)
+      if (Pred == ICmpInst::ICMP_SGE && match(CmpRHS, ZeroOrOne))
+        return {SPF_ABS, SPNB_NA, false};
+
       // (X <s 0) ? X : -X or (X <s 1) ? X : -X --> NABS(X)
       // (-X <s 0) ? -X : X or (-X <s 1) ? -X : X --> NABS(X)
       if (Pred == ICmpInst::ICMP_SLT && match(CmpRHS, ZeroOrOne))

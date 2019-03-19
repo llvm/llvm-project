@@ -48,6 +48,7 @@ private:
 
   bool tryMergeLessLess();
   bool tryMergeNSStringLiteral();
+  bool tryMergeJSPrivateIdentifier();
 
   bool tryMergeTokens(ArrayRef<tok::TokenKind> Kinds, TokenType NewType);
 

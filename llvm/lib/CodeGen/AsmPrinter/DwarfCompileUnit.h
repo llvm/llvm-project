@@ -124,6 +124,16 @@ public:
     const DIExpression *Expr;
   };
 
+  struct BaseTypeRef {
+    BaseTypeRef(unsigned BitSize, dwarf::TypeKind Encoding) :
+      BitSize(BitSize), Encoding(Encoding) {}
+    unsigned BitSize;
+    dwarf::TypeKind Encoding;
+    DIE *Die = nullptr;
+  };
+
+  std::vector<BaseTypeRef> ExprRefedBaseTypes;
+
   /// Get or create global variable DIE.
   DIE *
   getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV,
@@ -198,6 +208,8 @@ public:
   DIE *createScopeChildrenDIE(LexicalScope *Scope,
                               SmallVectorImpl<DIE *> &Children,
                               bool *HasNonScopeChildren = nullptr);
+
+  void createBaseTypeDIEs();
 
   /// Construct a DIE for this subprogram scope.
   DIE &constructSubprogramScopeDIE(const DISubprogram *Sub,
@@ -313,6 +325,8 @@ public:
   void setDWOId(uint64_t DwoId) { DWOId = DwoId; }
 
   bool hasDwarfPubSections() const;
+
+  void addBaseTypeRef(DIEValueList &Die, int64_t Idx);
 };
 
 } // end namespace llvm

@@ -26,67 +26,8 @@
 
 namespace clang {
 namespace clangd {
+
 namespace {
-
-// Convert a index::SymbolKind to clangd::SymbolKind (LSP)
-// Note, some are not perfect matches and should be improved when this LSP
-// issue is addressed:
-// https://github.com/Microsoft/language-server-protocol/issues/344
-SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
-  switch (Kind) {
-  case index::SymbolKind::Unknown:
-    return SymbolKind::Variable;
-  case index::SymbolKind::Module:
-    return SymbolKind::Module;
-  case index::SymbolKind::Namespace:
-    return SymbolKind::Namespace;
-  case index::SymbolKind::NamespaceAlias:
-    return SymbolKind::Namespace;
-  case index::SymbolKind::Macro:
-    return SymbolKind::String;
-  case index::SymbolKind::Enum:
-    return SymbolKind::Enum;
-  case index::SymbolKind::Struct:
-    return SymbolKind::Struct;
-  case index::SymbolKind::Class:
-    return SymbolKind::Class;
-  case index::SymbolKind::Protocol:
-    return SymbolKind::Interface;
-  case index::SymbolKind::Extension:
-    return SymbolKind::Interface;
-  case index::SymbolKind::Union:
-    return SymbolKind::Class;
-  case index::SymbolKind::TypeAlias:
-    return SymbolKind::Class;
-  case index::SymbolKind::Function:
-    return SymbolKind::Function;
-  case index::SymbolKind::Variable:
-    return SymbolKind::Variable;
-  case index::SymbolKind::Field:
-    return SymbolKind::Field;
-  case index::SymbolKind::EnumConstant:
-    return SymbolKind::EnumMember;
-  case index::SymbolKind::InstanceMethod:
-  case index::SymbolKind::ClassMethod:
-  case index::SymbolKind::StaticMethod:
-    return SymbolKind::Method;
-  case index::SymbolKind::InstanceProperty:
-  case index::SymbolKind::ClassProperty:
-  case index::SymbolKind::StaticProperty:
-    return SymbolKind::Property;
-  case index::SymbolKind::Constructor:
-  case index::SymbolKind::Destructor:
-    return SymbolKind::Method;
-  case index::SymbolKind::ConversionFunction:
-    return SymbolKind::Function;
-  case index::SymbolKind::Parameter:
-    return SymbolKind::Variable;
-  case index::SymbolKind::Using:
-    return SymbolKind::Namespace;
-  }
-  llvm_unreachable("invalid symbol kind");
-}
-
 using ScoredSymbolInfo = std::pair<float, SymbolInformation>;
 struct ScoredSymbolGreater {
   bool operator()(const ScoredSymbolInfo &L, const ScoredSymbolInfo &R) {

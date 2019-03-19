@@ -347,6 +347,7 @@ private:
   SDValue PromoteIntRes_MULFIX(SDNode *N);
   SDValue PromoteIntRes_FLT_ROUNDS(SDNode *N);
   SDValue PromoteIntRes_VECREDUCE(SDNode *N);
+  SDValue PromoteIntRes_ABS(SDNode *N);
 
   // Integer Operand Promotion.
   bool PromoteIntegerOperand(SDNode *N, unsigned OpNo);
@@ -404,6 +405,7 @@ private:
   void ExpandIntRes_AssertSext        (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_AssertZext        (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_Constant          (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_ABS               (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTLZ              (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTPOP             (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTTZ              (SDNode *N, SDValue &Lo, SDValue &Hi);

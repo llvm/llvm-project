@@ -127,6 +127,14 @@ def SDTBufferLoad : SDTypeProfile<1, 7,
 
 def SIbuffer_load : SDNode <"AMDGPUISD::BUFFER_LOAD", SDTBufferLoad,
                             [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
+def SIbuffer_load_ubyte : SDNode <"AMDGPUISD::BUFFER_LOAD_UBYTE", SDTBufferLoad,
+                            [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
+def SIbuffer_load_ushort : SDNode <"AMDGPUISD::BUFFER_LOAD_USHORT", SDTBufferLoad,
+                            [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
+def SIbuffer_load_byte : SDNode <"AMDGPUISD::BUFFER_LOAD_BYTE", SDTBufferLoad,
+                            [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
+def SIbuffer_load_short: SDNode <"AMDGPUISD::BUFFER_LOAD_SHORT", SDTBufferLoad,
+                            [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 def SIbuffer_load_format : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT", SDTBufferLoad,
                             [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 def SIbuffer_load_format_d16 : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_D16",
@@ -145,6 +153,12 @@ def SDTBufferStore : SDTypeProfile<0, 8,
 
 def SIbuffer_store : SDNode <"AMDGPUISD::BUFFER_STORE", SDTBufferStore,
                              [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+def SIbuffer_store_byte: SDNode <"AMDGPUISD::BUFFER_STORE_BYTE",
+                         SDTBufferStore,
+                         [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+def SIbuffer_store_short : SDNode <"AMDGPUISD::BUFFER_STORE_SHORT",
+                           SDTBufferStore,
+                           [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 def SIbuffer_store_format : SDNode <"AMDGPUISD::BUFFER_STORE_FORMAT",
                             SDTBufferStore,
                             [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;

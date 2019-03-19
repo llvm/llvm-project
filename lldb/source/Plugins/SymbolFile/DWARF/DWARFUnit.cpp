@@ -165,15 +165,6 @@ void DWARFUnit::ExtractDIEsRWLocked() {
 
   DWARFDebugInfoEntry die;
   // Keep a flat array of the DIE for binary lookup by DIE offset
-  Log *log(
-      LogChannelDWARF::GetLogIfAny(DWARF_LOG_DEBUG_INFO | DWARF_LOG_LOOKUPS));
-  if (log) {
-    m_dwarf->GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
-        log,
-        "DWARFUnit::ExtractDIEsIfNeeded () for compile unit at "
-        ".debug_info[0x%8.8x]",
-        GetOffset());
-  }
 
   uint32_t depth = 0;
   // We are in our compile unit, parse starting at the offset we were told to
@@ -834,15 +825,6 @@ dw_offset_t DWARFUnit::GetBaseObjOffset() const { return m_base_obj_offset; }
 const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
   if (m_func_aranges_up == NULL) {
     m_func_aranges_up.reset(new DWARFDebugAranges());
-    Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_ARANGES));
-
-    if (log) {
-      m_dwarf->GetObjectFile()->GetModule()->LogMessage(
-          log,
-          "DWARFUnit::GetFunctionAranges() for compile unit at "
-          ".debug_info[0x%8.8x]",
-          GetOffset());
-    }
     const DWARFDebugInfoEntry *die = DIEPtr();
     if (die)
       die->BuildFunctionAddressRangeTable(m_dwarf, this,

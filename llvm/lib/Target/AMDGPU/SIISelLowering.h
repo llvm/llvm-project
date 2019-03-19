@@ -140,6 +140,7 @@ private:
   SDValue performOrCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performXorCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performZeroExtendCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performSignExtendInRegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performClassCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue getCanonicalConstantFP(SelectionDAG &DAG, const SDLoc &SL, EVT VT,
                                  const APFloat &C) const;
@@ -191,6 +192,15 @@ private:
   // pointed to by Offsets.
   void setBufferOffsets(SDValue CombinedOffset, SelectionDAG &DAG,
                         SDValue *Offsets, unsigned Align = 4) const;
+
+  // Handle 8 bit and 16 bit buffer loads
+  SDValue handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT, SDLoc DL,
+                                     ArrayRef<SDValue> Ops, MemSDNode *M) const;
+
+  // Handle 8 bit and 16 bit buffer stores
+  SDValue handleByteShortBufferStores(SelectionDAG &DAG, EVT VDataType,
+                                      SDLoc DL, SDValue Ops[],
+                                      MemSDNode *M) const;
 
 public:
   SITargetLowering(const TargetMachine &tm, const GCNSubtarget &STI);

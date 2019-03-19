@@ -13,6 +13,7 @@
 #include "common.h"
 #include "linux.h"
 #include "mutex.h"
+#include "string_utils.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -133,10 +134,7 @@ bool getRandom(void *Buffer, uptr Length, UNUSED bool Blocking) {
 void outputRaw(const char *Buffer) {
   static StaticSpinMutex Mutex;
   SpinMutexLock L(&Mutex);
-  uptr N = 0;
-  while (Buffer[N])
-    N++;
-  write(2, Buffer, N);
+  write(2, Buffer, strlen(Buffer));
 }
 
 extern "C" WEAK void android_set_abort_message(const char *);

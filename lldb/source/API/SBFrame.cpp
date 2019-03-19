@@ -1290,3 +1290,82 @@ const char *SBFrame::GetDisplayFunctionName() {
   }
   return name;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBFrame>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBFrame, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBFrame, (const lldb::StackFrameSP &));
+  LLDB_REGISTER_CONSTRUCTOR(SBFrame, (const lldb::SBFrame &));
+  LLDB_REGISTER_METHOD(const lldb::SBFrame &,
+                       SBFrame, operator=,(const lldb::SBFrame &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBFrame, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBFrame, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBSymbolContext, SBFrame, GetSymbolContext,
+                             (uint32_t));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBModule, SBFrame, GetModule, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBCompileUnit, SBFrame, GetCompileUnit,
+                             ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBFunction, SBFrame, GetFunction, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBSymbol, SBFrame, GetSymbol, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBBlock, SBFrame, GetBlock, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBBlock, SBFrame, GetFrameBlock, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBLineEntry, SBFrame, GetLineEntry, ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBFrame, GetFrameID, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::addr_t, SBFrame, GetCFA, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::addr_t, SBFrame, GetPC, ());
+  LLDB_REGISTER_METHOD(bool, SBFrame, SetPC, (lldb::addr_t));
+  LLDB_REGISTER_METHOD_CONST(lldb::addr_t, SBFrame, GetSP, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::addr_t, SBFrame, GetFP, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::SBAddress, SBFrame, GetPCAddress, ());
+  LLDB_REGISTER_METHOD(void, SBFrame, Clear, ());
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBFrame, GetValueForVariablePath,
+                       (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBFrame, GetValueForVariablePath,
+                       (const char *, lldb::DynamicValueType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBFrame, FindVariable, (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBFrame, FindVariable,
+                       (const char *, lldb::DynamicValueType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBFrame, FindValue,
+                       (const char *, lldb::ValueType));
+  LLDB_REGISTER_METHOD(
+      lldb::SBValue, SBFrame, FindValue,
+      (const char *, lldb::ValueType, lldb::DynamicValueType));
+  LLDB_REGISTER_METHOD_CONST(bool, SBFrame, IsEqual, (const lldb::SBFrame &));
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBFrame, operator==,(const lldb::SBFrame &));
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBFrame, operator!=,(const lldb::SBFrame &));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBThread, SBFrame, GetThread, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBFrame, Disassemble, ());
+  LLDB_REGISTER_METHOD(lldb::SBValueList, SBFrame, GetVariables,
+                       (bool, bool, bool, bool));
+  LLDB_REGISTER_METHOD(lldb::SBValueList, SBFrame, GetVariables,
+                       (bool, bool, bool, bool, lldb::DynamicValueType));
+  LLDB_REGISTER_METHOD(lldb::SBValueList, SBFrame, GetVariables,
+                       (const lldb::SBVariablesOptions &));
+  LLDB_REGISTER_METHOD(lldb::SBValueList, SBFrame, GetRegisters, ());
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBFrame, FindRegister, (const char *));
+  LLDB_REGISTER_METHOD(bool, SBFrame, GetDescription, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBFrame, EvaluateExpression,
+                       (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBFrame, EvaluateExpression,
+                       (const char *, lldb::DynamicValueType));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBFrame, EvaluateExpression,
+                       (const char *, lldb::DynamicValueType, bool));
+  LLDB_REGISTER_METHOD(lldb::SBValue, SBFrame, EvaluateExpression,
+                       (const char *, const lldb::SBExpressionOptions &));
+  LLDB_REGISTER_METHOD(bool, SBFrame, IsInlined, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBFrame, IsInlined, ());
+  LLDB_REGISTER_METHOD(bool, SBFrame, IsArtificial, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBFrame, IsArtificial, ());
+  LLDB_REGISTER_METHOD(const char *, SBFrame, GetFunctionName, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::LanguageType, SBFrame, GuessLanguage, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBFrame, GetFunctionName, ());
+  LLDB_REGISTER_METHOD(const char *, SBFrame, GetDisplayFunctionName, ());
+}
+
+}
+}
