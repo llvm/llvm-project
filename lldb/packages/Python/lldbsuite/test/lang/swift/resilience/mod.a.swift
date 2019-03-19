@@ -12,12 +12,32 @@
 
 public struct S {
   public var a = 1
-  public var s1 = "i"
-  public var s2 = "am"
-  public var s3 = "large"
-  public var s4 = "!"
+  fileprivate var s1 = "i"
+  fileprivate var s2 = "am"
+  fileprivate var s3 = "large"
+  fileprivate var s4 = "!"
 
   public init() {}
+}
+
+fileprivate class Message { fileprivate var s = "hello" }
+fileprivate struct NotBitwiseTakable {
+  fileprivate weak var msg : Message?
+}
+
+fileprivate struct FixedContainer {
+    var s = S()
+}
+
+fileprivate var g_msg = Message()
+fileprivate var g_b = NotBitwiseTakable()
+fileprivate var g_s = S()
+fileprivate var g_t = (S(), S())
+fileprivate var g_c = FixedContainer()
+
+public func initGlobal() -> Int {
+  g_b.msg = g_msg
+  return g_s.a + g_t.0.a + g_c.s.a
 }
 
 public func fA(_ x: S) -> Int {

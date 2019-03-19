@@ -35,3 +35,9 @@ let n = Notification(name: Notification.Name("abc"), object: Double(42.0), userI
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
+
+n
+
+// CHECK:      {{.*R.*}}: Notification = {
+// CHECK-NEXT:   name = "abc"
+// CHECK-NEXT:   object = 42
