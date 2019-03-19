@@ -14,13 +14,13 @@
 #include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Analysis/CallGraph.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "clang/Analysis/CallGraph.h"
 
 #include <array>
 
@@ -95,17 +95,17 @@ public:
       // all functions used by kernel have already been parsed and have
       // definitions.
       if (RecursiveSet.count(Callee)) {
-        SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict) <<
-                     KernelCallRecursiveFunction;
+        SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict)
+            << KernelCallRecursiveFunction;
         SemaRef.Diag(Callee->getSourceRange().getBegin(),
-                         diag::note_sycl_recursive_function_declared_here)
-                         << KernelCallRecursiveFunction;
+                     diag::note_sycl_recursive_function_declared_here)
+            << KernelCallRecursiveFunction;
       }
 
       if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Callee))
         if (Method->isVirtual())
-          SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict) <<
-                       KernelCallVirtualFunction;
+          SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict)
+              << KernelCallVirtualFunction;
 
       CheckSYCLType(Callee->getReturnType(), Callee->getSourceRange());
 
@@ -116,8 +116,8 @@ public:
         }
       }
     } else if (!SemaRef.getLangOpts().SYCLAllowFuncPtr)
-      SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict) <<
-                   KernelCallFunctionPointer;
+      SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict)
+          << KernelCallFunctionPointer;
     return true;
   }
 
@@ -178,8 +178,8 @@ public:
     if (VarDecl *VD = dyn_cast<VarDecl>(E->getMemberDecl())) {
       bool IsConst = VD->getType().getNonReferenceType().isConstQualified();
       if (VD->isStaticDataMember() && !IsConst)
-        SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict) <<
-                     KernelNonConstStaticDataVariable;
+        SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict)
+            << KernelNonConstStaticDataVariable;
     }
     return true;
   }
@@ -190,24 +190,24 @@ public:
       bool IsConst = VD->getType().getNonReferenceType().isConstQualified();
       if (!IsConst && VD->hasGlobalStorage() && !VD->isStaticLocal() &&
           !VD->isStaticDataMember() && !isa<ParmVarDecl>(VD))
-        SemaRef.Diag(E->getLocation(), diag::err_sycl_restrict) <<
-                     KernelGlobalVariable;
+        SemaRef.Diag(E->getLocation(), diag::err_sycl_restrict)
+            << KernelGlobalVariable;
     }
     return true;
   }
 
   bool VisitCXXNewExpr(CXXNewExpr *E) {
-  // Memory storage allocation is not allowed in kernels.
-  // All memory allocation for the device is done on
-  // the host using accessor classes. Consequently, the default
-  // allocation operator new overloads that allocate
-  // storage are disallowed in a SYCL kernel. The placement
-  // new operator and any user-defined overloads that
-  // do not allocate storage are permitted.
+    // Memory storage allocation is not allowed in kernels.
+    // All memory allocation for the device is done on
+    // the host using accessor classes. Consequently, the default
+    // allocation operator new overloads that allocate
+    // storage are disallowed in a SYCL kernel. The placement
+    // new operator and any user-defined overloads that
+    // do not allocate storage are permitted.
     if (FunctionDecl *FD = E->getOperatorNew()) {
       if (FD->isReplaceableGlobalAllocationFunction()) {
-          SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict) <<
-                       KernelAllocateStorage;
+        SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict)
+            << KernelAllocateStorage;
       } else if (FunctionDecl *Def = FD->getDefinition()) {
         if (!Def->hasAttr<SYCLDeviceAttr>()) {
           Def->addAttr(SYCLDeviceAttr::CreateImplicit(SemaRef.Context));
@@ -219,26 +219,26 @@ public:
   }
 
   bool VisitCXXThrowExpr(CXXThrowExpr *E) {
-    SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict) <<
-                 KernelUseExceptions;
+    SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict)
+        << KernelUseExceptions;
     return true;
   }
 
   bool VisitCXXCatchStmt(CXXCatchStmt *S) {
-    SemaRef.Diag(S->getBeginLoc(), diag::err_sycl_restrict) <<
-                 KernelUseExceptions;
+    SemaRef.Diag(S->getBeginLoc(), diag::err_sycl_restrict)
+        << KernelUseExceptions;
     return true;
   }
 
   bool VisitCXXTryStmt(CXXTryStmt *S) {
-    SemaRef.Diag(S->getBeginLoc(), diag::err_sycl_restrict) <<
-                 KernelUseExceptions;
+    SemaRef.Diag(S->getBeginLoc(), diag::err_sycl_restrict)
+        << KernelUseExceptions;
     return true;
   }
 
   bool VisitSEHTryStmt(SEHTryStmt *S) {
-    SemaRef.Diag(S->getBeginLoc(), diag::err_sycl_restrict) <<
-                 KernelUseExceptions;
+    SemaRef.Diag(S->getBeginLoc(), diag::err_sycl_restrict)
+        << KernelUseExceptions;
     return true;
   }
 
@@ -291,8 +291,8 @@ public:
       }
     }
   }
-private:
 
+private:
   bool CheckSYCLType(QualType Ty, SourceRange Loc) {
     if (Ty->isVariableArrayType()) {
       SemaRef.Diag(Loc.getBegin(), diag::err_vla_unsupported);
@@ -306,7 +306,7 @@ private:
       // FIXME: this seems like a temporary fix for SYCL programs
       // that pre-declare, use, but not define OclCXX classes,
       // which are later translated into SPIRV types.
-      if(!CRD->hasDefinition())
+      if (!CRD->hasDefinition())
         return true;
 
       if (CRD->isPolymorphic()) {
@@ -450,9 +450,10 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
       QualType FieldType = Field->getType();
       CXXRecordDecl *CRD = FieldType->getAsCXXRecordDecl();
       if (CRD && Util::isSyclAccessorType(FieldType)) {
-        // Since this is an accessor next 3 TargetFuncParams including current
-        // should be set in __init method: _ValueType*, range<int>, id<int>
-        const size_t NumParams = 3;
+        // Since this is an accessor next 4 TargetFuncParams including current
+        // should be set in __init method: _ValueType*, range<int>, range<int>,
+        // id<int>
+        const size_t NumParams = 4;
         llvm::SmallVector<DeclRefExpr *, NumParams> ParamDREs(NumParams);
         auto TFP = TargetFuncParam;
         for (size_t I = 0; I < NumParams; ++TFP, ++I) {
@@ -495,7 +496,7 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
         ExprValueKind VK = Expr::getValueKindForType(ResultTy);
         ResultTy = ResultTy.getNonLValueExprType(S.Context);
 
-        // __init needs three parameter
+        // __init needs four parameter
         auto ParamItr = InitMethod->param_begin();
         // kernel_parameters
         llvm::SmallVector<Expr *, NumParams> ParamStmts;
@@ -505,7 +506,10 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
             S, ((*ParamItr++))->getOriginalType(), ParamDREs[1]));
         ParamStmts.push_back(getExprForRangeOrOffset(
             S, ((*ParamItr++))->getOriginalType(), ParamDREs[2]));
-        // kernel_obj.accessor.__init(_ValueType*, range<int>, id<int>)
+        ParamStmts.push_back(getExprForRangeOrOffset(
+            S, ((*ParamItr++))->getOriginalType(), ParamDREs[3]));
+        // kernel_obj.accessor.__init(_ValueType*, range<int>, range<int>,
+        // id<int>)
         CXXMemberCallExpr *Call = CXXMemberCallExpr::Create(
             S.Context, ME, ParamStmts, ResultTy, VK, SourceLocation());
         BodyStmts.push_back(Call);
@@ -643,10 +647,17 @@ static void buildArgTys(ASTContext &Context, CXXRecordDecl *KernelObj,
 
       CreateAndAddPrmDsc(Fld, PointerType);
 
-      FieldDecl *RangeFld = getFieldDeclByName(RecordDecl, {"__impl", "Range"});
-      assert(RangeFld &&
-             "The accessor must contain the Range from the __impl field");
-      CreateAndAddPrmDsc(RangeFld, RangeFld->getType());
+      FieldDecl *AccessRangeFld =
+          getFieldDeclByName(RecordDecl, {"__impl", "AccessRange"});
+      assert(AccessRangeFld &&
+             "The accessor must contain the AccessRange from the __impl field");
+      CreateAndAddPrmDsc(AccessRangeFld, AccessRangeFld->getType());
+
+      FieldDecl *MemRangeFld =
+          getFieldDeclByName(RecordDecl, {"__impl", "MemRange"});
+      assert(MemRangeFld &&
+             "The accessor must contain the MemRange from the __impl field");
+      CreateAndAddPrmDsc(MemRangeFld, MemRangeFld->getType());
 
       FieldDecl *OffsetFld =
           getFieldDeclByName(RecordDecl, {"__impl", "Offset"});
@@ -705,13 +716,22 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
       const auto *AccTmplTy = cast<ClassTemplateSpecializationDecl>(AccTy);
       H.addParamDesc(SYCLIntegrationHeader::kind_accessor,
                      getAccessTarget(AccTmplTy), Offset);
-      // ... second descriptor (translated to range kernel parameter):
-      FieldDecl *RngFld =
-          getFieldDeclByName(AccTy, {"__impl", "Range"}, &Offset);
-      uint64_t Sz = Ctx.getTypeSizeInChars(RngFld->getType()).getQuantity();
+      // ... second descriptor (translated to access range kernel parameter):
+      FieldDecl *AccessRngFld =
+          getFieldDeclByName(AccTy, {"__impl", "AccessRange"}, &Offset);
+      uint64_t Sz =
+          Ctx.getTypeSizeInChars(AccessRngFld->getType()).getQuantity();
       H.addParamDesc(SYCLIntegrationHeader::kind_std_layout,
                      static_cast<unsigned>(Sz), static_cast<unsigned>(Offset));
-      // ... third descriptor (translated to id kernel parameter):
+      // ... third descriptor (translated to mem range kernel parameter):
+      // Get offset in bytes
+      Offset = Layout.getFieldOffset(Fld->getFieldIndex()) / 8;
+      FieldDecl *MemRngFld =
+          getFieldDeclByName(AccTy, {"__impl", "MemRange"}, &Offset);
+      Sz = Ctx.getTypeSizeInChars(MemRngFld->getType()).getQuantity();
+      H.addParamDesc(SYCLIntegrationHeader::kind_std_layout,
+                     static_cast<unsigned>(Sz), static_cast<unsigned>(Offset));
+      // ... fourth descriptor (translated to id kernel parameter):
       // Get offset in bytes
       Offset = Layout.getFieldOffset(Fld->getFieldIndex()) / 8;
       FieldDecl *OffstFld =
