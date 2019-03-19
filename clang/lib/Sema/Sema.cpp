@@ -921,6 +921,9 @@ void Sema::ActOnEndOfTranslationUnit() {
     if (getLangOpts().SYCLIsDevice && SyclIntHeader != nullptr) {
       SyclIntHeader->emit(getLangOpts().SYCLIntHeader);
     }
+    if (getLangOpts().SYCLIsDevice)
+      MarkDevice();
+
 
     assert(LateParsedInstantiations.empty() &&
            "end of TU template instantiation should not create more "

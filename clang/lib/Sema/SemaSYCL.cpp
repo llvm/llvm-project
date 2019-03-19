@@ -94,10 +94,13 @@ public:
       // instantiation as template functions. It means that
       // all functions used by kernel have already been parsed and have
       // definitions.
-      llvm::SmallPtrSet<FunctionDecl *, 10> VisitedSet;
-      if (IsRecursive(Callee, Callee, VisitedSet))
+      if (RecursiveSet.count(Callee)) {
         SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict) <<
                      KernelCallRecursiveFunction;
+        SemaRef.Diag(Callee->getSourceRange().getBegin(),
+                         diag::note_sycl_recursive_function_declared_here)
+                         << KernelCallRecursiveFunction;
+      }
 
       if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Callee))
         if (Method->isVirtual())
@@ -109,7 +112,6 @@ public:
       if (FunctionDecl *Def = Callee->getDefinition()) {
         if (!Def->hasAttr<SYCLDeviceAttr>()) {
           Def->addAttr(SYCLDeviceAttr::CreateImplicit(SemaRef.Context));
-          this->TraverseStmt(Def->getBody());
           SemaRef.AddSyclKernel(Def);
         }
       }
@@ -127,7 +129,6 @@ public:
 
     if (FunctionDecl *Def = Ctor->getDefinition()) {
       Def->addAttr(SYCLDeviceAttr::CreateImplicit(SemaRef.Context));
-      this->TraverseStmt(Def->getBody());
       SemaRef.AddSyclKernel(Def);
     }
 
@@ -137,7 +138,6 @@ public:
 
       if (FunctionDecl *Def = Dtor->getDefinition()) {
         Def->addAttr(SYCLDeviceAttr::CreateImplicit(SemaRef.Context));
-        this->TraverseStmt(Def->getBody());
         SemaRef.AddSyclKernel(Def);
       }
     }
@@ -211,7 +211,6 @@ public:
       } else if (FunctionDecl *Def = FD->getDefinition()) {
         if (!Def->hasAttr<SYCLDeviceAttr>()) {
           Def->addAttr(SYCLDeviceAttr::CreateImplicit(SemaRef.Context));
-          this->TraverseStmt(Def->getBody());
           SemaRef.AddSyclKernel(Def);
         }
       }
@@ -257,33 +256,42 @@ public:
 
   // The call graph for this translation unit.
   CallGraph SYCLCG;
-private:
+  // The set of functions called by a kernel function.
+  llvm::SmallPtrSet<FunctionDecl *, 10> KernelSet;
+  // The set of recursive functions identified while building the
+  // kernel set, this is used for error diagnostics.
+  llvm::SmallPtrSet<FunctionDecl *, 10> RecursiveSet;
   // Determines whether the function FD is recursive.
   // CalleeNode is a function which is called either directly
   // or indirectly from FD.  If recursion is detected then create
   // diagnostic notes on each function as the callstack is unwound.
-  bool IsRecursive(FunctionDecl *CalleeNode, FunctionDecl *FD,
-                   llvm::SmallPtrSet<FunctionDecl *, 10> VisitedSet) {
+  void CollectKernelSet(FunctionDecl *CalleeNode, FunctionDecl *FD,
+                        llvm::SmallPtrSet<FunctionDecl *, 10> VisitedSet) {
     // We're currently checking CalleeNode on a different
     // trace through the CallGraph, we avoid infinite recursion
-    // by using VisitedSet to keep track of this.
-    if (!VisitedSet.insert(CalleeNode).second)
-      return false;
+    // by using KernelSet to keep track of this.
+    if (!KernelSet.insert(CalleeNode).second)
+      // Previously seen, stop recursion.
+      return;
     if (CallGraphNode *N = SYCLCG.getNode(CalleeNode)) {
       for (const CallGraphNode *CI : *N) {
         if (FunctionDecl *Callee = dyn_cast<FunctionDecl>(CI->getDecl())) {
           Callee = Callee->getCanonicalDecl();
-          if (Callee == FD)
-            return SemaRef.Diag(FD->getSourceRange().getBegin(),
-                         diag::note_sycl_recursive_function_declared_here)
-                         << KernelCallRecursiveFunction;
-          else if (IsRecursive(Callee, FD, VisitedSet))
-            return true;
+          if (VisitedSet.count(Callee)) {
+            // There's a stack frame to visit this Callee above
+            // this invocation. Do not recurse here.
+            RecursiveSet.insert(Callee);
+            RecursiveSet.insert(CalleeNode);
+          } else {
+            VisitedSet.insert(Callee);
+            CollectKernelSet(Callee, FD, VisitedSet);
+            VisitedSet.erase(Callee);
+          }
         }
       }
     }
-    return false;
   }
+private:
 
   bool CheckSYCLType(QualType Ty, SourceRange Loc) {
     if (Ty->isVariableArrayType()) {
@@ -770,13 +778,30 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
       CreateSYCLKernelBody(*this, KernelCallerFunc, SYCLKernel);
   SYCLKernel->setBody(SYCLKernelBody);
   AddSyclKernel(SYCLKernel);
+}
+
+void Sema::MarkDevice(void) {
   // Let's mark all called functions with SYCL Device attribute.
-  MarkDeviceFunction Marker(*this);
   // Create the call graph so we can detect recursion and check the validity
   // of new operator overrides. Add the kernel function itself in case
   // it is recursive.
+  MarkDeviceFunction Marker(*this);
   Marker.SYCLCG.addToCallGraph(getASTContext().getTranslationUnitDecl());
-  Marker.TraverseStmt(SYCLKernelBody);
+  for (Decl *D : SyclKernels()) {
+    if (auto SYCLKernel = dyn_cast<FunctionDecl>(D)) {
+      llvm::SmallPtrSet<FunctionDecl *, 10> VisitedSet;
+      Marker.CollectKernelSet(SYCLKernel, SYCLKernel, VisitedSet);
+    }
+  }
+  for (const auto &elt : Marker.KernelSet) {
+    if (FunctionDecl *Def = elt->getDefinition()) {
+      if (!Def->hasAttr<SYCLDeviceAttr>()) {
+        Def->addAttr(SYCLDeviceAttr::CreateImplicit(Context));
+        AddSyclKernel(Def);
+      }
+      Marker.TraverseStmt(Def->getBody());
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------

@@ -11146,6 +11146,7 @@ public:
   }
 
   void ConstructSYCLKernel(FunctionDecl *KernelCallerFunc);
+  void MarkDevice(void);
 };
 
 /// RAII object that enters a new expression evaluation context.

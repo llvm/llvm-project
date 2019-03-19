@@ -11,17 +11,17 @@ int fib(int n)
 
 typedef struct S {
 template <typename T>
-  // expected-note@+1 2{{function implemented using recursion declared here}}
+  // expected-note@+1 3{{function implemented using recursion declared here}}
 T factT(T i, T j)
 {
-  // expected-error@+1 1{{SYCL kernel cannot call a recursive function}}
+  // expected-error@+1 {{SYCL kernel cannot call a recursive function}}
   return factT(j,i);
 }
 
 int fact(unsigned i)
 {
   if (i==0) return 1;
-  // expected-error@+1 1{{SYCL kernel cannot call a recursive function}}
+  // expected-error@+1 {{SYCL kernel cannot call a recursive function}}
   else return factT<unsigned>(i-1, i);
 }
 } S_type;
@@ -47,7 +47,7 @@ bool isa_B(void) {
   S_type s;
 
   unsigned f = s.fact(3);
-  // expected-error@+1 1{{SYCL kernel cannot call a recursive function}}
+  // expected-error@+1 {{SYCL kernel cannot call a recursive function}}
   unsigned f1 = s.factT<unsigned>(3,4);
   // expected-error@+1 {{SYCL kernel cannot call a recursive function}}
   unsigned g = fact(3);
