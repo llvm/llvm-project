@@ -8,15 +8,15 @@ define protected i64 @__activelanemask_v4_b64_b1(i32 %input) #5 {
   ret i64 %a
 }
 
-define protected i32 @__amdgcn_wave_sr1(i32 %v, i1 %b) #3  {
-  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 312, i32 15, i32 15, i1 %b)
-  ret i32 %call
-}
+;define protected i32 @__amdgcn_wave_sr1(i32 %v, i1 %b) #3  {
+;  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 312, i32 15, i32 15, i1 %b)
+;  ret i32 %call
+;}
 
-define protected i32 @__amdgcn_wave_sl1(i32 %v, i1 %b) #3  {
-  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 304, i32 15, i32 15, i1 %b)
-  ret i32 %call
-}
+;define protected i32 @__amdgcn_wave_sl1(i32 %v, i1 %b) #3  {
+;  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 304, i32 15, i32 15, i1 %b)
+;  ret i32 %call
+;}
 
 define protected i32 @__amdgcn_wave_rr1(i32 %v) #3  {
   %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 316, i32 15, i32 15, i1 0)
@@ -127,18 +127,18 @@ define protected i32 @__amdgcn_ds_bpermute(i32 %index, i32 %src) #3  {
 ;llvm.amdgcn.ds.bpermute <index> <src>
 declare i32 @llvm.amdgcn.ds.bpermute(i32, i32) #4
 
-define protected i32 @__amdgcn_ds_swizzle(i32 %src, i32 %pattern) #3  {
-  %call = call i32 @llvm.amdgcn.ds.swizzle(i32 %src, i32 %pattern)
-  ret i32 %call
-}
+;define protected i32 @__amdgcn_ds_swizzle(i32 %src, i32 %pattern) #3  {
+;  %call = call i32 @llvm.amdgcn.ds.swizzle(i32 %src, i32 %pattern)
+;  ret i32 %call
+;}
 
 ;llvm.amdgcn.ds.swizzle <index> <src>
-declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #4
+;declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #4
 
-define protected i32 @__amdgcn_move_dpp(i32 %src, i32 %dpp_ctrl, i32 %row_mask, i32 %bank_mask, i1 %bound_ctrl) #3  {
-  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %src, i32 %dpp_ctrl, i32 %row_mask, i32 %bank_mask, i1 %bound_ctrl)
-  ret i32 %call
-}
+;define protected i32 @__amdgcn_move_dpp(i32 %src, i32 %dpp_ctrl, i32 %row_mask, i32 %bank_mask, i1 %bound_ctrl) #3  {
+;  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %src, i32 %dpp_ctrl, i32 %row_mask, i32 %bank_mask, i1 %bound_ctrl)
+;  ret i32 %call
+;}
 
 ; llvm.amdgcn.mov.dpp.i32 <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
 declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #4
