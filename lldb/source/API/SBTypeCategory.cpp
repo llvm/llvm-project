@@ -660,3 +660,78 @@ bool SBTypeCategory::IsDefaultCategory() {
 
   return (strcmp(m_opaque_sp->GetName(), "default") == 0);
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBTypeCategory>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeCategory, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeCategory, (const lldb::SBTypeCategory &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBTypeCategory, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBTypeCategory, operator bool, ());
+  LLDB_REGISTER_METHOD(bool, SBTypeCategory, GetEnabled, ());
+  LLDB_REGISTER_METHOD(void, SBTypeCategory, SetEnabled, (bool));
+  LLDB_REGISTER_METHOD(const char *, SBTypeCategory, GetName, ());
+  LLDB_REGISTER_METHOD(lldb::LanguageType, SBTypeCategory, GetLanguageAtIndex,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBTypeCategory, GetNumLanguages, ());
+  LLDB_REGISTER_METHOD(void, SBTypeCategory, AddLanguage,
+                       (lldb::LanguageType));
+  LLDB_REGISTER_METHOD(uint32_t, SBTypeCategory, GetNumFormats, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBTypeCategory, GetNumSummaries, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBTypeCategory, GetNumFilters, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBTypeCategory, GetNumSynthetics, ());
+  LLDB_REGISTER_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
+                       GetTypeNameSpecifierForSyntheticAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBTypeSummary, SBTypeCategory, GetSummaryForType,
+                       (lldb::SBTypeNameSpecifier));
+  LLDB_REGISTER_METHOD(lldb::SBTypeSynthetic, SBTypeCategory,
+                       GetSyntheticForType, (lldb::SBTypeNameSpecifier));
+  LLDB_REGISTER_METHOD(lldb::SBTypeFilter, SBTypeCategory, GetFilterAtIndex,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBTypeSummary, SBTypeCategory, GetSummaryAtIndex,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBTypeSynthetic, SBTypeCategory,
+                       GetSyntheticAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(bool, SBTypeCategory, AddTypeSummary,
+                       (lldb::SBTypeNameSpecifier, lldb::SBTypeSummary));
+  LLDB_REGISTER_METHOD(bool, SBTypeCategory, AddTypeSynthetic,
+                       (lldb::SBTypeNameSpecifier, lldb::SBTypeSynthetic));
+  LLDB_REGISTER_METHOD(bool, SBTypeCategory, DeleteTypeSynthetic,
+                       (lldb::SBTypeNameSpecifier));
+  LLDB_REGISTER_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
+                       GetTypeNameSpecifierForFilterAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
+                       GetTypeNameSpecifierForFormatAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
+                       GetTypeNameSpecifierForSummaryAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBTypeFilter, SBTypeCategory, GetFilterForType,
+                       (lldb::SBTypeNameSpecifier));
+  LLDB_REGISTER_METHOD(lldb::SBTypeFormat, SBTypeCategory, GetFormatForType,
+                       (lldb::SBTypeNameSpecifier));
+  LLDB_REGISTER_METHOD(lldb::SBTypeFormat, SBTypeCategory, GetFormatAtIndex,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(bool, SBTypeCategory, AddTypeFormat,
+                       (lldb::SBTypeNameSpecifier, lldb::SBTypeFormat));
+  LLDB_REGISTER_METHOD(bool, SBTypeCategory, DeleteTypeFormat,
+                       (lldb::SBTypeNameSpecifier));
+  LLDB_REGISTER_METHOD(bool, SBTypeCategory, DeleteTypeSummary,
+                       (lldb::SBTypeNameSpecifier));
+  LLDB_REGISTER_METHOD(bool, SBTypeCategory, AddTypeFilter,
+                       (lldb::SBTypeNameSpecifier, lldb::SBTypeFilter));
+  LLDB_REGISTER_METHOD(bool, SBTypeCategory, DeleteTypeFilter,
+                       (lldb::SBTypeNameSpecifier));
+  LLDB_REGISTER_METHOD(bool, SBTypeCategory, GetDescription,
+                       (lldb::SBStream &, lldb::DescriptionLevel));
+  LLDB_REGISTER_METHOD(
+      lldb::SBTypeCategory &,
+      SBTypeCategory, operator=,(const lldb::SBTypeCategory &));
+  LLDB_REGISTER_METHOD(bool,
+                       SBTypeCategory, operator==,(lldb::SBTypeCategory &));
+  LLDB_REGISTER_METHOD(bool,
+                       SBTypeCategory, operator!=,(lldb::SBTypeCategory &));
+}
+
+}
+}

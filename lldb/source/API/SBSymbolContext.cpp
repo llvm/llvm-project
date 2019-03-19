@@ -228,3 +228,43 @@ SBSymbolContext::GetParentOfInlinedScope(const SBAddress &curr_frame_pc,
   }
   return LLDB_RECORD_RESULT(SBSymbolContext());
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBSymbolContext>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBSymbolContext, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBSymbolContext,
+                            (const lldb_private::SymbolContext *));
+  LLDB_REGISTER_CONSTRUCTOR(SBSymbolContext, (const lldb::SBSymbolContext &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBSymbolContext &,
+      SBSymbolContext, operator=,(const lldb::SBSymbolContext &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBSymbolContext, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBSymbolContext, operator bool, ());
+  LLDB_REGISTER_METHOD(lldb::SBModule, SBSymbolContext, GetModule, ());
+  LLDB_REGISTER_METHOD(lldb::SBCompileUnit, SBSymbolContext, GetCompileUnit,
+                       ());
+  LLDB_REGISTER_METHOD(lldb::SBFunction, SBSymbolContext, GetFunction, ());
+  LLDB_REGISTER_METHOD(lldb::SBBlock, SBSymbolContext, GetBlock, ());
+  LLDB_REGISTER_METHOD(lldb::SBLineEntry, SBSymbolContext, GetLineEntry, ());
+  LLDB_REGISTER_METHOD(lldb::SBSymbol, SBSymbolContext, GetSymbol, ());
+  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetModule, (lldb::SBModule));
+  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetCompileUnit,
+                       (lldb::SBCompileUnit));
+  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetFunction,
+                       (lldb::SBFunction));
+  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetBlock, (lldb::SBBlock));
+  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetLineEntry,
+                       (lldb::SBLineEntry));
+  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetSymbol, (lldb::SBSymbol));
+  LLDB_REGISTER_METHOD(bool, SBSymbolContext, GetDescription,
+                       (lldb::SBStream &));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBSymbolContext, SBSymbolContext,
+                             GetParentOfInlinedScope,
+                             (const lldb::SBAddress &, lldb::SBAddress &));
+}
+
+}
+}

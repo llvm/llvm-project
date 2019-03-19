@@ -206,8 +206,7 @@ bool DWARFDebugInfoEntry::FastExtract(
 // .debug_abbrev data within the SymbolFileDWARF class starting at the given
 // offset
 //----------------------------------------------------------------------
-bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
-                                  const DWARFUnit *cu,
+bool DWARFDebugInfoEntry::Extract(const DWARFUnit *cu,
                                   lldb::offset_t *offset_ptr) {
   const DWARFDataExtractor &debug_info_data = cu->GetData();
   //    const DWARFDataExtractor& debug_str_data =
@@ -362,23 +361,6 @@ bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
   }
 
   return false;
-}
-
-//----------------------------------------------------------------------
-// DumpAncestry
-//
-// Dumps all of a debug information entries parents up until oldest and all of
-// it's attributes to the specified stream.
-//----------------------------------------------------------------------
-void DWARFDebugInfoEntry::DumpAncestry(SymbolFileDWARF *dwarf2Data,
-                                       const DWARFUnit *cu,
-                                       const DWARFDebugInfoEntry *oldest,
-                                       Stream &s,
-                                       uint32_t recurse_depth) const {
-  const DWARFDebugInfoEntry *parent = GetParent();
-  if (parent && parent != oldest)
-    parent->DumpAncestry(dwarf2Data, cu, oldest, s, 0);
-  Dump(dwarf2Data, cu, s, recurse_depth);
 }
 
 static dw_offset_t GetRangesOffset(const DWARFDebugRangesBase *debug_ranges,
@@ -646,23 +628,6 @@ void DWARFDebugInfoEntry::Dump(SymbolFileDWARF *dwarf2Data,
       s.Printf("NULL\n");
     }
   }
-}
-
-void DWARFDebugInfoEntry::DumpLocation(SymbolFileDWARF *dwarf2Data,
-                                       DWARFUnit *cu, Stream &s) const {
-  const DWARFBaseDIE cu_die = cu->GetUnitDIEOnly();
-  const char *cu_name = NULL;
-  if (cu_die)
-    cu_name = cu_die.GetName();
-  const char *obj_file_name = NULL;
-  ObjectFile *obj_file = dwarf2Data->GetObjectFile();
-  if (obj_file)
-    obj_file_name =
-        obj_file->GetFileSpec().GetFilename().AsCString("<Unknown>");
-  const char *die_name = GetName(dwarf2Data, cu);
-  s.Printf("0x%8.8x/0x%8.8x: %-30s (from %s in %s)", cu->GetOffset(),
-           GetOffset(), die_name ? die_name : "", cu_name ? cu_name : "<NULL>",
-           obj_file_name ? obj_file_name : "<NULL>");
 }
 
 //----------------------------------------------------------------------
@@ -977,22 +942,6 @@ lldb::LanguageType DWARFDebugInfoEntry::GetLanguageAttributeValue(
 }
 
 //----------------------------------------------------------------------
-// GetAttributeValueAsSigned
-//
-// Get the value of an attribute a signed value and return it.
-//----------------------------------------------------------------------
-int64_t DWARFDebugInfoEntry::GetAttributeValueAsSigned(
-    SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
-    const dw_attr_t attr, int64_t fail_value,
-    bool check_specification_or_abstract_origin) const {
-  DWARFFormValue form_value;
-  if (GetAttributeValue(dwarf2Data, cu, attr, form_value, nullptr,
-                        check_specification_or_abstract_origin))
-    return form_value.Signed();
-  return fail_value;
-}
-
-//----------------------------------------------------------------------
 // GetAttributeValueAsReference
 //
 // Get the value of an attribute as reference and fix up and compile unit
@@ -1178,7 +1127,7 @@ bool DWARFDebugInfoEntry::GetName(SymbolFileDWARF *dwarf2Data,
 
   DWARFDebugInfoEntry die;
   lldb::offset_t offset = die_offset;
-  if (die.Extract(dwarf2Data, cu, &offset)) {
+  if (die.Extract(cu, &offset)) {
     if (die.IsNULL()) {
       s.PutCString("NULL");
       return true;
@@ -1212,7 +1161,7 @@ bool DWARFDebugInfoEntry::AppendTypeName(SymbolFileDWARF *dwarf2Data,
 
   DWARFDebugInfoEntry die;
   lldb::offset_t offset = die_offset;
-  if (die.Extract(dwarf2Data, cu, &offset)) {
+  if (die.Extract(cu, &offset)) {
     if (die.IsNULL()) {
       s.PutCString("NULL");
       return true;
@@ -1820,25 +1769,6 @@ DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(
 bool DWARFDebugInfoEntry::OffsetLessThan(const DWARFDebugInfoEntry &a,
                                          const DWARFDebugInfoEntry &b) {
   return a.GetOffset() < b.GetOffset();
-}
-
-void DWARFDebugInfoEntry::DumpDIECollection(
-    Stream &strm, DWARFDebugInfoEntry::collection &die_collection) {
-  DWARFDebugInfoEntry::const_iterator pos;
-  DWARFDebugInfoEntry::const_iterator end = die_collection.end();
-  strm.PutCString("\noffset    parent   sibling  child\n");
-  strm.PutCString("--------  -------- -------- --------\n");
-  for (pos = die_collection.begin(); pos != end; ++pos) {
-    const DWARFDebugInfoEntry &die_ref = *pos;
-    const DWARFDebugInfoEntry *p = die_ref.GetParent();
-    const DWARFDebugInfoEntry *s = die_ref.GetSibling();
-    const DWARFDebugInfoEntry *c = die_ref.GetFirstChild();
-    strm.Printf("%.8x: %.8x %.8x %.8x 0x%4.4x %s%s\n", die_ref.GetOffset(),
-                p ? p->GetOffset() : 0, s ? s->GetOffset() : 0,
-                c ? c->GetOffset() : 0, die_ref.Tag(),
-                DW_TAG_value_to_name(die_ref.Tag()),
-                die_ref.HasChildren() ? " *" : "");
-  }
 }
 
 bool DWARFDebugInfoEntry::operator==(const DWARFDebugInfoEntry &rhs) const {

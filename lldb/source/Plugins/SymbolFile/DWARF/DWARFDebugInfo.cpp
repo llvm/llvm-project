@@ -121,19 +121,6 @@ DWARFUnit *DWARFDebugInfo::GetCompileUnitAtIndex(uint32_t idx) {
   return cu;
 }
 
-bool DWARFDebugInfo::ContainsCompileUnit(const DWARFUnit *cu) const {
-  // Not a verify efficient function, but it is handy for use in assertions to
-  // make sure that a compile unit comes from a debug information file.
-  CompileUnitColl::const_iterator end_pos = m_compile_units.end();
-  CompileUnitColl::const_iterator pos;
-
-  for (pos = m_compile_units.begin(); pos != end_pos; ++pos) {
-    if (pos->get() == cu)
-      return true;
-  }
-  return false;
-}
-
 bool DWARFDebugInfo::OffsetLessThanCompileUnitOffset(
     dw_offset_t offset, const DWARFUnitSP &cu_sp) {
   return offset < cu_sp->GetOffset();

@@ -36,7 +36,6 @@ public:
   void SetDwarfData(SymbolFileDWARF *dwarf2Data);
 
   size_t GetNumCompileUnits();
-  bool ContainsCompileUnit(const DWARFUnit *cu) const;
   DWARFUnit *GetCompileUnitAtIndex(uint32_t idx);
   DWARFUnit *GetCompileUnit(dw_offset_t cu_offset, uint32_t *idx_ptr = NULL);
   DWARFUnit *GetCompileUnitContainingDIEOffset(dw_offset_t die_offset);

@@ -156,3 +156,34 @@ void SBTypeNameSpecifier::SetSP(
 SBTypeNameSpecifier::SBTypeNameSpecifier(
     const lldb::TypeNameSpecifierImplSP &type_namespec_sp)
     : m_opaque_sp(type_namespec_sp) {}
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBTypeNameSpecifier>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeNameSpecifier, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeNameSpecifier, (const char *, bool));
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeNameSpecifier, (lldb::SBType));
+  LLDB_REGISTER_CONSTRUCTOR(SBTypeNameSpecifier,
+                            (const lldb::SBTypeNameSpecifier &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBTypeNameSpecifier, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBTypeNameSpecifier, operator bool, ());
+  LLDB_REGISTER_METHOD(const char *, SBTypeNameSpecifier, GetName, ());
+  LLDB_REGISTER_METHOD(lldb::SBType, SBTypeNameSpecifier, GetType, ());
+  LLDB_REGISTER_METHOD(bool, SBTypeNameSpecifier, IsRegex, ());
+  LLDB_REGISTER_METHOD(bool, SBTypeNameSpecifier, GetDescription,
+                       (lldb::SBStream &, lldb::DescriptionLevel));
+  LLDB_REGISTER_METHOD(
+      lldb::SBTypeNameSpecifier &,
+      SBTypeNameSpecifier, operator=,(const lldb::SBTypeNameSpecifier &));
+  LLDB_REGISTER_METHOD(
+      bool, SBTypeNameSpecifier, operator==,(lldb::SBTypeNameSpecifier &));
+  LLDB_REGISTER_METHOD(bool, SBTypeNameSpecifier, IsEqualTo,
+                       (lldb::SBTypeNameSpecifier &));
+  LLDB_REGISTER_METHOD(
+      bool, SBTypeNameSpecifier, operator!=,(lldb::SBTypeNameSpecifier &));
+}
+
+}
+}
