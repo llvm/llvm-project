@@ -57,8 +57,6 @@ public:
     return DW_INVALID_OFFSET;
   }
 
-  static void Dump(SymbolFileDWARF *dwarf2Data, lldb_private::Stream *s);
-
 protected:
   RangeToDIE m_aranges;
 };

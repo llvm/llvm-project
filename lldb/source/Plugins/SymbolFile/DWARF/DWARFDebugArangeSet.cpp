@@ -219,20 +219,6 @@ dw_offset_t DWARFDebugArangeSet::GetOffsetOfNextEntry() const {
   return m_offset + m_header.length + 4;
 }
 
-void DWARFDebugArangeSet::Dump(Stream *s) const {
-  s->Printf("Address Range Header: length = 0x%8.8x, version = 0x%4.4x, "
-            "cu_offset = 0x%8.8x, addr_size = 0x%2.2x, seg_size = 0x%2.2x\n",
-            m_header.length, m_header.version, m_header.cu_offset,
-            m_header.addr_size, m_header.seg_size);
-
-  const uint32_t hex_width = m_header.addr_size * 2;
-  DescriptorConstIter pos;
-  DescriptorConstIter end = m_arange_descriptors.end();
-  for (pos = m_arange_descriptors.begin(); pos != end; ++pos)
-    s->Printf("[0x%*.*" PRIx64 " - 0x%*.*" PRIx64 ")\n", hex_width, hex_width,
-              pos->address, hex_width, hex_width, pos->end_address());
-}
-
 class DescriptorContainsAddress {
 public:
   DescriptorContainsAddress(dw_addr_t address) : m_address(address) {}

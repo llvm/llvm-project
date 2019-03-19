@@ -55,15 +55,6 @@ DWARFAbbreviationDeclarationSet::extract(const DWARFDataExtractor &data,
 }
 
 //----------------------------------------------------------------------
-// DWARFAbbreviationDeclarationSet::Dump()
-//----------------------------------------------------------------------
-void DWARFAbbreviationDeclarationSet::Dump(Stream *s) const {
-  std::for_each(
-      m_decls.begin(), m_decls.end(),
-      bind2nd(std::mem_fun_ref(&DWARFAbbreviationDeclaration::Dump), s));
-}
-
-//----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration()
 //----------------------------------------------------------------------
 const DWARFAbbreviationDeclaration *
@@ -161,22 +152,6 @@ llvm::Error DWARFDebugAbbrev::parse(const DWARFDataExtractor &data) {
   }
   m_prev_abbr_offset_pos = m_abbrevCollMap.end();
   return llvm::ErrorSuccess();
-}
-
-//----------------------------------------------------------------------
-// DWARFDebugAbbrev::Dump()
-//----------------------------------------------------------------------
-void DWARFDebugAbbrev::Dump(Stream *s) const {
-  if (m_abbrevCollMap.empty()) {
-    s->PutCString("< EMPTY >\n");
-    return;
-  }
-
-  DWARFAbbreviationDeclarationCollMapConstIter pos;
-  for (pos = m_abbrevCollMap.begin(); pos != m_abbrevCollMap.end(); ++pos) {
-    s->Printf("Abbrev table for offset: 0x%8.8x\n", pos->first);
-    pos->second.Dump(s);
-  }
 }
 
 //----------------------------------------------------------------------

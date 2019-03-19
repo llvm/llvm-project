@@ -411,17 +411,6 @@ const char *DW_VIS_value_to_name(uint32_t val) {
   return llvmstr.data();
 }
 
-const char *DW_VIRTUALITY_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::VirtualityString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_VIRTUALITY constant: 0x%x",
-             val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
 const char *DW_LANG_value_to_name(uint32_t val) {
   static char invalid[100];
   llvm::StringRef llvmstr = llvm::dwarf::LanguageString(val);

@@ -59,7 +59,6 @@ public:
   extract(const lldb_private::DWARFDataExtractor &data,
           lldb::offset_t *offset_ptr);
   bool IsValid();
-  void Dump(lldb_private::Stream *s) const;
   bool operator==(const DWARFAbbreviationDeclaration &rhs) const;
   const DWARFAttribute::collection &Attributes() const { return m_attributes; }
 

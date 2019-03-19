@@ -167,19 +167,11 @@ public:
   void Dump(SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
             lldb_private::Stream &s, uint32_t recurse_depth) const;
 
-  void DumpAncestry(SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
-                    const DWARFDebugInfoEntry *oldest, lldb_private::Stream &s,
-                    uint32_t recurse_depth) const;
-
   static void
   DumpAttribute(SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
                 const lldb_private::DWARFDataExtractor &debug_info_data,
                 lldb::offset_t *offset_ptr, lldb_private::Stream &s,
                 dw_attr_t attr, DWARFFormValue &form_value);
-  // This one dumps the comp unit name, objfile name and die offset for this die
-  // so the stream S.
-  void DumpLocation(SymbolFileDWARF *dwarf2Data, DWARFUnit *cu,
-                    lldb_private::Stream &s) const;
 
   bool
   GetDIENamesAndRanges(SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,

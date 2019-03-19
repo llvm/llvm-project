@@ -47,8 +47,6 @@ const char *DW_ACCESS_value_to_name(uint32_t val);
 
 const char *DW_VIS_value_to_name(uint32_t val);
 
-const char *DW_VIRTUALITY_value_to_name(uint32_t val);
-
 const char *DW_LANG_value_to_name(uint32_t val);
 
 const char *DW_ID_value_to_name(uint32_t val);

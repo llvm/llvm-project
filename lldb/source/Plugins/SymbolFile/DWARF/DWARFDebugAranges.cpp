@@ -13,6 +13,7 @@
 
 #include <algorithm>
 
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 

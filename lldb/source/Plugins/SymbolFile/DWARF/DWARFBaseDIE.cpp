@@ -171,12 +171,6 @@ size_t DWARFBaseDIE::GetAttributes(DWARFAttributes &attributes,
   return 0;
 }
 
-void DWARFBaseDIE::Dump(lldb_private::Stream *s,
-                    const uint32_t recurse_depth) const {
-  if (s && IsValid())
-    m_die->Dump(GetDWARF(), GetCU(), *s, recurse_depth);
-}
-
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
   return lhs.GetDIE() == rhs.GetDIE() && lhs.GetCU() == rhs.GetCU();
 }

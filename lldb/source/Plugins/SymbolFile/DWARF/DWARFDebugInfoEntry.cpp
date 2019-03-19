@@ -364,23 +364,6 @@ bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
   return false;
 }
 
-//----------------------------------------------------------------------
-// DumpAncestry
-//
-// Dumps all of a debug information entries parents up until oldest and all of
-// it's attributes to the specified stream.
-//----------------------------------------------------------------------
-void DWARFDebugInfoEntry::DumpAncestry(SymbolFileDWARF *dwarf2Data,
-                                       const DWARFUnit *cu,
-                                       const DWARFDebugInfoEntry *oldest,
-                                       Stream &s,
-                                       uint32_t recurse_depth) const {
-  const DWARFDebugInfoEntry *parent = GetParent();
-  if (parent && parent != oldest)
-    parent->DumpAncestry(dwarf2Data, cu, oldest, s, 0);
-  Dump(dwarf2Data, cu, s, recurse_depth);
-}
-
 static dw_offset_t GetRangesOffset(const DWARFDebugRangesBase *debug_ranges,
                                    DWARFFormValue &form_value) {
   if (form_value.Form() == DW_FORM_rnglistx)
@@ -646,23 +629,6 @@ void DWARFDebugInfoEntry::Dump(SymbolFileDWARF *dwarf2Data,
       s.Printf("NULL\n");
     }
   }
-}
-
-void DWARFDebugInfoEntry::DumpLocation(SymbolFileDWARF *dwarf2Data,
-                                       DWARFUnit *cu, Stream &s) const {
-  const DWARFBaseDIE cu_die = cu->GetUnitDIEOnly();
-  const char *cu_name = NULL;
-  if (cu_die)
-    cu_name = cu_die.GetName();
-  const char *obj_file_name = NULL;
-  ObjectFile *obj_file = dwarf2Data->GetObjectFile();
-  if (obj_file)
-    obj_file_name =
-        obj_file->GetFileSpec().GetFilename().AsCString("<Unknown>");
-  const char *die_name = GetName(dwarf2Data, cu);
-  s.Printf("0x%8.8x/0x%8.8x: %-30s (from %s in %s)", cu->GetOffset(),
-           GetOffset(), die_name ? die_name : "", cu_name ? cu_name : "<NULL>",
-           obj_file_name ? obj_file_name : "<NULL>");
 }
 
 //----------------------------------------------------------------------

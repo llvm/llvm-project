@@ -46,7 +46,6 @@ public:
   void Compact();
   llvm::Error extract(const lldb_private::DWARFDataExtractor &data,
                       lldb::offset_t *offset_ptr);
-  void Dump(lldb_private::Stream *s) const;
   dw_offset_t GetCompileUnitDIEOffset() const { return m_header.cu_offset; }
   dw_offset_t GetOffsetOfNextEntry() const;
   dw_offset_t FindAddress(dw_addr_t address) const;

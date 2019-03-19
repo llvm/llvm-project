@@ -138,12 +138,6 @@ public:
 
   size_t GetAttributes(DWARFAttributes &attributes, uint32_t depth = 0) const;
 
-  //----------------------------------------------------------------------
-  // Pretty printing
-  //----------------------------------------------------------------------
-
-  void Dump(lldb_private::Stream *s, const uint32_t recurse_depth) const;
-
 protected:
   DWARFUnit *m_cu;
   DWARFDebugInfoEntry *m_die;

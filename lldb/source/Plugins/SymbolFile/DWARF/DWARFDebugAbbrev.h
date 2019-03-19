@@ -34,7 +34,6 @@ public:
 
   void Clear();
   dw_offset_t GetOffset() const { return m_offset; }
-  void Dump(lldb_private::Stream *s) const;
 
   /// Extract all abbrev decls in a set.  Returns llvm::ErrorSuccess() on
   /// success, and an appropriate llvm::Error object otherwise.
@@ -66,8 +65,6 @@ public:
   DWARFDebugAbbrev();
   const DWARFAbbreviationDeclarationSet *
   GetAbbreviationDeclarationSet(dw_offset_t cu_abbr_offset) const;
-  void Dump(lldb_private::Stream *s) const;
-
   /// Extract all abbreviations for a particular compile unit.  Returns
   /// llvm::ErrorSuccess() on success, and an appropriate llvm::Error object
   /// otherwise.
