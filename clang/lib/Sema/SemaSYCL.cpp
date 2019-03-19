@@ -513,7 +513,7 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
         CXXMemberCallExpr *Call = CXXMemberCallExpr::Create(
             S.Context, ME, ParamStmts, ResultTy, VK, SourceLocation());
         BodyStmts.push_back(Call);
-      } else if (CRD || FieldType->isBuiltinType()) {
+      } else if (CRD || FieldType->isScalarType()) {
         // If field have built-in or a structure/class type just initialize
         // this field with corresponding kernel argument using '=' binary
         // operator. The structure/class type must be copy assignable - this
@@ -536,6 +536,8 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
             BinaryOperator(Lhs, Rhs, BO_Assign, FieldType, VK_LValue,
                            OK_Ordinary, SourceLocation(), FPOptions());
         BodyStmts.push_back(Res);
+      } else {
+        llvm_unreachable("unsupported field type");
       }
       TargetFuncParam++;
     }
