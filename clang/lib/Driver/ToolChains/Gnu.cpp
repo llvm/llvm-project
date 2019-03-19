@@ -521,6 +521,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
+      if (Args.hasArg(options::OPT_fsycl))
+        CmdArgs.push_back("-lsycl");
+
       if (WantPthread && !isAndroid)
         CmdArgs.push_back("-lpthread");
 
