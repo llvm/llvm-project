@@ -374,6 +374,43 @@ public:
     }
   }
 
+#ifdef __SYCL_USE_EXT_VECTOR_TYPE__
+  // Optimized naive constructors with NumElements of DataT values.
+  // We don't expect compilers to optimize vararg recursive functions well.
+
+  // Helper type to make specific constructors available only for specific
+  // number of elements.
+  template <int IdxNum, typename T = void>
+  using EnableIfMultipleElems =
+      typename std::enable_if<std::is_convertible<T, DataT>::value &&
+                                  NumElements == IdxNum,
+                              DataT>::type;
+  template <typename Ty = DataT>
+  vec(const EnableIfMultipleElems<2, Ty> Arg0, const DataT Arg1)
+      : m_Data{Arg0, Arg1} {}
+  template <typename Ty = DataT>
+  vec(const EnableIfMultipleElems<3, Ty> Arg0, const DataT Arg1,
+      const DataT Arg2)
+      : m_Data{Arg0, Arg1, Arg2} {}
+  template <typename Ty = DataT>
+  vec(const EnableIfMultipleElems<4, Ty> Arg0, const DataT Arg1,
+      const DataT Arg2, const Ty Arg3)
+      : m_Data{Arg0, Arg1, Arg2, Arg3} {}
+  template <typename Ty = DataT>
+  vec(const EnableIfMultipleElems<8, Ty> Arg0, const DataT Arg1,
+      const DataT Arg2, const DataT Arg3, const DataT Arg4, const DataT Arg5,
+      const DataT Arg6, const DataT Arg7)
+      : m_Data{Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7} {}
+  template <typename Ty = DataT>
+  vec(const EnableIfMultipleElems<16, Ty> Arg0, const DataT Arg1,
+      const DataT Arg2, const DataT Arg3, const DataT Arg4, const DataT Arg5,
+      const DataT Arg6, const DataT Arg7, const DataT Arg8, const DataT Arg9,
+      const DataT ArgA, const DataT ArgB, const DataT ArgC, const DataT ArgD,
+      const DataT ArgE, const DataT ArgF)
+      : m_Data{Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7,
+               Arg8, Arg9, ArgA, ArgB, ArgC, ArgD, ArgE, ArgF} {}
+#endif
+
   // Constructor from values of base type or vec of base type. Checks that
   // base types are match and that the NumElements == sum of lenghts of args.
   template <typename... argTN, typename = EnableIfSuitableTypes<argTN...>,
