@@ -14,20 +14,22 @@ define i32 @a() {
 ; CHECK-NEXT:    movsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    callq _b
 ; CHECK-NEXT:    cvtsi2sd %eax, %xmm0
-; CHECK-NEXT:    movq _calloc@{{.*}}(%rip), %rcx
-; CHECK-NEXT:    subq $-1, %rcx
-; CHECK-NEXT:    setne %dl
-; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdi
+; CHECK-NEXT:    movq _calloc@{{.*}}(%rip), %rax
+; CHECK-NEXT:    subq $-1, %rax
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    ## kill: def $rcx killed $ecx
+; CHECK-NEXT:    leaq {{.*}}(%rip), %rdx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0
-; CHECK-NEXT:    setae %dl
-; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdi
+; CHECK-NEXT:    setae %cl
+; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    ## kill: def $rcx killed $ecx
+; CHECK-NEXT:    leaq {{.*}}(%rip), %rdx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    cvttsd2si %xmm0, %eax
+; CHECK-NEXT:    cvttsd2si %xmm0, %ecx
+; CHECK-NEXT:    movq %rax, (%rsp) ## 8-byte Spill
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq
 entry:
