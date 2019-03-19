@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
-//
-// TODO: Remove this when filesystem gets integrated into the dylib
-// REQUIRES: c++filesystem
 
 // <chrono>
 
