@@ -1976,10 +1976,15 @@ PragmaClangAttributeSupport::generateStrictConformsTo(const Record &Attr,
          << ", /*IsSupported=*/";
       if (!LangOpts.empty()) {
         for (auto I = LangOpts.begin(), E = LangOpts.end(); I != E; ++I) {
-          const StringRef Part = (*I)->getValueAsString("Name");
           if ((*I)->getValueAsBit("Negated"))
             OS << "!";
-          OS << "LangOpts." << Part;
+          const StringRef Code = (*I)->getValueAsString("CustomCode");
+          if (!Code.empty()) {
+            OS << Code;
+          } else {
+            const StringRef Name = (*I)->getValueAsString("Name");
+            OS << "LangOpts." << Name;
+          }
           if (I + 1 != E)
             OS << " || ";
         }
@@ -3462,16 +3467,22 @@ static std::string GenerateLangOptRequirements(const Record &R,
   // codegen efficiency).
   std::string FnName = "check", Test;
   for (auto I = LangOpts.begin(), E = LangOpts.end(); I != E; ++I) {
-    const StringRef Part = (*I)->getValueAsString("Name");
     if ((*I)->getValueAsBit("Negated")) {
       FnName += "Not";
       Test += "!";
     }
-    Test += "S.LangOpts.";
-    Test +=  Part;
+    const StringRef Name = (*I)->getValueAsString("Name");
+    FnName += Name;
+    const StringRef Code = (*I)->getValueAsString("CustomCode");
+    if (!Code.empty()) {
+      Test += "S.";
+      Test += Code;
+    } else {
+      Test += "S.LangOpts.";
+      Test += Name;
+    }
     if (I + 1 != E)
       Test += " || ";
-    FnName += Part;
   }
   FnName += "LangOpts";
 

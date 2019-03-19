@@ -895,6 +895,12 @@ def err_objc_root_class_subclass : Error<
 def err_restricted_superclass_mismatch : Error<
   "cannot subclass a class that was declared with the "
   "'objc_subclassing_restricted' attribute">;
+def err_class_stub_subclassing_mismatch : Error<
+  "'objc_class_stub' attribute cannot be specified on a class that does not "
+  "have the 'objc_subclassing_restricted' attribute">;
+def err_implementation_of_class_stub : Error<
+  "cannot declare implementation of a class declared with the "
+  "'objc_class_stub' attribute">;
 def warn_objc_root_class_missing : Warning<
   "class %0 defined without specifying a base class">,
   InGroup<ObjCRootClass>;
