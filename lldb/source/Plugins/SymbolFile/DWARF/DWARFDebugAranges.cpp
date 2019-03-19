@@ -13,13 +13,11 @@
 
 #include <algorithm>
 
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 
 #include "DWARFUnit.h"
 #include "DWARFDebugInfo.h"
-#include "LogChannelDWARF.h"
 #include "SymbolFileDWARF.h"
 
 using namespace lldb;
@@ -118,30 +116,8 @@ void DWARFDebugAranges::Sort(bool minimize) {
   Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                      static_cast<void *>(this));
 
-  Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_ARANGES));
-  size_t orig_arange_size = 0;
-  if (log) {
-    orig_arange_size = m_aranges.GetSize();
-    log->Printf("DWARFDebugAranges::Sort(minimize = %u) with %" PRIu64
-                " entries",
-                minimize, (uint64_t)orig_arange_size);
-  }
-
   m_aranges.Sort();
   m_aranges.CombineConsecutiveEntriesWithEqualData();
-
-  if (log) {
-    if (minimize) {
-      const size_t new_arange_size = m_aranges.GetSize();
-      const size_t delta = orig_arange_size - new_arange_size;
-      log->Printf("DWARFDebugAranges::Sort() %" PRIu64
-                  " entries after minimizing (%" PRIu64
-                  " entries combined for %" PRIu64 " bytes saved)",
-                  (uint64_t)new_arange_size, (uint64_t)delta,
-                  (uint64_t)delta * sizeof(Range));
-    }
-    Dump(log);
-  }
 }
 
 //----------------------------------------------------------------------
