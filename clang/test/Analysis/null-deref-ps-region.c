@@ -51,7 +51,7 @@ void testHeapSymbol() {
 
 void testStackArrayOutOfBound() {
   char buf[1];
-  memset(buf, 0, 1024); // expected-warning {{Memory set function accesses out-of-bound array element}}
+  memset(buf, 0, 1024); // expected-warning {{Memory set function accesses out-of-bound array element}} expected-warning {{'memset' will always overflow; destination buffer has size 1, but size argument is 1024}}
 }
 
 void testHeapSymbolOutOfBound() {

@@ -8460,44 +8460,41 @@ Error ASTImporter::ImportDefinition_New(Decl *From) {
   if (!To)
     return llvm::make_error<ImportError>();
 
-  if (auto *FromDC = cast<DeclContext>(From)) {
-    ASTNodeImporter Importer(*this);
+  auto *FromDC = cast<DeclContext>(From);
+  ASTNodeImporter Importer(*this);
 
-    if (auto *ToRecord = dyn_cast<RecordDecl>(To)) {
-      if (!ToRecord->getDefinition()) {
-        return Importer.ImportDefinition(
-            cast<RecordDecl>(FromDC), ToRecord,
-            ASTNodeImporter::IDK_Everything);
-      }
+  if (auto *ToRecord = dyn_cast<RecordDecl>(To)) {
+    if (!ToRecord->getDefinition()) {
+      return Importer.ImportDefinition(
+          cast<RecordDecl>(FromDC), ToRecord,
+          ASTNodeImporter::IDK_Everything);
     }
-
-    if (auto *ToEnum = dyn_cast<EnumDecl>(To)) {
-      if (!ToEnum->getDefinition()) {
-        return Importer.ImportDefinition(
-            cast<EnumDecl>(FromDC), ToEnum, ASTNodeImporter::IDK_Everything);
-      }
-    }
-
-    if (auto *ToIFace = dyn_cast<ObjCInterfaceDecl>(To)) {
-      if (!ToIFace->getDefinition()) {
-        return Importer.ImportDefinition(
-            cast<ObjCInterfaceDecl>(FromDC), ToIFace,
-            ASTNodeImporter::IDK_Everything);
-      }
-    }
-
-    if (auto *ToProto = dyn_cast<ObjCProtocolDecl>(To)) {
-      if (!ToProto->getDefinition()) {
-        return Importer.ImportDefinition(
-            cast<ObjCProtocolDecl>(FromDC), ToProto,
-            ASTNodeImporter::IDK_Everything);
-      }
-    }
-
-    return Importer.ImportDeclContext(FromDC, true);
   }
 
-  return Error::success();
+  if (auto *ToEnum = dyn_cast<EnumDecl>(To)) {
+    if (!ToEnum->getDefinition()) {
+      return Importer.ImportDefinition(
+          cast<EnumDecl>(FromDC), ToEnum, ASTNodeImporter::IDK_Everything);
+    }
+  }
+
+  if (auto *ToIFace = dyn_cast<ObjCInterfaceDecl>(To)) {
+    if (!ToIFace->getDefinition()) {
+      return Importer.ImportDefinition(
+          cast<ObjCInterfaceDecl>(FromDC), ToIFace,
+          ASTNodeImporter::IDK_Everything);
+    }
+  }
+
+  if (auto *ToProto = dyn_cast<ObjCProtocolDecl>(To)) {
+    if (!ToProto->getDefinition()) {
+      return Importer.ImportDefinition(
+          cast<ObjCProtocolDecl>(FromDC), ToProto,
+          ASTNodeImporter::IDK_Everything);
+    }
+  }
+
+  return Importer.ImportDeclContext(FromDC, true);
 }
 
 void ASTImporter::ImportDefinition(Decl *From) {

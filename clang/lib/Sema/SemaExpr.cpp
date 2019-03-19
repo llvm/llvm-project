@@ -5931,6 +5931,8 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     if (CheckFunctionCall(FDecl, TheCall, Proto))
       return ExprError();
 
+    checkFortifiedBuiltinMemoryFunction(FDecl, TheCall);
+
     if (BuiltinID)
       return CheckBuiltinFunctionCall(FDecl, BuiltinID, TheCall);
   } else if (NDecl) {

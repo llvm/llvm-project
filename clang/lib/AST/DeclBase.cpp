@@ -1179,13 +1179,15 @@ DeclContext *DeclContext::getPrimaryContext() {
     return this;
 
   case Decl::ObjCInterface:
-    if (auto *Def = cast<ObjCInterfaceDecl>(this)->getDefinition())
-      return Def;
+    if (auto *OID = dyn_cast<ObjCInterfaceDecl>(this))
+      if (auto *Def = OID->getDefinition())
+        return Def;
     return this;
 
   case Decl::ObjCProtocol:
-    if (auto *Def = cast<ObjCProtocolDecl>(this)->getDefinition())
-      return Def;
+    if (auto *OPD = dyn_cast<ObjCProtocolDecl>(this))
+      if (auto *Def = OPD->getDefinition())
+        return Def;
     return this;
 
   case Decl::ObjCCategory:

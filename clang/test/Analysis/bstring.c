@@ -72,7 +72,10 @@ void memcpy2 () {
   char src[] = {1, 2, 3, 4};
   char dst[1];
 
-  memcpy(dst, src, 4); // expected-warning{{Memory copy function overflows destination buffer}}
+  memcpy(dst, src, 4);  // expected-warning{{Memory copy function overflows destination buffer}}
+#ifndef VARIANT
+  // expected-warning@-2{{memcpy' will always overflow; destination buffer has size 1, but size argument is 4}}
+#endif
 }
 
 void memcpy3 () {
@@ -94,6 +97,9 @@ void memcpy5() {
   char dst[3];
 
   memcpy(dst+2, src+2, 2); // expected-warning{{Memory copy function overflows destination buffer}}
+#ifndef VARIANT
+  // expected-warning@-2{{memcpy' will always overflow; destination buffer has size 1, but size argument is 2}}
+#endif
 }
 
 void memcpy6() {
@@ -351,7 +357,10 @@ void memmove2 () {
   char src[] = {1, 2, 3, 4};
   char dst[1];
 
-  memmove(dst, src, 4); // expected-warning{{overflow}}
+  memmove(dst, src, 4); // expected-warning{{Memory copy function overflows destination buffer}}
+#ifndef VARIANT
+  // expected-warning@-2{{memmove' will always overflow; destination buffer has size 1, but size argument is 4}}
+#endif
 }
 
 //===----------------------------------------------------------------------===

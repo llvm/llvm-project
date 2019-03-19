@@ -726,26 +726,26 @@ void shared_bad_2() {
 }
 
 void shared_bad_3() {
-  sls_mu.Lock();
+  sls_mu.Lock();         // expected-note {{mutex acquired here}}
   sls_mu.ReaderUnlock(); // \
     // expected-warning {{releasing mutex 'sls_mu' using shared access, expected exclusive access}}
 }
 
 void shared_bad_4() {
-  sls_mu.ReaderLock();
+  sls_mu.ReaderLock();      // expected-note {{mutex acquired here}}
   sls_mu.ExclusiveUnlock(); // \
     // expected-warning {{releasing mutex 'sls_mu' using exclusive access, expected shared access}}
 }
 
 void shared_bad_5() {
-  sls_mu.Lock();
+  sls_mu.Lock();          // expected-note {{mutex acquired here}}
   sls_mu.PromoteShared(); // \
     // expected-warning {{releasing mutex 'sls_mu' using shared access, expected exclusive access}}
   sls_mu.ExclusiveUnlock();
 }
 
 void shared_bad_6() {
-  sls_mu.ReaderLock();
+  sls_mu.ReaderLock();      // expected-note {{mutex acquired here}}
   sls_mu.DemoteExclusive(); // \
     // expected-warning {{releasing mutex 'sls_mu' using exclusive access, expected shared access}}
   sls_mu.ReaderUnlock();

@@ -75,4 +75,64 @@ _wbinvd(void) {
   __builtin_ia32_wbinvd();
 }
 
+static __inline__ unsigned char __attribute__((__always_inline__, __nodebug__))
+__rolb(unsigned char __X, int __C) {
+  return __builtin_rotateleft8(__X, __C);
+}
+
+static __inline__ unsigned char __attribute__((__always_inline__, __nodebug__))
+__rorb(unsigned char __X, int __C) {
+  return __builtin_rotateright8(__X, __C);
+}
+
+static __inline__ unsigned short __attribute__((__always_inline__, __nodebug__))
+__rolw(unsigned short __X, int __C) {
+  return __builtin_rotateleft16(__X, __C);
+}
+
+static __inline__ unsigned short __attribute__((__always_inline__, __nodebug__))
+__rorw(unsigned short __X, int __C) {
+  return __builtin_rotateright16(__X, __C);
+}
+
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
+__rold(unsigned int __X, int __C) {
+  return __builtin_rotateleft32(__X, __C);
+}
+
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
+__rord(unsigned int __X, int __C) {
+  return __builtin_rotateright32(__X, __C);
+}
+
+#ifdef __x86_64__
+static __inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
+__rolq(unsigned long long __X, int __C) {
+  return __builtin_rotateleft64(__X, __C);
+}
+
+static __inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
+__rorq(unsigned long long __X, int __C) {
+  return __builtin_rotateright64(__X, __C);
+}
+#endif /* __x86_64__ */
+
+#ifndef _MSC_VER
+/* These are already provided as builtins for MSVC. */
+/* Select the correct function based on the size of long. */
+#ifdef __LP64__
+#define _lrotl(a,b) __rolq((a), (b))
+#define _lrotr(a,b) __rorq((a), (b))
+#else
+#define _lrotl(a,b) __rold((a), (b))
+#define _lrotr(a,b) __rord((a), (b))
+#endif
+#define _rotl(a,b) __rold((a), (b))
+#define _rotr(a,b) __rord((a), (b))
+#endif // _MSC_VER
+
+/* These are not builtins so need to be provided in all modes. */
+#define _rotwl(a,b) __rolw((a), (b))
+#define _rotwr(a,b) __rorw((a), (b))
+
 #endif /* __IA32INTRIN_H */
