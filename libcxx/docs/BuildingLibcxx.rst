@@ -224,18 +224,6 @@ libc++experimental Specific Options
   Install libc++experimental.a alongside libc++.
 
 
-.. option:: LIBCXX_ENABLE_FILESYSTEM:BOOL
-
-  **Default**: ``ON``
-
-  Build filesystem as a standalone library libc++fs.a.
-
-.. option:: LIBCXX_INSTALL_FILESYSTEM_LIBRARY:BOOL
-
-  **Default**: ``LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_INSTALL_LIBRARY``
-
-  Install libc++fs.a alongside libc++.
-
 .. _ABI Library Specific Options:
 
 ABI Library Specific Options

@@ -28,17 +28,6 @@ const char *DW_TAG_value_to_name(uint32_t val) {
   return llvmstr.data();
 }
 
-const char *DW_CHILDREN_value_to_name(uint8_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::ChildrenString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_CHILDREN constant: 0x%x",
-             val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
 const char *DW_AT_value_to_name(uint32_t val) {
   static char invalid[100];
   llvm::StringRef llvmstr = llvm::dwarf::AttributeString(val);
@@ -390,72 +379,11 @@ const char *DW_ATE_value_to_name(uint32_t val) {
   return llvmstr.data();
 }
 
-const char *DW_ACCESS_value_to_name(uint32_t val) {
-  static char invalid[100];
-
-  llvm::StringRef llvmstr = llvm::dwarf::AccessibilityString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_ACCESS constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-const char *DW_VIS_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::VisibilityString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_VIS constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
 const char *DW_LANG_value_to_name(uint32_t val) {
   static char invalid[100];
   llvm::StringRef llvmstr = llvm::dwarf::LanguageString(val);
   if (llvmstr.empty()) {
     snprintf(invalid, sizeof(invalid), "Unknown DW_LANG constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-const char *DW_ID_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::CaseString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_ID constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-const char *DW_CC_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::ConventionString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_CC constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-const char *DW_INL_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::InlineCodeString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_INL constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-const char *DW_ORD_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::ArrayOrderString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_ORD constant: 0x%x", val);
     return invalid;
   }
   return llvmstr.data();
@@ -469,159 +397,6 @@ const char *DW_LNS_value_to_name(uint32_t val) {
     return invalid;
   }
   return llvmstr.data();
-}
-
-const char *DW_LNE_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::LNExtendedString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_LNE constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-const char *DW_MACINFO_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::MacinfoString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_MACINFO constant: 0x%x",
-             val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-const char *DW_CFA_value_to_name(uint32_t val, llvm::Triple::ArchType Arch) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::CallFrameString(val, Arch);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_CFA constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-DW_TAG_CategoryEnum get_tag_category(uint16_t tag) {
-  switch (tag) {
-  case DW_TAG_array_type:
-    return TagCategoryType;
-  case DW_TAG_class_type:
-    return TagCategoryType;
-  case DW_TAG_entry_point:
-    return TagCategoryProgram;
-  case DW_TAG_enumeration_type:
-    return TagCategoryType;
-  case DW_TAG_formal_parameter:
-    return TagCategoryVariable;
-  case DW_TAG_imported_declaration:
-    return TagCategoryProgram;
-  case DW_TAG_label:
-    return TagCategoryProgram;
-  case DW_TAG_lexical_block:
-    return TagCategoryProgram;
-  case DW_TAG_member:
-    return TagCategoryType;
-  case DW_TAG_pointer_type:
-    return TagCategoryType;
-  case DW_TAG_reference_type:
-    return TagCategoryType;
-  case DW_TAG_compile_unit:
-    return TagCategoryProgram;
-  case DW_TAG_string_type:
-    return TagCategoryType;
-  case DW_TAG_structure_type:
-    return TagCategoryType;
-  case DW_TAG_subroutine_type:
-    return TagCategoryType;
-  case DW_TAG_typedef:
-    return TagCategoryType;
-  case DW_TAG_union_type:
-    return TagCategoryType;
-  case DW_TAG_unspecified_parameters:
-    return TagCategoryVariable;
-  case DW_TAG_variant:
-    return TagCategoryType;
-  case DW_TAG_common_block:
-    return TagCategoryProgram;
-  case DW_TAG_common_inclusion:
-    return TagCategoryProgram;
-  case DW_TAG_inheritance:
-    return TagCategoryType;
-  case DW_TAG_inlined_subroutine:
-    return TagCategoryProgram;
-  case DW_TAG_module:
-    return TagCategoryProgram;
-  case DW_TAG_ptr_to_member_type:
-    return TagCategoryType;
-  case DW_TAG_set_type:
-    return TagCategoryType;
-  case DW_TAG_subrange_type:
-    return TagCategoryType;
-  case DW_TAG_with_stmt:
-    return TagCategoryProgram;
-  case DW_TAG_access_declaration:
-    return TagCategoryProgram;
-  case DW_TAG_base_type:
-    return TagCategoryType;
-  case DW_TAG_catch_block:
-    return TagCategoryProgram;
-  case DW_TAG_const_type:
-    return TagCategoryType;
-  case DW_TAG_constant:
-    return TagCategoryVariable;
-  case DW_TAG_enumerator:
-    return TagCategoryType;
-  case DW_TAG_file_type:
-    return TagCategoryType;
-  case DW_TAG_friend:
-    return TagCategoryType;
-  case DW_TAG_namelist:
-    return TagCategoryVariable;
-  case DW_TAG_namelist_item:
-    return TagCategoryVariable;
-  case DW_TAG_packed_type:
-    return TagCategoryType;
-  case DW_TAG_subprogram:
-    return TagCategoryProgram;
-  case DW_TAG_template_type_parameter:
-    return TagCategoryType;
-  case DW_TAG_template_value_parameter:
-    return TagCategoryType;
-  case DW_TAG_GNU_template_parameter_pack:
-    return TagCategoryType;
-  case DW_TAG_thrown_type:
-    return TagCategoryType;
-  case DW_TAG_try_block:
-    return TagCategoryProgram;
-  case DW_TAG_variant_part:
-    return TagCategoryType;
-  case DW_TAG_variable:
-    return TagCategoryVariable;
-  case DW_TAG_volatile_type:
-    return TagCategoryType;
-  case DW_TAG_dwarf_procedure:
-    return TagCategoryProgram;
-  case DW_TAG_restrict_type:
-    return TagCategoryType;
-  case DW_TAG_interface_type:
-    return TagCategoryType;
-  case DW_TAG_namespace:
-    return TagCategoryProgram;
-  case DW_TAG_imported_module:
-    return TagCategoryProgram;
-  case DW_TAG_unspecified_type:
-    return TagCategoryType;
-  case DW_TAG_partial_unit:
-    return TagCategoryProgram;
-  case DW_TAG_imported_unit:
-    return TagCategoryProgram;
-  case DW_TAG_shared_type:
-    return TagCategoryType;
-  default:
-    break;
-  }
-  return TagCategoryProgram;
 }
 
 } // namespace lldb_private

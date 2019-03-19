@@ -18,20 +18,7 @@ enum class DWARFEnumState { MoreItems, Complete };
 
 typedef uint32_t DRC_class; // Holds DRC_* class bitfields
 
-enum DW_TAG_Category {
-  TagCategoryVariable,
-  TagCategoryType,
-  TagCategoryProgram,
-  kNumTagCategories
-};
-
-typedef enum DW_TAG_Category DW_TAG_CategoryEnum;
-
 const char *DW_TAG_value_to_name(uint32_t val);
-
-DW_TAG_CategoryEnum get_tag_category(uint16_t tag);
-
-const char *DW_CHILDREN_value_to_name(uint8_t val);
 
 const char *DW_AT_value_to_name(uint32_t val);
 
@@ -43,29 +30,9 @@ DRC_class DW_OP_value_to_class(uint32_t val);
 
 const char *DW_ATE_value_to_name(uint32_t val);
 
-const char *DW_ACCESS_value_to_name(uint32_t val);
-
-const char *DW_VIS_value_to_name(uint32_t val);
-
 const char *DW_LANG_value_to_name(uint32_t val);
 
-const char *DW_ID_value_to_name(uint32_t val);
-
-const char *DW_CC_value_to_name(uint32_t val);
-
-const char *DW_INL_value_to_name(uint32_t val);
-
-const char *DW_ORD_value_to_name(uint32_t val);
-
 const char *DW_LNS_value_to_name(uint32_t val);
-
-const char *DW_LNE_value_to_name(uint32_t val);
-
-const char *DW_MACINFO_value_to_name(uint32_t val);
-
-const char *DW_CFA_value_to_name(uint32_t val, llvm::Triple::ArchType Arch);
-
-const char *DW_GNU_EH_PE_value_to_name(uint32_t val);
 
 /* These DRC are entirely our own construction,
     although they are derived from various comments in the DWARF standard.
