@@ -2318,13 +2318,15 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       PatchedName != "setb" && PatchedName != "setnb")
     PatchedName = PatchedName.substr(0, Name.size()-1);
 
+  unsigned ComparisonCode = ~0U;
+
   // FIXME: Hack to recognize cmp<comparison code>{ss,sd,ps,pd}.
   if ((PatchedName.startswith("cmp") || PatchedName.startswith("vcmp")) &&
       (PatchedName.endswith("ss") || PatchedName.endswith("sd") ||
        PatchedName.endswith("ps") || PatchedName.endswith("pd"))) {
     bool IsVCMP = PatchedName[0] == 'v';
     unsigned CCIdx = IsVCMP ? 4 : 3;
-    unsigned ComparisonCode = StringSwitch<unsigned>(
+    unsigned CC = StringSwitch<unsigned>(
       PatchedName.slice(CCIdx, PatchedName.size() - 2))
       .Case("eq",       0x00)
       .Case("eq_oq",    0x00)
@@ -2374,26 +2376,29 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       .Case("gt_oq",    0x1E)
       .Case("true_us",  0x1F)
       .Default(~0U);
-    if (ComparisonCode != ~0U && (IsVCMP || ComparisonCode < 8)) {
+    if (CC != ~0U && (IsVCMP || CC < 8)) {
+      if (PatchedName.endswith("ss"))
+        PatchedName = IsVCMP ? "vcmpss" : "cmpss";
+      else if (PatchedName.endswith("sd"))
+        PatchedName = IsVCMP ? "vcmpsd" : "cmpsd";
+      else if (PatchedName.endswith("ps"))
+        PatchedName = IsVCMP ? "vcmpps" : "cmpps";
+      else if (PatchedName.endswith("pd"))
+        PatchedName = IsVCMP ? "vcmppd" : "cmppd";
+      else
+        llvm_unreachable("Unexpecte suffix!");
 
-      Operands.push_back(X86Operand::CreateToken(PatchedName.slice(0, CCIdx),
-                                                 NameLoc));
-
-      const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
-                                                   getParser().getContext());
-      Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
-
-      PatchedName = PatchedName.substr(PatchedName.size() - 2);
+      ComparisonCode = CC;
     }
   }
 
   // FIXME: Hack to recognize vpcmp<comparison code>{ub,uw,ud,uq,b,w,d,q}.
   if (PatchedName.startswith("vpcmp") &&
-      (PatchedName.endswith("b") || PatchedName.endswith("w") ||
-       PatchedName.endswith("d") || PatchedName.endswith("q"))) {
-    unsigned CCIdx = PatchedName.drop_back().back() == 'u' ? 2 : 1;
-    unsigned ComparisonCode = StringSwitch<unsigned>(
-      PatchedName.slice(5, PatchedName.size() - CCIdx))
+      (PatchedName.back() == 'b' || PatchedName.back() == 'w' ||
+       PatchedName.back() == 'd' || PatchedName.back() == 'q')) {
+    unsigned SuffixSize = PatchedName.drop_back().back() == 'u' ? 2 : 1;
+    unsigned CC = StringSwitch<unsigned>(
+      PatchedName.slice(5, PatchedName.size() - SuffixSize))
       .Case("eq",    0x0) // Only allowed on unsigned. Checked below.
       .Case("lt",    0x1)
       .Case("le",    0x2)
@@ -2403,24 +2408,26 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       .Case("nle",   0x6)
       //.Case("true",  0x7) // Not a documented alias.
       .Default(~0U);
-    if (ComparisonCode != ~0U && (ComparisonCode != 0 || CCIdx == 2)) {
-      Operands.push_back(X86Operand::CreateToken("vpcmp", NameLoc));
-
-      const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
-                                                   getParser().getContext());
-      Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
-
-      PatchedName = PatchedName.substr(PatchedName.size() - CCIdx);
+    if (CC != ~0U && (CC != 0 || SuffixSize == 2)) {
+      switch (PatchedName.back()) {
+      default: llvm_unreachable("Unexpected character!");
+      case 'b': PatchedName = SuffixSize == 2 ? "vpcmpub" : "vpcmpb"; break;
+      case 'w': PatchedName = SuffixSize == 2 ? "vpcmpuw" : "vpcmpw"; break;
+      case 'd': PatchedName = SuffixSize == 2 ? "vpcmpud" : "vpcmpd"; break;
+      case 'q': PatchedName = SuffixSize == 2 ? "vpcmpuq" : "vpcmpq"; break;
+      }
+      // Set up the immediate to push into the operands later.
+      ComparisonCode = CC;
     }
   }
 
   // FIXME: Hack to recognize vpcom<comparison code>{ub,uw,ud,uq,b,w,d,q}.
   if (PatchedName.startswith("vpcom") &&
-      (PatchedName.endswith("b") || PatchedName.endswith("w") ||
-       PatchedName.endswith("d") || PatchedName.endswith("q"))) {
-    unsigned CCIdx = PatchedName.drop_back().back() == 'u' ? 2 : 1;
-    unsigned ComparisonCode = StringSwitch<unsigned>(
-      PatchedName.slice(5, PatchedName.size() - CCIdx))
+      (PatchedName.back() == 'b' || PatchedName.back() == 'w' ||
+       PatchedName.back() == 'd' || PatchedName.back() == 'q')) {
+    unsigned SuffixSize = PatchedName.drop_back().back() == 'u' ? 2 : 1;
+    unsigned CC = StringSwitch<unsigned>(
+      PatchedName.slice(5, PatchedName.size() - SuffixSize))
       .Case("lt",    0x0)
       .Case("le",    0x1)
       .Case("gt",    0x2)
@@ -2430,14 +2437,16 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       .Case("false", 0x6)
       .Case("true",  0x7)
       .Default(~0U);
-    if (ComparisonCode != ~0U) {
-      Operands.push_back(X86Operand::CreateToken("vpcom", NameLoc));
-
-      const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
-                                                   getParser().getContext());
-      Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
-
-      PatchedName = PatchedName.substr(PatchedName.size() - CCIdx);
+    if (CC != ~0U) {
+      switch (PatchedName.back()) {
+      default: llvm_unreachable("Unexpected character!");
+      case 'b': PatchedName = SuffixSize == 2 ? "vpcomub" : "vpcomb"; break;
+      case 'w': PatchedName = SuffixSize == 2 ? "vpcomuw" : "vpcomw"; break;
+      case 'd': PatchedName = SuffixSize == 2 ? "vpcomud" : "vpcomd"; break;
+      case 'q': PatchedName = SuffixSize == 2 ? "vpcomuq" : "vpcomq"; break;
+      }
+      // Set up the immediate to push into the operands later.
+      ComparisonCode = CC;
     }
   }
 
@@ -2510,6 +2519,13 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   Operands.push_back(X86Operand::CreateToken(PatchedName, NameLoc));
 
+  // Push the immediate if we extracted one from the mnemonic.
+  if (ComparisonCode != ~0U && !isParsingIntelSyntax()) {
+    const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
+                                                 getParser().getContext());
+    Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
+  }
+
   // This does the actual operand parsing.  Don't parse any more if we have a
   // prefix juxtaposed with an operation like "lock incl 4(%rax)", because we
   // just want to parse the "lock" as the first instruction and the "incl" as
@@ -2542,6 +2558,13 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         (getLexer().is(AsmToken::LCurly) || getLexer().is(AsmToken::RCurly));
     if (getLexer().isNot(AsmToken::EndOfStatement) && !CurlyAsEndOfStatement)
       return TokError("unexpected token in argument list");
+  }
+
+  // Push the immediate if we extracted one from the mnemonic.
+  if (ComparisonCode != ~0U && isParsingIntelSyntax()) {
+    const MCExpr *ImmOp = MCConstantExpr::create(ComparisonCode,
+                                                 getParser().getContext());
+    Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
   }
 
   // Consume the EndOfStatement or the prefix separator Slash

@@ -68,6 +68,8 @@ public:
   findChecksumsSubsection() const;
 
 private:
+  Error reloadSerialize(BinaryStreamReader &Reader);
+
   DbiModuleDescriptor Mod;
 
   uint32_t Signature;

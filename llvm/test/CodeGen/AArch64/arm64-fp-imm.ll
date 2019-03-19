@@ -10,12 +10,11 @@ define double @foo() {
   ret double 0x400921FB54442D18
 }
 
-; CHECK: literal4
-; CHECK: .long 1078530011
 define float @bar() {
 ; CHECK: _bar:
-; CHECK:  adrp  x[[REG:[0-9]+]], lCPI1_0@PAGE
-; CHECK:  ldr s0, [x[[REG]], lCPI1_0@PAGEOFF]
+; CHECK:  mov  [[REG:w[0-9]+]], #4059
+; CHECK:  movk [[REG]], #16457, lsl #16
+; CHECK:  fmov s0, [[REG]]
 ; CHECK-NEXT:  ret
   ret float 0x400921FB60000000
 }

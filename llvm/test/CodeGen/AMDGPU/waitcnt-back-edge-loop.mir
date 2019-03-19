@@ -16,7 +16,7 @@ body:             |
     $vgpr4 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load 4 from `float addrspace(1)* null`, addrspace 1)
     $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load 4 from `float addrspace(1)* null`, addrspace 1)
     $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 3, killed $sgpr4, implicit $exec
-    $vgpr3 = V_CNDMASK_B32_e64 -1082130432, 1065353216, killed $sgpr0_sgpr1, implicit $exec
+    $vgpr3 = V_CNDMASK_B32_e64 0, -1082130432, 0, 1065353216, killed $sgpr0_sgpr1, implicit $exec
     $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     S_BRANCH %bb.1
 

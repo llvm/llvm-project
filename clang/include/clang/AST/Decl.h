@@ -2255,7 +2255,7 @@ public:
     return const_cast<FunctionDecl*>(this)->getCanonicalDecl();
   }
 
-  unsigned getBuiltinID() const;
+  unsigned getBuiltinID(bool ConsiderWrapperFunctions = false) const;
 
   // ArrayRef interface to parameters.
   ArrayRef<ParmVarDecl *> parameters() const {

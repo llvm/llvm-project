@@ -4077,13 +4077,6 @@ static OverflowResult mapOverflowResult(ConstantRange::OverflowResult OR) {
   llvm_unreachable("Unknown OverflowResult");
 }
 
-static ConstantRange constantRangeFromKnownBits(const KnownBits &Known) {
-  if (Known.isUnknown())
-    return ConstantRange(Known.getBitWidth(), /* full */ true);
-
-  return ConstantRange(Known.One, ~Known.Zero + 1);
-}
-
 OverflowResult llvm::computeOverflowForUnsignedAdd(
     const Value *LHS, const Value *RHS, const DataLayout &DL,
     AssumptionCache *AC, const Instruction *CxtI, const DominatorTree *DT,
@@ -4092,54 +4085,11 @@ OverflowResult llvm::computeOverflowForUnsignedAdd(
                                         nullptr, UseInstrInfo);
   KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT,
                                         nullptr, UseInstrInfo);
-  ConstantRange LHSRange = constantRangeFromKnownBits(LHSKnown);
-  ConstantRange RHSRange = constantRangeFromKnownBits(RHSKnown);
+  ConstantRange LHSRange =
+      ConstantRange::fromKnownBits(LHSKnown, /*signed*/ false);
+  ConstantRange RHSRange =
+      ConstantRange::fromKnownBits(RHSKnown, /*signed*/ false);
   return mapOverflowResult(LHSRange.unsignedAddMayOverflow(RHSRange));
-}
-
-/// Return true if we can prove that adding the two values of the
-/// knownbits will not overflow.
-/// Otherwise return false.
-static bool checkRippleForSignedAdd(const KnownBits &LHSKnown,
-                                    const KnownBits &RHSKnown) {
-  // Addition of two 2's complement numbers having opposite signs will never
-  // overflow.
-  if ((LHSKnown.isNegative() && RHSKnown.isNonNegative()) ||
-      (LHSKnown.isNonNegative() && RHSKnown.isNegative()))
-    return true;
-
-  // If either of the values is known to be non-negative, adding them can only
-  // overflow if the second is also non-negative, so we can assume that.
-  // Two non-negative numbers will only overflow if there is a carry to the
-  // sign bit, so we can check if even when the values are as big as possible
-  // there is no overflow to the sign bit.
-  if (LHSKnown.isNonNegative() || RHSKnown.isNonNegative()) {
-    APInt MaxLHS = ~LHSKnown.Zero;
-    MaxLHS.clearSignBit();
-    APInt MaxRHS = ~RHSKnown.Zero;
-    MaxRHS.clearSignBit();
-    APInt Result = std::move(MaxLHS) + std::move(MaxRHS);
-    return Result.isSignBitClear();
-  }
-
-  // If either of the values is known to be negative, adding them can only
-  // overflow if the second is also negative, so we can assume that.
-  // Two negative number will only overflow if there is no carry to the sign
-  // bit, so we can check if even when the values are as small as possible
-  // there is overflow to the sign bit.
-  if (LHSKnown.isNegative() || RHSKnown.isNegative()) {
-    APInt MinLHS = LHSKnown.One;
-    MinLHS.clearSignBit();
-    APInt MinRHS = RHSKnown.One;
-    MinRHS.clearSignBit();
-    APInt Result = std::move(MinLHS) + std::move(MinRHS);
-    return Result.isSignBitSet();
-  }
-
-  // If we reached here it means that we know nothing about the sign bits.
-  // In this case we can't know if there will be an overflow, since by
-  // changing the sign bits any two values can be made to overflow.
-  return false;
 }
 
 static OverflowResult computeOverflowForSignedAdd(const Value *LHS,
@@ -4173,9 +4123,14 @@ static OverflowResult computeOverflowForSignedAdd(const Value *LHS,
 
   KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT);
   KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
-
-  if (checkRippleForSignedAdd(LHSKnown, RHSKnown))
-    return OverflowResult::NeverOverflows;
+  ConstantRange LHSRange =
+      ConstantRange::fromKnownBits(LHSKnown, /*signed*/ true);
+  ConstantRange RHSRange =
+      ConstantRange::fromKnownBits(RHSKnown, /*signed*/ true);
+  OverflowResult OR =
+      mapOverflowResult(LHSRange.signedAddMayOverflow(RHSRange));
+  if (OR != OverflowResult::MayOverflow)
+    return OR;
 
   // The remaining code needs Add to be available. Early returns if not so.
   if (!Add)
@@ -4208,8 +4163,10 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
                                                    const DominatorTree *DT) {
   KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT);
   KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
-  ConstantRange LHSRange = constantRangeFromKnownBits(LHSKnown);
-  ConstantRange RHSRange = constantRangeFromKnownBits(RHSKnown);
+  ConstantRange LHSRange =
+      ConstantRange::fromKnownBits(LHSKnown, /*signed*/ false);
+  ConstantRange RHSRange =
+      ConstantRange::fromKnownBits(RHSKnown, /*signed*/ false);
   return mapOverflowResult(LHSRange.unsignedSubMayOverflow(RHSRange));
 }
 
@@ -5696,6 +5653,36 @@ static void setLimitsForIntrinsic(const IntrinsicInst &II, APInt &Lower,
   }
 }
 
+static void setLimitsForSelectPattern(const SelectInst &SI, APInt &Lower,
+                                      APInt &Upper) {
+  const Value *LHS, *RHS;
+  SelectPatternResult R = matchSelectPattern(&SI, LHS, RHS);
+  if (R.Flavor == SPF_UNKNOWN)
+    return;
+
+  unsigned BitWidth = SI.getType()->getScalarSizeInBits();
+
+  // matchSelectPattern() returns the negation part of an abs pattern in RHS.
+  // If the negate has an NSW flag, abs(INT_MIN) is undefined. Without that
+  // constraint, we can't make a contiguous range for the result of abs.
+  if (R.Flavor == SelectPatternFlavor::SPF_ABS &&
+      cast<Instruction>(RHS)->hasNoSignedWrap()) {
+    // The result of abs(X) is >= 0 (with nsw).
+    Lower = APInt::getNullValue(BitWidth);
+    Upper = APInt::getSignedMaxValue(BitWidth) + 1;
+    return;
+  }
+
+  if (R.Flavor == SelectPatternFlavor::SPF_NABS) {
+    // The result of -abs(X) is <= 0.
+    Lower = APInt::getSignedMinValue(BitWidth);
+    Upper = APInt(BitWidth, 1);
+    return;
+  }
+
+  // TODO Handle min/max flavors.
+}
+
 ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo) {
   assert(V->getType()->isIntOrIntVectorTy() && "Expected integer instruction");
 
@@ -5707,6 +5694,8 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo) {
     setLimitsForBinOp(*BO, Lower, Upper, IIQ);
   else if (auto *II = dyn_cast<IntrinsicInst>(V))
     setLimitsForIntrinsic(*II, Lower, Upper);
+  else if (auto *SI = dyn_cast<SelectInst>(V))
+    setLimitsForSelectPattern(*SI, Lower, Upper);
 
   ConstantRange CR = Lower != Upper ? ConstantRange(Lower, Upper)
                                     : ConstantRange(BitWidth, true);

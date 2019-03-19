@@ -640,8 +640,7 @@ public:
   /// \pre setBasicBlock or setMI must have been called.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildCopy(const DstOp &Res, const SrcOp &Op,
-                                unsigned Subreg = 0);
+  MachineInstrBuilder buildCopy(const DstOp &Res, const SrcOp &Op);
 
   /// Build and insert `Res = G_LOAD Addr, MMO`.
   ///

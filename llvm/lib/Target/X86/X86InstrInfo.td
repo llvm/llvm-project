@@ -370,37 +370,35 @@ def anymem : X86MemOperand<"printanymem">;
 // restrict to only unsized memory.
 def opaquemem : X86MemOperand<"printopaquemem">;
 
-def i8mem   : X86MemOperand<"printi8mem",   X86Mem8AsmOperand>;
-def i16mem  : X86MemOperand<"printi16mem",  X86Mem16AsmOperand>;
-def i32mem  : X86MemOperand<"printi32mem",  X86Mem32AsmOperand>;
-def i64mem  : X86MemOperand<"printi64mem",  X86Mem64AsmOperand>;
-def i128mem : X86MemOperand<"printi128mem", X86Mem128AsmOperand>;
-def i256mem : X86MemOperand<"printi256mem", X86Mem256AsmOperand>;
-def i512mem : X86MemOperand<"printi512mem", X86Mem512AsmOperand>;
-def f32mem  : X86MemOperand<"printf32mem",  X86Mem32AsmOperand>;
-def f64mem  : X86MemOperand<"printf64mem",  X86Mem64AsmOperand>;
-def f80mem  : X86MemOperand<"printf80mem",  X86Mem80AsmOperand>;
-def f128mem : X86MemOperand<"printf128mem", X86Mem128AsmOperand>;
-def f256mem : X86MemOperand<"printf256mem", X86Mem256AsmOperand>;
-def f512mem : X86MemOperand<"printf512mem", X86Mem512AsmOperand>;
-
-def v512mem : X86VMemOperand<VR512, "printf512mem", X86Mem512AsmOperand>;
+def i8mem   : X86MemOperand<"printbytemem",   X86Mem8AsmOperand>;
+def i16mem  : X86MemOperand<"printwordmem",  X86Mem16AsmOperand>;
+def i32mem  : X86MemOperand<"printdwordmem",  X86Mem32AsmOperand>;
+def i64mem  : X86MemOperand<"printqwordmem",  X86Mem64AsmOperand>;
+def i128mem : X86MemOperand<"printxmmwordmem", X86Mem128AsmOperand>;
+def i256mem : X86MemOperand<"printymmwordmem", X86Mem256AsmOperand>;
+def i512mem : X86MemOperand<"printzmmwordmem", X86Mem512AsmOperand>;
+def f32mem  : X86MemOperand<"printdwordmem",  X86Mem32AsmOperand>;
+def f64mem  : X86MemOperand<"printqwordmem",  X86Mem64AsmOperand>;
+def f80mem  : X86MemOperand<"printtbytemem",  X86Mem80AsmOperand>;
+def f128mem : X86MemOperand<"printxmmwordmem", X86Mem128AsmOperand>;
+def f256mem : X86MemOperand<"printymmwordmem", X86Mem256AsmOperand>;
+def f512mem : X86MemOperand<"printzmmwordmem", X86Mem512AsmOperand>;
 
 // Gather mem operands
-def vx64mem  : X86VMemOperand<VR128,  "printi64mem",  X86Mem64_RC128Operand>;
-def vx128mem : X86VMemOperand<VR128,  "printi128mem", X86Mem128_RC128Operand>;
-def vx256mem : X86VMemOperand<VR128,  "printi256mem", X86Mem256_RC128Operand>;
-def vy128mem : X86VMemOperand<VR256,  "printi128mem", X86Mem128_RC256Operand>;
-def vy256mem : X86VMemOperand<VR256,  "printi256mem", X86Mem256_RC256Operand>;
+def vx64mem  : X86VMemOperand<VR128,  "printqwordmem",  X86Mem64_RC128Operand>;
+def vx128mem : X86VMemOperand<VR128,  "printxmmwordmem", X86Mem128_RC128Operand>;
+def vx256mem : X86VMemOperand<VR128,  "printymmwordmem", X86Mem256_RC128Operand>;
+def vy128mem : X86VMemOperand<VR256,  "printxmmwordmem", X86Mem128_RC256Operand>;
+def vy256mem : X86VMemOperand<VR256,  "printymmwordmem", X86Mem256_RC256Operand>;
 
-def vx64xmem  : X86VMemOperand<VR128X, "printi64mem",  X86Mem64_RC128XOperand>;
-def vx128xmem : X86VMemOperand<VR128X, "printi128mem", X86Mem128_RC128XOperand>;
-def vx256xmem : X86VMemOperand<VR128X, "printi256mem", X86Mem256_RC128XOperand>;
-def vy128xmem : X86VMemOperand<VR256X, "printi128mem", X86Mem128_RC256XOperand>;
-def vy256xmem : X86VMemOperand<VR256X, "printi256mem", X86Mem256_RC256XOperand>;
-def vy512xmem : X86VMemOperand<VR256X, "printi512mem", X86Mem512_RC256XOperand>;
-def vz256mem  : X86VMemOperand<VR512,  "printi256mem", X86Mem256_RC512Operand>;
-def vz512mem  : X86VMemOperand<VR512,  "printi512mem", X86Mem512_RC512Operand>;
+def vx64xmem  : X86VMemOperand<VR128X, "printqwordmem",  X86Mem64_RC128XOperand>;
+def vx128xmem : X86VMemOperand<VR128X, "printxmmwordmem", X86Mem128_RC128XOperand>;
+def vx256xmem : X86VMemOperand<VR128X, "printymmwordmem", X86Mem256_RC128XOperand>;
+def vy128xmem : X86VMemOperand<VR256X, "printxmmwordmem", X86Mem128_RC256XOperand>;
+def vy256xmem : X86VMemOperand<VR256X, "printymmwordmem", X86Mem256_RC256XOperand>;
+def vy512xmem : X86VMemOperand<VR256X, "printzmmwordmem", X86Mem512_RC256XOperand>;
+def vz256mem  : X86VMemOperand<VR512,  "printymmwordmem", X86Mem256_RC512Operand>;
+def vz512mem  : X86VMemOperand<VR512,  "printzmmwordmem", X86Mem512_RC512Operand>;
 
 // A version of i8mem for use on x86-64 and x32 that uses a NOREX GPR instead
 // of a plain GPR, so that it doesn't potentially require a REX prefix.
@@ -408,7 +406,7 @@ def ptr_rc_norex : PointerLikeRegClass<2>;
 def ptr_rc_norex_nosp : PointerLikeRegClass<3>;
 
 def i8mem_NOREX : Operand<iPTR> {
-  let PrintMethod = "printi8mem";
+  let PrintMethod = "printbytemem";
   let MIOperandInfo = (ops ptr_rc_norex, i8imm, ptr_rc_norex_nosp, i32imm,
                        SEGMENT_REG);
   let ParserMatchClass = X86Mem8AsmOperand;
@@ -423,7 +421,7 @@ def ptr_rc_tailcall : PointerLikeRegClass<4>;
 // allowed to use callee-saved registers since they must be scheduled
 // after callee-saved register are popped.
 def i32mem_TC : Operand<i32> {
-  let PrintMethod = "printi32mem";
+  let PrintMethod = "printdwordmem";
   let MIOperandInfo = (ops ptr_rc_tailcall, i8imm, ptr_rc_tailcall,
                        i32imm, SEGMENT_REG);
   let ParserMatchClass = X86Mem32AsmOperand;
@@ -434,7 +432,7 @@ def i32mem_TC : Operand<i32> {
 // allowed to use callee-saved registers since they must be scheduled
 // after callee-saved register are popped.
 def i64mem_TC : Operand<i64> {
-  let PrintMethod = "printi64mem";
+  let PrintMethod = "printqwordmem";
   let MIOperandInfo = (ops ptr_rc_tailcall, i8imm,
                        ptr_rc_tailcall, i32imm, SEGMENT_REG);
   let ParserMatchClass = X86Mem64AsmOperand;
@@ -602,26 +600,6 @@ def offset64_32 : X86MemOffsOperand<i64imm, "printMemOffs32",
 def offset64_64 : X86MemOffsOperand<i64imm, "printMemOffs64",
                                     X86MemOffs64_64AsmOperand>;
 
-def SSECC : Operand<i8> {
-  let PrintMethod = "printSSEAVXCC";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def AVXCC : Operand<i8> {
-  let PrintMethod = "printSSEAVXCC";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def AVX512ICC : Operand<i8> {
-  let PrintMethod = "printSSEAVXCC";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def XOPCC : Operand<i8> {
-  let PrintMethod = "printXOPCC";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
 class ImmSExtAsmOperandClass : AsmOperandClass {
   let SuperClasses = [ImmAsmOperand];
   let RenderMethod = "addImmOperands";
@@ -717,9 +695,25 @@ def u8imm : Operand<i8> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+// 16-bit immediate but only 8-bits are significant and they are unsigned.
+// Used by BT instructions.
+def i16u8imm : Operand<i16> {
+  let PrintMethod = "printU8Imm";
+  let ParserMatchClass = ImmUnsignedi8AsmOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
 // 32-bit immediate but only 8-bits are significant and they are unsigned.
 // Used by some SSE/AVX instructions that use intrinsics.
 def i32u8imm : Operand<i32> {
+  let PrintMethod = "printU8Imm";
+  let ParserMatchClass = ImmUnsignedi8AsmOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+// 64-bit immediate but only 8-bits are significant and they are unsigned.
+// Used by BT instructions.
+def i64u8imm : Operand<i64> {
   let PrintMethod = "printU8Imm";
   let ParserMatchClass = ImmUnsignedi8AsmOperand;
   let OperandType = "OPERAND_IMMEDIATE";
@@ -1006,16 +1000,13 @@ def i64relocImmSExt32 : PatLeaf<(i64 relocImm), [{
 // Eventually, it would be nice to allow ConstantHoisting to merge constants
 // globally for potentially added savings.
 //
-def imm8_su : PatLeaf<(i8 relocImm), [{
+def relocImm8_su : PatLeaf<(i8 relocImm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
-def imm16_su : PatLeaf<(i16 relocImm), [{
+def relocImm16_su : PatLeaf<(i16 relocImm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
-def imm32_su : PatLeaf<(i32 relocImm), [{
-    return !shouldAvoidImmediateInstFormsForSize(N);
-}]>;
-def i64immSExt32_su : PatLeaf<(i64immSExt32), [{
+def relocImm32_su : PatLeaf<(i32 relocImm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
 
@@ -1516,16 +1507,16 @@ def MOV32ri_alt : Ii32<0xC7, MRM0r, (outs GR32:$dst), (ins i32imm:$src),
 let SchedRW = [WriteStore] in {
 def MOV8mi  : Ii8 <0xC6, MRM0m, (outs), (ins i8mem :$dst, i8imm :$src),
                    "mov{b}\t{$src, $dst|$dst, $src}",
-                   [(store (i8 imm8_su:$src), addr:$dst)]>;
+                   [(store (i8 relocImm8_su:$src), addr:$dst)]>;
 def MOV16mi : Ii16<0xC7, MRM0m, (outs), (ins i16mem:$dst, i16imm:$src),
                    "mov{w}\t{$src, $dst|$dst, $src}",
-                   [(store (i16 imm16_su:$src), addr:$dst)]>, OpSize16;
+                   [(store (i16 relocImm16_su:$src), addr:$dst)]>, OpSize16;
 def MOV32mi : Ii32<0xC7, MRM0m, (outs), (ins i32mem:$dst, i32imm:$src),
                    "mov{l}\t{$src, $dst|$dst, $src}",
-                   [(store (i32 imm32_su:$src), addr:$dst)]>, OpSize32;
+                   [(store (i32 relocImm32_su:$src), addr:$dst)]>, OpSize32;
 def MOV64mi32 : RIi32S<0xC7, MRM0m, (outs), (ins i64mem:$dst, i64i32imm:$src),
                        "mov{q}\t{$src, $dst|$dst, $src}",
-                       [(store i64immSExt32_su:$src, addr:$dst)]>,
+                       [(store i64relocImmSExt32_su:$src, addr:$dst)]>,
                        Requires<[In64BitMode]>;
 } // SchedRW
 
@@ -1772,36 +1763,36 @@ let mayLoad = 1, hasSideEffects = 0, SchedRW = [WriteBitTestRegLd] in {
 }
 
 let SchedRW = [WriteBitTest] in {
-def BT16ri8 : Ii8<0xBA, MRM4r, (outs), (ins GR16:$src1, i16i8imm:$src2),
+def BT16ri8 : Ii8<0xBA, MRM4r, (outs), (ins GR16:$src1, i16u8imm:$src2),
                 "bt{w}\t{$src2, $src1|$src1, $src2}",
-                [(set EFLAGS, (X86bt GR16:$src1, i16immSExt8:$src2))]>,
+                [(set EFLAGS, (X86bt GR16:$src1, imm:$src2))]>,
                 OpSize16, TB;
-def BT32ri8 : Ii8<0xBA, MRM4r, (outs), (ins GR32:$src1, i32i8imm:$src2),
+def BT32ri8 : Ii8<0xBA, MRM4r, (outs), (ins GR32:$src1, i32u8imm:$src2),
                 "bt{l}\t{$src2, $src1|$src1, $src2}",
-                [(set EFLAGS, (X86bt GR32:$src1, i32immSExt8:$src2))]>,
+                [(set EFLAGS, (X86bt GR32:$src1, imm:$src2))]>,
                 OpSize32, TB;
-def BT64ri8 : RIi8<0xBA, MRM4r, (outs), (ins GR64:$src1, i64i8imm:$src2),
+def BT64ri8 : RIi8<0xBA, MRM4r, (outs), (ins GR64:$src1, i64u8imm:$src2),
                 "bt{q}\t{$src2, $src1|$src1, $src2}",
-                [(set EFLAGS, (X86bt GR64:$src1, i64immSExt8:$src2))]>, TB;
+                [(set EFLAGS, (X86bt GR64:$src1, imm:$src2))]>, TB;
 } // SchedRW
 
 // Note that these instructions aren't slow because that only applies when the
 // other operand is in a register. When it's an immediate, bt is still fast.
 let SchedRW = [WriteBitTestImmLd] in {
-def BT16mi8 : Ii8<0xBA, MRM4m, (outs), (ins i16mem:$src1, i16i8imm:$src2),
+def BT16mi8 : Ii8<0xBA, MRM4m, (outs), (ins i16mem:$src1, i16u8imm:$src2),
                   "bt{w}\t{$src2, $src1|$src1, $src2}",
                   [(set EFLAGS, (X86bt (loadi16 addr:$src1),
-                                       i16immSExt8:$src2))]>,
+                                       imm:$src2))]>,
                   OpSize16, TB;
-def BT32mi8 : Ii8<0xBA, MRM4m, (outs), (ins i32mem:$src1, i32i8imm:$src2),
+def BT32mi8 : Ii8<0xBA, MRM4m, (outs), (ins i32mem:$src1, i32u8imm:$src2),
                   "bt{l}\t{$src2, $src1|$src1, $src2}",
                   [(set EFLAGS, (X86bt (loadi32 addr:$src1),
-                                       i32immSExt8:$src2))]>,
+                                       imm:$src2))]>,
                   OpSize32, TB;
-def BT64mi8 : RIi8<0xBA, MRM4m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
+def BT64mi8 : RIi8<0xBA, MRM4m, (outs), (ins i64mem:$src1, i64u8imm:$src2),
                 "bt{q}\t{$src2, $src1|$src1, $src2}",
                 [(set EFLAGS, (X86bt (loadi64 addr:$src1),
-                                     i64immSExt8:$src2))]>, TB,
+                                     imm:$src2))]>, TB,
                 Requires<[In64BitMode]>;
 } // SchedRW
 
@@ -1831,20 +1822,20 @@ def BTC64mr : RI<0xBB, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
 }
 
 let SchedRW = [WriteBitTestSet], Constraints = "$src1 = $dst" in {
-def BTC16ri8 : Ii8<0xBA, MRM7r, (outs GR16:$dst), (ins GR16:$src1, i16i8imm:$src2),
+def BTC16ri8 : Ii8<0xBA, MRM7r, (outs GR16:$dst), (ins GR16:$src1, i16u8imm:$src2),
                     "btc{w}\t{$src2, $src1|$src1, $src2}", []>, OpSize16, TB;
-def BTC32ri8 : Ii8<0xBA, MRM7r, (outs GR32:$dst), (ins GR32:$src1, i32i8imm:$src2),
+def BTC32ri8 : Ii8<0xBA, MRM7r, (outs GR32:$dst), (ins GR32:$src1, i32u8imm:$src2),
                     "btc{l}\t{$src2, $src1|$src1, $src2}", []>, OpSize32, TB;
-def BTC64ri8 : RIi8<0xBA, MRM7r, (outs GR64:$dst), (ins GR64:$src1, i64i8imm:$src2),
+def BTC64ri8 : RIi8<0xBA, MRM7r, (outs GR64:$dst), (ins GR64:$src1, i64u8imm:$src2),
                     "btc{q}\t{$src2, $src1|$src1, $src2}", []>, TB;
 } // SchedRW
 
 let mayLoad = 1, mayStore = 1, SchedRW = [WriteBitTestSetImmRMW] in {
-def BTC16mi8 : Ii8<0xBA, MRM7m, (outs), (ins i16mem:$src1, i16i8imm:$src2),
+def BTC16mi8 : Ii8<0xBA, MRM7m, (outs), (ins i16mem:$src1, i16u8imm:$src2),
                     "btc{w}\t{$src2, $src1|$src1, $src2}", []>, OpSize16, TB;
-def BTC32mi8 : Ii8<0xBA, MRM7m, (outs), (ins i32mem:$src1, i32i8imm:$src2),
+def BTC32mi8 : Ii8<0xBA, MRM7m, (outs), (ins i32mem:$src1, i32u8imm:$src2),
                     "btc{l}\t{$src2, $src1|$src1, $src2}", []>, OpSize32, TB;
-def BTC64mi8 : RIi8<0xBA, MRM7m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
+def BTC64mi8 : RIi8<0xBA, MRM7m, (outs), (ins i64mem:$src1, i64u8imm:$src2),
                     "btc{q}\t{$src2, $src1|$src1, $src2}", []>, TB,
                     Requires<[In64BitMode]>;
 }
@@ -1874,24 +1865,24 @@ def BTR64mr : RI<0xB3, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
 }
 
 let SchedRW = [WriteBitTestSet], Constraints = "$src1 = $dst" in {
-def BTR16ri8 : Ii8<0xBA, MRM6r, (outs GR16:$dst), (ins GR16:$src1, i16i8imm:$src2),
+def BTR16ri8 : Ii8<0xBA, MRM6r, (outs GR16:$dst), (ins GR16:$src1, i16u8imm:$src2),
                     "btr{w}\t{$src2, $src1|$src1, $src2}", []>,
                     OpSize16, TB;
-def BTR32ri8 : Ii8<0xBA, MRM6r, (outs GR32:$dst), (ins GR32:$src1, i32i8imm:$src2),
+def BTR32ri8 : Ii8<0xBA, MRM6r, (outs GR32:$dst), (ins GR32:$src1, i32u8imm:$src2),
                     "btr{l}\t{$src2, $src1|$src1, $src2}", []>,
                     OpSize32, TB;
-def BTR64ri8 : RIi8<0xBA, MRM6r, (outs GR64:$dst), (ins GR64:$src1, i64i8imm:$src2),
+def BTR64ri8 : RIi8<0xBA, MRM6r, (outs GR64:$dst), (ins GR64:$src1, i64u8imm:$src2),
                     "btr{q}\t{$src2, $src1|$src1, $src2}", []>, TB;
 } // SchedRW
 
 let mayLoad = 1, mayStore = 1, SchedRW = [WriteBitTestSetImmRMW] in {
-def BTR16mi8 : Ii8<0xBA, MRM6m, (outs), (ins i16mem:$src1, i16i8imm:$src2),
+def BTR16mi8 : Ii8<0xBA, MRM6m, (outs), (ins i16mem:$src1, i16u8imm:$src2),
                     "btr{w}\t{$src2, $src1|$src1, $src2}", []>,
                     OpSize16, TB;
-def BTR32mi8 : Ii8<0xBA, MRM6m, (outs), (ins i32mem:$src1, i32i8imm:$src2),
+def BTR32mi8 : Ii8<0xBA, MRM6m, (outs), (ins i32mem:$src1, i32u8imm:$src2),
                     "btr{l}\t{$src2, $src1|$src1, $src2}", []>,
                     OpSize32, TB;
-def BTR64mi8 : RIi8<0xBA, MRM6m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
+def BTR64mi8 : RIi8<0xBA, MRM6m, (outs), (ins i64mem:$src1, i64u8imm:$src2),
                     "btr{q}\t{$src2, $src1|$src1, $src2}", []>, TB,
                     Requires<[In64BitMode]>;
 }
@@ -1921,20 +1912,20 @@ def BTS64mr : RI<0xAB, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
 }
 
 let SchedRW = [WriteBitTestSet], Constraints = "$src1 = $dst" in {
-def BTS16ri8 : Ii8<0xBA, MRM5r, (outs GR16:$dst), (ins GR16:$src1, i16i8imm:$src2),
+def BTS16ri8 : Ii8<0xBA, MRM5r, (outs GR16:$dst), (ins GR16:$src1, i16u8imm:$src2),
                     "bts{w}\t{$src2, $src1|$src1, $src2}", []>, OpSize16, TB;
-def BTS32ri8 : Ii8<0xBA, MRM5r, (outs GR32:$dst), (ins GR32:$src1, i32i8imm:$src2),
+def BTS32ri8 : Ii8<0xBA, MRM5r, (outs GR32:$dst), (ins GR32:$src1, i32u8imm:$src2),
                     "bts{l}\t{$src2, $src1|$src1, $src2}", []>, OpSize32, TB;
-def BTS64ri8 : RIi8<0xBA, MRM5r, (outs GR64:$dst), (ins GR64:$src1, i64i8imm:$src2),
+def BTS64ri8 : RIi8<0xBA, MRM5r, (outs GR64:$dst), (ins GR64:$src1, i64u8imm:$src2),
                     "bts{q}\t{$src2, $src1|$src1, $src2}", []>, TB;
 } // SchedRW
 
 let mayLoad = 1, mayStore = 1, SchedRW = [WriteBitTestSetImmRMW] in {
-def BTS16mi8 : Ii8<0xBA, MRM5m, (outs), (ins i16mem:$src1, i16i8imm:$src2),
+def BTS16mi8 : Ii8<0xBA, MRM5m, (outs), (ins i16mem:$src1, i16u8imm:$src2),
                     "bts{w}\t{$src2, $src1|$src1, $src2}", []>, OpSize16, TB;
-def BTS32mi8 : Ii8<0xBA, MRM5m, (outs), (ins i32mem:$src1, i32i8imm:$src2),
+def BTS32mi8 : Ii8<0xBA, MRM5m, (outs), (ins i32mem:$src1, i32u8imm:$src2),
                     "bts{l}\t{$src2, $src1|$src1, $src2}", []>, OpSize32, TB;
-def BTS64mi8 : RIi8<0xBA, MRM5m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
+def BTS64mi8 : RIi8<0xBA, MRM5m, (outs), (ins i64mem:$src1, i64u8imm:$src2),
                     "bts{q}\t{$src2, $src1|$src1, $src2}", []>, TB,
                     Requires<[In64BitMode]>;
 }

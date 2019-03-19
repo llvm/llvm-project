@@ -3270,6 +3270,24 @@ unsigned CGOpenMPRuntime::getDefaultFlagsForBarriers(OpenMPDirectiveKind Kind) {
   return Flags;
 }
 
+void CGOpenMPRuntime::getDefaultScheduleAndChunk(
+    CodeGenFunction &CGF, const OMPLoopDirective &S,
+    OpenMPScheduleClauseKind &ScheduleKind, const Expr *&ChunkExpr) const {
+  // Check if the loop directive is actually a doacross loop directive. In this
+  // case choose static, 1 schedule.
+  if (llvm::any_of(
+          S.getClausesOfKind<OMPOrderedClause>(),
+          [](const OMPOrderedClause *C) { return C->getNumForLoops(); })) {
+    ScheduleKind = OMPC_SCHEDULE_static;
+    // Chunk size is 1 in this case.
+    llvm::APInt ChunkSize(32, 1);
+    ChunkExpr = IntegerLiteral::Create(
+        CGF.getContext(), ChunkSize,
+        CGF.getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
+        SourceLocation());
+  }
+}
+
 void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
                                       OpenMPDirectiveKind Kind, bool EmitChecks,
                                       bool ForceSimpleCall) {

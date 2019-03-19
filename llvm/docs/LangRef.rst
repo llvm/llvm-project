@@ -15819,8 +15819,7 @@ Arguments:
 """"""""""
 
 The ``llvm.expect`` intrinsic takes two arguments. The first argument is
-a value. The second argument is an expected value, this needs to be a
-constant value, variables are not allowed.
+a value. The second argument is an expected value.
 
 Semantics:
 """"""""""

@@ -119,9 +119,11 @@ public:
   /// \param Kind -- the capability's name parameter (role, mutex, etc).
   /// \param Expected -- the kind of lock expected.
   /// \param Received -- the kind of lock received.
+  /// \param LocLocked -- The SourceLocation of the Lock.
   /// \param Loc -- The SourceLocation of the Unlock.
   virtual void handleIncorrectUnlockKind(StringRef Kind, Name LockName,
                                          LockKind Expected, LockKind Received,
+                                         SourceLocation LocLocked,
                                          SourceLocation Loc) {}
 
   /// Warn about lock function calls for locks which are already held.

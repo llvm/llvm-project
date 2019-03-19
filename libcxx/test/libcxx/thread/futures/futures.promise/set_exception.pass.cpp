@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03
 
-// MODULES_DEFINES: _LIBCPP_DEBUG_USE_EXCEPTIONS
 // MODULES_DEFINES: _LIBCPP_DEBUG=0
 
 // Can't test the system lib because this test enables debug mode
@@ -24,33 +22,28 @@
 // Test that a null exception_ptr is diagnosed.
 
 #define _LIBCPP_DEBUG 0
-#define _LIBCPP_DEBUG_USE_EXCEPTIONS
+
 #include <future>
 #include <exception>
 #include <cstdlib>
 #include <cassert>
 
 
+#include "debug_mode_helper.h"
+
 int main(int, char**)
 {
-    typedef std::__libcpp_debug_exception ExType;
     {
         typedef int T;
         std::promise<T> p;
-        try {
-            p.set_exception(std::exception_ptr());
-            assert(false);
-        } catch (ExType const&) {
-        }
+
+        EXPECT_DEATH( p.set_exception(std::exception_ptr()) );
     }
     {
         typedef int& T;
         std::promise<T> p;
-        try {
-            p.set_exception(std::exception_ptr());
-            assert(false);
-        } catch (ExType const&) {
-        }
+
+        EXPECT_DEATH( p.set_exception(std::exception_ptr()) );
     }
 
   return 0;

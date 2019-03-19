@@ -478,7 +478,8 @@ static bool selectSubregisterCopy(MachineInstr &I, MachineRegisterInfo &MRI,
                                   unsigned SubReg) {
   MachineIRBuilder MIB(I);
   auto Copy = MIB.buildCopy({From}, {SrcReg});
-  auto SubRegCopy = MIB.buildCopy({To}, {Copy}, SubReg);
+  auto SubRegCopy = MIB.buildInstr(TargetOpcode::COPY, {To}, {})
+                        .addReg(Copy.getReg(0), 0, SubReg);
   MachineOperand &RegOp = I.getOperand(1);
   RegOp.setReg(SubRegCopy.getReg(0));
 
@@ -1104,7 +1105,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
 
     unsigned DstReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
     MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
-    MIB.buildCopy({I.getOperand(0).getReg()}, {DstReg}, AArch64::sub_32);
+    MIB.buildInstr(TargetOpcode::COPY, {I.getOperand(0).getReg()}, {})
+        .addReg(DstReg, 0, AArch64::sub_32);
     RBI.constrainGenericRegister(I.getOperand(0).getReg(),
                                  AArch64::GPR32RegClass, MRI);
     I.getOperand(0).setReg(DstReg);
@@ -1938,7 +1940,8 @@ MachineInstr *AArch64InstructionSelector::emitExtractVectorElt(
     DstReg = MRI.createVirtualRegister(DstRC);
   // If the lane index is 0, we just use a subregister COPY.
   if (LaneIdx == 0) {
-    auto Copy = MIRBuilder.buildCopy({*DstReg}, {VecReg}, ExtractSubReg);
+    auto Copy = MIRBuilder.buildInstr(TargetOpcode::COPY, {*DstReg}, {})
+                    .addReg(VecReg, 0, ExtractSubReg);
     RBI.constrainGenericRegister(*DstReg, *DstRC, MRI);
     return &*Copy;
   }
@@ -2115,7 +2118,8 @@ bool AArch64InstructionSelector::selectUnmergeValues(
   //
   // Perform the first copy separately as a subregister copy.
   unsigned CopyTo = I.getOperand(0).getReg();
-  auto FirstCopy = MIB.buildCopy({CopyTo}, {InsertRegs[0]}, ExtractSubReg);
+  auto FirstCopy = MIB.buildInstr(TargetOpcode::COPY, {CopyTo}, {})
+                       .addReg(InsertRegs[0], 0, ExtractSubReg);
   constrainSelectedInstRegOperands(*FirstCopy, TII, TRI, RBI);
 
   // Now, perform the remaining copies as vector lane copies.
@@ -2388,7 +2392,9 @@ bool AArch64InstructionSelector::selectShuffleVector(
     constrainSelectedInstRegOperands(*TBL1, TII, TRI, RBI);
 
     auto Copy =
-        MIRBuilder.buildCopy({I.getOperand(0).getReg()}, {TBL1}, AArch64::dsub);
+        MIRBuilder
+            .buildInstr(TargetOpcode::COPY, {I.getOperand(0).getReg()}, {})
+            .addReg(TBL1.getReg(0), 0, AArch64::dsub);
     RBI.constrainGenericRegister(Copy.getReg(0), AArch64::FPR64RegClass, MRI);
     I.eraseFromParent();
     return true;
@@ -2538,7 +2544,8 @@ bool AArch64InstructionSelector::selectBuildVector(
     unsigned Reg = MRI.createVirtualRegister(RC);
     unsigned DstReg = I.getOperand(0).getReg();
 
-    MIRBuilder.buildCopy({DstReg}, {DstVec}, SubReg);
+    MIRBuilder.buildInstr(TargetOpcode::COPY, {DstReg}, {})
+        .addReg(DstVec, 0, SubReg);
     MachineOperand &RegOp = I.getOperand(1);
     RegOp.setReg(Reg);
     RBI.constrainGenericRegister(DstReg, *RC, MRI);

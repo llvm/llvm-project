@@ -639,7 +639,8 @@ bool AMDGPUTargetLowering::isSelectSupported(SelectSupportKind SelType) const {
 
 // The backend supports 32 and 64 bit floating point immediates.
 // FIXME: Why are we reporting vectors of FP immediates as legal?
-bool AMDGPUTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
+bool AMDGPUTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                        bool ForCodeSize) const {
   EVT ScalarVT = VT.getScalarType();
   return (ScalarVT == MVT::f32 || ScalarVT == MVT::f64 ||
          (ScalarVT == MVT::f16 && Subtarget->has16BitInsts()));
@@ -1008,9 +1009,10 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
       if (MemVT.isVector() && MemVT.getVectorNumElements() == 1)
         MemVT = MemVT.getScalarType();
 
-      if (MemVT.isExtended()) {
-        // This should really only happen if we have vec3 arguments
-        assert(MemVT.isVector() && MemVT.getVectorNumElements() == 3);
+      // Round up vec3/vec5 argument.
+      if (MemVT.isVector() && !MemVT.isPow2VectorType()) {
+        assert(MemVT.getVectorNumElements() == 3 ||
+               MemVT.getVectorNumElements() == 5);
         MemVT = MemVT.getPow2VectorType(State.getContext());
       }
 

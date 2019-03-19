@@ -1642,6 +1642,13 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     return ONS;
   }
 
+  OptionalNotes makeLockedHereNote(SourceLocation LocLocked, StringRef Kind) {
+    return LocLocked.isValid()
+               ? getNotes(PartialDiagnosticAt(
+                     LocLocked, S.PDiag(diag::note_locked_here) << Kind))
+               : getNotes();
+  }
+
  public:
   ThreadSafetyReporter(Sema &S, SourceLocation FL, SourceLocation FEL)
     : S(S), FunLocation(FL), FunEndLocation(FEL),
@@ -1679,13 +1686,15 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
 
   void handleIncorrectUnlockKind(StringRef Kind, Name LockName,
                                  LockKind Expected, LockKind Received,
+                                 SourceLocation LocLocked,
                                  SourceLocation Loc) override {
     if (Loc.isInvalid())
       Loc = FunLocation;
     PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_unlock_kind_mismatch)
                                          << Kind << LockName << Received
                                          << Expected);
-    Warnings.emplace_back(std::move(Warning), getNotes());
+    Warnings.emplace_back(std::move(Warning),
+                          makeLockedHereNote(LocLocked, Kind));
   }
 
   void handleDoubleLock(StringRef Kind, Name LockName, SourceLocation LocLocked,
@@ -1694,12 +1703,8 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
       Loc = FunLocation;
     PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_double_lock)
                                          << Kind << LockName);
-    OptionalNotes Notes =
-        LocLocked.isValid()
-            ? getNotes(PartialDiagnosticAt(
-                  LocLocked, S.PDiag(diag::note_locked_here) << Kind))
-            : getNotes();
-    Warnings.emplace_back(std::move(Warning), std::move(Notes));
+    Warnings.emplace_back(std::move(Warning),
+                          makeLockedHereNote(LocLocked, Kind));
   }
 
   void handleMutexHeldEndOfScope(StringRef Kind, Name LockName,
@@ -1726,13 +1731,8 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
 
     PartialDiagnosticAt Warning(LocEndOfScope, S.PDiag(DiagID) << Kind
                                                                << LockName);
-    if (LocLocked.isValid()) {
-      PartialDiagnosticAt Note(LocLocked, S.PDiag(diag::note_locked_here)
-                                              << Kind);
-      Warnings.emplace_back(std::move(Warning), getNotes(Note));
-      return;
-    }
-    Warnings.emplace_back(std::move(Warning), getNotes());
+    Warnings.emplace_back(std::move(Warning),
+                          makeLockedHereNote(LocLocked, Kind));
   }
 
   void handleExclusiveAndShared(StringRef Kind, Name LockName,

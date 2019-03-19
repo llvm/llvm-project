@@ -5326,12 +5326,14 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     }
   }
 
-  if (!Op && N.getNode())
+  if (!Op && N.getNode()) {
     // Check if frame index is available.
-    if (LoadSDNode *LNode = dyn_cast<LoadSDNode>(N.getNode()))
+    SDValue LCandidate = peekThroughBitcasts(N);
+    if (LoadSDNode *LNode = dyn_cast<LoadSDNode>(LCandidate.getNode()))
       if (FrameIndexSDNode *FINode =
           dyn_cast<FrameIndexSDNode>(LNode->getBasePtr().getNode()))
         Op = MachineOperand::CreateFI(FINode->getIndex());
+  }
 
   if (!Op) {
     // Check if ValueMap has reg number.

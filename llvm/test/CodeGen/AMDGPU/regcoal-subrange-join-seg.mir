@@ -189,7 +189,7 @@ body:             |
     %46 = V_AND_B32_e32 1, killed %45, implicit $exec
     %21 = S_BUFFER_LOAD_DWORD_SGPR undef %22, undef %23, 0 :: (dereferenceable invariant load 4)
     %25 = V_CMP_GE_F32_e64 0, 0, 0, killed %21, 0, implicit $exec
-    %26 = V_CNDMASK_B32_e64 0, -1, killed %25, implicit $exec
+    %26 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %25, implicit $exec
     %62 = IMPLICIT_DEF
 
   bb.29:

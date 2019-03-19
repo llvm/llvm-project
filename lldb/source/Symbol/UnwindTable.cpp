@@ -46,7 +46,7 @@ void UnwindTable::Initialize() {
   if (!object_file)
     return;
 
-  SectionList *sl = object_file->GetSectionList();
+  SectionList *sl = m_module.GetSectionList();
   if (!sl)
     return;
 
