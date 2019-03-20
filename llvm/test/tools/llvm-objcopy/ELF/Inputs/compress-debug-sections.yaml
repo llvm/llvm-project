@@ -21,6 +21,10 @@ Sections:
       - Offset:          0x2
         Symbol:          .notdebug_foo
         Type:            R_X86_64_32
+## This section should not be involved in relocations.
+  - Name:            .debug_bar
+    Type:            SHT_PROGBITS
+    Content:         0000000000000000
 Symbols:
   Global:
     - Name:    .debug_foo
@@ -29,4 +33,6 @@ Symbols:
     - Name:    .notdebug_foo
       Type:    STT_SECTION
       Section: .notdebug_foo
+    - Name:    .Linfo_string0
+      Section: .debug_bar
 ...

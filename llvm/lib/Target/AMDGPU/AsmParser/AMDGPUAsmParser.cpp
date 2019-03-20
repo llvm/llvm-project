@@ -306,7 +306,7 @@ public:
   bool isIdxen() const { return isImmTy(ImmTyIdxen); }
   bool isAddr64() const { return isImmTy(ImmTyAddr64); }
   bool isOffset() const { return isImmTy(ImmTyOffset) && isUInt<16>(getImm()); }
-  bool isOffset0() const { return isImmTy(ImmTyOffset0) && isUInt<16>(getImm()); }
+  bool isOffset0() const { return isImmTy(ImmTyOffset0) && isUInt<8>(getImm()); }
   bool isOffset1() const { return isImmTy(ImmTyOffset1) && isUInt<8>(getImm()); }
 
   bool isOffsetU12() const { return (isImmTy(ImmTyOffset) || isImmTy(ImmTyInstOffset)) && isUInt<12>(getImm()); }
@@ -343,6 +343,8 @@ public:
   }
 
   bool isRegClass(unsigned RCID) const;
+
+  bool isInlineValue() const;
 
   bool isRegOrInlineNoMods(unsigned RCID, MVT type) const {
     return (isRegClass(RCID) || isInlinableImm(type)) && !hasModifiers();
@@ -1271,6 +1273,15 @@ static bool canLosslesslyConvertToFPType(APFloat &FPLiteral, MVT VT) {
 }
 
 bool AMDGPUOperand::isInlinableImm(MVT type) const {
+
+  // This is a hack to enable named inline values like
+  // shared_base with both 32-bit and 64-bit operands.
+  // Note that these values are defined as
+  // 32-bit operands only.
+  if (isInlineValue()) {
+    return true;
+  }
+
   if (!isImmTy(ImmTyNone)) {
     // Only plain immediates are inlinable (e.g. "clamp" attribute is not)
     return false;
@@ -1579,6 +1590,23 @@ void AMDGPUOperand::addRegOperands(MCInst &Inst, unsigned N) const {
   Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(getReg(), AsmParser->getSTI())));
 }
 
+static bool isInlineValue(unsigned Reg) {
+  switch (Reg) {
+  case AMDGPU::SRC_SHARED_BASE:
+  case AMDGPU::SRC_SHARED_LIMIT:
+  case AMDGPU::SRC_PRIVATE_BASE:
+  case AMDGPU::SRC_PRIVATE_LIMIT:
+  case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool AMDGPUOperand::isInlineValue() const {
+  return isRegKind() && ::isInlineValue(getReg());
+}
+
 //===----------------------------------------------------------------------===//
 // AsmParser
 //===----------------------------------------------------------------------===//
@@ -1622,6 +1650,16 @@ static unsigned getSpecialRegForName(StringRef RegName) {
     .Case("vcc", AMDGPU::VCC)
     .Case("flat_scratch", AMDGPU::FLAT_SCR)
     .Case("xnack_mask", AMDGPU::XNACK_MASK)
+    .Case("shared_base", AMDGPU::SRC_SHARED_BASE)
+    .Case("src_shared_base", AMDGPU::SRC_SHARED_BASE)
+    .Case("shared_limit", AMDGPU::SRC_SHARED_LIMIT)
+    .Case("src_shared_limit", AMDGPU::SRC_SHARED_LIMIT)
+    .Case("private_base", AMDGPU::SRC_PRIVATE_BASE)
+    .Case("src_private_base", AMDGPU::SRC_PRIVATE_BASE)
+    .Case("private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
+    .Case("src_private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
+    .Case("pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
+    .Case("src_pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
     .Case("lds_direct", AMDGPU::LDS_DIRECT)
     .Case("src_lds_direct", AMDGPU::LDS_DIRECT)
     .Case("m0", AMDGPU::M0)
@@ -3390,6 +3428,9 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   default:
     break;
   }
+
+  if (isInlineValue(RegNo))
+    return !isCI() && !isSI() && !isVI();
 
   if (isCI())
     return true;

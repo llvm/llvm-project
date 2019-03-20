@@ -21,7 +21,7 @@ struct ParserImpl {
 
   // The parser kind. This is used as a tag to safely cast between
   // implementations.
-  enum Kind ParserKind;
+  Kind ParserKind;
 };
 } // end namespace remarks
 } // end namespace llvm

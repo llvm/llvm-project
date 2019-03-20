@@ -18,6 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ASTPrint.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/Tooling.h"
@@ -29,81 +30,6 @@ using namespace ast_matchers;
 using namespace tooling;
 
 namespace {
-
-using PolicyAdjusterType =
-    Optional<llvm::function_ref<void(PrintingPolicy &Policy)>>;
-
-void PrintStmt(raw_ostream &Out, const ASTContext *Context, const Stmt *S,
-               PolicyAdjusterType PolicyAdjuster) {
-  assert(S != nullptr && "Expected non-null Stmt");
-  PrintingPolicy Policy = Context->getPrintingPolicy();
-  if (PolicyAdjuster)
-    (*PolicyAdjuster)(Policy);
-  S->printPretty(Out, /*Helper*/ nullptr, Policy);
-}
-
-class PrintMatch : public MatchFinder::MatchCallback {
-  SmallString<1024> Printed;
-  unsigned NumFoundStmts;
-  PolicyAdjusterType PolicyAdjuster;
-
-public:
-  PrintMatch(PolicyAdjusterType PolicyAdjuster)
-      : NumFoundStmts(0), PolicyAdjuster(PolicyAdjuster) {}
-
-  void run(const MatchFinder::MatchResult &Result) override {
-    const Stmt *S = Result.Nodes.getNodeAs<Stmt>("id");
-    if (!S)
-      return;
-    NumFoundStmts++;
-    if (NumFoundStmts > 1)
-      return;
-
-    llvm::raw_svector_ostream Out(Printed);
-    PrintStmt(Out, Result.Context, S, PolicyAdjuster);
-  }
-
-  StringRef getPrinted() const {
-    return Printed;
-  }
-
-  unsigned getNumFoundStmts() const {
-    return NumFoundStmts;
-  }
-};
-
-template <typename T>
-::testing::AssertionResult
-PrintedStmtMatches(StringRef Code, const std::vector<std::string> &Args,
-                   const T &NodeMatch, StringRef ExpectedPrinted,
-                   PolicyAdjusterType PolicyAdjuster = None) {
-
-  PrintMatch Printer(PolicyAdjuster);
-  MatchFinder Finder;
-  Finder.addMatcher(NodeMatch, &Printer);
-  std::unique_ptr<FrontendActionFactory> Factory(
-      newFrontendActionFactory(&Finder));
-
-  if (!runToolOnCodeWithArgs(Factory->create(), Code, Args))
-    return testing::AssertionFailure()
-      << "Parsing error in \"" << Code.str() << "\"";
-
-  if (Printer.getNumFoundStmts() == 0)
-    return testing::AssertionFailure()
-        << "Matcher didn't find any statements";
-
-  if (Printer.getNumFoundStmts() > 1)
-    return testing::AssertionFailure()
-        << "Matcher should match only one statement "
-           "(found " << Printer.getNumFoundStmts() << ")";
-
-  if (Printer.getPrinted() != ExpectedPrinted)
-    return ::testing::AssertionFailure()
-      << "Expected \"" << ExpectedPrinted.str() << "\", "
-         "got \"" << Printer.getPrinted().str() << "\"";
-
-  return ::testing::AssertionSuccess();
-}
 
 enum class StdVer { CXX98, CXX11, CXX14, CXX17, CXX2a };
 

@@ -659,6 +659,9 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         case AMDGPU::SRC_PRIVATE_LIMIT:
           continue;
 
+        case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
+          llvm_unreachable("src_pops_exiting_wave_id should not be used");
+
         case AMDGPU::NoRegister:
           assert(MI.isDebugInstr());
           continue;

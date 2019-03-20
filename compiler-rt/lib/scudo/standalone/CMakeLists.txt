@@ -39,6 +39,7 @@ set(SCUDO_SOURCES
   common.cc
   fuchsia.cc
   linux.cc
+  report.cc
   string_utils.cc)
 
 # Enable the SSE 4.2 instruction set for crc32_hw.cc, if available.
@@ -61,6 +62,7 @@ set(SCUDO_HEADERS
   list.h
   mutex.h
   platform.h
+  report.h
   stats.h
   string_utils.h
   vector.h)

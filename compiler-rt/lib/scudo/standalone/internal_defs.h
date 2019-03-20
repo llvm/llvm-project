@@ -32,21 +32,21 @@
 #define WEAK __attribute__((weak))
 #define INLINE inline
 #define ALWAYS_INLINE inline __attribute__((always_inline))
-#define ALIAS(x) __attribute__((alias(x)))
+#define ALIAS(X) __attribute__((alias(X)))
 // Please only use the ALIGNED macro before the type. Using ALIGNED after the
 // variable declaration is not portable.
-#define ALIGNED(x) __attribute__((aligned(x)))
-#define FORMAT(f, a) __attribute__((format(printf, f, a)))
+#define ALIGNED(X) __attribute__((aligned(X)))
+#define FORMAT(F, A) __attribute__((format(printf, F, A)))
 #define NOINLINE __attribute__((noinline))
 #define NORETURN __attribute__((noreturn))
 #define THREADLOCAL __thread
-#define LIKELY(x) __builtin_expect(!!(x), 1)
-#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+#define LIKELY(X) __builtin_expect(!!(X), 1)
+#define UNLIKELY(X) __builtin_expect(!!(X), 0)
 #if defined(__i386__) || defined(__x86_64__)
-// __builtin_prefetch(x) generates prefetchnt0 on x86
-#define PREFETCH(x) __asm__("prefetchnta (%0)" : : "r"(x))
+// __builtin_prefetch(X) generates prefetchnt0 on x86
+#define PREFETCH(X) __asm__("prefetchnta (%0)" : : "r"(X))
 #else
-#define PREFETCH(x) __builtin_prefetch(x)
+#define PREFETCH(X) __builtin_prefetch(X)
 #endif
 #define UNUSED __attribute__((unused))
 #define USED __attribute__((used))
@@ -79,47 +79,50 @@ void NORETURN die();
 
 #define RAW_CHECK(Expr) RAW_CHECK_MSG(Expr, #Expr)
 
-// TODO(kostyak): use reportCheckFailed when checked-in.
-#define CHECK_IMPL(c1, op, c2)                                                 \
+void NORETURN reportCheckFailed(const char *File, int Line,
+                                const char *Condition, u64 Value1, u64 Value2);
+
+#define CHECK_IMPL(C1, Op, C2)                                                 \
   do {                                                                         \
-    u64 v1 = (u64)(c1);                                                        \
-    u64 v2 = (u64)(c2);                                                        \
-    if (UNLIKELY(!(v1 op v2))) {                                               \
-      outputRaw("CHECK failed: (" #c1 ") " #op " (" #c2 ")\n");                \
+    u64 V1 = (u64)(C1);                                                        \
+    u64 V2 = (u64)(C2);                                                        \
+    if (UNLIKELY(!(V1 Op V2))) {                                               \
+      reportCheckFailed(__FILE__, __LINE__, "(" #C1 ") " #Op " (" #C2 ")", V1, \
+                        V2);                                                   \
       die();                                                                   \
     }                                                                          \
   } while (false)
 
-#define CHECK(a) CHECK_IMPL((a), !=, 0)
-#define CHECK_EQ(a, b) CHECK_IMPL((a), ==, (b))
-#define CHECK_NE(a, b) CHECK_IMPL((a), !=, (b))
-#define CHECK_LT(a, b) CHECK_IMPL((a), <, (b))
-#define CHECK_LE(a, b) CHECK_IMPL((a), <=, (b))
-#define CHECK_GT(a, b) CHECK_IMPL((a), >, (b))
-#define CHECK_GE(a, b) CHECK_IMPL((a), >=, (b))
+#define CHECK(A) CHECK_IMPL((A), !=, 0)
+#define CHECK_EQ(A, B) CHECK_IMPL((A), ==, (B))
+#define CHECK_NE(A, B) CHECK_IMPL((A), !=, (B))
+#define CHECK_LT(A, B) CHECK_IMPL((A), <, (B))
+#define CHECK_LE(A, B) CHECK_IMPL((A), <=, (B))
+#define CHECK_GT(A, B) CHECK_IMPL((A), >, (B))
+#define CHECK_GE(A, B) CHECK_IMPL((A), >=, (B))
 
 #if SCUDO_DEBUG
-#define DCHECK(a) CHECK(a)
-#define DCHECK_EQ(a, b) CHECK_EQ(a, b)
-#define DCHECK_NE(a, b) CHECK_NE(a, b)
-#define DCHECK_LT(a, b) CHECK_LT(a, b)
-#define DCHECK_LE(a, b) CHECK_LE(a, b)
-#define DCHECK_GT(a, b) CHECK_GT(a, b)
-#define DCHECK_GE(a, b) CHECK_GE(a, b)
+#define DCHECK(A) CHECK(A)
+#define DCHECK_EQ(A, B) CHECK_EQ(A, B)
+#define DCHECK_NE(A, B) CHECK_NE(A, B)
+#define DCHECK_LT(A, B) CHECK_LT(A, B)
+#define DCHECK_LE(A, B) CHECK_LE(A, B)
+#define DCHECK_GT(A, B) CHECK_GT(A, B)
+#define DCHECK_GE(A, B) CHECK_GE(A, B)
 #else
-#define DCHECK(a)
-#define DCHECK_EQ(a, b)
-#define DCHECK_NE(a, b)
-#define DCHECK_LT(a, b)
-#define DCHECK_LE(a, b)
-#define DCHECK_GT(a, b)
-#define DCHECK_GE(a, b)
+#define DCHECK(A)
+#define DCHECK_EQ(A, B)
+#define DCHECK_NE(A, B)
+#define DCHECK_LT(A, B)
+#define DCHECK_LE(A, B)
+#define DCHECK_GT(A, B)
+#define DCHECK_GE(A, B)
 #endif
 
 // The superfluous die() call effectively makes this macro NORETURN.
-#define UNREACHABLE(msg)                                                       \
+#define UNREACHABLE(Msg)                                                       \
   do {                                                                         \
-    CHECK(0 && msg);                                                           \
+    CHECK(0 && Msg);                                                           \
     die();                                                                     \
   } while (0)
 

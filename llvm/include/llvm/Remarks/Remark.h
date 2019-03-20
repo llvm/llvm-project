@@ -62,7 +62,7 @@ enum class Type {
 /// A remark type used for both emission and parsing.
 struct Remark {
   /// The type of the remark.
-  enum Type RemarkType = Type::Unknown;
+  Type RemarkType = Type::Unknown;
 
   /// Name of the pass that triggers the emission of this remark.
   StringRef PassName;

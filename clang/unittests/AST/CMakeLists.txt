@@ -21,6 +21,7 @@ add_clang_unittest(ASTTests
   ExternalASTSourceTest.cpp
   Language.cpp
   NamedDeclPrinterTest.cpp
+  OMPStructuredBlockTest.cpp
   SourceLocationTest.cpp
   StmtPrinterTest.cpp
   StructuralEquivalenceTest.cpp
