@@ -592,14 +592,24 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
 #define CONSTRUCTOR_ATTRIBUTE
 #endif
 
+#ifndef _WIN32
+__attribute__((visibility("hidden")))
+#endif
 int __cpu_indicator_init(void) CONSTRUCTOR_ATTRIBUTE;
 
+#ifndef _WIN32
+__attribute__((visibility("hidden")))
+#endif
 struct __processor_model {
   unsigned int __cpu_vendor;
   unsigned int __cpu_type;
   unsigned int __cpu_subtype;
   unsigned int __cpu_features[1];
 } __cpu_model = {0, 0, 0, {0}};
+
+#ifndef _WIN32
+__attribute__((visibility("hidden")))
+#endif
 unsigned int __cpu_features2;
 
 /* A constructor function that is sets __cpu_model and __cpu_features2 with
