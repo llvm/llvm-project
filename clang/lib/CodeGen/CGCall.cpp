@@ -3452,7 +3452,7 @@ void CodeGenFunction::EmitCallArgs(
     assert(EmittedArg.getScalarVal() && "We emitted nothing for the arg?");
     llvm::Value *V = evaluateOrEmitBuiltinObjectSize(Arg, PS->getType(), T,
                                                      EmittedArg.getScalarVal(),
-                                                     /*IsDynamic=*/false);
+                                                     PS->isDynamic());
     Args.add(RValue::get(V), SizeTy);
     // If we're emitting args in reverse, be sure to do so with
     // pass_object_size, as well.
