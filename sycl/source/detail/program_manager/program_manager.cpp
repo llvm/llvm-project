@@ -252,7 +252,7 @@ cnri_program ProgramManager::loadProgram(OSModuleHandle M,
     Img->Kind = SYCL_OFFLOAD_KIND;
     Img->Format = CNRI_IMG_NONE;
     Img->DeviceTargetSpec = CNRI_TGT_STR_UNKNOWN;
-    Img->BuildOptions = nullptr;
+    Img->BuildOptions = "";
     Img->ManifestStart = nullptr;
     Img->ManifestEnd = nullptr;
     Img->ImageStart = Data;
@@ -291,13 +291,13 @@ cnri_program ProgramManager::loadProgram(OSModuleHandle M,
   assert(Img->ImageEnd >= Img->ImageStart);
   size_t ImgSize = static_cast<size_t>(Img->ImageEnd - Img->ImageStart);
 
-  // Determine the kind of the image if not set already
-  if (Img->Kind == CNRI_IMG_NONE) {
+  // Determine the format of the image if not set already
+  if (Img->Format == CNRI_IMG_NONE) {
     struct {
       cnri_device_image_format Fmt;
-      const int32_t Magic;
+      const uint32_t Magic;
     } Fmts[] = {{CNRI_IMG_SPIRV, 0x07230203},
-                {CNRI_IMG_LLVMIR_BITCODE, 0x4243C0DE}};
+                {CNRI_IMG_LLVMIR_BITCODE, 0xDEC04342}};
     if (ImgSize >= sizeof(Fmts[0].Magic)) {
       std::remove_const<decltype(Fmts[0].Magic)>::type Hdr = 0;
       std::copy(Img->ImageStart, Img->ImageStart + sizeof(Hdr),
@@ -308,7 +308,8 @@ cnri_program ProgramManager::loadProgram(OSModuleHandle M,
           Img->Format = Fmt.Fmt;
 
           if (DbgProgMgr > 1) {
-            std::cerr << "determined image format: " << Img->Format;
+            std::cerr << "determined image format: " << (int)Img->Format
+              << "\n";
           }
           break;
         }
@@ -321,9 +322,9 @@ cnri_program ProgramManager::loadProgram(OSModuleHandle M,
     Fname += Img->DeviceTargetSpec;
     std::string Ext;
 
-    if (Img->Kind == CNRI_IMG_SPIRV) {
+    if (Img->Format == CNRI_IMG_SPIRV) {
       Ext = ".spv";
-    } else if (Img->Kind == CNRI_IMG_LLVMIR_BITCODE) {
+    } else if (Img->Format == CNRI_IMG_LLVMIR_BITCODE) {
       Ext = ".bc";
     } else {
       Ext = ".bin";
