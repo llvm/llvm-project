@@ -267,7 +267,7 @@ class MicrosoftCXXNameMangler {
   typedef llvm::DenseMap<const void *, unsigned> ArgBackRefMap;
   ArgBackRefMap TypeBackReferences;
 
-  typedef std::set<int> PassObjectSizeArgsSet;
+  typedef std::set<std::pair<int, bool>> PassObjectSizeArgsSet;
   PassObjectSizeArgsSet PassObjectSizeArgs;
 
   ASTContext &getASTContext() const { return Context.getASTContext(); }
@@ -1761,14 +1761,16 @@ void MicrosoftCXXNameMangler::mangleArgumentType(QualType T,
 void MicrosoftCXXNameMangler::manglePassObjectSizeArg(
     const PassObjectSizeAttr *POSA) {
   int Type = POSA->getType();
+  bool Dynamic = POSA->isDynamic();
 
-  auto Iter = PassObjectSizeArgs.insert(Type).first;
+  auto Iter = PassObjectSizeArgs.insert({Type, Dynamic}).first;
   auto *TypePtr = (const void *)&*Iter;
   ArgBackRefMap::iterator Found = TypeBackReferences.find(TypePtr);
 
   if (Found == TypeBackReferences.end()) {
-    mangleArtificialTagType(TTK_Enum, "__pass_object_size" + llvm::utostr(Type),
-                           {"__clang"});
+    std::string Name =
+        Dynamic ? "__pass_dynamic_object_size" : "__pass_object_size";
+    mangleArtificialTagType(TTK_Enum, Name + llvm::utostr(Type), {"__clang"});
 
     if (TypeBackReferences.size() < 10) {
       size_t Size = TypeBackReferences.size();

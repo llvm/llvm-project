@@ -7,6 +7,7 @@ struct Foo {
 };
 
 #define PS(N) __attribute__((pass_object_size(N)))
+#define PDS(N) __attribute__((pass_dynamic_object_size(N)))
 
 int gi = 0;
 
@@ -16,14 +17,32 @@ int ObjectSize0(void *const p PS(0)) {
   return __builtin_object_size(p, 0);
 }
 
+// CHECK-LABEL: define i32 @DynamicObjectSize0(i8* %{{.*}}, i64)
+int DynamicObjectSize0(void *const p PDS(0)) {
+  // CHECK-NOT: @llvm.objectsize
+  return __builtin_dynamic_object_size(p, 0);
+}
+
 // CHECK-LABEL: define i32 @ObjectSize1(i8* %{{.*}}, i64)
 int ObjectSize1(void *const p PS(1)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 1);
 }
 
+// CHECK-LABEL: define i32 @DynamicObjectSize1(i8* %{{.*}}, i64)
+int DynamicObjectSize1(void *const p PDS(1)) {
+  // CHECK-NOT: @llvm.objectsize
+  return __builtin_dynamic_object_size(p, 1);
+}
+
 // CHECK-LABEL: define i32 @ObjectSize2(i8* %{{.*}}, i64)
 int ObjectSize2(void *const p PS(2)) {
+  // CHECK-NOT: @llvm.objectsize
+  return __builtin_object_size(p, 2);
+}
+
+// CHECK-LABEL: define i32 @DynamicObjectSize2(i8* %{{.*}}, i64)
+int DynamicObjectSize2(void *const p PDS(2)) {
   // CHECK-NOT: @llvm.objectsize
   return __builtin_object_size(p, 2);
 }
@@ -34,8 +53,16 @@ int ObjectSize3(void *const p PS(3)) {
   return __builtin_object_size(p, 3);
 }
 
+// CHECK-LABEL: define i32 @DynamicObjectSize3(i8* %{{.*}}, i64)
+int DynamicObjectSize3(void *const p PDS(3)) {
+  // CHECK-NOT: @llvm.objectsize
+  return __builtin_object_size(p, 3);
+}
+
+void *malloc(unsigned long) __attribute__((alloc_size(1)));
+
 // CHECK-LABEL: define void @test1
-void test1() {
+void test1(unsigned long sz) {
   struct Foo t[10];
 
   // CHECK: call i32 @ObjectSize0(i8* %{{.*}}, i64 360)
@@ -55,6 +82,21 @@ void test1() {
   gi = ObjectSize2(&t[1].t[1]);
   // CHECK: call i32 @ObjectSize3(i8* %{{.*}}, i64 36)
   gi = ObjectSize3(&t[1].t[1]);
+
+  char *ptr = (char *)malloc(sz);
+
+  // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0i8({{.*}}, i1 false, i1 true, i1 true)
+  // CHECK: call i32 @DynamicObjectSize0(i8* %{{.*}}, i64 [[REG]])
+  gi = DynamicObjectSize0(ptr);
+
+  // CHECK: [[WITH_OFFSET:%.*]] = getelementptr
+  // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0i8(i8* [[WITH_OFFSET]], i1 false, i1 true, i1 true)
+  // CHECK: call i32 @DynamicObjectSize0(i8* {{.*}}, i64 [[REG]])
+  gi = DynamicObjectSize0(ptr+10);
+
+  // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0i8({{.*}}, i1 true, i1 true, i1 true)
+  // CHECK: call i32 @DynamicObjectSize2(i8* {{.*}}, i64 [[REG]])
+  gi = DynamicObjectSize2(ptr);
 }
 
 // CHECK-LABEL: define void @test2
@@ -68,6 +110,13 @@ void test2(struct Foo *t) {
 
 // CHECK-LABEL: define i32 @_Z27NoViableOverloadObjectSize0Pv
 int NoViableOverloadObjectSize0(void *const p) __attribute__((overloadable)) {
+  // CHECK: @llvm.objectsize
+  return __builtin_object_size(p, 0);
+}
+
+// CHECK-LABEL: define i32 @_Z34NoViableOverloadDynamicObjectSize0Pv
+int NoViableOverloadDynamicObjectSize0(void *const p)
+  __attribute__((overloadable)) {
   // CHECK: @llvm.objectsize
   return __builtin_object_size(p, 0);
 }
@@ -95,6 +144,11 @@ int NoViableOverloadObjectSize3(void *const p) __attribute__((overloadable)) {
 int NoViableOverloadObjectSize0(void *const p PS(0))
     __attribute__((overloadable)) {
   return __builtin_object_size(p, 0);
+}
+
+int NoViableOverloadDynamicObjectSize0(void *const p PDS(0))
+  __attribute__((overloadable)) {
+  return __builtin_dynamic_object_size(p, 0);
 }
 
 int NoViableOverloadObjectSize1(void *const p PS(1))
@@ -154,6 +208,9 @@ void test3() {
   gi = NoViableOverloadObjectSize2(&t[1].t[1]);
   // CHECK: call i32 @_Z27NoViableOverloadObjectSize3PvU17pass_object_size3(i8* %{{.*}}, i64 36)
   gi = NoViableOverloadObjectSize3(&t[1].t[1]);
+
+  // CHECK: call i32 @_Z34NoViableOverloadDynamicObjectSize0PvU25pass_dynamic_object_size0(i8* %{{.*}}, i64 360)
+  gi = NoViableOverloadDynamicObjectSize0(&t[1]);
 }
 
 // CHECK-LABEL: define void @test4
@@ -183,6 +240,9 @@ void test5() {
 
   int (*f)(void *) = &NoViableOverloadObjectSize0;
   gi = f(&t[1]);
+
+  int (*g)(void *) = &NoViableOverloadDynamicObjectSize0;
+  gi = g(&t[1]);
 }
 
 // CHECK-LABEL: define i32 @IndirectObjectSize0
@@ -211,6 +271,12 @@ int IndirectObjectSize3(void *const p PS(3)) {
   // CHECK: call i32 @ObjectSize3(i8* %{{.*}}, i64 %{{.*}})
   // CHECK-NOT: @llvm.objectsize
   return ObjectSize3(p);
+}
+
+int IndirectDynamicObjectSize0(void *const p PDS(0)) {
+  // CHECK: call i32 @ObjectSize0(i8* %{{.*}}, i64 %{{.*}})
+  // CHECK-NOT: @llvm.objectsize
+  return ObjectSize0(p);
 }
 
 int Overload0(void *, size_t, void *, size_t);
@@ -417,4 +483,11 @@ void test17(char *C) {
   // CHECK-NOT: 65535
   // CHECK: call i32 @ObjectSize0(i8* [[PTR]]
   ObjectSize0(C + ({ int a = 65535; a; }));
+}
+
+// CHECK-LABEL: define void @test18
+void test18(char *const p PDS(0)) {
+  // CHECK-NOT: llvm.objectsize
+  gi = __builtin_dynamic_object_size(p, 0);
+  gi = __builtin_object_size(p, 0);
 }

@@ -699,6 +699,15 @@ Currently, ``pass_object_size`` is a bit restricted in terms of its usage:
 * It is an error to apply the ``pass_object_size`` attribute to parameters that
   are not pointers. Additionally, any parameter that ``pass_object_size`` is
   applied to must be marked ``const`` at its function's definition.
+
+Clang also supports the ``pass_dynamic_object_size`` attribute, which behaves
+identically to ``pass_object_size``, but evaluates a call to
+``__builtin_dynamic_object_size`` at the callee instead of
+``__builtin_object_size``. ``__builtin_dynamic_object_size`` provides some extra
+runtime checks when the object size can't be determined at compile-time. You can
+read more about ``__builtin_dynamic_object_size`` `here
+<https://clang.llvm.org/docs/LanguageExtensions.html#evaluating-object-size-dynamically>`_.
+
   }];
 }
 
@@ -964,43 +973,6 @@ gets possibly modified by some optimizations into code similar to this:
 where the call to "nodupfunc" is duplicated and sunk into the two branches
 of the condition.
   }];
-}
-
-def FortifyStdLibDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``fortify_stdlib`` attribute applies to declarations of C stdlib functions
-(memcpy, sprintf, ...), and causes clang to emit calls to their fortified
-variants with ``__builtin_object_size``. This attribute is intended for use
-within standard C library implementations and should not generally be used for
-user applications. For instance:
-
-.. code-block:: c
-
-  __attribute__((fortify_stdlib(0, 0)))
-  int sprintf(char *buf, const char *fmt, ...);
-
-  int main() {
-    char buf[5];
-    sprintf(buf, "%f", 42.0);
-    // Clang generates code equivalent to:
-    // __sprintf_chk(buf, 0, __builtin_object_size(0), "%f", 42.0);
-  }
-
-The first argument to the attribute is the integer `type` argument passed to
-`__builtin_object_size` (you can read more about `__builtin_object_size`
-`here <https://gcc.gnu.org/onlinedocs/gcc-4.8.5/gcc/Object-Size-Checking.html>`_),
-The second argument to this attribute is the flag that the fortified format
-functions accept.
-
-Only a specific set of standard library functions are supported:
-  - memcpy, memmove, memset
-  - stpcpy, strcat, strcpy
-  - strlcat, strlcpy
-  - strncat, strncpy, stpncpy
-  - snprintf, vsnprintf, sprintf, vsprintf
-  - fprintf, vfprintf, printf, vprintf
-}];
 }
 
 def ConvergentDocs : Documentation {
