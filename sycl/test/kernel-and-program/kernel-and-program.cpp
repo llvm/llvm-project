@@ -98,35 +98,40 @@ int main() {
   {
     cl::sycl::queue q;
     std::vector<int> dataVec(10);
-    std::iota(dataVec.begin(), dataVec.end(), 0);
-    // Precompiled kernel invocation
-    {
-      cl::sycl::range<1> numOfItems(dataVec.size());
-      cl::sycl::buffer<int, 1> buf(dataVec.data(), numOfItems);
-      cl::sycl::program prg(q.get_context());
-      assert(prg.get_state() == cl::sycl::program_state::none);
-      // Test compiling -> linking
-      prg.compile_with_kernel_type<class ParallelFor>();
-      assert(prg.get_state() == cl::sycl::program_state::compiled);
-      prg.link();
-      assert(prg.get_state() == cl::sycl::program_state::linked);
-      assert(prg.has_kernel<class ParallelFor>());
-      cl::sycl::kernel krn = prg.get_kernel<class ParallelFor>();
-      assert(krn.get_context() == q.get_context());
-      assert(krn.get_program() == prg);
 
-      q.submit([&](cl::sycl::handler &cgh) {
-        auto acc = buf.get_access<cl::sycl::access::mode::read_write>(cgh);
-        cgh.parallel_for<class ParallelFor>(
-            numOfItems, krn,
-            [=](cl::sycl::id<1> wiID) { acc[wiID] = acc[wiID] + 1; });
-      });
-    }
-    for (size_t i = 0; i < dataVec.size(); ++i) {
-      assert(dataVec[i] == i + 1);
+    // Precompiled kernel invocation
+    // TODO Disabled on GPU, revert once compile -> link issue is fixed there
+    if (!q.get_device().is_gpu()) {
+      std::iota(dataVec.begin(), dataVec.end(), 0);
+      {
+        cl::sycl::range<1> numOfItems(dataVec.size());
+        cl::sycl::buffer<int, 1> buf(dataVec.data(), numOfItems);
+        cl::sycl::program prg(q.get_context());
+        assert(prg.get_state() == cl::sycl::program_state::none);
+        // Test compiling -> linking
+        prg.compile_with_kernel_type<class ParallelFor>();
+        assert(prg.get_state() == cl::sycl::program_state::compiled);
+        prg.link();
+        assert(prg.get_state() == cl::sycl::program_state::linked);
+        assert(prg.has_kernel<class ParallelFor>());
+        cl::sycl::kernel krn = prg.get_kernel<class ParallelFor>();
+        assert(krn.get_context() == q.get_context());
+        assert(krn.get_program() == prg);
+
+        q.submit([&](cl::sycl::handler &cgh) {
+          auto acc = buf.get_access<cl::sycl::access::mode::read_write>(cgh);
+          cgh.parallel_for<class ParallelFor>(
+              numOfItems, krn,
+              [=](cl::sycl::id<1> wiID) { acc[wiID] = acc[wiID] + 1; });
+        });
+      }
+      for (size_t i = 0; i < dataVec.size(); ++i) {
+        assert(dataVec[i] == i + 1);
+      }
     }
 
     // OpenCL interoperability kernel invocation
+    std::iota(dataVec.begin(), dataVec.end(), 0);
     if (!q.is_host()) {
       cl_int err;
       {
@@ -158,7 +163,7 @@ int main() {
         clReleaseContext(clCtx);
         assert(err == CL_SUCCESS);
         for (size_t i = 0; i < dataVec.size(); ++i) {
-          assert(dataVec[i] == i + 2);
+          assert(dataVec[i] == i + 1);
         }
       }
     }
