@@ -86,8 +86,7 @@ void event_impl::wait(
 void event_impl::wait_and_throw(
     std::shared_ptr<cl::sycl::detail::event_impl> Self) {
   wait(Self);
-  cl::sycl::simple_scheduler::Scheduler::getInstance().throwForEventRecursive(
-      Self);
+  cl::sycl::simple_scheduler::Scheduler::getInstance().throwForEvent(Self);
 }
 
 template <>

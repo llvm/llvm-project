@@ -17,7 +17,6 @@
 #include <cassert>
 #include <fstream>
 #include <set>
-#include <unordered_set>
 #include <vector>
 
 namespace cl {
@@ -74,56 +73,36 @@ void Scheduler::waitForEvent(EventImplPtr Event) {
   }
 }
 
-// Calls async handler for the given command Cmd and those other
-// commands that Cmd depends on.
-void Scheduler::throwForCmdRecursive(std::shared_ptr<Command> Cmd) {
-  if (Cmd == nullptr) {
+// Calls async handler for the given event Event and those other
+// events that Event immediaately depends on.
+void Scheduler::throwForEvent(EventImplPtr Event) {
+  auto Cmd = getCmdForEvent(std::move(Event));
+  if (!Cmd) {
     return;
   }
+  Cmd->getQueue()->throw_asynchronous();
 
-  auto QImpl = Cmd->getQueue();
-  QImpl->throw_asynchronous();
-
+  // Call async handler for immediate dependencies.
   std::vector<std::pair<std::shared_ptr<Command>, BufferReqPtr>> Deps =
       Cmd->getDependencies();
   for (auto D : Deps) {
-    throwForCmdRecursive(D.first);
+    D.first->getQueue()->throw_asynchronous();
   }
 }
 
-// Calls async handler for the given event Event and those other
-// events that Event depends on.
-void Scheduler::throwForEventRecursive(EventImplPtr Event) {
+vector_class<event> Scheduler::getDepEvents(EventImplPtr Event) {
+  vector_class<event> DepEventsVec;
   auto Cmd = getCmdForEvent(Event);
-  if (Cmd) {
-    throwForCmdRecursive(Cmd);
-  }
-}
-
-void Scheduler::getDepEventsHelper(
-    std::unordered_set<cl::sycl::event> &EventsSet,
-    EventImplPtr Event) {
-  auto Cmd = getCmdForEvent(Event);
-  if (Cmd == nullptr) {
-    return;
+  if (!Cmd) {
+    return DepEventsVec;
   }
 
   std::vector<std::pair<std::shared_ptr<Command>, BufferReqPtr>> Deps =
       Cmd->getDependencies();
   for (auto D : Deps) {
     auto DepEvent = D.first->getEvent();
-    EventsSet.insert(DepEvent);
-
-    auto DepEventImpl = cl::sycl::detail::getSyclObjImpl(DepEvent);
-    getDepEventsHelper(EventsSet, DepEventImpl);
+    DepEventsVec.push_back(std::move(DepEvent));
   }
-}
-
-vector_class<event> Scheduler::getDepEventsRecursive(EventImplPtr Event) {
-  std::unordered_set<event> DepEventsSet;
-  getDepEventsHelper(DepEventsSet, Event);
-
-  vector_class<event> DepEventsVec(DepEventsSet.begin(), DepEventsSet.end());
   return DepEventsVec;
 }
 

@@ -22,7 +22,6 @@
 #include <iostream>
 #include <map>
 #include <set>
-#include <unordered_set>
 #include <vector>
 
 namespace cl {
@@ -161,8 +160,8 @@ public:
   void waitForEvent(EventImplPtr Event);
 
   // Calls asynchronous handler for the passed event Event
-  // and for those other events that Event depends on.
-  void throwForEventRecursive(EventImplPtr Event);
+  // and for those other events that Event immediately depends on.
+  void throwForEvent(EventImplPtr Event);
 
   // Adds new node to graph, creating an Alloca and MemMove commands if
   // needed.
@@ -202,11 +201,8 @@ public:
   enum DumpOptions { Text = 0, WholeGraph = 1, RunGraph = 2 };
   bool getDumpFlagValue(DumpOptions DumpOption);
 
-  // Walks through the dependencies and returns the vector of events
-  // that given Event waits for.
-  // The unordered_set is used to collect unuque events,
-  // and the unordered_set is convenient as it does not need operator<().
-  vector_class<event> getDepEventsRecursive(EventImplPtr Event);
+  // Returns the vector of events that the given event immediately depends on.
+  vector_class<event> getDepEvents(EventImplPtr Event);
 protected:
   // TODO: Add releasing of OpenCL buffers.
 
@@ -239,19 +235,6 @@ private:
   // Returns the pointer to the command associated with the given event,
   // or nullptr if none is found.
   CommandPtr getCmdForEvent(EventImplPtr Event);
-
-  // Basically it is the helper method for throwForEventRecursive() now.
-  // It calls async handler for the command Cmd and those other
-  // commands that Cmd depends on.
-  void throwForCmdRecursive(std::shared_ptr<Command> Cmd);
-
-  // The helper method for getDepEventsRecursive(). It recursively walks
-  // through the command dependence tree and put those events that the given
-  // Event wait for into the EventsSet. The unordered_set is convenient and
-  // efficient way to collect unuque events. Also, it is unordered to avoid
-  // the need in operator<().
-  void getDepEventsHelper(std::unordered_set<cl::sycl::event> &EventsSet,
-                          EventImplPtr Event);
 };
 
 } // namespace simple_scheduler

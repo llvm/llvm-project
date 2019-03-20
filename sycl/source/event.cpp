@@ -51,7 +51,7 @@ void event::wait_and_throw(const vector_class<event> &EventList) {
 
 vector_class<event> event::get_wait_list() {
   return cl::sycl::simple_scheduler::Scheduler::getInstance().
-      getDepEventsRecursive(impl);
+      getDepEvents(impl);
 }
 
 event::event(std::shared_ptr<detail::event_impl> event_impl)
