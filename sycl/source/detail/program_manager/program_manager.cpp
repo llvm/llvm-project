@@ -288,11 +288,19 @@ cnri_program ProgramManager::loadProgram(OSModuleHandle M,
       debugDumpBinaryImage(Img);
     }
   }
-  assert(Img->ImageEnd >= Img->ImageStart);
+  // perform minimal sanity checks on the device image and the descriptor
+  if (Img->ImageEnd < Img->ImageStart) {
+    throw runtime_error("Malformed device program image descriptor");
+  }
+  if (Img->ImageEnd == Img->ImageStart) {
+    throw runtime_error("Invalid device program image: size is zero");
+  }
   size_t ImgSize = static_cast<size_t>(Img->ImageEnd - Img->ImageStart);
+  cnri_device_image_format Format =
+      static_cast<cnri_device_image_format>(Img->Format);
 
   // Determine the format of the image if not set already
-  if (Img->Format == CNRI_IMG_NONE) {
+  if (Format == CNRI_IMG_NONE) {
     struct {
       cnri_device_image_format Fmt;
       const uint32_t Magic;
@@ -305,11 +313,22 @@ cnri_program ProgramManager::loadProgram(OSModuleHandle M,
 
       for (const auto &Fmt : Fmts) {
         if (Hdr == Fmt.Magic) {
-          Img->Format = Fmt.Fmt;
+          Format = Fmt.Fmt;
 
+          // Image binary format wasn't set but determined above - update it;
+          if (UseKernelSpv) {
+            Img->Format = Format;
+          } else {
+            // TODO the binary image is a part of the fat binary, the clang
+            //   driver should have set proper format option to the
+            //   clang-offload-wrapper. The fix depends on AOT compilation
+            //   implementation, so will be implemented together with it.
+            //   Img->Format can't be updated as it is inside of the in-memory
+            //   OS module binary.
+            // throw runtime_error("Image format not set");
+          }
           if (DbgProgMgr > 1) {
-            std::cerr << "determined image format: " << (int)Img->Format
-              << "\n";
+            std::cerr << "determined image format: " << (int)Format << "\n";
           }
           break;
         }
@@ -322,9 +341,9 @@ cnri_program ProgramManager::loadProgram(OSModuleHandle M,
     Fname += Img->DeviceTargetSpec;
     std::string Ext;
 
-    if (Img->Format == CNRI_IMG_SPIRV) {
+    if (Format == CNRI_IMG_SPIRV) {
       Ext = ".spv";
-    } else if (Img->Format == CNRI_IMG_LLVMIR_BITCODE) {
+    } else if (Format == CNRI_IMG_LLVMIR_BITCODE) {
       Ext = ".bc";
     } else {
       Ext = ".bin";
@@ -342,7 +361,7 @@ cnri_program ProgramManager::loadProgram(OSModuleHandle M,
   // Load the selected image
   const cnri_context &Ctx = getRawSyclObjImpl(Context)->getHandleRef();
   cnri_program Res = nullptr;
-  Res = Img->Format == CNRI_IMG_SPIRV
+  Res = Format == CNRI_IMG_SPIRV
             ? createSpirvProgram(Ctx, Img->ImageStart, ImgSize)
             : createBinaryProgram(Ctx, Img->ImageStart, ImgSize);
 
