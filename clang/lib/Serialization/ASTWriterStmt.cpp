@@ -67,6 +67,7 @@ void ASTStmtWriter::AddTemplateKWAndArgsInfo(
 }
 
 void ASTStmtWriter::VisitStmt(Stmt *S) {
+  Record.push_back(S->StmtBits.IsOMPStructuredBlock);
 }
 
 void ASTStmtWriter::VisitNullStmt(NullStmt *S) {

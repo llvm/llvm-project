@@ -6,6 +6,6 @@ unittest("RemarksTests") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "RemarksParsingTest.cpp",
+    "YAMLRemarksParsingTest.cpp",
   ]
 }

@@ -98,13 +98,10 @@ LIBCXX_INSTALL_DIR="${TEMP_DIR}/libcxx-install"
 LIBCXXABI_BUILD_DIR="${TEMP_DIR}/libcxxabi-build"
 LIBCXXABI_INSTALL_DIR="${TEMP_DIR}/libcxxabi-install"
 
-LLVM_TARBALL_URL="https://github.com/llvm-mirror/llvm/archive/master.tar.gz"
-export CC="$(xcrun --find clang)"
-export CXX="$(xcrun --find clang++)"
-
 
 echo "@@@ Downloading LLVM tarball of master (only used for CMake configuration) @@@"
 mkdir "${LLVM_ROOT}"
+LLVM_TARBALL_URL="https://github.com/llvm-mirror/llvm/archive/master.tar.gz"
 curl -L "${LLVM_TARBALL_URL}" | tar -xz --strip-components=1 -C "${LLVM_ROOT}"
 echo "@@@@@@"
 

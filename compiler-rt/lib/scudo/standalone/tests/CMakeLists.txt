@@ -55,6 +55,7 @@ set(SCUDO_UNIT_TEST_SOURCES
   list_test.cc
   map_test.cc
   mutex_test.cc
+  report_test.cc
   stats_test.cc
   strings_test.cc
   vector_test.cc

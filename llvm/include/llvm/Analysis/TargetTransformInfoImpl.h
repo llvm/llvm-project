@@ -140,14 +140,21 @@ public:
 
   unsigned getInliningThresholdMultiplier() { return 1; }
 
+  unsigned getMemcpyCost(const Instruction *I) {
+    return TTI::TCC_Expensive;
+  }
+
   unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                             ArrayRef<Type *> ParamTys, const User *U) {
     switch (IID) {
     default:
       // Intrinsics rarely (if ever) have normal argument setup constraints.
       // Model them as having a basic instruction cost.
-      // FIXME: This is wrong for libc intrinsics.
       return TTI::TCC_Basic;
+
+    // TODO: other libc intrinsics.
+    case Intrinsic::memcpy:
+      return getMemcpyCost(dyn_cast<Instruction>(U));
 
     case Intrinsic::annotation:
     case Intrinsic::assume:

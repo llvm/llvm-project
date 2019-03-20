@@ -12926,6 +12926,9 @@ TEST_F(FormatTest, GuessLanguageWithCpp11AttributeSpecifiers) {
             guessLanguage("foo.h", "[[using gsl: suppress(\"type\")]];"));
   EXPECT_EQ(
       FormatStyle::LK_Cpp,
+      guessLanguage("foo.h", "for (auto &&[endpoint, stream] : streams_)"));
+  EXPECT_EQ(
+      FormatStyle::LK_Cpp,
       guessLanguage("foo.h",
                     "[[clang::callable_when(\"unconsumed\", \"unknown\")]]"));
   EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo.h", "[[foo::bar, ...]]"));
