@@ -1220,170 +1220,182 @@ fast_normalize(T p) __NOEXC {
   return __sycl_std::__invoke_fast_normalize<T>(p);
 }
 
-/* --------------- 4.13.7 Relational functions. -----------------------------*/
-// igeninteger16bit isequal (genfloath x, genfloath y)
+/* --------------- 4.13.7 Relational functions. Device version --------------*/
+//
+// int isequal (half x, half y)
+// shortn isequal (halfn x, halfn y)
 // igeninteger32bit isequal (genfloatf x, genfloatf y)
-// igeninteger64bit isequal (genfloatd x, genfloatd y)
+// int isequal (double x,double y);
+// longn isequal (doublen x, doublen y)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type isequal(T x,
                                                                T y) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(isequal, T)
   return __sycl_std::__invoke_OpFOrdEqual<
       typename detail::float_point_to_sign_integral<T>::type>(x, y);
 }
 
-// igeninteger16bit isnotequal (genfloath x, genfloath y)
+// int isnotequal (half x, half y)
+// shortn isnotequal (halfn x, halfn y)
 // igeninteger32bit isnotequal (genfloatf x, genfloatf y)
-// igeninteger64bit isnotequal (genfloatd x, genfloatd y)
+// int isnotequal (double x, double y)
+// longn isnotequal (doublen x, doublen y)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type isnotequal(T x,
                                                                   T y) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(isnotequal, T);
   return __sycl_std::__invoke_OpFUnordNotEqual<
       typename detail::float_point_to_sign_integral<T>::type>(x, y);
 }
 
-// igeninteger16bit isgreater (genfloath x, genfloath y)
+// int isgreater (half x, half y)
+// shortn isgreater (halfn x, halfn y)
 // igeninteger32bit isgreater (genfloatf x, genfloatf y)
-// igeninteger64bit isgreater (genfloatd x, genfloatd y)
+// int isgreater (double x, double y)
+// longn isgreater (doublen x, doublen y)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type isgreater(T x,
                                                                  T y) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(isgreater, T);
   return __sycl_std::__invoke_OpFOrdGreaterThan<
       typename detail::float_point_to_sign_integral<T>::type>(x, y);
 }
 
-// igeninteger16bit isgreaterequal (genfloath x, genfloath y)
+// int isgreaterequal (half x, half y)
+// shortn isgreaterequal (halfn x, halfn y)
 // igeninteger32bit isgreaterequal (genfloatf x, genfloatf y)
-// igeninteger64bit isgreaterequal (genfloatd x, genfloatd y)
+// int isgreaterequal (double x, double y)
+// longn isgreaterequal (doublen x, doublen y)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type
 isgreaterequal(T x, T y) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(isgreaterequal, T);
   return __sycl_std::__invoke_OpFOrdGreaterThanEqual<
       typename detail::float_point_to_sign_integral<T>::type>(x, y);
 }
 
-// igeninteger16bit isless (genfloath x, genfloath y)
+// int isless (half x, half y)
+// shortn isless (halfn x, halfn y)
 // igeninteger32bit isless (genfloatf x, genfloatf y)
-// igeninteger64bit isless (genfloatd x, genfloatd y)
+// int isless (long x, long y)
+// longn isless (doublen x, doublen y)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type isless(T x,
                                                               T y) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(isless, T);
   return __sycl_std::__invoke_OpFOrdLessThan<
       typename detail::float_point_to_sign_integral<T>::type>(x, y);
 }
-
-// igeninteger16bit islessequal (genfloath x, genfloath y)
+// int islessequal (half x, half y)
+// shortn islessequal (halfn x, halfn y)
 // igeninteger32bit islessequal (genfloatf x, genfloatf y)
-// igeninteger64bit islessequal (genfloatd x, genfloatd y)
+// int islessequal (double x, double y)
+// longn islessequal (doublen x, doublen y)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type
 islessequal(T x, T y) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(islessequal, T);
   return __sycl_std::__invoke_OpFOrdLessThanEqual<
       typename detail::float_point_to_sign_integral<T>::type>(x, y);
 }
 
-// igeninteger16bit islessgreater (genfloath x, genfloath y)
+// int islessgreater (half x, half y)
+// shortn islessgreater (halfn x, halfn y)
 // igeninteger32bit islessgreater (genfloatf x, genfloatf y)
-// igeninteger64bit islessgreater (genfloatd x, genfloatd y)
+// int islessgreater (double x, double y)
+// longn islessgreater (doublen x, doublen y)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type
 islessgreater(T x, T y) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(islessgreater, T);
   return __sycl_std::__invoke_OpLessOrGreater<
       typename detail::float_point_to_sign_integral<T>::type>(x, y);
 }
-
-// igeninteger16bit isfinite (genfloath x)
+// int isfinite (half x)
+// shortn isfinite (halfn x)
 // igeninteger32bit isfinite (genfloatf x)
-// igeninteger64bit isfinite (genfloatd x)
+// int isfinite (double x)
+// longn isfinite (doublen x)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type isfinite(T x) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(isfinite, T)
   __NO_SUPPORT_DEVICE_VERSION(isfinite, T)
   return __sycl_std::__invoke_OpIsFinite<
       typename detail::float_point_to_sign_integral<T>::type>(x);
 }
 
-// igeninteger16bit isinf (genfloath x)
+// int isinf (half x)
+// shortn isinf (halfn x)
 // igeninteger32bit isinf (genfloatf x)
-// igeninteger64bit isinf (genfloatd x)
+// int isinf (double x)
+// longn isinf (doublen x)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type isinf(T x) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(isinf, T)
   __NO_SUPPORT_DEVICE_VERSION(isinf, T)
   return __sycl_std::__invoke_OpIsInf<
       typename detail::float_point_to_sign_integral<T>::type>(x);
 }
 
-// igeninteger16bit isnan (genfloath x)
+// int isnan (half x)
+// shortn isnan (halfn x)
 // igeninteger32bit isnan (genfloatf x)
-// igeninteger64bit isnan (genfloatd x)
+// int isnan (double x)
+// longn isnan (doublen x)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type isnan(T x) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(isnan, T)
   __NO_SUPPORT_DEVICE_VERSION(isnan, T)
   return __sycl_std::__invoke_OpIsNan<
       typename detail::float_point_to_sign_integral<T>::type>(x);
 }
-
-// igeninteger16bit isnormal (genfloath x)
+// int isnormal (half x)
+// shortn isnormal (halfn x)
 // igeninteger32bit isnormal (genfloatf x)
-// igeninteger64bit isnormal (genfloatd x)
+// int isnormal (double x)
+// longn isnormal (doublen x)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type isnormal(T x) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(isnormal, T)
   __NO_SUPPORT_DEVICE_VERSION(isnormal, T)
   return __sycl_std::__invoke_OpIsNormal<
       typename detail::float_point_to_sign_integral<T>::type>(x);
 }
 
-// igeninteger16bit isordered (genfloath x, genfloath y)
+// int isordered (half x)
+// shortn isordered (halfn x, halfn y)
 // igeninteger32bit isordered (genfloatf x, genfloatf y)
-// igeninteger64bit isordered (genfloatd x, genfloatd y)
+// int isordered (double x, double y)
+// longn isordered (doublen x, doublen y)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type isordered(T x,
                                                                  T y) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(isordered, T)
   return __sycl_std::__invoke_OpOrdered<
       typename detail::float_point_to_sign_integral<T>::type>(x, y);
 }
 
-// igeninteger16bit isunordered (genfloath x, genfloath y)
+// int isunordered (half x, half y)
+// shortn isunordered (halfn x, halfn y)
 // igeninteger32bit isunordered (genfloatf x, genfloatf y)
-// igeninteger64bit isunordered (genfloatd x, genfloatd y)
+// int isunordered (double x, double y)
+// longn isunordered (doublen x, doublen y)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type
 isunordered(T x, T y) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(isunordered, T)
   return __sycl_std::__invoke_OpUnordered<
       typename detail::float_point_to_sign_integral<T>::type>(x, y);
 }
 
-// igeninteger16bit signbit (genfloath x)
+// int signbit (half x)
+// shortn signbit (halfn x)
 // igeninteger32bit signbit (genfloatf x)
-// igeninteger64bit signbit (genfloatd x)
+// int signbit (double)
+// longn signbit (doublen x)
 template <typename T, typename = typename std::enable_if<
                           detail::is_genfloat<T>::value, T>::type>
 typename detail::float_point_to_sign_integral<T>::type signbit(T x) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(signbit, T)
   __NO_SUPPORT_DEVICE_VERSION(signbit, T)
   return __sycl_std::__invoke_OpSignBitSet<
       typename detail::float_point_to_sign_integral<T>::type>(x);
@@ -1393,7 +1405,6 @@ typename detail::float_point_to_sign_integral<T>::type signbit(T x) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_igeninteger<T>::value, T>::type>
 cl::sycl::cl_int any(T x) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(signbit, T)
   __NO_SUPPORT_DEVICE_VERSION(signbit, T)
   return __sycl_std::__invoke_OpAny<cl::sycl::cl_int>(x);
 }
@@ -1402,7 +1413,6 @@ cl::sycl::cl_int any(T x) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_igeninteger<T>::value, T>::type>
 cl::sycl::cl_int all(T x) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(all, T)
   __NO_SUPPORT_DEVICE_VERSION(all, T)
   return __sycl_std::__invoke_OpAll<cl::sycl::cl_int>(x);
 }
@@ -1411,7 +1421,6 @@ cl::sycl::cl_int all(T x) __NOEXC {
 template <typename T>
 typename std::enable_if<detail::is_gentype<T>::value, T>::type
 bitselect(T a, T b, T c) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(bitselect, T)
   return __sycl_std::__invoke_bitselect<T>(a, b, c);
 }
 
@@ -1421,7 +1430,6 @@ typename std::enable_if<detail::is_geninteger<T>::value &&
                             detail::is_igeninteger<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(select, T)
   __NO_SUPPORT_DEVICE_VERSION(select, T)
   return __sycl_std::__invoke_OpSelect<T>(a, b, c);
 }
@@ -1432,7 +1440,6 @@ typename std::enable_if<detail::is_geninteger<T>::value &&
                             detail::is_ugeninteger<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(select, T)
   __NO_SUPPORT_DEVICE_VERSION(select, T)
   return __sycl_std::__invoke_OpSelect<T>(a, b, c);
 }
@@ -1442,7 +1449,6 @@ template <typename T, typename T2>
 typename std::enable_if<
     detail::is_genfloatf<T>::value && detail::is_genint<T2>::value, T>::type
 select(T a, T b, T2 c) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(select, T)
   __NO_SUPPORT_DEVICE_VERSION(select, T)
   return __sycl_std::__invoke_OpSelect<T>(a, b, c);
 }
@@ -1452,7 +1458,6 @@ template <typename T, typename T2>
 typename std::enable_if<
     detail::is_genfloatf<T>::value && detail::is_ugenint<T2>::value, T>::type
 select(T a, T b, T2 c) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(select, T)
   __NO_SUPPORT_DEVICE_VERSION(select, T)
   return __sycl_std::__invoke_OpSelect<T>(a, b, c);
 }
@@ -1463,7 +1468,6 @@ typename std::enable_if<detail::is_genfloatd<T>::value &&
                             detail::is_igeninteger64bit<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(select, T)
   __NO_SUPPORT_DEVICE_VERSION(select, T)
   return __sycl_std::__invoke_OpSelect<T>(a, b, c);
 }
@@ -1474,7 +1478,6 @@ typename std::enable_if<detail::is_genfloatd<T>::value &&
                             detail::is_ugeninteger64bit<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(select, T)
   __NO_SUPPORT_DEVICE_VERSION(select, T)
   return __sycl_std::__invoke_OpSelect<T>(a, b, c);
 }
@@ -1486,7 +1489,6 @@ typename std::enable_if<detail::is_genfloath<T>::value &&
                             detail::is_igeninteger64bit<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(select, T)
   __NO_SUPPORT_DEVICE_VERSION(select, T)
   return __sycl_std::__invoke_OpSelect<T>(a, b, c);
 }
@@ -1497,7 +1499,6 @@ typename std::enable_if<detail::is_genfloath<T>::value &&
                             detail::is_ugeninteger64bit<T2>::value,
                         T>::type
 select(T a, T b, T2 c) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(select, T)
   __NO_SUPPORT_DEVICE_VERSION(select, T)
   return __sycl_std::__invoke_OpSelect<T>(a, b, c);
 }

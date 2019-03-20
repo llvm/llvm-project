@@ -587,7 +587,7 @@ template <> struct float_point_to_sign_integral<cl_float16> {
 
 #ifndef __HALF_NO_ENABLED
 template <> struct float_point_to_sign_integral<cl_half> {
-  using type = cl_short;
+  using type = cl_int;
 };
 template <> struct float_point_to_sign_integral<cl_half2> {
   using type = cl_short2;
@@ -607,7 +607,7 @@ template <> struct float_point_to_sign_integral<cl_half16> {
 #endif
 
 template <> struct float_point_to_sign_integral<cl_double> {
-  using type = cl_long;
+  using type = cl_int;
 };
 template <> struct float_point_to_sign_integral<cl_double2> {
   using type = cl_long2;
