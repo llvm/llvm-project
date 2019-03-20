@@ -6387,15 +6387,17 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   HostTripleOpt += getToolChain().getAuxTriple()->str();
   WrapperArgs.push_back(C.getArgs().MakeArgString(HostTripleOpt));
 
-  // TODO forcing kind and format here is a simplification which assumes wrapper
-  // used only with SYCL and the only device code format is SPIRV (which is true
-  // at this point). Should be fixed together with supporting AOT in the driver.
+  // TODO forcing offload kind is a simplification which assumes wrapper used
+  // only with SYCL. Device binary format (-format=xxx) option should also come
+  // from the command line and/or the native compiler. Should be fixed together
+  // with supporting AOT in the driver.
+  // If format is not set, the default is "none" which means runtime must try
+  // to determine it automatically.
   StringRef Kind = Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
   WrapperArgs.push_back(
       C.getArgs().MakeArgString(Twine("-kind=") + Twine(Kind)));
 
   for (auto I : Inputs) {
-    WrapperArgs.push_back("-format=spirv");
     WrapperArgs.push_back(I.getFilename());
   }
 
