@@ -15,6 +15,11 @@
 
 namespace cl {
 namespace sycl {
+// Forward declaration
+template <typename dataT, int dimensions, access::mode accessMode,
+          access::target accessTarget, access::placeholder isPlaceholder>
+class accessor;
+
 template <typename ElementType, access::address_space Space> class multi_ptr {
 public:
   using element_type = ElementType;
@@ -166,9 +171,9 @@ public:
   void prefetch(size_t NumElements) const {
     size_t NumBytes = NumElements * sizeof(ElementType);
 #ifdef __SYCL_DEVICE_ONLY__
-    auto PrefetchPtr = reinterpret_cast<const __global char*>(m_Pointer);
+    auto PrefetchPtr = reinterpret_cast<const __global char *>(m_Pointer);
 #else
-    auto PrefetchPtr = reinterpret_cast<const char*>(m_Pointer);
+    auto PrefetchPtr = reinterpret_cast<const char *>(m_Pointer);
 #endif
     cl::__spirv::prefetch(PrefetchPtr, NumBytes);
   }
@@ -232,7 +237,8 @@ public:
                 _Space == Space &&
                 Space == access::address_space::global_space>::type>
   multi_ptr(
-      accessor<ElementType, dimensions, Mode, access::target::global_buffer>
+      accessor<ElementType, dimensions, Mode, access::target::global_buffer,
+               access::placeholder::false_t>
           Accessor)
       : multi_ptr(Accessor.get_pointer()) {}
 
@@ -242,8 +248,9 @@ public:
       access::address_space _Space = Space,
       typename = typename std::enable_if<
           _Space == Space && Space == access::address_space::local_space>::type>
-  multi_ptr(
-      accessor<ElementType, dimensions, Mode, access::target::local> Accessor)
+  multi_ptr(accessor<ElementType, dimensions, Mode, access::target::local,
+                     access::placeholder::false_t>
+                Accessor)
       : multi_ptr(Accessor.get_pointer()) {}
 
   // Only if Space == constant_space
@@ -253,7 +260,8 @@ public:
                 _Space == Space &&
                 Space == access::address_space::constant_space>::type>
   multi_ptr(
-      accessor<ElementType, dimensions, Mode, access::target::constant_buffer>
+      accessor<ElementType, dimensions, Mode, access::target::constant_buffer,
+               access::placeholder::false_t>
           Accessor)
       : multi_ptr(Accessor.get_pointer()) {}
 
@@ -268,7 +276,8 @@ public:
   explicit operator multi_ptr<ElementType, Space>() const {
     using elem_pointer_t =
         typename detail::PtrValueType<ElementType, Space>::type *;
-    return multi_ptr<ElementType, Space>(static_cast<elem_pointer_t>(m_Pointer));
+    return multi_ptr<ElementType, Space>(
+        static_cast<elem_pointer_t>(m_Pointer));
   }
 
 private:
@@ -320,7 +329,6 @@ bool operator<=(const multi_ptr<ElementType, Space> &lhs,
                 const multi_ptr<ElementType, Space> &rhs) {
   return lhs.get() <= rhs.get();
 }
-
 
 template <typename ElementType, access::address_space Space>
 bool operator>=(const multi_ptr<ElementType, Space> &lhs,

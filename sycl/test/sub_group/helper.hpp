@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include <CL/sycl.hpp>
+#include <cmath>
 #include <iostream>
 
 using namespace cl::sycl;

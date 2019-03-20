@@ -16,15 +16,15 @@
 
 /// This struct is a record of the device image information
 struct __tgt_device_image {
-  void *ImageStart;                  // Pointer to the target code start
-  void *ImageEnd;                    // Pointer to the target code end
+  void *ImageStart; // Pointer to the target code start
+  void *ImageEnd;   // Pointer to the target code end
 };
 
 /// This struct is a record of all the host code that may be offloaded to a
 /// target.
 struct __tgt_bin_desc {
-  int32_t NumDeviceImages;           // Number of device types supported
-  __tgt_device_image *DeviceImages;  // Array of device images (1 per dev. type)
+  int32_t NumDeviceImages;          // Number of device types supported
+  __tgt_device_image *DeviceImages; // Array of device images (1 per dev. type)
 };
 
 // +++ Entry points referenced by the offload wrapper object {
@@ -52,7 +52,8 @@ public:
   static ProgramManager &getInstance();
   cl_program createOpenCLProgram(const context &Context);
   cl_program getBuiltOpenCLProgram(const context &Context);
-  cl_kernel getOrCreateKernel(const context &Context, const char *KernelName);
+  cl_kernel getOrCreateKernel(const context &Context,
+                              const string_class &KernelName);
   cl_program getClProgramFromClKernel(cl_kernel ClKernel);
 
   void setDeviceImages(__tgt_bin_desc *_DeviceImages) {

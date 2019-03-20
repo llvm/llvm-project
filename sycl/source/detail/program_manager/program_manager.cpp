@@ -129,13 +129,13 @@ cl_program ProgramManager::getBuiltOpenCLProgram(const context &Context) {
 }
 
 cl_kernel ProgramManager::getOrCreateKernel(const context &Context,
-                                            const char *KernelName) {
+                                            const string_class &KernelName) {
   cl_program Program = getBuiltOpenCLProgram(Context);
-  auto &KernelsCache = m_CachedKernels[Program];
-  cl_kernel &Kernel = KernelsCache[string_class(KernelName)];
+  std::map<string_class, cl_kernel> &KernelsCache = m_CachedKernels[Program];
+  cl_kernel &Kernel = KernelsCache[KernelName];
   if (!Kernel) {
     cl_int Err = CL_SUCCESS;
-    Kernel = clCreateKernel(Program, KernelName, &Err);
+    Kernel = clCreateKernel(Program, KernelName.c_str(), &Err);
     CHECK_OCL_CODE(Err);
   }
   return Kernel;

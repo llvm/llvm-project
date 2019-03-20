@@ -45,6 +45,7 @@
 #endif // __HAS_EXT_VECTOR_TYPE__
 
 #include <CL/sycl/detail/common.hpp>
+#include <CL/sycl/multi_ptr.hpp>
 
 // 4.10.1: Scalar data types
 // 4.10.2: SYCL vector types
@@ -733,7 +734,7 @@ private:
   DataT getValue(int Index, int) const {
     return m_Data[Index];
   }
-#else // __SYCL_USE_EXT_VECTOR_TYPE__
+#else  // __SYCL_USE_EXT_VECTOR_TYPE__
   template <int Num = NumElements,
             typename = typename std::enable_if<1 != Num>::type>
   void setValue(int Index, const DataT &Value, int) {
@@ -1286,9 +1287,7 @@ private:
       return IDXs[index >= getNumElements() ? 0 : index];
     }
   };
-  static constexpr int Indexer(int index) {
-    return IndexerHelper::get(index);
-  }
+  static constexpr int Indexer(int index) { return IndexerHelper::get(index); }
 
 public:
 #ifdef __SYCL_ACCESS_RETURN
