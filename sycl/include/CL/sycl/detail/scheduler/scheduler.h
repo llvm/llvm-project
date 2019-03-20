@@ -146,6 +146,8 @@ public:
   void updateHost(accessor<T, Dimensions, mode, tgt, isPlaceholder> &Acc,
                   cl::sycl::event &Event);
 
+  CommandPtr insertUpdateHostCmd(const BufferReqPtr &BufStor);
+
   // Frees the specified buffer_impl.
   template <typename AllocatorT>
   void removeBuffer(detail::buffer_impl<AllocatorT> &Buf);
@@ -201,6 +203,7 @@ public:
   // and the unordered_set is convenient as it does not need operator<().
   void getDepEventsRecursive(std::unordered_set<cl::sycl::event> &EventsSet,
                              EventImplPtr Event);
+
 protected:
   // TODO: Add releasing of OpenCL buffers.
 
@@ -214,6 +217,7 @@ protected:
   // Recursively generates dot records for the command passed and all that the
   // command depends on.
   void printGraphForCommand(CommandPtr Cmd, std::ostream &Stream) const;
+
 private:
   Scheduler();
   ~Scheduler();

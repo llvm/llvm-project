@@ -204,7 +204,6 @@ void Scheduler::copyBack(detail::buffer_impl<AllocatorT> &Buf) {
 template <access::mode Mode, access::target Target, typename AllocatorT>
 void Scheduler::updateHost(detail::buffer_impl<AllocatorT> &Buf,
                            cl::sycl::event &Event) {
-  CommandPtr UpdateHostCmd;
   BufferReqPtr BufStor =
       std::make_shared<BufferStorage<AllocatorT, Mode, Target>>(Buf);
 
@@ -212,17 +211,7 @@ void Scheduler::updateHost(detail::buffer_impl<AllocatorT> &Buf,
     return;
   }
 
-  // TODO: Find a better way to say that we need copy to HOST, just nullptr?
-  cl::sycl::device HostDevice;
-  UpdateHostCmd = std::make_shared<MemMoveCommand>(
-      BufStor, m_BuffersEvolution[BufStor].back()->getQueue(),
-      detail::getSyclObjImpl(cl::sycl::queue(HostDevice)),
-      cl::sycl::access::mode::read_write);
-
-  // Add dependency if there was operations with the buffer already.
-  UpdateHostCmd->addDep(m_BuffersEvolution[BufStor].back(), BufStor);
-
-  m_BuffersEvolution[BufStor].push_back(UpdateHostCmd);
+  CommandPtr UpdateHostCmd = insertUpdateHostCmd(BufStor);
   Event = EnqueueCommand(std::move(UpdateHostCmd));
 }
 
@@ -243,10 +232,8 @@ void Scheduler::removeBuffer(detail::buffer_impl<AllocatorT> &Buf) {
   m_BuffersEvolution.erase(BufStor);
 }
 
-static bool cmdsHaveEqualCxtAndDev(const CommandPtr &LHS,
-                                   const CommandPtr &RHS) {
-  return LHS->getQueue()->get_device() == RHS->getQueue()->get_device() &&
-         LHS->getQueue()->get_context() == LHS->getQueue()->get_context();
+static bool cmdsHaveEqualCxt(const CommandPtr &LHS, const CommandPtr &RHS) {
+  return LHS->getQueue()->get_context() == RHS->getQueue()->get_context();
 }
 
 // Adds new node to graph, creating an Alloca and MemMove commands if
@@ -262,8 +249,10 @@ inline cl::sycl::event Scheduler::addNode(Node NewNode) {
                                           cl::sycl::access::mode::read_write);
       m_BuffersEvolution[Buf].push_back(AllocaCmd);
     }
+
     // If targets of previous and new command differ - insert memmove command.
-    if (!cmdsHaveEqualCxtAndDev(m_BuffersEvolution[Buf].back(), Cmd)) {
+    if (!cmdsHaveEqualCxt(m_BuffersEvolution[Buf].back(), Cmd)) {
+      insertUpdateHostCmd(Buf);
       CommandPtr MemMoveCmd = std::make_shared<MemMoveCommand>(
           Buf, std::move(m_BuffersEvolution[Buf].back()->getQueue()),
           std::move(NewNode.getQueue()), cl::sycl::access::mode::read_write);

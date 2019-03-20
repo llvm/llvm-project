@@ -16,7 +16,10 @@
 
 namespace cl {
 namespace sycl {
+class context;
 namespace detail {
+class context_impl;
+using ContextImplPtr = std::shared_ptr<cl::sycl::detail::context_impl>;
 
 class event_impl {
 public:
@@ -48,10 +51,15 @@ public:
   // Warning. Returned reference will be invalid if event_impl was destroyed.
   cl_event &getHandleRef();
 
-  void setIsHostEvent(bool Value);
+  const ContextImplPtr &getContextImpl();
+
+  // Warning. Provided cl_context inside ContextImplPtr must be associated
+  // with the cl_event object stored in this class
+  void setContextImpl(const ContextImplPtr &Context);
 
 private:
   cl_event m_Event = nullptr;
+  ContextImplPtr m_Context;
   bool m_OpenCLInterop = false;
   bool m_HostEvent = true;
 };

@@ -43,21 +43,33 @@ void event_impl::waitInternal() const {
 
 cl_event &event_impl::getHandleRef() { return m_Event; }
 
-void event_impl::setIsHostEvent(bool Value) {
-  m_HostEvent = Value;
-  m_OpenCLInterop = !Value;
+const ContextImplPtr &event_impl::getContextImpl() { return m_Context; }
+
+void event_impl::setContextImpl(const ContextImplPtr &Context) {
+  m_HostEvent = Context->is_host();
+  m_OpenCLInterop = !m_HostEvent;
+  m_Context = Context;
 }
 
 event_impl::event_impl(cl_event CLEvent, const context &SyclContext)
-    : m_Event(CLEvent), m_OpenCLInterop(true), m_HostEvent(false) {
-  CHECK_OCL_CODE(clRetainEvent(m_Event));
-  // TODO: Add check that CLEvent is bound to cl_context encapsulated in
-  // SyclContext.
-  if (SyclContext.is_host()) {
+    : m_Event(CLEvent), m_Context(detail::getSyclObjImpl(SyclContext)),
+      m_OpenCLInterop(true), m_HostEvent(false) {
+  if (m_Context->is_host()) {
     throw cl::sycl::invalid_parameter_error(
         "The syclContext must match the OpenCL context associated with the "
         "clEvent.");
   }
+
+  cl_context TempContext;
+  clGetEventInfo(CLEvent, CL_EVENT_CONTEXT, sizeof(cl_context), &TempContext,
+                 nullptr);
+  if (m_Context->getHandleRef() != TempContext) {
+    throw cl::sycl::invalid_parameter_error(
+        "The syclContext must match the OpenCL context associated with the "
+        "clEvent.");
+  }
+
+  CHECK_OCL_CODE(clRetainEvent(m_Event));
 }
 
 void event_impl::wait(
@@ -71,12 +83,11 @@ void event_impl::wait(
     simple_scheduler::Scheduler::getInstance().waitForEvent(Self);
 }
 
-
 void event_impl::wait_and_throw(
     std::shared_ptr<cl::sycl::detail::event_impl> Self) {
   wait(Self);
   cl::sycl::simple_scheduler::Scheduler::getInstance().throwForEventRecursive(
-    Self);
+      Self);
 }
 
 template <>

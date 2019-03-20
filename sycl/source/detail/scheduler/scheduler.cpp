@@ -12,6 +12,7 @@
 #include <CL/sycl/detail/scheduler/scheduler.h>
 #include <CL/sycl/event.hpp>
 #include <CL/sycl/nd_range.hpp>
+#include <CL/sycl/queue.hpp>
 
 #include <cassert>
 #include <fstream>
@@ -35,8 +36,8 @@ Scheduler::Scheduler() {
   }
 }
 
-void Node::addInteropArg(shared_ptr_class<void> Ptr, size_t Size,
-                         int ArgIndex, BufferReqPtr BufReq) {
+void Node::addInteropArg(shared_ptr_class<void> Ptr, size_t Size, int ArgIndex,
+                         BufferReqPtr BufReq) {
   m_InteropArgs.emplace_back(Ptr, Size, ArgIndex, BufReq);
 }
 
@@ -84,7 +85,7 @@ void Scheduler::throwForCmdRecursive(std::shared_ptr<Command> Cmd) {
   QImpl->throw_asynchronous();
 
   std::vector<std::pair<std::shared_ptr<Command>, BufferReqPtr>> Deps =
-    Cmd->getDependencies();
+      Cmd->getDependencies();
   for (auto D : Deps) {
     throwForCmdRecursive(D.first);
   }
@@ -100,15 +101,14 @@ void Scheduler::throwForEventRecursive(EventImplPtr Event) {
 }
 
 void Scheduler::getDepEventsRecursive(
-    std::unordered_set<cl::sycl::event> &EventsSet,
-    EventImplPtr Event) {
+    std::unordered_set<cl::sycl::event> &EventsSet, EventImplPtr Event) {
   auto Cmd = getCmdForEvent(Event);
   if (Cmd == nullptr) {
     return;
   }
 
   std::vector<std::pair<std::shared_ptr<Command>, BufferReqPtr>> Deps =
-    Cmd->getDependencies();
+      Cmd->getDependencies();
   for (auto D : Deps) {
     auto DepEvent = D.first->getEvent();
     EventsSet.insert(DepEvent);
@@ -246,6 +246,21 @@ void Scheduler::printGraphForCommand(CommandPtr Cmd,
 Scheduler &Scheduler::getInstance() {
   static Scheduler Instance;
   return Instance;
+}
+
+CommandPtr Scheduler::insertUpdateHostCmd(const BufferReqPtr &BufStor) {
+  // TODO: Find a better way to say that we need copy to HOST, just nullptr?
+  cl::sycl::device HostDevice;
+  CommandPtr UpdateHostCmd = std::make_shared<MemMoveCommand>(
+      BufStor, m_BuffersEvolution[BufStor].back()->getQueue(),
+      detail::getSyclObjImpl(cl::sycl::queue(HostDevice)),
+      cl::sycl::access::mode::read_write);
+
+  // Add dependency if there was operations with the buffer already.
+  UpdateHostCmd->addDep(m_BuffersEvolution[BufStor].back(), BufStor);
+
+  m_BuffersEvolution[BufStor].push_back(UpdateHostCmd);
+  return UpdateHostCmd;
 }
 
 } // namespace simple_scheduler

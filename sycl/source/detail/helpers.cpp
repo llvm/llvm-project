@@ -21,8 +21,8 @@ std::vector<cl_event> getOrWaitEvents(std::vector<cl::sycl::event> DepEvents,
   std::vector<cl_event> CLEvents;
   for (auto SyclEvent : DepEvents) {
     auto SyclEventImplPtr = detail::getSyclObjImpl(SyclEvent);
-    // TODO: Add check that contexts are equal.
-    if (SyclEventImplPtr->is_host()) {
+    if (SyclEventImplPtr->is_host() ||
+        SyclEventImplPtr->getContextImpl() != Context) {
       SyclEventImplPtr->waitInternal();
     } else {
       CLEvents.push_back(SyclEventImplPtr->getHandleRef());
