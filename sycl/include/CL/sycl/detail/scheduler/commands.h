@@ -16,6 +16,7 @@
 
 #include <CL/sycl/detail/helpers.hpp>
 #include <CL/sycl/detail/kernel_desc.hpp>
+#include <CL/sycl/detail/os_util.hpp>
 #include <CL/sycl/detail/scheduler/requirements.h>
 #include <CL/sycl/event.hpp>
 #include <CL/sycl/exception.hpp>
@@ -168,11 +169,12 @@ template <typename KernelType, int Dimensions, typename RangeType,
 class ExecuteKernelCommand : public Command {
 public:
   ExecuteKernelCommand(KernelType &HostKernel, const std::string KernelName,
+                       csd::OSModuleHandle OSModule,
                        const unsigned int KernelArgsNum,
                        const detail::kernel_param_desc_t *KernelArgs,
                        RangeType workItemsRange, QueueImplPtr Queue,
                        cl_kernel ClKernel, id<Dimensions> workItemOffset = {})
-      : Command(Command::RUN_KERNEL, std::move(Queue)),
+      : Command(Command::RUN_KERNEL, std::move(Queue)), m_OSModule(OSModule),
         m_KernelName(KernelName), m_KernelArgsNum(KernelArgsNum),
         m_KernelArgs(KernelArgs), m_WorkItemsRange(workItemsRange),
         m_WorkItemsOffset(workItemOffset), m_HostKernel(HostKernel),
@@ -323,6 +325,8 @@ private:
   runEnqueueNDRangeKernel(cl_command_queue &EnvQueue, cl_kernel &Kernel,
                           std::vector<cl_event> CLEvents);
 
+  /// A module to be used for kernel resolution
+  csd::OSModuleHandle m_OSModule;
   std::string m_KernelName;
   const unsigned int m_KernelArgsNum;
   const detail::kernel_param_desc_t *m_KernelArgs;

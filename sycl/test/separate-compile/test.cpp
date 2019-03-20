@@ -27,7 +27,7 @@
 //
 // >> ---- wrap device binary
 // >> produce .bc
-// RUN: clang-offload-wrapper -o wrapper.bc -target=sycl-x86_64-pc-linux-gnu -emit-entry-table=0 app.spv
+// RUN: clang-offload-wrapper -o wrapper.bc -host=x86_64-pc-linux-gnu -kind=sycl app.spv
 //
 // >> compile .bc to .o
 // RUN: llc -filetype=obj wrapper.bc -o wrapper.o

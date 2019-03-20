@@ -42,7 +42,7 @@ void ExecuteKernelCommand<
   context Context = m_Queue->get_context();
   if (!m_ClKernel) {
     m_ClKernel = detail::ProgramManager::getInstance().getOrCreateKernel(
-        Context, m_KernelName);
+        m_OSModule, Context, m_KernelName);
   }
 
   if (m_KernelArgs != nullptr) {

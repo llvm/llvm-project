@@ -46,8 +46,12 @@ public:
   typename info::param_traits<info::context, param>::return_type
   get_info() const;
 
+  // Returns underlying native context object (if any) w/o reference count
+  // modification. Caller must ensure the returned object lives on stack only.
+  // It can also be safely passed to the underlying native runtime API.
   // Warning. Returned reference will be invalid if context_impl was destroyed.
   cl_context &getHandleRef();
+  const cl_context &getHandleRef() const;
 
 private:
   async_handler m_AsyncHandler;

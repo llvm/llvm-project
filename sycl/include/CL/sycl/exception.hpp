@@ -38,6 +38,10 @@ protected:
       : msg(std::string(msg) + " " +
             ((cl_err == CL_SUCCESS) ? "" : OCL_CODE_TO_STR(cl_err))),
         cl_err(cl_err), Context(Context) {}
+
+  exception(const std::string &msg, int cl_err = CL_SUCCESS,
+            shared_ptr_class<context> Context = nullptr)
+      : exception(msg.c_str(), cl_err, Context) {}
 };
 
 // Forward declaration
@@ -71,6 +75,8 @@ class runtime_error : public exception {
 public:
   runtime_error(const char *str, cl_int err = CL_SUCCESS)
       : exception(str, err) {}
+  runtime_error(const std::string &str, cl_int err = CL_SUCCESS)
+      : runtime_error(str.c_str(), err) {}
 };
 class kernel_error : public runtime_error {
   using runtime_error::runtime_error;

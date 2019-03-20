@@ -9,6 +9,7 @@
 #pragma once
 
 #include <CL/sycl/context.hpp>
+#include <CL/sycl/detail/os_util.hpp>
 #include <CL/sycl/detail/scheduler/commands.h>
 #include <CL/sycl/detail/scheduler/requirements.h>
 #include <CL/sycl/device.hpp>
@@ -62,27 +63,31 @@ public:
 
   // Adds a kernel to this node, maps to single task.
   template <typename KernelType>
-  void addKernel(const std::string &KernelName, const int KernelArgsNum,
+  void addKernel(csd::OSModuleHandle M, const std::string &KernelName,
+                 const int KernelArgsNum,
                  const detail::kernel_param_desc_t *KernelArgs,
                  KernelType KernelFunc, cl_kernel ClKernel = nullptr);
 
   // Adds kernel to this node, maps on range parallel for.
   template <typename KernelType, int Dimensions, typename KernelArgType>
-  void addKernel(const std::string &KernelName, const int KernelArgsNum,
+  void addKernel(csd::OSModuleHandle M, const std::string &KernelName,
+                 const int KernelArgsNum,
                  const detail::kernel_param_desc_t *KernelArgs,
                  KernelType KernelFunc, range<Dimensions> NumWorkItems,
                  cl_kernel ClKernel = nullptr);
 
   // Adds kernel to this node, maps on range parallel for with offset.
   template <typename KernelType, int Dimensions, typename KernelArgType>
-  void addKernel(const std::string &KernelName, const int KernelArgsNum,
+  void addKernel(csd::OSModuleHandle M, const std::string &KernelName,
+                 const int KernelArgsNum,
                  const detail::kernel_param_desc_t *KernelArgs,
                  KernelType KernelFunc, range<Dimensions> NumWorkItems,
                  id<Dimensions> WorkItemOffset, cl_kernel ClKernel = nullptr);
 
   // Adds kernel to this node, maps on nd_range parallel for.
   template <typename KernelType, int Dimensions>
-  void addKernel(const std::string &KernelName, const int KernelArgsNum,
+  void addKernel(csd::OSModuleHandle M, const std::string &KernelName,
+                 const int KernelArgsNum,
                  const detail::kernel_param_desc_t *KernelArgs,
                  KernelType KernelFunc, nd_range<Dimensions> ExecutionRange,
                  cl_kernel ClKernel = nullptr);
