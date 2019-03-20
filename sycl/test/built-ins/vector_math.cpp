@@ -112,7 +112,7 @@ int main() {
     assert(r2 == 3);
   }
 
-  // fract
+  // fract with global memory
   /*{
     cl::sycl::cl_float2 r{0, 0};
     cl::sycl::cl_float2 i{0, 0};
@@ -127,6 +127,38 @@ int main() {
         cgh.single_task<class fractF2GF2>([=]() {
           global_ptr<cl::sycl::cl_float2> Iptr(AccI);
           AccR[0] = cl::sycl::fract(cl::sycl::cl_float2{1.5f, 2.5f}, Iptr);
+        });
+      });
+    }
+
+    cl::sycl::cl_float r1 = r.x();
+    cl::sycl::cl_float r2 = r.y();
+    cl::sycl::cl_float i1 = i.x();
+    cl::sycl::cl_float i2 = i.y();
+    std::cout << "r1 " << r1 << " r2 " << r2 << " i1 " << i1 << " i2 " << i2
+              << std::endl;
+    assert(r1 == 0.5f);
+    assert(r2 == 0.5f);
+    assert(i1 == 1.0f);
+    assert(i2 == 2.0f);
+  }
+
+  // fract with private memory
+  {
+    cl::sycl::cl_float2 r{0, 0};
+    cl::sycl::cl_float2 i{0, 0};
+    {
+      buffer<cl::sycl::cl_float2, 1> BufR(&r, range<1>(1));
+      buffer<cl::sycl::cl_float2, 1> BufI(&i, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::read_write>(cgh);
+        auto AccI = BufI.get_access<access::mode::read_write>(cgh);
+        cgh.single_task<class fractF2PF2>([=]() {
+          cl::sycl::cl_float2 temp(0.0);
+          private_ptr<cl::sycl::cl_float2> Iptr(&temp);
+          AccR[0] = cl::sycl::fract(cl::sycl::cl_float2{1.5f, 2.5f}, Iptr);
+          AccI[0] = *Iptr;
         });
       });
     }

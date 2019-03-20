@@ -273,8 +273,6 @@ template <typename T, typename T2>
 typename std::enable_if<
     detail::is_genfloat<T>::value && detail::is_genfloatptr<T2>::value, T>::type
 fract(T x, T2 iptr) __NOEXC {
-  static_assert(T2::address_space != access::address_space::private_space,
-                "No support for private pointers now");
   return __sycl_std::__invoke_fract<T>(x, iptr);
 }
 
@@ -283,8 +281,6 @@ template <typename T, typename T2>
 typename std::enable_if<
     detail::is_genfloat<T>::value && detail::is_genintptr<T2>::value, T>::type
 frexp(T x, T2 exp) __NOEXC {
-  static_assert(T2::address_space != access::address_space::private_space,
-                "No support for private pointers now");
   return __sycl_std::__invoke_frexp<T>(x, exp);
 }
 
@@ -340,8 +336,6 @@ template <typename T, typename T2>
 typename std::enable_if<
     detail::is_genfloat<T>::value && detail::is_genintptr<T2>::value, T>::type
 lgamma_r(T x, T2 signp) __NOEXC {
-  static_assert(T2::address_space != access::address_space::private_space,
-                "No support for private pointers now");
   return __sycl_std::__invoke_lgamma_r<T>(x, signp);
 }
 
@@ -406,8 +400,6 @@ template <typename T, typename T2>
 typename std::enable_if<
     detail::is_genfloat<T>::value && detail::is_genfloatptr<T2>::value, T>::type
 modf(T x, T2 iptr) __NOEXC {
-  static_assert(T2::address_space != access::address_space::private_space,
-                "No support for private pointers now");
   return __sycl_std::__invoke_modf<T>(x, iptr);
 }
 
@@ -463,8 +455,6 @@ template <typename T, typename T2>
 typename std::enable_if<
     detail::is_genfloat<T>::value && detail::is_genintptr<T2>::value, T>::type
 remquo(T x, T y, T2 quo) __NOEXC {
-  static_assert(T2::address_space != access::address_space::private_space,
-                "No support for private pointers now");
   return __sycl_std::__invoke_remquo<T>(x, y, quo);
 }
 
@@ -509,8 +499,6 @@ template <typename T, typename T2>
 typename std::enable_if<
     detail::is_genfloat<T>::value && detail::is_genfloatptr<T2>::value, T>::type
 sincos(T x, T2 cosval) __NOEXC {
-  static_assert(T2::address_space != access::address_space::private_space,
-                "No support for private pointers now");
   return __sycl_std::__invoke_sincos<T>(x, cosval);
 }
 
