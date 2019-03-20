@@ -1175,6 +1175,9 @@ static bool maskIsAllOneOrUndef(Value *Mask) {
   return true;
 }
 
+// TODO, Obvious Missing Transforms:
+// * Dereferenceable address -> speculative load/select
+// * Narrow width by halfs excluding zero/undef lanes
 static Value *simplifyMaskedLoad(const IntrinsicInst &II,
                                  InstCombiner::BuilderTy &Builder) {
   // If the mask is all ones or undefs, this is a plain vector load of the 1st
@@ -1189,6 +1192,10 @@ static Value *simplifyMaskedLoad(const IntrinsicInst &II,
   return nullptr;
 }
 
+// TODO, Obvious Missing Transforms:
+// * SimplifyDemandedVectorElts
+// * Single constant active lane -> store
+// * Narrow width by halfs excluding zero/undef lanes
 static Instruction *simplifyMaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
   if (!ConstMask)
@@ -1208,6 +1215,11 @@ static Instruction *simplifyMaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   return nullptr;
 }
 
+// TODO, Obvious Missing Transforms:
+// * Single constant active lane load -> load
+// * Dereferenceable address & few lanes -> scalarize speculative load/selects
+// * Adjacent vector addresses -> masked.load
+// * Narrow width by halfs excluding zero/undef lanes
 static Instruction *simplifyMaskedGather(IntrinsicInst &II, InstCombiner &IC) {
   // If the mask is all zeros, return the "passthru" argument of the gather.
   auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
@@ -1251,6 +1263,11 @@ static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
   return cast<Instruction>(Result);
 }
 
+// TODO, Obvious Missing Transforms:
+// * SimplifyDemandedVectorElts
+// * Single constant active lane -> store
+// * Adjacent vector addresses -> masked.store
+// * Narrow store width by halfs excluding zero/undef lanes
 static Instruction *simplifyMaskedScatter(IntrinsicInst &II, InstCombiner &IC) {
   // If the mask is all zeros, a scatter does nothing.
   auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));

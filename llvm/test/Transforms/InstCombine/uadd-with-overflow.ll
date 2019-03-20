@@ -33,9 +33,8 @@ define { i8, i1 } @fold_on_constant_add_no_overflow(i8 %x) {
 
 define { i8, i1 } @no_fold_on_constant_add_overflow(i8 %x) {
 ; CHECK-LABEL: @no_fold_on_constant_add_overflow(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[X:%.*]], -56
-; CHECK-NEXT:    [[B:%.*]] = tail call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[A]], i8 56)
-; CHECK-NEXT:    ret { i8, i1 } [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[X:%.*]], 0
+; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
 ;
   %a = add nuw i8 %x, 200
   %b = tail call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %a, i8 56)

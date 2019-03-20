@@ -1436,6 +1436,26 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
     if (!II) break;
     switch (II->getIntrinsicID()) {
+    case Intrinsic::masked_gather: // fallthrough
+    case Intrinsic::masked_load: {
+      APInt DemandedPtrs(DemandedElts), DemandedPassThrough(DemandedElts);
+      if (auto *CV = dyn_cast<ConstantVector>(II->getOperand(2)))
+        for (unsigned i = 0; i < VWidth; i++) {
+          Constant *CElt = CV->getAggregateElement(i);
+          if (CElt->isNullValue())
+            DemandedPtrs.clearBit(i);
+          else if (CElt->isAllOnesValue())
+            DemandedPassThrough.clearBit(i);
+        }
+      if (II->getIntrinsicID() == Intrinsic::masked_gather)
+        simplifyAndSetOp(II, 0, DemandedPtrs, UndefElts2);
+      simplifyAndSetOp(II, 3, DemandedPassThrough, UndefElts3);
+      
+      // Output elements are undefined if the element from both sources are.
+      // TODO: can strengthen via mask as well.
+      UndefElts = UndefElts2 & UndefElts3;
+      break;
+    }
     case Intrinsic::x86_xop_vfrcz_ss:
     case Intrinsic::x86_xop_vfrcz_sd:
       // The instructions for these intrinsics are speced to zero upper bits not

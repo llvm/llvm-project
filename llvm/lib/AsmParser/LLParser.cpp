@@ -4838,6 +4838,15 @@ bool LLParser::ParseDIExpression(MDNode *&Result, bool IsDistinct) {
         return TokError(Twine("invalid DWARF op '") + Lex.getStrVal() + "'");
       }
 
+      if (Lex.getKind() == lltok::DwarfAttEncoding) {
+        if (unsigned Op = dwarf::getAttributeEncoding(Lex.getStrVal())) {
+          Lex.Lex();
+          Elements.push_back(Op);
+          continue;
+        }
+        return TokError(Twine("invalid DWARF attribute encoding '") + Lex.getStrVal() + "'");
+      }
+
       if (Lex.getKind() != lltok::APSInt || Lex.getAPSIntVal().isSigned())
         return TokError("expected unsigned integer");
 

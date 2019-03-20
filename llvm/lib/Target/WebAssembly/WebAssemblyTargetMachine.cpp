@@ -191,6 +191,12 @@ public:
   void addPostRegAlloc() override;
   bool addGCPasses() override { return false; }
   void addPreEmitPass() override;
+
+  // No reg alloc
+  bool addRegAssignmentFast() override { return false; }
+
+  // No reg alloc
+  bool addRegAssignmentOptimized() override { return false; }
 };
 } // end anonymous namespace
 

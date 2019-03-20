@@ -17,6 +17,7 @@
 #include "DwarfUnit.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -1184,4 +1185,28 @@ void DwarfCompileUnit::addAddrTableBase() {
                   getDwarfVersion() >= 5 ? dwarf::DW_AT_addr_base
                                          : dwarf::DW_AT_GNU_addr_base,
                   Label, TLOF.getDwarfAddrSection()->getBeginSymbol());
+}
+
+void DwarfCompileUnit::addBaseTypeRef(DIEValueList &Die, int64_t Idx) {
+  Die.addValue(DIEValueAllocator, (dwarf::Attribute)0, dwarf::DW_FORM_udata,
+               new (DIEValueAllocator) DIEBaseTypeRef(this, Idx));
+}
+
+void DwarfCompileUnit::createBaseTypeDIEs() {
+  // Insert the base_type DIEs directly after the CU so that their offsets will
+  // fit in the fixed size ULEB128 used inside the location expressions.
+  // Maintain order by iterating backwards and inserting to the front of CU
+  // child list.
+  for (auto &Btr : reverse(ExprRefedBaseTypes)) {
+    DIE &Die = getUnitDie().addChildFront(
+      DIE::get(DIEValueAllocator, dwarf::DW_TAG_base_type));
+    SmallString<32> Str;
+    addString(Die, dwarf::DW_AT_name,
+              Twine(dwarf::AttributeEncodingString(Btr.Encoding) +
+                    "_" + Twine(Btr.BitSize)).toStringRef(Str));
+    addUInt(Die, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1, Btr.Encoding);
+    addUInt(Die, dwarf::DW_AT_byte_size, None, Btr.BitSize / 8);
+
+    Btr.Die = &Die;
+  }
 }

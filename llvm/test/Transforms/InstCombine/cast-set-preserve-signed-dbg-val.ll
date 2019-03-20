@@ -14,7 +14,7 @@ define i16 @test5(i16 %A) !dbg !34 {
   ;
   ; The high 16 bits of the original 'and' require sign-extending the new 16-bit and:
   ; CHECK-NEXT: call void @llvm.dbg.value(metadata i16 [[and]], metadata [[C:![0-9]+]],
-  ; CHECK-SAME:    metadata !DIExpression(DW_OP_dup, DW_OP_constu, 15, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_or, DW_OP_stack_value)
+  ; CHECK-SAME:    metadata !DIExpression(DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)
 
   %D = trunc i32 %C to i16, !dbg !42
   call void @llvm.dbg.value(metadata i16 %D, metadata !38, metadata !DIExpression()), !dbg !42

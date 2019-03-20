@@ -164,3 +164,6 @@ cqto
 
 // 32: error: instruction requires: 64-bit mode
 cltq
+
+// 32: error: instruction requires: 64-bit mode
+cmpxchg16b (%eax)

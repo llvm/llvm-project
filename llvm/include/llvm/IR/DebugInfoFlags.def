@@ -50,7 +50,6 @@ HANDLE_DI_FLAG((3 << 16), VirtualInheritance)
 HANDLE_DI_FLAG((1 << 18), IntroducedVirtual)
 HANDLE_DI_FLAG((1 << 19), BitField)
 HANDLE_DI_FLAG((1 << 20), NoReturn)
-HANDLE_DI_FLAG((1 << 21), MainSubprogram)
 HANDLE_DI_FLAG((1 << 22), TypePassByValue)
 HANDLE_DI_FLAG((1 << 23), TypePassByReference)
 HANDLE_DI_FLAG((1 << 24), EnumClass)
@@ -88,11 +87,12 @@ HANDLE_DISP_FLAG((1u << 4), Optimized)
 HANDLE_DISP_FLAG((1u << 5), Pure)
 HANDLE_DISP_FLAG((1u << 6), Elemental)
 HANDLE_DISP_FLAG((1u << 7), Recursive)
+HANDLE_DISP_FLAG((1u << 8), MainSubprogram)
 
 #ifdef DISP_FLAG_LARGEST_NEEDED
 // Intended to be used with ADT/BitmaskEnum.h.
 // NOTE: Always must be equal to largest flag, check this when adding new flags.
-HANDLE_DISP_FLAG((1 << 7), Largest)
+HANDLE_DISP_FLAG((1 << 8), Largest)
 #undef DISP_FLAG_LARGEST_NEEDED
 #endif
 

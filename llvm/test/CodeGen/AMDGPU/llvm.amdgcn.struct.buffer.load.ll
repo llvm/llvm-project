@@ -144,6 +144,62 @@ main_body:
   ret {<4 x float>, <2 x float>, float} %r2
 }
 
+;CHECK-LABEL: {{^}}struct_buffer_load_ubyte:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_ubyte v{{[0-9]}}, v[0:1], s[0:3], 0 idxen offen
+;CHECK: s_waitcnt vmcnt(0)
+;CHECK-NEXT: v_cvt_f32_ubyte0_e32 v0, v0
+;CHECK-NEXT: ; return to shader part epilog
+define amdgpu_ps float @struct_buffer_load_ubyte(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs) {
+main_body:
+  %tmp = call i8 @llvm.amdgcn.struct.buffer.load.i8(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 0, i32 0)
+  %tmp2 = zext i8 %tmp to i32
+  %val = uitofp i32 %tmp2 to float
+  ret float %val
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_load_ushort:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_ushort v{{[0-9]}}, v[0:1], s[0:3], 0 idxen offen
+;CHECK-NEXT: s_waitcnt vmcnt(0)
+;CHECK-NEXT: v_cvt_f32_u32_e32 v0, v0
+;CHECK-NEXT: ; return to shader part epilog
+define amdgpu_ps float @struct_buffer_load_ushort(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs) {
+main_body:
+  %tmp = call i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 0, i32 0)
+  %tmp2 = zext i16 %tmp to i32
+  %val = uitofp i32 %tmp2 to float
+  ret float %val
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_load_sbyte:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_sbyte v{{[0-9]}}, v[0:1], s[0:3], 0 idxen offen
+;CHECK-NEXT: s_waitcnt vmcnt(0)
+;CHECK-NEXT: v_cvt_f32_i32_e32 v0, v0
+;CHECK-NEXT: ; return to shader part epilog
+define amdgpu_ps float @struct_buffer_load_sbyte(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs) {
+main_body:
+  %tmp = call i8 @llvm.amdgcn.struct.buffer.load.i8(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 0, i32 0)
+  %tmp2 = sext i8 %tmp to i32
+  %val = sitofp i32 %tmp2 to float
+  ret float %val
+}
+
+;CHECK-LABEL: {{^}}struct_buffer_load_sshort:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: buffer_load_sshort v{{[0-9]}}, v[0:1], s[0:3], 0 idxen offen
+;CHECK-NEXT: s_waitcnt vmcnt(0)
+;CHECK-NEXT: v_cvt_f32_i32_e32 v0, v0
+;CHECK-NEXT: ; return to shader part epilog
+define amdgpu_ps float @struct_buffer_load_sshort(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs) {
+main_body:
+  %tmp = call i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 0, i32 0)
+  %tmp2 = sext i16 %tmp to i32
+  %val = sitofp i32 %tmp2 to float
+  ret float %val
+}
+
 declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32) #0
 declare <2 x float> @llvm.amdgcn.struct.buffer.load.v2f32(<4 x i32>, i32, i32, i32, i32) #0
 declare <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32>, i32, i32, i32, i32) #0
@@ -151,5 +207,7 @@ declare i32 @llvm.amdgcn.struct.buffer.load.i32(<4 x i32>, i32, i32, i32, i32) #
 declare <2 x i32> @llvm.amdgcn.struct.buffer.load.v2i32(<4 x i32>, i32, i32, i32, i32) #0
 declare <4 x i32> @llvm.amdgcn.struct.buffer.load.v4i32(<4 x i32>, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
+declare i8 @llvm.amdgcn.struct.buffer.load.i8(<4 x i32>, i32, i32, i32, i32) #0
+declare i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32>, i32, i32, i32, i32) #0
 
 attributes #0 = { nounwind readonly }

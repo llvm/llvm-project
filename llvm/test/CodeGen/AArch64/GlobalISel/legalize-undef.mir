@@ -42,12 +42,8 @@ body: |
   bb.0:
 
     ; CHECK-LABEL: name: test_implicit_def_v2s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[DEF3:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF1]](s32), [[DEF2]](s32), [[DEF3]](s32)
-    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[DEF]](<4 x s32>)
     ; CHECK: $x0 = COPY [[UV]](<2 x s32>)
     ; CHECK: $x1 = COPY [[UV1]](<2 x s32>)
     %0:_(<4 x s32>) = G_IMPLICIT_DEF
