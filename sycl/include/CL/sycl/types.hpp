@@ -350,7 +350,13 @@ public:
 
   vec() { m_Data = {0}; }
 
+  // TODO Remove this difference between host and device side after
+  // when root cause of API incompatibility will be fixed
+#ifdef __SYCL_DEVICE_ONLY__
   vec(const vec &Rhs) = default;
+#else
+  vec(const vec &Rhs) : m_Data(Rhs.m_Data) {}
+#endif
 
   vec(vec &&Rhs) = default;
 

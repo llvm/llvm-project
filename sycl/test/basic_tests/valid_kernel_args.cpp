@@ -29,6 +29,8 @@ struct SomeStructure {
   static_assert(std::is_trivially_copyable<Type>::value,                       \
                 "Is not trivially copyable type.");
 
+#ifdef __SYCL_DEVICE_ONLY__
 CHECK_PASSING_TO_KERNEL_BY_VALUE(int)
 CHECK_PASSING_TO_KERNEL_BY_VALUE(cl::sycl::cl_uchar4)
 CHECK_PASSING_TO_KERNEL_BY_VALUE(SomeStructure)
+#endif
