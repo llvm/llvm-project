@@ -176,3 +176,35 @@ bool SBInstructionList::DumpEmulationForAllInstructions(const char *triple) {
   }
   return true;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBInstructionList>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBInstructionList, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBInstructionList,
+                            (const lldb::SBInstructionList &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBInstructionList &,
+      SBInstructionList, operator=,(const lldb::SBInstructionList &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBInstructionList, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBInstructionList, operator bool, ());
+  LLDB_REGISTER_METHOD(size_t, SBInstructionList, GetSize, ());
+  LLDB_REGISTER_METHOD(lldb::SBInstruction, SBInstructionList,
+                       GetInstructionAtIndex, (uint32_t));
+  LLDB_REGISTER_METHOD(
+      size_t, SBInstructionList, GetInstructionsCount,
+      (const lldb::SBAddress &, const lldb::SBAddress &, bool));
+  LLDB_REGISTER_METHOD(void, SBInstructionList, Clear, ());
+  LLDB_REGISTER_METHOD(void, SBInstructionList, AppendInstruction,
+                       (lldb::SBInstruction));
+  LLDB_REGISTER_METHOD(void, SBInstructionList, Print, (FILE *));
+  LLDB_REGISTER_METHOD(bool, SBInstructionList, GetDescription,
+                       (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(bool, SBInstructionList,
+                       DumpEmulationForAllInstructions, (const char *));
+}
+
+}
+}

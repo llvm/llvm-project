@@ -120,20 +120,21 @@ public:
   /// \param Expected -- the kind of lock expected.
   /// \param Received -- the kind of lock received.
   /// \param LocLocked -- The SourceLocation of the Lock.
-  /// \param Loc -- The SourceLocation of the Unlock.
+  /// \param LocUnlock -- The SourceLocation of the Unlock.
   virtual void handleIncorrectUnlockKind(StringRef Kind, Name LockName,
                                          LockKind Expected, LockKind Received,
                                          SourceLocation LocLocked,
-                                         SourceLocation Loc) {}
+                                         SourceLocation LocUnlock) {}
 
   /// Warn about lock function calls for locks which are already held.
   /// \param Kind -- the capability's name parameter (role, mutex, etc).
   /// \param LockName -- A StringRef name for the lock expression, to be printed
   /// in the error message.
   /// \param LocLocked -- The location of the first lock expression.
-  /// \param Loc -- The location of the second lock expression.
+  /// \param LocDoubleLock -- The location of the second lock expression.
   virtual void handleDoubleLock(StringRef Kind, Name LockName,
-                                SourceLocation LocLocked, SourceLocation Loc) {}
+                                SourceLocation LocLocked,
+                                SourceLocation LocDoubleLock) {}
 
   /// Warn about situations where a mutex is sometimes held and sometimes not.
   /// The three situations are:

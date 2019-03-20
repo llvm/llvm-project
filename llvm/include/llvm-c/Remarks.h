@@ -34,86 +34,201 @@ extern "C" {
 #define REMARKS_API_VERSION 0
 
 /**
+ * The type of the emitted remark.
+ */
+enum LLVMRemarkType {
+  LLVMRemarkTypeUnknown,
+  LLVMRemarkTypePassed,
+  LLVMRemarkTypeMissed,
+  LLVMRemarkTypeAnalysis,
+  LLVMRemarkTypeAnalysisFPCommute,
+  LLVMRemarkTypeAnalysisAliasing,
+  LLVMRemarkTypeFailure
+};
+
+/**
  * String containing a buffer and a length. The buffer is not guaranteed to be
  * zero-terminated.
  *
  * \since REMARKS_API_VERSION=0
  */
-typedef struct {
-  const char *Str;
-  uint32_t Len;
-} LLVMRemarkStringRef;
+typedef struct LLVMRemarkOpaqueString *LLVMRemarkStringRef;
+
+/**
+ * Returns the buffer holding the string.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern const char *LLVMRemarkStringGetData(LLVMRemarkStringRef String);
+
+/**
+ * Returns the size of the string.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern uint32_t LLVMRemarkStringGetLen(LLVMRemarkStringRef String);
 
 /**
  * DebugLoc containing File, Line and Column.
  *
  * \since REMARKS_API_VERSION=0
  */
-typedef struct {
-  // File:
-  LLVMRemarkStringRef SourceFile;
-  // Line:
-  uint32_t SourceLineNumber;
-  // Column:
-  uint32_t SourceColumnNumber;
-} LLVMRemarkDebugLoc;
+typedef struct LLVMRemarkOpaqueDebugLoc *LLVMRemarkDebugLocRef;
+
+/**
+ * Return the path to the source file for a debug location.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern LLVMRemarkStringRef
+LLVMRemarkDebugLocGetSourceFilePath(LLVMRemarkDebugLocRef DL);
+
+/**
+ * Return the line in the source file for a debug location.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern uint32_t LLVMRemarkDebugLocGetSourceLine(LLVMRemarkDebugLocRef DL);
+
+/**
+ * Return the column in the source file for a debug location.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern uint32_t LLVMRemarkDebugLocGetSourceColumn(LLVMRemarkDebugLocRef DL);
 
 /**
  * Element of the "Args" list. The key might give more information about what
- * are the semantics of the value, e.g. "Callee" will tell you that the value
+ * the semantics of the value are, e.g. "Callee" will tell you that the value
  * is a symbol that names a function.
  *
  * \since REMARKS_API_VERSION=0
  */
-typedef struct {
-  // e.g. "Callee"
-  LLVMRemarkStringRef Key;
-  // e.g. "malloc"
-  LLVMRemarkStringRef Value;
-
-  // "DebugLoc": Optional
-  LLVMRemarkDebugLoc DebugLoc;
-} LLVMRemarkArg;
+typedef struct LLVMRemarkOpaqueArg *LLVMRemarkArgRef;
 
 /**
- * One remark entry.
+ * Returns the key of an argument. The key defines what the value is, and the
+ * same key can appear multiple times in the list of arguments.
  *
  * \since REMARKS_API_VERSION=0
  */
-typedef struct {
-  // e.g. !Missed, !Passed
-  LLVMRemarkStringRef RemarkType;
-  // "Pass": Required
-  LLVMRemarkStringRef PassName;
-  // "Name": Required
-  LLVMRemarkStringRef RemarkName;
-  // "Function": Required
-  LLVMRemarkStringRef FunctionName;
+extern LLVMRemarkStringRef LLVMRemarkArgGetKey(LLVMRemarkArgRef Arg);
 
-  // "DebugLoc": Optional
-  LLVMRemarkDebugLoc DebugLoc;
-  // "Hotness": Optional
-  uint32_t Hotness;
-  // "Args": Optional. It is an array of `num_args` elements.
-  uint32_t NumArgs;
-  LLVMRemarkArg *Args;
-} LLVMRemarkEntry;
+/**
+ * Returns the value of an argument. This is a string that can contain newlines.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern LLVMRemarkStringRef LLVMRemarkArgGetValue(LLVMRemarkArgRef Arg);
+
+/**
+ * Returns the debug location that is attached to the value of this argument.
+ *
+ * If there is no debug location, the return value will be `NULL`.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern LLVMRemarkDebugLocRef LLVMRemarkArgGetDebugLoc(LLVMRemarkArgRef Arg);
+
+/**
+ * A remark emitted by the compiler.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+typedef struct LLVMRemarkOpaqueEntry *LLVMRemarkEntryRef;
+
+/**
+ * The type of the remark. For example, it can allow users to only keep the
+ * missed optimizations from the compiler.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern enum LLVMRemarkType LLVMRemarkEntryGetType(LLVMRemarkEntryRef Remark);
+
+/**
+ * Get the name of the pass that emitted this remark.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern LLVMRemarkStringRef
+LLVMRemarkEntryGetPassName(LLVMRemarkEntryRef Remark);
+
+/**
+ * Get an identifier of the remark.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern LLVMRemarkStringRef
+LLVMRemarkEntryGetRemarkName(LLVMRemarkEntryRef Remark);
+
+/**
+ * Get the name of the function being processsed when the remark was emitted.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern LLVMRemarkStringRef
+LLVMRemarkEntryGetFunctionName(LLVMRemarkEntryRef Remark);
+
+/**
+ * Returns the debug location that is attached to this remark.
+ *
+ * If there is no debug location, the return value will be `NULL`.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern LLVMRemarkDebugLocRef
+LLVMRemarkEntryGetDebugLoc(LLVMRemarkEntryRef Remark);
+
+/**
+ * Return the hotness of the remark.
+ *
+ * A hotness of `0` means this value is not set.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern uint64_t LLVMRemarkEntryGetHotness(LLVMRemarkEntryRef Remark);
+
+/**
+ * The number of arguments the remark holds.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern uint32_t LLVMRemarkEntryGetNumArgs(LLVMRemarkEntryRef Remark);
+
+/**
+ * Get a new iterator to iterate over a remark's argument.
+ *
+ * If there are no arguments in \p Remark, the return value will be `NULL`.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern LLVMRemarkArgRef LLVMRemarkEntryGetFirstArg(LLVMRemarkEntryRef Remark);
+
+/**
+ * Get the next argument in \p Remark from the position of \p It.
+ *
+ * Returns `NULL` if there are no more arguments available.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern LLVMRemarkArgRef LLVMRemarkEntryGetNextArg(LLVMRemarkArgRef It,
+                                                  LLVMRemarkEntryRef Remark);
 
 typedef struct LLVMRemarkOpaqueParser *LLVMRemarkParserRef;
 
 /**
- * Creates a remark parser that can be used to read and parse the buffer located
- * in \p Buf of size \p Size.
+ * Creates a remark parser that can be used to parse the buffer located in \p
+ * Buf of size \p Size bytes.
  *
- * \p Buf cannot be NULL.
+ * \p Buf cannot be `NULL`.
  *
  * This function should be paired with LLVMRemarkParserDispose() to avoid
  * leaking resources.
  *
  * \since REMARKS_API_VERSION=0
  */
-extern LLVMRemarkParserRef LLVMRemarkParserCreate(const void *Buf,
-                                                  uint64_t Size);
+extern LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
+                                                      uint64_t Size);
 
 /**
  * Returns the next remark in the file.
@@ -121,9 +236,9 @@ extern LLVMRemarkParserRef LLVMRemarkParserCreate(const void *Buf,
  * The value pointed to by the return value is invalidated by the next call to
  * LLVMRemarkParserGetNext().
  *
- * If the parser reaches the end of the buffer, the return value will be NULL.
+ * If the parser reaches the end of the buffer, the return value will be `NULL`.
  *
- * In the case of an error, the return value will be NULL, and:
+ * In the case of an error, the return value will be `NULL`, and:
  *
  * 1) LLVMRemarkParserHasError() will return `1`.
  *
@@ -134,18 +249,16 @@ extern LLVMRemarkParserRef LLVMRemarkParserCreate(const void *Buf,
  *
  * 1) An argument is invalid.
  *
- * 2) There is a YAML parsing error. This type of error aborts parsing
- *    immediately and returns `1`. It can occur on malformed YAML.
+ * 2) There is a parsing error. This can occur on things like malformed YAML.
  *
- * 3) Remark parsing error. If this type of error occurs, the parser won't call
- *    the handler and will continue to the next one. It can occur on malformed
- *    remarks, like missing or extra fields in the file.
+ * 3) There is a Remark semantic error. This can occur on well-formed files with
+ *    missing or extra fields.
  *
  * Here is a quick example of the usage:
  *
  * ```
- * LLVMRemarkParserRef Parser = LLVMRemarkParserCreate(Buf, Size);
- * LLVMRemarkEntry *Remark = NULL;
+ * LLVMRemarkParserRef Parser = LLVMRemarkParserCreateYAML(Buf, Size);
+ * LLVMRemarkEntryRef Remark = NULL;
  * while ((Remark == LLVMRemarkParserGetNext(Parser))) {
  *    // use Remark
  * }
@@ -155,7 +268,7 @@ extern LLVMRemarkParserRef LLVMRemarkParserCreate(const void *Buf,
  *
  * \since REMARKS_API_VERSION=0
  */
-extern LLVMRemarkEntry *LLVMRemarkParserGetNext(LLVMRemarkParserRef Parser);
+extern LLVMRemarkEntryRef LLVMRemarkParserGetNext(LLVMRemarkParserRef Parser);
 
 /**
  * Returns `1` if the parser encountered an error while parsing the buffer.
@@ -185,7 +298,7 @@ extern const char *LLVMRemarkParserGetErrorMessage(LLVMRemarkParserRef Parser);
 extern void LLVMRemarkParserDispose(LLVMRemarkParserRef Parser);
 
 /**
- * Returns the version of the remarks dylib.
+ * Returns the version of the remarks library.
  *
  * \since REMARKS_API_VERSION=0
  */

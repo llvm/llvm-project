@@ -41,6 +41,8 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -161,6 +163,7 @@ static const char *const DWARFGroupName = "dwarf";
 static const char *const DWARFGroupDescription = "DWARF Emission";
 static const char *const DbgTimerName = "writer";
 static const char *const DbgTimerDescription = "DWARF Debug Writer";
+static constexpr unsigned ULEB128PadSize = 4;
 
 void DebugLocDwarfExpression::emitOp(uint8_t Op, const char *Comment) {
   BS.EmitInt8(
@@ -174,6 +177,11 @@ void DebugLocDwarfExpression::emitSigned(int64_t Value) {
 
 void DebugLocDwarfExpression::emitUnsigned(uint64_t Value) {
   BS.EmitULEB128(Value, Twine(Value));
+}
+
+void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
+  assert(Idx < (1ULL << (ULEB128PadSize * 7)) && "Idx wont fit");
+  BS.EmitULEB128(Idx, Twine(Idx), ULEB128PadSize);
 }
 
 bool DebugLocDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
@@ -940,6 +948,11 @@ void DwarfDebug::endModule() {
   assert(CurFn == nullptr);
   assert(CurMI == nullptr);
 
+  for (const auto &P : CUMap) {
+    auto &CU = *P.second;
+    CU.createBaseTypeDIEs();
+  }
+
   // If we aren't actually generating debug info (check beginModule -
   // conditionalized on !DisableDebugInfoPrinting and the presence of the
   // llvm.dbg.cu metadata node)
@@ -1369,7 +1382,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
 
     // Finalize the entry by lowering it into a DWARF bytestream.
     for (auto &Entry : Entries)
-      Entry.finalize(*Asm, List, BT);
+      Entry.finalize(*Asm, List, BT, TheCU);
   }
 
   // For each InlinedEntity collected from DBG_LABEL instructions, convert to
@@ -1911,13 +1924,55 @@ void DwarfDebug::emitDebugStr() {
                      StringOffsetsSection, /* UseRelativeOffsets = */ true);
 }
 
-void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
-                                   const DebugLocStream::Entry &Entry) {
+void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer, const
+                                   DebugLocStream::Entry &Entry,
+                                   const DwarfCompileUnit *CU) {
   auto &&Comments = DebugLocs.getComments(Entry);
   auto Comment = Comments.begin();
   auto End = Comments.end();
-  for (uint8_t Byte : DebugLocs.getBytes(Entry))
-    Streamer.EmitInt8(Byte, Comment != End ? *(Comment++) : "");
+
+  // The expressions are inserted into a byte stream rather early (see
+  // DwarfExpression::addExpression) so for those ops (e.g. DW_OP_convert) that
+  // need to reference a base_type DIE the offset of that DIE is not yet known.
+  // To deal with this we instead insert a placeholder early and then extract
+  // it here and replace it with the real reference.
+  unsigned PtrSize = Asm->MAI->getCodePointerSize();
+  DWARFDataExtractor Data(StringRef(DebugLocs.getBytes(Entry).data(),
+                                    DebugLocs.getBytes(Entry).size()),
+                          Asm->getDataLayout().isLittleEndian(), PtrSize);
+  DWARFExpression Expr(Data, getDwarfVersion(), PtrSize);
+
+  using Encoding = DWARFExpression::Operation::Encoding;
+  uint32_t Offset = 0;
+  for (auto &Op : Expr) {
+    assert(Op.getCode() != dwarf::DW_OP_const_type &&
+           "3 operand ops not yet supported");
+    Streamer.EmitInt8(Op.getCode(), Comment != End ? *(Comment++) : "");
+    Offset++;
+    for (unsigned I = 0; I < 2; ++I) {
+      if (Op.getDescription().Op[I] == Encoding::SizeNA)
+        continue;
+      if (Op.getDescription().Op[I] == Encoding::BaseTypeRef) {
+          if (CU) {
+            uint64_t Offset = CU->ExprRefedBaseTypes[Op.getRawOperand(I)].Die->getOffset();
+            assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
+            Asm->EmitULEB128(Offset, nullptr, ULEB128PadSize);
+          } else {
+            // Emit a reference to the 'generic type'.
+            Asm->EmitULEB128(0, nullptr, ULEB128PadSize);
+          }
+          // Make sure comments stay aligned.
+          for (unsigned J = 0; J < ULEB128PadSize; ++J)
+            if (Comment != End)
+              Comment++;
+      } else {
+        for (uint32_t J = Offset; J < Op.getOperandEndOffset(I); ++J)
+          Streamer.EmitInt8(Data.getData()[J], Comment != End ? *(Comment++) : "");
+      }
+      Offset = Op.getOperandEndOffset(I);
+    }
+    assert(Offset == Op.getEndOffset());
+  }
 }
 
 static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
@@ -1951,11 +2006,12 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
 
 void DebugLocEntry::finalize(const AsmPrinter &AP,
                              DebugLocStream::ListBuilder &List,
-                             const DIBasicType *BT) {
+                             const DIBasicType *BT,
+                             DwarfCompileUnit &TheCU) {
   assert(Begin != End && "unexpected location list entry with empty range");
   DebugLocStream::EntryBuilder Entry(List, Begin, End);
   BufferByteStreamer Streamer = Entry.getStreamer();
-  DebugLocDwarfExpression DwarfExpr(AP.getDwarfVersion(), Streamer);
+  DebugLocDwarfExpression DwarfExpr(AP.getDwarfVersion(), Streamer, TheCU);
   const DebugLocEntry::Value &Value = Values[0];
   if (Value.isFragment()) {
     // Emit all fragments that belong to the same variable and range.
@@ -1975,16 +2031,23 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
   DwarfExpr.finalize();
 }
 
-void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry) {
+void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
+                                           const DwarfCompileUnit *CU) {
   // Emit the size.
   Asm->OutStreamer->AddComment("Loc expr size");
   if (getDwarfVersion() >= 5)
     Asm->EmitULEB128(DebugLocs.getBytes(Entry).size());
-  else
+  else if (DebugLocs.getBytes(Entry).size() <= std::numeric_limits<uint16_t>::max())
     Asm->emitInt16(DebugLocs.getBytes(Entry).size());
+  else {
+    // The entry is too big to fit into 16 bit, drop it as there is nothing we
+    // can do.
+    Asm->emitInt16(0);
+    return;
+  }
   // Emit the entry.
   APByteStreamer Streamer(*Asm);
-  emitDebugLocEntry(Streamer, Entry);
+  emitDebugLocEntry(Streamer, Entry, CU);
 }
 
 // Emit the common part of the DWARF 5 range/locations list tables header.
@@ -2084,7 +2147,7 @@ void DwarfDebug::emitDebugLoc() {
           Asm->EmitLabelDifference(Entry.EndSym, Base, Size);
         }
 
-        emitDebugLocEntryLocation(Entry);
+        emitDebugLocEntryLocation(Entry, CU);
         continue;
       }
 
@@ -2105,7 +2168,7 @@ void DwarfDebug::emitDebugLoc() {
         Asm->OutStreamer->EmitSymbolValue(Entry.EndSym, Size);
       }
 
-      emitDebugLocEntryLocation(Entry);
+      emitDebugLocEntryLocation(Entry, CU);
     }
 
     if (IsLocLists) {
@@ -2141,7 +2204,7 @@ void DwarfDebug::emitDebugLocDWO() {
       Asm->EmitULEB128(idx);
       Asm->EmitLabelDifference(Entry.EndSym, Entry.BeginSym, 4);
 
-      emitDebugLocEntryLocation(Entry);
+      emitDebugLocEntryLocation(Entry, List.CU);
     }
     Asm->emitInt8(dwarf::DW_LLE_end_of_list);
   }

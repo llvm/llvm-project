@@ -15,9 +15,9 @@ entry:
 define signext i8 @sub_i8_sext(i8 signext %a, i8 signext %b) {
 ; MIPS32-LABEL: sub_i8_sext:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    subu $4, $5, $4
-; MIPS32-NEXT:    sll $4, $4, 24
-; MIPS32-NEXT:    sra $2, $4, 24
+; MIPS32-NEXT:    subu $1, $5, $4
+; MIPS32-NEXT:    sll $1, $1, 24
+; MIPS32-NEXT:    sra $2, $1, 24
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -28,9 +28,9 @@ entry:
 define zeroext i8 @sub_i8_zext(i8 zeroext %a, i8 zeroext %b) {
 ; MIPS32-LABEL: sub_i8_zext:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    subu $4, $5, $4
-; MIPS32-NEXT:    ori $5, $zero, 255
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    subu $1, $5, $4
+; MIPS32-NEXT:    ori $2, $zero, 255
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -52,9 +52,9 @@ entry:
 define signext i16 @sub_i16_sext(i16 signext %a, i16 signext %b) {
 ; MIPS32-LABEL: sub_i16_sext:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    subu $4, $5, $4
-; MIPS32-NEXT:    sll $4, $4, 16
-; MIPS32-NEXT:    sra $2, $4, 16
+; MIPS32-NEXT:    subu $1, $5, $4
+; MIPS32-NEXT:    sll $1, $1, 16
+; MIPS32-NEXT:    sra $2, $1, 16
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -65,9 +65,9 @@ entry:
 define zeroext i16 @sub_i16_zext(i16 zeroext %a, i16 zeroext %b) {
 ; MIPS32-LABEL: sub_i16_zext:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    subu $4, $5, $4
-; MIPS32-NEXT:    ori $5, $zero, 65535
-; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    subu $1, $5, $4
+; MIPS32-NEXT:    ori $2, $zero, 65535
+; MIPS32-NEXT:    and $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -90,11 +90,11 @@ define i64 @sub_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: sub_i64:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    subu $2, $6, $4
-; MIPS32-NEXT:    sltu $4, $6, $4
-; MIPS32-NEXT:    subu $5, $7, $5
-; MIPS32-NEXT:    ori $6, $zero, 1
-; MIPS32-NEXT:    and $4, $4, $6
-; MIPS32-NEXT:    subu $3, $5, $4
+; MIPS32-NEXT:    sltu $1, $6, $4
+; MIPS32-NEXT:    subu $3, $7, $5
+; MIPS32-NEXT:    ori $4, $zero, 1
+; MIPS32-NEXT:    and $1, $1, $4
+; MIPS32-NEXT:    subu $3, $3, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

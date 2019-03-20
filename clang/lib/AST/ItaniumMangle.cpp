@@ -2833,7 +2833,10 @@ void CXXNameMangler::mangleBareFunctionType(const FunctionProtoType *Proto,
       if (auto *Attr = FD->getParamDecl(I)->getAttr<PassObjectSizeAttr>()) {
         // Attr can only take 1 character, so we can hardcode the length below.
         assert(Attr->getType() <= 9 && Attr->getType() >= 0);
-        Out << "U17pass_object_size" << Attr->getType();
+        if (Attr->isDynamic())
+          Out << "U25pass_dynamic_object_size" << Attr->getType();
+        else
+          Out << "U17pass_object_size" << Attr->getType();
       }
     }
   }

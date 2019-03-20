@@ -895,6 +895,98 @@ void Preprocessor::Lex(Token &Result) {
   LastTokenWasAt = Result.is(tok::at);
 }
 
+/// Lex a header-name token (including one formed from header-name-tokens if
+/// \p AllowConcatenation is \c true).
+///
+/// \param FilenameTok Filled in with the next token. On success, this will
+///        be either an angle_header_name or a string_literal token. On
+///        failure, it will be whatever other token was found instead.
+/// \param AllowMacroExpansion If \c true, allow the header name to be formed
+///        by macro expansion (concatenating tokens as necessary if the first
+///        token is a '<').
+/// \return \c true if we reached EOD or EOF while looking for a > token in
+///         a concatenated header name and diagnosed it. \c false otherwise.
+bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
+  // Lex using header-name tokenization rules if tokens are being lexed from
+  // a file. Just grab a token normally if we're in a macro expansion.
+  if (CurPPLexer)
+    CurPPLexer->LexIncludeFilename(FilenameTok);
+  else
+    Lex(FilenameTok);
+
+  // This could be a <foo/bar.h> file coming from a macro expansion.  In this
+  // case, glue the tokens together into an angle_string_literal token.
+  SmallString<128> FilenameBuffer;
+  if (FilenameTok.is(tok::less) && AllowMacroExpansion) {
+    SourceLocation Start = FilenameTok.getLocation();
+    SourceLocation End;
+    FilenameBuffer.push_back('<');
+
+    // Consume tokens until we find a '>'.
+    // FIXME: A header-name could be formed starting or ending with an
+    // alternative token. It's not clear whether that's ill-formed in all
+    // cases.
+    while (FilenameTok.isNot(tok::greater)) {
+      Lex(FilenameTok);
+      if (FilenameTok.isOneOf(tok::eod, tok::eof)) {
+        Diag(FilenameTok.getLocation(), diag::err_expected) << tok::greater;
+        Diag(Start, diag::note_matching) << tok::less;
+        return true;
+      }
+
+      End = FilenameTok.getLocation();
+
+      // FIXME: Provide code completion for #includes.
+      if (FilenameTok.is(tok::code_completion)) {
+        setCodeCompletionReached();
+        Lex(FilenameTok);
+        continue;
+      }
+
+      // Append the spelling of this token to the buffer. If there was a space
+      // before it, add it now.
+      if (FilenameTok.hasLeadingSpace())
+        FilenameBuffer.push_back(' ');
+
+      // Get the spelling of the token, directly into FilenameBuffer if
+      // possible.
+      size_t PreAppendSize = FilenameBuffer.size();
+      FilenameBuffer.resize(PreAppendSize + FilenameTok.getLength());
+
+      const char *BufPtr = &FilenameBuffer[PreAppendSize];
+      unsigned ActualLen = getSpelling(FilenameTok, BufPtr);
+
+      // If the token was spelled somewhere else, copy it into FilenameBuffer.
+      if (BufPtr != &FilenameBuffer[PreAppendSize])
+        memcpy(&FilenameBuffer[PreAppendSize], BufPtr, ActualLen);
+
+      // Resize FilenameBuffer to the correct size.
+      if (FilenameTok.getLength() != ActualLen)
+        FilenameBuffer.resize(PreAppendSize + ActualLen);
+    }
+
+    FilenameTok.startToken();
+    FilenameTok.setKind(tok::header_name);
+    CreateString(FilenameBuffer, FilenameTok, Start, End);
+  } else if (FilenameTok.is(tok::string_literal) && AllowMacroExpansion) {
+    // Convert a string-literal token of the form " h-char-sequence "
+    // (produced by macro expansion) into a header-name token.
+    //
+    // The rules for header-names don't quite match the rules for
+    // string-literals, but all the places where they differ result in
+    // undefined behavior, so we can and do treat them the same.
+    //
+    // A string-literal with a prefix or suffix is not translated into a
+    // header-name. This could theoretically be observable via the C++20
+    // context-sensitive header-name formation rules.
+    StringRef Str = getSpelling(FilenameTok, FilenameBuffer);
+    if (Str.size() >= 2 && Str.front() == '"' && Str.back() == '"')
+      FilenameTok.setKind(tok::header_name);
+  }
+
+  return false;
+}
+
 /// Lex a token following the 'import' contextual keyword.
 ///
 void Preprocessor::LexAfterModuleImport(Token &Result) {

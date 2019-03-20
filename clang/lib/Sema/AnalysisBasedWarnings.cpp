@@ -1687,22 +1687,22 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
   void handleIncorrectUnlockKind(StringRef Kind, Name LockName,
                                  LockKind Expected, LockKind Received,
                                  SourceLocation LocLocked,
-                                 SourceLocation Loc) override {
-    if (Loc.isInvalid())
-      Loc = FunLocation;
-    PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_unlock_kind_mismatch)
-                                         << Kind << LockName << Received
-                                         << Expected);
+                                 SourceLocation LocUnlock) override {
+    if (LocUnlock.isInvalid())
+      LocUnlock = FunLocation;
+    PartialDiagnosticAt Warning(
+        LocUnlock, S.PDiag(diag::warn_unlock_kind_mismatch)
+                       << Kind << LockName << Received << Expected);
     Warnings.emplace_back(std::move(Warning),
                           makeLockedHereNote(LocLocked, Kind));
   }
 
   void handleDoubleLock(StringRef Kind, Name LockName, SourceLocation LocLocked,
-                        SourceLocation Loc) override {
-    if (Loc.isInvalid())
-      Loc = FunLocation;
-    PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_double_lock)
-                                         << Kind << LockName);
+                        SourceLocation LocDoubleLock) override {
+    if (LocDoubleLock.isInvalid())
+      LocDoubleLock = FunLocation;
+    PartialDiagnosticAt Warning(LocDoubleLock, S.PDiag(diag::warn_double_lock)
+                                                   << Kind << LockName);
     Warnings.emplace_back(std::move(Warning),
                           makeLockedHereNote(LocLocked, Kind));
   }

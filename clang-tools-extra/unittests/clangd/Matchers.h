@@ -127,6 +127,73 @@ PolySubsequenceMatcher<Args...> HasSubsequence(Args &&... M) {
     llvm::consumeError(ComputedValue.takeError());                             \
   } while (false)
 
+// Implements the HasValue(m) matcher for matching an Optional whose
+// value matches matcher m.
+template <typename InnerMatcher> class OptionalMatcher {
+public:
+  explicit OptionalMatcher(const InnerMatcher &matcher) : matcher_(matcher) {}
+
+  // This type conversion operator template allows Optional(m) to be
+  // used as a matcher for any Optional type whose value type is
+  // compatible with the inner matcher.
+  //
+  // The reason we do this instead of relying on
+  // MakePolymorphicMatcher() is that the latter is not flexible
+  // enough for implementing the DescribeTo() method of Optional().
+  template <typename Optional> operator Matcher<Optional>() const {
+    return MakeMatcher(new Impl<Optional>(matcher_));
+  }
+
+private:
+  // The monomorphic implementation that works for a particular optional type.
+  template <typename Optional>
+  class Impl : public ::testing::MatcherInterface<Optional> {
+  public:
+    using Value = typename std::remove_const<
+        typename std::remove_reference<Optional>::type>::type::value_type;
+
+    explicit Impl(const InnerMatcher &matcher)
+        : matcher_(::testing::MatcherCast<const Value &>(matcher)) {}
+
+    virtual void DescribeTo(::std::ostream *os) const {
+      *os << "has a value that ";
+      matcher_.DescribeTo(os);
+    }
+
+    virtual void DescribeNegationTo(::std::ostream *os) const {
+      *os << "does not have a value that ";
+      matcher_.DescribeTo(os);
+    }
+
+    virtual bool
+    MatchAndExplain(Optional optional,
+                    ::testing::MatchResultListener *listener) const {
+      if (!optional.hasValue())
+        return false;
+
+      *listener << "which has a value ";
+      return MatchPrintAndExplain(*optional, matcher_, listener);
+    }
+
+  private:
+    const Matcher<const Value &> matcher_;
+
+    GTEST_DISALLOW_ASSIGN_(Impl);
+  };
+
+  const InnerMatcher matcher_;
+
+  GTEST_DISALLOW_ASSIGN_(OptionalMatcher);
+};
+
+// Creates a matcher that matches an Optional that has a value
+// that matches inner_matcher.
+template <typename InnerMatcher>
+inline OptionalMatcher<InnerMatcher>
+HasValue(const InnerMatcher &inner_matcher) {
+  return OptionalMatcher<InnerMatcher>(inner_matcher);
+}
+
 } // namespace clangd
 } // namespace clang
 #endif

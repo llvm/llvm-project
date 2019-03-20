@@ -26,10 +26,8 @@ define <2 x i1> @PR1738_vec_undef(<2 x double> %x, <2 x double> %y) {
 define i1 @PR41069(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @PR41069(
 ; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[UNO2:%.*]] = fcmp uno double [[C:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[UNO1]], [[UNO2]]
-; CHECK-NEXT:    [[UNO3:%.*]] = fcmp uno double [[D:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[OR]], [[UNO3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[UNO1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %uno1 = fcmp uno double %a, %b
@@ -43,10 +41,8 @@ define i1 @PR41069(double %a, double %b, double %c, double %d) {
 define i1 @PR41069_commute(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @PR41069_commute(
 ; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[UNO2:%.*]] = fcmp uno double [[C:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[UNO1]], [[UNO2]]
-; CHECK-NEXT:    [[UNO3:%.*]] = fcmp uno double [[D:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[UNO3]], [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[UNO1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %uno1 = fcmp uno double %a, %b
@@ -59,10 +55,8 @@ define i1 @PR41069_commute(double %a, double %b, double %c, double %d) {
 
 define <2 x i1> @PR41069_vec(<2 x i1> %z, <2 x float> %c, <2 x float> %d) {
 ; CHECK-LABEL: @PR41069_vec(
-; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno <2 x float> [[C:%.*]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[UNO1]], [[Z:%.*]]
-; CHECK-NEXT:    [[UNO2:%.*]] = fcmp uno <2 x float> [[D:%.*]], <float 0.000000e+00, float undef>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[OR]], [[UNO2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <2 x float> [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %uno1 = fcmp uno <2 x float> %c, zeroinitializer
@@ -74,10 +68,8 @@ define <2 x i1> @PR41069_vec(<2 x i1> %z, <2 x float> %c, <2 x float> %d) {
 
 define <2 x i1> @PR41069_vec_commute(<2 x i1> %z, <2 x float> %c, <2 x float> %d) {
 ; CHECK-LABEL: @PR41069_vec_commute(
-; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno <2 x float> [[C:%.*]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[UNO1]], [[Z:%.*]]
-; CHECK-NEXT:    [[UNO2:%.*]] = fcmp uno <2 x float> [[D:%.*]], <float 0.000000e+00, float undef>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[UNO2]], [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <2 x float> [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %uno1 = fcmp uno <2 x float> %c, zeroinitializer

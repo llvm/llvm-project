@@ -122,6 +122,7 @@ bool X86TargetInfo::initFeatureMap(
   case CK_i586:
   case CK_Pentium:
   case CK_PentiumPro:
+  case CK_i686:
   case CK_Lakemont:
     break;
 
@@ -926,6 +927,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__tune_pentium2__");
     LLVM_FALLTHROUGH;
   case CK_PentiumPro:
+  case CK_i686:
     defineCPUMacros(Builder, "i686");
     defineCPUMacros(Builder, "pentiumpro");
     break;

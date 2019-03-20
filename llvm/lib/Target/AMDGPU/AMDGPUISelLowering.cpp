@@ -4208,10 +4208,16 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(ATOMIC_LOAD_FMIN)
   NODE_NAME_CASE(ATOMIC_LOAD_FMAX)
   NODE_NAME_CASE(BUFFER_LOAD)
+  NODE_NAME_CASE(BUFFER_LOAD_UBYTE)
+  NODE_NAME_CASE(BUFFER_LOAD_USHORT)
+  NODE_NAME_CASE(BUFFER_LOAD_BYTE)
+  NODE_NAME_CASE(BUFFER_LOAD_SHORT)
   NODE_NAME_CASE(BUFFER_LOAD_FORMAT)
   NODE_NAME_CASE(BUFFER_LOAD_FORMAT_D16)
   NODE_NAME_CASE(SBUFFER_LOAD)
   NODE_NAME_CASE(BUFFER_STORE)
+  NODE_NAME_CASE(BUFFER_STORE_BYTE)
+  NODE_NAME_CASE(BUFFER_STORE_SHORT)
   NODE_NAME_CASE(BUFFER_STORE_FORMAT)
   NODE_NAME_CASE(BUFFER_STORE_FORMAT_D16)
   NODE_NAME_CASE(BUFFER_ATOMIC_SWAP)
@@ -4376,6 +4382,14 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     }
     break;
   }
+  case AMDGPUISD::BUFFER_LOAD_UBYTE:  {
+    Known.Zero.setHighBits(24);
+    break;
+  }
+  case AMDGPUISD::BUFFER_LOAD_USHORT: {
+    Known.Zero.setHighBits(16);
+    break;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
     switch (IID) {
@@ -4421,6 +4435,14 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
   case AMDGPUISD::CARRY:
   case AMDGPUISD::BORROW:
     return 31;
+  case AMDGPUISD::BUFFER_LOAD_BYTE:
+    return 25;
+  case AMDGPUISD::BUFFER_LOAD_SHORT:
+    return 17;
+  case AMDGPUISD::BUFFER_LOAD_UBYTE:
+    return 24;
+  case AMDGPUISD::BUFFER_LOAD_USHORT:
+    return 16;
   case AMDGPUISD::FP_TO_FP16:
   case AMDGPUISD::FP16_ZEXT:
     return 16;

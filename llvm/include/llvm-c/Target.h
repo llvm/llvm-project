@@ -22,10 +22,6 @@
 #include "llvm-c/Types.h"
 #include "llvm/Config/llvm-config.h"
 
-#if defined(_MSC_VER) && !defined(inline)
-#define inline __inline
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif

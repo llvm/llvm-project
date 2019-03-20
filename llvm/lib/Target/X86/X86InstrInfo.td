@@ -2083,9 +2083,10 @@ def CMPXCHG8B : I<0xC7, MRM1m, (outs), (ins i64mem:$dst),
                   "cmpxchg8b\t$dst", []>, TB;
 
 let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX] in
+// NOTE: In64BitMode check needed for the AssemblerPredicate.
 def CMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$dst),
                     "cmpxchg16b\t$dst", []>,
-                    TB, Requires<[HasCmpxchg16b]>;
+                    TB, Requires<[HasCmpxchg16b,In64BitMode]>;
 } // SchedRW, mayLoad, mayStore, hasSideEffects
 
 

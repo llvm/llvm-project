@@ -129,3 +129,31 @@ lldb::tid_t SBTraceOptions::getThreadID() {
     return m_traceoptions_sp->getThreadID();
   return LLDB_INVALID_THREAD_ID;
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBTraceOptions>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBTraceOptions, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::TraceType, SBTraceOptions, getType, ());
+  LLDB_REGISTER_METHOD_CONST(uint64_t, SBTraceOptions, getTraceBufferSize,
+                             ());
+  LLDB_REGISTER_METHOD(lldb::SBStructuredData, SBTraceOptions, getTraceParams,
+                       (lldb::SBError &));
+  LLDB_REGISTER_METHOD_CONST(uint64_t, SBTraceOptions, getMetaDataBufferSize,
+                             ());
+  LLDB_REGISTER_METHOD(void, SBTraceOptions, setTraceParams,
+                       (lldb::SBStructuredData &));
+  LLDB_REGISTER_METHOD(void, SBTraceOptions, setType, (lldb::TraceType));
+  LLDB_REGISTER_METHOD(void, SBTraceOptions, setTraceBufferSize, (uint64_t));
+  LLDB_REGISTER_METHOD(void, SBTraceOptions, setMetaDataBufferSize,
+                       (uint64_t));
+  LLDB_REGISTER_METHOD(bool, SBTraceOptions, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBTraceOptions, operator bool, ());
+  LLDB_REGISTER_METHOD(void, SBTraceOptions, setThreadID, (lldb::tid_t));
+  LLDB_REGISTER_METHOD(lldb::tid_t, SBTraceOptions, getThreadID, ());
+}
+
+}
+}

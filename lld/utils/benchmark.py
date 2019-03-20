@@ -13,8 +13,13 @@ import subprocess
 import json
 import datetime
 import argparse
-import urllib
-import urllib2
+try:
+    from urllib.parse import urlencode
+    from urllib.request import urlopen, Request
+except ImportError:
+    from urllib import urlencode
+    from urllib2 import urlopen, Request
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('benchmark_directory')
@@ -126,8 +131,8 @@ def buildLntJson(benchmarks):
     return json.dumps(ret, sort_keys=True, indent=4)
 
 def submitToServer(data):
-    data2 = urllib.urlencode({ 'input_data' : data }).encode('ascii')
-    urllib2.urlopen(urllib2.Request(args.url, data2))
+    data2 = urlencode({ 'input_data' : data }).encode('ascii')
+    urlopen(Request(args.url, data2))
 
 os.chdir(args.benchmark_directory)
 data = buildLntJson(getBenchmarks())

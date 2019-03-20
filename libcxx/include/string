@@ -1060,10 +1060,10 @@ public:
     void push_back(value_type __c);
     _LIBCPP_INLINE_VISIBILITY
     void pop_back();
-    _LIBCPP_INLINE_VISIBILITY reference       front();
-    _LIBCPP_INLINE_VISIBILITY const_reference front() const;
-    _LIBCPP_INLINE_VISIBILITY reference       back();
-    _LIBCPP_INLINE_VISIBILITY const_reference back() const;
+    _LIBCPP_INLINE_VISIBILITY reference       front() _NOEXCEPT;
+    _LIBCPP_INLINE_VISIBILITY const_reference front() const _NOEXCEPT;
+    _LIBCPP_INLINE_VISIBILITY reference       back() _NOEXCEPT;
+    _LIBCPP_INLINE_VISIBILITY const_reference back() const _NOEXCEPT;
 
     template <class _Tp>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
@@ -3237,7 +3237,7 @@ basic_string<_CharT, _Traits, _Allocator>::at(size_type __n)
 template <class _CharT, class _Traits, class _Allocator>
 inline
 typename basic_string<_CharT, _Traits, _Allocator>::reference
-basic_string<_CharT, _Traits, _Allocator>::front()
+basic_string<_CharT, _Traits, _Allocator>::front() _NOEXCEPT
 {
     _LIBCPP_ASSERT(!empty(), "string::front(): string is empty");
     return *__get_pointer();
@@ -3246,7 +3246,7 @@ basic_string<_CharT, _Traits, _Allocator>::front()
 template <class _CharT, class _Traits, class _Allocator>
 inline
 typename basic_string<_CharT, _Traits, _Allocator>::const_reference
-basic_string<_CharT, _Traits, _Allocator>::front() const
+basic_string<_CharT, _Traits, _Allocator>::front() const _NOEXCEPT
 {
     _LIBCPP_ASSERT(!empty(), "string::front(): string is empty");
     return *data();
@@ -3255,7 +3255,7 @@ basic_string<_CharT, _Traits, _Allocator>::front() const
 template <class _CharT, class _Traits, class _Allocator>
 inline
 typename basic_string<_CharT, _Traits, _Allocator>::reference
-basic_string<_CharT, _Traits, _Allocator>::back()
+basic_string<_CharT, _Traits, _Allocator>::back() _NOEXCEPT
 {
     _LIBCPP_ASSERT(!empty(), "string::back(): string is empty");
     return *(__get_pointer() + size() - 1);
@@ -3264,7 +3264,7 @@ basic_string<_CharT, _Traits, _Allocator>::back()
 template <class _CharT, class _Traits, class _Allocator>
 inline
 typename basic_string<_CharT, _Traits, _Allocator>::const_reference
-basic_string<_CharT, _Traits, _Allocator>::back() const
+basic_string<_CharT, _Traits, _Allocator>::back() const _NOEXCEPT
 {
     _LIBCPP_ASSERT(!empty(), "string::back(): string is empty");
     return *(data() + size() - 1);

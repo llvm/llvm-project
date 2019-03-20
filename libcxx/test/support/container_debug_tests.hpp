@@ -149,39 +149,27 @@ struct BasicContainerChecks {
   }
 
   static void run_iterator_tests() {
-    try {
-      TestNullIterators<iterator>();
-      TestNullIterators<const_iterator>();
-      if constexpr (IsBiDir) { DecrementBegin(); }
-      IncrementEnd();
-      DerefEndIterator();
-    } catch (...) {
-      assert(false && "uncaught debug exception");
-    }
+    TestNullIterators<iterator>();
+    TestNullIterators<const_iterator>();
+    if constexpr (IsBiDir) { DecrementBegin(); }
+    IncrementEnd();
+    DerefEndIterator();
   }
 
   static void run_container_tests() {
-    try {
-      CopyInvalidatesIterators();
-      MoveInvalidatesIterators();
-      if constexpr (CT != CT_ForwardList) {
-        EraseIter();
-        EraseIterIter();
-      }
-    } catch (...) {
-      assert(false && "uncaught debug exception");
+    CopyInvalidatesIterators();
+    MoveInvalidatesIterators();
+    if constexpr (CT != CT_ForwardList) {
+      EraseIter();
+      EraseIterIter();
     }
   }
 
   static void run_allocator_aware_tests() {
-    try {
-      SwapNonEqualAllocators();
-      if constexpr (CT != CT_ForwardList ) {
-        // FIXME: This should work for both forward_list and string
-        SwapInvalidatesIterators();
-      }
-    } catch (...) {
-      assert(false && "uncaught debug exception");
+    SwapNonEqualAllocators();
+    if constexpr (CT != CT_ForwardList ) {
+      // FIXME: This should work for both forward_list and string
+      SwapInvalidatesIterators();
     }
   }
 

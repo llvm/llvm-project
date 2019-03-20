@@ -1229,7 +1229,7 @@ public:
   /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
   /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
   /// or 'operator binop(LHS, RHS)'.
-  llvm::Function *emitReductionFunction(CodeGenModule &CGM, SourceLocation Loc,
+  llvm::Function *emitReductionFunction(SourceLocation Loc,
                                         llvm::Type *ArgsType,
                                         ArrayRef<const Expr *> Privates,
                                         ArrayRef<const Expr *> LHSExprs,
@@ -1597,8 +1597,7 @@ public:
 
   /// Perform check on requires decl to ensure that target architecture
   /// supports unified addressing
-  virtual void checkArchForUnifiedAddressing(CodeGenModule &CGM,
-                                             const OMPRequiresDecl *D) const {}
+  virtual void checkArchForUnifiedAddressing(const OMPRequiresDecl *D) const {}
 };
 
 /// Class supports emissionof SIMD-only code.
@@ -2163,6 +2162,12 @@ public:
   /// \param TargetParam Corresponding target-specific parameter.
   Address getParameterAddress(CodeGenFunction &CGF, const VarDecl *NativeParam,
                               const VarDecl *TargetParam) const override;
+
+  /// Gets the OpenMP-specific address of the local variable.
+  Address getAddressOfLocalVariable(CodeGenFunction &CGF,
+                                    const VarDecl *VD) override {
+    return Address::invalid();
+  }
 };
 
 } // namespace CodeGen

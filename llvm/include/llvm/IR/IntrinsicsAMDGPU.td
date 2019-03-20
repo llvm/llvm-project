@@ -840,7 +840,7 @@ let TargetPrefix = "amdgcn" in {
 defset list<AMDGPURsrcIntrinsic> AMDGPUBufferIntrinsics = {
 
 class AMDGPUBufferLoad : Intrinsic <
-  [llvm_anyfloat_ty],
+  [llvm_any_ty],
   [llvm_v4i32_ty,     // rsrc(SGPR)
    llvm_i32_ty,       // vindex(VGPR)
    llvm_i32_ty,       // offset(SGPR/VGPR/imm)
@@ -861,7 +861,7 @@ def int_amdgcn_s_buffer_load : Intrinsic <
 
 class AMDGPUBufferStore : Intrinsic <
   [],
-  [llvm_anyfloat_ty,  // vdata(VGPR) -- can currently only select f32, v2f32, v4f32
+  [llvm_any_ty,       // vdata(VGPR)
    llvm_v4i32_ty,     // rsrc(SGPR)
    llvm_i32_ty,       // vindex(VGPR)
    llvm_i32_ty,       // offset(SGPR/VGPR/imm)
@@ -1361,7 +1361,7 @@ def int_amdgcn_kill : Intrinsic<[], [llvm_i1_ty], []>;
 // enabled, with a few exceptions: - Phi nodes with require WWM return an
 // undefined value.
 def int_amdgcn_wwm : Intrinsic<[llvm_any_ty],
-  [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
+  [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable, IntrConvergent]
 >;
 
 // Given a value, copies it while setting all the inactive lanes to a given

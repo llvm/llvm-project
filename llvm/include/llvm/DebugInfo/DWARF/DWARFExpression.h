@@ -79,11 +79,13 @@ public:
     bool Error;
     uint32_t EndOffset;
     uint64_t Operands[2];
+    uint32_t OperandEndOffsets[2];
 
   public:
     Description &getDescription() { return Desc; }
     uint8_t getCode() { return Opcode; }
     uint64_t getRawOperand(unsigned Idx) { return Operands[Idx]; }
+    uint32_t getOperandEndOffset(unsigned Idx) { return OperandEndOffsets[Idx]; }
     uint32_t getEndOffset() { return EndOffset; }
     bool extract(DataExtractor Data, uint16_t Version, uint8_t AddressSize,
                  uint32_t Offset);

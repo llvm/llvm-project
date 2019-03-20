@@ -801,3 +801,143 @@ void SBCommand::SetFlags(uint32_t flags) {
   if (IsValid())
     m_opaque_sp->GetFlags().Set(flags);
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBCommandInterpreterRunOptions>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBCommandInterpreterRunOptions, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
+                             GetStopOnContinue, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions,
+                       SetStopOnContinue, (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
+                             GetStopOnError, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions, SetStopOnError,
+                       (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
+                             GetStopOnCrash, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions, SetStopOnCrash,
+                       (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
+                             GetEchoCommands, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions, SetEchoCommands,
+                       (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
+                             GetEchoCommentCommands, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions,
+                       SetEchoCommentCommands, (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
+                             GetPrintResults, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions, SetPrintResults,
+                       (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
+                             GetAddToHistory, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions, SetAddToHistory,
+                       (bool));
+  LLDB_REGISTER_CONSTRUCTOR(SBCommandInterpreter,
+                            (lldb_private::CommandInterpreter *));
+  LLDB_REGISTER_CONSTRUCTOR(SBCommandInterpreter,
+                            (const lldb::SBCommandInterpreter &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBCommandInterpreter &,
+      SBCommandInterpreter, operator=,(const lldb::SBCommandInterpreter &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreter, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreter, operator bool, ());
+  LLDB_REGISTER_METHOD(bool, SBCommandInterpreter, CommandExists,
+                       (const char *));
+  LLDB_REGISTER_METHOD(bool, SBCommandInterpreter, AliasExists,
+                       (const char *));
+  LLDB_REGISTER_METHOD(bool, SBCommandInterpreter, IsActive, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreter, WasInterrupted, ());
+  LLDB_REGISTER_METHOD(const char *, SBCommandInterpreter,
+                       GetIOHandlerControlSequence, (char));
+  LLDB_REGISTER_METHOD(lldb::ReturnStatus, SBCommandInterpreter,
+                       HandleCommand,
+                       (const char *, lldb::SBCommandReturnObject &, bool));
+  LLDB_REGISTER_METHOD(lldb::ReturnStatus, SBCommandInterpreter,
+                       HandleCommand,
+                       (const char *, lldb::SBExecutionContext &,
+                        lldb::SBCommandReturnObject &, bool));
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreter, HandleCommandsFromFile,
+                       (lldb::SBFileSpec &, lldb::SBExecutionContext &,
+                        lldb::SBCommandInterpreterRunOptions &,
+                        lldb::SBCommandReturnObject));
+  LLDB_REGISTER_METHOD(int, SBCommandInterpreter, HandleCompletion,
+                       (const char *, const char *, const char *, int, int,
+                        lldb::SBStringList &));
+  LLDB_REGISTER_METHOD(int, SBCommandInterpreter,
+                       HandleCompletionWithDescriptions,
+                       (const char *, const char *, const char *, int, int,
+                        lldb::SBStringList &, lldb::SBStringList &));
+  LLDB_REGISTER_METHOD(int, SBCommandInterpreter,
+                       HandleCompletionWithDescriptions,
+                       (const char *, uint32_t, int, int,
+                        lldb::SBStringList &, lldb::SBStringList &));
+  LLDB_REGISTER_METHOD(
+      int, SBCommandInterpreter, HandleCompletion,
+      (const char *, uint32_t, int, int, lldb::SBStringList &));
+  LLDB_REGISTER_METHOD(bool, SBCommandInterpreter, HasCommands, ());
+  LLDB_REGISTER_METHOD(bool, SBCommandInterpreter, HasAliases, ());
+  LLDB_REGISTER_METHOD(bool, SBCommandInterpreter, HasAliasOptions, ());
+  LLDB_REGISTER_METHOD(lldb::SBProcess, SBCommandInterpreter, GetProcess, ());
+  LLDB_REGISTER_METHOD(lldb::SBDebugger, SBCommandInterpreter, GetDebugger,
+                       ());
+  LLDB_REGISTER_METHOD(bool, SBCommandInterpreter, GetPromptOnQuit, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreter, SetPromptOnQuit, (bool));
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreter, AllowExitCodeOnQuit,
+                       (bool));
+  LLDB_REGISTER_METHOD(bool, SBCommandInterpreter, HasCustomQuitExitCode, ());
+  LLDB_REGISTER_METHOD(int, SBCommandInterpreter, GetQuitStatus, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreter, ResolveCommand,
+                       (const char *, lldb::SBCommandReturnObject &));
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreter,
+                       SourceInitFileInHomeDirectory,
+                       (lldb::SBCommandReturnObject &));
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreter,
+                       SourceInitFileInCurrentWorkingDirectory,
+                       (lldb::SBCommandReturnObject &));
+  LLDB_REGISTER_METHOD(lldb::SBBroadcaster, SBCommandInterpreter,
+                       GetBroadcaster, ());
+  LLDB_REGISTER_STATIC_METHOD(const char *, SBCommandInterpreter,
+                              GetBroadcasterClass, ());
+  LLDB_REGISTER_STATIC_METHOD(const char *, SBCommandInterpreter,
+                              GetArgumentTypeAsCString,
+                              (const lldb::CommandArgumentType));
+  LLDB_REGISTER_STATIC_METHOD(const char *, SBCommandInterpreter,
+                              GetArgumentDescriptionAsCString,
+                              (const lldb::CommandArgumentType));
+  LLDB_REGISTER_STATIC_METHOD(bool, SBCommandInterpreter,
+                              EventIsCommandInterpreterEvent,
+                              (const lldb::SBEvent &));
+  LLDB_REGISTER_METHOD(lldb::SBCommand, SBCommandInterpreter,
+                       AddMultiwordCommand, (const char *, const char *));
+  LLDB_REGISTER_METHOD(
+      lldb::SBCommand, SBCommandInterpreter, AddCommand,
+      (const char *, lldb::SBCommandPluginInterface *, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBCommand, SBCommandInterpreter, AddCommand,
+                       (const char *, lldb::SBCommandPluginInterface *,
+                        const char *, const char *));
+  LLDB_REGISTER_CONSTRUCTOR(SBCommand, ());
+  LLDB_REGISTER_METHOD(bool, SBCommand, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommand, operator bool, ());
+  LLDB_REGISTER_METHOD(const char *, SBCommand, GetName, ());
+  LLDB_REGISTER_METHOD(const char *, SBCommand, GetHelp, ());
+  LLDB_REGISTER_METHOD(const char *, SBCommand, GetHelpLong, ());
+  LLDB_REGISTER_METHOD(void, SBCommand, SetHelp, (const char *));
+  LLDB_REGISTER_METHOD(void, SBCommand, SetHelpLong, (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBCommand, SBCommand, AddMultiwordCommand,
+                       (const char *, const char *));
+  LLDB_REGISTER_METHOD(
+      lldb::SBCommand, SBCommand, AddCommand,
+      (const char *, lldb::SBCommandPluginInterface *, const char *));
+  LLDB_REGISTER_METHOD(lldb::SBCommand, SBCommand, AddCommand,
+                       (const char *, lldb::SBCommandPluginInterface *,
+                        const char *, const char *));
+  LLDB_REGISTER_METHOD(uint32_t, SBCommand, GetFlags, ());
+  LLDB_REGISTER_METHOD(void, SBCommand, SetFlags, (uint32_t));
+}
+
+}
+}

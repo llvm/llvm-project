@@ -160,6 +160,34 @@ return:
   ret void
 }
 
+define void @trueblock_cmp_eq(i32 %a, i32 %b) {
+; CHECK-LABEL: @trueblock_cmp_eq(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END:%.*]], label [[RETURN:%.*]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A]], 1
+; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN3:%.*]], label [[RETURN]]
+; CHECK:       if.then3:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp = icmp sgt i32 %a, 0
+  br i1 %cmp, label %if.end, label %return
+
+if.end:
+  %cmp1 = icmp slt i32 %a, 2
+  br i1 %cmp1, label %if.then3, label %return
+
+if.then3:
+  br label %return
+
+return:
+  ret void
+}
+
 define i1 @trueblock_cmp_is_false(i32 %x, i32 %y) {
 ; CHECK-LABEL: @trueblock_cmp_is_false(
 ; CHECK-NEXT:  entry:

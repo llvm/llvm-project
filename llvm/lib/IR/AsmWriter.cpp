@@ -2123,8 +2123,13 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
       assert(!OpStr.empty() && "Expected valid opcode");
 
       Out << FS << OpStr;
-      for (unsigned A = 0, AE = I->getNumArgs(); A != AE; ++A)
-        Out << FS << I->getArg(A);
+      if (I->getOp() == dwarf::DW_OP_LLVM_convert) {
+        Out << FS << I->getArg(0);
+        Out << FS << dwarf::AttributeEncodingString(I->getArg(1));
+      } else {
+        for (unsigned A = 0, AE = I->getNumArgs(); A != AE; ++A)
+          Out << FS << I->getArg(A);
+      }
     }
   } else {
     for (const auto &I : N->getElements())

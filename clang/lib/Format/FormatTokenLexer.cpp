@@ -95,6 +95,8 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       Tokens.back()->Tok.setKind(tok::starequal);
       return;
     }
+    if (tryMergeJSPrivateIdentifier())
+      return;
   }
 
   if (Style.Language == FormatStyle::LK_Java) {
@@ -117,6 +119,25 @@ bool FormatTokenLexer::tryMergeNSStringLiteral() {
                             String->TokenText.end() - At->TokenText.begin());
   At->ColumnWidth += String->ColumnWidth;
   At->Type = TT_ObjCStringLiteral;
+  Tokens.erase(Tokens.end() - 1);
+  return true;
+}
+
+bool FormatTokenLexer::tryMergeJSPrivateIdentifier() {
+  // Merges #idenfier into a single identifier with the text #identifier
+  // but the token tok::identifier.
+  if (Tokens.size() < 2)
+    return false;
+  auto &Hash = *(Tokens.end() - 2);
+  auto &Identifier = *(Tokens.end() - 1);
+  if (!Hash->is(tok::hash) || !Identifier->is(tok::identifier))
+    return false;
+  Hash->Tok.setKind(tok::identifier);
+  Hash->TokenText =
+      StringRef(Hash->TokenText.begin(),
+                Identifier->TokenText.end() - Hash->TokenText.begin());
+  Hash->ColumnWidth += Identifier->ColumnWidth;
+  Hash->Type = TT_JsPrivateIdentifier;
   Tokens.erase(Tokens.end() - 1);
   return true;
 }

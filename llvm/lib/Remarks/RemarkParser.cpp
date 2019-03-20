@@ -11,355 +11,104 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Remarks/RemarkParser.h"
+#include "YAMLRemarkParser.h"
 #include "llvm-c/Remarks.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/CBindingWrapping.h"
 
 using namespace llvm;
+using namespace llvm::remarks;
 
-namespace {
-struct YAMLRemarkParser {
-  /// Source manager for better error messages.
-  SourceMgr SM;
-  /// Stream for yaml parsing.
-  yaml::Stream Stream;
-  /// Storage for the error stream.
-  std::string ErrorString;
-  /// The error stream.
-  raw_string_ostream ErrorStream;
-  /// Iterator in the YAML stream.
-  yaml::document_iterator DI;
-  /// The parsed remark (if any).
-  Optional<LLVMRemarkEntry> LastRemark;
-  /// Temporary parsing buffer for the arguments.
-  SmallVector<LLVMRemarkArg, 8> TmpArgs;
-  /// The state used by the parser to parse a remark entry. Invalidated with
-  /// every call to `parseYAMLElement`.
-  struct ParseState {
-    /// Temporary parsing buffer for the arguments.
-    SmallVectorImpl<LLVMRemarkArg> *Args;
-    StringRef Type;
-    StringRef Pass;
-    StringRef Name;
-    StringRef Function;
-    /// Optional.
-    Optional<StringRef> File;
-    Optional<unsigned> Line;
-    Optional<unsigned> Column;
-    Optional<unsigned> Hotness;
+Parser::Parser(StringRef Buf) : Impl(llvm::make_unique<YAMLParserImpl>(Buf)) {}
 
-    ParseState(SmallVectorImpl<LLVMRemarkArg> &Args) : Args(&Args) {}
-    /// Use Args only as a **temporary** buffer.
-    ~ParseState() { Args->clear(); }
-  };
+Parser::~Parser() = default;
 
-  ParseState State;
-
-  /// Set to `true` if we had any errors during parsing.
-  bool HadAnyErrors = false;
-
-  YAMLRemarkParser(StringRef Buf)
-      : SM(), Stream(Buf, SM), ErrorString(), ErrorStream(ErrorString),
-        DI(Stream.begin()), LastRemark(), TmpArgs(), State(TmpArgs) {
-    SM.setDiagHandler(YAMLRemarkParser::HandleDiagnostic, this);
-  }
-
-  /// Parse a YAML element.
-  Error parseYAMLElement(yaml::Document &Remark);
-
-private:
-  /// Parse one key to a string.
-  /// otherwise.
-  Error parseKey(StringRef &Result, yaml::KeyValueNode &Node);
-  /// Parse one value to a string.
-  Error parseValue(StringRef &Result, yaml::KeyValueNode &Node);
-  /// Parse one value to an unsigned.
-  Error parseValue(Optional<unsigned> &Result, yaml::KeyValueNode &Node);
-  /// Parse a debug location.
-  Error parseDebugLoc(Optional<StringRef> &File, Optional<unsigned> &Line,
-                      Optional<unsigned> &Column, yaml::KeyValueNode &Node);
-  /// Parse an argument.
-  Error parseArg(SmallVectorImpl<LLVMRemarkArg> &TmpArgs, yaml::Node &Node);
-
-  /// Handle a diagnostic from the YAML stream. Records the error in the
-  /// YAMLRemarkParser class.
-  static void HandleDiagnostic(const SMDiagnostic &Diag, void *Ctx) {
-    assert(Ctx && "Expected non-null Ctx in diagnostic handler.");
-    auto *Parser = static_cast<YAMLRemarkParser *>(Ctx);
-    Diag.print(/*ProgName=*/nullptr, Parser->ErrorStream, /*ShowColors*/ false,
-               /*ShowKindLabels*/ true);
-  }
-};
-
-class ParseError : public ErrorInfo<ParseError> {
-public:
-  static char ID;
-
-  ParseError(StringRef Message, yaml::Node &Node)
-      : Message(Message), Node(Node) {}
-
-  void log(raw_ostream &OS) const override { OS << Message; }
-  std::error_code convertToErrorCode() const override {
-    return inconvertibleErrorCode();
-  }
-
-  StringRef getMessage() const { return Message; }
-  yaml::Node &getNode() const { return Node; }
-
-private:
-  StringRef Message; // No need to hold a full copy of the buffer.
-  yaml::Node &Node;
-};
-
-char ParseError::ID = 0;
-
-static LLVMRemarkStringRef toRemarkStr(StringRef Str) {
-  return {Str.data(), static_cast<uint32_t>(Str.size())};
-}
-
-Error YAMLRemarkParser::parseKey(StringRef &Result, yaml::KeyValueNode &Node) {
-  auto *Key = dyn_cast<yaml::ScalarNode>(Node.getKey());
-  if (!Key)
-    return make_error<ParseError>("key is not a string.", Node);
-
-  Result = Key->getRawValue();
-  return Error::success();
-}
-
-Error YAMLRemarkParser::parseValue(StringRef &Result,
-                                   yaml::KeyValueNode &Node) {
-  auto *Value = dyn_cast<yaml::ScalarNode>(Node.getValue());
-  if (!Value)
-    return make_error<ParseError>("expected a value of scalar type.", Node);
-  Result = Value->getRawValue();
-
-  if (Result.front() == '\'')
-    Result = Result.drop_front();
-
-  if (Result.back() == '\'')
-    Result = Result.drop_back();
-
-  return Error::success();
-}
-
-Error YAMLRemarkParser::parseValue(Optional<unsigned> &Result,
-                                   yaml::KeyValueNode &Node) {
-  SmallVector<char, 4> Tmp;
-  auto *Value = dyn_cast<yaml::ScalarNode>(Node.getValue());
-  if (!Value)
-    return make_error<ParseError>("expected a value of scalar type.", Node);
-  unsigned UnsignedValue = 0;
-  if (Value->getValue(Tmp).getAsInteger(10, UnsignedValue))
-    return make_error<ParseError>("expected a value of integer type.", *Value);
-  Result = UnsignedValue;
-  return Error::success();
-}
-
-Error YAMLRemarkParser::parseDebugLoc(Optional<StringRef> &File,
-                                      Optional<unsigned> &Line,
-                                      Optional<unsigned> &Column,
-                                      yaml::KeyValueNode &Node) {
-  auto *DebugLoc = dyn_cast<yaml::MappingNode>(Node.getValue());
-  if (!DebugLoc)
-    return make_error<ParseError>("expected a value of mapping type.", Node);
-
-  for (yaml::KeyValueNode &DLNode : *DebugLoc) {
-    StringRef KeyName;
-    if (Error E = parseKey(KeyName, DLNode))
-      return E;
-    if (KeyName == "File") {
-      File = StringRef(); // Set the optional to contain a default constructed
-                          // value, to be passed to the parsing function.
-      if (Error E = parseValue(*File, DLNode))
-        return E;
-    } else if (KeyName == "Column") {
-      if (Error E = parseValue(Column, DLNode))
-        return E;
-    } else if (KeyName == "Line") {
-      if (Error E = parseValue(Line, DLNode))
-        return E;
-    } else {
-      return make_error<ParseError>("unknown entry in DebugLoc map.", DLNode);
-    }
-  }
-
-  // If any of the debug loc fields is missing, return an error.
-  if (!File || !Line || !Column)
-    return make_error<ParseError>("DebugLoc node incomplete.", Node);
-
-  return Error::success();
-}
-
-Error YAMLRemarkParser::parseArg(SmallVectorImpl<LLVMRemarkArg> &Args,
-                                 yaml::Node &Node) {
-  auto *ArgMap = dyn_cast<yaml::MappingNode>(&Node);
-  if (!ArgMap)
-    return make_error<ParseError>("expected a value of mapping type.", Node);
-
-  StringRef ValueStr;
-  StringRef KeyStr;
-  Optional<StringRef> File;
-  Optional<unsigned> Line;
-  Optional<unsigned> Column;
-
-  for (yaml::KeyValueNode &ArgEntry : *ArgMap) {
-    StringRef KeyName;
-    if (Error E = parseKey(KeyName, ArgEntry))
-      return E;
-
-    // Try to parse debug locs.
-    if (KeyName == "DebugLoc") {
-      // Can't have multiple DebugLoc entries per argument.
-      if (File || Line || Column)
-        return make_error<ParseError>(
-            "only one DebugLoc entry is allowed per argument.", ArgEntry);
-
-      if (Error E = parseDebugLoc(File, Line, Column, ArgEntry))
-        return E;
-      continue;
-    }
-
-    // If we already have a string, error out.
-    if (!ValueStr.empty())
-      return make_error<ParseError>(
-          "only one string entry is allowed per argument.", ArgEntry);
-
-    // Try to parse a string.
-    if (Error E = parseValue(ValueStr, ArgEntry))
-      return E;
-
-    // Keep the key from the string.
-    KeyStr = KeyName;
-  }
-
-  if (KeyStr.empty())
-    return make_error<ParseError>("argument key is missing.", *ArgMap);
-  if (ValueStr.empty())
-    return make_error<ParseError>("argument value is missing.", *ArgMap);
-
-  Args.push_back(LLVMRemarkArg{
-      toRemarkStr(KeyStr), toRemarkStr(ValueStr),
-      LLVMRemarkDebugLoc{toRemarkStr(File.getValueOr(StringRef())),
-                         Line.getValueOr(0), Column.getValueOr(0)}});
-
-  return Error::success();
-}
-
-Error YAMLRemarkParser::parseYAMLElement(yaml::Document &Remark) {
-  // Parsing a new remark, clear the previous one.
-  LastRemark = None;
-  State = ParseState(TmpArgs);
-
-  auto *Root = dyn_cast<yaml::MappingNode>(Remark.getRoot());
-  if (!Root)
-    return make_error<ParseError>("document root is not of mapping type.",
-                                  *Remark.getRoot());
-
-  State.Type = Root->getRawTag();
-
-  for (yaml::KeyValueNode &RemarkField : *Root) {
-    StringRef KeyName;
-    if (Error E = parseKey(KeyName, RemarkField))
-      return E;
-
-    if (KeyName == "Pass") {
-      if (Error E = parseValue(State.Pass, RemarkField))
-        return E;
-    } else if (KeyName == "Name") {
-      if (Error E = parseValue(State.Name, RemarkField))
-        return E;
-    } else if (KeyName == "Function") {
-      if (Error E = parseValue(State.Function, RemarkField))
-        return E;
-    } else if (KeyName == "Hotness") {
-      if (Error E = parseValue(State.Hotness, RemarkField))
-        return E;
-    } else if (KeyName == "DebugLoc") {
-      if (Error E =
-              parseDebugLoc(State.File, State.Line, State.Column, RemarkField))
-        return E;
-    } else if (KeyName == "Args") {
-      auto *Args = dyn_cast<yaml::SequenceNode>(RemarkField.getValue());
-      if (!Args)
-        return make_error<ParseError>("wrong value type for key.", RemarkField);
-
-      for (yaml::Node &Arg : *Args)
-        if (Error E = parseArg(*State.Args, Arg))
-          return E;
-    } else {
-      return make_error<ParseError>("unknown key.", RemarkField);
-    }
-  }
-
-  // If the YAML parsing failed, don't even continue parsing. We might
-  // encounter malformed YAML.
-  if (Stream.failed())
-    return make_error<ParseError>("YAML parsing failed.", *Remark.getRoot());
-
-  // Check if any of the mandatory fields are missing.
-  if (State.Type.empty() || State.Pass.empty() || State.Name.empty() ||
-      State.Function.empty())
-    return make_error<ParseError>("Type, Pass, Name or Function missing.",
-                                  *Remark.getRoot());
-
-  LastRemark = LLVMRemarkEntry{
-      toRemarkStr(State.Type),
-      toRemarkStr(State.Pass),
-      toRemarkStr(State.Name),
-      toRemarkStr(State.Function),
-      LLVMRemarkDebugLoc{toRemarkStr(State.File.getValueOr(StringRef())),
-                         State.Line.getValueOr(0), State.Column.getValueOr(0)},
-      State.Hotness.getValueOr(0),
-      static_cast<uint32_t>(State.Args->size()),
-      State.Args->data()};
-
-  return Error::success();
-}
-} // namespace
-
-// Create wrappers for C Binding types (see CBindingWrapping.h).
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(YAMLRemarkParser, LLVMRemarkParserRef)
-
-extern "C" LLVMRemarkParserRef LLVMRemarkParserCreate(const void *Buf,
-                                                      uint64_t Size) {
-  return wrap(
-      new YAMLRemarkParser(StringRef(static_cast<const char *>(Buf), Size)));
-}
-
-extern "C" LLVMRemarkEntry *
-LLVMRemarkParserGetNext(LLVMRemarkParserRef Parser) {
-  YAMLRemarkParser &TheParser = *unwrap(Parser);
+static Expected<const Remark *> getNextYAML(YAMLParserImpl &Impl) {
+  YAMLRemarkParser &YAMLParser = Impl.YAMLParser;
   // Check for EOF.
-  if (TheParser.HadAnyErrors || TheParser.DI == TheParser.Stream.end())
+  if (Impl.YAMLIt == Impl.YAMLParser.Stream.end())
     return nullptr;
+
+  auto CurrentIt = Impl.YAMLIt;
 
   // Try to parse an entry.
-  if (Error E = TheParser.parseYAMLElement(*TheParser.DI)) {
-    handleAllErrors(std::move(E), [&](const ParseError &PE) {
-      TheParser.Stream.printError(&PE.getNode(),
-                                  Twine(PE.getMessage()) + Twine('\n'));
-      TheParser.HadAnyErrors = true;
-    });
-    return nullptr;
+  if (Error E = YAMLParser.parseYAMLElement(*CurrentIt)) {
+    // Set the iterator to the end, in case the user calls getNext again.
+    Impl.YAMLIt = Impl.YAMLParser.Stream.end();
+    return std::move(E);
   }
 
   // Move on.
-  ++TheParser.DI;
+  ++Impl.YAMLIt;
 
   // Return the just-parsed remark.
-  if (Optional<LLVMRemarkEntry> &Entry = TheParser.LastRemark)
-    return &*Entry;
-  return nullptr;
+  if (const Optional<YAMLRemarkParser::ParseState> &State = YAMLParser.State)
+    return &State->TheRemark;
+  else
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "unexpected error while parsing.");
+}
+
+Expected<const Remark *> Parser::getNext() const {
+  if (auto *Impl = dyn_cast<YAMLParserImpl>(this->Impl.get()))
+    return getNextYAML(*Impl);
+  llvm_unreachable("Get next called with an unknown parsing implementation.");
+}
+
+// Create wrappers for C Binding types (see CBindingWrapping.h).
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(remarks::Parser, LLVMRemarkParserRef)
+
+extern "C" LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
+                                                          uint64_t Size) {
+  return wrap(
+      new remarks::Parser(StringRef(static_cast<const char *>(Buf), Size)));
+}
+
+static void handleYAMLError(remarks::YAMLParserImpl &Impl, Error E) {
+  handleAllErrors(
+      std::move(E),
+      [&](const YAMLParseError &PE) {
+        Impl.YAMLParser.Stream.printError(&PE.getNode(),
+                                          Twine(PE.getMessage()) + Twine('\n'));
+      },
+      [&](const ErrorInfoBase &EIB) { EIB.log(Impl.YAMLParser.ErrorStream); });
+  Impl.HasErrors = true;
+}
+
+extern "C" LLVMRemarkEntryRef
+LLVMRemarkParserGetNext(LLVMRemarkParserRef Parser) {
+  remarks::Parser &TheParser = *unwrap(Parser);
+
+  Expected<const remarks::Remark *> RemarkOrErr = TheParser.getNext();
+  if (!RemarkOrErr) {
+    // Error during parsing.
+    if (auto *Impl = dyn_cast<remarks::YAMLParserImpl>(TheParser.Impl.get()))
+      handleYAMLError(*Impl, RemarkOrErr.takeError());
+    else
+      llvm_unreachable("unkown parser implementation.");
+    return nullptr;
+  }
+
+  if (*RemarkOrErr == nullptr)
+    return nullptr;
+  // Valid remark.
+  return wrap(*RemarkOrErr);
 }
 
 extern "C" LLVMBool LLVMRemarkParserHasError(LLVMRemarkParserRef Parser) {
-  return unwrap(Parser)->HadAnyErrors;
+  if (auto *Impl =
+          dyn_cast<remarks::YAMLParserImpl>(unwrap(Parser)->Impl.get()))
+    return Impl->HasErrors;
+  llvm_unreachable("unkown parser implementation.");
 }
 
 extern "C" const char *
 LLVMRemarkParserGetErrorMessage(LLVMRemarkParserRef Parser) {
-  return unwrap(Parser)->ErrorStream.str().c_str();
+  if (auto *Impl =
+          dyn_cast<remarks::YAMLParserImpl>(unwrap(Parser)->Impl.get()))
+    return Impl->YAMLParser.ErrorStream.str().c_str();
+  llvm_unreachable("unkown parser implementation.");
 }
 
 extern "C" void LLVMRemarkParserDispose(LLVMRemarkParserRef Parser) {

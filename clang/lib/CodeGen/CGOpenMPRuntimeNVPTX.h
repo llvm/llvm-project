@@ -383,8 +383,7 @@ public:
 
   /// Perform check on requires decl to ensure that target architecture
   /// supports unified addressing
-  void checkArchForUnifiedAddressing(CodeGenModule &CGM,
-                                     const OMPRequiresDecl *D) const override;
+  void checkArchForUnifiedAddressing(const OMPRequiresDecl *D) const override;
 
   /// Returns default address space for the constant firstprivates, __constant__
   /// address space by default.

@@ -1761,8 +1761,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
       llvm::Expected<DWARFDebugAranges &> aranges =
           debug_info->GetCompileUnitAranges();
       if (!aranges) {
-        Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO |
-                                                DWARF_LOG_DEBUG_ARANGES);
+        Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
         LLDB_LOG_ERROR(log, aranges.takeError(),
                        "SymbolFileDWARF::ResolveSymbolContext failed to get cu "
                        "aranges.  {0}");

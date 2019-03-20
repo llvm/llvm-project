@@ -87,3 +87,24 @@ SBThread SBThreadCollection::GetThreadAtIndex(size_t idx) {
     thread = m_opaque_sp->GetThreadAtIndex(idx);
   return LLDB_RECORD_RESULT(thread);
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBThreadCollection>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBThreadCollection, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBThreadCollection,
+                            (const lldb::SBThreadCollection &));
+  LLDB_REGISTER_METHOD(
+      const lldb::SBThreadCollection &,
+      SBThreadCollection, operator=,(const lldb::SBThreadCollection &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBThreadCollection, IsValid, ());
+  LLDB_REGISTER_METHOD_CONST(bool, SBThreadCollection, operator bool, ());
+  LLDB_REGISTER_METHOD(size_t, SBThreadCollection, GetSize, ());
+  LLDB_REGISTER_METHOD(lldb::SBThread, SBThreadCollection, GetThreadAtIndex,
+                       (size_t));
+}
+
+}
+}

@@ -355,7 +355,7 @@ define i8 @test_scalar_uadd_sub_nuw_lost_no_ov(i8 %a) {
 define i8 @test_scalar_uadd_urem_no_ov(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_urem_no_ov(
 ; CHECK-NEXT:    [[B:%.*]] = urem i8 [[A:%.*]], 100
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B]], i8 -100)
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[B]], -100
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %b = urem i8 %a, 100
@@ -379,7 +379,7 @@ define i8 @test_scalar_uadd_urem_known_bits(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_scalar_uadd_urem_known_bits(
 ; CHECK-NEXT:    [[AA:%.*]] = udiv i8 -66, [[A:%.*]]
 ; CHECK-NEXT:    [[BB:%.*]] = and i8 [[B:%.*]], 63
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[AA]], i8 [[BB]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw i8 [[AA]], [[BB]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %aa = udiv i8 190, %a
@@ -768,8 +768,7 @@ define <2 x i8> @test_vector_ssub_neg_nneg(<2 x i8> %a) {
 
 define i8 @test_scalar_usub_add_nuw_no_ov(i8 %a) {
 ; CHECK-LABEL: @test_scalar_usub_add_nuw_no_ov(
-; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[A:%.*]], 10
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 9)
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %b = add nuw i8 %a, 10
@@ -779,9 +778,7 @@ define i8 @test_scalar_usub_add_nuw_no_ov(i8 %a) {
 
 define i8 @test_scalar_usub_add_nuw_eq(i8 %a) {
 ; CHECK-LABEL: @test_scalar_usub_add_nuw_eq(
-; CHECK-NEXT:    [[B:%.*]] = add nuw i8 [[A:%.*]], 10
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 10)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[A:%.*]]
 ;
   %b = add nuw i8 %a, 10
   %r = call i8 @llvm.usub.sat.i8(i8 %b, i8 10)
@@ -801,9 +798,7 @@ define i8 @test_scalar_usub_add_nuw_may_ov(i8 %a) {
 
 define i8 @test_scalar_usub_urem_must_ov(i8 %a) {
 ; CHECK-LABEL: @test_scalar_usub_urem_must_ov(
-; CHECK-NEXT:    [[B:%.*]] = urem i8 [[A:%.*]], 10
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 10)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %b = urem i8 %a, 10
   %r = call i8 @llvm.usub.sat.i8(i8 %b, i8 10)
@@ -828,7 +823,7 @@ define i8 @test_scalar_usub_add_nuw_known_bits(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_scalar_usub_add_nuw_known_bits(
 ; CHECK-NEXT:    [[AA:%.*]] = add nuw i8 [[A:%.*]], 10
 ; CHECK-NEXT:    [[BB:%.*]] = and i8 [[B:%.*]], 7
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[AA]], i8 [[BB]])
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[AA]], [[BB]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %aa = add nuw i8 %a, 10
@@ -840,7 +835,7 @@ define i8 @test_scalar_usub_add_nuw_known_bits(i8 %a, i8 %b) {
 define i8 @test_scalar_usub_add_nuw_inferred(i8 %a) {
 ; CHECK-LABEL: @test_scalar_usub_add_nuw_inferred(
 ; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[B]], 9
+; CHECK-NEXT:    [[R:%.*]] = add nuw i8 [[B]], 9
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %b = call i8 @llvm.usub.sat.i8(i8 %a, i8 10)
@@ -850,8 +845,7 @@ define i8 @test_scalar_usub_add_nuw_inferred(i8 %a) {
 
 define <2 x i8> @test_vector_usub_add_nuw_no_ov(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_add_nuw_no_ov(
-; CHECK-NEXT:    [[B:%.*]] = add nuw <2 x i8> [[A:%.*]], <i8 10, i8 10>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[B]], <2 x i8> <i8 9, i8 9>)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[A:%.*]], <i8 1, i8 1>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %b = add nuw <2 x i8> %a, <i8 10, i8 10>
