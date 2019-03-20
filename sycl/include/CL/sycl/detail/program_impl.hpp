@@ -241,20 +241,22 @@ public:
 
   vector_class<vector_class<char>> get_binaries() const {
     throw_if_state_is(program_state::none);
-    vector_class<size_t> BinarySizes(Devices.size());
-    CHECK_OCL_CODE(clGetProgramInfo(ClProgram, CL_PROGRAM_BINARY_SIZES,
-                                    sizeof(size_t) * BinarySizes.size(),
-                                    BinarySizes.data(), nullptr));
-
     vector_class<vector_class<char>> Result;
-    vector_class<char *> Pointers;
-    for (size_t I = 0; I < BinarySizes.size(); ++I) {
-      Result.emplace_back(BinarySizes[I]);
-      Pointers.push_back(Result[I].data());
+    if (!is_host()) {
+      vector_class<size_t> BinarySizes(Devices.size());
+      CHECK_OCL_CODE(clGetProgramInfo(ClProgram, CL_PROGRAM_BINARY_SIZES,
+                                      sizeof(size_t) * BinarySizes.size(),
+                                      BinarySizes.data(), nullptr));
+
+      vector_class<char *> Pointers;
+      for (size_t I = 0; I < BinarySizes.size(); ++I) {
+        Result.emplace_back(BinarySizes[I]);
+        Pointers.push_back(Result[I].data());
+      }
+      CHECK_OCL_CODE(clGetProgramInfo(ClProgram, CL_PROGRAM_BINARIES,
+                                      sizeof(char *) * Pointers.size(),
+                                      Pointers.data(), nullptr));
     }
-    CHECK_OCL_CODE(clGetProgramInfo(ClProgram, CL_PROGRAM_BINARIES,
-                                    sizeof(char *) * Pointers.size(),
-                                    Pointers.data(), nullptr));
     return Result;
   }
 
