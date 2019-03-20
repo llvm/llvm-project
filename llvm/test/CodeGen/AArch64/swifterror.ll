@@ -19,12 +19,11 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-LABEL: foo:
 ; CHECK-O0: orr w{{.*}}, wzr, #0x10
 ; CHECK-O0: malloc
-; CHECK-O0: mov x21, x0
-; CHECK-O0-NOT: x21
+; CHECK-O0: mov x1, x0
+; CHECK-O0-NOT: x1
 ; CHECK-O0: orr [[ID:w[0-9]+]], wzr, #0x1
-; CHECK-O0-NOT: x21
 ; CHECK-O0: strb [[ID]], [x0, #8]
-; CHECK-O0-NOT: x21
+; CHECK-O0: mov x21, x1
 entry:
   %call = call i8* @malloc(i64 16)
   %call.0 = bitcast i8* %call to %swift_error*

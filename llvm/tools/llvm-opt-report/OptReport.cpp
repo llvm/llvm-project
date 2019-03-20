@@ -15,6 +15,7 @@
 
 #include "llvm-c/Remarks.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
@@ -151,39 +152,43 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
     return false;
   }
 
-  StringRef Buffer = (*Buf)->getBuffer();
-  LLVMRemarkParserRef Parser =
-      LLVMRemarkParserCreate(Buffer.data(), Buffer.size());
+  remarks::Parser Parser((*Buf)->getBuffer());
 
-  LLVMRemarkEntry *Remark = nullptr;
-  while ((Remark = LLVMRemarkParserGetNext(Parser))) {
-    bool Transformed =
-        StringRef(Remark->RemarkType.Str, Remark->RemarkType.Len) == "!Passed";
-    StringRef Pass(Remark->PassName.Str, Remark->PassName.Len);
-    StringRef File(Remark->DebugLoc.SourceFile.Str,
-                   Remark->DebugLoc.SourceFile.Len);
-    StringRef Function(Remark->FunctionName.Str, Remark->FunctionName.Len);
-    uint32_t Line = Remark->DebugLoc.SourceLineNumber;
-    uint32_t Column = Remark->DebugLoc.SourceColumnNumber;
-    ArrayRef<LLVMRemarkArg> Args(Remark->Args, Remark->NumArgs);
+  while (true) {
+    Expected<const remarks::Remark *> RemarkOrErr = Parser.getNext();
+    if (!RemarkOrErr) {
+      handleAllErrors(RemarkOrErr.takeError(), [&](const ErrorInfoBase &PE) {
+        PE.log(WithColor::error());
+      });
+      return false;
+    }
+    if (!*RemarkOrErr) // End of file.
+      break;
+
+    const remarks::Remark &Remark = **RemarkOrErr;
+
+    bool Transformed = Remark.RemarkType == remarks::Type::Passed;
 
     int VectorizationFactor = 1;
     int InterleaveCount = 1;
     int UnrollCount = 1;
 
-    for (const LLVMRemarkArg &Arg : Args) {
-      StringRef ArgKeyName(Arg.Key.Str, Arg.Key.Len);
-      StringRef ArgValue(Arg.Value.Str, Arg.Value.Len);
-      if (ArgKeyName == "VectorizationFactor")
-        ArgValue.getAsInteger(10, VectorizationFactor);
-      else if (ArgKeyName == "InterleaveCount")
-        ArgValue.getAsInteger(10, InterleaveCount);
-      else if (ArgKeyName == "UnrollCount")
-        ArgValue.getAsInteger(10, UnrollCount);
+    for (const remarks::Argument &Arg : Remark.Args) {
+      if (Arg.Key == "VectorizationFactor")
+        Arg.Val.getAsInteger(10, VectorizationFactor);
+      else if (Arg.Key == "InterleaveCount")
+        Arg.Val.getAsInteger(10, InterleaveCount);
+      else if (Arg.Key == "UnrollCount")
+        Arg.Val.getAsInteger(10, UnrollCount);
     }
 
-    if (Line < 1 || File.empty())
+    const Optional<remarks::RemarkLocation> &Loc = Remark.Loc;
+    if (!Loc)
       continue;
+
+    StringRef File = Loc->SourceFilePath;
+    unsigned Line = Loc->SourceLine;
+    unsigned Column = Loc->SourceColumn;
 
     // We track information on both actual and potential transformations. This
     // way, if there are multiple possible things on a line that are, or could
@@ -194,27 +199,22 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
         LLII.Transformed = true;
     };
 
-    if (Pass == "inline") {
-      auto &LI = LocationInfo[File][Line][Function][Column];
+    if (Remark.PassName == "inline") {
+      auto &LI = LocationInfo[File][Line][Remark.FunctionName][Column];
       UpdateLLII(LI.Inlined);
-    } else if (Pass == "loop-unroll") {
-      auto &LI = LocationInfo[File][Line][Function][Column];
+    } else if (Remark.PassName == "loop-unroll") {
+      auto &LI = LocationInfo[File][Line][Remark.FunctionName][Column];
       LI.UnrollCount = UnrollCount;
       UpdateLLII(LI.Unrolled);
-    } else if (Pass == "loop-vectorize") {
-      auto &LI = LocationInfo[File][Line][Function][Column];
+    } else if (Remark.PassName == "loop-vectorize") {
+      auto &LI = LocationInfo[File][Line][Remark.FunctionName][Column];
       LI.VectorizationFactor = VectorizationFactor;
       LI.InterleaveCount = InterleaveCount;
       UpdateLLII(LI.Vectorized);
     }
   }
 
-  bool HasError = LLVMRemarkParserHasError(Parser);
-  if (HasError)
-    WithColor::error() << LLVMRemarkParserGetErrorMessage(Parser) << "\n";
-
-  LLVMRemarkParserDispose(Parser);
-  return !HasError;
+  return true;
 }
 
 static bool writeReport(LocationInfoTy &LocationInfo) {

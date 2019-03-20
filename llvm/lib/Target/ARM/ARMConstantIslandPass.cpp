@@ -1647,6 +1647,9 @@ ARMConstantIslands::fixupUnconditionalBr(ImmBranch &Br) {
   if (!isThumb1)
     llvm_unreachable("fixupUnconditionalBr is Thumb1 only!");
 
+  if (!AFI->isLRSpilled())
+    report_fatal_error("underestimated function size");
+
   // Use BL to implement far jump.
   Br.MaxDisp = (1 << 21) * 2;
   MI->setDesc(TII->get(ARM::tBfar));

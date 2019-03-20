@@ -901,11 +901,12 @@ void Preprocessor::Lex(Token &Result) {
 /// \param FilenameTok Filled in with the next token. On success, this will
 ///        be either an angle_header_name or a string_literal token. On
 ///        failure, it will be whatever other token was found instead.
-/// \param AllowConcatenation If \c true, allow a < token, followed by other
-///        tokens and finally a > token, to form a single header-name token.
+/// \param AllowMacroExpansion If \c true, allow the header name to be formed
+///        by macro expansion (concatenating tokens as necessary if the first
+///        token is a '<').
 /// \return \c true if we reached EOD or EOF while looking for a > token in
 ///         a concatenated header name and diagnosed it. \c false otherwise.
-bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowConcatenation) {
+bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
   // Lex using header-name tokenization rules if tokens are being lexed from
   // a file. Just grab a token normally if we're in a macro expansion.
   if (CurPPLexer)
@@ -915,13 +916,16 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowConcatenation) {
 
   // This could be a <foo/bar.h> file coming from a macro expansion.  In this
   // case, glue the tokens together into an angle_string_literal token.
-  if (FilenameTok.is(tok::less) && AllowConcatenation) {
-    SmallString<128> FilenameBuffer;
+  SmallString<128> FilenameBuffer;
+  if (FilenameTok.is(tok::less) && AllowMacroExpansion) {
     SourceLocation Start = FilenameTok.getLocation();
     SourceLocation End;
     FilenameBuffer.push_back('<');
 
     // Consume tokens until we find a '>'.
+    // FIXME: A header-name could be formed starting or ending with an
+    // alternative token. It's not clear whether that's ill-formed in all
+    // cases.
     while (FilenameTok.isNot(tok::greater)) {
       Lex(FilenameTok);
       if (FilenameTok.isOneOf(tok::eod, tok::eof)) {
@@ -962,8 +966,22 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowConcatenation) {
     }
 
     FilenameTok.startToken();
-    FilenameTok.setKind(tok::angle_string_literal);
+    FilenameTok.setKind(tok::header_name);
     CreateString(FilenameBuffer, FilenameTok, Start, End);
+  } else if (FilenameTok.is(tok::string_literal) && AllowMacroExpansion) {
+    // Convert a string-literal token of the form " h-char-sequence "
+    // (produced by macro expansion) into a header-name token.
+    //
+    // The rules for header-names don't quite match the rules for
+    // string-literals, but all the places where they differ result in
+    // undefined behavior, so we can and do treat them the same.
+    //
+    // A string-literal with a prefix or suffix is not translated into a
+    // header-name. This could theoretically be observable via the C++20
+    // context-sensitive header-name formation rules.
+    StringRef Str = getSpelling(FilenameTok, FilenameBuffer);
+    if (Str.size() >= 2 && Str.front() == '"' && Str.back() == '"')
+      FilenameTok.setKind(tok::header_name);
   }
 
   return false;

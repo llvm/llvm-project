@@ -486,7 +486,7 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
     return;
 
   // If the next token wasn't a header-name, diagnose the error.
-  if (!FilenameTok.isOneOf(tok::angle_string_literal, tok::string_literal)) {
+  if (FilenameTok.isNot(tok::header_name)) {
     Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
     return;
   }
@@ -670,8 +670,7 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
 
   StringRef SourceFileName;
   SmallString<128> FileNameBuffer;
-  if (SourceFilenameTok.is(tok::string_literal) ||
-      SourceFilenameTok.is(tok::angle_string_literal)) {
+  if (SourceFilenameTok.is(tok::header_name)) {
     SourceFileName = getSpelling(SourceFilenameTok, FileNameBuffer);
   } else {
     Diag(Tok, diag::warn_pragma_include_alias_expected_filename);
@@ -691,8 +690,7 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
     return;
 
   StringRef ReplaceFileName;
-  if (ReplaceFilenameTok.is(tok::string_literal) ||
-      ReplaceFilenameTok.is(tok::angle_string_literal)) {
+  if (ReplaceFilenameTok.is(tok::header_name)) {
     ReplaceFileName = getSpelling(ReplaceFilenameTok, FileNameBuffer);
   } else {
     Diag(Tok, diag::warn_pragma_include_alias_expected_filename);

@@ -2037,8 +2037,14 @@ void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
   Asm->OutStreamer->AddComment("Loc expr size");
   if (getDwarfVersion() >= 5)
     Asm->EmitULEB128(DebugLocs.getBytes(Entry).size());
-  else
+  else if (DebugLocs.getBytes(Entry).size() <= std::numeric_limits<uint16_t>::max())
     Asm->emitInt16(DebugLocs.getBytes(Entry).size());
+  else {
+    // The entry is too big to fit into 16 bit, drop it as there is nothing we
+    // can do.
+    Asm->emitInt16(0);
+    return;
+  }
   // Emit the entry.
   APByteStreamer Streamer(*Asm);
   emitDebugLocEntry(Streamer, Entry, CU);

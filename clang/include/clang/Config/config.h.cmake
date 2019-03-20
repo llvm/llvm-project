@@ -23,6 +23,9 @@
 /* Default runtime library to use. */
 #define CLANG_DEFAULT_RTLIB "${CLANG_DEFAULT_RTLIB}"
 
+/* Default unwind library to use. */
+#define CLANG_DEFAULT_UNWINDLIB "${CLANG_DEFAULT_UNWINDLIB}"
+
 /* Default objcopy to use */
 #define CLANG_DEFAULT_OBJCOPY "${CLANG_DEFAULT_OBJCOPY}"
 

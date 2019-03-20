@@ -1159,47 +1159,80 @@ bool tools::isObjCAutoRefCount(const ArgList &Args) {
   return Args.hasFlag(options::OPT_fobjc_arc, options::OPT_fno_objc_arc, false);
 }
 
-static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
-                      ArgStringList &CmdArgs, const ArgList &Args) {
-  bool isAndroid = Triple.isAndroid();
-  bool isCygMing = Triple.isOSCygMing();
-  bool IsIAMCU = Triple.isOSIAMCU();
-  bool StaticLibgcc = Args.hasArg(options::OPT_static_libgcc) ||
-                      Args.hasArg(options::OPT_static) ||
-                      Args.hasArg(options::OPT_static_pie);
+enum class LibGccType { UnspecifiedLibGcc, StaticLibGcc, SharedLibGcc };
 
-  bool SharedLibgcc = Args.hasArg(options::OPT_shared_libgcc);
-  bool UnspecifiedLibgcc = !StaticLibgcc && !SharedLibgcc;
+static LibGccType getLibGccType(const ArgList &Args) {
+  bool Static = Args.hasArg(options::OPT_static_libgcc) ||
+                Args.hasArg(options::OPT_static) ||
+                Args.hasArg(options::OPT_static_pie);
 
-  // Gcc adds libgcc arguments in various ways:
-  //
-  // gcc <none>:     -lgcc --as-needed -lgcc_s --no-as-needed
-  // g++ <none>:                       -lgcc_s               -lgcc
-  // gcc shared:                       -lgcc_s               -lgcc
-  // g++ shared:                       -lgcc_s               -lgcc
-  // gcc static:     -lgcc             -lgcc_eh
-  // g++ static:     -lgcc             -lgcc_eh
-  // gcc static-pie: -lgcc             -lgcc_eh
-  // g++ static-pie: -lgcc             -lgcc_eh
-  //
-  // Also, certain targets need additional adjustments.
+  bool Shared = Args.hasArg(options::OPT_shared_libgcc);
+  if (Shared)
+    return LibGccType::SharedLibGcc;
+  if (Static)
+    return LibGccType::StaticLibGcc;
+  return LibGccType::UnspecifiedLibGcc;
+}
 
-  bool LibGccFirst = (D.CCCIsCC() && UnspecifiedLibgcc) || StaticLibgcc;
-  if (LibGccFirst)
-    CmdArgs.push_back("-lgcc");
+// Gcc adds libgcc arguments in various ways:
+//
+// gcc <none>:     -lgcc --as-needed -lgcc_s --no-as-needed
+// g++ <none>:                       -lgcc_s               -lgcc
+// gcc shared:                       -lgcc_s               -lgcc
+// g++ shared:                       -lgcc_s               -lgcc
+// gcc static:     -lgcc             -lgcc_eh
+// g++ static:     -lgcc             -lgcc_eh
+// gcc static-pie: -lgcc             -lgcc_eh
+// g++ static-pie: -lgcc             -lgcc_eh
+//
+// Also, certain targets need additional adjustments.
 
-  bool AsNeeded = D.CCCIsCC() && UnspecifiedLibgcc && !isAndroid && !isCygMing;
+static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
+                             ArgStringList &CmdArgs, const ArgList &Args) {
+  ToolChain::UnwindLibType UNW = TC.GetUnwindLibType(Args);
+  // Targets that don't use unwind libraries.
+  if (TC.getTriple().isAndroid() || TC.getTriple().isOSIAMCU() ||
+      TC.getTriple().isOSBinFormatWasm() ||
+      UNW == ToolChain::UNW_None)
+    return;
+
+  LibGccType LGT = getLibGccType(Args);
+  bool AsNeeded = D.CCCIsCC() && LGT == LibGccType::UnspecifiedLibGcc &&
+                  !TC.getTriple().isAndroid() && !TC.getTriple().isOSCygMing();
   if (AsNeeded)
     CmdArgs.push_back("--as-needed");
 
-  if ((UnspecifiedLibgcc || SharedLibgcc) && !isAndroid)
-    CmdArgs.push_back("-lgcc_s");
-
-  else if (StaticLibgcc && !isAndroid && !IsIAMCU)
-    CmdArgs.push_back("-lgcc_eh");
+  switch (UNW) {
+  case ToolChain::UNW_None:
+    return;
+  case ToolChain::UNW_Libgcc: {
+    LibGccType LGT = getLibGccType(Args);
+    if (LGT == LibGccType::UnspecifiedLibGcc || LGT == LibGccType::SharedLibGcc)
+      CmdArgs.push_back("-lgcc_s");
+    else if (LGT == LibGccType::StaticLibGcc)
+      CmdArgs.push_back("-lgcc_eh");
+    break;
+  }
+  case ToolChain::UNW_CompilerRT:
+    CmdArgs.push_back("-lunwind");
+    break;
+  }
 
   if (AsNeeded)
     CmdArgs.push_back("--no-as-needed");
+}
+
+static void AddLibgcc(const ToolChain &TC, const Driver &D,
+                      ArgStringList &CmdArgs, const ArgList &Args) {
+  bool isAndroid = TC.getTriple().isAndroid();
+
+  LibGccType LGT = getLibGccType(Args);
+  bool LibGccFirst = (D.CCCIsCC() && LGT == LibGccType::UnspecifiedLibGcc) ||
+                     LGT == LibGccType::StaticLibGcc;
+  if (LibGccFirst)
+    CmdArgs.push_back("-lgcc");
+
+  AddUnwindLibrary(TC, D, CmdArgs, Args);
 
   if (!LibGccFirst)
     CmdArgs.push_back("-lgcc");
@@ -1209,7 +1242,7 @@ static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
   //
   // NOTE: This fixes a link error on Android MIPS as well.  The non-static
   // libgcc for MIPS relies on _Unwind_Find_FDE and dl_iterate_phdr from libdl.
-  if (isAndroid && !StaticLibgcc)
+  if (isAndroid && getLibGccType(Args) != LibGccType::StaticLibGcc)
     CmdArgs.push_back("-ldl");
 }
 
@@ -1221,6 +1254,7 @@ void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
   switch (RLT) {
   case ToolChain::RLT_CompilerRT:
     CmdArgs.push_back(TC.getCompilerRTArgString(Args, "builtins"));
+    AddUnwindLibrary(TC, D, CmdArgs, Args);
     break;
   case ToolChain::RLT_Libgcc:
     // Make sure libgcc is not used under MSVC environment by default
@@ -1232,7 +1266,7 @@ void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
             << Args.getLastArg(options::OPT_rtlib_EQ)->getValue() << "MSVC";
       }
     } else
-      AddLibgcc(TC.getTriple(), D, CmdArgs, Args);
+      AddLibgcc(TC, D, CmdArgs, Args);
     break;
   }
 }

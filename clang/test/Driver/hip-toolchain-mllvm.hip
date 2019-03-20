@@ -8,7 +8,8 @@
 // RUN:   %s 2>&1 | FileCheck %s
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
-// CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
+// CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
+// CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-target-cpu" "gfx803"
 // CHECK-SAME: {{.*}} "-mllvm" "-amdgpu-function-calls=0" {{.*}}
 
@@ -22,7 +23,8 @@
 // CHECK-SAME: "-amdgpu-function-calls=0" "-o" {{".*-gfx803-.*o"}}
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
-// CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
+// CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
+// CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-target-cpu" "gfx900"
 // CHECK-SAME: {{.*}} "-mllvm" "-amdgpu-function-calls=0" {{.*}}
 
