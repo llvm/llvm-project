@@ -73,6 +73,7 @@ set(OPENCL_INCLUDE "${OpenCL_INCLUDE_DIRS}")
 
 add_library("${SYCLLibrary}" SHARED
   "${includeRootPath}/CL/sycl.hpp"
+  "${sourceRootPath}/detail/builtins.cpp"
   "${sourceRootPath}/detail/cnri.cpp"
   "${sourceRootPath}/detail/common.cpp"
   "${sourceRootPath}/detail/context_impl.cpp"

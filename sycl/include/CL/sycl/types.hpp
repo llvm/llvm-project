@@ -444,8 +444,8 @@ public:
   operator typename std::enable_if<N == 1, DataT>::type() const {
     return m_Data;
   }
-  size_t get_count() const { return NumElements; }
-  size_t get_size() const { return sizeof(m_Data); }
+  static constexpr size_t get_count() { return NumElements; }
+  static constexpr size_t get_size() { return sizeof(m_Data); }
 
   // TODO: convert() for FP to FP. Also, check whether rounding mode handling
   // is needed for integers to FP convert.

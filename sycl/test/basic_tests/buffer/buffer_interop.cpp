@@ -40,11 +40,10 @@ int main() {
     {
       buffer<int, 1> BufferData(Data, range<1>(Size),
                                 {property::buffer::use_host_ptr()});
-      buffer<int, 1> BufferCL(OpenCLBuffer, MyQueue.get_context());
       BufferData.set_final_data(Result.begin());
       MyQueue.submit([&](handler &CGH) {
         auto Data = BufferData.get_access<access::mode::write>(CGH);
-        auto CLData = BufferCL.get_access<access::mode::read>(CGH);
+        auto CLData = Buffer.get_access<access::mode::read>(CGH);
         CGH.parallel_for<class UseMemContent>(range<1>{Size}, [=](id<1> Index) {
           Data[Index] = 2 * CLData[Index];
         });

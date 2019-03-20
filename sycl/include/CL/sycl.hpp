@@ -10,6 +10,7 @@
 
 #include <CL/sycl/accessor.hpp>
 #include <CL/sycl/atomic.hpp>
+#include <CL/sycl/builtins.hpp>
 #include <CL/sycl/buffer.hpp>
 #include <CL/sycl/context.hpp>
 #include <CL/sycl/device.hpp>
@@ -24,7 +25,6 @@
 #include <CL/sycl/item.hpp>
 #include <CL/sycl/kernel.hpp>
 #include <CL/sycl/macro.hpp>
-#include <CL/sycl/math.hpp>
 #include <CL/sycl/multi_ptr.hpp>
 #include <CL/sycl/nd_item.hpp>
 #include <CL/sycl/nd_range.hpp>
