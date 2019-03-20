@@ -14,17 +14,30 @@
 //===----------------------------------------------------------------------===//
 
 #include <CL/sycl.hpp>
+#include <algorithm>
 #include <cstring>
 #include <iostream>
+#include <iterator>
 
 using namespace cl::sycl;
 
 struct MyNestedStruct {
+  bool operator==(const MyNestedStruct &Rhs) {
+    return (FldArr[0] == Rhs.FldArr[0] && FldFloat == Rhs.FldFloat);
+  }
   cl::sycl::cl_char FldArr[1];
   cl::sycl::cl_float FldFloat;
 };
 
 struct MyStruct {
+  bool operator==(const MyStruct &Rhs) {
+    return (FldChar == Rhs.FldChar && FldLong == Rhs.FldLong &&
+            FldShort == Rhs.FldShort && FldUint == Rhs.FldUint &&
+            FldStruct == Rhs.FldStruct &&
+            std::equal(std::begin(FldArr), std::end(FldArr),
+                       std::begin(Rhs.FldArr)) &&
+            FldInt == Rhs.FldInt);
+  }
   cl::sycl::cl_char FldChar;
   cl::sycl::cl_long FldLong;
   cl::sycl::cl_short FldShort;
@@ -46,7 +59,7 @@ static void printStruct(const MyStruct &S0) {
 
 bool test0() {
   MyStruct S = GlobS;
-  MyStruct S0 = { 0 };
+  MyStruct S0 = {0};
   {
     buffer<MyStruct, 1> Buf(&S0, range<1>(1));
     queue myQueue;
@@ -55,7 +68,7 @@ bool test0() {
       cgh.single_task<class MyKernel>([=] { B[0] = S; });
     });
   }
-  bool Passed = (std::memcmp(&S0, &S, sizeof(MyStruct)) == 0);
+  bool Passed = (S == S0);
 
   if (!Passed) {
     std::cout << "test0 failed" << std::endl;
@@ -72,15 +85,14 @@ bool test0() {
 bool test1() {
   range<3> ice(8, 9, 10);
   uint ice2 = 888;
-  uint result[4] = { 0 };
+  uint result[4] = {0};
 
   {
     buffer<unsigned int, 1> Buffer((unsigned int *)result, range<1>(4));
     queue myQueue;
     myQueue.submit([&](handler &cgh) {
       auto B = Buffer.get_access<access::mode::write>(cgh);
-      cgh.parallel_for<class bufferByRange_cap>(range<1>{ 4 },
-                                                [=](id<1> index) {
+      cgh.parallel_for<class bufferByRange_cap>(range<1>{4}, [=](id<1> index) {
         B[index.get(0)] = index.get(0) > 2 ? ice2 : ice.get(index.get(0));
       });
     });
@@ -111,17 +123,16 @@ int main(int argc, char **argv) {
   cl::sycl::cl_long PartLong = ((cl::sycl::cl_long)argc) << 32;
   cl::sycl::cl_float PartFloat = argc;
 
-  GlobS = { PartChar,
-            PartLong,
-            PartShort,
-            PartUint,
-            { { PartChar }, PartFloat },
-            { PartShort, PartShort, PartShort },
-            PartInt };
+  GlobS = {PartChar,
+           PartLong,
+           PartShort,
+           PartUint,
+           {{PartChar}, PartFloat},
+           {PartShort, PartShort, PartShort},
+           PartInt};
 
   bool Pass = test0() & test1();
 
   std::cout << "Test " << (Pass ? "passed" : "FAILED") << std::endl;
   return Pass ? 0 : 1;
 }
-
