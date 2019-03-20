@@ -120,6 +120,8 @@ option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Mi
 option(LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT "Enable per TU ABI insulation by default. To be used by vendors." OFF)
 set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header.")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
+set(LIBCXX_LIBCPPABI_VERSION "2" CACHE STRING "Version of libc++abi's ABI to re-export from libc++ when re-exporting is enabled.
+                                               Note that this is not related to the version of libc++'s ABI itself!")
 
 if (NOT LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_STATIC)
   message(FATAL_ERROR "libc++ must be built as either a shared or static library.")

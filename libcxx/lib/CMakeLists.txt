@@ -136,28 +136,10 @@ if (LIBCXX_TARGETING_MSVC)
 endif()
 
 if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
-  if (NOT DEFINED LIBCXX_LIBCPPABI_VERSION)
-    set(LIBCXX_LIBCPPABI_VERSION "2") # Default value
-    execute_process(
-      COMMAND xcrun --show-sdk-version
-      OUTPUT_VARIABLE sdk_ver
-      RESULT_VARIABLE res
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if (res EQUAL 0)
-      message(STATUS "Found SDK version ${sdk_ver}")
-      string(REPLACE "10." "" sdk_ver "${sdk_ver}")
-      if (sdk_ver LESS 9)
-        set(LIBCXX_LIBCPPABI_VERSION "")
-      else()
-        set(LIBCXX_LIBCPPABI_VERSION "2")
-      endif()
-    endif()
-  endif()
-
   if ("armv7" IN_LIST CMAKE_OSX_ARCHITECTURES)
-    set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++sjlj-abi.exp")
+    set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++sjlj-abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
   else()
-    set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++abi${LIBCXX_LIBCPPABI_VERSION}.exp")
+    set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
   endif()
   add_link_flags(
     "-compatibility_version 1"
