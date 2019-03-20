@@ -99,7 +99,6 @@ public:
 
   const WasmSection *CodeSection = nullptr;
   const WasmSection *DataSection = nullptr;
-  const WasmSection *ProducersSection = nullptr;
 
   // Maps input type indices to output type indices
   std::vector<uint32_t> TypeMap;

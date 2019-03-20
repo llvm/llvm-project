@@ -1,0 +1,44 @@
+# RUN: yaml2obj %s -o %t1.o
+
+# RUN: yaml2obj %S/Inputs/disallow-feature-foo.yaml -o %t.disallowed.o
+# RUN: wasm-ld --no-entry -o - %t1.o %t.disallowed.o | obj2yaml | FileCheck %s --check-prefix DISALLOWED
+
+# RUN: yaml2obj %S/Inputs/no-feature-foo.yaml -o %t.none.o
+# RUN: wasm-ld --no-entry -o - %t1.o %t.none.o | obj2yaml | FileCheck %s --check-prefix NONE
+
+# Check that the following combinations of feature linkage policies
+# give the expected results:
+#
+#     DISALLOWED x DISALLOWED => NONE
+#     DISALLOWED x NONE => NONE
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+  - Type:            CUSTOM
+    Name:            target_features
+    Features:
+      - Prefix:        DISALLOWED
+        Name:          "foo"
+        # included so output has target features section
+      - Prefix:        USED
+        Name:          "bar"
+...
+
+# DISALLOWED:        - Type:            CUSTOM
+# DISALLOWED-NEXT:     Name:            target_features
+# DISALLOWED-NEXT:     Features:
+# DISALLOWED-NEXT:       - Prefix:          USED
+# DISALLOWED-NEXT:         Name:            bar
+# DISALLOWED-NEXT: ...
+
+# NONE:        - Type:            CUSTOM
+# NONE-NEXT:     Name:            target_features
+# NONE-NEXT:     Features:
+# NONE-NEXT:       - Prefix:          USED
+# NONE-NEXT:         Name:            bar
+# NONE-NEXT: ...
