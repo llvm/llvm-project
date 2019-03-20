@@ -457,6 +457,13 @@ Error SymbolTableSection::removeSymbols(
   return Error::success();
 }
 
+void SymbolTableSection::replaceSectionReferences(
+    const DenseMap<SectionBase *, SectionBase *> &FromTo) {
+  for (std::unique_ptr<Symbol> &Sym : Symbols)
+    if (SectionBase *To = FromTo.lookup(Sym->DefinedIn))
+      Sym->DefinedIn = To;
+}
+
 void SymbolTableSection::initialize(SectionTableRef SecTable) {
   Size = 0;
   setStrTab(SecTable.getSectionOfType<StringTableSection>(
@@ -638,12 +645,6 @@ void RelocationSection::replaceSectionReferences(
   // Update the target section if it was replaced.
   if (SectionBase *To = FromTo.lookup(SecToApplyRel))
     SecToApplyRel = To;
-
-  // Change the sections where symbols are defined in if their
-  // original sections were replaced.
-  for (const Relocation &R : Relocations)
-    if (SectionBase *To = FromTo.lookup(R.RelocSymbol->DefinedIn))
-      R.RelocSymbol->DefinedIn = To;
 }
 
 void SectionWriter::visit(const DynamicRelocationSection &Sec) {

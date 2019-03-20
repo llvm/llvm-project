@@ -3915,6 +3915,8 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     llvm_unreachable("Unknown OpenMP directive");
   }
 
+  ErrorFound = Res.isInvalid() || ErrorFound;
+
   for (const auto &P : VarsWithInheritedDSA) {
     Diag(P.second->getExprLoc(), diag::err_omp_no_dsa_for_variable)
         << P.first << P.second->getSourceRange();
@@ -3927,6 +3929,13 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
 
   if (ErrorFound)
     return StmtError();
+
+  if (!(Res.getAs<OMPExecutableDirective>()->isStandaloneDirective())) {
+    Res.getAs<OMPExecutableDirective>()
+        ->getStructuredBlock()
+        ->setIsOMPStructuredBlock(true);
+  }
+
   return Res;
 }
 

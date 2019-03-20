@@ -261,6 +261,22 @@ public:
   ArrayRef<OMPClause *> clauses() const {
     return const_cast<OMPExecutableDirective *>(this)->getClauses();
   }
+
+  /// Returns whether or not this is a Standalone directive.
+  ///
+  /// Stand-alone directives are executable directives
+  /// that have no associated user code.
+  bool isStandaloneDirective() const;
+
+  /// Returns the AST node representing OpenMP structured-block of this
+  /// OpenMP executable directive,
+  /// Prerequisite: Executable Directive must not be Standalone directive.
+  const Stmt *getStructuredBlock() const;
+
+  Stmt *getStructuredBlock() {
+    return const_cast<Stmt *>(
+        const_cast<const OMPExecutableDirective *>(this)->getStructuredBlock());
+  }
 };
 
 /// This represents '#pragma omp parallel' directive.

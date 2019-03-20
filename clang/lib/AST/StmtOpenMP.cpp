@@ -22,6 +22,25 @@ void OMPExecutableDirective::setClauses(ArrayRef<OMPClause *> Clauses) {
   std::copy(Clauses.begin(), Clauses.end(), getClauses().begin());
 }
 
+bool OMPExecutableDirective::isStandaloneDirective() const {
+  // Special case: 'omp target enter data', 'omp target exit data',
+  // 'omp target update' are stand-alone directives, but for implementation
+  // reasons they have empty synthetic structured block, to simplify codegen.
+  if (isa<OMPTargetEnterDataDirective>(this) ||
+      isa<OMPTargetExitDataDirective>(this) ||
+      isa<OMPTargetUpdateDirective>(this))
+    return true;
+  return !hasAssociatedStmt() || !getAssociatedStmt();
+}
+
+const Stmt *OMPExecutableDirective::getStructuredBlock() const {
+  assert(!isStandaloneDirective() &&
+         "Standalone Executable Directives don't have Structured Blocks.");
+  if (auto *LD = dyn_cast<OMPLoopDirective>(this))
+    return LD->getBody();
+  return getInnermostCapturedStmt()->getCapturedStmt();
+}
+
 void OMPLoopDirective::setCounters(ArrayRef<Expr *> A) {
   assert(A.size() == getCollapsedNumber() &&
          "Number of loop counters is not the same as the collapsed number");
