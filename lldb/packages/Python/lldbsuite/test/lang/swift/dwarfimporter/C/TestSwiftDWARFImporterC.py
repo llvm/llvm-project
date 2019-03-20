@@ -35,6 +35,8 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.assertTrue(os.path.isdir(include))
         shutil.rmtree(include)
 
+    @skipIf(archs=['ppc64le'])
+    # SR-10214
     @swiftTest
     # This test needs a working Remote Mirrors implementation.
     @skipIf(oslist=['linux', 'windows'])
@@ -64,6 +66,8 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         target.Clear()
         lldb.SBDebugger.MemoryPressureDetected()
 
+    @skipIf(archs=['ppc64le'])
+    # SR-10214
     @swiftTest
     def test_negative(self):
         lldb.SBDebugger.MemoryPressureDetected()
