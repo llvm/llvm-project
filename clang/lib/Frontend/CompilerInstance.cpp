@@ -65,11 +65,7 @@ CompilerInstance::CompilerInstance(
       Invocation(new CompilerInvocation()),
       ModuleCache(SharedModuleCache ? SharedModuleCache
                                     : new InMemoryModuleCache),
-      ThePCHContainerOperations(std::move(PCHContainerOps)) {
-  // Don't allow this to invalidate buffers in use by others.
-  if (SharedModuleCache)
-    getModuleCache().finalizeCurrentBuffers();
-}
+      ThePCHContainerOperations(std::move(PCHContainerOps)) {}
 
 CompilerInstance::~CompilerInstance() {
   assert(OutputFiles.empty() && "Still output files in flight?");

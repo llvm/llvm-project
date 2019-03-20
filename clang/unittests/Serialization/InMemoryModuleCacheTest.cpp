@@ -23,72 +23,99 @@ std::unique_ptr<MemoryBuffer> getBuffer(int I) {
                                     /* RequiresNullTerminator = */ false);
 }
 
-TEST(InMemoryModuleCacheTest, addBuffer) {
-  auto B1 = getBuffer(1);
-  auto B2 = getBuffer(2);
-  auto B3 = getBuffer(3);
-  auto *RawB1 = B1.get();
-  auto *RawB2 = B2.get();
-  auto *RawB3 = B3.get();
-
-  // Add a few buffers.
+TEST(InMemoryModuleCacheTest, initialState) {
   InMemoryModuleCache Cache;
-  EXPECT_EQ(RawB1, &Cache.addBuffer("1", std::move(B1)));
-  EXPECT_EQ(RawB2, &Cache.addBuffer("2", std::move(B2)));
-  EXPECT_EQ(RawB3, &Cache.addBuffer("3", std::move(B3)));
-  EXPECT_EQ(RawB1, Cache.lookupBuffer("1"));
-  EXPECT_EQ(RawB2, Cache.lookupBuffer("2"));
-  EXPECT_EQ(RawB3, Cache.lookupBuffer("3"));
-  EXPECT_FALSE(Cache.isBufferFinal("1"));
-  EXPECT_FALSE(Cache.isBufferFinal("2"));
-  EXPECT_FALSE(Cache.isBufferFinal("3"));
+  EXPECT_EQ(InMemoryModuleCache::Unknown, Cache.getPCMState("B"));
+  EXPECT_FALSE(Cache.isPCMFinal("B"));
+  EXPECT_FALSE(Cache.shouldBuildPCM("B"));
 
-  // Remove the middle buffer.
-  EXPECT_FALSE(Cache.tryToRemoveBuffer("2"));
-  EXPECT_EQ(nullptr, Cache.lookupBuffer("2"));
-  EXPECT_FALSE(Cache.isBufferFinal("2"));
-
-  // Replace the middle buffer.
-  B2 = getBuffer(2);
-  RawB2 = B2.get();
-  EXPECT_EQ(RawB2, &Cache.addBuffer("2", std::move(B2)));
-
-  // Check that nothing is final.
-  EXPECT_FALSE(Cache.isBufferFinal("1"));
-  EXPECT_FALSE(Cache.isBufferFinal("2"));
-  EXPECT_FALSE(Cache.isBufferFinal("3"));
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(Cache.tryToDropPCM("B"), "PCM to remove is unknown");
+  EXPECT_DEATH(Cache.finalizePCM("B"), "PCM to finalize is unknown");
+#endif
 }
 
-TEST(InMemoryModuleCacheTest, finalizeCurrentBuffers) {
-  // Add a buffer.
+TEST(InMemoryModuleCacheTest, addPCM) {
+  auto B = getBuffer(1);
+  auto *RawB = B.get();
+
   InMemoryModuleCache Cache;
-  auto B1 = getBuffer(1);
-  auto *RawB1 = B1.get();
-  Cache.addBuffer("1", std::move(B1));
-  ASSERT_FALSE(Cache.isBufferFinal("1"));
+  EXPECT_EQ(RawB, &Cache.addPCM("B", std::move(B)));
+  EXPECT_EQ(InMemoryModuleCache::Tentative, Cache.getPCMState("B"));
+  EXPECT_EQ(RawB, Cache.lookupPCM("B"));
+  EXPECT_FALSE(Cache.isPCMFinal("B"));
+  EXPECT_FALSE(Cache.shouldBuildPCM("B"));
 
-  // Finalize it.
-  Cache.finalizeCurrentBuffers();
-  EXPECT_TRUE(Cache.isBufferFinal("1"));
-  EXPECT_TRUE(Cache.tryToRemoveBuffer("1"));
-  EXPECT_EQ(RawB1, Cache.lookupBuffer("1"));
-  EXPECT_TRUE(Cache.isBufferFinal("1"));
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(Cache.addPCM("B", getBuffer(2)), "Already has a PCM");
+  EXPECT_DEATH(Cache.addBuiltPCM("B", getBuffer(2)),
+               "Trying to override tentative PCM");
+#endif
+}
 
-  // Repeat.
-  auto B2 = getBuffer(2);
-  auto *RawB2 = B2.get();
-  Cache.addBuffer("2", std::move(B2));
-  EXPECT_FALSE(Cache.isBufferFinal("2"));
+TEST(InMemoryModuleCacheTest, addBuiltPCM) {
+  auto B = getBuffer(1);
+  auto *RawB = B.get();
 
-  Cache.finalizeCurrentBuffers();
-  EXPECT_TRUE(Cache.isBufferFinal("1"));
-  EXPECT_TRUE(Cache.isBufferFinal("2"));
-  EXPECT_TRUE(Cache.tryToRemoveBuffer("1"));
-  EXPECT_TRUE(Cache.tryToRemoveBuffer("2"));
-  EXPECT_EQ(RawB1, Cache.lookupBuffer("1"));
-  EXPECT_EQ(RawB2, Cache.lookupBuffer("2"));
-  EXPECT_TRUE(Cache.isBufferFinal("1"));
-  EXPECT_TRUE(Cache.isBufferFinal("2"));
+  InMemoryModuleCache Cache;
+  EXPECT_EQ(RawB, &Cache.addBuiltPCM("B", std::move(B)));
+  EXPECT_EQ(InMemoryModuleCache::Final, Cache.getPCMState("B"));
+  EXPECT_EQ(RawB, Cache.lookupPCM("B"));
+  EXPECT_TRUE(Cache.isPCMFinal("B"));
+  EXPECT_FALSE(Cache.shouldBuildPCM("B"));
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(Cache.addPCM("B", getBuffer(2)), "Already has a PCM");
+  EXPECT_DEATH(Cache.addBuiltPCM("B", getBuffer(2)),
+               "Trying to override finalized PCM");
+#endif
+}
+
+TEST(InMemoryModuleCacheTest, tryToDropPCM) {
+  auto B = getBuffer(1);
+  auto *RawB = B.get();
+
+  InMemoryModuleCache Cache;
+  EXPECT_EQ(InMemoryModuleCache::Unknown, Cache.getPCMState("B"));
+  EXPECT_EQ(RawB, &Cache.addPCM("B", std::move(B)));
+  EXPECT_FALSE(Cache.tryToDropPCM("B"));
+  EXPECT_EQ(nullptr, Cache.lookupPCM("B"));
+  EXPECT_EQ(InMemoryModuleCache::ToBuild, Cache.getPCMState("B"));
+  EXPECT_FALSE(Cache.isPCMFinal("B"));
+  EXPECT_TRUE(Cache.shouldBuildPCM("B"));
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(Cache.addPCM("B", getBuffer(2)), "Already has a PCM");
+  EXPECT_DEATH(Cache.tryToDropPCM("B"),
+               "PCM to remove is scheduled to be built");
+  EXPECT_DEATH(Cache.finalizePCM("B"), "Trying to finalize a dropped PCM");
+#endif
+
+  B = getBuffer(2);
+  ASSERT_NE(RawB, B.get());
+  RawB = B.get();
+
+  // Add a new one.
+  EXPECT_EQ(RawB, &Cache.addBuiltPCM("B", std::move(B)));
+  EXPECT_TRUE(Cache.isPCMFinal("B"));
+
+  // Can try to drop again, but this should error and do nothing.
+  EXPECT_TRUE(Cache.tryToDropPCM("B"));
+  EXPECT_EQ(RawB, Cache.lookupPCM("B"));
+}
+
+TEST(InMemoryModuleCacheTest, finalizePCM) {
+  auto B = getBuffer(1);
+  auto *RawB = B.get();
+
+  InMemoryModuleCache Cache;
+  EXPECT_EQ(InMemoryModuleCache::Unknown, Cache.getPCMState("B"));
+  EXPECT_EQ(RawB, &Cache.addPCM("B", std::move(B)));
+
+  // Call finalize.
+  Cache.finalizePCM("B");
+  EXPECT_EQ(InMemoryModuleCache::Final, Cache.getPCMState("B"));
+  EXPECT_TRUE(Cache.isPCMFinal("B"));
 }
 
 } // namespace

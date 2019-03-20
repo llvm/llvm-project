@@ -31,54 +31,79 @@ namespace clang {
 /// Critically, it ensures that a single process has a consistent view of each
 /// PCM.  This is used by \a CompilerInstance when building PCMs to ensure that
 /// each \a ModuleManager sees the same files.
-///
-/// \a finalizeCurrentBuffers() should be called before creating a new user.
-/// This locks in the current PCMs, ensuring that no PCM that has already been
-/// accessed can be purged, preventing use-after-frees.
 class InMemoryModuleCache : public llvm::RefCountedBase<InMemoryModuleCache> {
   struct PCM {
     std::unique_ptr<llvm::MemoryBuffer> Buffer;
 
-    /// Track the timeline of when this was added to the cache.
-    unsigned Index;
+    /// Track whether this PCM is known to be good (either built or
+    /// successfully imported by a CompilerInstance/ASTReader using this
+    /// cache).
+    bool IsFinal = false;
+
+    PCM() = default;
+    PCM(std::unique_ptr<llvm::MemoryBuffer> Buffer)
+        : Buffer(std::move(Buffer)) {}
   };
 
   /// Cache of buffers.
   llvm::StringMap<PCM> PCMs;
 
-  /// Monotonically increasing index.
-  unsigned NextIndex = 0;
-
-  /// Bumped to prevent "older" buffers from being removed.
-  unsigned FirstRemovableIndex = 0;
-
 public:
-  /// Store the Buffer under the Filename.
+  /// There are four states for a PCM.  It must monotonically increase.
   ///
-  /// \pre There is not already buffer is not already in the cache.
+  ///  1. Unknown: the PCM has neither been read from disk nor built.
+  ///  2. Tentative: the PCM has been read from disk but not yet imported or
+  ///     built.  It might work.
+  ///  3. ToBuild: the PCM read from disk did not work but a new one has not
+  ///     been built yet.
+  ///  4. Final: indicating that the current PCM was either built in this
+  ///     process or has been successfully imported.
+  enum State { Unknown, Tentative, ToBuild, Final };
+
+  /// Get the state of the PCM.
+  State getPCMState(llvm::StringRef Filename) const;
+
+  /// Store the PCM under the Filename.
+  ///
+  /// \pre state is Unknown
+  /// \post state is Tentative
   /// \return a reference to the buffer as a convenience.
-  llvm::MemoryBuffer &addBuffer(llvm::StringRef Filename,
-                                std::unique_ptr<llvm::MemoryBuffer> Buffer);
+  llvm::MemoryBuffer &addPCM(llvm::StringRef Filename,
+                             std::unique_ptr<llvm::MemoryBuffer> Buffer);
 
-  /// Try to remove a buffer from the cache.
+  /// Store a just-built PCM under the Filename.
   ///
-  /// \return false on success, iff \c !isBufferFinal().
-  bool tryToRemoveBuffer(llvm::StringRef Filename);
+  /// \pre state is Unknown or ToBuild.
+  /// \pre state is not Tentative.
+  /// \return a reference to the buffer as a convenience.
+  llvm::MemoryBuffer &addBuiltPCM(llvm::StringRef Filename,
+                                  std::unique_ptr<llvm::MemoryBuffer> Buffer);
 
-  /// Get a pointer to the buffer if it exists; else nullptr.
-  llvm::MemoryBuffer *lookupBuffer(llvm::StringRef Filename);
-
-  /// Check whether the buffer is final.
+  /// Try to remove a buffer from the cache.  No effect if state is Final.
   ///
-  /// \return true iff \a finalizeCurrentBuffers() has been called since the
-  /// buffer was added.  This prevents buffers from being removed.
-  bool isBufferFinal(llvm::StringRef Filename);
+  /// \pre state is Tentative/Final.
+  /// \post Tentative => ToBuild or Final => Final.
+  /// \return false on success, i.e. if Tentative => ToBuild.
+  bool tryToDropPCM(llvm::StringRef Filename);
 
-  /// Finalize the current buffers in the cache.
+  /// Mark a PCM as final.
   ///
-  /// Should be called when creating a new user to ensure previous uses aren't
-  /// invalidated.
-  void finalizeCurrentBuffers();
+  /// \pre state is Tentative or Final.
+  /// \post state is Final.
+  void finalizePCM(llvm::StringRef Filename);
+
+  /// Get a pointer to the pCM if it exists; else nullptr.
+  llvm::MemoryBuffer *lookupPCM(llvm::StringRef Filename) const;
+
+  /// Check whether the PCM is final and has been shown to work.
+  ///
+  /// \return true iff state is Final.
+  bool isPCMFinal(llvm::StringRef Filename) const;
+
+  /// Check whether the PCM is waiting to be built.
+  ///
+  /// \return true iff state is ToBuild.
+  bool shouldBuildPCM(llvm::StringRef Filename) const;
 };
 
 } // end namespace clang

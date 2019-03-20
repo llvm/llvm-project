@@ -2224,6 +2224,10 @@ public:
   // Read a path
   std::string ReadPath(ModuleFile &F, const RecordData &Record, unsigned &Idx);
 
+  // Read a path
+  std::string ReadPath(StringRef BaseDirectory, const RecordData &Record,
+                       unsigned &Idx);
+
   // Skip a path
   static void SkipPath(const RecordData &Record, unsigned &Idx) {
     SkipString(Record, Idx);
