@@ -32,7 +32,7 @@ OpGroupAsyncCopy(int32_t Scope, __global dataT *Dest, __local dataT *Src,
 
 // Atomic SPIR-V builtins
 #define __SPIRV_ATOMIC_LOAD(AS, Type)                                          \
-  extern Type OpAtomicLoad(AS Type *P, Scope S, MemorySemantics O);
+  extern Type OpAtomicLoad(AS const Type *P, Scope S, MemorySemantics O);
 #define __SPIRV_ATOMIC_STORE(AS, Type)                                         \
   extern void OpAtomicStore(AS Type *P, Scope S, MemorySemantics O, Type V);
 #define __SPIRV_ATOMIC_EXCHANGE(AS, Type)                                      \
