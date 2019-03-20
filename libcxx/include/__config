@@ -96,7 +96,7 @@
 // Enable optimized version of __do_get_(un)signed which avoids redundant copies.
 #  define _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
 // Use the smallest possible integer type to represent the index of the variant.
-// Previously libc++ used "unsigned int" exclusivly.
+// Previously libc++ used "unsigned int" exclusively.
 #  define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
 // Unstable attempt to provide a more optimized std::function
 #  define _LIBCPP_ABI_OPTIMIZED_FUNCTION
@@ -264,7 +264,7 @@
 #  define _LIBCPP_WIN32API
 #  define _LIBCPP_LITTLE_ENDIAN
 #  define _LIBCPP_SHORT_WCHAR   1
-// Both MinGW and native MSVC provide a "MSVC"-like enviroment
+// Both MinGW and native MSVC provide a "MSVC"-like environment
 #  define _LIBCPP_MSVCRT_LIKE
 // If mingw not explicitly detected, assume using MS C runtime only if
 // a MS compatibility version is specified.
@@ -784,7 +784,7 @@ typedef __char32_t char32_t;
 #else
    // Try to approximate the effect of exclude_from_explicit_instantiation
    // (which is that entities are not assumed to be provided by explicit
-   // template instantitations in the dylib) by always inlining those entities.
+   // template instantiations in the dylib) by always inlining those entities.
 #  define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION _LIBCPP_ALWAYS_INLINE
 #endif
 
@@ -982,7 +982,7 @@ template <unsigned> struct __static_assert_check {};
 #if defined(_LIBCPP_MSVCRT) && defined(_MSC_VER) && _MSC_VER < 1912
 #  define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
 #elif defined(_LIBCPP_ABI_VCRUNTIME) && !defined(__cpp_aligned_new)
-   // We're defering to Microsoft's STL to provide aligned new et al. We don't
+   // We're deferring to Microsoft's STL to provide aligned new et al. We don't
    // have it unless the language feature test macro is defined.
 #  define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
 #endif
