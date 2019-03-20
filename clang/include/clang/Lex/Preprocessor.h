@@ -72,7 +72,6 @@ class FileEntry;
 class FileManager;
 class HeaderSearch;
 class MacroArgs;
-class MemoryBufferCache;
 class PragmaHandler;
 class PragmaNamespace;
 class PreprocessingRecord;
@@ -133,7 +132,6 @@ class Preprocessor {
   const TargetInfo *AuxTarget = nullptr;
   FileManager       &FileMgr;
   SourceManager     &SourceMgr;
-  MemoryBufferCache &PCMCache;
   std::unique_ptr<ScratchBuffer> ScratchBuf;
   HeaderSearch      &HeaderInfo;
   ModuleLoader      &TheModuleLoader;
@@ -777,7 +775,6 @@ private:
 public:
   Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
                DiagnosticsEngine &diags, LangOptions &opts, SourceManager &SM,
-               MemoryBufferCache &PCMCache,
                HeaderSearch &Headers, ModuleLoader &TheModuleLoader,
                IdentifierInfoLookup *IILookup = nullptr,
                bool OwnsHeaderSearch = false,
@@ -817,7 +814,6 @@ public:
   const TargetInfo *getAuxTargetInfo() const { return AuxTarget; }
   FileManager &getFileManager() const { return FileMgr; }
   SourceManager &getSourceManager() const { return SourceMgr; }
-  MemoryBufferCache &getPCMCache() const { return PCMCache; }
   HeaderSearch &getHeaderSearchInfo() const { return HeaderInfo; }
 
   IdentifierTable &getIdentifierTable() { return Identifiers; }
