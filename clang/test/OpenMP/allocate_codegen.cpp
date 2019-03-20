@@ -37,10 +37,10 @@ struct St1{
 #pragma omp allocate(b) allocator(omp_default_mem_alloc)
 } d;
 
-int a, b;
+int a, b, c;
 #pragma omp allocate(a) allocator(omp_large_cap_mem_alloc)
-#pragma omp allocate(a) allocator(omp_const_mem_alloc)
-#pragma omp allocate(d, b) allocator(omp_high_bw_mem_alloc)
+#pragma omp allocate(b) allocator(omp_const_mem_alloc)
+#pragma omp allocate(d, c) allocator(omp_high_bw_mem_alloc)
 
 template <class T>
 struct ST {

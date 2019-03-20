@@ -4077,18 +4077,27 @@ static OverflowResult mapOverflowResult(ConstantRange::OverflowResult OR) {
   llvm_unreachable("Unknown OverflowResult");
 }
 
+/// Combine constant ranges from computeConstantRange() and computeKnownBits().
+static ConstantRange computeConstantRangeIncludingKnownBits(
+    const Value *V, bool ForSigned, const DataLayout &DL, unsigned Depth,
+    AssumptionCache *AC, const Instruction *CxtI, const DominatorTree *DT,
+    OptimizationRemarkEmitter *ORE = nullptr, bool UseInstrInfo = true) {
+  KnownBits Known = computeKnownBits(
+      V, DL, Depth, AC, CxtI, DT, ORE, UseInstrInfo);
+  ConstantRange CR = computeConstantRange(V, UseInstrInfo);
+  return ConstantRange::fromKnownBits(Known, ForSigned).intersectWith(CR);
+}
+
 OverflowResult llvm::computeOverflowForUnsignedAdd(
     const Value *LHS, const Value *RHS, const DataLayout &DL,
     AssumptionCache *AC, const Instruction *CxtI, const DominatorTree *DT,
     bool UseInstrInfo) {
-  KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT,
-                                        nullptr, UseInstrInfo);
-  KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT,
-                                        nullptr, UseInstrInfo);
-  ConstantRange LHSRange =
-      ConstantRange::fromKnownBits(LHSKnown, /*signed*/ false);
-  ConstantRange RHSRange =
-      ConstantRange::fromKnownBits(RHSKnown, /*signed*/ false);
+  ConstantRange LHSRange = computeConstantRangeIncludingKnownBits(
+      LHS, /*ForSigned=*/false, DL, /*Depth=*/0, AC, CxtI, DT,
+      nullptr, UseInstrInfo);
+  ConstantRange RHSRange = computeConstantRangeIncludingKnownBits(
+      RHS, /*ForSigned=*/false, DL, /*Depth=*/0, AC, CxtI, DT,
+      nullptr, UseInstrInfo);
   return mapOverflowResult(LHSRange.unsignedAddMayOverflow(RHSRange));
 }
 
@@ -4161,12 +4170,10 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
                                                    AssumptionCache *AC,
                                                    const Instruction *CxtI,
                                                    const DominatorTree *DT) {
-  KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT);
-  KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
-  ConstantRange LHSRange =
-      ConstantRange::fromKnownBits(LHSKnown, /*signed*/ false);
-  ConstantRange RHSRange =
-      ConstantRange::fromKnownBits(RHSKnown, /*signed*/ false);
+  ConstantRange LHSRange = computeConstantRangeIncludingKnownBits(
+      LHS, /*ForSigned=*/false, DL, /*Depth=*/0, AC, CxtI, DT);
+  ConstantRange RHSRange = computeConstantRangeIncludingKnownBits(
+      RHS, /*ForSigned=*/false, DL, /*Depth=*/0, AC, CxtI, DT);
   return mapOverflowResult(LHSRange.unsignedSubMayOverflow(RHSRange));
 }
 
@@ -5689,6 +5696,10 @@ static void setLimitsForSelectPattern(const SelectInst &SI, APInt &Lower,
 
 ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo) {
   assert(V->getType()->isIntOrIntVectorTy() && "Expected integer instruction");
+
+  const APInt *C;
+  if (match(V, m_APInt(C)))
+    return ConstantRange(*C);
 
   InstrInfoQuery IIQ(UseInstrInfo);
   unsigned BitWidth = V->getType()->getScalarSizeInBits();

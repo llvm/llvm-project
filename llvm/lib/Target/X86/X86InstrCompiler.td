@@ -903,14 +903,14 @@ def LCMPXCHG8B_SAVE_EBX :
 
 
 let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX],
-    Predicates = [HasCmpxchg16b], SchedRW = [WriteCMPXCHGRMW] in {
+    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW] in {
 defm LCMPXCHG16B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg16b",
                                  X86cas16, i128mem>, REX_W;
 }
 
 // Same as LCMPXCHG8B_SAVE_RBX but for the 16 Bytes variant.
 let Defs = [RAX, RDX, RBX, EFLAGS], Uses = [RAX, RCX, RDX],
-    Predicates = [HasCmpxchg16b], SchedRW = [WriteCMPXCHGRMW],
+    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
     isCodeGenOnly = 1, isPseudo = 1, Constraints = "$rbx_save = $dst",
     usesCustomInserter = 1 in {
 def LCMPXCHG16B_SAVE_RBX :

@@ -17,7 +17,7 @@ entry:
 ; CHECK: bl num_entries
 ; Any register is actually valid here, but turns out we use lr,
 ; because we do not have the kill flag on R0.
-; CHECK: mov.w [[R1:lr]], #7
+; CHECK: movs [[R1:r1]], #7
 ; CHECK: add.w [[R0:r[0-9]+]], [[R1]], [[R0]], lsl #2
 ; CHECK: bic [[R0]], [[R0]], #4
 ; CHECK: lsrs r4, [[R0]], #2

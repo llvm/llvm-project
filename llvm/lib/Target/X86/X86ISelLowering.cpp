@@ -33041,11 +33041,21 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     SDValue Amt = Op.getOperand(1);
     MVT AmtVT = Amt.getSimpleValueType();
     assert(AmtVT.is128BitVector() && "Unexpected value type");
+
+    // If we reuse the shift amount just for sse shift amounts then we know that
+    // only the bottom 64-bits are only ever used.
+    bool AssumeSingleUse = llvm::all_of(Amt->uses(), [&Amt](SDNode *Use) {
+      unsigned Opc = Use->getOpcode();
+      return (Opc == X86ISD::VSHL || Opc == X86ISD::VSRL ||
+              Opc == X86ISD::VSRA) &&
+             Use->getOperand(0) != Amt;
+    });
+
     APInt AmtUndef, AmtZero;
     unsigned NumAmtElts = AmtVT.getVectorNumElements();
     APInt AmtElts = APInt::getLowBitsSet(NumAmtElts, NumAmtElts / 2);
     if (SimplifyDemandedVectorElts(Amt, AmtElts, AmtUndef, AmtZero, TLO,
-                                   Depth + 1))
+                                   Depth + 1, AssumeSingleUse))
       return true;
     LLVM_FALLTHROUGH;
   }

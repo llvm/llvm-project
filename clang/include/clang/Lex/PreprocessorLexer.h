@@ -48,8 +48,7 @@ protected:
   /// True when parsing \#XXX; turns '\\n' into a tok::eod token.
   bool ParsingPreprocessorDirective = false;
 
-  /// True after \#include; turns \<xx> into a tok::angle_string_literal
-  /// token.
+  /// True after \#include; turns \<xx> or "xxx" into a tok::header_name token.
   bool ParsingFilename = false;
 
   /// True if in raw mode.

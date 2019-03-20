@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -1475,13 +1476,17 @@ bool ARMFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 }
 
 // FIXME: Make generic?
-static unsigned GetFunctionSizeInBytes(const MachineFunction &MF,
-                                       const ARMBaseInstrInfo &TII) {
+static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
+                                            const ARMBaseInstrInfo &TII) {
   unsigned FnSize = 0;
   for (auto &MBB : MF) {
     for (auto &MI : MBB)
       FnSize += TII.getInstSizeInBytes(MI);
   }
+  if (MF.getJumpTableInfo())
+    for (auto &Table: MF.getJumpTableInfo()->getJumpTables())
+      FnSize += Table.MBBs.size() * 4;
+  FnSize += MF.getConstantPool()->getConstants().size() * 4;
   return FnSize;
 }
 
@@ -1725,7 +1730,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   bool ForceLRSpill = false;
   if (!LRSpilled && AFI->isThumb1OnlyFunction()) {
-    unsigned FnSize = GetFunctionSizeInBytes(MF, TII);
+    unsigned FnSize = EstimateFunctionSizeInBytes(MF, TII);
     // Force LR to be spilled if the Thumb function size is > 2048. This enables
     // use of BL to implement far jump. If it turns out that it's not needed
     // then the branch fix up path will undo it.
@@ -2027,6 +2032,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(ARM::LR);
     AFI->setLRIsSpilledForFarJump(true);
   }
+  AFI->setLRIsSpilled(SavedRegs.test(ARM::LR));
 }
 
 MachineBasicBlock::iterator ARMFrameLowering::eliminateCallFramePseudoInstr(

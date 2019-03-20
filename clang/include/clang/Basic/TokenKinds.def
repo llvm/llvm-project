@@ -154,7 +154,9 @@ TOK(utf32_char_constant) // U'a'
 // C99 6.4.5: String Literals.
 TOK(string_literal)      // "foo"
 TOK(wide_string_literal) // L"foo"
-TOK(angle_string_literal)// <foo>
+
+// C11 6.4.7: Header Names
+TOK(header_name)         // <foo>, or "foo" lexed as a header-name
 
 // C++11 String Literals.
 TOK(utf8_string_literal) // u8"foo"

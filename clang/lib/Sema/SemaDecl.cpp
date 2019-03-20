@@ -2935,7 +2935,8 @@ static bool hasIdenticalPassObjectSizeAttrs(const FunctionDecl *A,
     const auto *AttrB = B->getAttr<PassObjectSizeAttr>();
     if (AttrA == AttrB)
       return true;
-    return AttrA && AttrB && AttrA->getType() == AttrB->getType();
+    return AttrA && AttrB && AttrA->getType() == AttrB->getType() &&
+           AttrA->isDynamic() == AttrB->isDynamic();
   };
 
   return std::equal(A->param_begin(), A->param_end(), B->param_begin(), AttrEq);

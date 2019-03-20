@@ -73,12 +73,6 @@ option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." O
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
 option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
-set(ENABLE_FILESYSTEM_DEFAULT ${LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY})
-if (WIN32)
-  set(ENABLE_FILESYSTEM_DEFAULT OFF)
-endif()
-option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of libc++fs.a"
-    ${ENABLE_FILESYSTEM_DEFAULT})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 
 # Benchmark options -----------------------------------------------------------
@@ -117,9 +111,6 @@ option(LIBCXX_INSTALL_SUPPORT_HEADERS "Install libc++ support headers." ON)
 cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
         "Install libc++experimental.a" ON
         "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
-cmake_dependent_option(LIBCXX_INSTALL_FILESYSTEM_LIBRARY
-        "Install libc++fs.a" ON
-        "LIBCXX_ENABLE_FILESYSTEM;LIBCXX_INSTALL_LIBRARY" OFF)
 
 set(LIBCXX_ABI_VERSION "1" CACHE STRING "ABI version of libc++. Can be either 1 or 2, where 2 is currently not stable. Defaults to 1.")
 set(LIBCXX_ABI_NAMESPACE "" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
@@ -290,11 +281,6 @@ option(LIBCXX_HERMETIC_STATIC_LIBRARY
 #===============================================================================
 # Check option configurations
 #===============================================================================
-
-if (LIBCXX_ENABLE_FILESYSTEM AND NOT LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
-  message(FATAL_ERROR
-    "LIBCXX_ENABLE_FILESYSTEM cannot be turned on when LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF")
-endif()
 
 # Ensure LIBCXX_ENABLE_MONOTONIC_CLOCK is set to ON only when
 # LIBCXX_ENABLE_THREADS is on.
@@ -790,9 +776,6 @@ set(LIBCXX_TEST_DEPS "")
 
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   list(APPEND LIBCXX_TEST_DEPS cxx_experimental)
-endif()
-if (LIBCXX_ENABLE_FILESYSTEM)
-  list(APPEND LIBCXX_TEST_DEPS cxx_filesystem)
 endif()
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)

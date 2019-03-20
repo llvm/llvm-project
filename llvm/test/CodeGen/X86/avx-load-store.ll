@@ -45,15 +45,15 @@ define void @test_256_load(double* nocapture %d, float* nocapture %f, <4 x i64>*
 ; CHECK_O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK_O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK_O0-NEXT:    callq dummy
-; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; CHECK_O0-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK_O0-NEXT:    vmovapd %ymm0, (%rdx)
-; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK_O0-NEXT:    vmovapd %ymm0, (%rax)
+; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; CHECK_O0-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
-; CHECK_O0-NEXT:    vmovaps %ymm1, (%rsi)
-; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; CHECK_O0-NEXT:    vmovaps %ymm1, (%rcx)
+; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; CHECK_O0-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm2 # 32-byte Reload
-; CHECK_O0-NEXT:    vmovdqa %ymm2, (%rdi)
+; CHECK_O0-NEXT:    vmovdqa %ymm2, (%rdx)
 ; CHECK_O0-NEXT:    addq $152, %rsp
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq

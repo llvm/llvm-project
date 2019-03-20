@@ -38,15 +38,16 @@ struct St1{
 // CHECK-NEXT: #pragma omp allocate(St1::b) allocator(omp_default_mem_alloc){{$}}
 } d;
 
-int a, b;
+int a, b, c;
 // CHECK: int a;
 // CHECK: int b;
+// CHECK: int c;
 #pragma omp allocate(a) allocator(omp_large_cap_mem_alloc)
-#pragma omp allocate(a) allocator(omp_const_mem_alloc)
+#pragma omp allocate(b) allocator(omp_const_mem_alloc)
 // CHECK-NEXT: #pragma omp allocate(a) allocator(omp_large_cap_mem_alloc)
-// CHECK-NEXT: #pragma omp allocate(a) allocator(omp_const_mem_alloc)
-#pragma omp allocate(d, b) allocator(omp_high_bw_mem_alloc)
-// CHECK-NEXT: #pragma omp allocate(d,b) allocator(omp_high_bw_mem_alloc)
+// CHECK-NEXT: #pragma omp allocate(b) allocator(omp_const_mem_alloc)
+#pragma omp allocate(c, d) allocator(omp_high_bw_mem_alloc)
+// CHECK-NEXT: #pragma omp allocate(c,d) allocator(omp_high_bw_mem_alloc)
 
 template <class T>
 struct ST {
