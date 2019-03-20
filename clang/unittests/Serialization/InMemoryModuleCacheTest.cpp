@@ -1,4 +1,4 @@
-//===- MemoryBufferCacheTest.cpp - MemoryBufferCache tests ----------------===//
+//===- InMemoryModuleCacheTest.cpp - InMemoryModuleCache tests ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/MemoryBufferCache.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
 
@@ -23,7 +23,7 @@ std::unique_ptr<MemoryBuffer> getBuffer(int I) {
                                     /* RequiresNullTerminator = */ false);
 }
 
-TEST(MemoryBufferCacheTest, addBuffer) {
+TEST(InMemoryModuleCacheTest, addBuffer) {
   auto B1 = getBuffer(1);
   auto B2 = getBuffer(2);
   auto B3 = getBuffer(3);
@@ -32,7 +32,7 @@ TEST(MemoryBufferCacheTest, addBuffer) {
   auto *RawB3 = B3.get();
 
   // Add a few buffers.
-  MemoryBufferCache Cache;
+  InMemoryModuleCache Cache;
   EXPECT_EQ(RawB1, &Cache.addBuffer("1", std::move(B1)));
   EXPECT_EQ(RawB2, &Cache.addBuffer("2", std::move(B2)));
   EXPECT_EQ(RawB3, &Cache.addBuffer("3", std::move(B3)));
@@ -59,9 +59,9 @@ TEST(MemoryBufferCacheTest, addBuffer) {
   EXPECT_FALSE(Cache.isBufferFinal("3"));
 }
 
-TEST(MemoryBufferCacheTest, finalizeCurrentBuffers) {
+TEST(InMemoryModuleCacheTest, finalizeCurrentBuffers) {
   // Add a buffer.
-  MemoryBufferCache Cache;
+  InMemoryModuleCache Cache;
   auto B1 = getBuffer(1);
   auto *RawB1 = B1.get();
   Cache.addBuffer("1", std::move(B1));
