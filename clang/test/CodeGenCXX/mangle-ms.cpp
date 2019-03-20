@@ -457,6 +457,8 @@ int bar(int *const i __attribute__((pass_object_size(1)))) { return 0; }
 int qux(int *const i __attribute__((pass_object_size(1))), int *const j __attribute__((pass_object_size(0)))) { return 0; }
 // CHECK-DAG: define dso_local i32 @"?zot@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@01@Z"
 int zot(int *const i __attribute__((pass_object_size(1))), int *const j __attribute__((pass_object_size(1)))) { return 0; }
+// CHECK-DAG: define dso_local i32 @"?silly_word@PassObjectSize@@YAHQAHW4__pass_dynamic_object_size1@__clang@@@Z"
+int silly_word(int *const i __attribute__((pass_dynamic_object_size(1)))) { return 0; }
 }
 
 namespace Atomic {

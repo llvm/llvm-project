@@ -65,8 +65,6 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
     AddUnitDIE(m_first_die);
     return;
   }
-
-  ExtractDIEsEndCheck(offset);
 }
 
 //----------------------------------------------------------------------
@@ -164,7 +162,6 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   lldb::offset_t next_cu_offset = GetNextCompileUnitOffset();
 
   DWARFDebugInfoEntry die;
-  // Keep a flat array of the DIE for binary lookup by DIE offset
 
   uint32_t depth = 0;
   // We are in our compile unit, parse starting at the offset we were told to
@@ -251,37 +248,9 @@ void DWARFUnit::ExtractDIEsRWLocked() {
 
   m_die_array.shrink_to_fit();
 
-  ExtractDIEsEndCheck(offset);
-
   if (m_dwo_symbol_file) {
     DWARFUnit *dwo_cu = m_dwo_symbol_file->GetCompileUnit();
     dwo_cu->ExtractDIEsIfNeeded();
-  }
-}
-
-//--------------------------------------------------------------------------
-// Final checks for both ExtractUnitDIEIfNeeded() and ExtractDIEsIfNeeded().
-//--------------------------------------------------------------------------
-void DWARFUnit::ExtractDIEsEndCheck(lldb::offset_t offset) const {
-  // Give a little bit of info if we encounter corrupt DWARF (our offset should
-  // always terminate at or before the start of the next compilation unit
-  // header).
-  if (offset > GetNextCompileUnitOffset()) {
-    m_dwarf->GetObjectFile()->GetModule()->ReportWarning(
-        "DWARF compile unit extends beyond its bounds cu 0x%8.8x at "
-        "0x%8.8" PRIx64 "\n",
-        GetOffset(), offset);
-  }
-
-  Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO));
-  if (log && log->GetVerbose()) {
-    StreamString strm;
-    Dump(&strm);
-    if (m_die_array.empty())
-      strm.Printf("error: no DIE for compile unit");
-    else
-      m_die_array[0].Dump(m_dwarf, this, strm, UINT32_MAX);
-    log->PutString(strm.GetString());
   }
 }
 

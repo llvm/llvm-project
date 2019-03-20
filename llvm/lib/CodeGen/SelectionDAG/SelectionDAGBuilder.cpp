@@ -4564,6 +4564,11 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   auto Flags = MachineMemOperand::MOLoad;
   if (I.isVolatile())
     Flags |= MachineMemOperand::MOVolatile;
+  if (I.getMetadata(LLVMContext::MD_invariant_load) != nullptr)
+    Flags |= MachineMemOperand::MOInvariant;
+  if (isDereferenceablePointer(I.getPointerOperand(), DAG.getDataLayout()))
+    Flags |= MachineMemOperand::MODereferenceable;
+
   Flags |= TLI.getMMOFlags(I);
 
   MachineMemOperand *MMO =

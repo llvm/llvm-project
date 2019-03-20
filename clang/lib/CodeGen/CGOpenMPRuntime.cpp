@@ -9744,7 +9744,7 @@ Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
       llvm::Value *ThreadID = getThreadID(CGF, CVD->getBeginLoc());
       llvm::Value *Allocator;
       if (const Expr *AllocExpr = AA->getAllocator()) {
-        Allocator = CGF.EmitScalarExpr(AA->getAllocator());
+        Allocator = CGF.EmitScalarExpr(AllocExpr);
       } else {
         // Default allocator in libomp is nullptr.
         Allocator = llvm::ConstantPointerNull::get(CGM.VoidPtrPtrTy);

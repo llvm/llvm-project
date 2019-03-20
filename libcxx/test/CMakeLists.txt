@@ -28,7 +28,6 @@ endif()
 
 pythonize_bool(LIBCXX_ENABLE_EXCEPTIONS)
 pythonize_bool(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
-pythonize_bool(LIBCXX_ENABLE_FILESYSTEM)
 pythonize_bool(LIBCXX_ENABLE_RTTI)
 pythonize_bool(LIBCXX_ENABLE_SHARED)
 pythonize_bool(LIBCXX_BUILD_32_BITS)

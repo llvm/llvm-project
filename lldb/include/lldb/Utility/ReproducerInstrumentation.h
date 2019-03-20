@@ -68,19 +68,20 @@ template <typename... Ts> inline std::string log_args(const Ts &... ts) {
 // #define LLDB_REPRO_INSTR_TRACE
 
 #define LLDB_REGISTER_CONSTRUCTOR(Class, Signature)                            \
-  Register<Class * Signature>(&construct<Class Signature>::doit, "", #Class,   \
+  R.Register<Class * Signature>(&construct<Class Signature>::doit, "", #Class, \
                               #Class, #Signature)
 #define LLDB_REGISTER_METHOD(Result, Class, Method, Signature)                 \
-  Register(                                                                    \
+  R.Register(                                                                  \
       &invoke<Result(Class::*) Signature>::method<(&Class::Method)>::doit,     \
       #Result, #Class, #Method, #Signature)
 #define LLDB_REGISTER_METHOD_CONST(Result, Class, Method, Signature)           \
-  Register(&invoke<Result(Class::*)                                            \
+  R.Register(&invoke<Result(Class::*)                                          \
                        Signature const>::method_const<(&Class::Method)>::doit, \
            #Result, #Class, #Method, #Signature)
 #define LLDB_REGISTER_STATIC_METHOD(Result, Class, Method, Signature)          \
-  Register<Result Signature>(static_cast<Result(*) Signature>(&Class::Method), \
-                             #Result, #Class, #Method, #Signature)
+  R.Register<Result Signature>(                                                \
+      static_cast<Result(*) Signature>(&Class::Method), #Result, #Class,       \
+      #Method, #Signature)
 
 #define LLDB_RECORD_CONSTRUCTOR(Class, Signature, ...)                         \
   LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0} ({1})",             \

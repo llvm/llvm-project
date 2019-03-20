@@ -1274,7 +1274,7 @@ public:
   void Lex(Token &Result);
 
   /// Lex a token, forming a header-name token if possible.
-  bool LexHeaderName(Token &Result, bool AllowConcatenation = true);
+  bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
   void LexAfterModuleImport(Token &Result);
 

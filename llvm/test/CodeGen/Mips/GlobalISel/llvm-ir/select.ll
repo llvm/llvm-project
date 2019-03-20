@@ -60,11 +60,11 @@ entry:
 define i32 @select_with_negation(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; MIPS32-LABEL: select_with_negation:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    slt $4, $4, $5
-; MIPS32-NEXT:    not $4, $4
-; MIPS32-NEXT:    ori $5, $zero, 1
-; MIPS32-NEXT:    and $4, $4, $5
-; MIPS32-NEXT:    movn $7, $6, $4
+; MIPS32-NEXT:    slt $1, $4, $5
+; MIPS32-NEXT:    not $1, $1
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    and $1, $1, $2
+; MIPS32-NEXT:    movn $7, $6, $1
 ; MIPS32-NEXT:    move $2, $7
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop

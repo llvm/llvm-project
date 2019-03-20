@@ -2665,6 +2665,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   // any other unary ops.
   LLVM_FALLTHROUGH;
 
+  case ISD::ABS:
   case ISD::BITREVERSE:
   case ISD::BSWAP:
   case ISD::CTLZ:

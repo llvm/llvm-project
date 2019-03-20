@@ -61,6 +61,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// enable far jump.
   bool LRSpilledForFarJump = false;
 
+  /// LRSpilled - True if the LR register has been for spilled for
+  /// any reason, so it's legal to emit an ARM::tBfar (i.e. "bl").
+  bool LRSpilled = false;
+
   /// FramePtrSpillOffset - If HasStackFrame, this records the frame pointer
   /// spill stack offset.
   unsigned FramePtrSpillOffset = 0;
@@ -149,6 +153,9 @@ public:
 
   bool shouldRestoreSPFromFP() const { return RestoreSPFromFP; }
   void setShouldRestoreSPFromFP(bool s) { RestoreSPFromFP = s; }
+
+  bool isLRSpilled() const { return LRSpilled; }
+  void setLRIsSpilled(bool s) { LRSpilled = s; }
 
   bool isLRSpilledForFarJump() const { return LRSpilledForFarJump; }
   void setLRIsSpilledForFarJump(bool s) { LRSpilledForFarJump = s; }

@@ -79,29 +79,29 @@ define void @foo(i32 %new, i32 %old) {
 ; N64-NEXT:    sll $1, $1, 0
 ; N64-NEXT:    move $2, $4
 ; N64-NEXT:    sll $2, $2, 0
-; N64-NEXT:    lui $4, %highest(sym)
-; N64-NEXT:    daddiu $4, $4, %higher(sym)
-; N64-NEXT:    dsll $4, $4, 16
-; N64-NEXT:    daddiu $4, $4, %hi(sym)
-; N64-NEXT:    dsll $4, $4, 16
-; N64-NEXT:    ld $4, %lo(sym)($4)
+; N64-NEXT:    lui $3, %highest(sym)
+; N64-NEXT:    daddiu $3, $3, %higher(sym)
+; N64-NEXT:    dsll $3, $3, 16
+; N64-NEXT:    daddiu $3, $3, %hi(sym)
+; N64-NEXT:    dsll $3, $3, 16
+; N64-NEXT:    ld $3, %lo(sym)($3)
 ; N64-NEXT:    sync
-; N64-NEXT:    lw $3, 12($sp) # 4-byte Folded Reload
+; N64-NEXT:    lw $6, 12($sp) # 4-byte Folded Reload
 ; N64-NEXT:  .LBB0_1: # %entry
 ; N64-NEXT:    # =>This Inner Loop Header: Depth=1
-; N64-NEXT:    ll $6, 0($4)
-; N64-NEXT:    bne $6, $2, .LBB0_3
+; N64-NEXT:    ll $7, 0($3)
+; N64-NEXT:    bne $7, $2, .LBB0_3
 ; N64-NEXT:    nop
 ; N64-NEXT:  # %bb.2: # %entry
 ; N64-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; N64-NEXT:    move $7, $1
-; N64-NEXT:    sc $7, 0($4)
-; N64-NEXT:    beqz $7, .LBB0_1
+; N64-NEXT:    move $8, $1
+; N64-NEXT:    sc $8, 0($3)
+; N64-NEXT:    beqz $8, .LBB0_1
 ; N64-NEXT:    nop
 ; N64-NEXT:  .LBB0_3: # %entry
 ; N64-NEXT:    sync
-; N64-NEXT:    sw $6, 12($sp) # 4-byte Folded Spill
-; N64-NEXT:    sw $3, 8($sp) # 4-byte Folded Spill
+; N64-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; N64-NEXT:    sw $6, 8($sp) # 4-byte Folded Spill
 ; N64-NEXT:    daddiu $sp, $sp, 16
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    nop

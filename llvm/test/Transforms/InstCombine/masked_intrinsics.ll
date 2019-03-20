@@ -35,19 +35,20 @@ define <2 x double> @load_undefmask(<2 x double>* %ptr, <2 x double> %passthru) 
 
 }
 
+@G = external global i8
+
 define <2 x double> @load_cemask(<2 x double>* %ptr, <2 x double> %passthru)  {
 ; CHECK-LABEL: @load_cemask(
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* [[PTR:%.*]], i32 2, <2 x i1> <i1 true, i1 false>, <2 x double> [[PASSTHRU:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* [[PTR:%.*]], i32 2, <2 x i1> <i1 true, i1 ptrtoint (i8* @G to i1)>, <2 x double> [[PASSTHRU:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
-  %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %ptr, i32 2, <2 x i1> <i1 1, i1 trunc (i32 0 to i1)>, <2 x double> %passthru)
+  %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %ptr, i32 2, <2 x i1> <i1 1, i1 ptrtoint (i8* @G to i1)>, <2 x double> %passthru)
   ret <2 x double> %res
 }
 
 define <2 x double> @load_lane0(<2 x double>* %ptr, double %pt)  {
 ; CHECK-LABEL: @load_lane0(
-; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
-; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[PTV2:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* [[PTR:%.*]], i32 2, <2 x i1> <i1 true, i1 false>, <2 x double> [[PTV2]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
@@ -102,7 +103,7 @@ define <2 x double> @gather_zeromask(<2 x double*> %ptrs, <2 x double> %passthru
 
 define <2 x double> @gather_onemask(<2 x double*> %ptrs, <2 x double> %passthru)  {
 ; CHECK-LABEL: @gather_onemask(
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> [[PTRS:%.*]], i32 5, <2 x i1> <i1 true, i1 true>, <2 x double> [[PASSTHRU:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> [[PTRS:%.*]], i32 5, <2 x i1> <i1 true, i1 true>, <2 x double> undef)
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %res = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> %ptrs, i32 5, <2 x i1> <i1 true, i1 true>, <2 x double> %passthru)
@@ -112,9 +113,8 @@ define <2 x double> @gather_onemask(<2 x double*> %ptrs, <2 x double> %passthru)
 
 define <2 x double> @gather_lane0(double* %base, double %pt)  {
 ; CHECK-LABEL: @gather_lane0(
-; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, double* [[BASE:%.*]], <2 x i64> <i64 0, i64 1>
-; CHECK-NEXT:    [[PT_V1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
-; CHECK-NEXT:    [[PT_V2:%.*]] = shufflevector <2 x double> [[PT_V1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, double* [[BASE:%.*]], <2 x i64> <i64 0, i64 undef>
+; CHECK-NEXT:    [[PT_V2:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> [[PTRS]], i32 5, <2 x i1> <i1 true, i1 false>, <2 x double> [[PT_V2]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;

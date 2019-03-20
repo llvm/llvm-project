@@ -258,3 +258,51 @@ void SBAttachInfo::SetListener(SBListener &listener) {
 
   m_opaque_sp->SetListener(listener.GetSP());
 }
+
+namespace lldb_private {
+namespace repro {
+
+template <>
+void RegisterMethods<SBAttachInfo>(Registry &R) {
+  LLDB_REGISTER_CONSTRUCTOR(SBAttachInfo, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBAttachInfo, (lldb::pid_t));
+  LLDB_REGISTER_CONSTRUCTOR(SBAttachInfo, (const char *, bool));
+  LLDB_REGISTER_CONSTRUCTOR(SBAttachInfo, (const char *, bool, bool));
+  LLDB_REGISTER_CONSTRUCTOR(SBAttachInfo, (const lldb::SBAttachInfo &));
+  LLDB_REGISTER_METHOD(lldb::SBAttachInfo &,
+                       SBAttachInfo, operator=,(const lldb::SBAttachInfo &));
+  LLDB_REGISTER_METHOD(lldb::pid_t, SBAttachInfo, GetProcessID, ());
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetProcessID, (lldb::pid_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBAttachInfo, GetResumeCount, ());
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetResumeCount, (uint32_t));
+  LLDB_REGISTER_METHOD(const char *, SBAttachInfo, GetProcessPluginName, ());
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetProcessPluginName,
+                       (const char *));
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetExecutable, (const char *));
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetExecutable, (lldb::SBFileSpec));
+  LLDB_REGISTER_METHOD(bool, SBAttachInfo, GetWaitForLaunch, ());
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetWaitForLaunch, (bool));
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetWaitForLaunch, (bool, bool));
+  LLDB_REGISTER_METHOD(bool, SBAttachInfo, GetIgnoreExisting, ());
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetIgnoreExisting, (bool));
+  LLDB_REGISTER_METHOD(uint32_t, SBAttachInfo, GetUserID, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBAttachInfo, GetGroupID, ());
+  LLDB_REGISTER_METHOD(bool, SBAttachInfo, UserIDIsValid, ());
+  LLDB_REGISTER_METHOD(bool, SBAttachInfo, GroupIDIsValid, ());
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetUserID, (uint32_t));
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetGroupID, (uint32_t));
+  LLDB_REGISTER_METHOD(uint32_t, SBAttachInfo, GetEffectiveUserID, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBAttachInfo, GetEffectiveGroupID, ());
+  LLDB_REGISTER_METHOD(bool, SBAttachInfo, EffectiveUserIDIsValid, ());
+  LLDB_REGISTER_METHOD(bool, SBAttachInfo, EffectiveGroupIDIsValid, ());
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetEffectiveUserID, (uint32_t));
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetEffectiveGroupID, (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::pid_t, SBAttachInfo, GetParentProcessID, ());
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetParentProcessID, (lldb::pid_t));
+  LLDB_REGISTER_METHOD(bool, SBAttachInfo, ParentProcessIDIsValid, ());
+  LLDB_REGISTER_METHOD(lldb::SBListener, SBAttachInfo, GetListener, ());
+  LLDB_REGISTER_METHOD(void, SBAttachInfo, SetListener, (lldb::SBListener &));
+}
+
+}
+}

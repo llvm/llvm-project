@@ -272,6 +272,192 @@ define void @widen_broadcast_unaligned(i32* %p0, i32 %v) {
   ret void
 }
 
+define i128 @load_i128(i128* %ptr) {
+; CHECK-O0-LABEL: load_i128:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    pushq %rbx
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-O0-NEXT:    .cfi_offset %rbx, -16
+; CHECK-O0-NEXT:    xorl %eax, %eax
+; CHECK-O0-NEXT:    movl %eax, %ecx
+; CHECK-O0-NEXT:    movq %rcx, %rax
+; CHECK-O0-NEXT:    movq %rcx, %rdx
+; CHECK-O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; CHECK-O0-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-O0-NEXT:    popq %rbx
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: load_i128:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    pushq %rbx
+; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-O3-NEXT:    .cfi_offset %rbx, -16
+; CHECK-O3-NEXT:    xorl %eax, %eax
+; CHECK-O3-NEXT:    xorl %edx, %edx
+; CHECK-O3-NEXT:    xorl %ecx, %ecx
+; CHECK-O3-NEXT:    xorl %ebx, %ebx
+; CHECK-O3-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-O3-NEXT:    popq %rbx
+; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i128, i128* %ptr unordered, align 16
+  ret i128 %v
+}
+
+define void @store_i128(i128* %ptr, i128 %v) {
+; CHECK-O0-LABEL: store_i128:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    pushq %rbx
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-O0-NEXT:    .cfi_offset %rbx, -16
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    movq 8(%rdi), %rcx
+; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    jmp .LBB16_1
+; CHECK-O0-NEXT:  .LBB16_1: # %atomicrmw.start
+; CHECK-O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rcx, %rax
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK-O0-NEXT:    lock cmpxchg16b (%rsi)
+; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    jne .LBB16_1
+; CHECK-O0-NEXT:    jmp .LBB16_2
+; CHECK-O0-NEXT:  .LBB16_2: # %atomicrmw.end
+; CHECK-O0-NEXT:    popq %rbx
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: store_i128:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    pushq %rbx
+; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-O3-NEXT:    .cfi_offset %rbx, -16
+; CHECK-O3-NEXT:    movq %rdx, %rcx
+; CHECK-O3-NEXT:    movq %rsi, %rbx
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    movq 8(%rdi), %rdx
+; CHECK-O3-NEXT:    .p2align 4, 0x90
+; CHECK-O3-NEXT:  .LBB16_1: # %atomicrmw.start
+; CHECK-O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-O3-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-O3-NEXT:    jne .LBB16_1
+; CHECK-O3-NEXT:  # %bb.2: # %atomicrmw.end
+; CHECK-O3-NEXT:    popq %rbx
+; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O3-NEXT:    retq
+  store atomic i128 %v, i128* %ptr unordered, align 16
+  ret void
+}
+
+define i256 @load_i256(i256* %ptr) {
+; CHECK-O0-LABEL: load_i256:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    subq $56, %rsp
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movl $32, %ecx
+; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; CHECK-O0-NEXT:    xorl %r8d, %r8d
+; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rcx, %rdi
+; CHECK-O0-NEXT:    movl %r8d, %ecx
+; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    callq __atomic_load
+; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
+; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Reload
+; CHECK-O0-NEXT:    movq %rdi, 24(%r9)
+; CHECK-O0-NEXT:    movq %rsi, 16(%r9)
+; CHECK-O0-NEXT:    movq %rdx, 8(%r9)
+; CHECK-O0-NEXT:    movq %rax, (%r9)
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-O0-NEXT:    addq $56, %rsp
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: load_i256:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    pushq %rbx
+; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-O3-NEXT:    subq $32, %rsp
+; CHECK-O3-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-O3-NEXT:    .cfi_offset %rbx, -16
+; CHECK-O3-NEXT:    movq %rdi, %rbx
+; CHECK-O3-NEXT:    movq %rsp, %rdx
+; CHECK-O3-NEXT:    movl $32, %edi
+; CHECK-O3-NEXT:    xorl %ecx, %ecx
+; CHECK-O3-NEXT:    callq __atomic_load
+; CHECK-O3-NEXT:    vmovups (%rsp), %ymm0
+; CHECK-O3-NEXT:    vmovups %ymm0, (%rbx)
+; CHECK-O3-NEXT:    movq %rbx, %rax
+; CHECK-O3-NEXT:    addq $32, %rsp
+; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-O3-NEXT:    popq %rbx
+; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O3-NEXT:    vzeroupper
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i256, i256* %ptr unordered, align 16
+  ret i256 %v
+}
+
+define void @store_i256(i256* %ptr, i256 %v) {
+; CHECK-O0-LABEL: store_i256:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    subq $40, %rsp
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-O0-NEXT:    xorl %eax, %eax
+; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %r9
+; CHECK-O0-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
+; CHECK-O0-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; CHECK-O0-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; CHECK-O0-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
+; CHECK-O0-NEXT:    movl $32, %ecx
+; CHECK-O0-NEXT:    movq %rdi, (%rsp) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rcx, %rdi
+; CHECK-O0-NEXT:    movq (%rsp), %rsi # 8-byte Reload
+; CHECK-O0-NEXT:    movq %r9, %rdx
+; CHECK-O0-NEXT:    movl %eax, %ecx
+; CHECK-O0-NEXT:    callq __atomic_store
+; CHECK-O0-NEXT:    addq $40, %rsp
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: store_i256:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    subq $40, %rsp
+; CHECK-O3-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-O3-NEXT:    movq %rdi, %rax
+; CHECK-O3-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
+; CHECK-O3-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; CHECK-O3-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; CHECK-O3-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
+; CHECK-O3-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; CHECK-O3-NEXT:    movl $32, %edi
+; CHECK-O3-NEXT:    movq %rax, %rsi
+; CHECK-O3-NEXT:    xorl %ecx, %ecx
+; CHECK-O3-NEXT:    callq __atomic_store
+; CHECK-O3-NEXT:    addq $40, %rsp
+; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O3-NEXT:    retq
+  store atomic i256 %v, i256* %ptr unordered, align 16
+  ret void
+}
+
 ; Legal if wider type is also atomic (TODO)
 define void @vec_store(i32* %p0, <2 x i32> %vec) {
 ; CHECK-O0-LABEL: vec_store:
@@ -418,9 +604,8 @@ define void @widen_zero_init_unaligned(i32* %p0, i32 %v1, i32 %v2) {
 define i64 @load_fold_add1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_add1:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    addq $15, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    addq $15, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_add1:
@@ -453,9 +638,8 @@ define i64 @load_fold_add2(i64* %p, i64 %v2) {
 define i64 @load_fold_add3(i64* %p1, i64* %p2) {
 ; CHECK-O0-LABEL: load_fold_add3:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    addq (%rsi), %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    addq (%rsi), %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_add3:
@@ -473,9 +657,8 @@ define i64 @load_fold_add3(i64* %p1, i64* %p2) {
 define i64 @load_fold_sub1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_sub1:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    subq $15, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    subq $15, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_sub1:
@@ -491,9 +674,8 @@ define i64 @load_fold_sub1(i64* %p) {
 define i64 @load_fold_sub2(i64* %p, i64 %v2) {
 ; CHECK-O0-LABEL: load_fold_sub2:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    subq %rsi, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    subq %rsi, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_sub2:
@@ -509,9 +691,8 @@ define i64 @load_fold_sub2(i64* %p, i64 %v2) {
 define i64 @load_fold_sub3(i64* %p1, i64* %p2) {
 ; CHECK-O0-LABEL: load_fold_sub3:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    subq (%rsi), %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    subq (%rsi), %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_sub3:
@@ -563,9 +744,8 @@ define i64 @load_fold_mul2(i64* %p, i64 %v2) {
 define i64 @load_fold_mul3(i64* %p1, i64* %p2) {
 ; CHECK-O0-LABEL: load_fold_mul3:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    imulq (%rsi), %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    imulq (%rsi), %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_mul3:
@@ -585,8 +765,8 @@ define i64 @load_fold_sdiv1(i64* %p) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    cqto
-; CHECK-O0-NEXT:    movl $15, %edi
-; CHECK-O0-NEXT:    idivq %rdi
+; CHECK-O0-NEXT:    movl $15, %ecx
+; CHECK-O0-NEXT:    idivq %rcx
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_sdiv1:
@@ -621,12 +801,12 @@ define i64 @load_fold_sdiv2(i64* %p, i64 %v2) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB31_1
+; CHECK-O3-NEXT:    je .LBB35_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rsi
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB31_1:
+; CHECK-O3-NEXT:  .LBB35_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -652,12 +832,12 @@ define i64 @load_fold_sdiv3(i64* %p1, i64* %p2) {
 ; CHECK-O3-NEXT:    movq %rax, %rdx
 ; CHECK-O3-NEXT:    orq %rcx, %rdx
 ; CHECK-O3-NEXT:    shrq $32, %rdx
-; CHECK-O3-NEXT:    je .LBB32_1
+; CHECK-O3-NEXT:    je .LBB36_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rcx
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB32_1:
+; CHECK-O3-NEXT:  .LBB36_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %ecx
@@ -676,8 +856,8 @@ define i64 @load_fold_udiv1(i64* %p) {
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    xorl %ecx, %ecx
 ; CHECK-O0-NEXT:    movl %ecx, %edx
-; CHECK-O0-NEXT:    movl $15, %edi
-; CHECK-O0-NEXT:    divq %rdi
+; CHECK-O0-NEXT:    movl $15, %esi
+; CHECK-O0-NEXT:    divq %rsi
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_udiv1:
@@ -708,12 +888,12 @@ define i64 @load_fold_udiv2(i64* %p, i64 %v2) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB34_1
+; CHECK-O3-NEXT:    je .LBB38_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rsi
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB34_1:
+; CHECK-O3-NEXT:  .LBB38_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -740,12 +920,12 @@ define i64 @load_fold_udiv3(i64* %p1, i64* %p2) {
 ; CHECK-O3-NEXT:    movq %rax, %rdx
 ; CHECK-O3-NEXT:    orq %rcx, %rdx
 ; CHECK-O3-NEXT:    shrq $32, %rdx
-; CHECK-O3-NEXT:    je .LBB35_1
+; CHECK-O3-NEXT:    je .LBB39_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rcx
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB35_1:
+; CHECK-O3-NEXT:  .LBB39_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %ecx
@@ -763,8 +943,8 @@ define i64 @load_fold_srem1(i64* %p) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    cqto
-; CHECK-O0-NEXT:    movl $15, %edi
-; CHECK-O0-NEXT:    idivq %rdi
+; CHECK-O0-NEXT:    movl $15, %ecx
+; CHECK-O0-NEXT:    idivq %rcx
 ; CHECK-O0-NEXT:    movq %rdx, %rax
 ; CHECK-O0-NEXT:    retq
 ;
@@ -805,13 +985,13 @@ define i64 @load_fold_srem2(i64* %p, i64 %v2) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB37_1
+; CHECK-O3-NEXT:    je .LBB41_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rsi
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB37_1:
+; CHECK-O3-NEXT:  .LBB41_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -838,13 +1018,13 @@ define i64 @load_fold_srem3(i64* %p1, i64* %p2) {
 ; CHECK-O3-NEXT:    movq %rax, %rdx
 ; CHECK-O3-NEXT:    orq %rcx, %rdx
 ; CHECK-O3-NEXT:    shrq $32, %rdx
-; CHECK-O3-NEXT:    je .LBB38_1
+; CHECK-O3-NEXT:    je .LBB42_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rcx
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB38_1:
+; CHECK-O3-NEXT:  .LBB42_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %ecx
@@ -863,8 +1043,8 @@ define i64 @load_fold_urem1(i64* %p) {
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    xorl %ecx, %ecx
 ; CHECK-O0-NEXT:    movl %ecx, %edx
-; CHECK-O0-NEXT:    movl $15, %edi
-; CHECK-O0-NEXT:    divq %rdi
+; CHECK-O0-NEXT:    movl $15, %esi
+; CHECK-O0-NEXT:    divq %rsi
 ; CHECK-O0-NEXT:    movq %rdx, %rax
 ; CHECK-O0-NEXT:    retq
 ;
@@ -902,13 +1082,13 @@ define i64 @load_fold_urem2(i64* %p, i64 %v2) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB40_1
+; CHECK-O3-NEXT:    je .LBB44_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rsi
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB40_1:
+; CHECK-O3-NEXT:  .LBB44_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -936,13 +1116,13 @@ define i64 @load_fold_urem3(i64* %p1, i64* %p2) {
 ; CHECK-O3-NEXT:    movq %rax, %rdx
 ; CHECK-O3-NEXT:    orq %rcx, %rdx
 ; CHECK-O3-NEXT:    shrq $32, %rdx
-; CHECK-O3-NEXT:    je .LBB41_1
+; CHECK-O3-NEXT:    je .LBB45_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rcx
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB41_1:
+; CHECK-O3-NEXT:  .LBB45_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %ecx
@@ -958,9 +1138,8 @@ define i64 @load_fold_urem3(i64* %p1, i64* %p2) {
 define i64 @load_fold_shl1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_shl1:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    shlq $15, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    shlq $15, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_shl1:
@@ -976,11 +1155,10 @@ define i64 @load_fold_shl1(i64* %p) {
 define i64 @load_fold_shl2(i64* %p, i64 %v2) {
 ; CHECK-O0-LABEL: load_fold_shl2:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq %rsi, %rcx
 ; CHECK-O0-NEXT:    # kill: def $cl killed $rcx
-; CHECK-O0-NEXT:    shlq %cl, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    shlq %cl, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_shl2:
@@ -995,11 +1173,10 @@ define i64 @load_fold_shl2(i64* %p, i64 %v2) {
 define i64 @load_fold_shl3(i64* %p1, i64* %p2) {
 ; CHECK-O0-LABEL: load_fold_shl3:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq (%rsi), %rcx
 ; CHECK-O0-NEXT:    # kill: def $cl killed $rcx
-; CHECK-O0-NEXT:    shlq %cl, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    shlq %cl, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_shl3:
@@ -1017,9 +1194,8 @@ define i64 @load_fold_shl3(i64* %p1, i64* %p2) {
 define i64 @load_fold_lshr1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_lshr1:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    shrq $15, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    shrq $15, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_lshr1:
@@ -1035,11 +1211,10 @@ define i64 @load_fold_lshr1(i64* %p) {
 define i64 @load_fold_lshr2(i64* %p, i64 %v2) {
 ; CHECK-O0-LABEL: load_fold_lshr2:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq %rsi, %rcx
 ; CHECK-O0-NEXT:    # kill: def $cl killed $rcx
-; CHECK-O0-NEXT:    shrq %cl, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    shrq %cl, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_lshr2:
@@ -1054,11 +1229,10 @@ define i64 @load_fold_lshr2(i64* %p, i64 %v2) {
 define i64 @load_fold_lshr3(i64* %p1, i64* %p2) {
 ; CHECK-O0-LABEL: load_fold_lshr3:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq (%rsi), %rcx
 ; CHECK-O0-NEXT:    # kill: def $cl killed $rcx
-; CHECK-O0-NEXT:    shrq %cl, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    shrq %cl, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_lshr3:
@@ -1076,9 +1250,8 @@ define i64 @load_fold_lshr3(i64* %p1, i64* %p2) {
 define i64 @load_fold_ashr1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_ashr1:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    sarq $15, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    sarq $15, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_ashr1:
@@ -1094,11 +1267,10 @@ define i64 @load_fold_ashr1(i64* %p) {
 define i64 @load_fold_ashr2(i64* %p, i64 %v2) {
 ; CHECK-O0-LABEL: load_fold_ashr2:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq %rsi, %rcx
 ; CHECK-O0-NEXT:    # kill: def $cl killed $rcx
-; CHECK-O0-NEXT:    sarq %cl, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    sarq %cl, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_ashr2:
@@ -1113,11 +1285,10 @@ define i64 @load_fold_ashr2(i64* %p, i64 %v2) {
 define i64 @load_fold_ashr3(i64* %p1, i64* %p2) {
 ; CHECK-O0-LABEL: load_fold_ashr3:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq (%rsi), %rcx
 ; CHECK-O0-NEXT:    # kill: def $cl killed $rcx
-; CHECK-O0-NEXT:    sarq %cl, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    sarq %cl, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_ashr3:
@@ -1135,9 +1306,8 @@ define i64 @load_fold_ashr3(i64* %p1, i64* %p2) {
 define i64 @load_fold_and1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_and1:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    andq $15, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    andq $15, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_and1:
@@ -1170,9 +1340,8 @@ define i64 @load_fold_and2(i64* %p, i64 %v2) {
 define i64 @load_fold_and3(i64* %p1, i64* %p2) {
 ; CHECK-O0-LABEL: load_fold_and3:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    andq (%rsi), %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    andq (%rsi), %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_and3:
@@ -1190,9 +1359,8 @@ define i64 @load_fold_and3(i64* %p1, i64* %p2) {
 define i64 @load_fold_or1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_or1:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    orq $15, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    orq $15, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_or1:
@@ -1225,9 +1393,8 @@ define i64 @load_fold_or2(i64* %p, i64 %v2) {
 define i64 @load_fold_or3(i64* %p1, i64* %p2) {
 ; CHECK-O0-LABEL: load_fold_or3:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    orq (%rsi), %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    orq (%rsi), %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_or3:
@@ -1245,9 +1412,8 @@ define i64 @load_fold_or3(i64* %p1, i64* %p2) {
 define i64 @load_fold_xor1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_xor1:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    xorq $15, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    xorq $15, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_xor1:
@@ -1280,9 +1446,8 @@ define i64 @load_fold_xor2(i64* %p, i64 %v2) {
 define i64 @load_fold_xor3(i64* %p1, i64* %p2) {
 ; CHECK-O0-LABEL: load_fold_xor3:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    xorq (%rsi), %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    xorq (%rsi), %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_xor3:
@@ -1299,10 +1464,11 @@ define i64 @load_fold_xor3(i64* %p1, i64* %p2) {
 define i1 @load_fold_icmp1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_icmp1:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    subq $15, %rdi
-; CHECK-O0-NEXT:    sete %al
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    subq $15, %rax
+; CHECK-O0-NEXT:    sete %cl
+; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movb %cl, %al
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_icmp1:
@@ -1318,10 +1484,11 @@ define i1 @load_fold_icmp1(i64* %p) {
 define i1 @load_fold_icmp2(i64* %p, i64 %v2) {
 ; CHECK-O0-LABEL: load_fold_icmp2:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    subq %rsi, %rdi
-; CHECK-O0-NEXT:    sete %al
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    subq %rsi, %rax
+; CHECK-O0-NEXT:    sete %cl
+; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movb %cl, %al
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_icmp2:
@@ -1337,11 +1504,12 @@ define i1 @load_fold_icmp2(i64* %p, i64 %v2) {
 define i1 @load_fold_icmp3(i64* %p1, i64* %p2) {
 ; CHECK-O0-LABEL: load_fold_icmp3:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    movq (%rsi), %rsi
-; CHECK-O0-NEXT:    subq %rsi, %rdi
-; CHECK-O0-NEXT:    sete %al
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    movq (%rsi), %rcx
+; CHECK-O0-NEXT:    subq %rcx, %rax
+; CHECK-O0-NEXT:    sete %dl
+; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movb %dl, %al
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_icmp3:
@@ -1537,13 +1705,13 @@ define void @rmw_fold_sdiv2(i64* %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB70_1
+; CHECK-O3-NEXT:    je .LBB74_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rsi
 ; CHECK-O3-NEXT:    movq %rax, (%rdi)
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB70_1:
+; CHECK-O3-NEXT:  .LBB74_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -1599,13 +1767,13 @@ define void @rmw_fold_udiv2(i64* %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB72_1
+; CHECK-O3-NEXT:    je .LBB76_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rsi
 ; CHECK-O3-NEXT:    movq %rax, (%rdi)
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB72_1:
+; CHECK-O3-NEXT:  .LBB76_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -1677,13 +1845,13 @@ define void @rmw_fold_srem2(i64* %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB74_1
+; CHECK-O3-NEXT:    je .LBB78_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rsi
 ; CHECK-O3-NEXT:    movq %rdx, (%rdi)
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB74_1:
+; CHECK-O3-NEXT:  .LBB78_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -1748,13 +1916,13 @@ define void @rmw_fold_urem2(i64* %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB76_1
+; CHECK-O3-NEXT:    je .LBB80_1
 ; CHECK-O3-NEXT:  # %bb.2:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rsi
 ; CHECK-O3-NEXT:    movq %rdx, (%rdi)
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB76_1:
+; CHECK-O3-NEXT:  .LBB80_1:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -1795,9 +1963,9 @@ define void @rmw_fold_shl2(i64* %p, i64 %v) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movb %sil, %cl
-; CHECK-O0-NEXT:    # implicit-def: $rsi
-; CHECK-O0-NEXT:    movb %cl, %sil
-; CHECK-O0-NEXT:    shlxq %rsi, %rax, %rax
+; CHECK-O0-NEXT:    # implicit-def: $rdx
+; CHECK-O0-NEXT:    movb %cl, %dl
+; CHECK-O0-NEXT:    shlxq %rdx, %rax, %rax
 ; CHECK-O0-NEXT:    movq %rax, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
@@ -1840,9 +2008,9 @@ define void @rmw_fold_lshr2(i64* %p, i64 %v) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movb %sil, %cl
-; CHECK-O0-NEXT:    # implicit-def: $rsi
-; CHECK-O0-NEXT:    movb %cl, %sil
-; CHECK-O0-NEXT:    shrxq %rsi, %rax, %rax
+; CHECK-O0-NEXT:    # implicit-def: $rdx
+; CHECK-O0-NEXT:    movb %cl, %dl
+; CHECK-O0-NEXT:    shrxq %rdx, %rax, %rax
 ; CHECK-O0-NEXT:    movq %rax, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
@@ -1885,9 +2053,9 @@ define void @rmw_fold_ashr2(i64* %p, i64 %v) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movb %sil, %cl
-; CHECK-O0-NEXT:    # implicit-def: $rsi
-; CHECK-O0-NEXT:    movb %cl, %sil
-; CHECK-O0-NEXT:    sarxq %rsi, %rax, %rax
+; CHECK-O0-NEXT:    # implicit-def: $rdx
+; CHECK-O0-NEXT:    movb %cl, %dl
+; CHECK-O0-NEXT:    sarxq %rdx, %rax, %rax
 ; CHECK-O0-NEXT:    movq %rax, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
@@ -2028,8 +2196,9 @@ define void @rmw_fold_xor2(i64* %p, i64 %v) {
 define i32 @fold_trunc(i64* %p) {
 ; CHECK-O0-LABEL: fold_trunc:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    movl %edi, %eax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    movl %eax, %ecx
+; CHECK-O0-NEXT:    movl %ecx, %eax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: fold_trunc:
@@ -2046,9 +2215,10 @@ define i32 @fold_trunc(i64* %p) {
 define i32 @fold_trunc_add(i64* %p, i32 %v2) {
 ; CHECK-O0-LABEL: fold_trunc_add:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    movl %edi, %eax
-; CHECK-O0-NEXT:    addl %esi, %eax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    movl %eax, %ecx
+; CHECK-O0-NEXT:    addl %esi, %ecx
+; CHECK-O0-NEXT:    movl %ecx, %eax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: fold_trunc_add:
@@ -2067,9 +2237,10 @@ define i32 @fold_trunc_add(i64* %p, i32 %v2) {
 define i32 @fold_trunc_and(i64* %p, i32 %v2) {
 ; CHECK-O0-LABEL: fold_trunc_and:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    movl %edi, %eax
-; CHECK-O0-NEXT:    andl %esi, %eax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    movl %eax, %ecx
+; CHECK-O0-NEXT:    andl %esi, %ecx
+; CHECK-O0-NEXT:    movl %ecx, %eax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: fold_trunc_and:
@@ -2088,9 +2259,10 @@ define i32 @fold_trunc_and(i64* %p, i32 %v2) {
 define i32 @fold_trunc_or(i64* %p, i32 %v2) {
 ; CHECK-O0-LABEL: fold_trunc_or:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    movl %edi, %eax
-; CHECK-O0-NEXT:    orl %esi, %eax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    movl %eax, %ecx
+; CHECK-O0-NEXT:    orl %esi, %ecx
+; CHECK-O0-NEXT:    movl %ecx, %eax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: fold_trunc_or:
@@ -2110,12 +2282,12 @@ define i32 @fold_trunc_or(i64* %p, i32 %v2) {
 define i32 @split_load(i64* %p) {
 ; CHECK-O0-LABEL: split_load:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
-; CHECK-O0-NEXT:    movb %dil, %al
-; CHECK-O0-NEXT:    shrq $32, %rdi
-; CHECK-O0-NEXT:    movb %dil, %cl
-; CHECK-O0-NEXT:    orb %cl, %al
-; CHECK-O0-NEXT:    movzbl %al, %eax
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    movb %al, %cl
+; CHECK-O0-NEXT:    shrq $32, %rax
+; CHECK-O0-NEXT:    movb %al, %dl
+; CHECK-O0-NEXT:    orb %dl, %cl
+; CHECK-O0-NEXT:    movzbl %cl, %eax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: split_load:
@@ -2238,10 +2410,9 @@ define void @dead_store(i64* %p, i64 %v) {
 define i64 @nofold_fence(i64* %p) {
 ; CHECK-O0-LABEL: nofold_fence:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    mfence
-; CHECK-O0-NEXT:    addq $15, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    addq $15, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: nofold_fence:
@@ -2259,10 +2430,9 @@ define i64 @nofold_fence(i64* %p) {
 define i64 @nofold_fence_acquire(i64* %p) {
 ; CHECK-O0-LABEL: nofold_fence_acquire:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    #MEMBARRIER
-; CHECK-O0-NEXT:    addq $15, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    addq $15, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: nofold_fence_acquire:
@@ -2281,10 +2451,9 @@ define i64 @nofold_fence_acquire(i64* %p) {
 define i64 @nofold_stfence(i64* %p) {
 ; CHECK-O0-LABEL: nofold_stfence:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    #MEMBARRIER
-; CHECK-O0-NEXT:    addq $15, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    addq $15, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: nofold_stfence:
@@ -2360,7 +2529,7 @@ define i64 @fold_constant_fence(i64 %arg) {
   ret i64 %ret
 }
 
-define i64 @fold_invariant_clobber(i64* %p, i64 %arg) {
+define i64 @fold_invariant_clobber(i64* dereferenceable(8) %p, i64 %arg) {
 ; CHECK-O0-LABEL: fold_invariant_clobber:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
@@ -2381,13 +2550,12 @@ define i64 @fold_invariant_clobber(i64* %p, i64 %arg) {
 }
 
 
-define i64 @fold_invariant_fence(i64* %p, i64 %arg) {
+define i64 @fold_invariant_fence(i64* dereferenceable(8) %p, i64 %arg) {
 ; CHECK-O0-LABEL: fold_invariant_fence:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    mfence
-; CHECK-O0-NEXT:    addq %rsi, %rdi
-; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    addq %rsi, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: fold_invariant_fence:

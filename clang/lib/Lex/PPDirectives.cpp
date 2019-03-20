@@ -1446,6 +1446,14 @@ bool Preprocessor::GetIncludeFilenameSpelling(SourceLocation Loc,
   // Get the text form of the filename.
   assert(!Buffer.empty() && "Can't have tokens with empty spellings!");
 
+  // FIXME: Consider warning on some of the cases described in C11 6.4.7/3 and
+  // C++20 [lex.header]/2:
+  //
+  // If `"`, `'`, `\`, `/*`, or `//` appears in a header-name, then
+  //   in C: behavior is undefined
+  //   in C++: program is conditionally-supported with implementation-defined
+  //           semantics
+
   // Make sure the filename is <x> or "x".
   bool isAngled;
   if (Buffer[0] == '<') {
@@ -1613,7 +1621,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   if (LexHeaderName(FilenameTok))
     return;
 
-  if (!FilenameTok.isOneOf(tok::angle_string_literal, tok::string_literal)) {
+  if (FilenameTok.isNot(tok::header_name)) {
     Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
     if (FilenameTok.isNot(tok::eod))
       DiscardUntilEndOfDirective();

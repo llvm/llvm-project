@@ -579,8 +579,8 @@ public:
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
-  void addFastRegAlloc(FunctionPass *RegAllocPass) override;
-  void addOptimizedRegAlloc(FunctionPass *RegAllocPass) override;
+  void addFastRegAlloc() override;
+  void addOptimizedRegAlloc() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
@@ -865,7 +865,7 @@ void GCNPassConfig::addPreRegAlloc() {
   addPass(createSIWholeQuadModePass());
 }
 
-void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
+void GCNPassConfig::addFastRegAlloc() {
   // FIXME: We have to disable the verifier here because of PHIElimination +
   // TwoAddressInstructions disabling it.
 
@@ -878,10 +878,10 @@ void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
   // machine-level CFG, but before register allocation.
   insertPass(&SILowerControlFlowID, &SIFixWWMLivenessID, false);
 
-  TargetPassConfig::addFastRegAlloc(RegAllocPass);
+  TargetPassConfig::addFastRegAlloc();
 }
 
-void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
+void GCNPassConfig::addOptimizedRegAlloc() {
   insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
 
   insertPass(&SIOptimizeExecMaskingPreRAID, &SIFormMemoryClausesID);
@@ -895,7 +895,7 @@ void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
   // machine-level CFG, but before register allocation.
   insertPass(&SILowerControlFlowID, &SIFixWWMLivenessID, false);
 
-  TargetPassConfig::addOptimizedRegAlloc(RegAllocPass);
+  TargetPassConfig::addOptimizedRegAlloc();
 }
 
 void GCNPassConfig::addPostRegAlloc() {

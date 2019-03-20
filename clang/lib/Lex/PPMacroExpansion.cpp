@@ -1166,7 +1166,7 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
     PP.Diag(LParenLoc, diag::err_pp_expected_after) << II << tok::l_paren;
     // If the next token looks like a filename or the start of one,
     // assume it is and process it as such.
-    if (!Tok.is(tok::angle_string_literal) && !Tok.is(tok::string_literal))
+    if (Tok.isNot(tok::header_name))
       return false;
   } else {
     // Save '(' location for possible missing ')' message.
@@ -1175,7 +1175,7 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
       return false;
   }
 
-  if (!Tok.isOneOf(tok::angle_string_literal, tok::string_literal)) {
+  if (Tok.isNot(tok::header_name)) {
     PP.Diag(Tok.getLocation(), diag::err_pp_expects_filename);
     return false;
   }

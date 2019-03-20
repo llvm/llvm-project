@@ -304,49 +304,6 @@ bool DWARFMappedHash::Header::Read(const lldb_private::DWARFDataExtractor &data,
   return true;
 }
 
-void DWARFMappedHash::Header::Dump(lldb_private::Stream &strm,
-                                   const DIEInfo &hash_data) const {
-  const size_t num_atoms = header_data.atoms.size();
-  for (size_t i = 0; i < num_atoms; ++i) {
-    if (i > 0)
-      strm.PutCString(", ");
-
-    DWARFFormValue form_value(NULL, header_data.atoms[i].form);
-    switch (header_data.atoms[i].type) {
-    case eAtomTypeDIEOffset: // DIE offset, check form for encoding
-      strm.Printf("{0x%8.8x}", hash_data.offset);
-      break;
-
-    case eAtomTypeTag: // DW_TAG value for the DIE
-    {
-      const char *tag_cstr = lldb_private::DW_TAG_value_to_name(hash_data.tag);
-      if (tag_cstr)
-        strm.PutCString(tag_cstr);
-      else
-        strm.Printf("DW_TAG_(0x%4.4x)", hash_data.tag);
-    } break;
-
-    case eAtomTypeTypeFlags: // Flags from enum TypeFlags
-      strm.Printf("0x%2.2x", hash_data.type_flags);
-      if (hash_data.type_flags) {
-        strm.PutCString(" (");
-        if (hash_data.type_flags & eTypeFlagClassIsImplementation)
-          strm.PutCString(" implementation");
-        strm.PutCString(" )");
-      }
-      break;
-
-    case eAtomTypeQualNameHash: // Flags from enum TypeFlags
-      strm.Printf("0x%8.8x", hash_data.qualified_name_hash);
-      break;
-
-    default:
-      strm.Printf("AtomType(0x%x)", header_data.atoms[i].type);
-      break;
-    }
-  }
-}
-
 DWARFMappedHash::MemoryTable::MemoryTable(
     lldb_private::DWARFDataExtractor &table_data,
     const lldb_private::DWARFDataExtractor &string_table, const char *name)

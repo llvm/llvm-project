@@ -16,7 +16,7 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-LABEL: foo:
 ; CHECK-O0: lghi %r2, 16
 ; CHECK-O0: brasl %r14, malloc
-; CHECK-O0: lgr %r9, %r2
+; CHECK-O0: lgr %r0, %r2
 ; CHECK-O0: mvi 8(%r2), 1
 entry:
   %call = call i8* @malloc(i64 16)

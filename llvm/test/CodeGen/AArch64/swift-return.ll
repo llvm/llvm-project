@@ -8,7 +8,7 @@
 ; CHECK-O0-LABEL: test1
 ; CHECK-O0: bl      _gen
 ; CHECK-O0: sxth    [[TMP:w.*]], w0
-; CHECK-O0: add     w0, [[TMP]], w1, sxtb
+; CHECK-O0: add     w8, [[TMP]], w1, sxtb
 define i16 @test1(i32) {
 entry:
   %call = call swiftcc { i16, i8 } @gen(i32 %0)
