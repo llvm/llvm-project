@@ -2367,7 +2367,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
   // of bool aren't allowed.
   if ((!T->isDependentType() && !T->isIntegerType() &&
        !T->isRealFloatingType()) ||
-      T->isBooleanType()) {
+      (!Context.getLangOpts().SYCLIsDevice && T->isBooleanType())) {
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << T;
     return QualType();
   }
