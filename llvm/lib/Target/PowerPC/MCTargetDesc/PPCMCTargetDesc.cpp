@@ -36,6 +36,8 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <set>
+
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
@@ -182,16 +184,35 @@ public:
 
   void emitAssignment(MCSymbol *S, const MCExpr *Value) override {
     auto *Symbol = cast<MCSymbolELF>(S);
+
+    auto I = UpdateOther.find(Symbol);
+    if (I != UpdateOther.end())
+      UpdateOther.erase(I);
+
     // When encoding an assignment to set symbol A to symbol B, also copy
     // the st_other bits encoding the local entry point offset.
-    if (Value->getKind() != MCExpr::SymbolRef)
-      return;
-    const auto &RhsSym = cast<MCSymbolELF>(
-        static_cast<const MCSymbolRefExpr *>(Value)->getSymbol());
-    unsigned Other = Symbol->getOther();
+    if (copyLocalEntry(Symbol, Value))
+      UpdateOther.insert(Symbol);
+  }
+
+  void finish() override {
+    for (auto *Sym : UpdateOther)
+      copyLocalEntry(Sym, Sym->getVariableValue());
+  }
+
+private:
+  std::set<MCSymbolELF *> UpdateOther;
+
+  bool copyLocalEntry(MCSymbolELF *D, const MCExpr *S) {
+    if (S->getKind() != MCExpr::SymbolRef)
+      return false;
+    const auto &RhsSym =
+        cast<MCSymbolELF>(static_cast<const MCSymbolRefExpr *>(S)->getSymbol());
+    unsigned Other = D->getOther();
     Other &= ~ELF::STO_PPC64_LOCAL_MASK;
     Other |= RhsSym.getOther() & ELF::STO_PPC64_LOCAL_MASK;
-    Symbol->setOther(Other);
+    D->setOther(Other);
+    return true;
   }
 };
 
