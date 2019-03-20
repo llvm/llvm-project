@@ -136,7 +136,7 @@ void Node::addExplicitMemOp(
          "Accessor should have an initialized accessor_base");
   detail::buffer_impl<buffer_allocator<char>> *Buf = DestBase->m_Buf;
 
-  range<Dimensions> Range = DestBase->Range;
+  range<Dimensions> Range = DestBase->AccessRange;
   id<Dimensions> Offset = DestBase->Offset;
 
   BufferReqPtr Req = getReqForBuffer(m_Bufs, *Buf);
@@ -169,13 +169,13 @@ void Node::addExplicitMemOp(
   assert(DestBuf != nullptr &&
          "Accessor should have an initialized buffer_impl");
 
-  range<dim_src> SrcRange = SrcBase->Range;
+  range<dim_src> SrcRange = SrcBase->AccessRange;
   id<dim_src> SrcOffset = SrcBase->Offset;
   id<dim_dest> DestOffset = DestBase->Offset;
 
   // Use BufRange here
-  range<dim_src> BuffSrcRange = SrcBase->BufRange;
-  range<dim_src> BuffDestRange = DestBase->BufRange;
+  range<dim_src> BuffSrcRange = SrcBase->MemRange;
+  range<dim_src> BuffDestRange = DestBase->MemRange;
 
   BufferReqPtr SrcReq = getReqForBuffer(m_Bufs, *SrcBuf);
   BufferReqPtr DestReq = getReqForBuffer(m_Bufs, *DestBuf);
