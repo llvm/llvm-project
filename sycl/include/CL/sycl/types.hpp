@@ -350,14 +350,11 @@ public:
 
   vec() { m_Data = {0}; }
 
-  vec(const vec &Rhs) : m_Data(Rhs.m_Data) {}
+  vec(const vec &Rhs) = default;
 
-  vec(vec &&Rhs) : m_Data(std::move(Rhs.m_Data)) {}
+  vec(vec &&Rhs) = default;
 
-  vec &operator=(const vec &Rhs) {
-    m_Data = Rhs.m_Data;
-    return *this;
-  }
+  vec &operator=(const vec &Rhs) = default;
 
   // W/o this, things like "vec<char,*> = vec<signed char, *>" doesn't work.
   template <typename Ty = DataT>
