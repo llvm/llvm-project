@@ -100,8 +100,9 @@ void Scheduler::throwForEventRecursive(EventImplPtr Event) {
   }
 }
 
-void Scheduler::getDepEventsRecursive(
-    std::unordered_set<cl::sycl::event> &EventsSet, EventImplPtr Event) {
+void Scheduler::getDepEventsHelper(
+    std::unordered_set<cl::sycl::event> &EventsSet,
+    EventImplPtr Event) {
   auto Cmd = getCmdForEvent(Event);
   if (Cmd == nullptr) {
     return;
@@ -114,8 +115,16 @@ void Scheduler::getDepEventsRecursive(
     EventsSet.insert(DepEvent);
 
     auto DepEventImpl = cl::sycl::detail::getSyclObjImpl(DepEvent);
-    getDepEventsRecursive(EventsSet, DepEventImpl);
+    getDepEventsHelper(EventsSet, DepEventImpl);
   }
+}
+
+vector_class<event> Scheduler::getDepEventsRecursive(EventImplPtr Event) {
+  std::unordered_set<event> DepEventsSet;
+  getDepEventsHelper(DepEventsSet, Event);
+
+  vector_class<event> DepEventsVec(DepEventsSet.begin(), DepEventsSet.end());
+  return DepEventsVec;
 }
 
 void Scheduler::print(std::ostream &Stream) const {

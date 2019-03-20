@@ -197,13 +197,11 @@ public:
   enum DumpOptions { Text = 0, WholeGraph = 1, RunGraph = 2 };
   bool getDumpFlagValue(DumpOptions DumpOption);
 
-  // Recursively walks through the dependencies and initializes
-  // the given EventsSet with the events that the Event
-  // waits for. The unordered_set is used to collect unuque events,
+  // Walks through the dependencies and returns the vector of events
+  // that given Event waits for.
+  // The unordered_set is used to collect unuque events,
   // and the unordered_set is convenient as it does not need operator<().
-  void getDepEventsRecursive(std::unordered_set<cl::sycl::event> &EventsSet,
-                             EventImplPtr Event);
-
+  vector_class<event> getDepEventsRecursive(EventImplPtr Event);
 protected:
   // TODO: Add releasing of OpenCL buffers.
 
@@ -241,6 +239,14 @@ private:
   // It calls async handler for the command Cmd and those other
   // commands that Cmd depends on.
   void throwForCmdRecursive(std::shared_ptr<Command> Cmd);
+
+  // The helper method for getDepEventsRecursive(). It recursively walks
+  // through the command dependence tree and put those events that the given
+  // Event wait for into the EventsSet. The unordered_set is convenient and
+  // efficient way to collect unuque events. Also, it is unordered to avoid
+  // the need in operator<().
+  void getDepEventsHelper(std::unordered_set<cl::sycl::event> &EventsSet,
+                          EventImplPtr Event);
 };
 
 } // namespace simple_scheduler
