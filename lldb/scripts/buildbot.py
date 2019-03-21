@@ -193,4 +193,4 @@ build_bot = LLDBBuildBot(build_directory_path=arg_dict["build_path"],
 try:
     build_bot.Run()
 except BuildError as err:
-    print err
+    print(err)

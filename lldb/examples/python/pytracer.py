@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import inspect
 from collections import OrderedDict
@@ -229,17 +230,17 @@ def disable():
 class LoggingTracer:
 
     def callEvent(self, frame):
-        print "call " + frame.getName() + " from " + frame.getCaller().getName() + " @ " + str(frame.getCaller().getLineNumber()) + " args are " + str(frame.getArgumentInfo())
+        print("call " + frame.getName() + " from " + frame.getCaller().getName() + " @ " + str(frame.getCaller().getLineNumber()) + " args are " + str(frame.getArgumentInfo()))
 
     def lineEvent(self, frame):
-        print "running " + frame.getName() + " @ " + str(frame.getLineNumber()) + " locals are " + str(frame.getLocals()) + " in " + frame.getFileName()
+        print("running " + frame.getName() + " @ " + str(frame.getLineNumber()) + " locals are " + str(frame.getLocals()) + " in " + frame.getFileName())
 
     def returnEvent(self, frame, retval):
-        print "return from " + frame.getName() + " value is " + str(retval) + " locals are " + str(frame.getLocals())
+        print("return from " + frame.getName() + " value is " + str(retval) + " locals are " + str(frame.getLocals()))
 
     def exceptionEvent(self, frame, exception):
-        print "exception %s %s raised from %s @ %s" % (exception.getType(), str(exception.getValue()), frame.getName(), frame.getLineNumber())
-        print "tb: " + str(exception.getTraceback())
+        print("exception %s %s raised from %s @ %s" % (exception.getType(), str(exception.getValue()), frame.getName(), frame.getLineNumber()))
+        print("tb: " + str(exception.getTraceback()))
 
 # the same functionality as LoggingTracer, but with a little more
 # lldb-specific smarts
@@ -251,10 +252,10 @@ class LLDBAwareTracer:
         if frame.getName() == "<module>":
             return
         if frame.getName() == "run_one_line":
-            print "call run_one_line(%s)" % (frame.getArgumentInfo().getArgs()["input_string"])
+            print("call run_one_line(%s)" % (frame.getArgumentInfo().getArgs()["input_string"]))
             return
         if "Python.framework" in frame.getFileName():
-            print "call into Python at " + frame.getName()
+            print("call into Python at " + frame.getName())
             return
         if frame.getName() == "__init__" and frame.getCaller().getName(
         ) == "run_one_line" and frame.getCaller().getLineNumber() == 101:
@@ -270,16 +271,16 @@ class LLDBAwareTracer:
         else:
             strout += " from " + frame.getCaller().getName() + " @ " + \
                 str(frame.getCaller().getLineNumber()) + " args are " + str(frame.getArgumentInfo())
-        print strout
+        print(strout)
 
     def lineEvent(self, frame):
         if frame.getName() == "<module>":
             return
         if frame.getName() == "run_one_line":
-            print "running run_one_line(%s) @ %s" % (frame.getArgumentInfo().getArgs()["input_string"], frame.getLineNumber())
+            print("running run_one_line(%s) @ %s" % (frame.getArgumentInfo().getArgs()["input_string"], frame.getLineNumber()))
             return
         if "Python.framework" in frame.getFileName():
-            print "running into Python at " + frame.getName() + " @ " + str(frame.getLineNumber())
+            print("running into Python at " + frame.getName() + " @ " + str(frame.getLineNumber()))
             return
         strout = "running " + frame.getName() + " @ " + str(frame.getLineNumber()) + \
             " locals are "
@@ -292,16 +293,16 @@ class LLDBAwareTracer:
         else:
             strout = strout + str(frame.getLocals())
         strout = strout + " in " + frame.getFileName()
-        print strout
+        print(strout)
 
     def returnEvent(self, frame, retval):
         if frame.getName() == "<module>":
             return
         if frame.getName() == "run_one_line":
-            print "return from run_one_line(%s) return value is %s" % (frame.getArgumentInfo().getArgs()["input_string"], retval)
+            print("return from run_one_line(%s) return value is %s" % (frame.getArgumentInfo().getArgs()["input_string"], retval))
             return
         if "Python.framework" in frame.getFileName():
-            print "return from Python at " + frame.getName() + " return value is " + str(retval)
+            print("return from Python at " + frame.getName() + " return value is " + str(retval))
             return
         strout = "return from " + frame.getName() + " return value is " + \
             str(retval) + " locals are "
@@ -314,13 +315,13 @@ class LLDBAwareTracer:
         else:
             strout = strout + str(frame.getLocals())
         strout = strout + " in " + frame.getFileName()
-        print strout
+        print(strout)
 
     def exceptionEvent(self, frame, exception):
         if frame.getName() == "<module>":
             return
-        print "exception %s %s raised from %s @ %s" % (exception.getType(), str(exception.getValue()), frame.getName(), frame.getLineNumber())
-        print "tb: " + str(exception.getTraceback())
+        print("exception %s %s raised from %s @ %s" % (exception.getType(), str(exception.getValue()), frame.getName(), frame.getLineNumber()))
+        print("tb: " + str(exception.getTraceback()))
 
 
 def f(x, y=None):
@@ -336,7 +337,7 @@ def g(x):
 def print_keyword_args(**kwargs):
     # kwargs is a dict of the keyword args passed to the function
     for key, value in kwargs.items():
-        print "%s = %s" % (key, value)
+        print("%s = %s" % (key, value))
 
 
 def total(initial=5, *numbers, **keywords):

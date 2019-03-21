@@ -5,6 +5,8 @@ Run llvm-mc interactively.
 
 """
 
+from __future__ import print_function
+
 import os
 import sys
 from optparse import OptionParser
@@ -105,8 +107,8 @@ Usage: %prog [options]
     llvm_mc_options = opts.llvm_mc_options
 
     # We have parsed the options.
-    print "llvm-mc:", llvm_mc
-    print "llvm-mc options:", llvm_mc_options
+    print("llvm-mc:", llvm_mc)
+    print("llvm-mc options:", llvm_mc_options)
 
     llvm_mc_loop(llvm_mc, llvm_mc_options)
 

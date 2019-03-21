@@ -3,6 +3,8 @@
 # This file defines the layer that talks to lldb
 #
 
+from __future__ import print_function
+
 import os
 import re
 import sys
@@ -164,7 +166,7 @@ class LLDBController(object):
         self.ui.activate()
         self.pid = self.process.GetProcessID()
 
-        print "Attached to %s (pid=%d)" % (process_name, self.pid)
+        print("Attached to %s (pid=%d)" % (process_name, self.pid))
 
     def doDetach(self):
         if self.process is not None and self.process.IsValid():
@@ -196,7 +198,7 @@ class LLDBController(object):
         self.process.GetBroadcaster().AddListener(
             self.processListener, lldb.SBProcess.eBroadcastBitStateChanged)
 
-        print "Launched %s %s (pid=%d)" % (exe, args, self.pid)
+        print("Launched %s %s (pid=%d)" % (exe, args, self.pid))
 
         if not stop_at_entry:
             self.doContinue()
@@ -323,7 +325,7 @@ class LLDBController(object):
         if success:
             self.ui.update(self.target, "", self, goto_file)
             if len(output) > 0 and print_on_success:
-                print output
+                print(output)
         else:
             sys.stderr.write(output)
 
