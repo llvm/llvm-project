@@ -1181,10 +1181,14 @@ static bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
     if (!MathDominates && !DT.dominates(Cmp, BO))
       return false;
 
-    // Check that the insertion doesn't create a value that is live across more
-    // than two blocks, so to minimise the increase in register pressure.
     BasicBlock *MathBB = BO->getParent(), *CmpBB = Cmp->getParent();
     if (MathBB != CmpBB) {
+      // Avoid hoisting an extra op into a dominating block and creating a
+      // potentially longer critical path.
+      if (!MathDominates)
+        return false;
+      // Check that the insertion doesn't create a value that is live across
+      // more than two blocks, so to minimise the increase in register pressure.
       BasicBlock *Dominator = MathDominates ? MathBB : CmpBB;
       BasicBlock *Dominated = MathDominates ? CmpBB : MathBB;
       auto Successors = successors(Dominator);

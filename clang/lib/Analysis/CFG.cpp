@@ -1378,6 +1378,15 @@ void CFGBuilder::findConstructionContexts(
     findConstructionContexts(Layer, CO->getRHS());
     break;
   }
+  case Stmt::InitListExprClass: {
+    auto *ILE = cast<InitListExpr>(Child);
+    if (ILE->isTransparent()) {
+      findConstructionContexts(Layer, ILE->getInit(0));
+      break;
+    }
+    // TODO: Handle other cases. For now, fail to find construction contexts.
+    break;
+  }
   default:
     break;
   }

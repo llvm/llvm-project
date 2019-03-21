@@ -242,4 +242,22 @@ void foo() {
   B &&bcr = C({{}}); // no-crash
 #endif
 }
+} // namespace CXX17_aggregate_construction
+
+namespace CXX17_transparent_init_list_exprs {
+class A {};
+
+class B: private A {};
+
+B boo();
+void foo1() {
+  B b { boo() }; // no-crash
 }
+
+class C: virtual public A {};
+
+C coo();
+void foo2() {
+  C c { coo() }; // no-crash
+}
+} // namespace CXX17_transparent_init_list_exprs

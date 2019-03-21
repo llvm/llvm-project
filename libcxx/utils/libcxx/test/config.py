@@ -435,6 +435,11 @@ class Configuration(object):
         if self.long_tests:
             self.config.available_features.add('long_tests')
 
+        if not self.get_lit_bool('enable_filesystem', default=True):
+            self.config.available_features.add('c++filesystem-disabled')
+            self.config.available_features.add('dylib-has-no-filesystem')
+
+
         # Run a compile test for the -fsized-deallocation flag. This is needed
         # in test/std/language.support/support.dynamic/new.delete
         if self.cxx.hasCompileFlag('-fsized-deallocation'):

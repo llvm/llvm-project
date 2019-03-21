@@ -17,7 +17,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "DWARFCompileUnit.h"
-#include "DWARFDebugAranges.h"
+#include "DWARFContext.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugInfoEntry.h"
@@ -30,8 +30,9 @@ using namespace std;
 //----------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------
-DWARFDebugInfo::DWARFDebugInfo()
-    : m_dwarf2Data(NULL), m_compile_units(), m_cu_aranges_up() {}
+DWARFDebugInfo::DWARFDebugInfo(lldb_private::DWARFContext &context)
+    : m_dwarf2Data(NULL), m_context(context), m_compile_units(),
+      m_cu_aranges_up() {}
 
 //----------------------------------------------------------------------
 // SetDwarfData
@@ -48,10 +49,10 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
   assert(m_dwarf2Data);
 
   m_cu_aranges_up = llvm::make_unique<DWARFDebugAranges>();
-  const DWARFDataExtractor &debug_aranges_data =
-      m_dwarf2Data->get_debug_aranges_data();
-  if (debug_aranges_data.GetByteSize() > 0) {
-    llvm::Error error = m_cu_aranges_up->extract(debug_aranges_data);
+  const DWARFDataExtractor *debug_aranges_data =
+      m_context.getOrLoadArangesData();
+  if (debug_aranges_data) {
+    llvm::Error error = m_cu_aranges_up->extract(*debug_aranges_data);
     if (error)
       return std::move(error);
   }
@@ -90,8 +91,8 @@ void DWARFDebugInfo::ParseCompileUnitHeadersIfNeeded() {
   const auto &debug_info_data = m_dwarf2Data->get_debug_info_data();
 
   while (debug_info_data.ValidOffset(offset)) {
-    llvm::Expected<DWARFUnitSP> cu_sp =
-        DWARFCompileUnit::extract(m_dwarf2Data, debug_info_data, &offset);
+    llvm::Expected<DWARFUnitSP> cu_sp = DWARFCompileUnit::extract(
+        m_dwarf2Data, m_context, debug_info_data, &offset);
 
     if (!cu_sp) {
       // FIXME: Propagate this error up.

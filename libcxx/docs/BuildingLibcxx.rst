@@ -206,6 +206,13 @@ libc++ specific options
   libraries that may be used in with other shared libraries that use different
   C++ library. We want to avoid avoid exporting any libc++ symbols in that case.
 
+.. option:: LIBCXX_ENABLE_FILESYSTEM:BOOL
+
+   **Default**: ``ON`` except on Windows.
+
+   This option can be used to enable or disable the filesystem components on
+   platforms that may not support them. For example on Windows.
+
 .. _libc++experimental options:
 
 libc++experimental Specific Options

@@ -242,8 +242,9 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures() {
       // "atomics" is special: code compiled without atomics may have had its
       // atomics lowered to nonatomic operations. Such code would be dangerous
       // to mix with proper atomics, so it is always Required or Disallowed.
-      Entry.Prefix = UsedFeatures[F.first] ? wasm::WASM_FEATURE_PREFIX_REQUIRED
-                                           : wasm::WASM_FEATURE_PREFIX_DISALLOWED;
+      Entry.Prefix = UsedFeatures[F.first]
+                         ? wasm::WASM_FEATURE_PREFIX_REQUIRED
+                         : wasm::WASM_FEATURE_PREFIX_DISALLOWED;
       EmittedFeatures.push_back(Entry);
     } else {
       // Other features are marked Used or not mentioned

@@ -3,8 +3,6 @@ set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTOR
 # Get sources
 # FIXME: Don't use glob here
 file(GLOB LIBCXX_SOURCES ../src/*.cpp)
-list(APPEND LIBCXX_SOURCES ../src/filesystem/operations.cpp
-                           ../src/filesystem/directory_iterator.cpp)
 if(WIN32)
   file(GLOB LIBCXX_WIN32_SOURCES ../src/support/win32/*.cpp)
   list(APPEND LIBCXX_SOURCES ${LIBCXX_WIN32_SOURCES})
@@ -13,12 +11,16 @@ elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")
   list(APPEND LIBCXX_SOURCES ${LIBCXX_SOLARIS_SOURCES})
 endif()
 
-# Filesystem uses __int128_t, which requires a definition of __muloi4 when
-# compiled with UBSAN. This definition is not provided by libgcc_s, but is
-# provided by compiler-rt. So we need to disable it to avoid having multiple
-# definitions. See filesystem/int128_builtins.cpp.
-if (NOT LIBCXX_USE_COMPILER_RT)
-  list(APPEND LIBCXX_SOURCES ../src/filesystem/int128_builtins.cpp)
+if (LIBCXX_ENABLE_FILESYSTEM)
+  list(APPEND LIBCXX_SOURCES ../src/filesystem/operations.cpp
+                             ../src/filesystem/directory_iterator.cpp)
+  # Filesystem uses __int128_t, which requires a definition of __muloi4 when
+  # compiled with UBSAN. This definition is not provided by libgcc_s, but is
+  # provided by compiler-rt. So we need to disable it to avoid having multiple
+  # definitions. See filesystem/int128_builtins.cpp.
+  if (NOT LIBCXX_USE_COMPILER_RT)
+    list(APPEND LIBCXX_SOURCES ../src/filesystem/int128_builtins.cpp)
+  endif()
 endif()
 
 # Add all the headers to the project for IDEs.

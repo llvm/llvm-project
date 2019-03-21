@@ -7,21 +7,21 @@
 int dummy_function() { return 0; }
 
 // 2. test __pascal
-// expected-warning@+1 {{calling convention '_pascal' ignored for this target}}
+// expected-warning@+1 {{'_pascal' calling convention ignored for this target}}
 int _pascal f2();
 
-// expected-warning@+1 {{calling convention '__pascal' ignored for this target}}
+// expected-warning@+1 {{'__pascal' calling convention ignored for this target}}
 float __pascal gi2(int, int); 
-// expected-warning@+1 {{calling convention '__pascal' ignored for this target}}
+// expected-warning@+1 {{'__pascal' calling convention ignored for this target}}
 template<typename T> T g2(T (__pascal * const )(int, int)) { return 0; }
 
 struct M {
-    // expected-warning@+1 {{calling convention '__pascal' ignored for this target}}
+    // expected-warning@+1 {{'__pascal' calling convention ignored for this target}}
     int __pascal addP();
-    // expected-warning@+1 {{calling convention '__pascal' ignored for this target}}
+    // expected-warning@+1 {{'__pascal' calling convention ignored for this target}}
     float __pascal subtractP(); 
 };
-// expected-warning@+1 {{calling convention '__pascal' ignored for this target}}
+// expected-warning@+1 {{'__pascal' calling convention ignored for this target}}
 template<typename T> int h2(T (__pascal M::* const )()) { return 0; }
 void m2() {
     int i; float f;
@@ -34,9 +34,9 @@ void m2() {
 
 // 3. test other calling conventions
 int _cdecl fa3();
-// expected-warning@+1 {{calling convention '_fastcall' ignored for this target}}
+// expected-warning@+1 {{'_fastcall' calling convention ignored for this target}}
 int _fastcall fc3();
-// expected-warning@+1 {{calling convention '_stdcall' ignored for this target}}
+// expected-warning@+1 {{'_stdcall' calling convention ignored for this target}}
 int _stdcall fd3();
 
 // 4. test __uuidof()

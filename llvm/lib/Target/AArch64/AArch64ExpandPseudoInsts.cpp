@@ -505,6 +505,12 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     if (MF->getTarget().getTargetTriple().isOSFuchsia() &&
         MF->getTarget().getCodeModel() == CodeModel::Kernel)
       SysReg = AArch64SysReg::TPIDR_EL1;
+    else if (MF->getSubtarget<AArch64Subtarget>().useEL3ForTP())
+      SysReg = AArch64SysReg::TPIDR_EL3;
+    else if (MF->getSubtarget<AArch64Subtarget>().useEL2ForTP())
+      SysReg = AArch64SysReg::TPIDR_EL2;
+    else if (MF->getSubtarget<AArch64Subtarget>().useEL1ForTP())
+      SysReg = AArch64SysReg::TPIDR_EL1;
     BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::MRS), DstReg)
         .addImm(SysReg);
     MI.eraseFromParent();

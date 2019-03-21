@@ -52,6 +52,7 @@ SymbolicFile::createSymbolicFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::macho_universal_binary:
   case file_magic::windows_resource:
   case file_magic::pdb:
+  case file_magic::minidump:
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::elf:
   case file_magic::elf_executable:

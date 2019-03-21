@@ -14,6 +14,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallString.h"
 #include "gmock/gmock.h"
@@ -25,12 +26,6 @@ using namespace tooling;
 
 namespace {
 
-AST_MATCHER(Stmt, isOMPStructuredBlock) { return Node.isOMPStructuredBlock(); }
-
-const ast_matchers::internal::VariadicDynCastAllOfMatcher<
-    Stmt, OMPExecutableDirective>
-    ompExecutableDirective;
-
 const ast_matchers::internal::VariadicDynCastAllOfMatcher<
     OMPExecutableDirective, OMPTargetDirective>
     ompTargetDirective;
@@ -39,10 +34,6 @@ StatementMatcher OMPInnermostStructuredBlockMatcher() {
   return stmt(isOMPStructuredBlock(),
               unless(hasDescendant(stmt(isOMPStructuredBlock()))))
       .bind("id");
-}
-
-AST_MATCHER(OMPExecutableDirective, isStandaloneDirective) {
-  return Node.isStandaloneDirective();
 }
 
 StatementMatcher OMPStandaloneDirectiveMatcher() {
@@ -55,7 +46,7 @@ PrintedOMPStmtMatches(StringRef Code, const T &NodeMatch,
                       StringRef ExpectedPrinted,
                       PolicyAdjusterType PolicyAdjuster = None) {
   std::vector<std::string> Args = {
-      "-fopenmp",
+      "-fopenmp=libomp",
   };
   return PrintedStmtMatches(Code, Args, NodeMatch, ExpectedPrinted,
                             PolicyAdjuster);

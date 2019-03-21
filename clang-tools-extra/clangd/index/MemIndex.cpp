@@ -38,6 +38,15 @@ bool MemIndex::fuzzyFind(
   for (const auto Pair : Index) {
     const Symbol *Sym = Pair.second;
 
+    // FIXME: Enable fuzzy find on template specializations once we start
+    // storing template arguments in the name. Currently we only store name for
+    // class template, which would cause duplication in the results.
+    if (Sym->SymInfo.Properties &
+        (static_cast<index::SymbolPropertySet>(
+             index::SymbolProperty::TemplateSpecialization) |
+         static_cast<index::SymbolPropertySet>(
+             index::SymbolProperty::TemplatePartialSpecialization)))
+      continue;
     // Exact match against all possible scopes.
     if (!Req.AnyScope && !llvm::is_contained(Req.Scopes, Sym->Scope))
       continue;

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: windows
 
 // MODULES_DEFINES: _LIBCPP_DEBUG=1
 

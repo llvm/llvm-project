@@ -335,7 +335,7 @@ def g(x):
 
 def print_keyword_args(**kwargs):
     # kwargs is a dict of the keyword args passed to the function
-    for key, value in kwargs.iteritems():
+    for key, value in kwargs.items():
         print "%s = %s" % (key, value)
 
 
