@@ -18,6 +18,7 @@
 #include "lldb/Utility/RegularExpression.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Errno.h"
 
 #ifndef LLDB_DISABLE_POSIX
 #include "lldb/Host/posix/DomainSocket.h"
@@ -450,9 +451,11 @@ NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
   if (!child_processes_inherit) {
     flags |= SOCK_CLOEXEC;
   }
-  NativeSocket fd = ::accept4(sockfd, addr, addrlen, flags);
+  NativeSocket fd = llvm::sys::RetryAfterSignal(-1, ::accept4,
+      sockfd, addr, addrlen, flags);
 #else
-  NativeSocket fd = ::accept(sockfd, addr, addrlen);
+  NativeSocket fd = llvm::sys::RetryAfterSignal(-1, ::accept,
+      sockfd, addr, addrlen);
 #endif
   if (fd == kInvalidSocketValue)
     SetLastError(error);
