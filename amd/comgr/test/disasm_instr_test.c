@@ -54,6 +54,12 @@ const char *skipspace(const char *s) {
   return s;
 }
 
+size_t strlen_without_trailing_whitespace(const char *s) {
+  size_t i = strlen(s);
+  while (i && isspace(s[--i]));
+  return i + 1;
+}
+
 const char program[] = {
   '\x02', '\x00', '\x06', '\xC0',  '\x00', '\x00', '\x00', '\x00',
   '\x7f', '\xC0', '\x8c', '\xbf',
@@ -97,9 +103,9 @@ void print_instruction_callback(const char *instruction, void *user_data) {
   check_user_data(user_data);
   if (instructions_idx == INSTRUCTIONS_LEN)
     fail("too many instructions");
-  const char *expected = instructions[instructions_idx++];
+  const char *expected = skipspace(instructions[instructions_idx++]);
   const char *actual = skipspace(instruction);
-  if (strcmp(expected, actual))
+  if (strncmp(expected, actual, strlen_without_trailing_whitespace(actual)))
     fail("incorrect instruction: expected '%s', actual '%s'", expected, actual);
 }
 
