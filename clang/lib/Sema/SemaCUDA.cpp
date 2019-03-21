@@ -499,7 +499,7 @@ void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
 
     if (!AllowedInit) {
       Diag(VD->getLocation(), VD->hasAttr<CUDASharedAttr>()
-                                  ? diag::err_shared_var_init
+                                  ? diag::warn_shared_var_init
                                   : diag::err_dynamic_var_init)
           << Init->getSourceRange();
       VD->setInvalidDecl();

@@ -7198,8 +7198,9 @@ def err_cuda_device_exceptions : Error<
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
     "__device__, __constant__, and __shared__ variables.">;
-def err_shared_var_init : Error<
-    "initialization is not supported for __shared__ variables.">;
+def warn_shared_var_init : Warning<
+    "initialization is not supported for __shared__ variables.">,
+    InGroup<DiagGroup<"cuda-shared-init">>, DefaultError;
 def err_device_static_local_var : Error<
     "within a %select{__device__|__global__|__host__|__host__ __device__}0 "
     "function, only __shared__ variables or const variables without device "
