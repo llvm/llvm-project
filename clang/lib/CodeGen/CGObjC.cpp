@@ -4013,8 +4013,9 @@ static unsigned getBaseMachOPlatformID(const llvm::Triple &TT) {
   }
 }
 
-static llvm::Value *emitIsPlatformVersionAtLeast(CodeGenFunction &CGF,
-                                                 const VersionTuple &Version) {
+static llvm::Value *
+emitIsPlatformVersionAtLeast(CodeGenFunction &CGF, const VersionTuple &Version,
+                             const VersionTuple &VariantVersion) {
   CodeGenModule &CGM = CGF.CGM;
   // Note: we intend to support multi-platform version checks, so reserve
   // the room for a dual platform checking invocation that will be
@@ -4031,8 +4032,10 @@ static llvm::Value *emitIsPlatformVersionAtLeast(CodeGenFunction &CGF,
     Args.push_back(llvm::ConstantInt::get(CGM.Int32Ty, SMin.value_or(0)));
   };
 
-  assert(!Version.empty() && "unexpected empty version");
-  EmitArgs(Version, CGM.getTarget().getTriple());
+  if (!Version.empty())
+    EmitArgs(Version, CGM.getTarget().getTriple());
+  if (!VariantVersion.empty())
+    EmitArgs(VariantVersion, *CGM.getTarget().getDarwinTargetVariantTriple());
 
   if (!CGM.IsPlatformVersionAtLeastFn) {
     llvm::FunctionType *FTy = llvm::FunctionType::get(
@@ -4040,82 +4043,29 @@ static llvm::Value *emitIsPlatformVersionAtLeast(CodeGenFunction &CGF,
         false);
     CGM.IsPlatformVersionAtLeastFn =
         CGM.CreateRuntimeFunction(FTy, "__isPlatformVersionAtLeast");
+    llvm::FunctionType *FTy2 = llvm::FunctionType::get(
+        CGM.Int32Ty,
+        {CGM.Int32Ty, CGM.Int32Ty, CGM.Int32Ty, CGM.Int32Ty, CGM.Int32Ty,
+         CGM.Int32Ty, CGM.Int32Ty, CGM.Int32Ty},
+        false);
+    CGM.IsPlatformOrVariantPlatformVersionAtLeastFn = CGM.CreateRuntimeFunction(
+        FTy2, "__isPlatformOrVariantPlatformVersionAtLeast");
   }
 
-  llvm::Value *Check =
-      CGF.EmitNounwindRuntimeCall(CGM.IsPlatformVersionAtLeastFn, Args);
+  assert((Args.size() == 4 || Args.size() == 8) &&
+         "Expected 4 or 8 argument here!");
+  llvm::Value *Check = CGF.EmitNounwindRuntimeCall(
+      Args.size() == 4 ? CGM.IsPlatformVersionAtLeastFn
+                       : CGM.IsPlatformOrVariantPlatformVersionAtLeastFn,
+      Args);
   return CGF.Builder.CreateICmpNE(Check,
                                   llvm::Constant::getNullValue(CGM.Int32Ty));
 }
 
 llvm::Value *
 CodeGenFunction::EmitBuiltinAvailable(const VersionTuple &Version,
-                                      const VersionTuple &VariantVersion,
-                                      bool UseTargetVariantCheck) {
-  // Darwin uses the new __isPlatformVersionAtLeast family of routines.
-  if (CGM.getTarget().getTriple().isOSDarwin() &&
-      !CGM.getTarget().hasTargetVariantPlatform())
-    return emitIsPlatformVersionAtLeast(*this, Version);
-
-  if (!CGM.IsOSVersionAtLeastFn) {
-    llvm::FunctionType *FTy =
-        llvm::FunctionType::get(Int32Ty, {Int32Ty, Int32Ty, Int32Ty}, false);
-    CGM.IsOSVersionAtLeastFn =
-        CGM.CreateRuntimeFunction(FTy, "__isOSVersionAtLeast");
-    llvm::FunctionType *FTy2 = llvm::FunctionType::get(Int32Ty, {}, false);
-    CGM.IsTargetPlatformNativeFn =
-        CGM.CreateRuntimeFunction(FTy2, "__isTargetPlatformNative");
-    CGM.IsTargetVariantOSVersionAtLeastFn =
-        CGM.CreateRuntimeFunction(FTy, "__isTargetVariantOSVersionAtLeast");
-  }
-
-  auto EmitVersionArgs = [&](const VersionTuple &V,
-                             llvm::SmallVectorImpl<llvm::Value *> &Args) {
-    if (V.empty())
-      return;
-    std::optional<unsigned> Min = V.getMinor(), SMin = V.getSubminor();
-    Args.push_back(llvm::ConstantInt::get(CGM.Int32Ty, V.getMajor()));
-    Args.push_back(llvm::ConstantInt::get(CGM.Int32Ty, Min.value_or(0)));
-    Args.push_back(llvm::ConstantInt::get(CGM.Int32Ty, SMin.value_or(0)));
-  };
-
-  llvm::SmallVector<llvm::Value *, 3> Args;
-  llvm::SmallVector<llvm::Value *, 3> VariantArgs;
-  EmitVersionArgs(Version, Args);
-  EmitVersionArgs(VariantVersion, VariantArgs);
-
-  llvm::Value *Check = nullptr;
-  if (!Args.empty()) {
-    Check = EmitNounwindRuntimeCall(UseTargetVariantCheck
-                                        ? CGM.IsTargetVariantOSVersionAtLeastFn
-                                        : CGM.IsOSVersionAtLeastFn,
-                                    Args);
-  }
-  llvm::Value *VariantCheck = nullptr;
-  if (!VariantArgs.empty()) {
-    VariantCheck = EmitNounwindRuntimeCall(
-        UseTargetVariantCheck ? CGM.IsOSVersionAtLeastFn
-                              : CGM.IsTargetVariantOSVersionAtLeastFn,
-        VariantArgs);
-  }
-  llvm::Value *IsNativeCheck = nullptr;
-  if (CGM.getTarget().hasTargetVariantPlatform()) {
-    IsNativeCheck = EmitNounwindRuntimeCall(CGM.IsTargetPlatformNativeFn);
-    IsNativeCheck = Builder.CreateICmpNE(IsNativeCheck,
-                                         llvm::Constant::getNullValue(Int32Ty));
-    if (!Check)
-      Check = llvm::ConstantInt::get(Int32Ty, 1);
-    if (!VariantCheck)
-      VariantCheck = llvm::ConstantInt::get(Int32Ty, 1);
-    // When macOS is the target variant, we should swap the check and the
-    // variant check to ensure that our condition which always checks if the
-    // process is macOS still works.
-    if (UseTargetVariantCheck)
-      std::swap(Check, VariantCheck);
-    Check = Builder.CreateSelect(IsNativeCheck, Check, VariantCheck);
-  }
-
-  return Builder.CreateICmpNE(Check, llvm::Constant::getNullValue(Int32Ty));
+                                      const VersionTuple &VariantVersion) {
+  return emitIsPlatformVersionAtLeast(*this, Version, VariantVersion);
 }
 
 static bool isFoundationNeededForDarwinAvailabilityCheck(
