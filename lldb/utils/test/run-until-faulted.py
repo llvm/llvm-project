@@ -5,6 +5,8 @@ Run a program via lldb until it fails.
 The lldb executable is located via your PATH env variable, if not specified.
 """
 
+from __future__ import print_function
+
 import os
 import sys
 from optparse import OptionParser
@@ -65,7 +67,7 @@ def do_lldb_launch_loop(lldb_command, exe, exe_options):
             break
         elif index == 2:
             # Something went wrong.
-            print "TIMEOUT occurred:", str(lldb)
+            print("TIMEOUT occurred:", str(lldb))
 
     # Give control of lldb shell to the user.
     lldb.interact()
@@ -120,9 +122,9 @@ The lldb executable is located via your PATH env variable, if not specified.\
     exe_options = opts.exe_options
 
     # We have parsed the options.
-    print "lldb command:", lldb_command
-    print "executable:", exe
-    print "executable options:", exe_options
+    print("lldb command:", lldb_command)
+    print("executable:", exe)
+    print("executable options:", exe_options)
 
     do_lldb_launch_loop(lldb_command, exe, exe_options)
 

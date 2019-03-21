@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from __future__ import print_function
 
 import cmd
 import dict_utils
@@ -187,11 +188,11 @@ def dump_memory(base_addr, data, hex_bytes_len, num_per_line):
     while i < hex_bytes_len:
         if ((i / 2) % num_per_line) == 0:
             if i > 0:
-                print ' %s' % (ascii_str)
+                print(' %s' % (ascii_str))
                 ascii_str = ''
-            print '0x%8.8x:' % (addr + i),
+            print('0x%8.8x:' % (addr + i), end=' ')
         hex_byte = hex_bytes[i:i + 2]
-        print hex_byte,
+        print(hex_byte, end=' ')
         int_byte = int(hex_byte, 16)
         ascii_char = '%c' % (int_byte)
         if int_byte >= 32 and int_byte < 127:
@@ -204,8 +205,8 @@ def dump_memory(base_addr, data, hex_bytes_len, num_per_line):
             padding = num_per_line - ((i / 2) % num_per_line)
         else:
             padding = 0
-        print '%*s%s' % (padding * 3 + 1, '', ascii_str)
-    print
+        print('%*s%s' % (padding * 3 + 1, '', ascii_str))
+    print()
 
 
 class TerminalColors:
@@ -371,11 +372,11 @@ def dump_hex_bytes(addr, s, bytes_per_line=16):
     for ch in s:
         if (i % bytes_per_line) == 0:
             if line:
-                print line
+                print(line)
             line = '%#8.8x: ' % (addr + i)
         line += "%02X " % ord(ch)
         i += 1
-    print line
+    print(line)
 
 
 def dump_hex_byte_string_diff(addr, a, b, bytes_per_line=16):
@@ -404,7 +405,7 @@ def dump_hex_byte_string_diff(addr, a, b, bytes_per_line=16):
         mismatch = ch_a != ch_b
         if (i % bytes_per_line) == 0:
             if line:
-                print line
+                print(line)
             line = '%#8.8x: ' % (addr + i)
         if mismatch:
             line += tty_colors.red()
@@ -413,7 +414,7 @@ def dump_hex_byte_string_diff(addr, a, b, bytes_per_line=16):
             line += tty_colors.default()
         i += 1
 
-    print line
+    print(line)
 
 
 class Mach:
@@ -533,11 +534,11 @@ class Mach:
             # f.close()
         except IOError as xxx_todo_changeme:
             (errno, strerror) = xxx_todo_changeme.args
-            print "I/O error({0}): {1}".format(errno, strerror)
+            print("I/O error({0}): {1}".format(errno, strerror))
         except ValueError:
-            print "Could not convert data to an integer."
+            print("Could not convert data to an integer.")
         except:
-            print "Unexpected error:", sys.exc_info()[0]
+            print("Unexpected error:", sys.exc_info()[0])
             raise
 
     def compare(self, rhs):
@@ -625,56 +626,56 @@ class Mach:
                 self.archs[i].mach.unpack(data, skinny_magic)
 
         def compare(self, rhs):
-            print 'error: comparing two universal files is not supported yet'
+            print('error: comparing two universal files is not supported yet')
             return False
 
         def dump(self, options):
             if options.dump_header:
-                print
-                print "Universal Mach File: magic = %s, nfat_arch = %u" % (self.magic, self.nfat_arch)
-                print
+                print()
+                print("Universal Mach File: magic = %s, nfat_arch = %u" % (self.magic, self.nfat_arch))
+                print()
             if self.nfat_arch > 0:
                 if options.dump_header:
                     self.archs[0].dump_header(True, options)
                     for i in range(self.nfat_arch):
                         self.archs[i].dump_flat(options)
                 if options.dump_header:
-                    print
+                    print()
                 for i in range(self.nfat_arch):
                     self.archs[i].mach.dump(options)
 
         def dump_header(self, dump_description=True, options=None):
             if dump_description:
-                print self.description()
+                print(self.description())
             for i in range(self.nfat_arch):
                 self.archs[i].mach.dump_header(True, options)
-                print
+                print()
 
         def dump_load_commands(self, dump_description=True, options=None):
             if dump_description:
-                print self.description()
+                print(self.description())
             for i in range(self.nfat_arch):
                 self.archs[i].mach.dump_load_commands(True, options)
-                print
+                print()
 
         def dump_sections(self, dump_description=True, options=None):
             if dump_description:
-                print self.description()
+                print(self.description())
             for i in range(self.nfat_arch):
                 self.archs[i].mach.dump_sections(True, options)
-                print
+                print()
 
         def dump_section_contents(self, options):
             for i in range(self.nfat_arch):
                 self.archs[i].mach.dump_section_contents(options)
-                print
+                print()
 
         def dump_symtab(self, dump_description=True, options=None):
             if dump_description:
-                print self.description()
+                print(self.description())
             for i in range(self.nfat_arch):
                 self.archs[i].mach.dump_symtab(True, options)
-                print
+                print()
 
         def dump_symbol_names_matching_regex(self, regex, file=None):
             for i in range(self.nfat_arch):
@@ -698,24 +699,24 @@ class Mach:
 
             def dump_header(self, dump_description=True, options=None):
                 if options.verbose:
-                    print "CPU        SUBTYPE    OFFSET     SIZE       ALIGN"
-                    print "---------- ---------- ---------- ---------- ----------"
+                    print("CPU        SUBTYPE    OFFSET     SIZE       ALIGN")
+                    print("---------- ---------- ---------- ---------- ----------")
                 else:
-                    print "ARCH       FILEOFFSET FILESIZE   ALIGN"
-                    print "---------- ---------- ---------- ----------"
+                    print("ARCH       FILEOFFSET FILESIZE   ALIGN")
+                    print("---------- ---------- ---------- ----------")
 
             def dump_flat(self, options):
                 if options.verbose:
-                    print "%#8.8x %#8.8x %#8.8x %#8.8x %#8.8x" % (self.arch.cpu, self.arch.sub, self.offset, self.size, self.align)
+                    print("%#8.8x %#8.8x %#8.8x %#8.8x %#8.8x" % (self.arch.cpu, self.arch.sub, self.offset, self.size, self.align))
                 else:
-                    print "%-10s %#8.8x %#8.8x %#8.8x" % (self.arch, self.offset, self.size, self.align)
+                    print("%-10s %#8.8x %#8.8x %#8.8x" % (self.arch, self.offset, self.size, self.align))
 
             def dump(self):
-                print "   cputype: %#8.8x" % self.arch.cpu
-                print "cpusubtype: %#8.8x" % self.arch.sub
-                print "    offset: %#8.8x" % self.offset
-                print "      size: %#8.8x" % self.size
-                print "     align: %#8.8x" % self.align
+                print("   cputype: %#8.8x" % self.arch.cpu)
+                print("cpusubtype: %#8.8x" % self.arch.sub)
+                print("    offset: %#8.8x" % self.offset)
+                print("      size: %#8.8x" % self.size)
+                print("     align: %#8.8x" % self.align)
 
             def __str__(self):
                 return "Mach.Universal.ArchInfo: %#8.8x %#8.8x %#8.8x %#8.8x %#8.8x" % (
@@ -906,21 +907,21 @@ class Mach:
             return lc
 
         def compare(self, rhs):
-            print "\nComparing:"
-            print "a) %s %s" % (self.arch, self.path)
-            print "b) %s %s" % (rhs.arch, rhs.path)
+            print("\nComparing:")
+            print("a) %s %s" % (self.arch, self.path))
+            print("b) %s %s" % (rhs.arch, rhs.path))
             result = True
             if self.type == rhs.type:
                 for lhs_section in self.sections[1:]:
                     rhs_section = rhs.get_section_by_section(lhs_section)
                     if rhs_section:
-                        print 'comparing %s.%s...' % (lhs_section.segname, lhs_section.sectname),
+                        print('comparing %s.%s...' % (lhs_section.segname, lhs_section.sectname), end=' ')
                         sys.stdout.flush()
                         lhs_data = lhs_section.get_contents(self)
                         rhs_data = rhs_section.get_contents(rhs)
                         if lhs_data and rhs_data:
                             if lhs_data == rhs_data:
-                                print 'ok'
+                                print('ok')
                             else:
                                 lhs_data_len = len(lhs_data)
                                 rhs_data_len = len(rhs_data)
@@ -938,51 +939,51 @@ class Mach:
                                 #         result = False
                                 # else:
                                 result = False
-                                print 'error: sections differ'
+                                print('error: sections differ')
                                 # print 'a) %s' % (lhs_section)
                                 # dump_hex_byte_string_diff(0, lhs_data, rhs_data)
                                 # print 'b) %s' % (rhs_section)
                                 # dump_hex_byte_string_diff(0, rhs_data, lhs_data)
                         elif lhs_data and not rhs_data:
-                            print 'error: section data missing from b:'
-                            print 'a) %s' % (lhs_section)
-                            print 'b) %s' % (rhs_section)
+                            print('error: section data missing from b:')
+                            print('a) %s' % (lhs_section))
+                            print('b) %s' % (rhs_section))
                             result = False
                         elif not lhs_data and rhs_data:
-                            print 'error: section data missing from a:'
-                            print 'a) %s' % (lhs_section)
-                            print 'b) %s' % (rhs_section)
+                            print('error: section data missing from a:')
+                            print('a) %s' % (lhs_section))
+                            print('b) %s' % (rhs_section))
                             result = False
                         elif lhs_section.offset or rhs_section.offset:
-                            print 'error: section data missing for both a and b:'
-                            print 'a) %s' % (lhs_section)
-                            print 'b) %s' % (rhs_section)
+                            print('error: section data missing for both a and b:')
+                            print('a) %s' % (lhs_section))
+                            print('b) %s' % (rhs_section))
                             result = False
                         else:
-                            print 'ok'
+                            print('ok')
                     else:
                         result = False
-                        print 'error: section %s is missing in %s' % (lhs_section.sectname, rhs.path)
+                        print('error: section %s is missing in %s' % (lhs_section.sectname, rhs.path))
             else:
-                print 'error: comaparing a %s mach-o file with a %s mach-o file is not supported' % (self.type, rhs.type)
+                print('error: comaparing a %s mach-o file with a %s mach-o file is not supported' % (self.type, rhs.type))
                 result = False
             if not result:
-                print 'error: mach files differ'
+                print('error: mach files differ')
             return result
 
         def dump_header(self, dump_description=True, options=None):
             if options.verbose:
-                print "MAGIC      CPU        SUBTYPE    FILETYPE   NUM CMDS SIZE CMDS  FLAGS"
-                print "---------- ---------- ---------- ---------- -------- ---------- ----------"
+                print("MAGIC      CPU        SUBTYPE    FILETYPE   NUM CMDS SIZE CMDS  FLAGS")
+                print("---------- ---------- ---------- ---------- -------- ---------- ----------")
             else:
-                print "MAGIC        ARCH       FILETYPE       NUM CMDS SIZE CMDS  FLAGS"
-                print "------------ ---------- -------------- -------- ---------- ----------"
+                print("MAGIC        ARCH       FILETYPE       NUM CMDS SIZE CMDS  FLAGS")
+                print("------------ ---------- -------------- -------- ---------- ----------")
 
         def dump_flat(self, options):
             if options.verbose:
-                print "%#8.8x %#8.8x %#8.8x %#8.8x %#8u %#8.8x %#8.8x" % (self.magic, self.arch.cpu, self.arch.sub, self.filetype.value, self.ncmds, self.sizeofcmds, self.flags.bits)
+                print("%#8.8x %#8.8x %#8.8x %#8.8x %#8u %#8.8x %#8.8x" % (self.magic, self.arch.cpu, self.arch.sub, self.filetype.value, self.ncmds, self.sizeofcmds, self.flags.bits))
             else:
-                print "%-12s %-10s %-14s %#8u %#8.8x %s" % (self.magic, self.arch, self.filetype, self.ncmds, self.sizeofcmds, self.flags)
+                print("%-12s %-10s %-14s %#8u %#8.8x %s" % (self.magic, self.arch, self.filetype, self.ncmds, self.sizeofcmds, self.flags))
 
         def dump(self, options):
             if options.dump_header:
@@ -998,27 +999,27 @@ class Mach:
                 if len(self.symbols):
                     self.dump_sections(False, options)
                 else:
-                    print "No symbols"
+                    print("No symbols")
             if options.find_mangled:
                 self.dump_symbol_names_matching_regex(re.compile('^_?_Z'))
 
         def dump_header(self, dump_description=True, options=None):
             if dump_description:
-                print self.description()
-            print "Mach Header"
-            print "       magic: %#8.8x %s" % (self.magic.value, self.magic)
-            print "     cputype: %#8.8x %s" % (self.arch.cpu, self.arch)
-            print "  cpusubtype: %#8.8x" % self.arch.sub
-            print "    filetype: %#8.8x %s" % (self.filetype.get_enum_value(), self.filetype.get_enum_name())
-            print "       ncmds: %#8.8x %u" % (self.ncmds, self.ncmds)
-            print "  sizeofcmds: %#8.8x" % self.sizeofcmds
-            print "       flags: %#8.8x %s" % (self.flags.bits, self.flags)
+                print(self.description())
+            print("Mach Header")
+            print("       magic: %#8.8x %s" % (self.magic.value, self.magic))
+            print("     cputype: %#8.8x %s" % (self.arch.cpu, self.arch))
+            print("  cpusubtype: %#8.8x" % self.arch.sub)
+            print("    filetype: %#8.8x %s" % (self.filetype.get_enum_value(), self.filetype.get_enum_name()))
+            print("       ncmds: %#8.8x %u" % (self.ncmds, self.ncmds))
+            print("  sizeofcmds: %#8.8x" % self.sizeofcmds)
+            print("       flags: %#8.8x %s" % (self.flags.bits, self.flags))
 
         def dump_load_commands(self, dump_description=True, options=None):
             if dump_description:
-                print self.description()
+                print(self.description())
             for lc in self.commands:
-                print lc
+                print(lc)
 
         def get_section_by_name(self, name):
             for section in self.sections:
@@ -1034,12 +1035,12 @@ class Mach:
 
         def dump_sections(self, dump_description=True, options=None):
             if dump_description:
-                print self.description()
+                print(self.description())
             num_sections = len(self.sections)
             if num_sections > 1:
                 self.sections[1].dump_header()
                 for sect_idx in range(1, num_sections):
-                    print "%s" % self.sections[sect_idx]
+                    print("%s" % self.sections[sect_idx])
 
         def dump_section_contents(self, options):
             saved_section_to_disk = False
@@ -1075,19 +1076,19 @@ class Mach:
                                     data.seek(data_offset)
                                     outfile.write(data.read_size(data_size))
                             else:
-                                print "Saving section %s to '%s'" % (sectname, options.outfile)
+                                print("Saving section %s to '%s'" % (sectname, options.outfile))
                                 outfile.write(sect_bytes)
                             outfile.close()
                             saved_section_to_disk = True
                         else:
-                            print "error: you can only save a single section to disk at a time, skipping section '%s'" % (sectname)
+                            print("error: you can only save a single section to disk at a time, skipping section '%s'" % (sectname))
                     else:
-                        print 'section %s:\n' % (sectname)
+                        print('section %s:\n' % (sectname))
                         section.dump_header()
-                        print '%s\n' % (section)
+                        print('%s\n' % (section))
                         dump_memory(0, sect_bytes, options.max_count, 16)
                 else:
-                    print 'error: no section named "%s" was found' % (sectname)
+                    print('error: no section named "%s" was found' % (sectname))
 
         def get_segment(self, segname):
             if len(self.segments) == 1 and self.segments[0].segname == '':
@@ -1125,20 +1126,20 @@ class Mach:
                         nlist.unpack(self, self.data, lc_symtab)
                         self.symbols.append(nlist)
                 else:
-                    print "no LC_SYMTAB"
+                    print("no LC_SYMTAB")
 
         def dump_symtab(self, dump_description=True, options=None):
             self.get_symtab()
             if dump_description:
-                print self.description()
+                print(self.description())
             for i, symbol in enumerate(self.symbols):
-                print '[%5u] %s' % (i, symbol)
+                print('[%5u] %s' % (i, symbol))
 
         def dump_symbol_names_matching_regex(self, regex, file=None):
             self.get_symtab()
             for symbol in self.symbols:
                 if symbol.name and regex.search(symbol.name):
-                    print symbol.name
+                    print(symbol.name)
                     if file:
                         file.write('%s\n' % (symbol.name))
 
@@ -1247,11 +1248,11 @@ class Mach:
 
         def dump_header(self):
             if self.is_64:
-                print "INDEX ADDRESS            SIZE               OFFSET     ALIGN      RELOFF     NRELOC     FLAGS      RESERVED1  RESERVED2  RESERVED3  NAME"
-                print "===== ------------------ ------------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------------------"
+                print("INDEX ADDRESS            SIZE               OFFSET     ALIGN      RELOFF     NRELOC     FLAGS      RESERVED1  RESERVED2  RESERVED3  NAME")
+                print("===== ------------------ ------------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------------------")
             else:
-                print "INDEX ADDRESS    SIZE       OFFSET     ALIGN      RELOFF     NRELOC     FLAGS      RESERVED1  RESERVED2  NAME"
-                print "===== ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------------------"
+                print("INDEX ADDRESS    SIZE       OFFSET     ALIGN      RELOFF     NRELOC     FLAGS      RESERVED1  RESERVED2  NAME")
+                print("===== ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------------------")
 
         def __str__(self):
             if self.is_64:
@@ -1682,7 +1683,7 @@ class Mach:
 
         def default(self, line):
             '''Catch all for unknown command, which will exit the interpreter.'''
-            print "uknown command: %s" % line
+            print("uknown command: %s" % line)
             return True
 
         def do_q(self, line):
@@ -1813,10 +1814,10 @@ if __name__ == '__main__':
     (options, mach_files) = parser.parse_args()
     if options.extract_modules:
         if options.section_names:
-            print "error: can't use --section option with the --extract-modules option"
+            print("error: can't use --section option with the --extract-modules option")
             exit(1)
         if not options.outfile:
-            print "error: the --output=FILE option must be specified with the --extract-modules option"
+            print("error: the --output=FILE option must be specified with the --extract-modules option")
             exit(1)
         options.section_names.append("__apple_ast")
     if options.compare:
@@ -1827,14 +1828,14 @@ if __name__ == '__main__':
             mach_b.parse(mach_files[1])
             mach_a.compare(mach_b)
         else:
-            print 'error: --compare takes two mach files as arguments'
+            print('error: --compare takes two mach files as arguments')
     else:
         if not (options.dump_header or options.dump_load_commands or options.dump_symtab or options.dump_sections or options.find_mangled or options.section_names):
             options.dump_header = True
             options.dump_load_commands = True
         if options.verbose:
-            print 'options', options
-            print 'mach_files', mach_files
+            print('options', options)
+            print('mach_files', mach_files)
         for path in mach_files:
             mach = Mach()
             mach.parse(path)

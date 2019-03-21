@@ -25,6 +25,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 
 using namespace lldb;
@@ -71,9 +72,9 @@ Status FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
 }
 
 FILE *FileSystem::Fopen(const char *path, const char *mode) {
-  return ::fopen(path, mode);
+  return llvm::sys::RetryAfterSignal(nullptr, ::fopen, path, mode);
 }
 
 int FileSystem::Open(const char *path, int flags, int mode) {
-  return ::open(path, flags, mode);
+  return llvm::sys::RetryAfterSignal(-1, ::open, path, flags, mode);
 }
