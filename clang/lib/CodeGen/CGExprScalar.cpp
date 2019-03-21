@@ -648,11 +648,7 @@ public:
                CGF.CGM.getTarget().getTargetVariantPlatformMinVersion()))))
       return llvm::ConstantInt::get(Builder.getInt1Ty(), 1);
 
-    return CGF.EmitBuiltinAvailable(
-        Version, VariantVersion,
-        /*UseTargetVariantCheck=*/CGF.CGM.getTarget().getTriple().getOS() ==
-                llvm::Triple::IOS &&
-            CGF.CGM.getTarget().getTriple().isMacCatalystEnvironment());
+    return CGF.EmitBuiltinAvailable(Version, VariantVersion);
   }
 
   Value *VisitArraySubscriptExpr(ArraySubscriptExpr *E);

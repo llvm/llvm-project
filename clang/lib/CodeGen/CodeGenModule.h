@@ -832,8 +832,9 @@ public:
   llvm::FunctionCallee IsOSVersionAtLeastFn = nullptr;
   // i32 @__isPlatformVersionAtLeast(i32, i32, i32, i32)
   llvm::FunctionCallee IsPlatformVersionAtLeastFn = nullptr;
-  llvm::FunctionCallee IsTargetPlatformNativeFn = nullptr;
-  llvm::FunctionCallee IsTargetVariantOSVersionAtLeastFn = nullptr;
+  // i32 @__isPlatformOrVariantPlatformVersionAtLeast(i32, i32, i32, i32, i32,
+  // i32, i32, i32)
+  llvm::FunctionCallee IsPlatformOrVariantPlatformVersionAtLeastFn = nullptr;
 
   InstrProfStats &getPGOStats() { return PGOStats; }
   llvm::IndexedInstrProfReader *getPGOReader() const { return PGOReader.get(); }
