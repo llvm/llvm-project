@@ -30,6 +30,26 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
+static bool unexpected(llvm::StringRef expected, llvm::StringRef actual) {
+  // The 'expected' string contains the raw data, including the leading $ and
+  // trailing checksum. The 'actual' string contains only the packet's content.
+  if (expected.contains(actual))
+    return false;
+  if (expected == "+" || actual == "+")
+    return false;
+  // Contains a PID which might be different.
+  if (expected.contains("vAttach"))
+    return false;
+  // Contains a ascii-hex-path.
+  if (expected.contains("QSetSTD"))
+    return false;
+  // Contains environment values.
+  if (expected.contains("QEnvironment"))
+    return false;
+
+  return true;
+}
+
 GDBRemoteCommunicationReplayServer::GDBRemoteCommunicationReplayServer()
     : GDBRemoteCommunication("gdb-remote.server",
                              "gdb-remote.server.rx_packet"),
@@ -87,15 +107,31 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
     m_send_acks = false;
   }
 
+  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
   while (!m_packet_history.empty()) {
     // Pop last packet from the history.
     GDBRemoteCommunicationHistory::Entry entry = m_packet_history.back();
     m_packet_history.pop_back();
 
-    // We only care about what we received from the server. Skip everything
-    // the client sent.
-    if (entry.type != GDBRemoteCommunicationHistory::ePacketTypeRecv)
+    if (entry.type == GDBRemoteCommunicationHistory::ePacketTypeSend) {
+      if (unexpected(entry.packet.data, packet.GetStringRef())) {
+        LLDB_LOG(log,
+                 "GDBRemoteCommunicationReplayServer expected packet: '{}'\n",
+                 entry.packet.data);
+        LLDB_LOG(log,
+                 "GDBRemoteCommunicationReplayServer actual packet: '{}'\n",
+                 packet.GetStringRef());
+      }
       continue;
+    }
+
+    if (entry.type == GDBRemoteCommunicationHistory::ePacketTypeInvalid) {
+      LLDB_LOG(
+          log,
+          "GDBRemoteCommunicationReplayServer skipped invalid packet: '{}'\n",
+          packet.GetStringRef());
+      continue;
+    }
 
     return SendRawPacketNoLock(entry.packet.data, true);
   }
