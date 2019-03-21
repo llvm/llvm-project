@@ -791,6 +791,11 @@ AvailabilityResult Decl::getAvailability(StringRef Platform,
     return FTD->getTemplatedDecl()->getAvailability(
         Platform, PlatformMinVersion, Message, RealizedPlatform);
 
+  if (getASTContext().getTargetInfo().hasTargetVariantPlatform() &&
+      getASTContext().getTargetInfo().getTargetVariantPlatform() == Platform) {
+    return AR_Available;
+  }
+
   AvailabilityResult Result = AR_Available;
   std::string ResultMessage;
 
