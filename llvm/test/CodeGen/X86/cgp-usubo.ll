@@ -211,14 +211,14 @@ define void @PR41129(i64* %p64) {
 ; CHECK-LABEL: PR41129:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    subq $1, %rcx
-; CHECK-NEXT:    jae .LBB10_1
-; CHECK-NEXT:  # %bb.2: # %true
-; CHECK-NEXT:    movq %rcx, (%rdi)
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB10_1: # %false
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    je .LBB10_2
+; CHECK-NEXT:  # %bb.1: # %false
 ; CHECK-NEXT:    andl $7, %eax
+; CHECK-NEXT:    movq %rax, (%rdi)
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB10_2: # %true
+; CHECK-NEXT:    decq %rax
 ; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    retq
 entry:

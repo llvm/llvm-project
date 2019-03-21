@@ -1803,7 +1803,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (V1 > V2)
     std::swap(Locs.first, Locs.second);
   std::pair<AliasCacheTy::iterator, bool> Pair =
-      AliasCache.insert(std::make_pair(Locs, MayAlias));
+      AliasCache.try_emplace(Locs, MayAlias);
   if (!Pair.second)
     return Pair.first->second;
 
@@ -1832,7 +1832,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     AliasResult Result = aliasPHI(PN, V1Size, V1AAInfo,
                                   V2, V2Size, V2AAInfo, O2);
     if (Result != MayAlias) {
-      Pair = AliasCache.insert(std::make_pair(Locs, Result));
+      Pair = AliasCache.try_emplace(Locs, Result);
       assert(!Pair.second && "Entry must have existed");
       return Pair.first->second = Result;
     }
@@ -1848,7 +1848,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     AliasResult Result =
         aliasSelect(S1, V1Size, V1AAInfo, V2, V2Size, V2AAInfo, O2);
     if (Result != MayAlias) {
-      Pair = AliasCache.insert(std::make_pair(Locs, Result));
+      Pair = AliasCache.try_emplace(Locs, Result);
       assert(!Pair.second && "Entry must have existed");
       return Pair.first->second = Result;
     }
@@ -1860,7 +1860,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     if (V1Size.isPrecise() && V2Size.isPrecise() &&
         (isObjectSize(O1, V1Size.getValue(), DL, TLI, NullIsValidLocation) ||
          isObjectSize(O2, V2Size.getValue(), DL, TLI, NullIsValidLocation))) {
-      Pair = AliasCache.insert(std::make_pair(Locs, PartialAlias));
+      Pair = AliasCache.try_emplace(Locs, PartialAlias);
       assert(!Pair.second && "Entry must have existed");
       return Pair.first->second = PartialAlias;
     }
@@ -1869,7 +1869,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // memory locations. We have already ensured that BasicAA has a MayAlias
   // cache result for these, so any recursion back into BasicAA won't loop.
   AliasResult Result = getBestAAResults().alias(Locs.first, Locs.second);
-  Pair = AliasCache.insert(std::make_pair(Locs, Result));
+  Pair = AliasCache.try_emplace(Locs, Result);
   assert(!Pair.second && "Entry must have existed");
   return Pair.first->second = Result;
 }

@@ -78,7 +78,7 @@ def parse_linespec(linespec, frame, result):
         if (mo is not None):
             matched = True
             # print "Matched <address-expression>"
-            address = long(mo.group(1), base=0)
+            address = int(mo.group(1), base=0)
             breakpoint = target.BreakpointCreateByAddress(address)
 
     if (not matched):

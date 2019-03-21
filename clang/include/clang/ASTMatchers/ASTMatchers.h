@@ -56,10 +56,12 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -2490,6 +2492,9 @@ AST_MATCHER_P(UnaryExprOrTypeTraitExpr, hasArgumentOfType,
 /// \endcode
 /// unaryExprOrTypeTraitExpr(ofKind(UETT_SizeOf))
 ///   matches \c sizeof(x)
+///
+/// If the matcher is use from clang-query, UnaryExprOrTypeTrait parameter
+/// should be passed as a quoted string. e.g., ofKind("UETT_SizeOf").
 AST_MATCHER_P(UnaryExprOrTypeTraitExpr, ofKind, UnaryExprOrTypeTrait, Kind) {
   return Node.getKind() == Kind;
 }
@@ -4481,6 +4486,9 @@ AST_POLYMORPHIC_MATCHER_P(hasSourceExpression,
 /// \code
 ///   int *p = 0;
 /// \endcode
+///
+/// If the matcher is use from clang-query, CastKind parameter
+/// should be passed as a quoted string. e.g., ofKind("CK_NullToPointer").
 AST_MATCHER_P(CastExpr, hasCastKind, CastKind, Kind) {
   return Node.getCastKind() == Kind;
 }
@@ -6368,6 +6376,165 @@ AST_MATCHER(FunctionDecl, hasTrailingReturn) {
     return F->hasTrailingReturn();
   return false;
 }
+
+//----------------------------------------------------------------------------//
+// OpenMP handling.
+//----------------------------------------------------------------------------//
+
+/// Matches any ``#pragma omp`` executable directive.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   #pragma omp parallel default(none)
+///   #pragma omp taskyield
+/// \endcode
+///
+/// ``ompExecutableDirective()`` matches ``omp parallel``,
+/// ``omp parallel default(none)`` and ``omp taskyield``.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
+    ompExecutableDirective;
+
+/// Matches standalone OpenMP directives,
+/// i.e., directives that can't have a structured block.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   {}
+///   #pragma omp taskyield
+/// \endcode
+///
+/// ``ompExecutableDirective(isStandaloneDirective()))`` matches
+/// ``omp taskyield``.
+AST_MATCHER(OMPExecutableDirective, isStandaloneDirective) {
+  return Node.isStandaloneDirective();
+}
+
+/// Matches the Stmt AST node that is marked as being the structured-block
+/// of an OpenMP executable directive.
+///
+/// Given
+///
+/// \code
+///    #pragma omp parallel
+///    {}
+/// \endcode
+///
+/// ``stmt(isOMPStructuredBlock()))`` matches ``{}``.
+AST_MATCHER(Stmt, isOMPStructuredBlock) { return Node.isOMPStructuredBlock(); }
+
+/// Matches the structured-block of the OpenMP executable directive
+///
+/// Prerequisite: the executable directive must not be standalone directive.
+/// If it is, it will never match.
+///
+/// Given
+///
+/// \code
+///    #pragma omp parallel
+///    ;
+///    #pragma omp parallel
+///    {}
+/// \endcode
+///
+/// ``ompExecutableDirective(hasStructuredBlock(nullStmt()))`` will match ``;``
+AST_MATCHER_P(OMPExecutableDirective, hasStructuredBlock,
+              internal::Matcher<Stmt>, InnerMatcher) {
+  if (Node.isStandaloneDirective())
+    return false; // Standalone directives have no structured blocks.
+  return InnerMatcher.matches(*Node.getStructuredBlock(), Finder, Builder);
+}
+
+/// Matches any clause in an OpenMP directive.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   #pragma omp parallel default(none)
+/// \endcode
+///
+/// ``ompExecutableDirective(hasAnyClause(anything()))`` matches
+/// ``omp parallel default(none)``.
+AST_MATCHER_P(OMPExecutableDirective, hasAnyClause,
+              internal::Matcher<OMPClause>, InnerMatcher) {
+  ArrayRef<OMPClause *> Clauses = Node.clauses();
+  return matchesFirstInPointerRange(InnerMatcher, Clauses.begin(),
+                                    Clauses.end(), Finder, Builder);
+}
+
+/// Matches OpenMP ``default`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel default(none)
+///   #pragma omp parallel default(shared)
+///   #pragma omp parallel
+/// \endcode
+///
+/// ``ompDefaultClause()`` matches ``default(none)`` and ``default(shared)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
+    ompDefaultClause;
+
+/// Matches if the OpenMP ``default`` clause has ``none`` kind specified.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   #pragma omp parallel default(none)
+///   #pragma omp parallel default(shared)
+/// \endcode
+///
+/// ``ompDefaultClause(isNoneKind())`` matches only ``default(none)``.
+AST_MATCHER(OMPDefaultClause, isNoneKind) {
+  return Node.getDefaultKind() == OMPC_DEFAULT_none;
+}
+
+/// Matches if the OpenMP ``default`` clause has ``shared`` kind specified.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   #pragma omp parallel default(none)
+///   #pragma omp parallel default(shared)
+/// \endcode
+///
+/// ``ompDefaultClause(isSharedKind())`` matches only ``default(shared)``.
+AST_MATCHER(OMPDefaultClause, isSharedKind) {
+  return Node.getDefaultKind() == OMPC_DEFAULT_shared;
+}
+
+/// Matches if the OpenMP directive is allowed to contain the specified OpenMP
+/// clause kind.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   #pragma omp parallel for
+///   #pragma omp          for
+/// \endcode
+///
+/// `ompExecutableDirective(isAllowedToContainClause(OMPC_default))`` matches
+/// ``omp parallel`` and ``omp parallel for``.
+///
+/// If the matcher is use from clang-query, ``OpenMPClauseKind`` parameter
+/// should be passed as a quoted string. e.g.,
+/// ``isAllowedToContainClauseKind("OMPC_default").``
+AST_MATCHER_P(OMPExecutableDirective, isAllowedToContainClauseKind,
+              OpenMPClauseKind, CKind) {
+  return isAllowedClauseForDirective(Node.getDirectiveKind(), CKind);
+}
+
+//----------------------------------------------------------------------------//
+// End OpenMP handling.
+//----------------------------------------------------------------------------//
 
 } // namespace ast_matchers
 } // namespace clang

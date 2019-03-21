@@ -1865,9 +1865,9 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
           if (SeenChains.count(Op.getNode()) == 0)
             PrunedOps.push_back(Op);
         }
-        Result = DAG.getNode(ISD::TokenFactor, SDLoc(N), MVT::Other, PrunedOps);
+        Result = DAG.getTokenFactor(SDLoc(N), PrunedOps);
       } else {
-        Result = DAG.getNode(ISD::TokenFactor, SDLoc(N), MVT::Other, Ops);
+        Result = DAG.getTokenFactor(SDLoc(N), Ops);
       }
     }
     return Result;
@@ -14431,7 +14431,7 @@ SDValue DAGCombiner::getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
   }
 
   assert(Chains.size() > 0 && "Chain should have generated a chain");
-  return DAG.getNode(ISD::TokenFactor, StoreDL, MVT::Other, Chains);
+  return DAG.getTokenFactor(StoreDL, Chains);
 }
 
 bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
@@ -18948,13 +18948,14 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   if (N2 == N3) return N2;
 
   EVT CmpOpVT = N0.getValueType();
+  EVT CmpResVT = getSetCCResultType(CmpOpVT);
   EVT VT = N2.getValueType();
   auto *N1C = dyn_cast<ConstantSDNode>(N1.getNode());
   auto *N2C = dyn_cast<ConstantSDNode>(N2.getNode());
   auto *N3C = dyn_cast<ConstantSDNode>(N3.getNode());
 
   // Determine if the condition we're dealing with is constant.
-  if (SDValue SCC = DAG.FoldSetCC(VT, N0, N1, CC, DL)) {
+  if (SDValue SCC = DAG.FoldSetCC(CmpResVT, N0, N1, CC, DL)) {
     AddToWorklist(SCC.getNode());
     if (auto *SCCC = dyn_cast<ConstantSDNode>(SCC)) {
       // fold select_cc true, x, y -> x
@@ -19021,7 +19022,7 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     SDValue Temp, SCC;
     // zext (setcc n0, n1)
     if (LegalTypes) {
-      SCC = DAG.getSetCC(DL, getSetCCResultType(CmpOpVT), N0, N1, CC);
+      SCC = DAG.getSetCC(DL, CmpResVT, N0, N1, CC);
       if (VT.bitsLT(SCC.getValueType()))
         Temp = DAG.getZeroExtendInReg(SCC, SDLoc(N2), VT);
       else
@@ -19599,7 +19600,7 @@ SDValue DAGCombiner::FindBetterChain(LSBaseSDNode *N, SDValue OldChain) {
     return Aliases[0];
 
   // Construct a custom tailored token factor.
-  return DAG.getNode(ISD::TokenFactor, SDLoc(N), MVT::Other, Aliases);
+  return DAG.getTokenFactor(SDLoc(N), Aliases);
 }
 
 namespace {

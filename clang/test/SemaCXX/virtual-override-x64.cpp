@@ -6,7 +6,7 @@
 namespace PR14339 {
   class A {
   public:
-    virtual void __attribute__((thiscall)) f();	// expected-warning {{calling convention 'thiscall' ignored for this target}}
+    virtual void __attribute__((thiscall)) f();	// expected-warning {{'thiscall' calling convention ignored for this target}}
   };
 
   class B : public A {
@@ -16,7 +16,7 @@ namespace PR14339 {
 
   class C : public A {
   public:
-    void __attribute__((thiscall)) f();  // expected-warning {{calling convention 'thiscall' ignored for this target}}
+    void __attribute__((thiscall)) f();  // expected-warning {{'thiscall' calling convention ignored for this target}}
   };
 
   class D : public A {
@@ -26,7 +26,7 @@ namespace PR14339 {
 
   class E {
   public:
-    virtual void __attribute__((stdcall)) g();  // expected-warning {{calling convention 'stdcall' ignored for this target}}
+    virtual void __attribute__((stdcall)) g();  // expected-warning {{'stdcall' calling convention ignored for this target}}
   };
 
   class F : public E {

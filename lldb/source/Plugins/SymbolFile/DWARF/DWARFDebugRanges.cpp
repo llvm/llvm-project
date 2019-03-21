@@ -29,11 +29,12 @@ static dw_addr_t GetBaseAddressMarker(uint32_t addr_size) {
 
 DWARFDebugRanges::DWARFDebugRanges() : m_range_map() {}
 
-void DWARFDebugRanges::Extract(SymbolFileDWARF *dwarf2Data) {
+void DWARFDebugRanges::Extract(SymbolFileDWARF *dwarf2Data,
+                               lldb_private::DWARFContext &dwarf_context) {
   DWARFRangeList range_list;
   lldb::offset_t offset = 0;
   dw_offset_t debug_ranges_offset = offset;
-  while (Extract(dwarf2Data, &offset, range_list)) {
+  while (Extract(dwarf2Data, dwarf_context, &offset, range_list)) {
     range_list.Sort();
     m_range_map[debug_ranges_offset] = range_list;
     debug_ranges_offset = offset;
@@ -41,21 +42,24 @@ void DWARFDebugRanges::Extract(SymbolFileDWARF *dwarf2Data) {
 }
 
 bool DWARFDebugRanges::Extract(SymbolFileDWARF *dwarf2Data,
+                               DWARFContext &dwarf_context,
                                lldb::offset_t *offset_ptr,
                                DWARFRangeList &range_list) {
   range_list.Clear();
 
   lldb::offset_t range_offset = *offset_ptr;
-  const DWARFDataExtractor &debug_ranges_data =
-      dwarf2Data->get_debug_ranges_data();
-  uint32_t addr_size = debug_ranges_data.GetAddressByteSize();
+  const DWARFDataExtractor *debug_ranges =
+      dwarf_context.getOrLoadDebugRangesData();
+  if (!debug_ranges)
+    return false;
+
+  uint32_t addr_size = debug_ranges->GetAddressByteSize();
   dw_addr_t base_addr = 0;
   dw_addr_t base_addr_marker = GetBaseAddressMarker(addr_size);
 
-  while (
-      debug_ranges_data.ValidOffsetForDataOfSize(*offset_ptr, 2 * addr_size)) {
-    dw_addr_t begin = debug_ranges_data.GetMaxU64(offset_ptr, addr_size);
-    dw_addr_t end = debug_ranges_data.GetMaxU64(offset_ptr, addr_size);
+  while (debug_ranges->ValidOffsetForDataOfSize(*offset_ptr, 2 * addr_size)) {
+    dw_addr_t begin = debug_ranges->GetMaxU64(offset_ptr, addr_size);
+    dw_addr_t end = debug_ranges->GetMaxU64(offset_ptr, addr_size);
 
     if (!begin && !end) {
       // End of range list
@@ -255,33 +259,38 @@ bool DWARFDebugRngLists::FindRanges(const DWARFUnit *cu,
   return false;
 }
 
-void DWARFDebugRngLists::Extract(SymbolFileDWARF *dwarf2Data) {
-  const DWARFDataExtractor &data = dwarf2Data->get_debug_rnglists_data();
+void DWARFDebugRngLists::Extract(SymbolFileDWARF *dwarf2Data,
+                                 lldb_private::DWARFContext &dwarf_context) {
+  const DWARFDataExtractor *data = dwarf_context.getOrLoadDebugRnglistsData();
+  if (!data)
+    return;
+
   lldb::offset_t offset = 0;
 
-  uint64_t length = data.GetU32(&offset);
+  uint64_t length = data->GetU32(&offset);
   // FIXME: Handle DWARF64.
   lldb::offset_t end = offset + length;
 
   // Check version.
-  if (data.GetU16(&offset) < 5)
+  if (data->GetU16(&offset) < 5)
     return;
 
-  uint8_t addrSize = data.GetU8(&offset);
+  uint8_t addrSize = data->GetU8(&offset);
 
   // We do not support non-zero segment selector size.
-  if (data.GetU8(&offset) != 0) {
+  if (data->GetU8(&offset) != 0) {
     lldbassert(0 && "not implemented");
     return;
   }
 
-  uint32_t offsetsAmount = data.GetU32(&offset);
+  uint32_t offsetsAmount = data->GetU32(&offset);
   for (uint32_t i = 0; i < offsetsAmount; ++i)
-    Offsets.push_back(data.GetMaxU64(&offset, 4));
+    Offsets.push_back(data->GetMaxU64(&offset, 4));
 
   lldb::offset_t listOffset = offset;
   std::vector<RngListEntry> rangeList;
-  while (offset < end && ExtractRangeList(data, addrSize, &offset, rangeList)) {
+  while (offset < end &&
+         ExtractRangeList(*data, addrSize, &offset, rangeList)) {
     m_range_map[listOffset] = rangeList;
     listOffset = offset;
   }

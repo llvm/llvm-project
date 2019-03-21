@@ -332,8 +332,9 @@ bool DWARFDIE::GetDIENamesAndRanges(
     lldb_private::DWARFExpression *frame_base) const {
   if (IsValid()) {
     return m_die->GetDIENamesAndRanges(
-        GetDWARF(), GetCU(), name, mangled, ranges, decl_file, decl_line,
-        decl_column, call_file, call_line, call_column, frame_base);
+        GetDWARF(), GetDWARF()->GetDWARFContext(), GetCU(), name, mangled,
+        ranges, decl_file, decl_line, decl_column, call_file, call_line,
+        call_column, frame_base);
   } else
     return false;
 }

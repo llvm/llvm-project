@@ -73,16 +73,18 @@ struct AllDiffTypes : EnumValuesAsTuple<AllDiffTypes, DiffType, 4> {
                                           "ChangeMiddle", "ChangeLast"};
 };
 
+static constexpr char kSmallStringLiteral[] = "012345678";
+
 TEST_ALWAYS_INLINE const char* getSmallString(DiffType D) {
   switch (D) {
     case DiffType::Control:
-      return "0123456";
+      return kSmallStringLiteral;
     case DiffType::ChangeFirst:
-      return "-123456";
+      return "-12345678";
     case DiffType::ChangeMiddle:
-      return "012-456";
+      return "0123-5678";
     case DiffType::ChangeLast:
-      return "012345-";
+      return "01234567-";
   }
 }
 
@@ -261,6 +263,42 @@ struct StringRelational {
   }
 };
 
+template <class Rel, class LHLength, class DiffType>
+struct StringRelationalLiteral {
+  static void run(benchmark::State& state) {
+    auto Lhs = makeString(LHLength(), DiffType());
+    for (auto _ : state) {
+      benchmark::DoNotOptimize(Lhs);
+      switch (Rel()) {
+      case Relation::Eq:
+        benchmark::DoNotOptimize(Lhs == kSmallStringLiteral);
+        break;
+      case Relation::Less:
+        benchmark::DoNotOptimize(Lhs < kSmallStringLiteral);
+        break;
+      case Relation::Compare:
+        benchmark::DoNotOptimize(Lhs.compare(kSmallStringLiteral));
+        break;
+      }
+    }
+  }
+
+  static bool skip() {
+    // Doesn't matter how they differ if they have different size.
+    if (LHLength() != Length::Small && DiffType() != ::DiffType::Control)
+      return true;
+    // We don't need huge. Doensn't give anything different than Large.
+    if (LHLength() == Length::Huge)
+      return true;
+    return false;
+  }
+
+  static std::string name() {
+    return "BM_StringRelationalLiteral" + Rel::name() + LHLength::name() +
+           DiffType::name();
+  }
+};
+
 enum class Depth { Shallow, Deep };
 struct AllDepths : EnumValuesAsTuple<AllDepths, Depth, 2> {
   static constexpr const char* Names[] = {"Shallow", "Deep"};
@@ -368,6 +406,8 @@ int main(int argc, char** argv) {
   makeCartesianProductBenchmark<StringMove, AllLengths>();
   makeCartesianProductBenchmark<StringDestroy, AllLengths>();
   makeCartesianProductBenchmark<StringRelational, AllRelations, AllLengths,
+                                AllLengths, AllDiffTypes>();
+  makeCartesianProductBenchmark<StringRelationalLiteral, AllRelations,
                                 AllLengths, AllDiffTypes>();
   makeCartesianProductBenchmark<StringRead, AllTemperatures, AllDepths,
                                 AllLengths>();

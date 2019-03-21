@@ -78,14 +78,13 @@ define amdgpu_kernel void @extload_v2f16_to_v2f32_arg(<2 x float> addrspace(1)* 
 
 ; GCN-LABEL: {{^}}extload_v3f16_to_v3f32_arg:
 ; GCN: s_load_dwordx2 s
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
 ; GCN: s_load_dwordx2 s
 ; GCN-NOT: _load
 ; GCN: v_cvt_f32_f16_e32
-; GCN: v_cvt_f32_f16_e32
-; GCN: v_cvt_f32_f16_e32
 ; GCN-NOT: v_cvt_f32_f16
-; GCN-DAG: _store_dword
-; GCN-DAG: _store_dwordx2
+; GCN-DAG: _store_dwordx3
 ; GCN: s_endpgm
 define amdgpu_kernel void @extload_v3f16_to_v3f32_arg(<3 x float> addrspace(1)* %out, <3 x half> %arg) #0 {
   %ext = fpext <3 x half> %arg to <3 x float>
@@ -472,7 +471,7 @@ define amdgpu_kernel void @global_truncstore_v2f32_to_v2f16(<2 x half> addrspace
 }
 
 ; GCN-LABEL: {{^}}global_truncstore_v3f32_to_v3f16:
-; GCN: flat_load_dwordx4
+; GCN: flat_load_dwordx3
 ; GCN-DAG: v_cvt_f16_f32_e32
 ; SI-DAG:  v_cvt_f16_f32_e32
 ; VI-DAG:  v_cvt_f16_f32_sdwa

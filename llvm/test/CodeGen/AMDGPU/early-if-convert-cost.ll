@@ -1,4 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -stress-early-ifcvt -amdgpu-early-ifcvt=1 -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -stress-early-ifcvt -amdgpu-early-ifcvt=1 -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -stress-early-ifcvt -amdgpu-early-ifcvt=1 -march=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCNX3 %s
 
 ; FIXME: Most of these cases that don't trigger because of broken cost
 ; heuristics. Should not need -stress-early-ifcvt
@@ -60,8 +61,9 @@ endif:
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 
-; GCN-DAG: buffer_store_dword v
-; GCN-DAG: buffer_store_dwordx2
+; SI-DAG: buffer_store_dwordx2
+; SI-DAG: buffer_store_dword v
+; GCNX3: buffer_store_dwordx3
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle96(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(1)* %in, float %cnd) #0 {
 entry:
   %v = load <3 x i32>, <3 x i32> addrspace(1)* %in

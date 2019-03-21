@@ -10391,8 +10391,11 @@ static SDValue PerformABSCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  if (!TLI.expandABS(N, res, DAG))
+  if (TLI.isOperationLegal(N->getOpcode(), N->getValueType(0)))
     return SDValue();
+
+  if (!TLI.expandABS(N, res, DAG))
+      return SDValue();
 
   return res;
 }
