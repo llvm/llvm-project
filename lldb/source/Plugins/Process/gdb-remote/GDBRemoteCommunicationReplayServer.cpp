@@ -107,6 +107,13 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
     m_send_acks = false;
   }
 
+  // A QEnvironment packet is sent for every environment variable. If the
+  // number of environment variables is different during replay, the replies
+  // become out of sync.
+  if (packet.GetStringRef().find("QEnvironment") == 0) {
+    return SendRawPacketNoLock("$OK#9a", true);
+  }
+
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
   while (!m_packet_history.empty()) {
     // Pop last packet from the history.
@@ -122,6 +129,14 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
                  "GDBRemoteCommunicationReplayServer actual packet: '{}'\n",
                  packet.GetStringRef());
       }
+
+      // Ignore QEnvironment packets as they're handled earlier.
+      if (entry.packet.data.find("QEnvironment") == 1) {
+        assert(m_packet_history.back().type ==
+               GDBRemoteCommunicationHistory::ePacketTypeRecv);
+        m_packet_history.pop_back();
+      }
+
       continue;
     }
 
