@@ -2,26 +2,25 @@
 
 ROCm Device libraries.
 
-This repository contains the following libraries:
+This repository contains the sources and CMake build system for a
+set of AMD specific device-side language runtime libraries.  Specifically:
 
 | **Name** | **Comments** | **Dependencies** |
 | --- | --- | --- |
-| irif | Internal interface to LLVM IR | |
-| ocml | Open Compute Math library ([documentation](doc/OCML.md)) | irif |
-| oclc | Open Compute library controls ([documentation](doc/OCML.md#controls)) | |
-| ockl | Open Compute Kernel library. | irif |
-| opencl | OpenCL built-in library | ocml, ockl |
-| hc | Heterogeneous Compute built-in library | ocml, ockl |
-
-All libraries are compiled to LLVM Bitcode which can be linked. Note that libraries use specific AMDGPU intrinsics.
+| oclc* | Open Compute library controls ([documentation](doc/OCML.md#controls)) | |
+| ocml | Open Compute Math library ([documentation](doc/OCML.md)) | oclc* |
+| ockl | Open Compute Kernel library ([documentation](doc/OCKL.md)) | oclc* |
+| opencl | OpenCL built-in library | ocml, ockl, oclc* |
+| hip | HIP built-in library | ocml, ockl, oclc* |
+| hc | Heterogeneous Compute built-in library | ocml, ockl, oclc* |
 
 Refer to [LICENSE.TXT](LICENSE.TXT) for license information.
 
 ## BUILDING
 
-To build it, use RadeonOpenCompute LLVM/LLD/Clang. Default branch on these
-repositories is "amd-common", which may contain AMD-specific codes yet
-upstreamed.
+The library sources should be compiled using a clang compiler built from
+sources in the amd-common branch of AMD modified clang, llvm, and lld repositories
+using the following commands:
 
     git clone git@github.com:RadeonOpenCompute/llvm.git llvm_amd-common
     cd llvm_amd-common/tools
@@ -36,20 +35,18 @@ upstreamed.
         -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" \
         ..
 
-Testing also requires amdhsacod utility from ROCm Runtime.
 
-Use out-of-source CMake build and create separate directory to run CMake.
-
-The following build steps are performed:
+To build the library bitcodes, from the top level of this repository
+run the following commands:
 
     mkdir -p build
     cd build
-    export LLVM_BUILD=... (path to LLVM build)
+    export LLVM_BUILD=... (path to LLVM build directory created above)
     CC=$LLVM_BUILD/bin/clang cmake -DLLVM_DIR=$LLVM_BUILD ..
     make
 
-It is also possible to use compiler that only has AMDGPU target enabled if you build prepare-builtins separately
-with host compiler and pass explicit target option to CMake:
+It is also possible to use a compiler that only has AMDGPU target enabled if you build prepare-builtins separately
+with the regular host compiler and pass explicit target option to CMake:
 
     export LLVM_BUILD=... (path to LLVM build)
     # Build prepare-builtins
@@ -62,7 +59,9 @@ with host compiler and pass explicit target option to CMake:
     cd ../..
     mkdir build
     cd build
-    CC=$LLVM_BUILD/bin/clang cmake -DLLVM_DIR=$LLVM_BUILD -DCMAKE_C_FLAGS="-target amdgcn--amdhsa" -DCMAKE_CXX_FLAGS="-target amdgcn--amdhsa" -DPREPARE_BUILTINS=`cd ../utils/build/prepare-builtins/; pwd`/prepare-builtins ..
+    CC=$LLVM_BUILD/bin/clang cmake -DLLVM_DIR=$LLVM_BUILD -DPREPARE_BUILTINS=`cd ../utils/build/prepare-builtins/; pwd`/prepare-builtins ..
+
+Testing requires the amdhsacod utility from ROCm Runtime.
 
 To install artifacts:
     make install
@@ -74,17 +73,14 @@ To create packages for the library:
    make package
 
 ## USING BITCODE LIBRARIES
+ 
+The ROCm language runtimes automatically add the required bitcode files during the
+LLVM linking stage invoked during the process of creating a code object.  There are options
+to display the exact commands executed, but an approximation of the command the OpenCL
+runtime might use is as follows:
 
-The bitcode libraries should be linked to user bitcode (obtained from source) *before* final code generation
-with llvm-link or -mlink-builtin-bitcode, or -mlink-bitcode-file options of clang.
-
-For OpenCL, the list of bitcode libraries includes opencl, its dependencies (ocml, ockl)
-and oclc control libraries selected according to OpenCL compilation mode.  Assuming that the build
-of this repository was done in /srv/git/ROCm-Device-Libs/build, the following command line
-shows how to compile simple OpenCL source test.cl into code object test.so:
-
-    clang -x cl -Xclang -finclude-default-header \
-        -target amdgcn--amdhsa -mcpu=fiji \
+    $LLVM_BUILD/bin/clang -x cl -Xclang -finclude-default-header \
+        -target amdgcn-amd-amdhsa -mcpu=gfx803 \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/opencl/opencl.amdgcn.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/ocml/ocml.amdgcn.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/ockl/ockl.amdgcn.bc \
