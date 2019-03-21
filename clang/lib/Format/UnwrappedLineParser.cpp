@@ -1000,7 +1000,7 @@ void UnwrappedLineParser::parseStructuralElement() {
   case tok::kw_protected:
   case tok::kw_private:
     if (Style.Language == FormatStyle::LK_Java ||
-        Style.Language == FormatStyle::LK_JavaScript)
+        Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp())
       nextToken();
     else
       parseAccessSpecifier();
@@ -1214,9 +1214,9 @@ void UnwrappedLineParser::parseStructuralElement() {
       // parseRecord falls through and does not yet add an unwrapped line as a
       // record declaration or definition can start a structural element.
       parseRecord();
-      // This does not apply for Java and JavaScript.
+      // This does not apply for Java, JavaScript and C#.
       if (Style.Language == FormatStyle::LK_Java ||
-          Style.Language == FormatStyle::LK_JavaScript) {
+          Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp()) {
         if (FormatTok->is(tok::semi))
           nextToken();
         addUnwrappedLine();

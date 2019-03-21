@@ -39,6 +39,7 @@ struct file_magic {
     macho_dsym_companion,                     ///< Mach-O dSYM companion file
     macho_kext_bundle,                        ///< Mach-O kext bundle file
     macho_universal_binary,                   ///< Mach-O universal binary
+    minidump,                                 ///< Windows minidump file
     coff_cl_gl_object,   ///< Microsoft cl.exe's intermediate code file
     coff_object,         ///< COFF object file
     coff_import_library, ///< COFF import library

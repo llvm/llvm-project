@@ -1208,7 +1208,6 @@ static Value *simplifyMaskedLoad(const IntrinsicInst &II,
 }
 
 // TODO, Obvious Missing Transforms:
-// * SimplifyDemandedVectorElts
 // * Single constant active lane -> store
 // * Narrow width by halfs excluding zero/undef lanes
 Instruction *InstCombiner::simplifyMaskedStore(IntrinsicInst &II) {
@@ -1244,11 +1243,45 @@ Instruction *InstCombiner::simplifyMaskedStore(IntrinsicInst &II) {
 // * Dereferenceable address & few lanes -> scalarize speculative load/selects
 // * Adjacent vector addresses -> masked.load
 // * Narrow width by halfs excluding zero/undef lanes
+// * Vector splat address w/known mask -> scalar load
+// * Vector incrementing address -> vector masked load
 static Instruction *simplifyMaskedGather(IntrinsicInst &II, InstCombiner &IC) {
   // If the mask is all zeros, return the "passthru" argument of the gather.
   auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
   if (ConstMask && ConstMask->isNullValue())
     return IC.replaceInstUsesWith(II, II.getArgOperand(3));
+
+  return nullptr;
+}
+
+// TODO, Obvious Missing Transforms:
+// * Single constant active lane -> store
+// * Adjacent vector addresses -> masked.store
+// * Narrow store width by halfs excluding zero/undef lanes
+// * Vector splat address w/known mask -> scalar store
+// * Vector incrementing address -> vector masked store
+Instruction *InstCombiner::simplifyMaskedScatter(IntrinsicInst &II) {
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
+  if (!ConstMask)
+    return nullptr;
+
+  // If the mask is all zeros, a scatter does nothing.
+  if (ConstMask->isNullValue())
+    return eraseInstFromFunction(II);
+
+  // Use masked off lanes to simplify operands via SimplifyDemandedVectorElts
+  APInt DemandedElts = possiblyDemandedEltsInMask(ConstMask);
+  APInt UndefElts(DemandedElts.getBitWidth(), 0);
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0),
+                                            DemandedElts, UndefElts)) {
+    II.setOperand(0, V);
+    return &II;
+  }
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(1),
+                                            DemandedElts, UndefElts)) {
+    II.setOperand(1, V);
+    return &II;
+  }
 
   return nullptr;
 }
@@ -1285,37 +1318,6 @@ static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
     Result = IC.Builder.CreateBitCast(Result, II.getType());
 
   return cast<Instruction>(Result);
-}
-
-// TODO, Obvious Missing Transforms:
-// * SimplifyDemandedVectorElts
-// * Single constant active lane -> store
-// * Adjacent vector addresses -> masked.store
-// * Narrow store width by halfs excluding zero/undef lanes
-Instruction *InstCombiner::simplifyMaskedScatter(IntrinsicInst &II) {
-  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
-  if (!ConstMask)
-    return nullptr;
-
-  // If the mask is all zeros, a scatter does nothing.
-  if (ConstMask->isNullValue())
-    return eraseInstFromFunction(II);
-
-  // Use masked off lanes to simplify operands via SimplifyDemandedVectorElts
-  APInt DemandedElts = possiblyDemandedEltsInMask(ConstMask);
-  APInt UndefElts(DemandedElts.getBitWidth(), 0);
-  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0),
-                                            DemandedElts, UndefElts)) {
-    II.setOperand(0, V);
-    return &II;
-  }
-  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(1),
-                                            DemandedElts, UndefElts)) {
-    II.setOperand(1, V);
-    return &II;
-  }
-
-  return nullptr;
 }
 
 static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {

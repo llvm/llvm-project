@@ -479,6 +479,7 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
 // SI_SPILL_32_* instructions.
 defm SI_SPILL_S32  : SI_SPILL_SGPR <SReg_32>;
 defm SI_SPILL_S64  : SI_SPILL_SGPR <SReg_64>;
+defm SI_SPILL_S96  : SI_SPILL_SGPR <SReg_96>;
 defm SI_SPILL_S128 : SI_SPILL_SGPR <SReg_128>;
 defm SI_SPILL_S256 : SI_SPILL_SGPR <SReg_256>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
@@ -738,6 +739,22 @@ foreach Index = 0-2 in {
   >;
 }
 
+foreach Index = 0-2 in {
+  def Extract_Element_v3i32_#Index : Extract_Element <
+    i32, v3i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v3i32_#Index : Insert_Element <
+    i32, v3i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v3f32_#Index : Extract_Element <
+    f32, v3f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v3f32_#Index : Insert_Element <
+    f32, v3f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
+
 foreach Index = 0-3 in {
   def Extract_Element_v4i32_#Index : Extract_Element <
     i32, v4i32, Index, !cast<SubRegIndex>(sub#Index)
@@ -868,6 +885,10 @@ def : BitConvert <i64, v4f16, VReg_64>;
 
 def : BitConvert <v4i32, v4f32, VReg_128>;
 def : BitConvert <v4f32, v4i32, VReg_128>;
+
+// 96-bit bitcast
+def : BitConvert <v3i32, v3f32, SGPR_96>;
+def : BitConvert <v3f32, v3i32, SGPR_96>;
 
 // 128-bit bitcast
 def : BitConvert <v2i64, v4i32, SReg_128>;

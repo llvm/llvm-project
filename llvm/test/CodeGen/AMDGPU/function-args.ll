@@ -161,8 +161,7 @@ define void @void_func_v2i32(<2 x i32> %arg0) #0 {
 }
 
 ; GCN-LABEL: {{^}}void_func_v3i32:
-; GCN-DAG: buffer_store_dword v2, off
-; GCN-DAG: buffer_store_dwordx2 v[0:1], off
+; GCN-DAG: buffer_store_dwordx3 v[0:2], off
 define void @void_func_v3i32(<3 x i32> %arg0) #0 {
   store <3 x i32> %arg0, <3 x i32> addrspace(1)* undef
   ret void
@@ -356,8 +355,7 @@ define void @void_func_v2f32(<2 x float> %arg0) #0 {
 }
 
 ; GCN-LABEL: {{^}}void_func_v3f32:
-; GCN-DAG: buffer_store_dword v2, off
-; GCN-DAG: buffer_store_dwordx2 v[0:1], off
+; GCN-DAG: buffer_store_dwordx3 v[0:2], off
 define void @void_func_v3f32(<3 x float> %arg0) #0 {
   store <3 x float> %arg0, <3 x float> addrspace(1)* undef
   ret void

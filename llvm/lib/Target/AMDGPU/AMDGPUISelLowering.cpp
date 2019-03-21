@@ -150,6 +150,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v2f32, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v2f32, MVT::v2i32);
 
+  setOperationAction(ISD::LOAD, MVT::v3f32, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v3f32, MVT::v3i32);
+
   setOperationAction(ISD::LOAD, MVT::v4f32, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v4f32, MVT::v4i32);
 
@@ -234,6 +237,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::STORE, MVT::v2f32, Promote);
   AddPromotedToType(ISD::STORE, MVT::v2f32, MVT::v2i32);
+
+  setOperationAction(ISD::STORE, MVT::v3f32, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v3f32, MVT::v3i32);
 
   setOperationAction(ISD::STORE, MVT::v4f32, Promote);
   AddPromotedToType(ISD::STORE, MVT::v4f32, MVT::v4i32);
@@ -325,12 +331,16 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   // Expand to fneg + fadd.
   setOperationAction(ISD::FSUB, MVT::f64, Expand);
 
+  setOperationAction(ISD::CONCAT_VECTORS, MVT::v3i32, Custom);
+  setOperationAction(ISD::CONCAT_VECTORS, MVT::v3f32, Custom);
   setOperationAction(ISD::CONCAT_VECTORS, MVT::v4i32, Custom);
   setOperationAction(ISD::CONCAT_VECTORS, MVT::v4f32, Custom);
   setOperationAction(ISD::CONCAT_VECTORS, MVT::v8i32, Custom);
   setOperationAction(ISD::CONCAT_VECTORS, MVT::v8f32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v2f32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v2i32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v3f32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v3i32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4f32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4i32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v8f32, Custom);
@@ -392,7 +402,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Custom);
 
   static const MVT::SimpleValueType VectorIntTypes[] = {
-    MVT::v2i32, MVT::v4i32
+    MVT::v2i32, MVT::v3i32, MVT::v4i32
   };
 
   for (MVT VT : VectorIntTypes) {
@@ -434,7 +444,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   }
 
   static const MVT::SimpleValueType FloatVectorTypes[] = {
-    MVT::v2f32, MVT::v4f32
+     MVT::v2f32, MVT::v3f32, MVT::v4f32
   };
 
   for (MVT VT : FloatVectorTypes) {
@@ -475,6 +485,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   // instructions may be better if the select sources are SGPRs.
   setOperationAction(ISD::SELECT, MVT::v2f32, Promote);
   AddPromotedToType(ISD::SELECT, MVT::v2f32, MVT::v2i32);
+
+  setOperationAction(ISD::SELECT, MVT::v3f32, Promote);
+  AddPromotedToType(ISD::SELECT, MVT::v3f32, MVT::v3i32);
 
   setOperationAction(ISD::SELECT, MVT::v4f32, Promote);
   AddPromotedToType(ISD::SELECT, MVT::v4f32, MVT::v4i32);
@@ -1372,6 +1385,41 @@ SDValue AMDGPUTargetLowering::getHiHalf64(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Vec, One);
 }
 
+// Split a vector type into two parts. The first part is a power of two vector.
+// The second part is whatever is left over, and is a scalar if it would
+// otherwise be a 1-vector.
+std::pair<EVT, EVT>
+AMDGPUTargetLowering::getSplitDestVTs(const EVT &VT, SelectionDAG &DAG) const {
+  EVT LoVT, HiVT;
+  EVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned LoNumElts = PowerOf2Ceil((NumElts + 1) / 2);
+  LoVT = EVT::getVectorVT(*DAG.getContext(), EltVT, LoNumElts);
+  HiVT = NumElts - LoNumElts == 1
+             ? EltVT
+             : EVT::getVectorVT(*DAG.getContext(), EltVT, NumElts - LoNumElts);
+  return std::make_pair(LoVT, HiVT);
+}
+
+// Split a vector value into two parts of types LoVT and HiVT. HiVT could be
+// scalar.
+std::pair<SDValue, SDValue>
+AMDGPUTargetLowering::splitVector(const SDValue &N, const SDLoc &DL,
+                                  const EVT &LoVT, const EVT &HiVT,
+                                  SelectionDAG &DAG) const {
+  assert(LoVT.getVectorNumElements() +
+                 (HiVT.isVector() ? HiVT.getVectorNumElements() : 1) <=
+             N.getValueType().getVectorNumElements() &&
+         "More vector elements requested than available!");
+  auto IdxTy = getVectorIdxTy(DAG.getDataLayout());
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, N,
+                           DAG.getConstant(0, DL, IdxTy));
+  SDValue Hi = DAG.getNode(
+      HiVT.isVector() ? ISD::EXTRACT_SUBVECTOR : ISD::EXTRACT_VECTOR_ELT, DL,
+      HiVT, N, DAG.getConstant(LoVT.getVectorNumElements(), DL, IdxTy));
+  return std::make_pair(Lo, Hi);
+}
+
 SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
                                               SelectionDAG &DAG) const {
   LoadSDNode *Load = cast<LoadSDNode>(Op);
@@ -1393,9 +1441,9 @@ SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
   EVT LoMemVT, HiMemVT;
   SDValue Lo, Hi;
 
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
-  std::tie(LoMemVT, HiMemVT) = DAG.GetSplitDestVTs(MemVT);
-  std::tie(Lo, Hi) = DAG.SplitVector(Op, SL, LoVT, HiVT);
+  std::tie(LoVT, HiVT) = getSplitDestVTs(VT, DAG);
+  std::tie(LoMemVT, HiMemVT) = getSplitDestVTs(MemVT, DAG);
+  std::tie(Lo, Hi) = splitVector(Op, SL, LoVT, HiVT, DAG);
 
   unsigned Size = LoMemVT.getStoreSize();
   unsigned BaseAlign = Load->getAlignment();
@@ -1410,13 +1458,50 @@ SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
                      HiPtr, SrcValue.getWithOffset(LoMemVT.getStoreSize()),
                      HiMemVT, HiAlign, Load->getMemOperand()->getFlags());
 
-  SDValue Ops[] = {
-    DAG.getNode(ISD::CONCAT_VECTORS, SL, VT, LoLoad, HiLoad),
-    DAG.getNode(ISD::TokenFactor, SL, MVT::Other,
-                LoLoad.getValue(1), HiLoad.getValue(1))
-  };
+  auto IdxTy = getVectorIdxTy(DAG.getDataLayout());
+  SDValue Join;
+  if (LoVT == HiVT) {
+    // This is the case that the vector is power of two so was evenly split.
+    Join = DAG.getNode(ISD::CONCAT_VECTORS, SL, VT, LoLoad, HiLoad);
+  } else {
+    Join = DAG.getNode(ISD::INSERT_SUBVECTOR, SL, VT, DAG.getUNDEF(VT), LoLoad,
+                       DAG.getConstant(0, SL, IdxTy));
+    Join = DAG.getNode(HiVT.isVector() ? ISD::INSERT_SUBVECTOR
+                                       : ISD::INSERT_VECTOR_ELT,
+                       SL, VT, Join, HiLoad,
+                       DAG.getConstant(LoVT.getVectorNumElements(), SL, IdxTy));
+  }
+
+  SDValue Ops[] = {Join, DAG.getNode(ISD::TokenFactor, SL, MVT::Other,
+                                     LoLoad.getValue(1), HiLoad.getValue(1))};
 
   return DAG.getMergeValues(Ops, SL);
+}
+
+// Widen a vector load from vec3 to vec4.
+SDValue AMDGPUTargetLowering::WidenVectorLoad(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  LoadSDNode *Load = cast<LoadSDNode>(Op);
+  EVT VT = Op.getValueType();
+  assert(VT.getVectorNumElements() == 3);
+  SDValue BasePtr = Load->getBasePtr();
+  EVT MemVT = Load->getMemoryVT();
+  SDLoc SL(Op);
+  const MachinePointerInfo &SrcValue = Load->getMemOperand()->getPointerInfo();
+  unsigned BaseAlign = Load->getAlignment();
+
+  EVT WideVT =
+      EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(), 4);
+  EVT WideMemVT =
+      EVT::getVectorVT(*DAG.getContext(), MemVT.getVectorElementType(), 4);
+  SDValue WideLoad = DAG.getExtLoad(
+      Load->getExtensionType(), SL, WideVT, Load->getChain(), BasePtr, SrcValue,
+      WideMemVT, BaseAlign, Load->getMemOperand()->getFlags());
+  return DAG.getMergeValues(
+      {DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, VT, WideLoad,
+                   DAG.getConstant(0, SL, getVectorIdxTy(DAG.getDataLayout()))),
+       WideLoad.getValue(1)},
+      SL);
 }
 
 SDValue AMDGPUTargetLowering::SplitVectorStore(SDValue Op,
@@ -1439,9 +1524,9 @@ SDValue AMDGPUTargetLowering::SplitVectorStore(SDValue Op,
   EVT LoMemVT, HiMemVT;
   SDValue Lo, Hi;
 
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
-  std::tie(LoMemVT, HiMemVT) = DAG.GetSplitDestVTs(MemVT);
-  std::tie(Lo, Hi) = DAG.SplitVector(Val, SL, LoVT, HiVT);
+  std::tie(LoVT, HiVT) = getSplitDestVTs(VT, DAG);
+  std::tie(LoMemVT, HiMemVT) = getSplitDestVTs(MemVT, DAG);
+  std::tie(Lo, Hi) = splitVector(Val, SL, LoVT, HiVT, DAG);
 
   SDValue HiPtr = DAG.getObjectPtrOffset(SL, BasePtr, LoMemVT.getStoreSize());
 

@@ -273,13 +273,12 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v3i32:
-; SI-DAG: buffer_store_dwordx2
 ; SI-DAG: buffer_store_dword v
+; SI-DAG: buffer_store_dwordx2
 
-; VI-DAG: buffer_store_dwordx3
+; VI: buffer_store_dwordx3
 
-; GFX9-DAG: global_store_dwordx2
-; GFX9-DAG: global_store_dword v
+; GFX9: global_store_dwordx3
 
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.[XYZW]}}, {{T[0-9]+\.[XYZW]}},
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.XY}}, {{T[0-9]+\.[XYZW]}},

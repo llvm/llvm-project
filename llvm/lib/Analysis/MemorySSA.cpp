@@ -922,8 +922,6 @@ public:
 #endif
     return Result;
   }
-
-  void verify(const MemorySSA *MSSA) { assert(MSSA == &this->MSSA); }
 };
 
 struct RenamePassData {
@@ -963,7 +961,6 @@ public:
   // additional query becomes heavily used we may decide to cache the result.
   // Walker instantiations will decide how to set the SkipSelf bool.
   MemoryAccess *getClobberingMemoryAccessBase(MemoryAccess *, bool);
-  void verify(const MemorySSA *MSSA) { Walker.verify(MSSA); }
 };
 
 /// A MemorySSAWalker that does AA walks to disambiguate accesses. It no
@@ -987,11 +984,6 @@ public:
     if (auto *MUD = dyn_cast<MemoryUseOrDef>(MA))
       MUD->resetOptimized();
   }
-
-  void verify(const MemorySSA *MSSA) override {
-    MemorySSAWalker::verify(MSSA);
-    Walker->verify(MSSA);
-  }
 };
 
 class MemorySSA::SkipSelfWalker final : public MemorySSAWalker {
@@ -1011,11 +1003,6 @@ public:
   void invalidateInfo(MemoryAccess *MA) override {
     if (auto *MUD = dyn_cast<MemoryUseOrDef>(MA))
       MUD->resetOptimized();
-  }
-
-  void verify(const MemorySSA *MSSA) override {
-    MemorySSAWalker::verify(MSSA);
-    Walker->verify(MSSA);
   }
 };
 
@@ -1775,7 +1762,6 @@ void MemorySSA::verifyMemorySSA() const {
   verifyDomination(F);
   verifyOrdering(F);
   verifyDominationNumbers(F);
-  Walker->verify(this);
   // Previously, the verification used to also verify that the clobberingAccess
   // cached by MemorySSA is the same as the clobberingAccess found at a later
   // query to AA. This does not hold true in general due to the current fragility

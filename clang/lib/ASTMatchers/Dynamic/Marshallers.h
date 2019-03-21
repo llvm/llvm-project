@@ -26,6 +26,7 @@
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/OpenMPKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
@@ -163,6 +164,28 @@ public:
   static ArgKind getKind() {
     return ArgKind(ArgKind::AK_String);
   }
+};
+
+template <> struct ArgTypeTraits<OpenMPClauseKind> {
+private:
+  static Optional<OpenMPClauseKind> getClauseKind(llvm::StringRef ClauseKind) {
+    return llvm::StringSwitch<Optional<OpenMPClauseKind>>(ClauseKind)
+#define OPENMP_CLAUSE(TextualSpelling, Class)                                  \
+  .Case("OMPC_" #TextualSpelling, OMPC_##TextualSpelling)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(llvm::None);
+  }
+
+public:
+  static bool is(const VariantValue &Value) {
+    return Value.isString() && getClauseKind(Value.getString());
+  }
+
+  static OpenMPClauseKind get(const VariantValue &Value) {
+    return *getClauseKind(Value.getString());
+  }
+
+  static ArgKind getKind() { return ArgKind(ArgKind::AK_String); }
 };
 
 /// Matcher descriptor interface.

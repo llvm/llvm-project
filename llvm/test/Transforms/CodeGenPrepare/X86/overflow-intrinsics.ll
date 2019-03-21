@@ -475,23 +475,22 @@ define i64 @foo2(i8 *%p) {
   ret i64 %sub
 }
 
-; When the compare operand has uses besides add/sub,
-; the transform may not be profitable.
+; Avoid hoisting a math op into a dominating block which would
+; increase the critical path.
 
 define void @PR41129(i64* %p64) {
 ; CHECK-LABEL: @PR41129(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[KEY:%.*]] = load i64, i64* [[P64:%.*]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[KEY]], i64 1)
-; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[OV]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK-NEXT:    [[COND17:%.*]] = icmp eq i64 [[KEY]], 0
+; CHECK-NEXT:    br i1 [[COND17]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       false:
 ; CHECK-NEXT:    [[ANDVAL:%.*]] = and i64 [[KEY]], 7
 ; CHECK-NEXT:    store i64 [[ANDVAL]], i64* [[P64]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    store i64 [[MATH]], i64* [[P64]]
+; CHECK-NEXT:    [[SVALUE:%.*]] = add i64 [[KEY]], -1
+; CHECK-NEXT:    store i64 [[SVALUE]], i64* [[P64]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

@@ -289,7 +289,9 @@ void OutputSection::finalize() {
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
     // need to translate the InputSection sh_link to the OutputSection sh_link,
     // all InputSections in the OutputSection have the same dependency.
-    if (auto *D = First->getLinkOrderDep())
+    if (auto *EX = dyn_cast<ARMExidxSyntheticSection>(First))
+      Link = EX->getLinkOrderDep()->getParent()->SectionIndex;
+    else if (auto *D = First->getLinkOrderDep())
       Link = D->getParent()->SectionIndex;
   }
 
