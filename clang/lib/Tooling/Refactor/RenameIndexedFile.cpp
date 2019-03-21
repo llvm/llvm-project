@@ -417,7 +417,7 @@ static void findInclusionDirectiveOccurrence(
   RawLex.setParsingPreprocessorDirective(true);
   RawLex.LexIncludeFilename(RawTok);
   if (RawTok.isNot(tok::string_literal) &&
-      RawTok.isNot(tok::angle_string_literal))
+      RawTok.isNot(tok::header_name))
     return;
   StringRef Filename = llvm::sys::path::filename(
       StringRef(RawTok.getLiteralData(), RawTok.getLength())
