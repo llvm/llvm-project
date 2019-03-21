@@ -47,11 +47,11 @@ int __attribute__((pcs(pcs1))) pcs3(void); // expected-error {{'pcs' attribute r
                                            // expected-error {{invalid PCS type}}
 int __attribute__((pcs(0))) pcs4(void); // expected-error {{'pcs' attribute requires a string}}
 /* These are ignored because the target is i386 and not ARM */
-int __attribute__((pcs("aapcs"))) pcs5(void); // expected-warning {{calling convention 'pcs' ignored for this target}}
-int __attribute__((pcs("aapcs-vfp"))) pcs6(void); // expected-warning {{calling convention 'pcs' ignored for this target}}
+int __attribute__((pcs("aapcs"))) pcs5(void); // expected-warning {{'pcs' calling convention ignored for this target}}
+int __attribute__((pcs("aapcs-vfp"))) pcs6(void); // expected-warning {{'pcs' calling convention ignored for this target}}
 int __attribute__((pcs("foo"))) pcs7(void); // expected-error {{invalid PCS type}}
 
-int __attribute__((aarch64_vector_pcs)) aavpcs(void); // expected-warning {{calling convention 'aarch64_vector_pcs' ignored for this target}}
+int __attribute__((aarch64_vector_pcs)) aavpcs(void); // expected-warning {{'aarch64_vector_pcs' calling convention ignored for this target}}
 
 // PR6361
 void ctest3();
@@ -68,3 +68,5 @@ typedef_fun_t typedef_fun; // expected-note {{previous declaration is here}}
 void __attribute__((stdcall)) typedef_fun(int x) { } // expected-error {{function declared 'stdcall' here was previously declared without calling convention}}
 
 struct type_test {} __attribute__((stdcall));  // expected-warning {{'stdcall' attribute only applies to functions and methods}}
+
+void __vectorcall __builtin_unreachable(); // expected-warning {{vectorcall calling convention ignored on builtin function}}

@@ -235,6 +235,18 @@ testing::AssertionResult notMatchesWithCuda(const std::string &Code,
 }
 
 template <typename T>
+testing::AssertionResult matchesWithOpenMP(const std::string &Code,
+                                           const T &AMatcher) {
+  return matchesConditionally(Code, AMatcher, true, "-fopenmp=libomp");
+}
+
+template <typename T>
+testing::AssertionResult notMatchesWithOpenMP(const std::string &Code,
+                                              const T &AMatcher) {
+  return matchesConditionally(Code, AMatcher, false, "-fopenmp=libomp");
+}
+
+template <typename T>
 testing::AssertionResult
 matchAndVerifyResultConditionally(const std::string &Code, const T &AMatcher,
                                   std::unique_ptr<BoundNodesCallback> FindResultVerifier,

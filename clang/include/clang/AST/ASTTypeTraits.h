@@ -18,6 +18,7 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeLoc.h"
@@ -58,6 +59,7 @@ public:
   static ASTNodeKind getFromNode(const Decl &D);
   static ASTNodeKind getFromNode(const Stmt &S);
   static ASTNodeKind getFromNode(const Type &T);
+  static ASTNodeKind getFromNode(const OMPClause &C);
   /// \}
 
   /// Returns \c true if \c this and \c Other represent the same kind.
@@ -136,6 +138,9 @@ private:
     NKI_Type,
 #define TYPE(DERIVED, BASE) NKI_##DERIVED##Type,
 #include "clang/AST/TypeNodes.def"
+    NKI_OMPClause,
+#define OPENMP_CLAUSE(TextualSpelling, Class) NKI_##Class,
+#include "clang/Basic/OpenMPKinds.def"
     NKI_NumberOfKinds
   };
 
@@ -183,12 +188,15 @@ KIND_TO_KIND_ID(TypeLoc)
 KIND_TO_KIND_ID(Decl)
 KIND_TO_KIND_ID(Stmt)
 KIND_TO_KIND_ID(Type)
+KIND_TO_KIND_ID(OMPClause)
 #define DECL(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Decl)
 #include "clang/AST/DeclNodes.inc"
 #define STMT(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED)
 #include "clang/AST/StmtNodes.inc"
 #define TYPE(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Type)
 #include "clang/AST/TypeNodes.def"
+#define OPENMP_CLAUSE(TextualSpelling, Class) KIND_TO_KIND_ID(Class)
+#include "clang/Basic/OpenMPKinds.def"
 #undef KIND_TO_KIND_ID
 
 inline raw_ostream &operator<<(raw_ostream &OS, ASTNodeKind K) {
@@ -458,6 +466,11 @@ template <typename T>
 struct DynTypedNode::BaseConverter<
     T, typename std::enable_if<std::is_base_of<Type, T>::value>::type>
     : public DynCastPtrConverter<T, Type> {};
+
+template <typename T>
+struct DynTypedNode::BaseConverter<
+    T, typename std::enable_if<std::is_base_of<OMPClause, T>::value>::type>
+    : public DynCastPtrConverter<T, OMPClause> {};
 
 template <>
 struct DynTypedNode::BaseConverter<
