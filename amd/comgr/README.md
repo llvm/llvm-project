@@ -73,3 +73,17 @@ If Comgr is not installed to a standard CMake search directory, the path to the
 build or install tree can be supplied to CMake via `CMAKE_PREFIX_PATH`:
 
     cmake -DCMAKE_PREFIX_PATH=path/to/comgr/build/or/install
+
+Versioning
+----------
+
+Comgr is versioned according to a `major.minor` number scheme. The version of
+the library can be determined dynamically via the `amd_comgr_get_version`
+function. The version is not changed due to bug-fixes. The minor version number
+is incremented for each backwards-compatible change introduced. The major
+version number is incremented, and the minor version is reset to zero, for each
+backwards-incompatible change introduced.
+
+* `1.2`: Introduce `amd_comgr_disassemble_instruction` and associated APIS.
+* `1.1`: First versioned release. Versions before this have no guaranteed
+  compatibility.
