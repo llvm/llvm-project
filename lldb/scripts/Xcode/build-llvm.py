@@ -239,7 +239,8 @@ def check_out_if_needed(spec):
 
 
 def all_check_out_if_needed():
-    map(check_out_if_needed, XCODE_REPOSITORIES())
+    for r in XCODE_REPOSITORIES():
+        check_out_if_needed(r)
 
 
 def should_build_llvm():
@@ -263,7 +264,8 @@ def setup_source_symlink(repo):
 
 
 def setup_source_symlinks():
-    map(setup_source_symlink, XCODE_REPOSITORIES())
+    for r in XCODE_REPOSITORIES():
+        setup_source_symlink(r)
 
 
 def setup_build_symlink():
