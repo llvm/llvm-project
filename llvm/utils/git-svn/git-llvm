@@ -42,7 +42,7 @@ else:
 
 # It's *almost* a straightforward mapping from the monorepo to svn...
 GIT_TO_SVN_DIR = {
-    d: (d + '/trunk')
+    d: (d + '/branches/release_80')
     for d in [
         'clang-tools-extra',
         'compiler-rt',
@@ -63,8 +63,8 @@ GIT_TO_SVN_DIR = {
         'pstl',
     ]
 }
-GIT_TO_SVN_DIR.update({'clang': 'cfe/trunk'})
-GIT_TO_SVN_DIR.update({'': 'monorepo-root/trunk'})
+GIT_TO_SVN_DIR.update({'clang': 'cfe/branches/release_80'})
+GIT_TO_SVN_DIR.update({'': 'monorepo-root/branches/release_80'})
 
 VERBOSE = False
 QUIET = False
