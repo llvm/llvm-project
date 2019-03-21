@@ -1540,18 +1540,6 @@ void X86TargetInfo::getCPUSpecificCPUDispatchFeatures(
   WholeList.split(Features, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 }
 
-std::string X86TargetInfo::getCPUKindCanonicalName(CPUKind Kind) const {
-  switch (Kind) {
-  case CK_Generic:
-    return "";
-#define PROC(ENUM, STRING, IS64BIT)                                            \
-  case CK_##ENUM:                                                              \
-    return STRING;
-#include "clang/Basic/X86Target.def"
-  }
-  llvm_unreachable("Invalid CPUKind");
-}
-
 // We can't use a generic validation scheme for the cpus accepted here
 // versus subtarget cpus accepted in the target attribute because the
 // variables intitialized by the runtime only support the below currently

@@ -293,7 +293,7 @@ struct class_0 : class_1 {
 };
 
 class_0::class_0() {
-  // WIN32: define dso_local x86_thiscallcc %struct.class_0* @"??0class_0@@QAE@XZ"(%struct.class_0* returned %this, i32 %is_most_derived) 
+  // WIN32: define dso_local x86_thiscallcc %struct.class_0* @"??0class_0@@QAE@XZ"(%struct.class_0* returned %this, i32 %is_most_derived)
   // WIN32: store i32 %is_most_derived, i32* %[[IS_MOST_DERIVED_VAR:.*]], align 4
   // WIN32: %[[IS_MOST_DERIVED_VAL:.*]] = load i32, i32* %[[IS_MOST_DERIVED_VAR]]
   // WIN32: %[[SHOULD_CALL_VBASE_CTORS:.*]] = icmp ne i32 %[[IS_MOST_DERIVED_VAL]], 0
@@ -304,7 +304,7 @@ class_0::class_0() {
 // ehcleanup:
   // WIN32: %[[CLEANUPPAD:.*]] = cleanuppad within none []
   // WIN32-NEXT: bitcast %{{.*}}* %{{.*}} to i8*
-  // WIN32-NEXT: getelementptr inbounds i8, i8* %{{.*}}, i{{.*}} {{.}} 
+  // WIN32-NEXT: getelementptr inbounds i8, i8* %{{.*}}, i{{.*}} {{.}}
   // WIN32-NEXT: bitcast i8* %{{.*}} to %{{.*}}*
   // WIN32-NEXT: %[[SHOULD_CALL_VBASE_DTOR:.*]] = icmp ne i32 %[[IS_MOST_DERIVED_VAL]], 0
   // WIN32-NEXT: br i1 %[[SHOULD_CALL_VBASE_DTOR]], label %[[DTOR_VBASE:.*]], label %[[SKIP_VBASE:.*]]

@@ -170,8 +170,8 @@ AST Matchers
 clang-format
 ------------
 
-
-- ...
+- Added new option `PPDIS_BeforeHash` (in configuration: `BeforeHash`) to
+  `IndentPPDirectives` which indents preprocessor directives before the hash.
 
 libclang
 --------

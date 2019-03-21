@@ -1411,6 +1411,16 @@ the configuration (without a prefix: ``Auto``).
        #  endif
        #endif
 
+  * ``PPDIS_BeforeHash`` (in configuration: ``BeforeHash``)
+    Indents directives before the hash.
+
+    .. code-block:: c++
+
+       #if FOO
+         #if BAR
+           #include <foo>
+         #endif
+       #endif
 
 
 **IndentWidth** (``unsigned``)

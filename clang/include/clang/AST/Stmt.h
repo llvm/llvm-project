@@ -91,12 +91,20 @@ protected:
   //===--- Statement bitfields classes ---===//
 
   class StmtBitfields {
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
     friend class Stmt;
 
     /// The statement class.
     unsigned sClass : 8;
+
+    /// This bit is set only for the Stmts that are the structured-block of
+    /// OpenMP executable directives. Directives that have a structured block
+    /// are called "non-standalone" directives.
+    /// I.e. those returned by OMPExecutableDirective::getStructuredBlock().
+    unsigned IsOMPStructuredBlock : 1;
   };
-  enum { NumStmtBits = 8 };
+  enum { NumStmtBits = 9 };
 
   class NullStmtBitfields {
     friend class ASTStmtReader;
@@ -1026,6 +1034,7 @@ public:
     static_assert(sizeof(*this) % alignof(void *) == 0,
                   "Insufficient alignment!");
     StmtBits.sClass = SC;
+    StmtBits.IsOMPStructuredBlock = false;
     if (StatisticsEnabled) Stmt::addStmtClass(SC);
   }
 
@@ -1034,6 +1043,11 @@ public:
   }
 
   const char *getStmtClassName() const;
+
+  bool isOMPStructuredBlock() const { return StmtBits.IsOMPStructuredBlock; }
+  void setIsOMPStructuredBlock(bool IsOMPStructuredBlock) {
+    StmtBits.IsOMPStructuredBlock = IsOMPStructuredBlock;
+  }
 
   /// SourceLocation tokens are not useful in isolation - they are low level
   /// value objects created/interpreted by SourceManager. We assume AST

@@ -77,7 +77,7 @@ CharSourceRange getExtendedRange(const T &Node, tok::TokenKind Next,
 ///     if (!x) return foo();
 ///     // S2:
 ///     if (!x) { return 3; }
-//    }
+///   }
 /// \endcode
 /// then
 /// \code

@@ -18,12 +18,12 @@ void for_disable()
 // CHECK: br label %{{.*}}, !llvm.loop ![[FOR_DISABLE:.*]]
 }
 
-void for_full()
+void for_enable()
 {
-// CHECK-LABEL: for_full
+// CHECK-LABEL: for_enable
     __attribute__((opencl_unroll_hint))
     for( int i = 0; i < 1000; ++i);
-// CHECK: br label %{{.*}}, !llvm.loop ![[FOR_FULL:.*]]
+// CHECK: br label %{{.*}}, !llvm.loop ![[FOR_ENABLE:.*]]
 }
 
 /*** while ***/
@@ -45,13 +45,13 @@ void while_disable()
 // CHECK: br label %{{.*}}, !llvm.loop ![[WHILE_DISABLE:.*]]
 }
 
-void while_full()
+void while_enable()
 {
-// CHECK-LABEL: while_full
+// CHECK-LABEL: while_enable
     int i = 1000;
     __attribute__((opencl_unroll_hint))
     while(i-->0);
-// CHECK: br label %{{.*}}, !llvm.loop ![[WHILE_FULL:.*]]
+// CHECK: br label %{{.*}}, !llvm.loop ![[WHILE_ENABLE:.*]]
 }
 
 /*** do ***/
@@ -73,13 +73,13 @@ void do_disable()
 // CHECK: br i1 %{{.*}}, label %{{.*}}, label %{{.*}}, !llvm.loop ![[DO_DISABLE:.*]]
 }
 
-void do_full()
+void do_enable()
 {
-// CHECK-LABEL: do_full
+// CHECK-LABEL: do_enable
     int i = 1000;
     __attribute__((opencl_unroll_hint))
     do {} while(i--> 0);
-// CHECK: br i1 %{{.*}}, label %{{.*}}, label %{{.*}}, !llvm.loop ![[DO_FULL:.*]]
+// CHECK: br i1 %{{.*}}, label %{{.*}}, label %{{.*}}, !llvm.loop ![[DO_ENABLE:.*]]
 }
 
 
@@ -87,11 +87,11 @@ void do_full()
 // CHECK: ![[COUNT]]         =  !{!"llvm.loop.unroll.count", i32 8}
 // CHECK: ![[FOR_DISABLE]]   =  distinct !{![[FOR_DISABLE]],  ![[DISABLE:.*]]}
 // CHECK: ![[DISABLE]]       =  !{!"llvm.loop.unroll.disable"}
-// CHECK: ![[FOR_FULL]]      =  distinct !{![[FOR_FULL]],  ![[FULL:.*]]}
-// CHECK: ![[FULL]]          =  !{!"llvm.loop.unroll.full"}
+// CHECK: ![[FOR_ENABLE]]      =  distinct !{![[FOR_ENABLE]],  ![[ENABLE:.*]]}
+// CHECK: ![[ENABLE]]          =  !{!"llvm.loop.unroll.enable"}
 // CHECK: ![[WHILE_COUNT]]   =  distinct !{![[WHILE_COUNT]],    ![[COUNT]]}
 // CHECK: ![[WHILE_DISABLE]] =  distinct !{![[WHILE_DISABLE]],  ![[DISABLE]]}
-// CHECK: ![[WHILE_FULL]]    =  distinct !{![[WHILE_FULL]],     ![[FULL]]}
+// CHECK: ![[WHILE_ENABLE]]    =  distinct !{![[WHILE_ENABLE]],     ![[ENABLE]]}
 // CHECK: ![[DO_COUNT]]      =  distinct !{![[DO_COUNT]],       ![[COUNT]]}
 // CHECK: ![[DO_DISABLE]]    =  distinct !{![[DO_DISABLE]],     ![[DISABLE]]}
-// CHECK: ![[DO_FULL]]       =  distinct !{![[DO_FULL]],        ![[FULL]]}
+// CHECK: ![[DO_ENABLE]]       =  distinct !{![[DO_ENABLE]],        ![[ENABLE]]}

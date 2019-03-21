@@ -15,13 +15,19 @@ int sss;
 #pragma omp allocate(sss) allocator(sss)  // expected-error {{omp_allocator_handle_t type not found; include <omp.h>}}
 
 typedef void **omp_allocator_handle_t;
-extern const omp_allocator_handle_t omp_thread_mem_alloc;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
 extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
 
 struct St1{
  int a;
  static int b;
-#pragma omp allocate(b) allocator(sss) // expected-error {{initializing 'omp_allocator_handle_t' (aka 'void **') with an expression of incompatible type 'int'}} expected-note {{previous allocator is specified here}}
+#pragma omp allocate(b) allocator(sss) // expected-error {{initializing 'const omp_allocator_handle_t' (aka 'void **const') with an expression of incompatible type 'int'}} expected-note {{previous allocator is specified here}}
 #pragma omp allocate(b)
 #pragma omp allocate(b) allocator(omp_thread_mem_alloc) // expected-warning {{allocate directive specifies 'omp_thread_mem_alloc' allocator while previously used default}}
 } d; // expected-note 2 {{'d' defined here}}

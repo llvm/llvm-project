@@ -410,7 +410,10 @@ private:
          Parent->isUnaryOperator() ||
          // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
          Parent->isOneOf(TT_ObjCForIn, TT_CastRParen) ||
-         getBinOpPrecedence(Parent->Tok.getKind(), true, true) > prec::Unknown);
+         // for (auto && [A,B] : C)  && structure binding seen as ObjCMethodExpr
+         (Parent->isNot(tok::ampamp) &&
+          getBinOpPrecedence(Parent->Tok.getKind(), true, true) >
+              prec::Unknown));
     bool ColonFound = false;
 
     unsigned BindingIncrease = 1;
@@ -1921,12 +1924,15 @@ void TokenAnnotator::setCommentLineLevels(
         NextNonCommentLine->First->NewlinesBefore <= 1 &&
         NextNonCommentLine->First->OriginalColumn ==
             (*I)->First->OriginalColumn) {
-      // Align comments for preprocessor lines with the # in column 0.
-      // Otherwise, align with the next line.
-      (*I)->Level = (NextNonCommentLine->Type == LT_PreprocessorDirective ||
-                     NextNonCommentLine->Type == LT_ImportStatement)
-                        ? 0
-                        : NextNonCommentLine->Level;
+      // Align comments for preprocessor lines with the # in column 0 if
+      // preprocessor lines are not indented. Otherwise, align with the next
+      // line.
+      (*I)->Level =
+          (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+           (NextNonCommentLine->Type == LT_PreprocessorDirective ||
+            NextNonCommentLine->Type == LT_ImportStatement))
+              ? 0
+              : NextNonCommentLine->Level;
     } else {
       NextNonCommentLine = (*I)->First->isNot(tok::r_brace) ? (*I) : nullptr;
     }

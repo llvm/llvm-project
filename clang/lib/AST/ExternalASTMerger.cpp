@@ -110,7 +110,7 @@ public:
 
   /// Whenever a DeclContext is imported, ensure that ExternalASTSource's origin
   /// map is kept up to date.  Also set the appropriate flags.
-  Decl *Imported(Decl *From, Decl *To) override {
+  void Imported(Decl *From, Decl *To) override {
     if (auto *ToDC = dyn_cast<DeclContext>(To)) {
       const bool LoggingEnabled = Parent.LoggingEnabled();
       if (LoggingEnabled)
@@ -153,7 +153,6 @@ public:
       ToContainer->getPrimaryContext()->setMustBuildLookupTable();
       assert(Parent.CanComplete(ToContainer));
     }
-    return To;
   }
   ASTImporter &GetReverse() { return Reverse; }
 };
