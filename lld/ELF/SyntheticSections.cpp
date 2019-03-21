@@ -3052,183 +3052,33 @@ MipsRldMapSection::MipsRldMapSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, Config->Wordsize,
                        ".rld_map") {}
 
-ARMExidxSyntheticSection::ARMExidxSyntheticSection()
+ARMExidxSentinelSection::ARMExidxSentinelSection()
     : SyntheticSection(SHF_ALLOC | SHF_LINK_ORDER, SHT_ARM_EXIDX,
-                       Config->Wordsize, ".ARM.exidx") {
-  for (InputSectionBase *&IS : InputSections) {
-    if (isa<InputSection>(IS) && IS->Type == SHT_ARM_EXIDX) {
-      ExidxSections.push_back(cast<InputSection>(IS));
-      IS = nullptr;
-    } else if (IS->Live && isa<InputSection>(IS) &&
-               IS->kind() != SectionBase::Synthetic &&
-               (IS->Flags & SHF_ALLOC) && (IS->Flags & SHF_EXECINSTR) &&
-               IS->getSize() > 0) {
-      ExecutableSections.push_back(cast<InputSection>(IS));
-    }
-  }
-  setSizeAndOffsets();
+                       Config->Wordsize, ".ARM.exidx") {}
 
-  std::vector<InputSectionBase *> &V = InputSections;
-  V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());
+// Write a terminating sentinel entry to the end of the .ARM.exidx table.
+// This section will have been sorted last in the .ARM.exidx table.
+// This table entry will have the form:
+// | PREL31 upper bound of code that has exception tables | EXIDX_CANTUNWIND |
+// The sentinel must have the PREL31 value of an address higher than any
+// address described by any other table entry.
+void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
+  assert(Highest);
+  uint64_t S = Highest->getVA(Highest->getSize());
+  uint64_t P = getVA();
+  Target->relocateOne(Buf, R_ARM_PREL31, S - P);
+  write32le(Buf + 4, 1);
 }
 
-static InputSection *findExidxSection(InputSection *IS) {
-  for (InputSection *D : IS->DependentSections)
-    if (D->Type == SHT_ARM_EXIDX)
-      return D;
-  return nullptr;
-}
-
-void ARMExidxSyntheticSection::setSizeAndOffsets() {
-  size_t Offset = 0;
-  Size = 0;
-  for (InputSection *IS : ExecutableSections) {
-    if (InputSection *D = findExidxSection(IS)) {
-      D->OutSecOff = Offset;
-      D->Parent = getParent();
-      Offset += D->getSize();
-      Empty = false;
-    } else {
-      Offset += 8;
-    }
-  }
-  // Size includes Sentinel.
-  Size = Offset + 8;
-}
-
-// References to .ARM.Extab Sections have bit 31 clear and are not the
-// special EXIDX_CANTUNWIND bit-pattern.
-static bool isExtabRef(uint32_t Unwind) {
-  return (Unwind & 0x80000000) == 0 && Unwind != 0x1;
-}
-
-// Return true if the .ARM.exidx section Cur can be merged into the .ARM.exidx
-// section Prev, where Cur follows Prev in the table. This can be done if the
-// unwinding instructions in Cur are identical to Prev. Linker generated
-// EXIDX_CANTUNWIND entries are represented by nullptr as they do not have an
-// InputSection.
-static bool isDuplicateArmExidxSec(InputSection *Prev, InputSection *Cur) {
-
-  struct ExidxEntry {
-    ulittle32_t Fn;
-    ulittle32_t Unwind;
-  };
-  // Get the last table Entry from the previous .ARM.exidx section. If Prev is
-  // nullptr then it will be a synthesized EXIDX_CANTUNWIND entry.
-  ExidxEntry PrevEntry = {ulittle32_t(0), ulittle32_t(1)};
-  if (Prev)
-    PrevEntry = Prev->getDataAs<ExidxEntry>().back();
-  if (isExtabRef(PrevEntry.Unwind))
-    return false;
-
-  // We consider the unwind instructions of an .ARM.exidx table entry
-  // a duplicate if the previous unwind instructions if:
-  // - Both are the special EXIDX_CANTUNWIND.
-  // - Both are the same inline unwind instructions.
-  // We do not attempt to follow and check links into .ARM.extab tables as
-  // consecutive identical entries are rare and the effort to check that they
-  // are identical is high.
-
-  // If Cur is nullptr then this is synthesized EXIDX_CANTUNWIND entry.
-  if (Cur == nullptr)
-    return PrevEntry.Unwind == 1;
-
-  for (const ExidxEntry Entry : Cur->getDataAs<ExidxEntry>())
-    if (isExtabRef(Entry.Unwind) || Entry.Unwind != PrevEntry.Unwind)
+// The sentinel has to be removed if there are no other .ARM.exidx entries.
+bool ARMExidxSentinelSection::empty() const {
+  for (InputSection *IS : getInputSections(getParent()))
+    if (!isa<ARMExidxSentinelSection>(IS))
       return false;
-
-  // All table entries in this .ARM.exidx Section can be merged into the
-  // previous Section.
   return true;
 }
 
-// The .ARM.exidx table must be sorted in ascending order of the address of the
-// functions the table describes. Optionally duplicate adjacent table entries
-// can be removed. At the end of the function the ExecutableSections must be
-// sorted in ascending order of address, Sentinel is set to the InputSection
-// with the highest address and any InputSections that have mergeable
-// .ARM.exidx table entries are removed from it.
-void ARMExidxSyntheticSection::finalizeContents() {
-  // Sort the executable sections that may or may not have associated
-  // .ARM.exidx sections by order of ascending address. This requires the
-  // relative positions of InputSections to be known.
-  auto CompareByFilePosition = [](const InputSection *A,
-                                  const InputSection *B) {
-    OutputSection *AOut = A->getParent();
-    OutputSection *BOut = B->getParent();
-
-    if (AOut != BOut)
-      return AOut->SectionIndex < BOut->SectionIndex;
-    return A->OutSecOff < B->OutSecOff;
-  };
-  std::stable_sort(ExecutableSections.begin(), ExecutableSections.end(),
-                   CompareByFilePosition);
-  Sentinel = ExecutableSections.back();
-  // Optionally merge adjacent duplicate entries.
-  if (Config->MergeArmExidx) {
-    std::vector<InputSection *> SelectedSections;
-    SelectedSections.reserve(ExecutableSections.size());
-    SelectedSections.push_back(ExecutableSections[0]);
-    size_t Prev = 0;
-    for (size_t I = 1; I < ExecutableSections.size(); ++I) {
-      InputSection *EX1 = findExidxSection(ExecutableSections[Prev]);
-      InputSection *EX2 = findExidxSection(ExecutableSections[I]);
-      if (!isDuplicateArmExidxSec(EX1, EX2)) {
-        SelectedSections.push_back(ExecutableSections[I]);
-        Prev = I;
-      }
-    }
-    ExecutableSections = std::move(SelectedSections);
-  }
-  setSizeAndOffsets();
-}
-
-InputSection *ARMExidxSyntheticSection::getLinkOrderDep() const {
-  for (InputSection *IS : ExecutableSections)
-    if (findExidxSection(IS))
-      return IS;
-  return nullptr;
-}
-
-// To write the .ARM.exidx table from the ExecutableSections we have three cases
-// 1.) The InputSection has a .ARM.exidx InputSection in its dependent sections.
-//     We write the .ARM.exidx section contents and apply its relocations.
-// 2.) The InputSection does not have a dependent .ARM.exidx InputSection. We
-//     must write the contents of an EXIDX_CANTUNWIND directly. We use the
-//     start of the InputSection as the purpose of the linker generated
-//     section is to terminate the address range of the previous entry.
-// 3.) A trailing EXIDX_CANTUNWIND sentinel section is required at the end of
-//     the table to terminate the address range of the final entry.
-void ARMExidxSyntheticSection::writeTo(uint8_t *Buf) {
-
-  const uint8_t CantUnwindData[8] = {0, 0, 0, 0,  // PREL31 to target
-                                     1, 0, 0, 0}; // EXIDX_CANTUNWIND
-
-  uint64_t Offset = 0;
-  for (InputSection *IS : ExecutableSections) {
-    assert(IS->getParent() != nullptr);
-    if (InputSection *D = findExidxSection(IS)) {
-      memcpy(Buf + Offset, D->data().data(), D->data().size());
-      D->relocateAlloc(Buf, Buf + D->getSize());
-      Offset += D->getSize();
-    } else {
-      // A Linker generated CANTUNWIND section.
-      memcpy(Buf + Offset, CantUnwindData, sizeof(CantUnwindData));
-      uint64_t S = IS->getVA();
-      uint64_t P = getVA() + Offset;
-      Target->relocateOne(Buf + Offset, R_ARM_PREL31, S - P);
-      Offset += 8;
-    }
-  }
-  // Write Sentinel.
-  memcpy(Buf + Offset, CantUnwindData, sizeof(CantUnwindData));
-  uint64_t S = Sentinel->getVA(Sentinel->getSize());
-  uint64_t P = getVA() + Offset;
-  Target->relocateOne(Buf + Offset, R_ARM_PREL31, S - P);
-  assert(Size == Offset + 8);
-}
-
-bool ARMExidxSyntheticSection::classof(const SectionBase *D) {
+bool ARMExidxSentinelSection::classof(const SectionBase *D) {
   return D->kind() == InputSectionBase::Synthetic && D->Type == SHT_ARM_EXIDX;
 }
 

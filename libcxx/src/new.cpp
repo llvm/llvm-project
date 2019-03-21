@@ -12,22 +12,22 @@
 #include "include/atomic_support.h"
 
 #if defined(_LIBCPP_ABI_MICROSOFT)
-#if !defined(_LIBCPP_ABI_VCRUNTIME)
-#include "support/runtime/new_handler_fallback.ipp"
-#endif
+#   if !defined(_LIBCPP_ABI_VCRUNTIME)
+#       include "support/runtime/new_handler_fallback.ipp"
+#   endif
 #elif defined(LIBCXX_BUILDING_LIBCXXABI)
-#include <cxxabi.h>
+#   include <cxxabi.h>
 #elif defined(LIBCXXRT)
-#include <cxxabi.h>
-#include "support/runtime/new_handler_fallback.ipp"
-#elif defined(__GLIBCXX__)
-// nothing todo
-#else
-# if defined(__APPLE__) && !defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY)
-#   include <cxxabi.h> // FIXME: remove this once buildit is gone.
-# else
+#   include <cxxabi.h>
 #   include "support/runtime/new_handler_fallback.ipp"
-# endif
+#elif defined(__GLIBCXX__)
+    // nothing to do
+#else
+#   if defined(__APPLE__) && !defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY)
+#       include <cxxabi.h> // FIXME: remove this once buildit is gone.
+#   else
+#       include "support/runtime/new_handler_fallback.ipp"
+#   endif
 #endif
 
 namespace std

@@ -435,12 +435,10 @@ template <class ELFT> static void createSyntheticSections() {
   if (In.StrTab)
     Add(In.StrTab);
 
-  if (Config->EMachine == EM_ARM && !Config->Relocatable) {
-    // The ARMExidxsyntheticsection replaces all the individual .ARM.exidx
-    // InputSections.
-    In.ARMExidx = make<ARMExidxSyntheticSection>();
-    Add(In.ARMExidx);
-  }
+  if (Config->EMachine == EM_ARM && !Config->Relocatable)
+    // Add a sentinel to terminate .ARM.exidx. It helps an unwinder
+    // to find the exact address range of the last entry.
+    Add(make<ARMExidxSentinelSection>());
 }
 
 // The main function of the writer.
@@ -923,9 +921,6 @@ void Writer<ELFT>::forEachRelSec(
       Fn(*IS);
   for (EhInputSection *ES : In.EhFrame->Sections)
     Fn(*ES);
-  if (In.ARMExidx)
-    for (InputSection *Ex : In.ARMExidx->ExidxSections)
-      Fn(*Ex);
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or
@@ -1388,6 +1383,11 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 }
 
 static bool compareByFilePosition(InputSection *A, InputSection *B) {
+  // Synthetic, i. e. a sentinel section, should go last.
+  if (A->kind() == InputSectionBase::Synthetic ||
+      B->kind() == InputSectionBase::Synthetic)
+    return A->kind() != InputSectionBase::Synthetic;
+
   InputSection *LA = A->getLinkOrderDep();
   InputSection *LB = B->getLinkOrderDep();
   OutputSection *AOut = LA->getParent();
@@ -1396,6 +1396,53 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
   if (AOut != BOut)
     return AOut->SectionIndex < BOut->SectionIndex;
   return LA->OutSecOff < LB->OutSecOff;
+}
+
+// This function is used by the --merge-exidx-entries to detect duplicate
+// .ARM.exidx sections. It is Arm only.
+//
+// The .ARM.exidx section is of the form:
+// | PREL31 offset to function | Unwind instructions for function |
+// where the unwind instructions are either a small number of unwind
+// instructions inlined into the table entry, the special CANT_UNWIND value of
+// 0x1 or a PREL31 offset into a .ARM.extab Section that contains unwind
+// instructions.
+//
+// We return true if all the unwind instructions in the .ARM.exidx entries of
+// Cur can be merged into the last entry of Prev.
+static bool isDuplicateArmExidxSec(InputSection *Prev, InputSection *Cur) {
+
+  // References to .ARM.Extab Sections have bit 31 clear and are not the
+  // special EXIDX_CANTUNWIND bit-pattern.
+  auto IsExtabRef = [](uint32_t Unwind) {
+    return (Unwind & 0x80000000) == 0 && Unwind != 0x1;
+  };
+
+  struct ExidxEntry {
+    ulittle32_t Fn;
+    ulittle32_t Unwind;
+  };
+
+  // Get the last table Entry from the previous .ARM.exidx section.
+  const ExidxEntry &PrevEntry = Prev->getDataAs<ExidxEntry>().back();
+  if (IsExtabRef(PrevEntry.Unwind))
+    return false;
+
+  // We consider the unwind instructions of an .ARM.exidx table entry
+  // a duplicate if the previous unwind instructions if:
+  // - Both are the special EXIDX_CANTUNWIND.
+  // - Both are the same inline unwind instructions.
+  // We do not attempt to follow and check links into .ARM.extab tables as
+  // consecutive identical entries are rare and the effort to check that they
+  // are identical is high.
+
+  for (const ExidxEntry Entry : Cur->getDataAs<ExidxEntry>())
+    if (IsExtabRef(Entry.Unwind) || Entry.Unwind != PrevEntry.Unwind)
+      return false;
+
+  // All table entries in this .ARM.exidx Section can be merged into the
+  // previous Section.
+  return true;
 }
 
 template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
@@ -1415,17 +1462,46 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
         }
       }
     }
-
-    // The ARM.exidx section use SHF_LINK_ORDER, but we have consolidated
-    // this processing inside the ARMExidxsyntheticsection::finalizeContents().
-    if (!Config->Relocatable && Config->EMachine == EM_ARM &&
-        Sec->Type == SHT_ARM_EXIDX)
-      continue;
-
     std::stable_sort(Sections.begin(), Sections.end(), compareByFilePosition);
+
+    if (!Config->Relocatable && Config->EMachine == EM_ARM &&
+        Sec->Type == SHT_ARM_EXIDX) {
+
+      if (auto *Sentinel = dyn_cast<ARMExidxSentinelSection>(Sections.back())) {
+        assert(Sections.size() >= 2 &&
+               "We should create a sentinel section only if there are "
+               "alive regular exidx sections.");
+
+        // The last executable section is required to fill the sentinel.
+        // Remember it here so that we don't have to find it again.
+        Sentinel->Highest = Sections[Sections.size() - 2]->getLinkOrderDep();
+      }
+
+      // The EHABI for the Arm Architecture permits consecutive identical
+      // table entries to be merged. We use a simple implementation that
+      // removes a .ARM.exidx Input Section if it can be merged into the
+      // previous one. This does not require any rewriting of InputSection
+      // contents but misses opportunities for fine grained deduplication
+      // where only a subset of the InputSection contents can be merged.
+      if (Config->MergeArmExidx) {
+        size_t Prev = 0;
+        // The last one is a sentinel entry which should not be removed.
+        for (size_t I = 1; I < Sections.size() - 1; ++I) {
+          if (isDuplicateArmExidxSec(Sections[Prev], Sections[I]))
+            Sections[I] = nullptr;
+          else
+            Prev = I;
+        }
+      }
+    }
 
     for (int I = 0, N = Sections.size(); I < N; ++I)
       *ScriptSections[I] = Sections[I];
+
+    // Remove the Sections we marked as duplicate earlier.
+    for (BaseCommand *Base : Sec->SectionCommands)
+      if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
+        llvm::erase_if(ISD->Sections, [](InputSection *IS) { return !IS; });
   }
 }
 
@@ -1695,7 +1771,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
   finalizeSynthetic(In.DynSymTab);
-  finalizeSynthetic(In.ARMExidx);
   finalizeSynthetic(In.Bss);
   finalizeSynthetic(In.BssRelRo);
   finalizeSynthetic(In.GnuHashTab);
@@ -1722,8 +1797,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (!Script->HasSectionsCommand && !Config->Relocatable)
     fixSectionAlignments();
 
-  // SHFLinkOrder processing must be processed after relative section placements are
-  // known but before addresses are allocated.
+  // After link order processing .ARM.exidx sections can be deduplicated, which
+  // needs to be resolved before any other address dependent operation.
   resolveShfLinkOrder();
 
   // Jump instructions in many ISAs have small displacements, and therefore they

@@ -158,22 +158,23 @@ public:
   static bool OffsetLessThan(const DWARFDebugInfoEntry &a,
                              const DWARFDebugInfoEntry &b);
 
-  void Dump(SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
+  void Dump(SymbolFileDWARF *dwarf2Data,
+            lldb_private::DWARFContext &dwarf_context, const DWARFUnit *cu,
             lldb_private::Stream &s, uint32_t recurse_depth) const;
 
   static void
-  DumpAttribute(SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
+  DumpAttribute(SymbolFileDWARF *dwarf2Data,
+                lldb_private::DWARFContext &dwarf_context, const DWARFUnit *cu,
                 const lldb_private::DWARFDataExtractor &debug_info_data,
                 lldb::offset_t *offset_ptr, lldb_private::Stream &s,
                 dw_attr_t attr, DWARFFormValue &form_value);
 
-  bool
-  GetDIENamesAndRanges(SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
-                       const char *&name, const char *&mangled,
-                       DWARFRangeList &rangeList, int &decl_file,
-                       int &decl_line, int &decl_column, int &call_file,
-                       int &call_line, int &call_column,
-                       lldb_private::DWARFExpression *frame_base = NULL) const;
+  bool GetDIENamesAndRanges(
+      SymbolFileDWARF *dwarf2Data, lldb_private::DWARFContext &dwarf_context,
+      const DWARFUnit *cu, const char *&name, const char *&mangled,
+      DWARFRangeList &rangeList, int &decl_file, int &decl_line,
+      int &decl_column, int &call_file, int &call_line, int &call_column,
+      lldb_private::DWARFExpression *frame_base = NULL) const;
 
   const DWARFAbbreviationDeclaration *
   GetAbbreviationDeclarationPtr(SymbolFileDWARF *dwarf2Data,
