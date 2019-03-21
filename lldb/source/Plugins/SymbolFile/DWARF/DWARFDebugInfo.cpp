@@ -91,8 +91,8 @@ void DWARFDebugInfo::ParseCompileUnitHeadersIfNeeded() {
   const auto &debug_info_data = m_dwarf2Data->get_debug_info_data();
 
   while (debug_info_data.ValidOffset(offset)) {
-    llvm::Expected<DWARFUnitSP> cu_sp =
-        DWARFCompileUnit::extract(m_dwarf2Data, debug_info_data, &offset);
+    llvm::Expected<DWARFUnitSP> cu_sp = DWARFCompileUnit::extract(
+        m_dwarf2Data, m_context, debug_info_data, &offset);
 
     if (!cu_sp) {
       // FIXME: Propagate this error up.

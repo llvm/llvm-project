@@ -1213,16 +1213,17 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                 return false;
             } else if (const auto *MD = dyn_cast<MemoryDef>(&MA))
               if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
+                (void)LI; // Silence warning.
                 assert(!LI->isUnordered() && "Expected unordered load");
                 return false;
               }
-         }
+        }
 
-        auto *Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(SI);
-        (*LicmMssaOptCounter)++;
-        // If there are no clobbering Defs in the loop, store is safe to hoist.
-        return MSSA->isLiveOnEntryDef(Source) ||
-               !CurLoop->contains(Source->getBlock());
+      auto *Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(SI);
+      (*LicmMssaOptCounter)++;
+      // If there are no clobbering Defs in the loop, store is safe to hoist.
+      return MSSA->isLiveOnEntryDef(Source) ||
+             !CurLoop->contains(Source->getBlock());
     }
   }
 

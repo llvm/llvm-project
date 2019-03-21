@@ -298,6 +298,8 @@ private:
           CurrentToken->Type = TT_JavaAnnotation;
         if (Left->Previous && Left->Previous->is(TT_LeadingJavaAnnotation))
           CurrentToken->Type = TT_LeadingJavaAnnotation;
+        if (Left->Previous && Left->Previous->is(TT_AttributeSquare))
+          CurrentToken->Type = TT_AttributeSquare;
 
         if (!HasMultipleLines)
           Left->PackingKind = PPK_Inconclusive;
@@ -344,6 +346,40 @@ private:
       updateParameterCount(Left, Tok);
       if (CurrentToken && CurrentToken->HasUnescapedNewline)
         HasMultipleLines = true;
+    }
+    return false;
+  }
+
+  bool isCSharpAttributeSpecifier(const FormatToken &Tok) {
+    if (!Style.isCSharp())
+      return false;
+
+    const FormatToken *AttrTok = Tok.Next;
+    if (!AttrTok)
+      return false;
+
+    // Just an empty declaration e.g. string [].
+    if (AttrTok->is(tok::r_square))
+      return false;
+
+    // Move along the tokens inbetween the '[' and ']' e.g. [STAThread].
+    while (AttrTok && AttrTok->isNot(tok::r_square)) {
+      AttrTok = AttrTok->Next;
+    }
+
+    if (!AttrTok)
+      return false;
+
+    // Move past the end of ']'.
+    AttrTok = AttrTok->Next;
+    if (!AttrTok)
+      return false;
+
+    // Limit this to being an access modifier that follows.
+    if (AttrTok->isOneOf(tok::kw_public, tok::kw_private, tok::kw_protected,
+                         tok::kw_class, tok::kw_static, tok::l_square,
+                         Keywords.kw_internal)) {
+      return true;
     }
     return false;
   }
@@ -397,6 +433,11 @@ private:
 
     bool IsCpp11AttributeSpecifier = isCpp11AttributeSpecifier(*Left) ||
                                      Contexts.back().InCpp11AttributeSpecifier;
+
+    // Treat C# Attributes [STAThread] much like C++ attributes [[...]].
+    bool IsCSharp11AttributeSpecifier =
+        isCSharpAttributeSpecifier(*Left) ||
+        Contexts.back().InCSharpAttributeSpecifier;
 
     bool InsideInlineASM = Line.startsWith(tok::kw_asm);
     bool StartsObjCMethodExpr =
@@ -478,6 +519,8 @@ private:
                                  // Should only be relevant to JavaScript:
                                  tok::kw_default)) {
         Left->Type = TT_ArrayInitializerLSquare;
+      } else if (IsCSharp11AttributeSpecifier) {
+        Left->Type = TT_AttributeSquare;
       } else {
         BindingIncrease = 10;
         Left->Type = TT_ArraySubscriptLSquare;
@@ -492,10 +535,13 @@ private:
 
     Contexts.back().ColonIsObjCMethodExpr = StartsObjCMethodExpr;
     Contexts.back().InCpp11AttributeSpecifier = IsCpp11AttributeSpecifier;
+    Contexts.back().InCSharpAttributeSpecifier = IsCSharp11AttributeSpecifier;
 
     while (CurrentToken) {
       if (CurrentToken->is(tok::r_square)) {
         if (IsCpp11AttributeSpecifier)
+          CurrentToken->Type = TT_AttributeSquare;
+        if (IsCSharp11AttributeSpecifier)
           CurrentToken->Type = TT_AttributeSquare;
         else if (((CurrentToken->Next &&
                    CurrentToken->Next->is(tok::l_paren)) ||
@@ -1193,6 +1239,7 @@ private:
     bool CaretFound = false;
     bool IsForEachMacro = false;
     bool InCpp11AttributeSpecifier = false;
+    bool InCSharpAttributeSpecifier = false;
   };
 
   /// Puts a new \c Context onto the stack \c Contexts for the lifetime
@@ -2630,7 +2677,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // and "%d %d"
     if (Left.is(tok::numeric_constant) && Right.is(tok::percent))
       return Right.WhitespaceRange.getEnd() != Right.WhitespaceRange.getBegin();
-  } else if (Style.Language == FormatStyle::LK_JavaScript) {
+  } else if (Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp()) {
     if (Left.is(TT_JsFatArrow))
       return true;
     // for await ( ...
@@ -2977,6 +3024,14 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Left.is(TT_ObjCBlockLBrace) && !Style.AllowShortBlocksOnASingleLine)
     return true;
 
+  // Put multiple C# attributes on a new line.
+  if (Style.isCSharp() &&
+      ((Left.is(TT_AttributeSquare) && Left.is(tok::r_square)) ||
+       (Left.is(tok::r_square) && Right.is(TT_AttributeSquare) &&
+        Right.is(tok::l_square))))
+    return true;
+
+  // Put multiple Java annotation on a new line.
   if ((Style.Language == FormatStyle::LK_Java ||
        Style.Language == FormatStyle::LK_JavaScript) &&
       Left.is(TT_LeadingJavaAnnotation) &&

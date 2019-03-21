@@ -3136,6 +3136,15 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
       // there but not here.
       NewTypeInfo = NewTypeInfo.withCallingConv(OldTypeInfo.getCC());
       RequiresAdjustment = true;
+    } else if (New->getBuiltinID()) {
+      // Calling Conventions on a Builtin aren't really useful and setting a
+      // default calling convention and cdecl'ing some builtin redeclarations is
+      // common, so warn and ignore the calling convention on the redeclaration.
+      Diag(New->getLocation(), diag::warn_cconv_ignored)
+          << FunctionType::getNameForCallConv(NewTypeInfo.getCC())
+          << (int)CallingConventionIgnoredReason::BuiltinFunction;
+      NewTypeInfo = NewTypeInfo.withCallingConv(OldTypeInfo.getCC());
+      RequiresAdjustment = true;
     } else {
       // Calling conventions aren't compatible, so complain.
       bool FirstCCExplicit = getCallingConvAttributedType(First->getType());

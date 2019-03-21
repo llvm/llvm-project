@@ -41,7 +41,9 @@ protected:
     ID_Archive,
     ID_MachOUniversalBinary,
     ID_COFFImportFile,
-    ID_IR,                 // LLVM IR
+    ID_IR, // LLVM IR
+
+    ID_Minidump,
 
     ID_WinRes, // Windows resource (.res) file.
 
@@ -126,6 +128,8 @@ public:
   bool isIR() const {
     return TypeID == ID_IR;
   }
+
+  bool isMinidump() const { return TypeID == ID_Minidump; }
 
   bool isLittleEndian() const {
     return !(TypeID == ID_ELF32B || TypeID == ID_ELF64B ||

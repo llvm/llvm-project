@@ -7,8 +7,8 @@ supported by :doc:`LibFormat` and :doc:`ClangFormat`.
 
 When using :program:`clang-format` command line utility or
 ``clang::format::reformat(...)`` functions from code, one can either use one of
-the predefined styles (LLVM, Google, Chromium, Mozilla, WebKit) or create a
-custom style by configuring specific style options.
+the predefined styles (LLVM, Google, Chromium, Mozilla, WebKit, Microsoft) or
+create a custom style by configuring specific style options.
 
 
 Configuring Style with clang-format
@@ -68,6 +68,10 @@ An example of a configuration file for multiple languages:
   Language: Proto
   # Don't format .proto files.
   DisableFormat: true
+  ---
+  Language: CSharp
+  # Use 100 columns for C#.
+  ColumnLimit: 100
   ...
 
 An easy way to get a valid ``.clang-format`` file containing all configuration
@@ -144,6 +148,9 @@ the configuration (without a prefix: ``Auto``).
   * ``WebKit``
     A style complying with `WebKit's style guide
     <https://www.webkit.org/coding/coding-style.html>`_
+  * ``Microsoft``
+    A style complying with `Microsoft's style guide
+    <https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference?view=vs-2017>`_
 
 .. START_FORMAT_STYLE_OPTIONS
 
@@ -1551,6 +1558,9 @@ the configuration (without a prefix: ``Auto``).
 
   * ``LK_Cpp`` (in configuration: ``Cpp``)
     Should be used for C, C++.
+
+  * ``LK_CSharp`` (in configuration: ``CSharp``)
+    Should be used for C#.
 
   * ``LK_Java`` (in configuration: ``Java``)
     Should be used for Java.

@@ -821,7 +821,7 @@ defm BUFFER_LOAD_DWORDX2 : MUBUF_Pseudo_Loads <
   "buffer_load_dwordx2", VReg_64, v2i32, mubuf_load
 >;
 defm BUFFER_LOAD_DWORDX3 : MUBUF_Pseudo_Loads <
-  "buffer_load_dwordx3", VReg_96, untyped, mubuf_load
+  "buffer_load_dwordx3", VReg_96, v3i32, mubuf_load
 >;
 defm BUFFER_LOAD_DWORDX4 : MUBUF_Pseudo_Loads <
   "buffer_load_dwordx4", VReg_128, v4i32, mubuf_load
@@ -855,7 +855,7 @@ defm BUFFER_STORE_DWORDX2 : MUBUF_Pseudo_Stores <
   "buffer_store_dwordx2", VReg_64, v2i32, store_global
 >;
 defm BUFFER_STORE_DWORDX3 : MUBUF_Pseudo_Stores <
-  "buffer_store_dwordx3", VReg_96, untyped, store_global
+  "buffer_store_dwordx3", VReg_96, v3i32, store_global
 >;
 defm BUFFER_STORE_DWORDX4 : MUBUF_Pseudo_Stores <
   "buffer_store_dwordx4", VReg_128, v4i32, store_global
@@ -1045,9 +1045,6 @@ let SubtargetPredicate = isCIVI in {
 //===----------------------------------------------------------------------===//
 // Instruction definitions for CI and newer.
 //===----------------------------------------------------------------------===//
-// Remaining instructions:
-// BUFFER_LOAD_DWORDX3
-// BUFFER_STORE_DWORDX3
 
 def BUFFER_WBINVL1_VOL : MUBUF_Invalidate <"buffer_wbinvl1_vol",
                                            int_amdgcn_buffer_wbinvl1_vol>;
@@ -1405,6 +1402,7 @@ defm : MUBUFScratchLoadPat <BUFFER_LOAD_USHORT_OFFEN, BUFFER_LOAD_USHORT_OFFSET,
 defm : MUBUFScratchLoadPat <BUFFER_LOAD_USHORT_OFFEN, BUFFER_LOAD_USHORT_OFFSET, i16, load_private>;
 defm : MUBUFScratchLoadPat <BUFFER_LOAD_DWORD_OFFEN, BUFFER_LOAD_DWORD_OFFSET, i32, load_private>;
 defm : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX2_OFFEN, BUFFER_LOAD_DWORDX2_OFFSET, v2i32, load_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX3_OFFEN, BUFFER_LOAD_DWORDX3_OFFSET, v3i32, load_private>;
 defm : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX4_OFFEN, BUFFER_LOAD_DWORDX4_OFFSET, v4i32, load_private>;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
@@ -1477,6 +1475,7 @@ defm : MUBUFScratchStorePat <BUFFER_STORE_BYTE_OFFEN, BUFFER_STORE_BYTE_OFFSET, 
 defm : MUBUFScratchStorePat <BUFFER_STORE_SHORT_OFFEN, BUFFER_STORE_SHORT_OFFSET, i16, store_private>;
 defm : MUBUFScratchStorePat <BUFFER_STORE_DWORD_OFFEN, BUFFER_STORE_DWORD_OFFSET, i32, store_private>;
 defm : MUBUFScratchStorePat <BUFFER_STORE_DWORDX2_OFFEN, BUFFER_STORE_DWORDX2_OFFSET, v2i32, store_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_DWORDX3_OFFEN, BUFFER_STORE_DWORDX3_OFFSET, v3i32, store_private>;
 defm : MUBUFScratchStorePat <BUFFER_STORE_DWORDX4_OFFEN, BUFFER_STORE_DWORDX4_OFFSET, v4i32, store_private>;
 
 

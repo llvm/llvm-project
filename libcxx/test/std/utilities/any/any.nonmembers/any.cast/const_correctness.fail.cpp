@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: dylib-has-no-bad_any_cast
 
 // <any>
 
@@ -19,10 +20,6 @@
 
 struct TestType {};
 struct TestType2 {};
-
-// On platforms that do not support any_cast, an additional availability error
-// is triggered by these tests.
-// expected-error@const_correctness.fail.cpp:* 0+ {{call to unavailable function 'any_cast': introduced in macOS 10.14}}
 
 int main(int, char**)
 {

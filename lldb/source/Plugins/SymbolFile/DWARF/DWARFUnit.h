@@ -21,6 +21,10 @@ class NameToDIE;
 class SymbolFileDWARF;
 class SymbolFileDWARFDwo;
 
+namespace lldb_private {
+class DWARFContext;
+}
+
 typedef std::shared_ptr<DWARFUnit> DWARFUnitSP;
 
 enum DWARFProducer {
@@ -147,6 +151,7 @@ public:
   bool Supports_unnamed_objc_bitfields();
 
   SymbolFileDWARF *GetSymbolFileDWARF() const;
+  lldb_private::DWARFContext &GetDWARFContext() const;
 
   DWARFProducer GetProducer();
 
@@ -175,9 +180,10 @@ public:
   }
 
 protected:
-  DWARFUnit(SymbolFileDWARF *dwarf);
+  DWARFUnit(SymbolFileDWARF *dwarf, lldb_private::DWARFContext &dwarf_context);
 
   SymbolFileDWARF *m_dwarf = nullptr;
+  lldb_private::DWARFContext &m_dwarf_context;
   std::unique_ptr<SymbolFileDWARFDwo> m_dwo_symbol_file;
   const DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
   void *m_user_data = nullptr;

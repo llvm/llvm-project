@@ -1345,3 +1345,19 @@ define <3 x float> @test_minps_illegal_v3f32(<3 x float> %x, <3 x float> %y)  {
   ret <3 x float> %min
 }
 
+; OSS-Fuzz #13838
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=13838
+define float @ossfuzz13838(float %x) {
+; ALL-LABEL: ossfuzz13838:
+; ALL:       # %bb.0: # %bb
+; ALL-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ALL-NEXT:    retq
+bb:
+  %cmp2 = fcmp fast olt float %x, 2.550000e+02
+  %B1 = urem i1 %cmp2, %cmp2
+  %min = select i1 %B1, float %x, float 2.550000e+02
+  %B = frem float %min, 0x47EFFFFFE0000000
+  %cmp1 = fcmp fast olt float %B, 1.000000e+00
+  %r = select i1 %cmp1, float 1.000000e+00, float %min
+  ret float %r
+}

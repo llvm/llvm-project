@@ -49,6 +49,16 @@ An example of using ``LD_LIBRARY_PATH``:
   $ export LD_LIBRARY_PATH=<libcxx-install-prefix>/lib
   $ ./a.out # Searches for libc++ along LD_LIBRARY_PATH
 
+Using ``<filesystem>``
+======================
+
+Prior to LLVM 9.0, libc++ provides the implementation of the filesystem library
+in a separate static library. Users of ``<filesystem>`` and ``<experimental/filesystem>``
+are required to link ``-lc++fs``. Prior to libc++ 7.0, users of
+``<experimental/filesystem>`` were required to link libc++experimental.
+
+Starting with LLVM 9.0, support for ``<filesystem>`` is provided in the main
+library and nothing special is required to use ``<filesystem>``.
 
 Using libc++experimental and ``<experimental/...>``
 =====================================================

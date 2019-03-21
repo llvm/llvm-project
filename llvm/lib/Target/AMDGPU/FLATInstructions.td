@@ -730,6 +730,7 @@ def : FlatLoadPat <FLAT_LOAD_USHORT, load_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_DWORD, load_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_DWORDX2, load_flat, v2i32>;
+def : FlatLoadPat <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
 def : FlatLoadPat <FLAT_LOAD_DWORDX4, load_flat, v4i32>;
 
 def : FlatLoadAtomicPat <FLAT_LOAD_DWORD, atomic_load_flat, i32>;
@@ -739,6 +740,7 @@ def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i32>;
 def : FlatStorePat <FLAT_STORE_SHORT, truncstorei16_flat, i32>;
 def : FlatStorePat <FLAT_STORE_DWORD, store_flat, i32>;
 def : FlatStorePat <FLAT_STORE_DWORDX2, store_flat, v2i32>;
+def : FlatStorePat <FLAT_STORE_DWORDX3, store_flat, v3i32>;
 def : FlatStorePat <FLAT_STORE_DWORDX4, store_flat, v4i32>;
 
 def : FlatStoreAtomicPat <FLAT_STORE_DWORD, atomic_store_flat, i32>;
@@ -808,6 +810,7 @@ def : FlatLoadSignedPat <GLOBAL_LOAD_USHORT, load_global, i16>;
 
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORD, load_global, i32>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX2, load_global, v2i32>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX3, load_global, v3i32>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX4, load_global, v4i32>;
 
 def : FlatLoadAtomicPat <GLOBAL_LOAD_DWORD, atomic_load_global, i32>;
@@ -819,6 +822,7 @@ def : FlatStoreSignedPat <GLOBAL_STORE_SHORT, truncstorei16_global, i32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_SHORT, store_global, i16>;
 def : FlatStoreSignedPat <GLOBAL_STORE_DWORD, store_global, i32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX2, store_global, v2i32>;
+def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX3, store_global, v3i32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX4, store_global, v4i32>;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
