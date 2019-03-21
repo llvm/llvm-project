@@ -250,6 +250,7 @@ class WasmObjectWriter : public MCObjectWriter {
   // section.
   std::vector<WasmCustomSection> CustomSections;
   std::unique_ptr<WasmCustomSection> ProducersSection;
+  std::unique_ptr<WasmCustomSection> TargetFeaturesSection;
   // Relocations for fixing up references in the custom sections.
   DenseMap<const MCSectionWasm *, std::vector<WasmRelocationEntry>>
       CustomSectionsRelocations;
@@ -291,6 +292,7 @@ private:
     DataLocations.clear();
     CustomSections.clear();
     ProducersSection.reset();
+    TargetFeaturesSection.reset();
     CustomSectionsRelocations.clear();
     SignatureIndices.clear();
     Signatures.clear();
@@ -1286,9 +1288,14 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
                              Twine(SectionName));
       }
 
-      // Separate out the producers section
+      // Separate out the producers and target features sections
       if (Name == "producers") {
         ProducersSection = llvm::make_unique<WasmCustomSection>(Name, &Section);
+        continue;
+      }
+      if (Name == "target_features") {
+        TargetFeaturesSection =
+            llvm::make_unique<WasmCustomSection>(Name, &Section);
         continue;
       }
 
@@ -1593,6 +1600,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeCustomRelocSections();
   if (ProducersSection)
     writeCustomSection(*ProducersSection, Asm, Layout);
+  if (TargetFeaturesSection)
+    writeCustomSection(*TargetFeaturesSection, Asm, Layout);
 
   // TODO: Translate the .comment section to the output.
   return W.OS.tell() - StartOffset;

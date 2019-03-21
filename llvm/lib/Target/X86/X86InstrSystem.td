@@ -14,10 +14,10 @@
 
 let SchedRW = [WriteSystem] in {
 let Defs = [RAX, RDX] in
-  def RDTSC : I<0x31, RawFrm, (outs), (ins), "rdtsc", [(X86rdtsc)]>, TB;
+def RDTSC : I<0x31, RawFrm, (outs), (ins), "rdtsc", []>, TB;
 
 let Defs = [RAX, RCX, RDX] in
-  def RDTSCP : I<0x01, MRM_F9, (outs), (ins), "rdtscp", [(X86rdtscp)]>, TB;
+def RDTSCP : I<0x01, MRM_F9, (outs), (ins), "rdtscp", []>, TB;
 
 // CPU flow control instructions
 
@@ -410,7 +410,7 @@ let Defs = [EAX, EDX], Uses = [ECX] in
 def RDMSR : I<0x32, RawFrm, (outs), (ins), "rdmsr", []>, TB;
 
 let Defs = [RAX, RDX], Uses = [ECX] in
-  def RDPMC : I<0x33, RawFrm, (outs), (ins), "rdpmc", [(X86rdpmc)]>, TB;
+def RDPMC : I<0x33, RawFrm, (outs), (ins), "rdpmc", []>, TB;
 
 def SMSW16r : I<0x01, MRM4r, (outs GR16:$dst), (ins),
                 "smsw{w}\t$dst", []>, OpSize16, TB;

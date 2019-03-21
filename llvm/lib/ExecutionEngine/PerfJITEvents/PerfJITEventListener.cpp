@@ -265,16 +265,22 @@ void PerfJITEventListener::notifyObjectLoaded(
       consumeError(AddrOrErr.takeError());
       continue;
     }
-    uint64_t Addr = *AddrOrErr;
     uint64_t Size = P.second;
+    object::SectionedAddress Address;
+    Address.Address = *AddrOrErr;
+
+    uint64_t SectionIndex = object::SectionedAddress::UndefSection;
+    if (auto SectOrErr = Sym.getSection())
+        if (*SectOrErr != Obj.section_end())
+            SectionIndex = SectOrErr.get()->getIndex();
 
     // According to spec debugging info has to come before loading the
     // corresonding code load.
     DILineInfoTable Lines = Context->getLineInfoForAddressRange(
-        Addr, Size, FileLineInfoKind::AbsoluteFilePath);
+        {*AddrOrErr, SectionIndex}, Size, FileLineInfoKind::AbsoluteFilePath);
 
-    NotifyDebug(Addr, Lines);
-    NotifyCode(Name, Addr, Size);
+    NotifyDebug(*AddrOrErr, Lines);
+    NotifyCode(Name, *AddrOrErr, Size);
   }
 
   Dumpstream->flush();

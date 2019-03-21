@@ -581,29 +581,25 @@ bool ScalarizeMaskedMemIntrin::optimizeCallInst(CallInst *CI,
       break;
     case Intrinsic::masked_load:
       // Scalarize unsupported vector masked load
-      if (!TTI->isLegalMaskedLoad(CI->getType())) {
-        scalarizeMaskedLoad(CI, ModifiedDT);
-        return true;
-      }
-      return false;
+      if (TTI->isLegalMaskedLoad(CI->getType()))
+        return false;
+      scalarizeMaskedLoad(CI, ModifiedDT);
+      return true;
     case Intrinsic::masked_store:
-      if (!TTI->isLegalMaskedStore(CI->getArgOperand(0)->getType())) {
-        scalarizeMaskedStore(CI, ModifiedDT);
-        return true;
-      }
-      return false;
+      if (TTI->isLegalMaskedStore(CI->getArgOperand(0)->getType()))
+        return false;
+      scalarizeMaskedStore(CI, ModifiedDT);
+      return true;
     case Intrinsic::masked_gather:
-      if (!TTI->isLegalMaskedGather(CI->getType())) {
-        scalarizeMaskedGather(CI, ModifiedDT);
-        return true;
-      }
-      return false;
+      if (TTI->isLegalMaskedGather(CI->getType()))
+        return false;
+      scalarizeMaskedGather(CI, ModifiedDT);
+      return true;
     case Intrinsic::masked_scatter:
-      if (!TTI->isLegalMaskedScatter(CI->getArgOperand(0)->getType())) {
-        scalarizeMaskedScatter(CI, ModifiedDT);
-        return true;
-      }
-      return false;
+      if (TTI->isLegalMaskedScatter(CI->getArgOperand(0)->getType()))
+        return false;
+      scalarizeMaskedScatter(CI, ModifiedDT);
+      return true;
     }
   }
 

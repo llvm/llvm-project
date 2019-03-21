@@ -311,8 +311,8 @@ void ARCFrameLowering::emitEpilogue(MachineFunction &MF,
   // Now, pop fp if necessary.
   if (hasFP(MF)) {
     BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI), TII->get(ARC::LD_AB_rs9))
-        .addReg(ARC::SP, RegState::Define)
         .addReg(ARC::FP, RegState::Define)
+        .addReg(ARC::SP, RegState::Define)
         .addReg(ARC::SP)
         .addImm(4);
   }

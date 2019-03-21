@@ -181,7 +181,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::coff_object;
     break;
 
-  case 'M': // Possible MS-DOS stub on Windows PE file or MSF/PDB file.
+  case 'M': // Possible MS-DOS stub on Windows PE file, MSF/PDB file or a
+            // Minidump file.
     if (startswith(Magic, "MZ") && Magic.size() >= 0x3c + 4) {
       uint32_t off = read32le(Magic.data() + 0x3c);
       // PE/COFF file, either EXE or DLL.
@@ -191,6 +192,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
     }
     if (Magic.startswith("Microsoft C/C++ MSF 7.00\r\n"))
       return file_magic::pdb;
+    if (startswith(Magic, "MDMP"))
+      return file_magic::minidump;
     break;
 
   case 0x64: // x86-64 or ARM64 Windows.

@@ -155,6 +155,16 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
       ProducersSec->SDKs.push_back(Producer);
     }
     CustomSec = std::move(ProducersSec);
+  } else if (WasmSec.Name == "target_features") {
+    std::unique_ptr<WasmYAML::TargetFeaturesSection> TargetFeaturesSec =
+        make_unique<WasmYAML::TargetFeaturesSection>();
+    for (auto &E : Obj.getTargetFeatures()) {
+      WasmYAML::FeatureEntry Feature;
+      Feature.Prefix = E.Prefix;
+      Feature.Name = E.Name;
+      TargetFeaturesSec->Features.push_back(Feature);
+    }
+    CustomSec = std::move(TargetFeaturesSec);
   } else {
     CustomSec = make_unique<WasmYAML::CustomSection>(WasmSec.Name);
   }

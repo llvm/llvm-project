@@ -16826,7 +16826,6 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
 // a vector zero extend and possibly an extract subvector.
 // TODO: Support sign extend or any extend?
 // TODO: Allow undef elements?
-// TODO: Don't require the extracts to start at element 0.
 SDValue DAGCombiner::convertBuildVecZextToZext(SDNode *N) {
   if (LegalOperations)
     return SDValue();

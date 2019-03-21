@@ -130,6 +130,9 @@ public:
 
   const wasm::WasmDylinkInfo &dylinkInfo() const { return DylinkInfo; }
   const wasm::WasmProducerInfo &getProducerInfo() const { return ProducerInfo; }
+  ArrayRef<wasm::WasmFeatureEntry> getTargetFeatures() const {
+    return TargetFeatures;
+  }
   ArrayRef<wasm::WasmSignature> types() const { return Signatures; }
   ArrayRef<uint32_t> functionTypes() const { return FunctionTypes; }
   ArrayRef<wasm::WasmImport> imports() const { return Imports; }
@@ -252,12 +255,14 @@ private:
   Error parseLinkingSectionSymtab(ReadContext &Ctx);
   Error parseLinkingSectionComdat(ReadContext &Ctx);
   Error parseProducersSection(ReadContext &Ctx);
+  Error parseTargetFeaturesSection(ReadContext &Ctx);
   Error parseRelocSection(StringRef Name, ReadContext &Ctx);
 
   wasm::WasmObjectHeader Header;
   std::vector<WasmSection> Sections;
   wasm::WasmDylinkInfo DylinkInfo;
   wasm::WasmProducerInfo ProducerInfo;
+  std::vector<wasm::WasmFeatureEntry> TargetFeatures;
   std::vector<wasm::WasmSignature> Signatures;
   std::vector<uint32_t> FunctionTypes;
   std::vector<wasm::WasmTable> Tables;
@@ -318,6 +323,8 @@ public:
     WASM_SEC_ORDER_NAME,
     // "producers" section must appear after "name" section.
     WASM_SEC_ORDER_PRODUCERS,
+    // "target_features" section must appear after producers section
+    WASM_SEC_ORDER_TARGET_FEATURES,
 
     // Must be last
     WASM_NUM_SEC_ORDERS

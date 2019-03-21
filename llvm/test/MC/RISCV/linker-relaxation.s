@@ -29,7 +29,6 @@ beq s1, s1, .L1
 lui t1, %hi(foo)
 # NORELAX-RELOC: R_RISCV_HI20 foo 0x0
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
-# RELOC: R_RISCV_HI20 foo 0x0
 # RELAX-RELOC: R_RISCV_RELAX - 0x0
 # RELAX-FIXUP: fixup A - offset: 0, value: %hi(foo), kind: fixup_riscv_hi20
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
@@ -37,7 +36,6 @@ lui t1, %hi(foo)
 addi t1, t1, %lo(foo)
 # NORELAX-RELOC: R_RISCV_LO12_I foo 0x0
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
-# RELOC: R_RISCV_LO12_I foo 0x0
 # RELAX-RELOC: R_RISCV_RELAX - 0x0
 # RELAX-FIXUP: fixup A - offset: 0, value: %lo(foo), kind: fixup_riscv_lo12_i
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
@@ -45,7 +43,6 @@ addi t1, t1, %lo(foo)
 sb t1, %lo(foo)(a2)
 # NORELAX-RELOC: R_RISCV_LO12_S foo 0x0
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
-# RELOC: R_RISCV_LO12_S foo 0x0
 # RELAX-RELOC: R_RISCV_RELAX - 0x0
 # RELAX-FIXUP: fixup A - offset: 0, value: %lo(foo), kind: fixup_riscv_lo12_s
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
@@ -53,7 +50,6 @@ sb t1, %lo(foo)(a2)
 auipc t1, %pcrel_hi(foo)
 # NORELAX-RELOC: R_RISCV_PCREL_HI20 foo 0x0
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
-# RELOC: R_RISCV_PCREL_HI20 foo 0x0
 # RELAX-RELOC: R_RISCV_RELAX - 0x0
 # RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_hi(foo), kind: fixup_riscv_pcrel_hi20
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
@@ -61,7 +57,6 @@ auipc t1, %pcrel_hi(foo)
 addi t1, t1, %pcrel_lo(foo)
 # NORELAX-RELOC: R_RISCV_PCREL_LO12_I foo 0x0
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
-# RELOC: R_RISCV_PCREL_LO12_I foo 0x0
 # RELAX-RELOC: R_RISCV_RELAX - 0x0
 # RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_lo(foo), kind: fixup_riscv_pcrel_lo12_i
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
@@ -69,7 +64,6 @@ addi t1, t1, %pcrel_lo(foo)
 sb t1, %pcrel_lo(foo)(a2)
 # NORELAX-RELOC: R_RISCV_PCREL_LO12_S foo 0x0
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
-# RELOC: R_RISCV_PCREL_LO12_S foo 0x0
 # RELAX-RELOC: R_RISCV_RELAX - 0x0
 # RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_lo(foo), kind: fixup_riscv_pcrel_lo12_s
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax

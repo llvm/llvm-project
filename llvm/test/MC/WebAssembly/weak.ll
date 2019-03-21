@@ -30,4 +30,9 @@ entry:
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            weak_external_data
 ; CHECK-NEXT:         Flags:           [ BINDING_WEAK, UNDEFINED ]
+; CHECK-NEXT:   - Type:            CUSTOM
+; CHECK-NEXT:     Name:            target_features
+; CHECK-NEXT:     Features:
+; CHECK-NEXT:       - Prefix:          DISALLOWED
+; CHECK-NEXT:         Name:            atomics
 ; CHECK-NEXT: ...

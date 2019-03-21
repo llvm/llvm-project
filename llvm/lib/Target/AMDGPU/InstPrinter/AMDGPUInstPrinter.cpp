@@ -268,6 +268,21 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   case AMDGPU::XNACK_MASK:
     O << "xnack_mask";
     return;
+  case AMDGPU::SRC_SHARED_BASE:
+    O << "src_shared_base";
+    return;
+  case AMDGPU::SRC_SHARED_LIMIT:
+    O << "src_shared_limit";
+    return;
+  case AMDGPU::SRC_PRIVATE_BASE:
+    O << "src_private_base";
+    return;
+  case AMDGPU::SRC_PRIVATE_LIMIT:
+    O << "src_private_limit";
+    return;
+  case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
+    O << "src_pops_exiting_wave_id";
+    return;
   case AMDGPU::LDS_DIRECT:
     O << "src_lds_direct";
     return;

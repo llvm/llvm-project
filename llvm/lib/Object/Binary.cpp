@@ -16,6 +16,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Object/Minidump.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Support/Error.h"
@@ -81,6 +82,8 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::coff_cl_gl_object:
     // Unrecognized object file format.
     return errorCodeToError(object_error::invalid_file_type);
+  case file_magic::minidump:
+    return MinidumpFile::create(Buffer);
   }
   llvm_unreachable("Unexpected Binary File Type");
 }

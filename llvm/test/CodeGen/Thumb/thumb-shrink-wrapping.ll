@@ -501,10 +501,9 @@ if.end:                                           ; preds = %for.body, %if.else
 ; DISABLE-NEXT: beq [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Setup of the varags.
-; CHECK: mov [[TMP_SP:r[0-9]+]], sp
-; CHECK-NEXT: str r1, {{\[}}[[TMP_SP]]]
-; CHECK-NEXT: str r1, {{\[}}[[TMP_SP]], #4]
-; CHECK-NEXT: str r1, {{\[}}[[TMP_SP]], #8]
+; CHECK: str r1, [sp]
+; CHECK-NEXT: str r1, [sp, #4]
+; CHECK-NEXT: str r1, [sp, #8]
 ; CHECK:      movs r0, r1
 ; CHECK-NEXT: movs r2, r1
 ; CHECK-NEXT: movs r3, r1

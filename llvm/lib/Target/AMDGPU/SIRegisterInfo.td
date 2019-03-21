@@ -74,6 +74,7 @@ def SRC_SHARED_BASE : SIReg<"src_shared_base", 235>;
 def SRC_SHARED_LIMIT : SIReg<"src_shared_limit", 236>;
 def SRC_PRIVATE_BASE : SIReg<"src_private_base", 237>;
 def SRC_PRIVATE_LIMIT : SIReg<"src_private_limit", 238>;
+def SRC_POPS_EXITING_WAVE_ID : SIReg<"src_pops_exiting_wave_id", 239>;
 
 def LDS_DIRECT : SIReg <"lds_direct", 254>;
 
@@ -422,7 +423,7 @@ def LDS_DIRECT_CLASS : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16
 def SReg_32_XM0_XEXEC : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   (add SGPR_32, VCC_LO, VCC_HI, FLAT_SCR_LO, FLAT_SCR_HI, XNACK_MASK_LO, XNACK_MASK_HI,
    TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE, SRC_SHARED_LIMIT,
-   SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT)> {
+   SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT, SRC_POPS_EXITING_WAVE_ID)> {
   let AllocationPriority = 7;
 }
 
