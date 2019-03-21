@@ -425,7 +425,7 @@ class TypeSourceInfo;
 
     /// Subclasses can override this function to observe all of the \c From ->
     /// \c To declaration mappings as they are imported.
-    virtual Decl *Imported(Decl *From, Decl *To) { return To; }
+    virtual void Imported(Decl *From, Decl *To) {}
 
     /// Store and assign the imported declaration to its counterpart.
     Decl *MapImported(Decl *From, Decl *To);

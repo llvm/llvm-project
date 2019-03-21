@@ -2841,7 +2841,7 @@ struct _FilesystemClock {
 
   static _LIBCPP_CONSTEXPR_AFTER_CXX11 const bool is_steady = false;
 
-  _LIBCPP_FUNC_VIS static time_point now() noexcept;
+  _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_FUNC_VIS static time_point now() noexcept;
 
   _LIBCPP_INLINE_VISIBILITY
   static time_t to_time_t(const time_point& __t) noexcept {

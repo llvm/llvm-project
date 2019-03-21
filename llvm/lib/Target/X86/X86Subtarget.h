@@ -88,6 +88,9 @@ protected:
   /// True if the processor supports X87 instructions.
   bool HasX87 = false;
 
+  /// True if the processor supports CMPXCHG8B.
+  bool HasCmpxchg8b = false;
+
   /// True if this processor has NOPL instruction
   /// (generally pentium pro+).
   bool HasNOPL = false;
@@ -546,6 +549,7 @@ public:
   void setPICStyle(PICStyles::Style Style)  { PICStyle = Style; }
 
   bool hasX87() const { return HasX87; }
+  bool hasCmpxchg8b() const { return HasCmpxchg8b; }
   bool hasNOPL() const { return HasNOPL; }
   // SSE codegen depends on cmovs, and all SSE1+ processors support them.
   // All 64-bit processors support cmov.

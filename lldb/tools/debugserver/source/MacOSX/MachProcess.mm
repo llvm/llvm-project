@@ -1290,9 +1290,11 @@ bool MachProcess::Kill(const struct timespec *timeout_abstime) {
   ::ptrace(PT_KILL, m_pid, 0, 0);
   DNBError err;
   err.SetErrorToErrno();
-  DNBLogThreadedIf(LOG_PROCESS, "MachProcess::Kill() DoSIGSTOP() ::ptrace "
-                                "(PT_KILL, pid=%u, 0, 0) => 0x%8.8x (%s)",
-                   m_pid, err.Status(), err.AsString());
+  if (DNBLogCheckLogBit(LOG_PROCESS) || err.Fail()) {
+    err.LogThreaded("MachProcess::Kill() DoSIGSTOP() ::ptrace "
+            "(PT_KILL, pid=%u, 0, 0) => 0x%8.8x (%s)",
+            m_pid, err.Status(), err.AsString());
+  }
   m_thread_actions = DNBThreadResumeActions(eStateRunning, 0);
   PrivateResume();
 

@@ -30,6 +30,7 @@
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
 
+#include "DWARFContext.h"
 #include "DWARFDataExtractor.h"
 #include "DWARFDefines.h"
 #include "DWARFIndex.h"
@@ -227,7 +228,6 @@ public:
 
   virtual const lldb_private::DWARFDataExtractor &get_debug_abbrev_data();
   virtual const lldb_private::DWARFDataExtractor &get_debug_addr_data();
-  const lldb_private::DWARFDataExtractor &get_debug_aranges_data();
   const lldb_private::DWARFDataExtractor &get_debug_frame_data();
   virtual const lldb_private::DWARFDataExtractor &get_debug_info_data();
   const lldb_private::DWARFDataExtractor &get_debug_line_data();
@@ -458,11 +458,10 @@ protected:
   llvm::once_flag m_dwp_symfile_once_flag;
   std::unique_ptr<SymbolFileDWARFDwp> m_dwp_symfile;
 
-  lldb_private::DWARFDataExtractor m_dwarf_data;
+  lldb_private::DWARFContext m_context;
 
   DWARFDataSegment m_data_debug_abbrev;
   DWARFDataSegment m_data_debug_addr;
-  DWARFDataSegment m_data_debug_aranges;
   DWARFDataSegment m_data_debug_frame;
   DWARFDataSegment m_data_debug_info;
   DWARFDataSegment m_data_debug_line;

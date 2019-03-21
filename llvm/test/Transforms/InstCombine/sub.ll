@@ -631,7 +631,7 @@ define <2 x i32> @test27commutedvecmixed(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @test28(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test28(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
@@ -643,7 +643,7 @@ define i32 @test28(i32 %x, i32 %y, i32 %z) {
 
 define i32 @test28commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test28commuted(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
@@ -1265,4 +1265,30 @@ define <2 x i32> @test69(<2 x i32> %x) {
   %3 = select <2 x i1> %2, <2 x i32> %1, <2 x i32> <i32 -256, i32 -128>
   %res = sub <2 x i32> zeroinitializer, %3
   ret <2 x i32> %res
+}
+
+define i32 @nsw_inference1(i32 %x, i32 %y) {
+; CHECK-LABEL: @nsw_inference1(
+; CHECK-NEXT:    [[X2:%.*]] = or i32 [[X:%.*]], 1024
+; CHECK-NEXT:    [[Y2:%.*]] = and i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[Z:%.*]] = sub nuw i32 [[X2]], [[Y2]]
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %x2 = or i32 %x, 1024
+  %y2 = and i32 %y, 1
+  %z = sub i32 %x2, %y2
+  ret i32 %z
+}
+
+define i32 @nsw_inference2(i32 %x, i32 %y) {
+; CHECK-LABEL: @nsw_inference2(
+; CHECK-NEXT:    [[X2:%.*]] = and i32 [[X:%.*]], -1025
+; CHECK-NEXT:    [[Y2:%.*]] = or i32 [[Y:%.*]], -2
+; CHECK-NEXT:    [[Z:%.*]] = sub i32 [[X2]], [[Y2]]
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %x2 = and i32 %x, -1025
+  %y2 = or i32 %y, -2
+  %z = sub i32 %x2, %y2
+  ret i32 %z
 }

@@ -649,26 +649,26 @@ template coro<bad_promise_7> no_unhandled_exception_dependent(bad_promise_7); //
 
 struct bad_promise_base {
 private:
-  void return_void();
+  void return_void(); // expected-note 2 {{declared private here}}
 };
 struct bad_promise_8 : bad_promise_base {
   coro<bad_promise_8> get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend();
-  void unhandled_exception() __attribute__((unavailable)); // expected-note 2 {{made unavailable}}
-  void unhandled_exception() const;                        // expected-note 2 {{candidate}}
-  void unhandled_exception(void *) const;                  // expected-note 2 {{requires 1 argument, but 0 were provided}}
+  void unhandled_exception() __attribute__((unavailable)); // expected-note 2 {{marked unavailable here}}
+  void unhandled_exception() const;
+  void unhandled_exception(void *) const;
 };
 coro<bad_promise_8> calls_unhandled_exception() {
-  // expected-error@-1 {{call to unavailable member function 'unhandled_exception'}}
-  // FIXME: also warn about private 'return_void' here. Even though building
-  // the call to unhandled_exception has already failed.
+  // expected-error@-1 {{'unhandled_exception' is unavailable}}
+  // expected-error@-2 {{'return_void' is a private member}}
   co_await a;
 }
 
 template <class T>
 coro<T> calls_unhandled_exception_dependent(T) {
-  // expected-error@-1 {{call to unavailable member function 'unhandled_exception'}}
+  // expected-error@-1 {{'unhandled_exception' is unavailable}}
+  // expected-error@-2 {{'return_void' is a private member}}
   co_await a;
 }
 template coro<bad_promise_8> calls_unhandled_exception_dependent(bad_promise_8); // expected-note {{in instantiation}}
@@ -677,14 +677,13 @@ struct bad_promise_9 {
   coro<bad_promise_9> get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend();
-  void await_transform(void *);                                // expected-note {{candidate}}
-  awaitable await_transform(int) __attribute__((unavailable)); // expected-note {{explicitly made unavailable}}
+  void await_transform(void *);
+  awaitable await_transform(int) __attribute__((unavailable)); // expected-note {{explicitly marked unavailable}}
   void return_void();
   void unhandled_exception();
 };
 coro<bad_promise_9> calls_await_transform() {
-  co_await 42; // expected-error {{call to unavailable member function 'await_transform'}}
-  // expected-note@-1 {{call to 'await_transform' implicitly required by 'co_await' here}}
+  co_await 42; // expected-error {{'await_transform' is unavailable}}
 }
 
 struct bad_promise_10 {

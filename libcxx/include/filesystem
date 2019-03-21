@@ -258,6 +258,8 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
+_LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
+
 typedef chrono::time_point<_FilesystemClock> file_time_type;
 
 struct _LIBCPP_TYPE_VIS space_info {
@@ -1310,7 +1312,11 @@ inline _LIBCPP_INLINE_VISIBILITY bool operator!=(const path::iterator& __lhs,
   return !(__lhs == __rhs);
 }
 
-class _LIBCPP_EXCEPTION_ABI filesystem_error : public system_error {
+// TODO(ldionne): We need to pop the pragma and push it again after
+//                filesystem_error to work around PR41078.
+_LIBCPP_AVAILABILITY_FILESYSTEM_POP
+
+class _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_EXCEPTION_ABI filesystem_error : public system_error {
 public:
   _LIBCPP_INLINE_VISIBILITY
   filesystem_error(const string& __what, error_code __ec)
@@ -1360,6 +1366,8 @@ private:
   };
   shared_ptr<_Storage> __storage_;
 };
+
+_LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
 
 template <class... _Args>
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
@@ -2623,6 +2631,8 @@ inline _LIBCPP_INLINE_VISIBILITY recursive_directory_iterator
 end(const recursive_directory_iterator&) noexcept {
   return recursive_directory_iterator();
 }
+
+_LIBCPP_AVAILABILITY_FILESYSTEM_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

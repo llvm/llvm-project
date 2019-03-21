@@ -333,17 +333,6 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
   return false;
 }
 
-/// Retrieve the message suffix that should be added to a
-/// diagnostic complaining about the given function being deleted or
-/// unavailable.
-std::string Sema::getDeletedOrUnavailableSuffix(const FunctionDecl *FD) {
-  std::string Message;
-  if (FD->getAvailability(&Message))
-    return ": " + Message;
-
-  return std::string();
-}
-
 /// DiagnoseSentinelCalls - This routine checks whether a call or
 /// message-send is to a declaration with the sentinel attribute, and
 /// if so, it checks that the requirements of the sentinel are

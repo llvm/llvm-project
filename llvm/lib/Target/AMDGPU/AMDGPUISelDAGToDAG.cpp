@@ -931,9 +931,10 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
   unsigned Opc = N->getOpcode() == ISD::UADDO ?
     AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
 
-  CurDAG->SelectNodeTo(N, Opc, N->getVTList(),
-                       {N->getOperand(0), N->getOperand(1),
-                        CurDAG->getConstant(0, {}, MVT::i1)/*clamp bit*/});
+  CurDAG->SelectNodeTo(
+      N, Opc, N->getVTList(),
+      {N->getOperand(0), N->getOperand(1),
+       CurDAG->getTargetConstant(0, {}, MVT::i1) /*clamp bit*/});
 }
 
 void AMDGPUDAGToDAGISel::SelectFMA_W_CHAIN(SDNode *N) {
@@ -1041,7 +1042,8 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
           unsigned SubOp = AMDGPU::V_SUB_I32_e32;
           if (Subtarget->hasAddNoCarry()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
-            Opnds.push_back(Zero); // clamp bit
+            Opnds.push_back(
+                CurDAG->getTargetConstant(0, {}, MVT::i1)); // clamp bit
           }
 
           MachineSDNode *MachineSub =
@@ -1119,7 +1121,8 @@ bool AMDGPUDAGToDAGISel::SelectDS64Bit4ByteAligned(SDValue Addr, SDValue &Base,
           unsigned SubOp = AMDGPU::V_SUB_I32_e32;
           if (Subtarget->hasAddNoCarry()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
-            Opnds.push_back(Zero); // clamp bit
+            Opnds.push_back(
+                CurDAG->getTargetConstant(0, {}, MVT::i1)); // clamp bit
           }
 
           MachineSDNode *MachineSub

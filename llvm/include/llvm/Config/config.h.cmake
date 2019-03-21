@@ -154,9 +154,6 @@
 /* Have pthread_rwlock_init */
 #cmakedefine HAVE_PTHREAD_RWLOCK_INIT ${HAVE_PTHREAD_RWLOCK_INIT}
 
-/* Define to 1 if you have the `realpath' function. */
-#cmakedefine HAVE_REALPATH ${HAVE_REALPATH}
-
 /* Define to 1 if you have the `sbrk' function. */
 #cmakedefine HAVE_SBRK ${HAVE_SBRK}
 

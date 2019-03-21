@@ -896,6 +896,10 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   // Break up allocas
   PM.add(createSROAPass());
 
+  // LTO provides additional opportunities for tailcall elimination due to
+  // link-time inlining, and visibility of nocapture attribute.
+  PM.add(createTailCallEliminationPass());
+
   // Run a few AA driven optimizations here and now, to cleanup the code.
   PM.add(createPostOrderFunctionAttrsLegacyPass()); // Add nocapture.
   PM.add(createGlobalsAAWrapperPass()); // IP alias analysis.

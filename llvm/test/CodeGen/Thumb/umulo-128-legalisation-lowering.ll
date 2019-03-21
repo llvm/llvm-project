@@ -12,15 +12,14 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV6-NEXT:    mov r7, r2
 ; THUMBV6-NEXT:    mov r4, r0
 ; THUMBV6-NEXT:    movs r5, #0
-; THUMBV6-NEXT:    mov r0, sp
-; THUMBV6-NEXT:    str r5, [r0, #12]
-; THUMBV6-NEXT:    str r5, [r0, #8]
-; THUMBV6-NEXT:    ldr r1, [sp, #116]
-; THUMBV6-NEXT:    str r1, [sp, #72] @ 4-byte Spill
-; THUMBV6-NEXT:    str r1, [r0, #4]
-; THUMBV6-NEXT:    ldr r1, [sp, #112]
-; THUMBV6-NEXT:    str r1, [sp, #44] @ 4-byte Spill
-; THUMBV6-NEXT:    str r1, [r0]
+; THUMBV6-NEXT:    str r5, [sp, #12]
+; THUMBV6-NEXT:    str r5, [sp, #8]
+; THUMBV6-NEXT:    ldr r0, [sp, #116]
+; THUMBV6-NEXT:    str r0, [sp, #72] @ 4-byte Spill
+; THUMBV6-NEXT:    str r0, [sp, #4]
+; THUMBV6-NEXT:    ldr r0, [sp, #112]
+; THUMBV6-NEXT:    str r0, [sp, #44] @ 4-byte Spill
+; THUMBV6-NEXT:    str r0, [sp]
 ; THUMBV6-NEXT:    mov r0, r2
 ; THUMBV6-NEXT:    mov r1, r3
 ; THUMBV6-NEXT:    mov r2, r5

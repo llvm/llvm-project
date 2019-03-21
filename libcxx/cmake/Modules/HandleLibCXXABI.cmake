@@ -103,7 +103,6 @@ elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxabi")
     else()
       set(CXXABI_LIBNAME cxxabi_shared)
     endif()
-    set(LIBCXX_LIBCPPABI_VERSION "2" PARENT_SCOPE)
   else()
     # Assume c++abi is installed in the system, rely on -lc++abi link flag.
     set(CXXABI_LIBNAME "c++abi")
