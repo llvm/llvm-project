@@ -65,7 +65,7 @@ def scan_deps(this_dir, file):
 for (base, dirs, files) in os.walk(inc_dir):
     dir = os.path.basename(base)
     relative = os.path.relpath(base, inc_dir)
-    inc_files = filter(lambda x : os.path.splitext(x)[1] in [".h"], files)
+    inc_files = [x for x in files if os.path.splitext(x)[1] in [".h"]]
     relative = relative.replace("\\", "/")
     for inc in inc_files:
         inc_path = os.path.join(base, inc)
@@ -74,7 +74,7 @@ for (base, dirs, files) in os.walk(inc_dir):
 for (base, dirs, files) in os.walk(src_dir):
     dir = os.path.basename(base)
     relative = os.path.relpath(base, src_dir)
-    src_files = filter(lambda x : os.path.splitext(x)[1] in [".cpp", ".h", ".mm"], files)
+    src_files = [x for x in files if os.path.splitext(x)[1] in [".cpp", ".h", ".mm"]]
     norm_base_path = os.path.normpath(os.path.join("lldb", relative))
     norm_base_path = norm_base_path.replace("\\", "/")
     for src in src_files:

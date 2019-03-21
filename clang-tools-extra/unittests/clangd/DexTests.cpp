@@ -714,30 +714,35 @@ TEST(DexTest, TemplateSpecialization) {
   SymbolSlab::Builder B;
 
   Symbol S = symbol("TempSpec");
+  S.ID = SymbolID("0");
   B.insert(S);
 
-  S = symbol("TempSpec<int, bool>");
+  S = symbol("TempSpec");
+  S.ID = SymbolID("1");
   S.SymInfo.Properties = static_cast<index::SymbolPropertySet>(
       index::SymbolProperty::TemplateSpecialization);
   B.insert(S);
 
-  S = symbol("TempSpec<int, U>");
+  S = symbol("TempSpec");
+  S.ID = SymbolID("2");
   S.SymInfo.Properties = static_cast<index::SymbolPropertySet>(
       index::SymbolProperty::TemplatePartialSpecialization);
   B.insert(S);
 
   auto I = dex::Dex::build(std::move(B).build(), RefSlab());
   FuzzyFindRequest Req;
+  Req.Query = "TempSpec";
   Req.AnyScope = true;
 
-  Req.Query = "TempSpec";
-  EXPECT_THAT(match(*I, Req),
-              UnorderedElementsAre("TempSpec", "TempSpec<int, bool>",
-                                   "TempSpec<int, U>"));
-
-  Req.Query = "TempSpec<int";
-  EXPECT_THAT(match(*I, Req),
-              UnorderedElementsAre("TempSpec<int, bool>", "TempSpec<int, U>"));
+  std::vector<Symbol> Symbols;
+  I->fuzzyFind(Req, [&Symbols](const Symbol &Sym) { Symbols.push_back(Sym); });
+  EXPECT_EQ(Symbols.size(), 1U);
+  EXPECT_FALSE(Symbols.front().SymInfo.Properties &
+               static_cast<index::SymbolPropertySet>(
+                   index::SymbolProperty::TemplateSpecialization));
+  EXPECT_FALSE(Symbols.front().SymInfo.Properties &
+               static_cast<index::SymbolPropertySet>(
+                   index::SymbolProperty::TemplatePartialSpecialization));
 }
 
 } // namespace
