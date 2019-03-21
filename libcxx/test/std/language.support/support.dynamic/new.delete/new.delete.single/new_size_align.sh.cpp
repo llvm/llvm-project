@@ -21,7 +21,7 @@
 
 int main(int, char**)
 {
-    (void)::operator new(4, std::align_val_t{4});
+    ::operator new(4, std::align_val_t{4});  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   return 0;
 }
