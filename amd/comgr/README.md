@@ -102,6 +102,13 @@ is incremented for each backwards-compatible change introduced. The major
 version number is incremented, and the minor version is reset to zero, for each
 backwards-incompatible change introduced.
 
+* `1.3`: Introduce `amd_comgr_action_info_set_option_list`,
+  `amd_comgr_action_info_get_option_list_count`, and
+  `amd_comgr_action_info_get_option_list_item` to replace the old option APIs
+  `amd_comgr_action_info_set_options` and `amd_comgr_action_info_get_options`.
+  The old APIs do not support arguments with embedded delimiters, and are
+  replaced with an array-oriented API. The old APIs are deprecated and will be
+  removed in a future version of the library.
 * `1.2`: Introduce `amd_comgr_disassemble_instruction` and associated APIS.
 * `1.1`: First versioned release. Versions before this have no guaranteed
   compatibility.

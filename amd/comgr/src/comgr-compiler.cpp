@@ -674,7 +674,7 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
   for (auto &Arg : Args)
     Argv.push_back(Arg);
 
-  for (auto &Option : Options)
+  for (auto &Option : ActionInfo->getOptions())
     Argv.push_back(Option.c_str());
 
   Argv.push_back(InputFilePath);
@@ -731,16 +731,6 @@ AMDGPUCompiler::processFiles(amd_comgr_data_kind_t OutputKind,
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
-}
-
-void AMDGPUCompiler::parseOptions() {
-  if (!ActionInfo->Options)
-    return;
-  StringRef OptionsRef(ActionInfo->Options);
-  SmallVector<StringRef, 16> OptionRefs;
-  OptionsRef.split(OptionRefs, ' ');
-  for (auto &Option : OptionRefs)
-    Options.push_back(Option);
 }
 
 amd_comgr_status_t AMDGPUCompiler::addIncludeFlags() {
@@ -959,7 +949,7 @@ amd_comgr_status_t AMDGPUCompiler::linkToRelocatable() {
   if (auto Status = createTmpDirs())
     return Status;
 
-  for (auto &Option : Options)
+  for (auto &Option : ActionInfo->getOptions())
     Args.push_back(Option.c_str());
 
   SmallVector<SmallString<128>, 128> Inputs;
@@ -1004,7 +994,7 @@ amd_comgr_status_t AMDGPUCompiler::linkToExecutable() {
     if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
       return Status;
 
-  for (auto &Option : Options)
+  for (auto &Option : ActionInfo->getOptions())
     Args.push_back(Option.c_str());
 
   SmallVector<SmallString<128>, 128> Inputs;
@@ -1046,7 +1036,6 @@ AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
     : ActionInfo(ActionInfo), InSet(InSet), OutSetT(DataSet::convert(OutSet)),
       LogS(LogS) {
   initializeCommandLineArgs(Args);
-  parseOptions();
 }
 
 AMDGPUCompiler::~AMDGPUCompiler() {

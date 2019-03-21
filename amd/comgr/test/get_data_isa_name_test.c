@@ -74,7 +74,8 @@ void testIsaName(amd_comgr_data_t data, const char *expectedIsaName) {
   free(isaName);
 }
 
-void compileAndTestIsaName(const char *expectedIsaName, const char *options) {
+void compileAndTestIsaName(const char *expectedIsaName, const char *options[],
+                           size_t optionsCount) {
   char *bufSource;
   size_t sizeSource;
   amd_comgr_data_t dataSource, dataReloc, dataExec;
@@ -104,8 +105,9 @@ void compileAndTestIsaName(const char *expectedIsaName, const char *options) {
   checkError(status, "amd_comgr_action_info_set_language");
   status = amd_comgr_action_info_set_isa_name(dataAction, expectedIsaName);
   checkError(status, "amd_comgr_action_info_set_isa_name");
-  status = amd_comgr_action_info_set_options(dataAction, options);
-  checkError(status, "amd_comgr_action_info_set_options");
+  status =
+      amd_comgr_action_info_set_option_list(dataAction, options, optionsCount);
+  checkError(status, "amd_comgr_action_info_set_option_list");
 
   status = amd_comgr_create_data_set(&dataSetBC);
   checkError(status, "amd_comgr_create_data_set");
@@ -166,6 +168,10 @@ void compileAndTestIsaName(const char *expectedIsaName, const char *options) {
 int main(int argc, char *argv[]) {
   size_t isaCount;
   amd_comgr_status_t status;
+  const char *v2Options[] = {"-mno-code-object-v3"};
+  size_t v2OptionsCount = sizeof(v2Options) / sizeof(v2Options[0]);
+  const char *v3Options[] = {"-mcode-object-v3"};
+  size_t v3OptionsCount = sizeof(v3Options) / sizeof(v3Options[0]);
 
   status = amd_comgr_get_isa_count(&isaCount);
   checkError(status, "amd_comgr_get_isa_count");
@@ -176,8 +182,8 @@ int main(int argc, char *argv[]) {
     checkError(status, "amd_comgr_get_isa_name");
 
     // Test object code v2.
-    compileAndTestIsaName(isaName, "-mno-code-object-v3");
+    compileAndTestIsaName(isaName, v2Options, v2OptionsCount);
     // Test object code v3.
-    compileAndTestIsaName(isaName, "-mcode-object-v3");
+    compileAndTestIsaName(isaName, v3Options, v3OptionsCount);
   }
 }

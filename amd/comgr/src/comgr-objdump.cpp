@@ -2180,19 +2180,16 @@ void llvm::DisassemHelper::DumpInput(StringRef file) {
 // destructor of
 // DisassemHelper.
 // ------------------------------------------------------------------------------------
-amd_comgr_status_t llvm::DisassemHelper::disassembleAction(StringRef Input,
-                                                           StringRef Options) {
+amd_comgr_status_t
+llvm::DisassemHelper::disassembleAction(StringRef Input,
+                                        ArrayRef<std::string> Options) {
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  SmallVector<StringRef, 20> OptionRefs;
-  Options.split(OptionRefs, ' ');
-  BumpPtrAllocator A;
-  StringSaver Saver(A);
   SmallVector<const char *, 20> ArgV;
   ArgV.push_back(nullptr);
-  for (auto &Option : OptionRefs)
-    ArgV.push_back(Saver.save(Option).data());
+  for (auto &Option : Options)
+    ArgV.push_back(Option.c_str());
   size_t ArgC = ArgV.size();
   ArgV.push_back(nullptr);
   COMGR::clearLLVMOptions();

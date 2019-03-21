@@ -103,8 +103,6 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_action_info_set_isa_name(dataAction,
                                               "amdgcn-amd-amdhsa--gfx803");
   checkError(status, "amd_comgr_action_info_set_isa_name");
-  status = amd_comgr_action_info_set_options(dataAction, "");
-  checkError(status, "amd_comgr_action_info_set_options");
 
   status = amd_comgr_create_data_set(&dataSetPreproc);
   checkError(status, "amd_comgr_create_data_set");

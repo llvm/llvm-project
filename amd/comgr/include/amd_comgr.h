@@ -76,7 +76,7 @@
 #endif
 
 #define AMD_COMGR_INTERFACE_VERSION_MAJOR 1
-#define AMD_COMGR_INTERFACE_VERSION_MINOR 2
+#define AMD_COMGR_INTERFACE_VERSION_MINOR 3
 
 #ifdef __cplusplus
 extern "C" {
@@ -961,9 +961,15 @@ amd_comgr_action_info_get_language(
   amd_comgr_language_t *language);
 
 /**
- * @brief Set the options of an action info object.
+ * @brief Set the options string of an action info object.
  *
- * When an action info object is created it has empty options.
+ * When an action info object is created it has an empty options string.
+ *
+ * This overrides any option strings or arrays previously set by calls to this
+ * function or @p amd_comgr_action_info_set_option_list.
+ *
+ * An @p action_info object which had its options set with this function can
+ * only have its option inspected with @p amd_comgr_action_info_get_options.
  *
  * @param[in] action_info A handle to the action info object to be
  * updated.
@@ -979,6 +985,9 @@ amd_comgr_action_info_get_language(
  *
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update action info object as out of resources.
+ *
+ * @deprecated since 1.3
+ * @see amd_comgr_action_info_set_option_list
  */
 amd_comgr_status_t AMD_API
 amd_comgr_action_info_set_options(
@@ -986,8 +995,11 @@ amd_comgr_action_info_set_options(
   const char *options);
 
 /**
- * @brief Get the options and/or isa options length of an action info
- * object.
+ * @brief Get the options string and/or options strings length of an action
+ * info object.
+ *
+ * The @p action_info object must have had its options set with @p
+ * amd_comgr_action_info_set_options.
  *
  * @param[in] action_info The action info object to query.
  *
@@ -1004,17 +1016,125 @@ amd_comgr_action_info_set_options(
  * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
  * been executed successfully.
  *
+ * @retval ::AMD_COMGR_STATUS_ERROR The options of @p action_info were not set
+ * with @p amd_comgr_action_info_set_options.
+ *
  * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
  * action_info is an invalid action info object. @p size is NULL.
  *
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
+ *
+ * @deprecated since 1.3
+ * @see amd_comgr_action_info_get_option_list_count and
+ * amd_comgr_action_info_get_option_list_item
  */
 amd_comgr_status_t AMD_API
 amd_comgr_action_info_get_options(
   amd_comgr_action_info_t action_info,
   size_t *size,
   char *options);
+
+/**
+ * @brief Set the options array of an action info object.
+ *
+ * This overrides any option strings or arrays previously set by calls to this
+ * function or @p amd_comgr_action_info_set_options.
+ *
+ * An @p action_info object which had its options set with this function can
+ * only have its option inspected with @p
+ * amd_comgr_action_info_get_option_list_count and @p
+ * amd_comgr_action_info_get_option_list_item.
+ *
+ * @param[in] action_info A handle to the action info object to be updated.
+ *
+ * @param[in] options An array of null terminated strings. May be NULL if @p
+ * count is zero, which will result in an empty options array.
+ *
+ * @param[in] count The number of null terminated strings in @p options.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has been executed
+ * successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p action_info is an
+ * invalid action info object, or @p options is NULL and @p count is non-zero.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to update action
+ * info object as out of resources.
+ */
+amd_comgr_status_t AMD_API
+amd_comgr_action_info_set_option_list(
+  amd_comgr_action_info_t action_info,
+  const char *options[],
+  size_t count);
+
+/**
+ * @brief Return the number of options in the options array.
+ *
+ * The @p action_info object must have had its options set with @p
+ * amd_comgr_action_info_set_option_list.
+ *
+ * @param[in] action_info The action info object to query.
+ *
+ * @param[out] count The number of options in the options array.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has been executed
+ * successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR The options of @p action_info were never
+ * set, or not set with @p amd_comgr_action_info_set_option_list.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p action_info is an
+ * invalid action info object, or @p count is NULL.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to query the data
+ * object as out of resources.
+ */
+amd_comgr_status_t AMD_API
+amd_comgr_action_info_get_option_list_count(
+  amd_comgr_action_info_t action_info,
+  size_t *count);
+
+/**
+ * @brief Return the Nth option string in the options array and/or that
+ * option's length.
+ *
+ * The @p action_info object must have had its options set with @p
+ * amd_comgr_action_info_set_option_list.
+ *
+ * @param[in] action_info The action info object to query.
+ *
+ * @param[in] index The index of the option to be returned. The first option
+ * index is 0. The order is the same as the options when they were added in @p
+ * amd_comgr_action_info_set_options.
+ *
+ * @param[in, out] size On entry, the size of @p option. On return, if @option
+ * is NULL, set to the size of the Nth option string including the terminating
+ * null character.
+ *
+ * @param[out] option If not NULL, then the first @p size characters of the Nth
+ * option string are copied into @p option. If NULL, no option string is
+ * copied, and only @p size is updated (useful in order to find the size of
+ * buffer required to copy the option string).
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has been executed
+ * successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR The options of @p action_info were never
+ * set, or not set with @p amd_comgr_action_info_set_option_list.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p action_info is an
+ * invalid action info object, @p index is invalid, or @p size is NULL.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to query the data
+ * object as out of resources.
+ */
+amd_comgr_status_t AMD_API
+amd_comgr_action_info_get_option_list_item(
+  amd_comgr_action_info_t action_info,
+  size_t index,
+  size_t *size,
+  char *option);
 
 /**
  * @brief Set the working directory of an action info object.
@@ -1172,8 +1292,8 @@ typedef enum amd_comgr_action_kind_s {
    * Currently the only supported languages are @p AMD_COMGR_LANGUAGE_OPENCL_1_2
    * and @p AMD_COMGR_LANGUAGE_OPENCL_2_0.
    *
-   * The options in @p info should be set to a comma-separated set of
-   * language-specific flags. For OpenCL these include:
+   * The options in @p info should be set to a set of language-specific flags.
+   * For OpenCL these include:
    *
    *    correctly_rounded_sqrt
    *    daz_opt
@@ -1183,7 +1303,9 @@ typedef enum amd_comgr_action_kind_s {
    * For example, to enable daz_opt and unsafe_math, the options should be set
    * as:
    *
-   *    amd_comgr_action_info_set_options(info, "daz_opt,unsafe_math");
+   *    const char *options[] = {"daz_opt, "unsafe_math"};
+   *    size_t optionsCount = sizeof(options) / sizeof(options[0]);
+   *    amd_comgr_action_info_set_option_list(info, options, optionsCount);
    *
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if isa name or language
    * is not set in @p info, the language is not supported, an unknown

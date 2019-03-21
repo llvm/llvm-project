@@ -81,8 +81,8 @@ int main(int argc, char *argv[]) {
     checkError(status, "amd_comgr_create_action_info");
     amd_comgr_action_info_set_isa_name(dataAction, "amdgcn-amd-amdhsa--gfx803");
     checkError(status, "amd_comgr_action_info_set_language");
-    status = amd_comgr_action_info_set_options(dataAction, "");
-    checkError(status, "amd_comgr_action_info_set_options");
+    status = amd_comgr_action_info_set_option_list(dataAction, NULL, 0);
+    checkError(status, "amd_comgr_action_info_set_option_list");
     status =
         amd_comgr_do_action(AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE,
                             dataAction, dataSetIn, dataSetOut);

@@ -202,14 +202,37 @@ struct DataAction {
   }
 
   amd_comgr_status_t setIsaName(llvm::StringRef IsaName);
-  amd_comgr_status_t setActionOptions(llvm::StringRef ActionOptions);
   amd_comgr_status_t setActionPath(llvm::StringRef ActionPath);
 
+  // Set the options to be the legacy "flat" string.
+  amd_comgr_status_t setOptionsFlat(llvm::StringRef Options);
+  // If the options were set via setOptionsFlag, return a reference to the
+  // string (including the null terminator).
+  amd_comgr_status_t getOptionsFlat(llvm::StringRef &Options);
+
+  // Set the options to be the new list.
+  amd_comgr_status_t setOptionList(llvm::ArrayRef<const char *> Options);
+  // If the options were set via setOptionList, return the length of the list.
+  amd_comgr_status_t getOptionListCount(size_t &Size);
+  // If the options were set via setOptionList, return a reference to the
+  // string at Index in the list (including the null terminator).
+  amd_comgr_status_t getOptionListItem(size_t Index, llvm::StringRef &Option);
+
+  // Return a normalized array of options, possibly splitting a flat options
+  // string. If splitting, ' ' is used as a delimiter if IsDeviceLibs is false,
+  // otherwise ',' is used. The returned array reference is only valid as long
+  // as no other option APIs are called.
+  ArrayRef<std::string> getOptions(bool IsDeviceLibs = false);
+
   char *IsaName;
-  char *Options;
   char *Path;
   amd_comgr_language_t Language;
   bool Logging;
+
+private:
+  bool AreOptionsList;
+  std::string FlatOptions;
+  std::vector<std::string> ListOptions;
 };
 
 struct DataMeta {

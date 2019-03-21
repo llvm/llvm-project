@@ -89,7 +89,8 @@ public:
   DisassemHelper(raw_ostream &OutS, raw_ostream &ErrS)
       : OutS(OutS), ErrS(ErrS) {}
 
-  amd_comgr_status_t disassembleAction(StringRef Input, StringRef Options);
+  amd_comgr_status_t disassembleAction(StringRef Input,
+                                       ArrayRef<std::string> Options);
 }; // DisassemHelper
 
 } // end namespace llvm

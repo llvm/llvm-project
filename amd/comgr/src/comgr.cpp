@@ -100,12 +100,11 @@ dispatchDisassembleAction(amd_comgr_action_kind_t ActionKind,
           return true;
         return false;
       });
-  std::string Options = "-disassemble -mcpu=";
-  Options.append(Ident.Processor);
-  if (ActionInfo->Options) {
-    Options.append(" ");
-    Options.append(ActionInfo->Options);
-  }
+  std::vector<std::string> Options;
+  Options.emplace_back("-disassemble");
+  Options.push_back((Twine("-mcpu=") + Ident.Processor).str());
+  auto ActionOptions = ActionInfo->getOptions();
+  Options.insert(Options.end(), ActionOptions.begin(), ActionOptions.end());
   // Loop through the input data set, perform actions and add result
   // to output data set.
   for (auto Input : Objects) {
@@ -245,6 +244,19 @@ static StringRef getStatusName(amd_comgr_status_t Status) {
   }
 }
 
+/// Perform a simple quoting of an option to allow separating options with
+/// space in debug output. The option is surrounded by double quotes, and
+/// any embedded double quotes or backslashes are preceeded by a backslash.
+static void printQuotedOption(raw_ostream &OS, StringRef Option) {
+  OS << '"';
+  for (const char C : Option) {
+    if (C == '"' || C == '\\')
+      OS << '\\';
+    OS << C;
+  }
+  OS << '"';
+}
+
 bool COMGR::isDataKindValid(amd_comgr_data_kind_t DataKind) {
   return DataKind > AMD_COMGR_DATA_KIND_UNDEF &&
          DataKind <= AMD_COMGR_DATA_KIND_LAST;
@@ -342,12 +354,11 @@ DataSet::~DataSet() {
 }
 
 DataAction::DataAction()
-    : IsaName(nullptr), Options(nullptr), Path(nullptr),
-      Language(AMD_COMGR_LANGUAGE_NONE), Logging(false) {}
+    : IsaName(nullptr), Path(nullptr), Language(AMD_COMGR_LANGUAGE_NONE),
+      Logging(false), AreOptionsList(false) {}
 
 DataAction::~DataAction() {
   free(IsaName);
-  free(Options);
   free(Path);
 }
 
@@ -355,12 +366,67 @@ amd_comgr_status_t DataAction::setIsaName(llvm::StringRef IsaName) {
   return setCStr(this->IsaName, IsaName);
 }
 
-amd_comgr_status_t DataAction::setActionOptions(llvm::StringRef ActionOptions) {
-  return setCStr(this->Options, ActionOptions);
-}
-
 amd_comgr_status_t DataAction::setActionPath(llvm::StringRef ActionPath) {
   return setCStr(this->Path, ActionPath);
+}
+
+amd_comgr_status_t DataAction::setOptionsFlat(StringRef Options) {
+  AreOptionsList = false;
+  FlatOptions = Options.str();
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t DataAction::getOptionsFlat(StringRef &Options) {
+  if (AreOptionsList)
+    return AMD_COMGR_STATUS_ERROR;
+  Options = StringRef(FlatOptions.c_str(), FlatOptions.size() + 1);
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t DataAction::setOptionList(ArrayRef<const char *> Options) {
+  AreOptionsList = true;
+  ListOptions.clear();
+  for (auto &Option : Options)
+    ListOptions.push_back(Option);
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t DataAction::getOptionListCount(size_t &Size) {
+  if (!AreOptionsList)
+    return AMD_COMGR_STATUS_ERROR;
+  Size = ListOptions.size();
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t DataAction::getOptionListItem(size_t Index,
+                                                 StringRef &Option) {
+  if (!AreOptionsList)
+    return AMD_COMGR_STATUS_ERROR;
+  if (Index >= ListOptions.size())
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  auto &Str = ListOptions[Index];
+  Option = StringRef(Str.c_str(), Str.size() + 1);
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+ArrayRef<std::string> DataAction::getOptions(bool IsDeviceLibs) {
+  // In the legacy path the ListOptions is used as a buffer to split the
+  // options in. We have to do this lazily as the delimiter depends on
+  // IsDeviceLibs. We could avoid re-splitting in the case where the same call
+  // is repeated, but this path will be deprecated and removed anyway.
+  if (!AreOptionsList) {
+    ListOptions.clear();
+    StringRef OptionsRef(FlatOptions);
+    SmallVector<StringRef, 16> OptionRefs;
+    if (IsDeviceLibs)
+      OptionsRef.split(OptionRefs, ',', -1, false);
+    else
+      OptionsRef.split(OptionRefs, ' ');
+    for (auto &Option : OptionRefs)
+      ListOptions.push_back(Option);
+  }
+
+  return ListOptions;
 }
 
 amd_comgr_metadata_kind_t DataMeta::getMetadataKind() {
@@ -828,7 +894,7 @@ amd_comgr_status_t AMD_API
   if (!ActionP)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  return ActionP->setActionOptions(Options);
+  return ActionP->setOptionsFlat(Options);
 }
 
 amd_comgr_status_t AMD_API
@@ -841,10 +907,63 @@ amd_comgr_status_t AMD_API
   if (!ActionP || !Size)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
+  StringRef ActionOptions;
+  if (auto Status = ActionP->getOptionsFlat(ActionOptions))
+    return Status;
+
   if (Options)
-    memcpy(Options, ActionP->Options, *Size);
+    memcpy(Options, ActionOptions.data(), *Size);
   else
-    *Size = strlen(ActionP->Options) + 1; // include terminating 0
+    *Size = ActionOptions.size();
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_set_option_list
+    //
+    (amd_comgr_action_info_t ActionInfo, const char *Options[], size_t Count) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP || (!Options && Count))
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  return ActionP->setOptionList(ArrayRef<const char *>(Options, Count));
+}
+
+amd_comgr_status_t AMD_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_get_option_list_count
+    //
+    (amd_comgr_action_info_t ActionInfo, size_t *Count) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP || !Count)
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  return ActionP->getOptionListCount(*Count);
+}
+
+amd_comgr_status_t AMD_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_get_option_list_item
+    //
+    (amd_comgr_action_info_t ActionInfo, size_t Index, size_t *Size,
+     char *Option) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP || !Size)
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  StringRef ActionOption;
+  if (auto Status = ActionP->getOptionListItem(Index, ActionOption))
+    return Status;
+
+  if (Option)
+    memcpy(Option, ActionOption.data(), *Size);
+  else
+    *Size = ActionOption.size();
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -959,7 +1078,13 @@ amd_comgr_status_t AMD_API
   *LogP << "amd_comgr_do_action:\n"
         << "\t  ActionKind: " << getActionKindName(ActionKind) << '\n'
         << "\t     IsaName: " << ActionInfoP->IsaName << '\n'
-        << "\t     Options: " << ActionInfoP->Options << '\n'
+        << "\t     Options:";
+  for (auto &Option : ActionInfoP->getOptions(
+           ActionKind == AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES)) {
+    *LogP << ' ';
+    printQuotedOption(*LogP, Option);
+  }
+  *LogP << '\n'
         << "\t        Path: " << ActionInfoP->Path << '\n'
         << "\t    Language: " << getLanguageName(ActionInfoP->Language) << '\n';
 

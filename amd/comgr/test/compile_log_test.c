@@ -144,9 +144,6 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_action_info_set_logging(dataAction, true);
   checkError(status, "amd_comgr_action_info_set_logging");
 
-  status = amd_comgr_action_info_set_options(dataAction, "");
-  checkError(status, "amd_comgr_action_info_set_options");
-
   // AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC
 
   status = amd_comgr_create_data_set(&dataSetOut);

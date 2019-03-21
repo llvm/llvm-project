@@ -99,8 +99,6 @@ class AMDGPUCompiler {
   std::string CPU;
   /// Precompiled header file paths.
   llvm::SmallVector<llvm::SmallString<128>, 2> PrecompiledHeaders;
-  /// User supplied options to the compiler.
-  llvm::SmallVector<llvm::SmallString<128>, 16> Options;
   /// Arguments common to all driver invocations in the current action.
   llvm::SmallVector<const char *, 128> Args;
   llvm::SmallString<128> TmpDir;
@@ -116,7 +114,6 @@ class AMDGPUCompiler {
   /// Process each file in @c InSet individually, placing output in @c OutSet.
   amd_comgr_status_t processFiles(amd_comgr_data_kind_t OutputKind,
                                   const char *OutputSuffix);
-  void parseOptions();
   amd_comgr_status_t addIncludeFlags();
   amd_comgr_status_t addTargetIdentifierFlags(llvm::StringRef IdentStr);
 

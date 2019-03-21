@@ -48,6 +48,9 @@ int main(int argc, char *argv[]) {
   amd_comgr_action_info_t dataAction;
   amd_comgr_status_t status;
   size_t count;
+  const char *codeGenOptions[] = {"-mllvm", "-amdgpu-early-inline-all"};
+  size_t codeGenOptionsCount =
+      sizeof(codeGenOptions) / sizeof(codeGenOptions[0]);
 
   sizeSource1 = setBuf(TEST_OBJ_DIR "/source1.cl", &bufSource1);
   sizeSource2 = setBuf(TEST_OBJ_DIR "/source2.cl", &bufSource2);
@@ -91,9 +94,9 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_action_info_set_isa_name(dataAction,
                                               "amdgcn-amd-amdhsa--gfx803");
   checkError(status, "amd_comgr_action_info_set_isa_name");
-  status = amd_comgr_action_info_set_options(dataAction,
-                                             "-mllvm -amdgpu-early-inline-all");
-  checkError(status, "amd_comgr_action_info_set_options");
+  status = amd_comgr_action_info_set_option_list(dataAction, codeGenOptions,
+                                                 codeGenOptionsCount);
+  checkError(status, "amd_comgr_action_info_set_option_list");
 
   status = amd_comgr_create_data_set(&dataSetBC);
   checkError(status, "amd_comgr_create_data_set");
@@ -115,10 +118,6 @@ int main(int argc, char *argv[]) {
 
   status = amd_comgr_create_data_set(&dataSetLinked);
   checkError(status, "amd_comgr_create_data_set");
-
-  status = amd_comgr_action_info_set_options(dataAction,
-                                             "-mllvm -amdgpu-early-inline-all");
-  checkError(status, "amd_comgr_action_info_set_options");
 
   status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_BC_TO_BC, dataAction,
                                dataSetBC, dataSetLinked);
@@ -156,8 +155,8 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_create_data_set(&dataSetExec);
   checkError(status, "amd_comgr_create_data_set");
 
-  status = amd_comgr_action_info_set_options(dataAction, "");
-  checkError(status, "amd_comgr_action_info_set_options");
+  status = amd_comgr_action_info_set_option_list(dataAction, NULL, 0);
+  checkError(status, "amd_comgr_action_info_set_option_list");
 
   status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE,
                                dataAction, dataSetReloc, dataSetExec);

@@ -106,12 +106,9 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
   if (auto Status = addOCLCObject(ResultSet, get_oclc_isa_version(GFXIP)))
     return Status;
 
-  StringRef OptionsString(ActionInfo->Options);
-  SmallVector<StringRef, 5> Options;
-  OptionsString.split(Options, ',', -1, false);
   bool CorrectlyRoundedSqrt = false, DazOpt = false, FiniteOnly = false,
        UnsafeMath = false;
-  for (auto &Option : Options) {
+  for (auto &Option : ActionInfo->getOptions(true)) {
     bool *Flag = StringSwitch<bool *>(Option)
                      .Case("correctly_rounded_sqrt", &CorrectlyRoundedSqrt)
                      .Case("daz_opt", &DazOpt)
