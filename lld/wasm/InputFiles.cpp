@@ -244,8 +244,6 @@ void ObjFile::parse() {
       CustomSections.emplace_back(make<InputSection>(Section, this));
       CustomSections.back()->setRelocations(Section.Relocations);
       CustomSectionsByIndex[SectionIndex] = CustomSections.back();
-      if (Section.Name == "producers")
-        ProducersSection = &Section;
     }
     SectionIndex++;
   }

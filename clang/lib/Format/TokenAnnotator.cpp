@@ -1924,12 +1924,15 @@ void TokenAnnotator::setCommentLineLevels(
         NextNonCommentLine->First->NewlinesBefore <= 1 &&
         NextNonCommentLine->First->OriginalColumn ==
             (*I)->First->OriginalColumn) {
-      // Align comments for preprocessor lines with the # in column 0.
-      // Otherwise, align with the next line.
-      (*I)->Level = (NextNonCommentLine->Type == LT_PreprocessorDirective ||
-                     NextNonCommentLine->Type == LT_ImportStatement)
-                        ? 0
-                        : NextNonCommentLine->Level;
+      // Align comments for preprocessor lines with the # in column 0 if
+      // preprocessor lines are not indented. Otherwise, align with the next
+      // line.
+      (*I)->Level =
+          (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+           (NextNonCommentLine->Type == LT_PreprocessorDirective ||
+            NextNonCommentLine->Type == LT_ImportStatement))
+              ? 0
+              : NextNonCommentLine->Level;
     } else {
       NextNonCommentLine = (*I)->First->isNot(tok::r_brace) ? (*I) : nullptr;
     }

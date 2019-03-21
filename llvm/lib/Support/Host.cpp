@@ -1264,6 +1264,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 
   getX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);
 
+  Features["cx8"]    = (EDX >>  8) & 1;
   Features["cmov"]   = (EDX >> 15) & 1;
   Features["mmx"]    = (EDX >> 23) & 1;
   Features["fxsr"]   = (EDX >> 24) & 1;

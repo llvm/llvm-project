@@ -65,7 +65,8 @@
 ; OSABI-PAL-ELF: amdgcn-amd-amdpal--gfx802
 ; OSABI-PAL-ELF-NOT: NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
 ; OSABI-PAL-ELF: NT_AMD_AMDGPU_PAL_METADATA (PAL Metadata)
-; OSABI-PAL-ELF: PAL Metadata:
+; TODO: readobj can no longer dump PAL metadata pending resolution of D52821
+; OSABI-PAL-ELF-XXX: PAL Metadata:
 ; TODO: Following check line fails on mips:
 ; OSABI-PAL-ELF-XXX: 0x2e12,0xac02c0,0x2e13,0x80,0x1000001b,0x1,0x10000022,0x60,0x1000003e,0x0
 

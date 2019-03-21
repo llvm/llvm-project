@@ -166,7 +166,6 @@ echo "@@@ Running tests for libc++ @@@"
 "${LIBCXX_BUILD_DIR}/bin/llvm-lit" -sv "${LIBCXX_ROOT}/test" \
                                    --param=enable_experimental=false \
                                    ${LIT_ARCH_STRING} \
-                                   --param=cxx_under_test="${CXX}" \
                                    --param=cxx_headers="${LIBCXX_INSTALL_DIR}/include/c++/v1" \
                                    --param=std="${STD}" \
                                    --param=platform="macosx${DEPLOYMENT_TARGET}" \

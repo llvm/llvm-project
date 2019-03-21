@@ -52,24 +52,6 @@ AMDGPURegisterBankInfo::AMDGPURegisterBankInfo(const TargetRegisterInfo &TRI)
 
 }
 
-static bool isConstant(const MachineOperand &MO, int64_t &C) {
-  const MachineFunction *MF = MO.getParent()->getParent()->getParent();
-  const MachineRegisterInfo &MRI = MF->getRegInfo();
-  const MachineInstr *Def = MRI.getVRegDef(MO.getReg());
-  if (!Def)
-    return false;
-
-  if (Def->getOpcode() == AMDGPU::G_CONSTANT) {
-    C = Def->getOperand(1).getCImm()->getSExtValue();
-    return true;
-  }
-
-  if (Def->getOpcode() == AMDGPU::COPY)
-    return isConstant(Def->getOperand(1), C);
-
-  return false;
-}
-
 unsigned AMDGPURegisterBankInfo::copyCost(const RegisterBank &Dst,
                                           const RegisterBank &Src,
                                           unsigned Size) const {
@@ -816,42 +798,35 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
 
   case AMDGPU::G_EXTRACT_VECTOR_ELT: {
-    unsigned IdxOp = 2;
-    int64_t Imm;
-    // XXX - Do we really need to fully handle these? The constant case should
-    // be legalized away before RegBankSelect?
-
-    unsigned OutputBankID = isSALUMapping(MI) && isConstant(MI.getOperand(IdxOp), Imm) ?
+    unsigned OutputBankID = isSALUMapping(MI) ?
                             AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
-
+    unsigned SrcSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    unsigned IdxSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
     unsigned IdxBank = getRegBankID(MI.getOperand(2).getReg(), MRI, *TRI);
-    OpdsMapping[0] = AMDGPU::getValueMapping(OutputBankID, MRI.getType(MI.getOperand(0).getReg()).getSizeInBits());
-    OpdsMapping[1] = AMDGPU::getValueMapping(OutputBankID, MRI.getType(MI.getOperand(1).getReg()).getSizeInBits());
+
+    OpdsMapping[0] = AMDGPU::getValueMapping(OutputBankID, SrcSize);
+    OpdsMapping[1] = AMDGPU::getValueMapping(OutputBankID, SrcSize);
 
     // The index can be either if the source vector is VGPR.
-    OpdsMapping[2] = AMDGPU::getValueMapping(IdxBank, MRI.getType(MI.getOperand(2).getReg()).getSizeInBits());
+    OpdsMapping[2] = AMDGPU::getValueMapping(IdxBank, IdxSize);
     break;
   }
   case AMDGPU::G_INSERT_VECTOR_ELT: {
-    // XXX - Do we really need to fully handle these? The constant case should
-    // be legalized away before RegBankSelect?
+    unsigned OutputBankID = isSALUMapping(MI) ?
+      AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
 
-    int64_t Imm;
+    unsigned VecSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    unsigned InsertSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
+    unsigned IdxSize = MRI.getType(MI.getOperand(3).getReg()).getSizeInBits();
+    unsigned InsertEltBank = getRegBankID(MI.getOperand(2).getReg(), MRI, *TRI);
+    unsigned IdxBank = getRegBankID(MI.getOperand(3).getReg(), MRI, *TRI);
 
-    unsigned IdxOp = MI.getOpcode() == AMDGPU::G_EXTRACT_VECTOR_ELT ? 2 : 3;
-    unsigned BankID = isSALUMapping(MI) && isConstant(MI.getOperand(IdxOp), Imm) ?
-                      AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
+    OpdsMapping[0] = AMDGPU::getValueMapping(OutputBankID, VecSize);
+    OpdsMapping[1] = AMDGPU::getValueMapping(OutputBankID, VecSize);
+    OpdsMapping[2] = AMDGPU::getValueMapping(InsertEltBank, InsertSize);
 
-
-
-    // TODO: Can do SGPR indexing, which would obviate the need for the
-    // isConstant check.
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      unsigned Size = getSizeInBits(MI.getOperand(i).getReg(), MRI, *TRI);
-      OpdsMapping[i] = AMDGPU::getValueMapping(BankID, Size);
-    }
-
-
+    // The index can be either if the source vector is VGPR.
+    OpdsMapping[3] = AMDGPU::getValueMapping(IdxBank, IdxSize);
     break;
   }
   case AMDGPU::G_UNMERGE_VALUES: {

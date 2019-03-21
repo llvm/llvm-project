@@ -52,3 +52,9 @@ void test_watchos() {
   f5c_watchos(0); // expected-warning {{'f5c_watchos' is deprecated: first deprecated in watchOS 2.0}}
   f6_watchos(0); // expected-warning {{'f6_watchos' is deprecated: first deprecated in watchOS 3.0}}
 }
+
+void deprecatedAfterIntroduced() __attribute__((availability(ios,introduced=9.3,deprecated=10))); // expected-note {{here}}
+
+void test_ios_correctly_map_to_watchos() {
+  deprecatedAfterIntroduced(); // expected-warning {{'deprecatedAfterIntroduced' is deprecated: first deprecated in watchOS 3}}
+}

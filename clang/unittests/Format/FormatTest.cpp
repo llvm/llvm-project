@@ -2993,22 +2993,25 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
     EXPECT_EQ(Expected, format(ToFormat, Style));
     EXPECT_EQ(Expected, format(Expected, Style));
   }
-  // Test with tabs.
-  Style.UseTab = FormatStyle::UT_Always;
-  Style.IndentWidth = 8;
-  Style.TabWidth = 8;
-  verifyFormat("#ifdef _WIN32\n"
-               "#\tdefine A 0\n"
-               "#\tifdef VAR2\n"
-               "#\t\tdefine B 1\n"
-               "#\t\tinclude <someheader.h>\n"
-               "#\t\tdefine MACRO          \\\n"
-               "\t\t\tsome_very_long_func_aaaaaaaaaa();\n"
-               "#\tendif\n"
-               "#else\n"
-               "#\tdefine A 1\n"
-               "#endif",
-               Style);
+  // Test AfterHash with tabs.
+  {
+    FormatStyle Tabbed = Style;
+    Tabbed.UseTab = FormatStyle::UT_Always;
+    Tabbed.IndentWidth = 8;
+    Tabbed.TabWidth = 8;
+    verifyFormat("#ifdef _WIN32\n"
+                 "#\tdefine A 0\n"
+                 "#\tifdef VAR2\n"
+                 "#\t\tdefine B 1\n"
+                 "#\t\tinclude <someheader.h>\n"
+                 "#\t\tdefine MACRO          \\\n"
+                 "\t\t\tsome_very_long_func_aaaaaaaaaa();\n"
+                 "#\tendif\n"
+                 "#else\n"
+                 "#\tdefine A 1\n"
+                 "#endif",
+                 Tabbed);
+  }
 
   // Regression test: Multiline-macro inside include guards.
   verifyFormat("#ifndef HEADER_H\n"
@@ -3018,6 +3021,102 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "  int j;\n"
                "#endif // HEADER_H",
                getLLVMStyleWithColumns(20));
+
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
+  // Basic before hash indent tests
+  verifyFormat("#ifdef _WIN32\n"
+               "  #define A 0\n"
+               "  #ifdef VAR2\n"
+               "    #define B 1\n"
+               "    #include <someheader.h>\n"
+               "    #define MACRO                      \\\n"
+               "      some_very_long_func_aaaaaaaaaa();\n"
+               "  #endif\n"
+               "#else\n"
+               "  #define A 1\n"
+               "#endif",
+               Style);
+  verifyFormat("#if A\n"
+               "  #define MACRO                        \\\n"
+               "    void a(int x) {                    \\\n"
+               "      b();                             \\\n"
+               "      c();                             \\\n"
+               "      d();                             \\\n"
+               "      e();                             \\\n"
+               "      f();                             \\\n"
+               "    }\n"
+               "#endif",
+               Style);
+  // Keep comments aligned with indented directives. These
+  // tests cannot use verifyFormat because messUp manipulates leading
+  // whitespace.
+  {
+    const char *Expected = "void f() {\n"
+                           "// Aligned to preprocessor.\n"
+                           "#if 1\n"
+                           "  // Aligned to code.\n"
+                           "  int a;\n"
+                           "  #if 1\n"
+                           "    // Aligned to preprocessor.\n"
+                           "    #define A 0\n"
+                           "  // Aligned to code.\n"
+                           "  int b;\n"
+                           "  #endif\n"
+                           "#endif\n"
+                           "}";
+    const char *ToFormat = "void f() {\n"
+                           "// Aligned to preprocessor.\n"
+                           "#if 1\n"
+                           "// Aligned to code.\n"
+                           "int a;\n"
+                           "#if 1\n"
+                           "// Aligned to preprocessor.\n"
+                           "#define A 0\n"
+                           "// Aligned to code.\n"
+                           "int b;\n"
+                           "#endif\n"
+                           "#endif\n"
+                           "}";
+    EXPECT_EQ(Expected, format(ToFormat, Style));
+    EXPECT_EQ(Expected, format(Expected, Style));
+  }
+  {
+    const char *Expected = "void f() {\n"
+                           "/* Aligned to preprocessor. */\n"
+                           "#if 1\n"
+                           "  /* Aligned to code. */\n"
+                           "  int a;\n"
+                           "  #if 1\n"
+                           "    /* Aligned to preprocessor. */\n"
+                           "    #define A 0\n"
+                           "  /* Aligned to code. */\n"
+                           "  int b;\n"
+                           "  #endif\n"
+                           "#endif\n"
+                           "}";
+    const char *ToFormat = "void f() {\n"
+                           "/* Aligned to preprocessor. */\n"
+                           "#if 1\n"
+                           "/* Aligned to code. */\n"
+                           "int a;\n"
+                           "#if 1\n"
+                           "/* Aligned to preprocessor. */\n"
+                           "#define A 0\n"
+                           "/* Aligned to code. */\n"
+                           "int b;\n"
+                           "#endif\n"
+                           "#endif\n"
+                           "}";
+    EXPECT_EQ(Expected, format(ToFormat, Style));
+    EXPECT_EQ(Expected, format(Expected, Style));
+  }
+
+  // Test single comment before preprocessor
+  verifyFormat("// Comment\n"
+               "\n"
+               "#if 1\n"
+               "#endif",
+               Style);
 }
 
 TEST_F(FormatTest, FormatHashIfNotAtStartOfLine) {

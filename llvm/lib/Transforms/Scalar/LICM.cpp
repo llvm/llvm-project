@@ -1191,33 +1191,38 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     } else { // MSSAU
       if (isOnlyMemoryAccess(SI, CurLoop, MSSAU))
         return true;
-      if (*LicmMssaOptCounter < LicmMssaOptCap) {
+      // If there are more accesses than the Promotion cap, give up, we're not
+      // walking a list that long.
+      if (NoOfMemAccTooLarge)
+        return false;
+      // Check store only if there's still "quota" to check clobber.
+      if (*LicmMssaOptCounter >= LicmMssaOptCap)
+        return false;
+      // If there are interfering Uses (i.e. their defining access is in the
+      // loop), or ordered loads (stored as Defs!), don't move this store.
+      // Could do better here, but this is conservatively correct.
+      // TODO: Cache set of Uses on the first walk in runOnLoop, update when
+      // moving accesses. Can also extend to dominating uses.
+      for (auto *BB : CurLoop->getBlocks())
+        if (auto *Accesses = MSSA->getBlockAccesses(BB)) {
+          for (const auto &MA : *Accesses)
+            if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
+              auto *MD = MU->getDefiningAccess();
+              if (!MSSA->isLiveOnEntryDef(MD) &&
+                  CurLoop->contains(MD->getBlock()))
+                return false;
+            } else if (const auto *MD = dyn_cast<MemoryDef>(&MA))
+              if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
+                assert(!LI->isUnordered() && "Expected unordered load");
+                return false;
+              }
+         }
+
         auto *Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(SI);
         (*LicmMssaOptCounter)++;
-        // If there are no clobbering Defs in the loop, we still need to check
-        // for interfering Uses. If there are more accesses than the Promotion
-        // cap, give up, we're not walking a list that long. Otherwise, walk the
-        // list, check each Use if it's optimized to an access outside the loop.
-        // If yes, store is safe to hoist. This is fairly restrictive, but
-        // conservatively correct.
-        // TODO: Cache set of Uses on the first walk in runOnLoop, update when
-        // moving accesses. Can also extend to dominating uses.
-        if ((!MSSA->isLiveOnEntryDef(Source) &&
-             CurLoop->contains(Source->getBlock())) ||
-            NoOfMemAccTooLarge)
-          return false;
-        for (auto *BB : CurLoop->getBlocks())
-          if (auto *Accesses = MSSA->getBlockAccesses(BB))
-            for (const auto &MA : *Accesses)
-              if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
-                auto *MD = MU->getDefiningAccess();
-                if (!MSSA->isLiveOnEntryDef(MD) &&
-                    CurLoop->contains(MD->getBlock()))
-                  return false;
-              }
-        return true;
-      }
-      return false;
+        // If there are no clobbering Defs in the loop, store is safe to hoist.
+        return MSSA->isLiveOnEntryDef(Source) ||
+               !CurLoop->contains(Source->getBlock());
     }
   }
 

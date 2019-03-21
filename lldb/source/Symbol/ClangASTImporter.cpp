@@ -937,7 +937,7 @@ void ClangASTImporter::Minion::ImportDefinitionTo(clang::Decl *to,
   }
 }
 
-clang::Decl *ClangASTImporter::Minion::Imported(clang::Decl *from,
+void ClangASTImporter::Minion::Imported(clang::Decl *from,
                                                 clang::Decl *to) {
   ClangASTMetrics::RegisterClangImport();
 
@@ -1096,8 +1096,6 @@ clang::Decl *ClangASTImporter::Minion::Imported(clang::Decl *from,
       }
     }
   }
-
-  return clang::ASTImporter::Imported(from, to);
 }
 
 clang::Decl *ClangASTImporter::Minion::GetOriginalDecl(clang::Decl *To) {

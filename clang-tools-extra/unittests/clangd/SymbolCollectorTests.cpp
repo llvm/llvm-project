@@ -394,80 +394,23 @@ TEST_F(SymbolCollectorTest, Template) {
   Annotations Header(R"(
     // Primary template and explicit specialization are indexed, instantiation
     // is not.
-    template <class X> class $barclasstemp[[Bar]] {};
-    template <class T, class U, template<typename> class Z, int Q>
-    struct [[Tmpl]] { T $xdecl[[x]] = 0; };
-
-    // template-template, non-type and type full spec
-    template <> struct $specdecl[[Tmpl]]<int, bool, Bar, 3> {};
-
-    // template-template, non-type and type partial spec
-    template <class U, int T> struct $partspecdecl[[Tmpl]]<bool, U, Bar, T> {};
-    // instantiation
-    extern template struct Tmpl<float, bool, Bar, 8>;
-    // instantiation
-    template struct Tmpl<double, bool, Bar, 2>;
-
-    template <typename ...> class $fooclasstemp[[Foo]] {};
-    // parameter-packs full spec
-    template<> class $parampack[[Foo]]<Bar<int>, int, double> {};
-    // parameter-packs partial spec
-    template<class T> class $parampackpartial[[Foo]]<T, T> {};
-
-    template <int ...> class $bazclasstemp[[Baz]] {};
-    // non-type parameter-packs full spec
-    template<> class $parampacknontype[[Baz]]<3, 5, 8> {};
-    // non-type parameter-packs partial spec
-    template<int T> class $parampacknontypepartial[[Baz]]<T, T> {};
-
-    template <template <class> class ...> class $fozclasstemp[[Foz]] {};
-    // template-template parameter-packs full spec
-    template<> class $parampacktempltempl[[Foz]]<Bar, Bar> {};
-    // template-template parameter-packs partial spec
-    template<template <class> class T>
-    class $parampacktempltemplpartial[[Foz]]<T, T> {};
+    template <class T, class U> struct [[Tmpl]] {T $xdecl[[x]] = 0;};
+    template <> struct $specdecl[[Tmpl]]<int, bool> {};
+    template <class U> struct $partspecdecl[[Tmpl]]<bool, U> {};
+    extern template struct Tmpl<float, bool>;
+    template struct Tmpl<double, bool>;
   )");
   runSymbolCollector(Header.code(), /*Main=*/"");
-  EXPECT_THAT(Symbols.size(), 14U);
-  EXPECT_THAT(
-      Symbols,
-      AllOf(
-          Contains(AllOf(QName("Tmpl"), DeclRange(Header.range()),
-                         ForCodeCompletion(true))),
-          Contains(AllOf(QName("Bar"), DeclRange(Header.range("barclasstemp")),
-                         ForCodeCompletion(true))),
-          Contains(AllOf(QName("Foo"), DeclRange(Header.range("fooclasstemp")),
-                         ForCodeCompletion(true))),
-          Contains(AllOf(QName("Baz"), DeclRange(Header.range("bazclasstemp")),
-                         ForCodeCompletion(true))),
-          Contains(AllOf(QName("Foz"), DeclRange(Header.range("fozclasstemp")),
-                         ForCodeCompletion(true))),
-          Contains(AllOf(QName("Tmpl<int, bool, Bar, 3>"),
-                         DeclRange(Header.range("specdecl")),
-                         ForCodeCompletion(false))),
-          Contains(AllOf(QName("Tmpl<bool, U, Bar, T>"),
-                         DeclRange(Header.range("partspecdecl")),
-                         ForCodeCompletion(false))),
-          Contains(AllOf(QName("Foo<Bar<int>, int, double>"),
-                         DeclRange(Header.range("parampack")),
-                         ForCodeCompletion(false))),
-          Contains(AllOf(QName("Foo<T, T>"),
-                         DeclRange(Header.range("parampackpartial")),
-                         ForCodeCompletion(false))),
-          Contains(AllOf(QName("Baz<3, 5, 8>"),
-                         DeclRange(Header.range("parampacknontype")),
-                         ForCodeCompletion(false))),
-          Contains(AllOf(QName("Baz<T, T>"),
-                         DeclRange(Header.range("parampacknontypepartial")),
-                         ForCodeCompletion(false))),
-          Contains(AllOf(QName("Foz<Bar, Bar>"),
-                         DeclRange(Header.range("parampacktempltempl")),
-                         ForCodeCompletion(false))),
-          Contains(AllOf(QName("Foz<T, T>"),
-                         DeclRange(Header.range("parampacktempltemplpartial")),
-                         ForCodeCompletion(false))),
-          Contains(AllOf(QName("Tmpl::x"), DeclRange(Header.range("xdecl")),
-                         ForCodeCompletion(false)))));
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("Tmpl"), DeclRange(Header.range()),
+                        ForCodeCompletion(true)),
+                  AllOf(QName("Tmpl"), DeclRange(Header.range("specdecl")),
+                        ForCodeCompletion(false)),
+                  AllOf(QName("Tmpl"), DeclRange(Header.range("partspecdecl")),
+                        ForCodeCompletion(false)),
+                  AllOf(QName("Tmpl::x"), DeclRange(Header.range("xdecl")),
+                        ForCodeCompletion(false))));
 }
 
 TEST_F(SymbolCollectorTest, ObjCSymbols) {

@@ -55,7 +55,7 @@ PrintedOMPStmtMatches(StringRef Code, const T &NodeMatch,
                       StringRef ExpectedPrinted,
                       PolicyAdjusterType PolicyAdjuster = None) {
   std::vector<std::string> Args = {
-      "-fopenmp",
+      "-fopenmp=libomp",
   };
   return PrintedStmtMatches(Code, Args, NodeMatch, ExpectedPrinted,
                             PolicyAdjuster);

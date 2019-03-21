@@ -355,12 +355,13 @@ SymbolFileDWARF::SymbolFileDWARF(ObjectFile *objfile)
                                   << 32), // Used by SymbolFileDWARFDebugMap to
                                           // when this class parses .o files to
                                           // contain the .o file index/ID
-      m_debug_map_module_wp(), m_debug_map_symfile(NULL), m_data_debug_abbrev(),
-      m_data_debug_aranges(), m_data_debug_frame(), m_data_debug_info(),
-      m_data_debug_line(), m_data_debug_macro(), m_data_debug_loc(),
-      m_data_debug_ranges(), m_data_debug_rnglists(), m_data_debug_str(),
-      m_data_apple_names(), m_data_apple_types(), m_data_apple_namespaces(),
-      m_abbr(), m_info(), m_line(), m_fetched_external_modules(false),
+      m_debug_map_module_wp(), m_debug_map_symfile(NULL),
+      m_context(*objfile->GetModule()), m_data_debug_abbrev(),
+      m_data_debug_frame(), m_data_debug_info(), m_data_debug_line(),
+      m_data_debug_macro(), m_data_debug_loc(), m_data_debug_ranges(),
+      m_data_debug_rnglists(), m_data_debug_str(), m_data_apple_names(),
+      m_data_apple_types(), m_data_apple_namespaces(), m_abbr(), m_info(),
+      m_line(), m_fetched_external_modules(false),
       m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate), m_ranges(),
       m_unique_ast_type_map() {}
 
@@ -394,15 +395,6 @@ TypeSystem *SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
 
 void SymbolFileDWARF::InitializeObject() {
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
-  ModuleSP module_sp(m_obj_file->GetModule());
-  if (module_sp) {
-    const SectionList *section_list = module_sp->GetSectionList();
-    Section *section =
-        section_list->FindSectionByName(GetDWARFMachOSegmentName()).get();
-
-    if (section)
-      m_obj_file->ReadSectionData(section, m_dwarf_data);
-  }
 
   if (!GetGlobalPluginProperties()->IgnoreFileIndexes()) {
     DWARFDataExtractor apple_names, apple_namespaces, apple_types, apple_objc;
@@ -549,19 +541,15 @@ void SymbolFileDWARF::LoadSectionData(lldb::SectionType sect_type,
                                       DWARFDataExtractor &data) {
   ModuleSP module_sp(m_obj_file->GetModule());
   const SectionList *section_list = module_sp->GetSectionList();
-  if (section_list) {
-    SectionSP section_sp(section_list->FindSectionByType(sect_type, true));
-    if (section_sp) {
-      // See if we memory mapped the DWARF segment?
-      if (m_dwarf_data.GetByteSize()) {
-        data.SetData(m_dwarf_data, section_sp->GetOffset(),
-                     section_sp->GetFileSize());
-      } else {
-        if (m_obj_file->ReadSectionData(section_sp.get(), data) == 0)
-          data.Clear();
-      }
-    }
-  }
+  if (!section_list)
+    return;
+
+  SectionSP section_sp(section_list->FindSectionByType(sect_type, true));
+  if (!section_sp)
+    return;
+
+  data.Clear();
+  m_obj_file->ReadSectionData(section_sp.get(), data);
 }
 
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_abbrev_data() {
@@ -571,11 +559,6 @@ const DWARFDataExtractor &SymbolFileDWARF::get_debug_abbrev_data() {
 
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_addr_data() {
   return GetCachedSectionData(eSectionTypeDWARFDebugAddr, m_data_debug_addr);
-}
-
-const DWARFDataExtractor &SymbolFileDWARF::get_debug_aranges_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugAranges,
-                              m_data_debug_aranges);
 }
 
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_frame_data() {
@@ -690,10 +673,8 @@ DWARFDebugInfo *SymbolFileDWARF::DebugInfo() {
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
     if (get_debug_info_data().GetByteSize() > 0) {
-      m_info.reset(new DWARFDebugInfo());
-      if (m_info) {
-        m_info->SetDwarfData(this);
-      }
+      m_info = llvm::make_unique<DWARFDebugInfo>(m_context);
+      m_info->SetDwarfData(this);
     }
   }
   return m_info.get();

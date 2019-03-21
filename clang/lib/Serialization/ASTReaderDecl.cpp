@@ -4490,10 +4490,15 @@ void ASTDeclReader::UpdateDecl(Decl *D,
                                                           ReadSourceRange()));
       break;
 
-    case UPD_DECL_MARKED_OPENMP_ALLOCATE:
+    case UPD_DECL_MARKED_OPENMP_ALLOCATE: {
+      auto AllocatorKind =
+          static_cast<OMPAllocateDeclAttr::AllocatorTypeTy>(Record.readInt());
+      Expr *Allocator = Record.readExpr();
+      SourceRange SR = ReadSourceRange();
       D->addAttr(OMPAllocateDeclAttr::CreateImplicit(
-          Reader.getContext(), Record.readExpr(), ReadSourceRange()));
+          Reader.getContext(), AllocatorKind, Allocator, SR));
       break;
+    }
 
     case UPD_DECL_EXPORTED: {
       unsigned SubmoduleID = readSubmoduleID();

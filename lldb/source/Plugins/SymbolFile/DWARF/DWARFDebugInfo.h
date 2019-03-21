@@ -19,6 +19,10 @@
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Error.h"
 
+namespace lldb_private {
+class DWARFContext;
+}
+
 typedef std::multimap<const char *, dw_offset_t, CStringCompareFunctionObject>
     CStringToDIEMap;
 typedef CStringToDIEMap::iterator CStringToDIEMapIter;
@@ -32,7 +36,7 @@ public:
                                   const dw_offset_t next_offset,
                                   const uint32_t depth, void *userData);
 
-  DWARFDebugInfo();
+  explicit DWARFDebugInfo(lldb_private::DWARFContext &context);
   void SetDwarfData(SymbolFileDWARF *dwarf2Data);
 
   size_t GetNumCompileUnits();
@@ -62,6 +66,7 @@ protected:
   // Member variables
   //----------------------------------------------------------------------
   SymbolFileDWARF *m_dwarf2Data;
+  lldb_private::DWARFContext &m_context;
   CompileUnitColl m_compile_units;
   std::unique_ptr<DWARFDebugAranges>
       m_cu_aranges_up; // A quick address to compile unit table
