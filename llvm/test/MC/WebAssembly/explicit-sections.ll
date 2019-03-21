@@ -70,4 +70,9 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:         Name:            .sec2
 ; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
+; CHECK-NEXT:   - Type:            CUSTOM
+; CHECK-NEXT:     Name:            target_features
+; CHECK-NEXT:     Features:
+; CHECK-NEXT:       - Prefix:          DISALLOWED
+; CHECK-NEXT:         Name:            atomics
 ; CHECK-NEXT: ...

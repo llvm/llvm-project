@@ -56,12 +56,10 @@ private:
   DenseMap<const Function *, SIFunctionResourceInfo> CallGraphResourceInfo;
 
   std::unique_ptr<AMDGPU::HSAMD::MetadataStreamer> HSAMetadataStream;
-  std::map<uint32_t, uint32_t> PALMetadataMap;
 
   uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
   SIFunctionResourceInfo analyzeResourceUsage(const MachineFunction &MF) const;
 
-  void readPALMetadata(Module &M);
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
   void getAmdKernelCode(amd_kernel_code_t &Out, const SIProgramInfo &KernelInfo,
                         const MachineFunction &MF) const;

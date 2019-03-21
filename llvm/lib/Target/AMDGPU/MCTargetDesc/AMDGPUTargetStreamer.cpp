@@ -153,6 +153,14 @@ AMDGPUTargetAsmStreamer::AMDGPUTargetAsmStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS)
     : AMDGPUTargetStreamer(S), OS(OS) { }
 
+// A hook for emitting stuff at the end.
+// We use it for emitting the accumulated PAL metadata as directives.
+void AMDGPUTargetAsmStreamer::finish() {
+  std::string S;
+  getPALMetadata()->toString(S);
+  OS << S;
+}
+
 void AMDGPUTargetAsmStreamer::EmitDirectiveAMDGCNTarget(StringRef Target) {
   OS << "\t.amdgcn_target \"" << Target << "\"\n";
 }
@@ -222,16 +230,6 @@ bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
   OS << '\t' << V3::AssemblerDirectiveBegin << '\n';
   OS << StrOS.str() << '\n';
   OS << '\t' << V3::AssemblerDirectiveEnd << '\n';
-  return true;
-}
-
-bool AMDGPUTargetAsmStreamer::EmitPALMetadata(
-    const PALMD::Metadata &PALMetadata) {
-  std::string PALMetadataString;
-  if (PALMD::toString(PALMetadata, PALMetadataString))
-    return false;
-
-  OS << '\t' << PALMD::AssemblerDirective << PALMetadataString << '\n';
   return true;
 }
 
@@ -382,6 +380,19 @@ MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
   return static_cast<MCELFStreamer &>(Streamer);
 }
 
+// A hook for emitting stuff at the end.
+// We use it for emitting the accumulated PAL metadata as a .note record.
+void AMDGPUTargetELFStreamer::finish() {
+  std::string Blob;
+  const char *Vendor = getPALMetadata()->getVendor();
+  unsigned Type = getPALMetadata()->getType();
+  getPALMetadata()->toBlob(Type, Blob);
+  if (Blob.empty())
+    return;
+  EmitNote(Vendor, MCConstantExpr::create(Blob.size(), getContext()), Type,
+           [&](MCELFStreamer &OS) { OS.EmitBytes(Blob); });
+}
+
 void AMDGPUTargetELFStreamer::EmitNote(
     StringRef Name, const MCExpr *DescSZ, unsigned NoteType,
     function_ref<void(MCELFStreamer &)> EmitDesc) {
@@ -524,18 +535,6 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
              OS.EmitLabel(DescBegin);
              OS.EmitBytes(HSAMetadataString);
              OS.EmitLabel(DescEnd);
-           });
-  return true;
-}
-
-bool AMDGPUTargetELFStreamer::EmitPALMetadata(
-    const PALMD::Metadata &PALMetadata) {
-  EmitNote(ElfNote::NoteNameV2,
-           MCConstantExpr::create(PALMetadata.size() * sizeof(uint32_t),
-                                  getContext()),
-           ELF::NT_AMD_AMDGPU_PAL_METADATA, [&](MCELFStreamer &OS) {
-             for (auto I : PALMetadata)
-               OS.EmitIntValue(I, sizeof(uint32_t));
            });
   return true;
 }

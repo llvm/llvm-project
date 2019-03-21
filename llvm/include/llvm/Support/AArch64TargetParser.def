@@ -80,54 +80,55 @@ AARCH64_ARCH_EXT_NAME("predres",  AArch64::AEK_PREDRES,  "+predres", "-predres")
 #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)
 #endif
 AARCH64_CPU_NAME("cortex-a35", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC))
+                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("cortex-a53", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, true,
-                (AArch64::AEK_CRC))
+                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("cortex-a55", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC))
 AARCH64_CPU_NAME("cortex-a57", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC))
+                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("cortex-a72", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC))
+                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("cortex-a73", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC))
+                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("cortex-a75", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC))
 AARCH64_CPU_NAME("cortex-a76", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
                   AArch64::AEK_SSBS))
 AARCH64_CPU_NAME("cortex-a76ae", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
+                 (AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
                   AArch64::AEK_SSBS))
 AARCH64_CPU_NAME("cyclone", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_NONE))
+                 (AArch64::AEK_NONE))
 AARCH64_CPU_NAME("exynos-m1", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC))
+                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("exynos-m2", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC))
+                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("exynos-m3", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC))
+                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("exynos-m4", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_FP16 | AArch64::AEK_DOTPROD))
+                 (AArch64::AEK_FP16 | AArch64::AEK_DOTPROD))
 AARCH64_CPU_NAME("falkor", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC | AArch64::AEK_RDM))
+                 (AArch64::AEK_CRC | AArch64::AEK_RDM))
 AARCH64_CPU_NAME("saphira", ARMV8_3A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_PROFILE))
+                 (AArch64::AEK_PROFILE))
 AARCH64_CPU_NAME("kryo", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC))
+                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("thunderx2t99", ARMV8_1A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_NONE))
+                 (AArch64::AEK_NONE))
 AARCH64_CPU_NAME("thunderx", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC | AArch64::AEK_PROFILE))
+                 (AArch64::AEK_CRC | AArch64::AEK_PROFILE))
 AARCH64_CPU_NAME("thunderxt88", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC | AArch64::AEK_PROFILE))
+                 (AArch64::AEK_CRC | AArch64::AEK_PROFILE))
 AARCH64_CPU_NAME("thunderxt81", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC | AArch64::AEK_PROFILE))
+                 (AArch64::AEK_CRC | AArch64::AEK_PROFILE))
 AARCH64_CPU_NAME("thunderxt83", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC | AArch64::AEK_PROFILE))
+                 (AArch64::AEK_CRC | AArch64::AEK_PROFILE))
 AARCH64_CPU_NAME("tsv110", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                 (AArch64::AEK_PROFILE | AArch64::AEK_FP16 | AArch64::AEK_FP16FML |
-                  AArch64::AEK_DOTPROD))
+                 (AArch64::AEK_DOTPROD |
+                  AArch64::AEK_FP16 | AArch64::AEK_FP16FML |
+                  AArch64::AEK_PROFILE))
 // Invalid CPU
 AARCH64_CPU_NAME("invalid", INVALID, FK_INVALID, true, AArch64::AEK_INVALID)
 #undef AARCH64_CPU_NAME

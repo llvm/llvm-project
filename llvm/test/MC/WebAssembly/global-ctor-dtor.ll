@@ -181,4 +181,9 @@ declare void @func3()
 ; CHECK-NEXT:         Symbol: 10
 ; CHECK-NEXT:       - Priority: 65535
 ; CHECK-NEXT:         Symbol: 7
+; CHECK-NEXT:   - Type:            CUSTOM
+; CHECK-NEXT:     Name:            target_features
+; CHECK-NEXT:     Features:
+; CHECK-NEXT:       - Prefix:          DISALLOWED
+; CHECK-NEXT:         Name:            atomics
 ; CHECK-NEXT: ...

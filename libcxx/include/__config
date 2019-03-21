@@ -1311,7 +1311,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #if !defined(_LIBCPP_BUILDING_LIBRARY) &&                                      \
     !defined(_LIBCPP_DISABLE_AVAILABILITY) &&                                  \
     __has_feature(attribute_availability_with_strict) &&                       \
-    __has_feature(attribute_availability_in_templates)
+    __has_feature(attribute_availability_in_templates) &&                      \
+    __has_extension(pragma_clang_attribute_external_declaration)
 #  ifdef __APPLE__
 #    define _LIBCPP_USE_AVAILABILITY_APPLE
 #  endif
@@ -1359,6 +1360,16 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
      __attribute__((availability(ios,strict,unavailable)))                     \
      __attribute__((availability(tvos,strict,unavailable)))                    \
      __attribute__((availability(watchos,strict,unavailable)))
+#  define _LIBCPP_AVAILABILITY_FILESYSTEM_PUSH                                 \
+     _Pragma("clang attribute push(__attribute__((availability(macosx,strict,unavailable))), apply_to=any(function,record))") \
+     _Pragma("clang attribute push(__attribute__((availability(ios,strict,unavailable))), apply_to=any(function,record))")    \
+     _Pragma("clang attribute push(__attribute__((availability(tvos,strict,unavailable))), apply_to=any(function,record))")   \
+     _Pragma("clang attribute push(__attribute__((availability(watchos,strict,unavailable))), apply_to=any(function,record))")
+#  define _LIBCPP_AVAILABILITY_FILESYSTEM_POP                                  \
+     _Pragma("clang attribute pop")                                            \
+     _Pragma("clang attribute pop")                                            \
+     _Pragma("clang attribute pop")                                            \
+     _Pragma("clang attribute pop")
 #else
 #  define _LIBCPP_AVAILABILITY_SHARED_MUTEX
 #  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
@@ -1371,6 +1382,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_AVAILABILITY_LOCALE_CATEGORY
 #  define _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 #  define _LIBCPP_AVAILABILITY_FILESYSTEM
+#  define _LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
+#  define _LIBCPP_AVAILABILITY_FILESYSTEM_POP
 #endif
 
 // Define availability that depends on _LIBCPP_NO_EXCEPTIONS.

@@ -655,6 +655,7 @@ void UnwrappedLineParser::parseChildBlock() {
 void UnwrappedLineParser::parsePPDirective() {
   assert(FormatTok->Tok.is(tok::hash) && "'#' expected");
   ScopedMacroState MacroState(*Line, Tokens, FormatTok);
+
   nextToken();
 
   if (!FormatTok->Tok.getIdentifierInfo()) {
@@ -823,7 +824,7 @@ void UnwrappedLineParser::parsePPDefine() {
           FormatTok->WhitespaceRange.getEnd()) {
     parseParens();
   }
-  if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash)
+  if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)
     Line->Level += PPBranchLevel + 1;
   addUnwrappedLine();
   ++Line->Level;
@@ -840,7 +841,7 @@ void UnwrappedLineParser::parsePPUnknown() {
   do {
     nextToken();
   } while (!eof());
-  if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash)
+  if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)
     Line->Level += PPBranchLevel + 1;
   addUnwrappedLine();
 }
@@ -2671,6 +2672,9 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       // Comments stored before the preprocessor directive need to be output
       // before the preprocessor directive, at the same level as the
       // preprocessor directive, as we consider them to apply to the directive.
+      if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
+          PPBranchLevel > 0)
+        Line->Level += PPBranchLevel;
       flushComments(isOnNewLine(*FormatTok));
       parsePPDirective();
     }

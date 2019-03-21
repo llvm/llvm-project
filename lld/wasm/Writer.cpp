@@ -20,6 +20,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -68,6 +69,7 @@ private:
   void calculateInitFunctions();
   void processRelocations(InputChunk *Chunk);
   void assignIndexes();
+  void calculateTargetFeatures();
   void calculateImports();
   void calculateExports();
   void calculateCustomSections();
@@ -99,6 +101,7 @@ private:
   void createLinkingSection();
   void createNameSection();
   void createProducersSection();
+  void createTargetFeaturesSection();
 
   void writeHeader();
   void writeSections();
@@ -129,6 +132,7 @@ private:
 
   llvm::StringMap<std::vector<InputSection *>> CustomSectionMapping;
   llvm::StringMap<SectionSymbol *> CustomSectionSymbols;
+  llvm::SmallSet<std::string, 8> TargetFeatures;
 
   // Elements that are used to construct the final output
   std::string Header;
@@ -344,7 +348,7 @@ void Writer::calculateCustomSections() {
       // These custom sections are known the linker and synthesized rather than
       // blindly copied
       if (Name == "linking" || Name == "name" || Name == "producers" ||
-          Name.startswith("reloc."))
+          Name == "target_features" || Name.startswith("reloc."))
         continue;
       // .. or it is a debug section
       if (StripDebug && Name.startswith(".debug_"))
@@ -701,6 +705,23 @@ void Writer::createProducersSection() {
   }
 }
 
+void Writer::createTargetFeaturesSection() {
+  if (TargetFeatures.size() == 0)
+    return;
+
+  SmallVector<std::string, 8> Emitted(TargetFeatures.begin(),
+                                      TargetFeatures.end());
+  std::sort(Emitted.begin(), Emitted.end());
+  SyntheticSection *Section =
+      createSyntheticSection(WASM_SEC_CUSTOM, "target_features");
+  auto &OS = Section->getStream();
+  writeUleb128(OS, Emitted.size(), "feature count");
+  for (auto &Feature : Emitted) {
+    writeU8(OS, WASM_FEATURE_PREFIX_USED, "feature used prefix");
+    writeStr(OS, Feature, "feature name");
+  }
+}
+
 void Writer::writeHeader() {
   memcpy(Buffer->getBufferStart(), Header.data(), Header.size());
 }
@@ -844,13 +865,57 @@ void Writer::createSections() {
   if (!Config->StripDebug && !Config->StripAll)
     createNameSection();
 
-  if (!Config->StripAll)
+  if (!Config->StripAll) {
     createProducersSection();
+    createTargetFeaturesSection();
+  }
 
   for (OutputSection *S : OutputSections) {
     S->setOffset(FileSize);
     S->finalizeContents();
     FileSize += S->getSize();
+  }
+}
+
+void Writer::calculateTargetFeatures() {
+  SmallSet<std::string, 8> Required;
+  SmallSet<std::string, 8> Disallowed;
+
+  // Find the sets of used, required, and disallowed features
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    for (auto &Feature : File->getWasmObj()->getTargetFeatures()) {
+      switch (Feature.Prefix) {
+      case WASM_FEATURE_PREFIX_USED:
+        TargetFeatures.insert(Feature.Name);
+        break;
+      case WASM_FEATURE_PREFIX_REQUIRED:
+        TargetFeatures.insert(Feature.Name);
+        Required.insert(Feature.Name);
+        break;
+      case WASM_FEATURE_PREFIX_DISALLOWED:
+        Disallowed.insert(Feature.Name);
+        break;
+      default:
+        error("Unrecognized feature policy prefix " +
+              std::to_string(Feature.Prefix));
+      }
+    }
+  }
+
+  // Validate the required and disallowed constraints for each file
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    SmallSet<std::string, 8> ObjectFeatures;
+    for (auto &Feature : File->getWasmObj()->getTargetFeatures()) {
+      if (Feature.Prefix == WASM_FEATURE_PREFIX_DISALLOWED)
+        continue;
+      ObjectFeatures.insert(Feature.Name);
+      if (Disallowed.count(Feature.Name))
+        error("Target feature \"" + Feature.Name + "\" is disallowed");
+    }
+    for (auto &Feature : Required) {
+      if (!ObjectFeatures.count(Feature))
+        error(Twine("Missing required target feature \"") + Feature + "\"");
+    }
   }
 }
 
@@ -1225,6 +1290,8 @@ void Writer::run() {
   if (!Config->Pic)
     TableBase = 1;
 
+  log("-- calculateTargetFeatures");
+  calculateTargetFeatures();
   log("-- calculateImports");
   calculateImports();
   log("-- assignIndexes");

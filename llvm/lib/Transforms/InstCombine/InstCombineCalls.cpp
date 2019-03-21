@@ -25,6 +25,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -1175,6 +1176,20 @@ static bool maskIsAllOneOrUndef(Value *Mask) {
   return true;
 }
 
+/// Given a mask vector <Y x i1>, return an APInt (of bitwidth Y) for each lane
+/// which may be active.  TODO: This is a lot like known bits, but for
+/// vectors.  Is there something we can common this with?
+static APInt possiblyDemandedEltsInMask(Value *Mask) {
+
+  const unsigned VWidth = cast<VectorType>(Mask->getType())->getNumElements();
+  APInt DemandedElts = APInt::getAllOnesValue(VWidth);
+  if (auto *CV = dyn_cast<ConstantVector>(Mask))
+    for (unsigned i = 0; i < VWidth; i++)
+      if (CV->getAggregateElement(i)->isNullValue())
+        DemandedElts.clearBit(i);
+  return DemandedElts;
+}
+
 // TODO, Obvious Missing Transforms:
 // * Dereferenceable address -> speculative load/select
 // * Narrow width by halfs excluding zero/undef lanes
@@ -1193,23 +1208,31 @@ static Value *simplifyMaskedLoad(const IntrinsicInst &II,
 }
 
 // TODO, Obvious Missing Transforms:
-// * SimplifyDemandedVectorElts
 // * Single constant active lane -> store
 // * Narrow width by halfs excluding zero/undef lanes
-static Instruction *simplifyMaskedStore(IntrinsicInst &II, InstCombiner &IC) {
+Instruction *InstCombiner::simplifyMaskedStore(IntrinsicInst &II) {
   auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
   if (!ConstMask)
     return nullptr;
 
   // If the mask is all zeros, this instruction does nothing.
   if (ConstMask->isNullValue())
-    return IC.eraseInstFromFunction(II);
+    return eraseInstFromFunction(II);
 
   // If the mask is all ones, this is a plain vector store of the 1st argument.
   if (ConstMask->isAllOnesValue()) {
     Value *StorePtr = II.getArgOperand(1);
     unsigned Alignment = cast<ConstantInt>(II.getArgOperand(2))->getZExtValue();
     return new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
+  }
+
+  // Use masked off lanes to simplify operands via SimplifyDemandedVectorElts
+  APInt DemandedElts = possiblyDemandedEltsInMask(ConstMask);
+  APInt UndefElts(DemandedElts.getBitWidth(), 0);
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0),
+                                            DemandedElts, UndefElts)) {
+    II.setOperand(0, V);
+    return &II;
   }
 
   return nullptr;
@@ -1220,11 +1243,45 @@ static Instruction *simplifyMaskedStore(IntrinsicInst &II, InstCombiner &IC) {
 // * Dereferenceable address & few lanes -> scalarize speculative load/selects
 // * Adjacent vector addresses -> masked.load
 // * Narrow width by halfs excluding zero/undef lanes
+// * Vector splat address w/known mask -> scalar load
+// * Vector incrementing address -> vector masked load
 static Instruction *simplifyMaskedGather(IntrinsicInst &II, InstCombiner &IC) {
   // If the mask is all zeros, return the "passthru" argument of the gather.
   auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
   if (ConstMask && ConstMask->isNullValue())
     return IC.replaceInstUsesWith(II, II.getArgOperand(3));
+
+  return nullptr;
+}
+
+// TODO, Obvious Missing Transforms:
+// * Single constant active lane -> store
+// * Adjacent vector addresses -> masked.store
+// * Narrow store width by halfs excluding zero/undef lanes
+// * Vector splat address w/known mask -> scalar store
+// * Vector incrementing address -> vector masked store
+Instruction *InstCombiner::simplifyMaskedScatter(IntrinsicInst &II) {
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
+  if (!ConstMask)
+    return nullptr;
+
+  // If the mask is all zeros, a scatter does nothing.
+  if (ConstMask->isNullValue())
+    return eraseInstFromFunction(II);
+
+  // Use masked off lanes to simplify operands via SimplifyDemandedVectorElts
+  APInt DemandedElts = possiblyDemandedEltsInMask(ConstMask);
+  APInt UndefElts(DemandedElts.getBitWidth(), 0);
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0),
+                                            DemandedElts, UndefElts)) {
+    II.setOperand(0, V);
+    return &II;
+  }
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(1),
+                                            DemandedElts, UndefElts)) {
+    II.setOperand(1, V);
+    return &II;
+  }
 
   return nullptr;
 }
@@ -1261,20 +1318,6 @@ static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
     Result = IC.Builder.CreateBitCast(Result, II.getType());
 
   return cast<Instruction>(Result);
-}
-
-// TODO, Obvious Missing Transforms:
-// * SimplifyDemandedVectorElts
-// * Single constant active lane -> store
-// * Adjacent vector addresses -> masked.store
-// * Narrow store width by halfs excluding zero/undef lanes
-static Instruction *simplifyMaskedScatter(IntrinsicInst &II, InstCombiner &IC) {
-  // If the mask is all zeros, a scatter does nothing.
-  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
-  if (ConstMask && ConstMask->isNullValue())
-    return IC.eraseInstFromFunction(II);
-
-  return nullptr;
 }
 
 static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
@@ -1972,11 +2015,11 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(CI, SimplifiedMaskedOp);
     break;
   case Intrinsic::masked_store:
-    return simplifyMaskedStore(*II, *this);
+    return simplifyMaskedStore(*II);
   case Intrinsic::masked_gather:
     return simplifyMaskedGather(*II, *this);
   case Intrinsic::masked_scatter:
-    return simplifyMaskedScatter(*II, *this);
+    return simplifyMaskedScatter(*II);
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
     if (auto *SkippedBarrier = simplifyInvariantGroupIntrinsic(*II, *this))
@@ -2063,6 +2106,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return &CI;
     break;
   }
+  case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow: {
     if (Instruction *I = canonicalizeConstantArg0ToArg1(CI))
       return I;
@@ -2070,25 +2114,27 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return I;
 
     // Given 2 constant operands whose sum does not overflow:
+    // uaddo (X +nuw C0), C1 -> uaddo X, C0 + C1
     // saddo (X +nsw C0), C1 -> saddo X, C0 + C1
     Value *X;
     const APInt *C0, *C1;
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
-    if (match(Arg0, m_NSWAdd(m_Value(X), m_APInt(C0))) &&
-        match(Arg1, m_APInt(C1))) {
+    bool IsSigned = II->getIntrinsicID() == Intrinsic::sadd_with_overflow;
+    bool HasNWAdd = IsSigned ? match(Arg0, m_NSWAdd(m_Value(X), m_APInt(C0)))
+                             : match(Arg0, m_NUWAdd(m_Value(X), m_APInt(C0)));
+    if (HasNWAdd && match(Arg1, m_APInt(C1))) {
       bool Overflow;
-      APInt NewC = C1->sadd_ov(*C0, Overflow);
+      APInt NewC =
+          IsSigned ? C1->sadd_ov(*C0, Overflow) : C1->uadd_ov(*C0, Overflow);
       if (!Overflow)
         return replaceInstUsesWith(
             *II, Builder.CreateBinaryIntrinsic(
-                     Intrinsic::sadd_with_overflow, X,
+                     II->getIntrinsicID(), X,
                      ConstantInt::get(Arg1->getType(), NewC)));
     }
-
     break;
   }
-  case Intrinsic::uadd_with_overflow:
   case Intrinsic::umul_with_overflow:
   case Intrinsic::smul_with_overflow:
     if (Instruction *I = canonicalizeConstantArg0ToArg1(CI))

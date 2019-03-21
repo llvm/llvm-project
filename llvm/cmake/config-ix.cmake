@@ -207,7 +207,6 @@ check_symbol_exists(malloc_zone_statistics malloc/malloc.h
 check_symbol_exists(getrlimit "sys/types.h;sys/time.h;sys/resource.h" HAVE_GETRLIMIT)
 check_symbol_exists(posix_spawn spawn.h HAVE_POSIX_SPAWN)
 check_symbol_exists(pread unistd.h HAVE_PREAD)
-check_symbol_exists(realpath stdlib.h HAVE_REALPATH)
 check_symbol_exists(sbrk unistd.h HAVE_SBRK)
 check_symbol_exists(strerror string.h HAVE_STRERROR)
 check_symbol_exists(strerror_r string.h HAVE_STRERROR_R)

@@ -24,90 +24,10 @@ Example usage for git/svn users:
 """
 
 import argparse
-import glob
 import json
-import multiprocessing
-import os
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
-import threading
-import traceback
-import yaml
-
-is_py2 = sys.version[0] == '2'
-
-if is_py2:
-    import Queue as queue
-else:
-    import queue as queue
-
-
-def run_tidy(task_queue, lock, timeout):
-  watchdog = None
-  while True:
-    command = task_queue.get()
-    try:
-      proc = subprocess.Popen(command,
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
-
-      if timeout is not None:
-        watchdog = threading.Timer(timeout, proc.kill)
-        watchdog.start()
-
-      stdout, stderr = proc.communicate()
-
-      with lock:
-        sys.stdout.write(stdout.decode('utf-8') + '\n')
-        sys.stdout.flush()
-        if stderr:
-          sys.stderr.write(stderr.decode('utf-8') + '\n')
-          sys.stderr.flush()
-    except Exception as e:
-      with lock:
-        sys.stderr.write('Failed: ' + str(e) + ': '.join(command) + '\n')
-    finally:
-      with lock:
-        if (not timeout is None) and (not watchdog is None):
-          if not watchdog.is_alive():
-              sys.stderr.write('Terminated by timeout: ' +
-                               ' '.join(command) + '\n')
-          watchdog.cancel()
-      task_queue.task_done()
-
-
-def start_workers(max_tasks, tidy_caller, task_queue, lock, timeout):
-  for _ in range(max_tasks):
-    t = threading.Thread(target=tidy_caller, args=(task_queue, lock, timeout))
-    t.daemon = True
-    t.start()
-
-def merge_replacement_files(tmpdir, mergefile):
-  """Merge all replacement files in a directory into a single file"""
-  # The fixes suggested by clang-tidy >= 4.0.0 are given under
-  # the top level key 'Diagnostics' in the output yaml files
-  mergekey = "Diagnostics"
-  merged = []
-  for replacefile in glob.iglob(os.path.join(tmpdir, '*.yaml')):
-    content = yaml.safe_load(open(replacefile, 'r'))
-    if not content:
-      continue # Skip empty files.
-    merged.extend(content.get(mergekey, []))
-
-  if merged:
-    # MainSourceFile: The key is required by the definition inside
-    # include/clang/Tooling/ReplacementsYaml.h, but the value
-    # is actually never used inside clang-apply-replacements,
-    # so we set it to '' here.
-    output = { 'MainSourceFile': '', mergekey: merged }
-    with open(mergefile, 'w') as out:
-      yaml.safe_dump(output, out)
-  else:
-    # Empty the file:
-    open(mergefile, 'w').close()
 
 
 def main():
@@ -127,10 +47,7 @@ def main():
                       r'.*\.(cpp|cc|c\+\+|cxx|c|cl|h|hpp|m|mm|inc)',
                       help='custom pattern selecting file paths to check '
                       '(case insensitive, overridden by -regex)')
-  parser.add_argument('-j', type=int, default=1,
-                      help='number of tidy instances to be run in parallel.')
-  parser.add_argument('-timeout', type=int, default=None,
-                      help='timeout per each file in seconds.')
+
   parser.add_argument('-fix', action='store_true', default=False,
                       help='apply suggested fixes')
   parser.add_argument('-checks',
@@ -167,7 +84,7 @@ def main():
     match = re.search('^\+\+\+\ \"?(.*?/){%s}([^ \t\n\"]*)' % args.p, line)
     if match:
       filename = match.group(2)
-    if filename is None:
+    if filename == None:
       continue
 
     if args.regex is not None:
@@ -185,79 +102,44 @@ def main():
         line_count = int(match.group(3))
       if line_count == 0:
         continue
-      end_line = start_line + line_count - 1
+      end_line = start_line + line_count - 1;
       lines_by_file.setdefault(filename, []).append([start_line, end_line])
 
-  if not any(lines_by_file):
+  if len(lines_by_file) == 0:
     print("No relevant changes found.")
     sys.exit(0)
 
-  max_task_count = args.j
-  if max_task_count == 0:
-      max_task_count = multiprocessing.cpu_count()
-  max_task_count = min(len(lines_by_file), max_task_count)
+  line_filter_json = json.dumps(
+    [{"name" : name, "lines" : lines_by_file[name]} for name in lines_by_file],
+    separators = (',', ':'))
 
-  tmpdir = None
-  if args.export_fixes:
-    tmpdir = tempfile.mkdtemp()
+  quote = "";
+  if sys.platform == 'win32':
+    line_filter_json=re.sub(r'"', r'"""', line_filter_json)
+  else:
+    quote = "'";
 
-  # Tasks for clang-tidy.
-  task_queue = queue.Queue(max_task_count)
-  # A lock for console output.
-  lock = threading.Lock()
-
-  # Run a pool of clang-tidy workers.
-  start_workers(max_task_count, run_tidy, task_queue, lock, args.timeout)
-
-  # Form the common args list.
-  common_clang_tidy_args = []
+  # Run clang-tidy on files containing changes.
+  command = [args.clang_tidy_binary]
+  command.append('-line-filter=' + quote + line_filter_json + quote)
   if args.fix:
-    common_clang_tidy_args.append('-fix')
-  if args.checks != '':
-    common_clang_tidy_args.append('-checks=' + args.checks)
-  if args.quiet:
-    common_clang_tidy_args.append('-quiet')
-  if args.build_path is not None:
-    common_clang_tidy_args.append('-p=%s' % args.build_path)
-  for arg in args.extra_arg:
-    common_clang_tidy_args.append('-extra-arg=%s' % arg)
-  for arg in args.extra_arg_before:
-    common_clang_tidy_args.append('-extra-arg-before=%s' % arg)
-
-  for name in lines_by_file:
-    line_filter_json = json.dumps(
-      [{"name": name, "lines": lines_by_file[name]}],
-      separators=(',', ':'))
-
-    # Run clang-tidy on files containing changes.
-    command = [args.clang_tidy_binary]
-    command.append('-line-filter=' + line_filter_json)
-    if args.export_fixes:
-      # Get a temporary file. We immediately close the handle so clang-tidy can
-      # overwrite it.
-      (handle, tmp_name) = tempfile.mkstemp(suffix='.yaml', dir=tmpdir)
-      os.close(handle)
-      command.append('-export-fixes=' + tmp_name)
-    command.extend(common_clang_tidy_args)
-    command.append(name)
-    command.extend(clang_tidy_args)
-
-    task_queue.put(command)
-
-  # Wait for all threads to be done.
-  task_queue.join()
-
+    command.append('-fix')
   if args.export_fixes:
-    print('Writing fixes to ' + args.export_fixes + ' ...')
-    try:
-      merge_replacement_files(tmpdir, args.export_fixes)
-    except:
-      sys.stderr.write('Error exporting fixes.\n')
-      traceback.print_exc()
+    command.append('-export-fixes=' + args.export_fixes)
+  if args.checks != '':
+    command.append('-checks=' + quote + args.checks + quote)
+  if args.quiet:
+    command.append('-quiet')
+  if args.build_path is not None:
+    command.append('-p=%s' % args.build_path)
+  command.extend(lines_by_file.keys())
+  for arg in args.extra_arg:
+      command.append('-extra-arg=%s' % arg)
+  for arg in args.extra_arg_before:
+      command.append('-extra-arg-before=%s' % arg)
+  command.extend(clang_tidy_args)
 
-  if tmpdir:
-    shutil.rmtree(tmpdir)
-
+  sys.exit(subprocess.call(' '.join(command), shell=True))
 
 if __name__ == '__main__':
   main()

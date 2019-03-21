@@ -700,6 +700,11 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryPhi, MemoryAccess)
 class MemorySSA {
 public:
   MemorySSA(Function &, AliasAnalysis *, DominatorTree *);
+
+  // MemorySSA must remain where it's constructed; Walkers it creates store
+  // pointers to it.
+  MemorySSA(MemorySSA &&) = delete;
+
   ~MemorySSA();
 
   MemorySSAWalker *getWalker();
@@ -1038,8 +1043,6 @@ public:
   /// invalidation.  This will be called by MemorySSA at appropriate times for
   /// the walker it uses or returns.
   virtual void invalidateInfo(MemoryAccess *) {}
-
-  virtual void verify(const MemorySSA *MSSA) { assert(MSSA == this->MSSA); }
 
 protected:
   friend class MemorySSA; // For updating MSSA pointer in MemorySSA move

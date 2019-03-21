@@ -111,11 +111,11 @@ namespace test5 {
 
 // rdar://problem/8592139
 namespace test6 {
-  void foo(id); // expected-note{{candidate function}}
-  void foo(A*) __attribute__((unavailable)); // expected-note {{explicitly made unavailable}}
+  void foo(id);
+  void foo(A*) __attribute__((unavailable)); // expected-note {{marked unavailable here}}
 
   void test(B *b) {
-    foo(b); // expected-error {{call to unavailable function 'foo'}}
+    foo(b); // expected-error {{'foo' is unavailable}}
   }
 }
 

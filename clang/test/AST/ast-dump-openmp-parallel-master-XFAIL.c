@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -fopenmp-version=50 -ast-dump %s 2>&1 | FileCheck --match-full-lines -implicit-check-not=openmp_structured_block %s
 
+// REQUIRES: broken-PR41022
+// https://bugs.llvm.org/show_bug.cgi?id=41022
+
 void test_zero() {
 #pragma omp parallel master
   ;

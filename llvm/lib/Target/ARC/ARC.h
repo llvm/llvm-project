@@ -25,6 +25,7 @@ class ARCTargetMachine;
 FunctionPass *createARCISelDag(ARCTargetMachine &TM,
                                CodeGenOpt::Level OptLevel);
 FunctionPass *createARCExpandPseudosPass();
+FunctionPass *createARCOptAddrMode();
 FunctionPass *createARCBranchFinalizePass();
 
 } // end namespace llvm

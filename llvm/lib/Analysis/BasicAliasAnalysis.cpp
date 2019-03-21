@@ -1585,10 +1585,15 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
       // that causes a MayAlias.
       // Pretend the phis do not alias.
       AliasResult Alias = NoAlias;
-      assert(AliasCache.count(Locs) &&
-             "There must exist an entry for the phi node");
-      AliasResult OrigAliasResult = AliasCache[Locs];
-      AliasCache[Locs] = NoAlias;
+      AliasResult OrigAliasResult;
+      {
+        // Limited lifetime iterator invalidated by the aliasCheck call below.
+        auto CacheIt = AliasCache.find(Locs);
+        assert((CacheIt != AliasCache.end()) &&
+               "There must exist an entry for the phi node");
+        OrigAliasResult = CacheIt->second;
+        CacheIt->second = NoAlias;
+      }
 
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
         AliasResult ThisAlias =
@@ -1601,9 +1606,11 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
       }
 
       // Reset if speculation failed.
-      if (Alias != NoAlias)
-        AliasCache[Locs] = OrigAliasResult;
-
+      if (Alias != NoAlias) {
+        auto Pair = AliasCache.insert(std::make_pair(Locs, OrigAliasResult));
+        assert(!Pair.second && "Entry must have existed");
+        Pair.first->second = OrigAliasResult;
+      }
       return Alias;
     }
 
@@ -1824,8 +1831,11 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (const PHINode *PN = dyn_cast<PHINode>(V1)) {
     AliasResult Result = aliasPHI(PN, V1Size, V1AAInfo,
                                   V2, V2Size, V2AAInfo, O2);
-    if (Result != MayAlias)
-      return AliasCache[Locs] = Result;
+    if (Result != MayAlias) {
+      Pair = AliasCache.insert(std::make_pair(Locs, Result));
+      assert(!Pair.second && "Entry must have existed");
+      return Pair.first->second = Result;
+    }
   }
 
   if (isa<SelectInst>(V2) && !isa<SelectInst>(V1)) {
@@ -1837,8 +1847,11 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (const SelectInst *S1 = dyn_cast<SelectInst>(V1)) {
     AliasResult Result =
         aliasSelect(S1, V1Size, V1AAInfo, V2, V2Size, V2AAInfo, O2);
-    if (Result != MayAlias)
-      return AliasCache[Locs] = Result;
+    if (Result != MayAlias) {
+      Pair = AliasCache.insert(std::make_pair(Locs, Result));
+      assert(!Pair.second && "Entry must have existed");
+      return Pair.first->second = Result;
+    }
   }
 
   // If both pointers are pointing into the same object and one of them
@@ -1846,14 +1859,19 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (O1 == O2)
     if (V1Size.isPrecise() && V2Size.isPrecise() &&
         (isObjectSize(O1, V1Size.getValue(), DL, TLI, NullIsValidLocation) ||
-         isObjectSize(O2, V2Size.getValue(), DL, TLI, NullIsValidLocation)))
-      return AliasCache[Locs] = PartialAlias;
+         isObjectSize(O2, V2Size.getValue(), DL, TLI, NullIsValidLocation))) {
+      Pair = AliasCache.insert(std::make_pair(Locs, PartialAlias));
+      assert(!Pair.second && "Entry must have existed");
+      return Pair.first->second = PartialAlias;
+    }
 
   // Recurse back into the best AA results we have, potentially with refined
   // memory locations. We have already ensured that BasicAA has a MayAlias
   // cache result for these, so any recursion back into BasicAA won't loop.
   AliasResult Result = getBestAAResults().alias(Locs.first, Locs.second);
-  return AliasCache[Locs] = Result;
+  Pair = AliasCache.insert(std::make_pair(Locs, Result));
+  assert(!Pair.second && "Entry must have existed");
+  return Pair.first->second = Result;
 }
 
 /// Check whether two Values can be considered equivalent.
