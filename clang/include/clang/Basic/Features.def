@@ -247,6 +247,7 @@ EXTENSION(cxx_variable_templates, LangOpts.CPlusPlus)
 // Miscellaneous language extensions
 EXTENSION(overloadable_unmarked, true)
 EXTENSION(pragma_clang_attribute_namespaces, true)
+EXTENSION(pragma_clang_attribute_external_declaration, true)
 
 #undef EXTENSION
 #undef FEATURE

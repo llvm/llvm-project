@@ -9263,6 +9263,10 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   // Don't allow 0 dmask, as hardware assumes one channel enabled.
   bool NoChannels = !NewDmask;
   if (NoChannels) {
+    if (!UsesTFC) {
+      // No uses of the result and not using TFC. Then do nothing.
+      return Node;
+    }
     // If the original dmask has one channel - then nothing to do
     if (OldBitsSet == 1)
       return Node;

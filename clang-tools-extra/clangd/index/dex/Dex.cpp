@@ -86,15 +86,6 @@ void Dex::buildIndex() {
   llvm::DenseMap<Token, std::vector<DocID>> TempInvertedIndex;
   for (DocID SymbolRank = 0; SymbolRank < Symbols.size(); ++SymbolRank) {
     const auto *Sym = Symbols[SymbolRank];
-    // FIXME: Enable fuzzy find on template specializations once we start
-    // storing template arguments in the name. Currently we only store name for
-    // class template, which would cause duplication in the results.
-    if (Sym->SymInfo.Properties &
-        (static_cast<index::SymbolPropertySet>(
-             index::SymbolProperty::TemplateSpecialization) |
-         static_cast<index::SymbolPropertySet>(
-             index::SymbolProperty::TemplatePartialSpecialization)))
-      continue;
     for (const auto &Token : generateSearchTokens(*Sym))
       TempInvertedIndex[Token].push_back(SymbolRank);
   }

@@ -410,7 +410,10 @@ private:
          Parent->isUnaryOperator() ||
          // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
          Parent->isOneOf(TT_ObjCForIn, TT_CastRParen) ||
-         getBinOpPrecedence(Parent->Tok.getKind(), true, true) > prec::Unknown);
+         // for (auto && [A,B] : C)  && structure binding seen as ObjCMethodExpr
+         (Parent->isNot(tok::ampamp) &&
+          getBinOpPrecedence(Parent->Tok.getKind(), true, true) >
+              prec::Unknown));
     bool ColonFound = false;
 
     unsigned BindingIncrease = 1;

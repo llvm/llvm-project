@@ -22794,24 +22794,37 @@ static SDValue getPrefetchNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   return SDValue(Res, 0);
 }
 
-/// Handles the lowering of builtin intrinsic that return the value
-/// of the extended control register.
-static void getExtendedControlRegister(SDNode *N, const SDLoc &DL,
-                                       SelectionDAG &DAG,
-                                       const X86Subtarget &Subtarget,
-                                       SmallVectorImpl<SDValue> &Results) {
-  assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
-  SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
-  SDValue LO, HI;
+/// Handles the lowering of builtin intrinsics with chain that return their
+/// value into registers EDX:EAX.
+/// If operand ScrReg is a valid register identifier, then operand 2 of N is
+/// copied to SrcReg. The assumption is that SrcReg is an implicit input to
+/// TargetOpcode.
+/// Returns a Glue value which can be used to add extra copy-from-reg if the
+/// expanded intrinsics implicitly defines extra registers (i.e. not just
+/// EDX:EAX).
+static SDValue expandIntrinsicWChainHelper(SDNode *N, const SDLoc &DL,
+                                        SelectionDAG &DAG,
+                                        unsigned TargetOpcode,
+                                        unsigned SrcReg,
+                                        const X86Subtarget &Subtarget,
+                                        SmallVectorImpl<SDValue> &Results) {
+  SDValue Chain = N->getOperand(0);
+  SDValue Glue;
 
-  // The ECX register is used to select the index of the XCR register to
-  // return.
-  SDValue Chain =
-      DAG.getCopyToReg(N->getOperand(0), DL, X86::ECX, N->getOperand(2));
-  SDNode *N1 = DAG.getMachineNode(X86::XGETBV, DL, Tys, Chain);
+  if (SrcReg) {
+    assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
+    Chain = DAG.getCopyToReg(Chain, DL, SrcReg, N->getOperand(2), Glue);
+    Glue = Chain.getValue(1);
+  }
+
+  SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
+  SDValue N1Ops[] = {Chain, Glue};
+  SDNode *N1 = DAG.getMachineNode(
+      TargetOpcode, DL, Tys, ArrayRef<SDValue>(N1Ops, Glue.getNode() ? 2 : 1));
   Chain = SDValue(N1, 0);
 
   // Reads the content of XCR and returns it in registers EDX:EAX.
+  SDValue LO, HI;
   if (Subtarget.is64Bit()) {
     LO = DAG.getCopyFromReg(Chain, DL, X86::RAX, MVT::i64, SDValue(N1, 1));
     HI = DAG.getCopyFromReg(LO.getValue(1), DL, X86::RDX, MVT::i64,
@@ -22822,14 +22835,15 @@ static void getExtendedControlRegister(SDNode *N, const SDLoc &DL,
                             LO.getValue(2));
   }
   Chain = HI.getValue(1);
+  Glue = HI.getValue(2);
 
   if (Subtarget.is64Bit()) {
-    // Merge the two 32-bit values into a 64-bit one..
+    // Merge the two 32-bit values into a 64-bit one.
     SDValue Tmp = DAG.getNode(ISD::SHL, DL, MVT::i64, HI,
                               DAG.getConstant(32, DL, MVT::i8));
     Results.push_back(DAG.getNode(ISD::OR, DL, MVT::i64, LO, Tmp));
     Results.push_back(Chain);
-    return;
+    return Glue;
   }
 
   // Use a buildpair to merge the two 32-bit values into a 64-bit one.
@@ -22837,52 +22851,7 @@ static void getExtendedControlRegister(SDNode *N, const SDLoc &DL,
   SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Ops);
   Results.push_back(Pair);
   Results.push_back(Chain);
-}
-
-/// Handles the lowering of builtin intrinsics that read performance monitor
-/// counters (x86_rdpmc).
-static void getReadPerformanceCounter(SDNode *N, const SDLoc &DL,
-                                      SelectionDAG &DAG,
-                                      const X86Subtarget &Subtarget,
-                                      SmallVectorImpl<SDValue> &Results) {
-  assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
-  SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
-  SDValue LO, HI;
-
-  // The ECX register is used to select the index of the performance counter
-  // to read.
-  SDValue Chain = DAG.getCopyToReg(N->getOperand(0), DL, X86::ECX,
-                                   N->getOperand(2));
-  SDValue rd = DAG.getNode(X86ISD::RDPMC_DAG, DL, Tys, Chain);
-
-  // Reads the content of a 64-bit performance counter and returns it in the
-  // registers EDX:EAX.
-  if (Subtarget.is64Bit()) {
-    LO = DAG.getCopyFromReg(rd, DL, X86::RAX, MVT::i64, rd.getValue(1));
-    HI = DAG.getCopyFromReg(LO.getValue(1), DL, X86::RDX, MVT::i64,
-                            LO.getValue(2));
-  } else {
-    LO = DAG.getCopyFromReg(rd, DL, X86::EAX, MVT::i32, rd.getValue(1));
-    HI = DAG.getCopyFromReg(LO.getValue(1), DL, X86::EDX, MVT::i32,
-                            LO.getValue(2));
-  }
-  Chain = HI.getValue(1);
-
-  if (Subtarget.is64Bit()) {
-    // The EAX register is loaded with the low-order 32 bits. The EDX register
-    // is loaded with the supported high-order bits of the counter.
-    SDValue Tmp = DAG.getNode(ISD::SHL, DL, MVT::i64, HI,
-                              DAG.getConstant(32, DL, MVT::i8));
-    Results.push_back(DAG.getNode(ISD::OR, DL, MVT::i64, LO, Tmp));
-    Results.push_back(Chain);
-    return;
-  }
-
-  // Use a buildpair to merge the two 32-bit values into a 64-bit one.
-  SDValue Ops[] = { LO, HI };
-  SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Ops);
-  Results.push_back(Pair);
-  Results.push_back(Chain);
+  return Glue;
 }
 
 /// Handles the lowering of builtin intrinsics that read the time stamp counter
@@ -22892,59 +22861,28 @@ static void getReadTimeStampCounter(SDNode *N, const SDLoc &DL, unsigned Opcode,
                                     SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget,
                                     SmallVectorImpl<SDValue> &Results) {
-  SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
-  SDValue rd = DAG.getNode(Opcode, DL, Tys, N->getOperand(0));
-  SDValue LO, HI;
-
   // The processor's time-stamp counter (a 64-bit MSR) is stored into the
   // EDX:EAX registers. EDX is loaded with the high-order 32 bits of the MSR
   // and the EAX register is loaded with the low-order 32 bits.
-  if (Subtarget.is64Bit()) {
-    LO = DAG.getCopyFromReg(rd, DL, X86::RAX, MVT::i64, rd.getValue(1));
-    HI = DAG.getCopyFromReg(LO.getValue(1), DL, X86::RDX, MVT::i64,
-                            LO.getValue(2));
-  } else {
-    LO = DAG.getCopyFromReg(rd, DL, X86::EAX, MVT::i32, rd.getValue(1));
-    HI = DAG.getCopyFromReg(LO.getValue(1), DL, X86::EDX, MVT::i32,
-                            LO.getValue(2));
-  }
-  SDValue Chain = HI.getValue(1);
-
-  SDValue TSC;
-  if (Subtarget.is64Bit()) {
-    // The EDX register is loaded with the high-order 32 bits of the MSR, and
-    // the EAX register is loaded with the low-order 32 bits.
-    TSC = DAG.getNode(ISD::SHL, DL, MVT::i64, HI,
-                      DAG.getConstant(32, DL, MVT::i8));
-    TSC = DAG.getNode(ISD::OR, DL, MVT::i64, LO, TSC);
-  } else {
-    // Use a buildpair to merge the two 32-bit values into a 64-bit one.
-    TSC = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, { LO, HI });
-  }
-
-  if (Opcode == X86ISD::RDTSCP_DAG) {
-    assert(N->getNumOperands() == 2 && "Unexpected number of operands!");
-
-    // Instruction RDTSCP loads the IA32:TSC_AUX_MSR (address C000_0103H) into
-    // the ECX register. Add 'ecx' explicitly to the chain.
-    SDValue ecx = DAG.getCopyFromReg(Chain, DL, X86::ECX, MVT::i32,
-                                     HI.getValue(2));
-
-    Results.push_back(TSC);
-    Results.push_back(ecx);
-    Results.push_back(ecx.getValue(1));
+  SDValue Glue = expandIntrinsicWChainHelper(N, DL, DAG, Opcode,
+                                             /* NoRegister */0, Subtarget,
+                                             Results);
+  if (Opcode != X86::RDTSCP)
     return;
-  }
 
-  Results.push_back(TSC);
-  Results.push_back(Chain);
+  SDValue Chain = Results[1];
+  // Instruction RDTSCP loads the IA32:TSC_AUX_MSR (address C000_0103H) into
+  // the ECX register. Add 'ecx' explicitly to the chain.
+  SDValue ecx = DAG.getCopyFromReg(Chain, DL, X86::ECX, MVT::i32, Glue);
+  Results[1] = ecx;
+  Results.push_back(ecx.getValue(1));
 }
 
 static SDValue LowerREADCYCLECOUNTER(SDValue Op, const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
   SmallVector<SDValue, 3> Results;
   SDLoc DL(Op);
-  getReadTimeStampCounter(Op.getNode(), DL, X86ISD::RDTSC_DAG, DAG, Subtarget,
+  getReadTimeStampCounter(Op.getNode(), DL, X86::RDTSC, DAG, Subtarget,
                           Results);
   return DAG.getMergeValues(Results, DL);
 }
@@ -23145,15 +23083,16 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getMergeValues(Results, dl);
   }
   // Read Performance Monitoring Counters.
-  case RDPMC: {
-    SmallVector<SDValue, 2> Results;
-    getReadPerformanceCounter(Op.getNode(), dl, DAG, Subtarget, Results);
-    return DAG.getMergeValues(Results, dl);
-  }
-  // Get Extended Control Register.
+  case RDPMC:
+  // GetExtended Control Register.
   case XGETBV: {
     SmallVector<SDValue, 2> Results;
-    getExtendedControlRegister(Op.getNode(), dl, DAG, Subtarget, Results);
+
+    // RDPMC uses ECX to select the index of the performance counter to read.
+    // XGETBV uses ECX to select the index of the XCR register to return.
+    // The result is stored into registers EDX:EAX.
+    expandIntrinsicWChainHelper(Op.getNode(), dl, DAG, IntrData->Opc0, X86::ECX,
+                                Subtarget, Results);
     return DAG.getMergeValues(Results, dl);
   }
   // XTEST intrinsics.
@@ -27233,21 +27172,23 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     default : llvm_unreachable("Do not know how to custom type "
                                "legalize this intrinsic operation!");
     case Intrinsic::x86_rdtsc:
-      return getReadTimeStampCounter(N, dl, X86ISD::RDTSC_DAG, DAG, Subtarget,
+      return getReadTimeStampCounter(N, dl, X86::RDTSC, DAG, Subtarget,
                                      Results);
     case Intrinsic::x86_rdtscp:
-      return getReadTimeStampCounter(N, dl, X86ISD::RDTSCP_DAG, DAG, Subtarget,
+      return getReadTimeStampCounter(N, dl, X86::RDTSCP, DAG, Subtarget,
                                      Results);
     case Intrinsic::x86_rdpmc:
-      return getReadPerformanceCounter(N, dl, DAG, Subtarget, Results);
-
+      expandIntrinsicWChainHelper(N, dl, DAG, X86::RDPMC, X86::ECX, Subtarget,
+                                  Results);
+      return;
     case Intrinsic::x86_xgetbv:
-      return getExtendedControlRegister(N, dl, DAG, Subtarget, Results);
+      expandIntrinsicWChainHelper(N, dl, DAG, X86::XGETBV, X86::ECX, Subtarget,
+                                  Results);
+      return;
     }
   }
   case ISD::READCYCLECOUNTER: {
-    return getReadTimeStampCounter(N, dl, X86ISD::RDTSC_DAG, DAG, Subtarget,
-                                   Results);
+    return getReadTimeStampCounter(N, dl, X86::RDTSC, DAG, Subtarget, Results);
   }
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS: {
     EVT T = N->getValueType(0);
@@ -27526,9 +27467,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FLD:                return "X86ISD::FLD";
   case X86ISD::FST:                return "X86ISD::FST";
   case X86ISD::CALL:               return "X86ISD::CALL";
-  case X86ISD::RDTSC_DAG:          return "X86ISD::RDTSC_DAG";
-  case X86ISD::RDTSCP_DAG:         return "X86ISD::RDTSCP_DAG";
-  case X86ISD::RDPMC_DAG:          return "X86ISD::RDPMC_DAG";
   case X86ISD::BT:                 return "X86ISD::BT";
   case X86ISD::CMP:                return "X86ISD::CMP";
   case X86ISD::COMI:               return "X86ISD::COMI";
@@ -41223,11 +41161,12 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG) {
       onlyZeroFlagUsed(SDValue(N, 0))) {
     EVT VT = Op.getValueType();
     unsigned BitWidth = VT.getSizeInBits();
-    unsigned ShAmt = Op.getConstantOperandVal(1);
-    if (ShAmt < BitWidth) { // Avoid undefined shifts.
+    const APInt &ShAmt = Op.getConstantOperandAPInt(1);
+    if (ShAmt.ult(BitWidth)) { // Avoid undefined shifts.
+      unsigned MaskBits = BitWidth - ShAmt.getZExtValue();
       APInt Mask = Op.getOpcode() == ISD::SRL
-                       ? APInt::getHighBitsSet(BitWidth, BitWidth - ShAmt)
-                       : APInt::getLowBitsSet(BitWidth, BitWidth - ShAmt);
+                       ? APInt::getHighBitsSet(BitWidth, MaskBits)
+                       : APInt::getLowBitsSet(BitWidth, MaskBits);
       if (Mask.isSignedIntN(32)) {
         Op = DAG.getNode(ISD::AND, dl, VT, Op.getOperand(0),
                          DAG.getConstant(Mask, dl, VT));
@@ -41236,7 +41175,6 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG) {
       }
     }
   }
-
 
   // Look for a truncate with a single use.
   if (Op.getOpcode() != ISD::TRUNCATE || !Op.hasOneUse())

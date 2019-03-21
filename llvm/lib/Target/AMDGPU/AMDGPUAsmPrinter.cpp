@@ -136,7 +136,7 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
     HSAMetadataStream->begin(M);
 
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
-    readPALMetadata(M);
+    getTargetStreamer()->getPALMetadata()->readFromIR(M);
 
   if (IsaInfo::hasCodeObjectV3(getGlobalSTI()))
     return;
@@ -170,20 +170,6 @@ void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
     bool Success = HSAMetadataStream->emitTo(*getTargetStreamer());
     (void)Success;
     assert(Success && "Malformed HSA Metadata");
-  }
-
-  if (!IsaInfo::hasCodeObjectV3(getGlobalSTI())) {
-    // Emit PAL Metadata (NT_AMD_AMDGPU_PAL_METADATA).
-    if (TM.getTargetTriple().getOS() == Triple::AMDPAL) {
-      // Copy the PAL metadata from the map where we collected it into a vector,
-      // then write it as a .note.
-      PALMD::Metadata PALMetadataVector;
-      for (auto i : PALMetadataMap) {
-        PALMetadataVector.push_back(i.first);
-        PALMetadataVector.push_back(i.second);
-      }
-      getTargetStreamer()->EmitPALMetadata(PALMetadataVector);
-    }
   }
 }
 
@@ -310,27 +296,6 @@ void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   CallGraphResourceInfo.clear();
   return AsmPrinter::doFinalization(M);
-}
-
-// For the amdpal OS type, read the amdgpu.pal.metadata supplied by the
-// frontend into our PALMetadataMap, ready for per-function modification.  It
-// is a NamedMD containing an MDTuple containing a number of MDNodes each of
-// which is an integer value, and each two integer values forms a key=value
-// pair that we store as PALMetadataMap[key]=value in the map.
-void AMDGPUAsmPrinter::readPALMetadata(Module &M) {
-  auto NamedMD = M.getNamedMetadata("amdgpu.pal.metadata");
-  if (!NamedMD || !NamedMD->getNumOperands())
-    return;
-  auto Tuple = dyn_cast<MDTuple>(NamedMD->getOperand(0));
-  if (!Tuple)
-    return;
-  for (unsigned I = 0, E = Tuple->getNumOperands() & -2; I != E; I += 2) {
-    auto Key = mdconst::dyn_extract<ConstantInt>(Tuple->getOperand(I));
-    auto Val = mdconst::dyn_extract<ConstantInt>(Tuple->getOperand(I + 1));
-    if (!Key || !Val)
-      continue;
-    PALMetadataMap[Key->getZExtValue()] = Val->getZExtValue();
-  }
 }
 
 // Print comments that apply to both callable functions and entry points.
@@ -658,6 +623,9 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         case AMDGPU::SRC_PRIVATE_BASE:
         case AMDGPU::SRC_PRIVATE_LIMIT:
           continue;
+
+        case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
+          llvm_unreachable("src_pops_exiting_wave_id should not be used");
 
         case AMDGPU::NoRegister:
           assert(MI.isDebugInstr());
@@ -1045,70 +1013,33 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type
 // is AMDPAL.  It stores each compute/SPI register setting and other PAL
-// metadata items into the PALMetadataMap, combining with any provided by the
-// frontend as LLVM metadata. Once all functions are written, PALMetadataMap is
-// then written as a single block in the .note section.
+// metadata items into the PALMD::Metadata, combining with any provided by the
+// frontend as LLVM metadata. Once all functions are written, the PAL metadata
+// is then written as a single block in the .note section.
 void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
        const SIProgramInfo &CurrentProgramInfo) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  // Given the calling convention, calculate the register number for rsrc1. In
-  // principle the register number could change in future hardware, but we know
-  // it is the same for gfx6-9 (except that LS and ES don't exist on gfx9), so
-  // we can use the same fixed value that .AMDGPU.config has for Mesa. Note
-  // that we use a register number rather than a byte offset, so we need to
-  // divide by 4.
-  unsigned Rsrc1Reg = getRsrcReg(MF.getFunction().getCallingConv()) / 4;
-  unsigned Rsrc2Reg = Rsrc1Reg + 1;
-  // Also calculate the PAL metadata key for *S_SCRATCH_SIZE. It can be used
-  // with a constant offset to access any non-register shader-specific PAL
-  // metadata key.
-  unsigned ScratchSizeKey = PALMD::Key::CS_SCRATCH_SIZE;
-  switch (MF.getFunction().getCallingConv()) {
-    case CallingConv::AMDGPU_PS:
-      ScratchSizeKey = PALMD::Key::PS_SCRATCH_SIZE;
-      break;
-    case CallingConv::AMDGPU_VS:
-      ScratchSizeKey = PALMD::Key::VS_SCRATCH_SIZE;
-      break;
-    case CallingConv::AMDGPU_GS:
-      ScratchSizeKey = PALMD::Key::GS_SCRATCH_SIZE;
-      break;
-    case CallingConv::AMDGPU_ES:
-      ScratchSizeKey = PALMD::Key::ES_SCRATCH_SIZE;
-      break;
-    case CallingConv::AMDGPU_HS:
-      ScratchSizeKey = PALMD::Key::HS_SCRATCH_SIZE;
-      break;
-    case CallingConv::AMDGPU_LS:
-      ScratchSizeKey = PALMD::Key::LS_SCRATCH_SIZE;
-      break;
-  }
-  unsigned NumUsedVgprsKey = ScratchSizeKey +
-      PALMD::Key::VS_NUM_USED_VGPRS - PALMD::Key::VS_SCRATCH_SIZE;
-  unsigned NumUsedSgprsKey = ScratchSizeKey +
-      PALMD::Key::VS_NUM_USED_SGPRS - PALMD::Key::VS_SCRATCH_SIZE;
-  PALMetadataMap[NumUsedVgprsKey] = CurrentProgramInfo.NumVGPRsForWavesPerEU;
-  PALMetadataMap[NumUsedSgprsKey] = CurrentProgramInfo.NumSGPRsForWavesPerEU;
+  auto CC = MF.getFunction().getCallingConv();
+  auto MD = getTargetStreamer()->getPALMetadata();
+
+  MD->setEntryPoint(CC, MF.getFunction().getName());
+  MD->setNumUsedVgprs(CC, CurrentProgramInfo.NumVGPRsForWavesPerEU);
+  MD->setNumUsedSgprs(CC, CurrentProgramInfo.NumSGPRsForWavesPerEU);
   if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
-    PALMetadataMap[Rsrc1Reg] |= CurrentProgramInfo.ComputePGMRSrc1;
-    PALMetadataMap[Rsrc2Reg] |= CurrentProgramInfo.ComputePGMRSrc2;
-    // ScratchSize is in bytes, 16 aligned.
-    PALMetadataMap[ScratchSizeKey] |=
-        alignTo(CurrentProgramInfo.ScratchSize, 16);
+    MD->setRsrc1(CC, CurrentProgramInfo.ComputePGMRSrc1);
+    MD->setRsrc2(CC, CurrentProgramInfo.ComputePGMRSrc2);
   } else {
-    PALMetadataMap[Rsrc1Reg] |= S_00B028_VGPRS(CurrentProgramInfo.VGPRBlocks) |
-        S_00B028_SGPRS(CurrentProgramInfo.SGPRBlocks);
+    MD->setRsrc1(CC, S_00B028_VGPRS(CurrentProgramInfo.VGPRBlocks) |
+        S_00B028_SGPRS(CurrentProgramInfo.SGPRBlocks));
     if (CurrentProgramInfo.ScratchBlocks > 0)
-      PALMetadataMap[Rsrc2Reg] |= S_00B84C_SCRATCH_EN(1);
-    // ScratchSize is in bytes, 16 aligned.
-    PALMetadataMap[ScratchSizeKey] |=
-        alignTo(CurrentProgramInfo.ScratchSize, 16);
+      MD->setRsrc2(CC, S_00B84C_SCRATCH_EN(1));
   }
+  // ScratchSize is in bytes, 16 aligned.
+  MD->setScratchSize(CC, alignTo(CurrentProgramInfo.ScratchSize, 16));
   if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
-    PALMetadataMap[Rsrc2Reg] |=
-        S_00B02C_EXTRA_LDS_SIZE(CurrentProgramInfo.LDSBlocks);
-    PALMetadataMap[R_0286CC_SPI_PS_INPUT_ENA / 4] |= MFI->getPSInputEnable();
-    PALMetadataMap[R_0286D0_SPI_PS_INPUT_ADDR / 4] |= MFI->getPSInputAddr();
+    MD->setRsrc2(CC, S_00B02C_EXTRA_LDS_SIZE(CurrentProgramInfo.LDSBlocks));
+    MD->setSpiPsInputEna(MFI->getPSInputEnable());
+    MD->setSpiPsInputAddr(MFI->getPSInputAddr());
   }
 }
 

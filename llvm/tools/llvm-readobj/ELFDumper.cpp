@@ -3893,17 +3893,6 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
     return {"ISA Version",
             std::string(reinterpret_cast<const char *>(Desc.data()),
                         Desc.size())};
-  case ELF::NT_AMD_AMDGPU_PAL_METADATA:
-    const uint32_t *PALMetadataBegin =
-        reinterpret_cast<const uint32_t *>(Desc.data());
-    const uint32_t *PALMetadataEnd = PALMetadataBegin + Desc.size();
-    std::vector<uint32_t> PALMetadata(PALMetadataBegin, PALMetadataEnd);
-    std::string PALMetadataString;
-    auto Error = AMDGPU::PALMD::toString(PALMetadata, PALMetadataString);
-    if (Error) {
-      return {"PAL Metadata", "Invalid"};
-    }
-    return {"PAL Metadata", PALMetadataString};
   }
 }
 

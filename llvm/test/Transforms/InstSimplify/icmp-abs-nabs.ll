@@ -150,11 +150,7 @@ define i1 @abs_nsw_is_not_negative_wrong_range(i32 %x) {
 ; Even if we don't have nsw, the range is still limited in the unsigned domain.
 define i1 @abs_positive_or_signed_min(i32 %x) {
 ; CHECK-LABEL: @abs_positive_or_signed_min(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[NEGX]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[ABS]], -2147483647
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp slt i32 %x, 0
   %negx = sub i32 0, %x

@@ -106,8 +106,6 @@ LIBCXXABI_INSTALL_DIR="${TEMP_DIR}/libcxxabi-install"
 
 PREVIOUS_DYLIBS_URL="http://lab.llvm.org:8080/roots/libcxx-roots.tar.gz"
 LLVM_TARBALL_URL="https://github.com/llvm-mirror/llvm/archive/master.tar.gz"
-export CC="$(xcrun --find clang)"
-export CXX="$(xcrun --find clang++)"
 
 
 echo "@@@ Downloading LLVM tarball of master (only used for CMake configuration) @@@"
@@ -168,7 +166,6 @@ echo "@@@ Running tests for libc++ @@@"
 "${LIBCXX_BUILD_DIR}/bin/llvm-lit" -sv "${LIBCXX_ROOT}/test" \
                                    --param=enable_experimental=false \
                                    ${LIT_ARCH_STRING} \
-                                   --param=cxx_under_test="${CXX}" \
                                    --param=cxx_headers="${LIBCXX_INSTALL_DIR}/include/c++/v1" \
                                    --param=std="${STD}" \
                                    --param=platform="macosx${DEPLOYMENT_TARGET}" \

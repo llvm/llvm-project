@@ -8635,7 +8635,7 @@ bool InitializationSequence::Diagnose(Sema &S,
           = FailedCandidateSet.BestViableFunction(S, Kind.getLocation(), Best);
         if (Ovl != OR_Deleted) {
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_init)
-            << true << DestType << ArgsRange;
+              << DestType << ArgsRange;
           llvm_unreachable("Inconsistent overload resolution?");
           break;
         }
@@ -8649,7 +8649,7 @@ bool InitializationSequence::Diagnose(Sema &S,
             << DestType << ArgsRange;
         else
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_init)
-            << true << DestType << ArgsRange;
+              << DestType << ArgsRange;
 
         S.NoteDeletedFunction(Best->Function);
         break;

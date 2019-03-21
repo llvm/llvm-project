@@ -474,6 +474,9 @@ private:
   Instruction *transformCallThroughTrampoline(CallBase &Call,
                                               IntrinsicInst &Tramp);
 
+  Instruction *simplifyMaskedStore(IntrinsicInst &II);
+  Instruction *simplifyMaskedScatter(IntrinsicInst &II);
+  
   /// Transform (zext icmp) to bitwise / integer operations in order to
   /// eliminate it.
   ///

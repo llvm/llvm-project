@@ -5673,14 +5673,15 @@ static void setLimitsForSelectPattern(const SelectInst &SI, APInt &Lower,
 
   unsigned BitWidth = SI.getType()->getScalarSizeInBits();
 
-  // matchSelectPattern() returns the negation part of an abs pattern in RHS.
-  // If the negate has an NSW flag, abs(INT_MIN) is undefined. Without that
-  // constraint, we can't make a contiguous range for the result of abs.
-  if (R.Flavor == SelectPatternFlavor::SPF_ABS &&
-      cast<Instruction>(RHS)->hasNoSignedWrap()) {
-    // The result of abs(X) is >= 0 (with nsw).
+  if (R.Flavor == SelectPatternFlavor::SPF_ABS) {
+    // If the negation part of the abs (in RHS) has the NSW flag,
+    // then the result of abs(X) is [0..SIGNED_MAX],
+    // otherwise it is [0..SIGNED_MIN], as -SIGNED_MIN == SIGNED_MIN.
     Lower = APInt::getNullValue(BitWidth);
-    Upper = APInt::getSignedMaxValue(BitWidth) + 1;
+    if (cast<Instruction>(RHS)->hasNoSignedWrap())
+      Upper = APInt::getSignedMaxValue(BitWidth) + 1;
+    else
+      Upper = APInt::getSignedMinValue(BitWidth) + 1;
     return;
   }
 

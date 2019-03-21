@@ -2338,8 +2338,7 @@ static bool resolveAllocationOverload(
   case OR_Deleted: {
     if (Diagnose) {
       S.Diag(R.getNameLoc(), diag::err_ovl_deleted_call)
-          << Best->Function->isDeleted() << R.getLookupName()
-          << S.getDeletedOrUnavailableSuffix(Best->Function) << Range;
+          << R.getLookupName() << Range;
       Candidates.NoteCandidates(S, OCD_AllCandidates, Args);
     }
     return true;
@@ -3517,8 +3516,7 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
 
   case OR_Deleted: {
     S.Diag(R.getNameLoc(), diag::err_ovl_deleted_call)
-        << Best->Function->isDeleted() << R.getLookupName()
-        << S.getDeletedOrUnavailableSuffix(Best->Function) << Range;
+        << R.getLookupName() << Range;
     Candidates.NoteCandidates(S, OCD_AllCandidates, Args);
     return true;
   }

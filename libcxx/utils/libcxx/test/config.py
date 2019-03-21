@@ -1151,6 +1151,10 @@ class Configuration(object):
 
                 self.config.available_features.add('dylib-has-no-bad_any_cast')
                 self.lit_config.note("throwing bad_any_cast is not supported by the deployment target")
+            # Filesystem is not supported on Apple platforms yet
+            if name == 'macosx':
+                self.config.available_features.add('dylib-has-no-filesystem')
+                self.lit_config.note("the deployment target does not support the dylib parts of <filesystem>")
         else:
             self.cxx.flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
 

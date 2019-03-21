@@ -606,6 +606,7 @@ Query for this feature with ``__has_attribute(diagnose_if)``.
 
 def PassObjectSizeDocs : Documentation {
   let Category = DocCatVariable; // Technically it's a parameter doc, but eh.
+  let Heading = "pass_object_size, pass_dynamic_object_size";
   let Content = [{
 .. Note:: The mangling of functions with parameters that are annotated with
   ``pass_object_size`` is subject to change. You can get around this by

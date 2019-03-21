@@ -246,6 +246,10 @@ public:
                        ArrayRef<const Value *> Arguments,
                        const User *U = nullptr) const;
 
+  /// \Return the expected cost of a memcpy, which could e.g. depend on the
+  /// source/destination type and alignment and the number of bytes copied.
+  int getMemcpyCost(const Instruction *I) const;
+
   /// \return The estimated number of case clusters when lowering \p 'SI'.
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
   /// table.
@@ -1053,6 +1057,7 @@ public:
   virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                                ArrayRef<const Value *> Arguments,
                                const User *U) = 0;
+  virtual int getMemcpyCost(const Instruction *I) = 0;
   virtual unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
                                                     unsigned &JTSize) = 0;
   virtual int
@@ -1266,6 +1271,9 @@ public:
                        ArrayRef<const Value *> Arguments,
                        const User *U = nullptr) override {
     return Impl.getIntrinsicCost(IID, RetTy, Arguments, U);
+  }
+  int getMemcpyCost(const Instruction *I) override {
+    return Impl.getMemcpyCost(I);
   }
   int getUserCost(const User *U, ArrayRef<const Value *> Operands) override {
     return Impl.getUserCost(U, Operands);

@@ -121,8 +121,6 @@ protected:
 
   CPUKind getCPUKind(StringRef CPU) const;
 
-  std::string getCPUKindCanonicalName(CPUKind Kind) const;
-
   enum FPMathKind { FP_Default, FP_SSE, FP_387 } FPMath = FP_Default;
 
 public:

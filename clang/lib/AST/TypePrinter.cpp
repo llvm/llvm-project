@@ -1632,6 +1632,21 @@ static const TemplateArgument &getArgument(const TemplateArgumentLoc &A) {
   return A.getArgument();
 }
 
+static void printArgument(const TemplateArgument &A, const PrintingPolicy &PP,
+                          llvm::raw_ostream &OS) {
+  A.print(PP, OS);
+}
+
+static void printArgument(const TemplateArgumentLoc &A,
+                          const PrintingPolicy &PP, llvm::raw_ostream &OS) {
+  const auto &Kind = A.getArgument().getKind();
+  assert(Kind != TemplateArgument::Null &&
+         "TemplateArgumentKind can not be null!");
+  if (Kind == TemplateArgument::ArgKind::Type)
+    return A.getTypeSourceInfo()->getType().print(OS, PP);
+  return A.getArgument().print(PP, OS);
+}
+
 template<typename TA>
 static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
                     const PrintingPolicy &Policy, bool SkipBrackets) {
@@ -1653,7 +1668,7 @@ static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
     } else {
       if (!FirstArg)
         OS << Comma;
-      Argument.print(Policy, ArgOS);
+      printArgument(Arg, Policy, ArgOS);
     }
     StringRef ArgString = ArgOS.str();
 

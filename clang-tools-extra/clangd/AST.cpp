@@ -11,9 +11,12 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/TemplateBase.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/USRGeneration.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ScopedPrinter.h"
 
@@ -50,6 +53,22 @@ SourceLocation findNameLoc(const clang::Decl *D) {
   return SM.getSpellingLoc(D->getLocation());
 }
 
+static llvm::Optional<llvm::ArrayRef<TemplateArgumentLoc>>
+getTemplateSpecializationArgLocs(const NamedDecl &ND) {
+  if (auto *Func = llvm::dyn_cast<FunctionDecl>(&ND)) {
+    if (auto *Args = Func->getTemplateSpecializationArgsAsWritten())
+      return Args->arguments();
+  } else if (auto *Cls =
+                 llvm::dyn_cast<ClassTemplatePartialSpecializationDecl>(&ND)) {
+    if (auto *Args = Cls->getTemplateArgsAsWritten())
+      return Args->arguments();
+  } else if (auto *Var = llvm::dyn_cast<VarTemplateSpecializationDecl>(&ND))
+    return Var->getTemplateArgsInfo().arguments();
+  // We return None for ClassTemplateSpecializationDecls because it does not
+  // contain TemplateArgumentLoc information.
+  return llvm::None;
+}
+
 std::string printQualifiedName(const NamedDecl &ND) {
   std::string QName;
   llvm::raw_string_ostream OS(QName);
@@ -60,6 +79,19 @@ std::string printQualifiedName(const NamedDecl &ND) {
   // namespaces to query: the preamble doesn't have a dedicated list.
   Policy.SuppressUnwrittenScope = true;
   ND.printQualifiedName(OS, Policy);
+  if (auto Args = getTemplateSpecializationArgLocs(ND))
+    printTemplateArgumentList(OS, *Args, Policy);
+  else if (auto *Cls = llvm::dyn_cast<ClassTemplateSpecializationDecl>(&ND)) {
+    if (auto STL = Cls->getTypeAsWritten()
+                       ->getTypeLoc()
+                       .getAs<TemplateSpecializationTypeLoc>()) {
+      llvm::SmallVector<TemplateArgumentLoc, 8> ArgLocs;
+      ArgLocs.reserve(STL.getNumArgs());
+      for (unsigned I = 0; I < STL.getNumArgs(); ++I)
+        ArgLocs.push_back(STL.getArgLoc(I));
+      printTemplateArgumentList(OS, ArgLocs, Policy);
+    }
+  }
   OS.flush();
   assert(!StringRef(QName).startswith("::"));
   return QName;

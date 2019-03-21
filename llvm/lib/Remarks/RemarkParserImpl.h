@@ -19,6 +19,10 @@ namespace remarks {
 struct ParserImpl {
   enum class Kind { YAML };
 
+  explicit ParserImpl(Kind TheParserKind) : ParserKind(TheParserKind) {}
+  // Virtual destructor prevents mismatched deletes
+  virtual ~ParserImpl() {}
+
   // The parser kind. This is used as a tag to safely cast between
   // implementations.
   Kind ParserKind;
