@@ -102,8 +102,8 @@ class LLDBController(object):
             pass
 
         if result.GetSize() > 0:
-            results = filter(None, [result.GetStringAtIndex(x)
-                                    for x in range(result.GetSize())])
+            results = [_f for _f in [result.GetStringAtIndex(x)
+                                    for x in range(result.GetSize())] if _f]
             return results
         else:
             return []
