@@ -204,7 +204,7 @@ UUID MinidumpParser::GetModuleUUID(const MinidumpModule *module) {
     }
     return UUID::fromData(pdb70_uuid->Uuid, sizeof(pdb70_uuid->Uuid));
   } else if (cv_signature == CvSignature::ElfBuildId)
-    return UUID::fromData(cv_record);
+    return UUID::fromOptionalData(cv_record);
 
   return UUID();
 }
