@@ -1387,7 +1387,8 @@ lldb_private::Status ProcessMonitor::Detach(lldb::tid_t tid) {
 
 bool ProcessMonitor::DupDescriptor(const FileSpec &file_spec, int fd,
                                    int flags) {
-  int target_fd = open(file_spec.GetCString(), flags, 0666);
+  int target_fd = llvm::sys::RetryAfterSignal(-1, open,
+      file_spec.GetCString(), flags, 0666);
 
   if (target_fd == -1)
     return false;

@@ -72,7 +72,8 @@ static void DisableASLRIfRequested(int error_fd, const ProcessLaunchInfo &info) 
 
 static void DupDescriptor(int error_fd, const FileSpec &file_spec, int fd,
                           int flags) {
-  int target_fd = ::open(file_spec.GetCString(), flags, 0666);
+  int target_fd = llvm::sys::RetryAfterSignal(-1, ::open,
+      file_spec.GetCString(), flags, 0666);
 
   if (target_fd == -1)
     ExitWithError(error_fd, "DupDescriptor-open");
@@ -211,7 +212,7 @@ ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   error.SetErrorString(buf);
 
-  waitpid(pid, nullptr, 0);
+  llvm::sys::RetryAfterSignal(-1, waitpid, pid, nullptr, 0);
 
   return HostProcess();
 }

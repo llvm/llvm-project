@@ -21,6 +21,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Errno.h"
 
 #include <stdio.h>
 
@@ -39,7 +40,7 @@ void StructuredPythonObject::Dump(Stream &s, bool pretty_print) const {
 
 void PythonObject::Dump(Stream &strm) const {
   if (m_py_obj) {
-    FILE *file = ::tmpfile();
+    FILE *file = llvm::sys::RetryAfterSignal(nullptr, ::tmpfile);
     if (file) {
       ::PyObject_Print(m_py_obj, file, 0);
       const long length = ftell(file);

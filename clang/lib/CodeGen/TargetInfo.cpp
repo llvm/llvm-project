@@ -2268,6 +2268,12 @@ public:
     return static_cast<const X86_64ABIInfo&>(TargetCodeGenInfo::getABIInfo());
   }
 
+  /// Disable tail call on x86-64. The epilogue code before the tail jump blocks
+  /// the autoreleaseRV/retainRV optimization.
+  bool shouldSuppressTailCallsOfRetainAutoreleasedReturnValue() const override {
+    return true;
+  }
+
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &CGM) const override {
     return 7;
   }

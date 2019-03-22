@@ -18,6 +18,7 @@
 #include "lldb/Host/FileSystem.h"
 
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Errno.h"
 
 //++
 //------------------------------------------------------------------------------------
@@ -83,7 +84,8 @@ bool CMIUtilFileStd::CreateWrite(const CMIUtilString &vFileNamePath,
 
 #if !defined(_MSC_VER)
   // Open with 'write' and 'binary' mode
-  m_pFileHandle = ::fopen(vFileNamePath.c_str(), "wb");
+  m_pFileHandle = llvm::sys::RetryAfterSignal(nullptr, ::fopen,
+      vFileNamePath.c_str(), "wb");
 #else
   // Open a file with exclusive write and shared read permissions
   std::wstring path;
@@ -226,7 +228,8 @@ bool CMIUtilFileStd::IsFileExist(const CMIUtilString &vFileNamePath) const {
     return false;
 
   FILE *pTmp = nullptr;
-  pTmp = ::fopen(vFileNamePath.c_str(), "wb");
+  pTmp = llvm::sys::RetryAfterSignal(nullptr, ::fopen,
+      vFileNamePath.c_str(), "wb");
   if (pTmp != nullptr) {
     ::fclose(pTmp);
     return true;

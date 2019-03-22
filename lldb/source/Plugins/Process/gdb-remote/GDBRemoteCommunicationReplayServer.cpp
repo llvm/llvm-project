@@ -123,10 +123,10 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
     if (entry.type == GDBRemoteCommunicationHistory::ePacketTypeSend) {
       if (unexpected(entry.packet.data, packet.GetStringRef())) {
         LLDB_LOG(log,
-                 "GDBRemoteCommunicationReplayServer expected packet: '{}'\n",
+                 "GDBRemoteCommunicationReplayServer expected packet: '{0}'",
                  entry.packet.data);
         LLDB_LOG(log,
-                 "GDBRemoteCommunicationReplayServer actual packet: '{}'\n",
+                 "GDBRemoteCommunicationReplayServer actual packet: '{0}'",
                  packet.GetStringRef());
       }
 
@@ -143,7 +143,7 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
     if (entry.type == GDBRemoteCommunicationHistory::ePacketTypeInvalid) {
       LLDB_LOG(
           log,
-          "GDBRemoteCommunicationReplayServer skipped invalid packet: '{}'\n",
+          "GDBRemoteCommunicationReplayServer skipped invalid packet: '{0}'",
           packet.GetStringRef());
       continue;
     }

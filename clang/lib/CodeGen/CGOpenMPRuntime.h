@@ -1598,6 +1598,11 @@ public:
   /// Perform check on requires decl to ensure that target architecture
   /// supports unified addressing
   virtual void checkArchForUnifiedAddressing(const OMPRequiresDecl *D) const {}
+
+  /// Checks if the variable has associated OMPAllocateDeclAttr attribute with
+  /// the predefined allocator and translates it into the corresponding address
+  /// space.
+  virtual bool hasAllocateAttributeForGlobalVar(const VarDecl *VD, LangAS &AS);
 };
 
 /// Class supports emissionof SIMD-only code.

@@ -848,7 +848,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
 
     // For functions which can never be passed stack arguments, add
     // a tail keyword.
-    if (IsAlwaysTail(Class)) {
+    if (IsAlwaysTail(Class) && !cast<CallInst>(Inst)->isNoTailCall()) {
       Changed = true;
       LLVM_DEBUG(
           dbgs() << "Adding tail keyword to function since it can never be "

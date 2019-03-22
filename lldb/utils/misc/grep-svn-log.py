@@ -8,6 +8,7 @@ Example:
 
 svn log -v | grep-svn-log.py '^   D.+why_are_you_missing.h$'
 """
+from __future__ import print_function
 
 import fileinput
 import re
@@ -32,7 +33,7 @@ class Log(StringIO.StringIO):
         """Add a line to the content, if there is a previous line, commit it."""
         global separator
         if self.prev_line is not None:
-            print >> self, self.prev_line
+            print(self.prev_line, file=self)
         self.prev_line = a_line
         self.separator_added = (a_line == separator)
 
@@ -42,13 +43,13 @@ class Log(StringIO.StringIO):
 
     def reset(self):
         """Forget about the previous lines entered."""
-        StringIO.StringIO.__init__(self)
+        io.StringIO.__init__(self)
         self.prev_line = None
 
     def finish(self):
         """Call this when you're finished with populating content."""
         if self.prev_line is not None:
-            print >> self, self.prev_line
+            print(self.prev_line, file=self)
         self.prev_line = None
 
 
@@ -70,7 +71,7 @@ def grep(regexp):
             # is encountered.  At which point, we can return the log content.
             if line == separator:
                 log.finish()
-                print log.getvalue()
+                print(log.getvalue())
                 return
             log.add_line(line)
 
@@ -85,7 +86,7 @@ def grep(regexp):
 
 def main():
     if len(sys.argv) != 2:
-        print usage
+        print(usage)
         sys.exit(0)
 
     regexp = re.compile(sys.argv[1])

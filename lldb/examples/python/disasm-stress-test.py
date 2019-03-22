@@ -71,7 +71,7 @@ def AddLLDBToSysPathOnMacOSX():
     lldb_framework_path = GetLLDBFrameworkPath()
 
     if lldb_framework_path is None:
-        print "Couldn't find LLDB.framework"
+        print("Couldn't find LLDB.framework")
         sys.exit(-1)
 
     sys.path.append(lldb_framework_path + "/Resources/Python")
@@ -86,13 +86,13 @@ import lldb
 debugger = lldb.SBDebugger.Create()
 
 if debugger.IsValid() == False:
-    print "Couldn't create an SBDebugger"
+    print("Couldn't create an SBDebugger")
     sys.exit(-1)
 
 target = debugger.CreateTargetWithFileAndArch(None, arg_ns.arch)
 
 if target.IsValid() == False:
-    print "Couldn't create an SBTarget for architecture " + arg_ns.arch
+    print("Couldn't create an SBTarget for architecture " + arg_ns.arch)
     sys.exit(-1)
 
 
@@ -103,8 +103,8 @@ def ResetLogFile(log_file):
 
 def PrintByteArray(log_file, byte_array):
     for byte in byte_array:
-        print >>log_file, hex(byte) + " ",
-    print >>log_file
+        print(hex(byte) + " ", end=' ', file=log_file)
+    print(file=log_file)
 
 
 class SequentialInstructionProvider:
@@ -119,7 +119,7 @@ class SequentialInstructionProvider:
 
     def PrintCurrentState(self, ret):
         ResetLogFile(self.m_log_file)
-        print >>self.m_log_file, self.m_value
+        print(self.m_value, file=self.m_log_file)
         PrintByteArray(self.m_log_file, ret)
 
     def GetNextInstruction(self):
@@ -215,16 +215,16 @@ for inst_bytes in instruction_provider:
             remaining_time = float(
                 total_num_instructions - num_instructions_logged) * (
                 float(elapsed_time) / float(num_instructions_logged))
-            print str(datetime.timedelta(seconds=remaining_time))
+            print(str(datetime.timedelta(seconds=remaining_time)))
         num_instructions_logged = num_instructions_logged + 1
     inst_list = target.GetInstructions(fake_address, inst_bytes)
     if not inst_list.IsValid():
-        print >>log_file, "Invalid instruction list"
+        print("Invalid instruction list", file=log_file)
         continue
     inst = inst_list.GetInstructionAtIndex(0)
     if not inst.IsValid():
-        print >>log_file, "Invalid instruction"
+        print("Invalid instruction", file=log_file)
         continue
     instr_output_stream = lldb.SBStream()
     inst.GetDescription(instr_output_stream)
-    print >>log_file, instr_output_stream.GetData()
+    print(instr_output_stream.GetData(), file=log_file)
