@@ -262,7 +262,7 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
         options.c_cc[VMIN] = 1;
         options.c_cc[VTIME] = 0;
 
-        ::tcsetattr(fd, TCSANOW, &options);
+        llvm::sys::RetryAfterSignal(-1, ::tcsetattr, fd, TCSANOW, &options);
       }
 
       int flags = ::fcntl(fd, F_GETFL, 0);

@@ -2845,8 +2845,9 @@
 // I386:#define __i386__ 1
 // I386:#define i386 1
 //
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-pc-linux-gnu -target-cpu pentium4 < /dev/null | FileCheck -match-full-lines -check-prefix I386-LINUX %s
-// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=i386-pc-linux-gnu -target-cpu pentium4 < /dev/null | FileCheck -match-full-lines -check-prefix I386-LINUX -check-prefix I386-LINUX-CXX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-pc-linux-gnu -target-cpu pentium4 < /dev/null | FileCheck -match-full-lines -check-prefix I386-LINUX -check-prefix I386-LINUX-ALIGN32 %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=i386-pc-linux-gnu -target-cpu pentium4 < /dev/null | FileCheck -match-full-lines -check-prefix I386-LINUX -check-prefix I386-LINUX-CXX -check-prefix I386-LINUX-ALIGN32 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-pc-linux-gnu -target-cpu pentium4 -malign-double < /dev/null | FileCheck -match-full-lines -check-prefix I386-LINUX -check-prefix I386-LINUX-ALIGN64 %s
 //
 // I386-LINUX-NOT:#define _LP64
 // I386-LINUX:#define __BIGGEST_ALIGNMENT__ 16
@@ -2883,6 +2884,18 @@
 // I386-LINUX:#define __FLT_MIN_EXP__ (-125)
 // I386-LINUX:#define __FLT_MIN__ 1.17549435e-38F
 // I386-LINUX:#define __FLT_RADIX__ 2
+// I386-LINUX:#define __GCC_ATOMIC_BOOL_LOCK_FREE 2
+// I386-LINUX:#define __GCC_ATOMIC_CHAR16_T_LOCK_FREE 2
+// I386-LINUX:#define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
+// I386-LINUX:#define __GCC_ATOMIC_CHAR_LOCK_FREE 2
+// I386-LINUX:#define __GCC_ATOMIC_INT_LOCK_FREE 2
+// I386-LINUX-ALIGN32:#define __GCC_ATOMIC_LLONG_LOCK_FREE 1
+// I386-LINUX-ALIGN64:#define __GCC_ATOMIC_LLONG_LOCK_FREE 2
+// I386-LINUX:#define __GCC_ATOMIC_LONG_LOCK_FREE 2
+// I386-LINUX:#define __GCC_ATOMIC_POINTER_LOCK_FREE 2
+// I386-LINUX:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
+// I386-LINUX:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
+// I386-LINUX:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
 // I386-LINUX:#define __INT16_C_SUFFIX__
 // I386-LINUX:#define __INT16_FMTd__ "hd"
 // I386-LINUX:#define __INT16_FMTi__ "hi"
@@ -3034,8 +3047,10 @@
 // I386-LINUX:#define __i386__ 1
 // I386-LINUX:#define i386 1
 //
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix I386-NETBSD %s
-// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=i386-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix I386-NETBSD -check-prefix I386-NETBSD-CXX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-netbsd -target-cpu i486 < /dev/null | FileCheck -match-full-lines -check-prefix I386-NETBSD %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=i386-netbsd -target-cpu i486 < /dev/null | FileCheck -match-full-lines -check-prefix I386-NETBSD -check-prefix I386-NETBSD-CXX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-netbsd -target-cpu i486 -malign-double < /dev/null | FileCheck -match-full-lines -check-prefix I386-NETBSD %s
+//
 //
 // I386-NETBSD-NOT:#define _LP64
 // I386-NETBSD:#define __BIGGEST_ALIGNMENT__ 16
@@ -3072,6 +3087,17 @@
 // I386-NETBSD:#define __FLT_MIN_EXP__ (-125)
 // I386-NETBSD:#define __FLT_MIN__ 1.17549435e-38F
 // I386-NETBSD:#define __FLT_RADIX__ 2
+// I386-NETBSD:#define __GCC_ATOMIC_BOOL_LOCK_FREE 2
+// I386-NETBSD:#define __GCC_ATOMIC_CHAR16_T_LOCK_FREE 2
+// I386-NETBSD:#define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
+// I386-NETBSD:#define __GCC_ATOMIC_CHAR_LOCK_FREE 2
+// I386-NETBSD:#define __GCC_ATOMIC_INT_LOCK_FREE 2
+// I386-NETBSD:#define __GCC_ATOMIC_LLONG_LOCK_FREE 1
+// I386-NETBSD:#define __GCC_ATOMIC_LONG_LOCK_FREE 2
+// I386-NETBSD:#define __GCC_ATOMIC_POINTER_LOCK_FREE 2
+// I386-NETBSD:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
+// I386-NETBSD:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
+// I386-NETBSD:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
 // I386-NETBSD:#define __INT16_C_SUFFIX__
 // I386-NETBSD:#define __INT16_FMTd__ "hd"
 // I386-NETBSD:#define __INT16_FMTi__ "hi"
@@ -8947,6 +8973,17 @@
 // X86_64-LINUX:#define __FLT_MIN_EXP__ (-125)
 // X86_64-LINUX:#define __FLT_MIN__ 1.17549435e-38F
 // X86_64-LINUX:#define __FLT_RADIX__ 2
+// X86_64-LINUX:#define __GCC_ATOMIC_BOOL_LOCK_FREE 2
+// X86_64-LINUX:#define __GCC_ATOMIC_CHAR16_T_LOCK_FREE 2
+// X86_64-LINUX:#define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
+// X86_64-LINUX:#define __GCC_ATOMIC_CHAR_LOCK_FREE 2
+// X86_64-LINUX:#define __GCC_ATOMIC_INT_LOCK_FREE 2
+// X86_64-LINUX:#define __GCC_ATOMIC_LLONG_LOCK_FREE 2
+// X86_64-LINUX:#define __GCC_ATOMIC_LONG_LOCK_FREE 2
+// X86_64-LINUX:#define __GCC_ATOMIC_POINTER_LOCK_FREE 2
+// X86_64-LINUX:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
+// X86_64-LINUX:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
+// X86_64-LINUX:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
 // X86_64-LINUX:#define __INT16_C_SUFFIX__
 // X86_64-LINUX:#define __INT16_FMTd__ "hd"
 // X86_64-LINUX:#define __INT16_FMTi__ "hi"
@@ -9149,6 +9186,17 @@
 // X86_64-NETBSD:#define __FLT_MIN_EXP__ (-125)
 // X86_64-NETBSD:#define __FLT_MIN__ 1.17549435e-38F
 // X86_64-NETBSD:#define __FLT_RADIX__ 2
+// X86_64-NETBSD:#define __GCC_ATOMIC_BOOL_LOCK_FREE 2
+// X86_64-NETBSD:#define __GCC_ATOMIC_CHAR16_T_LOCK_FREE 2
+// X86_64-NETBSD:#define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
+// X86_64-NETBSD:#define __GCC_ATOMIC_CHAR_LOCK_FREE 2
+// X86_64-NETBSD:#define __GCC_ATOMIC_INT_LOCK_FREE 2
+// X86_64-NETBSD:#define __GCC_ATOMIC_LLONG_LOCK_FREE 2
+// X86_64-NETBSD:#define __GCC_ATOMIC_LONG_LOCK_FREE 2
+// X86_64-NETBSD:#define __GCC_ATOMIC_POINTER_LOCK_FREE 2
+// X86_64-NETBSD:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
+// X86_64-NETBSD:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
+// X86_64-NETBSD:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
 // X86_64-NETBSD:#define __INT16_C_SUFFIX__
 // X86_64-NETBSD:#define __INT16_FMTd__ "hd"
 // X86_64-NETBSD:#define __INT16_FMTi__ "hi"

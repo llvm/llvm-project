@@ -185,6 +185,14 @@ bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType) const {
   return TTIImpl->isLegalMaskedScatter(DataType);
 }
 
+bool TargetTransformInfo::isLegalMaskedCompressStore(Type *DataType) const {
+  return TTIImpl->isLegalMaskedCompressStore(DataType);
+}
+
+bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType) const {
+  return TTIImpl->isLegalMaskedExpandLoad(DataType);
+}
+
 bool TargetTransformInfo::hasDivRemOp(Type *DataType, bool IsSigned) const {
   return TTIImpl->hasDivRemOp(DataType, IsSigned);
 }

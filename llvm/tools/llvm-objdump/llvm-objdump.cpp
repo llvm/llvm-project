@@ -197,7 +197,7 @@ cl::list<std::string>
 llvm::FilterSections("section", cl::desc("Operate on the specified sections only. "
                                          "With -macho dump segment,section"));
 cl::alias static FilterSectionsj("j", cl::desc("Alias for --section"),
-                                 cl::NotHidden,
+                                 cl::NotHidden, cl::Grouping, cl::Prefix,
                                  cl::aliasopt(llvm::FilterSections));
 
 cl::list<std::string>
@@ -299,7 +299,8 @@ static cl::list<std::string>
                         cl::value_desc("options"), cl::CommaSeparated);
 static cl::alias
     DisassemblerOptionsShort("M", cl::desc("Alias for --disassembler-options"),
-                             cl::NotHidden, cl::Prefix, cl::CommaSeparated,
+                             cl::NotHidden, cl::Grouping, cl::Prefix,
+                             cl::CommaSeparated,
                              cl::aliasopt(DisassemblerOptions));
 
 static StringRef ToolName;

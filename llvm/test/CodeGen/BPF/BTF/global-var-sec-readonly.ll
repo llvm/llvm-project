@@ -28,7 +28,7 @@
 ; CHECK-NEXT:        .long   16777248                # 0x1000020
 ; CHECK-NEXT:        .long   5                       # BTF_KIND_VAR(id = 3)
 ; CHECK-NEXT:        .long   234881024               # 0xe000000
-; CHECK-NEXT:        .long   2
+; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   9                       # BTF_KIND_VAR(id = 4)
 ; CHECK-NEXT:        .long   234881024               # 0xe000000

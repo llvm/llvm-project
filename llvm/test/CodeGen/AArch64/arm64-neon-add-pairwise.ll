@@ -65,27 +65,27 @@ define <2 x i64> @test_addp_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
         ret <2 x i64> %val
 }
 
-declare <2 x float> @llvm.aarch64.neon.addp.v2f32(<2 x float>, <2 x float>)
-declare <4 x float> @llvm.aarch64.neon.addp.v4f32(<4 x float>, <4 x float>)
-declare <2 x double> @llvm.aarch64.neon.addp.v2f64(<2 x double>, <2 x double>)
+declare <2 x float> @llvm.aarch64.neon.faddp.v2f32(<2 x float>, <2 x float>)
+declare <4 x float> @llvm.aarch64.neon.faddp.v4f32(<4 x float>, <4 x float>)
+declare <2 x double> @llvm.aarch64.neon.faddp.v2f64(<2 x double>, <2 x double>)
 
 define <2 x float> @test_faddp_v2f32(<2 x float> %lhs, <2 x float> %rhs) {
 ; CHECK: test_faddp_v2f32:
-        %val = call <2 x float> @llvm.aarch64.neon.addp.v2f32(<2 x float> %lhs, <2 x float> %rhs)
+        %val = call <2 x float> @llvm.aarch64.neon.faddp.v2f32(<2 x float> %lhs, <2 x float> %rhs)
 ; CHECK: faddp v0.2s, v0.2s, v1.2s
         ret <2 x float> %val
 }
 
 define <4 x float> @test_faddp_v4f32(<4 x float> %lhs, <4 x float> %rhs) {
 ; CHECK: test_faddp_v4f32:
-        %val = call <4 x float> @llvm.aarch64.neon.addp.v4f32(<4 x float> %lhs, <4 x float> %rhs)
+        %val = call <4 x float> @llvm.aarch64.neon.faddp.v4f32(<4 x float> %lhs, <4 x float> %rhs)
 ; CHECK: faddp v0.4s, v0.4s, v1.4s
         ret <4 x float> %val
 }
 
 define <2 x double> @test_faddp_v2f64(<2 x double> %lhs, <2 x double> %rhs) {
 ; CHECK: test_faddp_v2f64:
-        %val = call <2 x double> @llvm.aarch64.neon.addp.v2f64(<2 x double> %lhs, <2 x double> %rhs)
+        %val = call <2 x double> @llvm.aarch64.neon.faddp.v2f64(<2 x double> %lhs, <2 x double> %rhs)
 ; CHECK: faddp v0.2d, v0.2d, v1.2d
         ret <2 x double> %val
 }

@@ -899,15 +899,15 @@ TEST(TargetParserTest, testAArch64Extension) {
   EXPECT_FALSE(testAArch64Extension("exynos-m3",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_TRUE(testAArch64Extension("exynos-m4",
+                                   AArch64::ArchKind::INVALID, "dotprod"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m4",
+                                   AArch64::ArchKind::INVALID, "fp16"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m4",
                                    AArch64::ArchKind::INVALID, "lse"));
   EXPECT_TRUE(testAArch64Extension("exynos-m4",
-                                   AArch64::ArchKind::INVALID, "rdm"));
-  EXPECT_TRUE(testAArch64Extension("exynos-m4",
                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_FALSE(testAArch64Extension("exynos-m4",
-                                    AArch64::ArchKind::INVALID, "fullfp16"));
   EXPECT_TRUE(testAArch64Extension("exynos-m4",
-                                   AArch64::ArchKind::INVALID, "dotprod"));
+                                   AArch64::ArchKind::INVALID, "rdm"));
   EXPECT_TRUE(testAArch64Extension("falkor",
                                    AArch64::ArchKind::INVALID, "rdm"));
   EXPECT_FALSE(testAArch64Extension("kryo",

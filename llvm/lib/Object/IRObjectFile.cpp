@@ -78,6 +78,8 @@ IRObjectFile::findBitcodeInObject(const ObjectFile &Obj) {
       StringRef SecContents;
       if (std::error_code EC = Sec.getContents(SecContents))
         return errorCodeToError(EC);
+      if (SecContents.size() <= 1)
+        return errorCodeToError(object_error::bitcode_section_not_found);
       return MemoryBufferRef(SecContents, Obj.getFileName());
     }
   }

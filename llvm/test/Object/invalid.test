@@ -3,7 +3,7 @@ RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-size.elf 2>&1 | FileCheck %s
 RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-zero-size.elf 2>&1 | FileCheck %s
 CHECK: Invalid data was encountered while parsing the file
 
-RUN: not llvm-dwarfdump %p/Inputs/invalid-bad-rel-type.elf 2>&1 | FileCheck --check-prefix=RELA %s
+RUN: not llvm-dwarfdump -debug-line %p/Inputs/invalid-bad-rel-type.elf 2>&1 | FileCheck --check-prefix=RELA %s
 RELA: Section is not SHT_RELA
 
 RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-non-null.elf 2>&1 | FileCheck --check-prefix=NON-NULL %s

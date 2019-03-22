@@ -34,6 +34,7 @@ class COFFObjectFile;
 namespace pdb {
 class GSIHashTable;
 class InputFile;
+class TypeReferenceTracker;
 
 struct StatCollection {
   struct Stat {
@@ -62,6 +63,7 @@ class DumpOutputStyle : public OutputStyle {
 
 public:
   DumpOutputStyle(InputFile &File);
+  ~DumpOutputStyle() override;
 
   Error dump() override;
 
@@ -89,6 +91,7 @@ private:
   Error dumpNewFpo(PDBFile &File);
   Error dumpTpiStream(uint32_t StreamIdx);
   Error dumpTypesFromObjectFile();
+  Error dumpTypeRefStats();
   Error dumpModules();
   Error dumpModuleFiles();
   Error dumpModuleSymsForPdb();
@@ -104,6 +107,7 @@ private:
   void dumpSectionHeaders(StringRef Label, DbgHeaderType Type);
 
   InputFile &File;
+  std::unique_ptr<TypeReferenceTracker> RefTracker;
   LinePrinter P;
   SmallVector<StreamInfo, 32> StreamPurposes;
 };

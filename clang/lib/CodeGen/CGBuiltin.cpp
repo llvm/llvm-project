@@ -5095,6 +5095,13 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
 
   switch (BuiltinID) {
   default: break;
+  case NEON::BI__builtin_neon_vpadd_v:
+  case NEON::BI__builtin_neon_vpaddq_v:
+    // We don't allow fp/int overloading of intrinsics.
+    if (VTy->getElementType()->isFloatingPointTy() &&
+        Int == Intrinsic::aarch64_neon_addp)
+      Int = Intrinsic::aarch64_neon_faddp;
+    break;
   case NEON::BI__builtin_neon_vabs_v:
   case NEON::BI__builtin_neon_vabsq_v:
     if (VTy->getElementType()->isFloatingPointTy())
