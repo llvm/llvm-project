@@ -73,6 +73,7 @@ Name prefix            Description
                        means "C++11") language constructs.
 ``mpi-``               Checks related to MPI (Message Passing Interface).
 ``objc-``              Checks related to Objective-C coding conventions.
+``openmp-``            Checks related to OpenMP API.
 ``performance-``       Checks that target performance-related issues.
 ``portability-``       Checks that target portability-related issues that don't
                        relate to any particular coding style.

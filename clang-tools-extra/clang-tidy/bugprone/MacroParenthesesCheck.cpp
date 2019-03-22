@@ -248,10 +248,9 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
   }
 }
 
-void MacroParenthesesCheck::registerPPCallbacks(CompilerInstance &Compiler) {
-  Compiler.getPreprocessor().addPPCallbacks(
-      llvm::make_unique<MacroParenthesesPPCallbacks>(
-          &Compiler.getPreprocessor(), this));
+void MacroParenthesesCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  PP->addPPCallbacks(llvm::make_unique<MacroParenthesesPPCallbacks>(PP, this));
 }
 
 } // namespace bugprone

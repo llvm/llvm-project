@@ -143,6 +143,24 @@ public:
   /// dependent properties, e.g. the order of include directives.
   virtual void registerPPCallbacks(CompilerInstance &Compiler) {}
 
+  /// \brief Override this to register ``PPCallbacks`` in the preprocessor.
+  ///
+  /// This should be used for clang-tidy checks that analyze preprocessor-
+  /// dependent properties, e.g. include directives and macro definitions.
+  ///
+  /// There are two Preprocessors to choose from that differ in how they handle
+  /// modular #includes:
+  ///  - PP is the real Preprocessor. It doesn't walk into modular #includes and
+  ///    thus doesn't generate PPCallbacks for their contents.
+  ///  - ModuleExpanderPP preprocesses the whole translation unit in the
+  ///    non-modular mode, which allows it to generate PPCallbacks not only for
+  ///    the main file and textual headers, but also for all transitively
+  ///    included modular headers when the analysis runs with modules enabled.
+  ///    When modules are not enabled ModuleExpanderPP just points to the real
+  ///    preprocessor.
+  virtual void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                                   Preprocessor *ModuleExpanderPP) {}
+
   /// \brief Override this to register AST matchers with \p Finder.
   ///
   /// This should be used by clang-tidy checks that analyze code properties that
@@ -190,7 +208,9 @@ class ClangTidyCheckFactories;
 
 class ClangTidyASTConsumerFactory {
 public:
-  ClangTidyASTConsumerFactory(ClangTidyContext &Context);
+  ClangTidyASTConsumerFactory(
+      ClangTidyContext &Context,
+      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
 
   /// \brief Returns an ASTConsumer that runs the specified clang-tidy checks.
   std::unique_ptr<clang::ASTConsumer>
@@ -204,6 +224,7 @@ public:
 
 private:
   ClangTidyContext &Context;
+  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS;
   std::unique_ptr<ClangTidyCheckFactories> CheckFactories;
 };
 
@@ -233,7 +254,7 @@ std::vector<ClangTidyError>
 runClangTidy(clang::tidy::ClangTidyContext &Context,
              const tooling::CompilationDatabase &Compilations,
              ArrayRef<std::string> InputFiles,
-             llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+             llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
              bool EnableCheckProfile = false,
              llvm::StringRef StoreCheckProfile = StringRef());
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangMove.h"
+#include "Move.h"
 #include "unittests/Tooling/RewriterTestContext.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/FrontendActions.h"
