@@ -1567,10 +1567,6 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
-template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
-  return this->Entsize * Relocs.size();
-}
-
 template <class ELFT>
 AndroidPackedRelocationSection<ELFT>::AndroidPackedRelocationSection(
     StringRef Name)
@@ -2329,15 +2325,18 @@ PltSection::PltSection(bool IsIplt)
 void PltSection::writeTo(uint8_t *Buf) {
   // At beginning of PLT or retpoline IPLT, we have code to call the dynamic
   // linker to resolve dynsyms at runtime. Write such code.
-  if (HeaderSize > 0)
+  if (HeaderSize)
     Target->writePltHeader(Buf);
   size_t Off = HeaderSize;
-  // The IPlt is immediately after the Plt, account for this in RelOff
-  unsigned PltOff = getPltRelocOff();
 
-  for (auto &I : Entries) {
-    const Symbol *B = I.first;
-    unsigned RelOff = I.second + PltOff;
+  RelocationBaseSection *RelSec = IsIplt ? In.RelaIplt : In.RelaPlt;
+
+  // The IPlt is immediately after the Plt, account for this in RelOff
+  size_t PltOff = IsIplt ? In.Plt->getSize() : 0;
+
+  for (size_t I = 0, E = Entries.size(); I != E; ++I) {
+    const Symbol *B = Entries[I];
+    unsigned RelOff = RelSec->Entsize * I + PltOff;
     uint64_t Got = B->getGotPltVA();
     uint64_t Plt = this->getVA() + Off;
     Target->writePlt(Buf + Off, Got, Plt, B->PltIndex, RelOff);
@@ -2347,12 +2346,7 @@ void PltSection::writeTo(uint8_t *Buf) {
 
 template <class ELFT> void PltSection::addEntry(Symbol &Sym) {
   Sym.PltIndex = Entries.size();
-  RelocationBaseSection *PltRelocSection = In.RelaPlt;
-  if (IsIplt)
-    PltRelocSection = In.RelaIplt;
-  unsigned RelOff =
-      static_cast<RelocationSection<ELFT> *>(PltRelocSection)->getRelocOffset();
-  Entries.push_back(std::make_pair(&Sym, RelOff));
+  Entries.push_back(&Sym);
 }
 
 size_t PltSection::getSize() const {
@@ -2365,15 +2359,12 @@ void PltSection::addSymbols() {
   // The PLT may have symbols defined for the Header, the IPLT has no header
   if (!IsIplt)
     Target->addPltHeaderSymbols(*this);
+
   size_t Off = HeaderSize;
   for (size_t I = 0; I < Entries.size(); ++I) {
     Target->addPltSymbols(*this, Off);
     Off += Target->PltEntrySize;
   }
-}
-
-unsigned PltSection::getPltRelocOff() const {
-  return IsIplt ? In.Plt->getSize() : 0;
 }
 
 // The string hash function for .gdb_index.

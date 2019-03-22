@@ -1,5 +1,9 @@
 # RUN: yaml2obj %s -o %t1.o
 
+# RUN: wasm-ld --no-entry --features=foo,bar,baz -o - %t1.o | obj2yaml | FileCheck %s --check-prefix SPECIFIED
+
+# RUN: wasm-ld --no-entry --features=bar,baz,quux -o - %t1.o | obj2yaml | FileCheck %s --check-prefix UNSPECIFIED
+
 # RUN: yaml2obj %S/Inputs/disallow-feature-foo.yaml -o %t.disallowed.o
 # RUN: wasm-ld --no-entry -o %t.disallowed.exe %t1.o %t.disallowed.o
 # RUN: obj2yaml < %t.disallowed.exe | FileCheck %s --check-prefix DISALLOWED
@@ -30,6 +34,28 @@ Sections:
       - Prefix:        USED
         Name:          "bar"
 ...
+
+# SPECIFIED:        - Type:            CUSTOM
+# SPECIFIED-NEXT:     Name:            target_features
+# SPECIFIED-NEXT:     Features:
+# SPECIFIED-NEXT:       - Prefix:          USED
+# SPECIFIED-NEXT:         Name:            bar
+# SPECIFIED-NEXT:       - Prefix:          USED
+# SPECIFIED-NEXT:         Name:            baz
+# SPECIFIED-NEXT:       - Prefix:          USED
+# SPECIFIED-NEXT:         Name:            foo
+# SPECIFIED-NEXT: ...
+
+# UNSPECIFIED:        - Type:            CUSTOM
+# UNSPECIFIED-NEXT:     Name:            target_features
+# UNSPECIFIED-NEXT:     Features:
+# UNSPECIFIED-NEXT:       - Prefix:          USED
+# UNSPECIFIED-NEXT:         Name:            bar
+# UNSPECIFIED-NEXT:       - Prefix:          USED
+# UNSPECIFIED-NEXT:         Name:            baz
+# UNSPECIFIED-NEXT:       - Prefix:          USED
+# UNSPECIFIED-NEXT:         Name:            quux
+# UNSPECIFIED-NEXT: ...
 
 # DISALLOWED:        - Type:            CUSTOM
 # DISALLOWED-NEXT:     Name:            target_features
