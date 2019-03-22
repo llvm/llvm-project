@@ -119,3 +119,16 @@ class MiniDumpUUIDTestCase(TestBase):
         self.assertEqual(2, len(modules))
         self.verify_module(modules[0], "/tmp/a", "01020304-0506-0708-090A-0B0C0D0E0F10-11121314")
         self.verify_module(modules[1], "/tmp/b", "0A141E28-323C-4650-5A64-6E78828C96A0-AAB4BEC8")
+
+    def test_uuid_modules_elf_build_id_zero(self):
+        """
+            Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
+            and contains a ELF build ID whose value is all zero.
+        """
+        self.dbg.CreateTarget(None)
+        self.target = self.dbg.GetSelectedTarget()
+        self.process = self.target.LoadCore("linux-arm-uuids-elf-build-id-zero.dmp")
+        modules = self.target.modules
+        self.assertEqual(2, len(modules))
+        self.verify_module(modules[0], "/not/exist/a", None)
+        self.verify_module(modules[1], "/not/exist/b", None)
