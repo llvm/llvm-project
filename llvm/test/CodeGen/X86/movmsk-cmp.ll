@@ -4770,3 +4770,424 @@ define i32 @movmskb256(<32 x i8> %x) {
   %b = bitcast <32 x i1> %a to i32
   ret i32 %b
 }
+
+; Multiple extract elements from a vector compare.
+
+define i1 @movmsk_v16i8(<16 x i8> %x, <16 x i8> %y) {
+; SSE2-LABEL: movmsk_v16i8:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    xorb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    andb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: movmsk_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpextrb $3, %xmm0, %eax
+; AVX-NEXT:    vpextrb $8, %xmm0, %ecx
+; AVX-NEXT:    xorl %eax, %ecx
+; AVX-NEXT:    vpextrb $15, %xmm0, %eax
+; AVX-NEXT:    andl %ecx, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    retq
+;
+; KNL-LABEL: movmsk_v16i8:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
+; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; KNL-NEXT:    kshiftrw $15, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %ecx
+; KNL-NEXT:    kshiftrw $8, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %edx
+; KNL-NEXT:    kshiftrw $3, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    xorb %dl, %al
+; KNL-NEXT:    andb %cl, %al
+; KNL-NEXT:    # kill: def $al killed $al killed $eax
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: movmsk_v16i8:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
+; SKX-NEXT:    kshiftrw $15, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %ecx
+; SKX-NEXT:    kshiftrw $8, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %edx
+; SKX-NEXT:    kshiftrw $3, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    xorb %dl, %al
+; SKX-NEXT:    andb %cl, %al
+; SKX-NEXT:    # kill: def $al killed $al killed $eax
+; SKX-NEXT:    retq
+  %cmp = icmp eq <16 x i8> %x, %y
+  %e1 = extractelement <16 x i1> %cmp, i32 3
+  %e2 = extractelement <16 x i1> %cmp, i32 8
+  %e3 = extractelement <16 x i1> %cmp, i32 15
+  %u1 = xor i1 %e1, %e2
+  %u2 = and i1 %e3, %u1
+  ret i1 %u2
+}
+
+define i1 @movmsk_v8i16(<8 x i16> %x, <8 x i16> %y) {
+; SSE2-LABEL: movmsk_v8i16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpgtw %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    pextrw $1, %xmm0, %edx
+; SSE2-NEXT:    pextrw $7, %xmm0, %esi
+; SSE2-NEXT:    pextrw $4, %xmm0, %eax
+; SSE2-NEXT:    andl %esi, %eax
+; SSE2-NEXT:    andl %edx, %eax
+; SSE2-NEXT:    andl %ecx, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: movmsk_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %ecx
+; AVX-NEXT:    vpextrw $1, %xmm0, %edx
+; AVX-NEXT:    vpextrw $7, %xmm0, %esi
+; AVX-NEXT:    vpextrw $4, %xmm0, %eax
+; AVX-NEXT:    andl %esi, %eax
+; AVX-NEXT:    andl %edx, %eax
+; AVX-NEXT:    andl %ecx, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    retq
+;
+; KNL-LABEL: movmsk_v8i16:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
+; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
+; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; KNL-NEXT:    kshiftrw $4, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %ecx
+; KNL-NEXT:    kshiftrw $7, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %eax
+; KNL-NEXT:    kshiftrw $1, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %edx
+; KNL-NEXT:    kmovw %k0, %esi
+; KNL-NEXT:    andb %cl, %al
+; KNL-NEXT:    andb %dl, %al
+; KNL-NEXT:    andb %sil, %al
+; KNL-NEXT:    # kill: def $al killed $al killed $eax
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: movmsk_v8i16:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vpcmpgtw %xmm1, %xmm0, %k0
+; SKX-NEXT:    kshiftrb $4, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %ecx
+; SKX-NEXT:    kshiftrb $7, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %eax
+; SKX-NEXT:    kshiftrb $1, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %edx
+; SKX-NEXT:    kmovd %k0, %esi
+; SKX-NEXT:    andb %cl, %al
+; SKX-NEXT:    andb %dl, %al
+; SKX-NEXT:    andb %sil, %al
+; SKX-NEXT:    # kill: def $al killed $al killed $eax
+; SKX-NEXT:    retq
+  %cmp = icmp sgt <8 x i16> %x, %y
+  %e1 = extractelement <8 x i1> %cmp, i32 0
+  %e2 = extractelement <8 x i1> %cmp, i32 1
+  %e3 = extractelement <8 x i1> %cmp, i32 7
+  %e4 = extractelement <8 x i1> %cmp, i32 4
+  %u1 = and i1 %e1, %e2
+  %u2 = and i1 %e3, %e4
+  %u3 = and i1 %u1, %u2
+  ret i1 %u3
+}
+
+define i1 @movmsk_v4i32(<4 x i32> %x, <4 x i32> %y) {
+; SSE2-LABEL: movmsk_v4i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,1,2,3]
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    xorl %ecx, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: movmsk_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpextrd $2, %xmm0, %ecx
+; AVX-NEXT:    vpextrd $3, %xmm0, %eax
+; AVX-NEXT:    xorl %ecx, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    retq
+;
+; KNL-LABEL: movmsk_v4i32:
+; KNL:       # %bb.0:
+; KNL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; KNL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
+; KNL-NEXT:    kshiftrw $3, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %ecx
+; KNL-NEXT:    kshiftrw $2, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    xorb %cl, %al
+; KNL-NEXT:    # kill: def $al killed $al killed $eax
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: movmsk_v4i32:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vpcmpgtd %xmm0, %xmm1, %k0
+; SKX-NEXT:    kshiftrb $3, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %ecx
+; SKX-NEXT:    kshiftrb $2, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    xorb %cl, %al
+; SKX-NEXT:    # kill: def $al killed $al killed $eax
+; SKX-NEXT:    retq
+  %cmp = icmp slt <4 x i32> %x, %y
+  %e1 = extractelement <4 x i1> %cmp, i32 2
+  %e2 = extractelement <4 x i1> %cmp, i32 3
+  %u1 = xor i1 %e1, %e2
+  ret i1 %u1
+}
+
+define i1 @movmsk_v2i64(<2 x i64> %x, <2 x i64> %y) {
+; SSE2-LABEL: movmsk_v2i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
+; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    andl %ecx, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: movmsk_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpextrd $2, %xmm0, %ecx
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    andl %ecx, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    retq
+;
+; KNL-LABEL: movmsk_v2i64:
+; KNL:       # %bb.0:
+; KNL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; KNL-NEXT:    vpcmpneqq %zmm1, %zmm0, %k0
+; KNL-NEXT:    kshiftrw $1, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %ecx
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    andb %cl, %al
+; KNL-NEXT:    # kill: def $al killed $al killed $eax
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: movmsk_v2i64:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vpcmpneqq %xmm1, %xmm0, %k0
+; SKX-NEXT:    kshiftrb $1, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %ecx
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    andb %cl, %al
+; SKX-NEXT:    # kill: def $al killed $al killed $eax
+; SKX-NEXT:    retq
+  %cmp = icmp ne <2 x i64> %x, %y
+  %e1 = extractelement <2 x i1> %cmp, i32 0
+  %e2 = extractelement <2 x i1> %cmp, i32 1
+  %u1 = and i1 %e1, %e2
+  ret i1 %u1
+}
+
+define i1 @movmsk_v4f32(<4 x float> %x, <4 x float> %y) {
+; SSE2-LABEL: movmsk_v4f32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    cmpeqps %xmm1, %xmm2
+; SSE2-NEXT:    cmpunordps %xmm1, %xmm0
+; SSE2-NEXT:    orps %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movd %xmm1, %edx
+; SSE2-NEXT:    pextrw $6, %xmm0, %eax
+; SSE2-NEXT:    orl %edx, %eax
+; SSE2-NEXT:    orl %ecx, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: movmsk_v4f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcmpeq_uqps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vextractps $1, %xmm0, %ecx
+; AVX-NEXT:    vextractps $2, %xmm0, %edx
+; AVX-NEXT:    vpextrb $12, %xmm0, %eax
+; AVX-NEXT:    orl %edx, %eax
+; AVX-NEXT:    orl %ecx, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    retq
+;
+; KNL-LABEL: movmsk_v4f32:
+; KNL:       # %bb.0:
+; KNL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; KNL-NEXT:    vcmpeq_uqps %zmm1, %zmm0, %k0
+; KNL-NEXT:    kshiftrw $3, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %ecx
+; KNL-NEXT:    kshiftrw $2, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %eax
+; KNL-NEXT:    kshiftrw $1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %edx
+; KNL-NEXT:    orb %cl, %al
+; KNL-NEXT:    orb %dl, %al
+; KNL-NEXT:    # kill: def $al killed $al killed $eax
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: movmsk_v4f32:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vcmpeq_uqps %xmm1, %xmm0, %k0
+; SKX-NEXT:    kshiftrb $3, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %ecx
+; SKX-NEXT:    kshiftrb $2, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %eax
+; SKX-NEXT:    kshiftrb $1, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %edx
+; SKX-NEXT:    orb %cl, %al
+; SKX-NEXT:    orb %dl, %al
+; SKX-NEXT:    # kill: def $al killed $al killed $eax
+; SKX-NEXT:    retq
+  %cmp = fcmp ueq <4 x float> %x, %y
+  %e1 = extractelement <4 x i1> %cmp, i32 1
+  %e2 = extractelement <4 x i1> %cmp, i32 2
+  %e3 = extractelement <4 x i1> %cmp, i32 3
+  %u1 = or i1 %e1, %e2
+  %u2 = or i1 %u1, %e3
+  ret i1 %u2
+}
+
+define i1 @movmsk_v2f64(<2 x double> %x, <2 x double> %y) {
+; SSE2-LABEL: movmsk_v2f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cmplepd %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    andl %ecx, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: movmsk_v2f64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcmplepd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vextractps $2, %xmm0, %ecx
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    andl %ecx, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    retq
+;
+; KNL-LABEL: movmsk_v2f64:
+; KNL:       # %bb.0:
+; KNL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; KNL-NEXT:    vcmplepd %zmm0, %zmm1, %k0
+; KNL-NEXT:    kshiftrw $1, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %ecx
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    andb %cl, %al
+; KNL-NEXT:    # kill: def $al killed $al killed $eax
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: movmsk_v2f64:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vcmplepd %xmm0, %xmm1, %k0
+; SKX-NEXT:    kshiftrb $1, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %ecx
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    andb %cl, %al
+; SKX-NEXT:    # kill: def $al killed $al killed $eax
+; SKX-NEXT:    retq
+  %cmp = fcmp oge <2 x double> %x, %y
+  %e1 = extractelement <2 x i1> %cmp, i32 0
+  %e2 = extractelement <2 x i1> %cmp, i32 1
+  %u1 = and i1 %e1, %e2
+  ret i1 %u1
+}
+
+define i32 @PR39665_c_ray(<2 x double> %x, <2 x double> %y) {
+; SSE2-LABEL: PR39665_c_ray:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cmpltpd %xmm0, %xmm1
+; SSE2-NEXT:    movapd %xmm1, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    testb $1, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movl $42, %eax
+; SSE2-NEXT:    movl $99, %ecx
+; SSE2-NEXT:    cmovel %ecx, %eax
+; SSE2-NEXT:    testb $1, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    cmovel %ecx, %eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: PR39665_c_ray:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX-NEXT:    vpextrb $8, %xmm0, %eax
+; AVX-NEXT:    testb $1, %al
+; AVX-NEXT:    movl $42, %eax
+; AVX-NEXT:    movl $99, %edx
+; AVX-NEXT:    cmovel %edx, %eax
+; AVX-NEXT:    testb $1, %cl
+; AVX-NEXT:    cmovel %edx, %eax
+; AVX-NEXT:    retq
+;
+; KNL-LABEL: PR39665_c_ray:
+; KNL:       # %bb.0:
+; KNL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; KNL-NEXT:    vcmpltpd %zmm0, %zmm1, %k0
+; KNL-NEXT:    kshiftrw $1, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %eax
+; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    testb $1, %al
+; KNL-NEXT:    movl $42, %eax
+; KNL-NEXT:    movl $99, %edx
+; KNL-NEXT:    cmovel %edx, %eax
+; KNL-NEXT:    testb $1, %cl
+; KNL-NEXT:    cmovel %edx, %eax
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: PR39665_c_ray:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
+; SKX-NEXT:    kshiftrb $1, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %eax
+; SKX-NEXT:    kmovd %k0, %ecx
+; SKX-NEXT:    testb $1, %al
+; SKX-NEXT:    movl $42, %eax
+; SKX-NEXT:    movl $99, %edx
+; SKX-NEXT:    cmovel %edx, %eax
+; SKX-NEXT:    testb $1, %cl
+; SKX-NEXT:    cmovel %edx, %eax
+; SKX-NEXT:    retq
+  %cmp = fcmp ogt <2 x double> %x, %y
+  %e1 = extractelement <2 x i1> %cmp, i32 0
+  %e2 = extractelement <2 x i1> %cmp, i32 1
+  %u = and i1 %e1, %e2
+  %r = select i1 %u, i32 42, i32 99
+  ret i32 %r
+}

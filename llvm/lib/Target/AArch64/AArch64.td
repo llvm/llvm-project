@@ -385,6 +385,14 @@ def AArch64InstrInfo : InstrInfo;
 include "AArch64SystemOperands.td"
 
 //===----------------------------------------------------------------------===//
+// Access to privileged registers
+//===----------------------------------------------------------------------===//
+
+foreach i = 1-3 in
+def FeatureUseEL#i#ForTP : SubtargetFeature<"tpidr-el"#i, "UseEL"#i#"ForTP",
+  "true", "Permit use of TPIDR_EL"#i#" for the TLS base">;
+
+//===----------------------------------------------------------------------===//
 // AArch64 Processors supported.
 //
 include "AArch64SchedA53.td"
@@ -565,7 +573,7 @@ def ProcExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
                                      FeatureDotProd,
                                      FeatureExynosCheapAsMoveHandling,
                                      FeatureForce32BitJumpTables,
-                                     FeatureFP16FML,
+                                     FeatureFullFP16,
                                      FeatureFuseAddress,
                                      FeatureFuseAES,
                                      FeatureFuseArithmeticLogic,

@@ -54,7 +54,7 @@ define dso_local i32 @foo() local_unnamed_addr #0 !dbg !2 {
 ; CHECK-NEXT:        .long   16777232                # 0x1000010
 ; CHECK-NEXT:        .long   58                      # BTF_KIND_VAR(id = 7)
 ; CHECK-NEXT:        .long   234881024               # 0xe000000
-; CHECK-NEXT:        .long   6
+; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_CONST(id = 8)
 ; CHECK-NEXT:        .long   167772160               # 0xa000000
@@ -68,7 +68,7 @@ define dso_local i32 @foo() local_unnamed_addr #0 !dbg !2 {
 ; CHECK-NEXT:        .long   16777224                # 0x1000008
 ; CHECK-NEXT:        .long   69                      # BTF_KIND_VAR(id = 11)
 ; CHECK-NEXT:        .long   234881024               # 0xe000000
-; CHECK-NEXT:        .long   10
+; CHECK-NEXT:        .long   8
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   71                      # BTF_KIND_DATASEC(id = 12)
 ; CHECK-NEXT:        .long   251658242               # 0xf000002

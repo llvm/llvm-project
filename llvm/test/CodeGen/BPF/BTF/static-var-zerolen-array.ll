@@ -70,7 +70,7 @@ define dso_local i32 @test() local_unnamed_addr #0 !dbg !21 {
 ; CHECK-NEXT:        .long   16777224                # 0x1000008
 ; CHECK-NEXT:        .long   86                      # BTF_KIND_VAR(id = 9)
 ; CHECK-NEXT:        .long   234881024               # 0xe000000
-; CHECK-NEXT:        .long   5
+; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   89                      # BTF_KIND_DATASEC(id = 10)
 ; CHECK-NEXT:        .long   251658241               # 0xf000001

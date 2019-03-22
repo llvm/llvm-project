@@ -21,19 +21,20 @@ static Expected<std::unique_ptr<MinidumpFile>> create(ArrayRef<uint8_t> Data) {
 }
 
 TEST(MinidumpFile, BasicInterface) {
-  // A very simple minidump file which contains just a single stream.
-  auto ExpectedFile =
-      create({                                      // Header
-              'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
-              1, 0, 0, 0,                           // NumberOfStreams,
-              0x20, 0, 0, 0,                        // StreamDirectoryRVA
-              0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
-              8, 9, 0, 1, 2, 3, 4, 5,               // Flags
+  std::vector<uint8_t> Data{                        // Header
+                            'M', 'D', 'M', 'P',     // Signature
+                            0x93, 0xa7, 0, 0,       // Version
+                            1, 0, 0, 0,             // NumberOfStreams,
+                            0x20, 0, 0, 0,          // StreamDirectoryRVA
+                            0, 1, 2, 3, 4, 5, 6, 7, // Checksum, TimeDateStamp
+                            8, 9, 0, 1, 2, 3, 4, 5, // Flags
                                                     // Stream Directory
-              3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
-              0x2c, 0, 0, 0,                        // RVA
-                                                    // Stream
-              'C', 'P', 'U', 'I', 'N', 'F', 'O'});
+                            3, 0, 0x67, 0x47, 7, 0, 0, 0, // Type, DataSize,
+                            0x2c, 0, 0, 0,                // RVA
+                                                          // Stream
+                            'C', 'P', 'U', 'I', 'N', 'F', 'O'};
+  // A very simple minidump file which contains just a single stream.
+  auto ExpectedFile = create(Data);
   ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
   const MinidumpFile &File = **ExpectedFile;
   const Header &H = File.header();
@@ -60,135 +61,127 @@ TEST(MinidumpFile, BasicInterface) {
 
 // Use the input from the previous test, but corrupt it in various ways
 TEST(MinidumpFile, create_ErrorCases) {
-  // File too short
-  EXPECT_THAT_EXPECTED(create({'M', 'D', 'M', 'P'}), Failed<BinaryError>());
+  std::vector<uint8_t> FileTooShort{'M', 'D', 'M', 'P'};
+  EXPECT_THAT_EXPECTED(create(FileTooShort), Failed<BinaryError>());
 
-  // Wrong Signature
-  EXPECT_THAT_EXPECTED(
-      create({                                      // Header
-              '!', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
-              1, 0, 0, 0,                           // NumberOfStreams,
-              0x20, 0, 0, 0,                        // StreamDirectoryRVA
-              0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
-              8, 9, 0, 1, 2, 3, 4, 5,               // Flags
-                                                    // Stream Directory
-              3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
-              0x2c, 0, 0, 0,                        // RVA
-                                                    // Stream
-              'C', 'P', 'U', 'I', 'N', 'F', 'O'}),
-      Failed<BinaryError>());
+  std::vector<uint8_t> WrongSignature{
+      // Header
+      '!', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      0x20, 0, 0, 0,                        // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      8, 9, 0, 1, 2, 3, 4, 5,               // Flags
+                                            // Stream Directory
+      3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
+      0x2c, 0, 0, 0,                        // RVA
+                                            // Stream
+      'C', 'P', 'U', 'I', 'N', 'F', 'O'};
+  EXPECT_THAT_EXPECTED(create(WrongSignature), Failed<BinaryError>());
 
-  // Wrong Version
-  EXPECT_THAT_EXPECTED(
-      create({                                      // Header
-              'M', 'D', 'M', 'P', 0x39, 0xa7, 0, 0, // Signature, Version
-              1, 0, 0, 0,                           // NumberOfStreams,
-              0x20, 0, 0, 0,                        // StreamDirectoryRVA
-              0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
-              8, 9, 0, 1, 2, 3, 4, 5,               // Flags
-                                                    // Stream Directory
-              3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
-              0x2c, 0, 0, 0,                        // RVA
-                                                    // Stream
-              'C', 'P', 'U', 'I', 'N', 'F', 'O'}),
-      Failed<BinaryError>());
+  std::vector<uint8_t> WrongVersion{
+      // Header
+      'M', 'D', 'M', 'P', 0x39, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      0x20, 0, 0, 0,                        // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      8, 9, 0, 1, 2, 3, 4, 5,               // Flags
+                                            // Stream Directory
+      3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
+      0x2c, 0, 0, 0,                        // RVA
+                                            // Stream
+      'C', 'P', 'U', 'I', 'N', 'F', 'O'};
+  EXPECT_THAT_EXPECTED(create(WrongVersion), Failed<BinaryError>());
 
-  // Stream directory after EOF
-  EXPECT_THAT_EXPECTED(
-      create({                                      // Header
-              'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
-              1, 0, 0, 0,                           // NumberOfStreams,
-              0x20, 1, 0, 0,                        // StreamDirectoryRVA
-              0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
-              8, 9, 0, 1, 2, 3, 4, 5,               // Flags
-                                                    // Stream Directory
-              3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
-              0x2c, 0, 0, 0,                        // RVA
-                                                    // Stream
-              'C', 'P', 'U', 'I', 'N', 'F', 'O'}),
-      Failed<BinaryError>());
+  std::vector<uint8_t> DirectoryAfterEOF{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      0x20, 1, 0, 0,                        // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      8, 9, 0, 1, 2, 3, 4, 5,               // Flags
+                                            // Stream Directory
+      3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
+      0x2c, 0, 0, 0,                        // RVA
+                                            // Stream
+      'C', 'P', 'U', 'I', 'N', 'F', 'O'};
+  EXPECT_THAT_EXPECTED(create(DirectoryAfterEOF), Failed<BinaryError>());
 
-  // Truncated stream directory
-  EXPECT_THAT_EXPECTED(
-      create({                                      // Header
-              'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
-              1, 1, 0, 0,                           // NumberOfStreams,
-              0x20, 0, 0, 0,                        // StreamDirectoryRVA
-              0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
-              8, 9, 0, 1, 2, 3, 4, 5,               // Flags
-                                                    // Stream Directory
-              3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
-              0x2c, 0, 0, 0,                        // RVA
-                                                    // Stream
-              'C', 'P', 'U', 'I', 'N', 'F', 'O'}),
-      Failed<BinaryError>());
+  std::vector<uint8_t> TruncatedDirectory{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 1, 0, 0,                           // NumberOfStreams,
+      0x20, 0, 0, 0,                        // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      8, 9, 0, 1, 2, 3, 4, 5,               // Flags
+                                            // Stream Directory
+      3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
+      0x2c, 0, 0, 0,                        // RVA
+                                            // Stream
+      'C', 'P', 'U', 'I', 'N', 'F', 'O'};
+  EXPECT_THAT_EXPECTED(create(TruncatedDirectory), Failed<BinaryError>());
 
-  // Stream0 after EOF
-  EXPECT_THAT_EXPECTED(
-      create({                                      // Header
-              'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
-              1, 0, 0, 0,                           // NumberOfStreams,
-              0x20, 0, 0, 0,                        // StreamDirectoryRVA
-              0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
-              8, 9, 0, 1, 2, 3, 4, 5,               // Flags
-                                                    // Stream Directory
-              3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
-              0x2c, 1, 0, 0,                        // RVA
-                                                    // Stream
-              'C', 'P', 'U', 'I', 'N', 'F', 'O'}),
-      Failed<BinaryError>());
+  std::vector<uint8_t> Stream0AfterEOF{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      0x20, 0, 0, 0,                        // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      8, 9, 0, 1, 2, 3, 4, 5,               // Flags
+                                            // Stream Directory
+      3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
+      0x2c, 1, 0, 0,                        // RVA
+                                            // Stream
+      'C', 'P', 'U', 'I', 'N', 'F', 'O'};
+  EXPECT_THAT_EXPECTED(create(Stream0AfterEOF), Failed<BinaryError>());
 
-  // Truncated Stream0
-  EXPECT_THAT_EXPECTED(
-      create({                                      // Header
-              'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
-              1, 0, 0, 0,                           // NumberOfStreams,
-              0x20, 0, 0, 0,                        // StreamDirectoryRVA
-              0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
-              8, 9, 0, 1, 2, 3, 4, 5,               // Flags
-                                                    // Stream Directory
-              3, 0, 0x67, 0x47, 8, 0, 0, 0,         // Type, DataSize,
-              0x2c, 0, 0, 0,                        // RVA
-                                                    // Stream
-              'C', 'P', 'U', 'I', 'N', 'F', 'O'}),
-      Failed<BinaryError>());
+  std::vector<uint8_t> Stream0Truncated{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      0x20, 0, 0, 0,                        // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      8, 9, 0, 1, 2, 3, 4, 5,               // Flags
+                                            // Stream Directory
+      3, 0, 0x67, 0x47, 8, 0, 0, 0,         // Type, DataSize,
+      0x2c, 0, 0, 0,                        // RVA
+                                            // Stream
+      'C', 'P', 'U', 'I', 'N', 'F', 'O'};
+  EXPECT_THAT_EXPECTED(create(Stream0Truncated), Failed<BinaryError>());
 
-  // Duplicate Stream
-  EXPECT_THAT_EXPECTED(
-      create({                                      // Header
-              'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
-              2, 0, 0, 0,                           // NumberOfStreams,
-              0x20, 0, 0, 0,                        // StreamDirectoryRVA
-              0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
-              8, 9, 0, 1, 2, 3, 4, 5,               // Flags
-                                                    // Stream Directory
-              3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
-              0x40, 0, 0, 0,                        // RVA
-                                                    // Stream
-              3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
-              0x40, 0, 0, 0,                        // RVA
-                                                    // Stream
-              'C', 'P', 'U', 'I', 'N', 'F', 'O'}),
-      Failed<BinaryError>());
+  std::vector<uint8_t> DuplicateStream{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      2, 0, 0, 0,                           // NumberOfStreams,
+      0x20, 0, 0, 0,                        // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      8, 9, 0, 1, 2, 3, 4, 5,               // Flags
+                                            // Stream Directory
+      3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
+      0x40, 0, 0, 0,                        // RVA
+                                            // Stream
+      3, 0, 0x67, 0x47, 7, 0, 0, 0,         // Type, DataSize,
+      0x40, 0, 0, 0,                        // RVA
+                                            // Stream
+      'C', 'P', 'U', 'I', 'N', 'F', 'O'};
+  EXPECT_THAT_EXPECTED(create(DuplicateStream), Failed<BinaryError>());
 
-  // Stream matching one of the DenseMapInfo magic values
-  EXPECT_THAT_EXPECTED(
-      create({                                      // Header
-              'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
-              1, 0, 0, 0,                           // NumberOfStreams,
-              0x20, 0, 0, 0,                        // StreamDirectoryRVA
-              0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
-              8, 9, 0, 1, 2, 3, 4, 5,               // Flags
-                                                    // Stream Directory
-              0xff, 0xff, 0xff, 0xff, 7, 0, 0, 0,   // Type, DataSize,
-              0x2c, 0, 0, 0,                        // RVA
-                                                    // Stream
-              'C', 'P', 'U', 'I', 'N', 'F', 'O'}),
-      Failed<BinaryError>());
+  std::vector<uint8_t> DenseMapInfoConflict{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      0x20, 0, 0, 0,                        // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      8, 9, 0, 1, 2, 3, 4, 5,               // Flags
+                                            // Stream Directory
+      0xff, 0xff, 0xff, 0xff, 7, 0, 0, 0,   // Type, DataSize,
+      0x2c, 0, 0, 0,                        // RVA
+                                            // Stream
+      'C', 'P', 'U', 'I', 'N', 'F', 'O'};
+  EXPECT_THAT_EXPECTED(create(DenseMapInfoConflict), Failed<BinaryError>());
 }
 
 TEST(MinidumpFile, IngoresDummyStreams) {
-  auto ExpectedFile = create({
+  std::vector<uint8_t> TwoDummyStreams{
       // Header
       'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
       2, 0, 0, 0,                           // NumberOfStreams,
@@ -200,7 +193,8 @@ TEST(MinidumpFile, IngoresDummyStreams) {
       0x20, 0, 0, 0,                        // RVA
       0, 0, 0, 0, 0, 0, 0, 0,               // Type, DataSize,
       0x20, 0, 0, 0,                        // RVA
-  });
+  };
+  auto ExpectedFile = create(TwoDummyStreams);
   ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
   const MinidumpFile &File = **ExpectedFile;
   ASSERT_EQ(2u, File.streams().size());
@@ -210,7 +204,7 @@ TEST(MinidumpFile, IngoresDummyStreams) {
 }
 
 TEST(MinidumpFile, getSystemInfo) {
-  auto ExpectedFile = create({
+  std::vector<uint8_t> Data{
       // Header
       'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
       1, 0, 0, 0,                           // NumberOfStreams,
@@ -229,7 +223,8 @@ TEST(MinidumpFile, getSystemInfo) {
       'L', 'L', 'V', 'M', 'L', 'L', 'V', 'M', 'L', 'L', 'V', 'M', // VendorID
       1, 2, 3, 4, 5, 6, 7, 8, // VersionInfo, FeatureInfo
       9, 0, 1, 2,             // AMDExtendedFeatures
-  });
+  };
+  auto ExpectedFile = create(Data);
   ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
   const MinidumpFile &File = **ExpectedFile;
 

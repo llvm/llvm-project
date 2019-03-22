@@ -207,11 +207,23 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
         continue;
       }
     }
-    const ValueMapping *ValMapping =
-        &getValueMapping(0, getSizeInBits(Reg, MRI, TRI), *CurRegBank);
+
+    unsigned Size = getSizeInBits(Reg, MRI, TRI);
+    const ValueMapping *ValMapping = &getValueMapping(0, Size, *CurRegBank);
     if (IsCopyLike) {
-      OperandsMapping[0] = ValMapping;
-      CompleteMapping = true;
+      if (!OperandsMapping[0]) {
+        if (MI.isRegSequence()) {
+          // For reg_sequence, the result size does not match the input.
+          unsigned ResultSize = getSizeInBits(MI.getOperand(0).getReg(),
+                                              MRI, TRI);
+          OperandsMapping[0] = &getValueMapping(0, ResultSize, *CurRegBank);
+        } else {
+          OperandsMapping[0] = ValMapping;
+        }
+
+        CompleteMapping = true;
+      }
+
       break;
     }
     OperandsMapping[OpIdx] = ValMapping;

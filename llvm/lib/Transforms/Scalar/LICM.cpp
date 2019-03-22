@@ -1217,13 +1217,13 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                 assert(!LI->isUnordered() && "Expected unordered load");
                 return false;
               }
-         }
+        }
 
-        auto *Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(SI);
-        (*LicmMssaOptCounter)++;
-        // If there are no clobbering Defs in the loop, store is safe to hoist.
-        return MSSA->isLiveOnEntryDef(Source) ||
-               !CurLoop->contains(Source->getBlock());
+      auto *Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(SI);
+      (*LicmMssaOptCounter)++;
+      // If there are no clobbering Defs in the loop, store is safe to hoist.
+      return MSSA->isLiveOnEntryDef(Source) ||
+             !CurLoop->contains(Source->getBlock());
     }
   }
 

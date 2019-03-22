@@ -562,7 +562,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned EltSize = 4;
   unsigned Opcode = AMDGPU::V_MOV_B32_e32;
   if (RI.isSGPRClass(RC)) {
-    if (RI.getRegSizeInBits(*RC) > 32) {
+    // TODO: Copy vec3/vec5 with s_mov_b64s then final s_mov_b32.
+    if (!(RI.getRegSizeInBits(*RC) % 64)) {
       Opcode =  AMDGPU::S_MOV_B64;
       EltSize = 8;
     } else {
@@ -840,6 +841,8 @@ static unsigned getSGPRSpillSaveOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_S32_SAVE;
   case 8:
     return AMDGPU::SI_SPILL_S64_SAVE;
+  case 12:
+    return AMDGPU::SI_SPILL_S96_SAVE;
   case 16:
     return AMDGPU::SI_SPILL_S128_SAVE;
   case 32:
@@ -942,6 +945,8 @@ static unsigned getSGPRSpillRestoreOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_S32_RESTORE;
   case 8:
     return AMDGPU::SI_SPILL_S64_RESTORE;
+  case 12:
+    return AMDGPU::SI_SPILL_S96_RESTORE;
   case 16:
     return AMDGPU::SI_SPILL_S128_RESTORE;
   case 32:
@@ -1916,14 +1921,18 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
   const int16_t *SubIndices = Sub0_15;
   int NElts = DstSize / 32;
 
-  // 64-bit select is only avaialble for SALU.
+  // 64-bit select is only available for SALU.
+  // TODO: Split 96-bit into 64-bit and 32-bit, not 3x 32-bit.
   if (Pred == SCC_TRUE) {
-    SelOp = AMDGPU::S_CSELECT_B64;
-    EltRC = &AMDGPU::SGPR_64RegClass;
-    SubIndices = Sub0_15_64;
-
-    assert(NElts % 2 == 0);
-    NElts /= 2;
+    if (NElts % 2) {
+      SelOp = AMDGPU::S_CSELECT_B32;
+      EltRC = &AMDGPU::SGPR_32RegClass;
+    } else {
+      SelOp = AMDGPU::S_CSELECT_B64;
+      EltRC = &AMDGPU::SGPR_64RegClass;
+      SubIndices = Sub0_15_64;
+      NElts /= 2;
+    }
   }
 
   MachineInstrBuilder MIB = BuildMI(

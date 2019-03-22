@@ -1271,7 +1271,7 @@ define i32 @nsw_inference1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @nsw_inference1(
 ; CHECK-NEXT:    [[X2:%.*]] = or i32 [[X:%.*]], 1024
 ; CHECK-NEXT:    [[Y2:%.*]] = and i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = sub nuw i32 [[X2]], [[Y2]]
+; CHECK-NEXT:    [[Z:%.*]] = sub nuw nsw i32 [[X2]], [[Y2]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %x2 = or i32 %x, 1024
@@ -1284,7 +1284,7 @@ define i32 @nsw_inference2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @nsw_inference2(
 ; CHECK-NEXT:    [[X2:%.*]] = and i32 [[X:%.*]], -1025
 ; CHECK-NEXT:    [[Y2:%.*]] = or i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[Z:%.*]] = sub i32 [[X2]], [[Y2]]
+; CHECK-NEXT:    [[Z:%.*]] = sub nsw i32 [[X2]], [[Y2]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %x2 = and i32 %x, -1025

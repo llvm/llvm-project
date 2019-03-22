@@ -11,7 +11,7 @@ define i1 @imm_multiple_users(i64 %a, i64* %b) optsize {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq $-1, %rax
 ; CHECK-NEXT:    movq %rax, (%rsi)
-; CHECK-NEXT:    cmpq %rax, %rdi
+; CHECK-NEXT:    cmpq $-1, %rdi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   store i64 -1, i64* %b, align 8

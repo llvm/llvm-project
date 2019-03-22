@@ -134,6 +134,18 @@ b0:
   ret i32 %v3
 }
 
+; CHECK-LABEL: f11
+; CHECK: r0 |= lsr(r1,#25)
+; CHECK: r0 |= asl(r1,#7)
+define i32 @f11(i32 %a0, i32 %a1) #0 {
+b0:
+  %v0 = shl i32 %a1, 7
+  %v1 = lshr i32 %a1, 25
+  %v2 = or i32 %v1, %a0
+  %v3 = or i32 %v2, %v0
+  ret i32 %v3
+}
+
 ; CHECK-LABEL: f12
 ; CHECK: r0 ^= rol(r1,#7)
 define i32 @f12(i32 %a0, i32 %a1) #0 {
@@ -175,6 +187,18 @@ b0:
   %v1 = lshr i64 %a1, 57
   %v2 = or i64 %v0, %v1
   %v3 = and i64 %v2, %a0
+  ret i64 %v3
+}
+
+; CHECK-LABEL: f16
+; CHECK: r1:0 |= lsr(r3:2,#57)
+; CHECK: r1:0 |= asl(r3:2,#7)
+define i64 @f16(i64 %a0, i64 %a1) #0 {
+b0:
+  %v0 = shl i64 %a1, 7
+  %v1 = lshr i64 %a1, 57
+  %v2 = or i64 %v1, %a0
+  %v3 = or i64 %v2, %v0
   ret i64 %v3
 }
 
