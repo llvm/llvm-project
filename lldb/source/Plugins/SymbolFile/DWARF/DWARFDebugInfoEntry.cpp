@@ -377,20 +377,19 @@ static dw_offset_t GetRangesOffset(const DWARFDebugRangesBase *debug_ranges,
 // DW_AT_low_pc/DW_AT_high_pc pair, DW_AT_entry_pc, or DW_AT_ranges attributes.
 //----------------------------------------------------------------------
 bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
-    SymbolFileDWARF *dwarf2Data, DWARFContext &dwarf_context,
-    const DWARFUnit *cu, const char *&name, const char *&mangled,
-    DWARFRangeList &ranges, int &decl_file, int &decl_line, int &decl_column,
-    int &call_file, int &call_line, int &call_column,
-    DWARFExpression *frame_base) const {
+    SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu, const char *&name,
+    const char *&mangled, DWARFRangeList &ranges, int &decl_file,
+    int &decl_line, int &decl_column, int &call_file, int &call_line,
+    int &call_column, DWARFExpression *frame_base) const {
   if (dwarf2Data == nullptr)
     return false;
 
   SymbolFileDWARFDwo *dwo_symbol_file = cu->GetDwoSymbolFile();
   if (dwo_symbol_file)
     return GetDIENamesAndRanges(
-        dwo_symbol_file, dwarf_context, dwo_symbol_file->GetCompileUnit(), name,
-        mangled, ranges, decl_file, decl_line, decl_column, call_file,
-        call_line, call_column, frame_base);
+        dwo_symbol_file, dwo_symbol_file->GetCompileUnit(), name, mangled,
+        ranges, decl_file, decl_line, decl_column, call_file, call_line,
+        call_column, frame_base);
 
   dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
   dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
@@ -516,18 +515,15 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
               frame_base->SetOpcodeData(module, debug_info_data, block_offset,
                                         block_length);
             } else {
-              const DWARFDataExtractor *debug_loc =
-                  dwarf_context.getOrLoadBestDebugLocData();
-              if (!debug_loc)
-                break;
-
+              const DWARFDataExtractor &debug_loc_data =
+                  dwarf2Data->DebugLocData();
               const dw_offset_t debug_loc_offset = form_value.Unsigned();
 
               size_t loc_list_length = DWARFExpression::LocationListSize(
-                  cu, *debug_loc, debug_loc_offset);
+                  cu, debug_loc_data, debug_loc_offset);
               if (loc_list_length > 0) {
-                frame_base->SetOpcodeData(module, *debug_loc, debug_loc_offset,
-                                          loc_list_length);
+                frame_base->SetOpcodeData(module, debug_loc_data,
+                                          debug_loc_offset, loc_list_length);
                 if (lo_pc != LLDB_INVALID_ADDRESS) {
                   assert(lo_pc >= cu->GetBaseAddress());
                   frame_base->SetLocationListSlide(lo_pc -
@@ -568,9 +564,8 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
         DWARFDIE die = dwarf2Data->GetDIE(die_ref);
         if (die)
           die.GetDIE()->GetDIENamesAndRanges(
-              die.GetDWARF(), die.GetDWARF()->GetDWARFContext(), die.GetCU(),
-              name, mangled, ranges, decl_file, decl_line, decl_column,
-              call_file, call_line, call_column);
+              die.GetDWARF(), die.GetCU(), name, mangled, ranges, decl_file,
+              decl_line, decl_column, call_file, call_line, call_column);
       }
     }
   }
@@ -584,7 +579,6 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 // stream.
 //----------------------------------------------------------------------
 void DWARFDebugInfoEntry::Dump(SymbolFileDWARF *dwarf2Data,
-                               lldb_private::DWARFContext &dwarf_context,
                                const DWARFUnit *cu, Stream &s,
                                uint32_t recurse_depth) const {
   const DWARFDataExtractor &debug_info_data = cu->GetData();
@@ -612,8 +606,8 @@ void DWARFDebugInfoEntry::Dump(SymbolFileDWARF *dwarf2Data,
           dw_attr_t attr;
           abbrevDecl->GetAttrAndFormValueByIndex(i, attr, form_value);
 
-          DumpAttribute(dwarf2Data, dwarf_context, cu, debug_info_data, &offset,
-                        s, attr, form_value);
+          DumpAttribute(dwarf2Data, cu, debug_info_data, &offset, s, attr,
+                        form_value);
         }
 
         const DWARFDebugInfoEntry *child = GetFirstChild();
@@ -621,7 +615,7 @@ void DWARFDebugInfoEntry::Dump(SymbolFileDWARF *dwarf2Data,
           s.IndentMore();
 
           while (child) {
-            child->Dump(dwarf2Data, dwarf_context, cu, s, recurse_depth - 1);
+            child->Dump(dwarf2Data, cu, s, recurse_depth - 1);
             child = child->GetSibling();
           }
           s.IndentLess();
@@ -644,10 +638,9 @@ void DWARFDebugInfoEntry::Dump(SymbolFileDWARF *dwarf2Data,
 // values for attributes, etc).
 //----------------------------------------------------------------------
 void DWARFDebugInfoEntry::DumpAttribute(
-    SymbolFileDWARF *dwarf2Data, lldb_private::DWARFContext &dwarf_context,
-    const DWARFUnit *cu, const DWARFDataExtractor &debug_info_data,
-    lldb::offset_t *offset_ptr, Stream &s, dw_attr_t attr,
-    DWARFFormValue &form_value) {
+    SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
+    const DWARFDataExtractor &debug_info_data, lldb::offset_t *offset_ptr,
+    Stream &s, dw_attr_t attr, DWARFFormValue &form_value) {
   bool show_form = s.GetFlags().Test(DWARFDebugInfo::eDumpFlag_ShowForm);
 
   s.Printf("            ");
@@ -700,13 +693,8 @@ void DWARFDebugInfoEntry::DumpAttribute(
       // the .debug_loc section that describes the value over it's lifetime
       uint64_t debug_loc_offset = form_value.Unsigned();
       if (dwarf2Data) {
-        const DWARFDataExtractor *debug_loc_data =
-            dwarf_context.getOrLoadBestDebugLocData();
-        if (!debug_loc_data)
-          break;
-
-        DWARFExpression::PrintDWARFLocationList(s, cu, *debug_loc_data,
-                                                debug_loc_offset);
+        DWARFExpression::PrintDWARFLocationList(
+            s, cu, dwarf2Data->DebugLocData(), debug_loc_offset);
       }
     }
   } break;
@@ -732,12 +720,8 @@ void DWARFDebugInfoEntry::DumpAttribute(
     lldb::offset_t ranges_offset =
         GetRangesOffset(dwarf2Data->DebugRanges(), form_value);
     dw_addr_t base_addr = cu ? cu->GetBaseAddress() : 0;
-    const DWARFDataExtractor *debug_ranges =
-        dwarf_context.getOrLoadDebugRangesData();
-    if (!debug_ranges)
-      break;
-
-    DWARFDebugRanges::Dump(s, *debug_ranges, &ranges_offset, base_addr);
+    DWARFDebugRanges::Dump(s, dwarf2Data->get_debug_ranges_data(),
+                           &ranges_offset, base_addr);
   } break;
 
   default:
