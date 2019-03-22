@@ -25497,9 +25497,8 @@ bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 // FIXME: On 32 bits x86, fild/movq might be faster than lock cmpxchg8b.
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
-  auto PTy = cast<PointerType>(LI->getPointerOperandType());
-  return needsCmpXchgNb(PTy->getElementType()) ? AtomicExpansionKind::CmpXChg
-                                               : AtomicExpansionKind::None;
+  return needsCmpXchgNb(LI->getType()) ? AtomicExpansionKind::CmpXChg
+                                       : AtomicExpansionKind::None;
 }
 
 TargetLowering::AtomicExpansionKind
@@ -37266,7 +37265,7 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
   assert(N->getOpcode() == ISD::OR && "Unexpected Opcode");
 
   EVT VT = N->getValueType(0);
-  if (!VT.isVector())
+  if (!VT.isVector() || (VT.getScalarSizeInBits() % 8) != 0)
     return SDValue();
 
   SDValue N0 = peekThroughBitcasts(N->getOperand(0));

@@ -51,8 +51,10 @@ struct ChildDeleter {
 
   ~ChildDeleter() {
     int status;
-    kill(pid, SIGKILL);            // Kill the child.
-    waitpid(pid, &status, __WALL); // Pick up the remains.
+    // Kill the child.
+    kill(pid, SIGKILL);
+    // Pick up the remains.
+    llvm::sys::RetryAfterSignal(-1, waitpid, pid, &status, __WALL);
   }
 };
 
@@ -81,7 +83,8 @@ bool WorkaroundNeeded() {
   }
 
   int status;
-  ::pid_t wpid = waitpid(child_pid, &status, __WALL);
+  ::pid_t wpid = llvm::sys::RetryAfterSignal(-1, waitpid,
+      child_pid, &status, __WALL);
   if (wpid != child_pid || !WIFSTOPPED(status)) {
     LLDB_LOG(log, "waitpid() failed (status = {0:x}): {1}", status,
              Status(errno, eErrorTypePOSIX));
@@ -110,7 +113,8 @@ bool WorkaroundNeeded() {
       break;
     }
 
-    wpid = waitpid(child_pid, &status, __WALL);
+    wpid = llvm::sys::RetryAfterSignal(-1, waitpid,
+        child_pid, &status, __WALL);
     if (wpid != child_pid || !WIFSTOPPED(status)) {
       LLDB_LOG(log, "waitpid() failed (status = {0:x}): {1}", status,
                Status(errno, eErrorTypePOSIX));

@@ -4725,6 +4725,28 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
 
 Address CGOpenMPRuntimeNVPTX::getAddressOfLocalVariable(CodeGenFunction &CGF,
                                                         const VarDecl *VD) {
+  bool UseDefaultAllocator = true;
+  if (VD && VD->hasAttr<OMPAllocateDeclAttr>()) {
+    const auto *A = VD->getAttr<OMPAllocateDeclAttr>();
+    switch (A->getAllocatorType()) {
+      // Use the default allocator here as by default local vars are
+      // threadlocal.
+    case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
+    case OMPAllocateDeclAttr::OMPThreadMemAlloc:
+      // Just pass-through to check if the globalization is required.
+      break;
+    case OMPAllocateDeclAttr::OMPLargeCapMemAlloc:
+    case OMPAllocateDeclAttr::OMPCGroupMemAlloc:
+    case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
+    case OMPAllocateDeclAttr::OMPLowLatMemAlloc:
+    case OMPAllocateDeclAttr::OMPConstMemAlloc:
+    case OMPAllocateDeclAttr::OMPPTeamMemAlloc:
+    case OMPAllocateDeclAttr::OMPUserDefinedMemAlloc:
+      UseDefaultAllocator = false;
+      break;
+    }
+  }
+
   if (getDataSharingMode(CGM) != CGOpenMPRuntimeNVPTX::Generic)
     return Address::invalid();
 
@@ -4746,9 +4768,12 @@ Address CGOpenMPRuntimeNVPTX::getAddressOfLocalVariable(CodeGenFunction &CGF,
         return VDI->second.PrivateAddr;
     }
   }
+
   // TODO: replace it with return
+  // UseDefaultAllocator ? Address::invalid :
   // CGOpenMPRuntime::getAddressOfLocalVariable(CGF, VD); when NVPTX libomp
   // supports __kmpc_alloc|__kmpc_free.
+  (void)UseDefaultAllocator; // Prevent a warning.
   return Address::invalid();
 }
 
@@ -4838,6 +4863,34 @@ void CGOpenMPRuntimeNVPTX::adjustTargetSpecificDataForLambdas(
 
 unsigned CGOpenMPRuntimeNVPTX::getDefaultFirstprivateAddressSpace() const {
   return CGM.getContext().getTargetAddressSpace(LangAS::cuda_constant);
+}
+
+bool CGOpenMPRuntimeNVPTX::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
+                                                            LangAS &AS) {
+  if (!VD || !VD->hasAttr<OMPAllocateDeclAttr>())
+    return false;
+  const auto *A = VD->getAttr<OMPAllocateDeclAttr>();
+  switch(A->getAllocatorType()) {
+  case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
+  // Not supported, fallback to the default mem space.
+  case OMPAllocateDeclAttr::OMPThreadMemAlloc:
+  case OMPAllocateDeclAttr::OMPLargeCapMemAlloc:
+  case OMPAllocateDeclAttr::OMPCGroupMemAlloc:
+  case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
+  case OMPAllocateDeclAttr::OMPLowLatMemAlloc:
+    AS = LangAS::Default;
+    return true;
+  case OMPAllocateDeclAttr::OMPConstMemAlloc:
+    AS = LangAS::cuda_constant;
+    return true;
+  case OMPAllocateDeclAttr::OMPPTeamMemAlloc:
+    AS = LangAS::cuda_shared;
+    return true;
+  case OMPAllocateDeclAttr::OMPUserDefinedMemAlloc:
+    llvm_unreachable("Expected predefined allocator for the variables with the "
+                     "static storage.");
+  }
+  return false;
 }
 
 // Get current CudaArch and ignore any unknown values

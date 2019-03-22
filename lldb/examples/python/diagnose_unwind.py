@@ -5,6 +5,7 @@
 # information about the stack frames, and tries an alternate unwind
 # algorithm, that will help to understand why lldb's unwind algorithm
 # did not succeed.
+from __future__ import print_function
 
 import optparse
 import lldb
@@ -39,7 +40,7 @@ def backtrace_print_frame(target, frame_num, addr, fp):
                 module_description = '%s %s' % (
                     module_filename, module_uuid_str)
     except Exception:
-        print '%2d: pc==0x%-*x fp==0x%-*x' % (frame_num, addr_width, addr_for_printing, addr_width, fp)
+        print('%2d: pc==0x%-*x fp==0x%-*x' % (frame_num, addr_width, addr_for_printing, addr_width, fp))
         return
 
     sym_ctx = target.ResolveSymbolContextForAddress(
@@ -47,9 +48,9 @@ def backtrace_print_frame(target, frame_num, addr, fp):
     if sym_ctx.IsValid() and sym_ctx.GetSymbol().IsValid():
         function_start = sym_ctx.GetSymbol().GetStartAddress().GetLoadAddress(target)
         offset = addr - function_start
-        print '%2d: pc==0x%-*x fp==0x%-*x %s %s + %d' % (frame_num, addr_width, addr_for_printing, addr_width, fp, module_description, sym_ctx.GetSymbol().GetName(), offset)
+        print('%2d: pc==0x%-*x fp==0x%-*x %s %s + %d' % (frame_num, addr_width, addr_for_printing, addr_width, fp, module_description, sym_ctx.GetSymbol().GetName(), offset))
     else:
-        print '%2d: pc==0x%-*x fp==0x%-*x %s' % (frame_num, addr_width, addr_for_printing, addr_width, fp, module_description)
+        print('%2d: pc==0x%-*x fp==0x%-*x %s' % (frame_num, addr_width, addr_for_printing, addr_width, fp, module_description))
     return sbaddr.GetModule()
 
 # A simple stack walk algorithm that follows the frame chain.
@@ -78,7 +79,7 @@ def simple_backtrace(debugger):
     this_module = backtrace_print_frame(
         target, 0, cur_thread.GetFrameAtIndex(0).GetPC(), initial_fp)
     print_stack_frame(process, initial_fp)
-    print ""
+    print("")
     if this_module is not None:
         module_list.append(this_module)
     if cur_thread.GetNumFrames() < 2:
@@ -94,7 +95,7 @@ def simple_backtrace(debugger):
         address_list.append(cur_pc)
         this_module = backtrace_print_frame(target, frame_num, cur_pc, cur_fp)
         print_stack_frame(process, cur_fp)
-        print ""
+        print("")
         if this_module is not None:
             module_list.append(this_module)
         frame_num = frame_num + 1
@@ -119,7 +120,7 @@ def simple_backtrace(debugger):
         cur_fp = next_fp
     this_module = backtrace_print_frame(target, frame_num, cur_pc, cur_fp)
     print_stack_frame(process, cur_fp)
-    print ""
+    print("")
     if this_module is not None:
         module_list.append(this_module)
     return [module_list, address_list]
@@ -139,7 +140,7 @@ def print_stack_frame(process, fp):
                 addr + (i * addr_size), error)
             outline += " 0x%x" % address
             i += 1
-        print outline
+        print(outline)
     except Exception:
         return
 
@@ -180,39 +181,39 @@ def diagnose_unwind(debugger, command, result, dict):
                 modules_seen = []
                 addresses_seen = []
 
-                print 'LLDB version %s' % debugger.GetVersionString()
-                print 'Unwind diagnostics for thread %d' % thread.GetIndexID()
-                print ""
-                print "============================================================================================="
-                print ""
-                print "OS plugin setting:"
+                print('LLDB version %s' % debugger.GetVersionString())
+                print('Unwind diagnostics for thread %d' % thread.GetIndexID())
+                print("")
+                print("=============================================================================================")
+                print("")
+                print("OS plugin setting:")
                 debugger.HandleCommand(
                     "settings show target.process.python-os-plugin-path")
-                print ""
-                print "Live register context:"
+                print("")
+                print("Live register context:")
                 thread.SetSelectedFrame(0)
                 debugger.HandleCommand("register read")
-                print ""
-                print "============================================================================================="
-                print ""
-                print "lldb's unwind algorithm:"
-                print ""
+                print("")
+                print("=============================================================================================")
+                print("")
+                print("lldb's unwind algorithm:")
+                print("")
                 frame_num = 0
                 for frame in thread.frames:
                     if not frame.IsInlined():
                         this_module = backtrace_print_frame(
                             target, frame_num, frame.GetPC(), frame.GetFP())
                         print_stack_frame(process, frame.GetFP())
-                        print ""
+                        print("")
                         if this_module is not None:
                             modules_seen.append(this_module)
                         addresses_seen.append(frame.GetPC())
                         frame_num = frame_num + 1
-                print ""
-                print "============================================================================================="
-                print ""
-                print "Simple stack walk algorithm:"
-                print ""
+                print("")
+                print("=============================================================================================")
+                print("")
+                print("Simple stack walk algorithm:")
+                print("")
                 (module_list, address_list) = simple_backtrace(debugger)
                 if module_list and module_list is not None:
                     modules_seen += module_list
@@ -220,11 +221,11 @@ def diagnose_unwind(debugger, command, result, dict):
                     addresses_seen = set(addresses_seen)
                     addresses_seen.update(set(address_list))
 
-                print ""
-                print "============================================================================================="
-                print ""
-                print "Modules seen in stack walks:"
-                print ""
+                print("")
+                print("=============================================================================================")
+                print("")
+                print("Modules seen in stack walks:")
+                print("")
                 modules_already_seen = set()
                 for module in modules_seen:
                     if module is not None and module.GetFileSpec().GetFilename() is not None:
@@ -235,18 +236,18 @@ def diagnose_unwind(debugger, command, result, dict):
                             modules_already_seen.add(
                                 module.GetFileSpec().GetFilename())
 
-                print ""
-                print "============================================================================================="
-                print ""
-                print "Disassembly ofaddresses seen in stack walks:"
-                print ""
+                print("")
+                print("=============================================================================================")
+                print("")
+                print("Disassembly ofaddresses seen in stack walks:")
+                print("")
                 additional_addresses_to_disassemble = addresses_seen
                 for frame in thread.frames:
                     if not frame.IsInlined():
-                        print "--------------------------------------------------------------------------------------"
-                        print ""
-                        print "Disassembly of %s, frame %d, address 0x%x" % (frame.GetFunctionName(), frame.GetFrameID(), frame.GetPC())
-                        print ""
+                        print("--------------------------------------------------------------------------------------")
+                        print("")
+                        print("Disassembly of %s, frame %d, address 0x%x" % (frame.GetFunctionName(), frame.GetFrameID(), frame.GetPC()))
+                        print("")
                         if target.triple[
                                 0:6] == "x86_64" or target.triple[
                                 0:4] == "i386":
@@ -261,10 +262,10 @@ def diagnose_unwind(debugger, command, result, dict):
                                 frame.GetPC())
 
                 for address in list(additional_addresses_to_disassemble):
-                    print "--------------------------------------------------------------------------------------"
-                    print ""
-                    print "Disassembly of 0x%x" % address
-                    print ""
+                    print("--------------------------------------------------------------------------------------")
+                    print("")
+                    print("Disassembly of 0x%x" % address)
+                    print("")
                     if target.triple[
                             0:6] == "x86_64" or target.triple[
                             0:4] == "i386":
@@ -273,16 +274,16 @@ def diagnose_unwind(debugger, command, result, dict):
                     else:
                         debugger.HandleCommand('disassemble -a 0x%x' % address)
 
-                print ""
-                print "============================================================================================="
-                print ""
+                print("")
+                print("=============================================================================================")
+                print("")
                 additional_addresses_to_show_unwind = addresses_seen
                 for frame in thread.frames:
                     if not frame.IsInlined():
-                        print "--------------------------------------------------------------------------------------"
-                        print ""
-                        print "Unwind instructions for %s, frame %d" % (frame.GetFunctionName(), frame.GetFrameID())
-                        print ""
+                        print("--------------------------------------------------------------------------------------")
+                        print("")
+                        print("Unwind instructions for %s, frame %d" % (frame.GetFunctionName(), frame.GetFrameID()))
+                        print("")
                         debugger.HandleCommand(
                             'image show-unwind -a "0x%x"' % frame.GetPC())
                         if frame.GetPC() in additional_addresses_to_show_unwind:
@@ -290,10 +291,10 @@ def diagnose_unwind(debugger, command, result, dict):
                                 frame.GetPC())
 
                 for address in list(additional_addresses_to_show_unwind):
-                    print "--------------------------------------------------------------------------------------"
-                    print ""
-                    print "Unwind instructions for 0x%x" % address
-                    print ""
+                    print("--------------------------------------------------------------------------------------")
+                    print("")
+                    print("Unwind instructions for 0x%x" % address)
+                    print("")
                     debugger.HandleCommand(
                         'image show-unwind -a "0x%x"' % address)
 
@@ -310,4 +311,4 @@ def create_diagnose_unwind_options():
 lldb.debugger.HandleCommand(
     'command script add -f %s.diagnose_unwind diagnose-unwind' %
     __name__)
-print 'The "diagnose-unwind" command has been installed, type "help diagnose-unwind" for detailed help.'
+print('The "diagnose-unwind" command has been installed, type "help diagnose-unwind" for detailed help.')

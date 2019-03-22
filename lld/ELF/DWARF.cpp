@@ -54,6 +54,25 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *Obj) {
   }
 }
 
+namespace {
+template <class RelTy> struct LLDRelocationResolver {
+  // In the ELF ABIs, S sepresents the value of the symbol in the relocation
+  // entry. For Rela, the addend is stored as part of the relocation entry.
+  static uint64_t Resolve(object::RelocationRef Ref, uint64_t S,
+                          uint64_t /* A */) {
+    return S + Ref.getRawDataRefImpl().p;
+  }
+};
+
+template <class ELFT> struct LLDRelocationResolver<Elf_Rel_Impl<ELFT, false>> {
+  // For Rel, the addend A is supplied by the caller.
+  static uint64_t Resolve(object::RelocationRef /*Ref*/, uint64_t S,
+                          uint64_t A) {
+    return S + A;
+  }
+};
+} // namespace
+
 // Find if there is a relocation at Pos in Sec.  The code is a bit
 // more complicated than usual because we need to pass a section index
 // to llvm since it has no idea about InputSection.
@@ -83,14 +102,17 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
             llvm::utohexstr(Rel.r_offset) + " has unsupported target");
     return None;
   }
-  uint64_t Val = DR->Value + getAddend<ELFT>(Rel);
+  uint64_t Val = DR->Value;
 
   // FIXME: We should be consistent about always adding the file
   // offset or not.
   if (DR->Section->Flags & ELF::SHF_ALLOC)
     Val += cast<InputSection>(DR->Section)->getOffsetInFile();
 
-  return RelocAddrEntry{SecIndex, Val};
+  DataRefImpl D;
+  D.p = getAddend<ELFT>(Rel);
+  return RelocAddrEntry{SecIndex, RelocationRef(D, nullptr),
+                        LLDRelocationResolver<RelTy>::Resolve, Val};
 }
 
 template <class ELFT>

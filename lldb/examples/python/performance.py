@@ -9,6 +9,8 @@
 #----------------------------------------------------------------------
 
 import commands
+from __future__ import print_function
+
 import optparse
 import os
 import platform
@@ -50,11 +52,11 @@ except ImportError:
                 except ImportError:
                     pass
                 else:
-                    print 'imported lldb from: "%s"' % (lldb_python_dir)
+                    print('imported lldb from: "%s"' % (lldb_python_dir))
                     success = True
                     break
     if not success:
-        print "error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly"
+        print("error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly")
         sys.exit(1)
 
 
@@ -179,7 +181,7 @@ class TestCase:
             error = lldb.SBError()
             self.process = self.target.Launch(self.launch_info, error)
             if not error.Success():
-                print "error: %s" % error.GetCString()
+                print("error: %s" % error.GetCString())
             if self.process:
                 self.process.GetBroadcaster().AddListener(self.listener,
                                                           lldb.SBProcess.eBroadcastBitStateChanged | lldb.SBProcess.eBroadcastBitInterrupt)
@@ -194,7 +196,7 @@ class TestCase:
                 if self.listener.WaitForEvent(lldb.UINT32_MAX, process_event):
                     state = lldb.SBProcess.GetStateFromEvent(process_event)
                     if self.verbose:
-                        print "event = %s" % (lldb.SBDebugger.StateAsCString(state))
+                        print("event = %s" % (lldb.SBDebugger.StateAsCString(state)))
                     if lldb.SBProcess.GetRestartedFromEvent(process_event):
                         continue
                     if state == lldb.eStateInvalid or state == lldb.eStateDetached or state == lldb.eStateCrashed or state == lldb.eStateUnloaded or state == lldb.eStateExited:
@@ -213,46 +215,46 @@ class TestCase:
 
                             stop_reason = thread.GetStopReason()
                             if self.verbose:
-                                print "tid = %#x pc = %#x " % (thread.GetThreadID(), frame.GetPC()),
+                                print("tid = %#x pc = %#x " % (thread.GetThreadID(), frame.GetPC()), end=' ')
                             if stop_reason == lldb.eStopReasonNone:
                                 if self.verbose:
-                                    print "none"
+                                    print("none")
                             elif stop_reason == lldb.eStopReasonTrace:
                                 select_thread = True
                                 if self.verbose:
-                                    print "trace"
+                                    print("trace")
                             elif stop_reason == lldb.eStopReasonPlanComplete:
                                 select_thread = True
                                 if self.verbose:
-                                    print "plan complete"
+                                    print("plan complete")
                             elif stop_reason == lldb.eStopReasonThreadExiting:
                                 if self.verbose:
-                                    print "thread exiting"
+                                    print("thread exiting")
                             elif stop_reason == lldb.eStopReasonExec:
                                 if self.verbose:
-                                    print "exec"
+                                    print("exec")
                             elif stop_reason == lldb.eStopReasonInvalid:
                                 if self.verbose:
-                                    print "invalid"
+                                    print("invalid")
                             elif stop_reason == lldb.eStopReasonException:
                                 select_thread = True
                                 if self.verbose:
-                                    print "exception"
+                                    print("exception")
                                 fatal = True
                             elif stop_reason == lldb.eStopReasonBreakpoint:
                                 select_thread = True
                                 bp_id = thread.GetStopReasonDataAtIndex(0)
                                 bp_loc_id = thread.GetStopReasonDataAtIndex(1)
                                 if self.verbose:
-                                    print "breakpoint id = %d.%d" % (bp_id, bp_loc_id)
+                                    print("breakpoint id = %d.%d" % (bp_id, bp_loc_id))
                             elif stop_reason == lldb.eStopReasonWatchpoint:
                                 select_thread = True
                                 if self.verbose:
-                                    print "watchpoint id = %d" % (thread.GetStopReasonDataAtIndex(0))
+                                    print("watchpoint id = %d" % (thread.GetStopReasonDataAtIndex(0)))
                             elif stop_reason == lldb.eStopReasonSignal:
                                 select_thread = True
                                 if self.verbose:
-                                    print "signal %d" % (thread.GetStopReasonDataAtIndex(0))
+                                    print("signal %d" % (thread.GetStopReasonDataAtIndex(0)))
 
                             if select_thread and not selected_thread:
                                 self.thread = thread
@@ -339,7 +341,7 @@ class TesterTestCase(TestCase):
     def BreakpointHit(self, thread):
         bp_id = thread.GetStopReasonDataAtIndex(0)
         loc_id = thread.GetStopReasonDataAtIndex(1)
-        print "Breakpoint %i.%i hit: %s" % (bp_id, loc_id, thread.process.target.FindBreakpointByID(bp_id))
+        print("Breakpoint %i.%i hit: %s" % (bp_id, loc_id, thread.process.target.FindBreakpointByID(bp_id)))
         thread.StepOver()
 
     def PlanComplete(self, thread):
@@ -374,9 +376,9 @@ class TesterTestCase(TestCase):
                     while not self.done:
                         self.WaitForNextProcessEvent()
                 else:
-                    print "error: failed to launch process"
+                    print("error: failed to launch process")
             else:
-                print "error: failed to create target with '%s'" % (args[0])
+                print("error: failed to create target with '%s'" % (args[0]))
         print('Total time = %.03f sec.' % total_time.interval)
 
 
@@ -386,7 +388,7 @@ if __name__ == '__main__':
     test.Run(sys.argv[1:])
     mem = MemoryMeasurement(os.getpid())
     mem.Measure()
-    print str(mem)
+    print(str(mem))
     lldb.SBDebugger.Terminate()
     # print "sleeeping for 100 seconds"
     # time.sleep(100)

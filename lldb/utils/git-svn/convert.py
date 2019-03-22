@@ -11,6 +11,8 @@ Usage:
 4. git svn dcommit [--commit-url https://id@llvm.org/svn/llvm-project/lldb/trunk]
 """
 
+from __future__ import print_function
+
 import os
 import re
 import sys
@@ -19,8 +21,8 @@ import StringIO
 
 def usage(problem_file=None):
     if problem_file:
-        print "%s is not a file" % problem_file
-    print "Usage: convert.py raw-message-source [raw-message-source2 ...]"
+        print("%s is not a file" % problem_file)
+    print("Usage: convert.py raw-message-source [raw-message-source2 ...]")
     sys.exit(0)
 
 
@@ -29,7 +31,7 @@ def do_convert(file):
     Then for each line ('From: ' header included), replace the dos style CRLF
     end-of-line with unix style LF end-of-line.
     """
-    print "converting %s ..." % file
+    print("converting %s ..." % file)
 
     with open(file, 'r') as f_in:
         content = f_in.read()
@@ -50,12 +52,12 @@ def do_convert(file):
             else:
                 from_header_seen = True
 
-        print >> new_content, line
+        print(line, file=new_content)
 
     with open(file, 'w') as f_out:
         f_out.write(new_content.getvalue())
 
-    print "done"
+    print("done")
 
 
 def main():

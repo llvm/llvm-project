@@ -1,6 +1,8 @@
 
 # LLDB UI state in the Vim user interface.
 
+from __future__ import print_function
+
 import os
 import re
 import sys
@@ -143,7 +145,7 @@ class UI:
                 if curname is not None and is_same_file(curname, fname):
                     move_cursor(line, 0)
                 elif move_cursor:
-                    print "FIXME: not sure where to move cursor because %s != %s " % (vim.current.buffer.name, fname)
+                    print("FIXME: not sure where to move cursor because %s != %s " % (vim.current.buffer.name, fname))
 
     def update_breakpoints(self, target, buffers):
         """ Decorates buffer with signs corresponding to breakpoints in target. """
@@ -219,7 +221,7 @@ class UI:
                 self.update_pc(process, self.get_user_buffers, goto_file)
 
         if status is not None and len(status) > 0:
-            print status
+            print(status)
 
     def haveBreakpoint(self, file, line):
         """ Returns True if we have a breakpoint at file:line, False otherwise  """

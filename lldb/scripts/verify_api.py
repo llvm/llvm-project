@@ -16,9 +16,9 @@ def extract_exe_symbol_names(arch, exe_path, match_str):
         if command_output:
             return command_output[0:-1].split("'\n")
         else:
-            print 'error: command returned no output'
+            print('error: command returned no output')
     else:
-        print 'error: command failed with exit status %i\n    command: %s' % (command_exit_status, command)
+        print('error: command failed with exit status %i\n    command: %s' % (command_exit_status, command))
     return list()
 
 
@@ -76,12 +76,12 @@ def verify_api(all_args):
                 else:
                     sys.exit(1)
     else:
-        print 'error: must specify one or more architectures with the --arch option'
+        print('error: must specify one or more architectures with the --arch option')
         sys.exit(4)
     if options.verbose:
-        print "API symbols:"
+        print("API symbols:")
         for (i, external_symbol) in enumerate(api_external_symbols):
-            print "[%u] %s" % (i, external_symbol)
+            print("[%u] %s" % (i, external_symbol))
 
     api_regex = None
     if options.api_regex_str:
@@ -89,7 +89,7 @@ def verify_api(all_args):
 
     for arch in options.archs:
         for exe_path in args:
-            print 'Verifying (%s) "%s"...' % (arch, exe_path)
+            print('Verifying (%s) "%s"...' % (arch, exe_path))
             exe_errors = 0
             undefined_symbols = extract_exe_symbol_names(
                 arch, exe_path, "(     UNDF EXT)")
@@ -98,18 +98,18 @@ def verify_api(all_args):
                     match = api_regex.search(undefined_symbol)
                     if not match:
                         if options.verbose:
-                            print 'ignoring symbol: %s' % (undefined_symbol)
+                            print('ignoring symbol: %s' % (undefined_symbol))
                         continue
                 if undefined_symbol in api_external_symbols:
                     if options.verbose:
-                        print 'verified symbol: %s' % (undefined_symbol)
+                        print('verified symbol: %s' % (undefined_symbol))
                 else:
-                    print 'missing symbol: %s' % (undefined_symbol)
+                    print('missing symbol: %s' % (undefined_symbol))
                     exe_errors += 1
             if exe_errors:
-                print 'error: missing %u API symbols from %s' % (exe_errors, options.libraries)
+                print('error: missing %u API symbols from %s' % (exe_errors, options.libraries))
             else:
-                print 'success'
+                print('success')
 
 if __name__ == '__main__':
     verify_api(sys.argv[1:])

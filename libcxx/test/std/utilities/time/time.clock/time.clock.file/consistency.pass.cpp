@@ -12,8 +12,6 @@
 // violation because Clock::is_steady is defined in both the dylib and this TU.
 // UNSUPPORTED: asan
 
-// XFAIL: dylib-has-no-filesystem
-
 // <chrono>
 
 // file_clock

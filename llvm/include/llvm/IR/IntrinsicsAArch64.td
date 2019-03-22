@@ -289,6 +289,7 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
 
   // Pairwise Add
   def int_aarch64_neon_addp : AdvSIMD_2VectorArg_Intrinsic;
+  def int_aarch64_neon_faddp : AdvSIMD_2VectorArg_Intrinsic;
 
   // Long Pairwise Add
   // FIXME: In theory, we shouldn't need intrinsics for saddlp or

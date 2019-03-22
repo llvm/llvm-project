@@ -8,7 +8,7 @@ if not "SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER" in os.environ:
 
 device_id = os.environ["SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER"]
 
-for e in ["ASAN_OPTIONS", "TSAN_OPTIONS", "UBSAN_OPTIONS", "APPLE_ASAN_INIT_FOR_DLOPEN"]:
+for e in ["ASAN_OPTIONS", "TSAN_OPTIONS", "UBSAN_OPTIONS", "APPLE_ASAN_INIT_FOR_DLOPEN", "ASAN_ACTIVATION_OPTIONS"]:
   if e in os.environ:
     os.environ["SIMCTL_CHILD_" + e] = os.environ[e]
 

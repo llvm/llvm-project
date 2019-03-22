@@ -3014,6 +3014,34 @@ bool X86TTIImpl::isLegalMaskedStore(Type *DataType) {
   return isLegalMaskedLoad(DataType);
 }
 
+bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy) {
+  if (!isa<VectorType>(DataTy))
+    return false;
+
+  if (!ST->hasAVX512())
+    return false;
+
+  // The backend can't handle a single element vector.
+  if (DataTy->getVectorNumElements() == 1)
+    return false;
+
+  Type *ScalarTy = DataTy->getVectorElementType();
+
+  if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
+    return true;
+
+  if (!ScalarTy->isIntegerTy())
+    return false;
+
+  unsigned IntWidth = ScalarTy->getIntegerBitWidth();
+  return IntWidth == 32 || IntWidth == 64 ||
+         ((IntWidth == 8 || IntWidth == 16) && ST->hasVBMI2());
+}
+
+bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy) {
+  return isLegalMaskedExpandLoad(DataTy);
+}
+
 bool X86TTIImpl::isLegalMaskedGather(Type *DataTy) {
   // Some CPUs have better gather performance than others.
   // TODO: Remove the explicit ST->hasAVX512()?, That would mean we would only

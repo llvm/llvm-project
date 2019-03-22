@@ -130,7 +130,7 @@ void test2(int cond) {
   // CHECK-NEXT: br i1
   //   Within true branch, cleanup enabled.
   // CHECK:      [[T0:%.*]] = call i8* @test2_producer()
-  // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
   // CHECK-NEXT: store i8* [[T1]], i8** [[CLEANUP_SAVE]]
   // CHECK-NEXT: store i1 true, i1* [[RUN_CLEANUP]]
   // CHECK-NEXT: br label

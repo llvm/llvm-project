@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple x86_64-pc-win32 -fms-extensions -fms-compatibility \
 // RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS64
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple x86_64-pc-win32 -fms-extensions -fms-compatibility \
-// RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | grep GCC | count 1
+// RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | grep GCC | count 5
 // CHECK-MS64: #define _INTEGRAL_MAX_BITS 64
 // CHECK-MS64: #define _MSC_EXTENSIONS 1
 // CHECK-MS64: #define _MSC_VER 1900
@@ -15,13 +15,17 @@
 // CHECK-MS64-NOT: GNU
 // CHECK-MS64-NOT: GXX
 // CHECK-MS64: #define __GCC_ASM_FLAG_OUTPUTS__ 1
+// CHECK-MS64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK-MS64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK-MS64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK-MS64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
 // CHECK-MS64-NOT: GNU
 // CHECK-MS64-NOT: GXX
 
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
 // RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
-// RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | grep GCC | count 1
+// RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | grep GCC | count 5
 // CHECK-MS: #define _INTEGRAL_MAX_BITS 64
 // CHECK-MS: #define _MSC_EXTENSIONS 1
 // CHECK-MS: #define _MSC_VER 1900
@@ -33,6 +37,10 @@
 // CHECK-MS-NOT: GNU
 // CHECK-MS-NOT: GXX
 // CHECK-MS: #define __GCC_ASM_FLAG_OUTPUTS__ 1
+// CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
 // CHECK-MS-NOT: GNU
 // CHECK-MS-NOT: GXX
 

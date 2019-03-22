@@ -18,6 +18,7 @@ add_llvm_library(LLVMObject
   Object.cpp
   ObjectFile.cpp
   RecordStreamer.cpp
+  RelocationResolver.cpp
   SymbolicFile.cpp
   SymbolSize.cpp
   WasmObjectFile.cpp
