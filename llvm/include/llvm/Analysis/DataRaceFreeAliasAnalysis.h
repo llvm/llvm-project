@@ -21,6 +21,7 @@
 namespace llvm {
 
 class TaskInfo;
+class MemoryLocation;
 
 /// A simple alias analysis implementation that implements the assumption that
 /// the Tapir program is data-race free.  This analysis uses TaskInfo to
@@ -35,10 +36,12 @@ public:
   explicit DRFAAResult(TaskInfo &TI) : AAResultBase(), TI(TI) {}
   DRFAAResult(DRFAAResult &&Arg) : AAResultBase(std::move(Arg)), TI(Arg.TI) {}
 
-  ModRefInfo getModRefInfo(ImmutableCallSite CS, const MemoryLocation &Loc) {
-    return AAResultBase::getModRefInfo(CS, Loc);
-  }
+  /// Handle invalidation events in the new pass manager.
+  bool invalidate(Function &Fn, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &Inv);
 
+  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
+  ModRefInfo getModRefInfo(ImmutableCallSite CS, const MemoryLocation &Loc);
   ModRefInfo getModRefInfo(ImmutableCallSite CS1, ImmutableCallSite CS2);
 };
 

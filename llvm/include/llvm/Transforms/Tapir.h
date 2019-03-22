@@ -82,6 +82,12 @@ FunctionPass *createTaskSimplifyPass();
 
 //===----------------------------------------------------------------------===//
 //
+// DRFScopedNoAlias - Add scoped-noalias information based on DRF assumption
+//
+FunctionPass *createDRFScopedNoAliasWrapperPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LoopStripMinePass - Stripmine Tapir loops
 //
 Pass *createLoopStripMinePass(int Count = -1);

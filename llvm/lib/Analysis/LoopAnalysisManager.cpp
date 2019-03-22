@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/DataRaceFreeAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -149,5 +150,6 @@ PreservedAnalyses llvm::getLoopPassPreservedAnalyses() {
   PA.preserve<BasicAA>();
   PA.preserve<GlobalsAA>();
   PA.preserve<SCEVAA>();
+  PA.preserve<DRFAA>();
   return PA;
 }

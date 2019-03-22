@@ -152,6 +152,10 @@ static cl::opt<bool> EnableTapirLoopStripmine(
     "enable-tapir-loop-stripmine", cl::init(false), cl::Hidden,
     cl::desc("Enable the new, experimental Tapir LoopStripMine Pass"));
 
+static cl::opt<bool> EnableDRFAA(
+    "enable-drf-aa", cl::init(false), cl::Hidden,
+    cl::desc("Enable AA based on the data-race-free assumption (default = off)"));
+
 PassManagerBuilder::PassManagerBuilder() {
     TapirTarget = TapirTargetID::None;
     DisableTapirOpts = false;
@@ -244,6 +248,8 @@ void PassManagerBuilder::addInitialAliasAnalysisPasses(
   // BasicAliasAnalysis wins if they disagree. This is intended to help
   // support "obvious" type-punning idioms.
   PM.add(createTypeBasedAAWrapperPass());
+  if (EnableDRFAA)
+    PM.add(createDRFAAWrapperPass());
   PM.add(createScopedNoAliasAAWrapperPass());
 }
 
@@ -507,6 +513,8 @@ void PassManagerBuilder::populateModulePassManager(
   if (LibraryInfo)
     MPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
 
+  if (EnableDRFAA)
+    MPM.add(createDRFScopedNoAliasWrapperPass());
   addInitialAliasAnalysisPasses(MPM);
 
   // For ThinLTO there are two passes of indirect call promotion. The

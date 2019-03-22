@@ -1,4 +1,4 @@
-; RUN: opt -disable-output < %s -aa-pipeline=drf-aa -passes=aa-eval -print-no-modref 2>&1 | FileCheck %s
+; RUN: opt -disable-output < %s -aa-pipeline=drf-aa -enable-drf-aa-results -passes=aa-eval -print-no-modref 2>&1 | FileCheck %s
 
 @x = common local_unnamed_addr global i32 0, align 4
 

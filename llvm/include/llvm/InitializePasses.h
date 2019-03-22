@@ -120,6 +120,7 @@ void initializeDAHPass(PassRegistry&);
 void initializeDCELegacyPassPass(PassRegistry&);
 void initializeDSELegacyPassPass(PassRegistry&);
 void initializeDRFAAWrapperPassPass(PassRegistry&);
+void initializeDRFScopedNoAliasWrapperPassPass(PassRegistry&);
 void initializeDataFlowSanitizerPass(PassRegistry&);
 void initializeDeadInstEliminationPass(PassRegistry&);
 void initializeDeadMachineInstructionElimPass(PassRegistry&);
