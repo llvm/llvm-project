@@ -142,6 +142,7 @@ is incremented for each backwards-compatible change introduced. The major
 version number is incremented, and the minor version is reset to zero, for each
 backwards-incompatible change introduced.
 
+* `1.9`: Add gfx1031
 * `1.8`: Implement GNU Symbol Versioning for all exported functions. Rename
   some macros exposed in `amd_comgr.h` to avoid conflicts.
 * `1.7`: Add `AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC`, a
