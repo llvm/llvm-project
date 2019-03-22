@@ -200,6 +200,14 @@ CAST_OPERATION(IntegralToFloating)
 ///    (_Accum) 0.5r
 CAST_OPERATION(FixedPointCast)
 
+/// CK_FixedPointToIntegral - Fixed point to integral.
+///    (int) 2.0k
+CAST_OPERATION(FixedPointToIntegral)
+
+/// CK_IntegralToFixedPoint - Integral to a fixed point.
+///    (_Accum) 2
+CAST_OPERATION(IntegralToFixedPoint)
+
 /// CK_FixedPointToBoolean - Fixed point to boolean.
 ///    (bool) 0.5r
 CAST_OPERATION(FixedPointToBoolean)

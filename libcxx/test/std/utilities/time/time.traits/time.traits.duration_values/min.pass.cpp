@@ -17,7 +17,7 @@
 #include "test_macros.h"
 #include "../../rep.h"
 
-int main()
+int main(int, char**)
 {
     assert(std::chrono::duration_values<int>::min() ==
            std::numeric_limits<int>::lowest());
@@ -42,4 +42,6 @@ int main()
     ASSERT_NOEXCEPT(std::chrono::duration_values<double>::min());
     ASSERT_NOEXCEPT(std::chrono::duration_values<Rep>::min());
 #endif
+
+  return 0;
 }

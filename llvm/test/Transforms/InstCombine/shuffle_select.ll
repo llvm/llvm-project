@@ -1397,7 +1397,7 @@ define <4 x i32> @add_or(<4 x i32> %v) {
 define <4 x i8> @or_add(<4 x i8> %v) {
 ; CHECK-LABEL: @or_add(
 ; CHECK-NEXT:    [[V0:%.*]] = lshr <4 x i8> [[V:%.*]], <i8 3, i8 3, i8 3, i8 3>
-; CHECK-NEXT:    [[T3:%.*]] = add nsw <4 x i8> [[V0]], <i8 1, i8 2, i8 -64, i8 -64>
+; CHECK-NEXT:    [[T3:%.*]] = add nuw nsw <4 x i8> [[V0]], <i8 1, i8 2, i8 -64, i8 -64>
 ; CHECK-NEXT:    ret <4 x i8> [[T3]]
 ;
   %v0 = lshr <4 x i8> %v, <i8 3, i8 3, i8 3, i8 3>          ; clear the top bits

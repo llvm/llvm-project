@@ -21,7 +21,7 @@
 #include <type_traits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -35,4 +35,6 @@ int main()
         static_assert((std::is_base_of<std::ctype_base, std::ctype<wchar_t> >::value), "");
         static_assert((std::is_base_of<std::locale::facet, std::ctype<wchar_t> >::value), "");
     }
+
+  return 0;
 }

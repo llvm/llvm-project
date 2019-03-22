@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++experimental
 // UNSUPPORTED: c++98, c++03
 
 // <experimental/memory_resource>
@@ -46,7 +45,9 @@ ex::memory_resource* resource = ex::new_delete_resource();
 
 POSType constructed_after_resources(resource, resource->allocate(1024), 1024);
 
-int main()
+int main(int, char**)
 {
     swap(constructed_after_resources, constructed_before_resources);
+
+  return 0;
 }

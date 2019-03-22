@@ -166,3 +166,14 @@ def iPTR   : ValueType<0  , 254>;
 
 // Pseudo valuetype to represent "any type of any size".
 def Any    : ValueType<0  , 255>;
+
+/// This class is for targets that want to use pointer types in patterns
+/// with the GlobalISelEmitter.  Targets must define their own pointer
+/// derived from this class.  The scalar argument should be an
+/// integer type with the same bit size as the ponter.
+/// e.g. def p0 : PtrValueType <i64, 0>;
+
+class PtrValueType <ValueType scalar, int addrspace> :
+    ValueType<scalar.Size, scalar.Value> {
+  int AddrSpace = addrspace;
+}

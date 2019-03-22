@@ -20,6 +20,7 @@
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */
+COMPILER_RT_VISIBILITY
 void lprofMergeValueProfData(ValueProfData *SrcValueProfData,
                              __llvm_profile_data *DstData) {
   unsigned I, S, V, DstIndex = 0;

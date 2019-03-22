@@ -70,7 +70,7 @@ struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
-int main()
+int main(int, char**)
 {
     test_is_array<char[3]>();
     test_is_array<char[]>();
@@ -90,4 +90,6 @@ int main()
     test_is_not_array<bit_zero>();
     test_is_not_array<NotEmpty>();
     test_is_not_array<incomplete_type>();  //  LWG#2582
+
+  return 0;
 }

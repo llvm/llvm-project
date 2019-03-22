@@ -62,7 +62,7 @@ constexpr bool can_swap() {
 }
 #endif
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -99,4 +99,6 @@ int main()
         static_assert(noexcept(std::swap(nm, nm)), "");
     }
 #endif
+
+  return 0;
 }

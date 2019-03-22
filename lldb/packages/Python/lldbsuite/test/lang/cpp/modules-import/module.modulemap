@@ -1,0 +1,7 @@
+module Foo {
+  header "Foo.h"
+}
+
+module Bar {
+  header "Bar.h"
+}

@@ -33,12 +33,13 @@ public:
   static ErrorOr<std::unique_ptr<SymbolizableObjectFile>>
   create(object::ObjectFile *Obj, std::unique_ptr<DIContext> DICtx);
 
-  DILineInfo symbolizeCode(uint64_t ModuleOffset, FunctionNameKind FNKind,
+  DILineInfo symbolizeCode(object::SectionedAddress ModuleOffset,
+                           FunctionNameKind FNKind,
                            bool UseSymbolTable) const override;
-  DIInliningInfo symbolizeInlinedCode(uint64_t ModuleOffset,
+  DIInliningInfo symbolizeInlinedCode(object::SectionedAddress ModuleOffset,
                                       FunctionNameKind FNKind,
                                       bool UseSymbolTable) const override;
-  DIGlobal symbolizeData(uint64_t ModuleOffset) const override;
+  DIGlobal symbolizeData(object::SectionedAddress ModuleOffset) const override;
 
   // Return true if this is a 32-bit x86 PE COFF module.
   bool isWin32Module() const override;

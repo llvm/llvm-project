@@ -31,8 +31,10 @@ struct A
     void operator&() const {}
 };
 
-int main()
+int main(int, char**)
 {
     test_address<int>();
     test_address<A>();
+
+  return 0;
 }

@@ -157,7 +157,7 @@ public:
   uint8_t getAddrSize() const { return Header.getAddrSize(); }
 
   void dump(raw_ostream &OS,
-            llvm::function_ref<Optional<SectionedAddress>(uint32_t)>
+            llvm::function_ref<Optional<object::SectionedAddress>(uint32_t)>
                 LookupPooledAddress,
             DIDumpOptions DumpOpts = {}) const;
 
@@ -234,7 +234,7 @@ Error DWARFListType<ListEntryType>::extract(DWARFDataExtractor Data,
 template <typename DWARFListType>
 void DWARFListTableBase<DWARFListType>::dump(
     raw_ostream &OS,
-    llvm::function_ref<Optional<SectionedAddress>(uint32_t)>
+    llvm::function_ref<Optional<object::SectionedAddress>(uint32_t)>
         LookupPooledAddress,
     DIDumpOptions DumpOpts) const {
   Header.dump(OS, DumpOpts);

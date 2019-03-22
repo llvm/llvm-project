@@ -158,7 +158,8 @@ bool isNonVolatileMemoryOp(const MachineInstr &MI) {
   const MachineMemOperand *MemOperand = *MI.memoperands_begin();
 
   // Don't move volatile memory accesses
-  if (MemOperand->isVolatile())
+  // TODO: unclear if we need to be as conservative about atomics
+  if (MemOperand->isVolatile() || MemOperand->isAtomic())
     return false;
 
   return true;

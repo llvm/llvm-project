@@ -45,7 +45,7 @@ void swap(M&&, M&&) noexcept {}
 
 } // namespace MyNS
 
-int main()
+int main(int, char**)
 {
     using namespace MyNS;
     {
@@ -77,4 +77,6 @@ int main()
         static_assert(std::is_nothrow_swappable_with_v<int&, int&>, "");
         static_assert(!std::is_nothrow_swappable_with_v<int&&, int&&>, "");
     }
+
+  return 0;
 }

@@ -660,8 +660,14 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
   if (!CI)
     return false;
 
+  auto GetConstantInt = [](Value *V) {
+    if (auto *I = dyn_cast<BitCastInst>(V))
+      return dyn_cast<ConstantInt>(I->getOperand(0));
+    return dyn_cast<ConstantInt>(V);
+  };
+
   Value *RHS = CI->getOperand(1);
-  ConstantInt *CV = dyn_cast<ConstantInt>(RHS);
+  ConstantInt *CV = GetConstantInt(RHS);
   if (!CV)
     return false;
 

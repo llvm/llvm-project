@@ -33,7 +33,7 @@ define amdgpu_kernel void @memset_global_to_flat_no_md(i8 addrspace(1)* %global.
 }
 
 ; CHECK-LABEL: @memcpy_flat_to_flat_replace_src_with_group(
-; CHCK: call void @llvm.memcpy.p0i8.p3i8.i64(i8* align 4 %dest, i8 addrspace(3)* align 4 %src.group.ptr, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
+; CHECK: call void @llvm.memcpy.p0i8.p3i8.i64(i8* align 4 %dest, i8 addrspace(3)* align 4 %src.group.ptr, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group(i8* %dest, i8 addrspace(3)* %src.group.ptr, i64 %size) #0 {
   %cast.src = addrspacecast i8 addrspace(3)* %src.group.ptr to i8*
   call void @llvm.memcpy.p4i8.p0i8.i64(i8* align 4 %dest, i8* align 4 %cast.src, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4

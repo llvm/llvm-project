@@ -60,7 +60,7 @@ struct A {};
 
 #endif // TEST_STD_VER >= 11
 
-int main()
+int main(int, char**)
 {
   {
     int* ptr = new int;
@@ -99,4 +99,6 @@ int main()
 #endif
   }
 #endif
+
+  return 0;
 }

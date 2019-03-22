@@ -391,26 +391,35 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
     // at the end of a statement expression, they yield the value of their
     // subexpression.  Handle this by walking through all labels we encounter,
     // emitting them before we evaluate the subexpr.
+    // Similar issues arise for attributed statements.
     const Stmt *LastStmt = S.body_back();
-    while (const LabelStmt *LS = dyn_cast<LabelStmt>(LastStmt)) {
-      EmitLabel(LS->getDecl());
-      LastStmt = LS->getSubStmt();
+    while (!isa<Expr>(LastStmt)) {
+      if (const auto *LS = dyn_cast<LabelStmt>(LastStmt)) {
+        EmitLabel(LS->getDecl());
+        LastStmt = LS->getSubStmt();
+      } else if (const auto *AS = dyn_cast<AttributedStmt>(LastStmt)) {
+        // FIXME: Update this if we ever have attributes that affect the
+        // semantics of an expression.
+        LastStmt = AS->getSubStmt();
+      } else {
+        llvm_unreachable("unknown value statement");
+      }
     }
 
     EnsureInsertPoint();
 
-    QualType ExprTy = cast<Expr>(LastStmt)->getType();
+    const Expr *E = cast<Expr>(LastStmt);
+    QualType ExprTy = E->getType();
     if (hasAggregateEvaluationKind(ExprTy)) {
-      EmitAggExpr(cast<Expr>(LastStmt), AggSlot);
+      EmitAggExpr(E, AggSlot);
     } else {
       // We can't return an RValue here because there might be cleanups at
       // the end of the StmtExpr.  Because of that, we have to emit the result
       // here into a temporary alloca.
       RetAlloca = CreateMemTemp(ExprTy);
-      EmitAnyExprToMem(cast<Expr>(LastStmt), RetAlloca, Qualifiers(),
-                       /*IsInit*/false);
+      EmitAnyExprToMem(E, RetAlloca, Qualifiers(),
+                       /*IsInit*/ false);
     }
-
   }
 
   return RetAlloca;

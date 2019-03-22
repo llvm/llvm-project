@@ -1404,8 +1404,8 @@ static void RemoveFromWorklist(Instruction *I,
 /// When we find that I really equals V, remove I from the
 /// program, replacing all uses with V and update the worklist.
 static void ReplaceUsesOfWith(Instruction *I, Value *V,
-                              std::vector<Instruction*> &Worklist,
-                              Loop *L, LPPassManager *LPM) {
+                              std::vector<Instruction *> &Worklist, Loop *L,
+                              LPPassManager *LPM, MemorySSAUpdater *MSSAU) {
   LLVM_DEBUG(dbgs() << "Replace with '" << *V << "': " << *I << "\n");
 
   // Add uses to the worklist, which may be dead now.
@@ -1419,8 +1419,11 @@ static void ReplaceUsesOfWith(Instruction *I, Value *V,
   LPM->deleteSimpleAnalysisValue(I, L);
   RemoveFromWorklist(I, Worklist);
   I->replaceAllUsesWith(V);
-  if (!I->mayHaveSideEffects())
+  if (!I->mayHaveSideEffects()) {
+    if (MSSAU)
+      MSSAU->removeMemoryAccess(I);
     I->eraseFromParent();
+  }
   ++NumSimplify;
 }
 
@@ -1595,7 +1598,7 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
     // 'false'.  TODO: update the domtree properly so we can pass it here.
     if (Value *V = SimplifyInstruction(I, DL))
       if (LI->replacementPreservesLCSSAForm(I, V)) {
-        ReplaceUsesOfWith(I, V, Worklist, L, LPM);
+        ReplaceUsesOfWith(I, V, Worklist, L, LPM, MSSAU.get());
         continue;
       }
 
@@ -1615,7 +1618,8 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
 
         // Resolve any single entry PHI nodes in Succ.
         while (PHINode *PN = dyn_cast<PHINode>(Succ->begin()))
-          ReplaceUsesOfWith(PN, PN->getIncomingValue(0), Worklist, L, LPM);
+          ReplaceUsesOfWith(PN, PN->getIncomingValue(0), Worklist, L, LPM,
+                            MSSAU.get());
 
         // If Succ has any successors with PHI nodes, update them to have
         // entries coming from Pred instead of Succ.

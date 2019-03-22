@@ -211,7 +211,7 @@ const DIE *DIE::getUnitDie() const {
   return nullptr;
 }
 
-const DIEUnit *DIE::getUnit() const {
+DIEUnit *DIE::getUnit() const {
   const DIE *UnitDie = getUnitDie();
   if (UnitDie)
     return UnitDie->Owner.dyn_cast<DIEUnit*>();

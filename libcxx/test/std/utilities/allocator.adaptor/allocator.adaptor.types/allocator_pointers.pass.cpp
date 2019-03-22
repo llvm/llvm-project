@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 #include <scoped_allocator>
 #include <memory>
 #include <cassert>
 
-#include "test_macros.h"
-
-#if TEST_STD_VER >= 11
 // #include <memory>
 //
 // template <class Alloc>
@@ -109,7 +108,7 @@ void test_void_pointer()
 
 struct Foo { int x; };
 
-int main()
+int main(int, char**)
 {
     test_pointer<std::scoped_allocator_adaptor<std::allocator<char>>> ();
     test_pointer<std::scoped_allocator_adaptor<std::allocator<int>>> ();
@@ -118,7 +117,6 @@ int main()
     test_void_pointer<std::scoped_allocator_adaptor<std::allocator<char>>> ();
     test_void_pointer<std::scoped_allocator_adaptor<std::allocator<int>>> ();
     test_void_pointer<std::scoped_allocator_adaptor<std::allocator<Foo>>> ();
+
+  return 0;
 }
-#else
-int main() {}
-#endif

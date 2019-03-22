@@ -340,7 +340,7 @@ LLVM_PACKED_END
 
 // x86 extensions to FXSAVE (i.e. for AVX and MPX processors)
 LLVM_PACKED_START
-struct LLVM_ALIGNAS(16) XSAVE {
+struct XSAVE {
   FXSAVE i387;      // floating point registers typical in i387_fxsave_struct
   XSAVE_HDR header; // The xsave_hdr_struct can be used to determine if the
                     // following extensions are usable

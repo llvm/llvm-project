@@ -189,6 +189,17 @@ TEST(FileSpecTest, EqualDotsPosixRoot) {
   }
 }
 
+TEST(FileSpecTest, GuessPathStyle) {
+  EXPECT_EQ(FileSpec::Style::posix, FileSpec::GuessPathStyle("/foo/bar.txt"));
+  EXPECT_EQ(FileSpec::Style::posix, FileSpec::GuessPathStyle("//net/bar.txt"));
+  EXPECT_EQ(FileSpec::Style::windows,
+            FileSpec::GuessPathStyle(R"(C:\foo.txt)"));
+  EXPECT_EQ(FileSpec::Style::windows,
+            FileSpec::GuessPathStyle(R"(\\net\foo.txt)"));
+  EXPECT_EQ(llvm::None, FileSpec::GuessPathStyle("foo.txt"));
+  EXPECT_EQ(llvm::None, FileSpec::GuessPathStyle("foo/bar.txt"));
+}
+
 TEST(FileSpecTest, GetNormalizedPath) {
   std::pair<const char *, const char *> posix_tests[] = {
       {"/foo/.././bar", "/bar"},

@@ -7,6 +7,10 @@
 #include <thread>
 #ifdef __USE_POSIX
 #include <pthread.h>
+#elif defined(__APPLE__)
+#include <sys/resource.h>
+#elif defined (_WIN32)
+#include <Windows.h>
 #endif
 
 namespace clang {
@@ -121,6 +125,17 @@ void setCurrentThreadPriority(ThreadPriority Priority) {
       Priority == ThreadPriority::Low && !AvoidThreadStarvation ? SCHED_IDLE
                                                                 : SCHED_OTHER,
       &priority);
+#elif defined(__APPLE__)
+  // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/getpriority.2.html
+  setpriority(PRIO_DARWIN_THREAD, 0,
+              Priority == ThreadPriority::Low && !AvoidThreadStarvation
+                  ? PRIO_DARWIN_BG
+                  : 0);
+#elif defined(_WIN32)
+  SetThreadPriority(GetCurrentThread(),
+                    Priority == ThreadPriority::Low && !AvoidThreadStarvation
+                        ? THREAD_MODE_BACKGROUND_BEGIN
+                        : THREAD_MODE_BACKGROUND_END);
 #endif
 }
 

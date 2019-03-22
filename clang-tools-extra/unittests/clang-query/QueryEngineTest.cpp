@@ -1,4 +1,4 @@
-//===---- QueryTest.cpp - clang-query test --------------------------------===//
+//===-- QueryEngineTest.cpp - clang-query test ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

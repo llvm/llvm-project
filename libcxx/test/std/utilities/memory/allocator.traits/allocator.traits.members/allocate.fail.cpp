@@ -42,9 +42,11 @@ struct A
     }
 };
 
-int main()
+int main(int, char**)
 {
     A<int> a;
     std::allocator_traits<A<int> >::allocate(a, 10);          // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::allocator_traits<A<int> >::allocate(a, 10, nullptr); // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  return 0;
 }

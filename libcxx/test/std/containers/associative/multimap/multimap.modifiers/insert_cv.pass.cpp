@@ -53,7 +53,7 @@ void do_insert_test() {
     assert(r->second == 3.5);
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::multimap<int, double> Container;
@@ -65,4 +65,6 @@ int main()
         do_insert_test<Container>();
     }
 #endif
+
+  return 0;
 }

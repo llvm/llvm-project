@@ -28,7 +28,7 @@
 #error "This test requires is C++14 (or later)"
 #else
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::map<int, double, transparent_less_not_a_type> M;

@@ -32,6 +32,9 @@
 #ifndef CONCEPTS_KEYWORD
 #define CONCEPTS_KEYWORD(X) CXX2A_KEYWORD(X,KEYCONCEPTS)
 #endif
+#ifndef COROUTINES_KEYWORD
+#define COROUTINES_KEYWORD(X) CXX2A_KEYWORD(X,KEYCOROUTINES)
+#endif
 #ifndef MODULES_KEYWORD
 #define MODULES_KEYWORD(X) KEYWORD(X,KEYMODULES)
 #endif
@@ -243,6 +246,7 @@ PUNCTUATOR(caretcaret,            "^^")
 //                are enabled.
 //   KEYGNU   - This is a keyword if GNU extensions are enabled
 //   KEYMS    - This is a keyword if Microsoft extensions are enabled
+//   KEYMSCOMPAT - This is a keyword if Microsoft compatibility mode is enabled
 //   KEYNOMS18 - This is a keyword that must never be enabled under
 //               MSVC <= v18.
 //   KEYOPENCLC   - This is a keyword in OpenCL C
@@ -254,8 +258,7 @@ PUNCTUATOR(caretcaret,            "^^")
 //   KEYZVECTOR - This is a keyword for the System z vector extensions,
 //                which are heavily based on AltiVec
 //   KEYBORLAND - This is a keyword if Borland extensions are enabled
-//   KEYCOROUTINES - This is a keyword if support for the C++ coroutines
-//                   TS is enabled
+//   KEYCOROUTINES - This is a keyword if support for C++ coroutines is enabled
 //   BOOLSUPPORT - This is a keyword if 'bool' is a built-in type
 //   HALFSUPPORT - This is a keyword if 'half' is a built-in type
 //   WCHARSUPPORT - This is a keyword if 'wchar_t' is a built-in type
@@ -364,24 +367,24 @@ CXX11_KEYWORD(constexpr             , 0)
 CXX11_KEYWORD(decltype              , 0)
 CXX11_KEYWORD(noexcept              , 0)
 CXX11_KEYWORD(nullptr               , 0)
-CXX11_KEYWORD(static_assert         , 0)
+CXX11_KEYWORD(static_assert         , KEYMSCOMPAT)
 CXX11_KEYWORD(thread_local          , 0)
 
 // C++2a / concepts TS keywords
 CONCEPTS_KEYWORD(concept)
 CONCEPTS_KEYWORD(requires)
 
-// C++ coroutines TS keywords
-KEYWORD(co_await                    , KEYCOROUTINES)
-KEYWORD(co_return                   , KEYCOROUTINES)
-KEYWORD(co_yield                    , KEYCOROUTINES)
+// C++2a / coroutines TS keywords
+COROUTINES_KEYWORD(co_await)
+COROUTINES_KEYWORD(co_return)
+COROUTINES_KEYWORD(co_yield)
 
 // C++ modules TS keywords
 MODULES_KEYWORD(module)
 MODULES_KEYWORD(import)
 
 // C++ char8_t proposal
-KEYWORD(char8_t                     , CHAR8SUPPORT)
+CXX2A_KEYWORD(char8_t               , CHAR8SUPPORT)
 
 // C11 Extension
 KEYWORD(_Float16                    , KEYALL)
@@ -551,9 +554,9 @@ ALIAS("read_only", __read_only      , KEYOPENCLC | KEYOPENCLCXX)
 ALIAS("write_only", __write_only    , KEYOPENCLC | KEYOPENCLCXX)
 ALIAS("read_write", __read_write    , KEYOPENCLC | KEYOPENCLCXX)
 // OpenCL builtins
-KEYWORD(__builtin_astype            , KEYOPENCLC)
+KEYWORD(__builtin_astype            , KEYOPENCLC | KEYOPENCLCXX)
 KEYWORD(vec_step                    , KEYOPENCLC | KEYALTIVEC | KEYZVECTOR)
-#define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCLC)
+#define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCLC | KEYOPENCLCXX)
 #include "clang/Basic/OpenCLImageTypes.def"
 
 // OpenMP Type Traits

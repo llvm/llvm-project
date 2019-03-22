@@ -14,14 +14,28 @@
 
 #include "lldb/Host/windows/HostInfoWindows.h"
 #include "lldb/Host/windows/PosixApi.h"
+#include "lldb/Utility/UserIDResolver.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lldb_private;
+
+namespace {
+class WindowsUserIDResolver : public UserIDResolver {
+protected:
+  llvm::Optional<std::string> DoGetUserName(id_t uid) override {
+    return llvm::None;
+  }
+  llvm::Optional<std::string> DoGetGroupName(id_t gid) override {
+    return llvm::None;
+  }
+};
+} // namespace
 
 FileSpec HostInfoWindows::m_program_filespec;
 
@@ -116,4 +130,10 @@ bool HostInfoWindows::GetEnvironmentVar(const std::string &var_name,
   if (const wchar_t *wvar = _wgetenv(wvar_name.c_str()))
     return llvm::convertWideToUTF8(wvar, var);
   return false;
+}
+
+static llvm::ManagedStatic<WindowsUserIDResolver> g_user_id_resolver;
+
+UserIDResolver &HostInfoWindows::GetUserIDResolver() {
+  return *g_user_id_resolver;
 }

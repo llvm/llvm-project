@@ -30,7 +30,7 @@
 ; CHECK:         addl    $20, %esp
 ; CHECK:         popl    %esi
 ; CHECK:         retl
-; CHECK: Ltmp2:
+; CHECK: Ltmp3:
 ; CHECK:         .cv_fpo_endproc
 
 ; ModuleID = 't.c'

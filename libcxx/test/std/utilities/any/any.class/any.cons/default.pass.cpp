@@ -20,7 +20,7 @@
 #include "any_helpers.h"
 #include "count_new.hpp"
 
-int main()
+int main(int, char**)
 {
     using std::any;
     {
@@ -43,4 +43,6 @@ int main()
         any const a;
         assertEmpty(a);
     }
+
+  return 0;
 }

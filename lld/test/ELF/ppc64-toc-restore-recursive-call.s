@@ -18,7 +18,7 @@
 # CHECK-NEXT: 10000:
 # CHECK-LABEL: recursive_func
 # CHECK-NEXT:  10014:
-# CHECK:       1003c: {{[0-9a-fA-F ]+}} bl .+67108804
+# CHECK:       1003c: {{.*}}  bl .-60
 # CHECK-NEXT:  ld 2, 24(1)
 
         .abiversion 2

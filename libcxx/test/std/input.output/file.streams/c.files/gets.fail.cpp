@@ -13,7 +13,9 @@
 
 #include <cstdio>
 
-int main()
+int main(int, char**)
 {
     (void) std::gets((char *) NULL);
+
+  return 0;
 }

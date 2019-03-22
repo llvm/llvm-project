@@ -1600,8 +1600,8 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
   assert(RegTy == MRI.getType(Op1Reg) && RegTy == MRI.getType(Op2Reg) &&
          "Arguments and return value types must match");
 
-  const RegisterBank &RegRB = *RBI.getRegBank(DstReg, MRI, TRI);
-  if (RegRB.getID() != X86::GPRRegBankID)
+  const RegisterBank *RegRB = RBI.getRegBank(DstReg, MRI, TRI);
+  if (!RegRB || RegRB->getID() != X86::GPRRegBankID)
     return false;
 
   const static unsigned NumTypes = 4; // i8, i16, i32, i64
@@ -1699,7 +1699,7 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
   const DivRemEntry &TypeEntry = *OpEntryIt;
   const DivRemEntry::DivRemResult &OpEntry = TypeEntry.ResultTable[OpIndex];
 
-  const TargetRegisterClass *RegRC = getRegClass(RegTy, RegRB);
+  const TargetRegisterClass *RegRC = getRegClass(RegTy, *RegRB);
   if (!RBI.constrainGenericRegister(Op1Reg, *RegRC, MRI) ||
       !RBI.constrainGenericRegister(Op2Reg, *RegRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *RegRC, MRI)) {

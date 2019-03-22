@@ -208,8 +208,10 @@ void decompFilenameTest()
   }
 }
 
-int main()
+int main(int, char**)
 {
   decompPathTest();
   decompFilenameTest();
+
+  return 0;
 }

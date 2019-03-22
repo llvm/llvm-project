@@ -44,6 +44,9 @@ struct IndexingOptions {
   // callback is not available (e.g. after parsing has finished). Note that
   // macro references are not available in Proprocessor.
   bool IndexMacrosInPreprocessor = false;
+  // Has no effect if IndexFunctionLocals are false.
+  bool IndexParametersInDeclarations = false;
+  bool IndexTemplateParameters = false;
 };
 
 /// Creates a frontend action that indexes all symbols (macros and AST decls).

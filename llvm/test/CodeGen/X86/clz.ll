@@ -289,7 +289,7 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retl
 ; X32-NEXT:  .LBB8_1:
-; X32-NEXT:    movb    $8, %al
+; X32-NEXT:    movb $8, %al
 ; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retl
 ;
@@ -304,7 +304,7 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB8_1:
-; X64-NEXT:    movb    $8, %al
+; X64-NEXT:    movb $8, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
@@ -340,7 +340,7 @@ define i16 @ctlz_i16_zero_test(i16 %n) {
 ; X32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NEXT:    retl
 ; X32-NEXT:  .LBB9_1:
-; X32-NEXT:    movw    $16, %ax
+; X32-NEXT:    movw $16, %ax
 ; X32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NEXT:    retl
 ;
@@ -383,7 +383,7 @@ define i32 @ctlz_i32_zero_test(i32 %n) {
 ; X32-NEXT:    xorl $31, %eax
 ; X32-NEXT:    retl
 ; X32-NEXT:  .LBB10_1:
-; X32-NEXT:    movl    $32, %eax
+; X32-NEXT:    movl $32, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: ctlz_i32_zero_test:
@@ -482,7 +482,7 @@ define i8 @cttz_i8_zero_test(i8 %n) {
 ; X32-NEXT:    bsfl %eax, %eax
 ; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retl
-; X32-NEXT:  .LBB12_1
+; X32-NEXT:  .LBB12_1:
 ; X32-NEXT:    movb $8, %al
 ; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retl
@@ -530,7 +530,7 @@ define i16 @cttz_i16_zero_test(i16 %n) {
 ; X32-NEXT:  # %bb.2: # %cond.false
 ; X32-NEXT:    bsfw %ax, %ax
 ; X32-NEXT:    retl
-; X32-NEXT:  .LBB13_1
+; X32-NEXT:  .LBB13_1:
 ; X32-NEXT:    movw $16, %ax
 ; X32-NEXT:    retl
 ;
@@ -568,7 +568,7 @@ define i32 @cttz_i32_zero_test(i32 %n) {
 ; X32-NEXT:  # %bb.2: # %cond.false
 ; X32-NEXT:    bsfl %eax, %eax
 ; X32-NEXT:    retl
-; X32-NEXT:  .LBB14_1
+; X32-NEXT:  .LBB14_1:
 ; X32-NEXT:    movl $32, %eax
 ; X32-NEXT:    retl
 ;
@@ -667,7 +667,7 @@ define i32 @ctlz_i32_fold_cmov(i32 %n) {
 ; X32-NEXT:    bsrl %eax, %eax
 ; X32-NEXT:    xorl $31, %eax
 ; X32-NEXT:    retl
-; X32-NEXT:  .LBB16_1
+; X32-NEXT:  .LBB16_1:
 ; X32-NEXT:    movl $32, %eax
 ; X32-NEXT:    retl
 ;

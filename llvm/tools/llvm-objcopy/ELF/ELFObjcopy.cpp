@@ -223,18 +223,9 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
   return createStringError(object_error::parse_failed, "Section not found");
 }
 
-static bool isCompressed(const SectionBase &Section) {
-  const char *Magic = "ZLIB";
-  return StringRef(Section.Name).startswith(".zdebug") ||
-         (Section.OriginalData.size() > strlen(Magic) &&
-          !strncmp(reinterpret_cast<const char *>(Section.OriginalData.data()),
-                   Magic, strlen(Magic))) ||
-         (Section.Flags & ELF::SHF_COMPRESSED);
-}
-
 static bool isCompressable(const SectionBase &Section) {
-  return !isCompressed(Section) && isDebugSection(Section) &&
-         Section.Name != ".gdb_index";
+  return !(Section.Flags & ELF::SHF_COMPRESSED) &&
+         StringRef(Section.Name).startswith(".debug");
 }
 
 static void replaceDebugSections(
@@ -266,6 +257,12 @@ static void replaceDebugSections(
   RemovePred = [shouldReplace, RemovePred](const SectionBase &Sec) {
     return shouldReplace(Sec) || RemovePred(Sec);
   };
+}
+
+static bool isUnneededSymbol(const Symbol &Sym) {
+  return !Sym.Referenced &&
+         (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&
+         Sym.Type != STT_FILE && Sym.Type != STT_SECTION;
 }
 
 // This function handles the high level operations of GNU objcopy including
@@ -336,7 +333,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
     // The purpose of this loop is to mark symbols referenced by sections
     // (like GroupSection or RelocationSection). This way, we know which
     // symbols are still 'needed' and which are not.
-    if (Config.StripUnneeded) {
+    if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty()) {
       for (auto &Section : Obj.sections())
         Section.markSymbols();
     }
@@ -359,9 +356,9 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
       if (is_contained(Config.SymbolsToRemove, Sym.Name))
         return true;
 
-      if (Config.StripUnneeded && !Sym.Referenced &&
-          (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&
-          Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
+      if ((Config.StripUnneeded ||
+           is_contained(Config.UnneededSymbolsToRemove, Sym.Name)) &&
+          isUnneededSymbol(Sym))
         return true;
 
       return false;
@@ -560,6 +557,16 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
   if (!Config.AddGnuDebugLink.empty())
     Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink);
 
+  for (const NewSymbolInfo &SI : Config.SymbolsToAdd) {
+    SectionBase *Sec = Obj.findSection(SI.SectionName);
+    uint64_t Value = Sec ? Sec->Addr + SI.Value : SI.Value;
+    Obj.SymbolTable->addSymbol(
+        SI.SymbolName, SI.Bind, SI.Type, Sec, Value, SI.Visibility,
+        Sec ? (uint16_t)SYMBOL_SIMPLE_INDEX : (uint16_t)SHN_ABS, 0);
+  }
+
+  if (Config.EntryExpr)
+    Obj.Entry = Config.EntryExpr(Obj.Entry);
   return Error::success();
 }
 

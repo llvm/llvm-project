@@ -314,10 +314,10 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
 
 void ThreadPlanStepInRange::SetAvoidRegexp(const char *name) {
   auto name_ref = llvm::StringRef::withNullAsEmpty(name);
-  if (!m_avoid_regexp_ap)
-    m_avoid_regexp_ap.reset(new RegularExpression(name_ref));
+  if (!m_avoid_regexp_up)
+    m_avoid_regexp_up.reset(new RegularExpression(name_ref));
 
-  m_avoid_regexp_ap->Compile(name_ref);
+  m_avoid_regexp_up->Compile(name_ref);
 }
 
 void ThreadPlanStepInRange::SetDefaultFlagValue(uint32_t new_value) {
@@ -350,7 +350,7 @@ bool ThreadPlanStepInRange::FrameMatchesAvoidCriteria() {
   if (libraries_say_avoid)
     return true;
 
-  const RegularExpression *avoid_regexp_to_use = m_avoid_regexp_ap.get();
+  const RegularExpression *avoid_regexp_to_use = m_avoid_regexp_up.get();
   if (avoid_regexp_to_use == nullptr)
     avoid_regexp_to_use = GetThread().GetSymbolsToAvoidRegexp();
 

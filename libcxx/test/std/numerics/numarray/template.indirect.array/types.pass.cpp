@@ -17,7 +17,9 @@
 #include <valarray>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::indirect_array<int>::value_type, int>::value), "");
+
+  return 0;
 }

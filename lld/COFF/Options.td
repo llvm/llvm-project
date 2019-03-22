@@ -32,6 +32,8 @@ def errorlimit : P<"errorlimit",
 def export  : P<"export", "Export a function">;
 // No help text because /failifmismatch is not intended to be used by the user.
 def failifmismatch : P<"failifmismatch", "">;
+def functionpadmin : F<"functionpadmin">;
+def functionpadmin_opt : P<"functionpadmin", "Prepares an image for hotpatching">;
 def guard   : P<"guard", "Control flow guard">;
 def heap    : P<"heap", "Size of the heap">;
 def ignore : P<"ignore", "Specify warning codes to ignore">;
@@ -150,6 +152,7 @@ def help : F<"help">;
 def help_q : Flag<["/?", "-?"], "">, Alias<help>;
 
 // LLD extensions
+def exclude_all_symbols : F<"exclude-all-symbols">;
 def export_all_symbols : F<"export-all-symbols">;
 def kill_at : F<"kill-at">;
 def lldmingw : F<"lldmingw">;
@@ -160,6 +163,9 @@ def rsp_quoting : Joined<["--"], "rsp-quoting=">,
   HelpText<"Quoting style for response files, 'windows' (default) or 'posix'">;
 def dash_dash_version : Flag<["--"], "version">,
   HelpText<"Print version information">;
+defm threads: B<"threads",
+    "Run the linker multi-threaded (default)",
+    "Do not run the linker multi-threaded">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;
@@ -177,7 +183,6 @@ multiclass QB<string name> {
   def _no : F<name#":no">;
 }
 
-def functionpadmin : F<"functionpadmin">;
 def ignoreidl : F<"ignoreidl">;
 def nologo : F<"nologo">;
 def throwingnew : F<"throwingnew">;

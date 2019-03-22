@@ -23,7 +23,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
     typedef std::iterator_traits<A*> It;
     static_assert((std::is_same<It::difference_type, std::ptrdiff_t>::value), "");
@@ -31,4 +31,6 @@ int main()
     static_assert((std::is_same<It::pointer, A*>::value), "");
     static_assert((std::is_same<It::reference, A&>::value), "");
     static_assert((std::is_same<It::iterator_category, std::random_access_iterator_tag>::value), "");
+
+  return 0;
 }

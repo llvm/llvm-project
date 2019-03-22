@@ -585,11 +585,20 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
       O << "  case ";
       if (!Namespace.empty())
         O << Namespace << "::";
-      O << AltName << ":\n"
-        << "    assert(*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
-        << "[RegNo-1]) &&\n"
-        << "           \"Invalid alt name index for register!\");\n"
-        << "    return AsmStrs" << AltName << "+RegAsmOffset" << AltName
+      O << AltName << ":\n";
+      if (R->isValueUnset("FallbackRegAltNameIndex"))
+        O << "    assert(*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
+          << "[RegNo-1]) &&\n"
+          << "           \"Invalid alt name index for register!\");\n";
+      else {
+        O << "    if (!*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
+          << "[RegNo-1]))\n"
+          << "      return getRegisterName(RegNo, ";
+        if (!Namespace.empty())
+          O << Namespace << "::";
+        O << R->getValueAsDef("FallbackRegAltNameIndex")->getName() << ");\n";
+      }
+      O << "    return AsmStrs" << AltName << "+RegAsmOffset" << AltName
         << "[RegNo-1];\n";
     }
     O << "  }\n";

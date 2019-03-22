@@ -75,7 +75,7 @@ static bool glibc_version_less_than(char const* version) {
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         Fnf f("C", 1);
@@ -179,4 +179,6 @@ int main()
         Fwt f(LOCALE_zh_CN_UTF_8, 1);
         assert(f.curr_symbol() == L"CNY ");
     }
+
+  return 0;
 }

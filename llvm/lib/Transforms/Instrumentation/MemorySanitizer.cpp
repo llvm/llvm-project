@@ -454,17 +454,16 @@ namespace {
 /// the module.
 class MemorySanitizer {
 public:
-  MemorySanitizer(Module &M, int TrackOrigins = 0, bool Recover = false,
-                  bool EnableKmsan = false) {
+  MemorySanitizer(Module &M, MemorySanitizerOptions Options) {
     this->CompileKernel =
-        ClEnableKmsan.getNumOccurrences() > 0 ? ClEnableKmsan : EnableKmsan;
+        ClEnableKmsan.getNumOccurrences() > 0 ? ClEnableKmsan : Options.Kernel;
     if (ClTrackOrigins.getNumOccurrences() > 0)
       this->TrackOrigins = ClTrackOrigins;
     else
-      this->TrackOrigins = this->CompileKernel ? 2 : TrackOrigins;
+      this->TrackOrigins = this->CompileKernel ? 2 : Options.TrackOrigins;
     this->Recover = ClKeepGoing.getNumOccurrences() > 0
                         ? ClKeepGoing
-                        : (this->CompileKernel | Recover);
+                        : (this->CompileKernel | Options.Recover);
     initializeModule(M);
   }
 
@@ -598,10 +597,8 @@ struct MemorySanitizerLegacyPass : public FunctionPass {
   // Pass identification, replacement for typeid.
   static char ID;
 
-  MemorySanitizerLegacyPass(int TrackOrigins = 0, bool Recover = false,
-                            bool EnableKmsan = false)
-      : FunctionPass(ID), TrackOrigins(TrackOrigins), Recover(Recover),
-        EnableKmsan(EnableKmsan) {}
+  MemorySanitizerLegacyPass(MemorySanitizerOptions Options = {})
+      : FunctionPass(ID), Options(Options) {}
   StringRef getPassName() const override { return "MemorySanitizerLegacyPass"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -615,16 +612,14 @@ struct MemorySanitizerLegacyPass : public FunctionPass {
   bool doInitialization(Module &M) override;
 
   Optional<MemorySanitizer> MSan;
-  int TrackOrigins;
-  bool Recover;
-  bool EnableKmsan;
+  MemorySanitizerOptions Options;
 };
 
 } // end anonymous namespace
 
 PreservedAnalyses MemorySanitizerPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
-  MemorySanitizer Msan(*F.getParent(), TrackOrigins, Recover, EnableKmsan);
+  MemorySanitizer Msan(*F.getParent(), Options);
   if (Msan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F)))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -640,10 +635,9 @@ INITIALIZE_PASS_END(MemorySanitizerLegacyPass, "msan",
                     "MemorySanitizer: detects uninitialized reads.", false,
                     false)
 
-FunctionPass *llvm::createMemorySanitizerLegacyPassPass(int TrackOrigins,
-                                                        bool Recover,
-                                                        bool CompileKernel) {
-  return new MemorySanitizerLegacyPass(TrackOrigins, Recover, CompileKernel);
+FunctionPass *
+llvm::createMemorySanitizerLegacyPassPass(MemorySanitizerOptions Options) {
+  return new MemorySanitizerLegacyPass(Options);
 }
 
 /// Create a non-const global initialized with the given string.
@@ -950,7 +944,7 @@ void MemorySanitizer::initializeModule(Module &M) {
 }
 
 bool MemorySanitizerLegacyPass::doInitialization(Module &M) {
-  MSan.emplace(M, TrackOrigins, Recover, EnableKmsan);
+  MSan.emplace(M, Options);
   return true;
 }
 
@@ -2934,6 +2928,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return true;
   }
 
+  // Instrument BMI / BMI2 intrinsics.
+  // All of these intrinsics are Z = I(X, Y)
+  // where the types of all operands and the result match, and are either i32 or i64.
+  // The following instrumentation happens to work for all of them:
+  //   Sz = I(Sx, Y) | (sext (Sy != 0))
+  void handleBmiIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Type *ShadowTy = getShadowTy(&I);
+
+    // If any bit of the mask operand is poisoned, then the whole thing is.
+    Value *SMask = getShadow(&I, 1);
+    SMask = IRB.CreateSExt(IRB.CreateICmpNE(SMask, getCleanShadow(ShadowTy)),
+                           ShadowTy);
+    // Apply the same intrinsic to the shadow of the first operand.
+    Value *S = IRB.CreateCall(I.getCalledFunction(),
+                              {getShadow(&I, 0), I.getOperand(1)});
+    S = IRB.CreateOr(SMask, S);
+    setShadow(&I, S);
+    setOriginForNaryOp(I);
+  }
 
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
@@ -3148,6 +3162,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // generates reasonably looking IR that fails in the backend with "Do not
       // know how to split the result of this operator!".
       handleVectorComparePackedIntrinsic(I);
+      break;
+
+    case Intrinsic::x86_bmi_bextr_32:
+    case Intrinsic::x86_bmi_bextr_64:
+    case Intrinsic::x86_bmi_bzhi_32:
+    case Intrinsic::x86_bmi_bzhi_64:
+    case Intrinsic::x86_bmi_pdep_32:
+    case Intrinsic::x86_bmi_pdep_64:
+    case Intrinsic::x86_bmi_pext_32:
+    case Intrinsic::x86_bmi_pext_64:
+      handleBmiIntrinsic(I);
       break;
 
     case Intrinsic::is_constant:

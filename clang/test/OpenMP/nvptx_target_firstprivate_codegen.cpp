@@ -13,9 +13,11 @@ struct TT {
   ty Y;
 };
 
-// TCHECK:  [[TT:%.+]] = type { i64, i8 }
-// TCHECK:  [[S1:%.+]] = type { double }
+// TCHECK-DAG:  [[TT:%.+]] = type { i64, i8 }
+// TCHECK-DAG:  [[TTII:%.+]] = type { i32, i32 }
+// TCHECK-DAG:  [[S1:%.+]] = type { double }
 
+// TCHECK: @__omp_offloading_firstprivate__{{.+}}_e_l28 = internal addrspace(4) global [[TTII]] zeroinitializer
 // TCHECK: @{{.*}}_$_{{.*}} = common global i32 0, !dbg !{{[0-9]+}}
 int foo(int n, double *ptr) {
   int a = 0;
@@ -23,16 +25,20 @@ int foo(int n, double *ptr) {
   float b[10];
   double c[5][10];
   TT<long long, char> d;
+  const TT<int, int> e = {n, n};
 
-#pragma omp target firstprivate(a) map(tofrom \
-                                       : b)
+#pragma omp target firstprivate(a, e) map(tofrom \
+                                          : b)
   {
     b[a] = a;
+    b[a] += e.X;
   }
 
-  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}([10 x float] addrspace(1)* noalias [[B_IN:%.+]], i{{[0-9]+}} [[A_IN:%.+]])
+  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}([10 x float] addrspace(1)* noalias [[B_IN:%.+]], i{{[0-9]+}} [[A_IN:%.+]], [[TTII]]* noalias [[E_IN:%.+]])
+  // TCHECK-NOT: alloca [[TTII]],
   // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
-  // TCHECK-NOT:  alloca i{{[0-9]+}},
+  // TCHECK-NOT: alloca [[TTII]],
+  // TCHECK-NOT: alloca i{{[0-9]+}},
   // TCHECK-64:  call void @llvm.dbg.declare(metadata [10 x float] addrspace(1)** %{{.+}}, metadata !{{[0-9]+}}, metadata !DIExpression())
   // TCHECK:  store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[A_ADDR]],
   // TCHECK:  ret void

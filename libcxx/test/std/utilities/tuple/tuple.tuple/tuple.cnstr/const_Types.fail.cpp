@@ -42,6 +42,8 @@ std::tuple<ExplicitCopy> const_explicit_copy_no_brace() {
     // expected-error@-1 {{no viable conversion}}
 }
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }

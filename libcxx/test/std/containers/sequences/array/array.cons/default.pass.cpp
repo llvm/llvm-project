@@ -21,7 +21,7 @@ struct NoDefault {
   NoDefault(int) {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -44,4 +44,6 @@ int main()
       C c2 = {{}};
       assert(c2.size() == 0);
     }
+
+  return 0;
 }

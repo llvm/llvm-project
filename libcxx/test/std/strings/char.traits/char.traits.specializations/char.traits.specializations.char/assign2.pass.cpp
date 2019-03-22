@@ -27,7 +27,7 @@ constexpr bool test_constexpr()
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     char c = '\0';
     std::char_traits<char>::assign(c, 'a');
@@ -36,4 +36,6 @@ int main()
 #if TEST_STD_VER > 14
     static_assert(test_constexpr(), "" );
 #endif
+
+  return 0;
 }

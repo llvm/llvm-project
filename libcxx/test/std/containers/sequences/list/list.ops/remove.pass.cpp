@@ -32,7 +32,7 @@ struct S {
   int *i_;
 };
 
-int main() {
+int main(int, char**) {
   {
     int a1[] = {1, 2, 3, 4};
     int a2[] = {1, 2, 4};
@@ -79,4 +79,6 @@ int main() {
     assert((c == std::list<int, min_allocator<int>>(a2, a2 + 3)));
   }
 #endif
+
+  return 0;
 }

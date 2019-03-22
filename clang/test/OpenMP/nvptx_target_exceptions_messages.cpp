@@ -68,4 +68,17 @@ int baz2() {
   return 2 + baz3();
 }
 
+int baz1() { throw 1; } // expected-error {{cannot use 'throw' with exceptions disabled}}
+
+int foobar1();
+int foobar2();
+
+int (*A)() = &foobar1;
+#pragma omp declare target
+int (*B)() = &foobar2;
+#pragma omp end declare target
+
+int foobar1() { throw 1; }
+int foobar2() { throw 1; } // expected-error {{cannot use 'throw' with exceptions disabled}}
+
 #endif // HEADER

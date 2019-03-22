@@ -22,8 +22,9 @@ class COFFImportFile;
 class ObjectFile;
 }
 namespace codeview {
+class GlobalTypeTableBuilder;
 class MergingTypeTableBuilder;
-}
+} // namespace codeview
 
 class ScopedPrinter;
 
@@ -88,7 +89,10 @@ public:
   virtual void printCodeViewDebugInfo() { }
   virtual void
   mergeCodeViewTypes(llvm::codeview::MergingTypeTableBuilder &CVIDs,
-                     llvm::codeview::MergingTypeTableBuilder &CVTypes) {}
+                     llvm::codeview::MergingTypeTableBuilder &CVTypes,
+                     llvm::codeview::GlobalTypeTableBuilder &GlobalCVIDs,
+                     llvm::codeview::GlobalTypeTableBuilder &GlobalCVTypes,
+                     bool GHash) {}
 
   // Only implemented for MachO.
   virtual void printMachODataInCode() { }
@@ -132,9 +136,9 @@ std::error_code createWasmDumper(const object::ObjectFile *Obj,
 void dumpCOFFImportFile(const object::COFFImportFile *File,
                         ScopedPrinter &Writer);
 
-void dumpCodeViewMergedTypes(
-    ScopedPrinter &Writer, llvm::codeview::MergingTypeTableBuilder &IDTable,
-    llvm::codeview::MergingTypeTableBuilder &TypeTable);
+void dumpCodeViewMergedTypes(ScopedPrinter &Writer,
+                             ArrayRef<ArrayRef<uint8_t>> IpiRecords,
+                             ArrayRef<ArrayRef<uint8_t>> TpiRecords);
 
 } // namespace llvm
 

@@ -63,19 +63,19 @@ writeAtomically(llvm::StringRef OutPath,
 }
 
 // Uses disk as a storage for index shards. Creates a directory called
-// ".clangd-index/" under the path provided during construction.
+// ".clangd/index/" under the path provided during construction.
 class DiskBackedIndexStorage : public BackgroundIndexStorage {
   std::string DiskShardRoot;
 
 public:
-  // Sets DiskShardRoot to (Directory + ".clangd-index/") which is the base
+  // Sets DiskShardRoot to (Directory + ".clangd/index/") which is the base
   // directory for all shard files.
   DiskBackedIndexStorage(llvm::StringRef Directory) {
     llvm::SmallString<128> CDBDirectory(Directory);
-    llvm::sys::path::append(CDBDirectory, ".clangd-index/");
+    llvm::sys::path::append(CDBDirectory, ".clangd", "index");
     DiskShardRoot = CDBDirectory.str();
     std::error_code OK;
-    std::error_code EC = llvm::sys::fs::create_directory(DiskShardRoot);
+    std::error_code EC = llvm::sys::fs::create_directories(DiskShardRoot);
     if (EC != OK) {
       elog("Failed to create directory {0} for index storage: {1}",
            DiskShardRoot, EC.message());

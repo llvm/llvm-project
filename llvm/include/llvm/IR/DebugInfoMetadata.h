@@ -2510,6 +2510,12 @@ public:
   /// return true with an offset of zero.
   bool extractIfOffset(int64_t &Offset) const;
 
+  /// Checks if the last 4 elements of the expression are DW_OP_constu <DWARF
+  /// Address Space> DW_OP_swap DW_OP_xderef and extracts the <DWARF Address
+  /// Space>.
+  static const DIExpression *extractAddressClass(const DIExpression *Expr,
+                                                 unsigned &AddrClass);
+
   /// Constants for DIExpression::prepend.
   enum { NoDeref = false, WithDeref = true, WithStackValue = true };
 

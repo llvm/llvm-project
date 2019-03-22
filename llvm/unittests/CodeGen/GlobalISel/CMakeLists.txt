@@ -14,5 +14,6 @@ add_llvm_unittest(GlobalISelTests
   LegalizerHelperTest.cpp
   LegalizerInfoTest.cpp
   MachineIRBuilderTest.cpp
+  GISelMITest.cpp
   PatternMatchTest.cpp
   )

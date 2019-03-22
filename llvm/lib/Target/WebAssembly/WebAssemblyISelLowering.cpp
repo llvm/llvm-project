@@ -174,6 +174,23 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
           setOperationAction(Op, T, Expand);
     }
 
+    // Expand integer operations supported for scalars but not SIMD
+    for (auto Op : {ISD::CTLZ, ISD::CTTZ, ISD::CTPOP, ISD::SDIV, ISD::UDIV,
+                    ISD::SREM, ISD::UREM, ISD::ROTL, ISD::ROTR}) {
+      for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
+        setOperationAction(Op, T, Expand);
+      if (Subtarget->hasUnimplementedSIMD128())
+        setOperationAction(Op, MVT::v2i64, Expand);
+    }
+
+    // Expand float operations supported for scalars but not SIMD
+    for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
+                    ISD::FCOPYSIGN}) {
+      setOperationAction(Op, MVT::v4f32, Expand);
+      if (Subtarget->hasUnimplementedSIMD128())
+        setOperationAction(Op, MVT::v2f64, Expand);
+    }
+
     // Expand additional SIMD ops that V8 hasn't implemented yet
     if (!Subtarget->hasUnimplementedSIMD128()) {
       setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
@@ -243,6 +260,16 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
   setMaxAtomicSizeInBitsSupported(64);
+
+  if (Subtarget->hasBulkMemory()) {
+    // Use memory.copy and friends over multiple loads and stores
+    MaxStoresPerMemcpy = 1;
+    MaxStoresPerMemcpyOptSize = 1;
+    MaxStoresPerMemmove = 1;
+    MaxStoresPerMemmoveOptSize = 1;
+    MaxStoresPerMemset = 1;
+    MaxStoresPerMemsetOptSize = 1;
+  }
 }
 
 TargetLowering::AtomicExpansionKind
@@ -319,11 +346,11 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
   auto &Context = BB->getParent()->getFunction().getContext();
   Type *Ty = Float64 ? Type::getDoubleTy(Context) : Type::getFloatTy(Context);
 
-  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
   MachineFunction *F = BB->getParent();
-  MachineBasicBlock *TrueMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *FalseMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *DoneMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *TrueMBB = F->CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *FalseMBB = F->CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *DoneMBB = F->CreateMachineBasicBlock(LLVMBB);
 
   MachineFunction::iterator It = ++BB->getIterator();
   F->insert(It, FalseMBB);
@@ -331,8 +358,7 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
   F->insert(It, DoneMBB);
 
   // Transfer the remainder of BB and its successor edges to DoneMBB.
-  DoneMBB->splice(DoneMBB->begin(), BB,
-                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  DoneMBB->splice(DoneMBB->begin(), BB, std::next(MI.getIterator()), BB->end());
   DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
 
   BB->addSuccessor(TrueMBB);
@@ -573,14 +599,14 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 // Lowering Code
 //===----------------------------------------------------------------------===//
 
-static void fail(const SDLoc &DL, SelectionDAG &DAG, const char *msg) {
+static void fail(const SDLoc &DL, SelectionDAG &DAG, const char *Msg) {
   MachineFunction &MF = DAG.getMachineFunction();
   DAG.getContext()->diagnose(
-      DiagnosticInfoUnsupported(MF.getFunction(), msg, DL.getDebugLoc()));
+      DiagnosticInfoUnsupported(MF.getFunction(), Msg, DL.getDebugLoc()));
 }
 
 // Test whether the given calling convention is supported.
-static bool CallingConvSupported(CallingConv::ID CallConv) {
+static bool callingConvSupported(CallingConv::ID CallConv) {
   // We currently support the language-independent target-independent
   // conventions. We don't yet have a way to annotate calls with properties like
   // "cold", and we don't have any call-clobbered registers, so these are mostly
@@ -603,7 +629,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   auto Layout = MF.getDataLayout();
 
   CallingConv::ID CallConv = CLI.CallConv;
-  if (!CallingConvSupported(CallConv))
+  if (!callingConvSupported(CallConv))
     fail(DL, DAG,
          "WebAssembly doesn't support language-specific or target-specific "
          "calling conventions yet");
@@ -625,9 +651,9 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
   unsigned NumFixedArgs = 0;
-  for (unsigned i = 0; i < Outs.size(); ++i) {
-    const ISD::OutputArg &Out = Outs[i];
-    SDValue &OutVal = OutVals[i];
+  for (unsigned I = 0; I < Outs.size(); ++I) {
+    const ISD::OutputArg &Out = Outs[I];
+    SDValue &OutVal = OutVals[I];
     if (Out.Flags.isNest())
       fail(DL, DAG, "WebAssembly hasn't implemented nest arguments");
     if (Out.Flags.isInAlloca())
@@ -664,13 +690,16 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsVarArg) {
     // Outgoing non-fixed arguments are placed in a buffer. First
     // compute their offsets and the total amount of buffer space needed.
-    for (SDValue Arg :
-         make_range(OutVals.begin() + NumFixedArgs, OutVals.end())) {
+    for (unsigned I = NumFixedArgs; I < Outs.size(); ++I) {
+      const ISD::OutputArg &Out = Outs[I];
+      SDValue &Arg = OutVals[I];
       EVT VT = Arg.getValueType();
       assert(VT != MVT::iPTR && "Legalized args should be concrete");
       Type *Ty = VT.getTypeForEVT(*DAG.getContext());
+      unsigned Align = std::max(Out.Flags.getOrigAlign(),
+                                Layout.getABITypeAlignment(Ty));
       unsigned Offset = CCInfo.AllocateStack(Layout.getTypeAllocSize(Ty),
-                                             Layout.getABITypeAlignment(Ty));
+                                             Align);
       CCInfo.addLoc(CCValAssign::getMem(ArgLocs.size(), VT.getSimpleVT(),
                                         Offset, VT.getSimpleVT(),
                                         CCValAssign::Full));
@@ -763,7 +792,7 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
     const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
     SelectionDAG &DAG) const {
   assert(Outs.size() <= 1 && "WebAssembly can only return up to one value");
-  if (!CallingConvSupported(CallConv))
+  if (!callingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
 
   SmallVector<SDValue, 4> RetOps(1, Chain);
@@ -790,7 +819,7 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
-  if (!CallingConvSupported(CallConv))
+  if (!callingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -837,7 +866,7 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
   // Record the number and types of arguments and results.
   SmallVector<MVT, 4> Params;
   SmallVector<MVT, 4> Results;
-  ComputeSignatureVTs(MF.getFunction().getFunctionType(), MF.getFunction(),
+  computeSignatureVTs(MF.getFunction().getFunctionType(), MF.getFunction(),
                       DAG.getTarget(), Params, Results);
   for (MVT VT : Results)
     MFI->addResult(VT);
@@ -1054,7 +1083,7 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
 
   switch (IntNo) {
   default:
-    return {}; // Don't custom lower most intrinsics.
+    return SDValue(); // Don't custom lower most intrinsics.
 
   case Intrinsic::wasm_lsda: {
     EVT VT = Op.getValueType();
@@ -1223,11 +1252,10 @@ WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   Ops[OpIdx++] = Op.getOperand(1);
 
   // Expand mask indices to byte indices and materialize them as operands
-  for (size_t I = 0, Lanes = Mask.size(); I < Lanes; ++I) {
+  for (int M : Mask) {
     for (size_t J = 0; J < LaneBytes; ++J) {
       // Lower undefs (represented by -1 in mask) to zero
-      uint64_t ByteIndex =
-          Mask[I] == -1 ? 0 : (uint64_t)Mask[I] * LaneBytes + J;
+      uint64_t ByteIndex = M == -1 ? 0 : (uint64_t)M * LaneBytes + J;
       Ops[OpIdx++] = DAG.getConstant(ByteIndex, DL, MVT::i32);
     }
   }
@@ -1247,7 +1275,7 @@ WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
     return SDValue();
 }
 
-static SDValue UnrollVectorShift(SDValue Op, SelectionDAG &DAG) {
+static SDValue unrollVectorShift(SDValue Op, SelectionDAG &DAG) {
   EVT LaneT = Op.getSimpleValueType().getVectorElementType();
   // 32-bit and 64-bit unrolled shifts will have proper semantics
   if (LaneT.bitsGE(MVT::i32))
@@ -1282,17 +1310,17 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
   // Expand all vector shifts until V8 fixes its implementation
   // TODO: remove this once V8 is fixed
   if (!Subtarget->hasUnimplementedSIMD128())
-    return UnrollVectorShift(Op, DAG);
+    return unrollVectorShift(Op, DAG);
 
   // Unroll non-splat vector shifts
   BuildVectorSDNode *ShiftVec;
   SDValue SplatVal;
   if (!(ShiftVec = dyn_cast<BuildVectorSDNode>(Op.getOperand(1).getNode())) ||
       !(SplatVal = ShiftVec->getSplatValue()))
-    return UnrollVectorShift(Op, DAG);
+    return unrollVectorShift(Op, DAG);
 
   // All splats except i64x2 const splats are handled by patterns
-  ConstantSDNode *SplatConst = dyn_cast<ConstantSDNode>(SplatVal);
+  auto *SplatConst = dyn_cast<ConstantSDNode>(SplatVal);
   if (!SplatConst || Op.getSimpleValueType() != MVT::v2i64)
     return Op;
 

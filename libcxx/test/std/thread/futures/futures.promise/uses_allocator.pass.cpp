@@ -19,9 +19,11 @@
 #include <future>
 #include "test_allocator.h"
 
-int main()
+int main(int, char**)
 {
     static_assert((std::uses_allocator<std::promise<int>, test_allocator<int> >::value), "");
     static_assert((std::uses_allocator<std::promise<int&>, test_allocator<int> >::value), "");
     static_assert((std::uses_allocator<std::promise<void>, test_allocator<void> >::value), "");
+
+  return 0;
 }

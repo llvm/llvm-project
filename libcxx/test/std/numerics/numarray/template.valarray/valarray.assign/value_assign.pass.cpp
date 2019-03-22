@@ -16,7 +16,7 @@
 #include <cassert>
 #include <cstddef>
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -28,4 +28,6 @@ int main()
         for (std::size_t i = 0; i < v.size(); ++i)
             assert(v[i] == 7);
     }
+
+  return 0;
 }

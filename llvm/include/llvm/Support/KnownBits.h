@@ -113,10 +113,16 @@ public:
     return KnownBits(Zero.trunc(BitWidth), One.trunc(BitWidth));
   }
 
-  /// Zero extends the underlying known Zero and One bits. This is equivalent
-  /// to zero extending the value we're tracking.
-  KnownBits zext(unsigned BitWidth) {
-    return KnownBits(Zero.zext(BitWidth), One.zext(BitWidth));
+  /// Extends the underlying known Zero and One bits.
+  /// By setting ExtendedBitsAreKnownZero=true this will be equivalent to
+  /// zero extending the value we're tracking.
+  /// With ExtendedBitsAreKnownZero=false the extended bits are set to unknown.
+  KnownBits zext(unsigned BitWidth, bool ExtendedBitsAreKnownZero) {
+    unsigned OldBitWidth = getBitWidth();
+    APInt NewZero = Zero.zext(BitWidth);
+    if (ExtendedBitsAreKnownZero)
+      NewZero.setBitsFrom(OldBitWidth);
+    return KnownBits(NewZero, One.zext(BitWidth));
   }
 
   /// Sign extends the underlying known Zero and One bits. This is equivalent
@@ -125,9 +131,13 @@ public:
     return KnownBits(Zero.sext(BitWidth), One.sext(BitWidth));
   }
 
-  /// Zero extends or truncates the underlying known Zero and One bits. This is
-  /// equivalent to zero extending or truncating the value we're tracking.
-  KnownBits zextOrTrunc(unsigned BitWidth) {
+  /// Extends or truncates the underlying known Zero and One bits. When
+  /// extending the extended bits can either be set as known zero (if
+  /// ExtendedBitsAreKnownZero=true) or as unknown (if
+  /// ExtendedBitsAreKnownZero=false).
+  KnownBits zextOrTrunc(unsigned BitWidth, bool ExtendedBitsAreKnownZero) {
+    if (BitWidth > getBitWidth())
+      return zext(BitWidth, ExtendedBitsAreKnownZero);
     return KnownBits(Zero.zextOrTrunc(BitWidth), One.zextOrTrunc(BitWidth));
   }
 

@@ -45,6 +45,7 @@ public:
     CortexA72,
     CortexA73,
     CortexA75,
+    CortexA76,
     Cyclone,
     ExynosM1,
     ExynosM3,

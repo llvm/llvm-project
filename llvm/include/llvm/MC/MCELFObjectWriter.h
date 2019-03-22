@@ -53,13 +53,14 @@ struct ELFRelocationEntry {
 
 class MCELFObjectTargetWriter : public MCObjectTargetWriter {
   const uint8_t OSABI;
+  const uint8_t ABIVersion;
   const uint16_t EMachine;
   const unsigned HasRelocationAddend : 1;
   const unsigned Is64Bit : 1;
 
 protected:
   MCELFObjectTargetWriter(bool Is64Bit_, uint8_t OSABI_, uint16_t EMachine_,
-                          bool HasRelocationAddend);
+                          bool HasRelocationAddend_, uint8_t ABIVersion_ = 0);
 
 public:
   virtual ~MCELFObjectTargetWriter() = default;
@@ -97,6 +98,7 @@ public:
   /// \name Accessors
   /// @{
   uint8_t getOSABI() const { return OSABI; }
+  uint8_t getABIVersion() const { return ABIVersion; }
   uint16_t getEMachine() const { return EMachine; }
   bool hasRelocationAddend() const { return HasRelocationAddend; }
   bool is64Bit() const { return Is64Bit; }

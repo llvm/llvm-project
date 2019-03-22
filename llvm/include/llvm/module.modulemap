@@ -220,7 +220,7 @@ module LLVM_intrinsic_gen {
   module IR_ConstantRange { header "IR/ConstantRange.h" export * }
   module IR_Dominators { header "IR/Dominators.h" export * }
   module Analysis_PostDominators { header "Analysis/PostDominators.h" export * }
-  module IR_DomTreeUpdater { header "IR/DomTreeUpdater.h" export * }
+  module Analysis_DomTreeUpdater { header "Analysis/DomTreeUpdater.h" export * }
   module IR_IRBuilder { header "IR/IRBuilder.h" export * }
   module IR_PassManager { header "IR/PassManager.h" export * }
   module IR_PredIteratorCache { header "IR/PredIteratorCache.h" export * }

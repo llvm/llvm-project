@@ -493,14 +493,12 @@ size_t Stream::PutBytesAsRawHex8(const void *s, size_t src_len,
   return *delta;
 }
 
-size_t Stream::PutCStringAsRawHex8(const char *s) {
+size_t Stream::PutStringAsRawHex8(llvm::StringRef s) {
   ByteDelta delta(*this);
   bool binary_is_set = m_flags.Test(eBinary);
   m_flags.Clear(eBinary);
-  while(*s) {
-    _PutHex8(*s, false);
-    ++s;
-  }
+  for (char c : s)
+    _PutHex8(c, false);
   if (binary_is_set)
     m_flags.Set(eBinary);
   return *delta;

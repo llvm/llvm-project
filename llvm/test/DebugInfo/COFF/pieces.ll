@@ -136,7 +136,7 @@
 ; ASM:        .asciz  "pad_right"             # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; ASM:        .cv_def_range    .Lfunc_begin1 .Ltmp8, "C\021\021\000\000\000\004\000\000\000"
+; ASM:        .cv_def_range    .Ltmp8 .Ltmp8, "C\021\021\000\000\000\004\000\000\000"
 
 ; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
@@ -159,7 +159,7 @@
 ; ASM:        .asciz  "pad_left"              # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; ASM:        .cv_def_range    .Lfunc_begin2 .Ltmp10, "C\021\021\000\000\000\000\000\000\000"
+; ASM:        .cv_def_range    .Ltmp10 .Ltmp10, "C\021\021\000\000\000\000\000\000\000"
 
 ; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)

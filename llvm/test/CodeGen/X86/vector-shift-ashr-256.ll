@@ -1070,13 +1070,13 @@ define <4 x i64> @constant_shift_v4i64(<4 x i64> %a) nounwind {
 ; X32-AVX1-NEXT:    vpsrlq $62, %xmm1, %xmm2
 ; X32-AVX1-NEXT:    vpsrlq $31, %xmm1, %xmm1
 ; X32-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
-; X32-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,0,1,0,2,0,0,0]
+; X32-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,2,0]
 ; X32-AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; X32-AVX1-NEXT:    vpsubq %xmm2, %xmm1, %xmm1
 ; X32-AVX1-NEXT:    vpsrlq $7, %xmm0, %xmm2
 ; X32-AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm0
 ; X32-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
-; X32-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,0,0,16384,0,0,0,256]
+; X32-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1073741824,0,16777216]
 ; X32-AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X32-AVX1-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
 ; X32-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -1184,7 +1184,6 @@ define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmulhw {{.*}}(%rip), %ymm0, %ymm1
 ; AVX2-NEXT:    vpblendw {{.*#+}} ymm2 = ymm0[0],ymm1[1,2,3,4,5,6,7],ymm0[8],ymm1[9,10,11,12,13,14,15]
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    vpsraw $1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3,4,5,6,7,8],ymm0[9],ymm2[10,11,12,13,14,15]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
@@ -1248,7 +1247,6 @@ define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) nounwind {
 ; X32-AVX2:       # %bb.0:
 ; X32-AVX2-NEXT:    vpmulhw {{\.LCPI.*}}, %ymm0, %ymm1
 ; X32-AVX2-NEXT:    vpblendw {{.*#+}} ymm2 = ymm0[0],ymm1[1,2,3,4,5,6,7],ymm0[8],ymm1[9,10,11,12,13,14,15]
-; X32-AVX2-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm1[4,5,6,7]
 ; X32-AVX2-NEXT:    vpsraw $1, %ymm0, %ymm0
 ; X32-AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3,4,5,6,7,8],ymm0[9],ymm2[10,11,12,13,14,15]
 ; X32-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]

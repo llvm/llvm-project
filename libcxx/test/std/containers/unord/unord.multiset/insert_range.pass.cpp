@@ -21,7 +21,7 @@
 #include "test_iterators.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multiset<int> C;
@@ -66,4 +66,6 @@ int main()
         assert(c.count(4) == 1);
     }
 #endif
+
+  return 0;
 }

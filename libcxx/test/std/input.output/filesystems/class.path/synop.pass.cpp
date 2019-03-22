@@ -23,7 +23,7 @@
 #include "test_macros.h"
 
 
-int main() {
+int main(int, char**) {
   using namespace fs;
   ASSERT_SAME_TYPE(path::value_type, char);
   ASSERT_SAME_TYPE(path::string_type, std::basic_string<path::value_type>);
@@ -34,4 +34,6 @@ int main() {
     const char* dummy = &path::preferred_separator;
     ((void)dummy);
   }
+
+  return 0;
 }

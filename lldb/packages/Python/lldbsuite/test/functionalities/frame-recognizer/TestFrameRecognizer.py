@@ -89,8 +89,10 @@ class FrameRecognizerTestCase(TestBase):
         self.assertEqual(variables.GetSize(), 2)
         self.assertEqual(variables.GetValueAtIndex(0).name, "a")
         self.assertEqual(variables.GetValueAtIndex(0).signed, 42)
+        self.assertEqual(variables.GetValueAtIndex(0).GetValueType(), lldb.eValueTypeVariableArgument)
         self.assertEqual(variables.GetValueAtIndex(1).name, "b")
         self.assertEqual(variables.GetValueAtIndex(1).signed, 56)
+        self.assertEqual(variables.GetValueAtIndex(1).GetValueType(), lldb.eValueTypeVariableArgument)
 
         self.expect("frame recognizer info 0",
                     substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])

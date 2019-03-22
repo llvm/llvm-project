@@ -72,8 +72,20 @@ ARMInstPrinter::ARMInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                                const MCRegisterInfo &MRI)
     : MCInstPrinter(MAI, MII, MRI) {}
 
+bool ARMInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
+  if (Opt == "reg-names-std") {
+    DefaultAltIdx = ARM::NoRegAltName;
+    return true;
+  }
+  if (Opt == "reg-names-raw") {
+    DefaultAltIdx = ARM::RegNamesRaw;
+    return true;
+  }
+  return false;
+}
+
 void ARMInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  OS << markup("<reg:") << getRegisterName(RegNo) << markup(">");
+  OS << markup("<reg:") << getRegisterName(RegNo, DefaultAltIdx) << markup(">");
 }
 
 void ARMInstPrinter::printInst(const MCInst *MI, raw_ostream &O,

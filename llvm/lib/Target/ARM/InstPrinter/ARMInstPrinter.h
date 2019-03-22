@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_ARM_INSTPRINTER_ARMINSTPRINTER_H
 #define LLVM_LIB_TARGET_ARM_INSTPRINTER_ARMINSTPRINTER_H
 
+#include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
@@ -21,6 +22,8 @@ class ARMInstPrinter : public MCInstPrinter {
 public:
   ARMInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                  const MCRegisterInfo &MRI);
+
+  bool applyTargetSpecificCLOption(StringRef Opt) override;
 
   void printInst(const MCInst *MI, raw_ostream &O, StringRef Annot,
                  const MCSubtargetInfo &STI) override;
@@ -35,7 +38,8 @@ public:
                                        unsigned PrintMethodIdx,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O);
-  static const char *getRegisterName(unsigned RegNo);
+  static const char *getRegisterName(unsigned RegNo,
+                                     unsigned AltIdx = ARM::NoRegAltName);
 
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
@@ -235,6 +239,9 @@ public:
   template<int64_t Angle, int64_t Remainder>
   void printComplexRotationOp(const MCInst *MI, unsigned OpNum,
                               const MCSubtargetInfo &STI, raw_ostream &O);
+
+private:
+  unsigned DefaultAltIdx = ARM::NoRegAltName;
 };
 
 } // end namespace llvm

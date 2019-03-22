@@ -3,16 +3,32 @@
 ;
 ; RUN: not FileCheck -DVALUE=10 -check-prefix NOT -input-file %s %s 2>&1 | FileCheck %s -check-prefix NOT-ERRMSG
 ; RUN: FileCheck -DVALUE=20 -check-prefix NOT -input-file %s %s
+; RUN: not FileCheck -DVALUE10 -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRCLIEQ1
+; RUN: not FileCheck -D -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRCLIEQ2
+; RUN: not FileCheck -D=10 -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRCLIVAR1
+; RUN: not FileCheck -D= -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRCLIVAR2
+; RUN: FileCheck -DVALUE= -check-prefix EMPTY -input-file %s %s 2>&1
 
 Value = 10
 ; CHECK: Value = [[VALUE]]
 ; NOT-NOT: Value = [[VALUE]]
 
-; ERRMSG: defines.txt:8:10: error: CHECK: expected string not found in input
+; ERRMSG: defines.txt:[[@LINE-3]]:10: error: CHECK: expected string not found in input
 ; ERRMSG: defines.txt:1:1: note: scanning from here
 ; ERRMSG: defines.txt:1:1: note: with variable "VALUE" equal to "20"
-; ERRMSG: defines.txt:7:1: note: possible intended match here
+; ERRMSG: defines.txt:[[@LINE-7]]:1: note: possible intended match here
 
-; NOT-ERRMSG: defines.txt:9:12: error: {{NOT}}-NOT: excluded string found in input
-; NOT-ERRMSG: defines.txt:7:1: note: found here
-; NOT-ERRMSG: defines.txt:7:1: note: with variable "VALUE" equal to "10"
+; NOT-ERRMSG: defines.txt:[[@LINE-7]]:12: error: {{NOT}}-NOT: excluded string found in input
+; NOT-ERRMSG: defines.txt:[[@LINE-10]]:1: note: found here
+; NOT-ERRMSG: defines.txt:[[@LINE-11]]:1: note: with variable "VALUE" equal to "10"
+
+; ERRCLIEQ1: Missing equal sign in command-line definition '-DVALUE10'
+
+; ERRCLIEQ2: {{F|f}}ile{{C|c}}heck{{[^:]*}}: for the -D option: requires a value!
+
+; ERRCLIVAR1: Missing pattern variable name in command-line definition '-D=10'
+
+; ERRCLIVAR2: Missing pattern variable name in command-line definition '-D='
+
+Empty value = @@
+; EMPTY: Empty value = @[[VALUE]]@

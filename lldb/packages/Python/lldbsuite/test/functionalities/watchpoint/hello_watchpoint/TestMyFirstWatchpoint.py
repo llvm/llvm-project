@@ -34,6 +34,7 @@ class HelloWatchpointTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureNetBSD
     @add_test_categories(["basic_process"])
     def test_hello_watchpoint_using_watchpoint_set(self):
         """Test a simple sequence of watchpoint creation and watchpoint hit."""

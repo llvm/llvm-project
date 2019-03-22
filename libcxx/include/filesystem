@@ -1364,13 +1364,11 @@ private:
 template <class... _Args>
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 #ifndef _LIBCPP_NO_EXCEPTIONS
-    void
-    __throw_filesystem_error(_Args&&... __args) {
+void __throw_filesystem_error(_Args&&... __args) {
   throw filesystem_error(std::forward<_Args>(__args)...);
 }
 #else
-    void
-    __throw_filesystem_error(_Args&&...) {
+void __throw_filesystem_error(_Args&&...) {
   _VSTD::abort();
 }
 #endif

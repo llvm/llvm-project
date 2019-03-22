@@ -36,6 +36,7 @@ config.have_zlib = @HAVE_LIBZ@
 config.have_libxar = @HAVE_LIBXAR@
 config.have_dia_sdk = @LLVM_ENABLE_DIA_SDK@
 config.enable_ffi = @LLVM_ENABLE_FFI@
+config.build_examples = @LLVM_BUILD_EXAMPLES@
 config.enable_threads = @LLVM_ENABLE_THREADS@
 config.build_shared_libs = @BUILD_SHARED_LIBS@
 config.link_llvm_dylib = @LLVM_LINK_LLVM_DYLIB@

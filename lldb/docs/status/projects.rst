@@ -394,3 +394,24 @@ remote memory and its function calling support is very rudimentary. It would be
 useful to unify these and make the IR interpreter -- both for LLVM and LLDB --
 better. An alternate strategy would be simply to JIT into the current process
 but have callbacks for non-stack memory access.
+
+Teach lldb to predict exception propagation at the throw site
+-------------------------------------------------------------
+
+There are a bunch of places in lldb where we need to know at the point where an
+exception is thrown, what frame will catch the exception.  
+
+For instance, if an expression throws an exception, we need to know whether the 
+exception will be caught in the course of the expression evaluation.  If so it 
+would be safe to let the expression continue.  But since we would destroy the 
+state of the thread if we let the exception escape the expression, we currently 
+stop the expression evaluation if we see a throw.  If we knew where it would be
+caught we could distinguish these two cases.
+
+Similarly, when you step over a call that throws, you want to stop at the throw 
+point if you know the exception will unwind past the frame you were stepping in,
+but it would annoying to have the step abort every time an exception was thrown.
+If we could predict the catching frame, we could do this right.
+
+And of course, this would be a useful piece of information to display when stopped 
+at a throw point.

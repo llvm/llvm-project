@@ -78,7 +78,7 @@ public:
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         typedef short U;
@@ -130,4 +130,6 @@ int main()
     }
 
     static_assert(!(std::is_constructible<optional<X>, const optional<Y>&>::value), "");
+
+  return 0;
 }

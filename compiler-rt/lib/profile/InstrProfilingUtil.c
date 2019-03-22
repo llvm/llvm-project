@@ -80,7 +80,7 @@ void *lprofPtrFetchAdd(void **Mem, long ByteIncr) {
 
 #endif
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 COMPILER_RT_VISIBILITY int lprofGetHostName(char *Name, int Len) {
   WCHAR Buffer[COMPILER_RT_MAX_HOSTLEN];
   DWORD BufferSize = sizeof(Buffer);

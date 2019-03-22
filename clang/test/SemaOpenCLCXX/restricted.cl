@@ -39,25 +39,3 @@ kernel void test_storage_classes() {
   thread_local int y;
   // expected-error@-1 {{OpenCL C++ version 1.0 does not support the 'thread_local' storage class specifier}}
 }
-
-// Test that access qualifiers are reserved keywords.
-kernel void test_access_qualifiers() {
-  int read_only;
-  // expected-error@-1 {{'read_only' is a reserved keyword in OpenCL C++}}
-  // expected-warning@-2 {{declaration does not declare anything}}
-  int __read_only;
-  // expected-error@-1 {{'__read_only' is a reserved keyword in OpenCL C++}}
-  // expected-warning@-2 {{declaration does not declare anything}}
-  int write_only;
-  // expected-error@-1 {{'write_only' is a reserved keyword in OpenCL C++}}
-  // expected-warning@-2 {{declaration does not declare anything}}
-  int __write_only;
-  // expected-error@-1 {{'__write_only' is a reserved keyword in OpenCL C++}}
-  // expected-warning@-2 {{declaration does not declare anything}}
-  int read_write;
-  // expected-error@-1 {{'read_write' is a reserved keyword in OpenCL C++}}
-  // expected-warning@-2 {{declaration does not declare anything}}
-  int __read_write;
-  // expected-error@-1 {{'__read_write' is a reserved keyword in OpenCL C++}}
-  // expected-warning@-2 {{declaration does not declare anything}}
-}

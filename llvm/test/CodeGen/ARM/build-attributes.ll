@@ -106,6 +106,10 @@
 ; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m33 | FileCheck %s --check-prefix=CORTEX-M33
 ; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m33 -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M33-FAST
 ; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m33 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
+
+; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m35p | FileCheck %s --check-prefix=CORTEX-M35P
+; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m35p -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
+
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r4 | FileCheck %s --check-prefix=CORTEX-R4
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r4f | FileCheck %s --check-prefix=CORTEX-R4F
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r5 | FileCheck %s --check-prefix=CORTEX-R5
@@ -229,6 +233,8 @@
 ; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m23 | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m33 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m33 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
+; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m35p | FileCheck %s --check-prefix=NO-STRICT-ALIGN
+; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m35p -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 
 ; CPU-SUPPORTED-NOT: is not a recognized processor for this target
 
@@ -1390,6 +1396,27 @@
 ; CORTEX-M33-NOT:  .eabi_attribute 28
 ; CORTEX-M33:  .eabi_attribute 38, 1
 ; CORTEX-M33:  .eabi_attribute 14, 0
+
+; CORTEX-M35P:  .cpu cortex-m35p
+; CORTEX-M35P:  .eabi_attribute 6, 17
+; CORTEX-M35P:  .eabi_attribute 7, 77
+; CORTEX-M35P:  .eabi_attribute 8, 0
+; CORTEX-M35P:  .eabi_attribute 9, 3
+; CORTEX-M35P:  .fpu fpv5-sp-d16
+; CORTEX-M35P:  .eabi_attribute 27, 1
+; CORTEX-M35P:  .eabi_attribute 36, 1
+; CORTEX-M35P-NOT:  .eabi_attribute 44
+; CORTEX-M35P:  .eabi_attribute 46, 1
+; CORTEX-M35P:  .eabi_attribute 34, 1
+; CORTEX-M35P:  .eabi_attribute 17, 1
+; CORTEX-M35P:  .eabi_attribute 20, 1
+; CORTEX-M35P:  .eabi_attribute 21, 1
+; CORTEX-M35P:  .eabi_attribute 23, 3
+; CORTEX-M35P:  .eabi_attribute 24, 1
+; CORTEX-M35P:  .eabi_attribute 25, 1
+; CORTEX-M35P-NOT:  .eabi_attribute 28
+; CORTEX-M35P:  .eabi_attribute 38, 1
+; CORTEX-M35P:  .eabi_attribute 14, 0
 
 ; CORTEX-M33-FAST-NOT:   .eabi_attribute 19
 ; CORTEX-M33-FAST:  .eabi_attribute 20, 2

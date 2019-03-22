@@ -61,7 +61,7 @@ private:
 
   void SetDeclaration(const lldb_private::Declaration &lldb_object_ref);
 
-  std::unique_ptr<lldb_private::Declaration> m_opaque_ap;
+  std::unique_ptr<lldb_private::Declaration> m_opaque_up;
 };
 
 } // namespace lldb

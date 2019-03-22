@@ -153,8 +153,6 @@ bool WalkAST::containsBadStrncatPattern(const CallExpr *CE) {
 bool WalkAST::containsBadStrlcpyStrlcatPattern(const CallExpr *CE) {
   if (CE->getNumArgs() != 3)
     return false;
-  const FunctionDecl *FD = CE->getDirectCallee();
-  bool Append = CheckerContext::isCLibraryFunction(FD, "strlcat");
   const Expr *DstArg = CE->getArg(0);
   const Expr *LenArg = CE->getArg(2);
 
@@ -194,13 +192,8 @@ bool WalkAST::containsBadStrlcpyStrlcatPattern(const CallExpr *CE) {
         ASTContext &C = BR.getContext();
         uint64_t BufferLen = C.getTypeSize(Buffer) / 8;
         auto RemainingBufferLen = BufferLen - DstOff;
-        if (Append) {
-          if (RemainingBufferLen <= ILRawVal)
-            return true;
-        } else {
-          if (RemainingBufferLen < ILRawVal)
-            return true;
-        }
+        if (RemainingBufferLen < ILRawVal)
+          return true;
       }
     }
   }

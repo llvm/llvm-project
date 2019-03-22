@@ -28,7 +28,7 @@ test(S s1)
     assert(s2.get_allocator() == s1.get_allocator());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef test_allocator<char> A;
@@ -46,4 +46,6 @@ int main()
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A()));
     }
 #endif
+
+  return 0;
 }

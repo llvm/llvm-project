@@ -21,6 +21,7 @@ class AttachResumeTestCase(TestBase):
 
     @skipIfRemote
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr19310')
+    @expectedFailureNetBSD
     @skipIfWindows # llvm.org/pr24778, llvm.org/pr21753
     def test_attach_continue_interrupt_detach(self):
         """Test attach/continue/interrupt/detach"""

@@ -27,7 +27,7 @@ struct TestT {
       : x(*il.begin()), size(static_cast<int>(il.size())) {}
 };
 
-int main()
+int main(int, char**)
 {
     using std::make_optional;
     {
@@ -49,4 +49,6 @@ int main()
         auto opt = make_optional<std::string>({'a', 'b', 'c'}, std::allocator<char>{});
         assert(*opt == "abc");
     }
+
+  return 0;
 }

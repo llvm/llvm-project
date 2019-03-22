@@ -23,7 +23,7 @@
 #include <type_traits>
 #include <variant>
 
-int main() {
+int main(int, char**) {
   using M = std::monostate;
   constexpr M m1{};
   constexpr M m2{};
@@ -51,4 +51,6 @@ int main() {
     static_assert((m1 != m2) == false, "");
     ASSERT_NOEXCEPT(m1 != m2);
   }
+
+  return 0;
 }

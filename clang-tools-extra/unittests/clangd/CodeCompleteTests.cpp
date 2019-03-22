@@ -17,6 +17,7 @@
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestIndex.h"
+#include "TestTU.h"
 #include "index/MemIndex.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/Error.h"
@@ -645,6 +646,36 @@ TEST(CompletionTest, CompletionInPreamble) {
   EXPECT_THAT(Results, ElementsAre(Named("ifndef")));
 }
 
+TEST(CompletionTest, DynamicIndexIncludeInsertion) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer::Options Opts = ClangdServer::optsForTest();
+  Opts.BuildDynamicSymbolIndex = true;
+  ClangdServer Server(CDB, FS, DiagConsumer, Opts);
+
+  FS.Files[testPath("foo_header.h")] = R"cpp(
+    struct Foo {
+       // Member doc
+       int foo();
+    };
+  )cpp";
+  const std::string FileContent(R"cpp(
+    #include "foo_header.h"
+    int Foo::foo() {
+      return 42;
+    }
+  )cpp");
+  Server.addDocument(testPath("foo_impl.cpp"), FileContent);
+  // Wait for the dynamic index being built.
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+  EXPECT_THAT(
+      completions(Server, "Foo^ foo;").Completions,
+      ElementsAre(AllOf(Named("Foo"),
+                        HasInclude('"' + testPath("foo_header.h") + '"'),
+                        InsertInclude())));
+}
+
 TEST(CompletionTest, DynamicIndexMultiFile) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
@@ -1064,8 +1095,10 @@ TEST(CompletionTest, UnresolvedQualifierIdQuery) {
       } // namespace ns
   )cpp");
 
-  EXPECT_THAT(Requests, ElementsAre(Field(&FuzzyFindRequest::Scopes,
-                                          UnorderedElementsAre("bar::"))));
+  EXPECT_THAT(Requests,
+              ElementsAre(Field(
+                  &FuzzyFindRequest::Scopes,
+                  UnorderedElementsAre("a::bar::", "ns::bar::", "bar::"))));
 }
 
 TEST(CompletionTest, UnresolvedNestedQualifierIdQuery) {
@@ -2282,6 +2315,55 @@ TEST(CompletionTest, WorksWithNullType) {
     }
   )cpp");
   EXPECT_THAT(R.Completions, ElementsAre(Named("loopVar")));
+}
+
+TEST(CompletionTest, UsingDecl) {
+  const char *Header(R"cpp(
+    void foo(int);
+    namespace std {
+      using ::foo;
+    })cpp");
+  const char *Source(R"cpp(
+    void bar() {
+      std::^;
+    })cpp");
+  auto Index = TestTU::withHeaderCode(Header).index();
+  clangd::CodeCompleteOptions Opts;
+  Opts.Index = Index.get();
+  Opts.AllScopes = true;
+  auto R = completions(Source, {}, Opts);
+  EXPECT_THAT(R.Completions,
+              ElementsAre(AllOf(Scope("std::"), Named("foo"),
+                                Kind(CompletionItemKind::Reference))));
+}
+
+TEST(CompletionTest, ScopeIsUnresolved) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(R"cpp(
+    namespace a {
+    void f() { b::X^ }
+    }
+  )cpp",
+                             {cls("a::b::XYZ")}, Opts);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Named("XYZ"))));
+}
+
+TEST(CompletionTest, NestedScopeIsUnresolved) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(R"cpp(
+    namespace a {
+    namespace b {}
+    void f() { b::c::X^ }
+    }
+  )cpp",
+                             {cls("a::b::c::XYZ")}, Opts);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Named("XYZ"))));
 }
 
 } // namespace

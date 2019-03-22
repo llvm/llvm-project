@@ -113,7 +113,7 @@ void test_sfinae() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test_sfinae();
   {
     std::unique_ptr<B> bptr(new B);
@@ -141,4 +141,6 @@ int main() {
   }
   assert(A::count == 0);
   assert(B::count == 0);
+
+  return 0;
 }

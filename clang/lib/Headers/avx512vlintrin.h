@@ -5513,7 +5513,7 @@ static __inline __m128i __DEFAULT_FN_ATTRS128
 _mm_loadu_epi64 (void const *__P)
 {
   struct __loadu_epi64 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi64*)__P)->__v;
 }
@@ -5539,7 +5539,7 @@ static __inline __m256i __DEFAULT_FN_ATTRS256
 _mm256_loadu_epi64 (void const *__P)
 {
   struct __loadu_epi64 {
-    __m256i __v;
+    __m256i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi64*)__P)->__v;
 }
@@ -5565,7 +5565,7 @@ static __inline __m128i __DEFAULT_FN_ATTRS128
 _mm_loadu_epi32 (void const *__P)
 {
   struct __loadu_epi32 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi32*)__P)->__v;
 }
@@ -5591,7 +5591,7 @@ static __inline __m256i __DEFAULT_FN_ATTRS256
 _mm256_loadu_epi32 (void const *__P)
 {
   struct __loadu_epi32 {
-    __m256i __v;
+    __m256i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi32*)__P)->__v;
 }
@@ -5717,7 +5717,7 @@ static __inline void __DEFAULT_FN_ATTRS128
 _mm_storeu_epi64 (void *__P, __m128i __A)
 {
   struct __storeu_epi64 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi64*)__P)->__v = __A;
 }
@@ -5734,7 +5734,7 @@ static __inline void __DEFAULT_FN_ATTRS256
 _mm256_storeu_epi64 (void *__P, __m256i __A)
 {
   struct __storeu_epi64 {
-    __m256i __v;
+    __m256i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi64*)__P)->__v = __A;
 }
@@ -5751,7 +5751,7 @@ static __inline void __DEFAULT_FN_ATTRS128
 _mm_storeu_epi32 (void *__P, __m128i __A)
 {
   struct __storeu_epi32 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi32*)__P)->__v = __A;
 }
@@ -5768,7 +5768,7 @@ static __inline void __DEFAULT_FN_ATTRS256
 _mm256_storeu_epi32 (void *__P, __m256i __A)
 {
   struct __storeu_epi32 {
-    __m256i __v;
+    __m256i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi32*)__P)->__v = __A;
 }

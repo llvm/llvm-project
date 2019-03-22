@@ -7,9 +7,8 @@
 define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ; X32-SLOW-LABEL: trunc4:
 ; X32-SLOW:       # %bb.0:
-; X32-SLOW-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; X32-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; X32-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; X32-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; X32-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; X32-SLOW-NEXT:    vzeroupper
 ; X32-SLOW-NEXT:    retl
 ;
@@ -23,9 +22,8 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ;
 ; X64-SLOW-LABEL: trunc4:
 ; X64-SLOW:       # %bb.0:
-; X64-SLOW-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; X64-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; X64-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; X64-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; X64-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; X64-SLOW-NEXT:    vzeroupper
 ; X64-SLOW-NEXT:    retq
 ;

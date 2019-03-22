@@ -128,10 +128,12 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // LLT Objects.
 // CHECK-NEXT:  enum {
+// CHECK-NEXT:    GILLT_p0s32
 // CHECK-NEXT:    GILLT_s32,
 // CHECK-NEXT:  }
-// CHECK-NEXT:  const static size_t NumTypeObjects = 1;
+// CHECK-NEXT:  const static size_t NumTypeObjects = 2;
 // CHECK-NEXT:  const static LLT TypeObjects[] = {
+// CHECK-NEXT:    LLT::pointer(0, 32),
 // CHECK-NEXT:    LLT::scalar(32),
 // CHECK-NEXT:  };
 
@@ -829,7 +831,7 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src3
 // NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 25,
+// NOOPT-NEXT:    // GIR_Coverage, 26,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -974,6 +976,31 @@ def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$
 def LOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
             [(set GPR32:$dst, (load GPR32:$src1))]>;
 
+//===- Test a simple pattern with explicit pointer operands. ---------------===//
+
+// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
+// NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_LOAD,
+// NOOPT-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
+// NOOPT-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(int64_t)AtomicOrdering::NotAtomic,
+// NOOPT-NEXT:    // MIs[0] dst
+// NOOPT-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_p0s32,
+// NOOPT-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// NOOPT-NEXT:    // MIs[0] src
+// NOOPT-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
+// NOOPT-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
+// NOOPT-NEXT:    // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src)
+// NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::LOAD,
+// NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 23,
+// NOOPT-NEXT:    GIR_Done,
+// NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+
+def p0 : PtrValueType <i32, 0>;
+
+def : Pat<(load GPR32:$src),
+          (p0 (LOAD GPR32:$src))>;
+
 //===- Test a simple pattern with a sextload -------------------------------===//
 //
 // NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
@@ -1061,7 +1088,7 @@ def DOUBLE : I<(outs GPR32:$dst), (ins GPR32:$src), [(set GPR32:$dst, (add GPR32
 // NOOPT-NEXT:    // (add:{ *:[i32] } i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2) => (ADD:{ *:[i32] } i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::ADD,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 23,
+// NOOPT-NEXT:    // GIR_Coverage, 24,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -1113,7 +1140,7 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 // NOOPT-NEXT:    // (bitconvert:{ *:[i32] } FPR32:{ *:[f32] }:$src1) => (COPY_TO_REGCLASS:{ *:[i32] } FPR32:{ *:[f32] }:$src1, GPR32:{ *:[i32] })
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // NOOPT-NEXT:    GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, /*RC GPR32*/1,
-// NOOPT-NEXT:    // GIR_Coverage, 24,
+// NOOPT-NEXT:    // GIR_Coverage, 25,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 

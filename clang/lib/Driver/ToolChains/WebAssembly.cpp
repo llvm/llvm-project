@@ -123,6 +123,18 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
   if (DriverArgs.hasFlag(clang::driver::options::OPT_fuse_init_array,
                          options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fuse-init-array");
+
+  // '-pthread' implies '-target-feature +atomics'
+  if (DriverArgs.hasFlag(options::OPT_pthread, options::OPT_no_pthread,
+                         false)) {
+    if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
+                           false))
+      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+          << "-pthread"
+          << "-mno-atomics";
+    CC1Args.push_back("-target-feature");
+    CC1Args.push_back("+atomics");
+  }
 }
 
 ToolChain::RuntimeLibType WebAssembly::GetDefaultRuntimeLibType() const {
@@ -178,14 +190,6 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   case ToolChain::CST_Libstdcxx:
     llvm_unreachable("invalid stdlib name");
   }
-}
-
-std::string WebAssembly::getThreadModel() const {
-  // The WebAssembly MVP does not yet support threads; for now, use the
-  // "single" threading model, which lowers atomics to non-atomic operations.
-  // When threading support is standardized and implemented in popular engines,
-  // this override should be removed.
-  return "single";
 }
 
 Tool *WebAssembly::buildLinker() const {

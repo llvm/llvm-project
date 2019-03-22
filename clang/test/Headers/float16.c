@@ -1,7 +1,11 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c89 -ffreestanding %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c99 -ffreestanding %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c11 -ffreestanding %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -x c++ -ffreestanding %s
+// RUN: %clang_cc1 -triple=aarch64-none-none -fsyntax-only -verify -std=c89 \
+// RUN:   -ffreestanding %s
+// RUN: %clang_cc1 -triple=aarch64-none-none -fsyntax-only -verify \
+// RUN:   -std=c99 -ffreestanding %s
+// RUN: %clang_cc1 -triple=aarch64-none-none -fsyntax-only -verify -std=c11 \
+// RUN:   -ffreestanding %s
+// RUN: %clang_cc1 -triple=aarch64-none-none -fsyntax-only -verify \
+// RUN:   -std=c++11 -x c++ -ffreestanding %s
 // expected-no-diagnostics
 
 #define __STDC_WANT_IEC_60559_TYPES_EXT__

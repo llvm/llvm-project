@@ -419,12 +419,12 @@ private:
   lldb::TargetSP m_target_sp;
   std::string m_module_spec;
   lldb::ModuleSP m_module_sp;
-  std::unique_ptr<FileSpec> m_file_spec_ap;
+  std::unique_ptr<FileSpec> m_file_spec_up;
   size_t m_start_line;
   size_t m_end_line;
   std::string m_function_spec;
   std::string m_class_name;
-  std::unique_ptr<AddressRange> m_address_range_ap;
+  std::unique_ptr<AddressRange> m_address_range_up;
   uint32_t m_type; // Or'ed bits from SpecificationType
 };
 

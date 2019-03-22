@@ -163,12 +163,11 @@ set(LLVM_TOOLCHAIN_TOOLS
 
 set(LLVM_DISTRIBUTION_COMPONENTS
   clang
-  libclang
   lld
   LTO
   clang-apply-replacements
   clang-format
-  clang-headers
+  clang-resource-headers
   clang-include-fixer
   clang-refactor
   clang-tidy

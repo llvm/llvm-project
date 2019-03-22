@@ -37,7 +37,9 @@ class Class
 {
 };
 
-int main()
+int main(int, char**)
 {
     test_member_object_pointer<int Class::*>();
+
+  return 0;
 }

@@ -2472,11 +2472,11 @@
 // CHECK:  encoding: [0xda,0x05,0x78,0x56,0x34,0x12]
         	fiaddl	0x12345678
 
-// CHECK: faddp	%st(2)
+// CHECK: faddp	%st, %st(2)
 // CHECK:  encoding: [0xde,0xc2]
         	faddp	%st(2)
 
-// CHECK: fsub	%st(2)
+// CHECK: fsub	%st(2), %st
 // CHECK:  encoding: [0xd8,0xe2]
         	fsub	%st(2)
 
@@ -2504,11 +2504,11 @@
 // CHECK:  encoding: [0xda,0x25,0x78,0x56,0x34,0x12]
         	fisubl	0x12345678
 
-// CHECK: fsubp	%st(2)
+// CHECK: fsubp	%st, %st(2)
 // CHECK:  encoding: [0xde,0xe2]
         	fsubp	%st(2)
 
-// CHECK: fsubr	%st(2)
+// CHECK: fsubr	%st(2), %st
 // CHECK:  encoding: [0xd8,0xea]
         	fsubr	%st(2)
 
@@ -2536,11 +2536,11 @@
 // CHECK:  encoding: [0xda,0x2d,0x78,0x56,0x34,0x12]
         	fisubrl	0x12345678
 
-// CHECK: fsubrp	%st(2)
+// CHECK: fsubrp	%st, %st(2)
 // CHECK:  encoding: [0xde,0xea]
         	fsubrp	%st(2)
 
-// CHECK: fmul	%st(2)
+// CHECK: fmul	%st(2), %st
 // CHECK:  encoding: [0xd8,0xca]
         	fmul	%st(2)
 
@@ -2568,11 +2568,11 @@
 // CHECK:  encoding: [0xda,0x0d,0x78,0x56,0x34,0x12]
         	fimull	0x12345678
 
-// CHECK: fmulp	%st(2)
+// CHECK: fmulp	%st, %st(2)
 // CHECK:  encoding: [0xde,0xca]
         	fmulp	%st(2)
 
-// CHECK: fdiv	%st(2)
+// CHECK: fdiv	%st(2), %st
 // CHECK:  encoding: [0xd8,0xf2]
         	fdiv	%st(2)
 
@@ -2600,11 +2600,11 @@
 // CHECK:  encoding: [0xda,0x35,0x78,0x56,0x34,0x12]
         	fidivl	0x12345678
 
-// CHECK: fdivp	%st(2)
+// CHECK: fdivp	%st, %st(2)
 // CHECK:  encoding: [0xde,0xf2]
         	fdivp	%st(2)
 
-// CHECK: fdivr	%st(2)
+// CHECK: fdivr	%st(2), %st
 // CHECK:  encoding: [0xd8,0xfa]
         	fdivr	%st(2)
 
@@ -2632,7 +2632,7 @@
 // CHECK:  encoding: [0xda,0x3d,0x78,0x56,0x34,0x12]
         	fidivrl	0x12345678
 
-// CHECK: fdivrp	%st(2)
+// CHECK: fdivrp	%st, %st(2)
 // CHECK:  encoding: [0xde,0xfa]
         	fdivrp	%st(2)
 

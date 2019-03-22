@@ -41,13 +41,16 @@ public:
     bool RelativeAddresses : 1;
     std::string DefaultArch;
     std::vector<std::string> DsymHints;
+    std::string FallbackDebugPath;
 
     Options(FunctionNameKind PrintFunctions = FunctionNameKind::LinkageName,
             bool UseSymbolTable = true, bool Demangle = true,
-            bool RelativeAddresses = false, std::string DefaultArch = "")
+            bool RelativeAddresses = false, std::string DefaultArch = "",
+            std::string FallbackDebugPath = "")
         : PrintFunctions(PrintFunctions), UseSymbolTable(UseSymbolTable),
           Demangle(Demangle), RelativeAddresses(RelativeAddresses),
-          DefaultArch(std::move(DefaultArch)) {}
+          DefaultArch(std::move(DefaultArch)),
+          FallbackDebugPath(std::move(FallbackDebugPath)) {}
   };
 
   LLVMSymbolizer(const Options &Opts = Options()) : Opts(Opts) {}
@@ -57,13 +60,14 @@ public:
   }
 
   Expected<DILineInfo> symbolizeCode(const std::string &ModuleName,
-                                     uint64_t ModuleOffset,
+                                     object::SectionedAddress ModuleOffset,
                                      StringRef DWPName = "");
-  Expected<DIInliningInfo> symbolizeInlinedCode(const std::string &ModuleName,
-                                                uint64_t ModuleOffset,
-                                                StringRef DWPName = "");
+  Expected<DIInliningInfo>
+  symbolizeInlinedCode(const std::string &ModuleName,
+                       object::SectionedAddress ModuleOffset,
+                       StringRef DWPName = "");
   Expected<DIGlobal> symbolizeData(const std::string &ModuleName,
-                                   uint64_t ModuleOffset);
+                                   object::SectionedAddress ModuleOffset);
   void flush();
 
   static std::string

@@ -379,6 +379,7 @@ public:
     case Instruction::ExtractElement:
     case Instruction::ShuffleVector:
     case Instruction::InsertElement:
+    case Instruction::PHI:
       return false;
     default:
       return V->getType()->isFPOrFPVectorTy();

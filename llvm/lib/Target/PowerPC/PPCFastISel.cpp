@@ -987,11 +987,16 @@ bool PPCFastISel::SelectFPTrunc(const Instruction *I) {
 
   // Round the result to single precision.
   unsigned DestReg;
-
+  auto RC = MRI.getRegClass(SrcReg);
   if (PPCSubTarget->hasSPE()) {
     DestReg = createResultReg(&PPC::SPE4RCRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
       TII.get(PPC::EFSCFD), DestReg)
+      .addReg(SrcReg);
+  } else if (isVSFRCRegClass(RC)) {
+    DestReg = createResultReg(&PPC::VSSRCRegClass);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+      TII.get(PPC::XSRSP), DestReg)
       .addReg(SrcReg);
   } else {
     DestReg = createResultReg(&PPC::F4RCRegClass);
@@ -1207,16 +1212,19 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
   if (SrcReg == 0)
     return false;
 
-  // Convert f32 to f64 if necessary.  This is just a meaningless copy
-  // to get the register class right.
+  // Convert f32 to f64 or convert VSSRC to VSFRC if necessary. This is just a
+  // meaningless copy to get the register class right.
   const TargetRegisterClass *InRC = MRI.getRegClass(SrcReg);
   if (InRC == &PPC::F4RCRegClass)
     SrcReg = copyRegToRegClass(&PPC::F8RCRegClass, SrcReg);
+  else if (InRC == &PPC::VSSRCRegClass)
+    SrcReg = copyRegToRegClass(&PPC::VSFRCRegClass, SrcReg);
 
   // Determine the opcode for the conversion, which takes place
-  // entirely within FPRs.
+  // entirely within FPRs or VSRs.
   unsigned DestReg;
   unsigned Opc;
+  auto RC = MRI.getRegClass(SrcReg);
 
   if (PPCSubTarget->hasSPE()) {
     DestReg = createResultReg(&PPC::GPRCRegClass);
@@ -1224,6 +1232,12 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
       Opc = InRC == &PPC::SPE4RCRegClass ? PPC::EFSCTSIZ : PPC::EFDCTSIZ;
     else
       Opc = InRC == &PPC::SPE4RCRegClass ? PPC::EFSCTUIZ : PPC::EFDCTUIZ;
+  } else if (isVSFRCRegClass(RC)) {
+    DestReg = createResultReg(&PPC::VSFRCRegClass);
+    if (DstVT == MVT::i32) 
+      Opc = IsSigned ? PPC::XSCVDPSXWS : PPC::XSCVDPUXWS;
+    else
+      Opc = IsSigned ? PPC::XSCVDPSXDS : PPC::XSCVDPUXDS;
   } else {
     DestReg = createResultReg(&PPC::F8RCRegClass);
     if (DstVT == MVT::i32)

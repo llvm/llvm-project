@@ -68,3 +68,12 @@ entry:
 	%tmp2 = extractvalue { i32, i1 } %tmp1, 0
 	ret i32 %tmp2
 }
+
+; Check that shifts larger than the shift amount type are handled.
+; Intentionally not testing codegen here, only that this doesn't assert.
+declare {i300, i1} @llvm.umul.with.overflow.i300(i300 %a, i300 %b)
+define i300 @test4(i300 %a, i300 %b) nounwind {
+  %x = call {i300, i1} @llvm.umul.with.overflow.i300(i300 %a, i300 %b)
+  %y = extractvalue {i300, i1} %x, 0
+  ret i300 %y
+}

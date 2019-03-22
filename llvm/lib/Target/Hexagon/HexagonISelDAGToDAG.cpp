@@ -848,6 +848,9 @@ void HexagonDAGToDAGISel::SelectD2P(SDNode *N) {
 void HexagonDAGToDAGISel::SelectV2Q(SDNode *N) {
   const SDLoc &dl(N);
   MVT ResTy = N->getValueType(0).getSimpleVT();
+  // The argument to V2Q should be a single vector.
+  MVT OpTy = N->getOperand(0).getValueType().getSimpleVT(); (void)OpTy;
+  assert(HST->getVectorLength() * 8 == OpTy.getSizeInBits());
 
   SDValue C = CurDAG->getTargetConstant(-1, dl, MVT::i32);
   SDNode *R = CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl, MVT::i32, C);
@@ -859,6 +862,8 @@ void HexagonDAGToDAGISel::SelectV2Q(SDNode *N) {
 void HexagonDAGToDAGISel::SelectQ2V(SDNode *N) {
   const SDLoc &dl(N);
   MVT ResTy = N->getValueType(0).getSimpleVT();
+  // The result of V2Q should be a single vector.
+  assert(HST->getVectorLength() * 8 == ResTy.getSizeInBits());
 
   SDValue C = CurDAG->getTargetConstant(-1, dl, MVT::i32);
   SDNode *R = CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl, MVT::i32, C);

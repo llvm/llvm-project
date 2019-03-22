@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.4.3)
 
+if(POLICY CMP0075)
+  cmake_policy(SET CMP0075 NEW)
+endif()
+
 # Add path for custom modules
 set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
@@ -18,14 +22,12 @@ else()
   add_definitions( -DLLDB_CONFIGURATION_RELEASE )
 endif()
 
-if (LLDB_DISABLE_LIBEDIT)
-  add_definitions( -DLLDB_DISABLE_LIBEDIT )
-else()
-  find_package(LibEdit REQUIRED)
-endif()
-
 if(APPLE)
   add_definitions(-DLLDB_USE_OS_LOG)
+endif()
+
+if (WIN32)
+  add_definitions(-D_ENABLE_EXTENDED_ALIGNED_STORAGE)
 endif()
 
 add_subdirectory(docs)
@@ -89,6 +91,10 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS lldb-mi)
   endif()
 
+  if(TARGET lldb-instr)
+    list(APPEND LLDB_TEST_DEPS lldb-instr)
+  endif()
+
   if(NOT LLDB_BUILT_STANDALONE)
     list(APPEND LLDB_TEST_DEPS yaml2obj)
   endif()
@@ -120,7 +126,7 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS dsymutil)
   endif()
 
-  add_custom_target(lldb-test-depends DEPENDS ${LLDB_TEST_DEPS})
+  add_custom_target(lldb-test-deps DEPENDS ${LLDB_TEST_DEPS})
 
   add_subdirectory(test)
   add_subdirectory(unittests)

@@ -267,7 +267,8 @@ static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
 /// loops reachable and need to move the current loop up the loop nest or even
 /// to an entirely separate nest.
 static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
-                                 DominatorTree &DT, LoopInfo &LI) {
+                                 DominatorTree &DT, LoopInfo &LI,
+                                 MemorySSAUpdater *MSSAU) {
   // If the loop is already at the top level, we can't hoist it anywhere.
   Loop *OldParentL = L.getParentLoop();
   if (!OldParentL)
@@ -328,7 +329,8 @@ static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
     // unswitching it is possible to get new non-dedicated exits out of parent
     // loop so let's conservatively form dedicated exit blocks and figure out
     // if we can optimize later.
-    formDedicatedExitBlocks(OldContainingL, &DT, &LI, /*PreserveLCSSA*/ true);
+    formDedicatedExitBlocks(OldContainingL, &DT, &LI, MSSAU,
+                            /*PreserveLCSSA*/ true);
   }
 }
 
@@ -535,7 +537,10 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // If this was full unswitching, we may have changed the nesting relationship
   // for this loop so hoist it to its correct parent if needed.
   if (FullUnswitch)
-    hoistLoopToNewParent(L, *NewPH, DT, LI);
+    hoistLoopToNewParent(L, *NewPH, DT, LI, MSSAU);
+
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
 
   LLVM_DEBUG(dbgs() << "    done: unswitching trivial branch...\n");
   ++NumTrivial;
@@ -761,7 +766,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
         continue;
       }
       CommonSuccBB->removePredecessor(BB,
-                                      /*DontDeleteUselessPHIs*/ true);
+                                      /*KeepOneInputPHIs*/ true);
     }
     // Now nuke the switch and replace it with a direct branch.
     SI.eraseFromParent();
@@ -788,9 +793,8 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     DTUpdates.push_back({DT.Insert, OldPH, UnswitchedExitBB});
   }
   for (auto SplitUnswitchedPair : SplitExitBBMap) {
-    auto *UnswitchedBB = SplitUnswitchedPair.second;
-    DTUpdates.push_back({DT.Delete, ParentBB, UnswitchedBB});
-    DTUpdates.push_back({DT.Insert, OldPH, UnswitchedBB});
+    DTUpdates.push_back({DT.Delete, ParentBB, SplitUnswitchedPair.first});
+    DTUpdates.push_back({DT.Insert, OldPH, SplitUnswitchedPair.second});
   }
   DT.applyUpdates(DTUpdates);
 
@@ -804,7 +808,10 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
 
   // We may have changed the nesting relationship for this loop so hoist it to
   // its correct parent if needed.
-  hoistLoopToNewParent(L, *NewPH, DT, LI);
+  hoistLoopToNewParent(L, *NewPH, DT, LI, MSSAU);
+
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
 
   ++NumTrivial;
   ++NumSwitches;
@@ -1069,7 +1076,7 @@ static BasicBlock *buildClonedLoopBlocks(
       continue;
 
     ClonedSuccBB->removePredecessor(ClonedParentBB,
-                                    /*DontDeleteUselessPHIs*/ true);
+                                    /*KeepOneInputPHIs*/ true);
   }
 
   // Replace the cloned branch with an unconditional branch to the cloned
@@ -2078,7 +2085,7 @@ static void unswitchNontrivialInvariants(
              "Only one possible unswitched block for a branch!");
       BasicBlock *UnswitchedSuccBB = *UnswitchedSuccBBs.begin();
       UnswitchedSuccBB->removePredecessor(ParentBB,
-                                          /*DontDeleteUselessPHIs*/ true);
+                                          /*KeepOneInputPHIs*/ true);
       DTUpdates.push_back({DominatorTree::Delete, ParentBB, UnswitchedSuccBB});
     } else {
       // Note that we actually want to remove the parent block as a predecessor
@@ -2093,7 +2100,7 @@ static void unswitchNontrivialInvariants(
       for (auto &Case : NewSI->cases())
         Case.getCaseSuccessor()->removePredecessor(
             ParentBB,
-            /*DontDeleteUselessPHIs*/ true);
+            /*KeepOneInputPHIs*/ true);
 
       // We need to use the set to populate domtree updates as even when there
       // are multiple cases pointing at the same successor we only want to
@@ -2239,7 +2246,7 @@ static void unswitchNontrivialInvariants(
     // introduced new, non-dedicated exits. At least try to re-form dedicated
     // exits for these loops. This may fail if they couldn't have dedicated
     // exits to start with.
-    formDedicatedExitBlocks(&UpdateL, &DT, &LI, /*PreserveLCSSA*/ true);
+    formDedicatedExitBlocks(&UpdateL, &DT, &LI, MSSAU, /*PreserveLCSSA*/ true);
   };
 
   // For non-child cloned loops and hoisted loops, we just need to update LCSSA

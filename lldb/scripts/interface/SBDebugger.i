@@ -122,8 +122,8 @@ public:
     static void
     Initialize();
 
-    static void
-    Initialize(lldb::SBInitializerOptions& options);
+    static SBError
+    InitializeWithErrorHandling();
 
     static void
     Terminate();

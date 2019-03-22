@@ -63,4 +63,4 @@ const char * Test()
 }
 // CHECK: @e = global [2 x i8] c"i\00", align 1
 // CHECK: define i8* @Test()
-// CHECK: ret i8* getelementptr inbounds ([2 x i8], [2 x i8]* @e, i32 0, i32 0)
+// CHECK: ret i8* getelementptr inbounds ([2 x i8], [2 x i8]* @e, i64 0, i64 0)

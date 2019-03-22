@@ -18,11 +18,13 @@
 #include <codecvt>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(std::consume_header == 4);
     assert(std::generate_header == 2);
     assert(std::little_endian == 1);
     std::codecvt_mode e = std::consume_header;
     assert(e == 4);
+
+  return 0;
 }

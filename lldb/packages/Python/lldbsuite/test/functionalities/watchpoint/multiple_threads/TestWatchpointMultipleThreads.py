@@ -23,6 +23,7 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureNetBSD
     def test_watchpoint_before_thread_start(self):
         """Test that we can hit a watchpoint we set before starting another thread"""
         self.do_watchpoint_test("Before running the thread")
@@ -30,6 +31,7 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureNetBSD
     def test_watchpoint_after_thread_start(self):
         """Test that we can hit a watchpoint we set after starting another thread"""
         self.do_watchpoint_test("After running the thread")

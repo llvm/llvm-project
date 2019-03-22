@@ -165,6 +165,14 @@ struct PositiveEnum {
   // CHECK-FIXES: Enum e{Foo};
 };
 
+struct PositiveValueEnum {
+  PositiveValueEnum() : e() {}
+  // CHECK-FIXES: PositiveValueEnum()  {}
+  Enum e;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use default member initializer for 'e'
+  // CHECK-FIXES: Enum e{};
+};
+
 struct PositiveString {
   PositiveString() : s("foo") {}
   // CHECK-FIXES: PositiveString()  {}
@@ -380,6 +388,16 @@ struct ExistingString {
   const char *e2 = nullptr;
   const char *e3 = "foo";
   const char *e4 = "bar";
+};
+
+struct UnionExisting {
+  UnionExisting() : e(5.0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: member initializer for 'e' is redundant
+  // CHECK-FIXES: UnionExisting()  {}
+  union {
+    int i;
+    double e = 5.0;
+  };
 };
 
 template <typename T>

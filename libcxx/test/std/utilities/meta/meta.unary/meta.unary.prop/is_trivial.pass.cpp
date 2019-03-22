@@ -51,7 +51,7 @@ public:
     B();
 };
 
-int main()
+int main(int, char**)
 {
     test_is_trivial<int> ();
     test_is_trivial<A> ();
@@ -59,4 +59,6 @@ int main()
     test_is_not_trivial<int&> ();
     test_is_not_trivial<volatile int&> ();
     test_is_not_trivial<B> ();
+
+  return 0;
 }

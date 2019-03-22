@@ -49,7 +49,7 @@ test()
         assert(ia[i] == ib[i]);
 }
 
-int main()
+int main(int, char**)
 {
     test<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
     test<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
@@ -66,4 +66,6 @@ int main()
 // #if TEST_STD_VER > 17
 //     static_assert(test_constexpr());
 // #endif
+
+  return 0;
 }

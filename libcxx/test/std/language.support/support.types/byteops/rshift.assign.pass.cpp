@@ -22,7 +22,7 @@ constexpr std::byte test(std::byte b) {
     }
 
 
-int main () {
+int main(int, char**) {
     std::byte b;  // not constexpr, just used in noexcept check
     constexpr std::byte b16{static_cast<std::byte>(16)};
     constexpr std::byte b192{static_cast<std::byte>(192)};
@@ -31,4 +31,6 @@ int main () {
 
     static_assert(std::to_integer<int>(test(b16))  ==  4, "" );
     static_assert(std::to_integer<int>(test(b192)) == 48, "" );
+
+  return 0;
 }

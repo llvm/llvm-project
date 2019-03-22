@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++experimental
 // UNSUPPORTED: c++98, c++03
 
 // <experimental/memory_resource>
@@ -22,7 +21,7 @@
 
 namespace ex = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
     typedef ex::polymorphic_allocator<void> A;
     {
@@ -53,4 +52,6 @@ int main()
         assert(a.resource() == mptr);
         assert(a.resource() == ex::get_default_resource());
     }
+
+  return 0;
 }

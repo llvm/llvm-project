@@ -55,9 +55,13 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
       if (MC->getChildNo() < 4)  // Only have CheckChildSame0...3
         New = new CheckChildSameMatcher(MC->getChildNo(), CS->getMatchNumber());
 
-    if (CheckIntegerMatcher *CS = dyn_cast<CheckIntegerMatcher>(MC->getNext()))
+    if (CheckIntegerMatcher *CI = dyn_cast<CheckIntegerMatcher>(MC->getNext()))
       if (MC->getChildNo() < 5)  // Only have CheckChildInteger0...4
-        New = new CheckChildIntegerMatcher(MC->getChildNo(), CS->getValue());
+        New = new CheckChildIntegerMatcher(MC->getChildNo(), CI->getValue());
+
+    if (auto *CCC = dyn_cast<CheckCondCodeMatcher>(MC->getNext()))
+      if (MC->getChildNo() == 2)  // Only have CheckChild2CondCode
+        New = new CheckChild2CondCodeMatcher(CCC->getCondCodeName());
 
     if (New) {
       // Insert the new node.

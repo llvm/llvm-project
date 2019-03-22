@@ -446,3 +446,8 @@
 // PTHREAD-NOT: _POSIX_THREADS
 // PTHREAD:     _REENTRANT
 // PTHREAD-NOT: _POSIX_THREADS
+
+// Check PowerPC for Secure PLT
+// RUN: %clang -target powerpc-unknown-netbsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=POWERPC-SECUREPLT %s
+// POWERPC-SECUREPLT: "-target-feature" "+secure-plt"

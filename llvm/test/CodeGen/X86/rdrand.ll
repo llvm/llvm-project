@@ -94,7 +94,7 @@ define void @loop(i32* %p, i32 %n) nounwind {
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    rdrandl %esi
 ; X86-NEXT:    movl %esi, (%ecx,%edx,4)
-; X86-NEXT:    addl $1, %edx
+; X86-NEXT:    incl %edx
 ; X86-NEXT:    cmpl %edx, %eax
 ; X86-NEXT:    jne .LBB3_2
 ; X86-NEXT:  .LBB3_3: # %while.end
@@ -113,7 +113,7 @@ define void @loop(i32* %p, i32 %n) nounwind {
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    rdrandl %edx
 ; X64-NEXT:    movl %edx, (%rdi,%rcx,4)
-; X64-NEXT:    addq $1, %rcx
+; X64-NEXT:    incq %rcx
 ; X64-NEXT:    cmpl %ecx, %eax
 ; X64-NEXT:    jne .LBB3_2
 ; X64-NEXT:  .LBB3_3: # %while.end

@@ -52,12 +52,8 @@ DominatingValue<RValue>::saved_type::save(CodeGenFunction &CGF, RValue rv) {
     llvm::Type *ComplexTy =
         llvm::StructType::get(V.first->getType(), V.second->getType());
     Address addr = CGF.CreateDefaultAlignTempAlloca(ComplexTy, "saved-complex");
-    CGF.Builder.CreateStore(V.first,
-                            CGF.Builder.CreateStructGEP(addr, 0, CharUnits()));
-    CharUnits offset = CharUnits::fromQuantity(
-               CGF.CGM.getDataLayout().getTypeAllocSize(V.first->getType()));
-    CGF.Builder.CreateStore(V.second,
-                            CGF.Builder.CreateStructGEP(addr, 1, offset));
+    CGF.Builder.CreateStore(V.first, CGF.Builder.CreateStructGEP(addr, 0));
+    CGF.Builder.CreateStore(V.second, CGF.Builder.CreateStructGEP(addr, 1));
     return saved_type(addr.getPointer(), ComplexAddress);
   }
 
@@ -95,12 +91,10 @@ RValue DominatingValue<RValue>::saved_type::restore(CodeGenFunction &CGF) {
   }
   case ComplexAddress: {
     Address address = getSavingAddress(Value);
-    llvm::Value *real = CGF.Builder.CreateLoad(
-                 CGF.Builder.CreateStructGEP(address, 0, CharUnits()));
-    CharUnits offset = CharUnits::fromQuantity(
-                 CGF.CGM.getDataLayout().getTypeAllocSize(real->getType()));
-    llvm::Value *imag = CGF.Builder.CreateLoad(
-                 CGF.Builder.CreateStructGEP(address, 1, offset));
+    llvm::Value *real =
+        CGF.Builder.CreateLoad(CGF.Builder.CreateStructGEP(address, 0));
+    llvm::Value *imag =
+        CGF.Builder.CreateLoad(CGF.Builder.CreateStructGEP(address, 1));
     return RValue::getComplex(real, imag);
   }
   }

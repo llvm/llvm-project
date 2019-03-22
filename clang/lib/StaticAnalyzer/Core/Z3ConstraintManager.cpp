@@ -102,6 +102,11 @@ public:
       Z3_dec_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
   }
 
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    ID.AddInteger(
+        Z3_get_ast_id(Context.Context, reinterpret_cast<Z3_ast>(Sort)));
+  }
+
   bool isBitvectorSortImpl() const override {
     return (Z3_get_sort_kind(Context.Context, Sort) == Z3_BV_SORT);
   }
@@ -172,7 +177,7 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
-    ID.AddInteger(Z3_get_ast_hash(Context.Context, AST));
+    ID.AddInteger(Z3_get_ast_id(Context.Context, AST));
   }
 
   /// Comparison of AST equality, not model equivalence.
@@ -253,19 +258,18 @@ static bool areEquivalent(const llvm::fltSemantics &LHS,
           llvm::APFloat::semanticsSizeInBits(RHS));
 }
 
-} // end anonymous namespace
-
-typedef llvm::ImmutableSet<std::pair<SymbolRef, Z3Expr>> ConstraintZ3Ty;
-REGISTER_TRAIT_WITH_PROGRAMSTATE(ConstraintZ3, ConstraintZ3Ty)
-
-namespace {
-
 class Z3Solver : public SMTSolver {
   friend class Z3ConstraintManager;
 
   Z3Context Context;
 
   Z3_solver Solver;
+
+  // Cache Sorts
+  std::set<Z3Sort> CachedSorts;
+
+  // Cache Exprs
+  std::set<Z3Expr> CachedExprs;
 
 public:
   Z3Solver() : Solver(Z3_mk_simple_solver(Context.Context)) {
@@ -286,42 +290,48 @@ public:
     Z3_solver_assert(Context.Context, Solver, toZ3Expr(*Exp).AST);
   }
 
+  // Given an SMTSort, adds/retrives it from the cache and returns
+  // an SMTSortRef to the SMTSort in the cache
+  SMTSortRef newSortRef(const SMTSort &Sort) {
+    auto It = CachedSorts.insert(toZ3Sort(Sort));
+    return &(*It.first);
+  }
+
+  // Given an SMTExpr, adds/retrives it from the cache and returns
+  // an SMTExprRef to the SMTExpr in the cache
+  SMTExprRef newExprRef(const SMTExpr &Exp) {
+    auto It = CachedExprs.insert(toZ3Expr(Exp));
+    return &(*It.first);
+  }
+
   SMTSortRef getBoolSort() override {
-    return std::make_shared<Z3Sort>(Context, Z3_mk_bool_sort(Context.Context));
+    return newSortRef(Z3Sort(Context, Z3_mk_bool_sort(Context.Context)));
   }
 
   SMTSortRef getBitvectorSort(unsigned BitWidth) override {
-    return std::make_shared<Z3Sort>(Context,
-                                    Z3_mk_bv_sort(Context.Context, BitWidth));
+    return newSortRef(
+        Z3Sort(Context, Z3_mk_bv_sort(Context.Context, BitWidth)));
   }
 
   SMTSortRef getSort(const SMTExprRef &Exp) override {
-    return std::make_shared<Z3Sort>(
-        Context, Z3_get_sort(Context.Context, toZ3Expr(*Exp).AST));
+    return newSortRef(
+        Z3Sort(Context, Z3_get_sort(Context.Context, toZ3Expr(*Exp).AST)));
   }
 
   SMTSortRef getFloat16Sort() override {
-    return std::make_shared<Z3Sort>(Context,
-                                    Z3_mk_fpa_sort_16(Context.Context));
+    return newSortRef(Z3Sort(Context, Z3_mk_fpa_sort_16(Context.Context)));
   }
 
   SMTSortRef getFloat32Sort() override {
-    return std::make_shared<Z3Sort>(Context,
-                                    Z3_mk_fpa_sort_32(Context.Context));
+    return newSortRef(Z3Sort(Context, Z3_mk_fpa_sort_32(Context.Context)));
   }
 
   SMTSortRef getFloat64Sort() override {
-    return std::make_shared<Z3Sort>(Context,
-                                    Z3_mk_fpa_sort_64(Context.Context));
+    return newSortRef(Z3Sort(Context, Z3_mk_fpa_sort_64(Context.Context)));
   }
 
   SMTSortRef getFloat128Sort() override {
-    return std::make_shared<Z3Sort>(Context,
-                                    Z3_mk_fpa_sort_128(Context.Context));
-  }
-
-  SMTExprRef newExprRef(const SMTExpr &E) const override {
-    return std::make_shared<Z3Expr>(toZ3Expr(E));
+    return newSortRef(Z3Sort(Context, Z3_mk_fpa_sort_128(Context.Context)));
   }
 
   SMTExprRef mkBVNeg(const SMTExprRef &Exp) override {
@@ -804,14 +814,6 @@ public:
   }
 }; // end class Z3Solver
 
-class Z3ConstraintManager : public SMTConstraintManager<ConstraintZ3, Z3Expr> {
-  SMTSolverRef Solver = CreateZ3Solver();
-
-public:
-  Z3ConstraintManager(SubEngine *SE, SValBuilder &SB)
-      : SMTConstraintManager(SE, SB, Solver) {}
-}; // end class Z3ConstraintManager
-
 } // end anonymous namespace
 
 #endif
@@ -829,12 +831,5 @@ SMTSolverRef clang::ento::CreateZ3Solver() {
 
 std::unique_ptr<ConstraintManager>
 ento::CreateZ3ConstraintManager(ProgramStateManager &StMgr, SubEngine *Eng) {
-#if CLANG_ANALYZER_WITH_Z3
-  return llvm::make_unique<Z3ConstraintManager>(Eng, StMgr.getSValBuilder());
-#else
-  llvm::report_fatal_error("Clang was not compiled with Z3 support, rebuild "
-                           "with -DCLANG_ANALYZER_ENABLE_Z3_SOLVER=ON",
-                           false);
-  return nullptr;
-#endif
+  return llvm::make_unique<SMTConstraintManager>(Eng, StMgr.getSValBuilder());
 }

@@ -16,6 +16,7 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Threads.h"
 #include "lld/Common/Timer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -159,15 +160,12 @@ public:
 // PartialSection represents a group of chunks that contribute to an
 // OutputSection. Collating a collection of PartialSections of same name and
 // characteristics constitutes the OutputSection.
-class PartialSection {
+class PartialSectionKey {
 public:
-  PartialSection(StringRef N, uint32_t Chars)
-      : Name(N), Characteristics(Chars) {}
   StringRef Name;
   unsigned Characteristics;
-  std::vector<Chunk *> Chunks;
 
-  bool operator<(const PartialSection &Other) const {
+  bool operator<(const PartialSectionKey &Other) const {
     int C = Name.compare(Other.Name);
     if (C == 1)
       return false;
@@ -177,10 +175,13 @@ public:
   }
 };
 
-struct PartialLess {
-  bool operator()(PartialSection *L, PartialSection *R) const {
-    return *L < *R;
-  }
+class PartialSection {
+public:
+  PartialSection(StringRef N, uint32_t Chars)
+      : Name(N), Characteristics(Chars) {}
+  StringRef Name;
+  unsigned Characteristics;
+  std::vector<Chunk *> Chunks;
 };
 
 // The writer writes a SymbolTable result to a file.
@@ -234,7 +235,7 @@ private:
   uint32_t getSizeOfInitializedData();
 
   std::unique_ptr<FileOutputBuffer> &Buffer;
-  std::set<PartialSection *, PartialLess> PartialSections;
+  std::map<PartialSectionKey, PartialSection *> PartialSections;
   std::vector<OutputSection *> OutputSections;
   std::vector<char> Strtab;
   std::vector<llvm::object::coff_symbol16> OutputSymtab;
@@ -628,7 +629,8 @@ bool Writer::fixGnuImportChunks() {
 
   // Make sure all .idata$* section chunks are mapped as RDATA in order to
   // be sorted into the same sections as our own synthesized .idata chunks.
-  for (PartialSection *PSec : PartialSections) {
+  for (auto It : PartialSections) {
+    PartialSection *PSec = It.second;
     if (!PSec->Name.startswith(".idata"))
       continue;
     if (PSec->Characteristics == RDATA)
@@ -642,7 +644,8 @@ bool Writer::fixGnuImportChunks() {
   bool HasIdata = false;
   // Sort all .idata$* chunks, grouping chunks from the same library,
   // with alphabetical ordering of the object fils within a library.
-  for (PartialSection *PSec : PartialSections) {
+  for (auto It : PartialSections) {
+    PartialSection *PSec = It.second;
     if (!PSec->Name.startswith(".idata"))
       continue;
 
@@ -773,8 +776,8 @@ void Writer::createSections() {
 
   // Process an /order option.
   if (!Config->Order.empty())
-    for (PartialSection *PSec : PartialSections)
-      sortBySectionOrder(PSec->Chunks);
+    for (auto It : PartialSections)
+      sortBySectionOrder(It.second->Chunks);
 
   if (HasIdata)
     locateImportTables();
@@ -783,7 +786,8 @@ void Writer::createSections() {
   // '$' and all following characters in input section names are
   // discarded when determining output section. So, .text$foo
   // contributes to .text, for example. See PE/COFF spec 3.2.
-  for (PartialSection *PSec : PartialSections) {
+  for (auto It : PartialSections) {
+    PartialSection *PSec = It.second;
     StringRef Name = getOutputSectionName(PSec->Name);
     uint32_t OutChars = PSec->Characteristics;
 
@@ -1093,8 +1097,7 @@ void Writer::mergeSections() {
 // Visits all sections to initialize their relocation targets.
 void Writer::readRelocTargets() {
   for (OutputSection *Sec : OutputSections)
-    for_each(parallel::par, Sec->Chunks.begin(), Sec->Chunks.end(),
-             [&](Chunk *C) { C->readRelocTargets(); });
+    parallelForEach(Sec->Chunks, [&](Chunk *C) { C->readRelocTargets(); });
 }
 
 // Visits all sections to assign incremental, non-overlapping RVAs and
@@ -1114,7 +1117,18 @@ void Writer::assignAddresses() {
       addBaserels();
     uint64_t RawSize = 0, VirtualSize = 0;
     Sec->Header.VirtualAddress = RVA;
+
+    // If /FUNCTIONPADMIN is used, functions are padded in order to create a
+    // hotpatchable image.
+    const bool IsCodeSection =
+        (Sec->Header.Characteristics & IMAGE_SCN_CNT_CODE) &&
+        (Sec->Header.Characteristics & IMAGE_SCN_MEM_READ) &&
+        (Sec->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE);
+    uint32_t Padding = IsCodeSection ? Config->FunctionPadMin : 0;
+
     for (Chunk *C : Sec->Chunks) {
+      if (Padding && C->isHotPatchable())
+        VirtualSize += Padding;
       VirtualSize = alignTo(VirtualSize, C->Alignment);
       C->setRVA(RVA + VirtualSize);
       C->OutputSectionOff = VirtualSize;
@@ -1376,19 +1390,47 @@ static void addSymbolToRVASet(SymbolRVASet &RVASet, Defined *S) {
 // symbol in an executable section.
 static void maybeAddAddressTakenFunction(SymbolRVASet &AddressTakenSyms,
                                          Symbol *S) {
-  auto *D = dyn_cast_or_null<DefinedCOFF>(S);
-
-  // Ignore undefined symbols and references to non-functions (e.g. globals and
-  // labels).
-  if (!D ||
-      D->getCOFFSymbol().getComplexType() != COFF::IMAGE_SYM_DTYPE_FUNCTION)
+  if (!S)
     return;
 
-  // Mark the symbol as address taken if it's in an executable section.
-  Chunk *RefChunk = D->getChunk();
-  OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
-  if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
-    addSymbolToRVASet(AddressTakenSyms, D);
+  switch (S->kind()) {
+  case Symbol::DefinedLocalImportKind:
+  case Symbol::DefinedImportDataKind:
+    // Defines an __imp_ pointer, so it is data, so it is ignored.
+    break;
+  case Symbol::DefinedCommonKind:
+    // Common is always data, so it is ignored.
+    break;
+  case Symbol::DefinedAbsoluteKind:
+  case Symbol::DefinedSyntheticKind:
+    // Absolute is never code, synthetic generally isn't and usually isn't
+    // determinable.
+    break;
+  case Symbol::LazyKind:
+  case Symbol::UndefinedKind:
+    // Undefined symbols resolve to zero, so they don't have an RVA. Lazy
+    // symbols shouldn't have relocations.
+    break;
+
+  case Symbol::DefinedImportThunkKind:
+    // Thunks are always code, include them.
+    addSymbolToRVASet(AddressTakenSyms, cast<Defined>(S));
+    break;
+
+  case Symbol::DefinedRegularKind: {
+    // This is a regular, defined, symbol from a COFF file. Mark the symbol as
+    // address taken if the symbol type is function and it's in an executable
+    // section.
+    auto *D = cast<DefinedRegular>(S);
+    if (D->getCOFFSymbol().getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION) {
+      Chunk *RefChunk = D->getChunk();
+      OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
+      if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
+        addSymbolToRVASet(AddressTakenSyms, D);
+    }
+    break;
+  }
+  }
 }
 
 // Visit all relocations from all section contributions of this object file and
@@ -1599,8 +1641,7 @@ void Writer::writeSections() {
     // ADD instructions).
     if (Sec->Header.Characteristics & IMAGE_SCN_CNT_CODE)
       memset(SecBuf, 0xCC, Sec->getRawSize());
-    for_each(parallel::par, Sec->Chunks.begin(), Sec->Chunks.end(),
-             [&](Chunk *C) { C->writeTo(SecBuf); });
+    parallelForEach(Sec->Chunks, [&](Chunk *C) { C->writeTo(SecBuf); });
   }
 }
 
@@ -1668,14 +1709,16 @@ void Writer::sortExceptionTable() {
   uint8_t *End = BufAddr(LastPdata) + LastPdata->getSize();
   if (Config->Machine == AMD64) {
     struct Entry { ulittle32_t Begin, End, Unwind; };
-    sort(parallel::par, (Entry *)Begin, (Entry *)End,
-         [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
+    parallelSort(
+        MutableArrayRef<Entry>((Entry *)Begin, (Entry *)End),
+        [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
     return;
   }
   if (Config->Machine == ARMNT || Config->Machine == ARM64) {
     struct Entry { ulittle32_t Begin, Unwind; };
-    sort(parallel::par, (Entry *)Begin, (Entry *)End,
-         [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
+    parallelSort(
+        MutableArrayRef<Entry>((Entry *)Begin, (Entry *)End),
+        [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
     return;
   }
   errs() << "warning: don't know how to handle .pdata.\n";
@@ -1771,19 +1814,16 @@ void Writer::addBaserelBlocks(std::vector<Baserel> &V) {
 
 PartialSection *Writer::createPartialSection(StringRef Name,
                                              uint32_t OutChars) {
-  PartialSection *PSec = findPartialSection(Name, OutChars);
+  PartialSection *&PSec = PartialSections[{Name, OutChars}];
   if (PSec)
     return PSec;
   PSec = make<PartialSection>(Name, OutChars);
-  PartialSections.insert(PSec);
   return PSec;
 }
 
 PartialSection *Writer::findPartialSection(StringRef Name, uint32_t OutChars) {
-  auto It = find_if(PartialSections, [&](PartialSection *P) {
-    return P->Name == Name && P->Characteristics == OutChars;
-  });
+  auto It = PartialSections.find({Name, OutChars});
   if (It != PartialSections.end())
-    return *It;
+    return It->second;
   return nullptr;
 }

@@ -29,7 +29,7 @@ long y = __builtin_abs(-2l);
 
 extern const char char_memchr_arg[32];
 char *memchr_result = __builtin_char_memchr(char_memchr_arg, 123, 32);
-// CHECK: call i8* @memchr(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @char_memchr_arg, i32 0, i32 0), i32 123, i64 32)
+// CHECK: call i8* @memchr(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @char_memchr_arg, i64 0, i64 0), i32 123, i64 32)
 
 int constexpr_overflow_result() {
   constexpr int x = 1;

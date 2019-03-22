@@ -22,6 +22,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -350,6 +351,13 @@ Error InstrProfSymtab::create(SectionRef &Section) {
   if (auto EC = Section.getContents(Data))
     return errorCodeToError(EC);
   Address = Section.getAddress();
+
+  // If this is a linked PE/COFF file, then we have to skip over the null byte
+  // that is allocated in the .lprfn$A section in the LLVM profiling runtime.
+  const ObjectFile *Obj = Section.getObject();
+  if (isa<COFFObjectFile>(Obj) && !Obj->isRelocatableObject())
+    Data = Data.drop_front(1);
+
   return Error::success();
 }
 
@@ -616,11 +624,20 @@ static Error loadTestingFormat(StringRef Data, InstrProfSymtab &ProfileNames,
 }
 
 static Expected<SectionRef> lookupSection(ObjectFile &OF, StringRef Name) {
+  // On COFF, the object file section name may end in "$M". This tells the
+  // linker to sort these sections between "$A" and "$Z". The linker removes the
+  // dollar and everything after it in the final binary. Do the same to match.
+  bool IsCOFF = isa<COFFObjectFile>(OF);
+  auto stripSuffix = [IsCOFF](StringRef N) {
+    return IsCOFF ? N.split('$').first : N;
+  };
+  Name = stripSuffix(Name);
+
   StringRef FoundName;
   for (const auto &Section : OF.sections()) {
     if (auto EC = Section.getName(FoundName))
       return errorCodeToError(EC);
-    if (FoundName == Name)
+    if (stripSuffix(FoundName) == Name)
       return Section;
   }
   return make_error<CoverageMapError>(coveragemap_error::no_data_found);

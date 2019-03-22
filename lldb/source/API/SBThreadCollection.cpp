@@ -7,19 +7,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBThreadCollection.h"
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Target/ThreadList.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBThreadCollection::SBThreadCollection() : m_opaque_sp() {}
+SBThreadCollection::SBThreadCollection() : m_opaque_sp() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBThreadCollection);
+}
 
 SBThreadCollection::SBThreadCollection(const SBThreadCollection &rhs)
-    : m_opaque_sp(rhs.m_opaque_sp) {}
+    : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_RECORD_CONSTRUCTOR(SBThreadCollection,
+                          (const lldb::SBThreadCollection &), rhs);
+}
 
 const SBThreadCollection &SBThreadCollection::
 operator=(const SBThreadCollection &rhs) {
+  LLDB_RECORD_METHOD(
+      const lldb::SBThreadCollection &,
+      SBThreadCollection, operator=,(const lldb::SBThreadCollection &), rhs);
+
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
   return *this;
@@ -50,17 +60,26 @@ const lldb::ThreadCollectionSP &SBThreadCollection::operator*() const {
   return m_opaque_sp;
 }
 
-bool SBThreadCollection::IsValid() const { return m_opaque_sp.get() != NULL; }
+bool SBThreadCollection::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadCollection, IsValid);
+
+  return m_opaque_sp.get() != NULL;
+}
 
 size_t SBThreadCollection::GetSize() {
+  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBThreadCollection, GetSize);
+
   if (m_opaque_sp)
     return m_opaque_sp->GetSize();
   return 0;
 }
 
 SBThread SBThreadCollection::GetThreadAtIndex(size_t idx) {
+  LLDB_RECORD_METHOD(lldb::SBThread, SBThreadCollection, GetThreadAtIndex,
+                     (size_t), idx);
+
   SBThread thread;
   if (m_opaque_sp && idx < m_opaque_sp->GetSize())
     thread = m_opaque_sp->GetThreadAtIndex(idx);
-  return thread;
+  return LLDB_RECORD_RESULT(thread);
 }

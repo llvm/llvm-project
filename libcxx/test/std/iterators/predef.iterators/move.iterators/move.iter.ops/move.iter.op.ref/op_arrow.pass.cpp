@@ -27,7 +27,7 @@ test(It i)
     assert(r.operator->() == i);
 }
 
-int main()
+int main(int, char**)
 {
     char s[] = "123";
     test(s);
@@ -42,4 +42,6 @@ int main()
     static_assert(it2.operator->() == p + 1, "");
     }
 #endif
+
+  return 0;
 }

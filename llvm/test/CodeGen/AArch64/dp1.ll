@@ -1,22 +1,29 @@
 ; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-linux-gnu | FileCheck %s
+; RUN: llc -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -verify-machineinstrs -o - %s -mtriple=aarch64-linux-gnu | FileCheck %s --check-prefixes=FALLBACK,GISEL
 
 @var32 = global i32 0
 @var64 = global i64 0
 
+; FALLBACK-NOT: remark{{.*}}rev_i32
 define void @rev_i32() {
 ; CHECK-LABEL: rev_i32:
+; GISEL-LABEL: rev_i32:
     %val0_tmp = load i32, i32* @var32
     %val1_tmp = call i32 @llvm.bswap.i32(i32 %val0_tmp)
 ; CHECK: rev	{{w[0-9]+}}, {{w[0-9]+}}
+; GISEL: rev	{{w[0-9]+}}, {{w[0-9]+}}
     store volatile i32 %val1_tmp, i32* @var32
     ret void
 }
 
+; FALLBACK-NOT: remark{{.*}}rev_i64
 define void @rev_i64() {
 ; CHECK-LABEL: rev_i64:
+; GISEL-LABEL: rev_i64:
     %val0_tmp = load i64, i64* @var64
     %val1_tmp = call i64 @llvm.bswap.i64(i64 %val0_tmp)
 ; CHECK: rev	{{x[0-9]+}}, {{x[0-9]+}}
+; GISEL: rev	{{x[0-9]+}}, {{x[0-9]+}}
     store volatile i64 %val1_tmp, i64* @var64
     ret void
 }
@@ -149,4 +156,3 @@ declare i32  @llvm.cttz.i32 (i32, i1)
 declare i64  @llvm.cttz.i64 (i64, i1)
 declare i32  @llvm.ctpop.i32 (i32)
 declare i64  @llvm.ctpop.i64 (i64)
-

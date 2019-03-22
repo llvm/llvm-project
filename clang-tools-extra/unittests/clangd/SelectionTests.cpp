@@ -1,4 +1,4 @@
-//===-- RIFFTests.cpp - Binary container unit tests -----------------------===//
+//===-- SelectionTests.cpp - ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -176,6 +176,16 @@ TEST(SelectionTest, CommonAncestor) {
 
       // Node types that have caused problems in the past.
       {"template <typename T> void foo() { [[^T]] t; }", "TypeLoc"},
+
+      // No crash
+      {
+          R"cpp(
+            template <class T> struct Foo {};
+            template <[[template<class> class /*cursor here*/^U]]>
+             struct Foo<U<int>*> {};
+          )cpp",
+          "TemplateTemplateParmDecl"
+      },
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);
@@ -221,6 +231,11 @@ TEST(SelectionTest, Selected) {
           }]] else [[{^
           }]]]]
         }
+      )cpp",
+      R"cpp(
+          template <class T>
+          struct unique_ptr {};
+          void foo(^$C[[unique_ptr<unique_ptr<$C[[int]]>>]]^ a) {}
       )cpp",
   };
   for (const char *C : Cases) {

@@ -48,7 +48,7 @@ typedef const char const_array[3];
 typedef char incomplete_array[];
 struct Incomplete;
 
-int main()
+int main(int, char**)
 {
     test_array<array>();
     test_array<const_array>();
@@ -57,4 +57,6 @@ int main()
 
 //  LWG#2582
     static_assert(!std::is_array<Incomplete>::value, "");
+
+  return 0;
 }

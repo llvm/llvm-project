@@ -1,15 +1,15 @@
-/*===-- CIndexDiagnostics.cpp - Diagnostics C Interface ---------*- C++ -*-===*\
-|*                                                                            *|
-|* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
-|* Exceptions.                                                                *|
-|* See https://llvm.org/LICENSE.txt for license information.                  *|
-|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    *|
-|*                                                                            *|
-|*===----------------------------------------------------------------------===*|
-|*                                                                            *|
-|* Implements the diagnostic functions of the Clang C interface.              *|
-|*                                                                            *|
-\*===----------------------------------------------------------------------===*/
+//===- CIndexDiagnostic.cpp - Diagnostics C Interface ---------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Implements the diagnostic functions of the Clang C interface.
+//
+//===----------------------------------------------------------------------===//
+
 #include "CIndexDiagnostic.h"
 #include "CIndexer.h"
 #include "CXTranslationUnit.h"

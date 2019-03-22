@@ -64,6 +64,7 @@ source_set("sources") {
     "sanitizer_fuchsia.cc",
     "sanitizer_fuchsia.h",
     "sanitizer_getauxval.h",
+    "sanitizer_hash.h",
     "sanitizer_interface_internal.h",
     "sanitizer_internal_defs.h",
     "sanitizer_lfstack.h",

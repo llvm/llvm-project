@@ -28,7 +28,7 @@ test(S s1, SV sv)
     assert(s1.capacity() >= s1.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -70,4 +70,6 @@ int main()
          SV("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
     }
 #endif
+
+  return 0;
 }

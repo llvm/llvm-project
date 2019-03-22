@@ -52,7 +52,7 @@ void check(const std::locale& loc)
     assert((std::has_facet<std::messages<wchar_t> >(loc)));
 }
 
-int main()
+int main(int, char**)
 {
     std::locale loc;
     assert(loc.name() == "C");
@@ -61,4 +61,6 @@ int main()
     std::locale loc2;
     check(loc2);
     assert(loc2 == std::locale(LOCALE_en_US_UTF_8));
+
+  return 0;
 }

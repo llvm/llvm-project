@@ -1692,6 +1692,14 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
 }
 
 bool LowerTypeTestsModule::lower() {
+  // If only some of the modules were split, we cannot correctly perform
+  // this transformation. We already checked for the presense of type tests
+  // with partially split modules during the thin link, and would have emitted
+  // an error if any were found, so here we can simply return.
+  if ((ExportSummary && ExportSummary->partiallySplitLTOUnits()) ||
+      (ImportSummary && ImportSummary->partiallySplitLTOUnits()))
+    return false;
+
   Function *TypeTestFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
   Function *ICallBranchFunnelFunc =
@@ -1700,13 +1708,6 @@ bool LowerTypeTestsModule::lower() {
       (!ICallBranchFunnelFunc || ICallBranchFunnelFunc->use_empty()) &&
       !ExportSummary && !ImportSummary)
     return false;
-
-  // If only some of the modules were split, we cannot correctly handle
-  // code that contains type tests.
-  if (TypeTestFunc && !TypeTestFunc->use_empty() &&
-      ((ExportSummary && ExportSummary->partiallySplitLTOUnits()) ||
-       (ImportSummary && ImportSummary->partiallySplitLTOUnits())))
-    report_fatal_error("inconsistent LTO Unit splitting with llvm.type.test");
 
   if (ImportSummary) {
     if (TypeTestFunc) {

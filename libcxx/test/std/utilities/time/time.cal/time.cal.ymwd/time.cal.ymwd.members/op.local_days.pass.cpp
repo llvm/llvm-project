@@ -25,7 +25,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year               = std::chrono::year;
     using month              = std::chrono::month;
@@ -70,4 +70,5 @@ int main()
     assert( year_month_weekday{sd} == ymwd); // and back
     }
 
+    return 0;
 }

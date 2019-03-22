@@ -24,6 +24,7 @@ class NamespaceDefinitionsTestCase(TestBase):
         bugnumber="llvm.org/pr28948",
         oslist=['linux'], compiler="gcc", archs=['arm','aarch64'])
     @expectedFailureAll(oslist=["windows"])
+    @expectedFailureNetBSD
     def test_expr(self):
         self.build()
         self.common_setup()

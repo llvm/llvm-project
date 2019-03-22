@@ -64,7 +64,8 @@ public:
   int Open(const char *path, int flags, int mode);
 
   Status Open(File &File, const FileSpec &file_spec, uint32_t options,
-              uint32_t permissions = lldb::eFilePermissionsFileDefault);
+              uint32_t permissions = lldb::eFilePermissionsFileDefault,
+              bool should_close_fd = true);
 
   /// Get a directory iterator.
   /// @{
@@ -179,6 +180,10 @@ public:
 
   llvm::ErrorOr<std::string> GetExternalPath(const llvm::Twine &path);
   llvm::ErrorOr<std::string> GetExternalPath(const FileSpec &file_spec);
+
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> GetVirtualFileSystem() {
+    return m_fs;
+  }
 
 private:
   static llvm::Optional<FileSystem> &InstanceImpl();

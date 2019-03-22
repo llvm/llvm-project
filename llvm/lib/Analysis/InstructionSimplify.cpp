@@ -33,6 +33,8 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
@@ -671,8 +673,8 @@ static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
         break;
       V = GA->getAliasee();
     } else {
-      if (auto CS = CallSite(V))
-        if (Value *RV = CS.getReturnedArgOperand()) {
+      if (auto *Call = dyn_cast<CallBase>(V))
+        if (Value *RV = Call->getReturnedArgOperand()) {
           V = RV;
           continue;
         }
@@ -3646,6 +3648,8 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   }
 
   // Handle fcmp with constant RHS.
+  // TODO: Use match with a specific FP value, so these work with vectors with
+  // undef lanes.
   const APFloat *C;
   if (match(RHS, m_APFloat(C))) {
     // Check whether the constant is an infinity.
@@ -3674,28 +3678,7 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         }
       }
     }
-    if (C->isZero()) {
-      switch (Pred) {
-      case FCmpInst::FCMP_OGE:
-        if (FMF.noNaNs() && CannotBeOrderedLessThanZero(LHS, Q.TLI))
-          return getTrue(RetTy);
-        break;
-      case FCmpInst::FCMP_UGE:
-        if (CannotBeOrderedLessThanZero(LHS, Q.TLI))
-          return getTrue(RetTy);
-        break;
-      case FCmpInst::FCMP_ULT:
-        if (FMF.noNaNs() && CannotBeOrderedLessThanZero(LHS, Q.TLI))
-          return getFalse(RetTy);
-        break;
-      case FCmpInst::FCMP_OLT:
-        if (CannotBeOrderedLessThanZero(LHS, Q.TLI))
-          return getFalse(RetTy);
-        break;
-      default:
-        break;
-      }
-    } else if (C->isNegative()) {
+    if (C->isNegative() && !C->isNegZero()) {
       assert(!C->isNaN() && "Unexpected NaN constant!");
       // TODO: We can catch more cases by using a range check rather than
       //       relying on CannotBeOrderedLessThanZero.
@@ -3717,6 +3700,28 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       default:
         break;
       }
+    }
+  }
+  if (match(RHS, m_AnyZeroFP())) {
+    switch (Pred) {
+    case FCmpInst::FCMP_OGE:
+      if (FMF.noNaNs() && CannotBeOrderedLessThanZero(LHS, Q.TLI))
+        return getTrue(RetTy);
+      break;
+    case FCmpInst::FCMP_UGE:
+      if (CannotBeOrderedLessThanZero(LHS, Q.TLI))
+        return getTrue(RetTy);
+      break;
+    case FCmpInst::FCMP_ULT:
+      if (FMF.noNaNs() && CannotBeOrderedLessThanZero(LHS, Q.TLI))
+        return getFalse(RetTy);
+      break;
+    case FCmpInst::FCMP_OLT:
+      if (CannotBeOrderedLessThanZero(LHS, Q.TLI))
+        return getFalse(RetTy);
+      break;
+    default:
+      break;
     }
   }
 
@@ -3903,27 +3908,44 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
                                            Pred == ICmpInst::ICMP_EQ))
         return V;
 
-    // Test for zero-shift-guard-ops around funnel shifts. These are used to
-    // avoid UB from oversized shifts in raw IR rotate patterns, but the
-    // intrinsics do not have that problem.
+    // Test for a bogus zero-shift-guard-op around funnel-shift or rotate.
     Value *ShAmt;
     auto isFsh = m_CombineOr(m_Intrinsic<Intrinsic::fshl>(m_Value(X), m_Value(),
                                                           m_Value(ShAmt)),
                              m_Intrinsic<Intrinsic::fshr>(m_Value(), m_Value(X),
                                                           m_Value(ShAmt)));
-    // (ShAmt != 0) ? fshl(X, *, ShAmt) : X --> fshl(X, *, ShAmt)
-    // (ShAmt != 0) ? fshr(*, X, ShAmt) : X --> fshr(*, X, ShAmt)
     // (ShAmt == 0) ? fshl(X, *, ShAmt) : X --> X
     // (ShAmt == 0) ? fshr(*, X, ShAmt) : X --> X
-    if (match(TrueVal, isFsh) && FalseVal == X && CmpLHS == ShAmt)
-      return Pred == ICmpInst::ICMP_NE ? TrueVal : X;
-
-    // (ShAmt == 0) ? X : fshl(X, *, ShAmt) --> fshl(X, *, ShAmt)
-    // (ShAmt == 0) ? X : fshr(*, X, ShAmt) --> fshr(*, X, ShAmt)
+    if (match(TrueVal, isFsh) && FalseVal == X && CmpLHS == ShAmt &&
+        Pred == ICmpInst::ICMP_EQ)
+      return X;
     // (ShAmt != 0) ? X : fshl(X, *, ShAmt) --> X
     // (ShAmt != 0) ? X : fshr(*, X, ShAmt) --> X
-    if (match(FalseVal, isFsh) && TrueVal == X && CmpLHS == ShAmt)
-      return Pred == ICmpInst::ICMP_EQ ? FalseVal : X;
+    if (match(FalseVal, isFsh) && TrueVal == X && CmpLHS == ShAmt &&
+        Pred == ICmpInst::ICMP_NE)
+      return X;
+
+    // Test for a zero-shift-guard-op around rotates. These are used to
+    // avoid UB from oversized shifts in raw IR rotate patterns, but the
+    // intrinsics do not have that problem.
+    // We do not allow this transform for the general funnel shift case because
+    // that would not preserve the poison safety of the original code.
+    auto isRotate = m_CombineOr(m_Intrinsic<Intrinsic::fshl>(m_Value(X),
+                                                             m_Deferred(X),
+                                                             m_Value(ShAmt)),
+                                m_Intrinsic<Intrinsic::fshr>(m_Value(X),
+                                                             m_Deferred(X),
+                                                             m_Value(ShAmt)));
+    // (ShAmt != 0) ? fshl(X, X, ShAmt) : X --> fshl(X, X, ShAmt)
+    // (ShAmt != 0) ? fshr(X, X, ShAmt) : X --> fshr(X, X, ShAmt)
+    if (match(TrueVal, isRotate) && FalseVal == X && CmpLHS == ShAmt &&
+        Pred == ICmpInst::ICMP_NE)
+      return TrueVal;
+    // (ShAmt == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
+    // (ShAmt == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
+    if (match(FalseVal, isRotate) && TrueVal == X && CmpLHS == ShAmt &&
+        Pred == ICmpInst::ICMP_EQ)
+      return FalseVal;
   }
 
   // Check for other compares that behave like bit test.
@@ -5145,7 +5167,7 @@ static Value *simplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
 }
 
 template <typename IterTy>
-static Value *SimplifyCall(ImmutableCallSite CS, Value *V, IterTy ArgBegin,
+static Value *SimplifyCall(CallBase *Call, Value *V, IterTy ArgBegin,
                            IterTy ArgEnd, const SimplifyQuery &Q,
                            unsigned MaxRecurse) {
   Type *Ty = V->getType();
@@ -5166,7 +5188,7 @@ static Value *SimplifyCall(ImmutableCallSite CS, Value *V, IterTy ArgBegin,
     if (Value *Ret = simplifyIntrinsic(F, ArgBegin, ArgEnd, Q))
       return Ret;
 
-  if (!canConstantFoldCallTo(CS, F))
+  if (!canConstantFoldCallTo(Call, F))
     return nullptr;
 
   SmallVector<Constant *, 4> ConstantArgs;
@@ -5178,24 +5200,22 @@ static Value *SimplifyCall(ImmutableCallSite CS, Value *V, IterTy ArgBegin,
     ConstantArgs.push_back(C);
   }
 
-  return ConstantFoldCall(CS, F, ConstantArgs, Q.TLI);
+  return ConstantFoldCall(Call, F, ConstantArgs, Q.TLI);
 }
 
-Value *llvm::SimplifyCall(ImmutableCallSite CS, Value *V,
-                          User::op_iterator ArgBegin, User::op_iterator ArgEnd,
+Value *llvm::SimplifyCall(CallBase *Call, Value *V, User::op_iterator ArgBegin,
+                          User::op_iterator ArgEnd, const SimplifyQuery &Q) {
+  return ::SimplifyCall(Call, V, ArgBegin, ArgEnd, Q, RecursionLimit);
+}
+
+Value *llvm::SimplifyCall(CallBase *Call, Value *V, ArrayRef<Value *> Args,
                           const SimplifyQuery &Q) {
-  return ::SimplifyCall(CS, V, ArgBegin, ArgEnd, Q, RecursionLimit);
+  return ::SimplifyCall(Call, V, Args.begin(), Args.end(), Q, RecursionLimit);
 }
 
-Value *llvm::SimplifyCall(ImmutableCallSite CS, Value *V,
-                          ArrayRef<Value *> Args, const SimplifyQuery &Q) {
-  return ::SimplifyCall(CS, V, Args.begin(), Args.end(), Q, RecursionLimit);
-}
-
-Value *llvm::SimplifyCall(ImmutableCallSite ICS, const SimplifyQuery &Q) {
-  CallSite CS(const_cast<Instruction*>(ICS.getInstruction()));
-  return ::SimplifyCall(CS, CS.getCalledValue(), CS.arg_begin(), CS.arg_end(),
-                        Q, RecursionLimit);
+Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
+  return ::SimplifyCall(Call, Call->getCalledValue(), Call->arg_begin(),
+                        Call->arg_end(), Q, RecursionLimit);
 }
 
 /// See if we can compute a simplified version of this instruction.
@@ -5334,8 +5354,7 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
     Result = SimplifyPHINode(cast<PHINode>(I), Q);
     break;
   case Instruction::Call: {
-    CallSite CS(cast<CallInst>(I));
-    Result = SimplifyCall(CS, Q);
+    Result = SimplifyCall(cast<CallInst>(I), Q);
     break;
   }
 #define HANDLE_CAST_INST(num, opc, clas) case Instruction::opc:

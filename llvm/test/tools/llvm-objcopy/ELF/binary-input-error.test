@@ -6,5 +6,5 @@
 # RUN: not llvm-objcopy -I binary -B xyz %t.txt %t.o 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=BAD-BINARY-ARCH
 
-# MISSING-BINARY-ARCH: Specified binary input without specifiying an architecture.
-# BAD-BINARY-ARCH: Invalid architecture: 'xyz'.
+# MISSING-BINARY-ARCH: Specified binary input without specifiying an architecture
+# BAD-BINARY-ARCH: Invalid architecture: 'xyz'

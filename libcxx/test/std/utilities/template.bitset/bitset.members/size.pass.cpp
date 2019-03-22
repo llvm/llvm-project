@@ -18,7 +18,7 @@ void test_size()
     assert(v.size() == N);
 }
 
-int main()
+int main(int, char**)
 {
     test_size<0>();
     test_size<1>();
@@ -29,4 +29,6 @@ int main()
     test_size<64>();
     test_size<65>();
     test_size<1000>();
+
+  return 0;
 }

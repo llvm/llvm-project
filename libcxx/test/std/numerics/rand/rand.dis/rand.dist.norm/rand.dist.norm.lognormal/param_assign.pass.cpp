@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::lognormal_distribution<> D;
@@ -28,4 +28,6 @@ int main()
         assert(p.m() == .75);
         assert(p.s() == 6);
     }
+
+  return 0;
 }

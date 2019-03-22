@@ -43,7 +43,7 @@ insert3at(C& c, typename C::iterator i,
     c.insert(++i, x3);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::vector<int> C;
@@ -81,4 +81,6 @@ int main()
     insert3at(c2, c2.begin()+3, 'a', 'b', 'c');
     test(c1, 3, 'a', 'b', 'c', c2);
     }
+
+  return 0;
 }

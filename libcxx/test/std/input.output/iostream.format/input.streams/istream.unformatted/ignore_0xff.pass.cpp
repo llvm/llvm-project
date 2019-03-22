@@ -16,7 +16,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     int bad=-1;
     std::ostringstream os;
@@ -30,4 +30,6 @@ int main()
     is.ignore(ignoreLen);
     std::istringstream::pos_type b=is.tellg();
     assert((b-a)==ignoreLen);
+
+  return 0;
 }

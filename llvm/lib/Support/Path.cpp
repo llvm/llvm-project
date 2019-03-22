@@ -1128,26 +1128,27 @@ TempFile::~TempFile() { assert(Done); }
 
 Error TempFile::discard() {
   Done = true;
-  std::error_code RemoveEC;
-// On windows closing will remove the file.
-#ifndef _WIN32
-  // Always try to close and remove.
-  if (!TmpName.empty()) {
-    RemoveEC = fs::remove(TmpName);
-    sys::DontRemoveFileOnSignal(TmpName);
-  }
-#endif
-
-  if (!RemoveEC)
-    TmpName = "";
-
   if (FD != -1 && close(FD) == -1) {
     std::error_code EC = std::error_code(errno, std::generic_category());
     return errorCodeToError(EC);
   }
   FD = -1;
 
+#ifdef _WIN32
+  // On windows closing will remove the file.
+  TmpName = "";
+  return Error::success();
+#else
+  // Always try to close and remove.
+  std::error_code RemoveEC;
+  if (!TmpName.empty()) {
+    RemoveEC = fs::remove(TmpName);
+    sys::DontRemoveFileOnSignal(TmpName);
+    if (!RemoveEC)
+      TmpName = "";
+  }
   return errorCodeToError(RemoveEC);
+#endif
 }
 
 Error TempFile::keep(const Twine &Name) {

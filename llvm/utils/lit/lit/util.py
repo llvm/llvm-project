@@ -102,6 +102,20 @@ def to_string(b):
         raise TypeError('not sure how to convert %s to %s' % (type(b), str))
 
 
+def to_unicode(s):
+    """Return the parameter as type which supports unicode, possibly decoding
+    it.
+
+    In Python2, this is the unicode type. In Python3 it's the str type.
+
+    """
+    if isinstance(s, bytes):
+        # In Python2, this branch is taken for both 'str' and 'bytes'.
+        # In Python3, this branch is taken only for 'bytes'.
+        return s.decode('utf-8')
+    return s
+
+
 def detectCPUs():
     """Detects the number of CPUs on a system.
 
@@ -424,3 +438,17 @@ def killProcessAndChildren(pid):
         psutilProc.kill()
     except psutil.NoSuchProcess:
         pass
+
+
+try:
+    import win32api
+except ImportError:
+    win32api = None
+
+def abort_now():
+    """Abort the current process without doing any exception teardown"""
+    sys.stdout.flush()
+    if win32api:
+        win32api.TerminateProcess(win32api.GetCurrentProcess(), 3)
+    else:
+        os.kill(0, 9)

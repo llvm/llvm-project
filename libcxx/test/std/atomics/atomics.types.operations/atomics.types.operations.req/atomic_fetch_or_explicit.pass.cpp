@@ -46,7 +46,9 @@ struct TestFn {
   }
 };
 
-int main()
+int main(int, char**)
 {
     TestEachIntegralType<TestFn>()();
+
+  return 0;
 }

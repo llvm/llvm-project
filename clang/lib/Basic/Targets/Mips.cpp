@@ -215,6 +215,14 @@ ArrayRef<Builtin::Info> MipsTargetInfo::getTargetBuiltins() const {
                                              Builtin::FirstTSBuiltin);
 }
 
+unsigned MipsTargetInfo::getUnwindWordWidth() const {
+  return llvm::StringSwitch<unsigned>(ABI)
+      .Case("o32", 32)
+      .Case("n32", 64)
+      .Case("n64", 64)
+      .Default(getPointerWidth(0));
+}
+
 bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   // microMIPS64R6 backend was removed.
   if (getTriple().isMIPS64() && IsMicromips && (ABI == "n32" || ABI == "n64")) {

@@ -708,8 +708,8 @@ v_mov_b32 v1, s2 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 
 // NOSICI: error:
 // NOVI: error:
-// GFX9: v_mov_b32_sdwa v1, exec dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x02,0x02,0x7e,0x7e,0x10,0x86,0x00]
-v_mov_b32 v1, exec dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
+// GFX9: v_mov_b32_sdwa v1, exec_lo dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x02,0x02,0x7e,0x7e,0x10,0x86,0x00]
+v_mov_b32 v1, exec_lo dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 
 // NOSICI: error:
 // NOVI: error:
@@ -729,7 +729,7 @@ v_add_f32 v0, v0, s22 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_s
 // NOSICI: error:
 // NOVI: error:
 // NO: invalid operand (violates constant bus restrictions)
-v_add_f32 v0, exec, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+v_add_f32 v0, exec_lo, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error:
 // NOVI: error:
@@ -774,7 +774,7 @@ v_cmp_eq_f32_sdwa vcc, v1, ttmp15 src0_sel:WORD_1 src1_sel:BYTE_2
 // NOSICI: error:
 // NOVI: error:
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
-v_cmp_eq_f32_sdwa vcc, exec, vcc src0_sel:WORD_1 src1_sel:BYTE_2
+v_cmp_eq_f32_sdwa vcc, exec_lo, vcc_lo src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error:
 // NOVI: error:
@@ -1081,3 +1081,71 @@ v_add_f32 v0, v0, v0 clamp div:2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WO
 // NOVI: error:
 // GFX9: v_screen_partition_4se_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 ; encoding: [0xf9,0x6e,0x0a,0x7e,0x01,0x16,0x00,0x00]
 v_screen_partition_4se_b32_sdwa v5, v1 src0_sel:BYTE_0
+
+//===----------------------------------------------------------------------===//
+// Validate register size checks (bug 37943)
+//===----------------------------------------------------------------------===//
+
+// NOSICI: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+v_add_f32 v0, s[0:1], v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+v_add_f32 v0, s[0:3], v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+v_add_f32 v0, v[0:1], v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+v_add_f32 v0, v[0:2], v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+v_add_f32 v0, v0, s[0:1] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+v_add_f32 v0, s0, v[0:1] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+v_add_f32 v0, s0, v[0:3] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+v_add_f16 v1, v[2:3], v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+v_add_f16 v1, s[2:3], v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+v_add_f16 v1, v2, v[2:3] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+v_add_f16 v1, v2, s[2:3] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: not a valid operand
+// NOVI: error: not a valid operand
+// NOGFX9: error: invalid operand for instruction
+v_add_u32 v1, v[2:3], v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: not a valid operand
+// NOVI: error: not a valid operand
+// NOGFX9: error: invalid operand for instruction
+v_add_u32 v1, s[2:3], v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: not a valid operand
+// NOVI: error: not a valid operand
+// NOGFX9: error: invalid operand for instruction
+v_add_u32 v1, v3, v[2:3] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error: not a valid operand
+// NOVI: error: not a valid operand
+// NOGFX9: error: invalid operand for instruction
+v_add_u32 v1, v3, s[2:3] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2

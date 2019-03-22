@@ -2090,7 +2090,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
   if (byte_size || *byte_size == 0)
     return false;
 
-  std::unique_ptr<DataBufferHeap> heap_data_ap(
+  std::unique_ptr<DataBufferHeap> heap_data_up(
       new DataBufferHeap(*byte_size, 0));
   const ByteOrder byte_order = exe_ctx.GetProcessRef().GetByteOrder();
   Status error;
@@ -2124,10 +2124,10 @@ static bool LoadValueFromConsecutiveGPRRegisters(
         if (!reg_ctx->ReadRegister(reg_info, reg_value))
           return false;
 
-        // Make sure we have enough room in "heap_data_ap"
-        if ((data_offset + *base_byte_size) <= heap_data_ap->GetByteSize()) {
+        // Make sure we have enough room in "heap_data_up"
+        if ((data_offset + *base_byte_size) <= heap_data_up->GetByteSize()) {
           const size_t bytes_copied = reg_value.GetAsMemoryData(
-              reg_info, heap_data_ap->GetBytes() + data_offset, *base_byte_size,
+              reg_info, heap_data_up->GetBytes() + data_offset, *base_byte_size,
               byte_order, error);
           if (bytes_copied != *base_byte_size)
             return false;
@@ -2138,7 +2138,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
       }
       data.SetByteOrder(byte_order);
       data.SetAddressByteSize(exe_ctx.GetProcessRef().GetAddressByteSize());
-      data.SetData(DataBufferSP(heap_data_ap.release()));
+      data.SetData(DataBufferSP(heap_data_up.release()));
       return true;
     }
   }
@@ -2163,7 +2163,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
 
       const size_t curr_byte_size = std::min<size_t>(8, bytes_left);
       const size_t bytes_copied = reg_value.GetAsMemoryData(
-          reg_info, heap_data_ap->GetBytes() + data_offset, curr_byte_size,
+          reg_info, heap_data_up->GetBytes() + data_offset, curr_byte_size,
           byte_order, error);
       if (bytes_copied == 0)
         return false;
@@ -2204,15 +2204,15 @@ static bool LoadValueFromConsecutiveGPRRegisters(
       return false;
 
     if (exe_ctx.GetProcessRef().ReadMemory(
-            value_addr, heap_data_ap->GetBytes(), heap_data_ap->GetByteSize(),
-            error) != heap_data_ap->GetByteSize()) {
+            value_addr, heap_data_up->GetBytes(), heap_data_up->GetByteSize(),
+            error) != heap_data_up->GetByteSize()) {
       return false;
     }
   }
 
   data.SetByteOrder(byte_order);
   data.SetAddressByteSize(exe_ctx.GetProcessRef().GetAddressByteSize());
-  data.SetData(DataBufferSP(heap_data_ap.release()));
+  data.SetData(DataBufferSP(heap_data_up.release()));
   return true;
 }
 
@@ -2266,7 +2266,7 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
               if (x1_reg_info) {
                 if (*byte_size <=
                     x0_reg_info->byte_size + x1_reg_info->byte_size) {
-                  std::unique_ptr<DataBufferHeap> heap_data_ap(
+                  std::unique_ptr<DataBufferHeap> heap_data_up(
                       new DataBufferHeap(*byte_size, 0));
                   const ByteOrder byte_order =
                       exe_ctx.GetProcessRef().GetByteOrder();
@@ -2276,13 +2276,13 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
                       reg_ctx->ReadRegister(x1_reg_info, x1_reg_value)) {
                     Status error;
                     if (x0_reg_value.GetAsMemoryData(
-                            x0_reg_info, heap_data_ap->GetBytes() + 0, 8,
+                            x0_reg_info, heap_data_up->GetBytes() + 0, 8,
                             byte_order, error) &&
                         x1_reg_value.GetAsMemoryData(
-                            x1_reg_info, heap_data_ap->GetBytes() + 8, 8,
+                            x1_reg_info, heap_data_up->GetBytes() + 8, 8,
                             byte_order, error)) {
                       DataExtractor data(
-                          DataBufferSP(heap_data_ap.release()), byte_order,
+                          DataBufferSP(heap_data_up.release()), byte_order,
                           exe_ctx.GetProcessRef().GetAddressByteSize());
 
                       return_valobj_sp = ValueObjectConstResult::Create(
@@ -2364,16 +2364,16 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
       const RegisterInfo *v0_info = reg_ctx->GetRegisterInfoByName("v0", 0);
 
       if (v0_info) {
-        std::unique_ptr<DataBufferHeap> heap_data_ap(
+        std::unique_ptr<DataBufferHeap> heap_data_up(
             new DataBufferHeap(*byte_size, 0));
         const ByteOrder byte_order = exe_ctx.GetProcessRef().GetByteOrder();
         RegisterValue reg_value;
         if (reg_ctx->ReadRegister(v0_info, reg_value)) {
           Status error;
-          if (reg_value.GetAsMemoryData(v0_info, heap_data_ap->GetBytes(),
-                                        heap_data_ap->GetByteSize(), byte_order,
+          if (reg_value.GetAsMemoryData(v0_info, heap_data_up->GetBytes(),
+                                        heap_data_up->GetByteSize(), byte_order,
                                         error)) {
-            DataExtractor data(DataBufferSP(heap_data_ap.release()), byte_order,
+            DataExtractor data(DataBufferSP(heap_data_up.release()), byte_order,
                                exe_ctx.GetProcessRef().GetAddressByteSize());
             return_valobj_sp = ValueObjectConstResult::Create(
                 &thread, return_compiler_type, ConstString(""), data);

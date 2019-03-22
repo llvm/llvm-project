@@ -80,7 +80,8 @@ class SizeClassAllocator64 {
       CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
     }
     SetReleaseToOSIntervalMs(release_to_os_interval_ms);
-    MapWithCallbackOrDie(SpaceEnd(), AdditionalSize());
+    MapWithCallbackOrDie(SpaceEnd(), AdditionalSize(),
+                         "SizeClassAllocator: region info");
     // Check that the RegionInfo array is aligned on the CacheLine size.
     DCHECK_EQ(SpaceEnd() % kCacheLineSize, 0);
   }
@@ -633,8 +634,8 @@ class SizeClassAllocator64 {
     return reinterpret_cast<CompactPtrT *>(GetMetadataEnd(region_beg));
   }
 
-  bool MapWithCallback(uptr beg, uptr size) {
-    uptr mapped = address_range.Map(beg, size);
+  bool MapWithCallback(uptr beg, uptr size, const char *name) {
+    uptr mapped = address_range.Map(beg, size, name);
     if (UNLIKELY(!mapped))
       return false;
     CHECK_EQ(beg, mapped);
@@ -642,8 +643,8 @@ class SizeClassAllocator64 {
     return true;
   }
 
-  void MapWithCallbackOrDie(uptr beg, uptr size) {
-    CHECK_EQ(beg, address_range.MapOrDie(beg, size));
+  void MapWithCallbackOrDie(uptr beg, uptr size, const char *name) {
+    CHECK_EQ(beg, address_range.MapOrDie(beg, size, name));
     MapUnmapCallback().OnMap(beg, size);
   }
 
@@ -661,7 +662,8 @@ class SizeClassAllocator64 {
       uptr current_map_end = reinterpret_cast<uptr>(GetFreeArray(region_beg)) +
                              region->mapped_free_array;
       uptr new_map_size = new_mapped_free_array - region->mapped_free_array;
-      if (UNLIKELY(!MapWithCallback(current_map_end, new_map_size)))
+      if (UNLIKELY(!MapWithCallback(current_map_end, new_map_size,
+                                    "SizeClassAllocator: freearray")))
         return false;
       region->mapped_free_array = new_mapped_free_array;
     }
@@ -712,7 +714,8 @@ class SizeClassAllocator64 {
       if (UNLIKELY(IsRegionExhausted(region, class_id, user_map_size)))
         return false;
       if (UNLIKELY(!MapWithCallback(region_beg + region->mapped_user,
-                                    user_map_size)))
+                                    user_map_size,
+                                    "SizeClassAllocator: region data")))
         return false;
       stat->Add(AllocatorStatMapped, user_map_size);
       region->mapped_user += user_map_size;
@@ -732,7 +735,7 @@ class SizeClassAllocator64 {
           return false;
         if (UNLIKELY(!MapWithCallback(
             GetMetadataEnd(region_beg) - region->mapped_meta - meta_map_size,
-            meta_map_size)))
+            meta_map_size, "SizeClassAllocator: region metadata")))
           return false;
         region->mapped_meta += meta_map_size;
       }

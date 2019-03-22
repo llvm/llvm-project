@@ -20,7 +20,7 @@
 
 struct testbuf : public std::streambuf {};
 
-int main()
+int main(int, char**)
 {
     {
         std::ios ios(0);
@@ -48,4 +48,6 @@ int main()
         ios.exceptions(std::ios::badbit);
         assert(ios.exceptions() == std::ios::badbit);
     }
+
+  return 0;
 }

@@ -490,13 +490,11 @@ size_t Mangled::MemorySize() const {
 lldb::LanguageType Mangled::GuessLanguage() const {
   ConstString mangled = GetMangledName();
   if (mangled) {
-    if (GetDemangledName(lldb::eLanguageTypeUnknown)) {
-      const char *mangled_name = mangled.GetCString();
-      if (CPlusPlusLanguage::IsCPPMangledName(mangled_name))
-        return lldb::eLanguageTypeC_plus_plus;
-      else if (ObjCLanguage::IsPossibleObjCMethodName(mangled_name))
-        return lldb::eLanguageTypeObjC;
-    }
+    const char *mangled_name = mangled.GetCString();
+    if (CPlusPlusLanguage::IsCPPMangledName(mangled_name))
+      return lldb::eLanguageTypeC_plus_plus;
+    else if (ObjCLanguage::IsPossibleObjCMethodName(mangled_name))
+      return lldb::eLanguageTypeObjC;
   } else {
     // ObjC names aren't really mangled, so they won't necessarily be in the
     // mangled name slot.

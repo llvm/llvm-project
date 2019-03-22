@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "index/Index.h"
 #include "index/IndexAction.h"
 #include "index/Merge.h"
+#include "index/Ref.h"
 #include "index/Serialization.h"
+#include "index/Symbol.h"
 #include "index/SymbolCollector.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"

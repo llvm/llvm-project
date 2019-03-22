@@ -27,7 +27,7 @@ struct test
     virtual int_type pbackfail(int_type c = EOF) {return base::pbackfail(c);}
 };
 
-int main()
+int main(int, char**)
 {
     {
         const char buf[] = "123";
@@ -58,4 +58,6 @@ int main()
         assert(sb.pbackfail(EOF) == EOF);
         assert(sb.str() == std::string("133"));
     }
+
+  return 0;
 }

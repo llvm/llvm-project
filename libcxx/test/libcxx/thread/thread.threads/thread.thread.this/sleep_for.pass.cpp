@@ -34,7 +34,7 @@
 
 void sig_action(int) {}
 
-int main()
+int main(int, char**)
 {
     int ec;
     struct sigaction action;
@@ -64,4 +64,6 @@ int main()
     std::chrono::nanoseconds err = 5 * ms / 100;
     // The time slept is within 5% of 500ms
     assert(std::abs(ns.count()) < err.count());
+
+  return 0;
 }

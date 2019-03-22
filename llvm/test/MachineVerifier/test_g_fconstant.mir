@@ -1,0 +1,35 @@
+#RUN: not llc -march=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: global-isel, aarch64-registered-target
+
+---
+name:            test_fconstant
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    ; CHECK: Bad machine code: Instruction cannot use a vector result type
+    %0:_(<2 x s32>) = G_FCONSTANT float 0.0
+
+    ; CHECK: Bad machine code: Too few operands
+    %1:_(s32) = G_FCONSTANT
+
+    ; Not a cimm
+    ; CHECK: Bad machine code:  G_FCONSTANT operand must be fpimm
+    %2:_(s32) = G_FCONSTANT 0
+
+    ; Not a cimm
+    ; CHECK: Bad machine code:  G_FCONSTANT operand must be fpimm
+    %3:_(s32) = G_FCONSTANT i32 0
+
+   ;  Size is bigger than result
+   ; CHECK: Bad machine code: inconsistent constant size
+    %4:_(s32) = G_FCONSTANT double 1.0
+
+    ; Size is smaller than result
+    ; CHECK: Bad machine code: inconsistent constant size
+    %4:_(s32) = G_FCONSTANT half 1.0
+
+...

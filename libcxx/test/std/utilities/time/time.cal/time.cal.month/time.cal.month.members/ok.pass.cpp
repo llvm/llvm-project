@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using month = std::chrono::month;
 
@@ -34,4 +34,6 @@ int main()
         assert(month{i}.ok());
     for (unsigned i = 13; i <= 255; ++i)
         assert(!month{i}.ok());
+
+  return 0;
 }

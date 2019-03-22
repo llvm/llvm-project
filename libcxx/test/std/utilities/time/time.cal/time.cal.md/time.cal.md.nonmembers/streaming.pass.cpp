@@ -31,10 +31,12 @@
 #include <iostream>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using month_day = std::chrono::month_day;
     using month     = std::chrono::month;
     using day       = std::chrono::day;
     std::cout << month_day{month{1}, day{1}};
+
+  return 0;
 }

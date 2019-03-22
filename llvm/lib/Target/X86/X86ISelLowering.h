@@ -598,29 +598,27 @@ namespace llvm {
       /// integer destination in memory and a FP reg source.  This corresponds
       /// to the X86::FIST*m instructions and the rounding mode change stuff. It
       /// has two inputs (token chain and address) and two outputs (int value
-      /// and token chain).
-      FP_TO_INT16_IN_MEM,
-      FP_TO_INT32_IN_MEM,
-      FP_TO_INT64_IN_MEM,
+      /// and token chain). Memory VT specifies the type to store to.
+      FP_TO_INT_IN_MEM,
 
       /// This instruction implements SINT_TO_FP with the
       /// integer source in memory and FP reg result.  This corresponds to the
-      /// X86::FILD*m instructions. It has three inputs (token chain, address,
-      /// and source type) and two outputs (FP value and token chain). FILD_FLAG
-      /// also produces a flag).
+      /// X86::FILD*m instructions. It has two inputs (token chain and address)
+      /// and two outputs (FP value and token chain). FILD_FLAG also produces a
+      /// flag). The integer source type is specified by the memory VT.
       FILD,
       FILD_FLAG,
 
       /// This instruction implements an extending load to FP stack slots.
       /// This corresponds to the X86::FLD32m / X86::FLD64m. It takes a chain
-      /// operand, ptr to load from, and a ValueType node indicating the type
-      /// to load to.
+      /// operand, and ptr to load from. The memory VT specifies the type to
+      /// load from.
       FLD,
 
       /// This instruction implements a truncating store to FP stack
       /// slots. This corresponds to the X86::FST32m / X86::FST64m. It takes a
-      /// chain operand, value to store, address, and a ValueType to store it
-      /// as.
+      /// chain operand, value to store, and address. The memory VT specifies
+      /// the type to store as.
       FST,
 
       /// This instruction grabs the address of the next argument
@@ -923,6 +921,11 @@ namespace llvm {
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 
+    /// Handle Lowering flag assembly outputs.
+    SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag, SDLoc DL,
+                                        const AsmOperandInfo &Constraint,
+                                        SelectionDAG &DAG) const override;
+
     /// Given a physical register constraint
     /// (e.g. {edx}), return the register number and the register class for the
     /// register.  This should only be used for C_Register constraints.  On
@@ -1067,6 +1070,11 @@ namespace llvm {
     /// the vector equivalent, so this always makes sense if the scalar op is
     /// supported.
     bool shouldScalarizeBinop(SDValue) const override;
+
+    /// Overflow nodes should get combined/lowered to optimal instructions
+    /// (they should allow eliminating explicit compares by getting flags from
+    /// math ops).
+    bool shouldFormOverflowOp(unsigned Opcode, EVT VT) const override;
 
     bool storeOfVectorConstantIsCheap(EVT MemVT, unsigned NumElem,
                                       unsigned AddrSpace) const override {
@@ -1226,9 +1234,7 @@ namespace llvm {
 
     unsigned getAddressSpace(void) const;
 
-    std::pair<SDValue,SDValue> FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
-                                               bool isSigned,
-                                               bool isReplace) const;
+    SDValue FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG, bool isSigned) const;
 
     SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVSELECT(SDValue Op, SelectionDAG &DAG) const;

@@ -40,10 +40,12 @@ struct Comp {
   }
 };
 
-int main() {
+int main(int, char**) {
   std::multimap<std::pair<int, int>, int, Comp> s{
       {{2, 1}, 1}, {{1, 1}, 2}, {{1, 1}, 3}, {{1, 1}, 4}, {{2, 2}, 5}};
 
   auto cnt = s.count(1);
   assert(cnt == 3);
+
+  return 0;
 }

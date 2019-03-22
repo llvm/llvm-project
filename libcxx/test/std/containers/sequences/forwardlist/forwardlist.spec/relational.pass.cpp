@@ -52,7 +52,7 @@ void test(int N, int M)
         assert(c1 > c2);
 }
 
-int main()
+int main(int, char**)
 {
     for (int i = 0; i < 10; ++i)
         for (int j = 0; j < 10; ++j)
@@ -62,4 +62,6 @@ int main()
         for (int j = 0; j < 10; ++j)
             test<std::forward_list<int, min_allocator<int>> >(i, j);
 #endif
+
+  return 0;
 }

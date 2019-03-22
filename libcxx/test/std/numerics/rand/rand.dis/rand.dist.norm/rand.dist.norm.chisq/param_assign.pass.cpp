@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::chi_squared_distribution<> D;
@@ -27,4 +27,6 @@ int main()
         p = p0;
         assert(p.n() == .75);
     }
+
+  return 0;
 }

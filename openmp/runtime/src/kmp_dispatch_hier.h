@@ -263,8 +263,8 @@ void core_barrier_impl<T>::barrier(kmp_int32 id,
                 next_wait_value));
   char v = (current_wait_value ? 0x1 : 0x0);
   (RCAST(volatile char *, &(bdata->val[current_index])))[id] = v;
-  __kmp_wait_yield<kmp_uint64>(&(bdata->val[current_index]), current_wait_value,
-                               __kmp_eq<kmp_uint64> USE_ITT_BUILD_ARG(NULL));
+  __kmp_wait<kmp_uint64>(&(bdata->val[current_index]), current_wait_value,
+                         __kmp_eq<kmp_uint64> USE_ITT_BUILD_ARG(NULL));
   tdata->wait_val[current_index] = next_wait_value;
   tdata->index = next_index;
 }
@@ -310,8 +310,8 @@ void counter_barrier_impl<T>::barrier(kmp_int32 id,
                 next_wait_value));
   val = RCAST(volatile kmp_int64 *, &(bdata->val[current_index]));
   KMP_TEST_THEN_INC64(val);
-  __kmp_wait_yield<kmp_uint64>(&(bdata->val[current_index]), current_wait_value,
-                               __kmp_ge<kmp_uint64> USE_ITT_BUILD_ARG(NULL));
+  __kmp_wait<kmp_uint64>(&(bdata->val[current_index]), current_wait_value,
+                         __kmp_ge<kmp_uint64> USE_ITT_BUILD_ARG(NULL));
   tdata->wait_val[current_index] = next_wait_value;
   tdata->index = next_index;
 }

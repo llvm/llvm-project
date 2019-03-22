@@ -10,9 +10,11 @@
 #include "ClangdUnit.h"
 #include "Logger.h"
 #include "SymbolCollector.h"
+#include "index/CanonicalIncludes.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
 #include "index/Merge.h"
+#include "index/SymbolOrigin.h"
 #include "index/dex/Dex.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Lex/MacroInfo.h"
@@ -28,14 +30,11 @@ namespace clangd {
 
 static std::pair<SymbolSlab, RefSlab>
 indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-             llvm::ArrayRef<Decl *> DeclsToIndex, bool IsIndexMainAST) {
+             llvm::ArrayRef<Decl *> DeclsToIndex,
+             const CanonicalIncludes &Includes, bool IsIndexMainAST) {
   SymbolCollector::Options CollectorOpts;
-  // FIXME(ioeric): we might also want to collect include headers. We would need
-  // to make sure all includes are canonicalized (with CanonicalIncludes), which
-  // is not trivial given the current way of collecting symbols: we only have
-  // AST at this point, but we also need preprocessor callbacks (e.g.
-  // CommentHandler for IWYU pragma) to canonicalize includes.
-  CollectorOpts.CollectIncludePath = false;
+  CollectorOpts.CollectIncludePath = true;
+  CollectorOpts.Includes = &Includes;
   CollectorOpts.CountReferences = false;
   CollectorOpts.Origin = SymbolOrigin::Dynamic;
 
@@ -47,9 +46,13 @@ indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   if (IsIndexMainAST) {
     // We only collect refs when indexing main AST.
     CollectorOpts.RefFilter = RefKind::All;
-  }else {
+    // Comments for main file can always be obtained from sema, do not store
+    // them in the index.
+    CollectorOpts.StoreAllDocumentation = false;
+  } else {
     IndexOpts.IndexMacrosInPreprocessor = true;
     CollectorOpts.CollectMacro = true;
+    CollectorOpts.StoreAllDocumentation = true;
   }
 
   SymbolCollector Collector(std::move(CollectorOpts));
@@ -72,16 +75,16 @@ indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 
 std::pair<SymbolSlab, RefSlab> indexMainDecls(ParsedAST &AST) {
   return indexSymbols(AST.getASTContext(), AST.getPreprocessorPtr(),
-                      AST.getLocalTopLevelDecls(),
+                      AST.getLocalTopLevelDecls(), AST.getCanonicalIncludes(),
                       /*IsIndexMainAST=*/true);
 }
 
-SymbolSlab indexHeaderSymbols(ASTContext &AST,
-                              std::shared_ptr<Preprocessor> PP) {
+SymbolSlab indexHeaderSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
+                              const CanonicalIncludes &Includes) {
   std::vector<Decl *> DeclsToIndex(
       AST.getTranslationUnitDecl()->decls().begin(),
       AST.getTranslationUnitDecl()->decls().end());
-  return indexSymbols(AST, std::move(PP), DeclsToIndex,
+  return indexSymbols(AST, std::move(PP), DeclsToIndex, Includes,
                       /*IsIndexMainAST=*/false)
       .first;
 }
@@ -195,8 +198,9 @@ FileIndex::FileIndex(bool UseDex)
       MainFileIndex(llvm::make_unique<MemIndex>()) {}
 
 void FileIndex::updatePreamble(PathRef Path, ASTContext &AST,
-                               std::shared_ptr<Preprocessor> PP) {
-  auto Symbols = indexHeaderSymbols(AST, std::move(PP));
+                               std::shared_ptr<Preprocessor> PP,
+                               const CanonicalIncludes &Includes) {
+  auto Symbols = indexHeaderSymbols(AST, std::move(PP), Includes);
   PreambleSymbols.update(Path,
                          llvm::make_unique<SymbolSlab>(std::move(Symbols)),
                          llvm::make_unique<RefSlab>());

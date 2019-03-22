@@ -32,14 +32,16 @@ namespace mca {
 /// the pre-built "default" out-of-order pipeline.
 struct PipelineOptions {
   PipelineOptions(unsigned DW, unsigned RFS, unsigned LQS, unsigned SQS,
-                  bool NoAlias)
+                  bool NoAlias, bool ShouldEnableBottleneckAnalysis = false)
       : DispatchWidth(DW), RegisterFileSize(RFS), LoadQueueSize(LQS),
-        StoreQueueSize(SQS), AssumeNoAlias(NoAlias) {}
+        StoreQueueSize(SQS), AssumeNoAlias(NoAlias),
+        EnableBottleneckAnalysis(ShouldEnableBottleneckAnalysis) {}
   unsigned DispatchWidth;
   unsigned RegisterFileSize;
   unsigned LoadQueueSize;
   unsigned StoreQueueSize;
   bool AssumeNoAlias;
+  bool EnableBottleneckAnalysis;
 };
 
 class Context {

@@ -59,7 +59,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
@@ -141,10 +140,6 @@ static const char *const CodeViewLineTablesGroupDescription =
   "CodeView Line Tables";
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
-
-static cl::opt<bool>
-    PrintSchedule("print-schedule", cl::Hidden, cl::init(false),
-                  cl::desc("Print 'sched: [latency:throughput]' in .s output"));
 
 char AsmPrinter::ID = 0;
 
@@ -746,74 +741,30 @@ void AsmPrinter::EmitFunctionEntryLabel() {
 }
 
 /// emitComments - Pretty-print comments for instructions.
-/// It returns true iff the sched comment was emitted.
-///   Otherwise it returns false.
-static bool emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
-                         AsmPrinter *AP) {
+static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
   const MachineFunction *MF = MI.getMF();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
   // Check for spills and reloads
-  int FI;
-
-  const MachineFrameInfo &MFI = MF->getFrameInfo();
-  bool Commented = false;
-
-  auto getSize =
-      [&MFI](const SmallVectorImpl<const MachineMemOperand *> &Accesses) {
-        unsigned Size = 0;
-        for (auto A : Accesses)
-          if (MFI.isSpillSlotObjectIndex(
-                  cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
-                      ->getFrameIndex()))
-            Size += A->getSize();
-        return Size;
-      };
 
   // We assume a single instruction only has a spill or reload, not
   // both.
-  const MachineMemOperand *MMO;
-  SmallVector<const MachineMemOperand *, 2> Accesses;
-  if (TII->isLoadFromStackSlotPostFE(MI, FI)) {
-    if (MFI.isSpillSlotObjectIndex(FI)) {
-      MMO = *MI.memoperands_begin();
-      CommentOS << MMO->getSize() << "-byte Reload";
-      Commented = true;
-    }
-  } else if (TII->hasLoadFromStackSlot(MI, Accesses)) {
-    if (auto Size = getSize(Accesses)) {
-      CommentOS << Size << "-byte Folded Reload";
-      Commented = true;
-    }
-  } else if (TII->isStoreToStackSlotPostFE(MI, FI)) {
-    if (MFI.isSpillSlotObjectIndex(FI)) {
-      MMO = *MI.memoperands_begin();
-      CommentOS << MMO->getSize() << "-byte Spill";
-      Commented = true;
-    }
-  } else if (TII->hasStoreToStackSlot(MI, Accesses)) {
-    if (auto Size = getSize(Accesses)) {
-      CommentOS << Size << "-byte Folded Spill";
-      Commented = true;
-    }
+  Optional<unsigned> Size;
+  if ((Size = MI.getRestoreSize(TII))) {
+    CommentOS << *Size << "-byte Reload\n";
+  } else if ((Size = MI.getFoldedRestoreSize(TII))) {
+    if (*Size)
+      CommentOS << *Size << "-byte Folded Reload\n";
+  } else if ((Size = MI.getSpillSize(TII))) {
+    CommentOS << *Size << "-byte Spill\n";
+  } else if ((Size = MI.getFoldedSpillSize(TII))) {
+    if (*Size)
+      CommentOS << *Size << "-byte Folded Spill\n";
   }
 
   // Check for spill-induced copies
-  if (MI.getAsmPrinterFlag(MachineInstr::ReloadReuse)) {
-    Commented = true;
-    CommentOS << " Reload Reuse";
-  }
-
-  if (Commented) {
-    if (AP->EnablePrintSchedInfo) {
-      // If any comment was added above and we need sched info comment then add
-      // this new comment just after the above comment w/o "\n" between them.
-      CommentOS << " " << MF->getSubtarget().getSchedInfoStr(MI) << "\n";
-      return true;
-    }
-    CommentOS << "\n";
-  }
-  return false;
+  if (MI.getAsmPrinterFlag(MachineInstr::ReloadReuse))
+    CommentOS << " Reload Reuse\n";
 }
 
 /// emitImplicitDef - This method emits the specified machine instruction
@@ -1101,10 +1052,8 @@ void AsmPrinter::EmitFunctionBody() {
         }
       }
 
-      if (isVerbose() && emitComments(MI, OutStreamer->GetCommentOS(), this)) {
-        MachineInstr *MIP = const_cast<MachineInstr *>(&MI);
-        MIP->setAsmPrinterFlag(MachineInstr::NoSchedComment);
-      }
+      if (isVerbose())
+        emitComments(MI, OutStreamer->GetCommentOS());
 
       switch (MI.getOpcode()) {
       case TargetOpcode::CFI_INSTRUCTION:
@@ -1118,6 +1067,7 @@ void AsmPrinter::EmitFunctionBody() {
         OutStreamer->EmitLabel(MI.getOperand(0).getMCSymbol());
         break;
       case TargetOpcode::INLINEASM:
+      case TargetOpcode::INLINEASM_BR:
         EmitInlineAsm(&MI);
         break;
       case TargetOpcode::DBG_VALUE:
@@ -1337,9 +1287,19 @@ void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
   else
     assert(GIS.hasLocalLinkage() && "Invalid alias or ifunc linkage");
 
+  bool IsFunction = GIS.getType()->getPointerElementType()->isFunctionTy();
+
+  // Treat bitcasts of functions as functions also. This is important at least
+  // on WebAssembly where object and function addresses can't alias each other.
+  if (!IsFunction)
+    if (auto *CE = dyn_cast<ConstantExpr>(GIS.getIndirectSymbol()))
+      if (CE->getOpcode() == Instruction::BitCast)
+        IsFunction =
+          CE->getOperand(0)->getType()->getPointerElementType()->isFunctionTy();
+
   // Set the symbol type to function if the alias has a function type.
   // This affects codegen when the aliasee is not a function.
-  if (GIS.getType()->getPointerElementType()->isFunctionTy()) {
+  if (IsFunction) {
     OutStreamer->EmitSymbolAttribute(Name, MCSA_ELF_TypeFunction);
     if (isa<GlobalIFunc>(GIS))
       OutStreamer->EmitSymbolAttribute(Name, MCSA_ELF_TypeIndFunction);
@@ -1636,11 +1596,6 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   }
 
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  EnablePrintSchedInfo = PrintSchedule.getNumOccurrences()
-                             ? PrintSchedule
-                             : STI.supportPrintSchedInfo();
 }
 
 namespace {
@@ -1913,8 +1868,7 @@ bool AsmPrinter::EmitSpecialLLVMGlobal(const GlobalVariable *GV) {
 }
 
 /// EmitLLVMUsedList - For targets that define a MAI::UsedDirective, mark each
-/// global in the specified llvm.used list for which emitUsedDirectiveFor
-/// is true, as being used with this directive.
+/// global in the specified llvm.used list.
 void AsmPrinter::EmitLLVMUsedList(const ConstantArray *InitList) {
   // Should be an array of 'i8*'.
   for (unsigned i = 0, e = InitList->getNumOperands(); i != e; ++i) {

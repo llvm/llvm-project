@@ -28,14 +28,13 @@
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/ProcessRunLock.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Memory.h"
-#include "lldb/Target/ProcessInfo.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -43,9 +42,11 @@
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/TraceOptions.h"
+#include "lldb/Utility/UserIDResolver.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -106,63 +107,6 @@ protected:
 };
 
 typedef std::shared_ptr<ProcessProperties> ProcessPropertiesSP;
-
-//----------------------------------------------------------------------
-// ProcessInstanceInfo
-//
-// Describes an existing process and any discoverable information that pertains
-// to that process.
-//----------------------------------------------------------------------
-class ProcessInstanceInfo : public ProcessInfo {
-public:
-  ProcessInstanceInfo()
-      : ProcessInfo(), m_euid(UINT32_MAX), m_egid(UINT32_MAX),
-        m_parent_pid(LLDB_INVALID_PROCESS_ID) {}
-
-  ProcessInstanceInfo(const char *name, const ArchSpec &arch, lldb::pid_t pid)
-      : ProcessInfo(name, arch, pid), m_euid(UINT32_MAX), m_egid(UINT32_MAX),
-        m_parent_pid(LLDB_INVALID_PROCESS_ID) {}
-
-  void Clear() {
-    ProcessInfo::Clear();
-    m_euid = UINT32_MAX;
-    m_egid = UINT32_MAX;
-    m_parent_pid = LLDB_INVALID_PROCESS_ID;
-  }
-
-  uint32_t GetEffectiveUserID() const { return m_euid; }
-
-  uint32_t GetEffectiveGroupID() const { return m_egid; }
-
-  bool EffectiveUserIDIsValid() const { return m_euid != UINT32_MAX; }
-
-  bool EffectiveGroupIDIsValid() const { return m_egid != UINT32_MAX; }
-
-  void SetEffectiveUserID(uint32_t uid) { m_euid = uid; }
-
-  void SetEffectiveGroupID(uint32_t gid) { m_egid = gid; }
-
-  lldb::pid_t GetParentProcessID() const { return m_parent_pid; }
-
-  void SetParentProcessID(lldb::pid_t pid) { m_parent_pid = pid; }
-
-  bool ParentProcessIDIsValid() const {
-    return m_parent_pid != LLDB_INVALID_PROCESS_ID;
-  }
-
-  void Dump(Stream &s, Platform *platform) const;
-
-  static void DumpTableHeader(Stream &s, Platform *platform, bool show_args,
-                              bool verbose);
-
-  void DumpAsTableRow(Stream &s, Platform *platform, bool show_args,
-                      bool verbose) const;
-
-protected:
-  uint32_t m_euid;
-  uint32_t m_egid;
-  lldb::pid_t m_parent_pid;
-};
 
 //----------------------------------------------------------------------
 // ProcessAttachInfo
@@ -296,94 +240,6 @@ public:
 
   ProcessLaunchInfo launch_info;
   lldb_private::LazyBool disable_aslr;
-};
-
-//----------------------------------------------------------------------
-// ProcessInstanceInfoMatch
-//
-// A class to help matching one ProcessInstanceInfo to another.
-//----------------------------------------------------------------------
-
-class ProcessInstanceInfoMatch {
-public:
-  ProcessInstanceInfoMatch()
-      : m_match_info(), m_name_match_type(NameMatch::Ignore),
-        m_match_all_users(false) {}
-
-  ProcessInstanceInfoMatch(const char *process_name,
-                           NameMatch process_name_match_type)
-      : m_match_info(), m_name_match_type(process_name_match_type),
-        m_match_all_users(false) {
-    m_match_info.GetExecutableFile().SetFile(process_name,
-                                             FileSpec::Style::native);
-  }
-
-  ProcessInstanceInfo &GetProcessInfo() { return m_match_info; }
-
-  const ProcessInstanceInfo &GetProcessInfo() const { return m_match_info; }
-
-  bool GetMatchAllUsers() const { return m_match_all_users; }
-
-  void SetMatchAllUsers(bool b) { m_match_all_users = b; }
-
-  NameMatch GetNameMatchType() const { return m_name_match_type; }
-
-  void SetNameMatchType(NameMatch name_match_type) {
-    m_name_match_type = name_match_type;
-  }
-
-  bool NameMatches(const char *process_name) const;
-
-  bool Matches(const ProcessInstanceInfo &proc_info) const;
-
-  bool MatchAllProcesses() const;
-  void Clear();
-
-protected:
-  ProcessInstanceInfo m_match_info;
-  NameMatch m_name_match_type;
-  bool m_match_all_users;
-};
-
-class ProcessInstanceInfoList {
-public:
-  ProcessInstanceInfoList() = default;
-
-  void Clear() { m_infos.clear(); }
-
-  size_t GetSize() { return m_infos.size(); }
-
-  void Append(const ProcessInstanceInfo &info) { m_infos.push_back(info); }
-
-  const char *GetProcessNameAtIndex(size_t idx) {
-    return ((idx < m_infos.size()) ? m_infos[idx].GetName() : nullptr);
-  }
-
-  size_t GetProcessNameLengthAtIndex(size_t idx) {
-    return ((idx < m_infos.size()) ? m_infos[idx].GetNameLength() : 0);
-  }
-
-  lldb::pid_t GetProcessIDAtIndex(size_t idx) {
-    return ((idx < m_infos.size()) ? m_infos[idx].GetProcessID() : 0);
-  }
-
-  bool GetInfoAtIndex(size_t idx, ProcessInstanceInfo &info) {
-    if (idx < m_infos.size()) {
-      info = m_infos[idx];
-      return true;
-    }
-    return false;
-  }
-
-  // You must ensure "idx" is valid before calling this function
-  const ProcessInstanceInfo &GetProcessInfoAtIndex(size_t idx) const {
-    assert(idx < m_infos.size());
-    return m_infos[idx];
-  }
-
-protected:
-  typedef std::vector<ProcessInstanceInfo> collection;
-  collection m_infos;
 };
 
 // This class tracks the Modification state of the process.  Things that can
@@ -2520,9 +2376,13 @@ public:
   //------------------------------------------------------------------
   void RestoreProcessEvents();
 
+  bool StateChangedIsHijackedForSynchronousResume();
+
+  bool StateChangedIsExternallyHijacked();
+
   const lldb::ABISP &GetABI();
 
-  OperatingSystem *GetOperatingSystem() { return m_os_ap.get(); }
+  OperatingSystem *GetOperatingSystem() { return m_os_up.get(); }
 
   virtual LanguageRuntime *GetLanguageRuntime(lldb::LanguageType language,
                                               bool retry_if_null = true);
@@ -2537,7 +2397,7 @@ public:
   bool IsRunning() const;
 
   DynamicCheckerFunctions *GetDynamicCheckers() {
-    return m_dynamic_checkers_ap.get();
+    return m_dynamic_checkers_up.get();
   }
 
   void SetDynamicCheckers(DynamicCheckerFunctions *dynamic_checkers);
@@ -2918,10 +2778,10 @@ protected:
   };
 
   void SetNextEventAction(Process::NextEventAction *next_event_action) {
-    if (m_next_event_action_ap.get())
-      m_next_event_action_ap->HandleBeingUnshipped();
+    if (m_next_event_action_up.get())
+      m_next_event_action_up->HandleBeingUnshipped();
 
-    m_next_event_action_ap.reset(next_event_action);
+    m_next_event_action_up.reset(next_event_action);
   }
 
   // This is the completer for Attaching:
@@ -3070,15 +2930,15 @@ protected:
   BreakpointSiteList m_breakpoint_site_list; ///< This is the list of breakpoint
                                              ///locations we intend to insert in
                                              ///the target.
-  lldb::DynamicLoaderUP m_dyld_ap;
-  lldb::JITLoaderListUP m_jit_loaders_ap;
-  lldb::DynamicCheckerFunctionsUP m_dynamic_checkers_ap; ///< The functions used
-                                                         ///by the expression
-                                                         ///parser to validate
-                                                         ///data that
-                                                         ///expressions use.
-  lldb::OperatingSystemUP m_os_ap;
-  lldb::SystemRuntimeUP m_system_runtime_ap;
+  lldb::DynamicLoaderUP m_dyld_up;
+  lldb::JITLoaderListUP m_jit_loaders_up;
+  lldb::DynamicCheckerFunctionsUP m_dynamic_checkers_up; ///< The functions used
+                                                         /// by the expression
+                                                         /// parser to validate
+                                                         /// data that
+                                                         /// expressions use.
+  lldb::OperatingSystemUP m_os_up;
+  lldb::SystemRuntimeUP m_system_runtime_up;
   lldb::UnixSignalsSP
       m_unix_signals_sp; /// This is the current signal set for this process.
   lldb::ABISP m_abi_sp;
@@ -3098,7 +2958,7 @@ protected:
                         /// with an explicit call to Kill or Detach?
   LanguageRuntimeCollection m_language_runtimes;
   InstrumentationRuntimeCollection m_instrumentation_runtimes;
-  std::unique_ptr<NextEventAction> m_next_event_action_ap;
+  std::unique_ptr<NextEventAction> m_next_event_action_up;
   std::vector<PreResumeCallbackAndBaton> m_pre_resume_actions;
   ProcessRunLock m_public_run_lock;
   ProcessRunLock m_private_run_lock;
@@ -3210,8 +3070,6 @@ protected:
   Status StopForDestroyOrDetach(lldb::EventSP &exit_event_sp);
 
   virtual Status UpdateAutomaticSignalFiltering();
-
-  bool StateChangedIsExternallyHijacked();
 
   void LoadOperatingSystemPlugin(bool flush);
 

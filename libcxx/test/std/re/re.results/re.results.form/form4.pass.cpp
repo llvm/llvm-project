@@ -20,7 +20,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::match_results<const char*> m;
@@ -77,4 +77,6 @@ int main()
         std::wstring out = m.format(fmt, std::regex_constants::format_sed);
         assert(out == L"match: cdefghi, m[1]: efg, m[2]: e");
     }
+
+  return 0;
 }

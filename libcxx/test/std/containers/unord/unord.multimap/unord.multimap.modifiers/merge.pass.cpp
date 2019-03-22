@@ -49,7 +49,7 @@ struct throw_hasher
 };
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         std::unordered_multimap<int, int> src{{1, 0}, {3, 0}, {5, 0}};
@@ -153,4 +153,5 @@ int main()
             first.merge(std::move(second));
         }
     }
+    return 0;
 }

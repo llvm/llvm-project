@@ -119,7 +119,7 @@ protected:
   std::unique_ptr<Address> m_PrintForDebugger_addr;
   bool m_read_objc_library;
   std::unique_ptr<lldb_private::AppleObjCTrampolineHandler>
-      m_objc_trampoline_handler_ap;
+      m_objc_trampoline_handler_up;
   lldb::BreakpointSP m_objc_exception_bp_sp;
   lldb::ModuleWP m_objc_module_wp;
   std::unique_ptr<FunctionCaller> m_print_object_caller_up;

@@ -3887,6 +3887,249 @@ InvokeInst::InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
 }
 
 //===----------------------------------------------------------------------===//
+//                              CallBrInst Class
+//===----------------------------------------------------------------------===//
+
+/// CallBr instruction, tracking function calls that may not return control but
+/// instead transfer it to a third location. The SubclassData field is used to
+/// hold the calling convention of the call.
+///
+class CallBrInst : public CallBase {
+
+  unsigned NumIndirectDests;
+
+  CallBrInst(const CallBrInst &BI);
+
+  /// Construct a CallBrInst given a range of arguments.
+  ///
+  /// Construct a CallBrInst from a range of arguments
+  inline CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
+                    ArrayRef<BasicBlock *> IndirectDests,
+                    ArrayRef<Value *> Args,
+                    ArrayRef<OperandBundleDef> Bundles, int NumOperands,
+                    const Twine &NameStr, Instruction *InsertBefore);
+
+  inline CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
+                    ArrayRef<BasicBlock *> IndirectDests,
+                    ArrayRef<Value *> Args,
+                    ArrayRef<OperandBundleDef> Bundles, int NumOperands,
+                    const Twine &NameStr, BasicBlock *InsertAtEnd);
+
+  void init(FunctionType *FTy, Value *Func, BasicBlock *DefaultDest,
+            ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
+            ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr);
+
+  /// Compute the number of operands to allocate.
+  static int ComputeNumOperands(int NumArgs, int NumIndirectDests,
+                                int NumBundleInputs = 0) {
+    // We need one operand for the called function, plus our extra operands and
+    // the input operand counts provided.
+    return 2 + NumIndirectDests + NumArgs + NumBundleInputs;
+  }
+
+protected:
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+
+  CallBrInst *cloneImpl() const;
+
+public:
+  static CallBrInst *Create(FunctionType *Ty, Value *Func,
+                            BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args, const Twine &NameStr,
+                            Instruction *InsertBefore = nullptr) {
+    int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size());
+    return new (NumOperands)
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, None,
+                   NumOperands, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *Create(FunctionType *Ty, Value *Func,
+                            BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> Bundles = None,
+                            const Twine &NameStr = "",
+                            Instruction *InsertBefore = nullptr) {
+    int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size(),
+                                         CountBundleInputs(Bundles));
+    unsigned DescriptorBytes = Bundles.size() * sizeof(BundleOpInfo);
+
+    return new (NumOperands, DescriptorBytes)
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, Bundles,
+                   NumOperands, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *Create(FunctionType *Ty, Value *Func,
+                            BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args, const Twine &NameStr,
+                            BasicBlock *InsertAtEnd) {
+    int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size());
+    return new (NumOperands)
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, None,
+                   NumOperands, NameStr, InsertAtEnd);
+  }
+
+  static CallBrInst *Create(FunctionType *Ty, Value *Func,
+                            BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> Bundles,
+                            const Twine &NameStr, BasicBlock *InsertAtEnd) {
+    int NumOperands = ComputeNumOperands(Args.size(), IndirectDests.size(),
+                                         CountBundleInputs(Bundles));
+    unsigned DescriptorBytes = Bundles.size() * sizeof(BundleOpInfo);
+
+    return new (NumOperands, DescriptorBytes)
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, Bundles,
+                   NumOperands, NameStr, InsertAtEnd);
+  }
+
+  static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args, const Twine &NameStr,
+                            Instruction *InsertBefore = nullptr) {
+    return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
+                  IndirectDests, Args, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> Bundles = None,
+                            const Twine &NameStr = "",
+                            Instruction *InsertBefore = nullptr) {
+    return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
+                  IndirectDests, Args, Bundles, NameStr, InsertBefore);
+  }
+
+  static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args, const Twine &NameStr,
+                            BasicBlock *InsertAtEnd) {
+    return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
+                  IndirectDests, Args, NameStr, InsertAtEnd);
+  }
+
+  static CallBrInst *Create(FunctionCallee Func,
+                            BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> Bundles,
+                            const Twine &NameStr, BasicBlock *InsertAtEnd) {
+    return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
+                  IndirectDests, Args, Bundles, NameStr, InsertAtEnd);
+  }
+
+  /// Create a clone of \p CBI with a different set of operand bundles and
+  /// insert it before \p InsertPt.
+  ///
+  /// The returned callbr instruction is identical to \p CBI in every way
+  /// except that the operand bundles for the new instruction are set to the
+  /// operand bundles in \p Bundles.
+  static CallBrInst *Create(CallBrInst *CBI,
+                            ArrayRef<OperandBundleDef> Bundles,
+                            Instruction *InsertPt = nullptr);
+
+  /// Return the number of callbr indirect dest labels.
+  ///
+  unsigned getNumIndirectDests() const { return NumIndirectDests; }
+
+  /// getIndirectDestLabel - Return the i-th indirect dest label.
+  ///
+  Value *getIndirectDestLabel(unsigned i) const {
+    assert(i < getNumIndirectDests() && "Out of bounds!");
+    return getOperand(i + getNumArgOperands() + getNumTotalBundleOperands() +
+                      1);
+  }
+
+  Value *getIndirectDestLabelUse(unsigned i) const {
+    assert(i < getNumIndirectDests() && "Out of bounds!");
+    return getOperandUse(i + getNumArgOperands() + getNumTotalBundleOperands() +
+                         1);
+  }
+
+  // Return the destination basic blocks...
+  BasicBlock *getDefaultDest() const {
+    return cast<BasicBlock>(*(&Op<-1>() - getNumIndirectDests() - 1));
+  }
+  BasicBlock *getIndirectDest(unsigned i) const {
+    return cast<BasicBlock>(*(&Op<-1>() - getNumIndirectDests() + i));
+  }
+  SmallVector<BasicBlock *, 16> getIndirectDests() const {
+    SmallVector<BasicBlock *, 16> IndirectDests;
+    for (unsigned i = 0, e = getNumIndirectDests(); i < e; ++i)
+      IndirectDests.push_back(getIndirectDest(i));
+    return IndirectDests;
+  }
+  void setDefaultDest(BasicBlock *B) {
+    *(&Op<-1>() - getNumIndirectDests() - 1) = reinterpret_cast<Value *>(B);
+  }
+  void setIndirectDest(unsigned i, BasicBlock *B) {
+    *(&Op<-1>() - getNumIndirectDests() + i) = reinterpret_cast<Value *>(B);
+  }
+
+  BasicBlock *getSuccessor(unsigned i) const {
+    assert(i < getNumSuccessors() + 1 &&
+           "Successor # out of range for callbr!");
+    return i == 0 ? getDefaultDest() : getIndirectDest(i - 1);
+  }
+
+  void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
+    assert(idx < getNumIndirectDests() + 1 &&
+           "Successor # out of range for callbr!");
+    *(&Op<-1>() - getNumIndirectDests() -1 + idx) =
+        reinterpret_cast<Value *>(NewSucc);
+  }
+
+  unsigned getNumSuccessors() const { return getNumIndirectDests() + 1; }
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *I) {
+    return (I->getOpcode() == Instruction::CallBr);
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+
+private:
+
+  // Shadow Instruction::setInstructionSubclassData with a private forwarding
+  // method so that subclasses cannot accidentally use it.
+  void setInstructionSubclassData(unsigned short D) {
+    Instruction::setInstructionSubclassData(D);
+  }
+};
+
+CallBrInst::CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
+                       ArrayRef<BasicBlock *> IndirectDests,
+                       ArrayRef<Value *> Args,
+                       ArrayRef<OperandBundleDef> Bundles, int NumOperands,
+                       const Twine &NameStr, Instruction *InsertBefore)
+    : CallBase(Ty->getReturnType(), Instruction::CallBr,
+               OperandTraits<CallBase>::op_end(this) - NumOperands, NumOperands,
+               InsertBefore) {
+  init(Ty, Func, DefaultDest, IndirectDests, Args, Bundles, NameStr);
+}
+
+CallBrInst::CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
+                       ArrayRef<BasicBlock *> IndirectDests,
+                       ArrayRef<Value *> Args,
+                       ArrayRef<OperandBundleDef> Bundles, int NumOperands,
+                       const Twine &NameStr, BasicBlock *InsertAtEnd)
+    : CallBase(
+          cast<FunctionType>(
+              cast<PointerType>(Func->getType())->getElementType())
+              ->getReturnType(),
+          Instruction::CallBr,
+          OperandTraits<CallBase>::op_end(this) - NumOperands, NumOperands,
+          InsertAtEnd) {
+  init(Ty, Func, DefaultDest, IndirectDests, Args, Bundles, NameStr);
+}
+
+//===----------------------------------------------------------------------===//
 //                              ResumeInst Class
 //===----------------------------------------------------------------------===//
 

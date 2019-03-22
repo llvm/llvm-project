@@ -53,7 +53,7 @@ caller:
 # CHECK-LABEL: caller
 # CHECK:         bl .+44
 # CHECK-NEXT:    mr 31, 3
-# CHECK-NEXT:    bl .+67108816
+# CHECK-NEXT:    bl .-48
 # CHECK-NEXT:    ld 2, 24(1)
 # CHECK-NEXT:    add 3, 3, 31
 # CHECK-NEXT:    addi 1, 1, 32

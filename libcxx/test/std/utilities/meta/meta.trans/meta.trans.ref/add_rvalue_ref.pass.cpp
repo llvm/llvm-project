@@ -46,7 +46,7 @@ void test_function1()
 
 struct Foo {};
 
-int main()
+int main(int, char**)
 {
     test_add_rvalue_reference<void, void>();
     test_add_rvalue_reference<int, int&&>();
@@ -73,4 +73,6 @@ int main()
     test_function0<void (Foo::*)() &&>();
     test_function0<void (Foo::*)() const &>();
     test_function0<void (Foo::*)() const &&>();
+
+  return 0;
 }

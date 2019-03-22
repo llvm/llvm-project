@@ -55,7 +55,7 @@ private:
 
   void SetProcessInfo(const lldb_private::ProcessInstanceInfo &proc_info_ref);
 
-  std::unique_ptr<lldb_private::ProcessInstanceInfo> m_opaque_ap;
+  std::unique_ptr<lldb_private::ProcessInstanceInfo> m_opaque_up;
 };
 
 } // namespace lldb

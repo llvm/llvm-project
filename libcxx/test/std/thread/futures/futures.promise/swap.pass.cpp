@@ -22,7 +22,7 @@
 
 #include "test_allocator.h"
 
-int main()
+int main(int, char**)
 {
     assert(test_alloc_base::alloc_count == 0);
     {
@@ -81,4 +81,6 @@ int main()
         assert(test_alloc_base::alloc_count == 1);
     }
     assert(test_alloc_base::alloc_count == 0);
+
+  return 0;
 }

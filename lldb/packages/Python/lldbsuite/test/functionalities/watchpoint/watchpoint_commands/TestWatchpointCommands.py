@@ -41,6 +41,7 @@ class WatchpointCommandsTestCase(TestBase):
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
+    @expectedFailureNetBSD
     def test_rw_watchpoint(self):
         """Test read_write watchpoint and expect to stop two times."""
         self.build(dictionary=self.d)
@@ -169,6 +170,7 @@ class WatchpointCommandsTestCase(TestBase):
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
+    @expectedFailureNetBSD
     def test_rw_watchpoint_set_ignore_count(self):
         """Test watchpoint ignore count and expect to not to stop at all."""
         self.build(dictionary=self.d)
@@ -229,6 +231,7 @@ class WatchpointCommandsTestCase(TestBase):
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
+    @expectedFailureNetBSD
     def test_rw_disable_after_first_stop(self):
         """Test read_write watchpoint but disable it after the first stop."""
         self.build(dictionary=self.d)
@@ -299,6 +302,7 @@ class WatchpointCommandsTestCase(TestBase):
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
+    @expectedFailureNetBSD
     def test_rw_disable_then_enable(self):
         """Test read_write watchpoint, disable initially, then enable it."""
         self.build(dictionary=self.d)

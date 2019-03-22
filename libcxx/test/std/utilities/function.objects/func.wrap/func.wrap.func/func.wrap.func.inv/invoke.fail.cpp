@@ -39,7 +39,9 @@ test_int_1()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_int_1();
+
+  return 0;
 }

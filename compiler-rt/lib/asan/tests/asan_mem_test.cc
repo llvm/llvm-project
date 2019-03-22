@@ -9,7 +9,11 @@
 // This file is a part of AddressSanitizer, an address sanity checker.
 //
 //===----------------------------------------------------------------------===//
+#include <string.h>
 #include "asan_test_utils.h"
+#if defined(_GNU_SOURCE)
+#include <strings.h>  // for bcmp
+#endif
 #include <vector>
 
 template<typename T>
@@ -205,37 +209,43 @@ TEST(AddressSanitizer, MemMoveOOBTest) {
   MemTransferOOBTestTemplate<int, MemMoveWrapper>(1024);
 }
 
-
-TEST(AddressSanitizer, MemCmpOOBTest) {
+template <int (*cmpfn)(const void *, const void *, size_t)>
+void CmpOOBTestCommon() {
   size_t size = Ident(100);
   char *s1 = MallocAndMemsetString(size);
   char *s2 = MallocAndMemsetString(size);
-  // Normal memcmp calls.
-  Ident(memcmp(s1, s2, size));
-  Ident(memcmp(s1 + size - 1, s2 + size - 1, 1));
-  Ident(memcmp(s1 - 1, s2 - 1, 0));
+  // Normal cmpfn calls.
+  Ident(cmpfn(s1, s2, size));
+  Ident(cmpfn(s1 + size - 1, s2 + size - 1, 1));
+  Ident(cmpfn(s1 - 1, s2 - 1, 0));
   // One of arguments points to not allocated memory.
-  EXPECT_DEATH(Ident(memcmp)(s1 - 1, s2, 1), LeftOOBReadMessage(1));
-  EXPECT_DEATH(Ident(memcmp)(s1, s2 - 1, 1), LeftOOBReadMessage(1));
-  EXPECT_DEATH(Ident(memcmp)(s1 + size, s2, 1), RightOOBReadMessage(0));
-  EXPECT_DEATH(Ident(memcmp)(s1, s2 + size, 1), RightOOBReadMessage(0));
+  EXPECT_DEATH(Ident(cmpfn)(s1 - 1, s2, 1), LeftOOBReadMessage(1));
+  EXPECT_DEATH(Ident(cmpfn)(s1, s2 - 1, 1), LeftOOBReadMessage(1));
+  EXPECT_DEATH(Ident(cmpfn)(s1 + size, s2, 1), RightOOBReadMessage(0));
+  EXPECT_DEATH(Ident(cmpfn)(s1, s2 + size, 1), RightOOBReadMessage(0));
   // Hit unallocated memory and die.
-  EXPECT_DEATH(Ident(memcmp)(s1 + 1, s2 + 1, size), RightOOBReadMessage(0));
-  EXPECT_DEATH(Ident(memcmp)(s1 + size - 1, s2, 2), RightOOBReadMessage(0));
+  EXPECT_DEATH(Ident(cmpfn)(s1 + 1, s2 + 1, size), RightOOBReadMessage(0));
+  EXPECT_DEATH(Ident(cmpfn)(s1 + size - 1, s2, 2), RightOOBReadMessage(0));
   // Zero bytes are not terminators and don't prevent from OOB.
   s1[size - 1] = '\0';
   s2[size - 1] = '\0';
-  EXPECT_DEATH(Ident(memcmp)(s1, s2, size + 1), RightOOBReadMessage(0));
+  EXPECT_DEATH(Ident(cmpfn)(s1, s2, size + 1), RightOOBReadMessage(0));
 
   // Even if the buffers differ in the first byte, we still assume that
-  // memcmp may access the whole buffer and thus reporting the overflow here:
+  // cmpfn may access the whole buffer and thus reporting the overflow here:
   s1[0] = 1;
   s2[0] = 123;
-  EXPECT_DEATH(Ident(memcmp)(s1, s2, size + 1), RightOOBReadMessage(0));
+  EXPECT_DEATH(Ident(cmpfn)(s1, s2, size + 1), RightOOBReadMessage(0));
 
   free(s1);
   free(s2);
 }
 
+TEST(AddressSanitizer, MemCmpOOBTest) { CmpOOBTestCommon<memcmp>(); }
 
-
+TEST(AddressSanitizer, BCmpOOBTest) {
+#if (defined(__linux__) && !defined(__ANDROID__) && defined(_GNU_SOURCE)) || \
+    defined(__NetBSD__) || defined(__FreeBSD__) || defined(__OpenBSD__)
+  CmpOOBTestCommon<bcmp>();
+#endif
+}

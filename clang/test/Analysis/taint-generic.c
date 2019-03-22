@@ -2,6 +2,7 @@
 // RUN: %clang_analyze_cc1  -DFILE_IS_STRUCT -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -Wno-format-security -verify %s
 
 int scanf(const char *restrict format, ...);
+char *gets(char *str);
 int getchar(void);
 
 typedef struct _FILE FILE;
@@ -140,6 +141,12 @@ void testTaintSystemCall3() {
   scanf("%s %d", addr, &numt);
   __builtin_snprintf(buffern2, numt, "/bin/mail %s < /tmp/email", "abcd");
   system(buffern2); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+void testGets() {
+  char str[50];
+  gets(str);
+  system(str); // expected-warning {{Untrusted data is passed to a system call}}
 }
 
 void testTaintedBufferSize() {

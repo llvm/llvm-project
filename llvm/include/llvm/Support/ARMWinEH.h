@@ -1,4 +1,4 @@
-//===-- llvm/Support/WinARMEH.h - Windows on ARM EH Constants ---*- C++ -*-===//
+//===-- llvm/Support/ARMWinEH.h - Windows on ARM EH Constants ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -382,7 +382,7 @@ struct ExceptionDataRecord {
     return ((Data[0] & 0x00400000) >> 22);
   }
 
-  uint8_t EpilogueCount() const {
+  uint16_t EpilogueCount() const {
     if (HeaderWords(*this) == 1) {
       if (isAArch64)
         return (Data[0] & 0x07C00000) >> 22;

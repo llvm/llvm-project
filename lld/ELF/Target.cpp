@@ -98,7 +98,7 @@ template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *Loc) {
     if (!IS->getParent())
       continue;
 
-    uint8_t *ISLoc = IS->getParent()->Loc + IS->OutSecOff;
+    uint8_t *ISLoc = Out::BufferStart + IS->getParent()->Offset + IS->OutSecOff;
     if (ISLoc <= Loc && Loc < ISLoc + IS->getSize())
       return {IS, IS->template getLocation<ELFT>(Loc - ISLoc) + ": "};
   }

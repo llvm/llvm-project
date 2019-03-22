@@ -197,7 +197,7 @@ DWARFDataExtractor DWARFUnit::getDebugInfoExtractor() const {
                             getAddressByteSize());
 }
 
-Optional<SectionedAddress>
+Optional<object::SectionedAddress>
 DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
   if (IsDWO) {
     auto R = Context.info_section_units();
@@ -744,7 +744,7 @@ const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
   return Abbrevs;
 }
 
-llvm::Optional<SectionedAddress> DWARFUnit::getBaseAddress() {
+llvm::Optional<object::SectionedAddress> DWARFUnit::getBaseAddress() {
   if (BaseAddr)
     return BaseAddr;
 

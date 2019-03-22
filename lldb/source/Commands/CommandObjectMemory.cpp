@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <inttypes.h>
-
 #include "clang/AST/Decl.h"
 
 #include "CommandObjectMemory.h"
@@ -41,6 +39,9 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "lldb/lldb-private.h"
+
+#include <cinttypes>
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -652,7 +653,7 @@ protected:
         addr = addr + (*size * m_memory_options.m_offset.GetCurrentValue());
     } else if (m_format_options.GetFormatValue().GetCurrentValue() !=
                eFormatCString) {
-      data_sp.reset(new DataBufferHeap(total_byte_size, '\0'));
+      data_sp = std::make_shared<DataBufferHeap>(total_byte_size, '\0');
       if (data_sp->GetBytes() == nullptr) {
         result.AppendErrorWithFormat(
             "can't allocate 0x%" PRIx32
@@ -692,8 +693,9 @@ protected:
         item_byte_size = target->GetMaximumSizeOfStringSummary();
       if (!m_format_options.GetCountValue().OptionWasSet())
         item_count = 1;
-      data_sp.reset(new DataBufferHeap((item_byte_size + 1) * item_count,
-                                       '\0')); // account for NULLs as necessary
+      data_sp = std::make_shared<DataBufferHeap>(
+          (item_byte_size + 1) * item_count,
+          '\0'); // account for NULLs as necessary
       if (data_sp->GetBytes() == nullptr) {
         result.AppendErrorWithFormat(
             "can't allocate 0x%" PRIx64
@@ -740,7 +742,8 @@ protected:
         if (break_on_no_NULL)
           break;
       }
-      data_sp.reset(new DataBufferHeap(data_sp->GetBytes(), bytes_read + 1));
+      data_sp =
+          std::make_shared<DataBufferHeap>(data_sp->GetBytes(), bytes_read + 1);
     }
 
     m_next_addr = addr + bytes_read;

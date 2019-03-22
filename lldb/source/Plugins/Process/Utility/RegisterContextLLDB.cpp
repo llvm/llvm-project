@@ -34,6 +34,8 @@
 
 #include "RegisterContextLLDB.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -237,9 +239,8 @@ void RegisterContextLLDB::InitializeZerothFrame() {
 
     if (m_sym_ctx_valid) {
       func_unwinders_sp =
-          pc_module_sp->GetObjectFile()
-              ->GetUnwindTable()
-              .GetFuncUnwindersContainingAddress(m_current_pc, m_sym_ctx);
+          pc_module_sp->GetUnwindTable().GetFuncUnwindersContainingAddress(
+              m_current_pc, m_sym_ctx);
     }
 
     if (func_unwinders_sp.get() != nullptr)
@@ -369,7 +370,8 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
 
     if (abi) {
       m_fast_unwind_plan_sp.reset();
-      m_full_unwind_plan_sp.reset(new UnwindPlan(lldb::eRegisterKindGeneric));
+      m_full_unwind_plan_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       abi->CreateDefaultUnwindPlan(*m_full_unwind_plan_sp);
       if (m_frame_type != eSkipFrame) // don't override eSkipFrame
       {
@@ -669,9 +671,8 @@ UnwindPlanSP RegisterContextLLDB::GetFastUnwindPlanForFrame() {
     return unwind_plan_sp;
 
   FuncUnwindersSP func_unwinders_sp(
-      pc_module_sp->GetObjectFile()
-          ->GetUnwindTable()
-          .GetFuncUnwindersContainingAddress(m_current_pc, m_sym_ctx));
+      pc_module_sp->GetUnwindTable().GetFuncUnwindersContainingAddress(
+          m_current_pc, m_sym_ctx));
   if (!func_unwinders_sp)
     return unwind_plan_sp;
 
@@ -716,8 +717,8 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
   Process *process = exe_ctx.GetProcessPtr();
   ABI *abi = process ? process->GetABI().get() : NULL;
   if (abi) {
-    arch_default_unwind_plan_sp.reset(
-        new UnwindPlan(lldb::eRegisterKindGeneric));
+    arch_default_unwind_plan_sp =
+        std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
     abi->CreateDefaultUnwindPlan(*arch_default_unwind_plan_sp);
   } else {
     UnwindLogMsg(
@@ -752,7 +753,8 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
          process->GetLoadAddressPermissions(current_pc_addr, permissions) &&
          (permissions & ePermissionsExecutable) == 0)) {
       if (abi) {
-        unwind_plan_sp.reset(new UnwindPlan(lldb::eRegisterKindGeneric));
+        unwind_plan_sp =
+            std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
         abi->CreateFunctionEntryUnwindPlan(*unwind_plan_sp);
         m_frame_type = eNormalFrame;
         return unwind_plan_sp;
@@ -771,9 +773,8 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
   FuncUnwindersSP func_unwinders_sp;
   if (m_sym_ctx_valid) {
     func_unwinders_sp =
-        pc_module_sp->GetObjectFile()
-            ->GetUnwindTable()
-            .GetFuncUnwindersContainingAddress(m_current_pc, m_sym_ctx);
+        pc_module_sp->GetUnwindTable().GetFuncUnwindersContainingAddress(
+            m_current_pc, m_sym_ctx);
   }
 
   // No FuncUnwinders available for this pc (stripped function symbols, lldb
@@ -791,9 +792,9 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
     // Even with -fomit-frame-pointer, we can try eh_frame to get back on
     // track.
     DWARFCallFrameInfo *eh_frame =
-        pc_module_sp->GetObjectFile()->GetUnwindTable().GetEHFrameInfo();
+        pc_module_sp->GetUnwindTable().GetEHFrameInfo();
     if (eh_frame) {
-      unwind_plan_sp.reset(new UnwindPlan(lldb::eRegisterKindGeneric));
+      unwind_plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (eh_frame->GetUnwindPlan(m_current_pc, *unwind_plan_sp))
         return unwind_plan_sp;
       else
@@ -801,9 +802,9 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
     }
 
     ArmUnwindInfo *arm_exidx =
-        pc_module_sp->GetObjectFile()->GetUnwindTable().GetArmUnwindInfo();
+        pc_module_sp->GetUnwindTable().GetArmUnwindInfo();
     if (arm_exidx) {
-      unwind_plan_sp.reset(new UnwindPlan(lldb::eRegisterKindGeneric));
+      unwind_plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (arm_exidx->GetUnwindPlan(exe_ctx.GetTargetRef(), m_current_pc,
                                    *unwind_plan_sp))
         return unwind_plan_sp;

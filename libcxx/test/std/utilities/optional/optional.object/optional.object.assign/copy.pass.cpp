@@ -48,7 +48,7 @@ constexpr bool assign_value(optional<Tp>&& lhs) {
     return lhs.has_value() && rhs.has_value() && *lhs == *rhs;
 }
 
-int main()
+int main(int, char**)
 {
     {
         using O = optional<int>;
@@ -102,4 +102,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

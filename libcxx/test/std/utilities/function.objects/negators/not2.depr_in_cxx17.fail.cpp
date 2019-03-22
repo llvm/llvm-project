@@ -28,6 +28,8 @@ struct Predicate {
     bool operator()(first_argument_type, second_argument_type) const { return true; }
 };
 
-int main() {
+int main(int, char**) {
     std::not2(Predicate()); // expected-error{{'not2<Predicate>' is deprecated}}
+
+  return 0;
 }

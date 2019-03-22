@@ -13,13 +13,68 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
+//
+// We are supporting two versions of libc++ std::atomic
+//
+// Given std::atomic<int> i;
+//
+// The previous version of std::atomic was laid out like this
+//
+// (lldb) frame var -L -R i
+// 0x00007ffeefbff9a0: (std::__1::atomic<int>) i = {
+// 0x00007ffeefbff9a0:   std::__1::__atomic_base<int, true> = {
+// 0x00007ffeefbff9a0:     std::__1::__atomic_base<int, false> = {
+// 0x00007ffeefbff9a0:       __a_ = 5
+//        }
+//    }
+// }
+//
+// In this case we need to obtain __a_ and the current version is laid out as so
+//
+// (lldb) frame var -L -R i
+// 0x00007ffeefbff9b0: (std::__1::atomic<int>) i = {
+// 0x00007ffeefbff9b0:   std::__1::__atomic_base<int, true> = {
+// 0x00007ffeefbff9b0:     std::__1::__atomic_base<int, false> = {
+// 0x00007ffeefbff9b0:       __a_ = {
+// 0x00007ffeefbff9b0:         std::__1::__cxx_atomic_base_impl<int> = {
+// 0x00007ffeefbff9b0:           __a_value = 5
+//                }
+//          }
+//       }
+//    }
+//}
+//
+// In this case we need to obtain __a_value
+//
+// The below method covers both cases and returns the relevant member as a
+// ValueObjectSP
+//
+ValueObjectSP
+lldb_private::formatters::GetLibCxxAtomicValue(ValueObject &valobj) {
+  ValueObjectSP non_sythetic = valobj.GetNonSyntheticValue();
+  if (!non_sythetic)
+    return {};
+
+  ValueObjectSP member__a_ =
+      non_sythetic->GetChildMemberWithName(ConstString("__a_"), true);
+  if (!member__a_)
+    return {};
+
+  ValueObjectSP member__a_value =
+      member__a_->GetChildMemberWithName(ConstString("__a_value"), true);
+  if (!member__a_value)
+    return member__a_;
+
+  return member__a_value;
+}
+
 bool lldb_private::formatters::LibCxxAtomicSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static ConstString g___a_("__a_");
 
-  if (ValueObjectSP child = valobj.GetChildMemberWithName(g___a_, true)) {
+  if (ValueObjectSP atomic_value = GetLibCxxAtomicValue(valobj)) {
     std::string summary;
-    if (child->GetSummaryAsCString(summary, options) && summary.size() > 0) {
+    if (atomic_value->GetSummaryAsCString(summary, options) &&
+        summary.size() > 0) {
       stream.Printf("%s", summary.c_str());
       return true;
     }
@@ -59,9 +114,9 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
     : SyntheticChildrenFrontEnd(*valobj_sp), m_real_child(nullptr) {}
 
 bool lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::Update() {
-  static ConstString g___a_("__a_");
-
-  m_real_child = m_backend.GetChildMemberWithName(g___a_, true).get();
+  ValueObjectSP atomic_value = GetLibCxxAtomicValue(m_backend);
+  if (atomic_value)
+    m_real_child = GetLibCxxAtomicValue(m_backend).get();
 
   return false;
 }

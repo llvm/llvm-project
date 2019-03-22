@@ -12,9 +12,11 @@
 
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::complex<float> cf;
     auto t1 = std::make_pair<int, int> ( 42, 43 );
     assert ( std::get<int>(t1) == 42 ); // two ints
+
+  return 0;
 }

@@ -1103,7 +1103,7 @@ bool ABISysV_hexagon::PrepareTrivialCall(
     sp -= argSize;
 
     // write this argument onto the stack of the host process
-    proc->WriteMemory(sp, arg.data_ap.get(), arg.size, error);
+    proc->WriteMemory(sp, arg.data_up.get(), arg.size, error);
     if (error.Fail())
       return false;
 

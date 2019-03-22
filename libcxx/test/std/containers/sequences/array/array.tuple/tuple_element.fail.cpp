@@ -23,7 +23,7 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -31,4 +31,6 @@ int main()
         std::tuple_element<3, C> foo; // expected-note {{requested here}}
         // expected-error-re@array:* {{static_assert failed{{( due to requirement '3U[L]{0,2} < 3U[L]{0,2}')?}} "Index out of bounds in std::tuple_element<> (std::array)"}}
     }
+
+  return 0;
 }

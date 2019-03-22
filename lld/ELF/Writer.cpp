@@ -60,7 +60,8 @@ private:
 
   std::vector<PhdrEntry *> createPhdrs();
   void removeEmptyPTLoad();
-  void addPtArmExid(std::vector<PhdrEntry *> &Phdrs);
+  void addPhdrForSection(std::vector<PhdrEntry *> &Phdrs, unsigned ShType,
+                         unsigned PType, unsigned PFlags);
   void assignFileOffsets();
   void assignFileOffsetsBinary();
   void setPhdrs();
@@ -288,10 +289,8 @@ template <class ELFT> static void createSyntheticSections() {
   Out::ProgramHeaders = make<OutputSection>("", 0, SHF_ALLOC);
   Out::ProgramHeaders->Alignment = Config->Wordsize;
 
-  if (needsInterpSection()) {
-    In.Interp = createInterpSection();
-    Add(In.Interp);
-  }
+  if (needsInterpSection())
+    Add(createInterpSection());
 
   if (Config->Strip != StripPolicy::All) {
     In.StrTab = make<StringTableSection>(".strtab", false);
@@ -333,16 +332,16 @@ template <class ELFT> static void createSyntheticSections() {
     In.DynSymTab = make<SymbolTableSection<ELFT>>(*In.DynStrTab);
     Add(In.DynSymTab);
 
-    InX<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
-    Add(InX<ELFT>::VerSym);
+    In.VerSym = make<VersionTableSection>();
+    Add(In.VerSym);
 
     if (!Config->VersionDefinitions.empty()) {
       In.VerDef = make<VersionDefinitionSection>();
       Add(In.VerDef);
     }
 
-    InX<ELFT>::VerNeed = make<VersionNeedSection<ELFT>>();
-    Add(InX<ELFT>::VerNeed);
+    In.VerNeed = make<VersionNeedSection<ELFT>>();
+    Add(In.VerNeed);
 
     if (Config->GnuHash) {
       In.GnuHashTab = make<GnuHashTableSection>();
@@ -384,10 +383,8 @@ template <class ELFT> static void createSyntheticSections() {
   In.IgotPlt = make<IgotPltSection>();
   Add(In.IgotPlt);
 
-  if (Config->GdbIndex) {
-    In.GdbIndex = GdbIndexSection::create<ELFT>();
-    Add(In.GdbIndex);
-  }
+  if (Config->GdbIndex)
+    Add(GdbIndexSection::create<ELFT>());
 
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
@@ -1262,8 +1259,8 @@ static void sortSection(OutputSection *Sec,
     auto *ISD = cast<InputSectionDescription>(Sec->SectionCommands[0]);
     std::stable_sort(ISD->Sections.begin(), ISD->Sections.end(),
                      [](const InputSection *A, const InputSection *B) -> bool {
-                       return A->File->PPC64SmallCodeModelRelocs &&
-                              !B->File->PPC64SmallCodeModelRelocs;
+                       return A->File->PPC64SmallCodeModelTocRelocs &&
+                              !B->File->PPC64SmallCodeModelTocRelocs;
                      });
     return;
   }
@@ -1677,6 +1674,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (!Config->Relocatable)
     forEachRelSec(scanRelocations<ELFT>);
 
+  addIRelativeRelocs();
+
   if (In.Plt && !In.Plt->empty())
     In.Plt->addSymbols();
   if (In.Iplt && !In.Iplt->empty())
@@ -1715,7 +1714,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       In.DynSymTab->addSymbol(Sym);
       if (auto *File = dyn_cast_or_null<SharedFile<ELFT>>(Sym->File))
         if (File->IsNeeded && !Sym->isUndefined())
-          InX<ELFT>::VerNeed->addSymbol(Sym);
+          In.VerNeed->addSymbol(Sym);
     }
   }
 
@@ -1724,7 +1723,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     return;
 
   if (In.MipsGot)
-    In.MipsGot->build<ELFT>();
+    In.MipsGot->build();
 
   removeUnusedSyntheticSections();
 
@@ -1759,7 +1758,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // image base and the dynamic section on mips includes the image base.
   if (!Config->Relocatable && !Config->OFormatBinary) {
     Phdrs = Script->hasPhdrsCommands() ? Script->createPhdrs() : createPhdrs();
-    addPtArmExid(Phdrs);
+    if (Config->EMachine == EM_ARM) {
+      // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
+      addPhdrForSection(Phdrs, SHT_ARM_EXIDX, PT_ARM_EXIDX, PF_R);
+    }
+    if (Config->EMachine == EM_MIPS) {
+      // Add separate segments for MIPS-specific sections.
+      addPhdrForSection(Phdrs, SHT_MIPS_REGINFO, PT_MIPS_REGINFO, PF_R);
+      addPhdrForSection(Phdrs, SHT_MIPS_OPTIONS, PT_MIPS_OPTIONS, PF_R);
+      addPhdrForSection(Phdrs, SHT_MIPS_ABIFLAGS, PT_MIPS_ABIFLAGS, PF_R);
+    }
     Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
 
     // Find the TLS segment. This happens before the section layout loop so that
@@ -1796,8 +1804,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   finalizeSynthetic(In.Plt);
   finalizeSynthetic(In.Iplt);
   finalizeSynthetic(In.EhFrameHdr);
-  finalizeSynthetic(InX<ELFT>::VerSym);
-  finalizeSynthetic(InX<ELFT>::VerNeed);
+  finalizeSynthetic(In.VerSym);
+  finalizeSynthetic(In.VerNeed);
   finalizeSynthetic(In.Dynamic);
 
   if (!Script->HasSectionsCommand && !Config->Relocatable)
@@ -1827,7 +1835,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
   for (OutputSection *Sec : OutputSections)
-    Sec->finalize<ELFT>();
+    Sec->finalize();
 }
 
 // Ensure data sections are not mixed with executable sections when
@@ -2055,19 +2063,17 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
 }
 
 template <class ELFT>
-void Writer<ELFT>::addPtArmExid(std::vector<PhdrEntry *> &Phdrs) {
-  if (Config->EMachine != EM_ARM)
-    return;
-  auto I = llvm::find_if(OutputSections, [](OutputSection *Cmd) {
-    return Cmd->Type == SHT_ARM_EXIDX;
-  });
+void Writer<ELFT>::addPhdrForSection(std::vector<PhdrEntry *> &Phdrs,
+                                     unsigned ShType, unsigned PType,
+                                     unsigned PFlags) {
+  auto I = llvm::find_if(
+      OutputSections, [=](OutputSection *Cmd) { return Cmd->Type == ShType; });
   if (I == OutputSections.end())
     return;
 
-  // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
-  PhdrEntry *ARMExidx = make<PhdrEntry>(PT_ARM_EXIDX, PF_R);
-  ARMExidx->add(*I);
-  Phdrs.push_back(ARMExidx);
+  PhdrEntry *Entry = make<PhdrEntry>(PType, PFlags);
+  Entry->add(*I);
+  Phdrs.push_back(Entry);
 }
 
 // The first section of each PT_LOAD, the first section in PT_GNU_RELRO and the
@@ -2382,23 +2388,33 @@ static uint16_t getELFType() {
 
 static uint8_t getAbiVersion() {
   // MIPS non-PIC executable gets ABI version 1.
-  if (Config->EMachine == EM_MIPS && getELFType() == ET_EXEC &&
-      (Config->EFlags & (EF_MIPS_PIC | EF_MIPS_CPIC)) == EF_MIPS_CPIC)
-    return 1;
+  if (Config->EMachine == EM_MIPS) {
+    if (getELFType() == ET_EXEC &&
+        (Config->EFlags & (EF_MIPS_PIC | EF_MIPS_CPIC)) == EF_MIPS_CPIC)
+      return 1;
+    return 0;
+  }
+
+  if (Config->EMachine == EM_AMDGPU) {
+    uint8_t Ver = ObjectFiles[0]->ABIVersion;
+    for (InputFile *File : makeArrayRef(ObjectFiles).slice(1))
+      if (File->ABIVersion != Ver)
+        error("incompatible ABI version: " + toString(File));
+    return Ver;
+  }
+
   return 0;
 }
 
 template <class ELFT> void Writer<ELFT>::writeHeader() {
-  uint8_t *Buf = Buffer->getBufferStart();
-
   // For executable segments, the trap instructions are written before writing
   // the header. Setting Elf header bytes to zero ensures that any unused bytes
   // in header are zero-cleared, instead of having trap instructions.
-  memset(Buf, 0, sizeof(Elf_Ehdr));
-  memcpy(Buf, "\177ELF", 4);
+  memset(Out::BufferStart, 0, sizeof(Elf_Ehdr));
+  memcpy(Out::BufferStart, "\177ELF", 4);
 
   // Write the ELF header.
-  auto *EHdr = reinterpret_cast<Elf_Ehdr *>(Buf);
+  auto *EHdr = reinterpret_cast<Elf_Ehdr *>(Out::BufferStart);
   EHdr->e_ident[EI_CLASS] = Config->Is64 ? ELFCLASS64 : ELFCLASS32;
   EHdr->e_ident[EI_DATA] = Config->IsLE ? ELFDATA2LSB : ELFDATA2MSB;
   EHdr->e_ident[EI_VERSION] = EV_CURRENT;
@@ -2420,7 +2436,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   }
 
   // Write the program header table.
-  auto *HBuf = reinterpret_cast<Elf_Phdr *>(Buf + EHdr->e_phoff);
+  auto *HBuf = reinterpret_cast<Elf_Phdr *>(Out::BufferStart + EHdr->e_phoff);
   for (PhdrEntry *P : Phdrs) {
     HBuf->p_type = P->p_type;
     HBuf->p_flags = P->p_flags;
@@ -2442,7 +2458,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   // the value. The sentinel values and fields are:
   // e_shnum = 0, SHdrs[0].sh_size = number of sections.
   // e_shstrndx = SHN_XINDEX, SHdrs[0].sh_link = .shstrtab section index.
-  auto *SHdrs = reinterpret_cast<Elf_Shdr *>(Buf + EHdr->e_shoff);
+  auto *SHdrs = reinterpret_cast<Elf_Shdr *>(Out::BufferStart + EHdr->e_shoff);
   size_t Num = OutputSections.size() + 1;
   if (Num >= SHN_LORESERVE)
     SHdrs->sh_size = Num;
@@ -2464,7 +2480,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 // Open a result file.
 template <class ELFT> void Writer<ELFT>::openFile() {
   uint64_t MaxSize = Config->Is64 ? INT64_MAX : UINT32_MAX;
-  if (MaxSize < FileSize) {
+  if (FileSize != size_t(FileSize) || MaxSize < FileSize) {
     error("output file too large: " + Twine(FileSize) + " bytes");
     return;
   }
@@ -2476,18 +2492,19 @@ template <class ELFT> void Writer<ELFT>::openFile() {
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize, Flags);
 
-  if (!BufferOrErr)
+  if (!BufferOrErr) {
     error("failed to open " + Config->OutputFile + ": " +
           llvm::toString(BufferOrErr.takeError()));
-  else
-    Buffer = std::move(*BufferOrErr);
+    return;
+  }
+  Buffer = std::move(*BufferOrErr);
+  Out::BufferStart = Buffer->getBufferStart();
 }
 
 template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
-  uint8_t *Buf = Buffer->getBufferStart();
   for (OutputSection *Sec : OutputSections)
     if (Sec->Flags & SHF_ALLOC)
-      Sec->writeTo<ELFT>(Buf + Sec->Offset);
+      Sec->writeTo<ELFT>(Out::BufferStart + Sec->Offset);
 }
 
 static void fillTrap(uint8_t *I, uint8_t *End) {
@@ -2506,11 +2523,12 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
     return;
 
   // Fill the last page.
-  uint8_t *Buf = Buffer->getBufferStart();
   for (PhdrEntry *P : Phdrs)
     if (P->p_type == PT_LOAD && (P->p_flags & PF_X))
-      fillTrap(Buf + alignDown(P->p_offset + P->p_filesz, Target->PageSize),
-               Buf + alignTo(P->p_offset + P->p_filesz, Target->PageSize));
+      fillTrap(Out::BufferStart +
+                   alignDown(P->p_offset + P->p_filesz, Target->PageSize),
+               Out::BufferStart +
+                   alignTo(P->p_offset + P->p_filesz, Target->PageSize));
 
   // Round up the file size of the last segment to the page boundary iff it is
   // an executable segment to ensure that other tools don't accidentally
@@ -2526,27 +2544,16 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
 
 // Write section contents to a mmap'ed file.
 template <class ELFT> void Writer<ELFT>::writeSections() {
-  uint8_t *Buf = Buffer->getBufferStart();
-
-  OutputSection *EhFrameHdr = nullptr;
-  if (In.EhFrameHdr && !In.EhFrameHdr->empty())
-    EhFrameHdr = In.EhFrameHdr->getParent();
-
   // In -r or -emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
   // section while doing it.
   for (OutputSection *Sec : OutputSections)
     if (Sec->Type == SHT_REL || Sec->Type == SHT_RELA)
-      Sec->writeTo<ELFT>(Buf + Sec->Offset);
+      Sec->writeTo<ELFT>(Out::BufferStart + Sec->Offset);
 
   for (OutputSection *Sec : OutputSections)
-    if (Sec != EhFrameHdr && Sec->Type != SHT_REL && Sec->Type != SHT_RELA)
-      Sec->writeTo<ELFT>(Buf + Sec->Offset);
-
-  // The .eh_frame_hdr depends on .eh_frame section contents, therefore
-  // it should be written after .eh_frame is written.
-  if (EhFrameHdr)
-    EhFrameHdr->writeTo<ELFT>(Buf + EhFrameHdr->Offset);
+    if (Sec->Type != SHT_REL && Sec->Type != SHT_RELA)
+      Sec->writeTo<ELFT>(Out::BufferStart + Sec->Offset);
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
@@ -2554,9 +2561,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
     return;
 
   // Compute a hash of all sections of the output file.
-  uint8_t *Start = Buffer->getBufferStart();
-  uint8_t *End = Start + FileSize;
-  In.BuildId->writeBuildId({Start, End});
+  In.BuildId->writeBuildId({Out::BufferStart, size_t(FileSize)});
 }
 
 template void elf::writeResult<ELF32LE>();

@@ -28,7 +28,7 @@
 #include "test_macros.h"
 #include "archetypes.hpp"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<float, short*> P;
@@ -51,4 +51,6 @@ int main()
         static_assert(!std::is_default_constructible<P2>::value, "");
     }
 #endif
+
+  return 0;
 }

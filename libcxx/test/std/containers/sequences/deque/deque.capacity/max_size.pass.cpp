@@ -18,7 +18,7 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-int main() {
+int main(int, char**) {
   {
     typedef limited_allocator<int, 10> A;
     typedef std::deque<int, A> C;
@@ -43,4 +43,6 @@ int main() {
     assert(c.max_size() <= max_dist);
     assert(c.max_size() <= alloc_max_size(c.get_allocator()));
   }
+
+  return 0;
 }

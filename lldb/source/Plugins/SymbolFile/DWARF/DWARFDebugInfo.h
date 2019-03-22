@@ -64,7 +64,7 @@ protected:
   SymbolFileDWARF *m_dwarf2Data;
   CompileUnitColl m_compile_units;
   std::unique_ptr<DWARFDebugAranges>
-      m_cu_aranges_ap; // A quick address to compile unit table
+      m_cu_aranges_up; // A quick address to compile unit table
 
 private:
   // All parsing needs to be done partially any managed by this class as

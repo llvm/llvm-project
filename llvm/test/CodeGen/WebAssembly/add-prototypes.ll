@@ -58,6 +58,9 @@ define void @as_paramater() {
 
 declare void @func_param(i64 (...)*)
 
+; CHECK: declare void @func_not_called()
+declare void @func_not_called(...) #1
+
 ; CHECK: declare extern_weak i64 @foo(i32)
 declare extern_weak i64 @foo(...) #1
 

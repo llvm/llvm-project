@@ -1,4 +1,4 @@
-//== llvm/CodeGen/GlobalISel/LegalizePass.h ------------- -*- C++ -*-==//
+//== llvm/CodeGen/GlobalISel/Legalizer.h ---------------- -*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -52,6 +52,11 @@ public:
   MachineFunctionProperties getSetProperties() const override {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::Legalized);
+  }
+
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties()
+      .set(MachineFunctionProperties::Property::NoPHIs);
   }
 
   bool combineExtracts(MachineInstr &MI, MachineRegisterInfo &MRI,

@@ -1397,8 +1397,8 @@ void ento::registerNonLocalizedStringChecker(CheckerManager &mgr) {
   NonLocalizedStringChecker *checker =
       mgr.registerChecker<NonLocalizedStringChecker>();
   checker->IsAggressive =
-      mgr.getAnalyzerOptions().getCheckerBooleanOption("AggressiveReport",
-                                                       false, checker);
+      mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          checker, "AggressiveReport", false);
 }
 
 bool ento::shouldRegisterNonLocalizedStringChecker(const LangOptions &LO) {
@@ -1409,7 +1409,8 @@ void ento::registerEmptyLocalizationContextChecker(CheckerManager &mgr) {
   mgr.registerChecker<EmptyLocalizationContextChecker>();
 }
 
-bool ento::shouldRegisterEmptyLocalizationContextChecker(const LangOptions &LO) {
+bool ento::shouldRegisterEmptyLocalizationContextChecker(
+                                                        const LangOptions &LO) {
   return true;
 }
 

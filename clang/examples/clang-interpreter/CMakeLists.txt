@@ -16,7 +16,7 @@ add_clang_executable(clang-interpreter
   )
 
 add_dependencies(clang-interpreter
-  clang-headers
+  clang-resource-headers
   )
 
 target_link_libraries(clang-interpreter

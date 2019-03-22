@@ -10,6 +10,7 @@
 ...
 ---
 name:            foo
+# CHECK-LABEL: name: foo
 tracksRegLiveness: true
 constants:       
   - id:              0

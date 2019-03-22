@@ -234,9 +234,6 @@ bool ignoreReport(SourceLocation SLoc, ReportOptions Opts, ErrorType ET);
     GET_CALLER_PC_BP; \
     ReportOptions Opts = {unrecoverable_handler, pc, bp}
 
-void GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc, uptr bp,
-                   void *context, bool fast);
-
 /// \brief Instantiate this class before printing diagnostics in the error
 /// report. This class ensures that reports from different threads and from
 /// different sanitizers won't be mixed.

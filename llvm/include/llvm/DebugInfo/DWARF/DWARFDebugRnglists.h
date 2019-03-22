@@ -37,7 +37,7 @@ struct RangeListEntry : public DWARFListEntryBase {
   Error extract(DWARFDataExtractor Data, uint32_t End, uint32_t *OffsetPtr);
   void dump(raw_ostream &OS, uint8_t AddrSize, uint8_t MaxEncodingStringLength,
             uint64_t &CurrentBase, DIDumpOptions DumpOpts,
-            llvm::function_ref<Optional<SectionedAddress>(uint32_t)>
+            llvm::function_ref<Optional<object::SectionedAddress>(uint32_t)>
                 LookupPooledAddress) const;
   bool isSentinel() const { return EntryKind == dwarf::DW_RLE_end_of_list; }
 };
@@ -47,7 +47,7 @@ class DWARFDebugRnglist : public DWARFListType<RangeListEntry> {
 public:
   /// Build a DWARFAddressRangesVector from a rangelist.
   DWARFAddressRangesVector
-  getAbsoluteRanges(llvm::Optional<SectionedAddress> BaseAddr,
+  getAbsoluteRanges(llvm::Optional<object::SectionedAddress> BaseAddr,
                     DWARFUnit &U) const;
 };
 

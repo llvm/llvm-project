@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++experimental
 // UNSUPPORTED: c++98, c++03
 
 // <experimental/memory_resource>
@@ -36,7 +35,7 @@
 
 using namespace std::experimental::pmr;
 
-int main() {
+int main(int, char**) {
     TestResource R;
     { // Test (A) and (B)
         memory_resource* p = get_default_resource();
@@ -70,4 +69,6 @@ int main() {
         static_assert(noexcept(set_default_resource(nullptr)),
                       "set_default_resource() must be noexcept");
     }
+
+  return 0;
 }

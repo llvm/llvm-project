@@ -175,23 +175,25 @@ endfunction()
 # added as an extra RPATH below.
 #
 function(lldb_setup_framework_rpaths_in_tool name)
-  # In the build-tree, we know the exact path to the binary in the framework.
-  set(rpath_build_tree "$<TARGET_FILE:liblldb>")
-
   # The installed framework is relocatable and can be in different locations.
-  set(rpaths_install_tree "@loader_path/../../../SharedFrameworks")
+  set(rpaths_install_tree)
+
+  if(LLDB_FRAMEWORK_INSTALL_DIR)
+    list(APPEND rpaths_install_tree "@loader_path/../${LLDB_FRAMEWORK_INSTALL_DIR}")
+  endif()
+
+  list(APPEND rpaths_install_tree "@loader_path/../../../SharedFrameworks")
   list(APPEND rpaths_install_tree "@loader_path/../../System/Library/PrivateFrameworks")
   list(APPEND rpaths_install_tree "@loader_path/../../Library/PrivateFrameworks")
 
-  if(LLDB_FRAMEWORK_INSTALL_DIR)
-    set(rpaths_install_tree "@loader_path/../${LLDB_FRAMEWORK_INSTALL_DIR}")
-  endif()
+  # In the build-tree, we know the exact path to the framework directory.
+  get_target_property(framework_target_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
 
   # If LLDB_NO_INSTALL_DEFAULT_RPATH was NOT enabled (default), this overwrites
   # the default settings from llvm_setup_rpath().
   set_target_properties(${name} PROPERTIES
     BUILD_WITH_INSTALL_RPATH OFF
-    BUILD_RPATH "${rpath_build_tree}"
+    BUILD_RPATH "${framework_target_dir}"
     INSTALL_RPATH "${rpaths_install_tree}"
   )
 

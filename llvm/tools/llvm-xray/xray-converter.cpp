@@ -17,7 +17,6 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -241,6 +240,31 @@ StackTrieNode *findOrCreateStackNode(
   return CurrentStack;
 }
 
+void writeTraceViewerRecord(uint16_t Version, raw_ostream &OS, int32_t FuncId,
+                            uint32_t TId, uint32_t PId, bool Symbolize,
+                            const FuncIdConversionHelper &FuncIdHelper,
+                            double EventTimestampUs,
+                            const StackTrieNode &StackCursor,
+                            StringRef FunctionPhenotype) {
+  OS << "    ";
+  if (Version >= 3) {
+    OS << llvm::formatv(
+        R"({ "name" : "{0}", "ph" : "{1}", "tid" : "{2}", "pid" : "{3}", )"
+        R"("ts" : "{4:f4}", "sf" : "{5}" })",
+        (Symbolize ? FuncIdHelper.SymbolOrNumber(FuncId)
+                   : llvm::to_string(FuncId)),
+        FunctionPhenotype, TId, PId, EventTimestampUs,
+        StackCursor.ExtraData.id);
+  } else {
+    OS << llvm::formatv(
+        R"({ "name" : "{0}", "ph" : "{1}", "tid" : "{2}", "pid" : "1", )"
+        R"("ts" : "{3:f3}", "sf" : "{4}" })",
+        (Symbolize ? FuncIdHelper.SymbolOrNumber(FuncId)
+                   : llvm::to_string(FuncId)),
+        FunctionPhenotype, TId, EventTimestampUs, StackCursor.ExtraData.id);
+  }
+}
+
 } // namespace
 
 void TraceConverter::exportAsChromeTraceEventFormat(const Trace &Records,
@@ -251,14 +275,18 @@ void TraceConverter::exportAsChromeTraceEventFormat(const Trace &Records,
 
   unsigned id_counter = 0;
 
+  OS << "{\n  \"traceEvents\": [";
   DenseMap<uint32_t, StackTrieNode *> StackCursorByThreadId{};
   DenseMap<uint32_t, SmallVector<StackTrieNode *, 4>> StackRootsByThreadId{};
   DenseMap<unsigned, StackTrieNode *> StacksByStackId{};
   std::forward_list<StackTrieNode> NodeStore{};
-
-  // Create a JSON Array which will hold all trace events.
-  json::Array TraceEvents;
+  int loop_count = 0;
   for (const auto &R : Records) {
+    if (loop_count++ == 0)
+      OS << "\n";
+    else
+      OS << ",\n";
+
     // Chrome trace event format always wants data in micros.
     // CyclesPerMicro = CycleHertz / 10^6
     // TSC / CyclesPerMicro == TSC * 10^6 / CycleHertz == MicroTimestamp
@@ -283,15 +311,8 @@ void TraceConverter::exportAsChromeTraceEventFormat(const Trace &Records,
       // type of B for begin or E for end, thread id, process id,
       // timestamp in microseconds, and a stack frame id. The ids are logged
       // in an id dictionary after the events.
-      TraceEvents.push_back(json::Object({
-          {"name", Symbolize ? FuncIdHelper.SymbolOrNumber(R.FuncId)
-                             : llvm::to_string(R.FuncId)},
-          {"ph", "B"},
-          {"tid", llvm::to_string(R.TId)},
-          {"pid", llvm::to_string(Version >= 3 ? R.PId : 1)},
-          {"ts", llvm::formatv("{0:f4}", EventTimestampUs)},
-          {"sf", llvm::to_string(StackCursor->ExtraData.id)},
-      }));
+      writeTraceViewerRecord(Version, OS, R.FuncId, R.TId, R.PId, Symbolize,
+                             FuncIdHelper, EventTimestampUs, *StackCursor, "B");
       break;
     case RecordTypes::EXIT:
     case RecordTypes::TAIL_EXIT:
@@ -302,51 +323,43 @@ void TraceConverter::exportAsChromeTraceEventFormat(const Trace &Records,
       // (And/Or in loop termination below)
       StackTrieNode *PreviousCursor = nullptr;
       do {
-        TraceEvents.push_back(json::Object({
-            {"name", Symbolize
-                         ? FuncIdHelper.SymbolOrNumber(StackCursor->FuncId)
-                         : llvm::to_string(StackCursor->FuncId)},
-            {"ph", "E"},
-            {"tid", llvm::to_string(R.TId)},
-            {"pid", llvm::to_string(Version >= 3 ? R.PId : 1)},
-            {"ts", llvm::formatv("{0:f4}", EventTimestampUs)},
-            {"sf", llvm::to_string(StackCursor->ExtraData.id)},
-        }));
+        if (PreviousCursor != nullptr) {
+          OS << ",\n";
+        }
+        writeTraceViewerRecord(Version, OS, StackCursor->FuncId, R.TId, R.PId,
+                               Symbolize, FuncIdHelper, EventTimestampUs,
+                               *StackCursor, "E");
         PreviousCursor = StackCursor;
         StackCursor = StackCursor->Parent;
       } while (PreviousCursor->FuncId != R.FuncId && StackCursor != nullptr);
       break;
     }
   }
+  OS << "\n  ],\n"; // Close the Trace Events array.
+  OS << "  "
+     << "\"displayTimeUnit\": \"ns\",\n";
 
   // The stackFrames dictionary substantially reduces size of the output file by
   // avoiding repeating the entire call stack of function names for each entry.
-  json::Object StackFrames;
-  for (const auto &Stack : StacksByStackId) {
-    const auto &StackId = Stack.first;
-    const auto &StackFunctionNode = Stack.second;
-    json::Object::iterator It;
-    std::tie(It, std::ignore) = StackFrames.insert({
-        llvm::to_string(StackId),
-        json::Object{
-            {"name",
-             Symbolize ? FuncIdHelper.SymbolOrNumber(StackFunctionNode->FuncId)
-                       : llvm::to_string(StackFunctionNode->FuncId)}},
-    });
-
-    if (StackFunctionNode->Parent != nullptr)
-      It->second.getAsObject()->insert(
-          {"parent", llvm::to_string(StackFunctionNode->Parent->ExtraData.id)});
+  OS << R"(  "stackFrames": {)";
+  int stack_frame_count = 0;
+  for (auto map_iter : StacksByStackId) {
+    if (stack_frame_count++ == 0)
+      OS << "\n";
+    else
+      OS << ",\n";
+    OS << "    ";
+    OS << llvm::formatv(
+        R"("{0}" : { "name" : "{1}")", map_iter.first,
+        (Symbolize ? FuncIdHelper.SymbolOrNumber(map_iter.second->FuncId)
+                   : llvm::to_string(map_iter.second->FuncId)));
+    if (map_iter.second->Parent != nullptr)
+      OS << llvm::formatv(R"(, "parent": "{0}")",
+                          map_iter.second->Parent->ExtraData.id);
+    OS << " }";
   }
-
-  json::Object TraceJSON{
-      {"displayTimeUnit", "ns"},
-      {"traceEvents", std::move(TraceEvents)},
-      {"stackFrames", std::move(StackFrames)},
-  };
-
-  // Pretty-print the JSON using two spaces for indentations.
-  OS << formatv("{0:2}", json::Value(std::move(TraceJSON)));
+  OS << "\n  }\n"; // Close the stack frames map.
+  OS << "}\n";     // Close the JSON entry.
 }
 
 namespace llvm {

@@ -546,6 +546,10 @@ void BTFDebug::emitCommonHeader() {
 }
 
 void BTFDebug::emitBTFSection() {
+  // Do not emit section if no types and only "" string.
+  if (!TypeEntries.size() && StringTable.getSize() == 1)
+    return;
+
   MCContext &Ctx = OS.getContext();
   OS.SwitchSection(Ctx.getELFSection(".BTF", ELF::SHT_PROGBITS, 0));
 
@@ -578,6 +582,10 @@ void BTFDebug::emitBTFSection() {
 }
 
 void BTFDebug::emitBTFExtSection() {
+  // Do not emit section if empty FuncInfoTable and LineInfoTable.
+  if (!FuncInfoTable.size() && !LineInfoTable.size())
+    return;
+
   MCContext &Ctx = OS.getContext();
   OS.SwitchSection(Ctx.getELFSection(".BTF.ext", ELF::SHT_PROGBITS, 0));
 

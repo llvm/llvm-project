@@ -23,7 +23,7 @@ test(const S& s)
     assert(ce == s.rend());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -37,4 +37,6 @@ int main()
     test(S("123"));
     }
 #endif
+
+  return 0;
 }

@@ -328,11 +328,8 @@ static void CheckShadowMapping() {
 #if !SANITIZER_GO
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
-  uptr top = 0;
-  uptr bottom = 0;
-  bool fast = common_flags()->fast_unwind_on_fatal;
-  if (fast) GetThreadStackTopAndBottom(false, &top, &bottom);
-  stack->Unwind(kStackTraceMax, sig.pc, sig.bp, sig.context, top, bottom, fast);
+  stack->Unwind(sig.pc, sig.bp, sig.context,
+                common_flags()->fast_unwind_on_fatal);
 }
 
 static void TsanOnDeadlySignal(int signo, void *siginfo, void *context) {
@@ -396,7 +393,7 @@ void Initialize(ThreadState *thr) {
   // Initialize thread 0.
   int tid = ThreadCreate(thr, 0, 0, true);
   CHECK_EQ(tid, 0);
-  ThreadStart(thr, tid, GetTid(), /*workerthread*/ false);
+  ThreadStart(thr, tid, GetTid(), ThreadType::Regular);
 #if TSAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();
 #endif
@@ -641,6 +638,7 @@ void MemoryAccessImpl1(ThreadState *thr, uptr addr,
   // __m128i _mm_move_epi64(__m128i*);
   // _mm_storel_epi64(u64*, __m128i);
   u64 store_word = cur.raw();
+  bool stored = false;
 
   // scan all the shadow values and dispatch to 4 categories:
   // same, replace, candidate and race (see comments below).
@@ -665,16 +663,28 @@ void MemoryAccessImpl1(ThreadState *thr, uptr addr,
   int idx = 0;
 #include "tsan_update_shadow_word_inl.h"
   idx = 1;
+  if (stored) {
 #include "tsan_update_shadow_word_inl.h"
+  } else {
+#include "tsan_update_shadow_word_inl.h"
+  }
   idx = 2;
+  if (stored) {
 #include "tsan_update_shadow_word_inl.h"
+  } else {
+#include "tsan_update_shadow_word_inl.h"
+  }
   idx = 3;
+  if (stored) {
 #include "tsan_update_shadow_word_inl.h"
+  } else {
+#include "tsan_update_shadow_word_inl.h"
+  }
 #endif
 
   // we did not find any races and had already stored
   // the current access info, so we are done
-  if (LIKELY(store_word == 0))
+  if (LIKELY(stored))
     return;
   // choose a random candidate slot and replace it
   StoreShadow(shadow_mem + (cur.epoch() % kShadowCnt), store_word);
@@ -814,7 +824,7 @@ void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
   }
 #endif
 
-  if (!SANITIZER_GO && *shadow_mem == kShadowRodata) {
+  if (!SANITIZER_GO && !kAccessIsWrite && *shadow_mem == kShadowRodata) {
     // Access to .rodata section, no races here.
     // Measurements show that it can be 10-20% of all memory accesses.
     StatInc(thr, StatMop);
@@ -825,7 +835,7 @@ void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
   }
 
   FastState fast_state = thr->fast_state;
-  if (fast_state.GetIgnoreBit()) {
+  if (UNLIKELY(fast_state.GetIgnoreBit())) {
     StatInc(thr, StatMop);
     StatInc(thr, kAccessIsWrite ? StatMopWrite : StatMopRead);
     StatInc(thr, (StatType)(StatMop1 + kAccessSizeLog));

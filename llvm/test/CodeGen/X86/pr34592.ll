@@ -10,7 +10,7 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
-; CHECK-NEXT:    subq $352, %rsp # imm = 0x160
+; CHECK-NEXT:    subq $320, %rsp # imm = 0x140
 ; CHECK-NEXT:    vmovaps 240(%rbp), %ymm8
 ; CHECK-NEXT:    vmovaps 208(%rbp), %ymm9
 ; CHECK-NEXT:    vmovaps 176(%rbp), %ymm10
@@ -21,10 +21,6 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-NEXT:    vmovaps 16(%rbp), %ymm15
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm2 = ymm6[0,1,2,3,4,5],ymm2[6,7]
 ; CHECK-NEXT:    vmovaps %xmm9, %xmm6
-; CHECK-NEXT:    vmovdqa %xmm6, %xmm9
-; CHECK-NEXT:    # kill: def $ymm9 killed $xmm9
-; CHECK-NEXT:    vmovaps %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    # implicit-def: $ymm0
 ; CHECK-NEXT:    vinserti128 $1, %xmm6, %ymm0, %ymm0
@@ -34,9 +30,10 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm6
 ; CHECK-NEXT:    # implicit-def: $ymm2
 ; CHECK-NEXT:    vinserti128 $1, %xmm6, %ymm2, %ymm2
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %ymm11 # 32-byte Reload
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm11 = ymm7[0,1],ymm11[2,3],ymm7[4,5],ymm11[6,7]
-; CHECK-NEXT:    vpermq {{.*#+}} ymm11 = ymm11[2,1,2,3]
+; CHECK-NEXT:    vextracti128 $1, %ymm7, %xmm6
+; CHECK-NEXT:    vmovq {{.*#+}} xmm6 = xmm6[0],zero
+; CHECK-NEXT:    # implicit-def: $ymm11
+; CHECK-NEXT:    vmovaps %xmm6, %xmm11
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm2 = ymm11[0,1,2,3],ymm2[4,5,6,7]
 ; CHECK-NEXT:    vmovaps %xmm7, %xmm6
 ; CHECK-NEXT:    vpslldq {{.*#+}} xmm6 = zero,zero,zero,zero,zero,zero,zero,zero,xmm6[0,1,2,3,4,5,6,7]

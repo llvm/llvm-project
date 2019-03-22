@@ -95,6 +95,7 @@ set(files
   ext/__hash
   ext/hash_map
   ext/hash_set
+  fenv.h
   filesystem
   float.h
   forward_list

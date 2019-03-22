@@ -26,7 +26,7 @@ test(S s, typename S::size_type n, typename S::value_type c, S expected)
     assert(s == expected);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -60,4 +60,6 @@ int main()
     test(S("12345678901234567890"), 10, 'a', S("12345678901234567890aaaaaaaaaa"));
     }
 #endif
+
+  return 0;
 }

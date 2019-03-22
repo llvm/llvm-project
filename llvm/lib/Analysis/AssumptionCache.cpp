@@ -53,11 +53,11 @@ AssumptionCache::getOrInsertAffectedValues(Value *V) {
   return AVIP.first->second;
 }
 
-void AssumptionCache::updateAffectedValues(CallInst *CI) {
+static void findAffectedValues(CallInst *CI,
+                               SmallVectorImpl<Value *> &Affected) {
   // Note: This code must be kept in-sync with the code in
   // computeKnownBitsFromAssume in ValueTracking.
 
-  SmallVector<Value *, 16> Affected;
   auto AddAffected = [&Affected](Value *V) {
     if (isa<Argument>(V)) {
       Affected.push_back(V);
@@ -108,12 +108,29 @@ void AssumptionCache::updateAffectedValues(CallInst *CI) {
       AddAffectedFromEq(B);
     }
   }
+}
+
+void AssumptionCache::updateAffectedValues(CallInst *CI) {
+  SmallVector<Value *, 16> Affected;
+  findAffectedValues(CI, Affected);
 
   for (auto &AV : Affected) {
     auto &AVV = getOrInsertAffectedValues(AV);
     if (std::find(AVV.begin(), AVV.end(), CI) == AVV.end())
       AVV.push_back(CI);
   }
+}
+
+void AssumptionCache::unregisterAssumption(CallInst *CI) {
+  SmallVector<Value *, 16> Affected;
+  findAffectedValues(CI, Affected);
+
+  for (auto &AV : Affected) {
+    auto AVI = AffectedValues.find_as(AV);
+    if (AVI != AffectedValues.end())
+      AffectedValues.erase(AVI);
+  }
+  remove_if(AssumeHandles, [CI](WeakTrackingVH &VH) { return CI == VH; });
 }
 
 void AssumptionCache::AffectedValueCallbackVH::deleted() {
@@ -238,6 +255,13 @@ AssumptionCache &AssumptionCacheTracker::getAssumptionCache(Function &F) {
       FunctionCallbackVH(&F, this), llvm::make_unique<AssumptionCache>(F)));
   assert(IP.second && "Scanning function already in the map?");
   return *IP.first->second;
+}
+
+AssumptionCache *AssumptionCacheTracker::lookupAssumptionCache(Function &F) {
+  auto I = AssumptionCaches.find_as(&F);
+  if (I != AssumptionCaches.end())
+    return I->second.get();
+  return nullptr;
 }
 
 void AssumptionCacheTracker::verifyAnalysis() const {

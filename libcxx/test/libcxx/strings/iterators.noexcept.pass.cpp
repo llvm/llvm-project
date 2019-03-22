@@ -30,7 +30,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-int main()
+int main(int, char**)
 {
 //  basic tests
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<char *>::value), "");
@@ -77,4 +77,6 @@ int main()
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::initializer_list<char>::iterator>              ::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::initializer_list<char>::const_iterator>        ::value), "");
 #endif
+
+  return 0;
 }

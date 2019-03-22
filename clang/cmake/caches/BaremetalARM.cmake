@@ -41,7 +41,7 @@ set(LLVM_TOOLCHAIN_TOOLS
 set(LLVM_DISTRIBUTION_COMPONENTS
   clang
   lld
-  clang-headers
+  clang-resource-headers
   builtins-armv6m-none-eabi
   builtins-armv7m-none-eabi
   builtins-armv7em-none-eabi

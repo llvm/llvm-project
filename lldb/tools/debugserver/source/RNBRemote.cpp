@@ -45,6 +45,7 @@
 
 #include <TargetConditionals.h>
 #include <iomanip>
+#include <memory>
 #include <sstream>
 #include <unordered_set>
 
@@ -5227,7 +5228,7 @@ JSONGenerator::ObjectSP
 RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
   JSONGenerator::ArraySP threads_array_sp;
   if (m_ctx.HasValidProcessID()) {
-    threads_array_sp.reset(new JSONGenerator::Array());
+    threads_array_sp = std::make_shared<JSONGenerator::Array>();
 
     nub_process_t pid = m_ctx.ProcessID();
 

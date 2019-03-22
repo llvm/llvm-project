@@ -108,7 +108,7 @@ static cl::opt<bool> EnableSDWAPeephole(
 static cl::opt<bool> EnableDPPCombine(
   "amdgpu-dpp-combine",
   cl::desc("Enable DPP combiner"),
-  cl::init(false));
+  cl::init(true));
 
 // Enable address space based alias analysis
 static cl::opt<bool> EnableAMDGPUAliasAnalysis("enable-amdgpu-aa", cl::Hidden,
@@ -122,11 +122,11 @@ static cl::opt<bool, true> LateCFGStructurize(
   cl::location(AMDGPUTargetMachine::EnableLateStructurizeCFG),
   cl::Hidden);
 
-static cl::opt<bool, true> EnableAMDGPUFunctionCalls(
+static cl::opt<bool, true> EnableAMDGPUFunctionCallsOpt(
   "amdgpu-function-calls",
   cl::desc("Enable AMDGPU function call support"),
   cl::location(AMDGPUTargetMachine::EnableFunctionCalls),
-  cl::init(false),
+  cl::init(true),
   cl::Hidden);
 
 // Enable lib calls simplifications
@@ -200,7 +200,6 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSILowerControlFlowPass(*PR);
   initializeSIInsertSkipsPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
-  initializeSIDebuggerInsertNopsPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
   initializeSIFixWWMLivenessPass(*PR);
   initializeSIFormMemoryClausesPass(*PR);
@@ -362,11 +361,11 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
 
   bool EnableOpt = getOptLevel() > CodeGenOpt::None;
   bool Internalize = InternalizeSymbols;
-  bool EarlyInline = EarlyInlineAll && EnableOpt && !EnableAMDGPUFunctionCalls;
+  bool EarlyInline = EarlyInlineAll && EnableOpt && !EnableFunctionCalls;
   bool AMDGPUAA = EnableAMDGPUAliasAnalysis && EnableOpt;
   bool LibCallSimplify = EnableLibCallSimplify && EnableOpt;
 
-  if (EnableAMDGPUFunctionCalls) {
+  if (EnableFunctionCalls) {
     delete Builder.Inliner;
     Builder.Inliner = createAMDGPUFunctionInliningPass();
   }
@@ -427,6 +426,11 @@ R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
                                      CodeGenOpt::Level OL, bool JIT)
     : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
   setRequiresStructuredCFG(true);
+
+  // Override the default since calls aren't supported for r600.
+  if (EnableFunctionCalls &&
+      EnableAMDGPUFunctionCallsOpt.getNumOccurrences() == 0)
+    EnableFunctionCalls = false;
 }
 
 const R600Subtarget *R600TargetMachine::getSubtargetImpl(
@@ -918,7 +922,6 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(&PostRAHazardRecognizerID);
 
   addPass(&SIInsertSkipsPassID);
-  addPass(createSIDebuggerInsertNopsPass());
   addPass(&BranchRelaxationPassID);
 }
 

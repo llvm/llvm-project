@@ -1,0 +1,77 @@
+# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+---
+name:            extract512
+legalized:       true
+regBankSelected: true
+
+# CHECK-LABEL: extract512
+# CHECK: [[BASE:%[0-9]+]]:sreg_512 = IMPLICIT_DEF
+# CHECK: [[SGPR0:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub0
+# CHECK: [[SGPR1:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub1
+# CHECK: [[SGPR2:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub2
+# CHECK: [[SGPR3:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub3
+# CHECK: [[SGPR4:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub4
+# CHECK: [[SGPR5:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub5
+# CHECK: [[SGPR6:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub6
+# CHECK: [[SGPR7:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub7
+# CHECK: [[SGPR8:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub8
+# CHECK: [[SGPR9:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub9
+# CHECK: [[SGPR10:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub10
+# CHECK: [[SGPR11:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub11
+# CHECK: [[SGPR12:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub12
+# CHECK: [[SGPR13:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub13
+# CHECK: [[SGPR14:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub14
+# CHECK: [[SGPR15:%[0-9]+]]:sreg_32_xm0 = COPY [[BASE]].sub15
+# CHECK: $sgpr0 = COPY [[SGPR0]]
+# CHECK: $sgpr1 = COPY [[SGPR1]]
+# CHECK: $sgpr2 = COPY [[SGPR2]]
+# CHECK: $sgpr3 = COPY [[SGPR3]]
+# CHECK: $sgpr4 = COPY [[SGPR4]]
+# CHECK: $sgpr5 = COPY [[SGPR5]]
+# CHECK: $sgpr6 = COPY [[SGPR6]]
+# CHECK: $sgpr7 = COPY [[SGPR7]]
+# CHECK: $sgpr8 = COPY [[SGPR8]]
+# CHECK: $sgpr9 = COPY [[SGPR9]]
+# CHECK: $sgpr10 = COPY [[SGPR10]]
+# CHECK: $sgpr11 = COPY [[SGPR11]]
+# CHECK: $sgpr12 = COPY [[SGPR12]]
+# CHECK: $sgpr13 = COPY [[SGPR13]]
+# CHECK: $sgpr14 = COPY [[SGPR14]]
+# CHECK: $sgpr15 = COPY [[SGPR15]]
+
+body: |
+  bb.0:
+    %0:sgpr(s512) = G_IMPLICIT_DEF
+    %1:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 0
+    %2:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 32
+    %3:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 64
+    %4:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 96
+    %5:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 128
+    %6:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 160
+    %7:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 192
+    %8:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 224
+    %9:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 256
+    %10:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 288
+    %11:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 320
+    %12:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 352
+    %13:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 384
+    %14:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 416
+    %15:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 448
+    %16:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 480
+    $sgpr0 = COPY %1:sgpr(s32)
+    $sgpr1 = COPY %2:sgpr(s32)
+    $sgpr2 = COPY %3:sgpr(s32)
+    $sgpr3 = COPY %4:sgpr(s32)
+    $sgpr4 = COPY %5:sgpr(s32)
+    $sgpr5 = COPY %6:sgpr(s32)
+    $sgpr6 = COPY %7:sgpr(s32)
+    $sgpr7 = COPY %8:sgpr(s32)
+    $sgpr8 = COPY %9:sgpr(s32)
+    $sgpr9 = COPY %10:sgpr(s32)
+    $sgpr10 = COPY %11:sgpr(s32)
+    $sgpr11 = COPY %12:sgpr(s32)
+    $sgpr12 = COPY %13:sgpr(s32)
+    $sgpr13 = COPY %14:sgpr(s32)
+    $sgpr14 = COPY %15:sgpr(s32)
+    $sgpr15 = COPY %16:sgpr(s32)
+    SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15

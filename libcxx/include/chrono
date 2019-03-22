@@ -1749,14 +1749,14 @@ public:
     year() = default;
     explicit inline constexpr year(int __val) noexcept : __y(static_cast<short>(__val)) {}
 
-    inline constexpr year& operator++()    noexcept { ++__y; return *this; };
-    inline constexpr year  operator++(int) noexcept { year __tmp = *this; ++(*this); return __tmp; };
-    inline constexpr year& operator--()    noexcept { --__y; return *this; };
-    inline constexpr year  operator--(int) noexcept { year __tmp = *this; --(*this); return __tmp; };
+    inline constexpr year& operator++()    noexcept { ++__y; return *this; }
+    inline constexpr year  operator++(int) noexcept { year __tmp = *this; ++(*this); return __tmp; }
+    inline constexpr year& operator--()    noexcept { --__y; return *this; }
+    inline constexpr year  operator--(int) noexcept { year __tmp = *this; --(*this); return __tmp; }
            constexpr year& operator+=(const years& __dy) noexcept;
            constexpr year& operator-=(const years& __dy) noexcept;
     inline constexpr year operator+() const noexcept { return *this; }
-    inline constexpr year operator-() const noexcept { return year{-__y}; };
+    inline constexpr year operator-() const noexcept { return year{-__y}; }
 
     inline constexpr bool is_leap() const noexcept { return __y % 4 == 0 && (__y % 100 != 0 || __y % 400 == 0); }
     explicit inline constexpr operator int() const noexcept { return __y; }

@@ -43,19 +43,17 @@ define i32 @test1() nounwind {
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movb {{.*}}(%rip), %dil
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    incb %al
+; X64-NEXT:    movb {{.*}}(%rip), %cl
+; X64-NEXT:    leal 1(%rcx), %eax
 ; X64-NEXT:    movb %al, {{.*}}(%rip)
 ; X64-NEXT:    incl {{.*}}(%rip)
-; X64-NEXT:    sete %sil
-; X64-NEXT:    movb {{.*}}(%rip), %cl
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    incb %dl
-; X64-NEXT:    cmpb %dil, %cl
+; X64-NEXT:    sete %dl
+; X64-NEXT:    movb {{.*}}(%rip), %sil
+; X64-NEXT:    leal 1(%rsi), %edi
+; X64-NEXT:    cmpb %cl, %sil
 ; X64-NEXT:    sete {{.*}}(%rip)
-; X64-NEXT:    movb %dl, {{.*}}(%rip)
-; X64-NEXT:    testb %sil, %sil
+; X64-NEXT:    movb %dil, {{.*}}(%rip)
+; X64-NEXT:    testb %dl, %dl
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %if.then
 ; X64-NEXT:    pushq %rax

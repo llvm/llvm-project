@@ -50,7 +50,7 @@ public:
     ~Class();
 };
 
-int main()
+int main(int, char**)
 {
     test_extent<void, 0>();
     test_extent<int&, 0>();
@@ -70,4 +70,6 @@ int main()
     test_extent1<int[2], 0>();
     test_extent1<int[2][4], 4>();
     test_extent1<int[][4], 4>();
+
+  return 0;
 }

@@ -1,0 +1,20 @@
+# RUN: mkdir -p %t.dir
+# RUN: cp %p/Inputs/foo.cpp %t.dir/foo.cpp
+# RUN: cp %p/Inputs/foo.h %t.dir/foo.h
+
+# RUN: lldb-instr %t.dir/foo.cpp
+# RUN: cat %t.dir/foo.cpp | FileCheck %s
+
+# CHECK: LLDB_RECORD_CONSTRUCTOR_NO_ARGS(Foo);
+# CHECK: LLDB_RECORD_METHOD_NO_ARGS(void, Foo, A);
+# CHECK: LLDB_RECORD_METHOD(void, Foo, B, (int), i);
+# CHECK: LLDB_RECORD_METHOD(int, Foo, C, (int), i);
+# CHECK: LLDB_RECORD_METHOD_CONST(int, Foo, D, (bool), b);
+# CHECK: LLDB_RECORD_STATIC_METHOD_NO_ARGS(void, Foo, E);
+# CHECK: LLDB_RECORD_STATIC_METHOD(int, Foo, F, (int), i);
+# CHECK-NOT: LLDB_RECORD_STATIC_METHOD(void, Foo, G
+# CHECK: LLDB_RECORD_STATIC_METHOD_NO_ARGS(Foo, Foo, H);
+# CHECK: LLDB_RECORD_RESULT(Foo())
+# CHECK-NOT: LLDB_RECORD_METHOD_CONST_NO_ARGS(void, Foo, I);
+# CHECK: LLDB_RECORD_METHOD_CONST_NO_ARGS(Bar, Foo, J);
+# CHECK-NOT: LLDB_RECORD_RESULT(Bar());

@@ -24,7 +24,7 @@ struct Key {
   bool operator< (const Key&) const { return false; }
 };
 
-int main()
+int main(int, char**)
 {
     typedef std::map<Key, int> MapT;
     typedef MapT::iterator Iter;
@@ -48,4 +48,6 @@ int main()
         assert(!result2.second);
         assert(map[Key(0)] == 42);
     }
+
+  return 0;
 }

@@ -280,7 +280,7 @@ function(add_compiler_rt_runtime name type)
         OUTPUT_NAME ${output_name_${libname}})
     set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Runtime")
     if(LIB_LINK_LIBS)
-      target_link_libraries(${libname} ${LIB_LINK_LIBS})
+      target_link_libraries(${libname} PRIVATE ${LIB_LINK_LIBS})
     endif()
     if(${type} STREQUAL "SHARED")
       if(COMMAND llvm_setup_rpath)
@@ -509,13 +509,16 @@ macro(add_custom_libcxx name prefix)
   if(NOT COMPILER_RT_LIBCXX_PATH)
     message(FATAL_ERROR "libcxx not found!")
   endif()
+  if(NOT COMPILER_RT_LIBCXXABI_PATH)
+    message(FATAL_ERROR "libcxxabi not found!")
+  endif()
 
   cmake_parse_arguments(LIBCXX "USE_TOOLCHAIN" "" "DEPS;CFLAGS;CMAKE_ARGS" ${ARGN})
 
   if(LIBCXX_USE_TOOLCHAIN)
     set(compiler_args -DCMAKE_C_COMPILER=${COMPILER_RT_TEST_COMPILER}
                       -DCMAKE_CXX_COMPILER=${COMPILER_RT_TEST_CXX_COMPILER})
-    if(NOT COMPILER_RT_STANDALONE_BUILD)
+    if(NOT COMPILER_RT_STANDALONE_BUILD AND NOT RUNTIMES_BUILD)
       set(toolchain_deps $<TARGET_FILE:clang>)
       set(force_deps DEPENDS $<TARGET_FILE:clang>)
     endif()
@@ -584,7 +587,7 @@ macro(add_custom_libcxx name prefix)
   ExternalProject_Add(${name}
     DEPENDS ${name}-clobber ${LIBCXX_DEPS}
     PREFIX ${prefix}
-    SOURCE_DIR ${COMPILER_RT_LIBCXX_PATH}
+    SOURCE_DIR ${COMPILER_RT_SOURCE_DIR}/cmake/Modules/CustomLibcxx
     STAMP_DIR ${STAMP_DIR}
     BINARY_DIR ${BINARY_DIR}
     CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
@@ -595,7 +598,8 @@ macro(add_custom_libcxx name prefix)
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
                -DLLVM_BINARY_DIR=${prefix}
                -DLLVM_LIBRARY_OUTPUT_INTDIR=${prefix}/lib
-               -DLIBCXX_STANDALONE_BUILD=ON
+               -DCOMPILER_RT_LIBCXX_PATH=${COMPILER_RT_LIBCXX_PATH}
+               -DCOMPILER_RT_LIBCXXABI_PATH=${COMPILER_RT_LIBCXXABI_PATH}
                ${LIBCXX_CMAKE_ARGS}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build

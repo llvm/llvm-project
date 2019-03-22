@@ -52,7 +52,7 @@ class Class
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
   test_member_function_pointer<void (Class::*)()>();
   test_member_function_pointer<void (Class::*)(int)>();
@@ -225,4 +225,6 @@ int main()
 
 //  LWG#2582
   static_assert(!std::is_member_function_pointer<incomplete_type>::value, "");
+
+  return 0;
 }

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
 
@@ -10139,70 +10140,70 @@ __m512i test_mm512_set_epi8(char e63, char e62, char e61, char e60, char e59,
     char e1, char e0) {
 
   //CHECK-LABEL: @test_mm512_set_epi8
-  //CHECK: load i8, i8* %e63.addr, align 1
-   //CHECK: load i8, i8* %e62.addr, align 1
-   //CHECK: load i8, i8* %e61.addr, align 1
-   //CHECK: load i8, i8* %e60.addr, align 1
-   //CHECK: load i8, i8* %e59.addr, align 1
-   //CHECK: load i8, i8* %e58.addr, align 1
-   //CHECK: load i8, i8* %e57.addr, align 1
-   //CHECK: load i8, i8* %e56.addr, align 1
-   //CHECK: load i8, i8* %e55.addr, align 1
-   //CHECK: load i8, i8* %e54.addr, align 1
-   //CHECK: load i8, i8* %e53.addr, align 1
-   //CHECK: load i8, i8* %e52.addr, align 1
-   //CHECK: load i8, i8* %e51.addr, align 1
-   //CHECK: load i8, i8* %e50.addr, align 1
-   //CHECK: load i8, i8* %e49.addr, align 1
-   //CHECK: load i8, i8* %e48.addr, align 1
-   //CHECK: load i8, i8* %e47.addr, align 1
-   //CHECK: load i8, i8* %e46.addr, align 1
-   //CHECK: load i8, i8* %e45.addr, align 1
-   //CHECK: load i8, i8* %e44.addr, align 1
-   //CHECK: load i8, i8* %e43.addr, align 1
-   //CHECK: load i8, i8* %e42.addr, align 1
-   //CHECK: load i8, i8* %e41.addr, align 1
-   //CHECK: load i8, i8* %e40.addr, align 1
-   //CHECK: load i8, i8* %e39.addr, align 1
-   //CHECK: load i8, i8* %e38.addr, align 1
-   //CHECK: load i8, i8* %e37.addr, align 1
-   //CHECK: load i8, i8* %e36.addr, align 1
-   //CHECK: load i8, i8* %e35.addr, align 1
-   //CHECK: load i8, i8* %e34.addr, align 1
-   //CHECK: load i8, i8* %e33.addr, align 1
-   //CHECK: load i8, i8* %e32.addr, align 1
-   //CHECK: load i8, i8* %e31.addr, align 1
-   //CHECK: load i8, i8* %e30.addr, align 1
-   //CHECK: load i8, i8* %e29.addr, align 1
-   //CHECK: load i8, i8* %e28.addr, align 1
-   //CHECK: load i8, i8* %e27.addr, align 1
-   //CHECK: load i8, i8* %e26.addr, align 1
-   //CHECK: load i8, i8* %e25.addr, align 1
-   //CHECK: load i8, i8* %e24.addr, align 1
-   //CHECK: load i8, i8* %e23.addr, align 1
-   //CHECK: load i8, i8* %e22.addr, align 1
-   //CHECK: load i8, i8* %e21.addr, align 1
-   //CHECK: load i8, i8* %e20.addr, align 1
-   //CHECK: load i8, i8* %e19.addr, align 1
-   //CHECK: load i8, i8* %e18.addr, align 1
-   //CHECK: load i8, i8* %e17.addr, align 1
-   //CHECK: load i8, i8* %e16.addr, align 1
-   //CHECK: load i8, i8* %e15.addr, align 1
-   //CHECK: load i8, i8* %e14.addr, align 1
-   //CHECK: load i8, i8* %e13.addr, align 1
-   //CHECK: load i8, i8* %e12.addr, align 1
-   //CHECK: load i8, i8* %e11.addr, align 1
-   //CHECK: load i8, i8* %e10.addr, align 1
-   //CHECK: load i8, i8* %e9.addr, align 1
-   //CHECK: load i8, i8* %e8.addr, align 1
-   //CHECK: load i8, i8* %e7.addr, align 1
-   //CHECK: load i8, i8* %e6.addr, align 1
-   //CHECK: load i8, i8* %e5.addr, align 1
-   //CHECK: load i8, i8* %e4.addr, align 1
-   //CHECK: load i8, i8* %e3.addr, align 1
-   //CHECK: load i8, i8* %e2.addr, align 1
-   //CHECK: load i8, i8* %e1.addr, align 1
-   //CHECK: load i8, i8* %e0.addr, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
+  //CHECK: load i8, i8* %{{.*}}, align 1
   return _mm512_set_epi8(e63, e62, e61, e60, e59, e58, e57, e56, e55, e54,
       e53, e52, e51, e50, e49, e48,e47, e46, e45, e44, e43, e42, e41, e40,
       e39, e38, e37, e36, e35, e34, e33, e32,e31, e30, e29, e28, e27, e26,
@@ -10286,22 +10287,22 @@ __m512i test_mm512_setr_epi32 (int __A, int __B, int __C, int __D,
                int __M, int __N, int __O, int __P)
 {
  //CHECK-LABEL: @test_mm512_setr_epi32
- //CHECK: load{{.*}}%__P.addr, align 4
- //CHECK: load{{.*}}%__O.addr, align 4
- //CHECK: load{{.*}}%__N.addr, align 4
- //CHECK: load{{.*}}%__M.addr, align 4
- //CHECK: load{{.*}}%__L.addr, align 4
- //CHECK: load{{.*}}%__K.addr, align 4
- //CHECK: load{{.*}}%__J.addr, align 4
- //CHECK: load{{.*}}%__I.addr, align 4
- //CHECK: load{{.*}}%__H.addr, align 4
- //CHECK: load{{.*}}%__G.addr, align 4
- //CHECK: load{{.*}}%__F.addr, align 4
- //CHECK: load{{.*}}%__E.addr, align 4
- //CHECK: load{{.*}}%__D.addr, align 4
- //CHECK: load{{.*}}%__C.addr, align 4
- //CHECK: load{{.*}}%__B.addr, align 4
- //CHECK: load{{.*}}%__A.addr, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
+ //CHECK: load{{.*}}%{{.*}}, align 4
  //CHECK: insertelement{{.*}}i32 0
  //CHECK: insertelement{{.*}}i32 1
  //CHECK: insertelement{{.*}}i32 2
@@ -10374,14 +10375,14 @@ __m512i test_mm512_setr_epi64 (long long __A, long long __B, long long __C,
                               long long __G, long long __H)
 {
     //CHECK-LABEL: @test_mm512_setr_epi64
-    //CHECK: load{{.*}}%__H.addr, align 8
-    //CHECK: load{{.*}}%__G.addr, align 8
-    //CHECK: load{{.*}}%__F.addr, align 8
-    //CHECK: load{{.*}}%__E.addr, align 8
-    //CHECK: load{{.*}}%__D.addr, align 8
-    //CHECK: load{{.*}}%__C.addr, align 8
-    //CHECK: load{{.*}}%__B.addr, align 8
-    //CHECK: load{{.*}}%__A.addr, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
     //CHECK: insertelement{{.*}}i32 0
     //CHECK: insertelement{{.*}}i32 1
     //CHECK: insertelement{{.*}}i32 2
@@ -10412,14 +10413,14 @@ __m512d test_mm512_setr_pd (double __A, double __B, double __C, double __D,
                            double __E, double __F, double __G, double __H)
 {
     //CHECK-LABEL: @test_mm512_setr_pd
-    //CHECK: load{{.*}}%__H.addr, align 8
-    //CHECK: load{{.*}}%__G.addr, align 8
-    //CHECK: load{{.*}}%__F.addr, align 8
-    //CHECK: load{{.*}}%__E.addr, align 8
-    //CHECK: load{{.*}}%__D.addr, align 8
-    //CHECK: load{{.*}}%__C.addr, align 8
-    //CHECK: load{{.*}}%__B.addr, align 8
-    //CHECK: load{{.*}}%__A.addr, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
+    //CHECK: load{{.*}}%{{.*}}, align 8
     //CHECK: insertelement{{.*}}i32 0
     //CHECK: insertelement{{.*}}i32 1
     //CHECK: insertelement{{.*}}i32 2
@@ -10503,22 +10504,22 @@ __m512 test_mm512_setr_ps (float __A, float __B, float __C, float __D,
                           float __M, float __N, float __O, float __P)
 {
     //CHECK-LABEL: @test_mm512_setr_ps
-    //CHECK: load{{.*}}%__P.addr, align 4
-    //CHECK: load{{.*}}%__O.addr, align 4
-    //CHECK: load{{.*}}%__N.addr, align 4
-    //CHECK: load{{.*}}%__M.addr, align 4
-    //CHECK: load{{.*}}%__L.addr, align 4
-    //CHECK: load{{.*}}%__K.addr, align 4
-    //CHECK: load{{.*}}%__J.addr, align 4
-    //CHECK: load{{.*}}%__I.addr, align 4
-    //CHECK: load{{.*}}%__H.addr, align 4
-    //CHECK: load{{.*}}%__G.addr, align 4
-    //CHECK: load{{.*}}%__F.addr, align 4
-    //CHECK: load{{.*}}%__E.addr, align 4
-    //CHECK: load{{.*}}%__D.addr, align 4
-    //CHECK: load{{.*}}%__C.addr, align 4
-    //CHECK: load{{.*}}%__B.addr, align 4
-    //CHECK: load{{.*}}%__A.addr, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
+    //CHECK: load{{.*}}%{{.*}}, align 4
     //CHECK: insertelement{{.*}}i32 0
     //CHECK: insertelement{{.*}}i32 1
     //CHECK: insertelement{{.*}}i32 2

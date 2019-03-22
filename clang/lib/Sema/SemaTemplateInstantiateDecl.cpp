@@ -344,6 +344,51 @@ static void instantiateOMPDeclareSimdDeclAttr(
       Attr.getRange());
 }
 
+static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const AMDGPUFlatWorkGroupSizeAttr &Attr, Decl *New) {
+  // Both min and max expression are constant expressions.
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult Result = S.SubstExpr(Attr.getMin(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *MinExpr = Result.getAs<Expr>();
+
+  Result = S.SubstExpr(Attr.getMax(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *MaxExpr = Result.getAs<Expr>();
+
+  S.addAMDGPUFlatWorkGroupSizeAttr(Attr.getLocation(), New, MinExpr, MaxExpr,
+                                   Attr.getSpellingListIndex());
+}
+
+static void instantiateDependentAMDGPUWavesPerEUAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const AMDGPUWavesPerEUAttr &Attr, Decl *New) {
+  // Both min and max expression are constant expressions.
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult Result = S.SubstExpr(Attr.getMin(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *MinExpr = Result.getAs<Expr>();
+
+  Expr *MaxExpr = nullptr;
+  if (auto Max = Attr.getMax()) {
+    Result = S.SubstExpr(Max, TemplateArgs);
+    if (Result.isInvalid())
+      return;
+    MaxExpr = Result.getAs<Expr>();
+  }
+
+  S.addAMDGPUWavesPerEUAttr(Attr.getLocation(), New, MinExpr, MaxExpr,
+                            Attr.getSpellingListIndex());
+}
+
 void Sema::InstantiateAttrsForDecl(
     const MultiLevelTemplateArgumentList &TemplateArgs, const Decl *Tmpl,
     Decl *New, LateInstantiatedAttrVec *LateAttrs,
@@ -435,6 +480,18 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     if (const auto *OMPAttr = dyn_cast<OMPDeclareSimdDeclAttr>(TmplAttr)) {
       instantiateOMPDeclareSimdDeclAttr(*this, TemplateArgs, *OMPAttr, New);
       continue;
+    }
+
+    if (const AMDGPUFlatWorkGroupSizeAttr *AMDGPUFlatWorkGroupSize =
+            dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(TmplAttr)) {
+      instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
+          *this, TemplateArgs, *AMDGPUFlatWorkGroupSize, New);
+    }
+
+    if (const AMDGPUWavesPerEUAttr *AMDGPUFlatWorkGroupSize =
+            dyn_cast<AMDGPUWavesPerEUAttr>(TmplAttr)) {
+      instantiateDependentAMDGPUWavesPerEUAttr(*this, TemplateArgs,
+                                               *AMDGPUFlatWorkGroupSize, New);
     }
 
     // Existing DLL attribute on the instantiation takes precedence.
@@ -2989,11 +3046,19 @@ TemplateDeclInstantiator::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
       }
       if (!IsCorrect)
         break;
+      NestedNameSpecifierLoc NewQualifierLoc =
+          SemaRef.SubstNestedNameSpecifierLoc(OldC->getMapperQualifierLoc(),
+                                              TemplateArgs);
+      CXXScopeSpec SS;
+      SS.Adopt(NewQualifierLoc);
+      DeclarationNameInfo NewNameInfo = SemaRef.SubstDeclarationNameInfo(
+          OldC->getMapperIdInfo(), TemplateArgs);
+      OMPVarListLocTy Locs(OldC->getBeginLoc(), OldC->getLParenLoc(),
+                           OldC->getEndLoc());
       OMPClause *NewC = SemaRef.ActOnOpenMPMapClause(
-          OldC->getMapTypeModifiers(), OldC->getMapTypeModifiersLoc(),
-          OldC->getMapType(), OldC->isImplicitMapType(), OldC->getMapLoc(),
-          OldC->getColonLoc(), NewVars, OldC->getBeginLoc(),
-          OldC->getLParenLoc(), OldC->getEndLoc());
+          OldC->getMapTypeModifiers(), OldC->getMapTypeModifiersLoc(), SS,
+          NewNameInfo, OldC->getMapType(), OldC->isImplicitMapType(),
+          OldC->getMapLoc(), OldC->getColonLoc(), NewVars, Locs);
       Clauses.push_back(NewC);
     }
     SemaRef.EndOpenMPDSABlock(nullptr);
@@ -5378,7 +5443,8 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
                 // Because all SYCL kernel functions are template functions - they
                 // have deferred instantination. We need bodies of these functions
                 // so we are checking for SYCL kernel attribute after instantination.
-                if (getLangOpts().SYCL && CurFD->hasAttr<SYCLKernelAttr>()) {
+                if (getLangOpts().SYCLIsDevice &&
+                        CurFD->hasAttr<SYCLKernelAttr>()) {
                   ConstructSYCLKernel(CurFD);
                 }
                 CurFD->setInstantiationIsPending(false);
@@ -5391,7 +5457,8 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
           // Because all SYCL kernel functions are template functions - they
           // have deferred instantination. We need bodies of these functions
           // so we are checking for SYCL kernel attribute after instantination.
-          if (getLangOpts().SYCL && Function->hasAttr<SYCLKernelAttr>()) {
+          if (getLangOpts().SYCLIsDevice &&
+                  Function->hasAttr<SYCLKernelAttr>()) {
               ConstructSYCLKernel(Function);
           }
           Function->setInstantiationIsPending(false);

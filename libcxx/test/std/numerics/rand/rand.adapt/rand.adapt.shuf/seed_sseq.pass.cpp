@@ -28,7 +28,9 @@ test1()
     assert(e1 == e2);
 }
 
-int main()
+int main(int, char**)
 {
     test1();
+
+  return 0;
 }

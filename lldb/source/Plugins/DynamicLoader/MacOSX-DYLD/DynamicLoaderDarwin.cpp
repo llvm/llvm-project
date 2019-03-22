@@ -46,6 +46,8 @@
 #include <uuid/uuid.h>
 #endif
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -939,8 +941,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
           load_addrs.push_back(address.GetLoadAddress(target_sp.get()));
         }
       }
-      thread_plan_sp.reset(
-          new ThreadPlanRunToAddress(thread, load_addrs, stop_others));
+      thread_plan_sp = std::make_shared<ThreadPlanRunToAddress>(
+          thread, load_addrs, stop_others);
     }
   } else {
     if (log)

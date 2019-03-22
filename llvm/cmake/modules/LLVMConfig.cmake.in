@@ -67,10 +67,12 @@ set(LLVM_LIBDIR_SUFFIX @LLVM_LIBDIR_SUFFIX@)
 set(LLVM_INCLUDE_DIRS "@LLVM_CONFIG_INCLUDE_DIRS@")
 set(LLVM_LIBRARY_DIRS "@LLVM_CONFIG_LIBRARY_DIRS@")
 
-# These variables are duplicated, but they must match the LLVM variables of the
-# same name. The variables ending in "S" could some day become lists, and are
-# preserved for convention and compatibility.
-set(LLVM_INCLUDE_DIR "@LLVM_CONFIG_INCLUDE_DIRS@")
+# These variables are duplicated for install tree but they have different
+# values for build tree.  LLVM_INCLUDE_DIRS contains both source
+# and generated include directories while the following variables have
+# them split.
+set(LLVM_INCLUDE_DIR "@LLVM_CONFIG_INCLUDE_DIR@")
+set(LLVM_MAIN_INCLUDE_DIR "@LLVM_CONFIG_MAIN_INCLUDE_DIR@")
 set(LLVM_LIBRARY_DIR "@LLVM_CONFIG_LIBRARY_DIRS@")
 
 set(LLVM_DEFINITIONS "@LLVM_DEFINITIONS@")

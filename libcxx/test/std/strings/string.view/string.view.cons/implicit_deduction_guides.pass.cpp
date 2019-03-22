@@ -26,7 +26,7 @@
 // (2)  basic_string_view(const basic_string_view&)
 // (3)  basic_string_view(const CharT*, size_type)
 // (4)  basic_string_view(const CharT*)
-int main()
+int main(int, char**)
 {
   { // Testing (1)
     // Nothing TODO. Cannot deduce without any arguments.
@@ -61,4 +61,6 @@ int main()
     ASSERT_SAME_TYPE(decltype(w), std::wstring_view);
     assert(w == L"abcdef");
   }
+
+  return 0;
 }

@@ -257,6 +257,8 @@
     extern int __KAI_KMPC_CONVENTION omp_pause_resource(omp_pause_resource_t, int);
     extern int __KAI_KMPC_CONVENTION omp_pause_resource_all(omp_pause_resource_t);
 
+    extern int __KAI_KMPC_CONVENTION omp_get_supported_active_levels(void);
+
 #   undef __KAI_KMPC_CONVENTION
 #   undef __KMP_IMP
 

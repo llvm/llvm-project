@@ -25,11 +25,13 @@ public:
     }
 };
 
-int main()
+int main(int, char**)
 {
     test t;
     assert(t.width() == 0);
     std::streamsize w = t.width(4);
     assert(w == 0);
     assert(t.width() == 4);
+
+  return 0;
 }

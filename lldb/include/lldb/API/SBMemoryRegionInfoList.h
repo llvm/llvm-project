@@ -47,7 +47,7 @@ private:
 
   const lldb_private::MemoryRegionInfos &ref() const;
 
-  std::unique_ptr<MemoryRegionInfoListImpl> m_opaque_ap;
+  std::unique_ptr<MemoryRegionInfoListImpl> m_opaque_up;
 };
 
 } // namespace lldb

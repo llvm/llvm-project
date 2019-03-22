@@ -76,7 +76,7 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
   // no alignment constraits.
   uint32_t V = std::max<uint64_t>(Alignment, 1);
   if (!isPowerOf2_64(V))
-    fatal(toString(File) + ": section sh_addralign is not a power of 2");
+    fatal(toString(this) + ": sh_addralign is not a power of 2");
   this->Alignment = V;
 
   // In ELF, each section can be compressed by zlib, and if compressed,
@@ -557,10 +557,16 @@ static Relocation *getRISCVPCRelHi20(const Symbol *Sym, uint64_t Addend) {
 
   // Relocations are sorted by offset, so we can use std::equal_range to do
   // binary search.
-  auto Range = std::equal_range(IS->Relocations.begin(), IS->Relocations.end(),
-                                D->Value, RelocationOffsetComparator{});
-  for (auto It = std::get<0>(Range); It != std::get<1>(Range); ++It)
-    if (isRelExprOneOf<R_PC>(It->Expr))
+  Relocation R;
+  R.Offset = D->Value;
+  auto Range =
+      std::equal_range(IS->Relocations.begin(), IS->Relocations.end(), R,
+                       [](const Relocation &LHS, const Relocation &RHS) {
+                         return LHS.Offset < RHS.Offset;
+                       });
+
+  for (auto It = Range.first; It != Range.second; ++It)
+    if (It->Expr == R_PC)
       return &*It;
 
   error("R_RISCV_PCREL_LO12 relocation points to " + IS->getObjMsg(D->Value) +
@@ -600,8 +606,6 @@ static int64_t getTlsTpOffset() {
 static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
                                  uint64_t P, const Symbol &Sym, RelExpr Expr) {
   switch (Expr) {
-  case R_INVALID:
-    return 0;
   case R_ABS:
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
@@ -611,7 +615,6 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_ARM_SBREL:
     return Sym.getVA(A) - getARMStaticBase(Sym);
   case R_GOT:
-  case R_GOT_PLT:
   case R_RELAX_TLS_GD_TO_IE_ABS:
     return Sym.getGotVA() + A;
   case R_GOTONLY_PC:
@@ -630,7 +633,6 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     return Sym.getGotOffset() + A;
   case R_AARCH64_GOT_PAGE_PC:
-  case R_AARCH64_GOT_PAGE_PC_PLT:
   case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     return getAArch64Page(Sym.getGotVA() + A) - getAArch64Page(P);
   case R_GOT_PC:
@@ -678,10 +680,6 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
            In.MipsGot->getGp(File);
   case R_AARCH64_PAGE_PC: {
     uint64_t Val = Sym.isUndefWeak() ? P + A : Sym.getVA(A);
-    return getAArch64Page(Val) - getAArch64Page(P);
-  }
-  case R_AARCH64_PLT_PAGE_PC: {
-    uint64_t Val = Sym.isUndefWeak() ? P + A : Sym.getPltVA() + A;
     return getAArch64Page(Val) - getAArch64Page(P);
   }
   case R_RISCV_PC_INDIRECT: {

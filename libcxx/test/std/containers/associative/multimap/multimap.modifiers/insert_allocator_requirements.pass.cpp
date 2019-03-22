@@ -20,8 +20,10 @@
 #include "../../../map_allocator_requirement_test_templates.h"
 
 
-int main()
+int main(int, char**)
 {
   testMultimapInsert<TCT::multimap<> >();
   testMultimapInsertHint<TCT::multimap<> >();
+
+  return 0;
 }

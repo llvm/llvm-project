@@ -56,7 +56,7 @@ class E1 : public std::nested_exception {};
 class E2 : public std::nested_exception {};
 class E : public E1, public E2 {};
 
-int main()
+int main(int, char**)
 {
     {
         try
@@ -131,4 +131,6 @@ int main()
         }
     }
 
+
+  return 0;
 }

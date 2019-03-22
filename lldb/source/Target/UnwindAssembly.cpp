@@ -21,9 +21,9 @@ UnwindAssemblySP UnwindAssembly::FindPlugin(const ArchSpec &arch) {
        (create_callback = PluginManager::GetUnwindAssemblyCreateCallbackAtIndex(
             idx)) != nullptr;
        ++idx) {
-    UnwindAssemblySP assembly_profiler_ap(create_callback(arch));
-    if (assembly_profiler_ap)
-      return assembly_profiler_ap;
+    UnwindAssemblySP assembly_profiler_up(create_callback(arch));
+    if (assembly_profiler_up)
+      return assembly_profiler_up;
   }
   return nullptr;
 }

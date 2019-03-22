@@ -12,7 +12,7 @@ This script is used to continually test the back-deployment use case of libc++ a
   --libcxxabi-root    Full path to the root of the libc++abi repository to test.
   --std               Version of the C++ Standard to run the tests under (c++03, c++11, etc..).
   --arch              Architecture to build the tests for (32, 64).
-  --deployment-target The deployment target to run the tests for. This should be a version number of MacOS (e.g. 10.12). All MacOS versions until and including 10.7 are supported.
+  --deployment-target The deployment target to run the tests for. This should be a version number of MacOS (e.g. 10.12). All MacOS versions until and including 10.9 are supported.
   --sdk-version       The version of the SDK to test with. This should be a version number of MacOS (e.g. 10.12). We'll link against the libc++ dylib in that SDK, but we'll run against the one on the given deployment target.
   [--lit-args]        Additional arguments to pass to lit (optional). If there are multiple arguments, quote them to pass them as a single argument to this script.
   [--no-cleanup]      Do not cleanup the temporary directory that was used for testing at the end. This can be useful to debug failures. Make sure to clean up manually after.

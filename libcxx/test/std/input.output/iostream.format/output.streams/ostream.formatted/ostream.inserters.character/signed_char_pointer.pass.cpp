@@ -49,7 +49,7 @@ protected:
         }
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::ostream os((std::streambuf*)0);
@@ -84,4 +84,6 @@ int main()
         assert(sb.str() == "123  ");
         assert(os.width() == 0);
     }
+
+  return 0;
 }

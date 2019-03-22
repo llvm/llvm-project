@@ -8,4 +8,5 @@
 // CHECK: {{\.}}section .debug_info
 // CHECK: {{\.}}section .debug_info
 // CHECK-NOT: {{\.}}section
-// CHECK: .ascii "comment.s"
+// Look for this as a relative path.
+// CHECK: .ascii "{{[^\\/].*}}comment.s"

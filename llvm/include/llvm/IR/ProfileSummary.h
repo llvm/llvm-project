@@ -42,11 +42,10 @@ using SummaryEntryVector = std::vector<ProfileSummaryEntry>;
 
 class ProfileSummary {
 public:
-  enum Kind { PSK_Instr, PSK_Sample };
+  enum Kind { PSK_Instr, PSK_CSInstr, PSK_Sample };
 
 private:
   const Kind PSK;
-  static const char *KindStr[2];
   SummaryEntryVector DetailedSummary;
   uint64_t TotalCount, MaxCount, MaxInternalCount, MaxFunctionCount;
   uint32_t NumCounts, NumFunctions;

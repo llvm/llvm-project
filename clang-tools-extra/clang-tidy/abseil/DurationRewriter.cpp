@@ -84,6 +84,22 @@ rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
   return llvm::None;
 }
 
+/// If `Node` is a call to the inverse of `Scale`, return that inverse's
+/// argument, otherwise None.
+static llvm::Optional<std::string>
+rewriteInverseTimeCall(const MatchFinder::MatchResult &Result,
+                       DurationScale Scale, const Expr &Node) {
+  llvm::StringRef InverseFunction = getTimeInverseForScale(Scale);
+  if (const auto *MaybeCallArg = selectFirst<const Expr>(
+          "e", match(callExpr(callee(functionDecl(hasName(InverseFunction))),
+                              hasArgument(0, expr().bind("e"))),
+                     Node, *Result.Context))) {
+    return tooling::fixit::getText(*MaybeCallArg, *Result.Context).str();
+  }
+
+  return llvm::None;
+}
+
 /// Returns the factory function name for a given `Scale`.
 llvm::StringRef getDurationFactoryForScale(DurationScale Scale) {
   switch (Scale) {
@@ -99,6 +115,24 @@ llvm::StringRef getDurationFactoryForScale(DurationScale Scale) {
     return "absl::Microseconds";
   case DurationScale::Nanoseconds:
     return "absl::Nanoseconds";
+  }
+  llvm_unreachable("unknown scaling factor");
+}
+
+llvm::StringRef getTimeFactoryForScale(DurationScale Scale) {
+  switch (Scale) {
+  case DurationScale::Hours:
+    return "absl::FromUnixHours";
+  case DurationScale::Minutes:
+    return "absl::FromUnixMinutes";
+  case DurationScale::Seconds:
+    return "absl::FromUnixSeconds";
+  case DurationScale::Milliseconds:
+    return "absl::FromUnixMillis";
+  case DurationScale::Microseconds:
+    return "absl::FromUnixMicros";
+  case DurationScale::Nanoseconds:
+    return "absl::FromUnixNanos";
   }
   llvm_unreachable("unknown scaling factor");
 }
@@ -247,6 +281,24 @@ std::string rewriteExprFromNumberToDuration(
 
   return (llvm::Twine(getDurationFactoryForScale(Scale)) + "(" +
           simplifyDurationFactoryArg(Result, RootNode) + ")")
+      .str();
+}
+
+std::string rewriteExprFromNumberToTime(
+    const ast_matchers::MatchFinder::MatchResult &Result, DurationScale Scale,
+    const Expr *Node) {
+  const Expr &RootNode = *Node->IgnoreParenImpCasts();
+
+  // First check to see if we can undo a complimentary function call.
+  if (llvm::Optional<std::string> MaybeRewrite =
+          rewriteInverseTimeCall(Result, Scale, RootNode))
+    return *MaybeRewrite;
+
+  if (IsLiteralZero(Result, RootNode))
+    return std::string("absl::UnixEpoch()");
+
+  return (llvm::Twine(getTimeFactoryForScale(Scale)) + "(" +
+          tooling::fixit::getText(RootNode, *Result.Context) + ")")
       .str();
 }
 

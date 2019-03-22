@@ -43,7 +43,7 @@ define double @trunc_unsigned_f64(double %x) #0 {
 ; SSE2-NEXT:    subpd {{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    movapd %xmm1, %xmm0
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; SSE2-NEXT:    addpd %xmm1, %xmm0
+; SSE2-NEXT:    addsd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_unsigned_f64:

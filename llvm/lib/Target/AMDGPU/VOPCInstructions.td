@@ -82,8 +82,6 @@ class VOPC_Pseudo <string opName, VOPC_Profile P, list<dag> pattern=[]> :
   let Uses = [EXEC];
   let Defs = [VCC];
 
-  let SubtargetPredicate = isGCN;
-
   VOPProfile Pfl = P;
 }
 

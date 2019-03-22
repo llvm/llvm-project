@@ -3851,7 +3851,7 @@ public:
   static bool classofKind(Kind K) { return K == FileScopeAsm; }
 };
 
-/// Pepresents a block literal declaration, which is like an
+/// Represents a block literal declaration, which is like an
 /// unnamed FunctionDecl.  For example:
 /// ^{ statement-body }   or   ^(int arg1, float arg2){ statement-body }
 class BlockDecl : public Decl, public DeclContext {
@@ -4007,6 +4007,13 @@ public:
 
   bool doesNotEscape() const { return BlockDeclBits.DoesNotEscape; }
   void setDoesNotEscape(bool B = true) { BlockDeclBits.DoesNotEscape = B; }
+
+  bool canAvoidCopyToHeap() const {
+    return BlockDeclBits.CanAvoidCopyToHeap;
+  }
+  void setCanAvoidCopyToHeap(bool B = true) {
+    BlockDeclBits.CanAvoidCopyToHeap = B;
+  }
 
   bool capturesVariable(const VarDecl *var) const;
 

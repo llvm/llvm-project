@@ -32,6 +32,10 @@ struct ClangdDiagnosticOptions {
   /// stage during which the issue was produced, e.g. "Semantic Issue" or "Parse
   /// Issue".
   bool SendDiagnosticCategory = false;
+
+  /// If true, Clangd will add a number of available fixes to the diagnostic's
+  /// message.
+  bool DisplayFixesCount = true;
 };
 
 /// Contains basic information about a diagnostic.

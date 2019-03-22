@@ -157,7 +157,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
 
     // First stage is to make the ClangUtility to hold our injected function:
 
-    if (!m_get_queues_impl_code_up.get()) {
+    if (!m_get_queues_impl_code_up) {
       if (g_get_current_queues_function_code != NULL) {
         Status error;
         m_get_queues_impl_code_up.reset(

@@ -6478,6 +6478,18 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
              Inst.getOperand(MCID.findFirstPredOperandIdx()).getImm() !=
                  ARMCC::AL) {
     return Warning(Loc, "predicated instructions should be in IT block");
+  } else if (!MCID.isPredicable()) {
+    // Check the instruction doesn't have a predicate operand anyway
+    // that it's not allowed to use. Sometimes this happens in order
+    // to keep instructions the same shape even though one cannot
+    // legally be predicated, e.g. vmul.f16 vs vmul.f32.
+    for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i) {
+      if (MCID.OpInfo[i].isPredicate()) {
+        if (Inst.getOperand(i).getImm() != ARMCC::AL)
+          return Error(Loc, "instruction is not predicable");
+        break;
+      }
+    }
   }
 
   // PC-setting instructions in an IT block, but not the last instruction of

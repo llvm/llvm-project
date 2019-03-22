@@ -1,7 +1,8 @@
+// RUN: %clang_cc1 -verify -cl-std=c++ %s
 // RUN: %clang_cc1 -verify %s
 // RUN: %clang_cc1 -verify -D=ATTR_TEST -fms-compatibility %s
 
-void test1(image1d_t *i) {} // expected-error{{pointer to type '__read_only image1d_t' is invalid in OpenCL}}
+void test1(image1d_t *i) {} // expected-error-re{{pointer to type '{{__generic __read_only|__read_only}} image1d_t' is invalid in OpenCL}}
 
 void test2(image1d_t i) {
   image1d_t ti;            // expected-error{{type '__read_only image1d_t' can only be used as a function parameter}}

@@ -464,7 +464,8 @@ private:
   void calcGapWeights(unsigned, SmallVectorImpl<float>&);
   unsigned canReassign(LiveInterval &VirtReg, unsigned PrevReg);
   bool shouldEvict(LiveInterval &A, bool, LiveInterval &B, bool);
-  bool canEvictInterference(LiveInterval&, unsigned, bool, EvictionCost&);
+  bool canEvictInterference(LiveInterval&, unsigned, bool, EvictionCost&,
+                            const SmallVirtRegSet&);
   bool canEvictInterferenceInRange(LiveInterval &VirtReg, unsigned PhysReg,
                                    SlotIndex Start, SlotIndex End,
                                    EvictionCost &MaxCost);
@@ -478,9 +479,11 @@ private:
                                   const SmallVirtRegSet &FixedRegisters);
 
   unsigned tryAssign(LiveInterval&, AllocationOrder&,
-                     SmallVectorImpl<unsigned>&);
+                     SmallVectorImpl<unsigned>&,
+                     const SmallVirtRegSet&);
   unsigned tryEvict(LiveInterval&, AllocationOrder&,
-                    SmallVectorImpl<unsigned>&, unsigned = ~0u);
+                    SmallVectorImpl<unsigned>&, unsigned,
+                    const SmallVirtRegSet&);
   unsigned tryRegionSplit(LiveInterval&, AllocationOrder&,
                           SmallVectorImpl<unsigned>&);
   unsigned isSplitBenefitWorthCost(LiveInterval &VirtReg);
@@ -507,7 +510,8 @@ private:
   unsigned tryLocalSplit(LiveInterval&, AllocationOrder&,
     SmallVectorImpl<unsigned>&);
   unsigned trySplit(LiveInterval&, AllocationOrder&,
-                    SmallVectorImpl<unsigned>&);
+                    SmallVectorImpl<unsigned>&,
+                    const SmallVirtRegSet&);
   unsigned tryLastChanceRecoloring(LiveInterval &, AllocationOrder &,
                                    SmallVectorImpl<unsigned> &,
                                    SmallVirtRegSet &, unsigned);
@@ -757,7 +761,8 @@ LiveInterval *RAGreedy::dequeue(PQueue &CurQueue) {
 /// tryAssign - Try to assign VirtReg to an available register.
 unsigned RAGreedy::tryAssign(LiveInterval &VirtReg,
                              AllocationOrder &Order,
-                             SmallVectorImpl<unsigned> &NewVRegs) {
+                             SmallVectorImpl<unsigned> &NewVRegs,
+                             const SmallVirtRegSet &FixedRegisters) {
   Order.rewind();
   unsigned PhysReg;
   while ((PhysReg = Order.next()))
@@ -775,7 +780,7 @@ unsigned RAGreedy::tryAssign(LiveInterval &VirtReg,
       LLVM_DEBUG(dbgs() << "missed hint " << printReg(Hint, TRI) << '\n');
       EvictionCost MaxCost;
       MaxCost.setBrokenHints(1);
-      if (canEvictInterference(VirtReg, Hint, true, MaxCost)) {
+      if (canEvictInterference(VirtReg, Hint, true, MaxCost, FixedRegisters)) {
         evictInterference(VirtReg, Hint, NewVRegs);
         return Hint;
       }
@@ -793,7 +798,7 @@ unsigned RAGreedy::tryAssign(LiveInterval &VirtReg,
 
   LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << " is available at cost "
                     << Cost << '\n');
-  unsigned CheapReg = tryEvict(VirtReg, Order, NewVRegs, Cost);
+  unsigned CheapReg = tryEvict(VirtReg, Order, NewVRegs, Cost, FixedRegisters);
   return CheapReg ? CheapReg : PhysReg;
 }
 
@@ -865,7 +870,8 @@ bool RAGreedy::shouldEvict(LiveInterval &A, bool IsHint,
 ///                when returning true.
 /// @returns True when interference can be evicted cheaper than MaxCost.
 bool RAGreedy::canEvictInterference(LiveInterval &VirtReg, unsigned PhysReg,
-                                    bool IsHint, EvictionCost &MaxCost) {
+                                    bool IsHint, EvictionCost &MaxCost,
+                                    const SmallVirtRegSet &FixedRegisters) {
   // It is only possible to evict virtual register interference.
   if (Matrix->checkInterference(VirtReg, PhysReg) > LiveRegMatrix::IK_VirtReg)
     return false;
@@ -895,6 +901,13 @@ bool RAGreedy::canEvictInterference(LiveInterval &VirtReg, unsigned PhysReg,
       LiveInterval *Intf = Q.interferingVRegs()[i - 1];
       assert(TargetRegisterInfo::isVirtualRegister(Intf->reg) &&
              "Only expecting virtual register interference from query");
+
+      // Do not allow eviction of a virtual register if we are in the middle
+      // of last-chance recoloring and this virtual register is one that we
+      // have scavenged a physical register for.
+      if (FixedRegisters.count(Intf->reg))
+        return false;
+
       // Never evict spill products. They cannot split or spill.
       if (getStage(*Intf) == RS_Done)
         return false;
@@ -1093,7 +1106,8 @@ bool RAGreedy::isUnusedCalleeSavedReg(unsigned PhysReg) const {
 unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
                             AllocationOrder &Order,
                             SmallVectorImpl<unsigned> &NewVRegs,
-                            unsigned CostPerUseLimit) {
+                            unsigned CostPerUseLimit,
+                            const SmallVirtRegSet &FixedRegisters) {
   NamedRegionTimer T("evict", "Evict", TimerGroupName, TimerGroupDescription,
                      TimePassesIsEnabled);
 
@@ -1141,7 +1155,8 @@ unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
       continue;
     }
 
-    if (!canEvictInterference(VirtReg, PhysReg, false, BestCost))
+    if (!canEvictInterference(VirtReg, PhysReg, false, BestCost,
+                              FixedRegisters))
       continue;
 
     // Best so far.
@@ -2443,7 +2458,8 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
 /// assignable.
 /// @return Physreg when VirtReg may be assigned and/or new NewVRegs.
 unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
-                            SmallVectorImpl<unsigned>&NewVRegs) {
+                            SmallVectorImpl<unsigned>&NewVRegs,
+                            const SmallVirtRegSet &FixedRegisters) {
   // Ranges must be Split2 or less.
   if (getStage(VirtReg) >= RS_Spill)
     return 0;
@@ -2471,7 +2487,7 @@ unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
   if (SA->didRepairRange()) {
     // VirtReg has changed, so all cached queries are invalid.
     Matrix->invalidateVirtRegs();
-    if (unsigned PhysReg = tryAssign(VirtReg, Order, NewVRegs))
+    if (unsigned PhysReg = tryAssign(VirtReg, Order, NewVRegs, FixedRegisters))
       return PhysReg;
   }
 
@@ -2610,6 +2626,7 @@ unsigned RAGreedy::tryLastChanceRecoloring(LiveInterval &VirtReg,
   DenseMap<unsigned, unsigned> VirtRegToPhysReg;
   // Mark VirtReg as fixed, i.e., it will not be recolored pass this point in
   // this recoloring "session".
+  assert(!FixedRegisters.count(VirtReg.reg));
   FixedRegisters.insert(VirtReg.reg);
   SmallVector<unsigned, 4> CurrentNewVRegs;
 
@@ -3021,7 +3038,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
   unsigned CostPerUseLimit = ~0u;
   // First try assigning a free register.
   AllocationOrder Order(VirtReg.reg, *VRM, RegClassInfo, Matrix);
-  if (unsigned PhysReg = tryAssign(VirtReg, Order, NewVRegs)) {
+  if (unsigned PhysReg = tryAssign(VirtReg, Order, NewVRegs, FixedRegisters)) {
     // If VirtReg got an assignment, the eviction info is no longre relevant.
     LastEvicted.clearEvicteeInfo(VirtReg.reg);
     // When NewVRegs is not empty, we may have made decisions such as evicting
@@ -3048,7 +3065,8 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
   // get a second chance until they have been split.
   if (Stage != RS_Split)
     if (unsigned PhysReg =
-            tryEvict(VirtReg, Order, NewVRegs, CostPerUseLimit)) {
+            tryEvict(VirtReg, Order, NewVRegs, CostPerUseLimit,
+                     FixedRegisters)) {
       unsigned Hint = MRI->getSimpleHint(VirtReg.reg);
       // If VirtReg has a hint and that hint is broken record this
       // virtual register as a recoloring candidate for broken hint.
@@ -3078,7 +3096,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
   if (Stage < RS_Spill) {
     // Try splitting VirtReg or interferences.
     unsigned NewVRegSizeBefore = NewVRegs.size();
-    unsigned PhysReg = trySplit(VirtReg, Order, NewVRegs);
+    unsigned PhysReg = trySplit(VirtReg, Order, NewVRegs, FixedRegisters);
     if (PhysReg || (NewVRegs.size() - NewVRegSizeBefore)) {
       // If VirtReg got split, the eviction info is no longre relevant.
       LastEvicted.clearEvicteeInfo(VirtReg.reg);

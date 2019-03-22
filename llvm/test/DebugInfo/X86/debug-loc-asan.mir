@@ -27,7 +27,7 @@
 # We expect two location ranges for the variable.
 #
 # First, its address is stored in %rcx:
-# CHECK:      .quad .Lfunc_begin0-.Lfunc_begin0
+# CHECK:      .quad .Ltmp0-.Lfunc_begin0
 # CHECK-NEXT: .quad [[START_LABEL]]-.Lfunc_begin0
 # CHECK: DW_OP_breg2
 # DWARF:       DW_TAG_formal_parameter

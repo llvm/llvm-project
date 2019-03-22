@@ -1,9 +1,8 @@
 //===-- PDBFPOProgramToDWARFExpressionTests.cpp -----------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -115,7 +114,7 @@ CheckInvalidProgramTranslation(llvm::StringRef fpo_program,
   StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
   EXPECT_FALSE(TranslateFPOProgramToDWARFExpression(
       fpo_program, target_register_name, arch_type, stream));
-  EXPECT_EQ(0, stream.GetSize());
+  EXPECT_EQ((size_t)0, stream.GetSize());
 }
 
 TEST(PDBFPOProgramToDWARFExpressionTests, InvalidAssignmentSingle) {

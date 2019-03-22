@@ -1,0 +1,9 @@
+# RUN: llvm-mc -disassemble -triple thumbv8a-none-eabi -mattr=+fullfp16,+thumb-mode -show-encoding < %s 2>&1 | FileCheck %s
+
+# CHECK: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+[0xc8,0xbf]
+[0x30,0xee,0x81,0x09]
+
+# CHECK-NOT: [[@LINE+2]]:2: warning
+[0xc8,0xbf]
+[0x30,0xee,0x81,0x0a]

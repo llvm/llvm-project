@@ -361,8 +361,7 @@ void memmove2 () {
 #ifdef VARIANT
 
 #define bcmp BUILTIN(bcmp)
-// __builtin_bcmp is not defined with const in Builtins.def.
-int bcmp(/*const*/ void *s1, /*const*/ void *s2, size_t n);
+int bcmp(const void *s1, const void *s2, size_t n);
 #define memcmp bcmp
 // 
 #else /* VARIANT */

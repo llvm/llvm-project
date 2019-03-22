@@ -21,7 +21,7 @@ struct ConvToPath {
   }
 };
 
-int main() {
+int main(int, char**) {
   ConvToPath LHS, RHS;
   (void)(LHS == RHS); // expected-error {{invalid operands to binary expression}}
   (void)(LHS != RHS); // expected-error {{invalid operands to binary expression}}
@@ -29,4 +29,6 @@ int main() {
   (void)(LHS <= RHS); // expected-error {{invalid operands to binary expression}}
   (void)(LHS > RHS); // expected-error {{invalid operands to binary expression}}
   (void)(LHS >= RHS); // expected-error {{invalid operands to binary expression}}
+
+  return 0;
 }

@@ -377,7 +377,12 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
 
   Constant *SanCovLowestStackConstant =
       M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
-  SanCovLowestStack = cast<GlobalVariable>(SanCovLowestStackConstant);
+  SanCovLowestStack = dyn_cast<GlobalVariable>(SanCovLowestStackConstant);
+  if (!SanCovLowestStack) {
+    C->emitError(StringRef("'") + SanCovLowestStackName +
+                 "' should not be declared by the user");
+    return true;
+  }
   SanCovLowestStack->setThreadLocalMode(
       GlobalValue::ThreadLocalMode::InitialExecTLSModel);
   if (Options.StackDepth && !SanCovLowestStack->isDeclaration())
@@ -449,12 +454,12 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
                                   const DominatorTree *DT,
                                   const PostDominatorTree *PDT,
                                   const SanitizerCoverageOptions &Options) {
-  // Don't insert coverage for unreachable blocks: we will never call
-  // __sanitizer_cov() for them, so counting them in
+  // Don't insert coverage for blocks containing nothing but unreachable: we
+  // will never call __sanitizer_cov() for them, so counting them in
   // NumberOfInstrumentedBlocks() might complicate calculation of code coverage
   // percentage. Also, unreachable instructions frequently have no debug
   // locations.
-  if (isa<UnreachableInst>(BB->getTerminator()))
+  if (isa<UnreachableInst>(BB->getFirstNonPHIOrDbgOrLifetime()))
     return false;
 
   // Don't insert coverage into blocks without a valid insertion point

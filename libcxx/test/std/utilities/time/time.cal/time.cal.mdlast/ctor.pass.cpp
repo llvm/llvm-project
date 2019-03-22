@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using month     = std::chrono::month;
     using month_day_last = std::chrono::month_day_last;
@@ -37,4 +37,6 @@ int main()
     constexpr month_day_last md1{std::chrono::January};
     static_assert( md1.month() == std::chrono::January, "");
     static_assert( md1.ok(),                            "");
+
+  return 0;
 }

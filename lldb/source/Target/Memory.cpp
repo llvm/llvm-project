@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/Memory.h"
-#include <inttypes.h>
+
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+
+#include <cinttypes>
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -226,17 +229,17 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
 
       if (bytes_left > 0) {
         assert((curr_addr % cache_line_byte_size) == 0);
-        std::unique_ptr<DataBufferHeap> data_buffer_heap_ap(
+        std::unique_ptr<DataBufferHeap> data_buffer_heap_up(
             new DataBufferHeap(cache_line_byte_size, 0));
         size_t process_bytes_read = m_process.ReadMemoryFromInferior(
-            curr_addr, data_buffer_heap_ap->GetBytes(),
-            data_buffer_heap_ap->GetByteSize(), error);
+            curr_addr, data_buffer_heap_up->GetBytes(),
+            data_buffer_heap_up->GetByteSize(), error);
         if (process_bytes_read == 0)
           return dst_len - bytes_left;
 
         if (process_bytes_read != cache_line_byte_size)
-          data_buffer_heap_ap->SetByteSize(process_bytes_read);
-        m_L2_cache[curr_addr] = DataBufferSP(data_buffer_heap_ap.release());
+          data_buffer_heap_up->SetByteSize(process_bytes_read);
+        m_L2_cache[curr_addr] = DataBufferSP(data_buffer_heap_up.release());
         // We have read data and put it into the cache, continue through the
         // loop again to get the data out of the cache...
       }
@@ -357,8 +360,8 @@ AllocatedMemoryCache::AllocatePage(uint32_t byte_size, uint32_t permissions,
   }
 
   if (addr != LLDB_INVALID_ADDRESS) {
-    block_sp.reset(
-        new AllocatedBlock(addr, page_byte_size, permissions, chunk_size));
+    block_sp = std::make_shared<AllocatedBlock>(addr, page_byte_size,
+                                                permissions, chunk_size);
     m_memory_map.insert(std::make_pair(permissions, block_sp));
   }
   return block_sp;

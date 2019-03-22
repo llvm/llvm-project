@@ -633,6 +633,11 @@ public:
         MachineFunctionProperties::Property::RegBankSelected);
   }
 
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties()
+      .set(MachineFunctionProperties::Property::NoPHIs);
+  }
+
   /// Walk through \p MF and assign a register bank to every virtual register
   /// that are still mapped to nothing.
   /// The target needs to provide a RegisterBankInfo and in particular

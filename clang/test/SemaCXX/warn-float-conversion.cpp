@@ -44,17 +44,17 @@ void Convert(float f, double d, long double ld) {
 void CompoundAssignment() {
   int x = 3;
 
-  x += 1.234;  //expected-warning{{conversion}}
-  x -= -0.0;  //expected-warning{{conversion}}
-  x *= 1.1f;  //expected-warning{{conversion}}
-  x /= -2.2f;  //expected-warning{{conversion}}
+  x += 1.234; // expected-warning {{implicit conversion turns floating-point number into integer: 'double' to 'int'}}
+  x -= -0.0;  // expected-warning {{implicit conversion turns floating-point number into integer: 'double' to 'int'}}
+  x *= 1.1f;  // expected-warning {{implicit conversion turns floating-point number into integer: 'float' to 'int'}}
+  x /= -2.2f; // expected-warning {{implicit conversion turns floating-point number into integer: 'float' to 'int'}}
 
-  int y = x += 1.4f;  //expected-warning{{conversion}}
+  int y = x += 1.4f; // expected-warning {{implicit conversion turns floating-point number into integer: 'float' to 'int'}}
 
   float z = 1.1f;
   double w = -2.2;
 
-  y += z + w;  //expected-warning{{conversion}}
+  y += z + w; // expected-warning {{implicit conversion turns floating-point number into integer: 'double' to 'int'}}
 }
 
 # 1 "foo.h" 3

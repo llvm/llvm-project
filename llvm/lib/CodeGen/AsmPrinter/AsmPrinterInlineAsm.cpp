@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
@@ -154,7 +153,6 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
                        " we don't have an asm parser for this target\n");
   Parser->setAssemblerDialect(Dialect);
   Parser->setTargetParser(*TAP.get());
-  Parser->setEnablePrintSchedInfo(EnablePrintSchedInfo);
   // Enable lexing Masm binary and hex integer literals in intel inline
   // assembly.
   if (Dialect == InlineAsm::AD_Intel)
@@ -435,9 +433,16 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
           ++OpNo;  // Skip over the ID number.
 
           if (Modifier[0] == 'l') { // Labels are target independent.
-            // FIXME: What if the operand isn't an MBB, report error?
-            const MCSymbol *Sym = MI->getOperand(OpNo).getMBB()->getSymbol();
-            Sym->print(OS, AP->MAI);
+            if (MI->getOperand(OpNo).isBlockAddress()) {
+              const BlockAddress *BA = MI->getOperand(OpNo).getBlockAddress();
+              MCSymbol *Sym = AP->GetBlockAddressSymbol(BA);
+              Sym->print(OS, AP->MAI);
+            } else if (MI->getOperand(OpNo).isMBB()) {
+              const MCSymbol *Sym = MI->getOperand(OpNo).getMBB()->getSymbol();
+              Sym->print(OS, AP->MAI);
+            } else {
+              Error = true;
+            }
           } else {
             if (InlineAsm::isMemKind(OpFlags)) {
               Error = AP->PrintAsmMemoryOperand(MI, OpNo, InlineAsmVariant,

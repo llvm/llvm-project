@@ -125,8 +125,10 @@ void test_bullet_three() {
     POuter.reset();
 }
 
-int main() {
+int main(int, char**) {
     test_bullet_one();
     test_bullet_two();
     test_bullet_three();
+
+  return 0;
 }

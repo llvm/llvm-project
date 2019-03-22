@@ -125,11 +125,19 @@ struct BinOpInfo {
     return true;
   }
 
-  /// Check if either operand is a fixed point type, in which case, this
+  /// Check if either operand is a fixed point type or integer type, with at
+  /// least one being a fixed point type. In any case, this
   /// operation did not follow usual arithmetic conversion and both operands may
   /// not be the same.
   bool isFixedPointBinOp() const {
-    return isa<BinaryOperator>(E) && Ty->isFixedPointType();
+    // We cannot simply check the result type since comparison operations return
+    // an int.
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+      QualType LHSType = BinOp->getLHS()->getType();
+      QualType RHSType = BinOp->getRHS()->getType();
+      return LHSType->isFixedPointType() || RHSType->isFixedPointType();
+    }
+    return false;
   }
 };
 
@@ -355,11 +363,14 @@ public:
                        SourceLocation Loc,
                        ScalarConversionOpts Opts = ScalarConversionOpts());
 
+  /// Convert between either a fixed point and other fixed point or fixed point
+  /// and an integer.
   Value *EmitFixedPointConversion(Value *Src, QualType SrcTy, QualType DstTy,
                                   SourceLocation Loc);
   Value *EmitFixedPointConversion(Value *Src, FixedPointSemantics &SrcFixedSema,
                                   FixedPointSemantics &DstFixedSema,
-                                  SourceLocation Loc);
+                                  SourceLocation Loc,
+                                  bool DstIsInteger = false);
 
   /// Emit a conversion from the specified complex type to the specified
   /// destination type, where the destination type is an LLVM scalar type.
@@ -1217,17 +1228,25 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   // TODO(leonardchan): When necessary, add another if statement checking for
   // conversions to fixed point types from other types.
   if (SrcType->isFixedPointType()) {
-    if (DstType->isFixedPointType()) {
-      return EmitFixedPointConversion(Src, SrcType, DstType, Loc);
-    } else if (DstType->isBooleanType()) {
+    if (DstType->isBooleanType())
+      // It is important that we check this before checking if the dest type is
+      // an integer because booleans are technically integer types.
       // We do not need to check the padding bit on unsigned types if unsigned
       // padding is enabled because overflow into this bit is undefined
       // behavior.
       return Builder.CreateIsNotNull(Src, "tobool");
-    }
+    if (DstType->isFixedPointType() || DstType->isIntegerType())
+      return EmitFixedPointConversion(Src, SrcType, DstType, Loc);
 
     llvm_unreachable(
-        "Unhandled scalar conversion involving a fixed point type.");
+        "Unhandled scalar conversion from a fixed point type to another type.");
+  } else if (DstType->isFixedPointType()) {
+    if (SrcType->isIntegerType())
+      // This also includes converting booleans and enums to fixed point types.
+      return EmitFixedPointConversion(Src, SrcType, DstType, Loc);
+
+    llvm_unreachable(
+        "Unhandled scalar conversion to a fixed point type from another type.");
   }
 
   QualType NoncanonicalSrcType = SrcType;
@@ -1435,19 +1454,17 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 Value *ScalarExprEmitter::EmitFixedPointConversion(Value *Src, QualType SrcTy,
                                                    QualType DstTy,
                                                    SourceLocation Loc) {
-  assert(SrcTy->isFixedPointType());
-  assert(DstTy->isFixedPointType());
-
   FixedPointSemantics SrcFPSema =
       CGF.getContext().getFixedPointSemantics(SrcTy);
   FixedPointSemantics DstFPSema =
       CGF.getContext().getFixedPointSemantics(DstTy);
-  return EmitFixedPointConversion(Src, SrcFPSema, DstFPSema, Loc);
+  return EmitFixedPointConversion(Src, SrcFPSema, DstFPSema, Loc,
+                                  DstTy->isIntegerType());
 }
 
 Value *ScalarExprEmitter::EmitFixedPointConversion(
     Value *Src, FixedPointSemantics &SrcFPSema, FixedPointSemantics &DstFPSema,
-    SourceLocation Loc) {
+    SourceLocation Loc, bool DstIsInteger) {
   using llvm::APInt;
   using llvm::ConstantInt;
   using llvm::Value;
@@ -1464,13 +1481,26 @@ Value *ScalarExprEmitter::EmitFixedPointConversion(
   Value *Result = Src;
   unsigned ResultWidth = SrcWidth;
 
-  if (!DstFPSema.isSaturated()) {
-    // Downscale.
-    if (DstScale < SrcScale)
-      Result = SrcIsSigned ?
-          Builder.CreateAShr(Result, SrcScale - DstScale, "downscale") :
-          Builder.CreateLShr(Result, SrcScale - DstScale, "downscale");
+  // Downscale.
+  if (DstScale < SrcScale) {
+    // When converting to integers, we round towards zero. For negative numbers,
+    // right shifting rounds towards negative infinity. In this case, we can
+    // just round up before shifting.
+    if (DstIsInteger && SrcIsSigned) {
+      Value *Zero = llvm::Constant::getNullValue(Result->getType());
+      Value *IsNegative = Builder.CreateICmpSLT(Result, Zero);
+      Value *LowBits = ConstantInt::get(
+          CGF.getLLVMContext(), APInt::getLowBitsSet(ResultWidth, SrcScale));
+      Value *Rounded = Builder.CreateAdd(Result, LowBits);
+      Result = Builder.CreateSelect(IsNegative, Rounded, Result);
+    }
 
+    Result = SrcIsSigned
+                 ? Builder.CreateAShr(Result, SrcScale - DstScale, "downscale")
+                 : Builder.CreateLShr(Result, SrcScale - DstScale, "downscale");
+  }
+
+  if (!DstFPSema.isSaturated()) {
     // Resize.
     Result = Builder.CreateIntCast(Result, DstIntTy, SrcIsSigned, "resize");
 
@@ -1485,10 +1515,6 @@ Value *ScalarExprEmitter::EmitFixedPointConversion(
       llvm::Type *UpscaledTy = Builder.getIntNTy(ResultWidth);
       Result = Builder.CreateIntCast(Result, UpscaledTy, SrcIsSigned, "resize");
       Result = Builder.CreateShl(Result, DstScale - SrcScale, "upscale");
-    } else if (DstScale < SrcScale) {
-      Result = SrcIsSigned ?
-          Builder.CreateAShr(Result, SrcScale - DstScale, "downscale") :
-          Builder.CreateLShr(Result, SrcScale - DstScale, "downscale");
     }
 
     // Handle saturation.
@@ -2220,6 +2246,21 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
 
+  case CK_FixedPointToIntegral:
+    assert(E->getType()->isFixedPointType() &&
+           "Expected src type to be fixed point type");
+    assert(DestTy->isIntegerType() && "Expected dest type to be an integer");
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+
+  case CK_IntegralToFixedPoint:
+    assert(E->getType()->isIntegerType() &&
+           "Expected src type to be an integer");
+    assert(DestTy->isFixedPointType() &&
+           "Expected dest type to be fixed point type");
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+
   case CK_IntegralCast: {
     ScalarConversionOpts Opts;
     if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE)) {
@@ -2547,14 +2588,14 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   }
 
   if (atomicPHI) {
-    llvm::BasicBlock *opBB = Builder.GetInsertBlock();
+    llvm::BasicBlock *curBlock = Builder.GetInsertBlock();
     llvm::BasicBlock *contBB = CGF.createBasicBlock("atomic_cont", CGF.CurFn);
     auto Pair = CGF.EmitAtomicCompareExchange(
         LV, RValue::get(atomicPHI), RValue::get(value), E->getExprLoc());
     llvm::Value *old = CGF.EmitToMemory(Pair.first.getScalarVal(), type);
     llvm::Value *success = Pair.second;
-    atomicPHI->addIncoming(old, opBB);
-    Builder.CreateCondBr(success, contBB, opBB);
+    atomicPHI->addIncoming(old, curBlock);
+    Builder.CreateCondBr(success, contBB, atomicPHI->getParent());
     Builder.SetInsertPoint(contBB);
     return isPre ? value : input;
   }
@@ -2901,14 +2942,14 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
                                 Loc, ScalarConversionOpts(CGF.SanOpts));
 
   if (atomicPHI) {
-    llvm::BasicBlock *opBB = Builder.GetInsertBlock();
+    llvm::BasicBlock *curBlock = Builder.GetInsertBlock();
     llvm::BasicBlock *contBB = CGF.createBasicBlock("atomic_cont", CGF.CurFn);
     auto Pair = CGF.EmitAtomicCompareExchange(
         LHSLV, RValue::get(atomicPHI), RValue::get(Result), E->getExprLoc());
     llvm::Value *old = CGF.EmitToMemory(Pair.first.getScalarVal(), LHSTy);
     llvm::Value *success = Pair.second;
-    atomicPHI->addIncoming(old, opBB);
-    Builder.CreateCondBr(success, contBB, opBB);
+    atomicPHI->addIncoming(old, curBlock);
+    Builder.CreateCondBr(success, contBB, atomicPHI->getParent());
     Builder.SetInsertPoint(contBB);
     return LHSLV;
   }
@@ -3110,7 +3151,8 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   llvm::Type *argTypes[] = { CGF.Int64Ty, CGF.Int64Ty, Int8Ty, Int8Ty };
   llvm::FunctionType *handlerTy =
       llvm::FunctionType::get(CGF.Int64Ty, argTypes, true);
-  llvm::Value *handler = CGF.CGM.CreateRuntimeFunction(handlerTy, *handlerName);
+  llvm::FunctionCallee handler =
+      CGF.CGM.CreateRuntimeFunction(handlerTy, *handlerName);
 
   // Sign extend the args to 64-bit, so that we can use the same handler for
   // all types of overflow.
@@ -3371,8 +3413,6 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
   using llvm::ConstantInt;
 
   const auto *BinOp = cast<BinaryOperator>(op.E);
-  assert((BinOp->getOpcode() == BO_Add || BinOp->getOpcode() == BO_Sub) &&
-         "Expected operation to be addition or subtraction");
 
   // The result is a fixed point type and at least one of the operands is fixed
   // point while the other is either fixed point or an int. This resulting type
@@ -3420,17 +3460,30 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
     }
     break;
   }
+  case BO_LT:
+    return CommonFixedSema.isSigned() ? Builder.CreateICmpSLT(FullLHS, FullRHS)
+                                      : Builder.CreateICmpULT(FullLHS, FullRHS);
+  case BO_GT:
+    return CommonFixedSema.isSigned() ? Builder.CreateICmpSGT(FullLHS, FullRHS)
+                                      : Builder.CreateICmpUGT(FullLHS, FullRHS);
+  case BO_LE:
+    return CommonFixedSema.isSigned() ? Builder.CreateICmpSLE(FullLHS, FullRHS)
+                                      : Builder.CreateICmpULE(FullLHS, FullRHS);
+  case BO_GE:
+    return CommonFixedSema.isSigned() ? Builder.CreateICmpSGE(FullLHS, FullRHS)
+                                      : Builder.CreateICmpUGE(FullLHS, FullRHS);
+  case BO_EQ:
+    // For equality operations, we assume any padding bits on unsigned types are
+    // zero'd out. They could be overwritten through non-saturating operations
+    // that cause overflow, but this leads to undefined behavior.
+    return Builder.CreateICmpEQ(FullLHS, FullRHS);
+  case BO_NE:
+    return Builder.CreateICmpNE(FullLHS, FullRHS);
   case BO_Mul:
   case BO_Div:
   case BO_Shl:
   case BO_Shr:
   case BO_Cmp:
-  case BO_LT:
-  case BO_GT:
-  case BO_LE:
-  case BO_GE:
-  case BO_EQ:
-  case BO_NE:
   case BO_LAnd:
   case BO_LOr:
   case BO_MulAssign:
@@ -3713,8 +3766,9 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     Result = CGF.CGM.getCXXABI().EmitMemberPointerComparison(
                    CGF, LHS, RHS, MPT, E->getOpcode() == BO_NE);
   } else if (!LHSTy->isAnyComplexType() && !RHSTy->isAnyComplexType()) {
-    Value *LHS = Visit(E->getLHS());
-    Value *RHS = Visit(E->getRHS());
+    BinOpInfo BOInfo = EmitBinOps(E);
+    Value *LHS = BOInfo.LHS;
+    Value *RHS = BOInfo.RHS;
 
     // If AltiVec, the comparison results in a numeric type, so we use
     // intrinsics comparing vectors and giving 0 or 1 as a result
@@ -3792,7 +3846,9 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
                                   E->getExprLoc());
     }
 
-    if (LHS->getType()->isFPOrFPVectorTy()) {
+    if (BOInfo.isFixedPointBinOp()) {
+      Result = EmitFixedPointBinOp(BOInfo);
+    } else if (LHS->getType()->isFPOrFPVectorTy()) {
       Result = Builder.CreateFCmp(FCmpOpc, LHS, RHS, "cmp");
     } else if (LHSTy->hasSignedIntegerRepresentation()) {
       Result = Builder.CreateICmp(SICmpOpc, LHS, RHS, "cmp");

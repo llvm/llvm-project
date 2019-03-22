@@ -483,10 +483,7 @@ void __kmp_resume_oncore(int target_gtid, kmp_flag_oncore *flag) {
   __kmp_resume_template(target_gtid, flag);
 }
 
-void __kmp_yield(int cond) {
-  if (cond)
-    Sleep(0);
-}
+void __kmp_yield() { Sleep(0); }
 
 void __kmp_gtid_set_specific(int gtid) {
   if (__kmp_init_gtid) {
@@ -1245,8 +1242,8 @@ static void __kmp_reap_common(kmp_info_t *th) {
      Right solution seems to be waiting for *either* thread termination *or*
      ds_alive resetting. */
   {
-    // TODO: This code is very similar to KMP_WAIT_YIELD. Need to generalize
-    // KMP_WAIT_YIELD to cover this usage also.
+    // TODO: This code is very similar to KMP_WAIT. Need to generalize
+    // KMP_WAIT to cover this usage also.
     void *obj = NULL;
     kmp_uint32 spins;
 #if USE_ITT_BUILD
@@ -1258,8 +1255,7 @@ static void __kmp_reap_common(kmp_info_t *th) {
       KMP_FSYNC_SPIN_PREPARE(obj);
 #endif /* USE_ITT_BUILD */
       __kmp_is_thread_alive(th, &exit_val);
-      KMP_YIELD(TCR_4(__kmp_nth) > __kmp_avail_proc);
-      KMP_YIELD_SPIN(spins);
+      KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
     } while (exit_val == STILL_ACTIVE && TCR_4(th->th.th_info.ds.ds_alive));
 #if USE_ITT_BUILD
     if (exit_val == STILL_ACTIVE) {

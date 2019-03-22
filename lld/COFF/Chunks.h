@@ -108,6 +108,8 @@ public:
   // The alignment of this chunk. The writer uses the value.
   uint32_t Alignment = 1;
 
+  virtual bool isHotPatchable() const { return false; }
+
 protected:
   Chunk(Kind K = OtherKind) : ChunkKind(K) {}
   const Kind ChunkKind;
@@ -204,6 +206,16 @@ public:
 
   // The section ID this chunk belongs to in its Obj.
   uint32_t getSectionNumber() const;
+
+  ArrayRef<uint8_t> consumeDebugMagic();
+
+  static ArrayRef<uint8_t> consumeDebugMagic(ArrayRef<uint8_t> Data,
+                                             StringRef SectionName);
+
+  static SectionChunk *findByName(ArrayRef<SectionChunk *> Sections,
+                                  StringRef Name);
+
+  bool isHotPatchable() const override { return File->HotPatchable; }
 
   // A pointer pointing to a replacement for this chunk.
   // Initially it points to "this" object. If this chunk is merged
@@ -321,6 +333,8 @@ public:
   size_t getSize() const override { return sizeof(ImportThunkX86); }
   void writeTo(uint8_t *Buf) const override;
 
+  bool isHotPatchable() const override { return true; }
+
 private:
   Defined *ImpSymbol;
 };
@@ -331,6 +345,8 @@ public:
   size_t getSize() const override { return sizeof(ImportThunkX86); }
   void getBaserels(std::vector<Baserel> *Res) override;
   void writeTo(uint8_t *Buf) const override;
+
+  bool isHotPatchable() const override { return true; }
 
 private:
   Defined *ImpSymbol;
@@ -343,6 +359,8 @@ public:
   void getBaserels(std::vector<Baserel> *Res) override;
   void writeTo(uint8_t *Buf) const override;
 
+  bool isHotPatchable() const override { return true; }
+
 private:
   Defined *ImpSymbol;
 };
@@ -352,6 +370,8 @@ public:
   explicit ImportThunkChunkARM64(Defined *S) : ImpSymbol(S) {}
   size_t getSize() const override { return sizeof(ImportThunkARM64); }
   void writeTo(uint8_t *Buf) const override;
+
+  bool isHotPatchable() const override { return true; }
 
 private:
   Defined *ImpSymbol;

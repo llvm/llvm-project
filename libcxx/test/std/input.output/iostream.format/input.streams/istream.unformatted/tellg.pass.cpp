@@ -47,7 +47,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb(" 123456789");
@@ -59,4 +59,6 @@ int main()
         std::wistream is(&sb);
         assert(is.tellg() == 5);
     }
+
+  return 0;
 }

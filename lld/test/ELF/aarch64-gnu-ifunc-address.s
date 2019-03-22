@@ -21,20 +21,17 @@ main:
  ldr  x8, [x8, :got_lo12:myfunc]
  ret
 # CHECK:   0000000000010004 main:
-# x8 = 0x30000
-# CHECK-NEXT:    10004: 08 01 00 90     adrp    x8, #131072
-# x8 = 0x300e0 = .got entry for myfunc with R_AARCH64_GLOB_DAT
-# CHECK-NEXT:    10008: 08 71 40 f9     ldr     x8, [x8, #224]
+# x8 = 0x20000
+# CHECK-NEXT:    10004: 88 00 00 90     adrp    x8, #65536
+# x8 = 0x200a0 = .got entry for myfunc with R_AARCH64_GLOB_DAT
+# CHECK-NEXT:    10008: 08 51 40 f9     ldr     x8, [x8, #160]
 # CHECK-NEXT:    1000c: c0 03 5f d6     ret
 
 # CHECK: Disassembly of section .got:
-# CHECK-NEXT: 00000000000300e0 .got:
+# CHECK-NEXT: 00000000000200a0 .got:
 
 # CHECK-RELOCS: Relocations [
 # CHECK-RELOCS-NEXT:   Section {{.*}} .rela.dyn {
-# CHECK-RELOCS-NEXT:     0x300E0 R_AARCH64_GLOB_DAT myfunc 0x0
-# CHECK-RELOCS-NEXT:   }
-# CHECK-RELOCS-NEXT:   Section {{.*}} .rela.plt {
-# CHECK-RELOCS-NEXT:     0x20018 R_AARCH64_JUMP_SLOT myfunc 0x0
+# CHECK-RELOCS-NEXT:     0x200A0 R_AARCH64_GLOB_DAT myfunc 0x0
 # CHECK-RELOCS-NEXT:   }
 # CHECK-RELOCS-NEXT: ]

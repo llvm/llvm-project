@@ -105,9 +105,9 @@ bool TargetThreadWindows::CalculateStopInfo() {
 Unwind *TargetThreadWindows::GetUnwinder() {
   // FIXME: Implement an unwinder based on the Windows unwinder exposed through
   // DIA SDK.
-  if (!m_unwinder_ap)
-    m_unwinder_ap.reset(new UnwindLLDB(*this));
-  return m_unwinder_ap.get();
+  if (!m_unwinder_up)
+    m_unwinder_up.reset(new UnwindLLDB(*this));
+  return m_unwinder_up.get();
 }
 
 Status TargetThreadWindows::DoResume() {

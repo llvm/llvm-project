@@ -36,6 +36,10 @@ public:
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind) const override;
 
+  bool isPICDefault() const override { return false; }
+  bool isPIEDefault() const override { return false; }
+  bool isPICDefaultForced() const override { return true; }
+
 protected:
   Tool *buildLinker() const override;
 

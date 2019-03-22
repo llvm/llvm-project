@@ -10,11 +10,11 @@ declare void @ext_func_i32(i32* %ptr)
 ; Check that there is an extra local for the stack pointer.
 ; CHECK: .local i32{{$}}
 define void @alloca32() noredzone {
- ; CHECK-NEXT: global.get $push[[L2:.+]]=, __stack_pointer@GLOBAL{{$}}
+ ; CHECK-NEXT: global.get $push[[L2:.+]]=, __stack_pointer{{$}}
  ; CHECK-NEXT: i32.const $push[[L3:.+]]=, 16
  ; CHECK-NEXT: i32.sub $push[[L9:.+]]=, $pop[[L2]], $pop[[L3]]
  ; CHECK-NEXT: local.tee $push[[L8:.+]]=, [[SP:.+]], $pop[[L9]]{{$}}
- ; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L8]]{{$}}
+ ; CHECK-NEXT: global.set __stack_pointer, $pop[[L8]]{{$}}
  %retval = alloca i32
  ; CHECK: local.get $push[[L4:.+]]=, [[SP]]{{$}}
  ; CHECK: i32.const $push[[L0:.+]]=, 0
@@ -23,14 +23,14 @@ define void @alloca32() noredzone {
  ; CHECK: local.get $push[[L6:.+]]=, [[SP]]{{$}}
  ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 16
  ; CHECK-NEXT: i32.add $push[[L7:.+]]=, $pop[[L6]], $pop[[L5]]
- ; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L7]]
+ ; CHECK-NEXT: global.set __stack_pointer, $pop[[L7]]
  ret void
 }
 
 ; CHECK-LABEL: alloca3264:
 ; CHECK: .local i32{{$}}
 define void @alloca3264() {
- ; CHECK: global.get $push[[L3:.+]]=, __stack_pointer@GLOBAL{{$}}
+ ; CHECK: global.get $push[[L3:.+]]=, __stack_pointer{{$}}
  ; CHECK-NEXT: i32.const $push[[L4:.+]]=, 16
  ; CHECK-NEXT: i32.sub $push[[L6:.+]]=, $pop[[L3]], $pop[[L4]]
  ; CHECK-NEXT: local.tee $push[[L5:.+]]=, [[SP:.+]], $pop[[L6]]
@@ -50,11 +50,11 @@ define void @alloca3264() {
 ; CHECK-LABEL: allocarray:
 ; CHECK: .local i32{{$}}
 define void @allocarray() {
- ; CHECK-NEXT: global.get $push[[L4:.+]]=, __stack_pointer@GLOBAL{{$}}
+ ; CHECK-NEXT: global.get $push[[L4:.+]]=, __stack_pointer{{$}}
  ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 144{{$}}
  ; CHECK-NEXT: i32.sub $push[[L12:.+]]=, $pop[[L4]], $pop[[L5]]
  ; CHECK-NEXT: local.tee $push[[L11:.+]]=, 0, $pop[[L12]]
- ; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L11]]
+ ; CHECK-NEXT: global.set __stack_pointer, $pop[[L11]]
  %r = alloca [33 x i32]
 
  ; CHECK:      i32.const $push{{.+}}=, 24
@@ -72,7 +72,7 @@ define void @allocarray() {
  ; CHECK-NEXT: local.get $push[[L2:.+]]=, [[SP]]{{$}}
  ; CHECK-NEXT: i32.const $push[[L7:.+]]=, 144
  ; CHECK-NEXT: i32.add $push[[L8:.+]]=, $pop[[L2]], $pop[[L7]]
- ; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L8]]
+ ; CHECK-NEXT: global.set __stack_pointer, $pop[[L8]]
  ret void
 }
 
@@ -81,7 +81,7 @@ define void @non_mem_use(i8** %addr) {
  ; CHECK: i32.const $push[[L2:.+]]=, 48
  ; CHECK-NEXT: i32.sub $push[[L12:.+]]=, {{.+}}, $pop[[L2]]
  ; CHECK-NEXT: local.tee $push[[L11:.+]]=, [[SP:.+]], $pop[[L12]]
- ; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L11]]
+ ; CHECK-NEXT: global.set __stack_pointer, $pop[[L11]]
  %buf = alloca [27 x i8], align 16
  %r = alloca i64
  %r2 = alloca i64
@@ -89,11 +89,11 @@ define void @non_mem_use(i8** %addr) {
  ; CHECK: local.get $push[[L3:.+]]=, [[SP]]
  ; CHECK: i32.const $push[[OFF:.+]]=, 8
  ; CHECK-NEXT: i32.add $push[[ARG1:.+]]=, $pop[[L3]], $pop[[OFF]]
- ; CHECK-NEXT: call ext_func@FUNCTION, $pop[[ARG1]]
+ ; CHECK-NEXT: call ext_func, $pop[[ARG1]]
  call void @ext_func(i64* %r)
  ; %r2 is at SP+0, no add needed
  ; CHECK: local.get $push[[L4:.+]]=, [[SP]]
- ; CHECK-NEXT: call ext_func@FUNCTION, $pop[[L4]]
+ ; CHECK-NEXT: call ext_func, $pop[[L4]]
  call void @ext_func(i64* %r2)
  ; Use as a value, but in a store
  ; %buf is at SP+16
@@ -109,11 +109,11 @@ define void @non_mem_use(i8** %addr) {
 ; CHECK-LABEL: allocarray_inbounds:
 ; CHECK: .local i32{{$}}
 define void @allocarray_inbounds() {
- ; CHECK: global.get $push[[L3:.+]]=, __stack_pointer@GLOBAL{{$}}
+ ; CHECK: global.get $push[[L3:.+]]=, __stack_pointer{{$}}
  ; CHECK-NEXT: i32.const $push[[L4:.+]]=, 32{{$}}
  ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, $pop[[L3]], $pop[[L4]]
  ; CHECK-NEXT: local.tee $push[[L10:.+]]=, [[SP:.+]], $pop[[L11]]
- ; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L10]]{{$}}
+ ; CHECK-NEXT: global.set __stack_pointer, $pop[[L10]]{{$}}
  %r = alloca [5 x i32]
  ; CHECK: i32.const $push[[L3:.+]]=, 1
  ; CHECK-DAG: i32.store 24(${{.+}}), $pop[[L3]]
@@ -127,29 +127,29 @@ define void @allocarray_inbounds() {
  ; CHECK: call ext_func
  ; CHECK: i32.const $push[[L5:.+]]=, 32{{$}}
  ; CHECK-NEXT: i32.add $push[[L7:.+]]=, ${{.+}}, $pop[[L5]]
- ; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L7]]
+ ; CHECK-NEXT: global.set __stack_pointer, $pop[[L7]]
  ret void
 }
 
 ; CHECK-LABEL: dynamic_alloca:
 define void @dynamic_alloca(i32 %alloc) {
- ; CHECK: global.get $push[[L13:.+]]=, __stack_pointer@GLOBAL{{$}}
+ ; CHECK: global.get $push[[L13:.+]]=, __stack_pointer{{$}}
  ; CHECK-NEXT: local.tee $push[[L12:.+]]=, [[SP:.+]], $pop[[L13]]{{$}}
  ; Target independent codegen bumps the stack pointer.
  ; CHECK: i32.sub
  ; Check that SP is written back to memory after decrement
- ; CHECK: global.set __stack_pointer@GLOBAL,
+ ; CHECK: global.set __stack_pointer,
  %r = alloca i32, i32 %alloc
  ; Target-independent codegen also calculates the store addr
- ; CHECK: call ext_func_i32@FUNCTION
+ ; CHECK: call ext_func_i32
  call void @ext_func_i32(i32* %r)
- ; CHECK: global.set __stack_pointer@GLOBAL, $pop{{.+}}
+ ; CHECK: global.set __stack_pointer, $pop{{.+}}
  ret void
 }
 
 ; CHECK-LABEL: dynamic_alloca_redzone:
 define void @dynamic_alloca_redzone(i32 %alloc) {
- ; CHECK: global.get $push[[L13:.+]]=, __stack_pointer@GLOBAL{{$}}
+ ; CHECK: global.get $push[[L13:.+]]=, __stack_pointer{{$}}
  ; CHECK-NEXT: local.tee $push[[L12:.+]]=, [[SP:.+]], $pop[[L13]]{{$}}
  ; Target independent codegen bumps the stack pointer
  ; CHECK: i32.sub
@@ -166,11 +166,11 @@ define void @dynamic_alloca_redzone(i32 %alloc) {
 ; CHECK-LABEL: dynamic_static_alloca:
 define void @dynamic_static_alloca(i32 %alloc) noredzone {
  ; Decrement SP in the prolog by the static amount and writeback to memory.
- ; CHECK: global.get $push[[L11:.+]]=, __stack_pointer@GLOBAL{{$}}
+ ; CHECK: global.get $push[[L11:.+]]=, __stack_pointer{{$}}
  ; CHECK-NEXT: i32.const $push[[L12:.+]]=, 16
  ; CHECK-NEXT: i32.sub $push[[L23:.+]]=, $pop[[L11]], $pop[[L12]]
  ; CHECK-NEXT: local.tee $push[[L22:.+]]=, [[SP:.+]], $pop[[L23]]
- ; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L22]]
+ ; CHECK-NEXT: global.set __stack_pointer, $pop[[L22]]
 
  ; Alloc and write to a static alloca
  ; CHECK: local.get $push[[L21:.+]]=, [[SP:.+]]
@@ -184,7 +184,7 @@ define void @dynamic_static_alloca(i32 %alloc) noredzone {
  ; CHECK: i32.sub
  ; CHECK: local.tee $push[[L16:.+]]=, [[dynamic_local:.+]], $pop{{.+}}
  ; CHECK: local.tee $push[[L15:.+]]=, [[other:.+]], $pop[[L16]]{{$}}
- ; CHECK: global.set __stack_pointer@GLOBAL, $pop[[L15]]{{$}}
+ ; CHECK: global.set __stack_pointer, $pop[[L15]]{{$}}
  %dynamic = alloca i32, i32 %alloc
 
  ; Ensure we don't modify the frame pointer after assigning it.
@@ -226,7 +226,7 @@ define void @dynamic_static_alloca(i32 %alloc) noredzone {
  ; CHECK: local.get $push[[L24:.+]]=, [[FP]]{{$}}
  ; CHECK: i32.const $push[[L18:.+]]=, 16
  ; CHECK-NEXT: i32.add $push[[L19:.+]]=, $pop[[L24]], $pop[[L18]]
- ; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L19]]
+ ; CHECK-NEXT: global.set __stack_pointer, $pop[[L19]]
  ret void
 }
 
@@ -235,7 +235,7 @@ declare void @llvm.stackrestore(i8*)
 
 ; CHECK-LABEL: llvm_stack_builtins:
 define void @llvm_stack_builtins(i32 %alloc) noredzone {
- ; CHECK: global.get $push[[L11:.+]]=, __stack_pointer@GLOBAL{{$}}
+ ; CHECK: global.get $push[[L11:.+]]=, __stack_pointer{{$}}
  ; CHECK-NEXT: local.tee $push[[L10:.+]]=, {{.+}}, $pop[[L11]]
  ; CHECK-NEXT: local.set [[STACK:.+]], $pop[[L10]]
  %stack = call i8* @llvm.stacksave()
@@ -245,7 +245,7 @@ define void @llvm_stack_builtins(i32 %alloc) noredzone {
  %dynamic = alloca i32, i32 %alloc
 
  ; CHECK: local.get $push[[L12:.+]]=, [[STACK]]
- ; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L12]]
+ ; CHECK-NEXT: global.set __stack_pointer, $pop[[L12]]
  call void @llvm.stackrestore(i8* %stack)
 
  ret void
@@ -256,7 +256,7 @@ define void @llvm_stack_builtins(i32 %alloc) noredzone {
 ; moved after the stack pointer was updated for the dynamic alloca.
 ; CHECK-LABEL: dynamic_alloca_nouse:
 define void @dynamic_alloca_nouse(i32 %alloc) noredzone {
- ; CHECK: global.get $push[[L11:.+]]=, __stack_pointer@GLOBAL{{$}}
+ ; CHECK: global.get $push[[L11:.+]]=, __stack_pointer{{$}}
  ; CHECK-NEXT: local.tee $push[[L10:.+]]=, {{.+}}, $pop[[L11]]
  ; CHECK-NEXT: local.set [[FP:.+]], $pop[[L10]]
  %dynamic = alloca i32, i32 %alloc
@@ -264,7 +264,7 @@ define void @dynamic_alloca_nouse(i32 %alloc) noredzone {
  ; CHECK-NOT: local.set [[FP]],
 
  ; CHECK: local.get $push[[L12:.+]]=, [[FP]]
- ; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L12]]
+ ; CHECK-NEXT: global.set __stack_pointer, $pop[[L12]]
  ret void
 }
 
@@ -295,11 +295,11 @@ declare i8* @llvm.frameaddress(i32)
 
 ; Test __builtin_frame_address(0).
 ; CHECK-LABEL: frameaddress_0:
-; CHECK: global.get $push[[L3:.+]]=, __stack_pointer@GLOBAL{{$}}
+; CHECK: global.get $push[[L3:.+]]=, __stack_pointer{{$}}
 ; CHECK-NEXT: local.tee $push[[L2:.+]]=, [[FP:.+]], $pop[[L3]]{{$}}
-; CHECK-NEXT: call use_i8_star@FUNCTION, $pop[[L2]]
+; CHECK-NEXT: call use_i8_star, $pop[[L2]]
 ; CHECK-NEXT: local.get $push[[L5:.+]]=, [[FP]]
-; CHECK-NEXT: global.set __stack_pointer@GLOBAL, $pop[[L5]]
+; CHECK-NEXT: global.set __stack_pointer, $pop[[L5]]
 define void @frameaddress_0() {
   %t = call i8* @llvm.frameaddress(i32 0)
   call void @use_i8_star(i8* %t)
@@ -310,7 +310,7 @@ define void @frameaddress_0() {
 
 ; CHECK-LABEL: frameaddress_1:
 ; CHECK:      i32.const $push0=, 0{{$}}
-; CHECK-NEXT: call use_i8_star@FUNCTION, $pop0{{$}}
+; CHECK-NEXT: call use_i8_star, $pop0{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @frameaddress_1() {
   %t = call i8* @llvm.frameaddress(i32 1)
@@ -320,7 +320,7 @@ define void @frameaddress_1() {
 
 ; Test a stack address passed to an inline asm.
 ; CHECK-LABEL: inline_asm:
-; CHECK:       global.get {{.+}}, __stack_pointer@GLOBAL{{$}}
+; CHECK:       global.get {{.+}}, __stack_pointer{{$}}
 ; CHECK:       #APP
 ; CHECK-NEXT:  # %{{[0-9]+}}{{$}}
 ; CHECK-NEXT:  #NO_APP

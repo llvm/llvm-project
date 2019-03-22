@@ -2224,16 +2224,16 @@ define <4 x i32> @fptosi_2f80_to_4i32(<2 x x86_fp80> %a) nounwind {
 ; SSE-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; SSE-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; SSE-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; SSE-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    orl $3072, %eax # imm = 0xC00
 ; SSE-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    fistpl -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; SSE-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; SSE-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    orl $3072, %eax # imm = 0xC00
 ; SSE-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    fistpl -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero

@@ -14,6 +14,8 @@ public:
   Duration &operator/=(float r);
   Duration &operator/=(double r);
   template <typename T> Duration &operator/=(T r);
+
+  Duration &operator+(Duration d);
 };
 
 template <typename T> Duration operator*(Duration lhs, T rhs);
@@ -67,6 +69,8 @@ Time FromUnixSeconds(int64_t);
 Time FromUnixMillis(int64_t);
 Time FromUnixMicros(int64_t);
 Time FromUnixNanos(int64_t);
+
+Time Now();
 
 // Relational Operators
 constexpr bool operator<(Duration lhs, Duration rhs);

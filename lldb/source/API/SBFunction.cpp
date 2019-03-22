@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBFunction.h"
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Disassembler.h"
@@ -22,24 +23,37 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBFunction::SBFunction() : m_opaque_ptr(NULL) {}
+SBFunction::SBFunction() : m_opaque_ptr(NULL) {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFunction);
+}
 
 SBFunction::SBFunction(lldb_private::Function *lldb_object_ptr)
     : m_opaque_ptr(lldb_object_ptr) {}
 
 SBFunction::SBFunction(const lldb::SBFunction &rhs)
-    : m_opaque_ptr(rhs.m_opaque_ptr) {}
+    : m_opaque_ptr(rhs.m_opaque_ptr) {
+  LLDB_RECORD_CONSTRUCTOR(SBFunction, (const lldb::SBFunction &), rhs);
+}
 
 const SBFunction &SBFunction::operator=(const SBFunction &rhs) {
+  LLDB_RECORD_METHOD(const lldb::SBFunction &,
+                     SBFunction, operator=,(const lldb::SBFunction &), rhs);
+
   m_opaque_ptr = rhs.m_opaque_ptr;
   return *this;
 }
 
 SBFunction::~SBFunction() { m_opaque_ptr = NULL; }
 
-bool SBFunction::IsValid() const { return m_opaque_ptr != NULL; }
+bool SBFunction::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFunction, IsValid);
+
+  return m_opaque_ptr != NULL;
+}
 
 const char *SBFunction::GetName() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFunction, GetName);
+
   const char *cstr = NULL;
   if (m_opaque_ptr)
     cstr = m_opaque_ptr->GetName().AsCString();
@@ -57,6 +71,8 @@ const char *SBFunction::GetName() const {
 }
 
 const char *SBFunction::GetDisplayName() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFunction, GetDisplayName);
+
   const char *cstr = NULL;
   if (m_opaque_ptr)
     cstr = m_opaque_ptr->GetMangled()
@@ -76,6 +92,8 @@ const char *SBFunction::GetDisplayName() const {
 }
 
 const char *SBFunction::GetMangledName() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFunction, GetMangledName);
+
   const char *cstr = NULL;
   if (m_opaque_ptr)
     cstr = m_opaque_ptr->GetMangled().GetMangledName().AsCString();
@@ -92,14 +110,22 @@ const char *SBFunction::GetMangledName() const {
 }
 
 bool SBFunction::operator==(const SBFunction &rhs) const {
+  LLDB_RECORD_METHOD_CONST(
+      bool, SBFunction, operator==,(const lldb::SBFunction &), rhs);
+
   return m_opaque_ptr == rhs.m_opaque_ptr;
 }
 
 bool SBFunction::operator!=(const SBFunction &rhs) const {
+  LLDB_RECORD_METHOD_CONST(
+      bool, SBFunction, operator!=,(const lldb::SBFunction &), rhs);
+
   return m_opaque_ptr != rhs.m_opaque_ptr;
 }
 
 bool SBFunction::GetDescription(SBStream &s) {
+  LLDB_RECORD_METHOD(bool, SBFunction, GetDescription, (lldb::SBStream &), s);
+
   if (m_opaque_ptr) {
     s.Printf("SBFunction: id = 0x%8.8" PRIx64 ", name = %s",
              m_opaque_ptr->GetID(), m_opaque_ptr->GetName().AsCString());
@@ -113,11 +139,17 @@ bool SBFunction::GetDescription(SBStream &s) {
 }
 
 SBInstructionList SBFunction::GetInstructions(SBTarget target) {
-  return GetInstructions(target, NULL);
+  LLDB_RECORD_METHOD(lldb::SBInstructionList, SBFunction, GetInstructions,
+                     (lldb::SBTarget), target);
+
+  return LLDB_RECORD_RESULT(GetInstructions(target, NULL));
 }
 
 SBInstructionList SBFunction::GetInstructions(SBTarget target,
                                               const char *flavor) {
+  LLDB_RECORD_METHOD(lldb::SBInstructionList, SBFunction, GetInstructions,
+                     (lldb::SBTarget, const char *), target, flavor);
+
   SBInstructionList sb_instructions;
   if (m_opaque_ptr) {
     ExecutionContext exe_ctx;
@@ -137,7 +169,7 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
           m_opaque_ptr->GetAddressRange(), prefer_file_cache));
     }
   }
-  return sb_instructions;
+  return LLDB_RECORD_RESULT(sb_instructions);
 }
 
 lldb_private::Function *SBFunction::get() { return m_opaque_ptr; }
@@ -147,13 +179,17 @@ void SBFunction::reset(lldb_private::Function *lldb_object_ptr) {
 }
 
 SBAddress SBFunction::GetStartAddress() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBAddress, SBFunction, GetStartAddress);
+
   SBAddress addr;
   if (m_opaque_ptr)
     addr.SetAddress(&m_opaque_ptr->GetAddressRange().GetBaseAddress());
-  return addr;
+  return LLDB_RECORD_RESULT(addr);
 }
 
 SBAddress SBFunction::GetEndAddress() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBAddress, SBFunction, GetEndAddress);
+
   SBAddress addr;
   if (m_opaque_ptr) {
     addr_t byte_size = m_opaque_ptr->GetAddressRange().GetByteSize();
@@ -162,10 +198,13 @@ SBAddress SBFunction::GetEndAddress() {
       addr->Slide(byte_size);
     }
   }
-  return addr;
+  return LLDB_RECORD_RESULT(addr);
 }
 
 const char *SBFunction::GetArgumentName(uint32_t arg_idx) {
+  LLDB_RECORD_METHOD(const char *, SBFunction, GetArgumentName, (uint32_t),
+                     arg_idx);
+
   if (m_opaque_ptr) {
     Block &block = m_opaque_ptr->GetBlock(true);
     VariableListSP variable_list_sp = block.GetBlockVariableList(true);
@@ -182,29 +221,37 @@ const char *SBFunction::GetArgumentName(uint32_t arg_idx) {
 }
 
 uint32_t SBFunction::GetPrologueByteSize() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBFunction, GetPrologueByteSize);
+
   if (m_opaque_ptr)
     return m_opaque_ptr->GetPrologueByteSize();
   return 0;
 }
 
 SBType SBFunction::GetType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBFunction, GetType);
+
   SBType sb_type;
   if (m_opaque_ptr) {
     Type *function_type = m_opaque_ptr->GetType();
     if (function_type)
       sb_type.ref().SetType(function_type->shared_from_this());
   }
-  return sb_type;
+  return LLDB_RECORD_RESULT(sb_type);
 }
 
 SBBlock SBFunction::GetBlock() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBBlock, SBFunction, GetBlock);
+
   SBBlock sb_block;
   if (m_opaque_ptr)
     sb_block.SetPtr(&m_opaque_ptr->GetBlock(true));
-  return sb_block;
+  return LLDB_RECORD_RESULT(sb_block);
 }
 
 lldb::LanguageType SBFunction::GetLanguage() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::LanguageType, SBFunction, GetLanguage);
+
   if (m_opaque_ptr) {
     if (m_opaque_ptr->GetCompileUnit())
       return m_opaque_ptr->GetCompileUnit()->GetLanguage();
@@ -213,6 +260,8 @@ lldb::LanguageType SBFunction::GetLanguage() {
 }
 
 bool SBFunction::GetIsOptimized() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBFunction, GetIsOptimized);
+
   if (m_opaque_ptr) {
     if (m_opaque_ptr->GetCompileUnit())
       return m_opaque_ptr->GetCompileUnit()->GetIsOptimized();

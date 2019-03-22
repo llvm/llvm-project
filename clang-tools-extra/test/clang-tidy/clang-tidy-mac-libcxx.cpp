@@ -8,7 +8,7 @@
 // RUN: cp -r %S/Inputs/mock-libcxx %t/
 //
 // Pretend clang is installed beside the mock library that we provided.
-// RUN: echo '[{"directory":"%t","command":"%t/mock-libcxx/bin/clang++ -stdlib=libc++ -target x86_64-apple-darwin -c test.cpp","file":"test.cpp"}]' | sed -e 's/\\/\//g' > %t/compile_commands.json
+// RUN: echo '[{"directory":"%t","command":"%t/mock-libcxx/bin/clang++ -stdlib=libc++ -std=c++11 -target x86_64-apple-darwin -c test.cpp","file":"test.cpp"}]' | sed -e 's/\\/\//g' > %t/compile_commands.json
 // RUN: cp "%s" "%t/test.cpp"
 // RUN: clang-tidy -header-filter='.*' -system-headers -checks='-*,modernize-use-using'  "%t/test.cpp" | FileCheck %s
 // CHECK: mock_vector:{{[0-9]+}}:{{[0-9]+}}: warning: use 'using' instead of 'typedef'

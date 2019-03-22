@@ -9,6 +9,7 @@
 #ifndef liblldb_StackFrameRecognizer_h_
 #define liblldb_StackFrameRecognizer_h_
 
+#include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/StructuredData.h"
@@ -121,6 +122,42 @@ public:
       lldb::StackFrameSP frame);
 
   static lldb::RecognizedStackFrameSP RecognizeFrame(lldb::StackFrameSP frame);
+};
+
+/// @class ValueObjectRecognizerSynthesizedValue
+///
+/// ValueObject subclass that presents the passed ValueObject as a recognized
+/// value with the specified ValueType. Frame recognizers should return
+/// instances of this class as the returned objects in GetRecognizedArguments().
+
+class ValueObjectRecognizerSynthesizedValue : public ValueObject {
+ public:
+  static lldb::ValueObjectSP Create(ValueObject &parent, lldb::ValueType type) {
+    return (new ValueObjectRecognizerSynthesizedValue(parent, type))->GetSP();
+  }
+  ValueObjectRecognizerSynthesizedValue(ValueObject &parent,
+                                        lldb::ValueType type)
+      : ValueObject(parent), m_type(type) {
+    SetName(parent.GetName());
+  }
+
+  uint64_t GetByteSize() override { return m_parent->GetByteSize(); }
+  lldb::ValueType GetValueType() const override { return m_type; }
+  bool UpdateValue() override {
+    if (!m_parent->UpdateValueIfNeeded()) return false;
+    m_value = m_parent->GetValue();
+    return true;
+  }
+  size_t CalculateNumChildren(uint32_t max = UINT32_MAX) override {
+    return m_parent->GetNumChildren(max);
+  }
+  CompilerType GetCompilerTypeImpl() override {
+    return m_parent->GetCompilerType();
+  }
+  bool IsSynthetic() override { return true; }
+
+ private:
+  lldb::ValueType m_type;
 };
 
 } // namespace lldb_private

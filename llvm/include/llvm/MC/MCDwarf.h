@@ -320,6 +320,8 @@ public:
 
   bool hasRootFile() const { return !Header.RootFile.Name.empty(); }
 
+  const MCDwarfFile &getRootFile() const { return Header.RootFile; }
+
   // Report whether MD5 usage has been consistent (all-or-none).
   bool isMD5UsageConsistent() const { return Header.isMD5UsageConsistent(); }
 

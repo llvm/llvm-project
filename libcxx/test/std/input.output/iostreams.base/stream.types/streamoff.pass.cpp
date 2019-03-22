@@ -13,8 +13,10 @@
 #include <ios>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert(std::is_integral<std::streamoff>::value, "");
     static_assert(std::is_signed<std::streamoff>::value, "");
+
+  return 0;
 }

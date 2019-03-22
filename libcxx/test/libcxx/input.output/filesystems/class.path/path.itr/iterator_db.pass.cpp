@@ -26,7 +26,7 @@
 #include "test_macros.h"
 #include "filesystem_test_helper.hpp"
 
-int main() {
+int main(int, char**) {
   using namespace fs;
   using ExType = std::__libcpp_debug_exception;
   // Test incrementing/decrementing a singular iterator
@@ -71,4 +71,6 @@ int main() {
       assert(false);
     } catch (ExType const&) {}
   }
+
+  return 0;
 }

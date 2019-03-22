@@ -7,5 +7,6 @@
 // RUN: %clang -### -target aarch64 -march=armv8.2a+dotprod %s 2>&1 | FileCheck %s
 // RUN: %clang -### -target aarch64 -march=armv8.3a+dotprod %s 2>&1 | FileCheck %s
 // RUN: %clang -### -target aarch64 -mcpu=cortex-a75 %s 2>&1 | FileCheck %s
+// RUN: %clang -### -target aarch64 -mcpu=cortex-a76 %s 2>&1 | FileCheck %s
 // RUN: %clang -### -target aarch64 -mcpu=cortex-a55 %s 2>&1 | FileCheck %s
 // CHECK: "+dotprod"

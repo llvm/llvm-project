@@ -18,9 +18,11 @@
 
 namespace ex = std::experimental::pmr;
 
-int main() {
+int main(int, char**) {
     ex::memory_resource *m = ex::new_delete_resource();
     m->do_allocate(0, 0); // expected-error{{'do_allocate' is a protected member}}
     m->do_deallocate(nullptr, 0, 0); // expected-error{{'do_deallocate' is a protected member}}
     m->do_is_equal(*m); // expected-error{{'do_is_equal' is a protected member}}
+
+  return 0;
 }

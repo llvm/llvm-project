@@ -15,7 +15,7 @@
 #include <mutex>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::once_flag f;
@@ -27,4 +27,6 @@ int main()
     (void)f;
     }
 #endif
+
+  return 0;
 }

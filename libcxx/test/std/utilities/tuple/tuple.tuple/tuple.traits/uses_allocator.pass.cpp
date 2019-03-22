@@ -20,7 +20,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::tuple<> T;
@@ -42,4 +42,6 @@ int main()
         static_assert((std::is_base_of<std::true_type,
                                        std::uses_allocator<T, A>>::value), "");
     }
+
+  return 0;
 }

@@ -82,7 +82,7 @@ template <class E> void rethrow_if_nested(const E& e);
 #include <type_traits>
 #include <version>
 
-#if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
+#if defined(_LIBCPP_ABI_VCRUNTIME)
 #include <vcruntime_exception.h>
 #endif
 
@@ -93,7 +93,7 @@ template <class E> void rethrow_if_nested(const E& e);
 namespace std  // purposefully not using versioning namespace
 {
 
-#if !defined(_LIBCPP_ABI_MICROSOFT) || defined(_LIBCPP_NO_VCRUNTIME)
+#if !defined(_LIBCPP_ABI_VCRUNTIME)
 class _LIBCPP_EXCEPTION_ABI exception
 {
 public:
@@ -110,7 +110,7 @@ public:
     virtual ~bad_exception() _NOEXCEPT;
     virtual const char* what() const _NOEXCEPT;
 };
-#endif // !_LIBCPP_ABI_MICROSOFT || _LIBCPP_NO_VCRUNTIME
+#endif // !_LIBCPP_ABI_VCRUNTIME
 
 #if _LIBCPP_STD_VER <= 14 \
     || defined(_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS) \

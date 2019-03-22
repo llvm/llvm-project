@@ -26,6 +26,7 @@ class SaveJITObjectsTestCase(TestBase):
         return
 
     @expectedFailureAll(oslist=["windows"])
+    @expectedFailureNetBSD
     def test_save_jit_objects(self):
         self.build()
         os.chdir(self.getBuildDir())

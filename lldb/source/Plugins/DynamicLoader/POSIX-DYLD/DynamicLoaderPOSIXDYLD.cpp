@@ -20,12 +20,13 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ProcessInfo.h"
 
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -497,7 +498,8 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
 
     llvm::sort(start, end);
     addrs.erase(std::unique(start, end), end);
-    thread_plan_sp.reset(new ThreadPlanRunToAddress(thread, addrs, stop));
+    thread_plan_sp =
+        std::make_shared<ThreadPlanRunToAddress>(thread, addrs, stop);
   }
 
   return thread_plan_sp;
@@ -635,7 +637,7 @@ addr_t DynamicLoaderPOSIXDYLD::GetEntryPoint() {
   if (m_entry_point != LLDB_INVALID_ADDRESS)
     return m_entry_point;
 
-  if (m_auxv.get() == NULL)
+  if (m_auxv == NULL)
     return LLDB_INVALID_ADDRESS;
 
   AuxVector::iterator I = m_auxv->FindEntry(AuxVector::AUXV_AT_ENTRY);

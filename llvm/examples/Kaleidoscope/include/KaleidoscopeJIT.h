@@ -46,7 +46,7 @@ public:
       : Resolver(createLegacyLookupResolver(
             ES,
             [this](const std::string &Name) {
-              return ObjectLayer.findSymbol(Name, true);
+              return findMangledSymbol(Name);
             },
             [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); })),
         TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),

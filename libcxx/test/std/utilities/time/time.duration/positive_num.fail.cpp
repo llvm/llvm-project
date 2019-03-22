@@ -14,8 +14,10 @@
 
 #include <chrono>
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::duration<int, std::ratio<5, -1> > D;
     D d;
+
+  return 0;
 }

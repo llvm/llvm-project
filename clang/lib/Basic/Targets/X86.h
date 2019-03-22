@@ -198,7 +198,7 @@ public:
                                   StringRef Expression) const override {
     StringRef::iterator I, E;
     for (I = Constraint.begin(), E = Constraint.end(); I != E; ++I) {
-      if (isalpha(*I))
+      if (isalpha(*I) || *I == '@')
         break;
     }
     if (I == E)

@@ -30,7 +30,7 @@ test(const C& x)
     LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
 }
 
-int main()
+int main(int, char**)
 {
     {
         int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
@@ -74,4 +74,6 @@ int main()
         assert(is_contiguous_container_asan_correct(v2));
     }
 #endif
+
+  return 0;
 }

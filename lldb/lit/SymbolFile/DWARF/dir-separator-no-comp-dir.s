@@ -2,6 +2,7 @@
 # compile unit does not have a DW_AT_comp_dir attribute.
 
 # REQUIRES: lld
+# XFAIL: system-netbsd
 
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj > %t.o
 # RUN: ld.lld %t.o -o %t

@@ -11,12 +11,14 @@ Clang-Tidy Checks
    abseil-duration-factory-float
    abseil-duration-factory-scale
    abseil-duration-subtraction
+   abseil-duration-unnecessary-conversion
    abseil-faster-strsplit-delimiter
    abseil-no-internal-dependencies
    abseil-no-namespace
    abseil-redundant-strcat-calls
    abseil-str-cat-append
    abseil-string-find-startswith
+   abseil-time-subtraction
    abseil-upgrade-duration-conversions
    android-cloexec-accept
    android-cloexec-accept4
@@ -97,6 +99,7 @@ Clang-Tidy Checks
    cppcoreguidelines-avoid-goto
    cppcoreguidelines-avoid-magic-numbers (redirects to readability-magic-numbers) <cppcoreguidelines-avoid-magic-numbers>
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
+   cppcoreguidelines-explicit-virtual-functions (redirects to modernize-use-override) <cppcoreguidelines-explicit-virtual-functions>
    cppcoreguidelines-interfaces-global-init
    cppcoreguidelines-macro-usage
    cppcoreguidelines-narrowing-conversions

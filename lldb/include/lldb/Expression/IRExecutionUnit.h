@@ -62,8 +62,8 @@ public:
   //------------------------------------------------------------------
   /// Constructor
   //------------------------------------------------------------------
-  IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_ap,
-                  std::unique_ptr<llvm::Module> &module_ap, ConstString &name,
+  IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
+                  std::unique_ptr<llvm::Module> &module_up, ConstString &name,
                   const lldb::TargetSP &target_sp, const SymbolContext &sym_ctx,
                   std::vector<std::string> &cpu_features);
 
@@ -336,13 +336,13 @@ private:
                                     bool AbortOnFailure = true) override;
 
   private:
-    std::unique_ptr<SectionMemoryManager> m_default_mm_ap; ///< The memory
-                                                           ///allocator to use
-                                                           ///in actually
-                                                           ///creating space.
-                                                           ///All calls are
-                                                           ///passed through to
-                                                           ///it.
+    std::unique_ptr<SectionMemoryManager> m_default_mm_up; ///< The memory
+                                                           /// allocator to use
+                                                           /// in actually
+                                                           /// creating space.
+                                                           /// All calls are
+                                                           /// passed through to
+                                                           /// it.
     IRExecutionUnit &m_parent; ///< The execution unit this is a proxy for.
   };
 
@@ -392,11 +392,11 @@ private:
   typedef std::vector<AllocationRecord> RecordVector;
   RecordVector m_records;
 
-  std::unique_ptr<llvm::LLVMContext> m_context_ap;
-  std::unique_ptr<llvm::ExecutionEngine> m_execution_engine_ap;
-  std::unique_ptr<llvm::ObjectCache> m_object_cache_ap;
+  std::unique_ptr<llvm::LLVMContext> m_context_up;
+  std::unique_ptr<llvm::ExecutionEngine> m_execution_engine_up;
+  std::unique_ptr<llvm::ObjectCache> m_object_cache_up;
   std::unique_ptr<llvm::Module>
-      m_module_ap;        ///< Holder for the module until it's been handed off
+      m_module_up;        ///< Holder for the module until it's been handed off
   llvm::Module *m_module; ///< Owned by the execution engine
   std::vector<std::string> m_cpu_features;
   std::vector<JittedFunction> m_jitted_functions; ///< A vector of all functions

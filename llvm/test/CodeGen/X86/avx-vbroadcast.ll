@@ -6,9 +6,7 @@ define <4 x i64> @A(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: A:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcastsd (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: A:
@@ -34,11 +32,9 @@ define <4 x i64> @A2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%ecx), %edx
 ; X32-NEXT:    movl 4(%ecx), %esi
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vbroadcastsd (%ecx), %ymm0
 ; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    movl %esi, 4(%eax)
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
@@ -590,8 +586,7 @@ define <2 x i64> @G(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: G:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: G:
@@ -615,10 +610,9 @@ define <2 x i64> @G2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%ecx), %edx
 ; X32-NEXT:    movl 4(%ecx), %esi
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    movl %esi, 4(%eax)
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
@@ -860,6 +854,32 @@ define <4 x double> @broadcast_shuffle1032(double* %p) {
   %3 = insertelement <2 x double> undef, double %1, i32 0
   %4 = shufflevector <2 x double> %2, <2 x double> %3, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   ret <4 x double> %4
+}
+
+define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
+; X32-LABEL: broadcast_v16i32:
+; X32:       ## %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vbroadcastss (%ecx), %ymm0
+; X32-NEXT:    vmovups %ymm0, 32(%eax)
+; X32-NEXT:    vmovups %ymm0, (%eax)
+; X32-NEXT:    vzeroupper
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_v16i32:
+; X64:       ## %bb.0:
+; X64-NEXT:    vbroadcastss (%rdi), %ymm0
+; X64-NEXT:    vmovups %ymm0, 32(%rsi)
+; X64-NEXT:    vmovups %ymm0, (%rsi)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %1 = load i32, i32* %a, align 4
+  %2 = insertelement <8 x i32> undef, i32 %1, i32 0
+  %3 = shufflevector <8 x i32> %2, <8 x i32> undef, <8 x i32> zeroinitializer
+  %4 = shufflevector <8 x i32> undef, <8 x i32> %3, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  store <16 x i32> %4, <16 x i32>* %b, align 4
+  ret void
 }
 
 ;

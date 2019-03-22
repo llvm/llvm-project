@@ -16,7 +16,9 @@
 
 _LIBCPP_NODISCARD_AFTER_CXX17 int foo() { return 6; }
 
-int main ()
+int main(int, char**)
 {
 	foo();	// expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  return 0;
 }

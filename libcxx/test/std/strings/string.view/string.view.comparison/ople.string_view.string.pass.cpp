@@ -25,7 +25,7 @@ test(const S& lhs, const typename S::value_type* rhs, bool x, bool y)
     assert((rhs <= lhs) == y);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
@@ -46,4 +46,6 @@ int main()
     test(S("abcdefghijklmnopqrst"), "abcdefghij", false, true);
     test(S("abcdefghijklmnopqrst"), "abcdefghijklmnopqrst", true, true);
     }
+
+  return 0;
 }

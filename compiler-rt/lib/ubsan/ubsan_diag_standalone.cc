@@ -16,20 +16,23 @@
 
 using namespace __ubsan;
 
+void __sanitizer::BufferedStackTrace::UnwindImpl(
+    uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
+  uptr top = 0;
+  uptr bottom = 0;
+  if (StackTrace::WillUseFastUnwind(request_fast)) {
+    GetThreadStackTopAndBottom(false, &top, &bottom);
+    Unwind(max_depth, pc, bp, nullptr, top, bottom, true);
+  } else
+    Unwind(max_depth, pc, bp, context, 0, 0, false);
+}
+
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_print_stack_trace() {
-  uptr top = 0;
-  uptr bottom = 0;
-  bool request_fast_unwind = common_flags()->fast_unwind_on_fatal;
-  if (request_fast_unwind)
-    __sanitizer::GetThreadStackTopAndBottom(false, &top, &bottom);
-
-  GET_CURRENT_PC_BP_SP;
-  (void)sp;
+  GET_CURRENT_PC_BP;
   BufferedStackTrace stack;
-  stack.Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom,
-               request_fast_unwind);
+  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
   stack.Print();
 }
 } // extern "C"

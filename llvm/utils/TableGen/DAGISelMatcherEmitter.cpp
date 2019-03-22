@@ -258,7 +258,7 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 
   OS << "\n};";
   OS << "\nreturn StringRef(PATTERN_MATCH_TABLE[Index]);";
-  OS << "\n}";
+  OS << "\n}\n";
   EndEmitFunction(OS);
 
   BeginEmitFunction(OS, "StringRef", "getIncludePathForIndex(unsigned Index)",
@@ -272,7 +272,7 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 
   OS << "\n};";
   OS << "\nreturn StringRef(INCLUDE_PATH_TABLE[Index]);";
-  OS << "\n}";
+  OS << "\n}\n";
   EndEmitFunction(OS);
 }
 
@@ -552,6 +552,11 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
   case Matcher::CheckCondCode:
     OS << "OPC_CheckCondCode, ISD::"
        << cast<CheckCondCodeMatcher>(N)->getCondCodeName() << ",\n";
+    return 2;
+
+  case Matcher::CheckChild2CondCode:
+    OS << "OPC_CheckChild2CondCode, ISD::"
+       << cast<CheckChild2CondCodeMatcher>(N)->getCondCodeName() << ",\n";
     return 2;
 
   case Matcher::CheckValueType:
@@ -995,6 +1000,7 @@ static StringRef getOpcodeString(Matcher::KindTy Kind) {
   case Matcher::CheckInteger: return "OPC_CheckInteger"; break;
   case Matcher::CheckChildInteger: return "OPC_CheckChildInteger"; break;
   case Matcher::CheckCondCode: return "OPC_CheckCondCode"; break;
+  case Matcher::CheckChild2CondCode: return "OPC_CheckChild2CondCode"; break;
   case Matcher::CheckValueType: return "OPC_CheckValueType"; break;
   case Matcher::CheckComplexPat: return "OPC_CheckComplexPat"; break;
   case Matcher::CheckAndImm: return "OPC_CheckAndImm"; break;

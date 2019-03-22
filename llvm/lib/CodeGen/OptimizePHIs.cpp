@@ -181,11 +181,12 @@ bool OptimizePHIs::OptimizeBB(MachineBasicBlock &MBB) {
       if (!MRI->constrainRegClass(SingleValReg, MRI->getRegClass(OldReg)))
         continue;
 
-      // for the case SingleValReg taken from copy instr
-      MRI->clearKillFlags(SingleValReg);
-
       MRI->replaceRegWith(OldReg, SingleValReg);
       MI->eraseFromParent();
+
+      // The kill flags on OldReg and SingleValReg may no longer be correct.
+      MRI->clearKillFlags(SingleValReg);
+
       ++NumPHICycles;
       Changed = true;
       continue;

@@ -15,7 +15,7 @@
 #include <random>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::bernoulli_distribution D;
@@ -23,4 +23,6 @@ int main()
         typedef param_type::distribution_type distribution_type;
         static_assert((std::is_same<D, distribution_type>::value), "");
     }
+
+  return 0;
 }

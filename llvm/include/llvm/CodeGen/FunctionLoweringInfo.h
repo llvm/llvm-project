@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_FUNCTIONLOWERINGINFO_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/Optional.h"
@@ -173,6 +174,10 @@ public:
   /// ArgDbgValues - A list of DBG_VALUE instructions created during isel for
   /// function arguments that are inserted after scheduling is completed.
   SmallVector<MachineInstr*, 8> ArgDbgValues;
+
+  /// Bitvector with a bit set if corresponding argument is described in
+  /// ArgDbgValues. Using arg numbers according to Argument numbering.
+  BitVector DescribedArgs;
 
   /// RegFixups - Registers which need to be replaced after isel is done.
   DenseMap<unsigned, unsigned> RegFixups;

@@ -229,7 +229,8 @@ unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
 
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
                                unsigned FlatWorkGroupSize) {
-  if (!STI->getFeatureBits().test(FeatureGCN))
+  assert(FlatWorkGroupSize != 0);
+  if (STI->getTargetTriple().getArch() != Triple::amdgcn)
     return 8;
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
   if (N == 1)
@@ -801,9 +802,11 @@ unsigned getRegBitWidth(unsigned RCID) {
   switch (RCID) {
   case AMDGPU::SGPR_32RegClassID:
   case AMDGPU::VGPR_32RegClassID:
+  case AMDGPU::VRegOrLds_32RegClassID:
   case AMDGPU::VS_32RegClassID:
   case AMDGPU::SReg_32RegClassID:
   case AMDGPU::SReg_32_XM0RegClassID:
+  case AMDGPU::SRegOrLds_32RegClassID:
     return 32;
   case AMDGPU::SGPR_64RegClassID:
   case AMDGPU::VS_64RegClassID:

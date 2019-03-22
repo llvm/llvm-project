@@ -1151,10 +1151,9 @@ protected:
           if (pid != LLDB_INVALID_PROCESS_ID) {
             ProcessInstanceInfo proc_info;
             if (platform_sp->GetProcessInfo(pid, proc_info)) {
-              ProcessInstanceInfo::DumpTableHeader(ostrm, platform_sp.get(),
-                                                   m_options.show_args,
+              ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
                                                    m_options.verbose);
-              proc_info.DumpAsTableRow(ostrm, platform_sp.get(),
+              proc_info.DumpAsTableRow(ostrm, platform_sp->GetUserIDResolver(),
                                        m_options.show_args, m_options.verbose);
               result.SetStatus(eReturnStatusSuccessFinishResult);
             } else {
@@ -1212,13 +1211,12 @@ protected:
                 result.AppendMessageWithFormat(" whose name %s \"%s\"",
                                                match_desc, match_name);
               result.AppendMessageWithFormat("\n");
-              ProcessInstanceInfo::DumpTableHeader(ostrm, platform_sp.get(),
-                                                   m_options.show_args,
+              ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
                                                    m_options.verbose);
               for (uint32_t i = 0; i < matches; ++i) {
                 proc_infos.GetProcessInfoAtIndex(i).DumpAsTableRow(
-                    ostrm, platform_sp.get(), m_options.show_args,
-                    m_options.verbose);
+                    ostrm, platform_sp->GetUserIDResolver(),
+                    m_options.show_args, m_options.verbose);
               }
             }
           }
@@ -1453,7 +1451,7 @@ protected:
               if (platform_sp->GetProcessInfo(pid, proc_info)) {
                 ostrm.Printf("Process information for process %" PRIu64 ":\n",
                              pid);
-                proc_info.Dump(ostrm, platform_sp.get());
+                proc_info.Dump(ostrm, platform_sp->GetUserIDResolver());
               } else {
                 ostrm.Printf("error: no process information is available for "
                              "process %" PRIu64 "\n",

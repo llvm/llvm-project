@@ -54,7 +54,7 @@ def read_packet(f, verbose=False, trace_file=None):
     '''Decode a JSON packet that starts with the content length and is
        followed by the JSON bytes from a file 'f'
     '''
-    line = f.readline()
+    line = f.readline().decode("utf-8")
     if len(line) == 0:
         return None
 
@@ -121,7 +121,7 @@ class DebugCommunication(object):
 
     @classmethod
     def encode_content(cls, s):
-        return "Content-Length: %u\r\n\r\n%s" % (len(s), s)
+        return ("Content-Length: %u\r\n\r\n%s" % (len(s), s)).encode("utf-8")
 
     @classmethod
     def validate_response(cls, command, response):

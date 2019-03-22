@@ -5474,7 +5474,13 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
   case CXCursor_StaticAssert:
       return cxstring::createRef("StaticAssert");
   case CXCursor_FriendDecl:
-    return cxstring::createRef("FriendDecl");
+      return cxstring::createRef("FriendDecl");
+  case CXCursor_ConvergentAttr:
+      return cxstring::createRef("attribute(convergent)");
+  case CXCursor_WarnUnusedAttr:
+      return cxstring::createRef("attribute(warn_unused)");
+  case CXCursor_WarnUnusedResultAttr:
+      return cxstring::createRef("attribute(warn_unused_result)");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");

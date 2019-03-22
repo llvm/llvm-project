@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::discrete_distribution<> D;
@@ -24,4 +24,6 @@ int main()
         D d(p0, p0+3);
         assert(d.min() == 0);
     }
+
+  return 0;
 }

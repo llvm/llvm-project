@@ -354,14 +354,14 @@ def UseNegativeImmediates :
 
 // FIXME: Eventually this will be just "hasV6T2Ops".
 let RecomputePerFunction = 1 in {
-  def UseMovt          : Predicate<"Subtarget->useMovt(*MF)">;
-  def DontUseMovt      : Predicate<"!Subtarget->useMovt(*MF)">;
-  def UseMovtInPic     : Predicate<"Subtarget->useMovt(*MF) && Subtarget->allowPositionIndependentMovt()">;
-  def DontUseMovtInPic : Predicate<"!Subtarget->useMovt(*MF) || !Subtarget->allowPositionIndependentMovt()">;
+  def UseMovt          : Predicate<"Subtarget->useMovt()">;
+  def DontUseMovt      : Predicate<"!Subtarget->useMovt()">;
+  def UseMovtInPic     : Predicate<"Subtarget->useMovt() && Subtarget->allowPositionIndependentMovt()">;
+  def DontUseMovtInPic : Predicate<"!Subtarget->useMovt() || !Subtarget->allowPositionIndependentMovt()">;
 
   def UseFPVMLx: Predicate<"((Subtarget->useFPVMLx() &&"
                            "  TM.Options.AllowFPOpFusion != FPOpFusion::Fast) ||"
-                           "MF->getFunction().optForMinSize())">;
+                           "Subtarget->optForMinSize())">;
 }
 def UseMulOps        : Predicate<"Subtarget->useMulOps()">;
 
@@ -717,24 +717,11 @@ def mod_imm_neg : Operand<i32>, PatLeaf<(imm), [{
 }
 
 /// arm_i32imm - True for +V6T2, or when isSOImmTwoParVal()
-def arm_i32imm : PatLeaf<(imm), [{
-  if (Subtarget->useMovt(*MF))
+def arm_i32imm : IntImmLeaf<i32, [{
+  if (Subtarget->useMovt())
     return true;
-  return ARM_AM::isSOImmTwoPartVal((unsigned)N->getZExtValue());
-}]> {
-  // Ideally this would be an IntImmLeaf, but then we wouldn't have access to
-  // the MachineFunction.
-  let GISelPredicateCode = [{
-    const auto &MF = *MI.getParent()->getParent();
-    if (STI.useMovt(MF))
-      return true;
-
-    const auto &MO = MI.getOperand(1);
-    if (!MO.isCImm())
-      return false;
-    return ARM_AM::isSOImmTwoPartVal(MO.getCImm()->getZExtValue());
-  }];
-}
+  return ARM_AM::isSOImmTwoPartVal(Imm.getZExtValue());
+}]>;
 
 /// imm0_1 predicate - Immediate in the range [0,1].
 def Imm0_1AsmOperand: ImmAsmOperand<0,1> { let Name = "Imm0_1"; }

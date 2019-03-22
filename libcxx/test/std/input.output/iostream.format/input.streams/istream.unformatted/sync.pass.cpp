@@ -46,7 +46,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb(" 123456789");
@@ -60,4 +60,6 @@ int main()
         assert(is.sync() == 0);
         assert(sync_called == 2);
     }
+
+  return 0;
 }

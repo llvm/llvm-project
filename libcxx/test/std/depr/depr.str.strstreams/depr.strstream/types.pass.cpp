@@ -21,11 +21,13 @@
 #include <strstream>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_base_of<std::iostream, std::strstream>::value), "");
     static_assert((std::is_same<std::strstream::char_type, char>::value), "");
     static_assert((std::is_same<std::strstream::int_type, std::char_traits<char>::int_type>::value), "");
     static_assert((std::is_same<std::strstream::pos_type, std::char_traits<char>::pos_type>::value), "");
     static_assert((std::is_same<std::strstream::off_type, std::char_traits<char>::off_type>::value), "");
+
+  return 0;
 }

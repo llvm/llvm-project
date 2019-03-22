@@ -84,10 +84,15 @@ static cl::opt<unsigned> AnalysisNumPoints(
     "analysis-numpoints",
     cl::desc("minimum number of points in an analysis cluster"), cl::init(3));
 
-static cl::opt<float>
-    AnalysisEpsilon("analysis-epsilon",
-                    cl::desc("dbscan epsilon for analysis clustering"),
-                    cl::init(0.1));
+static cl::opt<float> AnalysisClusteringEpsilon(
+    "analysis-clustering-epsilon",
+    cl::desc("dbscan epsilon for benchmark point clustering"), cl::init(0.1));
+
+static cl::opt<float> AnalysisInconsistencyEpsilon(
+    "analysis-inconsistency-epsilon",
+    cl::desc("epsilon for detection of when the cluster is different from the "
+             "LLVM schedule profile values"),
+    cl::init(0.1));
 
 static cl::opt<std::string>
     AnalysisClustersOutputFile("analysis-clusters-output-file", cl::desc(""),
@@ -96,12 +101,20 @@ static cl::opt<std::string>
     AnalysisInconsistenciesOutputFile("analysis-inconsistencies-output-file",
                                       cl::desc(""), cl::init(""));
 
+static cl::opt<bool> AnalysisDisplayUnstableOpcodes(
+    "analysis-display-unstable-clusters",
+    cl::desc("if there is more than one benchmark for an opcode, said "
+             "benchmarks may end up not being clustered into the same cluster "
+             "if the measured performance characteristics are different. by "
+             "default all such opcodes are filtered out. this flag will "
+             "instead show only such unstable opcodes"),
+    cl::init(false));
+
 static cl::opt<std::string>
     CpuName("mcpu",
             cl::desc(
                 "cpu name to use for pfm counters, leave empty to autodetect"),
             cl::init(""));
-
 
 static ExitOnError ExitOnErr;
 
@@ -191,8 +204,7 @@ public:
   // Implementation of the llvm::MCStreamer interface. We only care about
   // instructions.
   void EmitInstruction(const llvm::MCInst &Instruction,
-                       const llvm::MCSubtargetInfo &STI,
-                       bool PrintSchedInfo) override {
+                       const llvm::MCSubtargetInfo &STI) override {
     Result->Instructions.push_back(Instruction);
   }
 
@@ -433,10 +445,16 @@ static void analysisMain() {
     llvm::errs() << "unknown target '" << Points[0].LLVMTriple << "'\n";
     return;
   }
-  const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
-      Points, AnalysisNumPoints, AnalysisEpsilon));
 
-  const Analysis Analyzer(*TheTarget, Clustering);
+  std::unique_ptr<llvm::MCInstrInfo> InstrInfo(TheTarget->createMCInstrInfo());
+
+  const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
+      Points, AnalysisNumPoints, AnalysisClusteringEpsilon,
+      InstrInfo->getNumOpcodes()));
+
+  const Analysis Analyzer(*TheTarget, std::move(InstrInfo), Clustering,
+                          AnalysisInconsistencyEpsilon,
+                          AnalysisDisplayUnstableOpcodes);
 
   maybeRunAnalysis<Analysis::PrintClusters>(Analyzer, "analysis clusters",
                                             AnalysisClustersOutputFile);

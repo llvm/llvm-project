@@ -47,6 +47,7 @@ class IRInterpreterTestCase(TestBase):
     @expectedFailureAll(
         oslist=['windows'],
         bugnumber="http://llvm.org/pr21765")
+    @expectedFailureNetBSD
     @expectedFailureAll(
         oslist=['linux'],
         archs=['arm'],

@@ -80,7 +80,7 @@ SectionLoadHistory::GetSectionLoadListForStopID(uint32_t stop_id,
       StopIDToSectionLoadList::reverse_iterator rpos =
           m_stop_id_to_section_load_list.rbegin();
       SectionLoadListSP section_load_list_sp(
-          new SectionLoadList(*rpos->second.get()));
+          new SectionLoadList(*rpos->second));
       m_stop_id_to_section_load_list[stop_id] = section_load_list_sp;
       return section_load_list_sp.get();
     }

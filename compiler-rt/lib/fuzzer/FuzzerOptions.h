@@ -19,8 +19,13 @@ struct FuzzingOptions {
   size_t MaxLen = 0;
   size_t LenControl = 1000;
   int UnitTimeoutSec = 300;
-  int TimeoutExitCode = 77;
+  int TimeoutExitCode = 70;
+  int OOMExitCode = 71;
+  int InterruptExitCode = 72;
   int ErrorExitCode = 77;
+  bool IgnoreTimeouts = true;
+  bool IgnoreOOMs = true;
+  bool IgnoreCrashes = false;
   int MaxTotalTimeSec = 0;
   int RssLimitMb = 0;
   int MallocLimitMb = 0;

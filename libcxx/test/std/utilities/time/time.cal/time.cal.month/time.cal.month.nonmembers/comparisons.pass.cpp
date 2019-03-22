@@ -26,7 +26,7 @@
 #include "test_comparisons.h"
 
 
-int main()
+int main(int, char**)
 {
     using month = std::chrono::month;
 
@@ -43,4 +43,6 @@ int main()
     for (unsigned i = 1; i < 10; ++i)
         for (unsigned j = 10; j < 10; ++j)
             assert(testComparisons6Values<month>(i, j));
+
+  return 0;
 }

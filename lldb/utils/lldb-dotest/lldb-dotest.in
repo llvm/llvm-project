@@ -9,7 +9,7 @@ if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
     dotest_args = dotest_args_str.split(';')
     # Build dotest.py command.
-    cmd = [dotest_path, '-q']
+    cmd = [sys.executable, dotest_path, '-q']
     cmd.extend(dotest_args)
     cmd.extend(wrapper_args)
     # Invoke dotest.py and return exit code.

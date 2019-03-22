@@ -70,7 +70,7 @@ struct A
     ~A();
 };
 
-int main()
+int main(int, char**)
 {
     test_has_not_virtual_destructor<void>();
     test_has_not_virtual_destructor<A>();
@@ -87,4 +87,6 @@ int main()
 
     test_has_virtual_destructor<Abstract>();
     test_has_virtual_destructor<NotEmpty>();
+
+  return 0;
 }

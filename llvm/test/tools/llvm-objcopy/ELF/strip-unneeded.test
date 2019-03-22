@@ -5,6 +5,24 @@
 # RUN: cmp %t %t1
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
+# RUN: llvm-objcopy --strip-unneeded-symbol=bar \
+# RUN:              %t %t3
+# RUN: llvm-readobj --symbols %t3 | FileCheck %s --check-prefixes=STRIP-BAR,REMAIN
+
+# RUN: llvm-objcopy --regex --strip-unneeded-symbol='.*' %t %t4
+# RUN: cmp %t2 %t4
+
+# RUN: echo " bar # bar " > %t.list.txt
+# RUN: echo "foobar" >> %t.list.txt
+# RUN: echo "foobaz" >> %t.list.txt
+# RUN: echo " # comment " >> %t.list.txt
+# RUN: llvm-objcopy --strip-unneeded-symbols %t.list.txt %t %t5
+# RUN: cmp %t2 %t5
+
+# RUN: echo " .* # * - remove all " > %t.list2.txt
+# RUN: llvm-objcopy --regex --strip-unneeded-symbols %t.list2.txt %t %t6
+# RUN: cmp %t2 %t6
+
 # Verify that llvm-strip modifies the symbol table the same way.
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: cmp %t %t2
@@ -141,3 +159,7 @@ Symbols:
 #CHECK-NEXT:    Section: .text
 #CHECK-NEXT:  }
 #CHECK-NEXT:]
+
+#STRIP-BAR-NOT: Name: bar ({{.*}})
+#REMAIN: Name: foobar
+#REMAIN: Name: foobaz

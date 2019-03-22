@@ -1,4 +1,5 @@
 // RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/modules-pruning \
+// RUN:   -verify \
 // RUN:   -y %p/dummy-debug-map.map -o - \
 // RUN:     | llvm-dwarfdump --name isRef -p - | FileCheck %s
 

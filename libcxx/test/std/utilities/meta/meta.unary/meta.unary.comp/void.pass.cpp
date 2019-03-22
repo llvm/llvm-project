@@ -33,7 +33,9 @@ void test_void()
     test_void_imp<const volatile T>();
 }
 
-int main()
+int main(int, char**)
 {
     test_void<void>();
+
+  return 0;
 }

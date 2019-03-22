@@ -1,6 +1,9 @@
 // Check that llvm-objdump does not attempt to disassemble symbols outside
 // of section boundaries.
-// RUN: llvm-objdump -d -t %p/Inputs/out-of-section-sym.elf-i386 | FileCheck %s
+// RUN: llvm-objdump -d -t %p/Inputs/out-of-section-sym.elf-i386 >%t0
+// RUN: llvm-objdump -dt %p/Inputs/out-of-section-sym.elf-i386 >%t1
+// RUN: cmp %t0 %t1
+// RUN: FileCheck --input-file %t0 %s
 
 CHECK: Disassembly of section .text:
 CHECK-NEXT: _start:

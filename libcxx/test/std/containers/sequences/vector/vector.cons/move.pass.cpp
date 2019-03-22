@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<MoveOnly, test_allocator<MoveOnly> > l(test_allocator<MoveOnly>(5));
@@ -129,4 +129,6 @@ int main()
         assert(a.get_data() == 42);
       }
     }
+
+  return 0;
 }

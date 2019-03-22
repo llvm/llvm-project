@@ -719,7 +719,7 @@ struct MakeIterator
 
 // Useful constant variables
 constexpr std::size_t GuardSize = 5;
-constexpr std::size_t sizeLimit = 1000;
+constexpr std::ptrdiff_t sizeLimit = 1000;
 
 template <typename Iter, typename Void = void> // local iterator_traits for non-iterators
 struct iterator_traits_

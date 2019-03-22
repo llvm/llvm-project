@@ -68,13 +68,12 @@ define i32 @test2() nounwind uwtable ssp {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
-; CHECK-NEXT:    leaq -1(%rax), %rsi
+; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    addq $-1, %rsi
+; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    movq %rsi, {{.*}}(%rip)
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    setne %cl
-; CHECK-NEXT:    movl %ecx, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
 ; CHECK-NEXT:    movl $.L.str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq printf

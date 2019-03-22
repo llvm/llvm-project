@@ -51,7 +51,7 @@ public:
 
 struct A; // incomplete
 
-int main()
+int main(int, char**)
 {
     test_is_not_signed<void>();
     test_is_not_signed<int&>();
@@ -71,4 +71,6 @@ int main()
     test_is_signed<__int128_t>();
     test_is_not_signed<__uint128_t>();
 #endif
+
+  return 0;
 }

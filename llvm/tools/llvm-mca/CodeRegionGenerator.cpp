@@ -48,8 +48,7 @@ public:
 
   // We only want to intercept the emission of new instructions.
   virtual void EmitInstruction(const MCInst &Inst,
-                               const MCSubtargetInfo & /* unused */,
-                               bool /* unused */) override {
+                               const MCSubtargetInfo &/* unused */) override {
     Regions.addInstruction(Inst);
   }
 

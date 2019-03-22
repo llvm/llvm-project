@@ -533,7 +533,12 @@ int main_gdbserver(int argc, char *argv[]) {
     return 1;
   }
 
-  mainloop.Run();
+  Status ret = mainloop.Run();
+  if (ret.Fail()) {
+    fprintf(stderr, "lldb-server terminating due to error: %s\n",
+            ret.AsCString());
+    return 1;
+  }
   fprintf(stderr, "lldb-server exiting...\n");
 
   return 0;

@@ -56,7 +56,7 @@ public:
     ~Class();
 };
 
-int main()
+int main(int, char**)
 {
     test_is_same<int, int>();
     test_is_same<void, void>();
@@ -69,4 +69,6 @@ int main()
     test_is_not_same<Class, int*>();
     test_is_not_same<int*, int&>();
     test_is_not_same<int&, int>();
+
+  return 0;
 }

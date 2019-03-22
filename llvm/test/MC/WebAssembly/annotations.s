@@ -28,7 +28,7 @@ test_annotation:
   local.set 0
   block    i32
   local.get 0
-  br_on_exn 0, __cpp_exception@EVENT
+  br_on_exn 0, __cpp_exception
   rethrow
   end_block
   end_try
@@ -59,7 +59,7 @@ test_annotation:
 # CHECK-NEXT:   local.set 0
 # CHECK-NEXT:   block    i32
 # CHECK-NEXT:   local.get 0
-# CHECK-NEXT:   br_on_exn 0, __cpp_exception@EVENT # 0: down to label6
+# CHECK-NEXT:   br_on_exn 0, __cpp_exception # 0: down to label6
 # CHECK-NEXT:   rethrow                   # to caller
 # CHECK-NEXT:   end_block                 # label6:
 # CHECK-NEXT:   end_try                   # label5:

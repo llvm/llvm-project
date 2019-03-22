@@ -148,11 +148,9 @@ bool IndirectBrExpandPass::runOnFunction(Function &F) {
     ConstantInt *BBIndexC = ConstantInt::get(ITy, BBIndex);
 
     // Now rewrite the blockaddress to an integer constant based on the index.
-    // FIXME: We could potentially preserve the uses as arguments to inline asm.
-    // This would allow some uses such as diagnostic information in crashes to
-    // have higher quality even when this transform is enabled, but would break
-    // users that round-trip blockaddresses through inline assembly and then
-    // back into an indirectbr.
+    // FIXME: This part doesn't properly recognize other uses of blockaddress
+    // expressions, for instance, where they are used to pass labels to
+    // asm-goto. This part of the pass needs a rework.
     BA->replaceAllUsesWith(ConstantExpr::getIntToPtr(BBIndexC, BA->getType()));
   }
 

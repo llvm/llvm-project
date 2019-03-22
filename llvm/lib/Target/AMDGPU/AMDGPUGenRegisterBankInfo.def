@@ -151,7 +151,8 @@ const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,
 
 const RegisterBankInfo::ValueMapping *getValueMappingSGPR64Only(unsigned BankID,
                                                                 unsigned Size) {
-  assert(Size == 64);
+  if (Size != 64)
+    return getValueMapping(BankID, Size);
 
   if (BankID == AMDGPU::VGPRRegBankID)
     return &ValMappingsSGPR64OnlyVGPR32[4];

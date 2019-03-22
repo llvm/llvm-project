@@ -74,7 +74,7 @@ void test_string_ctor()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_string_ctor<0>();
     test_string_ctor<1>();
@@ -85,4 +85,6 @@ int main()
     test_string_ctor<64>();
     test_string_ctor<65>();
     test_string_ctor<1000>();
+
+  return 0;
 }

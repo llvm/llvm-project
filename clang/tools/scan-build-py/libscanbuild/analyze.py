@@ -97,7 +97,7 @@ def need_analyzer(args):
     when compiler wrappers are used. That's the moment when build setup
     check the compiler and capture the location for the build process. """
 
-    return len(args) and not re.search('configure|autogen', args[0])
+    return len(args) and not re.search(r'configure|autogen', args[0])
 
 
 def prefix_with(constant, pieces):

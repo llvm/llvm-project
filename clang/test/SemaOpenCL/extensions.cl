@@ -28,6 +28,7 @@
 // enabled by default with -cl-std=CL2.0).
 //
 // RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL2.0 -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=c++
 
 #ifdef _OPENCL_H_
 // expected-no-diagnostics
@@ -37,7 +38,11 @@
 // expected-no-diagnostics
 #endif
 
-#if __OPENCL_C_VERSION__ < 120
+#ifdef __OPENCL_CPP_VERSION__
+// expected-no-diagnostics
+#endif
+
+#if (defined(__OPENCL_C_VERSION__) && __OPENCL_C_VERSION__ < 120)
 void f1(double da) { // expected-error {{type 'double' requires cl_khr_fp64 extension}}
   double d; // expected-error {{type 'double' requires cl_khr_fp64 extension}}
   (void) 1.0; // expected-warning {{double precision constant requires cl_khr_fp64}}
@@ -89,7 +94,7 @@ void f2(void) {
 // expected-warning@-2{{unsupported OpenCL extension 'cl_khr_fp64' - ignoring}}
 #endif
 
-#if __OPENCL_C_VERSION__ < 120
+#if (defined(__OPENCL_C_VERSION__) && __OPENCL_C_VERSION__ < 120)
 void f3(void) {
   double d; // expected-error {{type 'double' requires cl_khr_fp64 extension}}
 }

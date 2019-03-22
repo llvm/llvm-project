@@ -15,8 +15,10 @@
 #include <condition_variable>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::condition_variable_any cv0;
     std::condition_variable_any cv1(cv0);
+
+  return 0;
 }

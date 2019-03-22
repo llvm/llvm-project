@@ -149,7 +149,7 @@ private:
   lldb::addr_t m_impl_stret_fn_addr;
   lldb::addr_t m_msg_forward_addr;
   lldb::addr_t m_msg_forward_stret_addr;
-  std::unique_ptr<AppleObjCVTables> m_vtables_ap;
+  std::unique_ptr<AppleObjCVTables> m_vtables_up;
 };
 
 } // namespace lldb_private

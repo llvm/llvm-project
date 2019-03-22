@@ -17,8 +17,10 @@
 #include <thread>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::thread t;
     assert(t.get_id() == std::thread::id());
+
+  return 0;
 }

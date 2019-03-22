@@ -15,8 +15,10 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(std::char_traits<char>::eq('a', 'a'));
     assert(!std::char_traits<char>::eq('a', 'A'));
+
+  return 0;
 }

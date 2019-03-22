@@ -1,0 +1,43 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-readobj --symbols %t | FileCheck %s
+
+# CHECK: Name: notype
+# CHECK: Type: None
+# CHECK: Name: normal_type
+# CHECK: Type: Object
+# CHECK: Name: .text
+# CHECK: Type: Section
+# CHECK: Name: known_hex
+# CHECK: Type: Object
+# CHECK: Name: unknown_hex
+# CHECK: Type: 0xB
+# CHECK: Name: known_int
+# CHECK: Type: Object
+# CHECK: Name: unknown_int
+# CHECK: Type: 0xB
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  Global:
+    - Name: notype
+      Type: STT_NOTYPE
+    - Name: normal_type
+      Type: STT_OBJECT
+    - Name: .text
+      Type: STT_SECTION
+    - Name: known_hex
+      Type: 0x1
+    - Name: unknown_hex
+      Type: 0xb
+    - Name: known_int
+      Type: 1
+    - Name: unknown_int
+      Type: 11

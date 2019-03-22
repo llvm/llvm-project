@@ -481,7 +481,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
       break;
     case tok::identifier:
       if (!Tok->is(TT_StatementMacro))
-          break;
+        break;
       LLVM_FALLTHROUGH;
     case tok::at:
     case tok::semi:
@@ -1166,8 +1166,8 @@ void UnwrappedLineParser::parseStructuralElement() {
       case tok::objc_synchronized:
         nextToken();
         if (FormatTok->Tok.is(tok::l_paren))
-           // Skip synchronization object
-           parseParens();
+          // Skip synchronization object
+          parseParens();
         if (FormatTok->Tok.is(tok::l_brace)) {
           if (Style.BraceWrapping.AfterControlStatement)
             addUnwrappedLine();
@@ -1423,9 +1423,33 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::coloncolon:
     case tok::kw_mutable:
     case tok::kw_noexcept:
+    // Specialization of a template with an integer parameter can contain
+    // arithmetic, logical, comparison and ternary operators.
+    case tok::plus:
+    case tok::minus:
+    case tok::exclaim:
+    case tok::tilde:
+    case tok::slash:
+    case tok::percent:
+    case tok::lessless:
+    case tok::pipe:
+    case tok::pipepipe:
+    case tok::ampamp:
+    case tok::caret:
+    case tok::equalequal:
+    case tok::exclaimequal:
+    case tok::greaterequal:
+    case tok::lessequal:
+    case tok::question:
+    case tok::colon:
+    case tok::kw_true:
+    case tok::kw_false:
       nextToken();
       break;
     case tok::arrow:
+      // This might or might not actually be a lambda arrow (this could be an
+      // ObjC method invocation followed by a dereferencing arrow). We might
+      // reset this back to TT_Unknown in TokenAnnotator.
       FormatTok->Type = TT_LambdaArrow;
       nextToken();
       break;
@@ -2347,8 +2371,7 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
   }
 }
 
-void UnwrappedLineParser::parseStatementMacro()
-{
+void UnwrappedLineParser::parseStatementMacro() {
   nextToken();
   if (FormatTok->is(tok::l_paren))
     parseParens();

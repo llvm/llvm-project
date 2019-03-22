@@ -62,6 +62,8 @@ void test_each() {
     }
 }
 
-int main() {
+int main(int, char**) {
     for (int i=0; i < 25; ++i) test_each();
+
+  return 0;
 }

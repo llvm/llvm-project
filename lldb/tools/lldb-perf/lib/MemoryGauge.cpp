@@ -70,11 +70,11 @@ MemoryStats MemoryStats::operator*(const MemoryStats &rhs) {
 
 Results::ResultSP MemoryStats::GetResult(const char *name,
                                          const char *description) const {
-  std::unique_ptr<Results::Dictionary> dict_ap(
+  std::unique_ptr<Results::Dictionary> dict_up(
       new Results::Dictionary(name, NULL));
-  dict_ap->AddUnsigned("resident", NULL, GetResidentSize());
-  dict_ap->AddUnsigned("max_resident", NULL, GetMaxResidentSize());
-  return Results::ResultSP(dict_ap.release());
+  dict_up->AddUnsigned("resident", NULL, GetResidentSize());
+  dict_up->AddUnsigned("max_resident", NULL, GetMaxResidentSize());
+  return Results::ResultSP(dict_up.release());
 }
 
 MemoryGauge::ValueType MemoryGauge::Now() {

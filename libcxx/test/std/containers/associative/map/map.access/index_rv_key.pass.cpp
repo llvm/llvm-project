@@ -23,7 +23,7 @@
 #include "min_allocator.h"
 #include "container_test_types.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::map<MoveOnly, double> m;
@@ -76,4 +76,6 @@ int main()
             }
         }
     }
+
+  return 0;
 }

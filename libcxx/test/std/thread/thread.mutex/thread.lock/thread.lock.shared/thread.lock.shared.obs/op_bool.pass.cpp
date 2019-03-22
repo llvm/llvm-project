@@ -20,7 +20,7 @@
 
 std::shared_timed_mutex m;
 
-int main()
+int main(int, char**)
 {
     std::shared_lock<std::shared_timed_mutex> lk0;
     assert(static_cast<bool>(lk0) == false);
@@ -29,4 +29,6 @@ int main()
     lk1.unlock();
     assert(static_cast<bool>(lk1) == false);
     static_assert(noexcept(static_cast<bool>(lk0)), "explicit operator bool() must be noexcept");
+
+  return 0;
 }

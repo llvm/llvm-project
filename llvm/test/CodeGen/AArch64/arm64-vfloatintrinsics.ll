@@ -141,12 +141,20 @@ define %v4f16 @test_v4f16.fabs(%v4f16 %a) {
   %1 = call %v4f16 @llvm.fabs.v4f16(%v4f16 %a)
   ret %v4f16 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v4f16.floor
 define %v4f16 @test_v4f16.floor(%v4f16 %a) {
   ; CHECK-LABEL:          test_v4f16.floor:
   ; CHECK-NOFP16-COUNT-4: frintm s{{[0-9]+}}, s{{[0-9]+}}
   ; CHECK-FP16-NOT:       fcvt
   ; CHECK-FP16:           frintm.4h
   ; CHECK-FP16-NEXT:      ret
+
+  ; GISEL-LABEL:          test_v4f16.floor:
+  ; GISEL-NOFP16-COUNT-4: frintm s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-FP16-NOT:       fcvt
+  ; GISEL-FP16:           frintm.4h
+  ; GISEL-FP16-NEXT:      ret
   %1 = call %v4f16 @llvm.floor.v4f16(%v4f16 %a)
   ret %v4f16 %1
 }
@@ -342,12 +350,20 @@ define %v8f16 @test_v8f16.fabs(%v8f16 %a) {
   %1 = call %v8f16 @llvm.fabs.v8f16(%v8f16 %a)
   ret %v8f16 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v8f16.floor
 define %v8f16 @test_v8f16.floor(%v8f16 %a) {
   ; CHECK-LABEL:     		  test_v8f16.floor:
   ; CHECK-NOFP16-COUNT-8: frintm s{{[0-9]+}}, s{{[0-9]+}}
   ; CHECK-FP16-NOT:       fcvt
   ; CHECK-FP16:           frintm.8h
   ; CHECK-FP16-NEXT:      ret
+
+  ; GISEL-LABEL:     		  test_v8f16.floor:
+  ; GISEL-NOFP16-COUNT-8: frintm s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-FP16-NOT:       fcvt
+  ; GISEL-FP16:           frintm.8h
+  ; GISEL-FP16-NEXT:      ret
   %1 = call %v8f16 @llvm.floor.v8f16(%v8f16 %a)
   ret %v8f16 %1
 }
@@ -516,9 +532,13 @@ define %v2f32 @test_v2f32.fabs(%v2f32 %a) {
   %1 = call %v2f32 @llvm.fabs.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v2f32.floor
 ; CHECK-LABEL: test_v2f32.floor:
+; GISEL-LABEL: test_v2f32.floor:
 define %v2f32 @test_v2f32.floor(%v2f32 %a) {
   ; CHECK: frintm.2s
+  ; GISEL: frintm.2s
   %1 = call %v2f32 @llvm.floor.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
@@ -671,9 +691,13 @@ define %v4f32 @test_v4f32.fabs(%v4f32 %a) {
   %1 = call %v4f32 @llvm.fabs.v4f32(%v4f32 %a)
   ret %v4f32 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v4f32.floor
 ; CHECK: test_v4f32.floor:
+; GISEL: test_v4f32.floor:
 define %v4f32 @test_v4f32.floor(%v4f32 %a) {
   ; CHECK: frintm.4s
+  ; GISEL frintm.4s
   %1 = call %v4f32 @llvm.floor.v4f32(%v4f32 %a)
   ret %v4f32 %1
 }
@@ -826,9 +850,13 @@ define %v2f64 @test_v2f64.fabs(%v2f64 %a) {
   %1 = call %v2f64 @llvm.fabs.v2f64(%v2f64 %a)
   ret %v2f64 %1
 }
+
+; FALLBACK-NOT: remark{{.*}}test_v2f64.floor
 ; CHECK: test_v2f64.floor:
+; GISEL: test_v2f64.floor:
 define %v2f64 @test_v2f64.floor(%v2f64 %a) {
   ; CHECK: frintm.2d
+  ; GISEL: frintm.2d
   %1 = call %v2f64 @llvm.floor.v2f64(%v2f64 %a)
   ret %v2f64 %1
 }

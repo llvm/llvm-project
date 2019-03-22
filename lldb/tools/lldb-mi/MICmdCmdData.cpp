@@ -418,7 +418,7 @@ bool CMICmdCmdDataDisassemble::Execute() {
 
       // MI "src_and_asm_line={line=\"%u\",file=\"%s\",line_asm_insn=[ ]}"
       const CMICmnMIValueConst miValueConst(
-          CMIUtilString::Format("0x%u", nLine));
+          CMIUtilString::Format("%u", nLine));
       const CMICmnMIValueResult miValueResult("line", miValueConst);
       CMICmnMIValueTuple miValueTuple2(miValueResult);
       const CMICmnMIValueConst miValueConst2(pFileName);

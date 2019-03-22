@@ -100,6 +100,7 @@ public:
     ProfileClangInstr, // Clang instrumentation to generate execution counts
                        // to use with PGO.
     ProfileIRInstr,    // IR level PGO instrumentation in LLVM.
+    ProfileCSIRInstr, // IR level PGO context sensitive instrumentation in LLVM.
   };
 
   enum EmbedBitcodeKind {
@@ -203,8 +204,8 @@ public:
   /// A list of linker options to embed in the object file.
   std::vector<std::string> LinkerOptions;
 
-  /// Name of the profile file to use as output for -fprofile-instr-generate
-  /// and -fprofile-generate.
+  /// Name of the profile file to use as output for -fprofile-instr-generate,
+  /// -fprofile-generate, and -fcs-profile-generate.
   std::string InstrProfileOutput;
 
   /// Name of the profile file to use with -fprofile-sample-use.
@@ -318,6 +319,11 @@ public:
     return getProfileInstr() == ProfileIRInstr;
   }
 
+  /// Check if CS IR level profile instrumentation is on.
+  bool hasProfileCSIRInstr() const {
+    return getProfileInstr() == ProfileCSIRInstr;
+  }
+
   /// Check if Clang profile use is on.
   bool hasProfileClangUse() const {
     return getProfileUse() == ProfileClangInstr;
@@ -325,9 +331,12 @@ public:
 
   /// Check if IR level profile use is on.
   bool hasProfileIRUse() const {
-    return getProfileUse() == ProfileIRInstr;
+    return getProfileUse() == ProfileIRInstr ||
+           getProfileUse() == ProfileCSIRInstr;
   }
 
+  /// Check if CSIR profile use is on.
+  bool hasProfileCSIRUse() const { return getProfileUse() == ProfileCSIRInstr; }
 };
 
 }  // end namespace clang

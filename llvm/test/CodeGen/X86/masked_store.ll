@@ -330,17 +330,14 @@ define void @store_v2f32_v2i32(<2 x i32> %trigger, <2 x float>* %addr, <2 x floa
 ; SSE4-LABEL: store_v2f32_v2i32:
 ; SSE4:       ## %bb.0:
 ; SSE4-NEXT:    pxor %xmm2, %xmm2
-; SSE4-NEXT:    movdqa %xmm0, %xmm3
-; SSE4-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; SSE4-NEXT:    pcmpeqq %xmm2, %xmm3
-; SSE4-NEXT:    pextrb $0, %xmm3, %eax
+; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; SSE4-NEXT:    pcmpeqq %xmm2, %xmm0
+; SSE4-NEXT:    pextrb $0, %xmm0, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB3_2
 ; SSE4-NEXT:  ## %bb.1: ## %cond.store
 ; SSE4-NEXT:    movss %xmm1, (%rdi)
 ; SSE4-NEXT:  LBB3_2: ## %else
-; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; SSE4-NEXT:    pcmpeqq %xmm2, %xmm0
 ; SSE4-NEXT:    pextrb $8, %xmm0, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB3_4
@@ -417,17 +414,14 @@ define void @store_v2i32_v2i32(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %
 ; SSE4-LABEL: store_v2i32_v2i32:
 ; SSE4:       ## %bb.0:
 ; SSE4-NEXT:    pxor %xmm2, %xmm2
-; SSE4-NEXT:    movdqa %xmm0, %xmm3
-; SSE4-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; SSE4-NEXT:    pcmpeqq %xmm2, %xmm3
-; SSE4-NEXT:    pextrb $0, %xmm3, %eax
+; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; SSE4-NEXT:    pcmpeqq %xmm2, %xmm0
+; SSE4-NEXT:    pextrb $0, %xmm0, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB4_2
 ; SSE4-NEXT:  ## %bb.1: ## %cond.store
 ; SSE4-NEXT:    movss %xmm1, (%rdi)
 ; SSE4-NEXT:  LBB4_2: ## %else
-; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; SSE4-NEXT:    pcmpeqq %xmm2, %xmm0
 ; SSE4-NEXT:    pextrb $8, %xmm0, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB4_4

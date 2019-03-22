@@ -230,7 +230,7 @@ private:
   lldb::BatonSP m_callback_baton_sp; // This is the client data for the callback
   bool m_callback_is_synchronous;
   std::unique_ptr<ThreadSpec>
-      m_thread_spec_ap; // Thread for which this watchpoint will take
+      m_thread_spec_up; // Thread for which this watchpoint will take
 };
 
 } // namespace lldb_private

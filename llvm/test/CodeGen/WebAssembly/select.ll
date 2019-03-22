@@ -17,8 +17,10 @@ define i32 @select_i32_bool(i1 zeroext %a, i32 %b, i32 %c) {
 
 ; CHECK-LABEL: select_i32_bool_nozext:
 ; CHECK-NEXT: .functype select_i32_bool_nozext (i32, i32, i32) -> (i32){{$}}
-; SLOW-NEXT: i32.select $push0=, $1, $2, $0{{$}}
-; SLOW-NEXT: return     $pop0{{$}}
+; SLOW-NEXT: i32.const  $push0=, 1{{$}}
+; SLOW-NEXT: i32.and    $push1=, $0, $pop0{{$}}
+; SLOW-NEXT: i32.select $push2=, $1, $2, $pop1{{$}}
+; SLOW-NEXT: return     $pop2{{$}}
 define i32 @select_i32_bool_nozext(i1 %a, i32 %b, i32 %c) {
   %cond = select i1 %a, i32 %b, i32 %c
   ret i32 %cond
@@ -55,8 +57,10 @@ define i64 @select_i64_bool(i1 zeroext %a, i64 %b, i64 %c) {
 
 ; CHECK-LABEL: select_i64_bool_nozext:
 ; CHECK-NEXT: .functype select_i64_bool_nozext (i32, i64, i64) -> (i64){{$}}
-; SLOW-NEXT: i64.select $push0=, $1, $2, $0{{$}}
-; SLOW-NEXT: return     $pop0{{$}}
+; SLOW-NEXT: i32.const  $push0=, 1{{$}}
+; SLOW-NEXT: i32.and    $push1=, $0, $pop0{{$}}
+; SLOW-NEXT: i64.select $push2=, $1, $2, $pop1{{$}}
+; SLOW-NEXT: return     $pop2{{$}}
 define i64 @select_i64_bool_nozext(i1 %a, i64 %b, i64 %c) {
   %cond = select i1 %a, i64 %b, i64 %c
   ret i64 %cond
@@ -156,4 +160,17 @@ define double @select_f64_ne(i32 %a, double %b, double %c) {
   %cmp = icmp ne i32 %a, 0
   %cond = select i1 %cmp, double %b, double %c
   ret double %cond
+}
+
+; CHECK-LABEL: pr40805:
+; CHECK-NEXT: .functype pr40805 (i32, i32, i32) -> (i32){{$}}
+; SLOW-NEXT: i32.const  $push0=, 1{{$}}
+; SLOW-NEXT: i32.and    $push1=, $0, $pop0{{$}}
+; SLOW-NEXT: i32.select $push2=, $1, $2, $pop1{{$}}
+; SLOW-NEXT: return     $pop2{{$}}
+define i32 @pr40805(i32 %x, i32 %y, i32 %z) {
+  %a = and i32 %x, 1
+  %b = icmp ne i32 %a, 0
+  %c = select i1 %b, i32 %y, i32 %z
+  ret i32 %c
 }

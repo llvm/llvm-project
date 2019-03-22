@@ -25,7 +25,9 @@
 #include <type_traits>
 #include <variant>
 
-int main() {
+int main(int, char**) {
     using V = std::variant<int, void *, const void *, long double>;
     std::variant_alternative<4, V>::type foo;  // expected-error@variant:* {{Index out of bounds in std::variant_alternative<>}}
+
+  return 0;
 }

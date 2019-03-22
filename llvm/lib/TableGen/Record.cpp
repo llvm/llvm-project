@@ -15,9 +15,11 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -36,7 +38,12 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "tblgen-records"
+
 static BumpPtrAllocator Allocator;
+
+STATISTIC(CodeInitsConstructed,
+          "The total number of unique CodeInits constructed");
 
 //===----------------------------------------------------------------------===//
 //    Type implementations
@@ -506,13 +513,20 @@ IntInit::convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
   return BitsInit::get(NewBits);
 }
 
-CodeInit *CodeInit::get(StringRef V) {
-  static StringMap<CodeInit*, BumpPtrAllocator &> ThePool(Allocator);
+CodeInit *CodeInit::get(StringRef V, const SMLoc &Loc) {
+  static StringSet<BumpPtrAllocator &> ThePool(Allocator);
 
-  auto &Entry = *ThePool.insert(std::make_pair(V, nullptr)).first;
-  if (!Entry.second)
-    Entry.second = new(Allocator) CodeInit(Entry.getKey());
-  return Entry.second;
+  CodeInitsConstructed++;
+
+  // Unlike StringMap, StringSet doesn't accept empty keys.
+  if (V.empty())
+    return new (Allocator) CodeInit("", Loc);
+
+  // Location tracking prevents us from de-duping CodeInits as we're never
+  // called with the same string and same location twice. However, we can at
+  // least de-dupe the strings for a modest saving.
+  auto &Entry = *ThePool.insert(V).first;
+  return new(Allocator) CodeInit(Entry.getKey(), Loc);
 }
 
 StringInit *StringInit::get(StringRef V) {
@@ -528,7 +542,7 @@ Init *StringInit::convertInitializerTo(RecTy *Ty) const {
   if (isa<StringRecTy>(Ty))
     return const_cast<StringInit *>(this);
   if (isa<CodeRecTy>(Ty))
-    return CodeInit::get(getValue());
+    return CodeInit::get(getValue(), SMLoc());
 
   return nullptr;
 }
@@ -842,6 +856,24 @@ Init *BinOpInit::getStrConcat(Init *I0, Init *I1) {
   return BinOpInit::get(BinOpInit::STRCONCAT, I0, I1, StringRecTy::get());
 }
 
+static ListInit *ConcatListInits(const ListInit *LHS,
+                                 const ListInit *RHS) {
+  SmallVector<Init *, 8> Args;
+  Args.insert(Args.end(), LHS->begin(), LHS->end());
+  Args.insert(Args.end(), RHS->begin(), RHS->end());
+  return ListInit::get(Args, LHS->getElementType());
+}
+
+Init *BinOpInit::getListConcat(TypedInit *LHS, Init *RHS) {
+  assert(isa<ListRecTy>(LHS->getType()) && "First arg must be a list");
+
+  // Shortcut for the common case of concatenating two lists.
+   if (const ListInit *LHSList = dyn_cast<ListInit>(LHS))
+     if (const ListInit *RHSList = dyn_cast<ListInit>(RHS))
+       return ConcatListInits(LHSList, RHSList);
+   return BinOpInit::get(BinOpInit::LISTCONCAT, LHS, RHS, LHS->getType());
+}
+
 Init *BinOpInit::Fold(Record *CurRec) const {
   switch (getOpcode()) {
   case CONCAT: {
@@ -930,6 +962,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
     break;
   }
   case ADD:
+  case MUL:
   case AND:
   case OR:
   case SHL:
@@ -945,6 +978,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       switch (getOpcode()) {
       default: llvm_unreachable("Bad opcode!");
       case ADD: Result = LHSv +  RHSv; break;
+      case MUL: Result = LHSv *  RHSv; break;
       case AND: Result = LHSv &  RHSv; break;
       case OR: Result = LHSv | RHSv; break;
       case SHL: Result = LHSv << RHSv; break;
@@ -974,6 +1008,7 @@ std::string BinOpInit::getAsString() const {
   switch (getOpcode()) {
   case CONCAT: Result = "!con"; break;
   case ADD: Result = "!add"; break;
+  case MUL: Result = "!mul"; break;
   case AND: Result = "!and"; break;
   case OR: Result = "!or"; break;
   case SHL: Result = "!shl"; break;

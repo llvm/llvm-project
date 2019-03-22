@@ -140,6 +140,7 @@ class VectorLegalizer {
   SDValue ExpandFunnelShift(SDValue Op);
   SDValue ExpandROT(SDValue Op);
   SDValue ExpandFMINNUM_FMAXNUM(SDValue Op);
+  SDValue ExpandMULO(SDValue Op);
   SDValue ExpandAddSubSat(SDValue Op);
   SDValue ExpandFixedPointMul(SDValue Op);
   SDValue ExpandStrictFPOp(SDValue Op);
@@ -418,6 +419,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UMAX:
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
+  case ISD::SMULO:
+  case ISD::UMULO:
   case ISD::FCANONICALIZE:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
@@ -425,7 +428,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::USUBSAT:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
-  case ISD::SMULFIX: {
+  case ISD::SMULFIX:
+  case ISD::UMULFIX: {
     unsigned Scale = Node->getConstantOperandVal(2);
     Action = TLI.getFixedPointOperationAction(Node->getOpcode(),
                                               Node->getValueType(0), Scale);
@@ -650,23 +654,21 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
       LoadChains.push_back(ScalarLoad.getValue(1));
     }
 
-    // Extract bits, pack and extend/trunc them into destination type.
-    unsigned SrcEltBits = SrcEltVT.getSizeInBits();
-    SDValue SrcEltBitMask = DAG.getConstant((1U << SrcEltBits) - 1, dl, WideVT);
-
     unsigned BitOffset = 0;
     unsigned WideIdx = 0;
     unsigned WideBits = WideVT.getSizeInBits();
 
-    for (unsigned Idx = 0; Idx != NumElem; ++Idx) {
-      SDValue Lo, Hi, ShAmt;
+    // Extract bits, pack and extend/trunc them into destination type.
+    unsigned SrcEltBits = SrcEltVT.getSizeInBits();
+    SDValue SrcEltBitMask = DAG.getConstant(
+        APInt::getLowBitsSet(WideBits, SrcEltBits), dl, WideVT);
 
-      if (BitOffset < WideBits) {
-        ShAmt = DAG.getConstant(
-            BitOffset, dl, TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
-        Lo = DAG.getNode(ISD::SRL, dl, WideVT, LoadVals[WideIdx], ShAmt);
-        Lo = DAG.getNode(ISD::AND, dl, WideVT, Lo, SrcEltBitMask);
-      }
+    for (unsigned Idx = 0; Idx != NumElem; ++Idx) {
+      assert(BitOffset < WideBits && "Unexpected offset!");
+
+      SDValue ShAmt = DAG.getConstant(
+          BitOffset, dl, TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
+      SDValue Lo = DAG.getNode(ISD::SRL, dl, WideVT, LoadVals[WideIdx], ShAmt);
 
       BitOffset += SrcEltBits;
       if (BitOffset >= WideBits) {
@@ -676,13 +678,13 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
           ShAmt = DAG.getConstant(
               SrcEltBits - BitOffset, dl,
               TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
-          Hi = DAG.getNode(ISD::SHL, dl, WideVT, LoadVals[WideIdx], ShAmt);
-          Hi = DAG.getNode(ISD::AND, dl, WideVT, Hi, SrcEltBitMask);
+          SDValue Hi =
+              DAG.getNode(ISD::SHL, dl, WideVT, LoadVals[WideIdx], ShAmt);
+          Lo = DAG.getNode(ISD::OR, dl, WideVT, Lo, Hi);
         }
       }
 
-      if (Hi.getNode())
-        Lo = DAG.getNode(ISD::OR, dl, WideVT, Lo, Hi);
+      Lo = DAG.getNode(ISD::AND, dl, WideVT, Lo, SrcEltBitMask);
 
       switch (ExtType) {
       default: llvm_unreachable("Unknown extended-load op!");
@@ -778,12 +780,16 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return ExpandFMINNUM_FMAXNUM(Op);
+  case ISD::UMULO:
+  case ISD::SMULO:
+    return ExpandMULO(Op);
   case ISD::USUBSAT:
   case ISD::SSUBSAT:
   case ISD::UADDSAT:
   case ISD::SADDSAT:
     return ExpandAddSubSat(Op);
   case ISD::SMULFIX:
+  case ISD::UMULFIX:
     return ExpandFixedPointMul(Op);
   case ISD::STRICT_FADD:
   case ISD::STRICT_FSUB:
@@ -1212,6 +1218,16 @@ SDValue VectorLegalizer::ExpandFMINNUM_FMAXNUM(SDValue Op) {
   if (SDValue Expanded = TLI.expandFMINNUM_FMAXNUM(Op.getNode(), DAG))
     return Expanded;
   return DAG.UnrollVectorOp(Op.getNode());
+}
+
+SDValue VectorLegalizer::ExpandMULO(SDValue Op) {
+  SDValue Result, Overflow;
+  if (!TLI.expandMULO(Op.getNode(), Result, Overflow, DAG))
+    std::tie(Result, Overflow) = DAG.UnrollVectorOverflowOp(Op.getNode());
+
+  AddLegalizedOperand(Op.getValue(0), Result);
+  AddLegalizedOperand(Op.getValue(1), Overflow);
+  return Op.getResNo() ? Overflow : Result;
 }
 
 SDValue VectorLegalizer::ExpandAddSubSat(SDValue Op) {

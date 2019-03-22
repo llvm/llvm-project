@@ -1,0 +1,42 @@
+# Show that dumping operations apply to all members in an archive.
+
+# RUN: rm -f %t.a
+# RUN: llvm-ar rc %t.a %p/Inputs/trivial.obj.elf-x86-64 %p/Inputs/trivial.obj.elf-i386 %p/Inputs/trivial.obj.coff-arm
+# RUN: llvm-readobj --all %t.a | FileCheck %s --check-prefixes=LLVM,COFF
+# RUN: llvm-readelf --all %t.a | FileCheck %s --check-prefixes=GNU,COFF
+
+# LLVM: File: trivial.obj.elf-x86-64
+# LLVM: Format: ELF64-x86-64
+# LLVM: ElfHeader {
+# LLVM:   Machine: EM_X86_64
+# LLVM: Sections [
+# LLVM: Relocations [
+# LLVM: Symbols [
+
+# GNU: ELF Header:
+# GNU:   Machine: Advanced Micro Devices X86-64
+# GNU: Section Headers:
+# GNU: Relocation section '.rela.text'
+# GNU: Symbol table '.symtab'
+
+# LLVM: File: trivial.obj.elf-i386
+# LLVM: Format: ELF32-i386
+# LLVM: ElfHeader {
+# LLVM:   Machine: EM_386
+# LLVM: Sections [
+# LLVM: Relocations [
+# LLVM: Symbols [
+
+# GNU: ELF Header:
+# GNU:   Machine: Intel 80386
+# GNU: Section Headers:
+# GNU: Relocation section '.rel.text'
+# GNU: Symbol table '.symtab'
+
+# LLVM: File: trivial.obj.coff-arm
+# LLVM: Format: COFF-ARM
+# COFF: ImageFileHeader {
+# COFF:   Machine: IMAGE_FILE_MACHINE_ARMNT
+# COFF: Sections [
+# COFF: Relocations [
+# COFF: Symbols [

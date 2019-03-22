@@ -1,0 +1,24 @@
+# Show that llvm-readobj can handle no program headers when --program-headers
+# is requested, both for LLVM and GNU output.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj %t --program-headers | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf %t --program-headers | FileCheck %s --check-prefix=GNU
+
+# LLVM:      ProgramHeaders [
+# LLVM-NEXT: ]
+
+# GNU:       There are 0 program headers
+# GNU:       Program Headers:
+# GNU-NEXT:    Type Offset VirtAddr PhysAddr FileSiz MemSiz Flg Align
+# GNU-EMPTY:
+# GNU-NEXT:  Section to Segment mapping:
+# GNU-NEXT:    Segment Sections...
+# GNU-NEXT:     None   .symtab .strtab .shstrtab
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64

@@ -65,7 +65,7 @@ private:
 
   ValueListImpl &ref();
 
-  std::unique_ptr<ValueListImpl> m_opaque_ap;
+  std::unique_ptr<ValueListImpl> m_opaque_up;
 };
 
 } // namespace lldb

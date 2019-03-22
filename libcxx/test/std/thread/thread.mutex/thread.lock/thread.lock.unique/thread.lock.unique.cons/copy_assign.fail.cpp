@@ -15,7 +15,7 @@
 #include <mutex>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::mutex M;
@@ -29,4 +29,6 @@ int main()
     assert(lk0.mutex() == nullptr);
     assert(lk0.owns_lock() == false);
     }
+
+  return 0;
 }

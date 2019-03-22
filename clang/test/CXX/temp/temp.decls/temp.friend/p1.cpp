@@ -380,10 +380,10 @@ template <class T> struct A {
 namespace test18 {
 namespace ns1 { template <class T> struct foo {}; } // expected-note{{candidate ignored: not a function template}}
 namespace ns2 { void foo() {} } // expected-note{{candidate ignored: not a function template}}
-using ns1::foo;
-using ns2::foo;
+using ns1::foo; // expected-note {{found by name lookup}}
+using ns2::foo; // expected-note {{found by name lookup}}
 
 template <class T> class A {
-  friend void foo<T>() {} // expected-error{{no candidate function template was found for dependent friend function template specialization}}
+  friend void foo<T>() {} // expected-error {{ambiguous}} expected-error{{no candidate function template was found for dependent friend function template specialization}}
 };
 }

@@ -21,7 +21,7 @@
 
 typedef std::codecvt<char, char, std::mbstate_t> F;
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     const std::basic_string<F::intern_type> from("some text");
@@ -34,4 +34,6 @@ int main()
                       to.data(), to.data() + to.size(), to_next) == F::noconv);
     assert(from_next == from.data());
     assert(to_next == to.data());
+
+  return 0;
 }

@@ -12,9 +12,11 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     using namespace std::literals;
 
     std::string foo  =   ""s;
+
+  return 0;
 }

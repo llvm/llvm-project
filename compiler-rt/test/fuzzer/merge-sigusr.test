@@ -22,7 +22,8 @@ RUN: sleep 3
 RUN: cat %t/log | FileCheck %s
 RUN: grep C2/g %t/MCF
 RUN: grep STARTED %t/MCF
-RUN: tail -n 1 %t/MCF | grep DONE
+RUN: tail -n 2 %t/MCF | grep FT
+RUN: tail -n 1 %t/MCF | grep COV
 
 CHECK: INFO: signal received, trying to exit gracefully
 CHECK: INFO: libFuzzer: exiting as requested

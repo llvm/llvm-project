@@ -113,7 +113,7 @@ void test_reference_extension()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test<int>();
     test<int>(3);
@@ -169,4 +169,6 @@ int main()
         constexpr std::optional<int> o2 = o1;
         static_assert( *o2 == 4, "" );
     }
+
+  return 0;
 }

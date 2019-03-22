@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Core/Highlighter.h"
+#include "lldb/Host/FileSystem.h"
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
@@ -27,6 +28,7 @@ public:
 void HighlighterTest::SetUpTestCase() {
   // The HighlighterManager uses the language plugins under the hood, so we
   // have to initialize them here for our test process.
+  FileSystem::Initialize();
   CPlusPlusLanguage::Initialize();
   ObjCLanguage::Initialize();
   ObjCPlusPlusLanguage::Initialize();
@@ -36,6 +38,7 @@ void HighlighterTest::TearDownTestCase() {
   CPlusPlusLanguage::Terminate();
   ObjCLanguage::Terminate();
   ObjCPlusPlusLanguage::Terminate();
+  FileSystem::Terminate();
 }
 
 static std::string getName(lldb::LanguageType type) {

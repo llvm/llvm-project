@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZTargetMachine.h"
+#include "SystemZISelLowering.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/Debug.h"
@@ -302,6 +303,9 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   //   (Opcode (Opcode Op0 UpperVal) LowerVal)
   void splitLargeImmediate(unsigned Opcode, SDNode *Node, SDValue Op0,
                            uint64_t UpperVal, uint64_t LowerVal);
+
+  void loadVectorConstant(const SystemZVectorConstantInfo &VCI,
+                          SDNode *Node);
 
   // Try to use gather instruction Opcode to implement vector insertion N.
   bool tryGather(SDNode *N, unsigned Opcode);
@@ -1131,6 +1135,35 @@ void SystemZDAGToDAGISel::splitLargeImmediate(unsigned Opcode, SDNode *Node,
   SelectCode(Or.getNode());
 }
 
+void SystemZDAGToDAGISel::loadVectorConstant(
+    const SystemZVectorConstantInfo &VCI, SDNode *Node) {
+  assert((VCI.Opcode == SystemZISD::BYTE_MASK ||
+          VCI.Opcode == SystemZISD::REPLICATE ||
+          VCI.Opcode == SystemZISD::ROTATE_MASK) &&
+         "Bad opcode!");
+  assert(VCI.VecVT.getSizeInBits() == 128 && "Expected a vector type");
+  EVT VT = Node->getValueType(0);
+  SDLoc DL(Node);
+  SmallVector<SDValue, 2> Ops;
+  for (unsigned OpVal : VCI.OpVals)
+    Ops.push_back(CurDAG->getConstant(OpVal, DL, MVT::i32));
+  SDValue Op = CurDAG->getNode(VCI.Opcode, DL, VCI.VecVT, Ops);
+
+  if (VCI.VecVT == VT.getSimpleVT())
+    ReplaceNode(Node, Op.getNode());
+  else if (VT.getSizeInBits() == 128) {
+    SDValue BitCast = CurDAG->getNode(ISD::BITCAST, DL, VT, Op);
+    ReplaceNode(Node, BitCast.getNode());
+    SelectCode(BitCast.getNode());
+  } else { // float or double
+    unsigned SubRegIdx =
+        (VT.getSizeInBits() == 32 ? SystemZ::subreg_h32 : SystemZ::subreg_h64);
+    ReplaceNode(
+        Node, CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, Op).getNode());
+  }
+  SelectCode(Op.getNode());
+}
+
 bool SystemZDAGToDAGISel::tryGather(SDNode *N, unsigned Opcode) {
   SDValue ElemV = N->getOperand(2);
   auto *ElemN = dyn_cast<ConstantSDNode>(ElemV);
@@ -1524,6 +1557,27 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
         return;
     }
     break;
+  }
+
+  case ISD::BUILD_VECTOR: {
+    auto *BVN = cast<BuildVectorSDNode>(Node);
+    SystemZVectorConstantInfo VCI(BVN);
+    if (VCI.isVectorConstantLegal(*Subtarget)) {
+      loadVectorConstant(VCI, Node);
+      return;
+    }
+    break;
+  }
+
+  case ISD::ConstantFP: {
+    APFloat Imm = cast<ConstantFPSDNode>(Node)->getValueAPF();
+    if (Imm.isZero() || Imm.isNegZero())
+      break;
+    SystemZVectorConstantInfo VCI(Imm);
+    bool Success = VCI.isVectorConstantLegal(*Subtarget); (void)Success;
+    assert(Success && "Expected legal FP immediate");
+    loadVectorConstant(VCI, Node);
+    return;
   }
 
   case ISD::STORE: {

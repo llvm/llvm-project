@@ -29,7 +29,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 
     ASSERT_SAME_TYPE(const std::chrono::month, decltype(std::chrono::January));
@@ -83,4 +83,6 @@ int main()
     assert(static_cast<unsigned>(std::chrono::October)   == 10);
     assert(static_cast<unsigned>(std::chrono::November)  == 11);
     assert(static_cast<unsigned>(std::chrono::December)  == 12);
+
+  return 0;
 }

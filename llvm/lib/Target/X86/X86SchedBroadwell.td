@@ -733,10 +733,11 @@ def BWWriteResGroup20 : SchedWriteRes<[BWPort06,BWPort0156]> {
 }
 def: InstRW<[BWWriteResGroup20], (instrs CWD,
                                          JCXZ, JECXZ, JRCXZ,
-                                         ADC8i8, SBB8i8)>;
-def: InstRW<[BWWriteResGroup20], (instregex "ADC8ri",
-                                            "SBB8ri",
-                                            "SET(A|BE)r")>;
+                                         ADC8i8, SBB8i8,
+                                         ADC16i16, SBB16i16,
+                                         ADC32i32, SBB32i32,
+                                         ADC64i32, SBB64i32)>;
+def: InstRW<[BWWriteResGroup20], (instregex "SET(A|BE)r")>;
 
 def BWWriteResGroup22 : SchedWriteRes<[BWPort4,BWPort6,BWPort237]> {
   let Latency = 2;

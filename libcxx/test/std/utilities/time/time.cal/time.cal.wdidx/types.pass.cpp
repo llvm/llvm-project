@@ -16,10 +16,12 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using weekday_indexed = std::chrono::weekday_indexed;
 
     static_assert(std::is_trivially_copyable_v<weekday_indexed>, "");
     static_assert(std::is_standard_layout_v<weekday_indexed>, "");
+
+  return 0;
 }

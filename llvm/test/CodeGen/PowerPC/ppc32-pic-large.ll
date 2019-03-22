@@ -1,5 +1,9 @@
 ; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -relocation-model=pic | FileCheck -check-prefix=LARGE-BSS %s
 ; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -mattr=+secure-plt -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
+; RUN: llc < %s -mtriple=powerpc-unknown-netbsd -mattr=+secure-plt -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
+; RUN: llc < %s -mtriple=powerpc-unknown-netbsd -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
+; RUN: llc < %s -mtriple=powerpc-unknown-openbsd -mattr=+secure-plt -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
+; RUN: llc < %s -mtriple=powerpc-unknown-openbsd -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
 @bar = common global i32 0, align 4
 
 declare i32 @call_foo(i32, ...)

@@ -1033,16 +1033,23 @@ protected:
       return 0;
     case Instruction::Invoke:
       return 2;
+    case Instruction::CallBr:
+      return getNumSubclassExtraOperandsDynamic();
     }
     llvm_unreachable("Invalid opcode!");
   }
+
+  /// Get the number of extra operands for instructions that don't have a fixed
+  /// number of extra operands.
+  unsigned getNumSubclassExtraOperandsDynamic() const;
 
 public:
   using Instruction::getContext;
 
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Call ||
-           I->getOpcode() == Instruction::Invoke;
+           I->getOpcode() == Instruction::Invoke ||
+           I->getOpcode() == Instruction::CallBr;
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));

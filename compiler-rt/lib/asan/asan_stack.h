@@ -26,34 +26,6 @@ static const u32 kDefaultMallocContextSize = 30;
 void SetMallocContextSize(u32 size);
 u32 GetMallocContextSize();
 
-// Get the stack trace with the given pc and bp.
-// The pc will be in the position 0 of the resulting stack trace.
-// The bp may refer to the current frame or to the caller's frame.
-ALWAYS_INLINE
-void GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc, uptr bp,
-                   void *context, bool fast) {
-#if SANITIZER_WINDOWS
-  stack->Unwind(max_depth, pc, bp, context, 0, 0, fast);
-#else
-  AsanThread *t;
-  stack->size = 0;
-  if (LIKELY(asan_inited)) {
-    if ((t = GetCurrentThread()) && !t->isUnwinding()) {
-      uptr stack_top = t->stack_top();
-      uptr stack_bottom = t->stack_bottom();
-      ScopedUnwinding unwind_scope(t);
-      if (!SANITIZER_MIPS || IsValidFrame(bp, stack_top, stack_bottom)) {
-        stack->Unwind(max_depth, pc, bp, context, stack_top, stack_bottom,
-                      fast);
-      }
-    } else if (!t && !fast) {
-      /* If GetCurrentThread() has failed, try to do slow unwind anyways. */
-      stack->Unwind(max_depth, pc, bp, context, 0, 0, false);
-    }
-  }
-#endif // SANITIZER_WINDOWS
-}
-
 } // namespace __asan
 
 // NOTE: A Rule of thumb is to retrieve stack trace in the interceptors
@@ -70,19 +42,19 @@ void GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc, uptr bp,
       if (max_size > 1) stack.trace_buffer[1] = GET_CALLER_PC(); \
     }                                                            \
   } else {                                                       \
-    GetStackTrace(&stack, max_size, StackTrace::GetCurrentPc(),  \
-                  GET_CURRENT_FRAME(), 0, fast);                 \
+    stack.Unwind(StackTrace::GetCurrentPc(),                     \
+                 GET_CURRENT_FRAME(), nullptr, fast, max_size);  \
   }
 
 #define GET_STACK_TRACE_FATAL(pc, bp)              \
   BufferedStackTrace stack;                        \
-  GetStackTrace(&stack, kStackTraceMax, pc, bp, 0, \
-                common_flags()->fast_unwind_on_fatal)
+  stack.Unwind(pc, bp, nullptr,                    \
+               common_flags()->fast_unwind_on_fatal)
 
 #define GET_STACK_TRACE_SIGNAL(sig)                                        \
   BufferedStackTrace stack;                                                \
-  GetStackTrace(&stack, kStackTraceMax, (sig).pc, (sig).bp, (sig).context, \
-                common_flags()->fast_unwind_on_fatal)
+  stack.Unwind((sig).pc, (sig).bp, (sig).context,                          \
+               common_flags()->fast_unwind_on_fatal)
 
 #define GET_STACK_TRACE_FATAL_HERE                                \
   GET_STACK_TRACE(kStackTraceMax, common_flags()->fast_unwind_on_fatal)

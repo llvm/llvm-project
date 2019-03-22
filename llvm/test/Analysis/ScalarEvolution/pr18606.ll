@@ -2,7 +2,7 @@
 
 ; CHECK: @main
 ; CHECK: %mul.lcssa5 = phi i32 [ %a.promoted4, %entry ], [ %mul.30, %for.body3 ]
-; CEHCK: %mul = mul nsw i32 %mul.lcssa5, %mul.lcssa5
+; CHECK: %mul = mul nsw i32 %mul.lcssa5, %mul.lcssa5
 ; CHECK: %mul.30 = mul nsw i32 %mul.29, %mul.29
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

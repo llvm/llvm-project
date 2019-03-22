@@ -14,8 +14,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-extern int g_verbose;
-
 DWARFCompileUnit::DWARFCompileUnit(SymbolFileDWARF *dwarf2Data)
     : DWARFUnit(dwarf2Data) {}
 

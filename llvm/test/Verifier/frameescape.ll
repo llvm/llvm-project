@@ -66,4 +66,4 @@ define internal void @n(i8* %fp) {
   call i8* @llvm.localrecover(i8* bitcast(void ()* @m to i8*), i8* %fp, i32 1)
   ret void
 }
-; CHECK: all indices passed to llvm.localrecover must be less than the number of arguments passed ot llvm.localescape in the parent function
+; CHECK: all indices passed to llvm.localrecover must be less than the number of arguments passed to llvm.localescape in the parent function

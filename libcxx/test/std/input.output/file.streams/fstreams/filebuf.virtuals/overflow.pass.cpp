@@ -36,7 +36,7 @@ struct test_buf
     virtual int_type overflow(int_type c = traits_type::eof()) {return base::overflow(c);}
 };
 
-int main()
+int main(int, char**)
 {
     {
         test_buf<char> f;
@@ -140,4 +140,6 @@ int main()
         assert(f.sbumpc() == -1);
     }
     std::remove("overflow.dat");
+
+  return 0;
 }

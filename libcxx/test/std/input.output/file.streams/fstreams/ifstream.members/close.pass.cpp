@@ -16,7 +16,7 @@
 #include <fstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::ifstream fs;
@@ -34,4 +34,6 @@ int main()
         fs.close();
         assert(!fs.is_open());
     }
+
+  return 0;
 }

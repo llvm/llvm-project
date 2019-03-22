@@ -54,7 +54,7 @@ struct A0
 
 int A0::count = 0;
 
-int main()
+int main(int, char**)
 {
     {
         A0::count = 0;
@@ -86,4 +86,6 @@ int main()
         assert(b_destroy == 1);
     }
 #endif
+
+  return 0;
 }

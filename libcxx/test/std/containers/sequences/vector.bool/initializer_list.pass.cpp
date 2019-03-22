@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::vector<bool> d = {true, false, false, true};
@@ -35,4 +35,6 @@ int main()
     assert(d[2] == false);
     assert(d[3] == true);
     }
+
+  return 0;
 }

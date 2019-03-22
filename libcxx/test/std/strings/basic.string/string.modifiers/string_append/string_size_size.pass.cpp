@@ -12,6 +12,11 @@
 //   append(const basic_string<charT,traits>& str, size_type pos, size_type n = npos);
 //  the "= npos" was added for C++14
 
+// When back-deploying to macosx10.7, the RTTI for exception classes
+// incorrectly provided by libc++.dylib is mixed with the one in
+// libc++abi.dylib and exceptions are not caught properly.
+// XFAIL: with_system_cxx_lib=macosx10.7
+
 #include <string>
 #include <stdexcept>
 #include <cassert>
@@ -71,7 +76,7 @@ test_npos(S s, S str, typename S::size_type pos, S expected)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -133,4 +138,6 @@ int main()
     test_npos(S(), S("12345"), 5, S(""));
     test_npos(S(), S("12345"), 6, S("not happening"));
     }
+
+  return 0;
 }

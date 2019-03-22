@@ -21,7 +21,7 @@ private:
     ~X() {}
 };
 
-int main()
+int main(int, char**)
 {
     using std::optional;
     {
@@ -46,4 +46,6 @@ int main()
     }
     // FIXME these are garbage diagnostics that Clang should not produce
     // expected-error@optional:* 0+ {{is not a base class}}
+
+  return 0;
 }

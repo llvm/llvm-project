@@ -30,7 +30,7 @@ constexpr bool testConstexpr()
     return true;
 }
 
-int main()
+int main(int, char**)
 {
     using month = std::chrono::month;
     ASSERT_NOEXCEPT(++(std::declval<month&>())  );
@@ -48,4 +48,6 @@ int main()
         assert(static_cast<unsigned>(month++) == i + 1);
         assert(static_cast<unsigned>(month)   == i + 2);
     }
+
+  return 0;
 }

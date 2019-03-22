@@ -54,7 +54,7 @@ void del_at_end(C c)
     assert(&*it2 == &*it4);
 }
 
-int main()
+int main(int, char**)
 {
     std::deque<int> queue;
     for (int i = 0; i < 20; ++i)
@@ -66,4 +66,6 @@ int main()
         del_at_end(queue);
         queue.pop_back();
     }
+
+  return 0;
 }

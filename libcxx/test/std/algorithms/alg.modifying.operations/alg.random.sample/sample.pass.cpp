@@ -136,7 +136,7 @@ void test_small_population() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test<input_iterator, int, random_access_iterator, int>();
   test<forward_iterator, int, output_iterator, int>();
   test<forward_iterator, int, random_access_iterator, int>();
@@ -156,4 +156,6 @@ int main() {
   test_small_population<input_iterator, int, random_access_iterator, int>();
   test_small_population<forward_iterator, int, output_iterator, int>();
   test_small_population<forward_iterator, int, random_access_iterator, int>();
+
+  return 0;
 }

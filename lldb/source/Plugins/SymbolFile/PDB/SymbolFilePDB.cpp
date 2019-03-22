@@ -181,7 +181,7 @@ uint32_t SymbolFilePDB::CalculateAbilities() {
 }
 
 void SymbolFilePDB::InitializeObject() {
-  lldb::addr_t obj_load_address = m_obj_file->GetFileOffset();
+  lldb::addr_t obj_load_address = m_obj_file->GetBaseAddress().GetFileAddress();
   lldbassert(obj_load_address && obj_load_address != LLDB_INVALID_ADDRESS);
   m_session_up->setLoadAddress(obj_load_address);
   if (!m_global_scope_up)
@@ -377,7 +377,7 @@ bool SymbolFilePDB::ParseSupportFiles(
 
 bool SymbolFilePDB::ParseImportedModules(
     const lldb_private::SymbolContext &sc,
-    std::vector<lldb_private::ConstString> &imported_modules) {
+    std::vector<SourceModule> &imported_modules) {
   // PDB does not yet support module debug info
   return false;
 }
@@ -1349,11 +1349,9 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
     return;
 
   while (auto pub_symbol = results->getNext()) {
-    auto section_idx = pub_symbol->getAddressSection() - 1;
-    if (section_idx >= section_list->GetSize())
-      continue;
+    auto section_id = pub_symbol->getAddressSection();
 
-    auto section = section_list->GetSectionAtIndex(section_idx);
+    auto section = section_list->FindSectionByID(section_id);
     if (!section)
       continue;
 

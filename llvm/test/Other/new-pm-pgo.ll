@@ -1,6 +1,7 @@
 ; RUN: opt -debug-pass-manager -passes='default<O2>' -pgo-kind=pgo-instr-gen-pipeline -profile-file='temp' %s 2>&1 |FileCheck %s --check-prefixes=GEN
 ; RUN: llvm-profdata merge %S/Inputs/new-pm-pgo.proftext -o %t.profdata
 ; RUN: opt -debug-pass-manager -passes='default<O2>' -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' %s 2>&1 |FileCheck %s --check-prefixes=USE
+; RUN: opt -debug-pass-manager -passes='default<O2>' -hot-cold-split -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' %s 2>&1 |FileCheck %s --check-prefixes=USE --check-prefixes=SPLIT
 ; RUN: opt -debug-pass-manager -passes='default<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-pgo.prof' %s 2>&1 \
 ; RUN:     |FileCheck %s --check-prefixes=SAMPLE_USE,SAMPLE_USE_O
 ; RUN: opt -debug-pass-manager -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-pgo.prof' %s 2>&1 \
@@ -25,6 +26,7 @@
 ; SAMPLE_USE_POST_LINK-NOT: Running pass: GlobalOptPass
 ; SAMPLE_USE_POST_LINK: Running pass: PGOIndirectCallPromotion
 ; SAMPLE_GEN: Running pass: ModuleToFunctionPassAdaptor<{{.*}}AddDiscriminatorsPass{{.*}}>
+; SPLIT: Running pass: HotColdSplittingPass
 
 define void @foo() {
   ret void

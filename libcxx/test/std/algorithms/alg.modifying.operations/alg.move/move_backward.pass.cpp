@@ -54,7 +54,7 @@ test1()
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     test<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
     test<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
@@ -81,4 +81,6 @@ int main()
     test1<std::unique_ptr<int>*, random_access_iterator<std::unique_ptr<int>*> >();
     test1<std::unique_ptr<int>*, std::unique_ptr<int>*>();
 #endif // TEST_STD_VER >= 11
+
+  return 0;
 }

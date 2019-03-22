@@ -253,6 +253,11 @@ static void printOperand(X86AsmPrinter &P, const MachineInstr *MI,
     printSymbolOperand(P, MO, O);
     break;
   }
+  case MachineOperand::MO_BlockAddress: {
+    MCSymbol *Sym = P.GetBlockAddressSymbol(MO.getBlockAddress());
+    Sym->print(O, P.MAI);
+    break;
+  }
   }
 }
 

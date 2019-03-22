@@ -24,6 +24,8 @@ try:
 except:
     pass
 
+import re
+
 import optpmap
 
 try:
@@ -263,18 +265,24 @@ class Missed(Remark):
         return "red"
 
 
-def get_remarks(input_file):
+def get_remarks(input_file, filter_):
     max_hotness = 0
     all_remarks = dict()
     file_remarks = defaultdict(functools.partial(defaultdict, list))
 
     with open(input_file) as f:
         docs = yaml.load_all(f, Loader=Loader)
+
+        filter_e = re.compile(filter_)
         for remark in docs:
             remark.canonicalize()
             # Avoid remarks withoug debug location or if they are duplicated
             if not hasattr(remark, 'DebugLoc') or remark.key in all_remarks:
                 continue
+
+            if filter_ and not filter_e.search(remark.Pass):
+                continue
+
             all_remarks[remark.key] = remark
 
             file_remarks[remark.File][remark.Line].append(remark)
@@ -289,13 +297,13 @@ def get_remarks(input_file):
     return max_hotness, all_remarks, file_remarks
 
 
-def gather_results(filenames, num_jobs, should_print_progress):
+def gather_results(filenames, num_jobs, should_print_progress, filter_):
     if should_print_progress:
         print('Reading YAML files...')
     if not Remark.demangler_proc:
         Remark.set_demangler(Remark.default_demangler)
     remarks = optpmap.pmap(
-        get_remarks, filenames, num_jobs, should_print_progress)
+        get_remarks, filenames, num_jobs, should_print_progress, filter_)
     max_hotness = max(entry[0] for entry in remarks)
 
     def merge_file_remarks(file_remarks_job, all_remarks, merged):

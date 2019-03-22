@@ -226,6 +226,10 @@ OPTIONS
  Only output names of functions whose max count value are below the cutoff
  value.
 
+.. option:: -showcs
+ Only show context sensitive profile counts. The default is to filter all
+ context sensitive profile counts.
+
 EXIT STATUS
 -----------
 

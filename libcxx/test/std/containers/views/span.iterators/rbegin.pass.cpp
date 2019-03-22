@@ -71,7 +71,7 @@ constexpr int iArr1[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9};
           int iArr2[] = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
 
-int main()
+int main(int, char**)
 {
     static_assert(testConstexprSpan(std::span<int>()),            "");
     static_assert(testConstexprSpan(std::span<long>()),           "");
@@ -111,6 +111,8 @@ int main()
     testRuntimeSpan(std::span<int>(iArr2, 5));
 
     std::string s;
-    testRuntimeSpan(std::span<std::string>(&s, static_cast<std::ptrdiff_t>(0)));
+    testRuntimeSpan(std::span<std::string>(&s, static_cast<std::size_t>(0)));
     testRuntimeSpan(std::span<std::string>(&s, 1));
+
+  return 0;
 }

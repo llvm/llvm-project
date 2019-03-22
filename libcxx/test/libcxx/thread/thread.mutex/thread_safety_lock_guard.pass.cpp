@@ -32,8 +32,10 @@ static void scoped() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   scoped();
   std::lock_guard<std::mutex> lock(m);
   foo++;
+
+  return 0;
 }

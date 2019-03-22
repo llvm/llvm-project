@@ -34,8 +34,10 @@ test2()
         std::uint_fast64_t>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
+
+  return 0;
 }

@@ -93,7 +93,7 @@ LSUnit::Status LSUnit::isAvailable(const InstRef &IR) const {
   return LSUnit::LSU_AVAILABLE;
 }
 
-bool LSUnit::isReady(const InstRef &IR) const {
+unsigned LSUnit::isReady(const InstRef &IR) const {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
   const unsigned Index = IR.getSourceIndex();
   bool IsALoad = Desc.MayLoad;
@@ -106,49 +106,52 @@ bool LSUnit::isReady(const InstRef &IR) const {
     unsigned LoadBarrierIndex = *LoadBarriers.begin();
     // A younger load cannot pass a older load barrier.
     if (Index > LoadBarrierIndex)
-      return false;
+      return LoadBarrierIndex;
     // A load barrier cannot pass a older load.
     if (Index == LoadBarrierIndex && Index != *LoadQueue.begin())
-      return false;
+      return *LoadQueue.begin();
   }
 
   if (IsAStore && !StoreBarriers.empty()) {
     unsigned StoreBarrierIndex = *StoreBarriers.begin();
     // A younger store cannot pass a older store barrier.
     if (Index > StoreBarrierIndex)
-      return false;
+      return StoreBarrierIndex;
     // A store barrier cannot pass a older store.
     if (Index == StoreBarrierIndex && Index != *StoreQueue.begin())
-      return false;
+      return *StoreQueue.begin();
   }
 
   // A load may not pass a previous store unless flag 'NoAlias' is set.
   // A load may pass a previous load.
   if (NoAlias && IsALoad)
-    return true;
+    return Index;
 
   if (StoreQueue.size()) {
     // A load may not pass a previous store.
     // A store may not pass a previous store.
     if (Index > *StoreQueue.begin())
-      return false;
+      return *StoreQueue.begin();
   }
 
   // Okay, we are older than the oldest store in the queue.
   // If there are no pending loads, then we can say for sure that this
   // instruction is ready.
   if (isLQEmpty())
-    return true;
+    return Index;
 
   // Check if there are no older loads.
   if (Index <= *LoadQueue.begin())
-    return true;
+    return Index;
 
   // There is at least one younger load.
   //
-  // A store may not pass a previous load.
   // A load may pass a previous load.
-  return !IsAStore;
+  if (IsALoad)
+    return Index;
+
+  // A store may not pass a previous load.
+  return *LoadQueue.begin();
 }
 
 void LSUnit::onInstructionExecuted(const InstRef &IR) {

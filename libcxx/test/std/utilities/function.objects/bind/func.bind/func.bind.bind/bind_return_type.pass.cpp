@@ -115,7 +115,7 @@ void do_test_r(Fn* func) {
     }
 }
 
-int main()
+int main(int, char**)
 {
     do_test<int>(return_value);
     do_test<int&>(return_lvalue);
@@ -129,4 +129,6 @@ int main()
     do_test_r<long>(return_rvalue);
     do_test_r<long>(return_const_rvalue);
 
+
+  return 0;
 }

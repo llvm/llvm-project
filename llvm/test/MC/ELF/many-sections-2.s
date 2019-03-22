@@ -32,7 +32,7 @@
 
 
 // Test that this file has one section too many.
-// SYMBOLS:         Name: (0)
+// SYMBOLS:         Name: dm (0)
 // SYMBOLS:         Value: 0x0
 // SYMBOLS:         Size: 0
 // SYMBOLS:         Binding: Local (0x0)

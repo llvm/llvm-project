@@ -17,6 +17,7 @@
 #include <complex.h>
 #include <ctype.h>
 #include <errno.h>
+#include <fenv.h>
 #include <float.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -33,4 +34,8 @@
 #include <wchar.h>
 #include <wctype.h>
 
-int main() {}
+int main(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
+  return 0;
+}

@@ -52,7 +52,7 @@ struct B
 
 int B::count = 0;
 
-int main()
+int main(int, char**)
 {
     {
     const std::unique_ptr<A, Deleter<A> > p1(new A);
@@ -96,4 +96,6 @@ int main()
     assert((p1 < p2) == !(p1 <= p2));
     assert((p1 < p2) == !(p1 >= p2));
     }
+
+  return 0;
 }

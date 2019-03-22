@@ -155,6 +155,7 @@ private:
   SDValue performExtractVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performInsertVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
+  SDValue reassociateScalarOps(SDNode *N, SelectionDAG &DAG) const;
   unsigned getFusedOpcode(const SelectionDAG &DAG,
                           const SDNode *N0, const SDNode *N1) const;
   SDValue performAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -172,8 +173,6 @@ private:
   bool isLegalMUBUFAddressingMode(const AddrMode &AM) const;
 
   unsigned isCFIntrinsic(const SDNode *Intr) const;
-
-  void createDebuggerPrologueStackObjects(MachineFunction &MF) const;
 
   /// \returns True if fixup needs to be emitted for given global value \p GV,
   /// false otherwise.

@@ -32,7 +32,7 @@ constexpr bool testConstexpr(D d1)
     return true;
 }
 
-int main()
+int main(int, char**)
 {
     using year               = std::chrono::year;
     using month              = std::chrono::month;
@@ -76,4 +76,6 @@ int main()
         assert(ymwd.weekday()  == Tuesday);
         assert(ymwd.index()    == 2);
     }
+
+  return 0;
 }

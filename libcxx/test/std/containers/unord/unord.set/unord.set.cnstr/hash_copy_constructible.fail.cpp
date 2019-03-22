@@ -23,6 +23,8 @@ private:
     };
 
 
-int main() {
+int main(int, char**) {
     std::unordered_set<int, Hash<int> > m;
+
+  return 0;
 }

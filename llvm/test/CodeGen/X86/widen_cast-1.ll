@@ -11,7 +11,7 @@ define void @convert(<2 x i32>* %dst, <4 x i16>* %src) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movl $0, (%esp)
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; CHECK-NEXT:    cmpl $3, (%esp)
 ; CHECK-NEXT:    jg .LBB0_3
@@ -22,7 +22,7 @@ define void @convert(<2 x i32>* %dst, <4 x i16>* %src) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    pmovzxwd {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; CHECK-NEXT:    paddw %xmm0, %xmm2
+; CHECK-NEXT:    psubw %xmm0, %xmm2
 ; CHECK-NEXT:    pshufb %xmm1, %xmm2
 ; CHECK-NEXT:    movq %xmm2, (%ecx,%eax,8)
 ; CHECK-NEXT:    incl (%esp)
@@ -35,7 +35,7 @@ define void @convert(<2 x i32>* %dst, <4 x i16>* %src) nounwind {
 ; ATOM-LABEL: convert:
 ; ATOM:       # %bb.0: # %entry
 ; ATOM-NEXT:    pushl %eax
-; ATOM-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
+; ATOM-NEXT:    pcmpeqd %xmm0, %xmm0
 ; ATOM-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; ATOM-NEXT:    movl $0, (%esp)
 ; ATOM-NEXT:    cmpl $3, (%esp)
@@ -48,7 +48,7 @@ define void @convert(<2 x i32>* %dst, <4 x i16>* %src) nounwind {
 ; ATOM-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; ATOM-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
-; ATOM-NEXT:    paddw %xmm0, %xmm2
+; ATOM-NEXT:    psubw %xmm0, %xmm2
 ; ATOM-NEXT:    pshufb %xmm1, %xmm2
 ; ATOM-NEXT:    movq %xmm2, (%ecx,%eax,8)
 ; ATOM-NEXT:    incl (%esp)

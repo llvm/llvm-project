@@ -31,8 +31,8 @@ entry:
 ; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            hidden_function
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:   - Type:            CODE

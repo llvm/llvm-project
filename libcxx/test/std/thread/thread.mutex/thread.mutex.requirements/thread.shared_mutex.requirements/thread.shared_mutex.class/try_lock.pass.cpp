@@ -9,6 +9,8 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
+// FLAKY_TEST.
+
 // <shared_mutex>
 
 // class shared_mutex;
@@ -42,11 +44,13 @@ void f()
     assert(d < ms(200));  // within 200ms
 }
 
-int main()
+int main(int, char**)
 {
     m.lock();
     std::thread t(f);
     std::this_thread::sleep_for(ms(250));
     m.unlock();
     t.join();
+
+  return 0;
 }

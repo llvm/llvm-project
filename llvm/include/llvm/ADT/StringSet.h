@@ -33,6 +33,7 @@ namespace llvm {
       for (StringRef X : S)
         insert(X);
     }
+    explicit StringSet(AllocatorTy A) : base(A) {}
 
     std::pair<typename base::iterator, bool> insert(StringRef Key) {
       assert(!Key.empty());

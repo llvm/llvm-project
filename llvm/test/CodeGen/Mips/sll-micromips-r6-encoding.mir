@@ -6,7 +6,7 @@
 
 # CHECK-LABEL: a:
 # CHECK:  nop                           # encoding: [0x00,0x00,0x00,0x00]
-# CHECK:  jrc   $ra                     # encoding: [0x45,0xbf]
+# CHECK:  jrc16 $ra                     # encoding: [0x47,0xe3]
 ---
 name:            a
 alignment:       2
@@ -41,6 +41,6 @@ constants:
 body:             |
   bb.0.entry:
     $zero = SLL_MMR6 killed $zero, 0
-    JRC16_MM undef $ra, implicit $v0
+    JRC16_MMR6 undef $ra, implicit $v0
 
 ...

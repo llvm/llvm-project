@@ -22,7 +22,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::istringstream inf1(" 1 23");
     std::istringstream inf2(" 1 23");
@@ -51,4 +51,6 @@ int main()
 
     assert(std::operator==(i1, i2));
     assert(std::operator!=(i1, i3));
+
+  return 0;
 }

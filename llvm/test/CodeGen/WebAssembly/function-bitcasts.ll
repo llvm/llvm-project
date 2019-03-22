@@ -17,21 +17,21 @@ declare void @foo2()
 declare void @foo3()
 
 ; CHECK-LABEL: test:
-; CHECK:      call        .Lhas_i32_arg_bitcast.2@FUNCTION{{$}}
-; CHECK-NEXT: call        .Lhas_i32_arg_bitcast.2@FUNCTION{{$}}
-; CHECK-NEXT: call        .Lhas_i32_ret_bitcast@FUNCTION{{$}}
-; CHECK-NEXT: i32.call     $drop=, has_i32_ret@FUNCTION
+; CHECK:      call        .Lhas_i32_arg_bitcast.2{{$}}
+; CHECK-NEXT: call        .Lhas_i32_arg_bitcast.2{{$}}
+; CHECK-NEXT: call        .Lhas_i32_ret_bitcast{{$}}
+; CHECK-NEXT: i32.call     $drop=, has_i32_ret
 ; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, 0
-; CHECK-NEXT: call        .Lfoo0_bitcast@FUNCTION, $pop[[L0]]{{$}}
+; CHECK-NEXT: call        .Lfoo0_bitcast, $pop[[L0]]{{$}}
 ; CHECK-NEXT: i32.const   $push[[L1:[0-9]+]]=, 0
-; CHECK-NEXT: call        .Lfoo0_bitcast@FUNCTION, $pop[[L1]]{{$}}
+; CHECK-NEXT: call        .Lfoo0_bitcast, $pop[[L1]]{{$}}
 ; CHECK-NEXT: i32.const   $push[[L2:[0-9]+]]=, 0
-; CHECK-NEXT: call        .Lfoo0_bitcast@FUNCTION, $pop[[L2]]{{$}}
-; CHECK-NEXT: call        foo0@FUNCTION
-; CHECK-NEXT: i32.call    $drop=, .Lfoo1_bitcast@FUNCTION{{$}}
-; CHECK-NEXT: call        foo2@FUNCTION{{$}}
-; CHECK-NEXT: call        foo1@FUNCTION{{$}}
-; CHECK-NEXT: call        foo3@FUNCTION{{$}}
+; CHECK-NEXT: call        .Lfoo0_bitcast, $pop[[L2]]{{$}}
+; CHECK-NEXT: call        foo0
+; CHECK-NEXT: i32.call    $drop=, .Lfoo1_bitcast{{$}}
+; CHECK-NEXT: call        foo2{{$}}
+; CHECK-NEXT: call        foo1{{$}}
+; CHECK-NEXT: call        foo3{{$}}
 ; CHECK-NEXT: end_function
 define void @test() {
 entry:
@@ -55,9 +55,9 @@ entry:
 }
 
 ; CHECK-LABEL: test_structs:
-; CHECK: call     .Lhas_i32_arg_bitcast.1@FUNCTION, $pop{{[0-9]+}}, $pop{{[0-9]+$}}
-; CHECK: call     .Lhas_i32_arg_bitcast@FUNCTION, $0, $pop2
-; CHECK: call     .Lhas_struct_arg_bitcast@FUNCTION{{$}}
+; CHECK: call     .Lhas_i32_arg_bitcast.1, $pop{{[0-9]+}}, $pop{{[0-9]+$}}
+; CHECK: call     .Lhas_i32_arg_bitcast, $0, $pop2
+; CHECK: call     .Lhas_struct_arg_bitcast{{$}}
 define void @test_structs() {
 entry:
   call void bitcast (void (i32)* @has_i32_arg to void (i32, {i32})*)(i32 5, {i32} {i32 6})
@@ -67,9 +67,9 @@ entry:
 }
 
 ; CHECK-LABEL: test_structs_unhandled:
-; CHECK: call    has_struct_arg@FUNCTION, $pop{{[0-9]+$}}
-; CHECK: call    has_struct_arg@FUNCTION, $pop{{[0-9]+$}}
-; CHECK: call    has_i32_ret@FUNCTION, $pop{{[0-9]+$}}
+; CHECK: call    has_struct_arg, $pop{{[0-9]+$}}
+; CHECK: call    has_struct_arg, $pop{{[0-9]+$}}
+; CHECK: call    has_i32_ret, $pop{{[0-9]+$}}
 define void @test_structs_unhandled() {
 entry:
   call void @has_struct_arg({i32} {i32 3})
@@ -81,10 +81,10 @@ entry:
 ; CHECK-LABEL: test_varargs:
 ; CHECK:      global.set
 ; CHECK:      i32.const   $push[[L3:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: call        .Lvararg_bitcast@FUNCTION, $pop[[L3]]{{$}}
+; CHECK-NEXT: call        .Lvararg_bitcast, $pop[[L3]]{{$}}
 ; CHECK-NEXT: i32.const   $push[[L4:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i32.store   0($[[L5:[0-9]+]]), $pop[[L4]]{{$}}
-; CHECK-NEXT: call        .Lplain_bitcast@FUNCTION, $[[L5]]{{$}}
+; CHECK-NEXT: call        .Lplain_bitcast, $[[L5]]{{$}}
 define void @test_varargs() {
   call void bitcast (void (...)* @vararg to void (i32)*)(i32 0)
   call void (...) bitcast (void (i32)* @plain to void (...)*)(i32 0)
@@ -97,7 +97,7 @@ define void @test_varargs() {
 
 ; CHECK-LABEL: test_store:
 ; CHECK:      i32.const   $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: i32.const   $push[[L1:[0-9]+]]=, has_i32_ret@FUNCTION{{$}}
+; CHECK-NEXT: i32.const   $push[[L1:[0-9]+]]=, has_i32_ret{{$}}
 ; CHECK-NEXT: i32.store   global_func($pop[[L0]]), $pop[[L1]]{{$}}
 define void @test_store() {
   %1 = bitcast i32 ()* @has_i32_ret to void ()*
@@ -121,10 +121,10 @@ define i32 @test_load() {
 declare void @call_func(i32 ()*)
 
 ; CHECK-LABEL: test_argument:
-; CHECK:      i32.const   $push[[L0:[0-9]+]]=, has_i32_ret@FUNCTION{{$}}
-; CHECK-NEXT: call        call_func@FUNCTION, $pop[[L0]]{{$}}
-; CHECK-NEXT: i32.const   $push[[L1:[0-9]+]]=, has_i32_arg@FUNCTION{{$}}
-; CHECK-NEXT: call        call_func@FUNCTION, $pop[[L1]]{{$}}
+; CHECK:      i32.const   $push[[L0:[0-9]+]]=, has_i32_ret{{$}}
+; CHECK-NEXT: call        call_func, $pop[[L0]]{{$}}
+; CHECK-NEXT: i32.const   $push[[L1:[0-9]+]]=, has_i32_arg{{$}}
+; CHECK-NEXT: call        call_func, $pop[[L1]]{{$}}
 define void @test_argument() {
   call void @call_func(i32 ()* @has_i32_ret)
   call void @call_func(i32 ()* bitcast (void (i32)* @has_i32_arg to i32 ()*))
@@ -134,14 +134,14 @@ define void @test_argument() {
 ; Invokes should be treated like calls
 
 ; CHECK-LABEL: test_invoke:
-; CHECK:      i32.const   $push[[L1:[0-9]+]]=, call_func@FUNCTION{{$}}
-; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, has_i32_ret@FUNCTION{{$}}
-; CHECK-NEXT: call        "__invoke_void_i32()*"@FUNCTION, $pop[[L1]], $pop[[L0]]{{$}}
-; CHECK:      i32.const   $push[[L3:[0-9]+]]=, call_func@FUNCTION{{$}}
-; CHECK-NEXT: i32.const   $push[[L2:[0-9]+]]=, has_i32_arg@FUNCTION{{$}}
-; CHECK-NEXT: call        "__invoke_void_i32()*"@FUNCTION, $pop[[L3]], $pop[[L2]]{{$}}
-; CHECK:      i32.const   $push[[L4:[0-9]+]]=, .Lhas_i32_arg_bitcast.2@FUNCTION{{$}}
-; CHECK-NEXT: call        __invoke_void@FUNCTION, $pop[[L4]]{{$}}
+; CHECK:      i32.const   $push[[L1:[0-9]+]]=, call_func{{$}}
+; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, has_i32_ret{{$}}
+; CHECK-NEXT: call        "__invoke_void_i32()*", $pop[[L1]], $pop[[L0]]{{$}}
+; CHECK:      i32.const   $push[[L3:[0-9]+]]=, call_func{{$}}
+; CHECK-NEXT: i32.const   $push[[L2:[0-9]+]]=, has_i32_arg{{$}}
+; CHECK-NEXT: call        "__invoke_void_i32()*", $pop[[L3]], $pop[[L2]]{{$}}
+; CHECK:      i32.const   $push[[L4:[0-9]+]]=, .Lhas_i32_arg_bitcast.2{{$}}
+; CHECK-NEXT: call        __invoke_void, $pop[[L4]]{{$}}
 declare i32 @personality(...)
 define void @test_invoke() personality i32 (...)* @personality {
 entry:
@@ -167,37 +167,37 @@ end:
 
 ; CHECK-LABEL: .Lhas_i32_arg_bitcast:
 ; CHECK-NEXT: .functype .Lhas_i32_arg_bitcast (i32, i32) -> ()
-; CHECK-NEXT: call        has_i32_arg@FUNCTION, $1{{$}}
+; CHECK-NEXT: call        has_i32_arg, $1{{$}}
 ; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lhas_i32_arg_bitcast.1:
 ; CHECK-NEXT: .functype .Lhas_i32_arg_bitcast.1 (i32, i32) -> ()
-; CHECK-NEXT: call        has_i32_arg@FUNCTION, $0{{$}}
+; CHECK-NEXT: call        has_i32_arg, $0{{$}}
 ; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lhas_i32_arg_bitcast.2:
-; CHECK:      call        has_i32_arg@FUNCTION, $0{{$}}
+; CHECK:      call        has_i32_arg, $0{{$}}
 ; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lhas_i32_ret_bitcast:
-; CHECK:      call        $drop=, has_i32_ret@FUNCTION{{$}}
+; CHECK:      call        $drop=, has_i32_ret{{$}}
 ; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lvararg_bitcast:
-; CHECK: call        vararg@FUNCTION, $1{{$}}
+; CHECK: call        vararg, $1{{$}}
 ; CHECK: end_function
 
 ; CHECK-LABEL: .Lplain_bitcast:
-; CHECK: call        plain@FUNCTION, $1{{$}}
+; CHECK: call        plain, $1{{$}}
 ; CHECK: end_function
 
 ; CHECK-LABEL: .Lfoo0_bitcast:
 ; CHECK-NEXT: .functype .Lfoo0_bitcast (i32) -> ()
-; CHECK-NEXT: call        foo0@FUNCTION{{$}}
+; CHECK-NEXT: call        foo0{{$}}
 ; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lfoo1_bitcast:
 ; CHECK-NEXT: .functype .Lfoo1_bitcast () -> (i32)
-; CHECK-NEXT: call        foo1@FUNCTION{{$}}
+; CHECK-NEXT: call        foo1{{$}}
 ; CHECK-NEXT: local.copy  $push0=, $0
 ; CHECK-NEXT: end_function

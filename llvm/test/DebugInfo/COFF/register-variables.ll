@@ -24,9 +24,9 @@
 ; ASM: f:                                      # @f
 ; ASM: .Lfunc_begin0:
 ; ASM: # %bb.0:                                 # %entry
+; ASM:         #DEBUG_VALUE: f:p <- $ecx
 ; ASM:         pushq   %rsi
 ; ASM:         subq    $32, %rsp
-; ASM:         #DEBUG_VALUE: f:p <- $ecx
 ; ASM:         movl    %ecx, %esi
 ; ASM: [[p_ecx_esi:\.Ltmp.*]]:
 ; ASM:         #DEBUG_VALUE: f:p <- $esi

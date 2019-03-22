@@ -30,7 +30,7 @@ test(It i, typename std::iterator_traits<It>::difference_type n,
     assert(rr == x);
 }
 
-int main()
+int main(int, char**)
 {
     const char* s = "1234567890";
     test(random_access_iterator<const char*>(s+5), 4, '1');
@@ -45,4 +45,6 @@ int main()
     static_assert(it1[4] == '1', "");
     }
 #endif
+
+  return 0;
 }

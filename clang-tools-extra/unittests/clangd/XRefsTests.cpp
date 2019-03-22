@@ -86,6 +86,10 @@ TEST(HighlightsTest, All) {
           auto *X = &[[foo]];
         }
       )cpp",
+
+      R"cpp(// Function parameter in decl
+        void foo(int [[^bar]]);
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
@@ -180,6 +184,26 @@ TEST(LocateSymbol, WithIndex) {
       ElementsAre(Sym("Forward", SymbolHeader.range("forward"), Test.range())));
 }
 
+TEST(LocateSymbol, WithIndexPreferredLocation) {
+  Annotations SymbolHeader(R"cpp(
+        class $[[Proto]] {};
+      )cpp");
+  TestTU TU;
+  TU.HeaderCode = SymbolHeader.code();
+  TU.HeaderFilename = "x.proto"; // Prefer locations in codegen files.
+  auto Index = TU.index();
+
+  Annotations Test(R"cpp(// only declaration in AST.
+        // Shift to make range different.
+        class [[Proto]];
+        P^roto* create();
+      )cpp");
+
+  auto AST = TestTU::withCode(Test.code()).build();
+  auto Locs = clangd::locateSymbolAt(AST, Test.point(), Index.get());
+  EXPECT_THAT(Locs, ElementsAre(Sym("Proto", SymbolHeader.range())));
+}
+
 TEST(LocateSymbol, All) {
   // Ranges in tests:
   //   $decl is the declaration location (if absent, no symbol is located)
@@ -261,11 +285,15 @@ TEST(LocateSymbol, All) {
         }
       )cpp",
 
-      /* FIXME: clangIndex doesn't handle template type parameters
       R"cpp(// Template type parameter
-        template <[[typename T]]>
+        template <typename [[T]]>
         void foo() { ^T t; }
-      )cpp", */
+      )cpp",
+
+      R"cpp(// Template template type parameter
+        template <template<typename> class [[T]]>
+        void foo() { ^T<int> t; }
+      )cpp",
 
       R"cpp(// Namespace
         namespace $decl[[ns]] {
@@ -326,6 +354,68 @@ TEST(LocateSymbol, All) {
          FF();
          void f() { T^est a; }
       )cpp",
+
+      R"cpp(// explicit template specialization
+        template <typename T>
+        struct Foo { void bar() {} };
+
+        template <>
+        struct [[Foo]]<int> { void bar() {} };
+
+        void foo() {
+          Foo<char> abc;
+          Fo^o<int> b;
+        }
+      )cpp",
+
+      R"cpp(// implicit template specialization
+        template <typename T>
+        struct [[Foo]] { void bar() {} };
+        template <>
+        struct Foo<int> { void bar() {} };
+        void foo() {
+          Fo^o<char> abc;
+          Foo<int> b;
+        }
+      )cpp",
+
+      R"cpp(// partial template specialization
+        template <typename T>
+        struct Foo { void bar() {} };
+        template <typename T>
+        struct [[Foo]]<T*> { void bar() {} };
+        ^Foo<int*> x;
+      )cpp",
+
+      R"cpp(// function template specializations
+        template <class T>
+        void foo(T) {}
+        template <>
+        void [[foo]](int) {}
+        void bar() {
+          fo^o(10);
+        }
+      )cpp",
+
+      R"cpp(// variable template decls
+        template <class T>
+        T var = T();
+
+        template <>
+        double [[var]]<int> = 10;
+
+        double y = va^r<int>;
+      )cpp",
+
+      R"cpp(// No implicit constructors
+        class X {
+          X(X&& x) = default;
+        };
+        X [[makeX]]() {}
+        void foo() {
+          auto x = m^akeX();
+        }
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
@@ -373,20 +463,25 @@ TEST(LocateSymbol, Ambiguous) {
       Foo c = $3^f();
       $4^g($5^f());
       g($6^str);
+      Foo ab$7^c;
+      Foo ab$8^cd("asdf");
+      Foo foox = Fo$9^o("asdf");
     }
   )cpp");
   auto AST = TestTU::withCode(T.code()).build();
   // Ordered assertions are deliberate: we expect a predictable order.
-  EXPECT_THAT(locateSymbolAt(AST, T.point("1")),
-              ElementsAre(Sym("str"), Sym("Foo")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("1")), ElementsAre(Sym("str")));
   EXPECT_THAT(locateSymbolAt(AST, T.point("2")), ElementsAre(Sym("str")));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("3")),
-              ElementsAre(Sym("f"), Sym("Foo")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("3")), ElementsAre(Sym("f")));
   EXPECT_THAT(locateSymbolAt(AST, T.point("4")), ElementsAre(Sym("g")));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("5")),
-              ElementsAre(Sym("f"), Sym("Foo")));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("6")),
-              ElementsAre(Sym("str"), Sym("Foo"), Sym("Foo")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("5")), ElementsAre(Sym("f")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("6")), ElementsAre(Sym("str")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("7")), ElementsAre(Sym("abc")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("8")),
+              ElementsAre(Sym("Foo"), Sym("abcd")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("9")),
+              // First one is class definition, second is the constructor.
+              ElementsAre(Sym("Foo"), Sym("Foo")));
 }
 
 TEST(LocateSymbol, RelPathsInCompileCommand) {
@@ -648,7 +743,25 @@ TEST(Hover, All) {
             #define MACRO 2
             #undef macro
           )cpp",
-          "#define MACRO",
+          "#define MACRO 1",
+      },
+      {
+          R"cpp(// Macro
+            #define MACRO 0
+            #define MACRO2 ^MACRO
+          )cpp",
+          "#define MACRO 0",
+      },
+      {
+          R"cpp(// Macro
+            #define MACRO {\
+              return 0;\
+            }
+            int main() ^MACRO
+          )cpp",
+          R"cpp(#define MACRO {\
+              return 0;\
+            })cpp",
       },
       {
           R"cpp(// Forward class declaration

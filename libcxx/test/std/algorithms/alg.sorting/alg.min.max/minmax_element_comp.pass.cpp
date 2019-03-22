@@ -96,7 +96,7 @@ void constexpr_test()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test<forward_iterator<const int*> >();
     test<bidirectional_iterator<const int*> >();
@@ -104,4 +104,6 @@ int main()
     test<const int*>();
 
     constexpr_test();
+
+  return 0;
 }

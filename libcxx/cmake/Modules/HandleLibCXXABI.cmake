@@ -98,7 +98,7 @@ if ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libstdc++" OR
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxabi")
   if (LIBCXX_CXX_ABI_INTREE)
     # Link against just-built "cxxabi" target.
-    if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
+    if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
       set(CXXABI_LIBNAME cxxabi_static)
     else()
       set(CXXABI_LIBNAME cxxabi_shared)

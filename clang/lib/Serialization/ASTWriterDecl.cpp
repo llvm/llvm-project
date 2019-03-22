@@ -1110,6 +1110,7 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
   Record.push_back(D->blockMissingReturnType());
   Record.push_back(D->isConversionFromLambda());
   Record.push_back(D->doesNotEscape());
+  Record.push_back(D->canAvoidCopyToHeap());
   Record.push_back(D->capturesCXXThis());
   Record.push_back(D->getNumCaptures());
   for (const auto &capture : D->captures()) {
@@ -2272,7 +2273,7 @@ static bool isRequiredDecl(const Decl *D, ASTContext &Context,
   if (isa<FileScopeAsmDecl>(D) || isa<ObjCImplDecl>(D))
     return true;
 
-  if (WritingModule && (isa<VarDecl>(D) || isa<ImportDecl>(D))) {
+  if (WritingModule && isPartOfPerModuleInitializer(D)) {
     // These declarations are part of the module initializer, and are emitted
     // if and when the module is imported, rather than being emitted eagerly.
     return false;

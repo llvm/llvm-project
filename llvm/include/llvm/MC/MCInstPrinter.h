@@ -64,6 +64,10 @@ public:
 
   virtual ~MCInstPrinter();
 
+  /// Customize the printer according to a command line option.
+  /// @return true if the option is recognized and applied.
+  virtual bool applyTargetSpecificCLOption(StringRef Opt) { return false; }
+
   /// Specify a stream to emit comments to.
   void setCommentStream(raw_ostream &OS) { CommentStream = &OS; }
 

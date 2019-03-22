@@ -30,4 +30,6 @@ static_assert(!std::is_same<std::byte, unsigned char>::value, "" );
 // The standard doesn't outright say this, but it's pretty clear that it has to be true.
 static_assert(sizeof(std::byte) == 1, "" );
 
-int main () {}
+int main(int, char**) {
+  return 0;
+}

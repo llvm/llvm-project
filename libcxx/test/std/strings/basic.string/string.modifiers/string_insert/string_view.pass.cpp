@@ -11,6 +11,11 @@
 // basic_string<charT,traits,Allocator>&
 //   insert(size_type pos, string_view sv);
 
+// When back-deploying to macosx10.7, the RTTI for exception classes
+// incorrectly provided by libc++.dylib is mixed with the one in
+// libc++abi.dylib and exceptions are not caught properly.
+// XFAIL: with_system_cxx_lib=macosx10.7
+
 #include <string>
 #include <stdexcept>
 #include <cassert>
@@ -47,7 +52,7 @@ test(S s, typename S::size_type pos, SV sv, S expected)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -235,4 +240,6 @@ int main()
     s_long.insert(0, s_long.c_str());
     assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
     }
+
+  return 0;
 }

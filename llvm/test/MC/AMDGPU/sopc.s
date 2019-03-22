@@ -71,18 +71,44 @@ s_cmp_lg_u64 s[0:1], s[2:3]
 // VI: s_cmp_lg_u64 s[0:1], s[2:3] ; encoding: [0x00,0x02,0x13,0xbf]
 // NOSICI: error: instruction not supported on this GPU
 
+gpr_idx = 1
+s_set_gpr_idx_on s0, gpr_idx
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0) ; encoding: [0x00,0x01,0x11,0xbf]
+// NOSICI: error:
+
+gpr_idx_mode = 10
+s_set_gpr_idx_on s0, gpr_idx_mode + 5
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x00,0x0f,0x11,0xbf]
+// NOSICI: error:
+
 s_set_gpr_idx_on s0, 0
-// VI: s_set_gpr_idx_on s0, 0 ; encoding: [0x00,0x00,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// VI: s_set_gpr_idx_on s0, gpr_idx() ; encoding: [0x00,0x00,0x11,0xbf]
+// NOSICI: error:
+
+s_set_gpr_idx_on s0, gpr_idx()
+// VI: s_set_gpr_idx_on s0, gpr_idx() ; encoding: [0x00,0x00,0x11,0xbf]
+// NOSICI: error:
 
 s_set_gpr_idx_on s0, 1
-// VI: s_set_gpr_idx_on s0, src0 ; encoding: [0x00,0x01,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0) ; encoding: [0x00,0x01,0x11,0xbf]
+// NOSICI: error:
+
+s_set_gpr_idx_on s0, gpr_idx(SRC0)
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0) ; encoding: [0x00,0x01,0x11,0xbf]
+// NOSICI: error:
 
 s_set_gpr_idx_on s0, 3
-// VI: s_set_gpr_idx_on s0, src0 src1 ; encoding: [0x00,0x03,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1) ; encoding: [0x00,0x03,0x11,0xbf]
+// NOSICI: error:
+
+s_set_gpr_idx_on s0, gpr_idx(SRC1,SRC0)
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1) ; encoding: [0x00,0x03,0x11,0xbf]
+// NOSICI: error:
 
 s_set_gpr_idx_on s0, 15
-// VI: s_set_gpr_idx_on s0, dst src0 src1 src2 ; encoding: [0x00,0x0f,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x00,0x0f,0x11,0xbf]
+// NOSICI: error:
+
+s_set_gpr_idx_on s0, gpr_idx(SRC0,DST,SRC2,SRC1)
+// VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x00,0x0f,0x11,0xbf]
+// NOSICI: error:

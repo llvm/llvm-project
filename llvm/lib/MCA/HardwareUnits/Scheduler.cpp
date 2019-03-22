@@ -37,10 +37,13 @@ void Scheduler::dump() const {
 }
 #endif
 
-Scheduler::Status Scheduler::isAvailable(const InstRef &IR) const {
+Scheduler::Status Scheduler::isAvailable(const InstRef &IR) {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
 
-  switch (Resources->canBeDispatched(Desc.Buffers)) {
+  ResourceStateEvent RSE = Resources->canBeDispatched(Desc.Buffers);
+  HadTokenStall = RSE != RS_BUFFER_AVAILABLE;
+
+  switch (RSE) {
   case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
     return Scheduler::SC_BUFFERS_FULL;
   case ResourceStateEvent::RS_RESERVED:
@@ -50,7 +53,10 @@ Scheduler::Status Scheduler::isAvailable(const InstRef &IR) const {
   }
 
   // Give lower priority to LSUnit stall events.
-  switch (LSU.isAvailable(IR)) {
+  LSUnit::Status LSS = LSU.isAvailable(IR);
+  HadTokenStall = LSS != LSUnit::LSU_AVAILABLE;
+
+  switch (LSS) {
   case LSUnit::LSU_LQUEUE_FULL:
     return Scheduler::SC_LOAD_QUEUE_FULL;
   case LSUnit::LSU_SQUEUE_FULL:
@@ -74,7 +80,7 @@ void Scheduler::issueInstructionImpl(
 
   // Notify the instruction that it started executing.
   // This updates the internal state of each write.
-  IS->execute();
+  IS->execute(IR.getSourceIndex());
 
   if (IS->isExecuting())
     IssuedSet.emplace_back(IR);
@@ -96,13 +102,54 @@ void Scheduler::issueInstruction(
   // other dependent instructions. Dependent instructions may be issued during
   // this same cycle if operands have ReadAdvance entries.  Promote those
   // instructions to the ReadySet and notify the caller that those are ready.
-  if (HasDependentUsers)
+  if (HasDependentUsers && promoteToPendingSet())
     promoteToReadySet(ReadyInstructions);
 }
 
-void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
+bool Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
   // Scan the set of waiting instructions and promote them to the
-  // ready queue if operands are all ready.
+  // ready set if operands are all ready.
+  unsigned PromotedElements = 0;
+  for (auto I = PendingSet.begin(), E = PendingSet.end(); I != E;) {
+    InstRef &IR = *I;
+    if (!IR)
+      break;
+
+    // Check if there are still unsolved memory dependencies.
+    Instruction &IS = *IR.getInstruction();
+    if (IS.isMemOp()) {
+      unsigned CriticalMemDep = LSU.isReady(IR);
+      if (CriticalMemDep != IR.getSourceIndex()) {
+        IS.setCriticalMemDep(CriticalMemDep);
+        ++I;
+        continue;
+      }
+    }
+
+    // Check if this instruction is now ready. In case, force
+    // a transition in state using method 'update()'.
+    if (!IS.isReady() && !IS.updatePending()) {
+      ++I;
+      continue;
+    }
+    LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << IR
+                      << " promoted to the READY set.\n");
+
+    Ready.emplace_back(IR);
+    ReadySet.emplace_back(IR);
+
+    IR.invalidate();
+    ++PromotedElements;
+    std::iter_swap(I, E - PromotedElements);
+  }
+
+  PendingSet.resize(PendingSet.size() - PromotedElements);
+  return PromotedElements;
+}
+
+bool Scheduler::promoteToPendingSet() {
+  // Scan the set of waiting instructions and promote them to the
+  // pending set if operands are all ready.
   unsigned RemovedElements = 0;
   for (auto I = WaitSet.begin(), E = WaitSet.end(); I != E;) {
     InstRef &IR = *I;
@@ -112,17 +159,14 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
     // Check if this instruction is now ready. In case, force
     // a transition in state using method 'update()'.
     Instruction &IS = *IR.getInstruction();
-    if (!IS.isReady())
-      IS.update();
-
-    // Check if there are still unsolved data dependencies.
-    if (!isReady(IR)) {
+    if (IS.isDispatched() && !IS.updateDispatched()) {
       ++I;
       continue;
     }
+    LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << IR
+                      << " promoted to the PENDING set.\n");
 
-    Ready.emplace_back(IR);
-    ReadySet.emplace_back(IR);
+    PendingSet.emplace_back(IR);
 
     IR.invalidate();
     ++RemovedElements;
@@ -130,16 +174,20 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
   }
 
   WaitSet.resize(WaitSet.size() - RemovedElements);
+  return RemovedElements;
 }
 
 InstRef Scheduler::select() {
   unsigned QueueIndex = ReadySet.size();
   for (unsigned I = 0, E = ReadySet.size(); I != E; ++I) {
-    const InstRef &IR = ReadySet[I];
+    InstRef &IR = ReadySet[I];
     if (QueueIndex == ReadySet.size() ||
         Strategy->compare(IR, ReadySet[QueueIndex])) {
-      const InstrDesc &D = IR.getInstruction()->getDesc();
-      if (Resources->canBeIssued(D))
+      Instruction &IS = *IR.getInstruction();
+      uint64_t BusyResourceMask = Resources->checkAvailability(IS.getDesc());
+      IS.setCriticalResourceMask(BusyResourceMask);
+      BusyResourceUnits |= BusyResourceMask;
+      if (!BusyResourceMask)
         QueueIndex = I;
     }
   }
@@ -179,22 +227,49 @@ void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
   IssuedSet.resize(IssuedSet.size() - RemovedElements);
 }
 
+uint64_t Scheduler::analyzeResourcePressure(SmallVectorImpl<InstRef> &Insts) {
+  Insts.insert(Insts.end(), ReadySet.begin(), ReadySet.end());
+  return BusyResourceUnits;
+}
+
+void Scheduler::analyzeDataDependencies(SmallVectorImpl<InstRef> &RegDeps,
+                                        SmallVectorImpl<InstRef> &MemDeps) {
+  const auto EndIt = PendingSet.end() - NumDispatchedToThePendingSet;
+  for (InstRef &IR : make_range(PendingSet.begin(), EndIt)) {
+    Instruction &IS = *IR.getInstruction();
+    if (Resources->checkAvailability(IS.getDesc()))
+      continue;
+
+    if (IS.isReady() ||
+        (IS.isMemOp() && LSU.isReady(IR) != IR.getSourceIndex())) {
+      MemDeps.emplace_back(IR);
+    } else {
+      RegDeps.emplace_back(IR);
+    }
+  }
+}
+
 void Scheduler::cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
                            SmallVectorImpl<InstRef> &Executed,
                            SmallVectorImpl<InstRef> &Ready) {
   // Release consumed resources.
   Resources->cycleEvent(Freed);
 
-  // Propagate the cycle event to the 'Issued' and 'Wait' sets.
   for (InstRef &IR : IssuedSet)
     IR.getInstruction()->cycleEvent();
-
   updateIssuedSet(Executed);
+
+  for (InstRef &IR : PendingSet)
+    IR.getInstruction()->cycleEvent();
 
   for (InstRef &IR : WaitSet)
     IR.getInstruction()->cycleEvent();
 
+  promoteToPendingSet();
   promoteToReadySet(Ready);
+
+  NumDispatchedToThePendingSet = 0;
+  BusyResourceUnits = 0;
 }
 
 bool Scheduler::mustIssueImmediately(const InstRef &IR) const {
@@ -207,19 +282,28 @@ bool Scheduler::mustIssueImmediately(const InstRef &IR) const {
   return Desc.MustIssueImmediately;
 }
 
-void Scheduler::dispatch(const InstRef &IR) {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
+bool Scheduler::dispatch(const InstRef &IR) {
+  const Instruction &IS = *IR.getInstruction();
+  const InstrDesc &Desc = IS.getDesc();
   Resources->reserveBuffers(Desc.Buffers);
 
   // If necessary, reserve queue entries in the load-store unit (LSU).
-  bool IsMemOp = Desc.MayLoad || Desc.MayStore;
-  if (IsMemOp)
+  if (IS.isMemOp())
     LSU.dispatch(IR);
 
-  if (!isReady(IR)) {
+  if (IS.isPending()) {
+    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR
+                      << " to the PendingSet\n");
+    PendingSet.push_back(IR);
+    ++NumDispatchedToThePendingSet;
+    return false;
+  }
+
+  if (!IS.isReady() ||
+      (IS.isMemOp() && LSU.isReady(IR) != IR.getSourceIndex())) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the WaitSet\n");
     WaitSet.push_back(IR);
-    return;
+    return false;
   }
 
   // Don't add a zero-latency instruction to the Ready queue.
@@ -234,12 +318,8 @@ void Scheduler::dispatch(const InstRef &IR) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the ReadySet\n");
     ReadySet.push_back(IR);
   }
-}
 
-bool Scheduler::isReady(const InstRef &IR) const {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  bool IsMemOp = Desc.MayLoad || Desc.MayStore;
-  return IR.getInstruction()->isReady() && (!IsMemOp || LSU.isReady(IR));
+  return true;
 }
 
 } // namespace mca

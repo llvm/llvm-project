@@ -13,7 +13,7 @@
 ; CHECK-NEXT:    1e:	fb fd 00 00 	sw	$ra, 0($sp)
 ; CHECK-NEXT:    22:	41 a1 00 01 	lui	$1, 1
 ; CHECK-NEXT:    26:	40 60 00 02 	bal	8 <foo+0x2e>
-; CHECK-NEXT:    2a:	30 21 04 68 	addiu	$1, $1, 1128
+; CHECK-NEXT:    2a:	30 21 04 69 	addiu	$1, $1, 1129
 ; CHECK-NEXT:    2e:	00 3f 09 50 	addu	$1, $ra, $1
 ; CHECK-NEXT:    32:	ff fd 00 00 	lw	$ra, 0($sp)
 ; CHECK-NEXT:    36:	00 01 0f 3c 	jr	$1
@@ -27,7 +27,7 @@
 ; CHECK-NEXT:    56:	fb fd 00 00 	sw	$ra, 0($sp)
 ; CHECK-NEXT:    5a:	41 a1 00 01 	lui	$1, 1
 ; CHECK-NEXT:    5e:	40 60 00 02 	bal	8 <foo+0x66>
-; CHECK-NEXT:    62:	30 21 04 5c 	addiu	$1, $1, 1116
+; CHECK-NEXT:    62:	30 21 04 5d 	addiu	$1, $1, 1117
 ; CHECK-NEXT:    66:	00 3f 09 50 	addu	$1, $ra, $1
 ; CHECK-NEXT:    6a:	ff fd 00 00 	lw	$ra, 0($sp)
 ; CHECK-NEXT:    6e:	00 01 0f 3c 	jr	$1
@@ -39,7 +39,7 @@
 ; CHECK-NEXT:    86:	fb fd 00 00 	sw	$ra, 0($sp)
 ; CHECK-NEXT:    8a:	41 a1 00 01 	lui	$1, 1
 ; CHECK-NEXT:    8e:	40 60 00 02 	bal	8 <foo+0x96>
-; CHECK-NEXT:    92:	30 21 04 2c 	addiu	$1, $1, 1068
+; CHECK-NEXT:    92:	30 21 04 2d 	addiu	$1, $1, 1069
 ; CHECK-NEXT:    96:	00 3f 09 50 	addu	$1, $ra, $1
 ; CHECK-NEXT:    9a:	ff fd 00 00 	lw	$ra, 0($sp)
 ; CHECK-NEXT:    9e:	00 01 0f 3c 	jr	$1
@@ -51,7 +51,7 @@
 ; CHECK-NEXT: 10476:	fb fd 00 00 	sw	$ra, 0($sp)
 ; CHECK-NEXT: 1047a:	41 a1 00 01 	lui	$1, 1
 ; CHECK-NEXT: 1047e:	40 60 00 02 	bal	8 <foo+0x10486>
-; CHECK-NEXT: 10482:	30 21 04 00 	addiu	$1, $1, 1024
+; CHECK-NEXT: 10482:	30 21 04 01 	addiu	$1, $1, 1025
 ; CHECK-NEXT: 10486:	00 3f 09 50 	addu	$1, $ra, $1
 ; CHECK-NEXT: 1048a:	ff fd 00 00 	lw	$ra, 0($sp)
 ; CHECK-NEXT: 1048e:	00 01 0f 3c 	jr	$1

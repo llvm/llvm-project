@@ -34,7 +34,7 @@ public:
     size_t size; /* size in bytes of this argument */
 
     lldb::addr_t value;                 /* literal value */
-    std::unique_ptr<uint8_t[]> data_ap; /* host data pointer */
+    std::unique_ptr<uint8_t[]> data_up; /* host data pointer */
   };
 
   ~ABI() override;

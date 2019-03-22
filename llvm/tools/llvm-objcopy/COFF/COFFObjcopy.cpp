@@ -151,10 +151,13 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     if (!Sym.Referenced) {
       // With --strip-unneeded, GNU objcopy removes all unreferenced local
       // symbols, and any unreferenced undefined external.
-      if (Config.StripUnneeded &&
-          (Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC ||
-           Sym.Sym.SectionNumber == 0))
-        return true;
+      // With --strip-unneeded-symbol we strip only specific unreferenced
+      // local symbol instead of removing all of such.
+      if (Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC ||
+          Sym.Sym.SectionNumber == 0)
+        if (Config.StripUnneeded ||
+            is_contained(Config.UnneededSymbolsToRemove, Sym.Name))
+          return true;
 
       // GNU objcopy keeps referenced local symbols and external symbols
       // if --discard-all is set, similar to what --strip-unneeded does,
@@ -182,7 +185,8 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
       Config.PreserveDates || Config.StripDWO || Config.StripNonAlloc ||
       Config.StripSections || Config.Weaken || Config.DecompressDebugSections ||
-      Config.DiscardMode == DiscardType::Locals) {
+      Config.DiscardMode == DiscardType::Locals ||
+      !Config.SymbolsToAdd.empty() || Config.EntryExpr) {
     return createStringError(llvm::errc::invalid_argument,
                              "Option not supported by llvm-objcopy for COFF");
   }

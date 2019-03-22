@@ -1,0 +1,22 @@
+# RUN: yaml2obj %s > %t
+# RUN: obj2yaml %t | FileCheck %s
+
+# CHECK:      Symbols:
+# CHECK-NEXT:   Global:
+# CHECK-NEXT:     - Name: a_known_type
+# CHECK-NEXT:       Type: STT_OBJECT
+# CHECK-NEXT:     - Name: an_unknown_type
+# CHECK-NEXT:       Type: 0x07
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Symbols:
+  Global:
+    - Name: a_known_type
+      Type: STT_OBJECT
+    - Name: an_unknown_type
+      Type: 0x7

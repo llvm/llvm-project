@@ -46,7 +46,7 @@ if(CLANG_TEST_USE_VG)
 endif ()
 
 list(APPEND CLANG_TEST_DEPS
-  clang clang-headers
+  clang clang-resource-headers
   clang-format
   c-index-test diagtool
   clang-tblgen

@@ -477,15 +477,15 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
 
     ArrayRef<Type *> CFSCWB_arg_types(arg_type_array, 5);
 
-    llvm::Type *CFSCWB_ty =
+    llvm::FunctionType *CFSCWB_ty =
         FunctionType::get(ns_str_ty, CFSCWB_arg_types, false);
 
     // Build the constant containing the pointer to the function
     PointerType *CFSCWB_ptr_ty = PointerType::getUnqual(CFSCWB_ty);
     Constant *CFSCWB_addr_int =
         ConstantInt::get(m_intptr_ty, CFStringCreateWithBytes_addr, false);
-    m_CFStringCreateWithBytes =
-        ConstantExpr::getIntToPtr(CFSCWB_addr_int, CFSCWB_ptr_ty);
+    m_CFStringCreateWithBytes = {
+        CFSCWB_ty, ConstantExpr::getIntToPtr(CFSCWB_addr_int, CFSCWB_ptr_ty)};
   }
 
   ConstantDataSequential *string_array = NULL;
@@ -880,14 +880,15 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
 
     ArrayRef<Type *> srN_arg_types(type_array, 1);
 
-    llvm::Type *srN_type =
+    llvm::FunctionType *srN_type =
         FunctionType::get(sel_ptr_type, srN_arg_types, false);
 
     // Build the constant containing the pointer to the function
     PointerType *srN_ptr_ty = PointerType::getUnqual(srN_type);
     Constant *srN_addr_int =
         ConstantInt::get(m_intptr_ty, sel_registerName_addr, false);
-    m_sel_registerName = ConstantExpr::getIntToPtr(srN_addr_int, srN_ptr_ty);
+    m_sel_registerName = {srN_type,
+                          ConstantExpr::getIntToPtr(srN_addr_int, srN_ptr_ty)};
   }
 
   Value *argument_array[1];
@@ -1042,14 +1043,15 @@ bool IRForTarget::RewriteObjCClassReference(Instruction *class_load) {
 
     ArrayRef<Type *> ogC_arg_types(type_array, 1);
 
-    llvm::Type *ogC_type =
+    llvm::FunctionType *ogC_type =
         FunctionType::get(class_type, ogC_arg_types, false);
 
     // Build the constant containing the pointer to the function
     PointerType *ogC_ptr_ty = PointerType::getUnqual(ogC_type);
     Constant *ogC_addr_int =
         ConstantInt::get(m_intptr_ty, objc_getClass_addr, false);
-    m_objc_getClass = ConstantExpr::getIntToPtr(ogC_addr_int, ogC_ptr_ty);
+    m_objc_getClass = {ogC_type,
+                       ConstantExpr::getIntToPtr(ogC_addr_int, ogC_ptr_ty)};
   }
 
   Value *argument_array[1];

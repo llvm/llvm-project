@@ -52,7 +52,7 @@ void test()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test<int>();
     test<double>();
@@ -60,4 +60,6 @@ int main()
 #if TEST_STD_VER >= 11
     test<MoveOnly>();
 #endif
+
+  return 0;
 }

@@ -51,22 +51,23 @@ public:
   bool GetDescription(lldb::SBStream &description);
 
 protected:
-  friend class SBCommandReturnObject;
-  friend class SBData;
-  friend class SBDebugger;
-  friend class SBCommunication;
-  friend class SBHostOS;
-  friend class SBPlatform;
-  friend class SBProcess;
-  friend class SBStructuredData;
-  friend class SBThread;
-  friend class SBTrace;
-  friend class SBTarget;
-  friend class SBValue;
-  friend class SBWatchpoint;
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
   friend class SBBreakpointName;
+  friend class SBCommandReturnObject;
+  friend class SBCommunication;
+  friend class SBData;
+  friend class SBDebugger;
+  friend class SBHostOS;
+  friend class SBPlatform;
+  friend class SBProcess;
+  friend class SBReproducer;
+  friend class SBStructuredData;
+  friend class SBTarget;
+  friend class SBThread;
+  friend class SBTrace;
+  friend class SBValue;
+  friend class SBWatchpoint;
 
   lldb_private::Status *get();
 
@@ -79,7 +80,7 @@ protected:
   void SetError(const lldb_private::Status &lldb_error);
 
 private:
-  std::unique_ptr<lldb_private::Status> m_opaque_ap;
+  std::unique_ptr<lldb_private::Status> m_opaque_up;
 
   void CreateIfNeeded();
 };

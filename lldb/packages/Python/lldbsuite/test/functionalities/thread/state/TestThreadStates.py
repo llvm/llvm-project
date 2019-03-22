@@ -25,6 +25,7 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18190 thread states not properly maintained")
+    @expectedFailureNetBSD
     def test_state_after_breakpoint(self):
         """Test thread state after breakpoint."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
@@ -44,6 +45,7 @@ class ThreadStateTestCase(TestBase):
     @skipIfDarwin  # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin('llvm.org/pr23669')
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24660")
+    @expectedFailureNetBSD
     # thread states not properly maintained
     @unittest2.expectedFailure("llvm.org/pr16712")
     def test_state_after_expression(self):
@@ -57,6 +59,7 @@ class ThreadStateTestCase(TestBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     @skipIfDarwin # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
+    @expectedFailureNetBSD
     def test_process_state(self):
         """Test thread states (comprehensive)."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
@@ -191,6 +194,7 @@ class ThreadStateTestCase(TestBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     @skipIfDarwin # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
+    @expectedFailureNetBSD
     @no_debug_info_test
     def test_process_interrupt(self):
         """Test process interrupt and continue."""

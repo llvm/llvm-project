@@ -10,6 +10,11 @@
 
 // size_type copy(charT* s, size_type n, size_type pos = 0) const;
 
+// When back-deploying to macosx10.7, the RTTI for exception classes
+// incorrectly provided by libc++.dylib is mixed with the one in
+// libc++abi.dylib and exceptions are not caught properly.
+// XFAIL: with_system_cxx_lib=macosx10.7
+
 #include <string>
 #include <stdexcept>
 #include <algorithm>
@@ -49,7 +54,7 @@ test(S str, typename S::value_type* s, typename S::size_type n,
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -177,4 +182,6 @@ int main()
     test(S("abcdefghijklmnopqrst"), s, 21, 0);
     }
 #endif
+
+  return 0;
 }

@@ -417,6 +417,15 @@ class VirtRegMap;
       RegUnitRanges[Unit] = nullptr;
     }
 
+    /// Remove associated live ranges for the register units associated with \p
+    /// Reg. Subsequent uses should rely on on-demand recomputation.  \note This
+    /// method can result in inconsistent liveness tracking if multiple phyical
+    /// registers share a regunit, and should be used cautiously.
+    void removeAllRegUnitsForPhysReg(unsigned Reg) {
+      for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
+        removeRegUnit(*Units);
+    }
+
     /// Remove value numbers and related live segments starting at position
     /// \p Pos that are part of any liverange of physical register \p Reg or one
     /// of its subregisters.

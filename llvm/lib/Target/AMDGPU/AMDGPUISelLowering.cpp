@@ -590,6 +590,7 @@ static bool hasSourceMods(const SDNode *N) {
   case ISD::FDIV:
   case ISD::FREM:
   case ISD::INLINEASM:
+  case ISD::INLINEASM_BR:
   case AMDGPUISD::INTERP_P1:
   case AMDGPUISD::INTERP_P2:
   case AMDGPUISD::DIV_SCALE:
@@ -847,9 +848,6 @@ bool AMDGPUTargetLowering::isNarrowingProfitable(EVT SrcVT, EVT DestVT) const {
 CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
                                                   bool IsVarArg) {
   switch (CC) {
-  case CallingConv::AMDGPU_KERNEL:
-  case CallingConv::SPIR_KERNEL:
-    llvm_unreachable("kernels should not be handled here");
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
@@ -862,8 +860,10 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::Fast:
   case CallingConv::Cold:
     return CC_AMDGPU_Func;
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
   default:
-    report_fatal_error("Unsupported calling convention.");
+    report_fatal_error("Unsupported calling convention for call");
   }
 }
 
@@ -3088,7 +3088,7 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
   SDValue Src = N->getOperand(0);
 
   // vt1 (truncate (bitcast (build_vector vt0:x, ...))) -> vt1 (bitcast vt0:x)
-  if (Src.getOpcode() == ISD::BITCAST) {
+  if (Src.getOpcode() == ISD::BITCAST && !VT.isVector()) {
     SDValue Vec = Src.getOperand(0);
     if (Vec.getOpcode() == ISD::BUILD_VECTOR) {
       SDValue Elt0 = Vec.getOperand(0);

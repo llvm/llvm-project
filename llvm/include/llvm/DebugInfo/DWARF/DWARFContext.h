@@ -317,13 +317,18 @@ public:
 
   /// Get the compilation unit, the function DIE and lexical block DIE for the
   /// given address where applicable.
+  /// TODO: change input parameter from "uint64_t Address"
+  ///       into "SectionedAddress Address"
   DIEsForAddress getDIEsForAddress(uint64_t Address);
 
-  DILineInfo getLineInfoForAddress(uint64_t Address,
+  DILineInfo getLineInfoForAddress(
+      object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-  DILineInfoTable getLineInfoForAddressRange(uint64_t Address, uint64_t Size,
+  DILineInfoTable getLineInfoForAddressRange(
+      object::SectionedAddress Address, uint64_t Size,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-  DIInliningInfo getInliningInfoForAddress(uint64_t Address,
+  DIInliningInfo getInliningInfoForAddress(
+      object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
 
   bool isLittleEndian() const { return DObj->isLittleEndian(); }
@@ -366,6 +371,8 @@ public:
 private:
   /// Return the compile unit which contains instruction with provided
   /// address.
+  /// TODO: change input parameter from "uint64_t Address"
+  ///       into "SectionedAddress Address"
   DWARFCompileUnit *getCompileUnitForAddress(uint64_t Address);
 };
 

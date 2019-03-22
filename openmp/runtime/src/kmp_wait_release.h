@@ -129,11 +129,13 @@ static void __ompt_implicit_task_end(kmp_info_t *this_thr,
     void *codeptr = NULL;
     if (ompt_enabled.ompt_callback_sync_region_wait) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
-          ompt_sync_region_barrier, ompt_scope_end, NULL, tId, codeptr);
+          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, tId,
+          codeptr);
     }
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
-          ompt_sync_region_barrier, ompt_scope_end, NULL, tId, codeptr);
+          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, tId,
+          codeptr);
     }
 #endif
     if (!KMP_MASTER_TID(ds_tid)) {
@@ -150,13 +152,14 @@ static void __ompt_implicit_task_end(kmp_info_t *this_thr,
 }
 #endif
 
-/* Spin wait loop that first does pause, then yield, then sleep. A thread that
-   calls __kmp_wait_*  must make certain that another thread calls __kmp_release
+/* Spin wait loop that first does pause/yield, then sleep. A thread that calls
+   __kmp_wait_*  must make certain that another thread calls __kmp_release
    to wake it back up to prevent deadlocks!
 
    NOTE: We may not belong to a team at this point.  */
-template <class C, int final_spin>
-static inline void
+template <class C, int final_spin, bool cancellable = false,
+          bool sleepable = true>
+static inline bool
 __kmp_wait_template(kmp_info_t *this_thr,
                     C *flag USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
@@ -176,9 +179,14 @@ __kmp_wait_template(kmp_info_t *this_thr,
   KMP_FSYNC_SPIN_INIT(spin, NULL);
   if (flag->done_check()) {
     KMP_FSYNC_SPIN_ACQUIRED(CCAST(void *, spin));
-    return;
+    return false;
   }
   th_gtid = this_thr->th.th_info.ds.ds_gtid;
+  if (cancellable) {
+    kmp_team_t *team = this_thr->th.th_team;
+    if (team && team->t.t_cancel_request == cancel_parallel)
+      return true;
+  }
 #if KMP_OS_UNIX
   if (final_spin)
     KMP_ATOMIC_ST_REL(&this_thr->th.th_blocking, true);
@@ -264,8 +272,7 @@ final_spin=FALSE)
   }
 #endif
 
-  // Setup for waiting
-  KMP_INIT_YIELD(spins);
+  KMP_INIT_YIELD(spins); // Setup for waiting
 
   if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME
 #if OMP_50_ENABLED
@@ -362,14 +369,8 @@ final_spin=FALSE)
 
     // If we are oversubscribed, or have waited a bit (and
     // KMP_LIBRARY=throughput), then yield
-    // TODO: Should it be number of cores instead of thread contexts? Like:
-    // KMP_YIELD(TCR_4(__kmp_nth) > __kmp_ncores);
-    // Need performance improvement data to make the change...
-    if (oversubscribed) {
-      KMP_YIELD(1);
-    } else {
-      KMP_YIELD_SPIN(spins);
-    }
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+
     // Check if this thread was transferred from a team
     // to the thread pool (or vice-versa) while spinning.
     in_pool = !!TCR_4(this_thr->th.th_in_pool);
@@ -400,6 +401,12 @@ final_spin=FALSE)
       KMP_PUSH_PARTITIONED_TIMER(OMP_idle);
     }
 #endif
+    // Check if the barrier surrounding this wait loop has been cancelled
+    if (cancellable) {
+      kmp_team_t *team = this_thr->th.th_team;
+      if (team && team->t.t_cancel_request == cancel_parallel)
+        break;
+    }
 
     // Don't suspend if KMP_BLOCKTIME is set to "infinite"
     if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME
@@ -421,6 +428,10 @@ final_spin=FALSE)
     if (KMP_BLOCKING(hibernate_goal, poll_count++))
       continue;
 #endif
+    // Don't suspend if wait loop designated non-sleepable
+    // in template parameters
+    if (!sleepable)
+      continue;
 
 #if OMP_50_ENABLED
     if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
@@ -479,6 +490,21 @@ final_spin=FALSE)
     KMP_ATOMIC_ST_REL(&this_thr->th.th_blocking, false);
 #endif
   KMP_FSYNC_SPIN_ACQUIRED(CCAST(void *, spin));
+  if (cancellable) {
+    kmp_team_t *team = this_thr->th.th_team;
+    if (team && team->t.t_cancel_request == cancel_parallel) {
+      if (tasks_completed) {
+        // undo the previous decrement of unfinished_threads so that the
+        // thread can decrement at the join barrier with no problem
+        kmp_task_team_t *task_team = this_thr->th.th_task_team;
+        std::atomic<kmp_int32> *unfinished_threads =
+            &(task_team->tt.tt_unfinished_threads);
+        KMP_ATOMIC_INC(unfinished_threads);
+      }
+      return true;
+    }
+  }
+  return false;
 }
 
 /* Release any threads specified as waiting on the flag by releasing the flag
@@ -795,6 +821,18 @@ public:
     else
       __kmp_wait_template<kmp_flag_64, FALSE>(
           this_thr, this USE_ITT_BUILD_ARG(itt_sync_obj));
+  }
+  bool wait_cancellable_nosleep(kmp_info_t *this_thr,
+                                int final_spin
+                                    USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
+    bool retval = false;
+    if (final_spin)
+      retval = __kmp_wait_template<kmp_flag_64, TRUE, true, false>(
+          this_thr, this USE_ITT_BUILD_ARG(itt_sync_obj));
+    else
+      retval = __kmp_wait_template<kmp_flag_64, FALSE, true, false>(
+          this_thr, this USE_ITT_BUILD_ARG(itt_sync_obj));
+    return retval;
   }
   void release() { __kmp_release_template(this); }
   flag_type get_ptr_type() { return flag64; }

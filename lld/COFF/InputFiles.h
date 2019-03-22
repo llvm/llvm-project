@@ -46,6 +46,7 @@ class Chunk;
 class Defined;
 class DefinedImportData;
 class DefinedImportThunk;
+class DefinedRegular;
 class Lazy;
 class SectionChunk;
 class Symbol;
@@ -116,6 +117,8 @@ public:
   ArrayRef<SectionChunk *> getGuardLJmpChunks() { return GuardLJmpChunks; }
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
 
+  ArrayRef<uint8_t> getDebugSection(StringRef SecName);
+
   // Returns a Symbol object for the SymbolIndex'th symbol in the
   // underlying object file.
   Symbol *getSymbol(uint32_t SymbolIndex) {
@@ -155,11 +158,18 @@ public:
   // precompiled object. Any difference indicates out-of-date objects.
   llvm::Optional<uint32_t> PCHSignature;
 
+  // Tells whether this file was compiled with /hotpatch
+  bool HotPatchable = false;
+
 private:
   const coff_section* getSection(uint32_t I);
+  const coff_section *getSection(COFFSymbolRef Sym) {
+    return getSection(Sym.getSectionNumber());
+  }
 
   void initializeChunks();
   void initializeSymbols();
+  void initializeFlags();
 
   SectionChunk *
   readSection(uint32_t SectionNumber,
@@ -182,6 +192,16 @@ private:
   void maybeAssociateSEHForMingw(
       COFFSymbolRef Sym, const llvm::object::coff_aux_section_definition *Def,
       const llvm::DenseMap<StringRef, uint32_t> &PrevailingSectionMap);
+
+  // Given a new symbol Sym with comdat selection Selection, if the new
+  // symbol is not (yet) Prevailing and the existing comdat leader set to
+  // Leader, emits a diagnostic if the new symbol and its selection doesn't
+  // match the existing symbol and its selection. If either old or new
+  // symbol have selection IMAGE_COMDAT_SELECT_LARGEST, Sym might replace
+  // the existing leader. In that case, Prevailing is set to true.
+  void handleComdatSelection(COFFSymbolRef Sym,
+                             llvm::COFF::COMDATType &Selection,
+                             bool &Prevailing, DefinedRegular *Leader);
 
   llvm::Optional<Symbol *>
   createDefined(COFFSymbolRef Sym,

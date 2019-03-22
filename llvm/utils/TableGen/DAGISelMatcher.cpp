@@ -211,6 +211,11 @@ void CheckCondCodeMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "CheckCondCode ISD::" << CondCodeName << '\n';
 }
 
+void CheckChild2CondCodeMatcher::printImpl(raw_ostream &OS,
+                                           unsigned indent) const {
+  OS.indent(indent) << "CheckChild2CondCode ISD::" << CondCodeName << '\n';
+}
+
 void CheckValueTypeMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "CheckValueType MVT::" << TypeName << '\n';
 }

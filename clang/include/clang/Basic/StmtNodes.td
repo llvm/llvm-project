@@ -11,8 +11,6 @@ class DStmt<Stmt base, bit abstract = 0> : Stmt<abstract> {
 // Statements
 def NullStmt : Stmt;
 def CompoundStmt : Stmt;
-def LabelStmt : Stmt;
-def AttributedStmt : Stmt;
 def IfStmt : Stmt;
 def SwitchStmt : Stmt;
 def WhileStmt : Stmt;
@@ -28,6 +26,12 @@ def SwitchCase : Stmt<1>;
 def CaseStmt : DStmt<SwitchCase>;
 def DefaultStmt : DStmt<SwitchCase>;
 def CapturedStmt : Stmt;
+
+// Statements that might produce a value (for example, as the last non-null
+// statement in a GNU statement-expression).
+def ValueStmt : Stmt<1>;
+def LabelStmt : DStmt<ValueStmt>;
+def AttributedStmt : DStmt<ValueStmt>;
 
 // Asm statements
 def AsmStmt : Stmt<1>;
@@ -53,7 +57,7 @@ def CoroutineBodyStmt : Stmt;
 def CoreturnStmt : Stmt;
 
 // Expressions
-def Expr : Stmt<1>;
+def Expr : DStmt<ValueStmt, 1>;
 def PredefinedExpr : DStmt<Expr>;
 def DeclRefExpr : DStmt<Expr>;
 def IntegerLiteral : DStmt<Expr>;

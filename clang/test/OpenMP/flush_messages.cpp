@@ -33,7 +33,7 @@ T tmain(T argc) {
 #pragma omp flush // expected-error {{'#pragma omp flush' cannot be an immediate substatement}}
     switch (argc)
     case 1:
-#pragma omp flush
+#pragma omp flush // expected-error {{'#pragma omp flush' cannot be an immediate substatement}}
   switch (argc)
   case 1: {
 #pragma omp flush
@@ -53,7 +53,7 @@ T tmain(T argc) {
 #pragma omp flush
     }
 label:
-#pragma omp flush // expected-error {{'#pragma omp flush' cannot be an immediate substatement}}
+#pragma omp flush
 label1 : {
 #pragma omp flush
 }
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
 #pragma omp flush // expected-error {{'#pragma omp flush' cannot be an immediate substatement}}
     switch (argc)
     case 1:
-#pragma omp flush
+#pragma omp flush // expected-error {{'#pragma omp flush' cannot be an immediate substatement}}
   switch (argc)
   case 1: {
 #pragma omp flush
@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
 #pragma omp flush
     }
 label:
-#pragma omp flush // expected-error {{'#pragma omp flush' cannot be an immediate substatement}}
+#pragma omp flush
 label1 : {
 #pragma omp flush
 }

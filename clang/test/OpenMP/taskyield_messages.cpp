@@ -29,7 +29,7 @@ T tmain(T argc) {
 #pragma omp taskyield // expected-error {{'#pragma omp taskyield' cannot be an immediate substatement}}
     switch (argc)
     case 1:
-#pragma omp taskyield
+#pragma omp taskyield // expected-error {{'#pragma omp taskyield' cannot be an immediate substatement}}
   switch (argc)
   case 1: {
 #pragma omp taskyield
@@ -49,10 +49,13 @@ T tmain(T argc) {
 #pragma omp taskyield
     }
 label:
-#pragma omp taskyield // expected-error {{'#pragma omp taskyield' cannot be an immediate substatement}}
+#pragma omp taskyield
 label1 : {
 #pragma omp taskyield
 }
+if (1)
+  label2:
+#pragma omp taskyield // expected-error {{'#pragma omp taskyield' cannot be an immediate substatement}}
 
   return T();
 }
@@ -83,7 +86,7 @@ int main(int argc, char **argv) {
 #pragma omp taskyield // expected-error {{'#pragma omp taskyield' cannot be an immediate substatement}}
     switch (argc)
     case 1:
-#pragma omp taskyield
+#pragma omp taskyield // expected-error {{'#pragma omp taskyield' cannot be an immediate substatement}}
   switch (argc)
   case 1: {
 #pragma omp taskyield
@@ -103,10 +106,13 @@ int main(int argc, char **argv) {
 #pragma omp taskyield
     }
 label:
-#pragma omp taskyield // expected-error {{'#pragma omp taskyield' cannot be an immediate substatement}}
+#pragma omp taskyield
 label1 : {
 #pragma omp taskyield
 }
+if (1)
+  label2:
+#pragma omp taskyield // expected-error {{'#pragma omp taskyield' cannot be an immediate substatement}}
 
   return tmain(argc);
 }

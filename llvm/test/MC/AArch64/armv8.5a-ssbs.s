@@ -1,5 +1,7 @@
 // RUN:     llvm-mc -triple aarch64 -show-encoding -mattr=+ssbs  < %s      | FileCheck %s
 // RUN:     llvm-mc -triple aarch64 -show-encoding -mattr=+v8.5a < %s      | FileCheck %s
+// RUN:     llvm-mc -triple aarch64 -show-encoding -mcpu=cortex-a76 < %s      | FileCheck %s
+// RUN:     llvm-mc -triple aarch64 -show-encoding -mcpu=cortex-a76ae < %s      | FileCheck %s
 // RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=-ssbs  < %s 2>&1 | FileCheck %s --check-prefix=NOSPECID
 
 mrs x2, SSBS

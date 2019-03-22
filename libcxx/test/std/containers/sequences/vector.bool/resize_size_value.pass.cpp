@@ -16,7 +16,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<bool> v(100);
@@ -48,4 +48,6 @@ int main()
             assert(v[i] == 1);
     }
 #endif
+
+  return 0;
 }

@@ -20,11 +20,13 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER >= 11
     static_assert((std::is_same<std::pointer_traits<int*>::rebind<double>, double*>::value), "");
 #else
     static_assert((std::is_same<std::pointer_traits<int*>::rebind<double>::other, double*>::value), "");
 #endif
+
+  return 0;
 }

@@ -29,7 +29,7 @@ define zeroext i8 @s2z_func(i8 signext %t) {
 ; CHECK-NEXT: .functype z2s_call (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push[[NUM0:[0-9]+]]=, 255{{$}}
 ; CHECK-NEXT: i32.and $push[[NUM1:[0-9]+]]=, $0, $pop[[NUM0]]{{$}}
-; CHECK-NEXT: call $push[[NUM2:[0-9]+]]=, z2s_func@FUNCTION, $pop[[NUM1]]{{$}}
+; CHECK-NEXT: call $push[[NUM2:[0-9]+]]=, z2s_func, $pop[[NUM1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM2]]{{$}}
 define i32 @z2s_call(i32 %t) {
   %s = trunc i32 %t to i8
@@ -44,7 +44,7 @@ define i32 @z2s_call(i32 %t) {
 ; CHECK-NEXT: i32.shl $push[[NUM1:[0-9]+]]=, $0, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT: i32.const $push[[NUM6:[0-9]+]]=, 24{{$}}
 ; CHECK-NEXT: i32.shr_s $push[[NUM2:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM6]]{{$}}
-; CHECK-NEXT: call $push[[NUM3:[0-9]]]=, s2z_func@FUNCTION, $pop[[NUM2]]{{$}}
+; CHECK-NEXT: call $push[[NUM3:[0-9]]]=, s2z_func, $pop[[NUM2]]{{$}}
 ; CHECK-NEXT: i32.const $push[[NUM7:[0-9]+]]=, 24{{$}}
 ; CHECK-NEXT: i32.shl $push[[NUM4:[0-9]+]]=, $pop[[NUM3]], $pop[[NUM7]]{{$}}
 ; CHECK-NEXT: i32.const $push[[NUM8:[0-9]+]]=, 24{{$}}

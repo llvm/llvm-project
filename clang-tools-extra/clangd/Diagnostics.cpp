@@ -161,11 +161,11 @@ std::string capitalize(std::string Message) {
 ///
 ///     dir1/dir2/dir3/../../dir4/header.h:12:23
 ///     note: candidate function not viable: requires 3 arguments
-std::string mainMessage(const Diag &D) {
+std::string mainMessage(const Diag &D, bool DisplayFixesCount) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << D.Message;
-  if (!D.Fixes.empty())
+  if (DisplayFixesCount && !D.Fixes.empty())
     OS << " (" << (D.Fixes.size() > 1 ? "fixes" : "fix") << " available)";
   for (auto &Note : D.Notes) {
     OS << "\n\n";
@@ -252,7 +252,7 @@ void toLSPDiags(
 
   {
     clangd::Diagnostic Main = FillBasicFields(D);
-    Main.message = mainMessage(D);
+    Main.message = mainMessage(D, Opts.DisplayFixesCount);
     if (Opts.EmbedFixesInDiagnostics) {
       Main.codeActions.emplace();
       for (const auto &Fix : D.Fixes)
@@ -335,6 +335,11 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
     llvm::SmallVector<TextEdit, 1> Edits;
     for (auto &FixIt : Info.getFixItHints()) {
+      // Follow clang's behavior, don't apply FixIt to the code in macros,
+      // we are less certain it is the right fix.
+      if (FixIt.RemoveRange.getBegin().isMacroID() ||
+          FixIt.RemoveRange.getEnd().isMacroID())
+        return false;
       if (!isInsideMainFile(FixIt.RemoveRange.getBegin(),
                             Info.getSourceManager()))
         return false;

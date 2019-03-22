@@ -12,6 +12,11 @@
 // allocator:
 // pointer allocate(size_type n, allocator<void>::const_pointer hint=0);
 
+// When back-deploying to macosx10.7, the RTTI for exception classes
+// incorrectly provided by libc++.dylib is mixed with the one in
+// libc++abi.dylib and exceptions are not caught properly.
+// XFAIL: with_system_cxx_lib=macosx10.7
+
 #include <memory>
 #include <cassert>
 
@@ -39,8 +44,10 @@ void test()
     test_max<T> ((size_t) -1);                     // way too large
 }
 
-int main()
+int main(int, char**)
 {
     test<double>();
     LIBCPP_ONLY(test<const double>());
+
+  return 0;
 }

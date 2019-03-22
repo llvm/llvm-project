@@ -1014,6 +1014,26 @@ MDNode *findOptionMDForLoop(const Loop *TheLoop, StringRef Name);
 /// is representing an access group.
 bool isValidAsAccessGroup(MDNode *AccGroup);
 
+/// Create a new LoopID after the loop has been transformed.
+///
+/// This can be used when no follow-up loop attributes are defined
+/// (llvm::makeFollowupLoopID returning None) to stop transformations to be
+/// applied again.
+///
+/// @param Context        The LLVMContext in which to create the new LoopID.
+/// @param OrigLoopID     The original LoopID; can be nullptr if the original
+///                       loop has no LoopID.
+/// @param RemovePrefixes Remove all loop attributes that have these prefixes.
+///                       Use to remove metadata of the transformation that has
+///                       been applied.
+/// @param AddAttrs       Add these loop attributes to the new LoopID.
+///
+/// @return A new LoopID that can be applied using Loop::setLoopID().
+llvm::MDNode *
+makePostTransformationMetadata(llvm::LLVMContext &Context, MDNode *OrigLoopID,
+                               llvm::ArrayRef<llvm::StringRef> RemovePrefixes,
+                               llvm::ArrayRef<llvm::MDNode *> AddAttrs);
+
 } // End llvm namespace
 
 #endif

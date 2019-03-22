@@ -118,7 +118,9 @@ test2()
     do_search(Iter1(ih), Iter1(ih+sh), Iter2(ii), Iter2(ii+3), Iter1(ih+3),  sh*3);
 }
 
-int main() {
+int main(int, char**) {
     test<random_access_iterator<const int*>, random_access_iterator<const int*> >();
     test2<random_access_iterator<const char*>, random_access_iterator<const char*> >();
+
+  return 0;
 }

@@ -23,7 +23,7 @@
     typedef std::string_view   u8string_view;
 #endif
 
-int main()
+int main(int, char**)
 {
     using namespace std::literals::string_view_literals;
 
@@ -69,4 +69,6 @@ int main()
     static_assert(noexcept( L"ABC"sv), "");
     static_assert(noexcept( u"ABC"sv), "");
     static_assert(noexcept( U"ABC"sv), "");
+
+  return 0;
 }

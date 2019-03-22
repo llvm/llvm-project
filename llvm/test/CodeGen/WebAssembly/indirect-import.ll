@@ -20,31 +20,31 @@ entry:
   %s = alloca void (%struct.big*)*, align 4
   %i128ret = alloca i128 (i64)*, align 8
 
-; CHECK-DAG: i32.const       {{.+}}=, extern_fd@FUNCTION
-; CHECK-DAG: i32.const       {{.+}}=, extern_vj@FUNCTION
+; CHECK-DAG: i32.const       {{.+}}=, extern_fd
+; CHECK-DAG: i32.const       {{.+}}=, extern_vj
   store float (double)* @extern_fd, float (double)** %fd, align 4
   store void (i64)* @extern_vj, void (i64)** %vj, align 4
   %0 = load void (i64)*, void (i64)** %vj, align 4
   call void %0(i64 1)
 
-; CHECK: i32.const       {{.+}}=, extern_v@FUNCTION
+; CHECK: i32.const       {{.+}}=, extern_v
   store void ()* @extern_v, void ()** %v, align 4
   %1 = load void ()*, void ()** %v, align 4
   call void %1()
 
-; CHECK: i32.const       {{.+}}=, extern_ijidf@FUNCTION
+; CHECK: i32.const       {{.+}}=, extern_ijidf
   store i32 (i64, i32, double, float)* @extern_ijidf, i32 (i64, i32, double, float)** %ijidf, align 4
   %2 = load i32 (i64, i32, double, float)*, i32 (i64, i32, double, float)** %ijidf, align 4
   %call = call i32 %2(i64 1, i32 2, double 3.000000e+00, float 4.000000e+00)
 
-; CHECK-DAG: i32.const       {{.+}}=, extern_struct@FUNCTION
-; CHECK-DAG: i32.const       {{.+}}=, extern_sret@FUNCTION
+; CHECK-DAG: i32.const       {{.+}}=, extern_struct
+; CHECK-DAG: i32.const       {{.+}}=, extern_sret
   store void (%struct.big*)* @extern_struct, void (%struct.big*)** %vs, align 4
   store void (%struct.big*)* @extern_sret, void (%struct.big*)** %s, align 4
   %3 = load float (double)*, float (double)** %fd, align 4
   %4 = ptrtoint float (double)* %3 to i32
 
-; CHECK: i32.const       {{.+}}=, extern_i128ret@FUNCTION
+; CHECK: i32.const       {{.+}}=, extern_i128ret
   store i128 (i64)* @extern_i128ret, i128 (i64)** %i128ret, align 8
   %5 = load i128 (i64)*, i128 (i64)** %i128ret, align 8
   %6 = call i128 %5(i64 1)

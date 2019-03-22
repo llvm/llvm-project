@@ -103,6 +103,10 @@ public:
   /// not already be in the cache.
   void registerAssumption(CallInst *CI);
 
+  /// Remove an \@llvm.assume intrinsic from this function's cache if it has
+  /// been added to the cache earlier.
+  void unregisterAssumption(CallInst *CI);
+
   /// Update the cache of values being affected by this assumption (i.e.
   /// the values about which this assumption provides information).
   void updateAffectedValues(CallInst *CI);
@@ -207,6 +211,10 @@ public:
   /// If no assumptions are cached, this will scan the function. Otherwise, the
   /// existing cache will be returned.
   AssumptionCache &getAssumptionCache(Function &F);
+
+  /// Return the cached assumptions for a function if it has already been
+  /// scanned. Otherwise return nullptr.
+  AssumptionCache *lookupAssumptionCache(Function &F);
 
   AssumptionCacheTracker();
   ~AssumptionCacheTracker() override;

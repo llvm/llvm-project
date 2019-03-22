@@ -39,7 +39,9 @@ void test_time_point_resolution_and_range() {
   ASSERT_SAME_TYPE(Period, std::nano);
 }
 
-int main() {
+int main(int, char**) {
   test_trivial_clock();
   test_time_point_resolution_and_range();
+
+  return 0;
 }

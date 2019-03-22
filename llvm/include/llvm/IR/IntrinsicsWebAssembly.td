@@ -110,4 +110,18 @@ def int_wasm_alltrue :
             [llvm_anyvector_ty],
             [IntrNoMem, IntrSpeculatable]>;
 
+//===----------------------------------------------------------------------===//
+// Bulk memory intrinsics
+//===----------------------------------------------------------------------===//
+
+def int_wasm_memory_init :
+  Intrinsic<[],
+            [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrWriteMem, IntrInaccessibleMemOrArgMemOnly, WriteOnly<2>,
+             IntrHasSideEffects]>;
+def int_wasm_data_drop :
+  Intrinsic<[],
+            [llvm_i32_ty],
+            [IntrNoDuplicate, IntrHasSideEffects]>;
+
 } // TargetPrefix = "wasm"

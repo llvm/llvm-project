@@ -11,7 +11,9 @@
 
 #include <map>
 
-int main()
+int main(int, char**)
 {
     std::map<int, int, std::less<int>, std::allocator<long> > m;
+
+  return 0;
 }

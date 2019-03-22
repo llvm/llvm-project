@@ -15,11 +15,11 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -27,6 +27,10 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+namespace lldb_private {
+class Process;
+}
 
 //------------------------------------------------------------------
 // Static Variables

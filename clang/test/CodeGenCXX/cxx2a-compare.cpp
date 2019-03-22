@@ -80,7 +80,7 @@ auto mem_ptr_test(MemPtrT x, MemPtrT y) {
   // CHECK: %cmp.ptr.null = icmp eq [[TY]] %lhs.memptr.ptr, 0
   // CHECK: %cmp.adj = icmp eq [[TY]] %lhs.memptr.adj, %rhs.memptr.adj
   // CHECK: %[[OR:.*]] = or i1
-  // CHECK-SAME %cmp.adj
+  // CHECK-SAME: %cmp.adj
   // CHECK: %memptr.eq = and i1 %cmp.ptr, %[[OR]]
   // CHECK: %sel.eq = select i1 %memptr.eq, i8 [[EQ]], i8 [[NE]]
   // CHECK: %__value_ = getelementptr inbounds %[[SE]], %[[SE]]* %[[DEST]]

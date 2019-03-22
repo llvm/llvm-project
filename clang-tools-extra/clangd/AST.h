@@ -13,9 +13,10 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H_
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H_
 
-#include "index/Index.h"
+#include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/MacroInfo.h"
 
 namespace clang {
 class SourceManager;

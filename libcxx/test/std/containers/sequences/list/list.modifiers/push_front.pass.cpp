@@ -15,7 +15,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::list<int> c;
@@ -33,4 +33,6 @@ int main()
     assert((c == std::list<int, min_allocator<int>>(a, a+5)));
     }
 #endif
+
+  return 0;
 }

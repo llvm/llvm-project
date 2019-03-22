@@ -74,6 +74,9 @@ WHOLE-ARCHIVE: foo.o -wholearchive:bar.a baz.a
 RUN: ld.lld -### -m i386pep foo.o | FileCheck -check-prefix MINGW-FLAG %s
 MINGW-FLAG: -lldmingw
 
+RUN: ld.lld -### -m i386pep foo.o --exclude-all-symbols | FileCheck -check-prefix EXCLUDE-ALL %s
+EXCLUDE-ALL: -exclude-all-symbols
+
 RUN: ld.lld -### -m i386pep foo.o --export-all-symbols | FileCheck -check-prefix EXPORT-ALL %s
 EXPORT-ALL: -export-all-symbols
 
@@ -151,3 +154,9 @@ REQUIRE-DEFINED: -include:_foo -include:_bar -include:_baz -include:_foo2
 
 RUN: ld.lld -### -m i386pep foo.o -Llibpath | FileCheck -check-prefix LIBPATH %s
 LIBPATH: -libpath:libpath
+
+RUN: ld.lld -### -m i386pep foo.o --no-insert-timestamp | FileCheck -check-prefix NOTIMESTAMP %s
+RUN: ld.lld -### -m i386pep foo.o --insert-timestamp --no-insert-timestamp | FileCheck -check-prefix NOTIMESTAMP %s
+NOTIMESTAMP: -timestamp:0
+RUN: ld.lld -### -m i386pep foo.o --no-insert-timestamp --insert-timestamp | FileCheck -check-prefix TIMESTAMP %s
+TIMESTAMP-NOT: -timestamp:0
