@@ -31,6 +31,7 @@ void llvm::initializeTapirOpts(PassRegistry &Registry) {
   initializeLowerTapirToTargetPass(Registry);
   initializeAnalyzeTapirPass(Registry);
   initializeTaskSimplifyPass(Registry);
+  initializeLoopStripMinePass(Registry);
 }
 
 void LLVMInitializeTapirOpts(LLVMPassRegistryRef R) {

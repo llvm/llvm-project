@@ -97,11 +97,18 @@ public:
   /// stronger forms.
   void replaceNonPrimaryIVs(PredicatedScalarEvolution &PSE);
 
+  /// Identify the loop condition instruction, and determine if the loop uses an
+  /// inclusive or exclusive range.
+  void getLoopCondition();
+
   /// Fix up external users of the induction variable.
   void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
                     PredicatedScalarEvolution &PSE);
 
   /// Returns (and creates if needed) the original loop trip count.
+  const SCEV *getBackedgeTakenCount(PredicatedScalarEvolution &PSE) const;
+  const SCEV *getExitCount(const SCEV *BackedgeTakenCount,
+                           PredicatedScalarEvolution &PSE) const;
   Value *getOrCreateTripCount(PredicatedScalarEvolution &PSE);
 
   /// Record task T as a descendant task under this loop and not under a

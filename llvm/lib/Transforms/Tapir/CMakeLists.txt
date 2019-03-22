@@ -4,6 +4,8 @@ add_llvm_library(LLVMTapirOpts
   CilkRABI.cpp
   LoopSpawning.cpp
   LoopSpawningTI.cpp
+  LoopStripMine.cpp
+  LoopStripMinePass.cpp
   LoweringUtils.cpp
   OpenMPABI.cpp
   Outline.cpp

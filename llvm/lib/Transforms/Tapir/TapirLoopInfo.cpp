@@ -224,6 +224,23 @@ void TapirLoopInfo::replaceNonPrimaryIVs(PredicatedScalarEvolution &PSE) {
   }
 }
 
+void TapirLoopInfo::getLoopCondition() {
+  // Get the loop condition.
+  BranchInst *BI =
+    dyn_cast<BranchInst>(getLoop()->getLoopLatch()->getTerminator());
+  assert(BI && "Loop latch not terminated by a branch.");
+  Condition = dyn_cast<ICmpInst>(BI->getCondition());
+  LLVM_DEBUG(dbgs() << "\tLoop condition " << *Condition << "\n");
+  assert(Condition && "Condition is not an integer comparison.");
+  assert(Condition->isEquality() && "Condition is not an equality comparison.");
+
+  if (Condition->getOperand(0) == PrimaryInduction ||
+      Condition->getOperand(1) == PrimaryInduction)
+    // The condition examines the primary induction before the increment.
+    // Hence, the end iteration is included in the loop bounds.
+    InclusiveRange = true;
+}
+
 static Value *getEscapeValue(Instruction *UI, const InductionDescriptor &II,
                              Value *TripCount, PredicatedScalarEvolution &PSE,
                              bool PostInc) {
@@ -289,38 +306,24 @@ void TapirLoopInfo::fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II
   }
 
   for (auto &I : MissingVals) {
+    LLVM_DEBUG(dbgs() << "Replacing external IV use:" << *I.first << " with "
+               << *I.second << "\n");
     PHINode *PHI = cast<PHINode>(I.first);
     PHI->replaceAllUsesWith(I.second);
     PHI->eraseFromParent();
   }
 }
 
-/// Returns (and creates if needed) the original loop trip count.
-Value *TapirLoopInfo::getOrCreateTripCount(PredicatedScalarEvolution &PSE) {
-  if (TripCount)
-    return TripCount;
+const SCEV *TapirLoopInfo::getBackedgeTakenCount(
+    PredicatedScalarEvolution &PSE) const {
   Loop *L = getLoop();
-
-  // Get the existing SSA value being used for the end condition of the loop.
-  Value *ConditionEnd = Condition->getOperand(0);
-  {
-    Value *PrimaryIVInc =
-      PrimaryInduction->getIncomingValueForBlock(Condition->getParent());
-    if (ConditionEnd == (InclusiveRange ? PrimaryInduction : PrimaryIVInc))
-      ConditionEnd = Condition->getOperand(1);
-  }
-
-  IRBuilder<> Builder(L->getLoopPreheader()->getTerminator());
-  // Find the loop boundaries.
   ScalarEvolution *SE = PSE.getSE();
   const SCEV *BackedgeTakenCount = PSE.getBackedgeTakenCount();
   if (BackedgeTakenCount == SE->getCouldNotCompute())
     BackedgeTakenCount = SE->getExitCount(L, L->getLoopLatch());
 
   if (BackedgeTakenCount == SE->getCouldNotCompute())
-    return nullptr;
-  // assert(BackedgeTakenCount != SE->getCouldNotCompute() &&
-  //        "Invalid loop count");
+    return BackedgeTakenCount;
 
   Type *IdxTy = getWidestInductionType();
 
@@ -334,13 +337,54 @@ Value *TapirLoopInfo::getOrCreateTripCount(PredicatedScalarEvolution &PSE) {
     BackedgeTakenCount = SE->getTruncateOrNoop(BackedgeTakenCount, IdxTy);
   BackedgeTakenCount = SE->getNoopOrZeroExtend(BackedgeTakenCount, IdxTy);
 
+  return BackedgeTakenCount;
+}
+
+const SCEV *TapirLoopInfo::getExitCount(const SCEV *BackedgeTakenCount,
+                                        PredicatedScalarEvolution &PSE) const {
+  ScalarEvolution *SE = PSE.getSE();
   const SCEV *ExitCount;
-  // Get the total trip count from the count by adding 1.
   if (InclusiveRange)
     ExitCount = BackedgeTakenCount;
   else
-   ExitCount = SE->getAddExpr(
-      BackedgeTakenCount, SE->getOne(BackedgeTakenCount->getType()));
+    // Get the total trip count from the count by adding 1.
+    ExitCount = SE->getAddExpr(
+        BackedgeTakenCount, SE->getOne(BackedgeTakenCount->getType()));
+  return ExitCount;
+}
+
+/// Returns (and creates if needed) the original loop trip count.
+Value *TapirLoopInfo::getOrCreateTripCount(PredicatedScalarEvolution &PSE) {
+  if (TripCount)
+    return TripCount;
+  Loop *L = getLoop();
+
+  // Get the existing SSA value being used for the end condition of the loop.
+  if (!Condition)
+    getLoopCondition();
+
+  Value *ConditionEnd = Condition->getOperand(0);
+  {
+    Value *PrimaryIVInc =
+      PrimaryInduction->getIncomingValueForBlock(Condition->getParent());
+    if (ConditionEnd == (InclusiveRange ? PrimaryInduction : PrimaryIVInc))
+      ConditionEnd = Condition->getOperand(1);
+  }
+
+  IRBuilder<> Builder(L->getLoopPreheader()->getTerminator());
+  ScalarEvolution *SE = PSE.getSE();
+
+  // Find the loop boundaries.
+  const SCEV *BackedgeTakenCount = getBackedgeTakenCount(PSE);
+
+  if (BackedgeTakenCount == SE->getCouldNotCompute())
+    return nullptr;
+  // assert(BackedgeTakenCount != SE->getCouldNotCompute() &&
+  //        "Invalid loop count");
+
+  const SCEV *ExitCount = getExitCount(BackedgeTakenCount, PSE);
+
+  Type *IdxTy = getWidestInductionType();
 
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
 
@@ -390,21 +434,6 @@ bool TapirLoopInfo::prepareForOutlining(
 
   // Replace any non-primary IV's.
   replaceNonPrimaryIVs(PSE);
-
-  // Get the loop condition.
-  BranchInst *BI =
-    dyn_cast<BranchInst>(getLoop()->getLoopLatch()->getTerminator());
-  assert(BI && "Loop latch not terminated by a branch.");
-  Condition = dyn_cast<ICmpInst>(BI->getCondition());
-  LLVM_DEBUG(dbgs() << "\tLoop condition " << *Condition << "\n");
-  assert(Condition && "Condition is not an integer comparison.");
-  assert(Condition->isEquality() && "Condition is not an equality comparison.");
-
-  if (Condition->getOperand(0) == PrimaryInduction ||
-      Condition->getOperand(1) == PrimaryInduction)
-    // The condition examines the primary induction before the increment.
-    // Hence, the end iteration is included in the loop bounds.
-    InclusiveRange = true;
 
   // Compute the trip count for this loop.
   //

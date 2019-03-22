@@ -202,6 +202,9 @@ public:
   void getUnrollingPreferences(Loop *, ScalarEvolution &,
                                TTI::UnrollingPreferences &) {}
 
+  void getStripMiningPreferences(Loop *, ScalarEvolution &,
+                                 TTI::StripMiningPreferences &) {}
+
   bool isLegalAddImmediate(int64_t Imm) { return false; }
 
   bool isLegalICmpImmediate(int64_t Imm) { return false; }

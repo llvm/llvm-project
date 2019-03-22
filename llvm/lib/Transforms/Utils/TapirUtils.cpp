@@ -234,9 +234,11 @@ class LandingPadInliningInfo {
 
   SmallVector<Value*, 8> UnwindDestPHIValues;
 
+  /// Dominator tree to update.
+  DominatorTree *DT = nullptr;
 public:
-  LandingPadInliningInfo(DetachInst *DI)
-      : OuterResumeDest(DI->getUnwindDest()) {
+  LandingPadInliningInfo(DetachInst *DI, DominatorTree *DT = nullptr)
+      : OuterResumeDest(DI->getUnwindDest()), DT(DT) {
     // If there are PHI nodes in the unwind destination block, we need to keep
     // track of which values came into them from the detach before removing the
     // edge from this block.
@@ -292,6 +294,8 @@ BasicBlock *LandingPadInliningInfo::getInnerResumeDest() {
   InnerResumeDest =
     OuterResumeDest->splitBasicBlock(SplitPoint,
                                      OuterResumeDest->getName() + ".body");
+  if (DT)
+    DT->addNewBlock(InnerResumeDest, OuterResumeDest);
 
   // The number of incoming edges we expect to the inner landing pad.
   const unsigned PHICapacity = 2;
@@ -327,19 +331,52 @@ void LandingPadInliningInfo::forwardDetachedRethrow(InvokeInst *DR) {
   BasicBlock *Src = DR->getParent();
 
   BranchInst::Create(Dest, Src);
+  if (DT)
+    DT->changeImmediateDominator(
+        Dest, DT->findNearestCommonDominator(Dest, Src));
 
   // Update the PHIs in the destination. They were inserted in an order which
   // makes this work.
   addIncomingPHIValuesForInto(Src, Dest);
 
   InnerEHValuesPHI->addIncoming(DR->getOperand(1), Src);
+
+  // Update the DT
+  BasicBlock *NormalDest = nullptr, *UnwindDest = nullptr;
+  if (DT) {
+    if (DR->getNormalDest()->getSinglePredecessor()) {
+      NormalDest = DR->getNormalDest();
+      DT->eraseNode(DR->getNormalDest());
+    } else
+      DT->deleteEdge(Src, DR->getNormalDest());
+
+    if (DR->getUnwindDest()->getSinglePredecessor()) {
+      UnwindDest = DR->getUnwindDest();
+      DT->eraseNode(DR->getUnwindDest());
+    } else
+      DT->deleteEdge(Src, DR->getUnwindDest());
+  }
+
+  // Remove the DR
+  if (!NormalDest)
+    for (PHINode &PN : DR->getNormalDest()->phis())
+      PN.removeIncomingValue(Src);
+  if (!UnwindDest)
+    for (PHINode &PN : DR->getUnwindDest()->phis())
+      PN.removeIncomingValue(Src);
+
   DR->eraseFromParent();
+  if (NormalDest)
+    NormalDest->eraseFromParent();
+  if (UnwindDest)
+    UnwindDest->eraseFromParent();
 }
 
 static void handleDetachedLandingPads(
     DetachInst *DI, SmallPtrSetImpl<LandingPadInst *> &InlinedLPads,
-    SmallVectorImpl<Instruction *> &DetachedRethrows) {
-  LandingPadInliningInfo DetUnwind(DI);
+    SmallVectorImpl<Instruction *> &DetachedRethrows,
+    DominatorTree *DT = nullptr) {
+  LandingPadInliningInfo DetUnwind(DI, DT);
 
   // Append the clauses from the outer landing pad instruction into the inlined
   // landing pad instructions.
@@ -362,7 +399,8 @@ static void cloneEHBlocks(Function *F, Value *SyncRegion,
                           SmallVectorImpl<BasicBlock *> &EHBlocksToClone,
                           SmallPtrSetImpl<BasicBlock *> &EHBlockPreds,
                           SmallPtrSetImpl<LandingPadInst *> *InlinedLPads,
-                          SmallVectorImpl<Instruction *> *DetachedRethrows) {
+                          SmallVectorImpl<Instruction *> *DetachedRethrows,
+                          DominatorTree *DT = nullptr) {
   ValueToValueMapTy VMap;
   SmallVector<BasicBlock *, 8> NewBlocks;
   SmallPtrSet<BasicBlock *, 8> NewBlocksSet;
@@ -371,6 +409,8 @@ static void cloneEHBlocks(Function *F, Value *SyncRegion,
   for (BasicBlock *BB : EHBlocksToClone) {
     BasicBlock *New = CloneBasicBlock(BB, VMap, ".sd", F);
     VMap[BB] = New;
+    if (DT)
+      DT->addNewBlock(New, DT->getRoot());
     NewBlocks.push_back(New);
     NewBlocksSet.insert(New);
   }
@@ -401,6 +441,15 @@ static void cloneEHBlocks(Function *F, Value *SyncRegion,
 
   for (BasicBlock *EHBlock : EHBlocksToClone) {
     BasicBlock *NewEHBlock = cast<BasicBlock>(VMap[EHBlock]);
+    BasicBlock *IDomBB = nullptr;
+    if (DT) {
+      BasicBlock *IDomBB = DT->getNode(EHBlock)->getIDom()->getBlock();
+      if (VMap.lookup(IDomBB))
+        DT->changeImmediateDominator(cast<BasicBlock>(VMap[EHBlock]),
+                                     cast<BasicBlock>(VMap[IDomBB]));
+      else
+        DT->changeImmediateDominator(cast<BasicBlock>(VMap[EHBlock]), IDomBB);
+    }
     // Move the edges from Preds to point to NewBB instead of BB.
     for (BasicBlock *Pred : EHBlockPreds) {
       // This is slightly more strict than necessary; the minimum requirement is
@@ -409,6 +458,8 @@ static void cloneEHBlocks(Function *F, Value *SyncRegion,
       assert(!isa<IndirectBrInst>(Pred->getTerminator()) &&
              "Cannot split an edge from an IndirectBrInst");
       Pred->getTerminator()->replaceUsesOfWith(EHBlock, NewEHBlock);
+      if (DT && Pred == IDomBB)
+        DT->deleteEdge(Pred, EHBlock);
     }
   }
 
@@ -459,7 +510,8 @@ void llvm::SerializeDetach(DetachInst *DI, BasicBlock *ParentEntry,
                            SmallVectorImpl<BasicBlock *> *EHBlocksToClone,
                            SmallPtrSetImpl<BasicBlock *> *EHBlockPreds,
                            SmallPtrSetImpl<LandingPadInst *> *InlinedLPads,
-                           SmallVectorImpl<Instruction *> *DetachedRethrows) {
+                           SmallVectorImpl<Instruction *> *DetachedRethrows,
+                           DominatorTree *DT) {
   BasicBlock *Spawner = DI->getParent();
   BasicBlock *TaskEntry = DI->getDetached();
   BasicBlock *Continue = DI->getContinue();
@@ -470,7 +522,7 @@ void llvm::SerializeDetach(DetachInst *DI, BasicBlock *ParentEntry,
     assert(EHBlockPreds &&
            "Given EH blocks to clone, but not blocks exiting to them.");
     cloneEHBlocks(Spawner->getParent(), SyncRegion, *EHBlocksToClone,
-                  *EHBlockPreds, InlinedLPads, DetachedRethrows);
+                  *EHBlockPreds, InlinedLPads, DetachedRethrows, DT);
   }
 
   // Collect the exit points into a single vector.
@@ -508,20 +560,33 @@ void llvm::SerializeDetach(DetachInst *DI, BasicBlock *ParentEntry,
   if (DI->hasUnwindDest()) {
     assert(InlinedLPads && "Missing set of landing pads in task.");
     assert(DetachedRethrows && "Missing set of detached rethrows in task.");
-    handleDetachedLandingPads(DI, *InlinedLPads, *DetachedRethrows);
+    handleDetachedLandingPads(DI, *InlinedLPads, *DetachedRethrows, DT);
   }
 
   // Replace reattaches with unconditional branches to the continuation.
+  BasicBlock *ReattachDom = nullptr;
   for (Instruction *I : Reattaches) {
     assert(isa<ReattachInst>(I) && "Recorded reattach is not a reattach");
     assert(cast<ReattachInst>(I)->getSyncRegion() == SyncRegion &&
            "Reattach does not match sync region of detach.");
+    if (DT) {
+      if (!ReattachDom)
+        ReattachDom = I->getParent();
+      else
+        ReattachDom = DT->findNearestCommonDominator(ReattachDom,
+                                                     I->getParent());
+    }
     ReplaceInstWithInst(I, BranchInst::Create(Continue));
   }
 
   // Replace the detach with an unconditional branch to the task entry.
   Continue->removePredecessor(Spawner);
   ReplaceInstWithInst(DI, BranchInst::Create(TaskEntry));
+
+  // Update dominator tree.
+  if (DT)
+    if (DT->dominates(Spawner, Continue))
+      DT->changeImmediateDominator(Continue, ReattachDom);
 }
 
 /// Analyze a task for serialization
@@ -577,8 +642,9 @@ void llvm::AnalyzeTaskForSerialization(
   }
 }
 
-/// Serialize the detach DI that spawns task T.
-void llvm::SerializeDetach(DetachInst *DI, Task *T) {
+/// Serialize the detach DI that spawns task T.  If provided, the dominator tree
+/// DT will be updated to reflect the serialization.
+void llvm::SerializeDetach(DetachInst *DI, Task *T, DominatorTree *DT) {
   assert(DI && "SerializeDetach given nullptr for detach.");
   assert(DI == T->getDetach() && "Task and detach arguments do not match.");
   SmallVector<BasicBlock *, 4> EHBlocksToClone;
@@ -591,7 +657,7 @@ void llvm::SerializeDetach(DetachInst *DI, Task *T) {
                               InlinedLPads, DetachedRethrows);
   SerializeDetach(DI, T->getParentTask()->getEntry(), Reattaches,
                   &EHBlocksToClone, &EHBlockPreds, &InlinedLPads,
-                  &DetachedRethrows);
+                  &DetachedRethrows, DT);
 }
 
 /// SerializeDetachedCFG - Serialize the sub-CFG detached by the specified
@@ -1093,6 +1159,32 @@ void llvm::TapirLoopHints::writeHintsToClonedMetadata(ArrayRef<Hint> HintTypes,
   ClonedLatch->getTerminator()->setMetadata(LLVMContext::MD_loop, NewLoopID);
 }
 
+/// Sets current hints into loop metadata, keeping other values intact.
+void llvm::TapirLoopHints::clearHintsMetadata() {
+  Hint Hints[] = {Hint("spawn.strategy", ST_SEQ, HK_STRATEGY),
+                  Hint("grainsize", 0, HK_GRAINSIZE)};
+  // Reserve the first element to LoopID (see below).
+  SmallVector<Metadata *, 4> MDs(1);
+  // If the loop already has metadata, then ignore the existing operands.
+  MDNode *LoopID = TheLoop->getLoopID();
+  if (LoopID) {
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
+      MDNode *Node = cast<MDNode>(LoopID->getOperand(i));
+      // If node in update list, ignore old value.
+      if (!matchesHintMetadataName(Node, Hints))
+        MDs.push_back(Node);
+    }
+  }
+
+  // Replace current metadata node with new one.
+  LLVMContext &Context = TheLoop->getHeader()->getContext();
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+
+  TheLoop->setLoopID(NewLoopID);
+}
+
 /// Returns true if Tapir-loop hints require loop outlining during lowering.
 bool llvm::hintsDemandOutlining(const TapirLoopHints &Hints) {
   switch (Hints.getStrategy()) {
@@ -1101,9 +1193,8 @@ bool llvm::hintsDemandOutlining(const TapirLoopHints &Hints) {
   }
 }
 
-/// Examine a given loop to determine if its a Tapir loop that can and should be
-/// processed.  Returns the Task that encodes the loop body if so, or nullptr if
-/// not.
+/// Examine a given loop to determine if its a Tapir loop.  Returns the Task
+/// that encodes the loop body if so, or nullptr if not.
 Task *llvm::getTaskIfTapirLoop(const Loop *L, TaskInfo *TI) {
   if (!L || !TI)
     return nullptr;

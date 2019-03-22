@@ -80,6 +80,12 @@ FunctionPass *createAnalyzeTapirPass();
 //
 FunctionPass *createTaskSimplifyPass();
 
+//===----------------------------------------------------------------------===//
+//
+// LoopStripMinePass - Stripmine Tapir loops
+//
+Pass *createLoopStripMinePass(int Count = -1);
+
 } // End llvm namespace
 
 #endif

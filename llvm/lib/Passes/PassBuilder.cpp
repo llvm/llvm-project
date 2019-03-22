@@ -165,6 +165,7 @@
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Tapir/LoopSpawningTI.h"
+#include "llvm/Transforms/Tapir/LoopStripMinePass.h"
 #include "llvm/Transforms/Tapir/TapirToTarget.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
@@ -212,6 +213,10 @@ static cl::opt<bool> EnableSyntheticCounts(
     "enable-npm-synthetic-counts", cl::init(false), cl::Hidden, cl::ZeroOrMore,
     cl::desc("Run synthetic function entry count generation "
              "pass"));
+
+static cl::opt<bool> EnableTapirLoopStripmine(
+    "enable-npm-tapir-loop-stripmine", cl::init(false), cl::Hidden,
+    cl::desc("Enable the new, experimental Tapir LoopStripMine Pass"));
 
 static Regex DefaultAliasRegex(
     "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
@@ -883,6 +888,11 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // currently only performed for loops marked with the metadata
   // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
   OptimizePM.addPass(LoopDistributePass());
+
+  // Stripmine Tapir loops, if pass is enabled.
+  // TODO: Cleanup loops afterwards.
+  if (EnableTapirLoopStripmine)
+    OptimizePM.addPass(LoopStripMinePass());
 
   // Now run the core loop vectorizer.
   OptimizePM.addPass(LoopVectorizePass(

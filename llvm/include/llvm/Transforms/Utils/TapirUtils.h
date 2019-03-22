@@ -45,13 +45,15 @@ bool MoveStaticAllocasInBlock(BasicBlock *Entry, BasicBlock *Block,
 /// task that contains DI.  \p Reattaches, \p InlinedLPads, and \p
 /// DetachedRethrows identify the reattaches, landing pads, and detached
 /// rethrows in the task DI spawns that need special handling during
-/// serialization.
+/// serialization.  If \p DT is provided, then it will be updated to reflect the
+/// CFG changes.
 void SerializeDetach(DetachInst *DI, BasicBlock *ParentEntry,
                      SmallVectorImpl<Instruction *> &Reattaches,
                      SmallVectorImpl<BasicBlock *> *EHBlocksToClone,
                      SmallPtrSetImpl<BasicBlock *> *EHBlockPreds,
                      SmallPtrSetImpl<LandingPadInst *> *InlinedLPads,
-                     SmallVectorImpl<Instruction *> *DetachedRethrows);
+                     SmallVectorImpl<Instruction *> *DetachedRethrows,
+                     DominatorTree *DT = nullptr);
 
 /// Analyze a task T for serialization.  Gets the reattaches, landing pads, and
 /// detached rethrows that need special handling during serialization.
@@ -62,8 +64,9 @@ void AnalyzeTaskForSerialization(
     SmallPtrSetImpl<LandingPadInst *> &InlinedLPads,
     SmallVectorImpl<Instruction *> &DetachedRethrows);
 
-/// Serialize the detach DI that spawns task T.
-void SerializeDetach(DetachInst *DI, Task *T);
+/// Serialize the detach DI that spawns task T.  If \p DT is provided, then it
+/// will be updated to reflect the CFG changes.
+void SerializeDetach(DetachInst *DI, Task *T, DominatorTree *DT = nullptr);
 
 /// Serialize the sub-CFG detached by the specified detach
 /// instruction.  Removes the detach instruction and returns a pointer
@@ -182,6 +185,9 @@ public:
     return Grainsize.Value;
   }
 
+  /// Clear Tapir Hints metadata.
+  void clearHintsMetadata();
+
   /// Mark the loop L as having no spawning strategy.
   void clearStrategy() {
     Strategy.Value = ST_SEQ;
@@ -194,6 +200,12 @@ public:
     ClearStrategy.Value = ST_SEQ;
     Hint Hints[] = {ClearStrategy};
     writeHintsToClonedMetadata(Hints, VMap);
+  }
+
+  void setAlreadyStripMined() {
+    Grainsize.Value = 1;
+    Hint Hints[] = {Grainsize};
+    writeHintsToMetadata(Hints);
   }
 
 private:
