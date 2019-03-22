@@ -97,7 +97,7 @@ void TapirLoopInfo::addInductionPhi(PHINode *Phi,
   //   AllowedExit.insert(Phi->getIncomingValueForBlock(TheLoop->getLoopLatch()));
   // }
 
-  LLVM_DEBUG(dbgs() << "LS: Found an induction variable.\n");
+  LLVM_DEBUG(dbgs() << "TapirLoop: Found an induction variable.\n");
 }
 
 /// Create an analysis remark that explains why vectorization failed
@@ -138,7 +138,7 @@ bool TapirLoopInfo::collectIVs(PredicatedScalarEvolution &PSE,
           !PhiTy->isPointerTy()) {
         ORE.emit(createMissedAnalysis("CFGNotUnderstood", L, Phi)
                  << "loop control flow is not understood by loop spawning");
-        LLVM_DEBUG(dbgs() << "LS: Found an non-int non-pointer PHI.\n");
+        LLVM_DEBUG(dbgs() << "TapirLoop: Found an non-int non-pointer PHI.\n");
         return false;
       }
 
@@ -146,7 +146,7 @@ bool TapirLoopInfo::collectIVs(PredicatedScalarEvolution &PSE,
       if (Phi->getNumIncomingValues() != 2) {
         ORE.emit(createMissedAnalysis("CFGNotUnderstood", L, Phi)
                  << "loop control flow is not understood by loop spawning");
-        LLVM_DEBUG(dbgs() << "LS: Found an invalid PHI.\n");
+        LLVM_DEBUG(dbgs() << "TapirLoop: Found an invalid PHI.\n");
         return false;
       }
 
@@ -172,7 +172,8 @@ bool TapirLoopInfo::collectIVs(PredicatedScalarEvolution &PSE,
   }
 
   if (!PrimaryInduction) {
-    LLVM_DEBUG(dbgs() << "LS: Did not find one integer induction var.\n");
+    LLVM_DEBUG(dbgs()
+               << "TapirLoop: Did not find one integer induction var.\n");
     if (Inductions.empty()) {
       ORE.emit(createMissedAnalysis("NoInductionVariable", L)
                << "loop induction variable could not be identified");
@@ -211,7 +212,7 @@ void TapirLoopInfo::replaceNonPrimaryIVs(PredicatedScalarEvolution &PSE) {
       CastInst::getCastOpcode(PrimaryInduction, true, StepType, true);
     Value *CRD = B.CreateCast(CastOp, PrimaryInduction, StepType, "cast.crd");
     Value *PhiRepl = II.transform(B, CRD, PSE.getSE(), DL);
-    PhiRepl->setName(OrigPhi->getName() + ".ls.repl");
+    PhiRepl->setName(OrigPhi->getName() + ".tl.repl");
     OrigPhi->replaceAllUsesWith(PhiRepl);
     InductionsToRemove.push_back(InductionEntry);
   }

@@ -31,6 +31,7 @@ void llvm::initializeTapirOpts(PassRegistry &Registry) {
   initializeLowerTapirToTargetPass(Registry);
   initializeAnalyzeTapirPass(Registry);
   initializeTaskSimplifyPass(Registry);
+  initializeDRFScopedNoAliasWrapperPassPass(Registry);
   initializeLoopStripMinePass(Registry);
 }
 
@@ -40,10 +41,10 @@ void LLVMInitializeTapirOpts(LLVMPassRegistryRef R) {
 
 void LLVMAddLowerTapirToTargetPass(LLVMPassManagerRef PM)
 {
-    unwrap(PM)->add(createLowerTapirToTargetPass());
+  unwrap(PM)->add(createLowerTapirToTargetPass());
 }
 
 void LLVMAddLoopSpawningPass(LLVMPassManagerRef PM)
 {
-    unwrap(PM)->add(createLoopSpawningTIPass());
+  unwrap(PM)->add(createLoopSpawningTIPass());
 }

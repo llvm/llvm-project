@@ -567,6 +567,7 @@ Task *LoopSpawningImpl::getTaskIfTapirLoop(const Loop *L) {
     return nullptr;
   }
 
+  // Get the task for this loop if it is a Tapir loop.
   Task *T = llvm::getTaskIfTapirLoop(L, &TI);
   if (!T) {
     LLVM_DEBUG(dbgs() << "Loop does not match structure of Tapir loop.\n");
