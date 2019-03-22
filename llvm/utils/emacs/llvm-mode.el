@@ -27,7 +27,8 @@
          "noduplicate" "noimplicitfloat" "noinline" "nonlazybind" "noredzone" "noreturn"
          "norecurse" "nounwind" "optnone" "optsize" "readnone" "readonly" "returns_twice"
          "speculatable" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
-         "sanitize_thread" "sanitize_memory" "strictfp" "uwtable" "writeonly" "immarg") 'symbols) . font-lock-constant-face)
+         "sanitize_thread" "sanitize_memory" "strictfp" "uwtable" "writeonly" "immarg"
+	 "local_unnamed_addr" "nocapture" "nonnull" "sanitize_cilk" "stealable" "unnamed_addr") 'symbols) . font-lock-constant-face)
    ;; Variables
    '("%[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-variable-name-face)
    ;; Labels
@@ -35,7 +36,8 @@
    ;; Unnamed variable slots
    '("%[-]?[0-9]+" . font-lock-variable-name-face)
    ;; Types
-   `(,(regexp-opt '("void" "i1" "i8" "i16" "i32" "i64" "i128" "float" "double" "type" "label" "opaque" "token") 'symbols) . font-lock-type-face)
+   `(,(regexp-opt '("void" "i1" "i8" "i16" "i32" "i64" "i128" "half" "float" "double") 'words) . font-lock-type-face)
+   `(,(regexp-opt '("type" "label" "opaque" "token") 'symbols) . font-lock-type-face)
    ;; Integer literals
    '("\\b[-]?[0-9]+\\b" . font-lock-preprocessor-face)
    ;; Floating point constants
@@ -57,7 +59,7 @@
          "ccc" "fastcc" "coldcc" "webkit_jscc" "anyregcc" "preserve_mostcc" "preserve_allcc"
          "cxx_fast_tlscc" "swiftcc"
 
-         "atomic" "volatile" "personality" "prologue" "section") 'symbols) . font-lock-keyword-face)
+         "atomic" "volatile" "personality" "prologue" "section") 'words) . font-lock-keyword-face)
    ;; Arithmetic and Logical Operators
    `(,(regexp-opt '("add" "sub" "mul" "sdiv" "udiv" "urem" "srem" "and" "or" "xor"
                     "setne" "seteq" "setlt" "setgt" "setle" "setge") 'symbols) . font-lock-keyword-face)
