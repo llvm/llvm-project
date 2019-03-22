@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+from __future__ import print_function
 import lldb
 import commands
 import optparse
@@ -30,7 +30,7 @@ def stack_frames(debugger, command, result, dict):
     frame_info = {}
     for thread in process:
         last_frame = None
-        print "thread %u" % (thread.id)
+        print("thread %u" % (thread.id))
         for frame in thread.frames:
             if last_frame:
                 frame_size = 0
@@ -43,7 +43,7 @@ def stack_frames(debugger, command, result, dict):
                     else:
                         # First frame that has a valid size
                         first_frame_size = last_frame.fp - last_frame.sp
-                    print "<%#7x> %s" % (first_frame_size, last_frame)
+                    print("<%#7x> %s" % (first_frame_size, last_frame))
                     if first_frame_size:
                         name = last_frame.name
                         if name not in frame_info:
@@ -53,7 +53,7 @@ def stack_frames(debugger, command, result, dict):
                 else:
                     # Second or higher frame
                     frame_size = frame.fp - last_frame.fp
-                print "<%#7x> %s" % (frame_size, frame)
+                print("<%#7x> %s" % (frame_size, frame))
                 if frame_size > 0:
                     name = frame.name
                     if name not in frame_info:
@@ -61,9 +61,9 @@ def stack_frames(debugger, command, result, dict):
                     else:
                         frame_info[name] += frame_size
             last_frame = frame
-    print frame_info
+    print(frame_info)
 
 
 lldb.debugger.HandleCommand(
     "command script add -f stacks.stack_frames stack_frames")
-print "A new command called 'stack_frames' was added, type 'stack_frames --help' for more information."
+print("A new command called 'stack_frames' was added, type 'stack_frames --help' for more information.")

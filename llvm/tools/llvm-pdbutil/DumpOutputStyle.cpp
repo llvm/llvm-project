@@ -13,6 +13,7 @@
 #include "MinimalSymbolDumper.h"
 #include "MinimalTypeDumper.h"
 #include "StreamUtil.h"
+#include "TypeReferenceTracker.h"
 #include "llvm-pdbutil.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -60,7 +61,12 @@ using namespace llvm::msf;
 using namespace llvm::pdb;
 
 DumpOutputStyle::DumpOutputStyle(InputFile &File)
-    : File(File), P(2, false, outs()) {}
+    : File(File), P(2, false, outs()) {
+  if (opts::dump::DumpTypeRefStats)
+    RefTracker.reset(new TypeReferenceTracker(File));
+}
+
+DumpOutputStyle::~DumpOutputStyle() {}
 
 PDBFile &DumpOutputStyle::getPdb() { return File.pdb(); }
 object::COFFObjectFile &DumpOutputStyle::getObj() { return File.obj(); }
@@ -76,6 +82,10 @@ void DumpOutputStyle::printStreamNotPresent(StringRef StreamName) {
 }
 
 Error DumpOutputStyle::dump() {
+  // Walk symbols & globals if we are supposed to mark types referenced.
+  if (opts::dump::DumpTypeRefStats)
+    RefTracker->mark();
+
   if (opts::dump::DumpSummary) {
     if (auto EC = dumpFileSummary())
       return EC;
@@ -184,6 +194,11 @@ Error DumpOutputStyle::dump() {
   if (opts::dump::DumpSymbols) {
     auto EC = File.isPdb() ? dumpModuleSymsForPdb() : dumpModuleSymsForObj();
     if (EC)
+      return EC;
+  }
+
+  if (opts::dump::DumpTypeRefStats) {
+    if (auto EC = dumpTypeRefStats())
       return EC;
   }
 
@@ -1227,14 +1242,15 @@ static void buildDepSet(LazyRandomTypeCollection &Types,
 
 static void
 dumpFullTypeStream(LinePrinter &Printer, LazyRandomTypeCollection &Types,
-                   uint32_t NumTypeRecords, uint32_t NumHashBuckets,
+                   TypeReferenceTracker *RefTracker, uint32_t NumTypeRecords,
+                   uint32_t NumHashBuckets,
                    FixedStreamArray<support::ulittle32_t> HashValues,
                    TpiStream *Stream, bool Bytes, bool Extras) {
 
   Printer.formatLine("Showing {0:N} records", NumTypeRecords);
   uint32_t Width = NumDigits(TypeIndex::FirstNonSimpleIndex + NumTypeRecords);
 
-  MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
+  MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types, RefTracker,
                            NumHashBuckets, HashValues, Stream);
 
   if (auto EC = codeview::visitTypeStream(Types, V)) {
@@ -1245,12 +1261,13 @@ dumpFullTypeStream(LinePrinter &Printer, LazyRandomTypeCollection &Types,
 
 static void dumpPartialTypeStream(LinePrinter &Printer,
                                   LazyRandomTypeCollection &Types,
+                                  TypeReferenceTracker *RefTracker,
                                   TpiStream &Stream, ArrayRef<TypeIndex> TiList,
                                   bool Bytes, bool Extras, bool Deps) {
   uint32_t Width =
       NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
 
-  MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
+  MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types, RefTracker,
                            Stream.getNumHashBuckets(), Stream.getHashValues(),
                            &Stream);
 
@@ -1314,8 +1331,8 @@ Error DumpOutputStyle::dumpTypesFromObjectFile() {
     Types.reset(Reader, 100);
 
     if (opts::dump::DumpTypes) {
-      dumpFullTypeStream(P, Types, 0, 0, {}, nullptr, opts::dump::DumpTypeData,
-                         false);
+      dumpFullTypeStream(P, Types, RefTracker.get(), 0, 0, {}, nullptr,
+                         opts::dump::DumpTypeData, false);
     } else if (opts::dump::DumpTypeExtras) {
       auto LocalHashes = LocallyHashedType::hashTypeCollection(Types);
       auto GlobalHashes = GloballyHashedType::hashTypeCollection(Types);
@@ -1384,18 +1401,22 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   auto &Types = (StreamIdx == StreamTPI) ? File.types() : File.ids();
 
+  // Only emit notes about referenced/unreferenced for types.
+  TypeReferenceTracker *MaybeTracker =
+      (StreamIdx == StreamTPI) ? RefTracker.get() : nullptr;
+
   // Enable resolving forward decls.
   Stream.buildHashMap();
 
   if (DumpTypes || !Indices.empty()) {
     if (Indices.empty())
-      dumpFullTypeStream(P, Types, Stream.getNumTypeRecords(),
+      dumpFullTypeStream(P, Types, MaybeTracker, Stream.getNumTypeRecords(),
                          Stream.getNumHashBuckets(), Stream.getHashValues(),
                          &Stream, DumpBytes, DumpExtras);
     else {
       std::vector<TypeIndex> TiList(Indices.begin(), Indices.end());
-      dumpPartialTypeStream(P, Types, Stream, TiList, DumpBytes, DumpExtras,
-                            opts::dump::DumpTypeDependents);
+      dumpPartialTypeStream(P, Types, MaybeTracker, Stream, TiList, DumpBytes,
+                            DumpExtras, opts::dump::DumpTypeDependents);
     }
   }
 
@@ -1517,6 +1538,34 @@ Error DumpOutputStyle::dumpModuleSymsForPdb() {
           return;
         }
       });
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpTypeRefStats() {
+  printHeader(P, "Type Reference Statistics");
+  AutoIndent Indent(P);
+
+  // Sum the byte size of all type records, and the size and count of all
+  // referenced records.
+  size_t TotalRecs = File.types().size();
+  size_t RefRecs = 0;
+  size_t TotalBytes = 0;
+  size_t RefBytes = 0;
+  auto &Types = File.types();
+  for (Optional<TypeIndex> TI = Types.getFirst(); TI; TI = Types.getNext(*TI)) {
+    CVType Type = File.types().getType(*TI);
+    TotalBytes += Type.length();
+    if (RefTracker->isTypeReferenced(*TI)) {
+      ++RefRecs;
+      RefBytes += Type.length();
+    }
+  }
+
+  P.formatLine("Records referenced: {0:N} / {1:N} {2:P}", RefRecs, TotalRecs,
+               (double)RefRecs / TotalRecs);
+  P.formatLine("Bytes referenced: {0:N} / {1:N} {2:P}", RefBytes, TotalBytes,
+               (double)RefBytes / TotalBytes);
+
   return Error::success();
 }
 

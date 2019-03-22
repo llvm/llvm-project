@@ -1,7 +1,24 @@
-// This test checks that --section works correctly
+// This test checks that --section works correctly.
 // RUN: llvm-objdump -h %p/Inputs/section-filter.obj -j=.text \
 // RUN: --section=.bss | FileCheck %s
 
-# CHECK: .text
-# CHECK-NOT: .data
-# CHECK: .bss
+// CHECK: .text
+// CHECK-NOT: .data
+// CHECK: .bss
+
+// Test that the -j alias can be used flexibly. Create a baseline and ensure
+// all other combinations are identical.
+// RUN: llvm-objdump %p/Inputs/section-filter.obj -h -s --section .symtab > %t.full
+// RUN: llvm-objdump %p/Inputs/section-filter.obj -h -s -j .symtab > %t.1
+// RUN: llvm-objdump %p/Inputs/section-filter.obj -h -s -j=.symtab > %t.2
+// RUN: llvm-objdump %p/Inputs/section-filter.obj -h -s -j.symtab > %t.3
+// RUN: llvm-objdump %p/Inputs/section-filter.obj -hsj .symtab > %t.4
+// RUN: llvm-objdump %p/Inputs/section-filter.obj -hsj=.symtab > %t.5
+// RUN: llvm-objdump %p/Inputs/section-filter.obj -hsj.symtab > %t.6
+
+// RUN: cmp %t.full %t.1
+// RUN: cmp %t.full %t.2
+// RUN: cmp %t.full %t.3
+// RUN: cmp %t.full %t.4
+// RUN: cmp %t.full %t.5
+// RUN: cmp %t.full %t.6

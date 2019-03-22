@@ -3390,6 +3390,11 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
       return LangAS::cuda_device;
   }
 
+  if (LangOpts.OpenMP) {
+    LangAS AS;
+    if (OpenMPRuntime->hasAllocateAttributeForGlobalVar(D, AS))
+      return AS;
+  }
   return getTargetCodeGenInfo().getGlobalVarAddressSpace(*this, D);
 }
 

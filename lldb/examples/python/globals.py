@@ -7,6 +7,7 @@
 # For the shells sh, bash:
 #   PYTHONPATH=/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Resources/Python ./globals.py <path> [<path> ...]
 #----------------------------------------------------------------------
+from __future__ import print_function
 
 import lldb
 import commands
@@ -46,22 +47,22 @@ def get_globals(raw_path, options):
                             # Print results for anything that matched
                             for global_variable in global_variable_list:
                                 # returns the global variable name as a string
-                                print 'name = %s' % global_variable.name
+                                print('name = %s' % global_variable.name)
                                 # Returns the variable value as a string
-                                print 'value = %s' % global_variable.value
-                                print 'type = %s' % global_variable.type    # Returns an lldb.SBType object
+                                print('value = %s' % global_variable.value)
+                                print('type = %s' % global_variable.type)    # Returns an lldb.SBType object
                                 # Returns an lldb.SBAddress (section offset
                                 # address) for this global
-                                print 'addr = %s' % global_variable.addr
+                                print('addr = %s' % global_variable.addr)
                                 # Returns the file virtual address for this
                                 # global
-                                print 'file_addr = 0x%x' % global_variable.addr.file_addr
+                                print('file_addr = 0x%x' % global_variable.addr.file_addr)
                                 # returns the global variable value as a string
-                                print 'location = %s' % global_variable.location
+                                print('location = %s' % global_variable.location)
                                 # Returns the size in bytes of this global
                                 # variable
-                                print 'size = %s' % global_variable.size
-                                print
+                                print('size = %s' % global_variable.size)
+                                print()
 
 
 def globals(command_args):

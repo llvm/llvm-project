@@ -389,6 +389,11 @@ public:
   /// address space by default.
   unsigned getDefaultFirstprivateAddressSpace() const override;
 
+  /// Checks if the variable has associated OMPAllocateDeclAttr attribute with
+  /// the predefined allocator and translates it into the corresponding address
+  /// space.
+  bool hasAllocateAttributeForGlobalVar(const VarDecl *VD, LangAS &AS) override;
+
 private:
   /// Track the execution mode when codegening directives within a target
   /// region. The appropriate mode (SPMD/NON-SPMD) is set on entry to the

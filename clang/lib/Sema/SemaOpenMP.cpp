@@ -2219,35 +2219,22 @@ getAllocatorKind(Sema &S, DSAStackTy *Stack, Expr *Allocator) {
     return OMPAllocateDeclAttr::OMPDefaultMemAlloc;
   if (Allocator->isTypeDependent() || Allocator->isValueDependent() ||
       Allocator->isInstantiationDependent() ||
-      Allocator->containsUnexpandedParameterPack() ||
-      !Allocator->isEvaluatable(S.getASTContext()))
+      Allocator->containsUnexpandedParameterPack())
     return OMPAllocateDeclAttr::OMPUserDefinedMemAlloc;
-  bool Suppress = S.getDiagnostics().getSuppressAllDiagnostics();
-  S.getDiagnostics().setSuppressAllDiagnostics(/*Val=*/true);
   auto AllocatorKindRes = OMPAllocateDeclAttr::OMPUserDefinedMemAlloc;
   for (int I = OMPAllocateDeclAttr::OMPDefaultMemAlloc;
        I < OMPAllocateDeclAttr::OMPUserDefinedMemAlloc; ++I) {
     auto AllocatorKind = static_cast<OMPAllocateDeclAttr::AllocatorTypeTy>(I);
     Expr *DefAllocator = Stack->getAllocator(AllocatorKind);
-    // Compare allocator with the predefined allocator and if true - return
-    // predefined allocator kind.
-    ExprResult DefAllocRes = S.DefaultLvalueConversion(DefAllocator);
-    ExprResult AllocRes = S.DefaultLvalueConversion(Allocator);
-    ExprResult CompareRes = S.CreateBuiltinBinOp(
-        Allocator->getExprLoc(), BO_EQ, DefAllocRes.get(), AllocRes.get());
-    if (!CompareRes.isUsable())
-      continue;
-    bool Result;
-    if (!CompareRes.get()->EvaluateAsBooleanCondition(Result,
-                                                      S.getASTContext()))
-      continue;
-    if (Result) {
+    const Expr *AE = Allocator->IgnoreParenImpCasts();
+    llvm::FoldingSetNodeID AEId, DAEId;
+    AE->Profile(AEId, S.getASTContext(), /*Canonical=*/true);
+    DefAllocator->Profile(DAEId, S.getASTContext(), /*Canonical=*/true);
+    if (AEId == DAEId) {
       AllocatorKindRes = AllocatorKind;
       break;
     }
-
   }
-  S.getDiagnostics().setSuppressAllDiagnostics(Suppress);
   return AllocatorKindRes;
 }
 
@@ -2325,26 +2312,7 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPAllocateDirective(
     // allocator clause must be a constant expression that evaluates to one of
     // the predefined memory allocator values.
     if (Allocator && VD->hasGlobalStorage()) {
-      bool IsPredefinedAllocator = false;
-      if (const auto *DRE =
-              dyn_cast<DeclRefExpr>(Allocator->IgnoreParenImpCasts())) {
-        if (DRE->getType().isConstant(getASTContext())) {
-          DeclarationName DN = DRE->getDecl()->getDeclName();
-          if (DN.isIdentifier()) {
-            StringRef PredefinedAllocators[] = {
-                "omp_default_mem_alloc", "omp_large_cap_mem_alloc",
-                "omp_const_mem_alloc",   "omp_high_bw_mem_alloc",
-                "omp_low_lat_mem_alloc", "omp_cgroup_mem_alloc",
-                "omp_pteam_mem_alloc",   "omp_thread_mem_alloc",
-            };
-            IsPredefinedAllocator =
-                llvm::any_of(PredefinedAllocators, [&DN](StringRef S) {
-                  return DN.getAsIdentifierInfo()->isStr(S);
-                });
-          }
-        }
-      }
-      if (!IsPredefinedAllocator) {
+      if (AllocatorKind == OMPAllocateDeclAttr::OMPUserDefinedMemAlloc) {
         Diag(Allocator->getExprLoc(),
              diag::err_omp_expected_predefined_allocator)
             << Allocator->getSourceRange();

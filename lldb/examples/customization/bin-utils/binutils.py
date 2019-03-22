@@ -2,6 +2,7 @@
 
 import StringIO
 
+from __future__ import print_function
 
 def binary(n, width=None):
     """
@@ -77,7 +78,7 @@ def utob(debugger, command_line, result, dict):
             if width < 0:
                 width = 0
     except:
-        print utob.__doc__
+        print(utob.__doc__)
         return
 
     if len(args) > 2:
@@ -87,12 +88,12 @@ def utob(debugger, command_line, result, dict):
 
     bits = binary(n, width)
     if not bits:
-        print "insufficient width value: %d" % width
+        print("insufficient width value: %d" % width)
         return
     if verbose and width > 0:
         pos = positions(width)
-        print ' ' + ' '.join(pos)
-    print ' %s' % str(bits)
+        print(' ' + ' '.join(pos))
+    print(' %s' % str(bits))
 
 
 def itob(debugger, command_line, result, dict):
@@ -107,7 +108,7 @@ def itob(debugger, command_line, result, dict):
         if width < 0:
             width = 0
     except:
-        print itob.__doc__
+        print(itob.__doc__)
         return
 
     if len(args) > 2:
@@ -117,9 +118,9 @@ def itob(debugger, command_line, result, dict):
 
     bits = twos_complement(n, width)
     if not bits:
-        print "insufficient width value: %d" % width
+        print("insufficient width value: %d" % width)
         return
     if verbose and width > 0:
         pos = positions(width)
-        print ' ' + ' '.join(pos)
-    print ' %s' % str(bits)
+        print(' ' + ' '.join(pos))
+    print(' %s' % str(bits))

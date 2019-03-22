@@ -1724,7 +1724,7 @@ MipsTargetLowering::emitAtomicCmpSwap(MachineInstr &MI,
 
   assert((MI.getOpcode() == Mips::ATOMIC_CMP_SWAP_I32 ||
           MI.getOpcode() == Mips::ATOMIC_CMP_SWAP_I64) &&
-         "Unsupported atomic psseudo for EmitAtomicCmpSwap.");
+         "Unsupported atomic pseudo for EmitAtomicCmpSwap.");
 
   const unsigned Size = MI.getOpcode() == Mips::ATOMIC_CMP_SWAP_I32 ? 4 : 8;
 
@@ -1750,12 +1750,10 @@ MipsTargetLowering::emitAtomicCmpSwap(MachineInstr &MI,
   // after fast register allocation, the spills will end up outside of the
   // blocks that their values are defined in, causing livein errors.
 
-  unsigned DestCopy = MRI.createVirtualRegister(MRI.getRegClass(Dest));
   unsigned PtrCopy = MRI.createVirtualRegister(MRI.getRegClass(Ptr));
   unsigned OldValCopy = MRI.createVirtualRegister(MRI.getRegClass(OldVal));
   unsigned NewValCopy = MRI.createVirtualRegister(MRI.getRegClass(NewVal));
 
-  BuildMI(*BB, II, DL, TII->get(Mips::COPY), DestCopy).addReg(Dest);
   BuildMI(*BB, II, DL, TII->get(Mips::COPY), PtrCopy).addReg(Ptr);
   BuildMI(*BB, II, DL, TII->get(Mips::COPY), OldValCopy).addReg(OldVal);
   BuildMI(*BB, II, DL, TII->get(Mips::COPY), NewValCopy).addReg(NewVal);

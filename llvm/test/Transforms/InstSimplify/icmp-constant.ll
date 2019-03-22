@@ -378,6 +378,95 @@ define <2 x i1> @or1_vec(<2 x i32> %X) {
   ret <2 x i1> %B
 }
 
+; Single bit OR.
+define i1 @or2_true(i8 %x) {
+; CHECK-LABEL: @or2_true(
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], 64
+; CHECK-NEXT:    [[Z:%.*]] = icmp sge i8 [[Y]], -64
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = or i8 %x, 64
+  %z = icmp sge i8 %y, -64
+  ret i1 %z
+}
+
+define i1 @or2_unknown(i8 %x) {
+; CHECK-LABEL: @or2_unknown(
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], 64
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 [[Y]], -64
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = or i8 %x, 64
+  %z = icmp sgt i8 %y, -64
+  ret i1 %z
+}
+
+; Multi bit OR.
+; 78 = 0b01001110; -50 = 0b11001110
+define i1 @or3_true(i8 %x) {
+; CHECK-LABEL: @or3_true(
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], 78
+; CHECK-NEXT:    [[Z:%.*]] = icmp sge i8 [[Y]], -50
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = or i8 %x, 78
+  %z = icmp sge i8 %y, -50
+  ret i1 %z
+}
+
+define i1 @or3_unknown(i8 %x) {
+; CHECK-LABEL: @or3_unknown(
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], 78
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 [[Y]], -50
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = or i8 %x, 78
+  %z = icmp sgt i8 %y, -50
+  ret i1 %z
+}
+
+; OR with sign bit.
+define i1 @or4_true(i8 %x) {
+; CHECK-LABEL: @or4_true(
+; CHECK-NEXT:    ret i1 true
+;
+  %y = or i8 %x, -64
+  %z = icmp sge i8 %y, -64
+  ret i1 %z
+}
+
+define i1 @or4_unknown(i8 %x) {
+; CHECK-LABEL: @or4_unknown(
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 [[Y]], -64
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = or i8 %x, -64
+  %z = icmp sgt i8 %y, -64
+  ret i1 %z
+}
+
+; If sign bit is set, signed & unsigned ranges are the same.
+define i1 @or5_true(i8 %x) {
+; CHECK-LABEL: @or5_true(
+; CHECK-NEXT:    ret i1 true
+;
+  %y = or i8 %x, -64
+  %z = icmp uge i8 %y, -64
+  ret i1 %z
+}
+
+define i1 @or5_unknown(i8 %x) {
+; CHECK-LABEL: @or5_unknown(
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i8 [[Y]], -64
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = or i8 %x, -64
+  %z = icmp ugt i8 %y, -64
+  ret i1 %z
+}
+
 ; 'and x, C2' produces [0, C2]
 define i1 @and1(i32 %X) {
 ; CHECK-LABEL: @and1(
@@ -395,6 +484,61 @@ define <2 x i1> @and1_vec(<2 x i32> %X) {
   %A = and <2 x i32> %X, <i32 62, i32 62>
   %B = icmp ugt <2 x i32> %A, <i32 70, i32 70>
   ret <2 x i1> %B
+}
+
+; If the sign bit is not set, signed and unsigned ranges are the same.
+define i1 @and2(i32 %X) {
+; CHECK-LABEL: @and2(
+; CHECK-NEXT:    ret i1 false
+;
+  %A = and i32 %X, 62
+  %B = icmp sgt i32 %A, 70
+  ret i1 %B
+}
+
+; -75 = 0b10110101, 53 = 0b00110101
+define i1 @and3_true1(i8 %x) {
+; CHECK-LABEL: @and3_true1(
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[X:%.*]], -75
+; CHECK-NEXT:    [[Z:%.*]] = icmp sge i8 [[Y]], -75
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = and i8 %x, -75
+  %z = icmp sge i8 %y, -75
+  ret i1 %z
+}
+
+define i1 @and3_unknown1(i8 %x) {
+; CHECK-LABEL: @and3_unknown1(
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[X:%.*]], -75
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 [[Y]], -75
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = and i8 %x, -75
+  %z = icmp sgt i8 %y, -75
+  ret i1 %z
+}
+
+define i1 @and3_true2(i8 %x) {
+; CHECK-LABEL: @and3_true2(
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[X:%.*]], -75
+; CHECK-NEXT:    [[Z:%.*]] = icmp sle i8 [[Y]], 53
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = and i8 %x, -75
+  %z = icmp sle i8 %y, 53
+  ret i1 %z
+}
+
+define i1 @and3_unknown2(i8 %x) {
+; CHECK-LABEL: @and3_unknown2(
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[X:%.*]], -75
+; CHECK-NEXT:    [[Z:%.*]] = icmp slt i8 [[Y]], 53
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = and i8 %x, -75
+  %z = icmp slt i8 %y, 53
+  ret i1 %z
 }
 
 ; 'add nuw x, C2' produces [C2, UINT_MAX]
@@ -431,7 +575,7 @@ define i1 @add_nsw_neg_const1(i32 %x) {
 
 define i1 @add_nsw_neg_const2(i32 %x) {
 ; CHECK-LABEL: @add_nsw_neg_const2(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, -2147483647
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], -2147483647
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -455,7 +599,7 @@ define i1 @add_nsw_neg_const3(i32 %x) {
 
 define i1 @add_nsw_neg_const4(i32 %x) {
 ; CHECK-LABEL: @add_nsw_neg_const4(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, -2147483646
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], -2147483646
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -479,7 +623,7 @@ define i1 @add_nsw_neg_const5(i32 %x) {
 
 define i1 @add_nsw_neg_const6(i32 %x) {
 ; CHECK-LABEL: @add_nsw_neg_const6(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, -42
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], -42
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[ADD]], 2147483605
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -503,7 +647,7 @@ define i1 @add_nsw_pos_const1(i32 %x) {
 
 define i1 @add_nsw_pos_const2(i32 %x) {
 ; CHECK-LABEL: @add_nsw_pos_const2(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, 2147483647
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], 2147483647
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -527,7 +671,7 @@ define i1 @add_nsw_pos_const3(i32 %x) {
 
 define i1 @add_nsw_pos_const4(i32 %x) {
 ; CHECK-LABEL: @add_nsw_pos_const4(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, 2147483646
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], 2147483646
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -551,7 +695,7 @@ define i1 @add_nsw_pos_const5(i32 %x) {
 
 define i1 @add_nsw_pos_const6(i32 %x) {
 ; CHECK-LABEL: @add_nsw_pos_const6(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, 42
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], 42
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], -2147483606
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

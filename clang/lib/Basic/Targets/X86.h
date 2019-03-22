@@ -81,6 +81,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasMPX = false;
   bool HasSHSTK = false;
   bool HasSGX = false;
+  bool HasCX8 = false;
   bool HasCX16 = false;
   bool HasFXSR = false;
   bool HasXSAVE = false;
@@ -344,9 +345,8 @@ public:
          (1 << TargetInfo::LongDouble));
 
     // x86-32 has atomics up to 8 bytes
-    // FIXME: Check that we actually have cmpxchg8b before setting
-    // MaxAtomicInlineWidth. (cmpxchg8b is an i586 instruction.)
-    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+    MaxAtomicPromoteWidth = 64;
+    MaxAtomicInlineWidth = 32;
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -380,6 +380,11 @@ public:
     }
 
     return X86TargetInfo::validateOperandSize(Constraint, Size);
+  }
+
+  void setMaxAtomicWidth() override {
+    if (hasFeature("cx8"))
+      MaxAtomicInlineWidth = 64;
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;

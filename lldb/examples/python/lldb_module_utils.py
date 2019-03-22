@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from __future__ import print_function
 
 import lldb
 import optparse
@@ -61,14 +62,14 @@ class DumpLineTables:
                 result.SetError('no module found that matches "%s".' % (module_path))
                 return
             num_cus = module.GetNumCompileUnits()
-            print >>result, 'Module: "%s"' % (module.file.fullpath),
+            print('Module: "%s"' % (module.file.fullpath), end=' ', file=result)
             if num_cus == 0:
-                print >>result, 'no debug info.'
+                print('no debug info.', file=result)
                 continue
-            print >>result, 'has %u compile units:' % (num_cus)
+            print('has %u compile units:' % (num_cus), file=result)
             for cu_idx in range(num_cus):
                 cu = module.GetCompileUnitAtIndex(cu_idx)
-                print >>result, '  Compile Unit: %s' % (cu.file.fullpath)
+                print('  Compile Unit: %s' % (cu.file.fullpath), file=result)
                 for line_idx in range(cu.GetNumLineEntries()):
                     line_entry = cu.GetLineEntryAtIndex(line_idx)
                     start_file_addr = line_entry.addr.file_addr
@@ -163,19 +164,19 @@ path when setting breakpoints.
                 result.SetError('no module found that matches "%s".' % (module_path))
                 return
             num_cus = module.GetNumCompileUnits()
-            print >>result, 'Module: "%s"' % (module.file.fullpath),
+            print('Module: "%s"' % (module.file.fullpath), end=' ', file=result)
             if num_cus == 0:
-                print >>result, 'no debug info.'
+                print('no debug info.', file=result)
                 continue
-            print >>result, 'has %u compile units:' % (num_cus)
+            print('has %u compile units:' % (num_cus), file=result)
             for i in range(num_cus):
                 cu = module.GetCompileUnitAtIndex(i)
-                print >>result, '  Compile Unit: %s' % (cu.file.fullpath)
+                print('  Compile Unit: %s' % (cu.file.fullpath), file=result)
                 if options.support_files:
                     num_support_files = cu.GetNumSupportFiles()
                     for j in range(num_support_files):
                         path = cu.GetSupportFileAtIndex(j).fullpath
-                        print >>result, '    file[%u]: %s' % (j, path)
+                        print('    file[%u]: %s' % (j, path), file=result)
 
 
 def __lldb_init_module(debugger, dict):
@@ -187,5 +188,5 @@ def __lldb_init_module(debugger, dict):
                                                         DumpLineTables.command_name))
     debugger.HandleCommand(
         'command script add -c %s.DumpFiles %s' % (__name__, DumpFiles.command_name))
-    print 'The "%s" and "%s" commands have been installed.' % (DumpLineTables.command_name,
-                                                               DumpFiles.command_name)
+    print('The "%s" and "%s" commands have been installed.' % (DumpLineTables.command_name,
+                                                               DumpFiles.command_name))

@@ -67,25 +67,15 @@ int main () {
   static int a;
 #pragma omp allocate(a) allocator(omp_thread_mem_alloc)
   a=2;
-  // CHECK:      [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @{{.+}})
-  // CHECK-NEXT: [[B_VOID_ADDR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 8, i8** null)
-  // CHECK-NEXT: [[B_ADDR:%.+]] = bitcast i8* [[B_VOID_ADDR]] to double*
   // CHECK-NOT:  {{__kmpc_alloc|__kmpc_free}}
-  // CHECK:      store double 3.000000e+00, double* [[B_ADDR]],
-  // CHECK:      [[RES:%.+]] = call i32 [[FOO:@.+]]()
-  // CHECK:      store i32 [[RES]], i32* [[RET:%.+]],
-  // CHECK-NEXT: call void @__kmpc_free(i32 [[GTID]], i8* [[B_VOID_ADDR]], i8** null)
+  // CHECK:      alloca double,
   // CHECK-NOT:  {{__kmpc_alloc|__kmpc_free}}
   double b = 3;
 #pragma omp allocate(b)
-  // CHECK:      [[RETVAL:%.+]] = load i32, i32* [[RET]],
-  // CHECK:      ret i32 [[RETVAL]]
   return (foo<int>());
 }
 
-// CHECK-NOT:  call {{.+}} {{__kmpc_alloc|__kmpc_free}}
-
-// CHECK: define {{.*}}i32 [[FOO]]()
+// CHECK: define {{.*}}i32 @{{.+}}foo{{.+}}()
 // CHECK:      [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @{{.+}})
 // CHECK-NEXT: [[OMP_CGROUP_MEM_ALLOC:%.+]] = load i8**, i8*** @omp_cgroup_mem_alloc,
 // CHECK-NEXT: [[V_VOID_ADDR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 4, i8** [[OMP_CGROUP_MEM_ALLOC]])

@@ -363,13 +363,15 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
   // values.  One idea is to define some structures representing these types
   // that would allow the use of offsetof().
   switch (Kind) {
-  case SymbolKind::S_GPROC32:
-  case SymbolKind::S_LPROC32:
   case SymbolKind::S_GPROC32_ID:
   case SymbolKind::S_LPROC32_ID:
   case SymbolKind::S_LPROC32_DPC:
   case SymbolKind::S_LPROC32_DPC_ID:
     Refs.push_back({TiRefKind::IndexRef, 24, 1}); // LF_FUNC_ID
+    break;
+  case SymbolKind::S_GPROC32:
+  case SymbolKind::S_LPROC32:
+    Refs.push_back({TiRefKind::TypeRef, 24, 1}); // Type
     break;
   case SymbolKind::S_UDT:
     Refs.push_back({TiRefKind::TypeRef, 0, 1}); // UDT

@@ -19,9 +19,8 @@ define i32 @foo() optsize {
 ; X86-NEXT:    movl $1234, %eax # imm = 0x4D2
 ; X86-NEXT:    movl %eax, a
 ; X86-NEXT:    movl %eax, b
-; X86-NEXT:    movl $12, %eax
-; X86-NEXT:    movl %eax, c
-; X86-NEXT:    cmpl %eax, e
+; X86-NEXT:    movl $12, c
+; X86-NEXT:    cmpl $12, e
 ; X86-NEXT:    jne .LBB0_2
 ; X86-NEXT:  # %bb.1: # %if.then
 ; X86-NEXT:    movl $1, x
@@ -38,9 +37,8 @@ define i32 @foo() optsize {
 ; X64-NEXT:    movl $1234, %eax # imm = 0x4D2
 ; X64-NEXT:    movl %eax, {{.*}}(%rip)
 ; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    movl $12, %eax
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    cmpl %eax, {{.*}}(%rip)
+; X64-NEXT:    movl $12, {{.*}}(%rip)
+; X64-NEXT:    cmpl $12, {{.*}}(%rip)
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %if.then
 ; X64-NEXT:    movl $1, {{.*}}(%rip)

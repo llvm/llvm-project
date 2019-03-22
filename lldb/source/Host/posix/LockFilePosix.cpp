@@ -8,6 +8,8 @@
 
 #include "lldb/Host/posix/LockFilePosix.h"
 
+#include "llvm/Support/Errno.h"
+
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -27,7 +29,7 @@ Status fileLock(int fd, int cmd, int lock_type, const uint64_t start,
   fl.l_pid = ::getpid();
 
   Status error;
-  if (::fcntl(fd, cmd, &fl) == -1)
+  if (llvm::sys::RetryAfterSignal(-1, ::fcntl, fd, cmd, &fl) == -1)
     error.SetErrorToErrno();
 
   return error;

@@ -148,7 +148,7 @@ def get_configuration(options, rcdata, config_name):
 def create_transfer_agent(options, configuration):
     transfer_class_spec = configuration.get_value("transfer_class")
     if options.verbose:
-        print "specified transfer class: '{}'".format(transfer_class_spec)
+        print("specified transfer class: '{}'".format(transfer_class_spec))
 
     # Load the module (possibly package-qualified).
     components = transfer_class_spec.split(".")
@@ -250,7 +250,7 @@ def main():
     rc_filename = find_appropriate_rcfile(options)
     if rc_filename:
         if options.verbose:
-            print "reading rc data from file '{}'".format(rc_filename)
+            print("reading rc data from file '{}'".format(rc_filename))
         rcdata = read_rcfile(rc_filename)
     else:
         sys.stderr.write("no rcfile specified, cannot guess configuration")

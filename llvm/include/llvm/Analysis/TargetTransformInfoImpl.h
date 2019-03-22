@@ -270,6 +270,10 @@ public:
 
   bool isLegalMaskedGather(Type *DataType) { return false; }
 
+  bool isLegalMaskedCompressStore(Type *DataType) { return false; }
+
+  bool isLegalMaskedExpandLoad(Type *DataType) { return false; }
+
   bool hasDivRemOp(Type *DataType, bool IsSigned) { return false; }
 
   bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) { return false; }

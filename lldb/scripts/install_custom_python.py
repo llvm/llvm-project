@@ -30,7 +30,7 @@ import sys
 def copy_one_file(dest_dir, source_dir, filename):
     source_path = os.path.join(source_dir, filename)
     dest_path = os.path.join(dest_dir, filename)
-    print 'Copying file %s ==> %s...' % (source_path, dest_path)
+    print('Copying file %s ==> %s...' % (source_path, dest_path))
     shutil.copyfile(source_path, dest_path)
 
 
@@ -49,14 +49,14 @@ def copy_named_files(
 def copy_subdirectory(dest_dir, source_dir, subdir):
     dest_dir = os.path.join(dest_dir, subdir)
     source_dir = os.path.join(source_dir, subdir)
-    print 'Copying directory %s ==> %s...' % (source_dir, dest_dir)
+    print('Copying directory %s ==> %s...' % (source_dir, dest_dir))
     shutil.copytree(source_dir, dest_dir)
 
 
 def copy_distro(dest_dir, dest_subdir, source_dir, source_prefix):
     dest_dir = os.path.join(dest_dir, dest_subdir)
 
-    print 'Copying distribution %s ==> %s' % (source_dir, dest_dir)
+    print('Copying distribution %s ==> %s' % (source_dir, dest_dir))
 
     os.mkdir(dest_dir)
     PCbuild_dir = os.path.join(source_dir, 'PCbuild')
@@ -65,7 +65,7 @@ def copy_distro(dest_dir, dest_subdir, source_dir, source_prefix):
     # First copy the files that go into the root of the new distribution. This
     # includes the Python executables, python27(_d).dll, and relevant PDB
     # files.
-    print 'Copying Python executables...'
+    print('Copying Python executables...')
     copy_named_files(
         dest_dir, PCbuild_dir, ['w9xpopen'], [
             'exe', 'pdb'], False)
@@ -79,11 +79,11 @@ def copy_distro(dest_dir, dest_subdir, source_dir, source_prefix):
     copy_named_files(dest_dir, PCbuild_dir, ['python27'], ['dll', 'pdb'], True)
 
     # Next copy everything in the Include directory.
-    print 'Copying Python include directory'
+    print('Copying Python include directory')
     copy_subdirectory(dest_dir, source_dir, 'Include')
 
     # Copy Lib folder (builtin Python modules)
-    print 'Copying Python Lib directory'
+    print('Copying Python Lib directory')
     copy_subdirectory(dest_dir, source_dir, 'Lib')
 
     # Copy tools folder.  These are probably not necessary, but we copy them anyway to
@@ -115,13 +115,13 @@ def copy_distro(dest_dir, dest_subdir, source_dir, source_prefix):
     # Copy builtin extension modules (pyd files)
     dlls_dir = os.path.join(dest_dir, 'DLLs')
     os.mkdir(dlls_dir)
-    print 'Copying DLLs directory'
+    print('Copying DLLs directory')
     copy_named_files(dlls_dir, PCbuild_dir, pyd_names, ['pyd', 'pdb'], True)
 
     # Copy libs folder (implibs for the pyd files)
     libs_dir = os.path.join(dest_dir, 'libs')
     os.mkdir(libs_dir)
-    print 'Copying libs directory'
+    print('Copying libs directory')
     copy_named_files(libs_dir, PCbuild_dir, pyd_names, ['lib'], False)
     copy_named_files(libs_dir, PCbuild_dir, ['python27'], ['lib'], True)
 
@@ -153,18 +153,18 @@ args.source = os.path.normpath(args.source)
 args.dest = os.path.normpath(args.dest)
 
 if not os.path.exists(args.source):
-    print 'The source directory %s does not exist.  Exiting...'
+    print('The source directory %s does not exist.  Exiting...')
     sys.exit(1)
 
 if os.path.exists(args.dest):
     if not args.overwrite:
-        print 'The destination directory \'%s\' already exists and --overwrite was not specified.  Exiting...' % args.dest
+        print('The destination directory \'%s\' already exists and --overwrite was not specified.  Exiting...' % args.dest)
         sys.exit(1)
     while not args.silent:
-        print 'Ok to recursively delete \'%s\' and all contents (Y/N)?  Choosing Y will permanently delete the contents.' % args.dest
+        print('Ok to recursively delete \'%s\' and all contents (Y/N)?  Choosing Y will permanently delete the contents.' % args.dest)
         result = str.upper(sys.stdin.read(1))
         if result == 'N':
-            print 'Unable to copy files to the destination.  The destination already exists.'
+            print('Unable to copy files to the destination.  The destination already exists.')
             sys.exit(1)
         elif result == 'Y':
             break

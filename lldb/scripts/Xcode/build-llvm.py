@@ -250,7 +250,7 @@ def should_build_llvm():
 
 
 def do_symlink(source_path, link_path):
-    print "Symlinking " + source_path + " to " + link_path
+    print("Symlinking " + source_path + " to " + link_path)
     if os.path.islink(link_path):
         os.remove(link_path)
     if not os.path.exists(link_path):
@@ -376,12 +376,12 @@ def cmake_flags():
 
 def run_cmake(cmake_build_dir, ninja_binary_path):
     cmake_binary = find_cmake()
-    print "found cmake binary: using \"{}\"".format(cmake_binary)
+    print("found cmake binary: using \"{}\"".format(cmake_binary))
 
     command_line = [cmake_binary] + cmake_flags() + [
         "-DCMAKE_MAKE_PROGRAM={}".format(ninja_binary_path),
         llvm_source_path()]
-    print "running cmake like so: ({}) in dir ({})".format(command_line, cmake_build_dir)
+    print("running cmake like so: ({}) in dir ({})".format(command_line, cmake_build_dir))
 
     subprocess.check_call(
         command_line,
@@ -413,7 +413,7 @@ def build_ninja_if_needed():
         "ninja", os.environ["PATH"].split(os.pathsep))
     if ninja_binary_path:
         # It's on the path.  cmake will find it.  We're good.
-        print "found ninja here: \"{}\"".format(ninja_binary_path)
+        print("found ninja here: \"{}\"".format(ninja_binary_path))
         return ninja_binary_path
 
     # Figure out if we need to build it.
@@ -422,7 +422,7 @@ def build_ninja_if_needed():
     if not is_executable(ninja_binary_path):
         # Build ninja
         command_line = ["python", "configure.py", "--bootstrap"]
-        print "building ninja like so: ({}) in dir ({})".format(command_line, ninja_build_dir)
+        print("building ninja like so: ({}) in dir ({})".format(command_line, ninja_build_dir))
         subprocess.check_call(
             command_line,
             cwd=ninja_build_dir,

@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from __future__ import print_function
 
 import cmd
 import optparse
@@ -391,18 +392,18 @@ if __name__ == '__main__':
 
 
 def print_mtime_error(result, dmap_mtime, actual_mtime):
-    print >>result, ("error: modification time in debug map (%#08.8x) doesn't "
+    print("error: modification time in debug map (%#08.8x) doesn't "
                      "match the .o file modification time (%#08.8x)" % (
-                        dmap_mtime, actual_mtime))
+                        dmap_mtime, actual_mtime), file=result)
 
 
 def print_file_missing_error(result, path):
-    print >>result, "error: file \"%s\" doesn't exist" % (path)
+    print("error: file \"%s\" doesn't exist" % (path), file=result)
 
 
 def print_multiple_object_matches(result, object_name, mtime, matches):
-    print >>result, ("error: multiple matches for object '%s' with with "
-                     "modification time %#08.8x:" % (object_name, mtime))
+    print("error: multiple matches for object '%s' with with "
+                     "modification time %#08.8x:" % (object_name, mtime), file=result)
     Archive.dump_header(f=result)
     for match in matches:
         match.dump(f=result, flat=True)
@@ -411,15 +412,15 @@ def print_multiple_object_matches(result, object_name, mtime, matches):
 def print_archive_object_error(result, object_name, mtime, archive):
     matches = archive.find(object_name, f=result)
     if len(matches) > 0:
-        print >>result, ("error: no objects have a modification time that "
+        print("error: no objects have a modification time that "
                          "matches %#08.8x for '%s'. Potential matches:" % (
-                            mtime, object_name))
+                            mtime, object_name), file=result)
         Archive.dump_header(f=result)
         for match in matches:
             match.dump(f=result, flat=True)
     else:
-        print >>result, "error: no object named \"%s\" found in archive:" % (
-            object_name)
+        print("error: no object named \"%s\" found in archive:" % (
+            object_name), file=result)
         Archive.dump_header(f=result)
         for match in archive.objects:
             match.dump(f=result, flat=True)
@@ -496,13 +497,13 @@ or whose modification times don't match in the debug map of an executable.'''
                 dmap_mtime = int(str(symbol).split('value = ')
                                  [1].split(',')[0], 16)
                 if not options.errors:
-                    print >>result, '%s' % (path)
+                    print('%s' % (path), file=result)
                 if os.path.exists(path):
                     actual_mtime = int(os.stat(path).st_mtime)
                     if dmap_mtime != actual_mtime:
                         num_errors += 1
                         if options.errors:
-                            print >>result, '%s' % (path),
+                            print('%s' % (path), end=' ', file=result)
                         print_mtime_error(result, dmap_mtime,
                                           actual_mtime)
                 elif path[-1] == ')':
@@ -510,13 +511,13 @@ or whose modification times don't match in the debug map of an executable.'''
                     if not archive_path and not object_name:
                         num_errors += 1
                         if options.errors:
-                            print >>result, '%s' % (path),
+                            print('%s' % (path), end=' ', file=result)
                         print_file_missing_error(path)
                         continue
                     if not os.path.exists(archive_path):
                         num_errors += 1
                         if options.errors:
-                            print >>result, '%s' % (path),
+                            print('%s' % (path), end=' ', file=result)
                         print_file_missing_error(archive_path)
                         continue
                     if archive_path in archives:
@@ -527,30 +528,30 @@ or whose modification times don't match in the debug map of an executable.'''
                     matches = archive.find(object_name, dmap_mtime)
                     num_matches = len(matches)
                     if num_matches == 1:
-                        print >>result, '1 match'
+                        print('1 match', file=result)
                         obj = matches[0]
                         if obj.date != dmap_mtime:
                             num_errors += 1
                             if options.errors:
-                                print >>result, '%s' % (path),
+                                print('%s' % (path), end=' ', file=result)
                             print_mtime_error(result, dmap_mtime, obj.date)
                     elif num_matches == 0:
                         num_errors += 1
                         if options.errors:
-                            print >>result, '%s' % (path),
+                            print('%s' % (path), end=' ', file=result)
                         print_archive_object_error(result, object_name,
                                                    dmap_mtime, archive)
                     elif num_matches > 1:
                         num_errors += 1
                         if options.errors:
-                            print >>result, '%s' % (path),
+                            print('%s' % (path), end=' ', file=result)
                         print_multiple_object_matches(result,
                                                       object_name,
                                                       dmap_mtime, matches)
             if num_errors > 0:
-                print >>result, "%u errors found" % (num_errors)
+                print("%u errors found" % (num_errors), file=result)
             else:
-                print >>result, "No errors detected in debug map"
+                print("No errors detected in debug map", file=result)
 
 
 def __lldb_init_module(debugger, dict):

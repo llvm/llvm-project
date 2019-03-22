@@ -147,7 +147,7 @@ bool PseudoTerminal::OpenSlave(int oflag, char *error_str, size_t error_len) {
   if (slave_name == nullptr)
     return false;
 
-  m_slave_fd = ::open(slave_name, oflag);
+  m_slave_fd = llvm::sys::RetryAfterSignal(-1, ::open, slave_name, oflag);
 
   if (m_slave_fd < 0) {
     if (error_str)

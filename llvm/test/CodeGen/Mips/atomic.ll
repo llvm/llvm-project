@@ -1935,32 +1935,29 @@ define i32 @AtomicCmpSwap32(i32 signext %oldval, i32 signext %newval) nounwind {
 ; MIPS32O0:       # %bb.0: # %entry
 ; MIPS32O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32O0-NEXT:    addiu $sp, $sp, -16
+; MIPS32O0-NEXT:    addiu $sp, $sp, -8
 ; MIPS32O0-NEXT:    addu $1, $2, $25
-; MIPS32O0-NEXT:    sw $5, 12($sp)
-; MIPS32O0-NEXT:    lw $2, 12($sp)
+; MIPS32O0-NEXT:    sw $5, 4($sp)
+; MIPS32O0-NEXT:    lw $2, 4($sp)
 ; MIPS32O0-NEXT:    lw $1, %got(x)($1)
-; MIPS32O0-NEXT:    lw $3, 8($sp) # 4-byte Folded Reload
-; MIPS32O0-NEXT:    move $5, $4
+; MIPS32O0-NEXT:    move $3, $4
 ; MIPS32O0-NEXT:  $BB7_1: # %entry
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32O0-NEXT:    ll $6, 0($1)
-; MIPS32O0-NEXT:    bne $6, $5, $BB7_3
+; MIPS32O0-NEXT:    ll $5, 0($1)
+; MIPS32O0-NEXT:    bne $5, $3, $BB7_3
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # %entry
 ; MIPS32O0-NEXT:    # in Loop: Header=BB7_1 Depth=1
-; MIPS32O0-NEXT:    move $7, $2
-; MIPS32O0-NEXT:    sc $7, 0($1)
-; MIPS32O0-NEXT:    beqz $7, $BB7_1
+; MIPS32O0-NEXT:    move $6, $2
+; MIPS32O0-NEXT:    sc $6, 0($1)
+; MIPS32O0-NEXT:    beqz $6, $BB7_1
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  $BB7_3: # %entry
-; MIPS32O0-NEXT:    xor $1, $6, $4
+; MIPS32O0-NEXT:    xor $1, $5, $4
 ; MIPS32O0-NEXT:    sltiu $1, $1, 1
-; MIPS32O0-NEXT:    move $2, $6
-; MIPS32O0-NEXT:    sw $6, 8($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:    sw $3, 4($sp) # 4-byte Folded Spill
+; MIPS32O0-NEXT:    move $2, $5
 ; MIPS32O0-NEXT:    sw $1, 0($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:    addiu $sp, $sp, 16
+; MIPS32O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32O0-NEXT:    jr $ra
 ; MIPS32O0-NEXT:    nop
 ;
@@ -2013,30 +2010,27 @@ define i32 @AtomicCmpSwap32(i32 signext %oldval, i32 signext %newval) nounwind {
 ; MIPS32R6O0:       # %bb.0: # %entry
 ; MIPS32R6O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, -24
+; MIPS32R6O0-NEXT:    addiu $sp, $sp, -16
 ; MIPS32R6O0-NEXT:    addu $1, $2, $25
 ; MIPS32R6O0-NEXT:    move $2, $5
 ; MIPS32R6O0-NEXT:    move $3, $4
-; MIPS32R6O0-NEXT:    sw $5, 20($sp)
-; MIPS32R6O0-NEXT:    lw $5, 20($sp)
+; MIPS32R6O0-NEXT:    sw $5, 12($sp)
+; MIPS32R6O0-NEXT:    lw $5, 12($sp)
 ; MIPS32R6O0-NEXT:    lw $1, %got(x)($1)
-; MIPS32R6O0-NEXT:    lw $6, 16($sp) # 4-byte Folded Reload
 ; MIPS32R6O0-NEXT:  $BB7_1: # %entry
 ; MIPS32R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6O0-NEXT:    ll $7, 0($1)
-; MIPS32R6O0-NEXT:    bnec $7, $4, $BB7_3
+; MIPS32R6O0-NEXT:    ll $6, 0($1)
+; MIPS32R6O0-NEXT:    bnec $6, $4, $BB7_3
 ; MIPS32R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS32R6O0-NEXT:    # in Loop: Header=BB7_1 Depth=1
-; MIPS32R6O0-NEXT:    move $8, $5
-; MIPS32R6O0-NEXT:    sc $8, 0($1)
-; MIPS32R6O0-NEXT:    beqzc $8, $BB7_1
+; MIPS32R6O0-NEXT:    move $7, $5
+; MIPS32R6O0-NEXT:    sc $7, 0($1)
+; MIPS32R6O0-NEXT:    beqzc $7, $BB7_1
 ; MIPS32R6O0-NEXT:  $BB7_3: # %entry
-; MIPS32R6O0-NEXT:    sw $2, 12($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    move $2, $7
-; MIPS32R6O0-NEXT:    sw $3, 8($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $7, 16($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $6, 4($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, 24
+; MIPS32R6O0-NEXT:    sw $2, 8($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    move $2, $6
+; MIPS32R6O0-NEXT:    sw $3, 4($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    addiu $sp, $sp, 16
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
 ; MIPS4-LABEL: AtomicCmpSwap32:
@@ -2141,20 +2135,17 @@ define i32 @AtomicCmpSwap32(i32 signext %oldval, i32 signext %newval) nounwind {
 ; MIPS64R6O0-NEXT:    sw $3, 12($sp)
 ; MIPS64R6O0-NEXT:    lw $3, 12($sp)
 ; MIPS64R6O0-NEXT:    ld $1, %got_disp(x)($1)
-; MIPS64R6O0-NEXT:    lw $6, 8($sp) # 4-byte Folded Reload
 ; MIPS64R6O0-NEXT:  .LBB7_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    ll $7, 0($1)
-; MIPS64R6O0-NEXT:    bnec $7, $2, .LBB7_3
+; MIPS64R6O0-NEXT:    ll $6, 0($1)
+; MIPS64R6O0-NEXT:    bnec $6, $2, .LBB7_3
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    # in Loop: Header=BB7_1 Depth=1
-; MIPS64R6O0-NEXT:    move $8, $3
-; MIPS64R6O0-NEXT:    sc $8, 0($1)
-; MIPS64R6O0-NEXT:    beqzc $8, .LBB7_1
+; MIPS64R6O0-NEXT:    move $7, $3
+; MIPS64R6O0-NEXT:    sc $7, 0($1)
+; MIPS64R6O0-NEXT:    beqzc $7, .LBB7_1
 ; MIPS64R6O0-NEXT:  .LBB7_3: # %entry
-; MIPS64R6O0-NEXT:    move $2, $7
-; MIPS64R6O0-NEXT:    sw $7, 8($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:    sw $6, 4($sp) # 4-byte Folded Spill
+; MIPS64R6O0-NEXT:    move $2, $6
 ; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
@@ -6982,37 +6973,34 @@ define i32 @zeroreg() nounwind {
 ; MIPS32O0:       # %bb.0: # %entry
 ; MIPS32O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32O0-NEXT:    addiu $sp, $sp, -16
+; MIPS32O0-NEXT:    addiu $sp, $sp, -8
 ; MIPS32O0-NEXT:    addu $1, $2, $25
 ; MIPS32O0-NEXT:    sync
 ; MIPS32O0-NEXT:    lw $1, %got(a)($1)
 ; MIPS32O0-NEXT:    addiu $2, $zero, 0
 ; MIPS32O0-NEXT:    addiu $3, $zero, 1
-; MIPS32O0-NEXT:    lw $4, 12($sp) # 4-byte Folded Reload
-; MIPS32O0-NEXT:    move $5, $3
+; MIPS32O0-NEXT:    move $4, $3
 ; MIPS32O0-NEXT:  $BB17_1: # %entry
 ; MIPS32O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32O0-NEXT:    ll $6, 0($1)
-; MIPS32O0-NEXT:    bne $6, $5, $BB17_3
+; MIPS32O0-NEXT:    ll $5, 0($1)
+; MIPS32O0-NEXT:    bne $5, $4, $BB17_3
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  # %bb.2: # %entry
 ; MIPS32O0-NEXT:    # in Loop: Header=BB17_1 Depth=1
-; MIPS32O0-NEXT:    move $7, $2
-; MIPS32O0-NEXT:    sc $7, 0($1)
-; MIPS32O0-NEXT:    beqz $7, $BB17_1
+; MIPS32O0-NEXT:    move $6, $2
+; MIPS32O0-NEXT:    sc $6, 0($1)
+; MIPS32O0-NEXT:    beqz $6, $BB17_1
 ; MIPS32O0-NEXT:    nop
 ; MIPS32O0-NEXT:  $BB17_3: # %entry
-; MIPS32O0-NEXT:    xor $1, $6, $3
+; MIPS32O0-NEXT:    xor $1, $5, $3
 ; MIPS32O0-NEXT:    sltiu $1, $1, 1
 ; MIPS32O0-NEXT:    sync
 ; MIPS32O0-NEXT:    addiu $2, $zero, 1
-; MIPS32O0-NEXT:    xor $2, $6, $2
+; MIPS32O0-NEXT:    xor $2, $5, $2
 ; MIPS32O0-NEXT:    sltiu $2, $2, 1
 ; MIPS32O0-NEXT:    andi $2, $2, 1
-; MIPS32O0-NEXT:    sw $6, 12($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:    sw $4, 8($sp) # 4-byte Folded Spill
 ; MIPS32O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32O0-NEXT:    addiu $sp, $sp, 16
+; MIPS32O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32O0-NEXT:    jr $ra
 ; MIPS32O0-NEXT:    nop
 ;
@@ -7071,30 +7059,25 @@ define i32 @zeroreg() nounwind {
 ; MIPS32R6O0:       # %bb.0: # %entry
 ; MIPS32R6O0-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS32R6O0-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, -8
 ; MIPS32R6O0-NEXT:    addu $1, $2, $25
 ; MIPS32R6O0-NEXT:    sync
 ; MIPS32R6O0-NEXT:    lw $1, %got(a)($1)
 ; MIPS32R6O0-NEXT:    addiu $2, $zero, 0
 ; MIPS32R6O0-NEXT:    addiu $3, $zero, 1
-; MIPS32R6O0-NEXT:    lw $4, 4($sp) # 4-byte Folded Reload
-; MIPS32R6O0-NEXT:    move $5, $3
+; MIPS32R6O0-NEXT:    move $4, $3
 ; MIPS32R6O0-NEXT:  $BB17_1: # %entry
 ; MIPS32R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32R6O0-NEXT:    ll $6, 0($1)
-; MIPS32R6O0-NEXT:    bnec $6, $5, $BB17_3
+; MIPS32R6O0-NEXT:    ll $5, 0($1)
+; MIPS32R6O0-NEXT:    bnec $5, $4, $BB17_3
 ; MIPS32R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS32R6O0-NEXT:    # in Loop: Header=BB17_1 Depth=1
-; MIPS32R6O0-NEXT:    move $7, $2
-; MIPS32R6O0-NEXT:    sc $7, 0($1)
-; MIPS32R6O0-NEXT:    beqzc $7, $BB17_1
+; MIPS32R6O0-NEXT:    move $6, $2
+; MIPS32R6O0-NEXT:    sc $6, 0($1)
+; MIPS32R6O0-NEXT:    beqzc $6, $BB17_1
 ; MIPS32R6O0-NEXT:  $BB17_3: # %entry
-; MIPS32R6O0-NEXT:    xor $1, $6, $3
+; MIPS32R6O0-NEXT:    xor $1, $5, $3
 ; MIPS32R6O0-NEXT:    sltiu $2, $1, 1
 ; MIPS32R6O0-NEXT:    sync
-; MIPS32R6O0-NEXT:    sw $6, 4($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $4, 0($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
 ; MIPS4-LABEL: zeroreg:
@@ -7204,7 +7187,6 @@ define i32 @zeroreg() nounwind {
 ;
 ; MIPS64R6O0-LABEL: zeroreg:
 ; MIPS64R6O0:       # %bb.0: # %entry
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(zeroreg)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(zeroreg)))
@@ -7212,24 +7194,20 @@ define i32 @zeroreg() nounwind {
 ; MIPS64R6O0-NEXT:    ld $1, %got_disp(a)($1)
 ; MIPS64R6O0-NEXT:    addiu $2, $zero, 0
 ; MIPS64R6O0-NEXT:    addiu $3, $zero, 1
-; MIPS64R6O0-NEXT:    lw $4, 12($sp) # 4-byte Folded Reload
-; MIPS64R6O0-NEXT:    move $5, $3
+; MIPS64R6O0-NEXT:    move $4, $3
 ; MIPS64R6O0-NEXT:  .LBB17_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    ll $6, 0($1)
-; MIPS64R6O0-NEXT:    bnec $6, $5, .LBB17_3
+; MIPS64R6O0-NEXT:    ll $5, 0($1)
+; MIPS64R6O0-NEXT:    bnec $5, $4, .LBB17_3
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    # in Loop: Header=BB17_1 Depth=1
-; MIPS64R6O0-NEXT:    move $7, $2
-; MIPS64R6O0-NEXT:    sc $7, 0($1)
-; MIPS64R6O0-NEXT:    beqzc $7, .LBB17_1
+; MIPS64R6O0-NEXT:    move $6, $2
+; MIPS64R6O0-NEXT:    sc $6, 0($1)
+; MIPS64R6O0-NEXT:    beqzc $6, .LBB17_1
 ; MIPS64R6O0-NEXT:  .LBB17_3: # %entry
-; MIPS64R6O0-NEXT:    xor $2, $6, $3
+; MIPS64R6O0-NEXT:    xor $2, $5, $3
 ; MIPS64R6O0-NEXT:    sltiu $2, $2, 1
 ; MIPS64R6O0-NEXT:    sync
-; MIPS64R6O0-NEXT:    sw $6, 12($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:    sw $4, 8($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
 ; MM32-LABEL: zeroreg:

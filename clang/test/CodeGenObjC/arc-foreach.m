@@ -139,7 +139,7 @@ void test2(Test2 *a) {
 // CHECK-LP64-LABEL:    define void @test2(
 // CHECK-LP64:      [[T0:%.*]] = call [[ARRAY_T]]* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to [[ARRAY_T]]* (i8*, i8*)*)(
 // CHECK-LP64-NEXT: [[T1:%.*]] = bitcast [[ARRAY_T]]* [[T0]] to i8*
-// CHECK-LP64-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
+// CHECK-LP64-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-LP64-NEXT: [[COLL:%.*]] = bitcast i8* [[T2]] to [[ARRAY_T]]*
 
 // Make sure it's not immediately released before starting the iteration.

@@ -736,14 +736,14 @@ float16x8_t test_vmulxq_f16(float16x8_t a, float16x8_t b) {
 }
 
 // CHECK-LABEL: test_vpadd_f16
-// CHECK:  [[ADD:%.*]] = call <4 x half> @llvm.aarch64.neon.addp.v4f16(<4 x half> %a, <4 x half> %b)
+// CHECK:  [[ADD:%.*]] = call <4 x half> @llvm.aarch64.neon.faddp.v4f16(<4 x half> %a, <4 x half> %b)
 // CHECK:  ret <4 x half> [[ADD]]
 float16x4_t test_vpadd_f16(float16x4_t a, float16x4_t b) {
   return vpadd_f16(a, b);
 }
 
 // CHECK-LABEL: test_vpaddq_f16
-// CHECK:  [[ADD:%.*]] = call <8 x half> @llvm.aarch64.neon.addp.v8f16(<8 x half> %a, <8 x half> %b)
+// CHECK:  [[ADD:%.*]] = call <8 x half> @llvm.aarch64.neon.faddp.v8f16(<8 x half> %a, <8 x half> %b)
 // CHECK:  ret <8 x half> [[ADD]]
 float16x8_t test_vpaddq_f16(float16x8_t a, float16x8_t b) {
   return vpaddq_f16(a, b);

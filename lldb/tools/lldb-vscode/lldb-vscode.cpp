@@ -41,6 +41,7 @@
 #include <thread>
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -90,7 +91,8 @@ SOCKET AcceptConnection(int portno) {
     } else {
       listen(sockfd, 5);
       socklen_t clilen = sizeof(cli_addr);
-      newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
+      newsockfd = llvm::sys::RetryAfterSignal(-1, accept,
+          sockfd, (struct sockaddr *)&cli_addr, &clilen);
       if (newsockfd < 0)
         if (g_vsc.log)
           *g_vsc.log << "error: accept (" << strerror(errno) << ")"
@@ -1074,7 +1076,7 @@ void request_initialize(const llvm::json::Object &request) {
   // before we are given an executable to launch in a "launch" request, or a
   // executable when attaching to a process by process ID in a "attach"
   // request.
-  FILE *out = fopen(dev_null_path, "w");
+  FILE *out = llvm::sys::RetryAfterSignal(nullptr, fopen, dev_null_path, "w");
   if (out) {
     // Set the output and error file handles to redirect into nothing otherwise
     // if any code in LLDB prints to the debugger file handles, the output and
