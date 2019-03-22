@@ -9238,6 +9238,9 @@ def warn_omp_used_different_allocator : Warning<
   InGroup<OpenMPClauses>;
 def note_omp_previous_allocator : Note<
   "previous allocator is specified here">;
+def err_expected_allocator_clause : Error<"expected an 'allocator' clause "
+  "inside of the target region; provide an 'allocator' clause or use 'requires'"
+  " directive with the 'dynamic_allocators' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -9354,8 +9357,6 @@ def err_coroutine_objc_method : Error<
   "Objective-C methods as coroutines are not yet supported">;
 def err_coroutine_unevaluated_context : Error<
   "'%0' cannot be used in an unevaluated context">;
-def err_coroutine_within_handler : Error<
-  "'%0' cannot be used in the handler of a try block">;
 def err_coroutine_outside_function : Error<
   "'%0' cannot be used outside a function">;
 def err_coroutine_invalid_func_context : Error<

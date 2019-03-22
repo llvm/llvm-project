@@ -176,15 +176,15 @@ private:
     static char g_python_home[] = LLDB_PYTHON_HOME;
 #endif
     Py_SetPythonHome(g_python_home);
-#endif
 #else
 #if defined(__APPLE__) && PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION == 7
     // For Darwin, the only Python version supported is the one shipped in the OS
-    // and linked with lldb. Other installation of Python may have higher priorities
-    // in the path, overriding PYTHONHOME and causing problems/incompatibilities.
-    // In order to avoid confusion, always hardcode the PythonHome to be right,
-    // as it's not going to change.
-    Py_SetPythonHome("/System/Library/Frameworks/Python.framework/Versions/2.7");
+    // OS and linked with lldb. Other installation of Python may have higher
+    // priorities in the path, overriding PYTHONHOME and causing
+    // problems/incompatibilities. In order to avoid confusion, always hardcode
+    // the PythonHome to be right, as it's not going to change.
+    char path[] = "/System/Library/Frameworks/Python.framework/Versions/2.7";
+    Py_SetPythonHome(path);
 #endif
 #endif
   }

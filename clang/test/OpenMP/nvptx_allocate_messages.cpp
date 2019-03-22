@@ -1,9 +1,25 @@
 // RUN: %clang_cc1 -verify -fopenmp -triple x86_64-apple-darwin10.6.0 -fopenmp-targets=nvptx64-nvidia-cuda  -emit-llvm-bc -o %t-host.bc %s
-// RUN: %clang_cc1 -verify -fopenmp -triple nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -DDEVICE -fopenmp -triple nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda -fsyntax-only %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc
+// RUN: %clang_cc1 -verify -DDEVICE -DREQUIRES -fopenmp -triple nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda -fsyntax-only %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc
+#if !defined(DEVICE) || defined(REQUIRES)
 // expected-no-diagnostics
+#endif // DEVICE
 
 #ifndef HEADER
 #define HEADER
+
+#if defined(REQUIRES) && defined(DEVICE)
+#pragma omp requires dynamic_allocators
+#endif // REQUIRES && DEVICE
+
+int bar() {
+  int res = 0;
+#if defined(DEVICE) && !defined(REQUIRES)
+// expected-error@+2 {{expected an 'allocator' clause inside of the target region; provide an 'allocator' clause or use 'requires' directive with the 'dynamic_allocators' clause}}
+#endif // DEVICE && !REQUIRES
+#pragma omp allocate(res)
+  return 0;
+}
 
 #pragma omp declare target
 typedef void **omp_allocator_handle_t;
@@ -16,14 +32,6 @@ extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
 extern const omp_allocator_handle_t omp_pteam_mem_alloc;
 extern const omp_allocator_handle_t omp_thread_mem_alloc;
 
-// CHECK-DAG: @{{.+}}St1{{.+}}b{{.+}} = external global i32,
-// CHECK-DAG: @a = global i32 0,
-// CHECK-DAG: @b = addrspace(4) global i32 0,
-// CHECK-DAG: @c = global i32 0,
-// CHECK-DAG: @d = global %struct.St1 zeroinitializer,
-// CHECK-DAG: @{{.+}}ns{{.+}}a{{.+}} = addrspace(3) global i32 0,
-// CHECK-DAG: @{{.+}}main{{.+}}a{{.*}} = internal global i32 0,
-// CHECK-DAG: @{{.+}}ST{{.+}}m{{.+}} = external global i32,
 struct St{
  int a;
 };
@@ -57,19 +65,20 @@ namespace ns{
 }
 #pragma omp allocate(ns::a) allocator(omp_pteam_mem_alloc)
 
-// CHECK-LABEL: @main
 int main () {
-  // CHECK: alloca double,
   static int a;
 #pragma omp allocate(a) allocator(omp_thread_mem_alloc)
   a=2;
   double b = 3;
-#pragma omp allocate(b) allocator(omp_default_mem_alloc)
-  return (foo<int>());
+#if defined(DEVICE) && !defined(REQUIRES)
+// expected-error@+2 {{expected an 'allocator' clause inside of the target region; provide an 'allocator' clause or use 'requires' directive with the 'dynamic_allocators' clause}}
+#endif // DEVICE && !REQUIRES
+#pragma omp allocate(b)
+#if defined(DEVICE) && !defined(REQUIRES)
+// expected-note@+2 {{called by 'main'}}
+#endif // DEVICE && !REQUIRES
+  return (foo<int>() + bar());
 }
-
-// CHECK: define {{.*}}i32 @{{.+}}foo{{.+}}()
-// CHECK: alloca i32,
 
 extern template int ST<int>::m;
 #pragma omp end declare target

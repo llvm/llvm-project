@@ -299,11 +299,11 @@ bool CodeGenTypes::inheritingCtorHasParams(
   return Type == Ctor_Complete ||
          !Inherited.getShadowDecl()->constructsVirtualBase() ||
          !Target.getCXXABI().hasConstructorVariants();
-  }
+}
 
 const CGFunctionInfo &
-CodeGenTypes::arrangeCXXStructorDeclaration(const CXXMethodDecl *MD,
-                                            StructorType Type) {
+CodeGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
+  auto *MD = cast<CXXMethodDecl>(GD.getDecl());
 
   SmallVector<CanQualType, 16> argTypes;
   SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
@@ -311,17 +311,11 @@ CodeGenTypes::arrangeCXXStructorDeclaration(const CXXMethodDecl *MD,
 
   bool PassParams = true;
 
-  GlobalDecl GD;
   if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
-    GD = GlobalDecl(CD, toCXXCtorType(Type));
-
     // A base class inheriting constructor doesn't get forwarded arguments
     // needed to construct a virtual base (or base class thereof).
     if (auto Inherited = CD->getInheritedConstructor())
-      PassParams = inheritingCtorHasParams(Inherited, toCXXCtorType(Type));
-  } else {
-    auto *DD = dyn_cast<CXXDestructorDecl>(MD);
-    GD = GlobalDecl(DD, toCXXDtorType(Type));
+      PassParams = inheritingCtorHasParams(Inherited, GD.getCtorType());
   }
 
   CanQual<FunctionProtoType> FTP = GetFormalType(MD);
@@ -331,7 +325,7 @@ CodeGenTypes::arrangeCXXStructorDeclaration(const CXXMethodDecl *MD,
     appendParameterTypes(*this, argTypes, paramInfos, FTP);
 
   CGCXXABI::AddedStructorArgs AddedArgs =
-      TheCXXABI.buildStructorSignature(MD, Type, argTypes);
+      TheCXXABI.buildStructorSignature(GD, argTypes);
   if (!paramInfos.empty()) {
     // Note: prefix implies after the first param.
     if (AddedArgs.Prefix)
@@ -519,11 +513,9 @@ CodeGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
   // FIXME: Do we need to handle ObjCMethodDecl?
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
 
-  if (const CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(FD))
-    return arrangeCXXStructorDeclaration(CD, getFromCtorType(GD.getCtorType()));
-
-  if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(FD))
-    return arrangeCXXStructorDeclaration(DD, getFromDtorType(GD.getDtorType()));
+  if (isa<CXXConstructorDecl>(GD.getDecl()) ||
+      isa<CXXDestructorDecl>(GD.getDecl()))
+    return arrangeCXXStructorDeclaration(GD);
 
   return arrangeFunctionDeclaration(FD);
 }
@@ -1681,13 +1673,7 @@ llvm::Type *CodeGenTypes::GetFunctionTypeForVTable(GlobalDecl GD) {
   if (!isFuncTypeConvertible(FPT))
     return llvm::StructType::get(getLLVMContext());
 
-  const CGFunctionInfo *Info;
-  if (isa<CXXDestructorDecl>(MD))
-    Info =
-        &arrangeCXXStructorDeclaration(MD, getFromDtorType(GD.getDtorType()));
-  else
-    Info = &arrangeCXXMethodDeclaration(MD);
-  return GetFunctionType(*Info);
+  return GetFunctionType(GD);
 }
 
 static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,

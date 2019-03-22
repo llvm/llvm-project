@@ -309,7 +309,7 @@ public:
   /// adding any required parameters.  For convenience, ArgTys has been
   /// initialized with the type of 'this'.
   virtual AddedStructorArgs
-  buildStructorSignature(const CXXMethodDecl *MD, StructorType T,
+  buildStructorSignature(GlobalDecl GD,
                          SmallVectorImpl<CanQualType> &ArgTys) = 0;
 
   /// Returns true if the given destructor type should be emitted as a linkonce
@@ -588,7 +588,7 @@ public:
 
   /// Emit a single constructor/destructor with the given type from a C++
   /// constructor Decl.
-  virtual void emitCXXStructor(const CXXMethodDecl *MD, StructorType Type) = 0;
+  virtual void emitCXXStructor(GlobalDecl GD) = 0;
 
   /// Load a vtable from This, an object of polymorphic type RD, or from one of
   /// its virtual bases if it does not have its own vtable. Returns the vtable

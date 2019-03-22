@@ -90,14 +90,14 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
 }
 
 RValue CodeGenFunction::EmitCXXDestructorCall(
-    const CXXDestructorDecl *DD, const CGCallee &Callee, llvm::Value *This,
-    llvm::Value *ImplicitParam, QualType ImplicitParamTy, const CallExpr *CE,
-    StructorType Type) {
+    GlobalDecl Dtor, const CGCallee &Callee, llvm::Value *This,
+    llvm::Value *ImplicitParam, QualType ImplicitParamTy, const CallExpr *CE) {
   CallArgList Args;
-  commonEmitCXXMemberOrOperatorCall(*this, DD, This, ImplicitParam,
-                                    ImplicitParamTy, CE, Args, nullptr);
-  return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(DD, Type),
-                  Callee, ReturnValueSlot(), Args);
+  commonEmitCXXMemberOrOperatorCall(*this, cast<CXXMethodDecl>(Dtor.getDecl()),
+                                    This, ImplicitParam, ImplicitParamTy, CE,
+                                    Args, nullptr);
+  return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
+                  ReturnValueSlot(), Args);
 }
 
 RValue CodeGenFunction::EmitCXXPseudoDestructorExpr(
@@ -290,7 +290,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   const CGFunctionInfo *FInfo = nullptr;
   if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(CalleeDecl))
     FInfo = &CGM.getTypes().arrangeCXXStructorDeclaration(
-        Dtor, StructorType::Complete);
+        GlobalDecl(Dtor, Dtor_Complete));
   else
     FInfo = &CGM.getTypes().arrangeCXXMethodDeclaration(CalleeDecl);
 
@@ -334,23 +334,20 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
           *this, Dtor, Dtor_Complete, This.getAddress(),
           cast<CXXMemberCallExpr>(CE));
     } else {
+      GlobalDecl GD(Dtor, Dtor_Complete);
       CGCallee Callee;
       if (getLangOpts().AppleKext && Dtor->isVirtual() && HasQualifier)
         Callee = BuildAppleKextVirtualCall(Dtor, Qualifier, Ty);
       else if (!DevirtualizedMethod)
-        Callee = CGCallee::forDirect(
-            CGM.getAddrOfCXXStructor(Dtor, StructorType::Complete, FInfo, Ty),
-            GlobalDecl(Dtor, Dtor_Complete));
+        Callee =
+            CGCallee::forDirect(CGM.getAddrOfCXXStructor(GD, FInfo, Ty), GD);
       else {
-        Callee = CGCallee::forDirect(
-            CGM.GetAddrOfFunction(GlobalDecl(Dtor, Dtor_Complete), Ty),
-            GlobalDecl(Dtor, Dtor_Complete));
+        Callee = CGCallee::forDirect(CGM.GetAddrOfFunction(GD, Ty), GD);
       }
 
-      EmitCXXDestructorCall(Dtor, Callee, This.getPointer(),
+      EmitCXXDestructorCall(GD, Callee, This.getPointer(),
                             /*ImplicitParam=*/nullptr,
-                            /*ImplicitParamTy=*/QualType(), nullptr,
-                            getFromDtorType(Dtor_Complete));
+                            /*ImplicitParamTy=*/QualType(), nullptr);
     }
     return RValue::get(nullptr);
   }
