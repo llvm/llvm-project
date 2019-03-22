@@ -370,10 +370,12 @@ public:
       ABI = "elfv1";
     }
 
-    switch (getTriple().getOS()) {
+    switch (Triple.getOS()) {
     case llvm::Triple::FreeBSD:
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+      if (Triple.getOSMajorVersion() >= 13)
+        ABI = "elfv2";
       break;
     default:
       break;
