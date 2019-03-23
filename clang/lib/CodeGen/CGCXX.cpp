@@ -222,7 +222,7 @@ llvm::FunctionCallee CodeGenModule::getAddrAndTypeOfCXXStructor(
     bool DontDefer, ForDefinition_t IsForDefinition) {
   auto *MD = cast<CXXMethodDecl>(GD.getDecl());
 
-  if (auto *DD = dyn_cast<CXXDestructorDecl>(MD)) {
+  if (isa<CXXDestructorDecl>(MD)) {
     // Always alias equivalent complete destructors to base destructors in the
     // MS ABI.
     if (getTarget().getCXXABI().isMicrosoft() &&

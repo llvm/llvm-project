@@ -436,14 +436,6 @@ unsigned LowerSwitch::Clusterify(CaseVector& Cases, SwitchInst *SI) {
   return NumSimpleCases;
 }
 
-static ConstantRange getConstantRangeFromKnownBits(const KnownBits &Known) {
-  APInt Lower = Known.One;
-  APInt Upper = ~Known.Zero + 1;
-  if (Upper == Lower)
-    return ConstantRange(Known.getBitWidth(), /*isFullSet=*/true);
-  return ConstantRange(Lower, Upper);
-}
-
 /// Replace the specified switch instruction with a sequence of chained if-then
 /// insts in a balanced binary search.
 void LowerSwitch::processSwitchInst(SwitchInst *SI,
@@ -501,7 +493,9 @@ void LowerSwitch::processSwitchInst(SwitchInst *SI,
     //    switch, while LowerSwitch only needs to call LVI once per switch.
     const DataLayout &DL = F->getParent()->getDataLayout();
     KnownBits Known = computeKnownBits(Val, DL, /*Depth=*/0, AC, SI);
-    ConstantRange KnownBitsRange = getConstantRangeFromKnownBits(Known);
+    // TODO Shouldn't this create a signed range?
+    ConstantRange KnownBitsRange =
+        ConstantRange::fromKnownBits(Known, /*ForSigned=*/false);
     const ConstantRange LVIRange = LVI->getConstantRange(Val, OrigBlock, SI);
     ConstantRange ValRange = KnownBitsRange.intersectWith(LVIRange);
     // We delegate removal of unreachable non-default cases to other passes. In

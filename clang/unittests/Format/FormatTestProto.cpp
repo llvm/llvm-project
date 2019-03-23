@@ -107,6 +107,12 @@ TEST_F(FormatTestProto, FormatsEnums) {
                "};");
 }
 
+TEST_F(FormatTestProto, EnumAsFieldName) {
+  verifyFormat("message SomeMessage {\n"
+               "  required int32 enum = 1;\n"
+               "}");
+}
+
 TEST_F(FormatTestProto, UnderstandsReturns) {
   verifyFormat("rpc Search(SearchRequest) returns (SearchResponse);");
 }
@@ -385,6 +391,12 @@ TEST_F(FormatTestProto, FormatsOptions) {
                "  headheadheadheadheadhead_id: 1\n"
                "  product_data { product { 1 } }\n"
                "};");
+}
+
+TEST_F(FormatTestProto, DoesntWrapPackageStatements) {
+  verifyFormat(
+      "package"
+      " some.really.long.package.that.exceeds.the.column.limit00000000;");
 }
 
 TEST_F(FormatTestProto, FormatsService) {

@@ -23926,17 +23926,19 @@ static SDValue lowerAddSub(SDValue Op, SelectionDAG &DAG,
 
 static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
+  SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
   if (VT.getScalarType() == MVT::i1) {
     SDLoc dl(Op);
     switch (Op.getOpcode()) {
     default: llvm_unreachable("Expected saturated arithmetic opcode");
     case ISD::UADDSAT:
     case ISD::SADDSAT:
-      return DAG.getNode(ISD::OR, dl, VT, Op.getOperand(0), Op.getOperand(1));
+      // *addsat i1 X, Y --> X | Y
+      return DAG.getNode(ISD::OR, dl, VT, X, Y);
     case ISD::USUBSAT:
     case ISD::SSUBSAT:
-      return DAG.getNode(ISD::AND, dl, VT, Op.getOperand(0),
-                         DAG.getNOT(dl, Op.getOperand(1), VT));
+      // *subsat i1 X, Y --> X & ~Y
+      return DAG.getNode(ISD::AND, dl, VT, X, DAG.getNOT(dl, Y, VT));
     }
   }
 

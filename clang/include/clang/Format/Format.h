@@ -154,6 +154,38 @@ struct FormatStyle {
   /// \endcode
   bool AlignTrailingComments;
 
+  /// \brief If a function call or braced initializer list doesn't fit on a
+  /// line, allow putting all arguments onto the next line, even if
+  /// ``BinPackArguments`` is ``false``.
+  /// \code
+  ///   true:
+  ///   callFunction(
+  ///       a, b, c, d);
+  ///
+  ///   false:
+  ///   callFunction(a,
+  ///                b,
+  ///                c,
+  ///                d);
+  /// \endcode
+  bool AllowAllArgumentsOnNextLine;
+
+  /// \brief If a constructor definition with a member initializer list doesn't
+  /// fit on a single line, allow putting all member initializers onto the next
+  /// line, if ```ConstructorInitializerAllOnOneLineOrOnePerLine``` is true.
+  /// Note that this parameter has no effect if
+  /// ```ConstructorInitializerAllOnOneLineOrOnePerLine``` is false.
+  /// \code
+  ///   true:
+  ///   MyClass::MyClass() :
+  ///       member0(0), member1(2) {}
+  ///
+  ///   false:
+  ///   MyClass::MyClass() :
+  ///       member0(0),
+  ///       member1(2) {}
+  bool AllowAllConstructorInitializersOnNextLine;
+
   /// If the function declaration doesn't fit on a line,
   /// allow putting all parameters of a function declaration onto
   /// the next line even if ``BinPackParameters`` is ``false``.
@@ -1761,6 +1793,9 @@ struct FormatStyle {
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
+           AllowAllArgumentsOnNextLine == R.AllowAllArgumentsOnNextLine &&
+           AllowAllConstructorInitializersOnNextLine ==
+               R.AllowAllConstructorInitializersOnNextLine &&
            AllowAllParametersOfDeclarationOnNextLine ==
                R.AllowAllParametersOfDeclarationOnNextLine &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&

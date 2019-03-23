@@ -63,6 +63,9 @@ private:
                             uint64_t OpdAddress = 0);
   std::error_code addCoffExportSymbols(const object::COFFObjectFile *CoffObj);
 
+  /// Search for the first occurence of specified Address in ObjectFile.
+  uint64_t getModuleSectionIndexForAddress(uint64_t Address) const;
+
   object::ObjectFile *Module;
   std::unique_ptr<DIContext> DebugInfoContext;
 
