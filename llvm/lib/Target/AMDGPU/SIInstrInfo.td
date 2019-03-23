@@ -108,9 +108,6 @@ def SDTtbuffer_store : SDTypeProfile<0, 9,
 
 def SItbuffer_store : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT", SDTtbuffer_store,
                              [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
-def SItbuffer_store_x3 : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT_X3",
-                                SDTtbuffer_store,
-                                [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 def SItbuffer_store_d16 : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT_D16",
                                 SDTtbuffer_store,
                                 [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;

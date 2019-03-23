@@ -2,9 +2,12 @@ import("//llvm/utils/unittest/unittest.gni")
 
 unittest("ObjectYAMLTests") {
   deps = [
+    "//llvm/lib/Object",
     "//llvm/lib/ObjectYAML",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "MinidumpYAMLTest.cpp",
     "YAMLTest.cpp",
   ]
 }

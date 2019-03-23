@@ -1517,14 +1517,12 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
 namespace {
 
 Constant *GetConstantFoldFPValue(double V, Type *Ty) {
-  if (Ty->isHalfTy()) {
+  if (Ty->isHalfTy() || Ty->isFloatTy()) {
     APFloat APF(V);
     bool unused;
-    APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &unused);
+    APF.convert(Ty->getFltSemantics(), APFloat::rmNearestTiesToEven, &unused);
     return ConstantFP::get(Ty->getContext(), APF);
   }
-  if (Ty->isFloatTy())
-    return ConstantFP::get(Ty->getContext(), APFloat((float)V));
   if (Ty->isDoubleTy())
     return ConstantFP::get(Ty->getContext(), APFloat(V));
   llvm_unreachable("Can only constant fold half/float/double");

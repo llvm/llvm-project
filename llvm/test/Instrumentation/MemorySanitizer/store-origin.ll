@@ -74,7 +74,7 @@ attributes #1 = { nounwind readnone }
 ; CHECK: store {{.*}}!dbg ![[DBG:[0-9]+]]
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 
 ; Origin tracking level 1: simply store the origin value
 ; CHECK-ORIGINS1: store i32 {{.*}}[[ORIGIN]],{{.*}}!dbg !{{.*}}[[DBG]]
@@ -84,6 +84,6 @@ attributes #1 = { nounwind readnone }
 ; CHECK-ORIGINS2: store i32 {{.*}}[[ORIGIN2]],{{.*}}!dbg !{{.*}}[[DBG]]
 
 ; CHECK: br label{{.*}}!dbg !{{.*}}[[DBG]]
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: store{{.*}}!dbg !{{.*}}[[DBG]]
 ; CHECK: ret void

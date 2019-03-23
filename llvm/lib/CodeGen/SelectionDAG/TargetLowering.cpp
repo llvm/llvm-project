@@ -1257,29 +1257,29 @@ bool TargetLowering::SimplifyDemandedBits(
           // Do not turn (vt1 truncate (vt2 srl)) into (vt1 srl) if vt1 is
           // undesirable.
           break;
-        ConstantSDNode *ShAmt = dyn_cast<ConstantSDNode>(Src.getOperand(1));
-        if (!ShAmt)
+
+        auto *ShAmt = dyn_cast<ConstantSDNode>(Src.getOperand(1));
+        if (!ShAmt || ShAmt->getAPIntValue().uge(BitWidth))
           break;
+
         SDValue Shift = Src.getOperand(1);
-        if (TLO.LegalTypes()) {
-          uint64_t ShVal = ShAmt->getZExtValue();
+        uint64_t ShVal = ShAmt->getZExtValue();
+
+        if (TLO.LegalTypes())
           Shift = TLO.DAG.getConstant(ShVal, dl, getShiftAmountTy(VT, DL));
-        }
 
-        if (ShAmt->getZExtValue() < BitWidth) {
-          APInt HighBits = APInt::getHighBitsSet(OperandBitWidth,
-                                                 OperandBitWidth - BitWidth);
-          HighBits.lshrInPlace(ShAmt->getZExtValue());
-          HighBits = HighBits.trunc(BitWidth);
+        APInt HighBits =
+            APInt::getHighBitsSet(OperandBitWidth, OperandBitWidth - BitWidth);
+        HighBits.lshrInPlace(ShVal);
+        HighBits = HighBits.trunc(BitWidth);
 
-          if (!(HighBits & DemandedBits)) {
-            // None of the shifted in bits are needed.  Add a truncate of the
-            // shift input, then shift it.
-            SDValue NewTrunc =
-                TLO.DAG.getNode(ISD::TRUNCATE, dl, VT, Src.getOperand(0));
-            return TLO.CombineTo(
-                Op, TLO.DAG.getNode(ISD::SRL, dl, VT, NewTrunc, Shift));
-          }
+        if (!(HighBits & DemandedBits)) {
+          // None of the shifted in bits are needed.  Add a truncate of the
+          // shift input, then shift it.
+          SDValue NewTrunc =
+              TLO.DAG.getNode(ISD::TRUNCATE, dl, VT, Src.getOperand(0));
+          return TLO.CombineTo(
+              Op, TLO.DAG.getNode(ISD::SRL, dl, VT, NewTrunc, Shift));
         }
         break;
       }

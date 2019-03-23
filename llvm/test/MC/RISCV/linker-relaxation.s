@@ -45,6 +45,7 @@ sb t1, %lo(foo)(a2)
 # RELAX-FIXUP: fixup A - offset: 0, value: %lo(foo), kind: fixup_riscv_lo12_s
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
 
+1:
 auipc t1, %pcrel_hi(foo)
 # NORELAX-RELOC: R_RISCV_PCREL_HI20 foo 0x0
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
@@ -53,20 +54,20 @@ auipc t1, %pcrel_hi(foo)
 # RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_hi(foo), kind: fixup_riscv_pcrel_hi20
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
 
-addi t1, t1, %pcrel_lo(foo)
-# NORELAX-RELOC: R_RISCV_PCREL_LO12_I foo 0x0
+addi t1, t1, %pcrel_lo(1b)
+# NORELAX-RELOC: R_RISCV_PCREL_LO12_I .Ltmp0 0x0
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
-# RELAX-RELOC: R_RISCV_PCREL_LO12_I foo 0x0
+# RELAX-RELOC: R_RISCV_PCREL_LO12_I .Ltmp0 0x0
 # RELAX-RELOC: R_RISCV_RELAX - 0x0
-# RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_lo(foo), kind: fixup_riscv_pcrel_lo12_i
+# RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_lo(.Ltmp0), kind: fixup_riscv_pcrel_lo12_i
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
 
-sb t1, %pcrel_lo(foo)(a2)
-# NORELAX-RELOC: R_RISCV_PCREL_LO12_S foo 0x0
+sb t1, %pcrel_lo(1b)(a2)
+# NORELAX-RELOC: R_RISCV_PCREL_LO12_S .Ltmp0 0x0
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
-# RELAX-RELOC: R_RISCV_PCREL_LO12_S foo 0x0
+# RELAX-RELOC: R_RISCV_PCREL_LO12_S .Ltmp0 0x0
 # RELAX-RELOC: R_RISCV_RELAX - 0x0
-# RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_lo(foo), kind: fixup_riscv_pcrel_lo12_s
+# RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_lo(.Ltmp0), kind: fixup_riscv_pcrel_lo12_s
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
 
 
@@ -111,6 +112,7 @@ sb t1, %lo(bar)(a2)
 # RELAX-FIXUP: fixup A - offset: 0, value: %lo(bar), kind: fixup_riscv_lo12_s
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
 
+2:
 auipc t1, %pcrel_hi(bar)
 # NORELAX-RELOC-NOT: R_RISCV_PCREL_HI20
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
@@ -119,8 +121,22 @@ auipc t1, %pcrel_hi(bar)
 # RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_hi(bar), kind: fixup_riscv_pcrel_hi20
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
 
-# TODO/FIXME: %pcrel_lo(bar) will produce an error finding the corresponding
-# %pcrel_hi.
+# TODO/FIXME: The generated PCREL_LO relocations are incorrect.
+# RISCVMCExpr::evaluatePCRelLo should not be evaluating the fixup when linker
+# relaxation is enabled.
 
-#addi t1, t1, %pcrel_lo(bar)
-#sb t1, %pcrel_lo(bar)(a2)
+addi t1, t1, %pcrel_lo(2b)
+# NORELAX-RELOC-NOT: R_RISCV_PCREL_LO12_I
+# NORELAX-RELOC-NOT: R_RISCV_RELAX
+# RELAX-RELOC: R_RISCV_PCREL_LO12_I bar 0x4
+# RELAX-RELOC: R_RISCV_RELAX - 0x0
+# RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_lo(.Ltmp1), kind: fixup_riscv_pcrel_lo12_i
+# RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
+
+sb t1, %pcrel_lo(2b)(a2)
+# NORELAX-RELOC-NOT: R_RISCV_PCREL_LO12_S
+# NORELAX-RELOC-NOT: R_RISCV_RELAX
+# RELAX-RELOC: R_RISCV_PCREL_LO12_S bar 0x8
+# RELAX-RELOC: R_RISCV_RELAX - 0x0
+# RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_lo(.Ltmp1), kind: fixup_riscv_pcrel_lo12_s
+# RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax

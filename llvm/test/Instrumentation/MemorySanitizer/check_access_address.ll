@@ -44,9 +44,9 @@ entry:
 ; CHECK-NOT: xor
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: call void @__msan_warning_noreturn
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: xor
 ; CHECK: store
 ; CHECK: store i32 %x

@@ -30,6 +30,7 @@ namespace objcopy {
 // ELF file.
 struct MachineInfo {
   uint16_t EMachine;
+  uint8_t OSABI;
   bool Is64Bit;
   bool IsLittleEndian;
 };

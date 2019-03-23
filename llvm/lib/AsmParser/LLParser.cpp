@@ -2926,13 +2926,27 @@ BasicBlock *LLParser::PerFunctionState::GetBB(unsigned ID, LocTy Loc) {
 /// unnamed.  If there is an error, this returns null otherwise it returns
 /// the block being defined.
 BasicBlock *LLParser::PerFunctionState::DefineBB(const std::string &Name,
-                                                 LocTy Loc) {
+                                                 int NameID, LocTy Loc) {
   BasicBlock *BB;
-  if (Name.empty())
+  if (Name.empty()) {
+    if (NameID != -1 && unsigned(NameID) != NumberedVals.size()) {
+      P.Error(Loc, "label expected to be numbered '" +
+                       Twine(NumberedVals.size()) + "'");
+      return nullptr;
+    }
     BB = GetBB(NumberedVals.size(), Loc);
-  else
+    if (!BB) {
+      P.Error(Loc, "unable to create block numbered '" +
+                       Twine(NumberedVals.size()) + "'");
+      return nullptr;
+    }
+  } else {
     BB = GetBB(Name, Loc);
-  if (!BB) return nullptr; // Already diagnosed error.
+    if (!BB) {
+      P.Error(Loc, "unable to create block named '" + Name + "'");
+      return nullptr;
+    }
+  }
 
   // Move the block to the end of the function.  Forward ref'd blocks are
   // inserted wherever they happen to be referenced.
@@ -5489,20 +5503,23 @@ bool LLParser::ParseFunctionBody(Function &Fn) {
 }
 
 /// ParseBasicBlock
-///   ::= LabelStr? Instruction*
+///   ::= (LabelStr|LabelID)? Instruction*
 bool LLParser::ParseBasicBlock(PerFunctionState &PFS) {
   // If this basic block starts out with a name, remember it.
   std::string Name;
+  int NameID = -1;
   LocTy NameLoc = Lex.getLoc();
   if (Lex.getKind() == lltok::LabelStr) {
     Name = Lex.getStrVal();
     Lex.Lex();
+  } else if (Lex.getKind() == lltok::LabelID) {
+    NameID = Lex.getUIntVal();
+    Lex.Lex();
   }
 
-  BasicBlock *BB = PFS.DefineBB(Name, NameLoc);
+  BasicBlock *BB = PFS.DefineBB(Name, NameID, NameLoc);
   if (!BB)
-    return Error(NameLoc,
-                 "unable to create block named '" + Name + "'");
+    return true;
 
   std::string NameStr;
 

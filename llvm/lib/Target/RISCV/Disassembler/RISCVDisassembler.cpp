@@ -69,7 +69,13 @@ static const unsigned GPRDecoderTable[] = {
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                            uint64_t Address,
                                            const void *Decoder) {
-  if (RegNo > array_lengthof(GPRDecoderTable))
+  const FeatureBitset &FeatureBits =
+      static_cast<const MCDisassembler *>(Decoder)
+          ->getSubtargetInfo()
+          .getFeatureBits();
+  bool IsRV32E = FeatureBits[RISCV::FeatureRV32E];
+
+  if (RegNo > array_lengthof(GPRDecoderTable) || (IsRV32E && RegNo > 15))
     return MCDisassembler::Fail;
 
   // We must define our own mapping from RegNo to register identifier.

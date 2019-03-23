@@ -227,6 +227,11 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
                                       FunctionNameKind FNKind,
                                       bool UseSymbolTable) const {
   DILineInfo LineInfo;
+
+  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
+    ModuleOffset.SectionIndex =
+        getModuleSectionIndexForAddress(ModuleOffset.Address);
+
   if (DebugInfoContext) {
     LineInfo = DebugInfoContext->getLineInfoForAddress(
         ModuleOffset, getDILineInfoSpecifier(FNKind));
@@ -247,6 +252,10 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
     object::SectionedAddress ModuleOffset, FunctionNameKind FNKind,
     bool UseSymbolTable) const {
   DIInliningInfo InlinedContext;
+
+  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
+    ModuleOffset.SectionIndex =
+        getModuleSectionIndexForAddress(ModuleOffset.Address);
 
   if (DebugInfoContext)
     InlinedContext = DebugInfoContext->getInliningInfoForAddress(
@@ -275,4 +284,21 @@ DIGlobal SymbolizableObjectFile::symbolizeData(
   getNameFromSymbolTable(SymbolRef::ST_Data, ModuleOffset.Address, Res.Name,
                          Res.Start, Res.Size);
   return Res;
+}
+
+/// Search for the first occurence of specified Address in ObjectFile.
+uint64_t SymbolizableObjectFile::getModuleSectionIndexForAddress(
+    uint64_t Address) const {
+
+  for (SectionRef Sec : Module->sections()) {
+    if (!Sec.isText() || Sec.isVirtual())
+      continue;
+
+    if (Address >= Sec.getAddress() &&
+        Address <= Sec.getAddress() + Sec.getSize()) {
+      return Sec.getIndex();
+    }
+  }
+
+  return object::SectionedAddress::UndefSection;
 }
