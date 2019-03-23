@@ -22,7 +22,8 @@ class AvoidUnderscoreInGoogletestNameCheck : public ClangTidyCheck {
 public:
   using ClangTidyCheck::ClangTidyCheck;
 
-  void registerPPCallbacks(CompilerInstance &Compiler) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
 };
 
 } // namespace readability

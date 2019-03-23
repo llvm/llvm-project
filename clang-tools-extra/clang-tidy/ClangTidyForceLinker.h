@@ -77,6 +77,11 @@ static int LLVM_ATTRIBUTE_UNUSED MPIModuleAnchorDestination =
     MPIModuleAnchorSource;
 #endif
 
+// This anchor is used to force the linker to link the OpenMPModule.
+extern volatile int OpenMPModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED OpenMPModuleAnchorDestination =
+    OpenMPModuleAnchorSource;
+
 // This anchor is used to force the linker to link the PerformanceModule.
 extern volatile int PerformanceModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED PerformanceModuleAnchorDestination =

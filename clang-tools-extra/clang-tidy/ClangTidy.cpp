@@ -18,6 +18,7 @@
 #include "ClangTidyDiagnosticConsumer.h"
 #include "ClangTidyModuleRegistry.h"
 #include "ClangTidyProfiling.h"
+#include "ExpandModularHeadersPPCallbacks.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -290,8 +291,10 @@ private:
 } // namespace
 
 ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
-    ClangTidyContext &Context)
-    : Context(Context), CheckFactories(new ClangTidyCheckFactories) {
+    ClangTidyContext &Context,
+    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS)
+    : Context(Context), OverlayFS(OverlayFS),
+      CheckFactories(new ClangTidyCheckFactories) {
   for (ClangTidyModuleRegistry::iterator I = ClangTidyModuleRegistry::begin(),
                                          E = ClangTidyModuleRegistry::end();
        I != E; ++I) {
@@ -351,7 +354,8 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
     clang::CompilerInstance &Compiler, StringRef File) {
   // FIXME: Move this to a separate method, so that CreateASTConsumer doesn't
   // modify Compiler.
-  Context.setSourceManager(&Compiler.getSourceManager());
+  SourceManager *SM = &Compiler.getSourceManager();
+  Context.setSourceManager(SM);
   Context.setCurrentFile(File);
   Context.setASTContext(&Compiler.getASTContext());
 
@@ -377,9 +381,20 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   std::unique_ptr<ast_matchers::MatchFinder> Finder(
       new ast_matchers::MatchFinder(std::move(FinderOptions)));
 
+  Preprocessor *PP = &Compiler.getPreprocessor();
+  Preprocessor *ModuleExpanderPP = PP;
+
+  if (Context.getLangOpts().Modules && OverlayFS != nullptr) {
+    auto ModuleExpander = llvm::make_unique<ExpandModularHeadersPPCallbacks>(
+        &Compiler, OverlayFS);
+    ModuleExpanderPP = ModuleExpander->getPreprocessor();
+    PP->addPPCallbacks(std::move(ModuleExpander));
+  }
+
   for (auto &Check : Checks) {
     Check->registerMatchers(&*Finder);
     Check->registerPPCallbacks(Compiler);
+    Check->registerPPCallbacks(*SM, PP, ModuleExpanderPP);
   }
 
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
@@ -505,7 +520,7 @@ std::vector<ClangTidyError>
 runClangTidy(clang::tidy::ClangTidyContext &Context,
              const CompilationDatabase &Compilations,
              ArrayRef<std::string> InputFiles,
-             llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+             llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
              bool EnableCheckProfile, llvm::StringRef StoreCheckProfile) {
   ClangTool Tool(Compilations, InputFiles,
                  std::make_shared<PCHContainerOperations>(), BaseFS);
@@ -541,7 +556,9 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
 
   class ActionFactory : public FrontendActionFactory {
   public:
-    ActionFactory(ClangTidyContext &Context) : ConsumerFactory(Context) {}
+    ActionFactory(ClangTidyContext &Context,
+                  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS)
+        : ConsumerFactory(Context, BaseFS) {}
     FrontendAction *create() override { return new Action(&ConsumerFactory); }
 
     bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
@@ -572,7 +589,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
     ClangTidyASTConsumerFactory ConsumerFactory;
   };
 
-  ActionFactory Factory(Context);
+  ActionFactory Factory(Context, BaseFS);
   Tool.run(&Factory);
   return DiagConsumer.take();
 }

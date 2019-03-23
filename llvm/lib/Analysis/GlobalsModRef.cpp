@@ -806,7 +806,8 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
 /// other is some random pointer, we know there cannot be an alias, because the
 /// address of the global isn't taken.
 AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
-                                   const MemoryLocation &LocB) {
+                                   const MemoryLocation &LocB,
+                                   AAQueryInfo &AAQI) {
   // Get the base object these pointers point to.
   const Value *UV1 = GetUnderlyingObject(LocA.Ptr, DL);
   const Value *UV2 = GetUnderlyingObject(LocB.Ptr, DL);
@@ -881,11 +882,12 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
     if ((GV1 || GV2) && GV1 != GV2)
       return NoAlias;
 
-  return AAResultBase::alias(LocA, LocB);
+  return AAResultBase::alias(LocA, LocB, AAQI);
 }
 
 ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
-                                                     const GlobalValue *GV) {
+                                                     const GlobalValue *GV,
+                                                     AAQueryInfo &AAQI) {
   if (Call->doesNotAccessMemory())
     return ModRefInfo::NoModRef;
   ModRefInfo ConservativeResult =
@@ -901,7 +903,8 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
     if (!all_of(Objects, isIdentifiedObject) &&
         // Try ::alias to see if all objects are known not to alias GV.
         !all_of(Objects, [&](Value *V) {
-          return this->alias(MemoryLocation(V), MemoryLocation(GV)) == NoAlias;
+          return this->alias(MemoryLocation(V), MemoryLocation(GV), AAQI) ==
+                 NoAlias;
         }))
       return ConservativeResult;
 
@@ -914,7 +917,8 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
 }
 
 ModRefInfo GlobalsAAResult::getModRefInfo(const CallBase *Call,
-                                          const MemoryLocation &Loc) {
+                                          const MemoryLocation &Loc,
+                                          AAQueryInfo &AAQI) {
   ModRefInfo Known = ModRefInfo::ModRef;
 
   // If we are asking for mod/ref info of a direct call with a pointer to a
@@ -926,11 +930,11 @@ ModRefInfo GlobalsAAResult::getModRefInfo(const CallBase *Call,
         if (NonAddressTakenGlobals.count(GV))
           if (const FunctionInfo *FI = getFunctionInfo(F))
             Known = unionModRef(FI->getModRefInfoForGlobal(*GV),
-                                getModRefInfoForArgument(Call, GV));
+                                getModRefInfoForArgument(Call, GV, AAQI));
 
   if (!isModOrRefSet(Known))
     return ModRefInfo::NoModRef; // No need to query other mod/ref analyses
-  return intersectModRef(Known, AAResultBase::getModRefInfo(Call, Loc));
+  return intersectModRef(Known, AAResultBase::getModRefInfo(Call, Loc, AAQI));
 }
 
 GlobalsAAResult::GlobalsAAResult(const DataLayout &DL,

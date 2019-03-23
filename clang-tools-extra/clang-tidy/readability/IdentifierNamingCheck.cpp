@@ -240,10 +240,11 @@ void IdentifierNamingCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(nestedNameSpecifierLoc().bind("nestedNameLoc"), this);
 }
 
-void IdentifierNamingCheck::registerPPCallbacks(CompilerInstance &Compiler) {
-  Compiler.getPreprocessor().addPPCallbacks(
-      llvm::make_unique<IdentifierNamingCheckPPCallbacks>(
-          &Compiler.getPreprocessor(), this));
+void IdentifierNamingCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  ModuleExpanderPP->addPPCallbacks(
+      llvm::make_unique<IdentifierNamingCheckPPCallbacks>(ModuleExpanderPP,
+                                                          this));
 }
 
 static bool matchesStyle(StringRef Name,

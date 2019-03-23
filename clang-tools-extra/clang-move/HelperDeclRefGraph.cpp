@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HelperDeclRefGraph.h"
-#include "ClangMove.h"
+#include "Move.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/Debug.h"
 #include <vector>

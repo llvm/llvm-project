@@ -29,6 +29,7 @@ executable("llvm-pdbutil") {
     "PrettyTypedefDumper.cpp",
     "PrettyVariableDumper.cpp",
     "StreamUtil.cpp",
+    "TypeReferenceTracker.cpp",
     "YAMLOutputStyle.cpp",
     "llvm-pdbutil.cpp",
   ]

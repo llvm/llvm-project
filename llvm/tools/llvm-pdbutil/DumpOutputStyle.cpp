@@ -110,6 +110,12 @@ Error DumpOutputStyle::dump() {
     P.NewLine();
   }
 
+  if (opts::dump::DumpTypeStats) {
+    if (auto EC = dumpTypeStats())
+      return EC;
+    P.NewLine();
+  }
+
   if (opts::dump::DumpNamedStreams) {
     if (auto EC = dumpNamedStreams())
       return EC;
@@ -307,18 +313,30 @@ static inline std::string formatModuleDetailKind(SymbolKind K) {
   return formatSymbolKind(K);
 }
 
+// Get the stats sorted by size, descending.
+std::vector<StatCollection::KindAndStat>
+StatCollection::getStatsSortedBySize() const {
+  std::vector<KindAndStat> SortedStats(Individual.begin(), Individual.end());
+  std::stable_sort(SortedStats.begin(), SortedStats.end(),
+                   [](const KindAndStat &LHS, const KindAndStat &RHS) {
+                     return LHS.second.Size > RHS.second.Size;
+                   });
+  return SortedStats;
+}
+
 template <typename Kind>
 static void printModuleDetailStats(LinePrinter &P, StringRef Label,
                                    const StatCollection &Stats) {
   P.NewLine();
   P.formatLine("  {0}", Label);
   AutoIndent Indent(P);
-  P.formatLine("{0,40}: {1,7} entries ({2,8} bytes)", "Total",
+  P.formatLine("{0,40}: {1,7} entries ({2,12:N} bytes)", "Total",
                Stats.Totals.Count, Stats.Totals.Size);
   P.formatLine("{0}", fmt_repeat('-', 74));
-  for (const auto &K : Stats.Individual) {
+
+  for (const auto &K : Stats.getStatsSortedBySize()) {
     std::string KindName = formatModuleDetailKind(Kind(K.first));
-    P.formatLine("{0,40}: {1,7} entries ({2,8} bytes)", KindName,
+    P.formatLine("{0,40}: {1,7} entries ({2,12:N} bytes)", KindName,
                  K.second.Count, K.second.Size);
   }
 }
@@ -676,6 +694,35 @@ Error DumpOutputStyle::dumpSymbolStats() {
   return Error::success();
 }
 
+Error DumpOutputStyle::dumpTypeStats() {
+  printHeader(P, "Type Record Stats");
+
+  // Iterate the types, categorize by kind, accumulate size stats.
+  StatCollection TypeStats;
+  LazyRandomTypeCollection &Types = File.types();
+  for (Optional<TypeIndex> TI = Types.getFirst(); TI; TI = Types.getNext(*TI)) {
+    CVType Type = Types.getType(*TI);
+    TypeStats.update(uint32_t(Type.kind()), Type.length());
+  }
+
+  P.NewLine();
+  P.formatLine("  Types");
+  AutoIndent Indent(P);
+  P.formatLine("{0,14}: {1,7} entries ({2,12:N} bytes, {3,7} avg)", "Total",
+               TypeStats.Totals.Count, TypeStats.Totals.Size,
+               (double)TypeStats.Totals.Size / TypeStats.Totals.Count);
+  P.formatLine("{0}", fmt_repeat('-', 74));
+
+  for (const auto &K : TypeStats.getStatsSortedBySize()) {
+    P.formatLine("{0,14}: {1,7} entries ({2,12:N} bytes, {3,7} avg)",
+                 formatTypeLeafKind(TypeLeafKind(K.first)), K.second.Count,
+                 K.second.Size, (double)K.second.Size / K.second.Count);
+  }
+
+
+  return Error::success();
+}
+
 static bool isValidNamespaceIdentifier(StringRef S) {
   if (S.empty())
     return false;
@@ -820,7 +867,7 @@ Error DumpOutputStyle::dumpUdtStats() {
                fmt_align(SizeHeader, AlignStyle::Right, SD));
 
   P.formatLine("{0}", fmt_repeat('-', TableWidth));
-  for (const auto &Stat : UdtTargetStats.Individual) {
+  for (const auto &Stat : UdtTargetStats.getStatsSortedBySize()) {
     StringRef Label = getUdtStatLabel(Stat.first);
     P.formatLine("{0} | {1:N}  {2:N}",
                  fmt_align(Label, AlignStyle::Right, FieldWidth),
@@ -833,12 +880,25 @@ Error DumpOutputStyle::dumpUdtStats() {
                fmt_align(UdtStats.Totals.Count, AlignStyle::Right, CD),
                fmt_align(UdtStats.Totals.Size, AlignStyle::Right, SD));
   P.formatLine("{0}", fmt_repeat('-', TableWidth));
-  for (const auto &Stat : NamespacedStats) {
-    std::string Label = formatv("namespace '{0}'", Stat.getKey());
+  struct StrAndStat {
+    StringRef Key;
+    StatCollection::Stat Stat;
+  };
+
+  // Print namespace stats in descending order of size.
+  std::vector<StrAndStat> NamespacedStatsSorted;
+  for (const auto &Stat : NamespacedStats)
+    NamespacedStatsSorted.push_back({Stat.getKey(), Stat.second});
+  std::stable_sort(NamespacedStatsSorted.begin(), NamespacedStatsSorted.end(),
+                   [](const StrAndStat &L, const StrAndStat &R) {
+                     return L.Stat.Size > R.Stat.Size;
+                   });
+  for (const auto &Stat : NamespacedStatsSorted) {
+    std::string Label = formatv("namespace '{0}'", Stat.Key);
     P.formatLine("{0} | {1:N}  {2:N}",
                  fmt_align(Label, AlignStyle::Right, FieldWidth),
-                 fmt_align(Stat.second.Count, AlignStyle::Right, CD),
-                 fmt_align(Stat.second.Size, AlignStyle::Right, SD));
+                 fmt_align(Stat.Stat.Count, AlignStyle::Right, CD),
+                 fmt_align(Stat.Stat.Size, AlignStyle::Right, SD));
   }
   return Error::success();
 }

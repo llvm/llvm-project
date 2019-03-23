@@ -64,7 +64,7 @@ int main () {
 #pragma omp allocate(a) allocator(omp_thread_mem_alloc)
   a=2;
   double b = 3;
-#pragma omp allocate(b)
+#pragma omp allocate(b) allocator(omp_default_mem_alloc)
   return (foo<int>());
 }
 

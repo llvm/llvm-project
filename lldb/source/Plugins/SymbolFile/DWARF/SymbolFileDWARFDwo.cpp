@@ -147,7 +147,7 @@ SymbolFileDWARF *SymbolFileDWARFDwo::GetBaseSymbolFile() {
 }
 
 DWARFExpression::LocationListFormat
-SymbolFileDWARFDwo::GetLocationListFormat() {
+SymbolFileDWARFDwo::GetLocationListFormat() const {
   return DWARFExpression::SplitDwarfLocationList;
 }
 

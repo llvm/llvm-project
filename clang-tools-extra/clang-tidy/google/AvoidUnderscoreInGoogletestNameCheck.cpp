@@ -77,10 +77,9 @@ private:
 } // namespace
 
 void AvoidUnderscoreInGoogletestNameCheck::registerPPCallbacks(
-    CompilerInstance &Compiler) {
-  Compiler.getPreprocessor().addPPCallbacks(
-      llvm::make_unique<AvoidUnderscoreInGoogletestNameCallback>(
-          &Compiler.getPreprocessor(), this));
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  PP->addPPCallbacks(
+      llvm::make_unique<AvoidUnderscoreInGoogletestNameCallback>(PP, this));
 }
 
 } // namespace readability

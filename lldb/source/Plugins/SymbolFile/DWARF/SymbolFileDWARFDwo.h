@@ -26,7 +26,7 @@ public:
   GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
 
   lldb_private::DWARFExpression::LocationListFormat
-  GetLocationListFormat() override;
+  GetLocationListFormat() const override;
 
   size_t GetObjCMethodDIEOffsets(lldb_private::ConstString class_name,
                                  DIEArray &method_die_offsets) override;

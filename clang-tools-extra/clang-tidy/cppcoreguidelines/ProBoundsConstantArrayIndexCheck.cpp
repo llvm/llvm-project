@@ -31,13 +31,13 @@ void ProBoundsConstantArrayIndexCheck::storeOptions(
 }
 
 void ProBoundsConstantArrayIndexCheck::registerPPCallbacks(
-    CompilerInstance &Compiler) {
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   if (!getLangOpts().CPlusPlus)
     return;
 
-  Inserter.reset(new utils::IncludeInserter(
-      Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
-  Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
+  Inserter = llvm::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+                                                       IncludeStyle);
+  PP->addPPCallbacks(Inserter->CreatePPCallbacks());
 }
 
 void ProBoundsConstantArrayIndexCheck::registerMatchers(MatchFinder *Finder) {

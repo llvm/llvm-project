@@ -347,7 +347,7 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   TimersToPrint.clear();
 }
 
-void TimerGroup::prepareToPrintList() {
+void TimerGroup::prepareToPrintList(bool ResetTime) {
   // See if any of our timers were started, if so add them to TimersToPrint.
   for (Timer *T = FirstTimer; T; T = T->Next) {
     if (!T->hasTriggered()) continue;
@@ -357,15 +357,20 @@ void TimerGroup::prepareToPrintList() {
 
     TimersToPrint.emplace_back(T->Time, T->Name, T->Description);
 
+    if (ResetTime)
+      T->clear();
+
     if (WasRunning)
       T->startTimer();
   }
 }
 
-void TimerGroup::print(raw_ostream &OS) {
-  sys::SmartScopedLock<true> L(*TimerLock);
-
-  prepareToPrintList();
+void TimerGroup::print(raw_ostream &OS, bool ResetAfterPrint) {
+  {
+    // After preparing the timers we can free the lock
+    sys::SmartScopedLock<true> L(*TimerLock);
+    prepareToPrintList(ResetAfterPrint);
+  }
 
   // If any timers were started, print the group.
   if (!TimersToPrint.empty())
@@ -405,7 +410,7 @@ void TimerGroup::printJSONValue(raw_ostream &OS, const PrintRecord &R,
 const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
   sys::SmartScopedLock<true> L(*TimerLock);
 
-  prepareToPrintList();
+  prepareToPrintList(false);
   for (const PrintRecord &R : TimersToPrint) {
     OS << delim;
     delim = ",\n";

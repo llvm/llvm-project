@@ -168,10 +168,10 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 void UnnecessaryValueParamCheck::registerPPCallbacks(
-    CompilerInstance &Compiler) {
-  Inserter.reset(new utils::IncludeInserter(
-      Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
-  Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  Inserter = llvm::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+                                                       IncludeStyle);
+  PP->addPPCallbacks(Inserter->CreatePPCallbacks());
 }
 
 void UnnecessaryValueParamCheck::storeOptions(
