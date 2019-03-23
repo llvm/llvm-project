@@ -159,6 +159,13 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
 
   if (K == MachO)
     Size = alignTo(Size, 4); // Pad to multiple of 4.
+
+  // The first byte in an ELF string table must be null, according to the ELF
+  // specification. In 'initSize()' we reserved the first byte to hold null for
+  // this purpose and here we actually add the string to allow 'getOffset()' to
+  // be called on an empty string.
+  if (K == ELF)
+    StringIndexMap[CachedHashStringRef("")] = 0;
 }
 
 void StringTableBuilder::clear() {

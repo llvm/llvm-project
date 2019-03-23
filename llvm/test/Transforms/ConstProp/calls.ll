@@ -193,4 +193,14 @@ entry:
   ret double %0
 }
 
+define float @test_intrinsic_pow_f32_overflow() nounwind uwtable ssp {
+entry:
+; CHECK-LABEL: @test_intrinsic_pow_f32_overflow(
+; CHECK-NOT: call
+; CHECK: ret float 0x7FF0000000000000
+  %0 = call float @llvm.pow.f32(float 40.0, float 50.0)
+  ret float %0
+}
+
 declare double @llvm.pow.f64(double, double) nounwind readonly
+declare float @llvm.pow.f32(float, float) nounwind readonly

@@ -30,6 +30,7 @@ target_link_libraries(clang-tidy
   clangTidyMiscModule
   clangTidyModernizeModule
   clangTidyObjCModule
+  clangTidyOpenMPModule
   clangTidyPerformanceModule
   clangTidyPortabilityModule
   clangTidyReadabilityModule

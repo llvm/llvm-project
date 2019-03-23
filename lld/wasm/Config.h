@@ -19,6 +19,7 @@ namespace wasm {
 
 struct Configuration {
   bool AllowUndefined;
+  bool CheckFeatures;
   bool CompressRelocations;
   bool Demangle;
   bool DisableVerify;
@@ -54,6 +55,7 @@ struct Configuration {
   llvm::StringSet<> AllowUndefinedSymbols;
   std::vector<llvm::StringRef> SearchPaths;
   llvm::CachePruningPolicy ThinLTOCachePolicy;
+  llvm::Optional<std::vector<std::string>> Features;
 
   // True if we are creating position-independent code.
   bool Pic;

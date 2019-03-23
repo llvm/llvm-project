@@ -62,8 +62,10 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (ToolChain.ShouldLinkCXXStdlib(Args))
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
 
-    if (Args.hasArg(options::OPT_pthread))
+    if (Args.hasArg(options::OPT_pthread)) {
       CmdArgs.push_back("-lpthread");
+      CmdArgs.push_back("--shared-memory");
+    }
 
     CmdArgs.push_back("-lc");
     AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);

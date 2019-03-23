@@ -15,7 +15,7 @@ static_library("clang-move") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "ClangMove.cpp",
+    "Move.cpp",
     "HelperDeclRefGraph.cpp",
   ]
 }

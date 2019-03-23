@@ -497,7 +497,6 @@ class RelocationSection final : public RelocationBaseSection {
 
 public:
   RelocationSection(StringRef Name, bool Sort);
-  unsigned getRelocOffset();
   void writeTo(uint8_t *Buf) override;
 
 private:
@@ -663,8 +662,7 @@ public:
   size_t HeaderSize;
 
 private:
-  unsigned getPltRelocOff() const;
-  std::vector<std::pair<const Symbol *, unsigned>> Entries;
+  std::vector<const Symbol *> Entries;
   bool IsIplt;
 };
 

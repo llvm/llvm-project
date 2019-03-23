@@ -29,8 +29,9 @@ class PassInstrumentationCallbacks;
 class raw_ostream;
 
 /// If -time-passes has been specified, report the timings immediately and then
-/// reset the timers to zero.
-void reportAndResetTimings();
+/// reset the timers to zero. By default it uses the stream created by
+/// CreateInfoOutputFile().
+void reportAndResetTimings(raw_ostream *OutStream = nullptr);
 
 /// Request the timer for this legacy-pass-manager's pass instance.
 Timer *getPassTimer(Pass *);
@@ -64,8 +65,8 @@ class TimePassesHandler {
   SmallVector<Timer *, 8> TimerStack;
 
   /// Custom output stream to print timing information into.
-  /// By default (== nullptr) we emit time report into the stream controlled by
-  /// -info-output-file.
+  /// By default (== nullptr) we emit time report into the stream created by
+  /// CreateInfoOutputFile().
   raw_ostream *OutStream = nullptr;
 
   bool Enabled;

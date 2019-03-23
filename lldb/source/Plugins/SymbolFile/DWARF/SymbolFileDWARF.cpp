@@ -54,7 +54,6 @@
 #include "AppleDWARFIndex.h"
 #include "DWARFASTParser.h"
 #include "DWARFASTParserClang.h"
-#include "DWARFContext.h"
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
@@ -358,8 +357,11 @@ SymbolFileDWARF::SymbolFileDWARF(ObjectFile *objfile)
                                           // contain the .o file index/ID
       m_debug_map_module_wp(), m_debug_map_symfile(NULL),
       m_context(*objfile->GetModule()), m_data_debug_abbrev(),
-      m_data_debug_info(), m_data_debug_str(), m_abbr(), m_info(), m_line(),
-      m_fetched_external_modules(false),
+      m_data_debug_frame(), m_data_debug_info(), m_data_debug_line(),
+      m_data_debug_macro(), m_data_debug_loc(), m_data_debug_ranges(),
+      m_data_debug_rnglists(), m_data_debug_str(), m_data_apple_names(),
+      m_data_apple_types(), m_data_apple_namespaces(), m_abbr(), m_info(),
+      m_line(), m_fetched_external_modules(false),
       m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate), m_ranges(),
       m_unique_ast_type_map() {}
 
@@ -559,8 +561,50 @@ const DWARFDataExtractor &SymbolFileDWARF::get_debug_addr_data() {
   return GetCachedSectionData(eSectionTypeDWARFDebugAddr, m_data_debug_addr);
 }
 
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_frame_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugFrame, m_data_debug_frame);
+}
+
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_info_data() {
   return GetCachedSectionData(eSectionTypeDWARFDebugInfo, m_data_debug_info);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_line_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugLine, m_data_debug_line);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_line_str_data() {
+ return GetCachedSectionData(eSectionTypeDWARFDebugLineStr, m_data_debug_line_str);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_macro_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugMacro, m_data_debug_macro);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::DebugLocData() {
+  const DWARFDataExtractor &debugLocData = get_debug_loc_data();
+  if (debugLocData.GetByteSize() > 0)
+    return debugLocData;
+  return get_debug_loclists_data();
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_loc_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugLoc, m_data_debug_loc);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_loclists_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugLocLists,
+                              m_data_debug_loclists);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_ranges_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugRanges,
+                              m_data_debug_ranges);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_rnglists_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugRngLists,
+                              m_data_debug_rnglists);
 }
 
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_str_data() {
@@ -570,6 +614,32 @@ const DWARFDataExtractor &SymbolFileDWARF::get_debug_str_data() {
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_str_offsets_data() {
   return GetCachedSectionData(eSectionTypeDWARFDebugStrOffsets,
                               m_data_debug_str_offsets);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_types_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugTypes, m_data_debug_types);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_apple_names_data() {
+  return GetCachedSectionData(eSectionTypeDWARFAppleNames, m_data_apple_names);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_apple_types_data() {
+  return GetCachedSectionData(eSectionTypeDWARFAppleTypes, m_data_apple_types);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_apple_namespaces_data() {
+  return GetCachedSectionData(eSectionTypeDWARFAppleNamespaces,
+                              m_data_apple_namespaces);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_apple_objc_data() {
+  return GetCachedSectionData(eSectionTypeDWARFAppleObjC, m_data_apple_objc);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_gnu_debugaltlink() {
+  return GetCachedSectionData(eSectionTypeDWARFGNUDebugAltLink,
+                              m_data_gnu_debugaltlink);
 }
 
 DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
@@ -639,13 +709,13 @@ DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() {
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
 
-    if (m_context.getOrLoadDebugRangesData())
-      m_ranges = llvm::make_unique<DWARFDebugRanges>();
-    else if (m_context.getOrLoadDebugRnglistsData())
-      m_ranges = llvm::make_unique<DWARFDebugRngLists>();
+    if (get_debug_ranges_data().GetByteSize() > 0)
+      m_ranges.reset(new DWARFDebugRanges());
+    else if (get_debug_rnglists_data().GetByteSize() > 0)
+      m_ranges.reset(new DWARFDebugRngLists());
 
     if (m_ranges)
-      m_ranges->Extract(this, m_context);
+      m_ranges->Extract(this);
   }
   return m_ranges.get();
 }
@@ -801,26 +871,23 @@ bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
                                         FileSpecList &support_files) {
   ASSERT_MODULE_LOCK(this);
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
-  if (!dwarf_cu)
-    return false;
-  const DWARFBaseDIE cu_die = dwarf_cu->GetUnitDIEOnly();
+  if (dwarf_cu) {
+    const DWARFBaseDIE cu_die = dwarf_cu->GetUnitDIEOnly();
 
-  if (!cu_die)
-    return false;
-
-  const dw_offset_t stmt_list =
-      cu_die.GetAttributeValueAsUnsigned(DW_AT_stmt_list, DW_INVALID_OFFSET);
-  if (stmt_list == DW_INVALID_OFFSET)
-    return false;
-  // All file indexes in DWARF are one based and a file of index zero is
-  // supposed to be the compile unit itself.
-  support_files.Append(comp_unit);
-  const DWARFDataExtractor *debug_line = m_context.getOrLoadDebugLineData();
-  if (!debug_line)
-    return false;
-
-  return DWARFDebugLine::ParseSupportFiles(comp_unit.GetModule(), *debug_line,
-                                           stmt_list, support_files, dwarf_cu);
+    if (cu_die) {
+      const dw_offset_t stmt_list = cu_die.GetAttributeValueAsUnsigned(
+          DW_AT_stmt_list, DW_INVALID_OFFSET);
+      if (stmt_list != DW_INVALID_OFFSET) {
+        // All file indexes in DWARF are one based and a file of index zero is
+        // supposed to be the compile unit itself.
+        support_files.Append(comp_unit);
+        return DWARFDebugLine::ParseSupportFiles(
+            comp_unit.GetModule(), get_debug_line_data(), stmt_list,
+            support_files, dwarf_cu);
+      }
+    }
+  }
+  return false;
 }
 
 bool SymbolFileDWARF::ParseIsOptimized(CompileUnit &comp_unit) {
@@ -931,64 +998,58 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
     return true;
 
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
-  if (!dwarf_cu)
-    return false;
+  if (dwarf_cu) {
+    const DWARFBaseDIE dwarf_cu_die = dwarf_cu->GetUnitDIEOnly();
+    if (dwarf_cu_die) {
+      const dw_offset_t cu_line_offset =
+          dwarf_cu_die.GetAttributeValueAsUnsigned(DW_AT_stmt_list,
+                                                   DW_INVALID_OFFSET);
+      if (cu_line_offset != DW_INVALID_OFFSET) {
+        std::unique_ptr<LineTable> line_table_up(new LineTable(&comp_unit));
+        if (line_table_up) {
+          ParseDWARFLineTableCallbackInfo info;
+          info.line_table = line_table_up.get();
 
-  const DWARFBaseDIE dwarf_cu_die = dwarf_cu->GetUnitDIEOnly();
-  if (dwarf_cu_die) {
-    const dw_offset_t cu_line_offset = dwarf_cu_die.GetAttributeValueAsUnsigned(
-        DW_AT_stmt_list, DW_INVALID_OFFSET);
-    if (cu_line_offset == DW_INVALID_OFFSET)
-      return false;
+          /*
+           * MIPS:
+           * The SymbolContext may not have a valid target, thus we may not be
+           * able
+           * to call Address::GetOpcodeLoadAddress() which would clear the bit
+           * #0
+           * for MIPS. Use ArchSpec to clear the bit #0.
+          */
+          switch (GetObjectFile()->GetArchitecture().GetMachine()) {
+          case llvm::Triple::mips:
+          case llvm::Triple::mipsel:
+          case llvm::Triple::mips64:
+          case llvm::Triple::mips64el:
+            info.addr_mask = ~((lldb::addr_t)1);
+            break;
+          default:
+            info.addr_mask = ~((lldb::addr_t)0);
+            break;
+          }
 
-    std::unique_ptr<LineTable> line_table_up(new LineTable(&comp_unit));
-    if (!line_table_up)
-      return false;
-
-    ParseDWARFLineTableCallbackInfo info;
-    info.line_table = line_table_up.get();
-
-    /*
-     * MIPS:
-     * The SymbolContext may not have a valid target, thus we may not be
-     * able
-     * to call Address::GetOpcodeLoadAddress() which would clear the bit
-     * #0
-     * for MIPS. Use ArchSpec to clear the bit #0.
-     */
-    switch (GetObjectFile()->GetArchitecture().GetMachine()) {
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-      info.addr_mask = ~((lldb::addr_t)1);
-      break;
-    default:
-      info.addr_mask = ~((lldb::addr_t)0);
-      break;
-    }
-
-    lldb::offset_t offset = cu_line_offset;
-    const DWARFDataExtractor *debug_line = m_context.getOrLoadDebugLineData();
-    if (!debug_line)
-      return false;
-
-    DWARFDebugLine::ParseStatementTable(
-        *debug_line, &offset, ParseDWARFLineTableCallback, &info, dwarf_cu);
-    SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
-    if (debug_map_symfile) {
-      // We have an object file that has a line table with addresses that
-      // are not linked. We need to link the line table and convert the
-      // addresses that are relative to the .o file into addresses for
-      // the main executable.
-      comp_unit.SetLineTable(
-          debug_map_symfile->LinkOSOLineTable(this, line_table_up.get()));
-    } else {
-      comp_unit.SetLineTable(line_table_up.release());
-      return true;
+          lldb::offset_t offset = cu_line_offset;
+          DWARFDebugLine::ParseStatementTable(get_debug_line_data(), &offset,
+                                              ParseDWARFLineTableCallback,
+                                              &info, dwarf_cu);
+          SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
+          if (debug_map_symfile) {
+            // We have an object file that has a line table with addresses that
+            // are not linked. We need to link the line table and convert the
+            // addresses that are relative to the .o file into addresses for
+            // the main executable.
+            comp_unit.SetLineTable(
+                debug_map_symfile->LinkOSOLineTable(this, line_table_up.get()));
+          } else {
+            comp_unit.SetLineTable(line_table_up.release());
+            return true;
+          }
+        }
+      }
     }
   }
-
   return false;
 }
 
@@ -998,19 +1059,18 @@ SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
   if (iter != m_debug_macros_map.end())
     return iter->second;
 
-  const DWARFDataExtractor *debug_macro_data =
-      m_context.getOrLoadDebugMacroData();
-  if (!debug_macro_data)
-    return nullptr;
+  const DWARFDataExtractor &debug_macro_data = get_debug_macro_data();
+  if (debug_macro_data.GetByteSize() == 0)
+    return DebugMacrosSP();
 
   lldb_private::DebugMacrosSP debug_macros_sp(new lldb_private::DebugMacros());
   m_debug_macros_map[*offset] = debug_macros_sp;
 
   const DWARFDebugMacroHeader &header =
-      DWARFDebugMacroHeader::ParseHeader(*debug_macro_data, offset);
-  DWARFDebugMacroEntry::ReadMacroEntries(
-      *debug_macro_data, get_debug_str_data(), header.OffsetIs64Bit(), offset,
-      this, debug_macros_sp);
+      DWARFDebugMacroHeader::ParseHeader(debug_macro_data, offset);
+  DWARFDebugMacroEntry::ReadMacroEntries(debug_macro_data, get_debug_str_data(),
+                                         header.OffsetIs64Bit(), offset, this,
+                                         debug_macros_sp);
 
   return debug_macros_sp;
 }
@@ -1536,8 +1596,6 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
 
   return llvm::make_unique<SymbolFileDWARFDwo>(dwo_obj_file, &dwarf_cu);
 }
-
-DWARFContext &SymbolFileDWARF::GetDWARFContext() { return m_context; }
 
 void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
   if (m_fetched_external_modules)
@@ -3244,17 +3302,13 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               uint32_t block_length = form_value.Unsigned();
               location.CopyOpcodeData(module, data, block_offset, block_length);
             } else {
-              const DWARFDataExtractor *debug_loc_data =
-                  m_context.getOrLoadBestDebugLocData();
-              if (!debug_loc_data)
-                break;
-
+              const DWARFDataExtractor &debug_loc_data = DebugLocData();
               const dw_offset_t debug_loc_offset = form_value.Unsigned();
 
               size_t loc_list_length = DWARFExpression::LocationListSize(
-                  die.GetCU(), *debug_loc_data, debug_loc_offset);
+                  die.GetCU(), debug_loc_data, debug_loc_offset);
               if (loc_list_length > 0) {
-                location.CopyOpcodeData(module, *debug_loc_data,
+                location.CopyOpcodeData(module, debug_loc_data,
                                         debug_loc_offset, loc_list_length);
                 assert(func_low_pc != LLDB_INVALID_ADDRESS);
                 location.SetLocationListSlide(
@@ -3764,8 +3818,9 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
   return m_debug_map_symfile;
 }
 
-DWARFExpression::LocationListFormat SymbolFileDWARF::GetLocationListFormat() {
-  if (m_context.getOrLoadDebugLoclistData())
+DWARFExpression::LocationListFormat
+SymbolFileDWARF::GetLocationListFormat() const {
+  if (m_data_debug_loclists.m_data.GetByteSize() > 0)
     return DWARFExpression::LocLists;
   return DWARFExpression::RegularLocationList;
 }

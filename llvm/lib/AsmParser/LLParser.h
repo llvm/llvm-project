@@ -445,7 +445,7 @@ namespace llvm {
       /// DefineBB - Define the specified basic block, which is either named or
       /// unnamed.  If there is an error, this returns null otherwise it returns
       /// the block being defined.
-      BasicBlock *DefineBB(const std::string &Name, LocTy Loc);
+      BasicBlock *DefineBB(const std::string &Name, int NameID, LocTy Loc);
 
       bool resolveForwardRefBlockAddresses();
     };

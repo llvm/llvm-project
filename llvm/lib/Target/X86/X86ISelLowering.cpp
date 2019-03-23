@@ -414,6 +414,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CTPOP          , MVT::i32  , Expand);
     if (Subtarget.is64Bit())
       setOperationAction(ISD::CTPOP        , MVT::i64  , Expand);
+    else
+      setOperationAction(ISD::CTPOP        , MVT::i64  , Custom);
   }
 
   setOperationAction(ISD::READCYCLECOUNTER , MVT::i64  , Custom);
@@ -484,6 +486,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD_AND, VT, Custom);
     setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
   }
+
+  if (!Subtarget.is64Bit())
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
 
   if (Subtarget.hasCmpxchg16b()) {
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i128, Custom);
@@ -10385,11 +10390,11 @@ static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
 
   MVT LogicVT = VT;
   if (EltVT == MVT::f32 || EltVT == MVT::f64) {
-    Zero = DAG.getConstantFP(0.0, DL, MVT::f64);
-    AllOnes = DAG.getConstantFP(APInt::getAllOnesValue(64).bitsToDouble(), DL,
-                                EltVT);
-    LogicVT = MVT::getVectorVT(EltVT == MVT::f64 ? MVT::i64 : MVT::i32,
-                               Mask.size());
+    Zero = DAG.getConstantFP(0.0, DL, EltVT);
+    AllOnes = DAG.getConstantFP(
+        APFloat::getAllOnesValue(EltVT.getSizeInBits(), true), DL, EltVT);
+    LogicVT =
+        MVT::getVectorVT(EltVT == MVT::f64 ? MVT::i64 : MVT::i32, Mask.size());
   } else {
     Zero = DAG.getConstant(0, DL, EltVT);
     AllOnes = DAG.getAllOnesConstant(DL, EltVT);
@@ -25494,11 +25499,22 @@ bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 }
 
 // Note: this turns large loads into lock cmpxchg8b/16b.
-// FIXME: On 32 bits x86, fild/movq might be faster than lock cmpxchg8b.
+// TODO: In 32-bit mode, use MOVLPS when SSE1 is available?
+// TODO: In 32-bit mode, use FILD/FISTP when X87 is available?
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
-  return needsCmpXchgNb(LI->getType()) ? AtomicExpansionKind::CmpXChg
-                                       : AtomicExpansionKind::None;
+  Type *MemType = LI->getType();
+
+  // If this a 64 bit atomic load on a 32-bit target and SSE2 is enabled, we
+  // can use movq to do the load.
+  bool NoImplicitFloatOps =
+      LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat);
+  if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
+      !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2())
+    return AtomicExpansionKind::None;
+
+  return needsCmpXchgNb(MemType) ? AtomicExpansionKind::CmpXChg
+                                 : AtomicExpansionKind::None;
 }
 
 TargetLowering::AtomicExpansionKind
@@ -26701,6 +26717,26 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Do not know how to custom type legalize this operation!");
+  case ISD::CTPOP: {
+    assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
+    // Use a v2i64 if possible.
+    bool NoImplicitFloatOps =
+        DAG.getMachineFunction().getFunction().hasFnAttribute(
+            Attribute::NoImplicitFloat);
+    if (isTypeLegal(MVT::v2i64) && !NoImplicitFloatOps) {
+      SDValue Wide =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, N->getOperand(0));
+      Wide = DAG.getNode(ISD::CTPOP, dl, MVT::v2i64, Wide);
+      // Bit count should fit in 32-bits, extract it as that and then zero
+      // extend to i64. Otherwise we end up extracting bits 63:32 separately.
+      Wide = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, Wide);
+      Wide = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, Wide,
+                         DAG.getIntPtrConstant(0, dl));
+      Wide = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Wide);
+      Results.push_back(Wide);
+    }
+    return;
+  }
   case ISD::MUL: {
     EVT VT = N->getValueType(0);
     assert(VT.isVector() && "Unexpected VT");
@@ -27312,6 +27348,32 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(EFLAGS.getValue(1));
     return;
   }
+  case ISD::ATOMIC_LOAD: {
+    assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
+    bool NoImplicitFloatOps =
+        DAG.getMachineFunction().getFunction().hasFnAttribute(
+            Attribute::NoImplicitFloat);
+    if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
+        Subtarget.hasSSE2()) {
+      auto *Node = cast<AtomicSDNode>(N);
+      // Use a VZEXT_LOAD which will be selected as MOVQ. Then extract the lower
+      // 64-bits.
+      SDVTList Tys = DAG.getVTList(MVT::v2i64, MVT::Other);
+      SDValue Ops[] = { Node->getChain(), Node->getBasePtr() };
+      SDValue Ld = DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, dl, Tys, Ops,
+                                           MVT::i64, Node->getMemOperand());
+      SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Ld,
+                                DAG.getIntPtrConstant(0, dl));
+      Results.push_back(Res);
+      Results.push_back(Ld.getValue(1));
+      return;
+    }
+    // TODO: Use MOVLPS when SSE1 is available?
+    // TODO: Use FILD/FISTP when X87 is available?
+    // Delegate to generic TypeLegalization. Situations we can really handle
+    // should have already been dealt with by AtomicExpandPass.cpp.
+    break;
+  }
   case ISD::ATOMIC_SWAP:
   case ISD::ATOMIC_LOAD_ADD:
   case ISD::ATOMIC_LOAD_SUB:
@@ -27323,11 +27385,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::ATOMIC_LOAD_MAX:
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_UMAX:
-  case ISD::ATOMIC_LOAD: {
     // Delegate to generic TypeLegalization. Situations we can really handle
     // should have already been dealt with by AtomicExpandPass.cpp.
     break;
-  }
+
   case ISD::BITCAST: {
     assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
     EVT DstVT = N->getValueType(0);

@@ -339,8 +339,8 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
           dyn_cast_or_null<VarDecl>(M->getExtendingDecl()));
       CleanupArg = llvm::Constant::getNullValue(CGF.Int8PtrTy);
     } else {
-      CleanupFn = CGF.CGM.getAddrAndTypeOfCXXStructor(ReferenceTemporaryDtor,
-                                                      StructorType::Complete);
+      CleanupFn = CGF.CGM.getAddrAndTypeOfCXXStructor(
+          GlobalDecl(ReferenceTemporaryDtor, Dtor_Complete));
       CleanupArg = cast<llvm::Constant>(ReferenceTemporary.getPointer());
     }
     CGF.CGM.getCXXABI().registerGlobalDtor(

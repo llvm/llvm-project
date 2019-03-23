@@ -45,6 +45,9 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
       ObjectFile.FatMachO.reset(new MachOYAML::UniversalBinary());
       MappingTraits<MachOYAML::UniversalBinary>::mapping(IO,
                                                          *ObjectFile.FatMachO);
+    } else if (IO.mapTag("!minidump")) {
+      ObjectFile.Minidump.reset(new MinidumpYAML::Object());
+      MappingTraits<MinidumpYAML::Object>::mapping(IO, *ObjectFile.Minidump);
     } else if (IO.mapTag("!WASM")) {
       ObjectFile.Wasm.reset(new WasmYAML::Object());
       MappingTraits<WasmYAML::Object>::mapping(IO, *ObjectFile.Wasm);

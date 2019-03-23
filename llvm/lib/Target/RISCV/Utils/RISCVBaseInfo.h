@@ -172,6 +172,14 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
 
 } // namespace RISCVABI
 
+namespace RISCVFeatures {
+
+// Validates if the given combination of features are valid for the target
+// triple. Exits with report_fatal_error if not.
+void validate(const Triple &TT, const FeatureBitset &FeatureBits);
+
+} // namespace RISCVFeatures
+
 } // namespace llvm
 
 #endif

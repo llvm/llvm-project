@@ -741,11 +741,13 @@ A function definition contains a list of basic blocks, forming the CFG (Control
 Flow Graph) for the function. Each basic block may optionally start with a label
 (giving the basic block a symbol table entry), contains a list of instructions,
 and ends with a :ref:`terminator <terminators>` instruction (such as a branch or
-function return). If an explicit label is not provided, a block is assigned an
-implicit numbered label, using the next value from the same counter as used for
-unnamed temporaries (:ref:`see above<identifiers>`). For example, if a function
-entry block does not have an explicit label, it will be assigned label "%0",
-then the first unnamed temporary in that block will be "%1", etc.
+function return). If an explicit label name is not provided, a block is assigned
+an implicit numbered label, using the next value from the same counter as used
+for unnamed temporaries (:ref:`see above<identifiers>`). For example, if a
+function entry block does not have an explicit label, it will be assigned label
+"%0", then the first unnamed temporary in that block will be "%1", etc. If a
+numeric label is explicitly specified, it must match the numeric label that
+would be used implicitly.
 
 The first basic block in a function is special in two ways: it is
 immediately executed on entrance to the function, and it is not allowed

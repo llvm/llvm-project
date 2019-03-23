@@ -2138,8 +2138,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                                                  Delegating, Args);
 
   // Emit the call.
-  llvm::Constant *CalleePtr =
-    CGM.getAddrOfCXXStructor(D, getFromCtorType(Type));
+  llvm::Constant *CalleePtr = CGM.getAddrOfCXXStructor(GlobalDecl(D, Type));
   const CGFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(D, Type));

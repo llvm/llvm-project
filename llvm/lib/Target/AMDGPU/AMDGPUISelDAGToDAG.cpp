@@ -544,6 +544,8 @@ static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
     return AMDGPU::SGPR_96RegClassID;
   case 4:
     return AMDGPU::SReg_128RegClassID;
+  case 5:
+    return AMDGPU::SGPR_160RegClassID;
   case 8:
     return AMDGPU::SReg_256RegClassID;
   case 16:

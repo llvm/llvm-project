@@ -228,9 +228,23 @@ public:
 
   virtual const lldb_private::DWARFDataExtractor &get_debug_abbrev_data();
   virtual const lldb_private::DWARFDataExtractor &get_debug_addr_data();
+  const lldb_private::DWARFDataExtractor &get_debug_frame_data();
   virtual const lldb_private::DWARFDataExtractor &get_debug_info_data();
+  const lldb_private::DWARFDataExtractor &get_debug_line_data();
+  const lldb_private::DWARFDataExtractor &get_debug_line_str_data();
+  const lldb_private::DWARFDataExtractor &get_debug_macro_data();
+  const lldb_private::DWARFDataExtractor &get_debug_loc_data();
+  const lldb_private::DWARFDataExtractor &get_debug_loclists_data();
+  const lldb_private::DWARFDataExtractor &get_debug_ranges_data();
+  const lldb_private::DWARFDataExtractor &get_debug_rnglists_data();
   virtual const lldb_private::DWARFDataExtractor &get_debug_str_data();
   virtual const lldb_private::DWARFDataExtractor &get_debug_str_offsets_data();
+  const lldb_private::DWARFDataExtractor &get_debug_types_data();
+  const lldb_private::DWARFDataExtractor &get_apple_names_data();
+  const lldb_private::DWARFDataExtractor &get_apple_types_data();
+  const lldb_private::DWARFDataExtractor &get_apple_namespaces_data();
+  const lldb_private::DWARFDataExtractor &get_apple_objc_data();
+  const lldb_private::DWARFDataExtractor &get_gnu_debugaltlink();
 
   DWARFDebugAbbrev *DebugAbbrev();
 
@@ -243,6 +257,8 @@ public:
   DWARFDebugRangesBase *DebugRanges();
 
   const DWARFDebugRangesBase *DebugRanges() const;
+
+  const lldb_private::DWARFDataExtractor &DebugLocData();
 
   static bool SupportedVersion(uint16_t version);
 
@@ -269,7 +285,7 @@ public:
                                             uint32_t cu_idx);
 
   virtual lldb_private::DWARFExpression::LocationListFormat
-  GetLocationListFormat();
+  GetLocationListFormat() const;
 
   lldb::ModuleSP GetDWOModule(lldb_private::ConstString name);
 
@@ -286,7 +302,6 @@ public:
   virtual std::unique_ptr<SymbolFileDWARFDwo>
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
                                  const DWARFDebugInfoEntry &cu_die);
-  lldb_private::DWARFContext &GetDWARFContext();
 
   // For regular SymbolFileDWARF instances the method returns nullptr,
   // for the instances of the subclass SymbolFileDWARFDwo
@@ -447,9 +462,23 @@ protected:
 
   DWARFDataSegment m_data_debug_abbrev;
   DWARFDataSegment m_data_debug_addr;
+  DWARFDataSegment m_data_debug_frame;
   DWARFDataSegment m_data_debug_info;
+  DWARFDataSegment m_data_debug_line;
+  DWARFDataSegment m_data_debug_line_str;
+  DWARFDataSegment m_data_debug_macro;
+  DWARFDataSegment m_data_debug_loc;
+  DWARFDataSegment m_data_debug_loclists;
+  DWARFDataSegment m_data_debug_ranges;
+  DWARFDataSegment m_data_debug_rnglists;
   DWARFDataSegment m_data_debug_str;
   DWARFDataSegment m_data_debug_str_offsets;
+  DWARFDataSegment m_data_debug_types;
+  DWARFDataSegment m_data_apple_names;
+  DWARFDataSegment m_data_apple_types;
+  DWARFDataSegment m_data_apple_namespaces;
+  DWARFDataSegment m_data_apple_objc;
+  DWARFDataSegment m_data_gnu_debugaltlink;
 
   // The unique pointer items below are generated on demand if and when someone
   // accesses

@@ -22,15 +22,18 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
                        .Case("lp64d", ABI_LP64D)
                        .Default(ABI_Unknown);
 
+  bool IsRV64 = TT.isArch64Bit();
+  bool IsRV32E = FeatureBits[RISCV::FeatureRV32E];
+
   if (!ABIName.empty() && TargetABI == ABI_Unknown) {
     errs()
         << "'" << ABIName
         << "' is not a recognized ABI for this target (ignoring target-abi)\n";
-  } else if (ABIName.startswith("ilp32") && TT.isArch64Bit()) {
+  } else if (ABIName.startswith("ilp32") && IsRV64) {
     errs() << "32-bit ABIs are not supported for 64-bit targets (ignoring "
               "target-abi)\n";
     TargetABI = ABI_Unknown;
-  } else if (ABIName.startswith("lp64") && !TT.isArch64Bit()) {
+  } else if (ABIName.startswith("lp64") && !IsRV64) {
     errs() << "64-bit ABIs are not supported for 32-bit targets (ignoring "
               "target-abi)\n";
     TargetABI = ABI_Unknown;
@@ -44,17 +47,34 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
               "doesn't support the D instruction set extension (ignoring "
               "target-abi)\n";
     TargetABI = ABI_Unknown;
+  } else if (IsRV32E && TargetABI != ABI_ILP32E && TargetABI != ABI_Unknown) {
+    errs()
+        << "Only the ilp32e ABI is supported for RV32E (ignoring target-abi)\n";
+    TargetABI = ABI_Unknown;
   }
 
-  // For now, default to the ilp32/lp64 if no explicit ABI is given or an
-  // invalid/unrecognised string is given. In the future, it might be worth
-  // changing this to default to ilp32f/lp64f and ilp32d/lp64d when hardware
-  // support for floating point is present.
-  if (TargetABI == ABI_Unknown) {
-    TargetABI = TT.isArch64Bit() ? ABI_LP64 : ABI_ILP32;
-  }
+  if (TargetABI != ABI_Unknown)
+    return TargetABI;
 
-  return TargetABI;
+  // For now, default to the ilp32/ilp32e/lp64 ABI if no explicit ABI is given
+  // or an invalid/unrecognised string is given. In the future, it might be
+  // worth changing this to default to ilp32f/lp64f and ilp32d/lp64d when
+  // hardware support for floating point is present.
+  if (IsRV32E)
+    return ABI_ILP32E;
+  if (IsRV64)
+    return ABI_LP64;
+  return ABI_ILP32;
 }
 } // namespace RISCVABI
+
+namespace RISCVFeatures {
+
+void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
+  if (TT.isArch64Bit() && FeatureBits[RISCV::FeatureRV32E])
+    report_fatal_error("RV32E can't be enabled for an RV64 target");
+}
+
+} // namespace RISCVFeatures
+
 } // namespace llvm

@@ -32,7 +32,8 @@ public:
     utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
                                      HeaderFileExtensions, ',');
   }
-  void registerPPCallbacks(CompilerInstance &Compiler) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
 
   /// Returns ``true`` if the check should suggest inserting a trailing comment
   /// on the ``#endif`` of the header guard. It will use the same name as

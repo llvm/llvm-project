@@ -830,13 +830,13 @@ protected:
                                       const MemoryUseOrDef *Template = nullptr);
 
 private:
-  class ClobberWalkerBase;
-  class CachingWalker;
-  class SkipSelfWalker;
+  template <class AliasAnalysisType> class ClobberWalkerBase;
+  template <class AliasAnalysisType> class CachingWalker;
+  template <class AliasAnalysisType> class SkipSelfWalker;
   class OptimizeUses;
 
-  CachingWalker *getWalkerImpl();
-  void buildMemorySSA();
+  CachingWalker<AliasAnalysis> *getWalkerImpl();
+  void buildMemorySSA(BatchAAResults &BAA);
   void optimizeUses();
 
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
@@ -850,7 +850,8 @@ private:
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   bool dominatesUse(const MemoryAccess *, const MemoryAccess *) const;
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
-  MemoryUseOrDef *createNewAccess(Instruction *,
+  template <typename AliasAnalysisType>
+  MemoryUseOrDef *createNewAccess(Instruction *, AliasAnalysisType *,
                                   const MemoryUseOrDef *Template = nullptr);
   MemoryAccess *findDominatingDef(BasicBlock *, enum InsertionPlace);
   void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &);
@@ -886,9 +887,9 @@ private:
   mutable DenseMap<const MemoryAccess *, unsigned long> BlockNumbering;
 
   // Memory SSA building info
-  std::unique_ptr<ClobberWalkerBase> WalkerBase;
-  std::unique_ptr<CachingWalker> Walker;
-  std::unique_ptr<SkipSelfWalker> SkipWalker;
+  std::unique_ptr<ClobberWalkerBase<AliasAnalysis>> WalkerBase;
+  std::unique_ptr<CachingWalker<AliasAnalysis>> Walker;
+  std::unique_ptr<SkipSelfWalker<AliasAnalysis>> SkipWalker;
   unsigned NextID;
 };
 

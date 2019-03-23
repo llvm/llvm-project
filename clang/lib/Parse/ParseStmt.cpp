@@ -2260,10 +2260,8 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
   // C++ 3.3.2p3:
   // The name in a catch exception-declaration is local to the handler and
   // shall not be redeclared in the outermost block of the handler.
-  unsigned ScopeFlags = Scope::DeclScope | Scope::ControlScope |
-                        Scope::CatchScope |
-                        (FnCatch ? Scope::FnTryCatchScope : 0);
-  ParseScope CatchScope(this, ScopeFlags);
+  ParseScope CatchScope(this, Scope::DeclScope | Scope::ControlScope |
+                          (FnCatch ? Scope::FnTryCatchScope : 0));
 
   // exception-declaration is equivalent to '...' or a parameter-declaration
   // without default arguments.
@@ -2292,7 +2290,7 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
     return StmtError(Diag(Tok, diag::err_expected) << tok::l_brace);
 
   // FIXME: Possible draft standard bug: attribute-specifier should be allowed?
-  StmtResult Block(ParseCompoundStatement(/*isStmtExpr=*/false, ScopeFlags));
+  StmtResult Block(ParseCompoundStatement());
   if (Block.isInvalid())
     return Block;
 

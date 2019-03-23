@@ -462,7 +462,10 @@ cl::opt<bool> DumpSymbolStats(
     "sym-stats",
     cl::desc("Dump a detailed breakdown of symbol usage/size for each module"),
     cl::cat(MsfOptions), cl::sub(DumpSubcommand));
-
+cl::opt<bool> DumpTypeStats(
+    "type-stats",
+    cl::desc("Dump a detailed breakdown of type usage/size"),
+    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpUdtStats(
     "udt-stats",
     cl::desc("Dump a detailed breakdown of S_UDT record usage / stats"),

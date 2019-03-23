@@ -102,11 +102,12 @@ void test() {
     #pragma omp cancel parallel
 }
 })";
-  ASSERT_TRUE(
-      PrintedOMPStmtMatches(Source, OMPInnermostStructuredBlockMatcher(), R"({
+  const char *Expected = R"({
     #pragma omp cancel parallel
 }
-)"));
+)";
+  ASSERT_TRUE(PrintedOMPStmtMatches(
+      Source, OMPInnermostStructuredBlockMatcher(), Expected));
   ASSERT_TRUE(PrintedOMPStmtMatches(Source, OMPStandaloneDirectiveMatcher(),
                                     "#pragma omp cancel parallel\n"));
 }
@@ -117,14 +118,15 @@ TEST(OMPStructuredBlock, TestCancellationPoint) {
 void test() {
 #pragma omp parallel
 {
-#pragma omp cancellation point parallel
-}
-})";
-  ASSERT_TRUE(
-      PrintedOMPStmtMatches(Source, OMPInnermostStructuredBlockMatcher(), R"({
     #pragma omp cancellation point parallel
 }
-)"));
+})";
+  const char *Expected = R"({
+    #pragma omp cancellation point parallel
+}
+)";
+  ASSERT_TRUE(PrintedOMPStmtMatches(
+      Source, OMPInnermostStructuredBlockMatcher(), Expected));
   ASSERT_TRUE(
       PrintedOMPStmtMatches(Source, OMPStandaloneDirectiveMatcher(),
                             "#pragma omp cancellation point parallel\n"));

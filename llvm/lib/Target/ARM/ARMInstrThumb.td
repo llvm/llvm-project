@@ -811,8 +811,8 @@ def tLDMIA_UPD :
                  "$Rn = $wb", IIC_iLoad_mu>,
     PseudoInstExpansion<(tLDMIA tGPR:$Rn, pred:$p, reglist:$regs)> {
   let Size = 2;
-  let OutOperandList = (outs GPR:$wb);
-  let InOperandList = (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops);
+  let OutOperandList = (outs tGPR:$wb);
+  let InOperandList = (ins tGPR:$Rn, pred:$p, reglist:$regs, variable_ops);
   let Pattern = [];
   let isCodeGenOnly = 1;
   let isPseudo = 1;
@@ -821,7 +821,7 @@ def tLDMIA_UPD :
 
 // There is no non-writeback version of STM for Thumb.
 let mayStore = 1, hasExtraSrcRegAllocReq = 1 in
-def tSTMIA_UPD : Thumb1I<(outs GPR:$wb),
+def tSTMIA_UPD : Thumb1I<(outs tGPR:$wb),
                          (ins tGPR:$Rn, pred:$p, reglist:$regs, variable_ops),
                          AddrModeNone, 2, IIC_iStore_mu,
                          "stm${p}\t$Rn!, $regs", "$Rn = $wb", []>,
@@ -1511,12 +1511,13 @@ def tInt_eh_sjlj_setjmp : ThumbXI<(outs),(ins tGPR:$src, tGPR:$val),
 // FIXME: Non-IOS version(s)
 let isBarrier = 1, hasSideEffects = 1, isTerminator = 1, isCodeGenOnly = 1,
     Defs = [ R7, LR, SP ] in
-def tInt_eh_sjlj_longjmp : XI<(outs), (ins GPR:$src, GPR:$scratch),
+def tInt_eh_sjlj_longjmp : XI<(outs), (ins tGPR:$src, tGPR:$scratch),
                               AddrModeNone, 0, IndexModeNone,
                               Pseudo, NoItinerary, "", "",
-                              [(ARMeh_sjlj_longjmp GPR:$src, GPR:$scratch)]>,
+                              [(ARMeh_sjlj_longjmp tGPR:$src, tGPR:$scratch)]>,
                              Requires<[IsThumb,IsNotWindows]>;
 
+// (Windows is Thumb2-only)
 let isBarrier = 1, hasSideEffects = 1, isTerminator = 1, isCodeGenOnly = 1,
     Defs = [ R11, LR, SP ] in
 def tInt_WIN_eh_sjlj_longjmp
@@ -1611,16 +1612,16 @@ def : T1Pat<(extloadi16 t_addrmode_rr:$addr),  (tLDRHr t_addrmode_rr:$addr)>;
 // and expand it just after ISel.
 let usesCustomInserter = 1, mayLoad =1,
     Constraints = "$Rn = $Rn_wb,@earlyclobber $Rn_wb" in
- def tLDR_postidx: tPseudoInst<(outs rGPR:$Rt, rGPR:$Rn_wb),
-                               (ins rGPR:$Rn, pred:$p),
+ def tLDR_postidx: tPseudoInst<(outs tGPR:$Rt, tGPR:$Rn_wb),
+                               (ins tGPR:$Rn, pred:$p),
                                4, IIC_iStore_ru,
                                []>;
 
 // post-inc STR -> STM r0!, {r1}. The layout of this (because it doesn't def
 // multiple registers) is the same in ISel as MachineInstr, so there's no need
 // for a pseudo.
-def : T1Pat<(post_store rGPR:$Rt, rGPR:$Rn, 4),
-            (tSTMIA_UPD rGPR:$Rn, rGPR:$Rt)>;
+def : T1Pat<(post_store tGPR:$Rt, tGPR:$Rn, 4),
+            (tSTMIA_UPD tGPR:$Rn, tGPR:$Rt)>;
 
 // If it's impossible to use [r,r] address mode for sextload, select to
 // ldr{b|h} + sxt{b|h} instead.
@@ -1689,9 +1690,9 @@ def : T1Pat<(i32 imm256_510:$src),
 // be expanded into two instructions late to allow if-conversion and
 // scheduling.
 let isReMaterializable = 1 in
-def tLDRpci_pic : PseudoInst<(outs GPR:$dst), (ins i32imm:$addr, pclabel:$cp),
+def tLDRpci_pic : PseudoInst<(outs tGPR:$dst), (ins i32imm:$addr, pclabel:$cp),
                              NoItinerary,
-               [(set GPR:$dst, (ARMpic_add (load (ARMWrapper tconstpool:$addr)),
+               [(set tGPR:$dst, (ARMpic_add (load (ARMWrapper tconstpool:$addr)),
                                            imm:$cp))]>,
                Requires<[IsThumb, IsThumb1Only]>;
 

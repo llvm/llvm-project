@@ -1003,8 +1003,7 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
       NewDMask = ConstantInt::get(DMask->getType(), NewDMaskVal);
   }
 
-  // TODO: Handle 3 vectors when supported in code gen.
-  unsigned NewNumElts = PowerOf2Ceil(DemandedElts.countPopulation());
+  unsigned NewNumElts = DemandedElts.countPopulation();
   if (!NewNumElts)
     return UndefValue::get(II->getType());
 
