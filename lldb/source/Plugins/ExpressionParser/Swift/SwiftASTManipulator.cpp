@@ -439,10 +439,8 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
 
   const swift::StaticSpellingKind static_spelling_kind =
       swift::StaticSpellingKind::KeywordStatic;
-  result_loc_info.binding_decl = swift::PatternBindingDecl::create(
-      ast_context, source_loc, static_spelling_kind, source_loc, var_pattern,
-      swift::SourceLoc(), expr, new_decl_context);
-  result_loc_info.binding_decl->setImplicit();
+  result_loc_info.binding_decl = swift::PatternBindingDecl::createImplicit(
+      ast_context, static_spelling_kind, var_pattern, expr, new_decl_context);
   result_loc_info.binding_decl->setStatic(false);
 
   body.push_back(result_loc_info.binding_decl);
