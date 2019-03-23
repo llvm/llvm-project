@@ -481,6 +481,7 @@ defm SI_SPILL_S32  : SI_SPILL_SGPR <SReg_32>;
 defm SI_SPILL_S64  : SI_SPILL_SGPR <SReg_64>;
 defm SI_SPILL_S96  : SI_SPILL_SGPR <SReg_96>;
 defm SI_SPILL_S128 : SI_SPILL_SGPR <SReg_128>;
+defm SI_SPILL_S160 : SI_SPILL_SGPR <SReg_160>;
 defm SI_SPILL_S256 : SI_SPILL_SGPR <SReg_256>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 
@@ -514,6 +515,7 @@ defm SI_SPILL_V32  : SI_SPILL_VGPR <VGPR_32>;
 defm SI_SPILL_V64  : SI_SPILL_VGPR <VReg_64>;
 defm SI_SPILL_V96  : SI_SPILL_VGPR <VReg_96>;
 defm SI_SPILL_V128 : SI_SPILL_VGPR <VReg_128>;
+defm SI_SPILL_V160 : SI_SPILL_VGPR <VReg_160>;
 defm SI_SPILL_V256 : SI_SPILL_VGPR <VReg_256>;
 defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
 
@@ -771,6 +773,22 @@ foreach Index = 0-3 in {
   >;
 }
 
+foreach Index = 0-4 in {
+  def Extract_Element_v5i32_#Index : Extract_Element <
+    i32, v5i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v5i32_#Index : Insert_Element <
+    i32, v5i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v5f32_#Index : Extract_Element <
+    f32, v5f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v5f32_#Index : Insert_Element <
+    f32, v5f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
+
 foreach Index = 0-7 in {
   def Extract_Element_v8i32_#Index : Extract_Element <
     i32, v8i32, Index, !cast<SubRegIndex>(sub#Index)
@@ -899,6 +917,10 @@ def : BitConvert <v4f32, v2f64, VReg_128>;
 def : BitConvert <v4i32, v2f64, VReg_128>;
 def : BitConvert <v2i64, v2f64, VReg_128>;
 def : BitConvert <v2f64, v2i64, VReg_128>;
+
+// 160-bit bitcast
+def : BitConvert <v5i32, v5f32, SGPR_160>;
+def : BitConvert <v5f32, v5i32, SGPR_160>;
 
 // 256-bit bitcast
 def : BitConvert <v8i32, v8f32, SReg_256>;

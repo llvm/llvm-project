@@ -36,6 +36,7 @@ public:
         TargetOptions(Options) {
     TargetABI = RISCVABI::computeTargetABI(
         STI.getTargetTriple(), STI.getFeatureBits(), Options.getABIName());
+    RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
   }
   ~RISCVAsmBackend() override {}
 

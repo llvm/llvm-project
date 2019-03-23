@@ -62,6 +62,8 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-resource-headers
 
   clang-tidy
+  # Clang-tidy tests need clang for building modules.
+  clang
 )
 
 if(CLANGD_BUILD_XPC_SUPPORT)

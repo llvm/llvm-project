@@ -1,26 +1,50 @@
+# Show that the --output-format correctly configures both the main output file
+# and DWO output.
+# Note that we don't actually need any DWARF to produce the DWO file.
+
 # RUN: yaml2obj %s > %t.o
 
-# RUN: llvm-objcopy %t.o -O elf32-i386 %t.elf32_i386.o
-# RUN: llvm-readobj --file-headers %t.elf32_i386.o | FileCheck %s --check-prefixes=CHECK,I386,32
+# Without --output-format, the format should match the input.
+# RUN: llvm-objcopy %t.o %t.default.o --split-dwo=%t.default.dwo
+# RUN: llvm-readobj --file-headers %t.default.o | FileCheck %s --check-prefixes=CHECK,DEFAULT,32
+# RUN: llvm-readobj --file-headers %t.default.dwo | FileCheck %s --check-prefixes=CHECK,DEFAULT,32
 
-# RUN: llvm-objcopy %t.o -O elf32-powerpcle %t.elf32_ppcle.o
-# RUN: llvm-readobj --file-headers %t.elf32_ppcle.o | FileCheck %s --check-prefixes=CHECK,PPC,32
+# RUN: llvm-objcopy %t.o -O elf32-i386 %t.elf32_i386.o --split-dwo=%t.elf32_i386.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_i386.o | FileCheck %s --check-prefixes=CHECK,I386,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_i386.dwo | FileCheck %s --check-prefixes=CHECK,I386,32,SYSV
 
-# RUN: llvm-objcopy %t.o -O elf32-x86-64 %t.elf32_x86_64.o
-# RUN: llvm-readobj --file-headers %t.elf32_x86_64.o | FileCheck %s --check-prefixes=CHECK,X86-64,32
+# RUN: llvm-objcopy %t.o -O elf32-i386-freebsd %t.elf32_i386_freebsd.o --split-dwo=%t.elf32_i386_freebsd.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_i386_freebsd.o | FileCheck %s --check-prefixes=CHECK,I386,32,FREEBSD
+# RUN: llvm-readobj --file-headers %t.elf32_i386_freebsd.dwo | FileCheck %s --check-prefixes=CHECK,I386,32,FREEBSD
 
-# RUN: llvm-objcopy %t.o -O elf64-powerpcle %t.elf64_ppcle.o
-# RUN: llvm-readobj --file-headers %t.elf64_ppcle.o | FileCheck %s --check-prefixes=CHECK,PPC64,64
+# RUN: llvm-objcopy %t.o -O elf32-powerpcle %t.elf32_ppcle.o --split-dwo=%t.elf32_ppcle.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_ppcle.o | FileCheck %s --check-prefixes=CHECK,PPC,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_ppcle.dwo | FileCheck %s --check-prefixes=CHECK,PPC,32,SYSV
 
-# RUN: llvm-objcopy %t.o -O elf64-x86-64 %t.elf64_x86_64.o
-# RUN: llvm-readobj --file-headers %t.elf64_x86_64.o | FileCheck %s --check-prefixes=CHECK,X86-64,64
+# RUN: llvm-objcopy %t.o -O elf32-x86-64 %t.elf32_x86_64.o --split-dwo=%t.elf32_x86_64.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_x86_64.o | FileCheck %s --check-prefixes=CHECK,X86-64,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_x86_64.dwo | FileCheck %s --check-prefixes=CHECK,X86-64,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-powerpcle %t.elf64_ppcle.o --split-dwo=%t.elf64_ppcle.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_ppcle.o | FileCheck %s --check-prefixes=CHECK,PPC64,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_ppcle.dwo | FileCheck %s --check-prefixes=CHECK,PPC64,64,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-x86-64 %t.elf64_x86_64.o --split-dwo=%t.elf64_x86_64.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_x86_64.o | FileCheck %s --check-prefixes=CHECK,X86-64,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_x86_64.dwo | FileCheck %s --check-prefixes=CHECK,X86-64,64,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-x86-64-freebsd %t.elf64_x86_64_freebsd.o --split-dwo=%t.elf64_x86_64_freebsd.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_x86_64_freebsd.o | FileCheck %s --check-prefixes=CHECK,X86-64,64,FREEBSD
+# RUN: llvm-readobj --file-headers %t.elf64_x86_64_freebsd.dwo | FileCheck %s --check-prefixes=CHECK,X86-64,64,FREEBSD
 
 !ELF
 FileHeader:
   Class:           ELFCLASS32
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
-  Machine:         EM_386
+  # Arbitrary values that do not match any value we convert to via --output-format.
+  Machine:         EM_NONE
+  OSABI:           ELFOSABI_STANDALONE
 Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
@@ -43,14 +67,16 @@ Symbols:
 # 32-SAME:      ELF32-
 # 64-SAME:      ELF64-
 # I386-SAME:    i386
-# PPC-SAME:     ppc
+# PPC-SAME:     ppc{{$}}
 # PPC64-SAME:   ppc64
 # X86-64-SAME:  x86-64
+# DEFAULT-SAME: unknown
 
 # I386-NEXT:    Arch: i386
-# PPC-NEXT:     Arch: powerpc
+# PPC-NEXT:     Arch: powerpc{{$}}
 # PPC64-NEXT:   Arch: powerpc64le
 # X86-64-NEXT:  Arch: x86_64
+# DEFAULT-NEXT: Arch: unknown
 
 # 32-NEXT:      AddressSize: 32bit
 # 64-NEXT:      AddressSize: 64bit
@@ -59,10 +85,14 @@ Symbols:
 # 64:     Class: 64-bit
 # CHECK:  DataEncoding: LittleEndian
 
-# I386:   Machine: EM_386
-# PPC:    Machine: EM_PPC
-# PPC64:  Machine: EM_PPC64
-# X86-64: Machine: EM_X86_64
+# SYSV:    OS/ABI: SystemV (0x0)
+# FREEBSD: OS/ABI: FreeBSD (0x9)
+# DEFAULT: OS/ABI: Standalone (0xFF)
+
+# I386:   Machine: EM_386 (0x3)
+# PPC:    Machine: EM_PPC (0x14)
+# PPC64:  Machine: EM_PPC64 (0x15)
+# X86-64: Machine: EM_X86_64 (0x3E)
 
 # 32: HeaderSize: 52
 # 64: HeaderSize: 64

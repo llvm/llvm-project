@@ -39,6 +39,7 @@ RISCVSubtarget &RISCVSubtarget::initializeSubtargetDependencies(
   }
 
   TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
+  RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
 }
 

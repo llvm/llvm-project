@@ -422,6 +422,16 @@ public:
     RequiresDecls.push_back(RD);
   }
 
+  /// Checks if the defined 'requires' directive has specified type of clause.
+  template <typename ClauseType>
+  bool hasRequiresDeclWithClause() {
+    return llvm::any_of(RequiresDecls, [](const OMPRequiresDecl *D) {
+      return llvm::any_of(D->clauselists(), [](const OMPClause *C) {
+        return isa<ClauseType>(C);
+      });
+    });
+  }
+
   /// Checks for a duplicate clause amongst previously declared requires
   /// directives
   bool hasDuplicateRequiresClause(ArrayRef<OMPClause *> ClauseList) const {
@@ -2243,8 +2253,17 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPAllocateDirective(
     ArrayRef<OMPClause *> Clauses, DeclContext *Owner) {
   assert(Clauses.size() <= 1 && "Expected at most one clause.");
   Expr *Allocator = nullptr;
-  if (!Clauses.empty())
+  if (Clauses.empty()) {
+    // OpenMP 5.0, 2.11.3 allocate Directive, Restrictions.
+    // allocate directives that appear in a target region must specify an
+    // allocator clause unless a requires directive with the dynamic_allocators
+    // clause is present in the same compilation unit.
+    if (LangOpts.OpenMPIsDevice &&
+        !DSAStack->hasRequiresDeclWithClause<OMPDynamicAllocatorsClause>())
+      targetDiag(Loc, diag::err_expected_allocator_clause);
+  } else {
     Allocator = cast<OMPAllocatorClause>(Clauses.back())->getAllocator();
+  }
   OMPAllocateDeclAttr::AllocatorTypeTy AllocatorKind =
       getAllocatorKind(*this, DSAStack, Allocator);
   SmallVector<Expr *, 8> Vars;

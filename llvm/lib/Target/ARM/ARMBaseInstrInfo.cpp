@@ -2869,7 +2869,15 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
       // change. We can't do this transformation.
       return false;
 
-  } while (I != B);
+    if (I == B) {
+      // In some cases, we scan the use-list of an instruction for an AND;
+      // that AND is in the same BB, but may not be scheduled before the
+      // corresponding TST.  In that case, bail out.
+      //
+      // FIXME: We could try to reschedule the AND.
+      return false;
+    }
+  } while (true);
 
   // Return false if no candidates exist.
   if (!MI && !SubAdd)

@@ -20,7 +20,8 @@ class MacroRepeatedSideEffectsCheck : public ClangTidyCheck {
 public:
   MacroRepeatedSideEffectsCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
-  void registerPPCallbacks(CompilerInstance &Compiler) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
 };
 
 } // namespace bugprone

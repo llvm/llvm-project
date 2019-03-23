@@ -8,6 +8,7 @@ add_clang_library(clangTidy
   ClangTidyDiagnosticConsumer.cpp
   ClangTidyOptions.cpp
   ClangTidyProfiling.cpp
+  ExpandModularHeadersPPCallbacks.cpp
 
   DEPENDS
   ClangSACheckers
@@ -49,6 +50,7 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
   add_subdirectory(mpi)
 endif()
 add_subdirectory(objc)
+add_subdirectory(openmp)
 add_subdirectory(performance)
 add_subdirectory(plugin)
 add_subdirectory(portability)

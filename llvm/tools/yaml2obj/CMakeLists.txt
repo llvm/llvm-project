@@ -11,5 +11,6 @@ add_llvm_tool(yaml2obj
   yaml2coff.cpp
   yaml2elf.cpp
   yaml2macho.cpp
+  yaml2minidump.cpp
   yaml2wasm.cpp
   )

@@ -224,8 +224,10 @@ static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
   };
   if (Error E = DWOFile->removeSections(OnlyKeepDWOPred))
     return E;
-  if (Config.OutputArch)
+  if (Config.OutputArch) {
     DWOFile->Machine = Config.OutputArch.getValue().EMachine;
+    DWOFile->OSABI = Config.OutputArch.getValue().OSABI;
+  }
   FileBuffer FB(File);
   auto Writer = createWriter(Config, *DWOFile, FB, OutputElfType);
   if (Error E = Writer->finalize())
@@ -311,8 +313,10 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
             splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType))
       return E;
 
-  if (Config.OutputArch)
+  if (Config.OutputArch) {
     Obj.Machine = Config.OutputArch.getValue().EMachine;
+    Obj.OSABI = Config.OutputArch.getValue().OSABI;
+  }
 
   // TODO: update or remove symbols only if there is an option that affects
   // them.

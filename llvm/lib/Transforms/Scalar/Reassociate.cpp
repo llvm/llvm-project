@@ -2217,8 +2217,15 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
         if (std::less<Value *>()(Op1, Op0))
           std::swap(Op0, Op1);
         auto it = PairMap[Idx].find({Op0, Op1});
-        if (it != PairMap[Idx].end())
-          Score += it->second;
+        if (it != PairMap[Idx].end()) {
+          // Functions like BreakUpSubtract() can erase the Values we're using
+          // as keys and create new Values after we built the PairMap. There's a
+          // small chance that the new nodes can have the same address as
+          // something already in the table. We shouldn't accumulate the stored
+          // score in that case as it refers to the wrong Value.
+          if (it->second.isValid())
+            Score += it->second.Score;
+        }
 
         unsigned MaxRank = std::max(Ops[i].Rank, Ops[j].Rank);
         if (Score > Max || (Score == Max && MaxRank < BestRank)) {
@@ -2287,9 +2294,15 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
             std::swap(Op0, Op1);
           if (!Visited.insert({Op0, Op1}).second)
             continue;
-          auto res = PairMap[BinaryIdx].insert({{Op0, Op1}, 1});
-          if (!res.second)
-            ++res.first->second;
+          auto res = PairMap[BinaryIdx].insert({{Op0, Op1}, {Op0, Op1, 1}});
+          if (!res.second) {
+            // If either key value has been erased then we've got the same
+            // address by coincidence. That can't happen here because nothing is
+            // erasing values but it can happen by the time we're querying the
+            // map.
+            assert(res.first->second.isValid() && "WeakVH invalidated");
+            ++res.first->second.Score;
+          }
         }
       }
     }

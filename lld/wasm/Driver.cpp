@@ -21,6 +21,7 @@
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
@@ -292,6 +293,8 @@ static StringRef getEntry(opt::InputArgList &Args, StringRef Default) {
 // of these values.
 static void setConfigs(opt::InputArgList &Args) {
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
+  Config->CheckFeatures =
+      Args.hasFlag(OPT_check_features, OPT_no_check_features, true);
   Config->CompressRelocations = Args.hasArg(OPT_compress_relocations);
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
@@ -339,6 +342,13 @@ static void setConfigs(opt::InputArgList &Args) {
   Config->MaxMemory = args::getInteger(Args, OPT_max_memory, 0);
   Config->ZStackSize =
       args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
+
+  if (auto *Arg = Args.getLastArg(OPT_features)) {
+    Config->Features =
+        llvm::Optional<std::vector<std::string>>(std::vector<std::string>());
+    for (StringRef S : Arg->getValues())
+      Config->Features->push_back(S);
+  }
 }
 
 // Some command line options or some combinations of them are not allowed.

@@ -29,7 +29,8 @@ public:
         AllowedIncludes(Options.get("Includes", "*")),
         AllowedIncludesGlobList(AllowedIncludes) {}
 
-  void registerPPCallbacks(CompilerInstance &Compiler) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   bool contains(StringRef FileName) {
     return AllowedIncludesGlobList.contains(FileName);

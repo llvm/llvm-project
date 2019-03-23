@@ -14,6 +14,7 @@ class getSubRegs<int size> {
   list<SubRegIndex> ret2 = [sub0, sub1];
   list<SubRegIndex> ret3 = [sub0, sub1, sub2];
   list<SubRegIndex> ret4 = [sub0, sub1, sub2, sub3];
+  list<SubRegIndex> ret5 = [sub0, sub1, sub2, sub3, sub4];
   list<SubRegIndex> ret8 = [sub0, sub1, sub2, sub3, sub4, sub5, sub6, sub7];
   list<SubRegIndex> ret16 = [sub0, sub1, sub2, sub3,
                              sub4, sub5, sub6, sub7,
@@ -23,7 +24,8 @@ class getSubRegs<int size> {
   list<SubRegIndex> ret = !if(!eq(size, 2), ret2,
                               !if(!eq(size, 3), ret3,
                                   !if(!eq(size, 4), ret4,
-                                      !if(!eq(size, 8), ret8, ret16))));
+                                      !if(!eq(size, 5), ret5,
+                                          !if(!eq(size, 8), ret8, ret16)))));
 }
 
 //===----------------------------------------------------------------------===//
@@ -189,6 +191,14 @@ def SGPR_128Regs : RegisterTuples<getSubRegs<4>.ret,
                                (add (decimate (shl SGPR_32, 1), 4)),
                                (add (decimate (shl SGPR_32, 2), 4)),
                                (add (decimate (shl SGPR_32, 3), 4))]>;
+
+// SGPR 160-bit registers. No operations use these, but for symmetry with 160-bit VGPRs.
+def SGPR_160Regs : RegisterTuples<getSubRegs<5>.ret,
+                            [(add (decimate SGPR_32, 4)),
+                             (add (decimate (shl SGPR_32, 1), 4)),
+                             (add (decimate (shl SGPR_32, 2), 4)),
+                             (add (decimate (shl SGPR_32, 3), 4)),
+                             (add (decimate (shl SGPR_32, 4), 4))]>;
 
 // SGPR 256-bit registers
 def SGPR_256Regs : RegisterTuples<getSubRegs<8>.ret,
@@ -372,6 +382,14 @@ def VGPR_128 : RegisterTuples<getSubRegs<4>.ret,
                                (add (shl VGPR_32, 2)),
                                (add (shl VGPR_32, 3))]>;
 
+// VGPR 160-bit registers
+def VGPR_160 : RegisterTuples<getSubRegs<5>.ret,
+                             [(add (trunc VGPR_32, 252)),
+                              (add (shl VGPR_32, 1)),
+                              (add (shl VGPR_32, 2)),
+                              (add (shl VGPR_32, 3)),
+                              (add (shl VGPR_32, 4))]>;
+
 // VGPR 256-bit registers
 def VGPR_256 : RegisterTuples<getSubRegs<8>.ret,
                               [(add (trunc VGPR_32, 249)),
@@ -505,6 +523,18 @@ def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32,
 
 } // End CopyCost = 2
 
+// There are no 5-component scalar instructions, but this is needed
+// for symmetry with VGPRs.
+def SGPR_160 : RegisterClass<"AMDGPU", [v5i32, v5f32], 32,
+  (add SGPR_160Regs)> {
+  let AllocationPriority = 12;
+}
+
+def SReg_160 : RegisterClass<"AMDGPU", [v5i32, v5f32], 32,
+  (add SGPR_160)> {
+  let AllocationPriority = 12;
+}
+
 def SGPR_256 : RegisterClass<"AMDGPU", [v8i32, v8f32], 32, (add SGPR_256Regs)> {
   let AllocationPriority = 13;
 }
@@ -563,6 +593,14 @@ def VReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32, (add VG
   // Requires 4 v_mov_b32 to copy
   let CopyCost = 4;
   let AllocationPriority = 4;
+}
+
+def VReg_160 : RegisterClass<"AMDGPU", [v5i32, v5f32], 32, (add VGPR_160)> {
+  let Size = 160;
+
+  // Requires 5 v_mov_b32 to copy
+  let CopyCost = 5;
+  let AllocationPriority = 5;
 }
 
 def VReg_256 : RegisterClass<"AMDGPU", [v8i32, v8f32], 32, (add VGPR_256)> {

@@ -39,9 +39,11 @@ private:
     Context.setCurrentFile(File);
     Context.setASTContext(&Compiler.getASTContext());
 
+    Preprocessor *PP = &Compiler.getPreprocessor();
     for (auto &Check : Checks) {
       Check->registerMatchers(&Finder);
       Check->registerPPCallbacks(Compiler);
+      Check->registerPPCallbacks(Compiler.getSourceManager(), PP, PP);
     }
     return Finder.newASTConsumer();
   }
