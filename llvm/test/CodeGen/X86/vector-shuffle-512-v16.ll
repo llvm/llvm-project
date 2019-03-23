@@ -156,6 +156,17 @@ define <16 x float> @shuffle_v16f32_03_uu_uu_uu_uu_04_uu_uu_uu_uu_11_uu_uu_uu_uu
   ret <16 x float> %shuffle
 }
 
+; PR41203
+define <16 x float> @shuffle_v16f32_00_17_02_19_04_21_06_23_08_25_10_27_12_29_14_31(<16 x float> %a) {
+; ALL-LABEL: shuffle_v16f32_00_17_02_19_04_21_06_23_08_25_10_27_12_29_14_31:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; ALL-NEXT:    retq
+  %tmp1 = shufflevector <16 x float> %a, <16 x float> undef, <16 x i32> <i32 undef, i32 17, i32 undef, i32 19, i32 undef, i32 5, i32 undef, i32 7, i32 undef, i32 9, i32 undef, i32 11, i32 undef, i32 13, i32 undef, i32 15>
+  %tmp2 = shufflevector <16 x float> %tmp1, <16 x float> <float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef, float 0.000000e+00, float undef>, <16 x i32> <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
+  ret <16 x float> %tmp2
+}
+
 define <16 x i32> @shuffle_v16i32_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00(<16 x i32> %a, <16 x i32> %b) {
 ; ALL-LABEL: shuffle_v16i32_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; ALL:       # %bb.0:

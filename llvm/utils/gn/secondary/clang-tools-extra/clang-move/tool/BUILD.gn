@@ -14,6 +14,6 @@ executable("clang-move") {
   ]
   include_dirs = [ ".." ]
   sources = [
-    "ClangMoveMain.cpp",
+    "ClangMove.cpp",
   ]
 }

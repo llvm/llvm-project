@@ -114,11 +114,10 @@ void StringFindStartswithCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 void StringFindStartswithCheck::registerPPCallbacks(
-    CompilerInstance &Compiler) {
-  IncludeInserter = llvm::make_unique<clang::tidy::utils::IncludeInserter>(
-      Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle);
-  Compiler.getPreprocessor().addPPCallbacks(
-      IncludeInserter->CreatePPCallbacks());
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  IncludeInserter = llvm::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+                                                              IncludeStyle);
+  PP->addPPCallbacks(IncludeInserter->CreatePPCallbacks());
 }
 
 void StringFindStartswithCheck::storeOptions(

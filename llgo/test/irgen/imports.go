@@ -13,7 +13,7 @@ var X interface{}
 // CHECK-NEXT: %[[N:.*]] = load i1, i1* @"init$guard"
 // CHECK-NEXT: br i1 %[[N]], label %{{.*}}, label %[[L:.*]]
 
-// CHECK: ; <label>:[[L]]
+// CHECK: [[L]]:
 // CHECK-NEXT: call void @__go_register_gc_roots
 // CHECK-NEXT: store i1 true, i1* @"init$guard"
 // CHECK-NEXT: call void @fmt..import(i8* undef)

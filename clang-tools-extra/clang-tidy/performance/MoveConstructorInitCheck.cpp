@@ -91,10 +91,11 @@ void MoveConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-void MoveConstructorInitCheck::registerPPCallbacks(CompilerInstance &Compiler) {
-  Inserter.reset(new utils::IncludeInserter(
-      Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
-  Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
+void MoveConstructorInitCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  Inserter = llvm::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+                                                       IncludeStyle);
+  PP->addPPCallbacks(Inserter->CreatePPCallbacks());
 }
 
 void MoveConstructorInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

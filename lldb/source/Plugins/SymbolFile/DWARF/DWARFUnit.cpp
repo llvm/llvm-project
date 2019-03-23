@@ -29,8 +29,8 @@ using namespace std;
 
 extern int g_verbose;
 
-DWARFUnit::DWARFUnit(SymbolFileDWARF *dwarf, DWARFContext &dwarf_context)
-    : m_dwarf(dwarf), m_dwarf_context(dwarf_context), m_cancel_scopes(false) {}
+DWARFUnit::DWARFUnit(SymbolFileDWARF *dwarf)
+    : m_dwarf(dwarf), m_cancel_scopes(false) {}
 
 DWARFUnit::~DWARFUnit() {}
 
@@ -609,7 +609,6 @@ bool DWARFUnit::Supports_unnamed_objc_bitfields() {
 }
 
 SymbolFileDWARF *DWARFUnit::GetSymbolFileDWARF() const { return m_dwarf; }
-DWARFContext &DWARFUnit::GetDWARFContext() const { return m_dwarf_context; }
 
 void DWARFUnit::ParseProducerInfo() {
   m_producer_version_major = UINT32_MAX;

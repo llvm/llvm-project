@@ -22,7 +22,8 @@ namespace readability {
 class TodoCommentCheck : public ClangTidyCheck {
 public:
   TodoCommentCheck(StringRef Name, ClangTidyContext *Context);
-  void registerPPCallbacks(CompilerInstance &Compiler) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
 
 private:
   class TodoCommentHandler;

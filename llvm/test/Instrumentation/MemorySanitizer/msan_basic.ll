@@ -39,10 +39,10 @@ entry:
 ; CHECK: store
 ; CHECK-ORIGINS: icmp
 ; CHECK-ORIGINS: br i1
-; CHECK-ORIGINS: <label>
+; CHECK-ORIGINS: {{^[0-9]+}}:
 ; CHECK-ORIGINS: store
 ; CHECK-ORIGINS: br label
-; CHECK-ORIGINS: <label>
+; CHECK-ORIGINS: {{^[0-9]+}}:
 ; CHECK: store
 ; CHECK: ret void
 
@@ -63,10 +63,10 @@ entry:
 ; CHECK: store {{.*}} align 32
 ; CHECK-ORIGINS: icmp
 ; CHECK-ORIGINS: br i1
-; CHECK-ORIGINS: <label>
+; CHECK-ORIGINS: {{^[0-9]+}}:
 ; CHECK-ORIGINS: store {{.*}} align 32
 ; CHECK-ORIGINS: br label
-; CHECK-ORIGINS: <label>
+; CHECK-ORIGINS: {{^[0-9]+}}:
 ; CHECK: store {{.*}} align 32
 ; CHECK: ret void
 

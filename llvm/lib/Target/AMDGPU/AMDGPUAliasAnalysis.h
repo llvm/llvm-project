@@ -44,8 +44,10 @@ public:
   /// By definition, this result is stateless and so remains valid.
   bool invalidate(Function &, const PreservedAnalyses &) { return false; }
 
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
-  bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal);
+  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
+                    AAQueryInfo &AAQI);
+  bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
+                              bool OrLocal);
 
 private:
   bool Aliases(const MDNode *A, const MDNode *B) const;

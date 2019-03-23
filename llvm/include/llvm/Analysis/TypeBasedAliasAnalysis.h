@@ -40,12 +40,16 @@ public:
     return false;
   }
 
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
-  bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal);
+  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
+                    AAQueryInfo &AAQI);
+  bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
+                              bool OrLocal);
   FunctionModRefBehavior getModRefBehavior(const CallBase *Call);
   FunctionModRefBehavior getModRefBehavior(const Function *F);
-  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc);
-  ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2);
+  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
+                           AAQueryInfo &AAQI);
+  ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
+                           AAQueryInfo &AAQI);
 
 private:
   bool Aliases(const MDNode *A, const MDNode *B) const;

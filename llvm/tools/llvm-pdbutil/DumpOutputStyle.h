@@ -49,6 +49,8 @@ struct StatCollection {
     }
   };
 
+  using KindAndStat = std::pair<uint32_t, Stat>;
+
   void update(uint32_t Kind, uint32_t RecordSize) {
     Totals.update(RecordSize);
     auto Iter = Individual.try_emplace(Kind, 1, RecordSize);
@@ -57,6 +59,8 @@ struct StatCollection {
   }
   Stat Totals;
   DenseMap<uint32_t, Stat> Individual;
+
+  std::vector<KindAndStat> getStatsSortedBySize() const;
 };
 
 class DumpOutputStyle : public OutputStyle {
@@ -78,6 +82,7 @@ private:
   Error dumpStreamSummary();
   Error dumpSymbolStats();
   Error dumpUdtStats();
+  Error dumpTypeStats();
   Error dumpNamedStreams();
   Error dumpStringTable();
   Error dumpStringTableFromPdb();

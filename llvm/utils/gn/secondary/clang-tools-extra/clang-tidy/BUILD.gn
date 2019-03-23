@@ -32,5 +32,6 @@ static_library("clang-tidy") {
     "ClangTidyModule.cpp",
     "ClangTidyOptions.cpp",
     "ClangTidyProfiling.cpp",
+    "ExpandModularHeadersPPCallbacks.cpp",
   ]
 }

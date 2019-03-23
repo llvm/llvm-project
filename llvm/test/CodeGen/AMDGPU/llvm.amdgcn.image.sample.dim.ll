@@ -15,7 +15,7 @@ main_body:
 ; GCN: v_mov_b32_e32 v2, v0
 ; GCN: v_mov_b32_e32 v3, v0
 ; GCN: v_mov_b32_e32 v4, v0
-; GCN: image_sample v[0:7], v5, s[0:7], s[8:11] dmask:0xf tfe{{$}}
+; GCN: image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf tfe{{$}}
 define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 addrspace(1)* inreg %out, float %s) {
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
@@ -155,7 +155,7 @@ main_body:
 ; GCN: v_mov_b32_e32 v2, v0
 ; GCN: v_mov_b32_e32 v3, v0
 ; GCN: v_mov_b32_e32 v4, v0
-; GCN: image_sample v[0:7], v5, s[0:7], s[8:11] dmask:0xf lwe{{$}}
+; GCN: image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf lwe{{$}}
 define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 addrspace(1)* inreg %out, float %s) {
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 2, i32 0)
@@ -537,7 +537,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_d_o_2darray_V2_tfe:
-; GCN: image_sample_c_d_o v[9:12], v[0:15], s[0:7], s[8:11] dmask:0x6 tfe da{{$}}
+; GCN: image_sample_c_d_o v[9:11], v[0:15], s[0:7], s[8:11] dmask:0x6 tfe da{{$}}
 define amdgpu_ps <4 x float> @sample_c_d_o_2darray_V2_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice) {
 main_body:
   %v = call {<2 x float>, i32} @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32i32.f32.f32(i32 6, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)

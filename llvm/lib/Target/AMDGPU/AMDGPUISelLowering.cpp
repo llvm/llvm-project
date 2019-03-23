@@ -156,6 +156,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v4f32, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v4f32, MVT::v4i32);
 
+  setOperationAction(ISD::LOAD, MVT::v5f32, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v5f32, MVT::v5i32);
+
   setOperationAction(ISD::LOAD, MVT::v8f32, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v8f32, MVT::v8i32);
 
@@ -243,6 +246,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::STORE, MVT::v4f32, Promote);
   AddPromotedToType(ISD::STORE, MVT::v4f32, MVT::v4i32);
+
+  setOperationAction(ISD::STORE, MVT::v5f32, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v5f32, MVT::v5i32);
 
   setOperationAction(ISD::STORE, MVT::v8f32, Promote);
   AddPromotedToType(ISD::STORE, MVT::v8f32, MVT::v8i32);
@@ -335,6 +341,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CONCAT_VECTORS, MVT::v3f32, Custom);
   setOperationAction(ISD::CONCAT_VECTORS, MVT::v4i32, Custom);
   setOperationAction(ISD::CONCAT_VECTORS, MVT::v4f32, Custom);
+  setOperationAction(ISD::CONCAT_VECTORS, MVT::v5i32, Custom);
+  setOperationAction(ISD::CONCAT_VECTORS, MVT::v5f32, Custom);
   setOperationAction(ISD::CONCAT_VECTORS, MVT::v8i32, Custom);
   setOperationAction(ISD::CONCAT_VECTORS, MVT::v8f32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v2f32, Custom);
@@ -343,6 +351,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v3i32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4f32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4i32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v5f32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v5i32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v8f32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v8i32, Custom);
 
@@ -402,7 +412,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Custom);
 
   static const MVT::SimpleValueType VectorIntTypes[] = {
-    MVT::v2i32, MVT::v3i32, MVT::v4i32
+    MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32
   };
 
   for (MVT VT : VectorIntTypes) {
@@ -444,7 +454,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   }
 
   static const MVT::SimpleValueType FloatVectorTypes[] = {
-     MVT::v2f32, MVT::v3f32, MVT::v4f32
+     MVT::v2f32, MVT::v3f32, MVT::v4f32, MVT::v5f32
   };
 
   for (MVT VT : FloatVectorTypes) {
@@ -491,6 +501,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::SELECT, MVT::v4f32, Promote);
   AddPromotedToType(ISD::SELECT, MVT::v4f32, MVT::v4i32);
+
+  setOperationAction(ISD::SELECT, MVT::v5f32, Promote);
+  AddPromotedToType(ISD::SELECT, MVT::v5f32, MVT::v5i32);
 
   // There are no libcalls of any kind.
   for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I)
@@ -4282,7 +4295,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STORE_MSKOR)
   NODE_NAME_CASE(LOAD_CONSTANT)
   NODE_NAME_CASE(TBUFFER_STORE_FORMAT)
-  NODE_NAME_CASE(TBUFFER_STORE_FORMAT_X3)
   NODE_NAME_CASE(TBUFFER_STORE_FORMAT_D16)
   NODE_NAME_CASE(TBUFFER_LOAD_FORMAT)
   NODE_NAME_CASE(TBUFFER_LOAD_FORMAT_D16)

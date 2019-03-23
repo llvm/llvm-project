@@ -15,18 +15,18 @@ define void @PR28330(i32 %n) {
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[TMP0]], zeroinitializer
 ; DEFAULT-NEXT:    br label [[FOR_BODY:%.*]]
 ; DEFAULT:       for.body:
-; DEFAULT-NEXT:    [[TMP17:%.*]] = phi i32 [ [[BIN_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; DEFAULT-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
-; DEFAULT-NEXT:    [[TMP20:%.*]] = add i32 [[TMP17]], undef
-; DEFAULT-NEXT:    [[TMP22:%.*]] = add i32 [[TMP20]], undef
-; DEFAULT-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], undef
-; DEFAULT-NEXT:    [[TMP26:%.*]] = add i32 [[TMP24]], undef
-; DEFAULT-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], undef
-; DEFAULT-NEXT:    [[TMP30:%.*]] = add i32 [[TMP28]], undef
-; DEFAULT-NEXT:    [[TMP32:%.*]] = add i32 [[TMP30]], undef
+; DEFAULT-NEXT:    [[P20:%.*]] = add i32 [[P17]], undef
+; DEFAULT-NEXT:    [[P22:%.*]] = add i32 [[P20]], undef
+; DEFAULT-NEXT:    [[P24:%.*]] = add i32 [[P22]], undef
+; DEFAULT-NEXT:    [[P26:%.*]] = add i32 [[P24]], undef
+; DEFAULT-NEXT:    [[P28:%.*]] = add i32 [[P26]], undef
+; DEFAULT-NEXT:    [[P30:%.*]] = add i32 [[P28]], undef
+; DEFAULT-NEXT:    [[P32:%.*]] = add i32 [[P30]], undef
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP2]])
-; DEFAULT-NEXT:    [[BIN_EXTRA]] = add i32 [[TMP3]], [[TMP17]]
-; DEFAULT-NEXT:    [[TMP34:%.*]] = add i32 [[TMP32]], undef
+; DEFAULT-NEXT:    [[OP_EXTRA]] = add i32 [[TMP3]], [[P17]]
+; DEFAULT-NEXT:    [[P34:%.*]] = add i32 [[P32]], undef
 ; DEFAULT-NEXT:    br label [[FOR_BODY]]
 ;
 ; GATHER-LABEL: @PR28330(
@@ -35,7 +35,7 @@ define void @PR28330(i32 %n) {
 ; GATHER-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[TMP0]], zeroinitializer
 ; GATHER-NEXT:    br label [[FOR_BODY:%.*]]
 ; GATHER:       for.body:
-; GATHER-NEXT:    [[TMPP17:%.*]] = phi i32 [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; GATHER-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; GATHER-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP1]], i32 0
 ; GATHER-NEXT:    [[TMP3:%.*]] = insertelement <8 x i1> undef, i1 [[TMP2]], i32 0
 ; GATHER-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP1]], i32 1
@@ -54,19 +54,19 @@ define void @PR28330(i32 %n) {
 ; GATHER-NEXT:    [[TMP17:%.*]] = insertelement <8 x i1> [[TMP15]], i1 [[TMP16]], i32 7
 ; GATHER-NEXT:    [[TMP18:%.*]] = select <8 x i1> [[TMP17]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
 ; GATHER-NEXT:    [[TMP19:%.*]] = extractelement <8 x i32> [[TMP18]], i32 0
-; GATHER-NEXT:    [[TMPP20:%.*]] = add i32 [[TMPP17]], [[TMP19]]
+; GATHER-NEXT:    [[P20:%.*]] = add i32 [[P17]], [[TMP19]]
 ; GATHER-NEXT:    [[TMP20:%.*]] = extractelement <8 x i32> [[TMP18]], i32 1
-; GATHER-NEXT:    [[TMPP22:%.*]] = add i32 [[TMPP20]], [[TMP20]]
+; GATHER-NEXT:    [[P22:%.*]] = add i32 [[P20]], [[TMP20]]
 ; GATHER-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP18]], i32 2
-; GATHER-NEXT:    [[TMPP24:%.*]] = add i32 [[TMPP22]], [[TMP21]]
+; GATHER-NEXT:    [[P24:%.*]] = add i32 [[P22]], [[TMP21]]
 ; GATHER-NEXT:    [[TMP22:%.*]] = extractelement <8 x i32> [[TMP18]], i32 3
-; GATHER-NEXT:    [[TMPP26:%.*]] = add i32 [[TMPP24]], [[TMP22]]
+; GATHER-NEXT:    [[P26:%.*]] = add i32 [[P24]], [[TMP22]]
 ; GATHER-NEXT:    [[TMP23:%.*]] = extractelement <8 x i32> [[TMP18]], i32 4
-; GATHER-NEXT:    [[TMPP28:%.*]] = add i32 [[TMPP26]], [[TMP23]]
+; GATHER-NEXT:    [[P28:%.*]] = add i32 [[P26]], [[TMP23]]
 ; GATHER-NEXT:    [[TMP24:%.*]] = extractelement <8 x i32> [[TMP18]], i32 5
-; GATHER-NEXT:    [[TMPP30:%.*]] = add i32 [[TMPP28]], [[TMP24]]
+; GATHER-NEXT:    [[P30:%.*]] = add i32 [[P28]], [[TMP24]]
 ; GATHER-NEXT:    [[TMP25:%.*]] = extractelement <8 x i32> [[TMP18]], i32 6
-; GATHER-NEXT:    [[TMPP32:%.*]] = add i32 [[TMPP30]], [[TMP25]]
+; GATHER-NEXT:    [[P32:%.*]] = add i32 [[P30]], [[TMP25]]
 ; GATHER-NEXT:    [[TMP26:%.*]] = insertelement <8 x i32> undef, i32 [[TMP19]], i32 0
 ; GATHER-NEXT:    [[TMP27:%.*]] = insertelement <8 x i32> [[TMP26]], i32 [[TMP20]], i32 1
 ; GATHER-NEXT:    [[TMP28:%.*]] = insertelement <8 x i32> [[TMP27]], i32 [[TMP21]], i32 2
@@ -77,86 +77,86 @@ define void @PR28330(i32 %n) {
 ; GATHER-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP18]], i32 7
 ; GATHER-NEXT:    [[TMP34:%.*]] = insertelement <8 x i32> [[TMP32]], i32 [[TMP33]], i32 7
 ; GATHER-NEXT:    [[TMP35:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP34]])
-; GATHER-NEXT:    [[OP_EXTRA]] = add i32 [[TMP35]], [[TMPP17]]
-; GATHER-NEXT:    [[TMP34:%.*]] = add i32 [[TMPP32]], [[TMP33]]
+; GATHER-NEXT:    [[OP_EXTRA]] = add i32 [[TMP35]], [[P17]]
+; GATHER-NEXT:    [[P34:%.*]] = add i32 [[P32]], [[TMP33]]
 ; GATHER-NEXT:    br label [[FOR_BODY]]
 ;
 ; MAX-COST-LABEL: @PR28330(
 ; MAX-COST-NEXT:  entry:
-; MAX-COST-NEXT:    [[TMP0:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1), align 1
-; MAX-COST-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 0
-; MAX-COST-NEXT:    [[TMP2:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 2), align 2
-; MAX-COST-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], 0
-; MAX-COST-NEXT:    [[TMP4:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 3), align 1
-; MAX-COST-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
-; MAX-COST-NEXT:    [[TMP6:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 4), align 4
-; MAX-COST-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
-; MAX-COST-NEXT:    [[TMP8:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 5), align 1
-; MAX-COST-NEXT:    [[TMP9:%.*]] = icmp eq i8 [[TMP8]], 0
-; MAX-COST-NEXT:    [[TMP10:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 6), align 2
-; MAX-COST-NEXT:    [[TMP11:%.*]] = icmp eq i8 [[TMP10]], 0
-; MAX-COST-NEXT:    [[TMP12:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 7), align 1
-; MAX-COST-NEXT:    [[TMP13:%.*]] = icmp eq i8 [[TMP12]], 0
-; MAX-COST-NEXT:    [[TMP14:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 8), align 8
-; MAX-COST-NEXT:    [[TMP15:%.*]] = icmp eq i8 [[TMP14]], 0
+; MAX-COST-NEXT:    [[P0:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1), align 1
+; MAX-COST-NEXT:    [[P1:%.*]] = icmp eq i8 [[P0]], 0
+; MAX-COST-NEXT:    [[P2:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 2), align 2
+; MAX-COST-NEXT:    [[P3:%.*]] = icmp eq i8 [[P2]], 0
+; MAX-COST-NEXT:    [[P4:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 3), align 1
+; MAX-COST-NEXT:    [[P5:%.*]] = icmp eq i8 [[P4]], 0
+; MAX-COST-NEXT:    [[P6:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 4), align 4
+; MAX-COST-NEXT:    [[P7:%.*]] = icmp eq i8 [[P6]], 0
+; MAX-COST-NEXT:    [[P8:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 5), align 1
+; MAX-COST-NEXT:    [[P9:%.*]] = icmp eq i8 [[P8]], 0
+; MAX-COST-NEXT:    [[P10:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 6), align 2
+; MAX-COST-NEXT:    [[P11:%.*]] = icmp eq i8 [[P10]], 0
+; MAX-COST-NEXT:    [[P12:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 7), align 1
+; MAX-COST-NEXT:    [[P13:%.*]] = icmp eq i8 [[P12]], 0
+; MAX-COST-NEXT:    [[P14:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 8), align 8
+; MAX-COST-NEXT:    [[P15:%.*]] = icmp eq i8 [[P14]], 0
 ; MAX-COST-NEXT:    br label [[FOR_BODY:%.*]]
 ; MAX-COST:       for.body:
-; MAX-COST-NEXT:    [[TMP17:%.*]] = phi i32 [ [[TMP34:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; MAX-COST-NEXT:    [[TMP19:%.*]] = select i1 [[TMP1]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP20:%.*]] = add i32 [[TMP17]], [[TMP19]]
-; MAX-COST-NEXT:    [[TMP21:%.*]] = select i1 [[TMP3]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP22:%.*]] = add i32 [[TMP20]], [[TMP21]]
-; MAX-COST-NEXT:    [[TMP23:%.*]] = select i1 [[TMP5]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], [[TMP23]]
-; MAX-COST-NEXT:    [[TMP25:%.*]] = select i1 [[TMP7]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP26:%.*]] = add i32 [[TMP24]], [[TMP25]]
-; MAX-COST-NEXT:    [[TMP27:%.*]] = select i1 [[TMP9]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
-; MAX-COST-NEXT:    [[TMP29:%.*]] = select i1 [[TMP11]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP30:%.*]] = add i32 [[TMP28]], [[TMP29]]
-; MAX-COST-NEXT:    [[TMP31:%.*]] = select i1 [[TMP13]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP32:%.*]] = add i32 [[TMP30]], [[TMP31]]
-; MAX-COST-NEXT:    [[TMP33:%.*]] = select i1 [[TMP15]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP34]] = add i32 [[TMP32]], [[TMP33]]
+; MAX-COST-NEXT:    [[P17:%.*]] = phi i32 [ [[P34:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; MAX-COST-NEXT:    [[P19:%.*]] = select i1 [[P1]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P20:%.*]] = add i32 [[P17]], [[P19]]
+; MAX-COST-NEXT:    [[P21:%.*]] = select i1 [[P3]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P22:%.*]] = add i32 [[P20]], [[P21]]
+; MAX-COST-NEXT:    [[P23:%.*]] = select i1 [[P5]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P24:%.*]] = add i32 [[P22]], [[P23]]
+; MAX-COST-NEXT:    [[P25:%.*]] = select i1 [[P7]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P26:%.*]] = add i32 [[P24]], [[P25]]
+; MAX-COST-NEXT:    [[P27:%.*]] = select i1 [[P9]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P28:%.*]] = add i32 [[P26]], [[P27]]
+; MAX-COST-NEXT:    [[P29:%.*]] = select i1 [[P11]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P30:%.*]] = add i32 [[P28]], [[P29]]
+; MAX-COST-NEXT:    [[P31:%.*]] = select i1 [[P13]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P32:%.*]] = add i32 [[P30]], [[P31]]
+; MAX-COST-NEXT:    [[P33:%.*]] = select i1 [[P15]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P34]] = add i32 [[P32]], [[P33]]
 ; MAX-COST-NEXT:    br label [[FOR_BODY]]
 ;
 entry:
-  %tmp0 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1), align 1
-  %tmp1 = icmp eq i8 %tmp0, 0
-  %tmp2 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 2), align 2
-  %tmp3 = icmp eq i8 %tmp2, 0
-  %tmp4 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 3), align 1
-  %tmp5 = icmp eq i8 %tmp4, 0
-  %tmp6 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 4), align 4
-  %tmp7 = icmp eq i8 %tmp6, 0
-  %tmp8 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 5), align 1
-  %tmp9 = icmp eq i8 %tmp8, 0
-  %tmp10 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 6), align 2
-  %tmp11 = icmp eq i8 %tmp10, 0
-  %tmp12 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 7), align 1
-  %tmp13 = icmp eq i8 %tmp12, 0
-  %tmp14 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 8), align 8
-  %tmp15 = icmp eq i8 %tmp14, 0
+  %p0 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1), align 1
+  %p1 = icmp eq i8 %p0, 0
+  %p2 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 2), align 2
+  %p3 = icmp eq i8 %p2, 0
+  %p4 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 3), align 1
+  %p5 = icmp eq i8 %p4, 0
+  %p6 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 4), align 4
+  %p7 = icmp eq i8 %p6, 0
+  %p8 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 5), align 1
+  %p9 = icmp eq i8 %p8, 0
+  %p10 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 6), align 2
+  %p11 = icmp eq i8 %p10, 0
+  %p12 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 7), align 1
+  %p13 = icmp eq i8 %p12, 0
+  %p14 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 8), align 8
+  %p15 = icmp eq i8 %p14, 0
   br label %for.body
 
 for.body:
-  %tmp17 = phi i32 [ %tmp34, %for.body ], [ 0, %entry ]
-  %tmp19 = select i1 %tmp1, i32 -720, i32 -80
-  %tmp20 = add i32 %tmp17, %tmp19
-  %tmp21 = select i1 %tmp3, i32 -720, i32 -80
-  %tmp22 = add i32 %tmp20, %tmp21
-  %tmp23 = select i1 %tmp5, i32 -720, i32 -80
-  %tmp24 = add i32 %tmp22, %tmp23
-  %tmp25 = select i1 %tmp7, i32 -720, i32 -80
-  %tmp26 = add i32 %tmp24, %tmp25
-  %tmp27 = select i1 %tmp9, i32 -720, i32 -80
-  %tmp28 = add i32 %tmp26, %tmp27
-  %tmp29 = select i1 %tmp11, i32 -720, i32 -80
-  %tmp30 = add i32 %tmp28, %tmp29
-  %tmp31 = select i1 %tmp13, i32 -720, i32 -80
-  %tmp32 = add i32 %tmp30, %tmp31
-  %tmp33 = select i1 %tmp15, i32 -720, i32 -80
-  %tmp34 = add i32 %tmp32, %tmp33
+  %p17 = phi i32 [ %p34, %for.body ], [ 0, %entry ]
+  %p19 = select i1 %p1, i32 -720, i32 -80
+  %p20 = add i32 %p17, %p19
+  %p21 = select i1 %p3, i32 -720, i32 -80
+  %p22 = add i32 %p20, %p21
+  %p23 = select i1 %p5, i32 -720, i32 -80
+  %p24 = add i32 %p22, %p23
+  %p25 = select i1 %p7, i32 -720, i32 -80
+  %p26 = add i32 %p24, %p25
+  %p27 = select i1 %p9, i32 -720, i32 -80
+  %p28 = add i32 %p26, %p27
+  %p29 = select i1 %p11, i32 -720, i32 -80
+  %p30 = add i32 %p28, %p29
+  %p31 = select i1 %p13, i32 -720, i32 -80
+  %p32 = add i32 %p30, %p31
+  %p33 = select i1 %p15, i32 -720, i32 -80
+  %p34 = add i32 %p32, %p33
   br label %for.body
 }
 
@@ -167,18 +167,18 @@ define void @PR32038(i32 %n) {
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[TMP0]], zeroinitializer
 ; DEFAULT-NEXT:    br label [[FOR_BODY:%.*]]
 ; DEFAULT:       for.body:
-; DEFAULT-NEXT:    [[TMP17:%.*]] = phi i32 [ [[BIN_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; DEFAULT-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
-; DEFAULT-NEXT:    [[TMP20:%.*]] = add i32 -5, undef
-; DEFAULT-NEXT:    [[TMP22:%.*]] = add i32 [[TMP20]], undef
-; DEFAULT-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], undef
-; DEFAULT-NEXT:    [[TMP26:%.*]] = add i32 [[TMP24]], undef
-; DEFAULT-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], undef
-; DEFAULT-NEXT:    [[TMP30:%.*]] = add i32 [[TMP28]], undef
-; DEFAULT-NEXT:    [[TMP32:%.*]] = add i32 [[TMP30]], undef
+; DEFAULT-NEXT:    [[P20:%.*]] = add i32 -5, undef
+; DEFAULT-NEXT:    [[P22:%.*]] = add i32 [[P20]], undef
+; DEFAULT-NEXT:    [[P24:%.*]] = add i32 [[P22]], undef
+; DEFAULT-NEXT:    [[P26:%.*]] = add i32 [[P24]], undef
+; DEFAULT-NEXT:    [[P28:%.*]] = add i32 [[P26]], undef
+; DEFAULT-NEXT:    [[P30:%.*]] = add i32 [[P28]], undef
+; DEFAULT-NEXT:    [[P32:%.*]] = add i32 [[P30]], undef
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP2]])
-; DEFAULT-NEXT:    [[BIN_EXTRA]] = add i32 [[TMP3]], -5
-; DEFAULT-NEXT:    [[TMP34:%.*]] = add i32 [[TMP32]], undef
+; DEFAULT-NEXT:    [[OP_EXTRA]] = add i32 [[TMP3]], -5
+; DEFAULT-NEXT:    [[P34:%.*]] = add i32 [[P32]], undef
 ; DEFAULT-NEXT:    br label [[FOR_BODY]]
 ;
 ; GATHER-LABEL: @PR32038(
@@ -187,7 +187,7 @@ define void @PR32038(i32 %n) {
 ; GATHER-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[TMP0]], zeroinitializer
 ; GATHER-NEXT:    br label [[FOR_BODY:%.*]]
 ; GATHER:       for.body:
-; GATHER-NEXT:    [[TMP17:%.*]] = phi i32 [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; GATHER-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; GATHER-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP1]], i32 0
 ; GATHER-NEXT:    [[TMP3:%.*]] = insertelement <8 x i1> undef, i1 [[TMP2]], i32 0
 ; GATHER-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP1]], i32 1
@@ -206,19 +206,19 @@ define void @PR32038(i32 %n) {
 ; GATHER-NEXT:    [[TMP17:%.*]] = insertelement <8 x i1> [[TMP15]], i1 [[TMP16]], i32 7
 ; GATHER-NEXT:    [[TMP18:%.*]] = select <8 x i1> [[TMP17]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
 ; GATHER-NEXT:    [[TMP19:%.*]] = extractelement <8 x i32> [[TMP18]], i32 0
-; GATHER-NEXT:    [[TMPP20:%.*]] = add i32 -5, [[TMP19]]
+; GATHER-NEXT:    [[P20:%.*]] = add i32 -5, [[TMP19]]
 ; GATHER-NEXT:    [[TMP20:%.*]] = extractelement <8 x i32> [[TMP18]], i32 1
-; GATHER-NEXT:    [[TMPP22:%.*]] = add i32 [[TMPP20]], [[TMP20]]
+; GATHER-NEXT:    [[P22:%.*]] = add i32 [[P20]], [[TMP20]]
 ; GATHER-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP18]], i32 2
-; GATHER-NEXT:    [[TMPP24:%.*]] = add i32 [[TMPP22]], [[TMP21]]
+; GATHER-NEXT:    [[P24:%.*]] = add i32 [[P22]], [[TMP21]]
 ; GATHER-NEXT:    [[TMP22:%.*]] = extractelement <8 x i32> [[TMP18]], i32 3
-; GATHER-NEXT:    [[TMPP26:%.*]] = add i32 [[TMPP24]], [[TMP22]]
+; GATHER-NEXT:    [[P26:%.*]] = add i32 [[P24]], [[TMP22]]
 ; GATHER-NEXT:    [[TMP23:%.*]] = extractelement <8 x i32> [[TMP18]], i32 4
-; GATHER-NEXT:    [[TMPP28:%.*]] = add i32 [[TMPP26]], [[TMP23]]
+; GATHER-NEXT:    [[P28:%.*]] = add i32 [[P26]], [[TMP23]]
 ; GATHER-NEXT:    [[TMP24:%.*]] = extractelement <8 x i32> [[TMP18]], i32 5
-; GATHER-NEXT:    [[TMPP30:%.*]] = add i32 [[TMPP28]], [[TMP24]]
+; GATHER-NEXT:    [[P30:%.*]] = add i32 [[P28]], [[TMP24]]
 ; GATHER-NEXT:    [[TMP25:%.*]] = extractelement <8 x i32> [[TMP18]], i32 6
-; GATHER-NEXT:    [[TMPP32:%.*]] = add i32 [[TMPP30]], [[TMP25]]
+; GATHER-NEXT:    [[P32:%.*]] = add i32 [[P30]], [[TMP25]]
 ; GATHER-NEXT:    [[TMP26:%.*]] = insertelement <8 x i32> undef, i32 [[TMP19]], i32 0
 ; GATHER-NEXT:    [[TMP27:%.*]] = insertelement <8 x i32> [[TMP26]], i32 [[TMP20]], i32 1
 ; GATHER-NEXT:    [[TMP28:%.*]] = insertelement <8 x i32> [[TMP27]], i32 [[TMP21]], i32 2
@@ -230,89 +230,89 @@ define void @PR32038(i32 %n) {
 ; GATHER-NEXT:    [[TMP34:%.*]] = insertelement <8 x i32> [[TMP32]], i32 [[TMP33]], i32 7
 ; GATHER-NEXT:    [[TMP35:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP34]])
 ; GATHER-NEXT:    [[OP_EXTRA]] = add i32 [[TMP35]], -5
-; GATHER-NEXT:    [[TMP34:%.*]] = add i32 [[TMPP32]], [[TMP33]]
+; GATHER-NEXT:    [[P34:%.*]] = add i32 [[P32]], [[TMP33]]
 ; GATHER-NEXT:    br label [[FOR_BODY]]
 ;
 ; MAX-COST-LABEL: @PR32038(
 ; MAX-COST-NEXT:  entry:
 ; MAX-COST-NEXT:    [[TMP0:%.*]] = load <2 x i8>, <2 x i8>* bitcast (i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1) to <2 x i8>*), align 1
 ; MAX-COST-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[TMP0]], zeroinitializer
-; MAX-COST-NEXT:    [[TMP4:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 3), align 1
-; MAX-COST-NEXT:    [[TMPP5:%.*]] = icmp eq i8 [[TMP4]], 0
-; MAX-COST-NEXT:    [[TMP6:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 4), align 4
-; MAX-COST-NEXT:    [[TMPP7:%.*]] = icmp eq i8 [[TMP6]], 0
-; MAX-COST-NEXT:    [[TMP8:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 5), align 1
-; MAX-COST-NEXT:    [[TMP9:%.*]] = icmp eq i8 [[TMP8]], 0
-; MAX-COST-NEXT:    [[TMP10:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 6), align 2
-; MAX-COST-NEXT:    [[TMP11:%.*]] = icmp eq i8 [[TMP10]], 0
-; MAX-COST-NEXT:    [[TMP12:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 7), align 1
-; MAX-COST-NEXT:    [[TMP13:%.*]] = icmp eq i8 [[TMP12]], 0
-; MAX-COST-NEXT:    [[TMP14:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 8), align 8
-; MAX-COST-NEXT:    [[TMP15:%.*]] = icmp eq i8 [[TMP14]], 0
+; MAX-COST-NEXT:    [[P4:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 3), align 1
+; MAX-COST-NEXT:    [[P5:%.*]] = icmp eq i8 [[P4]], 0
+; MAX-COST-NEXT:    [[P6:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 4), align 4
+; MAX-COST-NEXT:    [[P7:%.*]] = icmp eq i8 [[P6]], 0
+; MAX-COST-NEXT:    [[P8:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 5), align 1
+; MAX-COST-NEXT:    [[P9:%.*]] = icmp eq i8 [[P8]], 0
+; MAX-COST-NEXT:    [[P10:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 6), align 2
+; MAX-COST-NEXT:    [[P11:%.*]] = icmp eq i8 [[P10]], 0
+; MAX-COST-NEXT:    [[P12:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 7), align 1
+; MAX-COST-NEXT:    [[P13:%.*]] = icmp eq i8 [[P12]], 0
+; MAX-COST-NEXT:    [[P14:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 8), align 8
+; MAX-COST-NEXT:    [[P15:%.*]] = icmp eq i8 [[P14]], 0
 ; MAX-COST-NEXT:    br label [[FOR_BODY:%.*]]
 ; MAX-COST:       for.body:
-; MAX-COST-NEXT:    [[TMP17:%.*]] = phi i32 [ [[TMP34:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; MAX-COST-NEXT:    [[P17:%.*]] = phi i32 [ [[P34:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; MAX-COST-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; MAX-COST-NEXT:    [[TMP3:%.*]] = insertelement <4 x i1> undef, i1 [[TMP2]], i32 0
 ; MAX-COST-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
 ; MAX-COST-NEXT:    [[TMP5:%.*]] = insertelement <4 x i1> [[TMP3]], i1 [[TMP4]], i32 1
-; MAX-COST-NEXT:    [[TMP6:%.*]] = insertelement <4 x i1> [[TMP5]], i1 [[TMPP5]], i32 2
-; MAX-COST-NEXT:    [[TMP7:%.*]] = insertelement <4 x i1> [[TMP6]], i1 [[TMPP7]], i32 3
+; MAX-COST-NEXT:    [[TMP6:%.*]] = insertelement <4 x i1> [[TMP5]], i1 [[P5]], i32 2
+; MAX-COST-NEXT:    [[TMP7:%.*]] = insertelement <4 x i1> [[TMP6]], i1 [[P7]], i32 3
 ; MAX-COST-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> <i32 -720, i32 -720, i32 -720, i32 -720>, <4 x i32> <i32 -80, i32 -80, i32 -80, i32 -80>
-; MAX-COST-NEXT:    [[TMP20:%.*]] = add i32 -5, undef
-; MAX-COST-NEXT:    [[TMP22:%.*]] = add i32 [[TMP20]], undef
-; MAX-COST-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], undef
-; MAX-COST-NEXT:    [[TMP26:%.*]] = add i32 [[TMP24]], undef
-; MAX-COST-NEXT:    [[TMP27:%.*]] = select i1 [[TMP9]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
-; MAX-COST-NEXT:    [[TMP29:%.*]] = select i1 [[TMP11]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P20:%.*]] = add i32 -5, undef
+; MAX-COST-NEXT:    [[P22:%.*]] = add i32 [[P20]], undef
+; MAX-COST-NEXT:    [[P24:%.*]] = add i32 [[P22]], undef
+; MAX-COST-NEXT:    [[P26:%.*]] = add i32 [[P24]], undef
+; MAX-COST-NEXT:    [[P27:%.*]] = select i1 [[P9]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P28:%.*]] = add i32 [[P26]], [[P27]]
+; MAX-COST-NEXT:    [[P29:%.*]] = select i1 [[P11]], i32 -720, i32 -80
 ; MAX-COST-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v4i32(<4 x i32> [[TMP8]])
-; MAX-COST-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[TMP27]]
-; MAX-COST-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], [[TMP29]]
-; MAX-COST-NEXT:    [[BIN_EXTRA:%.*]] = add i32 [[TMP11]], -5
-; MAX-COST-NEXT:    [[TMP30:%.*]] = add i32 [[TMP28]], [[TMP29]]
-; MAX-COST-NEXT:    [[TMP31:%.*]] = select i1 [[TMP13]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP32:%.*]] = add i32 [[BIN_EXTRA]], [[TMP31]]
-; MAX-COST-NEXT:    [[TMP33:%.*]] = select i1 [[TMP15]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP34]] = add i32 [[TMP32]], [[TMP33]]
+; MAX-COST-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[P27]]
+; MAX-COST-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], [[P29]]
+; MAX-COST-NEXT:    [[OP_EXTRA:%.*]] = add i32 [[TMP11]], -5
+; MAX-COST-NEXT:    [[P30:%.*]] = add i32 [[P28]], [[P29]]
+; MAX-COST-NEXT:    [[P31:%.*]] = select i1 [[P13]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P32:%.*]] = add i32 [[OP_EXTRA]], [[P31]]
+; MAX-COST-NEXT:    [[P33:%.*]] = select i1 [[P15]], i32 -720, i32 -80
+; MAX-COST-NEXT:    [[P34]] = add i32 [[P32]], [[P33]]
 ; MAX-COST-NEXT:    br label [[FOR_BODY]]
 ;
 entry:
-  %tmp0 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1), align 1
-  %tmp1 = icmp eq i8 %tmp0, 0
-  %tmp2 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 2), align 2
-  %tmp3 = icmp eq i8 %tmp2, 0
-  %tmp4 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 3), align 1
-  %tmp5 = icmp eq i8 %tmp4, 0
-  %tmp6 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 4), align 4
-  %tmp7 = icmp eq i8 %tmp6, 0
-  %tmp8 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 5), align 1
-  %tmp9 = icmp eq i8 %tmp8, 0
-  %tmp10 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 6), align 2
-  %tmp11 = icmp eq i8 %tmp10, 0
-  %tmp12 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 7), align 1
-  %tmp13 = icmp eq i8 %tmp12, 0
-  %tmp14 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 8), align 8
-  %tmp15 = icmp eq i8 %tmp14, 0
+  %p0 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1), align 1
+  %p1 = icmp eq i8 %p0, 0
+  %p2 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 2), align 2
+  %p3 = icmp eq i8 %p2, 0
+  %p4 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 3), align 1
+  %p5 = icmp eq i8 %p4, 0
+  %p6 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 4), align 4
+  %p7 = icmp eq i8 %p6, 0
+  %p8 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 5), align 1
+  %p9 = icmp eq i8 %p8, 0
+  %p10 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 6), align 2
+  %p11 = icmp eq i8 %p10, 0
+  %p12 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 7), align 1
+  %p13 = icmp eq i8 %p12, 0
+  %p14 = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 8), align 8
+  %p15 = icmp eq i8 %p14, 0
   br label %for.body
 
 for.body:
-  %tmp17 = phi i32 [ %tmp34, %for.body ], [ 0, %entry ]
-  %tmp19 = select i1 %tmp1, i32 -720, i32 -80
-  %tmp20 = add i32 -5, %tmp19
-  %tmp21 = select i1 %tmp3, i32 -720, i32 -80
-  %tmp22 = add i32 %tmp20, %tmp21
-  %tmp23 = select i1 %tmp5, i32 -720, i32 -80
-  %tmp24 = add i32 %tmp22, %tmp23
-  %tmp25 = select i1 %tmp7, i32 -720, i32 -80
-  %tmp26 = add i32 %tmp24, %tmp25
-  %tmp27 = select i1 %tmp9, i32 -720, i32 -80
-  %tmp28 = add i32 %tmp26, %tmp27
-  %tmp29 = select i1 %tmp11, i32 -720, i32 -80
-  %tmp30 = add i32 %tmp28, %tmp29
-  %tmp31 = select i1 %tmp13, i32 -720, i32 -80
-  %tmp32 = add i32 %tmp30, %tmp31
-  %tmp33 = select i1 %tmp15, i32 -720, i32 -80
-  %tmp34 = add i32 %tmp32, %tmp33
+  %p17 = phi i32 [ %p34, %for.body ], [ 0, %entry ]
+  %p19 = select i1 %p1, i32 -720, i32 -80
+  %p20 = add i32 -5, %p19
+  %p21 = select i1 %p3, i32 -720, i32 -80
+  %p22 = add i32 %p20, %p21
+  %p23 = select i1 %p5, i32 -720, i32 -80
+  %p24 = add i32 %p22, %p23
+  %p25 = select i1 %p7, i32 -720, i32 -80
+  %p26 = add i32 %p24, %p25
+  %p27 = select i1 %p9, i32 -720, i32 -80
+  %p28 = add i32 %p26, %p27
+  %p29 = select i1 %p11, i32 -720, i32 -80
+  %p30 = add i32 %p28, %p29
+  %p31 = select i1 %p13, i32 -720, i32 -80
+  %p32 = add i32 %p30, %p31
+  %p33 = select i1 %p15, i32 -720, i32 -80
+  %p34 = add i32 %p32, %p33
   br label %for.body
 }

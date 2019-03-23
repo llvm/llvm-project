@@ -127,9 +127,6 @@ public:
   // Returns the underlying COFF file.
   COFFObjectFile *getCOFFObj() { return COFFObj.get(); }
 
-  // Whether the object was already merged into the final PDB or not
-  bool wasProcessedForPDB() const { return !!ModuleDBI; }
-
   static std::vector<ObjFile *> Instances;
 
   // Flags in the absolute @feat.00 symbol if it is present. These usually
@@ -159,6 +156,9 @@ public:
 
   // Tells whether this file was compiled with /hotpatch
   bool HotPatchable = false;
+
+  // Whether the object was already merged into the final PDB or not
+  bool MergedIntoPDB = false;
 
 private:
   const coff_section* getSection(uint32_t I);

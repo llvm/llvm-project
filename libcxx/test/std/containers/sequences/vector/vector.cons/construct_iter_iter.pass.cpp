@@ -145,6 +145,11 @@ void test_ctor_under_alloc() {
 #endif
 }
 
+// In C++03, you can't instantiate a template with a local type.
+struct B1 { int x; };
+struct B2 { int y; };
+struct Der : B1, B2 { int z; };
+
 // Initialize a vector with a different value type.
 void test_ctor_with_different_value_type() {
   {
@@ -156,15 +161,12 @@ void test_ctor_with_different_value_type() {
     assert(v[1] == 1);
     assert(v[2] == 2);
   }
-  struct X { int x; };
-  struct Y { int y; };
-  struct Z : X, Y { int z; };
   {
-    Z z;
-    Z *array[1] = { &z };
-    // Though the types Z* and Y* are very similar, initialization still cannot
+    Der z;
+    Der *array[1] = { &z };
+    // Though the types Der* and B2* are very similar, initialization still cannot
     // be done with `memcpy`.
-    std::vector<Y*> v(array, array + 1);
+    std::vector<B2*> v(array, array + 1);
     assert(v[0] == &z);
   }
   {

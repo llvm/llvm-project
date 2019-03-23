@@ -22,6 +22,11 @@ using testing::Field;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
+static const auto HasPoints = [](const std::vector<int> &Indices) {
+  return Field(&InstructionBenchmarkClustering::Cluster::PointIndices,
+                 UnorderedElementsAreArray(Indices));
+};
+
 TEST(ClusteringTest, Clusters3D) {
   std::vector<InstructionBenchmark> Points(6);
 
@@ -40,11 +45,6 @@ TEST(ClusteringTest, Clusters3D) {
       {"x", 0.0, 0.0}, {"y", 0.01, 0.0}, {"z", -0.02, 0.0}};
   // Error cluster: points {2}
   Points[2].Error = "oops";
-
-  auto HasPoints = [](const std::vector<int> &Indices) {
-    return Field(&InstructionBenchmarkClustering::Cluster::PointIndices,
-                 UnorderedElementsAreArray(Indices));
-  };
 
   auto Clustering = InstructionBenchmarkClustering::create(Points, 2, 0.25);
   ASSERT_TRUE((bool)Clustering);
@@ -100,6 +100,38 @@ TEST(ClusteringTest, Ordering) {
 
   ASSERT_LT(InstructionBenchmarkClustering::ClusterId::noise(),
             InstructionBenchmarkClustering::ClusterId::error());
+}
+
+TEST(ClusteringTest, Ordering1) {
+  std::vector<InstructionBenchmark> Points(3);
+
+  Points[0].Measurements = {
+      {"x", 0.0, 0.0}};
+  Points[1].Measurements = {
+      {"x", 1.0, 0.0}};
+  Points[2].Measurements = {
+      {"x", 2.0, 0.0}};
+
+  auto Clustering = InstructionBenchmarkClustering::create(Points, 2, 1.1);
+  ASSERT_TRUE((bool)Clustering);
+  EXPECT_THAT(Clustering.get().getValidClusters(),
+              UnorderedElementsAre(HasPoints({0, 1, 2})));
+}
+
+TEST(ClusteringTest, Ordering2) {
+  std::vector<InstructionBenchmark> Points(3);
+
+  Points[0].Measurements = {
+      {"x", 0.0, 0.0}};
+  Points[1].Measurements = {
+      {"x", 2.0, 0.0}};
+  Points[2].Measurements = {
+      {"x", 1.0, 0.0}};
+
+  auto Clustering = InstructionBenchmarkClustering::create(Points, 2, 1.1);
+  ASSERT_TRUE((bool)Clustering);
+  EXPECT_THAT(Clustering.get().getValidClusters(),
+              UnorderedElementsAre(HasPoints({0, 1, 2})));
 }
 
 } // namespace

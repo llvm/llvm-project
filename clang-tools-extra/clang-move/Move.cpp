@@ -1,4 +1,4 @@
-//===-- ClangMove.cpp - Implement ClangMove functationalities ---*- C++ -*-===//
+//===-- Move.cpp - Implement ClangMove functationalities --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangMove.h"
+#include "Move.h"
 #include "HelperDeclRefGraph.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceManager.h"

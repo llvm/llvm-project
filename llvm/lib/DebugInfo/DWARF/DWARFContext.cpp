@@ -36,7 +36,7 @@
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Object/RelocVisitor.h"
+#include "llvm/Object/RelocationResolver.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
@@ -1500,6 +1500,9 @@ public:
 
       // Symbol to [address, section index] cache mapping.
       std::map<SymbolRef, SymInfo> AddrCache;
+      bool (*Supports)(uint64_t);
+      RelocationResolver Resolver;
+      std::tie(Supports, Resolver) = getRelocationResolver(Obj);
       for (const RelocationRef &Reloc : Section.relocations()) {
         // FIXME: it's not clear how to correctly handle scattered
         // relocations.
@@ -1514,9 +1517,15 @@ public:
           continue;
         }
 
-        object::RelocVisitor V(Obj);
-        uint64_t Val = V.visit(Reloc.getType(), Reloc, SymInfoOrErr->Address);
-        if (V.error()) {
+        // Check if Resolver can handle this relocation type early so as not to
+        // handle invalid cases in DWARFDataExtractor.
+        //
+        // TODO Don't store Resolver in every RelocAddrEntry.
+        if (Supports && Supports(Reloc.getType())) {
+          Map->try_emplace(Reloc.getOffset(),
+                           RelocAddrEntry{SymInfoOrErr->SectionIndex, Reloc,
+                                          Resolver, SymInfoOrErr->Address});
+        } else {
           SmallString<32> Type;
           Reloc.getTypeName(Type);
           ErrorPolicy EP = HandleError(
@@ -1524,10 +1533,7 @@ public:
                           errorCodeToError(object_error::parse_failed)));
           if (EP == ErrorPolicy::Halt)
             return;
-          continue;
         }
-        RelocAddrEntry Rel = {SymInfoOrErr->SectionIndex, Val};
-        Map->insert({Reloc.getOffset(), Rel});
       }
     }
 

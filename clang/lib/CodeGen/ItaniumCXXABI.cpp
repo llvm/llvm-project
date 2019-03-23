@@ -216,7 +216,7 @@ public:
   void EmitCXXConstructors(const CXXConstructorDecl *D) override;
 
   AddedStructorArgs
-  buildStructorSignature(const CXXMethodDecl *MD, StructorType T,
+  buildStructorSignature(GlobalDecl GD,
                          SmallVectorImpl<CanQualType> &ArgTys) override;
 
   bool useThunkForDtorVariant(const CXXDestructorDecl *Dtor,
@@ -376,7 +376,7 @@ public:
                          llvm::GlobalValue::LinkageTypes Linkage) const;
   friend class ItaniumRTTIBuilder;
 
-  void emitCXXStructor(const CXXMethodDecl *MD, StructorType Type) override;
+  void emitCXXStructor(GlobalDecl GD) override;
 
   std::pair<llvm::Value *, const CXXRecordDecl *>
   LoadVTablePtr(CodeGenFunction &CGF, Address This,
@@ -1209,7 +1209,7 @@ void ItaniumCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
     CXXRecordDecl *Record = cast<CXXRecordDecl>(RecordTy->getDecl());
     if (!Record->hasTrivialDestructor()) {
       CXXDestructorDecl *DtorD = Record->getDestructor();
-      Dtor = CGM.getAddrOfCXXStructor(DtorD, StructorType::Complete);
+      Dtor = CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete));
       Dtor = llvm::ConstantExpr::getBitCast(Dtor, CGM.Int8PtrTy);
     }
   }
@@ -1458,7 +1458,7 @@ void ItaniumCXXABI::EmitCXXConstructors(const CXXConstructorDecl *D) {
 }
 
 CGCXXABI::AddedStructorArgs
-ItaniumCXXABI::buildStructorSignature(const CXXMethodDecl *MD, StructorType T,
+ItaniumCXXABI::buildStructorSignature(GlobalDecl GD,
                                       SmallVectorImpl<CanQualType> &ArgTys) {
   ASTContext &Context = getContext();
 
@@ -1466,7 +1466,9 @@ ItaniumCXXABI::buildStructorSignature(const CXXMethodDecl *MD, StructorType T,
   // These are Clang types, so we don't need to worry about sret yet.
 
   // Check if we need to add a VTT parameter (which has type void **).
-  if (T == StructorType::Base && MD->getParent()->getNumVBases() != 0) {
+  if ((isa<CXXConstructorDecl>(GD.getDecl()) ? GD.getCtorType() == Ctor_Base
+                                             : GD.getDtorType() == Dtor_Base) &&
+      cast<CXXMethodDecl>(GD.getDecl())->getParent()->getNumVBases() != 0) {
     ArgTys.insert(ArgTys.begin() + 1,
                   Context.getPointerType(Context.VoidPtrTy));
     return AddedStructorArgs::prefix(1);
@@ -1564,11 +1566,9 @@ void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
       Type != Dtor_Base && DD->isVirtual())
     Callee = CGF.BuildAppleKextVirtualDestructorCall(DD, Type, DD->getParent());
   else
-    Callee = CGCallee::forDirect(
-        CGM.getAddrOfCXXStructor(DD, getFromDtorType(Type)), GD);
+    Callee = CGCallee::forDirect(CGM.getAddrOfCXXStructor(GD), GD);
 
-  CGF.EmitCXXDestructorCall(DD, Callee, This.getPointer(), VTT, VTTTy, nullptr,
-                            getFromDtorType(Type));
+  CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(), VTT, VTTTy, nullptr);
 }
 
 void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
@@ -1760,14 +1760,14 @@ llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
   assert(CE == nullptr || CE->arg_begin() == CE->arg_end());
   assert(DtorType == Dtor_Deleting || DtorType == Dtor_Complete);
 
-  const CGFunctionInfo *FInfo = &CGM.getTypes().arrangeCXXStructorDeclaration(
-      Dtor, getFromDtorType(DtorType));
+  GlobalDecl GD(Dtor, DtorType);
+  const CGFunctionInfo *FInfo =
+      &CGM.getTypes().arrangeCXXStructorDeclaration(GD);
   llvm::FunctionType *Ty = CGF.CGM.getTypes().GetFunctionType(*FInfo);
-  CGCallee Callee =
-      CGCallee::forVirtual(CE, GlobalDecl(Dtor, DtorType), This, Ty);
+  CGCallee Callee = CGCallee::forVirtual(CE, GD, This, Ty);
 
-  CGF.EmitCXXDestructorCall(Dtor, Callee, This.getPointer(), nullptr,
-                            QualType(), nullptr, getFromDtorType(DtorType));
+  CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(), nullptr, QualType(),
+                            nullptr);
   return nullptr;
 }
 
@@ -3845,31 +3845,28 @@ static void emitConstructorDestructorAlias(CodeGenModule &CGM,
   CGM.SetCommonAttributes(AliasDecl, Alias);
 }
 
-void ItaniumCXXABI::emitCXXStructor(const CXXMethodDecl *MD,
-                                    StructorType Type) {
+void ItaniumCXXABI::emitCXXStructor(GlobalDecl GD) {
+  auto *MD = cast<CXXMethodDecl>(GD.getDecl());
   auto *CD = dyn_cast<CXXConstructorDecl>(MD);
   const CXXDestructorDecl *DD = CD ? nullptr : cast<CXXDestructorDecl>(MD);
 
   StructorCodegen CGType = getCodegenToUse(CGM, MD);
 
-  if (Type == StructorType::Complete) {
-    GlobalDecl CompleteDecl;
+  if (CD ? GD.getCtorType() == Ctor_Complete
+         : GD.getDtorType() == Dtor_Complete) {
     GlobalDecl BaseDecl;
-    if (CD) {
-      CompleteDecl = GlobalDecl(CD, Ctor_Complete);
-      BaseDecl = GlobalDecl(CD, Ctor_Base);
-    } else {
-      CompleteDecl = GlobalDecl(DD, Dtor_Complete);
-      BaseDecl = GlobalDecl(DD, Dtor_Base);
-    }
+    if (CD)
+      BaseDecl = GD.getWithCtorType(Ctor_Base);
+    else
+      BaseDecl = GD.getWithDtorType(Dtor_Base);
 
     if (CGType == StructorCodegen::Alias || CGType == StructorCodegen::COMDAT) {
-      emitConstructorDestructorAlias(CGM, CompleteDecl, BaseDecl);
+      emitConstructorDestructorAlias(CGM, GD, BaseDecl);
       return;
     }
 
     if (CGType == StructorCodegen::RAUW) {
-      StringRef MangledName = CGM.getMangledName(CompleteDecl);
+      StringRef MangledName = CGM.getMangledName(GD);
       auto *Aliasee = CGM.GetAddrOfGlobal(BaseDecl);
       CGM.addReplacement(MangledName, Aliasee);
       return;
@@ -3880,7 +3877,8 @@ void ItaniumCXXABI::emitCXXStructor(const CXXMethodDecl *MD,
   // base class if there is exactly one non-virtual base class with a
   // non-trivial destructor, there are no fields with a non-trivial
   // destructor, and the body of the destructor is trivial.
-  if (DD && Type == StructorType::Base && CGType != StructorCodegen::COMDAT &&
+  if (DD && GD.getDtorType() == Dtor_Base &&
+      CGType != StructorCodegen::COMDAT &&
       !CGM.TryEmitBaseDestructorAsAlias(DD))
     return;
 
@@ -3896,7 +3894,7 @@ void ItaniumCXXABI::emitCXXStructor(const CXXMethodDecl *MD,
   // In such cases we should try to emit the deleting dtor as an alias to the
   // selected 'operator delete'.
 
-  llvm::Function *Fn = CGM.codegenCXXStructor(MD, Type);
+  llvm::Function *Fn = CGM.codegenCXXStructor(GD);
 
   if (CGType == StructorCodegen::COMDAT) {
     SmallString<256> Buffer;

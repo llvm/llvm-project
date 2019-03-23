@@ -22,7 +22,7 @@ main_body:
 ; NOPRT-NOT: v_mov_b32_e32 v1
 ; NOPRT-NOT: v_mov_b32_e32 v2
 ; NOPRT-NOT: v_mov_b32_e32 v3
-; GCN: image_load v[0:7], v{{[0-9]+}}, s[0:7] dmask:0xf unorm tfe{{$}}
+; GCN: image_load v[0:4], v{{[0-9]+}}, s[0:7] dmask:0xf unorm tfe{{$}}
 ; SIVI: buffer_store_dword v4, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v4
 define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s) {
@@ -45,7 +45,7 @@ main_body:
 ; NOPRT-NOT: v_mov_b32_e32 v1
 ; NOPRT-NOT: v_mov_b32_e32 v2
 ; NOPRT-NOT: v_mov_b32_e32 v3
-; GCN: image_load v[0:7], v{{[0-9]+}}, s[0:7] dmask:0xf unorm lwe{{$}}
+; GCN: image_load v[0:4], v{{[0-9]+}}, s[0:7] dmask:0xf unorm lwe{{$}}
 ; SIVI: buffer_store_dword v4, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v4
 define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s) {
@@ -76,7 +76,7 @@ main_body:
 ; NOPRT-NOT: v_mov_b32_e32 v1
 ; NOPRT-NOT: v_mov_b32_e32 v2
 ; NOPRT-NOT: v_mov_b32_e32 v3
-; GCN: image_load v[0:7], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe{{$}}
+; GCN: image_load v[0:4], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe{{$}}
 ; SIVI: buffer_store_dword v4, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v4
 define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t) {
@@ -107,7 +107,7 @@ main_body:
 ; NOPRT-NOT: v_mov_b32_e32 v1
 ; NOPRT-NOT: v_mov_b32_e32 v2
 ; NOPRT-NOT: v_mov_b32_e32 v3
-; GCN: image_load v[0:7], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe lwe{{$}}
+; GCN: image_load v[0:4], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe lwe{{$}}
 ; SIVI: buffer_store_dword v4, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v4
 define amdgpu_ps <4 x float> @load_3d_tfe_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %r) {
@@ -138,7 +138,7 @@ main_body:
 ; NOPRT-NOT: v_mov_b32_e32 v1
 ; NOPRT-NOT: v_mov_b32_e32 v2
 ; NOPRT-NOT: v_mov_b32_e32 v3
-; GCN: image_load v[0:7], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm lwe da{{$}}
+; GCN: image_load v[0:4], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm lwe da{{$}}
 ; SIVI: buffer_store_dword v4, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v4
 define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %slice) {
@@ -169,7 +169,7 @@ main_body:
 ; NOPRT-NOT: v_mov_b32_e32 v1
 ; NOPRT-NOT: v_mov_b32_e32 v2
 ; NOPRT-NOT: v_mov_b32_e32 v3
-; GCN: image_load v[0:7], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe da{{$}}
+; GCN: image_load v[0:4], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe da{{$}}
 ; SIVI: buffer_store_dword v4, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v4
 define amdgpu_ps <4 x float> @load_1darray_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %slice) {
@@ -200,7 +200,7 @@ main_body:
 ; NOPRT-NOT: v_mov_b32_e32 v1
 ; NOPRT-NOT: v_mov_b32_e32 v2
 ; NOPRT-NOT: v_mov_b32_e32 v3
-; GCN: image_load v[0:7], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm lwe da{{$}}
+; GCN: image_load v[0:4], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm lwe da{{$}}
 ; SIVI: buffer_store_dword v4, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v4
 define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %slice) {
@@ -231,7 +231,7 @@ main_body:
 ; NOPRT-NOT: v_mov_b32_e32 v1
 ; NOPRT-NOT: v_mov_b32_e32 v2
 ; NOPRT-NOT: v_mov_b32_e32 v3
-; GCN: image_load v[0:7], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe lwe{{$}}
+; GCN: image_load v[0:4], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe lwe{{$}}
 ; SIVI: buffer_store_dword v4, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v4
 define amdgpu_ps <4 x float> @load_2dmsaa_both(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %fragid) {
@@ -262,7 +262,7 @@ main_body:
 ; NOPRT-NOT: v_mov_b32_e32 v1
 ; NOPRT-NOT: v_mov_b32_e32 v2
 ; NOPRT-NOT: v_mov_b32_e32 v3
-; GCN: image_load v[0:7], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe da{{$}}
+; GCN: image_load v[0:4], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe da{{$}}
 ; SIVI: buffer_store_dword v4, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v4
 define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %slice, i32 %fragid) {
@@ -293,7 +293,7 @@ main_body:
 ; NOPRT-NOT: v_mov_b32_e32 v1
 ; NOPRT-NOT: v_mov_b32_e32 v2
 ; NOPRT-NOT: v_mov_b32_e32 v3
-; GCN: image_load_mip v[0:7], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm lwe{{$}}
+; GCN: image_load_mip v[0:4], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm lwe{{$}}
 ; SIVI: buffer_store_dword v4, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v4
 define amdgpu_ps <4 x float> @load_mip_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %mip) {
@@ -324,7 +324,7 @@ main_body:
 ; NOPRT-NOT: v_mov_b32_e32 v1
 ; NOPRT-NOT: v_mov_b32_e32 v2
 ; NOPRT-NOT: v_mov_b32_e32 v3
-; GCN: image_load_mip v[0:7], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe{{$}}
+; GCN: image_load_mip v[0:4], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm tfe{{$}}
 ; SIVI: buffer_store_dword v4, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v4
 define amdgpu_ps <4 x float> @load_mip_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %mip) {
@@ -451,7 +451,7 @@ main_body:
 ; NOPRT: v_mov_b32_e32 v2, 0
 ; NOPRT-NOT: v_mov_b32_e32 v0
 ; NOPRT-NOT: v_mov_b32_e32 v1
-; GCN: image_load v[0:3], v{{[0-9]+}}, s[0:7] dmask:0x6 unorm tfe{{$}}
+; GCN: image_load v[0:2], v{{[0-9]+}}, s[0:7] dmask:0x6 unorm tfe{{$}}
 ; SIVI: buffer_store_dword v2, off, s[8:11], 0
 ; GFX900: global_store_dword v[{{[0-9]+:[0-9]+}}], v2
 define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask2(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s) {

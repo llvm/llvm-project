@@ -1224,31 +1224,9 @@ void DebugSHandler::finish() {
 }
 
 void PDBLinker::addObjFile(ObjFile *File, CVIndexMap *ExternIndexMap) {
-  if (File->wasProcessedForPDB())
+  if (File->MergedIntoPDB)
     return;
-  // Add a module descriptor for every object file. We need to put an absolute
-  // path to the object into the PDB. If this is a plain object, we make its
-  // path absolute. If it's an object in an archive, we make the archive path
-  // absolute.
-  bool InArchive = !File->ParentName.empty();
-  SmallString<128> Path = InArchive ? File->ParentName : File->getName();
-  pdbMakeAbsolute(Path);
-  StringRef Name = InArchive ? File->getName() : StringRef(Path);
-
-  pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
-  File->ModuleDBI = &ExitOnErr(DbiBuilder.addModuleInfo(Name));
-  File->ModuleDBI->setObjFileName(Path);
-
-  auto Chunks = File->getChunks();
-  uint32_t Modi = File->ModuleDBI->getModuleIndex();
-  for (Chunk *C : Chunks) {
-    auto *SecChunk = dyn_cast<SectionChunk>(C);
-    if (!SecChunk || !SecChunk->Live)
-      continue;
-    pdb::SectionContrib SC = createSectionContrib(SecChunk, Modi);
-    File->ModuleDBI->setFirstSectionContrib(SC);
-    break;
-  }
+  File->MergedIntoPDB = true;
 
   // Before we can process symbol substreams from .debug$S, we need to process
   // type information, file checksums, and the string table.  Add type info to
@@ -1264,8 +1242,7 @@ void PDBLinker::addObjFile(ObjFile *File, CVIndexMap *ExternIndexMap) {
       consumeError(IndexMapResult.takeError());
       return;
     }
-    StringRef FileName = sys::path::filename(Path);
-    warn("Cannot use debug info for '" + FileName + "' [LNK4099]\n" +
+    warn("Cannot use debug info for '" + toString(File) + "' [LNK4099]\n" +
          ">>> failed to load reference " +
          StringRef(toString(IndexMapResult.takeError())));
     return;
@@ -1273,6 +1250,7 @@ void PDBLinker::addObjFile(ObjFile *File, CVIndexMap *ExternIndexMap) {
 
   ScopedTimer T(SymbolMergingTimer);
 
+  pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
   DebugSHandler DSH(*this, *File, *IndexMapResult);
   // Now do all live .debug$S and .debug$F sections.
   for (SectionChunk *DebugChunk : File->getDebugChunks()) {
@@ -1305,6 +1283,38 @@ void PDBLinker::addObjFile(ObjFile *File, CVIndexMap *ExternIndexMap) {
   DSH.finish();
 }
 
+// Add a module descriptor for every object file. We need to put an absolute
+// path to the object into the PDB. If this is a plain object, we make its
+// path absolute. If it's an object in an archive, we make the archive path
+// absolute.
+static void createModuleDBI(pdb::PDBFileBuilder &Builder) {
+  pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
+  SmallString<128> ObjName;
+
+  for (ObjFile *File : ObjFile::Instances) {
+
+    bool InArchive = !File->ParentName.empty();
+    ObjName = InArchive ? File->ParentName : File->getName();
+    pdbMakeAbsolute(ObjName);
+    StringRef ModName = InArchive ? File->getName() : StringRef(ObjName);
+
+    File->ModuleDBI = &ExitOnErr(DbiBuilder.addModuleInfo(ModName));
+    File->ModuleDBI->setObjFileName(ObjName);
+
+    ArrayRef<Chunk *> Chunks = File->getChunks();
+    uint32_t Modi = File->ModuleDBI->getModuleIndex();
+
+    for (Chunk *C : Chunks) {
+      auto *SecChunk = dyn_cast<SectionChunk>(C);
+      if (!SecChunk || !SecChunk->Live)
+        continue;
+      pdb::SectionContrib SC = createSectionContrib(SecChunk, Modi);
+      File->ModuleDBI->setFirstSectionContrib(SC);
+      break;
+    }
+  }
+}
+
 static PublicSym32 createPublic(Defined *Def) {
   PublicSym32 Pub(SymbolKind::S_PUB32);
   Pub.Name = Def->getName();
@@ -1326,6 +1336,9 @@ static PublicSym32 createPublic(Defined *Def) {
 // TpiData.
 void PDBLinker::addObjectsToPDB() {
   ScopedTimer T1(AddObjectsTimer);
+
+  createModuleDBI(Builder);
+
   for (ObjFile *File : ObjFile::Instances)
     addObjFile(File);
 

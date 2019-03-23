@@ -15,6 +15,7 @@ static_library("ObjectYAML") {
     "DWARFYAML.cpp",
     "ELFYAML.cpp",
     "MachOYAML.cpp",
+    "MinidumpYAML.cpp",
     "ObjectYAML.cpp",
     "WasmYAML.cpp",
     "YAML.cpp",

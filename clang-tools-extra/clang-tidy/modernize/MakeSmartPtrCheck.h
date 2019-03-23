@@ -26,7 +26,8 @@ public:
   MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
                     StringRef MakeSmartPtrFunctionName);
   void registerMatchers(ast_matchers::MatchFinder *Finder) final;
-  void registerPPCallbacks(clang::CompilerInstance &Compiler) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 

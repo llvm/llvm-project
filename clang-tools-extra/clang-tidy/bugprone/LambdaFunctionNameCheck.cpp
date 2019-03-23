@@ -64,10 +64,10 @@ void LambdaFunctionNameCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-void LambdaFunctionNameCheck::registerPPCallbacks(CompilerInstance &Compiler) {
-  Compiler.getPreprocessor().addPPCallbacks(
-      llvm::make_unique<MacroExpansionsWithFileAndLine>(
-          &SuppressMacroExpansions));
+void LambdaFunctionNameCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  PP->addPPCallbacks(llvm::make_unique<MacroExpansionsWithFileAndLine>(
+      &SuppressMacroExpansions));
 }
 
 void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {

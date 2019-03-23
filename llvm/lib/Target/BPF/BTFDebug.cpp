@@ -511,7 +511,8 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId) {
 
   // Visit base type of pointer, typedef, const, volatile, restrict or
   // struct/union member.
-  visitTypeEntry(DTy->getBaseType().resolve(), TypeId);
+  uint32_t TempTypeId = 0;
+  visitTypeEntry(DTy->getBaseType().resolve(), TempTypeId);
 }
 
 void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId) {

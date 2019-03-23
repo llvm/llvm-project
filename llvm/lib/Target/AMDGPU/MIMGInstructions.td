@@ -178,8 +178,8 @@ multiclass MIMG_NoSampler <bits<7> op, string asm, bit has_d16, bit mip = 0,
     defm _V3 : MIMG_NoSampler_Src_Helper <op, asm, VReg_96, 0>;
     let VDataDwords = 4 in
     defm _V4 : MIMG_NoSampler_Src_Helper <op, asm, VReg_128, 0>;
-    let VDataDwords = 8 in
-    defm _V8 : MIMG_NoSampler_Src_Helper <op, asm, VReg_256, 0>;
+    let VDataDwords = 5 in
+    defm _V5 : MIMG_NoSampler_Src_Helper <op, asm, VReg_160, 0>;
   }
 }
 
@@ -412,8 +412,8 @@ multiclass MIMG_Sampler <bits<7> op, AMDGPUSampleVariant sample, bit wqm = 0,
     defm _V3 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_96>;
     let VDataDwords = 4 in
     defm _V4 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_128>;
-    let VDataDwords = 8 in
-    defm _V8 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_256>;
+    let VDataDwords = 5 in
+    defm _V5 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_160>;
   }
 }
 
@@ -433,8 +433,8 @@ multiclass MIMG_Gather <bits<7> op, AMDGPUSampleVariant sample, bit wqm = 0,
     defm _V2 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_64>; /* for packed D16 only */
     let VDataDwords = 4 in
     defm _V4 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_128, 1>;
-    let VDataDwords = 8 in
-    defm _V8 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_256>;
+    let VDataDwords = 5 in
+    defm _V5 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_160>;
   }
 }
 

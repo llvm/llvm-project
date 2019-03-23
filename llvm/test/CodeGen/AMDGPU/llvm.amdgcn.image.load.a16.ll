@@ -19,7 +19,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}load.v3f32.1d:
-; GCN: image_load v[0:3], v0, s[0:7] dmask:0x7 unorm a16
+; GCN: image_load v[0:2], v0, s[0:7] dmask:0x7 unorm a16
 define amdgpu_ps <4 x float> @load.v3f32.1d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -57,7 +57,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}load.v3f32.2d:
-; GCN: image_load v[0:3], v0, s[0:7] dmask:0x7 unorm a16
+; GCN: image_load v[0:2], v0, s[0:7] dmask:0x7 unorm a16
 define amdgpu_ps <4 x float> @load.v3f32.2d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -99,7 +99,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}load.v3f32.3d:
-; GCN: image_load v[0:3], v[0:1], s[0:7] dmask:0x7 unorm a16
+; GCN: image_load v[0:2], v[0:1], s[0:7] dmask:0x7 unorm a16
 define amdgpu_ps <4 x float> @load.v3f32.3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_lo, <2 x i16> %coords_hi) {
 main_body:
   %x = extractelement <2 x i16> %coords_lo, i32 0

@@ -40,10 +40,10 @@ entry:
 }
 
 ; CHECK-LABEL: @Store1
-; CHECK-LABEL: entry:
+; CHECK: entry:
 ; CHECK: @__msan_get_context_state()
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: [[BASE2:%[0-9]+]] = ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; CHECK: [[BASE:%[0-9]+]] = ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; CHECK: [[SHADOW:%[a-z0-9_]+]] = inttoptr {{.*}} [[BASE]]
@@ -51,18 +51,18 @@ entry:
 ; CHECK: load i64, i64* [[SHADOW]]
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK-LABEL: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: @__msan_metadata_ptr_for_store_1(i8* %p)
 ; CHECK: store i8
 ; If the new shadow is non-zero, jump to __msan_chain_origin()
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: @__msan_chain_origin
 ; Storing origin here:
 ; CHECK: store i32
 ; CHECK: br label
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: store i8
 ; CHECK: ret void
 
@@ -73,28 +73,28 @@ entry:
 }
 
 ; CHECK-LABEL: @Store2
-; CHECK-LABEL: entry:
+; CHECK: entry:
 ; CHECK: @__msan_get_context_state()
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; Load the shadow of %p and check it
 ; CHECK: load i64
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK-LABEL: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: [[REG:%[0-9]+]] = bitcast i16* %p to i8*
 ; CHECK: @__msan_metadata_ptr_for_store_2(i8* [[REG]])
 ; CHECK: store i16
 ; If the new shadow is non-zero, jump to __msan_chain_origin()
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: @__msan_chain_origin
 ; Storing origin here:
 ; CHECK: store i32
 ; CHECK: br label
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: store i16
 ; CHECK: ret void
 
@@ -106,28 +106,28 @@ entry:
 }
 
 ; CHECK-LABEL: @Store4
-; CHECK-LABEL: entry:
+; CHECK: entry:
 ; CHECK: @__msan_get_context_state()
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; Load the shadow of %p and check it
 ; CHECK: load i32
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK-LABEL: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: [[REG:%[0-9]+]] = bitcast i32* %p to i8*
 ; CHECK: @__msan_metadata_ptr_for_store_4(i8* [[REG]])
 ; CHECK: store i32
 ; If the new shadow is non-zero, jump to __msan_chain_origin()
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: @__msan_chain_origin
 ; Storing origin here:
 ; CHECK: store i32
 ; CHECK: br label
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: store i32
 ; CHECK: ret void
 
@@ -138,28 +138,28 @@ entry:
 }
 
 ; CHECK-LABEL: @Store8
-; CHECK-LABEL: entry:
+; CHECK: entry:
 ; CHECK: @__msan_get_context_state()
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; Load the shadow of %p and check it
 ; CHECK: load i64
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK-LABEL: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: [[REG:%[0-9]+]] = bitcast i64* %p to i8*
 ; CHECK: @__msan_metadata_ptr_for_store_8(i8* [[REG]])
 ; CHECK: store i64
 ; If the new shadow is non-zero, jump to __msan_chain_origin()
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: @__msan_chain_origin
 ; Storing origin here:
 ; CHECK: store i32
 ; CHECK: br label
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: store i64
 ; CHECK: ret void
 
@@ -170,28 +170,28 @@ entry:
 }
 
 ; CHECK-LABEL: @Store16
-; CHECK-LABEL: entry:
+; CHECK: entry:
 ; CHECK: @__msan_get_context_state()
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; Load the shadow of %p and check it
 ; CHECK: load i64
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK-LABEL: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: [[REG:%[0-9]+]] = bitcast i128* %p to i8*
 ; CHECK: @__msan_metadata_ptr_for_store_n(i8* [[REG]], i64 16)
 ; CHECK: store i128
 ; If the new shadow is non-zero, jump to __msan_chain_origin()
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: @__msan_chain_origin
 ; Storing origin here:
 ; CHECK: store i32
 ; CHECK: br label
-; CHECK: <label>
+; CHECK: {{^[0-9]+}}:
 ; CHECK: store i128
 ; CHECK: ret void
 
@@ -205,16 +205,16 @@ entry:
 }
 
 ; CHECK-LABEL: @Load1
-; CHECK-LABEL: entry:
+; CHECK: entry:
 ; CHECK: @__msan_get_context_state()
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; Load the shadow of %p and check it
 ; CHECK: load i64
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK-LABEL: <label>
+; CHECK: {{^[0-9]+}}:
 ; Load the value from %p. This is done before accessing the shadow
 ; to ease atomic handling.
 ; CHECK: load i8
@@ -231,16 +231,16 @@ entry:
 }
 
 ; CHECK-LABEL: @Load2
-; CHECK-LABEL: entry:
+; CHECK: entry:
 ; CHECK: @__msan_get_context_state()
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; Load the shadow of %p and check it
 ; CHECK: load i64
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK-LABEL: <label>
+; CHECK: {{^[0-9]+}}:
 ; Load the value from %p. This is done before accessing the shadow
 ; to ease atomic handling.
 ; CHECK: load i16
@@ -258,16 +258,16 @@ entry:
 }
 
 ; CHECK-LABEL: @Load4
-; CHECK-LABEL: entry:
+; CHECK: entry:
 ; CHECK: @__msan_get_context_state()
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; Load the shadow of %p and check it
 ; CHECK: load i64
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK-LABEL: <label>
+; CHECK: {{^[0-9]+}}:
 ; Load the value from %p. This is done before accessing the shadow
 ; to ease atomic handling.
 ; CHECK: load i32
@@ -284,16 +284,16 @@ entry:
 }
 
 ; CHECK-LABEL: @Load8
-; CHECK-LABEL: entry:
+; CHECK: entry:
 ; CHECK: @__msan_get_context_state()
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; Load the shadow of %p and check it
 ; CHECK: load i64
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK-LABEL: <label>
+; CHECK: {{^[0-9]+}}:
 ; Load the value from %p. This is done before accessing the shadow
 ; to ease atomic handling.
 ; CHECK: load i64
@@ -310,16 +310,16 @@ entry:
 }
 
 ; CHECK-LABEL: @Load16
-; CHECK-LABEL: entry:
+; CHECK: entry:
 ; CHECK: @__msan_get_context_state()
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; Load the shadow of %p and check it
 ; CHECK: load i64
 ; CHECK: icmp
 ; CHECK: br i1
-; CHECK-LABEL: <label>
+; CHECK: {{^[0-9]+}}:
 ; Load the value from %p. This is done before accessing the shadow
 ; to ease atomic handling.
 ; CHECK: load i128
@@ -359,7 +359,7 @@ attributes #0 = { "target-features"="+fxsr,+x87,-sse" }
 ; CHECK: [[VA_ARG_ORIGIN:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 3
 ; CHECK: [[VA_ARG_OVERFLOW_SIZE:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 4
 
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: [[OSIZE:%[0-9]+]] = load i64, i64* [[VA_ARG_OVERFLOW_SIZE]]
 ; Register save area is 48 bytes for non-SSE builds.
 ; CHECK: [[SIZE:%[0-9]+]] = add i64 48, [[OSIZE]]
@@ -380,13 +380,13 @@ entry:
 
 ; CHECK-LABEL: @VarArgCaller
 
-; CHECK-LABEL: entry:
+; CHECK: entry:
 ; CHECK: @__msan_get_context_state()
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
 ; CHECK: [[VA_ARG_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 2
 ; CHECK: [[VA_ARG_OVERFLOW_SIZE:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 4
 
-; CHECK-LABEL: entry.split:
+; CHECK: entry.split:
 ; CHECK: [[PARAM_SI:%[_a-z0-9]+]] = ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; CHECK: [[ARG1_S:%[_a-z0-9]+]] = inttoptr i64 [[PARAM_SI]] to i64*
 ; First argument is initialized

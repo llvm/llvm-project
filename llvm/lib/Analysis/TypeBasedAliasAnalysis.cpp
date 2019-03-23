@@ -367,26 +367,28 @@ static bool isStructPathTBAA(const MDNode *MD) {
 }
 
 AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
-                                     const MemoryLocation &LocB) {
+                                     const MemoryLocation &LocB,
+                                     AAQueryInfo &AAQI) {
   if (!EnableTBAA)
-    return AAResultBase::alias(LocA, LocB);
+    return AAResultBase::alias(LocA, LocB, AAQI);
 
   // If accesses may alias, chain to the next AliasAnalysis.
   if (Aliases(LocA.AATags.TBAA, LocB.AATags.TBAA))
-    return AAResultBase::alias(LocA, LocB);
+    return AAResultBase::alias(LocA, LocB, AAQI);
 
   // Otherwise return a definitive result.
   return NoAlias;
 }
 
 bool TypeBasedAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
+                                               AAQueryInfo &AAQI,
                                                bool OrLocal) {
   if (!EnableTBAA)
-    return AAResultBase::pointsToConstantMemory(Loc, OrLocal);
+    return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
 
   const MDNode *M = Loc.AATags.TBAA;
   if (!M)
-    return AAResultBase::pointsToConstantMemory(Loc, OrLocal);
+    return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
 
   // If this is an "immutable" type, we can assume the pointer is pointing
   // to constant memory.
@@ -394,7 +396,7 @@ bool TypeBasedAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
       (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
     return true;
 
-  return AAResultBase::pointsToConstantMemory(Loc, OrLocal);
+  return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
 }
 
 FunctionModRefBehavior
@@ -420,29 +422,31 @@ FunctionModRefBehavior TypeBasedAAResult::getModRefBehavior(const Function *F) {
 }
 
 ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call,
-                                            const MemoryLocation &Loc) {
+                                            const MemoryLocation &Loc,
+                                            AAQueryInfo &AAQI) {
   if (!EnableTBAA)
-    return AAResultBase::getModRefInfo(Call, Loc);
+    return AAResultBase::getModRefInfo(Call, Loc, AAQI);
 
   if (const MDNode *L = Loc.AATags.TBAA)
     if (const MDNode *M = Call->getMetadata(LLVMContext::MD_tbaa))
       if (!Aliases(L, M))
         return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfo(Call, Loc);
+  return AAResultBase::getModRefInfo(Call, Loc, AAQI);
 }
 
 ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call1,
-                                            const CallBase *Call2) {
+                                            const CallBase *Call2,
+                                            AAQueryInfo &AAQI) {
   if (!EnableTBAA)
-    return AAResultBase::getModRefInfo(Call1, Call2);
+    return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
 
   if (const MDNode *M1 = Call1->getMetadata(LLVMContext::MD_tbaa))
     if (const MDNode *M2 = Call2->getMetadata(LLVMContext::MD_tbaa))
       if (!Aliases(M1, M2))
         return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfo(Call1, Call2);
+  return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
 }
 
 bool MDNode::isTBAAVtableAccess() const {
