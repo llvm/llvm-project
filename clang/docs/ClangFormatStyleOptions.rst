@@ -277,6 +277,41 @@ the configuration (without a prefix: ``Auto``).
     int a;     // My comment a      vs.     int a; // My comment a
     int b = 2; // comment  b                int b = 2; // comment about b
 
+**AllowAllArgumentsOnNextLine** (``bool``)
+  If a function call or braced initializer list doesn't fit on a
+  line, allow putting all arguments onto the next line, even if
+  ``BinPackArguments`` is ``false``.
+
+  .. code-block:: c++
+
+    true:
+    callFunction(
+        a, b, c, d);
+
+    false:
+    callFunction(a,
+                 b,
+                 c,
+                 d);
+
+**AllowAllConstructorInitializersOnNextLine** (``bool``)
+  If a constructor definition with a member initializer list doesn't
+  fit on a single line, allow putting all member initializers onto the next
+  line, if ```ConstructorInitializerAllOnOneLineOrOnePerLine``` is true.
+  Note that this parameter has no effect if
+  ```ConstructorInitializerAllOnOneLineOrOnePerLine``` is false.
+
+  .. code-block:: c++
+
+    true:
+    MyClass::MyClass() :
+        member0(0), member1(2) {}
+
+    false:
+    MyClass::MyClass() :
+        member0(0),
+        member1(2) {}
+
 **AllowAllParametersOfDeclarationOnNextLine** (``bool``)
   If the function declaration doesn't fit on a line,
   allow putting all parameters of a function declaration onto
