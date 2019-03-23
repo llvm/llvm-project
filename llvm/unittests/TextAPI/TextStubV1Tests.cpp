@@ -149,6 +149,8 @@ TEST(TBDv1, ReadFile2) {
   EXPECT_EQ(0U, File->reexportedLibraries().size());
 }
 
+// Disable test for windows.
+#ifndef _WIN32
 TEST(TBDv1, WriteFile) {
   static const char tbd_v1_file3[] =
       "---\n"
@@ -215,6 +217,7 @@ TEST(TBDv1, Platform_macOS) {
   EXPECT_EQ(FileType::TBD_V1, File->getFileType());
   EXPECT_EQ(PlatformKind::macOS, File->getPlatform());
 }
+#endif // _WIN32
 
 TEST(TBDv1, Platform_iOS) {
   static const char tbd_v1_platform_ios[] = "---\n"

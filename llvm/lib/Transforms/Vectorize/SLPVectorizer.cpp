@@ -683,7 +683,8 @@ private:
 
   /// \reorder commutative operands to get better probability of
   /// generating vectorized code.
-  void reorderInputsAccordingToOpcode(unsigned Opcode, ArrayRef<Value *> VL,
+  void reorderInputsAccordingToOpcode(const InstructionsState &S,
+                                      ArrayRef<Value *> VL,
                                       SmallVectorImpl<Value *> &Left,
                                       SmallVectorImpl<Value *> &Right);
   struct TreeEntry {
@@ -1896,7 +1897,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // have the same opcode.
       if (isa<BinaryOperator>(VL0) && VL0->isCommutative()) {
         ValueList Left, Right;
-        reorderInputsAccordingToOpcode(S.getOpcode(), VL, Left, Right);
+        reorderInputsAccordingToOpcode(S, VL, Left, Right);
         UserTreeIdx.EdgeIdx = 0;
         buildTree_rec(Left, Depth + 1, UserTreeIdx);
         UserTreeIdx.EdgeIdx = 1;
@@ -2809,7 +2810,7 @@ void BoUpSLP::reorderAltShuffleOperands(const InstructionsState &S,
 
   // Reorder if we have a commutative operation and consecutive access
   // are on either side of the alternate instructions.
-  for (unsigned j = 0; j < VL.size() - 1; ++j) {
+  for (unsigned j = 0, e = VL.size() - 1; j < e; ++j) {
     if (LoadInst *L = dyn_cast<LoadInst>(Left[j])) {
       if (LoadInst *L1 = dyn_cast<LoadInst>(Right[j + 1])) {
         Instruction *VL1 = cast<Instruction>(VL[j]);
@@ -2910,10 +2911,12 @@ static bool shouldReorderOperands(
   return false;
 }
 
-void BoUpSLP::reorderInputsAccordingToOpcode(unsigned Opcode,
+void BoUpSLP::reorderInputsAccordingToOpcode(const InstructionsState &S,
                                              ArrayRef<Value *> VL,
                                              SmallVectorImpl<Value *> &Left,
                                              SmallVectorImpl<Value *> &Right) {
+  unsigned Opcode = S.getOpcode();
+
   if (!VL.empty()) {
     // Peel the first iteration out of the loop since there's nothing
     // interesting to do anyway and it simplifies the checks in the loop.

@@ -638,7 +638,7 @@ TextAPIReader::get(std::unique_ptr<MemoryBuffer> InputBuffer) {
   if (YAMLIn.error())
     return make_error<StringError>(Ctx.ErrorMessage, YAMLIn.error());
 
-  return File;
+  return std::move(File);
 }
 
 Error TextAPIWriter::writeToStream(raw_ostream &OS, const InterfaceFile &File) {

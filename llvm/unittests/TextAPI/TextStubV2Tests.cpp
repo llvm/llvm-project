@@ -173,6 +173,8 @@ TEST(TBDv2, ReadFile2) {
   EXPECT_EQ(0U, File->reexportedLibraries().size());
 }
 
+// Disable test for windows.
+#ifndef _WIN32
 TEST(TBDv2, WriteFile) {
   static const char tbd_v2_file3[] =
       "--- !tapi-tbd-v2\n"
@@ -225,6 +227,7 @@ TEST(TBDv2, WriteFile) {
   EXPECT_FALSE(Result);
   EXPECT_STREQ(tbd_v2_file3, Buffer.c_str());
 }
+#endif // _WIN32
 
 TEST(TBDv2, Platform_macOS) {
   static const char tbd_v1_platform_macos[] = "--- !tapi-tbd-v2\n"
