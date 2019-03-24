@@ -1,4 +1,4 @@
-// RUN: pp-trace %s -undef -target x86_64 -std=c++11 | FileCheck --strict-whitespace %s
+// RUN: pp-trace %s -- -undef -target x86_64 -std=c++11 | FileCheck --strict-whitespace %s
 
 #include "Inputs/Level1A.h"
 #include "Inputs/Level1B.h"
