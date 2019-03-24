@@ -1,4 +1,4 @@
-// RUN: pp-trace -callbacks '*,-FileChanged,-MacroDefined' %s | FileCheck --strict-whitespace %s
+// RUN: pp-trace -callbacks '*,-FileChanged,-MacroDefined' %s -- | FileCheck --strict-whitespace %s
 
 #pragma clang diagnostic push
 #pragma clang diagnostic pop

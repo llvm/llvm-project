@@ -633,6 +633,8 @@ public:
   void finalize() override;
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;
+  void replaceSectionReferences(
+      const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
 
   static bool classof(const SectionBase *S) {
     return S->Type == ELF::SHT_GROUP;

@@ -963,7 +963,7 @@ Optional<ConstantRange> LazyValueInfoImpl::getRangeForOperand(unsigned Op,
 
   const unsigned OperandBitWidth =
     DL.getTypeSizeInBits(I->getOperand(Op)->getType());
-  ConstantRange Range = ConstantRange(OperandBitWidth);
+  ConstantRange Range = ConstantRange::getFull(OperandBitWidth);
   if (hasBlockValue(I->getOperand(Op), BB)) {
     ValueLatticeElement Val = getBlockValue(I->getOperand(Op), BB);
     intersectAssumeOrGuardBlockValueConstantRange(I->getOperand(Op), Val, I);
@@ -1576,14 +1576,14 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
   ValueLatticeElement Result =
       getImpl(PImpl, AC, &DL, DT).getValueInBlock(V, BB, CxtI);
   if (Result.isUndefined())
-    return ConstantRange(Width, /*isFullSet=*/false);
+    return ConstantRange::getEmpty(Width);
   if (Result.isConstantRange())
     return Result.getConstantRange();
   // We represent ConstantInt constants as constant ranges but other kinds
   // of integer constants, i.e. ConstantExpr will be tagged as constants
   assert(!(Result.isConstant() && isa<ConstantInt>(Result.getConstant())) &&
          "ConstantInt value must be represented as constantrange");
-  return ConstantRange(Width, /*isFullSet=*/true);
+  return ConstantRange::getFull(Width);
 }
 
 /// Determine whether the specified value is known to be a
@@ -1615,14 +1615,14 @@ ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
       getImpl(PImpl, AC, &DL, DT).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
   if (Result.isUndefined())
-    return ConstantRange(Width, /*isFullSet=*/false);
+    return ConstantRange::getEmpty(Width);
   if (Result.isConstantRange())
     return Result.getConstantRange();
   // We represent ConstantInt constants as constant ranges but other kinds
   // of integer constants, i.e. ConstantExpr will be tagged as constants
   assert(!(Result.isConstant() && isa<ConstantInt>(Result.getConstant())) &&
          "ConstantInt value must be represented as constantrange");
-  return ConstantRange(Width, /*isFullSet=*/true);
+  return ConstantRange::getFull(Width);
 }
 
 static LazyValueInfo::Tristate

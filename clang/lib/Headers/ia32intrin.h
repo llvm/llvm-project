@@ -28,6 +28,114 @@
 #ifndef __IA32INTRIN_H
 #define __IA32INTRIN_H
 
+/** Find the first set bit starting from the lsb. Result is undefined if
+ *  input is 0.
+ *
+ *  \headerfile <x86intrin.h>
+ *
+ *  This intrinsic corresponds to the <c> BSF </c> instruction or the
+ *  <c> TZCNT </c> instruction.
+ *
+ *  \param __A
+ *     A 32-bit integer operand.
+ *  \returns A 32-bit integer containing the bit number.
+ */
+static __inline__ int __attribute__((__always_inline__, __nodebug__))
+__bsfd(int __A) {
+  return __builtin_ctz(__A);
+}
+
+/** Find the first set bit starting from the msb. Result is undefined if
+ *  input is 0.
+ *
+ *  \headerfile <x86intrin.h>
+ *
+ *  This intrinsic corresponds to the <c> BSR </c> instruction or the
+ *  <c> LZCNT </c> instruction and an <c> XOR </c>.
+ *
+ *  \param __A
+ *     A 32-bit integer operand.
+ *  \returns A 32-bit integer containing the bit number.
+ */
+static __inline__ int __attribute__((__always_inline__, __nodebug__))
+__bsrd(int __A) {
+  return 31 - __builtin_clz(__A);
+}
+
+/** Swaps the bytes in the input. Converting little endian to big endian or
+ *  vice versa.
+ *
+ *  \headerfile <x86intrin.h>
+ *
+ *  This intrinsic corresponds to the <c> BSWAP </c> instruction.
+ *
+ *  \param __A
+ *     A 32-bit integer operand.
+ *  \returns A 32-bit integer containing the swapped bytes.
+ */
+static __inline__ int __attribute__((__always_inline__, __nodebug__))
+__bswapd(int __A) {
+  return __builtin_bswap32(__A);
+}
+
+#define _bswap(A) __bswapd((A))
+#define _bit_scan_forward(A) __bsfd((A))
+#define _bit_scan_reverse(A) __bsrd((A))
+
+#ifdef __x86_64__
+/** Find the first set bit starting from the lsb. Result is undefined if
+ *  input is 0.
+ *
+ *  \headerfile <x86intrin.h>
+ *
+ *  This intrinsic corresponds to the <c> BSF </c> instruction or the
+ *  <c> TZCNT </c> instruction.
+ *
+ *  \param __A
+ *     A 64-bit integer operand.
+ *  \returns A 32-bit integer containing the bit number.
+ */
+static __inline__ int __attribute__((__always_inline__, __nodebug__))
+__bsfq(long long __A) {
+  return __builtin_ctzll(__A);
+}
+
+/** Find the first set bit starting from the msb. Result is undefined if
+ *  input is 0.
+ *
+ *  \headerfile <x86intrin.h>
+ *
+ *  This intrinsic corresponds to the <c> BSR </c> instruction or the
+ *  <c> LZCNT </c> instruction and an <c> XOR </c>.
+ *
+ *  \param __A
+ *     A 64-bit integer operand.
+ *  \returns A 32-bit integer containing the bit number.
+ */
+static __inline__ int __attribute__((__always_inline__, __nodebug__))
+__bsrq(long long __A) {
+  return 63 - __builtin_clzll(__A);
+}
+
+/** Swaps the bytes in the input. Converting little endian to big endian or
+ *  vice versa.
+ *
+ *  \headerfile <x86intrin.h>
+ *
+ *  This intrinsic corresponds to the <c> BSWAP </c> instruction.
+ *
+ *  \param __A
+ *     A 64-bit integer operand.
+ *  \returns A 64-bit integer containing the swapped bytes.
+ */
+static __inline__ long long __attribute__((__always_inline__, __nodebug__))
+__bswapq(long long __A) {
+  return __builtin_bswap64(__A);
+}
+
+#define _bswap64(A) __bswapq((A))
+#endif
+
 /** Counts the number of bits in the source operand having a value of 1.
  *
  *  \headerfile <x86intrin.h>

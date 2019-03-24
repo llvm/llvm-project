@@ -2844,50 +2844,51 @@ void BoUpSLP::reorderAltShuffleOperands(const InstructionsState &S,
   }
 }
 
-// Return true if I should be commuted before adding it's left and right
-// operands to the arrays Left and Right.
+// Return true if the i'th left and right operands can be commuted.
 //
 // The vectorizer is trying to either have all elements one side being
 // instruction with the same opcode to enable further vectorization, or having
 // a splat to lower the vectorizing cost.
-static bool shouldReorderOperands(int i, Instruction &I, ArrayRef<Value *> Left,
+static bool shouldReorderOperands(int i, ArrayRef<Value *> Left,
                                   ArrayRef<Value *> Right,
                                   bool AllSameOpcodeLeft,
                                   bool AllSameOpcodeRight, bool SplatLeft,
-                                  bool SplatRight, Value *&VLeft,
-                                  Value *&VRight) {
-  VLeft = I.getOperand(0);
-  VRight = I.getOperand(1);
+                                  bool SplatRight) {
+  Value *PrevLeft = Left[i - 1];
+  Value *PrevRight = Right[i - 1];
+  Value *CurrLeft = Left[i];
+  Value *CurrRight = Right[i];
+
   // If we have "SplatRight", try to see if commuting is needed to preserve it.
   if (SplatRight) {
-    if (VRight == Right[i - 1])
+    if (CurrRight == PrevRight)
       // Preserve SplatRight
       return false;
-    if (VLeft == Right[i - 1]) {
+    if (CurrLeft == PrevRight) {
       // Commuting would preserve SplatRight, but we don't want to break
       // SplatLeft either, i.e. preserve the original order if possible.
       // (FIXME: why do we care?)
-      if (SplatLeft && VLeft == Left[i - 1])
+      if (SplatLeft && CurrLeft == PrevLeft)
         return false;
       return true;
     }
   }
   // Symmetrically handle Right side.
   if (SplatLeft) {
-    if (VLeft == Left[i - 1])
+    if (CurrLeft == PrevLeft)
       // Preserve SplatLeft
       return false;
-    if (VRight == Left[i - 1])
+    if (CurrRight == PrevLeft)
       return true;
   }
 
-  Instruction *ILeft = dyn_cast<Instruction>(VLeft);
-  Instruction *IRight = dyn_cast<Instruction>(VRight);
+  Instruction *ILeft = dyn_cast<Instruction>(CurrLeft);
+  Instruction *IRight = dyn_cast<Instruction>(CurrRight);
 
   // If we have "AllSameOpcodeRight", try to see if the left operands preserves
   // it and not the right, in this case we want to commute.
   if (AllSameOpcodeRight) {
-    unsigned RightPrevOpcode = cast<Instruction>(Right[i - 1])->getOpcode();
+    unsigned RightPrevOpcode = cast<Instruction>(PrevRight)->getOpcode();
     if (IRight && RightPrevOpcode == IRight->getOpcode())
       // Do not commute, a match on the right preserves AllSameOpcodeRight
       return false;
@@ -2897,14 +2898,14 @@ static bool shouldReorderOperands(int i, Instruction &I, ArrayRef<Value *> Left,
       // AllSameOpcodeLeft, i.e. preserve the original order if possible.
       // (FIXME: why do we care?)
       if (AllSameOpcodeLeft && ILeft &&
-          cast<Instruction>(Left[i - 1])->getOpcode() == ILeft->getOpcode())
+          cast<Instruction>(PrevLeft)->getOpcode() == ILeft->getOpcode())
         return false;
       return true;
     }
   }
   // Symmetrically handle Left side.
   if (AllSameOpcodeLeft) {
-    unsigned LeftPrevOpcode = cast<Instruction>(Left[i - 1])->getOpcode();
+    unsigned LeftPrevOpcode = cast<Instruction>(PrevLeft)->getOpcode();
     if (ILeft && LeftPrevOpcode == ILeft->getOpcode())
       return false;
     if (IRight && LeftPrevOpcode == IRight->getOpcode())
@@ -2945,17 +2946,12 @@ void BoUpSLP::reorderInputsAccordingToOpcode(const InstructionsState &S,
            "Can only process commutative instruction");
     // Commute to favor either a splat or maximizing having the same opcodes on
     // one side.
-    Value *VLeft;
-    Value *VRight;
-    if (shouldReorderOperands(i, *I, Left, Right, AllSameOpcodeLeft,
-                              AllSameOpcodeRight, SplatLeft, SplatRight, VLeft,
-                              VRight)) {
-      Left.push_back(VRight);
-      Right.push_back(VLeft);
-    } else {
-      Left.push_back(VLeft);
-      Right.push_back(VRight);
-    }
+    Left.push_back(I->getOperand(0));
+    Right.push_back(I->getOperand(1));
+    if (shouldReorderOperands(i, Left, Right, AllSameOpcodeLeft,
+                              AllSameOpcodeRight, SplatLeft, SplatRight))
+      std::swap(Left[i], Right[i]);
+
     // Update Splat* and AllSameOpcode* after the insertion.
     SplatRight = SplatRight && (Right[i - 1] == Right[i]);
     SplatLeft = SplatLeft && (Left[i - 1] == Left[i]);

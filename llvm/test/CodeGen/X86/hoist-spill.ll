@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @d = external global i32*, align 8
 
 ; Function Attrs: norecurse noreturn nounwind uwtable
-define void @fn1(i32 %p1) {
+define void @fn1(i32 %p1, i32 %p2, i64 %p3) {
 entry:
   %tmp = load i32*, i32** @d, align 8
   %tmp1 = load i32*, i32** @a, align 8
@@ -26,10 +26,10 @@ for.cond:                                         ; preds = %for.inc14, %entry
   %indvars.iv30.in = phi i32 [ %indvars.iv30, %for.inc14 ], [ %p1, %entry ]
   %c.0 = phi i32 [ %inc15, %for.inc14 ], [ 1, %entry ]
   %k.0 = phi i32 [ %k.1.lcssa, %for.inc14 ], [ undef, %entry ]
-  %tmp3 = icmp sgt i32 undef, 0
+  %tmp3 = icmp sgt i32 %p2, 0
   %smax52 = select i1 %tmp3, i32 %c.0, i32 0
   %tmp4 = zext i32 %smax52 to i64
-  %tmp5 = icmp sgt i64 undef, %tmp4
+  %tmp5 = icmp sgt i64 %p3, %tmp4
   %smax53 = select i1 %tmp5, i64 %tmp2, i64 %tmp4
   %tmp6 = add nsw i64 %smax53, 1
   %tmp7 = sub nsw i64 %tmp6, %tmp4
