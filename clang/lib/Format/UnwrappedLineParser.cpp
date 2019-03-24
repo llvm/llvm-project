@@ -2018,6 +2018,10 @@ bool UnwrappedLineParser::parseEnum() {
       FormatTok->isOneOf(tok::colon, tok::question))
     return false;
 
+  // In protobuf, "enum" can be used as a field name.
+  if (Style.Language == FormatStyle::LK_Proto && FormatTok->is(tok::equal))
+    return false;
+
   // Eat up enum class ...
   if (FormatTok->Tok.is(tok::kw_class) || FormatTok->Tok.is(tok::kw_struct))
     nextToken();

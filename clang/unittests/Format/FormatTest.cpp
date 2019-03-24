@@ -3956,6 +3956,191 @@ TEST_F(FormatTest, ConstructorInitializers) {
                    "    aaaa(aaaa) {}"));
 }
 
+TEST_F(FormatTest, AllowAllConstructorInitializersOnNextLine) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
+  Style.ColumnLimit = 60;
+  Style.ConstructorInitializerAllOnOneLineOrOnePerLine = true;
+  Style.AllowAllConstructorInitializersOnNextLine = true;
+  Style.BinPackParameters = false;
+
+  for (int i = 0; i < 4; ++i) {
+    // Test all combinations of parameters that should not have an effect.
+    Style.AllowAllParametersOfDeclarationOnNextLine = i & 1;
+    Style.AllowAllArgumentsOnNextLine = i & 2;
+
+    Style.AllowAllConstructorInitializersOnNextLine = true;
+    Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
+    verifyFormat("Constructor()\n"
+                 "    : aaaaaaaaaaaaaaaaaaaa(a), bbbbbbbbbbbbbbbbbbbbb(b) {}",
+                 Style);
+    verifyFormat("Constructor() : a(a), b(b) {}", Style);
+
+    Style.AllowAllConstructorInitializersOnNextLine = false;
+    verifyFormat("Constructor()\n"
+                 "    : aaaaaaaaaaaaaaaaaaaa(a)\n"
+                 "    , bbbbbbbbbbbbbbbbbbbbb(b) {}",
+                 Style);
+    verifyFormat("Constructor() : a(a), b(b) {}", Style);
+
+    Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
+    Style.AllowAllConstructorInitializersOnNextLine = true;
+    verifyFormat("Constructor()\n"
+                 "    : aaaaaaaaaaaaaaaaaaaa(a), bbbbbbbbbbbbbbbbbbbbb(b) {}",
+                 Style);
+
+    Style.AllowAllConstructorInitializersOnNextLine = false;
+    verifyFormat("Constructor()\n"
+                 "    : aaaaaaaaaaaaaaaaaaaa(a),\n"
+                 "      bbbbbbbbbbbbbbbbbbbbb(b) {}",
+                 Style);
+
+    Style.BreakConstructorInitializers = FormatStyle::BCIS_AfterColon;
+    Style.AllowAllConstructorInitializersOnNextLine = true;
+    verifyFormat("Constructor() :\n"
+                 "    aaaaaaaaaaaaaaaaaa(a), bbbbbbbbbbbbbbbbbbbbb(b) {}",
+                 Style);
+
+    Style.AllowAllConstructorInitializersOnNextLine = false;
+    verifyFormat("Constructor() :\n"
+                 "    aaaaaaaaaaaaaaaaaa(a),\n"
+                 "    bbbbbbbbbbbbbbbbbbbbb(b) {}",
+                 Style);
+  }
+
+  // Test interactions between AllowAllParametersOfDeclarationOnNextLine and
+  // AllowAllConstructorInitializersOnNextLine in all
+  // BreakConstructorInitializers modes
+  Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
+  Style.AllowAllParametersOfDeclarationOnNextLine = true;
+  Style.AllowAllConstructorInitializersOnNextLine = false;
+  verifyFormat("SomeClassWithALongName::Constructor(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaaa, int bbbbbbbbbbbbb)\n"
+               "    : aaaaaaaaaaaaaaaaaaaa(a)\n"
+               "    , bbbbbbbbbbbbbbbbbbbbb(b) {}",
+               Style);
+
+  Style.AllowAllConstructorInitializersOnNextLine = true;
+  verifyFormat("SomeClassWithALongName::Constructor(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbbb,\n"
+               "    int cccccccccccccccc)\n"
+               "    : aaaaaaaaaaaaaaaaaaaa(a), bbbbbbbbbbbbbbbbbbbbb(b) {}",
+               Style);
+
+  Style.AllowAllParametersOfDeclarationOnNextLine = false;
+  Style.AllowAllConstructorInitializersOnNextLine = false;
+  verifyFormat("SomeClassWithALongName::Constructor(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbbb)\n"
+               "    : aaaaaaaaaaaaaaaaaaaa(a)\n"
+               "    , bbbbbbbbbbbbbbbbbbbbb(b) {}",
+               Style);
+
+  Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
+
+  Style.AllowAllParametersOfDeclarationOnNextLine = true;
+  verifyFormat("SomeClassWithALongName::Constructor(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaaa, int bbbbbbbbbbbbb)\n"
+               "    : aaaaaaaaaaaaaaaaaaaa(a),\n"
+               "      bbbbbbbbbbbbbbbbbbbbb(b) {}",
+               Style);
+
+  Style.AllowAllConstructorInitializersOnNextLine = true;
+  verifyFormat("SomeClassWithALongName::Constructor(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbbb,\n"
+               "    int cccccccccccccccc)\n"
+               "    : aaaaaaaaaaaaaaaaaaaa(a), bbbbbbbbbbbbbbbbbbbbb(b) {}",
+               Style);
+
+  Style.AllowAllParametersOfDeclarationOnNextLine = false;
+  Style.AllowAllConstructorInitializersOnNextLine = false;
+  verifyFormat("SomeClassWithALongName::Constructor(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbbb)\n"
+               "    : aaaaaaaaaaaaaaaaaaaa(a),\n"
+               "      bbbbbbbbbbbbbbbbbbbbb(b) {}",
+               Style);
+
+  Style.BreakConstructorInitializers = FormatStyle::BCIS_AfterColon;
+  Style.AllowAllParametersOfDeclarationOnNextLine = true;
+  verifyFormat("SomeClassWithALongName::Constructor(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaaa, int bbbbbbbbbbbbb) :\n"
+               "    aaaaaaaaaaaaaaaaaaaa(a),\n"
+               "    bbbbbbbbbbbbbbbbbbbbb(b) {}",
+               Style);
+
+  Style.AllowAllConstructorInitializersOnNextLine = true;
+  verifyFormat("SomeClassWithALongName::Constructor(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbbb,\n"
+               "    int cccccccccccccccc) :\n"
+               "    aaaaaaaaaaaaaaaaaaaa(a), bbbbbbbbbbbbbbbbbbbbb(b) {}",
+               Style);
+
+  Style.AllowAllParametersOfDeclarationOnNextLine = false;
+  Style.AllowAllConstructorInitializersOnNextLine = false;
+  verifyFormat("SomeClassWithALongName::Constructor(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbbb) :\n"
+               "    aaaaaaaaaaaaaaaaaaaa(a),\n"
+               "    bbbbbbbbbbbbbbbbbbbbb(b) {}",
+               Style);
+}
+
+TEST_F(FormatTest, AllowAllArgumentsOnNextLine) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 60;
+  Style.BinPackArguments = false;
+  for (int i = 0; i < 4; ++i) {
+    // Test all combinations of parameters that should not have an effect.
+    Style.AllowAllParametersOfDeclarationOnNextLine = i & 1;
+    Style.AllowAllConstructorInitializersOnNextLine = i & 2;
+
+    Style.AllowAllArgumentsOnNextLine = true;
+    verifyFormat("void foo() {\n"
+                 "  FunctionCallWithReallyLongName(\n"
+                 "      aaaaaaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbb);\n"
+                 "}",
+                 Style);
+    Style.AllowAllArgumentsOnNextLine = false;
+    verifyFormat("void foo() {\n"
+                 "  FunctionCallWithReallyLongName(\n"
+                 "      aaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+                 "      bbbbbbbbbbbb);\n"
+                 "}",
+                 Style);
+
+    Style.AllowAllArgumentsOnNextLine = true;
+    verifyFormat("void foo() {\n"
+                 "  auto VariableWithReallyLongName = {\n"
+                 "      aaaaaaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbb};\n"
+                 "}",
+                 Style);
+    Style.AllowAllArgumentsOnNextLine = false;
+    verifyFormat("void foo() {\n"
+                 "  auto VariableWithReallyLongName = {\n"
+                 "      aaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+                 "      bbbbbbbbbbbb};\n"
+                 "}",
+                 Style);
+  }
+
+  // This parameter should not affect declarations.
+  Style.BinPackParameters = false;
+  Style.AllowAllArgumentsOnNextLine = false;
+  Style.AllowAllParametersOfDeclarationOnNextLine = true;
+  verifyFormat("void FunctionCallWithReallyLongName(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaa, int bbbbbbbbbbbb);",
+               Style);
+  Style.AllowAllParametersOfDeclarationOnNextLine = false;
+  verifyFormat("void FunctionCallWithReallyLongName(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbb);",
+               Style);
+}
+
 TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakConstructorInitializers = FormatStyle::BCIS_AfterColon;
@@ -3973,17 +4158,23 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
   verifyFormat("template <typename T>\n"
                "Constructor() : Initializer(FitsOnTheLine) {}",
                getStyleWithColumns(Style, 50));
-
+  Style.ConstructorInitializerAllOnOneLineOrOnePerLine = true;
   verifyFormat(
       "SomeClass::Constructor() :\n"
       "    aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaaaa(aaaaaaaaaaaa) {}",
-	  Style);
+      Style);
+
+  Style.ConstructorInitializerAllOnOneLineOrOnePerLine = false;
+  verifyFormat(
+      "SomeClass::Constructor() :\n"
+      "    aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaaaa(aaaaaaaaaaaa) {}",
+      Style);
 
   verifyFormat(
       "SomeClass::Constructor() :\n"
       "    aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
       "    aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}",
-	  Style);
+      Style);
   verifyFormat(
       "SomeClass::Constructor() :\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa),\n"
@@ -4029,7 +4220,7 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
 
   FormatStyle OnePerLine = Style;
   OnePerLine.ConstructorInitializerAllOnOneLineOrOnePerLine = true;
-  OnePerLine.AllowAllParametersOfDeclarationOnNextLine = false;
+  OnePerLine.AllowAllConstructorInitializersOnNextLine = false;
   verifyFormat("SomeClass::Constructor() :\n"
                "    aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
                "    aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
@@ -11025,6 +11216,8 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AlignTrailingComments);
   CHECK_PARSE_BOOL(AlignConsecutiveAssignments);
   CHECK_PARSE_BOOL(AlignConsecutiveDeclarations);
+  CHECK_PARSE_BOOL(AllowAllArgumentsOnNextLine);
+  CHECK_PARSE_BOOL(AllowAllConstructorInitializersOnNextLine);
   CHECK_PARSE_BOOL(AllowAllParametersOfDeclarationOnNextLine);
   CHECK_PARSE_BOOL(AllowShortBlocksOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortCaseLabelsOnASingleLine);

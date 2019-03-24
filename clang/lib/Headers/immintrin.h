@@ -241,18 +241,6 @@ _rdrand64_step(unsigned long long *__p)
 #endif
 #endif /* __RDRND__ */
 
-/* __bit_scan_forward */
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
-_bit_scan_forward(int __A) {
-  return __builtin_ctz(__A);
-}
-
-/* __bit_scan_reverse */
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
-_bit_scan_reverse(int __A) {
-  return 31 - __builtin_clz(__A);
-}
-
 #if !defined(_MSC_VER) || __has_feature(modules) || defined(__FSGSBASE__)
 #ifdef __x86_64__
 static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__, __target__("fsgsbase")))

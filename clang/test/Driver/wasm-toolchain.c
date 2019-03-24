@@ -42,7 +42,7 @@
 // Thread-related command line tests.
 
 // '-pthread' sets '-target-feature +atomics' and '--shared-memory'
-// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -pthread 2>&1 | FileCheck -check-prefix=PTHREAD %s
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -fuse-ld=wasm-ld -pthread 2>&1 | FileCheck -check-prefix=PTHREAD %s
 // PTHREAD: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+atomics"
 // PTHREAD: wasm-ld{{.*}}" "-lpthread" "--shared-memory"
 
