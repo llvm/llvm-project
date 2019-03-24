@@ -683,7 +683,8 @@ private:
 
   /// \reorder commutative operands to get better probability of
   /// generating vectorized code.
-  void reorderInputsAccordingToOpcode(unsigned Opcode, ArrayRef<Value *> VL,
+  void reorderInputsAccordingToOpcode(const InstructionsState &S,
+                                      ArrayRef<Value *> VL,
                                       SmallVectorImpl<Value *> &Left,
                                       SmallVectorImpl<Value *> &Right);
   struct TreeEntry {
@@ -1896,7 +1897,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // have the same opcode.
       if (isa<BinaryOperator>(VL0) && VL0->isCommutative()) {
         ValueList Left, Right;
-        reorderInputsAccordingToOpcode(S.getOpcode(), VL, Left, Right);
+        reorderInputsAccordingToOpcode(S, VL, Left, Right);
         UserTreeIdx.EdgeIdx = 0;
         buildTree_rec(Left, Depth + 1, UserTreeIdx);
         UserTreeIdx.EdgeIdx = 1;
@@ -2809,7 +2810,7 @@ void BoUpSLP::reorderAltShuffleOperands(const InstructionsState &S,
 
   // Reorder if we have a commutative operation and consecutive access
   // are on either side of the alternate instructions.
-  for (unsigned j = 0; j < VL.size() - 1; ++j) {
+  for (unsigned j = 0, e = VL.size() - 1; j < e; ++j) {
     if (LoadInst *L = dyn_cast<LoadInst>(Left[j])) {
       if (LoadInst *L1 = dyn_cast<LoadInst>(Right[j + 1])) {
         Instruction *VL1 = cast<Instruction>(VL[j]);
@@ -2849,10 +2850,12 @@ void BoUpSLP::reorderAltShuffleOperands(const InstructionsState &S,
 // The vectorizer is trying to either have all elements one side being
 // instruction with the same opcode to enable further vectorization, or having
 // a splat to lower the vectorizing cost.
-static bool shouldReorderOperands(
-    int i, unsigned Opcode, Instruction &I, ArrayRef<Value *> Left,
-    ArrayRef<Value *> Right, bool AllSameOpcodeLeft, bool AllSameOpcodeRight,
-    bool SplatLeft, bool SplatRight, Value *&VLeft, Value *&VRight) {
+static bool shouldReorderOperands(int i, Instruction &I, ArrayRef<Value *> Left,
+                                  ArrayRef<Value *> Right,
+                                  bool AllSameOpcodeLeft,
+                                  bool AllSameOpcodeRight, bool SplatLeft,
+                                  bool SplatRight, Value *&VLeft,
+                                  Value *&VRight) {
   VLeft = I.getOperand(0);
   VRight = I.getOperand(1);
   // If we have "SplatRight", try to see if commuting is needed to preserve it.
@@ -2910,7 +2913,7 @@ static bool shouldReorderOperands(
   return false;
 }
 
-void BoUpSLP::reorderInputsAccordingToOpcode(unsigned Opcode,
+void BoUpSLP::reorderInputsAccordingToOpcode(const InstructionsState &S,
                                              ArrayRef<Value *> VL,
                                              SmallVectorImpl<Value *> &Left,
                                              SmallVectorImpl<Value *> &Right) {
@@ -2936,14 +2939,15 @@ void BoUpSLP::reorderInputsAccordingToOpcode(unsigned Opcode,
 
   for (unsigned i = 1, e = VL.size(); i != e; ++i) {
     Instruction *I = cast<Instruction>(VL[i]);
-    assert(((I->getOpcode() == Opcode && I->isCommutative()) ||
-            (I->getOpcode() != Opcode && Instruction::isCommutative(Opcode))) &&
+    assert(((I->getOpcode() == S.getOpcode() && I->isCommutative()) ||
+            (I->getOpcode() != S.getOpcode() &&
+             Instruction::isCommutative(S.getOpcode()))) &&
            "Can only process commutative instruction");
     // Commute to favor either a splat or maximizing having the same opcodes on
     // one side.
     Value *VLeft;
     Value *VRight;
-    if (shouldReorderOperands(i, Opcode, *I, Left, Right, AllSameOpcodeLeft,
+    if (shouldReorderOperands(i, *I, Left, Right, AllSameOpcodeLeft,
                               AllSameOpcodeRight, SplatLeft, SplatRight, VLeft,
                               VRight)) {
       Left.push_back(VRight);

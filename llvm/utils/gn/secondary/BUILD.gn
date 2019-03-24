@@ -11,6 +11,8 @@ group("default") {
     "//clang-tools-extra/clang-query/tool:clang-query",
     "//clang-tools-extra/clang-reorder-fields/tool:clang-reorder-fields",
     "//clang-tools-extra/clang-tidy/tool:clang-tidy",
+    "//clang-tools-extra/modularize",
+    "//clang-tools-extra/pp-trace",
     "//clang/test",
     "//lld/test",
     "//llvm/test",

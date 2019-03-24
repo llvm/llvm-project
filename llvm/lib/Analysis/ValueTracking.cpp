@@ -5711,7 +5711,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo) {
     setLimitsForSelectPattern(*SI, Lower, Upper);
 
   ConstantRange CR = Lower != Upper ? ConstantRange(Lower, Upper)
-                                    : ConstantRange(BitWidth, true);
+                                    : ConstantRange::getFull(BitWidth);
 
   if (auto *I = dyn_cast<Instruction>(V))
     if (auto *Range = IIQ.getMetadata(I, LLVMContext::MD_range))
