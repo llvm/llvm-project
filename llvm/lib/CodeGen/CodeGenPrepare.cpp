@@ -374,6 +374,13 @@ class TypePromotionTransaction;
     bool simplifyOffsetableRelocate(Instruction &I);
 
     bool tryToSinkFreeOperands(Instruction *I);
+    bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
+                                     Intrinsic::ID IID, DominatorTree &DT);
+    bool optimizeCmp(CmpInst *Cmp, DominatorTree &DT, bool &ModifiedDT);
+    bool combineToUSubWithOverflow(CmpInst *Cmp, DominatorTree &DT,
+                                   bool &ModifiedDT);
+    bool combineToUAddWithOverflow(CmpInst *Cmp, DominatorTree &DT,
+                                   bool &ModifiedDT);
   };
 
 } // end anonymous namespace
@@ -1157,8 +1164,10 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   return SinkCast(CI);
 }
 
-static bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
-                                        Intrinsic::ID IID, DominatorTree &DT) {
+bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
+                                                 CmpInst *Cmp,
+                                                 Intrinsic::ID IID,
+                                                 DominatorTree &DT) {
   // We allow matching the canonical IR (add X, C) back to (usubo X, -C).
   Value *Arg0 = BO->getOperand(0);
   Value *Arg1 = BO->getOperand(1);
@@ -1242,17 +1251,16 @@ static bool matchUAddWithOverflowConstantEdgeCases(CmpInst *Cmp,
 
 /// Try to combine the compare into a call to the llvm.uadd.with.overflow
 /// intrinsic. Return true if any changes were made.
-static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
-                                      const DataLayout &DL, DominatorTree &DT,
-                                      bool &ModifiedDT) {
+bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp, DominatorTree &DT,
+                                               bool &ModifiedDT) {
   Value *A, *B;
   BinaryOperator *Add;
   if (!match(Cmp, m_UAddWithOverflow(m_Value(A), m_Value(B), m_BinOp(Add))))
     if (!matchUAddWithOverflowConstantEdgeCases(Cmp, Add))
       return false;
 
-  if (!TLI.shouldFormOverflowOp(ISD::UADDO,
-                                TLI.getValueType(DL, Add->getType())))
+  if (!TLI->shouldFormOverflowOp(ISD::UADDO,
+                                 TLI->getValueType(*DL, Add->getType())))
     return false;
 
   // We don't want to move around uses of condition values this late, so we
@@ -1269,9 +1277,8 @@ static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
   return true;
 }
 
-static bool combineToUSubWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
-                                      const DataLayout &DL, DominatorTree &DT,
-                                      bool &ModifiedDT) {
+bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp, DominatorTree &DT,
+                                               bool &ModifiedDT) {
   // We are not expecting non-canonical/degenerate code. Just bail out.
   Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
   if (isa<Constant>(A) && isa<Constant>(B))
@@ -1319,8 +1326,8 @@ static bool combineToUSubWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
   if (!Sub)
     return false;
 
-  if (!TLI.shouldFormOverflowOp(ISD::USUBO,
-                                TLI.getValueType(DL, Sub->getType())))
+  if (!TLI->shouldFormOverflowOp(ISD::USUBO,
+                                 TLI->getValueType(*DL, Sub->getType())))
     return false;
 
   if (!replaceMathCmpWithIntrinsic(Sub, Cmp, Intrinsic::usub_with_overflow, DT))
@@ -1397,16 +1404,15 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
   return MadeChange;
 }
 
-static bool optimizeCmp(CmpInst *Cmp, const TargetLowering &TLI,
-                        const DataLayout &DL, DominatorTree &DT,
-                        bool &ModifiedDT) {
-  if (sinkCmpExpression(Cmp, TLI))
+bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, DominatorTree &DT,
+                                 bool &ModifiedDT) {
+  if (sinkCmpExpression(Cmp, *TLI))
     return true;
 
-  if (combineToUAddWithOverflow(Cmp, TLI, DL, DT, ModifiedDT))
+  if (combineToUAddWithOverflow(Cmp, DT, ModifiedDT))
     return true;
 
-  if (combineToUSubWithOverflow(Cmp, TLI, DL, DT, ModifiedDT))
+  if (combineToUSubWithOverflow(Cmp, DT, ModifiedDT))
     return true;
 
   return false;
@@ -6926,7 +6932,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, DominatorTree &DT,
   }
 
   if (auto *Cmp = dyn_cast<CmpInst>(I))
-    if (TLI && optimizeCmp(Cmp, *TLI, *DL, DT, ModifiedDT))
+    if (TLI && optimizeCmp(Cmp, DT, ModifiedDT))
       return true;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {

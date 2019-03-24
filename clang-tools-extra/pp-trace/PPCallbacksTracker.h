@@ -32,14 +32,11 @@
 #include <string>
 #include <vector>
 
-/// \brief This class represents one callback function argument by name
-///   and value.
-class Argument {
-public:
-  Argument(llvm::StringRef Name, llvm::StringRef Value)
-      : Name(Name), Value(Value) {}
-  Argument() = default;
+namespace clang {
+namespace pp_trace {
 
+// This struct represents one callback function argument by name and value.
+struct Argument {
   std::string Name;
   std::string Value;
 };
@@ -74,7 +71,7 @@ using FilterType = std::vector<std::pair<llvm::GlobPattern, bool>>;
 /// overidden callback functions are defined.  The remaining functions are
 /// helpers for recording the trace data, to reduce the coupling between it
 /// and the recorded data structure.
-class PPCallbacksTracker : public clang::PPCallbacks {
+class PPCallbacksTracker : public PPCallbacks {
 public:
   /// \brief Note that all of the arguments are references, and owned
   /// by the caller.
@@ -83,89 +80,72 @@ public:
   /// \param PP - The preprocessor.  Needed for getting some argument strings.
   PPCallbacksTracker(const FilterType &Filters,
                      std::vector<CallbackCall> &CallbackCalls,
-                     clang::Preprocessor &PP);
+                     Preprocessor &PP);
 
   ~PPCallbacksTracker() override;
 
   // Overidden callback functions.
 
-  void FileChanged(clang::SourceLocation Loc,
-                   clang::PPCallbacks::FileChangeReason Reason,
-                   clang::SrcMgr::CharacteristicKind FileType,
-                   clang::FileID PrevFID = clang::FileID()) override;
-  void FileSkipped(const clang::FileEntry &SkippedFile,
-                   const clang::Token &FilenameTok,
-                   clang::SrcMgr::CharacteristicKind FileType) override;
+  void FileChanged(SourceLocation Loc, PPCallbacks::FileChangeReason Reason,
+                   SrcMgr::CharacteristicKind FileType,
+                   FileID PrevFID = FileID()) override;
+  void FileSkipped(const FileEntry &SkippedFile, const Token &FilenameTok,
+                   SrcMgr::CharacteristicKind FileType) override;
   bool FileNotFound(llvm::StringRef FileName,
                     llvm::SmallVectorImpl<char> &RecoveryPath) override;
-  void InclusionDirective(clang::SourceLocation HashLoc,
-                          const clang::Token &IncludeTok,
+  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           llvm::StringRef FileName, bool IsAngled,
-                          clang::CharSourceRange FilenameRange,
-                          const clang::FileEntry *File,
+                          CharSourceRange FilenameRange, const FileEntry *File,
                           llvm::StringRef SearchPath,
-                          llvm::StringRef RelativePath,
-                          const clang::Module *Imported,
-                          clang::SrcMgr::CharacteristicKind FileType) override;
-  void moduleImport(clang::SourceLocation ImportLoc, clang::ModuleIdPath Path,
-                    const clang::Module *Imported) override;
+                          llvm::StringRef RelativePath, const Module *Imported,
+                          SrcMgr::CharacteristicKind FileType) override;
+  void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
+                    const Module *Imported) override;
   void EndOfMainFile() override;
-  void Ident(clang::SourceLocation Loc, llvm::StringRef str) override;
-  void PragmaDirective(clang::SourceLocation Loc,
-                       clang::PragmaIntroducerKind Introducer) override;
-  void PragmaComment(clang::SourceLocation Loc,
-                     const clang::IdentifierInfo *Kind,
+  void Ident(SourceLocation Loc, llvm::StringRef str) override;
+  void PragmaDirective(SourceLocation Loc,
+                       PragmaIntroducerKind Introducer) override;
+  void PragmaComment(SourceLocation Loc, const IdentifierInfo *Kind,
                      llvm::StringRef Str) override;
-  void PragmaDetectMismatch(clang::SourceLocation Loc, llvm::StringRef Name,
+  void PragmaDetectMismatch(SourceLocation Loc, llvm::StringRef Name,
                             llvm::StringRef Value) override;
-  void PragmaDebug(clang::SourceLocation Loc,
-                   llvm::StringRef DebugType) override;
-  void PragmaMessage(clang::SourceLocation Loc, llvm::StringRef Namespace,
-                     clang::PPCallbacks::PragmaMessageKind Kind,
+  void PragmaDebug(SourceLocation Loc, llvm::StringRef DebugType) override;
+  void PragmaMessage(SourceLocation Loc, llvm::StringRef Namespace,
+                     PPCallbacks::PragmaMessageKind Kind,
                      llvm::StringRef Str) override;
-  void PragmaDiagnosticPush(clang::SourceLocation Loc,
+  void PragmaDiagnosticPush(SourceLocation Loc,
                             llvm::StringRef Namespace) override;
-  void PragmaDiagnosticPop(clang::SourceLocation Loc,
+  void PragmaDiagnosticPop(SourceLocation Loc,
                            llvm::StringRef Namespace) override;
-  void PragmaDiagnostic(clang::SourceLocation Loc, llvm::StringRef Namespace,
-                        clang::diag::Severity mapping,
-                        llvm::StringRef Str) override;
-  void PragmaOpenCLExtension(clang::SourceLocation NameLoc,
-                             const clang::IdentifierInfo *Name,
-                             clang::SourceLocation StateLoc,
-                             unsigned State) override;
-  void PragmaWarning(clang::SourceLocation Loc, llvm::StringRef WarningSpec,
+  void PragmaDiagnostic(SourceLocation Loc, llvm::StringRef Namespace,
+                        diag::Severity mapping, llvm::StringRef Str) override;
+  void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *Name,
+                             SourceLocation StateLoc, unsigned State) override;
+  void PragmaWarning(SourceLocation Loc, llvm::StringRef WarningSpec,
                      llvm::ArrayRef<int> Ids) override;
-  void PragmaWarningPush(clang::SourceLocation Loc, int Level) override;
-  void PragmaWarningPop(clang::SourceLocation Loc) override;
-  void PragmaExecCharsetPush(clang::SourceLocation Loc,
-                             clang::StringRef Str) override;
-  void PragmaExecCharsetPop(clang::SourceLocation Loc) override;
-  void MacroExpands(const clang::Token &MacroNameTok,
-                    const clang::MacroDefinition &MD, clang::SourceRange Range,
-                    const clang::MacroArgs *Args) override;
-  void MacroDefined(const clang::Token &MacroNameTok,
-                    const clang::MacroDirective *MD) override;
-  void MacroUndefined(const clang::Token &MacroNameTok,
-                      const clang::MacroDefinition &MD,
-                      const clang::MacroDirective *Undef) override;
-  void Defined(const clang::Token &MacroNameTok,
-               const clang::MacroDefinition &MD,
-               clang::SourceRange Range) override;
-  void SourceRangeSkipped(clang::SourceRange Range,
-                          clang::SourceLocation EndifLoc) override;
-  void If(clang::SourceLocation Loc, clang::SourceRange ConditionRange,
+  void PragmaWarningPush(SourceLocation Loc, int Level) override;
+  void PragmaWarningPop(SourceLocation Loc) override;
+  void PragmaExecCharsetPush(SourceLocation Loc, StringRef Str) override;
+  void PragmaExecCharsetPop(SourceLocation Loc) override;
+  void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
+                    SourceRange Range, const MacroArgs *Args) override;
+  void MacroDefined(const Token &MacroNameTok,
+                    const MacroDirective *MD) override;
+  void MacroUndefined(const Token &MacroNameTok, const MacroDefinition &MD,
+                      const MacroDirective *Undef) override;
+  void Defined(const Token &MacroNameTok, const MacroDefinition &MD,
+               SourceRange Range) override;
+  void SourceRangeSkipped(SourceRange Range, SourceLocation EndifLoc) override;
+  void If(SourceLocation Loc, SourceRange ConditionRange,
           ConditionValueKind ConditionValue) override;
-  void Elif(clang::SourceLocation Loc, clang::SourceRange ConditionRange,
-            ConditionValueKind ConditionValue, clang::SourceLocation IfLoc) override;
-  void Ifdef(clang::SourceLocation Loc, const clang::Token &MacroNameTok,
-             const clang::MacroDefinition &MD) override;
-  void Ifndef(clang::SourceLocation Loc, const clang::Token &MacroNameTok,
-              const clang::MacroDefinition &MD) override;
-  void Else(clang::SourceLocation Loc,
-            clang::SourceLocation IfLoc) override;
-  void Endif(clang::SourceLocation Loc,
-             clang::SourceLocation IfLoc) override;
+  void Elif(SourceLocation Loc, SourceRange ConditionRange,
+            ConditionValueKind ConditionValue, SourceLocation IfLoc) override;
+  void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+             const MacroDefinition &MD) override;
+  void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
+              const MacroDefinition &MD) override;
+  void Else(SourceLocation Loc, SourceLocation IfLoc) override;
+  void Endif(SourceLocation Loc, SourceLocation IfLoc) override;
 
   // Helper functions.
 
@@ -191,43 +171,43 @@ public:
   void appendArgument(const char *Name, const std::string &Value);
 
   /// \brief Append a token argument to the top trace item.
-  void appendArgument(const char *Name, const clang::Token &Value);
+  void appendArgument(const char *Name, const Token &Value);
 
   /// \brief Append an enum argument to the top trace item.
   void appendArgument(const char *Name, int Value, const char *const Strings[]);
 
   /// \brief Append a FileID argument to the top trace item.
-  void appendArgument(const char *Name, clang::FileID Value);
+  void appendArgument(const char *Name, FileID Value);
 
   /// \brief Append a FileEntry argument to the top trace item.
-  void appendArgument(const char *Name, const clang::FileEntry *Value);
+  void appendArgument(const char *Name, const FileEntry *Value);
 
   /// \brief Append a SourceLocation argument to the top trace item.
-  void appendArgument(const char *Name, clang::SourceLocation Value);
+  void appendArgument(const char *Name, SourceLocation Value);
 
   /// \brief Append a SourceRange argument to the top trace item.
-  void appendArgument(const char *Name, clang::SourceRange Value);
+  void appendArgument(const char *Name, SourceRange Value);
 
   /// \brief Append a CharSourceRange argument to the top trace item.
-  void appendArgument(const char *Name, clang::CharSourceRange Value);
+  void appendArgument(const char *Name, CharSourceRange Value);
 
   /// \brief Append a ModuleIdPath argument to the top trace item.
-  void appendArgument(const char *Name, clang::ModuleIdPath Value);
+  void appendArgument(const char *Name, ModuleIdPath Value);
 
   /// \brief Append an IdentifierInfo argument to the top trace item.
-  void appendArgument(const char *Name, const clang::IdentifierInfo *Value);
+  void appendArgument(const char *Name, const IdentifierInfo *Value);
 
   /// \brief Append a MacroDirective argument to the top trace item.
-  void appendArgument(const char *Name, const clang::MacroDirective *Value);
+  void appendArgument(const char *Name, const MacroDirective *Value);
 
   /// \brief Append a MacroDefinition argument to the top trace item.
-  void appendArgument(const char *Name, const clang::MacroDefinition &Value);
+  void appendArgument(const char *Name, const MacroDefinition &Value);
 
   /// \brief Append a MacroArgs argument to the top trace item.
-  void appendArgument(const char *Name, const clang::MacroArgs *Value);
+  void appendArgument(const char *Name, const MacroArgs *Value);
 
   /// \brief Append a Module argument to the top trace item.
-  void appendArgument(const char *Name, const clang::Module *Value);
+  void appendArgument(const char *Name, const Module *Value);
 
   /// \brief Append a double-quoted argument to the top trace item.
   void appendQuotedArgument(const char *Name, const std::string &Value);
@@ -236,7 +216,7 @@ public:
   void appendFilePathArgument(const char *Name, llvm::StringRef Value);
 
   /// \brief Get the raw source string of the range.
-  llvm::StringRef getSourceString(clang::CharSourceRange Range);
+  llvm::StringRef getSourceString(CharSourceRange Range);
 
   /// \brief Callback trace information.
   /// We use a reference so the trace will be preserved for the caller
@@ -252,7 +232,10 @@ public:
   /// \brief Inhibit trace while this is set.
   bool DisableTrace;
 
-  clang::Preprocessor &PP;
+  Preprocessor &PP;
 };
+
+} // namespace pp_trace
+} // namespace clang
 
 #endif // PPTRACE_PPCALLBACKSTRACKER_H

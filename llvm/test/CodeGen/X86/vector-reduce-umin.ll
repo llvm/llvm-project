@@ -771,32 +771,29 @@ define i32 @test_v2i32(<2 x i32> %a0) {
 ; AVX1-LABEL: test_v2i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm0, %xmm1
+; AVX1-NEXT:    vblendvpd %xmm1, %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_v2i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm2 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX2-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX2-NEXT:    vpcmpgtq %xmm2, %xmm0, %xmm1
+; AVX2-NEXT:    vblendvpd %xmm1, %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_v2i32:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX512BW-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX512BW-NEXT:    vpminuq %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX512BW-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX512BW-NEXT:    vpminuq %zmm0, %zmm2, %zmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
