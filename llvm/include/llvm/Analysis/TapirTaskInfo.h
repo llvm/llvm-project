@@ -789,6 +789,8 @@ protected:
   }
 };
 
+raw_ostream &operator<<(raw_ostream &OS, const Task &T);
+
 //===--------------------------------------------------------------------===//
 // GraphTraits specializations for task spindle graphs
 //===--------------------------------------------------------------------===//

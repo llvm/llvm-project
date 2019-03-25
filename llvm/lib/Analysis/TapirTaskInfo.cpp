@@ -814,6 +814,11 @@ void Spindle::print(raw_ostream &OS, bool Verbose) const {
   }
 }
 
+raw_ostream &llvm::operator<<(raw_ostream &OS, const Task &T) {
+  T.print(OS);
+  return OS;
+}
+
 /// Print task with all the BBs inside it.
 void Task::print(raw_ostream &OS, unsigned Depth, bool Verbose) const {
   OS.indent(Depth * 2) << "task at depth " << Depth << " containing: ";
