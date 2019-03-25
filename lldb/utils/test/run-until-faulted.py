@@ -32,7 +32,6 @@ def which(program):
 
 
 def do_lldb_launch_loop(lldb_command, exe, exe_options):
-    from cStringIO import StringIO
     import pexpect
     import time
 

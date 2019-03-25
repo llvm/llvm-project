@@ -19,8 +19,6 @@ project(ParallelSTL VERSION ${VERSION_MAJOR}.${VERSION_MINOR} LANGUAGES CXX)
 option(PARALLELSTL_USE_PARALLEL_POLICIES "Enable parallel policies" OFF)
 set(PARALLELSTL_BACKEND "tbb" CACHE STRING "Threading backend; defaults to TBB")
 
-include(CMakePackageConfigHelpers)
-
 if (NOT TBB_DIR)
     get_filename_component(PSTL_DIR_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
     string(REPLACE pstl tbb TBB_DIR_NAME ${PSTL_DIR_NAME})
@@ -54,6 +52,7 @@ target_include_directories(ParallelSTL
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
+include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfigVersion.cmake
     VERSION ${PROJECT_VERSION}

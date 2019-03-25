@@ -663,7 +663,7 @@ public:
     Stream &s = result.GetOutputStream();
     MinidumpParser &minidump = *process->m_minidump_parser;
     if (DumpDirectory()) {
-      s.Printf("RVA        SIZE       TYPE       MinidumpStreamType\n");
+      s.Printf("RVA        SIZE       TYPE       StreamType\n");
       s.Printf("---------- ---------- ---------- --------------------------\n");
       for (const auto &pair: minidump.GetDirectoryMap())
         s.Printf("0x%8.8x 0x%8.8x 0x%8.8x %s\n", (uint32_t)pair.second.rva,
@@ -671,7 +671,7 @@ public:
                  MinidumpParser::GetStreamTypeAsString(pair.first).data());
       s.Printf("\n");
     }
-    auto DumpTextStream = [&](MinidumpStreamType stream_type,
+    auto DumpTextStream = [&](StreamType stream_type,
                               llvm::StringRef label) -> void {
       auto bytes = minidump.GetStream(stream_type);
       if (!bytes.empty()) {
@@ -680,7 +680,7 @@ public:
         s.Printf("%s:\n%s\n\n", label.data(), bytes.data());
       }
     };
-    auto DumpBinaryStream = [&](MinidumpStreamType stream_type,
+    auto DumpBinaryStream = [&](StreamType stream_type,
                                 llvm::StringRef label) -> void {
       auto bytes = minidump.GetStream(stream_type);
       if (!bytes.empty()) {
@@ -696,30 +696,30 @@ public:
     };
 
     if (DumpLinuxCPUInfo())
-      DumpTextStream(MinidumpStreamType::LinuxCPUInfo, "/proc/cpuinfo");
+      DumpTextStream(StreamType::LinuxCPUInfo, "/proc/cpuinfo");
     if (DumpLinuxProcStatus())
-      DumpTextStream(MinidumpStreamType::LinuxProcStatus, "/proc/PID/status");
+      DumpTextStream(StreamType::LinuxProcStatus, "/proc/PID/status");
     if (DumpLinuxLSBRelease())
-      DumpTextStream(MinidumpStreamType::LinuxLSBRelease, "/etc/lsb-release");
+      DumpTextStream(StreamType::LinuxLSBRelease, "/etc/lsb-release");
     if (DumpLinuxCMDLine())
-      DumpTextStream(MinidumpStreamType::LinuxCMDLine, "/proc/PID/cmdline");
+      DumpTextStream(StreamType::LinuxCMDLine, "/proc/PID/cmdline");
     if (DumpLinuxEnviron())
-      DumpTextStream(MinidumpStreamType::LinuxEnviron, "/proc/PID/environ");
+      DumpTextStream(StreamType::LinuxEnviron, "/proc/PID/environ");
     if (DumpLinuxAuxv())
-      DumpBinaryStream(MinidumpStreamType::LinuxAuxv, "/proc/PID/auxv");
+      DumpBinaryStream(StreamType::LinuxAuxv, "/proc/PID/auxv");
     if (DumpLinuxMaps())
-      DumpTextStream(MinidumpStreamType::LinuxMaps, "/proc/PID/maps");
+      DumpTextStream(StreamType::LinuxMaps, "/proc/PID/maps");
     if (DumpLinuxProcStat())
-      DumpTextStream(MinidumpStreamType::LinuxProcStat, "/proc/PID/stat");
+      DumpTextStream(StreamType::LinuxProcStat, "/proc/PID/stat");
     if (DumpLinuxProcUptime())
-      DumpTextStream(MinidumpStreamType::LinuxProcUptime, "uptime");
+      DumpTextStream(StreamType::LinuxProcUptime, "uptime");
     if (DumpLinuxProcFD())
-      DumpTextStream(MinidumpStreamType::LinuxProcFD, "/proc/PID/fd");
+      DumpTextStream(StreamType::LinuxProcFD, "/proc/PID/fd");
     if (DumpFacebookAppData())
-      DumpTextStream(MinidumpStreamType::FacebookAppCustomData,
+      DumpTextStream(StreamType::FacebookAppCustomData,
                      "Facebook App Data");
     if (DumpFacebookBuildID()) {
-      auto bytes = minidump.GetStream(MinidumpStreamType::FacebookBuildID);
+      auto bytes = minidump.GetStream(StreamType::FacebookBuildID);
       if (bytes.size() >= 4) {
         DataExtractor data(bytes.data(), bytes.size(), eByteOrderLittle,
                            process->GetAddressByteSize());
@@ -731,31 +731,31 @@ public:
       }
     }
     if (DumpFacebookVersionName())
-      DumpTextStream(MinidumpStreamType::FacebookAppVersionName,
+      DumpTextStream(StreamType::FacebookAppVersionName,
                      "Facebook Version String");
     if (DumpFacebookJavaStack())
-      DumpTextStream(MinidumpStreamType::FacebookJavaStack,
+      DumpTextStream(StreamType::FacebookJavaStack,
                      "Facebook Java Stack");
     if (DumpFacebookDalvikInfo())
-      DumpTextStream(MinidumpStreamType::FacebookDalvikInfo,
+      DumpTextStream(StreamType::FacebookDalvikInfo,
                      "Facebook Dalvik Info");
     if (DumpFacebookUnwindSymbols())
-      DumpBinaryStream(MinidumpStreamType::FacebookUnwindSymbols,
+      DumpBinaryStream(StreamType::FacebookUnwindSymbols,
                        "Facebook Unwind Symbols Bytes");
     if (DumpFacebookErrorLog())
-      DumpTextStream(MinidumpStreamType::FacebookDumpErrorLog,
+      DumpTextStream(StreamType::FacebookDumpErrorLog,
                      "Facebook Error Log");
     if (DumpFacebookAppStateLog())
-      DumpTextStream(MinidumpStreamType::FacebookAppStateLog,
+      DumpTextStream(StreamType::FacebookAppStateLog,
                      "Faceook Application State Log");
     if (DumpFacebookAbortReason())
-      DumpTextStream(MinidumpStreamType::FacebookAbortReason,
+      DumpTextStream(StreamType::FacebookAbortReason,
                      "Facebook Abort Reason");
     if (DumpFacebookThreadName())
-      DumpTextStream(MinidumpStreamType::FacebookThreadName,
+      DumpTextStream(StreamType::FacebookThreadName,
                      "Facebook Thread Name");
     if (DumpFacebookLogcat())
-      DumpTextStream(MinidumpStreamType::FacebookLogcat,
+      DumpTextStream(StreamType::FacebookLogcat,
                      "Facebook Logcat");
     return true;
   }

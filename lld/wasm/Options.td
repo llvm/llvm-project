@@ -155,13 +155,6 @@ defm whole_archive: B<"whole-archive",
     "Force load of all members in a static library",
     "Do not force load of all members in a static library (default)">;
 
-defm check_features: B<"check-features",
-    "Check feature compatibility of linked objects (default)",
-    "Ignore feature compatibility of linked objects">;
-
-def features: CommaJoined<["--", "-"], "features=">,
-  HelpText<"Comma-separated used features, inferred from input objects by default.">;
-
 // Aliases
 def: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def: J<"entry=">, Alias<entry>;
