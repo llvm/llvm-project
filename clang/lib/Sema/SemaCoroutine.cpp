@@ -185,21 +185,8 @@ static QualType lookupCoroutineHandleType(Sema &S, QualType PromiseType,
 
 static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
                                     StringRef Keyword) {
-  // 'co_await' and 'co_yield' are not permitted in unevaluated operands,
-  // such as subexpressions of \c sizeof.
-  //
-  // [expr.await]p2, emphasis added: "An await-expression shall appear only in
-  // a *potentially evaluated* expression within the compound-statement of a
-  // function-body outside of a handler [...] A context within a function where
-  // an await-expression can appear is called a suspension context of the
-  // function." And per [expr.yield]p1: "A yield-expression shall appear only
-  // within a suspension context of a function."
-  if (S.isUnevaluatedContext()) {
-    S.Diag(Loc, diag::err_coroutine_unevaluated_context) << Keyword;
-    return false;
-  }
-
-  // Per [expr.await]p2, any other usage must be within a function.
+  // [expr.await]p2 dictates that 'co_await' and 'co_yield' must be used within
+  // a function body.
   // FIXME: This also covers [expr.await]p2: "An await-expression shall not
   // appear in a default argument." But the diagnostic QoI here could be
   // improved to inform the user that default arguments specifically are not
@@ -668,11 +655,56 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   return true;
 }
 
+// Recursively walks up the scope hierarchy until either a 'catch' or a function
+// scope is found, whichever comes first.
+static bool isWithinCatchScope(Scope *S) {
+  // 'co_await' and 'co_yield' keywords are disallowed within catch blocks, but
+  // lambdas that use 'co_await' are allowed. The loop below ends when a
+  // function scope is found in order to ensure the following behavior:
+  //
+  // void foo() {      // <- function scope
+  //   try {           //
+  //     co_await x;   // <- 'co_await' is OK within a function scope
+  //   } catch {       // <- catch scope
+  //     co_await x;   // <- 'co_await' is not OK within a catch scope
+  //     []() {        // <- function scope
+  //       co_await x; // <- 'co_await' is OK within a function scope
+  //     }();
+  //   }
+  // }
+  while (S && !(S->getFlags() & Scope::FnScope)) {
+    if (S->getFlags() & Scope::CatchScope)
+      return true;
+    S = S->getParent();
+  }
+  return false;
+}
+
+// [expr.await]p2, emphasis added: "An await-expression shall appear only in
+// a *potentially evaluated* expression within the compound-statement of a
+// function-body *outside of a handler* [...] A context within a function
+// where an await-expression can appear is called a suspension context of the
+// function."
+static void checkSuspensionContext(Sema &S, SourceLocation Loc,
+                                   StringRef Keyword) {
+  // First emphasis of [expr.await]p2: must be a potentially evaluated context.
+  // That is, 'co_await' and 'co_yield' cannot appear in subexpressions of
+  // \c sizeof.
+  if (S.isUnevaluatedContext())
+    S.Diag(Loc, diag::err_coroutine_unevaluated_context) << Keyword;
+
+  // Second emphasis of [expr.await]p2: must be outside of an exception handler.
+  if (isWithinCatchScope(S.getCurScope()))
+    S.Diag(Loc, diag::err_coroutine_within_handler) << Keyword;
+}
+
 ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
   if (!ActOnCoroutineBodyStart(S, Loc, "co_await")) {
     CorrectDelayedTyposInExpr(E);
     return ExprError();
   }
+
+  checkSuspensionContext(*this, Loc, "co_await");
 
   if (E->getType()->isPlaceholderType()) {
     ExprResult R = CheckPlaceholderExpr(E);
@@ -770,6 +802,8 @@ ExprResult Sema::ActOnCoyieldExpr(Scope *S, SourceLocation Loc, Expr *E) {
     CorrectDelayedTyposInExpr(E);
     return ExprError();
   }
+
+  checkSuspensionContext(*this, Loc, "co_yield");
 
   // Build yield_value call.
   ExprResult Awaitable = buildPromiseCall(

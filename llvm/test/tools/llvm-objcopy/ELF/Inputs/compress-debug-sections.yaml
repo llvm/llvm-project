@@ -25,6 +25,24 @@ Sections:
   - Name:            .debug_bar
     Type:            SHT_PROGBITS
     Content:         0000000000000000
+  - Name:            .group
+    Type:            SHT_GROUP
+    Link:            .symtab
+    AddressAlign:    4
+    EntSize:         0x0000000000000004
+    Info:            groupname
+    Members:
+      - SectionOrType:   GRP_COMDAT
+      - SectionOrType:   .text.in.group
+      - SectionOrType:   .debug_in_group
+  - Name:            .text.in.group
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+    Content:         '00'
+  - Name:            .debug_in_group
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GROUP ]
+    Content:         '00'
 Symbols:
   Global:
     - Name:    .debug_foo
@@ -35,4 +53,6 @@ Symbols:
       Section: .notdebug_foo
     - Name:    .Linfo_string0
       Section: .debug_bar
+    - Name:    groupname
+      Section: .group
 ...

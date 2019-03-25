@@ -23,7 +23,7 @@ pp-trace Usage
 Command Line Format
 -------------------
 
-``pp-trace [<pp-trace-options>] <source-file> [<front-end-options>]``
+``pp-trace [<pp-trace-options>] <source-file> [-- <front-end-options>]``
 
 ``<pp-trace-options>`` is a place-holder for options
 specific to pp-trace, which are described below in

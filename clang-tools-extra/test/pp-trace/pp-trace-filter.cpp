@@ -1,6 +1,6 @@
-// RUN: pp-trace -callbacks 'File*,Macro*,-MacroUndefined' %s | FileCheck %s
-// RUN: pp-trace -callbacks ' File* , Macro* , -MacroUndefined ' %s | FileCheck %s
-// RUN: not pp-trace -callbacks '[' %s 2>&1 | FileCheck --check-prefix=INVALID %s
+// RUN: pp-trace -callbacks 'File*,Macro*,-MacroUndefined' %s -- | FileCheck %s
+// RUN: pp-trace -callbacks ' File* , Macro* , -MacroUndefined ' %s -- | FileCheck %s
+// RUN: not pp-trace -callbacks '[' %s -- 2>&1 | FileCheck --check-prefix=INVALID %s
 
 #define M 1
 int i = M;

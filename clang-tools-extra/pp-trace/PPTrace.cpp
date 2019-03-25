@@ -17,23 +17,22 @@
 //
 // The pp-trace tool supports the following general command line format:
 //
-//    pp-trace [pp-trace options] (source file) [compiler options]
+//    pp-trace [options] file... [-- compiler options]
 //
 // Basically you put the pp-trace options first, then the source file or files,
-// and then any options you want to pass to the compiler.
+// and then -- followed by any options you want to pass to the compiler.
 //
 //===----------------------------------------------------------------------===//
 
 #include "PPCallbacksTracker.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -42,122 +41,95 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
-#include <algorithm>
-#include <fstream>
-#include <iterator>
 #include <string>
 #include <vector>
 
-using namespace clang;
-using namespace clang::tooling;
 using namespace llvm;
 
-// Options:
+namespace clang {
+namespace pp_trace {
 
-// Collect the source files.
-static cl::list<std::string> SourcePaths(cl::Positional,
-                                         cl::desc("<source0> [... <sourceN>]"),
-                                         cl::OneOrMore);
+static cl::OptionCategory Cat("pp-trace options");
 
 static cl::opt<std::string> Callbacks(
     "callbacks", cl::init("*"),
     cl::desc("Comma-separated list of globs describing the list of callbacks "
              "to output. Globs are processed in order of appearance. Globs "
              "with the '-' prefix remove callbacks from the set. e.g. "
-             "'*,-Macro*'."));
+             "'*,-Macro*'."),
+    cl::cat(Cat));
 
-// Option to specify the trace output file name.
 static cl::opt<std::string> OutputFileName(
-    "output", cl::init(""),
-    cl::desc("Output trace to the given file name or '-' for stdout."));
+    "output", cl::init("-"),
+    cl::desc("Output trace to the given file name or '-' for stdout."),
+    cl::cat(Cat));
 
-// Collect all other arguments, which will be passed to the front end.
-static cl::list<std::string>
-    CC1Arguments(cl::ConsumeAfter,
-                 cl::desc("<arguments to be passed to front end>..."));
-
-// Frontend action stuff:
-
-namespace {
-// Consumer is responsible for setting up the callbacks.
-class PPTraceConsumer : public ASTConsumer {
-public:
-  PPTraceConsumer(const FilterType &Filters,
-                  std::vector<CallbackCall> &CallbackCalls, Preprocessor &PP) {
-    // PP takes ownership.
-    PP.addPPCallbacks(
-        llvm::make_unique<PPCallbacksTracker>(Filters, CallbackCalls, PP));
-  }
-};
-
-class PPTraceAction : public SyntaxOnlyAction {
-public:
-  PPTraceAction(const FilterType &Filters,
-                std::vector<CallbackCall> &CallbackCalls)
-      : Filters(Filters), CallbackCalls(CallbackCalls) {}
-
-protected:
-  std::unique_ptr<clang::ASTConsumer>
-  CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {
-    return llvm::make_unique<PPTraceConsumer>(Filters, CallbackCalls,
-                                              CI.getPreprocessor());
-  }
-
-private:
-  const FilterType &Filters;
-  std::vector<CallbackCall> &CallbackCalls;
-};
-
-class PPTraceFrontendActionFactory : public FrontendActionFactory {
-public:
-  PPTraceFrontendActionFactory(const FilterType &Filters,
-                               std::vector<CallbackCall> &CallbackCalls)
-      : Filters(Filters), CallbackCalls(CallbackCalls) {}
-
-  PPTraceAction *create() override {
-    return new PPTraceAction(Filters, CallbackCalls);
-  }
-
-private:
-  const FilterType &Filters;
-  std::vector<CallbackCall> &CallbackCalls;
-};
-} // namespace
-
-// Output the trace given its data structure and a stream.
-static int outputPPTrace(std::vector<CallbackCall> &CallbackCalls,
-                         llvm::raw_ostream &OS) {
-  // Mark start of document.
-  OS << "---\n";
-
-  for (std::vector<CallbackCall>::const_iterator I = CallbackCalls.begin(),
-                                                 E = CallbackCalls.end();
-       I != E; ++I) {
-    const CallbackCall &Callback = *I;
-    OS << "- Callback: " << Callback.Name << "\n";
-
-    for (auto AI = Callback.Arguments.begin(), AE = Callback.Arguments.end();
-         AI != AE; ++AI) {
-      const Argument &Arg = *AI;
-      OS << "  " << Arg.Name << ": " << Arg.Value << "\n";
-    }
-  }
-
-  // Mark end of document.
-  OS << "...\n";
-
-  return 0;
+LLVM_ATTRIBUTE_NORETURN static void error(Twine Message) {
+  WithColor::error() << Message << '\n';
+  exit(1);
 }
 
-// Program entry point.
-int main(int Argc, const char **Argv) {
+namespace {
 
-  // Parse command line.
-  cl::ParseCommandLineOptions(Argc, Argv, "pp-trace.\n");
+class PPTraceAction : public ASTFrontendAction {
+public:
+  PPTraceAction(const FilterType &Filters, raw_ostream &OS)
+      : Filters(Filters), OS(OS) {}
+
+protected:
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override {
+    Preprocessor &PP = CI.getPreprocessor();
+    PP.addPPCallbacks(
+        make_unique<PPCallbacksTracker>(Filters, CallbackCalls, PP));
+    return make_unique<ASTConsumer>();
+  }
+
+  void EndSourceFileAction() override {
+    OS << "---\n";
+    for (const CallbackCall &Callback : CallbackCalls) {
+      OS << "- Callback: " << Callback.Name << "\n";
+      for (const Argument &Arg : Callback.Arguments)
+        OS << "  " << Arg.Name << ": " << Arg.Value << "\n";
+    }
+    OS << "...\n";
+
+    CallbackCalls.clear();
+  }
+
+private:
+  const FilterType &Filters;
+  raw_ostream &OS;
+  std::vector<CallbackCall> CallbackCalls;
+};
+
+class PPTraceFrontendActionFactory : public tooling::FrontendActionFactory {
+public:
+  PPTraceFrontendActionFactory(const FilterType &Filters, raw_ostream &OS)
+      : Filters(Filters), OS(OS) {}
+
+  PPTraceAction *create() override { return new PPTraceAction(Filters, OS); }
+
+private:
+  const FilterType &Filters;
+  raw_ostream &OS;
+};
+} // namespace
+} // namespace pp_trace
+} // namespace clang
+
+int main(int argc, const char **argv) {
+  using namespace clang::pp_trace;
+
+  InitLLVM X(argc, argv);
+  auto Exec =
+      clang::tooling::createExecutorFromCommandLineArgs(argc, argv, Cat);
+  if (!Exec)
+    error(toString(Exec.takeError()));
 
   // Parse the IgnoreCallbacks list into strings.
   SmallVector<StringRef, 32> Patterns;
@@ -169,51 +141,18 @@ int main(int Argc, const char **Argv) {
     bool Enabled = !Pattern.consume_front("-");
     if (Expected<GlobPattern> Pat = GlobPattern::create(Pattern))
       Filters.emplace_back(std::move(*Pat), Enabled);
-    else {
-      WithColor::error(llvm::errs(), "pp-trace")
-          << toString(Pat.takeError()) << '\n';
-      return 1;
-    }
+    else
+      error(toString(Pat.takeError()));
   }
 
-  // Create the compilation database.
-  SmallString<256> PathBuf;
-  sys::fs::current_path(PathBuf);
-  std::unique_ptr<CompilationDatabase> Compilations;
-  Compilations.reset(
-      new FixedCompilationDatabase(Twine(PathBuf), CC1Arguments));
+  std::error_code EC;
+  llvm::ToolOutputFile Out(OutputFileName, EC, llvm::sys::fs::F_Text);
+  if (EC)
+    error(EC.message());
 
-  // Store the callback trace information here.
-  std::vector<CallbackCall> CallbackCalls;
-
-  // Create the tool and run the compilation.
-  ClangTool Tool(*Compilations, SourcePaths);
-  PPTraceFrontendActionFactory Factory(Filters, CallbackCalls);
-  int HadErrors = Tool.run(&Factory);
-
-  // If we had errors, exit early.
-  if (HadErrors)
-    return HadErrors;
-
-  // Do the output.
-  if (!OutputFileName.size()) {
-    HadErrors = outputPPTrace(CallbackCalls, llvm::outs());
-  } else {
-    // Set up output file.
-    std::error_code EC;
-    llvm::ToolOutputFile Out(OutputFileName, EC, llvm::sys::fs::F_Text);
-    if (EC) {
-      llvm::errs() << "pp-trace: error creating " << OutputFileName << ":"
-                   << EC.message() << "\n";
-      return 1;
-    }
-
-    HadErrors = outputPPTrace(CallbackCalls, Out.os());
-
-    // Tell ToolOutputFile that we want to keep the file.
-    if (HadErrors == 0)
-      Out.keep();
-  }
-
-  return HadErrors;
+  if (Error Err = Exec->get()->execute(
+      make_unique<PPTraceFrontendActionFactory>(Filters, Out.os())))
+    error(toString(std::move(Err)));
+  Out.keep();
+  return 0;
 }

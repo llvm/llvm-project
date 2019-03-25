@@ -78,7 +78,11 @@ __bswapd(int __A) {
   return __builtin_bswap32(__A);
 }
 
-#define _bswap(A) __bswapd((A))
+static __inline__ int __attribute__((__always_inline__, __nodebug__))
+_bswap(int __A) {
+  return __builtin_bswap32(__A);
+}
+
 #define _bit_scan_forward(A) __bsfd((A))
 #define _bit_scan_reverse(A) __bsrd((A))
 
