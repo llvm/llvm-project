@@ -18,6 +18,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -1055,4 +1056,81 @@ PreservedAnalyses TaskVerifierPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   TI.verify(DT);
   return PreservedAnalyses::all();
+}
+
+//===----------------------------------------------------------------------===//
+// Associated analysis routines
+
+/// Examine a given loop to determine if it is structurally a Tapir loop.
+/// Returns the Task that encodes the loop body if so, or nullptr if not.
+Task *llvm::getTaskIfTapirLoopStructure(const Loop *L, TaskInfo *TI) {
+  if (!L || !TI)
+    return nullptr;
+
+  const BasicBlock *Header = L->getHeader();
+  const BasicBlock *Latch = L->getLoopLatch();
+
+  LLVM_DEBUG(dbgs() << "Analyzing loop: " << *L);
+
+  // Header must be terminated by a detach.
+  const DetachInst *DI = dyn_cast<DetachInst>(Header->getTerminator());
+  if (!DI) {
+    LLVM_DEBUG(dbgs() << "Loop header does not detach.\n");
+    return nullptr;
+  }
+
+  // Loop must have a unique latch.
+  if (!Latch) {
+    LLVM_DEBUG(dbgs() << "Loop does not have a unique latch.\n");
+    return nullptr;
+  }
+
+  // The loop latch must be the continuation of the detach in the header.
+  if (Latch != DI->getContinue()) {
+    LLVM_DEBUG(dbgs() <<
+               "Continuation of detach in header is not the latch.\n");
+    return nullptr;
+  }
+
+  Task *T = TI->getTaskFor(DI->getDetached());
+  assert(T && "Detached block not mapped to a task.");
+  assert(T->getDetach() == DI && "Task mapped to unexpected detach.");
+
+  // All predecessors of the latch other than the header must be in the task.
+  for (const BasicBlock *Pred : predecessors(Latch)) {
+    if (Header == Pred) continue;
+    if (!T->encloses(Pred)) {
+      LLVM_DEBUG(dbgs() << "Latch has predecessor outside of spawned body.\n");
+      return nullptr;
+    }
+  }
+
+  // For each exit from the latch, any predecessor of that exit inside the loop
+  // must be the header or the latch.
+  for (const BasicBlock *Exit : successors(Latch)) {
+    for (const BasicBlock *ExitPred : predecessors(Exit)) {
+      if (!L->contains(ExitPred)) continue;
+      if (Header != ExitPred && Latch != ExitPred) {
+        LLVM_DEBUG(dbgs() <<
+                   "Loop branches to an exit of the latch from a block " <<
+                   "other than the header or latch.\n");
+        return nullptr;
+      }
+    }
+  }
+
+#ifndef NDEBUG
+  // EXPENSIVE CHECK for verification.
+  //
+  // The blocks in this loop can only be the header, the latch, or a block
+  // contained in the task.
+  for (const BasicBlock *BB : L->blocks()) {
+    if (BB == Header) continue;
+    if (BB == Latch) continue;
+    assert(T->encloses(BB) &&
+           "Loop contains block not enclosed by detached task.\n");
+  }
+#endif
+
+  return T;
 }

@@ -35,6 +35,7 @@
 namespace llvm {
 
 class PHINode;
+class Loop;
 class raw_ostream;
 class Spindle;
 class Task;
@@ -1274,6 +1275,10 @@ public:
 
 /// Function to print a task's contents as LLVM's text IR assembly.
 void printTask(Task &T, raw_ostream &OS, const std::string &Banner = "");
+
+/// Examine a given loop to determine if it is structurally a Tapir loop.
+/// Returns the Task that encodes the loop body if so, or nullptr if not.
+Task *getTaskIfTapirLoopStructure(const Loop *L, TaskInfo *TI);
 
 } // End llvm namespace
 
