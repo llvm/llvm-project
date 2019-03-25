@@ -1994,8 +1994,8 @@ def : Pat<(X86sub_flag 0, GR32:$src), (NEG32r GR32:$src)>;
 def : Pat<(X86sub_flag 0, GR64:$src), (NEG64r GR64:$src)>;
 
 // sub reg, relocImm
-def : Pat<(X86sub_flag GR64:$src1, i64relocImmSExt8:$src2),
-          (SUB64ri8 GR64:$src1, i64relocImmSExt8:$src2)>;
+def : Pat<(X86sub_flag GR64:$src1, i64relocImmSExt8_su:$src2),
+          (SUB64ri8 GR64:$src1, i64relocImmSExt8_su:$src2)>;
 
 // mul reg, reg
 def : Pat<(mul GR16:$src1, GR16:$src2),

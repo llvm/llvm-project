@@ -30885,33 +30885,39 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
 
   // Match against a ZERO_EXTEND_VECTOR_INREG/VZEXT instruction.
   // TODO: Add 512-bit vector support (split AVX512F and AVX512BW).
-  if (AllowIntDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSE41()) ||
-                         (MaskVT.is256BitVector() && Subtarget.hasInt256()))) {
-    unsigned MaxScale = 64 / MaskEltSize;
-    for (unsigned Scale = 2; Scale <= MaxScale; Scale *= 2) {
-      bool Match = true;
-      unsigned NumDstElts = NumMaskElts / Scale;
-      for (unsigned i = 0; i != NumDstElts && Match; ++i) {
-        Match &= isUndefOrEqual(Mask[i * Scale], (int)i);
-        Match &= isUndefOrZeroInRange(Mask, (i * Scale) + 1, Scale - 1);
-      }
-      if (Match) {
-        unsigned SrcSize = std::max(128u, NumDstElts * MaskEltSize);
-        MVT ScalarTy = MaskVT.isInteger() ? MaskVT.getScalarType() :
-                                            MVT::getIntegerVT(MaskEltSize);
-        SrcVT = MVT::getVectorVT(ScalarTy, SrcSize / MaskEltSize);
+  if ((MaskVT.is128BitVector() && Subtarget.hasSSE41()) ||
+      (MaskVT.is256BitVector() && Subtarget.hasInt256())) {
+    // Allow this with FloatDomain if we'll be able to fold the load.
+    SDValue BC1 = peekThroughOneUseBitcasts(V1);
+    if (AllowIntDomain ||
+        (BC1.hasOneUse() && BC1.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+         MayFoldLoad(BC1.getOperand(0)))) {
+      unsigned MaxScale = 64 / MaskEltSize;
+      for (unsigned Scale = 2; Scale <= MaxScale; Scale *= 2) {
+        bool Match = true;
+        unsigned NumDstElts = NumMaskElts / Scale;
+        for (unsigned i = 0; i != NumDstElts && Match; ++i) {
+          Match &= isUndefOrEqual(Mask[i * Scale], (int)i);
+          Match &= isUndefOrZeroInRange(Mask, (i * Scale) + 1, Scale - 1);
+        }
+        if (Match) {
+          unsigned SrcSize = std::max(128u, NumDstElts * MaskEltSize);
+          MVT ScalarTy = MaskVT.isInteger() ? MaskVT.getScalarType()
+                                            : MVT::getIntegerVT(MaskEltSize);
+          SrcVT = MVT::getVectorVT(ScalarTy, SrcSize / MaskEltSize);
 
-        if (SrcVT.getSizeInBits() != MaskVT.getSizeInBits())
-          V1 = extractSubVector(V1, 0, DAG, DL, SrcSize);
+          if (SrcVT.getSizeInBits() != MaskVT.getSizeInBits())
+            V1 = extractSubVector(V1, 0, DAG, DL, SrcSize);
 
-        if (SrcVT.getVectorNumElements() == NumDstElts)
-          Shuffle = unsigned(ISD::ZERO_EXTEND);
-        else
-          Shuffle = unsigned(ISD::ZERO_EXTEND_VECTOR_INREG);
+          if (SrcVT.getVectorNumElements() == NumDstElts)
+            Shuffle = unsigned(ISD::ZERO_EXTEND);
+          else
+            Shuffle = unsigned(ISD::ZERO_EXTEND_VECTOR_INREG);
 
-        DstVT = MVT::getIntegerVT(Scale * MaskEltSize);
-        DstVT = MVT::getVectorVT(DstVT, NumDstElts);
-        return true;
+          DstVT = MVT::getIntegerVT(Scale * MaskEltSize);
+          DstVT = MVT::getVectorVT(DstVT, NumDstElts);
+          return true;
+        }
       }
     }
   }
@@ -42616,8 +42622,7 @@ static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(N->getOpcode(), SDLoc(N), VT, In.getOperand(0));
 
   // Attempt to combine as a shuffle.
-  // TODO: SSE41 support
-  if (Subtarget.hasAVX() && N->getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG) {
+  if (Subtarget.hasSSE41() && N->getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG) {
     SDValue Op(N, 0);
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(In.getValueType()))
       if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
