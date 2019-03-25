@@ -16,7 +16,7 @@ from __future__ import print_function
 import os
 import re
 import sys
-import StringIO
+import io
 
 
 def usage(problem_file=None):
@@ -37,7 +37,7 @@ def do_convert(file):
         content = f_in.read()
 
     # The new content to be written back to the same file.
-    new_content = StringIO.StringIO()
+    new_content = io.StringIO()
 
     # Boolean flag controls whether to start printing lines.
     from_header_seen = False

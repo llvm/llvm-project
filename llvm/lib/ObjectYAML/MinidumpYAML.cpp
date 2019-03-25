@@ -17,7 +17,7 @@ class BlobAllocator {
 public:
   size_t tell() const { return NextOffset; }
 
-  size_t AllocateCallback(size_t Size,
+  size_t allocateCallback(size_t Size,
                           std::function<void(raw_ostream &)> Callback) {
     size_t Offset = NextOffset;
     NextOffset += Size;
@@ -25,18 +25,18 @@ public:
     return Offset;
   }
 
-  size_t AllocateBytes(ArrayRef<uint8_t> Data) {
-    return AllocateCallback(
+  size_t allocateBytes(ArrayRef<uint8_t> Data) {
+    return allocateCallback(
         Data.size(), [Data](raw_ostream &OS) { OS << toStringRef(Data); });
   }
 
-  template <typename T> size_t AllocateArray(ArrayRef<T> Data) {
-    return AllocateBytes({reinterpret_cast<const uint8_t *>(Data.data()),
+  template <typename T> size_t allocateArray(ArrayRef<T> Data) {
+    return allocateBytes({reinterpret_cast<const uint8_t *>(Data.data()),
                           sizeof(T) * Data.size()});
   }
 
-  template <typename T> size_t AllocateObject(const T &Data) {
-    return AllocateArray(makeArrayRef(Data));
+  template <typename T> size_t allocateObject(const T &Data) {
+    return allocateArray(makeArrayRef(Data));
   }
 
   void writeTo(raw_ostream &OS) const;
@@ -340,7 +340,7 @@ static Directory layout(BlobAllocator &File, Stream &S) {
   switch (S.Kind) {
   case Stream::StreamKind::RawContent: {
     RawContentStream &Raw = cast<RawContentStream>(S);
-    File.AllocateCallback(Raw.Size, [&Raw](raw_ostream &OS) {
+    File.allocateCallback(Raw.Size, [&Raw](raw_ostream &OS) {
       Raw.Content.writeAsBinary(OS);
       assert(Raw.Content.binary_size() <= Raw.Size);
       OS << std::string(Raw.Size - Raw.Content.binary_size(), '\0');
@@ -348,10 +348,10 @@ static Directory layout(BlobAllocator &File, Stream &S) {
     break;
   }
   case Stream::StreamKind::SystemInfo:
-    File.AllocateObject(cast<SystemInfoStream>(S).Info);
+    File.allocateObject(cast<SystemInfoStream>(S).Info);
     break;
   case Stream::StreamKind::TextContent:
-    File.AllocateArray(arrayRefFromStringRef(cast<TextContentStream>(S).Text));
+    File.allocateArray(arrayRefFromStringRef(cast<TextContentStream>(S).Text));
     break;
   }
   Result.Location.DataSize = File.tell() - Result.Location.RVA;
@@ -360,11 +360,11 @@ static Directory layout(BlobAllocator &File, Stream &S) {
 
 void MinidumpYAML::writeAsBinary(Object &Obj, raw_ostream &OS) {
   BlobAllocator File;
-  File.AllocateObject(Obj.Header);
+  File.allocateObject(Obj.Header);
 
   std::vector<Directory> StreamDirectory(Obj.Streams.size());
   Obj.Header.StreamDirectoryRVA =
-      File.AllocateArray(makeArrayRef(StreamDirectory));
+      File.allocateArray(makeArrayRef(StreamDirectory));
   Obj.Header.NumberOfStreams = StreamDirectory.size();
 
   for (auto &Stream : enumerate(Obj.Streams))

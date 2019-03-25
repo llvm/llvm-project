@@ -132,7 +132,7 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp ult <16 x i8> [[TMP17]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = select <16 x i1> [[TMP24]], <16 x i8> [[TMP23]], <16 x i8> [[TMP21]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext <16 x i8> [[TMP25]] to <16 x i32>
-; CHECK-NEXT:    [[TMP27:%.*]] = mul <16 x i32> [[TMP15]], [[TMP26]]
+; CHECK-NEXT:    [[TMP27:%.*]] = mul <16 x i32> [[TMP26]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = trunc <16 x i32> [[TMP27]] to <16 x i8>
 ; CHECK-NEXT:    [[ARRAYIDX188:%.*]] = getelementptr inbounds i8, i8* [[E_ADDR_0354]], i64 15
 ; CHECK-NEXT:    [[TMP29:%.*]] = bitcast i8* [[E_ADDR_0354]] to <16 x i8>*
@@ -413,52 +413,52 @@ define i32 @foo1() local_unnamed_addr #0 {
 ; CHECK-LABEL: @foo1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([64 x i32]* @ib to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[TMP0]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], <4 x i32>* bitcast ([64 x i32]* @ia to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 4) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i32> [[TMP2]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 4) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 8) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i32> [[TMP4]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 8) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 12) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i32> [[TMP6]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 12) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 16) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP9:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = xor <4 x i32> [[TMP8]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 16) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 20) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP11:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = xor <4 x i32> [[TMP10]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP11]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 20) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 24) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP13:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = xor <4 x i32> [[TMP12]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP13]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 24) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP14:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 28) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP15:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = xor <4 x i32> [[TMP14]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP15]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 28) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP16:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 32) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP17:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = xor <4 x i32> [[TMP16]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP17]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 32) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP18:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 36) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP19:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP18]]
+; CHECK-NEXT:    [[TMP19:%.*]] = xor <4 x i32> [[TMP18]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP19]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 36) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP20:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 40) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP21:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP20]]
+; CHECK-NEXT:    [[TMP21:%.*]] = xor <4 x i32> [[TMP20]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP21]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 40) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP22:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 44) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP23:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP22]]
+; CHECK-NEXT:    [[TMP23:%.*]] = xor <4 x i32> [[TMP22]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP23]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 44) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP24:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 48) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP25:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP24]]
+; CHECK-NEXT:    [[TMP25:%.*]] = xor <4 x i32> [[TMP24]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP25]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 48) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP26:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 52) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP27:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP26]]
+; CHECK-NEXT:    [[TMP27:%.*]] = xor <4 x i32> [[TMP26]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP27]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 52) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP28:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 56) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP29:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP28]]
+; CHECK-NEXT:    [[TMP29:%.*]] = xor <4 x i32> [[TMP28]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP29]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 56) to <4 x i32>*), align 16
 ; CHECK-NEXT:    [[TMP30:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ib, i64 0, i64 60) to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP31:%.*]] = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[TMP30]]
+; CHECK-NEXT:    [[TMP31:%.*]] = xor <4 x i32> [[TMP30]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP31]], <4 x i32>* bitcast (i32* getelementptr inbounds ([64 x i32], [64 x i32]* @ia, i64 0, i64 60) to <4 x i32>*), align 16
 ; CHECK-NEXT:    br label [[FOR_BODY5:%.*]]
 ; CHECK:       for.cond3:

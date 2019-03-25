@@ -1147,7 +1147,7 @@ bool Parser::isTentativelyDeclared(IdentifierInfo *II) {
 }
 
 namespace {
-class TentativeParseCCC : public CorrectionCandidateCallback {
+class TentativeParseCCC final : public CorrectionCandidateCallback {
 public:
   TentativeParseCCC(const Token &Next) {
     WantRemainingKeywords = false;
@@ -1164,6 +1164,10 @@ public:
       return false;
 
     return CorrectionCandidateCallback::ValidateCandidate(Candidate);
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<TentativeParseCCC>(*this);
   }
 };
 }
@@ -1293,8 +1297,8 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
       // a parse error one way or another. In that case, tell the caller that
       // this is ambiguous. Typo-correct to type and expression keywords and
       // to types and identifiers, in order to try to recover from errors.
-      switch (TryAnnotateName(false /* no nested name specifier */,
-                              llvm::make_unique<TentativeParseCCC>(Next))) {
+      TentativeParseCCC CCC(Next);
+      switch (TryAnnotateName(false /* no nested name specifier */, &CCC)) {
       case ANK_Error:
         return TPResult::Error;
       case ANK_TentativeDecl:
@@ -1411,6 +1415,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw_const:
   case tok::kw_volatile:
     // OpenCL address space qualifiers
+  case tok::kw_private:
   case tok::kw___private:
   case tok::kw___local:
   case tok::kw___global:

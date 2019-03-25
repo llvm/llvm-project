@@ -17,6 +17,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 
@@ -31,14 +32,9 @@ namespace lldb_private {
 
 namespace minidump {
 
+using namespace llvm::minidump;
+
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
-
-enum class MinidumpHeaderConstants : uint32_t {
-  Signature = 0x504d444d, // 'PMDM'
-  Version = 0x0000a793,   // 42899
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Signature)
-
-};
 
 enum class CvSignature : uint32_t {
   Pdb70 = 0x53445352, // RSDS
@@ -54,129 +50,6 @@ struct CvRecordPdb70 {
 };
 static_assert(sizeof(CvRecordPdb70) == 20,
               "sizeof CvRecordPdb70 is not correct!");
-
-// Reference:
-// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680394.aspx
-enum class MinidumpStreamType : uint32_t {
-  Unused = 0,
-  Reserved0 = 1,
-  Reserved1 = 2,
-  ThreadList = 3,
-  ModuleList = 4,
-  MemoryList = 5,
-  Exception = 6,
-  SystemInfo = 7,
-  ThreadExList = 8,
-  Memory64List = 9,
-  CommentA = 10,
-  CommentW = 11,
-  HandleData = 12,
-  FunctionTable = 13,
-  UnloadedModuleList = 14,
-  MiscInfo = 15,
-  MemoryInfoList = 16,
-  ThreadInfoList = 17,
-  HandleOperationList = 18,
-  Token = 19,
-  JavascriptData = 20,
-  SystemMemoryInfo = 21,
-  ProcessVMCounters = 22,
-  LastReserved = 0x0000ffff,
-
-  /* Breakpad extension types.  0x4767 = "Gg" */
-  BreakpadInfo = 0x47670001,
-  AssertionInfo = 0x47670002,
-  /* These are additional minidump stream values which are specific to
-   * the linux breakpad implementation.   */
-  LinuxCPUInfo = 0x47670003,    /* /proc/cpuinfo      */
-  LinuxProcStatus = 0x47670004, /* /proc/$x/status    */
-  LinuxLSBRelease = 0x47670005, /* /etc/lsb-release   */
-  LinuxCMDLine = 0x47670006,    /* /proc/$x/cmdline   */
-  LinuxEnviron = 0x47670007,    /* /proc/$x/environ   */
-  LinuxAuxv = 0x47670008,       /* /proc/$x/auxv      */
-  LinuxMaps = 0x47670009,       /* /proc/$x/maps      */
-  LinuxDSODebug = 0x4767000A,
-  LinuxProcStat = 0x4767000B,   /* /proc/$x/stat      */
-  LinuxProcUptime = 0x4767000C, /* uptime             */
-  LinuxProcFD = 0x4767000D,     /* /proc/$x/fb        */
-  FacebookAppCustomData = 0xFACECAFA,
-  FacebookBuildID = 0xFACECAFB,
-  FacebookAppVersionName = 0xFACECAFC,
-  FacebookJavaStack = 0xFACECAFD,
-  FacebookDalvikInfo = 0xFACECAFE,
-  FacebookUnwindSymbols = 0xFACECAFF,
-  FacebookDumpErrorLog = 0xFACECB00,
-  FacebookAppStateLog = 0xFACECCCC,
-  FacebookAbortReason = 0xFACEDEAD,
-  FacebookThreadName = 0xFACEE000,
-  FacebookLogcat = 0xFACE1CA7,
-
-};
-
-// for MinidumpSystemInfo.processor_arch
-enum class MinidumpCPUArchitecture : uint16_t {
-  X86 = 0,         /* PROCESSOR_ARCHITECTURE_INTEL */
-  MIPS = 1,        /* PROCESSOR_ARCHITECTURE_MIPS */
-  Alpha = 2,       /* PROCESSOR_ARCHITECTURE_ALPHA */
-  PPC = 3,         /* PROCESSOR_ARCHITECTURE_PPC */
-  SHX = 4,         /* PROCESSOR_ARCHITECTURE_SHX (Super-H) */
-  ARM = 5,         /* PROCESSOR_ARCHITECTURE_ARM */
-  IA64 = 6,        /* PROCESSOR_ARCHITECTURE_IA64 */
-  Alpha64 = 7,     /* PROCESSOR_ARCHITECTURE_ALPHA64 */
-  MSIL = 8,        /* PROCESSOR_ARCHITECTURE_MSIL
-                                              * (Microsoft Intermediate Language) */
-  AMD64 = 9,       /* PROCESSOR_ARCHITECTURE_AMD64 */
-  X86Win64 = 10,   /* PROCESSOR_ARCHITECTURE_IA32_ON_WIN64 (WoW64) */
-  SPARC = 0x8001,  /* Breakpad-defined value for SPARC */
-  PPC64 = 0x8002,  /* Breakpad-defined value for PPC64 */
-  ARM64 = 0x8003,  /* Breakpad-defined value for ARM64 */
-  MIPS64 = 0x8004, /* Breakpad-defined value for MIPS64 */
-  Unknown = 0xffff /* PROCESSOR_ARCHITECTURE_UNKNOWN */
-};
-
-// for MinidumpSystemInfo.platform_id
-enum class MinidumpOSPlatform : uint32_t {
-  Win32S = 0,       /* VER_PLATFORM_WIN32s (Windows 3.1) */
-  Win32Windows = 1, /* VER_PLATFORM_WIN32_WINDOWS (Windows 95-98-Me) */
-  Win32NT = 2,      /* VER_PLATFORM_WIN32_NT (Windows NT, 2000+) */
-  Win32CE = 3,      /* VER_PLATFORM_WIN32_CE, VER_PLATFORM_WIN32_HH
-                                  * (Windows CE, Windows Mobile, "Handheld") */
-
-  /* The following values are Breakpad-defined. */
-  Unix = 0x8000,    /* Generic Unix-ish */
-  MacOSX = 0x8101,  /* Mac OS X/Darwin */
-  IOS = 0x8102,     /* iOS */
-  Linux = 0x8201,   /* Linux */
-  Solaris = 0x8202, /* Solaris */
-  Android = 0x8203, /* Android */
-  PS3 = 0x8204,     /* PS3 */
-  NaCl = 0x8205     /* Native Client (NaCl) */
-};
-
-// For MinidumpCPUInfo.arm_cpu_info.elf_hwcaps.
-// This matches the Linux kernel definitions from <asm/hwcaps.h>
-enum class MinidumpPCPUInformationARMElfHwCaps : uint32_t {
-  SWP = (1 << 0),
-  Half = (1 << 1),
-  Thumb = (1 << 2),
-  _26BIT = (1 << 3),
-  FastMult = (1 << 4),
-  FPA = (1 << 5),
-  VFP = (1 << 6),
-  EDSP = (1 << 7),
-  Java = (1 << 8),
-  IWMMXT = (1 << 9),
-  Crunch = (1 << 10),
-  ThumbEE = (1 << 11),
-  Neon = (1 << 12),
-  VFPv3 = (1 << 13),
-  VFPv3D16 = (1 << 14),
-  TLS = (1 << 15),
-  VFPv4 = (1 << 16),
-  IDIVA = (1 << 17),
-  IDIVT = (1 << 18),
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IDIVT)
-};
 
 enum class MinidumpMiscInfoFlags : uint32_t {
   ProcessID = (1 << 0),

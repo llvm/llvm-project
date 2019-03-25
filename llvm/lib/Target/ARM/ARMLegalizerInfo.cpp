@@ -129,14 +129,13 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   // We're keeping these builders around because we'll want to add support for
   // floating point to them.
-  auto &LoadStoreBuilder =
-      getActionDefinitionsBuilder({G_LOAD, G_STORE})
-          .legalForTypesWithMemDesc({
-              {s1, p0, 8, 8},
-              {s8, p0, 8, 8},
-              {s16, p0, 16, 8},
-              {s32, p0, 32, 8},
-              {p0, p0, 32, 8}});
+  auto &LoadStoreBuilder = getActionDefinitionsBuilder({G_LOAD, G_STORE})
+                               .legalForTypesWithMemDesc({{s1, p0, 8, 8},
+                                                          {s8, p0, 8, 8},
+                                                          {s16, p0, 16, 8},
+                                                          {s32, p0, 32, 8},
+                                                          {p0, p0, 32, 8}})
+                               .unsupportedIfMemSizeNotPow2();
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
@@ -155,7 +154,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FCONSTANT, G_FNEG})
         .legalFor({s32, s64});
 
-    LoadStoreBuilder.legalFor({{s64, p0}});
+    LoadStoreBuilder
+        .legalForTypesWithMemDesc({{s64, p0, 64, 32}})
+        .maxScalar(0, s32);
     PhiBuilder.legalFor({s64});
 
     getActionDefinitionsBuilder(G_FCMP).legalForCartesianProduct({s1},

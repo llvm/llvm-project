@@ -4572,8 +4572,7 @@ static void AddKeywordsToConsumer(Sema &SemaRef,
 
 std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
     const DeclarationNameInfo &TypoName, Sema::LookupNameKind LookupKind,
-    Scope *S, CXXScopeSpec *SS,
-    std::unique_ptr<CorrectionCandidateCallback> CCC,
+    Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
     DeclContext *MemberContext, bool EnteringContext,
     const ObjCObjectPointerType *OPT, bool ErrorRecovery) {
 
@@ -4635,9 +4634,13 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
                                            TypoName.getBeginLoc());
   }
 
-  CorrectionCandidateCallback &CCCRef = *CCC;
+  // Extend the lifetime of the callback. We delayed this until here
+  // to avoid allocations in the hot path (which is where no typo correction
+  // occurs). Note that CorrectionCandidateCallback is polymorphic and
+  // initially stack-allocated.
+  std::unique_ptr<CorrectionCandidateCallback> ClonedCCC = CCC.clone();
   auto Consumer = llvm::make_unique<TypoCorrectionConsumer>(
-      *this, TypoName, LookupKind, S, SS, std::move(CCC), MemberContext,
+      *this, TypoName, LookupKind, S, SS, std::move(ClonedCCC), MemberContext,
       EnteringContext);
 
   // Perform name lookup to find visible, similarly-named entities.
@@ -4689,7 +4692,9 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
     }
   }
 
-  AddKeywordsToConsumer(*this, *Consumer, S, CCCRef, SS && SS->isNotEmpty());
+  AddKeywordsToConsumer(*this, *Consumer, S,
+                        *Consumer->getCorrectionValidator(),
+                        SS && SS->isNotEmpty());
 
   // Build the NestedNameSpecifiers for the KnownNamespaces, if we're going
   // to search those namespaces.
@@ -4743,19 +4748,18 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
 TypoCorrection Sema::CorrectTypo(const DeclarationNameInfo &TypoName,
                                  Sema::LookupNameKind LookupKind,
                                  Scope *S, CXXScopeSpec *SS,
-                                 std::unique_ptr<CorrectionCandidateCallback> CCC,
+                                 CorrectionCandidateCallback &CCC,
                                  CorrectTypoKind Mode,
                                  DeclContext *MemberContext,
                                  bool EnteringContext,
                                  const ObjCObjectPointerType *OPT,
                                  bool RecordFailure) {
-  assert(CCC && "CorrectTypo requires a CorrectionCandidateCallback");
-
   // Always let the ExternalSource have the first chance at correction, even
   // if we would otherwise have given up.
   if (ExternalSource) {
-    if (TypoCorrection Correction = ExternalSource->CorrectTypo(
-        TypoName, LookupKind, S, SS, *CCC, MemberContext, EnteringContext, OPT))
+    if (TypoCorrection Correction =
+            ExternalSource->CorrectTypo(TypoName, LookupKind, S, SS, CCC,
+                                        MemberContext, EnteringContext, OPT))
       return Correction;
   }
 
@@ -4763,12 +4767,12 @@ TypoCorrection Sema::CorrectTypo(const DeclarationNameInfo &TypoName,
   // WantObjCSuper is only true for CTC_ObjCMessageReceiver and for
   // some instances of CTC_Unknown, while WantRemainingKeywords is true
   // for CTC_Unknown but not for CTC_ObjCMessageReceiver.
-  bool ObjCMessageReceiver = CCC->WantObjCSuper && !CCC->WantRemainingKeywords;
+  bool ObjCMessageReceiver = CCC.WantObjCSuper && !CCC.WantRemainingKeywords;
 
   IdentifierInfo *Typo = TypoName.getName().getAsIdentifierInfo();
-  auto Consumer = makeTypoCorrectionConsumer(
-      TypoName, LookupKind, S, SS, std::move(CCC), MemberContext,
-      EnteringContext, OPT, Mode == CTK_ErrorRecovery);
+  auto Consumer = makeTypoCorrectionConsumer(TypoName, LookupKind, S, SS, CCC,
+                                             MemberContext, EnteringContext,
+                                             OPT, Mode == CTK_ErrorRecovery);
 
   if (!Consumer)
     return TypoCorrection();
@@ -4878,16 +4882,13 @@ TypoCorrection Sema::CorrectTypo(const DeclarationNameInfo &TypoName,
 /// needed.
 TypoExpr *Sema::CorrectTypoDelayed(
     const DeclarationNameInfo &TypoName, Sema::LookupNameKind LookupKind,
-    Scope *S, CXXScopeSpec *SS,
-    std::unique_ptr<CorrectionCandidateCallback> CCC,
+    Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
     TypoDiagnosticGenerator TDG, TypoRecoveryCallback TRC, CorrectTypoKind Mode,
     DeclContext *MemberContext, bool EnteringContext,
     const ObjCObjectPointerType *OPT) {
-  assert(CCC && "CorrectTypoDelayed requires a CorrectionCandidateCallback");
-
-  auto Consumer = makeTypoCorrectionConsumer(
-      TypoName, LookupKind, S, SS, std::move(CCC), MemberContext,
-      EnteringContext, OPT, Mode == CTK_ErrorRecovery);
+  auto Consumer = makeTypoCorrectionConsumer(TypoName, LookupKind, S, SS, CCC,
+                                             MemberContext, EnteringContext,
+                                             OPT, Mode == CTK_ErrorRecovery);
 
   // Give the external sema source a chance to correct the typo.
   TypoCorrection ExternalTypo;

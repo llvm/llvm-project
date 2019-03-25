@@ -113,6 +113,10 @@ private:
   void reparseOpenedFiles();
   void applyConfiguration(const ConfigurationSettings &Settings);
 
+  /// Sends a "publishDiagnostics" notification to the LSP client.
+  void publishDiagnostics(const URIForFile &File,
+                          std::vector<clangd::Diagnostic> Diagnostics);
+
   /// Used to indicate that the 'shutdown' request was received from the
   /// Language Server client.
   bool ShutdownRequestReceived = false;

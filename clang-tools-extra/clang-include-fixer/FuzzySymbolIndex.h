@@ -31,7 +31,7 @@ namespace include_fixer {
 // Implementations may choose to truncate results, refuse short queries, etc.
 class FuzzySymbolIndex : public SymbolIndex {
 public:
-  // Loads the specified include-fixer database and returns an index serving it.
+  // Loads the specified clang-include-fixer database and returns an index serving it.
   static llvm::Expected<std::unique_ptr<FuzzySymbolIndex>>
   createFromYAML(llvm::StringRef File);
 

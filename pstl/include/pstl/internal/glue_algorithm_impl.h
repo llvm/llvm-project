@@ -736,11 +736,10 @@ __pstl::internal::enable_if_execution_policy<_ExecutionPolicy, bool>
 equal(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
       _ForwardIterator2 __last2, _BinaryPredicate __p)
 {
-    //TODO: to get rid of "distance"
     if (std::distance(__first1, __last1) == std::distance(__first2, __last2))
         return std::equal(__first1, __last1, __first2, __p);
-    else
-        return false;
+
+    return false;
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>
@@ -748,7 +747,7 @@ __pstl::internal::enable_if_execution_policy<_ExecutionPolicy, bool>
 equal(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
       _ForwardIterator2 __last2)
 {
-    return equal(std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __pstl::internal::pstl_equal());
+    return equal(std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __pstl::internal::pstl_equal());
 }
 
 // [alg.move]

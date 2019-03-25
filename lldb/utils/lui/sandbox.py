@@ -14,7 +14,10 @@ import os
 import signal
 import sys
 
-import Queue
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 
 import cui
 
@@ -62,7 +65,7 @@ class SandboxUI(cui.CursesUI):
 
 def main(screen):
     global event_queue
-    event_queue = Queue.Queue()
+    event_queue = queue.Queue()
 
     sandbox = SandboxUI(screen, event_queue)
     sandbox.eventLoop()

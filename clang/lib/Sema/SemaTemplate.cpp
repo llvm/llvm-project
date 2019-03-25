@@ -410,14 +410,14 @@ bool Sema::LookupTemplateName(LookupResult &Found,
     DeclarationName Name = Found.getLookupName();
     Found.clear();
     // Simple filter callback that, for keywords, only accepts the C++ *_cast
-    auto FilterCCC = llvm::make_unique<CorrectionCandidateCallback>();
-    FilterCCC->WantTypeSpecifiers = false;
-    FilterCCC->WantExpressionKeywords = false;
-    FilterCCC->WantRemainingKeywords = false;
-    FilterCCC->WantCXXNamedCasts = true;
-    if (TypoCorrection Corrected = CorrectTypo(
-            Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS,
-            std::move(FilterCCC), CTK_ErrorRecovery, LookupCtx)) {
+    DefaultFilterCCC FilterCCC{};
+    FilterCCC.WantTypeSpecifiers = false;
+    FilterCCC.WantExpressionKeywords = false;
+    FilterCCC.WantRemainingKeywords = false;
+    FilterCCC.WantCXXNamedCasts = true;
+    if (TypoCorrection Corrected =
+            CorrectTypo(Found.getLookupNameInfo(), Found.getLookupKind(), S,
+                        &SS, FilterCCC, CTK_ErrorRecovery, LookupCtx)) {
       Found.setLookupName(Corrected.getCorrection());
       if (auto *ND = Corrected.getFoundDecl())
         Found.addDecl(ND);
@@ -579,13 +579,16 @@ void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
         return S.getAsTemplateNameDecl(ND);
       return Candidate.isKeyword();
     }
+
+    std::unique_ptr<CorrectionCandidateCallback> clone() override {
+      return llvm::make_unique<TemplateCandidateFilter>(*this);
+    }
   };
 
   DeclarationName Name = NameInfo.getName();
-  if (TypoCorrection Corrected =
-          CorrectTypo(NameInfo, LookupKind, S, &SS,
-                      llvm::make_unique<TemplateCandidateFilter>(*this),
-                      CTK_ErrorRecovery, LookupCtx)) {
+  TemplateCandidateFilter CCC(*this);
+  if (TypoCorrection Corrected = CorrectTypo(NameInfo, LookupKind, S, &SS, CCC,
+                                             CTK_ErrorRecovery, LookupCtx)) {
     auto *ND = Corrected.getFoundDecl();
     if (ND)
       ND = getAsTemplateNameDecl(ND);

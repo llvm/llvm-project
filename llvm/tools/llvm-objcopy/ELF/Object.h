@@ -215,6 +215,7 @@ private:
   void writePhdrs();
   void writeShdrs();
   void writeSectionData();
+  void writeSegmentData();
 
   void assignOffsets();
 
@@ -312,6 +313,10 @@ public:
   uint32_t Index;
   uint64_t OriginalOffset;
   Segment *ParentSegment = nullptr;
+  ArrayRef<uint8_t> Contents;
+
+  explicit Segment(ArrayRef<uint8_t> Data) : Contents(Data) {}
+  Segment() {}
 
   const SectionBase *firstSection() const {
     if (!Sections.empty())
@@ -321,6 +326,8 @@ public:
 
   void removeSection(const SectionBase *Sec) { Sections.erase(Sec); }
   void addSection(const SectionBase *Sec) { Sections.insert(Sec); }
+
+  ArrayRef<uint8_t> getContents() const { return Contents; }
 };
 
 class Section : public SectionBase {
@@ -773,6 +780,7 @@ private:
 
   std::vector<SecPtr> Sections;
   std::vector<SegPtr> Segments;
+  std::vector<SecPtr> RemovedSections;
 
 public:
   template <class T>
@@ -815,6 +823,8 @@ public:
         find_if(Sections, [&](const SecPtr &Sec) { return Sec->Name == Name; });
     return SecIt == Sections.end() ? nullptr : SecIt->get();
   }
+  SectionTableRef removedSections() { return SectionTableRef(RemovedSections); }
+
   Range<Segment> segments() { return make_pointee_range(Segments); }
   ConstRange<Segment> segments() const { return make_pointee_range(Segments); }
 
@@ -827,8 +837,8 @@ public:
     Ptr->Index = Sections.size();
     return *Ptr;
   }
-  Segment &addSegment() {
-    Segments.emplace_back(llvm::make_unique<Segment>());
+  Segment &addSegment(ArrayRef<uint8_t> Data) {
+    Segments.emplace_back(llvm::make_unique<Segment>(Data));
     return *Segments.back();
   }
 };

@@ -65,7 +65,7 @@ Name:            bar
 Contexts:
   - ContextType:    Namespace
     ContextName:    c
-FilePath:        test/include-fixer/baz.h
+FilePath:        test/clang-include-fixer/baz.h
 Type:            Class
 Seen:            1
 Used:            0

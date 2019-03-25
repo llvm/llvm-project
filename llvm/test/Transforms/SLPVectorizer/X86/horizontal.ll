@@ -36,7 +36,7 @@ define i32 @add_red(float* %A, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD1330]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>, [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
 ; CHECK-NEXT:    [[ADD6:%.*]] = fadd fast float undef, undef
 ; CHECK-NEXT:    [[ADD11:%.*]] = fadd fast float [[ADD6]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
@@ -76,7 +76,7 @@ define i32 @add_red(float* %A, i32 %n) {
 ; STORE-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD1330]]
 ; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
 ; STORE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
-; STORE-NEXT:    [[TMP3:%.*]] = fmul <4 x float> <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>, [[TMP2]]
+; STORE-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
 ; STORE-NEXT:    [[ADD6:%.*]] = fadd fast float undef, undef
 ; STORE-NEXT:    [[ADD11:%.*]] = fadd fast float [[ADD6]], undef
 ; STORE-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>

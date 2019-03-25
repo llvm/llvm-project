@@ -276,7 +276,8 @@ if (CLANG_DEFAULT_UNWINDLIB STREQUAL "")
   endif()
 endif()
 
-if (NOT(CLANG_DEFAULT_UNWINDLIB STREQUAL "none" OR
+if (NOT(CLANG_DEFAULT_UNWINDLIB STREQUAL "" OR
+        CLANG_DEFAULT_UNWINDLIB STREQUAL "none" OR
         CLANG_DEFAULT_UNWINDLIB STREQUAL "libgcc" OR
         CLANG_DEFAULT_UNWINDLIB STREQUAL "libunwind"))
   message(WARNING "Resetting default unwindlib to use platform default")

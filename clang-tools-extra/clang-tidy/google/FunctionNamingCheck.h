@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_OBJC_FUNCTION_NAMING_CHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_OBJC_FUNCTION_NAMING_CHECK_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {

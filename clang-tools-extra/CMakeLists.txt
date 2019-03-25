@@ -11,10 +11,10 @@ add_subdirectory(clang-tidy-vs)
 
 add_subdirectory(clang-change-namespace)
 add_subdirectory(clang-doc)
-add_subdirectory(clang-query)
+add_subdirectory(clang-include-fixer)
 add_subdirectory(clang-move)
+add_subdirectory(clang-query)
 add_subdirectory(clangd)
-add_subdirectory(include-fixer)
 add_subdirectory(pp-trace)
 add_subdirectory(tool-template)
 

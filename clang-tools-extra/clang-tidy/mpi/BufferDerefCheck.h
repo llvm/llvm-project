@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFER_DEREF_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFER_DEREF_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {

@@ -16,7 +16,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define DEBUG_TYPE "include-fixer"
+#define DEBUG_TYPE "clang-include-fixer"
 
 using namespace clang;
 
@@ -348,8 +348,8 @@ IncludeFixerSemaSource::query(StringRef Query, StringRef ScopedQualifiers,
   //
   // We use conservative behavior for detecting the same unidentified symbol
   // here. The symbols which have the same ScopedQualifier and RawIdentifier
-  // are considered equal. So that include-fixer avoids false positives, and
-  // always adds missing qualifiers to correct symbols.
+  // are considered equal. So that clang-include-fixer avoids false positives,
+  // and always adds missing qualifiers to correct symbols.
   if (!GenerateDiagnostics && !QuerySymbolInfos.empty()) {
     if (ScopedQualifiers == QuerySymbolInfos.front().ScopedQualifiers &&
         Query == QuerySymbolInfos.front().RawIdentifier) {

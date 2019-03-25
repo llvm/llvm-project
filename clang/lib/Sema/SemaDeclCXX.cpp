@@ -3781,7 +3781,7 @@ namespace {
 
 // Callback to only accept typo corrections that can be a valid C++ member
 // intializer: either a non-static field member or a base class.
-class MemInitializerValidatorCCC : public CorrectionCandidateCallback {
+class MemInitializerValidatorCCC final : public CorrectionCandidateCallback {
 public:
   explicit MemInitializerValidatorCCC(CXXRecordDecl *ClassDecl)
       : ClassDecl(ClassDecl) {}
@@ -3793,6 +3793,10 @@ public:
       return isa<TypeDecl>(ND);
     }
     return false;
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<MemInitializerValidatorCCC>(*this);
   }
 
 private:
@@ -3924,11 +3928,10 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
 
       // If no results were found, try to correct typos.
       TypoCorrection Corr;
+      MemInitializerValidatorCCC CCC(ClassDecl);
       if (R.empty() && BaseType.isNull() &&
-          (Corr = CorrectTypo(
-               R.getLookupNameInfo(), R.getLookupKind(), S, &SS,
-               llvm::make_unique<MemInitializerValidatorCCC>(ClassDecl),
-               CTK_ErrorRecovery, ClassDecl))) {
+          (Corr = CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, &SS,
+                              CCC, CTK_ErrorRecovery, ClassDecl))) {
         if (FieldDecl *Member = Corr.getCorrectionDeclAs<FieldDecl>()) {
           // We have found a non-static data member with a similar
           // name to what was typed; complain and initialize that
@@ -9353,12 +9356,16 @@ static bool IsUsingDirectiveInToplevelContext(DeclContext *CurContext) {
 namespace {
 
 // Callback to only accept typo corrections that are namespaces.
-class NamespaceValidatorCCC : public CorrectionCandidateCallback {
+class NamespaceValidatorCCC final : public CorrectionCandidateCallback {
 public:
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     if (NamedDecl *ND = candidate.getCorrectionDecl())
       return isa<NamespaceDecl>(ND) || isa<NamespaceAliasDecl>(ND);
     return false;
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<NamespaceValidatorCCC>(*this);
   }
 };
 
@@ -9369,9 +9376,9 @@ static bool TryNamespaceTypoCorrection(Sema &S, LookupResult &R, Scope *Sc,
                                        SourceLocation IdentLoc,
                                        IdentifierInfo *Ident) {
   R.clear();
+  NamespaceValidatorCCC CCC{};
   if (TypoCorrection Corrected =
-          S.CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), Sc, &SS,
-                        llvm::make_unique<NamespaceValidatorCCC>(),
+          S.CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), Sc, &SS, CCC,
                         Sema::CTK_ErrorRecovery)) {
     if (DeclContext *DC = S.computeDeclContext(SS, false)) {
       std::string CorrectedStr(Corrected.getAsString(S.getLangOpts()));
@@ -9866,7 +9873,7 @@ static CXXBaseSpecifier *findDirectBaseWithType(CXXRecordDecl *Derived,
 }
 
 namespace {
-class UsingValidatorCCC : public CorrectionCandidateCallback {
+class UsingValidatorCCC final : public CorrectionCandidateCallback {
 public:
   UsingValidatorCCC(bool HasTypenameKeyword, bool IsInstantiation,
                     NestedNameSpecifier *NNS, CXXRecordDecl *RequireMemberOf)
@@ -9934,6 +9941,10 @@ public:
       return HasTypenameKeyword || !IsInstantiation;
 
     return !HasTypenameKeyword;
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<UsingValidatorCCC>(*this);
   }
 
 private:
@@ -10092,12 +10103,11 @@ NamedDecl *Sema::BuildUsingDeclaration(
         isa<TranslationUnitDecl>(LookupContext) &&
         getSourceManager().isInSystemHeader(UsingLoc))
       return nullptr;
-    if (TypoCorrection Corrected = CorrectTypo(
-            R.getLookupNameInfo(), R.getLookupKind(), S, &SS,
-            llvm::make_unique<UsingValidatorCCC>(
-                HasTypenameKeyword, IsInstantiation, SS.getScopeRep(),
-                dyn_cast<CXXRecordDecl>(CurContext)),
-            CTK_ErrorRecovery)) {
+    UsingValidatorCCC CCC(HasTypenameKeyword, IsInstantiation, SS.getScopeRep(),
+                          dyn_cast<CXXRecordDecl>(CurContext));
+    if (TypoCorrection Corrected =
+            CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, &SS, CCC,
+                        CTK_ErrorRecovery)) {
       // We reject candidates where DroppedSpecifier == true, hence the
       // literal '0' below.
       diagnoseTypo(Corrected, PDiag(diag::err_no_member_suggest)

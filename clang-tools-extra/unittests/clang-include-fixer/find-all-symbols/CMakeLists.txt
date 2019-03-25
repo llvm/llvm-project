@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 get_filename_component(INCLUDE_FIXER_SOURCE_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../../include-fixer/find-all-symbols REALPATH)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../../clang-include-fixer/find-all-symbols REALPATH)
 include_directories(
   ${INCLUDE_FIXER_SOURCE_DIR}
   )

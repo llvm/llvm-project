@@ -127,7 +127,7 @@ def main():
         out = execute_command_verbose([ar_exe, 't', arc])
         files.extend(out.splitlines())
 
-    execute_command_verbose([ar_exe, 'rcsD', args.output] + files,
+    execute_command_verbose([ar_exe, 'rcs', args.output] + files,
                             cwd=temp_directory_root, verbose=args.verbose)
 
 

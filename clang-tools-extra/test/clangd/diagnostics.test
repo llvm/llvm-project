@@ -23,6 +23,15 @@
 # CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"
 # CHECK-NEXT:  }
 ---
+{"jsonrpc":"2.0","id":2,"method":"sync","params":null}
+---
+{"jsonrpc":"2.0","method":"textDocument/didClose","params":{"textDocument":{"uri":"test:///foo.c"}}}
+#      CHECK:  "method": "textDocument/publishDiagnostics",
+# CHECK-NEXT:  "params": {
+# CHECK-NEXT:    "diagnostics": [],
+# CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"
+# CHECK-NEXT:  }
+---
 {"jsonrpc":"2.0","id":5,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}

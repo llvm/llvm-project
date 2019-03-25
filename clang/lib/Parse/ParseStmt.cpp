@@ -116,7 +116,7 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
 }
 
 namespace {
-class StatementFilterCCC : public CorrectionCandidateCallback {
+class StatementFilterCCC final : public CorrectionCandidateCallback {
 public:
   StatementFilterCCC(Token nextTok) : NextToken(nextTok) {
     WantTypeSpecifiers = nextTok.isOneOf(tok::l_paren, tok::less, tok::l_square,
@@ -137,6 +137,10 @@ public:
         candidate.getCorrectionDeclAs<NamespaceDecl>())
       return false;
     return CorrectionCandidateCallback::ValidateCandidate(candidate);
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<StatementFilterCCC>(*this);
   }
 
 private:
@@ -181,9 +185,8 @@ Retry:
     if (Next.isNot(tok::coloncolon)) {
       // Try to limit which sets of keywords should be included in typo
       // correction based on what the next token is.
-      if (TryAnnotateName(/*IsAddressOfOperand*/ false,
-                          llvm::make_unique<StatementFilterCCC>(Next)) ==
-          ANK_Error) {
+      StatementFilterCCC CCC(Next);
+      if (TryAnnotateName(/*IsAddressOfOperand*/ false, &CCC) == ANK_Error) {
         // Handle errors here by skipping up to the next semicolon or '}', and
         // eat the semicolon if that's what stopped us.
         SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);

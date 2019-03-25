@@ -5913,7 +5913,8 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
 
       ExprResult AddrSpace = S.ActOnIdExpression(
-          S.getCurScope(), SS, TemplateKWLoc, id, false, false);
+          S.getCurScope(), SS, TemplateKWLoc, id, /*HasTrailingLParen=*/false,
+          /*IsAddressOfOperand=*/false);
       if (AddrSpace.isInvalid())
         return;
 
@@ -7043,7 +7044,8 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
     Id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
 
     ExprResult Size = S.ActOnIdExpression(S.getCurScope(), SS, TemplateKWLoc,
-                                          Id, false, false);
+                                          Id, /*HasTrailingLParen=*/false,
+                                          /*IsAddressOfOperand=*/false);
 
     if (Size.isInvalid())
       return;
@@ -7080,7 +7082,8 @@ static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
 
     ExprResult Size = S.ActOnIdExpression(S.getCurScope(), SS, TemplateKWLoc,
-                                          id, false, false);
+                                          id, /*HasTrailingLParen=*/false,
+                                          /*IsAddressOfOperand=*/false);
     if (Size.isInvalid())
       return;
 
