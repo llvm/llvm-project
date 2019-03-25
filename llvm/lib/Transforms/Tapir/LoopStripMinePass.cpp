@@ -177,15 +177,18 @@ unsigned llvm::ApproximateLoopSize(
     const Loop *L, unsigned &NumCalls, bool &NotDuplicatable,
     bool &Convergent, bool &IsRecursive, bool &UnknownSize,
     const TargetTransformInfo &TTI, LoopInfo *LI, ScalarEvolution &SE,
-    const SmallPtrSetImpl<const Value *> &EphValues) {
+    const SmallPtrSetImpl<const Value *> &EphValues,
+    TargetLibraryInfo *TLI) {
 
   // TODO: Use more precise analysis to estimate the work in each call.
   // TODO: Use vectorizability to enhance cost analysis.
 
   CodeMetrics Metrics;
   for (BasicBlock *BB : L->blocks())
-    Metrics.analyzeBasicBlock(BB, TTI, EphValues);
-  NumCalls = Metrics.NumCalls;
+    Metrics.analyzeBasicBlock(BB, TTI, EphValues, TLI);
+  // Exclude calls to builtins when counting the calls.  This assumes that all
+  // builtin functions are cheap.
+  NumCalls = Metrics.NumCalls - Metrics.NumBuiltinCalls;
   NotDuplicatable = Metrics.notDuplicatable;
   Convergent = Metrics.convergent;
   IsRecursive = Metrics.isRecursive;

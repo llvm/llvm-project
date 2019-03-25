@@ -26,6 +26,7 @@ class LoopInfo;
 class MDNode;
 class OptimizationRemarkEmitter;
 class ScalarEvolution;
+class TargetLibraryInfo;
 class TaskInfo;
 
 using NewLoopsMap = SmallDenseMap<const Loop *, Loop *, 4>;
@@ -49,7 +50,8 @@ unsigned ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
                              bool &IsRecursive, bool &UnknownSize,
                              const TargetTransformInfo &TTI,
                              LoopInfo *LI, ScalarEvolution &SE,
-                             const SmallPtrSetImpl<const Value *> &EphValues);
+                             const SmallPtrSetImpl<const Value *> &EphValues,
+                             TargetLibraryInfo *TLI = nullptr);
 
 bool computeStripMineCount(Loop *L, const TargetTransformInfo &TTI,
                            unsigned LoopSize,
