@@ -218,7 +218,7 @@ public:
   lldb::StateType
   ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp,
                                 bool &script_error) override;
-                                
+
   StructuredData::GenericSP
   CreateScriptedBreakpointResolver(const char *class_name,
                                    StructuredDataImpl *args_data,
@@ -412,41 +412,6 @@ public:
 
   void ResetOutputFileHandle(FILE *new_fh) override;
 
-  static void InitializePrivate();
-
-  static void InitializeInterpreter(
-      SWIGInitCallback python_swig_init_callback,
-      SWIGBreakpointCallbackFunction swig_breakpoint_callback,
-      SWIGWatchpointCallbackFunction swig_watchpoint_callback,
-      SWIGPythonTypeScriptCallbackFunction swig_typescript_callback,
-      SWIGPythonCreateSyntheticProvider swig_synthetic_script,
-      SWIGPythonCreateCommandObject swig_create_cmd,
-      SWIGPythonCalculateNumChildren swig_calc_children,
-      SWIGPythonGetChildAtIndex swig_get_child_index,
-      SWIGPythonGetIndexOfChildWithName swig_get_index_child,
-      SWIGPythonCastPyObjectToSBValue swig_cast_to_sbvalue,
-      SWIGPythonGetValueObjectSPFromSBValue swig_get_valobj_sp_from_sbvalue,
-      SWIGPythonUpdateSynthProviderInstance swig_update_provider,
-      SWIGPythonMightHaveChildrenSynthProviderInstance
-          swig_mighthavechildren_provider,
-      SWIGPythonGetValueSynthProviderInstance swig_getvalue_provider,
-      SWIGPythonCallCommand swig_call_command,
-      SWIGPythonCallCommandObject swig_call_command_object,
-      SWIGPythonCallModuleInit swig_call_module_init,
-      SWIGPythonCreateOSPlugin swig_create_os_plugin,
-      SWIGPythonCreateFrameRecognizer swig_create_frame_recognizer,
-      SWIGPythonGetRecognizedArguments swig_get_recognized_arguments,
-      SWIGPythonScriptKeyword_Process swig_run_script_keyword_process,
-      SWIGPythonScriptKeyword_Thread swig_run_script_keyword_thread,
-      SWIGPythonScriptKeyword_Target swig_run_script_keyword_target,
-      SWIGPythonScriptKeyword_Frame swig_run_script_keyword_frame,
-      SWIGPythonScriptKeyword_Value swig_run_script_keyword_value,
-      SWIGPython_GetDynamicSetting swig_plugin_get,
-      SWIGPythonCreateScriptedThreadPlan swig_thread_plan_script,
-      SWIGPythonCallThreadPlan swig_call_thread_plan,
-      SWIGPythonCreateScriptedBreakpointResolver swig_bkpt_resolver_script,
-      SWIGPythonCallBreakpointResolver swig_call_breakpoint_resolver);
-
   const char *GetDictionaryName() { return m_dictionary_name.c_str(); }
 
   PyThreadState *GetThreadState() { return m_command_thread_state; }
@@ -467,6 +432,7 @@ public:
   //------------------------------------------------------------------
   // Static Functions
   //------------------------------------------------------------------
+  static void InitializeSWIG();
   static void Initialize();
 
   static void Terminate();
@@ -528,6 +494,41 @@ public:
   };
 
 protected:
+  static void InitializePrivate();
+
+  static void InitializeInterpreter(
+      SWIGInitCallback python_swig_init_callback,
+      SWIGBreakpointCallbackFunction swig_breakpoint_callback,
+      SWIGWatchpointCallbackFunction swig_watchpoint_callback,
+      SWIGPythonTypeScriptCallbackFunction swig_typescript_callback,
+      SWIGPythonCreateSyntheticProvider swig_synthetic_script,
+      SWIGPythonCreateCommandObject swig_create_cmd,
+      SWIGPythonCalculateNumChildren swig_calc_children,
+      SWIGPythonGetChildAtIndex swig_get_child_index,
+      SWIGPythonGetIndexOfChildWithName swig_get_index_child,
+      SWIGPythonCastPyObjectToSBValue swig_cast_to_sbvalue,
+      SWIGPythonGetValueObjectSPFromSBValue swig_get_valobj_sp_from_sbvalue,
+      SWIGPythonUpdateSynthProviderInstance swig_update_provider,
+      SWIGPythonMightHaveChildrenSynthProviderInstance
+          swig_mighthavechildren_provider,
+      SWIGPythonGetValueSynthProviderInstance swig_getvalue_provider,
+      SWIGPythonCallCommand swig_call_command,
+      SWIGPythonCallCommandObject swig_call_command_object,
+      SWIGPythonCallModuleInit swig_call_module_init,
+      SWIGPythonCreateOSPlugin swig_create_os_plugin,
+      SWIGPythonCreateFrameRecognizer swig_create_frame_recognizer,
+      SWIGPythonGetRecognizedArguments swig_get_recognized_arguments,
+      SWIGPythonScriptKeyword_Process swig_run_script_keyword_process,
+      SWIGPythonScriptKeyword_Thread swig_run_script_keyword_thread,
+      SWIGPythonScriptKeyword_Target swig_run_script_keyword_target,
+      SWIGPythonScriptKeyword_Frame swig_run_script_keyword_frame,
+      SWIGPythonScriptKeyword_Value swig_run_script_keyword_value,
+      SWIGPython_GetDynamicSetting swig_plugin_get,
+      SWIGPythonCreateScriptedThreadPlan swig_thread_plan_script,
+      SWIGPythonCallThreadPlan swig_call_thread_plan,
+      SWIGPythonCreateScriptedBreakpointResolver swig_bkpt_resolver_script,
+      SWIGPythonCallBreakpointResolver swig_call_breakpoint_resolver);
+
   class SynchronicityHandler {
   private:
     lldb::DebuggerSP m_debugger_sp;
