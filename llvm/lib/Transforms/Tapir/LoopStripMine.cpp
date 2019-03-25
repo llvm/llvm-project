@@ -40,7 +40,8 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "loop-stripmine"
+#define LSM_NAME "loop-stripmine"
+#define DEBUG_TYPE LSM_NAME
 
 /// Create an analysis remark that explains why stripmining failed.
 ///
@@ -454,21 +455,6 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
     return nullptr;
 }
 
-static void ReplaceIVUses(Instruction *Old, Instruction *New,
-                          SmallVectorImpl<Use *> &UsesToReplace) {
-  assert(New && "replaceIVUsesInTask(Old, <null>, T) is invalid!");
-  assert(New->getType() == Old->getType() &&
-         "replaceIVUsesInTask of value with new value of different type!");
-
-  // We don't notify ValueHandles, because the IV shouldn't be disappearing
-  // entirely.
-
-  for (Use *U : UsesToReplace)
-    U->set(New);
-
-  assert(Old->getNumUses() > 0 && "Replaced all uses!");
-}
-
 Loop *llvm::StripMineLoop(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
     bool UnrollRemainder, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
@@ -575,7 +561,14 @@ Loop *llvm::StripMineLoop(
     return nullptr;
   }
 
-  LLVM_DEBUG(dbgs() << "Stripmining loop with Count = " << Count << "\n");
+  LLVM_DEBUG(dbgs() << "Stripmining loop using grainsize " << Count << "\n");
+  using namespace ore;
+  ORE->emit([&]() {
+              return OptimizationRemark(LSM_NAME, "Stripmined",
+                                        L->getStartLoc(), L->getHeader())
+                << "stripmined loop using count "
+                << NV("StripMineCount", Count);
+            });
 
   // Loop structure is the following:
   //
@@ -847,7 +840,8 @@ Loop *llvm::StripMineLoop(
           NewUnreachable->getTerminator()->getDebugLoc());
       NewUnreachable->getTerminator()->eraseFromParent();
     }
-    // Update PHI nodes in NewUW to get the same value via OrigUW as from .
+    // Update PHI nodes in NewUW to get the same value via OrigUW from the new
+    // detach.
     for (PHINode &PN : NewUW->phis())
       PN.addIncoming(PN.getIncomingValueForBlock(LoopDetach), OrigUW);
     // Update the dominator tree
@@ -1111,9 +1105,11 @@ Loop *llvm::StripMineLoop(
   //              /*TI*/ nullptr, /*ORE*/ nullptr, /*PreserveLCSSA*/ true);
   // }
 
-  // At this point, the code is well formed.  We now simplify the unrolled loop,
+  // At this point, the code is well formed.  We now simplify the new loops,
   // doing constant propagation and dead code elimination as we go.
   simplifyLoopAfterStripMine(L, /*SimplifyIVs*/true, LI, SE, DT, AC);
+  simplifyLoopAfterStripMine(remainderLoop, /*SimplifyIVs*/true, LI, SE, DT,
+                             AC);
 
 #ifndef NDEBUG
   DT->verify();

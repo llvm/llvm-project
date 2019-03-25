@@ -51,6 +51,12 @@ static cl::opt<bool> StripMineUnrollRemainder(
   "stripmine-unroll-remainder", cl::Hidden,
   cl::desc("Allow the loop remainder after stripmining to be unrolled."));
 
+/// Constants for stripmining cost analysis.
+namespace StripMineConstants {
+/// Default coarsening factor for strpimined Tapir loops.
+const unsigned DefaultCoarseningFactor = 2048;
+}
+
 /// Create an analysis remark that explains why stripmining failed
 ///
 /// \p RemarkName is the identifier for the remark.  If \p I is passed it is an
@@ -88,7 +94,7 @@ TargetTransformInfo::StripMiningPreferences llvm::gatherStripMiningPreferences(
   SMP.AllowExpensiveTripCount = false;
   SMP.DefaultCoarseningFactor =
     (StripMineCoarseningFactor.getNumOccurrences() > 0) ?
-    StripMineCoarseningFactor : 4096;
+    StripMineCoarseningFactor : StripMineConstants::DefaultCoarseningFactor;
   SMP.UnrollRemainder = false;
 
   // Override with any target specific settings
@@ -101,6 +107,22 @@ TargetTransformInfo::StripMiningPreferences llvm::gatherStripMiningPreferences(
     SMP.UnrollRemainder = StripMineUnrollRemainder;
 
   return SMP;
+}
+
+// Helper method to get a constant trip count for the given loop.
+static unsigned getConstTripCount(const Loop *L, ScalarEvolution &SE) {
+  unsigned ConstTripCount = 0;
+  // If there are multiple exiting blocks but one of them is the latch, use
+  // the latch for the trip count estimation. Otherwise insist on a single
+  // exiting block for the trip count estimation.
+  BasicBlock *ExitingBlock = L->getLoopLatch();
+  if (!ExitingBlock || !L->isLoopExiting(ExitingBlock))
+    ExitingBlock = L->getExitingBlock();
+  if (ExitingBlock)
+    ConstTripCount = SE.getSmallConstantTripCount(L, ExitingBlock);
+  if (!ConstTripCount)
+    ConstTripCount = SE.getSmallConstantMaxTripCount(L);
+  return ConstTripCount;
 }
 
 /// Recursive helper routine to estimate the amount of work in a loop.
@@ -120,19 +142,7 @@ static unsigned ApproximateLoopSizeHelper(const Loop *L, CodeMetrics &Metrics,
       LoopSize = std::numeric_limits<unsigned>::max();
 
     // Find a constant trip count if available
-    unsigned ConstTripCount = 0;
-    {
-      // If there are multiple exiting blocks but one of them is the latch, use
-      // the latch for the trip count estimation. Otherwise insist on a single
-      // exiting block for the trip count estimation.
-      BasicBlock *ExitingBlock = SubL->getLoopLatch();
-      if (!ExitingBlock || !SubL->isLoopExiting(ExitingBlock))
-        ExitingBlock = SubL->getExitingBlock();
-      if (ExitingBlock)
-        ConstTripCount = SE.getSmallConstantTripCount(SubL, ExitingBlock);
-      if (!ConstTripCount)
-        ConstTripCount = SE.getSmallConstantMaxTripCount(SubL);
-    }
+    unsigned ConstTripCount = getConstTripCount(SubL, SE);
     // TODO: Use a more precise analysis to account for non-constant trip
     // counts.
     if (!ConstTripCount) {
@@ -273,6 +283,7 @@ static bool tryToStripMineLoop(
         dbgs() << "  Not stripmining loop which is not in loop-simplify form.\n");
     return false;
   }
+  bool StripMiningRequested = HasStripMineEnablePragma(L);
   TargetTransformInfo::StripMiningPreferences SMP = gatherStripMiningPreferences(
       L, SE, TTI, ProvidedCount);
 
@@ -288,32 +299,62 @@ static bool tryToStripMineLoop(
   unsigned LoopSize =
       ApproximateLoopSize(L, NumCalls, NotDuplicatable, Convergent, IsRecursive,
                           UnknownSize, TTI, LI, SE, EphValues);
-  if (UnknownSize) {
+  // computeStripMineCount() determines the count to stripmine the loop.
+  bool explicitCount = computeStripMineCount(L, TTI, LoopSize, SMP);
+
+  // If the loop size is unknown, then we cannot compute a stripmining count for
+  // it.
+  if (!explicitCount && UnknownSize) {
     LLVM_DEBUG(dbgs() << "  Not stripmining loop with unknown size.\n");
+    if (StripMiningRequested)
+      ORE.emit(DiagnosticInfoOptimizationFailure(
+                   DEBUG_TYPE, "UnknownSize",
+                   L->getStartLoc(), L->getHeader())
+               << "Cannot stripmine loop with unknown size.");
     return false;
   }
+
+  // If the loop size is enormous, then we might want to use a stripmining count
+  // of 1 for it.
   LLVM_DEBUG(dbgs() << "  Loop Size = " << LoopSize << "\n");
-  if (std::numeric_limits<unsigned>::max() == LoopSize) {
+  if (!explicitCount && std::numeric_limits<unsigned>::max() == LoopSize) {
     LLVM_DEBUG(dbgs() << "  Not stripmining loop with very large size.\n");
     if (Hints.getGrainsize() == 1)
       return false;
+    ORE.emit([&]() {
+               return OptimizationRemark("loop-stripmine", "HugeLoop",
+                                         L->getStartLoc(), L->getHeader())
+                 << "using grainsize 1 for huge loop";
+             });
     Hints.setAlreadyStripMined();
     return true;
   }
+
   // If the loop is recursive, set the stripmine factor to be 1.
-  if (IsRecursive) {
+  if (!explicitCount && IsRecursive) {
     LLVM_DEBUG(dbgs() << "  Not stripmining loop that recursively calls the "
                       << "containing function.\n");
     if (Hints.getGrainsize() == 1)
       return false;
+    ORE.emit([&]() {
+               return OptimizationRemark("loop-stripmine", "RecursiveCalls",
+                                         L->getStartLoc(), L->getHeader())
+                 << "using grainsize 1 for loop with recursive calls";
+             });
     Hints.setAlreadyStripMined();
     return true;
   }
+
   // TODO: We can stripmine loops if the stripmined version does not require a
   // prolog or epilog.
   if (NotDuplicatable) {
     LLVM_DEBUG(dbgs() << "  Not stripmining loop which contains "
                       << "non-duplicatable instructions.\n");
+    if (explicitCount || StripMiningRequested)
+      ORE.emit(DiagnosticInfoOptimizationFailure(
+                   DEBUG_TYPE, "NotDuplicatable",
+                   L->getStartLoc(), L->getHeader())
+               << "Cannot stripmine loop with non-duplicatable instructions.");
     return false;
   }
 
@@ -322,37 +363,40 @@ static bool tryToStripMineLoop(
   // control-flow dependency to the convergent operation.
   if (Convergent) {
     LLVM_DEBUG(dbgs() << "  Skipping loop with convergent operations.\n");
+    if (explicitCount || StripMiningRequested)
+      ORE.emit(DiagnosticInfoOptimizationFailure(
+                   DEBUG_TYPE, "Convergent",
+                   L->getStartLoc(), L->getHeader())
+               << "Cannot stripmine loop with convergent instructions.");
     return false;
   }
 
-  // Find a constant trip count if available
-  unsigned ConstTripCount = 0;
-  {
-    // If there are multiple exiting blocks but one of them is the latch, use
-    // the latch for the trip count estimation. Otherwise insist on a single
-    // exiting block for the trip count estimation.
-    BasicBlock *ExitingBlock = L->getLoopLatch();
-    if (!ExitingBlock || !L->isLoopExiting(ExitingBlock))
-      ExitingBlock = L->getExitingBlock();
-    if (ExitingBlock)
-      ConstTripCount = SE.getSmallConstantTripCount(L, ExitingBlock);
-  }
-
-  // computeStripMineCount() determines the count to stripmine the loop.
-  bool explicitCount = computeStripMineCount(L, TTI, LoopSize, SMP);
-  if (NumCalls > 0 && !explicitCount) {
+  // If the loop contains potentially expensive function calls, then we don't
+  // want to stripmine it.
+  if (NumCalls > 0 && !explicitCount && !StripMiningRequested) {
     LLVM_DEBUG(dbgs() << "  Skipping loop with expensive function calls.\n");
+    ORE.emit(createMissedAnalysis("ExpensiveCalls", L)
+             << "Not stripmining loop with potentially expensive calls.");
     return false;
   }
+
   // Make sure the count is a power of 2.
   if (!isPowerOf2_32(SMP.Count))
     SMP.Count = NextPowerOf2(SMP.Count);
   if (SMP.Count < 2) {
     if (Hints.getGrainsize() == 1)
       return false;
+    ORE.emit([&]() {
+               return OptimizationRemark("loop-stripmine", "LargeLoop",
+                                         L->getStartLoc(), L->getHeader())
+                 << "using grainsize 1 for large loop";
+             });
     Hints.setAlreadyStripMined();
     return true;
   }
+
+  // Find a constant trip count if available
+  unsigned ConstTripCount = getConstTripCount(L, SE);
 
   // Stripmining factor (Count) must be less or equal to TripCount.
   if (ConstTripCount && SMP.Count >= ConstTripCount) {
@@ -371,6 +415,7 @@ static bool tryToStripMineLoop(
   if (!NewLoop)
     return false;
 
+  // Mark the new loop as stripmined.
   TapirLoopHints NewHints(NewLoop);
   NewHints.setAlreadyStripMined();
 
