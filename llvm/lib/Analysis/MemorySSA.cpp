@@ -665,7 +665,7 @@ template <class AliasAnalysisType> class ClobberWalker {
   struct generic_def_path_iterator
       : public iterator_facade_base<generic_def_path_iterator<T, Walker>,
                                     std::forward_iterator_tag, T *> {
-    generic_def_path_iterator() = default;
+    generic_def_path_iterator() {}
     generic_def_path_iterator(Walker *W, ListIndex N) : W(W), N(N) {}
 
     T &operator*() const { return curNode(); }

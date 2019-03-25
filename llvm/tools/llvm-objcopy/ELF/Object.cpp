@@ -689,6 +689,13 @@ void GroupSection::markSymbols() {
     Sym->Referenced = true;
 }
 
+void GroupSection::replaceSectionReferences(
+    const DenseMap<SectionBase *, SectionBase *> &FromTo) {
+  for (SectionBase *&Sec : GroupMembers)
+    if (SectionBase *To = FromTo.lookup(Sec))
+      Sec = To;
+}
+
 void Section::initialize(SectionTableRef SecTable) {
   if (Link != ELF::SHN_UNDEF) {
     LinkSection =
@@ -949,6 +956,9 @@ template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
 
 template <class ELFT>
 void ELFBuilder<ELFT>::initGroupSection(GroupSection *GroupSec) {
+  if (GroupSec->Align % sizeof(ELF::Elf32_Word) != 0)
+    error("Invalid alignment " + Twine(GroupSec->Align) + " of group section " +
+          GroupSec->Name);
   auto SecTable = Obj.sections();
   auto SymTab = SecTable.template getSectionOfType<SymbolTableSection>(
       GroupSec->Link,

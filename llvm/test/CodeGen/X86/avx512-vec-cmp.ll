@@ -940,9 +940,10 @@ define <2 x i64> @test46(<2 x float> %x, <2 x float> %y) #0 {
 ; AVX512-LABEL: test46:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0xc2,0xc1,0x00]
-; AVX512-NEXT:    vpmovzxdq %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x35,0xc0]
-; AVX512-NEXT:    ## xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
+; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1 ## encoding: [0xc5,0xf0,0x57,0xc9]
+; AVX512-NEXT:    vunpcklps %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x14,0xc1]
+; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX512-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x54,0x05,A,A,A,A]
 ; AVX512-NEXT:    ## fixup A - offset: 4, value: LCPI47_0-4, kind: reloc_riprel_4byte
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
 ;

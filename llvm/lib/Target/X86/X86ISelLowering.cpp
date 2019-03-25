@@ -845,6 +845,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SADDSAT,            MVT::v8i16, Legal);
     setOperationAction(ISD::USUBSAT,            MVT::v8i16, Legal);
     setOperationAction(ISD::SSUBSAT,            MVT::v8i16, Legal);
+    setOperationAction(ISD::UADDSAT,            MVT::v4i32, Custom);
+    setOperationAction(ISD::USUBSAT,            MVT::v4i32, Custom);
+    setOperationAction(ISD::UADDSAT,            MVT::v2i64, Custom);
+    setOperationAction(ISD::USUBSAT,            MVT::v2i64, Custom);
 
     if (!ExperimentalVectorWideningLegalization) {
       // Use widening instead of promotion.
@@ -1884,6 +1888,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTargetDAGCombine(ISD::SIGN_EXTEND);
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
   setTargetDAGCombine(ISD::ANY_EXTEND_VECTOR_INREG);
+  setTargetDAGCombine(ISD::ZERO_EXTEND_VECTOR_INREG);
   setTargetDAGCombine(ISD::SINT_TO_FP);
   setTargetDAGCombine(ISD::UINT_TO_FP);
   setTargetDAGCombine(ISD::SETCC);
@@ -23924,12 +23929,14 @@ static SDValue lowerAddSub(SDValue Op, SelectionDAG &DAG,
   return split256IntArith(Op, DAG);
 }
 
-static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG) {
+static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
+                                  const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
   SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
+  unsigned Opcode = Op.getOpcode();
   if (VT.getScalarType() == MVT::i1) {
     SDLoc dl(Op);
-    switch (Op.getOpcode()) {
+    switch (Opcode) {
     default: llvm_unreachable("Expected saturated arithmetic opcode");
     case ISD::UADDSAT:
     case ISD::SADDSAT:
@@ -23940,6 +23947,28 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG) {
       // *subsat i1 X, Y --> X & ~Y
       return DAG.getNode(ISD::AND, dl, VT, X, DAG.getNOT(dl, Y, VT));
     }
+  }
+
+  if (VT.is128BitVector()) {
+    // Avoid the generic expansion with min/max if we don't have pminu*/pmaxu*.
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    EVT SetCCResultType = TLI.getSetCCResultType(DAG.getDataLayout(),
+                                                 *DAG.getContext(), VT);
+    SDLoc DL(Op);
+    if (Opcode == ISD::UADDSAT && !TLI.isOperationLegal(ISD::UMIN, VT)) {
+      // uaddsat X, Y --> (X >u (X + Y)) ? -1 : X + Y
+      SDValue Add = DAG.getNode(ISD::ADD, DL, VT, X, Y);
+      SDValue Cmp = DAG.getSetCC(DL, SetCCResultType, X, Add, ISD::SETUGT);
+      return DAG.getSelect(DL, VT, Cmp, DAG.getAllOnesConstant(DL, VT), Add);
+    }
+    if (Opcode == ISD::USUBSAT && !TLI.isOperationLegal(ISD::UMAX, VT)) {
+      // usubsat X, Y --> (X >u Y) ? X - Y : 0
+      SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, X, Y);
+      SDValue Cmp = DAG.getSetCC(DL, SetCCResultType, X, Y, ISD::SETUGT);
+      return DAG.getSelect(DL, VT, Cmp, Sub, DAG.getConstant(0, DL, VT));
+    }
+    // Use default expansion.
+    return SDValue();
   }
 
   assert(Op.getSimpleValueType().is256BitVector() &&
@@ -26671,7 +26700,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UADDSAT:
   case ISD::SADDSAT:
   case ISD::USUBSAT:
-  case ISD::SSUBSAT:            return LowerADDSAT_SUBSAT(Op, DAG);
+  case ISD::SSUBSAT:            return LowerADDSAT_SUBSAT(Op, DAG, Subtarget);
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:
@@ -30856,33 +30885,39 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
 
   // Match against a ZERO_EXTEND_VECTOR_INREG/VZEXT instruction.
   // TODO: Add 512-bit vector support (split AVX512F and AVX512BW).
-  if (AllowIntDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSE41()) ||
-                         (MaskVT.is256BitVector() && Subtarget.hasInt256()))) {
-    unsigned MaxScale = 64 / MaskEltSize;
-    for (unsigned Scale = 2; Scale <= MaxScale; Scale *= 2) {
-      bool Match = true;
-      unsigned NumDstElts = NumMaskElts / Scale;
-      for (unsigned i = 0; i != NumDstElts && Match; ++i) {
-        Match &= isUndefOrEqual(Mask[i * Scale], (int)i);
-        Match &= isUndefOrZeroInRange(Mask, (i * Scale) + 1, Scale - 1);
-      }
-      if (Match) {
-        unsigned SrcSize = std::max(128u, NumDstElts * MaskEltSize);
-        MVT ScalarTy = MaskVT.isInteger() ? MaskVT.getScalarType() :
-                                            MVT::getIntegerVT(MaskEltSize);
-        SrcVT = MVT::getVectorVT(ScalarTy, SrcSize / MaskEltSize);
+  if ((MaskVT.is128BitVector() && Subtarget.hasSSE41()) ||
+      (MaskVT.is256BitVector() && Subtarget.hasInt256())) {
+    // Allow this with FloatDomain if we'll be able to fold the load.
+    SDValue BC1 = peekThroughOneUseBitcasts(V1);
+    if (AllowIntDomain ||
+        (BC1.hasOneUse() && BC1.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+         MayFoldLoad(BC1.getOperand(0)))) {
+      unsigned MaxScale = 64 / MaskEltSize;
+      for (unsigned Scale = 2; Scale <= MaxScale; Scale *= 2) {
+        bool Match = true;
+        unsigned NumDstElts = NumMaskElts / Scale;
+        for (unsigned i = 0; i != NumDstElts && Match; ++i) {
+          Match &= isUndefOrEqual(Mask[i * Scale], (int)i);
+          Match &= isUndefOrZeroInRange(Mask, (i * Scale) + 1, Scale - 1);
+        }
+        if (Match) {
+          unsigned SrcSize = std::max(128u, NumDstElts * MaskEltSize);
+          MVT ScalarTy = MaskVT.isInteger() ? MaskVT.getScalarType()
+                                            : MVT::getIntegerVT(MaskEltSize);
+          SrcVT = MVT::getVectorVT(ScalarTy, SrcSize / MaskEltSize);
 
-        if (SrcVT.getSizeInBits() != MaskVT.getSizeInBits())
-          V1 = extractSubVector(V1, 0, DAG, DL, SrcSize);
+          if (SrcVT.getSizeInBits() != MaskVT.getSizeInBits())
+            V1 = extractSubVector(V1, 0, DAG, DL, SrcSize);
 
-        if (SrcVT.getVectorNumElements() == NumDstElts)
-          Shuffle = unsigned(ISD::ZERO_EXTEND);
-        else
-          Shuffle = unsigned(ISD::ZERO_EXTEND_VECTOR_INREG);
+          if (SrcVT.getVectorNumElements() == NumDstElts)
+            Shuffle = unsigned(ISD::ZERO_EXTEND);
+          else
+            Shuffle = unsigned(ISD::ZERO_EXTEND_VECTOR_INREG);
 
-        DstVT = MVT::getIntegerVT(Scale * MaskEltSize);
-        DstVT = MVT::getVectorVT(DstVT, NumDstElts);
-        return true;
+          DstVT = MVT::getIntegerVT(Scale * MaskEltSize);
+          DstVT = MVT::getVectorVT(DstVT, NumDstElts);
+          return true;
+        }
       }
     }
   }
@@ -42569,7 +42604,8 @@ static SDValue combinePMULDQ(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
+                               const X86Subtarget &Subtarget) {
   // Disabling for widening legalization for now. We can enable if we find a
   // case that needs it. Otherwise it can be deleted when we switch to
   // widening legalization.
@@ -42584,6 +42620,14 @@ static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG) {
   if (In.getOpcode() == N->getOpcode() &&
       TLI.isTypeLegal(VT) && TLI.isTypeLegal(In.getOperand(0).getValueType()))
     return DAG.getNode(N->getOpcode(), SDLoc(N), VT, In.getOperand(0));
+
+  // Attempt to combine as a shuffle.
+  if (Subtarget.hasSSE41() && N->getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG) {
+    SDValue Op(N, 0);
+    if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(In.getValueType()))
+      if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
+        return Res;
+  }
 
   return SDValue();
 }
@@ -42651,7 +42695,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ZERO_EXTEND:    return combineZext(N, DAG, DCI, Subtarget);
   case ISD::SIGN_EXTEND:    return combineSext(N, DAG, DCI, Subtarget);
   case ISD::SIGN_EXTEND_INREG: return combineSignExtendInReg(N, DAG, Subtarget);
-  case ISD::ANY_EXTEND_VECTOR_INREG: return combineExtInVec(N, DAG);
+  case ISD::ANY_EXTEND_VECTOR_INREG:
+  case ISD::ZERO_EXTEND_VECTOR_INREG: return combineExtInVec(N, DAG, Subtarget);
   case ISD::SETCC:          return combineSetCC(N, DAG, Subtarget);
   case X86ISD::SETCC:       return combineX86SetCC(N, DAG, Subtarget);
   case X86ISD::BRCOND:      return combineBrCond(N, DAG, Subtarget);
