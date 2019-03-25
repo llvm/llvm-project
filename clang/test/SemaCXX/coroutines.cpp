@@ -314,19 +314,70 @@ struct CtorDtor {
   }
 };
 
+namespace std { class type_info; }
+
 void unevaluated() {
-  decltype(co_await a); // expected-error {{cannot be used in an unevaluated context}}
-  sizeof(co_await a); // expected-error {{cannot be used in an unevaluated context}}
-  typeid(co_await a); // expected-error {{cannot be used in an unevaluated context}}
-  decltype(co_yield a); // expected-error {{cannot be used in an unevaluated context}}
-  sizeof(co_yield a); // expected-error {{cannot be used in an unevaluated context}}
-  typeid(co_yield a); // expected-error {{cannot be used in an unevaluated context}}
+  decltype(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
+                        // expected-warning@-1 {{declaration does not declare anything}}
+  sizeof(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
+                      // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
+  typeid(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
+                      // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
+                      // expected-warning@-2 {{expression result unused}}
+  decltype(co_yield 1); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
+                        // expected-warning@-1 {{declaration does not declare anything}}
+  sizeof(co_yield 2); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
+                      // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
+  typeid(co_yield 3); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
+                      // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
+                      // expected-warning@-2 {{expression result unused}}
 }
 
 // [expr.await]p2: "An await-expression shall not appear in a default argument."
 // FIXME: A better diagnostic would explicitly state that default arguments are
 // not allowed. A user may not understand that this is "outside a function."
 void default_argument(int arg = co_await 0) {} // expected-error {{'co_await' cannot be used outside a function}}
+
+void await_in_catch_coroutine() {
+  try {
+  } catch (...) { // FIXME: Emit a note diagnostic pointing out the try handler on this line.
+    []() -> void { co_await a; }(); // OK
+    co_await a; // expected-error {{'co_await' cannot be used in the handler of a try block}}
+  }
+}
+
+void await_nested_in_catch_coroutine() {
+  try {
+  } catch (...) { // FIXME: Emit a note diagnostic pointing out the try handler on this line.
+    try {
+      co_await a; // expected-error {{'co_await' cannot be used in the handler of a try block}}
+      []() -> void { co_await a; }(); // OK
+    } catch (...) {
+      co_return 123;
+    }
+  }
+}
+
+void await_in_lambda_in_catch_coroutine() {
+  try {
+  } catch (...) {
+    []() -> void { co_await a; }(); // OK
+  }
+}
+
+void yield_in_catch_coroutine() {
+  try {
+  } catch (...) {
+    co_yield 1; // expected-error {{'co_yield' cannot be used in the handler of a try block}}
+  }
+}
+
+void return_in_catch_coroutine() {
+  try {
+  } catch (...) {
+    co_return 123; // OK
+  }
+}
 
 constexpr auto constexpr_deduced_return_coroutine() {
   co_yield 0; // expected-error {{'co_yield' cannot be used in a constexpr function}}
