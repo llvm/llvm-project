@@ -581,11 +581,17 @@ static bool eliminateRecursiveTailCall(
     if (TailCallsAreMarkedTail)
       // Move all fixed sized allocas from OldEntry to NewEntry.
       for (BasicBlock::iterator OEBI = OldEntry->begin(), E = OldEntry->end(),
-             NEBI = NewEntry->begin(); OEBI != E; )
-        if (AllocaInst *AI = dyn_cast<AllocaInst>(OEBI++))
+             NEBI = NewEntry->begin(); OEBI != E; ) {
+        auto I = OEBI++;
+        if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
           if (isa<ConstantInt>(AI->getArraySize()))
             AI->moveBefore(&*NEBI);
-
+        } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+          // Also move syncregions to NewEntry.
+          if (Intrinsic::syncregion_start == II->getIntrinsicID())
+            II->moveBefore(&*NEBI);
+        }
+      }
     // Now that we have created a new block, which jumps to the entry
     // block, insert a PHI node for each argument of the function.
     // For now, we initialize each PHI to only have the real arguments
