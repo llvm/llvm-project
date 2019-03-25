@@ -16,14 +16,19 @@
 #include "PythonTestSuite.h"
 
 using namespace lldb_private;
+class TestScriptInterpreterPython : public ScriptInterpreterPython {
+public:
+  using ScriptInterpreterPython::Initialize;
+  using ScriptInterpreterPython::InitializePrivate;
+};
 
 void PythonTestSuite::SetUp() {
   FileSystem::Initialize();
   HostInfoBase::Initialize();
   // ScriptInterpreterPython::Initialize() depends on HostInfo being
   // initializedso it can compute the python directory etc.
-  ScriptInterpreterPython::Initialize();
-  ScriptInterpreterPython::InitializePrivate();
+  TestScriptInterpreterPython::Initialize();
+  TestScriptInterpreterPython::InitializePrivate();
 
   // Although we don't care about concurrency for the purposes of running
   // this test suite, Python requires the GIL to be locked even for
@@ -36,7 +41,7 @@ void PythonTestSuite::SetUp() {
 void PythonTestSuite::TearDown() {
   PyGILState_Release(m_gil_state);
 
-  ScriptInterpreterPython::Terminate();
+  TestScriptInterpreterPython::Terminate();
   HostInfoBase::Terminate();
   FileSystem::Terminate();
 }
