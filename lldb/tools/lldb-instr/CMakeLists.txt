@@ -6,6 +6,9 @@ add_lldb_tool(lldb-instr
     clangBasic
     clangCodeGen
     clangFrontend
+    clangLex
+    clangRewrite
+    clangSerialization
     clangTooling
 
   LINK_COMPONENTS
