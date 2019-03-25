@@ -1105,6 +1105,9 @@ Loop *llvm::StripMineLoop(
   //              /*TI*/ nullptr, /*ORE*/ nullptr, /*PreserveLCSSA*/ true);
   // }
 
+  // Record that the remainder loop was derived from a Tapir loop.
+  remainderLoop->setDerivedFromTapirLoop();
+
   // At this point, the code is well formed.  We now simplify the new loops,
   // doing constant propagation and dead code elimination as we go.
   simplifyLoopAfterStripMine(L, /*SimplifyIVs*/true, LI, SE, DT, AC);
@@ -1115,6 +1118,9 @@ Loop *llvm::StripMineLoop(
   DT->verify();
   LI->verify(*DT);
 #endif
+
+  // Record that the old loop was derived from a Tapir loop.
+  L->setDerivedFromTapirLoop();
 
   // Update TaskInfo manually using the updated DT.
   if (TI)
