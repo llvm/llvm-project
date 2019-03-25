@@ -194,65 +194,66 @@ LLDBSWIGPython_GetDynamicSetting(void *module, const char *setting,
 
 #endif
 
-static ScriptInterpreterPython::SWIGInitCallback g_swig_init_callback = nullptr;
-static ScriptInterpreterPython::SWIGBreakpointCallbackFunction
-    g_swig_breakpoint_callback = nullptr;
-static ScriptInterpreterPython::SWIGWatchpointCallbackFunction
-    g_swig_watchpoint_callback = nullptr;
-static ScriptInterpreterPython::SWIGPythonTypeScriptCallbackFunction
-    g_swig_typescript_callback = nullptr;
-static ScriptInterpreterPython::SWIGPythonCreateSyntheticProvider
-    g_swig_synthetic_script = nullptr;
-static ScriptInterpreterPython::SWIGPythonCreateCommandObject
-    g_swig_create_cmd = nullptr;
-static ScriptInterpreterPython::SWIGPythonCalculateNumChildren
-    g_swig_calc_children = nullptr;
-static ScriptInterpreterPython::SWIGPythonGetChildAtIndex
-    g_swig_get_child_index = nullptr;
-static ScriptInterpreterPython::SWIGPythonGetIndexOfChildWithName
-    g_swig_get_index_child = nullptr;
-static ScriptInterpreterPython::SWIGPythonCastPyObjectToSBValue
-    g_swig_cast_to_sbvalue = nullptr;
-static ScriptInterpreterPython::SWIGPythonGetValueObjectSPFromSBValue
-    g_swig_get_valobj_sp_from_sbvalue = nullptr;
-static ScriptInterpreterPython::SWIGPythonUpdateSynthProviderInstance
-    g_swig_update_provider = nullptr;
-static ScriptInterpreterPython::SWIGPythonMightHaveChildrenSynthProviderInstance
-    g_swig_mighthavechildren_provider = nullptr;
-static ScriptInterpreterPython::SWIGPythonGetValueSynthProviderInstance
-    g_swig_getvalue_provider = nullptr;
-static ScriptInterpreterPython::SWIGPythonCallCommand g_swig_call_command =
-    nullptr;
-static ScriptInterpreterPython::SWIGPythonCallCommandObject
-    g_swig_call_command_object = nullptr;
-static ScriptInterpreterPython::SWIGPythonCallModuleInit
-    g_swig_call_module_init = nullptr;
-static ScriptInterpreterPython::SWIGPythonCreateOSPlugin
-    g_swig_create_os_plugin = nullptr;
-static ScriptInterpreterPython::SWIGPythonCreateFrameRecognizer
-    g_swig_create_frame_recognizer = nullptr;
-static ScriptInterpreterPython::SWIGPythonGetRecognizedArguments
-    g_swig_get_recognized_arguments = nullptr;
-static ScriptInterpreterPython::SWIGPythonScriptKeyword_Process
-    g_swig_run_script_keyword_process = nullptr;
-static ScriptInterpreterPython::SWIGPythonScriptKeyword_Thread
-    g_swig_run_script_keyword_thread = nullptr;
-static ScriptInterpreterPython::SWIGPythonScriptKeyword_Target
-    g_swig_run_script_keyword_target = nullptr;
-static ScriptInterpreterPython::SWIGPythonScriptKeyword_Frame
-    g_swig_run_script_keyword_frame = nullptr;
-static ScriptInterpreterPython::SWIGPythonScriptKeyword_Value
-    g_swig_run_script_keyword_value = nullptr;
-static ScriptInterpreterPython::SWIGPython_GetDynamicSetting g_swig_plugin_get =
-    nullptr;
-static ScriptInterpreterPython::SWIGPythonCreateScriptedThreadPlan
-    g_swig_thread_plan_script = nullptr;
-static ScriptInterpreterPython::SWIGPythonCallThreadPlan
-    g_swig_call_thread_plan = nullptr;
-static ScriptInterpreterPython::SWIGPythonCreateScriptedBreakpointResolver
-    g_swig_bkpt_resolver_script = nullptr;
-static ScriptInterpreterPython::SWIGPythonCallBreakpointResolver
-    g_swig_call_bkpt_resolver = nullptr;
+ScriptInterpreterPython::SWIGInitCallback
+    ScriptInterpreterPython::g_swig_init_callback = nullptr;
+ScriptInterpreterPython::SWIGBreakpointCallbackFunction
+    ScriptInterpreterPython::g_swig_breakpoint_callback = nullptr;
+ScriptInterpreterPython::SWIGWatchpointCallbackFunction
+    ScriptInterpreterPython::g_swig_watchpoint_callback = nullptr;
+ScriptInterpreterPython::SWIGPythonTypeScriptCallbackFunction
+    ScriptInterpreterPython::g_swig_typescript_callback = nullptr;
+ScriptInterpreterPython::SWIGPythonCreateSyntheticProvider
+    ScriptInterpreterPython::g_swig_synthetic_script = nullptr;
+ScriptInterpreterPython::SWIGPythonCreateCommandObject
+    ScriptInterpreterPython::g_swig_create_cmd = nullptr;
+ScriptInterpreterPython::SWIGPythonCalculateNumChildren
+    ScriptInterpreterPython::g_swig_calc_children = nullptr;
+ScriptInterpreterPython::SWIGPythonGetChildAtIndex
+    ScriptInterpreterPython::g_swig_get_child_index = nullptr;
+ScriptInterpreterPython::SWIGPythonGetIndexOfChildWithName
+    ScriptInterpreterPython::g_swig_get_index_child = nullptr;
+ScriptInterpreterPython::SWIGPythonCastPyObjectToSBValue
+    ScriptInterpreterPython::g_swig_cast_to_sbvalue = nullptr;
+ScriptInterpreterPython::SWIGPythonGetValueObjectSPFromSBValue
+    ScriptInterpreterPython::g_swig_get_valobj_sp_from_sbvalue = nullptr;
+ScriptInterpreterPython::SWIGPythonUpdateSynthProviderInstance
+    ScriptInterpreterPython::g_swig_update_provider = nullptr;
+ScriptInterpreterPython::SWIGPythonMightHaveChildrenSynthProviderInstance
+    ScriptInterpreterPython::g_swig_mighthavechildren_provider = nullptr;
+ScriptInterpreterPython::SWIGPythonGetValueSynthProviderInstance
+    ScriptInterpreterPython::g_swig_getvalue_provider = nullptr;
+ScriptInterpreterPython::SWIGPythonCallCommand
+    ScriptInterpreterPython::g_swig_call_command = nullptr;
+ScriptInterpreterPython::SWIGPythonCallCommandObject
+    ScriptInterpreterPython::g_swig_call_command_object = nullptr;
+ScriptInterpreterPython::SWIGPythonCallModuleInit
+    ScriptInterpreterPython::g_swig_call_module_init = nullptr;
+ScriptInterpreterPython::SWIGPythonCreateOSPlugin
+    ScriptInterpreterPython::g_swig_create_os_plugin = nullptr;
+ScriptInterpreterPython::SWIGPythonCreateFrameRecognizer
+    ScriptInterpreterPython::g_swig_create_frame_recognizer = nullptr;
+ScriptInterpreterPython::SWIGPythonGetRecognizedArguments
+    ScriptInterpreterPython::g_swig_get_recognized_arguments = nullptr;
+ScriptInterpreterPython::SWIGPythonScriptKeyword_Process
+    ScriptInterpreterPython::g_swig_run_script_keyword_process = nullptr;
+ScriptInterpreterPython::SWIGPythonScriptKeyword_Thread
+    ScriptInterpreterPython::g_swig_run_script_keyword_thread = nullptr;
+ScriptInterpreterPython::SWIGPythonScriptKeyword_Target
+    ScriptInterpreterPython::g_swig_run_script_keyword_target = nullptr;
+ScriptInterpreterPython::SWIGPythonScriptKeyword_Frame
+    ScriptInterpreterPython::g_swig_run_script_keyword_frame = nullptr;
+ScriptInterpreterPython::SWIGPythonScriptKeyword_Value
+    ScriptInterpreterPython::g_swig_run_script_keyword_value = nullptr;
+ScriptInterpreterPython::SWIGPython_GetDynamicSetting
+    ScriptInterpreterPython::g_swig_plugin_get = nullptr;
+ScriptInterpreterPython::SWIGPythonCreateScriptedThreadPlan
+    ScriptInterpreterPython::g_swig_thread_plan_script = nullptr;
+ScriptInterpreterPython::SWIGPythonCallThreadPlan
+    ScriptInterpreterPython::g_swig_call_thread_plan = nullptr;
+ScriptInterpreterPython::SWIGPythonCreateScriptedBreakpointResolver
+    ScriptInterpreterPython::g_swig_bkpt_resolver_script = nullptr;
+ScriptInterpreterPython::SWIGPythonCallBreakpointResolver
+    ScriptInterpreterPython::g_swig_call_bkpt_resolver = nullptr;
 
 static bool g_initialized = false;
 
@@ -275,7 +276,8 @@ public:
     InitializePythonHome();
 
     // Register _lldb as a built-in module.
-    PyImport_AppendInittab("_lldb", g_swig_init_callback);
+    PyImport_AppendInittab("_lldb",
+                           ScriptInterpreterPython::g_swig_init_callback);
 
 // Python < 3.2 and Python >= 3.2 reversed the ordering requirements for
 // calling `Py_Initialize` and `PyEval_InitThreads`.  < 3.2 requires that you
