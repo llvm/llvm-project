@@ -609,47 +609,55 @@ int Driver::MainLoop() {
   // are processed.
   WriteCommandsForSourcing(eCommandPlacementBeforeFile, commands_stream);
 
-  const size_t num_args = m_option_data.m_args.size();
-  if (num_args > 0) {
-    char arch_name[64];
-    if (lldb::SBDebugger::GetDefaultArchitecture(arch_name, sizeof(arch_name)))
-      commands_stream.Printf("target create --arch=%s %s", arch_name,
-                             EscapeString(m_option_data.m_args[0]).c_str());
-    else
-      commands_stream.Printf("target create %s",
-                             EscapeString(m_option_data.m_args[0]).c_str());
+  // If we're not in --repl mode, add the commands to process the file
+  // arguments, and the commands specified to run afterwards.
+  if (!m_option_data.m_repl) {
+    const size_t num_args = m_option_data.m_args.size();
+    if (num_args > 0) {
+      char arch_name[64];
+      if (lldb::SBDebugger::GetDefaultArchitecture(arch_name, sizeof(arch_name)))
+        commands_stream.Printf("target create --arch=%s %s", arch_name,
+                               EscapeString(m_option_data.m_args[0]).c_str());
+      else
+        commands_stream.Printf("target create %s",
+                               EscapeString(m_option_data.m_args[0]).c_str());
 
-    if (!m_option_data.m_core_file.empty()) {
-      commands_stream.Printf(" --core %s",
-                             EscapeString(m_option_data.m_core_file).c_str());
-    }
-    commands_stream.Printf("\n");
-
-    if (num_args > 1) {
-      commands_stream.Printf("settings set -- target.run-args ");
-      for (size_t arg_idx = 1; arg_idx < num_args; ++arg_idx)
-        commands_stream.Printf(
-            " %s", EscapeString(m_option_data.m_args[arg_idx]).c_str());
+      if (!m_option_data.m_core_file.empty()) {
+        commands_stream.Printf(" --core %s",
+                               EscapeString(m_option_data.m_core_file).c_str());
+      }
       commands_stream.Printf("\n");
+
+      if (num_args > 1) {
+        commands_stream.Printf("settings set -- target.run-args ");
+        for (size_t arg_idx = 1; arg_idx < num_args; ++arg_idx)
+          commands_stream.Printf(
+              " %s", EscapeString(m_option_data.m_args[arg_idx]).c_str());
+        commands_stream.Printf("\n");
+      }
+    } else if (!m_option_data.m_core_file.empty()) {
+      commands_stream.Printf("target create --core %s\n",
+                             EscapeString(m_option_data.m_core_file).c_str());
+    } else if (!m_option_data.m_process_name.empty()) {
+      commands_stream.Printf("process attach --name %s",
+                             EscapeString(m_option_data.m_process_name).c_str());
+
+      if (m_option_data.m_wait_for)
+        commands_stream.Printf(" --waitfor");
+
+      commands_stream.Printf("\n");
+
+    } else if (LLDB_INVALID_PROCESS_ID != m_option_data.m_process_pid) {
+      commands_stream.Printf("process attach --pid %" PRIu64 "\n",
+                             m_option_data.m_process_pid);
     }
-  } else if (!m_option_data.m_core_file.empty()) {
-    commands_stream.Printf("target create --core %s\n",
-                           EscapeString(m_option_data.m_core_file).c_str());
-  } else if (!m_option_data.m_process_name.empty()) {
-    commands_stream.Printf("process attach --name %s",
-                           EscapeString(m_option_data.m_process_name).c_str());
 
-    if (m_option_data.m_wait_for)
-      commands_stream.Printf(" --waitfor");
-
-    commands_stream.Printf("\n");
-
-  } else if (LLDB_INVALID_PROCESS_ID != m_option_data.m_process_pid) {
-    commands_stream.Printf("process attach --pid %" PRIu64 "\n",
-                           m_option_data.m_process_pid);
+    WriteCommandsForSourcing(eCommandPlacementAfterFile, commands_stream);
+  } else if (!m_option_data.m_after_file_commands.empty()) {
+    // We're in repl mode and after-file-load commands were specified.
+    WithColor::warning() << "commands specified to run after file load (via -o "
+      "or -s) are ignored in REPL mode.\n";
   }
-
-  WriteCommandsForSourcing(eCommandPlacementAfterFile, commands_stream);
 
   if (GetDebugMode()) {
     result.PutError(m_debugger.GetErrorFileHandle());
@@ -659,100 +667,101 @@ int Driver::MainLoop() {
   bool handle_events = true;
   bool spawn_thread = false;
 
-  if (m_option_data.m_repl) {
-    const char *repl_options = nullptr;
-    if (!m_option_data.m_repl_options.empty())
-      repl_options = m_option_data.m_repl_options.c_str();
-    SBError error(m_debugger.RunREPL(m_option_data.m_repl_lang, repl_options));
-    if (error.Fail()) {
-      const char *error_cstr = error.GetCString();
-      if ((error_cstr != nullptr) && (error_cstr[0] != 0))
-        WithColor::error() << error_cstr << '\n';
-      else
-        WithColor::error() << error.GetError() << '\n';
-    }
-  } else {
-    // Check if we have any data in the commands stream, and if so, save it to a
-    // temp file
-    // so we can then run the command interpreter using the file contents.
-    const char *commands_data = commands_stream.GetData();
-    const size_t commands_size = commands_stream.GetSize();
+  // Check if we have any data in the commands stream, and if so, save it to a
+  // temp file
+  // so we can then run the command interpreter using the file contents.
+  const char *commands_data = commands_stream.GetData();
+  const size_t commands_size = commands_stream.GetSize();
 
-    // The command file might have requested that we quit, this variable will
-    // track that.
-    bool quit_requested = false;
-    bool stopped_for_crash = false;
-    if ((commands_data != nullptr) && (commands_size != 0u)) {
-      int initial_commands_fds[2];
-      bool success = true;
-      FILE *commands_file = PrepareCommandsForSourcing(
-          commands_data, commands_size, initial_commands_fds);
-      if (commands_file != nullptr) {
-        m_debugger.SetInputFileHandle(commands_file, true);
+  // The command file might have requested that we quit, this variable will
+  // track that.
+  bool quit_requested = false;
+  bool stopped_for_crash = false;
+  if ((commands_data != nullptr) && (commands_size != 0u)) {
+    int initial_commands_fds[2];
+    bool success = true;
+    FILE *commands_file = PrepareCommandsForSourcing(
+        commands_data, commands_size, initial_commands_fds);
+    if (commands_file != nullptr) {
+      m_debugger.SetInputFileHandle(commands_file, true);
 
-        // Set the debugger into Sync mode when running the command file.
-        // Otherwise command files
-        // that run the target won't run in a sensible way.
-        bool old_async = m_debugger.GetAsync();
-        m_debugger.SetAsync(false);
-        int num_errors;
+      // Set the debugger into Sync mode when running the command file.
+      // Otherwise command files
+      // that run the target won't run in a sensible way.
+      bool old_async = m_debugger.GetAsync();
+      m_debugger.SetAsync(false);
+      int num_errors;
 
-        SBCommandInterpreterRunOptions options;
-        options.SetStopOnError(true);
-        if (m_option_data.m_batch)
-          options.SetStopOnCrash(true);
+      SBCommandInterpreterRunOptions options;
+      options.SetStopOnError(true);
+      if (m_option_data.m_batch)
+        options.SetStopOnCrash(true);
 
-        m_debugger.RunCommandInterpreter(handle_events, spawn_thread, options,
-                                         num_errors, quit_requested,
-                                         stopped_for_crash);
+      m_debugger.RunCommandInterpreter(handle_events, spawn_thread, options,
+                                       num_errors, quit_requested,
+                                       stopped_for_crash);
 
-        if (m_option_data.m_batch && stopped_for_crash &&
-            !m_option_data.m_after_crash_commands.empty()) {
-          int crash_command_fds[2];
-          SBStream crash_commands_stream;
-          WriteCommandsForSourcing(eCommandPlacementAfterCrash,
-                                   crash_commands_stream);
-          const char *crash_commands_data = crash_commands_stream.GetData();
-          const size_t crash_commands_size = crash_commands_stream.GetSize();
-          commands_file = PrepareCommandsForSourcing(
-              crash_commands_data, crash_commands_size, crash_command_fds);
-          if (commands_file != nullptr) {
-            bool local_quit_requested;
-            bool local_stopped_for_crash;
-            m_debugger.SetInputFileHandle(commands_file, true);
+      if (m_option_data.m_batch && stopped_for_crash &&
+          !m_option_data.m_after_crash_commands.empty()) {
+        int crash_command_fds[2];
+        SBStream crash_commands_stream;
+        WriteCommandsForSourcing(eCommandPlacementAfterCrash,
+                                 crash_commands_stream);
+        const char *crash_commands_data = crash_commands_stream.GetData();
+        const size_t crash_commands_size = crash_commands_stream.GetSize();
+        commands_file = PrepareCommandsForSourcing(
+            crash_commands_data, crash_commands_size, crash_command_fds);
+        if (commands_file != nullptr) {
+          bool local_quit_requested;
+          bool local_stopped_for_crash;
+          m_debugger.SetInputFileHandle(commands_file, true);
 
-            m_debugger.RunCommandInterpreter(
-                handle_events, spawn_thread, options, num_errors,
-                local_quit_requested, local_stopped_for_crash);
-            if (local_quit_requested)
-              quit_requested = true;
-          }
+          m_debugger.RunCommandInterpreter(
+              handle_events, spawn_thread, options, num_errors,
+              local_quit_requested, local_stopped_for_crash);
+          if (local_quit_requested)
+            quit_requested = true;
         }
-        m_debugger.SetAsync(old_async);
-      } else
-        success = false;
-
-      // Close any pipes that we still have ownership of
-      CleanupAfterCommandSourcing(initial_commands_fds);
-
-      // Something went wrong with command pipe
-      if (!success) {
-        exit(1);
       }
+      m_debugger.SetAsync(old_async);
+    } else
+      success = false;
+
+    // Close any pipes that we still have ownership of
+    CleanupAfterCommandSourcing(initial_commands_fds);
+
+    // Something went wrong with command pipe
+    if (!success) {
+      exit(1);
     }
+  }
 
-    // Now set the input file handle to STDIN and run the command
-    // interpreter again in interactive mode and let the debugger
-    // take ownership of stdin
+  // Now set the input file handle to STDIN and run the command
+  // interpreter again in interactive mode or repl mode and let the debugger
+  // take ownership of stdin
 
-    bool go_interactive = true;
-    if (quit_requested)
-      go_interactive = false;
-    else if (m_option_data.m_batch && !stopped_for_crash)
-      go_interactive = false;
+  bool go_interactive = true;
+  if (quit_requested)
+    go_interactive = false;
+  else if (m_option_data.m_batch && !stopped_for_crash)
+    go_interactive = false;
 
-    if (go_interactive) {
-      m_debugger.SetInputFileHandle(stdin, true);
+  if (go_interactive) {
+    m_debugger.SetInputFileHandle(stdin, true);
+
+    if (m_option_data.m_repl) {
+      const char *repl_options = nullptr;
+      if (!m_option_data.m_repl_options.empty())
+        repl_options = m_option_data.m_repl_options.c_str();
+      SBError error(m_debugger.RunREPL(m_option_data.m_repl_lang, repl_options));
+      if (error.Fail()) {
+        const char *error_cstr = error.GetCString();
+        if ((error_cstr != nullptr) && (error_cstr[0] != 0))
+          WithColor::error() << error_cstr << '\n';
+        else
+          WithColor::error() << error.GetError() << '\n';
+      }
+    } else {
       m_debugger.RunCommandInterpreter(handle_events, spawn_thread);
     }
   }
@@ -838,13 +847,16 @@ EXAMPLES:
 
     lldb -c /path/to/core
 
-  Command options can be combined with either mode and cause lldb to run the
+  Command options can be combined with these modes and cause lldb to run the
   specified commands before or after events, like loading the file or crashing,
   in the order provided on the command line.
 
     lldb -O 'settings set stop-disassembly-count 20' -o 'run' -o 'bt'
     lldb -S /source/before/file -s /source/after/file
     lldb -K /source/before/crash -k /source/after/crash
+
+  Note: In REPL mode no file is loaded, so commands specified to run after
+  loading the file (via -o or -s) will be ignored.
   )___";
   llvm::outs() << examples;
 }
