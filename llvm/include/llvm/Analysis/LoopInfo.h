@@ -791,6 +791,14 @@ public:
   /// unrolling pass is run more than once (which it generally is).
   void setLoopAlreadyUnrolled();
 
+  /// Add llvm.loop.from.tapir.loop to this loop's loop id metadata, to indicate
+  /// that this loop was derived from a Tapir loop.
+  void setDerivedFromTapirLoop();
+
+  /// Returns true if the loop was derived from a Tapir loop, according to its
+  /// metadata.
+  bool wasDerivedFromTapirLoop() const;
+
   void dump() const;
   void dumpVerbose() const;
 

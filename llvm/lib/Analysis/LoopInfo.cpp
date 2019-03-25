@@ -530,6 +530,52 @@ void Loop::setLoopAlreadyUnrolled() {
   setLoopID(NewLoopID);
 }
 
+void Loop::setDerivedFromTapirLoop() {
+  MDNode *LoopID = getLoopID();
+  // First Gather all existing loop metadata.
+  SmallVector<Metadata *, 4> MDs;
+  // Reserve first location for self reference to the LoopID metadata node.
+  MDs.push_back(nullptr);
+
+  if (LoopID)
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i)
+      MDs.push_back(LoopID->getOperand(i));
+
+  // Add metadata to indicate the loop was derived from a Tapir loop.
+  LLVMContext &Context = getHeader()->getContext();
+  SmallVector<Metadata *, 1> WasTapirOperands;
+  WasTapirOperands.push_back(MDString::get(Context,
+                                           "llvm.loop.from.tapir.loop"));
+  MDNode *WasTapirNode = MDNode::get(Context, WasTapirOperands);
+  MDs.push_back(WasTapirNode);
+
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  setLoopID(NewLoopID);
+}
+
+bool Loop::wasDerivedFromTapirLoop() const {
+  MDNode *LoopID = getLoopID();
+
+  if (!LoopID)
+    return false;
+
+  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
+    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+    if (!MD)
+      continue;
+
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+    if (!S)
+      continue;
+
+    if (S->getString().equals("llvm.loop.from.tapir.loop"))
+      return true;
+  }
+  return false;
+}
+
 bool Loop::isAnnotatedParallel() const {
   MDNode *DesiredLoopIdMetadata = getLoopID();
 
