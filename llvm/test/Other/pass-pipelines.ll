@@ -84,6 +84,10 @@
 ; Next is the late function pass pipeline.
 ; CHECK-O2: FunctionPass Manager
 ; CHECK-O2-NOT: Manager
+; CHECK-O2: Loop Pass Manager
+; CHECK-O2-NEXT: Stripmine Tapir loops
+; CHECK-O2: Loop Pass Manager
+; CHECK-O2-NEXT: Simplify loop CFG
 ; We rotate loops prior to vectorization.
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NEXT: Rotate Loops

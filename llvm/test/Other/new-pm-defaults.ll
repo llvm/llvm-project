@@ -236,6 +236,21 @@
 ; CHECK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-O-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-O-NEXT: Running pass: Float2IntPass
+; CHECK-O-NEXT: Running pass: LoopStripMinePass
+; CHECK-O-NEXT: Running pass: TaskSimplifyPass on foo
+; CHECK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopStandardAnalysisResults{{.*}}>
+; CHECK-O-NEXT: Starting llvm::Function pass manager run.
+; CHECK-O-NEXT: Running pass: LoopSimplifyPass
+; CHECK-O-NEXT: Running pass: LCSSAPass
+; CHECK-O-NEXT: Finished llvm::Function pass manager run.
+; CHECK-O-NEXT: Starting Loop pass manager run.
+; CHECK-O-NEXT: Running pass: LoopSimplifyCFGPass
+; CHECK-O-NEXT: Running pass: IndVarSimplifyPass
+; CHECK-O-NEXT: Finished Loop pass manager run.
+; CHECK-O-NEXT: Running pass: EarlyCSEPass
+; CHECK-O-NEXT: Running pass: JumpThreadingPass
+; CHECK-O-NEXT: Running pass: CorrelatedValuePropagationPass
+; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-EP-VECTORIZER-START-NEXT: Running pass: NoOpFunctionPass
 ; CHECK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopRotatePass
 ; CHECK-O-NEXT: Starting llvm::Function pass manager run.

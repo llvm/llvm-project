@@ -210,6 +210,21 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-POSTLINK-O-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-POSTLINK-O-NEXT: Running pass: Float2IntPass
+; CHECK-POSTLINK-O-NEXT: Running pass: LoopStripMinePass on foo
+; CHECK-POSTLINK-O-NEXT: Running pass: TaskSimplifyPass on foo
+; CHECK-POSTLINK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopStandardAnalysisResults{{.*}}>
+; CHECK-POSTLINK-O-NEXT: Starting llvm::Function pass manager run.
+; CHECK-POSTLINK-O-NEXT: Running pass: LoopSimplifyPass
+; CHECK-POSTLINK-O-NEXT: Running pass: LCSSAPass
+; CHECK-POSTLINK-O-NEXT: Finished llvm::Function pass manager run.
+; CHECK-POSTLINK-O-NEXT: Starting Loop pass manager run.
+; CHECK-POSTLINK-O-NEXT: Running pass: LoopSimplifyCFGPass
+; CHECK-POSTLINK-O-NEXT: Running pass: IndVarSimplifyPass
+; CHECK-POSTLINK-O-NEXT: Finished Loop pass manager run.
+; CHECK-POSTLINK-O-NEXT: Running pass: EarlyCSEPass
+; CHECK-POSTLINK-O-NEXT: Running pass: JumpThreadingPass
+; CHECK-POSTLINK-O-NEXT: Running pass: CorrelatedValuePropagationPass
+; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopRotatePass
 ; CHECK-POSTLINK-O-NEXT: Starting llvm::Function pass manager run
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopSimplifyPass
