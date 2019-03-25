@@ -37,7 +37,7 @@
 # RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -u'            | FileCheck --check-prefix=CHECKUP %s
 # RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --fd'          | FileCheck --check-prefix=CHECKFD %s
 # RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -f'            | FileCheck --check-prefix=CHECKFD %s
-# CHECKDIR:      RVA        SIZE       TYPE       MinidumpStreamType
+# CHECKDIR:      RVA        SIZE       TYPE       StreamType
 # CHECKDIR-NEXT: ---------- ---------- ---------- --------------------------
 # CHECKDIR-NEXT: 0x000000b0 0x00000038 0x00000007 SystemInfo
 # CHECKDIR-NEXT: 0x0000015d 0x0000001b 0x47670007 LinuxEnviron
