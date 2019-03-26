@@ -42,5 +42,8 @@ int main() {
     assert(ClProgramSecond == ClProgramSecondNew);
   }
 
+  queue q;
+  q.submit([&](handler &cgh) { cgh.single_task<class foo>([]() {}); });
+
   return 0;
 }
