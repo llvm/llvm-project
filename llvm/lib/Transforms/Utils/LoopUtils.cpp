@@ -628,7 +628,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
     // Recompute task info.
     // FIXME: Figure out a way to update task info that is less computationally
     // wasteful.
-    TI->recalculate(*Preheader->getParent(), *DT);
+    TI->recalculate(*DT->getRoot()->getParent(), *DT);
 }
 
 Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {

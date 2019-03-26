@@ -960,7 +960,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     if (TI)
       // FIXME: Recalculating TaskInfo for the whole function is wasteful.
       // Optimize this routine in the future.
-      TI->recalculate(*Header->getParent(), *DT);
+      TI->recalculate(*DT->getRoot()->getParent(), *DT);
   }
 
   return CompletelyUnroll ? LoopUnrollResult::FullyUnrolled
