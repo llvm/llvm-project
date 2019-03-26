@@ -8,13 +8,17 @@
 #   export PYTHONPATH=/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Resources/Python
 #----------------------------------------------------------------------
 
-import commands
 from __future__ import print_function
 
 import optparse
 import os
 import platform
 import sys
+
+if sys.version_info.major == 2:
+    import commands as subprocess
+else:
+    import subprocess
 
 #----------------------------------------------------------------------
 # Code that auto imports LLDB
@@ -28,7 +32,7 @@ except ImportError:
     platform_system = platform.system()
     if platform_system == 'Darwin':
         # On Darwin, try the currently selected Xcode directory
-        xcode_dir = commands.getoutput("xcode-select --print-path")
+        xcode_dir = subprocess.getoutput("xcode-select --print-path")
         if xcode_dir:
             lldb_python_dirs.append(
                 os.path.realpath(

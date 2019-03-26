@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import commands
+import subprocess
 import optparse
 import os
 import os.path
@@ -11,7 +11,7 @@ import sys
 def extract_exe_symbol_names(arch, exe_path, match_str):
     command = 'dsymutil --arch %s -s "%s" | grep "%s" | colrm 1 69' % (
         arch, exe_path, match_str)
-    (command_exit_status, command_output) = commands.getstatusoutput(command)
+    (command_exit_status, command_output) = subprocess.getstatusoutput(command)
     if command_exit_status == 0:
         if command_output:
             return command_output[0:-1].split("'\n")
