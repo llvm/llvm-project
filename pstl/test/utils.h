@@ -10,14 +10,15 @@
 // File contains common utilities that tests rely on
 
 // Do not #include <algorithm>, because if we do we will not detect accidental dependencies.
-#include <sstream>
-#include <iostream>
-#include <cstring>
-#include <iterator>
-#include <vector>
 #include <atomic>
-#include <memory>
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <iterator>
+#include <memory>
+#include <sstream>
+#include <vector>
 
 #include "pstl_test_config.h"
 
@@ -38,32 +39,30 @@ template <typename T>
 class Sequence;
 
 // Handy macros for error reporting
-#define EXPECT_TRUE(condition, message) TestUtils::expect<true>(condition, __FILE__, __LINE__, message)
-#define EXPECT_FALSE(condition, message) TestUtils::expect<false>(condition, __FILE__, __LINE__, message)
+#define EXPECT_TRUE(condition, message) ::TestUtils::expect(true, condition, __FILE__, __LINE__, message)
+#define EXPECT_FALSE(condition, message) ::TestUtils::expect(false, condition, __FILE__, __LINE__, message)
 
 // Check that expected and actual are equal and have the same type.
-#define EXPECT_EQ(expected, actual, message) TestUtils::expect_equal(expected, actual, __FILE__, __LINE__, message)
+#define EXPECT_EQ(expected, actual, message) ::TestUtils::expect_equal(expected, actual, __FILE__, __LINE__, message)
 
 // Check that sequences started with expected and actual and have had size n are equal and have the same type.
 #define EXPECT_EQ_N(expected, actual, n, message)                                                                      \
-    TestUtils::expect_equal(expected, actual, n, __FILE__, __LINE__, message)
+    ::TestUtils::expect_equal(expected, actual, n, __FILE__, __LINE__, message)
 
 // Issue error message from outstr, adding a newline.
 // Real purpose of this routine is to have a place to hang a breakpoint.
-static void
+inline void
 issue_error_message(std::stringstream& outstr)
 {
     outstr << std::endl;
     std::cerr << outstr.str();
+    std::exit(EXIT_FAILURE);
 }
 
-template <bool B>
-void
-expect(bool condition, const char* file, int32_t line, const char* message)
+inline void
+expect(bool expected, bool condition, const char* file, int32_t line, const char* message)
 {
-    // Templating this function is somewhat silly, but avoids the need to declare it static
-    // or have a separate translation unit.
-    if (condition != B)
+    if (condition != expected)
     {
         std::stringstream outstr;
         outstr << "error at " << file << ":" << line << " - " << message;

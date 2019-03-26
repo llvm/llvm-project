@@ -55,7 +55,7 @@
 # RUN: %lldb -c %p/Inputs/fb-dump-content.dmp  \
 # RUN:   -o 'process plugin dump --fb-logcat' | \
 # RUN:   FileCheck --check-prefix=CHECK-LOGCAT %s
-# CHECK-DIR:      RVA        SIZE       TYPE       MinidumpStreamType
+# CHECK-DIR:      RVA        SIZE       TYPE       StreamType
 # CHECK-DIR-NEXT: ---------- ---------- ---------- --------------------------
 # CHECK-DIR-NEXT: 0x0000010c 0x00000013 0xfacecb00 FacebookDumpErrorLog
 # CHECK-DIR-NEXT: 0x0000011f 0x00000015 0xfacee000 FacebookThreadName

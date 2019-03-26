@@ -906,7 +906,9 @@ template <class ELFT> void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
 template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
   uint32_t Index = 0;
   for (const auto &Phdr : unwrapOrError(ElfFile.program_headers())) {
-    Segment &Seg = Obj.addSegment();
+    ArrayRef<uint8_t> Data{ElfFile.base() + Phdr.p_offset,
+                           (size_t)Phdr.p_filesz};
+    Segment &Seg = Obj.addSegment(Data);
     Seg.Type = Phdr.p_type;
     Seg.Flags = Phdr.p_flags;
     Seg.OriginalOffset = Phdr.p_offset;
@@ -1350,7 +1352,31 @@ template <class ELFT> void ELFWriter<ELFT>::writeShdrs() {
 
 template <class ELFT> void ELFWriter<ELFT>::writeSectionData() {
   for (auto &Sec : Obj.sections())
-    Sec.accept(*SecWriter);
+    // Segments are responsible for writing their contents, so only write the
+    // section data if the section is not in a segment. Note that this renders
+    // sections in segments effectively immutable.
+    if (Sec.ParentSegment == nullptr)
+      Sec.accept(*SecWriter);
+}
+
+template <class ELFT> void ELFWriter<ELFT>::writeSegmentData() {
+  for (Segment &Seg : Obj.segments()) {
+    uint8_t *B = Buf.getBufferStart() + Seg.Offset;
+    assert(Seg.FileSize == Seg.getContents().size() &&
+           "Segment size must match contents size");
+    std::memcpy(B, Seg.getContents().data(), Seg.FileSize);
+  }
+
+  // Iterate over removed sections and overwrite their old data with zeroes.
+  for (auto &Sec : Obj.removedSections()) {
+    Segment *Parent = Sec.ParentSegment;
+    if (Parent == nullptr || Sec.Type == SHT_NOBITS || Sec.Size == 0)
+      continue;
+    uint64_t Offset =
+        Sec.OriginalOffset - Parent->OriginalOffset + Parent->Offset;
+    uint8_t *B = Buf.getBufferStart();
+    std::memset(B + Offset, 0, Sec.Size);
+  }
 }
 
 Error Object::removeSections(
@@ -1396,7 +1422,10 @@ Error Object::removeSections(
       return E;
   }
 
-  // Now finally get rid of them all togethor.
+  // Transfer removed sections into the Object RemovedSections container for use
+  // later.
+  std::move(Iter, Sections.end(), std::back_inserter(RemovedSections));
+  // Now finally get rid of them all together.
   Sections.erase(Iter, std::end(Sections));
   return Error::success();
 }
@@ -1542,6 +1571,9 @@ template <class ELFT> size_t ELFWriter<ELFT>::totalSize() const {
 }
 
 template <class ELFT> Error ELFWriter<ELFT>::write() {
+  // Segment data must be written first, so that the ELF header and program
+  // header tables can overwrite it, if covered by a segment.
+  writeSegmentData();
   writeEhdr();
   writePhdrs();
   writeSectionData();

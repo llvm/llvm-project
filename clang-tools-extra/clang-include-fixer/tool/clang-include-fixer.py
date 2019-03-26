@@ -2,12 +2,14 @@
 # - Change 'binary' if clang-include-fixer is not on the path (see below).
 # - Add to your .vimrc:
 #
-#   noremap <leader>cf :pyf path/to/llvm/source/tools/clang/tools/extra/include-fixer/tool/clang-include-fixer.py<cr>
+#   noremap <leader>cf :pyf path/to/llvm/source/tools/clang/tools/extra/clang-include-fixer/tool/clang-include-fixer.py<cr>
 #
-# This enables clang-include-fixer for NORMAL and VISUAL mode. Change "<leader>cf"
-# to another binding if you need clang-include-fixer on a different key.
+# This enables clang-include-fixer for NORMAL and VISUAL mode. Change
+# "<leader>cf" to another binding if you need clang-include-fixer on a
+# different key.
 #
-# To set up clang-include-fixer, see http://clang.llvm.org/extra/include-fixer.html
+# To set up clang-include-fixer, see
+# http://clang.llvm.org/extra/clang-include-fixer.html
 #
 # With this integration you can press the bound key and clang-include-fixer will
 # be run on the current buffer.
@@ -76,7 +78,7 @@ def GetUserSelection(message, headers, maximum_suggested_headers):
         raise Exception()
     except Exception:
       # Show a new prompt on invalid option instead of aborting so that users
-      # don't need to wait for another include-fixer run.
+      # don't need to wait for another clang-include-fixer run.
       print >> sys.stderr, "Invalid option:", res
       return GetUserSelection(message, headers, maximum_suggested_headers)
   return headers[idx - 1]
@@ -170,7 +172,7 @@ def main():
     print "The file is fine, no need to add a header."
     return
   symbol = query_symbol_infos[0]["RawIdentifier"]
-  # The header_infos is already sorted by include-fixer.
+  # The header_infos is already sorted by clang-include-fixer.
   header_infos = include_fixer_context["HeaderInfos"]
   # Deduplicate headers while keeping the order, so that the same header would
   # not be suggested twice.

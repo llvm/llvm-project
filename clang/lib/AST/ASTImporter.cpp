@@ -148,32 +148,20 @@ namespace clang {
     // Use this to import pointers of specific type.
     template <typename ImportT>
     LLVM_NODISCARD Error importInto(ImportT *&To, ImportT *From) {
-      auto ToI = Importer.Import(From);
-      if (!ToI && From)
-        return make_error<ImportError>();
-      To = cast_or_null<ImportT>(ToI);
-      return Error::success();
-      // FIXME: This should be the final code.
-      //auto ToOrErr = Importer.Import(From);
-      //if (ToOrErr) {
-      //  To = cast_or_null<ImportT>(*ToOrErr);
-      //}
-      //return ToOrErr.takeError();
+      auto ToOrErr = Importer.Import_New(From);
+      if (ToOrErr)
+        To = cast_or_null<ImportT>(*ToOrErr);
+      return ToOrErr.takeError();
     }
 
     // Call the import function of ASTImporter for a baseclass of type `T` and
     // cast the return value to `T`.
     template <typename T>
     Expected<T *> import(T *From) {
-      auto *To = Importer.Import(From);
-      if (!To && From)
-        return make_error<ImportError>();
-      return cast_or_null<T>(To);
-      // FIXME: This should be the final code.
-      //auto ToOrErr = Importer.Import(From);
-      //if (!ToOrErr)
-      //  return ToOrErr.takeError();
-      //return cast_or_null<T>(*ToOrErr);
+      auto ToOrErr = Importer.Import_New(From);
+      if (!ToOrErr)
+        return ToOrErr.takeError();
+      return cast_or_null<T>(*ToOrErr);
     }
 
     template <typename T>
@@ -184,13 +172,7 @@ namespace clang {
     // Call the import function of ASTImporter for type `T`.
     template <typename T>
     Expected<T> import(const T &From) {
-      T To = Importer.Import(From);
-      T DefaultT;
-      if (To == DefaultT && !(From == DefaultT))
-        return make_error<ImportError>();
-      return To;
-      // FIXME: This should be the final code.
-      //return Importer.Import(From);
+      return Importer.Import_New(From);
     }
 
     template <class T>
@@ -282,8 +264,15 @@ namespace clang {
     void InitializeImportedDecl(Decl *FromD, Decl *ToD) {
       ToD->IdentifierNamespace = FromD->IdentifierNamespace;
       if (FromD->hasAttrs())
-        for (const Attr *FromAttr : FromD->getAttrs())
-          ToD->addAttr(Importer.Import(FromAttr));
+        for (const Attr *FromAttr : FromD->getAttrs()) {
+          // FIXME: Return of the error here is not possible until store of
+          // import errors is implemented.
+          auto ToAttrOrErr = import(FromAttr);
+          if (ToAttrOrErr)
+            ToD->addAttr(*ToAttrOrErr);
+          else
+            llvm::consumeError(ToAttrOrErr.takeError());
+        }
       if (FromD->isUsed())
         ToD->setIsUsed();
       if (FromD->isImplicit())
@@ -642,15 +631,6 @@ namespace clang {
     Expected<FunctionDecl *> FindFunctionTemplateSpecialization(
         FunctionDecl *FromFD);
   };
-
-// FIXME: Temporary until every import returns Expected.
-template <>
-Expected<TemplateName> ASTNodeImporter::import(const TemplateName &From) {
-  TemplateName To = Importer.Import(From);
-  if (To.isNull() && !From.isNull())
-    return make_error<ImportError>();
-  return To;
-}
 
 template <typename InContainerTy>
 Error ASTNodeImporter::ImportTemplateArgumentListInfo(
@@ -1692,15 +1672,10 @@ Error ASTNodeImporter::ImportImplicitMethods(
 static Error setTypedefNameForAnonDecl(TagDecl *From, TagDecl *To,
                                        ASTImporter &Importer) {
   if (TypedefNameDecl *FromTypedef = From->getTypedefNameForAnonDecl()) {
-    Decl *ToTypedef = Importer.Import(FromTypedef);
-    if (!ToTypedef)
-      return make_error<ImportError>();
-    To->setTypedefNameForAnonDecl(cast<TypedefNameDecl>(ToTypedef));
-    // FIXME: This should be the final code.
-    //if (Expected<Decl *> ToTypedefOrErr = Importer.Import(FromTypedef))
-    //  To->setTypedefNameForAnonDecl(cast<TypedefNameDecl>(*ToTypedefOrErr));
-    //else
-    //  return ToTypedefOrErr.takeError();
+    if (ExpectedDecl ToTypedefOrErr = Importer.Import_New(FromTypedef))
+      To->setTypedefNameForAnonDecl(cast<TypedefNameDecl>(*ToTypedefOrErr));
+    else
+      return ToTypedefOrErr.takeError();
   }
   return Error::success();
 }
@@ -3385,9 +3360,6 @@ ExpectedDecl ASTNodeImporter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
                               Loc, Name.getAsIdentifierInfo(), *TypeOrErr, CH))
     // FIXME here we leak `NamedChain` which is allocated before
     return ToIndirectField;
-
-  for (const auto *Attr : D->attrs())
-    ToIndirectField->addAttr(Importer.Import(Attr));
 
   ToIndirectField->setAccess(D->getAccess());
   ToIndirectField->setLexicalDeclContext(LexicalDC);

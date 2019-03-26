@@ -752,7 +752,7 @@ INPUT                  =  \
                           @abs_srcdir@/../clang-reorder-fields \
                           @abs_srcdir@/../clang-tidy \
                           @abs_srcdir@/../clangd \
-                          @abs_srcdir@/../include-fixer \
+                          @abs_srcdir@/../clang-include-fixer \
                           @abs_srcdir@/../modularize \
                           @abs_srcdir@/../pp-trace \
                           @abs_srcdir@/../tool-template \

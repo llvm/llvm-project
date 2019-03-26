@@ -429,13 +429,18 @@ namespace {
 
 // Callback to only accept typo corrections that can be a valid C++ member
 // intializer: either a non-static field member or a base class.
-class NestedNameSpecifierValidatorCCC : public CorrectionCandidateCallback {
- public:
+class NestedNameSpecifierValidatorCCC final
+    : public CorrectionCandidateCallback {
+public:
   explicit NestedNameSpecifierValidatorCCC(Sema &SRef)
       : SRef(SRef) {}
 
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     return SRef.isAcceptableNestedNameSpecifier(candidate.getCorrectionDecl());
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<NestedNameSpecifierValidatorCCC>(*this);
   }
 
  private:
@@ -614,9 +619,9 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     // different kind of error, so look for typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
+    NestedNameSpecifierValidatorCCC CCC(*this);
     if (TypoCorrection Corrected = CorrectTypo(
-            Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS,
-            llvm::make_unique<NestedNameSpecifierValidatorCCC>(*this),
+            Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS, CCC,
             CTK_ErrorRecovery, LookupCtx, EnteringContext)) {
       if (LookupCtx) {
         bool DroppedSpecifier =

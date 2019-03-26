@@ -19,7 +19,7 @@ define i32 @foo(i32* nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[TMP1]], i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> <i32 7, i32 8, i32 9, i32 10>, [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP5]], <i32 7, i32 8, i32 9, i32 10>
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>, <4 x i32>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[TMP6]], [[TMP8]]

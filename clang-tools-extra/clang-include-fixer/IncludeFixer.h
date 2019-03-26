@@ -67,7 +67,7 @@ private:
 ///
 /// \param Code The source code.
 /// \param Context The context which contains all information for creating
-/// include-fixer replacements.
+/// clang-include-fixer replacements.
 /// \param Style clang-format style being used.
 /// \param AddQualifiers  Whether we should add qualifiers to all instances of
 /// an unidentified symbol.

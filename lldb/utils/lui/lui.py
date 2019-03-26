@@ -18,7 +18,10 @@ import os
 import signal
 import sys
 
-import Queue
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 
 import debuggerdriver
 import cui
@@ -126,7 +129,7 @@ def main(screen):
     signal.signal(signal.SIGINT, sigint_handler)
 
     global event_queue
-    event_queue = Queue.Queue()
+    event_queue = queue.Queue()
 
     global debugger
     debugger = lldb.SBDebugger.Create()

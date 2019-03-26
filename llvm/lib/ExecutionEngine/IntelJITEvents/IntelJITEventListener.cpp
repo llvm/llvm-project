@@ -141,15 +141,25 @@ void IntelJITEventListener::notifyObjectLoaded(
     uint64_t Addr = *AddrOrErr;
     uint64_t Size = P.second;
 
+    auto SecOrErr = Sym.getSection();
+    if (!SecOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(SecOrErr.takeError());
+      continue;
+    }
+    object::section_iterator Sec = *SecOrErr;
+    if (Sec == Obj.section_end())
+      continue;
+    uint64_t Index = Sec->getIndex();
+
     // Record this address in a local vector
     Functions.push_back((void*)Addr);
 
     // Build the function loaded notification message
     iJIT_Method_Load FunctionMessage =
       FunctionDescToIntelJITFormat(*Wrapper, Name->data(), Addr, Size);
-    // TODO: it is neccessary to set proper SectionIndex here.
-    // object::SectionedAddress::UndefSection works for only absolute addresses.
-    DILineInfoTable Lines = Context->getLineInfoForAddressRange({Addr, object::SectionedAddress::UndefSection}, Size);
+    DILineInfoTable Lines =
+      Context->getLineInfoForAddressRange({Addr, Index}, Size);
     DILineInfoTable::iterator Begin = Lines.begin();
     DILineInfoTable::iterator End = Lines.end();
     for (DILineInfoTable::iterator It = Begin; It != End; ++It) {

@@ -1,7 +1,5 @@
 "Collection of tools for displaying bit representation of numbers."""
 
-import StringIO
-
 from __future__ import print_function
 
 def binary(n, width=None):

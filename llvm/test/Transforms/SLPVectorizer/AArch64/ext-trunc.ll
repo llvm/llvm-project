@@ -66,7 +66,7 @@ define void @test2(<4 x i16> %a, <4 x i16> %b, i64 %c0, i64 %c1, i64 %c2, i64 %c
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[C1:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[C2:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP3]], i64 [[C3:%.*]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[TMP4]], [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i64, i64* [[P:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, i64* [[GEP0]]

@@ -35,7 +35,7 @@ public:
 
   protected:
     bool assignVRegs(ArrayRef<unsigned> VRegs, ArrayRef<CCValAssign> ArgLocs,
-                     unsigned Index);
+                     unsigned ArgLocsStartIndex, const EVT &VT);
 
     void setLeastSignificantFirst(SmallVectorImpl<unsigned> &VRegs);
 
@@ -43,19 +43,21 @@ public:
     MachineRegisterInfo &MRI;
 
   private:
-    bool assign(unsigned VReg, const CCValAssign &VA);
+    bool assign(unsigned VReg, const CCValAssign &VA, const EVT &VT);
 
     virtual unsigned getStackAddress(const CCValAssign &VA,
                                      MachineMemOperand *&MMO) = 0;
 
-    virtual void assignValueToReg(unsigned ValVReg, const CCValAssign &VA) = 0;
+    virtual void assignValueToReg(unsigned ValVReg, const CCValAssign &VA,
+                                  const EVT &VT) = 0;
 
     virtual void assignValueToAddress(unsigned ValVReg,
                                       const CCValAssign &VA) = 0;
 
     virtual bool handleSplit(SmallVectorImpl<unsigned> &VRegs,
                              ArrayRef<CCValAssign> ArgLocs,
-                             unsigned ArgLocsStartIndex, unsigned ArgsReg) = 0;
+                             unsigned ArgLocsStartIndex, unsigned ArgsReg,
+                             const EVT &VT) = 0;
   };
 
   MipsCallLowering(const MipsTargetLowering &TLI);

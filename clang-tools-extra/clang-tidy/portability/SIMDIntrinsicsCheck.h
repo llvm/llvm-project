@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SIMD_INTRINSICS_CHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SIMD_INTRINSICS_CHECK_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 #include "llvm/ADT/SmallString.h"
 

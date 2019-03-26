@@ -298,110 +298,94 @@ static bool isUnneededSymbol(const Symbol &Sym) {
          Sym.Type != STT_FILE && Sym.Type != STT_SECTION;
 }
 
-// This function handles the high level operations of GNU objcopy including
-// handling command line options. It's important to outline certain properties
-// we expect to hold of the command line operations. Any operation that "keeps"
-// should keep regardless of a remove. Additionally any removal should respect
-// any previous removals. Lastly whether or not something is removed shouldn't
-// depend a) on the order the options occur in or b) on some opaque priority
-// system. The only priority is that keeps/copies overrule removes.
-static Error handleArgs(const CopyConfig &Config, Object &Obj,
-                        const Reader &Reader, ElfType OutputElfType) {
-
-  if (!Config.SplitDWO.empty())
-    if (Error E =
-            splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType))
-      return E;
-
-  if (Config.OutputArch) {
-    Obj.Machine = Config.OutputArch.getValue().EMachine;
-    Obj.OSABI = Config.OutputArch.getValue().OSABI;
-  }
-
+static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
   // TODO: update or remove symbols only if there is an option that affects
   // them.
-  if (Obj.SymbolTable) {
-    Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
-      // Common and undefined symbols don't make sense as local symbols, and can
-      // even cause crashes if we localize those, so skip them.
-      if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
-          ((Config.LocalizeHidden &&
-            (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
-           is_contained(Config.SymbolsToLocalize, Sym.Name)))
-        Sym.Binding = STB_LOCAL;
+  if (!Obj.SymbolTable)
+    return Error::success();
 
-      // Note: these two globalize flags have very similar names but different
-      // meanings:
-      //
-      // --globalize-symbol: promote a symbol to global
-      // --keep-global-symbol: all symbols except for these should be made local
-      //
-      // If --globalize-symbol is specified for a given symbol, it will be
-      // global in the output file even if it is not included via
-      // --keep-global-symbol. Because of that, make sure to check
-      // --globalize-symbol second.
-      if (!Config.SymbolsToKeepGlobal.empty() &&
-          !is_contained(Config.SymbolsToKeepGlobal, Sym.Name) &&
-          Sym.getShndx() != SHN_UNDEF)
-        Sym.Binding = STB_LOCAL;
+  Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
+    // Common and undefined symbols don't make sense as local symbols, and can
+    // even cause crashes if we localize those, so skip them.
+    if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
+        ((Config.LocalizeHidden &&
+          (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
+         is_contained(Config.SymbolsToLocalize, Sym.Name)))
+      Sym.Binding = STB_LOCAL;
 
-      if (is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
-          Sym.getShndx() != SHN_UNDEF)
-        Sym.Binding = STB_GLOBAL;
+    // Note: these two globalize flags have very similar names but different
+    // meanings:
+    //
+    // --globalize-symbol: promote a symbol to global
+    // --keep-global-symbol: all symbols except for these should be made local
+    //
+    // If --globalize-symbol is specified for a given symbol, it will be
+    // global in the output file even if it is not included via
+    // --keep-global-symbol. Because of that, make sure to check
+    // --globalize-symbol second.
+    if (!Config.SymbolsToKeepGlobal.empty() &&
+        !is_contained(Config.SymbolsToKeepGlobal, Sym.Name) &&
+        Sym.getShndx() != SHN_UNDEF)
+      Sym.Binding = STB_LOCAL;
 
-      if (is_contained(Config.SymbolsToWeaken, Sym.Name) &&
-          Sym.Binding == STB_GLOBAL)
-        Sym.Binding = STB_WEAK;
+    if (is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
+        Sym.getShndx() != SHN_UNDEF)
+      Sym.Binding = STB_GLOBAL;
 
-      if (Config.Weaken && Sym.Binding == STB_GLOBAL &&
-          Sym.getShndx() != SHN_UNDEF)
-        Sym.Binding = STB_WEAK;
+    if (is_contained(Config.SymbolsToWeaken, Sym.Name) &&
+        Sym.Binding == STB_GLOBAL)
+      Sym.Binding = STB_WEAK;
 
-      const auto I = Config.SymbolsToRename.find(Sym.Name);
-      if (I != Config.SymbolsToRename.end())
-        Sym.Name = I->getValue();
+    if (Config.Weaken && Sym.Binding == STB_GLOBAL &&
+        Sym.getShndx() != SHN_UNDEF)
+      Sym.Binding = STB_WEAK;
 
-      if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
-        Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
-    });
+    const auto I = Config.SymbolsToRename.find(Sym.Name);
+    if (I != Config.SymbolsToRename.end())
+      Sym.Name = I->getValue();
 
-    // The purpose of this loop is to mark symbols referenced by sections
-    // (like GroupSection or RelocationSection). This way, we know which
-    // symbols are still 'needed' and which are not.
-    if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty()) {
-      for (auto &Section : Obj.sections())
-        Section.markSymbols();
-    }
+    if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
+      Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
+  });
 
-    auto RemoveSymbolsPred = [&](const Symbol &Sym) {
-      if (is_contained(Config.SymbolsToKeep, Sym.Name) ||
-          (Config.KeepFileSymbols && Sym.Type == STT_FILE))
-        return false;
-
-      if ((Config.DiscardMode == DiscardType::All ||
-           (Config.DiscardMode == DiscardType::Locals &&
-            StringRef(Sym.Name).startswith(".L"))) &&
-          Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
-          Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
-        return true;
-
-      if (Config.StripAll || Config.StripAllGNU)
-        return true;
-
-      if (is_contained(Config.SymbolsToRemove, Sym.Name))
-        return true;
-
-      if ((Config.StripUnneeded ||
-           is_contained(Config.UnneededSymbolsToRemove, Sym.Name)) &&
-          isUnneededSymbol(Sym))
-        return true;
-
-      return false;
-    };
-    if (Error E = Obj.removeSymbols(RemoveSymbolsPred))
-      return E;
+  // The purpose of this loop is to mark symbols referenced by sections
+  // (like GroupSection or RelocationSection). This way, we know which
+  // symbols are still 'needed' and which are not.
+  if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty()) {
+    for (auto &Section : Obj.sections())
+      Section.markSymbols();
   }
 
+  auto RemoveSymbolsPred = [&](const Symbol &Sym) {
+    if (is_contained(Config.SymbolsToKeep, Sym.Name) ||
+        (Config.KeepFileSymbols && Sym.Type == STT_FILE))
+      return false;
+
+    if ((Config.DiscardMode == DiscardType::All ||
+         (Config.DiscardMode == DiscardType::Locals &&
+          StringRef(Sym.Name).startswith(".L"))) &&
+        Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
+        Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
+      return true;
+
+    if (Config.StripAll || Config.StripAllGNU)
+      return true;
+
+    if (is_contained(Config.SymbolsToRemove, Sym.Name))
+      return true;
+
+    if ((Config.StripUnneeded ||
+         is_contained(Config.UnneededSymbolsToRemove, Sym.Name)) &&
+        isUnneededSymbol(Sym))
+      return true;
+
+    return false;
+  };
+
+  return Obj.removeSymbols(RemoveSymbolsPred);
+}
+
+static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
   SectionPred RemovePred = [](const SectionBase &) { return false; };
 
   // Removes:
@@ -535,7 +519,33 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
           return &Obj.addSection<DecompressedSection>(*CS);
         });
 
-  if (Error E = Obj.removeSections(RemovePred))
+  return Obj.removeSections(RemovePred);
+}
+
+// This function handles the high level operations of GNU objcopy including
+// handling command line options. It's important to outline certain properties
+// we expect to hold of the command line operations. Any operation that "keeps"
+// should keep regardless of a remove. Additionally any removal should respect
+// any previous removals. Lastly whether or not something is removed shouldn't
+// depend a) on the order the options occur in or b) on some opaque priority
+// system. The only priority is that keeps/copies overrule removes.
+static Error handleArgs(const CopyConfig &Config, Object &Obj,
+                        const Reader &Reader, ElfType OutputElfType) {
+
+  if (!Config.SplitDWO.empty())
+    if (Error E =
+            splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType))
+      return E;
+
+  if (Config.OutputArch) {
+    Obj.Machine = Config.OutputArch.getValue().EMachine;
+    Obj.OSABI = Config.OutputArch.getValue().OSABI;
+  }
+
+  if (Error E = updateAndRemoveSymbols(Config, Obj))
+    return E;
+
+  if (Error E = replaceAndRemoveSections(Config, Obj))
     return E;
 
   if (!Config.SectionsToRename.empty()) {

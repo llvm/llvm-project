@@ -61,7 +61,7 @@ Sema::DeclGroupPtrTy Sema::ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType) {
 
 namespace {
 
-class TypeNameValidatorCCC : public CorrectionCandidateCallback {
+class TypeNameValidatorCCC final : public CorrectionCandidateCallback {
  public:
    TypeNameValidatorCCC(bool AllowInvalid, bool WantClass = false,
                         bool AllowTemplates = false,
@@ -103,6 +103,10 @@ class TypeNameValidatorCCC : public CorrectionCandidateCallback {
     }
 
     return !WantClassName && candidate.isKeyword();
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<TypeNameValidatorCCC>(*this);
   }
 
  private:
@@ -367,11 +371,10 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   case LookupResult::NotFound:
   case LookupResult::NotFoundInCurrentInstantiation:
     if (CorrectedII) {
-      TypoCorrection Correction =
-          CorrectTypo(Result.getLookupNameInfo(), Kind, S, SS,
-                      llvm::make_unique<TypeNameValidatorCCC>(
-                          true, isClassName, AllowDeducedTemplate),
-                      CTK_ErrorRecovery);
+      TypeNameValidatorCCC CCC(/*AllowInvalid=*/true, isClassName,
+                               AllowDeducedTemplate);
+      TypoCorrection Correction = CorrectTypo(Result.getLookupNameInfo(), Kind,
+                                              S, SS, CCC, CTK_ErrorRecovery);
       IdentifierInfo *NewII = Correction.getCorrectionAsIdentifierInfo();
       TemplateTy Template;
       bool MemberOfUnknownSpecialization;
@@ -664,11 +667,12 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
 
   // There may have been a typo in the name of the type. Look up typo
   // results, in case we have something that we can suggest.
+  TypeNameValidatorCCC CCC(/*AllowInvalid=*/false, /*WantClass=*/false,
+                           /*AllowTemplates=*/IsTemplateName,
+                           /*AllowNonTemplates=*/!IsTemplateName);
   if (TypoCorrection Corrected =
           CorrectTypo(DeclarationNameInfo(II, IILoc), LookupOrdinaryName, S, SS,
-                      llvm::make_unique<TypeNameValidatorCCC>(
-                          false, false, IsTemplateName, !IsTemplateName),
-                      CTK_ErrorRecovery)) {
+                      CCC, CTK_ErrorRecovery)) {
     // FIXME: Support error recovery for the template-name case.
     bool CanRecover = !IsTemplateName;
     if (Corrected.isKeyword()) {
@@ -843,8 +847,7 @@ static ParsedType buildNestedType(Sema &S, CXXScopeSpec &SS,
 Sema::NameClassification
 Sema::ClassifyName(Scope *S, CXXScopeSpec &SS, IdentifierInfo *&Name,
                    SourceLocation NameLoc, const Token &NextToken,
-                   bool IsAddressOfOperand,
-                   std::unique_ptr<CorrectionCandidateCallback> CCC) {
+                   bool IsAddressOfOperand, CorrectionCandidateCallback *CCC) {
   DeclarationNameInfo NameInfo(Name, NameLoc);
   ObjCMethodDecl *CurMethod = getCurMethodDecl();
 
@@ -926,10 +929,9 @@ Corrected:
     // close to this name.
     if (!SecondTry && CCC) {
       SecondTry = true;
-      if (TypoCorrection Corrected = CorrectTypo(Result.getLookupNameInfo(),
-                                                 Result.getLookupKind(), S,
-                                                 &SS, std::move(CCC),
-                                                 CTK_ErrorRecovery)) {
+      if (TypoCorrection Corrected =
+              CorrectTypo(Result.getLookupNameInfo(), Result.getLookupKind(), S,
+                          &SS, *CCC, CTK_ErrorRecovery)) {
         unsigned UnqualifiedDiag = diag::err_undeclared_var_use_suggest;
         unsigned QualifiedDiag = diag::err_no_member_suggest;
 
@@ -1865,10 +1867,10 @@ ObjCInterfaceDecl *Sema::getObjCInterfaceDecl(IdentifierInfo *&Id,
   if (!IDecl && DoTypoCorrection) {
     // Perform typo correction at the given location, but only if we
     // find an Objective-C class name.
-    if (TypoCorrection C = CorrectTypo(
-            DeclarationNameInfo(Id, IdLoc), LookupOrdinaryName, TUScope, nullptr,
-            llvm::make_unique<DeclFilterCCC<ObjCInterfaceDecl>>(),
-            CTK_ErrorRecovery)) {
+    DeclFilterCCC<ObjCInterfaceDecl> CCC{};
+    if (TypoCorrection C =
+            CorrectTypo(DeclarationNameInfo(Id, IdLoc), LookupOrdinaryName,
+                        TUScope, nullptr, CCC, CTK_ErrorRecovery)) {
       diagnoseTypo(C, PDiag(diag::err_undef_interface_suggest) << Id);
       IDecl = C.getCorrectionDeclAs<ObjCInterfaceDecl>();
       Id = IDecl->getIdentifier();
@@ -7688,7 +7690,7 @@ namespace {
 
 // Callback to only accept typo corrections that have a non-zero edit distance.
 // Also only accept corrections that have the same parent decl.
-class DifferentNameValidatorCCC : public CorrectionCandidateCallback {
+class DifferentNameValidatorCCC final : public CorrectionCandidateCallback {
  public:
   DifferentNameValidatorCCC(ASTContext &Context, FunctionDecl *TypoFD,
                             CXXRecordDecl *Parent)
@@ -7718,6 +7720,10 @@ class DifferentNameValidatorCCC : public CorrectionCandidateCallback {
     }
 
     return false;
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<DifferentNameValidatorCCC>(*this);
   }
 
  private:
@@ -7767,6 +7773,8 @@ static NamedDecl *DiagnoseInvalidRedeclaration(
   assert(!Prev.isAmbiguous() &&
          "Cannot have an ambiguity in previous-declaration lookup");
   CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewFD);
+  DifferentNameValidatorCCC CCC(SemaRef.Context, NewFD,
+                                MD ? MD->getParent() : nullptr);
   if (!Prev.empty()) {
     for (LookupResult::iterator Func = Prev.begin(), FuncEnd = Prev.end();
          Func != FuncEnd; ++Func) {
@@ -7783,10 +7791,8 @@ static NamedDecl *DiagnoseInvalidRedeclaration(
   // If the qualified name lookup yielded nothing, try typo correction
   } else if ((Correction = SemaRef.CorrectTypo(
                   Prev.getLookupNameInfo(), Prev.getLookupKind(), S,
-                  &ExtraArgs.D.getCXXScopeSpec(),
-                  llvm::make_unique<DifferentNameValidatorCCC>(
-                      SemaRef.Context, NewFD, MD ? MD->getParent() : nullptr),
-                  Sema::CTK_ErrorRecovery, IsLocalFriend ? nullptr : NewDC))) {
+                  &ExtraArgs.D.getCXXScopeSpec(), CCC, Sema::CTK_ErrorRecovery,
+                  IsLocalFriend ? nullptr : NewDC))) {
     // Set up everything for the call to ActOnFunctionDeclarator
     ExtraArgs.D.SetIdentifier(Correction.getCorrectionAsIdentifierInfo(),
                               ExtraArgs.D.getIdentifierLoc());
@@ -13538,10 +13544,10 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
   // function declaration is going to be treated as an error.
   if (Diags.getDiagnosticLevel(diag_id, Loc) >= DiagnosticsEngine::Error) {
     TypoCorrection Corrected;
-    if (S &&
-        (Corrected = CorrectTypo(
-             DeclarationNameInfo(&II, Loc), LookupOrdinaryName, S, nullptr,
-             llvm::make_unique<DeclFilterCCC<FunctionDecl>>(), CTK_NonError)))
+    DeclFilterCCC<FunctionDecl> CCC{};
+    if (S && (Corrected =
+                  CorrectTypo(DeclarationNameInfo(&II, Loc), LookupOrdinaryName,
+                              S, nullptr, CCC, CTK_NonError)))
       diagnoseTypo(Corrected, PDiag(diag::note_function_suggestion),
                    /*ErrorRecovery*/false);
   }

@@ -19,11 +19,6 @@ def GetLo32XForm : SDNodeXForm<imm, [{
   return getI32Imm((uint32_t)N->getZExtValue(), SDLoc(N));
 }]>;
 
-def GetLo8XForm : SDNodeXForm<imm, [{
-  // Transformation function: get the low 8 bits.
-  return getI8Imm((uint8_t)N->getZExtValue(), SDLoc(N));
-}]>;
-
 
 //===----------------------------------------------------------------------===//
 // Random Pseudo Instructions.
@@ -1523,7 +1518,7 @@ def : Pat<(and GR64:$src, i64immZExt32SExt8:$imm),
             (i64 0),
             (AND32ri8
               (EXTRACT_SUBREG GR64:$src, sub_32bit),
-              (i32 (GetLo8XForm imm:$imm))),
+              (i32 (GetLo32XForm imm:$imm))),
             sub_32bit)>;
 
 def : Pat<(and GR64:$src, i64immZExt32:$imm),

@@ -16,8 +16,8 @@ define void @fusion(i8* noalias nocapture align 256 dereferenceable(19267584) %a
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds half, half* [[TMP10]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half* [[TMP11]] to <2 x half>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half>* [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x half> <half 0xH5380, half 0xH5380>, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x half> <half 0xH57F0, half 0xH57F0>, [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x half> [[TMP2]], <half 0xH5380, half 0xH5380>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x half> [[TMP3]], <half 0xH57F0, half 0xH57F0>
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds half, half* [[TMP15]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast half* [[TMP16]] to <2 x half>*
 ; CHECK-NEXT:    store <2 x half> [[TMP4]], <2 x half>* [[TMP5]], align 8
