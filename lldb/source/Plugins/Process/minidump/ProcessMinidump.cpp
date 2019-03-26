@@ -29,7 +29,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
-
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 
@@ -104,18 +104,14 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
 
   lldb::ProcessSP process_sp;
   // Read enough data for the Minidump header
-  constexpr size_t header_size = sizeof(MinidumpHeader);
+  constexpr size_t header_size = sizeof(Header);
   auto DataPtr = FileSystem::Instance().CreateDataBuffer(crash_file->GetPath(),
                                                          header_size, 0);
   if (!DataPtr)
     return nullptr;
 
   lldbassert(DataPtr->GetByteSize() == header_size);
-
-  // first, only try to parse the header, beacuse we need to be fast
-  llvm::ArrayRef<uint8_t> HeaderBytes = DataPtr->GetData();
-  const MinidumpHeader *header = MinidumpHeader::Parse(HeaderBytes);
-  if (header == nullptr)
+  if (identify_magic(toStringRef(DataPtr->GetData())) != llvm::file_magic::minidump)
     return nullptr;
 
   auto AllData =
@@ -301,7 +297,7 @@ void ProcessMinidump::Clear() { Process::m_thread_list.Clear(); }
 bool ProcessMinidump::UpdateThreadList(ThreadList &old_thread_list,
                                        ThreadList &new_thread_list) {
   for (const MinidumpThread& thread : m_thread_list) {
-    MinidumpLocationDescriptor context_location = thread.thread_context;
+    LocationDescriptor context_location = thread.thread_context;
 
     // If the minidump contains an exception context, use it
     if (m_active_exception != nullptr &&
@@ -666,8 +662,8 @@ public:
       s.Printf("RVA        SIZE       TYPE       StreamType\n");
       s.Printf("---------- ---------- ---------- --------------------------\n");
       for (const auto &pair: minidump.GetDirectoryMap())
-        s.Printf("0x%8.8x 0x%8.8x 0x%8.8x %s\n", (uint32_t)pair.second.rva,
-                 (uint32_t)pair.second.data_size, pair.first,
+        s.Printf("0x%8.8x 0x%8.8x 0x%8.8x %s\n", (uint32_t)pair.second.RVA,
+                 (uint32_t)pair.second.DataSize, (unsigned)pair.first,
                  MinidumpParser::GetStreamTypeAsString(pair.first).data());
       s.Printf("\n");
     }
@@ -676,7 +672,7 @@ public:
       auto bytes = minidump.GetStream(stream_type);
       if (!bytes.empty()) {
         if (label.empty())
-          label = MinidumpParser::GetStreamTypeAsString((uint32_t)stream_type);
+          label = MinidumpParser::GetStreamTypeAsString(stream_type);
         s.Printf("%s:\n%s\n\n", label.data(), bytes.data());
       }
     };
@@ -685,7 +681,7 @@ public:
       auto bytes = minidump.GetStream(stream_type);
       if (!bytes.empty()) {
         if (label.empty())
-          label = MinidumpParser::GetStreamTypeAsString((uint32_t)stream_type);
+          label = MinidumpParser::GetStreamTypeAsString(stream_type);
         s.Printf("%s:\n", label.data());
         DataExtractor data(bytes.data(), bytes.size(), eByteOrderLittle,
                            process->GetAddressByteSize());

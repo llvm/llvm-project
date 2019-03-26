@@ -28,19 +28,34 @@ static llvm::Error stringError(llvm::StringRef Err) {
                                              llvm::inconvertibleErrorCode());
 }
 
+const Header *ParseHeader(llvm::ArrayRef<uint8_t> &data) {
+  const Header *header = nullptr;
+  Status error = consumeObject(data, header);
+
+  uint32_t signature = header->Signature;
+  uint32_t version = header->Version & 0x0000ffff;
+  // the high 16 bits of the version field are implementation specific
+
+  if (error.Fail() || signature != Header::MagicSignature ||
+      version != Header::MagicVersion)
+    return nullptr;
+
+  return header;
+}
+
 llvm::Expected<MinidumpParser>
 MinidumpParser::Create(const lldb::DataBufferSP &data_sp) {
-  if (data_sp->GetByteSize() < sizeof(MinidumpHeader))
+  if (data_sp->GetByteSize() < sizeof(Header))
     return stringError("Buffer too small.");
 
   llvm::ArrayRef<uint8_t> header_data(data_sp->GetBytes(),
-                                      sizeof(MinidumpHeader));
-  const MinidumpHeader *header = MinidumpHeader::Parse(header_data);
+                                      sizeof(Header));
+  const Header *header = ParseHeader(header_data);
   if (!header)
     return stringError("invalid minidump: can't parse the header");
 
   // A minidump without at least one stream is clearly ill-formed
-  if (header->streams_count == 0)
+  if (header->NumberOfStreams == 0)
     return stringError("invalid minidump: no streams present");
 
   struct FileRange {
@@ -58,42 +73,42 @@ MinidumpParser::Create(const lldb::DataBufferSP &data_sp) {
   // - truncation (streams pointing past the end of file)
   std::vector<FileRange> minidump_map;
 
-  minidump_map.emplace_back(0, sizeof(MinidumpHeader));
+  minidump_map.emplace_back(0, sizeof(Header));
 
   // Add the directory entries to the file map
-  FileRange directory_range(header->stream_directory_rva,
-                            header->streams_count * sizeof(MinidumpDirectory));
+  FileRange directory_range(header->StreamDirectoryRVA,
+                            header->NumberOfStreams * sizeof(Directory));
   if (directory_range.end() > file_size)
     return stringError("invalid minidump: truncated streams directory");
   minidump_map.push_back(directory_range);
 
-  llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> directory_map;
+  llvm::DenseMap<StreamType, LocationDescriptor> directory_map;
 
   // Parse stream directory entries
   llvm::ArrayRef<uint8_t> directory_data(
       data_sp->GetBytes() + directory_range.offset, directory_range.size);
-  for (uint32_t i = 0; i < header->streams_count; ++i) {
-    const MinidumpDirectory *directory_entry = nullptr;
+  for (uint32_t i = 0; i < header->NumberOfStreams; ++i) {
+    const Directory *directory_entry = nullptr;
     Status error = consumeObject(directory_data, directory_entry);
     if (error.Fail())
       return error.ToError();
-    if (directory_entry->stream_type == 0) {
+    if (directory_entry->Type == StreamType::Unused) {
       // Ignore dummy streams (technically ill-formed, but a number of
       // existing minidumps seem to contain such streams)
-      if (directory_entry->location.data_size == 0)
+      if (directory_entry->Location.DataSize == 0)
         continue;
       return stringError("invalid minidump: bad stream type");
     }
     // Update the streams map, checking for duplicate stream types
     if (!directory_map
-             .insert({directory_entry->stream_type, directory_entry->location})
+             .insert({directory_entry->Type, directory_entry->Location})
              .second)
       return stringError("invalid minidump: duplicate stream type");
 
     // Ignore the zero-length streams for layout checks
-    if (directory_entry->location.data_size != 0) {
-      minidump_map.emplace_back(directory_entry->location.rva,
-                                directory_entry->location.data_size);
+    if (directory_entry->Location.DataSize != 0) {
+      minidump_map.emplace_back(directory_entry->Location.RVA,
+                                directory_entry->Location.DataSize);
     }
   }
 
@@ -120,7 +135,7 @@ MinidumpParser::Create(const lldb::DataBufferSP &data_sp) {
 
 MinidumpParser::MinidumpParser(
     lldb::DataBufferSP data_sp,
-    llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> directory_map)
+    llvm::DenseMap<StreamType, LocationDescriptor> directory_map)
     : m_data_sp(std::move(data_sp)), m_directory_map(std::move(directory_map)) {
 }
 
@@ -131,16 +146,16 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetData() {
 
 llvm::ArrayRef<uint8_t>
 MinidumpParser::GetStream(StreamType stream_type) {
-  auto iter = m_directory_map.find(static_cast<uint32_t>(stream_type));
+  auto iter = m_directory_map.find(stream_type);
   if (iter == m_directory_map.end())
     return {};
 
   // check if there is enough data
-  if (iter->second.rva + iter->second.data_size > m_data_sp->GetByteSize())
+  if (iter->second.RVA + iter->second.DataSize > m_data_sp->GetByteSize())
     return {};
 
-  return llvm::ArrayRef<uint8_t>(m_data_sp->GetBytes() + iter->second.rva,
-                                 iter->second.data_size);
+  return llvm::ArrayRef<uint8_t>(m_data_sp->GetBytes() + iter->second.RVA,
+                                 iter->second.DataSize);
 }
 
 llvm::Optional<std::string> MinidumpParser::GetMinidumpString(uint32_t rva) {
@@ -153,7 +168,7 @@ llvm::Optional<std::string> MinidumpParser::GetMinidumpString(uint32_t rva) {
 
 UUID MinidumpParser::GetModuleUUID(const MinidumpModule *module) {
   auto cv_record =
-      GetData().slice(module->CV_record.rva, module->CV_record.data_size);
+      GetData().slice(module->CV_record.RVA, module->CV_record.DataSize);
 
   // Read the CV record signature
   const llvm::support::ulittle32_t *signature = nullptr;
@@ -219,10 +234,10 @@ llvm::ArrayRef<MinidumpThread> MinidumpParser::GetThreads() {
 }
 
 llvm::ArrayRef<uint8_t>
-MinidumpParser::GetThreadContext(const MinidumpLocationDescriptor &location) {
-  if (location.rva + location.data_size > GetData().size())
+MinidumpParser::GetThreadContext(const LocationDescriptor &location) {
+  if (location.RVA + location.DataSize > GetData().size())
     return {};
-  return GetData().slice(location.rva, location.data_size);
+  return GetData().slice(location.RVA, location.DataSize);
 }
 
 llvm::ArrayRef<uint8_t>
@@ -261,13 +276,18 @@ MinidumpParser::GetThreadContextWow64(const MinidumpThread &td) {
   // stored in the first slot of the 64-bit TEB (wow64teb.Reserved1[0]).
 }
 
-const MinidumpSystemInfo *MinidumpParser::GetSystemInfo() {
+const SystemInfo *MinidumpParser::GetSystemInfo() {
   llvm::ArrayRef<uint8_t> data = GetStream(StreamType::SystemInfo);
 
   if (data.size() == 0)
     return nullptr;
+  const SystemInfo *system_info;
 
-  return MinidumpSystemInfo::Parse(data);
+  Status error = consumeObject(data, system_info);
+  if (error.Fail())
+    return nullptr;
+
+  return system_info;
 }
 
 ArchSpec MinidumpParser::GetArchitecture() {
@@ -275,7 +295,7 @@ ArchSpec MinidumpParser::GetArchitecture() {
     return m_arch;
 
   // Set the architecture in m_arch
-  const MinidumpSystemInfo *system_info = GetSystemInfo();
+  const SystemInfo *system_info = GetSystemInfo();
 
   if (!system_info)
     return m_arch;
@@ -286,10 +306,7 @@ ArchSpec MinidumpParser::GetArchitecture() {
   llvm::Triple triple;
   triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
 
-  auto arch = static_cast<ProcessorArchitecture>(
-      static_cast<uint32_t>(system_info->processor_arch));
-
-  switch (arch) {
+  switch (system_info->ProcessorArch) {
   case ProcessorArchitecture::X86:
     triple.setArch(llvm::Triple::ArchType::x86);
     break;
@@ -307,11 +324,8 @@ ArchSpec MinidumpParser::GetArchitecture() {
     break;
   }
 
-  auto os =
-      static_cast<OSPlatform>(static_cast<uint32_t>(system_info->platform_id));
-
   // TODO add all of the OSes that Minidump/breakpad distinguishes?
-  switch (os) {
+  switch (system_info->PlatformId) {
   case OSPlatform::Win32S:
   case OSPlatform::Win32Windows:
   case OSPlatform::Win32NT:
@@ -336,7 +350,7 @@ ArchSpec MinidumpParser::GetArchitecture() {
   default: {
     triple.setOS(llvm::Triple::OSType::UnknownOS);
     std::string csd_version;
-    if (auto s = GetMinidumpString(system_info->csd_version_rva))
+    if (auto s = GetMinidumpString(system_info->CSDVersionRVA))
       csd_version = *s;
     if (csd_version.find("Linux") != std::string::npos)
       triple.setOS(llvm::Triple::OSType::Linux);
@@ -457,16 +471,16 @@ MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
       return llvm::None;
 
     for (const auto &memory_desc : memory_list) {
-      const MinidumpLocationDescriptor &loc_desc = memory_desc.memory;
+      const LocationDescriptor &loc_desc = memory_desc.memory;
       const lldb::addr_t range_start = memory_desc.start_of_memory_range;
-      const size_t range_size = loc_desc.data_size;
+      const size_t range_size = loc_desc.DataSize;
 
-      if (loc_desc.rva + loc_desc.data_size > GetData().size())
+      if (loc_desc.RVA + loc_desc.DataSize > GetData().size())
         return llvm::None;
 
       if (range_start <= addr && addr < range_start + range_size) {
         return minidump::Range(range_start,
-                               GetData().slice(loc_desc.rva, range_size));
+                               GetData().slice(loc_desc.RVA, range_size));
       }
     }
   }
@@ -578,11 +592,11 @@ CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
     return false;
   regions.reserve(memory_list.size());
   for (const auto &memory_desc : memory_list) {
-    if (memory_desc.memory.data_size == 0)
+    if (memory_desc.memory.DataSize == 0)
       continue;
     MemoryRegionInfo region;
     region.GetRange().SetRangeBase(memory_desc.start_of_memory_range);
-    region.GetRange().SetByteSize(memory_desc.memory.data_size);
+    region.GetRange().SetByteSize(memory_desc.memory.DataSize);
     region.SetReadable(MemoryRegionInfo::eYes);
     region.SetMapped(MemoryRegionInfo::eYes);
     regions.push_back(region);
@@ -675,10 +689,12 @@ const MemoryRegionInfos &MinidumpParser::GetMemoryRegions() {
   return m_regions;
 }
 
-#define ENUM_TO_CSTR(ST) case (uint32_t)StreamType::ST: return #ST
+#define ENUM_TO_CSTR(ST)                                                       \
+  case StreamType::ST:                                                         \
+    return #ST
 
 llvm::StringRef
-MinidumpParser::GetStreamTypeAsString(uint32_t stream_type) {
+MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
   switch (stream_type) {
     ENUM_TO_CSTR(Unused);
     ENUM_TO_CSTR(ThreadList);
@@ -701,6 +717,7 @@ MinidumpParser::GetStreamTypeAsString(uint32_t stream_type) {
     ENUM_TO_CSTR(JavascriptData);
     ENUM_TO_CSTR(SystemMemoryInfo);
     ENUM_TO_CSTR(ProcessVMCounters);
+    ENUM_TO_CSTR(LastReserved);
     ENUM_TO_CSTR(BreakpadInfo);
     ENUM_TO_CSTR(AssertionInfo);
     ENUM_TO_CSTR(LinuxCPUInfo);

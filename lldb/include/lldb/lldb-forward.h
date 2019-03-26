@@ -276,7 +276,6 @@ class TypeEnumMemberImpl;
 class TypeEnumMemberListImpl;
 class TypeFormatImpl;
 class TypeNameSpecifierImpl;
-class TypePair;
 class TypeValidatorImpl;
 class UUID;
 class UnixSignals;

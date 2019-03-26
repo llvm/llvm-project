@@ -76,37 +76,10 @@ Status consumeObject(llvm::ArrayRef<uint8_t> &Buffer, const T *&Object) {
 llvm::Optional<std::string> parseMinidumpString(llvm::ArrayRef<uint8_t> &data);
 
 // Reference:
-// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680378(v=vs.85).aspx
-struct MinidumpHeader {
-  llvm::support::ulittle32_t signature;
-  llvm::support::ulittle32_t
-      version; // The high 16 bits of version field are implementation specific
-  llvm::support::ulittle32_t streams_count;
-  llvm::support::ulittle32_t
-      stream_directory_rva; // offset of the stream directory
-  llvm::support::ulittle32_t checksum;
-  llvm::support::ulittle32_t time_date_stamp; // time_t format
-  llvm::support::ulittle64_t flags;
-
-  static const MinidumpHeader *Parse(llvm::ArrayRef<uint8_t> &data);
-};
-static_assert(sizeof(MinidumpHeader) == 32,
-              "sizeof MinidumpHeader is not correct!");
-
-// Reference:
-// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680383.aspx
-struct MinidumpLocationDescriptor {
-  llvm::support::ulittle32_t data_size;
-  llvm::support::ulittle32_t rva;
-};
-static_assert(sizeof(MinidumpLocationDescriptor) == 8,
-              "sizeof MinidumpLocationDescriptor is not correct!");
-
-// Reference:
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms680384(v=vs.85).aspx
 struct MinidumpMemoryDescriptor {
   llvm::support::ulittle64_t start_of_memory_range;
-  MinidumpLocationDescriptor memory;
+  LocationDescriptor memory;
 
   static llvm::ArrayRef<MinidumpMemoryDescriptor>
   ParseMemoryList(llvm::ArrayRef<uint8_t> &data);
@@ -123,15 +96,6 @@ struct MinidumpMemoryDescriptor64 {
 };
 static_assert(sizeof(MinidumpMemoryDescriptor64) == 16,
               "sizeof MinidumpMemoryDescriptor64 is not correct!");
-
-// Reference:
-// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680365.aspx
-struct MinidumpDirectory {
-  llvm::support::ulittle32_t stream_type;
-  MinidumpLocationDescriptor location;
-};
-static_assert(sizeof(MinidumpDirectory) == 12,
-              "sizeof MinidumpDirectory is not correct!");
 
 // Reference:
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms680385(v=vs.85).aspx
@@ -226,7 +190,7 @@ struct MinidumpThread {
   llvm::support::ulittle32_t priority;
   llvm::support::ulittle64_t teb;
   MinidumpMemoryDescriptor stack;
-  MinidumpLocationDescriptor thread_context;
+  LocationDescriptor thread_context;
 
   static const MinidumpThread *Parse(llvm::ArrayRef<uint8_t> &data);
 
@@ -235,53 +199,6 @@ struct MinidumpThread {
 };
 static_assert(sizeof(MinidumpThread) == 48,
               "sizeof MinidumpThread is not correct!");
-
-// Reference:
-// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx
-union MinidumpCPUInfo {
-  struct {
-    llvm::support::ulittle32_t vendor_id[3];        /* cpuid 0: ebx, edx, ecx */
-    llvm::support::ulittle32_t version_information; /* cpuid 1: eax */
-    llvm::support::ulittle32_t feature_information; /* cpuid 1: edx */
-    llvm::support::ulittle32_t
-        amd_extended_cpu_features; /* cpuid 0x80000001, ebx */
-  } x86_cpu_info;
-  struct {
-    llvm::support::ulittle32_t cpuid;
-    llvm::support::ulittle32_t elf_hwcaps; /* linux specific, 0 otherwise */
-  } arm_cpu_info;
-  struct {
-    llvm::support::ulittle64_t processor_features[2];
-  } other_cpu_info;
-};
-static_assert(sizeof(MinidumpCPUInfo) == 24,
-              "sizeof MinidumpCPUInfo is not correct!");
-
-// Reference:
-// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx
-struct MinidumpSystemInfo {
-  llvm::support::ulittle16_t processor_arch;
-  llvm::support::ulittle16_t processor_level;
-  llvm::support::ulittle16_t processor_revision;
-
-  uint8_t number_of_processors;
-  uint8_t product_type;
-
-  llvm::support::ulittle32_t major_version;
-  llvm::support::ulittle32_t minor_version;
-  llvm::support::ulittle32_t build_number;
-  llvm::support::ulittle32_t platform_id;
-  llvm::support::ulittle32_t csd_version_rva;
-
-  llvm::support::ulittle16_t suit_mask;
-  llvm::support::ulittle16_t reserved2;
-
-  MinidumpCPUInfo cpu;
-
-  static const MinidumpSystemInfo *Parse(llvm::ArrayRef<uint8_t> &data);
-};
-static_assert(sizeof(MinidumpSystemInfo) == 56,
-              "sizeof MinidumpSystemInfo is not correct!");
 
 // TODO misc2, misc3 ?
 // Reference:
@@ -343,8 +260,8 @@ struct MinidumpModule {
   llvm::support::ulittle32_t time_date_stamp;
   llvm::support::ulittle32_t module_name_rva;
   MinidumpVSFixedFileInfo version_info;
-  MinidumpLocationDescriptor CV_record;
-  MinidumpLocationDescriptor misc_record;
+  LocationDescriptor CV_record;
+  LocationDescriptor misc_record;
   llvm::support::ulittle32_t reserved0[2];
   llvm::support::ulittle32_t reserved1[2];
 
@@ -378,7 +295,7 @@ struct MinidumpExceptionStream {
   llvm::support::ulittle32_t thread_id;
   llvm::support::ulittle32_t alignment;
   MinidumpException exception_record;
-  MinidumpLocationDescriptor thread_context;
+  LocationDescriptor thread_context;
 
   static const MinidumpExceptionStream *Parse(llvm::ArrayRef<uint8_t> &data);
 };
