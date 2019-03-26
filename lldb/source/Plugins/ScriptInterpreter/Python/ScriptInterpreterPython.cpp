@@ -322,7 +322,7 @@ private:
     // priorities in the path, overriding PYTHONHOME and causing
     // problems/incompatibilities. In order to avoid confusion, always hardcode
     // the PythonHome to be right, as it's not going to change.
-    char path[] = "/System/Library/Frameworks/Python.framework/Versions/2.7";
+    static char path[] = "/System/Library/Frameworks/Python.framework/Versions/2.7";
     Py_SetPythonHome(path);
 #endif
 #endif
