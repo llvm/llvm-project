@@ -17,7 +17,7 @@
 #----------------------------------------------------------------------
 
 import binascii
-import commands
+import subprocess
 import json
 import math
 import optparse

@@ -193,10 +193,7 @@ void WebAssemblyCFGStackify::unregisterScope(MachineInstr *Begin) {
 
 /// Insert a BLOCK marker for branches to MBB (if needed).
 void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
-  // This should have been handled in placeTryMarker.
-  if (MBB.isEHPad())
-    return;
-
+  assert(!MBB.isEHPad());
   MachineFunction &MF = *MBB.getParent();
   auto &MDT = getAnalysis<MachineDominatorTree>();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
@@ -253,14 +250,12 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   // Instructions that should go after the BLOCK.
   SmallPtrSet<const MachineInstr *, 4> AfterSet;
   for (const auto &MI : *Header) {
-    // If there is a previously placed LOOP/TRY marker and the bottom block of
-    // the loop/exception is above MBB, it should be after the BLOCK, because
-    // the loop/exception is nested in this block. Otherwise it should be before
-    // the BLOCK.
-    if (MI.getOpcode() == WebAssembly::LOOP ||
-        MI.getOpcode() == WebAssembly::TRY) {
-      auto *BottomBB = BeginToEnd[&MI]->getParent()->getPrevNode();
-      if (MBB.getNumber() > BottomBB->getNumber())
+    // If there is a previously placed LOOP marker and the bottom block of the
+    // loop is above MBB, it should be after the BLOCK, because the loop is
+    // nested in this BLOCK. Otherwise it should be before the BLOCK.
+    if (MI.getOpcode() == WebAssembly::LOOP) {
+      auto *LoopBottom = BeginToEnd[&MI]->getParent()->getPrevNode();
+      if (MBB.getNumber() > LoopBottom->getNumber())
         AfterSet.insert(&MI);
 #ifndef NDEBUG
       else
@@ -268,9 +263,10 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
 #endif
     }
 
-    // All previously inserted BLOCK markers should be after the BLOCK because
-    // they are all nested blocks.
-    if (MI.getOpcode() == WebAssembly::BLOCK)
+    // All previously inserted BLOCK/TRY markers should be after the BLOCK
+    // because they are all nested blocks.
+    if (MI.getOpcode() == WebAssembly::BLOCK ||
+        MI.getOpcode() == WebAssembly::TRY)
       AfterSet.insert(&MI);
 
 #ifndef NDEBUG
@@ -428,9 +424,7 @@ void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
 }
 
 void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
-  if (!MBB.isEHPad())
-    return;
-
+  assert(MBB.isEHPad());
   MachineFunction &MF = *MBB.getParent();
   auto &MDT = getAnalysis<MachineDominatorTree>();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
@@ -486,16 +480,17 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
 
   // Decide where in Header to put the TRY.
 
-  // Instructions that should go before the BLOCK.
+  // Instructions that should go before the TRY.
   SmallPtrSet<const MachineInstr *, 4> BeforeSet;
-  // Instructions that should go after the BLOCK.
+  // Instructions that should go after the TRY.
   SmallPtrSet<const MachineInstr *, 4> AfterSet;
   for (const auto &MI : *Header) {
-    // If there is a previously placed LOOP marker and the bottom block of
-    // the loop is above MBB, the LOOP should be after the TRY, because the
-    // loop is nested in this try. Otherwise it should be before the TRY.
+    // If there is a previously placed LOOP marker and the bottom block of the
+    // loop is above MBB, it should be after the TRY, because the loop is nested
+    // in this TRY. Otherwise it should be before the TRY.
     if (MI.getOpcode() == WebAssembly::LOOP) {
-      if (MBB.getNumber() > Bottom->getNumber())
+      auto *LoopBottom = BeginToEnd[&MI]->getParent()->getPrevNode();
+      if (MBB.getNumber() > LoopBottom->getNumber())
         AfterSet.insert(&MI);
 #ifndef NDEBUG
       else
@@ -503,14 +498,16 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
 #endif
     }
 
-    // All previously inserted TRY markers should be after the TRY because they
-    // are all nested trys.
-    if (MI.getOpcode() == WebAssembly::TRY)
+    // All previously inserted BLOCK/TRY markers should be after the TRY because
+    // they are all nested trys.
+    if (MI.getOpcode() == WebAssembly::BLOCK ||
+        MI.getOpcode() == WebAssembly::TRY)
       AfterSet.insert(&MI);
 
 #ifndef NDEBUG
-    // All END_(LOOP/TRY) markers should be before the TRY.
-    if (MI.getOpcode() == WebAssembly::END_LOOP ||
+    // All END_(BLOCK/LOOP/TRY) markers should be before the TRY.
+    if (MI.getOpcode() == WebAssembly::END_BLOCK ||
+        MI.getOpcode() == WebAssembly::END_LOOP ||
         MI.getOpcode() == WebAssembly::END_TRY)
       BeforeSet.insert(&MI);
 #endif
@@ -566,8 +563,9 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   AfterSet.clear();
   for (const auto &MI : *Cont) {
 #ifndef NDEBUG
-    // END_TRY should precede existing LOOP markers.
-    if (MI.getOpcode() == WebAssembly::LOOP)
+    // END_TRY should precede existing LOOP and BLOCK markers.
+    if (MI.getOpcode() == WebAssembly::LOOP ||
+        MI.getOpcode() == WebAssembly::BLOCK)
       AfterSet.insert(&MI);
 
     // All END_TRY markers placed earlier belong to exceptions that contains
@@ -588,6 +586,8 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
         AfterSet.insert(&MI);
 #endif
     }
+
+    // It is not possible for an END_BLOCK to be already in this block.
   }
 
   // Mark the end of the TRY.
@@ -774,15 +774,19 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
   // Place the LOOP for MBB if MBB is the header of a loop.
   for (auto &MBB : MF)
     placeLoopMarker(MBB);
-  // Place the TRY for MBB if MBB is the EH pad of an exception.
+
   const MCAsmInfo *MCAI = MF.getTarget().getMCAsmInfo();
-  if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
-      MF.getFunction().hasPersonalityFn())
-    for (auto &MBB : MF)
-      placeTryMarker(MBB);
-  // Place the BLOCK for MBB if MBB is branched to from above.
-  for (auto &MBB : MF)
-    placeBlockMarker(MBB);
+  for (auto &MBB : MF) {
+    if (MBB.isEHPad()) {
+      // Place the TRY for MBB if MBB is the EH pad of an exception.
+      if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
+          MF.getFunction().hasPersonalityFn())
+        placeTryMarker(MBB);
+    } else {
+      // Place the BLOCK for MBB if MBB is branched to from above.
+      placeBlockMarker(MBB);
+    }
+  }
 }
 
 void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {

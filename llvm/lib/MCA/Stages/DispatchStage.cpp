@@ -25,6 +25,16 @@
 namespace llvm {
 namespace mca {
 
+DispatchStage::DispatchStage(const MCSubtargetInfo &Subtarget,
+                             const MCRegisterInfo &MRI,
+                             unsigned MaxDispatchWidth, RetireControlUnit &R,
+                             RegisterFile &F)
+    : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
+      CarryOver(0U), CarriedOver(), STI(Subtarget), RCU(R), PRF(F) {
+  if (!DispatchWidth)
+    DispatchWidth = Subtarget.getSchedModel().IssueWidth;
+}
+
 void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
                                                 ArrayRef<unsigned> UsedRegs,
                                                 unsigned UOps) const {

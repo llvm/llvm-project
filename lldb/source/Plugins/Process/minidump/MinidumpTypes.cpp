@@ -14,21 +14,6 @@
 using namespace lldb_private;
 using namespace minidump;
 
-const MinidumpHeader *MinidumpHeader::Parse(llvm::ArrayRef<uint8_t> &data) {
-  const MinidumpHeader *header = nullptr;
-  Status error = consumeObject(data, header);
-
-  uint32_t signature = header->signature;
-  uint32_t version = header->version & 0x0000ffff;
-  // the high 16 bits of the version field are implementation specific
-
-  if (error.Fail() || signature != Header::MagicSignature ||
-      version != Header::MagicVersion)
-    return nullptr;
-
-  return header;
-}
-
 // Minidump string
 llvm::Optional<std::string>
 lldb_private::minidump::parseMinidumpString(llvm::ArrayRef<uint8_t> &data) {
@@ -91,17 +76,6 @@ MinidumpThread::ParseThreadList(llvm::ArrayRef<uint8_t> &data) {
 
   return llvm::ArrayRef<MinidumpThread>(
       reinterpret_cast<const MinidumpThread *>(data.data()), *thread_count);
-}
-
-// MinidumpSystemInfo
-const MinidumpSystemInfo *
-MinidumpSystemInfo::Parse(llvm::ArrayRef<uint8_t> &data) {
-  const MinidumpSystemInfo *system_info;
-  Status error = consumeObject(data, system_info);
-  if (error.Fail())
-    return nullptr;
-
-  return system_info;
 }
 
 // MinidumpMiscInfo

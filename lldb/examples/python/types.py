@@ -9,7 +9,6 @@
 #   (lldb) command script import /path/to/cmdtemplate.py
 #----------------------------------------------------------------------
 
-import commands
 from __future__ import print_function
 
 import platform
@@ -17,6 +16,11 @@ import os
 import re
 import signal
 import sys
+
+if sys.version_info.major == 2:
+    import commands as subprocess
+else:
+    import subprocess
 
 try:
     # Just try for LLDB in case PYTHONPATH is already correctly setup
@@ -27,7 +31,7 @@ except ImportError:
     platform_system = platform.system()
     if platform_system == 'Darwin':
         # On Darwin, try the currently selected Xcode directory
-        xcode_dir = commands.getoutput("xcode-select --print-path")
+        xcode_dir = subprocess.getoutput("xcode-select --print-path")
         if xcode_dir:
             lldb_python_dirs.append(
                 os.path.realpath(
@@ -54,7 +58,6 @@ except ImportError:
         print("error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly")
         sys.exit(1)
 
-import commands
 import optparse
 import shlex
 import time

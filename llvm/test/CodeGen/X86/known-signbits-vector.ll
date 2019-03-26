@@ -144,9 +144,9 @@ define float @signbits_ashr_insert_ashr_extract_sitofp(i64 %a0, i64 %a1) nounwin
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    shrdl $30, %ecx, %eax
+; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    sarl $30, %ecx
+; X32-NEXT:    shll $2, %eax
 ; X32-NEXT:    vmovd %eax, %xmm0
 ; X32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
 ; X32-NEXT:    vpsrlq $3, %xmm0, %xmm0
