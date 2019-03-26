@@ -1,5 +1,5 @@
-; RUN: opt < %s -analyze -memoryssa -memssa-assume-drf 2>&1 | FileCheck %s
-; RUN: opt -disable-output < %s -passes='print<memoryssa>' -memssa-assume-drf 2>&1 | FileCheck %s
+; RUN: opt < %s -analyze -memoryssa -enable-drf-memoryssa 2>&1 | FileCheck %s
+; RUN: opt -disable-output < %s -passes='print<memoryssa>' -enable-drf-memoryssa 2>&1 | FileCheck %s
 
 @x = common local_unnamed_addr global i32 0, align 4
 
@@ -22,11 +22,11 @@ det.cont:                                         ; preds = %det.achd, %entry
 }
 
 ; CHECK: entry:
-; CHECK: 2 = MemoryDef(1)
+; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i32 5, i32* @x
 
 ; CHECK: det.cont:
-; CHECK: MemoryUse(2)
+; CHECK: MemoryUse(1)
 ; CHECK-NEXT: %1 = load i32, i32* @x
 
 ; Function Attrs: argmemonly nounwind

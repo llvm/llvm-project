@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -83,9 +84,12 @@ struct DRFScopedNoAliasWrapperPass : public FunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LoopInfoWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
     AU.addRequired<TaskInfoWrapperPass>();
+    AU.addPreserved<TaskInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addPreserved<BasicAAWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
 }  // End of anonymous namespace
@@ -219,13 +223,20 @@ bool DRFScopedNoAliasImpl::populateSubTaskScopeNoAlias(
 
   // FIXME? Separately handle shared EH spindles.
   for (Spindle *S : depth_first<InTask<Spindle *>>(T->getEntrySpindle())) {
-    for (const Task *MPT : MPTasks.TaskList[S])
-      CurrNoAlias.push_back(TaskToScope[MPT]);
-
+    for (const Task *MPT : MPTasks.TaskList[S]) {
+      // Don't record noalias scopes for maybe-parallel tasks that enclose the
+      // spindle.  These cases arise from parallel loops, which need special
+      // alias analysis anyway (e.g., LoopAccessAnalysis).
+      if (!MPT->encloses(S->getEntry()))
+        CurrNoAlias.push_back(TaskToScope[MPT]);
+    }
     // Populate instructions in spindle with scoped-noalias information.
     for (BasicBlock *BB : S->blocks())
       Changed |=
         populateTaskScopeNoAliasInBlock(T, BB, MDB, CurrScopes, CurrNoAlias);
+
+    // Remove the noalias scopes for this spindle.
+    CurrNoAlias.erase(CurrNoAlias.begin() + OrigNoAliasSize, CurrNoAlias.end());
 
     // For each successor spindle in a subtask, recursively populate the
     // scoped-noalias information in that subtask.
@@ -237,9 +248,6 @@ bool DRFScopedNoAliasImpl::populateSubTaskScopeNoAlias(
         CurrScopes.pop_back();
       }
     }
-
-    // Remove the noalias scopes for this spindle.
-    CurrNoAlias.erase(CurrNoAlias.begin() + OrigNoAliasSize, CurrNoAlias.end());
   }
 
   return Changed;
@@ -321,5 +329,11 @@ PreservedAnalyses DRFScopedNoAliasPass::run(Function &F,
 
   DRFScopedNoAliasImpl(F, TI, AA, &LI).run();
 
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<LoopAnalysis>();
+  PA.preserve<TaskAnalysis>();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<BasicAA>();
+  PA.preserve<GlobalsAA>();
+  return PA;
 }

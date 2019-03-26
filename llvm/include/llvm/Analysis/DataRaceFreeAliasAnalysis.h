@@ -75,6 +75,6 @@ public:
 /// Creates an instance of \c DRFAAWrapperPass.
 FunctionPass *createDRFAAWrapperPass();
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ANALYSIS_DATARACEFREEALIASANALYSIS_H
