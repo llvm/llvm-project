@@ -449,51 +449,6 @@ ClangTidyOptions::OptionMap ClangTidyASTConsumerFactory::getCheckOptions() {
   return Options;
 }
 
-DiagnosticBuilder ClangTidyCheck::diag(SourceLocation Loc, StringRef Message,
-                                       DiagnosticIDs::Level Level) {
-  return Context->diag(CheckName, Loc, Message, Level);
-}
-
-void ClangTidyCheck::run(const ast_matchers::MatchFinder::MatchResult &Result) {
-  // For historical reasons, checks don't implement the MatchFinder run()
-  // callback directly. We keep the run()/check() distinction to avoid interface
-  // churn, and to allow us to add cross-cutting logic in the future.
-  check(Result);
-}
-
-OptionsView::OptionsView(StringRef CheckName,
-                         const ClangTidyOptions::OptionMap &CheckOptions)
-    : NamePrefix(CheckName.str() + "."), CheckOptions(CheckOptions) {}
-
-std::string OptionsView::get(StringRef LocalName, StringRef Default) const {
-  const auto &Iter = CheckOptions.find(NamePrefix + LocalName.str());
-  if (Iter != CheckOptions.end())
-    return Iter->second;
-  return Default;
-}
-
-std::string OptionsView::getLocalOrGlobal(StringRef LocalName,
-                                          StringRef Default) const {
-  auto Iter = CheckOptions.find(NamePrefix + LocalName.str());
-  if (Iter != CheckOptions.end())
-    return Iter->second;
-  // Fallback to global setting, if present.
-  Iter = CheckOptions.find(LocalName.str());
-  if (Iter != CheckOptions.end())
-    return Iter->second;
-  return Default;
-}
-
-void OptionsView::store(ClangTidyOptions::OptionMap &Options,
-                        StringRef LocalName, StringRef Value) const {
-  Options[NamePrefix + LocalName.str()] = Value;
-}
-
-void OptionsView::store(ClangTidyOptions::OptionMap &Options,
-                        StringRef LocalName, int64_t Value) const {
-  store(Options, LocalName, llvm::itostr(Value));
-}
-
 std::vector<std::string>
 getCheckNames(const ClangTidyOptions &Options,
               bool AllowEnablingAnalyzerAlphaCheckers) {

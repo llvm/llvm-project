@@ -931,17 +931,6 @@ def fp64imm0 : PatLeaf<(f64 fpimm), [{
   return N->isExactlyValue(+0.0);
 }]>;
 
-def I8Imm : SDNodeXForm<imm, [{
-  // Transformation function: get the low 8 bits.
-  return getI8Imm((uint8_t)N->getZExtValue(), SDLoc(N));
-}]>;
-
-// BYTE_imm - Transform bit immediates into byte immediates.
-def BYTE_imm  : SDNodeXForm<imm, [{
-  // Transformation function: imm >> 3
-  return getI32Imm(N->getZExtValue() >> 3, SDLoc(N));
-}]>;
-
 // EXTRACT_get_vextract128_imm xform function: convert extract_subvector index
 // to VEXTRACTF128/VEXTRACTI128 imm.
 def EXTRACT_get_vextract128_imm : SDNodeXForm<extract_subvector, [{

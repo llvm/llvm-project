@@ -592,7 +592,7 @@ public:
 
 private:
      // Disable the reference extension using this static assert.
-    static_assert(!is_same_v<value_type, in_place_t>,
+    static_assert(!is_same_v<__uncvref_t<value_type>, in_place_t>,
         "instantiation of optional with in_place_t is ill-formed");
     static_assert(!is_same_v<__uncvref_t<value_type>, nullopt_t>,
         "instantiation of optional with nullopt_t is ill-formed");
@@ -600,6 +600,8 @@ private:
         "instantiation of optional with a reference type is ill-formed");
     static_assert(is_destructible_v<value_type>,
         "instantiation of optional with a non-destructible type is ill-formed");
+    static_assert(!is_array_v<value_type>,
+        "instantiation of optional with an array type is ill-formed");
 
     // LWG2756: conditionally explicit conversion from _Up
     struct _CheckOptionalArgsConstructor {

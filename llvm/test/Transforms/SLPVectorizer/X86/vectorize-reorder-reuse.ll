@@ -17,7 +17,7 @@ define i32 @foo(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a4
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[A6:%.*]], i32 5
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A7:%.*]], i32 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A8:%.*]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[TMP9]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 undef, undef
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 undef, i32 undef
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp ult i32 [[COND]], undef
@@ -91,7 +91,7 @@ define i32 @foo1(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[A6:%.*]], i32 5
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A7:%.*]], i32 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A8:%.*]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[TMP9]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 undef, undef
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 undef, i32 undef
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp ult i32 [[COND]], undef
@@ -169,7 +169,7 @@ define i32 @foo2(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[A6:%.*]], i32 5
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A7:%.*]], i32 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A8:%.*]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[TMP9]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 undef, undef
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 undef, i32 undef
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp ult i32 [[COND]], undef

@@ -18,6 +18,7 @@
 
 #include "execution_impl.h"
 #include "memory_impl.h"
+#include "parallel_backend_utils.h"
 #include "unseq_backend_simd.h"
 
 #if __PSTL_USE_PAR_POLICIES

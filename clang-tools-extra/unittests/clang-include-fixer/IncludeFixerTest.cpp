@@ -178,7 +178,7 @@ TEST(IncludeFixer, NestedName) {
   EXPECT_EQ("#define FOO(x) a::##x\nint x = FOO(b::foo);\n",
             runIncludeFixer("#define FOO(x) a::##x\nint x = FOO(b::foo);\n"));
 
-  // The empty namespace is cleaned up by clang-format after include-fixer
+  // The empty namespace is cleaned up by clang-format after clang-include-fixer
   // finishes.
   EXPECT_EQ("#include \"dir/otherdir/qux.h\"\n"
             "\nint a = a::b::foo(0);\n",
@@ -227,7 +227,7 @@ TEST(IncludeFixer, IgnoreSymbolFromHeader) {
 }
 
 // FIXME: add test cases for inserting and sorting multiple headers when
-// include-fixer supports multiple headers insertion.
+// clang-include-fixer supports multiple headers insertion.
 TEST(IncludeFixer, InsertAndSortSingleHeader) {
   // Insert one header.
   std::string Code = "#include \"a.h\"\n"

@@ -468,8 +468,7 @@ bool CMICmdCmdInterpreterExec::Execute() {
   CMICMDBASE_GETOPTION(pArgCommand, String, m_constStrArgNamedCommand);
 
   // Handle the interpreter parameter by do nothing on purpose (set to 'handled'
-  // in
-  // the arg definition above)
+  // in the arg definition above)
   const CMIUtilString &rStrInterpreter(pArgInterpreter->GetValue());
   MIunused(rStrInterpreter);
 

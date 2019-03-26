@@ -8,7 +8,7 @@
 ;; This package allows Emacs users to invoke the 'clang-include-fixer' within
 ;; Emacs.  'clang-include-fixer' provides an automated way of adding #include
 ;; directives for missing symbols in one translation unit, see
-;; <http://clang.llvm.org/extra/include-fixer.html>.
+;; <http://clang.llvm.org/extra/clang-include-fixer.html>.
 
 ;;; Code:
 
@@ -243,7 +243,7 @@ return nil.  Buffer restrictions are ignored."
                         t))))))))))))
 
 (defun clang-include-fixer--add-header (stdout)
-  "Analyse the result of include-fixer stored in STDOUT.
+  "Analyse the result of clang-include-fixer stored in STDOUT.
 Add a missing header if there is any.  If there are multiple
 possible headers the user can select one of them to be included.
 Temporarily highlight the affected symbols.  Asynchronously call
@@ -317,7 +317,7 @@ They are replaced by the single element selected by the user."
             (when overlays
               (goto-char (clang-include-fixer--closest-overlay overlays)))
             (cl-flet ((header (info) (let-alist info .Header)))
-              ;; The header-infos is already sorted by include-fixer.
+              ;; The header-infos is already sorted by clang-include-fixer.
               (let* ((headers (mapcar #'header .HeaderInfos))
                      (header (completing-read
                               (clang-include-fixer--format-message

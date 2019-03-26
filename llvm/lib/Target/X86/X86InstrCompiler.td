@@ -19,11 +19,6 @@ def GetLo32XForm : SDNodeXForm<imm, [{
   return getI32Imm((uint32_t)N->getZExtValue(), SDLoc(N));
 }]>;
 
-def GetLo8XForm : SDNodeXForm<imm, [{
-  // Transformation function: get the low 8 bits.
-  return getI8Imm((uint8_t)N->getZExtValue(), SDLoc(N));
-}]>;
-
 
 //===----------------------------------------------------------------------===//
 // Random Pseudo Instructions.
@@ -1523,7 +1518,7 @@ def : Pat<(and GR64:$src, i64immZExt32SExt8:$imm),
             (i64 0),
             (AND32ri8
               (EXTRACT_SUBREG GR64:$src, sub_32bit),
-              (i32 (GetLo8XForm imm:$imm))),
+              (i32 (GetLo32XForm imm:$imm))),
             sub_32bit)>;
 
 def : Pat<(and GR64:$src, i64immZExt32:$imm),
@@ -1994,8 +1989,8 @@ def : Pat<(X86sub_flag 0, GR32:$src), (NEG32r GR32:$src)>;
 def : Pat<(X86sub_flag 0, GR64:$src), (NEG64r GR64:$src)>;
 
 // sub reg, relocImm
-def : Pat<(X86sub_flag GR64:$src1, i64relocImmSExt8:$src2),
-          (SUB64ri8 GR64:$src1, i64relocImmSExt8:$src2)>;
+def : Pat<(X86sub_flag GR64:$src1, i64relocImmSExt8_su:$src2),
+          (SUB64ri8 GR64:$src1, i64relocImmSExt8_su:$src2)>;
 
 // mul reg, reg
 def : Pat<(mul GR16:$src1, GR16:$src2),

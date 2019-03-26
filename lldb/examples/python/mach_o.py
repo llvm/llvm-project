@@ -8,7 +8,7 @@ import optparse
 import re
 import struct
 import string
-import StringIO
+import io
 import sys
 import uuid
 
@@ -1054,7 +1054,7 @@ class Mach:
                             if options.extract_modules:
                                 # print "Extracting modules from mach file..."
                                 data = file_extract.FileExtract(
-                                    StringIO.StringIO(sect_bytes), self.data.byte_order)
+                                    io.BytesIO(sect_bytes), self.data.byte_order)
                                 version = data.get_uint32()
                                 num_modules = data.get_uint32()
                                 # print "version = %u, num_modules = %u" %

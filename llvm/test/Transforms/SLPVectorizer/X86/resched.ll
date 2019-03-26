@@ -72,7 +72,7 @@ define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv()
 ; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <16 x i32> [[TMP40]], i32 [[SHR_13_I_I]], i32 14
 ; CHECK-NEXT:    [[TMP42:%.*]] = insertelement <16 x i32> [[TMP41]], i32 [[SHR_14_I_I]], i32 15
 ; CHECK-NEXT:    [[TMP43:%.*]] = trunc <16 x i32> [[TMP42]] to <16 x i8>
-; CHECK-NEXT:    [[TMP44:%.*]] = and <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[TMP43]]
+; CHECK-NEXT:    [[TMP44:%.*]] = and <16 x i8> [[TMP43]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_15_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 15
 ; CHECK-NEXT:    [[TMP45:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
 ; CHECK-NEXT:    store <16 x i8> [[TMP44]], <16 x i8>* [[TMP45]], align 1

@@ -13,7 +13,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Path.h"
 
-#define DEBUG_TYPE "include-fixer"
+#define DEBUG_TYPE "clang-include-fixer"
 
 namespace clang {
 namespace include_fixer {

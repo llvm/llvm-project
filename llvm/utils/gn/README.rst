@@ -22,16 +22,10 @@ build.
 creates ninja files, but it can create some IDE projects (MSVC, Xcode, ...)
 which then shell out to ninja for the actual build.
 
-Its main features are that GN is very fast (it currently produces ninja files
-for LLVM's build in 35ms on the author's laptop, compared to 66s for CMake) --
-a 2000x difference), and since it's so fast it doesn't aggressively cache,
-making it possible to switch e.g. between release and debug builds in one build
-directory.
-
 The main motivation behind the GN build is that some people find it more
 convenient for day-to-day hacking on LLVM than CMake. Distribution, building
-just parts of LLVM, and embedding the LLVM GN build from other builds are a
-non-goal for the GN build.
+just parts of LLVM, and embedding the LLVM GN build from other builds are
+non-goals for the GN build.
 
 This is a `good overview of GN <https://docs.google.com/presentation/d/15Zwb53JcncHfEwHpnG_PoIbbzQ3GQi_cpujYwbpcbZo/edit#slide=id.g119d702868_0_12>`_.
 
@@ -42,39 +36,42 @@ Quick start
 
 GN only works in the monorepo layout.
 
-#. Obtain a gn binary. If gn is not already on your PATH, run
-   `llvm/utils/gn/get.py` to download a prebuilt gn binary if you're on a 64-bit
-   X86 system running Linux, macOS, or Windows, or `build gn yourself
+#. ``git clone https://github.com/llvm/llvm-project.git; cd llvm-project`` if
+   you don't have a monorepo checkout yet.
+
+#. ``llvm/utils/gn/get.py`` to download a prebuilt gn binary if you're on a
+   64-bit X86 system running Linux, macOS, or Windows. `Build gn yourself
    <https://gn.googlesource.com/gn/#getting-started>`_ if you're on a different
    platform or don't want to trust prebuilt binaries.
 
-#. In the root of the monorepo, run `llvm/utils/gn/gn.py gen out/gn`.
-   `out/gn` is the build directory, it can have any name, and you can have as
-   many as you want, each with different build settings.  (The `gn.py` script
-   adds `--dotfile=llvm/utils/gn/.gn --root=.` and just runs regular `gn`;
+#. ``llvm/utils/gn/gn.py gen out/gn`` to run GN and create build files.
+   ``out/gn`` is the build directory, it can have any name, and you can have as
+   many as you want, each with different build settings.  (The ``gn.py`` script
+   adds ``--dotfile=llvm/utils/gn/.gn --root=.`` and just runs regular ``gn``;
    you can manually pass these parameters and not use the wrapper if you
    prefer.)
 
-#. Run e.g. `ninja -C out/gn check-lld` to build all prerequisites for and
-   run the LLD tests.
+#. ``ninja -C out/gn check-lld`` to build all prerequisites for and run the LLD
+   tests.
 
 By default, you get a release build with assertions enabled that targets
-the host arch. You can set various build options by editing `out/gn/args.gn`,
-for example putting `is_debug = true` in there gives you a debug build. Run
-`llvm/utils/gn/gn.py args --list out/gn` to see a list of all possible
-options. After touching `out/gn/args.gn`, just run ninja, it will re-invoke gn
+the host arch. You can set build options by editing ``out/gn/args.gn``, for
+example putting ``is_debug = true`` in there gives you a debug build. Run
+``llvm/utils/gn/gn.py args --list out/gn`` to see a list of all possible
+options. After touching ``out/gn/args.gn`` just run ninja: it will re-invoke gn
 before starting the build.
 
-GN has extensive built-in help; try e.g. `gn help gen` to see the help
-for the `gen` command. The full GN reference is also `available online
-<https://gn.googlesource.com/gn/+/master/docs/reference.md>`_.
+GN has extensive built-in help; try e.g. ``llvm/utils/gn/gn.py help gen`` to see
+the help for the ``gen`` command. The full GN reference is also `available
+online <https://gn.googlesource.com/gn/+/master/docs/reference.md>`_.
 
-GN has an autoformatter: `git ls-files '*.gn' '*.gni' | xargs -n 1 gn format`
+GN has an autoformatter:
+``git ls-files '*.gn' '*.gni' | xargs llvm/utils/gn/gn.py format``
 after making GN build changes is your friend.
 
-To not put `BUILD.gn` into the main tree, they are all below
-`utils/gn/secondary`.  For example, the build file for `llvm/lib/Support` is in
-`utils/gn/secondary/llvm/lib/Support`.
+To not put ``BUILD.gn`` files into the main tree, they are all below
+``utils/gn/secondary``.  For example, the build file for ``llvm/lib/Support``
+is in ``utils/gn/secondary/llvm/lib/Support``.
 
 .. _Syncing GN files from CMake files:
 
@@ -83,15 +80,15 @@ Syncing GN files from CMake files
 
 Sometimes after pulling in the latest changes, the GN build doesn't work.
 Most of the time this is due to someone adding a file to CMakeLists.txt file.
-Run `llvm/utils/gn/build/sync_source_lists_from_cmake.py` to print a report
-of which files need to be added to or removed from `BUILD.gn` files to
-match the corresponding `CMakeLists.txt`. You have to manually read the output
+Run ``llvm/utils/gn/build/sync_source_lists_from_cmake.py`` to print a report
+of which files need to be added to or removed from ``BUILD.gn`` files to
+match the corresponding ``CMakeLists.txt``. You have to manually read the output
 of the script and implement its suggestions.
 
-If new `CMakeLists.txt` files have been added, you have to manually create
-a new corresponding `BUILD.gn` file below `llvm/utils/gn/secondary/`.
+If new ``CMakeLists.txt`` files have been added, you have to manually create
+a new corresponding ``BUILD.gn`` file below ``llvm/utils/gn/secondary/``.
 
-If the dependencies in a `CMakeLists.txt` file have been changed, you have to
+If the dependencies in a ``CMakeLists.txt`` file have been changed, you have to
 manually analyze and fix.
 
 .. _Philosophy:
@@ -133,9 +130,9 @@ configure is used for three classes of feature checks:
   config.h in a build step).
 
 For the last two points, it would be nice if LLVM didn't have a single
-`config.h` header, but one header per toggle. That way, when e.g.
-`llvm_enable_terminfo` is toggled, only the 3 files caring about that setting
-would need to be rebuilt, instead of everything including `config.h`.
+``config.h`` header, but one header per toggle. That way, when e.g.
+``llvm_enable_terminfo`` is toggled, only the 3 files caring about that setting
+would need to be rebuilt, instead of everything including ``config.h``.
 
 GN doesn't believe in users setting arbitrary cflags from an environment
 variable, it wants the build to be controlled by .gn files.

@@ -536,6 +536,17 @@ void ClangdLSPServer::onDocumentDidClose(
   PathRef File = Params.textDocument.uri.file();
   DraftMgr.removeDraft(File);
   Server->removeDocument(File);
+
+  {
+    std::lock_guard<std::mutex> Lock(FixItsMutex);
+    FixItsMap.erase(File);
+  }
+  // clangd will not send updates for this file anymore, so we empty out the
+  // list of diagnostics shown on the client (e.g. in the "Problems" pane of
+  // VSCode). Note that this cannot race with actual diagnostics responses
+  // because removeDocument() guarantees no diagnostic callbacks will be
+  // executed after it returns.
+  publishDiagnostics(URIForFile::canonicalize(File, /*TUPath=*/File), {});
 }
 
 void ClangdLSPServer::onDocumentOnTypeFormatting(
@@ -836,6 +847,16 @@ void ClangdLSPServer::applyConfiguration(
     reparseOpenedFiles();
 }
 
+void ClangdLSPServer::publishDiagnostics(
+    const URIForFile &File, std::vector<clangd::Diagnostic> Diagnostics) {
+  // Publish diagnostics.
+  notify("textDocument/publishDiagnostics",
+         llvm::json::Object{
+             {"uri", File},
+             {"diagnostics", std::move(Diagnostics)},
+         });
+}
+
 // FIXME: This function needs to be properly tested.
 void ClangdLSPServer::onChangeConfiguration(
     const DidChangeConfigurationParams &Params) {
@@ -978,17 +999,12 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
 
   // Cache FixIts
   {
-    // FIXME(ibiryukov): should be deleted when documents are removed
     std::lock_guard<std::mutex> Lock(FixItsMutex);
     FixItsMap[File] = LocalFixIts;
   }
 
-  // Publish diagnostics.
-  notify("textDocument/publishDiagnostics",
-         llvm::json::Object{
-             {"uri", URI},
-             {"diagnostics", std::move(LSPDiagnostics)},
-         });
+  // Send a notification to the LSP client.
+  publishDiagnostics(URI, std::move(LSPDiagnostics));
 }
 
 void ClangdLSPServer::onFileUpdated(PathRef File, const TUStatus &Status) {
