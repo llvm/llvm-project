@@ -596,11 +596,8 @@ amd_comgr_get_data(
       datap->data_kind == AMD_COMGR_DATA_KIND_UNDEF || size == NULL)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  if (bytes != NULL)
-    if (*size == datap->size)
-      memcpy(bytes, datap->data, *size);
-    else
-      return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  if (bytes)
+    memcpy(bytes, datap->data, *size);
   else
     *size = datap->size;
 
@@ -635,10 +632,10 @@ amd_comgr_get_data_name(
       size == NULL)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  if (name == NULL)
-    *size = strlen(datap->name) + 1;  // include terminating null
-  else
+  if (name)
     memcpy(name, datap->name, *size);
+  else
+    *size = strlen(datap->name) + 1; // include terminating null
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -865,10 +862,10 @@ amd_comgr_action_info_get_isa_name(
       size == NULL)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  if (isa_name == NULL)
-    *size = strlen(actionp->isa_name) + 1; // include terminating null
-  else
+  if (isa_name)
     memcpy(isa_name, actionp->isa_name, *size);
+  else
+    *size = strlen(actionp->isa_name) + 1; // include terminating null
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -930,11 +927,10 @@ amd_comgr_action_info_get_options(
       size == NULL)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  if (options == NULL)
-    *size = strlen(actionp->action_options) + 1;  // include terminating 0
-  else {
+  if (options)
     memcpy(options, actionp->action_options, *size);
-  }
+  else
+    *size = strlen(actionp->action_options) + 1; // include terminating 0
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -966,11 +962,10 @@ amd_comgr_action_info_get_working_directory_path(
       size == NULL)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  if (path == NULL)
-    *size = strlen(actionp->action_path) + 1;  // include terminating 0
-  else {
+  if (path)
     memcpy(path, actionp->action_path, *size);
-  }
+  else
+    *size = strlen(actionp->action_path) + 1; // include terminating 0
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -1126,16 +1121,11 @@ amd_comgr_status_t amd_comgr_get_metadata_string_yaml(DataMeta *metap,
       metap->get_metadata_kind() != AMD_COMGR_METADATA_KIND_STRING)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  // get length
-  if (string == NULL) {
-    std::string str = metap->node.as<std::string>();
-    *size = str.size() + 1; // ensure null teminator
-    return AMD_COMGR_STATUS_SUCCESS;
-  }
-
-  // get string
   std::string str = metap->node.as<std::string>();
-  memcpy(string, str.c_str(), *size);
+  if (string)
+    memcpy(string, str.c_str(), *size);
+  else
+    *size = str.size() + 1; // ensure null teminator
 
   return AMD_COMGR_STATUS_SUCCESS;
 }

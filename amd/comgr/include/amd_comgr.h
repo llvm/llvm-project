@@ -536,12 +536,12 @@ amd_comgr_set_data_name(
  *
  * @param[in] data The data object to query.
  *
- * @param[in, out] size On entry, the size of @p bytes. On return, set
- * to the size of the data object contents.
+ * @param[in, out] size On entry, the size of @p bytes. On return, if @p bytes
+ * is NULL, set to the size of the data object contents.
  *
  * @param[out] bytes If not NULL, then the first @p size bytes of the
  * data object contents is copied. If NULL, no data is copied, and
- * only @p size is updated (useful inorder to find the size of buffer
+ * only @p size is updated (useful in order to find the size of buffer
  * required to copy the data).
  *
  * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
@@ -565,13 +565,13 @@ amd_comgr_get_data(
  *
  * @param[in] data The data object to query.
  *
- * @param[in, out] size On entry, the size of @p name. On return, set
- * to the size of the data object name including the terminating null
+ * @param[in, out] size On entry, the size of @p name. On return, if @p name is
+ * NULL, set to the size of the data object name including the terminating null
  * character.
  *
  * @param[out] name If not NULL, then the first @p size characters of the
  * data object name are copied. If NULL, no name is copied, and
- * only @p size is updated (useful inorder to find the size of buffer
+ * only @p size is updated (useful in order to find the size of buffer
  * required to copy the name).
  *
  * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
@@ -595,13 +595,13 @@ amd_comgr_get_data_name(
  *
  * @param[in] data The data object to query.
  *
- * @param[in, out] size On entry, the size of @p isa_name. On return,
- * set to the size of the isa name including the terminating null
- * character.
+ * @param[in, out] size On entry, the size of @p isa_name. On return, if @p
+ * isa_name is NULL, set to the size of the isa name including the terminating
+ * null character.
  *
  * @param[out] isa_name If not NULL, then the first @p size characters
  * of the isa name are copied. If NULL, no isa name is copied, and
- * only @p size is updated (useful inorder to find the size of buffer
+ * only @p size is updated (useful in order to find the size of buffer
  * required to copy the isa name).
  *
  * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
@@ -884,14 +884,14 @@ amd_comgr_action_info_set_isa_name(
  *
  * @param[in] action_info The action info object to query.
  *
- * @param[in, out] size On entry, the size of @p isa_name. On return,
- * set to the size of the isa name including the terminating null
- * character.
+ * @param[in, out] size On entry, the size of @p isa_name. On return, if @p
+ * isa_name is NULL, set to the size of the isa name including the terminating
+ * null character.
  *
- * @param[out] isa_name If not NULL, then the first @p size characters
- * of the isa name are copied. If the isa name is not set then an
- * empty string is copied. If NULL, no name is copied, and only @p
- * size is updated (useful inorder to find the size of buffer required
+ * @param[out] isa_name If not NULL, then the first @p size characters of the
+ * isa name are copied into @p isa_name. If the isa name is not set then an
+ * empty string is copied into @p isa_name. If NULL, no name is copied, and
+ * only @p size is updated (useful in order to find the size of buffer required
  * to copy the name).
  *
  * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
@@ -991,9 +991,9 @@ amd_comgr_action_info_set_options(
  *
  * @param[in] action_info The action info object to query.
  *
- * @param[in, out] size On entry, the size of @p options. On return,
- * set to the size of the options including the terminating null
- * character.
+ * @param[in, out] size On entry, the size of @p options. On return, if @p
+ * options is NULL, set to the size of the options including the terminating
+ * null character.
  *
  * @param[out] options If not NULL, then the first @p size characters of
  * the options are copied. If the options are not set then an empty
@@ -1050,15 +1050,15 @@ amd_comgr_action_info_set_working_directory_path(
  *
  * @param[in] action_info The action info object to query.
  *
- * @param[in, out] size On entry, the size of @p path. On return, set
- * to the size of the working directory path including the terminating
- * null character.
+ * @param[in, out] size On entry, the size of @p path. On return, if @p path is
+ * NULL, set to the size of the working directory path including the
+ * terminating null character.
  *
  * @param[out] path If not NULL, then the first @p size characters of
  * the working directory path is copied. If the working directory path
  * is not set then an empty string is copied. If NULL, the working
  * directory path is not copied, and only @p size is updated (useful
- * inorder to find the size of buffer required to copy the working
+ * in order to find the size of buffer required to copy the working
  * directory path).
  *
  * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
@@ -1418,13 +1418,13 @@ amd_comgr_get_metadata_kind(
  *
  * @param[in] metadata The metadata node to query.
  *
- * @param[in, out] size On entry, the size of @p string. On return,
- * set to the size of the sring including the terminating null
+ * @param[in, out] size On entry, the size of @p string. On return, if @p
+ * string is NULL, set to the size of the string including the terminating null
  * character.
  *
  * @param[out] string If not NULL, then the first @p size characters
  * of the string are copied. If NULL, no string is copied, and only @p
- * size is updated (useful inorder to find the size of buffer required
+ * size is updated (useful in order to find the size of buffer required
  * to copy the string).
  *
  * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
