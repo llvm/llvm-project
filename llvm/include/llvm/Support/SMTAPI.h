@@ -70,7 +70,7 @@ public:
 
   virtual void print(raw_ostream &OS) const = 0;
 
-  LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
+  LLVM_DUMP_METHOD void dump() const;
 
 protected:
   /// Query the SMT solver and returns true if two sorts are equal (same kind
@@ -117,7 +117,7 @@ public:
 
   virtual void print(raw_ostream &OS) const = 0;
 
-  LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
+  LLVM_DUMP_METHOD void dump() const;
 
 protected:
   /// Query the SMT solver and returns true if two sorts are equal (same kind
@@ -138,7 +138,7 @@ public:
   SMTSolver() = default;
   virtual ~SMTSolver() = default;
 
-  LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
+  LLVM_DUMP_METHOD void dump() const;
 
   // Returns an appropriate floating-point sort for the given bitwidth.
   SMTSortRef getFloatSort(unsigned BitWidth) {

@@ -9,7 +9,7 @@
         addl $a, %eax
 # CHECK: addl $3, %eax
         addl $1 + 2, %eax
-        
+
 # Disambiguation
 
 # CHECK: addl $1, 8
@@ -26,7 +26,7 @@
         addl $1, (%eax)
 # CHECK: addl $1, 8(,%eax)
         addl $1, (4+4)(,%eax)
-        
+
 # Indirect Memory Operands
 # CHECK: addl $1, 1(%eax)
         addl $1, 1(%eax)

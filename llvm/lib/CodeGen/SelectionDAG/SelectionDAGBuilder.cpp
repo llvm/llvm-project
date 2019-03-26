@@ -1350,7 +1350,7 @@ bool SelectionDAGBuilder::handleDebugValue(const Value *V, DILocalVariable *Var,
 void SelectionDAGBuilder::resolveOrClearDbgInfo() {
   // Try to fixup any remaining dangling debug info -- and drop it if we can't.
   for (auto &Pair : DanglingDebugInfoMap)
-    for (auto &DDI : Pair.getSecond())
+    for (auto &DDI : Pair.second)
       salvageUnresolvedDbgValue(DDI);
   clearDanglingDebugInfo();
 }

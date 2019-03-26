@@ -4,6 +4,11 @@ endif()
 
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
+if(NOT LLDB_DISABLE_PYTHON)
+  get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
+  set(lldb_python_wrapper ${lldb_scripts_dir}/LLDBWrapPython.cpp)
+endif()
+
 add_lldb_library(liblldb SHARED
   SBAddress.cpp
   SBAttachInfo.cpp

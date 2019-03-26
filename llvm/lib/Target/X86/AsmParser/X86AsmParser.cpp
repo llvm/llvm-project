@@ -2949,13 +2949,13 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               uint64_t &ErrorInfo,
                                               bool MatchingInlineAsm) {
   assert(!Operands.empty() && "Unexpect empty operand list!");
-  X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-  assert(Op.isToken() && "Leading operand should always be a mnemonic!");
+  assert((*Operands[0]).isToken() && "Leading operand should always be a mnemonic!");
   SMRange EmptyRange = None;
 
   // First, handle aliases that expand to multiple instructions.
-  MatchFPUWaitAlias(IDLoc, Op, Operands, Out, MatchingInlineAsm);
-
+  MatchFPUWaitAlias(IDLoc, static_cast<X86Operand &>(*Operands[0]), Operands,
+                    Out, MatchingInlineAsm);
+  X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
   bool WasOriginallyInvalidOperand = false;
   unsigned Prefixes = getPrefixes(Operands);
 
@@ -2991,6 +2991,11 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
     break;
   case Match_MnemonicFail:
     break;
+  }
+  if (Op.getToken().empty()) {
+    Error(IDLoc, "instruction must have size higher than 0", EmptyRange,
+          MatchingInlineAsm);
+    return true;
   }
 
   // FIXME: Ideally, we would only attempt suffix matches for things which are
@@ -3127,15 +3132,15 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                 uint64_t &ErrorInfo,
                                                 bool MatchingInlineAsm) {
   assert(!Operands.empty() && "Unexpect empty operand list!");
-  X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-  assert(Op.isToken() && "Leading operand should always be a mnemonic!");
-  StringRef Mnemonic = Op.getToken();
+  assert((*Operands[0]).isToken() && "Leading operand should always be a mnemonic!");
+  StringRef Mnemonic = (static_cast<X86Operand &>(*Operands[0])).getToken();
   SMRange EmptyRange = None;
-  StringRef Base = Op.getToken();
+  StringRef Base = (static_cast<X86Operand &>(*Operands[0])).getToken();
   unsigned Prefixes = getPrefixes(Operands);
 
   // First, handle aliases that expand to multiple instructions.
-  MatchFPUWaitAlias(IDLoc, Op, Operands, Out, MatchingInlineAsm);
+  MatchFPUWaitAlias(IDLoc, static_cast<X86Operand &>(*Operands[0]), Operands, Out, MatchingInlineAsm);
+  X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
 
   MCInst Inst;
 

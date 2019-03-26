@@ -536,8 +536,14 @@ Record *TGParser::ParseClassID() {
   }
 
   Record *Result = Records.getClass(Lex.getCurStrVal());
-  if (!Result)
-    TokError("Couldn't find class '" + Lex.getCurStrVal() + "'");
+  if (!Result) {
+    std::string Msg("Couldn't find class '" + Lex.getCurStrVal() + "'");
+    if (MultiClasses[Lex.getCurStrVal()].get())
+      TokError(Msg + ". Use 'defm' if you meant to use multiclass '" +
+               Lex.getCurStrVal() + "'");
+    else
+      TokError(Msg);
+  }
 
   Lex.Lex();
   return Result;
@@ -2276,6 +2282,10 @@ void TGParser::ParseValueList(SmallVectorImpl<Init*> &Result, Record *CurRec,
 
   while (Lex.getCode() == tgtok::comma) {
     Lex.Lex();  // Eat the comma
+
+    // ignore trailing comma for lists
+    if (Lex.getCode() == tgtok::r_square)
+      return;
 
     if (ArgsRec && !EltTy) {
       ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();

@@ -237,81 +237,6 @@ protected:
   bool ResolveClangType(ResolveState compiler_type_resolve_state);
 };
 
-// these classes are used to back the SBType* objects
-
-// TODO: This class is just a wrapper around CompilerType. Delete it.
-class TypePair {
-public:
-  TypePair() : compiler_type() {}
-
-  TypePair(CompilerType type) : compiler_type(type) {}
-
-  TypePair(lldb::TypeSP type) : compiler_type(type->GetForwardCompilerType()) {}
-
-  bool IsValid() const { return compiler_type.IsValid(); }
-
-  explicit operator bool() const { return IsValid(); }
-
-  bool operator==(const TypePair &rhs) const {
-    return compiler_type == rhs.compiler_type;
-  }
-
-  bool operator!=(const TypePair &rhs) const { return !(*this == rhs); }
-
-  void Clear() { compiler_type.Clear(); }
-
-  ConstString GetName() const {
-    if (compiler_type)
-      return compiler_type.GetTypeName();
-    return ConstString();
-  }
-
-  ConstString GetDisplayTypeName() const {
-    if (compiler_type)
-      return compiler_type.GetDisplayTypeName();
-    return ConstString();
-  }
-
-  void SetType(CompilerType type) {
-    compiler_type = type;
-  }
-
-  void SetType(lldb::TypeSP type) {
-    compiler_type = type->GetForwardCompilerType();
-  }
-
-  CompilerType GetCompilerType() const { return compiler_type; }
-
-  CompilerType GetPointerType() const { return compiler_type.GetPointerType(); }
-
-  CompilerType GetPointeeType() const { return compiler_type.GetPointeeType(); }
-
-  CompilerType GetReferenceType() const {
-    return compiler_type.GetLValueReferenceType();
-  }
-
-  CompilerType GetTypedefedType() const {
-    return compiler_type.GetTypedefedType();
-  }
-
-  CompilerType GetDereferencedType() const {
-    return compiler_type.GetNonReferenceType();
-  }
-
-  CompilerType GetUnqualifiedType() const {
-    return compiler_type.GetFullyUnqualifiedType();
-  }
-
-  CompilerType GetCanonicalType() const {
-    return compiler_type.GetCanonicalType();
-  }
-
-  TypeSystem *GetTypeSystem() const { return compiler_type.GetTypeSystem(); }
-
-protected:
-  CompilerType compiler_type;
-};
-
 // the two classes here are used by the public API as a backend to the SBType
 // and SBTypeList classes
 
@@ -331,8 +256,6 @@ public:
 
   TypeImpl(const CompilerType &compiler_type, const CompilerType &dynamic);
 
-  TypeImpl(const TypePair &pair, const CompilerType &dynamic);
-
   void SetType(const lldb::TypeSP &type_sp);
 
   void SetType(const CompilerType &compiler_type);
@@ -340,8 +263,6 @@ public:
   void SetType(const lldb::TypeSP &type_sp, const CompilerType &dynamic);
 
   void SetType(const CompilerType &compiler_type, const CompilerType &dynamic);
-
-  void SetType(const TypePair &pair, const CompilerType &dynamic);
 
   TypeImpl &operator=(const TypeImpl &rhs);
 
@@ -384,7 +305,7 @@ private:
   bool CheckModule(lldb::ModuleSP &module_sp) const;
 
   lldb::ModuleWP m_module_wp;
-  TypePair m_static_type;
+  CompilerType m_static_type;
   CompilerType m_dynamic_type;
 };
 
@@ -476,14 +397,11 @@ protected:
 
 class TypeAndOrName {
 public:
-  TypeAndOrName();
+  TypeAndOrName() = default;
   TypeAndOrName(lldb::TypeSP &type_sp);
   TypeAndOrName(const CompilerType &compiler_type);
   TypeAndOrName(const char *type_str);
-  TypeAndOrName(const TypeAndOrName &rhs);
   TypeAndOrName(ConstString &type_const_string);
-
-  TypeAndOrName &operator=(const TypeAndOrName &rhs);
 
   bool operator==(const TypeAndOrName &other) const;
 
@@ -491,7 +409,7 @@ public:
 
   ConstString GetName() const;
 
-  CompilerType GetCompilerType() const { return m_type_pair.GetCompilerType(); }
+  CompilerType GetCompilerType() const { return m_compiler_type; }
 
   void SetName(ConstString type_name);
 
@@ -514,7 +432,7 @@ public:
   explicit operator bool() { return !IsEmpty(); }
 
 private:
-  TypePair m_type_pair;
+  CompilerType m_compiler_type;
   ConstString m_type_name;
 };
 
