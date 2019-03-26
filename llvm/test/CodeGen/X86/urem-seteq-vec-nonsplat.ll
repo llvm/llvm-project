@@ -683,16 +683,12 @@ define <4 x i32> @test_urem_both(<4 x i32> %X) nounwind readnone {
 define <4 x i32> @test_urem_div_undef(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE-LABEL: test_urem_div_undef:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    pxor %xmm0, %xmm0
-; CHECK-SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-SSE-NEXT:    psrld $31, %xmm0
+; CHECK-SSE-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: test_urem_div_undef:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %urem = urem <4 x i32> %X, <i32 5, i32 5, i32 undef, i32 5>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
@@ -794,16 +790,12 @@ define <4 x i32> @test_urem_comp_undef(<4 x i32> %X) nounwind readnone {
 define <4 x i32> @test_urem_both_undef(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE-LABEL: test_urem_both_undef:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    pxor %xmm0, %xmm0
-; CHECK-SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-SSE-NEXT:    psrld $31, %xmm0
+; CHECK-SSE-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: test_urem_both_undef:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %urem = urem <4 x i32> %X, <i32 5, i32 5, i32 undef, i32 5>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 undef, i32 0, i32 0>

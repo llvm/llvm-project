@@ -640,14 +640,15 @@ std::string Args::EscapeLLDBCommandArgument(const std::string &arg,
   case '\0':
     chars_to_escape = " \t\\'\"`";
     break;
-  case '\'':
-    chars_to_escape = "";
-    break;
   case '"':
     chars_to_escape = "$\"`\\";
     break;
+  case '`':
+  case '\'':
+    return arg;
   default:
     assert(false && "Unhandled quote character");
+    return arg;
   }
 
   std::string res;

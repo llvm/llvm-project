@@ -52,7 +52,7 @@ define i64 @f6() {
   ; CHECK: f6:
   ; CHECK: adrp x8, x2
   ; CHECK: add x8, x8, :lo12:x2
-  ; CHECK: orr w9, wzr, #0x200000
+  ; CHECK: mov w9, #2097152
   ; CHECK: ldr x0, [x8, x9]
   ; CHECK: ret
   %l = load i64, i64* getelementptr ([16777216 x i64], [16777216 x i64]* @x2, i64 0, i64 262144)

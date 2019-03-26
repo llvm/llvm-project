@@ -363,6 +363,10 @@ public:
   void writeTo(uint8_t *Buf) override;
   bool empty() const override;
 
+  // Flag to force GotPlt to be in output if we have relocations
+  // that relies on its address.
+  bool HasGotPltOffRel = false;
+
 private:
   std::vector<const Symbol *> Entries;
 };

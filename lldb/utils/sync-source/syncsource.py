@@ -11,7 +11,7 @@ and multiple OS types, verifying changes across all.
 """
 
 import argparse
-import cStringIO
+import io
 import importlib
 import json
 import os.path
@@ -89,11 +89,11 @@ def read_rcfile(filename):
     # preserving the line count.
     regex = re.compile(r"#.*$")
 
-    comment_stripped_file = cStringIO.StringIO()
+    comment_stripped_file = io.StringIO()
     with open(filename, "r") as json_file:
         for line in json_file:
             comment_stripped_file.write(regex.sub("", line))
-    return json.load(cStringIO.StringIO(comment_stripped_file.getvalue()))
+    return json.load(io.StringIO(comment_stripped_file.getvalue()))
 
 
 def find_appropriate_rcfile(options):

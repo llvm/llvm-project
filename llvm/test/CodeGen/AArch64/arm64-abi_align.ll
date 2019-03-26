@@ -294,7 +294,7 @@ entry:
 ; Space for s1 is allocated at fp-24 = sp+56
 ; FAST: sub x[[A:[0-9]+]], x29, #24
 ; Call memcpy with size = 24 (0x18)
-; FAST: orr {{x[0-9]+}}, xzr, #0x18
+; FAST: mov {{x[0-9]+}}, #24
 ; Space for s2 is allocated at sp+32
 ; FAST: add x[[A:[0-9]+]], sp, #32
 ; FAST: bl _memcpy
@@ -337,7 +337,7 @@ entry:
 ; Space for s1 is allocated at fp-24
 ; FAST: sub x[[A:[0-9]+]], x29, #24
 ; Call memcpy with size = 24 (0x18)
-; FAST: orr {{x[0-9]+}}, xzr, #0x18
+; FAST: mov {{x[0-9]+}}, #24
 ; FAST: bl _memcpy
 ; Space for s2 is allocated at fp-48
 ; FAST: sub x[[B:[0-9]+]], x29, #48
@@ -515,7 +515,7 @@ entry:
 ; FAST-LABEL: i64_split
 ; FAST: ldr x7, [{{x[0-9]+}}]
 ; FAST: mov x[[R0:[0-9]+]], sp
-; FAST: orr w[[R1:[0-9]+]], wzr, #0x8
+; FAST: mov w[[R1:[0-9]+]], #8
 ; FAST: str w[[R1]], {{\[}}x[[R0]]{{\]}}
   %0 = load i64, i64* bitcast (%struct.s41* @g41 to i64*), align 16
   %call = tail call i32 @callee_i64(i32 1, i32 2, i32 3, i32 4, i32 5,

@@ -3269,7 +3269,7 @@ void Verifier::visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty) {
   unsigned NumRanges = NumOperands / 2;
   Assert(NumRanges >= 1, "It should have at least one range!", Range);
 
-  ConstantRange LastRange(1); // Dummy initial value
+  ConstantRange LastRange(1, true); // Dummy initial value
   for (unsigned i = 0; i < NumRanges; ++i) {
     ConstantInt *Low =
         mdconst::dyn_extract<ConstantInt>(Range->getOperand(2 * i));

@@ -584,6 +584,8 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void advance(_InputIter& __i,
              typename iterator_traits<_InputIter>::difference_type __n)
 {
+    _LIBCPP_ASSERT(__n >= 0 || __is_bidirectional_iterator<_InputIter>::value,
+                       "Attempt to advance(it, -n) on a non-bidi iterator");
     __advance(__i, __n, typename iterator_traits<_InputIter>::iterator_category());
 }
 
@@ -624,20 +626,25 @@ typename enable_if
 next(_InputIter __x,
      typename iterator_traits<_InputIter>::difference_type __n = 1)
 {
+    _LIBCPP_ASSERT(__n >= 0 || __is_bidirectional_iterator<_InputIter>::value,
+                       "Attempt to next(it, -n) on a non-bidi iterator");
+
     _VSTD::advance(__x, __n);
     return __x;
 }
 
-template <class _BidirectionalIter>
+template <class _InputIter>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename enable_if
 <
-    __is_bidirectional_iterator<_BidirectionalIter>::value, 
-    _BidirectionalIter
+    __is_input_iterator<_InputIter>::value, 
+    _InputIter
 >::type
-prev(_BidirectionalIter __x,
-     typename iterator_traits<_BidirectionalIter>::difference_type __n = 1)
+prev(_InputIter __x,
+     typename iterator_traits<_InputIter>::difference_type __n = 1)
 {
+    _LIBCPP_ASSERT(__n <= 0 || __is_bidirectional_iterator<_InputIter>::value,
+                       "Attempt to prev(it, +n) on a non-bidi iterator");
     _VSTD::advance(__x, -__n);
     return __x;
 }

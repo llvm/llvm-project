@@ -188,3 +188,29 @@ TEST(ArgsTest, GetArgumentArrayRef) {
   EXPECT_STREQ("foo", ref[0]);
   EXPECT_STREQ("bar", ref[1]);
 }
+
+TEST(ArgsTest, EscapeLLDBCommandArgument) {
+  const std::string foo = "foo'";
+  EXPECT_EQ("foo\\'", Args::EscapeLLDBCommandArgument(foo, '\0'));
+  EXPECT_EQ("foo'", Args::EscapeLLDBCommandArgument(foo, '\''));
+  EXPECT_EQ("foo'", Args::EscapeLLDBCommandArgument(foo, '`'));
+  EXPECT_EQ("foo'", Args::EscapeLLDBCommandArgument(foo, '"'));
+
+  const std::string bar = "bar\"";
+  EXPECT_EQ("bar\\\"", Args::EscapeLLDBCommandArgument(bar, '\0'));
+  EXPECT_EQ("bar\"", Args::EscapeLLDBCommandArgument(bar, '\''));
+  EXPECT_EQ("bar\"", Args::EscapeLLDBCommandArgument(bar, '`'));
+  EXPECT_EQ("bar\\\"", Args::EscapeLLDBCommandArgument(bar, '"'));
+
+  const std::string baz = "baz`";
+  EXPECT_EQ("baz\\`", Args::EscapeLLDBCommandArgument(baz, '\0'));
+  EXPECT_EQ("baz`", Args::EscapeLLDBCommandArgument(baz, '\''));
+  EXPECT_EQ("baz`", Args::EscapeLLDBCommandArgument(baz, '`'));
+  EXPECT_EQ("baz\\`", Args::EscapeLLDBCommandArgument(baz, '"'));
+
+  const std::string quux = "quux\t";
+  EXPECT_EQ("quux\\\t", Args::EscapeLLDBCommandArgument(quux, '\0'));
+  EXPECT_EQ("quux\t", Args::EscapeLLDBCommandArgument(quux, '\''));
+  EXPECT_EQ("quux\t", Args::EscapeLLDBCommandArgument(quux, '`'));
+  EXPECT_EQ("quux\t", Args::EscapeLLDBCommandArgument(quux, '"'));
+}

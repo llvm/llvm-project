@@ -201,7 +201,6 @@ void RangeListEntry::dump(
   case dwarf::DW_RLE_end_of_list:
     OS << (DumpOpts.Verbose ? "" : "<End of list>");
     break;
-    //  case dwarf::DW_RLE_base_addressx:
   case dwarf::DW_RLE_base_addressx: {
     if (auto SA = LookupPooledAddress(Value0))
       CurrentBase = SA->Address;
@@ -238,7 +237,7 @@ void RangeListEntry::dump(
       Start = SA->Address;
     DWARFAddressRange(Start, Start + Value1).dump(OS, AddrSize, DumpOpts);
     break;
-  } break;
+  }
   default:
     llvm_unreachable("Unsupported range list encoding");
   }

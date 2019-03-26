@@ -49,7 +49,7 @@ public:
 
   llvm::ArrayRef<uint8_t> GetData();
 
-  llvm::ArrayRef<uint8_t> GetStream(MinidumpStreamType stream_type);
+  llvm::ArrayRef<uint8_t> GetStream(StreamType stream_type);
 
   llvm::Optional<std::string> GetMinidumpString(uint32_t rva);
 

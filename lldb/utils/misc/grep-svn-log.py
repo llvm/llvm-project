@@ -13,7 +13,7 @@ from __future__ import print_function
 import fileinput
 import re
 import sys
-import StringIO
+import io
 
 # Separator string for "svn log -v" output.
 separator = '-' * 72
@@ -23,7 +23,7 @@ Example:
     svn log -v | grep-svn-log.py '^   D.+why_are_you_missing.h'"""
 
 
-class Log(StringIO.StringIO):
+class Log(io.StringIO):
     """Simple facade to keep track of the log content."""
 
     def __init__(self):

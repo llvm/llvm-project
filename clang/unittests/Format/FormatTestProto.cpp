@@ -107,6 +107,12 @@ TEST_F(FormatTestProto, FormatsEnums) {
                "};");
 }
 
+TEST_F(FormatTestProto, EnumAsFieldName) {
+  verifyFormat("message SomeMessage {\n"
+               "  required int32 enum = 1;\n"
+               "}");
+}
+
 TEST_F(FormatTestProto, UnderstandsReturns) {
   verifyFormat("rpc Search(SearchRequest) returns (SearchResponse);");
 }

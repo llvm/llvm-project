@@ -10,7 +10,7 @@ define void @Test(i32) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP15:%.*]], [[LOOP]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[SHUFFLE]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> <i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529, i32 13685>, [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[SHUFFLE]], <i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529, i32 13685>
 ; CHECK-NEXT:    [[VAL_1:%.*]] = and i32 [[TMP2]], undef
 ; CHECK-NEXT:    [[VAL_2:%.*]] = and i32 [[VAL_1]], [[TMP0:%.*]]
 ; CHECK-NEXT:    [[VAL_3:%.*]] = and i32 [[VAL_2]], [[TMP0]]
@@ -81,9 +81,9 @@ define void @Test(i32) {
 ; CHECK-NEXT:    [[OP_EXTRA30:%.*]] = and i32 [[OP_EXTRA29]], [[TMP0]]
 ; CHECK-NEXT:    [[VAL_42:%.*]] = and i32 [[VAL_40]], undef
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> undef, i32 [[OP_EXTRA30]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 14910, i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> undef, i32 [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP7]], i32 14910, i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = and <2 x i32> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> [[TMP10]], <2 x i32> <i32 0, i32 3>
@@ -100,7 +100,7 @@ define void @Test(i32) {
 ; FORCE_REDUCTION-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP13:%.*]], [[LOOP]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
 ; FORCE_REDUCTION-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; FORCE_REDUCTION-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[SHUFFLE]], i32 1
-; FORCE_REDUCTION-NEXT:    [[TMP3:%.*]] = add <4 x i32> <i32 0, i32 55, i32 285, i32 1240>, [[SHUFFLE]]
+; FORCE_REDUCTION-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[SHUFFLE]], <i32 0, i32 55, i32 285, i32 1240>
 ; FORCE_REDUCTION-NEXT:    [[VAL_1:%.*]] = and i32 [[TMP2]], undef
 ; FORCE_REDUCTION-NEXT:    [[VAL_2:%.*]] = and i32 [[VAL_1]], [[TMP0:%.*]]
 ; FORCE_REDUCTION-NEXT:    [[VAL_3:%.*]] = and i32 [[VAL_2]], [[TMP0]]

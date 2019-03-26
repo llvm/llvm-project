@@ -259,10 +259,10 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
                 CompareBlockNumbersBackwards>
       Ready;
 
-  RegionInfo SUI(MLI, WEI);
+  RegionInfo RI(MLI, WEI);
   SmallVector<Entry, 4> Entries;
   for (MachineBasicBlock *MBB = &MF.front();;) {
-    const Region *R = SUI.getRegionFor(MBB);
+    const Region *R = RI.getRegionFor(MBB);
     if (R) {
       // If MBB is a region header, add it to the active region list. We can't
       // put any blocks that it doesn't dominate until we see the end of the
@@ -353,7 +353,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
 
   for (auto &MBB : MF) {
     assert(MBB.getNumber() >= 0 && "Renumbered blocks should be non-negative.");
-    const Region *Region = SUI.getRegionFor(&MBB);
+    const Region *Region = RI.getRegionFor(&MBB);
 
     if (Region && &MBB == Region->getHeader()) {
       if (Region->isLoop()) {
@@ -378,7 +378,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
       for (auto Pred : MBB.predecessors())
         assert(Pred->getNumber() < MBB.getNumber() &&
                "Non-loop-header predecessors should be topologically sorted");
-      assert(OnStack.count(SUI.getRegionFor(&MBB)) &&
+      assert(OnStack.count(RI.getRegionFor(&MBB)) &&
              "Blocks must be nested in their regions");
     }
     while (OnStack.size() > 1 && &MBB == WebAssembly::getBottom(OnStack.back()))

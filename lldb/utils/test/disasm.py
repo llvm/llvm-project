@@ -39,7 +39,7 @@ def do_llvm_mc_disassembly(
         func,
         mc,
         mc_options):
-    from cStringIO import StringIO
+    from io import StringIO
     import pexpect
 
     gdb_prompt = "\r\n\(gdb\) "

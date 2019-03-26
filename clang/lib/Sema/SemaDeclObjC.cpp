@@ -499,7 +499,7 @@ namespace {
 // Callback to only accept typo corrections that are Objective-C classes.
 // If an ObjCInterfaceDecl* is given to the constructor, then the validation
 // function will reject corrections to that class.
-class ObjCInterfaceValidatorCCC : public CorrectionCandidateCallback {
+class ObjCInterfaceValidatorCCC final : public CorrectionCandidateCallback {
  public:
   ObjCInterfaceValidatorCCC() : CurrentIDecl(nullptr) {}
   explicit ObjCInterfaceValidatorCCC(ObjCInterfaceDecl *IDecl)
@@ -508,6 +508,10 @@ class ObjCInterfaceValidatorCCC : public CorrectionCandidateCallback {
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     ObjCInterfaceDecl *ID = candidate.getCorrectionDeclAs<ObjCInterfaceDecl>();
     return ID && !declaresSameEntity(ID, CurrentIDecl);
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<ObjCInterfaceValidatorCCC>(*this);
   }
 
  private:
@@ -549,11 +553,10 @@ ActOnSuperClassOfClassInterface(Scope *S,
   if (!PrevDecl) {
     // Try to correct for a typo in the superclass name without correcting
     // to the class we're defining.
+    ObjCInterfaceValidatorCCC CCC(IDecl);
     if (TypoCorrection Corrected = CorrectTypo(
-            DeclarationNameInfo(SuperName, SuperLoc),
-            LookupOrdinaryName, TUScope,
-            nullptr, llvm::make_unique<ObjCInterfaceValidatorCCC>(IDecl),
-            CTK_ErrorRecovery)) {
+            DeclarationNameInfo(SuperName, SuperLoc), LookupOrdinaryName,
+            TUScope, nullptr, CCC, CTK_ErrorRecovery)) {
       diagnoseTypo(Corrected, PDiag(diag::err_undef_superclass_suggest)
                    << SuperName << ClassName);
       PrevDecl = Corrected.getCorrectionDeclAs<ObjCInterfaceDecl>();
@@ -1292,11 +1295,10 @@ Sema::FindProtocolDeclaration(bool WarnOnDeclarations, bool ForObjCContainer,
   for (const IdentifierLocPair &Pair : ProtocolId) {
     ObjCProtocolDecl *PDecl = LookupProtocol(Pair.first, Pair.second);
     if (!PDecl) {
+      DeclFilterCCC<ObjCProtocolDecl> CCC{};
       TypoCorrection Corrected = CorrectTypo(
-          DeclarationNameInfo(Pair.first, Pair.second),
-          LookupObjCProtocolName, TUScope, nullptr,
-          llvm::make_unique<DeclFilterCCC<ObjCProtocolDecl>>(),
-          CTK_ErrorRecovery);
+          DeclarationNameInfo(Pair.first, Pair.second), LookupObjCProtocolName,
+          TUScope, nullptr, CCC, CTK_ErrorRecovery);
       if ((PDecl = Corrected.getCorrectionDeclAs<ObjCProtocolDecl>()))
         diagnoseTypo(Corrected, PDiag(diag::err_undeclared_protocol_suggest)
                                     << Pair.first);
@@ -1334,7 +1336,8 @@ Sema::FindProtocolDeclaration(bool WarnOnDeclarations, bool ForObjCContainer,
 namespace {
 // Callback to only accept typo corrections that are either
 // Objective-C protocols or valid Objective-C type arguments.
-class ObjCTypeArgOrProtocolValidatorCCC : public CorrectionCandidateCallback {
+class ObjCTypeArgOrProtocolValidatorCCC final
+    : public CorrectionCandidateCallback {
   ASTContext &Context;
   Sema::LookupNameKind LookupKind;
  public:
@@ -1380,6 +1383,10 @@ class ObjCTypeArgOrProtocolValidatorCCC : public CorrectionCandidateCallback {
     }
 
     return false;
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return llvm::make_unique<ObjCTypeArgOrProtocolValidatorCCC>(*this);
   }
 };
 } // end anonymous namespace
@@ -1670,12 +1677,10 @@ void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
     }
 
     // Perform typo correction on the name.
-    TypoCorrection corrected = CorrectTypo(
-        DeclarationNameInfo(identifiers[i], identifierLocs[i]), lookupKind, S,
-        nullptr,
-        llvm::make_unique<ObjCTypeArgOrProtocolValidatorCCC>(Context,
-                                                             lookupKind),
-        CTK_ErrorRecovery);
+    ObjCTypeArgOrProtocolValidatorCCC CCC(Context, lookupKind);
+    TypoCorrection corrected =
+        CorrectTypo(DeclarationNameInfo(identifiers[i], identifierLocs[i]),
+                    lookupKind, S, nullptr, CCC, CTK_ErrorRecovery);
     if (corrected) {
       // Did we find a protocol?
       if (auto proto = corrected.getCorrectionDeclAs<ObjCProtocolDecl>()) {
@@ -1967,9 +1972,10 @@ Decl *Sema::ActOnStartClassImplementation(
   } else {
     // We did not find anything with the name ClassName; try to correct for
     // typos in the class name.
-    TypoCorrection Corrected = CorrectTypo(
-        DeclarationNameInfo(ClassName, ClassLoc), LookupOrdinaryName, TUScope,
-        nullptr, llvm::make_unique<ObjCInterfaceValidatorCCC>(), CTK_NonError);
+    ObjCInterfaceValidatorCCC CCC{};
+    TypoCorrection Corrected =
+        CorrectTypo(DeclarationNameInfo(ClassName, ClassLoc),
+                    LookupOrdinaryName, TUScope, nullptr, CCC, CTK_NonError);
     if (Corrected.getCorrectionDeclAs<ObjCInterfaceDecl>()) {
       // Suggest the (potentially) correct interface name. Don't provide a
       // code-modification hint or use the typo name for recovery, because

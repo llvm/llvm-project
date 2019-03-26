@@ -765,7 +765,7 @@ void ClangMoveTool::removeDeclsInOldFiles() {
     if (Context->Spec.OldDependOnNew &&
         MakeAbsolutePath(SM, FilePath) ==
             makeAbsolutePath(Context->Spec.OldHeader)) {
-      // FIXME: Minimize the include path like include-fixer.
+      // FIXME: Minimize the include path like clang-include-fixer.
       std::string IncludeNewH =
           "#include \"" + Context->Spec.NewHeader + "\"\n";
       // This replacment for inserting header will be cleaned up at the end.

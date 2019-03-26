@@ -1,10 +1,15 @@
 #!/usr/bin/python
+from __future__ import print_function
 
 import lldb
 import shlex
 import sys
-from Tkinter import *
-import ttk
+try:
+    from tkinter import *
+    import tkinter.ttk as ttk
+except ImportError:
+    from Tkinter import *
+    import ttk
 
 
 class ValueTreeItemDelegate(object):

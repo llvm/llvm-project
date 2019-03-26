@@ -104,6 +104,20 @@ public:
     return Result;
   }
 
+  GlobalDecl getWithCtorType(CXXCtorType Type) {
+    assert(isa<CXXConstructorDecl>(getDecl()));
+    GlobalDecl Result(*this);
+    Result.Value.setInt(Type);
+    return Result;
+  }
+
+  GlobalDecl getWithDtorType(CXXDtorType Type) {
+    assert(isa<CXXDestructorDecl>(getDecl()));
+    GlobalDecl Result(*this);
+    Result.Value.setInt(Type);
+    return Result;
+  }
+
   GlobalDecl getWithMultiVersionIndex(unsigned Index) {
     assert(isa<FunctionDecl>(getDecl()) &&
            !isa<CXXConstructorDecl>(getDecl()) &&

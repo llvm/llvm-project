@@ -1,6 +1,13 @@
-option(CLANGD_BUILD_XPC "Build XPC Support For Clangd." OFF)
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(CLANGD_BUILD_XPC ON CACHE BOOL "" FORCE)
+if (NOT DEFINED CLANGD_BUILD_XPC)
+  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(CLANGD_BUILD_XPC_DEFAULT ON)
+  else ()
+    set(CLANGD_BUILD_XPC_DEFAULT OFF)
+  endif ()
+
+  set(CLANGD_BUILD_XPC ${CLANGD_BUILD_XPC_DEFAULT} CACHE BOOL "Build XPC Support For Clangd." FORCE)
+
+  unset(CLANGD_BUILD_XPC_DEFAULT)
 endif ()
 
 add_subdirectory(clang-apply-replacements)
@@ -11,10 +18,10 @@ add_subdirectory(clang-tidy-vs)
 
 add_subdirectory(clang-change-namespace)
 add_subdirectory(clang-doc)
-add_subdirectory(clang-query)
+add_subdirectory(clang-include-fixer)
 add_subdirectory(clang-move)
+add_subdirectory(clang-query)
 add_subdirectory(clangd)
-add_subdirectory(include-fixer)
 add_subdirectory(pp-trace)
 add_subdirectory(tool-template)
 

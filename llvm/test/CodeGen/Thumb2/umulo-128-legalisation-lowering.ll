@@ -8,10 +8,10 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV7-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMBV7-NEXT:    .pad #44
 ; THUMBV7-NEXT:    sub sp, #44
-; THUMBV7-NEXT:    str r0, [sp, #40] @ 4-byte Spill
-; THUMBV7-NEXT:    movs r0, #0
 ; THUMBV7-NEXT:    ldrd r4, r7, [sp, #88]
 ; THUMBV7-NEXT:    mov r5, r3
+; THUMBV7-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV7-NEXT:    movs r0, #0
 ; THUMBV7-NEXT:    strd r4, r7, [sp]
 ; THUMBV7-NEXT:    mov r1, r3
 ; THUMBV7-NEXT:    strd r0, r0, [sp, #8]
@@ -20,8 +20,8 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV7-NEXT:    movs r2, #0
 ; THUMBV7-NEXT:    movs r3, #0
 ; THUMBV7-NEXT:    bl __multi3
-; THUMBV7-NEXT:    strd r1, r0, [sp, #32]
-; THUMBV7-NEXT:    strd r3, r2, [sp, #24]
+; THUMBV7-NEXT:    strd r1, r0, [sp, #32] @ 8-byte Folded Spill
+; THUMBV7-NEXT:    strd r3, r2, [sp, #24] @ 8-byte Folded Spill
 ; THUMBV7-NEXT:    ldrd r2, r0, [sp, #96]
 ; THUMBV7-NEXT:    ldr.w r9, [sp, #80]
 ; THUMBV7-NEXT:    umull lr, r0, r0, r6
@@ -47,7 +47,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV7-NEXT:    adds r3, r3, r6
 ; THUMBV7-NEXT:    ldr r6, [sp, #24] @ 4-byte Reload
 ; THUMBV7-NEXT:    adcs r2, r6
-; THUMBV7-NEXT:    ldrd r6, lr, [sp, #36]
+; THUMBV7-NEXT:    ldrd r6, lr, [sp, #36] @ 8-byte Folded Reload
 ; THUMBV7-NEXT:    str.w r6, [lr]
 ; THUMBV7-NEXT:    adc r8, r8, #0
 ; THUMBV7-NEXT:    ldr r6, [sp, #32] @ 4-byte Reload

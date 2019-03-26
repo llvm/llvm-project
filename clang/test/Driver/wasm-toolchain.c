@@ -12,25 +12,25 @@
 
 // A basic C link command-line with unknown OS.
 
-// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo -fuse-ld=wasm-ld %s 2>&1 | FileCheck -check-prefix=LINK %s
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s 2>&1 | FileCheck -check-prefix=LINK %s
 // LINK: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
 // A basic C link command-line with optimization with unknown OS.
 
-// RUN: %clang -### -O2 -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo -fuse-ld=wasm-ld %s 2>&1 | FileCheck -check-prefix=LINK_OPT %s
+// RUN: %clang -### -O2 -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s 2>&1 | FileCheck -check-prefix=LINK_OPT %s
 // LINK_OPT: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_OPT: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
 // A basic C link command-line with known OS.
 
-// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-wasi-musl --sysroot=/foo -fuse-ld=wasm-ld %s 2>&1 | FileCheck -check-prefix=LINK_KNOWN %s
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-wasi-musl --sysroot=/foo %s 2>&1 | FileCheck -check-prefix=LINK_KNOWN %s
 // LINK_KNOWN: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_KNOWN: wasm-ld{{.*}}" "-L/foo/lib/wasm32-wasi-musl" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
 // A basic C link command-line with optimization with known OS.
 
-// RUN: %clang -### -O2 -no-canonical-prefixes -target wasm32-unknown-wasi-musl --sysroot=/foo -fuse-ld=wasm-ld %s 2>&1 | FileCheck -check-prefix=LINK_OPT_KNOWN %s
+// RUN: %clang -### -O2 -no-canonical-prefixes -target wasm32-unknown-wasi-musl --sysroot=/foo %s 2>&1 | FileCheck -check-prefix=LINK_OPT_KNOWN %s
 // LINK_OPT_KNOWN: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_OPT_KNOWN: wasm-ld{{.*}}" "-L/foo/lib/wasm32-wasi-musl" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
@@ -41,9 +41,10 @@
 
 // Thread-related command line tests.
 
-// '-pthread' sets '-target-feature +atomics'
-// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -pthread 2>&1 | FileCheck -check-prefix=PTHREAD %s
+// '-pthread' sets '-target-feature +atomics' and '--shared-memory'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -fuse-ld=wasm-ld -pthread 2>&1 | FileCheck -check-prefix=PTHREAD %s
 // PTHREAD: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+atomics"
+// PTHREAD: wasm-ld{{.*}}" "-lpthread" "--shared-memory"
 
 // '-pthread' not allowed with '-mno-atomics'
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -pthread -mno-atomics 2>&1 | FileCheck -check-prefix=PTHREAD_NO_ATOMICS %s

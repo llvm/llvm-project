@@ -49,25 +49,25 @@ movl bar@GOT, %eax
 // ADDR-NEXT: Offset: 0x1040
 // ADDR-NEXT: Size: 32
 
-// ADDR:      Name: .got (
+// ADDR:      Name: .got.plt (
 // ADDR-NEXT: Type: SHT_PROGBITS
 // ADDR-NEXT: Flags [
 // ADDR-NEXT:   SHF_ALLOC
 // ADDR-NEXT:   SHF_WRITE
 // ADDR-NEXT: ]
-// ADDR-NEXT: Address: 0x402078
+// ADDR-NEXT: Address: 0x403000
 // ADDR-NEXT: Offset:
-// ADDR-NEXT: Size: 8
+// ADDR-NEXT: Size:
 
 .section .R_386_GOTPC,"ax",@progbits
 R_386_GOTPC:
  movl $_GLOBAL_OFFSET_TABLE_, %eax
 
-// 0x402078 + 8 - 0x401014 = 8300
+// 0x403000 (.got.plt) - 0x401014 = 8300
 
 // CHECK:      Disassembly of section .R_386_GOTPC:
 // CHECK-NEXT: R_386_GOTPC:
-// CHECK-NEXT:   401014:  {{.*}} movl  $4204, %eax
+// CHECK-NEXT:   401014:  {{.*}} movl  $8172, %eax
 
 .section .dynamic_reloc, "ax",@progbits
  call bar
@@ -84,13 +84,11 @@ R_386_GOT32:
  movl bar+8@GOT, %eax
  movl zed+4@GOT, %eax
 
-// 4294967288 = 0xFFFFFFF8 = got[0](0x402070) - .got(0x402070) - sizeof(.got)(8)
-// 4294967292 = 0xFFFFFFFC = got[1](0x402074) - .got(0x402070) - sizeof(.got)(8)
-// 0xFFFFFFF8 + 8 = 0
-// 0xFFFFFFFC + 4 = 0
+// 4294963320 = 0xfffff078 = got[0](0x402078) - .got.plt(0x403000)
+// 4294963324 = 0xfffff07c = got[1](0x40207c) - .got(0x403000)
 // CHECK:      Disassembly of section .R_386_GOT32:
 // CHECK-NEXT: R_386_GOT32:
-// CHECK-NEXT: 40101e: a1 f8 ff ff ff movl 4294967288, %eax
-// CHECK-NEXT: 401023: a1 fc ff ff ff movl 4294967292, %eax
-// CHECK-NEXT: 401028: a1 00 00 00 00 movl 0, %eax
-// CHECK-NEXT: 40102d: a1 00 00 00 00 movl 0, %eax
+// CHECK-NEXT: 40101e: a1 78 f0 ff ff movl 4294963320, %eax
+// CHECK-NEXT: 401023: a1 7c f0 ff ff movl 4294963324, %eax
+// CHECK-NEXT: 401028: a1 80 f0 ff ff movl 4294963328, %eax
+// CHECK-NEXT: 40102d: a1 80 f0 ff ff movl 4294963328, %eax

@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readelf -V %t | FileCheck %s
+# RUN: llvm-readobj -V %t | FileCheck %s
 
 # Check we are able to handle the SHT_GNU_verdef sections.
 

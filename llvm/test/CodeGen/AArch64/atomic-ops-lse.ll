@@ -821,7 +821,7 @@ define i8 @test_atomic_load_sub_i8_neg_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var8
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var8
-; CHECK: orr w[[IMM:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[IMM:[0-9]+]], #1
 ; CHECK: ldaddalb w[[IMM]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
@@ -835,7 +835,7 @@ define i16 @test_atomic_load_sub_i16_neg_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var16
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var16
-; CHECK: orr w[[IMM:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[IMM:[0-9]+]], #1
 ; CHECK: ldaddalh w[[IMM]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
@@ -849,7 +849,7 @@ define i32 @test_atomic_load_sub_i32_neg_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
-; CHECK: orr w[[IMM:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[IMM:[0-9]+]], #1
 ; CHECK: ldaddal w[[IMM]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
@@ -863,7 +863,7 @@ define i64 @test_atomic_load_sub_i64_neg_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
-; CHECK: orr w[[IMM:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[IMM:[0-9]+]], #1
 ; CHECK: ldaddal x[[IMM]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
@@ -984,7 +984,7 @@ define i8 @test_atomic_load_and_i8_inv_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var8
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var8
-; CHECK: orr w[[CONST:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[CONST:[0-9]+]], #1
 ; CHECK: ldclralb w[[CONST]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret i8 %old
@@ -996,7 +996,7 @@ define i16 @test_atomic_load_and_i16_inv_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var16
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var16
-; CHECK: orr w[[CONST:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[CONST:[0-9]+]], #1
 ; CHECK: ldclralh w[[CONST]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret i16 %old
@@ -1008,7 +1008,7 @@ define i32 @test_atomic_load_and_i32_inv_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
-; CHECK: orr w[[CONST:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[CONST:[0-9]+]], #1
 ; CHECK: ldclral w[[CONST]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret i32 %old
@@ -1020,7 +1020,7 @@ define i64 @test_atomic_load_and_i64_inv_imm() nounwind {
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
-; CHECK: orr w[[CONST:[0-9]+]], wzr, #0x1
+; CHECK: mov w[[CONST:[0-9]+]], #1
 ; CHECK: ldclral x[[CONST]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret i64 %old

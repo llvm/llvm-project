@@ -25,7 +25,7 @@ protected:
   static ConstantRange Wrap;
 };
 
-ConstantRange ConstantRangeTest::Full(16);
+ConstantRange ConstantRangeTest::Full(16, true);
 ConstantRange ConstantRangeTest::Empty(16, false);
 ConstantRange ConstantRangeTest::One(APInt(16, 0xa));
 ConstantRange ConstantRangeTest::Some(APInt(16, 0xa), APInt(16, 0xaaa));
@@ -320,10 +320,10 @@ TEST_F(ConstantRangeTest, UnionWith) {
             ConstantRange(APInt(16, 14), APInt(16, 8)));
   EXPECT_EQ(ConstantRange(APInt(16, 6), APInt(16, 4)).unionWith(
                                     ConstantRange(APInt(16, 4), APInt(16, 0))),
-              ConstantRange(16));
+            ConstantRange::getFull(16));
   EXPECT_EQ(ConstantRange(APInt(16, 1), APInt(16, 0)).unionWith(
                                     ConstantRange(APInt(16, 2), APInt(16, 1))),
-              ConstantRange(16));
+            ConstantRange::getFull(16));
 }
 
 TEST_F(ConstantRangeTest, SetDifference) {

@@ -666,7 +666,7 @@ Status NativeProcessNetBSD::Attach() {
   // Need to use WALLSIG otherwise we receive an error with errno=ECHLD At this
   // point we should have a thread stopped if waitpid succeeds.
   if ((wstatus = llvm::sys::RetryAfterSignal(-1, waitpid,
-          m_pid, NULL, WALLSIG)) < 0)
+          m_pid, nullptr, WALLSIG)) < 0)
     return Status(errno, eErrorTypePOSIX);
 
   /* Initialize threads */

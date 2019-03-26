@@ -5774,7 +5774,7 @@ static ConstantRange getRangeForAffineARHelper(APInt Step,
   // FullRange), then we don't know anything about the final range either.
   // Return FullRange.
   if (StartRange.isFullSet())
-    return ConstantRange(BitWidth, /* isFullSet = */ true);
+    return ConstantRange::getFull(BitWidth);
 
   // If Step is signed and negative, then we use its absolute value, but we also
   // note that we're moving in the opposite direction.
@@ -5790,7 +5790,7 @@ static ConstantRange getRangeForAffineARHelper(APInt Step,
   // Check if Offset is more than full span of BitWidth. If it is, the
   // expression is guaranteed to overflow.
   if (APInt::getMaxValue(StartRange.getBitWidth()).udiv(Step).ult(MaxBECount))
-    return ConstantRange(BitWidth, /* isFullSet = */ true);
+    return ConstantRange::getFull(BitWidth);
 
   // Offset is by how much the expression can change. Checks above guarantee no
   // overflow here.
@@ -5809,7 +5809,7 @@ static ConstantRange getRangeForAffineARHelper(APInt Step,
   // range (due to wrap around). This means that the expression can take any
   // value in this bitwidth, and we have to return full range.
   if (StartRange.contains(MovedBoundary))
-    return ConstantRange(BitWidth, /* isFullSet = */ true);
+    return ConstantRange::getFull(BitWidth);
 
   APInt NewLower =
       Descending ? std::move(MovedBoundary) : std::move(StartLower);
@@ -5819,7 +5819,7 @@ static ConstantRange getRangeForAffineARHelper(APInt Step,
 
   // If we end up with full range, return a proper full range.
   if (NewLower == NewUpper)
-    return ConstantRange(BitWidth, /* isFullSet = */ true);
+    return ConstantRange::getFull(BitWidth);
 
   // No overflow detected, return [StartLower, StartUpper + Offset + 1) range.
   return ConstantRange(std::move(NewLower), std::move(NewUpper));
@@ -5939,17 +5939,17 @@ ConstantRange ScalarEvolution::getRangeViaFactoring(const SCEV *Start,
 
   SelectPattern StartPattern(*this, BitWidth, Start);
   if (!StartPattern.isRecognized())
-    return ConstantRange(BitWidth, /* isFullSet = */ true);
+    return ConstantRange::getFull(BitWidth);
 
   SelectPattern StepPattern(*this, BitWidth, Step);
   if (!StepPattern.isRecognized())
-    return ConstantRange(BitWidth, /* isFullSet = */ true);
+    return ConstantRange::getFull(BitWidth);
 
   if (StartPattern.Condition != StepPattern.Condition) {
     // We don't handle this case today; but we could, by considering four
     // possibilities below instead of two. I'm not sure if there are cases where
     // that will help over what getRange already does, though.
-    return ConstantRange(BitWidth, /* isFullSet = */ true);
+    return ConstantRange::getFull(BitWidth);
   }
 
   // NB! Calling ScalarEvolution::getConstant is fine, but we should not try to
