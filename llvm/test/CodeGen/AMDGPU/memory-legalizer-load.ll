@@ -5,282 +5,282 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-; GCN-LABEL: {{^}}system_unordered:
+; GCN-LABEL: {{^}}system_one_as_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @system_unordered(
+define amdgpu_kernel void @system_one_as_unordered(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in unordered, align 4
+  %val = load atomic i32, i32* %in syncscope("one-as") unordered, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}system_monotonic:
+; GCN-LABEL: {{^}}system_one_as_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @system_monotonic(
+define amdgpu_kernel void @system_one_as_monotonic(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in monotonic, align 4
+  %val = load atomic i32, i32* %in syncscope("one-as") monotonic, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}system_acquire:
+; GCN-LABEL: {{^}}system_one_as_acquire:
 ; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
 ; GCN:        flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NEXT: buffer_wbinvl1_vol
 ; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @system_acquire(
+define amdgpu_kernel void @system_one_as_acquire(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in acquire, align 4
+  %val = load atomic i32, i32* %in syncscope("one-as") acquire, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}system_seq_cst:
+; GCN-LABEL: {{^}}system_one_as_seq_cst:
 ; GCN:        s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT:   flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NEXT: buffer_wbinvl1_vol
 ; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @system_seq_cst(
+define amdgpu_kernel void @system_one_as_seq_cst(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in seq_cst, align 4
+  %val = load atomic i32, i32* %in syncscope("one-as") seq_cst, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_unordered:
+; GCN-LABEL: {{^}}singlethread_one_as_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @singlethread_unordered(
+define amdgpu_kernel void @singlethread_one_as_unordered(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("singlethread") unordered, align 4
+  %val = load atomic i32, i32* %in syncscope("singlethread-one-as") unordered, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_monotonic:
+; GCN-LABEL: {{^}}singlethread_one_as_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @singlethread_monotonic(
+define amdgpu_kernel void @singlethread_one_as_monotonic(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("singlethread") monotonic, align 4
+  %val = load atomic i32, i32* %in syncscope("singlethread-one-as") monotonic, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_acquire:
+; GCN-LABEL: {{^}}singlethread_one_as_acquire:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @singlethread_acquire(
+define amdgpu_kernel void @singlethread_one_as_acquire(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("singlethread") acquire, align 4
+  %val = load atomic i32, i32* %in syncscope("singlethread-one-as") acquire, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_seq_cst:
+; GCN-LABEL: {{^}}singlethread_one_as_seq_cst:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @singlethread_seq_cst(
+define amdgpu_kernel void @singlethread_one_as_seq_cst(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("singlethread") seq_cst, align 4
+  %val = load atomic i32, i32* %in syncscope("singlethread-one-as") seq_cst, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_unordered:
+; GCN-LABEL: {{^}}agent_one_as_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @agent_unordered(
+define amdgpu_kernel void @agent_one_as_unordered(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("agent") unordered, align 4
+  %val = load atomic i32, i32* %in syncscope("agent-one-as") unordered, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_monotonic:
+; GCN-LABEL: {{^}}agent_one_as_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @agent_monotonic(
+define amdgpu_kernel void @agent_one_as_monotonic(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("agent") monotonic, align 4
+  %val = load atomic i32, i32* %in syncscope("agent-one-as") monotonic, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_acquire:
+; GCN-LABEL: {{^}}agent_one_as_acquire:
 ; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
 ; GCN:        flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NEXT: buffer_wbinvl1_vol
 ; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @agent_acquire(
+define amdgpu_kernel void @agent_one_as_acquire(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("agent") acquire, align 4
+  %val = load atomic i32, i32* %in syncscope("agent-one-as") acquire, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_seq_cst:
+; GCN-LABEL: {{^}}agent_one_as_seq_cst:
 ; GCN:        s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT:   flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NEXT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NEXT: buffer_wbinvl1_vol
 ; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @agent_seq_cst(
+define amdgpu_kernel void @agent_one_as_seq_cst(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("agent") seq_cst, align 4
+  %val = load atomic i32, i32* %in syncscope("agent-one-as") seq_cst, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_unordered:
+; GCN-LABEL: {{^}}workgroup_one_as_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @workgroup_unordered(
+define amdgpu_kernel void @workgroup_one_as_unordered(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("workgroup") unordered, align 4
+  %val = load atomic i32, i32* %in syncscope("workgroup-one-as") unordered, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_monotonic:
+; GCN-LABEL: {{^}}workgroup_one_as_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @workgroup_monotonic(
+define amdgpu_kernel void @workgroup_one_as_monotonic(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("workgroup") monotonic, align 4
+  %val = load atomic i32, i32* %in syncscope("workgroup-one-as") monotonic, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_acquire:
+; GCN-LABEL: {{^}}workgroup_one_as_acquire:
 ; GCN-NOT:    s_waitcnt vmcnt(0){{$}}
 ; GFX89:      flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GFX89-NOT:  s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT:  buffer_wbinvl1_vol
 ; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @workgroup_acquire(
+define amdgpu_kernel void @workgroup_one_as_acquire(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("workgroup") acquire, align 4
+  %val = load atomic i32, i32* %in syncscope("workgroup-one-as") acquire, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_seq_cst:
+; GCN-LABEL: {{^}}workgroup_one_as_seq_cst:
 ; GFX89-NOT:  s_waitcnt vmcnt(0){{$}}
 ; GFX89:      flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GFX89-NOT:  s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT:  buffer_wbinvl1_vol
 ; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @workgroup_seq_cst(
+define amdgpu_kernel void @workgroup_one_as_seq_cst(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("workgroup") seq_cst, align 4
+  %val = load atomic i32, i32* %in syncscope("workgroup-one-as") seq_cst, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_unordered:
+; GCN-LABEL: {{^}}wavefront_one_as_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @wavefront_unordered(
+define amdgpu_kernel void @wavefront_one_as_unordered(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("wavefront") unordered, align 4
+  %val = load atomic i32, i32* %in syncscope("wavefront-one-as") unordered, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_monotonic:
+; GCN-LABEL: {{^}}wavefront_one_as_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @wavefront_monotonic(
+define amdgpu_kernel void @wavefront_one_as_monotonic(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("wavefront") monotonic, align 4
+  %val = load atomic i32, i32* %in syncscope("wavefront-one-as") monotonic, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_acquire:
+; GCN-LABEL: {{^}}wavefront_one_as_acquire:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @wavefront_acquire(
+define amdgpu_kernel void @wavefront_one_as_acquire(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("wavefront") acquire, align 4
+  %val = load atomic i32, i32* %in syncscope("wavefront-one-as") acquire, align 4
   store i32 %val, i32* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_seq_cst:
+; GCN-LABEL: {{^}}wavefront_one_as_seq_cst:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
-define amdgpu_kernel void @wavefront_seq_cst(
+define amdgpu_kernel void @wavefront_one_as_seq_cst(
     i32* %in, i32* %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("wavefront") seq_cst, align 4
+  %val = load atomic i32, i32* %in syncscope("wavefront-one-as") seq_cst, align 4
   store i32 %val, i32* %out
   ret void
 }
@@ -370,6 +370,286 @@ entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %val.gep = getelementptr inbounds i32, i32* %in, i32 %tid
   %val = load i32, i32* %val.gep, align 4, !nontemporal !0
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}system_unordered:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @system_unordered(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in unordered, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}system_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @system_monotonic(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in monotonic, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}system_acquire:
+; GCN-NOT:    s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:        flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NEXT: buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @system_acquire(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in acquire, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}system_seq_cst:
+; GCN:        s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN-NEXT:   flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NEXT: buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @system_seq_cst(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in seq_cst, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}singlethread_unordered:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @singlethread_unordered(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("singlethread") unordered, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}singlethread_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @singlethread_monotonic(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("singlethread") monotonic, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}singlethread_acquire:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @singlethread_acquire(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("singlethread") acquire, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}singlethread_seq_cst:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @singlethread_seq_cst(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("singlethread") seq_cst, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}agent_unordered:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @agent_unordered(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("agent") unordered, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}agent_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @agent_monotonic(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("agent") monotonic, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}agent_acquire:
+; GCN-NOT:    s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:        flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NEXT: buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @agent_acquire(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("agent") acquire, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}agent_seq_cst:
+; GCN:        s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN-NEXT:   flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN-NEXT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NEXT: buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @agent_seq_cst(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("agent") seq_cst, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}workgroup_unordered:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @workgroup_unordered(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("workgroup") unordered, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}workgroup_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @workgroup_monotonic(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("workgroup") monotonic, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}workgroup_acquire:
+; GCN-NOT:    s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89:      flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GFX89:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT:  buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @workgroup_acquire(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("workgroup") acquire, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}workgroup_seq_cst:
+; GFX89-NOT:  s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89:      flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GFX89:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT:  buffer_wbinvl1_vol
+; GCN:        flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @workgroup_seq_cst(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("workgroup") seq_cst, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}wavefront_unordered:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @wavefront_unordered(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("wavefront") unordered, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}wavefront_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @wavefront_monotonic(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("wavefront") monotonic, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}wavefront_acquire:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @wavefront_acquire(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("wavefront") acquire, align 4
+  store i32 %val, i32* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}wavefront_seq_cst:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX89-NOT: buffer_wbinvl1_vol
+; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @wavefront_seq_cst(
+    i32* %in, i32* %out) {
+entry:
+  %val = load atomic i32, i32* %in syncscope("wavefront") seq_cst, align 4
   store i32 %val, i32* %out
   ret void
 }

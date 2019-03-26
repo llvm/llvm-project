@@ -81,9 +81,9 @@ define void @Test(i32) {
 ; CHECK-NEXT:    [[OP_EXTRA30:%.*]] = and i32 [[OP_EXTRA29]], [[TMP0]]
 ; CHECK-NEXT:    [[VAL_42:%.*]] = and i32 [[VAL_40]], undef
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> undef, i32 [[OP_EXTRA30]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 14910, i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> undef, i32 [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP7]], i32 14910, i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = and <2 x i32> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> [[TMP10]], <2 x i32> <i32 0, i32 3>

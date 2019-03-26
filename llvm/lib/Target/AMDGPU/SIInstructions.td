@@ -172,12 +172,14 @@ def S_MOV_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
    (ins SSrc_b64:$src0)> {
   let isAsCheapAsAMove = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
 }
 
 def S_XOR_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
    (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
   let isAsCheapAsAMove = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
   let Defs = [SCC];
 }
 
@@ -185,6 +187,7 @@ def S_ANDN2_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
    (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
   let isAsCheapAsAMove = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
 }
 
 def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),

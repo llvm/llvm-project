@@ -11,7 +11,7 @@ define i32 @main() local_unnamed_addr #1 {
 ; Make sure the stores happen in the correct order (the exact instructions could change).
 ; CHECK-LABEL: main:
 
-; CHECK: orr w9, wzr, #0x1
+; CHECK: mov w9, #1
 ; CHECK: str x9, [sp, #80]
 ; CHECK: stp q0, q0, [sp, #48]
 ; CHECK: ldr w8, [sp, #48]

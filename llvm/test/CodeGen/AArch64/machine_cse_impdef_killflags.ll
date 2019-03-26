@@ -5,9 +5,9 @@
 ; The verifier would complain otherwise.
 define i64 @csed-impdef-killflag(i64 %a) {
 ; CHECK-LABEL: csed-impdef-killflag
-; CHECK-DAG:  orr    [[REG1:w[0-9]+]], wzr, #0x1
-; CHECK-DAG:  orr    [[REG2:x[0-9]+]], xzr, #0x2
-; CHECK-DAG:  orr    [[REG3:x[0-9]+]], xzr, #0x3
+; CHECK-DAG:  mov    [[REG1:w[0-9]+]], #1
+; CHECK-DAG:  mov    [[REG2:x[0-9]+]], #2
+; CHECK-DAG:  mov    [[REG3:x[0-9]+]], #3
 ; CHECK-DAG:  cmp    x0, #0
 ; CHECK:  csel   w[[SELECT_WREG_1:[0-9]+]], wzr, [[REG1]], ne
 ; CHECK-DAG:  csel   [[SELECT_XREG_2:x[0-9]+]], [[REG2]], [[REG3]], ne

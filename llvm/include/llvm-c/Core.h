@@ -2403,6 +2403,13 @@ LLVMValueRef LLVMGetPersonalityFn(LLVMValueRef Fn);
 void LLVMSetPersonalityFn(LLVMValueRef Fn, LLVMValueRef PersonalityFn);
 
 /**
+ * Obtain the intrinsic ID number which matches the given function name.
+ *
+ * @see llvm::Function::lookupIntrinsicID()
+ */
+unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
+
+/**
  * Obtain the ID number from a function instance.
  *
  * @see llvm::Function::getIntrinsicID()

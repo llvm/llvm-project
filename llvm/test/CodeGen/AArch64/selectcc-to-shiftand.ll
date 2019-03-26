@@ -75,7 +75,7 @@ define i32 @pos_sel_constants(i32 %a) {
 define i32 @pos_sel_special_constant(i32 %a) {
 ; CHECK-LABEL: pos_sel_special_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, wzr, #0x200
+; CHECK-NEXT:    mov w8, #512
 ; CHECK-NEXT:    bic w0, w8, w0, lsr #22
 ; CHECK-NEXT:    ret
 ;

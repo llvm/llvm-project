@@ -156,7 +156,7 @@ define zeroext i1 @fcmp_une(float %a, float %b) {
 
 define zeroext i1 @fcmp_true(float %a) {
 ; CHECK-LABEL: fcmp_true
-; CHECK:       orr {{w[0-9]+}}, wzr, #0x1
+; CHECK:       mov {{w[0-9]+}}, #1
   %1 = fcmp ueq float %a, %a
   ret i1 %1
 }

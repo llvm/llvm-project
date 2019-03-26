@@ -23,6 +23,9 @@
 #if KMP_OS_DARWIN
 // OS X
 #define __kmp_gettid() syscall(SYS_thread_selfid)
+#elif KMP_OS_FREEBSD
+#include <pthread_np.h>
+#define __kmp_gettid() pthread_getthreadid_np()
 #elif KMP_OS_NETBSD
 #include <lwp.h>
 #define __kmp_gettid() _lwp_self()

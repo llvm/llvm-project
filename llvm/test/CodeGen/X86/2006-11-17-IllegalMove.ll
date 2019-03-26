@@ -10,11 +10,9 @@ define void @handle_vector_size_attribute() nounwind {
 ; CHECK-NEXT:    ja .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb77
 ; CHECK-NEXT:    movb 0, %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
-; CHECK-NEXT:    divb 0
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    cmpq %rax, %rax
+; CHECK-NEXT:    movb 0, %al
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:  .LBB0_2: # %bb84
 ; CHECK-NEXT:    retq
 entry:

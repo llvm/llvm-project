@@ -417,35 +417,46 @@ void SIMemOpAccess::reportUnsupported(const MachineBasicBlock::iterator &MI,
 Optional<std::tuple<SIAtomicScope, SIAtomicAddrSpace, bool>>
 SIMemOpAccess::toSIAtomicScope(SyncScope::ID SSID,
                                SIAtomicAddrSpace InstrScope) const {
-  /// TODO: For now assume OpenCL memory model which treats each
-  /// address space as having a separate happens-before relation, and
-  /// so an instruction only has ordering with respect to the address
-  /// space it accesses, and if it accesses multiple address spaces it
-  /// does not require ordering of operations in different address
-  /// spaces.
- if (SSID == SyncScope::System)
+  if (SSID == SyncScope::System)
+    return std::make_tuple(SIAtomicScope::SYSTEM,
+                           SIAtomicAddrSpace::ATOMIC,
+                           true);
+  if (SSID == MMI->getAgentSSID())
+    return std::make_tuple(SIAtomicScope::AGENT,
+                           SIAtomicAddrSpace::ATOMIC,
+                           true);
+  if (SSID == MMI->getWorkgroupSSID())
+    return std::make_tuple(SIAtomicScope::WORKGROUP,
+                           SIAtomicAddrSpace::ATOMIC,
+                           true);
+  if (SSID == MMI->getWavefrontSSID())
+    return std::make_tuple(SIAtomicScope::WAVEFRONT,
+                           SIAtomicAddrSpace::ATOMIC,
+                           true);
+  if (SSID == SyncScope::SingleThread)
+    return std::make_tuple(SIAtomicScope::SINGLETHREAD,
+                           SIAtomicAddrSpace::ATOMIC,
+                           true);
+  if (SSID == MMI->getSystemOneAddressSpaceSSID())
     return std::make_tuple(SIAtomicScope::SYSTEM,
                            SIAtomicAddrSpace::ATOMIC & InstrScope,
                            false);
-  if (SSID == MMI->getAgentSSID())
+  if (SSID == MMI->getAgentOneAddressSpaceSSID())
     return std::make_tuple(SIAtomicScope::AGENT,
                            SIAtomicAddrSpace::ATOMIC & InstrScope,
                            false);
-  if (SSID == MMI->getWorkgroupSSID())
+  if (SSID == MMI->getWorkgroupOneAddressSpaceSSID())
     return std::make_tuple(SIAtomicScope::WORKGROUP,
                            SIAtomicAddrSpace::ATOMIC & InstrScope,
                            false);
-  if (SSID == MMI->getWavefrontSSID())
+  if (SSID == MMI->getWavefrontOneAddressSpaceSSID())
     return std::make_tuple(SIAtomicScope::WAVEFRONT,
                            SIAtomicAddrSpace::ATOMIC & InstrScope,
                            false);
-  if (SSID == SyncScope::SingleThread)
+  if (SSID == MMI->getSingleThreadOneAddressSpaceSSID())
     return std::make_tuple(SIAtomicScope::SINGLETHREAD,
                            SIAtomicAddrSpace::ATOMIC & InstrScope,
                            false);
-  /// TODO: To support HSA Memory Model need to add additional memory
-  /// scopes that specify that do require cross address space
-  /// ordering.
   return None;
 }
 
@@ -721,13 +732,12 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
 
   bool VMCnt = false;
   bool LGKMCnt = false;
-  bool EXPCnt = false;
 
   if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-      VMCnt = true;
+      VMCnt |= true;
       break;
     case SIAtomicScope::WORKGROUP:
     case SIAtomicScope::WAVEFRONT:
@@ -751,7 +761,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       // also synchronizing with global/GDS memory as LDS operations
       // could be reordered with respect to later global/GDS memory
       // operations of the same wave.
-      LGKMCnt = IsCrossAddrSpaceOrdering;
+      LGKMCnt |= IsCrossAddrSpaceOrdering;
       break;
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
@@ -773,7 +783,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       // also synchronizing with global/LDS memory as GDS operations
       // could be reordered with respect to later global/LDS memory
       // operations of the same wave.
-      EXPCnt = IsCrossAddrSpaceOrdering;
+      LGKMCnt |= IsCrossAddrSpaceOrdering;
       break;
     case SIAtomicScope::WORKGROUP:
     case SIAtomicScope::WAVEFRONT:
@@ -786,11 +796,11 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     }
   }
 
-  if (VMCnt || LGKMCnt || EXPCnt) {
+  if (VMCnt || LGKMCnt) {
     unsigned WaitCntImmediate =
       AMDGPU::encodeWaitcnt(IV,
                             VMCnt ? 0 : getVmcntBitMask(IV),
-                            EXPCnt ? 0 : getExpcntBitMask(IV),
+                            getExpcntBitMask(IV),
                             LGKMCnt ? 0 : getLgkmcntBitMask(IV));
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(WaitCntImmediate);
     Changed = true;

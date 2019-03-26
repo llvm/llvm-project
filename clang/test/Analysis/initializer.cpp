@@ -1,7 +1,17 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,cplusplus.NewDeleteLeaks,debug.ExprInspection -analyzer-config c++-inlining=constructors -std=c++11 -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,cplusplus.NewDeleteLeaks,debug.ExprInspection -analyzer-config c++-inlining=constructors -std=c++17 -DCPLUSPLUS17 -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,cplusplus.NewDeleteLeaks,debug.ExprInspection -analyzer-config c++-inlining=constructors -std=c++11 -DTEST_INLINABLE_ALLOCATORS -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,cplusplus.NewDeleteLeaks,debug.ExprInspection -analyzer-config c++-inlining=constructors -std=c++17 -DCPLUSPLUS17 -DTEST_INLINABLE_ALLOCATORS -verify %s
+// RUN: %clang_analyze_cc1 -w -verify %s\
+// RUN:   -analyzer-checker=core,unix.Malloc,cplusplus.NewDeleteLeaks\
+// RUN:   -analyzer-checker=debug.ExprInspection -std=c++11
+// RUN: %clang_analyze_cc1 -w -verify %s\
+// RUN:   -analyzer-checker=core,unix.Malloc,cplusplus.NewDeleteLeaks\
+// RUN:   -analyzer-checker=debug.ExprInspection -std=c++17
+// RUN: %clang_analyze_cc1 -w -verify %s\
+// RUN:   -analyzer-checker=core,unix.Malloc,cplusplus.NewDeleteLeaks\
+// RUN:   -analyzer-checker=debug.ExprInspection -std=c++11\
+// RUN:   -DTEST_INLINABLE_ALLOCATORS
+// RUN: %clang_analyze_cc1 -w -verify %s\
+// RUN:   -analyzer-checker=core,unix.Malloc,cplusplus.NewDeleteLeaks\
+// RUN:   -analyzer-checker=debug.ExprInspection -std=c++17\
+// RUN:   -DTEST_INLINABLE_ALLOCATORS
 
 void clang_analyzer_eval(bool);
 
@@ -232,7 +242,7 @@ void foo() {
 
   D d = {}; // no-crash
 
-#ifdef CPLUSPLUS17
+#if __cplusplus >= 201703L
   C cd = {{}}; // no-crash
   const C &cdl = {{}}; // no-crash
   C &&cdr = {{}}; // no-crash
@@ -259,5 +269,9 @@ class C: virtual public A {};
 C coo();
 void foo2() {
   C c { coo() }; // no-crash
+}
+
+B foo_recursive() {
+  B b { foo_recursive() };
 }
 } // namespace CXX17_transparent_init_list_exprs

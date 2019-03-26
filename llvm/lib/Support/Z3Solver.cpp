@@ -1,4 +1,4 @@
-//== Z3ConstraintManager.cpp --------------------------------*- C++ -*--==//
+//== Z3Solver.cpp -----------------------------------------------*- C++ -*--==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/TargetInfo.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConstraintManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Config/config.h"
+#include "llvm/Support/SMTAPI.h"
+#include <set>
 
-#include "clang/Config/config.h"
+using namespace llvm;
 
-using namespace clang;
-using namespace ento;
-
-#if CLANG_ANALYZER_WITH_Z3
+#if LLVM_WITH_Z3
 
 #include <z3.h>
 
@@ -818,18 +814,13 @@ public:
 
 #endif
 
-SMTSolverRef clang::ento::CreateZ3Solver() {
-#if CLANG_ANALYZER_WITH_Z3
+llvm::SMTSolverRef llvm::CreateZ3Solver() {
+#if LLVM_WITH_Z3
   return llvm::make_unique<Z3Solver>();
 #else
-  llvm::report_fatal_error("Clang was not compiled with Z3 support, rebuild "
-                           "with -DCLANG_ANALYZER_ENABLE_Z3_SOLVER=ON",
+  llvm::report_fatal_error("LLVM was not compiled with Z3 support, rebuild "
+                           "with -DLLVM_ENABLE_Z3_SOLVER=ON",
                            false);
   return nullptr;
 #endif
-}
-
-std::unique_ptr<ConstraintManager>
-ento::CreateZ3ConstraintManager(ProgramStateManager &StMgr, SubEngine *Eng) {
-  return llvm::make_unique<SMTConstraintManager>(Eng, StMgr.getSValBuilder());
 }

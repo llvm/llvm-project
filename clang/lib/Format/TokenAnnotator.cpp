@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TokenAnnotator.h"
+#include "FormatToken.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
@@ -440,10 +441,11 @@ private:
         Contexts.back().InCSharpAttributeSpecifier;
 
     bool InsideInlineASM = Line.startsWith(tok::kw_asm);
+    bool IsCppStructuredBinding = Left->isCppStructuredBinding(Style);
     bool StartsObjCMethodExpr =
-        !InsideInlineASM && !CppArrayTemplates && Style.isCpp() &&
-        !IsCpp11AttributeSpecifier && Contexts.back().CanBeExpression &&
-        Left->isNot(TT_LambdaLSquare) &&
+        !IsCppStructuredBinding && !InsideInlineASM && !CppArrayTemplates &&
+        Style.isCpp() && !IsCpp11AttributeSpecifier &&
+        Contexts.back().CanBeExpression && Left->isNot(TT_LambdaLSquare) &&
         !CurrentToken->isOneOf(tok::l_brace, tok::r_square) &&
         (!Parent ||
          Parent->isOneOf(tok::colon, tok::l_square, tok::l_paren,
@@ -451,14 +453,12 @@ private:
          Parent->isUnaryOperator() ||
          // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
          Parent->isOneOf(TT_ObjCForIn, TT_CastRParen) ||
-         // for (auto && [A,B] : C)  && structure binding seen as ObjCMethodExpr
-         (Parent->isNot(tok::ampamp) &&
-          getBinOpPrecedence(Parent->Tok.getKind(), true, true) >
-              prec::Unknown));
+         (getBinOpPrecedence(Parent->Tok.getKind(), true, true) >
+          prec::Unknown));
     bool ColonFound = false;
 
     unsigned BindingIncrease = 1;
-    if (Left->isCppStructuredBinding(Style)) {
+    if (IsCppStructuredBinding) {
       Left->Type = TT_StructuredBindingLSquare;
     } else if (Left->is(TT_Unknown)) {
       if (StartsObjCMethodExpr) {

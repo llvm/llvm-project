@@ -29,12 +29,22 @@ private:
   // All supported memory/synchronization scopes can be found here:
   //   http://llvm.org/docs/AMDGPUUsage.html#memory-scopes
 
-  /// Agent synchronization scope ID.
+  /// Agent synchronization scope ID (cross address space).
   SyncScope::ID AgentSSID;
-  /// Workgroup synchronization scope ID.
+  /// Workgroup synchronization scope ID (cross address space).
   SyncScope::ID WorkgroupSSID;
-  /// Wavefront synchronization scope ID.
+  /// Wavefront synchronization scope ID (cross address space).
   SyncScope::ID WavefrontSSID;
+  /// System synchronization scope ID (single address space).
+  SyncScope::ID SystemOneAddressSpaceSSID;
+  /// Agent synchronization scope ID (single address space).
+  SyncScope::ID AgentOneAddressSpaceSSID;
+  /// Workgroup synchronization scope ID (single address space).
+  SyncScope::ID WorkgroupOneAddressSpaceSSID;
+  /// Wavefront synchronization scope ID (single address space).
+  SyncScope::ID WavefrontOneAddressSpaceSSID;
+  /// Single thread synchronization scope ID (single address space).
+  SyncScope::ID SingleThreadOneAddressSpaceSSID;
 
   /// In AMDGPU target synchronization scopes are inclusive, meaning a
   /// larger synchronization scope is inclusive of a smaller synchronization
@@ -43,34 +53,69 @@ private:
   /// \returns \p SSID's inclusion ordering, or "None" if \p SSID is not
   /// supported by the AMDGPU target.
   Optional<uint8_t> getSyncScopeInclusionOrdering(SyncScope::ID SSID) const {
-    if (SSID == SyncScope::SingleThread)
+    if (SSID == SyncScope::SingleThread ||
+        SSID == getSingleThreadOneAddressSpaceSSID())
       return 0;
-    else if (SSID == getWavefrontSSID())
+    else if (SSID == getWavefrontSSID() ||
+             SSID == getWavefrontOneAddressSpaceSSID())
       return 1;
-    else if (SSID == getWorkgroupSSID())
+    else if (SSID == getWorkgroupSSID() ||
+             SSID == getWorkgroupOneAddressSpaceSSID())
       return 2;
-    else if (SSID == getAgentSSID())
+    else if (SSID == getAgentSSID() ||
+             SSID == getAgentOneAddressSpaceSSID())
       return 3;
-    else if (SSID == SyncScope::System)
+    else if (SSID == SyncScope::System ||
+             SSID == getSystemOneAddressSpaceSSID())
       return 4;
 
     return None;
   }
 
+  /// \returns True if \p SSID is restricted to single address space, false
+  /// otherwise
+  bool isOneAddressSpace(SyncScope::ID SSID) const {
+    return SSID == getSingleThreadOneAddressSpaceSSID() ||
+        SSID == getWavefrontOneAddressSpaceSSID() ||
+        SSID == getWorkgroupOneAddressSpaceSSID() ||
+        SSID == getAgentOneAddressSpaceSSID() ||
+        SSID == getSystemOneAddressSpaceSSID();
+  }
+
 public:
   AMDGPUMachineModuleInfo(const MachineModuleInfo &MMI);
 
-  /// \returns Agent synchronization scope ID.
+  /// \returns Agent synchronization scope ID (cross address space).
   SyncScope::ID getAgentSSID() const {
     return AgentSSID;
   }
-  /// \returns Workgroup synchronization scope ID.
+  /// \returns Workgroup synchronization scope ID (cross address space).
   SyncScope::ID getWorkgroupSSID() const {
     return WorkgroupSSID;
   }
-  /// \returns Wavefront synchronization scope ID.
+  /// \returns Wavefront synchronization scope ID (cross address space).
   SyncScope::ID getWavefrontSSID() const {
     return WavefrontSSID;
+  }
+  /// \returns System synchronization scope ID (single address space).
+  SyncScope::ID getSystemOneAddressSpaceSSID() const {
+    return SystemOneAddressSpaceSSID;
+  }
+  /// \returns Agent synchronization scope ID (single address space).
+  SyncScope::ID getAgentOneAddressSpaceSSID() const {
+    return AgentOneAddressSpaceSSID;
+  }
+  /// \returns Workgroup synchronization scope ID (single address space).
+  SyncScope::ID getWorkgroupOneAddressSpaceSSID() const {
+    return WorkgroupOneAddressSpaceSSID;
+  }
+  /// \returns Wavefront synchronization scope ID (single address space).
+  SyncScope::ID getWavefrontOneAddressSpaceSSID() const {
+    return WavefrontOneAddressSpaceSSID;
+  }
+  /// \returns Single thread synchronization scope ID (single address space).
+  SyncScope::ID getSingleThreadOneAddressSpaceSSID() const {
+    return SingleThreadOneAddressSpaceSSID;
   }
 
   /// In AMDGPU target synchronization scopes are inclusive, meaning a
@@ -87,7 +132,11 @@ public:
     if (!AIO || !BIO)
       return None;
 
-    return AIO.getValue() > BIO.getValue();
+    bool IsAOneAddressSpace = isOneAddressSpace(A);
+    bool IsBOneAddressSpace = isOneAddressSpace(B);
+
+    return AIO.getValue() >= BIO.getValue() &&
+        (IsAOneAddressSpace == IsBOneAddressSpace || !IsAOneAddressSpace);
   }
 };
 
