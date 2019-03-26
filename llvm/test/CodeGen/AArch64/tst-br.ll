@@ -36,13 +36,13 @@ test3:
 ; CHECK: tbz {{[wx][0-9]+}}, #12, [[LBL_end1]]
 
 end2:
-; CHECK: {{movz x0, #1|orr w0, wzr, #0x1}}
+; CHECK: mov w0, #1
 ; CHECK-NEXT: ret
   ret i32 1
 
 end1:
 ; CHECK: [[LBL_end1]]:
-; CHECK-NEXT: {{mov x0, xzr|mov w0, wzr}}
+; CHECK-NEXT: mov w0, wzr
 ; CHECK-NEXT: ret
   ret i32 0
 }

@@ -55,7 +55,7 @@ define void @pr35497() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> undef, i64 [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP1]], <i64 2, i64 2>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> <i64 20, i64 20>, [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 20, i64 20>
 ; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i64> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[ARRAYIDX2_5:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 1
@@ -63,7 +63,7 @@ define void @pr35497() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> undef, i64 [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[ADD]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl <2 x i64> [[TMP7]], <i64 2, i64 2>
-; CHECK-NEXT:    [[TMP9:%.*]] = and <2 x i64> <i64 20, i64 20>, [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = and <2 x i64> [[TMP8]], <i64 20, i64 20>
 ; CHECK-NEXT:    [[ARRAYIDX2_6:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64* [[ARRAYIDX2_6]] to <2 x i64>*
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP10]], align 1

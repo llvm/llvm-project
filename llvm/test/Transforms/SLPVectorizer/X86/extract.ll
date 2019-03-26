@@ -8,7 +8,7 @@ define void @fextr(double* %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* undef
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds double, double* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> <double 0.000000e+00, double 1.100000e+00>, [[LD]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[LD]], <double 0.000000e+00, double 1.100000e+00>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[P0]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP0]], <2 x double>* [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
@@ -32,7 +32,7 @@ define void @fextr1(double* %ptr) {
 ; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* undef
 ; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <2 x double> [[LD]], <2 x double> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds double, double* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> <double 3.400000e+00, double 1.200000e+00>, [[REORDER_SHUFFLE]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[REORDER_SHUFFLE]], <double 3.400000e+00, double 1.200000e+00>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[P1]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP0]], <2 x double>* [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
@@ -59,7 +59,7 @@ define void @fextr2(double* %ptr) {
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds double, double* [[PTR:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[V0]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> <double 5.500000e+00, double 6.600000e+00>, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 5.500000e+00, double 6.600000e+00>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[P0]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP2]], <2 x double>* [[TMP3]], align 4
 ; CHECK-NEXT:    ret void

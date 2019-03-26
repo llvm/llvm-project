@@ -746,7 +746,7 @@ define <2 x i64> @v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-NEXT:    cmge v1.2d, v1.2d, #0
 ; CHECK-NEXT:    cmge v0.2d, v0.2d, #0
 ; CHECK-NEXT:    cmge v5.2d, v2.2d, #0
-; CHECK-NEXT:    orr x8, xzr, #0x7fffffffffffffff
+; CHECK-NEXT:    mov x8, #9223372036854775807
 ; CHECK-NEXT:    cmlt v3.2d, v2.2d, #0
 ; CHECK-NEXT:    cmeq v1.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    cmeq v0.2d, v0.2d, v5.2d
@@ -765,7 +765,7 @@ define <4 x i64> @v4i64(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; CHECK-LABEL: v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v4.2d, v0.2d, v2.2d
-; CHECK-NEXT:    orr x8, xzr, #0x7fffffffffffffff
+; CHECK-NEXT:    mov x8, #9223372036854775807
 ; CHECK-NEXT:    cmlt v6.2d, v4.2d, #0
 ; CHECK-NEXT:    dup v7.2d, x8
 ; CHECK-NEXT:    add v5.2d, v1.2d, v3.2d
@@ -800,7 +800,7 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; CHECK-LABEL: v8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v16.2d, v0.2d, v4.2d
-; CHECK-NEXT:    orr x8, xzr, #0x7fffffffffffffff
+; CHECK-NEXT:    mov x8, #9223372036854775807
 ; CHECK-NEXT:    add v17.2d, v1.2d, v5.2d
 ; CHECK-NEXT:    cmlt v20.2d, v16.2d, #0
 ; CHECK-NEXT:    dup v21.2d, x8
@@ -872,7 +872,7 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK-NEXT:    adcs x12, x3, x7
 ; CHECK-NEXT:    cmp x12, #0 // =0
 ; CHECK-NEXT:    cset w13, ge
-; CHECK-NEXT:    orr x8, xzr, #0x7fffffffffffffff
+; CHECK-NEXT:    mov x8, #9223372036854775807
 ; CHECK-NEXT:    csinc w13, w13, wzr, ne
 ; CHECK-NEXT:    cinv x14, x8, ge
 ; CHECK-NEXT:    cmp w10, w13

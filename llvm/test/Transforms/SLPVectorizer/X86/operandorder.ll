@@ -14,7 +14,7 @@ define void @shuffle_operands1(double * noalias %from, double * noalias %to,
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> undef, double [[V1:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[V2:%.*]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP6]], align 4
 ; CHECK-NEXT:    ret void

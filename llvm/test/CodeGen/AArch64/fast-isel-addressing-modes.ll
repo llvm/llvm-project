@@ -110,7 +110,7 @@ define void @store_breg_f64(double* %a) {
 ; Load Immediate
 define i32 @load_immoff_1() {
 ; CHECK-LABEL: load_immoff_1
-; CHECK:       orr {{w|x}}[[REG:[0-9]+]], {{wzr|xzr}}, #0x80
+; CHECK:       mov {{w|x}}[[REG:[0-9]+]], #128
 ; CHECK:       ldr {{w[0-9]+}}, {{\[}}x[[REG]]{{\]}}
   %1 = inttoptr i64 128 to i32*
   %2 = load i32, i32* %1
@@ -173,7 +173,7 @@ define i32 @load_breg_immoff_5(i64 %a) {
 ; Min un-supported scaled offset
 define i32 @load_breg_immoff_6(i64 %a) {
 ; SDAG-LABEL: load_breg_immoff_6
-; SDAG:       orr	w[[NUM:[0-9]+]], wzr, #0x4000
+; SDAG:       mov w[[NUM:[0-9]+]], #16384
 ; SDAG-NEXT:  ldr {{w[0-9]+}}, [x0, x[[NUM]]]
 ; FAST-LABEL: load_breg_immoff_6
 ; FAST:       add [[REG:x[0-9]+]], x0, #4, lsl #12
@@ -239,7 +239,7 @@ define void @store_breg_immoff_5(i64 %a) {
 ; Min un-supported scaled offset
 define void @store_breg_immoff_6(i64 %a) {
 ; SDAG-LABEL: store_breg_immoff_6
-; SDAG:       orr	w[[NUM:[0-9]+]], wzr, #0x4000
+; SDAG:       mov w[[NUM:[0-9]+]], #16384
 ; SDAG-NEXT:  str wzr, [x0, x[[NUM]]]
 ; FAST-LABEL: store_breg_immoff_6
 ; FAST:       add [[REG:x[0-9]+]], x0, #4, lsl #12
@@ -304,7 +304,7 @@ define i64 @load_breg_offreg_immoff_1(i64 %a, i64 %b) {
 define i64 @load_breg_offreg_immoff_2(i64 %a, i64 %b) {
 ; SDAG-LABEL: load_breg_offreg_immoff_2
 ; SDAG:       add [[REG1:x[0-9]+]], x0, x1
-; SDAG-NEXT:  orr w[[NUM:[0-9]+]], wzr, #0xf000
+; SDAG-NEXT:  mov w[[NUM:[0-9]+]], #61440
 ; SDAG-NEXT:  ldr x0, {{\[}}[[REG1]], x[[NUM]]]
 ; FAST-LABEL: load_breg_offreg_immoff_2
 ; FAST:       add [[REG:x[0-9]+]], x0, #15, lsl #12

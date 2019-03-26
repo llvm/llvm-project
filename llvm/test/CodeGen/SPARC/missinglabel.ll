@@ -4,7 +4,7 @@
 target datalayout = "E-m:e-i64:64-n32:64-S128"
 target triple = "sparc64-unknown-linux-gnu"
 
-define void @f() align 2 {
+define void @f(i64 %a0) align 2 {
 ; CHECK-LABEL: f:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0: ! %entry
@@ -22,7 +22,7 @@ define void @f() align 2 {
 ; CHECK-NEXT:  .LBB0_1: ! %cond.false
 ; CHECK-NEXT:  .LBB0_4: ! %exit.i85
 entry:
-  %cmp = icmp eq i64 undef, 0
+  %cmp = icmp eq i64 %a0, 0
   br i1 %cmp, label %targetblock, label %cond.false
 
 cond.false:

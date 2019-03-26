@@ -104,7 +104,7 @@ body:             |
     S_WAITCNT 127
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     S_WAITCNT 3952
-    BUFFER_ATOMIC_SMAX_ADDR64 killed $vgpr0, killed $vgpr1_vgpr2, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 400, 0, implicit $exec :: (volatile load seq_cst 4 from %ir.gep)
+    BUFFER_ATOMIC_SMAX_ADDR64 killed $vgpr0, killed $vgpr1_vgpr2, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 400, 0, implicit $exec :: (volatile load syncscope("one-as") seq_cst 4 from %ir.gep)
 
   bb.2.exit:
     liveins: $sgpr2_sgpr3

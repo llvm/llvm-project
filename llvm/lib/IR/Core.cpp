@@ -2329,6 +2329,10 @@ const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
   return strdup(Str.c_str());
 }
 
+unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen) {
+  return Function::lookupIntrinsicID({Name, NameLen});
+}
+
 LLVMBool LLVMIntrinsicIsOverloaded(unsigned ID) {
   auto IID = llvm_map_to_intrinsic_id(ID);
   return llvm::Intrinsic::isOverloaded(IID);

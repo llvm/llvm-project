@@ -297,6 +297,10 @@ class TypePromotionTransaction;
     /// DataLayout for the Function being processed.
     const DataLayout *DL = nullptr;
 
+    /// Building the dominator tree can be expensive, so we only build it
+    /// lazily and update it when required.
+    std::unique_ptr<DominatorTree> DT;
+
   public:
     static char ID; // Pass identification, replacement for typeid
 
@@ -335,6 +339,13 @@ class TypePromotionTransaction;
       }
     }
 
+    // Get the DominatorTree, building if necessary.
+    DominatorTree &getDT(Function &F) {
+      if (!DT)
+        DT = llvm::make_unique<DominatorTree>(F);
+      return *DT;
+    }
+
     bool eliminateFallThrough(Function &F);
     bool eliminateMostlyEmptyBlocks(Function &F);
     BasicBlock *findDestBlockOfMergeableEmptyBlock(BasicBlock *BB);
@@ -342,8 +353,8 @@ class TypePromotionTransaction;
     void eliminateMostlyEmptyBlock(BasicBlock *BB);
     bool isMergingEmptyBlockProfitable(BasicBlock *BB, BasicBlock *DestBB,
                                        bool isPreheader);
-    bool optimizeBlock(BasicBlock &BB, DominatorTree &DT, bool &ModifiedDT);
-    bool optimizeInst(Instruction *I, DominatorTree &DT, bool &ModifiedDT);
+    bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT);
+    bool optimizeInst(Instruction *I, bool &ModifiedDT);
     bool optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
                             Type *AccessTy, unsigned AddrSpace);
     bool optimizeInlineAsmInst(CallInst *CS);
@@ -363,7 +374,7 @@ class TypePromotionTransaction;
                           const SmallVectorImpl<Instruction *> &Exts,
                           SmallVectorImpl<Instruction *> &ProfitablyMovedExts,
                           unsigned CreatedInstsCost = 0);
-    bool mergeSExts(Function &F, DominatorTree &DT);
+    bool mergeSExts(Function &F);
     bool splitLargeGEPOffsets();
     bool performAddressTypePromotion(
         Instruction *&Inst,
@@ -375,12 +386,10 @@ class TypePromotionTransaction;
 
     bool tryToSinkFreeOperands(Instruction *I);
     bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
-                                     Intrinsic::ID IID, DominatorTree &DT);
-    bool optimizeCmp(CmpInst *Cmp, DominatorTree &DT, bool &ModifiedDT);
-    bool combineToUSubWithOverflow(CmpInst *Cmp, DominatorTree &DT,
-                                   bool &ModifiedDT);
-    bool combineToUAddWithOverflow(CmpInst *Cmp, DominatorTree &DT,
-                                   bool &ModifiedDT);
+                                     Intrinsic::ID IID);
+    bool optimizeCmp(CmpInst *Cmp, bool &ModifiedDT);
+    bool combineToUSubWithOverflow(CmpInst *Cmp, bool &ModifiedDT);
+    bool combineToUAddWithOverflow(CmpInst *Cmp, bool &ModifiedDT);
   };
 
 } // end anonymous namespace
@@ -459,18 +468,18 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   bool MadeChange = true;
   while (MadeChange) {
     MadeChange = false;
-    DominatorTree DT(F);
+    DT.reset();
     for (Function::iterator I = F.begin(); I != F.end(); ) {
       BasicBlock *BB = &*I++;
       bool ModifiedDTOnIteration = false;
-      MadeChange |= optimizeBlock(*BB, DT, ModifiedDTOnIteration);
+      MadeChange |= optimizeBlock(*BB, ModifiedDTOnIteration);
 
       // Restart BB iteration if the dominator tree of the Function was changed
       if (ModifiedDTOnIteration)
         break;
     }
     if (EnableTypePromotionMerge && !ValToSExtendedUses.empty())
-      MadeChange |= mergeSExts(F, DT);
+      MadeChange |= mergeSExts(F);
     if (!LargeOffsetGEPMap.empty())
       MadeChange |= splitLargeGEPOffsets();
 
@@ -1166,8 +1175,7 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
 
 bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
                                                  CmpInst *Cmp,
-                                                 Intrinsic::ID IID,
-                                                 DominatorTree &DT) {
+                                                 Intrinsic::ID IID) {
   // We allow matching the canonical IR (add X, C) back to (usubo X, -C).
   Value *Arg0 = BO->getOperand(0);
   Value *Arg1 = BO->getOperand(1);
@@ -1186,8 +1194,8 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
   } else {
     // The math and compare may be independent instructions. Check dominance to
     // determine the insertion point for the intrinsic.
-    bool MathDominates = DT.dominates(BO, Cmp);
-    if (!MathDominates && !DT.dominates(Cmp, BO))
+    bool MathDominates = getDT(*BO->getFunction()).dominates(BO, Cmp);
+    if (!MathDominates && !getDT(*BO->getFunction()).dominates(Cmp, BO))
       return false;
 
     BasicBlock *MathBB = BO->getParent(), *CmpBB = Cmp->getParent();
@@ -1251,7 +1259,7 @@ static bool matchUAddWithOverflowConstantEdgeCases(CmpInst *Cmp,
 
 /// Try to combine the compare into a call to the llvm.uadd.with.overflow
 /// intrinsic. Return true if any changes were made.
-bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp, DominatorTree &DT,
+bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp,
                                                bool &ModifiedDT) {
   Value *A, *B;
   BinaryOperator *Add;
@@ -1269,7 +1277,7 @@ bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp, DominatorTree &DT,
   if (Add->getParent() != Cmp->getParent() && !Add->hasOneUse())
     return false;
 
-  if (!replaceMathCmpWithIntrinsic(Add, Cmp, Intrinsic::uadd_with_overflow, DT))
+  if (!replaceMathCmpWithIntrinsic(Add, Cmp, Intrinsic::uadd_with_overflow))
     return false;
 
   // Reset callers - do not crash by iterating over a dead instruction.
@@ -1277,7 +1285,7 @@ bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp, DominatorTree &DT,
   return true;
 }
 
-bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp, DominatorTree &DT,
+bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
                                                bool &ModifiedDT) {
   // We are not expecting non-canonical/degenerate code. Just bail out.
   Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
@@ -1330,7 +1338,7 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp, DominatorTree &DT,
                                  TLI->getValueType(*DL, Sub->getType())))
     return false;
 
-  if (!replaceMathCmpWithIntrinsic(Sub, Cmp, Intrinsic::usub_with_overflow, DT))
+  if (!replaceMathCmpWithIntrinsic(Sub, Cmp, Intrinsic::usub_with_overflow))
     return false;
 
   // Reset callers - do not crash by iterating over a dead instruction.
@@ -1404,15 +1412,14 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
   return MadeChange;
 }
 
-bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, DominatorTree &DT,
-                                 bool &ModifiedDT) {
+bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, bool &ModifiedDT) {
   if (sinkCmpExpression(Cmp, *TLI))
     return true;
 
-  if (combineToUAddWithOverflow(Cmp, DT, ModifiedDT))
+  if (combineToUAddWithOverflow(Cmp, ModifiedDT))
     return true;
 
-  if (combineToUSubWithOverflow(Cmp, DT, ModifiedDT))
+  if (combineToUSubWithOverflow(Cmp, ModifiedDT))
     return true;
 
   return false;
@@ -5223,7 +5230,7 @@ bool CodeGenPrepare::tryToPromoteExts(
 }
 
 /// Merging redundant sexts when one is dominating the other.
-bool CodeGenPrepare::mergeSExts(Function &F, DominatorTree &DT) {
+bool CodeGenPrepare::mergeSExts(Function &F) {
   bool Changed = false;
   for (auto &Entry : ValToSExtendedUses) {
     SExts &Insts = Entry.second;
@@ -5234,7 +5241,7 @@ bool CodeGenPrepare::mergeSExts(Function &F, DominatorTree &DT) {
         continue;
       bool inserted = false;
       for (auto &Pt : CurPts) {
-        if (DT.dominates(Inst, Pt)) {
+        if (getDT(F).dominates(Inst, Pt)) {
           Pt->replaceAllUsesWith(Inst);
           RemovedInsts.insert(Pt);
           Pt->removeFromParent();
@@ -5243,7 +5250,7 @@ bool CodeGenPrepare::mergeSExts(Function &F, DominatorTree &DT) {
           Changed = true;
           break;
         }
-        if (!DT.dominates(Pt, Inst))
+        if (!getDT(F).dominates(Pt, Inst))
           // Give up if we need to merge in a common dominator as the
           // experiments show it is not profitable.
           continue;
@@ -6880,8 +6887,7 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   return true;
 }
 
-bool CodeGenPrepare::optimizeInst(Instruction *I, DominatorTree &DT,
-                                  bool &ModifiedDT) {
+bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
   // Bail out if we inserted the instruction to prevent optimizations from
   // stepping on each other's toes.
   if (InsertedInsts.count(I))
@@ -6932,7 +6938,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, DominatorTree &DT,
   }
 
   if (auto *Cmp = dyn_cast<CmpInst>(I))
-    if (TLI && optimizeCmp(Cmp, DT, ModifiedDT))
+    if (TLI && optimizeCmp(Cmp, ModifiedDT))
       return true;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
@@ -6994,7 +7000,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, DominatorTree &DT,
       GEPI->replaceAllUsesWith(NC);
       GEPI->eraseFromParent();
       ++NumGEPsElim;
-      optimizeInst(NC, DT, ModifiedDT);
+      optimizeInst(NC, ModifiedDT);
       return true;
     }
     if (tryUnmergingGEPsAcrossIndirectBr(GEPI, TTI)) {
@@ -7043,14 +7049,13 @@ static bool makeBitReverse(Instruction &I, const DataLayout &DL,
 // In this pass we look for GEP and cast instructions that are used
 // across basic blocks and rewrite them to improve basic-block-at-a-time
 // selection.
-bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, DominatorTree &DT,
-                                   bool &ModifiedDT) {
+bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool &ModifiedDT) {
   SunkAddrs.clear();
   bool MadeChange = false;
 
   CurInstIterator = BB.begin();
   while (CurInstIterator != BB.end()) {
-    MadeChange |= optimizeInst(&*CurInstIterator++, DT, ModifiedDT);
+    MadeChange |= optimizeInst(&*CurInstIterator++, ModifiedDT);
     if (ModifiedDT)
       return true;
   }

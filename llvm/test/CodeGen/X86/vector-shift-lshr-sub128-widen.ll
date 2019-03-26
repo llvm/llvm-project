@@ -1500,32 +1500,25 @@ define <2 x i32> @constant_shift_v2i32(<2 x i32> %a) nounwind {
 define <4 x i16> @constant_shift_v4i16(<4 x i16> %a) nounwind {
 ; SSE2-LABEL: constant_shift_v4i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <u,32768,16384,8192,u,u,u,u>
-; SSE2-NEXT:    pmulhuw %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    pcmpeqw {{.*}}(%rip), %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,65535,65535,65535,65535,65535]
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pandn %xmm0, %xmm2
+; SSE2-NEXT:    pmulhuw {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: constant_shift_v4i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    pcmpeqw {{.*}}(%rip), %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = <u,32768,16384,8192,u,u,u,u>
-; SSE41-NEXT:    pmulhuw %xmm1, %xmm2
-; SSE41-NEXT:    pblendvb %xmm0, %xmm1, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <u,32768,16384,8192,u,u,u,u>
+; SSE41-NEXT:    pmulhuw %xmm0, %xmm1
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: constant_shift_v4i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpeqw {{.*}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpmulhuw {{.*}}(%rip), %xmm0, %xmm2
-; AVX-NEXT:    vpblendvb %xmm1, %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpmulhuw {{.*}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: constant_shift_v4i16:
@@ -1535,10 +1528,8 @@ define <4 x i16> @constant_shift_v4i16(<4 x i16> %a) nounwind {
 ;
 ; AVX512DQ-LABEL: constant_shift_v4i16:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vpcmpeqw {{.*}}(%rip), %xmm1, %xmm1
-; AVX512DQ-NEXT:    vpmulhuw {{.*}}(%rip), %xmm0, %xmm2
-; AVX512DQ-NEXT:    vpblendvb %xmm1, %xmm0, %xmm2, %xmm0
+; AVX512DQ-NEXT:    vpmulhuw {{.*}}(%rip), %xmm0, %xmm1
+; AVX512DQ-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512BW-LABEL: constant_shift_v4i16:
@@ -1552,10 +1543,8 @@ define <4 x i16> @constant_shift_v4i16(<4 x i16> %a) nounwind {
 ;
 ; AVX512DQVL-LABEL: constant_shift_v4i16:
 ; AVX512DQVL:       # %bb.0:
-; AVX512DQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512DQVL-NEXT:    vpcmpeqw {{.*}}(%rip), %xmm1, %xmm1
-; AVX512DQVL-NEXT:    vpmulhuw {{.*}}(%rip), %xmm0, %xmm2
-; AVX512DQVL-NEXT:    vpblendvb %xmm1, %xmm0, %xmm2, %xmm0
+; AVX512DQVL-NEXT:    vpmulhuw {{.*}}(%rip), %xmm0, %xmm1
+; AVX512DQVL-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX512DQVL-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: constant_shift_v4i16:
@@ -1565,12 +1554,11 @@ define <4 x i16> @constant_shift_v4i16(<4 x i16> %a) nounwind {
 ;
 ; X32-SSE-LABEL: constant_shift_v4i16:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm1 = <u,32768,16384,8192,u,u,u,u>
-; X32-SSE-NEXT:    pmulhuw %xmm0, %xmm1
-; X32-SSE-NEXT:    pxor %xmm2, %xmm2
-; X32-SSE-NEXT:    pcmpeqw {{\.LCPI.*}}, %xmm2
-; X32-SSE-NEXT:    pand %xmm2, %xmm0
-; X32-SSE-NEXT:    pandn %xmm1, %xmm2
+; X32-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,65535,65535,65535,65535,65535]
+; X32-SSE-NEXT:    movdqa %xmm1, %xmm2
+; X32-SSE-NEXT:    pandn %xmm0, %xmm2
+; X32-SSE-NEXT:    pmulhuw {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    pand %xmm1, %xmm0
 ; X32-SSE-NEXT:    por %xmm2, %xmm0
 ; X32-SSE-NEXT:    retl
   %shift = lshr <4 x i16> %a, <i16 0, i16 1, i16 2, i16 3>
