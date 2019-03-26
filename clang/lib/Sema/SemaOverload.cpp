@@ -11892,15 +11892,6 @@ public:
 
 }
 
-static std::unique_ptr<CorrectionCandidateCallback>
-MakeValidator(Sema &SemaRef, MemberExpr *ME, size_t NumArgs,
-              bool HasTemplateArgs, bool AllowTypoCorrection) {
-  if (!AllowTypoCorrection)
-    return llvm::make_unique<NoTypoCorrectionCCC>();
-  return llvm::make_unique<FunctionCallFilterCCC>(SemaRef, NumArgs,
-                                                  HasTemplateArgs, ME);
-}
-
 /// Attempts to recover from a call where no functions were found.
 ///
 /// Returns true if new candidates were found.
@@ -11935,16 +11926,22 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   LookupResult R(SemaRef, ULE->getName(), ULE->getNameLoc(),
                  Sema::LookupOrdinaryName);
   bool DoDiagnoseEmptyLookup = EmptyLookup;
-  if (!DiagnoseTwoPhaseLookup(SemaRef, Fn->getExprLoc(), SS, R,
-                              OverloadCandidateSet::CSK_Normal,
-                              ExplicitTemplateArgs, Args,
-                              &DoDiagnoseEmptyLookup) &&
-    (!DoDiagnoseEmptyLookup || SemaRef.DiagnoseEmptyLookup(
-        S, SS, R,
-        MakeValidator(SemaRef, dyn_cast<MemberExpr>(Fn), Args.size(),
-                      ExplicitTemplateArgs != nullptr, AllowTypoCorrection),
-        ExplicitTemplateArgs, Args)))
-    return ExprError();
+  if (!DiagnoseTwoPhaseLookup(
+          SemaRef, Fn->getExprLoc(), SS, R, OverloadCandidateSet::CSK_Normal,
+          ExplicitTemplateArgs, Args, &DoDiagnoseEmptyLookup)) {
+    NoTypoCorrectionCCC NoTypoValidator{};
+    FunctionCallFilterCCC FunctionCallValidator(SemaRef, Args.size(),
+                                                ExplicitTemplateArgs != nullptr,
+                                                dyn_cast<MemberExpr>(Fn));
+    CorrectionCandidateCallback &Validator =
+        AllowTypoCorrection
+            ? static_cast<CorrectionCandidateCallback &>(FunctionCallValidator)
+            : static_cast<CorrectionCandidateCallback &>(NoTypoValidator);
+    if (!DoDiagnoseEmptyLookup ||
+        SemaRef.DiagnoseEmptyLookup(S, SS, R, Validator, ExplicitTemplateArgs,
+                                    Args))
+      return ExprError();
+  }
 
   assert(!R.empty() && "lookup results empty despite recovery");
 

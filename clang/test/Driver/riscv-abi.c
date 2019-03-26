@@ -2,6 +2,10 @@
 // RUN:   | FileCheck -check-prefix=CHECK-ILP32 %s
 // RUN: %clang -target riscv32-unknown-elf %s -### -o %t.o -mabi=ilp32 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ILP32 %s
+// RUN: %clang -target riscv32-unknown-elf -x assembler %s -### -o %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ILP32 %s
+// RUN: %clang -target riscv32-unknown-elf -x assembler %s -### -o %t.o \
+// RUN:   -mabi=ilp32 2>&1 | FileCheck -check-prefix=CHECK-ILP32 %s
 
 // CHECK-ILP32: "-target-abi" "ilp32"
 
@@ -26,6 +30,10 @@
 // RUN:   | FileCheck -check-prefix=CHECK-LP64 %s
 // RUN: %clang -target riscv64-unknown-elf %s -### -o %t.o -mabi=lp64 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LP64 %s
+// RUN: %clang -target riscv64-unknown-elf -x assembler %s -### -o %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LP64  %s
+// RUN: %clang -target riscv64-unknown-elf -x assembler %s -### -o %t.o \
+// RUN:   -mabi=lp64 2>&1 | FileCheck -check-prefix=CHECK-LP64 %s
 
 // CHECK-LP64: "-target-abi" "lp64"
 
