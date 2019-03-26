@@ -3008,19 +3008,18 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
     assert(XVT == MVT::i64 && "Expected truncation from i64");
   }
 
-  SDValue OrigNBits = NBits;
   // Truncate the shift amount.
   NBits = CurDAG->getNode(ISD::TRUNCATE, DL, MVT::i8, NBits);
-  insertDAGNode(*CurDAG, OrigNBits, NBits);
+  insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
 
   // Insert 8-bit NBits into lowest 8 bits of 32-bit register.
   // All the other bits are undefined, we do not care about them.
   SDValue ImplDef = SDValue(
       CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i32), 0);
-  insertDAGNode(*CurDAG, OrigNBits, ImplDef);
+  insertDAGNode(*CurDAG, SDValue(Node, 0), ImplDef);
   NBits = CurDAG->getTargetInsertSubreg(X86::sub_8bit, DL, MVT::i32, ImplDef,
                                         NBits);
-  insertDAGNode(*CurDAG, OrigNBits, NBits);
+  insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
 
   if (Subtarget->hasBMI2()) {
     // Great, just emit the the BZHI..
@@ -3028,10 +3027,10 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
       // But have to place the bit count into the wide-enough register first.
       SDValue ImplDef = SDValue(
           CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, XVT), 0);
-      insertDAGNode(*CurDAG, OrigNBits, ImplDef);
+      insertDAGNode(*CurDAG, SDValue(Node, 0), ImplDef);
       NBits = CurDAG->getTargetInsertSubreg(X86::sub_32bit, DL, XVT, ImplDef,
                                             NBits);
-      insertDAGNode(*CurDAG, OrigNBits, NBits);
+      insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
     }
 
     SDValue Extract = CurDAG->getNode(X86ISD::BZHI, DL, XVT, X, NBits);
@@ -3050,7 +3049,7 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   // This makes the low 8 bits to be zero.
   SDValue C8 = CurDAG->getConstant(8, DL, MVT::i8);
   SDValue Control = CurDAG->getNode(ISD::SHL, DL, MVT::i32, NBits, C8);
-  insertDAGNode(*CurDAG, OrigNBits, Control);
+  insertDAGNode(*CurDAG, SDValue(Node, 0), Control);
 
   // If the 'X' is *logically* shifted, we can fold that shift into 'control'.
   if (X.getOpcode() == ISD::SRL) {
@@ -3068,17 +3067,17 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
 
     // And now 'or' these low 8 bits of shift amount into the 'control'.
     Control = CurDAG->getNode(ISD::OR, DL, MVT::i32, Control, ShiftAmt);
-    insertDAGNode(*CurDAG, OrigNBits, Control);
+    insertDAGNode(*CurDAG, SDValue(Node, 0), Control);
   }
 
   // But have to place the 'control' into the wide-enough register first.
   if (XVT != MVT::i32) {
     SDValue ImplDef =
         SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, XVT), 0);
-    insertDAGNode(*CurDAG, OrigNBits, ImplDef);
+    insertDAGNode(*CurDAG, SDValue(Node, 0), ImplDef);
     Control = CurDAG->getTargetInsertSubreg(X86::sub_32bit, DL, XVT, ImplDef,
                                             Control);
-    insertDAGNode(*CurDAG, OrigNBits, Control);
+    insertDAGNode(*CurDAG, SDValue(Node, 0), Control);
   }
 
   // And finally, form the BEXTR itself.

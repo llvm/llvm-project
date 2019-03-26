@@ -57,14 +57,13 @@ public:
 
   llvm::ArrayRef<MinidumpThread> GetThreads();
 
-  llvm::ArrayRef<uint8_t>
-  GetThreadContext(const MinidumpLocationDescriptor &location);
+  llvm::ArrayRef<uint8_t> GetThreadContext(const LocationDescriptor &location);
 
   llvm::ArrayRef<uint8_t> GetThreadContext(const MinidumpThread &td);
 
   llvm::ArrayRef<uint8_t> GetThreadContextWow64(const MinidumpThread &td);
 
-  const MinidumpSystemInfo *GetSystemInfo();
+  const SystemInfo *GetSystemInfo();
 
   ArchSpec GetArchitecture();
 
@@ -92,23 +91,22 @@ public:
 
   const MemoryRegionInfos &GetMemoryRegions();
 
-  static llvm::StringRef GetStreamTypeAsString(uint32_t stream_type);
+  static llvm::StringRef GetStreamTypeAsString(StreamType stream_type);
 
-  const llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &
+  const llvm::DenseMap<StreamType, LocationDescriptor> &
   GetDirectoryMap() const {
     return m_directory_map;
   }
 
 private:
-  MinidumpParser(
-      lldb::DataBufferSP data_sp,
-      llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> directory_map);
+  MinidumpParser(lldb::DataBufferSP data_sp,
+                 llvm::DenseMap<StreamType, LocationDescriptor> directory_map);
 
   MemoryRegionInfo FindMemoryRegion(lldb::addr_t load_addr) const;
 
 private:
   lldb::DataBufferSP m_data_sp;
-  llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> m_directory_map;
+  llvm::DenseMap<StreamType, LocationDescriptor> m_directory_map;
   ArchSpec m_arch;
   MemoryRegionInfos m_regions;
   bool m_parsed_regions = false;

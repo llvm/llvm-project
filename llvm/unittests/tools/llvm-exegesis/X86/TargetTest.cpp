@@ -144,6 +144,10 @@ public:
   Core2Avx512TargetTest() : X86TargetTest("+avx512vl") {}
 };
 
+TEST_F(Core2TargetTest, NoHighByteRegs) {
+  EXPECT_TRUE(State.getRATC().reservedRegisters().test(X86::AH));
+}
+
 TEST_F(Core2TargetTest, SetFlags) {
   const unsigned Reg = llvm::X86::EFLAGS;
   EXPECT_THAT(

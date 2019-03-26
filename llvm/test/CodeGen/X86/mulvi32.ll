@@ -312,18 +312,10 @@ define <4 x i64> @_mul4xi32toi64c(<4 x i32>, <4 x i32>) {
 ; %ext0 = zext <2 x i32> %0 to <2 x i64>
 ; %ext1 = zext <2 x i32> %1 to <2 x i64>
 define <2 x i64> @_mul2xi64toi64a(<2 x i64>, <2 x i64>) {
-; SSE2-LABEL: _mul2xi64toi64a:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,4294967295]
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pmuludq %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: _mul2xi64toi64a:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    pmuludq %xmm1, %xmm0
-; SSE42-NEXT:    retq
+; SSE-LABEL: _mul2xi64toi64a:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmuludq %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: _mul2xi64toi64a:
 ; AVX:       # %bb.0:

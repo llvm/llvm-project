@@ -75,6 +75,8 @@ future versions of Clang.
 Modified Compiler Flags
 -----------------------
 
+- `clang -dumpversion` now returns the version of Clang itself.
+
 - ...
 
 New Pragmas in Clang

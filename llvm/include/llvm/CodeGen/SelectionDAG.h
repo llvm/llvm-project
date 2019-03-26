@@ -297,6 +297,9 @@ public:
 
     /// The node N that was updated.
     virtual void NodeUpdated(SDNode *N);
+
+    /// The node N that was inserted.
+    virtual void NodeInserted(SDNode *N);
   };
 
   struct DAGNodeDeletedListener : public DAGUpdateListener {

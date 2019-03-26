@@ -24,7 +24,8 @@ namespace mca {
 
 SummaryView::SummaryView(const MCSchedModel &Model, ArrayRef<MCInst> S,
                          unsigned Width, bool EmitBottleneckAnalysis)
-    : SM(Model), Source(S), DispatchWidth(Width), LastInstructionIdx(0),
+    : SM(Model), Source(S), DispatchWidth(Width?Width: Model.IssueWidth),
+      LastInstructionIdx(0),
       TotalCycles(0), NumMicroOps(0), BPI({0, 0, 0, 0, 0}),
       ResourcePressureDistribution(Model.getNumProcResourceKinds(), 0),
       ProcResourceUsage(Model.getNumProcResourceKinds(), 0),

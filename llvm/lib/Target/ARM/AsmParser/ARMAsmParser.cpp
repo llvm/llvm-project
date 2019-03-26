@@ -3661,7 +3661,7 @@ ARMAsmParser::parseCoprocNumOperand(OperandVector &Operands) {
   if (Tok.isNot(AsmToken::Identifier))
     return MatchOperand_NoMatch;
 
-  int Num = MatchCoprocessorOperandName(Tok.getString(), 'p');
+  int Num = MatchCoprocessorOperandName(Tok.getString().lower(), 'p');
   if (Num == -1)
     return MatchOperand_NoMatch;
   // ARMv7 and v8 don't allow cp10/cp11 due to VFP/NEON specific instructions
@@ -3684,7 +3684,7 @@ ARMAsmParser::parseCoprocRegOperand(OperandVector &Operands) {
   if (Tok.isNot(AsmToken::Identifier))
     return MatchOperand_NoMatch;
 
-  int Reg = MatchCoprocessorOperandName(Tok.getString(), 'c');
+  int Reg = MatchCoprocessorOperandName(Tok.getString().lower(), 'c');
   if (Reg == -1)
     return MatchOperand_NoMatch;
 

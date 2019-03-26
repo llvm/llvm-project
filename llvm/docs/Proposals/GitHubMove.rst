@@ -560,7 +560,7 @@ The GitHub SVN native bridge allows to checkout a subdirectory directly:
 This checks out only compiler-rt and provides commit access using "svn commit",
 in the same way as it would do today.
 
-**Using a Subproject Git Nirror**
+**Using a Subproject Git Mirror**
 
 You can use *git-svn* and one of the sub-project mirrors::
 

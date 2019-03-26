@@ -313,7 +313,7 @@ entry:
 ; CHECK-COMMON-LABEL: mul_with_neg_imm
 ; CHECK-COMMON-NOT: uxtb
 ; CHECK-COMMON:     and [[BIT0:r[0-9]+]], r0, #1
-; CHECK-COMMON:     add.w [[MUL32:r[0-9]+]], [[BIT0]], [[BIT0]], lsl #5
+; CHECK-COMMON:     orr.w [[MUL32:r[0-9]+]], [[BIT0]], [[BIT0]], lsl #5
 ; CHECK-COMMON:     cmp.w r0, [[MUL32]], lsl #2
 define void @mul_with_neg_imm(i32, i32* %b) {
 entry:
