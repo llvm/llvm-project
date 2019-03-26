@@ -998,15 +998,11 @@ public:
   //------------------------------------------------------------------
   /// Gets the outer-most return value from the completed plans
   ///
-<<<<<<< HEAD
-  /// @param[out] is_swift_error_value
+  /// \param[out] is_swift_error_value
   ///     If non-NULL, will be set to true if this is a Swift error value
   ///     not a true return.
   ///
-  /// @return
-=======
   /// \return
->>>>>>> public/master
   ///     A ValueObjectSP, either empty if there is no return value,
   ///     or containing the return value.
   //------------------------------------------------------------------

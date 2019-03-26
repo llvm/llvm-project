@@ -43,7 +43,6 @@ public:
                bool weak_self,
                const EvaluateExpressionOptions &options,
                ExecutionContext &exe_ctx,
-               const Expression::SwiftGenericInfo &generic_info,
                uint32_t &first_body_line) const;
 
 private:

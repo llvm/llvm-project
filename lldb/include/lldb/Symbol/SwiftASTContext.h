@@ -424,6 +424,13 @@ public:
                                 lldb::LanguageType *language_ptr,
                                 bool *is_instance_method_ptr,
                                 ConstString *language_object_name_ptr) override;
+                                
+  bool DeclContextIsContainedInLookup(void *opaque_decl_ctx,
+                                      void *other_opaque_decl_ctx) override {
+    if (opaque_decl_ctx == other_opaque_decl_ctx)
+      return true;
+    return false;
+  }
 
   //----------------------------------------------------------------------
   // Tests

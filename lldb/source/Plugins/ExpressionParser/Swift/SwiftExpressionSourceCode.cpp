@@ -46,7 +46,6 @@ bool SwiftExpressionSourceCode::GetText(
                bool weak_self,
                const EvaluateExpressionOptions &options,
                ExecutionContext &exe_ctx,
-               const Expression::SwiftGenericInfo &generic_info,
                uint32_t &first_body_line) const
   {
   Target *target = exe_ctx.GetTargetPtr();
@@ -115,7 +114,6 @@ bool SwiftExpressionSourceCode::GetText(
                                         needs_object_ptr, static_method,
                                         is_class, weak_self,
                                         localOptions,
-                                        generic_info,
                                         os_vers.str(),
                                         first_body_line);
 

@@ -4273,6 +4273,7 @@ bool TargetProperties::GetUseAllCompilerFlags() const {
   const uint32_t idx = ePropertyUseAllCompilerFlags;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       NULL, idx, g_properties[idx].default_uint_value != 0);
+}
 
 bool TargetProperties::GetEnableImportStdModule() const {
   const uint32_t idx = ePropertyImportStdModule;

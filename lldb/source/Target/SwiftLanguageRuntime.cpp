@@ -134,10 +134,10 @@ void SwiftLanguageRuntime::SetupReflection() {
   reflection_ctx.reset(new NativeReflectionContext(this->GetMemoryReader()));
 
   auto &target = m_process->GetTarget();
-  auto M = target.GetExecutableModule();
-  if (!M)
+  auto exe_module = target.GetExecutableModule();
+  if (!exe_module)
     return;
-  auto *obj_file = M->GetObjectFile();
+  auto *obj_file = exe_module->GetObjectFile();
   if (!obj_file)
       return;
   ConstString g_name("elf");

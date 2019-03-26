@@ -49,7 +49,7 @@ SwiftUserExpression::SwiftUserExpression(
     llvm::StringRef prefix, lldb::LanguageType language,
     ResultType desired_type, const EvaluateExpressionOptions &options)
     : LLVMUserExpression(exe_scope, expr, prefix, language, desired_type,
-                         options),
+                         options, eKindSwiftUserExpression),
       m_type_system_helper(*m_target_wp.lock().get()),
       m_result_delegate(exe_scope.CalculateTarget(), *this, false),
       m_error_delegate(exe_scope.CalculateTarget(), *this, true),
@@ -342,7 +342,6 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                             m_in_static_method,
                             m_is_class,
                             m_is_weak_self,  m_options, exe_ctx,
-                            m_swift_generic_info,
                             first_body_line)) {
     diagnostic_manager.PutString(eDiagnosticSeverityError,
                                   "couldn't construct expression body");

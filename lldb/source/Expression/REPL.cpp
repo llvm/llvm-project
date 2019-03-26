@@ -289,10 +289,8 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       // doing this in the REPL, let's not.
       expr_options.SetStopOthers(false);
 
-      if (m_command_options.timeout > 0)
-        expr_options.SetTimeout(std::chrono::microseconds(m_command_options.timeout));
-      else
-        expr_options.SetTimeout(llvm::None);
+      // Don't time out REPL expressions.
+      expr_options.SetTimeout(llvm::None);
 
       expr_options.SetLanguage(GetLanguage());
 
