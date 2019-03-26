@@ -124,13 +124,11 @@ private:
 
 int main(int argc, const char **argv) {
   using namespace clang::pp_trace;
-
   InitLLVM X(argc, argv);
-  auto Exec =
-      clang::tooling::createExecutorFromCommandLineArgs(argc, argv, Cat);
-  if (!Exec)
-    error(toString(Exec.takeError()));
-
+  auto OptionsParser = clang::tooling::CommonOptionsParser::create(
+      argc, argv, Cat, llvm::cl::ZeroOrMore);
+  if (!OptionsParser)
+    error(toString(OptionsParser.takeError()));
   // Parse the IgnoreCallbacks list into strings.
   SmallVector<StringRef, 32> Patterns;
   FilterType Filters;
@@ -139,20 +137,29 @@ int main(int argc, const char **argv) {
   for (StringRef Pattern : Patterns) {
     Pattern = Pattern.trim();
     bool Enabled = !Pattern.consume_front("-");
-    if (Expected<GlobPattern> Pat = GlobPattern::create(Pattern))
+    Expected<GlobPattern> Pat = GlobPattern::create(Pattern);
+    if (Pat)
       Filters.emplace_back(std::move(*Pat), Enabled);
     else
       error(toString(Pat.takeError()));
   }
 
+  // Create the tool and run the compilation.
+  clang::tooling::ClangTool Tool(OptionsParser->getCompilations(),
+                                 OptionsParser->getSourcePathList());
+
   std::error_code EC;
   llvm::ToolOutputFile Out(OutputFileName, EC, llvm::sys::fs::F_Text);
   if (EC)
     error(EC.message());
+  PPTraceFrontendActionFactory Factory(Filters, Out.os());
+  int HadErrors = Tool.run(&Factory);
 
-  if (Error Err = Exec->get()->execute(
-      llvm::make_unique<PPTraceFrontendActionFactory>(Filters, Out.os())))
-    error(toString(std::move(Err)));
+  // If we had errors, exit early.
+  if (HadErrors)
+    return HadErrors;
+
   Out.keep();
+
   return 0;
 }

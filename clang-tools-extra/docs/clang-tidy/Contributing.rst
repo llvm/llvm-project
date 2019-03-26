@@ -80,7 +80,8 @@ The Directory Structure
 ::
 
   clang-tidy/                       # Clang-tidy core.
-  |-- ClangTidy.h                   # Interfaces for users and checks.
+  |-- ClangTidy.h                   # Interfaces for users.
+  |-- ClangTidyCheck.h              # Interfaces for checks.
   |-- ClangTidyModule.h             # Interface for clang-tidy modules.
   |-- ClangTidyModuleRegistry.h     # Interface for registering of modules.
      ...
@@ -157,7 +158,7 @@ Let's see in more detail at the check class definition:
 
   ...
 
-  #include "../ClangTidy.h"
+  #include "../ClangTidyCheck.h"
 
   namespace clang {
   namespace tidy {

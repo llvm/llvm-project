@@ -878,30 +878,18 @@ void Writer::createSections() {
 }
 
 void Writer::calculateTargetFeatures() {
-  SmallSet<std::string, 8> Used;
   SmallSet<std::string, 8> Required;
   SmallSet<std::string, 8> Disallowed;
-
-  // Only infer used features if user did not specify features
-  bool InferFeatures = !Config->Features.hasValue();
-
-  if (!InferFeatures) {
-    for (auto &Feature : Config->Features.getValue())
-      TargetFeatures.insert(Feature);
-    // No need to read or check features
-    if (!Config->CheckFeatures)
-      return;
-  }
 
   // Find the sets of used, required, and disallowed features
   for (ObjFile *File : Symtab->ObjectFiles) {
     for (auto &Feature : File->getWasmObj()->getTargetFeatures()) {
       switch (Feature.Prefix) {
       case WASM_FEATURE_PREFIX_USED:
-        Used.insert(Feature.Name);
+        TargetFeatures.insert(Feature.Name);
         break;
       case WASM_FEATURE_PREFIX_REQUIRED:
-        Used.insert(Feature.Name);
+        TargetFeatures.insert(Feature.Name);
         Required.insert(Feature.Name);
         break;
       case WASM_FEATURE_PREFIX_DISALLOWED:
@@ -914,20 +902,6 @@ void Writer::calculateTargetFeatures() {
     }
   }
 
-  if (InferFeatures)
-    TargetFeatures.insert(Used.begin(), Used.end());
-
-  if (!Config->CheckFeatures)
-    return;
-
-  // Validate that used features are allowed in output
-  if (!InferFeatures) {
-    for (auto &Feature : Used) {
-      if (!TargetFeatures.count(Feature))
-        error(Twine("Target feature '") + Feature + "' is not allowed.");
-    }
-  }
-
   // Validate the required and disallowed constraints for each file
   for (ObjFile *File : Symtab->ObjectFiles) {
     SmallSet<std::string, 8> ObjectFeatures;
@@ -936,13 +910,11 @@ void Writer::calculateTargetFeatures() {
         continue;
       ObjectFeatures.insert(Feature.Name);
       if (Disallowed.count(Feature.Name))
-        error(Twine("Target feature '") + Feature.Name +
-              "' is disallowed. Use --no-check-features to suppress.");
+        error("Target feature \"" + Feature.Name + "\" is disallowed");
     }
     for (auto &Feature : Required) {
       if (!ObjectFeatures.count(Feature))
-        error(Twine("Missing required target feature '") + Feature +
-              "'. Use --no-check-features to suppress.");
+        error(Twine("Missing required target feature \"") + Feature + "\"");
     }
   }
 }

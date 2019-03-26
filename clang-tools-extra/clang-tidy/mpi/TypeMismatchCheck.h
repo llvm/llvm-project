@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPE_MISMATCH_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPE_MISMATCH_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 namespace clang {

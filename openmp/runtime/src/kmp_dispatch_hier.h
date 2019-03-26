@@ -1,3 +1,15 @@
+/*
+ * kmp_dispatch_hier.h -- hierarchical scheduling methods and data structures
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef KMP_DISPATCH_HIER_H
 #define KMP_DISPATCH_HIER_H
 #include "kmp.h"

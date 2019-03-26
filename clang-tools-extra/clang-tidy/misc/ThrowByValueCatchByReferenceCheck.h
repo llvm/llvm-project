@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_THROW_BY_VALUE_CATCH_BY_REFERENCE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_THROW_BY_VALUE_CATCH_BY_REFERENCE_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {

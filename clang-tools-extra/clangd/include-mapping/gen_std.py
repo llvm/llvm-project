@@ -90,6 +90,50 @@ def ParseIndexPage(index_page_html):
                       symbol_href["href"]))
   return symbols
 
+class Symbol:
+
+  def __init__(self, name, namespace, headers):
+    # unqualifed symbol name, e.g. "move"
+    self.name = name
+    # namespace of the symbol (with trailing "::"), e.g. "std::"
+    self.namespace = namespace
+    # a list of corresponding headers
+    self.headers = headers
+
+
+def GetSymbols(root_dir, index_page_name, namespace):
+  """Get all symbols listed in the index page. All symbols should be in the
+  given namespace.
+
+  Returns a list of Symbols.
+  """
+
+  # Workflow steps:
+  #   1. Parse index page which lists all symbols to get symbol
+  #      name (unqualified name) and its href link to the symbol page which
+  #      contains the defined header.
+  #   2. Parse the symbol page to get the defined header.
+  index_page_path = os.path.join(root_dir, index_page_name)
+  symbols = []
+  with open(index_page_path, "r") as f:
+    # A map from symbol name to a set of headers.
+    symbol_headers = {}
+    for symbol_name, symbol_page_path in ParseIndexPage(f.read()):
+      with open(os.path.join(root_dir, symbol_page_path), "r") as f:
+        headers = ParseSymbolPage(f.read())
+      if not headers:
+        sys.stderr.write("No header found for symbol %s at %s\n" % (symbol_name,
+          symbol_page_path))
+        continue
+
+      if symbol_name not in symbol_headers:
+        symbol_headers[symbol_name] = set()
+      symbol_headers[symbol_name].update(headers)
+
+    for name, headers in sorted(symbol_headers.items(), key=lambda t : t[0]):
+      symbols.append(Symbol(name, namespace, list(headers)))
+  return symbols
+
 
 def ParseArg():
   parser = argparse.ArgumentParser(description='Generate StdGen file')
@@ -103,46 +147,44 @@ def ParseArg():
 
 def main():
   args = ParseArg()
-  cpp_reference_root = args.cppreference
-  cpp_symbol_root = os.path.join(cpp_reference_root, "en", "cpp")
-  index_page_path = os.path.join(cpp_symbol_root, "symbol_index.html")
-  if not os.path.exists(index_page_path):
-    exit("Path %s doesn't exist!" % index_page_path)
+  cpp_root = os.path.join(args.cppreference, "en", "cpp")
+  symbol_index_root = os.path.join(cpp_root, "symbol_index")
+  if not os.path.exists(symbol_index_root):
+    exit("Path %s doesn't exist!" % symbol_index_root)
+
+  parse_pages =  [
+    (cpp_root, "symbol_index.html", "std::"),
+    # std sub-namespace symbols have separated pages.
+    # We don't index std literal operators (e.g.
+    # std::literals::chrono_literals::operator""d), these symbols can't be
+    # accessed by std::<symbol_name>.
+    # FIXME: index std::placeholders symbols, placeholders.html page is
+    # different (which contains one entry for _1, _2, ..., _N), we need special
+    # handling.
+    (symbol_index_root, "chrono.html", "std::chrono::"),
+    (symbol_index_root, "filesystem.html", "std::filesystem::"),
+    (symbol_index_root, "pmr.html", "std::pmr::"),
+    (symbol_index_root, "regex_constants.html", "std::regex_constants::"),
+    (symbol_index_root, "this_thread.html", "std::this_thread::"),
+  ]
+
+  symbols = []
+  for root_dir, page_name, namespace in parse_pages:
+    symbols.extend(GetSymbols(root_dir, page_name, namespace))
 
   # We don't have version information from the unzipped offline HTML files.
   # so we use the modified time of the symbol_index.html as the version.
+  index_page_path = os.path.join(cpp_root, "symbol_index.html")
   cppreference_modified_date = datetime.datetime.fromtimestamp(
     os.stat(index_page_path).st_mtime).strftime('%Y-%m-%d')
-
-  # Workflow steps:
-  #   1. Parse index page which lists all symbols to get symbol
-  #      name (unqualified name) and its href link to the symbol page which
-  #      contains the defined header.
-  #   2. Parse the symbol page to get the defined header.
-
-  # A map from symbol name to a set of headers.
-  symbols = {}
-  with open(index_page_path, "r") as f:
-    for symbol_name, symbol_page_path in ParseIndexPage(f.read()):
-      with open(os.path.join(cpp_symbol_root, symbol_page_path), "r") as f:
-        headers = ParseSymbolPage(f.read())
-      if not headers:
-        sys.stderr.write("No header found for symbol %s at %s\n" % (symbol_name,
-          symbol_page_path))
-        continue
-
-      if symbol_name not in symbols:
-        symbols[symbol_name] = set()
-      symbols[symbol_name].update(headers)
-
-    # Emit results to stdout.
-    print STDGEN_CODE_PREFIX % cppreference_modified_date
-    for name, headers in sorted(symbols.items(), key=lambda t : t[0]):
-      if len(headers) > 1:
-        # FIXME: support symbols with multiple headers (e.g. std::move).
-        continue
-      # SYMBOL(unqualified_name, namespace, header)
-      print "SYMBOL(%s, %s, %s)" % (name, "std::", list(headers)[0])
+  print STDGEN_CODE_PREFIX % cppreference_modified_date
+  for symbol in symbols:
+    if len(symbol.headers) > 1:
+      # FIXME: support symbols with multiple headers (e.g. std::move).
+      continue
+    # SYMBOL(unqualified_name, namespace, header)
+    print "SYMBOL(%s, %s, %s)" % (symbol.name, symbol.namespace,
+                                  symbol.headers[0])
 
 
 if __name__ == '__main__':

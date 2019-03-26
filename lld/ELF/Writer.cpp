@@ -383,6 +383,15 @@ template <class ELFT> static void createSyntheticSections() {
   In.IgotPlt = make<IgotPltSection>();
   Add(In.IgotPlt);
 
+  // _GLOBAL_OFFSET_TABLE_ is defined relative to either .got.plt or .got. Treat
+  // it as a relocation and ensure the referenced section is created.
+  if (ElfSym::GlobalOffsetTable && Config->EMachine != EM_MIPS) {
+    if (Target->GotBaseSymInGotPlt)
+      In.GotPlt->HasGotPltOffRel = true;
+    else
+      In.Got->HasGotOffRel = true;
+  }
+
   if (Config->GdbIndex)
     Add(GdbIndexSection::create<ELFT>());
 

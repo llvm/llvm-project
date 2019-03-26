@@ -366,8 +366,8 @@ int includeFixerMain(int argc, const char **argv) {
     }
 
     // We leave an empty symbol range as we don't know the range of the symbol
-    // being queried in this mode. include-fixer won't add namespace qualifiers
-    // if the symbol range is empty, which also fits this case.
+    // being queried in this mode. clang-include-fixer won't add namespace
+    // qualifiers if the symbol range is empty, which also fits this case.
     IncludeFixerContext::QuerySymbolInfo Symbol;
     Symbol.RawIdentifier = QuerySymbol;
     auto Context =
@@ -383,9 +383,10 @@ int includeFixerMain(int argc, const char **argv) {
 
   if (tool.run(&Factory) != 0) {
     // We suppress all Clang diagnostics (because they would be wrong,
-    // include-fixer does custom recovery) but still want to give some feedback
-    // in case there was a compiler error we couldn't recover from. The most
-    // common case for this is a #include in the file that couldn't be found.
+    // clang-include-fixer does custom recovery) but still want to give some
+    // feedback in case there was a compiler error we couldn't recover from.
+    // The most common case for this is a #include in the file that couldn't be
+    // found.
     llvm::errs() << "Fatal compiler error occurred while parsing file!"
                     " (incorrect include paths?)\n";
     return 1;
