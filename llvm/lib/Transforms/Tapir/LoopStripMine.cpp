@@ -466,7 +466,7 @@ Loop *llvm::StripMineLoop(
 
   TapirLoopInfo TL(L, T);
 
-  // TODO: Add support for loop peeling, i.e., using a prolog..
+  // TODO: Add support for loop peeling, i.e., using a prolog.
 
   // Use Scalar Evolution to compute the trip count. This allows more loops to
   // be stripmined than relying on induction var simplification.
@@ -670,6 +670,8 @@ Loop *llvm::StripMineLoop(
   LoopBlocksDFS LoopBlocks(L);
   LoopBlocks.perform(LI);
 
+  // Collect extra blocks in the task that LoopInfo does not consider to be part
+  // of the loop, e.g., exception-handling code for the task.
   std::vector<BasicBlock *> ExtraTaskBlocks;
   for (Task *SubT : depth_first(T))
     for (Spindle *S : depth_first<InTask<Spindle *>>(SubT->getEntrySpindle()))
@@ -875,7 +877,8 @@ Loop *llvm::StripMineLoop(
   NewLoop->addChildLoop(L);
 
   // Move the detach/reattach instructions to surround the stripmined loop.
-  BasicBlock *NewHeader; {
+  BasicBlock *NewHeader;
+  {
     SmallVector<BasicBlock*, 4> HeaderPreds;
     for (BasicBlock *Pred : predecessors(Header))
       if (Pred != Latch)
@@ -942,7 +945,7 @@ Loop *llvm::StripMineLoop(
   // ...
   // Latch (br Header, NewReattB)
   // NewReattB (reattach NewLatch)
-  // NewLatch (br NewHeader, LatchExit)
+  // NewLatch (br LoopReattach)
   // LoopReattach
 
   // Add check of stripmined loop count.
@@ -997,6 +1000,18 @@ Loop *llvm::StripMineLoop(
   ReplaceInstWithInst(NewLatch->getTerminator(),
                       BranchInst::Create(LoopReattach, NewHeader, IdxCmp));
   DT->changeImmediateDominator(NewLatch, NewHeader);
+  // The block structure of the stripmined loop should now look like so:
+  //
+  // LoopDetEntry
+  // NewHeader (detach NewEntry, NewLatch)
+  // NewEntry
+  // Header
+  // TaskEntry
+  // ...
+  // Latch (br Header, NewReattB)
+  // NewReattB (reattach NewLatch)
+  // NewLatch (br NewHeader, LoopReattach)
+  // LoopReattach
 
   // Fixup the LoopInfo for the new loop.
   if (!ParentLoop) {

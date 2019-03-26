@@ -120,8 +120,6 @@ static unsigned getConstTripCount(const Loop *L, ScalarEvolution &SE) {
     ExitingBlock = L->getExitingBlock();
   if (ExitingBlock)
     ConstTripCount = SE.getSmallConstantTripCount(L, ExitingBlock);
-  if (!ConstTripCount)
-    ConstTripCount = SE.getSmallConstantMaxTripCount(L);
   return ConstTripCount;
 }
 
@@ -258,6 +256,18 @@ bool llvm::computeStripMineCount(
   }
 
   // 3rd priority is computed stripmine count.
+  //
+  // We want to coarsen the loop such that the work of detaching a loop
+  // iteration is tiny compared to the work of the loop body.  Specifically, we
+  // want the total cost of the parallel loop to be at most (1 + \eps) times the
+  // cost of its serial projection.  Let G is the grainsize, n the number of
+  // loop iterations, d the cost of a detach, and S the work of the loop body.
+  // Then we want
+  //
+  //   (n/G)(G*S + d) <= (1 + \eps)(n * S)
+  //
+  // Solving for G yeilds G >= d/(\eps * S).  Substituting in \eps = 1/C for a
+  // given coarsening factor C gives the equation below.
   Instruction *DetachI = L->getHeader()->getTerminator();
   SMP.Count = SMP.DefaultCoarseningFactor * TTI.getUserCost(DetachI) / LoopSize;
 
