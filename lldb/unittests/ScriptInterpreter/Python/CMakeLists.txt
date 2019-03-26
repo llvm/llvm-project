@@ -7,7 +7,7 @@ add_lldb_unittest(ScriptInterpreterPythonTests
     lldbHost
     lldbPluginScriptInterpreterPython
     ${PYTHON_LIBRARY}
-    ${lldb_python_wrapper}
   LINK_COMPONENTS
     Support
   )
+  

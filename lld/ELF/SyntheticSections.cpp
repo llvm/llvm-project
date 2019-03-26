@@ -650,10 +650,8 @@ void GotSection::finalizeContents() {
 
 bool GotSection::empty() const {
   // We need to emit a GOT even if it's empty if there's a relocation that is
-  // relative to GOT(such as GOTOFFREL) or there's a symbol that points to a GOT
-  // (i.e. _GLOBAL_OFFSET_TABLE_) that the target defines relative to the .got.
-  return NumEntries == 0 && !HasGotOffRel &&
-         !(ElfSym::GlobalOffsetTable && !Target->GotBaseSymInGotPlt);
+  // relative to GOT(such as GOTOFFREL).
+  return NumEntries == 0 && !HasGotOffRel;
 }
 
 void GotSection::writeTo(uint8_t *Buf) {
@@ -1114,11 +1112,9 @@ void GotPltSection::writeTo(uint8_t *Buf) {
 }
 
 bool GotPltSection::empty() const {
-  // We need to emit a GOT.PLT even if it's empty if there's a symbol that
-  // references the _GLOBAL_OFFSET_TABLE_ and the Target defines the symbol
-  // relative to the .got.plt section.
-  return Entries.empty() &&
-         !(ElfSym::GlobalOffsetTable && Target->GotBaseSymInGotPlt);
+  // We need to emit GOTPLT even if it's empty if there's a relocation relative
+  // to it.
+  return Entries.empty() && !HasGotPltOffRel;
 }
 
 static StringRef getIgotPltName() {
