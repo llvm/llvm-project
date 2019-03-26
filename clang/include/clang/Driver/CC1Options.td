@@ -385,6 +385,8 @@ def fno_dllexport_inlines : Flag<["-"], "fno-dllexport-inlines">;
 
 def sys_header_deps : Flag<["-"], "sys-header-deps">,
   HelpText<"Include system headers in dependency output">;
+def skip_unused_modulemap_file_deps : Flag<["-"], "skip-unused-modulemap-deps">,
+  HelpText<"Include module map files only for imported modules in dependency output">;
 def module_file_deps : Flag<["-"], "module-file-deps">,
   HelpText<"Include module files in dependency output">;
 def header_include_file : Separate<["-"], "header-include-file">,
