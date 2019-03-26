@@ -579,10 +579,6 @@ module std [system] {
       header "experimental/string"
       export *
     }
-    module task {
-      header "experimental/task"
-      export *
-    }
     module type_traits {
       header "experimental/type_traits"
       export *

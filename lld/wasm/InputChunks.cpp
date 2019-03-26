@@ -74,11 +74,14 @@ void InputChunk::verifyRelocTargets() const {
 
     if (BytesRead && BytesRead != 5)
       warn("expected LEB at relocation site be 5-byte padded");
-    uint32_t ExpectedValue = File->calcExpectedValue(Rel);
-    if (ExpectedValue != ExistingValue)
-      warn("unexpected existing value for " + reloctTypeToString(Rel.Type) +
-           ": existing=" + Twine(ExistingValue) +
-           " expected=" + Twine(ExpectedValue));
+
+    if (Rel.Type != R_WASM_GLOBAL_INDEX_LEB) {
+      uint32_t ExpectedValue = File->calcExpectedValue(Rel);
+      if (ExpectedValue != ExistingValue)
+        warn("unexpected existing value for " + reloctTypeToString(Rel.Type) +
+             ": existing=" + Twine(ExistingValue) +
+             " expected=" + Twine(ExpectedValue));
+    }
   }
 }
 

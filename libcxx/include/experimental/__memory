@@ -73,13 +73,6 @@ struct __lfts_uses_alloc_ctor
     >
 {};
 
-// Round __s up to next multiple of __a.
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-size_t __aligned_allocation_size(size_t __s, size_t __a) _NOEXCEPT
-{
-    return (__s + __a - 1) & ~(__a - 1);
-}
-
 template <class _Tp, class _Alloc, class ..._Args>
 inline _LIBCPP_INLINE_VISIBILITY
 void __lfts_user_alloc_construct(

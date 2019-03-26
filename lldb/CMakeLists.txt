@@ -91,6 +91,10 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS lldb-mi)
   endif()
 
+  if(TARGET lldb-vscode)
+    list(APPEND LLDB_TEST_DEPS lldb-vscode)
+  endif()
+
   if(TARGET lldb-instr)
     list(APPEND LLDB_TEST_DEPS lldb-instr)
   endif()

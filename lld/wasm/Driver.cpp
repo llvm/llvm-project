@@ -519,6 +519,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   }
 
   if (Config->Shared) {
+    Config->ImportMemory = true;
     Config->ExportDynamic = true;
     Config->AllowUndefined = true;
   }

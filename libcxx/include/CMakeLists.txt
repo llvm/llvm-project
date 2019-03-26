@@ -86,7 +86,6 @@ set(files
   experimental/string
   experimental/string_view
   experimental/system_error
-  experimental/task
   experimental/tuple
   experimental/type_traits
   experimental/unordered_map
