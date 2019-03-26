@@ -8,7 +8,6 @@
 #   export PYTHONPATH=/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Resources/Python
 #----------------------------------------------------------------------
 
-import commands
 from __future__ import print_function
 
 import optparse
@@ -19,6 +18,11 @@ import resource
 import sys
 import time
 import types
+
+if sys.version_info.major == 2:
+    import commands as subprocess
+else:
+    import subprocess
 
 #----------------------------------------------------------------------
 # Code that auto imports LLDB
@@ -32,7 +36,7 @@ except ImportError:
     platform_system = platform.system()
     if platform_system == 'Darwin':
         # On Darwin, try the currently selected Xcode directory
-        xcode_dir = commands.getoutput("xcode-select --print-path")
+        xcode_dir = subprocess.getoutput("xcode-select --print-path")
         if xcode_dir:
             lldb_python_dirs.append(
                 os.path.realpath(
@@ -303,7 +307,7 @@ class MemoryMeasurement(Measurement):
         self.value = dict()
 
     def Measure(self):
-        output = commands.getoutput(self.command).split("\n")[-1]
+        output = subprocess.getoutput(self.command).split("\n")[-1]
         values = re.split('[-+\s]+', output)
         for (idx, stat) in enumerate(values):
             multiplier = 1
