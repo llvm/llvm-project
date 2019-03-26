@@ -87,14 +87,15 @@ int wctob_l( wint_t c, locale_t loc )
 
 int snprintf_l(char *ret, size_t n, locale_t loc, const char *format, ...)
 {
-#if !defined(_LIBCPP_MSVCRT)
-    __libcpp_locale_guard __current(loc);
-#endif
     va_list ap;
     va_start( ap, format );
 #if defined(_LIBCPP_MSVCRT)
-    int result = _vsnprintf_l( ret, n, format, loc, ap );
+    // FIXME: Remove usage of internal CRT function and globals.
+    int result = __stdio_common_vsprintf(
+        _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS | _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR,
+        ret, n, format, loc, ap);
 #else
+    __libcpp_locale_guard __current(loc);
     int result = vsnprintf( ret, n, format, ap );
 #endif
     va_end(ap);
