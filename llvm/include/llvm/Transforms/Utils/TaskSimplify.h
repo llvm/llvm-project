@@ -17,6 +17,7 @@
 
 namespace llvm {
 
+struct MaybeParallelTasks;
 class Task;
 class TaskInfo;
 
@@ -26,11 +27,11 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Simplify syncs in the specified task T.
-bool simplifySyncs(Task *T, TaskInfo &TI);
+/// Simplify syncs in the specified task T.
+bool simplifySyncs(Task *T, MaybeParallelTasks &MPTasks);
 
-/// \brief Simplify the specified task T.
-bool simplifyTask(Task *T, TaskInfo &TI);
+/// Simplify the specified task T.
+bool simplifyTask(Task *T);
 
 } // end namespace llvm
 

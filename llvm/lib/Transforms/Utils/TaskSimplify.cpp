@@ -107,18 +107,12 @@ static bool removeRedundantSyncRegions(MaybeParallelTasks &MPTasks, Task *T) {
   return Changed;
 }
 
-bool llvm::simplifySyncs(Task *T, TaskInfo &TI) {
+bool llvm::simplifySyncs(Task *T, MaybeParallelTasks &MPTasks) {
   bool Changed = false;
 
   LLVM_DEBUG(dbgs() <<
              "Simplifying syncs in task @ " << T->getEntry()->getName() <<
              "\n");
-
-  // Evaluate the tasks that might be in parallel with each spindle, and
-  // determine number of discriminating syncs: syncs that sync a subset of the
-  // detached tasks, based on sync regions.
-  MaybeParallelTasks MPTasks;
-  TI.evaluateParallelState<MaybeParallelTasks>(MPTasks);
 
   // Remove redundant syncs.  This optimization might not be necessary here,
   // because SimplifyCFG seems to do a good job removing syncs that cannot sync
@@ -159,7 +153,7 @@ static bool detachImmediatelySyncs(DetachInst *DI) {
   return isa<SyncInst>(I);
 }
 
-bool llvm::simplifyTask(Task *T, TaskInfo &TI) {
+bool llvm::simplifyTask(Task *T) {
   if (T->isRootTask())
     return false;
 
@@ -243,13 +237,22 @@ bool TaskSimplify::runOnFunction(Function &F) {
     return false;
 
   bool Changed = false;
+  LLVM_DEBUG(dbgs() << "TaskSimplify running on function " << F.getName()
+             << "\n");
+
+  // Evaluate the tasks that might be in parallel with each spindle, and
+  // determine number of discriminating syncs: syncs that sync a subset of the
+  // detached tasks, based on sync regions.
+  MaybeParallelTasks MPTasks;
+  TI.evaluateParallelState<MaybeParallelTasks>(MPTasks);
+
   // Simplify syncs in each task in the function.
   for (Task *T : post_order(TI.getRootTask()))
-    Changed |= simplifySyncs(T, TI);
+    Changed |= simplifySyncs(T, MPTasks);
 
   // Simplify each task in the function.
   for (Task *T : post_order(TI.getRootTask()))
-    Changed |= simplifyTask(T, TI);
+    Changed |= simplifyTask(T);
 
   if (Changed)
     simplifyCFG(F);
@@ -264,13 +267,22 @@ PreservedAnalyses TaskSimplifyPass::run(Function &F,
     return PreservedAnalyses::all();
 
   bool Changed = false;
+  LLVM_DEBUG(dbgs() << "TaskSimplify running on function " << F.getName()
+             << "\n");
+
+  // Evaluate the tasks that might be in parallel with each spindle, and
+  // determine number of discriminating syncs: syncs that sync a subset of the
+  // detached tasks, based on sync regions.
+  MaybeParallelTasks MPTasks;
+  TI.evaluateParallelState<MaybeParallelTasks>(MPTasks);
+
   // Simplify syncs in each task in the function.
   for (Task *T : post_order(TI.getRootTask()))
-    Changed |= simplifySyncs(T, TI);
+    Changed |= simplifySyncs(T, MPTasks);
 
   // Simplify each task in the function.
   for (Task *T : post_order(TI.getRootTask()))
-    Changed |= simplifyTask(T, TI);
+    Changed |= simplifyTask(T);
 
   if (!Changed)
     return PreservedAnalyses::all();
