@@ -175,6 +175,10 @@ class FileManager : public RefCountedBase<FileManager> {
   void fillRealPathName(FileEntry *UFE, llvm::StringRef FileName);
 
 public:
+  /// Construct a file manager, optionally with a custom VFS.
+  ///
+  /// \param FS if non-null, the VFS to use.  Otherwise uses
+  /// llvm::vfs::getRealFileSystem().
   FileManager(const FileSystemOptions &FileSystemOpts,
               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
   ~FileManager();
@@ -217,9 +221,7 @@ public:
   FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }
   const FileSystemOptions &getFileSystemOpts() const { return FileSystemOpts; }
 
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVirtualFileSystem() const {
-    return FS;
-  }
+  llvm::vfs::FileSystem &getVirtualFileSystem() const { return *FS; }
 
   /// Retrieve a file entry for a "virtual" file that acts as
   /// if there were a file with the given name on disk.

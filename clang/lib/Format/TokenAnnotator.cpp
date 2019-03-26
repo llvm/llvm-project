@@ -1191,11 +1191,11 @@ private:
 
     // Reset token type in case we have already looked at it and then
     // recovered from an error (e.g. failure to find the matching >).
-    if (!CurrentToken->isOneOf(TT_LambdaLSquare, TT_ForEachMacro,
-                               TT_FunctionLBrace, TT_ImplicitStringLiteral,
-                               TT_InlineASMBrace, TT_JsFatArrow, TT_LambdaArrow,
-                               TT_OverloadedOperator, TT_RegexLiteral,
-                               TT_TemplateString, TT_ObjCStringLiteral))
+    if (!CurrentToken->isOneOf(
+            TT_LambdaLSquare, TT_LambdaLBrace, TT_ForEachMacro,
+            TT_FunctionLBrace, TT_ImplicitStringLiteral, TT_InlineASMBrace,
+            TT_JsFatArrow, TT_LambdaArrow, TT_OverloadedOperator,
+            TT_RegexLiteral, TT_TemplateString, TT_ObjCStringLiteral))
       CurrentToken->Type = TT_Unknown;
     CurrentToken->Role.reset();
     CurrentToken->MatchingParen = nullptr;
@@ -2896,7 +2896,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
 // Returns 'true' if 'Tok' is a brace we'd want to break before in Allman style.
 static bool isAllmanBrace(const FormatToken &Tok) {
   return Tok.is(tok::l_brace) && Tok.BlockKind == BK_Block &&
-         !Tok.isOneOf(TT_ObjCBlockLBrace, TT_DictLiteral);
+         !Tok.isOneOf(TT_ObjCBlockLBrace, TT_LambdaLBrace, TT_DictLiteral);
 }
 
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
@@ -3023,6 +3023,19 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
            (Line.startsWith(tok::kw_struct) && Style.BraceWrapping.AfterStruct);
   if (Left.is(TT_ObjCBlockLBrace) && !Style.AllowShortBlocksOnASingleLine)
     return true;
+
+  if (Left.is(TT_LambdaLBrace)) {
+    if (Left.MatchingParen && Left.MatchingParen->Next &&
+        Left.MatchingParen->Next->isOneOf(tok::comma, tok::r_paren) &&
+        Style.AllowShortLambdasOnASingleLine == FormatStyle::SLS_Inline)
+      return false;
+
+    if (Style.AllowShortLambdasOnASingleLine == FormatStyle::SLS_None ||
+        Style.AllowShortLambdasOnASingleLine == FormatStyle::SLS_Inline ||
+        (!Left.Children.empty() &&
+         Style.AllowShortLambdasOnASingleLine == FormatStyle::SLS_Empty))
+      return true;
+  }
 
   // Put multiple C# attributes on a new line.
   if (Style.isCSharp() &&

@@ -1579,7 +1579,7 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
                                 DirNative);
 
         // Search each of the ".framework" directories to load them as modules.
-        llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+        llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
         for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                            DirEnd;
              Dir != DirEnd && !EC; Dir.increment(EC)) {
@@ -1650,7 +1650,7 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
   FileMgr.makeAbsolutePath(Dir);
   SmallString<128> DirNative;
   llvm::sys::path::native(Dir, DirNative);
-  llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
   for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
     bool IsFramework = llvm::sys::path::extension(Dir->path()) == ".framework";

@@ -395,8 +395,8 @@ def warn_cxx98_compat_empty_fnmacro_arg : Warning<
 def note_macro_here : Note<"macro %0 defined here">;
 def note_macro_expansion_here : Note<"expansion of macro %0 requested here">;
 
-def err_pp_opencl_variadic_macros :
-  Error<"variadic macros not supported in OpenCL">;
+def ext_pp_opencl_variadic_macros : Extension<
+  "variadic macros are a Clang extension in OpenCL">;
 
 def err_pp_invalid_directive : Error<"invalid preprocessing directive">;
 def err_pp_directive_required : Error<
