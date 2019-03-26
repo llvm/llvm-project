@@ -45,7 +45,7 @@ define void @test_floatcsel(float %lhs32, float %rhs32, double %lhs64, double %r
 ; CHECK-NOFP-NOT: fcmp
   %val2 = select i1 %tst2, i64 9, i64 15
   store i64 %val2, i64* @var64
-; CHECK: orr w[[CONST15:[0-9]+]], wzr, #0xf
+; CHECK: mov w[[CONST15:[0-9]+]], #15
 ; CHECK: mov {{[wx]}}[[CONST9:[0-9]+]], #{{9|0x9}}
 ; CHECK: csel [[MAYBETRUE:x[0-9]+]], x[[CONST9]], x[[CONST15]], eq
 ; CHECK: csel {{x[0-9]+}}, x[[CONST9]], [[MAYBETRUE]], vs

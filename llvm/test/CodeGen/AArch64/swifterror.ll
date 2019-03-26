@@ -9,19 +9,19 @@ declare void @free(i8*)
 ; that takes a swifterror parameter and "caller" is the caller of "foo".
 define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: foo:
-; CHECK-APPLE: orr w0, wzr, #0x10
+; CHECK-APPLE: mov w0, #16
 ; CHECK-APPLE: malloc
-; CHECK-APPLE: orr [[ID:w[0-9]+]], wzr, #0x1
+; CHECK-APPLE: mov [[ID:w[0-9]+]], #1
 ; CHECK-APPLE: strb [[ID]], [x0, #8]
 ; CHECK-APPLE: mov x21, x0
 ; CHECK-APPLE-NOT: x21
 
 ; CHECK-O0-LABEL: foo:
-; CHECK-O0: orr w{{.*}}, wzr, #0x10
+; CHECK-O0: mov w{{.*}}, #16
 ; CHECK-O0: malloc
 ; CHECK-O0: mov x1, x0
 ; CHECK-O0-NOT: x1
-; CHECK-O0: orr [[ID:w[0-9]+]], wzr, #0x1
+; CHECK-O0: mov [[ID:w[0-9]+]], #1
 ; CHECK-O0: strb [[ID]], [x0, #8]
 ; CHECK-O0: mov x21, x1
 entry:
@@ -118,9 +118,9 @@ handler:
 define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE-LABEL: foo_if:
 ; CHECK-APPLE: cbz w0
-; CHECK-APPLE: orr w0, wzr, #0x10
+; CHECK-APPLE: mov w0, #16
 ; CHECK-APPLE: malloc
-; CHECK-APPLE: orr [[ID:w[0-9]+]], wzr, #0x1
+; CHECK-APPLE: mov [[ID:w[0-9]+]], #1
 ; CHECK-APPLE: strb [[ID]], [x0, #8]
 ; CHECK-APPLE: mov x21, x0
 ; CHECK-APPLE-NOT: x21
@@ -130,10 +130,10 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; spill x21
 ; CHECK-O0: str x21, [sp, [[SLOT:#[0-9]+]]]
 ; CHECK-O0: cbz w0
-; CHECK-O0: orr w{{.*}}, wzr, #0x10
+; CHECK-O0: mov w{{.*}}, #16
 ; CHECK-O0: malloc
 ; CHECK-O0: mov [[ID:x[0-9]+]], x0
-; CHECK-O0: orr [[ID2:w[0-9]+]], wzr, #0x1
+; CHECK-O0: mov [[ID2:w[0-9]+]], #1
 ; CHECK-O0: strb [[ID2]], [x0, #8]
 ; CHECK-O0: mov x21, [[ID]]
 ; CHECK-O0: ret
@@ -163,7 +163,7 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-APPLE-LABEL: foo_loop:
 ; CHECK-APPLE: mov x0, x21
 ; CHECK-APPLE: cbz
-; CHECK-APPLE: orr w0, wzr, #0x10
+; CHECK-APPLE: mov w0, #16
 ; CHECK-APPLE: malloc
 ; CHECK-APPLE: strb w{{.*}}, [x0, #8]
 ; CHECK-APPLE: fcmp
@@ -179,7 +179,7 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-O0: ldr     x0, [sp, [[SLOT]]]
 ; CHECK-O0: str     x0, [sp, [[SLOT2:#[0-9]+]]]
 ; CHECK-O0: cbz {{.*}}, [[BB2:[A-Za-z0-9_]*]]
-; CHECK-O0: orr w{{.*}}, wzr, #0x10
+; CHECK-O0: mov w{{.*}}, #16
 ; CHECK-O0: malloc
 ; CHECK-O0: mov [[ID:x[0-9]+]], x0
 ; CHECK-O0: strb w{{.*}}, [{{.*}}[[ID]], #8]
@@ -223,22 +223,22 @@ bb_end:
 define void @foo_sret(%struct.S* sret %agg.result, i32 %val1, %swift_error** swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: foo_sret:
 ; CHECK-APPLE: mov [[SRET:x[0-9]+]], x8
-; CHECK-APPLE: orr w0, wzr, #0x10
+; CHECK-APPLE: mov w0, #16
 ; CHECK-APPLE: malloc
-; CHECK-APPLE: orr [[ID:w[0-9]+]], wzr, #0x1
+; CHECK-APPLE: mov [[ID:w[0-9]+]], #1
 ; CHECK-APPLE: strb [[ID]], [x0, #8]
 ; CHECK-APPLE: str w{{.*}}, [{{.*}}[[SRET]], #4]
 ; CHECK-APPLE: mov x21, x0
 ; CHECK-APPLE-NOT: x21
 
 ; CHECK-O0-LABEL: foo_sret:
-; CHECK-O0: orr w{{.*}}, wzr, #0x10
+; CHECK-O0: mov w{{.*}}, #16
 ; spill x8
 ; CHECK-O0-DAG: str x8
 ; spill x21
 ; CHECK-O0-DAG: str x21
 ; CHECK-O0: malloc
-; CHECK-O0: orr [[ID:w[0-9]+]], wzr, #0x1
+; CHECK-O0: mov [[ID:w[0-9]+]], #1
 ; CHECK-O0: strb [[ID]], [x0, #8]
 ; reload from stack
 ; CHECK-O0: ldr [[SRET:x[0-9]+]]
@@ -306,9 +306,9 @@ handler:
 declare void @llvm.va_start(i8*) nounwind
 define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE-LABEL: foo_vararg:
-; CHECK-APPLE: orr w0, wzr, #0x10
+; CHECK-APPLE: mov w0, #16
 ; CHECK-APPLE: malloc
-; CHECK-APPLE-DAG: orr [[ID:w[0-9]+]], wzr, #0x1
+; CHECK-APPLE-DAG: mov [[ID:w[0-9]+]], #1
 ; CHECK-APPLE-DAG: add [[ARGS:x[0-9]+]], [[TMP:x[0-9]+]], #16
 ; CHECK-APPLE-DAG: strb [[ID]], [x0, #8]
 
@@ -439,14 +439,14 @@ define swiftcc void @swifterror_reg_clobber(%swift_error** nocapture %err) {
 ; CHECK-APPLE:  mov      x19, x1
 ; CHECK-APPLE:  mov      x22, x0
 ; Setup call.
-; CHECK-APPLE:  orr     w0, wzr, #0x1
-; CHECK-APPLE:  orr     w1, wzr, #0x2
-; CHECK-APPLE:  orr     w2, wzr, #0x3
-; CHECK-APPLE:  orr     w3, wzr, #0x4
+; CHECK-APPLE:  mov     w0, #1
+; CHECK-APPLE:  mov     w1, #2
+; CHECK-APPLE:  mov     w2, #3
+; CHECK-APPLE:  mov     w3, #4
 ; CHECK-APPLE:  mov     w4, #5
-; CHECK-APPLE:  orr     w5, wzr, #0x6
-; CHECK-APPLE:  orr     w6, wzr, #0x7
-; CHECK-APPLE:  orr     w7, wzr, #0x8
+; CHECK-APPLE:  mov     w5, #6
+; CHECK-APPLE:  mov     w6, #7
+; CHECK-APPLE:  mov     w7, #8
 ; CHECK-APPLE:  mov      x20, xzr
 ; CHECK-APPLE:  mov      x21, xzr
 ; CHECK-APPLE:  bl      _params_in_reg2
@@ -505,14 +505,14 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, i8*
 ; CHECK-APPLE:  mov      x19, x1
 ; CHECK-APPLE:  mov      x22, x0
 ; Setup call arguments.
-; CHECK-APPLE:  orr     w0, wzr, #0x1
-; CHECK-APPLE:  orr     w1, wzr, #0x2
-; CHECK-APPLE:  orr     w2, wzr, #0x3
-; CHECK-APPLE:  orr     w3, wzr, #0x4
+; CHECK-APPLE:  mov     w0, #1
+; CHECK-APPLE:  mov     w1, #2
+; CHECK-APPLE:  mov     w2, #3
+; CHECK-APPLE:  mov     w3, #4
 ; CHECK-APPLE:  mov     w4, #5
-; CHECK-APPLE:  orr     w5, wzr, #0x6
-; CHECK-APPLE:  orr     w6, wzr, #0x7
-; CHECK-APPLE:  orr     w7, wzr, #0x8
+; CHECK-APPLE:  mov     w5, #6
+; CHECK-APPLE:  mov     w6, #7
+; CHECK-APPLE:  mov     w7, #8
 ; CHECK-APPLE:  mov      x20, xzr
 ; CHECK-APPLE:  mov      x21, xzr
 ; CHECK-APPLE:  bl      _params_in_reg2
@@ -541,15 +541,15 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, i8*
 ; Save swifterror %err.
 ; CHECK-APPLE:  str     x21, [sp, #24]
 ; Setup call.
-; CHECK-APPLE:  orr     w0, wzr, #0x1
-; CHECK-APPLE:  orr     w1, wzr, #0x2
-; CHECK-APPLE:  orr     w2, wzr, #0x3
-; CHECK-APPLE:  orr     w3, wzr, #0x4
+; CHECK-APPLE:  mov     w0, #1
+; CHECK-APPLE:  mov     w1, #2
+; CHECK-APPLE:  mov     w2, #3
+; CHECK-APPLE:  mov     w3, #4
 ; CHECK-APPLE:  mov     w4, #5
-; CHECK-APPLE:  orr     w5, wzr, #0x6
-; CHECK-APPLE:  orr     w6, wzr, #0x7
-; CHECK-APPLE:  orr     w7, wzr, #0x8
-; CHECK-APPLE:  mov      x20, xzr
+; CHECK-APPLE:  mov     w5, #6
+; CHECK-APPLE:  mov     w6, #7
+; CHECK-APPLE:  mov     w7, #8
+; CHECK-APPLE:  mov     x20, xzr
 ; ... setup call with swiferror %error_ptr_ref.
 ; CHECK-APPLE:  ldr     x21, [sp, #8]
 ; CHECK-APPLE:  bl      _params_in_reg2

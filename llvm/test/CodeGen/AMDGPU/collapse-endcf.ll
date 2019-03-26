@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}simple_nested_if:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC:s\[[0-9:]+\]]]
@@ -9,7 +9,9 @@
 ; GCN-NEXT: {{^BB[0-9_]+}}:
 ; GCN:      store_dword
 ; GCN-NEXT: {{^}}[[ENDIF]]:
-; GCN-NEXT: s_endpgm
+; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC]]
+; GCN: ds_write_b32
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_nested_if(i32 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -29,6 +31,7 @@ bb.inner.then:                                    ; preds = %bb.outer.then
   br label %bb.outer.end
 
 bb.outer.end:                                     ; preds = %bb.outer.then, %bb.inner.then, %bb
+  store i32 3, i32 addrspace(3)* null
   ret void
 }
 
@@ -44,7 +47,9 @@ bb.outer.end:                                     ; preds = %bb.outer.then, %bb.
 ; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_INNER]]
 ; GCN:      store_dword
 ; GCN-NEXT: {{^}}[[ENDIF_OUTER]]:
-; GCN-NEXT: s_endpgm
+; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_OUTER]]
+; GCN: ds_write_b32
+; GCN: s_endpgm
 define amdgpu_kernel void @uncollapsable_nested_if(i32 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -70,6 +75,7 @@ bb.inner.end:                                     ; preds = %bb.inner.then, %bb.
   br label %bb.outer.end
 
 bb.outer.end:                                     ; preds = %bb.inner.then, %bb
+  store i32 3, i32 addrspace(3)* null
   ret void
 }
 
@@ -88,7 +94,9 @@ bb.outer.end:                                     ; preds = %bb.inner.then, %bb
 ; GCN-NEXT: ; mask branch [[ENDIF_OUTER]]
 ; GCN:      store_dword
 ; GCN-NEXT: {{^}}[[ENDIF_OUTER]]:
-; GCN-NEXT: s_endpgm
+; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_OUTER]]
+; GCN: ds_write_b32
+; GCN: s_endpgm
 define amdgpu_kernel void @nested_if_if_else(i32 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -114,6 +122,7 @@ bb.else:                                             ; preds = %bb.outer.then
   br label %bb.outer.end
 
 bb.outer.end:                                        ; preds = %bb, %bb.then, %bb.else
+  store i32 3, i32 addrspace(3)* null
   ret void
 }
 
@@ -138,11 +147,15 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 ; GCN-NEXT: {{^BB[0-9_]+}}:
 ; GCN:      store_dword
 ; GCN-NEXT: s_and_saveexec_b64 [[SAVEEXEC_INNER_IF_OUTER_THEN:s\[[0-9:]+\]]]
-; GCN-NEXT: ; mask branch [[ENDIF_OUTER]]
+; GCN-NEXT: ; mask branch [[FLOW1:BB[0-9_]+]]
 ; GCN-NEXT: {{^BB[0-9_]+}}:
 ; GCN:      store_dword
+; GCN-NEXT: [[FLOW1]]:
+; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_INNER_IF_OUTER_THEN]]
 ; GCN-NEXT: {{^}}[[ENDIF_OUTER]]:
-; GCN-NEXT: s_endpgm
+; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_OUTER]]
+; GCN: ds_write_b32
+; GCN: s_endpgm
 define amdgpu_kernel void @nested_if_else_if(i32 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -174,6 +187,7 @@ bb.inner.then2:
   br label %bb.outer.end
 
 bb.outer.end:
+  store i32 3, i32 addrspace(3)* null
   ret void
 }
 

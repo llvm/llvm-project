@@ -5,203 +5,203 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-; GCN-LABEL: {{^}}system_unordered:
+; GCN-LABEL: {{^}}system_one_as_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @system_unordered(
+define amdgpu_kernel void @system_one_as_unordered(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out unordered, align 4
+  store atomic i32 %in, i32* %out syncscope("one-as") unordered, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}system_monotonic:
+; GCN-LABEL: {{^}}system_one_as_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @system_monotonic(
+define amdgpu_kernel void @system_one_as_monotonic(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out monotonic, align 4
+  store atomic i32 %in, i32* %out syncscope("one-as") monotonic, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}system_release:
+; GCN-LABEL: {{^}}system_one_as_release:
 ; GCN:        s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT:   flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @system_release(
+define amdgpu_kernel void @system_one_as_release(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out release, align 4
+  store atomic i32 %in, i32* %out syncscope("one-as") release, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}system_seq_cst:
+; GCN-LABEL: {{^}}system_one_as_seq_cst:
 ; GCN:        s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT:   flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @system_seq_cst(
+define amdgpu_kernel void @system_one_as_seq_cst(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out seq_cst, align 4
+  store atomic i32 %in, i32* %out syncscope("one-as") seq_cst, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_unordered:
+; GCN-LABEL: {{^}}singlethread_one_as_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @singlethread_unordered(
+define amdgpu_kernel void @singlethread_one_as_unordered(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("singlethread") unordered, align 4
+  store atomic i32 %in, i32* %out syncscope("singlethread-one-as") unordered, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_monotonic:
+; GCN-LABEL: {{^}}singlethread_one_as_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @singlethread_monotonic(
+define amdgpu_kernel void @singlethread_one_as_monotonic(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("singlethread") monotonic, align 4
+  store atomic i32 %in, i32* %out syncscope("singlethread-one-as") monotonic, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_release:
+; GCN-LABEL: {{^}}singlethread_one_as_release:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @singlethread_release(
+define amdgpu_kernel void @singlethread_one_as_release(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("singlethread") release, align 4
+  store atomic i32 %in, i32* %out syncscope("singlethread-one-as") release, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}singlethread_seq_cst:
+; GCN-LABEL: {{^}}singlethread_one_as_seq_cst:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @singlethread_seq_cst(
+define amdgpu_kernel void @singlethread_one_as_seq_cst(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("singlethread") seq_cst, align 4
+  store atomic i32 %in, i32* %out syncscope("singlethread-one-as") seq_cst, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_unordered:
+; GCN-LABEL: {{^}}agent_one_as_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @agent_unordered(
+define amdgpu_kernel void @agent_one_as_unordered(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("agent") unordered, align 4
+  store atomic i32 %in, i32* %out syncscope("agent-one-as") unordered, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_monotonic:
+; GCN-LABEL: {{^}}agent_one_as_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @agent_monotonic(
+define amdgpu_kernel void @agent_one_as_monotonic(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("agent") monotonic, align 4
+  store atomic i32 %in, i32* %out syncscope("agent-one-as") monotonic, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_release:
+; GCN-LABEL: {{^}}agent_one_as_release:
 ; GCN:        s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT:   flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @agent_release(
+define amdgpu_kernel void @agent_one_as_release(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("agent") release, align 4
+  store atomic i32 %in, i32* %out syncscope("agent-one-as") release, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}agent_seq_cst:
+; GCN-LABEL: {{^}}agent_one_as_seq_cst:
 ; GCN:        s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT:   flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @agent_seq_cst(
+define amdgpu_kernel void @agent_one_as_seq_cst(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("agent") seq_cst, align 4
+  store atomic i32 %in, i32* %out syncscope("agent-one-as") seq_cst, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_unordered:
+; GCN-LABEL: {{^}}workgroup_one_as_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @workgroup_unordered(
+define amdgpu_kernel void @workgroup_one_as_unordered(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("workgroup") unordered, align 4
+  store atomic i32 %in, i32* %out syncscope("workgroup-one-as") unordered, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_monotonic:
+; GCN-LABEL: {{^}}workgroup_one_as_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @workgroup_monotonic(
+define amdgpu_kernel void @workgroup_one_as_monotonic(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("workgroup") monotonic, align 4
+  store atomic i32 %in, i32* %out syncscope("workgroup-one-as") monotonic, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_release:
+; GCN-LABEL: {{^}}workgroup_one_as_release:
 ; GFX89-NOT:  s_waitcnt vmcnt(0){{$}}
 ; GCN:        flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @workgroup_release(
+define amdgpu_kernel void @workgroup_one_as_release(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("workgroup") release, align 4
+  store atomic i32 %in, i32* %out syncscope("workgroup-one-as") release, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}workgroup_seq_cst:
+; GCN-LABEL: {{^}}workgroup_one_as_seq_cst:
 ; GFX89-NOT:  s_waitcnt vmcnt(0){{$}}
 ; GCN:        flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @workgroup_seq_cst(
+define amdgpu_kernel void @workgroup_one_as_seq_cst(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("workgroup") seq_cst, align 4
+  store atomic i32 %in, i32* %out syncscope("workgroup-one-as") seq_cst, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_unordered:
+; GCN-LABEL: {{^}}wavefront_one_as_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @wavefront_unordered(
+define amdgpu_kernel void @wavefront_one_as_unordered(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("wavefront") unordered, align 4
+  store atomic i32 %in, i32* %out syncscope("wavefront-one-as") unordered, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_monotonic:
+; GCN-LABEL: {{^}}wavefront_one_as_monotonic:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @wavefront_monotonic(
+define amdgpu_kernel void @wavefront_one_as_monotonic(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("wavefront") monotonic, align 4
+  store atomic i32 %in, i32* %out syncscope("wavefront-one-as") monotonic, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_release:
+; GCN-LABEL: {{^}}wavefront_one_as_release:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @wavefront_release(
+define amdgpu_kernel void @wavefront_one_as_release(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("wavefront") release, align 4
+  store atomic i32 %in, i32* %out syncscope("wavefront-one-as") release, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}wavefront_seq_cst:
+; GCN-LABEL: {{^}}wavefront_one_as_seq_cst:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
-define amdgpu_kernel void @wavefront_seq_cst(
+define amdgpu_kernel void @wavefront_one_as_seq_cst(
     i32 %in, i32* %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("wavefront") seq_cst, align 4
+  store atomic i32 %in, i32* %out syncscope("wavefront-one-as") seq_cst, align 4
   ret void
 }
 
@@ -292,6 +292,206 @@ entry:
   %val = load i32, i32* %in, align 4
   %out.gep = getelementptr inbounds i32, i32* %out, i32 %tid
   store i32 %val, i32* %out.gep, !nontemporal !0
+  ret void
+}
+
+; GCN-LABEL: {{^}}system_unordered:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @system_unordered(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out unordered, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}system_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @system_monotonic(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out monotonic, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}system_release:
+; GCN:        s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN-NEXT:   flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @system_release(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out release, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}system_seq_cst:
+; GCN:        s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN-NEXT:   flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @system_seq_cst(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out seq_cst, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}singlethread_unordered:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @singlethread_unordered(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("singlethread") unordered, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}singlethread_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @singlethread_monotonic(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("singlethread") monotonic, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}singlethread_release:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @singlethread_release(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("singlethread") release, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}singlethread_seq_cst:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @singlethread_seq_cst(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("singlethread") seq_cst, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}agent_unordered:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @agent_unordered(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("agent") unordered, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}agent_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @agent_monotonic(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("agent") monotonic, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}agent_release:
+; GCN:        s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN-NEXT:   flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @agent_release(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("agent") release, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}agent_seq_cst:
+; GCN:        s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN-NEXT:   flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @agent_seq_cst(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("agent") seq_cst, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}workgroup_unordered:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @workgroup_unordered(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("workgroup") unordered, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}workgroup_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @workgroup_monotonic(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("workgroup") monotonic, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}workgroup_release:
+; GFX89-NOT:  s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:        flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @workgroup_release(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("workgroup") release, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}workgroup_seq_cst:
+; GFX89-NOT:  s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:        flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @workgroup_seq_cst(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("workgroup") seq_cst, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}wavefront_unordered:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @wavefront_unordered(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("wavefront") unordered, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}wavefront_monotonic:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @wavefront_monotonic(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("wavefront") monotonic, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}wavefront_release:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @wavefront_release(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("wavefront") release, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}wavefront_seq_cst:
+; GCN-NOT:   s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GCN:       flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @wavefront_seq_cst(
+    i32 %in, i32* %out) {
+entry:
+  store atomic i32 %in, i32* %out syncscope("wavefront") seq_cst, align 4
   ret void
 }
 

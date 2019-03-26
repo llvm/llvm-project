@@ -7,7 +7,7 @@
 ; CHECK:      sub     sp, sp, #32
 ; CHECK-NEXT: stp     x29, x30, [sp, #16]
 ; CHECK-NEXT: add     x29, sp, #16
-; CHECK-NEXT: orr     x1, xzr, #0xfffffffffffffffe
+; CHECK-NEXT: mov     x1, #-2
 ; CHECK-NEXT: stur    x1, [x29, #-16]
 ; CHECK-NEXT: cbz     w0, .LBB0_2
 

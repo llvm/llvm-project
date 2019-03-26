@@ -75,7 +75,7 @@ define i16 @test_urem_even(i16 %X) nounwind readnone {
 ; CHECK-NEXT:    umull x9, w9, w10
 ; CHECK-NEXT:    and w8, w0, #0xffff
 ; CHECK-NEXT:    lsr x9, x9, #34
-; CHECK-NEXT:    orr w10, wzr, #0xe
+; CHECK-NEXT:    mov w10, #14
 ; CHECK-NEXT:    msub w8, w9, w10, w8
 ; CHECK-NEXT:    cmp w8, #0 // =0
 ; CHECK-NEXT:    cset w0, ne
@@ -129,7 +129,7 @@ define i32 @test_urem_even_bit31(i32 %X) nounwind readnone {
 define i32 @test_urem_one(i32 %X) nounwind readnone {
 ; CHECK-LABEL: test_urem_one:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w0, wzr, #0x1
+; CHECK-NEXT:    mov w0, #1
 ; CHECK-NEXT:    ret
   %urem = urem i32 %X, 1
   %cmp = icmp eq i32 %urem, 0

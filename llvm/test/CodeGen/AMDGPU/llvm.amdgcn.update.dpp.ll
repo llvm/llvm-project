@@ -27,9 +27,9 @@ bb:
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = getelementptr inbounds [448 x i32], [448 x i32] addrspace(3)* @0, i32 0, i32 %tmp
   %tmp3 = load i32, i32 addrspace(3)* %tmp2, align 4
-  fence syncscope("workgroup") release
+  fence syncscope("workgroup-one-as") release
   tail call void @llvm.amdgcn.s.barrier()
-  fence syncscope("workgroup") acquire
+  fence syncscope("workgroup-one-as") acquire
   %tmp4 = add nsw i32 %tmp3, %tmp3
   %tmp5 = tail call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 %tmp4, i32 177, i32 15, i32 15, i1 zeroext false)
   %tmp6 = add nsw i32 %tmp5, %tmp4

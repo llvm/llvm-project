@@ -1640,11 +1640,7 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
   if (C.getArgs().hasArg(options::OPT_dumpversion)) {
     // Since -dumpversion is only implemented for pedantic GCC compatibility, we
     // return an answer which matches our definition of __VERSION__.
-    //
-    // If we want to return a more correct answer some day, then we should
-    // introduce a non-pedantically GCC compatible mode to Clang in which we
-    // provide sensible definitions for -dumpversion, __VERSION__, etc.
-    llvm::outs() << "4.2.1\n";
+    llvm::outs() << CLANG_VERSION_STRING << "\n";
     return false;
   }
 

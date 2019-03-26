@@ -11,15 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTSOLVER_H
-#define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTSOLVER_H
+#ifndef LLVM_SUPPORT_SMTAPI_H
+#define LLVM_SUPPORT_SMTAPI_H
 
-#include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/Support/raw_ostream.h"
+#include <memory>
 
-namespace clang {
-namespace ento {
+namespace llvm {
 
 /// Generic base class for SMT sorts
 class SMTSort {
@@ -399,7 +400,6 @@ using SMTSolverRef = std::shared_ptr<SMTSolver>;
 /// Convenience method to create and Z3Solver object
 SMTSolverRef CreateZ3Solver();
 
-} // namespace ento
-} // namespace clang
+} // namespace llvm
 
 #endif

@@ -456,7 +456,7 @@ template <typename _Size, typename _Tp, typename _BinaryOperation, typename _Una
 typename std::enable_if<!is_arithmetic_plus<_Tp, _BinaryOperation>::value, _Tp>::type
 simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _UnaryOperation __f) noexcept
 {
-    const std::size_t __block_size = __lane_size / sizeof(_Tp);
+    const _Size __block_size = __lane_size / sizeof(_Tp);
     if (__n > 2 * __block_size && __block_size > 1)
     {
         alignas(__lane_size) char __lane_[__lane_size];

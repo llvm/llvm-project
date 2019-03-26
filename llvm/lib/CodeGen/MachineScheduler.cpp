@@ -486,13 +486,17 @@ getSchedRegions(MachineBasicBlock *MBB,
       MachineInstr &MI = *std::prev(I);
       if (isSchedBoundary(&MI, &*MBB, MF, TII))
         break;
-      if (!MI.isDebugInstr())
+      if (!MI.isDebugInstr()) {
         // MBB::size() uses instr_iterator to count. Here we need a bundle to
         // count as a single instruction.
         ++NumRegionInstrs;
+      }
     }
 
-    Regions.push_back(SchedRegion(I, RegionEnd, NumRegionInstrs));
+    // It's possible we found a scheduling region that only has debug
+    // instructions. Don't bother scheduling these.
+    if (NumRegionInstrs != 0)
+      Regions.push_back(SchedRegion(I, RegionEnd, NumRegionInstrs));
   }
 
   if (RegionsTopDown)

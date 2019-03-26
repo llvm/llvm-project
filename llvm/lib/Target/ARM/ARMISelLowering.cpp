@@ -9015,18 +9015,23 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
     if (Align == 0)
       Align = MF->getDataLayout().getTypeAllocSize(C->getType());
     unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align);
+    MachineMemOperand *CPMMO =
+        MF->getMachineMemOperand(MachinePointerInfo::getConstantPool(*MF),
+                                 MachineMemOperand::MOLoad, 4, 4);
 
     if (IsThumb)
       BuildMI(*BB, MI, dl, TII->get(ARM::tLDRpci))
           .addReg(varEnd, RegState::Define)
           .addConstantPoolIndex(Idx)
-          .add(predOps(ARMCC::AL));
+          .add(predOps(ARMCC::AL))
+          .addMemOperand(CPMMO);
     else
       BuildMI(*BB, MI, dl, TII->get(ARM::LDRcp))
           .addReg(varEnd, RegState::Define)
           .addConstantPoolIndex(Idx)
           .addImm(0)
-          .add(predOps(ARMCC::AL));
+          .add(predOps(ARMCC::AL))
+          .addMemOperand(CPMMO);
   }
   BB->addSuccessor(loopMBB);
 
@@ -9274,7 +9279,8 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .add(MI.getOperand(2))  // Rn
         .add(MI.getOperand(3))  // PredImm
         .add(MI.getOperand(4))  // PredReg
-        .add(MI.getOperand(0)); // Rt
+        .add(MI.getOperand(0))  // Rt
+        .cloneMemRefs(MI);
     MI.eraseFromParent();
     return BB;
   }

@@ -130,11 +130,11 @@ R_X86_64_GOT32:
         .long zed@got
 
 // CHECK: Contents of section .R_X86_64_GOT32:
-// CHECK-NEXT: f8ffffff
+// CHECK-NEXT: f0f0ffff
 
 
 // CHECK: Contents of section .R_X86_64_GOT64:
-// CHECK-NEXT: f8ffffff ffffffff
+// CHECK-NEXT: f0f0ffff ffffffff
 .section .R_X86_64_GOT64,"a",@progbits
 .global R_X86_64_GOT64
 R_X86_64_GOT64:

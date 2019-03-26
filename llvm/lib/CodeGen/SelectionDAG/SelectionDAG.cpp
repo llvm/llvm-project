@@ -1974,9 +1974,25 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
     break;
   }
 
-  // We can always fold X == X for integer setcc's.
-  if (N1 == N2 && OpVT.isInteger())
-    return getBoolConstant(ISD::isTrueWhenEqual(Cond), dl, VT, OpVT);
+  if (OpVT.isInteger()) {
+    // For EQ and NE, we can always pick a value for the undef to make the
+    // predicate pass or fail, so we can return undef.
+    // Matches behavior in llvm::ConstantFoldCompareInstruction.
+    // icmp eq/ne X, undef -> undef.
+    if ((N1.isUndef() || N2.isUndef()) &&
+        (Cond == ISD::SETEQ || Cond == ISD::SETNE))
+      return getUNDEF(VT);
+
+    // If both operands are undef, we can return undef for int comparison.
+    // icmp undef, undef -> undef.
+    if (N1.isUndef() && N2.isUndef())
+      return getUNDEF(VT);
+
+    // icmp X, X -> true/false
+    // icmp X, undef -> true/false because undef could be X.
+    if (N1 == N2)
+      return getBoolConstant(ISD::isTrueWhenEqual(Cond), dl, VT, OpVT);
+  }
 
   if (ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2)) {
     const APInt &C2 = N2C->getAPIntValue();

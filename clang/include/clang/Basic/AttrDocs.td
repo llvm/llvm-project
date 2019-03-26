@@ -4089,3 +4089,20 @@ it will be automatically applied to overrides if the method is virtual. The
 attribute can also be written using C++11 syntax: ``[[mig::server_routine]]``.
 }];
 }
+
+def MSAllocatorDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``__declspec(allocator)`` attribute is applied to functions that allocate
+memory, such as operator new in C++. When CodeView debug information is emitted
+(enabled by ``clang -gcodeview`` or ``clang-cl /Z7``), Clang will attempt to
+record the code offset of heap allocation call sites in the debug info. It will
+also record the type being allocated using some local heuristics. The Visual
+Studio debugger uses this information to `profile memory usage`_.
+
+.. _profile memory usage: https://docs.microsoft.com/en-us/visualstudio/profiling/memory-usage
+
+This attribute does not affect optimizations in any way, unlike GCC's
+``__attribute__((malloc))``.
+}];
+}
