@@ -362,7 +362,7 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   auto WorkingDir = Compiler.getSourceManager()
                         .getFileManager()
                         .getVirtualFileSystem()
-                        ->getCurrentWorkingDirectory();
+                        .getCurrentWorkingDirectory();
   if (WorkingDir)
     Context.setCurrentBuildDirectory(WorkingDir.get());
 
@@ -555,7 +555,7 @@ void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
   ErrorReporter Reporter(Context, Fix, BaseFS);
   llvm::vfs::FileSystem &FileSystem =
-      *Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
+      Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
   auto InitialWorkingDir = FileSystem.getCurrentWorkingDirectory();
   if (!InitialWorkingDir)
     llvm::report_fatal_error("Cannot get current working path.");

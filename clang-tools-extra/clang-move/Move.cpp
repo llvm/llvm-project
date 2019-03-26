@@ -87,8 +87,7 @@ std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
 std::string MakeAbsolutePath(const SourceManager &SM, StringRef Path) {
   llvm::SmallString<128> AbsolutePath(Path);
   if (std::error_code EC =
-          SM.getFileManager().getVirtualFileSystem()->makeAbsolute(
-              AbsolutePath))
+          SM.getFileManager().getVirtualFileSystem().makeAbsolute(AbsolutePath))
     llvm::errs() << "Warning: could not make absolute file: '" << EC.message()
                  << '\n';
   // Handle symbolic link path cases.
