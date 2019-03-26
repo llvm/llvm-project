@@ -52,7 +52,7 @@ entry:
 ; a BIC.
 
 ; CHECK-LABEL: xor1:
-; CHECK: orr [[R0:w[0-9]+]], wzr, #0x38
+; CHECK: mov [[R0:w[0-9]+]], #56
 ; CHECK: bic {{w[0-9]+}}, [[R0]], w0, lsl #3
 
 define i32 @xor1(i32 %a) {

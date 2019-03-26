@@ -9,7 +9,7 @@ declare i8* @bar()
 
 ; CHECK-LABEL: foo:
 ; CHECK: tbz
-; CHECK: orr
+; CHECK: mov{{.*}}, #1
 ; CHECK: ret
 ; CHECK: bl bar
 ; CHECK: cbnz

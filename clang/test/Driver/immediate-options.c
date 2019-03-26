@@ -7,7 +7,7 @@
 // HELP-HIDDEN: driver-mode
 
 // RUN: %clang -dumpversion | FileCheck %s -check-prefix=DUMPVERSION
-// DUMPVERSION: 4.2.1
+// DUMPVERSION: {{[0-9]+\.[0-9.]+}}
 
 // RUN: %clang -print-search-dirs | FileCheck %s -check-prefix=PRINT-SEARCH-DIRS
 // PRINT-SEARCH-DIRS: programs: ={{.*}}

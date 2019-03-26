@@ -36,7 +36,7 @@ define void @t3(i64* %object) {
 
 ; base + unsigned offset (> imm12 * size of type in bytes)
 ; CHECK: @t4
-; CHECK: orr w[[NUM:[0-9]+]], wzr, #0x8000
+; CHECK: mov w[[NUM:[0-9]+]], #32768
 ; CHECK: ldr xzr, [x0, x[[NUM]]]
 ; CHECK: ret
 define void @t4(i64* %object) {
@@ -58,7 +58,7 @@ define void @t5(i64 %a) {
 ; base + reg + imm
 ; CHECK: @t6
 ; CHECK: add [[ADDREG:x[0-9]+]], x1, x0, lsl #3
-; CHECK-NEXT: orr w[[NUM:[0-9]+]], wzr, #0x8000
+; CHECK-NEXT: mov w[[NUM:[0-9]+]], #32768
 ; CHECK: ldr xzr, [x{{[0-9]+}}, x[[NUM]]]
 ; CHECK: ret
 define void @t6(i64 %a, i64* %object) {
@@ -71,7 +71,7 @@ define void @t6(i64 %a, i64* %object) {
 ; Test base + wide immediate
 define void @t7(i64 %a) {
 ; CHECK-LABEL: t7:
-; CHECK: orr w[[NUM:[0-9]+]], wzr, #0xffff
+; CHECK: mov w[[NUM:[0-9]+]], #65535
 ; CHECK-NEXT: ldr xzr, [x0, x[[NUM]]]
   %1 = add i64 %a, 65535   ;0xffff
   %2 = inttoptr i64 %1 to i64*

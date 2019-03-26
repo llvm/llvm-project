@@ -2956,6 +2956,9 @@ def err_base_specifier_attribute : Error<
   "%0 attribute cannot be applied to a base specifier">;
 def err_invalid_attribute_on_virtual_function : Error<
   "%0 attribute cannot be applied to virtual functions">;
+def warn_declspec_allocator_nonpointer : Warning<
+  "ignoring __declspec(allocator) because the function return type %0 is not "
+  "a pointer or reference type">, InGroup<IgnoredAttributes>;
 
 def ext_cannot_use_trivial_abi : ExtWarn<
   "'trivial_abi' cannot be applied to %0">, InGroup<IgnoredAttributes>;

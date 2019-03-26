@@ -173,12 +173,14 @@ namespace {
         MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
         int Offset, unsigned Base, bool BaseKill, unsigned Opcode,
         ARMCC::CondCodes Pred, unsigned PredReg, const DebugLoc &DL,
-        ArrayRef<std::pair<unsigned, bool>> Regs);
+        ArrayRef<std::pair<unsigned, bool>> Regs,
+        ArrayRef<MachineInstr*> Instrs);
     MachineInstr *CreateLoadStoreDouble(
         MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
         int Offset, unsigned Base, bool BaseKill, unsigned Opcode,
         ARMCC::CondCodes Pred, unsigned PredReg, const DebugLoc &DL,
-        ArrayRef<std::pair<unsigned, bool>> Regs) const;
+        ArrayRef<std::pair<unsigned, bool>> Regs,
+        ArrayRef<MachineInstr*> Instrs) const;
     void FormCandidates(const MemOpQueue &MemOps);
     MachineInstr *MergeOpsUpdate(const MergeCandidate &Cand);
     bool FixInvalidRegPairOp(MachineBasicBlock &MBB,
@@ -622,7 +624,8 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
     int Offset, unsigned Base, bool BaseKill, unsigned Opcode,
     ARMCC::CondCodes Pred, unsigned PredReg, const DebugLoc &DL,
-    ArrayRef<std::pair<unsigned, bool>> Regs) {
+    ArrayRef<std::pair<unsigned, bool>> Regs,
+    ArrayRef<MachineInstr*> Instrs) {
   unsigned NumRegs = Regs.size();
   assert(NumRegs > 1);
 
@@ -814,6 +817,8 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
   for (const std::pair<unsigned, bool> &R : Regs)
     MIB.addReg(R.first, getDefRegState(isDef) | getKillRegState(R.second));
 
+  MIB.cloneMergedMemRefs(Instrs);
+
   return MIB.getInstr();
 }
 
@@ -821,7 +826,8 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreDouble(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
     int Offset, unsigned Base, bool BaseKill, unsigned Opcode,
     ARMCC::CondCodes Pred, unsigned PredReg, const DebugLoc &DL,
-    ArrayRef<std::pair<unsigned, bool>> Regs) const {
+    ArrayRef<std::pair<unsigned, bool>> Regs,
+    ArrayRef<MachineInstr*> Instrs) const {
   bool IsLoad = isi32Load(Opcode);
   assert((IsLoad || isi32Store(Opcode)) && "Must have integer load or store");
   unsigned LoadStoreOpcode = IsLoad ? ARM::t2LDRDi8 : ARM::t2STRDi8;
@@ -837,6 +843,7 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreDouble(
        .addReg(Regs[1].first, getKillRegState(Regs[1].second));
   }
   MIB.addReg(Base).addImm(Offset).addImm(Pred).addReg(PredReg);
+  MIB.cloneMergedMemRefs(Instrs);
   return MIB.getInstr();
 }
 
@@ -894,10 +901,11 @@ MachineInstr *ARMLoadStoreOpt::MergeOpsUpdate(const MergeCandidate &Cand) {
   MachineInstr *Merged = nullptr;
   if (Cand.CanMergeToLSDouble)
     Merged = CreateLoadStoreDouble(MBB, InsertBefore, Offset, Base, BaseKill,
-                                   Opcode, Pred, PredReg, DL, Regs);
+                                   Opcode, Pred, PredReg, DL, Regs,
+                                   Cand.Instrs);
   if (!Merged && Cand.CanMergeToLSMulti)
     Merged = CreateLoadStoreMulti(MBB, InsertBefore, Offset, Base, BaseKill,
-                                  Opcode, Pred, PredReg, DL, Regs);
+                                  Opcode, Pred, PredReg, DL, Regs, Cand.Instrs);
   if (!Merged)
     return nullptr;
 
@@ -1435,14 +1443,16 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
       .addReg(Base, getKillRegState(isLd ? BaseKill : false))
       .addImm(Pred).addReg(PredReg)
       .addReg(MO.getReg(), (isLd ? getDefRegState(true) :
-                            getKillRegState(MO.isKill())));
+                            getKillRegState(MO.isKill())))
+      .cloneMemRefs(*MI);
   } else if (isLd) {
     if (isAM2) {
       // LDR_PRE, LDR_POST
       if (NewOpc == ARM::LDR_PRE_IMM || NewOpc == ARM::LDRB_PRE_IMM) {
         BuildMI(MBB, MBBI, DL, TII->get(NewOpc), MI->getOperand(0).getReg())
           .addReg(Base, RegState::Define)
-          .addReg(Base).addImm(Offset).addImm(Pred).addReg(PredReg);
+          .addReg(Base).addImm(Offset).addImm(Pred).addReg(PredReg)
+          .cloneMemRefs(*MI);
       } else {
         int Imm = ARM_AM::getAM2Opc(AddSub, Bytes, ARM_AM::no_shift);
         BuildMI(MBB, MBBI, DL, TII->get(NewOpc), MI->getOperand(0).getReg())
@@ -1450,7 +1460,8 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
             .addReg(Base)
             .addReg(0)
             .addImm(Imm)
-            .add(predOps(Pred, PredReg));
+            .add(predOps(Pred, PredReg))
+            .cloneMemRefs(*MI);
       }
     } else {
       // t2LDR_PRE, t2LDR_POST
@@ -1458,7 +1469,8 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
           .addReg(Base, RegState::Define)
           .addReg(Base)
           .addImm(Offset)
-          .add(predOps(Pred, PredReg));
+          .add(predOps(Pred, PredReg))
+          .cloneMemRefs(*MI);
     }
   } else {
     MachineOperand &MO = MI->getOperand(0);
@@ -1473,14 +1485,16 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
           .addReg(Base)
           .addReg(0)
           .addImm(Imm)
-          .add(predOps(Pred, PredReg));
+          .add(predOps(Pred, PredReg))
+          .cloneMemRefs(*MI);
     } else {
       // t2STR_PRE, t2STR_POST
       BuildMI(MBB, MBBI, DL, TII->get(NewOpc), Base)
           .addReg(MO.getReg(), getKillRegState(MO.isKill()))
           .addReg(Base)
           .addImm(Offset)
-          .add(predOps(Pred, PredReg));
+          .add(predOps(Pred, PredReg))
+          .cloneMemRefs(*MI);
     }
   }
   MBB.erase(MBBI);
@@ -1540,7 +1554,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
   // Transfer implicit operands.
   for (const MachineOperand &MO : MI.implicit_operands())
     MIB.add(MO);
-  MIB.setMemRefs(MI.memoperands());
+  MIB.cloneMemRefs(MI);
 
   MBB.erase(MBBI);
   return true;
@@ -1608,19 +1622,26 @@ static void InsertLDR_STR(MachineBasicBlock &MBB,
                           bool isDef, unsigned NewOpc, unsigned Reg,
                           bool RegDeadKill, bool RegUndef, unsigned BaseReg,
                           bool BaseKill, bool BaseUndef, ARMCC::CondCodes Pred,
-                          unsigned PredReg, const TargetInstrInfo *TII) {
+                          unsigned PredReg, const TargetInstrInfo *TII,
+                          MachineInstr *MI) {
   if (isDef) {
     MachineInstrBuilder MIB = BuildMI(MBB, MBBI, MBBI->getDebugLoc(),
                                       TII->get(NewOpc))
       .addReg(Reg, getDefRegState(true) | getDeadRegState(RegDeadKill))
       .addReg(BaseReg, getKillRegState(BaseKill)|getUndefRegState(BaseUndef));
     MIB.addImm(Offset).addImm(Pred).addReg(PredReg);
+    // FIXME: This is overly conservative; the new instruction accesses 4
+    // bytes, not 8.
+    MIB.cloneMemRefs(*MI);
   } else {
     MachineInstrBuilder MIB = BuildMI(MBB, MBBI, MBBI->getDebugLoc(),
                                       TII->get(NewOpc))
       .addReg(Reg, getKillRegState(RegDeadKill) | getUndefRegState(RegUndef))
       .addReg(BaseReg, getKillRegState(BaseKill)|getUndefRegState(BaseUndef));
     MIB.addImm(Offset).addImm(Pred).addReg(PredReg);
+    // FIXME: This is overly conservative; the new instruction accesses 4
+    // bytes, not 8.
+    MIB.cloneMemRefs(*MI);
   }
 }
 
@@ -1678,7 +1699,8 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
         .addReg(BaseReg, getKillRegState(BaseKill))
         .addImm(Pred).addReg(PredReg)
         .addReg(EvenReg, getDefRegState(isLd) | getDeadRegState(EvenDeadKill))
-        .addReg(OddReg,  getDefRegState(isLd) | getDeadRegState(OddDeadKill));
+        .addReg(OddReg,  getDefRegState(isLd) | getDeadRegState(OddDeadKill))
+        .cloneMemRefs(*MI);
       ++NumLDRD2LDM;
     } else {
       BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(NewOpc))
@@ -1687,7 +1709,8 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
         .addReg(EvenReg,
                 getKillRegState(EvenDeadKill) | getUndefRegState(EvenUndef))
         .addReg(OddReg,
-                getKillRegState(OddDeadKill)  | getUndefRegState(OddUndef));
+                getKillRegState(OddDeadKill)  | getUndefRegState(OddUndef))
+        .cloneMemRefs(*MI);
       ++NumSTRD2STM;
     }
   } else {
@@ -1705,9 +1728,10 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
     if (isLd && TRI->regsOverlap(EvenReg, BaseReg)) {
       assert(!TRI->regsOverlap(OddReg, BaseReg));
       InsertLDR_STR(MBB, MBBI, OffImm + 4, isLd, NewOpc2, OddReg, OddDeadKill,
-                    false, BaseReg, false, BaseUndef, Pred, PredReg, TII);
+                    false, BaseReg, false, BaseUndef, Pred, PredReg, TII, MI);
       InsertLDR_STR(MBB, MBBI, OffImm, isLd, NewOpc, EvenReg, EvenDeadKill,
-                    false, BaseReg, BaseKill, BaseUndef, Pred, PredReg, TII);
+                    false, BaseReg, BaseKill, BaseUndef, Pred, PredReg, TII,
+                    MI);
     } else {
       if (OddReg == EvenReg && EvenDeadKill) {
         // If the two source operands are the same, the kill marker is
@@ -1720,9 +1744,11 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
       if (EvenReg == BaseReg)
         EvenDeadKill = false;
       InsertLDR_STR(MBB, MBBI, OffImm, isLd, NewOpc, EvenReg, EvenDeadKill,
-                    EvenUndef, BaseReg, false, BaseUndef, Pred, PredReg, TII);
+                    EvenUndef, BaseReg, false, BaseUndef, Pred, PredReg, TII,
+                    MI);
       InsertLDR_STR(MBB, MBBI, OffImm + 4, isLd, NewOpc2, OddReg, OddDeadKill,
-                    OddUndef, BaseReg, BaseKill, BaseUndef, Pred, PredReg, TII);
+                    OddUndef, BaseReg, BaseKill, BaseUndef, Pred, PredReg, TII,
+                    MI);
     }
     if (isLd)
       ++NumLDRD2LDR;

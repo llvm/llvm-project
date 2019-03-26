@@ -323,62 +323,80 @@ is conservatively correct for OpenCL.
   .. table:: AMDHSA LLVM Sync Scopes
      :name: amdgpu-amdhsa-llvm-sync-scopes-table
 
-     ================ ==========================================================
-     LLVM Sync Scope  Description
-     ================ ==========================================================
-     *none*           The default: ``system``.
+     ======================= ===================================================
+     LLVM Sync Scope         Description
+     ======================= ===================================================
+     *none*                  The default: ``system``.
 
-                      Synchronizes with, and participates in modification and
-                      seq_cst total orderings with, other operations (except
-                      image operations) for all address spaces (except private,
-                      or generic that accesses private) provided the other
-                      operation's sync scope is:
+                             Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
 
-                      - ``system``.
-                      - ``agent`` and executed by a thread on the same agent.
-                      - ``workgroup`` and executed by a thread in the same
-                        workgroup.
-                      - ``wavefront`` and executed by a thread in the same
-                        wavefront.
+                             - ``system``.
+                             - ``agent`` and executed by a thread on the same
+                               agent.
+                             - ``workgroup`` and executed by a thread in the
+                               same workgroup.
+                             - ``wavefront`` and executed by a thread in the
+                               same wavefront.
 
-     ``agent``        Synchronizes with, and participates in modification and
-                      seq_cst total orderings with, other operations (except
-                      image operations) for all address spaces (except private,
-                      or generic that accesses private) provided the other
-                      operation's sync scope is:
+     ``agent``               Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
 
-                      - ``system`` or ``agent`` and executed by a thread on the
-                        same agent.
-                      - ``workgroup`` and executed by a thread in the same
-                        workgroup.
-                      - ``wavefront`` and executed by a thread in the same
-                        wavefront.
+                             - ``system`` or ``agent`` and executed by a thread
+                               on the same agent.
+                             - ``workgroup`` and executed by a thread in the
+                               same workgroup.
+                             - ``wavefront`` and executed by a thread in the
+                               same wavefront.
 
-     ``workgroup``    Synchronizes with, and participates in modification and
-                      seq_cst total orderings with, other operations (except
-                      image operations) for all address spaces (except private,
-                      or generic that accesses private) provided the other
-                      operation's sync scope is:
+     ``workgroup``           Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
 
-                      - ``system``, ``agent`` or ``workgroup`` and executed by a
-                        thread in the same workgroup.
-                      - ``wavefront`` and executed by a thread in the same
-                        wavefront.
+                             - ``system``, ``agent`` or ``workgroup`` and
+                               executed by a thread in the same workgroup.
+                             - ``wavefront`` and executed by a thread in the
+                               same wavefront.
 
-     ``wavefront``    Synchronizes with, and participates in modification and
-                      seq_cst total orderings with, other operations (except
-                      image operations) for all address spaces (except private,
-                      or generic that accesses private) provided the other
-                      operation's sync scope is:
+     ``wavefront``           Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
 
-                      - ``system``, ``agent``, ``workgroup`` or ``wavefront``
-                        and executed by a thread in the same wavefront.
+                             - ``system``, ``agent``, ``workgroup`` or
+                               ``wavefront`` and executed by a thread in the
+                               same wavefront.
 
-     ``singlethread`` Only synchronizes with, and participates in modification
-                      and seq_cst total orderings with, other operations (except
-                      image operations) running in the same thread for all
-                      address spaces (for example, in signal handlers).
-     ================ ==========================================================
+     ``singlethread``        Only synchronizes with, and participates in
+                             modification and seq_cst total orderings with,
+                             other operations (except image operations) running
+                             in the same thread for all address spaces (for
+                             example, in signal handlers).
+
+     ``one-as``              Same as ``system`` but only synchronizes with other
+                             operations within the same address space.
+
+     ``agent-one-as``        Same as ``agent`` but only synchronizes with other
+                             operations within the same address space.
+
+     ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
+                             other operations within the same address space.
+
+     ``wavefront-one-as``    Same as ``wavefront`` but only synchronizes with
+                             other operations within the same address space.
+
+     ``singlethread-one-as`` Same as ``singlethread`` but only synchronizes with
+                             other operations within the same address space.
+     ======================= ===================================================
 
 AMDGPU Intrinsics
 -----------------

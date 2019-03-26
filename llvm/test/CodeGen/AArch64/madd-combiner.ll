@@ -13,7 +13,7 @@ define i32 @mul_add_imm(i32 %a, i32 %b) {
 
 define i32 @mul_sub_imm1(i32 %a, i32 %b) {
 ; CHECK-LABEL: mul_sub_imm1
-; CHECK:       orr [[REG:w[0-9]+]], wzr, #0x4
+; CHECK:       mov [[REG:w[0-9]+]], #4
 ; CHECK-NEXT:  msub  {{w[0-9]+}}, w0, w1, [[REG]]
   %1 = mul i32 %a, %b
   %2 = sub i32 4, %1

@@ -3086,7 +3086,7 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
 
   // The 'X' was originally truncated. Do that now.
   if (XVT != NVT) {
-    insertDAGNode(*CurDAG, OrigNBits, Extract);
+    insertDAGNode(*CurDAG, SDValue(Node, 0), Extract);
     Extract = CurDAG->getNode(ISD::TRUNCATE, DL, NVT, Extract);
   }
 
@@ -4038,8 +4038,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         // No eligible transformation was found.
         break;
       }
-
-      // FIXME: We should be able to fold loads here.
 
       SDValue Imm = CurDAG->getTargetConstant(Mask, dl, VT);
       SDValue Reg = N0.getOperand(0);

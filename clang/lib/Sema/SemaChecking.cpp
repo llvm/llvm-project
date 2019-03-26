@@ -12522,6 +12522,8 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     return;
 
   const Type *BaseType = ArrayTy->getElementType().getTypePtr();
+  if (EffectiveType->isDependentType() || BaseType->isDependentType())
+    return;
 
   Expr::EvalResult Result;
   if (!IndexExpr->EvaluateAsInt(Result, Context, Expr::SE_AllowSideEffects))

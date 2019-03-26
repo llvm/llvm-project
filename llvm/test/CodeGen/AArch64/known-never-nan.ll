@@ -28,7 +28,7 @@ define float @fmaxnm(i32 %i1, i32 %i2) #0 {
 define float @not_fmaxnm_maybe_nan(i32 %i1, i32 %i2) #0 {
 ; CHECK-LABEL: not_fmaxnm_maybe_nan:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, wzr, #0xff800000
+; CHECK-NEXT:    mov w8, #-8388608
 ; CHECK-NEXT:    ucvtf s0, w0
 ; CHECK-NEXT:    ucvtf s1, w1
 ; CHECK-NEXT:    fmov s2, #17.00000000

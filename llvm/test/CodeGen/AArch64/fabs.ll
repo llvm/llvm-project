@@ -22,7 +22,7 @@ define double @not_fabs(double %x) #0 {
 define float @still_not_fabs(float %x) #0 {
 ; CHECK-LABEL: still_not_fabs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, wzr, #0x80000000
+; CHECK-NEXT:    mov w8, #-2147483648
 ; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    fneg s1, s0
 ; CHECK-NEXT:    fcmp s0, s2
@@ -72,7 +72,7 @@ define <4 x float> @nabsv4f32(<4 x float> %a) {
 define <2 x double> @nabsv2d64(<2 x double> %a) {
 ; CHECK-LABEL: nabsv2d64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr x8, xzr, #0x8000000000000000
+; CHECK-NEXT:    mov x8, #-9223372036854775808
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret

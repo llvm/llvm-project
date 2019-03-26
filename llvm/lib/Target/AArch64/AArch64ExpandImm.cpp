@@ -318,8 +318,11 @@ void expandMOVImm(uint64_t Imm, unsigned BitSize,
       ZeroChunks++;
   }
 
-  // FIXME: Prefer MOVZ/MOVN over ORR because of the rules for the "mov"
-  // alias.
+  // Prefer MOVZ/MOVN over ORR because of the rules for the "mov" alias.
+  if ((BitSize / 16) - OneChunks <= 1 || (BitSize / 16) - ZeroChunks <= 1) {
+    expandMOVImmSimple(Imm, BitSize, OneChunks, ZeroChunks, Insn);
+    return;
+  }
 
   // Try a single ORR.
   uint64_t UImm = Imm << (64 - BitSize) >> (64 - BitSize);
