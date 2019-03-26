@@ -306,7 +306,9 @@ static void ConnectEpilog(TapirLoopInfo &TL, Value *EpilStartIter,
     DT->changeImmediateDominator(Exit, NewExit);
 
   // Split the main loop exit to maintain canonicalization guarantees.
-  SmallVector<BasicBlock*, 4> NewExitPreds{LoopDet, LoopEnd};
+  SmallVector<BasicBlock*, 4> NewExitPreds{LoopDet};
+  if (LoopEnd != NewExit)
+    NewExitPreds.push_back(LoopEnd);
   SplitBlockPredecessors(NewExit, NewExitPreds, ".loopexit", DT, LI,
                          PreserveLCSSA);
 }
@@ -459,7 +461,7 @@ Loop *llvm::StripMineLoop(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
     bool UnrollRemainder, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
     AssumptionCache *AC, TaskInfo *TI, OptimizationRemarkEmitter *ORE,
-    bool PreserveLCSSA) {
+    bool PreserveLCSSA, bool ParallelEpilog) {
   Task *T = getTapirLoopForStripMining(L, *TI, ORE);
   if (!T)
     return nullptr;
@@ -774,88 +776,105 @@ Loop *llvm::StripMineLoop(
 
   // Detach the stripmined loop.
   Value *SyncReg = DI->getSyncRegion(), *NewSyncReg;
-  Module *M = F->getParent();
-  BasicBlock *LoopDetach = SplitBlock(NewPreheader,
-                                      NewPreheader->getTerminator(), DT, LI);
-  LoopDetach->setName(NewPreheader->getName() + ".strpm.detachloop");
-  BasicBlock *LoopDetEntry;
-  {
-    SmallVector<BasicBlock*, 4> HeaderPreds;
-    for (BasicBlock *Pred : predecessors(Header))
-      if (Pred != Latch)
-        HeaderPreds.push_back(Pred);
-    LoopDetEntry =
-      SplitBlockPredecessors(Header, HeaderPreds, ".strpm.detachloop.entry", DT,
-                             LI, PreserveLCSSA);
-    NewSyncReg = CallInst::Create(
-        Intrinsic::getDeclaration(M, Intrinsic::syncregion_start), {},
-        &*LoopDetEntry->getFirstInsertionPt());
-    NewSyncReg->setName(SyncReg->getName() + ".strpm.detachloop");
-  }
-  BasicBlock *LoopReattach = SplitEdge(Latch, NewExit, DT, LI);
-  LoopReattach->setName(Header->getName() + ".strpm.detachloop.reattach");
-
-  // Insert new detach instructions
-  if (DI->hasUnwindDest()) {
-    BasicBlock *UnwindDest = DI->getUnwindDest();
-    // Insert a detach instruction to detach the stripmined loop.
-    ReplaceInstWithInst(LoopDetach->getTerminator(),
-                        DetachInst::Create(LoopDetEntry, NewExit, UnwindDest,
-                                           SyncReg));
-    for (PHINode &PN : UnwindDest->phis())
-      PN.addIncoming(PN.getIncomingValueForBlock(Header), LoopDetach);
-
-    // Split the unwind dest to create a new landing pad for the new detach.
-    SmallVector<BasicBlock *, 4> UnwindDestPreds;
-    for (BasicBlock *Pred : predecessors(UnwindDest))
-      if (Pred != LoopDetach)
-        UnwindDestPreds.push_back(Pred);
-    SmallVector<BasicBlock *, 2> NewUnwinds;
-    SplitLandingPadPredecessors(UnwindDest, UnwindDestPreds, "", ".strpm",
-                                NewUnwinds, DT, LI, PreserveLCSSA);
-    BasicBlock *OrigUW = NewUnwinds[0], *NewUW = NewUnwinds[1];
-    BasicBlock *NewUnreachable =
-      SplitBlock(OrigUW, OrigUW->getTerminator(), DT, LI);
-    NewUnreachable->setName(OrigUW->getName() + ".unreachable");
-    // Add a detached rethrow to the end of OrigUW.
-    ReplaceInstWithInst(
-        OrigUW->getTerminator(),
-        InvokeInst::Create(
-            Intrinsic::getDeclaration(
-                M, Intrinsic::detached_rethrow,
-                { OrigUW->getLandingPadInst()->getType() }),
-            NewUnreachable, NewUW, { SyncReg, OrigUW->getLandingPadInst() }));
-    // Replace sync regions of existing detached-rethrows.
-    for (Instruction *I : DetachedRethrows) {
-      InvokeInst *II = cast<InvokeInst>(I);
-      II->setArgOperand(0, NewSyncReg);
-    }
-
-    // Remove uses of NewUnreachable from PHI nodes.
-    for (PHINode &PN : UnwindDest->phis())
-      PN.removeIncomingValue(NewUnreachable);
-    // Terminate NewUnreachable with an unreachable.
+  BasicBlock *EpilogPred, *LoopDetEntry, *LoopReattach;
+  if (ParallelEpilog) {
+    ORE->emit([&]() {
+                return OptimizationRemark(LSM_NAME, "ParallelEpil",
+                                          L->getStartLoc(), L->getHeader())
+                  << "allowing epilog to execute in parallel with stripmined "
+                  << "loop";
+              });
+    Module *M = F->getParent();
+    BasicBlock *LoopDetach = SplitBlock(NewPreheader,
+                                        NewPreheader->getTerminator(), DT, LI);
+    LoopDetach->setName(NewPreheader->getName() + ".strpm.detachloop");
     {
-      IRBuilder<> B(NewUnreachable->getTerminator());
-      Instruction *UnreachableTerm = cast<Instruction>(B.CreateUnreachable());
-      UnreachableTerm->setDebugLoc(
-          NewUnreachable->getTerminator()->getDebugLoc());
-      NewUnreachable->getTerminator()->eraseFromParent();
+      SmallVector<BasicBlock*, 4> HeaderPreds;
+      for (BasicBlock *Pred : predecessors(Header))
+        if (Pred != Latch)
+          HeaderPreds.push_back(Pred);
+      LoopDetEntry =
+        SplitBlockPredecessors(Header, HeaderPreds, ".strpm.detachloop.entry",
+                               DT, LI, PreserveLCSSA);
+      NewSyncReg = CallInst::Create(
+          Intrinsic::getDeclaration(M, Intrinsic::syncregion_start), {},
+          &*LoopDetEntry->getFirstInsertionPt());
+      NewSyncReg->setName(SyncReg->getName() + ".strpm.detachloop");
     }
-    // Update PHI nodes in NewUW to get the same value via OrigUW from the new
-    // detach.
-    for (PHINode &PN : NewUW->phis())
-      PN.addIncoming(PN.getIncomingValueForBlock(LoopDetach), OrigUW);
-    // Update the dominator tree
-    DT->changeImmediateDominator(UnwindDest, NewUW);
+    LoopReattach = SplitEdge(Latch, NewExit, DT, LI);
+    LoopReattach->setName(Header->getName() + ".strpm.detachloop.reattach");
+
+    // Insert new detach instructions
+    if (DI->hasUnwindDest()) {
+      BasicBlock *UnwindDest = DI->getUnwindDest();
+      // Insert a detach instruction to detach the stripmined loop.
+      ReplaceInstWithInst(LoopDetach->getTerminator(),
+                          DetachInst::Create(LoopDetEntry, NewExit, UnwindDest,
+                                             SyncReg));
+      for (PHINode &PN : UnwindDest->phis())
+        PN.addIncoming(PN.getIncomingValueForBlock(Header), LoopDetach);
+
+      // Split the unwind dest to create a new landing pad for the new detach.
+      SmallVector<BasicBlock *, 4> UnwindDestPreds;
+      for (BasicBlock *Pred : predecessors(UnwindDest))
+        if (Pred != LoopDetach)
+          UnwindDestPreds.push_back(Pred);
+      SmallVector<BasicBlock *, 2> NewUnwinds;
+      SplitLandingPadPredecessors(UnwindDest, UnwindDestPreds, "", ".strpm",
+                                  NewUnwinds, DT, LI, PreserveLCSSA);
+      BasicBlock *OrigUW = NewUnwinds[0], *NewUW = NewUnwinds[1];
+      BasicBlock *NewUnreachable =
+        SplitBlock(OrigUW, OrigUW->getTerminator(), DT, LI);
+      NewUnreachable->setName(OrigUW->getName() + ".unreachable");
+      // Add a detached rethrow to the end of OrigUW.
+      ReplaceInstWithInst(
+          OrigUW->getTerminator(),
+          InvokeInst::Create(
+              Intrinsic::getDeclaration(
+                  M, Intrinsic::detached_rethrow,
+                  { OrigUW->getLandingPadInst()->getType() }),
+              NewUnreachable, NewUW, { SyncReg, OrigUW->getLandingPadInst() }));
+      // Replace sync regions of existing detached-rethrows.
+      for (Instruction *I : DetachedRethrows) {
+        InvokeInst *II = cast<InvokeInst>(I);
+        II->setArgOperand(0, NewSyncReg);
+      }
+
+      // Remove uses of NewUnreachable from PHI nodes.
+      for (PHINode &PN : UnwindDest->phis())
+        PN.removeIncomingValue(NewUnreachable);
+      // Terminate NewUnreachable with an unreachable.
+      {
+        IRBuilder<> B(NewUnreachable->getTerminator());
+        Instruction *UnreachableTerm = cast<Instruction>(B.CreateUnreachable());
+        UnreachableTerm->setDebugLoc(
+            NewUnreachable->getTerminator()->getDebugLoc());
+        NewUnreachable->getTerminator()->eraseFromParent();
+      }
+      // Update PHI nodes in NewUW to get the same value via OrigUW from the new
+      // detach.
+      for (PHINode &PN : NewUW->phis())
+        PN.addIncoming(PN.getIncomingValueForBlock(LoopDetach), OrigUW);
+      // Update the dominator tree
+      DT->changeImmediateDominator(UnwindDest, NewUW);
+    } else {
+      // Insert a detach instruction to detach the stripmined loop.
+      ReplaceInstWithInst(LoopDetach->getTerminator(),
+                          DetachInst::Create(LoopDetEntry, NewExit, SyncReg));
+      LoopDetach->getTerminator()->setDebugLoc(
+          Header->getTerminator()->getDebugLoc());
+    }
+    // Insert a reattach instruction after the detached stripmined loop.
+    ReplaceInstWithInst(LoopReattach->getTerminator(),
+                        ReattachInst::Create(NewExit, SyncReg));
+    LoopReattach->getTerminator()->setDebugLoc(
+        LoopDetach->getTerminator()->getDebugLoc());
+    EpilogPred = LoopDetach;
   } else {
-    // Insert a detach instruction to detach the stripmined loop.
-    ReplaceInstWithInst(LoopDetach->getTerminator(),
-                        DetachInst::Create(LoopDetEntry, NewExit, SyncReg));
+    NewSyncReg = SyncReg;
+    LoopReattach = NewExit;
+    LoopDetEntry = NewPreheader;
   }
-  // Insert a reattach instruction after the detached stripmined loop.
-  ReplaceInstWithInst(LoopReattach->getTerminator(),
-                      ReattachInst::Create(NewExit, SyncReg));
 
   // Get the set of new loop blocks
   SetVector<BasicBlock *> NewLoopBlocks;
@@ -930,10 +949,13 @@ Loop *llvm::StripMineLoop(
   // Insert a reattach at the end of NewReattB.
   ReplaceInstWithInst(NewReattB->getTerminator(),
                       ReattachInst::Create(NewLatch, NewSyncReg));
-  // Update the dominator tree.
+  // Update the dominator tree, and determine predecessors of epilog.
   if (DT->dominates(Header, Latch))
     DT->changeImmediateDominator(Latch, ReattachDom);
-  DT->changeImmediateDominator(LoopReattach, NewLatch);
+  if (ParallelEpilog)
+    DT->changeImmediateDominator(LoopReattach, NewLatch);
+  else
+    EpilogPred = NewLatch;
 
   // The block structure of the stripmined loop should now look like so:
   //
@@ -1099,7 +1121,7 @@ Loop *llvm::StripMineLoop(
   Instruction *EpilStartIter = cast<Instruction>(
       B2.CreateSub(TripCount, ModVal));
   EpilStartIter->copyIRFlags(PrimaryInc);
-  ConnectEpilog(TL, EpilStartIter, ModVal, LoopDetach, LoopReattach, NewExit,
+  ConnectEpilog(TL, EpilStartIter, ModVal, EpilogPred, LoopReattach, NewExit,
                 LatchExit, Preheader, EpilogPreheader, VMap, DT, LI, SE, DL,
                 PreserveLCSSA);
 

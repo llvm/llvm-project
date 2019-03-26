@@ -419,9 +419,27 @@ static bool tryToStripMineLoop(
     return false;
   }
 
+  // When is it worthwhile to allow the epilog to run in parallel with the
+  // stripmined loop?  We expect the epilog to perform G/2 iterations on
+  // average, where G is the selected grainsize.  Our goal is to ensure that
+  // these G/2 iterations offset the cost of an additional detach.  We have
+  // already computed G = \pow_2_floor(C * d / S), where C is the coarsening
+  // factor (a power of 2), d is the cost of a detach, and S is the work of the
+  // loop body, and \pow_2_floor gives the floow of the value rounded to the
+  // next power of 2.  We distinguish two cases.
+  //
+  // 1) If G < C, then due to rounding, have that d / S < 1/2, implying that
+  // S > 2d.  Hence it's profitable to allow the epilog to execute in parallel.
+  //
+  // 2) If G == C, then to satisfy (G/2) * S + d <= (1 + \eps) * G/2 * S, where
+  // \eps = 1/C, we require S >= 2 * d.
+  //
+  // We check for these two cases and encode the result in ParallelEpilog.
+  bool ParallelEpilog = (SMP.Count < SMP.DefaultCoarseningFactor) ||
+    (LoopSize >= 2 * TTI.getUserCost(L->getHeader()->getTerminator()));
   Loop *NewLoop = StripMineLoop(L, SMP.Count, SMP.AllowExpensiveTripCount,
                                 SMP.UnrollRemainder, LI, &SE, &DT, &AC, TI,
-                                &ORE, PreserveLCSSA);
+                                &ORE, PreserveLCSSA, ParallelEpilog);
   if (!NewLoop)
     return false;
 
