@@ -555,16 +555,16 @@ define void @test16elt_signed(<16 x float>* noalias nocapture sret %agg.result, 
 ; CHECK-BE-NEXT:    lxvx v3, 0, r4
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI7_3@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI7_3@toc@l
-; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
-; CHECK-BE-NEXT:    stxv vs1, 48(r3)
+; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
+; CHECK-BE-NEXT:    stxv vs1, 32(r3)
 ; CHECK-BE-NEXT:    vextsb2w v3, v3
 ; CHECK-BE-NEXT:    xvcvsxwsp vs2, v3
 ; CHECK-BE-NEXT:    lxvx v3, 0, r4
 ; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
-; CHECK-BE-NEXT:    stxv vs2, 0(r3)
+; CHECK-BE-NEXT:    stxv vs2, 48(r3)
 ; CHECK-BE-NEXT:    vextsb2w v2, v2
 ; CHECK-BE-NEXT:    xvcvsxwsp vs3, v2
-; CHECK-BE-NEXT:    stxv vs3, 32(r3)
+; CHECK-BE-NEXT:    stxv vs3, 0(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = sitofp <16 x i8> %a to <16 x float>

@@ -349,8 +349,7 @@ bool ConstantRange::isWrappedSet() const {
 }
 
 bool ConstantRange::isSignWrappedSet() const {
-  return contains(APInt::getSignedMaxValue(getBitWidth())) &&
-         contains(APInt::getSignedMinValue(getBitWidth()));
+  return Lower.sgt(Upper) && !Upper.isMinSignedValue();
 }
 
 APInt ConstantRange::getSetSize() const {

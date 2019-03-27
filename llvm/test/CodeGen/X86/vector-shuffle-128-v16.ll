@@ -1736,7 +1736,7 @@ define <16 x i8> @insert_dup_mem_v16i8_i32(i32* %ptr) {
 define <16 x i8> @insert_dup_mem_v16i8_sext_i8(i8* %ptr) {
 ; SSE2-LABEL: insert_dup_mem_v16i8_sext_i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsbl (%rdi), %eax
+; SSE2-NEXT:    movzbl (%rdi), %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
@@ -1745,7 +1745,7 @@ define <16 x i8> @insert_dup_mem_v16i8_sext_i8(i8* %ptr) {
 ;
 ; SSSE3-LABEL: insert_dup_mem_v16i8_sext_i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movsbl (%rdi), %eax
+; SSSE3-NEXT:    movzbl (%rdi), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
 ; SSSE3-NEXT:    pxor %xmm1, %xmm1
 ; SSSE3-NEXT:    pshufb %xmm1, %xmm0
@@ -1753,7 +1753,7 @@ define <16 x i8> @insert_dup_mem_v16i8_sext_i8(i8* %ptr) {
 ;
 ; SSE41-LABEL: insert_dup_mem_v16i8_sext_i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movsbl (%rdi), %eax
+; SSE41-NEXT:    movzbl (%rdi), %eax
 ; SSE41-NEXT:    movd %eax, %xmm0
 ; SSE41-NEXT:    pxor %xmm1, %xmm1
 ; SSE41-NEXT:    pshufb %xmm1, %xmm0
@@ -1761,7 +1761,7 @@ define <16 x i8> @insert_dup_mem_v16i8_sext_i8(i8* %ptr) {
 ;
 ; AVX1-LABEL: insert_dup_mem_v16i8_sext_i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    movsbl (%rdi), %eax
+; AVX1-NEXT:    movzbl (%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm0, %xmm0

@@ -381,17 +381,13 @@ int main(int argc, char **argv) {
 
   const MCSchedModel &SM = STI->getSchedModel();
 
-  unsigned Width = SM.IssueWidth;
-  if (DispatchWidth)
-    Width = DispatchWidth;
-
   // Create an instruction builder.
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
 
   // Create a context to control ownership of the pipeline hardware.
   mca::Context MCA(*MRI, *STI);
 
-  mca::PipelineOptions PO(Width, RegisterFileSize, LoadQueueSize,
+  mca::PipelineOptions PO(DispatchWidth, RegisterFileSize, LoadQueueSize,
                           StoreQueueSize, AssumeNoAlias,
                           EnableBottleneckAnalysis);
 
@@ -470,7 +466,7 @@ int main(int argc, char **argv) {
 
     if (PrintSummaryView)
       Printer.addView(llvm::make_unique<mca::SummaryView>(
-          SM, Insts, Width, EnableBottleneckAnalysis));
+          SM, Insts, DispatchWidth, EnableBottleneckAnalysis));
 
     if (PrintInstructionInfoView)
       Printer.addView(

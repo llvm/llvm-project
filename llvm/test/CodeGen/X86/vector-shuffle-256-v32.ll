@@ -3154,7 +3154,7 @@ define <32 x i8> @insert_dup_mem_v32i8_i32(i32* %ptr) {
 define <32 x i8> @insert_dup_mem_v32i8_sext_i8(i8* %ptr) {
 ; AVX1-LABEL: insert_dup_mem_v32i8_sext_i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    movsbl (%rdi), %eax
+; AVX1-NEXT:    movzbl (%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm0, %xmm0

@@ -125,6 +125,7 @@ static_library("Support") {
     "WithColor.cpp",
     "YAMLParser.cpp",
     "YAMLTraits.cpp",
+    "Z3Solver.cpp",
     "circular_raw_ostream.cpp",
     "raw_os_ostream.cpp",
     "raw_ostream.cpp",
@@ -156,6 +157,9 @@ static_library("Support") {
   ]
 
   libs = []
+
+  # FIXME: llvm/Config/BUILD.gn currently always sets LLVM_WITH_Z3
+  # to false. If that changes we need to link to Z3 libs here.
 
   if (current_os == "linux" || current_os == "android") {
     libs += [ "dl" ]

@@ -12,10 +12,10 @@ executable("modularize") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "Modularize.cpp",
-    "ModuleAssistant.cpp",
-    "ModularizeUtilities.cpp",
     "CoverageChecker.cpp",
+    "Modularize.cpp",
+    "ModularizeUtilities.cpp",
+    "ModuleAssistant.cpp",
     "PreprocessorTracker.cpp",
   ]
 }

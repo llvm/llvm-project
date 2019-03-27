@@ -1064,6 +1064,28 @@ static Instruction *canonicalizeLowbitMask(BinaryOperator &I,
   return BinaryOperator::CreateNot(NotMask, I.getName());
 }
 
+static Instruction *foldToUnsignedSaturatedAdd(BinaryOperator &I) {
+  assert(I.getOpcode() == Instruction::Add && "Expecting add instruction");
+  Type *Ty = I.getType();
+  auto getUAddSat = [&]() {
+    return Intrinsic::getDeclaration(I.getModule(), Intrinsic::uadd_sat, Ty);
+  };
+
+  // add (umin X, ~Y), Y --> uaddsat X, Y
+  Value *X, *Y;
+  if (match(&I, m_c_Add(m_c_UMin(m_Value(X), m_Not(m_Value(Y))),
+                        m_Deferred(Y))))
+    return CallInst::Create(getUAddSat(), { X, Y });
+
+  // add (umin X, ~C), C --> uaddsat X, C
+  const APInt *C, *NotC;
+  if (match(&I, m_Add(m_UMin(m_Value(X), m_APInt(NotC)), m_APInt(C))) &&
+      *C == ~*NotC)
+    return CallInst::Create(getUAddSat(), { X, ConstantInt::get(Ty, *C) });
+
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   if (Value *V = SimplifyAddInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
@@ -1265,6 +1287,9 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
 
   if (Instruction *V = canonicalizeLowbitMask(I, Builder))
     return V;
+
+  if (Instruction *SatAdd = foldToUnsignedSaturatedAdd(I))
+    return SatAdd;
 
   return Changed ? &I : nullptr;
 }

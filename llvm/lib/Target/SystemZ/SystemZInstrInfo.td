@@ -361,9 +361,6 @@ defm CondStore64 : CondStores<GR64, nonvolatile_store,
 //===----------------------------------------------------------------------===//
 
 // Register moves.
-// Expands to LR, RISBHG or RISBLG, depending on the choice of registers.
-def LRMux : UnaryRRPseudo<"lr", null_frag, GRX32, GRX32>,
-            Requires<[FeatureHighWord]>;
 def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
 def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
 

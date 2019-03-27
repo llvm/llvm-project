@@ -297,6 +297,9 @@ public:
 
     /// The node N that was updated.
     virtual void NodeUpdated(SDNode *N);
+
+    /// The node N that was inserted.
+    virtual void NodeInserted(SDNode *N);
   };
 
   struct DAGNodeDeletedListener : public DAGUpdateListener {
@@ -972,6 +975,10 @@ public:
 
   /// Try to simplify a shift into 1 of its operands or a constant.
   SDValue simplifyShift(SDValue X, SDValue Y);
+
+  /// Try to simplify a floating-point binary operation into 1 of its operands
+  /// or a constant.
+  SDValue simplifyFPBinop(unsigned Opcode, SDValue X, SDValue Y);
 
   /// VAArg produces a result and token chain, and takes a pointer
   /// and a source value as input.

@@ -542,10 +542,14 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
     Obj.OSABI = Config.OutputArch.getValue().OSABI;
   }
 
-  if (Error E = updateAndRemoveSymbols(Config, Obj))
+  // It is important to remove the sections first. For example, we want to
+  // remove the relocation sections before removing the symbols. That allows
+  // us to avoid reporting the inappropriate errors about removing symbols
+  // named in relocations.
+  if (Error E = replaceAndRemoveSections(Config, Obj))
     return E;
 
-  if (Error E = replaceAndRemoveSections(Config, Obj))
+  if (Error E = updateAndRemoveSymbols(Config, Obj))
     return E;
 
   if (!Config.SectionsToRename.empty()) {
