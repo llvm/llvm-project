@@ -1118,9 +1118,9 @@ Loop *llvm::StripMineLoop(
 
   // Connect the epilog code to the original loop and update the PHI functions.
   B2.SetInsertPoint(EpilogPreheader->getTerminator());
-  Instruction *EpilStartIter = cast<Instruction>(
-      B2.CreateSub(TripCount, ModVal));
-  EpilStartIter->copyIRFlags(PrimaryInc);
+  Value *EpilStartIter = B2.CreateSub(TripCount, ModVal);
+  if (Instruction *ESIInst = dyn_cast<Instruction>(EpilStartIter))
+    ESIInst->copyIRFlags(PrimaryInc);
   ConnectEpilog(TL, EpilStartIter, ModVal, EpilogPred, LoopReattach, NewExit,
                 LatchExit, Preheader, EpilogPreheader, VMap, DT, LI, SE, DL,
                 PreserveLCSSA);
