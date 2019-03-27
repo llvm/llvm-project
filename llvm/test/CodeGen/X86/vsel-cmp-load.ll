@@ -108,10 +108,13 @@ define <16 x i16> @sgt_zero(<16 x i8>* %p, <16 x i16> %x, <16 x i16> %y) {
   ret <16 x i16> %sel
 }
 
+; FIXME: vpunpcklbw should fold in preceeding zero vector and vmovq.
 define <8 x i32> @slt_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
 ; AVX1-LABEL: slt_zero:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxbw (%rdi), %xmm2
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
 ; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm3
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
 ; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm2

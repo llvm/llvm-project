@@ -557,6 +557,44 @@ bool TargetLowering::SimplifyDemandedBits(
       Known.Zero &= Known2.Zero;
     }
     return false; // Don't fall through, will infinitely loop.
+  case ISD::INSERT_VECTOR_ELT: {
+    SDValue Vec = Op.getOperand(0);
+    SDValue Scl = Op.getOperand(1);
+    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    EVT VecVT = Vec.getValueType();
+
+    // If index isn't constant, assume we need all vector elements AND the
+    // inserted element.
+    APInt DemandedVecElts(OriginalDemandedElts);
+    if (CIdx && CIdx->getAPIntValue().ult(VecVT.getVectorNumElements())) {
+      unsigned Idx = CIdx->getZExtValue();
+      DemandedVecElts.clearBit(Idx);
+
+      // Inserted element is not required.
+      if (!OriginalDemandedElts[Idx])
+        return TLO.CombineTo(Op, Vec);
+    }
+
+    KnownBits KnownScl;
+    unsigned NumSclBits = Scl.getScalarValueSizeInBits();
+    APInt DemandedSclBits = OriginalDemandedBits.zextOrTrunc(NumSclBits);
+    if (SimplifyDemandedBits(Scl, DemandedSclBits, KnownScl, TLO, Depth + 1))
+      return true;
+
+    Known = KnownScl.zextOrTrunc(BitWidth, false);
+
+    KnownBits KnownVec;
+    if (SimplifyDemandedBits(Vec, OriginalDemandedBits, DemandedVecElts,
+                             KnownVec, TLO, Depth + 1))
+      return true;
+
+    if (!!DemandedVecElts) {
+      Known.One &= KnownVec.One;
+      Known.Zero &= KnownVec.Zero;
+    }
+
+    return false;
+  }
   case ISD::CONCAT_VECTORS: {
     Known.Zero.setAllBits();
     Known.One.setAllBits();

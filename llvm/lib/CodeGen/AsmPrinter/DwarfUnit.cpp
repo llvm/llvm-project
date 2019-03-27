@@ -397,7 +397,6 @@ void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, const DIFile *File) {
     return;
 
   unsigned FileID = getOrCreateSourceID(File);
-  assert(FileID && "Invalid file id");
   addUInt(Die, dwarf::DW_AT_decl_file, None, FileID);
   addUInt(Die, dwarf::DW_AT_decl_line, None, Line);
 }

@@ -151,7 +151,7 @@ private:
     return MVT::INVALID_SIMPLE_VALUE_TYPE;
   }
   bool computeAddress(const Value *Obj, Address &Addr);
-  void materializeLoadStoreOperands(Address &Addr);
+  bool materializeLoadStoreOperands(Address &Addr);
   void addLoadStoreOperands(const Address &Addr, const MachineInstrBuilder &MIB,
                             MachineMemOperand *MMO);
   unsigned maskI1Value(unsigned Reg, const Value *V);
@@ -374,10 +374,13 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
   return Addr.getReg() != 0;
 }
 
-void WebAssemblyFastISel::materializeLoadStoreOperands(Address &Addr) {
+bool WebAssemblyFastISel::materializeLoadStoreOperands(Address &Addr) {
   if (Addr.isRegBase()) {
     unsigned Reg = Addr.getReg();
     if (Reg == 0) {
+      const GlobalValue *GV = Addr.getGlobalValue();
+      if (GV && TLI.isPositionIndependent())
+        return false;
       Reg = createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
                                                    : &WebAssembly::I32RegClass);
       unsigned Opc = Subtarget->hasAddr64() ? WebAssembly::CONST_I64
@@ -387,6 +390,7 @@ void WebAssemblyFastISel::materializeLoadStoreOperands(Address &Addr) {
       Addr.setReg(Reg);
     }
   }
+  return true;
 }
 
 void WebAssemblyFastISel::addLoadStoreOperands(const Address &Addr,
@@ -604,7 +608,9 @@ unsigned WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
 }
 
 unsigned WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
-  if (const auto *GV = dyn_cast<GlobalValue>(C)) {
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(C)) {
+    if (TLI.isPositionIndependent())
+      return 0;
     unsigned ResultReg =
         createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
                                                : &WebAssembly::I32RegClass);
@@ -1181,7 +1187,8 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
     return false;
   }
 
-  materializeLoadStoreOperands(Addr);
+  if (!materializeLoadStoreOperands(Addr))
+    return false;
 
   unsigned ResultReg = createResultReg(RC);
   auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc),
@@ -1233,7 +1240,8 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
     return false;
   }
 
-  materializeLoadStoreOperands(Addr);
+  if (!materializeLoadStoreOperands(Addr))
+    return false;
 
   unsigned ValueReg = getRegForValue(Store->getValueOperand());
   if (ValueReg == 0)

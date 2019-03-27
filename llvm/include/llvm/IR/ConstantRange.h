@@ -58,7 +58,7 @@ class LLVM_NODISCARD ConstantRange {
   }
 
 public:
-  /// Initialize a full (the default) or empty set for the specified bit width.
+  /// Initialize a full or empty set for the specified bit width.
   explicit ConstantRange(uint32_t BitWidth, bool isFullSet);
 
   /// Initialize a range to hold the single specified value.

@@ -353,9 +353,9 @@ define i16 @select_pow2_diff_invert(i1 zeroext %cond) {
 define i32 @select_pow2_diff_neg(i1 zeroext %cond) {
 ; CHECK-LABEL: select_pow2_diff_neg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shlb $4, %dil
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    orl $-25, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    shll $4, %edi
+; CHECK-NEXT:    leal -25(%rdi), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -9, i32 -25
   ret i32 %sel

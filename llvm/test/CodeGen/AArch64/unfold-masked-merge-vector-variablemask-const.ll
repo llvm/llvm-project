@@ -156,8 +156,7 @@ define <4 x i32> @out_constant_mone_vary_invmask(<4 x i32> %x, <4 x i32> %y, <4 
 define <4 x i32> @in_constant_mone_vary_invmask(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask) {
 ; CHECK-LABEL: in_constant_mone_vary_invmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    orn v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    orn v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %n0 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %y ; %x

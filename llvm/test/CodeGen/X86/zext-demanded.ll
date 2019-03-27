@@ -113,7 +113,7 @@ define i64 @add_neg_one(i64 %x) {
 define i64 @sub_neg_one(i64 %x) {
 ; CHECK-LABEL: sub_neg_one:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    leal -65535(%rdi), %eax
+; CHECK-NEXT:    leal 1(%rdi), %eax
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    retq

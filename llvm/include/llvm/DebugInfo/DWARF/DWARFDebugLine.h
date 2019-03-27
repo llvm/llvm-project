@@ -275,6 +275,8 @@ public:
     SequenceVector Sequences;
 
   private:
+    const llvm::DWARFDebugLine::FileNameEntry &
+    getFileNameEntry(uint64_t Index) const;
     uint32_t findRowInSeq(const DWARFDebugLine::Sequence &Seq,
                           object::SectionedAddress Address) const;
     Optional<StringRef>

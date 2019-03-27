@@ -48,6 +48,7 @@ static_library("Core") {
     "RangeConstraintManager.cpp",
     "RangedConstraintManager.cpp",
     "RegionStore.cpp",
+    "SMTConstraintManager.cpp",
     "SValBuilder.cpp",
     "SVals.cpp",
     "SarifDiagnostics.cpp",
@@ -58,9 +59,5 @@ static_library("Core") {
     "SymbolManager.cpp",
     "TaintManager.cpp",
     "WorkList.cpp",
-    "Z3ConstraintManager.cpp",
   ]
-
-  # FIXME: clang/Config/BUILD.gn currently always sets CLANG_ANALYZER_WITH_Z3
-  # to false. If that changes we need to link to Z3 libs here.
 }

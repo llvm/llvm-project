@@ -8,8 +8,6 @@ target triple = "thumbv7em-arm-none-eabi"
 define arm_aapcs_vfpcc void @test(i8* %v50) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movw r1, #65534
-; CHECK-NEXT:    strh.w r1, [r0, #510]
 ; CHECK-NEXT:    movw r1, #64506
 ; CHECK-NEXT:    movt r1, #65020
 ; CHECK-NEXT:    str.w r1, [r0, #506]
@@ -94,6 +92,8 @@ define arm_aapcs_vfpcc void @test(i8* %v50) #0 {
 ; CHECK-NEXT:    movw r1, #36750
 ; CHECK-NEXT:    movt r1, #37264
 ; CHECK-NEXT:    str.w r1, [r0, #398]
+; CHECK-NEXT:    movw r1, #65534
+; CHECK-NEXT:    strh.w r1, [r0, #510]
 ; CHECK-NEXT:    movw r1, #35722
 ; CHECK-NEXT:    movt r1, #36236
 ; CHECK-NEXT:    str.w r1, [r0, #394]

@@ -218,9 +218,11 @@ struct MCDwarfLineTableHeader {
 private:
   bool HasAllMD5 = true;
   bool HasAnyMD5 = false;
+  unsigned DwarfVersion;
 
 public:
-  MCDwarfLineTableHeader() = default;
+  explicit MCDwarfLineTableHeader(unsigned DwarfVersion) :
+    DwarfVersion(DwarfVersion) {}
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
                                 MD5::MD5Result *Checksum,
@@ -245,6 +247,17 @@ public:
     return MCDwarfFiles.empty() || (HasAllMD5 == HasAnyMD5);
   }
 
+  void setRootFile(StringRef Directory, StringRef FileName,
+                   MD5::MD5Result *Checksum, Optional<StringRef> Source) {
+    CompilationDir = Directory;
+    RootFile.Name = FileName;
+    RootFile.DirIndex = 0;
+    RootFile.Checksum = Checksum;
+    RootFile.Source = Source;
+    trackMD5Usage(Checksum);
+    HasSource = Source.hasValue();
+  }
+
 private:
   void emitV2FileDirTables(MCStreamer *MCOS) const;
   void emitV5FileDirTables(MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr,
@@ -255,6 +268,8 @@ class MCDwarfDwoLineTable {
   MCDwarfLineTableHeader Header;
 
 public:
+  MCDwarfDwoLineTable(unsigned DwarfVersion) : Header(DwarfVersion) {}
+
   void maybeSetRootFile(StringRef Directory, StringRef FileName,
                         MD5::MD5Result *Checksum, Optional<StringRef> Source) {
     if (!Header.RootFile.Name.empty())
@@ -282,6 +297,7 @@ class MCDwarfLineTable {
   MCLineSection MCLineSections;
 
 public:
+  MCDwarfLineTable(unsigned DwarfVersion) : Header(DwarfVersion) {}
   // This emits the Dwarf file and the line tables for all Compile Units.
   static void Emit(MCObjectStreamer *MCOS, MCDwarfLineTableParams Params);
 

@@ -1,8 +1,7 @@
 ; RUN: %llc_dwarf -filetype=asm -dwarf-version=5 %s -o - | FileCheck %s -check-prefix=ASM
 ; RUN: %llc_dwarf -filetype=obj -dwarf-version=5 %s -o - | llvm-dwarfdump -debug-line - | FileCheck %s -check-prefix=OBJ
 ; ASM: .file 0 "{{.+}}" md5
-; ASM: .file 1 "{{.+}}" md5
-; ASM: .file 2 "t1.cpp"
+; ASM: .file 1 "t1.cpp"
 ; ASM-NOT: md5
 ; OBJ: file_names[ 0]:
 ; OBJ-NOT: md5

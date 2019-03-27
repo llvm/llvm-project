@@ -101,6 +101,7 @@ class DwarfCompileUnit final : public DwarfUnit {
   }
 
 public:
+  unsigned getDwarfVersion() const { return DD->getDwarfVersion(); }
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
                    DwarfDebug *DW, DwarfFile *DWU);
 

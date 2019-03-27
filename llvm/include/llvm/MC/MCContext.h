@@ -521,7 +521,7 @@ namespace llvm {
     }
 
     MCDwarfLineTable &getMCDwarfLineTable(unsigned CUID) {
-      return MCDwarfLineTablesCUMap[CUID];
+      return MCDwarfLineTablesCUMap.emplace(CUID, DwarfVersion).first->second;
     }
 
     const MCDwarfLineTable &getMCDwarfLineTable(unsigned CUID) const {
