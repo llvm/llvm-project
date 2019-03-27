@@ -185,10 +185,6 @@ public:
     eCore_uknownMach32,
     eCore_uknownMach64,
 
-    eCore_kalimba3,
-    eCore_kalimba4,
-    eCore_kalimba5,
-
     kNumCores,
 
     kCore_invalid,
@@ -221,9 +217,6 @@ public:
 
     kCore_hexagon_first = eCore_hexagon_generic,
     kCore_hexagon_last = eCore_hexagon_hexagonv5,
-
-    kCore_kalimba_first = eCore_kalimba3,
-    kCore_kalimba_last = eCore_kalimba5,
 
     kCore_mips32_first = eCore_mips32,
     kCore_mips32_last = eCore_mips32r6,
