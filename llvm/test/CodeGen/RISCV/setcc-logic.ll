@@ -102,26 +102,22 @@ define i1 @and_icmps_const_1bit_diff(i32 %x) nounwind {
 define i1 @and_icmps_const_not1bit_diff(i32 %x) nounwind {
 ; RV32I-LABEL: and_icmps_const_not1bit_diff:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a1, zero, 44
-; RV32I-NEXT:    xor a1, a0, a1
-; RV32I-NEXT:    addi a2, zero, 92
-; RV32I-NEXT:    xor a0, a0, a2
-; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    xori a1, a0, 92
 ; RV32I-NEXT:    snez a1, a1
-; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    xori a0, a0, 44
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_icmps_const_not1bit_diff:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    addi a1, zero, 44
-; RV64I-NEXT:    xor a1, a0, a1
-; RV64I-NEXT:    addi a2, zero, 92
-; RV64I-NEXT:    xor a0, a0, a2
-; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    xori a1, a0, 92
 ; RV64I-NEXT:    snez a1, a1
-; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    xori a0, a0, 44
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
   %a = icmp ne i32 %x, 44
   %b = icmp ne i32 %x, 92

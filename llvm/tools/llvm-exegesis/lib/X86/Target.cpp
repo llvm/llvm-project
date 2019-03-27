@@ -435,6 +435,12 @@ private:
                                      unsigned Reg,
                                      const llvm::APInt &Value) const override;
 
+  ArrayRef<unsigned> getUnavailableRegisters() const override {
+    return makeArrayRef(kUnavailableRegisters,
+                        sizeof(kUnavailableRegisters) /
+                            sizeof(kUnavailableRegisters[0]));
+  }
+
   std::unique_ptr<SnippetGenerator>
   createLatencySnippetGenerator(const LLVMState &State) const override {
     return llvm::make_unique<X86LatencySnippetGenerator>(State);
@@ -448,7 +454,14 @@ private:
   bool matchesArch(llvm::Triple::ArchType Arch) const override {
     return Arch == llvm::Triple::x86_64 || Arch == llvm::Triple::x86;
   }
+
+  static const unsigned kUnavailableRegisters[4];
 };
+
+// We disable a few registers that cannot be encoded on instructions with a REX
+// prefix.
+const unsigned ExegesisX86Target::kUnavailableRegisters[4] = {X86::AH, X86::BH,
+                                                              X86::CH, X86::DH};
 } // namespace
 
 void ExegesisX86Target::addTargetSpecificPasses(

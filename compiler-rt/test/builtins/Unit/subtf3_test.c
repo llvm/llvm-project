@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <fenv.h>
 #include <stdio.h>
 
 #if __LDBL_MANT_DIG__ == 113
@@ -66,6 +67,26 @@ int main()
                      UINT64_C(0x40041b8af1915166),
                      UINT64_C(0xa44a7bca780a166c)))
         return 1;
+
+#if (defined(__arm__) || defined(__aarch64__)) && defined(__ARM_FP)
+    // Rounding mode tests on supported architectures
+    long double m = 1234.0L, n = 0.01L;
+    fesetround(FE_UPWARD);
+    if (__subtf3(m, n) != 1234.0L)
+        return 1;
+
+    fesetround(FE_DOWNWARD);
+    if (__subtf3(m, n) != 1233.0L)
+        return 1;
+
+    fesetround(FE_TOWARDZERO);
+    if (__subtf3(m, n) != 1233.0L)
+        return 1;
+
+    fesetround(FE_TONEAREST);
+    if (__subtf3(m, n) != 1234.0L)
+        return 1;
+#endif
 
 #else
     printf("skipped\n");

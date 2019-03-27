@@ -142,7 +142,6 @@ llvm::Error SystemInitializerFull::Initialize() {
 #endif
 
 #if !defined(LLDB_DISABLE_PYTHON)
-  ScriptInterpreterPython::InitializeSWIG();
   ScriptInterpreterPython::Initialize();
 #endif
 

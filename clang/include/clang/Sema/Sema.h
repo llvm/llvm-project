@@ -587,13 +587,13 @@ public:
   /// element type here is ExprWithCleanups::Object.
   SmallVector<BlockDecl*, 8> ExprCleanupObjects;
 
-  /// Store a list of either DeclRefExprs or MemberExprs
-  ///  that contain a reference to a variable (constant) that may or may not
-  ///  be odr-used in this Expr, and we won't know until all lvalue-to-rvalue
-  ///  and discarded value conversions have been applied to all subexpressions
-  ///  of the enclosing full expression.  This is cleared at the end of each
-  ///  full expression.
-  llvm::SmallPtrSet<Expr*, 2> MaybeODRUseExprs;
+  /// Store a set of either DeclRefExprs or MemberExprs that contain a reference
+  /// to a variable (constant) that may or may not be odr-used in this Expr, and
+  /// we won't know until all lvalue-to-rvalue and discarded value conversions
+  /// have been applied to all subexpressions of the enclosing full expression.
+  /// This is cleared at the end of each full expression.
+  using MaybeODRUseExprSet = llvm::SmallPtrSet<Expr *, 2>;
+  MaybeODRUseExprSet MaybeODRUseExprs;
 
   std::unique_ptr<sema::FunctionScopeInfo> PreallocatedFunctionScope;
 
@@ -1029,7 +1029,7 @@ public:
     /// context (i.e. the number of TypoExprs created).
     unsigned NumTypos;
 
-    llvm::SmallPtrSet<Expr*, 2> SavedMaybeODRUseExprs;
+    MaybeODRUseExprSet SavedMaybeODRUseExprs;
 
     /// The lambdas that are present within this context, if it
     /// is indeed an unevaluated context.

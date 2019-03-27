@@ -1,0 +1,12 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
+
+# CHECK-LABEL: function_property_test
+# CHECK: machineFunctionInfo:
+# CHECK:   isCFGStackified:   true
+name: function_property_test
+liveins:
+  - { reg: '$arguments' }
+body: |
+  bb.0:
+    RETURN_VOID implicit-def dead $arguments
+...

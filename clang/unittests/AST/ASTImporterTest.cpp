@@ -44,7 +44,7 @@ createVirtualFileIfNeeded(ASTUnit *ToAST, StringRef FileName,
   assert(ToAST);
   ASTContext &ToCtx = ToAST->getASTContext();
   auto *OFS = static_cast<llvm::vfs::OverlayFileSystem *>(
-      ToCtx.getSourceManager().getFileManager().getVirtualFileSystem().get());
+      &ToCtx.getSourceManager().getFileManager().getVirtualFileSystem());
   auto *MFS = static_cast<llvm::vfs::InMemoryFileSystem *>(
       OFS->overlays_begin()->get());
   MFS->addFile(FileName, 0, std::move(Buffer));

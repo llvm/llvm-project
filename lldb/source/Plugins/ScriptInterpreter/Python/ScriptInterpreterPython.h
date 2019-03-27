@@ -304,7 +304,6 @@ public:
   //------------------------------------------------------------------
   // Static Functions
   //------------------------------------------------------------------
-  static void InitializeSWIG();
   static void Initialize();
 
   static void Terminate();
@@ -365,155 +364,8 @@ public:
     PyGILState_STATE m_GILState;
   };
 
-  // FIXME: This is currently used from the InitializePythonRAII. Make this
-  // private when we're able to break the dependency.
-#if PY_MAJOR_VERSION >= 3
-  typedef PyObject *(*SWIGInitCallback)(void);
-#else
-  typedef void (*SWIGInitCallback)(void);
-#endif
-  static SWIGInitCallback g_swig_init_callback;
-
 protected:
-  typedef bool (*SWIGBreakpointCallbackFunction)(
-      const char *python_function_name, const char *session_dictionary_name,
-      const lldb::StackFrameSP &frame_sp,
-      const lldb::BreakpointLocationSP &bp_loc_sp);
-
-  typedef bool (*SWIGWatchpointCallbackFunction)(
-      const char *python_function_name, const char *session_dictionary_name,
-      const lldb::StackFrameSP &frame_sp, const lldb::WatchpointSP &wp_sp);
-
-  typedef bool (*SWIGPythonTypeScriptCallbackFunction)(
-      const char *python_function_name, void *session_dictionary,
-      const lldb::ValueObjectSP &valobj_sp, void **pyfunct_wrapper,
-      const lldb::TypeSummaryOptionsSP &options, std::string &retval);
-
-  typedef void *(*SWIGPythonCreateSyntheticProvider)(
-      const char *python_class_name, const char *session_dictionary_name,
-      const lldb::ValueObjectSP &valobj_sp);
-
-  typedef void *(*SWIGPythonCreateCommandObject)(
-      const char *python_class_name, const char *session_dictionary_name,
-      const lldb::DebuggerSP debugger_sp);
-
-  typedef void *(*SWIGPythonCreateScriptedThreadPlan)(
-      const char *python_class_name, const char *session_dictionary_name,
-      const lldb::ThreadPlanSP &thread_plan_sp);
-
-  typedef bool (*SWIGPythonCallThreadPlan)(void *implementor,
-                                           const char *method_name,
-                                           Event *event_sp, bool &got_error);
-
-  typedef void *(*SWIGPythonCreateScriptedBreakpointResolver)(
-      const char *python_class_name, const char *session_dictionary_name,
-      lldb_private::StructuredDataImpl *args_impl, lldb::BreakpointSP &bkpt_sp);
-
-  typedef unsigned int (*SWIGPythonCallBreakpointResolver)(
-      void *implementor, const char *method_name,
-      lldb_private::SymbolContext *sym_ctx);
-
-  typedef void *(*SWIGPythonCreateOSPlugin)(const char *python_class_name,
-                                            const char *session_dictionary_name,
-                                            const lldb::ProcessSP &process_sp);
-
-  typedef void *(*SWIGPythonCreateFrameRecognizer)(
-      const char *python_class_name, const char *session_dictionary_name);
-
-  typedef void *(*SWIGPythonGetRecognizedArguments)(
-      void *implementor, const lldb::StackFrameSP &frame_sp);
-
-  typedef size_t (*SWIGPythonCalculateNumChildren)(void *implementor,
-                                                   uint32_t max);
-
-  typedef void *(*SWIGPythonGetChildAtIndex)(void *implementor, uint32_t idx);
-
-  typedef int (*SWIGPythonGetIndexOfChildWithName)(void *implementor,
-                                                   const char *child_name);
-
-  typedef void *(*SWIGPythonCastPyObjectToSBValue)(void *data);
-
-  typedef lldb::ValueObjectSP (*SWIGPythonGetValueObjectSPFromSBValue)(
-      void *data);
-
-  typedef bool (*SWIGPythonUpdateSynthProviderInstance)(void *data);
-
-  typedef bool (*SWIGPythonMightHaveChildrenSynthProviderInstance)(void *data);
-
-  typedef void *(*SWIGPythonGetValueSynthProviderInstance)(void *implementor);
-
-  typedef bool (*SWIGPythonCallCommand)(
-      const char *python_function_name, const char *session_dictionary_name,
-      lldb::DebuggerSP &debugger, const char *args,
-      lldb_private::CommandReturnObject &cmd_retobj,
-      lldb::ExecutionContextRefSP exe_ctx_ref_sp);
-
-  typedef bool (*SWIGPythonCallCommandObject)(
-      void *implementor, lldb::DebuggerSP &debugger, const char *args,
-      lldb_private::CommandReturnObject &cmd_retobj,
-      lldb::ExecutionContextRefSP exe_ctx_ref_sp);
-
-  typedef bool (*SWIGPythonCallModuleInit)(const char *python_module_name,
-                                           const char *session_dictionary_name,
-                                           lldb::DebuggerSP &debugger);
-
-  typedef bool (*SWIGPythonScriptKeyword_Process)(
-      const char *python_function_name, const char *session_dictionary_name,
-      lldb::ProcessSP &process, std::string &output);
-
-  typedef bool (*SWIGPythonScriptKeyword_Thread)(
-      const char *python_function_name, const char *session_dictionary_name,
-      lldb::ThreadSP &thread, std::string &output);
-
-  typedef bool (*SWIGPythonScriptKeyword_Target)(
-      const char *python_function_name, const char *session_dictionary_name,
-      lldb::TargetSP &target, std::string &output);
-
-  typedef bool (*SWIGPythonScriptKeyword_Frame)(
-      const char *python_function_name, const char *session_dictionary_name,
-      lldb::StackFrameSP &frame, std::string &output);
-
-  typedef bool (*SWIGPythonScriptKeyword_Value)(
-      const char *python_function_name, const char *session_dictionary_name,
-      lldb::ValueObjectSP &value, std::string &output);
-
-  typedef void *(*SWIGPython_GetDynamicSetting)(
-      void *module, const char *setting, const lldb::TargetSP &target_sp);
-
   static void InitializePrivate();
-
-  static void InitializeInterpreter(
-      SWIGInitCallback python_swig_init_callback,
-      SWIGBreakpointCallbackFunction swig_breakpoint_callback,
-      SWIGWatchpointCallbackFunction swig_watchpoint_callback,
-      SWIGPythonTypeScriptCallbackFunction swig_typescript_callback,
-      SWIGPythonCreateSyntheticProvider swig_synthetic_script,
-      SWIGPythonCreateCommandObject swig_create_cmd,
-      SWIGPythonCalculateNumChildren swig_calc_children,
-      SWIGPythonGetChildAtIndex swig_get_child_index,
-      SWIGPythonGetIndexOfChildWithName swig_get_index_child,
-      SWIGPythonCastPyObjectToSBValue swig_cast_to_sbvalue,
-      SWIGPythonGetValueObjectSPFromSBValue swig_get_valobj_sp_from_sbvalue,
-      SWIGPythonUpdateSynthProviderInstance swig_update_provider,
-      SWIGPythonMightHaveChildrenSynthProviderInstance
-          swig_mighthavechildren_provider,
-      SWIGPythonGetValueSynthProviderInstance swig_getvalue_provider,
-      SWIGPythonCallCommand swig_call_command,
-      SWIGPythonCallCommandObject swig_call_command_object,
-      SWIGPythonCallModuleInit swig_call_module_init,
-      SWIGPythonCreateOSPlugin swig_create_os_plugin,
-      SWIGPythonCreateFrameRecognizer swig_create_frame_recognizer,
-      SWIGPythonGetRecognizedArguments swig_get_recognized_arguments,
-      SWIGPythonScriptKeyword_Process swig_run_script_keyword_process,
-      SWIGPythonScriptKeyword_Thread swig_run_script_keyword_thread,
-      SWIGPythonScriptKeyword_Target swig_run_script_keyword_target,
-      SWIGPythonScriptKeyword_Frame swig_run_script_keyword_frame,
-      SWIGPythonScriptKeyword_Value swig_run_script_keyword_value,
-      SWIGPython_GetDynamicSetting swig_plugin_get,
-      SWIGPythonCreateScriptedThreadPlan swig_thread_plan_script,
-      SWIGPythonCallThreadPlan swig_call_thread_plan,
-      SWIGPythonCreateScriptedBreakpointResolver swig_bkpt_resolver_script,
-      SWIGPythonCallBreakpointResolver swig_call_breakpoint_resolver);
 
   class SynchronicityHandler {
   private:
@@ -587,38 +439,6 @@ protected:
   bool m_valid_session;
   uint32_t m_lock_count;
   PyThreadState *m_command_thread_state;
-
-  static SWIGBreakpointCallbackFunction g_swig_breakpoint_callback;
-  static SWIGWatchpointCallbackFunction g_swig_watchpoint_callback;
-  static SWIGPythonTypeScriptCallbackFunction g_swig_typescript_callback;
-  static SWIGPythonCreateSyntheticProvider g_swig_synthetic_script;
-  static SWIGPythonCreateCommandObject g_swig_create_cmd;
-  static SWIGPythonCalculateNumChildren g_swig_calc_children;
-  static SWIGPythonGetChildAtIndex g_swig_get_child_index;
-  static SWIGPythonGetIndexOfChildWithName g_swig_get_index_child;
-  static SWIGPythonCastPyObjectToSBValue g_swig_cast_to_sbvalue;
-  static SWIGPythonGetValueObjectSPFromSBValue
-      g_swig_get_valobj_sp_from_sbvalue;
-  static SWIGPythonUpdateSynthProviderInstance g_swig_update_provider;
-  static SWIGPythonMightHaveChildrenSynthProviderInstance
-      g_swig_mighthavechildren_provider;
-  static SWIGPythonGetValueSynthProviderInstance g_swig_getvalue_provider;
-  static SWIGPythonCallCommand g_swig_call_command;
-  static SWIGPythonCallCommandObject g_swig_call_command_object;
-  static SWIGPythonCallModuleInit g_swig_call_module_init;
-  static SWIGPythonCreateOSPlugin g_swig_create_os_plugin;
-  static SWIGPythonCreateFrameRecognizer g_swig_create_frame_recognizer;
-  static SWIGPythonGetRecognizedArguments g_swig_get_recognized_arguments;
-  static SWIGPythonScriptKeyword_Process g_swig_run_script_keyword_process;
-  static SWIGPythonScriptKeyword_Thread g_swig_run_script_keyword_thread;
-  static SWIGPythonScriptKeyword_Target g_swig_run_script_keyword_target;
-  static SWIGPythonScriptKeyword_Frame g_swig_run_script_keyword_frame;
-  static SWIGPythonScriptKeyword_Value g_swig_run_script_keyword_value;
-  static SWIGPython_GetDynamicSetting g_swig_plugin_get;
-  static SWIGPythonCreateScriptedThreadPlan g_swig_thread_plan_script;
-  static SWIGPythonCallThreadPlan g_swig_call_thread_plan;
-  static SWIGPythonCreateScriptedBreakpointResolver g_swig_bkpt_resolver_script;
-  static SWIGPythonCallBreakpointResolver g_swig_call_bkpt_resolver;
 };
 
 } // namespace lldb_private

@@ -10,7 +10,7 @@ executable("pp-trace") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "PPTrace.cpp",
     "PPCallbacksTracker.cpp",
+    "PPTrace.cpp",
   ]
 }

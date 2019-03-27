@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "fp_lib.h"
+#include "fp_mode.h"
 
 static __inline fp_t __addXf3__(fp_t a, fp_t b) {
     rep_t aRep = toRep(a);
@@ -137,7 +138,21 @@ static __inline fp_t __addXf3__(fp_t a, fp_t b) {
 
     // Final rounding.  The result may overflow to infinity, but that is the
     // correct result in that case.
-    if (roundGuardSticky > 0x4) result++;
-    if (roundGuardSticky == 0x4) result += result & 1;
+    switch (__fe_getround()){
+    case FE_TONEAREST:
+      if (roundGuardSticky > 0x4) result++;
+      if (roundGuardSticky == 0x4) result += result & 1;
+      break;
+    case FE_DOWNWARD:
+      if (resultSign && roundGuardSticky) result++;
+      break;
+    case FE_UPWARD:
+      if (!resultSign && roundGuardSticky) result++;
+      break;
+    case FE_TOWARDZERO:
+      break;
+    }
+    if (roundGuardSticky)
+      __fe_raise_inexact();
     return fromRep(result);
 }

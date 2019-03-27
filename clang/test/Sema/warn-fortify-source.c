@@ -20,6 +20,9 @@ void call_memcpy() {
   char dst[10];
   char src[20];
   memcpy(dst, src, 20); // expected-warning {{memcpy' will always overflow; destination buffer has size 10, but size argument is 20}}
+
+  if (sizeof(dst) == sizeof(src))
+    memcpy(dst, src, 20); // no warning, unreachable
 }
 
 void call_memcpy_type() {

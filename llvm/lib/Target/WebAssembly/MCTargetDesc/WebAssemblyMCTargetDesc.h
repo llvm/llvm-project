@@ -94,7 +94,12 @@ enum TOF {
   MO_SYMBOL_GLOBAL = 0x2,
   MO_SYMBOL_EVENT = 0x4,
   MO_SYMBOL_MASK = 0x7,
+
+  // Address of data symbol via a wasm global.  This adds a level of indirection
+  // similar to the GOT on native platforms.
+  MO_GOT = 0x8,
 };
+
 } // end namespace WebAssemblyII
 
 } // end namespace llvm

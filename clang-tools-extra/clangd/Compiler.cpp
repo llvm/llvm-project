@@ -95,7 +95,7 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
   if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
           Clang->getInvocation(), Clang->getDiagnostics(), VFS))
     VFS = VFSWithRemapping;
-  Clang->setVirtualFileSystem(VFS);
+  Clang->createFileManager(VFS);
 
   Clang->setTarget(TargetInfo::CreateTargetInfo(
       Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));

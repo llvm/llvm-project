@@ -1134,9 +1134,7 @@ define <2 x i33> @add_umax_vec(<2 x i33> %x) {
 
 define i8 @PR14613_umin(i8 %x) {
 ; CHECK-LABEL: @PR14613_umin(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X:%.*]], -16
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 -16
-; CHECK-NEXT:    [[U7:%.*]] = add i8 [[TMP2]], 15
+; CHECK-NEXT:    [[U7:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X:%.*]], i8 15)
 ; CHECK-NEXT:    ret i8 [[U7]]
 ;
   %u4 = zext i8 %x to i32

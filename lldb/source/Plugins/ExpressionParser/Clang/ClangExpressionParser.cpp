@@ -309,8 +309,7 @@ ClangExpressionParser::ClangExpressionParser(
   }
 
   // Make sure clang uses the same VFS as LLDB.
-  m_compiler->setVirtualFileSystem(
-      FileSystem::Instance().GetVirtualFileSystem());
+  m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
 
   lldb::LanguageType frame_lang =
       expr.Language(); // defaults to lldb::eLanguageTypeUnknown

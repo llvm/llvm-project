@@ -93,6 +93,12 @@ void Symbol::setOutputSymbolIndex(uint32_t Index) {
   OutputSymbolIndex = Index;
 }
 
+void Symbol::setGOTIndex(uint32_t Index) {
+  LLVM_DEBUG(dbgs() << "setGOTIndex " << Name << " -> " << Index << "\n");
+  assert(GOTIndex == INVALID_INDEX);
+  GOTIndex = Index;
+}
+
 bool Symbol::isWeak() const {
   return (Flags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK;
 }

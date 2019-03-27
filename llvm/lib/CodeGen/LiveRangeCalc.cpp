@@ -95,10 +95,11 @@ void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
       }
 
       LI.refineSubRanges(*Alloc, SubMask,
-          [&MO, this](LiveInterval::SubRange &SR) {
-        if (MO.isDef())
-          createDeadDef(*Indexes, *Alloc, SR, MO);
-      });
+                         [&MO, this](LiveInterval::SubRange &SR) {
+                           if (MO.isDef())
+                             createDeadDef(*Indexes, *Alloc, SR, MO);
+                         },
+                         *Indexes, TRI);
     }
 
     // Create the def in the main liverange. We do not have to do this if
