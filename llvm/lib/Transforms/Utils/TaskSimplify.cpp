@@ -74,11 +74,12 @@ static bool removeRedundantSyncRegions(MaybeParallelTasks &MPTasks, Task *T) {
 
   // Find the unique sync regions in this task.
   SmallPtrSet<Value *, 1> UniqueSyncRegs;
-  Value *FirstSyncRegion = nullptr;
+  Instruction *FirstSyncRegion = nullptr;
   for (Task *SubT : T->subtasks()) {
     UniqueSyncRegs.insert(SubT->getDetach()->getSyncRegion());
     if (!FirstSyncRegion)
-      FirstSyncRegion = SubT->getDetach()->getSyncRegion();
+      FirstSyncRegion = cast<Instruction>(
+          SubT->getDetach()->getSyncRegion());
   }
   // Skip this task if there's only one unique sync region.
   if (UniqueSyncRegs.size() < 2)
@@ -99,8 +100,13 @@ static bool removeRedundantSyncRegions(MaybeParallelTasks &MPTasks, Task *T) {
     // Replace all redundant sync regions with the first sync region.
     for (Value *SR : UniqueSyncRegs) {
       if (!NonRedundantSyncRegs.count(SR) && SR != FirstSyncRegion) {
+        LLVM_DEBUG(dbgs() << "Replacing " << *SR << " with " << *FirstSyncRegion
+                   << "\n");
         Changed = true;
         SR->replaceAllUsesWith(FirstSyncRegion);
+        // Ensure that the first sync region is in the entry block of T.
+        if (FirstSyncRegion->getParent() != T->getEntry())
+          FirstSyncRegion->moveAfter(&*T->getEntry()->getFirstInsertionPt());
       }
     }
   }
