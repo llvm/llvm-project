@@ -26,7 +26,7 @@
 template <typename Span>
 constexpr bool testConstexprSpan(Span sp)
 {
-    _LIBCPP_ASSERT(sp.back(), "");
+    LIBCPP_ASSERT(noexcept(sp.back()));
     return std::addressof(sp.back()) == sp.data() + sp.size() - 1;
 }
 
@@ -34,7 +34,7 @@ constexpr bool testConstexprSpan(Span sp)
 template <typename Span>
 void testRuntimeSpan(Span sp)
 {
-    _LIBCPP_ASSERT(sp.back(), "");
+    LIBCPP_ASSERT(noexcept(sp.back()));
     assert(std::addressof(sp.back()) == sp.data() + sp.size() - 1);
 }
 
@@ -71,5 +71,5 @@ int main(int, char**)
     testRuntimeSpan(std::span<std::string>   (&s, 1));
     testRuntimeSpan(std::span<std::string, 1>(&s, 1));
 
-  return 0;
+    return 0;
 }

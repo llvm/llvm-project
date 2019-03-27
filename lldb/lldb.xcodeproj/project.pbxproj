@@ -623,7 +623,6 @@
 		AF254E31170CCC33007AE5C9 /* PlatformDarwinKernel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF254E2F170CCC33007AE5C9 /* PlatformDarwinKernel.cpp */; };
 		9A20571C1F3B867400F6C293 /* PlatformDarwinTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A20571A1F3B866F00F6C293 /* PlatformDarwinTest.cpp */; };
 		2694E99D14FC0BB30076DE67 /* PlatformFreeBSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2694E99A14FC0BB30076DE67 /* PlatformFreeBSD.cpp */; };
-		23042D121976CA1D00621B2C /* PlatformKalimba.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23042D101976CA0A00621B2C /* PlatformKalimba.cpp */; };
 		2694E9A414FC0BBD0076DE67 /* PlatformLinux.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2694E9A114FC0BBD0076DE67 /* PlatformLinux.cpp */; };
 		2689009B13353E4200698AC0 /* PlatformMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C5577B132575AD008FD8FE /* PlatformMacOSX.cpp */; };
 		26EFB61B1BFE8D3E00544801 /* PlatformNetBSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26EFB6181BFE8D3E00544801 /* PlatformNetBSD.cpp */; };
@@ -2488,8 +2487,6 @@
 		9A20571A1F3B866F00F6C293 /* PlatformDarwinTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PlatformDarwinTest.cpp; path = Platform/PlatformDarwinTest.cpp; sourceTree = "<group>"; };
 		2694E99A14FC0BB30076DE67 /* PlatformFreeBSD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformFreeBSD.cpp; sourceTree = "<group>"; };
 		2694E99B14FC0BB30076DE67 /* PlatformFreeBSD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformFreeBSD.h; sourceTree = "<group>"; };
-		23042D101976CA0A00621B2C /* PlatformKalimba.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformKalimba.cpp; sourceTree = "<group>"; };
-		23042D111976CA0A00621B2C /* PlatformKalimba.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PlatformKalimba.h; sourceTree = "<group>"; };
 		2694E9A114FC0BBD0076DE67 /* PlatformLinux.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformLinux.cpp; sourceTree = "<group>"; };
 		2694E9A214FC0BBD0076DE67 /* PlatformLinux.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformLinux.h; sourceTree = "<group>"; };
 		26C5577B132575AD008FD8FE /* PlatformMacOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformMacOSX.cpp; sourceTree = "<group>"; };
@@ -3569,15 +3566,6 @@
 			name = Products;
 			sourceTree = "<group>";
 			usesTabs = 0;
-		};
-		23042D0F1976C9D800621B2C /* Kalimba */ = {
-			isa = PBXGroup;
-			children = (
-				23042D111976CA0A00621B2C /* PlatformKalimba.h */,
-				23042D101976CA0A00621B2C /* PlatformKalimba.cpp */,
-			);
-			path = Kalimba;
-			sourceTree = "<group>";
 		};
 		2321F9331BDD326500BA9A93 /* unittests */ = {
 			isa = PBXGroup;
@@ -5856,7 +5844,6 @@
 				6D55BAE61A8CD08C00A70529 /* Android */,
 				2694E99814FC0BB30076DE67 /* FreeBSD */,
 				264A97BC133918A30017F0BE /* GDB Server */,
-				23042D0F1976C9D800621B2C /* Kalimba */,
 				2694E99F14FC0BBD0076DE67 /* Linux */,
 				26C5577F132575C8008FD8FE /* MacOSX */,
 				26EFB6151BFE8D3E00544801 /* NetBSD */,
@@ -8013,7 +8000,6 @@
 				2689001213353DDE00698AC0 /* CommandObjectApropos.cpp in Sources */,
 				4C88BC2A1BA3722B00AA0964 /* Expression.cpp in Sources */,
 				8C3BD9961EF45DA50016C343 /* MainThreadCheckerRuntime.cpp in Sources */,
-				23042D121976CA1D00621B2C /* PlatformKalimba.cpp in Sources */,
 				2689001413353DDE00698AC0 /* CommandObjectBreakpoint.cpp in Sources */,
 				4C61465E223059B000D686F9 /* ClangExpressionSourceCode.cpp in Sources */,
 				2689001513353DDE00698AC0 /* CommandObjectBreakpointCommand.cpp in Sources */,
