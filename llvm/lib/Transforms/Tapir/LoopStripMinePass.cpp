@@ -20,6 +20,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TapirTaskInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -50,6 +51,10 @@ static cl::opt<unsigned> StripMineCoarseningFactor(
 static cl::opt<bool> StripMineUnrollRemainder(
   "stripmine-unroll-remainder", cl::Hidden,
   cl::desc("Allow the loop remainder after stripmining to be unrolled."));
+
+static cl::opt<bool> AllowParallelEpilog(
+  "allow-parallel-epilog", cl::Hidden, cl::init(true),
+  cl::desc("Allow stripmined Tapir loops to execute their epilogs in parallel."));
 
 /// Constants for stripmining cost analysis.
 namespace StripMineConstants {
@@ -277,7 +282,7 @@ bool llvm::computeStripMineCount(
 static bool tryToStripMineLoop(
     Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     const TargetTransformInfo &TTI, AssumptionCache &AC, TaskInfo *TI,
-    OptimizationRemarkEmitter &ORE, bool PreserveLCSSA,
+    OptimizationRemarkEmitter &ORE, TargetLibraryInfo *TLI, bool PreserveLCSSA,
     Optional<unsigned> ProvidedCount) {
   if (!getTaskIfTapirLoop(L, TI))
     return false;
@@ -308,7 +313,7 @@ static bool tryToStripMineLoop(
 
   unsigned LoopSize =
       ApproximateLoopSize(L, NumCalls, NotDuplicatable, Convergent, IsRecursive,
-                          UnknownSize, TTI, LI, SE, EphValues);
+                          UnknownSize, TTI, LI, SE, EphValues, TLI);
   // computeStripMineCount() determines the count to stripmine the loop.
   bool explicitCount = computeStripMineCount(L, TTI, LoopSize, SMP);
 
@@ -422,21 +427,24 @@ static bool tryToStripMineLoop(
   // When is it worthwhile to allow the epilog to run in parallel with the
   // stripmined loop?  We expect the epilog to perform G/2 iterations on
   // average, where G is the selected grainsize.  Our goal is to ensure that
-  // these G/2 iterations offset the cost of an additional detach.  We have
-  // already computed G = \pow_2_floor(C * d / S), where C is the coarsening
-  // factor (a power of 2), d is the cost of a detach, and S is the work of the
-  // loop body, and \pow_2_floor gives the floow of the value rounded to the
-  // next power of 2.  We distinguish two cases.
+  // these G/2 iterations offset the cost of an additional detach.
+  // Mathematically, this means
   //
-  // 1) If G < C, then due to rounding, have that d / S < 1/2, implying that
-  // S > 2d.  Hence it's profitable to allow the epilog to execute in parallel.
+  // (G/2) * S + d <= (1 + \eps) * G/2 * S ,
   //
-  // 2) If G == C, then to satisfy (G/2) * S + d <= (1 + \eps) * G/2 * S, where
-  // \eps = 1/C, we require S >= 2 * d.
-  //
-  // We check for these two cases and encode the result in ParallelEpilog.
-  bool ParallelEpilog = (SMP.Count < SMP.DefaultCoarseningFactor) ||
-    (LoopSize >= 2 * TTI.getUserCost(L->getHeader()->getTerminator()));
+  // where S is the work of one loop iteration, d is the cost of a detach, and
+  // \eps is a sufficiently small constant, e.g., 1/C for a coarsening factor C.
+  // We assume that the choice of G is chosen such that G * \eps <= 1, which is
+  // true for the automatic computation of G aimed at ensuring the stripmined
+  // loop performs at most a (1 + \eps) factor more work than its serial
+  // projection.  Solving the above equation thus shows that the epilog should
+  // be allowed to run in parallel when S >= 2 * d.  We check for this case and
+  // encode the result in ParallelEpilog.
+  Instruction *DetachI = L->getHeader()->getTerminator();
+  bool ParallelEpilog = AllowParallelEpilog &&
+    ((SMP.Count < SMP.DefaultCoarseningFactor) ||
+     (LoopSize >= static_cast<unsigned>(2 * TTI.getUserCost(DetachI))));
+
   Loop *NewLoop = StripMineLoop(L, SMP.Count, SMP.AllowExpensiveTripCount,
                                 SMP.UnrollRemainder, LI, &SE, &DT, &AC, TI,
                                 &ORE, PreserveLCSSA, ParallelEpilog);
@@ -469,6 +477,7 @@ public:
 
     Function &F = *L->getHeader()->getParent();
 
+    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     TaskInfo *TI = &getAnalysis<TaskInfoWrapperPass>().getTaskInfo();
@@ -482,8 +491,8 @@ public:
     OptimizationRemarkEmitter ORE(&F);
     bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
-    return tryToStripMineLoop(L, DT, LI, SE, TTI, AC, TI, ORE, PreserveLCSSA,
-                              ProvidedCount);
+    return tryToStripMineLoop(L, DT, LI, SE, TTI, AC, TI, ORE, &TLI,
+                              PreserveLCSSA, ProvidedCount);
   }
 
   /// This transformation requires natural loop information & requires that
@@ -491,6 +500,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     getLoopAnalysisUsage(AU);
   }
 };
@@ -504,6 +514,7 @@ INITIALIZE_PASS_BEGIN(LoopStripMine, "loop-stripmine", "Stripmine Tapir loops",
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(LoopStripMine, "loop-stripmine", "Stripmine Tapir loops",
                     false, false)
 
@@ -541,6 +552,7 @@ static SmallVector<Loop *, 8> appendLoopsToWorklist(RangeT &&Loops) {
 
 PreservedAnalyses LoopStripMinePass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
@@ -589,7 +601,7 @@ PreservedAnalyses LoopStripMinePass::run(Function &F,
     //   AllowPeeling = false;
     std::string LoopName = L.getName();
     bool LoopChanged =
-      tryToStripMineLoop(&L, DT, &LI, SE, TTI, AC, &TI, ORE,
+      tryToStripMineLoop(&L, DT, &LI, SE, TTI, AC, &TI, ORE, &TLI,
                          /*PreserveLCSSA*/ true, /*Count*/ None);
     Changed |= LoopChanged;
 
