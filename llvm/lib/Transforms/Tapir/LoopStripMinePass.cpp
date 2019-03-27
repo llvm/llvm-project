@@ -52,6 +52,10 @@ static cl::opt<bool> StripMineUnrollRemainder(
   "stripmine-unroll-remainder", cl::Hidden,
   cl::desc("Allow the loop remainder after stripmining to be unrolled."));
 
+static cl::opt<bool> SerializeUnprofitable(
+  "serialize-unprofitable-loops", cl::Hidden, cl::init(false),
+  cl::desc("Serialize any Tapir loops found to be unprofitable."));
+
 static cl::opt<bool> AllowParallelEpilog(
   "allow-parallel-epilog", cl::Hidden, cl::init(true),
   cl::desc("Allow stripmined Tapir loops to execute their epilogs in parallel."));
@@ -289,7 +293,8 @@ static bool tryToStripMineLoop(
     const TargetTransformInfo &TTI, AssumptionCache &AC, TaskInfo *TI,
     OptimizationRemarkEmitter &ORE, TargetLibraryInfo *TLI, bool PreserveLCSSA,
     Optional<unsigned> ProvidedCount) {
-  if (!getTaskIfTapirLoop(L, TI))
+  Task *T = getTaskIfTapirLoop(L, TI);
+  if (!T)
     return false;
   TapirLoopHints Hints(L);
 
@@ -420,6 +425,20 @@ static bool tryToStripMineLoop(
 
   // Stripmining factor (Count) must be less or equal to TripCount.
   if (ConstTripCount && SMP.Count >= ConstTripCount) {
+    if (SerializeUnprofitable) {
+      ORE.emit(DiagnosticInfoOptimizationFailure(
+                   DEBUG_TYPE, "SerializingUnprofitableParallelLoop",
+                   L->getStartLoc(), L->getHeader())
+               << "Serializing parallel loop that appears to be unprofitable "
+               << "to parallelize.");
+      SerializeDetach(cast<DetachInst>(L->getHeader()->getTerminator()), T,
+                      &DT);
+      Hints.clearHintsMetadata();
+      L->setDerivedFromTapirLoop();
+      // Recalculate TaskInfo
+      TI->recalculate(*DT.getRoot()->getParent(), DT);
+      return true;
+    }
     ORE.emit(createMissedAnalysis("FullStripMine", L)
              << "Stripmining count larger than loop trip count.");
     ORE.emit(DiagnosticInfoOptimizationFailure(
