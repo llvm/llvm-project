@@ -19,16 +19,8 @@
 #include "PythonExceptionState.h"
 #include "ScriptInterpreterPython.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <memory>
-#include <mutex>
-#include <string>
-
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBFrame.h"
-#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Breakpoint/WatchpointOptions.h"
 #include "lldb/Core/Communication.h"
@@ -53,6 +45,12 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+
+#include <memory>
+#include <mutex>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string>
 
 using namespace lldb;
 using namespace lldb_private;
