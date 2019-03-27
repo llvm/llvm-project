@@ -39,7 +39,7 @@ Loop *StripMineLoop(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
     bool UnrollRemainder, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
     AssumptionCache *AC, TaskInfo *TI, OptimizationRemarkEmitter *ORE,
-    bool PreserveLCSSA, bool ParallelEpilog);
+    bool PreserveLCSSA, bool ParallelEpilog, bool NeedNestedSync);
 
 TargetTransformInfo::StripMiningPreferences gatherStripMiningPreferences(
     Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,

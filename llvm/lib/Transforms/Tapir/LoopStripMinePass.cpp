@@ -56,6 +56,11 @@ static cl::opt<bool> AllowParallelEpilog(
   "allow-parallel-epilog", cl::Hidden, cl::init(true),
   cl::desc("Allow stripmined Tapir loops to execute their epilogs in parallel."));
 
+static cl::opt<bool> IncludeNestedSync(
+  "include-nested-sync", cl::Hidden, cl::init(false),
+  cl::desc("If the epilog is allowed to execute in parallel, include a sync "
+           "instruction in the nested task."));
+
 /// Constants for stripmining cost analysis.
 namespace StripMineConstants {
 /// Default coarsening factor for strpimined Tapir loops.
@@ -445,9 +450,16 @@ static bool tryToStripMineLoop(
     ((SMP.Count < SMP.DefaultCoarseningFactor) ||
      (LoopSize >= static_cast<unsigned>(2 * TTI.getUserCost(DetachI))));
 
+  // Some parallel runtimes, such as Cilk, require nested parallel tasks to be
+  // synchronized.
+  bool NeedNestedSync = IncludeNestedSync;
+  if (!NeedNestedSync && TLI)
+    NeedNestedSync = (TLI->getTapirTarget() == TapirTargetID::Cilk);
+
   Loop *NewLoop = StripMineLoop(L, SMP.Count, SMP.AllowExpensiveTripCount,
                                 SMP.UnrollRemainder, LI, &SE, &DT, &AC, TI,
-                                &ORE, PreserveLCSSA, ParallelEpilog);
+                                &ORE, PreserveLCSSA, ParallelEpilog,
+                                NeedNestedSync);
   if (!NewLoop)
     return false;
 

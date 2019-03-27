@@ -461,7 +461,7 @@ Loop *llvm::StripMineLoop(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
     bool UnrollRemainder, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
     AssumptionCache *AC, TaskInfo *TI, OptimizationRemarkEmitter *ORE,
-    bool PreserveLCSSA, bool ParallelEpilog) {
+    bool PreserveLCSSA, bool ParallelEpilog, bool NeedNestedSync) {
   Task *T = getTapirLoopForStripMining(L, *TI, ORE);
   if (!T)
     return nullptr;
@@ -1034,6 +1034,17 @@ Loop *llvm::StripMineLoop(
   // NewReattB (reattach NewLatch)
   // NewLatch (br NewHeader, LoopReattach)
   // LoopReattach
+
+  // If necessary, add the nested sync right before LoopReattach.
+  if (ParallelEpilog && NeedNestedSync) {
+    BasicBlock *NewLoopReattach =
+      SplitBlock(LoopReattach, LoopReattach->getTerminator(), DT, LI);
+    BasicBlock *NestedSyncBlock = LoopReattach;
+    LoopReattach = NewLoopReattach;
+    NestedSyncBlock->setName(Header->getName() + ".strpm.detachloop.sync");
+    ReplaceInstWithInst(NestedSyncBlock->getTerminator(),
+                        SyncInst::Create(LoopReattach, NewSyncReg));
+  }
 
   // Fixup the LoopInfo for the new loop.
   if (!ParentLoop) {
