@@ -1145,6 +1145,10 @@ class Configuration(object):
         # features are enabled/disabled. Otherwise, disable availability markup,
         # which is not relevant for non-shipped flavors of libc++.
         if self.use_system_cxx_lib:
+            # Dylib support for shared_mutex was added in macosx10.12.
+            if name == 'macosx' and version in ('10.%s' % v for v in range(7, 12)):
+                self.config.available_features.add('dylib-has-no-shared_mutex')
+                self.lit_config.note("shared_mutex is not supported by the deployment target")
             # Throwing bad_optional_access, bad_variant_access and bad_any_cast is
             # supported starting in macosx10.14.
             if name == 'macosx' and version in ('10.%s' % v for v in range(7, 14)):
