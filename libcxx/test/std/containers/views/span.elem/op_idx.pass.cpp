@@ -25,7 +25,7 @@
 template <typename Span>
 constexpr bool testConstexprSpan(Span sp, size_t idx)
 {
-    _LIBCPP_ASSERT(noexcept(sp[idx]), "");
+    LIBCPP_ASSERT(noexcept(sp[idx]));
 
     typename Span::reference r1 = sp[idx];
     typename Span::reference r2 = *(sp.data() + idx);
@@ -36,7 +36,7 @@ constexpr bool testConstexprSpan(Span sp, size_t idx)
 template <typename Span>
 void testRuntimeSpan(Span sp, size_t idx)
 {
-    _LIBCPP_ASSERT(noexcept(sp[idx]), "");
+    LIBCPP_ASSERT(noexcept(sp[idx]));
 
     typename Span::reference r1 = sp[idx];
     typename Span::reference r2 = *(sp.data() + idx);

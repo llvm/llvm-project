@@ -426,6 +426,14 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
     }
   }
 
+  // Set the reserved registers after parsing MachineFuncInfo. The target may
+  // have been recording information used to select the reserved registers
+  // there.
+  // FIXME: This is a temporary workaround until the reserved registers can be
+  // serialized.
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MRI.freezeReservedRegs(MF);
+
   computeFunctionProperties(MF);
 
   MF.getSubtarget().mirFileLoaded(MF);
@@ -564,9 +572,6 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
     }
   }
 
-  // FIXME: This is a temporary workaround until the reserved registers can be
-  // serialized.
-  MRI.freezeReservedRegs(MF);
   return Error;
 }
 

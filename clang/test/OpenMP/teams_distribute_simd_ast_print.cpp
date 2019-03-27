@@ -130,12 +130,12 @@ T tmain(T argc) {
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
 #pragma omp target
-#pragma omp teams distribute simd private(argc, b), firstprivate(c, d), collapse(2)
+#pragma omp teams distribute simd allocate(b) private(argc, b), firstprivate(c, d), collapse(2) allocate(c)
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
       foo();
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute simd private(argc,b) firstprivate(c,d) collapse(2)
+// CHECK-NEXT: #pragma omp teams distribute simd allocate(b) private(argc,b) firstprivate(c,d) collapse(2) allocate(c)
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: for (int j = 0; j < 10; ++j)
 // CHECK-NEXT: foo();

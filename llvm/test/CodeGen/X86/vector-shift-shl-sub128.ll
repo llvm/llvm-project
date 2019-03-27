@@ -289,16 +289,18 @@ define <8 x i8> @var_shift_v8i8(<8 x i8> %a, <8 x i8> %b) nounwind {
 ;
 ; SSE41-LABEL: var_shift_v8i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm2, %xmm2
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm2[8],xmm1[9],xmm2[9],xmm1[10],xmm2[10],xmm1[11],xmm2[11],xmm1[12],xmm2[12],xmm1[13],xmm2[13],xmm1[14],xmm2[14],xmm1[15],xmm2[15]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE41-NEXT:    pand %xmm1, %xmm2
+; SSE41-NEXT:    pxor %xmm3, %xmm3
+; SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm3[8],xmm1[9],xmm3[9],xmm1[10],xmm3[10],xmm1[11],xmm3[11],xmm1[12],xmm3[12],xmm1[13],xmm3[13],xmm1[14],xmm3[14],xmm1[15],xmm3[15]
 ; SSE41-NEXT:    pslld $23, %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [1065353216,1065353216,1065353216,1065353216]
-; SSE41-NEXT:    paddd %xmm2, %xmm1
+; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
+; SSE41-NEXT:    paddd %xmm3, %xmm1
 ; SSE41-NEXT:    cvttps2dq %xmm1, %xmm1
-; SSE41-NEXT:    pslld $23, %xmm3
-; SSE41-NEXT:    paddd %xmm2, %xmm3
-; SSE41-NEXT:    cvttps2dq %xmm3, %xmm2
+; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SSE41-NEXT:    pslld $23, %xmm2
+; SSE41-NEXT:    paddd %xmm3, %xmm2
+; SSE41-NEXT:    cvttps2dq %xmm2, %xmm2
 ; SSE41-NEXT:    packusdw %xmm1, %xmm2
 ; SSE41-NEXT:    pmullw %xmm2, %xmm0
 ; SSE41-NEXT:    retq

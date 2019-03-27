@@ -19,26 +19,24 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture r
 define void @pr38743(i32 %a0) #1 align 2 {
 ; CHECK-LABEL: pr38743:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    cmpl $3, %edi
-; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:  # %bb.1: # %bb
-; CHECK-NEXT:    cmpl $1, %edi
-; CHECK-NEXT:    je .LBB0_2
-; CHECK-NEXT:  # %bb.3: # %bb5
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    decl %edi
+; CHECK-NEXT:    jmpq *.LJTI0_0(,%rdi,8)
+; CHECK-NEXT:  .LBB0_2: # %bb5
 ; CHECK-NEXT:    movzwl .str.17+{{.*}}(%rip), %eax
 ; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq {{.*}}(%rip), %rax
-; CHECK-NEXT:    jmp .LBB0_5
-; CHECK-NEXT:  .LBB0_4: # %bb8
-; CHECK-NEXT:    movq .str.18+{{.*}}(%rip), %rax
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
-; CHECK-NEXT:    jmp .LBB0_5
-; CHECK-NEXT:  .LBB0_2: # %bb2
+; CHECK-NEXT:    jmp .LBB0_4
+; CHECK-NEXT:  .LBB0_1: # %bb2
 ; CHECK-NEXT:    movq .str.16+{{.*}}(%rip), %rax
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq {{.*}}(%rip), %rax
-; CHECK-NEXT:  .LBB0_5: # %bb12
+; CHECK-NEXT:    jmp .LBB0_4
+; CHECK-NEXT:  .LBB0_3: # %bb8
+; CHECK-NEXT:    movq .str.18+{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-NEXT:  .LBB0_4: # %bb12
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, (%rax)

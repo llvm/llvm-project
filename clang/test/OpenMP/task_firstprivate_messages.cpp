@@ -2,6 +2,7 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
 
+extern int omp_default_mem_alloc;
 void foo() {
 }
 
@@ -91,7 +92,7 @@ int main(int argc, char **argv) {
 #pragma omp task firstprivate(argc                          // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp task firstprivate(argc,                         // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp task firstprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
-#pragma omp task firstprivate(argc)
+#pragma omp task firstprivate(argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
 #pragma omp task firstprivate(S1)            // expected-error {{'S1' does not refer to a value}}
 #pragma omp task firstprivate(a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}}
 #pragma omp task firstprivate(argv[1])       // expected-error {{expected variable name}}

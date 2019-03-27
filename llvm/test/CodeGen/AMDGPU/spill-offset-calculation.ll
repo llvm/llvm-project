@@ -35,9 +35,8 @@ entry:
 
   %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
   ; 0x40000 / 64 = 4096 (for wave64)
-  ; CHECK: s_add_u32 s7, s7, 0x40000
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s7 ; 4-byte Folded Spill
-  ; CHECK: s_sub_u32 s7, s7, 0x40000
+  ; CHECK: s_add_u32 s6, s7, 0x40000
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
   %a = load volatile i32, i32 addrspace(5)* %aptr
 
   ; Force %a to spill
@@ -88,10 +87,9 @@ entry:
   %bufv2 = bitcast i8 addrspace(5)* %alloca to <2 x i32> addrspace(5)*
 
   ; 0x3ff00 / 64 = 4092 (for wave64)
-  ; CHECK: s_add_u32 s7, s7, 0x3ff00
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s7 ; 4-byte Folded Spill
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s7 offset:4 ; 4-byte Folded Spill
-  ; CHECK: s_sub_u32 s7, s7, 0x3ff00
+  ; CHECK: s_add_u32 s6, s7, 0x3ff00
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 offset:4 ; 4-byte Folded Spill
   %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
   %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
 
@@ -139,9 +137,8 @@ entry:
 
   %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
   ; 0x40000 / 64 = 4096 (for wave64)
-  ; CHECK: s_add_u32 s5, s5, 0x40000
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s5 ; 4-byte Folded Spill
-  ; CHECK: s_sub_u32 s5, s5, 0x40000
+  ; CHECK: s_add_u32 s6, s5, 0x40000
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
   %a = load volatile i32, i32 addrspace(5)* %aptr
 
   ; Force %a to spill
@@ -192,10 +189,9 @@ entry:
   %bufv2 = bitcast i8 addrspace(5)* %alloca to <2 x i32> addrspace(5)*
 
   ; 0x3ff00 / 64 = 4092 (for wave64)
-  ; CHECK: s_add_u32 s5, s5, 0x3ff00
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s5 ; 4-byte Folded Spill
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s5 offset:4 ; 4-byte Folded Spill
-  ; CHECK: s_sub_u32 s5, s5, 0x3ff00
+  ; CHECK: s_add_u32 s6, s5, 0x3ff00
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 offset:4 ; 4-byte Folded Spill
   %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
   %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
 

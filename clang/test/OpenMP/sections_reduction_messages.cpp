@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s
 
+extern int omp_default_mem_alloc;
 void foo() {
 }
 
@@ -14,7 +15,7 @@ bool foobool(int argc) {
 }
 
 void foobar(int &ref) {
-#pragma omp parallel   
+#pragma omp parallel
 #pragma omp sections reduction(+:ref)
   {
     foo();
@@ -149,7 +150,7 @@ T tmain(T argc) {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections reduction(&& : argc)
+#pragma omp sections reduction(&& : argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   {
     foo();
   }

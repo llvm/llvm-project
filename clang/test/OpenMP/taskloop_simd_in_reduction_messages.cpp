@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s
 
+extern int omp_default_mem_alloc;
 void foo() {
 }
 
@@ -164,7 +165,7 @@ T tmain(T argc) {
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskgroup task_reduction(&&:argc)
-#pragma omp taskloop simd in_reduction(&& : argc)
+#pragma omp taskloop simd in_reduction(&& : argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskloop simd in_reduction(^ : T) // expected-error {{'T' does not refer to a value}}

@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
   {
 #pragma omp cancellation point // expected-error {{one of 'for', 'parallel', 'sections' or 'taskgroup' is expected}}
   }
-#pragma omp cancellation point parallel untied // expected-error {{unexpected OpenMP clause 'untied' in directive '#pragma omp cancellation point'}} expected-error {{orphaned 'omp cancellation point' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
+#pragma omp cancellation point parallel untied allocate(argc) // expected-error {{unexpected OpenMP clause 'untied' in directive '#pragma omp cancellation point'}} expected-error {{orphaned 'omp cancellation point' directives are prohibited; perhaps you forget to enclose the directive into a region?}} expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp cancellation point'}}
 #pragma omp cancellation point unknown         // expected-error {{one of 'for', 'parallel', 'sections' or 'taskgroup' is expected}}
 #pragma omp parallel
   {

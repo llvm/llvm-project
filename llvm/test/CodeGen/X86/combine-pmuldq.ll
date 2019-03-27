@@ -91,16 +91,16 @@ define <4 x i64> @combine_shuffle_zero_pmuludq_256(<8 x i32> %a0, <8 x i32> %a1)
 define <8 x i64> @combine_zext_pmuludq_256(<8 x i32> %a) {
 ; SSE-LABEL: combine_zext_pmuludq_256:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm4
-; SSE-NEXT:    pxor %xmm3, %xmm3
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; SSE-NEXT:    pmovzxdq {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
+; SSE-NEXT:    pmovzxdq {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm1 = xmm1[2],xmm3[2],xmm1[3],xmm3[3]
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [715827883,715827883]
-; SSE-NEXT:    pmuludq %xmm3, %xmm0
-; SSE-NEXT:    pmuludq %xmm3, %xmm4
-; SSE-NEXT:    pmuludq %xmm3, %xmm2
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [715827883,715827883]
+; SSE-NEXT:    pmuludq %xmm1, %xmm0
+; SSE-NEXT:    pmuludq %xmm1, %xmm2
+; SSE-NEXT:    pmuludq %xmm1, %xmm4
 ; SSE-NEXT:    pmuludq %xmm1, %xmm3
 ; SSE-NEXT:    movdqa %xmm4, %xmm1
 ; SSE-NEXT:    retq

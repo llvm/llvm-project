@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100  %s
 
-#pragma omp requires unified_address // expected-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note{{unified_address clause previously used here}}
+int a;
+#pragma omp requires unified_address allocate(a) // expected-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note{{unified_address clause previously used here}} expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp requires'}}
 
 #pragma omp requires unified_shared_memory // expected-note {{unified_shared_memory clause previously used here}} expected-note{{unified_shared_memory clause previously used here}}
 
