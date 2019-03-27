@@ -61,7 +61,7 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   //
   // For SYCL, the mangled type name is attached, so it can be
   // reflown to proper name later.
-  if (getContext().getLangOpts().SYCL) {
+  if (getContext().getLangOpts().SYCLIsDevice) {
     std::unique_ptr<MangleContext> MC(getContext().createMangleContext());
     auto RDT = getContext().getRecordType(RD);
     MC->mangleCXXRTTIName(RDT, OS);
@@ -649,7 +649,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 
   case Type::BlockPointer: {
     const QualType FTy = cast<BlockPointerType>(Ty)->getPointeeType();
-    llvm::Type *PointeeType = ConvertTypeForMem(FTy);
+    llvm::Type *PointeeType = CGM.getLangOpts().OpenCL
+                                  ? CGM.getGenericBlockLiteralType()
+                                  : ConvertTypeForMem(FTy);
     unsigned AS = Context.getTargetAddressSpace(FTy);
     ResultType = llvm::PointerType::get(PointeeType, AS);
     break;
@@ -731,7 +733,7 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
     return Ty;
   }
 
-  assert((!Context.getLangOpts().SYCL || !isa<CXXRecordDecl>(RD) ||
+  assert((!Context.getLangOpts().SYCLIsDevice || !isa<CXXRecordDecl>(RD) ||
           !dyn_cast<CXXRecordDecl>(RD)->isPolymorphic()) &&
          "Types with virtual functions not allowed in SYCL");
 

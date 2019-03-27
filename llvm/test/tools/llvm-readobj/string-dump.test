@@ -1,0 +1,42 @@
+# Check the dumping of a section as strings.
+# RUN: yaml2obj %s > %t
+
+# RUN: llvm-readobj --string-dump=.strings --string-dump=.not_null_terminated %t | FileCheck %s
+# RUN: llvm-readobj -p=.strings -p=.not_null_terminated %t | FileCheck %s
+# RUN: llvm-readobj --string-dump=1 --string-dump=2 %t | FileCheck %s
+
+# RUN: llvm-readelf --string-dump=.strings --string-dump=.not_null_terminated %t | FileCheck %s
+# RUN: llvm-readelf -p=.strings -p=.not_null_terminated %t | FileCheck %s
+# RUN: llvm-readelf --string-dump=1 --string-dump=2 %t | FileCheck %s
+
+# CHECK:      String dump of section '.strings':
+# CHECK-NEXT: [ 0] here
+# CHECK-NEXT: [ 5] are
+# CHECK-NEXT: [ 9] some
+# CHECK-NEXT: [ e] strings
+# CHECK-NEXT: String dump of section '.not_null_terminated':
+# CHECK-NEXT: [ 0] no
+# CHECK-NEXT: [ 3] null{{$}}
+# CHECK-NOT:  {{.}}
+
+# RUN: not llvm-readobj --string-dump=does_not_exist %t 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not llvm-readobj --string-dump=42 %t 2>&1 | FileCheck %s --check-prefix=ERR
+
+# RUN: not llvm-readelf --string-dump=does_not_exist %t 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not llvm-readelf --string-dump=42 %t 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: Error reading file: invalid section reference.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name: .strings
+    Type: SHT_PROGBITS
+    Content: 686572650061726500736f6d6500737472696e677300
+  - Name: .not_null_terminated
+    Type: SHT_PROGBITS
+    Content: 6e6f006e756c6c

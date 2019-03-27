@@ -10,6 +10,7 @@
 
 #include <CL/sycl/accessor.hpp>
 #include <CL/sycl/buffer.hpp>
+#include <CL/sycl/detail/os_util.hpp>
 #include <CL/sycl/detail/scheduler/commands.h>
 #include <CL/sycl/detail/scheduler/requirements.h>
 #include <CL/sycl/detail/scheduler/scheduler.h>
@@ -24,6 +25,8 @@
 namespace cl {
 namespace sycl {
 namespace simple_scheduler {
+
+namespace csd = cl::sycl::detail;
 
 template <typename AllocatorT>
 static BufferReqPtr
@@ -67,7 +70,8 @@ void Node::addAccRequirement(
 
 // Adds a kernel to this node, maps to single task.
 template <typename KernelType>
-void Node::addKernel(const std::string &KernelName, const int KernelArgsNum,
+void Node::addKernel(csd::OSModuleHandle OSModule,
+                     const std::string &KernelName, const int KernelArgsNum,
                      const detail::kernel_param_desc_t *KernelArgs,
                      KernelType KernelFunc, cl_kernel ClKernel) {
   assert(!m_Kernel && "This node already contains an execution command");
@@ -75,13 +79,14 @@ void Node::addKernel(const std::string &KernelName, const int KernelArgsNum,
       std::make_shared<ExecuteKernelCommand<KernelType,
                                             /*Dimensions=*/1, range<1>, id<1>,
                                             /*SingleTask=*/true>>(
-          KernelFunc, KernelName, KernelArgsNum, KernelArgs, range<1>(1),
-          m_Queue, ClKernel);
+          KernelFunc, KernelName, OSModule, KernelArgsNum, KernelArgs,
+          range<1>(1), m_Queue, ClKernel);
 }
 
 // Adds kernel to this node, maps on range parallel for.
 template <typename KernelType, int Dimensions, typename KernelArgType>
-void Node::addKernel(const std::string &KernelName, const int KernelArgsNum,
+void Node::addKernel(csd::OSModuleHandle OSModule,
+                     const std::string &KernelName, const int KernelArgsNum,
                      const detail::kernel_param_desc_t *KernelArgs,
                      KernelType KernelFunc, range<Dimensions> NumWorkItems,
                      cl_kernel ClKernel) {
@@ -89,13 +94,14 @@ void Node::addKernel(const std::string &KernelName, const int KernelArgsNum,
   m_Kernel =
       std::make_shared<ExecuteKernelCommand<KernelType, Dimensions,
                                             range<Dimensions>, KernelArgType>>(
-          KernelFunc, KernelName, KernelArgsNum, KernelArgs, NumWorkItems,
-          m_Queue, ClKernel);
+          KernelFunc, KernelName, OSModule, KernelArgsNum, KernelArgs,
+          NumWorkItems, m_Queue, ClKernel);
 }
 
 // Adds kernel to this node, maps to range parallel for with offset.
 template <typename KernelType, int Dimensions, typename KernelArgType>
-void Node::addKernel(const std::string &KernelName, const int KernelArgsNum,
+void Node::addKernel(csd::OSModuleHandle OSModule,
+                     const std::string &KernelName, const int KernelArgsNum,
                      const detail::kernel_param_desc_t *KernelArgs,
                      KernelType KernelFunc, range<Dimensions> NumWorkItems,
                      id<Dimensions> WorkItemOffset, cl_kernel ClKernel) {
@@ -103,20 +109,21 @@ void Node::addKernel(const std::string &KernelName, const int KernelArgsNum,
   m_Kernel =
       std::make_shared<ExecuteKernelCommand<KernelType, Dimensions,
                                             range<Dimensions>, KernelArgType>>(
-          KernelFunc, KernelName, KernelArgsNum, KernelArgs, NumWorkItems,
-          m_Queue, ClKernel, WorkItemOffset);
+          KernelFunc, KernelName, OSModule, KernelArgsNum, KernelArgs,
+          NumWorkItems, m_Queue, ClKernel, WorkItemOffset);
 }
 // Adds kernel to this node, maps on nd_range parallel for.
 template <typename KernelType, int Dimensions>
-void Node::addKernel(const std::string &KernelName, const int KernelArgsNum,
+void Node::addKernel(csd::OSModuleHandle OSModule,
+                     const std::string &KernelName, const int KernelArgsNum,
                      const detail::kernel_param_desc_t *KernelArgs,
                      KernelType KernelFunc, nd_range<Dimensions> ExecutionRange,
                      cl_kernel ClKernel) {
   assert(!m_Kernel && "This node already contains an execution command");
   m_Kernel = std::make_shared<ExecuteKernelCommand<
       KernelType, Dimensions, nd_range<Dimensions>, nd_item<Dimensions>>>(
-      KernelFunc, KernelName, KernelArgsNum, KernelArgs, ExecutionRange,
-      m_Queue, ClKernel);
+      KernelFunc, KernelName, OSModule, KernelArgsNum, KernelArgs,
+      ExecutionRange, m_Queue, ClKernel);
 }
 
 // Adds explicit memory operation to this node, maps on handler fill method
@@ -129,7 +136,7 @@ void Node::addExplicitMemOp(
          "Accessor should have an initialized accessor_base");
   detail::buffer_impl<buffer_allocator<char>> *Buf = DestBase->m_Buf;
 
-  range<Dimensions> Range = DestBase->Range;
+  range<Dimensions> Range = DestBase->AccessRange;
   id<Dimensions> Offset = DestBase->Offset;
 
   BufferReqPtr Req = getReqForBuffer(m_Bufs, *Buf);
@@ -162,13 +169,13 @@ void Node::addExplicitMemOp(
   assert(DestBuf != nullptr &&
          "Accessor should have an initialized buffer_impl");
 
-  range<dim_src> SrcRange = SrcBase->Range;
+  range<dim_src> SrcRange = SrcBase->AccessRange;
   id<dim_src> SrcOffset = SrcBase->Offset;
   id<dim_dest> DestOffset = DestBase->Offset;
 
   // Use BufRange here
-  range<dim_src> BuffSrcRange = SrcBase->BufRange;
-  range<dim_src> BuffDestRange = DestBase->BufRange;
+  range<dim_src> BuffSrcRange = SrcBase->MemRange;
+  range<dim_src> BuffDestRange = DestBase->MemRange;
 
   BufferReqPtr SrcReq = getReqForBuffer(m_Bufs, *SrcBuf);
   BufferReqPtr DestReq = getReqForBuffer(m_Bufs, *DestBuf);
@@ -204,7 +211,6 @@ void Scheduler::copyBack(detail::buffer_impl<AllocatorT> &Buf) {
 template <access::mode Mode, access::target Target, typename AllocatorT>
 void Scheduler::updateHost(detail::buffer_impl<AllocatorT> &Buf,
                            cl::sycl::event &Event) {
-  CommandPtr UpdateHostCmd;
   BufferReqPtr BufStor =
       std::make_shared<BufferStorage<AllocatorT, Mode, Target>>(Buf);
 
@@ -212,17 +218,7 @@ void Scheduler::updateHost(detail::buffer_impl<AllocatorT> &Buf,
     return;
   }
 
-  // TODO: Find a better way to say that we need copy to HOST, just nullptr?
-  cl::sycl::device HostDevice;
-  UpdateHostCmd = std::make_shared<MemMoveCommand>(
-      BufStor, m_BuffersEvolution[BufStor].back()->getQueue(),
-      detail::getSyclObjImpl(cl::sycl::queue(HostDevice)),
-      cl::sycl::access::mode::read_write);
-
-  // Add dependency if there was operations with the buffer already.
-  UpdateHostCmd->addDep(m_BuffersEvolution[BufStor].back(), BufStor);
-
-  m_BuffersEvolution[BufStor].push_back(UpdateHostCmd);
+  CommandPtr UpdateHostCmd = insertUpdateHostCmd(BufStor);
   Event = EnqueueCommand(std::move(UpdateHostCmd));
 }
 
@@ -243,10 +239,8 @@ void Scheduler::removeBuffer(detail::buffer_impl<AllocatorT> &Buf) {
   m_BuffersEvolution.erase(BufStor);
 }
 
-static bool cmdsHaveEqualCxtAndDev(const CommandPtr &LHS,
-                                   const CommandPtr &RHS) {
-  return LHS->getQueue()->get_device() == RHS->getQueue()->get_device() &&
-         LHS->getQueue()->get_context() == LHS->getQueue()->get_context();
+static bool cmdsHaveEqualCxt(const CommandPtr &LHS, const CommandPtr &RHS) {
+  return LHS->getQueue()->get_context() == RHS->getQueue()->get_context();
 }
 
 // Adds new node to graph, creating an Alloca and MemMove commands if
@@ -262,8 +256,10 @@ inline cl::sycl::event Scheduler::addNode(Node NewNode) {
                                           cl::sycl::access::mode::read_write);
       m_BuffersEvolution[Buf].push_back(AllocaCmd);
     }
+
     // If targets of previous and new command differ - insert memmove command.
-    if (!cmdsHaveEqualCxtAndDev(m_BuffersEvolution[Buf].back(), Cmd)) {
+    if (!cmdsHaveEqualCxt(m_BuffersEvolution[Buf].back(), Cmd)) {
+      insertUpdateHostCmd(Buf);
       CommandPtr MemMoveCmd = std::make_shared<MemMoveCommand>(
           Buf, std::move(m_BuffersEvolution[Buf].back()->getQueue()),
           std::move(NewNode.getQueue()), cl::sycl::access::mode::read_write);

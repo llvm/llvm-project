@@ -11,7 +11,7 @@ int fib(int n)
 
 typedef struct S {
 template <typename T>
-  // expected-note@+1 2{{function implemented using recursion declared here}}
+  // expected-note@+1 3{{function implemented using recursion declared here}}
 T factT(T i, T j)
 {
   // expected-error@+1 {{SYCL kernel cannot call a recursive function}}

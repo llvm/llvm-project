@@ -55,7 +55,7 @@ test()
     static_assert((std::is_same<typename R::iterator_category, typename T::iterator_category>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<input_iterator<char*> >();
     test<forward_iterator<char*> >();
@@ -91,4 +91,6 @@ int main()
         static_assert(std::is_same<It::reference, int&&>::value, "");
     }
 #endif
+
+  return 0;
 }

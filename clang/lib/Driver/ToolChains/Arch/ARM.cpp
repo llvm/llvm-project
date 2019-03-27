@@ -248,7 +248,7 @@ arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
         ABI = FloatABI::SoftFP;
         break;
       case llvm::Triple::Android:
-        ABI = (SubArch == 7) ? FloatABI::SoftFP : FloatABI::Soft;
+        ABI = (SubArch >= 7) ? FloatABI::SoftFP : FloatABI::Soft;
         break;
       default:
         // Assume "soft", but warn the user we are guessing.
@@ -378,9 +378,7 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
   } else if (FPUArg) {
     getARMFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
   } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) >= 7) {
-    // Android mandates minimum FPU requirements based on OS version.
-    const char *AndroidFPU =
-        Triple.isAndroidVersionLT(23) ? "vfpv3-d16" : "neon";
+    const char *AndroidFPU = "neon";
     if (!llvm::ARM::getFPUFeatures(llvm::ARM::parseFPU(AndroidFPU), Features))
       D.Diag(clang::diag::err_drv_clang_unsupported)
           << std::string("-mfpu=") + AndroidFPU;

@@ -8,6 +8,8 @@
 
 // <cstdlib> and <cstring> are already tested elsewhere
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }

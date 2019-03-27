@@ -54,6 +54,7 @@ Error ExecuteStage::issueInstruction(InstRef &IR) {
   SmallVector<std::pair<ResourceRef, ResourceCycles>, 4> Used;
   SmallVector<InstRef, 4> Ready;
   HWS.issueInstruction(IR, Used, Ready);
+  NumIssuedOpcodes += IR.getInstruction()->getDesc().NumMicroOps;
 
   notifyReservedOrReleasedBuffers(IR, /* Reserved */ false);
 
@@ -89,6 +90,8 @@ Error ExecuteStage::cycleStart() {
   SmallVector<InstRef, 4> Ready;
 
   HWS.cycleEvent(Freed, Executed, Ready);
+  NumDispatchedOpcodes = 0;
+  NumIssuedOpcodes = 0;
 
   for (const ResourceRef &RR : Freed)
     notifyResourceAvailable(RR);
@@ -104,6 +107,45 @@ Error ExecuteStage::cycleStart() {
     notifyInstructionReady(IR);
 
   return issueReadyInstructions();
+}
+
+Error ExecuteStage::cycleEnd() {
+  if (!EnablePressureEvents)
+    return ErrorSuccess();
+
+  // Always conservatively report any backpressure events if the dispatch logic
+  // was stalled due to unavailable scheduler resources.
+  if (!HWS.hadTokenStall() && NumDispatchedOpcodes <= NumIssuedOpcodes)
+    return ErrorSuccess();
+
+  SmallVector<InstRef, 8> Insts;
+  uint64_t Mask = HWS.analyzeResourcePressure(Insts);
+  if (Mask) {
+    LLVM_DEBUG(dbgs() << "[E] Backpressure increased because of unavailable "
+                         "pipeline resources: "
+                      << format_hex(Mask, 16) << '\n');
+    HWPressureEvent Ev(HWPressureEvent::RESOURCES, Insts, Mask);
+    notifyEvent(Ev);
+    return ErrorSuccess();
+  }
+
+  SmallVector<InstRef, 8> RegDeps;
+  SmallVector<InstRef, 8> MemDeps;
+  HWS.analyzeDataDependencies(RegDeps, MemDeps);
+  if (RegDeps.size()) {
+    LLVM_DEBUG(
+        dbgs() << "[E] Backpressure increased by register dependencies\n");
+    HWPressureEvent Ev(HWPressureEvent::REGISTER_DEPS, RegDeps);
+    notifyEvent(Ev);
+  }
+
+  if (MemDeps.size()) {
+    LLVM_DEBUG(dbgs() << "[E] Backpressure increased by memory dependencies\n");
+    HWPressureEvent Ev(HWPressureEvent::MEMORY_DEPS, MemDeps);
+    notifyEvent(Ev);
+  }
+
+  return ErrorSuccess();
 }
 
 #ifndef NDEBUG
@@ -146,9 +188,10 @@ Error ExecuteStage::execute(InstRef &IR) {
   // BufferSize=0 as reserved. Resources with a buffer size of zero will only
   // be released after MCIS is issued, and all the ResourceCycles for those
   // units have been consumed.
-  HWS.dispatch(IR);
+  bool IsReadyInstruction = HWS.dispatch(IR);
+  NumDispatchedOpcodes += IR.getInstruction()->getDesc().NumMicroOps;
   notifyReservedOrReleasedBuffers(IR, /* Reserved */ true);
-  if (!HWS.isReady(IR))
+  if (!IsReadyInstruction)
     return ErrorSuccess();
 
   // If we did not return early, then the scheduler is ready for execution.
@@ -188,9 +231,10 @@ void ExecuteStage::notifyInstructionIssued(
   LLVM_DEBUG({
     dbgs() << "[E] Instruction Issued: #" << IR << '\n';
     for (const std::pair<ResourceRef, ResourceCycles> &Resource : Used) {
+      assert(Resource.second.getDenominator() == 1 && "Invalid cycles!");
       dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
              << Resource.first.second << "], ";
-      dbgs() << "cycles: " << Resource.second << '\n';
+      dbgs() << "cycles: " << Resource.second.getNumerator() << '\n';
     }
   });
 

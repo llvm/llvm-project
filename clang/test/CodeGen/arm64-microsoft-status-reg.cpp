@@ -23,88 +23,112 @@
 #define ARM64_TPIDRRO_EL0       ARM64_SYSREG(3,3,13, 0,3)  // Thread ID Register, User Read Only [CP15_TPIDRURO]
 #define ARM64_TPIDR_EL1         ARM64_SYSREG(3,0,13, 0,4)  // Thread ID Register, Privileged Only [CP15_TPIDRPRW]
 
-void check_ReadWriteStatusReg(int v) {
-  int ret;
+// From intrin.h
+__int64 _ReadStatusReg(int);
+void _WriteStatusReg(int, __int64);
+
+void check_ReadWriteStatusReg(__int64 v) {
+  __int64 ret;
   ret = _ReadStatusReg(ARM64_CNTVCT);
-// CHECK-ASM: mrs     x8, CNTVCT_EL0
-// CHECK-IR: call i64 @llvm.read_register.i64(metadata ![[MD2:.*]])
+// CHECK-ASM: mrs     x0, CNTVCT_EL0
+// CHECK-IR: %[[VAR:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2:.*]])
+// CHECK-IR-NEXT: store i64 %[[VAR]]
 
   ret = _ReadStatusReg(ARM64_PMCCNTR_EL0);
-// CHECK-ASM: mrs     x8, PMCCNTR_EL0
-// CHECK-IR: call i64 @llvm.read_register.i64(metadata ![[MD3:.*]])
+// CHECK-ASM: mrs     x0, PMCCNTR_EL0
+// CHECK-IR: %[[VAR:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD3:.*]])
+// CHECK-IR-NEXT: store i64 %[[VAR]]
 
   ret = _ReadStatusReg(ARM64_PMSELR_EL0);
-// CHECK-ASM: mrs     x8, PMSELR_EL0
-// CHECK-IR: call i64 @llvm.read_register.i64(metadata ![[MD4:.*]])
+// CHECK-ASM: mrs     x0, PMSELR_EL0
+// CHECK-IR: %[[VAR:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD4:.*]])
+// CHECK-IR-NEXT: store i64 %[[VAR]]
 
   ret = _ReadStatusReg(ARM64_PMXEVCNTR_EL0);
-// CHECK-ASM: mrs     x8, PMXEVCNTR_EL0
-// CHECK-IR: call i64 @llvm.read_register.i64(metadata ![[MD5:.*]])
+// CHECK-ASM: mrs     x0, PMXEVCNTR_EL0
+// CHECK-IR: %[[VAR:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD5:.*]])
+// CHECK-IR-NEXT: store i64 %[[VAR]]
 
   ret = _ReadStatusReg(ARM64_PMXEVCNTRn_EL0(0));
-// CHECK-ASM: mrs     x8, PMEVCNTR0_EL0
-// CHECK-IR: call i64 @llvm.read_register.i64(metadata ![[MD6:.*]])
+// CHECK-ASM: mrs     x0, PMEVCNTR0_EL0
+// CHECK-IR: %[[VAR:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD6:.*]])
+// CHECK-IR-NEXT: store i64 %[[VAR]]
 
   ret = _ReadStatusReg(ARM64_PMXEVCNTRn_EL0(1));
-// CHECK-ASM: mrs     x8, PMEVCNTR1_EL0
-// CHECK-IR: call i64 @llvm.read_register.i64(metadata ![[MD7:.*]])
+// CHECK-ASM: mrs     x0, PMEVCNTR1_EL0
+// CHECK-IR: %[[VAR:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD7:.*]])
+// CHECK-IR-NEXT: store i64 %[[VAR]]
 
   ret = _ReadStatusReg(ARM64_PMXEVCNTRn_EL0(30));
-// CHECK-ASM: mrs     x8, PMEVCNTR30_EL0
-// CHECK-IR: call i64 @llvm.read_register.i64(metadata ![[MD8:.*]])
+// CHECK-ASM: mrs     x0, PMEVCNTR30_EL0
+// CHECK-IR: %[[VAR:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD8:.*]])
+// CHECK-IR-NEXT: store i64 %[[VAR]]
 
   ret = _ReadStatusReg(ARM64_TPIDR_EL0);
-// CHECK-ASM: mrs     x8, TPIDR_EL0
-// CHECK-IR: call i64 @llvm.read_register.i64(metadata ![[MD9:.*]])
+// CHECK-ASM: mrs     x0, TPIDR_EL0
+// CHECK-IR: %[[VAR:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD9:.*]])
+// CHECK-IR-NEXT: store i64 %[[VAR]]
 
   ret = _ReadStatusReg(ARM64_TPIDRRO_EL0);
-// CHECK-ASM: mrs     x8, TPIDRRO_EL0
-// CHECK-IR: call i64 @llvm.read_register.i64(metadata ![[MD10:.*]])
+// CHECK-ASM: mrs     x0, TPIDRRO_EL0
+// CHECK-IR: %[[VAR:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD10:.*]])
+// CHECK-IR-NEXT: store i64 %[[VAR]]
 
   ret = _ReadStatusReg(ARM64_TPIDR_EL1);
-// CHECK-ASM: mrs     x8, TPIDR_EL1
-// CHECK-IR: call i64 @llvm.read_register.i64(metadata ![[MD11:.*]])
+// CHECK-ASM: mrs     x0, TPIDR_EL1
+// CHECK-IR: %[[VAR:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD11:.*]])
+// CHECK-IR-NEXT: store i64 %[[VAR]]
 
 
   _WriteStatusReg(ARM64_CNTVCT, v);
-// CHECK-ASM: msr     S3_3_C14_C0_2, x8
-// CHECK-IR: call void @llvm.write_register.i64(metadata ![[MD2:.*]], i64 {{%.*}})
+// CHECK-ASM: msr     S3_3_C14_C0_2, x0
+// CHECK-IR: %[[VAR:.*]] = load i64,
+// CHECK-IR-NEXT: call void @llvm.write_register.i64(metadata ![[MD2:.*]], i64 %[[VAR]])
 
   _WriteStatusReg(ARM64_PMCCNTR_EL0, v);
-// CHECK-ASM: msr     PMCCNTR_EL0, x8
-// CHECK-IR: call void @llvm.write_register.i64(metadata ![[MD3:.*]], i64 {{%.*}})
+// CHECK-ASM: msr     PMCCNTR_EL0, x0
+// CHECK-IR: %[[VAR:.*]] = load i64,
+// CHECK-IR-NEXT: call void @llvm.write_register.i64(metadata ![[MD3:.*]], i64 %[[VAR]])
 
   _WriteStatusReg(ARM64_PMSELR_EL0, v);
-// CHECK-ASM: msr     PMSELR_EL0, x8
-// CHECK-IR: call void @llvm.write_register.i64(metadata ![[MD4:.*]], i64 {{%.*}})
+// CHECK-ASM: msr     PMSELR_EL0, x0
+// CHECK-IR: %[[VAR:.*]] = load i64,
+// CHECK-IR-NEXT: call void @llvm.write_register.i64(metadata ![[MD4:.*]], i64 %[[VAR]])
 
   _WriteStatusReg(ARM64_PMXEVCNTR_EL0, v);
-// CHECK-ASM: msr     PMXEVCNTR_EL0, x8
-// CHECK-IR: call void @llvm.write_register.i64(metadata ![[MD5:.*]], i64 {{%.*}})
+// CHECK-ASM: msr     PMXEVCNTR_EL0, x0
+// CHECK-IR: %[[VAR:.*]] = load i64,
+// CHECK-IR-NEXT: call void @llvm.write_register.i64(metadata ![[MD5:.*]], i64 %[[VAR]])
 
   _WriteStatusReg(ARM64_PMXEVCNTRn_EL0(0), v);
-// CHECK-ASM: msr     PMEVCNTR0_EL0, x8
-// CHECK-IR: call void @llvm.write_register.i64(metadata ![[MD6:.*]], i64 {{%.*}})
+// CHECK-ASM: msr     PMEVCNTR0_EL0, x0
+// CHECK-IR: %[[VAR:.*]] = load i64,
+// CHECK-IR-NEXT: call void @llvm.write_register.i64(metadata ![[MD6:.*]], i64 %[[VAR]])
 
   _WriteStatusReg(ARM64_PMXEVCNTRn_EL0(1), v);
-// CHECK-ASM: msr     PMEVCNTR1_EL0, x8
-// CHECK-IR: call void @llvm.write_register.i64(metadata ![[MD7:.*]], i64 {{%.*}})
+// CHECK-ASM: msr     PMEVCNTR1_EL0, x0
+// CHECK-IR: %[[VAR:.*]] = load i64,
+// CHECK-IR-NEXT: call void @llvm.write_register.i64(metadata ![[MD7:.*]], i64 %[[VAR]])
 
   _WriteStatusReg(ARM64_PMXEVCNTRn_EL0(30), v);
-// CHECK-ASM: msr     PMEVCNTR30_EL0, x8
-// CHECK-IR: call void @llvm.write_register.i64(metadata ![[MD8:.*]], i64 {{%.*}})
+// CHECK-ASM: msr     PMEVCNTR30_EL0, x0
+// CHECK-IR: %[[VAR:.*]] = load i64,
+// CHECK-IR-NEXT: call void @llvm.write_register.i64(metadata ![[MD8:.*]], i64 %[[VAR]])
 
   _WriteStatusReg(ARM64_TPIDR_EL0, v);
-// CHECK-ASM: msr     TPIDR_EL0, x8
-// CHECK-IR: call void @llvm.write_register.i64(metadata ![[MD9:.*]], i64 {{%.*}})
+// CHECK-ASM: msr     TPIDR_EL0, x0
+// CHECK-IR: %[[VAR:.*]] = load i64,
+// CHECK-IR-NEXT: call void @llvm.write_register.i64(metadata ![[MD9:.*]], i64 %[[VAR]])
 
   _WriteStatusReg(ARM64_TPIDRRO_EL0, v);
-// CHECK-ASM: msr     TPIDRRO_EL0, x8
-// CHECK-IR: call void @llvm.write_register.i64(metadata ![[MD10:.*]], i64 {{%.*}})
+// CHECK-ASM: msr     TPIDRRO_EL0, x0
+// CHECK-IR: %[[VAR:.*]] = load i64,
+// CHECK-IR-NEXT: call void @llvm.write_register.i64(metadata ![[MD10:.*]], i64 %[[VAR]])
 
   _WriteStatusReg(ARM64_TPIDR_EL1, v);
-// CHECK-ASM: msr     TPIDR_EL1, x8
-// CHECK-IR: call void @llvm.write_register.i64(metadata ![[MD11:.*]], i64 {{%.*}})
+// CHECK-ASM: msr     TPIDR_EL1, x0
+// CHECK-IR: %[[VAR:.*]] = load i64,
+// CHECK-IR-NEXT: call void @llvm.write_register.i64(metadata ![[MD11:.*]], i64 %[[VAR]])
 }
 
 // CHECK-IR: ![[MD2]] = !{!"3:3:14:0:2"}

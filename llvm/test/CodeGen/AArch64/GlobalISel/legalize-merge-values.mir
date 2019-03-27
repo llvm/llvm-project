@@ -8,13 +8,13 @@ body: |
     ; CHECK-LABEL: name: test_merge_s4
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C2]]
-    ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C3]]
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND]], [[AND1]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C2]]
+    ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C3]]
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[AND]](s32)
     ; CHECK: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
     ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C4]]

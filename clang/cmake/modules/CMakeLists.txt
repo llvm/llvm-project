@@ -55,10 +55,19 @@ set(CLANG_CONFIG_EXPORTS_FILE)
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   get_property(clang_has_exports GLOBAL PROPERTY CLANG_HAS_EXPORTS)
   if(clang_has_exports)
-    install(EXPORT ClangTargets DESTINATION ${CLANG_INSTALL_PACKAGE_DIR})
+    install(EXPORT ClangTargets DESTINATION ${CLANG_INSTALL_PACKAGE_DIR}
+            COMPONENT clang-cmake-exports)
   endif()
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/ClangConfig.cmake
-    DESTINATION ${CLANG_INSTALL_PACKAGE_DIR})
+    DESTINATION ${CLANG_INSTALL_PACKAGE_DIR}
+    COMPONENT clang-cmake-exports)
+
+  if(NOT LLVM_ENABLE_IDE)
+    # Add a dummy target so this can be used with LLVM_DISTRIBUTION_COMPONENTS
+    add_custom_target(clang-cmake-exports)
+    add_llvm_install_targets(install-clang-cmake-exports
+                             COMPONENT clang-cmake-exports)
+  endif()
 endif()

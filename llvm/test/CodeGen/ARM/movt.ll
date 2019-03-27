@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=thumbv8m.base %s -o - | FileCheck %s
 ; RUN: llc -mtriple=thumbv8m.base -mcpu=cortex-m23 %s -o - | FileCheck %s --check-prefix=NOMOVT
 ; RUN: llc -mtriple=thumbv8m.base -mcpu=cortex-m33 %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv8m.base -mcpu=cortex-m35p %s -o - | FileCheck %s
 
 define i32 @t(i32 %X) nounwind {
 ; CHECK-LABEL: t:

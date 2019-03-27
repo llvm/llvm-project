@@ -93,6 +93,10 @@ def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;
 
 def threads: F<"threads">, HelpText<"Run the linker multi-threaded">;
 
+def trace: F<"trace">, HelpText<"Print the names of the input files">;
+
+defm trace_symbol: Eq<"trace-symbol", "Trace references to symbols">;
+
 defm undefined: Eq<"undefined", "Force undefined symbol during linking">;
 
 def v: Flag<["-"], "v">, HelpText<"Display the version number">;
@@ -160,6 +164,8 @@ def: Flag<["-"], "m">, Alias<max_memory>;
 def: Flag<["-"], "r">, Alias<relocatable>;
 def: Flag<["-"], "s">, Alias<strip_all>, HelpText<"Alias for --strip-all">;
 def: Flag<["-"], "S">, Alias<strip_debug>, HelpText<"Alias for --strip-debug">;
+def: Flag<["-"], "t">, Alias<trace>, HelpText<"Alias for --trace">;
+def: JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>, HelpText<"Alias for --trace-symbol">;
 def: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 
 // LTO-related options.

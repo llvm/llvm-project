@@ -1,0 +1,102 @@
+# Show that llvm-readobj prints symbol shndxes correctly, for valid indexes,
+# invalid indexes (i.e. section indexes that don't correspond to a real
+# section), reserved values and processor/os-specific index values, for both GNU
+# and LLVM styles.
+
+# Use --dyn-symbols because yaml2obj does not currently support large section indexes
+# and also does not allow hand-crafting of static symbol tables.
+# RUN: yaml2obj --docnum=1 %s > %t1
+# RUN: llvm-readobj --symbols --dyn-symbols %t1 | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --symbols --dyn-symbols %t1 | FileCheck %s --check-prefix=GNU1
+
+# llvm-readobj doesn't accept shndx values that are not valid section indexes
+# for LLVM style, so only test GNU output in this case.
+# RUN: yaml2obj --docnum=2 %s > %t2
+# RUN: llvm-readelf --symbols %t2 | FileCheck %s --check-prefix=GNU2
+
+# LLVM: Name:    undef
+# LLVM: Section: Undefined (0x0)
+# LLVM: Name:    normal
+# LLVM: Section: .text (0x1)
+# LLVM: Name:    common
+# LLVM: Section: Common (0xFFF2)
+# LLVM: Name:    absolute
+# LLVM: Section: Absolute (0xFFF1)
+# LLVM: Name:    proc
+# LLVM: Section: Processor Specific (0xFF01)
+# LLVM: Name:    os
+# LLVM: Section: Operating System Specific (0xFF21)
+# LLVM: Name:    reserved
+# LLVM: Section: Reserved (0xFFFE)
+
+# GNU1:      Symbol table '.dynsym' contains 2 entries:
+# GNU1-NEXT:   Num: {{.*}} Ndx Name
+# GNU1-NEXT:     0: {{.*}} UND
+# GNU1-NEXT:     1: {{.*}}   1 xindex
+# GNU1:      Symbol table '.symtab' contains 8 entries:
+# GNU1-NEXT:   Num: {{.*}} Ndx Name
+# GNU1-NEXT:     0: {{.*}} UND
+# GNU1-NEXT:     1: {{.*}} UND undef
+# GNU1-NEXT:     2: {{.*}}   1 normal
+# GNU1-NEXT:     3: {{.*}} COM common
+# GNU1-NEXT:     4: {{.*}} ABS absolute
+# GNU1-NEXT:     5: {{.*}} PRC[0xff01] proc
+# GNU1-NEXT:     6: {{.*}} OS[0xff21] os
+# GNU1-NEXT:     7: {{.*}} RSV[0xfffe] reserved
+
+# GNU2:      Symbol table '.symtab' contains 2 entries:
+# GNU2-NEXT:   Num: {{.*}} Ndx Name
+# GNU2-NEXT:     0: {{.*}} UND
+# GNU2-NEXT:     1: {{.*}}  66 bad
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .dynstr
+    Type: SHT_STRTAB
+    #\0xindex\0
+    Content: "0078696e64657800"
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Link: .dynstr
+    EntSize: 16
+    # Null symbol
+    # Symbol with st_name = 1, st_shndx = SHN_XINDEX
+    Content: "000000000000000000000000000000000100000000000000000000000000ffff"
+  - Name: .symtab_shndx
+    Type: SHT_SYMTAB_SHNDX
+    Link: .dynsym
+    EntSize: 4
+    Content: "0000000001000000"
+Symbols:
+  Global:
+    - Name:    undef
+    - Name:    normal
+      Section: .text
+    - Name:    common
+      Index:   SHN_COMMON
+    - Name:    absolute
+      Index:   SHN_ABS
+    - Name:    proc
+      Index:   0xff01
+    - Name:    os
+      Index:   0xff21
+    - Name:    reserved
+      Index:   0xfffe
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Symbols:
+  Global:
+    - Name:    bad
+      Index:   0x42

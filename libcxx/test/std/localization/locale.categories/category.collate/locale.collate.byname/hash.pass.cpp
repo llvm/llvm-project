@@ -22,7 +22,7 @@
 
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     std::locale l(LOCALE_en_US_UTF_8);
     {
@@ -39,4 +39,6 @@ int main()
         assert(f.hash(x1.data(), x1.data() + x1.size())
             != f.hash(x2.data(), x2.data() + x2.size()));
     }
+
+  return 0;
 }

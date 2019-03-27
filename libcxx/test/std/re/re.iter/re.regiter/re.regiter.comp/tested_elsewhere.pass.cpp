@@ -13,6 +13,8 @@
 // bool operator==(const regex_iterator& right) const;
 // bool operator!=(const regex_iterator& right) const;
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }

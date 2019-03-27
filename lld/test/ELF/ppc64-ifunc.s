@@ -42,9 +42,9 @@
 # CHECK: _start:
 # CHECK-NEXT:     addis 2, 12, 2
 # CHECK-NEXT:     addi 2, 2, -32588
-# CHECK-NEXT:     bl .+67108812
+# CHECK-NEXT:     bl .-52
 # CHECK-NEXT:     ld 2, 24(1)
-# CHECK-NEXT:     bl .+67108824
+# CHECK-NEXT:     bl .-40
 # CHECK-NEXT:     ld 2, 24(1)
 
 # Check tocbase

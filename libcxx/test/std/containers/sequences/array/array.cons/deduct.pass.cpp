@@ -30,7 +30,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 //  Test the explicit deduction guides
     {
@@ -61,4 +61,6 @@ int main()
     assert(arr[0] == 4.0);
     assert(arr[1] == 5.0);
   }
+
+  return 0;
 }

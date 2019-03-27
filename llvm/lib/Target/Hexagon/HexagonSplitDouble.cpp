@@ -152,8 +152,8 @@ bool HexagonSplitDoubleRegs::isInduction(unsigned Reg, LoopRegMap &IRM) const {
 }
 
 bool HexagonSplitDoubleRegs::isVolatileInstr(const MachineInstr *MI) const {
-  for (auto &I : MI->memoperands())
-    if (I->isVolatile())
+  for (auto &MO : MI->memoperands())
+    if (MO->isVolatile() || MO->isAtomic())
       return true;
   return false;
 }

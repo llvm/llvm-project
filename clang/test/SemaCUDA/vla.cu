@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -verify %s
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -verify -DHOST %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -verify -DHOST %s
+
+#ifndef __CUDA_ARCH__
+// expected-no-diagnostics
+#endif
 
 #include "Inputs/cuda.h"
 
@@ -8,7 +12,10 @@ void host(int n) {
 }
 
 __device__ void device(int n) {
-  int x[n];  // expected-error {{cannot use variable-length arrays in __device__ functions}}
+  int x[n];
+#ifdef __CUDA_ARCH__
+  // expected-error@-2 {{cannot use variable-length arrays in __device__ functions}}
+#endif
 }
 
 __host__ __device__ void hd(int n) {

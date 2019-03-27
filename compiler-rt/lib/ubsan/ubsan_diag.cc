@@ -26,13 +26,21 @@
 
 using namespace __ubsan;
 
-void __ubsan::GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc,
-                            uptr bp, void *context, bool fast) {
+// UBSan is combined with runtimes that already provide this functionality
+// (e.g., ASan) as well as runtimes that lack it (e.g., scudo). Tried to use
+// weak linkage to resolve this issue which is not portable and breaks on
+// Windows.
+// TODO(yln): This is a temporary workaround. GetStackTrace functions will be
+// removed in the future.
+void ubsan_GetStackTrace(BufferedStackTrace *stack, uptr max_depth,
+                         uptr pc, uptr bp, void *context, bool fast) {
   uptr top = 0;
   uptr bottom = 0;
-  if (fast)
+  if (StackTrace::WillUseFastUnwind(fast)) {
     GetThreadStackTopAndBottom(false, &top, &bottom);
-  stack->Unwind(max_depth, pc, bp, context, top, bottom, fast);
+    stack->Unwind(max_depth, pc, bp, nullptr, top, bottom, true);
+  } else
+    stack->Unwind(max_depth, pc, bp, context, 0, 0, false);
 }
 
 static void MaybePrintStackTrace(uptr pc, uptr bp) {
@@ -42,7 +50,7 @@ static void MaybePrintStackTrace(uptr pc, uptr bp) {
     return;
 
   BufferedStackTrace stack;
-  GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr,
+  ubsan_GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr,
                 common_flags()->fast_unwind_on_fatal);
   stack.Print();
 }

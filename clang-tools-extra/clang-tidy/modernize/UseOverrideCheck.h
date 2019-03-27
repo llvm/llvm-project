@@ -18,10 +18,16 @@ namespace modernize {
 /// Use C++11's `override` and remove `virtual` where applicable.
 class UseOverrideCheck : public ClangTidyCheck {
 public:
-  UseOverrideCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  UseOverrideCheck(StringRef Name, ClangTidyContext *Context);
+
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  const bool IgnoreDestructors;
+  const std::string OverrideSpelling;
+  const std::string FinalSpelling;
 };
 
 } // namespace modernize

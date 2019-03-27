@@ -24,7 +24,7 @@
 #ifndef __MMINTRIN_H
 #define __MMINTRIN_H
 
-typedef long long __m64 __attribute__((__vector_size__(8)));
+typedef long long __m64 __attribute__((__vector_size__(8), __aligned__(8)));
 
 typedef long long __v1di __attribute__((__vector_size__(8)));
 typedef int __v2si __attribute__((__vector_size__(8)));

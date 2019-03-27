@@ -22,7 +22,7 @@
 
 #include <iostream>
 
-int main()
+int main(int, char**)
 {
     using year                    = std::chrono::year;
     using month                   = std::chrono::month;
@@ -65,4 +65,6 @@ int main()
 
     assert(sd.time_since_epoch() == days{-(10957+35)});
     }
+
+  return 0;
 }

@@ -1144,3 +1144,32 @@ define void @demanded_i32(i32* nocapture readonly, i32* nocapture, i32) nounwind
 ; <label>:16:
   ret void
 }
+
+; Make sure we can simplify bt when the shift amount has known zeros in it
+; which cause the and mask to have bits removed.
+define zeroext i1 @demanded_with_known_zeroes(i32 %bit, i32 %bits) {
+; X86-LABEL: demanded_with_known_zeroes:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    shlb $2, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    setb %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: demanded_with_known_zeroes:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    shlb $2, %dil
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    btl %eax, %esi
+; X64-NEXT:    setb %al
+; X64-NEXT:    retq
+entry:
+  %bit2 = shl i32 %bit, 2
+  %and = and i32 %bit2, 31
+  %shl = shl i32 1, %and
+  %and1 = and i32 %shl, %bits
+  %tobool = icmp ne i32 %and1, 0
+  ret i1 %tobool
+}

@@ -15,7 +15,7 @@
 #include <system_error>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         const std::error_code ec(6, std::generic_category());
@@ -27,4 +27,6 @@ int main()
         std::error_condition e_cond = ec.default_error_condition();
         assert(e_cond == ec);
     }
+
+  return 0;
 }

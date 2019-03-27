@@ -73,6 +73,8 @@ set(OPENCL_INCLUDE "${OpenCL_INCLUDE_DIRS}")
 
 add_library("${SYCLLibrary}" SHARED
   "${includeRootPath}/CL/sycl.hpp"
+  "${sourceRootPath}/detail/builtins.cpp"
+  "${sourceRootPath}/detail/cnri.cpp"
   "${sourceRootPath}/detail/common.cpp"
   "${sourceRootPath}/detail/context_impl.cpp"
   "${sourceRootPath}/detail/device_info.cpp"
@@ -87,9 +89,11 @@ add_library("${SYCLLibrary}" SHARED
   "${sourceRootPath}/detail/program_impl.cpp"
   "${sourceRootPath}/detail/program_manager/program_manager.cpp"
   "${sourceRootPath}/detail/queue_impl.cpp"
+  "${sourceRootPath}/detail/os_util.cpp"
   "${sourceRootPath}/detail/scheduler/commands.cpp"
   "${sourceRootPath}/detail/scheduler/printers.cpp"
   "${sourceRootPath}/detail/scheduler/scheduler.cpp"
+  "${sourceRootPath}/detail/util.cpp"
   "${sourceRootPath}/context.cpp"
   "${sourceRootPath}/device.cpp"
   "${sourceRootPath}/device_selector.cpp"

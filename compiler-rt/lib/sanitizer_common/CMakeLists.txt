@@ -126,6 +126,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_common_interceptors.inc
   sanitizer_common_interceptors_format.inc
   sanitizer_common_interceptors_ioctl.inc
+  sanitizer_common_interceptors_vfork_aarch64.inc.S
   sanitizer_common_interface.inc
   sanitizer_common_interface_posix.inc
   sanitizer_common_syscalls.inc
@@ -142,6 +143,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_freebsd.h
   sanitizer_fuchsia.h
   sanitizer_getauxval.h
+  sanitizer_hash.h
   sanitizer_interceptors_ioctl_netbsd.inc
   sanitizer_interface_internal.h
   sanitizer_internal_defs.h

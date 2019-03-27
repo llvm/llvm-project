@@ -785,6 +785,30 @@ bb19:                                             ; preds = %bb3
   ret void
 }
 
+define void @bad_step(i32* nocapture readnone %x) #0 {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %i.08 = phi i32 [ 0, %entry ], [ %add3, %for.body ]
+  %call = tail call i32 @foo(i32 %i.08) #1
+  %add = add nsw i32 %i.08, 2
+  %call1 = tail call i32 @foo(i32 %add) #1
+  %add2 = add nsw i32 %i.08, 3
+  %call3 = tail call i32 @foo(i32 %add2) #1
+  %add3 = add nsw i32 %i.08, 6
+  %exitcond = icmp sge i32 %add3, 500
+  br i1 %exitcond, label %for.end, label %for.body
+
+; CHECK-LABEL: @bad_step
+; CHECK: %add = add nsw i32 %i.08, 2
+; CHECK: %add2 = add nsw i32 %i.08, 3
+; CHECK: %add3 = add nsw i32 %i.08, 6
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
 

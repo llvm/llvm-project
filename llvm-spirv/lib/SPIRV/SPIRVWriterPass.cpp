@@ -27,10 +27,10 @@ PreservedAnalyses SPIRVWriterPass::run(Module &M) {
 
 namespace {
 class WriteSPIRVPass : public ModulePass {
-  raw_ostream &OS; // raw_ostream to print on
+  std::ostream &OS; // std::ostream to print on
 public:
   static char ID; // Pass identification, replacement for typeid
-  explicit WriteSPIRVPass(raw_ostream &O) : ModulePass(ID), OS(O) {}
+  explicit WriteSPIRVPass(std::ostream &O) : ModulePass(ID), OS(O) {}
 
   StringRef getPassName() const override { return "SPIRV Writer"; }
 
@@ -45,6 +45,6 @@ public:
 
 char WriteSPIRVPass::ID = 0;
 
-ModulePass *llvm::createSPIRVWriterPass(raw_ostream &Str) {
+ModulePass *llvm::createSPIRVWriterPass(std::ostream &Str) {
   return new WriteSPIRVPass(Str);
 }

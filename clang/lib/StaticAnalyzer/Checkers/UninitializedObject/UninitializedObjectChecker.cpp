@@ -611,18 +611,17 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   UninitObjCheckerOptions &ChOpts = Chk->Opts;
 
   ChOpts.IsPedantic =
-      AnOpts.getCheckerBooleanOption("Pedantic", /*DefaultVal*/ false, Chk);
-  ChOpts.ShouldConvertNotesToWarnings =
-      AnOpts.getCheckerBooleanOption("NotesAsWarnings",
-                                     /*DefaultVal*/ false, Chk);
+      AnOpts.getCheckerBooleanOption(Chk, "Pedantic", /*DefaultVal*/ false);
+  ChOpts.ShouldConvertNotesToWarnings = AnOpts.getCheckerBooleanOption(
+      Chk, "NotesAsWarnings", /*DefaultVal*/ false);
   ChOpts.CheckPointeeInitialization = AnOpts.getCheckerBooleanOption(
-      "CheckPointeeInitialization", /*DefaultVal*/ false, Chk);
+      Chk, "CheckPointeeInitialization", /*DefaultVal*/ false);
   ChOpts.IgnoredRecordsWithFieldPattern =
-      AnOpts.getCheckerStringOption("IgnoreRecordsWithField",
-                                    /*DefaultVal*/ "", Chk);
+      AnOpts.getCheckerStringOption(Chk, "IgnoreRecordsWithField",
+                                    /*DefaultVal*/ "");
   ChOpts.IgnoreGuardedFields =
-      AnOpts.getCheckerBooleanOption("IgnoreGuardedFields",
-                                     /*DefaultVal*/ false, Chk);
+      AnOpts.getCheckerBooleanOption(Chk, "IgnoreGuardedFields",
+                                     /*DefaultVal*/ false);
 }
 
 bool ento::shouldRegisterUninitializedObjectChecker(const LangOptions &LO) {

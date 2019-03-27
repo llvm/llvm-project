@@ -37,7 +37,8 @@ CMIUtilString::CMIUtilString() : std::string() {}
 // Return:  None.
 // Throws:  None.
 //--
-CMIUtilString::CMIUtilString(const char *vpData) : std::string(vpData) {}
+CMIUtilString::CMIUtilString(const char *vpData)
+  : std::string(WithNullAsEmpty(vpData)) {}
 
 //++
 //------------------------------------------------------------------------------------
@@ -58,7 +59,7 @@ CMIUtilString::CMIUtilString(const std::string &vrStr) : std::string(vrStr) {}
 // Throws:  None.
 //--
 CMIUtilString &CMIUtilString::operator=(const char *vpRhs) {
-  assign(vpRhs);
+  assign(WithNullAsEmpty(vpRhs));
   return *this;
 }
 
@@ -103,12 +104,10 @@ CMIUtilString CMIUtilString::FormatPriv(const CMIUtilString &vrFormat,
   MIint n = vrFormat.size();
 
   // IOR: mysterious crash in this function on some windows builds not able to
-  // duplicate
-  // but found article which may be related. Crash occurs in vsnprintf() or
-  // va_copy()
+  // duplicate but found article which may be related. Crash occurs in
+  // vsnprintf() or va_copy().
   // Duplicate vArgs va_list argument pointer to ensure that it can be safely
-  // used in
-  // a new frame
+  // used in a new frame.
   // http://julipedia.meroh.net/2011/09/using-vacopy-to-safely-pass-ap.html
   va_list argsDup;
   va_copy(argsDup, vArgs);
@@ -127,8 +126,8 @@ CMIUtilString CMIUtilString::FormatPriv(const CMIUtilString &vrFormat,
     pFormatted.reset(new char[n + 1]); // +1 for safety margin
     ::strncpy(&pFormatted[0], vrFormat.c_str(), n);
 
-    //  We need to restore the variable argument list pointer to the start again
-    //  before running vsnprintf() more then once
+    // We need to restore the variable argument list pointer to the start again
+    // before running vsnprintf() more then once
     va_copy(argsDup, argsCpy);
 
     nFinal = ::vsnprintf(&pFormatted[0], n, vrFormat.c_str(), argsDup);
@@ -160,7 +159,8 @@ CMIUtilString CMIUtilString::FormatPriv(const CMIUtilString &vrFormat,
 CMIUtilString CMIUtilString::Format(const char *vFormating, ...) {
   va_list args;
   va_start(args, vFormating);
-  CMIUtilString strResult = CMIUtilString::FormatPriv(vFormating, args);
+  CMIUtilString strResult =
+      CMIUtilString::FormatPriv(WithNullAsEmpty(vFormating), args);
   va_end(args);
 
   return strResult;
@@ -457,7 +457,7 @@ bool CMIUtilString::ExtractNumberFromHexadecimal(MIint64 &vwrNumber) const {
 // Throws:  None.
 //--
 bool CMIUtilString::IsAllValidAlphaAndNumeric(const char *vpText) {
-  const size_t len = ::strlen(vpText);
+  const size_t len = ::strlen(WithNullAsEmpty(vpText));
   if (len == 0)
     return false;
 

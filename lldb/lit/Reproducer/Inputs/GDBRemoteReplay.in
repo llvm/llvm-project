@@ -1,5 +1,0 @@
-reproducer status
-breakpoint set -f simple.c -l 12
-run
-bt
-cont

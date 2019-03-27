@@ -105,7 +105,7 @@ void test2()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test<forward_iterator<int*>, forward_iterator<int*> >();
     test<forward_iterator<int*>, bidirectional_iterator<int*> >();
@@ -150,4 +150,6 @@ int main()
 #endif // TEST_STD_VER >= 11
 
     test2();
+
+  return 0;
 }

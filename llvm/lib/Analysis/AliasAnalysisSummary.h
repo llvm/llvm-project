@@ -37,7 +37,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/CallSite.h"
+#include "llvm/IR/InstrTypes.h"
 #include <bitset>
 
 namespace llvm {
@@ -195,12 +195,13 @@ struct AliasSummary {
   SmallVector<ExternalAttribute, 8> RetParamAttributes;
 };
 
-/// This is the result of instantiating InterfaceValue at a particular callsite
+/// This is the result of instantiating InterfaceValue at a particular call
 struct InstantiatedValue {
   Value *Val;
   unsigned DerefLevel;
 };
-Optional<InstantiatedValue> instantiateInterfaceValue(InterfaceValue, CallSite);
+Optional<InstantiatedValue> instantiateInterfaceValue(InterfaceValue IValue,
+                                                      CallBase &Call);
 
 inline bool operator==(InstantiatedValue LHS, InstantiatedValue RHS) {
   return LHS.Val == RHS.Val && LHS.DerefLevel == RHS.DerefLevel;
@@ -228,8 +229,8 @@ struct InstantiatedRelation {
   InstantiatedValue From, To;
   int64_t Offset;
 };
-Optional<InstantiatedRelation> instantiateExternalRelation(ExternalRelation,
-                                                           CallSite);
+Optional<InstantiatedRelation>
+instantiateExternalRelation(ExternalRelation ERelation, CallBase &Call);
 
 /// This is the result of instantiating ExternalAttribute at a particular
 /// callsite
@@ -237,8 +238,8 @@ struct InstantiatedAttr {
   InstantiatedValue IValue;
   AliasAttrs Attr;
 };
-Optional<InstantiatedAttr> instantiateExternalAttribute(ExternalAttribute,
-                                                        CallSite);
+Optional<InstantiatedAttr> instantiateExternalAttribute(ExternalAttribute EAttr,
+                                                        CallBase &Call);
 }
 
 template <> struct DenseMapInfo<cflaa::InstantiatedValue> {

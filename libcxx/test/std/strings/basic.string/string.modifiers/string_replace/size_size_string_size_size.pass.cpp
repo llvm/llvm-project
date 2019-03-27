@@ -13,6 +13,11 @@
 //           size_type pos2, size_type n2=npos);
 //  the "=npos" was added in C++14
 
+// When back-deploying to macosx10.7, the RTTI for exception classes
+// incorrectly provided by libc++.dylib is mixed with the one in
+// libc++abi.dylib and exceptions are not caught properly.
+// XFAIL: with_system_cxx_lib=macosx10.7
+
 #include <string>
 #include <stdexcept>
 #include <algorithm>
@@ -5859,7 +5864,7 @@ void test55()
     test_npos(S("abcdefghij"), 9, 2, S("12345"), 6, S("can't happen"));
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -5981,4 +5986,6 @@ int main()
     test55<S>();
     }
 #endif
+
+  return 0;
 }

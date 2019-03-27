@@ -21,23 +21,23 @@
 target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
 target triple = "spir-unknown-unknown"
 
-%opencl.image2d_t = type opaque
+%opencl.image2d_wo_t = type opaque
 
 ; Function Attrs: nounwind
-define spir_func void @sample_kernel_write(<4 x float> %input, %opencl.image2d_t addrspace(1)* %output, <2 x i32> %coord) #0 {
+define spir_func void @sample_kernel_write(<4 x float> %input, %opencl.image2d_wo_t addrspace(1)* %output, <2 x i32> %coord) #0 {
 entry:
-  call spir_func void @_Z12write_imagef11ocl_image2dDv2_iiDv4_f(%opencl.image2d_t addrspace(1)* %output, <2 x i32> %coord, i32 5, <4 x float> %input)
-; CHECK-LLVM: call spir_func void @_Z12write_imagef11ocl_image2dDv2_iiDv4_f(%opencl.image2d_t addrspace(1)* %output, <2 x i32> %coord, i32 5, <4 x float> %input)
+  call spir_func void @_Z12write_imagef14ocl_image2d_woDv2_iiDv4_f(%opencl.image2d_wo_t addrspace(1)* %output, <2 x i32> %coord, i32 5, <4 x float> %input)
+; CHECK-LLVM: call spir_func void @_Z12write_imagef14ocl_image2d_woDv2_iiDv4_f(%opencl.image2d_wo_t addrspace(1)* %output, <2 x i32> %coord, i32 5, <4 x float> %input)
 
-  call spir_func void @_Z12write_imagef11ocl_image2dDv2_iDv4_f(%opencl.image2d_t addrspace(1)* %output, <2 x i32> %coord, <4 x float> %input)
-; CHECK-LLVM: call spir_func void @_Z12write_imagef11ocl_image2dDv2_iDv4_f(%opencl.image2d_t addrspace(1)* %output, <2 x i32> %coord, <4 x float> %input)
+  call spir_func void @_Z12write_imagef14ocl_image2d_woDv2_iDv4_f(%opencl.image2d_wo_t addrspace(1)* %output, <2 x i32> %coord, <4 x float> %input)
+; CHECK-LLVM: call spir_func void @_Z12write_imagef14ocl_image2d_woDv2_iDv4_f(%opencl.image2d_wo_t addrspace(1)* %output, <2 x i32> %coord, <4 x float> %input)
 
   ret void
 }
 
-declare spir_func void @_Z12write_imagef11ocl_image2dDv2_iiDv4_f(%opencl.image2d_t addrspace(1)*, <2 x i32>, i32, <4 x float>) #1
+declare spir_func void @_Z12write_imagef14ocl_image2d_woDv2_iiDv4_f(%opencl.image2d_wo_t addrspace(1)*, <2 x i32>, i32, <4 x float>) #1
 
-declare spir_func void @_Z12write_imagef11ocl_image2dDv2_iDv4_f(%opencl.image2d_t addrspace(1)*, <2 x i32>, <4 x float>) #1
+declare spir_func void @_Z12write_imagef14ocl_image2d_woDv2_iDv4_f(%opencl.image2d_wo_t addrspace(1)*, <2 x i32>, <4 x float>) #1
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

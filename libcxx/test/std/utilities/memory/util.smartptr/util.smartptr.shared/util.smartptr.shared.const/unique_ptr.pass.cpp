@@ -49,7 +49,7 @@ void fn ( const std::shared_ptr<B> &) { assert (false); }
 template <typename T>
 void assert_deleter ( T * ) { assert(false); }
 
-int main()
+int main(int, char**)
 {
     {
         std::unique_ptr<A> ptr(new A);
@@ -97,4 +97,6 @@ int main()
         std::shared_ptr<int> p2(std::move(p)); // should not call deleter when going out of scope
     }
 #endif
+
+  return 0;
 }

@@ -54,7 +54,7 @@ void do_insert_rv_test()
     assert(r->second == 3);
 }
 
-int main()
+int main(int, char**)
 {
     do_insert_rv_test<std::multimap<int, MoveOnly>>();
     {
@@ -89,4 +89,6 @@ int main()
         assert(r->first == 3);
         assert(r->second == 3);
     }
+
+  return 0;
 }

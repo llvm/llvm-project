@@ -1,7 +1,8 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck -check-prefix=NOVI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii -show-encoding %s 2>&1 | FileCheck -check-prefix=NOVI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck -check-prefix=NOVI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck -check-prefix=NOGFX9 %s
 
 v_lshl_add_u32 v1, v2, v3, v4
 // GFX9: v_lshl_add_u32 v1, v2, v3, v4 ; encoding: [0x01,0x00,0xfd,0xd1,0x02,0x07,0x12,0x04]
@@ -453,3 +454,83 @@ v_screen_partition_4se_b32_e64 v5, v1
 v_screen_partition_4se_b32_e64 v5, -1
 // GXF9: [0x05,0x00,0x77,0xd1,0xc1,0x00,0x00,0x00]
 // NOVI: error: instruction not supported on this GPU
+
+//===----------------------------------------------------------------------===//
+// Validate register size checks (bug 37943)
+//===----------------------------------------------------------------------===//
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f64 v[0:1], s0, v[0:1]
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f64 v[0:1], s[0:3], v[0:1]
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f64 v[0:1], v0, v[0:1]
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f64 v[0:1], v[0:2], v[0:1]
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f64 v[0:1], v[0:3], v[0:1]
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f64 v[0:1], v[0:1], v0
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f64 v[0:1], v[0:1], s0
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f32 v0, s[0:1], v0
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f32 v0, v[0:1], v0
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f32 v0, v0, s[0:1]
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f32 v0, v0, v[0:1]
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f16 v0, s[0:1], v0
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f16 v0, v[0:1], v0
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f16 v0, v0, s[0:1]
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_f16 v0, v0, v[0:1]
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_u16 v0, s[0:1], v0
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_u16 v0, v[0:1], v0
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_u16 v0, v0, s[0:1]
+
+// NOVI: error: invalid operand for instruction
+// NOGFX9: error: invalid operand for instruction
+v_add_u16 v0, v0, v[0:1]

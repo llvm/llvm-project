@@ -159,14 +159,14 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   MemoryAccess *LeftStoreAccess = Updater.createMemoryAccessInBB(
       LeftStore, nullptr, Left, MemorySSA::Beginning);
   Updater.insertDef(cast<MemoryDef>(LeftStoreAccess), false);
-  // We don't touch existing loads, so we need to create a new one to get a phi
+
+  // MemoryPHI should exist after adding LeftStore.
+  MP = MSSA.getMemoryAccess(Merge);
+  EXPECT_NE(MP, nullptr);
+
   // Add the second load
   B.SetInsertPoint(Merge, Merge->begin());
   LoadInst *SecondLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
-
-  // MemoryPHI should not already exist.
-  MP = MSSA.getMemoryAccess(Merge);
-  EXPECT_EQ(MP, nullptr);
 
   // Create the load memory access
   MemoryUse *SecondLoadAccess = cast<MemoryUse>(Updater.createMemoryAccessInBB(
@@ -226,13 +226,13 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
       Updater.createMemoryAccessInBB(SI, nullptr, Left, MemorySSA::Beginning);
   Updater.insertDef(cast<MemoryDef>(StoreAccess));
 
+  // MemoryPHI should be created when inserting the def
+  MemoryPhi *MP = MSSA.getMemoryAccess(Merge);
+  EXPECT_NE(MP, nullptr);
+
   // Add the load
   B.SetInsertPoint(Merge, Merge->begin());
   LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), PointerArg);
-
-  // MemoryPHI should not already exist.
-  MemoryPhi *MP = MSSA.getMemoryAccess(Merge);
-  EXPECT_EQ(MP, nullptr);
 
   // Create the load memory acccess
   MemoryUse *LoadAccess = cast<MemoryUse>(Updater.createMemoryAccessInBB(

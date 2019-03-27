@@ -39,7 +39,7 @@ void func2(void) {
   // CHECK: store i32* %[[r0]], i32** %[[r3]], align 8
   int *lp1 = &lv1;
 
-  // CHECK: %[[arraydecay:.*]] = getelementptr inbounds [100 x i32], [100 x i32]* %[[r2]], i32 0, i32 0
+  // CHECK: %[[arraydecay:.*]] = getelementptr inbounds [100 x i32], [100 x i32]* %[[r2]], i64 0, i64 0
   // CHECK: store i32* %[[arraydecay]], i32** %[[r4]], align 8
   int *lp2 = la;
 

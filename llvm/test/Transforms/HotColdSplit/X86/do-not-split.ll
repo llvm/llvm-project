@@ -110,6 +110,78 @@ if.end:                                           ; preds = %entry
   ret void
 }
 
+; CHECK-LABEL: @sanitize_address
+; CHECK-NOT: sanitize_address.cold.1
+define void @sanitize_address() sanitize_address {
+entry:
+  br i1 undef, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  call void @sink()
+  ret void
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
+; CHECK-LABEL: @sanitize_hwaddress
+; CHECK-NOT: sanitize_hwaddress.cold.1
+define void @sanitize_hwaddress() sanitize_hwaddress {
+entry:
+  br i1 undef, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  call void @sink()
+  ret void
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
+; CHECK-LABEL: @sanitize_thread
+; CHECK-NOT: sanitize_thread.cold.1
+define void @sanitize_thread() sanitize_thread {
+entry:
+  br i1 undef, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  call void @sink()
+  ret void
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
+; CHECK-LABEL: @sanitize_memory
+; CHECK-NOT: sanitize_memory.cold.1
+define void @sanitize_memory() sanitize_memory {
+entry:
+  br i1 undef, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  call void @sink()
+  ret void
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
+declare void @llvm.trap() cold noreturn
+
+; CHECK-LABEL: @nosanitize_call
+; CHECK-NOT: nosanitize_call.cold.1
+define void @nosanitize_call() sanitize_memory {
+entry:
+  br i1 undef, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  call void @llvm.trap(), !nosanitize !2
+  unreachable
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 declare void @sink() cold

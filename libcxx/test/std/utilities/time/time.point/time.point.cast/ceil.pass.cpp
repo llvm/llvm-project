@@ -49,7 +49,7 @@ void test_constexpr ()
 }
 
 
-int main()
+int main(int, char**)
 {
 //  7290000ms is 2 hours, 1 minute, and 30 seconds
     test(std::chrono::milliseconds( 7290000), std::chrono::hours( 3));
@@ -65,4 +65,6 @@ int main()
 
     test_constexpr<std::chrono::milliseconds, 9000000, std::chrono::seconds, 9000> ();
     test_constexpr<std::chrono::milliseconds,-9000000, std::chrono::seconds,-9000> ();
+
+  return 0;
 }

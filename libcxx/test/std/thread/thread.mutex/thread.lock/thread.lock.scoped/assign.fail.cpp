@@ -18,7 +18,7 @@
 #include <mutex>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using M = std::mutex;
     M m0, m1, m2;
@@ -46,4 +46,6 @@ int main()
         LG lg2(om0, om1, om2);
         lg1 = lg2; // expected-error{{overload resolution selected deleted operator '='}}
     }
+
+  return 0;
 }

@@ -22,6 +22,7 @@ class TestYMMRegister(TestBase):
     @skipIfTargetAndroid()
     @skipIf(archs=no_match(['i386', 'x86_64']))
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
+    @expectedFailureNetBSD
     def test(self):
         self.build(dictionary={"CFLAGS_EXTRAS": "-march=haswell"})
         self.setTearDownCleanup()

@@ -106,7 +106,8 @@ inline bool isCvtFromUnsignedOpCode(Op OpCode) {
 }
 
 inline bool isOpaqueGenericTypeOpCode(Op OpCode) {
-  return (unsigned)OpCode >= OpTypeEvent && (unsigned)OpCode <= OpTypeQueue;
+  return ((unsigned)OpCode >= OpTypeEvent && (unsigned)OpCode <= OpTypeQueue) ||
+         OpCode == OpTypeSampler;
 }
 
 inline bool isGenericNegateOpCode(Op OpCode) {

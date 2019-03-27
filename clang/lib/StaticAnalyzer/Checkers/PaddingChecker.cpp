@@ -32,17 +32,14 @@ namespace {
 class PaddingChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 private:
   mutable std::unique_ptr<BugType> PaddingBug;
-  mutable int64_t AllowedPad;
   mutable BugReporter *BR;
 
 public:
+  int64_t AllowedPad;
+
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
     BR = &BRArg;
-    AllowedPad =
-        MGR.getAnalyzerOptions()
-          .getCheckerIntegerOption("AllowedPad", 24, this);
-    assert(AllowedPad >= 0 && "AllowedPad option should be non-negative");
 
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
@@ -348,7 +345,11 @@ public:
 } // namespace
 
 void ento::registerPaddingChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<PaddingChecker>();
+  auto *Checker = Mgr.registerChecker<PaddingChecker>();
+  Checker->AllowedPad = Mgr.getAnalyzerOptions()
+          .getCheckerIntegerOption(Checker, "AllowedPad", 24);
+  assert(Checker->AllowedPad >= 0 &&
+         "AllowedPad option should be non-negative");
 }
 
 bool ento::shouldRegisterPaddingChecker(const LangOptions &LO) {

@@ -72,7 +72,7 @@ class Final {
 };
 #endif
 
-int main()
+int main(int, char**)
 {
     test_is_not_polymorphic<void>();
     test_is_not_polymorphic<int&>();
@@ -91,4 +91,6 @@ int main()
 
     test_is_polymorphic<NotEmpty>();
     test_is_polymorphic<Abstract>();
+
+  return 0;
 }

@@ -943,7 +943,7 @@ static void analyzeStandardArguments(TargetLowering::CallLoweringInfo *CLI,
                                         AVR::R19R18, AVR::R17R16, AVR::R15R14,
                                         AVR::R13R12, AVR::R11R10, AVR::R9R8};
   if (IsVarArg) {
-    // Variadic functions do not need all the analisys below.
+    // Variadic functions do not need all the analysis below.
     if (IsCall) {
       CCInfo.AnalyzeCallOperands(*Outs, ArgCC_AVR_Vararg);
     } else {

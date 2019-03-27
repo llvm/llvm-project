@@ -88,10 +88,12 @@ void test_LWG2989() {
   static_assert(!is_istreamable<decltype(std::wcin), std::string>::value, "");
 }
 
-int main() {
+int main(int, char**) {
   doIOTest<char>();
   doIOTest<wchar_t>();
   //doIOTest<char16_t>();
   //doIOTest<char32_t>();
   test_LWG2989();
+
+  return 0;
 }

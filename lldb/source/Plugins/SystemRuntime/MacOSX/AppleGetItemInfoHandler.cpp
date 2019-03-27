@@ -142,7 +142,7 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
     // First stage is to make the UtilityFunction to hold our injected
     // function:
 
-    if (!m_get_item_info_impl_code.get()) {
+    if (!m_get_item_info_impl_code) {
       if (g_get_item_info_function_code != NULL) {
         Status error;
         m_get_item_info_impl_code.reset(

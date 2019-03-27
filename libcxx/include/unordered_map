@@ -1602,10 +1602,8 @@ _Tp&
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::at(const key_type& __k)
 {
     iterator __i = find(__k);
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (__i == end())
-        throw out_of_range("unordered_map::at: key not found");
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_out_of_range("unordered_map::at: key not found");
     return __i->second;
 }
 
@@ -1614,10 +1612,8 @@ const _Tp&
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::at(const key_type& __k) const
 {
     const_iterator __i = find(__k);
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (__i == end())
-        throw out_of_range("unordered_map::at: key not found");
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_out_of_range("unordered_map::at: key not found");
     return __i->second;
 }
 

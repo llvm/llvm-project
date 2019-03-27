@@ -106,7 +106,7 @@ class TestingConfig:
                  environment, substitutions, unsupported,
                  test_exec_root, test_source_root, excludes,
                  available_features, pipefail, limit_to_features = [],
-                 is_early = False, parallelism_group = ""):
+                 is_early = False, parallelism_group = None):
         self.parent = parent
         self.name = str(name)
         self.suffixes = set(suffixes)

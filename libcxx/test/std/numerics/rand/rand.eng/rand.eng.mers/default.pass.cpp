@@ -37,8 +37,10 @@ test2()
     assert(e1() == 14514284786278117030ull);
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
+
+  return 0;
 }

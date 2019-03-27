@@ -6,3 +6,6 @@ TooLargeAlignment TooBig;
 // CHECK: @TooBig = dso_local global <16 x float>  zeroinitializer, align 64
 NormalAlignment JustRight;
 // CHECK: @JustRight = common dso_local global <1 x float>  zeroinitializer, align 4
+
+TooLargeAlignment *IsAPointer;
+// CHECK: @IsAPointer = common dso_local global <16 x float>* null, align 8

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++experimental
 // UNSUPPORTED: c++98, c++03
 
 // <experimental/memory_resource>
@@ -121,7 +120,7 @@ void test_pmr_not_uses_allocator(TT&& t, UU&& u)
     }
 }
 
-int main()
+int main(int, char**)
 {
     using ERT = std::experimental::erased_type;
     using PMR = ex::memory_resource*;
@@ -140,4 +139,6 @@ int main()
         test_pmr_not_uses_allocator<PMR>(std::move(x), y);
         test_pmr_uses_allocator<PMA>(std::move(x), y);
     }
+
+  return 0;
 }

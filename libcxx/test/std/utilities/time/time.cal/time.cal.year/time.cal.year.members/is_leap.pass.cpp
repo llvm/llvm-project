@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year = std::chrono::year;
 
@@ -49,4 +49,6 @@ int main()
     assert(!year{ 2003}.is_leap());
     assert( year{ 2004}.is_leap());
     assert(!year{ 2100}.is_leap());
+
+  return 0;
 }

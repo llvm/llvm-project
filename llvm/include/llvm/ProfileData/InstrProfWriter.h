@@ -33,7 +33,8 @@ class raw_fd_ostream;
 class InstrProfWriter {
 public:
   using ProfilingData = SmallDenseMap<uint64_t, InstrProfRecord>;
-  enum ProfKind { PF_Unknown = 0, PF_FE, PF_IRLevel };
+  // PF_IRLevelWithCS is the profile from context sensitive IR instrumentation.
+  enum ProfKind { PF_Unknown = 0, PF_FE, PF_IRLevel, PF_IRLevelWithCS };
 
 private:
   bool Sparse;
@@ -74,15 +75,26 @@ public:
   std::unique_ptr<MemoryBuffer> writeBuffer();
 
   /// Set the ProfileKind. Report error if mixing FE and IR level profiles.
-  Error setIsIRLevelProfile(bool IsIRLevel) {
+  /// \c WithCS indicates if this is for contenxt sensitive instrumentation.
+  Error setIsIRLevelProfile(bool IsIRLevel, bool WithCS) {
     if (ProfileKind == PF_Unknown) {
-      ProfileKind = IsIRLevel ? PF_IRLevel: PF_FE;
+      if (IsIRLevel)
+        ProfileKind = WithCS ? PF_IRLevelWithCS : PF_IRLevel;
+      else
+        ProfileKind = PF_FE;
       return Error::success();
     }
-    return (IsIRLevel == (ProfileKind == PF_IRLevel))
-               ? Error::success()
-               : make_error<InstrProfError>(
-                     instrprof_error::unsupported_version);
+
+    if (((ProfileKind != PF_FE) && !IsIRLevel) ||
+        ((ProfileKind == PF_FE) && IsIRLevel))
+      return make_error<InstrProfError>(instrprof_error::unsupported_version);
+
+    // When merging a context-sensitive profile (WithCS == true) with an IRLevel
+    // profile, set the kind to PF_IRLevelWithCS.
+    if (ProfileKind == PF_IRLevel && WithCS)
+      ProfileKind = PF_IRLevelWithCS;
+
+    return Error::success();
   }
 
   // Internal interface for testing purpose only.

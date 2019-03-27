@@ -65,6 +65,40 @@ sb t1, %pcrel_lo(.L0)(a2)
 # INSTR: sb t1, %pcrel_lo(.L0)(a2)
 # FIXUP: fixup A - offset: 0, value: %pcrel_lo(.L0), kind: fixup_riscv_pcrel_lo12_s
 
+.L1:
+auipc t1, %got_pcrel_hi(foo)
+# RELOC: R_RISCV_GOT_HI20 foo 0x0
+# INSTR: auipc t1, %got_pcrel_hi(foo)
+# FIXUP: fixup A - offset: 0, value: %got_pcrel_hi(foo), kind: fixup_riscv_got_hi20
+
+addi t1, t1, %pcrel_lo(.L1)
+# RELOC: R_RISCV_PCREL_LO12_I .L1 0x0
+# INSTR: addi t1, t1, %pcrel_lo(.L1)
+# FIXUP: fixup A - offset: 0, value: %pcrel_lo(.L1), kind: fixup_riscv_pcrel_lo12_i
+
+sb t1, %pcrel_lo(.L1)(a2)
+# RELOC: R_RISCV_PCREL_LO12_S .L1 0x0
+# INSTR: sb t1, %pcrel_lo(.L1)(a2)
+# FIXUP: fixup A - offset: 0, value: %pcrel_lo(.L1), kind: fixup_riscv_pcrel_lo12_s
+
+# Check that GOT relocations aren't evaluated to a constant when the symbol is
+# in the same object file.
+.L2:
+auipc t1, %got_pcrel_hi(.L1)
+# RELOC: R_RISCV_GOT_HI20 .L1 0x0
+# INSTR: auipc t1, %got_pcrel_hi(.L1)
+# FIXUP: fixup A - offset: 0, value: %got_pcrel_hi(.L1), kind: fixup_riscv_got_hi20
+
+addi t1, t1, %pcrel_lo(.L2)
+# RELOC: R_RISCV_PCREL_LO12_I .L2 0x0
+# INSTR: addi t1, t1, %pcrel_lo(.L2)
+# FIXUP: fixup A - offset: 0, value: %pcrel_lo(.L2), kind: fixup_riscv_pcrel_lo12_i
+
+sb t1, %pcrel_lo(.L2)(a2)
+# RELOC: R_RISCV_PCREL_LO12_S .L2 0x0
+# INSTR: sb t1, %pcrel_lo(.L2)(a2)
+# FIXUP: fixup A - offset: 0, value: %pcrel_lo(.L2), kind: fixup_riscv_pcrel_lo12_s
+
 jal zero, foo
 # RELOC: R_RISCV_JAL
 # INSTR: jal zero, foo

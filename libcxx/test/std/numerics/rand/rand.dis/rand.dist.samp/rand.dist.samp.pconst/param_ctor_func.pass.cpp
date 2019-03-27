@@ -23,7 +23,7 @@ double fw(double x)
     return 2*x;
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::piecewise_constant_distribution<> D;
@@ -63,4 +63,6 @@ int main()
         assert(dn[0] == 0.1);
         assert(dn[1] == 0.15);
     }
+
+  return 0;
 }

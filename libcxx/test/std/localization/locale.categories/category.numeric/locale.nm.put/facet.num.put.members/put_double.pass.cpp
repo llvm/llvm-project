@@ -17876,7 +17876,7 @@ void test8()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
@@ -17886,4 +17886,6 @@ int main()
     test6();
     test7();
     test8();
+
+  return 0;
 }

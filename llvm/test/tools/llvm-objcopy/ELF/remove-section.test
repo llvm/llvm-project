@@ -11,6 +11,10 @@
 # RUN: llvm-objcopy --remove-section=.test2 %t1 %t3
 # RUN: cmp %t2 %t3
 
+# RUN: llvm-objcopy --regex --remove-section='.test[0-9]+' %t %t4
+# RUN: llvm-readobj --file-headers --sections %t4 | FileCheck %s --check-prefix=REGEX
+
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64
@@ -116,3 +120,7 @@ Sections:
 # CHECK:     EntrySize: 0
 # CHECK:   }
 # CHECK: ]
+
+# REGEX: SectionHeaderCount: 4
+# REGEX: Sections [
+# REGEX-NOT: test  

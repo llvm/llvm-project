@@ -91,7 +91,7 @@ test(SV sv, std::size_t pos, std::size_t n, const typename S::allocator_type& a)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -183,4 +183,6 @@ int main()
     S s7(s.data(), 2);     // calls ctor(const char *, len)
     assert(s7 == "AB");
     }
+
+  return 0;
 }

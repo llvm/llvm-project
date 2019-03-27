@@ -29,7 +29,7 @@ public:
         : F(refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     const my_facet f(1);
     std::ios ios(0);
@@ -301,4 +301,6 @@ int main()
         assert(i.base() == in+sizeof(in)-1);
         assert(err == std::ios_base::eofbit);
     }
+
+  return 0;
 }

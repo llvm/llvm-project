@@ -415,3 +415,9 @@ void OffloadWrappingJobAction::anchor() {}
 OffloadWrappingJobAction::OffloadWrappingJobAction(Action *Input,
                                                    types::ID Type)
     : JobAction(OffloadWrappingJobClass, Input, Type) {}
+
+void SPIRVTranslatorJobAction::anchor() {}
+
+SPIRVTranslatorJobAction::SPIRVTranslatorJobAction(Action *Input,
+                                                   types::ID Type)
+    : JobAction(SPIRVTranslatorJobClass, Input, Type) {}

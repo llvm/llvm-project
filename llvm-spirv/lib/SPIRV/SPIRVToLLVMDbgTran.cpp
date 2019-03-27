@@ -91,6 +91,10 @@ StringRef SPIRVToLLVMDbgTran::getString(const SPIRVId Id) {
 }
 
 void SPIRVToLLVMDbgTran::transDbgInfo(const SPIRVValue *SV, Value *V) {
+  // A constant sampler does not have a corresponding SPIRVInstruction.
+  if (SV->getOpCode() == OpConstantSampler)
+    return;
+
   if (Instruction *I = dyn_cast<Instruction>(V)) {
     const SPIRVInstruction *SI = static_cast<const SPIRVInstruction *>(SV);
     I->setDebugLoc(transDebugScope(SI));

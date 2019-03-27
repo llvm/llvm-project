@@ -12,6 +12,9 @@
 .globl myfunc
 .type myfunc,@gnu_indirect_function
 myfunc:
+.globl myfunc_resolver
+.type myfunc_resolver,@function
+myfunc_resolver:
  ret
 
 .text
@@ -22,7 +25,7 @@ main:
  add  x8, x8, :lo12: myfunc
  ret
 
-# CHECK: 0000000000010000 myfunc:
+# CHECK: 0000000000010000 myfunc_resolver:
 # CHECK-NEXT:    10000:	c0 03 5f d6 	ret
 # CHECK: 0000000000010004 main:
 # CHECK-NEXT:    10004:	08 00 00 90 	adrp	x8, #0
@@ -31,7 +34,7 @@ main:
 # x8 = 0x10010 = .plt for myfunc
 # CHECK-NEXT:    1000c:	c0 03 5f d6 	ret
 # CHECK-NEXT: Disassembly of section .plt:
-# CHECK-NEXT: 0000000000010010 .plt:
+# CHECK-NEXT: 0000000000010010 myfunc:
 # CHECK-NEXT:    10010:	90 00 00 90 	adrp	x16, #65536
 # CHECK-NEXT:    10014:	11 02 40 f9 	ldr	x17, [x16]
 # CHECK-NEXT:    10018:	10 02 00 91 	add	x16, x16, #0

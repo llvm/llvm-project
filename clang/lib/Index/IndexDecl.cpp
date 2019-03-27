@@ -88,12 +88,11 @@ public:
                                  /*isBase=*/false, isIBType);
     IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent);
     if (IndexCtx.shouldIndexFunctionLocalSymbols()) {
-      // Only index parameters in definitions, parameters in declarations are
-      // not useful.
       if (const ParmVarDecl *Parm = dyn_cast<ParmVarDecl>(D)) {
         auto *DC = Parm->getDeclContext();
         if (auto *FD = dyn_cast<FunctionDecl>(DC)) {
-          if (FD->isThisDeclarationADefinition())
+          if (IndexCtx.shouldIndexParametersInDeclarations() ||
+              FD->isThisDeclarationADefinition())
             IndexCtx.handleDecl(Parm);
         } else if (auto *MD = dyn_cast<ObjCMethodDecl>(DC)) {
           if (MD->isThisDeclarationADefinition())
@@ -102,7 +101,8 @@ public:
           IndexCtx.handleDecl(Parm);
         }
       } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-        if (FD->isThisDeclarationADefinition()) {
+        if (IndexCtx.shouldIndexParametersInDeclarations() ||
+            FD->isThisDeclarationADefinition()) {
           for (auto PI : FD->parameters()) {
             IndexCtx.handleDecl(PI);
           }
@@ -324,6 +324,7 @@ public:
   }
 
   bool VisitMSPropertyDecl(const MSPropertyDecl *D) {
+    TRY_DECL(D, IndexCtx.handleDecl(D));
     handleDeclarator(D);
     return true;
   }
@@ -580,9 +581,10 @@ public:
   }
 
   bool VisitUsingDecl(const UsingDecl *D) {
+    IndexCtx.handleDecl(D);
+
     const DeclContext *DC = D->getDeclContext()->getRedeclContext();
     const NamedDecl *Parent = dyn_cast<NamedDecl>(DC);
-
     IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent,
                                          D->getLexicalDeclContext());
     for (const auto *I : D->shadows())
@@ -672,6 +674,8 @@ public:
         shouldIndexTemplateParameterDefaultValue(Parent)) {
       const TemplateParameterList *Params = D->getTemplateParameters();
       for (const NamedDecl *TP : *Params) {
+        if (IndexCtx.shouldIndexTemplateParameters())
+          IndexCtx.handleDecl(TP);
         if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(TP)) {
           if (TTP->hasDefaultArgument())
             IndexCtx.indexTypeSourceInfo(TTP->getDefaultArgumentInfo(), Parent);

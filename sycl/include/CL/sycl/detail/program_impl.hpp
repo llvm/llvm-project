@@ -26,6 +26,11 @@ enum class program_state { none, compiled, linked };
 
 namespace detail {
 
+// Used to identify the module the user code, which included this header,
+// belongs to. Incurs some marginal inefficiency - there will be one copy
+// per '#include "program_impl.hpp"'
+static void *AddressInThisModule = &AddressInThisModule;
+
 class program_impl {
 public:
   program_impl() = delete;
@@ -133,7 +138,8 @@ public:
     throw_if_state_is_not(program_state::none);
     // TODO Check for existence of kernel
     if (!is_host()) {
-      create_cl_program_with_il();
+      OSModuleHandle M = OSUtil::getOSModuleHandle(AddressInThisModule);
+      create_cl_program_with_il(M);
       compile(CompileOptions);
     }
     State = program_state::compiled;
@@ -155,7 +161,8 @@ public:
     throw_if_state_is_not(program_state::none);
     // TODO Check for existence of kernel
     if (!is_host()) {
-      create_cl_program_with_il();
+      OSModuleHandle M = OSUtil::getOSModuleHandle(AddressInThisModule);
+      create_cl_program_with_il(M);
       build(BuildOptions);
     }
     State = program_state::linked;
@@ -241,20 +248,22 @@ public:
 
   vector_class<vector_class<char>> get_binaries() const {
     throw_if_state_is(program_state::none);
-    vector_class<size_t> BinarySizes(Devices.size());
-    CHECK_OCL_CODE(clGetProgramInfo(ClProgram, CL_PROGRAM_BINARY_SIZES,
-                                    sizeof(size_t) * BinarySizes.size(),
-                                    BinarySizes.data(), nullptr));
-
     vector_class<vector_class<char>> Result;
-    vector_class<char *> Pointers;
-    for (size_t I = 0; I < BinarySizes.size(); ++I) {
-      Result.emplace_back(BinarySizes[I]);
-      Pointers.push_back(Result[I].data());
+    if (!is_host()) {
+      vector_class<size_t> BinarySizes(Devices.size());
+      CHECK_OCL_CODE(clGetProgramInfo(ClProgram, CL_PROGRAM_BINARY_SIZES,
+                                      sizeof(size_t) * BinarySizes.size(),
+                                      BinarySizes.data(), nullptr));
+
+      vector_class<char *> Pointers;
+      for (size_t I = 0; I < BinarySizes.size(); ++I) {
+        Result.emplace_back(BinarySizes[I]);
+        Pointers.push_back(Result[I].data());
+      }
+      CHECK_OCL_CODE(clGetProgramInfo(ClProgram, CL_PROGRAM_BINARIES,
+                                      sizeof(char *) * Pointers.size(),
+                                      Pointers.data(), nullptr));
     }
-    CHECK_OCL_CODE(clGetProgramInfo(ClProgram, CL_PROGRAM_BINARIES,
-                                    sizeof(char *) * Pointers.size(),
-                                    Pointers.data(), nullptr));
     return Result;
   }
 
@@ -271,9 +280,9 @@ public:
   program_state get_state() const { return State; }
 
 private:
-  void create_cl_program_with_il() {
+  void create_cl_program_with_il(OSModuleHandle M) {
     assert(!ClProgram && "This program already has an encapsulated cl_program");
-    ClProgram = ProgramManager::getInstance().createOpenCLProgram(Context);
+    ClProgram = ProgramManager::getInstance().createOpenCLProgram(M, Context);
   }
 
   void create_cl_program_with_source(const string_class &Source) {

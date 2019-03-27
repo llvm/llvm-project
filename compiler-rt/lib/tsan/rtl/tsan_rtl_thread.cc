@@ -239,13 +239,15 @@ int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
   return tid;
 }
 
-void ThreadStart(ThreadState *thr, int tid, tid_t os_id, bool workerthread) {
+void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
+                 ThreadType thread_type) {
   uptr stk_addr = 0;
   uptr stk_size = 0;
   uptr tls_addr = 0;
   uptr tls_size = 0;
 #if !SANITIZER_GO
-  GetThreadStackAndTls(tid == 0, &stk_addr, &stk_size, &tls_addr, &tls_size);
+  if (thread_type != ThreadType::Fiber)
+    GetThreadStackAndTls(tid == 0, &stk_addr, &stk_size, &tls_addr, &tls_size);
 
   if (tid) {
     if (stk_addr && stk_size)
@@ -257,7 +259,7 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id, bool workerthread) {
 
   ThreadRegistry *tr = ctx->thread_registry;
   OnStartedArgs args = { thr, stk_addr, stk_size, tls_addr, tls_size };
-  tr->StartThread(tid, os_id, workerthread, &args);
+  tr->StartThread(tid, os_id, thread_type, &args);
 
   tr->Lock();
   thr->tctx = (ThreadContext*)tr->GetThreadLocked(tid);
@@ -402,5 +404,41 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
         shadow_mem, cur);
   }
 }
+
+#if !SANITIZER_MAC && !SANITIZER_ANDROID && !SANITIZER_GO
+void FiberSwitchImpl(ThreadState *from, ThreadState *to) {
+  Processor *proc = from->proc();
+  ProcUnwire(proc, from);
+  ProcWire(proc, to);
+  set_cur_thread(to);
+}
+
+ThreadState *FiberCreate(ThreadState *thr, uptr pc, unsigned flags) {
+  void *mem = internal_alloc(MBlockThreadContex, sizeof(ThreadState));
+  ThreadState *fiber = static_cast<ThreadState *>(mem);
+  internal_memset(fiber, 0, sizeof(*fiber));
+  int tid = ThreadCreate(thr, pc, 0, true);
+  FiberSwitchImpl(thr, fiber);
+  ThreadStart(fiber, tid, 0, ThreadType::Fiber);
+  FiberSwitchImpl(fiber, thr);
+  return fiber;
+}
+
+void FiberDestroy(ThreadState *thr, uptr pc, ThreadState *fiber) {
+  FiberSwitchImpl(thr, fiber);
+  ThreadFinish(fiber);
+  FiberSwitchImpl(fiber, thr);
+  internal_free(fiber);
+}
+
+void FiberSwitch(ThreadState *thr, uptr pc,
+                 ThreadState *fiber, unsigned flags) {
+  if (!(flags & FiberSwitchFlagNoSync))
+    Release(thr, pc, (uptr)fiber);
+  FiberSwitchImpl(thr, fiber);
+  if (!(flags & FiberSwitchFlagNoSync))
+    Acquire(fiber, pc, (uptr)fiber);
+}
+#endif
 
 }  // namespace __tsan

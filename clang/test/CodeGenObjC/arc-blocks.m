@@ -338,20 +338,19 @@ void test10a(void) {
   __block void (^block)(void) = ^{ block(); };
   // CHECK-LABEL:    define void @test10a()
   // CHECK:      [[BYREF:%.*]] = alloca [[BYREF_T:%.*]],
+  // CHECK:      [[BLOCK1:%.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
 
   // Zero-initialization before running the initializer.
   // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 6
   // CHECK-NEXT: store void ()* null, void ()** [[T0]], align 8
 
   // Run the initializer as an assignment.
-  // CHECK:      [[T0:%.*]] = bitcast void ()* {{%.*}} to i8*
-  // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retainBlock(i8* [[T0]])
-  // CHECK-NEXT: [[T2:%.*]] = bitcast i8* [[T1]] to void ()*
+  // CHECK:      [[T2:%.*]] = bitcast <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* [[BLOCK1]] to void ()*
   // CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 1
   // CHECK-NEXT: [[T4:%.*]] = load [[BYREF_T]]*, [[BYREF_T]]** [[T3]]
   // CHECK-NEXT: [[T5:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[T4]], i32 0, i32 6
   // CHECK-NEXT: [[T6:%.*]] = load void ()*, void ()** [[T5]], align 8
-  // CHECK-NEXT: store void ()* {{%.*}}, void ()** [[T5]], align 8
+  // CHECK-NEXT: store void ()* [[T2]], void ()** [[T5]], align 8
   // CHECK-NEXT: [[T7:%.*]] = bitcast void ()* [[T6]] to i8*
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T7]])
 
@@ -401,6 +400,7 @@ void test10b(void) {
 
   // CHECK-LABEL:    define void @test10b()
   // CHECK:      [[BYREF:%.*]] = alloca [[BYREF_T:%.*]],
+  // CHECK:      [[BLOCK3:%.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
 
   // Zero-initialize.
   // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 6
@@ -409,14 +409,12 @@ void test10b(void) {
   // CHECK-NEXT: [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 6
 
   // The assignment.
-  // CHECK:      [[T0:%.*]] = bitcast void ()* {{%.*}} to i8*
-  // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retainBlock(i8* [[T0]])
-  // CHECK-NEXT: [[T2:%.*]] = bitcast i8* [[T1]] to void ()*
+  // CHECK:      [[T2:%.*]] = bitcast <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* [[BLOCK3]] to void ()*
   // CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 1
   // CHECK-NEXT: [[T4:%.*]] = load [[BYREF_T]]*, [[BYREF_T]]** [[T3]]
   // CHECK-NEXT: [[T5:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[T4]], i32 0, i32 6
   // CHECK-NEXT: [[T6:%.*]] = load void ()*, void ()** [[T5]], align 8
-  // CHECK-NEXT: store void ()* {{%.*}}, void ()** [[T5]], align 8
+  // CHECK-NEXT: store void ()* [[T2]], void ()** [[T5]], align 8
   // CHECK-NEXT: [[T7:%.*]] = bitcast void ()* [[T6]] to i8*
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T7]])
 

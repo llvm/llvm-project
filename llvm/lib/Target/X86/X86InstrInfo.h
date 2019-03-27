@@ -452,7 +452,10 @@ public:
   /// conservative. If it cannot definitely determine the safety after visiting
   /// a few instructions in each direction it assumes it's not safe.
   bool isSafeToClobberEFLAGS(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator I) const;
+                             MachineBasicBlock::iterator I) const {
+    return MBB.computeRegisterLiveness(&RI, X86::EFLAGS, I, 4) ==
+           MachineBasicBlock::LQR_Dead;
+  }
 
   /// True if MI has a condition code def, e.g. EFLAGS, that is
   /// not marked dead.
@@ -589,7 +592,8 @@ private:
   MachineInstr *convertToThreeAddressWithLEA(unsigned MIOpc,
                                              MachineFunction::iterator &MFI,
                                              MachineInstr &MI,
-                                             LiveVariables *LV) const;
+                                             LiveVariables *LV,
+                                             bool Is8BitOp) const;
 
   /// Handles memory folding for special case instructions, for instance those
   /// requiring custom manipulation of the address.

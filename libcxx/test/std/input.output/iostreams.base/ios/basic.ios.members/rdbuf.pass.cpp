@@ -16,7 +16,7 @@
 #include <streambuf>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         const std::ios ios(0);
@@ -27,4 +27,6 @@ int main()
         const std::ios ios(sb);
         assert(ios.rdbuf() == sb);
     }
+
+  return 0;
 }

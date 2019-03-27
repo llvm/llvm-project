@@ -111,7 +111,7 @@ void TypeCategoryMap::EnableAllCategories() {
   decltype(sorted_categories)::iterator viter = sorted_categories.begin(),
                                         vend = sorted_categories.end();
   for (; viter != vend; viter++)
-    if (viter->get())
+    if (*viter)
       Enable(*viter, Last);
 }
 

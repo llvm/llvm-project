@@ -27,6 +27,7 @@ class ExprCommandWithTimeoutsTestCase(TestBase):
         oslist=[
             "windows"],
         bugnumber="llvm.org/pr21765")
+    @expectedFailureNetBSD
     def test(self):
         """Test calling std::String member function."""
         self.build()

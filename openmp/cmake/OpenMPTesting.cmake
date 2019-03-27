@@ -167,7 +167,7 @@ function(add_openmp_testsuite target comment)
     add_lit_testsuite(${target}
       ${comment}
       ${ARG_UNPARSED_ARGUMENTS}
-      DEPENDS clang clang-headers FileCheck ${ARG_DEPENDS}
+      DEPENDS clang clang-resource-headers FileCheck ${ARG_DEPENDS}
       ARGS ${ARG_ARGS}
     )
   endif()

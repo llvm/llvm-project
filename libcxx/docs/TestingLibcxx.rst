@@ -183,6 +183,14 @@ configuration. Passing the option on the command line will override the default.
   option is specified or the environment variable LIBCXX_COLOR_DIAGNOSTICS is
   present then color diagnostics will be enabled.
 
+.. option:: llvm_unwinder
+
+  Enable the use of LLVM unwinder instead of libgcc.
+
+.. option:: builtins_library
+
+  Path to the builtins library to use instead of libgcc.
+
 
 Environment Variables
 ---------------------

@@ -112,6 +112,7 @@ bool VLIWResourceModel::isResourceAvailable(SUnit *SU, bool IsTop) {
   case TargetOpcode::IMPLICIT_DEF:
   case TargetOpcode::COPY:
   case TargetOpcode::INLINEASM:
+  case TargetOpcode::INLINEASM_BR:
     break;
   }
 
@@ -167,6 +168,7 @@ bool VLIWResourceModel::reserveResources(SUnit *SU, bool IsTop) {
   case TargetOpcode::EH_LABEL:
   case TargetOpcode::COPY:
   case TargetOpcode::INLINEASM:
+  case TargetOpcode::INLINEASM_BR:
     break;
   }
   Packet.push_back(SU);

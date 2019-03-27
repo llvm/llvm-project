@@ -365,10 +365,9 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     KnownBits InputKnown(SrcBitWidth);
     if (SimplifyDemandedBits(I, 0, InputDemandedMask, InputKnown, Depth + 1))
       return I;
-    Known = InputKnown.zextOrTrunc(BitWidth);
-    // Any top bits are known to be zero.
-    if (BitWidth > SrcBitWidth)
-      Known.Zero.setBitsFrom(SrcBitWidth);
+    assert(InputKnown.getBitWidth() == SrcBitWidth && "Src width changed?");
+    Known = InputKnown.zextOrTrunc(BitWidth,
+                                   true /* ExtendedBitsAreKnownZero */);
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     break;
   }
@@ -966,24 +965,15 @@ InstCombiner::simplifyShrShlDemandedBits(Instruction *Shr, const APInt &ShrOp1,
 }
 
 /// Implement SimplifyDemandedVectorElts for amdgcn buffer and image intrinsics.
+///
+/// Note: This only supports non-TFE/LWE image intrinsic calls; those have
+///       struct returns.
 Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
                                                            APInt DemandedElts,
-                                                           int DMaskIdx,
-                                                           int TFCIdx) {
+                                                           int DMaskIdx) {
   unsigned VWidth = II->getType()->getVectorNumElements();
   if (VWidth == 1)
     return nullptr;
-
-  // Need to change to new instruction format
-  bool TFELWEEnabled = false;
-  if (TFCIdx > 0) {
-    if (ConstantInt *TFC = dyn_cast<ConstantInt>(II->getArgOperand(TFCIdx)))
-      TFELWEEnabled =    TFC->getZExtValue() & 0x1  // TFE
-                      || TFC->getZExtValue() & 0x2; // LWE
-  }
-
-  if (TFELWEEnabled)
-    return nullptr; // TFE not yet supported
 
   ConstantInt *NewDMask = nullptr;
 
@@ -1648,9 +1638,15 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     case Intrinsic::amdgcn_struct_buffer_load_format:
       return simplifyAMDGCNMemoryIntrinsicDemanded(II, DemandedElts);
     default: {
-      if (getAMDGPUImageDMaskIntrinsic(II->getIntrinsicID()))
-        return simplifyAMDGCNMemoryIntrinsicDemanded(
-            II, DemandedElts, 0, II->getNumArgOperands() - 2);
+      if (getAMDGPUImageDMaskIntrinsic(II->getIntrinsicID())) {
+        LLVM_DEBUG(
+          Value *TFC = II->getArgOperand(II->getNumOperands() - 2);
+          assert(!isa<ConstantInt>(TFC) ||
+                 dyn_cast<ConstantInt>(TFC)->getZExtValue() == 0);
+        );
+
+        return simplifyAMDGCNMemoryIntrinsicDemanded(II, DemandedElts, 0);
+      }
 
       break;
     }

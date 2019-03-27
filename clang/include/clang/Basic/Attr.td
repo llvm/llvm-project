@@ -102,13 +102,6 @@ def ObjCInstanceMethod : SubsetSubject<ObjCMethod,
                                        [{S->isInstanceMethod()}],
                                        "Objective-C instance methods">;
 
-def ObjCInterfaceDeclInitMethod : SubsetSubject<ObjCMethod,
-                               [{S->getMethodFamily() == OMF_init &&
-                                 (isa<ObjCInterfaceDecl>(S->getDeclContext()) ||
-                                  (isa<ObjCCategoryDecl>(S->getDeclContext()) &&
-            cast<ObjCCategoryDecl>(S->getDeclContext())->IsClassExtension()))}],
-            "init methods of interface or class extension declarations">;
-
 def Struct : SubsetSubject<Record,
                            [{!S->isUnion()}], "structs">;
 
@@ -296,7 +289,7 @@ class LangOpt<string name, bit negated = 0> {
 def MicrosoftExt : LangOpt<"MicrosoftExt">;
 def Borland : LangOpt<"Borland">;
 def CUDA : LangOpt<"CUDA">;
-def SYCL : LangOpt<"SYCL">;
+def SYCL : LangOpt<"SYCLIsDevice">;
 def COnly : LangOpt<"CPlusPlus", 1>;
 def CPlusPlus : LangOpt<"CPlusPlus">;
 def OpenCL : LangOpt<"OpenCL">;
@@ -1322,6 +1315,12 @@ def MayAlias : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def MIGServerRoutine : InheritableAttr {
+  let Spellings = [Clang<"mig_server_routine">];
+  let Subjects = SubjectList<[Function, ObjCMethod, Block]>;
+  let Documentation = [MIGConventionDocs];
+}
+
 def MSABI : DeclOrTypeAttr {
   let Spellings = [GCC<"ms_abi">];
 //  let Subjects = [Function, ObjCMethod];
@@ -1386,6 +1385,93 @@ def Mode : Attr {
   // This is notionally a type attribute, which #pragma clang attribute
   // generally does not support.
   let PragmaAttributeSupport = 0;
+}
+
+def IntelFPGAConstVar : SubsetSubject<Var,
+                      [{S->getKind() != Decl::ImplicitParam &&
+                        S->getKind() != Decl::ParmVar &&
+                        S->getKind() != Decl::NonTypeTemplateParm &&
+                        (S->getType().isConstQualified() ||
+                         S->getType().getAddressSpace() ==
+                            LangAS::opencl_constant)}],
+                      "constant variables">;
+
+def IntelFPGALocalStaticSlaveMemVar : SubsetSubject<Var,
+      [{S->getKind() != Decl::ImplicitParam &&
+        S->getKind() != Decl::NonTypeTemplateParm &&
+        (S->getStorageClass() == SC_Static ||
+         S->hasLocalStorage())}],
+         "local variables, static variables, slave memory arguments">;
+
+def IntelFPGALocalOrStaticVar : SubsetSubject<Var,
+                              [{S->getKind() != Decl::ImplicitParam &&
+                                S->getKind() != Decl::ParmVar &&
+                                S->getKind() != Decl::NonTypeTemplateParm &&
+                                (S->getStorageClass() == SC_Static ||
+                                 S->hasLocalStorage())}],
+                              "local variables, static variables">;
+
+def IntelFPGAMemory : Attr {
+  let Spellings = [GNU<"memory">, CXX11<"intelfpga", "memory">];
+  let Args = [EnumArgument<"Kind", "MemoryKind",
+                           ["MLAB", "BLOCK_RAM", ""],
+                           ["MLAB", "BlockRAM", "Default"], 1>];
+  let AdditionalMembers = [{
+    static void generateValidStrings(SmallString<256> &Str) {
+      auto Last = BlockRAM;
+      for (int I = 0; I <= Last; ++I) {
+        Str += ConvertMemoryKindToStr(static_cast<MemoryKind>(I));
+        if (I != Last) Str += " ";
+      }
+    }
+  }];
+  let Subjects = SubjectList<[IntelFPGAConstVar, IntelFPGALocalStaticSlaveMemVar,
+                              Field], ErrorDiag>;
+  let LangOpts = [SYCL];
+  let Documentation = [IntelFPGAMemoryAttrDocs];
+}
+
+def IntelFPGARegister : Attr {
+  let Spellings = [GNU<"register">, CXX11<"intelfpga", "register">];
+  let Subjects = SubjectList<[IntelFPGAConstVar, IntelFPGALocalOrStaticVar,
+                              Field], ErrorDiag>;
+  let LangOpts = [SYCL];
+  let Documentation = [IntelFPGARegisterAttrDocs];
+}
+
+// One integral argument.
+def IntelFPGABankWidth : Attr {
+  let Spellings = [GNU<"bankwidth">, CXX11<"intelfpga","bankwidth">];
+  let Args = [ExprArgument<"Value">];
+  let Subjects = SubjectList<[IntelFPGAConstVar, IntelFPGALocalStaticSlaveMemVar,
+                              Field], ErrorDiag>;
+  let LangOpts = [SYCL];
+  let Documentation = [IntelFPGABankWidthAttrDocs];
+  let AdditionalMembers = [{
+    static unsigned getMinValue() {
+      return 1;
+    }
+    static unsigned getMaxValue() {
+      return 1024*1024;
+    }
+  }];
+}
+
+def IntelFPGANumBanks : Attr {
+  let Spellings = [GNU<"numbanks">, CXX11<"intelfpga","numbanks">];
+  let Args = [ExprArgument<"Value">];
+  let Subjects = SubjectList<[IntelFPGAConstVar, IntelFPGALocalStaticSlaveMemVar,
+                              Field], ErrorDiag>;
+  let LangOpts = [SYCL];
+  let Documentation = [IntelFPGANumBanksAttrDocs];
+  let AdditionalMembers = [{
+    static unsigned getMinValue() {
+      return 1;
+    }
+    static unsigned getMaxValue() {
+      return 1024*1024;
+    }
+  }];
 }
 
 def Naked : InheritableAttr {
@@ -1500,14 +1586,14 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
 
 def AMDGPUFlatWorkGroupSize : InheritableAttr {
   let Spellings = [Clang<"amdgpu_flat_work_group_size", 0>];
-  let Args = [UnsignedArgument<"Min">, UnsignedArgument<"Max">];
+  let Args = [ExprArgument<"Min">, ExprArgument<"Max">];
   let Documentation = [AMDGPUFlatWorkGroupSizeDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
 def AMDGPUWavesPerEU : InheritableAttr {
   let Spellings = [Clang<"amdgpu_waves_per_eu", 0>];
-  let Args = [UnsignedArgument<"Min">, UnsignedArgument<"Max", 1>];
+  let Args = [ExprArgument<"Min">, ExprArgument<"Max", 1>];
   let Documentation = [AMDGPUWavesPerEUDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
@@ -1580,6 +1666,13 @@ def PassObjectSize : InheritableParamAttr {
   let Args = [IntArgument<"Type">];
   let Subjects = SubjectList<[ParmVar]>;
   let Documentation = [PassObjectSizeDocs];
+}
+
+def FortifyStdLib : InheritableAttr {
+  let Spellings = [Clang<"fortify_stdlib">];
+  let Args = [IntArgument<"Type">, IntArgument<"Flag">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [FortifyStdLibDocs];
 }
 
 // Nullability type attributes.
@@ -1773,6 +1866,13 @@ def ObjCRootClass : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def ObjCNonLazyClass : Attr {
+  let Spellings = [Clang<"objc_nonlazy_class">];
+  let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
+  let LangOpts = [ObjC];
+  let Documentation = [ObjCNonLazyClassDocs];
+}
+
 def ObjCSubclassingRestricted : InheritableAttr {
   let Spellings = [Clang<"objc_subclassing_restricted">];
   let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
@@ -1787,7 +1887,7 @@ def ObjCExplicitProtocolImpl : InheritableAttr {
 
 def ObjCDesignatedInitializer : Attr {
   let Spellings = [Clang<"objc_designated_initializer">];
-  let Subjects = SubjectList<[ObjCInterfaceDeclInitMethod], ErrorDiag>;
+  let Subjects = SubjectList<[ObjCMethod], ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
@@ -2368,7 +2468,7 @@ def NoSanitize : InheritableAttr {
   let Documentation = [NoSanitizeDocs];
   let AdditionalMembers = [{
     SanitizerMask getMask() const {
-      SanitizerMask Mask = 0;
+      SanitizerMask Mask;
       for (auto SanitizerName : sanitizers()) {
         SanitizerMask ParsedMask =
             parseSanitizerValue(SanitizerName, /*AllowGroups=*/true);

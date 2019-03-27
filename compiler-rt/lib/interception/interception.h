@@ -185,11 +185,17 @@ const interpose_substitution substitution_##func_name[] \
 #endif  // SANITIZER_MAC
 
 #if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
-#define DECLARE_REAL_AND_INTERCEPTOR(ret_type, func, ...) \
+# define DECLARE_REAL_AND_INTERCEPTOR(ret_type, func, ...) \
   DECLARE_REAL(ret_type, func, __VA_ARGS__) \
   extern "C" ret_type WRAP(func)(__VA_ARGS__);
+// Declare an interceptor and its wrapper defined in a different translation
+// unit (ex. asm).
+# define DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(ret_type, func, ...)    \
+  extern "C" ret_type WRAP(func)(__VA_ARGS__); \
+  extern "C" ret_type func(__VA_ARGS__);
 #else
-#define DECLARE_REAL_AND_INTERCEPTOR(ret_type, func, ...)
+# define DECLARE_REAL_AND_INTERCEPTOR(ret_type, func, ...)
+# define DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(ret_type, func, ...)
 #endif
 
 // Generally, you don't need to use DEFINE_REAL by itself, as INTERCEPTOR

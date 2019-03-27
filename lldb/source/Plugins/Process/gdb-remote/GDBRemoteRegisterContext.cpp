@@ -22,6 +22,8 @@
 #include "Utility/ARM_ehframe_Registers.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
@@ -205,6 +207,14 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
         if (buffer_sp->GetByteSize() >= m_reg_data.GetByteSize()) {
           SetAllRegisterValid(true);
           return true;
+        } else {
+          Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_THREAD |
+                                                                GDBR_LOG_PACKETS));
+          if (log)
+            log->Printf ("error: GDBRemoteRegisterContext::ReadRegisterBytes tried to read the "
+                        "entire register context at once, expected at least %" PRId64 " bytes "
+                        "but only got %" PRId64 " bytes.", m_reg_data.GetByteSize(),
+                        buffer_sp->GetByteSize());
         }
       }
       return false;
@@ -480,8 +490,8 @@ bool GDBRemoteRegisterContext::ReadAllRegisterValues(
       // ReadRegisterBytes saves the contents of the register in to the
       // m_reg_data buffer
     }
-    data_sp.reset(new DataBufferHeap(m_reg_data.GetDataStart(),
-                                     m_reg_info.GetRegisterDataByteSize()));
+    data_sp = std::make_shared<DataBufferHeap>(
+        m_reg_data.GetDataStart(), m_reg_info.GetRegisterDataByteSize());
     return true;
   } else {
 

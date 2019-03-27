@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -std=gnu89 -fno-gnu-keywords -E %s -o - \
 // RUN:     | FileCheck --check-prefix=CHECK-NONE %s
 
-// RUN: %clang_cc1 -std=c99 -fms-extensions -E %s -o - \
+// RUN: %clang_cc1 -std=c99 -fms-extensions -fms-compatibility -E %s -o - \
 // RUN:     | FileCheck --check-prefix=CHECK-MS-KEYWORDS %s
 // RUN: %clang_cc1 -std=c99 -fdeclspec -E %s -o - \
 // RUN:     | FileCheck --check-prefix=CHECK-DECLSPEC-KEYWORD %s
@@ -41,4 +41,14 @@ void has_ms_wchar();
 void no_declspec();
 #else
 void has_declspec();
+#endif
+
+// CHECK-NONE: no_static_assert
+// CHECK-GNU-KEYWORDS: no_static_assert
+// CHECK-MS-KEYWORDS: has_static_assert
+// CHECK-MS-KEYWORDS-WITHOUT-DECLSPEC: no_static_assert
+#if __is_identifier(static_assert)
+void no_static_assert();
+#else
+void has_static_assert();
 #endif

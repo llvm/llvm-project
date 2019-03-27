@@ -29,7 +29,7 @@ constexpr bool constexpr_test()
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::chrono::system_clock Clock;
@@ -42,4 +42,6 @@ int main()
 #if TEST_STD_VER > 14
     static_assert(constexpr_test(), "");
 #endif
+
+  return 0;
 }

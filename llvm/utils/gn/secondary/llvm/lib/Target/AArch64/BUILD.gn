@@ -1,5 +1,11 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+tablegen("AArch64GenAsmMatcher") {
+  visibility = [ ":LLVMAArch64CodeGen" ]
+  args = [ "-gen-asm-matcher" ]
+  td_file = "AArch64.td"
+}
+
 tablegen("AArch64GenCallingConv") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [ "-gen-callingconv" ]
@@ -38,6 +44,7 @@ tablegen("AArch64GenRegisterBank") {
 
 static_library("LLVMAArch64CodeGen") {
   deps = [
+    ":AArch64GenAsmMatcher",
     ":AArch64GenCallingConv",
     ":AArch64GenDAGISel",
     ":AArch64GenFastISel",

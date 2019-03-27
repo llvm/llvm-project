@@ -94,6 +94,7 @@ class LLDBIteratorTestCase(TestBase):
             self.assertTrue(yours[i] == mine[i],
                             "ID of yours[{0}] and mine[{0}] matches".format(i))
 
+    @expectedFailureNetBSD
     @add_test_categories(['pyapi'])
     def test_lldb_iter_frame(self):
         """Test iterator works correctly for SBProcess->SBThread->SBFrame."""

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #pragma once
+#include <CL/__spirv/spirv_ops.hpp>
 #include <CL/sycl/access/access.hpp>
 #include <CL/sycl/detail/common.hpp>
 #include <cassert>
@@ -14,6 +15,11 @@
 
 namespace cl {
 namespace sycl {
+// Forward declaration
+template <typename dataT, int dimensions, access::mode accessMode,
+          access::target accessTarget, access::placeholder isPlaceholder>
+class accessor;
+
 template <typename ElementType, access::address_space Space> class multi_ptr {
 public:
   using element_type = ElementType;
@@ -54,9 +60,10 @@ public:
   }
 #ifdef __SYCL_DEVICE_ONLY__
   multi_ptr &operator=(ElementType *pointer) {
-    m_Pointer = reinterpret_cast<pointer_t>(pointer);
     // TODO An implementation should reject an argument if the deduced
     // address space is not compatible with Space.
+    m_Pointer = reinterpret_cast<pointer_t>(pointer);
+    return *this;
   }
 #endif
   multi_ptr &operator=(std::nullptr_t) {
@@ -156,7 +163,20 @@ public:
     return multi_ptr(m_Pointer - r);
   }
 
-  void prefetch(size_t numElements) const;
+  // Only if Space == global_space
+  template <access::address_space _Space = Space,
+            typename = typename std::enable_if<
+                _Space == Space &&
+                Space == access::address_space::global_space>::type>
+  void prefetch(size_t NumElements) const {
+    size_t NumBytes = NumElements * sizeof(ElementType);
+#ifdef __SYCL_DEVICE_ONLY__
+    auto PrefetchPtr = reinterpret_cast<const __global char *>(m_Pointer);
+#else
+    auto PrefetchPtr = reinterpret_cast<const char *>(m_Pointer);
+#endif
+    cl::__spirv::prefetch(PrefetchPtr, NumBytes);
+  }
 
 private:
   pointer_t m_Pointer;
@@ -199,9 +219,10 @@ public:
   }
 #ifdef __SYCL_DEVICE_ONLY__
   multi_ptr &operator=(void *pointer) {
-    m_Pointer = reinterpret_cast<pointer_t>(pointer);
     // TODO An implementation should reject an argument if the deduced
     // address space is not compatible with Space.
+    m_Pointer = reinterpret_cast<pointer_t>(pointer);
+    return *this;
   }
 #endif
   multi_ptr &operator=(std::nullptr_t) {
@@ -216,7 +237,8 @@ public:
                 _Space == Space &&
                 Space == access::address_space::global_space>::type>
   multi_ptr(
-      accessor<ElementType, dimensions, Mode, access::target::global_buffer>
+      accessor<ElementType, dimensions, Mode, access::target::global_buffer,
+               access::placeholder::false_t>
           Accessor)
       : multi_ptr(Accessor.get_pointer()) {}
 
@@ -226,8 +248,9 @@ public:
       access::address_space _Space = Space,
       typename = typename std::enable_if<
           _Space == Space && Space == access::address_space::local_space>::type>
-  multi_ptr(
-      accessor<ElementType, dimensions, Mode, access::target::local> Accessor)
+  multi_ptr(accessor<ElementType, dimensions, Mode, access::target::local,
+                     access::placeholder::false_t>
+                Accessor)
       : multi_ptr(Accessor.get_pointer()) {}
 
   // Only if Space == constant_space
@@ -237,7 +260,8 @@ public:
                 _Space == Space &&
                 Space == access::address_space::constant_space>::type>
   multi_ptr(
-      accessor<ElementType, dimensions, Mode, access::target::constant_buffer>
+      accessor<ElementType, dimensions, Mode, access::target::constant_buffer,
+               access::placeholder::false_t>
           Accessor)
       : multi_ptr(Accessor.get_pointer()) {}
 
@@ -245,11 +269,16 @@ public:
   pointer_t get() const { return m_Pointer; }
 
   // Implicit conversion to the underlying pointer type
-  operator void *() const;
+  operator void *() const { return m_Pointer; };
 
   // Explicit conversion to a multi_ptr<ElementType>
   template <typename ElementType>
-  explicit operator multi_ptr<ElementType, Space>() const;
+  explicit operator multi_ptr<ElementType, Space>() const {
+    using elem_pointer_t =
+        typename detail::PtrValueType<ElementType, Space>::type *;
+    return multi_ptr<ElementType, Space>(
+        static_cast<elem_pointer_t>(m_Pointer));
+  }
 
 private:
   pointer_t m_Pointer;
@@ -273,62 +302,99 @@ multi_ptr<ElementType, Space> make_ptr(ElementType *pointer) {
 
 template <typename ElementType, access::address_space Space>
 bool operator==(const multi_ptr<ElementType, Space> &lhs,
-                const multi_ptr<ElementType, Space> &rhs);
+                const multi_ptr<ElementType, Space> &rhs) {
+  return lhs.get() == rhs.get();
+}
 
 template <typename ElementType, access::address_space Space>
 bool operator!=(const multi_ptr<ElementType, Space> &lhs,
-                const multi_ptr<ElementType, Space> &rhs);
+                const multi_ptr<ElementType, Space> &rhs) {
+  return lhs.get() != rhs.get();
+}
 
 template <typename ElementType, access::address_space Space>
 bool operator<(const multi_ptr<ElementType, Space> &lhs,
-               const multi_ptr<ElementType, Space> &rhs);
+               const multi_ptr<ElementType, Space> &rhs) {
+  return lhs.get() < rhs.get();
+}
 
 template <typename ElementType, access::address_space Space>
 bool operator>(const multi_ptr<ElementType, Space> &lhs,
-               const multi_ptr<ElementType, Space> &rhs);
+               const multi_ptr<ElementType, Space> &rhs) {
+  return lhs.get() > rhs.get();
+}
 
 template <typename ElementType, access::address_space Space>
 bool operator<=(const multi_ptr<ElementType, Space> &lhs,
-                const multi_ptr<ElementType, Space> &rhs);
+                const multi_ptr<ElementType, Space> &rhs) {
+  return lhs.get() <= rhs.get();
+}
 
 template <typename ElementType, access::address_space Space>
 bool operator>=(const multi_ptr<ElementType, Space> &lhs,
-                const multi_ptr<ElementType, Space> &rhs);
+                const multi_ptr<ElementType, Space> &rhs) {
+  return lhs.get() >= rhs.get();
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator!=(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs);
+bool operator!=(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs) {
+  return lhs.get() != nullptr;
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator!=(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs);
+bool operator!=(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs) {
+  return rhs.get() != nullptr;
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator==(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs);
+bool operator==(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs) {
+  return lhs.get() == nullptr;
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator==(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs);
+bool operator==(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs) {
+  return rhs.get() == nullptr;
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator>(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs);
+bool operator>(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs) {
+  return lhs.get() != nullptr;
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator>(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs);
+bool operator>(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs) {
+  return false;
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator<(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs);
+bool operator<(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs) {
+  return false;
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator<(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs);
+bool operator<(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs) {
+  return rhs.get() != nullptr;
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator>=(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs);
+bool operator>=(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs) {
+  return true;
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator>=(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs);
+bool operator>=(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs) {
+  return rhs.get() == nullptr;
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator<=(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs);
+bool operator<=(const multi_ptr<ElementType, Space> &lhs, std::nullptr_t rhs) {
+  return lhs.get() == nullptr;
+}
 
 template <typename ElementType, access::address_space Space>
-bool operator<=(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs);
+bool operator<=(std::nullptr_t lhs, const multi_ptr<ElementType, Space> &rhs) {
+  return rhs.get() == nullptr;
+}
+
 } // namespace sycl
 } // namespace cl

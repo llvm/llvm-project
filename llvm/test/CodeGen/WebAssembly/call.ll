@@ -17,7 +17,7 @@ declare void @void_nullary()
 
 ; CHECK-LABEL: call_i32_nullary:
 ; CHECK-NEXT: .functype call_i32_nullary () -> (i32){{$}}
-; CHECK-NEXT: {{^}} i32.call $push[[NUM:[0-9]+]]=, i32_nullary@FUNCTION{{$}}
+; CHECK-NEXT: {{^}} i32.call $push[[NUM:[0-9]+]]=, i32_nullary{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @call_i32_nullary() {
   %r = call i32 @i32_nullary()
@@ -26,7 +26,7 @@ define i32 @call_i32_nullary() {
 
 ; CHECK-LABEL: call_i64_nullary:
 ; CHECK-NEXT: .functype call_i64_nullary () -> (i64){{$}}
-; CHECK-NEXT: {{^}} i64.call $push[[NUM:[0-9]+]]=, i64_nullary@FUNCTION{{$}}
+; CHECK-NEXT: {{^}} i64.call $push[[NUM:[0-9]+]]=, i64_nullary{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @call_i64_nullary() {
   %r = call i64 @i64_nullary()
@@ -35,7 +35,7 @@ define i64 @call_i64_nullary() {
 
 ; CHECK-LABEL: call_float_nullary:
 ; CHECK-NEXT: .functype call_float_nullary () -> (f32){{$}}
-; CHECK-NEXT: {{^}} f32.call $push[[NUM:[0-9]+]]=, float_nullary@FUNCTION{{$}}
+; CHECK-NEXT: {{^}} f32.call $push[[NUM:[0-9]+]]=, float_nullary{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define float @call_float_nullary() {
   %r = call float @float_nullary()
@@ -44,7 +44,7 @@ define float @call_float_nullary() {
 
 ; CHECK-LABEL: call_double_nullary:
 ; CHECK-NEXT: .functype call_double_nullary () -> (f64){{$}}
-; CHECK-NEXT: {{^}} f64.call $push[[NUM:[0-9]+]]=, double_nullary@FUNCTION{{$}}
+; CHECK-NEXT: {{^}} f64.call $push[[NUM:[0-9]+]]=, double_nullary{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define double @call_double_nullary() {
   %r = call double @double_nullary()
@@ -53,7 +53,7 @@ define double @call_double_nullary() {
 
 ; CHECK-LABEL: call_v128_nullary:
 ; CHECK-NEXT: .functype call_v128_nullary () -> (v128){{$}}
-; CHECK-NEXT: {{^}} v128.call $push[[NUM:[0-9]+]]=, v128_nullary@FUNCTION{{$}}
+; CHECK-NEXT: {{^}} v128.call $push[[NUM:[0-9]+]]=, v128_nullary{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define <16 x i8> @call_v128_nullary() {
   %r = call <16 x i8> @v128_nullary()
@@ -62,7 +62,7 @@ define <16 x i8> @call_v128_nullary() {
 
 ; CHECK-LABEL: call_void_nullary:
 ; CHECK-NEXT: .functype call_void_nullary () -> (){{$}}
-; CHECK-NEXT: {{^}} call void_nullary@FUNCTION{{$}}
+; CHECK-NEXT: {{^}} call void_nullary{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @call_void_nullary() {
   call void @void_nullary()
@@ -72,7 +72,7 @@ define void @call_void_nullary() {
 ; CHECK-LABEL: call_i32_unary:
 ; CHECK-NEXT: .functype call_i32_unary (i32) -> (i32){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: {{^}} i32.call $push[[NUM:[0-9]+]]=, i32_unary@FUNCTION, $pop[[L0]]{{$}}
+; CHECK-NEXT: {{^}} i32.call $push[[NUM:[0-9]+]]=, i32_unary, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @call_i32_unary(i32 %a) {
   %r = call i32 @i32_unary(i32 %a)
@@ -83,7 +83,7 @@ define i32 @call_i32_unary(i32 %a) {
 ; CHECK-NEXT: .functype call_i32_binary (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: local.get $push[[L1:[0-9]+]]=, 1{{$}}
-; CHECK-NEXT: {{^}} i32.call $push[[NUM:[0-9]+]]=, i32_binary@FUNCTION, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: {{^}} i32.call $push[[NUM:[0-9]+]]=, i32_binary, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @call_i32_binary(i32 %a, i32 %b) {
   %r = call i32 @i32_binary(i32 %a, i32 %b)
@@ -176,7 +176,7 @@ define void @call_indirect_arg_2(i32 (i32, i32)* %callee, i32 %arg, i32 %arg2) {
 
 ; CHECK-LABEL: tail_call_void_nullary:
 ; CHECK-NEXT: .functype tail_call_void_nullary () -> (){{$}}
-; CHECK-NEXT: {{^}} call void_nullary@FUNCTION{{$}}
+; CHECK-NEXT: {{^}} call void_nullary{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @tail_call_void_nullary() {
   tail call void @void_nullary()
@@ -185,7 +185,7 @@ define void @tail_call_void_nullary() {
 
 ; CHECK-LABEL: fastcc_tail_call_void_nullary:
 ; CHECK-NEXT: .functype fastcc_tail_call_void_nullary () -> (){{$}}
-; CHECK-NEXT: {{^}} call void_nullary@FUNCTION{{$}}
+; CHECK-NEXT: {{^}} call void_nullary{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @fastcc_tail_call_void_nullary() {
   tail call fastcc void @void_nullary()
@@ -194,7 +194,7 @@ define void @fastcc_tail_call_void_nullary() {
 
 ; CHECK-LABEL: coldcc_tail_call_void_nullary:
 ; CHECK-NEXT: .functype coldcc_tail_call_void_nullary () -> (){{$}}
-; CHECK-NEXT: {{^}} call void_nullary@FUNCTION{{$}}
+; CHECK-NEXT: {{^}} call void_nullary{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @coldcc_tail_call_void_nullary() {
   tail call coldcc void @void_nullary()
@@ -205,9 +205,9 @@ define void @coldcc_tail_call_void_nullary() {
 ; CHECK-NEXT: .functype call_constexpr () -> (){{$}}
 ; CHECK-NEXT: i32.const $push[[L0:[0-9]+]]=, 2{{$}}
 ; CHECK-NEXT: i32.const $push[[L1:[0-9]+]]=, 3{{$}}
-; CHECK-NEXT: call .Lvararg_func_bitcast@FUNCTION, $pop[[L0]], $pop[[L1]]{{$}}
-; CHECK-NEXT: call other_void_nullary@FUNCTION{{$}}
-; CHECK-NEXT: call void_nullary@FUNCTION{{$}}
+; CHECK-NEXT: call .Lvararg_func_bitcast, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: call other_void_nullary{{$}}
+; CHECK-NEXT: call void_nullary{{$}}
 ; CHECK-NEXT: return{{$}}
 declare void @vararg_func(...)
 declare void @other_void_nullary()

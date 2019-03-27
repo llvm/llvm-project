@@ -58,7 +58,9 @@ test()
     static_assert((std::is_same<typename R::iterator_category, std::output_iterator_tag>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<std::vector<int> >();
+
+  return 0;
 }

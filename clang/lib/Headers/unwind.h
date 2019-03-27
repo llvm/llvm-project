@@ -66,8 +66,8 @@ extern "C" {
 #pragma GCC visibility push(default)
 #endif
 
-typedef uintptr_t _Unwind_Word;
-typedef intptr_t _Unwind_Sword;
+typedef uintptr_t _Unwind_Word __attribute__((__mode__(__unwind_word__)));
+typedef intptr_t _Unwind_Sword __attribute__((__mode__(__unwind_word__)));
 typedef uintptr_t _Unwind_Ptr;
 typedef uintptr_t _Unwind_Internal_Ptr;
 typedef uint64_t _Unwind_Exception_Class;

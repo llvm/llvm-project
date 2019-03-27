@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZISELLOWERING_H
 
 #include "SystemZ.h"
+#include "SystemZInstrInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -395,6 +396,7 @@ public:
       return TypeWidenVector;
     return TargetLoweringBase::getPreferredVectorAction(VT);
   }
+  bool isCheapToSpeculateCtlz() const override { return true; }
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &,
                          EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(EVT VT) const override;
@@ -640,8 +642,27 @@ private:
                                          MachineBasicBlock *MBB,
                                          unsigned Opcode) const;
 
+  MachineMemOperand::Flags getMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 };
+
+struct SystemZVectorConstantInfo {
+private:
+  APInt IntBits;             // The 128 bits as an integer.
+  APInt SplatBits;           // Smallest splat value.
+  APInt SplatUndef;          // Bits correspoding to undef operands of the BVN.
+  unsigned SplatBitSize = 0;
+  bool isFP128 = false;
+
+public:
+  unsigned Opcode = 0;
+  SmallVector<unsigned, 2> OpVals;
+  MVT VecVT;
+  SystemZVectorConstantInfo(APFloat FPImm);
+  SystemZVectorConstantInfo(BuildVectorSDNode *BVN);
+  bool isVectorConstantLegal(const SystemZSubtarget &Subtarget);
+};
+
 } // end namespace llvm
 
 #endif

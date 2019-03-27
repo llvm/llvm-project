@@ -15,10 +15,12 @@
 #include <functional>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     typedef std::binary_function<int, short, bool> bf;
     static_assert((std::is_same<bf::first_argument_type, int>::value), "");
     static_assert((std::is_same<bf::second_argument_type, short>::value), "");
     static_assert((std::is_same<bf::result_type, bool>::value), "");
+
+  return 0;
 }

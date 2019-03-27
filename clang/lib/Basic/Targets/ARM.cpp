@@ -652,6 +652,12 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (SoftFloat)
     Builder.defineMacro("__SOFTFP__");
 
+  // ACLE position independent code macros.
+  if (Opts.ROPI)
+    Builder.defineMacro("__ARM_ROPI", "1");
+  if (Opts.RWPI)
+    Builder.defineMacro("__ARM_RWPI", "1");
+
   if (ArchKind == llvm::ARM::ArchKind::XSCALE)
     Builder.defineMacro("__XSCALE__");
 

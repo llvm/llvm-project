@@ -408,7 +408,7 @@ static mode_t GetOpenMode(uint32_t permissions) {
 }
 
 Status FileSystem::Open(File &File, const FileSpec &file_spec, uint32_t options,
-                        uint32_t permissions) {
+                        uint32_t permissions, bool should_close_fd) {
   if (m_collector)
     m_collector->AddFile(file_spec);
 
@@ -431,7 +431,7 @@ Status FileSystem::Open(File &File, const FileSpec &file_spec, uint32_t options,
     File.SetDescriptor(descriptor, false);
     error.SetErrorToErrno();
   } else {
-    File.SetDescriptor(descriptor, true);
+    File.SetDescriptor(descriptor, should_close_fd);
     File.SetOptions(options);
   }
   return error;

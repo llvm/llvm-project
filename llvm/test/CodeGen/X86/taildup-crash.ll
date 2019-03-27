@@ -5,7 +5,7 @@ target triple = "x86_64--"
 ; block.
 ; CHECK-LABEL: func:
 ; CHECK: testb
-; CEHCK: je
+; CHECK: je
 ; CHECK: retq
 ; CHECK: jmp
 define hidden void @func() {

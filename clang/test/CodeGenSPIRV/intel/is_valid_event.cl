@@ -3,7 +3,8 @@
 // Builtins must be declared as overloadable, so Clang mangles their names,
 // and LLVM-SPIRV translator can recognize them.
 
-// RUN: %clang_cc1 %s -emit-spirv -triple spir-unknown-unknown -O0 -cl-std=CL2.0 -include opencl-c.h -o %t.spv
+// RUN: %clang_cc1 %s -emit-llvm-bc -triple spir-unknown-unknown -O0 -cl-std=CL2.0 -include opencl-c.h -o %t.bc
+// RUN: llvm-spirv %t.bc -o %t.spv
 // RUN: llvm-spirv -to-text %t.spv -o - | FileCheck %s
 
 // CHECK: CreateUserEvent

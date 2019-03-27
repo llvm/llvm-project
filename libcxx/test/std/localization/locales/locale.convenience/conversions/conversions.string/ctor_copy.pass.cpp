@@ -21,10 +21,12 @@
 #include <codecvt>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::codecvt_utf8<wchar_t> Codecvt;
     typedef std::wstring_convert<Codecvt> Myconv;
     static_assert(!std::is_copy_constructible<Myconv>::value, "");
     static_assert(!std::is_copy_assignable<Myconv>::value, "");
+
+  return 0;
 }

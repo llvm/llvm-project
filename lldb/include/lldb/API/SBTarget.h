@@ -75,8 +75,6 @@ public:
   ///
   /// @param[in] v
   ///     A boolean to control the collection.
-  /// @return
-  ///     void
   //------------------------------------------------------------------
   void SetCollectingStats(bool v);
 

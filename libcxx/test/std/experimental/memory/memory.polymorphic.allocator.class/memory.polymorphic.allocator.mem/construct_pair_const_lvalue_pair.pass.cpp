@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++experimental
 // UNSUPPORTED: c++98, c++03
 
 // <experimental/memory_resource>
@@ -118,7 +117,7 @@ void test_pmr_not_uses_allocator(std::pair<TT, UU> const& p)
 template <class Tp>
 struct Print;
 
-int main()
+int main(int, char**)
 {
     using ERT = std::experimental::erased_type;
     using PMR = ex::memory_resource*;
@@ -139,4 +138,6 @@ int main()
         test_pmr_not_uses_allocator<PMR>(p);
         test_pmr_uses_allocator<PMA>(p);
     }
+
+  return 0;
 }

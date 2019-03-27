@@ -438,4 +438,12 @@ TEST(SanitizerCommon, ReservedAddressRangeUnmap) {
   EXPECT_DEATH(address_range.Unmap(base_addr + (PageSize * 2), PageSize), ".*");
 }
 
+// Windows has no working ReadBinaryName.
+#if !SANITIZER_WINDOWS
+TEST(SanitizerCommon, ReadBinaryNameCached) {
+  char buf[256];
+  EXPECT_NE((uptr)0, ReadBinaryNameCached(buf, sizeof(buf)));
+}
+#endif
+
 }  // namespace __sanitizer

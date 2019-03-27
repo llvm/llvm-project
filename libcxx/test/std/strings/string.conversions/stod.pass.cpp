@@ -11,6 +11,11 @@
 // double stod(const string& str, size_t *idx = 0);
 // double stod(const wstring& str, size_t *idx = 0);
 
+// When back-deploying to macosx10.7, the RTTI for exception classes
+// incorrectly provided by libc++.dylib is mixed with the one in
+// libc++abi.dylib and exceptions are not caught properly.
+// XFAIL: with_system_cxx_lib=macosx10.7
+
 #include <string>
 #include <cmath>
 #include <cassert>
@@ -18,7 +23,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     assert(std::stod("0") == 0);
     assert(std::stod(L"0") == 0);
@@ -185,4 +190,6 @@ int main()
         assert(idx == 0);
     }
 #endif
+
+  return 0;
 }

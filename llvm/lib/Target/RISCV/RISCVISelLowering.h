@@ -141,9 +141,9 @@ private:
   SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
 
-  bool IsEligibleForTailCallOptimization(CCState &CCInfo,
-    CallLoweringInfo &CLI, MachineFunction &MF,
-    const SmallVector<CCValAssign, 16> &ArgLocs) const;
+  bool isEligibleForTailCallOptimization(
+      CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
+      const SmallVector<CCValAssign, 16> &ArgLocs) const;
 
   TargetLowering::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;

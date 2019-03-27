@@ -60,24 +60,13 @@ public:
     return (Denominator == 1) ? Numerator : (double)Numerator / Denominator;
   }
 
+  unsigned getNumerator() const { return Numerator; }
+  unsigned getDenominator() const { return Denominator; }
+
   // Add the components of RHS to this instance.  Instead of calculating
   // the final value here, we keep track of the numerator and denominator
   // separately, to reduce floating point error.
-  ResourceCycles &operator+=(const ResourceCycles &RHS) {
-    if (Denominator == RHS.Denominator)
-      Numerator += RHS.Numerator;
-    else {
-      // Create a common denominator for LHS and RHS by calculating the least
-      // common multiple from the GCD.
-      unsigned GCD = GreatestCommonDivisor64(Denominator, RHS.Denominator);
-      unsigned LCM = (Denominator * RHS.Denominator) / GCD;
-      unsigned LHSNumerator = Numerator * (LCM / Denominator);
-      unsigned RHSNumerator = RHS.Numerator * (LCM / RHS.Denominator);
-      Numerator = LHSNumerator + RHSNumerator;
-      Denominator = LCM;
-    }
-    return *this;
-  }
+  ResourceCycles &operator+=(const ResourceCycles &RHS);
 };
 
 /// Populates vector Masks with processor resource masks.
@@ -104,6 +93,13 @@ public:
 /// problems with simple bit manipulation operations.
 void computeProcResourceMasks(const MCSchedModel &SM,
                               MutableArrayRef<uint64_t> Masks);
+
+// Returns the index of the highest bit set. For resource masks, the position of
+// the highest bit set can be used to construct a resource mask identifier.
+inline unsigned getResourceStateIndex(uint64_t Mask) {
+  assert(Mask && "Processor Resource Mask cannot be zero!");
+  return (std::numeric_limits<uint64_t>::digits - countLeadingZeros(Mask)) - 1;
+}
 
 /// Compute the reciprocal block throughput from a set of processor resource
 /// cycles. The reciprocal block throughput is computed as the MAX between:

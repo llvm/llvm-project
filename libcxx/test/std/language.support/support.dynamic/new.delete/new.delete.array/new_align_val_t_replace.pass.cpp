@@ -66,7 +66,7 @@ void  operator delete[](void* p, std::align_val_t) TEST_NOEXCEPT
 }
 
 
-int main()
+int main(int, char**)
 {
     {
         A* ap = new A[3];
@@ -85,4 +85,6 @@ int main()
         delete [] bp;
         assert(!new_called);
     }
+
+  return 0;
 }

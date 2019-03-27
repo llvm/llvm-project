@@ -1778,8 +1778,8 @@ static DecodeStatus DecodeGPRSeqPairsClassRegisterClass(MCInst &Inst,
   if (RegNo & 0x1)
     return Fail;
 
-  unsigned Register = AArch64MCRegisterClasses[RegClassID].getRegister(RegNo);
-  Inst.addOperand(MCOperand::createReg(Register));
+  unsigned Reg = AArch64MCRegisterClasses[RegClassID].getRegister(RegNo / 2);
+  Inst.addOperand(MCOperand::createReg(Reg));
   return Success;
 }
 

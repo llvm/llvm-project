@@ -22,16 +22,16 @@ CHECK-NEXT:         Kind:            GLOBAL
 CHECK-NEXT:         Index:           2
 CHECK-NEXT:       - Name:            foo
 CHECK-NEXT:         Kind:            FUNCTION
-CHECK-NEXT:         Index:           2
+CHECK-NEXT:         Index:           1
 CHECK-NEXT:       - Name:            bar
 CHECK-NEXT:         Kind:            FUNCTION
-CHECK-NEXT:         Index:           3
+CHECK-NEXT:         Index:           2
 CHECK-NEXT:       - Name:            archive2_symbol
 CHECK-NEXT:         Kind:            FUNCTION
-CHECK-NEXT:         Index:           4
+CHECK-NEXT:         Index:           3
 CHECK-NEXT:       - Name:            _start
 CHECK-NEXT:         Kind:            FUNCTION
-CHECK-NEXT:         Index:           1
+CHECK-NEXT:         Index:           0
 CHECK-NEXT:   - Type:            CODE
 
 NOEXPORT:         Exports:
@@ -46,5 +46,5 @@ NOEXPORT-NEXT:         Kind:            GLOBAL
 NOEXPORT-NEXT:         Index:           2
 NOEXPORT-NEXT:       - Name:            _start
 NOEXPORT-NEXT:         Kind:            FUNCTION
-NOEXPORT-NEXT:         Index:           1
+NOEXPORT-NEXT:         Index:           0
 NOEXPORT-NEXT:   - Type:            CODE

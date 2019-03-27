@@ -13,7 +13,7 @@
 #include <stack>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::stack<int> q;
     assert(q.size() == 0);
@@ -23,4 +23,6 @@ int main()
     const std::stack<int>& cqr = q;
     const int& cir = cqr.top();
     assert(cir == 3);
+
+  return 0;
 }

@@ -1604,7 +1604,7 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
                                   r2_reg_info->byte_size +
                                   r3_reg_info->byte_size &&
                 process_sp) {
-              std::unique_ptr<DataBufferHeap> heap_data_ap(
+              std::unique_ptr<DataBufferHeap> heap_data_up(
                   new DataBufferHeap(*byte_size, 0));
               const ByteOrder byte_order = process_sp->GetByteOrder();
               RegisterValue r0_reg_value;
@@ -1617,18 +1617,18 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
                   reg_ctx->ReadRegister(r3_reg_info, r3_reg_value)) {
                 Status error;
                 if (r0_reg_value.GetAsMemoryData(r0_reg_info,
-                                                 heap_data_ap->GetBytes() + 0,
+                                                 heap_data_up->GetBytes() + 0,
                                                  4, byte_order, error) &&
                     r1_reg_value.GetAsMemoryData(r1_reg_info,
-                                                 heap_data_ap->GetBytes() + 4,
+                                                 heap_data_up->GetBytes() + 4,
                                                  4, byte_order, error) &&
                     r2_reg_value.GetAsMemoryData(r2_reg_info,
-                                                 heap_data_ap->GetBytes() + 8,
+                                                 heap_data_up->GetBytes() + 8,
                                                  4, byte_order, error) &&
                     r3_reg_value.GetAsMemoryData(r3_reg_info,
-                                                 heap_data_ap->GetBytes() + 12,
+                                                 heap_data_up->GetBytes() + 12,
                                                  4, byte_order, error)) {
-                  DataExtractor data(DataBufferSP(heap_data_ap.release()),
+                  DataExtractor data(DataBufferSP(heap_data_up.release()),
                                      byte_order,
                                      process_sp->GetAddressByteSize());
 

@@ -24,7 +24,7 @@ struct NoDefault {
   NoDefault(int) {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -70,4 +70,6 @@ int main()
         static_assert ( *c2.data()  ==  c2[0], "");
     }
 #endif
+
+  return 0;
 }

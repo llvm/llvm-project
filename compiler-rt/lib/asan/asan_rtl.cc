@@ -597,6 +597,19 @@ void NOINLINE __asan_handle_no_return() {
     curr_thread->fake_stack()->HandleNoReturn();
 }
 
+extern "C" void *__asan_extra_spill_area() {
+  AsanThread *t = GetCurrentThread();
+  CHECK(t);
+  return t->extra_spill_area();
+}
+
+void __asan_handle_vfork(void *sp) {
+  AsanThread *t = GetCurrentThread();
+  CHECK(t);
+  uptr bottom = t->stack_bottom();
+  PoisonShadow(bottom, (uptr)sp - bottom, 0);
+}
+
 void NOINLINE __asan_set_death_callback(void (*callback)(void)) {
   SetUserDieCallback(callback);
 }

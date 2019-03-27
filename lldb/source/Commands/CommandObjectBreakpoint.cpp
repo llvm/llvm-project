@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <vector>
-
 #include "CommandObjectBreakpoint.h"
 #include "CommandObjectBreakpointCommand.h"
 #include "lldb/Breakpoint/Breakpoint.h"
@@ -29,6 +27,9 @@
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StreamString.h"
+
+#include <memory>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -615,7 +616,7 @@ public:
       m_move_to_nearest_code = eLazyBoolCalculate;
       m_source_regex_func_names.clear();
       m_python_class.clear();
-      m_extra_args_sp.reset(new StructuredData::Dictionary());
+      m_extra_args_sp = std::make_shared<StructuredData::Dictionary>();
       m_current_key.clear();
     }
 

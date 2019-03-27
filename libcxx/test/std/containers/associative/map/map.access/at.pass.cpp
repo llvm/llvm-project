@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<const int, double> V;
@@ -160,4 +160,6 @@ int main()
         assert(m.size() == 7);
     }
 #endif
+
+  return 0;
 }

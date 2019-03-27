@@ -23,7 +23,7 @@
 # RUN: cp %p/../Inputs/module-warnings/1.o %t.dir
 # RUN: cp %p/../Inputs/module-warnings/Foo.pcm %t.dir/ModuleCache
 #
-# RUN: dsymutil -f -oso-prepend-path=%t.dir -y \
+# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y \
 # RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck %s
 #
 # Module-not-found should be reported only once.
@@ -32,12 +32,12 @@
 # CHECK-NOT: warning: {{.*}}Bar.pcm:
 #
 # RUN: cp %p/../Inputs/module-warnings/libstatic.a %t.dir
-# RUN: dsymutil -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 | FileCheck %s
+# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 | FileCheck %s
 # CHECK: rebuild the module cache
 # CHECK-NOT: static libraries
 #
 # RUN: rm -rf %t.dir/ModuleCache
-# RUN: dsymutil -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 \
+# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=STATIC
 # STATIC: warning: {{.*}}Bar.pcm:
 # STATIC: note: Linking a static library

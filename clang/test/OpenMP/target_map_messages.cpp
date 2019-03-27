@@ -110,17 +110,17 @@ struct SA {
     {}
     #pragma omp target map( , , : a)   // expected-error {{missing map type modifier}} expected-error {{missing map type modifier}} expected-error {{missing map type}}
     {}
-    #pragma omp target map( d, f, bf: a)   // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+    #pragma omp target map( d, f, bf: a)   // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
     {}
-    #pragma omp target map( , f, : a)   // expected-error {{missing map type modifier}} expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
+    #pragma omp target map( , f, : a)   // expected-error {{missing map type modifier}} expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{missing map type}}
     {}
     #pragma omp target map(always close: a)   // expected-error {{missing map type}}
     {}
     #pragma omp target map(always close bf: a)   // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
     {}
-    #pragma omp target map(always tofrom close: a)   // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
+    #pragma omp target map(always tofrom close: a)   // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{missing map type}}
     {}
-    #pragma omp target map(tofrom from: a)   // expected-error {{incorrect map type modifier, expected 'always' or 'close'}}
+    #pragma omp target map(tofrom from: a)   // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
     {}
     #pragma omp target map(close bf: a)   // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
     {}
@@ -516,14 +516,14 @@ T tmain(T argc) {
 
 #pragma omp target data map(always, tofrom: x)
 #pragma omp target data map(always: x) // expected-error {{missing map type}}
-#pragma omp target data map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
+#pragma omp target data map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{missing map type}}
 #pragma omp target data map(always, tofrom: always, tofrom, x)
 #pragma omp target map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   foo();
 
 #pragma omp target data map(close, tofrom: x)
 #pragma omp target data map(close: x) // expected-error {{missing map type}}
-#pragma omp target data map(tofrom, close: x) // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
+#pragma omp target data map(tofrom, close: x) // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{missing map type}}
 #pragma omp target data map(close, tofrom: close, tofrom, x)
   foo();
   return 0;
@@ -613,13 +613,13 @@ int main(int argc, char **argv) {
 
 #pragma omp target data map(always, tofrom: x)
 #pragma omp target data map(always: x) // expected-error {{missing map type}}
-#pragma omp target data map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
+#pragma omp target data map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{missing map type}}
 #pragma omp target data map(always, tofrom: always, tofrom, x)
 #pragma omp target map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   foo();
 #pragma omp target data map(close, tofrom: x)
 #pragma omp target data map(close: x) // expected-error {{missing map type}}
-#pragma omp target data map(tofrom, close: x) // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
+#pragma omp target data map(tofrom, close: x) // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{missing map type}}
   foo();
 #pragma omp target private(j) map(j) // expected-error {{private variable cannot be in a map clause in '#pragma omp target' directive}}  expected-note {{defined as private}}
   {}

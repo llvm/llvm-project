@@ -33,6 +33,7 @@ class SetWatchpointAPITestCase(TestBase):
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
+    @expectedFailureNetBSD
     def test_watch_val(self):
         """Exercise SBValue.Watch() API to set a watchpoint."""
         self.build()

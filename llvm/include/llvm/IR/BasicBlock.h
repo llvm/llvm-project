@@ -362,7 +362,7 @@ public:
   /// This is actually not used to update the Predecessor list, but is actually
   /// used to update the PHI nodes that reside in the block.  Note that this
   /// should be called while the predecessor still refers to this block.
-  void removePredecessor(BasicBlock *Pred, bool DontDeleteUselessPHIs = false);
+  void removePredecessor(BasicBlock *Pred, bool KeepOneInputPHIs = false);
 
   bool canSplitPredecessors() const;
 

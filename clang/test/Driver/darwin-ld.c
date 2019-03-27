@@ -203,6 +203,14 @@
 // LINK_PG: -lgcrt1.o
 // LINK_PG: -no_new_main
 
+// RUN: %clang -target i386-apple-darwin13 -pg -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_PG_NO_SUPPORT_OSX %s < %t.log
+// LINK_PG_NO_SUPPORT_OSX: error: the clang compiler does not support -pg option on versions of OS X
+
+// RUN: %clang -target x86_64-apple-ios5.0 -pg -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_PG_NO_SUPPORT %s < %t.log
+// LINK_PG_NO_SUPPORT: error: the clang compiler does not support -pg option on Darwin
+
 // Check that clang links with libgcc_s.1 for iOS 4 and earlier, but not arm64.
 // RUN: %clang -target armv7-apple-ios4.0 -miphoneos-version-min=4.0 -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_IOS_LIBGCC_S %s < %t.log

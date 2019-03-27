@@ -26,6 +26,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
@@ -48,7 +49,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -128,7 +128,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Builder.CreateBr(Destination);
       BI->eraseFromParent();
       if (DTU)
-        DTU->deleteEdgeRelaxed(BB, OldDest);
+        DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, OldDest}});
       return true;
     }
 
@@ -204,7 +204,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         i = SI->removeCase(i);
         e = SI->case_end();
         if (DTU)
-          DTU->deleteEdgeRelaxed(ParentBB, DefaultDest);
+          DTU->applyUpdatesPermissive(
+              {{DominatorTree::Delete, ParentBB, DefaultDest}});
         continue;
       }
 
@@ -252,7 +253,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       if (DeleteDeadConditions)
         RecursivelyDeleteTriviallyDeadInstructions(Cond, TLI);
       if (DTU)
-        DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+        DTU->applyUpdatesPermissive(Updates);
       return true;
     }
 
@@ -330,7 +331,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       }
 
       if (DTU)
-        DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+        DTU->applyUpdatesPermissive(Updates);
       return true;
     }
   }
@@ -415,8 +416,8 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     if (Constant *C = dyn_cast<Constant>(CI->getArgOperand(0)))
       return C->isNullValue() || isa<UndefValue>(C);
 
-  if (CallSite CS = CallSite(I))
-    if (isMathLibCallNoop(CS, TLI))
+  if (auto *Call = dyn_cast<CallBase>(I))
+    if (isMathLibCallNoop(Call, TLI))
       return true;
 
   return false;
@@ -429,7 +430,7 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
 bool llvm::RecursivelyDeleteTriviallyDeadInstructions(
     Value *V, const TargetLibraryInfo *TLI, MemorySSAUpdater *MSSAU) {
   Instruction *I = dyn_cast<Instruction>(V);
-  if (!I || !I->use_empty() || !isInstructionTriviallyDead(I, TLI))
+  if (!I || !isInstructionTriviallyDead(I, TLI))
     return false;
 
   SmallVector<Instruction*, 16> DeadInsts;
@@ -664,7 +665,7 @@ void llvm::RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred,
     if (PhiIt != OldPhiIt) PhiIt = &BB->front();
   }
   if (DTU)
-    DTU->deleteEdgeRelaxed(Pred, BB);
+    DTU->applyUpdatesPermissive({{DominatorTree::Delete, Pred, BB}});
 }
 
 /// MergeBasicBlockIntoOnlyPred - DestBB is a block with one predecessor and its
@@ -733,7 +734,7 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
            isa<UnreachableInst>(PredBB->getTerminator()) &&
            "The successor list of PredBB isn't empty before "
            "applying corresponding DTU updates.");
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+    DTU->applyUpdatesPermissive(Updates);
     DTU->deleteBB(PredBB);
     // Recalculation of DomTree is needed when updating a forward DomTree and
     // the Entry BB is replaced.
@@ -996,6 +997,18 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
   }
 
+  // We cannot fold the block if it's a branch to an already present callbr
+  // successor because that creates duplicate successors.
+  for (auto I = pred_begin(BB), E = pred_end(BB); I != E; ++I) {
+    if (auto *CBI = dyn_cast<CallBrInst>((*I)->getTerminator())) {
+      if (Succ == CBI->getDefaultDest())
+        return false;
+      for (unsigned i = 0, e = CBI->getNumIndirectDests(); i != e; ++i)
+        if (Succ == CBI->getIndirectDest(i))
+          return false;
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "Killing Trivial BB: \n" << *BB);
 
   SmallVector<DominatorTree::UpdateType, 32> Updates;
@@ -1063,7 +1076,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
                            "applying corresponding DTU updates.");
 
   if (DTU) {
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+    DTU->applyUpdatesPermissive(Updates);
     DTU->deleteBB(BB);
   } else {
     BB->eraseFromParent(); // Delete the old basic block.
@@ -1593,120 +1606,120 @@ bool llvm::salvageDebugInfo(Instruction &I) {
   if (DbgUsers.empty())
     return false;
 
-  auto &M = *I.getModule();
-  auto &DL = M.getDataLayout();
+  return salvageDebugInfoForDbgValues(I, DbgUsers);
+}
+
+bool llvm::salvageDebugInfoForDbgValues(
+    Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers) {
   auto &Ctx = I.getContext();
   auto wrapMD = [&](Value *V) { return wrapValueInMetadata(Ctx, V); };
 
-  auto doSalvage = [&](DbgVariableIntrinsic *DII, SmallVectorImpl<uint64_t> &Ops) {
-    auto *DIExpr = DII->getExpression();
-    if (!Ops.empty()) {
-      // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
-      // are implicitly pointing out the value as a DWARF memory location
-      // description.
-      bool WithStackValue = isa<DbgValueInst>(DII);
-      DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
-    }
+  for (auto *DII : DbgUsers) {
+    // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
+    // are implicitly pointing out the value as a DWARF memory location
+    // description.
+    bool StackValue = isa<DbgValueInst>(DII);
+
+    DIExpression *DIExpr =
+        salvageDebugInfoImpl(I, DII->getExpression(), StackValue);
+
+    // salvageDebugInfoImpl should fail on examining the first element of
+    // DbgUsers, or none of them.
+    if (!DIExpr)
+      return false;
+
     DII->setOperand(0, wrapMD(I.getOperand(0)));
     DII->setOperand(2, MetadataAsValue::get(Ctx, DIExpr));
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
+  }
+
+  return true;
+}
+
+DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
+                                         DIExpression *SrcDIExpr,
+                                         bool WithStackValue) {
+  auto &M = *I.getModule();
+  auto &DL = M.getDataLayout();
+
+  // Apply a vector of opcodes to the source DIExpression.
+  auto doSalvage = [&](SmallVectorImpl<uint64_t> &Ops) -> DIExpression * {
+    DIExpression *DIExpr = SrcDIExpr;
+    if (!Ops.empty()) {
+      DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
+    }
+    return DIExpr;
   };
 
-  auto applyOffset = [&](DbgVariableIntrinsic *DII, uint64_t Offset) {
+  // Apply the given offset to the source DIExpression.
+  auto applyOffset = [&](uint64_t Offset) -> DIExpression * {
     SmallVector<uint64_t, 8> Ops;
     DIExpression::appendOffset(Ops, Offset);
-    doSalvage(DII, Ops);
+    return doSalvage(Ops);
   };
 
-  auto applyOps = [&](DbgVariableIntrinsic *DII,
-                      std::initializer_list<uint64_t> Opcodes) {
+  // initializer-list helper for applying operators to the source DIExpression.
+  auto applyOps =
+      [&](std::initializer_list<uint64_t> Opcodes) -> DIExpression * {
     SmallVector<uint64_t, 8> Ops(Opcodes);
-    doSalvage(DII, Ops);
+    return doSalvage(Ops);
   };
 
   if (auto *CI = dyn_cast<CastInst>(&I)) {
     if (!CI->isNoopCast(DL))
-      return false;
+      return nullptr;
 
     // No-op casts are irrelevant for debug info.
-    MetadataAsValue *CastSrc = wrapMD(I.getOperand(0));
-    for (auto *DII : DbgUsers) {
-      DII->setOperand(0, CastSrc);
-      LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
-    }
-    return true;
+    return SrcDIExpr;
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     unsigned BitWidth =
         M.getDataLayout().getIndexSizeInBits(GEP->getPointerAddressSpace());
-    // Rewrite a constant GEP into a DIExpression.  Since we are performing
-    // arithmetic to compute the variable's *value* in the DIExpression, we
-    // need to mark the expression with a DW_OP_stack_value.
+    // Rewrite a constant GEP into a DIExpression.
     APInt Offset(BitWidth, 0);
-    if (GEP->accumulateConstantOffset(M.getDataLayout(), Offset))
-      for (auto *DII : DbgUsers)
-        applyOffset(DII, Offset.getSExtValue());
-    return true;
+    if (GEP->accumulateConstantOffset(M.getDataLayout(), Offset)) {
+      return applyOffset(Offset.getSExtValue());
+    } else {
+      return nullptr;
+    }
   } else if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
     // Rewrite binary operations with constant integer operands.
     auto *ConstInt = dyn_cast<ConstantInt>(I.getOperand(1));
     if (!ConstInt || ConstInt->getBitWidth() > 64)
-      return false;
+      return nullptr;
 
     uint64_t Val = ConstInt->getSExtValue();
-    for (auto *DII : DbgUsers) {
-      switch (BI->getOpcode()) {
-      case Instruction::Add:
-        applyOffset(DII, Val);
-        break;
-      case Instruction::Sub:
-        applyOffset(DII, -int64_t(Val));
-        break;
-      case Instruction::Mul:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_mul});
-        break;
-      case Instruction::SDiv:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_div});
-        break;
-      case Instruction::SRem:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_mod});
-        break;
-      case Instruction::Or:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
-        break;
-      case Instruction::And:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_and});
-        break;
-      case Instruction::Xor:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_xor});
-        break;
-      case Instruction::Shl:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shl});
-        break;
-      case Instruction::LShr:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shr});
-        break;
-      case Instruction::AShr:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shra});
-        break;
-      default:
-        // TODO: Salvage constants from each kind of binop we know about.
-        return false;
-      }
+    switch (BI->getOpcode()) {
+    case Instruction::Add:
+      return applyOffset(Val);
+    case Instruction::Sub:
+      return applyOffset(-int64_t(Val));
+    case Instruction::Mul:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_mul});
+    case Instruction::SDiv:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_div});
+    case Instruction::SRem:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_mod});
+    case Instruction::Or:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
+    case Instruction::And:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_and});
+    case Instruction::Xor:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_xor});
+    case Instruction::Shl:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_shl});
+    case Instruction::LShr:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_shr});
+    case Instruction::AShr:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_shra});
+    default:
+      // TODO: Salvage constants from each kind of binop we know about.
+      return nullptr;
     }
-    return true;
-  } else if (isa<LoadInst>(&I)) {
-    MetadataAsValue *AddrMD = wrapMD(I.getOperand(0));
-    for (auto *DII : DbgUsers) {
-      // Rewrite the load into DW_OP_deref.
-      auto *DIExpr = DII->getExpression();
-      DIExpr = DIExpression::prepend(DIExpr, DIExpression::WithDeref);
-      DII->setOperand(0, AddrMD);
-      DII->setOperand(2, MetadataAsValue::get(Ctx, DIExpr));
-      LLVM_DEBUG(dbgs() << "SALVAGE:  " << *DII << '\n');
-    }
-    return true;
+    // *Not* to do: we should not attempt to salvage load instructions,
+    // because the validity and lifetime of a dbg.value containing
+    // DW_OP_deref becomes difficult to analyze. See PR40628 for examples.
   }
-  return false;
+  return nullptr;
 }
 
 /// A replacement for a dbg.value expression.
@@ -1927,7 +1940,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
     ++NumInstrsRemoved;
   }
   if (DTU)
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+    DTU->applyUpdatesPermissive(Updates);
   return NumInstrsRemoved;
 }
 
@@ -1955,7 +1968,7 @@ static void changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr) {
   UnwindDestBB->removePredecessor(BB);
   II->eraseFromParent();
   if (DTU)
-    DTU->deleteEdgeRelaxed(BB, UnwindDestBB);
+    DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, UnwindDestBB}});
 }
 
 BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
@@ -2102,7 +2115,8 @@ static bool markAliveBlocks(Function &F,
           UnwindDestBB->removePredecessor(II->getParent());
           II->eraseFromParent();
           if (DTU)
-            DTU->deleteEdgeRelaxed(BB, UnwindDestBB);
+            DTU->applyUpdatesPermissive(
+                {{DominatorTree::Delete, BB, UnwindDestBB}});
         } else
           changeToCall(II, DTU);
         Changed = true;
@@ -2191,7 +2205,7 @@ void llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
   TI->replaceAllUsesWith(NewTI);
   TI->eraseFromParent();
   if (DTU)
-    DTU->deleteEdgeRelaxed(BB, UnwindDest);
+    DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, UnwindDest}});
 }
 
 /// removeUnreachableBlocks - Remove blocks that are not reachable, even
@@ -2256,7 +2270,7 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
   }
 
   if (DTU) {
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+    DTU->applyUpdatesPermissive(Updates);
     bool Deleted = false;
     for (auto *BB : DeadBlockSet) {
       if (DTU->isBBPendingDeletion(BB))
@@ -2450,12 +2464,12 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
   return ::replaceDominatedUsesWith(From, To, BB, ProperlyDominates);
 }
 
-bool llvm::callsGCLeafFunction(ImmutableCallSite CS,
+bool llvm::callsGCLeafFunction(const CallBase *Call,
                                const TargetLibraryInfo &TLI) {
   // Check if the function is specifically marked as a gc leaf function.
-  if (CS.hasFnAttr("gc-leaf-function"))
+  if (Call->hasFnAttr("gc-leaf-function"))
     return true;
-  if (const Function *F = CS.getCalledFunction()) {
+  if (const Function *F = Call->getCalledFunction()) {
     if (F->hasFnAttribute("gc-leaf-function"))
       return true;
 
@@ -2469,7 +2483,7 @@ bool llvm::callsGCLeafFunction(ImmutableCallSite CS,
   // marked as 'gc-leaf-function.' All available Libcalls are
   // GC-leaf.
   LibFunc LF;
-  if (TLI.getLibFunc(CS, LF)) {
+  if (TLI.getLibFunc(ImmutableCallSite(Call), LF)) {
     return TLI.has(LF);
   }
 
@@ -2530,13 +2544,13 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
                                     BasicBlock *BB) {
   // Since we are moving the instructions out of its basic block, we do not
   // retain their original debug locations (DILocations) and debug intrinsic
-  // instructions (dbg.values).
+  // instructions.
   //
   // Doing so would degrade the debugging experience and adversely affect the
   // accuracy of profiling information.
   //
   // Currently, when hoisting the instructions, we take the following actions:
-  // - Remove their dbg.values.
+  // - Remove their debug intrinsic instructions.
   // - Set their debug locations to the values from the insertion point.
   //
   // As per PR39141 (comment #8), the more fundamental reason why the dbg.values
@@ -2554,7 +2568,7 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
     I->dropUnknownNonDebugMetadata();
     if (I->isUsedByMetadata())
       dropDebugUsers(*I);
-    if (isa<DbgVariableIntrinsic>(I)) {
+    if (isa<DbgInfoIntrinsic>(I)) {
       // Remove DbgInfo Intrinsics.
       II = I->eraseFromParent();
       continue;

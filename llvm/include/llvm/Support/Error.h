@@ -1176,7 +1176,7 @@ Error createStringError(std::error_code EC, char const *Msg);
 /// show more detailed information to the user.
 class FileError final : public ErrorInfo<FileError> {
 
-  friend Error createFileError(std::string, Error);
+  friend Error createFileError(const Twine &, Error);
 
 public:
   void log(raw_ostream &OS) const override {
@@ -1193,15 +1193,15 @@ public:
   static char ID;
 
 private:
-  FileError(std::string F, std::unique_ptr<ErrorInfoBase> E) {
+  FileError(const Twine &F, std::unique_ptr<ErrorInfoBase> E) {
     assert(E && "Cannot create FileError from Error success value.");
-    assert(!F.empty() &&
+    assert(!F.isTriviallyEmpty() &&
            "The file name provided to FileError must not be empty.");
-    FileName = F;
+    FileName = F.str();
     Err = std::move(E);
   }
 
-  static Error build(std::string F, Error E) {
+  static Error build(const Twine &F, Error E) {
     return Error(std::unique_ptr<FileError>(new FileError(F, E.takePayload())));
   }
 
@@ -1211,11 +1211,17 @@ private:
 
 /// Concatenate a source file path and/or name with an Error. The resulting
 /// Error is unchecked.
-inline Error createFileError(std::string F, Error E) {
+inline Error createFileError(const Twine &F, Error E) {
   return FileError::build(F, std::move(E));
 }
 
-Error createFileError(std::string F, ErrorSuccess) = delete;
+/// Concatenate a source file path and/or name with a std::error_code 
+/// to form an Error object.
+inline Error createFileError(const Twine &F, std::error_code EC) {
+  return createFileError(F, errorCodeToError(EC));
+}
+
+Error createFileError(const Twine &F, ErrorSuccess) = delete;
 
 /// Helper for check-and-exit error handling.
 ///

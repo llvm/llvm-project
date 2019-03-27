@@ -239,16 +239,16 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   bool EnableEH;   // Enable exception handling
   bool EnableSjLj; // Enable setjmp/longjmp handling
 
-  GlobalVariable *ThrewGV;
-  GlobalVariable *ThrewValueGV;
-  Function *GetTempRet0Func;
-  Function *SetTempRet0Func;
-  Function *ResumeF;
-  Function *EHTypeIDF;
-  Function *EmLongjmpF;
-  Function *EmLongjmpJmpbufF;
-  Function *SaveSetjmpF;
-  Function *TestSetjmpF;
+  GlobalVariable *ThrewGV = nullptr;
+  GlobalVariable *ThrewValueGV = nullptr;
+  Function *GetTempRet0Func = nullptr;
+  Function *SetTempRet0Func = nullptr;
+  Function *ResumeF = nullptr;
+  Function *EHTypeIDF = nullptr;
+  Function *EmLongjmpF = nullptr;
+  Function *EmLongjmpJmpbufF = nullptr;
+  Function *SaveSetjmpF = nullptr;
+  Function *TestSetjmpF = nullptr;
 
   // __cxa_find_matching_catch_N functions.
   // Indexed by the number of clauses in an original landingpad instruction.
@@ -281,11 +281,7 @@ public:
   static char ID;
 
   WebAssemblyLowerEmscriptenEHSjLj(bool EnableEH = true, bool EnableSjLj = true)
-      : ModulePass(ID), EnableEH(EnableEH), EnableSjLj(EnableSjLj),
-        ThrewGV(nullptr), ThrewValueGV(nullptr), GetTempRet0Func(nullptr),
-        SetTempRet0Func(nullptr), ResumeF(nullptr), EHTypeIDF(nullptr),
-        EmLongjmpF(nullptr), EmLongjmpJmpbufF(nullptr), SaveSetjmpF(nullptr),
-        TestSetjmpF(nullptr) {
+      : ModulePass(ID), EnableEH(EnableEH), EnableSjLj(EnableSjLj) {
     EHWhitelistSet.insert(EHWhitelist.begin(), EHWhitelist.end());
   }
   bool runOnModule(Module &M) override;
@@ -432,8 +428,8 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
   // No attributes for the callee pointer.
   ArgAttributes.push_back(AttributeSet());
   // Copy the argument attributes from the original
-  for (unsigned i = 0, e = CI->getNumArgOperands(); i < e; ++i)
-    ArgAttributes.push_back(InvokeAL.getParamAttributes(i));
+  for (unsigned I = 0, E = CI->getNumArgOperands(); I < E; ++I)
+    ArgAttributes.push_back(InvokeAL.getParamAttributes(I));
 
   // Reconstruct the AttributesList based on the vector we constructed.
   AttributeList NewCallAL =
@@ -606,11 +602,11 @@ void WebAssemblyLowerEmscriptenEHSjLj::rebuildSSA(Function &F) {
         ++UI;
         SSA.Initialize(I.getType(), I.getName());
         SSA.AddAvailableValue(&BB, &I);
-        Instruction *User = cast<Instruction>(U.getUser());
+        auto *User = cast<Instruction>(U.getUser());
         if (User->getParent() == &BB)
           continue;
 
-        if (PHINode *UserPN = dyn_cast<PHINode>(User))
+        if (auto *UserPN = dyn_cast<PHINode>(User))
           if (UserPN->getIncomingBlock(U) == &BB)
             continue;
 
@@ -837,15 +833,15 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
   for (LandingPadInst *LPI : LandingPads) {
     IRB.SetInsertPoint(LPI);
     SmallVector<Value *, 16> FMCArgs;
-    for (unsigned i = 0, e = LPI->getNumClauses(); i < e; ++i) {
-      Constant *Clause = LPI->getClause(i);
+    for (unsigned I = 0, E = LPI->getNumClauses(); I < E; ++I) {
+      Constant *Clause = LPI->getClause(I);
       // As a temporary workaround for the lack of aggregate varargs support
       // in the interface between JS and wasm, break out filter operands into
       // their component elements.
-      if (LPI->isFilter(i)) {
+      if (LPI->isFilter(I)) {
         auto *ATy = cast<ArrayType>(Clause->getType());
-        for (unsigned j = 0, e = ATy->getNumElements(); j < e; ++j) {
-          Value *EV = IRB.CreateExtractValue(Clause, makeArrayRef(j), "filter");
+        for (unsigned J = 0, E = ATy->getNumElements(); J < E; ++J) {
+          Value *EV = IRB.CreateExtractValue(Clause, makeArrayRef(J), "filter");
           FMCArgs.push_back(EV);
         }
       } else
@@ -955,8 +951,8 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     BBs.push_back(&BB);
 
   // BBs.size() will change within the loop, so we query it every time
-  for (unsigned i = 0; i < BBs.size(); i++) {
-    BasicBlock *BB = BBs[i];
+  for (unsigned I = 0; I < BBs.size(); I++) {
+    BasicBlock *BB = BBs[I];
     for (Instruction &I : *BB) {
       assert(!isa<InvokeInst>(&I));
       auto *CI = dyn_cast<CallInst>(&I);
@@ -1029,9 +1025,9 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
       // switch case). 0 means a longjmp that is not ours to handle, needs a
       // rethrow. Otherwise the index is the same as the index in P+1 (to avoid
       // 0).
-      for (unsigned i = 0; i < SetjmpRetPHIs.size(); i++) {
-        SI->addCase(IRB.getInt32(i + 1), SetjmpRetPHIs[i]->getParent());
-        SetjmpRetPHIs[i]->addIncoming(LongjmpResult, EndBB);
+      for (unsigned I = 0; I < SetjmpRetPHIs.size(); I++) {
+        SI->addCase(IRB.getInt32(I + 1), SetjmpRetPHIs[I]->getParent());
+        SetjmpRetPHIs[I]->addIncoming(LongjmpResult, EndBB);
       }
 
       // We are splitting the block here, and must continue to find other calls
@@ -1078,7 +1074,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     Use &U = *UI;
     // Increment the iterator before removing the use from the list.
     ++UI;
-    if (Instruction *I = dyn_cast<Instruction>(U.getUser()))
+    if (auto *I = dyn_cast<Instruction>(U.getUser()))
       if (I->getParent() != &EntryBB)
         SetjmpTableSSA.RewriteUse(U);
   }
@@ -1086,7 +1082,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
        UI != UE;) {
     Use &U = *UI;
     ++UI;
-    if (Instruction *I = dyn_cast<Instruction>(U.getUser()))
+    if (auto *I = dyn_cast<Instruction>(U.getUser()))
       if (I->getParent() != &EntryBB)
         SetjmpTableSizeSSA.RewriteUse(U);
   }

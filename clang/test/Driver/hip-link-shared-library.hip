@@ -1,7 +1,7 @@
 // RUN: touch %t.o
 // RUN: %clang --hip-link -ccc-print-bindings -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t.o %S/Inputs/in.so \
-// RUN: 2>&1 | FileCheck %s
+// RUN:   -fgpu-rdc 2>&1 | FileCheck %s
 
 // CHECK: # "amdgcn-amd-amdhsa" - "offload bundler", inputs: ["[[IN:.*o]]"], outputs: ["[[OBJ1:.*o]]", "[[OBJ2:.*o]]", "[[OBJ3:.*o]]"]
 // CHECK: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[OBJ2]]"], output: "[[IMG2:.*out]]"

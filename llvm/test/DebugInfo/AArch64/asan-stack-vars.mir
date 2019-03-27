@@ -28,7 +28,7 @@
 # CHECK: "_cmd"
 # CHECK: DW_TAG_formal_parameter
 # CHECK-NEXT: DW_AT_location
-# CHECK-NEXT:   [0x{{0*}}, 0x{{.*}}):
+# CHECK-NEXT:   [0x{{.*}}, 0x{{.*}}):
 # CHECK-NOT:    DW_AT_
 # CHECK:        [0x{{.*}}, [[FN_END]]):
 # CHECK-NEXT: DW_AT_name {{.*}}"imageSize"

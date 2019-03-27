@@ -17,9 +17,11 @@
 #include <ios>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(std::ios_base::beg != std::ios_base::cur);
     assert(std::ios_base::beg != std::ios_base::end);
     assert(std::ios_base::cur != std::ios_base::end);
+
+  return 0;
 }

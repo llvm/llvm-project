@@ -516,7 +516,7 @@ define <3 x i32> @test_v3i32(<3 x i32> %a) {
 ; CHECK-NEXT: test_v4i32,
 ; CHECK:      ld.param.v4.b32  {[[RE0:%r[0-9]+]], [[RE1:%r[0-9]+]], [[RE2:%r[0-9]+]], [[RE3:%r[0-9]+]]}, [retval0+0];
 ; CHECK:      st.param.v4.b32  [func_retval0+0], {[[RE0]], [[RE1]], [[RE2]], [[RE3]]}
-; CHCK-NEXT: ret;
+; CHECK-NEXT: ret;
 define <4 x i32> @test_v4i32(<4 x i32> %a) {
        %r = tail call <4 x i32> @test_v4i32(<4 x i32> %a);
        ret <4 x i32> %r;

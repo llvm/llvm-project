@@ -1,0 +1,5 @@
+RUN: llvm-readelf --section-mapping %p/Inputs/trivial.obj.elf-x86-64 | FileCheck %s
+CHECK:      Section to Segment mapping:
+CHECK-NEXT:   Segment Sections...
+CHECK-NEXT:    None   .text .rela.text .data .bss .rodata.str1.1 .note.GNU-stack .shstrtab .symtab .strtab {{$}}
+CHECK-NOT: {{.}}

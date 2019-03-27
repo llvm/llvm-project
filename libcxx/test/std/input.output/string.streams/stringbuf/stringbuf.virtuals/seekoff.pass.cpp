@@ -17,7 +17,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::stringbuf sb(std::ios_base::in);
@@ -163,4 +163,6 @@ int main()
         assert(sb.sputc(L'c') == L'c');
         assert(sb.str() == L"0123456c89");
     }
+
+  return 0;
 }

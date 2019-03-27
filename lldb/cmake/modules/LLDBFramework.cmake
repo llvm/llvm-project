@@ -98,10 +98,10 @@ add_custom_command(TARGET lldb-framework-headers POST_BUILD
 
 # Copy vendor-specific headers from clang (without staging).
 if(NOT IOS AND NOT LLDB_BUILT_STANDALONE)
-  add_dependencies(lldb-framework clang-headers)
+  add_dependencies(lldb-framework clang-resource-headers)
   add_custom_command(TARGET lldb-framework POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-            $<TARGET_PROPERTY:clang-headers,RUNTIME_OUTPUT_DIRECTORY>
+            $<TARGET_PROPERTY:clang-resource-headers,RUNTIME_OUTPUT_DIRECTORY>
             $<TARGET_FILE_DIR:liblldb>/Resources/Clang/include
     COMMENT "LLDB.framework: copy clang vendor-specific headers"
   )

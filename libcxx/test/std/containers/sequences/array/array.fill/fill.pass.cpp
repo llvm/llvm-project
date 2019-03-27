@@ -17,7 +17,7 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -36,4 +36,6 @@ int main()
         c.fill(5.5);
         assert(c.size() == 0);
     }
+
+  return 0;
 }

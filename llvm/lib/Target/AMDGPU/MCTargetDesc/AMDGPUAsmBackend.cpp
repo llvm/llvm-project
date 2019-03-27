@@ -18,8 +18,10 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "Utils/AMDGPUBaseInfo.h"
 
 using namespace llvm;
+using namespace llvm::AMDGPU;
 
 namespace {
 
@@ -172,11 +174,13 @@ class ELFAMDGPUAsmBackend : public AMDGPUAsmBackend {
   bool Is64Bit;
   bool HasRelocationAddend;
   uint8_t OSABI = ELF::ELFOSABI_NONE;
+  uint8_t ABIVersion = 0;
 
 public:
-  ELFAMDGPUAsmBackend(const Target &T, const Triple &TT) :
+  ELFAMDGPUAsmBackend(const Target &T, const Triple &TT, uint8_t ABIVersion) :
       AMDGPUAsmBackend(T), Is64Bit(TT.getArch() == Triple::amdgcn),
-      HasRelocationAddend(TT.getOS() == Triple::AMDHSA) {
+      HasRelocationAddend(TT.getOS() == Triple::AMDHSA),
+      ABIVersion(ABIVersion) {
     switch (TT.getOS()) {
     case Triple::AMDHSA:
       OSABI = ELF::ELFOSABI_AMDGPU_HSA;
@@ -194,7 +198,8 @@ public:
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
-    return createAMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend);
+    return createAMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend,
+                                       ABIVersion);
   }
 };
 
@@ -205,5 +210,6 @@ MCAsmBackend *llvm::createAMDGPUAsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   // Use 64-bit ELF for amdgcn
-  return new ELFAMDGPUAsmBackend(T, STI.getTargetTriple());
+  return new ELFAMDGPUAsmBackend(T, STI.getTargetTriple(),
+                                 IsaInfo::hasCodeObjectV3(&STI) ? 1 : 0);
 }

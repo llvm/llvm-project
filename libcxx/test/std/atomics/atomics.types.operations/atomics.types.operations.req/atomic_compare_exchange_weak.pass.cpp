@@ -56,7 +56,9 @@ struct TestFn {
   }
 };
 
-int main()
+int main(int, char**)
 {
     TestEachAtomicType<TestFn>()();
+
+  return 0;
 }

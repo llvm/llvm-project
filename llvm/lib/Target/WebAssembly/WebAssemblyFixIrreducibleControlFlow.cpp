@@ -319,8 +319,7 @@ bool LoopFixer::run() {
 
       // This is a successor we need to rewrite.
       MachineBasicBlock *Split = MF.CreateMachineBasicBlock();
-      MF.insert(MBB->isLayoutSuccessor(Succ) ? MachineFunction::iterator(Succ)
-                                             : MF.end(),
+      MF.insert(MBB->isLayoutSuccessor(Succ) ? Succ->getIterator() : MF.end(),
                 Split);
       MLI.changeLoopFor(Split, Loop);
 

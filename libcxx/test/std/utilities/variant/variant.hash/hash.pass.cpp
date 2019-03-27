@@ -150,9 +150,11 @@ void test_hash_variant_enabled() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test_hash_variant();
   test_hash_variant_duplicate_elements();
   test_hash_monostate();
   test_hash_variant_enabled();
+
+  return 0;
 }

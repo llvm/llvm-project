@@ -63,7 +63,7 @@ test(int N)
     test_one(N, N-1);
 }
 
-int main()
+int main(int, char**)
 {
     int d = 0;
     std::nth_element(&d, &d, &d);
@@ -85,4 +85,6 @@ int main()
     assert(static_cast<std::size_t>(*v[v.size()/2]) == v.size()/2);
     }
 #endif
+
+  return 0;
 }

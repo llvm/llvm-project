@@ -136,7 +136,7 @@ macro(clang_compiler_add_cxx_check)
       COMMAND bash -c "${CMD}"
       COMMENT "Checking that just-built clang can find C++ headers..."
       VERBATIM)
-    if (NOT COMPILER_RT_STANDALONE_BUILD)
+    if (NOT COMPILER_RT_STANDALONE_BUILD AND NOT RUNTIMES_BUILD)
       ADD_DEPENDENCIES(CompilerRTUnitTestCheckCxx clang)
     endif()
   endif()

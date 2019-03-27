@@ -14,7 +14,7 @@ void g(const char* p);
 // CHECK-LABEL: define void @_Z1fv()
 void f() {
   const char* l_str = "l_str";
-  
+
   // CHECK: call void @llvm.memcpy.p0i8.p4i8.i64
   char l_array[] = "l_array";
 
@@ -25,4 +25,10 @@ void f() {
 
   const char* p = g_str;
   g(p);
+}
+
+// CHECK-LABEL: define void @_Z1ev
+void e() {
+  g("string literal");
+  g("string literal");
 }

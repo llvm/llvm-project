@@ -16,16 +16,21 @@ Sections:
   - Name:            .dynamic
     Type:            SHT_DYNAMIC
     Flags:           [ SHF_ALLOC ]
-    Address:         0x0008
-    AddressAlign:    8
-    Content:         "0e000000000000000d000000000000000a000000000000000100000000000000050000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000"
-      # DT_SONAME     13 (0x0d)
-      # DT_STRSZ      1 (0x01)
-      # DT_STRTAB     0x0
-      # DT_SYMTAB     0x0
-      # DT_NULL       0x0
-    Size:            80
+    Address:         0x0000000000000008
     Link:            .dynstr
+    AddressAlign:    0x0000000000000008
+    EntSize:         0x0000000000000010
+    Entries:
+      - Tag:             DT_SONAME
+        Value:           0x000000000000000D
+      - Tag:             DT_STRSZ
+        Value:           0x0000000000000001
+      - Tag:             DT_STRTAB
+        Value:           0x0000000000000000
+      - Tag:             DT_SYMTAB
+        Value:           0x0000000000000000
+      - Tag:             DT_NULL
+        Value:           0x0000000000000000
 ProgramHeaders:
   - Type: PT_LOAD
     Flags: [ PF_R ]

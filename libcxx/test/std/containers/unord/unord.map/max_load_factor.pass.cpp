@@ -27,7 +27,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_map<int, std::string> C;
@@ -65,4 +65,6 @@ int main()
         assert(false);
     }
 #endif
+
+  return 0;
 }

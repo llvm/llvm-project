@@ -302,8 +302,8 @@ ObjCLanguageRuntime::GetNonKVOClassDescriptor(ObjCISA isa) {
 CompilerType
 ObjCLanguageRuntime::EncodingToType::RealizeType(const char *name,
                                                  bool for_expression) {
-  if (m_scratch_ast_ctx_ap)
-    return RealizeType(*m_scratch_ast_ctx_ap, name, for_expression);
+  if (m_scratch_ast_ctx_up)
+    return RealizeType(*m_scratch_ast_ctx_up, name, for_expression);
   return CompilerType();
 }
 

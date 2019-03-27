@@ -85,7 +85,7 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
   // have any debug info.
   const DILocation *ReferenceDI =
       DILocation::get(FDI->getContext(), FDI->getLine(), 0, FDI);
-
+  assert(ReferenceDI && "ReferenceDI should not be nullptr");
   DenseMap<Location, unsigned> MemOpDiscriminators;
   MemOpDiscriminators[diToLocation(ReferenceDI)] = 0;
 
@@ -143,6 +143,7 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
         // Since we were able to encode, bump the MemOpDiscriminators.
         ++MemOpDiscriminators[L];
         DI = DI->cloneWithDiscriminator(EncodedDiscriminator.getValue());
+        assert(DI && "DI should not be nullptr");
         updateDebugInfo(&MI, DI);
         Changed = true;
         std::pair<DenseSet<unsigned>::iterator, bool> MustInsert =

@@ -8,9 +8,10 @@
 // IO functions.
 //===----------------------------------------------------------------------===//
 
-#include "FuzzerIO.h"
 #include "FuzzerDefs.h"
 #include "FuzzerExtFunctions.h"
+#include "FuzzerIO.h"
+#include "FuzzerUtil.h"
 #include <algorithm>
 #include <cstdarg>
 #include <fstream>
@@ -123,6 +124,27 @@ void Printf(const char *Fmt, ...) {
   vfprintf(OutputFile, Fmt, ap);
   va_end(ap);
   fflush(OutputFile);
+}
+
+void VPrintf(bool Verbose, const char *Fmt, ...) {
+  if (!Verbose) return;
+  va_list ap;
+  va_start(ap, Fmt);
+  vfprintf(OutputFile, Fmt, ap);
+  va_end(ap);
+  fflush(OutputFile);
+}
+
+void RmDirRecursive(const std::string &Dir) {
+  IterateDirRecursive(
+      Dir, [](const std::string &Path) {},
+      [](const std::string &Path) { RmDir(Path); },
+      [](const std::string &Path) { RemoveFile(Path); });
+}
+
+std::string TempPath(const char *Extension) {
+  return DirPlusFile(TmpDir(),
+                     "libFuzzerTemp." + std::to_string(GetPid()) + Extension);
 }
 
 }  // namespace fuzzer

@@ -49,7 +49,7 @@ int CountAssign::moved = 0;
 struct Incomplete;
 extern Incomplete inc_obj;
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<CopyAssignable, short> P;
@@ -94,6 +94,8 @@ int main()
         P p(42, inc_obj);
         assert(&p.second == &inc_obj);
     }
+
+  return 0;
 }
 
 struct Incomplete {};

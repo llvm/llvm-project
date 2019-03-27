@@ -21,6 +21,7 @@
 
 namespace llvm {
 
+class LLT;
 class MachineIRBuilder;
 class SIRegisterInfo;
 class TargetRegisterInfo;
@@ -50,6 +51,7 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
   /// Regs. This appropriately sets the regbank of the new registers.
   void split64BitValueForMapping(MachineIRBuilder &B,
                                  SmallVector<unsigned, 2> &Regs,
+                                 LLT HalfTy,
                                  unsigned Reg) const;
 
   bool isSALUMapping(const MachineInstr &MI) const;

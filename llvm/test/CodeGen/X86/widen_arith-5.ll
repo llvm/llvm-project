@@ -9,7 +9,7 @@ define void @update(<3 x i32>* %dst, <3 x i32>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movabsq $4294967297, %rax # imm = 0x100000001
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $0, -{{[0-9]+}}(%rsp)

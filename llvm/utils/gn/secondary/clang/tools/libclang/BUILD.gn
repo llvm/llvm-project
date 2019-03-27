@@ -12,8 +12,8 @@ import("//llvm/version.gni")
 # - the GN build doesn't have LIBCLANG_BUILD_STATIC
 
 libclang_target_type = "shared_library"
-if (host_os == "linux") {
-  # Linux needs -fPIC to build shared libs but they aren't on by default.
+if (host_os != "win" && host_os != "mac") {
+  # ELF targets need -fPIC to build shared libs but they aren't on by default.
   # For now, make libclang a static lib there.
   libclang_target_type = "static_library"
 }

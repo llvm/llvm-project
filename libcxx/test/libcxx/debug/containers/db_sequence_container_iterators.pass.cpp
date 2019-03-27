@@ -40,6 +40,7 @@ public:
   static void run() {
     Base::run();
     try {
+      SanityTest();
       FrontOnEmptyContainer();
 
       if constexpr (CT != CT_ForwardList) {
@@ -71,6 +72,12 @@ public:
   }
 
 private:
+  static void SanityTest() {
+    CHECKPOINT("sanity test");
+    Container C = {1, 1, 1, 1};
+    ::DoNotOptimize(&C);
+  }
+
   static void RemoveFirstElem() {
     // See llvm.org/PR35564
     CHECKPOINT("remove(<first-elem>)");
@@ -307,7 +314,7 @@ private:
   }
 };
 
-int main()
+int main(int, char**)
 {
   using Alloc = test_allocator<int>;
   {
@@ -323,4 +330,6 @@ int main()
     SequenceContainerChecks<
         std::deque<int, Alloc>, CT_Deque>::run();
   }
+
+  return 0;
 }

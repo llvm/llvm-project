@@ -20,8 +20,10 @@ using std::experimental::propagate_const;
 
 typedef propagate_const<ExplicitCopyConstructibleFromX> P;
 
-int main() {
+int main(int, char**) {
   static_assert(!std::is_convertible<P, X>::value, "");
   static_assert(std::is_constructible<P, X>::value, "");
+
+  return 0;
 }
 

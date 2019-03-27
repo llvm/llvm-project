@@ -16,7 +16,9 @@
 
 #include <mutex>
 
-int main()
+int main(int, char**)
 {
     std::recursive_mutex m;
+
+  return 0;
 }

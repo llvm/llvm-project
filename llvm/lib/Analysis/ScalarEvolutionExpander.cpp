@@ -2070,10 +2070,13 @@ bool SCEVExpander::isHighCostExpansionHelper(
 
   if (auto *UDivExpr = dyn_cast<SCEVUDivExpr>(S)) {
     // If the divisor is a power of two and the SCEV type fits in a native
-    // integer, consider the division cheap irrespective of whether it occurs in
-    // the user code since it can be lowered into a right shift.
+    // integer (and the LHS not expensive), consider the division cheap
+    // irrespective of whether it occurs in the user code since it can be
+    // lowered into a right shift.
     if (auto *SC = dyn_cast<SCEVConstant>(UDivExpr->getRHS()))
       if (SC->getAPInt().isPowerOf2()) {
+        if (isHighCostExpansionHelper(UDivExpr->getLHS(), L, At, Processed))
+          return true;
         const DataLayout &DL =
             L->getHeader()->getParent()->getParent()->getDataLayout();
         unsigned Width = cast<IntegerType>(UDivExpr->getType())->getBitWidth();

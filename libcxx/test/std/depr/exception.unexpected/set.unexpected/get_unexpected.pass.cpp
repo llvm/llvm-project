@@ -22,7 +22,7 @@ void f3()
     std::exit(0);
 }
 
-int main()
+int main(int, char**)
 {
 
     std::unexpected_handler old = std::get_unexpected();
@@ -37,4 +37,6 @@ int main()
     std::set_terminate(f3);
     (*old)();
     assert(0);
+
+  return 0;
 }

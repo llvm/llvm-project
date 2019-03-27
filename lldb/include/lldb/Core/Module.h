@@ -693,6 +693,21 @@ public:
   //------------------------------------------------------------------
   virtual void SectionFileAddressesChanged();
 
+  //------------------------------------------------------------------
+  /// Returns a reference to the UnwindTable for this Module
+  ///
+  /// The UnwindTable contains FuncUnwinders objects for any function in this
+  /// Module.  If a FuncUnwinders object hasn't been created yet (i.e. the
+  /// function has yet to be unwound in a stack walk), it will be created when
+  /// requested.  Specifically, we do not create FuncUnwinders objects for
+  /// functions until they are needed.
+  ///
+  /// @return
+  ///     Returns the unwind table for this module. If this object has no
+  ///     associated object file, an empty UnwindTable is returned.
+  //------------------------------------------------------------------
+  UnwindTable &GetUnwindTable() { return m_unwind_table; }
+
   llvm::VersionTuple GetVersion();
 
   //------------------------------------------------------------------
@@ -1090,8 +1105,10 @@ protected:
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    ///parser for this module as it may or may
                                    ///not be shared with the SymbolFile
+  UnwindTable m_unwind_table{*this}; ///< Table of FuncUnwinders objects created
+                                     /// for this Module's functions
   lldb::SymbolVendorUP
-      m_symfile_ap; ///< A pointer to the symbol vendor for this module.
+      m_symfile_up; ///< A pointer to the symbol vendor for this module.
   std::vector<lldb::SymbolVendorUP>
       m_old_symfiles; ///< If anyone calls Module::SetSymbolFileFileSpec() and
                       ///changes the symbol file,
@@ -1103,9 +1120,9 @@ protected:
                                      ///when you have debug info for a module
                                      ///that doesn't match where the sources
                                      ///currently are
-  lldb::SectionListUP m_sections_ap; ///< Unified section list for module that
-                                     ///is used by the ObjectFile and and
-                                     ///ObjectFile instances for the debug info
+  lldb::SectionListUP m_sections_up; ///< Unified section list for module that
+                                     /// is used by the ObjectFile and and
+                                     /// ObjectFile instances for the debug info
 
   std::atomic<bool> m_did_load_objfile{false};
   std::atomic<bool> m_did_load_symbol_vendor{false};

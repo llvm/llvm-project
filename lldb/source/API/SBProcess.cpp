@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBProcess.h"
+#include "SBReproducerPrivate.h"
 
 #include <inttypes.h>
 
@@ -25,6 +26,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 
@@ -48,18 +50,27 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBProcess::SBProcess() : m_opaque_wp() {}
+SBProcess::SBProcess() : m_opaque_wp() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBProcess);
+}
 
 //----------------------------------------------------------------------
 // SBProcess constructor
 //----------------------------------------------------------------------
 
-SBProcess::SBProcess(const SBProcess &rhs) : m_opaque_wp(rhs.m_opaque_wp) {}
+SBProcess::SBProcess(const SBProcess &rhs) : m_opaque_wp(rhs.m_opaque_wp) {
+  LLDB_RECORD_CONSTRUCTOR(SBProcess, (const lldb::SBProcess &), rhs);
+}
 
 SBProcess::SBProcess(const lldb::ProcessSP &process_sp)
-    : m_opaque_wp(process_sp) {}
+    : m_opaque_wp(process_sp) {
+  LLDB_RECORD_CONSTRUCTOR(SBProcess, (const lldb::ProcessSP &), process_sp);
+}
 
 const SBProcess &SBProcess::operator=(const SBProcess &rhs) {
+  LLDB_RECORD_METHOD(const lldb::SBProcess &,
+                     SBProcess, operator=,(const lldb::SBProcess &), rhs);
+
   if (this != &rhs)
     m_opaque_wp = rhs.m_opaque_wp;
   return *this;
@@ -71,10 +82,15 @@ const SBProcess &SBProcess::operator=(const SBProcess &rhs) {
 SBProcess::~SBProcess() {}
 
 const char *SBProcess::GetBroadcasterClassName() {
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(const char *, SBProcess,
+                                    GetBroadcasterClassName);
+
   return Process::GetStaticBroadcasterClass().AsCString();
 }
 
 const char *SBProcess::GetPluginName() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBProcess, GetPluginName);
+
   ProcessSP process_sp(GetSP());
   if (process_sp) {
     return process_sp->GetPluginName().GetCString();
@@ -83,6 +99,8 @@ const char *SBProcess::GetPluginName() {
 }
 
 const char *SBProcess::GetShortPluginName() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBProcess, GetShortPluginName);
+
   ProcessSP process_sp(GetSP());
   if (process_sp) {
     return process_sp->GetPluginName().GetCString();
@@ -94,9 +112,15 @@ lldb::ProcessSP SBProcess::GetSP() const { return m_opaque_wp.lock(); }
 
 void SBProcess::SetSP(const ProcessSP &process_sp) { m_opaque_wp = process_sp; }
 
-void SBProcess::Clear() { m_opaque_wp.reset(); }
+void SBProcess::Clear() {
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBProcess, Clear);
+
+  m_opaque_wp.reset();
+}
 
 bool SBProcess::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBProcess, IsValid);
+
   ProcessSP process_sp(m_opaque_wp.lock());
   return ((bool)process_sp && process_sp->IsValid());
 }
@@ -107,6 +131,13 @@ bool SBProcess::RemoteLaunch(char const **argv, char const **envp,
                              const char *working_directory,
                              uint32_t launch_flags, bool stop_at_entry,
                              lldb::SBError &error) {
+  LLDB_RECORD_METHOD(bool, SBProcess, RemoteLaunch,
+                     (const char **, const char **, const char *, const char *,
+                      const char *, const char *, uint32_t, bool,
+                      lldb::SBError &),
+                     argv, envp, stdin_path, stdout_path, stderr_path,
+                     working_directory, launch_flags, stop_at_entry, error);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (log)
     log->Printf("SBProcess(%p)::RemoteLaunch (argv=%p, envp=%p, stdin=%s, "
@@ -158,6 +189,9 @@ bool SBProcess::RemoteLaunch(char const **argv, char const **envp,
 
 bool SBProcess::RemoteAttachToProcessWithID(lldb::pid_t pid,
                                             lldb::SBError &error) {
+  LLDB_RECORD_METHOD(bool, SBProcess, RemoteAttachToProcessWithID,
+                     (lldb::pid_t, lldb::SBError &), pid, error);
+
   ProcessSP process_sp(GetSP());
   if (process_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -188,6 +222,8 @@ bool SBProcess::RemoteAttachToProcessWithID(lldb::pid_t pid,
 }
 
 uint32_t SBProcess::GetNumThreads() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBProcess, GetNumThreads);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   uint32_t num_threads = 0;
@@ -209,6 +245,9 @@ uint32_t SBProcess::GetNumThreads() {
 }
 
 SBThread SBProcess::GetSelectedThread() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBThread, SBProcess,
+                                   GetSelectedThread);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBThread sb_thread;
@@ -226,11 +265,14 @@ SBThread SBProcess::GetSelectedThread() const {
                 static_cast<void *>(process_sp.get()),
                 static_cast<void *>(thread_sp.get()));
 
-  return sb_thread;
+  return LLDB_RECORD_RESULT(sb_thread);
 }
 
 SBThread SBProcess::CreateOSPluginThread(lldb::tid_t tid,
                                          lldb::addr_t context) {
+  LLDB_RECORD_METHOD(lldb::SBThread, SBProcess, CreateOSPluginThread,
+                     (lldb::tid_t, lldb::addr_t), tid, context);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBThread sb_thread;
@@ -249,10 +291,12 @@ SBThread SBProcess::CreateOSPluginThread(lldb::tid_t tid,
                 static_cast<void *>(process_sp.get()), tid, context,
                 static_cast<void *>(thread_sp.get()));
 
-  return sb_thread;
+  return LLDB_RECORD_RESULT(sb_thread);
 }
 
 SBTarget SBProcess::GetTarget() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBTarget, SBProcess, GetTarget);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBTarget sb_target;
@@ -268,10 +312,13 @@ SBTarget SBProcess::GetTarget() const {
                 static_cast<void *>(process_sp.get()),
                 static_cast<void *>(target_sp.get()));
 
-  return sb_target;
+  return LLDB_RECORD_RESULT(sb_target);
 }
 
 size_t SBProcess::PutSTDIN(const char *src, size_t src_len) {
+  LLDB_RECORD_METHOD(size_t, SBProcess, PutSTDIN, (const char *, size_t), src,
+                     src_len);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   size_t ret_val = 0;
@@ -291,6 +338,9 @@ size_t SBProcess::PutSTDIN(const char *src, size_t src_len) {
 }
 
 size_t SBProcess::GetSTDOUT(char *dst, size_t dst_len) const {
+  LLDB_RECORD_METHOD_CONST(size_t, SBProcess, GetSTDOUT, (char *, size_t), dst,
+                           dst_len);
+
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -310,6 +360,9 @@ size_t SBProcess::GetSTDOUT(char *dst, size_t dst_len) const {
 }
 
 size_t SBProcess::GetSTDERR(char *dst, size_t dst_len) const {
+  LLDB_RECORD_METHOD_CONST(size_t, SBProcess, GetSTDERR, (char *, size_t), dst,
+                           dst_len);
+
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -329,6 +382,9 @@ size_t SBProcess::GetSTDERR(char *dst, size_t dst_len) const {
 }
 
 size_t SBProcess::GetAsyncProfileData(char *dst, size_t dst_len) const {
+  LLDB_RECORD_METHOD_CONST(size_t, SBProcess, GetAsyncProfileData,
+                           (char *, size_t), dst, dst_len);
+
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -349,6 +405,9 @@ size_t SBProcess::GetAsyncProfileData(char *dst, size_t dst_len) const {
 
 lldb::SBTrace SBProcess::StartTrace(SBTraceOptions &options,
                                     lldb::SBError &error) {
+  LLDB_RECORD_METHOD(lldb::SBTrace, SBProcess, StartTrace,
+                     (lldb::SBTraceOptions &, lldb::SBError &), options, error);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   ProcessSP process_sp(GetSP());
   error.Clear();
@@ -363,10 +422,13 @@ lldb::SBTrace SBProcess::StartTrace(SBTraceOptions &options,
     trace_instance.SetTraceUID(uid);
     LLDB_LOG(log, "SBProcess::returned uid - {0}", uid);
   }
-  return trace_instance;
+  return LLDB_RECORD_RESULT(trace_instance);
 }
 
 void SBProcess::ReportEventState(const SBEvent &event, FILE *out) const {
+  LLDB_RECORD_METHOD_CONST(void, SBProcess, ReportEventState,
+                           (const lldb::SBEvent &, FILE *), event, out);
+
   if (out == NULL)
     return;
 
@@ -385,6 +447,10 @@ void SBProcess::ReportEventState(const SBEvent &event, FILE *out) const {
 
 void SBProcess::AppendEventStateReport(const SBEvent &event,
                                        SBCommandReturnObject &result) {
+  LLDB_RECORD_METHOD(void, SBProcess, AppendEventStateReport,
+                     (const lldb::SBEvent &, lldb::SBCommandReturnObject &),
+                     event, result);
+
   ProcessSP process_sp(GetSP());
   if (process_sp) {
     const StateType event_state = SBProcess::GetStateFromEvent(event);
@@ -397,6 +463,9 @@ void SBProcess::AppendEventStateReport(const SBEvent &event,
 }
 
 bool SBProcess::SetSelectedThread(const SBThread &thread) {
+  LLDB_RECORD_METHOD(bool, SBProcess, SetSelectedThread,
+                     (const lldb::SBThread &), thread);
+
   ProcessSP process_sp(GetSP());
   if (process_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -408,6 +477,9 @@ bool SBProcess::SetSelectedThread(const SBThread &thread) {
 }
 
 bool SBProcess::SetSelectedThreadByID(lldb::tid_t tid) {
+  LLDB_RECORD_METHOD(bool, SBProcess, SetSelectedThreadByID, (lldb::tid_t),
+                     tid);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   bool ret_val = false;
@@ -428,6 +500,9 @@ bool SBProcess::SetSelectedThreadByID(lldb::tid_t tid) {
 }
 
 bool SBProcess::SetSelectedThreadByIndexID(uint32_t index_id) {
+  LLDB_RECORD_METHOD(bool, SBProcess, SetSelectedThreadByIndexID, (uint32_t),
+                     index_id);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   bool ret_val = false;
@@ -447,6 +522,9 @@ bool SBProcess::SetSelectedThreadByIndexID(uint32_t index_id) {
 }
 
 SBThread SBProcess::GetThreadAtIndex(size_t index) {
+  LLDB_RECORD_METHOD(lldb::SBThread, SBProcess, GetThreadAtIndex, (size_t),
+                     index);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBThread sb_thread;
@@ -467,10 +545,12 @@ SBThread SBProcess::GetThreadAtIndex(size_t index) {
                 static_cast<uint32_t>(index),
                 static_cast<void *>(thread_sp.get()));
 
-  return sb_thread;
+  return LLDB_RECORD_RESULT(sb_thread);
 }
 
 uint32_t SBProcess::GetNumQueues() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBProcess, GetNumQueues);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   uint32_t num_queues = 0;
@@ -492,6 +572,9 @@ uint32_t SBProcess::GetNumQueues() {
 }
 
 SBQueue SBProcess::GetQueueAtIndex(size_t index) {
+  LLDB_RECORD_METHOD(lldb::SBQueue, SBProcess, GetQueueAtIndex, (size_t),
+                     index);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBQueue sb_queue;
@@ -513,10 +596,13 @@ SBQueue SBProcess::GetQueueAtIndex(size_t index) {
                 static_cast<uint32_t>(index),
                 static_cast<void *>(queue_sp.get()));
 
-  return sb_queue;
+  return LLDB_RECORD_RESULT(sb_queue);
 }
 
 uint32_t SBProcess::GetStopID(bool include_expression_stops) {
+  LLDB_RECORD_METHOD(uint32_t, SBProcess, GetStopID, (bool),
+                     include_expression_stops);
+
   ProcessSP process_sp(GetSP());
   if (process_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -530,6 +616,9 @@ uint32_t SBProcess::GetStopID(bool include_expression_stops) {
 }
 
 SBEvent SBProcess::GetStopEventForStopID(uint32_t stop_id) {
+  LLDB_RECORD_METHOD(lldb::SBEvent, SBProcess, GetStopEventForStopID,
+                     (uint32_t), stop_id);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBEvent sb_event;
@@ -548,10 +637,11 @@ SBEvent SBProcess::GetStopEventForStopID(uint32_t stop_id) {
                 static_cast<void *>(process_sp.get()), stop_id,
                 static_cast<void *>(event_sp.get()));
 
-  return sb_event;
+  return LLDB_RECORD_RESULT(sb_event);
 }
 
 StateType SBProcess::GetState() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::StateType, SBProcess, GetState);
 
   StateType ret_val = eStateInvalid;
   ProcessSP process_sp(GetSP());
@@ -571,6 +661,8 @@ StateType SBProcess::GetState() {
 }
 
 int SBProcess::GetExitStatus() {
+  LLDB_RECORD_METHOD_NO_ARGS(int, SBProcess, GetExitStatus);
+
   int exit_status = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -588,6 +680,8 @@ int SBProcess::GetExitStatus() {
 }
 
 const char *SBProcess::GetExitDescription() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBProcess, GetExitDescription);
+
   const char *exit_desc = NULL;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -603,6 +697,8 @@ const char *SBProcess::GetExitDescription() {
 }
 
 lldb::pid_t SBProcess::GetProcessID() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::pid_t, SBProcess, GetProcessID);
+
   lldb::pid_t ret_val = LLDB_INVALID_PROCESS_ID;
   ProcessSP process_sp(GetSP());
   if (process_sp)
@@ -617,6 +713,8 @@ lldb::pid_t SBProcess::GetProcessID() {
 }
 
 uint32_t SBProcess::GetUniqueID() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBProcess, GetUniqueID);
+
   uint32_t ret_val = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp)
@@ -629,6 +727,8 @@ uint32_t SBProcess::GetUniqueID() {
 }
 
 ByteOrder SBProcess::GetByteOrder() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::ByteOrder, SBProcess, GetByteOrder);
+
   ByteOrder byteOrder = eByteOrderInvalid;
   ProcessSP process_sp(GetSP());
   if (process_sp)
@@ -643,6 +743,8 @@ ByteOrder SBProcess::GetByteOrder() const {
 }
 
 uint32_t SBProcess::GetAddressByteSize() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBProcess, GetAddressByteSize);
+
   uint32_t size = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp)
@@ -657,6 +759,8 @@ uint32_t SBProcess::GetAddressByteSize() const {
 }
 
 SBError SBProcess::Continue() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBError, SBProcess, Continue);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBError sb_error;
@@ -685,10 +789,12 @@ SBError SBProcess::Continue() {
                 static_cast<void *>(sb_error.get()), sstr.GetData());
   }
 
-  return sb_error;
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
 SBError SBProcess::Destroy() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBError, SBProcess, Destroy);
+
   SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -707,10 +813,12 @@ SBError SBProcess::Destroy() {
                 static_cast<void *>(sb_error.get()), sstr.GetData());
   }
 
-  return sb_error;
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
 SBError SBProcess::Stop() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBError, SBProcess, Stop);
+
   SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -729,10 +837,12 @@ SBError SBProcess::Stop() {
                 static_cast<void *>(sb_error.get()), sstr.GetData());
   }
 
-  return sb_error;
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
 SBError SBProcess::Kill() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBError, SBProcess, Kill);
+
   SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -751,16 +861,20 @@ SBError SBProcess::Kill() {
                 static_cast<void *>(sb_error.get()), sstr.GetData());
   }
 
-  return sb_error;
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
 SBError SBProcess::Detach() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBError, SBProcess, Detach);
+
   // FIXME: This should come from a process default.
   bool keep_stopped = false;
-  return Detach(keep_stopped);
+  return LLDB_RECORD_RESULT(Detach(keep_stopped));
 }
 
 SBError SBProcess::Detach(bool keep_stopped) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBProcess, Detach, (bool), keep_stopped);
+
   SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -770,10 +884,12 @@ SBError SBProcess::Detach(bool keep_stopped) {
   } else
     sb_error.SetErrorString("SBProcess is invalid");
 
-  return sb_error;
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
 SBError SBProcess::Signal(int signo) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBProcess, Signal, (int), signo);
+
   SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -790,17 +906,21 @@ SBError SBProcess::Signal(int signo) {
                 static_cast<void *>(process_sp.get()), signo,
                 static_cast<void *>(sb_error.get()), sstr.GetData());
   }
-  return sb_error;
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
 SBUnixSignals SBProcess::GetUnixSignals() {
-  if (auto process_sp = GetSP())
-    return SBUnixSignals{process_sp};
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBUnixSignals, SBProcess, GetUnixSignals);
 
-  return {};
+  if (auto process_sp = GetSP())
+    return LLDB_RECORD_RESULT(SBUnixSignals{process_sp});
+
+  return LLDB_RECORD_RESULT(SBUnixSignals{});
 }
 
 void SBProcess::SendAsyncInterrupt() {
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBProcess, SendAsyncInterrupt);
+
   ProcessSP process_sp(GetSP());
   if (process_sp) {
     process_sp->SendAsyncInterrupt();
@@ -808,6 +928,9 @@ void SBProcess::SendAsyncInterrupt() {
 }
 
 SBThread SBProcess::GetThreadByID(tid_t tid) {
+  LLDB_RECORD_METHOD(lldb::SBThread, SBProcess, GetThreadByID, (lldb::tid_t),
+                     tid);
+
   SBThread sb_thread;
   ThreadSP thread_sp;
   ProcessSP process_sp(GetSP());
@@ -827,10 +950,13 @@ SBThread SBProcess::GetThreadByID(tid_t tid) {
                 static_cast<void *>(process_sp.get()), tid,
                 static_cast<void *>(thread_sp.get()));
 
-  return sb_thread;
+  return LLDB_RECORD_RESULT(sb_thread);
 }
 
 SBThread SBProcess::GetThreadByIndexID(uint32_t index_id) {
+  LLDB_RECORD_METHOD(lldb::SBThread, SBProcess, GetThreadByIndexID, (uint32_t),
+                     index_id);
+
   SBThread sb_thread;
   ThreadSP thread_sp;
   ProcessSP process_sp(GetSP());
@@ -850,10 +976,13 @@ SBThread SBProcess::GetThreadByIndexID(uint32_t index_id) {
                 static_cast<void *>(process_sp.get()), index_id,
                 static_cast<void *>(thread_sp.get()));
 
-  return sb_thread;
+  return LLDB_RECORD_RESULT(sb_thread);
 }
 
 StateType SBProcess::GetStateFromEvent(const SBEvent &event) {
+  LLDB_RECORD_STATIC_METHOD(lldb::StateType, SBProcess, GetStateFromEvent,
+                            (const lldb::SBEvent &), event);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   StateType ret_val = Process::ProcessEventData::GetStateFromEvent(event.get());
@@ -867,6 +996,9 @@ StateType SBProcess::GetStateFromEvent(const SBEvent &event) {
 }
 
 bool SBProcess::GetRestartedFromEvent(const SBEvent &event) {
+  LLDB_RECORD_STATIC_METHOD(bool, SBProcess, GetRestartedFromEvent,
+                            (const lldb::SBEvent &), event);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   bool ret_val = Process::ProcessEventData::GetRestartedFromEvent(event.get());
@@ -879,16 +1011,26 @@ bool SBProcess::GetRestartedFromEvent(const SBEvent &event) {
 }
 
 size_t SBProcess::GetNumRestartedReasonsFromEvent(const lldb::SBEvent &event) {
+  LLDB_RECORD_STATIC_METHOD(size_t, SBProcess, GetNumRestartedReasonsFromEvent,
+                            (const lldb::SBEvent &), event);
+
   return Process::ProcessEventData::GetNumRestartedReasons(event.get());
 }
 
 const char *
 SBProcess::GetRestartedReasonAtIndexFromEvent(const lldb::SBEvent &event,
                                               size_t idx) {
+  LLDB_RECORD_STATIC_METHOD(const char *, SBProcess,
+                            GetRestartedReasonAtIndexFromEvent,
+                            (const lldb::SBEvent &, size_t), event, idx);
+
   return Process::ProcessEventData::GetRestartedReasonAtIndex(event.get(), idx);
 }
 
 SBProcess SBProcess::GetProcessFromEvent(const SBEvent &event) {
+  LLDB_RECORD_STATIC_METHOD(lldb::SBProcess, SBProcess, GetProcessFromEvent,
+                            (const lldb::SBEvent &), event);
+
   ProcessSP process_sp =
       Process::ProcessEventData::GetProcessFromEvent(event.get());
   if (!process_sp) {
@@ -896,24 +1038,37 @@ SBProcess SBProcess::GetProcessFromEvent(const SBEvent &event) {
     process_sp = EventDataStructuredData::GetProcessFromEvent(event.get());
   }
 
-  return SBProcess(process_sp);
+  return LLDB_RECORD_RESULT(SBProcess(process_sp));
 }
 
 bool SBProcess::GetInterruptedFromEvent(const SBEvent &event) {
+  LLDB_RECORD_STATIC_METHOD(bool, SBProcess, GetInterruptedFromEvent,
+                            (const lldb::SBEvent &), event);
+
   return Process::ProcessEventData::GetInterruptedFromEvent(event.get());
 }
 
 lldb::SBStructuredData
 SBProcess::GetStructuredDataFromEvent(const lldb::SBEvent &event) {
-  return SBStructuredData(event.GetSP());
+  LLDB_RECORD_STATIC_METHOD(lldb::SBStructuredData, SBProcess,
+                            GetStructuredDataFromEvent, (const lldb::SBEvent &),
+                            event);
+
+  return LLDB_RECORD_RESULT(SBStructuredData(event.GetSP()));
 }
 
 bool SBProcess::EventIsProcessEvent(const SBEvent &event) {
+  LLDB_RECORD_STATIC_METHOD(bool, SBProcess, EventIsProcessEvent,
+                            (const lldb::SBEvent &), event);
+
   return (event.GetBroadcasterClass() == SBProcess::GetBroadcasterClass()) &&
          !EventIsStructuredDataEvent(event);
 }
 
 bool SBProcess::EventIsStructuredDataEvent(const lldb::SBEvent &event) {
+  LLDB_RECORD_STATIC_METHOD(bool, SBProcess, EventIsStructuredDataEvent,
+                            (const lldb::SBEvent &), event);
+
   EventSP event_sp = event.GetSP();
   EventData *event_data = event_sp ? event_sp->GetData() : nullptr;
   return event_data && (event_data->GetFlavor() ==
@@ -921,6 +1076,9 @@ bool SBProcess::EventIsStructuredDataEvent(const lldb::SBEvent &event) {
 }
 
 SBBroadcaster SBProcess::GetBroadcaster() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBBroadcaster, SBProcess,
+                                   GetBroadcaster);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   ProcessSP process_sp(GetSP());
@@ -932,10 +1090,13 @@ SBBroadcaster SBProcess::GetBroadcaster() const {
                 static_cast<void *>(process_sp.get()),
                 static_cast<void *>(broadcaster.get()));
 
-  return broadcaster;
+  return LLDB_RECORD_RESULT(broadcaster);
 }
 
 const char *SBProcess::GetBroadcasterClass() {
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(const char *, SBProcess,
+                                    GetBroadcasterClass);
+
   return Process::GetStaticBroadcasterClass().AsCString();
 }
 
@@ -1011,6 +1172,10 @@ size_t SBProcess::ReadCStringFromMemory(addr_t addr, void *buf, size_t size,
 
 uint64_t SBProcess::ReadUnsignedFromMemory(addr_t addr, uint32_t byte_size,
                                            lldb::SBError &sb_error) {
+  LLDB_RECORD_METHOD(uint64_t, SBProcess, ReadUnsignedFromMemory,
+                     (lldb::addr_t, uint32_t, lldb::SBError &), addr, byte_size,
+                     sb_error);
+
   uint64_t value = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -1036,6 +1201,9 @@ uint64_t SBProcess::ReadUnsignedFromMemory(addr_t addr, uint32_t byte_size,
 
 lldb::addr_t SBProcess::ReadPointerFromMemory(addr_t addr,
                                               lldb::SBError &sb_error) {
+  LLDB_RECORD_METHOD(lldb::addr_t, SBProcess, ReadPointerFromMemory,
+                     (lldb::addr_t, lldb::SBError &), addr, sb_error);
+
   lldb::addr_t ptr = LLDB_INVALID_ADDRESS;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -1103,6 +1271,9 @@ size_t SBProcess::WriteMemory(addr_t addr, const void *src, size_t src_len,
 }
 
 bool SBProcess::GetDescription(SBStream &description) {
+  LLDB_RECORD_METHOD(bool, SBProcess, GetDescription, (lldb::SBStream &),
+                     description);
+
   Stream &strm = description.ref();
 
   ProcessSP process_sp(GetSP());
@@ -1126,6 +1297,10 @@ bool SBProcess::GetDescription(SBStream &description) {
 
 uint32_t
 SBProcess::GetNumSupportedHardwareWatchpoints(lldb::SBError &sb_error) const {
+  LLDB_RECORD_METHOD_CONST(uint32_t, SBProcess,
+                           GetNumSupportedHardwareWatchpoints,
+                           (lldb::SBError &), sb_error);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   uint32_t num = 0;
@@ -1145,12 +1320,21 @@ SBProcess::GetNumSupportedHardwareWatchpoints(lldb::SBError &sb_error) const {
 
 uint32_t SBProcess::LoadImage(lldb::SBFileSpec &sb_remote_image_spec,
                               lldb::SBError &sb_error) {
+  LLDB_RECORD_METHOD(uint32_t, SBProcess, LoadImage,
+                     (lldb::SBFileSpec &, lldb::SBError &),
+                     sb_remote_image_spec, sb_error);
+
   return LoadImage(SBFileSpec(), sb_remote_image_spec, sb_error);
 }
 
 uint32_t SBProcess::LoadImage(const lldb::SBFileSpec &sb_local_image_spec,
                               const lldb::SBFileSpec &sb_remote_image_spec,
                               lldb::SBError &sb_error) {
+  LLDB_RECORD_METHOD(
+      uint32_t, SBProcess, LoadImage,
+      (const lldb::SBFileSpec &, const lldb::SBFileSpec &, lldb::SBError &),
+      sb_local_image_spec, sb_remote_image_spec, sb_error);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -1185,8 +1369,13 @@ uint32_t SBProcess::LoadImage(const lldb::SBFileSpec &sb_local_image_spec,
 
 uint32_t SBProcess::LoadImageUsingPaths(const lldb::SBFileSpec &image_spec,
                                         SBStringList &paths,
-                                        lldb::SBFileSpec &loaded_path, 
+                                        lldb::SBFileSpec &loaded_path,
                                         lldb::SBError &error) {
+  LLDB_RECORD_METHOD(uint32_t, SBProcess, LoadImageUsingPaths,
+                     (const lldb::SBFileSpec &, lldb::SBStringList &,
+                      lldb::SBFileSpec &, lldb::SBError &),
+                     image_spec, paths, loaded_path, error);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -1235,6 +1424,9 @@ uint32_t SBProcess::LoadImageUsingPaths(const lldb::SBFileSpec &image_spec,
 }
 
 lldb::SBError SBProcess::UnloadImage(uint32_t image_token) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBProcess, UnloadImage, (uint32_t),
+                     image_token);
+
   lldb::SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -1254,10 +1446,13 @@ lldb::SBError SBProcess::UnloadImage(uint32_t image_token) {
     }
   } else
     sb_error.SetErrorString("invalid process");
-  return sb_error;
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
 lldb::SBError SBProcess::SendEventData(const char *event_data) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBProcess, SendEventData, (const char *),
+                     event_data);
+
   lldb::SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -1276,10 +1471,12 @@ lldb::SBError SBProcess::SendEventData(const char *event_data) {
     }
   } else
     sb_error.SetErrorString("invalid process");
-  return sb_error;
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
 uint32_t SBProcess::GetNumExtendedBacktraceTypes() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBProcess, GetNumExtendedBacktraceTypes);
+
   ProcessSP process_sp(GetSP());
   if (process_sp && process_sp->GetSystemRuntime()) {
     SystemRuntime *runtime = process_sp->GetSystemRuntime();
@@ -1289,6 +1486,9 @@ uint32_t SBProcess::GetNumExtendedBacktraceTypes() {
 }
 
 const char *SBProcess::GetExtendedBacktraceTypeAtIndex(uint32_t idx) {
+  LLDB_RECORD_METHOD(const char *, SBProcess, GetExtendedBacktraceTypeAtIndex,
+                     (uint32_t), idx);
+
   ProcessSP process_sp(GetSP());
   if (process_sp && process_sp->GetSystemRuntime()) {
     SystemRuntime *runtime = process_sp->GetSystemRuntime();
@@ -1308,16 +1508,22 @@ const char *SBProcess::GetExtendedBacktraceTypeAtIndex(uint32_t idx) {
 }
 
 SBThreadCollection SBProcess::GetHistoryThreads(addr_t addr) {
+  LLDB_RECORD_METHOD(lldb::SBThreadCollection, SBProcess, GetHistoryThreads,
+                     (lldb::addr_t), addr);
+
   ProcessSP process_sp(GetSP());
   SBThreadCollection threads;
   if (process_sp) {
     threads = SBThreadCollection(process_sp->GetHistoryThreads(addr));
   }
-  return threads;
+  return LLDB_RECORD_RESULT(threads);
 }
 
 bool SBProcess::IsInstrumentationRuntimePresent(
     InstrumentationRuntimeType type) {
+  LLDB_RECORD_METHOD(bool, SBProcess, IsInstrumentationRuntimePresent,
+                     (lldb::InstrumentationRuntimeType), type);
+
   ProcessSP process_sp(GetSP());
   if (!process_sp)
     return false;
@@ -1332,11 +1538,14 @@ bool SBProcess::IsInstrumentationRuntimePresent(
 }
 
 lldb::SBError SBProcess::SaveCore(const char *file_name) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBProcess, SaveCore, (const char *),
+                     file_name);
+
   lldb::SBError error;
   ProcessSP process_sp(GetSP());
   if (!process_sp) {
     error.SetErrorString("SBProcess is invalid");
-    return error;
+    return LLDB_RECORD_RESULT(error);
   }
 
   std::lock_guard<std::recursive_mutex> guard(
@@ -1344,17 +1553,21 @@ lldb::SBError SBProcess::SaveCore(const char *file_name) {
 
   if (process_sp->GetState() != eStateStopped) {
     error.SetErrorString("the process is not stopped");
-    return error;
+    return LLDB_RECORD_RESULT(error);
   }
 
   FileSpec core_file(file_name);
   error.ref() = PluginManager::SaveCore(process_sp, core_file);
-  return error;
+  return LLDB_RECORD_RESULT(error);
 }
 
 lldb::SBError
 SBProcess::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                SBMemoryRegionInfo &sb_region_info) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBProcess, GetMemoryRegionInfo,
+                     (lldb::addr_t, lldb::SBMemoryRegionInfo &), load_addr,
+                     sb_region_info);
+
   lldb::SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
@@ -1376,10 +1589,13 @@ SBProcess::GetMemoryRegionInfo(lldb::addr_t load_addr,
   } else {
     sb_error.SetErrorString("SBProcess is invalid");
   }
-  return sb_error;
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
 lldb::SBMemoryRegionInfoList SBProcess::GetMemoryRegions() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBMemoryRegionInfoList, SBProcess,
+                             GetMemoryRegions);
+
   lldb::SBMemoryRegionInfoList sb_region_list;
 
   ProcessSP process_sp(GetSP());
@@ -1397,15 +1613,17 @@ lldb::SBMemoryRegionInfoList SBProcess::GetMemoryRegions() {
           static_cast<void *>(process_sp.get()));
   }
 
-  return sb_region_list;
+  return LLDB_RECORD_RESULT(sb_region_list);
 }
 
 lldb::SBProcessInfo SBProcess::GetProcessInfo() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBProcessInfo, SBProcess, GetProcessInfo);
+
   lldb::SBProcessInfo sb_proc_info;
   ProcessSP process_sp(GetSP());
   ProcessInstanceInfo proc_info;
   if (process_sp && process_sp->GetProcessInfo(proc_info)) {
     sb_proc_info.SetProcessInfo(proc_info);
   }
-  return sb_proc_info;
+  return LLDB_RECORD_RESULT(sb_proc_info);
 }

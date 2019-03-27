@@ -82,7 +82,7 @@ int uncaught_exceptions() _NOEXCEPT {
     return __uncaught_exceptions();
 }
 
-#if defined(_LIBCPP_NO_VCRUNTIME)
+#if !defined(_LIBCPP_ABI_VCRUNTIME)
 bad_cast::bad_cast() _NOEXCEPT
 {
 }
@@ -158,6 +158,6 @@ bad_array_new_length::what() const _NOEXCEPT
 {
     return "bad_array_new_length";
 }
-#endif // _LIBCPP_NO_VCRUNTIME
+#endif // !_LIBCPP_ABI_VCRUNTIME
 
 } // namespace std

@@ -44,7 +44,7 @@
     }
   }
 }
-# CHECK: "uri": "file://DIRECTORY/foo.cpp"
+# CHECK: "uri": "file://{{.*}}/foo.cpp"
 ---
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
 ---

@@ -28,6 +28,8 @@ public:
         : std::messages<CharT>(refs) {}
 };
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }

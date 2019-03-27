@@ -68,7 +68,7 @@ public:
   dataT &operator[](size_t index) {
     ids[accessorDim - 1] = index;
     return accRef.__get_impl()->Data[getOffsetForId(
-      accRef.__get_impl()->Range, ids, accRef.__get_impl()->Offset)];
+      accRef.__get_impl()->MemRange, ids, accRef.__get_impl()->Offset)];
   }
 };
 
@@ -90,7 +90,7 @@ public:
   operator[](size_t index) {
     ids[accessorDim - 1] = index;
     return accRef.__get_impl()->Data[getOffsetForId(
-      accRef.__get_impl()->Range, ids, accRef.__get_impl()->Offset)];
+      accRef.__get_impl()->MemRange, ids, accRef.__get_impl()->Offset)];
   }
 };
 
@@ -124,16 +124,19 @@ SYCL_ACCESSOR_IMPL(isTargetHostAccess(accessTarget) && dimensions == 0) {
 /// Available when (dimensions > 0).
 SYCL_ACCESSOR_IMPL(isTargetHostAccess(accessTarget) && dimensions > 0) {
   dataT *Data;
-  range<dimensions> Range;
-  range<dimensions> BufRange;
+  // Accessor's own range, can be subset of MemRange
+  range<dimensions> AccessRange;
+  // Range of corresponding memory object
+  range<dimensions> MemRange;
   id<dimensions> Offset;
 
-  accessor_impl(dataT * Data, range<dimensions> Range,
-                range<dimensions> BufRange, id<dimensions> Offset = {})
-      : Data(Data), Range(Range), BufRange(BufRange), Offset(Offset) {}
+  accessor_impl(dataT * Data, range<dimensions> AccessRange,
+                range<dimensions> MemRange, id<dimensions> Offset = {})
+      : Data(Data), AccessRange(AccessRange), MemRange(MemRange),
+        Offset(Offset) {}
 
   // Returns the number of accessed elements.
-  size_t get_count() const { return Range.size(); }
+  size_t get_count() const { return AccessRange.size(); }
 };
 
 /// Implementation of device (kernel) accessor providing access to a single
@@ -188,20 +191,23 @@ SYCL_ACCESSOR_IMPL(!isTargetHostAccess(accessTarget) &&
 #endif // __SYCL_DEVICE_ONLY__
 
   dataT *Data;
-  range<dimensions> Range;
-  range<dimensions> BufRange;
+  // Accessor's own range, can be subset of MemRange
+  range<dimensions> AccessRange;
+  // Range of corresponding memory object
+  range<dimensions> MemRange;
   id<dimensions> Offset;
 
   // Device accessors must be associated with a command group handler.
   // The handler though can be nullptr at the creation point if the
   // accessor is a placeholder accessor.
-  accessor_impl(dataT * Data, range<dimensions> Range,
-                range<dimensions> BufRange, handler *Handler = nullptr,
+  accessor_impl(dataT * Data, range<dimensions> AccessRange,
+                range<dimensions> MemRange, handler *Handler = nullptr,
                 id<dimensions> Offset = {})
-      : Data(Data), Range(Range), BufRange(BufRange), Offset(Offset) {}
+      : Data(Data), AccessRange(AccessRange), MemRange(MemRange),
+        Offset(Offset) {}
 
   // Returns the number of accessed elements.
-  size_t get_count() const { return Range.size(); }
+  size_t get_count() const { return AccessRange.size(); }
 
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
@@ -265,16 +271,21 @@ SYCL_ACCESSOR_IMPL(accessTarget == access::target::local &&
 #endif
 
   dataT *Data;
-  range<dimensions> Range;
+  // Accessor's own range
+  range<dimensions> AccessRange;
+  // For local accessor AccessRange and MemRange always are same but both fields
+  // are presented here to keep no differences between local and global
+  // accessors for compiler
+  range<dimensions> MemRange;
   // TODO delete it when accessor class was remade
   // Offset field is not need for local accessor, but this field is now used
   // in the inheritance hierarchy. Getting rid of this field will cause
   // duplication and complication of the code even more.
   id<dimensions> Offset;
 
-  accessor_impl(range<dimensions> Range, handler * Handler) : Range(Range),
-      ByteSize(Range.size() * sizeof(dataT))
-  {
+  accessor_impl(range<dimensions> Range, handler * Handler)
+      : AccessRange(Range), MemRange(Range),
+        ByteSize(Range.size() * sizeof(dataT)) {
 #ifndef __SYCL_DEVICE_ONLY__
     assert(Handler != nullptr && "Handler is nullptr");
     if (Handler->is_host()) {
@@ -285,7 +296,7 @@ SYCL_ACCESSOR_IMPL(accessTarget == access::target::local &&
   }
 
   // Returns the number of accessed elements.
-  size_t get_count() const { return Range.size(); }
+  size_t get_count() const { return AccessRange.size(); }
 
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
@@ -351,7 +362,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_common, accessor_base, true /* always */) {
 
   template <int Dimensions = dimensions>
   typename std::enable_if<(Dimensions > 0), range<Dimensions>>::type
-  get_range() const { return this->__get_impl()->Range; }
+  get_range() const { return this->__get_impl()->AccessRange; }
 
   template <int Dimensions = dimensions>
   typename std::enable_if<(Dimensions > 0), id<Dimensions>>::type
@@ -377,7 +388,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_wn, accessor_opdata_w,
                        dimensions > 0) {
   dataT &operator[](id<dimensions> index) const {
     return this->__get_impl()->Data[getOffsetForId(
-      this->get_range(), index, this->get_offset())];
+      this->__get_impl()->MemRange, index, this->get_offset())];
   }
 
   subscript_obj<dimensions, dataT, dimensions - 1, accessMode, accessTarget,
@@ -404,7 +415,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_w, accessor_subscript_wn,
   // operator[](id<dimensions>) once again.
   dataT &operator[](id<dimensions> index) const {
     return this->operator[](
-      getOffsetForId(this->get_range(), index, this->get_offset()));
+      getOffsetForId(this->__get_impl()->MemRange, index, this->get_offset()));
   }
   dataT &operator[](size_t index) const {
     return this->__get_impl()->Data[index];
@@ -424,7 +435,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_rn, accessor_opdata_r,
   typename detail::remove_AS<dataT>::type
   operator[](id<dimensions> index) const {
     return this->__get_impl()->Data[getOffsetForId(
-      this->get_range(), index, this->get_offset())];
+      this->__get_impl()->MemRange, index, this->get_offset())];
   }
 
   subscript_obj<dimensions, dataT, dimensions - 1, accessMode, accessTarget,
@@ -442,7 +453,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_r, accessor_subscript_rn,
   typename detail::remove_AS<dataT>::type
   operator[](id<dimensions> index) const {
     return this->operator[](
-      getOffsetForId(this->get_range(), index, this->get_offset()));
+      getOffsetForId(this->__get_impl()->MemRange, index, this->get_offset()));
   }
   typename detail::remove_AS<dataT>::type
   operator[](size_t index) const {
@@ -482,7 +493,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_atomic_gt0,
   atomic<PureType, addressSpace> operator[](id<dimensions> index) const {
     return atomic<PureType, addressSpace>(
         multi_ptr<PureType, addressSpace>(&(this->__get_impl()->Data[getOffsetForId(
-            this->__get_impl()->Range, index, this->__get_impl()->Offset)])));
+            this->__get_impl()->MemRange, index, this->__get_impl()->Offset)])));
   }
 };
 
@@ -560,10 +571,11 @@ class accessor
   // implementation.
   _ImplT __impl;
 
-  void __init(_ValueType *Ptr, range<dimensions> Range,
-      id<dimensions> Offset) {
+  void __init(_ValueType *Ptr, range<dimensions> AccessRange,
+              range<dimensions> MemRange, id<dimensions> Offset) {
     __impl.Data = Ptr;
-    __impl.Range = Range;
+    __impl.AccessRange = AccessRange;
+    __impl.MemRange = MemRange;
     __impl.Offset = Offset;
   }
 

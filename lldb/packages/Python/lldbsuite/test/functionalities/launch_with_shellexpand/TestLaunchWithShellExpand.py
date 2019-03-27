@@ -23,6 +23,7 @@ class LaunchWithShellExpandTestCase(TestBase):
             "freebsd"],
         bugnumber="llvm.org/pr24778 llvm.org/pr22627")
     @skipIfDarwinEmbedded # iOS etc don't launch the binary via a shell, so arg expansion won't happen
+    @expectedFailureNetBSD
     def test(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

@@ -25,7 +25,7 @@ test(const T&)
 
 struct C {};
 
-int main()
+int main(int, char**)
 {
     test<1>(std::placeholders::_1);
     test<2>(std::placeholders::_2);
@@ -41,4 +41,6 @@ int main()
     test<0>(5.5);
     test<0>('a');
     test<0>(C());
+
+  return 0;
 }

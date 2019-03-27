@@ -143,7 +143,7 @@ public:
   const char *GetConstTrimmedCStringWithLength(const char *cstr,
                                                size_t cstr_len) {
     if (cstr != nullptr) {
-      const size_t trimmed_len = std::min<size_t>(strlen(cstr), cstr_len);
+      const size_t trimmed_len = strnlen(cstr, cstr_len);
       return GetConstCStringWithLength(cstr, trimmed_len);
     }
     return nullptr;

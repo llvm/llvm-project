@@ -201,7 +201,7 @@ void test_ambigious_assign() {
 }
 
 
-int main()
+int main(int, char**)
 {
     test_with_test_type();
     test_ambigious_assign();
@@ -264,4 +264,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

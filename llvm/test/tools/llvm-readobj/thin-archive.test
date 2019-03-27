@@ -1,0 +1,70 @@
+# RUN: rm -f %t.a
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+
+# Make copies of the test inputs for placing in the archive so that we can mess
+# about with them later on.
+# RUN: cp %p/Inputs/trivial.obj.elf-x86-64 %t/1.o
+# RUN: cp %p/Inputs/relocs.obj.elf-x86_64 %t/2.o
+# RUN: cp %p/Inputs/trivial.obj.coff-arm %t/3.o
+# RUN: llvm-ar rcT %t.a %t/1.o %t/2.o %t/3.o
+
+# Test that basic dumping works for all members.
+# RUN: llvm-readobj --all %t.a | FileCheck %s --check-prefixes=LLVM,COFF
+# RUN: llvm-readelf --all %t.a | FileCheck %s --check-prefixes=GNU,COFF
+
+# LLVM: File: {{.*}}1.o
+# LLVM: Format: ELF64-x86-64
+# LLVM: ElfHeader {
+# LLVM:   SectionHeaderCount: 10
+# LLVM: Sections [
+# LLVM: Relocations [
+# LLVM: Symbols [
+
+# GNU: ELF Header:
+# GNU:   Number of section headers: 10
+# GNU: Section Headers:
+# GNU: Relocation section '.rela.text'
+# GNU: Symbol table '.symtab'
+
+# LLVM: File: {{.*}}2.o
+# LLVM: Format: ELF64-x86-64
+# LLVM: ElfHeader {
+# LLVM:   SectionHeaderCount: 8
+# LLVM: Sections [
+# LLVM: Relocations [
+# LLVM: Symbols [
+
+# GNU: ELF Header:
+# GNU:   Number of section headers: 8
+# GNU: Section Headers:
+# GNU: Relocation section '.rela.text'
+# GNU: Symbol table '.symtab'
+
+# LLVM: File: {{.*}}3.o
+# LLVM: Format: COFF-ARM
+# COFF: ImageFileHeader {
+# COFF: Sections [
+# COFF: Relocations [
+# COFF: Symbols [
+
+# Overwrite one of the members with a member of a different size to show that
+# the size field in the member header is not relevant.
+# RUN: rm -f %t/2.o
+# RUN: cp %t/1.o %t/2.o
+# RUN: llvm-readobj --file-headers %t.a | FileCheck %s --check-prefix=RESIZED
+
+# RESIZED: File: {{.*}}1.o
+# RESIZED: SectionHeaderCount: 10
+# RESIZED: File: {{.*}}2.o
+# RESIZED: SectionHeaderCount: 10
+
+# Remove the second member and show that the first can still be dumped, but that the last isn't.
+# RUN: rm %t/2.o
+# RUN: not llvm-readobj --file-headers %t.a 2> %t.err | FileCheck %s --check-prefix=MISSING
+# RUN: FileCheck %s --check-prefix=ERR --input-file=%t.err
+
+# MISSING:     File: {{.*}}1.o
+# MISSING:     SectionHeaderCount: 10
+# MISSING-NOT: File: {{.*}}3.o
+# ERR: Error reading file: {{.*}}.a: '{{.*}}2.o': {{[Nn]}}o such file or directory

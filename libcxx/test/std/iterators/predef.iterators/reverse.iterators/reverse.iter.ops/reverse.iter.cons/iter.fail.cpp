@@ -23,8 +23,10 @@ test(It i)
     std::reverse_iterator<It> r = i;
 }
 
-int main()
+int main(int, char**)
 {
     const char s[] = "123";
     test(s);
+
+  return 0;
 }

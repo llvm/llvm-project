@@ -5,12 +5,13 @@
 ; RUN: llvm-spirv -r %t.spv -o %t.rev.bc
 ; RUN: llvm-dis < %t.rev.bc | FileCheck %s --check-prefix=CHECK-LLVM
 
-; CHECK-LLVM: call spir_func void @_Z7barrierj(i32 2)
-; CHECK-LLVM-NEXT: call spir_func void @_Z7barrierj(i32 1)
-; CHECK-LLVM-NEXT: call spir_func void @_Z7barrierj(i32 4)
-; CHECK-LLVM-NEXT: call spir_func void @_Z7barrierj(i32 3)
-; CHECK-LLVM-NEXT: call spir_func void @_Z7barrierj(i32 5)
-; CHECK-LLVM-NEXT: call spir_func void @_Z7barrierj(i32 7)
+; CHECK-LLVM: call spir_func void @_Z7barrierj(i32 2) [[attr:#[0-9]+]]
+; CHECK-LLVM-NEXT: call spir_func void @_Z7barrierj(i32 1) [[attr]]
+; CHECK-LLVM-NEXT: call spir_func void @_Z7barrierj(i32 4) [[attr]]
+; CHECK-LLVM-NEXT: call spir_func void @_Z7barrierj(i32 3) [[attr]]
+; CHECK-LLVM-NEXT: call spir_func void @_Z7barrierj(i32 5) [[attr]]
+; CHECK-LLVM-NEXT: call spir_func void @_Z7barrierj(i32 7) [[attr]]
+; CHECK-LLVM: attributes [[attr]] = { noduplicate nounwind }
 
 ; CHECK-SPIRV-DAG: 4 Constant {{[0-9]+}} [[MemSema1:[0-9]+]] 528
 ; CHECK-SPIRV-DAG: 4 Constant {{[0-9]+}} [[MemSema2:[0-9]+]] 272

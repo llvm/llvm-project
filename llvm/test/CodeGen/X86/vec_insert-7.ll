@@ -18,7 +18,7 @@ define x86_mmx @mmx_movzl(x86_mmx %x) nounwind {
 ; X64-LABEL: mmx_movzl:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    movd %eax, %xmm0
+; X64-NEXT:    movq %rax, %xmm0
 ; X64-NEXT:    retq
   %tmp = bitcast x86_mmx %x to <2 x i32>
   %tmp3 = insertelement <2 x i32> %tmp, i32 32, i32 0

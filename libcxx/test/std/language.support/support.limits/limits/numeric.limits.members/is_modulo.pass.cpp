@@ -24,7 +24,7 @@ test()
     static_assert(std::numeric_limits<const volatile T>::is_modulo == expected, "is_modulo test 4");
 }
 
-int main()
+int main(int, char**)
 {
     test<bool, false>();
 //    test<char, false>(); // don't know
@@ -53,4 +53,6 @@ int main()
     test<float, false>();
     test<double, false>();
     test<long double, false>();
+
+  return 0;
 }

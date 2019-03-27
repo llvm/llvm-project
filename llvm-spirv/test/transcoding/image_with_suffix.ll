@@ -6,7 +6,7 @@
 ; RUN: llvm-spirv -r %t.spv -o %t.rev.bc
 ; RUN: llvm-dis < %t.rev.bc | FileCheck %s --check-prefix=CHECK-LLVM
 
-; CHECK-LLVM: call spir_func i32 @_Z15get_image_width11ocl_image1d
+; CHECK-LLVM: call spir_func i32 @_Z15get_image_width14ocl_image1d_ro
 
 ; ModuleID = 'foo.ll'
 target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"

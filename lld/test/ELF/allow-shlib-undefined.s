@@ -1,5 +1,4 @@
 # REQUIRES: x86
-# --allow-shlib-undefined is set by default
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \

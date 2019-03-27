@@ -366,10 +366,6 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
     // We use TargetFrameIndex so that isel will not select it into LEA
     Loc = Builder.DAG.getTargetFrameIndex(Index, Builder.getFrameIndexTy());
 
-    // TODO: We can create TokenFactor node instead of
-    //       chaining stores one after another, this may allow
-    //       a bit more optimal scheduling for them
-
 #ifndef NDEBUG
     // Right now we always allocate spill slots that are of the same
     // size as the value we're about to spill (the size of spillee can
@@ -398,6 +394,9 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
 static void lowerIncomingStatepointValue(SDValue Incoming, bool LiveInOnly,
                                          SmallVectorImpl<SDValue> &Ops,
                                          SelectionDAGBuilder &Builder) {
+  // Note: We know all of these spills are independent, but don't bother to
+  // exploit that chain wise.  DAGCombine will happily do so as needed, so
+  // doing it here would be a small compile time win at most.
   SDValue Chain = Builder.getRoot();
 
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Incoming)) {
@@ -798,7 +797,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
 void
 SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
                                      const BasicBlock *EHPadBB /*= nullptr*/) {
-  assert(ISP.getCallSite().getCallingConv() != CallingConv::AnyReg &&
+  assert(ISP.getCall()->getCallingConv() != CallingConv::AnyReg &&
          "anyregcc is not supported on statepoints!");
 
 #ifndef NDEBUG
@@ -831,7 +830,7 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
   }
 
   StatepointLoweringInfo SI(DAG);
-  populateCallLoweringInfo(SI.CLI, ISP.getCallSite(),
+  populateCallLoweringInfo(SI.CLI, ISP.getCall(),
                            ImmutableStatepoint::CallArgsBeginPos,
                            ISP.getNumCallArgs(), ActualCallee,
                            ISP.getActualReturnType(), false /* IsPatchPoint */);
@@ -858,7 +857,7 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
   const GCResultInst *GCResult = ISP.getGCResult();
   Type *RetTy = ISP.getActualReturnType();
   if (!RetTy->isVoidTy() && GCResult) {
-    if (GCResult->getParent() != ISP.getCallSite().getParent()) {
+    if (GCResult->getParent() != ISP.getCall()->getParent()) {
       // Result value will be used in a different basic block so we need to
       // export it now.  Default exporting mechanism will not work here because
       // statepoint call has a different type than the actual call. It means
@@ -870,7 +869,7 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
       unsigned Reg = FuncInfo.CreateRegs(RetTy);
       RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
                        DAG.getDataLayout(), Reg, RetTy,
-                       ISP.getCallSite().getCallingConv());
+                       ISP.getCall()->getCallingConv());
       SDValue Chain = DAG.getEntryNode();
 
       RFV.getCopyToRegs(ReturnValue, DAG, getCurSDLoc(), Chain, nullptr);
@@ -890,22 +889,22 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
 }
 
 void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
-    ImmutableCallSite CS, SDValue Callee, const BasicBlock *EHPadBB,
+    const CallBase *Call, SDValue Callee, const BasicBlock *EHPadBB,
     bool VarArgDisallowed, bool ForceVoidReturnTy) {
   StatepointLoweringInfo SI(DAG);
-  unsigned ArgBeginIndex = CS.arg_begin() - CS.getInstruction()->op_begin();
+  unsigned ArgBeginIndex = Call->arg_begin() - Call->op_begin();
   populateCallLoweringInfo(
-      SI.CLI, CS, ArgBeginIndex, CS.getNumArgOperands(), Callee,
-      ForceVoidReturnTy ? Type::getVoidTy(*DAG.getContext()) : CS.getType(),
+      SI.CLI, Call, ArgBeginIndex, Call->getNumArgOperands(), Callee,
+      ForceVoidReturnTy ? Type::getVoidTy(*DAG.getContext()) : Call->getType(),
       false);
   if (!VarArgDisallowed)
-    SI.CLI.IsVarArg = CS.getFunctionType()->isVarArg();
+    SI.CLI.IsVarArg = Call->getFunctionType()->isVarArg();
 
-  auto DeoptBundle = *CS.getOperandBundle(LLVMContext::OB_deopt);
+  auto DeoptBundle = *Call->getOperandBundle(LLVMContext::OB_deopt);
 
   unsigned DefaultID = StatepointDirectives::DeoptBundleStatepointID;
 
-  auto SD = parseStatepointDirectivesFromAttrs(CS.getAttributes());
+  auto SD = parseStatepointDirectivesFromAttrs(Call->getAttributes());
   SI.ID = SD.StatepointID.getValueOr(DefaultID);
   SI.NumPatchBytes = SD.NumPatchBytes.getValueOr(0);
 
@@ -917,15 +916,14 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
   // NB! The GC arguments are deliberately left empty.
 
   if (SDValue ReturnVal = LowerAsSTATEPOINT(SI)) {
-    const Instruction *Inst = CS.getInstruction();
-    ReturnVal = lowerRangeToAssertZExt(DAG, *Inst, ReturnVal);
-    setValue(Inst, ReturnVal);
+    ReturnVal = lowerRangeToAssertZExt(DAG, *Call, ReturnVal);
+    setValue(Call, ReturnVal);
   }
 }
 
 void SelectionDAGBuilder::LowerCallSiteWithDeoptBundle(
-    ImmutableCallSite CS, SDValue Callee, const BasicBlock *EHPadBB) {
-  LowerCallSiteWithDeoptBundleImpl(CS, Callee, EHPadBB,
+    const CallBase *Call, SDValue Callee, const BasicBlock *EHPadBB) {
+  LowerCallSiteWithDeoptBundleImpl(Call, Callee, EHPadBB,
                                    /* VarArgDisallowed = */ false,
                                    /* ForceVoidReturnTy  = */ false);
 }
@@ -985,11 +983,11 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   }
 
   SDValue SpillSlot =
-      DAG.getTargetFrameIndex(*DerivedPtrLocation, getFrameIndexTy());
+    DAG.getTargetFrameIndex(*DerivedPtrLocation, getFrameIndexTy());
 
-  // Be conservative: flush all pending loads
-  // TODO: Probably we can be less restrictive on this,
-  // it may allow more scheduling opportunities.
+  // Note: We know all of these reloads are independent, but don't bother to
+  // exploit that chain wise.  DAGCombine will happily do so as needed, so
+  // doing it here would be a small compile time win at most.
   SDValue Chain = getRoot();
 
   SDValue SpillLoad =
@@ -999,7 +997,6 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
                   MachinePointerInfo::getFixedStack(DAG.getMachineFunction(),
                                                     *DerivedPtrLocation));
 
-  // Again, be conservative, don't emit pending loads
   DAG.setRoot(SpillLoad.getValue(1));
 
   assert(SpillLoad.getNode());

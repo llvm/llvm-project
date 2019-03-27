@@ -38,7 +38,7 @@ body:             |
     %0(p0) = G_GLOBAL_VALUE @internal_global
     ; RW-DEFAULT-MOVT: [[G:%[0-9]+]]:gpr = MOVi32imm @internal_global
     ; RW-DEFAULT-NOMOVT: [[G:%[0-9]+]]:gpr = LDRi12 %const.0, 0, 14, $noreg :: (load 4 from constant-pool)
-    ; RWPI-MOVT: [[OFF:%[0-9]+]]:gpr = MOVi32imm {{.*}} @internal_global
+    ; RWPI-MOVT: [[OFF:%[0-9]+]]:gpr = MOVi32imm target-flags(arm-sbrel) @internal_global
     ; RWPI-NOMOVT: [[OFF:%[0-9]+]]:gpr = LDRi12 %const.0, 0, 14, $noreg :: (load 4 from constant-pool)
     ; RWPI: [[G:%[0-9]+]]:gpr = ADDrr $r9, [[OFF]], 14, $noreg, $noreg
 
@@ -72,7 +72,7 @@ body:             |
     %0(p0) = G_GLOBAL_VALUE @external_global
     ; RW-DEFAULT-MOVT: [[G:%[0-9]+]]:gpr = MOVi32imm @external_global
     ; RW-DEFAULT-NOMOVT: [[G:%[0-9]+]]:gpr = LDRi12 %const.0, 0, 14, $noreg :: (load 4 from constant-pool)
-    ; RWPI-MOVT: [[OFF:%[0-9]+]]:gpr = MOVi32imm {{.*}} @external_global
+    ; RWPI-MOVT: [[OFF:%[0-9]+]]:gpr = MOVi32imm target-flags(arm-sbrel) @external_global
     ; RWPI-NOMOVT: [[OFF:%[0-9]+]]:gpr = LDRi12 %const.0, 0, 14, $noreg :: (load 4 from constant-pool)
     ; RWPI: [[G:%[0-9]+]]:gpr = ADDrr $r9, [[OFF]], 14, $noreg, $noreg
 

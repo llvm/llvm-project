@@ -14,6 +14,8 @@
 #error "_LIBCPP_VERSION must be defined after including <version>"
 #endif
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }

@@ -1502,7 +1502,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       for (unsigned j = 0, je = VTs.size(); j != je; ++j) {
         // New store.
         if (VectorInfo[j] & PVF_FIRST) {
-          assert(StoreOperands.empty() && "Unfinished preceeding store.");
+          assert(StoreOperands.empty() && "Unfinished preceding store.");
           StoreOperands.push_back(Chain);
           StoreOperands.push_back(DAG.getConstant(paramCount, dl, MVT::i32));
           StoreOperands.push_back(DAG.getConstant(Offsets[j], dl, MVT::i32));

@@ -17,7 +17,7 @@
 
 class C {};
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::reference_wrapper<C>::type,
                                                        C>::value), "");
@@ -33,4 +33,6 @@ int main()
                                                        int*(C::*)(double*)>::value), "");
     static_assert((std::is_same<std::reference_wrapper<int (C::*)(double*) const volatile>::type,
                                                        int (C::*)(double*) const volatile>::value), "");
+
+  return 0;
 }

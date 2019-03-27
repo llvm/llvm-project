@@ -37,8 +37,11 @@ bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
   {
     llvm::raw_string_ostream OS(Result);
     llvm::symbolize::DIPrinter Printer(OS);
-    auto ResOrErr =
-        getDefaultSymbolizer()->symbolizeInlinedCode(ModuleName, ModuleOffset);
+    // TODO: it is neccessary to set proper SectionIndex here.
+    // object::SectionedAddress::UndefSection works for only absolute addresses.
+    auto ResOrErr = getDefaultSymbolizer()->symbolizeInlinedCode(
+        ModuleName,
+        {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
     Printer << (ResOrErr ? ResOrErr.get() : llvm::DIInliningInfo());
   }
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
@@ -51,8 +54,11 @@ bool __sanitizer_symbolize_data(const char *ModuleName, uint64_t ModuleOffset,
   {
     llvm::raw_string_ostream OS(Result);
     llvm::symbolize::DIPrinter Printer(OS);
-    auto ResOrErr =
-        getDefaultSymbolizer()->symbolizeData(ModuleName, ModuleOffset);
+    // TODO: it is neccessary to set proper SectionIndex here.
+    // object::SectionedAddress::UndefSection works for only absolute addresses.
+    auto ResOrErr = getDefaultSymbolizer()->symbolizeData(
+        ModuleName,
+        {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
     Printer << (ResOrErr ? ResOrErr.get() : llvm::DIGlobal());
   }
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",

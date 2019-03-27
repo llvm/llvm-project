@@ -55,7 +55,7 @@ protected:
   // VSX registers.
   uint64_t m_vsx_ppc64le[k_num_vsx_registers_ppc64le * 2];
 
-  std::unique_ptr<lldb_private::RegisterInfoInterface> m_register_info_ap;
+  std::unique_ptr<lldb_private::RegisterInfoInterface> m_register_info_up;
 
   // Determines if an extended register set is supported on the processor
   // running the inferior process.

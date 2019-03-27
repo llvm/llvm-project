@@ -122,6 +122,12 @@
 #ifndef OPENMP_MAP_MODIFIER_KIND
 #define OPENMP_MAP_MODIFIER_KIND(Name)
 #endif
+#ifndef OPENMP_TO_MODIFIER_KIND
+#define OPENMP_TO_MODIFIER_KIND(Name)
+#endif
+#ifndef OPENMP_FROM_MODIFIER_KIND
+#define OPENMP_FROM_MODIFIER_KIND(Name)
+#endif
 #ifndef OPENMP_DIST_SCHEDULE_KIND
 #define OPENMP_DIST_SCHEDULE_KIND(Name)
 #endif
@@ -576,6 +582,13 @@ OPENMP_MAP_KIND(release)
 // Map-type-modifiers for 'map' clause.
 OPENMP_MAP_MODIFIER_KIND(always)
 OPENMP_MAP_MODIFIER_KIND(close)
+OPENMP_MAP_MODIFIER_KIND(mapper)
+
+// Modifiers for 'to' clause.
+OPENMP_TO_MODIFIER_KIND(mapper)
+
+// Modifiers for 'from' clause.
+OPENMP_FROM_MODIFIER_KIND(mapper)
 
 // Clauses allowed for OpenMP directive 'taskloop'.
 OPENMP_TASKLOOP_CLAUSE(if)
@@ -933,6 +946,8 @@ OPENMP_DECLARE_MAPPER_CLAUSE(map)
 #undef OPENMP_FOR_SIMD_CLAUSE
 #undef OPENMP_MAP_KIND
 #undef OPENMP_MAP_MODIFIER_KIND
+#undef OPENMP_TO_MODIFIER_KIND
+#undef OPENMP_FROM_MODIFIER_KIND
 #undef OPENMP_DISTRIBUTE_CLAUSE
 #undef OPENMP_DIST_SCHEDULE_KIND
 #undef OPENMP_DEFAULTMAP_KIND

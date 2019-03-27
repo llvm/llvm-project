@@ -677,19 +677,67 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
 
 static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
                                        InstCombiner::BuilderTy &Builder) {
-  // Match an unsigned saturated add with constant.
-  Value *X = Cmp->getOperand(0);
-  const APInt *CmpC, *AddC;
-  if (!Cmp->hasOneUse() || Cmp->getPredicate() != ICmpInst::ICMP_ULT ||
-      !match(Cmp->getOperand(1), m_APInt(CmpC)) || !match(FVal, m_AllOnes()) ||
-      !match(TVal, m_Add(m_Specific(X), m_APInt(AddC))) || ~(*AddC) != *CmpC)
+  if (!Cmp->hasOneUse())
     return nullptr;
 
-  // Commute compare and select operands:
-  // select (icmp ult X, C), (add X, ~C), -1 -->
-  // select (icmp ugt X, C), -1, (add X, ~C)
-  Value *NewCmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, X, Cmp->getOperand(1));
-  return Builder.CreateSelect(NewCmp, FVal, TVal);
+  // Match unsigned saturated add with constant.
+  Value *Cmp0 = Cmp->getOperand(0);
+  Value *Cmp1 = Cmp->getOperand(1);
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  Value *X;
+  const APInt *C, *CmpC;
+  if (Pred == ICmpInst::ICMP_ULT &&
+      match(TVal, m_Add(m_Value(X), m_APInt(C))) && X == Cmp0 &&
+      match(FVal, m_AllOnes()) && match(Cmp1, m_APInt(CmpC)) && *CmpC == ~*C) {
+    // Commute compare predicate and select operands:
+    // (X u< ~C) ? (X + C) : -1 --> (X u> ~C) ? -1 : (X + C)
+    Value *NewCmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, X, Cmp1);
+    return Builder.CreateSelect(NewCmp, FVal, TVal);
+  }
+
+  // Match unsigned saturated add of 2 variables with an unnecessary 'not'.
+  // There are 8 commuted variants.
+  // Canonicalize -1 (saturated result) to true value of the select.
+  if (match(FVal, m_AllOnes())) {
+    std::swap(TVal, FVal);
+    std::swap(Cmp0, Cmp1);
+  }
+  if (!match(TVal, m_AllOnes()))
+    return nullptr;
+
+  // Canonicalize predicate to 'ULT'.
+  if (Pred == ICmpInst::ICMP_UGT) {
+    Pred = ICmpInst::ICMP_ULT;
+    std::swap(Cmp0, Cmp1);
+  }
+  if (Pred != ICmpInst::ICMP_ULT)
+    return nullptr;
+
+  // Match unsigned saturated add of 2 variables with an unnecessary 'not'.
+  Value *Y;
+  if (match(Cmp0, m_Not(m_Value(X))) &&
+      match(FVal, m_c_Add(m_Specific(X), m_Value(Y))) && Y == Cmp1) {
+    // Change the comparison to use the sum (false value of the select). That is
+    // a canonical pattern match form for uadd.with.overflow and eliminates a
+    // use of the 'not' op:
+    // (~X u< Y) ? -1 : (X + Y) --> ((X + Y) u< Y) ? -1 : (X + Y)
+    // (~X u< Y) ? -1 : (Y + X) --> ((Y + X) u< Y) ? -1 : (Y + X)
+    Value *NewCmp = Builder.CreateICmp(ICmpInst::ICMP_ULT, FVal, Y);
+    return Builder.CreateSelect(NewCmp, TVal, FVal);
+  }
+  // The 'not' op may be included in the sum but not the compare.
+  X = Cmp0;
+  Y = Cmp1;
+  if (match(FVal, m_c_Add(m_Not(m_Specific(X)), m_Specific(Y)))) {
+    // Change the comparison to use the sum (false value of the select). That is
+    // a canonical pattern match form for uadd.with.overflow:
+    // (X u< Y) ? -1 : (~X + Y) --> ((~X + Y) u< Y) ? -1 : (~X + Y)
+    // (X u< Y) ? -1 : (Y + ~X) --> ((Y + ~X) u< Y) ? -1 : (Y + ~X)
+    Value *NewCmp = Builder.CreateICmp(ICmpInst::ICMP_ULT, FVal, Y);
+    return Builder.CreateSelect(NewCmp, TVal, FVal);
+  }
+
+  return nullptr;
 }
 
 /// Attempt to fold a cttz/ctlz followed by a icmp plus select into a single
@@ -1515,6 +1563,43 @@ static Instruction *foldSelectCmpXchg(SelectInst &SI) {
   return nullptr;
 }
 
+static Instruction *moveAddAfterMinMax(SelectPatternFlavor SPF, Value *X,
+                                       Value *Y,
+                                       InstCombiner::BuilderTy &Builder) {
+  assert(SelectPatternResult::isMinOrMax(SPF) && "Expected min/max pattern");
+  bool IsUnsigned = SPF == SelectPatternFlavor::SPF_UMIN ||
+                    SPF == SelectPatternFlavor::SPF_UMAX;
+  // TODO: If InstSimplify could fold all cases where C2 <= C1, we could change
+  // the constant value check to an assert.
+  Value *A;
+  const APInt *C1, *C2;
+  if (IsUnsigned && match(X, m_NUWAdd(m_Value(A), m_APInt(C1))) &&
+      match(Y, m_APInt(C2)) && C2->uge(*C1) && X->hasNUses(2)) {
+    // umin (add nuw A, C1), C2 --> add nuw (umin A, C2 - C1), C1
+    // umax (add nuw A, C1), C2 --> add nuw (umax A, C2 - C1), C1
+    Value *NewMinMax = createMinMax(Builder, SPF, A,
+                                    ConstantInt::get(X->getType(), *C2 - *C1));
+    return BinaryOperator::CreateNUW(BinaryOperator::Add, NewMinMax,
+                                     ConstantInt::get(X->getType(), *C1));
+  }
+
+  if (!IsUnsigned && match(X, m_NSWAdd(m_Value(A), m_APInt(C1))) &&
+      match(Y, m_APInt(C2)) && X->hasNUses(2)) {
+    bool Overflow;
+    APInt Diff = C2->ssub_ov(*C1, Overflow);
+    if (!Overflow) {
+      // smin (add nsw A, C1), C2 --> add nsw (smin A, C2 - C1), C1
+      // smax (add nsw A, C1), C2 --> add nsw (smax A, C2 - C1), C1
+      Value *NewMinMax = createMinMax(Builder, SPF, A,
+                                      ConstantInt::get(X->getType(), Diff));
+      return BinaryOperator::CreateNSW(BinaryOperator::Add, NewMinMax,
+                                       ConstantInt::get(X->getType(), *C1));
+    }
+  }
+
+  return nullptr;
+}
+
 /// Reduce a sequence of min/max with a common operand.
 static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
                                         Value *RHS,
@@ -1912,6 +1997,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       if (Instruction *I = moveNotAfterMinMax(LHS, RHS))
         return I;
       if (Instruction *I = moveNotAfterMinMax(RHS, LHS))
+        return I;
+
+      if (Instruction *I = moveAddAfterMinMax(SPF, LHS, RHS, Builder))
         return I;
 
       if (Instruction *I = factorizeMinMaxTree(SPF, LHS, RHS, Builder))

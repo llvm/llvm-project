@@ -49,6 +49,7 @@ void BufferedStackTrace::Init(const uptr *pcs, uptr cnt, uptr extra_top_pc) {
 static inline uhwptr *GetCanonicFrame(uptr bp,
                                       uptr stack_top,
                                       uptr stack_bottom) {
+  CHECK_GT(stack_top, stack_bottom);
 #ifdef __arm__
   if (!IsValidFrame(bp, stack_top, stack_bottom)) return 0;
   uhwptr *bp_prev = (uhwptr *)bp;
@@ -67,10 +68,11 @@ static inline uhwptr *GetCanonicFrame(uptr bp,
 #endif
 }
 
-void BufferedStackTrace::FastUnwindStack(uptr pc, uptr bp, uptr stack_top,
-                                         uptr stack_bottom, u32 max_depth) {
-  const uptr kPageSize = GetPageSizeCached();
+void BufferedStackTrace::UnwindFast(uptr pc, uptr bp, uptr stack_top,
+                                    uptr stack_bottom, u32 max_depth) {
+  // TODO(yln): add arg sanity check for stack_top/stack_bottom
   CHECK_GE(max_depth, 2);
+  const uptr kPageSize = GetPageSizeCached();
   trace_buffer[0] = pc;
   size = 1;
   if (stack_top < 4096) return;  // Sanity check for stack top.

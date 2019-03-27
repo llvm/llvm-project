@@ -80,7 +80,7 @@ void test_noexcept_function_pointers() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   using AbominableFunc = void(...) const noexcept;
   //  Non-callable things
   {
@@ -212,4 +212,6 @@ int main() {
     static_assert(!std::is_nothrow_invocable_r_v<int, Fn, int>, "");
   }
   test_noexcept_function_pointers();
+
+  return 0;
 }

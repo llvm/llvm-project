@@ -81,7 +81,7 @@ FunctionPass *llvm::createWebAssemblyMemIntrinsicResults() {
 }
 
 // Replace uses of FromReg with ToReg if they are dominated by MI.
-static bool ReplaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
+static bool replaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
                                  unsigned FromReg, unsigned ToReg,
                                  const MachineRegisterInfo &MRI,
                                  MachineDominatorTree &MDT,
@@ -156,10 +156,10 @@ static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
     return false;
 
   StringRef Name(Op1.getSymbolName());
-  bool callReturnsInput = Name == TLI.getLibcallName(RTLIB::MEMCPY) ||
+  bool CallReturnsInput = Name == TLI.getLibcallName(RTLIB::MEMCPY) ||
                           Name == TLI.getLibcallName(RTLIB::MEMMOVE) ||
                           Name == TLI.getLibcallName(RTLIB::MEMSET);
-  if (!callReturnsInput)
+  if (!CallReturnsInput)
     return false;
 
   LibFunc Func;
@@ -171,7 +171,7 @@ static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
   if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
     report_fatal_error("Memory Intrinsic results: call to builtin function "
                        "with wrong signature, from/to mismatch");
-  return ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT, LIS);
+  return replaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT, LIS);
 }
 
 bool WebAssemblyMemIntrinsicResults::runOnMachineFunction(MachineFunction &MF) {
@@ -181,11 +181,11 @@ bool WebAssemblyMemIntrinsicResults::runOnMachineFunction(MachineFunction &MF) {
   });
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  MachineDominatorTree &MDT = getAnalysis<MachineDominatorTree>();
+  auto &MDT = getAnalysis<MachineDominatorTree>();
   const WebAssemblyTargetLowering &TLI =
       *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
   const auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  auto &LIS = getAnalysis<LiveIntervals>();
   bool Changed = false;
 
   // We don't preserve SSA form.

@@ -1541,6 +1541,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::SRL:
       case ISD::SETCC:
       case ISD::VSELECT:
+      case ISD::SIGN_EXTEND:
+      case ISD::ZERO_EXTEND:
       case ISD::SIGN_EXTEND_INREG:
         return SplitHvxPairOp(Op, DAG);
     }

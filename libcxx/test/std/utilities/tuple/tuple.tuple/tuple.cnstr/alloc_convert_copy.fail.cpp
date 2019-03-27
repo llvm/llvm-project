@@ -36,7 +36,9 @@ std::tuple<ExplicitCopy> non_const_explicit_copy_test() {
     // expected-error@-1 {{chosen constructor is explicit in copy-initialization}}
 }
 
-int main()
+int main(int, char**)
 {
 
+
+  return 0;
 }

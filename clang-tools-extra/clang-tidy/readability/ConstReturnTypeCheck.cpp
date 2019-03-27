@@ -22,8 +22,8 @@ namespace readability {
 
 // Finds the location of the qualifying `const` token in the `FunctionDecl`'s
 // return type. Returns `None` when the return type is not `const`-qualified or
-// `const` does not appear in `Def`'s source like when the type is an alias or a
-// macro.
+// `const` does not appear in `Def`'s source, like when the type is an alias or
+// a macro.
 static llvm::Optional<Token>
 findConstToRemove(const FunctionDecl *Def,
                   const MatchFinder::MatchResult &Result) {

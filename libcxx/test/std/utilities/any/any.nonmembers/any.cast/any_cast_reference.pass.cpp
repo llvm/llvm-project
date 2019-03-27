@@ -8,13 +8,7 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// XFAIL: availability=macosx10.13
-// XFAIL: availability=macosx10.12
-// XFAIL: availability=macosx10.11
-// XFAIL: availability=macosx10.10
-// XFAIL: availability=macosx10.9
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
+// XFAIL: dylib-has-no-bad_any_cast && !libcpp-no-exceptions
 
 // <any>
 
@@ -309,7 +303,7 @@ void test_cast_to_value() {
     assert(Type::count == 0);
 }
 
-int main() {
+int main(int, char**) {
     test_cast_is_not_noexcept();
     test_cast_return_type();
     test_cast_empty();
@@ -317,4 +311,6 @@ int main() {
     test_cast_to_reference<large>();
     test_cast_to_value<small>();
     test_cast_to_value<large>();
+
+  return 0;
 }

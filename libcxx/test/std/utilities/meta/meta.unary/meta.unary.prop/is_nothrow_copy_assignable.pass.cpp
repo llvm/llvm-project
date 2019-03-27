@@ -52,7 +52,7 @@ struct A
     A& operator=(const A&);
 };
 
-int main()
+int main(int, char**)
 {
     test_has_nothrow_assign<int&>();
     test_has_nothrow_assign<Union>();
@@ -68,4 +68,6 @@ int main()
     test_has_not_nothrow_assign<void>();
     test_has_not_nothrow_assign<A>();
 
+
+  return 0;
 }

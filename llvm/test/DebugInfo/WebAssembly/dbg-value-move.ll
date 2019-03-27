@@ -11,7 +11,7 @@
 ; All lifetime markers and attributes were removed.
 source_filename = "fib.c"
 ; void swap(int* a, int* b);
-; 
+;
 ; __attribute__ ((visibility ("default")))
 ; int fib(int n) {
 ;   int i, t, a = 0, b = 1;

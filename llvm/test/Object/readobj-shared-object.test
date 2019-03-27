@@ -128,61 +128,61 @@ ELF: ]
 
 ELF: Symbols [
 ELF:   Symbol {
-ELF:     Name: (0)
+ELF:     Name: .hash (0)
 ELF:     Binding: Local
 ELF:     Type: Section
 ELF:     Section: .hash
 ELF:   }
 ELF:   Symbol {
-ELF:     Name: (0)
+ELF:     Name: .dynsym (0)
 ELF:     Binding: Local
 ELF:     Type: Section
 ELF:     Section: .dynsym
 ELF:   }
 ELF:   Symbol {
-ELF:     Name: (0)
+ELF:     Name: .dynstr (0)
 ELF:     Binding: Local
 ELF:     Type: Section
 ELF:     Section: .dynstr
 ELF:   }
 ELF:   Symbol {
-ELF:     Name: (0)
+ELF:     Name: .text (0)
 ELF:     Binding: Local
 ELF:     Type: Section
 ELF:     Section: .text
 ELF:   }
 ELF:   Symbol {
-ELF:     Name: (0)
+ELF:     Name: .eh_frame (0)
 ELF:     Binding: Local
 ELF:     Type: Section
 ELF:     Section: .eh_frame
 ELF:   }
 ELF:   Symbol {
-ELF:     Name: (0)
+ELF:     Name: .tdata (0)
 ELF:     Binding: Local
 ELF:     Type: Section
 ELF:     Section: .tdata
 ELF:   }
 ELF:   Symbol {
-ELF:     Name: (0)
+ELF:     Name: .dynamic (0)
 ELF:     Binding: Local
 ELF:     Type: Section
 ELF:     Section: .dynamic
 ELF:   }
 ELF:   Symbol {
-ELF:     Name: (0)
+ELF:     Name: .got.plt (0)
 ELF:     Binding: Local
 ELF:     Type: Section
 ELF:     Section: .got.plt
 ELF:   }
 ELF:   Symbol {
-ELF:     Name: (0)
+ELF:     Name: .data (0)
 ELF:     Binding: Local
 ELF:     Type: Section
 ELF:     Section: .data
 ELF:   }
 ELF:   Symbol {
-ELF:     Name: (0)
+ELF:     Name: .bss (0)
 ELF:     Binding: Local
 ELF:     Type: Section
 ELF:     Section: .bss

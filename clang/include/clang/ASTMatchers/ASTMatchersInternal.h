@@ -1547,8 +1547,7 @@ inline bool ValueEqualsMatcher<FloatingLiteral, llvm::APFloat>::matchesNode(
 /// given matchers, if SourceT can be dynamically casted into TargetT.
 ///
 /// For example:
-///   const VariadicDynCastAllOfMatcher<
-///       Decl, CXXRecordDecl> record;
+///   const VariadicDynCastAllOfMatcher<Decl, CXXRecordDecl> record;
 /// Creates a functor record(...) that creates a Matcher<Decl> given
 /// a variable number of arguments of type Matcher<CXXRecordDecl>.
 /// The returned matcher matches if the given Decl can by dynamically

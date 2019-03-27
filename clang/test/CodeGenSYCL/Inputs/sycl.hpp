@@ -64,9 +64,11 @@ public:
   template <typename... propertyTN>
   property_list(propertyTN... props) {}
 
-  template <typename propertyT> bool has_property() const { return true; }
+  template <typename propertyT>
+  bool has_property() const { return true; }
 
-  template <typename propertyT> propertyT get_property() const {
+  template <typename propertyT>
+  propertyT get_property() const {
     return propertyT{};
   }
 
@@ -77,12 +79,14 @@ public:
 
 template <int dim>
 struct id {
-  template<typename ...T> id(T...args) {} // fake constructor
+  template <typename... T>
+  id(T... args) {} // fake constructor
 };
 
 template <int dim>
 struct range {
-  template<typename ...T> range(T...args) {} // fake constructor
+  template <typename... T>
+  range(T... args) {} // fake constructor
 };
 
 template <int dim>
@@ -91,35 +95,36 @@ struct nd_range {
 
 template <int dim>
 struct _ImplT {
-    range<dim> Range;
-    id<dim> Offset;
+  range<dim> AccessRange;
+  range<dim> MemRange;
+  id<dim> Offset;
 };
 
 template <typename dataT, int dimensions, access::mode accessmode,
-  access::target accessTarget = access::target::global_buffer,
-  access::placeholder isPlaceholder = access::placeholder::false_t>
-  class accessor {
+          access::target accessTarget = access::target::global_buffer,
+          access::placeholder isPlaceholder = access::placeholder::false_t>
+class accessor {
 
-  public:
-
-    void __init(__global dataT *Ptr, range<dimensions> Range,
-      id<dimensions> Offset) {
-    }
-    void use(void) const {}
-    template <typename ...T> void use(T...args)       { }
-    template <typename ...T> void use(T...args) const { }
-    _ImplT<dimensions> __impl;
-
+public:
+  void __init(__global dataT *Ptr, range<dimensions> AccessRange,
+              range<dimensions> MemRange, id<dimensions> Offset) {}
+  void use(void) const {}
+  template <typename... T>
+  void use(T... args) {}
+  template <typename... T>
+  void use(T... args) const {}
+  _ImplT<dimensions> __impl;
 };
 
 class kernel {};
 class context {};
 class device {};
-class event{};
+class event {};
 
 class queue {
 public:
-  template <typename T> event submit(T cgf) { return event{}; }
+  template <typename T>
+  event submit(T cgf) { return event{}; }
 
   void wait() {}
   void wait_and_throw() {}
@@ -177,7 +182,8 @@ public:
   using const_reference = const value_type &;
   using allocator_type = AllocatorT;
 
-  template <typename ...ParamTypes> buffer(ParamTypes...args) {} // fake constructor
+  template <typename... ParamTypes>
+  buffer(ParamTypes... args) {} // fake constructor
 
   buffer(const range<dimensions> &bufferRange,
          const property_list &propList = {}) {}
@@ -221,4 +227,3 @@ public:
 
 } // namespace sycl
 } // namespace cl
-

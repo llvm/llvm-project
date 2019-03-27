@@ -889,10 +889,9 @@ bool ArchSpec::ContainsOnlyArch(const llvm::Triple &normalized_triple) {
 }
 
 void ArchSpec::MergeFrom(const ArchSpec &other) {
-  if (TripleVendorIsUnspecifiedUnknown() &&
-      !other.TripleVendorIsUnspecifiedUnknown())
+  if (!TripleVendorWasSpecified() && other.TripleVendorWasSpecified())
     GetTriple().setVendor(other.GetTriple().getVendor());
-  if (TripleOSIsUnspecifiedUnknown() && !other.TripleOSIsUnspecifiedUnknown())
+  if (!TripleOSWasSpecified() && other.TripleVendorWasSpecified())
     GetTriple().setOS(other.GetTriple().getOS());
   if (GetTriple().getArch() == llvm::Triple::UnknownArch) {
     GetTriple().setArch(other.GetTriple().getArch());
@@ -903,10 +902,9 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
     if (other.GetCore() != eCore_uknownMach64)
       UpdateCore();
   }
-  if (GetTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
-      !TripleVendorWasSpecified()) {
-    if (other.TripleVendorWasSpecified())
-      GetTriple().setEnvironment(other.GetTriple().getEnvironment());
+  if (!TripleEnvironmentWasSpecified() &&
+      other.TripleEnvironmentWasSpecified()) {
+    GetTriple().setEnvironment(other.GetTriple().getEnvironment());
   }
   // If this and other are both arm ArchSpecs and this ArchSpec is a generic
   // "some kind of arm" spec but the other ArchSpec is a specific arm core,

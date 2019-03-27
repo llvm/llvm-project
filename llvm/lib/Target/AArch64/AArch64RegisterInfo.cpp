@@ -216,11 +216,8 @@ bool AArch64RegisterInfo::isReservedReg(const MachineFunction &MF,
 }
 
 bool AArch64RegisterInfo::isAnyArgRegReserved(const MachineFunction &MF) const {
-  // FIXME: Get the list of argument registers from TableGen.
-  static const MCPhysReg GPRArgRegs[] = { AArch64::X0, AArch64::X1, AArch64::X2,
-                                          AArch64::X3, AArch64::X4, AArch64::X5,
-                                          AArch64::X6, AArch64::X7 };
-  return std::any_of(std::begin(GPRArgRegs), std::end(GPRArgRegs),
+  return std::any_of(std::begin(*AArch64::GPR64argRegClass.MC),
+                     std::end(*AArch64::GPR64argRegClass.MC),
                      [this, &MF](MCPhysReg r){return isReservedReg(MF, r);});
 }
 

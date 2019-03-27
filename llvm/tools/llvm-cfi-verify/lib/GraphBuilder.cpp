@@ -93,17 +93,19 @@ void GraphResult::printToDOT(const FileAnalysis &Analysis,
 }
 
 GraphResult GraphBuilder::buildFlowGraph(const FileAnalysis &Analysis,
-                                         uint64_t Address) {
+                                         object::SectionedAddress Address) {
   GraphResult Result;
-  Result.BaseAddress = Address;
+  Result.BaseAddress = Address.Address;
   DenseSet<uint64_t> OpenedNodes;
 
   const auto &IndirectInstructions = Analysis.getIndirectInstructions();
 
-  if (IndirectInstructions.find(Address) == IndirectInstructions.end())
+  // check that IndirectInstructions contains specified Address
+  if (IndirectInstructions.find(Address) == IndirectInstructions.end()) {
     return Result;
+  }
 
-  buildFlowGraphImpl(Analysis, OpenedNodes, Result, Address, 0);
+  buildFlowGraphImpl(Analysis, OpenedNodes, Result, Address.Address, 0);
   return Result;
 }
 

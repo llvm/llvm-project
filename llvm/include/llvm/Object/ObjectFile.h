@@ -135,6 +135,30 @@ public:
   const ObjectFile *getObject() const;
 };
 
+struct SectionedAddress {
+  // TODO: constructors could be removed when C++14 would be adopted.
+  SectionedAddress() {}
+  SectionedAddress(uint64_t Addr, uint64_t SectIdx)
+      : Address(Addr), SectionIndex(SectIdx) {}
+
+  const static uint64_t UndefSection = UINT64_MAX;
+
+  uint64_t Address = 0;
+  uint64_t SectionIndex = UndefSection;
+};
+
+inline bool operator<(const SectionedAddress &LHS,
+                      const SectionedAddress &RHS) {
+  return std::tie(LHS.SectionIndex, LHS.Address) <
+         std::tie(RHS.SectionIndex, RHS.Address);
+}
+
+inline bool operator==(const SectionedAddress &LHS,
+                       const SectionedAddress &RHS) {
+  return std::tie(LHS.SectionIndex, LHS.Address) ==
+         std::tie(RHS.SectionIndex, RHS.Address);
+}
+
 /// This is a value type class that represents a single symbol in the list of
 /// symbols in the object file.
 class SymbolRef : public BasicSymbolRef {

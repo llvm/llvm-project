@@ -9,6 +9,7 @@
 #pragma once
 
 #include <CL/sycl/access/access.hpp>
+#include <CL/sycl/detail/os_util.hpp> // for DLL_LOCAL used in int. header
 
 namespace cl {
 namespace sycl {

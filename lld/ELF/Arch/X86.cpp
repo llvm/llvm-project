@@ -23,6 +23,7 @@ namespace {
 class X86 : public TargetInfo {
 public:
   X86();
+  int getTlsGdRelaxSkip(RelType Type) const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
@@ -58,7 +59,6 @@ X86::X86() {
   GotPltEntrySize = 4;
   PltEntrySize = 16;
   PltHeaderSize = 16;
-  TlsGdRelaxSkip = 2;
   TrapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3
 
   // Align to the non-PAE large page size (known as a superpage or huge page).
@@ -66,10 +66,20 @@ X86::X86() {
   DefaultImageBase = 0x400000;
 }
 
-static bool hasBaseReg(uint8_t ModRM) { return (ModRM & 0xc7) != 0x5; }
+int X86::getTlsGdRelaxSkip(RelType Type) const {
+  return 2;
+}
 
 RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
                         const uint8_t *Loc) const {
+  // There are 4 different TLS variable models with varying degrees of
+  // flexibility and performance. LocalExec and InitialExec models are fast but
+  // less-flexible models. If they are in use, we set DF_STATIC_TLS flag in the
+  // dynamic section to let runtime know about that.
+  if (Type == R_386_TLS_LE || Type == R_386_TLS_LE_32 || Type == R_386_TLS_IE ||
+      Type == R_386_TLS_GOTIE)
+    Config->HasStaticTlsModel = true;
+
   switch (Type) {
   case R_386_8:
   case R_386_16:
@@ -107,14 +117,14 @@ RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
     // load an GOT address to a register, which is usually %ebx.
     //
     // So, there are two ways to refer to symbol foo's GOT entry: foo@GOT or
-    // foo@GOT(%reg).
+    // foo@GOT(%ebx).
     //
     // foo@GOT is not usable in PIC. If we are creating a PIC output and if we
     // find such relocation, we should report an error. foo@GOT is resolved to
     // an *absolute* address of foo's GOT entry, because both GOT address and
     // foo's offset are known. In other words, it's G + A.
     //
-    // foo@GOT(%reg) needs to be resolved to a *relative* offset from a GOT to
+    // foo@GOT(%ebx) needs to be resolved to a *relative* offset from a GOT to
     // foo's GOT entry in the table, because GOT address is not known but foo's
     // offset in the table is known. It's G + A - GOT.
     //
@@ -122,12 +132,12 @@ RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
     // different use cases. In order to distinguish them, we have to read a
     // machine instruction.
     //
-    // The following code implements it. We assume that Loc[0] is the first
-    // byte of a displacement or an immediate field of a valid machine
+    // The following code implements it. We assume that Loc[0] is the first byte
+    // of a displacement or an immediate field of a valid machine
     // instruction. That means a ModRM byte is at Loc[-1]. By taking a look at
-    // the byte, we can determine whether the instruction is register-relative
-    // (i.e. it was generated for foo@GOT(%reg)) or absolute (i.e. foo@GOT).
-    return hasBaseReg(Loc[-1]) ? R_GOT_FROM_END : R_GOT;
+    // the byte, we can determine whether the instruction uses the operand as an
+    // absolute address (R_GOT) or a register-relative address (R_GOT_FROM_END).
+    return (Loc[-1] & 0xc7) == 0x5 ? R_GOT : R_GOT_FROM_END;
   case R_386_TLS_GOTIE:
     return R_GOT_FROM_END;
   case R_386_GOTOFF:
@@ -139,7 +149,9 @@ RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
   case R_386_NONE:
     return R_NONE;
   default:
-    return R_INVALID;
+    error(getErrorLocation(Loc) + "unknown relocation (" + Twine(Type) +
+          ") against symbol " + toString(S));
+    return R_NONE;
   }
 }
 
@@ -308,7 +320,7 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write32le(Loc, Val);
     break;
   default:
-    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    llvm_unreachable("unknown relocation");
   }
 }
 

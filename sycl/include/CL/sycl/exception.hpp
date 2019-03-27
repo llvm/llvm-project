@@ -38,11 +38,17 @@ protected:
       : msg(std::string(msg) + " " +
             ((cl_err == CL_SUCCESS) ? "" : OCL_CODE_TO_STR(cl_err))),
         cl_err(cl_err), Context(Context) {}
+
+  exception(const std::string &msg, int cl_err = CL_SUCCESS,
+            shared_ptr_class<context> Context = nullptr)
+      : exception(msg.c_str(), cl_err, Context) {}
 };
 
-class exception_list {
+// Forward declaration
+namespace detail { class queue_impl; }
+
+class exception_list : private vector_class<exception_ptr_class> {
   using list_t = vector_class<exception_ptr_class>;
-  list_t list;
 
 public:
   using value_type = exception_ptr_class;
@@ -52,28 +58,15 @@ public:
   using iterator = list_t::const_iterator;
   using const_iterator = list_t::const_iterator;
 
-  ::size_t size() const { return list.size(); }
-
-  void clear() noexcept {
-    list.clear();
-  }
-
-  void push_back(const_reference value) {
-    list.push_back(value);
-  }
-
-  void push_back(value_type&& value) {
-    list.push_back(std::move(value));
-  }
+  using vector_class<exception_ptr_class>::size;
 
   /** first asynchronous exception */
-  iterator begin() const { return list.begin(); }
+  using vector_class<exception_ptr_class>::begin;
+
   /** refer to past-the-end last asynchronous exception */
-  iterator end() const { return list.end(); }
+  using vector_class<exception_ptr_class>::end;
 
-  bool operator==(const exception_list &rhs) const { return list == rhs.list; }
-
-  bool operator!=(const exception_list &rhs) const { return !(*this == rhs); }
+  friend class detail::queue_impl;
 };
 
 using async_handler = function_class<void(cl::sycl::exception_list)>;
@@ -82,6 +75,8 @@ class runtime_error : public exception {
 public:
   runtime_error(const char *str, cl_int err = CL_SUCCESS)
       : exception(str, err) {}
+  runtime_error(const std::string &str, cl_int err = CL_SUCCESS)
+      : runtime_error(str.c_str(), err) {}
 };
 class kernel_error : public runtime_error {
   using runtime_error::runtime_error;

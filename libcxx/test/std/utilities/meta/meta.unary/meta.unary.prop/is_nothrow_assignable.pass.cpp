@@ -45,7 +45,7 @@ struct C
     void operator=(C&);  // not const
 };
 
-int main()
+int main(int, char**)
 {
     test_is_nothrow_assignable<int&, int&> ();
     test_is_nothrow_assignable<int&, int> ();
@@ -58,4 +58,6 @@ int main()
     test_is_not_nothrow_assignable<B, A> ();
     test_is_not_nothrow_assignable<A, B> ();
     test_is_not_nothrow_assignable<C, C&> ();
+
+  return 0;
 }

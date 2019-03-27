@@ -33,7 +33,7 @@ struct A
     }
 };
 
-int main()
+int main(int, char**)
 {
   {
     A<int> a;
@@ -45,4 +45,6 @@ int main()
     Alloc a;
     assert(std::allocator_traits<Alloc >::allocate(a, 10) == reinterpret_cast<VT*>(static_cast<std::uintptr_t>(0xDEADBEEF)));
   }
+
+  return 0;
 }

@@ -40,9 +40,13 @@ typedef unsigned short __v32hu __attribute__((__vector_size__(64)));
 typedef unsigned long long __v8du __attribute__((__vector_size__(64)));
 typedef unsigned int __v16su __attribute__((__vector_size__(64)));
 
-typedef float __m512 __attribute__((__vector_size__(64)));
-typedef double __m512d __attribute__((__vector_size__(64)));
-typedef long long __m512i __attribute__((__vector_size__(64)));
+typedef float __m512 __attribute__((__vector_size__(64), __aligned__(64)));
+typedef double __m512d __attribute__((__vector_size__(64), __aligned__(64)));
+typedef long long __m512i __attribute__((__vector_size__(64), __aligned__(64)));
+
+typedef float __m512_u __attribute__((__vector_size__(64), __aligned__(1)));
+typedef double __m512d_u __attribute__((__vector_size__(64), __aligned__(1)));
+typedef long long __m512i_u __attribute__((__vector_size__(64), __aligned__(1)));
 
 typedef unsigned char __mmask8;
 typedef unsigned short __mmask16;
@@ -4324,7 +4328,7 @@ static __inline __m512i __DEFAULT_FN_ATTRS512
 _mm512_loadu_si512 (void const *__P)
 {
   struct __loadu_si512 {
-    __m512i __v;
+    __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_si512*)__P)->__v;
 }
@@ -4333,7 +4337,7 @@ static __inline __m512i __DEFAULT_FN_ATTRS512
 _mm512_loadu_epi32 (void const *__P)
 {
   struct __loadu_epi32 {
-    __m512i __v;
+    __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi32*)__P)->__v;
 }
@@ -4360,7 +4364,7 @@ static __inline __m512i __DEFAULT_FN_ATTRS512
 _mm512_loadu_epi64 (void const *__P)
 {
   struct __loadu_epi64 {
-    __m512i __v;
+    __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi64*)__P)->__v;
 }
@@ -4420,7 +4424,7 @@ static __inline __m512d __DEFAULT_FN_ATTRS512
 _mm512_loadu_pd(void const *__p)
 {
   struct __loadu_pd {
-    __m512d __v;
+    __m512d_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_pd*)__p)->__v;
 }
@@ -4429,7 +4433,7 @@ static __inline __m512 __DEFAULT_FN_ATTRS512
 _mm512_loadu_ps(void const *__p)
 {
   struct __loadu_ps {
-    __m512 __v;
+    __m512_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_ps*)__p)->__v;
 }
@@ -4504,7 +4508,7 @@ static __inline void __DEFAULT_FN_ATTRS512
 _mm512_storeu_epi64 (void *__P, __m512i __A)
 {
   struct __storeu_epi64 {
-    __m512i __v;
+    __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi64*)__P)->__v = __A;
 }
@@ -4520,7 +4524,7 @@ static __inline void __DEFAULT_FN_ATTRS512
 _mm512_storeu_si512 (void *__P, __m512i __A)
 {
   struct __storeu_si512 {
-    __m512i __v;
+    __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_si512*)__P)->__v = __A;
 }
@@ -4529,7 +4533,7 @@ static __inline void __DEFAULT_FN_ATTRS512
 _mm512_storeu_epi32 (void *__P, __m512i __A)
 {
   struct __storeu_epi32 {
-    __m512i __v;
+    __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi32*)__P)->__v = __A;
 }
@@ -4551,7 +4555,7 @@ static __inline void __DEFAULT_FN_ATTRS512
 _mm512_storeu_pd(void *__P, __m512d __A)
 {
   struct __storeu_pd {
-    __m512d __v;
+    __m512d_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_pd*)__P)->__v = __A;
 }
@@ -4567,7 +4571,7 @@ static __inline void __DEFAULT_FN_ATTRS512
 _mm512_storeu_ps(void *__P, __m512 __A)
 {
   struct __storeu_ps {
-    __m512 __v;
+    __m512_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_ps*)__P)->__v = __A;
 }

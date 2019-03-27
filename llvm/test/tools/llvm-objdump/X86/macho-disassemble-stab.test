@@ -1,0 +1,3 @@
+# RUN: llvm-objdump -m -disassemble %p/Inputs/macho-disassemble-stab-x86_64 | FileCheck %s
+
+CHECK: (__TEXT,__text) section

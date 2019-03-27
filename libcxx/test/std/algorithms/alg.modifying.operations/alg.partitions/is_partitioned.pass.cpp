@@ -35,7 +35,7 @@ TEST_CONSTEXPR bool test_constexpr() {
 #endif
 
 
-int main() {
+int main(int, char**) {
   {
     const int ia[] = {1, 2, 3, 4, 5, 6};
     unary_counting_predicate<is_odd, int> pred((is_odd()));
@@ -94,4 +94,6 @@ int main() {
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
 #endif
+
+  return 0;
 }

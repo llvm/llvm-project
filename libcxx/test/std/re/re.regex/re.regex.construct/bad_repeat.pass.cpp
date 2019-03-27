@@ -29,7 +29,7 @@ static bool error_badrepeat_thrown(const char *pat)
     return result;
 }
 
-int main()
+int main(int, char**)
 {
     assert(error_badrepeat_thrown("?a"));
     assert(error_badrepeat_thrown("*a"));
@@ -40,4 +40,6 @@ int main()
     assert(error_badrepeat_thrown("*(a+)"));
     assert(error_badrepeat_thrown("+(a+)"));
     assert(error_badrepeat_thrown("{(a+)"));
+
+  return 0;
 }

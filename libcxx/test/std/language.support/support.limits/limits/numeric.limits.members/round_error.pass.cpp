@@ -26,7 +26,7 @@ test(T expected)
     assert(std::numeric_limits<const volatile T>::round_error() == expected);
 }
 
-int main()
+int main(int, char**)
 {
     test<bool>(false);
     test<char>(0);
@@ -55,4 +55,6 @@ int main()
     test<float>(0.5);
     test<double>(0.5);
     test<long double>(0.5);
+
+  return 0;
 }

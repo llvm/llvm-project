@@ -15,9 +15,11 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(std::char_traits<wchar_t>::to_int_type(L'a') == L'a');
     assert(std::char_traits<wchar_t>::to_int_type(L'A') == L'A');
     assert(std::char_traits<wchar_t>::to_int_type(0) == 0);
+
+  return 0;
 }

@@ -178,8 +178,6 @@ private:
 
   std::unique_ptr<llvm::LLVMContext>
       m_llvm_context; ///< The LLVM context to generate IR into
-  std::unique_ptr<clang::FileManager>
-      m_file_manager; ///< The Clang file manager object used by the compiler
   std::unique_ptr<clang::CompilerInstance>
       m_compiler; ///< The Clang compiler used to parse expressions into IR
   std::unique_ptr<clang::CodeGenerator>

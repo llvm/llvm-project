@@ -29,7 +29,7 @@ struct A
 
 int A::constructed = 0;
 
-int main()
+int main(int, char**)
 {
     {
         std::exception_ptr p = std::current_exception();
@@ -270,4 +270,6 @@ int main()
         assert(p != nullptr);
     }
     assert(A::constructed == 0);
+
+  return 0;
 }

@@ -173,6 +173,7 @@ public:
     case Deallocator:
       return cast<FunctionDecl>(D)->getReturnType();
     }
+    llvm_unreachable("Unknown AnyCall::Kind");
   }
 
   /// \returns Function identifier if it is a named declaration,

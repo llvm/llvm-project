@@ -23,6 +23,7 @@ class ExprFormattersTestCase(TestBase):
                                 '// Stop here')
 
     @skipIfFreeBSD  # llvm.org/pr24691 skipping to avoid crashing the test runner
+    @expectedFailureNetBSD
     @expectedFailureAll(
         oslist=['freebsd'],
         bugnumber='llvm.org/pr19011 Newer Clang omits C1 complete object constructor')

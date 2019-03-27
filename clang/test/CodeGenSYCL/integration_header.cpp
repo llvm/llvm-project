@@ -1,4 +1,4 @@
-// RUN: %clang --sycl -Xclang -fsycl-int-header=%t.h %s -c -o %T/kernel.spv
+// RUN: %clang -I %S/Inputs --sycl -Xclang -fsycl-int-header=%t.h %s -c -o %T/kernel.spv
 // RUN: FileCheck -input-file=%t.h %s
 //
 // CHECK: #include <CL/sycl/detail/kernel_desc.hpp>
@@ -25,21 +25,25 @@
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2014, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 5 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 6 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 6 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 7 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 7 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 8 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 9 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- _ZTSN16second_namespace13second_kernelIcEE
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 5 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 6 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- _ZTS12third_kernelILi1Ei5pointIZ4mainE1XEE
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 5 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 6 },
 // CHECK-EMPTY:
 // CHECK-NEXT: };
 //
@@ -48,66 +52,7 @@
 // CHECK: template <> struct KernelInfo<::second_namespace::second_kernel<char>> {
 // CHECK: template <> struct KernelInfo<::third_kernel<1, int, ::point<X> >> {
 
-namespace cl {
-namespace sycl {
-namespace access {
-
-enum class target {
-  global_buffer = 2014,
-  constant_buffer,
-  local,
-  image,
-  host_buffer,
-  host_image,
-  image_array
-};
-
-enum class mode {
-  read = 1024,
-  write,
-  read_write,
-  discard_write,
-  discard_read_write,
-  atomic
-};
-
-enum class placeholder { false_t,
-                         true_t };
-
-enum class address_space : int {
-  private_space = 0,
-  global_space,
-  constant_space,
-  local_space
-};
-} // namespace access
-
-struct range {
-};
-
-struct id {
-};
-
-struct _ImplT {
-  range Range;
-  id Offset;
-};
-
-template <typename dataT, int dimensions, access::mode accessmode,
-          access::target accessTarget = access::target::global_buffer,
-          access::placeholder isPlaceholder = access::placeholder::false_t>
-class accessor {
-
-public:
-  void use(void) const {}
-  void __init(dataT *Ptr, range Range, id Offset) {
-  }
-
-  _ImplT __impl; // compiler looks for this field
-
-};
-} // namespace sycl
-} // namespace cl
+#include "sycl.hpp"
 
 template <typename KernelName, typename KernelType>
 __attribute__((sycl_kernel)) void kernel_single_task(KernelType kernelFunc) {

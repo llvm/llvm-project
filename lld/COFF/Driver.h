@@ -96,6 +96,8 @@ private:
   // Library search path. The first element is always "" (current directory).
   std::vector<StringRef> SearchPaths;
 
+  void maybeExportMinGWSymbols(const llvm::opt::InputArgList &Args);
+
   // We don't want to add the same file more than once.
   // Files are uniquified by their filesystem and file number.
   std::set<llvm::sys::fs::UniqueID> VisitedFiles;
@@ -155,6 +157,9 @@ void parseAlternateName(StringRef);
 void parseMerge(StringRef);
 void parseSection(StringRef);
 void parseAligncomm(StringRef);
+
+// Parses a string in the form of "[:<integer>]"
+void parseFunctionPadMin(llvm::opt::Arg *A, llvm::COFF::MachineTypes Machine);
 
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 void parseManifest(StringRef Arg);

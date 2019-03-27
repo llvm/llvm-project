@@ -1,10 +1,28 @@
 // RUN: %clang_cc1 -fcxx-exceptions -fsycl-is-device -Wno-return-type -verify -fsyntax-only -x c++ -emit-llvm-only -std=c++17 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsycl-is-device -fno-sycl-allow-func-ptr -Wno-return-type -verify -fsyntax-only -x c++ -emit-llvm-only -std=c++17 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsycl-is-device -DALLOW_FP=1 -fsycl-allow-func-ptr -Wno-return-type -verify -fsyntax-only -x c++ -emit-llvm-only -std=c++17 %s
 
 
 namespace std {
   class type_info;
   typedef __typeof__(sizeof(int)) size_t;
 }
+namespace Check_User_Operators {
+class Fraction
+{
+    int gcd(int a, int b) { return b == 0 ? a : gcd(b, a % b); }
+    int n, d;
+public:
+    Fraction(int n, int d = 1) : n(n/gcd(n, d)), d(d/gcd(n, d)) { }
+    int num() const { return n; }
+    int den() const { return d; }
+};
+bool operator==(const Fraction& lhs, const Fraction& rhs)
+{
+    // expected-error@+1 {{SYCL kernel cannot allocate storage}}
+    new int;
+    return lhs.num() == rhs.num() && lhs.den() == rhs.den();
+}}
 
 namespace Check_VLA_Restriction {
 void no_restriction(int p) {
@@ -40,6 +58,8 @@ struct OverloadedNewDelete {
 };
 
 bool isa_B(A *a) {
+  Check_User_Operators::Fraction f1(3, 8), f2(1, 2), f3(10, 2);
+  if (f1 == f2) return false;
 
   Check_VLA_Restriction::restriction(7);
   // expected-error@+1 {{SYCL kernel cannot allocate storage}}
@@ -104,7 +124,11 @@ void usage(  myFuncDef functionPtr ) {
 
   eh_not_ok();
 
-  // expected-error@+1 {{SYCL kernel cannot call through a function pointer}}
+#if ALLOW_FP
+  // No error message for function pointer.
+#else
+  // expected-error@+2 {{SYCL kernel cannot call through a function pointer}}
+#endif
   if ((*functionPtr)(1,2))
   // expected-note@+3{{used here}}
   // expected-error@+2 {{SYCL kernel cannot use a global variable}}

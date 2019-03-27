@@ -72,9 +72,10 @@ public:
     OffloadBundlingJobClass,
     OffloadUnbundlingJobClass,
     OffloadWrappingJobClass,
+    SPIRVTranslatorJobClass,
 
     JobClassFirst = PreprocessJobClass,
-    JobClassLast = OffloadWrappingJobClass
+    JobClassLast = SPIRVTranslatorJobClass
   };
 
   // The offloading kind determines if this action is binded to a particular
@@ -623,6 +624,17 @@ public:
 
   static bool classof(const Action *A) {
     return A->getKind() == OffloadWrappingJobClass;
+  }
+};
+
+class SPIRVTranslatorJobAction : public JobAction {
+  void anchor() override;
+
+public:
+  SPIRVTranslatorJobAction(Action *Input, types::ID OutputType);
+
+  static bool classof(const Action *A) {
+    return A->getKind() == SPIRVTranslatorJobClass;
   }
 };
 

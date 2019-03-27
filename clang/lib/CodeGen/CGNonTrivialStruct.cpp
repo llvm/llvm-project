@@ -413,8 +413,7 @@ template <class Derived> struct GenFuncBase {
     if (Offset.getQuantity() == 0)
       return Addr;
     Addr = CGF->Builder.CreateBitCast(Addr, CGF->CGM.Int8PtrTy);
-    Addr = CGF->Builder.CreateConstInBoundsGEP(Addr, Offset.getQuantity(),
-                                               CharUnits::One());
+    Addr = CGF->Builder.CreateConstInBoundsGEP(Addr, Offset.getQuantity());
     return CGF->Builder.CreateBitCast(Addr, CGF->CGM.Int8PtrPtrTy);
   }
 

@@ -11,8 +11,10 @@
 #include "CanonicalIncludes.h"
 #include "CodeComplete.h"
 #include "CodeCompletionStrings.h"
+#include "ExpectedTypes.h"
 #include "Logger.h"
 #include "SourceCode.h"
+#include "SymbolLocation.h"
 #include "URI.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -566,18 +568,13 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   std::string Documentation =
       formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion,
                                               /*CommentsFromHeaders=*/true));
-  // For symbols not indexed for completion (class members), we also store their
-  // docs in the index, because Sema doesn't load the docs from the preamble, we
-  // rely on the index to get the docs.
-  // FIXME: this can be optimized by only storing the docs in dynamic index --
-  // dynamic index should index these symbols when Sema completes a member
-  // completion.
-  S.Documentation = Documentation;
   if (!(S.Flags & Symbol::IndexedForCodeCompletion)) {
+    if (Opts.StoreAllDocumentation)
+      S.Documentation = Documentation;
     Symbols.insert(S);
     return Symbols.find(S.ID);
   }
-
+  S.Documentation = Documentation;
   std::string Signature;
   std::string SnippetSuffix;
   getSignature(*CCS, &Signature, &SnippetSuffix);

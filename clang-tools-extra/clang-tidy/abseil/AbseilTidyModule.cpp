@@ -16,12 +16,14 @@
 #include "DurationFactoryFloatCheck.h"
 #include "DurationFactoryScaleCheck.h"
 #include "DurationSubtractionCheck.h"
+#include "DurationUnnecessaryConversionCheck.h"
 #include "FasterStrsplitDelimiterCheck.h"
 #include "NoInternalDependenciesCheck.h"
 #include "NoNamespaceCheck.h"
 #include "RedundantStrcatCallsCheck.h"
 #include "StringFindStartswithCheck.h"
 #include "StrCatAppendCheck.h"
+#include "TimeSubtractionCheck.h"
 #include "UpgradeDurationConversionsCheck.h"
 
 namespace clang {
@@ -45,6 +47,8 @@ public:
         "abseil-duration-factory-scale");
     CheckFactories.registerCheck<DurationSubtractionCheck>(
         "abseil-duration-subtraction");
+    CheckFactories.registerCheck<DurationUnnecessaryConversionCheck>(
+        "abseil-duration-unnecessary-conversion");
     CheckFactories.registerCheck<FasterStrsplitDelimiterCheck>(
         "abseil-faster-strsplit-delimiter");
     CheckFactories.registerCheck<NoInternalDependenciesCheck>(
@@ -56,6 +60,8 @@ public:
         "abseil-str-cat-append");
     CheckFactories.registerCheck<StringFindStartswithCheck>(
         "abseil-string-find-startswith");
+    CheckFactories.registerCheck<TimeSubtractionCheck>(
+        "abseil-time-subtraction");
     CheckFactories.registerCheck<UpgradeDurationConversionsCheck>(
         "abseil-upgrade-duration-conversions");
   }

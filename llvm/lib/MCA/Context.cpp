@@ -42,7 +42,8 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
   auto Fetch = llvm::make_unique<EntryStage>(SrcMgr);
   auto Dispatch = llvm::make_unique<DispatchStage>(STI, MRI, Opts.DispatchWidth,
                                                    *RCU, *PRF);
-  auto Execute = llvm::make_unique<ExecuteStage>(*HWS);
+  auto Execute =
+      llvm::make_unique<ExecuteStage>(*HWS, Opts.EnableBottleneckAnalysis);
   auto Retire = llvm::make_unique<RetireStage>(*RCU, *PRF);
 
   // Pass the ownership of all the hardware units to this Context.

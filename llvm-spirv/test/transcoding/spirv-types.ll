@@ -44,12 +44,14 @@ target triple = "spir-unknown-unknown"
 
 ; CHECK-LLVM-DAG: %opencl.pipe_ro_t = type opaque
 ; CHECK-LLVM-DAG: %opencl.pipe_wo_t = type opaque
-; CHECK-LLVM-DAG: %opencl.image3d_t = type opaque
-; CHECK-LLVM_DAG: %opencl.image2d_depth_t = type opaque
-; CHECK-LLVM-DAG: %opencl.image2d_array_t = type opaque
-; CHECK-LLVM-DAG: %opencl.image1d_buffer_t = type opaque
-; CHECK-LLVM-DAG: %opencl.image1d_t = type opaque
-; CHECK-LLVM-DAG: %opencl.image2d_t = type opaque
+; CHECK-LLVM-DAG: %opencl.image3d_ro_t = type opaque
+; CHECK-LLVM_DAG: %opencl.image2d_depth_ro_t = type opaque
+; CHECK-LLVM-DAG: %opencl.image2d_array_ro_t = type opaque
+; CHECK-LLVM-DAG: %opencl.image1d_buffer_ro_t = type opaque
+; CHECK-LLVM-DAG: %opencl.image1d_ro_t = type opaque
+; CHECK-LLVM-DAG: %opencl.image1d_wo_t = type opaque
+; CHECK-LLVM-DAG: %opencl.image2d_ro_t = type opaque
+; CHECK-LLVM-DAG: %opencl.image2d_rw_t = type opaque
 ; CHECK-LLVM-DAG: %opencl.clk_event_t = type opaque
 ; CHECK-LLVM-DAG: %opencl.event_t = type opaque
 ; CHECK-LLVM-DAG: %opencl.queue_t = type opaque
@@ -57,14 +59,14 @@ target triple = "spir-unknown-unknown"
 
 %spirv.Pipe._0 = type opaque ; read_only pipe
 %spirv.Pipe._1 = type opaque ; write_only pipe
-%spirv.Image._void_0_0_0_0_0_0_0 = type opaque ; read_only image1d_t
-%spirv.Image._int_1_0_0_0_0_0_0 = type opaque ; read_only image2d_t
-%spirv.Image._uint_2_0_0_0_0_0_0 = type opaque ; read_only image3d_t
-%spirv.Image._float_1_1_0_0_0_0_0 = type opaque; read_only image2d_depth_t
-%spirv.Image._half_1_0_1_0_0_0_0 = type opaque ; read_only image2d_array_t
-%spirv.Image._float_5_0_0_0_0_0_0 = type opaque ; read_only image1d_buffer_t
-%spirv.Image._void_0_0_0_0_0_0_1 = type opaque ; write_only image1d_t
-%spirv.Image._void_1_0_0_0_0_0_2 = type opaque ; read_write image2d_t
+%spirv.Image._void_0_0_0_0_0_0_0 = type opaque ; read_only image1d_ro_t
+%spirv.Image._int_1_0_0_0_0_0_0 = type opaque ; read_only image2d_ro_t
+%spirv.Image._uint_2_0_0_0_0_0_0 = type opaque ; read_only image3d_ro_t
+%spirv.Image._float_1_1_0_0_0_0_0 = type opaque; read_only image2d_depth_ro_t
+%spirv.Image._half_1_0_1_0_0_0_0 = type opaque ; read_only image2d_array_ro_t
+%spirv.Image._float_5_0_0_0_0_0_0 = type opaque ; read_only image1d_buffer_ro_t
+%spirv.Image._void_0_0_0_0_0_0_1 = type opaque ; write_only image1d_wo_t
+%spirv.Image._void_1_0_0_0_0_0_2 = type opaque ; read_write image2d_rw_t
 %spirv.DeviceEvent          = type opaque ; clk_event_t
 %spirv.Event                = type opaque ; event_t
 %spirv.Queue                = type opaque ; queue_t
@@ -86,13 +88,13 @@ target triple = "spir-unknown-unknown"
 ; CHECK-LLVM:        define spir_kernel void @foo(
 ; CHECK-LLVM-SAME:     %opencl.pipe_ro_t addrspace(1)* nocapture %a,
 ; CHECK-LLVM-SAME:     %opencl.pipe_wo_t addrspace(1)* nocapture %b,
-; CHECK-LLVM-SAME:     %opencl.image1d_t addrspace(1)* nocapture %c1,
-; CHECK-LLVM-SAME:     %opencl.image2d_t addrspace(1)* nocapture %d1,
-; CHECK-LLVM-SAME:     %opencl.image3d_t addrspace(1)* nocapture %e1,
-; CHECK-LLVM-SAME:     %opencl.image2d_array_t addrspace(1)* nocapture %f1,
-; CHECK-LLVM-SAME:     %opencl.image1d_buffer_t addrspace(1)* nocapture %g1,
-; CHECK-LLVM-SAME:     %opencl.image1d_t addrspace(1)* nocapture %c2,
-; CHECK-LLVM-SAME:     %opencl.image2d_t addrspace(1)* nocapture %d3)
+; CHECK-LLVM-SAME:     %opencl.image1d_ro_t addrspace(1)* nocapture %c1,
+; CHECK-LLVM-SAME:     %opencl.image2d_ro_t addrspace(1)* nocapture %d1,
+; CHECK-LLVM-SAME:     %opencl.image3d_ro_t addrspace(1)* nocapture %e1,
+; CHECK-LLVM-SAME:     %opencl.image2d_array_ro_t addrspace(1)* nocapture %f1,
+; CHECK-LLVM-SAME:     %opencl.image1d_buffer_ro_t addrspace(1)* nocapture %g1,
+; CHECK-LLVM-SAME:     %opencl.image1d_wo_t addrspace(1)* nocapture %c2,
+; CHECK-LLVM-SAME:     %opencl.image2d_rw_t addrspace(1)* nocapture %d3)
 ; CHECK-LLVM-SAME:     !kernel_arg_addr_space [[AS:![0-9]+]]
 ; CHECK-LLVM-SAME:     !kernel_arg_access_qual [[AQ:![0-9]+]]
 ; CHECK-LLVM-SAME:     !kernel_arg_type [[TYPE:![0-9]+]]
@@ -141,9 +143,9 @@ define spir_func void @bar(
 ; CHECK-SPIRV: 7 ImageSampleExplicitLod {{[0-9]+}} {{[0-9]+}} [[SAMPIMG_VAR]]
 
 ; CHECK-LLVM: define spir_func void @test_sampler(
-; CHECK-LLVM:  %opencl.image2d_depth_t addrspace(1)* %srcimg.coerce,
-; CHECK-LLVM:  i32 %s.coerce)
-; CHECK-LLVM:  call spir_func float @_Z11read_imagef16ocl_image2ddepth11ocl_samplerDv4_if(%opencl.image2d_depth_t addrspace(1)* %srcimg.coerce, i32 %s.coerce, <4 x i32> zeroinitializer, float 1.000000e+00)
+; CHECK-LLVM:  %opencl.image2d_depth_ro_t addrspace(1)* %srcimg.coerce,
+; CHECK-LLVM:  %opencl.sampler_t* %s.coerce)
+; CHECK-LLVM:  call spir_func float @_Z11read_imagef20ocl_image2d_depth_ro11ocl_samplerDv4_if(%opencl.image2d_depth_ro_t addrspace(1)* %srcimg.coerce, %opencl.sampler_t* %s.coerce, <4 x i32> zeroinitializer, float 1.000000e+00)
 
 define spir_func void @test_sampler(%spirv.Image._float_1_1_0_0_0_0_0 addrspace(1)* %srcimg.coerce,
                                     %spirv.Sampler addrspace(1)* %s.coerce) {

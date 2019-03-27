@@ -2142,9 +2142,6 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup))
     ++MBBI;
 
-  if (MBBI->isTerminator())
-    return;
-
   // Create an UnwindHelp object.
   int UnwindHelpFI =
       MFI.CreateStackObject(/*size*/8, /*alignment*/16, false);
@@ -2152,8 +2149,10 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   // We need to store -2 into the UnwindHelp object at the start of the
   // function.
   DebugLoc DL;
-  RS->enterBasicBlock(MBB);
-  unsigned DstReg = RS->scavengeRegister(&AArch64::GPR64RegClass, MBBI, 0);
+  RS->enterBasicBlockEnd(MBB);
+  RS->backward(std::prev(MBBI));
+  unsigned DstReg = RS->FindUnusedReg(&AArch64::GPR64commonRegClass);
+  assert(DstReg && "There must be a free register after frame setup");
   BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVi64imm), DstReg).addImm(-2);
   BuildMI(MBB, MBBI, DL, TII.get(AArch64::STURXi))
       .addReg(DstReg, getKillRegState(true))

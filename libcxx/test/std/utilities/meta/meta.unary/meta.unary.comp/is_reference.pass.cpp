@@ -72,7 +72,7 @@ enum Enum {zero, one};
 typedef void (*FunctionPtr)();
 
 
-int main()
+int main(int, char**)
 {
     test_is_reference<int&>();
 #if TEST_STD_VER >= 11
@@ -100,4 +100,6 @@ int main()
     test_is_not_reference<int Empty::*>();
     test_is_not_reference<void (Empty::*)(int)>();
 
+
+  return 0;
 }

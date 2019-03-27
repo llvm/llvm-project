@@ -166,7 +166,7 @@ ENDIF24:                                          ; preds = %IF25, %ENDIF
   ret void
 }
 
-; We just want ot make sure the program doesn't crash
+; We just want to make sure the program doesn't crash
 ; CHECK-LABEL: {{^}}loop:
 define amdgpu_ps void @loop(<4 x i32> addrspace(4)* inreg %arg, <4 x i32> addrspace(4)* inreg %arg1, <8 x i32> addrspace(4)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
 main_body:

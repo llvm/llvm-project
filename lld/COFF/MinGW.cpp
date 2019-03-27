@@ -18,7 +18,34 @@ using namespace lld::coff;
 using namespace llvm;
 using namespace llvm::COFF;
 
-void AutoExporter::initSymbolExcludes() {
+AutoExporter::AutoExporter() {
+  ExcludeLibs = {
+      "libgcc",
+      "libgcc_s",
+      "libstdc++",
+      "libmingw32",
+      "libmingwex",
+      "libg2c",
+      "libsupc++",
+      "libobjc",
+      "libgcj",
+      "libclang_rt.builtins",
+      "libclang_rt.builtins-aarch64",
+      "libclang_rt.builtins-arm",
+      "libclang_rt.builtins-i386",
+      "libclang_rt.builtins-x86_64",
+      "libc++",
+      "libc++abi",
+      "libunwind",
+      "libmsvcrt",
+      "libucrtbase",
+  };
+
+  ExcludeObjects = {
+      "crt0.o",    "crt1.o",  "crt1u.o", "crt2.o",  "crt2u.o",    "dllcrt1.o",
+      "dllcrt2.o", "gcrt0.o", "gcrt1.o", "gcrt2.o", "crtbegin.o", "crtend.o",
+  };
+
   ExcludeSymbolPrefixes = {
       // Import symbols
       "__imp_",
@@ -31,10 +58,12 @@ void AutoExporter::initSymbolExcludes() {
       // Artifical symbols such as .refptr
       ".",
   };
+
   ExcludeSymbolSuffixes = {
       "_iname",
       "_NULL_THUNK_DATA",
   };
+
   if (Config->Machine == I386) {
     ExcludeSymbols = {
         "__NULL_IMPORT_DESCRIPTOR",
@@ -70,44 +99,6 @@ void AutoExporter::initSymbolExcludes() {
     };
     ExcludeSymbolPrefixes.insert("_head_");
   }
-}
-
-AutoExporter::AutoExporter() {
-  ExcludeLibs = {
-      "libgcc",
-      "libgcc_s",
-      "libstdc++",
-      "libmingw32",
-      "libmingwex",
-      "libg2c",
-      "libsupc++",
-      "libobjc",
-      "libgcj",
-      "libclang_rt.builtins",
-      "libclang_rt.builtins-aarch64",
-      "libclang_rt.builtins-arm",
-      "libclang_rt.builtins-i386",
-      "libclang_rt.builtins-x86_64",
-      "libc++",
-      "libc++abi",
-      "libunwind",
-      "libmsvcrt",
-      "libucrtbase",
-  };
-  ExcludeObjects = {
-      "crt0.o",
-      "crt1.o",
-      "crt1u.o",
-      "crt2.o",
-      "crt2u.o",
-      "dllcrt1.o",
-      "dllcrt2.o",
-      "gcrt0.o",
-      "gcrt1.o",
-      "gcrt2.o",
-      "crtbegin.o",
-      "crtend.o",
-  };
 }
 
 void AutoExporter::addWholeArchive(StringRef Path) {

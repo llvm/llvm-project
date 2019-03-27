@@ -39,7 +39,7 @@ void test ( const CharT *s ) {
     }
 
 
-int main () {
+int main(int, char**) {
 
     test ( "QBCDE" );
     test ( "A" );
@@ -65,4 +65,6 @@ int main () {
     static_assert ( sv1.size() == 5, "");
     }
 #endif
+
+  return 0;
 }

@@ -14,4 +14,6 @@
 
 // expected-error@experimental/any:* {{"<experimental/any> has been removed. Use <any> instead."}}
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

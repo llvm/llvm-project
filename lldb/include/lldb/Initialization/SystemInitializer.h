@@ -15,18 +15,12 @@
 
 namespace lldb_private {
 
-struct InitializerOptions {
-  bool reproducer_capture = false;
-  bool reproducer_replay = false;
-  std::string reproducer_path;
-};
-
 class SystemInitializer {
 public:
   SystemInitializer();
   virtual ~SystemInitializer();
 
-  virtual llvm::Error Initialize(const InitializerOptions &options) = 0;
+  virtual llvm::Error Initialize() = 0;
   virtual void Terminate() = 0;
 };
 }

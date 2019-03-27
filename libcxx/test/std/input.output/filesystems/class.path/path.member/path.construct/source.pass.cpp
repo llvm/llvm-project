@@ -117,7 +117,7 @@ void test_sfinae() {
   }
 }
 
-int main() {
+int main(int, char**) {
   for (auto const& MS : PathList) {
     RunTestCase<char>(MS);
     RunTestCase<wchar_t>(MS);
@@ -125,4 +125,6 @@ int main() {
     RunTestCase<char32_t>(MS);
   }
   test_sfinae();
+
+  return 0;
 }

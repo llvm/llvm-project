@@ -51,7 +51,7 @@ constexpr bool testConstexprMonths(std::chrono::year_month_day ym)
 }
 
 
-int main()
+int main(int, char**)
 {
     using day        = std::chrono::day;
     using year       = std::chrono::year;
@@ -108,4 +108,6 @@ int main()
     }
     }
 
+
+  return 0;
 }

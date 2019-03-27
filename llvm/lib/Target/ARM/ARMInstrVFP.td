@@ -129,6 +129,7 @@ def VLDRS : ASI5<0b1101, 0b01, (outs SPR:$Sd), (ins addrmode5:$addr),
   let D = VFPNeonDomain;
 }
 
+let isUnpredicable = 1 in
 def VLDRH : AHI5<0b1101, 0b01, (outs HPR:$Sd), (ins addrmode5fp16:$addr),
                  IIC_fpLoad16, "vldr", ".16\t$Sd, $addr",
                  [(set HPR:$Sd, (alignedload16 addrmode5fp16:$addr))]>,
@@ -148,6 +149,7 @@ def VSTRS : ASI5<0b1101, 0b00, (outs), (ins SPR:$Sd, addrmode5:$addr),
   let D = VFPNeonDomain;
 }
 
+let isUnpredicable = 1 in
 def VSTRH : AHI5<0b1101, 0b00, (outs), (ins HPR:$Sd, addrmode5fp16:$addr),
                  IIC_fpStore16, "vstr", ".16\t$Sd, $addr",
                  [(alignedstore16 HPR:$Sd, addrmode5fp16:$addr)]>,
@@ -451,7 +453,7 @@ def VNMULH : AHbI<0b11100, 0b10, 1, 0,
 
 multiclass vsel_inst<string op, bits<2> opc, int CC> {
   let DecoderNamespace = "VFPV8", PostEncoderMethod = "",
-      Uses = [CPSR], AddedComplexity = 4 in {
+      Uses = [CPSR], AddedComplexity = 4, isUnpredicable = 1 in {
     def H : AHbInp<0b11100, opc, 0,
                    (outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm),
                    NoItinerary, !strconcat("vsel", op, ".f16\t$Sd, $Sn, $Sm"),
@@ -479,7 +481,8 @@ defm VSELEQ : vsel_inst<"eq", 0b00, 0>;
 defm VSELVS : vsel_inst<"vs", 0b01, 6>;
 
 multiclass vmaxmin_inst<string op, bit opc, SDNode SD> {
-  let DecoderNamespace = "VFPV8", PostEncoderMethod = "" in {
+  let DecoderNamespace = "VFPV8", PostEncoderMethod = "",
+      isUnpredicable = 1 in {
     def H : AHbInp<0b11101, 0b00, opc,
                    (outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm),
                    NoItinerary, !strconcat(op, ".f16\t$Sd, $Sn, $Sm"),
@@ -947,7 +950,8 @@ defm VRINTX : vrint_inst_zrx<"x", 1, 0, frint>;
 
 multiclass vrint_inst_anpm<string opc, bits<2> rm,
                            SDPatternOperator node = null_frag> {
-  let PostEncoderMethod = "", DecoderNamespace = "VFPV8" in {
+  let PostEncoderMethod = "", DecoderNamespace = "VFPV8",
+      isUnpredicable = 1 in {
     def H : AHuInp<0b11101, 0b11, 0b1000, 0b01, 0,
                    (outs SPR:$Sd), (ins SPR:$Sm),
                    NoItinerary, !strconcat("vrint", opc, ".f16\t$Sd, $Sm"),
@@ -1012,7 +1016,7 @@ def VMOVS  : ASuI<0b11101, 0b11, 0b0000, 0b01, 0,
                   IIC_fpUNA32, "vmov", ".f32\t$Sd, $Sm", []>;
 } // isMoveReg
 
-let PostEncoderMethod = "", DecoderNamespace = "VFPV8" in {
+let PostEncoderMethod = "", DecoderNamespace = "VFPV8", isUnpredicable = 1 in {
 def VMOVH  : ASuInp<0b11101, 0b11, 0b0000, 0b01, 0,
                   (outs SPR:$Sd), (ins SPR:$Sm),
                   IIC_fpUNA16, "vmovx.f16\t$Sd, $Sm", []>,
@@ -1221,6 +1225,8 @@ def VMOVRH : AVConv2I<0b11100001, 0b1001,
 
   let Inst{6-5}   = 0b00;
   let Inst{3-0}   = 0b0000;
+
+  let isUnpredicable = 1;
 }
 
 // Move R->H, clearing top 16 bits
@@ -1241,6 +1247,8 @@ def VMOVHR : AVConv4I<0b11100000, 0b1001,
 
   let Inst{6-5}   = 0b00;
   let Inst{3-0}   = 0b0000;
+
+  let isUnpredicable = 1;
 }
 
 // FMRDH: SPR -> GPR
@@ -1347,6 +1355,7 @@ def VSITOH : AVConv1IHs_Encode<0b11101, 0b11, 0b1000, 0b1001,
                                []>,
              Sched<[WriteFPCVT]> {
   let Inst{7} = 1; // s32
+  let isUnpredicable = 1;
 }
 
 def : VFPNoNEONPat<(f16 (sint_to_fp GPR:$a)),
@@ -1392,6 +1401,7 @@ def VUITOH : AVConv1IHs_Encode<0b11101, 0b11, 0b1000, 0b1001,
                                 []>,
              Sched<[WriteFPCVT]> {
   let Inst{7} = 0; // u32
+  let isUnpredicable = 1;
 }
 
 def : VFPNoNEONPat<(f16 (uint_to_fp GPR:$a)),
@@ -1496,6 +1506,7 @@ def VTOSIZH : AVConv1IsH_Encode<0b11101, 0b11, 0b1101, 0b1001,
                                  []>,
               Sched<[WriteFPCVT]> {
   let Inst{7} = 1; // Z bit
+  let isUnpredicable = 1;
 }
 
 def : VFPNoNEONPat<(i32 (fp_to_sint HPR:$a)),
@@ -1542,6 +1553,7 @@ def VTOUIZH : AVConv1IsH_Encode<0b11101, 0b11, 0b1100, 0b1001,
                                  []>,
               Sched<[WriteFPCVT]> {
   let Inst{7} = 1; // Z bit
+  let isUnpredicable = 1;
 }
 
 def : VFPNoNEONPat<(i32 (fp_to_uint HPR:$a)),
@@ -1571,6 +1583,7 @@ def VTOSIRH : AVConv1IsH_Encode<0b11101, 0b11, 0b1101, 0b1001,
                                  []>,
               Sched<[WriteFPCVT]> {
   let Inst{7} = 0; // Z bit
+  let isUnpredicable = 1;
 }
 
 def VTOUIRD : AVConv1IsD_Encode<0b11101, 0b11, 0b1100, 0b1011,
@@ -1595,6 +1608,7 @@ def VTOUIRH : AVConv1IsH_Encode<0b11101, 0b11, 0b1100, 0b1001,
                                  []>,
               Sched<[WriteFPCVT]> {
   let Inst{7} = 0; // Z bit
+  let isUnpredicable = 1;
 }
 }
 
@@ -1642,6 +1656,8 @@ class AVConv1XInsD_Encode<bits<5> op1, bits<2> op2, bits<4> op3, bits<4> op4,
   let Predicates = [HasVFP2, HasDPVFP];
 }
 
+let isUnpredicable = 1 in {
+
 def VTOSHH : AVConv1XInsS_Encode<0b11101, 0b11, 0b1110, 0b1001, 0,
                        (outs SPR:$dst), (ins SPR:$a, fbits16:$fbits),
                  IIC_fpCVTHI, "vcvt", ".s16.f16\t$dst, $a, $fbits", []>,
@@ -1665,6 +1681,8 @@ def VTOULH : AVConv1XInsS_Encode<0b11101, 0b11, 0b1111, 0b1001, 1,
                  IIC_fpCVTHI, "vcvt", ".u32.f16\t$dst, $a, $fbits", []>,
              Requires<[HasFullFP16]>,
              Sched<[WriteFPCVT]>;
+
+} // End of 'let isUnpredicable = 1 in'
 
 def VTOSHS : AVConv1XInsS_Encode<0b11101, 0b11, 0b1110, 0b1010, 0,
                        (outs SPR:$dst), (ins SPR:$a, fbits16:$fbits),
@@ -1721,6 +1739,8 @@ def VTOULD : AVConv1XInsD_Encode<0b11101, 0b11, 0b1111, 0b1011, 1,
 
 // Fixed-Point to FP:
 
+let isUnpredicable = 1 in {
+
 def VSHTOH : AVConv1XInsS_Encode<0b11101, 0b11, 0b1010, 0b1001, 0,
                        (outs SPR:$dst), (ins SPR:$a, fbits16:$fbits),
                  IIC_fpCVTIH, "vcvt", ".f16.s16\t$dst, $a, $fbits", []>,
@@ -1744,6 +1764,8 @@ def VULTOH : AVConv1XInsS_Encode<0b11101, 0b11, 0b1011, 0b1001, 1,
                  IIC_fpCVTIH, "vcvt", ".f16.u32\t$dst, $a, $fbits", []>,
              Requires<[HasFullFP16]>,
              Sched<[WriteFPCVT]>;
+
+} // End of 'let isUnpredicable = 1 in'
 
 def VSHTOS : AVConv1XInsS_Encode<0b11101, 0b11, 0b1010, 0b1010, 0,
                        (outs SPR:$dst), (ins SPR:$a, fbits16:$fbits),
@@ -2370,6 +2392,8 @@ def FCONSTH : VFPAI<(outs HPR:$Sd), (ins vfp_f16imm:$imm),
   let Inst{11-8}  = 0b1001;     // Half precision
   let Inst{7-4}   = 0b0000;
   let Inst{3-0}   = imm{3-0};
+
+  let isUnpredicable = 1;
 }
 }
 

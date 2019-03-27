@@ -1,0 +1,7 @@
+RUN: rm -f %t
+RUN: not llvm-dwp %p/../Inputs/missing_dwo_id.dwo -o %t 2>&1 | FileCheck %s
+
+Make sure we did not leave behind a temporary file:
+RUN: not ls %t
+
+CHECK: error: {{.*}}missing_dwo_id.dwo': compile unit missing dwo_id

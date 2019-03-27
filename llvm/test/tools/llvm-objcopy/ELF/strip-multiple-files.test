@@ -72,4 +72,4 @@ Symbols:
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# BAD-O-FLAG: Multiple input files cannot be used in combination with -o.
+# BAD-O-FLAG: Multiple input files cannot be used in combination with -o

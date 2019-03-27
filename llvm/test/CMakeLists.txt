@@ -12,6 +12,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_LINK_LLVM_DYLIB
   LLVM_TOOL_LTO_BUILD
   LLVM_USE_INTEL_JITEVENTS
+  LLVM_BUILD_EXAMPLES
   )
 
 configure_lit_site_cfg(

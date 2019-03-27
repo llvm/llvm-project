@@ -45,7 +45,7 @@ struct some_hash
     std::size_t operator()(T const&) const;
 };
 
-int main()
+int main(int, char**)
 {
 #if defined(_LIBCPP_VERSION)
     {
@@ -72,4 +72,6 @@ int main()
                                                          some_comp<MoveOnly>> C;
         static_assert(!std::is_nothrow_default_constructible<C>::value, "");
     }
+
+  return 0;
 }

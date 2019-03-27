@@ -254,7 +254,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:    cmovgl %ecx, %eax
 ; X64-HSW-NEXT:    testl %esi, %esi
 ; X64-HSW-NEXT:    cmovel %ecx, %eax
-; X64-HSW-NEXT:    addl $-1, %edi
+; X64-HSW-NEXT:    decl %edi
 ; X64-HSW-NEXT:    cmpl $31, %edi
 ; X64-HSW-NEXT:    ja .LBB0_36
 ; X64-HSW-NEXT:  # %bb.1:

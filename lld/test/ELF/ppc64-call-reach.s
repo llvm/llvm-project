@@ -62,7 +62,7 @@ test:
 # CHECK:  10010024: {{.*}}  b  .+33554428
 
 # NEGOFFSET-LABEL: test
-# NEGOFFSET:  10010014: {{.*}}  bl .+33554432
+# NEGOFFSET:  10010014: {{.*}}  bl .-33554432
 # NEGOFFSET:  10010024: {{.*}}  b  .+33554432
 
 # .branch_lt[0]
@@ -83,7 +83,7 @@ test:
 # the offset is interpreted as a signed 26 bit value so 67108812 is actually
 # -52.
 # THUNK-LABEL: test:
-# THUNK: 10010034: {{.*}}  bl .+67108812
+# THUNK: 10010034: {{.*}}  bl .-52
 # THUNK: 10010044: {{.*}}  b .+67108812
 
 # The offset from the TOC to the .branch_lt section  is (-1 << 16) - 32768.

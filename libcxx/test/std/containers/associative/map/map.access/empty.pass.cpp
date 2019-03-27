@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::map<int, double> M;
@@ -39,4 +39,6 @@ int main()
     assert(m.empty());
     }
 #endif
+
+  return 0;
 }

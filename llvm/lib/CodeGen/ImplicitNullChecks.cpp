@@ -235,8 +235,11 @@ bool ImplicitNullChecks::canHandle(const MachineInstr *MI) {
   assert(!llvm::any_of(MI->operands(), IsRegMask) &&
          "Calls were filtered out above!");
 
-  auto IsUnordered = [](MachineMemOperand *MMO) { return MMO->isUnordered(); };
-  return llvm::all_of(MI->memoperands(), IsUnordered);
+  // TODO: This should be isUnordered (see D57601) once test cases are written
+  // demonstrating that.
+  auto IsSimple = [](MachineMemOperand *MMO) {
+    return !MMO->isVolatile() && !MMO->isAtomic(); };
+  return llvm::all_of(MI->memoperands(), IsSimple);
 }
 
 ImplicitNullChecks::DependenceResult

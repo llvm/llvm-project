@@ -27,7 +27,7 @@
 ; MOVREL: s_mov_b32 m0, [[READLANE]]
 ; MOVREL-NEXT: v_movreld_b32_e32 v[[VEC_ELT0]], [[INS0]]
 
-; IDXMODE: s_set_gpr_idx_on [[READLANE]], dst
+; IDXMODE: s_set_gpr_idx_on [[READLANE]], gpr_idx(DST)
 ; IDXMODE-NEXT: v_mov_b32_e32 v[[VEC_ELT0]], [[INS0]]
 ; IDXMODE: s_set_gpr_idx_off
 
@@ -47,7 +47,7 @@
 ; MOVREL: s_mov_b32 m0, [[READLANE]]
 ; MOVREL-NEXT: v_movreld_b32_e32 v{{[0-9]+}}, 63
 
-; IDXMODE: s_set_gpr_idx_on [[READLANE]], dst
+; IDXMODE: s_set_gpr_idx_on [[READLANE]], gpr_idx(DST)
 ; IDXMODE-NEXT: v_mov_b32_e32 v{{[0-9]+}}, 63
 ; IDXMODE: s_set_gpr_idx_off
 

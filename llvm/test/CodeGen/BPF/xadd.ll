@@ -1,5 +1,7 @@
 ; RUN: not llc -march=bpfel < %s 2>&1 | FileCheck %s
 ; RUN: not llc -march=bpfeb < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=bpfel -mattr=+alu32 < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=bpfeb -mattr=+alu32 < %s 2>&1 | FileCheck %s
 
 ; This file is generated with the source command and source
 ; $ clang -target bpf -O2 -g -S -emit-llvm t.c

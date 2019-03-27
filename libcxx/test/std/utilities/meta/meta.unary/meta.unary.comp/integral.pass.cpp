@@ -33,7 +33,7 @@ void test_integral()
     test_integral_imp<const volatile T>();
 }
 
-int main()
+int main(int, char**)
 {
     test_integral<bool>();
     test_integral<char>();
@@ -52,4 +52,6 @@ int main()
     test_integral<__int128_t>();
     test_integral<__uint128_t>();
 #endif
+
+  return 0;
 }

@@ -1,0 +1,38 @@
+# RUN: llc -mtriple thumbv6m-none-eabi -run-pass=opt-phis -verify-machineinstrs -o - %s | FileCheck %s
+--- |
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv6m-arm-none-eabi"
+
+  define i32 @funca() { unreachable }
+
+...
+---
+name:            funca
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+
+    %0:tgpr, dead $cpsr = tMOVi8 255, 14, $noreg
+    %1:tgpr, dead $cpsr = tMOVi8 128, 14, $noreg
+    tCMPi8 %0, 0, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.3, 1, $cpsr
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+  bb.3:
+    successors: %bb.0(0x80000000)
+
+    %2:tgpr = PHI %0, %bb.2, %0, %bb.0
+    %3:tgpr, $cpsr = tSUBrr %1, killed %2, 14, $noreg
+    %4:tgpr, $cpsr = tADDrr killed %3, killed %0, 14, $noreg
+    tB %bb.0, 14, $noreg
+
+# Make sure the kill flags are not incorrect
+# CHECK-LABEL: name: funca
+# CHECK-NOT: PHI
+# CHECK: tSUBrr %1, %0
+# CHECK: tADDrr killed %3, %0
+
+...

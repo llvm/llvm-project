@@ -835,6 +835,7 @@ template <> inline void SPIRVMap<std::string, Op, OCLOpaqueType>::init() {
   add("opencl.clk_event_t", OpTypeDeviceEvent);
   add("opencl.reserve_id_t", OpTypeReserveId);
   add("opencl.queue_t", OpTypeQueue);
+  add("opencl.sampler_t", OpTypeSampler);
 }
 
 } // namespace SPIRV

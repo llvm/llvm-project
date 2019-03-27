@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBBreakpointName.h"
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
@@ -105,10 +106,14 @@ lldb_private::BreakpointName *SBBreakpointNameImpl::GetBreakpointName() const {
 
 } // namespace lldb
 
-SBBreakpointName::SBBreakpointName() {}
+SBBreakpointName::SBBreakpointName() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBBreakpointName);
+}
 
-SBBreakpointName::SBBreakpointName(SBTarget &sb_target, const char *name)
-{
+SBBreakpointName::SBBreakpointName(SBTarget &sb_target, const char *name) {
+  LLDB_RECORD_CONSTRUCTOR(SBBreakpointName, (lldb::SBTarget &, const char *),
+                          sb_target, name);
+
   m_impl_up.reset(new SBBreakpointNameImpl(sb_target, name));
   // Call FindBreakpointName here to make sure the name is valid, reset if not:
   BreakpointName *bp_name = GetBreakpointName();
@@ -116,8 +121,10 @@ SBBreakpointName::SBBreakpointName(SBTarget &sb_target, const char *name)
     m_impl_up.reset();
 }
 
-SBBreakpointName::SBBreakpointName(SBBreakpoint &sb_bkpt, const char *name)
-{
+SBBreakpointName::SBBreakpointName(SBBreakpoint &sb_bkpt, const char *name) {
+  LLDB_RECORD_CONSTRUCTOR(SBBreakpointName,
+                          (lldb::SBBreakpoint &, const char *), sb_bkpt, name);
+
   if (!sb_bkpt.IsValid()) {
     m_impl_up.reset();
     return;
@@ -139,8 +146,10 @@ SBBreakpointName::SBBreakpointName(SBBreakpoint &sb_bkpt, const char *name)
                                  BreakpointName::Permissions());
 }
 
-SBBreakpointName::SBBreakpointName(const SBBreakpointName &rhs)
-{
+SBBreakpointName::SBBreakpointName(const SBBreakpointName &rhs) {
+  LLDB_RECORD_CONSTRUCTOR(SBBreakpointName, (const lldb::SBBreakpointName &),
+                          rhs);
+
   if (!rhs.m_impl_up)
     return;
   else
@@ -150,8 +159,12 @@ SBBreakpointName::SBBreakpointName(const SBBreakpointName &rhs)
 
 SBBreakpointName::~SBBreakpointName() = default;
 
-const SBBreakpointName &SBBreakpointName::operator=(const SBBreakpointName &rhs) 
-{
+const SBBreakpointName &SBBreakpointName::
+operator=(const SBBreakpointName &rhs) {
+  LLDB_RECORD_METHOD(
+      const lldb::SBBreakpointName &,
+      SBBreakpointName, operator=,(const lldb::SBBreakpointName &), rhs);
+
   if (!rhs.m_impl_up) {
     m_impl_up.reset();
     return *this;
@@ -163,26 +176,38 @@ const SBBreakpointName &SBBreakpointName::operator=(const SBBreakpointName &rhs)
 }
 
 bool SBBreakpointName::operator==(const lldb::SBBreakpointName &rhs) {
+  LLDB_RECORD_METHOD(
+      bool, SBBreakpointName, operator==,(const lldb::SBBreakpointName &), rhs);
+
   return *m_impl_up == *rhs.m_impl_up;
 }
 
 bool SBBreakpointName::operator!=(const lldb::SBBreakpointName &rhs) {
+  LLDB_RECORD_METHOD(
+      bool, SBBreakpointName, operator!=,(const lldb::SBBreakpointName &), rhs);
+
   return *m_impl_up != *rhs.m_impl_up;
 }
 
 bool SBBreakpointName::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBreakpointName, IsValid);
+
   if (!m_impl_up)
     return false;
   return m_impl_up->IsValid();
 }
 
 const char *SBBreakpointName::GetName() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBBreakpointName, GetName);
+
   if (!m_impl_up)
     return "<Invalid Breakpoint Name Object>";
   return m_impl_up->GetName();
 }
 
 void SBBreakpointName::SetEnabled(bool enable) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetEnabled, (bool), enable);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -208,6 +233,8 @@ void SBBreakpointName::UpdateName(BreakpointName &bp_name) {
 }
 
 bool SBBreakpointName::IsEnabled() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBBreakpointName, IsEnabled);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -222,6 +249,8 @@ bool SBBreakpointName::IsEnabled() {
 }
 
 void SBBreakpointName::SetOneShot(bool one_shot) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetOneShot, (bool), one_shot);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -237,6 +266,8 @@ void SBBreakpointName::SetOneShot(bool one_shot) {
 }
 
 bool SBBreakpointName::IsOneShot() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBreakpointName, IsOneShot);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   const BreakpointName *bp_name = GetBreakpointName();
@@ -251,6 +282,8 @@ bool SBBreakpointName::IsOneShot() const {
 }
 
 void SBBreakpointName::SetIgnoreCount(uint32_t count) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetIgnoreCount, (uint32_t), count);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -266,6 +299,8 @@ void SBBreakpointName::SetIgnoreCount(uint32_t count) {
 }
 
 uint32_t SBBreakpointName::GetIgnoreCount() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBBreakpointName, GetIgnoreCount);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -280,6 +315,9 @@ uint32_t SBBreakpointName::GetIgnoreCount() const {
 }
 
 void SBBreakpointName::SetCondition(const char *condition) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetCondition, (const char *),
+                     condition);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -297,6 +335,8 @@ void SBBreakpointName::SetCondition(const char *condition) {
 }
 
 const char *SBBreakpointName::GetCondition() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBBreakpointName, GetCondition);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -311,6 +351,9 @@ const char *SBBreakpointName::GetCondition() {
 }
 
 void SBBreakpointName::SetAutoContinue(bool auto_continue) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetAutoContinue, (bool),
+                     auto_continue);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -327,6 +370,8 @@ void SBBreakpointName::SetAutoContinue(bool auto_continue) {
 }
 
 bool SBBreakpointName::GetAutoContinue() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBBreakpointName, GetAutoContinue);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -341,6 +386,8 @@ bool SBBreakpointName::GetAutoContinue() {
 }
 
 void SBBreakpointName::SetThreadID(tid_t tid) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetThreadID, (lldb::tid_t), tid);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -357,6 +404,8 @@ void SBBreakpointName::SetThreadID(tid_t tid) {
 }
 
 tid_t SBBreakpointName::GetThreadID() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::tid_t, SBBreakpointName, GetThreadID);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -371,6 +420,8 @@ tid_t SBBreakpointName::GetThreadID() {
 }
 
 void SBBreakpointName::SetThreadIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetThreadIndex, (uint32_t), index);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -387,6 +438,8 @@ void SBBreakpointName::SetThreadIndex(uint32_t index) {
 }
 
 uint32_t SBBreakpointName::GetThreadIndex() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBBreakpointName, GetThreadIndex);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -401,6 +454,9 @@ uint32_t SBBreakpointName::GetThreadIndex() const {
 }
 
 void SBBreakpointName::SetThreadName(const char *thread_name) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetThreadName, (const char *),
+                     thread_name);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -417,6 +473,9 @@ void SBBreakpointName::SetThreadName(const char *thread_name) {
 }
 
 const char *SBBreakpointName::GetThreadName() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBBreakpointName,
+                                   GetThreadName);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -431,6 +490,9 @@ const char *SBBreakpointName::GetThreadName() const {
 }
 
 void SBBreakpointName::SetQueueName(const char *queue_name) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetQueueName, (const char *),
+                     queue_name);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -447,6 +509,9 @@ void SBBreakpointName::SetQueueName(const char *queue_name) {
 }
 
 const char *SBBreakpointName::GetQueueName() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBBreakpointName,
+                                   GetQueueName);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -461,6 +526,9 @@ const char *SBBreakpointName::GetQueueName() const {
 }
 
 void SBBreakpointName::SetCommandLineCommands(SBStringList &commands) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetCommandLineCommands,
+                     (lldb::SBStringList &), commands);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
@@ -480,6 +548,9 @@ void SBBreakpointName::SetCommandLineCommands(SBStringList &commands) {
 }
 
 bool SBBreakpointName::GetCommandLineCommands(SBStringList &commands) {
+  LLDB_RECORD_METHOD(bool, SBBreakpointName, GetCommandLineCommands,
+                     (lldb::SBStringList &), commands);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -496,6 +567,9 @@ bool SBBreakpointName::GetCommandLineCommands(SBStringList &commands) {
 }
 
 const char *SBBreakpointName::GetHelpString() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBBreakpointName,
+                                   GetHelpString);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -507,6 +581,9 @@ const char *SBBreakpointName::GetHelpString() const {
 }
 
 void SBBreakpointName::SetHelpString(const char *help_string) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetHelpString, (const char *),
+                     help_string);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
@@ -520,6 +597,9 @@ void SBBreakpointName::SetHelpString(const char *help_string) {
 }
 
 bool SBBreakpointName::GetDescription(SBStream &s) {
+  LLDB_RECORD_METHOD(bool, SBBreakpointName, GetDescription, (lldb::SBStream &),
+                     s);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -556,6 +636,9 @@ void SBBreakpointName::SetCallback(SBBreakpointHitCallback callback,
 
 void SBBreakpointName::SetScriptCallbackFunction(
     const char *callback_function_name) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetScriptCallbackFunction,
+                     (const char *), callback_function_name);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
   BreakpointName *bp_name = GetBreakpointName();
@@ -578,14 +661,17 @@ void SBBreakpointName::SetScriptCallbackFunction(
   UpdateName(*bp_name);
 }
 
-SBError SBBreakpointName::SetScriptCallbackBody(const char *callback_body_text)
-{
+SBError
+SBBreakpointName::SetScriptCallbackBody(const char *callback_body_text) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBBreakpointName, SetScriptCallbackBody,
+                     (const char *), callback_body_text);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   SBError sb_error;
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
-    return sb_error;
- 
+    return LLDB_RECORD_RESULT(sb_error);
+
   LLDB_LOG(log, "Name: {0} callback: {1}\n", bp_name->GetName(),
            callback_body_text);
   
@@ -603,19 +689,21 @@ SBError SBBreakpointName::SetScriptCallbackBody(const char *callback_body_text)
   if (!sb_error.Fail())
     UpdateName(*bp_name);
 
-  return sb_error;
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
-bool SBBreakpointName::GetAllowList() const
-{
+bool SBBreakpointName::GetAllowList() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBreakpointName, GetAllowList);
+
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return false;
   return bp_name->GetPermissions().GetAllowList();
 }
 
-void SBBreakpointName::SetAllowList(bool value)
-{
+void SBBreakpointName::SetAllowList(bool value) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetAllowList, (bool), value);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   BreakpointName *bp_name = GetBreakpointName();
@@ -626,17 +714,19 @@ void SBBreakpointName::SetAllowList(bool value)
                 bp_name->GetName().AsCString());
   bp_name->GetPermissions().SetAllowList(value);
 }
-  
-bool SBBreakpointName::GetAllowDelete()
-{
+
+bool SBBreakpointName::GetAllowDelete() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBBreakpointName, GetAllowDelete);
+
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return false;
   return bp_name->GetPermissions().GetAllowDelete();
 }
 
-void SBBreakpointName::SetAllowDelete(bool value)
-{
+void SBBreakpointName::SetAllowDelete(bool value) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetAllowDelete, (bool), value);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   BreakpointName *bp_name = GetBreakpointName();
@@ -647,17 +737,19 @@ void SBBreakpointName::SetAllowDelete(bool value)
                 bp_name->GetName().AsCString());
   bp_name->GetPermissions().SetAllowDelete(value);
 }
-  
-bool SBBreakpointName::GetAllowDisable()
-{
+
+bool SBBreakpointName::GetAllowDisable() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBBreakpointName, GetAllowDisable);
+
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return false;
   return bp_name->GetPermissions().GetAllowDisable();
 }
 
-void SBBreakpointName::SetAllowDisable(bool value)
-{
+void SBBreakpointName::SetAllowDisable(bool value) {
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetAllowDisable, (bool), value);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   BreakpointName *bp_name = GetBreakpointName();

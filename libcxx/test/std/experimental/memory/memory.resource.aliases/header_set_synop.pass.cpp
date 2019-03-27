@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++experimental
 // UNSUPPORTED: c++98, c++03
 
 // <experimental/set>
@@ -30,7 +29,7 @@
 
 namespace pmr = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
     using V = char;
     using DC = std::less<V>;
@@ -63,4 +62,6 @@ int main()
         pmr::multiset<int> m;
         assert(m.get_allocator().resource() == pmr::get_default_resource());
     }
+
+  return 0;
 }

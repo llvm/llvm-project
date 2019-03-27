@@ -41,7 +41,7 @@ public:
 int G::n_alive = 0;
 bool G::op_run = false;
 
-int main()
+int main(int, char**)
 {
     {
         G g;
@@ -50,4 +50,6 @@ int main()
         t0.join();
         assert(!t0.joinable());
     }
+
+  return 0;
 }

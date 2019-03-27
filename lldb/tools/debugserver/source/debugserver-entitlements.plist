@@ -16,7 +16,7 @@
     <array>
         <string>debugserver</string>
     </array>
-    <key>com.apple.diagnosticd.diagnostic</key>
+    <key>com.apple.private.logging.diagnostic</key>
     <true/>
     <key>com.apple.security.network.server</key>
     <true/>

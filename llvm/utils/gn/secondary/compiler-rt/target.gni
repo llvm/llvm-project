@@ -6,7 +6,9 @@ if (current_os == "linux" || current_os == "android") {
   assert(false, "unimplemented current_os " + current_os)
 }
 
-if (current_cpu == "x64") {
+if (current_cpu == "x86") {
+  crt_current_target_arch = "i386"
+} else if (current_cpu == "x64") {
   crt_current_target_arch = "x86_64"
 } else if (current_cpu == "arm64") {
   crt_current_target_arch = "aarch64"

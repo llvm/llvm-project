@@ -1217,7 +1217,8 @@ EVT SITargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
 static bool isFlatGlobalAddrSpace(unsigned AS) {
   return AS == AMDGPUAS::GLOBAL_ADDRESS ||
          AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS;
+         AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
 }
 
 bool SITargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
@@ -1861,7 +1862,6 @@ SDValue SITargetLowering::LowerFormalArguments(
   const Function &Fn = MF.getFunction();
   FunctionType *FType = MF.getFunction().getFunctionType();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   if (Subtarget->isAmdHsaOS() && AMDGPU::isShader(CallConv)) {
     DiagnosticInfoUnsupported NoGraphicsHSA(
@@ -1869,11 +1869,6 @@ SDValue SITargetLowering::LowerFormalArguments(
     DAG.getContext()->diagnose(NoGraphicsHSA);
     return DAG.getEntryNode();
   }
-
-  // Create stack objects that are used for emitting debugger prologue if
-  // "amdgpu-debugger-emit-prologue" attribute was specified.
-  if (ST.debuggerEmitPrologue())
-    createDebuggerPrologueStackObjects(MF);
 
   SmallVector<ISD::InputArg, 16> Splits;
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -2711,6 +2706,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   std::vector<SDValue> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
+  // Add a redundant copy of the callee global which will not be legalized, as
+  // we need direct access to the callee later.
+  GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Callee);
+  const GlobalValue *GV = GSD->getGlobal();
+  Ops.push_back(DAG.getTargetGlobalAddress(GV, DL, MVT::i64));
 
   if (IsTailCall) {
     // Each tail call may have to adjust the stack by a different amount, so
@@ -2911,7 +2911,7 @@ static MachineBasicBlock::iterator emitLoadM0FromVGPRLoop(
         .addImm(Offset);
     }
     unsigned IdxMode = IsIndirectSrc ?
-      VGPRIndexMode::SRC0_ENABLE : VGPRIndexMode::DST_ENABLE;
+      AMDGPU::VGPRIndexMode::SRC0_ENABLE : AMDGPU::VGPRIndexMode::DST_ENABLE;
     MachineInstr *SetOn =
       BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
       .addReg(IdxReg, RegState::Kill)
@@ -2931,7 +2931,7 @@ static MachineBasicBlock::iterator emitLoadM0FromVGPRLoop(
 
   // Update EXEC, switch all done bits to 0 and all todo bits to 1.
   MachineInstr *InsertPt =
-    BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_XOR_B64), AMDGPU::EXEC)
+    BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_XOR_B64_term), AMDGPU::EXEC)
     .addReg(AMDGPU::EXEC)
     .addReg(NewExec);
 
@@ -3042,7 +3042,7 @@ static bool setM0ToIndexFromSGPR(const SIInstrInfo *TII,
 
   if (UseGPRIdxMode) {
     unsigned IdxMode = IsIndirectSrc ?
-      VGPRIndexMode::SRC0_ENABLE : VGPRIndexMode::DST_ENABLE;
+      AMDGPU::VGPRIndexMode::SRC0_ENABLE : AMDGPU::VGPRIndexMode::DST_ENABLE;
     if (Offset == 0) {
       MachineInstr *SetOn =
           BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
@@ -3474,34 +3474,16 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
         .addReg(Info->getFrameOffsetReg(), RegState::Implicit);
     return BB;
   }
-  case AMDGPU::SI_CALL_ISEL:
-  case AMDGPU::SI_TCRETURN_ISEL: {
+  case AMDGPU::SI_CALL_ISEL: {
     const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
     const DebugLoc &DL = MI.getDebugLoc();
+
     unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
 
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-    unsigned GlobalAddrReg = MI.getOperand(0).getReg();
-    MachineInstr *PCRel = MRI.getVRegDef(GlobalAddrReg);
-    assert(PCRel->getOpcode() == AMDGPU::SI_PC_ADD_REL_OFFSET);
-
-    const GlobalValue *G = PCRel->getOperand(1).getGlobal();
-
     MachineInstrBuilder MIB;
-    if (MI.getOpcode() == AMDGPU::SI_CALL_ISEL) {
-      MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg)
-        .add(MI.getOperand(0))
-        .addGlobalAddress(G);
-    } else {
-      MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_TCRETURN))
-        .add(MI.getOperand(0))
-        .addGlobalAddress(G);
+    MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg);
 
-      // There is an additional imm operand for tcreturn, but it should be in the
-      // right place already.
-    }
-
-    for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I)
+    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
       MIB.add(MI.getOperand(I));
 
     MIB.cloneMemRefs(MI);
@@ -3974,32 +3956,6 @@ unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
   return 0;
 }
 
-void SITargetLowering::createDebuggerPrologueStackObjects(
-    MachineFunction &MF) const {
-  // Create stack objects that are used for emitting debugger prologue.
-  //
-  // Debugger prologue writes work group IDs and work item IDs to scratch memory
-  // at fixed location in the following format:
-  //   offset 0:  work group ID x
-  //   offset 4:  work group ID y
-  //   offset 8:  work group ID z
-  //   offset 16: work item ID x
-  //   offset 20: work item ID y
-  //   offset 24: work item ID z
-  SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  int ObjectIdx = 0;
-
-  // For each dimension:
-  for (unsigned i = 0; i < 3; ++i) {
-    // Create fixed stack object for work group ID.
-    ObjectIdx = MF.getFrameInfo().CreateFixedObject(4, i * 4, true);
-    Info->setDebuggerWorkGroupIDStackObjectIndex(i, ObjectIdx);
-    // Create fixed stack object for work item ID.
-    ObjectIdx = MF.getFrameInfo().CreateFixedObject(4, i * 4 + 16, true);
-    Info->setDebuggerWorkItemIDStackObjectIndex(i, ObjectIdx);
-  }
-}
-
 bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
   const Triple &TT = getTargetMachine().getTargetTriple();
   return (GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
@@ -4008,7 +3964,10 @@ bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
 }
 
 bool SITargetLowering::shouldEmitGOTReloc(const GlobalValue *GV) const {
-  return (GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+  // FIXME: Either avoid relying on address space here or change the default
+  // address space for functions to avoid the explicit check.
+  return (GV->getValueType()->isFunctionTy() ||
+          GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
           GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
           GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
          !shouldEmitFixup(GV) &&
@@ -8487,6 +8446,46 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
   return 0;
 }
 
+// For a reassociatable opcode perform:
+// op x, (op y, z) -> op (op x, z), y, if x and z are uniform
+SDValue SITargetLowering::reassociateScalarOps(SDNode *N,
+                                               SelectionDAG &DAG) const {
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  unsigned Opc = N->getOpcode();
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  if (!(Op0->isDivergent() ^ Op1->isDivergent()))
+    return SDValue();
+
+  if (Op0->isDivergent())
+    std::swap(Op0, Op1);
+
+  if (Op1.getOpcode() != Opc || !Op1.hasOneUse())
+    return SDValue();
+
+  SDValue Op2 = Op1.getOperand(1);
+  Op1 = Op1.getOperand(0);
+  if (!(Op1->isDivergent() ^ Op2->isDivergent()))
+    return SDValue();
+
+  if (Op1->isDivergent())
+    std::swap(Op1, Op2);
+
+  // If either operand is constant this will conflict with
+  // DAGCombiner::ReassociateOps().
+  if (DAG.isConstantIntBuildVectorOrConstantInt(Op0) ||
+      DAG.isConstantIntBuildVectorOrConstantInt(Op1))
+    return SDValue();
+
+  SDLoc SL(N);
+  SDValue Add1 = DAG.getNode(Opc, SL, VT, Op0, Op1);
+  return DAG.getNode(Opc, SL, VT, Add1, Op2);
+}
+
 static SDValue getMad64_32(SelectionDAG &DAG, const SDLoc &SL,
                            EVT VT,
                            SDValue N0, SDValue N1, SDValue N2,
@@ -8533,6 +8532,10 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     }
 
     return SDValue();
+  }
+
+  if (SDValue V = reassociateScalarOps(N, DAG)) {
+    return V;
   }
 
   if (VT != MVT::i32 || !DCI.isAfterLegalizeDAG())
@@ -8582,14 +8585,10 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  unsigned Opc = LHS.getOpcode();
-  if (Opc != ISD::SUBCARRY)
-    std::swap(RHS, LHS);
-
   if (LHS.getOpcode() == ISD::SUBCARRY) {
     // sub (subcarry x, 0, cc), y => subcarry x, y, cc
     auto C = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
-    if (!C || C->getZExtValue() != 0)
+    if (!C || !C->isNullValue())
       return SDValue();
     SDValue Args[] = { LHS.getOperand(0), RHS, LHS.getOperand(2) };
     return DAG.getNode(ISD::SUBCARRY, SDLoc(N), LHS->getVTList(), Args);
@@ -8717,7 +8716,7 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
   EVT VT = N->getValueType(0);
   SDLoc SL(N);
 
-  if (!Subtarget->hasDotInsts() || VT != MVT::f32)
+  if (!Subtarget->hasDot2Insts() || VT != MVT::f32)
     return SDValue();
 
   // FMA((F32)S0.x, (F32)S1. x, FMA((F32)S0.y, (F32)S1.y, (F32)z)) ->
@@ -9706,7 +9705,8 @@ static bool isCopyFromRegOfInlineAsm(const SDNode *N) {
   do {
     // Follow the chain until we find an INLINEASM node.
     N = N->getOperand(0).getNode();
-    if (N->getOpcode() == ISD::INLINEASM)
+    if (N->getOpcode() == ISD::INLINEASM ||
+        N->getOpcode() == ISD::INLINEASM_BR)
       return true;
   } while (N->getOpcode() == ISD::CopyFromReg);
   return false;

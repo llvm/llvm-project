@@ -49,7 +49,7 @@ private:
 
 };
 
-int main()
+int main(int, char**)
 {
   using SetAlloc = test_allocator<int>;
   using MapAlloc = test_allocator<std::pair<const int, int>>;
@@ -67,4 +67,6 @@ int main()
         std::unordered_multiset<int, std::hash<int>, std::equal_to<int>, SetAlloc>,
         CT_UnorderedMultiSet>::run();
   }
+
+  return 0;
 }

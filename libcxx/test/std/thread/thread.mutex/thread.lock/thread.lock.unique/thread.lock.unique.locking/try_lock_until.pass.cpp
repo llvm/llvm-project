@@ -37,7 +37,7 @@ struct mutex
 
 mutex m;
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::steady_clock Clock;
     std::unique_lock<mutex> lk(m, std::defer_lock);
@@ -71,4 +71,6 @@ int main()
         assert(e.code().value() == EPERM);
     }
 #endif
+
+  return 0;
 }

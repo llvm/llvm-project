@@ -928,7 +928,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
 
 static bool CopyStringDataToBufferSP(const StreamString &source,
                                      lldb::DataBufferSP &destination) {
-  destination.reset(new DataBufferHeap(source.GetSize() + 1, 0));
+  destination = std::make_shared<DataBufferHeap>(source.GetSize() + 1, 0);
   memcpy(destination->GetBytes(), source.GetString().data(), source.GetSize());
   return true;
 }
@@ -991,7 +991,7 @@ ValueObject::ReadPointedString(lldb::DataBufferSP &buffer_sp, Status &error,
           CopyStringDataToBufferSP(s, buffer_sp);
           return {0, was_capped};
         }
-        buffer_sp.reset(new DataBufferHeap(cstr_len, 0));
+        buffer_sp = std::make_shared<DataBufferHeap>(cstr_len, 0);
         memcpy(buffer_sp->GetBytes(), cstr, cstr_len);
         return {cstr_len, was_capped};
       } else {
@@ -1168,7 +1168,7 @@ const char *ValueObject::GetValueAsCString() {
     if (my_format != m_last_format || m_value_str.empty()) {
       m_last_format = my_format;
       if (!format_sp)
-        format_sp.reset(new TypeFormatImpl_Format(my_format));
+        format_sp = std::make_shared<TypeFormatImpl_Format>(my_format);
       if (GetValueAsCString(*format_sp.get(), m_value_str)) {
         if (!m_value_did_change && m_old_value_valid) {
           // The value was gotten successfully, so we consider the value as

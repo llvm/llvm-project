@@ -20,11 +20,13 @@
 #include <cassert>
 #include <cstring>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_base_of<std::exception, std::bad_weak_ptr>::value), "");
     std::bad_weak_ptr e;
     std::bad_weak_ptr e2 = e;
     e2 = e;
     assert(std::strcmp(e.what(), "bad_weak_ptr") == 0);
+
+  return 0;
 }

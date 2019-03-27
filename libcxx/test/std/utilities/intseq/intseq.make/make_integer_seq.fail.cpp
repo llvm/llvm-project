@@ -22,7 +22,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
   typedef std::make_integer_sequence<int, -3> MakeSeqT;
 
@@ -33,4 +33,6 @@ int main()
 #else
     MakeSeqT i; // expected-error@utility:* {{static_assert failed "std::make_integer_sequence must have a non-negative sequence length"}}
 #endif
+
+  return 0;
 }

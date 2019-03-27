@@ -56,11 +56,11 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     return false;
 
   if (range.GetByteSize() > 0 && range.GetBaseAddress().IsValid() &&
-      m_inst_emulator_ap.get()) {
+      m_inst_emulator_up.get()) {
 
     // The instruction emulation subclass setup the unwind plan for the first
     // instruction.
-    m_inst_emulator_ap->CreateFunctionEntryUnwind(unwind_plan);
+    m_inst_emulator_up->CreateFunctionEntryUnwind(unwind_plan);
 
     // CreateFunctionEntryUnwind should have created the first row. If it
     // doesn't, then we are done.
@@ -82,7 +82,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       const uint32_t addr_byte_size = m_arch.GetAddressByteSize();
       const bool show_address = true;
       const bool show_bytes = true;
-      m_inst_emulator_ap->GetRegisterInfo(unwind_plan.GetRegisterKind(),
+      m_inst_emulator_up->GetRegisterInfo(unwind_plan.GetRegisterKind(),
                                           unwind_plan.GetInitialCFARegister(),
                                           m_cfa_reg_info);
 
@@ -128,14 +128,14 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
         // cache the pc register number (in whatever register numbering this
         // UnwindPlan uses) for quick reference during instruction parsing.
         RegisterInfo pc_reg_info;
-        m_inst_emulator_ap->GetRegisterInfo(
+        m_inst_emulator_up->GetRegisterInfo(
             eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC, pc_reg_info);
 
         // cache the return address register number (in whatever register
         // numbering this UnwindPlan uses) for quick reference during
         // instruction parsing.
         RegisterInfo ra_reg_info;
-        m_inst_emulator_ap->GetRegisterInfo(
+        m_inst_emulator_up->GetRegisterInfo(
             eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA, ra_reg_info);
 
         // The architecture dependent condition code of the last processed
@@ -169,12 +169,12 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
               m_register_values = it->second.second;
             }
 
-            m_inst_emulator_ap->SetInstruction(inst->GetOpcode(),
+            m_inst_emulator_up->SetInstruction(inst->GetOpcode(),
                                                inst->GetAddress(), nullptr);
 
             if (last_condition !=
-                m_inst_emulator_ap->GetInstructionCondition()) {
-              if (m_inst_emulator_ap->GetInstructionCondition() !=
+                m_inst_emulator_up->GetInstructionCondition()) {
+              if (m_inst_emulator_up->GetInstructionCondition() !=
                       EmulateInstruction::UnconditionalCondition &&
                   saved_unwind_states.count(current_offset) == 0) {
                 // If we don't have a saved row for the current offset then
@@ -219,9 +219,9 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
               log->PutString(strm.GetString());
             }
 
-            last_condition = m_inst_emulator_ap->GetInstructionCondition();
+            last_condition = m_inst_emulator_up->GetInstructionCondition();
 
-            m_inst_emulator_ap->EvaluateInstruction(
+            m_inst_emulator_up->EvaluateInstruction(
                 eEmulateInstructionOptionIgnoreConditions);
 
             // If the current instruction is a branch forward then save the
@@ -296,12 +296,12 @@ bool UnwindAssemblyInstEmulation::FirstNonPrologueInsn(
 
 UnwindAssembly *
 UnwindAssemblyInstEmulation::CreateInstance(const ArchSpec &arch) {
-  std::unique_ptr<EmulateInstruction> inst_emulator_ap(
+  std::unique_ptr<EmulateInstruction> inst_emulator_up(
       EmulateInstruction::FindPlugin(arch, eInstructionTypePrologueEpilogue,
                                      NULL));
   // Make sure that all prologue instructions are handled
-  if (inst_emulator_ap.get())
-    return new UnwindAssemblyInstEmulation(arch, inst_emulator_ap.release());
+  if (inst_emulator_up)
+    return new UnwindAssemblyInstEmulation(arch, inst_emulator_up.release());
   return NULL;
 }
 

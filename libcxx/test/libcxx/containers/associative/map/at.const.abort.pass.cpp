@@ -1,0 +1,34 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// <map>
+
+// class map
+
+// const mapped_type& at(const key_type& k) const;
+
+// Make sure we abort() when exceptions are disabled and we fetch a key that
+// is not in the map.
+
+// REQUIRES: libcpp-no-exceptions
+
+#include <csignal>
+#include <cstdlib>
+#include <map>
+
+
+void exit_success(int) {
+    std::_Exit(EXIT_SUCCESS);
+}
+
+int main(int, char**) {
+    std::signal(SIGABRT, exit_success);
+    std::map<int, int> const map;
+    map.at(1);
+    return EXIT_FAILURE;
+}

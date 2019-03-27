@@ -37,7 +37,7 @@ __host__ __device__ void T::hd3() {
 }
 
 template <typename T> __host__ __device__ void hd2() { device_fn(); }
-// expected-error@-1 {{reference to __device__ function 'device_fn' in __host__ __device__ function}}
+// expected-error@-1 2 {{reference to __device__ function 'device_fn' in __host__ __device__ function}}
 void host_fn() { hd2<int>(); }
 
 __host__ __device__ void hd() { device_fn(); }
@@ -90,3 +90,8 @@ __host__ __device__ void fn_ptr_template() {
 static __host__ __device__ void hd_func() { device_fn(); }
 __global__ void kernel() { hd_func(); }
 void host_func(void) { kernel<<<1, 1>>>(); }
+
+// Should allow host function call kernel template with device function argument.
+__device__ void f();
+template<void(*F)()> __global__ void t() { F(); }
+__host__ void g() { t<f><<<1,1>>>(); }

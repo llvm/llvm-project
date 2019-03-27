@@ -11,6 +11,8 @@
 //#define ENABLE_DEBUG_PRINTF   // DO NOT LEAVE THIS DEFINED: DEBUG ONLY!!!
 #include <assert.h>
 
+#include <memory>
+
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Host/Host.h"
@@ -48,7 +50,7 @@ void DWARFDebugLine::Parse(const DWARFDataExtractor &debug_line_data) {
       // DEBUG_PRINTF("m_lineTableMap[0x%8.8x] = line_table_sp\n",
       // debug_line_offset);
       m_lineTableMap[debug_line_offset] = line_table_sp;
-      line_table_sp.reset(new LineTable);
+      line_table_sp = std::make_shared<LineTable>();
     } else
       ++offset; // Try next byte in line table
   }

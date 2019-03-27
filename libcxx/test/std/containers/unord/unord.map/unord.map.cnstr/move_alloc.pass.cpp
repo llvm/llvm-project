@@ -29,7 +29,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<int, std::string> P;
@@ -195,4 +195,6 @@ int main()
 
         assert(c0.empty());
     }
+
+  return 0;
 }

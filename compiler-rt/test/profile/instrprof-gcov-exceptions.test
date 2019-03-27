@@ -17,5 +17,5 @@ RUN: test -f instrprof-gcov-exceptions.gcno
 RUN: rm -f instrprof-gcov-exceptions.gcda
 RUN: %run %t
 RUN: llvm-cov gcov instrprof-gcov-exceptions.gcda
-# The result should be the same, not using XFAIL as only this part of the test is failing.
-RUN: not FileCheck --match-full-lines --strict-whitespace --input-file instrprof-gcov-exceptions.cpp.gcov %S/Inputs/instrprof-gcov-exceptions.cpp.gcov
+# FIXME: The result should be the same, but they are not on some platforms.
+RUNX: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-gcov-exceptions.cpp.gcov %S/Inputs/instrprof-gcov-exceptions.cpp.gcov

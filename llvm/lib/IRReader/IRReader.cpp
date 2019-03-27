@@ -29,9 +29,9 @@ static const char *const TimeIRParsingGroupDescription = "LLVM IR Parsing";
 static const char *const TimeIRParsingName = "parse";
 static const char *const TimeIRParsingDescription = "Parse IR";
 
-static std::unique_ptr<Module>
-getLazyIRModule(std::unique_ptr<MemoryBuffer> Buffer, SMDiagnostic &Err,
-                LLVMContext &Context, bool ShouldLazyLoadMetadata) {
+std::unique_ptr<Module>
+llvm::getLazyIRModule(std::unique_ptr<MemoryBuffer> Buffer, SMDiagnostic &Err,
+                      LLVMContext &Context, bool ShouldLazyLoadMetadata) {
   if (isBitcode((const unsigned char *)Buffer->getBufferStart(),
                 (const unsigned char *)Buffer->getBufferEnd())) {
     Expected<std::unique_ptr<Module>> ModuleOrErr = getOwningLazyBitcodeModule(

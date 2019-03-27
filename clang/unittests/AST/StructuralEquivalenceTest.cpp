@@ -230,6 +230,33 @@ TEST_F(StructuralEquivalenceFunctionTest, TemplateVsNonTemplate) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceFunctionTest, DifferentOperators) {
+  auto t = makeDecls<FunctionDecl>(
+      "struct X{}; bool operator<(X, X);",
+      "struct X{}; bool operator==(X, X);", Lang_CXX,
+      functionDecl(hasOverloadedOperatorName("<")),
+      functionDecl(hasOverloadedOperatorName("==")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, SameOperators) {
+  auto t = makeDecls<FunctionDecl>(
+      "struct X{}; bool operator<(X, X);",
+      "struct X{}; bool operator<(X, X);", Lang_CXX,
+      functionDecl(hasOverloadedOperatorName("<")),
+      functionDecl(hasOverloadedOperatorName("<")));
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, CtorVsDtor) {
+  auto t = makeDecls<FunctionDecl>(
+      "struct X{ X(); };",
+      "struct X{ ~X(); };", Lang_CXX,
+      cxxConstructorDecl(),
+      cxxDestructorDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 TEST_F(StructuralEquivalenceFunctionTest, ParamConstWithRef) {
   auto t = makeNamedDecls("void foo(int&);",
                           "void foo(const int&);", Lang_CXX);

@@ -38,7 +38,7 @@ int main_platform(int argc, char *argv[]);
 
 static void initialize() {
   if (auto e = g_debugger_lifetime->Initialize(
-          llvm::make_unique<SystemInitializerLLGS>(), {}, nullptr))
+          llvm::make_unique<SystemInitializerLLGS>(), nullptr))
     llvm::consumeError(std::move(e));
 }
 

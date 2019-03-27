@@ -24,6 +24,7 @@ class AssertingInferiorTestCase(TestBase):
         archs=["arm"],
         bugnumber="llvm.org/pr25338")
     @expectedFailureAll(bugnumber="llvm.org/pr26592", triple='^mips')
+    @expectedFailureNetBSD
     def test_inferior_asserting(self):
         """Test that lldb reliably catches the inferior asserting (command)."""
         self.build()
@@ -52,6 +53,7 @@ class AssertingInferiorTestCase(TestBase):
             "arm"],
         bugnumber="llvm.org/pr25338")
     @expectedFailureAll(bugnumber="llvm.org/pr26592", triple='^mips')
+    @expectedFailureNetBSD
     def test_inferior_asserting_disassemble(self):
         """Test that lldb reliably disassembles frames after asserting (command)."""
         self.build()
@@ -76,6 +78,7 @@ class AssertingInferiorTestCase(TestBase):
             "arm"],
         bugnumber="llvm.org/pr25338")
     @expectedFailureAll(bugnumber="llvm.org/pr26592", triple='^mips')
+    @expectedFailureNetBSD
     def test_inferior_asserting_expr(self):
         """Test that the lldb expression interpreter can read from the inferior after asserting (command)."""
         self.build()
@@ -91,6 +94,7 @@ class AssertingInferiorTestCase(TestBase):
             "arm"],
         bugnumber="llvm.org/pr25338")
     @expectedFailureAll(bugnumber="llvm.org/pr26592", triple='^mips')
+    @expectedFailureNetBSD
     def test_inferior_asserting_step(self):
         """Test that lldb functions correctly after stepping through a call to assert()."""
         self.build()

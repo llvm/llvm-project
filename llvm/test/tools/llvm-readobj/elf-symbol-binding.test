@@ -1,0 +1,60 @@
+# Show that llvm-readobj can print symbol bindings correctly for both LLVM and
+# GNU styles, including for symbol bindings that are not recognised.
+
+# RUN: yaml2obj %s > %t
+# RUN: llvm-readobj --symbols --dyn-symbols %t | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --symbols --dyn-symbols %t | FileCheck %s --check-prefix=GNU
+
+# LLVM: Name:    local
+# LLVM: Binding: Local
+# LLVM: Name:    global
+# LLVM: Binding: Global
+# LLVM: Name:    weak
+# LLVM: Binding: Weak
+# LLVM: Name:    unknown
+# LLVM: Binding: 0x3
+# LLVM: Name:    unique
+# LLVM: Binding: Unique (0xA)
+# LLVM: Name:    os
+# LLVM: Binding: 0xB
+# LLVM: Name:    proc
+# LLVM: Binding: 0xF
+
+# GNU:      3      {{.*}} unknown
+# GNU-NEXT: UNIQUE {{.*}} unique
+# GNU-NEXT: b      {{.*}} os
+# GNU-NEXT: f      {{.*}} proc
+# GNU:      LOCAL  {{.*}} local
+# GNU-NEXT: GLOBAL {{.*}} global
+# GNU-NEXT: WEAK   {{.*}} weak
+
+# yaml2obj doesn't have a way of specifying static symbols with custom bindings,
+# so use a custom dynamic symbol table section instead.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .dynstr
+    Type: SHT_STRTAB
+    #\0unknown\0unique\0os\0proc\0
+    Content: "00756e6b6e6f776e00756e69717565006f730070726f6300"
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Link: .dynstr
+    EntSize: 16
+    # Null symbol
+    # Symbol with st_name = 1, binding = 0x3
+    # Symbol with st_name = 9, binding = 0xa
+    # Symbol with st_name = 16, binding = 0xb
+    # Symbol with st_name = 19, binding = 0xf
+    Content: "0000000000000000000000000000000001000000000000000000000030000000090000000000000000000000a0000000100000000000000000000000b0000000130000000000000000000000f0000000"
+Symbols:
+  Local:
+    - Name: local
+  Global:
+    - Name: global
+  Weak:
+    - Name: weak

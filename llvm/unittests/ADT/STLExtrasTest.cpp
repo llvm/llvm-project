@@ -446,4 +446,27 @@ TEST(STLExtrasTest, splat) {
   EXPECT_FALSE(is_splat(V));
 }
 
+TEST(STLExtrasTest, to_address) {
+  int *V1 = new int;
+  EXPECT_EQ(V1, to_address(V1));
+
+  // Check fancy pointer overload for unique_ptr
+  std::unique_ptr<int> V2 = make_unique<int>(0);
+  EXPECT_EQ(V2.get(), to_address(V2));
+
+  V2.reset(V1);
+  EXPECT_EQ(V1, to_address(V2));
+  V2.release();
+
+  // Check fancy pointer overload for shared_ptr
+  std::shared_ptr<int> V3 = std::make_shared<int>(0);
+  std::shared_ptr<int> V4 = V3;
+  EXPECT_EQ(V3.get(), V4.get());
+  EXPECT_EQ(V3.get(), to_address(V3));
+  EXPECT_EQ(V4.get(), to_address(V4));
+
+  V3.reset(V1);
+  EXPECT_EQ(V1, to_address(V3));
+}
+
 } // namespace

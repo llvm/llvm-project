@@ -68,7 +68,7 @@ public:
 #pragma GCC system_header
 #endif
 
-#if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
+#if defined(_LIBCPP_ABI_VCRUNTIME)
 #include <vcruntime_typeinfo.h>
 #else
 
@@ -262,7 +262,7 @@ public:
 
 }  // std
 
-#endif // defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
+#endif // defined(_LIBCPP_ABI_VCRUNTIME)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY

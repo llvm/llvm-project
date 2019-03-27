@@ -45,7 +45,7 @@ void operator delete[](void* p, const std::nothrow_t&) TEST_NOEXCEPT
 //   selected.
 struct A { ~A() {} };
 
-int main()
+int main(int, char**)
 {
     A *x = new A[3];
     DoNotOptimize(x);
@@ -56,4 +56,6 @@ int main()
     DoNotOptimize(x);
     assert(1 == delete_called);
     assert(0 == delete_nothrow_called);
+
+  return 0;
 }

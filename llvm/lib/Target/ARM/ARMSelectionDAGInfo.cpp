@@ -170,7 +170,7 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
 
   // Code size optimisation: do not inline memcpy if expansion results in
   // more instructions than the libary call.
-  if (NumMEMCPYs > 1 && DAG.getMachineFunction().getFunction().optForMinSize()) {
+  if (NumMEMCPYs > 1 && Subtarget.optForMinSize()) {
     return SDValue();
   }
 

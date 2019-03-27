@@ -3,7 +3,8 @@
 extern "C" void *memset(void *, int, unsigned);
 extern "C" void *memmove(void *s1, const void *s2, unsigned n);
 extern "C" void *memcpy(void *s1, const void *s2, unsigned n);
-extern "C" void *memcmp(void *s1, const void *s2, unsigned n);
+extern "C" int memcmp(void *s1, const void *s2, unsigned n);
+extern "C" int bcmp(void *s1, const void *s2, unsigned n);
 
 
 // Redeclare without the extern "C" to test that we still figure out that this
@@ -58,6 +59,12 @@ void test_warn() {
       // expected-note {{explicitly cast the pointer to silence this warning}}
   memcmp(0, &x1, sizeof x1); // \
       // expected-warning{{second operand of this 'memcmp' call is a pointer to dynamic class 'X1'; vtable pointer will be compared}} \
+      // expected-note {{explicitly cast the pointer to silence this warning}}
+  bcmp(&x1, 0, sizeof x1); // \
+      // expected-warning{{first operand of this 'bcmp' call is a pointer to dynamic class 'X1'; vtable pointer will be compared}} \
+      // expected-note {{explicitly cast the pointer to silence this warning}}
+  bcmp(0, &x1, sizeof x1); // \
+      // expected-warning{{second operand of this 'bcmp' call is a pointer to dynamic class 'X1'; vtable pointer will be compared}} \
       // expected-note {{explicitly cast the pointer to silence this warning}}
 
   __builtin_memset(&x1, 0, sizeof x1); // \

@@ -16,6 +16,8 @@
 #include <CL/cl_ext_intel.h>
 #include <string>
 
+#include <type_traits>
+
 const char *stringifyErrorCode(cl_int error);
 
 #define OCL_CODE_TO_STR(code)                                                  \
@@ -82,6 +84,15 @@ namespace detail {
 // should be accessible from this function.
 template <class T> decltype(T::impl) getSyclObjImpl(const T &SyclObject) {
   return SyclObject.impl;
+}
+
+// Returns the raw pointer to the impl object of given face object. The caller
+// must make sure the returned pointer is not captured in a field or otherwise
+// stored - i.e. must live only as on-stack value.
+template <class T>
+typename std::add_pointer<typename decltype(T::impl)::element_type>::type
+getRawSyclObjImpl(const T &SyclObject) {
+  return SyclObject.impl.get();
 }
 
 // Helper function for creation SYCL interface objects from implementations.

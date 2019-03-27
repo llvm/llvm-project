@@ -49,7 +49,7 @@ void test_div_struct() {
     ((void) obj);
 };
 
-int main()
+int main(int, char**)
 {
     std::size_t s = 0;
     ((void)s);
@@ -108,4 +108,6 @@ int main()
     static_assert((std::is_same<decltype(std::wctomb(pc,L' ')), int>::value), "");
     static_assert((std::is_same<decltype(std::mbstowcs(pw,"",0)), std::size_t>::value), "");
     static_assert((std::is_same<decltype(std::wcstombs(pc,pwc,0)), std::size_t>::value), "");
+
+  return 0;
 }

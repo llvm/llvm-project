@@ -185,6 +185,12 @@ void MachineIRBuilder::validateBinaryOp(const LLT &Res, const LLT &Op0,
   assert((Res == Op0 && Res == Op1) && "type mismatch");
 }
 
+void MachineIRBuilder::validateShiftOp(const LLT &Res, const LLT &Op0,
+                                       const LLT &Op1) {
+  assert((Res.isScalar() || Res.isVector()) && "invalid operand type");
+  assert((Res == Op0) && "type mismatch");
+}
+
 MachineInstrBuilder MachineIRBuilder::buildGEP(unsigned Res, unsigned Op0,
                                                unsigned Op1) {
   assert(getMRI()->getType(Res).isPointer() &&
@@ -244,38 +250,26 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
                                                     const ConstantInt &Val) {
   LLT Ty = Res.getLLTTy(*getMRI());
   LLT EltTy = Ty.getScalarType();
-
-  const ConstantInt *NewVal = &Val;
-  if (EltTy.getSizeInBits() != Val.getBitWidth()) {
-    NewVal = ConstantInt::get(
-      getMF().getFunction().getContext(),
-      Val.getValue().sextOrTrunc(EltTy.getSizeInBits()));
-  }
+  assert(EltTy.getScalarSizeInBits() == Val.getBitWidth() &&
+         "creating constant with the wrong size");
 
   if (Ty.isVector()) {
-    unsigned EltReg = getMRI()->createGenericVirtualRegister(EltTy);
-    buildInstr(TargetOpcode::G_CONSTANT)
-      .addDef(EltReg)
-      .addCImm(NewVal);
-
-    auto MIB = buildInstr(TargetOpcode::G_BUILD_VECTOR);
-    Res.addDefToMIB(*getMRI(), MIB);
-
-    for (unsigned I = 0, E = Ty.getNumElements(); I != E; ++I)
-      MIB.addUse(EltReg);
-    return MIB;
+    auto Const = buildInstr(TargetOpcode::G_CONSTANT)
+    .addDef(getMRI()->createGenericVirtualRegister(EltTy))
+    .addCImm(&Val);
+    return buildSplatVector(Res, Const);
   }
 
-  auto MIB = buildInstr(TargetOpcode::G_CONSTANT);
-  Res.addDefToMIB(*getMRI(), MIB);
-  MIB.addCImm(NewVal);
-  return MIB;
+  auto Const = buildInstr(TargetOpcode::G_CONSTANT);
+  Res.addDefToMIB(*getMRI(), Const);
+  Const.addCImm(&Val);
+  return Const;
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
                                                     int64_t Val) {
   auto IntN = IntegerType::get(getMF().getFunction().getContext(),
-                               Res.getLLTTy(*getMRI()).getSizeInBits());
+                               Res.getLLTTy(*getMRI()).getScalarSizeInBits());
   ConstantInt *CI = ConstantInt::get(IntN, Val, true);
   return buildConstant(Res, *CI);
 }
@@ -283,28 +277,32 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
 MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
                                                      const ConstantFP &Val) {
   LLT Ty = Res.getLLTTy(*getMRI());
+  LLT EltTy = Ty.getScalarType();
+
+  assert(APFloat::getSizeInBits(Val.getValueAPF().getSemantics())
+         == EltTy.getSizeInBits() &&
+         "creating fconstant with the wrong size");
 
   assert(!Ty.isPointer() && "invalid operand type");
 
   if (Ty.isVector()) {
-    unsigned EltReg
-      = getMRI()->createGenericVirtualRegister(Ty.getElementType());
-    buildInstr(TargetOpcode::G_FCONSTANT)
-      .addDef(EltReg)
-      .addFPImm(&Val);
+    auto Const = buildInstr(TargetOpcode::G_FCONSTANT)
+    .addDef(getMRI()->createGenericVirtualRegister(EltTy))
+    .addFPImm(&Val);
 
-    auto MIB = buildInstr(TargetOpcode::G_BUILD_VECTOR);
-    Res.addDefToMIB(*getMRI(), MIB);
-
-    for (unsigned I = 0, E = Ty.getNumElements(); I != E; ++I)
-      MIB.addUse(EltReg);
-    return MIB;
+    return buildSplatVector(Res, Const);
   }
 
-  auto MIB = buildInstr(TargetOpcode::G_FCONSTANT);
-  Res.addDefToMIB(*getMRI(), MIB);
-  MIB.addFPImm(&Val);
-  return MIB;
+  auto Const = buildInstr(TargetOpcode::G_FCONSTANT);
+  Res.addDefToMIB(*getMRI(), Const);
+  Const.addFPImm(&Val);
+  return Const;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
+                                                    const APInt &Val) {
+  ConstantInt *CI = ConstantInt::get(getMF().getFunction().getContext(), Val);
+  return buildConstant(Res, *CI);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
@@ -312,7 +310,7 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
   LLT DstTy = Res.getLLTTy(*getMRI());
   auto &Ctx = getMF().getFunction().getContext();
   auto *CFP =
-      ConstantFP::get(Ctx, getAPFloatFromSize(Val, DstTy.getSizeInBits()));
+      ConstantFP::get(Ctx, getAPFloatFromSize(Val, DstTy.getScalarSizeInBits()));
   return buildFConstant(Res, *CFP);
 }
 
@@ -454,26 +452,29 @@ MachineInstrBuilder MachineIRBuilder::buildCast(const DstOp &Dst,
   return buildInstr(Opcode, Dst, Src);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildExtract(unsigned Res, unsigned Src,
+MachineInstrBuilder MachineIRBuilder::buildExtract(const DstOp &Dst,
+                                                   const SrcOp &Src,
                                                    uint64_t Index) {
+  LLT SrcTy = Src.getLLTTy(*getMRI());
+  LLT DstTy = Dst.getLLTTy(*getMRI());
+
 #ifndef NDEBUG
-  assert(getMRI()->getType(Src).isValid() && "invalid operand type");
-  assert(getMRI()->getType(Res).isValid() && "invalid operand type");
-  assert(Index + getMRI()->getType(Res).getSizeInBits() <=
-             getMRI()->getType(Src).getSizeInBits() &&
+  assert(SrcTy.isValid() && "invalid operand type");
+  assert(DstTy.isValid() && "invalid operand type");
+  assert(Index + DstTy.getSizeInBits() <= SrcTy.getSizeInBits() &&
          "extracting off end of register");
 #endif
 
-  if (getMRI()->getType(Res).getSizeInBits() ==
-      getMRI()->getType(Src).getSizeInBits()) {
+  if (DstTy.getSizeInBits() == SrcTy.getSizeInBits()) {
     assert(Index == 0 && "insertion past the end of a register");
-    return buildCast(Res, Src);
+    return buildCast(Dst, Src);
   }
 
-  return buildInstr(TargetOpcode::G_EXTRACT)
-      .addDef(Res)
-      .addUse(Src)
-      .addImm(Index);
+  auto Extract = buildInstr(TargetOpcode::G_EXTRACT);
+  Dst.addDefToMIB(*getMRI(), Extract);
+  Src.addSrcToMIB(Extract);
+  Extract.addImm(Index);
+  return Extract;
 }
 
 void MachineIRBuilder::buildSequence(unsigned Res, ArrayRef<unsigned> Ops,
@@ -554,6 +555,12 @@ MachineInstrBuilder MachineIRBuilder::buildBuildVector(const DstOp &Res,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
   SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
+                                                       const SrcOp &Src) {
+  SmallVector<SrcOp, 8> TmpVec(Res.getLLTTy(*getMRI()).getNumElements(), Src);
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
 
@@ -854,11 +861,8 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
   }
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_AND:
-  case TargetOpcode::G_ASHR:
-  case TargetOpcode::G_LSHR:
   case TargetOpcode::G_MUL:
   case TargetOpcode::G_OR:
-  case TargetOpcode::G_SHL:
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_XOR:
   case TargetOpcode::G_UDIV:
@@ -872,6 +876,17 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
                      SrcOps[0].getLLTTy(*getMRI()),
                      SrcOps[1].getLLTTy(*getMRI()));
     break;
+  }
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR: {
+    assert(DstOps.size() == 1 && "Invalid Dst");
+    assert(SrcOps.size() == 2 && "Invalid Srcs");
+    validateShiftOp(DstOps[0].getLLTTy(*getMRI()),
+                    SrcOps[0].getLLTTy(*getMRI()),
+                    SrcOps[1].getLLTTy(*getMRI()));
+    break;
+  }
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_ANYEXT:
@@ -881,7 +896,7 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
                      SrcOps[0].getLLTTy(*getMRI()), true);
     break;
   case TargetOpcode::G_TRUNC:
-  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FPTRUNC: {
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(SrcOps.size() == 1 && "Invalid Srcs");
     validateTruncExt(DstOps[0].getLLTTy(*getMRI()),

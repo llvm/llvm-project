@@ -19,6 +19,8 @@
 
 #include "Plugins/Process/Utility/InstructionUtils.h"
 
+#include <memory>
+
 // Support building against older versions of LLVM, this macro was added
 // recently.
 #ifndef LLVM_EXTENSION
@@ -1296,7 +1298,7 @@ bool RegisterContextDarwin_arm::WriteRegister(const RegisterInfo *reg_info,
 
 bool RegisterContextDarwin_arm::ReadAllRegisterValues(
     lldb::DataBufferSP &data_sp) {
-  data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
+  data_sp = std::make_shared<DataBufferHeap>(REG_CONTEXT_SIZE, 0);
   if (data_sp && ReadGPR(false) == KERN_SUCCESS &&
       ReadFPU(false) == KERN_SUCCESS && ReadEXC(false) == KERN_SUCCESS) {
     uint8_t *dst = data_sp->GetBytes();

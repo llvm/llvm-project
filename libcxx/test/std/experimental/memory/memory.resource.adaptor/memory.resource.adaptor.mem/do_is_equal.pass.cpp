@@ -23,7 +23,7 @@
 using std::size_t;
 namespace ex = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
 
     typedef CountingAllocator<char> Alloc1;
@@ -79,4 +79,6 @@ int main()
         assert(!m1.is_equal(m2));
         assert(!m2.is_equal(m1));
     }
+
+  return 0;
 }

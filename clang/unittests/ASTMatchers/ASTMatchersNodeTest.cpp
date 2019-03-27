@@ -754,6 +754,11 @@ TEST(Matcher, NullPtrLiteral) {
   EXPECT_TRUE(matches("int* i = nullptr;", cxxNullPtrLiteralExpr()));
 }
 
+TEST(Matcher, ChooseExpr) {
+  EXPECT_TRUE(matchesC("void f() { (void)__builtin_choose_expr(1, 2, 3); }",
+                       chooseExpr()));
+}
+
 TEST(Matcher, GNUNullExpr) {
   EXPECT_TRUE(matches("int* i = __null;", gnuNullExpr()));
 }

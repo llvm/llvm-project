@@ -1,0 +1,103 @@
+# RUN: llc -mtriple thumbv6m-arm-none-eabi -run-pass=machine-cse -verify-machineinstrs -o - %s | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv6m-arm-none-eabi"
+
+  define i32 @funca(i64 %l1) {
+  entry:
+    %l2 = icmp ult i64 %l1, -177673816660004267
+    %l3 = add i64 %l1, 401100203
+    %rem.i = select i1 %l2, i64 %l1, i64 %l3
+    %conv = trunc i64 %rem.i to i32
+    ret i32 %conv
+  }
+
+  define i32 @funcb(i64 %l1) { ret i32 0 }
+
+...
+---
+name:            funca
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$r1', virtual-reg: '%1' }
+constants:
+  - id:              0
+    value:           i32 401100203
+    alignment:       4
+    isTargetSpecific: false
+  - id:              1
+    value:           i32 41367909
+    alignment:       4
+    isTargetSpecific: false
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $r0, $r1
+
+    %1:tgpr = COPY $r1
+    %0:tgpr = COPY $r0
+    %2:tgpr = tLDRpci %const.0, 14, $noreg :: (load 4 from constant-pool)
+    %3:tgpr, dead $cpsr = tADDrr %0, %2, 14, $noreg
+    %4:tgpr = tLDRpci %const.1, 14, $noreg :: (load 4 from constant-pool)
+    %5:tgpr, $cpsr = tADDrr %0, %2, 14, $noreg
+    %6:tgpr, $cpsr = tADC %1, killed %4, 14, $noreg, implicit $cpsr
+    tBcc %bb.2, 3, $cpsr
+
+  bb.1.entry:
+    successors: %bb.2(0x80000000)
+
+  bb.2.entry:
+    %7:tgpr = PHI %3, %bb.1, %0, %bb.0
+    $r0 = COPY %7
+    tBX_RET 14, $noreg, implicit $r0
+
+# CHECK-LABEL: name: funca
+# cpsr def must not be dead
+# CHECK: %3:tgpr, $cpsr = tADDrr %0, %2
+# CHECK-NOT: %5:tgpr, $cpsr = tADDrr %0, %2
+
+...
+---
+name:            funcb
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$r1', virtual-reg: '%1' }
+constants:
+  - id:              0
+    value:           i32 401100203
+    alignment:       4
+    isTargetSpecific: false
+  - id:              1
+    value:           i32 41367909
+    alignment:       4
+    isTargetSpecific: false
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $r0, $r1
+
+    %1:tgpr = COPY $r1
+    %0:tgpr = COPY $r0
+    %2:tgpr = tLDRpci %const.0, 14, $noreg :: (load 4 from constant-pool)
+    %3:tgpr, dead $cpsr = tADDrr %0, %2, 14, $noreg
+    %4:tgpr = tLDRpci %const.1, 14, $noreg :: (load 4 from constant-pool)
+    %5:tgpr, dead $cpsr = tADDrr %0, %2, 14, $noreg
+    %6:tgpr, $cpsr = tADDrr %1, killed %4, 14, $noreg
+    tBcc %bb.2, 3, $cpsr
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+  bb.2:
+    %7:tgpr = PHI %3, %bb.1, %0, %bb.0
+    $r0 = COPY %7
+    tBX_RET 14, $noreg, implicit $r0
+
+# CHECK-LABEL: name: funcb
+# cpsr def should be dead
+# CHECK: %3:tgpr, dead $cpsr = tADDrr %0, %2
+# CHECK-NOT: %5:tgpr, dead $cpsr = tADDrr %0, %2
+...

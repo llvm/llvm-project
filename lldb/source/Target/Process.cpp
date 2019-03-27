@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 
 #include "llvm/Support/ScopedPrinter.h"
@@ -63,6 +64,7 @@
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
 
@@ -163,15 +165,15 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
 {
   if (process == nullptr) {
     // Global process properties, set them up one time
-    m_collection_sp.reset(
-        new ProcessOptionValueProperties(ConstString("process")));
+    m_collection_sp =
+        std::make_shared<ProcessOptionValueProperties>(ConstString("process"));
     m_collection_sp->Initialize(g_properties);
     m_collection_sp->AppendProperty(
         ConstString("thread"), ConstString("Settings specific to threads."),
         true, Thread::GetGlobalProperties()->GetValueProperties());
   } else {
-    m_collection_sp.reset(
-        new ProcessOptionValueProperties(Process::GetGlobalProperties().get()));
+    m_collection_sp = std::make_shared<ProcessOptionValueProperties>(
+        Process::GetGlobalProperties().get());
     m_collection_sp->SetValueChangedCallback(
         ePropertyPythonOSPluginPath,
         ProcessProperties::OptionValueChangedCallback, this);
@@ -275,140 +277,6 @@ bool ProcessProperties::GetStopOnExec() const {
   const uint32_t idx = ePropertyStopOnExec;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_properties[idx].default_uint_value != 0);
-}
-
-void ProcessInstanceInfo::Dump(Stream &s, Platform *platform) const {
-  const char *cstr;
-  if (m_pid != LLDB_INVALID_PROCESS_ID)
-    s.Printf("    pid = %" PRIu64 "\n", m_pid);
-
-  if (m_parent_pid != LLDB_INVALID_PROCESS_ID)
-    s.Printf(" parent = %" PRIu64 "\n", m_parent_pid);
-
-  if (m_executable) {
-    s.Printf("   name = %s\n", m_executable.GetFilename().GetCString());
-    s.PutCString("   file = ");
-    m_executable.Dump(&s);
-    s.EOL();
-  }
-  const uint32_t argc = m_arguments.GetArgumentCount();
-  if (argc > 0) {
-    for (uint32_t i = 0; i < argc; i++) {
-      const char *arg = m_arguments.GetArgumentAtIndex(i);
-      if (i < 10)
-        s.Printf(" arg[%u] = %s\n", i, arg);
-      else
-        s.Printf("arg[%u] = %s\n", i, arg);
-    }
-  }
-
-  s.Format("{0}", m_environment);
-
-  if (m_arch.IsValid()) {
-    s.Printf("   arch = ");
-    m_arch.DumpTriple(s);
-    s.EOL();
-  }
-
-  if (m_uid != UINT32_MAX) {
-    cstr = platform->GetUserName(m_uid);
-    s.Printf("    uid = %-5u (%s)\n", m_uid, cstr ? cstr : "");
-  }
-  if (m_gid != UINT32_MAX) {
-    cstr = platform->GetGroupName(m_gid);
-    s.Printf("    gid = %-5u (%s)\n", m_gid, cstr ? cstr : "");
-  }
-  if (m_euid != UINT32_MAX) {
-    cstr = platform->GetUserName(m_euid);
-    s.Printf("   euid = %-5u (%s)\n", m_euid, cstr ? cstr : "");
-  }
-  if (m_egid != UINT32_MAX) {
-    cstr = platform->GetGroupName(m_egid);
-    s.Printf("   egid = %-5u (%s)\n", m_egid, cstr ? cstr : "");
-  }
-}
-
-void ProcessInstanceInfo::DumpTableHeader(Stream &s, Platform *platform,
-                                          bool show_args, bool verbose) {
-  const char *label;
-  if (show_args || verbose)
-    label = "ARGUMENTS";
-  else
-    label = "NAME";
-
-  if (verbose) {
-    s.Printf("PID    PARENT USER       GROUP      EFF USER   EFF GROUP  TRIPLE "
-             "                  %s\n",
-             label);
-    s.PutCString("====== ====== ========== ========== ========== ========== "
-                 "======================== ============================\n");
-  } else {
-    s.Printf("PID    PARENT USER       TRIPLE                   %s\n", label);
-    s.PutCString("====== ====== ========== ======================== "
-                 "============================\n");
-  }
-}
-
-void ProcessInstanceInfo::DumpAsTableRow(Stream &s, Platform *platform,
-                                         bool show_args, bool verbose) const {
-  if (m_pid != LLDB_INVALID_PROCESS_ID) {
-    const char *cstr;
-    s.Printf("%-6" PRIu64 " %-6" PRIu64 " ", m_pid, m_parent_pid);
-
-    StreamString arch_strm;
-    if (m_arch.IsValid())
-      m_arch.DumpTriple(arch_strm);
-
-    if (verbose) {
-      cstr = platform->GetUserName(m_uid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_uid);
-
-      cstr = platform->GetGroupName(m_gid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_gid);
-
-      cstr = platform->GetUserName(m_euid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_euid);
-
-      cstr = platform->GetGroupName(m_egid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_egid);
-
-      s.Printf("%-24s ", arch_strm.GetData());
-    } else {
-      s.Printf("%-10s %-24s ", platform->GetUserName(m_euid),
-               arch_strm.GetData());
-    }
-
-    if (verbose || show_args) {
-      const uint32_t argc = m_arguments.GetArgumentCount();
-      if (argc > 0) {
-        for (uint32_t i = 0; i < argc; i++) {
-          if (i > 0)
-            s.PutChar(' ');
-          s.PutCString(m_arguments.GetArgumentAtIndex(i));
-        }
-      }
-    } else {
-      s.PutCString(GetName());
-    }
-
-    s.EOL();
-  }
 }
 
 Status ProcessLaunchCommandOptions::SetOptionValue(
@@ -580,89 +448,6 @@ llvm::ArrayRef<OptionDefinition> ProcessLaunchCommandOptions::GetDefinitions() {
   return llvm::makeArrayRef(g_process_launch_options);
 }
 
-bool ProcessInstanceInfoMatch::NameMatches(const char *process_name) const {
-  if (m_name_match_type == NameMatch::Ignore || process_name == nullptr)
-    return true;
-  const char *match_name = m_match_info.GetName();
-  if (!match_name)
-    return true;
-
-  return lldb_private::NameMatches(process_name, m_name_match_type, match_name);
-}
-
-bool ProcessInstanceInfoMatch::Matches(
-    const ProcessInstanceInfo &proc_info) const {
-  if (!NameMatches(proc_info.GetName()))
-    return false;
-
-  if (m_match_info.ProcessIDIsValid() &&
-      m_match_info.GetProcessID() != proc_info.GetProcessID())
-    return false;
-
-  if (m_match_info.ParentProcessIDIsValid() &&
-      m_match_info.GetParentProcessID() != proc_info.GetParentProcessID())
-    return false;
-
-  if (m_match_info.UserIDIsValid() &&
-      m_match_info.GetUserID() != proc_info.GetUserID())
-    return false;
-
-  if (m_match_info.GroupIDIsValid() &&
-      m_match_info.GetGroupID() != proc_info.GetGroupID())
-    return false;
-
-  if (m_match_info.EffectiveUserIDIsValid() &&
-      m_match_info.GetEffectiveUserID() != proc_info.GetEffectiveUserID())
-    return false;
-
-  if (m_match_info.EffectiveGroupIDIsValid() &&
-      m_match_info.GetEffectiveGroupID() != proc_info.GetEffectiveGroupID())
-    return false;
-
-  if (m_match_info.GetArchitecture().IsValid() &&
-      !m_match_info.GetArchitecture().IsCompatibleMatch(
-          proc_info.GetArchitecture()))
-    return false;
-  return true;
-}
-
-bool ProcessInstanceInfoMatch::MatchAllProcesses() const {
-  if (m_name_match_type != NameMatch::Ignore)
-    return false;
-
-  if (m_match_info.ProcessIDIsValid())
-    return false;
-
-  if (m_match_info.ParentProcessIDIsValid())
-    return false;
-
-  if (m_match_info.UserIDIsValid())
-    return false;
-
-  if (m_match_info.GroupIDIsValid())
-    return false;
-
-  if (m_match_info.EffectiveUserIDIsValid())
-    return false;
-
-  if (m_match_info.EffectiveGroupIDIsValid())
-    return false;
-
-  if (m_match_info.GetArchitecture().IsValid())
-    return false;
-
-  if (m_match_all_users)
-    return false;
-
-  return true;
-}
-
-void ProcessInstanceInfoMatch::Clear() {
-  m_match_info.Clear();
-  m_name_match_type = NameMatch::Ignore;
-  m_match_all_users = false;
-}
-
 ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
                               llvm::StringRef plugin_name,
                               ListenerSP listener_sp,
@@ -733,13 +518,13 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_thread_list(this), m_extended_thread_list(this),
       m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
       m_notifications(), m_image_tokens(), m_listener_sp(listener_sp),
-      m_breakpoint_site_list(), m_dynamic_checkers_ap(),
+      m_breakpoint_site_list(), m_dynamic_checkers_up(),
       m_unix_signals_sp(unix_signals_sp), m_abi_sp(), m_process_input_reader(),
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
       m_stdin_forward(false), m_stdout_data(), m_stderr_data(),
       m_profile_data_comm_mutex(), m_profile_data(), m_iohandler_sync(0),
       m_memory_cache(*this), m_allocated_memory_cache(*this),
-      m_should_detach(false), m_next_event_action_ap(), m_public_run_lock(),
+      m_should_detach(false), m_next_event_action_up(), m_public_run_lock(),
       m_private_run_lock(), m_finalizing(false), m_finalize_called(false),
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
@@ -847,12 +632,12 @@ void Process::Finalize() {
   // We need to destroy the loader before the derived Process class gets
   // destroyed since it is very likely that undoing the loader will require
   // access to the real process.
-  m_dynamic_checkers_ap.reset();
+  m_dynamic_checkers_up.reset();
   m_abi_sp.reset();
-  m_os_ap.reset();
-  m_system_runtime_ap.reset();
-  m_dyld_ap.reset();
-  m_jit_loaders_ap.reset();
+  m_os_up.reset();
+  m_system_runtime_up.reset();
+  m_dyld_up.reset();
+  m_jit_loaders_up.reset();
   m_thread_list_real.Destroy();
   m_thread_list.Destroy();
   m_extended_thread_list.Destroy();
@@ -865,7 +650,7 @@ void Process::Finalize() {
   m_allocated_memory_cache.Clear();
   m_language_runtimes.clear();
   m_instrumentation_runtimes.clear();
-  m_next_event_action_ap.reset();
+  m_next_event_action_up.reset();
   // Clear the last natural stop ID since it has a strong reference to this
   // process
   m_mod_id.SetStopEventForLastNaturalStopID(EventSP());
@@ -1505,12 +1290,12 @@ void Process::UpdateThreadListIfNeeded() {
 }
 
 void Process::UpdateQueueListIfNeeded() {
-  if (m_system_runtime_ap) {
+  if (m_system_runtime_up) {
     if (m_queue_list.GetSize() == 0 ||
         m_queue_list_stop_id != GetLastNaturalStopID()) {
       const StateType state = GetPrivateState();
       if (StateIsStoppedState(state, true)) {
-        m_system_runtime_ap->PopulateQueueList(m_queue_list);
+        m_system_runtime_up->PopulateQueueList(m_queue_list);
         m_queue_list_stop_id = GetLastNaturalStopID();
       }
     }
@@ -1549,16 +1334,6 @@ uint32_t Process::AssignIndexIDToThread(uint64_t thread_id) {
 
 StateType Process::GetState() {
   return m_public_state.GetValue();
-}
-
-bool Process::StateChangedIsExternallyHijacked() {
-  if (IsHijackedForEvent(eBroadcastBitStateChanged)) {
-    const char *hijacking_name = GetHijackingListenerName();
-    if (hijacking_name &&
-        strcmp(hijacking_name, "lldb.Process.ResumeSynchronous.hijack"))
-      return true;
-  }
-  return false;
 }
 
 void Process::SetPublicState(StateType new_state, bool restarted) {
@@ -1614,6 +1389,8 @@ Status Process::Resume() {
   return error;
 }
 
+static const char *g_resume_sync_name = "lldb.Process.ResumeSynchronous.hijack";
+
 Status Process::ResumeSynchronous(Stream *stream) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STATE |
                                                   LIBLLDB_LOG_PROCESS));
@@ -1627,7 +1404,7 @@ Status Process::ResumeSynchronous(Stream *stream) {
   }
 
   ListenerSP listener_sp(
-      Listener::MakeListener("lldb.Process.ResumeSynchronous.hijack"));
+      Listener::MakeListener(g_resume_sync_name));
   HijackProcessEvents(listener_sp);
 
   Status error = PrivateResume();
@@ -1649,6 +1426,26 @@ Status Process::ResumeSynchronous(Stream *stream) {
   RestoreProcessEvents();
 
   return error;
+}
+
+bool Process::StateChangedIsExternallyHijacked() {
+  if (IsHijackedForEvent(eBroadcastBitStateChanged)) {
+    const char *hijacking_name = GetHijackingListenerName();
+    if (hijacking_name &&
+        strcmp(hijacking_name, g_resume_sync_name))
+      return true;
+  }
+  return false;
+}
+
+bool Process::StateChangedIsHijackedForSynchronousResume() {
+  if (IsHijackedForEvent(eBroadcastBitStateChanged)) {
+    const char *hijacking_name = GetHijackingListenerName();
+    if (hijacking_name &&
+        strcmp(hijacking_name, g_resume_sync_name) == 0)
+      return true;
+  }
+  return false;
 }
 
 StateType Process::GetPrivateState() { return m_private_state.GetValue(); }
@@ -1791,7 +1588,7 @@ bool Process::IsPossibleDynamicValue(ValueObject &in_value) {
 }
 
 void Process::SetDynamicCheckers(DynamicCheckerFunctions *dynamic_checkers) {
-  m_dynamic_checkers_ap.reset(dynamic_checkers);
+  m_dynamic_checkers_up.reset(dynamic_checkers);
 }
 
 BreakpointSiteList &Process::GetBreakpointSiteList() {
@@ -2707,7 +2504,7 @@ Process::WaitForProcessStopPrivate(EventSP &event_sp,
 void Process::LoadOperatingSystemPlugin(bool flush) {
   if (flush)
     m_thread_list.Clear();
-  m_os_ap.reset(OperatingSystem::FindPlugin(this, nullptr));
+  m_os_up.reset(OperatingSystem::FindPlugin(this, nullptr));
   if (flush)
     Flush();
 }
@@ -2715,10 +2512,10 @@ void Process::LoadOperatingSystemPlugin(bool flush) {
 Status Process::Launch(ProcessLaunchInfo &launch_info) {
   Status error;
   m_abi_sp.reset();
-  m_dyld_ap.reset();
-  m_jit_loaders_ap.reset();
-  m_system_runtime_ap.reset();
-  m_os_ap.reset();
+  m_dyld_up.reset();
+  m_jit_loaders_up.reset();
+  m_system_runtime_up.reset();
+  m_os_up.reset();
   m_process_input_reader.reset();
 
   Module *exe_module = GetTarget().GetExecutableModulePointer();
@@ -2788,8 +2585,8 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
             if (system_runtime)
               system_runtime->DidLaunch();
 
-            if (!m_os_ap)
-                LoadOperatingSystemPlugin(false);
+            if (!m_os_up)
+              LoadOperatingSystemPlugin(false);
 
             // We successfully launched the process and stopped, now it the
             // right time to set up signal filters before resuming.
@@ -2849,7 +2646,7 @@ Status Process::LoadCore() {
     if (system_runtime)
       system_runtime->DidAttach();
 
-    if (!m_os_ap)
+    if (!m_os_up)
       LoadOperatingSystemPlugin(false);
 
     // We successfully loaded a core file, now pretend we stopped so we can
@@ -2875,25 +2672,25 @@ Status Process::LoadCore() {
 }
 
 DynamicLoader *Process::GetDynamicLoader() {
-  if (!m_dyld_ap)
-    m_dyld_ap.reset(DynamicLoader::FindPlugin(this, nullptr));
-  return m_dyld_ap.get();
+  if (!m_dyld_up)
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, nullptr));
+  return m_dyld_up.get();
 }
 
 const lldb::DataBufferSP Process::GetAuxvData() { return DataBufferSP(); }
 
 JITLoaderList &Process::GetJITLoaders() {
-  if (!m_jit_loaders_ap) {
-    m_jit_loaders_ap.reset(new JITLoaderList());
-    JITLoader::LoadPlugins(this, *m_jit_loaders_ap);
+  if (!m_jit_loaders_up) {
+    m_jit_loaders_up.reset(new JITLoaderList());
+    JITLoader::LoadPlugins(this, *m_jit_loaders_up);
   }
-  return *m_jit_loaders_ap;
+  return *m_jit_loaders_up;
 }
 
 SystemRuntime *Process::GetSystemRuntime() {
-  if (!m_system_runtime_ap)
-    m_system_runtime_ap.reset(SystemRuntime::FindPlugin(this));
-  return m_system_runtime_ap.get();
+  if (!m_system_runtime_up)
+    m_system_runtime_up.reset(SystemRuntime::FindPlugin(this));
+  return m_system_runtime_up.get();
 }
 
 Process::AttachCompletionHandler::AttachCompletionHandler(Process *process,
@@ -2983,10 +2780,10 @@ ListenerSP ProcessAttachInfo::GetListenerForProcess(Debugger &debugger) {
 Status Process::Attach(ProcessAttachInfo &attach_info) {
   m_abi_sp.reset();
   m_process_input_reader.reset();
-  m_dyld_ap.reset();
-  m_jit_loaders_ap.reset();
-  m_system_runtime_ap.reset();
-  m_os_ap.reset();
+  m_dyld_up.reset();
+  m_jit_loaders_up.reset();
+  m_system_runtime_up.reset();
+  m_os_up.reset();
 
   lldb::pid_t attach_pid = attach_info.GetProcessID();
   Status error;
@@ -3044,11 +2841,10 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
                 process_name, sizeof(process_name));
             if (num_matches > 1) {
               StreamString s;
-              ProcessInstanceInfo::DumpTableHeader(s, platform_sp.get(), true,
-                                                   false);
+              ProcessInstanceInfo::DumpTableHeader(s, true, false);
               for (size_t i = 0; i < num_matches; i++) {
                 process_infos.GetProcessInfoAtIndex(i).DumpAsTableRow(
-                    s, platform_sp.get(), true, false);
+                    s, platform_sp->GetUserIDResolver(), true, false);
               }
               error.SetErrorStringWithFormat(
                   "more than one process named %s:\n%s", process_name,
@@ -3192,7 +2988,7 @@ void Process::CompleteAttach() {
     }
   }
 
-  if (!m_os_ap)
+  if (!m_os_up)
     LoadOperatingSystemPlugin(false);
   // Figure out which one is the executable, and set that in our target:
   const ModuleList &target_modules = GetTarget().GetImages();
@@ -3850,9 +3646,9 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
       Process::ProcessEventData::GetStateFromEvent(event_sp.get());
 
   // First check to see if anybody wants a shot at this event:
-  if (m_next_event_action_ap) {
+  if (m_next_event_action_up) {
     NextEventAction::EventActionResult action_result =
-        m_next_event_action_ap->PerformAction(event_sp);
+        m_next_event_action_up->PerformAction(event_sp);
     if (log)
       log->Printf("Ran next event action, result was %d.", action_result);
 
@@ -3870,7 +3666,7 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
       // to exit so the next event will kill us.
       if (new_state != eStateExited) {
         // FIXME: should cons up an exited event, and discard this one.
-        SetExitStatus(0, m_next_event_action_ap->GetExitString());
+        SetExitStatus(0, m_next_event_action_up->GetExitString());
         SetNextEventAction(nullptr);
         return;
       }
@@ -4259,14 +4055,23 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
         // public resume.
         process_sp->PrivateResume();
       } else {
-        // If we didn't restart, run the Stop Hooks here: They might also
-        // restart the target, so watch for that.
-        process_sp->GetTarget().RunStopHooks();
-        if (process_sp->GetPrivateState() == eStateRunning)
-          SetRestarted(true);
+        bool hijacked = 
+          process_sp->IsHijackedForEvent(eBroadcastBitStateChanged)
+          && !process_sp->StateChangedIsHijackedForSynchronousResume();
+
+        if (!hijacked) {
+          // If we didn't restart, run the Stop Hooks here.
+          // Don't do that if state changed events aren't hooked up to the
+          // public (or SyncResume) broadcasters.  StopHooks are just for 
+          // real public stops.  They might also restart the target, 
+          // so watch for that.
+          process_sp->GetTarget().RunStopHooks();
+          if (process_sp->GetPrivateState() == eStateRunning)
+            SetRestarted(true);
       }
     }
   }
+}
 }
 
 void Process::ProcessEventData::Dump(Stream *s) const {
@@ -4657,11 +4462,11 @@ protected:
 void Process::SetSTDIOFileDescriptor(int fd) {
   // First set up the Read Thread for reading/handling process I/O
 
-  std::unique_ptr<ConnectionFileDescriptor> conn_ap(
+  std::unique_ptr<ConnectionFileDescriptor> conn_up(
       new ConnectionFileDescriptor(fd, true));
 
-  if (conn_ap) {
-    m_stdio_communication.SetConnection(conn_ap.release());
+  if (conn_up) {
+    m_stdio_communication.SetConnection(conn_up.release());
     if (m_stdio_communication.IsConnected()) {
       m_stdio_communication.SetReadThreadBytesReceivedCallback(
           STDIOReadThreadBytesReceived, this);
@@ -4670,7 +4475,8 @@ void Process::SetSTDIOFileDescriptor(int fd) {
       // Now read thread is set up, set up input reader.
 
       if (!m_process_input_reader)
-        m_process_input_reader.reset(new IOHandlerProcessSTDIO(this, fd));
+        m_process_input_reader =
+            std::make_shared<IOHandlerProcessSTDIO>(this, fd);
     }
   }
 }
@@ -5781,12 +5587,12 @@ void Process::DidExec() {
   Target &target = GetTarget();
   target.CleanupProcess();
   target.ClearModules(false);
-  m_dynamic_checkers_ap.reset();
+  m_dynamic_checkers_up.reset();
   m_abi_sp.reset();
-  m_system_runtime_ap.reset();
-  m_os_ap.reset();
-  m_dyld_ap.reset();
-  m_jit_loaders_ap.reset();
+  m_system_runtime_up.reset();
+  m_os_up.reset();
+  m_dyld_up.reset();
+  m_jit_loaders_up.reset();
   m_image_tokens.clear();
   m_allocated_memory_cache.Clear();
   m_language_runtimes.clear();
@@ -5870,7 +5676,7 @@ void Process::ModulesDidLoad(ModuleList &module_list) {
 
   // If we don't have an operating system plug-in, try to load one since
   // loading shared libraries might cause a new one to try and load
-  if (!m_os_ap)
+  if (!m_os_up)
     LoadOperatingSystemPlugin(false);
 
   // Give structured-data plugins a chance to see the modified modules.
@@ -5944,7 +5750,8 @@ ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {
     return threads;
   }
 
-  threads.reset(new ThreadCollection(memory_history->GetHistoryThreads(addr)));
+  threads = std::make_shared<ThreadCollection>(
+      memory_history->GetHistoryThreads(addr));
 
   return threads;
 }

@@ -169,7 +169,7 @@ class InputCorpus {
     InputInfo &II = *Inputs[ChooseUnitIdxToMutate(Rand)];
     assert(!II.U.empty());
     return II;
-  };
+  }
 
   // Returns an index of random unit from the corpus to mutate.
   size_t ChooseUnitIdxToMutate(Random &Rand) {

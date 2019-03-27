@@ -292,6 +292,12 @@ void AArch64InstPrinter::printInst(const MCInst *MI, raw_ostream &O,
     printInstruction(MI, STI, O);
 
   printAnnotation(O, Annot);
+
+  if (atomicBarrierDroppedOnZero(Opcode) &&
+      (MI->getOperand(0).getReg() == AArch64::XZR ||
+       MI->getOperand(0).getReg() == AArch64::WZR)) {
+    printAnnotation(O, "acquire semantics dropped since destination is zero");
+  }
 }
 
 static bool isTblTbxInstruction(unsigned Opcode, StringRef &Layout,

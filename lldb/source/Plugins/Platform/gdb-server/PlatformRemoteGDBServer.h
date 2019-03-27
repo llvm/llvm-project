@@ -19,7 +19,7 @@
 namespace lldb_private {
 namespace platform_gdb_server {
 
-class PlatformRemoteGDBServer : public Platform {
+class PlatformRemoteGDBServer : public Platform, private UserIDResolver {
 public:
   static void Initialize();
 
@@ -100,9 +100,7 @@ public:
   // name if connected.
   const char *GetHostname() override;
 
-  const char *GetUserName(uint32_t uid) override;
-
-  const char *GetGroupName(uint32_t gid) override;
+  UserIDResolver &GetUserIDResolver() override { return *this; }
 
   bool IsConnected() const override;
 
@@ -194,6 +192,9 @@ private:
   std::string MakeGdbServerUrl(const std::string &platform_scheme,
                                const std::string &platform_hostname,
                                uint16_t port, const char *socket_name);
+
+  llvm::Optional<std::string> DoGetUserName(UserIDResolver::id_t uid) override;
+  llvm::Optional<std::string> DoGetGroupName(UserIDResolver::id_t uid) override;
 
   DISALLOW_COPY_AND_ASSIGN(PlatformRemoteGDBServer);
 };

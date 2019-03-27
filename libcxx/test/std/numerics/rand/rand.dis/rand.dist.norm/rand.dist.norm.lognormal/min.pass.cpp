@@ -16,11 +16,13 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::lognormal_distribution<> D;
         D d(.5, .5);
         assert(d.min() == 0);
     }
+
+  return 0;
 }

@@ -75,7 +75,7 @@ struct MoveOnly2
 
 #endif
 
-int main()
+int main(int, char**)
 {
     test_has_not_trivial_move_constructor<void>();
     test_has_not_trivial_move_constructor<A>();
@@ -94,4 +94,6 @@ int main()
     static_assert(!std::is_trivially_move_constructible<MoveOnly1>::value, "");
     static_assert( std::is_trivially_move_constructible<MoveOnly2>::value, "");
 #endif
+
+  return 0;
 }

@@ -11,32 +11,32 @@
 # RUN: --check-prefix=CHECKAUX --check-prefix=CHECKMAP \
 # RUN: --check-prefix=CHECKSTAT --check-prefix=CHECKUP --check-prefix=CHECKFD %s
 # RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --directory' | FileCheck --check-prefix=CHECKDIR %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --d' | FileCheck --check-prefix=CHECKDIR %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -d' | FileCheck --check-prefix=CHECKDIR %s
 # RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --linux' | \
 # RUN: FileCheck --check-prefix=CHECKCPU --check-prefix=CHECKSTATUS \
 # RUN: --check-prefix=CHECKLSB --check-prefix=CHECKCMD --check-prefix=CHECKENV \
 # RUN: --check-prefix=CHECKAUX --check-prefix=CHECKMAP --check-prefix=CHECKSTAT \
 # RUN: --check-prefix=CHECKUP --check-prefix=CHECKFD %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --cpuinfo' | FileCheck --check-prefix=CHECKCPU %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --C' | FileCheck --check-prefix=CHECKCPU %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --status' | FileCheck --check-prefix=CHECKSTATUS %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --s' | FileCheck --check-prefix=CHECKSTATUS %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --cpuinfo'     | FileCheck --check-prefix=CHECKCPU %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -C'            | FileCheck --check-prefix=CHECKCPU %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --status'      | FileCheck --check-prefix=CHECKSTATUS %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -s'            | FileCheck --check-prefix=CHECKSTATUS %s
 # RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --lsb-release' | FileCheck --check-prefix=CHECKLSB %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --r' | FileCheck --check-prefix=CHECKLSB %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --cmdline' | FileCheck --check-prefix=CHECKCMD %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --c' | FileCheck --check-prefix=CHECKCMD %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --environ' | FileCheck --check-prefix=CHECKENV %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --e' | FileCheck --check-prefix=CHECKENV %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --auxv' | FileCheck --check-prefix=CHECKAUX %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --x' | FileCheck --check-prefix=CHECKAUX %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --maps' | FileCheck --check-prefix=CHECKMAP %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --m' | FileCheck --check-prefix=CHECKMAP %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --stat' | FileCheck --check-prefix=CHECKSTAT %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --S' | FileCheck --check-prefix=CHECKSTAT %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --uptime' | FileCheck --check-prefix=CHECKUP %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --u' | FileCheck --check-prefix=CHECKUP %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --fd' | FileCheck --check-prefix=CHECKFD %s
-# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --f' | FileCheck --check-prefix=CHECKFD %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -r'            | FileCheck --check-prefix=CHECKLSB %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --cmdline'     | FileCheck --check-prefix=CHECKCMD %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -c'            | FileCheck --check-prefix=CHECKCMD %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --environ'     | FileCheck --check-prefix=CHECKENV %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -e'            | FileCheck --check-prefix=CHECKENV %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --auxv'        | FileCheck --check-prefix=CHECKAUX %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -x'            | FileCheck --check-prefix=CHECKAUX %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --maps'        | FileCheck --check-prefix=CHECKMAP %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -m'            | FileCheck --check-prefix=CHECKMAP %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --stat'        | FileCheck --check-prefix=CHECKSTAT %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -S'            | FileCheck --check-prefix=CHECKSTAT %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --uptime'      | FileCheck --check-prefix=CHECKUP %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -u'            | FileCheck --check-prefix=CHECKUP %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump --fd'          | FileCheck --check-prefix=CHECKFD %s
+# RUN: %lldb -c %p/Inputs/dump-content.dmp -o 'process plugin dump -f'            | FileCheck --check-prefix=CHECKFD %s
 # CHECKDIR:      RVA        SIZE       TYPE       MinidumpStreamType
 # CHECKDIR-NEXT: ---------- ---------- ---------- --------------------------
 # CHECKDIR-NEXT: 0x000000b0 0x00000038 0x00000007 SystemInfo

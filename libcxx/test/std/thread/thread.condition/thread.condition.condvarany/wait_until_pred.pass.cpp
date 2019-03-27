@@ -89,7 +89,7 @@ void f()
     ++runs;
 }
 
-int main()
+int main(int, char**)
 {
     {
         L1 lk(m0);
@@ -115,4 +115,6 @@ int main()
         lk.unlock();
         t.join();
     }
+
+  return 0;
 }

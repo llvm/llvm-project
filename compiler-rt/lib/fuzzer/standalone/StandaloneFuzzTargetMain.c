@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
     fseek(f, 0, SEEK_SET);
     unsigned char *buf = (unsigned char*)malloc(len);
     size_t n_read = fread(buf, 1, len, f);
+    fclose(f);
     assert(n_read == len);
     LLVMFuzzerTestOneInput(buf, len);
     free(buf);

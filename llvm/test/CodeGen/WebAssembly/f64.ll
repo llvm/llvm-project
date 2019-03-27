@@ -159,7 +159,7 @@ define double @fmax64_intrinsic(double %x, double %y) {
 }
 
 ; CHECK-LABEL: fma64:
-; CHECK: {{^}} f64.call $push[[LR:[0-9]+]]=, fma@FUNCTION, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; CHECK: {{^}} f64.call $push[[LR:[0-9]+]]=, fma, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
 ; CHECK-NEXT: return $pop[[LR]]{{$}}
 define double @fma64(double %a, double %b, double %c) {
   %d = call double @llvm.fma.f64(double %a, double %b, double %c)

@@ -13,6 +13,7 @@
 #include <CL/sycl/info/info_desc.hpp>
 #include <CL/sycl/stl.hpp>
 #include <memory>
+#include <type_traits>
 // 4.6.2 Context class
 
 namespace cl {
@@ -61,6 +62,11 @@ private:
   std::shared_ptr<detail::context_impl> impl;
   template <class T>
   friend decltype(T::impl) detail::getSyclObjImpl(const T &SyclObject);
+
+  template <class T>
+  friend
+      typename std::add_pointer<typename decltype(T::impl)::element_type>::type
+      detail::getRawSyclObjImpl(const T &SyclObject);
 };
 
 } // namespace sycl

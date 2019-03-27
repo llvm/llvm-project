@@ -44,7 +44,8 @@ class ThreadContext : public ThreadContextBase {
 
 void InitializeThreadRegistry();
 
-void ThreadStart(u32 tid, tid_t os_id, bool workerthread = false);
+void ThreadStart(u32 tid, tid_t os_id,
+                 ThreadType thread_type = ThreadType::Regular);
 void ThreadFinish();
 u32 ThreadCreate(u32 tid, uptr uid, bool detached);
 void ThreadJoin(u32 tid);

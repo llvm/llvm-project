@@ -29,7 +29,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year               = std::chrono::year;
     using days               = std::chrono::days;
@@ -91,4 +91,6 @@ int main()
     assert((ymwd.weekday_indexed() == weekday_indexed{std::chrono::Wednesday, 5}));
     assert( ymwd                   == year_month_weekday{local_days{ymwd}}); // round trip
     }
+
+  return 0;
 }

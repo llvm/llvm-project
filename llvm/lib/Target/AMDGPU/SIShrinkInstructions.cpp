@@ -276,7 +276,9 @@ static bool shrinkScalarLogicOp(const GCNSubtarget &ST,
         if (Opc == AMDGPU::S_BITSET0_B32 ||
             Opc == AMDGPU::S_BITSET1_B32) {
           Src0->ChangeToImmediate(NewImm);
-          MI.RemoveOperand(2);
+          // Remove the immediate and add the tied input.
+          MI.getOperand(2).ChangeToRegister(Dest->getReg(), false);
+          MI.tieOperands(0, 2);
         } else {
           SrcImm->setImm(NewImm);
         }

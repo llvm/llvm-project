@@ -32,7 +32,7 @@ void test_add_cv()
     test_add_cv_imp<const volatile T, const volatile T>();
 }
 
-int main()
+int main(int, char**)
 {
     test_add_cv<void>();
     test_add_cv<int>();
@@ -41,4 +41,6 @@ int main()
     test_add_cv<const int&>();
     test_add_cv<int*>();
     test_add_cv<const int*>();
+
+  return 0;
 }

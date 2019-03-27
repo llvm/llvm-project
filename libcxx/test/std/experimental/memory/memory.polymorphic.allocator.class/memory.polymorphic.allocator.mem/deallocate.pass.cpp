@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++experimental
 // UNSUPPORTED: c++98, c++03
 
 // <experimental/memory_resource>
@@ -41,7 +40,7 @@ void testForSizeAndAlign() {
     }
 }
 
-int main()
+int main(int, char**)
 {
     {
         ex::polymorphic_allocator<int> a;
@@ -58,4 +57,6 @@ int main()
         testForSizeAndAlign<73, MA>();
         testForSizeAndAlign<13, MA>();
     }
+
+  return 0;
 }

@@ -454,3 +454,144 @@ __kmpc_nvptx_teams_end_reduce_nowait_simple(kmp_Ident *loc, int32_t global_tid,
   (void)atomicExch((uint32_t *)crit, 0);
 }
 
+INLINE static bool isMaster(kmp_Ident *loc, uint32_t ThreadId) {
+  return checkGenericMode(loc) || IsTeamMaster(ThreadId);
+}
+
+INLINE static uint32_t roundToWarpsize(uint32_t s) {
+  if (s < WARPSIZE)
+    return 1;
+  return (s & ~(unsigned)(WARPSIZE - 1));
+}
+
+__device__ static volatile uint32_t IterCnt = 0;
+__device__ static volatile uint32_t Cnt = 0;
+EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
+    kmp_Ident *loc, int32_t global_tid, void *global_buffer,
+    int32_t num_of_records, void *reduce_data, kmp_ShuffleReductFctPtr shflFct,
+    kmp_InterWarpCopyFctPtr cpyFct, kmp_ListGlobalFctPtr lgcpyFct,
+    kmp_ListGlobalFctPtr lgredFct, kmp_ListGlobalFctPtr glcpyFct,
+    kmp_ListGlobalFctPtr glredFct) {
+
+  // Terminate all threads in non-SPMD mode except for the master thread.
+  if (checkGenericMode(loc) && GetThreadIdInBlock() != GetMasterThreadID())
+    return 0;
+
+  uint32_t ThreadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
+
+  // In non-generic mode all workers participate in the teams reduction.
+  // In generic mode only the team master participates in the teams
+  // reduction because the workers are waiting for parallel work.
+  uint32_t NumThreads =
+      checkSPMDMode(loc)
+          ? GetNumberOfOmpThreads(ThreadId, /*isSPMDExecutionMode=*/true,
+                                  checkRuntimeUninitialized(loc))
+          : /*Master thread only*/ 1;
+  uint32_t TeamId = GetBlockIdInKernel();
+  uint32_t NumTeams = GetNumberOfBlocksInKernel();
+  __shared__ unsigned Bound;
+  __shared__ unsigned ChunkTeamCount;
+
+  // Block progress for teams greater than the current upper
+  // limit. We always only allow a number of teams less or equal
+  // to the number of slots in the buffer.
+  bool IsMaster = isMaster(loc, ThreadId);
+  while (IsMaster) {
+    // Atomic read
+    Bound = atomicAdd((uint32_t *)&IterCnt, 0);
+    if (TeamId < Bound + num_of_records)
+      break;
+  }
+
+  if (IsMaster) {
+    int ModBockId = TeamId % num_of_records;
+    if (TeamId < num_of_records)
+      lgcpyFct(global_buffer, ModBockId, reduce_data);
+    else
+      lgredFct(global_buffer, ModBockId, reduce_data);
+    __threadfence_system();
+
+    // Increment team counter.
+    // This counter is incremented by all teams in the current
+    // BUFFER_SIZE chunk.
+    ChunkTeamCount = atomicInc((uint32_t *)&Cnt, num_of_records - 1);
+  }
+  // Synchronize
+  if (checkSPMDMode(loc))
+    __kmpc_barrier(loc, global_tid);
+
+  // reduce_data is global or shared so before being reduced within the
+  // warp we need to bring it in local memory:
+  // local_reduce_data = reduce_data[i]
+  //
+  // Example for 3 reduction variables a, b, c (of potentially different
+  // types):
+  //
+  // buffer layout (struct of arrays):
+  // a, a, ..., a, b, b, ... b, c, c, ... c
+  // |__________|
+  //     num_of_records
+  //
+  // local_data_reduce layout (struct):
+  // a, b, c
+  //
+  // Each thread will have a local struct containing the values to be
+  // reduced:
+  //      1. do reduction within each warp.
+  //      2. do reduction across warps.
+  //      3. write the final result to the main reduction variable
+  //         by returning 1 in the thread holding the reduction result.
+
+  // Check if this is the very last team.
+  unsigned NumRecs = min(NumTeams, num_of_records);
+  if (ChunkTeamCount == NumTeams - Bound - 1) {
+    //
+    // Last team processing.
+    //
+    if (ThreadId >= NumRecs)
+      return 0;
+    NumThreads = roundToWarpsize(min(NumThreads, NumRecs));
+    if (ThreadId >= NumThreads)
+      return 0;
+
+    // Load from buffer and reduce.
+    glcpyFct(global_buffer, ThreadId, reduce_data);
+    for (uint32_t i = NumThreads + ThreadId; i < NumRecs; i += NumThreads)
+      glredFct(global_buffer, i, reduce_data);
+
+    // Reduce across warps to the warp master.
+    if (NumThreads > 1) {
+      gpu_regular_warp_reduce(reduce_data, shflFct);
+
+      // When we have more than [warpsize] number of threads
+      // a block reduction is performed here.
+      uint32_t ActiveThreads = min(NumRecs, NumThreads);
+      if (ActiveThreads > WARPSIZE) {
+        uint32_t WarpsNeeded = (ActiveThreads + WARPSIZE - 1) / WARPSIZE;
+        // Gather all the reduced values from each warp
+        // to the first warp.
+        cpyFct(reduce_data, WarpsNeeded);
+
+        uint32_t WarpId = ThreadId / WARPSIZE;
+        if (WarpId == 0)
+          gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded,
+                                    ThreadId);
+      }
+    }
+
+    if (IsMaster) {
+      Cnt = 0;
+      IterCnt = 0;
+      return 1;
+    }
+    return 0;
+  }
+  if (IsMaster && ChunkTeamCount == num_of_records - 1) {
+    // Allow SIZE number of teams to proceed writing their
+    // intermediate results to the global buffer.
+    atomicAdd((uint32_t *)&IterCnt, num_of_records);
+  }
+
+  return 0;
+}
+

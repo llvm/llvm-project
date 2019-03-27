@@ -41,7 +41,7 @@ public:
 int G::n_alive = 0;
 bool G::op_run = false;
 
-int main()
+int main(int, char**)
 {
     {
         G g;
@@ -54,4 +54,6 @@ int main()
         assert(t1.get_id() == std::thread::id());
         t0.join();
     }
+
+  return 0;
 }

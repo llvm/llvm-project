@@ -12,11 +12,11 @@
 #include <CL/sycl/detail/scheduler/scheduler.h>
 #include <CL/sycl/event.hpp>
 #include <CL/sycl/nd_range.hpp>
+#include <CL/sycl/queue.hpp>
 
 #include <cassert>
 #include <fstream>
 #include <set>
-#include <unordered_set>
 #include <vector>
 
 namespace cl {
@@ -35,8 +35,8 @@ Scheduler::Scheduler() {
   }
 }
 
-void Node::addInteropArg(shared_ptr_class<void> Ptr, size_t Size,
-                         int ArgIndex, BufferReqPtr BufReq) {
+void Node::addInteropArg(shared_ptr_class<void> Ptr, size_t Size, int ArgIndex,
+                         BufferReqPtr BufReq) {
   m_InteropArgs.emplace_back(Ptr, Size, ArgIndex, BufReq);
 }
 
@@ -73,49 +73,37 @@ void Scheduler::waitForEvent(EventImplPtr Event) {
   }
 }
 
-// Calls async handler for the given command Cmd and those other
-// commands that Cmd depends on.
-void Scheduler::throwForCmdRecursive(std::shared_ptr<Command> Cmd) {
-  if (Cmd == nullptr) {
-    return;
-  }
-
-  auto QImpl = Cmd->getQueue();
-  QImpl->throw_asynchronous();
-
-  std::vector<std::pair<std::shared_ptr<Command>, BufferReqPtr>> Deps =
-    Cmd->getDependencies();
-  for (auto D : Deps) {
-    throwForCmdRecursive(D.first);
-  }
-}
-
 // Calls async handler for the given event Event and those other
-// events that Event depends on.
-void Scheduler::throwForEventRecursive(EventImplPtr Event) {
-  auto Cmd = getCmdForEvent(Event);
-  if (Cmd) {
-    throwForCmdRecursive(Cmd);
+// events that Event immediaately depends on.
+void Scheduler::throwForEvent(EventImplPtr Event) {
+  auto Cmd = getCmdForEvent(std::move(Event));
+  if (!Cmd) {
+    return;
+  }
+  Cmd->getQueue()->throw_asynchronous();
+
+  // Call async handler for immediate dependencies.
+  std::vector<std::pair<std::shared_ptr<Command>, BufferReqPtr>> Deps =
+      Cmd->getDependencies();
+  for (auto D : Deps) {
+    D.first->getQueue()->throw_asynchronous();
   }
 }
 
-void Scheduler::getDepEventsRecursive(
-    std::unordered_set<cl::sycl::event> &EventsSet,
-    EventImplPtr Event) {
+vector_class<event> Scheduler::getDepEvents(EventImplPtr Event) {
+  vector_class<event> DepEventsVec;
   auto Cmd = getCmdForEvent(Event);
-  if (Cmd == nullptr) {
-    return;
+  if (!Cmd) {
+    return DepEventsVec;
   }
 
   std::vector<std::pair<std::shared_ptr<Command>, BufferReqPtr>> Deps =
-    Cmd->getDependencies();
+      Cmd->getDependencies();
   for (auto D : Deps) {
     auto DepEvent = D.first->getEvent();
-    EventsSet.insert(DepEvent);
-
-    auto DepEventImpl = cl::sycl::detail::getSyclObjImpl(DepEvent);
-    getDepEventsRecursive(EventsSet, DepEventImpl);
+    DepEventsVec.push_back(std::move(DepEvent));
   }
+  return DepEventsVec;
 }
 
 void Scheduler::print(std::ostream &Stream) const {
@@ -246,6 +234,21 @@ void Scheduler::printGraphForCommand(CommandPtr Cmd,
 Scheduler &Scheduler::getInstance() {
   static Scheduler Instance;
   return Instance;
+}
+
+CommandPtr Scheduler::insertUpdateHostCmd(const BufferReqPtr &BufStor) {
+  // TODO: Find a better way to say that we need copy to HOST, just nullptr?
+  cl::sycl::device HostDevice;
+  CommandPtr UpdateHostCmd = std::make_shared<MemMoveCommand>(
+      BufStor, m_BuffersEvolution[BufStor].back()->getQueue(),
+      detail::getSyclObjImpl(cl::sycl::queue(HostDevice)),
+      cl::sycl::access::mode::read_write);
+
+  // Add dependency if there was operations with the buffer already.
+  UpdateHostCmd->addDep(m_BuffersEvolution[BufStor].back(), BufStor);
+
+  m_BuffersEvolution[BufStor].push_back(UpdateHostCmd);
+  return UpdateHostCmd;
 }
 
 } // namespace simple_scheduler

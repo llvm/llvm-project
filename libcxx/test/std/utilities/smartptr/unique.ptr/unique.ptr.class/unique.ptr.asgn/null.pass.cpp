@@ -32,7 +32,9 @@ void test_basic() {
   assert(A::count == 0);
 }
 
-int main() {
+int main(int, char**) {
   test_basic</*IsArray*/ false>();
   test_basic<true>();
+
+  return 0;
 }

@@ -26,12 +26,10 @@ template <typename Span>
 constexpr bool testConstexprSpan(Span sp, ptrdiff_t idx)
 {
     _LIBCPP_ASSERT(noexcept(sp[idx]), "");
-    _LIBCPP_ASSERT(noexcept(sp(idx)), "");
 
     typename Span::reference r1 = sp[idx];
-    typename Span::reference r2 = sp(idx);
-    typename Span::reference r3 = *(sp.data() + idx);
-    return r1 == r2 && r2 == r3;
+    typename Span::reference r2 = *(sp.data() + idx);
+    return r1 == r2;
 }
 
 
@@ -39,19 +37,17 @@ template <typename Span>
 void testRuntimeSpan(Span sp, ptrdiff_t idx)
 {
     _LIBCPP_ASSERT(noexcept(sp[idx]), "");
-    _LIBCPP_ASSERT(noexcept(sp(idx)), "");
 
     typename Span::reference r1 = sp[idx];
-    typename Span::reference r2 = sp(idx);
-    typename Span::reference r3 = *(sp.data() + idx);
-    assert(r1 == r2 && r2 == r3);
+    typename Span::reference r2 = *(sp.data() + idx);
+    assert(r1 == r2);
 }
 
 struct A{};
 constexpr int iArr1[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9};
           int iArr2[] = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
-int main ()
+int main(int, char**)
 {
     static_assert(testConstexprSpan(std::span<const int>(iArr1, 1), 0), "");
 
@@ -115,4 +111,6 @@ int main ()
     std::string s;
     testRuntimeSpan(std::span<std::string>   (&s, 1), 0);
     testRuntimeSpan(std::span<std::string, 1>(&s, 1), 0);
+
+  return 0;
 }

@@ -1433,7 +1433,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
   case DeclSpec::TST_int128:
-    if (!S.Context.getTargetInfo().hasInt128Type())
+    if (!S.Context.getTargetInfo().hasInt128Type() &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__int128";
     if (DS.getTypeSpecSign() == DeclSpec::TSS_unsigned)
@@ -1445,7 +1446,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // CUDA host and device may have different _Float16 support, therefore
     // do not diagnose _Float16 usage to avoid false alarm.
     // ToDo: more precise diagnostics for CUDA.
-    if (!S.Context.getTargetInfo().hasFloat16Type() && !S.getLangOpts().CUDA)
+    if (!S.Context.getTargetInfo().hasFloat16Type() && !S.getLangOpts().CUDA &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "_Float16";
     Result = Context.Float16Ty;
@@ -1459,7 +1461,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Context.DoubleTy;
     break;
   case DeclSpec::TST_float128:
-    if (!S.Context.getTargetInfo().hasFloat128Type())
+    if (!S.Context.getTargetInfo().hasFloat128Type() &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__float128";
     Result = Context.Float128Ty;
@@ -2249,18 +2252,16 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     return QualType();
   }
 
-  if (T->isVariableArrayType() && !Context.getTargetInfo().isVLASupported()) {
-    if (getLangOpts().CUDA) {
-      // CUDA device code doesn't support VLAs.
-      CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget();
-    } else if (getLangOpts().SYCL) {
-      // Delay diagnostic to SemaSYCL so only Kernel functions are diagnosed.
-    } else if (!getLangOpts().OpenMP ||
-               shouldDiagnoseTargetSupportFromOpenMP()) {
-      // Some targets don't support VLAs.
-      Diag(Loc, diag::err_vla_unsupported);
-      return QualType();
-    }
+  // Delay diagnostic to SemaSYCL so only Kernel functions are diagnosed.
+  if (T->isVariableArrayType() && !Context.getTargetInfo().isVLASupported() &&
+      !getLangOpts().SYCLIsDevice) {
+    // CUDA device code and some other targets don't support VLAs.
+    targetDiag(Loc, (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+                        ? diag::err_cuda_vla
+                        : diag::err_vla_unsupported)
+        << ((getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+                ? CurrentCUDATarget()
+                : CFT_InvalidTarget);
   }
 
   // If this is not C99, extwarn about VLA's and C99 array size modifiers.
@@ -2366,7 +2367,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
   // of bool aren't allowed.
   if ((!T->isDependentType() && !T->isIntegerType() &&
        !T->isRealFloatingType()) ||
-      T->isBooleanType()) {
+      (!Context.getLangOpts().SYCLIsDevice && T->isBooleanType())) {
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << T;
     return QualType();
   }
@@ -5832,7 +5833,7 @@ static bool BuildAddressSpaceIndex(Sema &S, LangAS &ASIdx,
       return false;
     }
 
-    if (S.LangOpts.SYCL && (addrSpace == 4 || addrSpace > 5)) {
+    if (S.LangOpts.SYCLIsDevice && (addrSpace >= 4)) {
       S.Diag(AttrLoc, diag::err_sycl_attribute_address_space_invalid)
           << AddrSpace->getSourceRange();
       return false;
@@ -5841,11 +5842,11 @@ static bool BuildAddressSpaceIndex(Sema &S, LangAS &ASIdx,
     ASIdx = getLangASFromTargetAS(
                              static_cast<unsigned>(addrSpace.getZExtValue()));
 
-    if (S.LangOpts.SYCL) {
+    if (S.LangOpts.SYCLIsDevice) {
       ASIdx =
           [](unsigned AS) {
             switch (AS) {
-            case 5: case 0: return LangAS::sycl_private;
+            case 0: return LangAS::sycl_private;
             case 1: return LangAS::sycl_global;
             case 2: return LangAS::sycl_constant;
             case 3: return LangAS::sycl_local;
@@ -5979,7 +5980,8 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       Attr.setInvalid();
   } else {
     // The keyword-based type attributes imply which address space to use.
-    ASIdx = S.getLangOpts().SYCL ? Attr.asSYCLLangAS() : Attr.asOpenCLLangAS();
+    ASIdx = S.getLangOpts().SYCLIsDevice ? 
+                Attr.asSYCLLangAS() : Attr.asOpenCLLangAS();
     if (ASIdx == LangAS::Default)
       llvm_unreachable("Invalid address space");
 

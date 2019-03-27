@@ -27,7 +27,9 @@ struct Predicate {
     bool operator()(argument_type) const { return true; }
 };
 
-int main() {
+int main(int, char**) {
     std::unary_negate<Predicate> f((Predicate())); // expected-error{{'unary_negate<Predicate>' is deprecated}}
     (void)f;
+
+  return 0;
 }

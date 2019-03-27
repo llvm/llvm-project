@@ -15,7 +15,7 @@
 #include <valarray>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
     int a1[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
@@ -50,4 +50,6 @@ int main()
     std::slice_array<int> const & s3 = (s1 = s2);
     assert(&s1 == &s3);
     }
+
+  return 0;
 }

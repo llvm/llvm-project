@@ -76,7 +76,7 @@ bool isSpirvBinary(std::string &Img);
 /// This function is not thread safe and should not be used in multi-thread
 /// applications unless guarded by a critical section.
 /// \returns true if succeeds.
-bool convertSpirv(std::istream &IS, llvm::raw_ostream &OS, std::string &ErrMsg,
+bool convertSpirv(std::istream &IS, std::ostream &OS, std::string &ErrMsg,
                   bool FromText, bool ToText);
 
 /// \brief Convert SPIR-V between binary and internel text formats.
@@ -95,16 +95,16 @@ namespace llvm {
 
 /// \brief Translate LLVM module to SPIRV and write to ostream.
 /// \returns true if succeeds.
-bool writeSpirv(llvm::Module *M, llvm::raw_ostream &OS, std::string &ErrMsg);
+bool writeSpirv(Module *M, std::ostream &OS, std::string &ErrMsg);
 
 /// \brief Load SPIRV from istream and translate to LLVM module.
 /// \returns true if succeeds.
-bool readSpirv(llvm::LLVMContext &C, std::istream &IS, llvm::Module *&M,
+bool readSpirv(LLVMContext &C, std::istream &IS, Module *&M,
                std::string &ErrMsg);
 
 /// \brief Regularize LLVM module by removing entities not representable by
 /// SPIRV.
-bool regularizeLlvmForSpirv(llvm::Module *M, std::string &ErrMsg);
+bool regularizeLlvmForSpirv(Module *M, std::string &ErrMsg);
 
 /// \brief Mangle OpenCL builtin function function name.
 void mangleOpenClBuiltin(const std::string &UnmangledName,
@@ -157,7 +157,7 @@ ModulePass *createTransOCLMD();
 
 /// Create and return a pass that writes the module to the specified
 /// ostream.
-ModulePass *createSPIRVWriterPass(llvm::raw_ostream &Str);
+ModulePass *createSPIRVWriterPass(std::ostream &Str);
 
 } // namespace llvm
 

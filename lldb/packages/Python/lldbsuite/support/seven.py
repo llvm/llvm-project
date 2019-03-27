@@ -1,3 +1,4 @@
+import binascii
 import six
 
 if six.PY2:
@@ -23,3 +24,28 @@ else:
         return get_command_status_output(command)[1]
 
     cmp_ = lambda x, y: (x > y) - (x < y)
+
+def bitcast_to_string(b):
+    """
+    Take a string(PY2) or a bytes(PY3) object and return a string. The returned
+    string contains the exact same bytes as the input object (latin1 <-> unicode
+    transformation is an identity operation for the first 256 code points).
+    """
+    return b if six.PY2 else b.decode("latin1")
+
+def bitcast_to_bytes(s):
+    """
+    Take a string and return a string(PY2) or a bytes(PY3) object. The returned
+    object contains the exact same bytes as the input string. (latin1 <->
+    unicode transformation is an identity operation for the first 256 code
+    points).
+    """
+    return s if six.PY2 else s.encode("latin1")
+
+def unhexlify(hexstr):
+    """Hex-decode a string. The result is always a string."""
+    return bitcast_to_string(binascii.unhexlify(hexstr))
+
+def hexlify(data):
+    """Hex-encode string data. The result if always a string."""
+    return bitcast_to_string(binascii.hexlify(bitcast_to_bytes(data)))

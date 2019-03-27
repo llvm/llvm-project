@@ -252,12 +252,14 @@ static uptr DoMmapFixedOrDie(zx_handle_t vmar, uptr fixed_addr, uptr map_size,
   return addr;
 }
 
-uptr ReservedAddressRange::Map(uptr fixed_addr, uptr map_size) {
+uptr ReservedAddressRange::Map(uptr fixed_addr, uptr map_size,
+                               const char *name) {
   return DoMmapFixedOrDie(os_handle_, fixed_addr, map_size, base_,
                           name_, false);
 }
 
-uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr map_size) {
+uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr map_size,
+                                    const char *name) {
   return DoMmapFixedOrDie(os_handle_, fixed_addr, map_size, base_,
                           name_, true);
 }

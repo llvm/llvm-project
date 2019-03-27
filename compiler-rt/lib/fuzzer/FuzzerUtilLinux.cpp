@@ -13,12 +13,18 @@
 #include "FuzzerCommand.h"
 
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 
 namespace fuzzer {
 
 int ExecuteCommand(const Command &Cmd) {
   std::string CmdLine = Cmd.toString();
-  return system(CmdLine.c_str());
+  int exit_code = system(CmdLine.c_str());
+  if (WIFEXITED(exit_code))
+    return WEXITSTATUS(exit_code);
+  return exit_code;
 }
 
 } // namespace fuzzer

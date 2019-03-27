@@ -65,17 +65,6 @@ void ModuleSummaryIndex::collectDefinedFunctionsForModule(
   }
 }
 
-// Collect for each module the list of function it defines (GUID -> Summary).
-void ModuleSummaryIndex::collectDefinedGVSummariesPerModule(
-    StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries) const {
-  for (auto &GlobalList : *this) {
-    auto GUID = GlobalList.first;
-    for (auto &Summary : GlobalList.second.SummaryList) {
-      ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
-    }
-  }
-}
-
 GlobalValueSummary *
 ModuleSummaryIndex::getGlobalValueSummary(uint64_t ValueGUID,
                                           bool PerModuleIndex) const {
@@ -341,7 +330,8 @@ static bool hasReadOnlyFlag(const GlobalValueSummary *S) {
 void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
   std::vector<Edge> CrossModuleEdges;
   DenseMap<GlobalValue::GUID, std::vector<uint64_t>> NodeMap;
-  StringMap<GVSummaryMapTy> ModuleToDefinedGVS;
+  using GVSOrderedMapTy = std::map<GlobalValue::GUID, GlobalValueSummary *>;
+  std::map<StringRef, GVSOrderedMapTy> ModuleToDefinedGVS;
   collectDefinedGVSummariesPerModule(ModuleToDefinedGVS);
 
   // Get node identifier in form MXXX_<GUID>. The MXXX prefix is required,
@@ -378,12 +368,12 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
 
   OS << "digraph Summary {\n";
   for (auto &ModIt : ModuleToDefinedGVS) {
-    auto ModId = getModuleId(ModIt.first());
-    OS << "  // Module: " << ModIt.first() << "\n";
+    auto ModId = getModuleId(ModIt.first);
+    OS << "  // Module: " << ModIt.first << "\n";
     OS << "  subgraph cluster_" << std::to_string(ModId) << " {\n";
     OS << "    style = filled;\n";
     OS << "    color = lightgrey;\n";
-    OS << "    label = \"" << sys::path::filename(ModIt.first()) << "\";\n";
+    OS << "    label = \"" << sys::path::filename(ModIt.first) << "\";\n";
     OS << "    node [style=filled,fillcolor=lightblue];\n";
 
     auto &GVSMap = ModIt.second;

@@ -30,7 +30,9 @@ test()
     assert(m.str(4) == std::string(m[4]));
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

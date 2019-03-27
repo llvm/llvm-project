@@ -90,11 +90,9 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
     if (!section_list)
       return DWARFExpression(nullptr);
 
-    uint32_t section_idx = symbol.getAddressSection() - 1;
-    if (section_idx >= section_list->GetSize())
-      return DWARFExpression(nullptr);
+    uint32_t section_id = symbol.getAddressSection();
 
-    auto section = section_list->GetSectionAtIndex(section_idx);
+    auto section = section_list->FindSectionByID(section_id);
     if (!section)
       return DWARFExpression(nullptr);
 

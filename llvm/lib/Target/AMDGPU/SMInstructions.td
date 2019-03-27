@@ -33,7 +33,6 @@ class SM_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   let hasSideEffects = 0;
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteSMEM];
-  let SubtargetPredicate = isGCN;
 
   string Mnemonic = opName;
   string AsmOperands = asmOps;
@@ -153,11 +152,19 @@ multiclass SM_Pseudo_Discards<string opName> {
   def _SGPR : SM_Discard_Pseudo <opName, (ins SReg_64:$sbase, SReg_32:$offset), 0>;
 }
 
-class SM_Time_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
+class SM_Time_Pseudo<string opName, SDPatternOperator node = null_frag> : SM_Pseudo<
   opName, (outs SReg_64_XEXEC:$sdst), (ins),
   " $sdst", [(set i64:$sdst, (node))]> {
   let hasSideEffects = 1;
-  let mayStore = 0;
+
+  // FIXME: This should be definitively mayStore = 0. TableGen
+  // brokenly tries to infer these based on the intrinsic properties
+  // corresponding to the IR attributes. The target intrinsics are
+  // considered as writing to memory for IR dependency purposes, but
+  // those can be modeled with hasSideEffects here. These also end up
+  // inferring differently for llvm.readcyclecounter and the amdgcn
+  // intrinsics.
+  let mayStore = ?;
   let mayLoad = 1;
   let has_sbase = 0;
   let has_offset = 0;
@@ -683,7 +690,22 @@ def S_DCACHE_INV_VOL_ci : SMRD_Real_ci <0x1d, S_DCACHE_INV_VOL>;
 // Scalar Memory Patterns
 //===----------------------------------------------------------------------===//
 
-def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{ return isUniformLoad(N);}]>;
+def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{ return isUniformLoad(N);}]> {
+  let GISelPredicateCode = [{
+    if (!MI.hasOneMemOperand())
+      return false;
+    if (!isInstrUniform(MI))
+      return false;
+
+    // FIXME: We should probably be caching this.
+    SmallVector<GEPInfo, 4> AddrInfo;
+    getAddrModeInfo(MI, MRI, AddrInfo);
+
+    if (hasVgprParts(AddrInfo))
+      return false;
+    return true;
+  }];
+}
 
 def SMRDImm         : ComplexPattern<i64, 2, "SelectSMRDImm">;
 def SMRDImm32       : ComplexPattern<i64, 2, "SelectSMRDImm32">;
@@ -710,6 +732,12 @@ multiclass SMRD_Pattern <string Instr, ValueType vt> {
   def : GCNPat <
     (smrd_load (SMRDSgpr i64:$sbase, i32:$offset)),
     (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $offset, 0))
+  >;
+
+  // 4. No offset
+  def : GCNPat <
+    (vt (smrd_load (i64 SReg_64:$sbase))),
+    (vt (!cast<SM_Pseudo>(Instr#"_IMM") i64:$sbase, 0, 0))
   >;
 }
 

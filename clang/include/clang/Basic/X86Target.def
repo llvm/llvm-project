@@ -236,6 +236,7 @@ PROC_WITH_FEAT(BDVER4, "bdver4", PROC_64_BIT, FEATURE_AVX2)
 /// Zen architecture processors.
 //@{
 PROC_WITH_FEAT(ZNVER1, "znver1", PROC_64_BIT, FEATURE_AVX2)
+PROC_WITH_FEAT(ZNVER2, "znver2", PROC_64_BIT, FEATURE_AVX2)
 //@}
 
 /// This specification is deprecated and will be removed in the future.

@@ -45,7 +45,7 @@ void testRuntimeSpan(Span sp)
 struct A{};
 int iArr2[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9};
 
-int main ()
+int main(int, char**)
 {
     testRuntimeSpan(std::span<int>        ());
     testRuntimeSpan(std::span<long>       ());
@@ -72,6 +72,8 @@ int main ()
     testRuntimeSpan(std::span<int, 5>(iArr2 + 1, 5));
 
     std::string s;
-    testRuntimeSpan(std::span<std::string>(&s, (std::ptrdiff_t) 0));
+    testRuntimeSpan(std::span<std::string>(&s, (std::size_t) 0));
     testRuntimeSpan(std::span<std::string>(&s, 1));
+
+  return 0;
 }

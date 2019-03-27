@@ -26,7 +26,7 @@ test(S s, S str, S expected)
     assert(s == expected);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -85,4 +85,6 @@ int main()
     assert(s == "a");
     }
 #endif
+
+  return 0;
 }

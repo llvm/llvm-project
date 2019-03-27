@@ -254,7 +254,7 @@ void EmptySubobjectMap::AddSubobjectAtOffset(const CXXRecordDecl *RD,
   // If we have empty structures inside a union, we can assign both
   // the same offset. Just avoid pushing them twice in the list.
   ClassVectorTy &Classes = EmptyClassOffsets[Offset];
-  if (std::find(Classes.begin(), Classes.end(), RD) != Classes.end())
+  if (llvm::is_contained(Classes, RD))
     return;
 
   Classes.push_back(RD);

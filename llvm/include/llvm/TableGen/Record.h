@@ -623,10 +623,11 @@ public:
 
 class CodeInit : public TypedInit {
   StringRef Value;
+  SMLoc Loc;
 
-  explicit CodeInit(StringRef V)
+  explicit CodeInit(StringRef V, const SMLoc &Loc)
       : TypedInit(IK_CodeInit, static_cast<RecTy *>(CodeRecTy::get())),
-        Value(V) {}
+        Value(V), Loc(Loc) {}
 
 public:
   CodeInit(const StringInit &) = delete;
@@ -636,9 +637,10 @@ public:
     return I->getKind() == IK_CodeInit;
   }
 
-  static CodeInit *get(StringRef);
+  static CodeInit *get(StringRef, const SMLoc &Loc);
 
   StringRef getValue() const { return Value; }
+  const SMLoc &getLoc() const { return Loc; }
 
   Init *convertInitializerTo(RecTy *Ty) const override;
 
@@ -798,7 +800,7 @@ public:
 /// !op (X, Y) - Combine two inits.
 class BinOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum BinaryOp : uint8_t { ADD, AND, OR, SHL, SRA, SRL, LISTCONCAT,
+  enum BinaryOp : uint8_t { ADD, MUL, AND, OR, SHL, SRA, SRL, LISTCONCAT,
                             STRCONCAT, CONCAT, EQ, NE, LE, LT, GE, GT };
 
 private:
@@ -818,6 +820,7 @@ public:
   static BinOpInit *get(BinaryOp opc, Init *lhs, Init *rhs,
                         RecTy *Type);
   static Init *getStrConcat(Init *lhs, Init *rhs);
+  static Init *getListConcat(TypedInit *lhs, Init *rhs);
 
   void Profile(FoldingSetNodeID &ID) const;
 

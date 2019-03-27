@@ -119,7 +119,7 @@ body: |
 # CHECK-WORKLIST-DAG:   Changed: [[IN3]]:_(s8) = G_ADD [[NEW1:%[0-9]+]]:_, [[IN4]]:_
 # CHECK-WORKLIST-DAG:   Changing: [[IN5:%[0-9]+]]:_(s8) = G_SUB [[IN0]]:_, [[IN6:%[0-9]+]]:_
 # CHECK-WORKLIST-DAG:   Changed: [[IN5]]:_(s8) = G_SUB [[NEW2:%[0-9]+]]:_, [[IN6]]:_
-# CHECK-WORKLIST-DAG:   Erased: [[IN2]]:_(s32) = G_SEXT [[IN0]]:_(s8)
+# CHECK-WORKLIST-DAG:   Erasing: [[IN2]]:_(s32) = G_SEXT [[IN0]]:_(s8)
 # CHECK-WORKLIST-DAG:   Changed: [[IN2]]:_(s32) = G_SEXTLOAD [[IN1]]:_(p0) :: (load 1 from %ir.addr)
 # CHECK-WORKLIST-DAG:   Created: [[NEW1]]:_(s8) = G_TRUNC [[IN2]]:_(s32)
 # CHECK-WORKLIST-DAG:   Created: [[NEW2]]:_(s8) = G_TRUNC [[IN2]]:_(s32)
@@ -220,7 +220,7 @@ body: |
 # CHECK-WORKLIST-DAG:   Creating: G_TRUNC
 # CHECK-WORKLIST-DAG:   Changing: [[IN5:%[0-9]+]]:_(s8) = G_SUB [[IN0]]:_, [[IN6:%[0-9]+]]:_
 # CHECK-WORKLIST-DAG:   Changed: [[IN5]]:_(s8) = G_SUB [[OUT2:%[0-9]+]]:_, [[IN6]]:_
-# CHECK-WORKLIST-DAG:   Erased: [[IN2]]:_(s32) = G_SEXT [[IN0]]:_(s8)
+# CHECK-WORKLIST-DAG:   Erasing: [[IN2]]:_(s32) = G_SEXT [[IN0]]:_(s8)
 # CHECK-WORKLIST-DAG:   Changed: [[IN2]]:_(s32) = G_SEXTLOAD [[IN1]]:_(p0) :: (load 1 from %ir.addr)
 # CHECK-WORKLIST-DAG:   Created: [[OUT1]]:_(s8) = G_TRUNC [[IN2]]:_(s32)
 # CHECK-WORKLIST-DAG:   Created: [[OUT2]]:_(s8) = G_TRUNC [[IN2]]:_(s32)

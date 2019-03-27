@@ -35,7 +35,7 @@ struct Z
     Z& operator=(const Z&) = delete;
 };
 
-int main()
+int main(int, char**)
 {
     {
         using T = int;
@@ -55,4 +55,6 @@ int main()
     static_assert(!(std::is_trivially_copy_constructible<optional<std::string>>::value), "");
 
     static_assert(!(std::is_copy_constructible<optional<Z>>::value), "");
+
+  return 0;
 }

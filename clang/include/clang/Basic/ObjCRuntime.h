@@ -246,6 +246,22 @@ public:
     llvm_unreachable("bad kind");
   }
 
+  /// Does this runtime provide the objc_alloc_init entrypoint? This can apply
+  /// the same optimization as objc_alloc, but also sends an -init message,
+  /// reducing code size on the caller.
+  bool shouldUseRuntimeFunctionForCombinedAllocInit() const {
+    switch (getKind()) {
+    case MacOSX:
+      return getVersion() >= VersionTuple(10, 14, 4);
+    case iOS:
+      return getVersion() >= VersionTuple(12, 2);
+    case WatchOS:
+      return getVersion() >= VersionTuple(5, 2);
+    default:
+      return false;
+    }
+  }
+
   /// Does this runtime supports optimized setter entrypoints?
   bool hasOptimizedSetter() const {
     switch (getKind()) {

@@ -11,9 +11,9 @@
 // RUN: %clang_cc1 -std=c++03 -fdeclspec -fno-declspec -fsyntax-only %s
 // RUN: %clang_cc1 -std=c++03 -fms-extensions -fno-declspec -fdeclspec -DDECLSPEC -fsyntax-only %s
 // RUN: %clang_cc1 -std=c++03 -fms-extensions -fdeclspec -fno-declspec -fsyntax-only %s
-// RUN: %clang -std=c++03 -target i686-windows-msvc -DDECLSPEC -fsyntax-only %s
+// RUN: %clang -std=c++03 -target i686-windows-msvc -DMS -DDECLSPEC -fsyntax-only %s
 // RUN: %clang -std=c++03 -target x86_64-scei-ps4 -DDECLSPEC -fsyntax-only %s
-// RUN: %clang -std=c++03 -target i686-windows-msvc -fno-declspec -fsyntax-only %s
+// RUN: %clang -std=c++03 -target i686-windows-msvc -DMS -fno-declspec -fsyntax-only %s
 // RUN: %clang -std=c++03 -target x86_64-scei-ps4 -fno-declspec -fsyntax-only %s
 
 #define IS_KEYWORD(NAME) _Static_assert(!__is_identifier(NAME), #NAME)
@@ -51,7 +51,12 @@ CXX11_KEYWORD(char32_t);
 CXX11_TYPE(char32_t);
 CXX11_KEYWORD(constexpr);
 CXX11_KEYWORD(noexcept);
+#ifndef MS
 CXX11_KEYWORD(static_assert);
+#else
+// MS compiler recognizes static_assert in all modes. So should we.
+IS_KEYWORD(static_assert);
+#endif
 CXX11_KEYWORD(thread_local);
 
 // Concepts TS keywords

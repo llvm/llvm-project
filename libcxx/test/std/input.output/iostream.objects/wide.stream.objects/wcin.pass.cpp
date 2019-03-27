@@ -15,7 +15,7 @@
 #include <iostream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
 #if 0
     std::wcout << L"Hello World!\n";
@@ -30,4 +30,6 @@ int main()
     assert(std::wcin.tie() == &std::wcout);
 #endif
 #endif
+
+  return 0;
 }

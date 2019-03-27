@@ -474,7 +474,7 @@ static morder convert_morder(morder mo) {
 
 #define SCOPED_ATOMIC(func, ...) \
     ThreadState *const thr = cur_thread(); \
-    if (thr->ignore_sync || thr->ignore_interceptors) { \
+    if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors)) { \
       ProcessPendingSignals(thr); \
       return NoTsanAtomic##func(__VA_ARGS__); \
     } \

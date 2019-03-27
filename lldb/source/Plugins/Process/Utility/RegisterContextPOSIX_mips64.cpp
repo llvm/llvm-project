@@ -44,7 +44,7 @@ RegisterContextPOSIX_mips64::RegisterContextPOSIX_mips64(
     Thread &thread, uint32_t concrete_frame_idx,
     RegisterInfoInterface *register_info)
     : RegisterContext(thread, concrete_frame_idx) {
-  m_register_info_ap.reset(register_info);
+  m_register_info_up.reset(register_info);
   m_num_registers = GetRegisterCount();
   int set = GetRegisterSetCount();
 
@@ -77,18 +77,18 @@ unsigned RegisterContextPOSIX_mips64::GetRegisterSize(unsigned reg) {
 }
 
 size_t RegisterContextPOSIX_mips64::GetRegisterCount() {
-  return m_register_info_ap->GetRegisterCount();
+  return m_register_info_up->GetRegisterCount();
 }
 
 size_t RegisterContextPOSIX_mips64::GetGPRSize() {
-  return m_register_info_ap->GetGPRSize();
+  return m_register_info_up->GetGPRSize();
 }
 
 const RegisterInfo *RegisterContextPOSIX_mips64::GetRegisterInfo() {
   // Commonly, this method is overridden and g_register_infos is copied and
   // specialized. So, use GetRegisterInfo() rather than g_register_infos in
   // this scope.
-  return m_register_info_ap->GetRegisterInfo();
+  return m_register_info_up->GetRegisterInfo();
 }
 
 const RegisterInfo *
@@ -100,22 +100,22 @@ RegisterContextPOSIX_mips64::GetRegisterInfoAtIndex(size_t reg) {
 }
 
 size_t RegisterContextPOSIX_mips64::GetRegisterSetCount() {
-  ArchSpec target_arch = m_register_info_ap->GetTargetArchitecture();
+  ArchSpec target_arch = m_register_info_up->GetTargetArchitecture();
   switch (target_arch.GetTriple().getOS()) {
   case llvm::Triple::Linux: {
     if ((target_arch.GetMachine() == llvm::Triple::mipsel) ||
          (target_arch.GetMachine() == llvm::Triple::mips)) {
-      const auto *context = static_cast<const RegisterContextLinux_mips *>
-                                        (m_register_info_ap.get());
+      const auto *context = static_cast<const RegisterContextLinux_mips *>(
+          m_register_info_up.get());
       return context->GetRegisterSetCount();
     }
-    const auto *context = static_cast<const RegisterContextLinux_mips64 *>
-                                      (m_register_info_ap.get());
+    const auto *context = static_cast<const RegisterContextLinux_mips64 *>(
+        m_register_info_up.get());
     return context->GetRegisterSetCount();
   }
   default: {
-    const auto *context = static_cast<const RegisterContextFreeBSD_mips64 *>
-                                      (m_register_info_ap.get());
+    const auto *context = static_cast<const RegisterContextFreeBSD_mips64 *>(
+        m_register_info_up.get());
     return context->GetRegisterSetCount();
   }
                        
@@ -123,22 +123,22 @@ size_t RegisterContextPOSIX_mips64::GetRegisterSetCount() {
 }
 
 const RegisterSet *RegisterContextPOSIX_mips64::GetRegisterSet(size_t set) {
-  ArchSpec target_arch = m_register_info_ap->GetTargetArchitecture();
+  ArchSpec target_arch = m_register_info_up->GetTargetArchitecture();
   switch (target_arch.GetTriple().getOS()) {
   case llvm::Triple::Linux: {
     if ((target_arch.GetMachine() == llvm::Triple::mipsel) ||
          (target_arch.GetMachine() == llvm::Triple::mips)) {
-      const auto *context = static_cast<const RegisterContextLinux_mips *>
-                                        (m_register_info_ap.get());
+      const auto *context = static_cast<const RegisterContextLinux_mips *>(
+          m_register_info_up.get());
       return context->GetRegisterSet(set);
     }
-    const auto *context = static_cast<const RegisterContextLinux_mips64 *>
-                                      (m_register_info_ap.get());
+    const auto *context = static_cast<const RegisterContextLinux_mips64 *>(
+        m_register_info_up.get());
     return context->GetRegisterSet(set);
   }
   default: {
-    const auto *context = static_cast<const RegisterContextFreeBSD_mips64 *>
-                                       (m_register_info_ap.get());
+    const auto *context = static_cast<const RegisterContextFreeBSD_mips64 *>(
+        m_register_info_up.get());
     return context->GetRegisterSet(set);
   }
   }

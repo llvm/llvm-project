@@ -1,5 +1,15 @@
-// RUN: %clang_analyze_cc1 -triple hexagon-unknown-linux -analyzer-checker=core,valist.Uninitialized,valist.CopyToSelf -analyzer-disable-checker=core.CallAndMessage -analyzer-output=text -analyzer-store=region -verify %s
-// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,valist.Uninitialized,valist.CopyToSelf -analyzer-disable-checker=core.CallAndMessage -analyzer-output=text -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -triple hexagon-unknown-linux -verify %s \
+// RUN:   -analyzer-checker=core,valist.Uninitialized,valist.CopyToSelf \
+// RUN:   -analyzer-disable-checker=core.CallAndMessage \
+// RUN:   -analyzer-output=text
+//
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -verify %s \
+// RUN:   -analyzer-checker=core,valist.Uninitialized,valist.CopyToSelf \
+// RUN:   -analyzer-disable-checker=core.CallAndMessage \
+// RUN:   -analyzer-output=text
+//
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu %s \
+// RUN:   -analyzer-checker=core,valist.Uninitialized
 
 #include "Inputs/system-header-simulator-for-valist.h"
 

@@ -12,7 +12,7 @@
 #include "include/atomic_support.h"
 
 #if defined(_LIBCPP_ABI_MICROSOFT)
-#if defined(_LIBCPP_NO_VCRUNTIME)
+#if !defined(_LIBCPP_ABI_VCRUNTIME)
 #include "support/runtime/new_handler_fallback.ipp"
 #endif
 #elif defined(LIBCXX_BUILDING_LIBCXXABI)
@@ -54,7 +54,7 @@ __throw_bad_alloc()
 }  // std
 
 #if !defined(__GLIBCXX__) &&                                                   \
-    !defined(_LIBCPP_DEFER_NEW_TO_VCRUNTIME) &&      \
+    !defined(_LIBCPP_ABI_VCRUNTIME) &&      \
     !defined(_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
 
 // Implement all new and delete operators as weak definitions
@@ -298,4 +298,4 @@ operator delete[] (void* ptr, size_t, std::align_val_t alignment) _NOEXCEPT
 }
 
 #endif // !_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
-#endif // !__GLIBCXX__ && (!_LIBCPP_ABI_MICROSOFT || _LIBCPP_NO_VCRUNTIME) && !_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS
+#endif // !__GLIBCXX__ && !_LIBCPP_ABI_VCRUNTIME && !_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS

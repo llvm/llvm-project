@@ -458,7 +458,7 @@ GenericTaintChecker::TaintPropagationRule::process(const CallExpr *CE,
   ProgramStateRef State = C.getState();
 
   // Check for taint in arguments.
-  bool IsTainted = false;
+  bool IsTainted = true;
   for (unsigned ArgNum : SrcArgs) {
     if (ArgNum >= CE->getNumArgs())
       return State;

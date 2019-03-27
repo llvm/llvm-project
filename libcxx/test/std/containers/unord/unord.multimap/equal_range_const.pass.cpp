@@ -21,7 +21,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, std::string> C;
@@ -100,4 +100,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

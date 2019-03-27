@@ -1,0 +1,52 @@
+# RUN: yaml2obj %s > %t
+
+## Check we do not skip zeroes blocks if have relocations pointed to these places.
+# RUN: llvm-objdump -D -reloc %t
+
+# CHECK:      Disassembly of section .rodata:
+# CHECK-NEXT: 0000000000000000 .rodata:
+# CHECK-NEXT:        0:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:                 0000000000000000:  R_X86_64_64  *ABS*
+# CHECK-NEXT:        2:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:        4:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:        6:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:        8:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:                 0000000000000008:  R_X86_64_64  *ABS*
+# CHECK-NEXT:        a:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:        c:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:        e:       00 00   addb    %al, (%rax)
+
+## Check that without -reloc all zeroes would be omitted.
+# RUN: llvm-objdump -D %t | FileCheck %s --check-prefix=SKIP
+
+# SKIP:      Disassembly of section .rodata:
+# SKIP-NEXT: 0000000000000000 .rodata:
+# SKIP-NEXT:   ...
+# SKIP-NEXT: Disassembly of section .rela.rodata:
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000001
+    Content:         '00000000000000000000000000000000'
+  - Name:            .rela.rodata
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x0000000000000008
+    EntSize:         0x0000000000000018
+    Info:            .rodata
+    Relocations:
+      - Offset:          0x0000000000000000
+        Symbol:          x
+        Type:            R_X86_64_64
+      - Offset:          0x0000000000000008
+        Symbol:          x
+        Type:            R_X86_64_64

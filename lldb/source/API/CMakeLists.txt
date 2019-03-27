@@ -34,7 +34,6 @@ add_lldb_library(liblldb SHARED
   SBFrame.cpp
   SBFunction.cpp
   SBHostOS.cpp
-  SBInitializerOptions.cpp
   SBInstruction.cpp
   SBInstructionList.cpp
   SBLanguageRuntime.cpp
@@ -50,6 +49,7 @@ add_lldb_library(liblldb SHARED
   SBProcessInfo.cpp
   SBQueue.cpp
   SBQueueItem.cpp
+  SBReproducer.cpp
   SBSection.cpp
   SBSourceManager.cpp
   SBStream.cpp
@@ -149,6 +149,10 @@ else()
     PROPERTIES
     OUTPUT_NAME lldb
   )
+endif()
+
+if (NOT LLDB_BUILT_STANDALONE)
+  add_dependencies(liblldb clang-resource-headers)
 endif()
 
 if(LLDB_BUILD_FRAMEWORK)

@@ -36,7 +36,10 @@ namespace exegesis {
 class Analysis {
 public:
   Analysis(const llvm::Target &Target,
-           const InstructionBenchmarkClustering &Clustering);
+           std::unique_ptr<llvm::MCInstrInfo> InstrInfo,
+           const InstructionBenchmarkClustering &Clustering,
+           double AnalysisInconsistencyEpsilon,
+           bool AnalysisDisplayUnstableOpcodes);
 
   // Prints a csv of instructions for each cluster.
   struct PrintClusters {};
@@ -79,7 +82,8 @@ private:
     bool
     measurementsMatch(const llvm::MCSubtargetInfo &STI,
                       const ResolvedSchedClass &SC,
-                      const InstructionBenchmarkClustering &Clustering) const;
+                      const InstructionBenchmarkClustering &Clustering,
+                      const double AnalysisInconsistencyEpsilonSquared_) const;
 
     void addPoint(size_t PointId,
                   const InstructionBenchmarkClustering &Clustering);
@@ -125,6 +129,8 @@ private:
   std::unique_ptr<llvm::MCAsmInfo> AsmInfo_;
   std::unique_ptr<llvm::MCInstPrinter> InstPrinter_;
   std::unique_ptr<llvm::MCDisassembler> Disasm_;
+  const double AnalysisInconsistencyEpsilonSquared_;
+  const bool AnalysisDisplayUnstableOpcodes_;
 };
 
 // Computes the idealized ProcRes Unit pressure. This is the expected

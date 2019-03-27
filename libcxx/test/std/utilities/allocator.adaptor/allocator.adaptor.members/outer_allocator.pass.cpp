@@ -21,7 +21,7 @@
 
 #include "allocators.h"
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -39,4 +39,6 @@ int main()
         A a(A1<int>(5), A2<int>(6), A3<int>(8));
         assert(a.outer_allocator() == A1<int>(5));
     }
+
+  return 0;
 }

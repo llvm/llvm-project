@@ -3238,39 +3238,39 @@ def : InstAlias<"fucompi",      (UCOM_FIPr   ST1), 0>;
 // instructions like "fadd %st(0), %st(0)" as "fadd %st(0)" for consistency with
 // gas.
 multiclass FpUnaryAlias<string Mnemonic, Instruction Inst, bit EmitAlias = 1> {
- def : InstAlias<!strconcat(Mnemonic, "\t{$op, %st|st, $op}"),
+ def : InstAlias<!strconcat(Mnemonic, "\t$op"),
                  (Inst RSTi:$op), EmitAlias>;
  def : InstAlias<!strconcat(Mnemonic, "\t{%st, %st|st, st}"),
                  (Inst ST0), EmitAlias>;
 }
 
-defm : FpUnaryAlias<"fadd",   ADD_FST0r>;
-defm : FpUnaryAlias<"faddp",  ADD_FPrST0>;
-defm : FpUnaryAlias<"fsub",   SUB_FST0r>;
-defm : FpUnaryAlias<"fsub{|r}p",  SUBR_FPrST0>;
-defm : FpUnaryAlias<"fsubr",  SUBR_FST0r>;
-defm : FpUnaryAlias<"fsub{r|}p", SUB_FPrST0>;
-defm : FpUnaryAlias<"fmul",   MUL_FST0r>;
-defm : FpUnaryAlias<"fmulp",  MUL_FPrST0>;
-defm : FpUnaryAlias<"fdiv",   DIV_FST0r>;
-defm : FpUnaryAlias<"fdiv{|r}p",  DIVR_FPrST0>;
-defm : FpUnaryAlias<"fdivr",  DIVR_FST0r>;
-defm : FpUnaryAlias<"fdiv{r|}p", DIV_FPrST0>;
-defm : FpUnaryAlias<"fcomi",   COM_FIr>;
-defm : FpUnaryAlias<"fucomi",  UCOM_FIr>;
-defm : FpUnaryAlias<"fcompi",   COM_FIPr>;
-defm : FpUnaryAlias<"fucompi",  UCOM_FIPr>;
+defm : FpUnaryAlias<"fadd",   ADD_FST0r, 0>;
+defm : FpUnaryAlias<"faddp",  ADD_FPrST0, 0>;
+defm : FpUnaryAlias<"fsub",   SUB_FST0r, 0>;
+defm : FpUnaryAlias<"fsub{|r}p",  SUBR_FPrST0, 0>;
+defm : FpUnaryAlias<"fsubr",  SUBR_FST0r, 0>;
+defm : FpUnaryAlias<"fsub{r|}p", SUB_FPrST0, 0>;
+defm : FpUnaryAlias<"fmul",   MUL_FST0r, 0>;
+defm : FpUnaryAlias<"fmulp",  MUL_FPrST0, 0>;
+defm : FpUnaryAlias<"fdiv",   DIV_FST0r, 0>;
+defm : FpUnaryAlias<"fdiv{|r}p",  DIVR_FPrST0, 0>;
+defm : FpUnaryAlias<"fdivr",  DIVR_FST0r, 0>;
+defm : FpUnaryAlias<"fdiv{r|}p", DIV_FPrST0, 0>;
+defm : FpUnaryAlias<"fcomi",   COM_FIr, 0>;
+defm : FpUnaryAlias<"fucomi",  UCOM_FIr, 0>;
+defm : FpUnaryAlias<"fcompi",   COM_FIPr, 0>;
+defm : FpUnaryAlias<"fucompi",  UCOM_FIPr, 0>;
 
 
-// Handle "f{mulp,addp} st(0), $op" the same as "f{mulp,addp} $op", since they
+// Handle "f{mulp,addp} $op, %st(0)" the same as "f{mulp,addp} $op", since they
 // commute.  We also allow fdiv[r]p/fsubrp even though they don't commute,
 // solely because gas supports it.
-def : InstAlias<"faddp\t{%st, $op|$op, st}", (ADD_FPrST0 RSTi:$op)>;
-def : InstAlias<"fmulp\t{%st, $op|$op, st}", (MUL_FPrST0 RSTi:$op)>;
-def : InstAlias<"fsub{|r}p\t{%st, $op|$op, st}", (SUBR_FPrST0 RSTi:$op)>;
-def : InstAlias<"fsub{r|}p\t{%st, $op|$op, st}", (SUB_FPrST0 RSTi:$op)>;
-def : InstAlias<"fdiv{|r}p\t{%st, $op|$op, st}", (DIVR_FPrST0 RSTi:$op)>;
-def : InstAlias<"fdiv{r|}p\t{%st, $op|$op, st}", (DIV_FPrST0 RSTi:$op)>;
+def : InstAlias<"faddp\t{$op, %st|st, $op}", (ADD_FPrST0 RSTi:$op), 0>;
+def : InstAlias<"fmulp\t{$op, %st|st, $op}", (MUL_FPrST0 RSTi:$op), 0>;
+def : InstAlias<"fsub{|r}p\t{$op, %st|st, $op}", (SUBR_FPrST0 RSTi:$op), 0>;
+def : InstAlias<"fsub{r|}p\t{$op, %st|st, $op}", (SUB_FPrST0 RSTi:$op), 0>;
+def : InstAlias<"fdiv{|r}p\t{$op, %st|st, $op}", (DIVR_FPrST0 RSTi:$op), 0>;
+def : InstAlias<"fdiv{r|}p\t{$op, %st|st, $op}", (DIV_FPrST0 RSTi:$op), 0>;
 
 def : InstAlias<"fnstsw"     , (FNSTSW16r), 0>;
 

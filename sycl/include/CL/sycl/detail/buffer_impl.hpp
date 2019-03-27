@@ -277,7 +277,6 @@ void buffer_impl<AllocatorT>::fill(QueueImplPtr Queue,
   ContextImplPtr Context = detail::getSyclObjImpl(Queue->get_context());
 
   OCLState.Queue = std::move(Queue);
-  Event->setIsHostEvent(false);
 
   cl_event &BufEvent = Event->getHandleRef();
   std::vector<cl_event> CLEvents =
@@ -290,6 +289,7 @@ void buffer_impl<AllocatorT>::fill(QueueImplPtr Queue,
 
   CHECK_OCL_CODE(Error);
   CHECK_OCL_CODE(clReleaseCommandQueue(CommandQueue));
+  Event->setContextImpl(Context);
 }
 
 template <typename AllocatorT>
@@ -340,7 +340,7 @@ void buffer_impl<AllocatorT>::copy(
   CHECK_OCL_CODE(Error);
   CHECK_OCL_CODE(clReleaseCommandQueue(CommandQueue));
   OCLState.Queue = std::move(Queue);
-  Event->setIsHostEvent(false);
+  Event->setContextImpl(Context);
 }
 
 template <typename AllocatorT>
@@ -362,7 +362,7 @@ void buffer_impl<AllocatorT>::moveMemoryTo(
   // TODO: Check discuss if "user host" and "host device" are the same.
   if ((Queue->is_host()) && (OCLState.Queue->is_host())) {
     detail::waitEvents(DepEvents);
-    Event->setIsHostEvent(true);
+    Event->setContextImpl(Context);
     OCLState.Queue = std::move(Queue);
     return;
   }
@@ -386,8 +386,8 @@ void buffer_impl<AllocatorT>::moveMemoryTo(
         /*blocking_read=*/CL_FALSE, /*offset=*/0, ByteSize, BufPtr,
         CLEvents.size(), CLEvents.data(), &ReadBufEvent);
     CHECK_OCL_CODE(Error);
-
-    Event->setIsHostEvent(false);
+    Event->setContextImpl(
+        detail::getSyclObjImpl(OCLState.Queue->get_context()));
 
     OCLState.Queue = std::move(Queue);
     return;
@@ -434,7 +434,7 @@ void buffer_impl<AllocatorT>::moveMemoryTo(
                              ByteSize, BufPtr, CLEvents.size(), CLEvents.data(),
                              &WriteBufEvent); // replace &WriteBufEvent to NULL
     CHECK_OCL_CODE(Error);
-    Event->setIsHostEvent(false);
+    Event->setContextImpl(Context);
 
     return;
   }
@@ -489,9 +489,12 @@ void buffer_impl<AllocatorT>::allocate(QueueImplPtr Queue,
         "context associated with the OpenCL memory object.");
 
   if (OpenCLInterop) {
-    AvailableEvent.wait();
+    // For interoperability instance of the SYCL buffer class being constructed
+    // must wait for the SYCL event parameter, if one is provided,
+    // availableEvent to signal that the cl_mem instance is ready to be used
+    // Move availableEvent to SYCL scheduler ownership to handle dependencies.
+    Event = detail::getSyclObjImpl(AvailableEvent);
     OCLState.Queue = std::move(Queue);
-    Event->setIsHostEvent(true);
     return;
   }
 
@@ -513,13 +516,12 @@ void buffer_impl<AllocatorT>::allocate(QueueImplPtr Queue,
 
     OCLState.Queue = std::move(Queue);
     OCLState.Mem = Mem;
-
-    Event->setIsHostEvent(false);
+    Event->setContextImpl(Context);
 
     return;
   }
   if (Queue->is_host()) {
-    Event->setIsHostEvent(true);
+    Event->setContextImpl(Context);
     OCLState.Queue = std::move(Queue);
     return;
   }

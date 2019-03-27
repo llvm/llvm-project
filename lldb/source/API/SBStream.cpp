@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBStream.h"
 
+#include "SBReproducerPrivate.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Status.h"
@@ -17,31 +18,41 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBStream::SBStream() : m_opaque_ap(new StreamString()), m_is_file(false) {}
+SBStream::SBStream() : m_opaque_up(new StreamString()), m_is_file(false) {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBStream);
+}
 
 SBStream::SBStream(SBStream &&rhs)
-    : m_opaque_ap(std::move(rhs.m_opaque_ap)), m_is_file(rhs.m_is_file) {}
+    : m_opaque_up(std::move(rhs.m_opaque_up)), m_is_file(rhs.m_is_file) {}
 
 SBStream::~SBStream() {}
 
-bool SBStream::IsValid() const { return (m_opaque_ap != NULL); }
+bool SBStream::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStream, IsValid);
+
+  return (m_opaque_up != NULL);
+}
 
 // If this stream is not redirected to a file, it will maintain a local cache
 // for the stream data which can be accessed using this accessor.
 const char *SBStream::GetData() {
-  if (m_is_file || m_opaque_ap == NULL)
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBStream, GetData);
+
+  if (m_is_file || m_opaque_up == NULL)
     return NULL;
 
-  return static_cast<StreamString *>(m_opaque_ap.get())->GetData();
+  return static_cast<StreamString *>(m_opaque_up.get())->GetData();
 }
 
 // If this stream is not redirected to a file, it will maintain a local cache
 // for the stream output whose length can be accessed using this accessor.
 size_t SBStream::GetSize() {
-  if (m_is_file || m_opaque_ap == NULL)
+  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBStream, GetSize);
+
+  if (m_is_file || m_opaque_up == NULL)
     return 0;
 
-  return static_cast<StreamString *>(m_opaque_ap.get())->GetSize();
+  return static_cast<StreamString *>(m_opaque_up.get())->GetSize();
 }
 
 void SBStream::Printf(const char *format, ...) {
@@ -54,15 +65,18 @@ void SBStream::Printf(const char *format, ...) {
 }
 
 void SBStream::RedirectToFile(const char *path, bool append) {
+  LLDB_RECORD_METHOD(void, SBStream, RedirectToFile, (const char *, bool), path,
+                     append);
+
   if (path == nullptr)
     return;
 
   std::string local_data;
-  if (m_opaque_ap) {
+  if (m_opaque_up) {
     // See if we have any locally backed data. If so, copy it so we can then
     // redirect it to the file so we don't lose the data
     if (!m_is_file)
-      local_data = static_cast<StreamString *>(m_opaque_ap.get())->GetString();
+      local_data = static_cast<StreamString *>(m_opaque_up.get())->GetString();
   }
   StreamFile *stream_file = new StreamFile;
   uint32_t open_options = File::eOpenOptionWrite | File::eOpenOptionCanCreate;
@@ -73,81 +87,89 @@ void SBStream::RedirectToFile(const char *path, bool append) {
 
   FileSystem::Instance().Open(stream_file->GetFile(), FileSpec(path),
                               open_options);
-  m_opaque_ap.reset(stream_file);
+  m_opaque_up.reset(stream_file);
 
-  if (m_opaque_ap) {
+  if (m_opaque_up) {
     m_is_file = true;
 
     // If we had any data locally in our StreamString, then pass that along to
     // the to new file we are redirecting to.
     if (!local_data.empty())
-      m_opaque_ap->Write(&local_data[0], local_data.size());
+      m_opaque_up->Write(&local_data[0], local_data.size());
   } else
     m_is_file = false;
 }
 
 void SBStream::RedirectToFileHandle(FILE *fh, bool transfer_fh_ownership) {
+  LLDB_RECORD_METHOD(void, SBStream, RedirectToFileHandle, (FILE *, bool), fh,
+                     transfer_fh_ownership);
+
   if (fh == nullptr)
     return;
 
   std::string local_data;
-  if (m_opaque_ap) {
+  if (m_opaque_up) {
     // See if we have any locally backed data. If so, copy it so we can then
     // redirect it to the file so we don't lose the data
     if (!m_is_file)
-      local_data = static_cast<StreamString *>(m_opaque_ap.get())->GetString();
+      local_data = static_cast<StreamString *>(m_opaque_up.get())->GetString();
   }
-  m_opaque_ap.reset(new StreamFile(fh, transfer_fh_ownership));
+  m_opaque_up.reset(new StreamFile(fh, transfer_fh_ownership));
 
-  if (m_opaque_ap) {
+  if (m_opaque_up) {
     m_is_file = true;
 
     // If we had any data locally in our StreamString, then pass that along to
     // the to new file we are redirecting to.
     if (!local_data.empty())
-      m_opaque_ap->Write(&local_data[0], local_data.size());
+      m_opaque_up->Write(&local_data[0], local_data.size());
   } else
     m_is_file = false;
 }
 
 void SBStream::RedirectToFileDescriptor(int fd, bool transfer_fh_ownership) {
+  LLDB_RECORD_METHOD(void, SBStream, RedirectToFileDescriptor, (int, bool), fd,
+                     transfer_fh_ownership);
+
   std::string local_data;
-  if (m_opaque_ap) {
+  if (m_opaque_up) {
     // See if we have any locally backed data. If so, copy it so we can then
     // redirect it to the file so we don't lose the data
     if (!m_is_file)
-      local_data = static_cast<StreamString *>(m_opaque_ap.get())->GetString();
+      local_data = static_cast<StreamString *>(m_opaque_up.get())->GetString();
   }
 
-  m_opaque_ap.reset(new StreamFile(::fdopen(fd, "w"), transfer_fh_ownership));
-  if (m_opaque_ap) {
+  m_opaque_up.reset(new StreamFile(::fdopen(fd, "w"), transfer_fh_ownership));
+  if (m_opaque_up) {
     m_is_file = true;
 
     // If we had any data locally in our StreamString, then pass that along to
     // the to new file we are redirecting to.
     if (!local_data.empty())
-      m_opaque_ap->Write(&local_data[0], local_data.size());
+      m_opaque_up->Write(&local_data[0], local_data.size());
   } else
     m_is_file = false;
 }
 
-lldb_private::Stream *SBStream::operator->() { return m_opaque_ap.get(); }
+lldb_private::Stream *SBStream::operator->() { return m_opaque_up.get(); }
 
-lldb_private::Stream *SBStream::get() { return m_opaque_ap.get(); }
+lldb_private::Stream *SBStream::get() { return m_opaque_up.get(); }
 
 lldb_private::Stream &SBStream::ref() {
-  if (m_opaque_ap == NULL)
-    m_opaque_ap.reset(new StreamString());
-  return *m_opaque_ap;
+  if (m_opaque_up == NULL)
+    m_opaque_up.reset(new StreamString());
+  return *m_opaque_up;
 }
 
 void SBStream::Clear() {
-  if (m_opaque_ap) {
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBStream, Clear);
+
+  if (m_opaque_up) {
     // See if we have any locally backed data. If so, copy it so we can then
     // redirect it to the file so we don't lose the data
     if (m_is_file)
-      m_opaque_ap.reset();
+      m_opaque_up.reset();
     else
-      static_cast<StreamString *>(m_opaque_ap.get())->Clear();
+      static_cast<StreamString *>(m_opaque_up.get())->Clear();
   }
 }

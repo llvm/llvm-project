@@ -440,6 +440,15 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FNEG(SDNode *N, unsigned ResNo) {
     return SDValue(N, ResNo);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDLoc dl(N);
+
+  EVT FloatVT = N->getValueType(ResNo);
+  if (FloatVT == MVT::f32 || FloatVT == MVT::f64 || FloatVT == MVT::f128) {
+    // Expand Y = FNEG(X) -> Y = X ^ sign mask
+    APInt SignMask = APInt::getSignMask(NVT.getSizeInBits());
+    return DAG.getNode(ISD::XOR, dl, NVT, GetSoftenedFloat(N->getOperand(0)),
+                       DAG.getConstant(SignMask, dl, NVT));
+  }
+
   // Expand Y = FNEG(X) -> Y = SUB -0.0, X
   SDValue Ops[2] = { DAG.getConstantFP(-0.0, dl, N->getValueType(0)),
                      GetSoftenedFloat(N->getOperand(0)) };

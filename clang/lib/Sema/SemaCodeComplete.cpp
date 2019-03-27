@@ -350,13 +350,16 @@ public:
 void PreferredTypeBuilder::enterReturn(Sema &S, SourceLocation Tok) {
   if (isa<BlockDecl>(S.CurContext)) {
     if (sema::BlockScopeInfo *BSI = S.getCurBlock()) {
+      ComputeType = nullptr;
       Type = BSI->ReturnType;
       ExpectedLoc = Tok;
     }
   } else if (const auto *Function = dyn_cast<FunctionDecl>(S.CurContext)) {
+    ComputeType = nullptr;
     Type = Function->getReturnType();
     ExpectedLoc = Tok;
   } else if (const auto *Method = dyn_cast<ObjCMethodDecl>(S.CurContext)) {
+    ComputeType = nullptr;
     Type = Method->getReturnType();
     ExpectedLoc = Tok;
   }
@@ -364,7 +367,15 @@ void PreferredTypeBuilder::enterReturn(Sema &S, SourceLocation Tok) {
 
 void PreferredTypeBuilder::enterVariableInit(SourceLocation Tok, Decl *D) {
   auto *VD = llvm::dyn_cast_or_null<ValueDecl>(D);
+  ComputeType = nullptr;
   Type = VD ? VD->getType() : QualType();
+  ExpectedLoc = Tok;
+}
+
+void PreferredTypeBuilder::enterFunctionArgument(
+    SourceLocation Tok, llvm::function_ref<QualType()> ComputeType) {
+  this->ComputeType = ComputeType;
+  Type = QualType();
   ExpectedLoc = Tok;
 }
 
@@ -480,13 +491,14 @@ static QualType getPreferredTypeOfUnaryArg(Sema &S, QualType ContextType,
   case tok::kw___imag:
     return QualType();
   default:
-    assert(false && "unhnalded unary op");
+    assert(false && "unhandled unary op");
     return QualType();
   }
 }
 
 void PreferredTypeBuilder::enterBinary(Sema &S, SourceLocation Tok, Expr *LHS,
                                        tok::TokenKind Op) {
+  ComputeType = nullptr;
   Type = getPreferredTypeOfBinaryRHS(S, LHS, Op);
   ExpectedLoc = Tok;
 }
@@ -495,30 +507,38 @@ void PreferredTypeBuilder::enterMemAccess(Sema &S, SourceLocation Tok,
                                           Expr *Base) {
   if (!Base)
     return;
-  Type = this->get(Base->getBeginLoc());
+  // Do we have expected type for Base?
+  if (ExpectedLoc != Base->getBeginLoc())
+    return;
+  // Keep the expected type, only update the location.
   ExpectedLoc = Tok;
+  return;
 }
 
 void PreferredTypeBuilder::enterUnary(Sema &S, SourceLocation Tok,
                                       tok::TokenKind OpKind,
                                       SourceLocation OpLoc) {
+  ComputeType = nullptr;
   Type = getPreferredTypeOfUnaryArg(S, this->get(OpLoc), OpKind);
   ExpectedLoc = Tok;
 }
 
 void PreferredTypeBuilder::enterSubscript(Sema &S, SourceLocation Tok,
                                           Expr *LHS) {
+  ComputeType = nullptr;
   Type = S.getASTContext().IntTy;
   ExpectedLoc = Tok;
 }
 
 void PreferredTypeBuilder::enterTypeCast(SourceLocation Tok,
                                          QualType CastType) {
+  ComputeType = nullptr;
   Type = !CastType.isNull() ? CastType.getCanonicalType() : QualType();
   ExpectedLoc = Tok;
 }
 
 void PreferredTypeBuilder::enterCondition(Sema &S, SourceLocation Tok) {
+  ComputeType = nullptr;
   Type = S.getASTContext().BoolTy;
   ExpectedLoc = Tok;
 }
@@ -968,8 +988,8 @@ void ResultBuilder::AdjustResultPriorityForDecl(Result &R) {
   }
 }
 
-DeclContext::lookup_result getConstructors(ASTContext &Context,
-                                           const CXXRecordDecl *Record) {
+static DeclContext::lookup_result getConstructors(ASTContext &Context,
+                                                  const CXXRecordDecl *Record) {
   QualType RecordTy = Context.getTypeDeclType(Record);
   DeclarationName ConstructorName =
       Context.DeclarationNames.getCXXConstructorName(
@@ -5061,7 +5081,20 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
   if (SS.isInvalid()) {
     CodeCompletionContext CC(CodeCompletionContext::CCC_Symbol);
     CC.setCXXScopeSpecifier(SS);
-    HandleCodeCompleteResults(this, CodeCompleter, CC, nullptr, 0);
+    // As SS is invalid, we try to collect accessible contexts from the current
+    // scope with a dummy lookup so that the completion consumer can try to
+    // guess what the specified scope is.
+    ResultBuilder DummyResults(*this, CodeCompleter->getAllocator(),
+                               CodeCompleter->getCodeCompletionTUInfo(), CC);
+    if (S->getEntity()) {
+      CodeCompletionDeclConsumer Consumer(DummyResults, S->getEntity(),
+                                          BaseType);
+      LookupVisibleDecls(S, LookupOrdinaryName, Consumer,
+                         /*IncludeGlobalScope=*/false,
+                         /*LoadExternal=*/false);
+    }
+    HandleCodeCompleteResults(this, CodeCompleter,
+                              DummyResults.getCompletionContext(), nullptr, 0);
     return;
   }
   // Always pretend to enter a context to ensure that a dependent type
@@ -8371,10 +8404,23 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
   };
 
   // Helper: scans IncludeDir for nice files, and adds results for each.
-  auto AddFilesFromIncludeDir = [&](StringRef IncludeDir, bool IsSystem) {
+  auto AddFilesFromIncludeDir = [&](StringRef IncludeDir,
+                                    bool IsSystem,
+                                    DirectoryLookup::LookupType_t LookupType) {
     llvm::SmallString<128> Dir = IncludeDir;
-    if (!NativeRelDir.empty())
-      llvm::sys::path::append(Dir, NativeRelDir);
+    if (!NativeRelDir.empty()) {
+      if (LookupType == DirectoryLookup::LT_Framework) {
+        // For a framework dir, #include <Foo/Bar/> actually maps to
+        // a path of Foo.framework/Headers/Bar/.
+        auto Begin = llvm::sys::path::begin(NativeRelDir);
+        auto End = llvm::sys::path::end(NativeRelDir);
+
+        llvm::sys::path::append(Dir, *Begin + ".framework", "Headers");
+        llvm::sys::path::append(Dir, ++Begin, End);
+      } else {
+        llvm::sys::path::append(Dir, NativeRelDir);
+      }
+    }
 
     std::error_code EC;
     unsigned Count = 0;
@@ -8385,6 +8431,12 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
       StringRef Filename = llvm::sys::path::filename(It->path());
       switch (It->type()) {
       case llvm::sys::fs::file_type::directory_file:
+        // All entries in a framework directory must have a ".framework" suffix,
+        // but the suffix does not appear in the source code's include/import.
+        if (LookupType == DirectoryLookup::LT_Framework &&
+            NativeRelDir.empty() && !Filename.consume_back(".framework"))
+          break;
+
         AddCompletion(Filename, /*IsDirectory=*/true);
         break;
       case llvm::sys::fs::file_type::regular_file:
@@ -8413,10 +8465,12 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
       // header maps are not (currently) enumerable.
       break;
     case DirectoryLookup::LT_NormalDir:
-      AddFilesFromIncludeDir(IncludeDir.getDir()->getName(), IsSystem);
+      AddFilesFromIncludeDir(IncludeDir.getDir()->getName(), IsSystem,
+                             DirectoryLookup::LT_NormalDir);
       break;
     case DirectoryLookup::LT_Framework:
-      AddFilesFromIncludeDir(IncludeDir.getFrameworkDir()->getName(), IsSystem);
+      AddFilesFromIncludeDir(IncludeDir.getFrameworkDir()->getName(), IsSystem,
+                             DirectoryLookup::LT_Framework);
       break;
     }
   };
@@ -8430,7 +8484,8 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
     // The current directory is on the include path for "quoted" includes.
     auto *CurFile = PP.getCurrentFileLexer()->getFileEntry();
     if (CurFile && CurFile->getDir())
-      AddFilesFromIncludeDir(CurFile->getDir()->getName(), false);
+      AddFilesFromIncludeDir(CurFile->getDir()->getName(), false,
+                             DirectoryLookup::LT_NormalDir);
     for (const auto &D : make_range(S.quoted_dir_begin(), S.quoted_dir_end()))
       AddFilesFromDirLookup(D, false);
   }

@@ -210,4 +210,54 @@ entry:
   ret double %d6
 }
 
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+; Like the test for @foo1, but check that the inserted dbg.value does not
+; affect codegen. The CHECK items below should always be identical to @foo1,
+; minus the DEBUG_VALUE line and changes in labels..
+define double @foo1_g(float %p1, double %p2, double %p3) nounwind !dbg !4 {
+; CHECK-LABEL: foo1_g:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorps %xmm3, %xmm3
+; CHECK-NEXT:    ucomiss %xmm3, %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    jae .LBB6_1
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    addsd %xmm2, %xmm0
+; CHECK-NEXT:    jmp .LBB6_3
+; CHECK-NEXT:  .LBB6_1:
+; CHECK-NEXT:    addsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    movapd %xmm1, %xmm2
+; CHECK-NEXT:  .LBB6_3: # %entry
+; CHECK-NEXT:    #DEBUG_VALUE: foobar:xyzzy <- undef
+; CHECK-NEXT:    subsd %xmm1, %xmm0
+; CHECK-NEXT:    addsd %xmm2, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %c1 = fcmp oge float %p1, 0.000000e+00
+  %d0 = fadd double %p2, 1.25e0
+  %d1 = fadd double %p3, 1.25e0
+  %d2 = select i1 %c1, double %d0, double %d1
+  call void @llvm.dbg.value(metadata float undef, metadata !5, metadata !DIExpression()), !dbg !6
+  %d3 = select i1 %c1, double %d2, double %p2
+  %d4 = select i1 %c1, double %d3, double %p3
+  %d5 = fsub double %d2, %d3
+  %d6 = fadd double %d5, %d4
+  ret double %d6
+}
+
+!llvm.module.flags = !{!1}
+!llvm.dbg.cu = !{!2}
+
 !0 = !{!"branch_weights", i32 1, i32 2000}
+!1 = !{i32 2, !"Debug Info Version", i32 3}
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, nameTableKind: None)
+!3 = !DIFile(filename: "test.c", directory: ".")
+!4 = distinct !DISubprogram(name: "foobar", scope: !2, file: !3, line: 1, type: !9, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !8)
+!5 = !DILocalVariable(name: "xyzzy", scope: !4, file: !3, line: 2, type: !7)
+!6 = !DILocation(line: 1, column: 1, scope: !4)
+!7 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
+!8 = !{!5}
+!9 = !DISubroutineType(types: !10)
+!10 = !{!7}

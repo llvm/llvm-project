@@ -193,8 +193,7 @@ using __map_node_handle =
     __basic_node_handle< _NodeType, _Alloc, __map_node_handle_specifics>;
 
 template <class _Iterator, class _NodeType>
-_LIBCPP_TEMPLATE_VIS
-struct __insert_return_type
+struct _LIBCPP_TEMPLATE_VIS __insert_return_type
 {
     _Iterator position;
     bool inserted;

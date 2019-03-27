@@ -10,7 +10,7 @@ define void @update(<5 x i16>* %dst, <5 x i16>* %src, i32 %n) nounwind {
 ; SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movq {{.*}}(%rip), %rax
+; SSE2-NEXT:    movabsq $4295032833, %rax # imm = 0x100010001
 ; SSE2-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movw $0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movl $0, -{{[0-9]+}}(%rsp)
@@ -44,7 +44,7 @@ define void @update(<5 x i16>* %dst, <5 x i16>* %src, i32 %n) nounwind {
 ; SSE41-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movq {{.*}}(%rip), %rax
+; SSE41-NEXT:    movabsq $4295032833, %rax # imm = 0x100010001
 ; SSE41-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movw $0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movl $0, -{{[0-9]+}}(%rsp)

@@ -22,8 +22,6 @@ class AutoExporter {
 public:
   AutoExporter();
 
-  void initSymbolExcludes();
-
   void addWholeArchive(StringRef Path);
 
   llvm::StringSet<> ExcludeSymbols;

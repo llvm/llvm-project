@@ -1190,6 +1190,13 @@ bool MipsTargetLowering::isCheapToSpeculateCtlz() const {
   return Subtarget.hasMips32();
 }
 
+bool MipsTargetLowering::shouldFoldShiftPairToMask(const SDNode *N,
+                                                   CombineLevel Level) const {
+  if (N->getOperand(0).getValueType().isVector())
+    return false;
+  return true;
+}
+
 void
 MipsTargetLowering::LowerOperationWrapper(SDNode *N,
                                           SmallVectorImpl<SDValue> &Results,

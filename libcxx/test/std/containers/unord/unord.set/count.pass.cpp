@@ -19,7 +19,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_set<int> C;
@@ -65,4 +65,6 @@ int main()
         assert(c.count(5) == 0);
     }
 #endif
+
+  return 0;
 }

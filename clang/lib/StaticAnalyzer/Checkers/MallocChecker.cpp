@@ -3098,7 +3098,7 @@ void ento::registerInnerPointerCheckerAux(CheckerManager &mgr) {
 void ento::registerDynamicMemoryModeling(CheckerManager &mgr) {
   auto *checker = mgr.registerChecker<MallocChecker>();
   checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(
-                                                  "Optimistic", false, checker);
+                                                  checker, "Optimistic", false);
 }
 
 bool ento::shouldRegisterDynamicMemoryModeling(const LangOptions &LO) {

@@ -81,8 +81,10 @@ struct test_signed : to_chars_test_base<T>
     }
 };
 
-int main()
+int main(int, char**)
 {
     run<test_basics>(integrals);
     run<test_signed>(all_signed);
+
+  return 0;
 }

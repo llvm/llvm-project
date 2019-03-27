@@ -52,9 +52,7 @@ _start:                                   # @_start
 .Lfunc_end0:
 	.size	_start, .Lfunc_end0-.Lfunc_begin0
                                         # -- End function
-.globl __tls_get_addr
-.type __tls_get_addr,@function
-__tls_get_addr:
+
 	.type	a,@object               # @a
 	.section	.tdata,"awT",@progbits
 	.p2align	2

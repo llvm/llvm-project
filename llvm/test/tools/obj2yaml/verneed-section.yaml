@@ -1,0 +1,69 @@
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+## Check we are able to yamalize SHT_GNU_verneed section.
+
+# CHECK:      - Name:            .gnu.version_r
+# CHECK-NEXT:   Type:            SHT_GNU_verneed
+# CHECK-NEXT:   Flags:           [ SHF_ALLOC ]
+# CHECK-NEXT:   Address:         0x0000000000200250
+# CHECK-NEXT:   Link:            .dynstr
+# CHECK-NEXT:   AddressAlign:    0x0000000000000004
+# CHECK-NEXT:   Info:            0x0000000000000002
+# CHECK-NEXT:   Dependencies:
+# CHECK-NEXT:     - Version:         1
+# CHECK-NEXT:       File:            dso.so.0
+# CHECK-NEXT:       Entries:
+# CHECK-NEXT:         - Name:            v1
+# CHECK-NEXT:           Hash:            1937
+# CHECK-NEXT:           Flags:           10
+# CHECK-NEXT:           Other:           3
+# CHECK-NEXT:         - Name:            v2
+# CHECK-NEXT:           Hash:            1938
+# CHECK-NEXT:           Flags:           11
+# CHECK-NEXT:           Other:           4
+# CHECK-NEXT:     - Version:         1
+# CHECK-NEXT:       File:            dso.so.1
+# CHECK-NEXT:       Entries:
+# CHECK-NEXT:         - Name:            v3
+# CHECK-NEXT:           Hash:            1939
+# CHECK-NEXT:           Flags:           12
+# CHECK-NEXT:           Other:           2
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000201000
+Sections:
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x200250
+    Link:            .dynstr
+    AddressAlign:    4
+    Info:            2
+    Dependencies:
+      - Version:         1
+        File:            dso.so.0
+        Entries:
+          - Name:            v1
+            Hash:            1937
+            Flags:           10
+            Other:           3
+          - Name:            v2
+            Hash:            1938
+            Flags:           11
+            Other:           4
+      - Version:         1
+        File:            dso.so.1
+        Entries:
+          - Name:            v3
+            Hash:            1939
+            Flags:           12
+            Other:           2
+DynamicSymbols:
+  Global:
+    - Name:            f1

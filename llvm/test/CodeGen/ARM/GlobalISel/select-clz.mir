@@ -1,0 +1,33 @@
+# RUN: llc -O0 -mtriple arm-- -mattr=+v6 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,ARM
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,THUMB
+--- |
+  define void @test_clz() { ret void }
+...
+---
+name:            test_clz
+# CHECK-LABEL: name: test_clz
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; ARM: [[VREGX:%[0-9]+]]:gpr = COPY $r0
+    ; THUMB: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = G_CTLZ %0(s32)
+    ; ARM: [[VREGR:%[0-9]+]]:gpr = CLZ [[VREGX]], 14, $noreg
+    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2CLZ [[VREGX]], 14, $noreg
+
+    $r0 = COPY %1(s32)
+    ; CHECK: $r0 = COPY [[VREGR]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...

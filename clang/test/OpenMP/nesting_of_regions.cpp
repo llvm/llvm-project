@@ -4080,6 +4080,13 @@ void foo() {
   }
 #pragma omp target // expected-error {{target construct with nested teams region contains statements outside of the teams construct}}
   {
+#pragma omp teams // expected-note {{directive outside teams construct here}}
+    ++a;
+#pragma omp teams // expected-note {{nested teams construct here}}
+    ++a;
+  }
+#pragma omp target // expected-error {{target construct with nested teams region contains statements outside of the teams construct}}
+  {
     ++a;           // expected-note {{statement outside teams construct here}}
 #pragma omp teams  // expected-note {{nested teams construct here}}
     ++a;
@@ -12689,6 +12696,13 @@ void foo() {
 #pragma omp target
   {
 #pragma omp teams
+    ++a;
+  }
+#pragma omp target // expected-error {{target construct with nested teams region contains statements outside of the teams construct}}
+  {
+#pragma omp teams // expected-note {{directive outside teams construct here}}
+    ++a;
+#pragma omp teams // expected-note {{nested teams construct here}}
     ++a;
   }
 #pragma omp target // expected-error {{target construct with nested teams region contains statements outside of the teams construct}}

@@ -42,6 +42,7 @@ class RegisterBankInfo;
 class SDep;
 class SelectionDAGTargetInfo;
 struct SubtargetFeatureKV;
+struct SubtargetSubTypeKV;
 struct SubtargetInfoKV;
 class SUnit;
 class TargetFrameLowering;
@@ -62,8 +63,7 @@ class TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS,
                       ArrayRef<SubtargetFeatureKV> PF,
-                      ArrayRef<SubtargetFeatureKV> PD,
-                      const SubtargetInfoKV *ProcSched,
+                      ArrayRef<SubtargetSubTypeKV> PD,
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
                       const MCReadAdvanceEntry *RA, const InstrStage *IS,
@@ -189,9 +189,6 @@ public:
   /// TargetLowering preference). It does not yet disable the postRA scheduler.
   virtual bool enableMachineScheduler() const;
 
-  /// Support printing of [latency:throughput] comment in output .S file.
-  virtual bool supportPrintSchedInfo() const { return false; }
-
   /// True if the machine scheduler should disable the TLI preference
   /// for preRA scheduling with the source level scheduler.
   virtual bool enableMachineSchedDefaultSched() const { return true; }
@@ -284,10 +281,6 @@ public:
   /// Please use MachineRegisterInfo::subRegLivenessEnabled() instead where
   /// possible.
   virtual bool enableSubRegLiveness() const { return false; }
-
-  /// Returns string representation of scheduler comment
-  std::string getSchedInfoStr(const MachineInstr &MI) const;
-  std::string getSchedInfoStr(MCInst const &MCI) const override;
 
   /// This is called after a .mir file was loaded.
   virtual void mirFileLoaded(MachineFunction &MF) const;

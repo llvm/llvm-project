@@ -80,6 +80,8 @@ enum ProcessorSubtypes {
   INTEL_COREI7_CANNONLAKE,
   INTEL_COREI7_ICELAKE_CLIENT,
   INTEL_COREI7_ICELAKE_SERVER,
+  AMDFAM17H_ZNVER2,
+  INTEL_COREI7_CASCADELAKE,
   CPU_SUBTYPE_MAX
 };
 
@@ -268,7 +270,8 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 static void
 getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                                 unsigned Brand_id, unsigned Features,
-                                unsigned *Type, unsigned *Subtype) {
+                                unsigned Features2, unsigned *Type,
+                                unsigned *Subtype) {
   if (Brand_id != 0)
     return;
   switch (Family) {
@@ -347,7 +350,10 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Skylake Xeon:
     case 0x55:
       *Type = INTEL_COREI7;
-      *Subtype = INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
+      if (Features2 & (1 << (FEATURE_AVX512VNNI - 32)))
+        *Subtype = INTEL_COREI7_CASCADELAKE; // "cascadelake"
+      else
+        *Subtype = INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
       break;
 
     // Cannonlake:
@@ -400,8 +406,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 }
 
 static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                          unsigned Features, unsigned *Type,
-                                          unsigned *Subtype) {
+                                          unsigned Features, unsigned Features2,
+                                          unsigned *Type, unsigned *Subtype) {
   // FIXME: this poorly matches the generated SubtargetFeatureKV table.  There
   // appears to be no way to generate the wide variety of AMD-specific targets
   // from the information returned from CPUID.
@@ -447,7 +453,14 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     break; // "btver2"
   case 23:
     *Type = AMDFAM17H;
-    *Subtype = AMDFAM17H_ZNVER1;
+    if (Model >= 0x30 && Model <= 0x3f) {
+      *Subtype = AMDFAM17H_ZNVER2;
+      break; // "znver2"; 30h-3fh: Zen2
+    }
+    if (Model <= 0x0f) {
+      *Subtype = AMDFAM17H_ZNVER1;
+      break; // "znver1"; 00h-0Fh: Zen1
+    }
     break;
   default:
     break; // "generic"
@@ -628,12 +641,13 @@ __cpu_indicator_init(void) {
   if (Vendor == SIG_INTEL) {
     /* Get CPU type.  */
     getIntelProcessorTypeAndSubtype(Family, Model, Brand_id, Features,
+                                    Features2,
                                     &(__cpu_model.__cpu_type),
                                     &(__cpu_model.__cpu_subtype));
     __cpu_model.__cpu_vendor = VENDOR_INTEL;
   } else if (Vendor == SIG_AMD) {
     /* Get CPU type.  */
-    getAMDProcessorTypeAndSubtype(Family, Model, Features,
+    getAMDProcessorTypeAndSubtype(Family, Model, Features, Features2,
                                   &(__cpu_model.__cpu_type),
                                   &(__cpu_model.__cpu_subtype));
     __cpu_model.__cpu_vendor = VENDOR_AMD;

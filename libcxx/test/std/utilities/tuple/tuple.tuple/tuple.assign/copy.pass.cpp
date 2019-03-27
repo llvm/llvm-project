@@ -35,7 +35,7 @@ struct MoveAssignable {
   MoveAssignable& operator=(MoveAssignable&&) = default;
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::tuple<> T;
@@ -100,4 +100,6 @@ int main()
         using T = std::tuple<int, MoveAssignable>;
         static_assert(!std::is_copy_assignable<T>::value, "");
     }
+
+  return 0;
 }

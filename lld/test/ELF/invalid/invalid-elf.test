@@ -9,10 +9,6 @@
 # RUN:   FileCheck --check-prefix=INVALID-FILE-CLASS %s
 # INVALID-FILE-CLASS: test.o: invalid file class
 
-# RUN: not ld.lld %p/Inputs/symtab-sh_info.elf -o %t2 2>&1 | \
-# RUN:   FileCheck --check-prefix=INVALID-SYMTAB-SHINFO %s
-# INVALID-SYMTAB-SHINFO: invalid sh_info in symbol table
-
 # RUN: not ld.lld %p/Inputs/binding.elf -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-BINDING %s
 # INVALID-BINDING: unexpected binding

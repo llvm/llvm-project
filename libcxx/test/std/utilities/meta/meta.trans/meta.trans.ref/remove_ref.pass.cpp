@@ -22,7 +22,7 @@ void test_remove_reference()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_remove_reference<void, void>();
     test_remove_reference<int, int>();
@@ -43,4 +43,6 @@ int main()
     test_remove_reference<int*&&, int*>();
     test_remove_reference<const int*&&, const int*>();
 #endif
+
+  return 0;
 }

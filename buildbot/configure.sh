@@ -26,7 +26,10 @@ done && shift $(($OPTIND - 1))
 # we're in llvm.obj dir
 BUILD_DIR=${PWD}
 
-cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS=clang -DLLVM_EXTERNAL_PROJECTS="sycl;llvm-spirv" \
-    -DLLVM_EXTERNAL_SYCL_SOURCE_DIR=../llvm.src/sycl -DLLVM_EXTERNAL_LLVM_SPIRV_SOURCE_DIR=../llvm.src/llvm-spirv \
-    -DLLVM_TOOL_SYCL_BUILD=ON -DLLVM_TOOL_LLVM_SPIRV_BUILD=ON -DOpenCL_INCLUDE_DIR="OpenCL-Headers" \
-    -DOpenCL_LIBRARY="OpenCL-ICD-Loader/build/lib/libOpenCL.so" ../llvm.src/llvm
+cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS=clang \
+    -DLLVM_EXTERNAL_SYCL_SOURCE_DIR=../llvm.src/sycl \
+    -DLLVM_EXTERNAL_LLVM_SPIRV_SOURCE_DIR=../llvm.src/llvm-spirv \
+    -DLLVM_TOOL_SYCL_BUILD=ON -DLLVM_TOOL_LLVM_SPIRV_BUILD=ON \
+    -DOpenCL_INCLUDE_DIR="OpenCL-Headers" \
+    -DOpenCL_LIBRARY="OpenCL-ICD-Loader/build/lib/libOpenCL.so" \
+    ../llvm.src/llvm

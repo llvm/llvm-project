@@ -615,3 +615,74 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownFshlZero) {
       "declare i16 @llvm.fshl.i16(i16, i16, i16)\n");
   expectKnownBits(/*zero*/ 15u, /*one*/ 3840u);
 }
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownUAddSatLeadingOnes) {
+  // uadd.sat(1111...1, ........)
+  // = 1111....
+  parseAssembly(
+      "define i8 @test(i8 %a, i8 %b) {\n"
+      "  %aa = or i8 %a, 241\n"
+      "  %A = call i8 @llvm.uadd.sat.i8(i8 %aa, i8 %b)\n"
+      "  ret i8 %A\n"
+      "}\n"
+      "declare i8 @llvm.uadd.sat.i8(i8, i8)\n");
+  expectKnownBits(/*zero*/ 0u, /*one*/ 240u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownUAddSatOnesPreserved) {
+  // uadd.sat(00...011, .1...110)
+  // = .......1
+  parseAssembly(
+      "define i8 @test(i8 %a, i8 %b) {\n"
+      "  %aa = or i8 %a, 3\n"
+      "  %aaa = and i8 %aa, 59\n"
+      "  %bb = or i8 %b, 70\n"
+      "  %bbb = and i8 %bb, 254\n"
+      "  %A = call i8 @llvm.uadd.sat.i8(i8 %aaa, i8 %bbb)\n"
+      "  ret i8 %A\n"
+      "}\n"
+      "declare i8 @llvm.uadd.sat.i8(i8, i8)\n");
+  expectKnownBits(/*zero*/ 0u, /*one*/ 1u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownUSubSatLHSLeadingZeros) {
+  // usub.sat(0000...0, ........)
+  // = 0000....
+  parseAssembly(
+      "define i8 @test(i8 %a, i8 %b) {\n"
+      "  %aa = and i8 %a, 14\n"
+      "  %A = call i8 @llvm.usub.sat.i8(i8 %aa, i8 %b)\n"
+      "  ret i8 %A\n"
+      "}\n"
+      "declare i8 @llvm.usub.sat.i8(i8, i8)\n");
+  expectKnownBits(/*zero*/ 240u, /*one*/ 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownUSubSatRHSLeadingOnes) {
+  // usub.sat(........, 1111...1)
+  // = 0000....
+  parseAssembly(
+      "define i8 @test(i8 %a, i8 %b) {\n"
+      "  %bb = or i8 %a, 241\n"
+      "  %A = call i8 @llvm.usub.sat.i8(i8 %a, i8 %bb)\n"
+      "  ret i8 %A\n"
+      "}\n"
+      "declare i8 @llvm.usub.sat.i8(i8, i8)\n");
+  expectKnownBits(/*zero*/ 240u, /*one*/ 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownUSubSatZerosPreserved) {
+  // usub.sat(11...011, .1...110)
+  // = ......0.
+  parseAssembly(
+      "define i8 @test(i8 %a, i8 %b) {\n"
+      "  %aa = or i8 %a, 195\n"
+      "  %aaa = and i8 %aa, 251\n"
+      "  %bb = or i8 %b, 70\n"
+      "  %bbb = and i8 %bb, 254\n"
+      "  %A = call i8 @llvm.usub.sat.i8(i8 %aaa, i8 %bbb)\n"
+      "  ret i8 %A\n"
+      "}\n"
+      "declare i8 @llvm.usub.sat.i8(i8, i8)\n");
+  expectKnownBits(/*zero*/ 2u, /*one*/ 0u);
+}

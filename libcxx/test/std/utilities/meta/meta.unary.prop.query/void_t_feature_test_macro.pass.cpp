@@ -27,9 +27,11 @@
 # endif
 #endif
 
-int main()
+int main(int, char**)
 {
 #if defined(__cpp_lib_void_t)
   static_assert(std::is_same_v<std::void_t<int>, void>, "");
 #endif
+
+  return 0;
 }

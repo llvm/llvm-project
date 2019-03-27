@@ -46,7 +46,7 @@ void f()
     assert(d < ms(200));  // within 200ms
 }
 
-int main()
+int main(int, char**)
 {
     m.lock();
     std::thread t(f);
@@ -58,4 +58,6 @@ int main()
     std::lock_guard lg(m);
     static_assert((std::is_same<decltype(lg), std::lock_guard<decltype(m)>>::value), "" );
 #endif
+
+  return 0;
 }

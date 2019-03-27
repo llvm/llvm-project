@@ -15,6 +15,8 @@
 
 #include <variant>
 
-int main() {
+int main(int, char**) {
   static_assert(std::variant_npos == static_cast<std::size_t>(-1), "");
+
+  return 0;
 }

@@ -36,7 +36,7 @@ Sections:
   - Type:            DATA
     Segments:
       - SectionOffset:   6
-        MemoryIndex:     0
+        InitFlags:       0
         Offset:
           Opcode:          I32_CONST
           Value:           0

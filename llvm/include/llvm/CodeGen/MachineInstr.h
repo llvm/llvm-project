@@ -1011,10 +1011,13 @@ public:
   }
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
   bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }
-  bool isInlineAsm() const { return getOpcode() == TargetOpcode::INLINEASM; }
+  bool isInlineAsm() const {
+    return getOpcode() == TargetOpcode::INLINEASM ||
+           getOpcode() == TargetOpcode::INLINEASM_BR;
+  }
 
   bool isMSInlineAsm() const {
-    return getOpcode() == TargetOpcode::INLINEASM && getInlineAsmDialect();
+    return isInlineAsm() && getInlineAsmDialect() == InlineAsm::AD_Intel;
   }
 
   bool isStackAligningInlineAsm() const;
@@ -1196,10 +1199,20 @@ public:
 
   /// Wrapper for findRegisterDefOperandIdx, it returns
   /// a pointer to the MachineOperand rather than an index.
-  MachineOperand *findRegisterDefOperand(unsigned Reg, bool isDead = false,
-                                      const TargetRegisterInfo *TRI = nullptr) {
-    int Idx = findRegisterDefOperandIdx(Reg, isDead, false, TRI);
+  MachineOperand *
+  findRegisterDefOperand(unsigned Reg, bool isDead = false,
+                         bool Overlap = false,
+                         const TargetRegisterInfo *TRI = nullptr) {
+    int Idx = findRegisterDefOperandIdx(Reg, isDead, Overlap, TRI);
     return (Idx == -1) ? nullptr : &getOperand(Idx);
+  }
+
+  const MachineOperand *
+  findRegisterDefOperand(unsigned Reg, bool isDead = false,
+                         bool Overlap = false,
+                         const TargetRegisterInfo *TRI = nullptr) const {
+    return const_cast<MachineInstr *>(this)->findRegisterDefOperand(
+        Reg, isDead, Overlap, TRI);
   }
 
   /// Find the index of the first operand in the
@@ -1399,6 +1412,19 @@ public:
   /// Return true if all the defs of this instruction are dead.
   bool allDefsAreDead() const;
 
+  /// Return a valid size if the instruction is a spill instruction.
+  Optional<unsigned> getSpillSize(const TargetInstrInfo *TII) const;
+
+  /// Return a valid size if the instruction is a folded spill instruction.
+  Optional<unsigned> getFoldedSpillSize(const TargetInstrInfo *TII) const;
+
+  /// Return a valid size if the instruction is a restore instruction.
+  Optional<unsigned> getRestoreSize(const TargetInstrInfo *TII) const;
+
+  /// Return a valid size if the instruction is a folded restore instruction.
+  Optional<unsigned>
+  getFoldedRestoreSize(const TargetInstrInfo *TII) const;
+
   /// Copy implicit register operands from specified
   /// instruction to this instruction.
   void copyImplicitOps(MachineFunction &MF, const MachineInstr &MI);
@@ -1524,6 +1550,8 @@ public:
   /// should be used when merging two MachineInstrs into one. This routine does
   /// not modify the MIFlags of this MachineInstr.
   uint16_t mergeFlagsWith(const MachineInstr& Other) const;
+
+  static uint16_t copyFlagsFromInstruction(const Instruction &I);
 
   /// Copy all flags to MachineInst MIFlags
   void copyIRFlags(const Instruction &I);

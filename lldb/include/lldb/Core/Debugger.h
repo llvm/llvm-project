@@ -63,6 +63,11 @@ class SymbolContext;
 namespace lldb_private {
 class Target;
 }
+namespace lldb_private {
+namespace repro {
+class DataRecorder;
+}
+} // namespace lldb_private
 namespace llvm {
 class raw_ostream;
 }
@@ -129,7 +134,10 @@ public:
 
   lldb::StreamFileSP GetErrorFile() { return m_error_file_sp; }
 
-  void SetInputFileHandle(FILE *fh, bool tranfer_ownership);
+  repro::DataRecorder *GetInputRecorder();
+
+  void SetInputFileHandle(FILE *fh, bool tranfer_ownership,
+                          repro::DataRecorder *recorder = nullptr);
 
   void SetOutputFileHandle(FILE *fh, bool tranfer_ownership);
 
@@ -144,8 +152,8 @@ public:
   lldb::StreamSP GetAsyncErrorStream();
 
   CommandInterpreter &GetCommandInterpreter() {
-    assert(m_command_interpreter_ap.get());
-    return *m_command_interpreter_ap;
+    assert(m_command_interpreter_up.get());
+    return *m_command_interpreter_up;
   }
 
   lldb::ListenerSP GetListener() { return m_listener_sp; }
@@ -370,6 +378,9 @@ protected:
   lldb::StreamFileSP m_output_file_sp;
   lldb::StreamFileSP m_error_file_sp;
 
+  /// Used for shadowing the input file when capturing a reproducer.
+  repro::DataRecorder *m_input_recorder;
+
   lldb::BroadcasterManagerSP m_broadcaster_manager_sp; // The debugger acts as a
                                                        // broadcaster manager of
                                                        // last resort.
@@ -381,7 +392,7 @@ protected:
 
   PlatformList m_platform_list;
   lldb::ListenerSP m_listener_sp;
-  std::unique_ptr<SourceManager> m_source_manager_ap; // This is a scratch
+  std::unique_ptr<SourceManager> m_source_manager_up; // This is a scratch
                                                       // source manager that we
                                                       // return if we have no
                                                       // targets.
@@ -390,7 +401,7 @@ protected:
                                                       // this debugger used this
                                                       // shared
                                                       // source file cache.
-  std::unique_ptr<CommandInterpreter> m_command_interpreter_ap;
+  std::unique_ptr<CommandInterpreter> m_command_interpreter_up;
 
   IOHandlerStack m_input_reader_stack;
   llvm::StringMap<std::weak_ptr<llvm::raw_ostream>> m_log_streams;

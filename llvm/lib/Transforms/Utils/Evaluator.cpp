@@ -540,7 +540,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
 
       if (Callee->isDeclaration()) {
         // If this is a function we can constant fold, do it.
-        if (Constant *C = ConstantFoldCall(CS, Callee, Formals, TLI)) {
+        if (Constant *C = ConstantFoldCall(cast<CallBase>(CS.getInstruction()),
+                                           Callee, Formals, TLI)) {
           InstResult = castCallResultIfNeeded(CS.getCalledValue(), C);
           if (!InstResult)
             return false;

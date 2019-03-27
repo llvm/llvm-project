@@ -1,21 +1,15 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
-; RUN: opt -mtriple=thumbv7em %s -S -loop-reduce -lsr-complexity-limit=65536 -o - | FileCheck %s --check-prefix=CHECK-DEFAULT
-; RUN: opt -mtriple=thumbv7em %s -S -loop-reduce -lsr-complexity-limit=2147483647 -o - | FileCheck %s --check-prefix=CHECK-COMPLEX
+; RUN: opt -mtriple=thumbv7em %s -S -loop-reduce -lsr-complexity-limit=65536 -o - | FileCheck %s
+; RUN: opt -mtriple=thumbv7em %s -S -loop-reduce -lsr-complexity-limit=2147483647 -o - | FileCheck %s
 
-; CHECK-DEFAULT-LABEL: for.body12.us.us:
-; CHECK-DEFAULT: phi i32
-; CHECK-DEFAULT: [[LSR_IV:%[^ ]+]] = phi i32 [ [[LSR_IV_NEXT:%[^ ]+]], %for.body12.us.us ], [ 0, %for.cond9.preheader.us.us ]
-; CHECK-DEFAULT: phi i32
-; CHECK-DEFAULT: [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 8
-
-; CHECK-COMPLEX-LABEL: for.body12.us.us:
-; CHECK-COMPLEX: phi i32
-; CHECK-COMPLEX: [[LSR_IV6:%[^ ]+]] = phi i16* [ [[SCEVGEP7:%[^ ]+]], %for.body12.us.us ], [ [[SCEVGEP5:%[^ ]+]], %for.cond9.preheader.us.us ]
-; CHECK-COMPLEX: [[LSR_IV:%[^ ]+]] = phi i16* [ [[SCEVGEP1:%[^ ]+]], %for.body12.us.us ], [ [[SCEVGEP:%[^ ]+]], %for.cond9.preheader.us.us ]
-; CHECK-COMPLEX: phi i32
-; CHECK-COMPLEX: [[SCEVGEP1]] = getelementptr i16, i16* [[LSR_IV]], i32 4
-; CHECK-COMPLEX: [[SCEVGEP7]] = getelementptr i16, i16* [[LSR_IV6]], i32 4
+; CHECK-LABEL: for.body12.us.us:
+; CHECK: [[LSR_IV6:%[^ ]+]] = phi i16* [ [[SCEVGEP7:%[^ ]+]], %for.body12.us.us ], [ [[SCEVGEP5:%[^ ]+]], %for.cond9.preheader.us.us ]
+; CHECK: phi i32
+; CHECK: [[LSR_IV:%[^ ]+]] = phi i16* [ [[SCEVGEP1:%[^ ]+]], %for.body12.us.us ], [ [[SCEVGEP:%[^ ]+]], %for.cond9.preheader.us.us ]
+; CHECK: phi i32
+; CHECK: [[SCEVGEP1]] = getelementptr i16, i16* [[LSR_IV]], i32 4
+; CHECK: [[SCEVGEP7]] = getelementptr i16, i16* [[LSR_IV6]], i32 4
 
 define void @convolve(i16** nocapture readonly %input_image, i16** nocapture readonly %filter, i32 %filter_dim, i32 %out_width, i32 %out_height, i32** nocapture readonly %convolved) {
 entry:

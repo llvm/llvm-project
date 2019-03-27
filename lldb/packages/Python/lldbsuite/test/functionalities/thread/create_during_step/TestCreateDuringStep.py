@@ -29,6 +29,7 @@ class CreateDuringStepTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
+    @expectedFailureNetBSD
     def test_step_inst(self):
         """Test thread creation during step-inst handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -48,6 +49,7 @@ class CreateDuringStepTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
+    @expectedFailureNetBSD
     def test_step_over(self):
         """Test thread creation during step-over handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -67,6 +69,7 @@ class CreateDuringStepTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
+    @expectedFailureNetBSD
     def test_step_in(self):
         """Test thread creation during step-in handling."""
         self.build(dictionary=self.getBuildFlags())

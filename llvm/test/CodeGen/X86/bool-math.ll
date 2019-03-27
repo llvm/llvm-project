@@ -47,9 +47,9 @@ define i32 @sub_zext_cmp_mask_wider_result(i8 %x) {
 define i8 @sub_zext_cmp_mask_narrower_result(i32 %x) {
 ; X64-LABEL: sub_zext_cmp_mask_narrower_result:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $1, %al
-; X64-NEXT:    orb $46, %al
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    andb $1, %dil
+; X64-NEXT:    leal 46(%rdi), %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;

@@ -43,6 +43,11 @@ void DwarfFile::emitUnit(DwarfUnit *TheU, bool UseOffsets) {
   if (!S)
     return;
 
+  // Skip CUs that ended up not being needed (split CUs that were abandoned
+  // because they added no information beyond the non-split CU)
+  if (llvm::empty(TheU->getUnitDie().values()))
+    return;
+
   Asm->OutStreamer->SwitchSection(S);
   TheU->emitHeader(UseOffsets);
   Asm->emitDwarfDIE(TheU->getUnitDie());
@@ -61,6 +66,11 @@ void DwarfFile::computeSizeAndOffsets() {
   for (const auto &TheU : CUs) {
     if (TheU->getCUNode()->isDebugDirectivesOnly())
       continue;
+
+    // Skip CUs that ended up not being needed (split CUs that were abandoned
+    // because they added no information beyond the non-split CU)
+    if (llvm::empty(TheU->getUnitDie().values()))
+      return;
 
     TheU->setDebugSectionOffset(SecOffset);
     SecOffset += computeSizeAndOffsetsForUnit(TheU.get());

@@ -12,31 +12,16 @@
 
 #include "lld/Common/Version.h"
 
-using namespace llvm;
+#ifdef HAVE_VCS_VERSION_INC
+#include "VCSVersion.inc"
+#endif
 
-// Returns an SVN repository path, which is usually "trunk".
-static std::string getRepositoryPath() {
-  StringRef S = LLD_REPOSITORY_STRING;
-  size_t Pos = S.find("lld/");
-  if (Pos != StringRef::npos)
-    return S.substr(Pos + 4);
-  return S;
-}
-
-// Returns an SVN repository name, e.g., " (trunk 284614)"
-// or an empty string if no repository info is available.
-static std::string getRepository() {
-  std::string Repo = getRepositoryPath();
-  std::string Rev = LLD_REVISION_STRING;
-
-  if (Repo.empty() && Rev.empty())
-    return "";
-  if (!Repo.empty() && !Rev.empty())
-    return " (" + Repo + " " + Rev + ")";
-  return " (" + Repo + Rev + ")";
-}
-
-// Returns a version string, e.g., "LLD 4.0 (lld/trunk 284614)".
+// Returns a version string, e.g.:
+// lld 9.0.0 (https://github.com/llvm/llvm-project.git 9efdd7ac5e914d3c9fa1ef)
 std::string lld::getLLDVersion() {
-  return "LLD " + std::string(LLD_VERSION_STRING) + getRepository();
+#if defined(LLD_REPOSITORY) && defined(LLD_REVISION)
+  return "LLD " LLD_VERSION_STRING " (" LLD_REPOSITORY " " LLD_REVISION ")";
+#else
+  return "LLD " LLD_VERSION_STRING;
+#endif
 }

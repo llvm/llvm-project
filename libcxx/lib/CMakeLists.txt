@@ -148,27 +148,21 @@ if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
     endif()
   endif()
 
-  if ( CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "10.6" )
-    message(FATAL_ERROR "Mac OSX 10.6 is not supported anymore as a deployment "
-                        "target. If you need support for this, please contact "
-                        "the libc++ maintainers.")
+  if ("armv7" IN_LIST CMAKE_OSX_ARCHITECTURES)
+    set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++sjlj-abi.exp")
   else()
-    if ("armv7" IN_LIST CMAKE_OSX_ARCHITECTURES)
-      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++sjlj-abi.exp")
-    else()
-      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++abi${LIBCXX_LIBCPPABI_VERSION}.exp")
-    endif()
-    add_link_flags(
-      "-compatibility_version 1"
-      "-install_name /usr/lib/libc++.1.dylib"
-      "-Wl,-unexported_symbols_list,\"${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp\""
-      "-Wl,-reexported_symbols_list,\"${RE_EXPORT_LIST}\""
-      "-Wl,-force_symbols_not_weak_list,\"${CMAKE_CURRENT_SOURCE_DIR}/notweak.exp\""
-      "-Wl,-force_symbols_weak_list,\"${CMAKE_CURRENT_SOURCE_DIR}/weak.exp\"")
+    set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++abi${LIBCXX_LIBCPPABI_VERSION}.exp")
+  endif()
+  add_link_flags(
+    "-compatibility_version 1"
+    "-install_name /usr/lib/libc++.1.dylib"
+    "-Wl,-unexported_symbols_list,\"${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp\""
+    "-Wl,-reexported_symbols_list,\"${RE_EXPORT_LIST}\""
+    "-Wl,-force_symbols_not_weak_list,\"${CMAKE_CURRENT_SOURCE_DIR}/notweak.exp\""
+    "-Wl,-force_symbols_weak_list,\"${CMAKE_CURRENT_SOURCE_DIR}/weak.exp\"")
 
-    if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-      add_link_flags("-Wl,-reexported_symbols_list,\"${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp\"")
-    endif()
+  if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+    add_link_flags("-Wl,-reexported_symbols_list,\"${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp\"")
   endif()
 endif()
 
@@ -328,7 +322,7 @@ if (LIBCXX_ENABLE_FILESYSTEM)
 
   set(filesystem_flags "${LIBCXX_COMPILE_FLAGS}")
   check_flag_supported(-std=c++14)
-  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
+  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG AND LIBCXX_STANDARD_VER STREQUAL "c++11")
     string(REPLACE "-std=c++11" "-std=c++14" filesystem_flags "${LIBCXX_COMPILE_FLAGS}")
   endif()
   set_target_properties(cxx_filesystem

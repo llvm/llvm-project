@@ -188,3 +188,28 @@ bool Builtin::Context::canBeRedeclared(unsigned ID) const {
          (!hasReferenceArgsOrResult(ID) &&
           !hasCustomTypechecking(ID));
 }
+
+unsigned Builtin::getFortifiedVariantFunction(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  case Builtin::BImemcpy:    return Builtin::BI__builtin___memcpy_chk;
+  case Builtin::BImemmove:   return Builtin::BI__builtin___memmove_chk;
+  case Builtin::BImemset:    return Builtin::BI__builtin___memset_chk;
+  case Builtin::BIstpcpy:    return Builtin::BI__builtin___stpcpy_chk;
+  case Builtin::BIstrcat:    return Builtin::BI__builtin___strcat_chk;
+  case Builtin::BIstrcpy:    return Builtin::BI__builtin___strcpy_chk;
+  case Builtin::BIstrlcat:   return Builtin::BI__builtin___strlcat_chk;
+  case Builtin::BIstrlcpy:   return Builtin::BI__builtin___strlcpy_chk;
+  case Builtin::BIstrncat:   return Builtin::BI__builtin___strncat_chk;
+  case Builtin::BIstrncpy:   return Builtin::BI__builtin___strncpy_chk;
+  case Builtin::BIstpncpy:   return Builtin::BI__builtin___stpncpy_chk;
+  case Builtin::BIsnprintf:  return Builtin::BI__builtin___snprintf_chk;
+  case Builtin::BIvsnprintf: return Builtin::BI__builtin___vsnprintf_chk;
+  case Builtin::BIsprintf:   return Builtin::BI__builtin___sprintf_chk;
+  case Builtin::BIvsprintf:  return Builtin::BI__builtin___vsprintf_chk;
+  case Builtin::BIfprintf:   return Builtin::BI__builtin___fprintf_chk;
+  case Builtin::BIvfprintf:  return Builtin::BI__builtin___vfprintf_chk;
+  case Builtin::BIprintf:    return Builtin::BI__builtin___printf_chk;
+  case Builtin::BIvprintf:   return Builtin::BI__builtin___vprintf_chk;
+  default: return 0;
+  }
+}

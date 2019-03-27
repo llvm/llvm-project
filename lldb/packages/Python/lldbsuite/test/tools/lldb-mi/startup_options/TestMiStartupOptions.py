@@ -144,6 +144,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfLinux  # llvm.org/pr22841: lldb-mi tests fail on all Linux buildbots
+    @expectedFailureNetBSD
     @skipIfDarwin
     def test_lldbmi_source_option_start_script(self):
         """Test that 'lldb-mi --interpreter' can execute user's commands after initial commands were executed."""
@@ -188,6 +189,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfLinux  # llvm.org/pr22841: lldb-mi tests fail on all Linux buildbots
+    @expectedFailureNetBSD
     @skipIfDarwin
     def test_lldbmi_source_option_start_script_exit(self):
         """Test that 'lldb-mi --interpreter' can execute a prepared file which passed via --source option."""

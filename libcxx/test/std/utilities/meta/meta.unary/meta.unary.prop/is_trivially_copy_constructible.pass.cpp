@@ -65,7 +65,7 @@ struct A
     A(const A&);
 };
 
-int main()
+int main(int, char**)
 {
     test_has_not_trivial_copy_constructor<void>();
     test_has_not_trivial_copy_constructor<A>();
@@ -80,4 +80,6 @@ int main()
     test_is_trivially_copy_constructible<int*>();
     test_is_trivially_copy_constructible<const int*>();
     test_is_trivially_copy_constructible<bit_zero>();
+
+  return 0;
 }

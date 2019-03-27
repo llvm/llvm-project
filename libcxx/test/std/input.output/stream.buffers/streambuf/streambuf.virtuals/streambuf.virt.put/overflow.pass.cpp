@@ -22,8 +22,10 @@ struct test
     test() {}
 };
 
-int main()
+int main(int, char**)
 {
     test t;
     assert(t.sputc('A') == -1);
+
+  return 0;
 }

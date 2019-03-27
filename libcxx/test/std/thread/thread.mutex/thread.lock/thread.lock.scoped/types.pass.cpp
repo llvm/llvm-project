@@ -36,7 +36,7 @@ constexpr bool has_mutex_type() {
     return !std::is_same<decltype(test_typedef<LG>(0)), NAT>::value;
 }
 
-int main()
+int main(int, char**)
 {
     {
         using T = std::scoped_lock<>;
@@ -74,4 +74,6 @@ int main()
         using T = std::scoped_lock<M1, M1, M1>;
         static_assert(!has_mutex_type<T>(), "");
     }
+
+  return 0;
 }

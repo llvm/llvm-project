@@ -70,7 +70,7 @@ void g3(std::ios_base::event, std::ios_base&, int index)
     g3_called = true;
 }
 
-int main()
+int main(int, char**)
 {
     testbuf sb1;
     testios ios1(&sb1);
@@ -164,4 +164,6 @@ int main()
     ios2.imbue(std::locale("C"));
     assert(f1_called);
     assert(f2_called);
+
+  return 0;
 }

@@ -3,5 +3,5 @@
 # RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t.o
 # RUN: not llvm-objcopy --compress-debug-sections=zlib --decompress-debug-sections %t.o 2>&1 | FileCheck %s
 
-# CHECK: Cannot specify --compress-debug-sections at the same time as --decompress-debug-sections at the same time.
+# CHECK: Cannot specify --compress-debug-sections at the same time as --decompress-debug-sections at the same time
 

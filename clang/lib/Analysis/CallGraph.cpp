@@ -79,6 +79,30 @@ public:
     VisitChildren(CE);
   }
 
+  void VisitLambdaExpr(LambdaExpr *LE) {
+    if (CXXMethodDecl *MD = LE->getCallOperator())
+      G->VisitFunctionDecl(MD);
+  }
+
+  void VisitCXXNewExpr(CXXNewExpr *E) {
+    if (FunctionDecl *FD = E->getOperatorNew())
+      addCalledDecl(FD);
+    VisitChildren(E);
+  }
+
+  void VisitCXXConstructExpr(CXXConstructExpr *E) {
+    CXXConstructorDecl *Ctor = E->getConstructor();
+    if (FunctionDecl *Def = Ctor->getDefinition())
+      addCalledDecl(Def);
+    const auto *ConstructedType = Ctor->getParent();
+    if (ConstructedType->hasUserDeclaredDestructor()) {
+      CXXDestructorDecl *Dtor = ConstructedType->getDestructor();
+      if (FunctionDecl *Def = Dtor->getDefinition())
+        addCalledDecl(Def);
+    }
+    VisitChildren(E);
+  }
+
   // Adds may-call edges for the ObjC message sends.
   void VisitObjCMessageExpr(ObjCMessageExpr *ME) {
     if (ObjCInterfaceDecl *IDecl = ME->getReceiverInterface()) {

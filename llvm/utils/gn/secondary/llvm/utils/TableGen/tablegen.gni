@@ -9,7 +9,7 @@
 #       Basename of the generated output file.
 #       Defaults to target name with ".inc" appended.
 #
-#   td_file (roptional)
+#   td_file (optional)
 #       The .td file to pass to llvm-tblgen.
 #       Defaults to target name with ".td" appended.
 #

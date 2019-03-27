@@ -96,10 +96,15 @@ static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned MemSizeInBytes) {
     switch (MemSizeInBytes) {
     case 4:
       return Mips::SW;
+    case 2:
+      return Mips::SH;
+    case 1:
+      return Mips::SB;
     default:
       return Opc;
     }
   else
+    // Unspecified extending load is selected into zeroExtending load.
     switch (MemSizeInBytes) {
     case 4:
       return Mips::LW;
@@ -134,6 +139,26 @@ bool MipsInstructionSelector::select(MachineInstr &I,
   using namespace TargetOpcode;
 
   switch (I.getOpcode()) {
+  case G_UMULH: {
+    unsigned PseudoMULTuReg = MRI.createVirtualRegister(&Mips::ACC64RegClass);
+    MachineInstr *PseudoMULTu, *PseudoMove;
+
+    PseudoMULTu = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::PseudoMULTu))
+                      .addDef(PseudoMULTuReg)
+                      .add(I.getOperand(1))
+                      .add(I.getOperand(2));
+    if (!constrainSelectedInstRegOperands(*PseudoMULTu, TII, TRI, RBI))
+      return false;
+
+    PseudoMove = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::PseudoMFHI))
+                     .addDef(I.getOperand(0).getReg())
+                     .addUse(PseudoMULTuReg);
+    if (!constrainSelectedInstRegOperands(*PseudoMove, TII, TRI, RBI))
+      return false;
+
+    I.eraseFromParent();
+    return true;
+  }
   case G_GEP: {
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::ADDu))
              .add(I.getOperand(0))
@@ -147,6 +172,25 @@ bool MipsInstructionSelector::select(MachineInstr &I,
              .add(I.getOperand(1))
              .addImm(0);
     break;
+  }
+  case G_BRCOND: {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::BNE))
+             .add(I.getOperand(0))
+             .addUse(Mips::ZERO)
+             .add(I.getOperand(1));
+    break;
+  }
+  case G_PHI: {
+    const unsigned DestReg = I.getOperand(0).getReg();
+    const unsigned DestRegBank = RBI.getRegBank(DestReg, MRI, TRI)->getID();
+    const unsigned OpSize = MRI.getType(DestReg).getSizeInBits();
+
+    if (DestRegBank != Mips::GPRBRegBankID || OpSize != 32)
+      return false;
+
+    const TargetRegisterClass *DefRC = &Mips::GPR32RegClass;
+    I.setDesc(TII.get(TargetOpcode::PHI));
+    return RBI.constrainGenericRegister(DestReg, *DefRC, MRI);
   }
   case G_STORE:
   case G_LOAD:

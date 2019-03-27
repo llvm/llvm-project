@@ -108,6 +108,35 @@ class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string
   let isCodeGenOnly = 1;
 }
 
+// Pseudo load instructions.
+class PseudoLoad<string opcodestr, RegisterClass rdty = GPR>
+    : Pseudo<(outs rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+  let isCodeGenOnly = 0;
+  let isAsmParserOnly = 1;
+}
+
+class PseudoFloatLoad<string opcodestr, RegisterClass rdty = GPR>
+    : Pseudo<(outs rdty:$rd, GPR:$tmp), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr, $tmp"> {
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+  let isCodeGenOnly = 0;
+  let isAsmParserOnly = 1;
+}
+
+// Pseudo store instructions.
+class PseudoStore<string opcodestr, RegisterClass rsty = GPR>
+    : Pseudo<(outs rsty:$rs, GPR:$tmp), (ins bare_symbol:$addr), [], opcodestr, "$rs, $addr, $tmp"> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 1;
+  let isCodeGenOnly = 0;
+  let isAsmParserOnly = 1;
+}
+
 // Instruction formats are listed in the order they appear in the RISC-V
 // instruction set manual (R, I, S, B, U, J) with sub-formats (e.g. RVInstR4,
 // RVInstRAtomic) sorted alphabetically.

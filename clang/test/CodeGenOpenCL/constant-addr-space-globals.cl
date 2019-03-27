@@ -26,6 +26,6 @@ kernel void k(void) {
 
   constant int var1 = 1;
   
-  // CHECK: call spir_func void @foo(i32 addrspace(2)* @k.var1, i32 addrspace(2)* getelementptr inbounds ([3 x i32], [3 x i32] addrspace(2)* @k.arr1, i32 0, i32 0)
+  // CHECK: call spir_func void @foo(i32 addrspace(2)* @k.var1, i32 addrspace(2)* getelementptr inbounds ([3 x i32], [3 x i32] addrspace(2)* @k.arr1, i64 0, i64 0)
   foo(&var1, arr1, arr2, arr3);
 }

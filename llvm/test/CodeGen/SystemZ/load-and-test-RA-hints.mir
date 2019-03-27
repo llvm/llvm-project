@@ -1,0 +1,166 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=greedy %s -o - \
+# RUN:   -debug-only=regalloc 2>&1 | FileCheck %s
+#
+# REQUIRES: asserts
+#
+# Test that regalloc hints are passed for compare with zero cases that can be
+# converted to load-and-test.
+
+--- |
+  ; ModuleID = './tc.ll'
+  source_filename = "proof.c"
+  target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+  target triple = "s390x-ibm-linux"
+  
+  @rootlosers = external dso_local local_unnamed_addr global [300 x i32], align 4
+  
+  define dso_local void @proofnumberscan() local_unnamed_addr #0 {
+  bb:
+    br i1 undef, label %bb20.preheader, label %bb1.preheader
+  
+  bb1.preheader:                                    ; preds = %bb
+    br label %bb1
+  
+  bb20.preheader:                                   ; preds = %bb
+    br label %bb20
+  
+  bb1:                                              ; preds = %bb1.preheader, %bb15
+    %lsr.iv3 = phi [512 x i32]* [ undef, %bb1.preheader ], [ %2, %bb15 ]
+    %lsr.iv1 = phi [300 x i32]* [ @rootlosers, %bb1.preheader ], [ %1, %bb15 ]
+    %lsr.iv = phi i32 [ 0, %bb1.preheader ], [ %lsr.iv.next, %bb15 ]
+    %tmp2 = phi i32 [ %tmp18, %bb15 ], [ 0, %bb1.preheader ]
+    %tmp3 = phi i32 [ %tmp17, %bb15 ], [ 100000000, %bb1.preheader ]
+    %lsr.iv35 = bitcast [512 x i32]* %lsr.iv3 to i32*
+    %tmp5 = load i32, i32* %lsr.iv35, align 4, !tbaa !1
+    %tmp6 = load i32, i32* undef, align 4, !tbaa !1
+    %tmp7 = icmp eq i32 %tmp6, 0
+    br i1 %tmp7, label %bb15, label %bb8
+  
+  bb8:                                              ; preds = %bb1
+    %0 = bitcast [300 x i32]* %lsr.iv1 to i32*
+    %tmp10 = load i32, i32* %0, align 4, !tbaa !1
+    %tmp11 = icmp eq i32 %tmp10, 0
+    %tmp12 = select i1 %tmp11, i32 %tmp5, i32 %tmp3
+    %tmp14 = select i1 %tmp11, i32 %lsr.iv, i32 %tmp2
+    br label %bb15
+  
+  bb15:                                             ; preds = %bb8, %bb1
+    %tmp16 = phi i32 [ 0, %bb1 ], [ %tmp6, %bb8 ]
+    %tmp17 = phi i32 [ %tmp3, %bb1 ], [ %tmp12, %bb8 ]
+    %tmp18 = phi i32 [ %tmp2, %bb1 ], [ %tmp14, %bb8 ]
+    %lsr.iv.next = add i32 %lsr.iv, 4
+    %scevgep = getelementptr [300 x i32], [300 x i32]* %lsr.iv1, i64 0, i64 4
+    %1 = bitcast i32* %scevgep to [300 x i32]*
+    %scevgep4 = getelementptr [512 x i32], [512 x i32]* %lsr.iv3, i64 0, i64 4
+    %2 = bitcast i32* %scevgep4 to [512 x i32]*
+    br label %bb1
+  
+  bb20:                                             ; preds = %bb20, %bb20.preheader
+    br label %bb20
+  }
+  
+  attributes #0 = { "target-cpu"="z13" "use-soft-float"="false" }
+  
+  !llvm.ident = !{!0}
+  
+  !0 = !{!"clang version 9.0.0 (http://llvm.org/git/clang.git 29e2813a2ab7d5569860bb07892dfef7b5374d96) (http://llvm.org/git/llvm.git 546f779cb9d4ac2ce9c9b9522019f500abca9522)"}
+  !1 = !{!2, !2, i64 0}
+  !2 = !{!"int", !3, i64 0}
+  !3 = !{!"omnipotent char", !4, i64 0}
+  !4 = !{!"Simple C/C++ TBAA"}
+
+...
+
+# CHECK: ********** MACHINEINSTRS **********
+# CHECK: LMux
+# CHECK: [[VREG0:%[0-9]+]]:grx32bit = LMux
+# CHECK: CHIMux [[VREG0]]:grx32bit, 0, implicit-def $cc
+# CHECK: [[VREG1:%[0-9]+]]:grx32bit = LMux
+# CHECK: CHIMux [[VREG1]]:grx32bit, 0, implicit-def $cc
+# CHECK: selectOrSplit GRX32Bit:[[VREG0]]
+# CHECK-NEXT: hints: $r0l $r1l $r2l $r3l $r4l $r5l $r14l $r13l $r12l $r11l $r10l $r9l $r8l $r7l $r6l
+# CHECK-NEXT: assigning [[VREG0]] to $[[PREG0:r[0-9]+]]l
+# CHECK: selectOrSplit GRX32Bit:[[VREG1]]
+# CHECK-NEXT: hints: $r0l $r1l $r2l $r3l $r4l $r5l $r14l $r13l $r12l $r11l $r10l $r9l $r8l $r7l $r6l
+# CHECK-NEXT: assigning [[VREG1]] to $[[PREG1:r[0-9]+]]l
+# CHECK: lt %[[PREG0]]
+# CHECK: lt %[[PREG1]]
+
+---
+name:            proofnumberscan
+alignment:       4
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: addr64bit }
+  - { id: 1, class: addr64bit }
+  - { id: 2, class: grx32bit }
+  - { id: 3, class: grx32bit }
+  - { id: 4, class: grx32bit }
+  - { id: 5, class: grx32bit }
+  - { id: 6, class: grx32bit }
+  - { id: 7, class: grx32bit }
+  - { id: 8, class: grx32bit }
+  - { id: 9, class: grx32bit }
+  - { id: 10, class: grx32bit }
+  - { id: 11, class: grx32bit }
+  - { id: 12, class: gr64bit }
+  - { id: 13, class: gr64bit }
+  - { id: 14, class: grx32bit }
+  - { id: 15, class: gr64bit }
+  - { id: 16, class: gr64bit }
+  - { id: 17, class: grx32bit }
+  - { id: 18, class: grx32bit }
+  - { id: 19, class: addr64bit }
+  - { id: 20, class: grx32bit }
+  - { id: 21, class: addr64bit }
+  - { id: 22, class: addr64bit }
+  - { id: 23, class: grx32bit }
+  - { id: 24, class: grx32bit }
+  - { id: 25, class: grx32bit }
+  - { id: 26, class: grx32bit }
+  - { id: 27, class: grx32bit }
+body:             |
+  bb.0.bb:
+    successors: %bb.1, %bb.2
+  
+    %23:grx32bit = LHIMux 0
+    CHIMux %23, 0, implicit-def $cc
+    BRC 14, 8, %bb.2, implicit killed $cc
+  
+  bb.1:
+    J %bb.6
+  
+  bb.2.bb1.preheader:
+    %25:grx32bit = IIFMux 100000000
+    %22:addr64bit = LARL @rootlosers
+    %21:addr64bit = IMPLICIT_DEF
+    %24:grx32bit = LHIMux 0
+    J %bb.3
+  
+  bb.3.bb1:
+    successors: %bb.7(0x30000000), %bb.4(0x50000000)
+  
+    %5:grx32bit = LMux %21, 0, $noreg :: (load 4 from %ir.lsr.iv35, !tbaa !1)
+    %6:grx32bit = LMux undef %19:addr64bit, 0, $noreg :: (load 4 from `i32* undef`, !tbaa !1)
+    CHIMux %6, 0, implicit-def $cc
+    BRC 14, 6, %bb.4, implicit killed $cc
+  
+  bb.7:
+    J %bb.5
+  
+  bb.4.bb8:
+    %20:grx32bit = LMux %22, 0, $noreg :: (load 4 from %ir.0, !tbaa !1)
+    CHIMux %20, 0, implicit-def $cc
+    %25:grx32bit = LOCRMux %25, %5, 14, 8, implicit $cc
+    %24:grx32bit = LOCRMux %24, %23, 14, 8, implicit killed $cc
+  
+  bb.5.bb15:
+    %23:grx32bit = AHIMux %23, 4, implicit-def dead $cc
+    %22:addr64bit = LA %22, 16, $noreg
+    %21:addr64bit = LA %21, 16, $noreg
+    J %bb.3
+  
+  bb.6.bb20:
+    J %bb.6
+
+...

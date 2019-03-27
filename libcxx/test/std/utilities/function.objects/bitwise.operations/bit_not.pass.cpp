@@ -15,7 +15,7 @@
 #include <type_traits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::bit_not<int> F;
     const F f = F();
@@ -42,4 +42,6 @@ int main()
 
     constexpr int bar = std::bit_not<> () (0xEA95) & 0xFFFF;
     static_assert ( bar == 0x156A, "" );
+
+  return 0;
 }

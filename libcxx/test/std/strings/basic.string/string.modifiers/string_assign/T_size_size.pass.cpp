@@ -11,6 +11,11 @@
 // template <class T>
 //    basic_string& assign(const T& t, size_type pos, size_type n=npos); // C++17
 
+// When back-deploying to macosx10.7, the RTTI for exception classes
+// incorrectly provided by libc++.dylib is mixed with the one in
+// libc++abi.dylib and exceptions are not caught properly.
+// XFAIL: with_system_cxx_lib=macosx10.7
+
 #include <string>
 #include <stdexcept>
 #include <cassert>
@@ -70,7 +75,7 @@ test_npos(S s, SV sv, typename S::size_type pos, S expected)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -191,4 +196,6 @@ int main()
     s.assign(sv, 0, std::string::npos);
     assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     }
+
+  return 0;
 }

@@ -1,0 +1,44 @@
+# Show that yaml2obj can handle a dynamic section with raw content instead of
+# entries. Also show that it rejects raw content when entries are also provided.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj -x .dynamic --sections %t1 | FileCheck %s --check-prefix=RAW
+
+# RAW:      Name: .dynamic
+# RAW-NEXT: Type: SHT_DYNAMIC
+# RAW-NEXT: Flags [
+# RAW-NEXT: ]
+# RAW-NEXT: Address:
+# RAW-NEXT: Offset:
+# RAW-NEXT: Size: 5
+
+# RAW:      Hex dump of section '.dynamic':
+# RAW-NEXT: 0x00000000 01234567 89 {{.*}}
+
+# RUN: not yaml2obj --docnum=2 %s -o %t2 2>&1 | FileCheck %s --check-prefix=ERR
+# ERR: Cannot specify both raw content and explicit entries for dynamic section '.dynamic'.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Content: "0123456789"
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Content: "0123456789"
+    Entries:
+      - Tag:   DT_STRSZ
+        Value: 0

@@ -26,7 +26,7 @@ struct SB : std::stringbuf
   const char* pubpptr() const { return pptr(); }
 };
 
-int main()
+int main(int, char**)
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     try {
@@ -40,4 +40,6 @@ int main()
     catch (const std::length_error &) {} // maybe the string can't take 2GB
     catch (const std::bad_alloc    &) {} // maybe we don't have enough RAM
 #endif
+
+  return 0;
 }

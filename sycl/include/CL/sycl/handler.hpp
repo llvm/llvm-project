@@ -12,6 +12,7 @@
 #include <CL/sycl/access/access.hpp>
 #include <CL/sycl/context.hpp>
 #include <CL/sycl/detail/common.hpp>
+#include <CL/sycl/detail/os_util.hpp>
 #include <CL/sycl/detail/scheduler/scheduler.h>
 #include <CL/sycl/event.hpp>
 #include <CL/sycl/id.hpp>
@@ -44,6 +45,9 @@ class __fill;
 
 namespace cl {
 namespace sycl {
+
+namespace csd = cl::sycl::detail;
+
 // Forward declaration
 class queue;
 
@@ -273,7 +277,8 @@ public:
     kernel_single_task<KernelName>(kernelFunc);
 #else
     using KI = cl::sycl::detail::KernelInfo<KernelName>;
-    m_Node.addKernel(KI::getName(), KI::getNumParams(), &KI::getParamDesc(0),
+    m_Node.addKernel(csd::OSUtil::getOSModuleHandle(KI::getName()),
+                     KI::getName(), KI::getNumParams(), &KI::getParamDesc(0),
                      std::move(kernelFunc));
 #endif
   }
@@ -358,8 +363,9 @@ public:
     using KI = cl::sycl::detail::KernelInfo<KernelName>;
     m_Node
         .addKernel<KernelType, dimensions, detail::lambda_arg_type<KernelType>>(
-            KI::getName(), KI::getNumParams(), &KI::getParamDesc(0),
-            std::move(kernelFunc), numWorkItems);
+            csd::OSUtil::getOSModuleHandle(KI::getName()), KI::getName(),
+            KI::getNumParams(), &KI::getParamDesc(0), std::move(kernelFunc),
+            numWorkItems);
 #endif
   }
 
@@ -379,8 +385,9 @@ public:
     using KI = cl::sycl::detail::KernelInfo<KernelName>;
     m_Node
         .addKernel<KernelType, dimensions, detail::lambda_arg_type<KernelType>>(
-            KI::getName(), KI::getNumParams(), &KI::getParamDesc(0),
-            std::move(kernelFunc), numWorkItems, workItemOffset);
+            csd::OSUtil::getOSModuleHandle(KI::getName()), KI::getName(),
+            KI::getNumParams(), &KI::getParamDesc(0), std::move(kernelFunc),
+            numWorkItems, workItemOffset);
 #endif
   }
 
@@ -392,8 +399,9 @@ public:
 #else
     using KI = cl::sycl::detail::KernelInfo<KernelName>;
     m_Node.addKernel<KernelType, dimensions>(
-        KI::getName(), KI::getNumParams(), &KI::getParamDesc(0),
-        std::move(kernelFunc), executionRange);
+        csd::OSUtil::getOSModuleHandle(KI::getName()), KI::getName(),
+        KI::getNumParams(), &KI::getParamDesc(0), std::move(kernelFunc),
+        executionRange);
 #endif
   }
 
@@ -425,7 +433,8 @@ public:
   void single_task(kernel syclKernel) {
     verifySyclKernelInvoc(syclKernel);
     std::function<void()> DummyLambda = []() {};
-    m_Node.addKernel(syclKernel.get_info<info::kernel::function_name>(), 0,
+    m_Node.addKernel(nullptr,
+                     syclKernel.get_info<info::kernel::function_name>(), 0,
                      nullptr, std::move(DummyLambda), syclKernel.get());
   }
 
@@ -433,7 +442,7 @@ public:
   void parallel_for(range<dimensions> numWorkItems, kernel syclKernel) {
     verifySyclKernelInvoc(syclKernel);
     m_Node.addKernel<DummyFunctor<dimensions>, dimensions, id<dimensions>>(
-        syclKernel.get_info<info::kernel::function_name>(), 0, nullptr,
+        nullptr, syclKernel.get_info<info::kernel::function_name>(), 0, nullptr,
         DummyFunctor<dimensions>(), numWorkItems, syclKernel.get());
   }
 
@@ -442,7 +451,7 @@ public:
                     id<dimensions> workItemOffset, kernel syclKernel) {
     verifySyclKernelInvoc(syclKernel);
     m_Node.addKernel<DummyFunctor<dimensions>, dimensions, id<dimensions>>(
-        syclKernel.get_info<info::kernel::function_name>(), 0, nullptr,
+        nullptr, syclKernel.get_info<info::kernel::function_name>(), 0, nullptr,
         DummyFunctor<dimensions>(), numWorkItems, workItemOffset,
         syclKernel.get());
   }
@@ -451,7 +460,7 @@ public:
   void parallel_for(nd_range<dimensions> ndRange, kernel syclKernel) {
     verifySyclKernelInvoc(syclKernel);
     m_Node.addKernel(
-        syclKernel.get_info<info::kernel::function_name>(), 0, nullptr,
+        nullptr, syclKernel.get_info<info::kernel::function_name>(), 0, nullptr,
         [](nd_item<dimensions>) {}, ndRange, syclKernel.get());
   }
 
@@ -469,7 +478,8 @@ public:
       clKernel = syclKernel.get();
     }
     using KI = cl::sycl::detail::KernelInfo<KernelName>;
-    m_Node.addKernel(KI::getName(), KI::getNumParams(), &KI::getParamDesc(0),
+    m_Node.addKernel(csd::OSUtil::getOSModuleHandle(KI::getName()),
+                     KI::getName(), KI::getNumParams(), &KI::getParamDesc(0),
                      std::move(kernelFunc), clKernel);
 #endif
   }
@@ -493,8 +503,9 @@ public:
     using KI = cl::sycl::detail::KernelInfo<KernelName>;
     m_Node
         .addKernel<KernelType, dimensions, detail::lambda_arg_type<KernelType>>(
-            KI::getName(), KI::getNumParams(), &KI::getParamDesc(0),
-            std::move(kernelFunc), numWorkItems, clKernel);
+            csd::OSUtil::getOSModuleHandle(KI::getName()), KI::getName(),
+            KI::getNumParams(), &KI::getParamDesc(0), std::move(kernelFunc),
+            numWorkItems, clKernel);
 #endif
   }
 
@@ -521,8 +532,9 @@ public:
     using KI = cl::sycl::detail::KernelInfo<KernelName>;
     m_Node
         .addKernel<KernelType, dimensions, detail::lambda_arg_type<KernelType>>(
-            KI::getName(), KI::getNumParams(), &KI::getParamDesc(0),
-            std::move(kernelFunc), numWorkItems, workItemOffset, clKernel);
+            csd::OSUtil::getOSModuleHandle(KI::getName()), KI::getName(),
+            KI::getNumParams(), &KI::getParamDesc(0), std::move(kernelFunc),
+            numWorkItems, workItemOffset, clKernel);
 #endif
   }
 
@@ -538,8 +550,9 @@ public:
     }
     using KI = cl::sycl::detail::KernelInfo<KernelName>;
     m_Node.addKernel<KernelType, dimensions>(
-        KI::getName(), KI::getNumParams(), &KI::getParamDesc(0),
-        std::move(kernelFunc), ndRange, clKernel);
+        csd::OSUtil::getOSModuleHandle(KI::getName()), KI::getName(),
+        KI::getNumParams(), &KI::getParamDesc(0), std::move(kernelFunc),
+        ndRange, clKernel);
 #endif
   }
 

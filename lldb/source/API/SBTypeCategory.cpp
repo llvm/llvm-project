@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTypeCategory.h"
+#include "SBReproducerPrivate.h"
 
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTypeFilter.h"
@@ -26,26 +27,38 @@ using namespace lldb_private;
 
 typedef std::pair<lldb::TypeCategoryImplSP, user_id_t> ImplType;
 
-SBTypeCategory::SBTypeCategory() : m_opaque_sp() {}
+SBTypeCategory::SBTypeCategory() : m_opaque_sp() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeCategory);
+}
 
 SBTypeCategory::SBTypeCategory(const char *name) : m_opaque_sp() {
   DataVisualization::Categories::GetCategory(ConstString(name), m_opaque_sp);
 }
 
 SBTypeCategory::SBTypeCategory(const lldb::SBTypeCategory &rhs)
-    : m_opaque_sp(rhs.m_opaque_sp) {}
+    : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_RECORD_CONSTRUCTOR(SBTypeCategory, (const lldb::SBTypeCategory &), rhs);
+}
 
 SBTypeCategory::~SBTypeCategory() {}
 
-bool SBTypeCategory::IsValid() const { return (m_opaque_sp.get() != NULL); }
+bool SBTypeCategory::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeCategory, IsValid);
+
+  return (m_opaque_sp.get() != NULL);
+}
 
 bool SBTypeCategory::GetEnabled() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTypeCategory, GetEnabled);
+
   if (!IsValid())
     return false;
   return m_opaque_sp->IsEnabled();
 }
 
 void SBTypeCategory::SetEnabled(bool enabled) {
+  LLDB_RECORD_METHOD(void, SBTypeCategory, SetEnabled, (bool), enabled);
+
   if (!IsValid())
     return;
   if (enabled)
@@ -55,29 +68,41 @@ void SBTypeCategory::SetEnabled(bool enabled) {
 }
 
 const char *SBTypeCategory::GetName() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTypeCategory, GetName);
+
   if (!IsValid())
     return NULL;
   return m_opaque_sp->GetName();
 }
 
 lldb::LanguageType SBTypeCategory::GetLanguageAtIndex(uint32_t idx) {
+  LLDB_RECORD_METHOD(lldb::LanguageType, SBTypeCategory, GetLanguageAtIndex,
+                     (uint32_t), idx);
+
   if (IsValid())
     return m_opaque_sp->GetLanguageAtIndex(idx);
   return lldb::eLanguageTypeUnknown;
 }
 
 uint32_t SBTypeCategory::GetNumLanguages() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeCategory, GetNumLanguages);
+
   if (IsValid())
     return m_opaque_sp->GetNumLanguages();
   return 0;
 }
 
 void SBTypeCategory::AddLanguage(lldb::LanguageType language) {
+  LLDB_RECORD_METHOD(void, SBTypeCategory, AddLanguage, (lldb::LanguageType),
+                     language);
+
   if (IsValid())
     m_opaque_sp->AddLanguage(language);
 }
 
 uint32_t SBTypeCategory::GetNumFormats() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeCategory, GetNumFormats);
+
   if (!IsValid())
     return 0;
 
@@ -86,6 +111,8 @@ uint32_t SBTypeCategory::GetNumFormats() {
 }
 
 uint32_t SBTypeCategory::GetNumSummaries() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeCategory, GetNumSummaries);
+
   if (!IsValid())
     return 0;
   return m_opaque_sp->GetTypeSummariesContainer()->GetCount() +
@@ -93,6 +120,8 @@ uint32_t SBTypeCategory::GetNumSummaries() {
 }
 
 uint32_t SBTypeCategory::GetNumFilters() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeCategory, GetNumFilters);
+
   if (!IsValid())
     return 0;
   return m_opaque_sp->GetTypeFiltersContainer()->GetCount() +
@@ -101,6 +130,8 @@ uint32_t SBTypeCategory::GetNumFilters() {
 
 #ifndef LLDB_DISABLE_PYTHON
 uint32_t SBTypeCategory::GetNumSynthetics() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeCategory, GetNumSynthetics);
+
   if (!IsValid())
     return 0;
   return m_opaque_sp->GetTypeSyntheticsContainer()->GetCount() +
@@ -110,44 +141,60 @@ uint32_t SBTypeCategory::GetNumSynthetics() {
 
 lldb::SBTypeNameSpecifier
 SBTypeCategory::GetTypeNameSpecifierForFilterAtIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
+                     GetTypeNameSpecifierForFilterAtIndex, (uint32_t), index);
+
   if (!IsValid())
-    return SBTypeNameSpecifier();
-  return SBTypeNameSpecifier(
-      m_opaque_sp->GetTypeNameSpecifierForFilterAtIndex(index));
+    return LLDB_RECORD_RESULT(SBTypeNameSpecifier());
+  return LLDB_RECORD_RESULT(SBTypeNameSpecifier(
+      m_opaque_sp->GetTypeNameSpecifierForFilterAtIndex(index)));
 }
 
 lldb::SBTypeNameSpecifier
 SBTypeCategory::GetTypeNameSpecifierForFormatAtIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
+                     GetTypeNameSpecifierForFormatAtIndex, (uint32_t), index);
+
   if (!IsValid())
-    return SBTypeNameSpecifier();
-  return SBTypeNameSpecifier(
-      m_opaque_sp->GetTypeNameSpecifierForFormatAtIndex(index));
+    return LLDB_RECORD_RESULT(SBTypeNameSpecifier());
+  return LLDB_RECORD_RESULT(SBTypeNameSpecifier(
+      m_opaque_sp->GetTypeNameSpecifierForFormatAtIndex(index)));
 }
 
 lldb::SBTypeNameSpecifier
 SBTypeCategory::GetTypeNameSpecifierForSummaryAtIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
+                     GetTypeNameSpecifierForSummaryAtIndex, (uint32_t), index);
+
   if (!IsValid())
-    return SBTypeNameSpecifier();
-  return SBTypeNameSpecifier(
-      m_opaque_sp->GetTypeNameSpecifierForSummaryAtIndex(index));
+    return LLDB_RECORD_RESULT(SBTypeNameSpecifier());
+  return LLDB_RECORD_RESULT(SBTypeNameSpecifier(
+      m_opaque_sp->GetTypeNameSpecifierForSummaryAtIndex(index)));
 }
 
 #ifndef LLDB_DISABLE_PYTHON
 lldb::SBTypeNameSpecifier
 SBTypeCategory::GetTypeNameSpecifierForSyntheticAtIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
+                     GetTypeNameSpecifierForSyntheticAtIndex, (uint32_t),
+                     index);
+
   if (!IsValid())
-    return SBTypeNameSpecifier();
-  return SBTypeNameSpecifier(
-      m_opaque_sp->GetTypeNameSpecifierForSyntheticAtIndex(index));
+    return LLDB_RECORD_RESULT(SBTypeNameSpecifier());
+  return LLDB_RECORD_RESULT(SBTypeNameSpecifier(
+      m_opaque_sp->GetTypeNameSpecifierForSyntheticAtIndex(index)));
 }
 #endif
 
 SBTypeFilter SBTypeCategory::GetFilterForType(SBTypeNameSpecifier spec) {
+  LLDB_RECORD_METHOD(lldb::SBTypeFilter, SBTypeCategory, GetFilterForType,
+                     (lldb::SBTypeNameSpecifier), spec);
+
   if (!IsValid())
-    return SBTypeFilter();
+    return LLDB_RECORD_RESULT(SBTypeFilter());
 
   if (!spec.IsValid())
-    return SBTypeFilter();
+    return LLDB_RECORD_RESULT(SBTypeFilter());
 
   lldb::TypeFilterImplSP children_sp;
 
@@ -159,19 +206,22 @@ SBTypeFilter SBTypeCategory::GetFilterForType(SBTypeNameSpecifier spec) {
         ConstString(spec.GetName()), children_sp);
 
   if (!children_sp)
-    return lldb::SBTypeFilter();
+    return LLDB_RECORD_RESULT(lldb::SBTypeFilter());
 
   TypeFilterImplSP filter_sp =
       std::static_pointer_cast<TypeFilterImpl>(children_sp);
 
-  return lldb::SBTypeFilter(filter_sp);
+  return LLDB_RECORD_RESULT(lldb::SBTypeFilter(filter_sp));
 }
 SBTypeFormat SBTypeCategory::GetFormatForType(SBTypeNameSpecifier spec) {
+  LLDB_RECORD_METHOD(lldb::SBTypeFormat, SBTypeCategory, GetFormatForType,
+                     (lldb::SBTypeNameSpecifier), spec);
+
   if (!IsValid())
-    return SBTypeFormat();
+    return LLDB_RECORD_RESULT(SBTypeFormat());
 
   if (!spec.IsValid())
-    return SBTypeFormat();
+    return LLDB_RECORD_RESULT(SBTypeFormat());
 
   lldb::TypeFormatImplSP format_sp;
 
@@ -183,18 +233,21 @@ SBTypeFormat SBTypeCategory::GetFormatForType(SBTypeNameSpecifier spec) {
         ConstString(spec.GetName()), format_sp);
 
   if (!format_sp)
-    return lldb::SBTypeFormat();
+    return LLDB_RECORD_RESULT(lldb::SBTypeFormat());
 
-  return lldb::SBTypeFormat(format_sp);
+  return LLDB_RECORD_RESULT(lldb::SBTypeFormat(format_sp));
 }
 
 #ifndef LLDB_DISABLE_PYTHON
 SBTypeSummary SBTypeCategory::GetSummaryForType(SBTypeNameSpecifier spec) {
+  LLDB_RECORD_METHOD(lldb::SBTypeSummary, SBTypeCategory, GetSummaryForType,
+                     (lldb::SBTypeNameSpecifier), spec);
+
   if (!IsValid())
-    return SBTypeSummary();
+    return LLDB_RECORD_RESULT(SBTypeSummary());
 
   if (!spec.IsValid())
-    return SBTypeSummary();
+    return LLDB_RECORD_RESULT(SBTypeSummary());
 
   lldb::TypeSummaryImplSP summary_sp;
 
@@ -206,19 +259,22 @@ SBTypeSummary SBTypeCategory::GetSummaryForType(SBTypeNameSpecifier spec) {
         ConstString(spec.GetName()), summary_sp);
 
   if (!summary_sp)
-    return lldb::SBTypeSummary();
+    return LLDB_RECORD_RESULT(lldb::SBTypeSummary());
 
-  return lldb::SBTypeSummary(summary_sp);
+  return LLDB_RECORD_RESULT(lldb::SBTypeSummary(summary_sp));
 }
 #endif // LLDB_DISABLE_PYTHON
 
 #ifndef LLDB_DISABLE_PYTHON
 SBTypeSynthetic SBTypeCategory::GetSyntheticForType(SBTypeNameSpecifier spec) {
+  LLDB_RECORD_METHOD(lldb::SBTypeSynthetic, SBTypeCategory, GetSyntheticForType,
+                     (lldb::SBTypeNameSpecifier), spec);
+
   if (!IsValid())
-    return SBTypeSynthetic();
+    return LLDB_RECORD_RESULT(SBTypeSynthetic());
 
   if (!spec.IsValid())
-    return SBTypeSynthetic();
+    return LLDB_RECORD_RESULT(SBTypeSynthetic());
 
   lldb::SyntheticChildrenSP children_sp;
 
@@ -230,65 +286,83 @@ SBTypeSynthetic SBTypeCategory::GetSyntheticForType(SBTypeNameSpecifier spec) {
         ConstString(spec.GetName()), children_sp);
 
   if (!children_sp)
-    return lldb::SBTypeSynthetic();
+    return LLDB_RECORD_RESULT(lldb::SBTypeSynthetic());
 
   ScriptedSyntheticChildrenSP synth_sp =
       std::static_pointer_cast<ScriptedSyntheticChildren>(children_sp);
 
-  return lldb::SBTypeSynthetic(synth_sp);
+  return LLDB_RECORD_RESULT(lldb::SBTypeSynthetic(synth_sp));
 }
 #endif
 
 #ifndef LLDB_DISABLE_PYTHON
 SBTypeFilter SBTypeCategory::GetFilterAtIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(lldb::SBTypeFilter, SBTypeCategory, GetFilterAtIndex,
+                     (uint32_t), index);
+
   if (!IsValid())
-    return SBTypeFilter();
+    return LLDB_RECORD_RESULT(SBTypeFilter());
   lldb::SyntheticChildrenSP children_sp =
       m_opaque_sp->GetSyntheticAtIndex((index));
 
   if (!children_sp.get())
-    return lldb::SBTypeFilter();
+    return LLDB_RECORD_RESULT(lldb::SBTypeFilter());
 
   TypeFilterImplSP filter_sp =
       std::static_pointer_cast<TypeFilterImpl>(children_sp);
 
-  return lldb::SBTypeFilter(filter_sp);
+  return LLDB_RECORD_RESULT(lldb::SBTypeFilter(filter_sp));
 }
 #endif
 
 SBTypeFormat SBTypeCategory::GetFormatAtIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(lldb::SBTypeFormat, SBTypeCategory, GetFormatAtIndex,
+                     (uint32_t), index);
+
   if (!IsValid())
-    return SBTypeFormat();
-  return SBTypeFormat(m_opaque_sp->GetFormatAtIndex((index)));
+    return LLDB_RECORD_RESULT(SBTypeFormat());
+  return LLDB_RECORD_RESULT(
+      SBTypeFormat(m_opaque_sp->GetFormatAtIndex((index))));
 }
 
 #ifndef LLDB_DISABLE_PYTHON
 SBTypeSummary SBTypeCategory::GetSummaryAtIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(lldb::SBTypeSummary, SBTypeCategory, GetSummaryAtIndex,
+                     (uint32_t), index);
+
   if (!IsValid())
-    return SBTypeSummary();
-  return SBTypeSummary(m_opaque_sp->GetSummaryAtIndex((index)));
+    return LLDB_RECORD_RESULT(SBTypeSummary());
+  return LLDB_RECORD_RESULT(
+      SBTypeSummary(m_opaque_sp->GetSummaryAtIndex((index))));
 }
 #endif
 
 #ifndef LLDB_DISABLE_PYTHON
 SBTypeSynthetic SBTypeCategory::GetSyntheticAtIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(lldb::SBTypeSynthetic, SBTypeCategory, GetSyntheticAtIndex,
+                     (uint32_t), index);
+
   if (!IsValid())
-    return SBTypeSynthetic();
+    return LLDB_RECORD_RESULT(SBTypeSynthetic());
   lldb::SyntheticChildrenSP children_sp =
       m_opaque_sp->GetSyntheticAtIndex((index));
 
   if (!children_sp.get())
-    return lldb::SBTypeSynthetic();
+    return LLDB_RECORD_RESULT(lldb::SBTypeSynthetic());
 
   ScriptedSyntheticChildrenSP synth_sp =
       std::static_pointer_cast<ScriptedSyntheticChildren>(children_sp);
 
-  return lldb::SBTypeSynthetic(synth_sp);
+  return LLDB_RECORD_RESULT(lldb::SBTypeSynthetic(synth_sp));
 }
 #endif
 
 bool SBTypeCategory::AddTypeFormat(SBTypeNameSpecifier type_name,
                                    SBTypeFormat format) {
+  LLDB_RECORD_METHOD(bool, SBTypeCategory, AddTypeFormat,
+                     (lldb::SBTypeNameSpecifier, lldb::SBTypeFormat), type_name,
+                     format);
+
   if (!IsValid())
     return false;
 
@@ -311,6 +385,9 @@ bool SBTypeCategory::AddTypeFormat(SBTypeNameSpecifier type_name,
 }
 
 bool SBTypeCategory::DeleteTypeFormat(SBTypeNameSpecifier type_name) {
+  LLDB_RECORD_METHOD(bool, SBTypeCategory, DeleteTypeFormat,
+                     (lldb::SBTypeNameSpecifier), type_name);
+
   if (!IsValid())
     return false;
 
@@ -328,6 +405,10 @@ bool SBTypeCategory::DeleteTypeFormat(SBTypeNameSpecifier type_name) {
 #ifndef LLDB_DISABLE_PYTHON
 bool SBTypeCategory::AddTypeSummary(SBTypeNameSpecifier type_name,
                                     SBTypeSummary summary) {
+  LLDB_RECORD_METHOD(bool, SBTypeCategory, AddTypeSummary,
+                     (lldb::SBTypeNameSpecifier, lldb::SBTypeSummary),
+                     type_name, summary);
+
   if (!IsValid())
     return false;
 
@@ -385,6 +466,9 @@ bool SBTypeCategory::AddTypeSummary(SBTypeNameSpecifier type_name,
 #endif
 
 bool SBTypeCategory::DeleteTypeSummary(SBTypeNameSpecifier type_name) {
+  LLDB_RECORD_METHOD(bool, SBTypeCategory, DeleteTypeSummary,
+                     (lldb::SBTypeNameSpecifier), type_name);
+
   if (!IsValid())
     return false;
 
@@ -401,6 +485,10 @@ bool SBTypeCategory::DeleteTypeSummary(SBTypeNameSpecifier type_name) {
 
 bool SBTypeCategory::AddTypeFilter(SBTypeNameSpecifier type_name,
                                    SBTypeFilter filter) {
+  LLDB_RECORD_METHOD(bool, SBTypeCategory, AddTypeFilter,
+                     (lldb::SBTypeNameSpecifier, lldb::SBTypeFilter), type_name,
+                     filter);
+
   if (!IsValid())
     return false;
 
@@ -423,6 +511,9 @@ bool SBTypeCategory::AddTypeFilter(SBTypeNameSpecifier type_name,
 }
 
 bool SBTypeCategory::DeleteTypeFilter(SBTypeNameSpecifier type_name) {
+  LLDB_RECORD_METHOD(bool, SBTypeCategory, DeleteTypeFilter,
+                     (lldb::SBTypeNameSpecifier), type_name);
+
   if (!IsValid())
     return false;
 
@@ -440,6 +531,10 @@ bool SBTypeCategory::DeleteTypeFilter(SBTypeNameSpecifier type_name) {
 #ifndef LLDB_DISABLE_PYTHON
 bool SBTypeCategory::AddTypeSynthetic(SBTypeNameSpecifier type_name,
                                       SBTypeSynthetic synth) {
+  LLDB_RECORD_METHOD(bool, SBTypeCategory, AddTypeSynthetic,
+                     (lldb::SBTypeNameSpecifier, lldb::SBTypeSynthetic),
+                     type_name, synth);
+
   if (!IsValid())
     return false;
 
@@ -496,6 +591,9 @@ bool SBTypeCategory::AddTypeSynthetic(SBTypeNameSpecifier type_name,
 }
 
 bool SBTypeCategory::DeleteTypeSynthetic(SBTypeNameSpecifier type_name) {
+  LLDB_RECORD_METHOD(bool, SBTypeCategory, DeleteTypeSynthetic,
+                     (lldb::SBTypeNameSpecifier), type_name);
+
   if (!IsValid())
     return false;
 
@@ -513,6 +611,10 @@ bool SBTypeCategory::DeleteTypeSynthetic(SBTypeNameSpecifier type_name) {
 
 bool SBTypeCategory::GetDescription(lldb::SBStream &description,
                                     lldb::DescriptionLevel description_level) {
+  LLDB_RECORD_METHOD(bool, SBTypeCategory, GetDescription,
+                     (lldb::SBStream &, lldb::DescriptionLevel), description,
+                     description_level);
+
   if (!IsValid())
     return false;
   description.Printf("Category name: %s\n", GetName());
@@ -521,6 +623,10 @@ bool SBTypeCategory::GetDescription(lldb::SBStream &description,
 
 lldb::SBTypeCategory &SBTypeCategory::
 operator=(const lldb::SBTypeCategory &rhs) {
+  LLDB_RECORD_METHOD(lldb::SBTypeCategory &,
+                     SBTypeCategory, operator=,(const lldb::SBTypeCategory &),
+                     rhs);
+
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
@@ -528,6 +634,9 @@ operator=(const lldb::SBTypeCategory &rhs) {
 }
 
 bool SBTypeCategory::operator==(lldb::SBTypeCategory &rhs) {
+  LLDB_RECORD_METHOD(bool, SBTypeCategory, operator==,(lldb::SBTypeCategory &),
+                     rhs);
+
   if (!IsValid())
     return !rhs.IsValid();
 
@@ -535,6 +644,9 @@ bool SBTypeCategory::operator==(lldb::SBTypeCategory &rhs) {
 }
 
 bool SBTypeCategory::operator!=(lldb::SBTypeCategory &rhs) {
+  LLDB_RECORD_METHOD(bool, SBTypeCategory, operator!=,(lldb::SBTypeCategory &),
+                     rhs);
+
   if (!IsValid())
     return rhs.IsValid();
 

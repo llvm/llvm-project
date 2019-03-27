@@ -105,7 +105,7 @@ RegisterContextPOSIX_arm64::RegisterContextPOSIX_arm64(
     lldb_private::Thread &thread, uint32_t concrete_frame_idx,
     lldb_private::RegisterInfoInterface *register_info)
     : lldb_private::RegisterContext(thread, concrete_frame_idx) {
-  m_register_info_ap.reset(register_info);
+  m_register_info_up.reset(register_info);
 
   switch (register_info->m_target_arch.GetMachine()) {
   case llvm::Triple::aarch64:
@@ -150,7 +150,7 @@ size_t RegisterContextPOSIX_arm64::GetRegisterCount() {
 }
 
 size_t RegisterContextPOSIX_arm64::GetGPRSize() {
-  return m_register_info_ap->GetGPRSize();
+  return m_register_info_up->GetGPRSize();
 }
 
 const lldb_private::RegisterInfo *
@@ -158,7 +158,7 @@ RegisterContextPOSIX_arm64::GetRegisterInfo() {
   // Commonly, this method is overridden and g_register_infos is copied and
   // specialized. So, use GetRegisterInfo() rather than g_register_infos in
   // this scope.
-  return m_register_info_ap->GetRegisterInfo();
+  return m_register_info_up->GetRegisterInfo();
 }
 
 const lldb_private::RegisterInfo *
@@ -182,7 +182,7 @@ size_t RegisterContextPOSIX_arm64::GetRegisterSetCount() {
 const lldb_private::RegisterSet *
 RegisterContextPOSIX_arm64::GetRegisterSet(size_t set) {
   if (IsRegisterSetAvailable(set)) {
-    switch (m_register_info_ap->m_target_arch.GetMachine()) {
+    switch (m_register_info_up->m_target_arch.GetMachine()) {
     case llvm::Triple::aarch64:
       return &g_reg_sets_arm64[set];
     default:

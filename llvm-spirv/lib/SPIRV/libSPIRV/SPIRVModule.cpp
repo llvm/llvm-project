@@ -61,7 +61,7 @@ SPIRVModule::~SPIRVModule() {}
 class SPIRVModuleImpl : public SPIRVModule {
 public:
   SPIRVModuleImpl()
-      : SPIRVModule(), NextId(1), BoolType(NULL), SPIRVVersion(SPIRV_1_0),
+      : SPIRVModule(), NextId(1), SPIRVVersion(SPIRV_1_0),
         GeneratorId(SPIRVGEN_KhronosLLVMSPIRVTranslator), GeneratorVer(0),
         InstSchema(SPIRVISCH_Default), SrcLang(SourceLanguageOpenCL_C),
         SrcLangVer(102000) {
@@ -372,7 +372,6 @@ public:
 private:
   SPIRVErrorLog ErrLog;
   SPIRVId NextId;
-  SPIRVTypeInt *BoolType;
   SPIRVWord SPIRVVersion;
   unsigned short GeneratorId;
   unsigned short GeneratorVer;
@@ -1636,7 +1635,7 @@ bool isSpirvBinary(const std::string &Img) {
 
 #ifdef _SPIRV_SUPPORT_TEXT_FMT
 
-bool convertSpirv(std::istream &IS, spv_ostream &OS, std::string &ErrMsg,
+bool convertSpirv(std::istream &IS, std::ostream &OS, std::string &ErrMsg,
                   bool FromText, bool ToText) {
   auto SaveOpt = SPIRVUseTextFormat;
   SPIRVUseTextFormat = FromText;
@@ -1673,11 +1672,7 @@ bool convertSpirv(std::string &Input, std::string &Out, std::string &ErrMsg,
     return true;
   }
   std::istringstream IS(Input);
-#ifdef _SPIRV_LLVM_API
-  llvm::raw_string_ostream OS(Out);
-#else
   std::ostringstream OS;
-#endif
   if (!convertSpirv(IS, OS, ErrMsg, FromText, ToText))
     return false;
   Out = OS.str();

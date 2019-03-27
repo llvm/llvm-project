@@ -239,23 +239,7 @@ MetadataStreamerV2::getHSACodeProps(const MachineFunction &MF,
 Kernel::DebugProps::Metadata
 MetadataStreamerV2::getHSADebugProps(const MachineFunction &MF,
                                      const SIProgramInfo &ProgramInfo) const {
-  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
-  HSAMD::Kernel::DebugProps::Metadata HSADebugProps;
-
-  if (!STM.debuggerSupported())
-    return HSADebugProps;
-
-  HSADebugProps.mDebuggerABIVersion.push_back(1);
-  HSADebugProps.mDebuggerABIVersion.push_back(0);
-
-  if (STM.debuggerEmitPrologue()) {
-    HSADebugProps.mPrivateSegmentBufferSGPR =
-        ProgramInfo.DebuggerPrivateSegmentBufferSGPR;
-    HSADebugProps.mWavefrontPrivateSegmentOffsetSGPR =
-        ProgramInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR;
-  }
-
-  return HSADebugProps;
+  return HSAMD::Kernel::DebugProps::Metadata();
 }
 
 void MetadataStreamerV2::emitVersion() {

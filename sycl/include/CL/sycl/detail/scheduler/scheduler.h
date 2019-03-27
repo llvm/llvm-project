@@ -9,6 +9,7 @@
 #pragma once
 
 #include <CL/sycl/context.hpp>
+#include <CL/sycl/detail/os_util.hpp>
 #include <CL/sycl/detail/scheduler/commands.h>
 #include <CL/sycl/detail/scheduler/requirements.h>
 #include <CL/sycl/device.hpp>
@@ -21,7 +22,6 @@
 #include <iostream>
 #include <map>
 #include <set>
-#include <unordered_set>
 #include <vector>
 
 namespace cl {
@@ -62,27 +62,31 @@ public:
 
   // Adds a kernel to this node, maps to single task.
   template <typename KernelType>
-  void addKernel(const std::string &KernelName, const int KernelArgsNum,
+  void addKernel(csd::OSModuleHandle M, const std::string &KernelName,
+                 const int KernelArgsNum,
                  const detail::kernel_param_desc_t *KernelArgs,
                  KernelType KernelFunc, cl_kernel ClKernel = nullptr);
 
   // Adds kernel to this node, maps on range parallel for.
   template <typename KernelType, int Dimensions, typename KernelArgType>
-  void addKernel(const std::string &KernelName, const int KernelArgsNum,
+  void addKernel(csd::OSModuleHandle M, const std::string &KernelName,
+                 const int KernelArgsNum,
                  const detail::kernel_param_desc_t *KernelArgs,
                  KernelType KernelFunc, range<Dimensions> NumWorkItems,
                  cl_kernel ClKernel = nullptr);
 
   // Adds kernel to this node, maps on range parallel for with offset.
   template <typename KernelType, int Dimensions, typename KernelArgType>
-  void addKernel(const std::string &KernelName, const int KernelArgsNum,
+  void addKernel(csd::OSModuleHandle M, const std::string &KernelName,
+                 const int KernelArgsNum,
                  const detail::kernel_param_desc_t *KernelArgs,
                  KernelType KernelFunc, range<Dimensions> NumWorkItems,
                  id<Dimensions> WorkItemOffset, cl_kernel ClKernel = nullptr);
 
   // Adds kernel to this node, maps on nd_range parallel for.
   template <typename KernelType, int Dimensions>
-  void addKernel(const std::string &KernelName, const int KernelArgsNum,
+  void addKernel(csd::OSModuleHandle M, const std::string &KernelName,
+                 const int KernelArgsNum,
                  const detail::kernel_param_desc_t *KernelArgs,
                  KernelType KernelFunc, nd_range<Dimensions> ExecutionRange,
                  cl_kernel ClKernel = nullptr);
@@ -146,6 +150,8 @@ public:
   void updateHost(accessor<T, Dimensions, mode, tgt, isPlaceholder> &Acc,
                   cl::sycl::event &Event);
 
+  CommandPtr insertUpdateHostCmd(const BufferReqPtr &BufStor);
+
   // Frees the specified buffer_impl.
   template <typename AllocatorT>
   void removeBuffer(detail::buffer_impl<AllocatorT> &Buf);
@@ -154,8 +160,8 @@ public:
   void waitForEvent(EventImplPtr Event);
 
   // Calls asynchronous handler for the passed event Event
-  // and for those other events that Event depends on.
-  void throwForEventRecursive(EventImplPtr Event);
+  // and for those other events that Event immediately depends on.
+  void throwForEvent(EventImplPtr Event);
 
   // Adds new node to graph, creating an Alloca and MemMove commands if
   // needed.
@@ -195,12 +201,8 @@ public:
   enum DumpOptions { Text = 0, WholeGraph = 1, RunGraph = 2 };
   bool getDumpFlagValue(DumpOptions DumpOption);
 
-  // Recursively walks through the dependencies and initializes
-  // the given EventsSet with the events that the Event
-  // waits for. The unordered_set is used to collect unuque events,
-  // and the unordered_set is convenient as it does not need operator<().
-  void getDepEventsRecursive(std::unordered_set<cl::sycl::event> &EventsSet,
-                             EventImplPtr Event);
+  // Returns the vector of events that the given event immediately depends on.
+  vector_class<event> getDepEvents(EventImplPtr Event);
 protected:
   // TODO: Add releasing of OpenCL buffers.
 
@@ -214,6 +216,7 @@ protected:
   // Recursively generates dot records for the command passed and all that the
   // command depends on.
   void printGraphForCommand(CommandPtr Cmd, std::ostream &Stream) const;
+
 private:
   Scheduler();
   ~Scheduler();
@@ -232,11 +235,6 @@ private:
   // Returns the pointer to the command associated with the given event,
   // or nullptr if none is found.
   CommandPtr getCmdForEvent(EventImplPtr Event);
-
-  // Basically it is the helper method for throwForEventRecursive() now.
-  // It calls async handler for the command Cmd and those other
-  // commands that Cmd depends on.
-  void throwForCmdRecursive(std::shared_ptr<Command> Cmd);
 };
 
 } // namespace simple_scheduler

@@ -273,7 +273,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
   std::vector<FileID> FileIDs;
   for (auto I : path) {
     FileID FID = I->getLocation().asLocation().getExpansionLoc().getFileID();
-    if (std::find(FileIDs.begin(), FileIDs.end(), FID) != FileIDs.end())
+    if (llvm::is_contained(FileIDs, FID))
       continue;
 
     FileIDs.push_back(FID);

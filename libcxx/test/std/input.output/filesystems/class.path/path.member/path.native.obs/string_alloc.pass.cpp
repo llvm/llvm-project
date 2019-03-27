@@ -116,7 +116,7 @@ void doLongStringTest(MultiStringType const& MS) {
   /////////////////////////////////////////////////////////////////////////////
 }
 
-int main()
+int main(int, char**)
 {
   using namespace fs;
   {
@@ -133,4 +133,6 @@ int main()
     doLongStringTest<char16_t>(S);
     doLongStringTest<char32_t>(S);
   }
+
+  return 0;
 }

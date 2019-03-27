@@ -70,7 +70,7 @@ struct C
     void operator=(C&);  // not const
 };
 
-int main()
+int main(int, char**)
 {
     test_is_copy_constructible<A>();
     test_is_copy_constructible<int&>();
@@ -91,4 +91,6 @@ int main()
 #if TEST_STD_VER >= 11
     test_is_not_copy_constructible<B>();
 #endif
+
+  return 0;
 }

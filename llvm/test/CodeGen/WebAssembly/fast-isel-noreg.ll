@@ -32,7 +32,7 @@ entry:
   ret i32 0
 }
 
-; CHECK: i32.const {{.*}}, addr@FUNCTION
+; CHECK: i32.const {{.*}}, addr
 ; CHECK: i32.const {{.*}}, 24
 ; CHECK: i32.shl
 ; CHECK: i32.const {{.*}}, 24
@@ -53,7 +53,7 @@ b:
   ret i32 0
 }
 
-; CHECK: i32.const {{.*}}, addr@FUNCTION
+; CHECK: i32.const {{.*}}, addr
 ; CHECK: i32.const {{.*}}, 255
 ; CHECK: i32.and
 ; CHECK: i32.const {{.*}}, 64
@@ -72,7 +72,7 @@ b:
   ret i32 0
 }
 
-; CHECK: i32.const {{.*}}, addr@FUNCTION
+; CHECK: i32.const {{.*}}, addr
 ; CHECK: i32.const {{.*}}, 24
 ; CHECK: i32.shl
 ; CHECK: i32.const {{.*}}, 24
@@ -83,7 +83,7 @@ entry:
   ret i32 %t
 }
 
-; CHECK: i32.const {{.*}}, addr@FUNCTION
+; CHECK: i32.const {{.*}}, addr
 ; CHECK: i32.const {{.*}}, 255
 ; CHECK: i32.and
 define hidden i32 @g() #0 {

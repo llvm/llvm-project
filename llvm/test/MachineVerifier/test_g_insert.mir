@@ -1,0 +1,44 @@
+# RUN: not llc -march=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: global-isel, aarch64-registered-target
+
+---
+name:            test_insert
+legalized:       true
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    ; CHECK: Bad machine code: Too few operands
+    %0:_(s32) = G_INSERT
+
+    ; CHECK: Bad machine code: Too few operands
+    ; CHECK: Bad machine code: generic instruction must use register operands
+    %1:_(s32) = G_INSERT 0
+
+    ; CHECK: Bad machine code: generic instruction must use register operands
+    ; CHECK: Bad machine code: generic instruction must use register operands
+    ; CHECK: Bad machine code: insert source must be a register
+    %2:_(s32) = G_INSERT 0, 0, 0
+
+    %3:_(s32) = G_IMPLICIT_DEF
+    %4:_(s1) = G_IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: insert writes past end of register
+    %5:_(s32) = G_INSERT %3, %4, 32
+
+    ; CHECK: Bad machine code: insert offset must be a constant
+    %5:_(s32) = G_INSERT %3, %4, %3
+
+    ; CHECK: Bad machine code: insert offset must be a constant
+    %6:_(s32) = G_INSERT %3, %4, i32 4
+
+    %7:_(s64) = G_IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: inserted size must be smaller than total register
+    %8:_(s32) = G_INSERT %3, %7, 0
+
+    ; CHECK: Bad machine code: inserted size must be smaller than total register
+    %9:_(s32) = G_INSERT %3, %3, 0
+
+...

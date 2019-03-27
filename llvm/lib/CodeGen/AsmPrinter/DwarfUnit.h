@@ -236,6 +236,9 @@ public:
   void applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
                                  bool SkipSPAttributes = false);
 
+  /// Creates type DIE with specific context.
+  DIE *createTypeDIE(const DIScope *Context, DIE &ContextDIE, const DIType *Ty);
+
   /// Find existing DIE or create new DIE for the given type.
   DIE *getOrCreateTypeDIE(const MDNode *TyNode);
 

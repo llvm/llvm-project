@@ -345,10 +345,13 @@ public:
     return NonIntegralAddressSpaces;
   }
 
-  bool isNonIntegralPointerType(PointerType *PT) const {
+  bool isNonIntegralAddressSpace(unsigned AddrSpace) const {
     ArrayRef<unsigned> NonIntegralSpaces = getNonIntegralAddressSpaces();
-    return find(NonIntegralSpaces, PT->getAddressSpace()) !=
-           NonIntegralSpaces.end();
+    return find(NonIntegralSpaces, AddrSpace) != NonIntegralSpaces.end();
+  }
+
+  bool isNonIntegralPointerType(PointerType *PT) const {
+    return isNonIntegralAddressSpace(PT->getAddressSpace());
   }
 
   bool isNonIntegralPointerType(Type *Ty) const {

@@ -636,7 +636,6 @@ define i32 @rotate_demanded_bits_3(i32, i32) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    addb %cl, %cl
-; X86-NEXT:    andb $30, %cl
 ; X86-NEXT:    roll %cl, %eax
 ; X86-NEXT:    retl
 ;
@@ -645,7 +644,6 @@ define i32 @rotate_demanded_bits_3(i32, i32) {
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    leal (%rsi,%rsi), %ecx
-; X64-NEXT:    andb $30, %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    retq

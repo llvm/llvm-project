@@ -64,7 +64,7 @@ test3(const Tuple&)
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         test0(std::forward_as_tuple());
@@ -84,4 +84,6 @@ int main()
         static_assert ( test3 (std::forward_as_tuple(i, c)) == 2, "" );
 #endif
     }
+
+  return 0;
 }

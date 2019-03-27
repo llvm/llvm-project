@@ -38,7 +38,7 @@
 template <class T>
 void test(const T &) {}
 
-int main()
+int main(int, char**)
 {
     assert(std::ctype_base::space);
     assert(std::ctype_base::print);
@@ -74,4 +74,6 @@ int main()
     test(std::ctype_base::blank);
     test(std::ctype_base::alnum);
     test(std::ctype_base::graph);
+
+  return 0;
 }

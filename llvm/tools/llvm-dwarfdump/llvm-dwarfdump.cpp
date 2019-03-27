@@ -379,7 +379,12 @@ static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
 
 /// Handle the --lookup option and dump the DIEs and line info for the given
 /// address.
-static bool lookup(DWARFContext &DICtx, uint64_t Address, raw_ostream &OS) {
+/// TODO: specified Address for --lookup option could relate for several
+/// different sections(in case not-linked object file). llvm-dwarfdump
+/// need to do something with this: extend lookup option with section
+/// information or probably display all matched entries, or something else...
+static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
+                   raw_ostream &OS) {
   auto DIEsForAddr = DICtx.getDIEsForAddress(Lookup);
 
   if (!DIEsForAddr)
@@ -394,7 +399,10 @@ static bool lookup(DWARFContext &DICtx, uint64_t Address, raw_ostream &OS) {
       DIEsForAddr.BlockDIE.dump(OS, 4, DumpOpts);
   }
 
-  if (DILineInfo LineInfo = DICtx.getLineInfoForAddress(Lookup))
+  // TODO: it is neccessary to set proper SectionIndex here.
+  // object::SectionedAddress::UndefSection works for only absolute addresses.
+  if (DILineInfo LineInfo = DICtx.getLineInfoForAddress(
+          {Lookup, object::SectionedAddress::UndefSection}))
     LineInfo.dump(OS);
 
   return true;
@@ -413,7 +421,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
 
   // Handle the --lookup option.
   if (Lookup)
-    return lookup(DICtx, Lookup, OS);
+    return lookup(Obj, DICtx, Lookup, OS);
 
   // Handle the --name option.
   if (!Name.empty()) {

@@ -10,19 +10,21 @@
 define i8 @out8_constmask(i8 %x, i8 %y) {
 ; CHECK-NOBMI-LABEL: out8_constmask:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movl %esi, %eax
+; CHECK-NOBMI-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NOBMI-NEXT:    andb $85, %dil
-; CHECK-NOBMI-NEXT:    andb $-86, %al
-; CHECK-NOBMI-NEXT:    orb %dil, %al
+; CHECK-NOBMI-NEXT:    andb $-86, %sil
+; CHECK-NOBMI-NEXT:    leal (%rsi,%rdi), %eax
 ; CHECK-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: out8_constmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-BMI-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-BMI-NEXT:    andb $85, %dil
-; CHECK-BMI-NEXT:    andb $-86, %al
-; CHECK-BMI-NEXT:    orb %dil, %al
+; CHECK-BMI-NEXT:    andb $-86, %sil
+; CHECK-BMI-NEXT:    leal (%rsi,%rdi), %eax
 ; CHECK-BMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-BMI-NEXT:    retq
   %mx = and i8 %x, 85

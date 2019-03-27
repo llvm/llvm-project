@@ -17,7 +17,7 @@
 #include <valarray>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -26,4 +26,6 @@ int main()
         const std::valarray<T> v(a, N);
         assert(v[0] == 1);
     }
+
+  return 0;
 }

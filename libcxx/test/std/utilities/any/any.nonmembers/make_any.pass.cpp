@@ -8,13 +8,7 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// XFAIL: availability=macosx10.13
-// XFAIL: availability=macosx10.12
-// XFAIL: availability=macosx10.11
-// XFAIL: availability=macosx10.10
-// XFAIL: availability=macosx10.9
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
+// XFAIL: dylib-has-no-bad_any_cast && !libcpp-no-exceptions
 
 // <any>
 
@@ -131,7 +125,7 @@ void test_make_any_throws()
 
 #endif
 
-int main() {
+int main(int, char**) {
     test_make_any_type<small>();
     test_make_any_type<large>();
     test_make_any_type<small_throws_on_copy>();
@@ -144,4 +138,6 @@ int main() {
     test_make_any_throws<LargeThrows>();
 
 #endif
+
+  return 0;
 }

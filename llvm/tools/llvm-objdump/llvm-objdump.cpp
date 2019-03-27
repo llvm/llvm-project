@@ -79,7 +79,8 @@ cl::opt<bool>
     llvm::AllHeaders("all-headers",
                      cl::desc("Display all available header information"));
 static cl::alias AllHeadersShort("x", cl::desc("Alias for --all-headers"),
-                                 cl::NotHidden, cl::aliasopt(AllHeaders));
+                                 cl::NotHidden, cl::Grouping,
+                                 cl::aliasopt(AllHeaders));
 
 static cl::list<std::string>
 InputFilenames(cl::Positional, cl::desc("<input object files>"),cl::ZeroOrMore);
@@ -88,22 +89,25 @@ cl::opt<bool>
 llvm::Disassemble("disassemble",
   cl::desc("Display assembler mnemonics for the machine instructions"));
 static cl::alias Disassembled("d", cl::desc("Alias for --disassemble"),
-                              cl::NotHidden, cl::aliasopt(Disassemble));
+                              cl::NotHidden, cl::Grouping,
+                              cl::aliasopt(Disassemble));
 
 cl::opt<bool>
 llvm::DisassembleAll("disassemble-all",
   cl::desc("Display assembler mnemonics for the machine instructions"));
 static cl::alias DisassembleAlld("D", cl::desc("Alias for --disassemble-all"),
-                                 cl::NotHidden, cl::aliasopt(DisassembleAll));
+                                 cl::NotHidden, cl::Grouping,
+                                 cl::aliasopt(DisassembleAll));
 
 cl::opt<bool> llvm::Demangle("demangle", cl::desc("Demangle symbols names"),
                              cl::init(false));
 
 static cl::alias DemangleShort("C", cl::desc("Alias for --demangle"),
-                               cl::NotHidden, cl::aliasopt(llvm::Demangle));
+                               cl::NotHidden, cl::Grouping,
+                               cl::aliasopt(llvm::Demangle));
 
 static cl::list<std::string>
-DisassembleFunctions("df",
+DisassembleFunctions("disassemble-functions",
                      cl::CommaSeparated,
                      cl::desc("List of functions to disassemble"));
 static StringSet<> DisasmFuncsSet;
@@ -112,14 +116,14 @@ cl::opt<bool>
 llvm::Relocations("reloc",
                   cl::desc("Display the relocation entries in the file"));
 static cl::alias RelocationsShort("r", cl::desc("Alias for --reloc"),
-                                  cl::NotHidden,
+                                  cl::NotHidden, cl::Grouping,
                                   cl::aliasopt(llvm::Relocations));
 
 cl::opt<bool>
 llvm::DynamicRelocations("dynamic-reloc",
   cl::desc("Display the dynamic relocation entries in the file"));
 static cl::alias DynamicRelocationsd("R", cl::desc("Alias for --dynamic-reloc"),
-                                     cl::NotHidden,
+                                     cl::NotHidden, cl::Grouping,
                                      cl::aliasopt(DynamicRelocations));
 
 cl::opt<bool>
@@ -127,12 +131,12 @@ cl::opt<bool>
                           cl::desc("Display the content of each section"));
 static cl::alias SectionContentsShort("s",
                                       cl::desc("Alias for --full-contents"),
-                                      cl::NotHidden,
+                                      cl::NotHidden, cl::Grouping,
                                       cl::aliasopt(SectionContents));
 
 cl::opt<bool> llvm::SymbolTable("syms", cl::desc("Display the symbol table"));
 static cl::alias SymbolTableShort("t", cl::desc("Alias for --syms"),
-                                  cl::NotHidden,
+                                  cl::NotHidden, cl::Grouping,
                                   cl::aliasopt(llvm::SymbolTable));
 
 cl::opt<bool>
@@ -157,7 +161,7 @@ llvm::RawClangAST("raw-clang-ast",
 static cl::opt<bool>
 MachOOpt("macho", cl::desc("Use MachO specific object file parser"));
 static cl::alias MachOm("m", cl::desc("Alias for --macho"), cl::NotHidden,
-                        cl::aliasopt(MachOOpt));
+                        cl::Grouping, cl::aliasopt(MachOOpt));
 
 cl::opt<std::string>
 llvm::TripleName("triple", cl::desc("Target triple to disassemble for, "
@@ -182,7 +186,7 @@ static cl::alias SectionHeadersShort("headers",
                                      cl::aliasopt(SectionHeaders));
 static cl::alias SectionHeadersShorter("h",
                                        cl::desc("Alias for --section-headers"),
-                                       cl::NotHidden,
+                                       cl::NotHidden, cl::Grouping,
                                        cl::aliasopt(SectionHeaders));
 
 static cl::opt<bool>
@@ -213,7 +217,8 @@ cl::opt<bool>
 llvm::UnwindInfo("unwind-info", cl::desc("Display unwind information"));
 
 static cl::alias UnwindInfoShort("u", cl::desc("Alias for --unwind-info"),
-                                 cl::NotHidden, cl::aliasopt(UnwindInfo));
+                                 cl::NotHidden, cl::Grouping,
+                                 cl::aliasopt(UnwindInfo));
 
 cl::opt<bool>
 llvm::PrivateHeaders("private-headers",
@@ -226,7 +231,7 @@ llvm::FirstPrivateHeader("private-header",
 
 static cl::alias PrivateHeadersShort("p",
                                      cl::desc("Alias for --private-headers"),
-                                     cl::NotHidden,
+                                     cl::NotHidden, cl::Grouping,
                                      cl::aliasopt(PrivateHeaders));
 
 cl::opt<bool> llvm::FileHeaders(
@@ -234,14 +239,16 @@ cl::opt<bool> llvm::FileHeaders(
     cl::desc("Display the contents of the overall file header"));
 
 static cl::alias FileHeadersShort("f", cl::desc("Alias for --file-headers"),
-                                  cl::NotHidden, cl::aliasopt(FileHeaders));
+                                  cl::NotHidden, cl::Grouping,
+                                  cl::aliasopt(FileHeaders));
 
 cl::opt<bool>
     llvm::ArchiveHeaders("archive-headers",
                          cl::desc("Display archive header information"));
 
 cl::alias ArchiveHeadersShort("a", cl::desc("Alias for --archive-headers"),
-                              cl::NotHidden, cl::aliasopt(ArchiveHeaders));
+                              cl::NotHidden, cl::Grouping,
+                              cl::aliasopt(ArchiveHeaders));
 
 cl::opt<bool>
     llvm::PrintImmHex("print-imm-hex",
@@ -260,14 +267,15 @@ cl::opt<bool> PrintSource(
         "Display source inlined with disassembly. Implies disassemble object"));
 
 cl::alias PrintSourceShort("S", cl::desc("Alias for -source"), cl::NotHidden,
-                           cl::aliasopt(PrintSource));
+                           cl::Grouping, cl::aliasopt(PrintSource));
 
 cl::opt<bool> PrintLines("line-numbers",
                          cl::desc("Display source line numbers with "
                                   "disassembly. Implies disassemble object"));
 
 cl::alias PrintLinesShort("l", cl::desc("Alias for -line-numbers"),
-                          cl::NotHidden, cl::aliasopt(PrintLines));
+                          cl::NotHidden, cl::Grouping,
+                          cl::aliasopt(PrintLines));
 
 cl::opt<unsigned long long>
     StartAddress("start-address", cl::desc("Disassemble beginning at address"),
@@ -282,8 +290,17 @@ cl::opt<bool> DisassembleZeroes(
                 cl::desc("Do not skip blocks of zeroes when disassembling"));
 cl::alias DisassembleZeroesShort("z",
                                  cl::desc("Alias for --disassemble-zeroes"),
-                                 cl::NotHidden,
+                                 cl::NotHidden, cl::Grouping,
                                  cl::aliasopt(DisassembleZeroes));
+
+static cl::list<std::string>
+    DisassemblerOptions("disassembler-options",
+                        cl::desc("Pass target specific disassembler options"),
+                        cl::value_desc("options"), cl::CommaSeparated);
+static cl::alias
+    DisassemblerOptionsShort("M", cl::desc("Alias for --disassembler-options"),
+                             cl::NotHidden, cl::Prefix, cl::CommaSeparated,
+                             cl::aliasopt(DisassemblerOptions));
 
 static StringRef ToolName;
 
@@ -491,7 +508,8 @@ public:
     Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
   }
   virtual ~SourcePrinter() = default;
-  virtual void printSourceLine(raw_ostream &OS, uint64_t Address,
+  virtual void printSourceLine(raw_ostream &OS,
+                               object::SectionedAddress Address,
                                StringRef Delimiter = "; ");
 };
 
@@ -521,7 +539,8 @@ bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
   return true;
 }
 
-void SourcePrinter::printSourceLine(raw_ostream &OS, uint64_t Address,
+void SourcePrinter::printSourceLine(raw_ostream &OS,
+                                    object::SectionedAddress Address,
                                     StringRef Delimiter) {
   if (!Symbolizer)
     return;
@@ -582,14 +601,15 @@ class PrettyPrinter {
 public:
   virtual ~PrettyPrinter() = default;
   virtual void printInst(MCInstPrinter &IP, const MCInst *MI,
-                         ArrayRef<uint8_t> Bytes, uint64_t Address,
-                         raw_ostream &OS, StringRef Annot,
-                         MCSubtargetInfo const &STI, SourcePrinter *SP,
+                         ArrayRef<uint8_t> Bytes,
+                         object::SectionedAddress Address, raw_ostream &OS,
+                         StringRef Annot, MCSubtargetInfo const &STI,
+                         SourcePrinter *SP,
                          std::vector<RelocationRef> *Rels = nullptr) {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
     if (!NoLeadingAddr)
-      OS << format("%8" PRIx64 ":", Address);
+      OS << format("%8" PRIx64 ":", Address.Address);
     if (!NoShowRawInsn) {
       OS << "\t";
       dumpBytes(Bytes, OS);
@@ -616,13 +636,13 @@ public:
     }
   }
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 uint64_t Address, raw_ostream &OS, StringRef Annot,
-                 MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 object::SectionedAddress Address, raw_ostream &OS,
+                 StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  std::vector<RelocationRef> *Rels) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, "");
     if (!MI) {
-      printLead(Bytes, Address, OS);
+      printLead(Bytes, Address.Address, OS);
       OS << " <unknown>";
       return;
     }
@@ -644,9 +664,9 @@ public:
     std::vector<RelocationRef>::const_iterator RelCur = Rels->begin();
     std::vector<RelocationRef>::const_iterator RelEnd = Rels->end();
     auto PrintReloc = [&]() -> void {
-      while ((RelCur != RelEnd) && (RelCur->getOffset() <= Address)) {
-        if (RelCur->getOffset() == Address) {
-          printRelocation(*RelCur, Address, 4);
+      while ((RelCur != RelEnd) && (RelCur->getOffset() <= Address.Address)) {
+        if (RelCur->getOffset() == Address.Address) {
+          printRelocation(*RelCur, Address.Address, 4);
           return;
         }
         ++RelCur;
@@ -658,7 +678,7 @@ public:
       Separator = "\n";
       if (SP && (PrintSource || PrintLines))
         SP->printSourceLine(OS, Address, "");
-      printLead(Bytes, Address, OS);
+      printLead(Bytes, Address.Address, OS);
       OS << Preamble;
       Preamble = "   ";
       StringRef Inst;
@@ -676,7 +696,7 @@ public:
         OS << " } " << PacketBundle.second;
       PrintReloc();
       Bytes = Bytes.slice(4);
-      Address += 4;
+      Address.Address += 4;
     }
   }
 };
@@ -685,8 +705,8 @@ HexagonPrettyPrinter HexagonPrettyPrinterInst;
 class AMDGCNPrettyPrinter : public PrettyPrinter {
 public:
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 uint64_t Address, raw_ostream &OS, StringRef Annot,
-                 MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 object::SectionedAddress Address, raw_ostream &OS,
+                 StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  std::vector<RelocationRef> *Rels) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
@@ -716,7 +736,7 @@ public:
       }
     }
 
-    OS << format("// %012" PRIX64 ": ", Address);
+    OS << format("// %012" PRIX64 ": ", Address.Address);
     if (Bytes.size() >=4) {
       for (auto D : makeArrayRef(reinterpret_cast<const U32*>(Bytes.data()),
                                  Bytes.size() / sizeof(U32)))
@@ -737,13 +757,13 @@ AMDGCNPrettyPrinter AMDGCNPrettyPrinterInst;
 class BPFPrettyPrinter : public PrettyPrinter {
 public:
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 uint64_t Address, raw_ostream &OS, StringRef Annot,
-                 MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 object::SectionedAddress Address, raw_ostream &OS,
+                 StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  std::vector<RelocationRef> *Rels) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
     if (!NoLeadingAddr)
-      OS << format("%8" PRId64 ":", Address / 8);
+      OS << format("%8" PRId64 ":", Address.Address / 8);
     if (!NoShowRawInsn) {
       OS << "\t";
       dumpBytes(Bytes, OS);
@@ -863,10 +883,6 @@ static void addPltEntries(const ObjectFile *Obj,
 // returns the number of zero bytes that can be skipped when dumping the
 // disassembly of the instructions in Buf.
 static size_t countSkippableZeroBytes(ArrayRef<uint8_t> Buf) {
-  // When -z or --disassemble-zeroes are given we always dissasemble them.
-  if (DisassembleZeroes)
-    return 0;
-
   // Find the number of leading zeroes.
   size_t N = 0;
   while (N < Buf.size() && !Buf[N])
@@ -1284,12 +1300,22 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         if (Index >= End)
           break;
 
-        if (size_t N =
-                countSkippableZeroBytes(Bytes.slice(Index, End - Index))) {
-          outs() << "\t\t..." << '\n';
-          Index += N;
-          if (Index >= End)
-            break;
+        // When -z or --disassemble-zeroes are given we always dissasemble them.
+        // Otherwise we might want to skip zero bytes we see.
+        if (!DisassembleZeroes) {
+          uint64_t MaxOffset = End - Index;
+          // For -reloc: print zero blocks patched by relocations, so that
+          // relocations can be shown in the dump.
+          if (RelCur != RelEnd)
+            MaxOffset = RelCur->getOffset() - Index;
+
+          if (size_t N =
+                  countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
+            outs() << "\t\t..." << '\n';
+            Index += N;
+            if (Index >= End)
+              break;
+          }
         }
 
         // Disassemble a real instruction or a data when disassemble all is
@@ -1300,9 +1326,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         if (Size == 0)
           Size = 1;
 
-        PIP.printInst(
-            *IP, Disassembled ? &Inst : nullptr, Bytes.slice(Index, Size),
-            SectionAddr + Index + VMAAdjustment, outs(), "", *STI, &SP, &Rels);
+        PIP.printInst(*IP, Disassembled ? &Inst : nullptr,
+                      Bytes.slice(Index, Size),
+                      {SectionAddr + Index + VMAAdjustment, Section.getIndex()},
+                      outs(), "", *STI, &SP, &Rels);
         outs() << CommentStream.str();
         Comments.clear();
 
@@ -1458,6 +1485,10 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
   PrettyPrinter &PIP = selectPrettyPrinter(Triple(TripleName));
   SourcePrinter SP(Obj, TheTarget->getName());
+
+  for (StringRef Opt : DisassemblerOptions)
+    if (!IP->applyTargetSpecificCLOption(Opt))
+      error("Unrecognized disassembler option: " + Opt);
 
   disassembleObject(TheTarget, Obj, Ctx, DisAsm.get(), MIA.get(), IP.get(),
                     STI.get(), PIP, SP, InlineRelocs);
@@ -1873,7 +1904,9 @@ static void printFaultMaps(const ObjectFile *Obj) {
 static void printPrivateFileHeaders(const ObjectFile *O, bool OnlyFirst) {
   if (O->isELF()) {
     printELFFileHeader(O);
-    return printELFDynamicSection(O);
+    printELFDynamicSection(O);
+    printELFSymbolVersionInfo(O);
+    return;
   }
   if (O->isCOFF())
     return printCOFFFileHeader(O);

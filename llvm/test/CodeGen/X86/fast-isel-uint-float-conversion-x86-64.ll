@@ -15,8 +15,7 @@ entry:
 define double @long_to_double_rm(i64* %a) {
 ; ALL-LABEL: long_to_double_rm:
 ; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    movq (%rdi), %rax
-; ALL-NEXT:    vcvtusi2sdq %rax, %xmm0, %xmm0
+; ALL-NEXT:    vcvtusi2sdq (%rdi), %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
   %0 = load i64, i64* %a
@@ -48,8 +47,7 @@ entry:
 define float @long_to_float_rm(i64* %a) {
 ; ALL-LABEL: long_to_float_rm:
 ; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    movq (%rdi), %rax
-; ALL-NEXT:    vcvtusi2ssq %rax, %xmm0, %xmm0
+; ALL-NEXT:    vcvtusi2ssq (%rdi), %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
   %0 = load i64, i64* %a

@@ -28,7 +28,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::shared_ptr<int> p;
@@ -36,4 +36,6 @@ int main()
         std::atomic_store(&p, r);
         assert(*p == *r);
     }
+
+  return 0;
 }

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -O0 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-LLVM
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -O0 -emit-spirv -o %t.spv
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -O0 -emit-llvm-bc -o %t.bc
+// RUN: llvm-spirv %t.bc -o %t.spv
 // RUN: llvm-spirv %t.spv -to-text -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 // CHECK-LLVM: @__const.test.arr = private unnamed_addr addrspace(2) constant [3 x i32] [i32 1, i32 2, i32 3], align 4

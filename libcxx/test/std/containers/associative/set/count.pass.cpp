@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 #include "private_constructor.hpp"
 
-int main()
+int main(int, char**)
 {
     {
         typedef int V;
@@ -167,4 +167,6 @@ int main()
     }
 #endif
 
+
+  return 0;
 }

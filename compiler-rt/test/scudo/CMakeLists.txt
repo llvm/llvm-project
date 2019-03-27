@@ -15,15 +15,7 @@ configure_lit_site_cfg(
 
 set(SCUDO_TEST_ARCH ${SCUDO_SUPPORTED_ARCH})
 foreach(arch ${SCUDO_TEST_ARCH})
-  if(ANDROID)
-    if (${arch} STREQUAL "i386")
-      set(SCUDO_TEST_TARGET_ARCH i686-android)
-    else()
-      set(SCUDO_TEST_TARGET_ARCH ${arch}-android)
-    endif()
-  else()
-    set(SCUDO_TEST_TARGET_ARCH ${arch})
-  endif()
+  set(SCUDO_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}" SCUDO_TEST_CONFIG_SUFFIX)
   get_test_cc_for_arch(${arch} SCUDO_TEST_TARGET_CC SCUDO_TEST_TARGET_CFLAGS)
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
@@ -34,6 +26,8 @@ foreach(arch ${SCUDO_TEST_ARCH})
     ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg)
   list(APPEND SCUDO_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
 endforeach()
+
+add_subdirectory(standalone)
 
 add_lit_testsuite(check-scudo "Running the Scudo Hardened Allocator tests"
   ${SCUDO_TESTSUITES}

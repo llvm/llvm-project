@@ -61,7 +61,7 @@ protected:
   uint32_t m_num_registers;
   uint8_t m_registers_count[register_set_count];
   std::unique_ptr<lldb_private::RegisterInfoInterface>
-      m_register_info_ap; // Register Info Interface (FreeBSD or Linux)
+      m_register_info_up; // Register Info Interface (FreeBSD or Linux)
 
   // Determines if an extended register set is supported on the processor
   // running the inferior process.

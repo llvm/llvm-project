@@ -43,21 +43,10 @@ define <8 x float> @load_splat_8f32_4f32_01010101(<4 x float>* %ptr) nounwind uw
 ; SSE42-NEXT:    movapd %xmm0, %xmm1
 ; SSE42-NEXT:    retq
 ;
-; AVX1-LABEL: load_splat_8f32_4f32_01010101:
-; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load_splat_8f32_4f32_01010101:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: load_splat_8f32_4f32_01010101:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: load_splat_8f32_4f32_01010101:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vbroadcastsd (%rdi), %ymm0
+; AVX-NEXT:    retq
 entry:
   %ld = load <4 x float>, <4 x float>* %ptr
   %ret = shufflevector <4 x float> %ld, <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>

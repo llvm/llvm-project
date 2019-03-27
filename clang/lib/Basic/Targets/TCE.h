@@ -43,7 +43,7 @@ static const unsigned TCEOpenCLAddrSpaceMap[] = {
     3, // sycl_global
     4, // sycl_local
     5, // sycl_constant
-    5, // sycl_private
+    0, // sycl_private
     // FIXME: generic has to be added to the target
     0, // sycl_generic
 };

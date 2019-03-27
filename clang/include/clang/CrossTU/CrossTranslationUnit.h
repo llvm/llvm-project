@@ -43,7 +43,8 @@ enum class index_error_code {
   failed_to_get_external_ast,
   failed_to_generate_usr,
   triple_mismatch,
-  lang_mismatch
+  lang_mismatch,
+  lang_dialect_mismatch
 };
 
 class IndexError : public llvm::ErrorInfo<IndexError> {

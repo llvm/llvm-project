@@ -18,7 +18,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::piecewise_linear_distribution<> D;
@@ -101,4 +101,6 @@ int main()
         assert(dn[2] == 1/4.5);
         assert(dn[3] == 0);
     }
+
+  return 0;
 }

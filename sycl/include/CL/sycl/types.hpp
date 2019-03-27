@@ -45,6 +45,7 @@
 #endif // __HAS_EXT_VECTOR_TYPE__
 
 #include <CL/sycl/detail/common.hpp>
+#include <CL/sycl/multi_ptr.hpp>
 
 // 4.10.1: Scalar data types
 // 4.10.2: SYCL vector types
@@ -349,14 +350,17 @@ public:
 
   vec() { m_Data = {0}; }
 
+  // TODO Remove this difference between host and device side after
+  // when root cause of API incompatibility will be fixed
+#ifdef __SYCL_DEVICE_ONLY__
+  vec(const vec &Rhs) = default;
+#else
   vec(const vec &Rhs) : m_Data(Rhs.m_Data) {}
+#endif
 
-  vec(vec &&Rhs) : m_Data(std::move(Rhs.m_Data)) {}
+  vec(vec &&Rhs) = default;
 
-  vec &operator=(const vec &Rhs) {
-    m_Data = Rhs.m_Data;
-    return *this;
-  }
+  vec &operator=(const vec &Rhs) = default;
 
   // W/o this, things like "vec<char,*> = vec<signed char, *>" doesn't work.
   template <typename Ty = DataT>
@@ -373,6 +377,43 @@ public:
       setValue(i, arg);
     }
   }
+
+#ifdef __SYCL_USE_EXT_VECTOR_TYPE__
+  // Optimized naive constructors with NumElements of DataT values.
+  // We don't expect compilers to optimize vararg recursive functions well.
+
+  // Helper type to make specific constructors available only for specific
+  // number of elements.
+  template <int IdxNum, typename T = void>
+  using EnableIfMultipleElems =
+      typename std::enable_if<std::is_convertible<T, DataT>::value &&
+                                  NumElements == IdxNum,
+                              DataT>::type;
+  template <typename Ty = DataT>
+  vec(const EnableIfMultipleElems<2, Ty> Arg0, const DataT Arg1)
+      : m_Data{Arg0, Arg1} {}
+  template <typename Ty = DataT>
+  vec(const EnableIfMultipleElems<3, Ty> Arg0, const DataT Arg1,
+      const DataT Arg2)
+      : m_Data{Arg0, Arg1, Arg2} {}
+  template <typename Ty = DataT>
+  vec(const EnableIfMultipleElems<4, Ty> Arg0, const DataT Arg1,
+      const DataT Arg2, const Ty Arg3)
+      : m_Data{Arg0, Arg1, Arg2, Arg3} {}
+  template <typename Ty = DataT>
+  vec(const EnableIfMultipleElems<8, Ty> Arg0, const DataT Arg1,
+      const DataT Arg2, const DataT Arg3, const DataT Arg4, const DataT Arg5,
+      const DataT Arg6, const DataT Arg7)
+      : m_Data{Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7} {}
+  template <typename Ty = DataT>
+  vec(const EnableIfMultipleElems<16, Ty> Arg0, const DataT Arg1,
+      const DataT Arg2, const DataT Arg3, const DataT Arg4, const DataT Arg5,
+      const DataT Arg6, const DataT Arg7, const DataT Arg8, const DataT Arg9,
+      const DataT ArgA, const DataT ArgB, const DataT ArgC, const DataT ArgD,
+      const DataT ArgE, const DataT ArgF)
+      : m_Data{Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7,
+               Arg8, Arg9, ArgA, ArgB, ArgC, ArgD, ArgE, ArgF} {}
+#endif
 
   // Constructor from values of base type or vec of base type. Checks that
   // base types are match and that the NumElements == sum of lenghts of args.
@@ -406,8 +447,8 @@ public:
   operator typename std::enable_if<N == 1, DataT>::type() const {
     return m_Data;
   }
-  size_t get_count() const { return NumElements; }
-  size_t get_size() const { return sizeof(m_Data); }
+  static constexpr size_t get_count() { return NumElements; }
+  static constexpr size_t get_size() { return sizeof(m_Data); }
 
   // TODO: convert() for FP to FP. Also, check whether rounding mode handling
   // is needed for integers to FP convert.
@@ -696,7 +737,7 @@ private:
   DataT getValue(int Index, int) const {
     return m_Data[Index];
   }
-#else // __SYCL_USE_EXT_VECTOR_TYPE__
+#else  // __SYCL_USE_EXT_VECTOR_TYPE__
   template <int Num = NumElements,
             typename = typename std::enable_if<1 != Num>::type>
   void setValue(int Index, const DataT &Value, int) {
@@ -1249,9 +1290,7 @@ private:
       return IDXs[index >= getNumElements() ? 0 : index];
     }
   };
-  static constexpr int Indexer(int index) {
-    return IndexerHelper::get(index);
-  }
+  static constexpr int Indexer(int index) { return IndexerHelper::get(index); }
 
 public:
 #ifdef __SYCL_ACCESS_RETURN

@@ -22,7 +22,7 @@
 
 
 // CHECK:            _start:
-// CHECK:            bl .+67108824
+// CHECK:            bl .-40
         .text
         .abiversion 2
         .globl  _start

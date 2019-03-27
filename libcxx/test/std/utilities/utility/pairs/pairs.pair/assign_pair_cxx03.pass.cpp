@@ -27,7 +27,7 @@ private:
 struct Incomplete;
 extern Incomplete inc_obj;
 
-int main()
+int main(int, char**)
 {
     {
     // Test that we don't constrain the assignment operator in C++03 mode.
@@ -42,6 +42,8 @@ int main()
     P p(42, inc_obj);
     assert(&p.second == &inc_obj);
     }
+
+  return 0;
 }
 
 struct Incomplete {};

@@ -34,6 +34,9 @@ enum Fixups {
   // fixup_riscv_pcrel_lo12_s - 12-bit fixup corresponding to pcrel_lo(foo) for
   // the S-type store instructions
   fixup_riscv_pcrel_lo12_s,
+  // fixup_riscv_got_hi20 - 20-bit fixup corresponding to got_pcrel_hi(foo) for
+  // instructions like auipc
+  fixup_riscv_got_hi20,
   // fixup_riscv_jal - 20-bit fixup for symbol references in the jal
   // instruction
   fixup_riscv_jal,

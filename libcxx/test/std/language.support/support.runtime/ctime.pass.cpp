@@ -26,7 +26,7 @@
 #endif
 #endif
 
-int main()
+int main(int, char**)
 {
     std::clock_t c = 0;
     std::size_t s = 0;
@@ -58,4 +58,6 @@ int main()
     ((void)c1); // Prevent unused warning
     ((void)c2); // Prevent unused warning
     static_assert((std::is_same<decltype(std::strftime(c1,s,c2,&tm)), std::size_t>::value), "");
+
+  return 0;
 }

@@ -42,6 +42,10 @@ struct DWARFAttribute {
     return isValid();
   }
 
+  /// Identifies DWARF attributes that may contain a reference to a
+  /// DWARF expression.
+  static bool mayHaveLocationDescription(dwarf::Attribute Attr);
+
   void clear() {
     Offset = 0;
     ByteSize = 0;

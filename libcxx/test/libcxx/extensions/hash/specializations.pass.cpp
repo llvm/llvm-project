@@ -12,7 +12,7 @@
 #include <ext/hash_map>
 #include <string>
 
-int main()
+int main(int, char**)
 {
     char str[] = "test";
     assert(__gnu_cxx::hash<const char *>()("test") ==
@@ -27,4 +27,6 @@ int main()
     assert(__gnu_cxx::hash<unsigned int>()(42) == 42);
     assert(__gnu_cxx::hash<long>()(42) == 42);
     assert(__gnu_cxx::hash<unsigned long>()(42) == 42);
+
+  return 0;
 }

@@ -18,7 +18,7 @@
 
 void do_nothing(int*) {}
 
-int main()
+int main(int, char**)
 {
     int* ptr1(new int);
     int* ptr2(new int);
@@ -27,4 +27,6 @@ int main()
     const std::shared_ptr<int> p3(ptr2, do_nothing);
     assert(p1 != p2);
     assert(p2 == p3);
+
+  return 0;
 }

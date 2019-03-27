@@ -51,6 +51,8 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
   return Error::success();
 }
 
+bool Reproducer::Initialized() { return InstanceImpl().operator bool(); }
+
 void Reproducer::Terminate() {
   lldbassert(InstanceImpl() && "Already terminated.");
   InstanceImpl().reset();
@@ -218,8 +220,54 @@ bool Loader::HasFile(StringRef file) {
   return (it != m_files.end()) && (*it == file);
 }
 
+llvm::Expected<std::unique_ptr<DataRecorder>>
+DataRecorder::Create(FileSpec filename) {
+  std::error_code ec;
+  auto recorder = llvm::make_unique<DataRecorder>(std::move(filename), ec);
+  if (ec)
+    return llvm::errorCodeToError(ec);
+  return std::move(recorder);
+}
+
+DataRecorder *CommandProvider::GetNewDataRecorder() {
+  std::size_t i = m_data_recorders.size() + 1;
+  std::string filename = (llvm::Twine(info::name) + llvm::Twine("-") +
+                          llvm::Twine(i) + llvm::Twine(".txt"))
+                             .str();
+  auto recorder_or_error =
+      DataRecorder::Create(GetRoot().CopyByAppendingPathComponent(filename));
+  if (!recorder_or_error) {
+    llvm::consumeError(recorder_or_error.takeError());
+    return nullptr;
+  }
+
+  m_data_recorders.push_back(std::move(*recorder_or_error));
+  return m_data_recorders.back().get();
+}
+
+void CommandProvider::Keep() {
+  std::vector<std::string> files;
+  for (auto &recorder : m_data_recorders)
+    files.push_back(recorder->GetFilename().GetPath());
+
+  FileSpec file = GetRoot().CopyByAppendingPathComponent(info::file);
+  std::error_code ec;
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::F_Text);
+  if (ec)
+    return;
+  yaml::Output yout(os);
+  yout << files;
+
+  m_data_recorders.clear();
+}
+
+void CommandProvider::Discard() { m_data_recorders.clear(); }
+
 void ProviderBase::anchor() {}
 char ProviderBase::ID = 0;
 char FileProvider::ID = 0;
+char CommandProvider::ID = 0;
 const char *FileInfo::name = "files";
 const char *FileInfo::file = "files.yaml";
+const char *CommandInfo::name = "command-interpreter";
+const char *CommandInfo::file = "command-interpreter.yaml";

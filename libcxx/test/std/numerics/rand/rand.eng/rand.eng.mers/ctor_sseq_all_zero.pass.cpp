@@ -71,10 +71,12 @@ void test(void) {
   assert(e() == X0);
 }
 
-int main() {
+int main(int, char**) {
   // Test for k == 1: word_size <= 32.
   test<unsigned short, 3u>();
 
   // Test for k == 2: (32 < word_size <= 64).
   test<unsigned long long, 33u>();
+
+  return 0;
 }

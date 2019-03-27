@@ -26,7 +26,7 @@ void test ( const CharT *s, size_t len ) {
         }
     }
 
-int main () {
+int main(int, char**) {
     test ( "ABCDE", 5 );
     test ( "a", 1 );
 
@@ -49,4 +49,6 @@ int main () {
     static_assert ( sv[1]  == 'B', "" );
     }
 #endif
+
+  return 0;
 }

@@ -53,7 +53,7 @@ void check(const std::locale& loc)
     assert((std::has_facet<std::messages<wchar_t> >(loc)));
 }
 
-int main()
+int main(int, char**)
 {
     int ok;
     {
@@ -73,4 +73,6 @@ int main()
         assert(globalMemCounter.checkOutstandingNewEq(ok));
     }
     assert(globalMemCounter.checkOutstandingNewEq(ok));
+
+  return 0;
 }

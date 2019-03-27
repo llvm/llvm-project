@@ -68,7 +68,6 @@ class VOP2_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], string suf
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let SubtargetPredicate = isGCN;
 
   let VOP2 = 1;
   let VALU = 1;
@@ -361,7 +360,7 @@ def VOP2e_I32_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1]> {
 def VOP_READLANE : VOPProfile<[i32, i32, i32]> {
   let Outs32 = (outs SReg_32:$vdst);
   let Outs64 = Outs32;
-  let Ins32 = (ins VGPR_32:$src0, SCSrc_b32:$src1);
+  let Ins32 = (ins VRegOrLds_32:$src0, SCSrc_b32:$src1);
   let Ins64 = Ins32;
   let Asm32 = " $vdst, $src0, $src1";
   let Asm64 = Asm32;
@@ -391,8 +390,6 @@ def VOP_WRITELANE : VOPProfile<[i32, i32, i32, i32]> {
 //===----------------------------------------------------------------------===//
 // VOP2 Instructions
 //===----------------------------------------------------------------------===//
-
-let SubtargetPredicate = isGCN, Predicates = [isGCN] in {
 
 defm V_CNDMASK_B32 : VOP2eInst <"v_cndmask_b32", VOP2e_I32_I32_I32_I1>;
 def V_MADMK_F32 : VOP2_Pseudo <"v_madmk_f32", VOP_MADMK_F32, []>;
@@ -471,7 +468,6 @@ defm V_CVT_PKRTZ_F16_F32 : VOP2Inst <"v_cvt_pkrtz_f16_f32", VOP_NO_EXT<VOP_V2F16
 defm V_CVT_PK_U16_U32 : VOP2Inst <"v_cvt_pk_u16_u32", VOP_NO_EXT<VOP_V2I16_I32_I32>, AMDGPUpk_u16_u32>;
 defm V_CVT_PK_I16_I32 : VOP2Inst <"v_cvt_pk_i16_i32", VOP_NO_EXT<VOP_V2I16_I32_I32>, AMDGPUpk_i16_i32>;
 
-} // End SubtargetPredicate = isGCN, Predicates = [isGCN]
 
 def : GCNPat<
     (AMDGPUadde i32:$src0, i32:$src1, i1:$src2),
@@ -769,7 +765,7 @@ defm V_SUBBREV_U32        : VOP2be_Real_e32e64_si <0x2a>;
 
 defm V_READLANE_B32       : VOP2_Real_si <0x01>;
 
-let InOperandList = (ins SSrc_b32:$src0, SCSrc_b32:$src1, VSrc_b32:$vdst_in) in {
+let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VSrc_b32:$vdst_in) in {
 defm V_WRITELANE_B32      : VOP2_Real_si <0x02>;
 }
 

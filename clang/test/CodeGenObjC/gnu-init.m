@@ -14,7 +14,7 @@
 
 // Check that we get a class ref to the defined class.
 // CHECK-NEW: @._OBJC_INIT_CLASS_X = global 
-// CHECK-NEW-SAME* @._OBJC_CLASS_X, section "__objc_classes"
+// CHECK-NEW-SAME: @._OBJC_CLASS_X, section "__objc_classes"
 
 // Check that we emit the section start and end symbols as hidden globals.
 // CHECK-NEW: @__start___objc_selectors = external hidden global i8*

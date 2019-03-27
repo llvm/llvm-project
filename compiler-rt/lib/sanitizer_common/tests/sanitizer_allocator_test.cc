@@ -1031,7 +1031,7 @@ TEST(SanitizerCommon, LargeMmapAllocatorBlockBegin) {
 // Don't test OOM conditions on Win64 because it causes other tests on the same
 // machine to OOM.
 #if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64 && !SANITIZER_ANDROID
-typedef SizeClassMap<3, 4, 8, 63, 128, 16> SpecialSizeClassMap;
+typedef __sanitizer::SizeClassMap<3, 4, 8, 63, 128, 16> SpecialSizeClassMap;
 template <typename AddressSpaceViewTy = LocalAddressSpaceView>
 struct AP64_SpecialSizeClassMap {
   static const uptr kSpaceBeg = kAllocatorSpace;

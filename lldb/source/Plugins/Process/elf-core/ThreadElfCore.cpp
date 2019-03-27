@@ -38,6 +38,8 @@
 #include "RegisterContextPOSIXCore_x86_64.h"
 #include "ThreadElfCore.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -186,40 +188,40 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
     switch (arch.GetMachine()) {
     case llvm::Triple::aarch64:
-      m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_arm64(
-          *this, reg_interface, m_gpregset_data, m_notes));
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_arm64>(
+          *this, reg_interface, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::arm:
-      m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_arm(
-          *this, reg_interface, m_gpregset_data, m_notes));
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_arm>(
+          *this, reg_interface, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::mipsel:
     case llvm::Triple::mips:
-      m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_mips64(
-          *this, reg_interface, m_gpregset_data, m_notes));
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_mips64>(
+          *this, reg_interface, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
-      m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_mips64(
-          *this, reg_interface, m_gpregset_data, m_notes));
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_mips64>(
+          *this, reg_interface, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::ppc:
     case llvm::Triple::ppc64:
-      m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_powerpc(
-          *this, reg_interface, m_gpregset_data, m_notes));
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_powerpc>(
+          *this, reg_interface, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::ppc64le:
-      m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_ppc64le(
-          *this, reg_interface, m_gpregset_data, m_notes));
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_ppc64le>(
+          *this, reg_interface, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::systemz:
-      m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_s390x(
-          *this, reg_interface, m_gpregset_data, m_notes));
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_s390x>(
+          *this, reg_interface, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
-      m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_x86_64(
-          *this, reg_interface, m_gpregset_data, m_notes));
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86_64>(
+          *this, reg_interface, m_gpregset_data, m_notes);
       break;
     default:
       break;

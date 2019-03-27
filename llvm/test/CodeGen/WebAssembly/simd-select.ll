@@ -29,7 +29,7 @@ define <16 x i8> @vselect_v16i8(<16 x i1> %c, <16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT: i8x16.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; CHECK-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $pop[[L3]]{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-define <16 x i8> @select_v16i8(i1 %c, <16 x i8> %x, <16 x i8> %y) {
+define <16 x i8> @select_v16i8(i1 zeroext %c, <16 x i8> %x, <16 x i8> %y) {
   %res = select i1 %c, <16 x i8> %x, <16 x i8> %y
   ret <16 x i8> %res
 }
@@ -99,7 +99,7 @@ define <8 x i16> @vselect_v8i16(<8 x i1> %c, <8 x i16> %x, <8 x i16> %y) {
 ; CHECK-NEXT: i16x8.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; CHECK-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $pop[[L3]]{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-define <8 x i16> @select_v8i16(i1 %c, <8 x i16> %x, <8 x i16> %y) {
+define <8 x i16> @select_v8i16(i1 zeroext %c, <8 x i16> %x, <8 x i16> %y) {
   %res = select i1 %c, <8 x i16> %x, <8 x i16> %y
   ret <8 x i16> %res
 }
@@ -170,7 +170,7 @@ define <4 x i32> @vselect_v4i32(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT: i32x4.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; CHECK-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $pop[[L3]]{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-define <4 x i32> @select_v4i32(i1 %c, <4 x i32> %x, <4 x i32> %y) {
+define <4 x i32> @select_v4i32(i1 zeroext %c, <4 x i32> %x, <4 x i32> %y) {
   %res = select i1 %c, <4 x i32> %x, <4 x i32> %y
   ret <4 x i32> %res
 }
@@ -240,7 +240,7 @@ define <2 x i64> @vselect_v2i64(<2 x i1> %c, <2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT: i64x2.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; CHECK-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $pop[[L3]]{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-define <2 x i64> @select_v2i64(i1 %c, <2 x i64> %x, <2 x i64> %y) {
+define <2 x i64> @select_v2i64(i1 zeroext %c, <2 x i64> %x, <2 x i64> %y) {
   %res = select i1 %c, <2 x i64> %x, <2 x i64> %y
   ret <2 x i64> %res
 }
@@ -313,7 +313,7 @@ define <4 x float> @vselect_v4f32(<4 x i1> %c, <4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT: i32x4.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; CHECK-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $pop[[L3]]{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-define <4 x float> @select_v4f32(i1 %c, <4 x float> %x, <4 x float> %y) {
+define <4 x float> @select_v4f32(i1 zeroext %c, <4 x float> %x, <4 x float> %y) {
   %res = select i1 %c, <4 x float> %x, <4 x float> %y
   ret <4 x float> %res
 }
@@ -383,7 +383,7 @@ define <2 x double> @vselect_v2f64(<2 x i1> %c, <2 x double> %x, <2 x double> %y
 ; CHECK-NEXT: i64x2.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; CHECK-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $pop[[L3]]{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-define <2 x double> @select_v2f64(i1 %c, <2 x double> %x, <2 x double> %y) {
+define <2 x double> @select_v2f64(i1 zeroext %c, <2 x double> %x, <2 x double> %y) {
   %res = select i1 %c, <2 x double> %x, <2 x double> %y
   ret <2 x double> %res
 }

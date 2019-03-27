@@ -219,10 +219,22 @@ OPTIONS
  Specify the numPoints parameters to be used for DBSCAN clustering
  (`analysis` mode).
 
-.. option:: -analysis-espilon=<dbscan epsilon parameter>
+.. option:: -analysis-clustering-epsilon=<dbscan epsilon parameter>
 
- Specify the numPoints parameters to be used for DBSCAN clustering
+ Specify the epsilon parameter used for clustering of benchmark points
  (`analysis` mode).
+
+.. option:: -analysis-inconsistency-epsilon=<epsilon>
+
+ Specify the epsilon parameter used for detection of when the cluster
+ is different from the LLVM schedule profile values (`analysis` mode).
+
+.. option:: -analysis-display-unstable-clusters
+
+ If there is more than one benchmark for an opcode, said benchmarks may end up
+ not being clustered into the same cluster if the measured performance
+ characteristics are different. by default all such opcodes are filtered out.
+ This flag will instead show only such unstable opcodes.
 
 .. option:: -ignore-invalid-sched-class=false
 

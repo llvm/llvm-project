@@ -197,7 +197,7 @@ namespace TestSuppress {
   [[gsl::suppress("on-decl")]]
   void TestSuppressFunction();
   // CHECK: FunctionDecl{{.*}} TestSuppressFunction
-  // CHECK-NEXT SuppressAttr{{.*}} on-decl
+  // CHECK-NEXT: SuppressAttr{{.*}} on-decl
 
   void f() {
       int *i;

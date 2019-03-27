@@ -29,7 +29,6 @@ tailrecurse:                                      ; preds = %sw.bb, %entry
 
 ; THUMB:      movs r[[R0:[0-9]+]], #3
 ; THUMB-NEXT: ands r[[R0]], r
-; THUMB-NEXT: cmp r[[R0]], #0
 ; THUMB-NEXT: beq
 
 ; T2:      ands {{r[0-9]+}}, {{r[0-9]+}}, #3

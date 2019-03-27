@@ -274,7 +274,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         if (!MFI.isVRegStackified(OldReg)) {
           const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
           unsigned NewReg = MRI.createVirtualRegister(RC);
-          auto InsertPt = std::next(MachineBasicBlock::iterator(&MI));
+          auto InsertPt = std::next(MI.getIterator());
           if (MI.getOpcode() == WebAssembly::IMPLICIT_DEF) {
             MI.eraseFromParent();
             Changed = true;
@@ -316,7 +316,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         // with inline asm register operands is to provide local indices as
         // immediates.
         if (MO.isDef()) {
-          assert(MI.getOpcode() == TargetOpcode::INLINEASM);
+          assert(MI.isInlineAsm());
           unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
           // If this register operand is tied to another operand, we can't
           // change it to an immediate. Untie it first.
@@ -334,7 +334,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 
         // Our contract with inline asm register operands is to provide local
         // indices as immediates.
-        if (MI.getOpcode() == TargetOpcode::INLINEASM) {
+        if (MI.isInlineAsm()) {
           unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
           // Untie it first if this reg operand is tied to another operand.
           MI.untieRegOperand(MI.getOperandNo(&MO));

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -48,4 +49,32 @@ TEST(BasicBlockUtils, SplitBlockPredecessors) {
   // entry block.
   SplitBlockPredecessors(&F->getEntryBlock(), {}, "split.entry", &DT);
   EXPECT_TRUE(DT.verify());
+}
+
+TEST(BasicBlockUtils, SplitCriticalEdge) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M = parseIR(
+    C,
+    "define void @crit_edge(i1 %cond0, i1 %cond1) {\n"
+    "entry:\n"
+    "  br i1 %cond0, label %bb0, label %bb1\n"
+    "bb0:\n"
+    "  br label %bb1\n"
+    "bb1:\n"
+    "  br label %bb2\n"
+    "bb2:\n"
+    "  ret void\n"
+    "}\n"
+    "\n"
+    );
+
+  auto *F = M->getFunction("crit_edge");
+  DominatorTree DT(*F);
+  PostDominatorTree PDT(*F);
+
+  CriticalEdgeSplittingOptions CESO(&DT, nullptr, nullptr, &PDT);
+  EXPECT_EQ(1u, SplitAllCriticalEdges(*F, CESO));
+  EXPECT_TRUE(DT.verify());
+  EXPECT_TRUE(PDT.verify());
 }

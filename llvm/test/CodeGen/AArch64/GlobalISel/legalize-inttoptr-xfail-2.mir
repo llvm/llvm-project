@@ -19,7 +19,7 @@
 # and fix the mistake: check that type index 0 is p0 and type index 1
 # is s64.
 
-# CHECK: Bad machine code: pointer casts must be all-vector or all-scalar
+# CHECK: Bad machine code: operand types must be all-vector or all-scalar
 # CHECK: LLVM ERROR: Found 1 machine code errors.
 
 ---

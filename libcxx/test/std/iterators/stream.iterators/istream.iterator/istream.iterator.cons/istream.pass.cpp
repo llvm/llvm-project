@@ -16,7 +16,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::istringstream inf(" 1 23");
     std::istream_iterator<int> i(inf);
@@ -26,4 +26,6 @@ int main()
     int j = 0;
     inf >> j;
     assert(j == 23);
+
+  return 0;
 }

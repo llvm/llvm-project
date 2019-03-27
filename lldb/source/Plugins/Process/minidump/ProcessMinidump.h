@@ -41,7 +41,7 @@ public:
   static const char *GetPluginDescriptionStatic();
 
   ProcessMinidump(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-                  const FileSpec &core_file, MinidumpParser minidump_parser);
+                  const FileSpec &core_file, lldb::DataBufferSP code_data);
 
   ~ProcessMinidump() override;
 
@@ -92,7 +92,7 @@ public:
     return error;
   }
 
-  MinidumpParser m_minidump_parser;
+  llvm::Optional<MinidumpParser> m_minidump_parser;
 
 protected:
   void Clear();
@@ -106,6 +106,7 @@ protected:
 
 private:
   FileSpec m_core_file;
+  lldb::DataBufferSP m_core_data;
   llvm::ArrayRef<MinidumpThread> m_thread_list;
   const MinidumpExceptionStream *m_active_exception;
   lldb::CommandObjectSP m_command_sp;

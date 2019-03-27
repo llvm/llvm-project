@@ -16,7 +16,7 @@
 #include <cassert>
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::vector<bool> C;
@@ -63,4 +63,6 @@ int main()
         assert(c[1] == true);
         assert(c.back() == true);
     }
+
+  return 0;
 }

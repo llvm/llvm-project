@@ -26,8 +26,11 @@
 
 #include <xmmintrin.h>
 
-typedef double __m128d __attribute__((__vector_size__(16)));
-typedef long long __m128i __attribute__((__vector_size__(16)));
+typedef double __m128d __attribute__((__vector_size__(16), __aligned__(16)));
+typedef long long __m128i __attribute__((__vector_size__(16), __aligned__(16)));
+
+typedef double __m128d_u __attribute__((__vector_size__(16), __aligned__(1)));
+typedef long long __m128i_u __attribute__((__vector_size__(16), __aligned__(1)));
 
 /* Type defines.  */
 typedef double __v2df __attribute__ ((__vector_size__ (16)));
@@ -1652,7 +1655,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_loadu_pd(double const *__dp)
 {
   struct __loadu_pd {
-    __m128d __v;
+    __m128d_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_pd*)__dp)->__v;
 }
@@ -2042,7 +2045,7 @@ static __inline__ void __DEFAULT_FN_ATTRS
 _mm_storeu_pd(double *__dp, __m128d __a)
 {
   struct __storeu_pd {
-    __m128d __v;
+    __m128d_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_pd*)__dp)->__v = __a;
 }
@@ -3564,10 +3567,10 @@ _mm_load_si128(__m128i const *__p)
 ///    A pointer to a memory location containing integer values.
 /// \returns A 128-bit integer vector containing the moved values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_loadu_si128(__m128i const *__p)
+_mm_loadu_si128(__m128i_u const *__p)
 {
   struct __loadu_si128 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_si128*)__p)->__v;
 }
@@ -3585,7 +3588,7 @@ _mm_loadu_si128(__m128i const *__p)
 /// \returns A 128-bit vector of [2 x i64]. The lower order bits contain the
 ///    moved value. The higher order bits are cleared.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_loadl_epi64(__m128i const *__p)
+_mm_loadl_epi64(__m128i_u const *__p)
 {
   struct __mm_loadl_epi64_struct {
     long long __u;
@@ -4027,10 +4030,10 @@ _mm_store_si128(__m128i *__p, __m128i __b)
 /// \param __b
 ///    A 128-bit integer vector containing the values to be moved.
 static __inline__ void __DEFAULT_FN_ATTRS
-_mm_storeu_si128(__m128i *__p, __m128i __b)
+_mm_storeu_si128(__m128i_u *__p, __m128i __b)
 {
   struct __storeu_si128 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_si128*)__p)->__v = __b;
 }
@@ -4139,7 +4142,7 @@ _mm_maskmoveu_si128(__m128i __d, __m128i __n, char *__p)
 ///    A 128-bit integer vector of [2 x i64]. The lower 64 bits contain the
 ///    value to be stored.
 static __inline__ void __DEFAULT_FN_ATTRS
-_mm_storel_epi64(__m128i *__p, __m128i __a)
+_mm_storel_epi64(__m128i_u *__p, __m128i __a)
 {
   struct __mm_storel_epi64_struct {
     long long __u;

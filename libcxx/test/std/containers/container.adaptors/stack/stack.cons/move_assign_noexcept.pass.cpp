@@ -20,10 +20,12 @@
 
 #include "MoveOnly.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::stack<MoveOnly> C;
         static_assert(std::is_nothrow_move_assignable<C>::value, "");
     }
+
+  return 0;
 }

@@ -1773,6 +1773,15 @@ int X86FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
   int64_t FPDelta = 0;
 
+  // In an x86 interrupt, remove the offset we added to account for the return
+  // address from any stack object allocated in the caller's frame. Interrupts
+  // do not have a standard return address. Fixed objects in the current frame,
+  // such as SSE register spills, should not get this treatment.
+  if (MF.getFunction().getCallingConv() == CallingConv::X86_INTR &&
+      Offset >= 0) {
+    Offset += getOffsetOfLocalArea();
+  }
+
   if (IsWin64Prologue) {
     assert(!MFI.hasCalls() || (StackSize % 16) == 8);
 

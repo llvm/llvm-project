@@ -21,7 +21,7 @@
 
 typedef std::codecvt<char32_t, char, std::mbstate_t> F;
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     const char from[] = "some text";
@@ -36,4 +36,6 @@ int main()
     assert(to_next - to == 9);
     for (unsigned i = 0; i < 9; ++i)
         assert(to[i] == static_cast<char32_t>(from[i]));
+
+  return 0;
 }

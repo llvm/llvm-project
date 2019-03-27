@@ -53,6 +53,27 @@
 // CHECK-RELOCATABLE-NOT: "--build-id"
 // CHECK-RELOCATABLE: "-r"
 
+// RUN: %clang %s -### --target=x86_64-fuchsia -nodefaultlibs -fuse-ld=lld 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NODEFAULTLIBS
+// CHECK-NODEFAULTLIBS: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-NODEFAULTLIBS-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-NODEFAULTLIBS-NOT: "-lc"
+
+// RUN: %clang %s -### --target=x86_64-fuchsia -nostdlib -fuse-ld=lld 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NOSTDLIB
+// CHECK-NOSTDLIB: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-NOSTDLIB-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-NOSTDLIB-NOT: "-lc"
+
+// RUN: %clang %s -### --target=x86_64-fuchsia -nolibc -fuse-ld=lld 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NOLIBC
+// CHECK-NOLIBC: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-NOLIBC: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-NOLIBC-NOT: "-lc"
+
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=safe-stack 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \

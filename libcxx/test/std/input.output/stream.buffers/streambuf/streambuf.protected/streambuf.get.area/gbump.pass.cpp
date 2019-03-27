@@ -41,7 +41,7 @@ struct test
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         test<char> t;
@@ -55,4 +55,6 @@ int main()
         t.setg(in, in+1, in+sizeof(in)/sizeof(in[0]));
         t.gbump(3);
     }
+
+  return 0;
 }

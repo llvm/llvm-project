@@ -67,11 +67,14 @@ class Thread {
     Print("Thread: ");
   }
 
+  uptr &vfork_spill() { return vfork_spill_; }
+
  private:
   // NOTE: There is no Thread constructor. It is allocated
   // via mmap() and *must* be valid in zero-initialized state.
   void ClearShadowForThreadStackAndTLS();
   void Print(const char *prefix);
+  uptr vfork_spill_;
   uptr stack_top_;
   uptr stack_bottom_;
   uptr tls_begin_;

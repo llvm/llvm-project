@@ -182,7 +182,7 @@ static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
   return None;
 }
 
-Optional<std::string> findMetaClassAlloc(const Expr *Callee) {
+static Optional<std::string> findMetaClassAlloc(const Expr *Callee) {
   if (const auto *ME = dyn_cast<MemberExpr>(Callee)) {
     if (ME->getMemberDecl()->getNameAsString() != "alloc")
       return None;
@@ -200,8 +200,7 @@ Optional<std::string> findMetaClassAlloc(const Expr *Callee) {
   return None;
 }
 
-std::string findAllocatedObjectName(const Stmt *S,
-                                    QualType QT) {
+static std::string findAllocatedObjectName(const Stmt *S, QualType QT) {
   if (const auto *CE = dyn_cast<CallExpr>(S))
     if (auto Out = findMetaClassAlloc(CE->getCallee()))
       return *Out;

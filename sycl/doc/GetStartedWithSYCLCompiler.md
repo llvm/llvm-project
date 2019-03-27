@@ -118,33 +118,11 @@ int main() {
 ```
 
 # Build and Test a simple SYCL program
-The SYCL Compiler supports two types of compilation:
 
-1. Simplified one step that compiles to binary directly
+To build simple-sycl-app run following command:
 
-   ```bash
-   clang++ -std=c++11 -fsycl simple-sycl-app.cpp -o simple-sycl-app -lsycl -lOpenCL
-   ```
-
-2. Manual two steps compilation that compiles device (to SPIR-V) and host code
-   separately (to binary)
-
-   a. Compile the device code from the C++ file into the SPIR-V file:
-
-   ```bash
-   clang++ --sycl -fno-sycl-use-bitcode -Xclang -fsycl-int-header=simple-sycl-app-int-header.h -c simple-sycl-app.cpp -o kernel.spv
-   # NOTE: The section "-Xclang -fsycl-int-header=simple-sycl-app-int-header.h"
-   #       generates `integration header` file.
-   #       This file must be included for the host side compilation.
-   # NOTE: The output file name must be kernel.spv
-   ```
-
-   b. Compile host code from the same C++ file into an executable:
-
-   ```bash
-   clang++ -std=c++11 -include simple-sycl-app-int-header.h simple-sycl-app.cpp -o simple-sycl-app -lsycl -lOpenCL
-   # NOTE: The section "-include simple-sycl-app-int-header.h" includes
-   #       integration header file, which is produced by the device compiler.
+   ```console
+   clang++ -std=c++11 -fsycl simple-sycl-app.cpp -o simple-sycl-app -lOpenCL
    ```
 
 This `simple-sycl-app` application doesn't specify SYCL device for execution,

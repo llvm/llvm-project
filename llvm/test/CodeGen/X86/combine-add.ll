@@ -99,6 +99,41 @@ define <4 x i32> @combine_vec_add_sub1(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %2
 }
 
+; fold ((A-B)+(C-A)) -> (C-B)
+define <4 x i32> @combine_vec_add_sub_sub0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+; SSE-LABEL: combine_vec_add_sub_sub0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_add_sub_sub0:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsubd %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    retq
+  %1 = sub <4 x i32> %a, %b
+  %2 = sub <4 x i32> %c, %a
+  %3 = add <4 x i32> %1, %2
+  ret <4 x i32> %3
+}
+
+; fold ((A-B)+(B-C)) -> (A-C)
+define <4 x i32> @combine_vec_add_sub_sub1(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+; SSE-LABEL: combine_vec_add_sub_sub1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psubd %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_add_sub_sub1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = sub <4 x i32> %a, %b
+  %2 = sub <4 x i32> %b, %c
+  %3 = add <4 x i32> %1, %2
+  ret <4 x i32> %3
+}
+
 ; fold (A+(B-(A+C))) to (B-C)
 define <4 x i32> @combine_vec_add_sub_add0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; SSE-LABEL: combine_vec_add_sub_add0:
@@ -313,4 +348,49 @@ define <4 x i32> @combine_vec_add_sextinreg(<4 x i32> %a0, <4 x i32> %a1) {
   %2 = ashr <4 x i32> %1, <i32 31, i32 31, i32 31, i32 31>
   %3 = add <4 x i32> %2, %a1
   ret <4 x i32> %3
+}
+
+; TODO: (add (add (xor a, -1), b), 1) -> (sub b, a)
+define i32 @combine_add_add_not(i32 %a, i32 %b) {
+; SSE-LABEL: combine_add_add_not:
+; SSE:       # %bb.0:
+; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
+; SSE-NEXT:    notl %edi
+; SSE-NEXT:    leal 1(%rdi,%rsi), %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_add_add_not:
+; AVX:       # %bb.0:
+; AVX-NEXT:    # kill: def $esi killed $esi def $rsi
+; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
+; AVX-NEXT:    notl %edi
+; AVX-NEXT:    leal 1(%rdi,%rsi), %eax
+; AVX-NEXT:    retq
+  %nota = xor i32 %a, -1
+  %add = add i32 %nota, %b
+  %r = add i32 %add, 1
+  ret i32 %r
+}
+
+define <4 x i32> @combine_vec_add_add_not(<4 x i32> %a, <4 x i32> %b) {
+; SSE-LABEL: combine_vec_add_add_not:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pxor %xmm2, %xmm0
+; SSE-NEXT:    paddd %xmm1, %xmm0
+; SSE-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_add_add_not:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %nota = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %add = add <4 x i32> %nota, %b
+  %r = add <4 x i32> %add, <i32 1, i32 1, i32 1, i32 -1>
+  ret <4 x i32> %r
 }

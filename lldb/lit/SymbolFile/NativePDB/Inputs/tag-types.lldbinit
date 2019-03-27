@@ -3,6 +3,8 @@ type lookup -- Class
 type lookup -- Union
 type lookup -- Derived
 type lookup -- Derived2
+type lookup -- DerivedVirtual1
+type lookup -- DerivedVirtual2
 type lookup -- EnumInt
 type lookup -- EnumShort
 type lookup -- InvalidType

@@ -148,7 +148,7 @@ protected:
                                // register sets.
   lldb_private::YMM m_ymm_set; // copy of ymmh and xmm register halves.
   std::unique_ptr<lldb_private::RegisterInfoInterface>
-      m_register_info_ap; // Register Info Interface (FreeBSD or Linux)
+      m_register_info_up; // Register Info Interface (FreeBSD or Linux)
 
   // Determines if an extended register set is supported on the processor
   // running the inferior process.

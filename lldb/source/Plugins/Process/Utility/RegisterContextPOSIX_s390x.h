@@ -58,7 +58,7 @@ protected:
   };
 
   RegInfo m_reg_info;
-  std::unique_ptr<lldb_private::RegisterInfoInterface> m_register_info_ap;
+  std::unique_ptr<lldb_private::RegisterInfoInterface> m_register_info_up;
 
   virtual bool IsRegisterSetAvailable(size_t set_index);
 

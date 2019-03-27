@@ -33,7 +33,7 @@ constexpr bool test_constexpr ()
         ;
 }
 
-int main()
+int main(int, char**)
 {
     using year           = std::chrono::year;
     using month          = std::chrono::month;
@@ -56,4 +56,6 @@ int main()
         assert(ym1.month() == January);
         assert(ym1.day() == day{10});
     }
+
+  return 0;
 }

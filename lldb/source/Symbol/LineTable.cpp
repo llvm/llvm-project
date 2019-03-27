@@ -444,7 +444,7 @@ size_t LineTable::GetContiguousFileAddressRanges(FileAddressRanges &file_ranges,
 }
 
 LineTable *LineTable::LinkLineTable(const FileRangeMap &file_range_map) {
-  std::unique_ptr<LineTable> line_table_ap(new LineTable(m_comp_unit));
+  std::unique_ptr<LineTable> line_table_up(new LineTable(m_comp_unit));
   LineSequenceImpl sequence;
   const size_t count = m_entries.size();
   LineEntry line_entry;
@@ -507,7 +507,7 @@ LineTable *LineTable::LinkLineTable(const FileRangeMap &file_range_map) {
       sequence.m_entries.back().is_terminal_entry = true;
 
       // Append the sequence since we just terminated the previous one
-      line_table_ap->InsertSequence(&sequence);
+      line_table_up->InsertSequence(&sequence);
       sequence.Clear();
     }
 
@@ -523,7 +523,7 @@ LineTable *LineTable::LinkLineTable(const FileRangeMap &file_range_map) {
     // insert this sequence into our new line table.
     if (!sequence.m_entries.empty() &&
         sequence.m_entries.back().is_terminal_entry) {
-      line_table_ap->InsertSequence(&sequence);
+      line_table_up->InsertSequence(&sequence);
       sequence.Clear();
       prev_entry_was_linked = false;
     } else {
@@ -532,7 +532,7 @@ LineTable *LineTable::LinkLineTable(const FileRangeMap &file_range_map) {
     prev_file_addr = entry.file_addr;
     range_changed = false;
   }
-  if (line_table_ap->m_entries.empty())
+  if (line_table_up->m_entries.empty())
     return nullptr;
-  return line_table_ap.release();
+  return line_table_up.release();
 }

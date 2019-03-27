@@ -17,10 +17,12 @@
 #include <chrono>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::steady_clock C;
     C::time_point t1 = C::now();
     C::time_point t2 = C::now();
     assert(t2 >= t1);
+
+  return 0;
 }

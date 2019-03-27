@@ -27,6 +27,7 @@ class CPPBreakpointTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24538, clang-cl does not support throw or catch")
+    @expectedFailureNetBSD
     def test(self):
         """Test lldb exception breakpoint command for CPP."""
         self.build()

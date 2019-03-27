@@ -41,7 +41,9 @@ void test_basic() {
   assert(d.state() == 0);
 }
 
-int main() {
+int main(int, char**) {
   test_basic<int>();
   test_basic<int[]>();
+
+  return 0;
 }

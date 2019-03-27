@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::piecewise_constant_distribution<> D;
@@ -30,4 +30,6 @@ int main()
         assert(dn.size() == 1);
         assert(dn[0] == 1);
     }
+
+  return 0;
 }

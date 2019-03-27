@@ -54,10 +54,12 @@ test()
     test_constexpr<T> ();
     }
 
-int main()
+int main(int, char**)
 {
     test<float>();
     test<double>();
     test<long double>();
 //   test_constexpr<int> ();
+
+  return 0;
 }

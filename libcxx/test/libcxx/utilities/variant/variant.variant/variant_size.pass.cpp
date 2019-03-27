@@ -59,10 +59,12 @@ void test_index_internals() {
   static_assert(std::__variant_npos<IndexT> == IndexLim::max(), "");
 }
 
-int main() {
+int main(int, char**) {
   test_index_type<unsigned char>();
   // This won't compile due to template depth issues.
   //test_index_type<unsigned short>();
   test_index_internals<unsigned char>();
   test_index_internals<unsigned short>();
+
+  return 0;
 }

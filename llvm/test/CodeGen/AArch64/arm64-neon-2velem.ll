@@ -559,9 +559,9 @@ entry:
 }
 
 define double @test_vfmsd_lane_f64_0(double %a, double %b, <1 x double> %v) {
-; CHCK-LABEL: test_vfmsd_lane_f64_0
-; CHCK: fmsub {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
-; CHCK-NEXT: ret
+; CHECK-LABEL: test_vfmsd_lane_f64_0
+; CHECK: fmsub {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+; CHECK-NEXT: ret
 entry:
   %tmp0 = fsub <1 x double> <double -0.000000e+00>, %v
   %tmp1 = extractelement <1 x double> %tmp0, i32 0

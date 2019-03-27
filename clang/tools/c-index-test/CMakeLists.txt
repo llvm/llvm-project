@@ -61,7 +61,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     RUNTIME DESTINATION "${INSTALL_DESTINATION}"
     COMPONENT c-index-test)
 
-  if (NOT CMAKE_CONFIGURATION_TYPES) # don't add this for IDE's.
+  if (NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-c-index-test
                              DEPENDS c-index-test
                              COMPONENT c-index-test)

@@ -35,14 +35,14 @@ void ExecuteKernelCommand<
                                EventImplPtr Event) {
   if (m_Queue->is_host()) {
     detail::waitEvents(DepEvents);
-    Event->setIsHostEvent(true);
+    Event->setContextImpl(detail::getSyclObjImpl(m_Queue->get_context()));
     runOnHost();
     return;
   }
   context Context = m_Queue->get_context();
   if (!m_ClKernel) {
     m_ClKernel = detail::ProgramManager::getInstance().getOrCreateKernel(
-        Context, m_KernelName.c_str());
+        m_OSModule, Context, m_KernelName);
   }
 
   if (m_KernelArgs != nullptr) {
@@ -103,7 +103,7 @@ void ExecuteKernelCommand<
   cl_event &CLEvent = Event->getHandleRef();
   CLEvent = runEnqueueNDRangeKernel(m_Queue->getHandleRef(), m_ClKernel,
                                     std::move(CLEvents));
-  Event->setIsHostEvent(false);
+  Event->setContextImpl(detail::getSyclObjImpl(m_Queue->get_context()));
 }
 
 template <typename KernelType, int Dimensions, typename RangeType,

@@ -11,11 +11,11 @@
 // nullptr_t
 //  is_null_pointer
 
+// UNSUPPORTED: c++98, c++03, c++11
+
 #include <type_traits>
 #include <cstddef>        // for std::nullptr_t
-#include "test_macros.h"
 
-#if TEST_STD_VER > 11
 template <class T>
 void test_nullptr_imp()
 {
@@ -46,13 +46,11 @@ void test_nullptr()
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_nullptr<std::nullptr_t>();
 
 //  LWG#2582
     static_assert(!std::is_null_pointer<incomplete_type>::value, "");
+    return 0;
 }
-#else
-int main() {}
-#endif
