@@ -34,6 +34,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-cfg-sort"
 
+// Option to disable EH pad first sorting. Only for testing unwind destination
+// mismatches in CFGStackify.
+static cl::opt<bool> WasmDisableEHPadSort(
+    "wasm-disable-ehpad-sort", cl::ReallyHidden,
+    cl::desc(
+        "WebAssembly: Disable EH pad-first sort order. Testing purpose only."),
+    cl::init(false));
+
 namespace {
 
 // Wrapper for loops and exceptions
@@ -187,10 +195,12 @@ namespace {
 struct CompareBlockNumbers {
   bool operator()(const MachineBasicBlock *A,
                   const MachineBasicBlock *B) const {
-    if (A->isEHPad() && !B->isEHPad())
-      return false;
-    if (!A->isEHPad() && B->isEHPad())
-      return true;
+    if (!WasmDisableEHPadSort) {
+      if (A->isEHPad() && !B->isEHPad())
+        return false;
+      if (!A->isEHPad() && B->isEHPad())
+        return true;
+    }
 
     return A->getNumber() > B->getNumber();
   }
@@ -199,11 +209,12 @@ struct CompareBlockNumbers {
 struct CompareBlockNumbersBackwards {
   bool operator()(const MachineBasicBlock *A,
                   const MachineBasicBlock *B) const {
-    // We give a higher priority to an EH pad
-    if (A->isEHPad() && !B->isEHPad())
-      return false;
-    if (!A->isEHPad() && B->isEHPad())
-      return true;
+    if (!WasmDisableEHPadSort) {
+      if (A->isEHPad() && !B->isEHPad())
+        return false;
+      if (!A->isEHPad() && B->isEHPad())
+        return true;
+    }
 
     return A->getNumber() < B->getNumber();
   }

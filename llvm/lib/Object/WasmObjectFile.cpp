@@ -777,7 +777,11 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
                                               object_error::parse_failed);
       break;
     case wasm::R_WASM_GLOBAL_INDEX_LEB:
-      if (!isValidGlobalSymbol(Reloc.Index))
+      // R_WASM_GLOBAL_INDEX_LEB are can be used against function and data
+      // symbols to refer to thier GOT enties.
+      if (!isValidGlobalSymbol(Reloc.Index) &&
+          !isValidDataSymbol(Reloc.Index) &&
+          !isValidFunctionSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation global index",
                                               object_error::parse_failed);
       break;

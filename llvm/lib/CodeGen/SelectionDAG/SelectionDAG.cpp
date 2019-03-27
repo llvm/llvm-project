@@ -4931,6 +4931,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isFloatingPoint() && "This operator only applies to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
+    if (SDValue V = simplifyFPBinop(Opcode, N1, N2))
+      return V;
     break;
   case ISD::FCOPYSIGN:   // N1 and result must match.  N1/N2 need not match.
     assert(N1.getValueType() == VT &&
@@ -7049,6 +7051,31 @@ SDValue SelectionDAG::simplifyShift(SDValue X, SDValue Y) {
   };
   if (ISD::matchUnaryPredicate(Y, isShiftTooBig, true))
     return getUNDEF(X.getValueType());
+
+  return SDValue();
+}
+
+// TODO: Use fast-math-flags to enable more simplifications.
+SDValue SelectionDAG::simplifyFPBinop(unsigned Opcode, SDValue X, SDValue Y) {
+  ConstantFPSDNode *YC = isConstOrConstSplatFP(Y, /* AllowUndefs */ true);
+  if (!YC)
+    return SDValue();
+
+  // X + -0.0 --> X
+  if (Opcode == ISD::FADD)
+    if (YC->getValueAPF().isNegZero())
+      return X;
+
+  // X - +0.0 --> X
+  if (Opcode == ISD::FSUB)
+    if (YC->getValueAPF().isPosZero())
+      return X;
+
+  // X * 1.0 --> X
+  // X / 1.0 --> X
+  if (Opcode == ISD::FMUL || Opcode == ISD::FDIV)
+    if (YC->getValueAPF().isExactlyValue(1.0))
+      return X;
 
   return SDValue();
 }

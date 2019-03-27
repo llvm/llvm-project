@@ -36,12 +36,11 @@ define float @ext_fmul_v4f32(<4 x float> %x) {
   ret float %ext
 }
 
-; TODO: X / 1.0 --> X
+; X / 1.0 --> X
 
 define float @ext_fdiv_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: ext_fdiv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    divss {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bo = fdiv <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 42.0>
   %ext = extractelement <4 x float> %bo, i32 0

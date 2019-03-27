@@ -78,6 +78,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -99,6 +100,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Pass.h"
+#include "llvm/Remarks/Remark.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -140,6 +142,11 @@ static const char *const CodeViewLineTablesGroupDescription =
   "CodeView Line Tables";
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
+
+static cl::opt<bool> EnableRemarksSection(
+    "remarks-section",
+    cl::desc("Emit a section containing remark diagnostics metadata"),
+    cl::init(false));
 
 char AsmPrinter::ID = 0;
 
@@ -1331,6 +1338,38 @@ void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
   }
 }
 
+void AsmPrinter::emitRemarksSection(Module &M) {
+  RemarkStreamer *RS = M.getContext().getRemarkStreamer();
+  if (!RS)
+    return;
+
+  // Switch to the right section: .remarks/__remarks.
+  MCSection *RemarksSection =
+      OutContext.getObjectFileInfo()->getRemarksSection();
+  OutStreamer->SwitchSection(RemarksSection);
+
+  // Emit the magic number.
+  OutStreamer->EmitBytes(remarks::Magic);
+  // Explicitly emit a '\0'.
+  OutStreamer->EmitIntValue(/*Value=*/0, /*Size=*/1);
+
+  // Emit the version number: little-endian uint64_t.
+  // The version number is located at the offset 0x0 in the section.
+  std::array<char, 8> Version;
+  support::endian::write64le(Version.data(), remarks::Version);
+  OutStreamer->EmitBinaryData(StringRef(Version.data(), Version.size()));
+
+  // Emit the null-terminated absolute path to the remark file.
+  // The path is located at the offset 0x4 in the section.
+  StringRef FilenameRef = RS->getFilename();
+  SmallString<128> Filename = FilenameRef;
+  sys::fs::make_absolute(Filename);
+  assert(!Filename.empty() && "The filename can't be empty.");
+  OutStreamer->EmitBytes(Filename);
+  // Explicitly emit a '\0'.
+  OutStreamer->EmitIntValue(/*Value=*/0, /*Size=*/1);
+}
+
 bool AsmPrinter::doFinalization(Module &M) {
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that
@@ -1361,6 +1400,12 @@ bool AsmPrinter::doFinalization(Module &M) {
     MCSymbol *Name = getSymbol(&F);
     EmitVisibility(Name, V, false);
   }
+
+  // Emit the remarks section contents.
+  // FIXME: Figure out when is the safest time to emit this section. It should
+  // not come after debug info.
+  if (EnableRemarksSection)
+    emitRemarksSection(M);
 
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
 

@@ -1,5 +1,6 @@
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling | FileCheck %s
 ; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -exception-model=wasm -mattr=+exception-handling | FileCheck %s --check-prefix=NOOPT
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -333,6 +334,38 @@ catch.start:                                      ; preds = %catch.dispatch
 
 try.cont:                                         ; preds = %catch.start, %bb4, %bb3, %bb2
   ret void
+}
+
+; Tests if try/end_try markers are placed correctly wrt loop/end_loop markers,
+; when try and loop markers are in the same BB and end_try and end_loop are in
+; another BB.
+; CHECK: loop
+; CHECK:   try
+; CHECK:     call      foo
+; CHECK:   catch
+; CHECK:   end_try
+; CHECK: end_loop
+define void @test4(i32* %p) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  store volatile i32 0, i32* %p
+  br label %loop
+
+loop:                                             ; preds = %try.cont, %entry
+  store volatile i32 1, i32* %p
+  invoke void @foo()
+          to label %try.cont unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %loop
+  %0 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  catchret from %1 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start, %loop
+  br label %loop
 }
 
 declare void @foo()

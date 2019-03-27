@@ -7,6 +7,8 @@ group("default") {
     "//clang-tools-extra/clang-apply-replacements/tool:clang-apply-replacements",
     "//clang-tools-extra/clang-change-namespace/tool:clang-change-namespace",
     "//clang-tools-extra/clang-doc/tool:clang-doc",
+    "//clang-tools-extra/clang-include-fixer/find-all-symbols/tool:find-all-symbols",
+    "//clang-tools-extra/clang-include-fixer/tool:clang-include-fixer",
     "//clang-tools-extra/clang-move/tool:clang-move",
     "//clang-tools-extra/clang-query/tool:clang-query",
     "//clang-tools-extra/clang-reorder-fields/tool:clang-reorder-fields",

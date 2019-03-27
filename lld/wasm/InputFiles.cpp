@@ -152,9 +152,12 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
     return TypeMap[Reloc.Index];
   case R_WASM_FUNCTION_INDEX_LEB:
     return getFunctionSymbol(Reloc.Index)->getFunctionIndex();
-  case R_WASM_GLOBAL_INDEX_LEB:
-    return getGlobalSymbol(Reloc.Index)->getGlobalIndex();
-  case R_WASM_EVENT_INDEX_LEB:
+  case R_WASM_GLOBAL_INDEX_LEB: {
+    const Symbol* Sym = Symbols[Reloc.Index];
+    if (auto GS = dyn_cast<GlobalSymbol>(Sym))
+      return GS->getGlobalIndex();
+    return Sym->getGOTIndex();
+  } case R_WASM_EVENT_INDEX_LEB:
     return getEventSymbol(Reloc.Index)->getEventIndex();
   case R_WASM_FUNCTION_OFFSET_I32:
     if (auto *Sym = dyn_cast<DefinedFunction>(getFunctionSymbol(Reloc.Index))) {

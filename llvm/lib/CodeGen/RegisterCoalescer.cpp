@@ -924,23 +924,25 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
     }
     SlotIndex AIdx = CopyIdx.getRegSlot(true);
     LaneBitmask MaskA;
+    const SlotIndexes &Indexes = *LIS->getSlotIndexes();
     for (LiveInterval::SubRange &SA : IntA.subranges()) {
       VNInfo *ASubValNo = SA.getVNInfoAt(AIdx);
       assert(ASubValNo != nullptr);
       MaskA |= SA.LaneMask;
 
-      IntB.refineSubRanges(Allocator, SA.LaneMask,
-          [&Allocator,&SA,CopyIdx,ASubValNo,&ShrinkB]
-            (LiveInterval::SubRange &SR) {
-        VNInfo *BSubValNo = SR.empty()
-          ? SR.getNextValue(CopyIdx, Allocator)
-          : SR.getVNInfoAt(CopyIdx);
-        assert(BSubValNo != nullptr);
-        auto P = addSegmentsWithValNo(SR, BSubValNo, SA, ASubValNo);
-        ShrinkB |= P.second;
-        if (P.first)
-          BSubValNo->def = ASubValNo->def;
-      });
+      IntB.refineSubRanges(
+          Allocator, SA.LaneMask,
+          [&Allocator, &SA, CopyIdx, ASubValNo,
+           &ShrinkB](LiveInterval::SubRange &SR) {
+            VNInfo *BSubValNo = SR.empty() ? SR.getNextValue(CopyIdx, Allocator)
+                                           : SR.getVNInfoAt(CopyIdx);
+            assert(BSubValNo != nullptr);
+            auto P = addSegmentsWithValNo(SR, BSubValNo, SA, ASubValNo);
+            ShrinkB |= P.second;
+            if (P.first)
+              BSubValNo->def = ASubValNo->def;
+          },
+          Indexes, *TRI);
     }
     // Go over all subranges of IntB that have not been covered by IntA,
     // and delete the segments starting at CopyIdx. This can happen if
@@ -3262,16 +3264,18 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
                                           LaneBitmask LaneMask,
                                           CoalescerPair &CP) {
   BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
-  LI.refineSubRanges(Allocator, LaneMask,
-      [this,&Allocator,&ToMerge,&CP](LiveInterval::SubRange &SR) {
-    if (SR.empty()) {
-      SR.assign(ToMerge, Allocator);
-    } else {
-      // joinSubRegRange() destroys the merged range, so we need a copy.
-      LiveRange RangeCopy(ToMerge, Allocator);
-      joinSubRegRanges(SR, RangeCopy, SR.LaneMask, CP);
-    }
-  });
+  LI.refineSubRanges(
+      Allocator, LaneMask,
+      [this, &Allocator, &ToMerge, &CP](LiveInterval::SubRange &SR) {
+        if (SR.empty()) {
+          SR.assign(ToMerge, Allocator);
+        } else {
+          // joinSubRegRange() destroys the merged range, so we need a copy.
+          LiveRange RangeCopy(ToMerge, Allocator);
+          joinSubRegRanges(SR, RangeCopy, SR.LaneMask, CP);
+        }
+      },
+      *LIS->getSlotIndexes(), *TRI);
 }
 
 bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {

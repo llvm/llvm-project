@@ -449,6 +449,45 @@ the configuration (without a prefix: ``Auto``).
           return;
        }
 
+**AllowShortLambdasOnASingleLine** (``ShortLambdaStyle``)
+  Dependent on the value, ``auto lambda []() { return 0; }`` can be put on a
+  single line.
+
+  Possible values:
+
+  * ``SLS_None`` (in configuration: ``None``)
+    Never merge lambdas into a single line.
+
+  * ``SLS_Empty`` (in configuration: ``Empty``)
+    Only merge empty lambdas.
+
+    .. code-block:: c++
+
+      auto lambda = [](int a) {}
+      auto lambda2 = [](int a) {
+          return a;
+      };
+
+  * ``SLS_Inline`` (in configuration: ``Inline``)
+    Merge lambda into a single line if argument of a function.
+
+    .. code-block:: c++
+
+      auto lambda = [](int a) {
+          return a;
+      };
+      sort(a.begin(), a.end(), ()[] { return x < y; })
+
+  * ``SLS_All`` (in configuration: ``All``)
+    Merge all lambdas fitting on a single line.
+
+    .. code-block:: c++
+
+      auto lambda = [](int a) {}
+      auto lambda2 = [](int a) { return a; };
+
+
+
 **AllowShortLoopsOnASingleLine** (``bool``)
   If ``true``, ``while (true) continue;`` can be put on a single
   line.

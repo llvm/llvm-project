@@ -17,7 +17,11 @@ HANDLE_NODETYPE(CALL1)
 HANDLE_NODETYPE(CALL0)
 HANDLE_NODETYPE(RETURN)
 HANDLE_NODETYPE(ARGUMENT)
+// A wrapper node for TargetExternalSymbol, TargetGlobalAddress, and MCSymbol
 HANDLE_NODETYPE(Wrapper)
+// A special wapper used in PIC code for __memory_base/__table_base relcative
+// access.
+HANDLE_NODETYPE(WrapperPIC)
 HANDLE_NODETYPE(BR_IF)
 HANDLE_NODETYPE(BR_TABLE)
 HANDLE_NODETYPE(SHUFFLE)

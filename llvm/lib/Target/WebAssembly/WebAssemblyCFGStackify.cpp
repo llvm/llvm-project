@@ -579,7 +579,9 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
     // the END_TRY marker should go after that. Otherwise, the whole try-catch
     // is contained within this loop, so the END_TRY should go before that.
     if (MI.getOpcode() == WebAssembly::END_LOOP) {
-      if (EndToBegin[&MI]->getParent()->getNumber() >= Header->getNumber())
+      // For a LOOP to be after TRY, LOOP's BB should be after TRY's BB; if they
+      // are in the same BB, LOOP is always before TRY.
+      if (EndToBegin[&MI]->getParent()->getNumber() > Header->getNumber())
         BeforeSet.insert(&MI);
 #ifndef NDEBUG
       else
@@ -878,5 +880,6 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
            .isOSBinFormatELF())
     appendEndToFunction(MF, TII);
 
+  MF.getInfo<WebAssemblyFunctionInfo>()->setCFGStackified();
   return true;
 }
