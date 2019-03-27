@@ -161,7 +161,7 @@ TEST_F(ConstantRangeTest, GetMinsAndMaxes) {
 }
 
 TEST_F(ConstantRangeTest, SignWrapped) {
-  EXPECT_TRUE(Full.isSignWrappedSet());
+  EXPECT_FALSE(Full.isSignWrappedSet());
   EXPECT_FALSE(Empty.isSignWrappedSet());
   EXPECT_FALSE(One.isSignWrappedSet());
   EXPECT_FALSE(Some.isSignWrappedSet());

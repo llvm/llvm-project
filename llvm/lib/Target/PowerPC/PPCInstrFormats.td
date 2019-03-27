@@ -37,14 +37,6 @@ class I<bits<6> opcode, dag OOL, dag IOL, string asmstr, InstrItinClass itin>
   let TSFlags{2}   = PPC970_Cracked;
   let TSFlags{5-3} = PPC970_Unit;
 
-  /// Indicate that the VSX instruction is to use VSX numbering/encoding.
-  /// Since ISA 3.0, there are scalar instructions that use the upper
-  /// half of the VSX register set only. Rather than adding further complexity
-  /// to the register class set, the VSX registers just include the Altivec
-  /// registers and this flag decides the numbering to be used for them.
-  bits<1> UseVSXReg = 0;
-  let TSFlags{6}   = UseVSXReg;
-
   // Indicate that this instruction is of type X-Form Load or Store
   bits<1> XFormMemOp = 0;
   let TSFlags{7}  = XFormMemOp;
@@ -73,7 +65,6 @@ class PPC970_Unit_VALU     { bits<3> PPC970_Unit = 5;   }
 class PPC970_Unit_VPERM    { bits<3> PPC970_Unit = 6;   }
 class PPC970_Unit_BRU      { bits<3> PPC970_Unit = 7;   }
 
-class UseVSXReg { bits<1> UseVSXReg = 1; }
 class XFormMemOp { bits<1> XFormMemOp = 1; }
 
 // Two joined instructions; used to emit two adjacent instructions as one.

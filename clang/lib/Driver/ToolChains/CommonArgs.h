@@ -62,7 +62,7 @@ void AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
                         const Tool &T);
 
 const char *SplitDebugName(const llvm::opt::ArgList &Args,
-                           const InputInfo &Output);
+                           const InputInfo &Input, const InputInfo &Output);
 
 void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
                     const JobAction &JA, const llvm::opt::ArgList &Args,

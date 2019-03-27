@@ -309,7 +309,8 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
 
   comp_unit.AddFunction(func_sp);
 
-  TypeSystem *type_system = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  LanguageType lang = ParseLanguage(comp_unit);
+  TypeSystem *type_system = GetTypeSystemForLanguage(lang);
   if (!type_system)
     return nullptr;
   ClangASTContext *clang_type_system =

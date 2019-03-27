@@ -1,28 +1,23 @@
 # RUN: yaml2obj %s -o %t1.o
 
-# RUN: wasm-ld --no-entry --features=foo,bar,baz -o %t.specified.wasm %t1.o
-# RUN: obj2yaml %t.specified.wasm | FileCheck %s --check-prefix SPECIFIED
+# RUN: wasm-ld --no-entry --features=foo,bar,baz -o - %t1.o | obj2yaml | FileCheck %s --check-prefix SPECIFIED
 
-# RUN: not wasm-ld --no-entry --features=bar,baz,quux -o - %t1.o 2>&1 | FileCheck %s --check-prefix UNSPECIFIED
+# RUN: not wasm-ld --no-entry --features=bar,baz,quux -o /dev/null %t1.o 2>&1 | FileCheck %s --check-prefix UNSPECIFIED
 
-# RUN: wasm-ld --no-entry --no-check-features --features=bar,baz,quux -o %t.unspecified.wasm %t1.o
-# RUN: obj2yaml %t.unspecified.wasm | FileCheck %s --check-prefix UNSPECIFIED-NOCHECK
+# RUN: wasm-ld --no-entry --no-check-features --features=bar,baz,quux -o - %t1.o | obj2yaml | FileCheck %s --check-prefix UNSPECIFIED-NOCHECK
 
 # RUN: yaml2obj %S/Inputs/require-feature-foo.yaml -o %t.required.o
-# RUN: wasm-ld --no-entry -o %t.required.wasm %t1.o %t.required.o
-# RUN: obj2yaml %t.required.wasm | FileCheck %s --check-prefix REQUIRED
+# RUN: wasm-ld --no-entry -o - %t1.o %t.required.o | obj2yaml | FileCheck %s --check-prefix REQUIRED
 
 # RUN: yaml2obj %S/Inputs/disallow-feature-foo.yaml -o %t.disallowed.o
 # RUN: not wasm-ld --no-entry -o /dev/null %t1.o %t.disallowed.o 2>&1 | FileCheck %s --check-prefix DISALLOWED
 
-# RUN: wasm-ld --no-entry --no-check-features -o %t.disallowed.wasm %t1.o %t.disallowed.o
-# RUN: obj2yaml %t.disallowed.wasm | FileCheck %s --check-prefix DISALLOWED-NOCHECK
+# RUN: wasm-ld --no-entry --no-check-features -o - %t1.o %t.disallowed.o | obj2yaml | FileCheck %s --check-prefix DISALLOWED-NOCHECK
 
 # RUN: yaml2obj %S/Inputs/no-feature-foo.yaml -o %t.none.o
 # RUN: not wasm-ld --no-entry -o /dev/null %t1.o %t.none.o 2>&1 | FileCheck %s --check-prefix NONE
 
-# RUN: wasm-ld --no-entry --no-check-features -o %t.none.wasm %t1.o %t.none.o
-# RUN: obj2yaml %t.none.wasm | FileCheck %s --check-prefix NONE-NOCHECK
+# RUN: wasm-ld --no-entry --no-check-features -o - %t1.o %t.none.o | obj2yaml | FileCheck %s --check-prefix NONE-NOCHECK
 
 # Check that the following combinations of feature linkage policies
 # give the expected results:

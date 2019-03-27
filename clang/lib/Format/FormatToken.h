@@ -65,6 +65,7 @@ namespace format {
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
   TYPE(LambdaArrow)                                                            \
+  TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
   TYPE(LeadingJavaAnnotation)                                                  \
   TYPE(LineComment)                                                            \

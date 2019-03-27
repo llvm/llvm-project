@@ -15,6 +15,7 @@
 
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
@@ -83,6 +84,14 @@ public:
     return isUnscaledLdSt(MI.getOpcode());
   }
 
+  /// Returns the unscaled load/store for the scaled load/store opcode,
+  /// if there is a corresponding unscaled variant available.
+  static Optional<unsigned> getUnscaledLdSt(unsigned Opc);
+
+
+  /// Returns the index for the immediate for a given instruction.
+  static unsigned getLoadStoreImmIdx(unsigned Opc);
+
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInst(const MachineInstr &MI);
 
@@ -111,8 +120,8 @@ public:
   /// \p Scale, \p Width, \p MinOffset, and \p MaxOffset accordingly.
   ///
   /// For unscaled instructions, \p Scale is set to 1.
-  bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
-                    int64_t &MinOffset, int64_t &MaxOffset) const;
+  static bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
+                           int64_t &MinOffset, int64_t &MaxOffset);
 
   bool shouldClusterMemOps(MachineOperand &BaseOp1, MachineOperand &BaseOp2,
                            unsigned NumLoads) const override;

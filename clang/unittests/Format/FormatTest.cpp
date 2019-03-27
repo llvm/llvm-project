@@ -12432,6 +12432,43 @@ TEST_F(FormatTest, FormatsLambdas) {
       "            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> {\n"
       "      //\n"
       "    });");
+
+  FormatStyle DoNotMerge = getLLVMStyle();
+  DoNotMerge.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+  verifyFormat("auto c = []() {\n"
+               "  return b;\n"
+               "};",
+               "auto c = []() { return b; };", DoNotMerge);
+  verifyFormat("auto c = []() {\n"
+               "};",
+               " auto c = []() {};", DoNotMerge);
+
+  FormatStyle MergeEmptyOnly = getLLVMStyle();
+  MergeEmptyOnly.AllowShortLambdasOnASingleLine = FormatStyle::SLS_Empty;
+  verifyFormat("auto c = []() {\n"
+               "  return b;\n"
+               "};",
+               "auto c = []() {\n"
+               "  return b;\n"
+               " };",
+               MergeEmptyOnly);
+  verifyFormat("auto c = []() {};",
+               "auto c = []() {\n"
+               "};",
+               MergeEmptyOnly);
+
+  FormatStyle MergeInline = getLLVMStyle();
+  MergeInline.AllowShortLambdasOnASingleLine = FormatStyle::SLS_Inline;
+  verifyFormat("auto c = []() {\n"
+               "  return b;\n"
+               "};",
+               "auto c = []() { return b; };", MergeInline);
+  verifyFormat("function([]() { return b; })", "function([]() { return b; })",
+               MergeInline);
+  verifyFormat("function([]() { return b; }, a)",
+               "function([]() { return b; }, a)", MergeInline);
+  verifyFormat("function(a, []() { return b; })",
+               "function(a, []() { return b; })", MergeInline);
 }
 
 TEST_F(FormatTest, EmptyLinesInLambdas) {

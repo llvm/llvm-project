@@ -542,15 +542,6 @@ Expected<unsigned> MCDwarfLineTable::tryGetFile(StringRef &Directory,
   return Header.tryGetFile(Directory, FileName, Checksum, Source, FileNumber);
 }
 
-bool isRootFile(const MCDwarfFile &RootFile, StringRef &Directory,
-                StringRef &FileName, MD5::MD5Result *Checksum) {
-  if (RootFile.Name.empty() || RootFile.Name != FileName.data())
-    return false;
-  if (!RootFile.Checksum)
-    return !Checksum;
-  return *RootFile.Checksum == *Checksum;
-}
-
 Expected<unsigned>
 MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
                                    StringRef &FileName,
@@ -570,8 +561,6 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
     trackMD5Usage(Checksum);
     HasSource = (Source != None);
   }
-  if (isRootFile(RootFile, Directory, FileName, Checksum) && DwarfVersion >= 5)
-    return 0;
   if (FileNumber == 0) {
     // File numbers start with 1 and/or after any file numbers
     // allocated by inline-assembler .file directives.

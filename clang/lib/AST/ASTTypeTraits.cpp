@@ -113,7 +113,6 @@ ASTNodeKind ASTNodeKind::getFromNode(const OMPClause &C) {
 #define OPENMP_CLAUSE(Name, Class)                                             \
     case OMPC_##Name: return ASTNodeKind(NKI_##Class);
 #include "clang/Basic/OpenMPKinds.def"
-  case OMPC_allocate:
   case OMPC_threadprivate:
   case OMPC_uniform:
   case OMPC_unknown:

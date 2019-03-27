@@ -789,8 +789,15 @@ namespace llvm {
     ///    L000F, refining for mask L0018. Will split the L00F0 lane into
     ///    L00E0 and L0010 and the L000F lane into L0007 and L0008. The Mod
     ///    function will be applied to the L0010 and L0008 subranges.
+    ///
+    /// \p Indexes and \p TRI are required to clean up the VNIs that
+    /// don't defne the related lane masks after they get shrunk. E.g.,
+    /// when L000F gets split into L0007 and L0008 maybe only a subset
+    /// of the VNIs that defined L000F defines L0007.
     void refineSubRanges(BumpPtrAllocator &Allocator, LaneBitmask LaneMask,
-                         std::function<void(LiveInterval::SubRange&)> Apply);
+                         std::function<void(LiveInterval::SubRange &)> Apply,
+                         const SlotIndexes &Indexes,
+                         const TargetRegisterInfo &TRI);
 
     bool operator<(const LiveInterval& other) const {
       const SlotIndex &thisIndex = beginIndex();

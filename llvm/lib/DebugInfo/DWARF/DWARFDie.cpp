@@ -396,6 +396,7 @@ DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
   // DWARF. This corresponds to following the DW_AT_abstract_origin and
   // DW_AT_specification just once.
   SmallSet<DWARFDie, 3> Seen;
+  Seen.insert(*this);
 
   while (!Worklist.empty()) {
     DWARFDie Die = Worklist.back();
@@ -404,19 +405,16 @@ DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
     if (!Die.isValid())
       continue;
 
-    if (Seen.count(Die))
-      continue;
-
-    Seen.insert(Die);
-
     if (auto Value = Die.find(Attrs))
       return Value;
 
     if (auto D = Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
-      Worklist.push_back(D);
+      if (Seen.insert(D).second)
+        Worklist.push_back(D);
 
     if (auto D = Die.getAttributeValueAsReferencedDie(DW_AT_specification))
-      Worklist.push_back(D);
+      if (Seen.insert(D).second)
+        Worklist.push_back(D);
   }
 
   return None;

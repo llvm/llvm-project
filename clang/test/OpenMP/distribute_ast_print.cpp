@@ -29,14 +29,14 @@ public:
   S7(typename T::type v) : a(v) {
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute private(a) private(this->a) private(T::a)
+#pragma omp distribute private(a) private(this->a) private(T::a) allocate(a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
   S7 &operator=(S7 &s) {
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute private(a) private(this->a)
+#pragma omp distribute allocate(a) private(a) private(this->a)
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
@@ -45,13 +45,13 @@ public:
 
 // CHECK: #pragma omp target
 // CHECK-NEXT: #pragma omp teams
-// CHECK-NEXT: #pragma omp distribute private(this->a) private(this->a) private(T::a)
+// CHECK-NEXT: #pragma omp distribute private(this->a) private(this->a) private(T::a) allocate(this->a)
 // CHECK: #pragma omp target
 // CHECK-NEXT: #pragma omp teams
-// CHECK-NEXT: #pragma omp distribute private(this->a) private(this->a)
+// CHECK-NEXT: #pragma omp distribute allocate(this->a) private(this->a) private(this->a)
 // CHECK: #pragma omp target
 // CHECK-NEXT: #pragma omp teams
-// CHECK-NEXT: #pragma omp distribute private(this->a) private(this->a) private(this->S::a)
+// CHECK-NEXT: #pragma omp distribute private(this->a) private(this->a) private(this->S::a) allocate(this->a)
 
 class S8 : public S7<S> {
   S8() {}

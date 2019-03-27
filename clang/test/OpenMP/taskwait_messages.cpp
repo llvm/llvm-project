@@ -4,7 +4,7 @@
 
 template <class T>
 T tmain(T argc) {
-#pragma omp taskwait
+#pragma omp taskwait allocate(argc) // expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp taskwait'}}
   ;
 #pragma omp taskwait untied  // expected-error {{unexpected OpenMP clause 'untied' in directive '#pragma omp taskwait'}}
 #pragma omp taskwait unknown // expected-warning {{extra tokens at the end of '#pragma omp taskwait' are ignored}}

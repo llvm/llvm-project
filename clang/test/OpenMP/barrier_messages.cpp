@@ -6,6 +6,7 @@ template <class T>
 T tmain(T argc) {
 #pragma omp barrier
   ;
+#pragma omp barrier allocate(argc)  // expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp barrier'}}
 #pragma omp barrier untied  // expected-error {{unexpected OpenMP clause 'untied' in directive '#pragma omp barrier'}}
 #pragma omp barrier unknown // expected-warning {{extra tokens at the end of '#pragma omp barrier' are ignored}}
   if (argc)

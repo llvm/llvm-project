@@ -167,8 +167,10 @@ public:
   /// For example: [100, 8).
   bool isWrappedSet() const;
 
-  /// Return true if this set wraps around the INT_MIN of
-  /// its bitwidth. For example: i8 [120, 140).
+  /// Return true if this set wraps around the signed domain. Special cases:
+  ///  * Empty set: Not wrapped.
+  ///  * Full set: Not wrapped.
+  ///  * [X, SignedMin) == [X, SignedMax]: Not wrapped.
   bool isSignWrappedSet() const;
 
   /// Return true if the specified value is in the set.
