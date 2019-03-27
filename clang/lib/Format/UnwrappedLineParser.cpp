@@ -1475,6 +1475,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
       return true;
     }
   }
+  FormatTok->Type = TT_LambdaLBrace;
   LSquare.Type = TT_LambdaLSquare;
   parseChildBlock();
   return true;

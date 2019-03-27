@@ -494,14 +494,23 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Propagate the -moutline flag to the linker in LTO.
-  if (Args.hasFlag(options::OPT_moutline, options::OPT_mno_outline, false)) {
-    if (getMachOToolChain().getMachOArchName(Args) == "arm64") {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-machine-outliner");
+  if (Arg *A =
+          Args.getLastArg(options::OPT_moutline, options::OPT_mno_outline)) {
+    if (A->getOption().matches(options::OPT_moutline)) {
+      if (getMachOToolChain().getMachOArchName(Args) == "arm64") {
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-enable-machine-outliner");
 
-      // Outline from linkonceodr functions by default in LTO.
+        // Outline from linkonceodr functions by default in LTO.
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-enable-linkonceodr-outlining");
+      }
+    } else {
+      // Disable all outlining behaviour if we have mno-outline. We need to do
+      // this explicitly, because targets which support default outlining will
+      // try to do work if we don't.
       CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-linkonceodr-outlining");
+      CmdArgs.push_back("-enable-machine-outliner=never");
     }
   }
 

@@ -140,6 +140,10 @@ End-user Options
  in the function prologue. Functions with dynamic stack allocations are not
  included.
 
+.. option:: -remarks-section
+
+ Emit the .remarks (ELF) / __remarks (MachO) section which contains metadata
+ about remark diagnostics.
 
 Tuning/Configuration Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

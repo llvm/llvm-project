@@ -301,7 +301,7 @@ bool ToolInvocation::run() {
       DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
 
   const std::unique_ptr<driver::Driver> Driver(
-      newDriver(&Diagnostics, BinaryName, Files->getVirtualFileSystem()));
+      newDriver(&Diagnostics, BinaryName, &Files->getVirtualFileSystem()));
   // The "input file not found" diagnostics from the driver are useful.
   // The driver is only aware of the VFS working directory, but some clients
   // change this at the FileManager level instead.

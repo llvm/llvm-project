@@ -168,10 +168,7 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
   switch (MO.getType()) {
   case MachineOperand::MO_Register: {
     // The MI is INLINEASM ONLY and UseVSXReg is always false.
-    unsigned Reg =
-        PPCInstrInfo::getRegNumForOperand(MI->getDesc(), MO.getReg(), OpNo);
-
-    const char *RegName = PPCInstPrinter::getRegisterName(Reg);
+    const char *RegName = PPCInstPrinter::getRegisterName(MO.getReg());
 
     // Linux assembler (Others?) does not take register mnemonics.
     // FIXME - What about special registers used in mfspr/mtspr?
