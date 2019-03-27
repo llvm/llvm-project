@@ -168,27 +168,22 @@ def GET_GROUPSTATICSIZE : SPseudoInstSI <(outs SReg_32:$sdst), (ins),
   [(set SReg_32:$sdst, (int_amdgcn_groupstaticsize))]>;
 } // End let usesCustomInserter = 1, SALU = 1
 
-def S_MOV_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
-   (ins SSrc_b64:$src0)> {
-  let isAsCheapAsAMove = 1;
+// Wrap an instruction by duplicating it, except for setting isTerminator.
+class WrapTerminatorInst<SOP_Pseudo base_inst> : SPseudoInstSI<
+      base_inst.OutOperandList,
+      base_inst.InOperandList> {
+  let Uses = base_inst.Uses;
+  let Defs = base_inst.Defs;
   let isTerminator = 1;
-  let hasSideEffects = 0;
+  let isAsCheapAsAMove = base_inst.isAsCheapAsAMove;
+  let hasSideEffects = base_inst.hasSideEffects;
+  let UseNamedOperandTable = base_inst.UseNamedOperandTable;
+  let CodeSize = base_inst.CodeSize;
 }
 
-def S_XOR_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
-   (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
-  let isAsCheapAsAMove = 1;
-  let isTerminator = 1;
-  let hasSideEffects = 0;
-  let Defs = [SCC];
-}
-
-def S_ANDN2_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
-   (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
-  let isAsCheapAsAMove = 1;
-  let isTerminator = 1;
-  let hasSideEffects = 0;
-}
+def S_MOV_B64_term : WrapTerminatorInst<S_MOV_B64>;
+def S_XOR_B64_term : WrapTerminatorInst<S_XOR_B64>;
+def S_ANDN2_B64_term : WrapTerminatorInst<S_ANDN2_B64>;
 
 def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_wave_barrier)]> {
@@ -197,7 +192,6 @@ def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   let hasSideEffects = 1;
   let mayLoad = 1;
   let mayStore = 1;
-  let isBarrier = 1;
   let isConvergent = 1;
   let FixedSize = 1;
   let Size = 0;

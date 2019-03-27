@@ -102,27 +102,27 @@ export function activate(context: vscode.ExtensionContext) {
         revealOutputChannelOn: vscodelc.RevealOutputChannelOn.Never
     };
 
-  const clangdClient = new vscodelc.LanguageClient('Clang Language Server', serverOptions, clientOptions);
-  console.log('Clang Language Server is now active!');
-  context.subscriptions.push(clangdClient.start());
-  context.subscriptions.push(vscode.commands.registerCommand(
-      'clangd-vscode.switchheadersource', async () => {
-        const uri =
-            vscode.Uri.file(vscode.window.activeTextEditor.document.fileName);
-        if (!uri) {
-          return;
-        }
-        const docIdentifier =
-            vscodelc.TextDocumentIdentifier.create(uri.toString());
-        const sourceUri = await clangdClient.sendRequest(
-            SwitchSourceHeaderRequest.type, docIdentifier);
-        if (!sourceUri) {
-          return;
-        }
-        const doc = await vscode.workspace.openTextDocument(
-            vscode.Uri.parse(sourceUri));
-        vscode.window.showTextDocument(doc);
-      }));
+    const clangdClient = new vscodelc.LanguageClient('Clang Language Server',serverOptions, clientOptions);
+    console.log('Clang Language Server is now active!');
+    context.subscriptions.push(clangdClient.start());
+    context.subscriptions.push(vscode.commands.registerCommand(
+        'clangd-vscode.switchheadersource', async () => {
+            const uri =
+                vscode.Uri.file(vscode.window.activeTextEditor.document.fileName);
+            if (!uri) {
+                return;
+            }
+            const docIdentifier =
+                vscodelc.TextDocumentIdentifier.create(uri.toString());
+            const sourceUri = await clangdClient.sendRequest(
+                SwitchSourceHeaderRequest.type, docIdentifier);
+            if (!sourceUri) {
+                return;
+            }
+            const doc = await vscode.workspace.openTextDocument(
+                vscode.Uri.parse(sourceUri));
+            vscode.window.showTextDocument(doc);
+        }));
     const status = new FileStatus();
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(() => {
         status.updateStatus();
@@ -139,4 +139,8 @@ export function activate(context: vscode.ExtensionContext) {
                 status.clear();
             }
         })
+    // An empty place holder for the activate command, otherwise we'll get an
+    // "command is not registered" error.
+    context.subscriptions.push(vscode.commands.registerCommand(
+            'clangd-vscode.activate', async () => {}));
 }

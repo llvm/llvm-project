@@ -295,6 +295,92 @@ public:
   }
 };
 
+/// This represents clause 'allocate' in the '#pragma omp ...' directives.
+///
+/// \code
+/// #pragma omp parallel private(a) allocate(omp_default_mem_alloc :a)
+/// \endcode
+/// In this example directive '#pragma omp parallel' has clause 'private'
+/// and clause 'allocate' for the variable 'a'.
+class OMPAllocateClause final
+    : public OMPVarListClause<OMPAllocateClause>,
+      private llvm::TrailingObjects<OMPAllocateClause, Expr *> {
+  friend class OMPClauseReader;
+  friend OMPVarListClause;
+  friend TrailingObjects;
+
+  /// Allocator specified in the clause, or 'nullptr' if the default one is
+  /// used.
+  Expr *Allocator = nullptr;
+  /// Position of the ':' delimiter in the clause;
+  SourceLocation ColonLoc;
+
+  /// Build clause with number of variables \a N.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param Allocator Allocator expression.
+  /// \param ColonLoc Location of ':' delimiter.
+  /// \param EndLoc Ending location of the clause.
+  /// \param N Number of the variables in the clause.
+  OMPAllocateClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                    Expr *Allocator, SourceLocation ColonLoc,
+                    SourceLocation EndLoc, unsigned N)
+      : OMPVarListClause<OMPAllocateClause>(OMPC_allocate, StartLoc, LParenLoc,
+                                            EndLoc, N),
+        Allocator(Allocator), ColonLoc(ColonLoc) {}
+
+  /// Build an empty clause.
+  ///
+  /// \param N Number of variables.
+  explicit OMPAllocateClause(unsigned N)
+      : OMPVarListClause<OMPAllocateClause>(OMPC_allocate, SourceLocation(),
+                                            SourceLocation(), SourceLocation(),
+                                            N) {}
+
+  /// Sets location of ':' symbol in clause.
+  void setColonLoc(SourceLocation CL) { ColonLoc = CL; }
+
+  void setAllocator(Expr *A) { Allocator = A; }
+
+public:
+  /// Creates clause with a list of variables \a VL.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param Allocator Allocator expression.
+  /// \param ColonLoc Location of ':' delimiter.
+  /// \param EndLoc Ending location of the clause.
+  /// \param VL List of references to the variables.
+  /// \param PrivateVL List of references to private copies with initializers.
+  static OMPAllocateClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                                   SourceLocation LParenLoc, Expr *Allocator,
+                                   SourceLocation ColonLoc,
+                                   SourceLocation EndLoc, ArrayRef<Expr *> VL);
+
+  /// Returns the allocator expression or nullptr, if no allocator is specified.
+  Expr *getAllocator() const { return Allocator; }
+
+  /// Returns the location of the ':' delimiter.
+  SourceLocation getColonLoc() const { return ColonLoc; }
+
+  /// Creates an empty clause with the place for \a N variables.
+  ///
+  /// \param C AST context.
+  /// \param N The number of variables.
+  static OMPAllocateClause *CreateEmpty(const ASTContext &C, unsigned N);
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_allocate;
+  }
+};
+
 /// This represents 'if' clause in the '#pragma omp ...' directive.
 ///
 /// \code

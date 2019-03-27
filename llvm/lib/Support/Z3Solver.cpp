@@ -603,6 +603,76 @@ public:
                                                     toZ3Expr(*Exp).AST)));
   }
 
+  /// Creates a predicate that checks for overflow in a bitvector addition
+  /// operation
+  SMTExprRef mkBVAddNoOverflow(const SMTExprRef &LHS, const SMTExprRef &RHS,
+                               bool isSigned) override {
+    return newExprRef(Z3Expr(
+        Context, Z3_mk_bvadd_no_overflow(Context.Context, toZ3Expr(*LHS).AST,
+                                         toZ3Expr(*RHS).AST, isSigned)));
+  }
+
+  /// Creates a predicate that checks for underflow in a signed bitvector
+  /// addition operation
+  SMTExprRef mkBVAddNoUnderflow(const SMTExprRef &LHS,
+                                const SMTExprRef &RHS) override {
+    return newExprRef(Z3Expr(
+        Context, Z3_mk_bvadd_no_underflow(Context.Context, toZ3Expr(*LHS).AST,
+                                          toZ3Expr(*RHS).AST)));
+  }
+
+  /// Creates a predicate that checks for overflow in a signed bitvector
+  /// subtraction operation
+  SMTExprRef mkBVSubNoOverflow(const SMTExprRef &LHS,
+                               const SMTExprRef &RHS) override {
+    return newExprRef(Z3Expr(
+        Context, Z3_mk_bvsub_no_overflow(Context.Context, toZ3Expr(*LHS).AST,
+                                         toZ3Expr(*RHS).AST)));
+  }
+
+  /// Creates a predicate that checks for underflow in a bitvector subtraction
+  /// operation
+  SMTExprRef mkBVSubNoUnderflow(const SMTExprRef &LHS, const SMTExprRef &RHS,
+                                bool isSigned) override {
+    return newExprRef(Z3Expr(
+        Context, Z3_mk_bvsub_no_underflow(Context.Context, toZ3Expr(*LHS).AST,
+                                          toZ3Expr(*RHS).AST, isSigned)));
+  }
+
+  /// Creates a predicate that checks for overflow in a signed bitvector
+  /// division/modulus operation
+  SMTExprRef mkBVSDivNoOverflow(const SMTExprRef &LHS,
+                                const SMTExprRef &RHS) override {
+    return newExprRef(Z3Expr(
+        Context, Z3_mk_bvsdiv_no_overflow(Context.Context, toZ3Expr(*LHS).AST,
+                                          toZ3Expr(*RHS).AST)));
+  }
+
+  /// Creates a predicate that checks for overflow in a bitvector negation
+  /// operation
+  SMTExprRef mkBVNegNoOverflow(const SMTExprRef &Exp) override {
+    return newExprRef(Z3Expr(
+        Context, Z3_mk_bvneg_no_overflow(Context.Context, toZ3Expr(*Exp).AST)));
+  }
+
+  /// Creates a predicate that checks for overflow in a bitvector multiplication
+  /// operation
+  SMTExprRef mkBVMulNoOverflow(const SMTExprRef &LHS, const SMTExprRef &RHS,
+                               bool isSigned) override {
+    return newExprRef(Z3Expr(
+        Context, Z3_mk_bvmul_no_overflow(Context.Context, toZ3Expr(*LHS).AST,
+                                         toZ3Expr(*RHS).AST, isSigned)));
+  }
+
+  /// Creates a predicate that checks for underflow in a signed bitvector
+  /// multiplication operation
+  SMTExprRef mkBVMulNoUnderflow(const SMTExprRef &LHS,
+                                const SMTExprRef &RHS) override {
+    return newExprRef(Z3Expr(
+        Context, Z3_mk_bvmul_no_underflow(Context.Context, toZ3Expr(*LHS).AST,
+                                          toZ3Expr(*RHS).AST)));
+  }
+
   SMTExprRef mkBVConcat(const SMTExprRef &LHS, const SMTExprRef &RHS) override {
     return newExprRef(
         Z3Expr(Context, Z3_mk_concat(Context.Context, toZ3Expr(*LHS).AST,

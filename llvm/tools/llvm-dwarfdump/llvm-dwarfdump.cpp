@@ -159,7 +159,7 @@ static opt<unsigned long long> Lookup("lookup",
                 "available file, function, block and line table details."),
            value_desc("address"), cat(DwarfDumpCategory));
 static opt<std::string>
-    OutputFilename("out-file", cl::init(""),
+    OutputFilename("out-file", cl::init("-"),
                    cl::desc("Redirect output to the specified file."),
                    cl::value_desc("filename"));
 static alias OutputFilenameAlias("o", desc("Alias for -out-file."),
@@ -586,17 +586,12 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  std::unique_ptr<ToolOutputFile> OutputFile;
-  if (!OutputFilename.empty()) {
-    std::error_code EC;
-    OutputFile = llvm::make_unique<ToolOutputFile>(OutputFilename, EC,
-                                                     sys::fs::F_None);
-    error("Unable to open output file" + OutputFilename, EC);
-    // Don't remove output file if we exit with an error.
-    OutputFile->keep();
-  }
+  std::error_code EC;
+  ToolOutputFile OutputFile(OutputFilename, EC, sys::fs::OF_None);
+  error("Unable to open output file" + OutputFilename, EC);
+  // Don't remove output file if we exit with an error.
+  OutputFile.keep();
 
-  raw_ostream &OS = OutputFile ? OutputFile->os() : outs();
   bool OffsetRequested = false;
 
   // Defaults to dumping all sections, unless brief mode is specified in which
@@ -640,15 +635,15 @@ int main(int argc, char **argv) {
   if (Verify) {
     // If we encountered errors during verify, exit with a non-zero exit status.
     if (!all_of(Objects, [&](std::string Object) {
-          return handleFile(Object, verifyObjectFile, OS);
+          return handleFile(Object, verifyObjectFile, OutputFile.os());
         }))
-      exit(1);
+      return 1;
   } else if (Statistics)
     for (auto Object : Objects)
-      handleFile(Object, collectStatsForObjectFile, OS);
+      handleFile(Object, collectStatsForObjectFile, OutputFile.os());
   else
     for (auto Object : Objects)
-      handleFile(Object, dumpObjectFile, OS);
+      handleFile(Object, dumpObjectFile, OutputFile.os());
 
   return EXIT_SUCCESS;
 }

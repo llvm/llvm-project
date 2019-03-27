@@ -11,6 +11,11 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchWaveOffsetReg: '$sgpr4'
+  frameOffsetReg:  '$sgpr4'
+
 registers:
   - { id: 0, class: vreg_128 }
   - { id: 1, class: vreg_128 }
@@ -92,6 +97,10 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchWaveOffsetReg: '$sgpr4'
+  frameOffsetReg:  '$sgpr4'
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
   - { id: 1, class: vgpr_32, preferred-register: '' }
@@ -130,8 +139,7 @@ body:             |
     BUFFER_STORE_DWORD_OFFEN %6.sub1, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, 0, implicit $exec
     BUFFER_STORE_DWORD_OFFEN %6.sub0, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
     $sgpr30_sgpr31 = COPY %5
-    $sgpr5 = COPY $sgpr5
-    S_SETPC_B64_return $sgpr30_sgpr31, implicit $sgpr5
+    S_SETPC_B64_return $sgpr30_sgpr31
 
 ...
 

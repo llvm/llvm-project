@@ -167,12 +167,19 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
     // Skip read2 / write2 variants for simplicity.
     // TODO: We should report true if the used offsets are adjacent (excluded
     // st64 versions).
-    if (AMDGPU::getNamedOperandIdx(Opc0, AMDGPU::OpName::data1) != -1 ||
-        AMDGPU::getNamedOperandIdx(Opc1, AMDGPU::OpName::data1) != -1)
+    int Offset0Idx = AMDGPU::getNamedOperandIdx(Opc0, AMDGPU::OpName::offset);
+    int Offset1Idx = AMDGPU::getNamedOperandIdx(Opc1, AMDGPU::OpName::offset);
+    if (Offset0Idx == -1 || Offset1Idx == -1)
       return false;
 
-    Offset0 = cast<ConstantSDNode>(Load0->getOperand(1))->getZExtValue();
-    Offset1 = cast<ConstantSDNode>(Load1->getOperand(1))->getZExtValue();
+    // XXX - be careful of datalesss loads
+    // getNamedOperandIdx returns the index for MachineInstrs.  Since they
+    // include the output in the operand list, but SDNodes don't, we need to
+    // subtract the index by one.
+    Offset0Idx -= get(Opc0).NumDefs;
+    Offset1Idx -= get(Opc1).NumDefs;
+    Offset0 = cast<ConstantSDNode>(Load0->getOperand(Offset0Idx))->getZExtValue();
+    Offset1 = cast<ConstantSDNode>(Load1->getOperand(Offset1Idx))->getZExtValue();
     return true;
   }
 
@@ -219,8 +226,8 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
     // getNamedOperandIdx returns the index for MachineInstrs.  Since they
     // include the output in the operand list, but SDNodes don't, we need to
     // subtract the index by one.
-    --OffIdx0;
-    --OffIdx1;
+    OffIdx0 -= get(Opc0).NumDefs;
+    OffIdx1 -= get(Opc1).NumDefs;
 
     SDValue Off0 = Load0->getOperand(OffIdx0);
     SDValue Off1 = Load1->getOperand(OffIdx1);

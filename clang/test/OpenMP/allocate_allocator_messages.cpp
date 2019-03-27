@@ -7,7 +7,8 @@ struct St{
 };
 
 int sss;
-#pragma omp allocate(sss) allocate // expected-warning {{extra tokens at the end of '#pragma omp allocate' are ignored}}
+#pragma omp allocate(sss) allocat // expected-warning {{extra tokens at the end of '#pragma omp allocate' are ignored}}
+#pragma omp allocate(sss) allocate(sss) // expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp allocate'}}
 #pragma omp allocate(sss) allocator // expected-error {{expected '(' after 'allocator'}}
 #pragma omp allocate(sss) allocator(0,  // expected-error {{expected ')'}} expected-error {{omp_allocator_handle_t type not found; include <omp.h>}} expected-note {{to match this '('}}
 #pragma omp allocate(sss) allocator(0,sss  // expected-error {{expected ')'}} expected-error {{omp_allocator_handle_t type not found; include <omp.h>}} expected-note {{to match this '('}}

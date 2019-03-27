@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
   }
 #pragma omp sections
   {
-#pragma omp cancel parallel // expected-error {{region cannot be closely nested inside 'sections' region}}
+#pragma omp cancel parallel allocate(argc) // expected-error {{region cannot be closely nested inside 'sections' region}} expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp cancel'}}
   }
   while (argc)
 #pragma omp cancel for // expected-error {{'#pragma omp cancel' cannot be an immediate substatement}} expected-error {{orphaned 'omp cancel' directives are prohibited; perhaps you forget to enclose the directive into a region?}}

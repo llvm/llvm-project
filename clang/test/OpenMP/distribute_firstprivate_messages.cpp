@@ -54,6 +54,8 @@ public:
   S6() : a(0) { }
 };
 
+extern int omp_default_mem_alloc;
+
 S3 h;
 #pragma omp threadprivate(h) // expected-note {{defined as threadprivate or thread local}}
 
@@ -85,7 +87,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target
   #pragma omp teams
-  #pragma omp distribute firstprivate (argc)
+  #pragma omp distribute firstprivate (argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target
   #pragma omp teams

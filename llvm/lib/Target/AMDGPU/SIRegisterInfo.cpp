@@ -257,11 +257,20 @@ bool SIRegisterInfo::requiresFrameIndexScavenging(
 
 bool SIRegisterInfo::requiresFrameIndexReplacementScavenging(
   const MachineFunction &MF) const {
-  // m0 is needed for the scalar store offset. m0 is unallocatable, so we can't
-  // create a virtual register for it during frame index elimination, so the
-  // scavenger is directly needed.
-  return MF.getFrameInfo().hasStackObjects() &&
-         MF.getSubtarget<GCNSubtarget>().hasScalarStores() &&
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.hasStackObjects())
+    return false;
+
+  // The scavenger is used for large frames which may require finding a free
+  // register for large offsets.
+  if (!isUInt<12>(MFI.getStackSize()))
+    return true;
+
+  // If using scalar stores, for spills, m0 is needed for the scalar store
+  // offset (pre-GFX9). m0 is unallocatable, so we can't create a virtual
+  // register for it during frame index elimination, so the scavenger is
+  // directly needed.
+  return MF.getSubtarget<GCNSubtarget>().hasScalarStores() &&
          MF.getInfo<SIMachineFunctionInfo>()->hasSpilledSGPRs();
 }
 
