@@ -123,6 +123,7 @@ public:
 
   bool adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
                                         uint8_t StOther) const override;
+  uint32_t getThunkSectionSpacing() const override;
 };
 } // namespace
 
@@ -924,6 +925,13 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
 
   return true;
 }
+
+
+uint32_t PPC64::getThunkSectionSpacing() const {
+  // REL14 range
+  return 0x8000;
+}
+
 
 TargetInfo *elf::getPPC64TargetInfo() {
   static PPC64 Target;
