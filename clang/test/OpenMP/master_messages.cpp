@@ -28,7 +28,7 @@ int main() {
   #pragma omp single
   for (int i = 0; i < 10; ++i) {
     foo();
-    #pragma omp master // expected-error {{region cannot be closely nested inside 'single' region}}
+    #pragma omp master allocate(i) // expected-error {{region cannot be closely nested inside 'single' region}} expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp master'}}
     foo();
   }
   #pragma omp master

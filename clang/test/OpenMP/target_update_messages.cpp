@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   #pragma omp target update to(m) ] // expected-warning {{extra tokens at the end of '#pragma omp target update' are ignored}}
   #pragma omp target update to(m) ) // expected-warning {{extra tokens at the end of '#pragma omp target update' are ignored}}
 
-  #pragma omp target update from(m) // OK
+  #pragma omp target update from(m) allocate(m) // expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp target update'}}
   {
     foo();
   }

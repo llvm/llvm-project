@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s
 
+extern int omp_default_mem_alloc;
 void foo() {
 }
 
@@ -207,7 +208,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target reduction(~ : argc) // expected-error {{expected unqualified-id}}
   foo();
-#pragma omp target reduction(&& : argc)
+#pragma omp target reduction(&& : argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   foo();
 #pragma omp target reduction(^ : S1) // expected-error {{'S1' does not refer to a value}}
   foo();

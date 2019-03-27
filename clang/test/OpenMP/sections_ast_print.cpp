@@ -18,12 +18,12 @@ T tmain(T argc) {
   static T a;
 // CHECK: static T a;
 #pragma omp parallel
-#pragma omp sections private(argc, b), firstprivate(c, d), lastprivate(d, f) reduction(- : g) nowait
+#pragma omp sections private(argc, b), firstprivate(c, d), lastprivate(d, f) reduction(- : g) nowait allocate(d)
   {
     foo();
   }
   // CHECK-NEXT: #pragma omp parallel
-  // CHECK-NEXT: #pragma omp sections private(argc,b) firstprivate(c,d) lastprivate(d,f) reduction(-: g) nowait{{$}}
+  // CHECK-NEXT: #pragma omp sections private(argc,b) firstprivate(c,d) lastprivate(d,f) reduction(-: g) nowait allocate(d){{$}}
   // CHECK-NEXT: {
   // CHECK-NEXT: foo();
   // CHECK-NEXT: }
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
   static int a;
 // CHECK: static int a;
 #pragma omp parallel
-#pragma omp sections private(argc, b), firstprivate(argv, c), lastprivate(d, f) reduction(+ : g) nowait
+#pragma omp sections allocate(c) private(argc, b), firstprivate(argv, c), lastprivate(d, f) reduction(+ : g) nowait
   {
 #pragma omp section
     foo();
@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
     foo();
   }
   // CHECK-NEXT: #pragma omp parallel
-  // CHECK-NEXT: #pragma omp sections private(argc,b) firstprivate(argv,c) lastprivate(d,f) reduction(+: g) nowait
+  // CHECK-NEXT: #pragma omp sections allocate(c) private(argc,b) firstprivate(argv,c) lastprivate(d,f) reduction(+: g) nowait
   // CHECK-NEXT: {
   // CHECK-NEXT: #pragma omp section{{$}}
   // CHECK-NEXT: foo();

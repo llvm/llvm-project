@@ -2336,6 +2336,10 @@ static SDValue getAsCarry(const TargetLowering &TLI, SDValue V) {
       V.getOpcode() != ISD::UADDO && V.getOpcode() != ISD::USUBO)
     return SDValue();
 
+  EVT VT = V.getNode()->getValueType(0);
+  if (!TLI.isOperationLegalOrCustom(V.getOpcode(), VT))
+    return SDValue();
+
   // If the result is masked, then no matter what kind of bool it is we can
   // return. If it isn't, then we need to make sure the bool type is either 0 or
   // 1 and not other values.

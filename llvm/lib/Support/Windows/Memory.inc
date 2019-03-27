@@ -135,8 +135,9 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
 
   DWORD Protect = getWindowsProtectionFlags(Flags);
 
+  size_t AllocSize = NumBlocks * Granularity;
   void *PA = ::VirtualAlloc(reinterpret_cast<void *>(Start),
-                            NumBlocks * Granularity, AllocType, Protect);
+                            AllocSize, AllocType, Protect);
   if (PA == NULL) {
     if (NearBlock || HugePages) {
       // Try again without the NearBlock hint and without large memory pages
@@ -148,11 +149,11 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
 
   MemoryBlock Result;
   Result.Address = PA;
-  Result.Size = NumBlocks*Granularity;
+  Result.Size = NumBytes;
   Result.Flags = (Flags & ~MF_HUGE_HINT) | (HugePages ? MF_HUGE_HINT : 0);
 
   if (Flags & MF_EXEC)
-    Memory::InvalidateInstructionCache(Result.Address, Result.Size);
+    Memory::InvalidateInstructionCache(Result.Address, AllocSize);
 
   return Result;
 }

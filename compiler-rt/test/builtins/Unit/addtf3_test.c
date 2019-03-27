@@ -11,12 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <fenv.h>
+#include "int_lib.h"
 #include <stdio.h>
 
 #if __LDBL_MANT_DIG__ == 113
 
-#include "int_lib.h"
 #include "fp_test.h"
 
 // Returns: a + b
@@ -74,26 +73,6 @@ int main()
                      UINT64_C(0x40042afc95c8b579),
                      UINT64_C(0x61e58dd6c51eb77c)))
         return 1;
-
-#if (defined(__arm__) || defined(__aarch64__)) && defined(__ARM_FP)
-    // Rounding mode tests on supported architectures
-    long double m = 1234.0L, n = 0.01L;
-    fesetround(FE_UPWARD);
-    if (__addtf3(m, n) != 1235.0L)
-        return 1;
-
-    fesetround(FE_DOWNWARD);
-    if (__addtf3(m, n) != 1234.0L)
-        return 1;
-
-    fesetround(FE_TOWARDZERO);
-    if (__addtf3(m, n) != 1234.0L)
-        return 1;
-
-    fesetround(FE_TONEAREST);
-    if (__addtf3(m, n) != 1234.0L)
-        return 1;
-#endif
 
 #else
     printf("skipped\n");

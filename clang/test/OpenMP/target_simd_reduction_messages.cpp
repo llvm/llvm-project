@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s
 
+extern int omp_default_mem_alloc;
 void foo() {
 }
 
@@ -124,7 +125,7 @@ T tmain(T argc) {
 #pragma omp target simd reduction(foo : argc) //expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}} expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp target simd reduction(&& : argc)
+#pragma omp target simd reduction(&& : argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp target simd reduction(^ : T) // expected-error {{'T' does not refer to a value}}

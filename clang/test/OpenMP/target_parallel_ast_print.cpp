@@ -41,9 +41,9 @@ T tmain(T argc, T *argv) {
   T i, j, a[20];
 #pragma omp target parallel
   h=2;
-#pragma omp target parallel default(none), private(argc,b) firstprivate(argv) shared (d) if (parallel:argc > 0) num_threads(C) proc_bind(master) reduction(+:c, arr1[argc]) reduction(max:e, arr[:C][0:10])
+#pragma omp target parallel allocate(argv) default(none), private(argc,b) firstprivate(argv) shared (d) if (parallel:argc > 0) num_threads(C) proc_bind(master) reduction(+:c, arr1[argc]) reduction(max:e, arr[:C][0:10])
   foo();
-#pragma omp target parallel if (C) num_threads(s) proc_bind(close) reduction(^:e, f, arr[0:C][:argc]) reduction(&& : g)
+#pragma omp target parallel if (C) num_threads(s) proc_bind(close) reduction(^:e, f, arr[0:C][:argc]) reduction(&& : g) allocate(g)
   foo();
 #pragma omp target parallel if (target:argc > 0)
   foo();
@@ -76,9 +76,9 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: T i, j, a[20]
 // CHECK-NEXT: #pragma omp target parallel{{$}}
 // CHECK-NEXT: h = 2;
-// CHECK-NEXT: #pragma omp target parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(C) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:C][0:10])
+// CHECK-NEXT: #pragma omp target parallel allocate(argv) default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(C) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:C][0:10])
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel if(C) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:C][:argc]) reduction(&&: g)
+// CHECK-NEXT: #pragma omp target parallel if(C) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:C][:argc]) reduction(&&: g) allocate(g)
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target parallel if(target: argc > 0)
 // CHECK-NEXT: foo()
@@ -108,9 +108,9 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: int i, j, a[20]
 // CHECK-NEXT: #pragma omp target parallel
 // CHECK-NEXT: h = 2;
-// CHECK-NEXT: #pragma omp target parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(5) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:5][0:10])
+// CHECK-NEXT: #pragma omp target parallel allocate(argv) default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(5) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:5][0:10])
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel if(5) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:5][:argc]) reduction(&&: g)
+// CHECK-NEXT: #pragma omp target parallel if(5) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:5][:argc]) reduction(&&: g) allocate(g)
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target parallel if(target: argc > 0)
 // CHECK-NEXT: foo()
@@ -140,9 +140,9 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: char i, j, a[20]
 // CHECK-NEXT: #pragma omp target parallel
 // CHECK-NEXT: h = 2;
-// CHECK-NEXT: #pragma omp target parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(1) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:1][0:10])
+// CHECK-NEXT: #pragma omp target parallel allocate(argv) default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(1) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:1][0:10])
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel if(1) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:1][:argc]) reduction(&&: g)
+// CHECK-NEXT: #pragma omp target parallel if(1) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:1][:argc]) reduction(&&: g) allocate(g)
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target parallel if(target: argc > 0)
 // CHECK-NEXT: foo()

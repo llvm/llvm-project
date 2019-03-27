@@ -74,6 +74,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_allocator:
+  case OMPC_allocate:
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_shared:
@@ -85,7 +86,6 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
-  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -147,6 +147,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_allocator:
+  case OMPC_allocate:
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_shared:
@@ -158,7 +159,6 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
-  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -699,6 +699,25 @@ OMPInReductionClause *OMPInReductionClause::CreateEmpty(const ASTContext &C,
                                                         unsigned N) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(6 * N));
   return new (Mem) OMPInReductionClause(N);
+}
+
+OMPAllocateClause *
+OMPAllocateClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                          SourceLocation LParenLoc, Expr *Allocator,
+                          SourceLocation ColonLoc, SourceLocation EndLoc,
+                          ArrayRef<Expr *> VL) {
+  // Allocate space for private variables and initializer expressions.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+  auto *Clause = new (Mem) OMPAllocateClause(StartLoc, LParenLoc, Allocator,
+                                             ColonLoc, EndLoc, VL.size());
+  Clause->setVarRefs(VL);
+  return Clause;
+}
+
+OMPAllocateClause *OMPAllocateClause::CreateEmpty(const ASTContext &C,
+                                                  unsigned N) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  return new (Mem) OMPAllocateClause(N);
 }
 
 OMPFlushClause *OMPFlushClause::Create(const ASTContext &C,
@@ -1262,6 +1281,21 @@ void OMPClausePrinter::VisitOMPClauseList(T *Node, char StartSym) {
     } else
       (*I)->printPretty(OS, nullptr, Policy, 0);
   }
+}
+
+void OMPClausePrinter::VisitOMPAllocateClause(OMPAllocateClause *Node) {
+  if (Node->varlist_empty())
+    return;
+  OS << "allocate";
+  if (Expr *Allocator = Node->getAllocator()) {
+    OS << "(";
+    Allocator->printPretty(OS, nullptr, Policy, 0);
+    OS << ":";
+    VisitOMPClauseList(Node, ' ');
+  } else {
+    VisitOMPClauseList(Node, '(');
+  }
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPPrivateClause(OMPPrivateClause *Node) {
