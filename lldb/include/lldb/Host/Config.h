@@ -13,6 +13,8 @@
 
 // This block of code only exists to keep the Xcode project working in the
 // absence of a configuration step.
+#define LLDB_LIBDIR_SUFFIX ""
+
 #define LLDB_CONFIG_TERMIOS_SUPPORTED 1
 
 #define LLDB_EDITLINE_USE_WCHAR 1
