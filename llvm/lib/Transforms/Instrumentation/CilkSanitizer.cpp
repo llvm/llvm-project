@@ -85,6 +85,11 @@ static cl::opt<bool>
         "ignore-inaccessible-memory", cl::init(false), cl::Hidden,
         cl::desc("Ignore inaccessible memory when checking for races."));
 
+static cl::opt<bool>
+    AssumeNoExceptions(
+        "cilksan-assume-no-exceptions", cl::init(false), cl::Hidden,
+        cl::desc("Assume that ordinary calls cannot throw exceptions."));
+
 static const char *const CsiUnitObjTableName = "__csi_unit_obj_table";
 static const char *const CsiUnitObjTableArrayName = "__csi_unit_obj_tables";
 
@@ -1849,7 +1854,8 @@ bool CilkSanitizerImpl::prepareToInstrumentFunction(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F))
     return false;
 
-  setupCalls(F);
+  if (!AssumeNoExceptions)
+    setupCalls(F);
   setupBlocks(F);
 
   SmallVector<Instruction *, 8> AllLoadsAndStores;
