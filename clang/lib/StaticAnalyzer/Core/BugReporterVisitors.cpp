@@ -161,8 +161,8 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
 /// are the immediate snapshots of the tracked region's bindings within the
 /// node's respective states but not really checking that these snapshots
 /// actually contain the same set of bindings.
-bool hasVisibleUpdate(const ExplodedNode *LeftNode, SVal LeftVal,
-                      const ExplodedNode *RightNode, SVal RightVal) {
+static bool hasVisibleUpdate(const ExplodedNode *LeftNode, SVal LeftVal,
+                             const ExplodedNode *RightNode, SVal RightVal) {
   if (LeftVal == RightVal)
     return true;
 

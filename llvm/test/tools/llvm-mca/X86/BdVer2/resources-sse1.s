@@ -212,7 +212,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      9     1.00    *                   cvtpi2ps	(%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00                        cvtps2pi	%xmm0, %mm2
 # CHECK-NEXT:  1      9     1.00    *                   cvtps2pi	(%rax), %mm2
-# CHECK-NEXT:  2      14    1.00                        cvtsi2ssl	%ecx, %xmm2
+# CHECK-NEXT:  2      13    1.00                        cvtsi2ssl	%ecx, %xmm2
 # CHECK-NEXT:  2      13    1.00                        cvtsi2ssq	%rcx, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   cvtsi2ssl	(%rax), %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   cvtsi2ssl	(%rax), %xmm2
@@ -249,7 +249,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   movhps	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00           *            movlps	%xmm0, (%rax)
 # CHECK-NEXT:  1      7     0.50    *                   movlps	(%rax), %xmm2
-# CHECK-NEXT:  2      10    1.00                        movmskps	%xmm0, %ecx
+# CHECK-NEXT:  2      12    1.00                        movmskps	%xmm0, %ecx
 # CHECK-NEXT:  1      3     1.00           *            movntps	%xmm0, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *      U     movntq	%mm0, (%rax)
 # CHECK-NEXT:  1      2     0.50                        movss	%xmm0, %xmm2
@@ -268,7 +268,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   pavgb	(%rax), %mm2
 # CHECK-NEXT:  1      2     0.50                        pavgw	%mm0, %mm2
 # CHECK-NEXT:  1      7     0.50    *                   pavgw	(%rax), %mm2
-# CHECK-NEXT:  2      13    1.00                        pextrw	$1, %mm0, %ecx
+# CHECK-NEXT:  2      12    1.00                        pextrw	$1, %mm0, %ecx
 # CHECK-NEXT:  2      12    0.50                        pinsrw	$1, %eax, %mm2
 # CHECK-NEXT:  2      6     0.50    *                   pinsrw	$1, (%rax), %mm2
 # CHECK-NEXT:  1      2     0.50                        pmaxsw	%mm0, %mm2
@@ -279,7 +279,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   pminsw	(%rax), %mm2
 # CHECK-NEXT:  1      2     0.50                        pminub	%mm0, %mm2
 # CHECK-NEXT:  1      7     0.50    *                   pminub	(%rax), %mm2
-# CHECK-NEXT:  2      13    1.00                        pmovmskb	%xmm0, %ecx
+# CHECK-NEXT:  2      12    1.00                        pmovmskb	%xmm0, %ecx
 # CHECK-NEXT:  1      4     1.00                        pmulhuw	%mm0, %mm2
 # CHECK-NEXT:  1      9     1.00    *                   pmulhuw	(%rax), %mm2
 # CHECK-NEXT:  1      5     0.50    *      *            prefetcht0	(%rax)

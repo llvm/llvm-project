@@ -353,7 +353,6 @@ public:
   /// \param ColonLoc Location of ':' delimiter.
   /// \param EndLoc Ending location of the clause.
   /// \param VL List of references to the variables.
-  /// \param PrivateVL List of references to private copies with initializers.
   static OMPAllocateClause *Create(const ASTContext &C, SourceLocation StartLoc,
                                    SourceLocation LParenLoc, Expr *Allocator,
                                    SourceLocation ColonLoc,

@@ -274,6 +274,9 @@ public:
                            StringRef &SectionName,
                            unsigned &SectionIndex) const;
   std::string getStaticSymbolName(uint32_t Index) const;
+	StringRef getSymbolVersionByIndex(StringRef StrTab,
+	                                  uint32_t VersionSymbolIndex,
+                                    bool &IsDefault) const;
 
   void printSymbolsHelper(bool IsDynamic) const;
   const Elf_Shdr *getDotSymtabSec() const { return DotSymtabSec; }
@@ -627,51 +630,25 @@ template <class ELFT> void ELFDumper<ELFT>::LoadVersionMap() const {
 
 template <typename ELFT>
 StringRef ELFDumper<ELFT>::getSymbolVersion(StringRef StrTab,
-                                            const Elf_Sym *symb,
+                                            const Elf_Sym *Sym,
                                             bool &IsDefault) const {
   // This is a dynamic symbol. Look in the GNU symbol version table.
   if (!dot_gnu_version_sec) {
     // No version table.
     IsDefault = false;
-    return StringRef("");
+    return "";
   }
 
   // Determine the position in the symbol table of this entry.
-  size_t entry_index = (reinterpret_cast<uintptr_t>(symb) -
+  size_t EntryIndex = (reinterpret_cast<uintptr_t>(Sym) -
                         reinterpret_cast<uintptr_t>(DynSymRegion.Addr)) /
                        sizeof(Elf_Sym);
 
-  // Get the corresponding version index entry
-  const Elf_Versym *vs = unwrapOrError(
-      ObjF->getELFFile()->template getEntry<Elf_Versym>(dot_gnu_version_sec, entry_index));
-  size_t version_index = vs->vs_index & ELF::VERSYM_VERSION;
-
-  // Special markers for unversioned symbols.
-  if (version_index == ELF::VER_NDX_LOCAL ||
-      version_index == ELF::VER_NDX_GLOBAL) {
-    IsDefault = false;
-    return StringRef("");
-  }
-
-  // Lookup this symbol in the version table
-  LoadVersionMap();
-  if (version_index >= VersionMap.size() || VersionMap[version_index].isNull())
-    reportError("Invalid version entry");
-  const VersionMapEntry &entry = VersionMap[version_index];
-
-  // Get the version name string
-  size_t name_offset;
-  if (entry.isVerdef()) {
-    // The first Verdaux entry holds the name.
-    name_offset = entry.getVerdef()->getAux()->vda_name;
-    IsDefault = !(vs->vs_index & ELF::VERSYM_HIDDEN);
-  } else {
-    name_offset = entry.getVernaux()->vna_name;
-    IsDefault = false;
-  }
-  if (name_offset >= StrTab.size())
-    reportError("Invalid string offset");
-  return StringRef(StrTab.data() + name_offset);
+  // Get the corresponding version index entry.
+  const Elf_Versym *Versym =
+      unwrapOrError(ObjF->getELFFile()->template getEntry<Elf_Versym>(
+          dot_gnu_version_sec, EntryIndex));
+  return this->getSymbolVersionByIndex(StrTab, Versym->vs_index, IsDefault);
 }
 
 static std::string maybeDemangle(StringRef Name) {
@@ -687,6 +664,39 @@ std::string ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
     reportError("Invalid symbol index");
   const Elf_Sym *Sym = &Syms[Index];
   return maybeDemangle(unwrapOrError(Sym->getName(StrTable)));
+}
+
+template <typename ELFT>
+StringRef ELFDumper<ELFT>::getSymbolVersionByIndex(
+    StringRef StrTab, uint32_t SymbolVersionIndex, bool &IsDefault) const {
+  size_t VersionIndex = SymbolVersionIndex & VERSYM_VERSION;
+
+  // Special markers for unversioned symbols.
+  if (VersionIndex == VER_NDX_LOCAL ||
+      VersionIndex == VER_NDX_GLOBAL) {
+    IsDefault = false;
+    return "";
+  }
+
+  // Lookup this symbol in the version table.
+  LoadVersionMap();
+  if (VersionIndex >= VersionMap.size() || VersionMap[VersionIndex].isNull())
+    reportError("Invalid version entry");
+  const VersionMapEntry &Entry = VersionMap[VersionIndex];
+
+  // Get the version name string.
+  size_t NameOffset;
+  if (Entry.isVerdef()) {
+    // The first Verdaux entry holds the name.
+    NameOffset = Entry.getVerdef()->getAux()->vda_name;
+    IsDefault = !(SymbolVersionIndex & VERSYM_HIDDEN);
+  } else {
+    NameOffset = Entry.getVernaux()->vna_name;
+    IsDefault = false;
+  }
+  if (NameOffset >= StrTab.size())
+    reportError("Invalid string offset");
+  return StrTab.data() + NameOffset;
 }
 
 template <typename ELFT>

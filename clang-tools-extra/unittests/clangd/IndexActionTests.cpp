@@ -29,6 +29,8 @@ MATCHER(IsTU, "") { return arg.IsTU; }
 
 MATCHER_P(HasDigest, Digest, "") { return arg.Digest == Digest; }
 
+MATCHER_P(HasName, Name, "") { return arg.Name == Name; }
+
 MATCHER(HasSameURI, "") {
   llvm::StringRef URI = testing::get<0>(arg);
   const std::string &Path = testing::get<1>(arg);
@@ -43,6 +45,7 @@ IncludesAre(const std::vector<std::string> &Includes) {
 
 void checkNodesAreInitialized(const IndexFileIn &IndexFile,
                               const std::vector<std::string> &Paths) {
+  ASSERT_TRUE(IndexFile.Sources);
   EXPECT_THAT(Paths.size(), IndexFile.Sources->size());
   for (llvm::StringRef Path : Paths) {
     auto URI = toUri(Path);
@@ -222,6 +225,27 @@ TEST_F(IndexActionTest, IncludeGraphDynamicInclude) {
                      HasDigest(digest(MainCode)))),
           Pair(toUri(HeaderPath), AllOf(Not(IsTU()), IncludesAre({}),
                                         HasDigest(digest(HeaderCode))))));
+}
+
+TEST_F(IndexActionTest, NoWarnings) {
+  std::string MainFilePath = testPath("main.cpp");
+  std::string MainCode = R"cpp(
+      void foo(int x) {
+        if (x = 1) // -Wparentheses
+          return;
+        if (x = 1) // -Wparentheses
+          return;
+      }
+      void bar() {}
+  )cpp";
+  addFile(MainFilePath, MainCode);
+  // We set -ferror-limit so the warning-promoted-to-error would be fatal.
+  // This would cause indexing to stop (if warnings weren't disabled).
+  IndexFileIn IndexFile = runIndexingAction(
+      MainFilePath, {"-ferror-limit=1", "-Wparentheses", "-Werror"});
+  ASSERT_TRUE(IndexFile.Sources);
+  ASSERT_NE(0u, IndexFile.Sources->size());
+  EXPECT_THAT(*IndexFile.Symbols, ElementsAre(HasName("foo"), HasName("bar")));
 }
 
 } // namespace

@@ -75,9 +75,9 @@ WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // WebAssemblyFixupKinds.h.
       //
       // Name                     Offset (bits) Size (bits)     Flags
-      {"fixup_code_sleb128_i32", 0, 5 * 8, 0},
-      {"fixup_code_sleb128_i64", 0, 10 * 8, 0},
-      {"fixup_code_uleb128_i32", 0, 5 * 8, 0},
+      {"fixup_sleb128_i32", 0, 5 * 8, 0},
+      {"fixup_sleb128_i64", 0, 10 * 8, 0},
+      {"fixup_uleb128_i32", 0, 5 * 8, 0},
   };
 
   if (Kind < FirstTargetFixupKind)

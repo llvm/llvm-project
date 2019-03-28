@@ -34302,37 +34302,39 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
     return SDValue();
 
   // For 32/64 bit comparisons use MOVMSKPS/MOVMSKPD, else PMOVMSKB.
-  MVT MaskVT;
+  MVT MaskSrcVT;
   if (64 == BitWidth || 32 == BitWidth)
-    MaskVT = MVT::getVectorVT(MVT::getFloatingPointVT(BitWidth),
-                              MatchSizeInBits / BitWidth);
+    MaskSrcVT = MVT::getVectorVT(MVT::getFloatingPointVT(BitWidth),
+                                 MatchSizeInBits / BitWidth);
   else
-    MaskVT = MVT::getVectorVT(MVT::i8, MatchSizeInBits / 8);
+    MaskSrcVT = MVT::getVectorVT(MVT::i8, MatchSizeInBits / 8);
 
-  APInt CompareBits;
+  SDLoc DL(Extract);
+  SDValue CmpC;
   ISD::CondCode CondCode;
   if (BinOp == ISD::OR) {
     // any_of -> MOVMSK != 0
-    CompareBits = APInt::getNullValue(32);
+    CmpC = DAG.getConstant(0, DL, MVT::i32);
     CondCode = ISD::CondCode::SETNE;
   } else {
     // all_of -> MOVMSK == ((1 << NumElts) - 1)
-    CompareBits = APInt::getLowBitsSet(32, MaskVT.getVectorNumElements());
+    uint64_t NumElts = MaskSrcVT.getVectorNumElements();
+    assert(NumElts <= 32 && "Not expecting more than 32 elements");
+    CmpC = DAG.getConstant((1ULL << NumElts) - 1, DL, MVT::i32);
     CondCode = ISD::CondCode::SETEQ;
   }
 
-  // Perform the select as i32/i64 and then truncate to avoid partial register
-  // stalls.
-  unsigned ResWidth = std::max(BitWidth, 32u);
-  EVT ResVT = EVT::getIntegerVT(*DAG.getContext(), ResWidth);
-  SDLoc DL(Extract);
-  SDValue Zero = DAG.getConstant(0, DL, ResVT);
-  SDValue Ones = DAG.getAllOnesConstant(DL, ResVT);
-  SDValue Res = DAG.getBitcast(MaskVT, Match);
-  Res = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Res);
-  Res = DAG.getSelectCC(DL, Res, DAG.getConstant(CompareBits, DL, MVT::i32),
-                        Ones, Zero, CondCode);
-  return DAG.getSExtOrTrunc(Res, DL, ExtractVT);
+  // The setcc produces an i8 of 0/1, so extend that to the result width and
+  // negate to get the final 0/-1 mask value.
+  SDValue BitcastLogicOp = DAG.getBitcast(MaskSrcVT, Match);
+  SDValue Movmsk = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, BitcastLogicOp);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT SetccVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                       MVT::i32);
+  SDValue Setcc = DAG.getSetCC(DL, SetccVT, Movmsk, CmpC, CondCode);
+  SDValue Zext = DAG.getZExtOrTrunc(Setcc, DL, ExtractVT);
+  SDValue Zero = DAG.getConstant(0, DL, ExtractVT);
+  return DAG.getNode(ISD::SUB, DL, ExtractVT, Zero, Zext);
 }
 
 static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,

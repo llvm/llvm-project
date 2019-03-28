@@ -21,8 +21,6 @@
 #include <cstdlib>
 #include <cassert>
 
-#include <iostream>
-
 std::recursive_timed_mutex m;
 
 typedef std::chrono::system_clock Clock;

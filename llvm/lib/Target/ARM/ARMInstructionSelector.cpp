@@ -111,7 +111,6 @@ private:
     unsigned MOVCCi;
 
     // Used for G_SELECT
-    unsigned CMPri;
     unsigned MOVCCr;
 
     unsigned TSTri;
@@ -319,7 +318,6 @@ ARMInstructionSelector::OpcodeCache::OpcodeCache(const ARMSubtarget &STI) {
   STORE_OPCODE(MOVi, MOVi);
   STORE_OPCODE(MOVCCi, MOVCCi);
 
-  STORE_OPCODE(CMPri, CMPri);
   STORE_OPCODE(MOVCCr, MOVCCr);
 
   STORE_OPCODE(TSTri, TSTri);
@@ -767,13 +765,13 @@ bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
   auto InsertBefore = std::next(MIB->getIterator());
   auto &DbgLoc = MIB->getDebugLoc();
 
-  // Compare the condition to 0.
+  // Compare the condition to 1.
   auto CondReg = MIB->getOperand(1).getReg();
   assert(validReg(MRI, CondReg, 1, ARM::GPRRegBankID) &&
          "Unsupported types for select operation");
-  auto CmpI = BuildMI(MBB, InsertBefore, DbgLoc, TII.get(Opcodes.CMPri))
+  auto CmpI = BuildMI(MBB, InsertBefore, DbgLoc, TII.get(Opcodes.TSTri))
                   .addUse(CondReg)
-                  .addImm(0)
+                  .addImm(1)
                   .add(predOps(ARMCC::AL));
   if (!constrainSelectedInstRegOperands(*CmpI, TII, TRI, RBI))
     return false;
@@ -1049,6 +1047,24 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     const auto NewOpc = selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize);
     if (NewOpc == G_LOAD || NewOpc == G_STORE)
       return false;
+
+    if (ValSize == 1 && NewOpc == Opcodes.STORE8) {
+      // Before storing a 1-bit value, make sure to clear out any unneeded bits.
+      unsigned OriginalValue = I.getOperand(0).getReg();
+
+      unsigned ValueToStore = MRI.createVirtualRegister(&ARM::GPRRegClass);
+      I.getOperand(0).setReg(ValueToStore);
+
+      auto InsertBefore = I.getIterator();
+      auto AndI = BuildMI(MBB, InsertBefore, I.getDebugLoc(), TII.get(Opcodes.AND))
+        .addDef(ValueToStore)
+        .addUse(OriginalValue)
+        .addImm(1)
+        .add(predOps(ARMCC::AL))
+        .add(condCodeOp());
+      if (!constrainSelectedInstRegOperands(*AndI, TII, TRI, RBI))
+        return false;
+    }
 
     I.setDesc(TII.get(NewOpc));
 

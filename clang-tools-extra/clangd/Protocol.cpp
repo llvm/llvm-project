@@ -938,16 +938,19 @@ bool fromJSON(const llvm::json::Value &Params, ReferenceParams &R) {
   return fromJSON(Params, Base);
 }
 
-llvm::json::Value toJSON(const OffsetEncoding &OE) {
+static const char *toString(OffsetEncoding OE) {
   switch (OE) {
-    case OffsetEncoding::UTF8:
-      return "utf-8";
-    case OffsetEncoding::UTF16:
-      return "utf-16";
-    case OffsetEncoding::UnsupportedEncoding:
-      return "unknown";
+  case OffsetEncoding::UTF8:
+    return "utf-8";
+  case OffsetEncoding::UTF16:
+    return "utf-16";
+  case OffsetEncoding::UTF32:
+    return "utf-32";
+  case OffsetEncoding::UnsupportedEncoding:
+    return "unknown";
   }
 }
+llvm::json::Value toJSON(const OffsetEncoding &OE) { return toString(OE); }
 bool fromJSON(const llvm::json::Value &V, OffsetEncoding &OE) {
   auto Str = V.getAsString();
   if (!Str)
@@ -955,8 +958,12 @@ bool fromJSON(const llvm::json::Value &V, OffsetEncoding &OE) {
   OE = llvm::StringSwitch<OffsetEncoding>(*Str)
            .Case("utf-8", OffsetEncoding::UTF8)
            .Case("utf-16", OffsetEncoding::UTF16)
+           .Case("utf-32", OffsetEncoding::UTF32)
            .Default(OffsetEncoding::UnsupportedEncoding);
   return true;
+}
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OffsetEncoding Enc) {
+  return OS << toString(Enc);
 }
 
 } // namespace clangd

@@ -2453,6 +2453,27 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   return false;
 }
 
+bool SIInstrInfo::mayReadEXEC(const MachineRegisterInfo &MRI,
+                              const MachineInstr &MI) const {
+  if (MI.isMetaInstruction())
+    return false;
+
+  // This won't read exec if this is an SGPR->SGPR copy.
+  if (MI.isCopyLike()) {
+    if (!RI.isSGPRReg(MRI, MI.getOperand(0).getReg()))
+      return true;
+
+    // Make sure this isn't copying exec as a normal operand
+    return MI.readsRegister(AMDGPU::EXEC, &RI);
+  }
+
+  // Be conservative with any unhandled generic opcodes.
+  if (!isTargetSpecificOpcode(MI.getOpcode()))
+    return true;
+
+  return !isSALU(MI) || MI.readsRegister(AMDGPU::EXEC, &RI);
+}
+
 bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
   switch (Imm.getBitWidth()) {
   case 32:

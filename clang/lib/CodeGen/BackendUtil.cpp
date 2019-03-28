@@ -914,9 +914,10 @@ static PassBuilder::OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
   }
 }
 
-void addSanitizersAtO0(ModulePassManager &MPM, const Triple &TargetTriple,
-                       const LangOptions &LangOpts,
-                       const CodeGenOptions &CodeGenOpts) {
+static void addSanitizersAtO0(ModulePassManager &MPM,
+                              const Triple &TargetTriple,
+                              const LangOptions &LangOpts,
+                              const CodeGenOptions &CodeGenOpts) {
   if (LangOpts.Sanitize.has(SanitizerKind::Address)) {
     MPM.addPass(RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
     bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Address);

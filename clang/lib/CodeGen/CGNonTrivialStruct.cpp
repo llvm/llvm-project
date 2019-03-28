@@ -139,8 +139,8 @@ struct CopyStructVisitor : StructVisitor<Derived>,
 // <alignment-info> ::= <dst-alignment> ["_" <src-alignment>]
 // <struct-field-info> ::= <field-info>+
 // <field-info> ::= <struct-or-scalar-field-info> | <array-field-info>
-// <struct-or-scalar-field-info> ::= <struct-field-info> | <strong-field-info> |
-//                                   <trivial-field-info>
+// <struct-or-scalar-field-info> ::= "_S" <struct-field-info> |
+//                                   <strong-field-info> | <trivial-field-info>
 // <array-field-info> ::= "_AB" <array-offset> "s" <element-size> "n"
 //                        <num-elements> <innermost-element-info> "_AE"
 // <innermost-element-info> ::= <struct-or-scalar-field-info>
@@ -175,6 +175,7 @@ template <class Derived> struct GenFuncNameBase {
   void visitStruct(QualType QT, const FieldDecl *FD,
                    CharUnits CurStructOffset) {
     CharUnits FieldOffset = CurStructOffset + asDerived().getFieldOffset(FD);
+    appendStr("_S");
     asDerived().visitStructFields(QT, FieldOffset);
   }
 
