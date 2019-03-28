@@ -13,7 +13,7 @@
 #include <functional>
 
 #include "utils.h"
-#include "numeric_impl.h"
+#include "numeric_fwd.h"
 
 namespace std
 {
