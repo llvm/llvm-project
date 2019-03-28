@@ -127,7 +127,7 @@ define i32 @xfoo(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; SHLD64-LABEL: xfoo:
 ; SHLD64:       # %bb.0: # %entry
 ; SHLD64-NEXT:    movl %edi, %eax
-; SHLD64-NEXT:    shldl $7, %edi, %eax
+; SHLD64-NEXT:    shldl $7, %eax, %eax
 ; SHLD64-NEXT:    retq
 ;
 ; BMI264-LABEL: xfoo:
@@ -233,7 +233,7 @@ define i32 @xun(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; SHLD64-LABEL: xun:
 ; SHLD64:       # %bb.0: # %entry
 ; SHLD64-NEXT:    movl %edi, %eax
-; SHLD64-NEXT:    shldl $25, %edi, %eax
+; SHLD64-NEXT:    shldl $25, %eax, %eax
 ; SHLD64-NEXT:    retq
 ;
 ; BMI264-LABEL: xun:
@@ -341,7 +341,7 @@ define i32 @fshl(i32 %x) nounwind {
 ; SHLD64-LABEL: fshl:
 ; SHLD64:       # %bb.0:
 ; SHLD64-NEXT:    movl %edi, %eax
-; SHLD64-NEXT:    shldl $7, %edi, %eax
+; SHLD64-NEXT:    shldl $7, %eax, %eax
 ; SHLD64-NEXT:    retq
 ;
 ; BMI264-LABEL: fshl:
@@ -380,7 +380,7 @@ define i32 @fshl1(i32 %x) nounwind {
 ; SHLD64-LABEL: fshl1:
 ; SHLD64:       # %bb.0:
 ; SHLD64-NEXT:    movl %edi, %eax
-; SHLD64-NEXT:    shldl $1, %edi, %eax
+; SHLD64-NEXT:    shldl $1, %eax, %eax
 ; SHLD64-NEXT:    retq
 ;
 ; BMI264-LABEL: fshl1:
@@ -418,7 +418,7 @@ define i32 @fshl31(i32 %x) nounwind {
 ; SHLD64-LABEL: fshl31:
 ; SHLD64:       # %bb.0:
 ; SHLD64-NEXT:    movl %edi, %eax
-; SHLD64-NEXT:    shldl $31, %edi, %eax
+; SHLD64-NEXT:    shldl $31, %eax, %eax
 ; SHLD64-NEXT:    retq
 ;
 ; BMI264-LABEL: fshl31:
@@ -498,7 +498,7 @@ define i32 @fshr(i32 %x) nounwind {
 ; SHLD64-LABEL: fshr:
 ; SHLD64:       # %bb.0:
 ; SHLD64-NEXT:    movl %edi, %eax
-; SHLD64-NEXT:    shrdl $7, %edi, %eax
+; SHLD64-NEXT:    shrdl $7, %eax, %eax
 ; SHLD64-NEXT:    retq
 ;
 ; BMI264-LABEL: fshr:
@@ -537,7 +537,7 @@ define i32 @fshr1(i32 %x) nounwind {
 ; SHLD64-LABEL: fshr1:
 ; SHLD64:       # %bb.0:
 ; SHLD64-NEXT:    movl %edi, %eax
-; SHLD64-NEXT:    shrdl $1, %edi, %eax
+; SHLD64-NEXT:    shrdl $1, %eax, %eax
 ; SHLD64-NEXT:    retq
 ;
 ; BMI264-LABEL: fshr1:
@@ -575,7 +575,7 @@ define i32 @fshr31(i32 %x) nounwind {
 ; SHLD64-LABEL: fshr31:
 ; SHLD64:       # %bb.0:
 ; SHLD64-NEXT:    movl %edi, %eax
-; SHLD64-NEXT:    shrdl $31, %edi, %eax
+; SHLD64-NEXT:    shrdl $31, %eax, %eax
 ; SHLD64-NEXT:    retq
 ;
 ; BMI264-LABEL: fshr31:

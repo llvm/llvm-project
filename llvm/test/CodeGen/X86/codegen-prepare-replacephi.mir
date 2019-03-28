@@ -1,5 +1,7 @@
 # RUN: llc -run-pass=codegenprepare -o - %s | FileCheck %s
 
+# REQUIRES: default_triple
+
 # This testcase without the accompanying fix triggers the assert
 # "Replacement PHI node is already replaced."
 

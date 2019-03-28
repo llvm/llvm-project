@@ -22,7 +22,7 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::wasm;
 
-static StringRef reloctTypeToString(uint8_t RelocType) {
+StringRef lld::relocTypeToString(uint8_t RelocType) {
   switch (RelocType) {
 #define WASM_RELOC(NAME, REL)                                                  \
   case REL:                                                                    \
@@ -78,7 +78,7 @@ void InputChunk::verifyRelocTargets() const {
     if (Rel.Type != R_WASM_GLOBAL_INDEX_LEB) {
       uint32_t ExpectedValue = File->calcExpectedValue(Rel);
       if (ExpectedValue != ExistingValue)
-        warn("unexpected existing value for " + reloctTypeToString(Rel.Type) +
+        warn("unexpected existing value for " + relocTypeToString(Rel.Type) +
              ": existing=" + Twine(ExistingValue) +
              " expected=" + Twine(ExpectedValue));
     }
@@ -105,7 +105,7 @@ void InputChunk::writeTo(uint8_t *Buf) const {
   for (const WasmRelocation &Rel : Relocations) {
     uint8_t *Loc = Buf + Rel.Offset + Off;
     uint32_t Value = File->calcNewValue(Rel);
-    LLVM_DEBUG(dbgs() << "apply reloc: type=" << reloctTypeToString(Rel.Type)
+    LLVM_DEBUG(dbgs() << "apply reloc: type=" << relocTypeToString(Rel.Type)
                       << " addend=" << Rel.Addend << " index=" << Rel.Index
                       << " value=" << Value << " offset=" << Rel.Offset
                       << "\n");

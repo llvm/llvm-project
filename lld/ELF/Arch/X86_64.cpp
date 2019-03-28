@@ -171,7 +171,7 @@ void X86_64<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 
   write32le(Buf + 2, GotPltEntryAddr - PltEntryAddr - 6);
   write32le(Buf + 7, Index);
-  write32le(Buf + 12, -getPltEntryOffset(Index) - 16);
+  write32le(Buf + 12, -this->PltHeaderSize - this->PltEntrySize * Index - 16);
 }
 
 template <class ELFT> RelType X86_64<ELFT>::getDynRel(RelType Type) const {
@@ -632,7 +632,7 @@ void Retpoline<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
-  uint64_t Off = getPltEntryOffset(Index);
+  uint64_t Off = this->PltHeaderSize + this->PltEntrySize * Index;
 
   write32le(Buf + 3, GotPltEntryAddr - PltEntryAddr - 7);
   write32le(Buf + 8, -Off - 12 + 32);
@@ -675,7 +675,7 @@ void RetpolineZNow<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   memcpy(Buf, Insn, sizeof(Insn));
 
   write32le(Buf + 3, GotPltEntryAddr - PltEntryAddr - 7);
-  write32le(Buf + 8, -getPltEntryOffset(Index) - 12);
+  write32le(Buf + 8, -this->PltHeaderSize - this->PltEntrySize * Index - 12);
 }
 
 template <class ELFT> static TargetInfo *getTargetInfo() {

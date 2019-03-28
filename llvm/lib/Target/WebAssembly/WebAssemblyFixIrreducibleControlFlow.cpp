@@ -26,6 +26,7 @@
 /// single entry in the loop containing the previous multiple entries. After
 /// ensuring all the loops in a region are reducible, we recurse into them. The
 /// total time complexity of this pass is:
+///
 ///   O(NumBlocks * NumNestedLoops * NumIrreducibleLoops +
 ///     NumLoops * NumLoops)
 ///
@@ -38,6 +39,7 @@
 /// irreducibility. The graph algorithms for finding loops and entries and so
 /// forth are also similar to the Relooper. The main differences between this
 /// pass and the Relooper are:
+///
 ///  * We just care about irreducibility, so we just look at loops.
 ///  * The Relooper emits structured control flow (with ifs etc.), while we
 ///    emit a CFG.

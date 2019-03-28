@@ -65,7 +65,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       });
 
   getActionDefinitionsBuilder(G_PHI)
-      .legalFor({p0, s16, s32, s64})
+      .legalFor({p0, s16, s32, s64, v2s32, v4s32, v2s64})
       .clampScalar(0, s16, s64)
       .widenScalarToNextPow2(0);
 

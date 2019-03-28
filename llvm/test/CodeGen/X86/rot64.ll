@@ -77,7 +77,7 @@ define i64 @xfoo(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ; SHLD-LABEL: xfoo:
 ; SHLD:       # %bb.0: # %entry
 ; SHLD-NEXT:    movq %rdi, %rax
-; SHLD-NEXT:    shldq $7, %rdi, %rax
+; SHLD-NEXT:    shldq $7, %rax, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: xfoo:
@@ -139,7 +139,7 @@ define i64 @xun(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ; SHLD-LABEL: xun:
 ; SHLD:       # %bb.0: # %entry
 ; SHLD-NEXT:    movq %rdi, %rax
-; SHLD-NEXT:    shldq $57, %rdi, %rax
+; SHLD-NEXT:    shldq $57, %rax, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: xun:
@@ -201,7 +201,7 @@ define i64 @fshl(i64 %x) nounwind {
 ; SHLD-LABEL: fshl:
 ; SHLD:       # %bb.0:
 ; SHLD-NEXT:    movq %rdi, %rax
-; SHLD-NEXT:    shldq $7, %rdi, %rax
+; SHLD-NEXT:    shldq $7, %rax, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: fshl:
@@ -223,7 +223,7 @@ define i64 @fshl1(i64 %x) nounwind {
 ; SHLD-LABEL: fshl1:
 ; SHLD:       # %bb.0:
 ; SHLD-NEXT:    movq %rdi, %rax
-; SHLD-NEXT:    shldq $1, %rdi, %rax
+; SHLD-NEXT:    shldq $1, %rax, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: fshl1:
@@ -244,7 +244,7 @@ define i64 @fshl63(i64 %x) nounwind {
 ; SHLD-LABEL: fshl63:
 ; SHLD:       # %bb.0:
 ; SHLD-NEXT:    movq %rdi, %rax
-; SHLD-NEXT:    shldq $63, %rdi, %rax
+; SHLD-NEXT:    shldq $63, %rax, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: fshl63:
@@ -287,7 +287,7 @@ define i64 @fshr(i64 %x) nounwind {
 ; SHLD-LABEL: fshr:
 ; SHLD:       # %bb.0:
 ; SHLD-NEXT:    movq %rdi, %rax
-; SHLD-NEXT:    shrdq $7, %rdi, %rax
+; SHLD-NEXT:    shrdq $7, %rax, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: fshr:
@@ -309,7 +309,7 @@ define i64 @fshr1(i64 %x) nounwind {
 ; SHLD-LABEL: fshr1:
 ; SHLD:       # %bb.0:
 ; SHLD-NEXT:    movq %rdi, %rax
-; SHLD-NEXT:    shrdq $1, %rdi, %rax
+; SHLD-NEXT:    shrdq $1, %rax, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: fshr1:
@@ -330,7 +330,7 @@ define i64 @fshr63(i64 %x) nounwind {
 ; SHLD-LABEL: fshr63:
 ; SHLD:       # %bb.0:
 ; SHLD-NEXT:    movq %rdi, %rax
-; SHLD-NEXT:    shrdq $63, %rdi, %rax
+; SHLD-NEXT:    shrdq $63, %rax, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: fshr63:

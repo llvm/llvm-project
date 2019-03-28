@@ -201,10 +201,6 @@ static inline void reportRangeError(uint8_t *Loc, RelType Type, const Twine &V,
               ", " + Twine(Max).str() + "]" + Hint);
 }
 
-inline unsigned getPltEntryOffset(unsigned Idx) {
-  return Target->PltHeaderSize + Target->PltEntrySize * Idx;
-}
-
 // Make sure that V can be represented as an N bit signed integer.
 inline void checkInt(uint8_t *Loc, int64_t V, int N, RelType Type) {
   if (V != llvm::SignExtend64(V, N))
