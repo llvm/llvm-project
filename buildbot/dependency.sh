@@ -30,17 +30,21 @@ done && shift $(($OPTIND - 1))
 # we're in llvm.obj dir
 BUILD_DIR=${PWD}
 
-# Get changed build script files
-cd ${SRC_DIR}
-git fetch -t origin refs/pull/${PR_NUMBER}/merge
-exit_if_err $? "fail to get tags"
-git checkout -B refs/pull/${PR_NUMBER}/merge
-exit_if_err $? "fail to get tags"
-base_commit=`git merge-base origin/sycl refs/pull/${PR_NUMBER}/merge`
-exit_if_err $? "fail to get base commit"
+# Get changed build script files if it is PR
+if [ -n "${PR_NUMBER}" ];then
+    cd ${SRC_DIR}
+    git fetch origin sycl
+    exit_if_err $? "fail to get the latest changes in sycl branch"
+    git fetch -t origin refs/pull/${PR_NUMBER}/merge
+    exit_if_err $? "fail to get tags"
+    git checkout -B refs/pull/${PR_NUMBER}/merge
+    exit_if_err $? "fail to create branch for specific tag"
+    base_commit=`git merge-base origin/sycl refs/pull/${PR_NUMBER}/merge`
+    exit_if_err $? "fail to get base commit"
 
-BUILD_SCRIPT=`git --no-pager diff ${base_commit} refs/pull/${PR_NUMBER}/merge --name-only buildbot`
-cd -
+    BUILD_SCRIPT=`git --no-pager diff ${base_commit} refs/pull/${PR_NUMBER}/merge --name-only buildbot`
+    cd -
+fi
 
 ## Clean up build directory if build scripts has changed
 cd ${DST_DIR}
