@@ -13,26 +13,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/CodeGen/BlockGenerators.h"
-#include "polly/CodeGen/CodeGeneration.h"
 #include "polly/CodeGen/IslExprBuilder.h"
 #include "polly/CodeGen/RuntimeDebugBuilder.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
-#include "polly/Support/GICHelper.h"
-#include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopHelper.h"
 #include "polly/Support/VirtualInstruction.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "isl/aff.h"
 #include "isl/ast.h"
-#include "isl/ast_build.h"
-#include "isl/set.h"
 #include <deque>
 
 using namespace llvm;

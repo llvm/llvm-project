@@ -36,12 +36,7 @@
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "llvm/Support/CommandLine.h"
-#include "isl/flow.h"
 #include "isl/isl-noexceptions.h"
-#include "isl/map.h"
-#include "isl/set.h"
-#include "isl/union_map.h"
-#include "isl/union_set.h"
 
 using namespace llvm;
 using namespace polly;

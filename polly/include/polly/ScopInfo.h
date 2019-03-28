@@ -19,75 +19,31 @@
 
 #include "polly/ScopDetection.h"
 #include "polly/Support/SCEVAffinator.h"
-#include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/RegionPass.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Casting.h"
 #include "isl/isl-noexceptions.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <forward_list>
-#include <functional>
-#include <list>
-#include <map>
-#include <memory>
-#include <string>
-#include <tuple>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 
 namespace llvm {
-
-class AssumptionCache;
-class BasicBlock;
-class DataLayout;
-class DominatorTree;
-class Function;
-class Loop;
-class LoopInfo;
-class OptimizationRemarkEmitter;
-class PassRegistry;
-class raw_ostream;
-class ScalarEvolution;
-class SCEV;
-class Type;
-class Value;
-
 void initializeScopInfoRegionPassPass(PassRegistry &);
 void initializeScopInfoWrapperPassPass(PassRegistry &);
 } // end namespace llvm
 
-struct isl_map;
-struct isl_pw_multi_aff;
-struct isl_schedule;
-struct isl_set;
-struct isl_union_map;
-
 namespace polly {
 
 class MemoryAccess;
-class Scop;
-class ScopStmt;
 
 //===---------------------------------------------------------------------===//
 

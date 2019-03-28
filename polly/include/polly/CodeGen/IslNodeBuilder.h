@@ -17,47 +17,19 @@
 #include "polly/CodeGen/BlockGenerators.h"
 #include "polly/CodeGen/IslExprBuilder.h"
 #include "polly/ScopDetectionDiagnostic.h"
-#include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/InstrTypes.h"
 #include "isl/ctx.h"
 #include "isl/isl-noexceptions.h"
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace polly;
 
-namespace llvm {
-
-class BasicBlock;
-class DataLayout;
-class DominatorTree;
-class Function;
-class Instruction;
-class Loop;
-class LoopInfo;
-class ScalarEvolution;
-class SCEV;
-class Type;
-class Value;
-} // namespace llvm
-
 namespace polly {
 
 struct InvariantEquivClassTy;
-class MemoryAccess;
-class Scop;
-class ScopStmt;
 } // namespace polly
-
-struct isl_ast_node;
-struct isl_ast_build;
-struct isl_union_map;
 
 struct SubtreeReferences {
   LoopInfo &LI;
