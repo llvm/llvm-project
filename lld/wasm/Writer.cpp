@@ -118,6 +118,7 @@ private:
   std::vector<const WasmSignature *> Types;
   DenseMap<WasmSignature, int32_t> TypeIndices;
   std::vector<const Symbol *> ImportedSymbols;
+  std::vector<const Symbol *> GOTSymbols;
   unsigned NumImportedFunctions = 0;
   unsigned NumImportedGlobals = 0;
   unsigned NumImportedEvents = 0;
@@ -147,7 +148,7 @@ private:
 } // anonymous namespace
 
 void Writer::createImportSection() {
-  uint32_t NumImports = ImportedSymbols.size();
+  uint32_t NumImports = ImportedSymbols.size() + GOTSymbols.size();
   if (Config->ImportMemory)
     ++NumImports;
   if (Config->ImportTable)
@@ -204,9 +205,6 @@ void Writer::createImportSection() {
     if (auto *FunctionSym = dyn_cast<FunctionSymbol>(Sym)) {
       Import.Kind = WASM_EXTERNAL_FUNCTION;
       Import.SigIndex = lookupType(*FunctionSym->Signature);
-    } else if (auto *DataSym = dyn_cast<UndefinedData>(Sym)) {
-      Import.Kind = WASM_EXTERNAL_GLOBAL;
-      Import.Global = {WASM_TYPE_I32, true};
     } else if (auto *GlobalSym = dyn_cast<GlobalSymbol>(Sym)) {
       Import.Kind = WASM_EXTERNAL_GLOBAL;
       Import.Global = *GlobalSym->getGlobalType();
@@ -216,6 +214,18 @@ void Writer::createImportSection() {
       Import.Event.Attribute = EventSym->getEventType()->Attribute;
       Import.Event.SigIndex = lookupType(*EventSym->Signature);
     }
+    writeImport(OS, Import);
+  }
+
+  for (const Symbol *Sym : GOTSymbols) {
+    WasmImport Import;
+    Import.Kind = WASM_EXTERNAL_GLOBAL;
+    Import.Global = {WASM_TYPE_I32, true};
+    if (isa<DataSymbol>(Sym))
+      Import.Module = "GOT.mem";
+    else
+      Import.Module = "GOT.func";
+    Import.Field = Sym->getName();
     writeImport(OS, Import);
   }
 }
@@ -957,9 +967,9 @@ void Writer::calculateImports() {
       continue;
     if (!Sym->IsUsedInRegularObj)
       continue;
-    // In relocatable output we don't generate imports for data symbols.
-    // These live only in the symbol table.
-    if (Config->Relocatable && isa<DataSymbol>(Sym))
+    // We don't generate imports for data symbols. They however can be imported
+    // as GOT entries.
+    if (isa<DataSymbol>(Sym))
       continue;
 
     LLVM_DEBUG(dbgs() << "import: " << Sym->getName() << "\n");
@@ -968,8 +978,6 @@ void Writer::calculateImports() {
       F->setFunctionIndex(NumImportedFunctions++);
     else if (auto *G = dyn_cast<GlobalSymbol>(Sym))
       G->setGlobalIndex(NumImportedGlobals++);
-    else if (auto *D = dyn_cast<UndefinedData>(Sym))
-      D->setGlobalIndex(NumImportedGlobals++);
     else
       cast<EventSymbol>(Sym)->setEventIndex(NumImportedEvents++);
   }
@@ -1144,6 +1152,13 @@ void Writer::processRelocations(InputChunk *Chunk) {
               "against undefined data symbol: " +
               DataSym->getName());
       break;
+    }
+    case R_WASM_GLOBAL_INDEX_LEB: {
+      auto* Sym = File->getSymbols()[Reloc.Index];
+      if (!isa<GlobalSymbol>(Sym) && !Sym->isInGOT()) {
+        Sym->setGOTIndex(NumImportedGlobals++);
+        GOTSymbols.push_back(Sym);
+      }
     }
     }
   }

@@ -252,7 +252,6 @@ private:
   std::unique_ptr<llvm::pdb::IPDBSession> m_session_up;
   std::unique_ptr<llvm::pdb::PDBSymbolExe> m_global_scope_up;
   uint32_t m_cached_compile_unit_count;
-  std::unique_ptr<lldb_private::CompilerDeclContext> m_tu_decl_ctx_up;
 
   lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;
   lldb_private::UniqueCStringMap<uint32_t> m_func_base_names;

@@ -467,7 +467,7 @@ public:
   // TypeSystem methods
   //------------------------------------------------------------------
   DWARFASTParser *GetDWARFParser() override;
-  PDBASTParser *GetPDBParser();
+  PDBASTParser *GetPDBParser() override;
 
   //------------------------------------------------------------------
   // ClangASTContext callbacks for external source lookups.

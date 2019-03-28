@@ -27,9 +27,6 @@ public:
 
   llvm::Error Initialize() override;
   void Terminate() override;
-
-private:
-  void InitializeSWIG();
 };
 
 } // namespace lldb_private

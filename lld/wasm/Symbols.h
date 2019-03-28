@@ -113,6 +113,16 @@ public:
 
   const WasmSignature* getSignature() const;
 
+  bool isInGOT() const { return GOTIndex != INVALID_INDEX; }
+
+  uint32_t getGOTIndex() const {
+    assert(GOTIndex != INVALID_INDEX);
+    return GOTIndex;
+  }
+
+  void setGOTIndex(uint32_t Index);
+  bool hasGOTIndex() const { return GOTIndex != INVALID_INDEX; }
+
 protected:
   Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
       : IsUsedInRegularObj(false), ForceExport(false), Traced(false),
@@ -124,6 +134,7 @@ protected:
   uint32_t Flags;
   InputFile *File;
   uint32_t OutputSymbolIndex = INVALID_INDEX;
+  uint32_t GOTIndex = INVALID_INDEX;
   bool Referenced;
 };
 
@@ -249,21 +260,6 @@ public:
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedDataKind;
   }
-
-  // Undefined data symbols are imported as wasm globals so also have a global
-  // index.
-  uint32_t getGlobalIndex() const {
-    assert(GlobalIndex != INVALID_INDEX);
-    return GlobalIndex;
-  }
-  void setGlobalIndex(uint32_t Index) {
-    assert(GlobalIndex == INVALID_INDEX);
-    GlobalIndex = Index;
-  }
-  bool hasGlobalIndex() const { return GlobalIndex != INVALID_INDEX; }
-
-protected:
-  uint32_t GlobalIndex = INVALID_INDEX;
 };
 
 class GlobalSymbol : public Symbol {

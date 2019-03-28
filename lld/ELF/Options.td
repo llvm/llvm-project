@@ -274,6 +274,9 @@ defm print_icf_sections: B<"print-icf-sections",
     "List identical folded sections",
     "Do not list identical folded sections (default)">;
 
+defm print_symbol_order: Eq<"print-symbol-order",
+  "Print a symbol order specified by --call-graph-ordering-file into the speficied file">;
+
 def pop_state: F<"pop-state">,
   HelpText<"Undo the effect of -push-state">;
 

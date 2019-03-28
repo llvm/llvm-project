@@ -7,12 +7,10 @@
 # RUN: obj2yaml %t.unspecified.wasm | FileCheck %s --check-prefix UNSPECIFIED
 
 # RUN: yaml2obj %S/Inputs/disallow-feature-foo.yaml -o %t.disallowed.o
-# RUN: wasm-ld --no-entry -o %t.disallowed.wasm %t1.o %t.disallowed.o
-# RUN: obj2yaml %t.disallowed.wasm | FileCheck %s --check-prefix DISALLOWED
+# RUN: wasm-ld --no-entry -o - %t1.o %t.disallowed.o | obj2yaml | FileCheck %s --check-prefix DISALLOWED
 
 # RUN: yaml2obj %S/Inputs/no-feature-foo.yaml -o %t.none.o
-# RUN: wasm-ld --no-entry -o %t.none.wasm %t1.o %t.none.o
-# RUN: obj2yaml %t.none.wasm | FileCheck %s --check-prefix NONE
+# RUN: wasm-ld --no-entry -o - %t1.o %t.none.o | obj2yaml | FileCheck %s --check-prefix NONE
 
 # Check that the following combinations of feature linkage policies
 # give the expected results:

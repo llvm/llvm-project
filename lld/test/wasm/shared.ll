@@ -1,10 +1,11 @@
-; RUN: llc -O0 -filetype=obj %s -o %t.o
+; RUN: llc -relocation-model=pic -filetype=obj %s -o %t.o
 ; RUN: wasm-ld -shared -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 
 @data = hidden global i32 2, align 4
+@data_external = external global i32
 @indirect_func = local_unnamed_addr global i32 ()* @foo, align 4
 @indirect_func_external = local_unnamed_addr global void ()* @func_external, align 4
 
@@ -13,18 +14,22 @@ entry:
   ; To ensure we use __stack_pointer
   %ptr = alloca i32
   %0 = load i32, i32* @data, align 4
-  ; TODO(sbc): Re-enable once the codegen supports generating the correct
-  ; relocation type when referencing external data in shared libraries.
-  ; %1 = load i32, i32* @data_external, align 4
   %1 = load i32 ()*, i32 ()** @indirect_func, align 4
   call i32 %1()
   ret i32 %0
 }
 
+define default i32* @get_data_address() {
+entry:
+  ret i32* @data_external
+}
+
+define default i8* @get_func_address() {
+entry:
+  ret i8* bitcast (void ()* @func_external to i8*)
+}
+
 declare void @func_external()
-
-@data_external = external global i32
-
 
 ; check for dylink section at start
 
@@ -42,6 +47,11 @@ declare void @func_external()
 
 ; CHECK:        - Type:            IMPORT
 ; CHECK-NEXT:     Imports:
+; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           memory
+; CHECK-NEXT:         Kind:            MEMORY
+; CHECK-NEXT:         Memory:
+; CHECK-NEXT:           Initial:       0x0000000
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __indirect_function_table
 ; CHECK-NEXT:         Kind:            TABLE
@@ -64,15 +74,21 @@ declare void @func_external()
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         GlobalType:      I32
 ; CHECK-NEXT:         GlobalMutable:   false
-; XCHECK-NEXT:       - Module:          env
-; XCHECK-NEXT:         Field:           data_external
-; XCHECK-NEXT:         Kind:            GLOBAL
-; XCHECK-NEXT:         GlobalType:      I32
-; XCHECK-NEXT:         GlobalMutable:   true
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           func_external
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        1
+; CHECK-NEXT:       - Module:          GOT.mem
+; CHECK-NEXT:         Field:           data_external
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         GlobalType:      I32
+; CHECK-NEXT:         GlobalMutable:   true
+; CHECK-NEXT:       - Module:          GOT.func
+; CHECK-NEXT:         Field:           func_external
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         GlobalType:      I32
+; CHECK-NEXT:         GlobalMutable:   true
+; CHECK-NEXT:   - Type:            FUNCTION
 
 ; check for elem segment initialized with __table_base global as offset
 

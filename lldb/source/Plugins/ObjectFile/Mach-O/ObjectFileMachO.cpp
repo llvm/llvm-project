@@ -6435,13 +6435,6 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             mach_header.sizeofcmds += 8 + LC_THREAD_data.GetSize();
           }
 
-          printf("mach_header: 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x "
-                 "0x%8.8x 0x%8.8x\n",
-                 mach_header.magic, mach_header.cputype, mach_header.cpusubtype,
-                 mach_header.filetype, mach_header.ncmds,
-                 mach_header.sizeofcmds, mach_header.flags,
-                 mach_header.reserved);
-
           // Write the mach header
           buffer.PutHex32(mach_header.magic);
           buffer.PutHex32(mach_header.cputype);
