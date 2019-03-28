@@ -960,6 +960,7 @@ static swift::ASTContext *SetupASTContext(
   // Normally we'd like to verify, but unfortunately the verifier's
   // error mode is abort().
   swift_ast_context->GetIRGenOptions().Verify = false;
+  swift_ast_context->GetIRGenOptions().ForcePublicLinkage = true;
 
   swift_ast_context->GetIRGenOptions().DisableRoundTripDebugTypes = true;
   return ast_context;
@@ -1584,7 +1585,13 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                       ConstString(variable_info.GetName().str()), imported_type,
                       m_sc.target_sp->GetArchitecture().GetByteOrder(),
                       m_sc.target_sp->GetArchitecture().GetAddressByteSize()));
-
+          // Detect global resilient variables in a fixed value buffer.
+          // Globals without a fixed size are placed in a fixed-size buffer.
+          auto *var_decl = variable_info.GetDecl();
+          if (var_decl && var_decl->getDeclContext()->isModuleScopeContext())
+            if (!scratch_ast_context->IsFixedSize(imported_type))
+              persistent_variable->m_flags |=
+                  ExpressionVariable::EVIsSwiftFixedBuffer;
           if (repl) {
             persistent_variable->m_flags |= ExpressionVariable::EVKeepInTarget;
             persistent_variable->m_flags |=

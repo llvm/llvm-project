@@ -1677,24 +1677,26 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
                 failure.render().c_str());
 
   // Try remote mirrors.
-  if (!reflection_ctx)
-    return llvm::None;
-  ConstString mangled_name(instance_type.GetMangledTypeName());
-  StringRef mangled_no_prefix =
-      swift::Demangle::dropSwiftManglingPrefix(mangled_name.GetStringRef());
-  swift::Demangle::Demangler Dem;
-  auto demangled = Dem.demangleType(mangled_no_prefix);
-  auto *type_ref = swift::Demangle::decodeMangledType(
-      reflection_ctx->getBuilder(), demangled);
-  if (!type_ref)
-    return llvm::None;
-  auto type_info =
-      reflection_ctx->getBuilder().getTypeConverter().getTypeInfo(type_ref);
+  const swift::reflection::TypeInfo *type_info = GetTypeInfo(instance_type);
   if (!type_info)
     return llvm::None;
   auto record_type_info =
       llvm::dyn_cast<swift::reflection::RecordTypeInfo>(type_info);
   if (record_type_info) {
+    // Handle tuples.
+    if (record_type_info->getRecordKind() ==
+        swift::reflection::RecordKind::Tuple) {
+      unsigned tuple_idx;
+      if (member_name.GetStringRef().getAsInteger(10, tuple_idx) ||
+          tuple_idx >= record_type_info->getNumFields()) {
+        if (error)
+          error->SetErrorString("tuple index out of bounds");
+        return llvm::None;
+      }
+      return record_type_info->getFields()[tuple_idx].Offset;
+    }
+
+    // Handle other record types.
     for (auto &field : record_type_info->getFields()) {
       if (ConstString(field.Name) == member_name)
         return field.Offset;
@@ -2397,6 +2399,35 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
     break;
   }
   return addr;
+}
+
+const swift::reflection::TypeInfo *
+SwiftLanguageRuntime::GetTypeInfo(CompilerType type) {
+  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+  ConstString mangled_name(type.GetMangledTypeName());
+  StringRef mangled_no_prefix =
+      swift::Demangle::dropSwiftManglingPrefix(mangled_name.GetStringRef());
+  swift::Demangle::Demangler Dem;
+  auto demangled = Dem.demangleType(mangled_no_prefix);
+  auto *type_ref = swift::Demangle::decodeMangledType(
+      reflection_ctx->getBuilder(), demangled);
+  if (!type_ref)
+    return nullptr;
+  return reflection_ctx->getBuilder().getTypeConverter().getTypeInfo(type_ref);
+}
+
+bool SwiftLanguageRuntime::IsStoredInlineInBuffer(CompilerType type) {
+  auto *type_info = GetTypeInfo(type);
+  if (!type_info)
+    return true;
+  return type_info->isBitwiseTakable() && type_info->getSize() <= 24;
+}
+
+llvm::Optional<uint64_t> SwiftLanguageRuntime::GetBitSize(CompilerType type) {
+  auto *type_info = GetTypeInfo(type);
+  if (!type_info)
+    return {};
+  return type_info->getSize() * 8;
 }
 
 bool SwiftLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {

@@ -126,6 +126,7 @@ Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file,
   m_flags.compiler_type_resolve_state =
       (compiler_type ? compiler_type_resolve_state : eResolveStateUnresolved);
   m_flags.is_complete_objc_class = false;
+  m_flags.is_swift_fixed_value_buffer = false;
 }
 
 Type::Type()

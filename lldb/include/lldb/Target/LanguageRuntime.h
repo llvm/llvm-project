@@ -113,6 +113,10 @@ public:
     return addr;
   }
 
+  /// \return whether the dynamic value stored in a Swift fixed buffer
+  /// fits into that buffer or is indirect and allocated on the heap.
+  virtual bool IsStoredInlineInBuffer(CompilerType type) { return true; }
+
   virtual void SetExceptionBreakpoints() {}
 
   virtual void ClearExceptionBreakpoints() {}

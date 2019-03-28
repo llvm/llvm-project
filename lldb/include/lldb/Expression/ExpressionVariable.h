@@ -104,8 +104,9 @@ public:
                                 ///than the location
     EVUnknownType = 1 << 7, ///< This is a symbol of unknown type, and the type
                             ///must be resolved after parsing is complete
-    EVBareRegister = 1 << 8 ///< This variable is a direct reference to $pc or
-                            ///some other entity.
+    EVBareRegister = 1 << 8, ///< This variable is a direct reference to $pc or
+                             ///some other entity.
+    EVIsSwiftFixedBuffer = 1 << 9 ///< A Swift global in a fixed-size buffer.
   };
 
   typedef uint16_t FlagType;

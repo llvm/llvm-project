@@ -209,6 +209,17 @@ public:
     m_flags.is_complete_objc_class = is_complete_objc_class;
   }
 
+  /// \return whether this is a Swift fixed-size buffer. Resilient variables in
+  /// fixed-size buffers may be indirect depending on the runtime size of the
+  /// type. This is more a property of the value than of its type.
+  bool IsSwiftFixedValueBuffer() const {
+    return m_flags.is_swift_fixed_value_buffer;
+  }
+
+  void SetSwiftFixedValueBuffer(bool is_swift_fixed_value_buffer) {
+    m_flags.is_swift_fixed_value_buffer = is_swift_fixed_value_buffer;
+  }
+
 protected:
   ConstString m_name;
   SymbolFile *m_symbol_file;
@@ -230,6 +241,7 @@ protected:
     ResolveState compiler_type_resolve_state : 2;
 #endif
     bool is_complete_objc_class : 1;
+    bool is_swift_fixed_value_buffer : 1;
   } m_flags;
 
   Type *GetEncodingType();
