@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 #include "SourceCode.h"
 
+#include "Context.h"
 #include "Logger.h"
+#include "Protocol.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
@@ -67,8 +69,23 @@ static size_t measureUTF16(llvm::StringRef U8, int U16Units, bool &Valid) {
   return std::min(Result, U8.size());
 }
 
+Key<OffsetEncoding> kCurrentOffsetEncoding;
+static bool useUTF16ForLSP() {
+  auto *Enc = Context::current().get(kCurrentOffsetEncoding);
+  switch (Enc ? *Enc : OffsetEncoding::UTF16) {
+    case OffsetEncoding::UTF16:
+      return true;
+    case OffsetEncoding::UTF8:
+      return false;
+    case OffsetEncoding::UnsupportedEncoding:
+      llvm_unreachable("cannot use an unsupported encoding");
+  }
+}
+
 // Like most strings in clangd, the input is UTF-8 encoded.
 size_t lspLength(llvm::StringRef Code) {
+  if (!useUTF16ForLSP())
+    return Code.size();
   // A codepoint takes two UTF-16 code unit if it's astral (outside BMP).
   // Astral codepoints are encoded as 4 bytes in UTF-8, starting with 11110xxx.
   size_t Count = 0;
@@ -98,14 +115,25 @@ llvm::Expected<size_t> positionToOffset(llvm::StringRef Code, Position P,
           llvm::errc::invalid_argument);
     StartOfLine = NextNL + 1;
   }
+  StringRef Line =
+      Code.substr(StartOfLine).take_until([](char C) { return C == '\n'; });
 
-  size_t NextNL = Code.find('\n', StartOfLine);
-  if (NextNL == llvm::StringRef::npos)
-    NextNL = Code.size();
-
+  if (!useUTF16ForLSP()) {
+    // Bounds-checking only.
+    if (P.character > int(Line.size())) {
+      if (AllowColumnsBeyondLineLength)
+        return StartOfLine + Line.size();
+      else
+        return llvm::make_error<llvm::StringError>(
+            llvm::formatv("UTF-8 offset {0} overruns line {1}", P.character,
+                          P.line),
+            llvm::errc::invalid_argument);
+    }
+    return StartOfLine + P.character;
+  }
+  // P.character is in UTF-16 code units, so we have to transcode.
   bool Valid;
-  size_t ByteOffsetInLine = measureUTF16(
-      Code.substr(StartOfLine, NextNL - StartOfLine), P.character, Valid);
+  size_t ByteOffsetInLine = measureUTF16(Line, P.character, Valid);
   if (!Valid && !AllowColumnsBeyondLineLength)
     return llvm::make_error<llvm::StringError>(
         llvm::formatv("UTF-16 offset {0} is invalid for line {1}", P.character,

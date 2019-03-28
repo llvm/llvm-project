@@ -163,7 +163,7 @@
 ; DIALOG-NEXT: )
 
 
-; RUN: llvm-rc /FO %t %p/Inputs/tag-dialog-headers.rc
+; RUN: llvm-rc /FO %t -- %p/Inputs/tag-dialog-headers.rc
 ; RUN: llvm-readobj %t | FileCheck %s --check-prefix=HEADERS
 
 ; HEADERS: Resource type (int): 5
@@ -636,73 +636,73 @@
 ; HEADERS-NEXT: )
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-large-coord.rc 2>&1 | FileCheck %s --check-prefix COORD1
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-dialog-large-coord.rc 2>&1 | FileCheck %s --check-prefix COORD1
 
 ; COORD1: llvm-rc: Error in DIALOGEX statement (ID 1):
 ; COORD1-NEXT: Dialog x-coordinate (50000) does not fit in 16-bit signed integer type.
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-large-coord-neg.rc 2>&1 | FileCheck %s --check-prefix COORD2
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-dialog-large-coord-neg.rc 2>&1 | FileCheck %s --check-prefix COORD2
 
 ; COORD2: llvm-rc: Error in DIALOG statement (ID 1):
 ; COORD2-NEXT: Dialog y-coordinate (-40000) does not fit in 16-bit signed integer type.
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-large-size.rc 2>&1 | FileCheck %s --check-prefix COORD3
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-dialog-large-size.rc 2>&1 | FileCheck %s --check-prefix COORD3
 
 ; COORD3: llvm-rc: Error in DIALOGEX statement (ID 1):
 ; COORD3-NEXT: Dialog height (32768) does not fit in 16-bit signed integer type.
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-negative-size.rc 2>&1 | FileCheck %s --check-prefix COORD4
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-dialog-negative-size.rc 2>&1 | FileCheck %s --check-prefix COORD4
 
 ; COORD4: llvm-rc: Error in DIALOGEX statement (ID 1):
 ; COORD4-NEXT: Dialog width (-50) cannot be negative.
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-ctl-large-coord.rc 2>&1 | FileCheck %s --check-prefix CTL-COORD1
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-dialog-ctl-large-coord.rc 2>&1 | FileCheck %s --check-prefix CTL-COORD1
 
 ; CTL-COORD1: llvm-rc: Error in DIALOGEX statement (ID 1):
 ; CTL-COORD1-NEXT: Error in LTEXT control (ID 1):
 ; CTL-COORD1-NEXT: Dialog control x-coordinate (44444) does not fit in 16-bit signed integer type.
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-ctl-large-coord-neg.rc 2>&1 | FileCheck %s --check-prefix CTL-COORD2
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-dialog-ctl-large-coord-neg.rc 2>&1 | FileCheck %s --check-prefix CTL-COORD2
 
 ; CTL-COORD2: llvm-rc: Error in DIALOG statement (ID 1):
 ; CTL-COORD2-NEXT: Error in LTEXT control (ID 1):
 ; CTL-COORD2-NEXT: Dialog control y-coordinate (-32769) does not fit in 16-bit signed integer type.
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-ctl-large-size.rc 2>&1 | FileCheck %s --check-prefix CTL-COORD3
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-dialog-ctl-large-size.rc 2>&1 | FileCheck %s --check-prefix CTL-COORD3
 
 ; CTL-COORD3: llvm-rc: Error in DIALOGEX statement (ID 1):
 ; CTL-COORD3-NEXT: Error in LTEXT control (ID 1):
 ; CTL-COORD3-NEXT: Dialog control width (40000) does not fit in 16-bit signed integer type.
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-ctl-negative-size.rc 2>&1 | FileCheck %s --check-prefix CTL-COORD4
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-dialog-ctl-negative-size.rc 2>&1 | FileCheck %s --check-prefix CTL-COORD4
 
 ; CTL-COORD4: llvm-rc: Error in DIALOG statement (ID 1):
 ; CTL-COORD4-NEXT: Error in LTEXT control (ID 1):
 ; CTL-COORD4-NEXT: Dialog control height (-700) cannot be negative.
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-ctl-large-id.rc 2>&1 | FileCheck %s --check-prefix CTL-ID
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-dialog-ctl-large-id.rc 2>&1 | FileCheck %s --check-prefix CTL-ID
 
 ; CTL-ID: llvm-rc: Error in DIALOG statement (ID 5):
 ; CTL-ID-NEXT: Error in RTEXT control (ID 100000):
 ; CTL-ID-NEXT: Control ID in simple DIALOG resource (100000) does not fit in 16 bits.
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-ctl-large-ref-id.rc 2>&1 | FileCheck %s --check-prefix CTL-REF-ID
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-dialog-ctl-large-ref-id.rc 2>&1 | FileCheck %s --check-prefix CTL-REF-ID
 
 ; CTL-REF-ID: llvm-rc: Error in DIALOGEX statement (ID 1):
 ; CTL-REF-ID-NEXT: Error in CTEXT control (ID 42):
 ; CTL-REF-ID-NEXT: Control reference ID (65536) does not fit in 16 bits.
 
 
-; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-bad-style.rc 2>&1 | FileCheck %s --check-prefix STYLE
+; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-dialog-bad-style.rc 2>&1 | FileCheck %s --check-prefix STYLE
 
 ; STYLE: llvm-rc: Error in DIALOG statement (ID 1):
 ; STYLE-NEXT: 16 higher bits of DIALOG resource style cannot be equal to 0xFFFF

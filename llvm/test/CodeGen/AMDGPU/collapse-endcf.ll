@@ -1,6 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,ALL %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -amdgpu-opt-exec-mask-pre-ra=0 < %s | FileCheck -enable-var-scope -check-prefixes=DISABLED,ALL %s
 
-; GCN-LABEL: {{^}}simple_nested_if:
+; ALL-LABEL: {{^}}simple_nested_if:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC:s\[[0-9:]+\]]]
 ; GCN-NEXT: ; mask branch [[ENDIF:BB[0-9_]+]]
 ; GCN-NEXT: s_cbranch_execz [[ENDIF]]
@@ -12,6 +13,10 @@
 ; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC]]
 ; GCN: ds_write_b32
 ; GCN: s_endpgm
+
+
+; DISABLED: s_or_b64 exec, exec
+; DISABLED: s_or_b64 exec, exec
 define amdgpu_kernel void @simple_nested_if(i32 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -35,7 +40,7 @@ bb.outer.end:                                     ; preds = %bb.outer.then, %bb.
   ret void
 }
 
-; GCN-LABEL: {{^}}uncollapsable_nested_if:
+; ALL-LABEL: {{^}}uncollapsable_nested_if:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC_OUTER:s\[[0-9:]+\]]]
 ; GCN-NEXT: ; mask branch [[ENDIF_OUTER:BB[0-9_]+]]
 ; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER]]
@@ -79,7 +84,7 @@ bb.outer.end:                                     ; preds = %bb.inner.then, %bb
   ret void
 }
 
-; GCN-LABEL: {{^}}nested_if_if_else:
+; ALL-LABEL: {{^}}nested_if_if_else:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC_OUTER:s\[[0-9:]+\]]]
 ; GCN-NEXT: ; mask branch [[ENDIF_OUTER:BB[0-9_]+]]
 ; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER]]
@@ -126,7 +131,7 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
   ret void
 }
 
-; GCN-LABEL: {{^}}nested_if_else_if:
+; ALL-LABEL: {{^}}nested_if_else_if:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC_OUTER:s\[[0-9:]+\]]]
 ; GCN-NEXT: s_xor_b64 [[SAVEEXEC_OUTER2:s\[[0-9:]+\]]], exec, [[SAVEEXEC_OUTER]]
 ; GCN-NEXT: ; mask branch [[THEN_OUTER:BB[0-9_]+]]
@@ -191,7 +196,7 @@ bb.outer.end:
   ret void
 }
 
-; GCN-LABEL: {{^}}s_endpgm_unsafe_barrier:
+; ALL-LABEL: {{^}}s_endpgm_unsafe_barrier:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC:s\[[0-9:]+\]]]
 ; GCN-NEXT: ; mask branch [[ENDIF:BB[0-9_]+]]
 ; GCN-NEXT: {{^BB[0-9_]+}}:
@@ -217,7 +222,7 @@ bb.end:                                           ; preds = %bb.then, %bb
 }
 
 ; Make sure scc liveness is updated if sor_b64 is removed
-; GCN-LABEL: {{^}}scc_liveness:
+; ALL-LABEL: {{^}}scc_liveness:
 
 ; GCN: [[BB1_LOOP:BB[0-9]+_[0-9]+]]:
 ; GCN: s_andn2_b64 exec, exec,

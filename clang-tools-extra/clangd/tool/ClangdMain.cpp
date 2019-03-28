@@ -9,10 +9,12 @@
 #include "Features.inc"
 #include "ClangdLSPServer.h"
 #include "Path.h"
+#include "Protocol.h"
 #include "Trace.h"
 #include "Transport.h"
 #include "index/Serialization.h"
 #include "clang/Basic/Version.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -218,6 +220,16 @@ static llvm::cl::opt<bool> SuggestMissingIncludes(
     llvm::cl::desc("Attempts to fix diagnostic errors caused by missing "
                    "includes using index."),
     llvm::cl::init(true));
+
+static llvm::cl::opt<OffsetEncoding> ForceOffsetEncoding(
+    "offset-encoding",
+    llvm::cl::desc("Force the offsetEncoding used for character positions. "
+                   "This bypasses negotiation via client capabilities."),
+    llvm::cl::values(clEnumValN(OffsetEncoding::UTF8, "utf-8",
+                                "Offsets are in UTF-8 bytes"),
+                     clEnumValN(OffsetEncoding::UTF16, "utf-16",
+                                "Offsets are in UTF-16 code units")),
+    llvm::cl::init(OffsetEncoding::UnsupportedEncoding));
 
 namespace {
 
@@ -458,9 +470,13 @@ int main(int argc, char *argv[]) {
   }
   Opts.ClangTidyOptProvider = ClangTidyOptProvider.get();
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
+  llvm::Optional<OffsetEncoding> OffsetEncodingFromFlag;
+  if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
+    OffsetEncodingFromFlag = ForceOffsetEncoding;
   ClangdLSPServer LSPServer(
       *TransportLayer, FSProvider, CCOpts, CompileCommandsDirPath,
-      /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs, Opts);
+      /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs,
+      OffsetEncodingFromFlag, Opts);
   llvm::set_thread_name("clangd.main");
   return LSPServer.run() ? 0
                          : static_cast<int>(ErrorResultCode::NoShutdownRequest);

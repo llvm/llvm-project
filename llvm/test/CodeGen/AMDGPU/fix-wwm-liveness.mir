@@ -12,7 +12,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: sreg_64, preferred-register: '' }
   - { id: 1, class: sgpr_32, preferred-register: '' }
   - { id: 2, class: sgpr_32, preferred-register: '' }
@@ -37,11 +37,11 @@ registers:
   - { id: 21, class: vgpr_32, preferred-register: '' }
   - { id: 22, class: sreg_64, preferred-register: '' }
   - { id: 23, class: sreg_64, preferred-register: '' }
-liveins:         
+liveins:
 body:             |
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  
+
     %21 = V_MOV_B32_e32 0, implicit $exec
     %5 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
     %6 = V_MBCNT_HI_U32_B32_e32 -1, killed %5, implicit $exec
@@ -52,10 +52,10 @@ body:             |
     $exec = S_MOV_B64_term killed %23
     SI_MASK_BRANCH %bb.2, implicit $exec
     S_BRANCH %bb.1
-  
+
   bb.1:
     successors: %bb.2(0x80000000)
-  
+
     %13 = S_MOV_B32 61440
     %14 = S_MOV_B32 -1
     %15 = REG_SEQUENCE undef %12, 1, undef %10, 2, killed %14, 3, killed %13, 4
@@ -67,7 +67,7 @@ body:             |
     %21 = V_MOV_B32_e32 1, implicit $exec
     early-clobber %18 = WWM killed %17, implicit $exec
     BUFFER_STORE_DWORD_OFFSET killed %18, killed %15, 0, 0, 0, 0, 0, implicit $exec :: (store 4)
-  
+
   bb.2:
     $exec = S_OR_B64 $exec, killed %0, implicit-def $scc
     $vgpr0 = COPY killed %21
@@ -91,7 +91,7 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
   - { id: 1, class: sreg_32_xm0, preferred-register: '' }
   - { id: 2, class: sreg_64, preferred-register: '' }
@@ -120,8 +120,8 @@ registers:
   - { id: 25, class: sreg_64, preferred-register: '' }
   - { id: 26, class: sreg_64, preferred-register: '' }
   - { id: 27, class: vgpr_32, preferred-register: '' }
-liveins:         
-frameInfo:       
+liveins:
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -139,13 +139,13 @@ frameInfo:
   localFrameSize:  0
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0:
     successors: %bb.1(0x80000000)
-  
+
     %25:sreg_64 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %0:vgpr_32 = FLAT_LOAD_DWORD undef %9:vreg_64, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load 4 from `float addrspace(1)* undef`, addrspace 1)
     $exec = EXIT_WWM killed %25
@@ -153,10 +153,10 @@ body:             |
     %7:sreg_64 = S_MOV_B64 0
     %26:sreg_64 = COPY killed %7
     %27:vgpr_32 = COPY killed %12
-  
+
   bb.1:
     successors: %bb.2(0x04000000), %bb.1(0x7c000000)
-  
+
     %24:sreg_64 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %20:vgpr_32 = COPY killed %27
     %2:sreg_64 = COPY killed %26
@@ -168,10 +168,10 @@ body:             |
     %21:vgpr_32 = COPY killed %22
     %26:sreg_64 = COPY %6
     %27:vgpr_32 = COPY killed %21
-    $exec = S_ANDN2_B64_term $exec, %6
+    $exec = S_ANDN2_B64_term $exec, %6, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
     S_BRANCH %bb.2
-  
+
   bb.2:
     $exec = S_OR_B64 $exec, killed %6, implicit-def $scc
     %23:sreg_64 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec

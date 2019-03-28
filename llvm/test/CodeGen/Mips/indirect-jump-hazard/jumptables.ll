@@ -155,12 +155,12 @@ define i8* @_Z3fooi(i32 signext %Letter) {
 ; MIPS64R2:       # %bb.0: # %entry
 ; MIPS64R2-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R2-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R2-NEXT:    sltiu $1, $4, 7
+; MIPS64R2-NEXT:    dext $2, $4, 0, 32
+; MIPS64R2-NEXT:    sltiu $1, $2, 7
 ; MIPS64R2-NEXT:    beqz $1, .LBB0_3
 ; MIPS64R2-NEXT:    sw $4, 4($sp)
 ; MIPS64R2-NEXT:  .LBB0_1: # %entry
-; MIPS64R2-NEXT:    dext $1, $4, 0, 32
-; MIPS64R2-NEXT:    dsll $1, $1, 3
+; MIPS64R2-NEXT:    dsll $1, $2, 3
 ; MIPS64R2-NEXT:    lui $2, %highest(.LJTI0_0)
 ; MIPS64R2-NEXT:    daddiu $2, $2, %higher(.LJTI0_0)
 ; MIPS64R2-NEXT:    dsll $2, $2, 16
@@ -250,12 +250,12 @@ define i8* @_Z3fooi(i32 signext %Letter) {
 ; MIPS64R6:       # %bb.0: # %entry
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R6-NEXT:    sltiu $1, $4, 7
+; MIPS64R6-NEXT:    dext $2, $4, 0, 32
+; MIPS64R6-NEXT:    sltiu $1, $2, 7
 ; MIPS64R6-NEXT:    beqz $1, .LBB0_3
 ; MIPS64R6-NEXT:    sw $4, 4($sp)
 ; MIPS64R6-NEXT:  .LBB0_1: # %entry
-; MIPS64R6-NEXT:    dext $1, $4, 0, 32
-; MIPS64R6-NEXT:    dsll $1, $1, 3
+; MIPS64R6-NEXT:    dsll $1, $2, 3
 ; MIPS64R6-NEXT:    lui $2, %highest(.LJTI0_0)
 ; MIPS64R6-NEXT:    daddiu $2, $2, %higher(.LJTI0_0)
 ; MIPS64R6-NEXT:    dsll $2, $2, 16
@@ -472,12 +472,12 @@ define i8* @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS64R2-NEXT:    lui $1, %hi(%neg(%gp_rel(_Z3fooi)))
 ; PIC-MIPS64R2-NEXT:    daddu $1, $1, $25
 ; PIC-MIPS64R2-NEXT:    daddiu $2, $1, %lo(%neg(%gp_rel(_Z3fooi)))
-; PIC-MIPS64R2-NEXT:    sltiu $1, $4, 7
+; PIC-MIPS64R2-NEXT:    dext $3, $4, 0, 32
+; PIC-MIPS64R2-NEXT:    sltiu $1, $3, 7
 ; PIC-MIPS64R2-NEXT:    beqz $1, .LBB0_3
 ; PIC-MIPS64R2-NEXT:    sw $4, 4($sp)
 ; PIC-MIPS64R2-NEXT:  .LBB0_1: # %entry
-; PIC-MIPS64R2-NEXT:    dext $1, $4, 0, 32
-; PIC-MIPS64R2-NEXT:    dsll $1, $1, 3
+; PIC-MIPS64R2-NEXT:    dsll $1, $3, 3
 ; PIC-MIPS64R2-NEXT:    ld $3, %got_page(.LJTI0_0)($2)
 ; PIC-MIPS64R2-NEXT:    daddu $1, $1, $3
 ; PIC-MIPS64R2-NEXT:    ld $1, %got_ofst(.LJTI0_0)($1)
@@ -535,12 +535,12 @@ define i8* @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS64R6-NEXT:    lui $1, %hi(%neg(%gp_rel(_Z3fooi)))
 ; PIC-MIPS64R6-NEXT:    daddu $1, $1, $25
 ; PIC-MIPS64R6-NEXT:    daddiu $2, $1, %lo(%neg(%gp_rel(_Z3fooi)))
-; PIC-MIPS64R6-NEXT:    sltiu $1, $4, 7
+; PIC-MIPS64R6-NEXT:    dext $3, $4, 0, 32
+; PIC-MIPS64R6-NEXT:    sltiu $1, $3, 7
 ; PIC-MIPS64R6-NEXT:    beqz $1, .LBB0_3
 ; PIC-MIPS64R6-NEXT:    sw $4, 4($sp)
 ; PIC-MIPS64R6-NEXT:  .LBB0_1: # %entry
-; PIC-MIPS64R6-NEXT:    dext $1, $4, 0, 32
-; PIC-MIPS64R6-NEXT:    dsll $1, $1, 3
+; PIC-MIPS64R6-NEXT:    dsll $1, $3, 3
 ; PIC-MIPS64R6-NEXT:    ld $3, %got_page(.LJTI0_0)($2)
 ; PIC-MIPS64R6-NEXT:    daddu $1, $1, $3
 ; PIC-MIPS64R6-NEXT:    ld $1, %got_ofst(.LJTI0_0)($1)

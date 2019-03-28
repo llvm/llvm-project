@@ -481,15 +481,15 @@ namespace {
 
     /// Walk up chain skipping non-aliasing memory nodes,
     /// looking for aliasing nodes and adding them to the Aliases vector.
-    void GatherAllAliases(LSBaseSDNode *N, SDValue OriginalChain,
+    void GatherAllAliases(SDNode *N, SDValue OriginalChain,
                           SmallVectorImpl<SDValue> &Aliases);
 
     /// Return true if there is any possibility that the two addresses overlap.
-    bool isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const;
+    bool isAlias(SDNode *Op0, SDNode *Op1) const;
 
     /// Walk up chain skipping non-aliasing memory nodes, looking for a better
     /// chain (aliasing node.)
-    SDValue FindBetterChain(LSBaseSDNode *N, SDValue Chain);
+    SDValue FindBetterChain(SDNode *N, SDValue Chain);
 
     /// Try to replace a store and any possibly adjacent stores on
     /// consecutive chains with better chains. Return true only if St is
@@ -641,16 +641,6 @@ public:
   void NodeDeleted(SDNode *N, SDNode *E) override {
     DC.removeFromWorklist(N);
   }
-};
-
-class WorklistInserter : public SelectionDAG::DAGUpdateListener {
-  DAGCombiner &DC;
-
-public:
-  explicit WorklistInserter(DAGCombiner &dc)
-      : SelectionDAG::DAGUpdateListener(dc.getDAG()), DC(dc) {}
-
-  void NodeInserted(SDNode *N) override { DC.AddToWorklist(N); }
 };
 
 } // end anonymous namespace
@@ -1405,8 +1395,6 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
 
-  WorklistInserter AddNodes(*this);
-
   // Add all the dag nodes to the worklist.
   for (SDNode &Node : DAG.allnodes())
     AddToWorklist(&Node);
@@ -1849,6 +1837,8 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
       for (const SDValue &Op : CurNode->op_values())
         AddToWorklist(i, Op.getNode(), CurOpNumber);
       break;
+    case ISD::LIFETIME_START:
+    case ISD::LIFETIME_END:
     case ISD::CopyFromReg:
     case ISD::CopyToReg:
       AddToWorklist(i, CurNode->getOperand(0).getNode(), CurOpNumber);
@@ -15652,24 +15642,12 @@ SDValue DAGCombiner::visitLIFETIME_END(SDNode *N) {
         Chains.push_back(Chain.getOperand(--Nops));
       break;
     case ISD::LIFETIME_START:
-    case ISD::LIFETIME_END: {
+    case ISD::LIFETIME_END:
       // We can forward past any lifetime start/end that can be proven not to
       // alias the node.
-      const auto *Lifetime = cast<LifetimeSDNode>(Chain);
-      if (!Lifetime->hasOffset())
-        break; // Be conservative if we don't know the extents of the object.
-
-      const BaseIndexOffset LifetimeBase(Lifetime->getOperand(1), SDValue(),
-                                         Lifetime->getOffset(), false);
-      bool IsAlias;
-      if (BaseIndexOffset::computeAliasing(LifetimeEndBase,
-                                           LifetimeEnd->getSize(), LifetimeBase,
-                                           Lifetime->getSize(), DAG, IsAlias) &&
-          !IsAlias) {
+      if (!isAlias(Chain.getNode(), N))
         Chains.push_back(Chain.getOperand(0));
-      }
       break;
-    }
     case ISD::STORE: {
       StoreSDNode *ST = dyn_cast<StoreSDNode>(Chain);
       if (ST->isVolatile() || ST->isIndexed())
@@ -19411,49 +19389,94 @@ SDValue DAGCombiner::buildSqrtEstimate(SDValue Op, SDNodeFlags Flags) {
 }
 
 /// Return true if there is any possibility that the two addresses overlap.
-bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
-  // If they are the same then they must be aliases.
-  if (Op0->getBasePtr() == Op1->getBasePtr()) return true;
+bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
+
+  struct MemUseCharacteristics {
+    bool IsVolatile;
+    SDValue BasePtr;
+    int64_t Offset;
+    Optional<int64_t> NumBytes;
+    MachineMemOperand *MMO;
+  };
+
+  auto getCharacteristics = [](SDNode *N) -> MemUseCharacteristics {
+    if (const auto *LSN = dyn_cast<LSBaseSDNode>(N)) {
+      int64_t Offset = 0;
+      if (auto *C = dyn_cast<ConstantSDNode>(LSN->getOffset()))
+        Offset = (LSN->getAddressingMode() == ISD::PRE_INC)
+                     ? C->getSExtValue()
+                     : (LSN->getAddressingMode() == ISD::PRE_DEC)
+                           ? -1 * C->getSExtValue()
+                           : 0;
+      return {LSN->isVolatile(), LSN->getBasePtr(), Offset /*base offset*/,
+              Optional<int64_t>(LSN->getMemoryVT().getStoreSize()),
+              LSN->getMemOperand()};
+    }
+    if (const auto *LN = cast<LifetimeSDNode>(N))
+      return {false /*isVolatile*/, LN->getOperand(1),
+              (LN->hasOffset()) ? LN->getOffset() : 0,
+              (LN->hasOffset()) ? Optional<int64_t>(LN->getSize())
+                                : Optional<int64_t>(),
+              (MachineMemOperand *)nullptr};
+    // Default.
+    return {false /*isvolatile*/, SDValue(), (int64_t)0 /*offset*/,
+            Optional<int64_t>() /*size*/, (MachineMemOperand *)nullptr};
+  };
+
+  MemUseCharacteristics MUC0 = getCharacteristics(Op0),
+                        MUC1 = getCharacteristics(Op1);
+
+  // If they are to the same address, then they must be aliases.
+  if (MUC0.BasePtr.getNode() && MUC0.BasePtr == MUC1.BasePtr &&
+      MUC0.Offset == MUC1.Offset)
+    return true;
 
   // If they are both volatile then they cannot be reordered.
-  if (Op0->isVolatile() && Op1->isVolatile()) return true;
+  if (MUC0.IsVolatile && MUC1.IsVolatile)
+    return true;
+
+  if (MUC0.MMO && MUC1.MMO) {
+    if ((MUC0.MMO->isInvariant() && MUC1.MMO->isStore()) ||
+        (MUC1.MMO->isInvariant() && MUC0.MMO->isStore()))
+      return false;
+  }
+
+  bool IsAlias;
+  if (BaseIndexOffset::computeAliasing(Op0, MUC0.NumBytes, Op1, MUC1.NumBytes,
+                                       DAG, IsAlias) &&
+      !IsAlias)
+    return IsAlias;
+
+  // The following all rely on MMO0 and MMO1 being valid. Fail conservatively if
+  // either are not known.
+  if (!MUC0.MMO || !MUC1.MMO)
+    return true;
 
   // If one operation reads from invariant memory, and the other may store, they
   // cannot alias. These should really be checking the equivalent of mayWrite,
   // but it only matters for memory nodes other than load /store.
-  if (Op0->isInvariant() && Op1->writeMem())
+  if ((MUC0.MMO->isInvariant() && MUC1.MMO->isStore()) ||
+      (MUC1.MMO->isInvariant() && MUC0.MMO->isStore()))
     return false;
-
-  if (Op1->isInvariant() && Op0->writeMem())
-    return false;
-
-  unsigned NumBytes0 = Op0->getMemoryVT().getStoreSize();
-  unsigned NumBytes1 = Op1->getMemoryVT().getStoreSize();
-
-  // Check for BaseIndexOffset matching.
-  bool IsAlias;
-  if (BaseIndexOffset::computeAliasing(
-          BaseIndexOffset::match(Op0, DAG), NumBytes0,
-          BaseIndexOffset::match(Op1, DAG), NumBytes1, DAG, IsAlias))
-    return IsAlias;
 
   // If we know required SrcValue1 and SrcValue2 have relatively large
   // alignment compared to the size and offset of the access, we may be able
   // to prove they do not alias. This check is conservative for now to catch
   // cases created by splitting vector types.
-  int64_t SrcValOffset0 = Op0->getSrcValueOffset();
-  int64_t SrcValOffset1 = Op1->getSrcValueOffset();
-  unsigned OrigAlignment0 = Op0->getOriginalAlignment();
-  unsigned OrigAlignment1 = Op1->getOriginalAlignment();
+  int64_t SrcValOffset0 = MUC0.MMO->getOffset();
+  int64_t SrcValOffset1 = MUC1.MMO->getOffset();
+  unsigned OrigAlignment0 = MUC0.MMO->getBaseAlignment();
+  unsigned OrigAlignment1 = MUC1.MMO->getBaseAlignment();
   if (OrigAlignment0 == OrigAlignment1 && SrcValOffset0 != SrcValOffset1 &&
-      NumBytes0 == NumBytes1 && OrigAlignment0 > NumBytes0) {
+      MUC0.NumBytes.hasValue() && MUC1.NumBytes.hasValue() &&
+      *MUC0.NumBytes == *MUC1.NumBytes && OrigAlignment0 > *MUC0.NumBytes) {
     int64_t OffAlign0 = SrcValOffset0 % OrigAlignment0;
     int64_t OffAlign1 = SrcValOffset1 % OrigAlignment1;
 
     // There is no overlap between these relatively aligned accesses of
     // similar size. Return no alias.
-    if ((OffAlign0 + NumBytes0) <= OffAlign1 ||
-        (OffAlign1 + NumBytes1) <= OffAlign0)
+    if ((OffAlign0 + *MUC0.NumBytes) <= OffAlign1 ||
+        (OffAlign1 + *MUC1.NumBytes) <= OffAlign0)
       return false;
   }
 
@@ -19466,17 +19489,16 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
     UseAA = false;
 #endif
 
-  if (UseAA && AA &&
-      Op0->getMemOperand()->getValue() && Op1->getMemOperand()->getValue()) {
+  if (UseAA && AA && MUC0.MMO->getValue() && MUC1.MMO->getValue()) {
     // Use alias analysis information.
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
-    int64_t Overlap0 = NumBytes0 + SrcValOffset0 - MinOffset;
-    int64_t Overlap1 = NumBytes1 + SrcValOffset1 - MinOffset;
-    AliasResult AAResult =
-        AA->alias(MemoryLocation(Op0->getMemOperand()->getValue(), Overlap0,
-                                 UseTBAA ? Op0->getAAInfo() : AAMDNodes()),
-                  MemoryLocation(Op1->getMemOperand()->getValue(), Overlap1,
-                                 UseTBAA ? Op1->getAAInfo() : AAMDNodes()) );
+    int64_t Overlap0 = *MUC0.NumBytes + SrcValOffset0 - MinOffset;
+    int64_t Overlap1 = *MUC1.NumBytes + SrcValOffset1 - MinOffset;
+    AliasResult AAResult = AA->alias(
+        MemoryLocation(MUC0.MMO->getValue(), Overlap0,
+                       UseTBAA ? MUC0.MMO->getAAInfo() : AAMDNodes()),
+        MemoryLocation(MUC1.MMO->getValue(), Overlap1,
+                       UseTBAA ? MUC1.MMO->getAAInfo() : AAMDNodes()));
     if (AAResult == NoAlias)
       return false;
   }
@@ -19487,25 +19509,69 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
 
 /// Walk up chain skipping non-aliasing memory nodes,
 /// looking for aliasing nodes and adding them to the Aliases vector.
-void DAGCombiner::GatherAllAliases(LSBaseSDNode *N, SDValue OriginalChain,
+void DAGCombiner::GatherAllAliases(SDNode *N, SDValue OriginalChain,
                                    SmallVectorImpl<SDValue> &Aliases) {
   SmallVector<SDValue, 8> Chains;     // List of chains to visit.
   SmallPtrSet<SDNode *, 16> Visited;  // Visited node set.
 
   // Get alias information for node.
-  bool IsLoad = isa<LoadSDNode>(N) && !N->isVolatile();
-  const BaseIndexOffset LSBasePtr = BaseIndexOffset::match(N, DAG);
-  const unsigned LSNumBytes = N->getMemoryVT().getStoreSize();
+  const bool IsLoad = isa<LoadSDNode>(N) && !cast<LoadSDNode>(N)->isVolatile();
 
   // Starting off.
   Chains.push_back(OriginalChain);
   unsigned Depth = 0;
+
+  // Attempt to improve chain by a single step
+  std::function<bool(SDValue &)> ImproveChain = [&](SDValue &C) -> bool {
+    switch (C.getOpcode()) {
+    case ISD::EntryToken:
+      // No need to mark EntryToken.
+      C = SDValue();
+      return true;
+    case ISD::LOAD:
+    case ISD::STORE: {
+      // Get alias information for C.
+      bool IsOpLoad = isa<LoadSDNode>(C.getNode()) &&
+                      !cast<LSBaseSDNode>(C.getNode())->isVolatile();
+      if ((IsLoad && IsOpLoad) || !isAlias(N, C.getNode())) {
+        // Look further up the chain.
+        C = C.getOperand(0);
+        return true;
+      }
+      // Alias, so stop here.
+      return false;
+    }
+
+    case ISD::CopyFromReg:
+      // Always forward past past CopyFromReg.
+      C = C.getOperand(0);
+      return true;
+
+    case ISD::LIFETIME_START:
+    case ISD::LIFETIME_END: {
+      // We can forward past any lifetime start/end that can be proven not to
+      // alias the memory access.
+      if (!isAlias(N, C.getNode())) {
+        // Look further up the chain.
+        C = C.getOperand(0);
+        return true;
+      }
+      return false;
+    }
+    default:
+      return false;
+    }
+  };
 
   // Look at each chain and determine if it is an alias.  If so, add it to the
   // aliases list.  If not, then continue up the chain looking for the next
   // candidate.
   while (!Chains.empty()) {
     SDValue Chain = Chains.pop_back_val();
+
+    // Don't bother if we've seen Chain before.
+    if (!Visited.insert(Chain.getNode()).second)
+      continue;
 
     // For TokenFactor nodes, look at each operand and only continue up the
     // chain until we reach the depth limit.
@@ -19519,89 +19585,36 @@ void DAGCombiner::GatherAllAliases(LSBaseSDNode *N, SDValue OriginalChain,
       return;
     }
 
-    // Don't bother if we've been before.
-    if (!Visited.insert(Chain.getNode()).second)
-      continue;
-
-    switch (Chain.getOpcode()) {
-    case ISD::EntryToken:
-      // Entry token is ideal chain operand, but handled in FindBetterChain.
-      break;
-
-    case ISD::LOAD:
-    case ISD::STORE: {
-      // Get alias information for Chain.
-      bool IsOpLoad = isa<LoadSDNode>(Chain.getNode()) &&
-          !cast<LSBaseSDNode>(Chain.getNode())->isVolatile();
-
-      // If chain is alias then stop here.
-      if (!(IsLoad && IsOpLoad) &&
-          isAlias(N, cast<LSBaseSDNode>(Chain.getNode()))) {
-        Aliases.push_back(Chain);
-      } else {
-        // Look further up the chain.
-        Chains.push_back(Chain.getOperand(0));
-        ++Depth;
-      }
-      break;
-    }
-
-    case ISD::TokenFactor:
+    if (Chain.getOpcode() == ISD::TokenFactor) {
       // We have to check each of the operands of the token factor for "small"
       // token factors, so we queue them up.  Adding the operands to the queue
       // (stack) in reverse order maintains the original order and increases the
       // likelihood that getNode will find a matching token factor (CSE.)
       if (Chain.getNumOperands() > 16) {
         Aliases.push_back(Chain);
-        break;
+        continue;
       }
       for (unsigned n = Chain.getNumOperands(); n;)
         Chains.push_back(Chain.getOperand(--n));
       ++Depth;
-      break;
-
-    case ISD::CopyFromReg:
-      // Forward past CopyFromReg.
-      Chains.push_back(Chain.getOperand(0));
+      continue;
+    }
+    // Everything else
+    if (ImproveChain(Chain)) {
+      // Updated Chain Found, Consider new chain if one exists.
+      if (Chain.getNode())
+        Chains.push_back(Chain);
       ++Depth;
-      break;
-
-    case ISD::LIFETIME_START:
-    case ISD::LIFETIME_END: {
-      // We can forward past any lifetime start/end that can be proven not to
-      // alias the memory access.
-      const auto *Lifetime = cast<LifetimeSDNode>(Chain);
-      if (!Lifetime->hasOffset()) {
-        Aliases.push_back(Chain);
-        break; // Be conservative if we don't know the extents of the object.
-      }
-
-      const BaseIndexOffset LifetimePtr(Lifetime->getOperand(1), SDValue(),
-                                        Lifetime->getOffset(), false);
-      bool IsAlias;
-      if (BaseIndexOffset::computeAliasing(LifetimePtr, Lifetime->getSize(),
-                                           LSBasePtr, LSNumBytes, DAG,
-                                           IsAlias) &&
-          !IsAlias) {
-        Chains.push_back(Chain.getOperand(0));
-        ++Depth;
-      } else {
-        Aliases.push_back(Chain);
-      }
-      break;
+      continue;
     }
-
-    default:
-      // For all other instructions we will just have to take what we can get.
-      Aliases.push_back(Chain);
-      break;
-    }
+    // No Improved Chain Possible, treat as Alias.
+    Aliases.push_back(Chain);
   }
 }
 
 /// Walk up chain skipping non-aliasing memory nodes, looking for a better chain
 /// (aliasing node.)
-SDValue DAGCombiner::FindBetterChain(LSBaseSDNode *N, SDValue OldChain) {
+SDValue DAGCombiner::FindBetterChain(SDNode *N, SDValue OldChain) {
   if (OptLevel == CodeGenOpt::None)
     return OldChain;
 

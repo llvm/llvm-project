@@ -1,6 +1,25 @@
 // RUN: not llvm-mc -triple=aarch64-none-linux-gnu -show-encoding -mattr=+sve  2>&1 < %s | FileCheck %s
 
 // ------------------------------------------------------------------------- //
+// Type suffix on unpredicated movprfx
+
+movprfx z0.b, z1.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: movprfx z0.b, z1.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0.b, z1.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: movprfx z0.b, z1.s
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z1.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: expected register without element width suffix
+// CHECK-NEXT: movprfx z0, z1.s
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// ------------------------------------------------------------------------- //
 // Different destination register (unary)
 
 movprfx z0, z1

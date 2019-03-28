@@ -893,10 +893,8 @@ define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat3(<2 x i8> %a) {
 
 define i32 @uadd_sat(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %notx = xor i32 %x, -1
   %a = add i32 %y, %x
@@ -908,10 +906,8 @@ define i32 @uadd_sat(i32 %x, i32 %y) {
 define i32 @uadd_sat_commute_add(i32 %xp, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_commute_add(
 ; CHECK-NEXT:    [[X:%.*]] = urem i32 42, [[XP:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %x = urem i32 42, %xp ; thwart complexity-based-canonicalization
   %notx = xor i32 %x, -1
@@ -924,10 +920,8 @@ define i32 @uadd_sat_commute_add(i32 %xp, i32 %y) {
 define i32 @uadd_sat_ugt(i32 %x, i32 %yp) {
 ; CHECK-LABEL: @uadd_sat_ugt(
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 [[YP:%.*]], 2442
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 [[Y]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %y = sdiv i32 %yp, 2442 ; thwart complexity-based-canonicalization
   %notx = xor i32 %x, -1
@@ -941,10 +935,8 @@ define <2 x i32> @uadd_sat_ugt_commute_add(<2 x i32> %xp, <2 x i32> %yp) {
 ; CHECK-LABEL: @uadd_sat_ugt_commute_add(
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv <2 x i32> [[YP:%.*]], <i32 2442, i32 4242>
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i32> <i32 42, i32 43>, [[XP:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> [[A]]
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> [[X]], <2 x i32> [[Y]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %y = sdiv <2 x i32> %yp, <i32 2442, i32 4242> ; thwart complexity-based-canonicalization
   %x = srem <2 x i32> <i32 42, i32 43>, %xp     ; thwart complexity-based-canonicalization
@@ -958,10 +950,8 @@ define <2 x i32> @uadd_sat_ugt_commute_add(<2 x i32> %xp, <2 x i32> %yp) {
 define i32 @uadd_sat_commute_select(i32 %x, i32 %yp) {
 ; CHECK-LABEL: @uadd_sat_commute_select(
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 [[YP:%.*]], 2442
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 [[Y]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %y = sdiv i32 %yp, 2442 ; thwart complexity-based-canonicalization
   %notx = xor i32 %x, -1
@@ -975,10 +965,8 @@ define i32 @uadd_sat_commute_select_commute_add(i32 %xp, i32 %yp) {
 ; CHECK-LABEL: @uadd_sat_commute_select_commute_add(
 ; CHECK-NEXT:    [[X:%.*]] = urem i32 42, [[XP:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 [[YP:%.*]], 2442
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %x = urem i32 42, %xp ; thwart complexity-based-canonicalization
   %y = sdiv i32 %yp, 2442 ; thwart complexity-based-canonicalization
@@ -991,10 +979,8 @@ define i32 @uadd_sat_commute_select_commute_add(i32 %xp, i32 %yp) {
 
 define <2 x i32> @uadd_sat_commute_select_ugt(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @uadd_sat_commute_select_ugt(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> [[A]]
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %notx = xor <2 x i32> %x, <i32 -1, i32 -1>
   %a = add <2 x i32> %y, %x
@@ -1006,10 +992,8 @@ define <2 x i32> @uadd_sat_commute_select_ugt(<2 x i32> %x, <2 x i32> %y) {
 define i32 @uadd_sat_commute_select_ugt_commute_add(i32 %xp, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_commute_select_ugt_commute_add(
 ; CHECK-NEXT:    [[X:%.*]] = srem i32 42, [[XP:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %x = srem i32 42, %xp   ; thwart complexity-based-canonicalization
   %notx = xor i32 %x, -1
@@ -1054,10 +1038,8 @@ define i32 @not_uadd_sat2(i32 %x, i32 %y) {
 define i32 @uadd_sat_not(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %notx = xor i32 %x, -1
   %a = add i32 %notx, %y
@@ -1071,10 +1053,8 @@ define i32 @uadd_sat_not_commute_add(i32 %xp, i32 %yp) {
 ; CHECK-NEXT:    [[X:%.*]] = srem i32 42, [[XP:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = urem i32 42, [[YP:%.*]]
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X]], -1
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[Y]], [[NOTX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y]], i32 [[NOTX]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %x = srem i32 42, %xp ; thwart complexity-based-canonicalization
   %y = urem i32 42, %yp ; thwart complexity-based-canonicalization
@@ -1088,10 +1068,8 @@ define i32 @uadd_sat_not_commute_add(i32 %xp, i32 %yp) {
 define i32 @uadd_sat_not_ugt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not_ugt(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %notx = xor i32 %x, -1
   %a = add i32 %notx, %y
@@ -1104,10 +1082,8 @@ define <2 x i32> @uadd_sat_not_ugt_commute_add(<2 x i32> %x, <2 x i32> %yp) {
 ; CHECK-LABEL: @uadd_sat_not_ugt_commute_add(
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv <2 x i32> [[YP:%.*]], <i32 2442, i32 4242>
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[Y]], [[NOTX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> [[A]]
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> [[Y]], <2 x i32> [[NOTX]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %y = sdiv <2 x i32> %yp, <i32 2442, i32 4242> ; thwart complexity-based-canonicalization
   %notx = xor <2 x i32> %x, <i32 -1, i32 -1>
@@ -1120,10 +1096,8 @@ define <2 x i32> @uadd_sat_not_ugt_commute_add(<2 x i32> %x, <2 x i32> %yp) {
 define i32 @uadd_sat_not_commute_select(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not_commute_select(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %notx = xor i32 %x, -1
   %a = add i32 %notx, %y
@@ -1136,10 +1110,8 @@ define i32 @uadd_sat_not_commute_select_commute_add(i32 %x, i32 %yp) {
 ; CHECK-LABEL: @uadd_sat_not_commute_select_commute_add(
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 42, [[YP:%.*]]
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y]], [[NOTX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y]], i32 [[NOTX]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %y = sdiv i32 42, %yp ; thwart complexity-based-canonicalization
   %notx = xor i32 %x, -1
@@ -1154,10 +1126,8 @@ define <2 x i32> @uadd_sat_not_commute_select_ugt(<2 x i32> %xp, <2 x i32> %yp) 
 ; CHECK-NEXT:    [[X:%.*]] = urem <2 x i32> <i32 42, i32 -42>, [[XP:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i32> <i32 12, i32 412>, [[YP:%.*]]
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i32> [[X]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[Y]], [[NOTX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> [[A]]
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> [[Y]], <2 x i32> [[NOTX]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %x = urem <2 x i32> <i32 42, i32 -42>, %xp ; thwart complexity-based-canonicalization
   %y = srem <2 x i32> <i32 12, i32 412>, %yp ; thwart complexity-based-canonicalization
@@ -1171,10 +1141,8 @@ define <2 x i32> @uadd_sat_not_commute_select_ugt(<2 x i32> %xp, <2 x i32> %yp) 
 define i32 @uadd_sat_not_commute_select_ugt_commute_add(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_not_commute_select_ugt_commute_add(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NOTX]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %notx = xor i32 %x, -1
   %a = add i32 %notx, %y
@@ -1198,10 +1166,8 @@ define i32 @uadd_sat_constant(i32 %x) {
 
 define i32 @uadd_sat_constant_commute(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_constant_commute(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 42
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[X]], -43
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 42)
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %a = add i32 %x, 42
   %c = icmp ult i32 %x, -43
@@ -1224,10 +1190,8 @@ define <4 x i32> @uadd_sat_constant_vec(<4 x i32> %x) {
 
 define <4 x i32> @uadd_sat_constant_vec_commute(<4 x i32> %x) {
 ; CHECK-LABEL: @uadd_sat_constant_vec_commute(
-; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[X:%.*]], <i32 42, i32 42, i32 42, i32 42>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i32> [[X]], <i32 -43, i32 -43, i32 -43, i32 -43>
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> [[A]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> [[X:%.*]], <4 x i32> <i32 42, i32 42, i32 42, i32 42>)
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>
   %c = icmp ult <4 x i32> %x, <i32 -43, i32 -43, i32 -43, i32 -43>

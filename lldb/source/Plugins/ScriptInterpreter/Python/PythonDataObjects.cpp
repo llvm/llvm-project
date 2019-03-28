@@ -20,12 +20,11 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Utility/Stream.h"
 
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"
 
 #include <stdio.h>
-
-#include "llvm/ADT/StringSwitch.h"
 
 using namespace lldb_private;
 using namespace lldb;

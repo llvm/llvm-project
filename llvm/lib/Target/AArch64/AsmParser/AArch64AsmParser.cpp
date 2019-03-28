@@ -1090,8 +1090,7 @@ public:
     if (Kind != k_Register || Reg.Kind != RegKind::SVEDataVector)
       return DiagnosticPredicateTy::NoMatch;
 
-    if (isSVEVectorReg<Class>() &&
-           (ElementWidth == 0 || Reg.ElementWidth == ElementWidth))
+    if (isSVEVectorReg<Class>() && Reg.ElementWidth == ElementWidth)
       return DiagnosticPredicateTy::Match;
 
     return DiagnosticPredicateTy::NearMatch;
@@ -4442,7 +4441,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidZPR64LSL64:
     return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d, lsl #3'");
   case Match_InvalidZPR0:
-    return Error(Loc, "expected register without element width sufix");
+    return Error(Loc, "expected register without element width suffix");
   case Match_InvalidZPR8:
   case Match_InvalidZPR16:
   case Match_InvalidZPR32:

@@ -362,7 +362,7 @@ class TypePromotionTransaction;
     bool optimizeExt(Instruction *&I);
     bool optimizeExtUses(Instruction *I);
     bool optimizeLoadExt(LoadInst *Load);
-    bool optimizeSelectInst(SelectInst *SI, bool &ModifiedDT);
+    bool optimizeSelectInst(SelectInst *SI);
     bool optimizeShuffleVectorInst(ShuffleVectorInst *SVI);
     bool optimizeSwitchInst(SwitchInst *SI);
     bool optimizeExtractElementInst(Instruction *Inst);
@@ -5921,7 +5921,7 @@ static Value *getTrueOrFalseValue(
 
 /// If we have a SelectInst that will likely profit from branch prediction,
 /// turn it into a branch.
-bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI, bool &ModifiedDT) {
+bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // If branch conversion isn't desirable, exit early.
   if (DisableSelectToBranch || OptSize || !TLI)
     return false;
@@ -5962,7 +5962,11 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI, bool &ModifiedDT) {
       !isFormingBranchFromSelectProfitable(TTI, TLI, SI))
     return false;
 
-  ModifiedDT = true;
+  // The DominatorTree needs to be rebuilt by any consumers after this
+  // transformation. We simply reset here rather than setting the ModifiedDT
+  // flag to avoid restarting the function walk in runOnFunction for each
+  // select optimized.
+  DT.reset();
 
   // Transform a sequence like this:
   //    start:
@@ -7016,7 +7020,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
   case Instruction::Call:
     return optimizeCallInst(cast<CallInst>(I), ModifiedDT);
   case Instruction::Select:
-    return optimizeSelectInst(cast<SelectInst>(I), ModifiedDT);
+    return optimizeSelectInst(cast<SelectInst>(I));
   case Instruction::ShuffleVector:
     return optimizeShuffleVectorInst(cast<ShuffleVectorInst>(I));
   case Instruction::Switch:

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SOURCECODE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SOURCECODE_H
+#include "Context.h"
 #include "Protocol.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
@@ -34,8 +35,14 @@ using FileDigest = decltype(llvm::SHA1::hash({}));
 FileDigest digest(StringRef Content);
 Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID);
 
+// This context variable controls the behavior of functions in this file
+// that convert between LSP offsets and native clang byte offsets.
+// If not set, defaults to UTF-16 for backwards-compatibility.
+extern Key<OffsetEncoding> kCurrentOffsetEncoding;
+
 // Counts the number of UTF-16 code units needed to represent a string (LSP
 // specifies string lengths in UTF-16 code units).
+// Use of UTF-16 may be overridden by kCurrentOffsetEncoding.
 size_t lspLength(StringRef Code);
 
 /// Turn a [line, column] pair into an offset in Code.

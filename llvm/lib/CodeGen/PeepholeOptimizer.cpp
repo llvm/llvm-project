@@ -1900,13 +1900,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
   // Def = REG_SEQUENCE v0, sub0, v1, sub1, ...
   // Check if one of the operand defines the subreg we are interested in.
   for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
-    if (RegSeqInput.SubIdx == DefSubReg) {
-      if (RegSeqInput.SubReg)
-        // Bail if we have to compose sub registers.
-        return ValueTrackerResult();
-
+    if (RegSeqInput.SubIdx == DefSubReg)
       return ValueTrackerResult(RegSeqInput.Reg, RegSeqInput.SubReg);
-    }
   }
 
   // If the subreg we are tracking is super-defined by another subreg,

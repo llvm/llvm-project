@@ -95,7 +95,7 @@ body: |
     %28:sreg_64 = S_OR_B64 %24, killed %27, implicit-def dead $scc
     %5:sreg_64 = COPY %28
     %6:vreg_128 = COPY killed %25
-    $exec = S_ANDN2_B64_term $exec, %28
+    $exec = S_ANDN2_B64_term $exec, %28, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.6, implicit $exec
     S_BRANCH %bb.8
 

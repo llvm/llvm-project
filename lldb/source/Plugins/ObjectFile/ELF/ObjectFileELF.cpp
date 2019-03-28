@@ -57,7 +57,6 @@ const char *const LLDB_NT_OWNER_GNU = "GNU";
 const char *const LLDB_NT_OWNER_NETBSD = "NetBSD";
 const char *const LLDB_NT_OWNER_NETBSDCORE = "NetBSD-CORE";
 const char *const LLDB_NT_OWNER_OPENBSD = "OpenBSD";
-const char *const LLDB_NT_OWNER_CSR = "csr";
 const char *const LLDB_NT_OWNER_ANDROID = "Android";
 const char *const LLDB_NT_OWNER_CORE = "CORE";
 const char *const LLDB_NT_OWNER_LINUX = "LINUX";
@@ -274,27 +273,6 @@ bool ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset) {
   return true;
 }
 
-static uint32_t kalimbaVariantFromElfFlags(const elf::elf_word e_flags) {
-  const uint32_t dsp_rev = e_flags & 0xFF;
-  uint32_t kal_arch_variant = LLDB_INVALID_CPUTYPE;
-  switch (dsp_rev) {
-  // TODO(mg11) Support more variants
-  case 10:
-    kal_arch_variant = llvm::Triple::KalimbaSubArch_v3;
-    break;
-  case 14:
-    kal_arch_variant = llvm::Triple::KalimbaSubArch_v4;
-    break;
-  case 17:
-  case 20:
-    kal_arch_variant = llvm::Triple::KalimbaSubArch_v5;
-    break;
-  default:
-    break;
-  }
-  return kal_arch_variant;
-}
-
 static uint32_t mipsVariantFromElfFlags (const elf::ELFHeader &header) {
   const uint32_t mips_arch = header.e_flags & llvm::ELF::EF_MIPS_ARCH;
   uint32_t endian = header.e_ident[EI_DATA];
@@ -352,32 +330,7 @@ static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
   if (header.e_machine == llvm::ELF::EM_MIPS)
     return mipsVariantFromElfFlags(header);
 
-  return llvm::ELF::EM_CSR_KALIMBA == header.e_machine
-             ? kalimbaVariantFromElfFlags(header.e_flags)
-             : LLDB_INVALID_CPUTYPE;
-}
-
-//! The kalimba toolchain identifies a code section as being
-//! one with the SHT_PROGBITS set in the section sh_type and the top
-//! bit in the 32-bit address field set.
-static lldb::SectionType
-kalimbaSectionType(const elf::ELFHeader &header,
-                   const elf::ELFSectionHeader &sect_hdr) {
-  if (llvm::ELF::EM_CSR_KALIMBA != header.e_machine) {
-    return eSectionTypeOther;
-  }
-
-  if (llvm::ELF::SHT_NOBITS == sect_hdr.sh_type) {
-    return eSectionTypeZeroFill;
-  }
-
-  if (llvm::ELF::SHT_PROGBITS == sect_hdr.sh_type) {
-    const lldb::addr_t KAL_CODE_BIT = 1 << 31;
-    return KAL_CODE_BIT & sect_hdr.sh_addr ? eSectionTypeCode
-                                           : eSectionTypeData;
-  }
-
-  return eSectionTypeOther;
+  return LLDB_INVALID_CPUTYPE;
 }
 
 // Arbitrary constant used as UUID prefix for core files.
@@ -1336,21 +1289,6 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       // Set the elf OS version to OpenBSD.  Also clear the vendor.
       arch_spec.GetTriple().setOS(llvm::Triple::OSType::OpenBSD);
       arch_spec.GetTriple().setVendor(llvm::Triple::VendorType::UnknownVendor);
-    }
-    // Process CSR kalimba notes
-    else if ((note.n_type == LLDB_NT_GNU_ABI_TAG) &&
-             (note.n_name == LLDB_NT_OWNER_CSR)) {
-      arch_spec.GetTriple().setOS(llvm::Triple::OSType::UnknownOS);
-      arch_spec.GetTriple().setVendor(llvm::Triple::VendorType::CSR);
-
-      // TODO At some point the description string could be processed.
-      // It could provide a steer towards the kalimba variant which this ELF
-      // targets.
-      if (note.n_descsz) {
-        const char *cstr =
-            data.GetCStr(&offset, llvm::alignTo(note.n_descsz, 4));
-        (void)cstr;
-      }
     } else if (note.n_name == LLDB_NT_OWNER_ANDROID) {
       arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
       arch_spec.GetTriple().setEnvironment(
@@ -1808,14 +1746,7 @@ SectionType ObjectFileELF::GetSectionType(const ELFSectionHeaderInfo &H) const {
   case SHT_DYNAMIC:
     return eSectionTypeELFDynamicLinkInfo;
   }
-  SectionType Type = GetSectionTypeFromName(H.section_name.GetStringRef());
-  if (Type == eSectionTypeOther) {
-    // the kalimba toolchain assumes that ELF section names are free-form.
-    // It does support linkscripts which (can) give rise to various
-    // arbitrarily named sections being "Code" or "Data".
-    Type = kalimbaSectionType(m_header, H);
-  }
-  return Type;
+  return GetSectionTypeFromName(H.section_name.GetStringRef());
 }
 
 static uint32_t GetTargetByteSize(SectionType Type, const ArchSpec &arch) {

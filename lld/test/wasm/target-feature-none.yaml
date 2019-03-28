@@ -1,13 +1,10 @@
 # RUN: yaml2obj %s -o %t1.o
 
-# RUN: wasm-ld --no-entry -o %t.empty.wasm %t1.o
-# RUN: obj2yaml %t.empty.wasm | FileCheck %s --check-prefix EMPTY
+# RUN: wasm-ld --no-entry -o - %t1.o | obj2yaml | FileCheck %s --check-prefix EMPTY
 
-# RUN: wasm-ld --no-entry --features= -o %t.empty.2.wasm %t1.o
-# RUN: obj2yaml %t.empty.2.wasm | FileCheck %s --check-prefix EMPTY
+# RUN: wasm-ld --no-entry --features= -o - %t1.o | obj2yaml | FileCheck %s --check-prefix EMPTY
 
-# RUN: wasm-ld --no-entry --features=foo,bar,baz -o %t.specified.wasm %t1.o
-# RUN: obj2yaml %t.specified.wasm | FileCheck %s --check-prefix SPECIFIED
+# RUN: wasm-ld --no-entry --features=foo,bar,baz -o - %t1.o | obj2yaml | FileCheck %s --check-prefix SPECIFIED
 
 --- !WASM
 FileHeader:

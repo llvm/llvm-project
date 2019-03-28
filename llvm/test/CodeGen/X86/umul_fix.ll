@@ -72,15 +72,13 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
   ret i64 %tmp;
 }
 
-; FIXME: extends should be folded into AND. 
 define i4 @func3(i4 %x, i4 %y) nounwind {
 ; X64-LABEL: func3:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $15, %dil
-; X64-NEXT:    andb $15, %sil
-; X64-NEXT:    movzbl %sil, %ecx
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    imull %ecx, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl $15, %esi
+; X64-NEXT:    andl $15, %eax
+; X64-NEXT:    imull %esi, %eax
 ; X64-NEXT:    shrb $2, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

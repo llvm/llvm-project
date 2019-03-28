@@ -229,10 +229,10 @@ class BTFDebug : public DebugHandlerBase {
   BTFStringTable StringTable;
   std::vector<std::unique_ptr<BTFTypeBase>> TypeEntries;
   std::unordered_map<const DIType *, uint32_t> DIToIdMap;
-  std::unordered_map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
-  std::unordered_map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
+  std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
+  std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   StringMap<std::vector<std::string>> FileContent;
-  std::unordered_map<std::string, std::unique_ptr<BTFKindDataSec>>
+  std::map<std::string, std::unique_ptr<BTFKindDataSec>>
       DataSecEntries;
 
   /// Add types to TypeEntries.
