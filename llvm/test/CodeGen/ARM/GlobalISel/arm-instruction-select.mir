@@ -671,27 +671,36 @@ registers:
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
   - { id: 3, class: gprb }
-# CHECK: id: [[P:[0-9]+]], class: gpr
-# CHECK: id: [[I8:[0-9]+]], class: gpr
-# CHECK: id: [[I16:[0-9]+]], class: gpr
-# CHECK: id: [[I32:[0-9]+]], class: gpr
+  - { id: 4, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
 
     %0(p0) = COPY $r0
+    ; CHECK: [[P:%[0-9]+]]:gpr = COPY $r0
+
     %3(s32) = COPY $r1
+    ; CHECK: [[V32:%[0-9]+]]:gpr = COPY $r1
+
+    %4(s1) = G_TRUNC %3(s32)
+
     %1(s8) = G_TRUNC %3(s32)
+    ; CHECK: [[V8:%[0-9]+]]:gprnopc = COPY [[V32]]
+
     %2(s16) = G_TRUNC %3(s32)
 
+    G_STORE %4(s1), %0(p0) :: (store 1)
+    ; CHECK: [[V1:%[0-9]+]]:gprnopc = ANDri [[V32]], 1, 14, $noreg, $noreg
+    ; CHECK: STRBi12 [[V1]], [[P]], 0, 14, $noreg
+
     G_STORE %1(s8), %0(p0) :: (store 1)
-    ; CHECK: STRBi12 %[[I8]], %[[P]], 0, 14, $noreg
+    ; CHECK: STRBi12 [[V8]], [[P]], 0, 14, $noreg
 
     G_STORE %2(s16), %0(p0) :: (store 2)
-    ; CHECK: STRH %[[I32]], %[[P]], $noreg, 0, 14, $noreg
+    ; CHECK: STRH [[V32]], [[P]], $noreg, 0, 14, $noreg
 
     G_STORE %3(s32), %0(p0) :: (store 4)
-    ; CHECK: STRi12 %[[I32]], %[[P]], 0, 14, $noreg
+    ; CHECK: STRi12 [[V32]], [[P]], 0, 14, $noreg
 
     BX_RET 14, $noreg
 ...
@@ -881,7 +890,7 @@ body:             |
     %2(s1) = G_TRUNC %1(s32)
 
     %3(s32) = G_SELECT %2(s1),  %0, %1
-    ; CHECK: CMPri [[VREGY]], 0, 14, $noreg, implicit-def $cpsr
+    ; CHECK: TSTri [[VREGY]], 1, 14, $noreg, implicit-def $cpsr
     ; CHECK: [[RES:%[0-9]+]]:gpr = MOVCCr [[VREGX]], [[VREGY]], 0, $cpsr
 
     $r0 = COPY %3(s32)
@@ -919,7 +928,7 @@ body:             |
     %3(s1) = G_TRUNC %2(s32)
 
     %4(p0) = G_SELECT %3(s1),  %0, %1
-    ; CHECK: CMPri [[VREGC]], 0, 14, $noreg, implicit-def $cpsr
+    ; CHECK: TSTri [[VREGC]], 1, 14, $noreg, implicit-def $cpsr
     ; CHECK: [[RES:%[0-9]+]]:gpr = MOVCCr [[VREGX]], [[VREGY]], 0, $cpsr
 
     $r0 = COPY %4(p0)

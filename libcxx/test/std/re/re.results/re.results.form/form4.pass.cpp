@@ -14,8 +14,6 @@
 //   format(const char_type* fmt,
 //          regex_constants::match_flag_type flags = regex_constants::format_default) const;
 
-#include <iostream>
-
 #include <regex>
 #include <cassert>
 #include "test_macros.h"

@@ -73,10 +73,11 @@ private:
 
     const std::vector<size_t> &getPointIds() const { return PointIds; }
 
+    void addPoint(size_t PointId,
+                  const InstructionBenchmarkClustering &Clustering);
+
     // Return the cluster centroid.
-    const std::vector<PerInstructionStats> &getRepresentative() const {
-      return Representative;
-    }
+    const SchedClassClusterCentroid &getCentroid() const { return Centroid; }
 
     // Returns true if the cluster representative measurements match that of SC.
     bool
@@ -85,14 +86,11 @@ private:
                       const InstructionBenchmarkClustering &Clustering,
                       const double AnalysisInconsistencyEpsilonSquared_) const;
 
-    void addPoint(size_t PointId,
-                  const InstructionBenchmarkClustering &Clustering);
-
   private:
     InstructionBenchmarkClustering::ClusterId ClusterId;
     std::vector<size_t> PointIds;
     // Measurement stats for the points in the SchedClassCluster.
-    std::vector<PerInstructionStats> Representative;
+    SchedClassClusterCentroid Centroid;
   };
 
   void printInstructionRowCsv(size_t PointId, llvm::raw_ostream &OS) const;

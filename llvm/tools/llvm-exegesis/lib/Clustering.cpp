@@ -53,6 +53,37 @@ void InstructionBenchmarkClustering::rangeQuery(
   }
 }
 
+// Given a set of points, checks that all the points are neighbours
+// up to AnalysisClusteringEpsilon. This is O(2*N).
+bool InstructionBenchmarkClustering::areAllNeighbours(
+    ArrayRef<size_t> Pts) const {
+  // First, get the centroid of this group of points. This is O(N).
+  SchedClassClusterCentroid G;
+  llvm::for_each(Pts, [this, &G](size_t P) {
+    assert(P < Points_.size());
+    ArrayRef<BenchmarkMeasure> Measurements = Points_[P].Measurements;
+    if (Measurements.empty()) // Error point.
+      return;
+    G.addPoint(Measurements);
+  });
+  const std::vector<BenchmarkMeasure> Centroid = G.getAsPoint();
+
+  // Since we will be comparing with the centroid, we need to halve the epsilon.
+  double AnalysisClusteringEpsilonHalvedSquared =
+      AnalysisClusteringEpsilonSquared_ / 4.0;
+
+  // And now check that every point is a neighbour of the centroid. Also O(N).
+  return llvm::all_of(
+      Pts, [this, &Centroid, AnalysisClusteringEpsilonHalvedSquared](size_t P) {
+        assert(P < Points_.size());
+        const auto &PMeasurements = Points_[P].Measurements;
+        if (PMeasurements.empty()) // Error point.
+          return true;             // Pretend that error point is a neighbour.
+        return isNeighbour(PMeasurements, Centroid,
+                           AnalysisClusteringEpsilonHalvedSquared);
+      });
+}
+
 InstructionBenchmarkClustering::InstructionBenchmarkClustering(
     const std::vector<InstructionBenchmark> &Points,
     const double AnalysisClusteringEpsilonSquared)
@@ -95,7 +126,7 @@ llvm::Error InstructionBenchmarkClustering::validateAndSetup() {
   return llvm::Error::success();
 }
 
-void InstructionBenchmarkClustering::dbScan(const size_t MinPts) {
+void InstructionBenchmarkClustering::clusterizeDbScan(const size_t MinPts) {
   std::vector<size_t> Neighbors; // Persistent buffer to avoid allocs.
   for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
     if (!ClusterIdForPoint_[P].isUndef())
@@ -150,6 +181,48 @@ void InstructionBenchmarkClustering::dbScan(const size_t MinPts) {
       NoiseCluster_.PointIndices.push_back(P);
     }
   }
+}
+
+void InstructionBenchmarkClustering::clusterizeNaive(unsigned NumOpcodes) {
+  // Given an instruction Opcode, which are the benchmarks of this instruction?
+  std::vector<llvm::SmallVector<size_t, 1>> OpcodeToPoints;
+  OpcodeToPoints.resize(NumOpcodes);
+  size_t NumOpcodesSeen = 0;
+  for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
+    const InstructionBenchmark &Point = Points_[P];
+    const unsigned Opcode = Point.keyInstruction().getOpcode();
+    assert(Opcode < NumOpcodes && "NumOpcodes is incorrect (too small)");
+    llvm::SmallVectorImpl<size_t> &PointsOfOpcode = OpcodeToPoints[Opcode];
+    if (PointsOfOpcode.empty()) // If we previously have not seen any points of
+      ++NumOpcodesSeen; // this opcode, then naturally this is the new opcode.
+    PointsOfOpcode.emplace_back(P);
+  }
+  assert(OpcodeToPoints.size() == NumOpcodes && "sanity check");
+  assert(NumOpcodesSeen <= NumOpcodes &&
+         "can't see more opcodes than there are total opcodes");
+  assert(NumOpcodesSeen <= Points_.size() &&
+         "can't see more opcodes than there are total points");
+
+  Clusters_.reserve(NumOpcodesSeen); // One cluster per opcode.
+  for (ArrayRef<size_t> PointsOfOpcode : llvm::make_filter_range(
+           OpcodeToPoints, [](ArrayRef<size_t> PointsOfOpcode) {
+             return !PointsOfOpcode.empty(); // Ignore opcodes with no points.
+           })) {
+    // Create a new cluster.
+    Clusters_.emplace_back(ClusterId::makeValid(
+        Clusters_.size(), /*IsUnstable=*/!areAllNeighbours(PointsOfOpcode)));
+    Cluster &CurrentCluster = Clusters_.back();
+    // Mark points as belonging to the new cluster.
+    llvm::for_each(PointsOfOpcode, [this, &CurrentCluster](size_t P) {
+      ClusterIdForPoint_[P] = CurrentCluster.Id;
+    });
+    // And add all the points of this opcode to the new cluster.
+    CurrentCluster.PointIndices.reserve(PointsOfOpcode.size());
+    CurrentCluster.PointIndices.assign(PointsOfOpcode.begin(),
+                                       PointsOfOpcode.end());
+    assert(CurrentCluster.PointIndices.size() == PointsOfOpcode.size());
+  }
+  assert(Clusters_.size() == NumOpcodesSeen);
 }
 
 // Given an instruction Opcode, we can make benchmarks (measurements) of the
@@ -246,8 +319,8 @@ void InstructionBenchmarkClustering::stabilize(unsigned NumOpcodes) {
 
 llvm::Expected<InstructionBenchmarkClustering>
 InstructionBenchmarkClustering::create(
-    const std::vector<InstructionBenchmark> &Points, const size_t MinPts,
-    const double AnalysisClusteringEpsilon,
+    const std::vector<InstructionBenchmark> &Points, const ModeE Mode,
+    const size_t DbscanMinPts, const double AnalysisClusteringEpsilon,
     llvm::Optional<unsigned> NumOpcodes) {
   InstructionBenchmarkClustering Clustering(
       Points, AnalysisClusteringEpsilon * AnalysisClusteringEpsilon);
@@ -258,12 +331,36 @@ InstructionBenchmarkClustering::create(
     return Clustering; // Nothing to cluster.
   }
 
-  Clustering.dbScan(MinPts);
+  if (Mode == ModeE::Dbscan) {
+    Clustering.clusterizeDbScan(DbscanMinPts);
 
-  if (NumOpcodes.hasValue())
-    Clustering.stabilize(NumOpcodes.getValue());
+    if (NumOpcodes.hasValue())
+      Clustering.stabilize(NumOpcodes.getValue());
+  } else /*if(Mode == ModeE::Naive)*/ {
+    if (!NumOpcodes.hasValue())
+      llvm::report_fatal_error(
+          "'naive' clustering mode requires opcode count to be specified");
+    Clustering.clusterizeNaive(NumOpcodes.getValue());
+  }
 
   return Clustering;
+}
+
+void SchedClassClusterCentroid::addPoint(ArrayRef<BenchmarkMeasure> Point) {
+  if (Representative.empty())
+    Representative.resize(Point.size());
+  assert(Representative.size() == Point.size() &&
+         "All points should have identical dimensions.");
+
+  for (const auto &I : llvm::zip(Representative, Point))
+    std::get<0>(I).push(std::get<1>(I));
+}
+
+std::vector<BenchmarkMeasure> SchedClassClusterCentroid::getAsPoint() const {
+  std::vector<BenchmarkMeasure> ClusterCenterPoint(Representative.size());
+  for (const auto &I : llvm::zip(ClusterCenterPoint, Representative))
+    std::get<0>(I).PerInstructionValue = std::get<1>(I).avg();
+  return ClusterCenterPoint;
 }
 
 } // namespace exegesis

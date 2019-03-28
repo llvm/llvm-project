@@ -6,8 +6,11 @@
 
 .globl  __entrypoint
 __entrypoint:
+.fnstart
     bx  lr
-
+ .save {r7, lr}
+ .setfp r7, sp, #0
+ .fnend
 // Check that .ARM.exidx/.gnu.linkonce.armexidx
 // are correctly removed if they were added.
 // CHECK-NOT: .ARM.exidx

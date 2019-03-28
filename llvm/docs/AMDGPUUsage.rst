@@ -699,21 +699,32 @@ if needed.
 Note Records
 ------------
 
-As required by ``ELFCLASS32`` and ``ELFCLASS64``, minimal zero byte padding must
-be generated after the ``name`` field to ensure the ``desc`` field is 4 byte
-aligned. In addition, minimal zero byte padding must be generated to ensure the
-``desc`` field size is a multiple of 4 bytes. The ``sh_addralign`` field of the
-``.note`` section must be at least 4 to indicate at least 8 byte alignment.
+The AMDGPU backend code object contains ELF note records in the ``.note``
+section. The set of generated notes and their semantics depend on the code
+object version; see :ref:`amdgpu-note-records-v2` and
+:ref:`amdgpu-note-records-v3`.
+
+As required by ``ELFCLASS32`` and ``ELFCLASS64``, minimal zero byte padding
+must be generated after the ``name`` field to ensure the ``desc`` field is 4
+byte aligned. In addition, minimal zero byte padding must be generated to
+ensure the ``desc`` field size is a multiple of 4 bytes. The ``sh_addralign``
+field of the ``.note`` section must be at least 4 to indicate at least 8 byte
+alignment.
 
 .. _amdgpu-note-records-v2:
 
 Code Object V2 Note Records (-mattr=-code-object-v3)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The AMDGPU backend code object uses the following ELF note record in the
-``.note`` section.
+.. warning:: Code Object V2 is not the default code object version emitted by
+  this version of LLVM. For a description of the notes generated with the
+  default configuration (Code Object V3) see :ref:`amdgpu-note-records-v3`.
 
-Additional note records can be present.
+The AMDGPU backend code object uses the following ELF note record in the
+``.note`` section when compiling for Code Object V2 (-mattr=-code-object-v3).
+
+Additional note records may be present, but any which are not documented here
+are deprecated and should not be used.
 
   .. table:: AMDGPU Code Object V2 ELF Note Records
      :name: amdgpu-elf-note-records-table-v2
@@ -750,9 +761,10 @@ Code Object V3 Note Records (-mattr=+code-object-v3)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The AMDGPU backend code object uses the following ELF note record in the
-``.note`` section.
+``.note`` section when compiling for Code Object V3 (-mattr=+code-object-v3).
 
-Additional note records can be present.
+Additional note records may be present, but any which are not documented here
+are deprecated and should not be used.
 
   .. table:: AMDGPU Code Object V3 ELF Note Records
      :name: amdgpu-elf-note-records-table-v3
@@ -1074,18 +1086,27 @@ Code Object Metadata
 
 The code object metadata specifies extensible metadata associated with the code
 objects executed on HSA [HSA]_ compatible runtimes such as AMD's ROCm
-[AMD-ROCm]_. It is specified in a note record (see :ref:`amdgpu-note-records`)
-and is required when the target triple OS is ``amdhsa`` (see
-:ref:`amdgpu-target-triples`). It must contain the minimum information
-necessary to support the ROCM kernel queries. For example, the segment sizes
-needed in a dispatch packet. In addition, a high level language runtime may
-require other information to be included. For example, the AMD OpenCL runtime
-records kernel argument information.
+[AMD-ROCm]_. The encoding and semantics of this metadata depends on the code
+object version; see :ref:`amdgpu-amdhsa-code-object-metadata-v2` and
+:ref:`amdgpu-amdhsa-code-object-metadata-v3`.
+
+Code object metadata is specified in a note record (see
+:ref:`amdgpu-note-records`) and is required when the target triple OS is
+``amdhsa`` (see :ref:`amdgpu-target-triples`). It must contain the minimum
+information necessary to support the ROCM kernel queries. For example, the
+segment sizes needed in a dispatch packet. In addition, a high level language
+runtime may require other information to be included. For example, the AMD
+OpenCL runtime records kernel argument information.
 
 .. _amdgpu-amdhsa-code-object-metadata-v2:
 
 Code Object V2 Metadata (-mattr=-code-object-v3)
 ++++++++++++++++++++++++++++++++++++++++++++++++
+
+.. warning:: Code Object V2 is not the default code object version emitted by
+  this version of LLVM. For a description of the metadata generated with the
+  default configuration (Code Object V3) see
+  :ref:`amdgpu-amdhsa-code-object-metadata-v3`.
 
 Code object V2 metadata is specified by the ``NT_AMD_AMDGPU_METADATA`` note
 record (see :ref:`amdgpu-note-records-v2`).
@@ -4800,8 +4821,72 @@ For full list of supported instructions, refer to "Vector ALU instructions".
 .. TODO
    Remove once we switch to code object v3 by default.
 
-HSA Code Object Directives
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _amdgpu-amdhsa-assembler-predefined-symbols-v2:
+
+Code Object V2 Predefined Symbols (-mattr=-code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. warning:: Code Object V2 is not the default code object version emitted by
+  this version of LLVM. For a description of the predefined symbols available
+  with the default configuration (Code Object V3) see
+  :ref:`amdgpu-amdhsa-assembler-predefined-symbols-v3`.
+
+The AMDGPU assembler defines and updates some symbols automatically. These
+symbols do not affect code generation.
+
+.option.machine_version_major
++++++++++++++++++++++++++++++
+
+Set to the GFX major generation number of the target being assembled for. For
+example, when assembling for a "GFX9" target this will be set to the integer
+value "9". The possible GFX major generation numbers are presented in
+:ref:`amdgpu-processors`.
+
+.option.machine_version_minor
++++++++++++++++++++++++++++++
+
+Set to the GFX minor generation number of the target being assembled for. For
+example, when assembling for a "GFX810" target this will be set to the integer
+value "1". The possible GFX minor generation numbers are presented in
+:ref:`amdgpu-processors`.
+
+.option.machine_version_stepping
+++++++++++++++++++++++++++++++++
+
+Set to the GFX stepping generation number of the target being assembled for.
+For example, when assembling for a "GFX704" target this will be set to the
+integer value "4". The possible GFX stepping generation numbers are presented
+in :ref:`amdgpu-processors`.
+
+.kernel.vgpr_count
+++++++++++++++++++
+
+Set to zero each time a
+:ref:`amdgpu-amdhsa-assembler-directive-amdgpu_hsa_kernel` directive is
+encountered. At each instruction, if the current value of this symbol is less
+than or equal to the maximum VPGR number explicitly referenced within that
+instruction then the symbol value is updated to equal that VGPR number plus
+one.
+
+.kernel.sgpr_count
+++++++++++++++++++
+
+Set to zero each time a
+:ref:`amdgpu-amdhsa-assembler-directive-amdgpu_hsa_kernel` directive is
+encountered. At each instruction, if the current value of this symbol is less
+than or equal to the maximum VPGR number explicitly referenced within that
+instruction then the symbol value is updated to equal that SGPR number plus
+one.
+
+.. _amdgpu-amdhsa-assembler-directives-v2:
+
+Code Object V2 Directives (-mattr=-code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. warning:: Code Object V2 is not the default code object version emitted by
+  this version of LLVM. For a description of the directives supported with
+  the default configuration (Code Object V3) see
+  :ref:`amdgpu-amdhsa-assembler-directives-v3`.
 
 AMDGPU ABI defines auxiliary data in output code object. In assembly source,
 one can specify them with assembler directives.
@@ -4824,6 +4909,8 @@ set architecture (ISA) version of the assembly program.
 
 By default, the assembler will derive the ISA version, *vendor*, and *arch*
 from the value of the -mcpu option that is passed to the assembler.
+
+.. _amdgpu-amdhsa-assembler-directive-amdgpu_hsa_kernel:
 
 .amdgpu_hsa_kernel (name)
 +++++++++++++++++++++++++
@@ -4857,7 +4944,17 @@ function label and before any instructions.
 For a full list of amd_kernel_code_t keys, refer to AMDGPU ABI document,
 comments in lib/Target/AMDGPU/AmdKernelCodeT.h and test/CodeGen/AMDGPU/hsa.s.
 
-Here is an example of a minimal amd_kernel_code_t specification:
+.. _amdgpu-amdhsa-assembler-example-v2:
+
+Code Object V2 Example Source Code (-mattr=-code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. warning:: Code Object V2 is not the default code object version emitted by
+  this version of LLVM. For a description of the directives supported with
+  the default configuration (Code Object V3) see
+  :ref:`amdgpu-amdhsa-assembler-example-v3`.
+
+Here is an example of a minimal assembly source file, defining one HSA kernel:
 
 .. code-block:: none
 
@@ -4892,8 +4989,10 @@ Here is an example of a minimal amd_kernel_code_t specification:
    .Lfunc_end0:
         .size   hello_world, .Lfunc_end0-hello_world
 
-Predefined Symbols (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _amdgpu-amdhsa-assembler-predefined-symbols-v3:
+
+Code Object V3 Predefined Symbols (-mattr=+code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The AMDGPU assembler defines and updates some symbols automatically. These
 symbols do not affect code generation.
@@ -4948,8 +5047,10 @@ May be used to set the `.amdhsa_next_free_spgr` directive in
 
 May be set at any time, e.g. manually set to zero at the start of each kernel.
 
-Code Object Directives (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _amdgpu-amdhsa-assembler-directives-v3:
+
+Code Object V3 Directives (-mattr=+code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Directives which begin with ``.amdgcn`` are valid for all ``amdgcn``
 architecture processors, and are not OS-specific. Directives which begin with
@@ -5089,8 +5190,10 @@ semantics described in :ref:`amdgpu-amdhsa-code-object-metadata-v3`.
 
 This directive is terminated by an ``.end_amdgpu_metadata`` directive.
 
-Example HSA Source Code (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _amdgpu-amdhsa-assembler-example-v3:
+
+Code Object V3 Example Source Code (-mattr=+code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here is an example of a minimal assembly source file, defining one HSA kernel:
 

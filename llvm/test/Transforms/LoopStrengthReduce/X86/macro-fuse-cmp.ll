@@ -3,8 +3,9 @@
 ; RUN: opt < %s -loop-reduce -mcpu=bdver2  -S | FileCheck %s --check-prefix=BUL
 ; RUN: opt < %s -loop-reduce -mcpu=haswell -S | FileCheck %s --check-prefix=HSW
 
-; RUN: llc < %s                    | FileCheck %s --check-prefix=BASE
-; RUN: llc < %s -mattr=macrofusion | FileCheck %s --check-prefix=FUSE
+; RUN: llc < %s                     | FileCheck %s --check-prefix=BASE
+; RUN: llc < %s -mattr=macrofusion  | FileCheck %s --check-prefix=FUSE
+; RUN: llc < %s -mattr=branchfusion | FileCheck %s --check-prefix=FUSE
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

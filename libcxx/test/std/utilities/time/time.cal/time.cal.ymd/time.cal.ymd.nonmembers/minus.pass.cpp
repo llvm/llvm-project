@@ -20,8 +20,6 @@
 
 #include "test_macros.h"
 
-#include <iostream>
-
 constexpr bool test_constexpr ()
 {
     std::chrono::year_month_day ym0{std::chrono::year{1234}, std::chrono::January, std::chrono::day{12}};

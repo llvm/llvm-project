@@ -1414,8 +1414,13 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
     // cv-qualifier
   case tok::kw_const:
   case tok::kw_volatile:
+    return TPResult::True;
+
     // OpenCL address space qualifiers
   case tok::kw_private:
+    if (!getLangOpts().OpenCL)
+      return TPResult::False;
+    LLVM_FALLTHROUGH;
   case tok::kw___private:
   case tok::kw___local:
   case tok::kw___global:

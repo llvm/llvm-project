@@ -102,10 +102,11 @@ struct Symbol {
   uint8_t Other;
 };
 
-struct LocalGlobalWeakSymbols {
+struct SymbolsDef {
   std::vector<Symbol> Local;
   std::vector<Symbol> Global;
   std::vector<Symbol> Weak;
+  std::vector<Symbol> GNUUnique;
 };
 
 struct SectionOrType {
@@ -288,8 +289,8 @@ struct Object {
   // cleaner and nicer if we read them from the YAML as a separate
   // top-level key, which automatically ensures that invariants like there
   // being a single SHT_SYMTAB section are upheld.
-  LocalGlobalWeakSymbols Symbols;
-  LocalGlobalWeakSymbols DynamicSymbols;
+  SymbolsDef Symbols;
+  SymbolsDef DynamicSymbols;
 };
 
 } // end namespace ELFYAML
@@ -436,9 +437,8 @@ struct MappingTraits<ELFYAML::Symbol> {
   static StringRef validate(IO &IO, ELFYAML::Symbol &Symbol);
 };
 
-template <>
-struct MappingTraits<ELFYAML::LocalGlobalWeakSymbols> {
-  static void mapping(IO &IO, ELFYAML::LocalGlobalWeakSymbols &Symbols);
+template <> struct MappingTraits<ELFYAML::SymbolsDef> {
+  static void mapping(IO &IO, ELFYAML::SymbolsDef &Symbols);
 };
 
 template <> struct MappingTraits<ELFYAML::DynamicEntry> {

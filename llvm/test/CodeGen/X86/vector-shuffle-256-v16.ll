@@ -4729,18 +4729,10 @@ define <16 x i16> @insert_dup_mem_v16i16_sext_i16(i16* %ptr) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: insert_dup_mem_v16i16_sext_i16:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    movzwl (%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpbroadcastw %xmm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: insert_dup_mem_v16i16_sext_i16:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    movzwl (%rdi), %eax
-; AVX512VL-NEXT:    vpbroadcastw %eax, %ymm0
-; AVX512VL-NEXT:    retq
+; AVX2OR512VL-LABEL: insert_dup_mem_v16i16_sext_i16:
+; AVX2OR512VL:       # %bb.0:
+; AVX2OR512VL-NEXT:    vpbroadcastw (%rdi), %ymm0
+; AVX2OR512VL-NEXT:    retq
   %tmp = load i16, i16* %ptr, align 2
   %tmp1 = sext i16 %tmp to i32
   %tmp2 = insertelement <4 x i32> zeroinitializer, i32 %tmp1, i32 0

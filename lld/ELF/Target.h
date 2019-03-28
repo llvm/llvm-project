@@ -84,7 +84,7 @@ public:
   unsigned PageSize = 4096;
   unsigned DefaultMaxPageSize = 4096;
 
-  uint64_t getImageBase();
+  uint64_t getImageBase() const;
 
   // Offset of _GLOBAL_OFFSET_TABLE_ from base of .got or .got.plt section.
   uint64_t GotBaseSymOff = 0;
@@ -183,7 +183,7 @@ bool isPPC64SmallCodeModelTocReloc(RelType Type);
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t Expr);
 
-extern TargetInfo *Target;
+extern const TargetInfo *Target;
 TargetInfo *getTarget();
 
 template <class ELFT> bool isMipsPIC(const Defined *Sym);
