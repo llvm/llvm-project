@@ -39,6 +39,7 @@ private:
                                        bool isBc, const char *InputFile) const;
   /// \return llvm-link output file name.
   const char *constructLLVMLinkCommand(Compilation &C, const JobAction &JA,
+                             const llvm::opt::ArgList &Args,
                              llvm::StringRef SubArchName,
                              llvm::StringRef OutputFilePrefix,
                              const llvm::opt::ArgStringList &InputFiles) const;

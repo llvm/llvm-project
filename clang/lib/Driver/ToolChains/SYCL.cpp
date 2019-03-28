@@ -53,13 +53,31 @@ const char *SYCL::Linker::constructLLVMSpirvCommand(Compilation &C,
 }
 
 const char *SYCL::Linker::constructLLVMLinkCommand(
-    Compilation &C, const JobAction &JA, StringRef SubArchName,
-    StringRef OutputFilePrefix,
+    Compilation &C, const JobAction &JA, const ArgList &Args,
+    StringRef SubArchName, StringRef OutputFilePrefix,
     const llvm::opt::ArgStringList &InputFiles) const {
   ArgStringList CmdArgs;
   // Add the input bc's created by compile step.
-  for (const auto &II : InputFiles)
-    CmdArgs.push_back(II);
+  // When offloading, the input file(s) could be from unbundled partially
+  // linked archives.  The unbundled information is a list of files and not
+  // an actual object/archive.  Take that list and pass those to the linker
+  // instead of the original object.
+  if (JA.isDeviceOffloading(Action::OFK_SYCL) &&
+      Args.hasArg(options::OPT_foffload_static_lib_EQ)) {
+    // Go through the Inputs to the link.  When an object is encountered, we
+    // know it is an unbundled generated list.
+    // FIXME - properly add objects from list to be removed when compilation is
+    // complete.
+    for (const auto &II : InputFiles) {
+      // Read each line of the generated unbundle file and add them to the link.
+      std::string FileName(II);
+      CmdArgs.push_back(C.getArgs().MakeArgString("@" + FileName));
+    }
+  }
+  else
+    for (const auto &II : InputFiles)
+      CmdArgs.push_back(II);
+
   // Add an intermediate output file.
   CmdArgs.push_back("-o");
   SmallString<128> TmpName(C.getDriver().GetTemporaryPath(
@@ -77,7 +95,7 @@ const char *SYCL::Linker::constructLLVMLinkCommand(
 void SYCL::Linker::constructLlcCommand(Compilation &C, const JobAction &JA,
     const InputInfo &Output, const char *InputFileName) const {
   // Construct llc command.
-  // The output is an object file
+  // The output is an object file.
   ArgStringList LlcArgs{"-filetype=obj", "-o",  Output.getFilename(),
                         InputFileName};
   SmallString<128> LlcPath(C.getDriver().Dir);
@@ -88,7 +106,7 @@ void SYCL::Linker::constructLlcCommand(Compilation &C, const JobAction &JA,
 
 // For SYCL the inputs of the linker job are SPIR-V binaries and output is
 // a single SPIR-V binary.  Input can also be bitcode when specified by
-// the user
+// the user.
 void SYCL::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfo &Output,
                                    const InputInfoList &Inputs,
@@ -112,7 +130,8 @@ void SYCL::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!II.isFilename())
       continue;
     if (Args.hasFlag(options::OPT_fsycl_use_bitcode,
-                     options::OPT_fno_sycl_use_bitcode, true))
+                     options::OPT_fno_sycl_use_bitcode, true) ||
+        Args.hasArg(options::OPT_foffload_static_lib_EQ))
       SpirvInputs.push_back(II.getFilename());
     else {
       const char *LLVMSpirvOutputFile =
@@ -122,7 +141,7 @@ void SYCL::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
   const char *LLVMLinkOutputFile =
-      constructLLVMLinkCommand(C, JA, SubArchName, Prefix, SpirvInputs);
+      constructLLVMLinkCommand(C, JA, Args, SubArchName, Prefix, SpirvInputs);
   constructLLVMSpirvCommand(C, JA, Output, Prefix, false, LLVMLinkOutputFile);
 }
 

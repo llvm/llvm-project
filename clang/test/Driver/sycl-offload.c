@@ -277,3 +277,15 @@
 // RUN: %clang -fsycl -target x86_64-unknown-linux-gnu %s -o %t -### 2>&1 | FileCheck -check-prefix=CHECK-LD-SYCL %s
 // CHECK-LD-SYCL: "{{.*}}ld{{(.exe)?}}"
 // CHECK-LD-SYCL: "-lsycl"
+
+/// ###########################################################################
+
+/// test behaviors of -foffload-static-lib=<lib>
+// RUN: touch %t.a
+// RUN: touch %t.o
+// RUN: %clang -fsycl -foffload-static-lib=%t.a -### %t.o 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=FOFFLOAD_STATIC_LIB
+// FOFFLOAD_STATIC_LIB: ld{{(.exe)?}}" "-r" "-o" {{.*}} "[[INPUT:.+\.o]]"
+// FOFFLOAD_STATIC_LIB: clang-offload-bundler{{.*}} "-type=oo"
+// FOFFLOAD_STATIC_LIB: llvm-link{{.*}} "@{{.*}}"
+

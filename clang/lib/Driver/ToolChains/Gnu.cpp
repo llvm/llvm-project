@@ -476,7 +476,33 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
-  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
+  // When offloading, the input file(s) could be from unbundled partially
+  // linked archives.  The unbundled information is a list of files and not
+  // an actual object/archive.  Take that list and pass those to the linker
+  // instead of the original object.
+  if (JA.isDeviceOffloading(Action::OFK_OpenMP) &&
+      Args.hasArg(options::OPT_foffload_static_lib_EQ)) {
+    InputInfoList UpdatedInputs;
+    // Go through the Inputs to the link.  When an object is encountered, we
+    // know it is an unbundled generated list.
+    // FIXME - properly add objects from list to be removed when compilation is
+    // complete.
+    for (const auto &II : Inputs) {
+      if (II.getType() == types::TY_Object) {
+        // Read each line of the generated unbundle file and add them to the
+        // link.
+        std::string FileName(II.getFilename());
+        const char * ArgFile = C.getArgs().MakeArgString("@" + FileName);
+        auto CurInput = InputInfo(types::TY_Object, ArgFile, ArgFile);
+        UpdatedInputs.push_back(CurInput);
+      } else
+        UpdatedInputs.push_back(II);
+    }
+    AddLinkerInputs(ToolChain, UpdatedInputs, Args, CmdArgs, JA);
+  }
+  else
+    AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
+
   // The profile runtime also needs access to system libraries.
   getToolChain().addProfileRTLibs(Args, CmdArgs);
 

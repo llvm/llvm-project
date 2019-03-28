@@ -6308,10 +6308,35 @@ void OffloadBundler::ConstructJobMultipleOutputs(
 
   assert(Inputs.size() == 1 && "Expecting to unbundle a single file!");
   InputInfo Input = Inputs.front();
+  const char *TypeArg = types::getTypeTempSuffix(Input.getType());
+  const char *InputFileName = Input.getFilename();
+
+  // For objects, we have initial support for fat archives (archives which
+  // contain bundled objects). We will perform partial linking against the
+  // object and specific offload target archives which will be sent to the
+  // unbundler to produce a list of target objects.
+  if (Input.getType() == types::TY_Object &&
+      TCArgs.hasArg(options::OPT_foffload_static_lib_EQ)) {
+    TypeArg = "oo";
+    ArgStringList LinkArgs;
+    LinkArgs.push_back("-r");
+    LinkArgs.push_back("-o");
+    std::string TmpName =
+      C.getDriver().GetTemporaryPath(
+          llvm::sys::path::stem(Input.getFilename()).str() + "-prelink", "o");
+    InputFileName = C.addTempFile(C.getArgs().MakeArgString(TmpName));
+    LinkArgs.push_back(InputFileName);
+    // Input files consist of fat libraries and the object to be unbundled.
+    LinkArgs.push_back(Input.getFilename());
+    for (const auto& A :
+            TCArgs.getAllArgValues(options::OPT_foffload_static_lib_EQ))
+      LinkArgs.push_back(TCArgs.MakeArgString(A));
+    const char *Exec = TCArgs.MakeArgString(getToolChain().GetLinkerPath());
+    C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, LinkArgs, Inputs));
+  }
 
   // Get the type.
-  CmdArgs.push_back(TCArgs.MakeArgString(
-      Twine("-type=") + types::getTypeTempSuffix(Input.getType())));
+  CmdArgs.push_back(TCArgs.MakeArgString(Twine("-type=") + TypeArg));
 
   // Get the targets.
   SmallString<128> Triples;
@@ -6336,7 +6361,7 @@ void OffloadBundler::ConstructJobMultipleOutputs(
 
   // Get bundled file command.
   CmdArgs.push_back(
-      TCArgs.MakeArgString(Twine("-inputs=") + Input.getFilename()));
+      TCArgs.MakeArgString(Twine("-inputs=") + InputFileName));
 
   // Get unbundled files command.
   SmallString<128> UB;

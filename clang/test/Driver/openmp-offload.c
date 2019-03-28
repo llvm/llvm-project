@@ -655,3 +655,14 @@
 // RUN:   | FileCheck -check-prefix=CHK-FOPENMP-IS-DEVICE %s
 
 // CHK-FOPENMP-IS-DEVICE: clang{{.*}} "-aux-triple" "powerpc64le-unknown-linux" {{.*}}.c" "-fopenmp-is-device" "-fopenmp-host-ir-file-path"
+
+/// ###########################################################################
+
+/// test behaviors of -foffload-static-lib=<lib>
+// RUN: touch %t.a
+// RUN: touch %t.o
+// RUN: %clang -fopenmp -fopenmp-targets=x86_64-pc-linux-gnu -foffload-static-lib=%t.a -### %t.o 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=FOFFLOAD_STATIC_LIB
+// FOFFLOAD_STATIC_LIB: ld{{(.exe)?}}" "-r" "-o" {{.*}} "[[INPUT:.+\.o]]"
+// FOFFLOAD_STATIC_LIB: clang-offload-bundler{{.*}} "-type=oo"
+// FOFFLOAD_STATIC_LIB: ld{{.*}} "@{{.*}}"
