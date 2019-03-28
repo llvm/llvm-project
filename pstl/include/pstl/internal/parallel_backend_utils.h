@@ -12,6 +12,7 @@
 
 #include <iterator>
 #include <utility>
+#include <cassert>
 #include "utils.h"
 
 namespace __pstl

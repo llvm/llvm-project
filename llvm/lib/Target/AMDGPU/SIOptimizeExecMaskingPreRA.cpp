@@ -308,7 +308,8 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
     }
 
     // Try to collapse adjacent endifs.
-    auto Lead = MBB.begin(), E = MBB.end();
+    auto E = MBB.end();
+    auto Lead = skipDebugInstructionsForward(MBB.begin(), E);
     if (MBB.succ_size() != 1 || Lead == E || !isEndCF(*Lead, TRI))
       continue;
 
@@ -318,14 +319,18 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
 
     auto I = std::next(Lead);
 
-    for ( ; I != E; ++I)
+    for ( ; I != E; ++I) {
+      if (I->isDebugInstr())
+        continue;
+
       if (!TII->isSALU(*I) || I->readsRegister(AMDGPU::EXEC, TRI))
         break;
+    }
 
     if (I != E)
       continue;
 
-    const auto NextLead = Succ->begin();
+    auto NextLead = skipDebugInstructionsForward(Succ->begin(), Succ->end());
     if (NextLead == Succ->end() || !isEndCF(*NextLead, TRI) ||
         !getOrExecSource(*NextLead, *TII, MRI))
       continue;

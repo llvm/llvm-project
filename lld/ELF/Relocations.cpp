@@ -979,7 +979,9 @@ static void processRelocAux(InputSectionBase &Sec, RelExpr Expr, RelType Type,
     if (!Sym.isInPlt())
       addPltEntry<ELFT>(In.Plt, In.GotPlt, In.RelaPlt, Target->PltRel, Sym);
     if (!Sym.isDefined())
-      replaceWithDefined(Sym, In.Plt, getPltEntryOffset(Sym.PltIndex), 0);
+      replaceWithDefined(
+          Sym, In.Plt,
+          Target->PltHeaderSize + Target->PltEntrySize * Sym.PltIndex, 0);
     Sym.NeedsPltAddr = true;
     Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
     return;

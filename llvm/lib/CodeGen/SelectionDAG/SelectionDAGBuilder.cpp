@@ -8346,7 +8346,7 @@ SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
     return Op;
 
   ConstantRange CR = getConstantRangeFromMetadata(*Range);
-  if (CR.isFullSet() || CR.isEmptySet() || CR.isWrappedSet())
+  if (CR.isFullSet() || CR.isEmptySet() || CR.isUpperWrapped())
     return Op;
 
   APInt Lo = CR.getUnsignedMin();

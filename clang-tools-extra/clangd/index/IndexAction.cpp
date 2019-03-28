@@ -9,7 +9,6 @@
 #include "IndexAction.h"
 #include "index/SymbolOrigin.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Tooling/Tooling.h"
 

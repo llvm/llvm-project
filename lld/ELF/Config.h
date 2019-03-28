@@ -101,6 +101,7 @@ struct Configuration {
   llvm::StringRef OptRemarksFilename;
   llvm::StringRef OptRemarksPasses;
   llvm::StringRef ProgName;
+  llvm::StringRef PrintSymbolOrder;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
   llvm::StringRef ThinLTOCacheDir;
