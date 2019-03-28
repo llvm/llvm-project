@@ -282,40 +282,6 @@ public:
     return MI.getOperand(Op).getReg() == ARM::CPSR;
   }
 
-  /// getSOImmOpValue - Return an encoded 12-bit shifted-immediate value.
-  unsigned getSOImmOpValue(const MCInst &MI, unsigned Op,
-                           SmallVectorImpl<MCFixup> &Fixups,
-                           const MCSubtargetInfo &STI) const {
-    const MCOperand &MO = MI.getOperand(Op);
-
-    // We expect MO to be an immediate or an expression,
-    // if it is an immediate - that's fine, just encode the value.
-    // Otherwise - create a Fixup.
-    if (MO.isExpr()) {
-      const MCExpr *Expr = MO.getExpr();
-      // In instruction code this value always encoded as lowest 12 bits,
-      // so we don't have to perform any specific adjustments.
-      // Due to requirements of relocatable records we have to use FK_Data_4.
-      // See ARMELFObjectWriter::ExplicitRelSym and
-      //     ARMELFObjectWriter::GetRelocTypeInner for more details.
-      MCFixupKind Kind = MCFixupKind(FK_Data_4);
-      Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
-      return 0;
-    }
-
-    unsigned SoImm = MO.getImm();
-    int SoImmVal = ARM_AM::getSOImmVal(SoImm);
-    assert(SoImmVal != -1 && "Not a valid so_imm value!");
-
-    // Encode rotate_imm.
-    unsigned Binary = (ARM_AM::getSOImmValRot((unsigned)SoImmVal) >> 1)
-      << ARMII::SoRotImmShift;
-
-    // Encode immed_8.
-    Binary |= ARM_AM::getSOImmValImm((unsigned)SoImmVal);
-    return Binary;
-  }
-
   unsigned getModImmOpValue(const MCInst &MI, unsigned Op,
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &ST) const {

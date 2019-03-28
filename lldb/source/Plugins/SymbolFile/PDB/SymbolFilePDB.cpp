@@ -124,7 +124,7 @@ SymbolFilePDB::CreateInstance(lldb_private::ObjectFile *obj_file) {
 
 SymbolFilePDB::SymbolFilePDB(lldb_private::ObjectFile *object_file)
     : SymbolFile(object_file), m_session_up(), m_global_scope_up(),
-      m_cached_compile_unit_count(0), m_tu_decl_ctx_up() {}
+      m_cached_compile_unit_count(0) {}
 
 SymbolFilePDB::~SymbolFilePDB() {}
 
@@ -189,14 +189,6 @@ void SymbolFilePDB::InitializeObject() {
   if (!m_global_scope_up)
     m_global_scope_up = m_session_up->getGlobalScope();
   lldbassert(m_global_scope_up.get());
-
-  TypeSystem *type_system =
-      GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
-  ClangASTContext *clang_type_system =
-      llvm::dyn_cast_or_null<ClangASTContext>(type_system);
-  lldbassert(clang_type_system);
-  m_tu_decl_ctx_up = llvm::make_unique<CompilerDeclContext>(
-      type_system, clang_type_system->GetTranslationUnitDecl());
 }
 
 uint32_t SymbolFilePDB::GetNumCompileUnits() {

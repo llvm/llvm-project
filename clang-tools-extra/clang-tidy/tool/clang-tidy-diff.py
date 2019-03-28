@@ -36,11 +36,10 @@ import tempfile
 import threading
 import traceback
 
-yaml_imported = True
 try:
   import yaml
 except ImportError:
-  yaml_imported = False
+  yaml = None
 
 is_py2 = sys.version[0] == '2'
 
@@ -144,7 +143,7 @@ def main():
                       default='')
   parser.add_argument('-path', dest='build_path',
                       help='Path used to read a compile command database.')
-  if yaml_imported:
+  if yaml:
     parser.add_argument('-export-fixes', metavar='FILE', dest='export_fixes',
                         help='Create a yaml file to store suggested fixes in, '
                         'which can be applied with clang-apply-replacements.')
@@ -204,7 +203,7 @@ def main():
   max_task_count = min(len(lines_by_file), max_task_count)
 
   tmpdir = None
-  if yaml_imported and args.export_fixes:
+  if yaml and args.export_fixes:
     tmpdir = tempfile.mkdtemp()
 
   # Tasks for clang-tidy.
@@ -238,7 +237,7 @@ def main():
     # Run clang-tidy on files containing changes.
     command = [args.clang_tidy_binary]
     command.append('-line-filter=' + line_filter_json)
-    if yaml_imported and args.export_fixes:
+    if yaml and args.export_fixes:
       # Get a temporary file. We immediately close the handle so clang-tidy can
       # overwrite it.
       (handle, tmp_name) = tempfile.mkstemp(suffix='.yaml', dir=tmpdir)
@@ -253,7 +252,7 @@ def main():
   # Wait for all threads to be done.
   task_queue.join()
 
-  if yaml_imported and args.export_fixes:
+  if yaml and args.export_fixes:
     print('Writing fixes to ' + args.export_fixes + ' ...')
     try:
       merge_replacement_files(tmpdir, args.export_fixes)

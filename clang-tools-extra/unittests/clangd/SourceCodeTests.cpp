@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Annotations.h"
+#include "Context.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -21,13 +23,8 @@ using llvm::Failed;
 using llvm::HasValue;
 
 MATCHER_P2(Pos, Line, Col, "") {
-  return arg.line == Line && arg.character == Col;
+  return arg.line == int(Line) && arg.character == int(Col);
 }
-
-// The = → 🡆 below are ASCII (1 byte), BMP (3 bytes), and astral (4 bytes).
-const char File[] = R"(0:0 = 0
-1:0 → 8
-2:0 🡆 18)";
 
 /// A helper to make tests easier to read.
 Position position(int line, int character) {
@@ -52,7 +49,27 @@ TEST(SourceCodeTests, lspLength) {
   EXPECT_EQ(lspLength("¥"), 1UL);
   // astral
   EXPECT_EQ(lspLength("😂"), 2UL);
+
+  WithContextValue UTF8(kCurrentOffsetEncoding, OffsetEncoding::UTF8);
+  EXPECT_EQ(lspLength(""), 0UL);
+  EXPECT_EQ(lspLength("ascii"), 5UL);
+  // BMP
+  EXPECT_EQ(lspLength("↓"), 3UL);
+  EXPECT_EQ(lspLength("¥"), 2UL);
+  // astral
+  EXPECT_EQ(lspLength("😂"), 4UL);
 }
+
+// The = → 🡆 below are ASCII (1 byte), BMP (3 bytes), and astral (4 bytes).
+const char File[] = R"(0:0 = 0
+1:0 → 8
+2:0 🡆 18)";
+struct Line {
+  unsigned Number;
+  unsigned Offset;
+  unsigned Length;
+};
+Line FileLines[] = {Line{0, 0, 7}, Line{1, 8, 9}, Line{2, 18, 11}};
 
 TEST(SourceCodeTests, PositionToOffset) {
   // line out of bounds
@@ -113,6 +130,23 @@ TEST(SourceCodeTests, PositionToOffset) {
   // line out of bounds
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(3, 0)), llvm::Failed());
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(3, 1)), llvm::Failed());
+
+  // Test UTF-8, where transformations are trivial.
+  WithContextValue UTF8(kCurrentOffsetEncoding, OffsetEncoding::UTF8);
+  EXPECT_THAT_EXPECTED(positionToOffset(File, position(-1, 2)), llvm::Failed());
+  EXPECT_THAT_EXPECTED(positionToOffset(File, position(3, 0)), llvm::Failed());
+  for (Line L : FileLines) {
+    EXPECT_THAT_EXPECTED(positionToOffset(File, position(L.Number, -1)),
+                         llvm::Failed()); // out of range
+    for (unsigned I = 0; I <= L.Length; ++I)
+      EXPECT_THAT_EXPECTED(positionToOffset(File, position(L.Number, I)),
+                           llvm::HasValue(L.Offset + I));
+    EXPECT_THAT_EXPECTED(positionToOffset(File, position(L.Number, L.Length+1)),
+                         llvm::HasValue(L.Offset + L.Length));
+    EXPECT_THAT_EXPECTED(
+        positionToOffset(File, position(L.Number, L.Length + 1), false),
+        llvm::Failed()); // out of range
+  }
 }
 
 TEST(SourceCodeTests, OffsetToPosition) {
@@ -134,6 +168,13 @@ TEST(SourceCodeTests, OffsetToPosition) {
   EXPECT_THAT(offsetToPosition(File, 28), Pos(2, 8)) << "end of last line";
   EXPECT_THAT(offsetToPosition(File, 29), Pos(2, 9)) << "EOF";
   EXPECT_THAT(offsetToPosition(File, 30), Pos(2, 9)) << "out of bounds";
+
+  WithContextValue UTF8(kCurrentOffsetEncoding, OffsetEncoding::UTF8);
+  for (Line L : FileLines) {
+    for (unsigned I = 0; I <= L.Length; ++I)
+      EXPECT_THAT(offsetToPosition(File, L.Offset + I), Pos(L.Number, I));
+  }
+  EXPECT_THAT(offsetToPosition(File, 30), Pos(2, 11)) << "out of bounds";
 }
 
 TEST(SourceCodeTests, IsRangeConsecutive) {

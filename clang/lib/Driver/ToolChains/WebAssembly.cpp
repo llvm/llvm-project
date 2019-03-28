@@ -12,8 +12,6 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Option/ArgList.h"
 
 using namespace clang::driver;
@@ -38,25 +36,6 @@ bool wasm::Linker::isLinkJob() const { return true; }
 
 bool wasm::Linker::hasIntegratedCPP() const { return false; }
 
-std::string wasm::Linker::getLinkerPath(const ArgList &Args) const {
-  const ToolChain &ToolChain = getToolChain();
-  if (const Arg* A = Args.getLastArg(options::OPT_fuse_ld_EQ)) {
-    StringRef UseLinker = A->getValue();
-    if (!UseLinker.empty()) {
-      if (llvm::sys::path::is_absolute(UseLinker) &&
-          llvm::sys::fs::can_execute(UseLinker))
-        return UseLinker;
-
-      // Accept 'lld', and 'ld' as aliases for the default linker
-      if (UseLinker != "lld" && UseLinker != "ld")
-        ToolChain.getDriver().Diag(diag::err_drv_invalid_linker_name)
-            << A->getAsString(Args);
-    }
-  }
-
-  return ToolChain.getDefaultLinker();
-}
-
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const InputInfo &Output,
                                 const InputInfoList &Inputs,
@@ -64,7 +43,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const char *LinkingOutput) const {
 
   const ToolChain &ToolChain = getToolChain();
-  const char *Linker = Args.MakeArgString(getLinkerPath(Args));
+  const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   ArgStringList CmdArgs;
 
   if (Args.hasArg(options::OPT_s))

@@ -269,9 +269,6 @@ class WasmObjectWriter : public MCObjectWriter {
 
   // TargetObjectWriter wrappers.
   bool is64Bit() const { return TargetObjectWriter->is64Bit(); }
-  unsigned getRelocType(const MCValue &Target, const MCFixup &Fixup) const {
-    return TargetObjectWriter->getRelocType(Target, Fixup);
-  }
 
   void startSection(SectionBookkeeping &Section, unsigned SectionId);
   void startCustomSection(SectionBookkeeping &Section, StringRef Name);
@@ -508,7 +505,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   // be negative and don't wrap.
   FixedValue = 0;
 
-  unsigned Type = getRelocType(Target, Fixup);
+  unsigned Type = TargetObjectWriter->getRelocType(Target, Fixup);
   assert(!IsPCRel);
   assert(SymA);
 

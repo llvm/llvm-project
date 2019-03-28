@@ -339,7 +339,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY span<const byte, _Extent * sizeof(element_type)> __as_bytes() const noexcept
     { return {reinterpret_cast<const byte *>(data()), size_bytes()}; }
 
-    _LIBCPP_INLINE_VISIBILITY span<byte, _Extent * sizeof(element_type)> __as_writeable_bytes() const noexcept
+    _LIBCPP_INLINE_VISIBILITY span<byte, _Extent * sizeof(element_type)> __as_writable_bytes() const noexcept
     { return {reinterpret_cast<byte *>(data()), size_bytes()}; }
 
 private:
@@ -513,7 +513,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY span<const byte, dynamic_extent> __as_bytes() const noexcept
     { return {reinterpret_cast<const byte *>(data()), size_bytes()}; }
 
-    _LIBCPP_INLINE_VISIBILITY span<byte, dynamic_extent> __as_writeable_bytes() const noexcept
+    _LIBCPP_INLINE_VISIBILITY span<byte, dynamic_extent> __as_writable_bytes() const noexcept
     { return {reinterpret_cast<byte *>(data()), size_bytes()}; }
 
 private:
@@ -550,7 +550,7 @@ get(span<_Tp, _Size> __s) noexcept
 }
 
 
-//  as_bytes & as_writeable_bytes
+//  as_bytes & as_writable_bytes
 template <class _Tp, size_t _Extent>
 _LIBCPP_INLINE_VISIBILITY
 auto as_bytes(span<_Tp, _Extent> __s) noexcept
@@ -559,9 +559,9 @@ auto as_bytes(span<_Tp, _Extent> __s) noexcept
 
 template <class _Tp, size_t _Extent>
 _LIBCPP_INLINE_VISIBILITY
-auto as_writeable_bytes(span<_Tp, _Extent> __s) noexcept
--> enable_if_t<!is_const_v<_Tp>, decltype(__s.__as_writeable_bytes())>
-{ return __s.__as_writeable_bytes(); }
+auto as_writable_bytes(span<_Tp, _Extent> __s) noexcept
+-> enable_if_t<!is_const_v<_Tp>, decltype(__s.__as_writable_bytes())>
+{ return __s.__as_writable_bytes(); }
 
 template <class _Tp, size_t _Extent>
 _LIBCPP_INLINE_VISIBILITY

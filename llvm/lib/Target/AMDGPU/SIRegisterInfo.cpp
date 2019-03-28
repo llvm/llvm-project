@@ -584,7 +584,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
     // We don't have access to the register scavenger if this function is called
     // during  PEI::scavengeFrameVirtualRegs().
     if (RS)
-      SOffset = RS->FindUnusedReg(&AMDGPU::SGPR_32RegClass);
+      SOffset = RS->scavengeRegister(&AMDGPU::SGPR_32RegClass, MI, 0, false);
 
     if (SOffset == AMDGPU::NoRegister) {
       // There are no free SGPRs, and since we are in the process of spilling

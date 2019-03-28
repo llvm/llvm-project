@@ -546,12 +546,12 @@ void SourcePrinter::printSourceLine(raw_ostream &OS,
   if (!Symbolizer)
     return;
   DILineInfo LineInfo = DILineInfo();
-  auto ExpectecLineInfo =
+  auto ExpectedLineInfo =
       Symbolizer->symbolizeCode(Obj->getFileName(), Address);
-  if (!ExpectecLineInfo)
-    consumeError(ExpectecLineInfo.takeError());
+  if (!ExpectedLineInfo)
+    consumeError(ExpectedLineInfo.takeError());
   else
-    LineInfo = *ExpectecLineInfo;
+    LineInfo = *ExpectedLineInfo;
 
   if ((LineInfo.FileName == "<invalid>") || OldLineInfo.Line == LineInfo.Line ||
       LineInfo.Line == 0)

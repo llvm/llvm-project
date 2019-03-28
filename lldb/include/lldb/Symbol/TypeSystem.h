@@ -25,6 +25,7 @@
 
 class DWARFDIE;
 class DWARFASTParser;
+class PDBASTParser;
 
 namespace lldb_private {
 
@@ -91,6 +92,7 @@ public:
   virtual void Finalize() {}
 
   virtual DWARFASTParser *GetDWARFParser() { return nullptr; }
+  virtual PDBASTParser *GetPDBParser() { return nullptr; }
 
   virtual SymbolFile *GetSymbolFile() const { return m_sym_file; }
 

@@ -225,7 +225,8 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
       SmallVector<MachineInstr *, 4> DeadInstructions;
-      if (ArtCombiner.tryCombineInstruction(MI, DeadInstructions)) {
+      if (ArtCombiner.tryCombineInstruction(MI, DeadInstructions,
+                                            WrapperObserver)) {
         for (auto *DeadMI : DeadInstructions) {
           LLVM_DEBUG(dbgs() << *DeadMI << "Is dead\n");
           RemoveDeadInstFromLists(DeadMI);

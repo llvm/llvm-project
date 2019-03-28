@@ -643,16 +643,6 @@ public:
   }
 };
 
-class WorklistInserter : public SelectionDAG::DAGUpdateListener {
-  DAGCombiner &DC;
-
-public:
-  explicit WorklistInserter(DAGCombiner &dc)
-      : SelectionDAG::DAGUpdateListener(dc.getDAG()), DC(dc) {}
-
-  void NodeInserted(SDNode *N) override { DC.AddToWorklist(N); }
-};
-
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -1405,8 +1395,6 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
 
-  WorklistInserter AddNodes(*this);
-
   // Add all the dag nodes to the worklist.
   for (SDNode &Node : DAG.allnodes())
     AddToWorklist(&Node);
@@ -1849,6 +1837,8 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
       for (const SDValue &Op : CurNode->op_values())
         AddToWorklist(i, Op.getNode(), CurOpNumber);
       break;
+    case ISD::LIFETIME_START:
+    case ISD::LIFETIME_END:
     case ISD::CopyFromReg:
     case ISD::CopyToReg:
       AddToWorklist(i, CurNode->getOperand(0).getNode(), CurOpNumber);

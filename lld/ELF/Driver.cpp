@@ -836,6 +836,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
   Config->PrintGcSections =
       Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
+  Config->PrintSymbolOrder =
+      Args.getLastArgValue(OPT_print_symbol_order);
   Config->Rpath = getRpath(Args);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
