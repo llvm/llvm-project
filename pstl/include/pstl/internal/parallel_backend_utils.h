@@ -17,11 +17,11 @@
 
 namespace __pstl
 {
-namespace par_backend
+namespace __par_backend
 {
 
 //! Destroy sequence [xs,xe)
-struct serial_destroy
+struct __serial_destroy
 {
     template <typename _RandomAccessIterator>
     void
@@ -38,13 +38,13 @@ struct serial_destroy
 
 //! Merge sequences [__xs,__xe) and [__ys,__ye) to output sequence [__zs,(__xe-__xs)+(__ye-__ys)), using std::move
 template <class _MoveValues, class _MoveSequences>
-struct serial_move_merge
+struct __serial_move_merge
 {
     const std::size_t _M_nmerge;
     _MoveValues _M_move_values;
     _MoveSequences _M_move_sequences;
 
-    explicit serial_move_merge(std::size_t __nmerge, _MoveValues __move_values, _MoveSequences __move_sequences)
+    explicit __serial_move_merge(std::size_t __nmerge, _MoveValues __move_values, _MoveSequences __move_sequences)
         : _M_nmerge(__nmerge), _M_move_values(__move_values), _M_move_sequences(__move_sequences)
     {
     }
@@ -108,7 +108,7 @@ struct serial_move_merge
 
 template <typename _RandomAccessIterator1, typename _OutputIterator>
 void
-init_buf(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _OutputIterator __zs, bool __bMove)
+__init_buf(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _OutputIterator __zs, bool __bMove)
 {
     const _OutputIterator __ze = __zs + (__xe - __xs);
     typedef typename std::iterator_traits<_OutputIterator>::value_type _ValueType;
@@ -126,8 +126,9 @@ init_buf(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _OutputIterat
     }
 }
 
+// TODO is this actually used anywhere?
 template <typename _Buf>
-class stack
+class __stack
 {
     typedef typename std::iterator_traits<decltype(_Buf(0).get())>::value_type _ValueType;
     typedef typename std::iterator_traits<_ValueType*>::difference_type _DifferenceType;
@@ -136,14 +137,14 @@ class stack
     _ValueType* _M_ptr;
     _DifferenceType _M_maxsize;
 
-    stack(const stack&) = delete;
+    __stack(const __stack&) = delete;
     void
-    operator=(const stack&) = delete;
+    operator=(const __stack&) = delete;
 
   public:
-    stack(_DifferenceType __max_size) : _M_buf(__max_size), _M_maxsize(__max_size) { _M_ptr = _M_buf.get(); }
+    __stack(_DifferenceType __max_size) : _M_buf(__max_size), _M_maxsize(__max_size) { _M_ptr = _M_buf.get(); }
 
-    ~stack()
+    ~__stack()
     {
         assert(size() <= _M_maxsize);
         while (!empty())
@@ -189,7 +190,7 @@ class stack
     }
 };
 
-} // namespace par_backend
+} // namespace __par_backend
 } // namespace __pstl
 
 #endif /* __PSTL_parallel_backend_utils_H */

@@ -16,7 +16,7 @@
 
 namespace __pstl
 {
-namespace internal
+namespace __internal
 {
 
 //------------------------------------------------------------------------
@@ -26,32 +26,32 @@ namespace internal
 Each f[i,j) must return a value in [i,j). */
 template <class _ExecutionPolicy, class _Index, class _Brick, class _Compare>
 _Index
-parallel_find(_ExecutionPolicy&& __exec, _Index __first, _Index __last, _Brick __f, _Compare __comp, bool __b_first)
+__parallel_find(_ExecutionPolicy&& __exec, _Index __first, _Index __last, _Brick __f, _Compare __comp, bool __b_first)
 {
     typedef typename std::iterator_traits<_Index>::difference_type _DifferenceType;
     const _DifferenceType __n = __last - __first;
     _DifferenceType __initial_dist = __b_first ? __n : -1;
     std::atomic<_DifferenceType> __extremum(__initial_dist);
     // TODO: find out what is better here: parallel_for or parallel_reduce
-    par_backend::parallel_for(std::forward<_ExecutionPolicy>(__exec), __first, __last,
-                              [__comp, __f, __first, &__extremum](_Index __i, _Index __j) {
-                                  // See "Reducing Contention Through Priority Updates", PPoPP '13, for discussion of
-                                  // why using a shared variable scales fairly well in this situation.
-                                  if (__comp(__i - __first, __extremum))
-                                  {
-                                      _Index __res = __f(__i, __j);
-                                      // If not '__last' returned then we found what we want so put this to extremum
-                                      if (__res != __j)
+    __par_backend::__parallel_for(std::forward<_ExecutionPolicy>(__exec), __first, __last,
+                                  [__comp, __f, __first, &__extremum](_Index __i, _Index __j) {
+                                      // See "Reducing Contention Through Priority Updates", PPoPP '13, for discussion of
+                                      // why using a shared variable scales fairly well in this situation.
+                                      if (__comp(__i - __first, __extremum))
                                       {
-                                          const _DifferenceType __k = __res - __first;
-                                          for (_DifferenceType __old = __extremum; __comp(__k, __old);
-                                               __old = __extremum)
+                                          _Index __res = __f(__i, __j);
+                                          // If not '__last' returned then we found what we want so put this to extremum
+                                          if (__res != __j)
                                           {
-                                              __extremum.compare_exchange_weak(__old, __k);
+                                              const _DifferenceType __k = __res - __first;
+                                              for (_DifferenceType __old = __extremum; __comp(__k, __old);
+                                                   __old = __extremum)
+                                              {
+                                                  __extremum.compare_exchange_weak(__old, __k);
+                                              }
                                           }
                                       }
-                                  }
-                              });
+                                  });
     return __extremum != __initial_dist ? __first + __extremum : __last;
 }
 
@@ -61,21 +61,21 @@ parallel_find(_ExecutionPolicy&& __exec, _Index __first, _Index __last, _Brick _
 //! Return true if brick f[i,j) returns true for some subrange [i,j) of [first,last)
 template <class _ExecutionPolicy, class _Index, class _Brick>
 bool
-parallel_or(_ExecutionPolicy&& __exec, _Index __first, _Index __last, _Brick __f)
+__parallel_or(_ExecutionPolicy&& __exec, _Index __first, _Index __last, _Brick __f)
 {
     std::atomic<bool> __found(false);
-    par_backend::parallel_for(std::forward<_ExecutionPolicy>(__exec), __first, __last,
-                              [__f, &__found](_Index __i, _Index __j) {
-                                  if (!__found.load(std::memory_order_relaxed) && __f(__i, __j))
-                                  {
-                                      __found.store(true, std::memory_order_relaxed);
-                                      par_backend::cancel_execution();
-                                  }
-                              });
+    __par_backend::__parallel_for(std::forward<_ExecutionPolicy>(__exec), __first, __last,
+                                  [__f, &__found](_Index __i, _Index __j) {
+                                      if (!__found.load(std::memory_order_relaxed) && __f(__i, __j))
+                                      {
+                                          __found.store(true, std::memory_order_relaxed);
+                                          __par_backend::__cancel_execution();
+                                      }
+                                  });
     return __found;
 }
 
-} // namespace internal
+} // namespace __internal
 } // namespace __pstl
 
 #endif /* __PSTL_parallel_impl_H */
