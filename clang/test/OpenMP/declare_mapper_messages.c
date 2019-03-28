@@ -34,7 +34,7 @@ int fun(int arg) {
 #pragma omp declare mapper(id: struct vec v) map(v.len)                 // expected-note {{previous definition is here}}
 #pragma omp declare mapper(id: struct vec v) map(v.len)                 // expected-error {{redefinition of user-defined mapper for type 'struct vec' with name 'id'}}
     {
-#pragma omp declare mapper(id: struct vec v) map(v.len)
+#pragma omp declare mapper(id: struct vec v) map(v.len) allocate(v)   // expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp declare mapper'}}
       struct vec vv, v1;
 #pragma omp target map(mapper)                                          // expected-error {{use of undeclared identifier 'mapper'}}
       {}

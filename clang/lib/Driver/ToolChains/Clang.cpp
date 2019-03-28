@@ -3261,8 +3261,7 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
 
   // -gsplit-dwarf should turn on -g and enable the backend dwarf
   // splitting and extraction.
-  // FIXME: Currently only works on Linux and Fuchsia.
-  if (T.isOSLinux() || T.isOSFuchsia()) {
+  if (T.isOSBinFormatELF()) {
     if (!SplitDWARFInlining)
       CmdArgs.push_back("-fno-split-dwarf-inlining");
 
@@ -4078,13 +4077,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add the split debug info name to the command lines here so we
   // can propagate it to the backend.
   bool SplitDWARF = (DwarfFission != DwarfFissionKind::None) &&
-                    (RawTriple.isOSLinux() || RawTriple.isOSFuchsia()) &&
+                    TC.getTriple().isOSBinFormatELF() &&
                     (isa<AssembleJobAction>(JA) || isa<CompileJobAction>(JA) ||
                      isa<BackendJobAction>(JA));
   const char *SplitDWARFOut;
   if (SplitDWARF) {
     CmdArgs.push_back("-split-dwarf-file");
-    SplitDWARFOut = SplitDebugName(Args, Output);
+    SplitDWARFOut = SplitDebugName(Args, Input, Output);
     CmdArgs.push_back(SplitDWARFOut);
   }
 
@@ -6168,10 +6167,10 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   const llvm::Triple &T = getToolChain().getTriple();
   Arg *A;
-  if ((getDebugFissionKind(D, Args, A) == DwarfFissionKind::Split) &&
-      (T.isOSLinux() || T.isOSFuchsia())) {
+  if (getDebugFissionKind(D, Args, A) == DwarfFissionKind::Split &&
+      T.isOSBinFormatELF()) {
     CmdArgs.push_back("-split-dwarf-file");
-    CmdArgs.push_back(SplitDebugName(Args, Output));
+    CmdArgs.push_back(SplitDebugName(Args, Input, Output));
   }
 
   assert(Input.isFilename() && "Invalid input.");

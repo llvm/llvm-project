@@ -8,7 +8,7 @@ struct S1 { // expected-note 2 {{declared here}}
 
 template <class T>
 T tmain(T argc) {
-#pragma omp flush
+#pragma omp flush allocate(argc) // expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp flush'}}
   ;
 #pragma omp flush untied  // expected-error {{unexpected OpenMP clause 'untied' in directive '#pragma omp flush'}}
 #pragma omp flush unknown // expected-warning {{extra tokens at the end of '#pragma omp flush' are ignored}}

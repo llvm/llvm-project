@@ -2263,6 +2263,10 @@ void OMPClauseEnqueue::VisitOMPClauseList(T *Node) {
   }
 }
 
+void OMPClauseEnqueue::VisitOMPAllocateClause(const OMPAllocateClause *C) {
+  VisitOMPClauseList(C);
+  Visitor->AddStmt(C->getAllocator());
+}
 void OMPClauseEnqueue::VisitOMPPrivateClause(const OMPPrivateClause *C) {
   VisitOMPClauseList(C);
   for (const auto *E : C->private_copies()) {

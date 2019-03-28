@@ -55,7 +55,7 @@ class S8 : public S7<S> {
 
 public:
   S8(int v) : S7<S>(v){
-#pragma omp target teams distribute private(a) private(this->a) private(S7<S>::a) 
+#pragma omp target teams distribute private(a) private(this->a) private(S7<S>::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
@@ -68,14 +68,14 @@ public:
 
   void bar() {
     int b, argv, d, c, e, f;
-#pragma omp target teams distribute default(none), private(b) firstprivate(argv) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d)
+#pragma omp target teams distribute allocate(argv) default(none), private(b) firstprivate(argv) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d) allocate(e)
     for (int k = 0; k < a.a; ++k)
       ++a.a;
   }
 };
 // CHECK: #pragma omp target teams distribute private(this->a) private(this->a) private(this->S7<S>::a)
 // CHECK: #pragma omp target teams distribute private(this->a) private(this->a)
-// CHECK: #pragma omp target teams distribute default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
+// CHECK: #pragma omp target teams distribute allocate(argv) default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d) allocate(e)
 
 template <class T, int N>
 T tmain(T argc) {

@@ -11870,6 +11870,9 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPIsDevicePtrClause::CreateEmpty(Context, Sizes);
     break;
   }
+  case OMPC_allocate:
+    C = OMPAllocateClause::CreateEmpty(Context, Record.readInt());
+    break;
   }
   Visit(C);
   C->setLocStart(Record.readSourceLocation());
@@ -12363,6 +12366,18 @@ void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
         AssociatedExpr, AssociatedDecl));
   }
   C->setComponents(Components, ListSizes);
+}
+
+void OMPClauseReader::VisitOMPAllocateClause(OMPAllocateClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setColonLoc(Record.readSourceLocation());
+  C->setAllocator(Record.readSubExpr());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned i = 0; i != NumVars; ++i)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
 }
 
 void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
