@@ -938,19 +938,76 @@ public:
   void writeTo(uint8_t *Buf) override {}
 };
 
-class ARMExidxSentinelSection : public SyntheticSection {
+// Representation of the combined .ARM.Exidx input sections. We process these
+// as a SyntheticSection like .eh_frame as we need to merge duplicate entries
+// and add terminating sentinel entries.
+//
+// The .ARM.exidx input sections after SHF_LINK_ORDER processing is done form
+// a table that the unwinder can derive (Addresses are encoded as offsets from
+// table):
+// | Address of function | Unwind instructions for function |
+// where the unwind instructions are either a small number of unwind or the
+// special EXIDX_CANTUNWIND entry representing no unwinding information.
+// When an exception is thrown from an address A, the unwinder searches the
+// table for the closest table entry with Address of function <= A. This means
+// that for two consecutive table entries:
+// | A1 | U1 |
+// | A2 | U2 |
+// The range of addresses described by U1 is [A1, A2)
+//
+// There are two cases where we need a linker generated table entry to fixup
+// the address ranges in the table
+// Case 1:
+// - A sentinel entry added with an address higher than all
+// executable sections. This was needed to work around libunwind bug pr31091.
+// - After address assignment we need to find the highest addressed executable
+// section and use the limit of that section so that the unwinder never
+// matches it.
+// Case 2:
+// - InputSections without a .ARM.exidx section (usually from Assembly)
+// need a table entry so that they terminate the range of the previously
+// function. This is pr40277.
+//
+// Instead of storing pointers to the .ARM.exidx InputSections from
+// InputObjects, we store pointers to the executable sections that need
+// .ARM.exidx sections. We can then use the dependentSections of these to
+// either find the .ARM.exidx section or know that we need to generate one.
+class ARMExidxSyntheticSection : public SyntheticSection {
 public:
-  ARMExidxSentinelSection();
-  size_t getSize() const override { return 8; }
+  ARMExidxSyntheticSection();
+  size_t getSize() const override { return Size; }
   void writeTo(uint8_t *Buf) override;
-  bool empty() const override;
+  bool empty() const override { return Empty; }
+  // Sort and remove duplicate entries.
+  void finalizeContents() override;
+  InputSection *getLinkOrderDep() const;
 
   static bool classof(const SectionBase *D);
 
-  // The last section referenced by a regular .ARM.exidx section.
-  // It is found and filled in Writer<ELFT>::resolveShfLinkOrder().
-  // The sentinel points at the end of that section.
-  InputSection *Highest = nullptr;
+  // Links to the ARMExidxSections so we can transfer the relocations once the
+  // layout is known.
+  std::vector<InputSection *> ExidxSections;
+
+private:
+  // Derive Size from contents of ExecutableSections, including any linker
+  // generated sentinels. Also set the OutSecOff of the ExidxSections.
+  void setSizeAndOffsets();
+  size_t Size;
+
+  // Empty if ExecutableSections contains no dependent .ARM.exidx sections.
+  bool Empty = true;
+
+  // Instead of storing pointers to the .ARM.exidx InputSections from
+  // InputObjects, we store pointers to the executable sections that need
+  // .ARM.exidx sections. We can then use the dependentSections of these to
+  // either find the .ARM.exidx section or know that we need to generate one.
+  std::vector<InputSection *> ExecutableSections;
+
+  // The executable InputSection with the highest address to use for the
+  // sentinel. We store separately from ExecutableSections as merging of
+  // duplicate entries may mean this InputSection is removed from
+  // ExecutableSections.
+  InputSection *Sentinel = nullptr;
 };
 
 // A container for one or more linker generated thunks. Instances of these
@@ -1005,6 +1062,7 @@ Defined *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
 // Linker generated sections which can be used as inputs.
 struct InStruct {
   InputSection *ARMAttributes;
+  ARMExidxSyntheticSection *ARMExidx;
   BssSection *Bss;
   BssSection *BssRelRo;
   BuildIdSection *BuildId;

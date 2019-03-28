@@ -28,6 +28,7 @@
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <bitset>
 #include <string>
 #include <vector>
@@ -346,9 +347,12 @@ enum class OffsetEncoding {
   UTF16,
   // Length counts bytes of UTF-8 encoded text. (Clangd extension).
   UTF8,
+  // Length counts codepoints in unicode text. (Clangd extension).
+  UTF32,
 };
 llvm::json::Value toJSON(const OffsetEncoding &);
 bool fromJSON(const llvm::json::Value &, OffsetEncoding &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, OffsetEncoding OS);
 
 // This struct doesn't mirror LSP!
 // The protocol defines deeply nested structures for client capabilities.

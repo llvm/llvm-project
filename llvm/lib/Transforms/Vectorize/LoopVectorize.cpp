@@ -1383,12 +1383,6 @@ static bool isExplicitVecOuterLoop(Loop *OuterLp,
     return false;
   }
 
-  if (!Hints.getWidth()) {
-    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: No user vector width.\n");
-    Hints.emitRemarkWithHints();
-    return false;
-  }
-
   if (Hints.getInterleave() > 1) {
     // TODO: Interleave support is future work.
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Interleave is not supported for "
@@ -6081,31 +6075,48 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   }
 }
 
+// TODO: we could return a pair of values that specify the max VF and
+// min VF, to be used in `buildVPlans(MinVF, MaxVF)` instead of
+// `buildVPlans(VF, VF)`. We cannot do it because VPLAN at the moment
+// doesn't have a cost model that can choose which plan to execute if
+// more than one is generated.
+static unsigned determineVPlanVF(const unsigned WidestVectorRegBits,
+                                 LoopVectorizationCostModel &CM) {
+  unsigned WidestType;
+  std::tie(std::ignore, WidestType) = CM.getSmallestAndWidestTypes();
+  return WidestVectorRegBits / WidestType;
+}
+
 VectorizationFactor
 LoopVectorizationPlanner::planInVPlanNativePath(bool OptForSize,
                                                 unsigned UserVF) {
+  unsigned VF = UserVF;
   // Outer loop handling: They may require CFG and instruction level
   // transformations before even evaluating whether vectorization is profitable.
   // Since we cannot modify the incoming IR, we need to build VPlan upfront in
   // the vectorization pipeline.
   if (!OrigLoop->empty()) {
-    // TODO: If UserVF is not provided, we set UserVF to 4 for stress testing.
-    // This won't be necessary when UserVF is not required in the VPlan-native
-    // path.
-    if (VPlanBuildStressTest && !UserVF)
-      UserVF = 4;
+    // If the user doesn't provide a vectorization factor, determine a
+    // reasonable one.
+    if (!UserVF) {
+      // We set VF to 4 for stress testing.
+      if (VPlanBuildStressTest)
+        VF = 4;
+      else
+        VF = determineVPlanVF(TTI->getRegisterBitWidth(true /* Vector*/), CM);
+    }
 
     assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
-    assert(UserVF && "Expected UserVF for outer loop vectorization.");
-    assert(isPowerOf2_32(UserVF) && "VF needs to be a power of two");
-    LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
-    buildVPlans(UserVF, UserVF);
+    assert(isPowerOf2_32(VF) && "VF needs to be a power of two");
+    LLVM_DEBUG(dbgs() << "LV: Using " << (UserVF ? "user VF " : "computed VF ")
+                      << VF << " to build VPlans.\n");
+    buildVPlans(VF, VF);
 
     // For VPlan build stress testing, we bail out after VPlan construction.
     if (VPlanBuildStressTest)
       return VectorizationFactor::Disabled();
 
-    return {UserVF, 0};
+    return {VF, 0};
   }
 
   LLVM_DEBUG(
@@ -7128,7 +7139,7 @@ static bool processLoopInVPlanNativePath(
   LoopVectorizationPlanner LVP(L, LI, TLI, TTI, LVL, CM);
 
   // Get user vectorization factor.
-  unsigned UserVF = Hints.getWidth();
+  const unsigned UserVF = Hints.getWidth();
 
   // Check the function attributes to find out if this function should be
   // optimized for size.
@@ -7136,16 +7147,18 @@ static bool processLoopInVPlanNativePath(
       Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
 
   // Plan how to best vectorize, return the best VF and its cost.
-  VectorizationFactor VF = LVP.planInVPlanNativePath(OptForSize, UserVF);
+  const VectorizationFactor VF = LVP.planInVPlanNativePath(OptForSize, UserVF);
 
   // If we are stress testing VPlan builds, do not attempt to generate vector
   // code. Masked vector code generation support will follow soon.
-  if (VPlanBuildStressTest || EnableVPlanPredication)
+  // Also, do not attempt to vectorize if no vector code will be produced.
+  if (VPlanBuildStressTest || EnableVPlanPredication ||
+      VectorizationFactor::Disabled() == VF)
     return false;
 
   LVP.setBestPlan(VF.Width, 1);
 
-  InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, UserVF, 1, LVL,
+  InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width, 1, LVL,
                          &CM);
   LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
                     << L->getHeader()->getParent()->getName() << "\"\n");

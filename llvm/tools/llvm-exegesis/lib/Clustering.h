@@ -25,20 +25,24 @@ namespace exegesis {
 
 class InstructionBenchmarkClustering {
 public:
+  enum ModeE { Dbscan, Naive };
+
   // Clusters `Points` using DBSCAN with the given parameters. See the cc file
   // for more explanations on the algorithm.
   static llvm::Expected<InstructionBenchmarkClustering>
-  create(const std::vector<InstructionBenchmark> &Points, size_t MinPts,
-         double AnalysisClusteringEpsilon,
+  create(const std::vector<InstructionBenchmark> &Points, ModeE Mode,
+         size_t DbscanMinPts, double AnalysisClusteringEpsilon,
          llvm::Optional<unsigned> NumOpcodes = llvm::None);
 
   class ClusterId {
   public:
     static ClusterId noise() { return ClusterId(kNoise); }
     static ClusterId error() { return ClusterId(kError); }
-    static ClusterId makeValid(size_t Id) { return ClusterId(Id); }
+    static ClusterId makeValid(size_t Id, bool IsUnstable = false) {
+      return ClusterId(Id, IsUnstable);
+    }
     static ClusterId makeValidUnstable(size_t Id) {
-      return ClusterId(Id, /*IsUnstable=*/true);
+      return makeValid(Id, /*IsUnstable=*/true);
     }
 
     ClusterId() : Id_(kUndef), IsUnstable_(false) {}
@@ -120,18 +124,41 @@ private:
       double AnalysisClusteringEpsilonSquared);
 
   llvm::Error validateAndSetup();
-  void dbScan(size_t MinPts);
+
+  void clusterizeDbScan(size_t MinPts);
+  void clusterizeNaive(unsigned NumOpcodes);
+
+  // Stabilization is only needed if dbscan was used to clusterize.
   void stabilize(unsigned NumOpcodes);
+
   void rangeQuery(size_t Q, std::vector<size_t> &Scratchpad) const;
+
+  bool areAllNeighbours(ArrayRef<size_t> Pts) const;
 
   const std::vector<InstructionBenchmark> &Points_;
   const double AnalysisClusteringEpsilonSquared_;
+
   int NumDimensions_ = 0;
   // ClusterForPoint_[P] is the cluster id for Points[P].
   std::vector<ClusterId> ClusterIdForPoint_;
   std::vector<Cluster> Clusters_;
   Cluster NoiseCluster_;
   Cluster ErrorCluster_;
+};
+
+class SchedClassClusterCentroid {
+public:
+  const std::vector<PerInstructionStats> &getStats() const {
+    return Representative;
+  }
+
+  std::vector<BenchmarkMeasure> getAsPoint() const;
+
+  void addPoint(ArrayRef<BenchmarkMeasure> Point);
+
+private:
+  // Measurement stats for the points in the SchedClassCluster.
+  std::vector<PerInstructionStats> Representative;
 };
 
 } // namespace exegesis

@@ -624,6 +624,10 @@ public:
   /// Whether we must prevent this instruction from executing with EXEC = 0.
   bool hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const;
 
+  /// Returns true if the instruction could potentially depend on the value of
+  /// exec. If false, exec dependencies may safely be ignored.
+  bool mayReadEXEC(const MachineRegisterInfo &MRI, const MachineInstr &MI) const;
+
   bool isInlineConstant(const APInt &Imm) const;
 
   bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const;

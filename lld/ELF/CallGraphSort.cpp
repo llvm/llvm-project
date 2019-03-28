@@ -226,6 +226,27 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
     for (int SecIndex : C.Sections)
       OrderMap[Sections[SecIndex]] = CurOrder++;
 
+  if (!Config->PrintSymbolOrder.empty()) {
+    std::error_code EC;
+    raw_fd_ostream OS(Config->PrintSymbolOrder, EC, sys::fs::F_None);
+    if (EC) {
+      error("cannot open " + Config->PrintSymbolOrder + ": " + EC.message());
+      return OrderMap;
+    }
+
+    // Print the symbols ordered by C3, in the order of increasing CurOrder
+    // Instead of sorting all the OrderMap, just repeat the loops above.
+    for (const Cluster &C : Clusters)
+      for (int SecIndex : C.Sections)
+        // Search all the symbols in the file of the section
+        // and find out a Defined symbol with name that is within the section.
+        for (Symbol *Sym: Sections[SecIndex]->File->getSymbols())
+          if (!Sym->isSection()) // Filter out section-type symbols here.
+            if (auto *D = dyn_cast<Defined>(Sym))
+              if (Sections[SecIndex] == D->Section)
+                OS << Sym->getName() << "\n";
+  }
+
   return OrderMap;
 }
 

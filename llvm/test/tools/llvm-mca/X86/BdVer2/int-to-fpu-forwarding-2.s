@@ -141,12 +141,12 @@ movq %rcx, %xmm0
 
 # CHECK:      Iterations:        500
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      506
+# CHECK-NEXT: Total Cycles:      515
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    1.98
-# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: uOps Per Cycle:    1.94
+# CHECK-NEXT: IPC:               0.97
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
@@ -158,7 +158,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      14    1.00                        cvtsi2ssl	%ecx, %xmm0
+# CHECK-NEXT:  2      13    1.00                        cvtsi2ssl	%ecx, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -197,12 +197,12 @@ movq %rcx, %xmm0
 
 # CHECK:      Iterations:        500
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      506
+# CHECK-NEXT: Total Cycles:      515
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    1.98
-# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: uOps Per Cycle:    1.94
+# CHECK-NEXT: IPC:               0.97
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
@@ -214,7 +214,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      14    1.00                        cvtsi2sdl	%ecx, %xmm0
+# CHECK-NEXT:  2      13    1.00                        cvtsi2sdl	%ecx, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -253,12 +253,12 @@ movq %rcx, %xmm0
 
 # CHECK:      Iterations:        500
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      262
+# CHECK-NEXT: Total Cycles:      263
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    3.82
-# CHECK-NEXT: IPC:               1.91
+# CHECK-NEXT: uOps Per Cycle:    3.80
+# CHECK-NEXT: IPC:               1.90
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -270,7 +270,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      10    0.50                        movd	%ecx, %xmm0
+# CHECK-NEXT:  2      11    0.50                        movd	%ecx, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -309,12 +309,12 @@ movq %rcx, %xmm0
 
 # CHECK:      Iterations:        500
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      262
+# CHECK-NEXT: Total Cycles:      263
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    3.82
-# CHECK-NEXT: IPC:               1.91
+# CHECK-NEXT: uOps Per Cycle:    3.80
+# CHECK-NEXT: IPC:               1.90
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -326,7 +326,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      10    0.50                        movq	%rcx, %xmm0
+# CHECK-NEXT:  2      11    0.50                        movq	%rcx, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01

@@ -240,7 +240,7 @@ TEST(DraftStoreIncrementalUpdateTest, StartCharOutOfRange) {
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(toString(Result.takeError()),
-            "UTF-16 offset 100 is invalid for line 0");
+            "utf-16 offset 100 is invalid for line 0");
 }
 
 TEST(DraftStoreIncrementalUpdateTest, EndCharOutOfRange) {
@@ -261,7 +261,7 @@ TEST(DraftStoreIncrementalUpdateTest, EndCharOutOfRange) {
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(toString(Result.takeError()),
-            "UTF-16 offset 100 is invalid for line 0");
+            "utf-16 offset 100 is invalid for line 0");
 }
 
 TEST(DraftStoreIncrementalUpdateTest, StartLineOutOfRange) {
@@ -335,7 +335,7 @@ TEST(DraftStoreIncrementalUpdateTest, InvalidRangeInASequence) {
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(toString(Result.takeError()),
-            "UTF-16 offset 100 is invalid for line 0");
+            "utf-16 offset 100 is invalid for line 0");
 
   Optional<std::string> Contents = DS.getDraft(File);
   EXPECT_TRUE(Contents);

@@ -19,8 +19,6 @@
 //   Otherwise the value returned is unspecified.
 //   [Example: January - February == months{11}. —end example]
 
-extern "C" int printf(const char *, ...);
-
 #include <chrono>
 #include <type_traits>
 #include <cassert>
@@ -41,8 +39,6 @@ constexpr bool testConstexpr()
     if (M{1} - M{2} != Ms{11}) return false;
     return true;
 }
-
-#include <iostream>
 
 int main(int, char**)
 {

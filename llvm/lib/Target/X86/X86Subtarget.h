@@ -297,6 +297,9 @@ protected:
   /// True if the processor supports macrofusion.
   bool HasMacroFusion = false;
 
+  /// True if the processor supports branch fusion.
+  bool HasBranchFusion = false;
+
   /// True if the processor has enhanced REP MOVSB/STOSB.
   bool HasERMSB = false;
 
@@ -642,6 +645,7 @@ public:
   bool hasFastBEXTR() const { return HasFastBEXTR; }
   bool hasFastHorizontalOps() const { return HasFastHorizontalOps; }
   bool hasMacroFusion() const { return HasMacroFusion; }
+  bool hasBranchFusion() const { return HasBranchFusion; }
   bool hasERMSB() const { return HasERMSB; }
   bool hasSlowDivide32() const { return HasSlowDivide32; }
   bool hasSlowDivide64() const { return HasSlowDivide64; }

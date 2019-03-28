@@ -15,7 +15,7 @@
 //          Extent == dynamic_extent
 //              ? dynamic_extent
 //              : sizeof(ElementType) * Extent>
-//     as_writeable_bytes(span<ElementType, Extent> s) noexcept;
+//     as_writable_bytes(span<ElementType, Extent> s) noexcept;
 
 
 #include <span>
@@ -27,9 +27,9 @@
 template<typename Span>
 void testRuntimeSpan(Span sp)
 {
-    ASSERT_NOEXCEPT(std::as_writeable_bytes(sp));
+    ASSERT_NOEXCEPT(std::as_writable_bytes(sp));
 
-    auto spBytes = std::as_writeable_bytes(sp);
+    auto spBytes = std::as_writable_bytes(sp);
     using SB = decltype(spBytes);
     ASSERT_SAME_TYPE(std::byte, typename SB::element_type);
 

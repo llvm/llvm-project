@@ -132,7 +132,8 @@ static void reportTypeError(const Symbol *Existing, const InputFile *File,
 // Check the type of new symbol matches that of the symbol is replacing.
 // Returns true if the function types match, false is there is a singature
 // mismatch.
-bool signatureMatches(FunctionSymbol *Existing, const WasmSignature *NewSig) {
+static bool signatureMatches(FunctionSymbol *Existing,
+                             const WasmSignature *NewSig) {
   if (!NewSig)
     return true;
 

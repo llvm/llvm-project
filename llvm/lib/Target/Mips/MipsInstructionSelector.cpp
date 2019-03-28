@@ -320,6 +320,41 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case G_FCONSTANT: {
+    const APFloat &FPimm = I.getOperand(1).getFPImm()->getValueAPF();
+    APInt APImm = FPimm.bitcastToAPInt();
+    unsigned Size = MRI.getType(I.getOperand(0).getReg()).getSizeInBits();
+
+    if (Size == 32) {
+      unsigned GPRReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      MachineIRBuilder B(I);
+      if (!materialize32BitImm(GPRReg, APImm, B))
+        return false;
+
+      MachineInstrBuilder MTC1 =
+          B.buildInstr(Mips::MTC1, {I.getOperand(0).getReg()}, {GPRReg});
+      if (!MTC1.constrainAllUses(TII, TRI, RBI))
+        return false;
+    }
+    if (Size == 64) {
+      unsigned GPRRegHigh = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      unsigned GPRRegLow = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      MachineIRBuilder B(I);
+      if (!materialize32BitImm(GPRRegHigh, APImm.getHiBits(32).trunc(32), B))
+        return false;
+      if (!materialize32BitImm(GPRRegLow, APImm.getLoBits(32).trunc(32), B))
+        return false;
+
+      MachineInstrBuilder PairF64 = B.buildInstr(
+          STI.isFP64bit() ? Mips::BuildPairF64_64 : Mips::BuildPairF64,
+          {I.getOperand(0).getReg()}, {GPRRegLow, GPRRegHigh});
+      if (!PairF64.constrainAllUses(TII, TRI, RBI))
+        return false;
+    }
+
+    I.eraseFromParent();
+    return true;
+  }
   case G_GLOBAL_VALUE: {
     if (MF.getTarget().isPositionIndependent())
       return false;

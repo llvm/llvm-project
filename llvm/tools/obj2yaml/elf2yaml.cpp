@@ -42,7 +42,7 @@ class ELFDumper {
   ArrayRef<Elf_Word> ShndxTable;
 
   std::error_code dumpSymbols(const Elf_Shdr *Symtab,
-                              ELFYAML::LocalGlobalWeakSymbols &Symbols);
+                              ELFYAML::SymbolsDef &Symbols);
   std::error_code dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
                              StringRef StrTable, ELFYAML::Symbol &S);
   std::error_code dumpCommonSection(const Elf_Shdr *Shdr, ELFYAML::Section &S);
@@ -226,9 +226,8 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
 }
 
 template <class ELFT>
-std::error_code
-ELFDumper<ELFT>::dumpSymbols(const Elf_Shdr *Symtab,
-                             ELFYAML::LocalGlobalWeakSymbols &Symbols) {
+std::error_code ELFDumper<ELFT>::dumpSymbols(const Elf_Shdr *Symtab,
+                                             ELFYAML::SymbolsDef &Symbols) {
   if (!Symtab)
     return std::error_code();
 
@@ -261,6 +260,9 @@ ELFDumper<ELFT>::dumpSymbols(const Elf_Shdr *Symtab,
       break;
     case ELF::STB_WEAK:
       Symbols.Weak.push_back(S);
+      break;
+    case ELF::STB_GNU_UNIQUE:
+      Symbols.GNUUnique.push_back(S);
       break;
     default:
       llvm_unreachable("Unknown ELF symbol binding");

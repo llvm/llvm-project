@@ -29,7 +29,7 @@ body:             |
     ; CHECK: [[VREGC:%[0-9]+]]:gprnopc = COPY [[VREGY]]
 
     %3(s32) = G_SELECT %2(s1),  %0, %1
-    ; CHECK: t2CMPri [[VREGC]], 0, 14, $noreg, implicit-def $cpsr
+    ; CHECK: t2TSTri [[VREGC]], 1, 14, $noreg, implicit-def $cpsr
     ; CHECK: [[RES:%[0-9]+]]:rgpr = t2MOVCCr [[VREGX]], [[VREGY]], 0, $cpsr
 
     $r0 = COPY %3(s32)
@@ -68,7 +68,7 @@ body:             |
     ; CHECK: [[VREGC:%[0-9]+]]:gprnopc = COPY [[VREGC32]]
 
     %4(p0) = G_SELECT %3(s1),  %0, %1
-    ; CHECK: t2CMPri [[VREGC]], 0, 14, $noreg, implicit-def $cpsr
+    ; CHECK: t2TSTri [[VREGC]], 1, 14, $noreg, implicit-def $cpsr
     ; CHECK: [[RES:%[0-9]+]]:rgpr = t2MOVCCr [[VREGX]], [[VREGY]], 0, $cpsr
 
     $r0 = COPY %4(p0)

@@ -46,7 +46,8 @@ TEST(ClusteringTest, Clusters3D) {
   // Error cluster: points {2}
   Points[2].Error = "oops";
 
-  auto Clustering = InstructionBenchmarkClustering::create(Points, 2, 0.25);
+  auto Clustering = InstructionBenchmarkClustering::create(
+      Points, InstructionBenchmarkClustering::ModeE::Dbscan, 2, 0.25);
   ASSERT_TRUE((bool)Clustering);
   EXPECT_THAT(Clustering.get().getValidClusters(),
               UnorderedElementsAre(HasPoints({0, 3}), HasPoints({1, 4})));
@@ -73,7 +74,9 @@ TEST(ClusteringTest, Clusters3D_InvalidSize) {
       {"x", 0.01, 0.0}, {"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
   Points[1].Measurements = {{"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
   auto Error =
-      InstructionBenchmarkClustering::create(Points, 2, 0.25).takeError();
+      InstructionBenchmarkClustering::create(
+          Points, InstructionBenchmarkClustering::ModeE::Dbscan, 2, 0.25)
+          .takeError();
   ASSERT_TRUE((bool)Error);
   consumeError(std::move(Error));
 }
@@ -83,7 +86,9 @@ TEST(ClusteringTest, Clusters3D_InvalidOrder) {
   Points[0].Measurements = {{"x", 0.01, 0.0}, {"y", 1.02, 0.0}};
   Points[1].Measurements = {{"y", 1.02, 0.0}, {"x", 1.98, 0.0}};
   auto Error =
-      InstructionBenchmarkClustering::create(Points, 2, 0.25).takeError();
+      InstructionBenchmarkClustering::create(
+          Points, InstructionBenchmarkClustering::ModeE::Dbscan, 2, 0.25)
+          .takeError();
   ASSERT_TRUE((bool)Error);
   consumeError(std::move(Error));
 }
@@ -112,7 +117,8 @@ TEST(ClusteringTest, Ordering1) {
   Points[2].Measurements = {
       {"x", 2.0, 0.0}};
 
-  auto Clustering = InstructionBenchmarkClustering::create(Points, 2, 1.1);
+  auto Clustering = InstructionBenchmarkClustering::create(
+      Points, InstructionBenchmarkClustering::ModeE::Dbscan, 2, 1.1);
   ASSERT_TRUE((bool)Clustering);
   EXPECT_THAT(Clustering.get().getValidClusters(),
               UnorderedElementsAre(HasPoints({0, 1, 2})));
@@ -128,7 +134,8 @@ TEST(ClusteringTest, Ordering2) {
   Points[2].Measurements = {
       {"x", 1.0, 0.0}};
 
-  auto Clustering = InstructionBenchmarkClustering::create(Points, 2, 1.1);
+  auto Clustering = InstructionBenchmarkClustering::create(
+      Points, InstructionBenchmarkClustering::ModeE::Dbscan, 2, 1.1);
   ASSERT_TRUE((bool)Clustering);
   EXPECT_THAT(Clustering.get().getValidClusters(),
               UnorderedElementsAre(HasPoints({0, 1, 2})));

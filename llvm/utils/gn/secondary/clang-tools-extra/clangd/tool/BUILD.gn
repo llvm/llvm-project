@@ -1,0 +1,50 @@
+import("//llvm/utils/gn/build/write_cmake_config.gni")
+
+declare_args() {
+  # Whether to build clangd's XPC components.
+  clangd_build_xpc = false
+}
+
+write_cmake_config("features") {
+  # FIXME: Try moving Features.inc.in to tools, seems like a better location.
+  input = "../Features.inc.in"
+  output = "$target_gen_dir/Features.inc"
+  values = []
+  if (clangd_build_xpc) {
+    values += [ "CLANGD_BUILD_XPC=1" ]
+  } else {
+    values += [ "CLANGD_BUILD_XPC=0" ]
+  }
+}
+
+executable("clangd") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    ":features",
+    "//clang-tools-extra/clang-tidy",
+    "//clang-tools-extra/clangd",
+    "//clang-tools-extra/clangd/refactor/tweaks",
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//clang/lib/Format",
+    "//clang/lib/Frontend",
+    "//clang/lib/Sema",
+    "//clang/lib/Tooling",
+    "//clang/lib/Tooling/Core",
+    "//llvm/lib/Support",
+  ]
+
+  include_dirs = [
+    "..",
+
+    # To pick up the generated inc files.
+    "$target_gen_dir",
+  ]
+  sources = [
+    "ClangdMain.cpp",
+  ]
+
+  if (clangd_build_xpc) {
+    # FIXME: Depend on clangdXpcJsonConversions, clangdXpcTransport
+  }
+}

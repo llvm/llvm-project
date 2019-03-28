@@ -16,11 +16,11 @@
 
 int main(int, char**)
 {
-    static_assert((std::is_same<std::conditional<true, char, int>::type, char>::value), "");
-    static_assert((std::is_same<std::conditional<false, char, int>::type, int>::value), "");
+    ASSERT_SAME_TYPE(char, std::conditional<true, char, int>::type);
+    ASSERT_SAME_TYPE(int,  std::conditional<false, char, int>::type);
 #if TEST_STD_VER > 11
-    static_assert((std::is_same<std::conditional_t<true, char, int>, char>::value), "");
-    static_assert((std::is_same<std::conditional_t<false, char, int>, int>::value), "");
+    ASSERT_SAME_TYPE(char, std::conditional_t<true, char, int>);
+    ASSERT_SAME_TYPE(int,  std::conditional_t<false, char, int>);
 #endif
 
   return 0;
