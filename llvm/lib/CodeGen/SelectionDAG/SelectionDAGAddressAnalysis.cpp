@@ -24,8 +24,10 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
   // Conservatively fail if we a match failed..
   if (!Base.getNode() || !Other.Base.getNode())
     return false;
+  if (!hasValidOffset() || !Other.hasValidOffset())
+    return false;
   // Initial Offset difference.
-  Off = Other.Offset - Offset;
+  Off = *Other.Offset - *Offset;
 
   if ((Other.Index == Index) && (Other.IsIndexSignExt == IsIndexSignExt)) {
     // Trivial match.
@@ -79,26 +81,31 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
   return false;
 }
 
-bool BaseIndexOffset::computeAliasing(const BaseIndexOffset &BasePtr0,
-                                      const int64_t NumBytes0,
-                                      const BaseIndexOffset &BasePtr1,
-                                      const int64_t NumBytes1,
+bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
+                                      const Optional<int64_t> NumBytes0,
+                                      const SDNode *Op1,
+                                      const Optional<int64_t> NumBytes1,
                                       const SelectionDAG &DAG, bool &IsAlias) {
+
+  BaseIndexOffset BasePtr0 = match(Op0, DAG);
+  BaseIndexOffset BasePtr1 = match(Op1, DAG);
+
   if (!(BasePtr0.getBase().getNode() && BasePtr1.getBase().getNode()))
     return false;
   int64_t PtrDiff;
-  if (BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff)) {
+  if (NumBytes0.hasValue() && NumBytes1.hasValue() &&
+      BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff)) {
     // BasePtr1 is PtrDiff away from BasePtr0. They alias if none of the
     // following situations arise:
     IsAlias = !(
         // [----BasePtr0----]
         //                         [---BasePtr1--]
         // ========PtrDiff========>
-        (NumBytes0 <= PtrDiff) ||
+        (*NumBytes0 <= PtrDiff) ||
         //                     [----BasePtr0----]
         // [---BasePtr1--]
         // =====(-PtrDiff)====>
-        (PtrDiff + NumBytes1 <= 0)); // i.e. NumBytes1 < -PtrDiff.
+        (PtrDiff + *NumBytes1 <= 0)); // i.e. *NumBytes1 < -PtrDiff.
     return true;
   }
   // If both BasePtr0 and BasePtr1 are FrameIndexes, we will not be
@@ -156,8 +163,8 @@ bool BaseIndexOffset::contains(const SelectionDAG &DAG, int64_t BitSize,
 }
 
 /// Parses tree in Ptr for base, index, offset addresses.
-BaseIndexOffset BaseIndexOffset::match(const LSBaseSDNode *N,
-                                       const SelectionDAG &DAG) {
+static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
+                                   const SelectionDAG &DAG) {
   SDValue Ptr = N->getBasePtr();
 
   // (((B + I*M) + c)) + c ...
@@ -259,6 +266,18 @@ BaseIndexOffset BaseIndexOffset::match(const LSBaseSDNode *N,
   return BaseIndexOffset(Base, Index, Offset, IsIndexSignExt);
 }
 
+BaseIndexOffset BaseIndexOffset::match(const SDNode *N,
+                                       const SelectionDAG &DAG) {
+  if (const auto *LS0 = dyn_cast<LSBaseSDNode>(N))
+    return matchLSNode(LS0, DAG);
+  if (const auto *LN = dyn_cast<LifetimeSDNode>(N)) {
+    if (LN->hasOffset())
+      return BaseIndexOffset(LN->getOperand(1), SDValue(), LN->getOffset(),
+                             false);
+    return BaseIndexOffset(LN->getOperand(1), SDValue(), false);
+  }
+  return BaseIndexOffset();
+}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 

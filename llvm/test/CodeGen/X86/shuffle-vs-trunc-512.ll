@@ -159,7 +159,7 @@ define void @shuffle_v32i16_to_v16i16(<32 x i16>* %L, <16 x i16>* %S) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512VL-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,1,4,5,u,u,u,u,8,9,12,13,u,u,u,u,16,17,20,21,u,u,u,u,24,25,28,29,u,u,u,u>
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,4,5,4,5,6,7,8,9,12,13,12,13,14,15,16,17,20,21,20,21,22,23,24,25,28,29,28,29,30,31]
 ; AVX512VL-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6,8,10,12,14]
@@ -172,7 +172,7 @@ define void @shuffle_v32i16_to_v16i16(<32 x i16>* %L, <16 x i16>* %S) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,1,4,5,u,u,u,u,8,9,12,13,u,u,u,u,16,17,20,21,u,u,u,u,24,25,28,29,u,u,u,u>
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,4,5,4,5,6,7,8,9,12,13,12,13,14,15,16,17,20,21,20,21,22,23,24,25,28,29,28,29,30,31]
 ; AVX512BW-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
@@ -194,7 +194,7 @@ define void @shuffle_v32i16_to_v16i16(<32 x i16>* %L, <16 x i16>* %S) nounwind {
 ; AVX512VBMI:       # %bb.0:
 ; AVX512VBMI-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512VBMI-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,1,4,5,u,u,u,u,8,9,12,13,u,u,u,u,16,17,20,21,u,u,u,u,24,25,28,29,u,u,u,u>
+; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,4,5,4,5,6,7,8,9,12,13,12,13,14,15,16,17,20,21,20,21,22,23,24,25,28,29,28,29,30,31]
 ; AVX512VBMI-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; AVX512VBMI-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
 ; AVX512VBMI-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]

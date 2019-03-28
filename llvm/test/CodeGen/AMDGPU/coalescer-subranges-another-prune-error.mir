@@ -159,7 +159,7 @@ body:             |
     %17:vreg_128 = COPY killed %80
     %18:vgpr_32 = COPY killed %76
     %19:vreg_128 = COPY killed %77
-    $exec = S_ANDN2_B64_term $exec, %60
+    $exec = S_ANDN2_B64_term $exec, %60, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.4, implicit $exec
     S_BRANCH %bb.6
 
@@ -180,7 +180,7 @@ body:             |
     %73:sreg_64 = COPY %85
     %74:vreg_128 = COPY %59
     %75:vreg_128 = COPY killed %86
-    $exec = S_ANDN2_B64_term $exec, %85
+    $exec = S_ANDN2_B64_term $exec, %85, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.10, implicit $exec
     S_BRANCH %bb.12
 

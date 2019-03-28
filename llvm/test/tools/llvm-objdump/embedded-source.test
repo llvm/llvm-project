@@ -2,6 +2,16 @@
 ; RUN: llvm-objdump -disassemble -source       %p/Inputs/embedded-source | FileCheck --check-prefix=SOURCE %s
 ; REQUIRES: x86-registered-target
 
+; Source for embedded-source.c
+; To regenerate this file:
+;   clang -gdwarf-5 -gembed-source embedded-source.c -o embedded-source
+;
+; int main(int argc, char *argv[]) {
+;   int i = 2;
+;   i += 1;
+;   return i;
+; }
+
 ; LINE: main:
 ; LINE-NEXT: ; {{.*}}embedded-source.c:1
 ; LINE-NEXT: pushq %rbp

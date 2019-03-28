@@ -15,8 +15,7 @@ define void @add3i32(%i32vec3*  sret %ret, %i32vec3* %ap, %i32vec3* %bp)  {
 ; X86-NEXT:    movdqa (%edx), %xmm0
 ; X86-NEXT:    paddd (%ecx), %xmm0
 ; X86-NEXT:    pextrd $2, %xmm0, 8(%eax)
-; X86-NEXT:    pextrd $1, %xmm0, 4(%eax)
-; X86-NEXT:    movd %xmm0, (%eax)
+; X86-NEXT:    movq %xmm0, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: add3i32:
@@ -40,16 +39,13 @@ define void @add3i32_2(%i32vec3*  sret %ret, %i32vec3* %ap, %i32vec3* %bp)  {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pinsrd $1, 4(%edx), %xmm0
+; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    pinsrd $2, 8(%edx), %xmm0
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    pinsrd $1, 4(%ecx), %xmm1
+; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    pinsrd $2, 8(%ecx), %xmm1
 ; X86-NEXT:    paddd %xmm0, %xmm1
-; X86-NEXT:    pextrd $1, %xmm1, 4(%eax)
+; X86-NEXT:    movq %xmm1, (%eax)
 ; X86-NEXT:    pextrd $2, %xmm1, 8(%eax)
-; X86-NEXT:    movd %xmm1, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: add3i32_2:
@@ -81,9 +77,8 @@ define void @add7i32(%i32vec7*  sret %ret, %i32vec7* %ap, %i32vec7* %bp)  {
 ; X86-NEXT:    movdqa 16(%edx), %xmm1
 ; X86-NEXT:    paddd (%ecx), %xmm0
 ; X86-NEXT:    paddd 16(%ecx), %xmm1
-; X86-NEXT:    movd %xmm1, 16(%eax)
-; X86-NEXT:    pextrd $1, %xmm1, 20(%eax)
 ; X86-NEXT:    pextrd $2, %xmm1, 24(%eax)
+; X86-NEXT:    movq %xmm1, 16(%eax)
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl $4
 ;
@@ -151,16 +146,12 @@ define void @add3i16(%i16vec3* nocapture sret %ret, %i16vec3* %ap, %i16vec3* %bp
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
+; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl 16(%ebp), %ecx
 ; X86-NEXT:    movl 12(%ebp), %edx
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X86-NEXT:    pinsrd $2, 4(%edx), %xmm0
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; X86-NEXT:    pinsrd $2, 4(%ecx), %xmm1
+; X86-NEXT:    pmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X86-NEXT:    pmovzxwd {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; X86-NEXT:    paddd %xmm0, %xmm1
 ; X86-NEXT:    pextrw $4, %xmm1, 4(%eax)
 ; X86-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
@@ -225,8 +216,7 @@ define void @add12i16(%i16vec12* nocapture sret %ret, %i16vec12* %ap, %i16vec12*
 ; X86-NEXT:    movdqa 16(%edx), %xmm1
 ; X86-NEXT:    paddw (%ecx), %xmm0
 ; X86-NEXT:    paddw 16(%ecx), %xmm1
-; X86-NEXT:    movd %xmm1, 16(%eax)
-; X86-NEXT:    pextrd $1, %xmm1, 20(%eax)
+; X86-NEXT:    movq %xmm1, 16(%eax)
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl $4
 ;
@@ -331,11 +321,10 @@ define void @add31i8(%i8vec31* nocapture sret %ret, %i8vec31* %ap, %i8vec31* %bp
 ; X86-NEXT:    movdqa 16(%edx), %xmm1
 ; X86-NEXT:    paddb (%ecx), %xmm0
 ; X86-NEXT:    paddb 16(%ecx), %xmm1
-; X86-NEXT:    movd %xmm1, 16(%eax)
-; X86-NEXT:    pextrd $1, %xmm1, 20(%eax)
 ; X86-NEXT:    pextrd $2, %xmm1, 24(%eax)
 ; X86-NEXT:    pextrw $6, %xmm1, 28(%eax)
 ; X86-NEXT:    pextrb $14, %xmm1, 30(%eax)
+; X86-NEXT:    movq %xmm1, 16(%eax)
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl $4
 ;

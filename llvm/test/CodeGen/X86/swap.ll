@@ -119,14 +119,11 @@ define dso_local void @onealloc_readback_1(i8* nocapture %a, i8* nocapture %b) l
 ; NOAA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; NOAA-NEXT:    vmovups (%rsi), %xmm0
 ; NOAA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; NOAA-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; NOAA-NEXT:    vmovups %xmm0, (%rdi)
 ; NOAA-NEXT:    retq
 ;
 ; AA-LABEL: onealloc_readback_1:
 ; AA:       # %bb.0: # %entry
-; AA-NEXT:    vmovups (%rdi), %xmm0
-; AA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AA-NEXT:    vmovups (%rsi), %xmm0
 ; AA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AA-NEXT:    vmovups %xmm0, (%rdi)
@@ -152,14 +149,11 @@ define dso_local void @onealloc_readback_2(i8* nocapture %a, i8* nocapture %b) l
 ; NOAA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; NOAA-NEXT:    vmovups (%rsi), %xmm0
 ; NOAA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; NOAA-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; NOAA-NEXT:    vmovups %xmm0, (%rdi)
 ; NOAA-NEXT:    retq
 ;
 ; AA-LABEL: onealloc_readback_2:
 ; AA:       # %bb.0: # %entry
-; AA-NEXT:    vmovups (%rdi), %xmm0
-; AA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AA-NEXT:    vmovups (%rsi), %xmm0
 ; AA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AA-NEXT:    vmovups %xmm0, (%rdi)

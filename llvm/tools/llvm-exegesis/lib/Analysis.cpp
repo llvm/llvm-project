@@ -333,7 +333,7 @@ void Analysis::printSchedClassClustersHtml(
       OS << "</span></li>";
     }
     OS << "</ul></td>";
-    for (const auto &Stats : Cluster.getRepresentative()) {
+    for (const auto &Stats : Cluster.getCentroid().getStats()) {
       OS << "<td class=\"measurement\">";
       writeMeasurementValue<kEscapeHtml>(OS, Stats.avg());
       OS << "<br><span class=\"minmax\">[";
@@ -437,14 +437,11 @@ void Analysis::SchedClassCluster::addPoint(
     size_t PointId, const InstructionBenchmarkClustering &Clustering) {
   PointIds.push_back(PointId);
   const auto &Point = Clustering.getPoints()[PointId];
-  if (ClusterId.isUndef()) {
+  if (ClusterId.isUndef())
     ClusterId = Clustering.getClusterIdForPoint(PointId);
-    Representative.resize(Point.Measurements.size());
-  }
-  for (size_t I = 0, E = Point.Measurements.size(); I < E; ++I) {
-    Representative[I].push(Point.Measurements[I]);
-  }
   assert(ClusterId == Clustering.getClusterIdForPoint(PointId));
+
+  Centroid.addPoint(Point.Measurements);
 }
 
 // Returns a ProxResIdx by id or name.
@@ -467,6 +464,7 @@ bool Analysis::SchedClassCluster::measurementsMatch(
     const llvm::MCSubtargetInfo &STI, const ResolvedSchedClass &RSC,
     const InstructionBenchmarkClustering &Clustering,
     const double AnalysisInconsistencyEpsilonSquared_) const {
+  ArrayRef<PerInstructionStats> Representative = Centroid.getStats();
   const size_t NumMeasurements = Representative.size();
   std::vector<BenchmarkMeasure> ClusterCenterPoint(NumMeasurements);
   std::vector<BenchmarkMeasure> SchedClassPoint(NumMeasurements);

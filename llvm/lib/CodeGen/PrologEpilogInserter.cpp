@@ -218,8 +218,6 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
 
   RS = TRI->requiresRegisterScavenging(MF) ? new RegScavenger() : nullptr;
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
-  FrameIndexEliminationScavenging = (RS && !FrameIndexVirtualScavenging) ||
-    TRI->requiresFrameIndexReplacementScavenging(MF);
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
   // Calculate the MaxCallFrameSize and AdjustsStack variables for the
@@ -1074,8 +1072,16 @@ void PEI::insertPrologEpilogCode(MachineFunction &MF) {
 /// replaceFrameIndices - Replace all MO_FrameIndex operands with physical
 /// register references and actual offsets.
 void PEI::replaceFrameIndices(MachineFunction &MF) {
-  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
-  if (!TFI.needsFrameIndexResolution(MF)) return;
+  const auto &ST = MF.getSubtarget();
+  const TargetFrameLowering &TFI = *ST.getFrameLowering();
+  if (!TFI.needsFrameIndexResolution(MF))
+    return;
+
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+
+  // Allow the target to determine this after knowing the frame size.
+  FrameIndexEliminationScavenging = (RS && !FrameIndexVirtualScavenging) ||
+    TRI->requiresFrameIndexReplacementScavenging(MF);
 
   // Store SPAdj at exit of a basic block.
   SmallVector<int, 8> SPState;

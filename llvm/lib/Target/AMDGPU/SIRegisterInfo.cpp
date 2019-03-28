@@ -257,11 +257,20 @@ bool SIRegisterInfo::requiresFrameIndexScavenging(
 
 bool SIRegisterInfo::requiresFrameIndexReplacementScavenging(
   const MachineFunction &MF) const {
-  // m0 is needed for the scalar store offset. m0 is unallocatable, so we can't
-  // create a virtual register for it during frame index elimination, so the
-  // scavenger is directly needed.
-  return MF.getFrameInfo().hasStackObjects() &&
-         MF.getSubtarget<GCNSubtarget>().hasScalarStores() &&
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.hasStackObjects())
+    return false;
+
+  // The scavenger is used for large frames which may require finding a free
+  // register for large offsets.
+  if (!isUInt<12>(MFI.getStackSize()))
+    return true;
+
+  // If using scalar stores, for spills, m0 is needed for the scalar store
+  // offset (pre-GFX9). m0 is unallocatable, so we can't create a virtual
+  // register for it during frame index elimination, so the scavenger is
+  // directly needed.
+  return MF.getSubtarget<GCNSubtarget>().hasScalarStores() &&
          MF.getInfo<SIMachineFunctionInfo>()->hasSpilledSGPRs();
 }
 
@@ -575,7 +584,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
     // We don't have access to the register scavenger if this function is called
     // during  PEI::scavengeFrameVirtualRegs().
     if (RS)
-      SOffset = RS->FindUnusedReg(&AMDGPU::SGPR_32RegClass);
+      SOffset = RS->scavengeRegister(&AMDGPU::SGPR_32RegClass, MI, 0, false);
 
     if (SOffset == AMDGPU::NoRegister) {
       // There are no free SGPRs, and since we are in the process of spilling

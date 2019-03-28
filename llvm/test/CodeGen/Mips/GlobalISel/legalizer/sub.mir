@@ -279,7 +279,6 @@ body:             |
     ; MIPS32: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (load 4 from %fixed-stack.3)
     ; MIPS32: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[LOAD]], [[COPY]]
     ; MIPS32: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[LOAD]](s32), [[COPY]]
-    ; MIPS32: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
     ; MIPS32: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[LOAD1]], [[COPY1]]
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
@@ -293,7 +292,6 @@ body:             |
     ; MIPS32: [[COPY7:%[0-9]+]]:_(s32) = COPY [[ICMP1]](s32)
     ; MIPS32: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY7]], [[C1]]
     ; MIPS32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND1]](s32), [[COPY5]], [[COPY6]]
-    ; MIPS32: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[SELECT]](s32)
     ; MIPS32: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[LOAD2]], [[COPY2]]
     ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY8:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)

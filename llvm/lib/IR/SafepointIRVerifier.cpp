@@ -197,6 +197,17 @@ protected:
 static void Verify(const Function &F, const DominatorTree &DT,
                    const CFGDeadness &CD);
 
+namespace llvm {
+PreservedAnalyses SafepointIRVerifierPass::run(Function &F,
+                                               FunctionAnalysisManager &AM) {
+  const auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  CFGDeadness CD;
+  CD.processFunction(F, DT);
+  Verify(F, DT, CD);
+  return PreservedAnalyses::all();
+}
+}
+
 namespace {
 
 struct SafepointIRVerifier : public FunctionPass {
