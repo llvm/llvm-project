@@ -26,10 +26,17 @@ done && shift $(($OPTIND - 1))
 # we're in llvm.obj dir
 BUILD_DIR=${PWD}
 
-cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS=clang \
+CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS=clang \
     -DLLVM_EXTERNAL_SYCL_SOURCE_DIR=../llvm.src/sycl \
     -DLLVM_EXTERNAL_LLVM_SPIRV_SOURCE_DIR=../llvm.src/llvm-spirv \
     -DLLVM_TOOL_SYCL_BUILD=ON -DLLVM_TOOL_LLVM_SPIRV_BUILD=ON \
-    -DOpenCL_INCLUDE_DIR="OpenCL-Headers" \
-    -DOpenCL_LIBRARY="OpenCL-ICD-Loader/build/lib/libOpenCL.so" \
-    ../llvm.src/llvm
+    -DOpenCL_INCLUDE_DIR=OpenCL-Headers \
+    -DOpenCL_LIBRARY=OpenCL-ICD-Loader/build/lib/libOpenCL.so \
+    ../llvm.src/llvm"
+
+cmake ${CMAKE_ARGS}
+# Do clean build if configure failed due to any reason
+if [ $? -ne 0 ]; then
+   rm -f ${BUILD_DIR}/CMakeCache.txt
+   cmake ${CMAKE_ARGS}
+fi
