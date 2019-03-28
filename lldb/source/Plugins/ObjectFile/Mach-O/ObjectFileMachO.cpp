@@ -6331,18 +6331,6 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             if (range_info.GetExecutable() == MemoryRegionInfo::eYes)
               prot |= VM_PROT_EXECUTE;
 
-            //                        printf ("[%3u] [0x%16.16" PRIx64 " -
-            //                        0x%16.16" PRIx64 ") %c%c%c\n",
-            //                                range_info_idx,
-            //                                addr,
-            //                                size,
-            //                                (prot & VM_PROT_READ   ) ? 'r' :
-            //                                '-',
-            //                                (prot & VM_PROT_WRITE  ) ? 'w' :
-            //                                '-',
-            //                                (prot & VM_PROT_EXECUTE) ? 'x' :
-            //                                '-');
-
             if (prot != 0) {
               uint32_t cmd_type = LC_SEGMENT_64;
               uint32_t segment_size = sizeof(segment_command_64);
@@ -6549,8 +6537,13 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
                 while (bytes_left > 0 && error.Success()) {
                   const size_t bytes_to_read =
                       bytes_left > sizeof(bytes) ? sizeof(bytes) : bytes_left;
-                  const size_t bytes_read = process_sp->ReadMemory(
+
+                  // In a savecore setting, we don't really care about caching,
+                  // as the data is dumped and very likely never read again,
+                  // so we call ReadMemoryFromInferior to bypass it.
+                  const size_t bytes_read = process_sp->ReadMemoryFromInferior(
                       addr, bytes, bytes_to_read, memory_read_error);
+
                   if (bytes_read == bytes_to_read) {
                     size_t bytes_written = bytes_read;
                     error = core_file.Write(bytes, bytes_written);
