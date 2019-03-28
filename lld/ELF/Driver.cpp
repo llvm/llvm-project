@@ -1454,11 +1454,6 @@ static const char *LibcallRoutineNames[] = {
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
-  Target = getTarget();
-
-  Config->MaxPageSize = getMaxPageSize(Args);
-  Config->ImageBase = getImageBase(Args);
-
   // If a -hash-style option was not given, set to a default value,
   // which varies depending on the target.
   if (!Args.hasArg(OPT_hash_style)) {
@@ -1616,12 +1611,21 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // We do not want to emit debug sections if --strip-all
   // or -strip-debug are given.
-  if (Config->Strip != StripPolicy::None)
+  if (Config->Strip != StripPolicy::None) {
     llvm::erase_if(InputSections, [](InputSectionBase *S) {
       return S->Name.startswith(".debug") || S->Name.startswith(".zdebug");
     });
+  }
+
+  // The Target instance handles target-specific stuff, such as applying
+  // relocations or writing a PLT section. It also contains target-dependent
+  // values such as a default image base address.
+  Target = getTarget();
 
   Config->EFlags = Target->calcEFlags();
+  Config->EFlags = Target->calcEFlags();
+  Config->MaxPageSize = getMaxPageSize(Args);
+  Config->ImageBase = getImageBase(Args);
 
   if (Config->EMachine == EM_ARM) {
     // FIXME: These warnings can be removed when lld only uses these features

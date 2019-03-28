@@ -12,7 +12,6 @@
 
 #include <type_traits>
 
-#include "pstl_config.h"
 #include "utils.h"
 
 // This header defines the minimum set of vector routines required

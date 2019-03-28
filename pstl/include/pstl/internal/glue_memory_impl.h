@@ -11,7 +11,7 @@
 #define __PSTL_glue_memory_impl_H
 
 #include "utils.h"
-#include "algorithm_impl.h"
+#include "algorithm_fwd.h"
 
 namespace std
 {
