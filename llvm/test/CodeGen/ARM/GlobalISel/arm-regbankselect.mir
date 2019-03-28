@@ -1,4 +1,5 @@
 # RUN: llc -mtriple arm-- -run-pass=regbankselect %s -o - | FileCheck %s
+# RUN: llc -mtriple thumbv7-- -run-pass=regbankselect %s -o - | FileCheck %s
 --- |
   define void @test_add_s32() { ret void }
   define void @test_sub_s32() { ret void }
@@ -83,7 +84,7 @@
   define void @test_soft_fp_s64() #0 { ret void }
 
   attributes #0 = { "target-features"="+vfp2"}
-  attributes #1 = { "target-features"="+hwdiv-arm" }
+  attributes #1 = { "target-features"="+hwdiv-arm,+hwdiv" }
   attributes #2 = { "target-features"="+vfp4"}
   attributes #3 = { "target-features"="+v5t"}
 ...

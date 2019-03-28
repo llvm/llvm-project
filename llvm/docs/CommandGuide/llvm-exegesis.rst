@@ -214,10 +214,17 @@ OPTIONS
  If non-empty, write inconsistencies found during analysis to this file. `-`
  prints to stdout. By default, this analysis is not run.
 
+.. option:: -analysis-clustering=[dbscan,naive]
+
+ Specify the clustering algorithm to use. By default DBSCAN will be used.
+ Naive clustering algorithm is better for doing further work on the
+ `-analysis-inconsistencies-output-file=` output, it will create one cluster
+ per opcode, and check that the cluster is stable (all points are neighbours).
+
 .. option:: -analysis-numpoints=<dbscan numPoints parameter>
 
  Specify the numPoints parameters to be used for DBSCAN clustering
- (`analysis` mode).
+ (`analysis` mode, DBSCAN only).
 
 .. option:: -analysis-clustering-epsilon=<dbscan epsilon parameter>
 

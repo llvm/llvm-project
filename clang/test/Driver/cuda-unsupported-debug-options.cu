@@ -17,6 +17,6 @@
 // CHECK: debug information option '{{-gz|-fdebug-info-for-profiling|-gsplit-dwarf|-glldb|-gcodeview|-gmodules|-gembed-source|-fdebug-macro|-ggnu-pubnames|-gdwarf-aranges|-fdebug-types-section}}' is not supported for target 'nvptx64-nvidia-cuda' [-Wunsupported-target-opt]
 // CHECK-NOT: debug information option '{{.*}}' is not supported for target 'x86
 // CHECK: "-triple" "nvptx64-nvidia-cuda"
-// CHECK-NOT: {{-compress-debug|-fdebug-info-for-profiling|split-dwarf|lldb|codeview|module-format|embed-source|debug-info-macro|gnu-pubnames|generate-arange-section|generate-type-units}}
+// CHECK-NOT: {{-compress-debug|-fdebug-info-for-profiling|lldb|codeview|module-format|embed-source|debug-info-macro|gnu-pubnames|generate-arange-section|generate-type-units}}
 // CHECK: "-triple" "x86_64
 // CHECK-SAME: {{-compress-debug|-fdebug-info-for-profiling|split-dwarf|lldb|codeview|module-format|embed-source|debug-info-macro|gnu-pubnames|generate-arange-section|generate-type-units}}

@@ -386,14 +386,8 @@ def PdWriteCMPXCHG16B : SchedWriteRes<[PdEX1]> {
 }
 def : InstRW<[PdWriteCMPXCHG16B], (instrs CMPXCHG16B)>;
 
-def PdWriteXCHG16rr : SchedWriteRes<[PdEX1]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-}
-def : InstRW<[PdWriteXCHG16rr], (instrs XCHG16rr)>;
-
 def PdWriteXADD : SchedWriteRes<[PdEX1]> {
-  let Latency = 2;
+  let Latency = 1;
   let NumMicroOps = 4;
 }
 def : InstRW<[PdWriteXADD], (instrs XADD8rr, XADD16rr, XADD32rr, XADD64rr)>;
@@ -426,7 +420,7 @@ defm : PdWriteResExPair<WriteIDiv16,  [PdEX1, PdDiv],           15,  [1, 17],   
 defm : PdWriteResExPair<WriteIDiv32,  [PdEX1, PdDiv],           14,  [1, 25],   2>;
 defm : PdWriteResExPair<WriteIDiv64,  [PdEX1, PdDiv],           14,  [1, 14],   2>;
 
-defm : PdWriteResExPair<WriteCRC32,   [PdEX01],                  3,  [4],       3>;
+defm : PdWriteResExPair<WriteCRC32,   [PdEX01],                  2,  [4],       3>;
 
 def PdWriteCRC32r32r16 : SchedWriteRes<[PdEX01]> {
   let Latency = 5;
@@ -547,11 +541,17 @@ def PdWriteRCR16ri : SchedWriteRes<[PdEX01]> {
 }
 def : InstRW<[PdWriteRCR16ri], (instrs RCR16ri)>;
 
-def PdWriteRCL32rCLRCL64rCL : SchedWriteRes<[PdEX01]> {
+def PdWriteRCL32rCL : SchedWriteRes<[PdEX01]> {
   let Latency = 7;
   let NumMicroOps = 17;
 }
-def : InstRW<[PdWriteRCL32rCLRCL64rCL], (instrs RCL32rCL, RCL64rCL)>;
+def : InstRW<[PdWriteRCL32rCL], (instrs RCL32rCL)>;
+
+def PdWriteRCL64rCL : SchedWriteRes<[PdEX01]> {
+  let Latency = 8;
+  let NumMicroOps = 17;
+}
+def : InstRW<[PdWriteRCL64rCL], (instrs RCL64rCL)>;
 
 def PdWriteRCR64rCL : SchedWriteRes<[PdEX01]> {
   let Latency = 7;
@@ -597,8 +597,8 @@ def PdWriteRCL8ri : SchedWriteRes<[PdEX01]> {
 def : InstRW<[PdWriteRCL8ri], (instrs RCL8ri)>;
 
 // SHLD/SHRD.
-defm : PdWriteRes<WriteSHDrri,       [PdEX01],         4, [6], 6>;
-defm : PdWriteRes<WriteSHDrrcl,      [PdEX01],         4, [8], 7>;
+defm : PdWriteRes<WriteSHDrri,       [PdEX01],         3, [6], 6>;
+defm : PdWriteRes<WriteSHDrrcl,      [PdEX01],         3, [8], 7>;
 
 def PdWriteSHLD32rri8SHRD16rri8 : SchedWriteRes<[PdEX01]> {
   let Latency = 3;
@@ -608,7 +608,7 @@ def PdWriteSHLD32rri8SHRD16rri8 : SchedWriteRes<[PdEX01]> {
 def : InstRW<[PdWriteSHLD32rri8SHRD16rri8 ], (instrs SHLD32rri8, SHRD16rri8)>;
 
 def PdWriteSHLD16rrCLSHLD32rrCLSHRD32rrCL : SchedWriteRes<[PdEX01]> {
-  let Latency = 4;
+  let Latency = 3;
   let ResourceCycles = [8];
   let NumMicroOps = 7;
 }
@@ -715,7 +715,7 @@ defm : PdWriteResYMMPair<WriteDPPSY,        [PdFPU1, PdFPFMA], 27, [2, 6], /*or 
 defm : X86WriteResPairUnsupported<WriteDPPSZ>;
 
 def PdWriteVDPPSrri : SchedWriteRes<[PdFPU1, PdFPFMA]> {
-  let Latency = 25;
+  let Latency = 27;
   let ResourceCycles = [1, 3];
   let NumMicroOps = 17;
 }
@@ -875,11 +875,11 @@ defm : X86WriteResPairUnsupported<WriteCvtI2PSZ>;
 defm : PdWriteResXMMPair<WriteCvtI2SD,   [PdFPU1, PdFPSTO], 4, [], 2>;
 // FIXME: .Folded version is one NumMicroOp *less*..
 
-def WriteCVTSI642SDrr : SchedWriteRes<[PdFPU1, PdFPSTO]> {
+def PdWriteCVTSI642SDrr_CVTSI642SSrr_CVTSI2SDr_CVTSI2SSrr : SchedWriteRes<[PdFPU1, PdFPSTO]> {
   let Latency = 13;
   let NumMicroOps = 2;
 }
-def : InstRW<[WriteCVTSI642SDrr], (instrs CVTSI642SDrr, CVTSI642SSrr)>;
+def : InstRW<[PdWriteCVTSI642SDrr_CVTSI642SSrr_CVTSI2SDr_CVTSI2SSrr], (instrs CVTSI642SDrr, CVTSI642SSrr, CVTSI2SDrr, CVTSI2SSrr)>;
 
 defm : PdWriteResXMMPair<WriteCvtI2PD,   [PdFPU1, PdFPSTO], 8, [],     2>;
 defm : PdWriteResYMMPair<WriteCvtI2PDY,  [PdFPU1, PdFPSTO], 8, [2, 1], 4, 1>;
@@ -952,11 +952,20 @@ defm : PdWriteRes<WriteVecMaskedStore,      [PdStore, PdFPU01, PdFPMAL], 6, [1, 
 defm : PdWriteRes<WriteVecMaskedStoreY,     [PdStore, PdFPU01, PdFPMAL], 6, [2, 2, 4], 2>;
 
 defm : PdWriteRes<WriteVecMove,             [PdFPU01, PdFPMAL], 2>;
-defm : PdWriteRes<WriteVecMoveX,            [PdFPU01, PdFPMAL], 2>;
+defm : PdWriteRes<WriteVecMoveX,            [PdFPU01, PdFPMAL], 1>;
 defm : PdWriteRes<WriteVecMoveY,            [PdFPU01, PdFPMAL], 2, [2, 2], 2>;
 
-defm : PdWriteRes<WriteVecMoveToGpr,        [PdFPU0, PdFPFMA, PdEX0], 10>;
-defm : PdWriteRes<WriteVecMoveFromGpr,      [PdFPU01, PdFPFMA], 10, [], 2>;
+def PdWriteMOVDQArr : SchedWriteRes<[PdFPU01, PdFPMAL]> {
+}
+def : InstRW<[PdWriteMOVDQArr], (instrs MOVDQArr)>;
+
+def PdWriteMOVQ2DQrr : SchedWriteRes<[PdFPU01, PdFPMAL]> {
+  let Latency = 4;
+}
+def : InstRW<[PdWriteMOVQ2DQrr], (instrs MMX_MOVQ2DQrr)>;
+
+defm : PdWriteRes<WriteVecMoveToGpr,        [PdFPU0, PdFPFMA, PdEX0], 11>;
+defm : PdWriteRes<WriteVecMoveFromGpr,      [PdFPU01, PdFPFMA], 11, [], 2>;
 
 defm : PdWriteResXMMPair<WriteVecALU,        [PdFPU01, PdFPMAL], 2>;
 defm : PdWriteResXMMPair<WriteVecALUX,       [PdFPU01, PdFPMAL], 2>;
@@ -982,16 +991,23 @@ defm : PdWriteResXMMPair<WritePMULLD,        [PdFPU0, PdFPU01, PdFPMMA, PdFPMAL]
 defm : X86WriteResPairUnsupported<WritePMULLDY>;
 defm : X86WriteResPairUnsupported<WritePMULLDZ>;
 
-def JWriteVPMACS : SchedWriteRes<[PdFPU0, PdFPU01, PdFPMMA, PdFPMAL]> {
+def PdWriteVPMACS : SchedWriteRes<[PdFPU0, PdFPU01, PdFPMMA, PdFPMAL]> {
   let Latency = 4;
   let ResourceCycles = [2, 1, 2, 1];
 }
-def : InstRW<[JWriteVPMACS], (instrs VPMACSDQHrr, VPMACSDQLrr, VPMACSSDQHrr,
+def : InstRW<[PdWriteVPMACS], (instrs VPMACSDQHrr, VPMACSDQLrr, VPMACSSDQHrr,
                                      VPMACSSDQLrr)>;
 
 defm : PdWriteResXMMPair<WriteMPSAD,         [PdFPU0, PdFPMMA], 9, [1, 2], 9>;
 defm : X86WriteResPairUnsupported<WriteMPSADY>;
 defm : X86WriteResPairUnsupported<WriteMPSADZ>;
+
+def PdWriteVMPSADBW : SchedWriteRes<[PdFPU0, PdFPMMA]> {
+  let Latency = 8;
+  let ResourceCycles = [1, 2];
+  let NumMicroOps = 9;
+}
+def : InstRW<[PdWriteVMPSADBW], (instrs VMPSADBWrri)>;
 
 defm : PdWriteResXMMPair<WritePSADBW,        [PdFPU01, PdFPMAL], 4, [], 2>;
 defm : PdWriteResXMMPair<WritePSADBWX,       [PdFPU01, PdFPMAL], 4, [], 2>;
@@ -1009,6 +1025,12 @@ defm : PdWriteResXMMPair<WriteVarShuffle,    [PdFPU01, PdFPMAL], 3, [1, 4]>;
 defm : PdWriteResXMMPair<WriteVarShuffleX,   [PdFPU01, PdFPMAL], 3, [1, 4]>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleY>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
+
+def PdWriteVPPERM : SchedWriteRes<[PdFPU01, PdFPMAL]> {
+  let Latency = 2;
+  let ResourceCycles = [1, 4];
+}
+def : InstRW<[PdWriteVPPERM], (instrs VPPERMrrr, VPPERMrrr_REV)>;
 
 defm : PdWriteResXMMPair<WriteBlend,         [PdFPU01, PdFPMAL], 2>;
 defm : X86WriteResPairUnsupported<WriteBlendY>;
@@ -1041,7 +1063,7 @@ defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>;
 defm : PdWriteRes<WriteVecInsert,    [PdFPU01, PdFPMAL], 2, [], 2>;
 defm : PdWriteRes<WriteVecInsertLd,  [PdFPU01, PdFPMAL, PdLoad], 6, [], 2>;
 
-defm : PdWriteRes<WriteVecExtract,   [PdFPU0, PdFPFMA, PdEX0], 13, [], 2>;
+defm : PdWriteRes<WriteVecExtract,   [PdFPU0, PdFPFMA, PdEX0], 12, [], 2>;
 defm : PdWriteRes<WriteVecExtractSt, [PdFPU1, PdFPSTO, PdStore], 13, [], 2>;
 
 def PdWriteEXTRQ : SchedWriteRes<[PdFPU01, PdFPMAL]> {
@@ -1053,19 +1075,19 @@ def : InstRW<[PdWriteEXTRQ], (instrs EXTRQ, EXTRQI)>;
 // SSE42 String instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : PdWriteResXMMPair<WritePCmpIStrI, [PdFPU1, PdFPFMA, PdEX0], 14, [1, 2, 1], 7, 1>;
-defm : PdWriteResXMMPair<WritePCmpIStrM, [PdFPU1, PdFPFMA, PdEX0],  6, [1, 2, 1], 7, 2>;
+defm : PdWriteResXMMPair<WritePCmpIStrI, [PdFPU1, PdFPFMA, PdEX0], 11, [1, 2, 1], 7, 1>;
+defm : PdWriteResXMMPair<WritePCmpIStrM, [PdFPU1, PdFPFMA, PdEX0],  7, [1, 2, 1], 7, 2>;
 
-defm : PdWriteResXMMPair<WritePCmpEStrI, [PdFPU1, PdStore, PdLoad, PdFPMAL, PdFPFMA, PdEX0], 15, [1, 2, 6, 4, 1, 1], 27, 1>;
+defm : PdWriteResXMMPair<WritePCmpEStrI, [PdFPU1, PdStore, PdLoad, PdFPMAL, PdFPFMA, PdEX0], 14, [1, 2, 6, 4, 1, 1], 27, 1>;
 defm : PdWriteResXMMPair<WritePCmpEStrM, [PdFPU1, PdStore, PdLoad, PdFPMAL, PdFPFMA, PdEX0], 10, [1, 2, 6, 4, 1, 1], 27, 1>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // MOVMSK Instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : PdWriteRes<WriteFMOVMSK, [PdFPU0, PdFPFMA, PdEX0],   10, [], 2>;
+defm : PdWriteRes<WriteFMOVMSK, [PdFPU0, PdFPFMA, PdEX0],   12, [], 2>;
 
-defm : PdWriteRes<WriteVecMOVMSK, [PdFPU0, PdFPFMA, PdEX0], 13, [], 2>;
+defm : PdWriteRes<WriteVecMOVMSK, [PdFPU0, PdFPFMA, PdEX0], 12, [], 2>;
 defm : X86WriteResUnsupported<WriteVecMOVMSKY>;
 // defm : X86WriteResUnsupported<WriteVecMOVMSKZ>;
 
@@ -1113,7 +1135,7 @@ def : InstRW<[WritePHAdd.Folded], (instrs PHADDDrm, PHSUBDrm,
 defm : PdWriteResXMMPair<WriteCLMul, [PdFPU0, PdFPMMA], 12, [], 5, 1>;
 
 def PdWriteVPCLMULQDQrr : SchedWriteRes<[PdFPU0, PdFPMMA]> {
-  let Latency = 13;
+  let Latency = 12;
   let NumMicroOps = 6;
 }
 def : InstRW<[PdWriteVPCLMULQDQrr], (instrs VPCLMULQDQrr)>;

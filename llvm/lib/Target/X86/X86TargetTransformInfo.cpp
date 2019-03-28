@@ -2984,7 +2984,7 @@ bool X86TTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
 }
 
 bool X86TTIImpl::canMacroFuseCmp() {
-  return ST->hasMacroFusion();
+  return ST->hasMacroFusion() || ST->hasBranchFusion();
 }
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {

@@ -15,8 +15,6 @@
 //     piecewise_linear_distribution(size_t nw, result_type xmin,
 //                                     result_type xmax, UnaryOperation fw);
 
-#include <iostream>
-
 #include <random>
 #include <cassert>
 

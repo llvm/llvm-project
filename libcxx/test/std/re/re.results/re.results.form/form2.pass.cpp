@@ -15,8 +15,6 @@
 //   format(OutputIter out, const basic_string<char_type, ST, SA>& fmt,
 //          regex_constants::match_flag_type flags = regex_constants::format_default) const;
 
-#include <iostream>
-
 #include <regex>
 #include <cassert>
 

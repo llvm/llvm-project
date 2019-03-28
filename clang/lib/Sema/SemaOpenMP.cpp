@@ -13352,10 +13352,11 @@ static bool checkMapConflicts(
 
 // Look up the user-defined mapper given the mapper name and mapped type, and
 // build a reference to it.
-ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
-                                     CXXScopeSpec &MapperIdScopeSpec,
-                                     const DeclarationNameInfo &MapperId,
-                                     QualType Type, Expr *UnresolvedMapper) {
+static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
+                                            CXXScopeSpec &MapperIdScopeSpec,
+                                            const DeclarationNameInfo &MapperId,
+                                            QualType Type,
+                                            Expr *UnresolvedMapper) {
   if (MapperIdScopeSpec.isInvalid())
     return ExprError();
   // Find all user-defined mappers with the given MapperId.

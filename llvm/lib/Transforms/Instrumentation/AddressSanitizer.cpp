@@ -275,6 +275,16 @@ static cl::opt<bool> ClInvalidPointerPairs(
     cl::desc("Instrument <, <=, >, >=, - with pointer operands"), cl::Hidden,
     cl::init(false));
 
+static cl::opt<bool> ClInvalidPointerCmp(
+    "asan-detect-invalid-pointer-cmp",
+    cl::desc("Instrument <, <=, >, >= with pointer operands"), cl::Hidden,
+    cl::init(false));
+
+static cl::opt<bool> ClInvalidPointerSub(
+    "asan-detect-invalid-pointer-sub",
+    cl::desc("Instrument - operations with pointer operands"), cl::Hidden,
+    cl::init(false));
+
 static cl::opt<unsigned> ClRealignStack(
     "asan-realign-stack",
     cl::desc("Realign stack to the value of this flag (power of two)"),
@@ -1408,11 +1418,24 @@ static bool isPointerOperand(Value *V) {
 // This is a rough heuristic; it may cause both false positives and
 // false negatives. The proper implementation requires cooperation with
 // the frontend.
-static bool isInterestingPointerComparisonOrSubtraction(Instruction *I) {
+static bool isInterestingPointerComparison(Instruction *I) {
   if (ICmpInst *Cmp = dyn_cast<ICmpInst>(I)) {
-    if (!Cmp->isRelational()) return false;
-  } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(I)) {
-    if (BO->getOpcode() != Instruction::Sub) return false;
+    if (!Cmp->isRelational())
+      return false;
+  } else {
+    return false;
+  }
+  return isPointerOperand(I->getOperand(0)) &&
+         isPointerOperand(I->getOperand(1));
+}
+
+// This is a rough heuristic; it may cause both false positives and
+// false negatives. The proper implementation requires cooperation with
+// the frontend.
+static bool isInterestingPointerSubtraction(Instruction *I) {
+  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(I)) {
+    if (BO->getOpcode() != Instruction::Sub)
+      return false;
   } else {
     return false;
   }
@@ -2619,8 +2642,10 @@ bool AddressSanitizer::instrumentFunction(Function &F,
               continue; // We've seen this temp in the current BB.
           }
         }
-      } else if (ClInvalidPointerPairs &&
-                 isInterestingPointerComparisonOrSubtraction(&Inst)) {
+      } else if (((ClInvalidPointerPairs || ClInvalidPointerCmp) &&
+                  isInterestingPointerComparison(&Inst)) ||
+                 ((ClInvalidPointerPairs || ClInvalidPointerSub) &&
+                  isInterestingPointerSubtraction(&Inst))) {
         PointerComparisonsOrSubtracts.push_back(&Inst);
         continue;
       } else if (isa<MemIntrinsic>(Inst)) {
