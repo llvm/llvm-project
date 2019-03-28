@@ -1476,7 +1476,14 @@ SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
     } else {
       // Try to load the specified file.
       FileSpec file_spec(symbol->GetName().GetCString());
-      if (FileSystem::Instance().Exists(file_spec)) {
+      bool exists = FileSystem::Instance().Exists(file_spec);
+      if (!exists)
+        if (file_spec.GetDirectory().IsEmpty() && m_obj_file) {
+          // For relative paths, search next to the binary.
+          file_spec.GetDirectory() = m_obj_file->GetFileSpec().GetDirectory();
+          exists = FileSystem::Instance().Exists(file_spec);
+        }
+      if (exists) {
         // We found the source data for the AST data blob.
         // Read it in and add it to our return vector.
         std::shared_ptr<DataBufferLLVM> data_buf_sp 

@@ -213,7 +213,8 @@ public:
     Empty,      ///< No cases in this enum.
     CStyle,     ///< No cases have payloads.
     AllPayload, ///< All cases have payloads.
-    Mixed       ///< Some cases have payloads.
+    Mixed,      ///< Some cases have payloads.
+    Resilient   ///< A resilient enum.
   };
 
   struct ElementInfo {
@@ -678,6 +679,39 @@ private:
   SwiftAllPayloadEnumDescriptor m_payload_cases;
 };
 
+class SwiftResilientEnumDescriptor : public SwiftEnumDescriptor {
+public:
+  SwiftResilientEnumDescriptor(swift::ASTContext *ast,
+                               swift::CanType swift_can_type,
+                               swift::EnumDecl *enum_decl)
+      : SwiftEnumDescriptor(ast, swift_can_type, enum_decl,
+                            SwiftEnumDescriptor::Kind::Resilient) {
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
+    if (log)
+      log->Printf("doing resilient enum layout for %s",
+                  GetTypeName().AsCString());
+  }
+
+  virtual ElementInfo *
+  GetElementFromData(const lldb_private::DataExtractor &data, bool no_payload) {
+    // Not yet supported by LLDB.
+    return nullptr;
+  }
+  virtual size_t GetNumElementsWithPayload() { return 0; }
+  virtual size_t GetNumCStyleElements() { return 0; }
+  virtual ElementInfo *GetElementWithPayloadAtIndex(size_t idx) {
+    return nullptr;
+  }
+  virtual ElementInfo *GetElementWithNoPayloadAtIndex(size_t idx) {
+    return nullptr;
+  }
+  static bool classof(const SwiftEnumDescriptor *S) {
+    return S->GetKind() == SwiftEnumDescriptor::Kind::Resilient;
+  }
+  virtual ~SwiftResilientEnumDescriptor() = default;
+};
+
 SwiftEnumDescriptor *
 SwiftEnumDescriptor::CreateDescriptor(swift::ASTContext *ast,
                                       swift::CanType swift_can_type,
@@ -694,19 +728,19 @@ SwiftEnumDescriptor::CreateDescriptor(swift::ASTContext *ast,
       elements_with_payload = enum_impl_strategy.getElementsWithPayload();
   llvm::ArrayRef<swift::irgen::EnumImplStrategy::Element>
       elements_with_no_payload = enum_impl_strategy.getElementsWithNoPayload();
+  if (enum_decl->isResilient())
+    return new SwiftResilientEnumDescriptor(ast, swift_can_type, enum_decl);
   if (elements_with_no_payload.size() == 0) {
-    // Nnothing with no payload.. empty or all payloads?
+    // Nothing with no payload.. empty or all payloads?
     if (elements_with_payload.size() == 0)
       return new SwiftEmptyEnumDescriptor(ast, swift_can_type, enum_decl);
-    else
-      return new SwiftAllPayloadEnumDescriptor(ast, swift_can_type, enum_decl);
-  } else {
-    // Something with no payload.. mixed or C-style?
-    if (elements_with_payload.size() == 0)
-      return new SwiftCStyleEnumDescriptor(ast, swift_can_type, enum_decl);
-    else
-      return new SwiftMixedEnumDescriptor(ast, swift_can_type, enum_decl);
+    return new SwiftAllPayloadEnumDescriptor(ast, swift_can_type, enum_decl);
   }
+  
+  // Something with no payload.. mixed or C-style?
+  if (elements_with_payload.size() == 0)
+    return new SwiftCStyleEnumDescriptor(ast, swift_can_type, enum_decl);
+  return new SwiftMixedEnumDescriptor(ast, swift_can_type, enum_decl);
 }
 
 static SwiftEnumDescriptor *
@@ -793,9 +827,6 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
   ir_gen_opts.UseJIT = true;
   ir_gen_opts.DWARFVersion = swift::DWARFVersion;
-
-  // FIXME: lldb does not support resilience yet.
-  ir_gen_opts.EnableResilienceBypass = true;
 }
 
 SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
@@ -3869,11 +3900,11 @@ bool SwiftASTContext::RegisterSectionModules(
                 ast_file_data_sp->GetByteSize());
             llvm::SmallVector<std::string, 4> swift_modules;
             if (swift::parseASTSection(sml, section_data_ref, swift_modules)) {
-              // Collect the LLVM module names referenced by the AST.
+              // Collect the Swift module names referenced by the AST.
               for (auto module_name : swift_modules) {
                 module_names.push_back(module_name);
                 if (log)
-                  log->Printf("SwiftASTContext::%s() - parsed module %s"
+                  log->Printf("SwiftASTContext::%s() - parsed module %s "
                               "from Swift AST section %zu of %zu.",
                               __FUNCTION__, module_name.c_str(), ast_number,
                               ast_file_datas.size());
@@ -5958,6 +5989,15 @@ SwiftASTContext::GetSwiftFixedTypeInfo(void *type) {
   return nullptr;
 }
 
+bool SwiftASTContext::IsFixedSize(CompilerType compiler_type) {
+  VALID_OR_RETURN(false);
+  const swift::irgen::FixedTypeInfo *type_info =
+      GetSwiftFixedTypeInfo(compiler_type.GetOpaqueQualType());
+  if (type_info)
+    return type_info->isFixedSize();
+  return false;
+}
+
 llvm::Optional<uint64_t>
 SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
                             ExecutionContextScope *exe_scope) {
@@ -5990,6 +6030,12 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
   if (fixed_type_info)
     return fixed_type_info->getFixedSize().getValue() * 8;
 
+  if (!exe_scope)
+    return {};
+  if (auto *runtime = exe_scope->CalculateProcess()->GetSwiftLanguageRuntime())
+    return runtime->GetBitSize({this, type});
+
+  
   // FIXME: This should be {}.
   return 0;
 }

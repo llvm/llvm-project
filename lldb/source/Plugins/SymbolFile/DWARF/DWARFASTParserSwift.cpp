@@ -104,6 +104,17 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   if (!mangled_name && name) {
+    if (name.GetStringRef().equals("$swift.fixedbuffer")) {
+      DWARFDIE type_die =
+          die.GetFirstChild().GetAttributeValueAsReferenceDIE(DW_AT_type);
+      if (auto wrapped_type =
+          ParseTypeFromDWARF(sc, type_die, log, type_is_new_ptr)) {
+        // Create a unique pointer for the type + fixed buffer flag.
+        type_sp.reset(new Type(*wrapped_type));
+        type_sp->SetSwiftFixedValueBuffer(true);
+        return type_sp;
+      }
+    }
     if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetCString()))
       mangled_name = name;
     else {
