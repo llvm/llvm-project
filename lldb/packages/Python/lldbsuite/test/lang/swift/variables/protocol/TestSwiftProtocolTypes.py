@@ -62,7 +62,7 @@ class TestSwiftProtocolTypes(TestBase):
         self.thread = threads[0]
 
         self.expect("frame variable --raw-output --show-types loc2d",
-                    substrs=['(PointUtils) loc2d =',
+                    substrs=['PointUtils) loc2d =',
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
                              '(Builtin.RawPointer) payload_data_2 = 0x',
@@ -74,7 +74,7 @@ class TestSwiftProtocolTypes(TestBase):
                              'x = 1.25', 'y = 2.5'])
 
         self.expect("frame variable --raw-output --show-types loc3d",
-                    substrs=['(PointUtils) loc3d =',
+                    substrs=['PointUtils) loc3d =',
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
                              '(Builtin.RawPointer) payload_data_2 = 0x',
@@ -90,7 +90,7 @@ class TestSwiftProtocolTypes(TestBase):
                 'z = 1.25'])
 
         self.expect("expression --raw-output --show-types -- loc2d",
-                    substrs=['(PointUtils) $R',
+                    substrs=['PointUtils) $R',
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
                              '(Builtin.RawPointer) payload_data_2 = 0x',
@@ -102,7 +102,7 @@ class TestSwiftProtocolTypes(TestBase):
                              'x = 1.25', 'y = 2.5'])
 
         self.expect("expression --raw-output --show-types -- loc3dCB",
-                    substrs=['(PointUtils & AnyObject) $R',
+                    substrs=['PointUtils & AnyObject) $R',
                              '(Builtin.RawPointer) instance = 0x',
                              '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
 
@@ -110,7 +110,7 @@ class TestSwiftProtocolTypes(TestBase):
                     substrs=['Point3D) $R', 'x = 1.25', 'y = 2.5', 'z = 1.25'])
 
         self.expect("expression --raw-output --show-types -- loc3dSuper",
-                    substrs=['(a.PointSuperclass & PointUtils) $R',
+                    substrs=['(a.PointSuperclass & a.PointUtils) $R',
                              '(a.PointSuperclass) instance = 0x',
                              '(Swift.Int) superData = ',
                              '(Builtin.RawPointer) witness_table_PointUtils = 0x'])

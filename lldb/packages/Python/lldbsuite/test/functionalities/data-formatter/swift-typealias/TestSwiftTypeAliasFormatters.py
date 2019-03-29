@@ -75,20 +75,20 @@ class TestSwiftTypeAliasFormatters(TestBase):
         self.expect("frame variable f", substrs=['Foo) f = (value = 12)'])
         self.expect("frame variable b", substrs=['Bar) b = (value = 24)'])
 
-        self.runCmd('type summary add Foo -v -s "hello"')
+        self.runCmd('type summary add a.Foo -v -s "hello"')
         self.expect("frame variable f", substrs=['Foo) f = hello'])
         self.expect("frame variable b", substrs=['Bar) b = hello'])
 
-        self.runCmd('type summary add Bar -v -s "hi"')
+        self.runCmd('type summary add a.Bar -v -s "hi"')
         self.expect("frame variable f", substrs=['Foo) f = hello'])
         self.expect("frame variable b", substrs=['Bar) b = hi'])
 
-        self.runCmd("type summary delete Foo")
+        self.runCmd("type summary delete a.Foo")
         self.expect("frame variable f", substrs=['Foo) f = (value = 12)'])
         self.expect("frame variable b", substrs=['Bar) b = hi'])
 
-        self.runCmd("type summary delete Bar")
-        self.runCmd("type summary add -C no -v Foo -s hello")
+        self.runCmd("type summary delete a.Bar")
+        self.runCmd("type summary add -C no -v a.Foo -s hello")
         self.expect("frame variable f", substrs=['Foo) f = hello'])
         self.expect("frame variable b", substrs=['Bar) b = (value = 24)'])
 

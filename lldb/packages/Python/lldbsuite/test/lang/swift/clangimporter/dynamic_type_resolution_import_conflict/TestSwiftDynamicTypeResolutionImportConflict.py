@@ -56,13 +56,13 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
                                           lldb.SBFileSpec('Dylib.swift'))
         self.expect("bt", substrs=['Dylib.swift'])
         self.expect("fr v -d no-dynamic-values -- input",
-                    substrs=['(LibraryProtocol) input'])
+                    substrs=['(Dylib.LibraryProtocol) input'])
         self.expect("fr v -d run-target -- input",
-                    substrs=['(LibraryProtocol) input'])
+                    substrs=['(Dylib.LibraryProtocol) input'])
                     # FIXME: substrs=['(main.FromMainModule) input'])
         self.expect("expr -d run-target -- input",
                     "test that the expression evaluator can recover",
-                    substrs=['(LibraryProtocol) $R0'])
+                    substrs=['(Dylib.LibraryProtocol) $R0'])
                     # FIXME: substrs=['(main.FromMainModule) input'])
                     
 
