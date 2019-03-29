@@ -30,6 +30,11 @@ typedef struct {
 } StrongOuter;
 
 typedef struct {
+  id f0;
+  Strong f1;
+} StrongOuter2;
+
+typedef struct {
   int f0;
   volatile id f1;
 } StrongVolatile;
@@ -81,6 +86,7 @@ typedef struct {
 
 StrongSmall getStrongSmall(void);
 StrongOuter getStrongOuter(void);
+StrongOuter2 getStrongOuter2(void);
 void calleeStrongSmall(StrongSmall);
 void func(Strong *);
 
@@ -89,12 +95,12 @@ void func(Strong *);
 // CHECK: define void @test_constructor_destructor_StrongOuter()
 // CHECK: %[[T:.*]] = alloca %[[STRUCT_STRONGOUTER:.*]], align 8
 // CHECK: %[[V0:.*]] = bitcast %[[STRUCT_STRONGOUTER]]* %[[T]] to i8**
-// CHECK: call void @__default_constructor_8_s16_s24(i8** %[[V0]])
+// CHECK: call void @__default_constructor_8_S_s16_s24(i8** %[[V0]])
 // CHECK: %[[V1:.*]] = bitcast %[[STRUCT_STRONGOUTER]]* %[[T]] to i8**
-// CHECK: call void @__destructor_8_s16_s24(i8** %[[V1]])
+// CHECK: call void @__destructor_8_S_s16_s24(i8** %[[V1]])
 // CHECK: ret void
 
-// CHECK: define linkonce_odr hidden void @__default_constructor_8_s16_s24(i8** %[[DST:.*]])
+// CHECK: define linkonce_odr hidden void @__default_constructor_8_S_s16_s24(i8** %[[DST:.*]])
 // CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
@@ -117,7 +123,7 @@ void func(Strong *);
 // CHECK: call void @llvm.memset.p0i8.i64(i8* align 8 %[[V4]], i8 0, i64 8, i1 false)
 // CHECK: ret void
 
-// CHECK: define linkonce_odr hidden void @__destructor_8_s16_s24(i8** %[[DST:.*]])
+// CHECK: define linkonce_odr hidden void @__destructor_8_S_s16_s24(i8** %[[DST:.*]])
 // CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
@@ -149,12 +155,12 @@ void test_constructor_destructor_StrongOuter(void) {
 // CHECK: %[[V0:.*]] = load %[[STRUCT_STRONGOUTER]]*, %[[STRUCT_STRONGOUTER]]** %[[S_ADDR]], align 8
 // CHECK: %[[V1:.*]] = bitcast %[[STRUCT_STRONGOUTER]]* %[[T]] to i8**
 // CHECK: %[[V2:.*]] = bitcast %[[STRUCT_STRONGOUTER]]* %[[V0]] to i8**
-// CHECK: call void @__copy_constructor_8_8_t0w16_s16_s24_t32w8(i8** %[[V1]], i8** %[[V2]])
+// CHECK: call void @__copy_constructor_8_8_S_t0w16_s16_s24_t32w8(i8** %[[V1]], i8** %[[V2]])
 // CHECK: %[[V3:.*]] = bitcast %[[STRUCT_STRONGOUTER]]* %[[T]] to i8**
-// CHECK: call void @__destructor_8_s16_s24(i8** %[[V3]])
+// CHECK: call void @__destructor_8_S_s16_s24(i8** %[[V3]])
 // CHECK: ret void
 
-// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w16_s16_s24_t32w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_S_t0w16_s16_s24_t32w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
 // CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
 // CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
@@ -208,7 +214,7 @@ void test_copy_constructor_StrongOuter(StrongOuter *s) {
   StrongOuter t = *s;
 }
 
-/// CHECK: define linkonce_odr hidden void @__copy_assignment_8_8_t0w16_s16_s24_t32w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+/// CHECK: define linkonce_odr hidden void @__copy_assignment_8_8_S_t0w16_s16_s24_t32w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
 // CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
 // CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
@@ -231,15 +237,15 @@ void test_copy_assignment_StrongOuter(StrongOuter *d, StrongOuter *s) {
 // CHECK: define void @test_move_constructor_StrongOuter()
 // CHECK: %[[T1:.*]] = getelementptr inbounds %[[STRUCT_BLOCK_BYREF_T:.*]], %[[STRUCT_BLOCK_BYREF_T]]* %{{.*}}, i32 0, i32 7
 // CHECK: %[[V1:.*]] = bitcast %[[STRUCT_STRONGOUTER]]* %[[T1]] to i8**
-// CHECK: call void @__default_constructor_8_s16_s24(i8** %[[V1]])
+// CHECK: call void @__default_constructor_8_S_s16_s24(i8** %[[V1]])
 // CHECK: %[[T2:.*]] = getelementptr inbounds %[[STRUCT_BLOCK_BYREF_T]], %[[STRUCT_BLOCK_BYREF_T]]* %{{.*}}, i32 0, i32 7
 // CHECK: %[[V9:.*]] = bitcast %[[STRUCT_STRONGOUTER]]* %[[T2]] to i8**
-// CHECK: call void @__destructor_8_s16_s24(i8** %[[V9]])
+// CHECK: call void @__destructor_8_S_s16_s24(i8** %[[V9]])
 
 // CHECK: define internal void @__Block_byref_object_copy_(i8*, i8*)
-// CHECK: call void @__move_constructor_8_8_t0w16_s16_s24_t32w8(
+// CHECK: call void @__move_constructor_8_8_S_t0w16_s16_s24_t32w8(
 
-// CHECK: define linkonce_odr hidden void @__move_constructor_8_8_t0w16_s16_s24_t32w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: define linkonce_odr hidden void @__move_constructor_8_8_S_t0w16_s16_s24_t32w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
 // CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
 // CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
@@ -258,14 +264,14 @@ void test_copy_assignment_StrongOuter(StrongOuter *d, StrongOuter *s) {
 // CHECK: store i8* %[[V8]], i8** %[[V4]], align 8
 
 // CHECK: define internal void @__Block_byref_object_dispose_(i8*)
-// CHECK: call void @__destructor_8_s16_s24(
+// CHECK: call void @__destructor_8_S_s16_s24(
 
 void test_move_constructor_StrongOuter(void) {
   __block StrongOuter t;
   BlockTy b = ^{ (void)t; };
 }
 
-// CHECK: define linkonce_odr hidden void @__move_assignment_8_8_t0w16_s16_s24_t32w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: define linkonce_odr hidden void @__move_assignment_8_8_S_t0w16_s16_s24_t32w8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
 // CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
 // CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
@@ -287,6 +293,121 @@ void test_move_constructor_StrongOuter(void) {
 
 void test_move_assignment_StrongOuter(StrongOuter *p) {
   *p = getStrongOuter();
+}
+
+// CHECK: define linkonce_odr hidden void @__default_constructor_8_s0_S_s24(i8** %[[DST:.*]])
+// CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
+// CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
+// CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
+// CHECK: %[[V1:.*]] = bitcast i8** %[[V0]] to i8*
+// CHECK: call void @llvm.memset.p0i8.i64(i8* align 8 %[[V1]], i8 0, i64 8, i1 false)
+// CHECK: %[[V2:.*]] = bitcast i8** %[[V0]] to i8*
+// CHECK: %[[V3:.*]] = getelementptr inbounds i8, i8* %[[V2]], i64 8
+// CHECK: %[[V4:.*]] = bitcast i8* %[[V3]] to i8**
+// CHECK: call void @__default_constructor_8_s16(i8** %[[V4]])
+
+// CHECK: define linkonce_odr hidden void @__destructor_8_s0_S_s24(i8** %[[DST:.*]])
+// CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
+// CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
+// CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V0]], i8* null)
+// CHECK: %[[V1:.*]] = bitcast i8** %[[V0]] to i8*
+// CHECK: %[[V2:.*]] = getelementptr inbounds i8, i8* %[[V1]], i64 8
+// CHECK: %[[V3:.*]] = bitcast i8* %[[V2]] to i8**
+// CHECK: call void @__destructor_8_s16(i8** %[[V3]])
+
+void test_constructor_destructor_StrongOuter2(void) {
+  StrongOuter2 t;
+}
+
+// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_s0_S_t8w16_s24(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
+// CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
+// CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
+// CHECK: store i8** %[[SRC]], i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
+// CHECK: %[[V1:.*]] = load i8**, i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V2:.*]] = load i8*, i8** %[[V1]], align 8
+// CHECK: %[[V3:.*]] = call i8* @llvm.objc.retain(i8* %[[V2]])
+// CHECK: store i8* %[[V3]], i8** %[[V0]], align 8
+// CHECK: %[[V4:.*]] = bitcast i8** %[[V0]] to i8*
+// CHECK: %[[V5:.*]] = getelementptr inbounds i8, i8* %[[V4]], i64 8
+// CHECK: %[[V6:.*]] = bitcast i8* %[[V5]] to i8**
+// CHECK: %[[V7:.*]] = bitcast i8** %[[V1]] to i8*
+// CHECK: %[[V8:.*]] = getelementptr inbounds i8, i8* %[[V7]], i64 8
+// CHECK: %[[V9:.*]] = bitcast i8* %[[V8]] to i8**
+// CHECK: call void @__copy_constructor_8_8_t0w16_s16(i8** %[[V6]], i8** %[[V9]])
+
+void test_copy_constructor_StrongOuter2(StrongOuter2 *s) {
+  StrongOuter2 t = *s;
+}
+
+// CHECK: define linkonce_odr hidden void @__copy_assignment_8_8_s0_S_t8w16_s24(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
+// CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
+// CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
+// CHECK: store i8** %[[SRC]], i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
+// CHECK: %[[V1:.*]] = load i8**, i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V2:.*]] = load i8*, i8** %[[V1]], align 8
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V0]], i8* %[[V2]])
+// CHECK: %[[V3:.*]] = bitcast i8** %[[V0]] to i8*
+// CHECK: %[[V4:.*]] = getelementptr inbounds i8, i8* %[[V3]], i64 8
+// CHECK: %[[V5:.*]] = bitcast i8* %[[V4]] to i8**
+// CHECK: %[[V6:.*]] = bitcast i8** %[[V1]] to i8*
+// CHECK: %[[V7:.*]] = getelementptr inbounds i8, i8* %[[V6]], i64 8
+// CHECK: %[[V8:.*]] = bitcast i8* %[[V7]] to i8**
+// CHECK: call void @__copy_assignment_8_8_t0w16_s16(i8** %[[V5]], i8** %[[V8]])
+
+void test_copy_assignment_StrongOuter2(StrongOuter2 *d, StrongOuter2 *s) {
+  *d = *s;
+}
+
+// CHECK: define linkonce_odr hidden void @__move_constructor_8_8_s0_S_t8w16_s24(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
+// CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
+// CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
+// CHECK: store i8** %[[SRC]], i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
+// CHECK: %[[V1:.*]] = load i8**, i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V2:.*]] = load i8*, i8** %[[V1]], align 8
+// CHECK: store i8* null, i8** %[[V1]], align 8
+// CHECK: store i8* %[[V2]], i8** %[[V0]], align 8
+// CHECK: %[[V3:.*]] = bitcast i8** %[[V0]] to i8*
+// CHECK: %[[V4:.*]] = getelementptr inbounds i8, i8* %[[V3]], i64 8
+// CHECK: %[[V5:.*]] = bitcast i8* %[[V4]] to i8**
+// CHECK: %[[V6:.*]] = bitcast i8** %[[V1]] to i8*
+// CHECK: %[[V7:.*]] = getelementptr inbounds i8, i8* %[[V6]], i64 8
+// CHECK: %[[V8:.*]] = bitcast i8* %[[V7]] to i8**
+// CHECK: call void @__move_constructor_8_8_t0w16_s16(i8** %[[V5]], i8** %[[V8]])
+
+void test_move_constructor_StrongOuter2(void) {
+  __block StrongOuter2 t;
+  BlockTy b = ^{ (void)t; };
+}
+
+// CHECK: define linkonce_odr hidden void @__move_assignment_8_8_s0_S_t8w16_s24(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
+// CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
+// CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
+// CHECK: store i8** %[[SRC]], i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
+// CHECK: %[[V1:.*]] = load i8**, i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V2:.*]] = load i8*, i8** %[[V1]], align 8
+// CHECK: store i8* null, i8** %[[V1]], align 8
+// CHECK: %[[V3:.*]] = load i8*, i8** %[[V0]], align 8
+// CHECK: store i8* %[[V2]], i8** %[[V0]], align 8
+// CHECK: call void @llvm.objc.release(i8* %[[V3]])
+// CHECK: %[[V4:.*]] = bitcast i8** %[[V0]] to i8*
+// CHECK: %[[V5:.*]] = getelementptr inbounds i8, i8* %[[V4]], i64 8
+// CHECK: %[[V6:.*]] = bitcast i8* %[[V5]] to i8**
+// CHECK: %[[V7:.*]] = bitcast i8** %[[V1]] to i8*
+// CHECK: %[[V8:.*]] = getelementptr inbounds i8, i8* %[[V7]], i64 8
+// CHECK: %[[V9:.*]] = bitcast i8* %[[V8]] to i8**
+// CHECK: call void @__move_assignment_8_8_t0w16_s16(i8** %[[V6]], i8** %[[V9]])
+
+void test_move_assignment_StrongOuter2(StrongOuter2 *p) {
+  *p = getStrongOuter2();
 }
 
 // CHECK: define void @test_parameter_StrongSmall([2 x i64] %[[A_COERCE:.*]])
@@ -480,14 +601,14 @@ void test_constructor_destructor_IDArray(void) {
   IDArray t;
 }
 
-// CHECK: define linkonce_odr hidden void @__default_constructor_8_AB8s24n4_s24_AE(
+// CHECK: define linkonce_odr hidden void @__default_constructor_8_AB8s24n4_S_s24_AE(
 void test_constructor_destructor_StructArray(void) {
   StructArray t;
 }
 
 // Test that StructArray's field 'd' is copied before entering the loop.
 
-// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w8_AB8s24n4_t8w16_s24_AE(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w8_AB8s24n4_S_t8w16_s24_AE(i8** %[[DST:.*]], i8** %[[SRC:.*]])
 // CHECK: entry:
 // CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8

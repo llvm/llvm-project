@@ -7,7 +7,16 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
-extern int omp_default_mem_alloc;
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 void foo() {
 }
 
@@ -17,7 +26,7 @@ bool foobool(int argc) {
 
 void foobar(int &ref) {
 #pragma omp taskgroup task_reduction(+:ref)
-#pragma omp task in_reduction(+:ref)
+#pragma omp task in_reduction(+:ref) allocate(omp_thread_mem_alloc: ref) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'task' directive}}
   foo();
 }
 
