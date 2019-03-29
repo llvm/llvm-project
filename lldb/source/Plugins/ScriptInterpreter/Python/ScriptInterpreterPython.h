@@ -442,7 +442,6 @@ protected:
   PythonFile m_saved_stdout;
   PythonFile m_saved_stderr;
   PythonObject m_main_module;
-  PythonObject m_lldb_module;
   PythonDictionary m_session_dict;
   PythonDictionary m_sys_module_dict;
   PythonObject m_run_one_line_function;

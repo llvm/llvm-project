@@ -361,7 +361,7 @@ ScriptInterpreterPython::ScriptInterpreterPython(
     CommandInterpreter &interpreter)
     : ScriptInterpreter(interpreter, eScriptLanguagePython),
       IOHandlerDelegateMultiline("DONE"), m_saved_stdin(), m_saved_stdout(),
-      m_saved_stderr(), m_main_module(), m_lldb_module(),
+      m_saved_stderr(), m_main_module(),
       m_session_dict(PyInitialValue::Invalid),
       m_sys_module_dict(PyInitialValue::Invalid), m_run_one_line_function(),
       m_run_one_line_str_global(),
