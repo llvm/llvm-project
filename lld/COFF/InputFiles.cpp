@@ -778,7 +778,7 @@ static StringRef getBasename(StringRef Path) {
 std::string lld::toString(const coff::InputFile *File) {
   if (!File)
     return "<internal>";
-  if (File->ParentName.empty())
+  if (File->ParentName.empty() || File->kind() == coff::InputFile::ImportKind)
     return File->getName();
 
   return (getBasename(File->ParentName) + "(" + getBasename(File->getName()) +

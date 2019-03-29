@@ -180,7 +180,7 @@ void assignExportOrdinals();
 // if value matches previous values for the key.
 // This feature used in the directive section to reject
 // incompatible objects.
-void checkFailIfMismatch(StringRef Arg, StringRef Source);
+void checkFailIfMismatch(StringRef Arg, InputFile *Source);
 
 // Convert Windows resource files (.res files) to a .obj file.
 MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs);

@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(LLDB_DISABLE_PYTHON)
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
-#endif
-
 #include "SystemInitializerFull.h"
 
 #include "lldb/API/SBCommandInterpreter.h"
