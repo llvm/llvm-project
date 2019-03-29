@@ -767,8 +767,7 @@ void MachOLinkingContext::registerDylib(MachODylibFile *dylib,
                                         bool upward) const {
   std::lock_guard<std::mutex> lock(_dylibsMutex);
 
-  if (std::find(_allDylibs.begin(),
-                _allDylibs.end(), dylib) == _allDylibs.end())
+  if (!llvm::count(_allDylibs, dylib))
     _allDylibs.push_back(dylib);
   _pathToDylibMap[dylib->installName()] = dylib;
   // If path is different than install name, register path too.

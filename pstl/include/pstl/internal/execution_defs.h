@@ -123,27 +123,27 @@ struct is_execution_policy : std::false_type
 };
 
 template <>
-struct is_execution_policy<sequenced_policy> : std::true_type
+struct is_execution_policy<__pstl::execution::sequenced_policy> : std::true_type
 {
 };
 #if __PSTL_USE_PAR_POLICIES
 template <>
-struct is_execution_policy<parallel_policy> : std::true_type
+struct is_execution_policy<__pstl::execution::parallel_policy> : std::true_type
 {
 };
 template <>
-struct is_execution_policy<parallel_unsequenced_policy> : std::true_type
+struct is_execution_policy<__pstl::execution::parallel_unsequenced_policy> : std::true_type
 {
 };
 #endif
 template <>
-struct is_execution_policy<unsequenced_policy> : std::true_type
+struct is_execution_policy<__pstl::execution::unsequenced_policy> : std::true_type
 {
 };
 
 #if __PSTL_CPP14_VARIABLE_TEMPLATES_PRESENT
 template <class T>
-constexpr bool is_execution_policy_v = is_execution_policy<T>::value;
+constexpr bool is_execution_policy_v = __pstl::execution::is_execution_policy<T>::value;
 #endif
 
 } // namespace v1

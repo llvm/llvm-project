@@ -551,9 +551,9 @@ static void implementPatch(uint64_t AdrpAddr, uint64_t PatcheeOffset,
   // and replace the relocation with a R_AARCH_JUMP26 branch relocation.
   // Case 4: No relocation. We must create a new R_AARCH64_JUMP26 branch
   // relocation at the offset.
-  auto RelIt = std::find_if(
-      IS->Relocations.begin(), IS->Relocations.end(),
-      [=](const Relocation &R) { return R.Offset == PatcheeOffset; });
+  auto RelIt = llvm::find_if(IS->Relocations, [=](const Relocation &R) {
+    return R.Offset == PatcheeOffset;
+  });
   if (RelIt != IS->Relocations.end() &&
       (RelIt->Type == R_AARCH64_JUMP26 || RelIt->Expr == R_RELAX_TLS_IE_TO_LE))
     return;

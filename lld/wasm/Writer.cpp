@@ -169,7 +169,7 @@ void Writer::createImportSection() {
     Import.Kind = WASM_EXTERNAL_MEMORY;
     Import.Memory.Flags = 0;
     Import.Memory.Initial = NumMemoryPages;
-    if (MaxMemoryPages != 0) {
+    if (MaxMemoryPages != 0 || Config->SharedMemory) {
       Import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
       Import.Memory.Maximum = MaxMemoryPages;
     }
@@ -257,7 +257,7 @@ void Writer::createMemorySection() {
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_MEMORY);
   raw_ostream &OS = Section->getStream();
 
-  bool HasMax = MaxMemoryPages != 0;
+  bool HasMax = MaxMemoryPages != 0 || Config->SharedMemory;
   writeUleb128(OS, 1, "memory count");
   unsigned Flags = 0;
   if (HasMax)
@@ -687,10 +687,10 @@ void Writer::createProducersSection() {
                             std::make_pair(&Info.SDKs, &SDKs)})
       for (auto &Producer : *Producers.first)
         if (Producers.second->end() ==
-            std::find_if(Producers.second->begin(), Producers.second->end(),
-                         [&](std::pair<std::string, std::string> Seen) {
-                           return Seen.first == Producer.first;
-                         }))
+            llvm::find_if(*Producers.second,
+                          [&](std::pair<std::string, std::string> Seen) {
+                            return Seen.first == Producer.first;
+                          }))
           Producers.second->push_back(Producer);
   }
   int FieldCount =
@@ -831,7 +831,8 @@ void Writer::layoutMemory() {
   NumMemoryPages = alignTo(MemoryPtr, WasmPageSize) / WasmPageSize;
   log("mem: total pages = " + Twine(NumMemoryPages));
 
-  if (Config->MaxMemory != 0) {
+  // Check max if explicitly supplied or required by shared memory
+  if (Config->MaxMemory != 0 || Config->SharedMemory) {
     if (Config->MaxMemory != alignTo(Config->MaxMemory, WasmPageSize))
       error("maximum memory must be " + Twine(WasmPageSize) + "-byte aligned");
     if (MemoryPtr > Config->MaxMemory)
@@ -927,8 +928,15 @@ void Writer::calculateTargetFeatures() {
   if (InferFeatures)
     TargetFeatures.insert(Used.begin(), Used.end());
 
+  if (TargetFeatures.count("atomics") && !Config->SharedMemory)
+    error("'atomics' feature is used, so --shared-memory must be used");
+
   if (!Config->CheckFeatures)
     return;
+
+  if (Disallowed.count("atomics") && Config->SharedMemory)
+    error(
+        "'atomics' feature is disallowed, so --shared-memory must not be used");
 
   // Validate that used features are allowed in output
   if (!InferFeatures) {
