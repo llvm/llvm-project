@@ -175,8 +175,7 @@ public:
     impl->set_final_data(finalData);
   }
 
-  // void set_write_back(bool flag = true) { return impl->set_write_back(flag);
-  // }
+  void set_write_back(bool flag = true) { return impl->set_write_back(flag); }
 
   // bool is_sub_buffer() const { return impl->is_sub_buffer(); }
 

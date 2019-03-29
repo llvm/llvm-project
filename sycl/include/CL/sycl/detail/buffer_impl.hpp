@@ -145,7 +145,7 @@ public:
           .copyBack<access::mode::read_write, access::target::host_buffer>(
               *this);
 
-    if (uploadData != nullptr) {
+    if (uploadData != nullptr && NeedWriteBack) {
       uploadData();
     }
 
@@ -186,6 +186,8 @@ public:
       std::copy(Ptr, Ptr + SizeInBytes / ValSize, final_data);
     };
   }
+
+  void set_write_back(bool flag) { NeedWriteBack = flag; }
 
   AllocatorT get_allocator() const { return MAllocator; }
 
@@ -281,6 +283,7 @@ private:
   AllocatorT MAllocator;
   OpenCLMemState OCLState;
   bool OpenCLInterop = false;
+  bool NeedWriteBack = true;
   event AvailableEvent;
   cl_context OpenCLContext = nullptr;
   void *BufPtr = nullptr;

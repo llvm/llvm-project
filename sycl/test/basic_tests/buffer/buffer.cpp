@@ -19,6 +19,7 @@ using namespace cl::sycl;
 
 int main() {
   int data = 5;
+  bool failed = false;
   buffer<int, 1> buf(&data, range<1>(1));
   {
     int data1[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
@@ -453,5 +454,55 @@ int main() {
     for (int i = 5; i < 10; i++)
       assert(data1[i] == -1);
   }
+
+  // Check that data is copied back after forcing write-back using
+  // set_write_back
+  {
+    std::vector<int> data1(10, -1);
+    {
+      buffer<int, 1> b(range<1>(10));
+      b.set_final_data(data1.data());
+      b.set_write_back(true);
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto B = b.get_access<access::mode::read_write>(cgh);
+        cgh.parallel_for<class wb>(range<1>{10},
+                                       [=](id<1> index) { B[index] = 0; });
+      });
+
+    }
+    // Data is copied back because there is a user side ptr and write-back is
+    // enabled
+    for (int i = 0; i < 10; i++)
+      if (data1[i] != 0) {
+        assert(false);
+        failed = true;
+      }
+  }
+
+  // Check that data is not copied back after canceling write-back using
+  // set_write_back
+  {
+    std::vector<int> data1(10, -1);
+    {
+      buffer<int, 1> b(range<1>(10));
+      b.set_final_data(data1.data());
+      b.set_write_back(false);
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto B = b.get_access<access::mode::read_write>(cgh);
+        cgh.parallel_for<class notwb>(range<1>{10},
+                                       [=](id<1> index) { B[index] = 0; });
+      });
+
+    }
+    // Data is not copied back because write-back is canceled
+    for (int i = 0; i < 10; i++)
+      if (data1[i] != -1) {
+        assert(false);
+        failed = true;
+      }
+  }
   // TODO tests with mutex property
+  return failed;
 }
