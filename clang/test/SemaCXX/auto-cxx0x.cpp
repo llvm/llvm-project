@@ -15,3 +15,11 @@ void g() {
   // expected-error@-2 {{'auto' not allowed in lambda parameter}}
 #endif
 }
+
+void rdar47689465() {
+  int x = 0;
+  [](auto __attribute__((noderef)) *){}(&x);
+#if __cplusplus == 201103L
+  // expected-error@-2 {{'auto' not allowed in lambda parameter}}
+#endif
+}

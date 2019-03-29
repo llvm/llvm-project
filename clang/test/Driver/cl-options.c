@@ -630,6 +630,13 @@
 // RUN:     -no-canonical-prefixes \
 // RUN:     -march=skylake \
 // RUN:     -fbracket-depth=123 \
+// RUN:     -fprofile-generate \
+// RUN:     -fprofile-generate=dir \
+// RUN:     -fno-profile-generate \
+// RUN:     -fno-profile-instr-generate \
+// RUN:     -fno-profile-instr-use \
+// RUN:     -fcs-profile-generate \
+// RUN:     -fcs-profile-generate=dir \
 // RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 

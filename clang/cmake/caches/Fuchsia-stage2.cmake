@@ -185,6 +185,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   lld
   LTO
   clang-apply-replacements
+  clang-doc
   clang-format
   clang-resource-headers
   clang-include-fixer
