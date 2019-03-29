@@ -207,8 +207,6 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                           names.
      ``gfx906``                  ``amdgcn``   dGPU  - xnack            - Radeon Instinct MI50
                                                       [off]            - Radeon Instinct MI60
-                                                      sram-ecc
-                                                      [on]
      ``gfx909``                  ``amdgcn``   APU   - xnack            *TBA* (Raven Ridge 2)
                                                       [on]
                                                                        .. TODO

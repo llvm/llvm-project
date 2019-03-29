@@ -687,10 +687,10 @@ void Writer::createProducersSection() {
                             std::make_pair(&Info.SDKs, &SDKs)})
       for (auto &Producer : *Producers.first)
         if (Producers.second->end() ==
-            std::find_if(Producers.second->begin(), Producers.second->end(),
-                         [&](std::pair<std::string, std::string> Seen) {
-                           return Seen.first == Producer.first;
-                         }))
+            llvm::find_if(*Producers.second,
+                          [&](std::pair<std::string, std::string> Seen) {
+                            return Seen.first == Producer.first;
+                          }))
           Producers.second->push_back(Producer);
   }
   int FieldCount =

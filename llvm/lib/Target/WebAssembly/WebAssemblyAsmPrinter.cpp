@@ -33,6 +33,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
@@ -161,7 +162,7 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
   }
 
   EmitProducerInfo(M);
-  EmitTargetFeatures();
+  EmitTargetFeatures(M);
 }
 
 void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
@@ -215,45 +216,39 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
   }
 }
 
-void WebAssemblyAsmPrinter::EmitTargetFeatures() {
-  static const std::pair<unsigned, const char *> FeaturePairs[] = {
-      {WebAssembly::FeatureAtomics, "atomics"},
-      {WebAssembly::FeatureBulkMemory, "bulk-memory"},
-      {WebAssembly::FeatureExceptionHandling, "exception-handling"},
-      {WebAssembly::FeatureNontrappingFPToInt, "nontrapping-fptoint"},
-      {WebAssembly::FeatureSignExt, "sign-ext"},
-      {WebAssembly::FeatureSIMD128, "simd128"},
-  };
-
+void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   struct FeatureEntry {
     uint8_t Prefix;
     StringRef Name;
   };
 
-  FeatureBitset UsedFeatures =
-      static_cast<WebAssemblyTargetMachine &>(TM).getUsedFeatures();
-
-  // Calculate the features and linkage policies to emit
+  // Read target features and linkage policies from module metadata
   SmallVector<FeatureEntry, 4> EmittedFeatures;
-  for (auto &F : FeaturePairs) {
+  for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
+    std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
+    Metadata *Policy = M.getModuleFlag(MDKey);
+    if (Policy == nullptr)
+      continue;
+
     FeatureEntry Entry;
-    Entry.Name = F.second;
-    if (F.first == WebAssembly::FeatureAtomics) {
-      // "atomics" is special: code compiled without atomics may have had its
-      // atomics lowered to nonatomic operations. Such code would be dangerous
-      // to mix with proper atomics, so it is always Required or Disallowed.
-      Entry.Prefix = UsedFeatures[F.first]
-                         ? wasm::WASM_FEATURE_PREFIX_REQUIRED
-                         : wasm::WASM_FEATURE_PREFIX_DISALLOWED;
-      EmittedFeatures.push_back(Entry);
-    } else {
-      // Other features are marked Used or not mentioned
-      if (UsedFeatures[F.first]) {
-        Entry.Prefix = wasm::WASM_FEATURE_PREFIX_USED;
-        EmittedFeatures.push_back(Entry);
-      }
-    }
+    Entry.Prefix = 0;
+    Entry.Name = KV.Key;
+
+    if (auto *MD = cast<ConstantAsMetadata>(Policy))
+      if (auto *I = cast<ConstantInt>(MD->getValue()))
+        Entry.Prefix = I->getZExtValue();
+
+    // Silently ignore invalid metadata
+    if (Entry.Prefix != wasm::WASM_FEATURE_PREFIX_USED &&
+        Entry.Prefix != wasm::WASM_FEATURE_PREFIX_REQUIRED &&
+        Entry.Prefix != wasm::WASM_FEATURE_PREFIX_DISALLOWED)
+      continue;
+
+    EmittedFeatures.push_back(Entry);
   }
+
+  if (EmittedFeatures.size() == 0)
+    return;
 
   // Emit features and linkage policies into the "target_features" section
   MCSectionWasm *FeaturesSection = OutContext.getWasmSection(

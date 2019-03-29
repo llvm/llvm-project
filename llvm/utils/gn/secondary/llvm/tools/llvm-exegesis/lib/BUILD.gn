@@ -27,6 +27,7 @@ static_library("lib") {
     "PerfHelper.cpp",
     "RegisterAliasing.cpp",
     "RegisterValue.cpp",
+    "SchedClassResolution.cpp",
     "SnippetGenerator.cpp",
     "Target.cpp",
     "Uops.cpp",

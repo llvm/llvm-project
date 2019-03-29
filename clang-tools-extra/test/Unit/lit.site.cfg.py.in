@@ -6,4 +6,4 @@ config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
 config.shlibdir = "@SHLIBDIR@"
 config.target_triple = "@TARGET_TRIPLE@"
 
-lit_config.load_config(config, "@CLANG_TOOLS_SOURCE_DIR@/test/Unit/lit.cfg")
+lit_config.load_config(config, "@CLANG_TOOLS_SOURCE_DIR@/test/Unit/lit.cfg.py")

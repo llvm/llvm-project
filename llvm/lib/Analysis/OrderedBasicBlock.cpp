@@ -104,7 +104,7 @@ void OrderedBasicBlock::replaceInstruction(const Instruction *Old,
   if (OI == NumberedInsts.end())
     return;
 
-  NumberedInsts[New] = OI->second;
+  NumberedInsts.insert({New, OI->second});
   if (LastInstFound != BB->end() && Old == &*LastInstFound)
     LastInstFound = New->getIterator();
   NumberedInsts.erase(Old);

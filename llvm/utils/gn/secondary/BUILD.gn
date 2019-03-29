@@ -4,18 +4,7 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
 group("default") {
   deps = [
-    "//clang-tools-extra/clang-apply-replacements/tool:clang-apply-replacements",
-    "//clang-tools-extra/clang-change-namespace/tool:clang-change-namespace",
-    "//clang-tools-extra/clang-doc/tool:clang-doc",
-    "//clang-tools-extra/clang-include-fixer/find-all-symbols/tool:find-all-symbols",
-    "//clang-tools-extra/clang-include-fixer/tool:clang-include-fixer",
-    "//clang-tools-extra/clang-move/tool:clang-move",
-    "//clang-tools-extra/clang-query/tool:clang-query",
-    "//clang-tools-extra/clang-reorder-fields/tool:clang-reorder-fields",
-    "//clang-tools-extra/clang-tidy/tool:clang-tidy",
-    "//clang-tools-extra/clangd/tool:clangd",
-    "//clang-tools-extra/modularize",
-    "//clang-tools-extra/pp-trace",
+    "//clang-tools-extra/test",
     "//clang/test",
     "//lld/test",
     "//llvm/test",

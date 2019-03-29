@@ -94,7 +94,6 @@ define dso_local void @twoallocs(i8* nocapture %a, i8* nocapture %b) local_unnam
 ; AA-LABEL: twoallocs:
 ; AA:       # %bb.0: # %entry
 ; AA-NEXT:    vmovups (%rdi), %xmm0
-; AA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AA-NEXT:    vmovups %xmm0, (%rsi)
 ; AA-NEXT:    retq
 entry:
@@ -125,7 +124,6 @@ define dso_local void @onealloc_readback_1(i8* nocapture %a, i8* nocapture %b) l
 ; AA-LABEL: onealloc_readback_1:
 ; AA:       # %bb.0: # %entry
 ; AA-NEXT:    vmovups (%rsi), %xmm0
-; AA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AA-NEXT:    vmovups %xmm0, (%rdi)
 ; AA-NEXT:    retq
 entry:
@@ -155,7 +153,6 @@ define dso_local void @onealloc_readback_2(i8* nocapture %a, i8* nocapture %b) l
 ; AA-LABEL: onealloc_readback_2:
 ; AA:       # %bb.0: # %entry
 ; AA-NEXT:    vmovups (%rsi), %xmm0
-; AA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AA-NEXT:    vmovups %xmm0, (%rdi)
 ; AA-NEXT:    retq
 entry:

@@ -778,3 +778,30 @@ end:
 ; CHECK: btl
 ; CHECK-NOT: btl
 }
+
+
+define void @range_with_unreachable_fallthrough(i32 %i) {
+entry:
+  switch i32 %i, label %default [
+    i32 1,  label %bb1
+    i32 2,  label %bb1
+    i32 3,  label %bb1
+    i32 4,  label %bb2
+    i32 5,  label %bb2
+    i32 6,  label %bb2
+  ]
+bb1: tail call void @g(i32 0) br label %return
+bb2: tail call void @g(i32 1) br label %return
+default: unreachable
+
+return:
+  ret void
+
+; CHECK-LABEL: range_with_unreachable_fallthrough:
+; Since the default is unreachable, either the 1--3 or the 4--6 cluster will be
+; reached. Only one comparison should be emitted.
+; CHECK: cmpl
+; CHECK-NOT: cmpl
+; CHECK: jmp g
+; CHECK: jmp g
+}
