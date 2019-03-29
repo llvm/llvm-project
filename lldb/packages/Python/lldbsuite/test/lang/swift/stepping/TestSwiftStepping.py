@@ -26,6 +26,7 @@ class TestSwiftStepping(lldbtest.TestBase):
 
     @decorators.swiftTest
     @decorators.skipIfLinux
+    @decorators.skipIfDarwin # rdar://49405390
     def test_swift_stepping(self):
         """Tests that we can step reliably in swift code."""
         self.build()
