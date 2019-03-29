@@ -6866,55 +6866,58 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
   return 0;
 }
 
-static int64_t GetInstanceVariableOffset_Metadata(
+static llvm::Optional<uint64_t> GetInstanceVariableOffset_Metadata(
     ValueObject *valobj, ExecutionContext *exe_ctx, const CompilerType &type,
-    ConstString ivar_name, const CompilerType &ivar_type) {
+    StringRef ivar_name, const CompilerType &ivar_type) {
+  const char *fn = "[GetInstanceVariableOffset_Metadata]";
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
   if (log)
-    log->Printf(
-        "[GetInstanceVariableOffset_Metadata] ivar_name = %s, type = %s",
-        ivar_name.AsCString(), type.GetTypeName().AsCString());
+    log->Printf("%s ivar_name = %s, type = %s", fn, ivar_name.str().c_str(),
+                type.GetTypeName().AsCString());
 
   Process *process = exe_ctx->GetProcessPtr();
-  if (process) {
-    SwiftLanguageRuntime *runtime = process->GetSwiftLanguageRuntime();
-    if (runtime) {
-      Status error;
-      if (auto offset =
-            runtime->GetMemberVariableOffset(type, valobj, ivar_name, &error)) {
-        if (log)
-          log->Printf("[GetInstanceVariableOffset_Metadata] for %s: %lu",
-                      ivar_name.AsCString(), *offset);
-        return *offset;
-      }
-      else if (log) {
-        log->Printf("[GetInstanceVariableOffset_Metadata] resolver failure: %s",
-                    error.AsCString());
-      }
-    } else if (log)
-      log->Printf("[GetInstanceVariableOffset_Metadata] no runtime");
-  } else if (log)
-    log->Printf("[GetInstanceVariableOffset_Metadata] no process");
-  return LLDB_INVALID_IVAR_OFFSET;
+  if (!process) {
+    if (log)
+      log->Printf("%s no process", fn);
+    return {};
+  }
+
+  SwiftLanguageRuntime *runtime = process->GetSwiftLanguageRuntime();
+  if (!runtime) {
+    if (log)
+      log->Printf("%s no runtime", fn);
+    return {};
+  }
+
+  Status error;
+  llvm::Optional<uint64_t> offset = runtime->GetMemberVariableOffset(
+      type, valobj, ConstString(ivar_name), &error);
+  if (log) {
+    if (offset)
+      log->Printf("%s for %s: %lu", fn, ivar_name.str().c_str(), *offset);
+    else
+      log->Printf("%s resolver failure: %s", fn, error.AsCString());
+  }
+
+  return offset;
 }
 
-static int64_t GetInstanceVariableOffset(ValueObject *valobj,
-                                         ExecutionContext *exe_ctx,
-                                         const CompilerType &class_type,
-                                         const char *ivar_name,
-                                         const CompilerType &ivar_type) {
-  int64_t offset = LLDB_INVALID_IVAR_OFFSET;
+static llvm::Optional<uint64_t>
+GetInstanceVariableOffset(ValueObject *valobj, ExecutionContext *exe_ctx,
+                          const CompilerType &class_type, StringRef ivar_name,
+                          const CompilerType &ivar_type) {
+  if (ivar_name.empty())
+    return {};
 
-  if (ivar_name && ivar_name[0]) {
-    if (exe_ctx) {
-      Target *target = exe_ctx->GetTargetPtr();
-      if (target) {
-        offset = GetInstanceVariableOffset_Metadata(
-            valobj, exe_ctx, class_type, ConstString(ivar_name), ivar_type);
-      }
-    }
-  }
-  return offset;
+  if (!exe_ctx)
+    return {};
+
+  Target *target = exe_ctx->GetTargetPtr();
+  if (!target)
+    return {};
+
+  return GetInstanceVariableOffset_Metadata(valobj, exe_ctx, class_type,
+                                            ivar_name, ivar_type);
 }
 
 bool SwiftASTContext::IsNonTriviallyManagedReferenceType(
@@ -7048,9 +7051,12 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     child_is_deref_of_parent = false;
 
     CompilerType compiler_type(GetSwiftType(type));
-    child_byte_offset =
-      GetInstanceVariableOffset(valobj, exe_ctx, compiler_type,
-                                printed_idx.c_str(), child_type);
+    llvm::Optional<uint64_t> offset = GetInstanceVariableOffset(
+        valobj, exe_ctx, compiler_type, printed_idx.c_str(), child_type);
+    if (!offset)
+      return {};
+
+    child_byte_offset = *offset;
     child_bitfield_bit_size = 0;
     child_bitfield_bit_offset = 0;
 
@@ -7105,9 +7111,12 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     child_is_deref_of_parent = false;
 
     CompilerType compiler_type(GetSwiftType(type));
-    child_byte_offset =
-      GetInstanceVariableOffset(valobj, exe_ctx, compiler_type,
-                                child_name.c_str(), child_type);
+    llvm::Optional<uint64_t> offset = GetInstanceVariableOffset(
+        valobj, exe_ctx, compiler_type, child_name.c_str(), child_type);
+    if (!offset)
+      return {};
+
+    child_byte_offset = *offset;
     child_bitfield_bit_size = 0;
     child_bitfield_bit_offset = 0;
     return child_type;
