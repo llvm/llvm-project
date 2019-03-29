@@ -226,6 +226,14 @@ public:
                                                   accessOffset);
   }
 
+  template <typename propertyT> bool has_property() const {
+    return Props.has_property<propertyT>();
+  }
+
+  template <typename propertyT> propertyT get_property() const {
+    return Props.get_property<propertyT>();
+  }
+
 public:
   void moveMemoryTo(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
                     EventImplPtr Event);

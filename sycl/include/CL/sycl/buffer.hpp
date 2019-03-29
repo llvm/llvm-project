@@ -192,6 +192,14 @@ public:
                                                             reinterpretRange);
   }
 
+  template <typename propertyT> bool has_property() const {
+    return impl->template has_property<propertyT>();
+  }
+
+  template <typename propertyT> propertyT get_property() const {
+    return impl->template get_property<propertyT>();
+  }
+
 private:
   shared_ptr_class<detail::buffer_impl<AllocatorT>> impl;
   template <class Obj>
