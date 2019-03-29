@@ -690,6 +690,8 @@ struct GenCopyConstructor : GenBinaryFunc<GenCopyConstructor, false> {
 
   void callSpecialFunction(QualType FT, CharUnits Offset,
                            std::array<Address, 2> Addrs) {
+    Addrs[DstIdx] = getAddrWithOffset(Addrs[DstIdx], Offset);
+    Addrs[SrcIdx] = getAddrWithOffset(Addrs[SrcIdx], Offset);
     CGF->callCStructCopyConstructor(CGF->MakeAddrLValue(Addrs[DstIdx], FT),
                                     CGF->MakeAddrLValue(Addrs[SrcIdx], FT));
   }
@@ -720,6 +722,8 @@ struct GenMoveConstructor : GenBinaryFunc<GenMoveConstructor, true> {
 
   void callSpecialFunction(QualType FT, CharUnits Offset,
                            std::array<Address, 2> Addrs) {
+    Addrs[DstIdx] = getAddrWithOffset(Addrs[DstIdx], Offset);
+    Addrs[SrcIdx] = getAddrWithOffset(Addrs[SrcIdx], Offset);
     CGF->callCStructMoveConstructor(CGF->MakeAddrLValue(Addrs[DstIdx], FT),
                                     CGF->MakeAddrLValue(Addrs[SrcIdx], FT));
   }
@@ -748,6 +752,8 @@ struct GenCopyAssignment : GenBinaryFunc<GenCopyAssignment, false> {
 
   void callSpecialFunction(QualType FT, CharUnits Offset,
                            std::array<Address, 2> Addrs) {
+    Addrs[DstIdx] = getAddrWithOffset(Addrs[DstIdx], Offset);
+    Addrs[SrcIdx] = getAddrWithOffset(Addrs[SrcIdx], Offset);
     CGF->callCStructCopyAssignmentOperator(
         CGF->MakeAddrLValue(Addrs[DstIdx], FT),
         CGF->MakeAddrLValue(Addrs[SrcIdx], FT));
@@ -782,6 +788,8 @@ struct GenMoveAssignment : GenBinaryFunc<GenMoveAssignment, true> {
 
   void callSpecialFunction(QualType FT, CharUnits Offset,
                            std::array<Address, 2> Addrs) {
+    Addrs[DstIdx] = getAddrWithOffset(Addrs[DstIdx], Offset);
+    Addrs[SrcIdx] = getAddrWithOffset(Addrs[SrcIdx], Offset);
     CGF->callCStructMoveAssignmentOperator(
         CGF->MakeAddrLValue(Addrs[DstIdx], FT),
         CGF->MakeAddrLValue(Addrs[SrcIdx], FT));
