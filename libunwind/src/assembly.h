@@ -37,6 +37,20 @@
 #define SEPARATOR ;
 #endif
 
+#if defined(__powerpc64__) && (!defined(_CALL_ELF) || _CALL_ELF == 1)
+#define PPC64_OPD1 .section .opd,"aw",@progbits SEPARATOR
+#define PPC64_OPD2 SEPARATOR \
+  .p2align 3 SEPARATOR \
+  .quad .Lfunc_begin0 SEPARATOR \
+  .quad .TOC.@tocbase SEPARATOR \
+  .quad 0 SEPARATOR \
+  .text SEPARATOR \
+.Lfunc_begin0:
+#else
+#define PPC64_OPD1
+#define PPC64_OPD2
+#endif
+
 #define GLUE2(a, b) a ## b
 #define GLUE(a, b) GLUE2(a, b)
 #define SYMBOL_NAME(name) GLUE(__USER_LABEL_PREFIX__, name)
@@ -97,13 +111,17 @@
   .globl SYMBOL_NAME(name) SEPARATOR                      \
   EXPORT_SYMBOL(name) SEPARATOR                           \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR             \
-  SYMBOL_NAME(name):
+  PPC64_OPD1                                              \
+  SYMBOL_NAME(name):                                      \
+  PPC64_OPD2
 
 #define DEFINE_LIBUNWIND_PRIVATE_FUNCTION(name)           \
   .globl SYMBOL_NAME(name) SEPARATOR                      \
   HIDDEN_SYMBOL(SYMBOL_NAME(name)) SEPARATOR              \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR             \
-  SYMBOL_NAME(name):
+  PPC64_OPD1                                              \
+  SYMBOL_NAME(name):                                      \
+  PPC64_OPD2
 
 #if defined(__arm__)
 #if !defined(__ARM_ARCH)

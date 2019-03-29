@@ -235,10 +235,10 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
 #endif
 
 #if defined(_LIBUNWIND_TARGET_PPC64)
-#define PPC64_ELFV1_R2_LOAD_INST_ENCODING 0xe8410028 // ld r2,40(r1)
-#define PPC64_ELFV1_R2_OFFSET 24
-#define PPC64_ELFV2_R2_LOAD_INST_ENCODING 0xe8410018 // ld r2,24(r1)
-#define PPC64_ELFV2_R2_OFFSET 40
+#define PPC64_ELFV1_R2_LOAD_INST_ENCODING 0xe8410028u // ld r2,40(r1)
+#define PPC64_ELFV1_R2_OFFSET 40
+#define PPC64_ELFV2_R2_LOAD_INST_ENCODING 0xe8410018u // ld r2,24(r1)
+#define PPC64_ELFV2_R2_OFFSET 24
       // If the instruction at return address is a TOC (r2) restore,
       // then r2 was saved and needs to be restored.
       // ELFv2 ABI specifies that the TOC Pointer must be saved at SP + 24,
