@@ -74,17 +74,15 @@ entry:
     i32 64, label %bb5
   ]
 
-; The switch is lowered with a jump table for cases 1--32 and case 64 checked
-; separately. Even though the default of switch is unreachable, the fall-through
-; for the jump table *is* reachable so the range check must be emitted.
+; The switch is lowered with a jump table for cases 1--32 and case 64 handled
+; separately. Even though the default of the switch is unreachable, the
+; fall-through for the jump table *is* reachable so the range check must be
+; emitted.
 ;
 ; CHECK-LABEL: reachable_fallthrough
-; CHECK: sub
-; CHECK: cmp
+; CHECK: sub [[REG:w[0-9]+]], w0, #1
+; CHECK: cmp [[REG]], #31
 ; CHECK: b.hi
-;
-; TODO: Drop the cmp for the 64 case since its fallthrough is unreachable.
-
 
 def: unreachable
 bb1: br label %return
@@ -94,6 +92,6 @@ bb4: br label %return
 bb5: br label %return
 
 return:
-  %p = phi i32 [ 3, %bb1 ], [ 2, %bb2 ], [ 1, %bb3 ], [ 0, %bb4 ], [ 0, %bb5 ]
+  %p = phi i32 [ 3, %bb1 ], [ 2, %bb2 ], [ 1, %bb3 ], [ 0, %bb4 ], [ 42, %bb5 ]
   ret i32 %p
 }

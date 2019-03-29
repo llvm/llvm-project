@@ -6421,3 +6421,90 @@ define <8 x i32> @zext_negate_sext(<8 x i8> %x) {
   %r = sext <8 x i16> %neg to <8 x i32>
   ret <8 x i32> %r
 }
+
+define <8 x i32> @zext_decremenet_sext(<8 x i8> %x) {
+; SSE2-LABEL: zext_decremenet_sext:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    paddw %xmm0, %xmm1
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE2-NEXT:    psrad $16, %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    psrad $16, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: zext_decremenet_sext:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSSE3-NEXT:    paddw %xmm0, %xmm1
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSSE3-NEXT:    psrad $16, %xmm0
+; SSSE3-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; SSSE3-NEXT:    psrad $16, %xmm1
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: zext_decremenet_sext:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    paddw %xmm0, %xmm1
+; SSE41-NEXT:    pmovsxwd %xmm1, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; SSE41-NEXT:    pmovsxwd %xmm1, %xmm1
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: zext_decremenet_sext:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: zext_decremenet_sext:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: zext_decremenet_sext:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
+;
+; X32-SSE2-LABEL: zext_decremenet_sext:
+; X32-SSE2:       # %bb.0:
+; X32-SSE2-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X32-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; X32-SSE2-NEXT:    paddw %xmm0, %xmm1
+; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X32-SSE2-NEXT:    psrad $16, %xmm0
+; X32-SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; X32-SSE2-NEXT:    psrad $16, %xmm1
+; X32-SSE2-NEXT:    retl
+;
+; X32-SSE41-LABEL: zext_decremenet_sext:
+; X32-SSE41:       # %bb.0:
+; X32-SSE41-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X32-SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; X32-SSE41-NEXT:    paddw %xmm0, %xmm1
+; X32-SSE41-NEXT:    pmovsxwd %xmm1, %xmm0
+; X32-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; X32-SSE41-NEXT:    pmovsxwd %xmm1, %xmm1
+; X32-SSE41-NEXT:    retl
+  %z = zext <8 x i8> %x to <8 x i16>
+  %dec = add <8 x i16> %z, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  %r = sext <8 x i16> %dec to <8 x i32>
+  ret <8 x i32> %r
+}

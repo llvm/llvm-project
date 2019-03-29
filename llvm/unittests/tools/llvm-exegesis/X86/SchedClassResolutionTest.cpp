@@ -1,4 +1,4 @@
-//===-- AnalysisTest.cpp ---------------------------------------*- C++ -*-===//
+//===-- SchedClassResolutionTest.cpp ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Analysis.h"
+#include "SchedClassResolution.h"
 
 #include <cassert>
 #include <memory>
@@ -23,9 +23,9 @@ namespace {
 using testing::Pair;
 using testing::UnorderedElementsAre;
 
-class AnalysisTest : public ::testing::Test {
+class SchedClassResolutionTest : public ::testing::Test {
 protected:
-  AnalysisTest() {
+  SchedClassResolutionTest() {
     const std::string TT = "x86_64-unknown-linux";
     std::string error;
     const llvm::Target *const TheTarget =
@@ -78,20 +78,20 @@ protected:
   uint16_t P0156Idx = 0;
 };
 
-TEST_F(AnalysisTest, ComputeIdealizedProcResPressure_2P0) {
+TEST_F(SchedClassResolutionTest, ComputeIdealizedProcResPressure_2P0) {
   const auto Pressure =
       computeIdealizedProcResPressure(STI->getSchedModel(), {{P0Idx, 2}});
   EXPECT_THAT(Pressure, UnorderedElementsAre(Pair(P0Idx, 2.0)));
 }
 
-TEST_F(AnalysisTest, ComputeIdealizedProcResPressure_2P05) {
+TEST_F(SchedClassResolutionTest, ComputeIdealizedProcResPressure_2P05) {
   const auto Pressure =
       computeIdealizedProcResPressure(STI->getSchedModel(), {{P05Idx, 2}});
   EXPECT_THAT(Pressure,
               UnorderedElementsAre(Pair(P0Idx, 1.0), Pair(P5Idx, 1.0)));
 }
 
-TEST_F(AnalysisTest, ComputeIdealizedProcResPressure_2P05_2P0156) {
+TEST_F(SchedClassResolutionTest, ComputeIdealizedProcResPressure_2P05_2P0156) {
   const auto Pressure = computeIdealizedProcResPressure(
       STI->getSchedModel(), {{P05Idx, 2}, {P0156Idx, 2}});
   EXPECT_THAT(Pressure,
@@ -99,7 +99,8 @@ TEST_F(AnalysisTest, ComputeIdealizedProcResPressure_2P05_2P0156) {
                                    Pair(P5Idx, 1.0), Pair(P6Idx, 1.0)));
 }
 
-TEST_F(AnalysisTest, ComputeIdealizedProcResPressure_1P1_1P05_2P0156) {
+TEST_F(SchedClassResolutionTest,
+       ComputeIdealizedProcResPressure_1P1_1P05_2P0156) {
   const auto Pressure = computeIdealizedProcResPressure(
       STI->getSchedModel(), {{P1Idx, 1}, {P05Idx, 1}, {P0156Idx, 2}});
   EXPECT_THAT(Pressure,
