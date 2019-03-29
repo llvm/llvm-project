@@ -206,6 +206,13 @@ static bool isSplat(ArrayRef<Value *> VL) {
   return true;
 }
 
+/// \returns True if \p I is commutative, handles CmpInst as well as Instruction.
+static bool isCommutative(Instruction *I) {
+  if (auto *IC = dyn_cast<CmpInst>(I))
+    return IC->isCommutative();
+  return I->isCommutative();
+}
+
 /// Checks if the vector of instructions can be represented as a shuffle, like:
 /// %x0 = extractelement <4 x i8> %x, i32 0
 /// %x3 = extractelement <4 x i8> %x, i32 3
@@ -1837,10 +1844,11 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     case Instruction::FCmp: {
       // Check that all of the compares have the same predicate.
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
+      CmpInst::Predicate SwapP0 = CmpInst::getSwappedPredicate(P0);
       Type *ComparedTy = VL0->getOperand(0)->getType();
       for (unsigned i = 1, e = VL.size(); i < e; ++i) {
         CmpInst *Cmp = cast<CmpInst>(VL[i]);
-        if (Cmp->getPredicate() != P0 ||
+        if ((Cmp->getPredicate() != P0 && Cmp->getPredicate() != SwapP0) ||
             Cmp->getOperand(0)->getType() != ComparedTy) {
           BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, false, UserTreeIdx, ReuseShuffleIndicies);
@@ -1853,15 +1861,29 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       newTreeEntry(VL, true, UserTreeIdx, ReuseShuffleIndicies);
       LLVM_DEBUG(dbgs() << "SLP: added a vector of compares.\n");
 
-      for (unsigned i = 0, e = VL0->getNumOperands(); i < e; ++i) {
-        ValueList Operands;
-        // Prepare the operand vector.
-        for (Value *j : VL)
-          Operands.push_back(cast<Instruction>(j)->getOperand(i));
-
-        UserTreeIdx.EdgeIdx = i;
-        buildTree_rec(Operands, Depth + 1, UserTreeIdx);
+      ValueList Left, Right;
+      if (cast<CmpInst>(VL0)->isCommutative()) {
+        // Commutative predicate - collect + sort operands of the instructions
+        // so that each side is more likely to have the same opcode.
+        assert(P0 == SwapP0 && "Commutative Predicate mismatch");
+        reorderInputsAccordingToOpcode(S, VL, Left, Right);
+      } else {
+        // Collect operands - commute if it uses the swapped predicate.
+        for (Value *V : VL) {
+          auto *Cmp = cast<CmpInst>(V);
+          Value *LHS = Cmp->getOperand(0);
+          Value *RHS = Cmp->getOperand(1);
+          if (Cmp->getPredicate() != P0)
+            std::swap(LHS, RHS);
+          Left.push_back(LHS);
+          Right.push_back(RHS);
+        }
       }
+
+      UserTreeIdx.EdgeIdx = 0;
+      buildTree_rec(Left, Depth + 1, UserTreeIdx);
+      UserTreeIdx.EdgeIdx = 1;
+      buildTree_rec(Right, Depth + 1, UserTreeIdx);
       return;
     }
     case Instruction::Select:
@@ -2876,7 +2898,7 @@ void BoUpSLP::reorderInputsAccordingToOpcode(const InstructionsState &S,
     Instruction *I = cast<Instruction>(VL[i]);
     // Commute to favor either a splat or maximizing having the same opcodes on
     // one side.
-    if (I->isCommutative() &&
+    if (isCommutative(I) &&
         shouldReorderOperands(i, Left, Right, AllSameOpcodeLeft,
                               AllSameOpcodeRight, SplatLeft, SplatRight))
       std::swap(Left[i], Right[i]);
@@ -2917,11 +2939,11 @@ void BoUpSLP::reorderInputsAccordingToOpcode(const InstructionsState &S,
         if (isConsecutiveAccess(L, L1, *DL, *SE)) {
           auto *VL1 = cast<Instruction>(VL[j]);
           auto *VL2 = cast<Instruction>(VL[j + 1]);
-          if (VL2->isCommutative()) {
+          if (isCommutative(VL2)) {
             std::swap(Left[j + 1], Right[j + 1]);
             continue;
           }
-          if (VL1->isCommutative()) {
+          if (isCommutative(VL1)) {
             std::swap(Left[j], Right[j]);
             continue;
           }
@@ -2933,11 +2955,11 @@ void BoUpSLP::reorderInputsAccordingToOpcode(const InstructionsState &S,
         if (isConsecutiveAccess(L, L1, *DL, *SE)) {
           auto *VL1 = cast<Instruction>(VL[j]);
           auto *VL2 = cast<Instruction>(VL[j + 1]);
-          if (VL2->isCommutative()) {
+          if (isCommutative(VL2)) {
             std::swap(Left[j + 1], Right[j + 1]);
             continue;
           }
-          if (VL1->isCommutative()) {
+          if (isCommutative(VL1)) {
             std::swap(Left[j], Right[j]);
             continue;
           }

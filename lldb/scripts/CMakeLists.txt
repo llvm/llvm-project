@@ -52,6 +52,3 @@ if(NOT LLDB_BUILD_FRAMEWORK)
   # Install the LLDB python module
   install(DIRECTORY ${SWIG_PYTHON_DIR} DESTINATION ${SWIG_INSTALL_DIR})
 endif()
-
-# build Python modules
-add_subdirectory(Python/modules)

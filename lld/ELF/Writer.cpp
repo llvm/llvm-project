@@ -2029,7 +2029,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
     // Find the first section after PT_GNU_RELRO. If it is in a PT_LOAD we
     // have to align it to a page.
     auto End = OutputSections.end();
-    auto I = std::find(OutputSections.begin(), End, P->LastSec);
+    auto I = llvm::find(OutputSections, P->LastSec);
     if (I == End || (I + 1) == End)
       continue;
 

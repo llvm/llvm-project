@@ -608,23 +608,6 @@ LLVM_DUMP_METHOD void ReadyQueue::dump() const {
 // Provide a vtable anchor.
 ScheduleDAGMI::~ScheduleDAGMI() = default;
 
-bool ScheduleDAGMI::canAddEdge(SUnit *SuccSU, SUnit *PredSU) {
-  return SuccSU == &ExitSU || !Topo.IsReachable(PredSU, SuccSU);
-}
-
-bool ScheduleDAGMI::addEdge(SUnit *SuccSU, const SDep &PredDep) {
-  if (SuccSU != &ExitSU) {
-    // Do not use WillCreateCycle, it assumes SD scheduling.
-    // If Pred is reachable from Succ, then the edge creates a cycle.
-    if (Topo.IsReachable(PredDep.getSUnit(), SuccSU))
-      return false;
-    Topo.AddPred(SuccSU, PredDep.getSUnit());
-  }
-  SuccSU->addPred(PredDep, /*Required=*/!PredDep.isArtificial());
-  // Return true regardless of whether a new edge needed to be inserted.
-  return true;
-}
-
 /// ReleaseSucc - Decrement the NumPredsLeft count of a successor. When
 /// NumPredsLeft reaches zero, release the successor node.
 ///
@@ -764,8 +747,6 @@ void ScheduleDAGMI::schedule() {
 
   // Build the DAG.
   buildSchedGraph(AA);
-
-  Topo.InitDAGTopologicalSorting();
 
   postprocessDAG();
 
@@ -1215,8 +1196,6 @@ void ScheduleDAGMILive::schedule() {
   LLVM_DEBUG(SchedImpl->dumpPolicy());
   buildDAGWithRegPressure();
 
-  Topo.InitDAGTopologicalSorting();
-
   postprocessDAG();
 
   SmallVector<SUnit*, 8> TopRoots, BotRoots;
@@ -1536,7 +1515,7 @@ public:
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
 protected:
-  void clusterNeighboringMemOps(ArrayRef<SUnit *> MemOps, ScheduleDAGMI *DAG);
+  void clusterNeighboringMemOps(ArrayRef<SUnit *> MemOps, ScheduleDAGInstrs *DAG);
 };
 
 class StoreClusterMutation : public BaseMemOpClusterMutation {
@@ -1573,7 +1552,7 @@ createStoreClusterDAGMutation(const TargetInstrInfo *TII,
 } // end namespace llvm
 
 void BaseMemOpClusterMutation::clusterNeighboringMemOps(
-    ArrayRef<SUnit *> MemOps, ScheduleDAGMI *DAG) {
+    ArrayRef<SUnit *> MemOps, ScheduleDAGInstrs *DAG) {
   SmallVector<MemOpInfo, 32> MemOpRecords;
   for (SUnit *SU : MemOps) {
     MachineOperand *BaseOp;
@@ -1613,9 +1592,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 }
 
 /// Callback from DAG postProcessing to create cluster edges for loads.
-void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
-  ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
-
+void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAG) {
   // Map DAG NodeNum to store chain ID.
   DenseMap<unsigned, unsigned> StoreChainIDs;
   // Map each store chain to a set of dependent MemOps.

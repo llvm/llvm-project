@@ -363,5 +363,36 @@ std::vector<BenchmarkMeasure> SchedClassClusterCentroid::getAsPoint() const {
   return ClusterCenterPoint;
 }
 
+bool SchedClassClusterCentroid::validate(
+    InstructionBenchmark::ModeE Mode) const {
+  size_t NumMeasurements = Representative.size();
+  switch (Mode) {
+  case InstructionBenchmark::Latency:
+    if (NumMeasurements != 1) {
+      llvm::errs()
+          << "invalid number of measurements in latency mode: expected 1, got "
+          << NumMeasurements << "\n";
+      return false;
+    }
+    break;
+  case InstructionBenchmark::Uops:
+    // Can have many measurements.
+    break;
+  case InstructionBenchmark::InverseThroughput:
+    if (NumMeasurements != 1) {
+      llvm::errs() << "invalid number of measurements in inverse throughput "
+                      "mode: expected 1, got "
+                   << NumMeasurements << "\n";
+      return false;
+    }
+    break;
+  default:
+    llvm_unreachable("unimplemented measurement matching mode");
+    return false;
+  }
+
+  return true; // All good.
+}
+
 } // namespace exegesis
 } // namespace llvm

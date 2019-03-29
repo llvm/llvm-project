@@ -475,6 +475,9 @@ BUILTIN(__builtin_bpermd, "SLLiSLLiSLLi", "")
 BUILTIN(__builtin_unpack_vector_int128, "ULLiV1LLLii", "")
 BUILTIN(__builtin_pack_vector_int128, "V1LLLiULLiULLi", "")
 
+// Set the floating point rounding mode
+BUILTIN(__builtin_setrnd, "di", "")
+
 // FIXME: Obviously incomplete.
 
 #undef BUILTIN

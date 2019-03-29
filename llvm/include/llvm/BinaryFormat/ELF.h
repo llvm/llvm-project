@@ -1339,6 +1339,14 @@ enum {
   NT_FREEBSD_PROCSTAT_AUXV = 16,
 };
 
+// Generic note types
+enum : unsigned {
+  NT_VERSION = 1,
+  NT_ARCH = 2,
+  NT_GNU_BUILD_ATTRIBUTE_OPEN = 0x100,
+  NT_GNU_BUILD_ATTRIBUTE_FUNC = 0x101,
+};
+
 enum {
   NT_GNU_ABI_TAG = 1,
   NT_GNU_HWCAP = 2,
