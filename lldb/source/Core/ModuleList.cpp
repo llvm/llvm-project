@@ -130,25 +130,12 @@ ModuleList::ModuleList(ModuleList::Notifier *notifier)
 
 const ModuleList &ModuleList::operator=(const ModuleList &rhs) {
   if (this != &rhs) {
-    // That's probably me nit-picking, but in theoretical situation:
-    //
-    // * that two threads A B and
-    // * two ModuleList's x y do opposite assignments ie.:
-    //
-    //  in thread A: | in thread B:
-    //    x = y;     |   y = x;
-    //
-    // This establishes correct(same) lock taking order and thus avoids
-    // priority inversion.
-    if (uintptr_t(this) > uintptr_t(&rhs)) {
-      std::lock_guard<std::recursive_mutex> lhs_guard(m_modules_mutex);
-      std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_modules_mutex);
-      m_modules = rhs.m_modules;
-    } else {
-      std::lock_guard<std::recursive_mutex> lhs_guard(m_modules_mutex);
-      std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_modules_mutex);
-      m_modules = rhs.m_modules;
-    }
+    std::lock(m_modules_mutex, rhs.m_modules_mutex);
+    std::lock_guard<std::recursive_mutex> lhs_guard(m_modules_mutex, 
+                                                    std::adopt_lock);
+    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_modules_mutex, 
+                                                    std::adopt_lock);
+    m_modules = rhs.m_modules;
   }
   return *this;
 }

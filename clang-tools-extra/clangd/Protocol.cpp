@@ -949,6 +949,7 @@ static const char *toString(OffsetEncoding OE) {
   case OffsetEncoding::UnsupportedEncoding:
     return "unknown";
   }
+  llvm_unreachable("Unknown clang.clangd.OffsetEncoding");
 }
 llvm::json::Value toJSON(const OffsetEncoding &OE) { return toString(OE); }
 bool fromJSON(const llvm::json::Value &V, OffsetEncoding &OE) {

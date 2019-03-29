@@ -957,6 +957,9 @@ namespace llvm {
 
     bool isVectorShiftByScalarCheap(Type *Ty) const override;
 
+    /// Returns true if the opcode is a commutative binary operation.
+    bool isCommutativeBinOp(unsigned Opcode) const override;
+
     /// Return true if it's free to truncate a value of
     /// type Ty1 to type Ty2. e.g. On x86 it's free to truncate a i32 value in
     /// register EAX to i16 by referencing its sub-register AX.

@@ -156,6 +156,8 @@ public:
 
   void addPoint(ArrayRef<BenchmarkMeasure> Point);
 
+  bool validate(InstructionBenchmark::ModeE Mode) const;
+
 private:
   // Measurement stats for the points in the SchedClassCluster.
   std::vector<PerInstructionStats> Representative;

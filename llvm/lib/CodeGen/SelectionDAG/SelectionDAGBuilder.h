@@ -226,6 +226,8 @@ private:
   /// multi-case switch statements.
   struct CaseBlock {
     // The condition code to use for the case block's setcc node.
+    // Besides the integer condition codes, this can also be SETTRUE, in which
+    // case no comparison gets emitted.
     ISD::CondCode CC;
 
     // The LHS/MHS/RHS of the comparison to emit.

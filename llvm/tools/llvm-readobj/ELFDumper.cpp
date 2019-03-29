@@ -455,6 +455,8 @@ private:
   void printRelocHeader(unsigned SType);
   void printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
                        const Elf_Rela &R, bool IsRela);
+  void printRelocation(const ELFO *Obj, const Elf_Sym *Sym,
+                       StringRef SymbolName, const Elf_Rela &R, bool IsRela);
   void printSymbol(const ELFO *Obj, const Elf_Sym *Symbol, const Elf_Sym *First,
                    StringRef StrTable, bool IsDynamic) override;
   std::string getSymbolSectionNdx(const ELFO *Obj, const Elf_Sym *Symbol,
@@ -2602,12 +2604,6 @@ template <class ELFT> void GNUStyle<ELFT>::printGroupSections(const ELFO *Obj) {
 template <class ELFT>
 void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
                                      const Elf_Rela &R, bool IsRela) {
-  // First two fields are bit width dependent. The rest of them are after are
-  // fixed width.
-  unsigned Bias = ELFT::Is64Bits ? 8 : 0;
-  Field Fields[5] = {0, 10 + Bias, 19 + 2 * Bias, 42 + 2 * Bias, 53 + 2 * Bias};
-  SmallString<32> RelocName;
-  Obj->getRelocationTypeName(R.getType(Obj->isMips64EL()), RelocName);
   const Elf_Sym *Sym = unwrapOrError(Obj->getRelocationSymbol(&R, SymTab));
   std::string TargetName;
   if (Sym && Sym->getType() == ELF::STT_SECTION) {
@@ -2619,21 +2615,36 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
     TargetName = this->dumper()->getFullSymbolName(
         Sym, StrTable, SymTab->sh_type == SHT_DYNSYM /* IsDynamic */);
   }
+  printRelocation(Obj, Sym, TargetName, R, IsRela);
+}
 
+template <class ELFT>
+void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Sym *Sym,
+                                     StringRef SymbolName, const Elf_Rela &R,
+                                     bool IsRela) {
+  // First two fields are bit width dependent. The rest of them are fixed width.
+  unsigned Bias = ELFT::Is64Bits ? 8 : 0;
+  Field Fields[5] = {0, 10 + Bias, 19 + 2 * Bias, 42 + 2 * Bias, 53 + 2 * Bias};
   unsigned Width = ELFT::Is64Bits ? 16 : 8;
+
   Fields[0].Str = to_string(format_hex_no_prefix(R.r_offset, Width));
   Fields[1].Str = to_string(format_hex_no_prefix(R.r_info, Width));
-  Fields[2].Str = RelocName.str();
-  if (Sym)
+
+  SmallString<32> RelocName;
+  Obj->getRelocationTypeName(R.getType(Obj->isMips64EL()), RelocName);
+  Fields[2].Str = RelocName.c_str();
+
+  if (Sym && (!SymbolName.empty() || Sym->getValue() != 0))
     Fields[3].Str = to_string(format_hex_no_prefix(Sym->getValue(), Width));
-  Fields[4].Str = TargetName;
-  for (auto &F : Fields)
+
+  Fields[4].Str = SymbolName;
+  for (const Field &F : Fields)
     printField(F);
 
   std::string Addend;
   if (IsRela) {
     int64_t RelAddend = R.r_addend;
-    if (Sym) {
+    if (!SymbolName.empty()) {
       if (R.r_addend < 0) {
         Addend = " - ";
         RelAddend = std::abs(RelAddend);
@@ -3267,44 +3278,11 @@ void GNUStyle<ELFT>::printSectionMapping(const ELFO *Obj) {
 template <class ELFT>
 void GNUStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela R,
                                             bool IsRela) {
-  unsigned Bias = ELFT::Is64Bits ? 8 : 0;
-  // First two fields are bit width dependent. The rest of them are after are
-  // fixed width.
-  Field Fields[5] = {0, 10 + Bias, 19 + 2 * Bias, 42 + 2 * Bias, 53 + 2 * Bias};
-
-  unsigned Width = ELFT::Is64Bits ? 16 : 8;
-  Fields[0].Str = to_string(format_hex_no_prefix(R.r_offset, Width));
-  Fields[1].Str = to_string(format_hex_no_prefix(R.r_info, Width));
-
   uint32_t SymIndex = R.getSymbol(Obj->isMips64EL());
   const Elf_Sym *Sym = this->dumper()->dynamic_symbols().begin() + SymIndex;
-  SmallString<32> RelocName;
-  Obj->getRelocationTypeName(R.getType(Obj->isMips64EL()), RelocName);
-  Fields[2].Str = RelocName.c_str();
-
   std::string SymbolName = maybeDemangle(
       unwrapOrError(Sym->getName(this->dumper()->getDynamicStringTable())));
-
-  if (!SymbolName.empty() || Sym->getValue() != 0)
-    Fields[3].Str = to_string(format_hex_no_prefix(Sym->getValue(), Width));
-
-  Fields[4].Str = SymbolName;
-  for (auto &Field : Fields)
-    printField(Field);
-
-  std::string Addend;
-  if (IsRela) {
-    int64_t RelAddend = R.r_addend;
-    if (!SymbolName.empty()) {
-      if (R.r_addend < 0) {
-        Addend = " - ";
-        RelAddend = std::abs(RelAddend);
-      } else
-        Addend = " + ";
-    }
-    Addend += to_string(format_hex_no_prefix(RelAddend, 1));
-  }
-  OS << Addend << "\n";
+  printRelocation(Obj, Sym, SymbolName, R, IsRela);
 }
 
 template <class ELFT>
@@ -3509,6 +3487,24 @@ void GNUStyle<ELFT>::printCGProfile(const ELFFile<ELFT> *Obj) {
 template <class ELFT>
 void GNUStyle<ELFT>::printAddrsig(const ELFFile<ELFT> *Obj) {
     OS << "GNUStyle::printAddrsig not implemented\n";
+}
+
+static StringRef getGenericNoteTypeName(const uint32_t NT) {
+  static const struct {
+    uint32_t ID;
+    const char *Name;
+  } Notes[] = {
+      {ELF::NT_VERSION, "NT_VERSION (version)"},
+      {ELF::NT_ARCH, "NT_ARCH (architecture)"},
+      {ELF::NT_GNU_BUILD_ATTRIBUTE_OPEN, "OPEN"},
+      {ELF::NT_GNU_BUILD_ATTRIBUTE_FUNC, "func"},
+  };
+
+  for (const auto &Note : Notes)
+    if (Note.ID == NT)
+      return Note.Name;
+
+  return "";
 }
 
 static std::string getGNUNoteTypeName(const uint32_t NT) {
@@ -3899,7 +3895,11 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       if (!N.Type.empty())
         OS << "    " << N.Type << ":\n        " << N.Value << '\n';
     } else {
-      OS << "Unknown note type: (" << format_hex(Type, 10) << ')';
+      StringRef NoteType = getGenericNoteTypeName(Type);
+      if (!NoteType.empty())
+        OS << NoteType;
+      else
+        OS << "Unknown note type: (" << format_hex(Type, 10) << ')';
     }
     OS << '\n';
   };
@@ -4704,8 +4704,12 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       if (!N.Type.empty())
         W.printString(N.Type, N.Value);
     } else {
-      W.printString("Type",
-                    "Unknown (" + to_string(format_hex(Type, 10)) + ")");
+      StringRef NoteType = getGenericNoteTypeName(Type);
+      if (!NoteType.empty())
+        W.printString("Type", NoteType);
+      else
+        W.printString("Type",
+                      "Unknown (" + to_string(format_hex(Type, 10)) + ")");
     }
   };
 

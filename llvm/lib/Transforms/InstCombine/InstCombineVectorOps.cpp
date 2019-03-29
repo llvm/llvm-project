@@ -1599,36 +1599,12 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
           LHS, RHS, SVI.getMask(), SVI.getType(), SQ.getWithInstruction(&SVI)))
     return replaceInstUsesWith(SVI, V);
 
-  if (Instruction *I = foldSelectShuffle(SVI, Builder, DL))
-    return I;
-
-  if (Instruction *I = narrowVectorSelect(SVI, Builder))
-    return I;
-
-  unsigned VWidth = SVI.getType()->getVectorNumElements();
-  APInt UndefElts(VWidth, 0);
-  APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
-  if (Value *V = SimplifyDemandedVectorElts(&SVI, AllOnesEltMask, UndefElts)) {
-    if (V != &SVI)
-      return replaceInstUsesWith(SVI, V);
-    return &SVI;
-  }
-
-  if (Instruction *I = foldIdentityExtractShuffle(SVI))
-    return I;
-
-  // This transform has the potential to lose undef knowledge, so it is
-  // intentionally placed after SimplifyDemandedVectorElts().
-  if (Instruction *I = foldShuffleWithInsert(SVI))
-    return I;
-
-  SmallVector<int, 16> Mask = SVI.getShuffleMask();
-  Type *Int32Ty = Type::getInt32Ty(SVI.getContext());
-  unsigned LHSWidth = LHS->getType()->getVectorNumElements();
-  bool MadeChange = false;
-
   // Canonicalize shuffle(x    ,x,mask) -> shuffle(x, undef,mask')
   // Canonicalize shuffle(undef,x,mask) -> shuffle(x, undef,mask').
+  unsigned VWidth = SVI.getType()->getVectorNumElements();
+  unsigned LHSWidth = LHS->getType()->getVectorNumElements();
+  SmallVector<int, 16> Mask = SVI.getShuffleMask();
+  Type *Int32Ty = Type::getInt32Ty(SVI.getContext());
   if (LHS == RHS || isa<UndefValue>(LHS)) {
     // Remap any references to RHS to use LHS.
     SmallVector<Constant*, 16> Elts;
@@ -1650,10 +1626,30 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     SVI.setOperand(0, SVI.getOperand(1));
     SVI.setOperand(1, UndefValue::get(RHS->getType()));
     SVI.setOperand(2, ConstantVector::get(Elts));
-    LHS = SVI.getOperand(0);
-    RHS = SVI.getOperand(1);
-    MadeChange = true;
+    return &SVI;
   }
+
+  if (Instruction *I = foldSelectShuffle(SVI, Builder, DL))
+    return I;
+
+  if (Instruction *I = narrowVectorSelect(SVI, Builder))
+    return I;
+
+  APInt UndefElts(VWidth, 0);
+  APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
+  if (Value *V = SimplifyDemandedVectorElts(&SVI, AllOnesEltMask, UndefElts)) {
+    if (V != &SVI)
+      return replaceInstUsesWith(SVI, V);
+    return &SVI;
+  }
+
+  if (Instruction *I = foldIdentityExtractShuffle(SVI))
+    return I;
+
+  // This transform has the potential to lose undef knowledge, so it is
+  // intentionally placed after SimplifyDemandedVectorElts().
+  if (Instruction *I = foldShuffleWithInsert(SVI))
+    return I;
 
   if (VWidth == LHSWidth) {
     // Analyze the shuffle, are the LHS or RHS and identity shuffles?
@@ -1699,6 +1695,7 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   //                +-----------+-----------+-----------+-----------+
   // Index range [6,10):              ^-----------^ Needs an extra shuffle.
   // Target type i40:           ^--------------^ Won't work, bail.
+  bool MadeChange = false;
   if (isShuffleExtractingFromLHS(SVI, Mask)) {
     Value *V = LHS;
     unsigned MaskElems = Mask.size();

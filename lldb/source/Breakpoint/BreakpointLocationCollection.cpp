@@ -181,17 +181,11 @@ void BreakpointLocationCollection::GetDescription(
 
 BreakpointLocationCollection &BreakpointLocationCollection::operator=(
     const BreakpointLocationCollection &rhs) {
-  // Same trick as in ModuleList to avoid lock inversion.
   if (this != &rhs) {
-    if (uintptr_t(this) > uintptr_t(&rhs)) {
-      std::lock_guard<std::mutex> lhs_guard(m_collection_mutex);
-      std::lock_guard<std::mutex> rhs_guard(rhs.m_collection_mutex);
+      std::lock(m_collection_mutex, rhs.m_collection_mutex);
+      std::lock_guard<std::mutex> lhs_guard(m_collection_mutex, std::adopt_lock);
+      std::lock_guard<std::mutex> rhs_guard(rhs.m_collection_mutex, std::adopt_lock);
       m_break_loc_collection = rhs.m_break_loc_collection;
-    } else {
-      std::lock_guard<std::mutex> lhs_guard(m_collection_mutex);
-      std::lock_guard<std::mutex> rhs_guard(rhs.m_collection_mutex);
-      m_break_loc_collection = rhs.m_break_loc_collection;
-    }
   }
   return *this;
 }

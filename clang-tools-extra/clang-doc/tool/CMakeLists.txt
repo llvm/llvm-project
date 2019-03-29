@@ -1,6 +1,6 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-add_clang_executable(clang-doc
+add_clang_tool(clang-doc
   ClangDocMain.cpp
   )
 

@@ -264,10 +264,6 @@ protected:
   LiveIntervals *LIS;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
 
-  /// Topo - A topological ordering for SUnits which permits fast IsReachable
-  /// and similar queries.
-  ScheduleDAGTopologicalSort Topo;
-
   /// Ordered list of DAG postprocessing steps.
   std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
 
@@ -291,7 +287,7 @@ public:
   ScheduleDAGMI(MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S,
                 bool RemoveKillFlags)
       : ScheduleDAGInstrs(*C->MF, C->MLI, RemoveKillFlags), AA(C->AA),
-        LIS(C->LIS), SchedImpl(std::move(S)), Topo(SUnits, &ExitSU) {}
+        LIS(C->LIS), SchedImpl(std::move(S)) {}
 
   // Provide a vtable anchor
   ~ScheduleDAGMI() override;
@@ -318,17 +314,6 @@ public:
     if (Mutation)
       Mutations.push_back(std::move(Mutation));
   }
-
-  /// True if an edge can be added from PredSU to SuccSU without creating
-  /// a cycle.
-  bool canAddEdge(SUnit *SuccSU, SUnit *PredSU);
-
-  /// Add a DAG edge to the given SU with the given predecessor
-  /// dependence data.
-  ///
-  /// \returns true if the edge may be added without creating a cycle OR if an
-  /// equivalent edge already existed (false indicates failure).
-  bool addEdge(SUnit *SuccSU, const SDep &PredDep);
 
   MachineBasicBlock::iterator top() const { return CurrentTop; }
   MachineBasicBlock::iterator bottom() const { return CurrentBottom; }

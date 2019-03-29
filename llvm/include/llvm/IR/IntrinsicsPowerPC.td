@@ -1166,4 +1166,9 @@ def int_ppc_ttest : GCCBuiltin<"__builtin_ttest">,
       Intrinsic<[llvm_i64_ty], [], []>;
 
 def int_ppc_cfence : Intrinsic<[], [llvm_anyint_ty], []>;
+
+// PowerPC set FPSCR Intrinsic Definitions.
+def int_ppc_setrnd : GCCBuiltin<"__builtin_setrnd">,
+      Intrinsic<[llvm_double_ty], [llvm_i32_ty], []>;
+
 }

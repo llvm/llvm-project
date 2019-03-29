@@ -270,9 +270,8 @@ public:
     mergedFile.addAtom(*helperCacheNLPAtom);
 
     // Add reference to dyld_stub_binder in libSystem.dylib
-    auto I = std::find_if(
-        mergedFile.sharedLibrary().begin(), mergedFile.sharedLibrary().end(),
-        [&](const SharedLibraryAtom *atom) {
+    auto I = llvm::find_if(
+        mergedFile.sharedLibrary(), [&](const SharedLibraryAtom *atom) {
           return atom->name().equals(_stubInfo.binderSymbolName);
         });
     assert(I != mergedFile.sharedLibrary().end() &&
