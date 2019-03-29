@@ -54,11 +54,33 @@ class MIGChecker : public Checker<check::PostCall, check::PreStmt<ReturnStmt>,
       CALL(3, 1, "mach_vm_deallocate"),
       CALL(2, 0, "mig_deallocate"),
       CALL(2, 1, "mach_port_deallocate"),
+      CALL(1, 0, "device_deallocate"),
+      CALL(1, 0, "iokit_remove_connect_reference"),
+      CALL(1, 0, "iokit_remove_reference"),
+      CALL(1, 0, "iokit_release_port"),
+      CALL(1, 0, "ipc_port_release"),
+      CALL(1, 0, "ipc_port_release_sonce"),
+      CALL(1, 0, "ipc_voucher_attr_control_release"),
+      CALL(1, 0, "ipc_voucher_release"),
+      CALL(1, 0, "lock_set_dereference"),
+      CALL(1, 0, "memory_object_control_deallocate"),
+      CALL(1, 0, "pset_deallocate"),
+      CALL(1, 0, "semaphore_dereference"),
+      CALL(1, 0, "space_deallocate"),
+      CALL(1, 0, "space_inspect_deallocate"),
+      CALL(1, 0, "task_deallocate"),
+      CALL(1, 0, "task_inspect_deallocate"),
+      CALL(1, 0, "task_name_deallocate"),
+      CALL(1, 0, "thread_deallocate"),
+      CALL(1, 0, "thread_inspect_deallocate"),
+      CALL(1, 0, "upl_deallocate"),
+      CALL(1, 0, "vm_map_deallocate"),
       // E.g., if the checker sees a method 'releaseAsyncReference64()' that is
       // defined on class 'IOUserClient' that takes exactly 1 argument, it knows
       // that the argument is going to be consumed in the sense of the MIG
       // consume-on-success convention.
       CALL(1, 0, "IOUserClient", "releaseAsyncReference64"),
+      CALL(1, 0, "IOUserClient", "releaseNotificationPort"),
 #undef CALL
   };
 
