@@ -1238,7 +1238,7 @@ static void
 invoke_if(Policy&& p, F f)
 {
 #if __PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN || __PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN
-    __pstl::internal::invoke_if_not(__pstl::internal::allow_unsequenced<Policy>(), f);
+    __pstl::__internal::invoke_if_not(__pstl::__internal::allow_unsequenced<Policy>(), f);
 #else
     f();
 #endif

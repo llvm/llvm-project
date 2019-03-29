@@ -37,8 +37,6 @@
 #include "polly/Support/GICHelper.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "isl/aff.h"
@@ -46,7 +44,6 @@
 #include "isl/ast_build.h"
 #include "isl/id.h"
 #include "isl/isl-noexceptions.h"
-#include "isl/map.h"
 #include "isl/printer.h"
 #include "isl/schedule.h"
 #include "isl/set.h"
@@ -54,10 +51,6 @@
 #include "isl/val.h"
 #include <cassert>
 #include <cstdlib>
-#include <cstring>
-#include <map>
-#include <string>
-#include <utility>
 
 #define DEBUG_TYPE "polly-ast"
 

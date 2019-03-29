@@ -198,7 +198,6 @@ private:
   void locateImportTables();
   void createExportTable();
   void mergeSections();
-  void readRelocTargets();
   void removeUnusedSections();
   void assignAddresses();
   void finalizeAddresses();
@@ -402,6 +401,7 @@ getThunk(DenseMap<uint64_t, Defined *> &LastThunks, Defined *Target, uint64_t P,
 static bool createThunks(OutputSection *OS, int Margin) {
   bool AddressesChanged = false;
   DenseMap<uint64_t, Defined *> LastThunks;
+  DenseMap<std::pair<ObjFile *, Defined *>, uint32_t> ThunkSymtabIndices;
   size_t ThunksSize = 0;
   // Recheck Chunks.size() each iteration, since we can insert more
   // elements into it.
@@ -415,9 +415,13 @@ static bool createThunks(OutputSection *OS, int Margin) {
     // Offset this by the size of the new thunks added so far, to make the
     // estimate slightly better.
     size_t ThunkInsertionRVA = SC->getRVA() + SC->getSize() + ThunksSize;
-    for (size_t J = 0, E = SC->Relocs.size(); J < E; ++J) {
-      const coff_relocation &Rel = SC->Relocs[J];
-      Symbol *&RelocTarget = SC->RelocTargets[J];
+    ObjFile *File = SC->File;
+    std::vector<std::pair<uint32_t, uint32_t>> RelocReplacements;
+    ArrayRef<coff_relocation> OriginalRelocs =
+        File->getCOFFObj()->getRelocations(SC->Header);
+    for (size_t J = 0, E = OriginalRelocs.size(); J < E; ++J) {
+      const coff_relocation &Rel = OriginalRelocs[J];
+      Symbol *RelocTarget = File->getSymbol(Rel.SymbolTableIndex);
 
       // The estimate of the source address P should be pretty accurate,
       // but we don't know whether the target Symbol address should be
@@ -450,8 +454,44 @@ static bool createThunks(OutputSection *OS, int Margin) {
         ThunkInsertionRVA += ThunkChunk->getSize();
         AddressesChanged = true;
       }
-      RelocTarget = Thunk;
+
+      // To redirect the relocation, add a symbol to the parent object file's
+      // symbol table, and replace the relocation symbol table index with the
+      // new index.
+      auto Insertion = ThunkSymtabIndices.insert({{File, Thunk}, ~0U});
+      uint32_t &ThunkSymbolIndex = Insertion.first->second;
+      if (Insertion.second)
+        ThunkSymbolIndex = File->addRangeThunkSymbol(Thunk);
+      RelocReplacements.push_back({J, ThunkSymbolIndex});
     }
+
+    // Get a writable copy of this section's relocations so they can be
+    // modified. If the relocations point into the object file, allocate new
+    // memory. Otherwise, this must be previously allocated memory that can be
+    // modified in place.
+    MutableArrayRef<coff_relocation> NewRelocs;
+    if (OriginalRelocs.data() == SC->Relocs.data()) {
+      NewRelocs = makeMutableArrayRef(
+          BAlloc.Allocate<coff_relocation>(OriginalRelocs.size()),
+          OriginalRelocs.size());
+    } else {
+      NewRelocs = makeMutableArrayRef(
+          const_cast<coff_relocation *>(SC->Relocs.data()), SC->Relocs.size());
+    }
+
+    // Copy each relocation, but replace the symbol table indices which need
+    // thunks.
+    auto NextReplacement = RelocReplacements.begin();
+    auto EndReplacement = RelocReplacements.end();
+    for (size_t I = 0, E = OriginalRelocs.size(); I != E; ++I) {
+      NewRelocs[I] = OriginalRelocs[I];
+      if (NextReplacement != EndReplacement && NextReplacement->first == I) {
+        NewRelocs[I].SymbolTableIndex = NextReplacement->second;
+        ++NextReplacement;
+      }
+    }
+
+    SC->Relocs = makeArrayRef(NewRelocs.data(), NewRelocs.size());
   }
   return AddressesChanged;
 }
@@ -465,7 +505,7 @@ static bool verifyRanges(const std::vector<Chunk *> Chunks) {
 
     for (size_t J = 0, E = SC->Relocs.size(); J < E; ++J) {
       const coff_relocation &Rel = SC->Relocs[J];
-      Symbol *RelocTarget = SC->RelocTargets[J];
+      Symbol *RelocTarget = SC->File->getSymbol(Rel.SymbolTableIndex);
 
       Defined *Sym = dyn_cast_or_null<Defined>(RelocTarget);
       if (!Sym)
@@ -521,11 +561,8 @@ void Writer::finalizeAddresses() {
       // If the previous pass didn't work out, reset everything back to the
       // original conditions before retrying with a wider margin. This should
       // ideally never happen under real circumstances.
-      for (OutputSection *Sec : OutputSections) {
+      for (OutputSection *Sec : OutputSections)
         Sec->Chunks = Sec->OrigChunks;
-        for (Chunk *C : Sec->Chunks)
-          C->resetRelocTargets();
-      }
       Margin *= 2;
     }
 
@@ -556,7 +593,6 @@ void Writer::run() {
   appendImportThunks();
   createExportTable();
   mergeSections();
-  readRelocTargets();
   removeUnusedSections();
   finalizeAddresses();
   removeEmptySections();
@@ -1092,12 +1128,6 @@ void Writer::mergeSections() {
     }
     To->merge(From);
   }
-}
-
-// Visits all sections to initialize their relocation targets.
-void Writer::readRelocTargets() {
-  for (OutputSection *Sec : OutputSections)
-    parallelForEach(Sec->Chunks, [&](Chunk *C) { C->readRelocTargets(); });
 }
 
 // Visits all sections to assign incremental, non-overlapping RVAs and

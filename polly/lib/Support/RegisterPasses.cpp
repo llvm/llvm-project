@@ -23,15 +23,11 @@
 #include "polly/CodeGen/CodeGeneration.h"
 #include "polly/CodeGen/CodegenCleanup.h"
 #include "polly/CodeGen/IslAst.h"
-#include "polly/CodeGen/PPCGCodeGeneration.h"
 #include "polly/CodePreparation.h"
-#include "polly/DeLICM.h"
 #include "polly/DependenceInfo.h"
-#include "polly/FlattenSchedule.h"
 #include "polly/ForwardOpTree.h"
 #include "polly/JSONExporter.h"
 #include "polly/LinkAllPasses.h"
-#include "polly/Options.h"
 #include "polly/PolyhedralInfo.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
@@ -45,8 +41,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Vectorize.h"
 
 using namespace llvm;
 using namespace polly;
