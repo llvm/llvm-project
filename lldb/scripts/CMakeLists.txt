@@ -9,8 +9,6 @@ set(SWIG_HEADERS
   ${LLDB_SOURCE_DIR}/include/lldb/lldb-versioning.h
 )
 
-include(FindPythonInterp)
-
 if(LLDB_BUILD_FRAMEWORK)
   set(framework_arg --framework --target-platform Darwin)
 endif()
