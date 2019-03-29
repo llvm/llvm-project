@@ -25,5 +25,5 @@ p input
 # The {{ }} avoids accidentally matching the input script!
 # CHECK: {{Swift}} error in fallback scratch context
 # CHECK: {{This}} error message is displayed only once.
-# CHECK: (LibraryProtocol) ${{R0}} =
-# CHECK: (LibraryProtocol) ${{R2}} =
+# CHECK: (Dylib.LibraryProtocol) ${{R0}} =
+# CHECK: (Dylib.LibraryProtocol) ${{R2}} =

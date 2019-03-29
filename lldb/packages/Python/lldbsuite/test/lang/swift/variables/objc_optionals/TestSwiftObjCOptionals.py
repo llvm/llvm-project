@@ -70,10 +70,10 @@ class TestSwiftObjCOptionalType(TestBase):
         """Check formatting for T? and T! when T is an ObjC type"""
         self.expect(
             "frame variable optColor_Some",
-            substrs=['(Color?) optColor_Some = 0x'])
+            substrs=['Color?) optColor_Some = 0x'])
         self.expect(
             "frame variable uoptColor_Some",
-            substrs=['(Color?) uoptColor_Some = 0x'])
+            substrs=['Color?) uoptColor_Some = 0x'])
 
         self.expect("frame variable optColor_None", substrs=['nil'])
         self.expect("frame variable uoptColor_None", substrs=['nil'])

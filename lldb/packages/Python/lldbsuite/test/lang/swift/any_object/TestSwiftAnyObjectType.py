@@ -69,7 +69,7 @@ class TestSwiftAnyObjectType(TestBase):
             self,
             var_object,
             use_dynamic=False,
-            typename="AnyObject")
+            typename="Swift.AnyObject")
         lldbutil.check_variable(
             self,
             var_object,
