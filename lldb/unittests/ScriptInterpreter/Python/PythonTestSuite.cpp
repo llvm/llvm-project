@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
+#include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPythonImpl.h"
 #include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -16,10 +17,10 @@
 #include "PythonTestSuite.h"
 
 using namespace lldb_private;
-class TestScriptInterpreterPython : public ScriptInterpreterPython {
+class TestScriptInterpreterPython : public ScriptInterpreterPythonImpl {
 public:
-  using ScriptInterpreterPython::Initialize;
-  using ScriptInterpreterPython::InitializePrivate;
+  using ScriptInterpreterPythonImpl::Initialize;
+  using ScriptInterpreterPythonImpl::InitializePrivate;
 };
 
 void PythonTestSuite::SetUp() {
