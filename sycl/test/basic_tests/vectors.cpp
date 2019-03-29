@@ -50,5 +50,13 @@ int main() {
   int64_t(vec_2.x());
   cl::sycl::int4(vec_2.x());
 
+  // Check broadcasting operator=
+  cl::sycl::vec<float, 4> b_vec(1.0);
+  b_vec = 0.5;
+  assert(static_cast<float>(b_vec.x()) == static_cast<float>(0.5));
+  assert(static_cast<float>(b_vec.y()) == static_cast<float>(0.5));
+  assert(static_cast<float>(b_vec.z()) == static_cast<float>(0.5));
+  assert(static_cast<float>(b_vec.w()) == static_cast<float>(0.5));
+
   return 0;
 }

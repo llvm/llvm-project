@@ -372,11 +372,33 @@ public:
     return *this;
   }
 
+#ifdef __SYCL_USE_EXT_VECTOR_TYPE__
+  explicit vec(const DataT &arg) {
+    m_Data = (DataType)arg;
+  }
+
+  template <typename Ty = DataT>
+  typename std::enable_if<std::is_fundamental<Ty>::value, vec &>::type
+  operator=(const DataT &Rhs) {
+    m_Data = (DataType)Rhs;
+    return *this;
+  }
+#else
   explicit vec(const DataT &arg) {
     for (int i = 0; i < NumElements; ++i) {
       setValue(i, arg);
     }
   }
+
+  template <typename Ty = DataT>
+  typename std::enable_if<std::is_fundamental<Ty>::value, vec &>::type
+  operator=(const DataT &Rhs) {
+    for (int i = 0; i < NumElements; ++i) {
+      setValue(i, Rhs);
+    }
+    return *this;
+  }
+#endif
 
 #ifdef __SYCL_USE_EXT_VECTOR_TYPE__
   // Optimized naive constructors with NumElements of DataT values.
