@@ -864,11 +864,12 @@ StringRef MappingTraits<ELFYAML::Symbol>::validate(IO &IO,
   return StringRef();
 }
 
-void MappingTraits<ELFYAML::LocalGlobalWeakSymbols>::mapping(
-    IO &IO, ELFYAML::LocalGlobalWeakSymbols &Symbols) {
+void MappingTraits<ELFYAML::SymbolsDef>::mapping(IO &IO,
+                                                 ELFYAML::SymbolsDef &Symbols) {
   IO.mapOptional("Local", Symbols.Local);
   IO.mapOptional("Global", Symbols.Global);
   IO.mapOptional("Weak", Symbols.Weak);
+  IO.mapOptional("GNUUnique", Symbols.GNUUnique);
 }
 
 static void commonSectionMapping(IO &IO, ELFYAML::Section &Section) {

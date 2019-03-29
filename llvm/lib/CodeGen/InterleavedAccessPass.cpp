@@ -163,14 +163,19 @@ static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor,
 ///     <0, 2, 4, 6>    (mask of index 0 to extract even elements)
 ///     <1, 3, 5, 7>    (mask of index 1 to extract odd elements)
 static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
-                               unsigned &Index, unsigned MaxFactor) {
+                               unsigned &Index, unsigned MaxFactor,
+                               unsigned NumLoadElements) {
   if (Mask.size() < 2)
     return false;
 
   // Check potential Factors.
-  for (Factor = 2; Factor <= MaxFactor; Factor++)
+  for (Factor = 2; Factor <= MaxFactor; Factor++) {
+    // Make sure we don't produce a load wider than the input load.
+    if (Mask.size() * Factor > NumLoadElements)
+      return false;
     if (isDeInterleaveMaskOfFactor(Mask, Factor, Index))
       return true;
+  }
 
   return false;
 }
@@ -302,9 +307,10 @@ bool InterleavedAccess::lowerInterleavedLoad(
 
   unsigned Factor, Index;
 
+  unsigned NumLoadElements = LI->getType()->getVectorNumElements();
   // Check if the first shufflevector is DE-interleave shuffle.
   if (!isDeInterleaveMask(Shuffles[0]->getShuffleMask(), Factor, Index,
-                          MaxFactor))
+                          MaxFactor, NumLoadElements))
     return false;
 
   // Holds the corresponding index for each DE-interleave shuffle.

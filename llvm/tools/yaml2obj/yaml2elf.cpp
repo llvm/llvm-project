@@ -133,7 +133,7 @@ class ELFState {
   const ELFYAML::Object &Doc;
 
   bool buildSectionIndex();
-  bool buildSymbolIndex(const ELFYAML::LocalGlobalWeakSymbols &);
+  bool buildSymbolIndex(const ELFYAML::SymbolsDef &);
   void initELFHeader(Elf_Ehdr &Header);
   void initProgramHeaders(std::vector<Elf_Phdr> &PHeaders);
   bool initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
@@ -362,6 +362,7 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
   addSymbols(Symbols.Local, Syms, ELF::STB_LOCAL, Strtab);
   addSymbols(Symbols.Global, Syms, ELF::STB_GLOBAL, Strtab);
   addSymbols(Symbols.Weak, Syms, ELF::STB_WEAK, Strtab);
+  addSymbols(Symbols.GNUUnique, Syms, ELF::STB_GNU_UNIQUE, Strtab);
 
   writeArrayData(
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign),
@@ -795,11 +796,10 @@ template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
 }
 
 template <class ELFT>
-bool ELFState<ELFT>::buildSymbolIndex(
-    const ELFYAML::LocalGlobalWeakSymbols &Symbols) {
+bool ELFState<ELFT>::buildSymbolIndex(const ELFYAML::SymbolsDef &Symbols) {
   std::size_t I = 0;
   for (const std::vector<ELFYAML::Symbol> &V :
-       {Symbols.Local, Symbols.Global, Symbols.Weak}) {
+       {Symbols.Local, Symbols.Global, Symbols.Weak, Symbols.GNUUnique}) {
     for (const auto &Sym : V) {
       ++I;
       if (Sym.Name.empty())
@@ -815,12 +815,14 @@ bool ELFState<ELFT>::buildSymbolIndex(
 
 template <class ELFT> void ELFState<ELFT>::finalizeStrings() {
   auto AddSymbols = [](StringTableBuilder &StrTab,
-                       const ELFYAML::LocalGlobalWeakSymbols &Symbols) {
+                       const ELFYAML::SymbolsDef &Symbols) {
     for (const auto &Sym : Symbols.Local)
       StrTab.add(Sym.Name);
     for (const auto &Sym : Symbols.Global)
       StrTab.add(Sym.Name);
     for (const auto &Sym : Symbols.Weak)
+      StrTab.add(Sym.Name);
+    for (const auto &Sym : Symbols.GNUUnique)
       StrTab.add(Sym.Name);
   };
 
@@ -919,9 +921,10 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, const ELFYAML::Object &Doc) {
 }
 
 template <class ELFT> bool ELFState<ELFT>::hasDynamicSymbols() const {
-  return Doc.DynamicSymbols.Global.size() > 0 ||
-         Doc.DynamicSymbols.Weak.size() > 0 ||
-         Doc.DynamicSymbols.Local.size() > 0;
+  return !Doc.DynamicSymbols.Global.empty() ||
+         !Doc.DynamicSymbols.Weak.empty() ||
+         !Doc.DynamicSymbols.Local.empty() ||
+         !Doc.DynamicSymbols.GNUUnique.empty();
 }
 
 template <class ELFT>

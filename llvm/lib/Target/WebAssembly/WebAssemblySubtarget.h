@@ -22,10 +22,15 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include <string>
 
+#define GET_SUBTARGETINFO_ENUM
 #define GET_SUBTARGETINFO_HEADER
 #include "WebAssemblyGenSubtargetInfo.inc"
 
 namespace llvm {
+
+// Defined in WebAssemblyGenSubtargetInfo.inc.
+extern const SubtargetFeatureKV
+    WebAssemblyFeatureKV[WebAssembly::NumSubtargetFeatures];
 
 class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   enum SIMDEnum {
@@ -77,6 +82,7 @@ public:
     return &getInstrInfo()->getRegisterInfo();
   }
   const Triple &getTargetTriple() const { return TargetTriple; }
+  bool enableAtomicExpand() const override;
   bool enableMachineScheduler() const override;
   bool useAA() const override;
 

@@ -24,22 +24,40 @@ namespace llvm {
 namespace Mips {
 enum PartialMappingIdx {
   PMI_GPR,
+  PMI_SPR,
+  PMI_DPR,
   PMI_Min = PMI_GPR,
 };
 
 RegisterBankInfo::PartialMapping PartMappings[]{
-    {0, 32, GPRBRegBank}
+    {0, 32, GPRBRegBank},
+    {0, 32, FPRBRegBank},
+    {0, 64, FPRBRegBank}
 };
 
-enum ValueMappingIdx { InvalidIdx = 0, GPRIdx = 1 };
+enum ValueMappingIdx {
+    InvalidIdx = 0,
+    GPRIdx = 1,
+    SPRIdx = 4,
+    DPRIdx = 7
+};
 
 RegisterBankInfo::ValueMapping ValueMappings[] = {
     // invalid
     {nullptr, 0},
-    // 3 operands in GPRs
+    // up to 3 operands in GPRs
     {&PartMappings[PMI_GPR - PMI_Min], 1},
     {&PartMappings[PMI_GPR - PMI_Min], 1},
-    {&PartMappings[PMI_GPR - PMI_Min], 1}};
+    {&PartMappings[PMI_GPR - PMI_Min], 1},
+    // up to 3 ops operands FPRs - single precission
+    {&PartMappings[PMI_SPR - PMI_Min], 1},
+    {&PartMappings[PMI_SPR - PMI_Min], 1},
+    {&PartMappings[PMI_SPR - PMI_Min], 1},
+    // up to 3 ops operands FPRs - double precission
+    {&PartMappings[PMI_DPR - PMI_Min], 1},
+    {&PartMappings[PMI_DPR - PMI_Min], 1},
+    {&PartMappings[PMI_DPR - PMI_Min], 1}
+};
 
 } // end namespace Mips
 } // end namespace llvm
@@ -76,6 +94,8 @@ const RegisterBankInfo::InstructionMapping &
 MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   unsigned Opc = MI.getOpcode();
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   const RegisterBankInfo::InstructionMapping &Mapping = getInstrMappingImpl(MI);
   if (Mapping.isValid())
@@ -109,6 +129,15 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_UREM:
     OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
     break;
+  case G_FCONSTANT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = Ty.getSizeInBits();
+    const RegisterBankInfo::ValueMapping *FPRValueMapping =
+        Size == 32 ? &Mips::ValueMappings[Mips::SPRIdx]
+                   : &Mips::ValueMappings[Mips::DPRIdx];
+    OperandsMapping = getOperandsMapping({FPRValueMapping, nullptr});
+    break;
+  }
   case G_CONSTANT:
   case G_FRAME_INDEX:
   case G_GLOBAL_VALUE:

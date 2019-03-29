@@ -220,8 +220,7 @@ define <32 x i16> @insert_dup_mem_v32i16_i32(i32* %ptr) {
 ;
 ; SKX-LABEL: insert_dup_mem_v32i16_i32:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    movl (%rdi), %eax
-; SKX-NEXT:    vpbroadcastw %eax, %zmm0
+; SKX-NEXT:    vpbroadcastw (%rdi), %zmm0
 ; SKX-NEXT:    retq
   %tmp = load i32, i32* %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
@@ -233,16 +232,13 @@ define <32 x i16> @insert_dup_mem_v32i16_i32(i32* %ptr) {
 define <32 x i16> @insert_dup_mem_v32i16_sext_i16(i16* %ptr) {
 ; KNL-LABEL: insert_dup_mem_v32i16_sext_i16:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movzwl (%rdi), %eax
-; KNL-NEXT:    vmovd %eax, %xmm0
-; KNL-NEXT:    vpbroadcastw %xmm0, %ymm0
+; KNL-NEXT:    vpbroadcastw (%rdi), %ymm0
 ; KNL-NEXT:    vmovdqa %ymm0, %ymm1
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_dup_mem_v32i16_sext_i16:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    movzwl (%rdi), %eax
-; SKX-NEXT:    vpbroadcastw %eax, %zmm0
+; SKX-NEXT:    vpbroadcastw (%rdi), %zmm0
 ; SKX-NEXT:    retq
   %tmp = load i16, i16* %ptr, align 2
   %tmp1 = sext i16 %tmp to i32
@@ -261,8 +257,7 @@ define <32 x i16> @insert_dup_elt1_mem_v32i16_i32(i32* %ptr) #0 {
 ;
 ; SKX-LABEL: insert_dup_elt1_mem_v32i16_i32:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    movzwl 2(%rdi), %eax
-; SKX-NEXT:    vpbroadcastw %eax, %zmm0
+; SKX-NEXT:    vpbroadcastw 2(%rdi), %zmm0
 ; SKX-NEXT:    retq
   %tmp = load i32, i32* %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
@@ -280,8 +275,7 @@ define <32 x i16> @insert_dup_elt3_mem_v32i16_i32(i32* %ptr) #0 {
 ;
 ; SKX-LABEL: insert_dup_elt3_mem_v32i16_i32:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    movzwl 2(%rdi), %eax
-; SKX-NEXT:    vpbroadcastw %eax, %zmm0
+; SKX-NEXT:    vpbroadcastw 2(%rdi), %zmm0
 ; SKX-NEXT:    retq
   %tmp = load i32, i32* %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 1

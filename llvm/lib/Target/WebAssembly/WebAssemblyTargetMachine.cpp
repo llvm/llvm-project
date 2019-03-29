@@ -26,6 +26,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LowerAtomic.h"
 #include "llvm/Transforms/Utils.h"
 using namespace llvm;
 
@@ -117,10 +118,6 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
 
   initAsmInfo();
 
-  // Create a subtarget using the unmodified target machine features to
-  // initialize the used feature set with explicitly enabled features.
-  getSubtargetImpl(getTargetCPU(), getTargetFeatureString());
-
   // Note that we don't use setRequiresStructuredCFG(true). It disables
   // optimizations than we're ok with, and want, such as critical edge
   // splitting and tail merging.
@@ -134,7 +131,6 @@ WebAssemblyTargetMachine::getSubtargetImpl(std::string CPU,
   auto &I = SubtargetMap[CPU + FS];
   if (!I) {
     I = llvm::make_unique<WebAssemblySubtarget>(TargetTriple, CPU, FS, *this);
-    UsedFeatures |= I->getFeatureBits();
   }
   return I.get();
 }
@@ -160,21 +156,123 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 namespace {
-class StripThreadLocal final : public ModulePass {
-  // The default thread model for wasm is single, where thread-local variables
-  // are identical to regular globals and should be treated the same. So this
-  // pass just converts all GlobalVariables to NotThreadLocal
+
+class CoalesceFeaturesAndStripAtomics final : public ModulePass {
+  // Take the union of all features used in the module and use it for each
+  // function individually, since having multiple feature sets in one module
+  // currently does not make sense for WebAssembly. If atomics are not enabled,
+  // also strip atomic operations and thread local storage.
   static char ID;
+  WebAssemblyTargetMachine *WasmTM;
 
 public:
-  StripThreadLocal() : ModulePass(ID) {}
+  CoalesceFeaturesAndStripAtomics(WebAssemblyTargetMachine *WasmTM)
+      : ModulePass(ID), WasmTM(WasmTM) {}
+
   bool runOnModule(Module &M) override {
-    for (auto &GV : M.globals())
-      GV.setThreadLocalMode(GlobalValue::ThreadLocalMode::NotThreadLocal);
+    FeatureBitset Features = coalesceFeatures(M);
+
+    std::string FeatureStr = getFeatureString(Features);
+    for (auto &F : M)
+      replaceFeatures(F, FeatureStr);
+
+    bool Stripped = false;
+    if (!Features[WebAssembly::FeatureAtomics]) {
+      Stripped |= stripAtomics(M);
+      Stripped |= stripThreadLocals(M);
+    }
+
+    recordFeatures(M, Features, Stripped);
+
+    // Conservatively assume we have made some change
     return true;
   }
+
+private:
+  FeatureBitset coalesceFeatures(const Module &M) {
+    FeatureBitset Features =
+        WasmTM
+            ->getSubtargetImpl(WasmTM->getTargetCPU(),
+                               WasmTM->getTargetFeatureString())
+            ->getFeatureBits();
+    for (auto &F : M)
+      Features |= WasmTM->getSubtargetImpl(F)->getFeatureBits();
+    return Features;
+  }
+
+  std::string getFeatureString(const FeatureBitset &Features) {
+    std::string Ret;
+    for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
+      if (Features[KV.Value])
+        Ret += (StringRef("+") + KV.Key + ",").str();
+    }
+    return Ret;
+  }
+
+  void replaceFeatures(Function &F, const std::string &Features) {
+    F.removeFnAttr("target-features");
+    F.removeFnAttr("target-cpu");
+    F.addFnAttr("target-features", Features);
+  }
+
+  bool stripAtomics(Module &M) {
+    // Detect whether any atomics will be lowered, since there is no way to tell
+    // whether the LowerAtomic pass lowers e.g. stores.
+    bool Stripped = false;
+    for (auto &F : M) {
+      for (auto &B : F) {
+        for (auto &I : B) {
+          if (I.isAtomic()) {
+            Stripped = true;
+            goto done;
+          }
+        }
+      }
+    }
+
+  done:
+    if (!Stripped)
+      return false;
+
+    LowerAtomicPass Lowerer;
+    FunctionAnalysisManager FAM;
+    for (auto &F : M)
+      Lowerer.run(F, FAM);
+
+    return true;
+  }
+
+  bool stripThreadLocals(Module &M) {
+    bool Stripped = false;
+    for (auto &GV : M.globals()) {
+      if (GV.getThreadLocalMode() !=
+          GlobalValue::ThreadLocalMode::NotThreadLocal) {
+        Stripped = true;
+        GV.setThreadLocalMode(GlobalValue::ThreadLocalMode::NotThreadLocal);
+      }
+    }
+    return Stripped;
+  }
+
+  void recordFeatures(Module &M, const FeatureBitset &Features, bool Stripped) {
+    for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
+      std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
+      if (KV.Value == WebAssembly::FeatureAtomics && Stripped) {
+        // "atomics" is special: code compiled without atomics may have had its
+        // atomics lowered to nonatomic operations. In that case, atomics is
+        // disallowed to prevent unsafe linking with atomics-enabled objects.
+        assert(!Features[WebAssembly::FeatureAtomics]);
+        M.addModuleFlag(Module::ModFlagBehavior::Error, MDKey,
+                        wasm::WASM_FEATURE_PREFIX_DISALLOWED);
+      } else if (Features[KV.Value]) {
+        // Otherwise features are marked Used or not mentioned
+        M.addModuleFlag(Module::ModFlagBehavior::Error, MDKey,
+                        wasm::WASM_FEATURE_PREFIX_USED);
+      }
+    }
+  }
 };
-char StripThreadLocal::ID = 0;
+char CoalesceFeaturesAndStripAtomics::ID = 0;
 
 /// WebAssembly Code Generator Pass Configuration Options.
 class WebAssemblyPassConfig final : public TargetPassConfig {
@@ -222,16 +320,11 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 //===----------------------------------------------------------------------===//
 
 void WebAssemblyPassConfig::addIRPasses() {
-  if (static_cast<WebAssemblyTargetMachine *>(TM)
-          ->getUsedFeatures()[WebAssembly::FeatureAtomics]) {
-    // Expand some atomic operations. WebAssemblyTargetLowering has hooks which
-    // control specifically what gets lowered.
-    addPass(createAtomicExpandPass());
-  } else {
-    // If atomics are not enabled, they get lowered to non-atomics.
-    addPass(createLowerAtomicPass());
-    addPass(new StripThreadLocal());
-  }
+  // Runs LowerAtomicPass if necessary
+  addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
+
+  // This is a no-op if atomics are not used in the module
+  addPass(createAtomicExpandPass());
 
   // Add signatures to prototype-less function declarations
   addPass(createWebAssemblyAddMissingPrototypes());

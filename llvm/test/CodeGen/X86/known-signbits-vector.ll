@@ -36,17 +36,10 @@ define <4 x float> @signbits_sext_v4i64_sitofp_v4f32(i8 signext %a0, i16 signext
 ;
 ; X64-LABEL: signbits_sext_v4i64_sitofp_v4f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    movslq %esi, %rsi
-; X64-NEXT:    movslq %edx, %rdx
-; X64-NEXT:    movslq %ecx, %rcx
-; X64-NEXT:    vmovq %rcx, %xmm0
-; X64-NEXT:    vmovq %rdx, %xmm1
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; X64-NEXT:    vmovq %rsi, %xmm1
-; X64-NEXT:    vmovq %rax, %xmm2
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,2],xmm0[0,2]
+; X64-NEXT:    vmovd %edi, %xmm0
+; X64-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
+; X64-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; X64-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
 ; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = sext i8 %a0 to i64

@@ -414,7 +414,7 @@ class TargetRegisterInfo;
     /// dirty.
     void setDepthToAtLeast(unsigned NewDepth);
 
-    /// If NewDepth is greater than this node's depth value, set it to be
+    /// If NewHeight is greater than this node's height value, set it to be
     /// the new height value. This also recursively marks predecessor nodes
     /// dirty.
     void setHeightToAtLeast(unsigned NewHeight);

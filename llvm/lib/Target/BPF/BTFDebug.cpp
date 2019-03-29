@@ -158,45 +158,24 @@ void BTFTypeEnum::emitType(MCStreamer &OS) {
   }
 }
 
-BTFTypeArray::BTFTypeArray(const DICompositeType *ATy) : ATy(ATy) {
+BTFTypeArray::BTFTypeArray(uint32_t ElemTypeId, uint32_t NumElems) {
   Kind = BTF::BTF_KIND_ARRAY;
+  BTFType.NameOff = 0;
   BTFType.Info = Kind << 24;
-}
-
-/// Represent a BTF array. BTF does not record array dimensions,
-/// so conceptually a BTF array is a one-dimensional array.
-void BTFTypeArray::completeType(BTFDebug &BDebug) {
-  BTFType.NameOff = BDebug.addString(ATy->getName());
   BTFType.Size = 0;
 
-  auto *BaseType = ATy->getBaseType().resolve();
-  ArrayInfo.ElemType = BDebug.getTypeId(BaseType);
+  ArrayInfo.ElemType = ElemTypeId;
+  ArrayInfo.Nelems = NumElems;
+}
+
+/// Represent a BTF array.
+void BTFTypeArray::completeType(BTFDebug &BDebug) {
 
   // The IR does not really have a type for the index.
   // A special type for array index should have been
   // created during initial type traversal. Just
   // retrieve that type id.
   ArrayInfo.IndexType = BDebug.getArrayIndexTypeId();
-
-  // Get the number of array elements.
-  // If the array size is 0, set the number of elements as 0.
-  // Otherwise, recursively traverse the base types to
-  // find the element size. The number of elements is
-  // the totoal array size in bits divided by
-  // element size in bits.
-  uint64_t ArraySizeInBits = ATy->getSizeInBits();
-  if (!ArraySizeInBits) {
-    ArrayInfo.Nelems = 0;
-  } else {
-    uint32_t BaseTypeSize = BaseType->getSizeInBits();
-    while (!BaseTypeSize) {
-      const auto *DDTy = cast<DIDerivedType>(BaseType);
-      BaseType = DDTy->getBaseType().resolve();
-      assert(BaseType);
-      BaseTypeSize = BaseType->getSizeInBits();
-    }
-    ArrayInfo.Nelems = ATy->getSizeInBits() / BaseTypeSize;
-  }
 }
 
 void BTFTypeArray::emitType(MCStreamer &OS) {
@@ -447,8 +426,34 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
 }
 
 void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
-  auto TypeEntry = llvm::make_unique<BTFTypeArray>(CTy);
-  TypeId = addType(std::move(TypeEntry), CTy);
+  // Visit array element type.
+  uint32_t ElemTypeId;
+  visitTypeEntry(CTy->getBaseType().resolve(), ElemTypeId);
+
+  if (!CTy->getSizeInBits()) {
+    auto TypeEntry = llvm::make_unique<BTFTypeArray>(ElemTypeId, 0);
+    ElemTypeId = addType(std::move(TypeEntry), CTy);
+  } else {
+    // Visit array dimensions.
+    DINodeArray Elements = CTy->getElements();
+    for (int I = Elements.size() - 1; I >= 0; --I) {
+      if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
+        if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
+          const DISubrange *SR = cast<DISubrange>(Element);
+          auto *CI = SR->getCount().dyn_cast<ConstantInt *>();
+          int64_t Count = CI->getSExtValue();
+
+          auto TypeEntry = llvm::make_unique<BTFTypeArray>(ElemTypeId, Count);
+          if (I == 0)
+            ElemTypeId = addType(std::move(TypeEntry), CTy);
+          else
+            ElemTypeId = addType(std::move(TypeEntry));
+        }
+    }
+  }
+
+  // The array TypeId is the type id of the outermost dimension.
+  TypeId = ElemTypeId;
 
   // The IR does not have a type for array index while BTF wants one.
   // So create an array index type if there is none.
@@ -457,9 +462,6 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
                                                    0, "__ARRAY_SIZE_TYPE__");
     ArrayIndexTypeId = addType(std::move(TypeEntry));
   }
-
-  // Visit array element type.
-  visitTypeEntry(CTy->getBaseType().resolve());
 }
 
 void BTFDebug::visitEnumType(const DICompositeType *CTy, uint32_t &TypeId) {

@@ -77,17 +77,17 @@ define i32 @PR15215_good(<4 x i32> %input) {
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    .cfi_offset %esi, -8
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    andl $1, %eax
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    andl $1, %ecx
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    andl $1, %edx
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    andl $1, %esi
-; X32-NEXT:    leal (%eax,%ecx,2), %eax
-; X32-NEXT:    leal (%eax,%edx,4), %eax
-; X32-NEXT:    leal (%eax,%esi,8), %eax
+; X32-NEXT:    andl $1, %edx
+; X32-NEXT:    andl $1, %ecx
+; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    leal (%esi,%edx,2), %edx
+; X32-NEXT:    leal (%edx,%ecx,4), %ecx
+; X32-NEXT:    leal (%ecx,%eax,8), %eax
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl

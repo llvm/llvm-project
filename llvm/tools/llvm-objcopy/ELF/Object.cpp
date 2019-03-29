@@ -171,8 +171,7 @@ getDecompressedSizeAndAlignment(ArrayRef<uint8_t> Data) {
   const bool IsGnuDebug = isDataGnuCompressed(Data);
   const uint64_t DecompressedSize =
       IsGnuDebug
-          ? support::endian::read64be(reinterpret_cast<const uint64_t *>(
-                Data.data() + ZlibGnuMagic.size()))
+          ? support::endian::read64be(Data.data() + ZlibGnuMagic.size())
           : reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data.data())->ch_size;
   const uint64_t DecompressedAlign =
       IsGnuDebug ? 1
@@ -742,12 +741,11 @@ GnuDebugLinkSection::GnuDebugLinkSection(StringRef File) : FileName(File) {
 
 template <class ELFT>
 void ELFSectionWriter<ELFT>::visit(const GnuDebugLinkSection &Sec) {
-  auto Buf = Out.getBufferStart() + Sec.Offset;
-  char *File = reinterpret_cast<char *>(Buf);
+  unsigned char *Buf = Out.getBufferStart() + Sec.Offset;
   Elf_Word *CRC =
       reinterpret_cast<Elf_Word *>(Buf + Sec.Size - sizeof(Elf_Word));
   *CRC = Sec.CRC32;
-  llvm::copy(Sec.FileName, File);
+  llvm::copy(Sec.FileName, Buf);
 }
 
 void GnuDebugLinkSection::accept(SectionVisitor &Visitor) const {

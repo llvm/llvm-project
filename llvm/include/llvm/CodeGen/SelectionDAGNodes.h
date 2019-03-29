@@ -1708,13 +1708,14 @@ public:
 /// This SDNode is used for LIFETIME_START/LIFETIME_END values, which indicate
 /// the offet and size that are started/ended in the underlying FrameIndex.
 class LifetimeSDNode : public SDNode {
+  friend class SelectionDAG;
   int64_t Size;
   int64_t Offset; // -1 if offset is unknown.
-public:
+
   LifetimeSDNode(unsigned Opcode, unsigned Order, const DebugLoc &dl,
                  SDVTList VTs, int64_t Size, int64_t Offset)
       : SDNode(Opcode, Order, dl, VTs), Size(Size), Offset(Offset) {}
-
+public:
   int64_t getFrameIndex() const {
     return cast<FrameIndexSDNode>(getOperand(1))->getIndex();
   }

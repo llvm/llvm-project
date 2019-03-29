@@ -61,8 +61,6 @@ int AsmLexer::getNextChar() {
   return (unsigned char)*CurPtr++;
 }
 
-/// LexFloatLiteral: [0-9]*[.][0-9]*([eE][+-]?[0-9]*)?
-///
 /// The leading integral digit sequence and dot should have already been
 /// consumed, some or all of the fractional digit sequence *can* have been
 /// consumed.
@@ -71,13 +69,16 @@ AsmToken AsmLexer::LexFloatLiteral() {
   while (isDigit(*CurPtr))
     ++CurPtr;
 
-  // Check for exponent; we intentionally accept a slighlty wider set of
-  // literals here and rely on the upstream client to reject invalid ones (e.g.,
-  // "1e+").
-  if (*CurPtr == 'e' || *CurPtr == 'E') {
+  if (*CurPtr == '-' || *CurPtr == '+')
+    return ReturnError(CurPtr, "Invalid sign in float literal");
+
+  // Check for exponent
+  if ((*CurPtr == 'e' || *CurPtr == 'E')) {
     ++CurPtr;
+
     if (*CurPtr == '-' || *CurPtr == '+')
       ++CurPtr;
+
     while (isDigit(*CurPtr))
       ++CurPtr;
   }
@@ -145,8 +146,9 @@ AsmToken AsmLexer::LexIdentifier() {
     // Disambiguate a .1243foo identifier from a floating literal.
     while (isDigit(*CurPtr))
       ++CurPtr;
-    if (*CurPtr == 'e' || *CurPtr == 'E' ||
-        !IsIdentifierChar(*CurPtr, AllowAtInIdentifier))
+
+    if (!IsIdentifierChar(*CurPtr, AllowAtInIdentifier) ||
+        *CurPtr == 'e' || *CurPtr == 'E')
       return LexFloatLiteral();
   }
 
@@ -326,8 +328,9 @@ AsmToken AsmLexer::LexDigit() {
     unsigned Radix = doHexLookAhead(CurPtr, 10, LexMasmIntegers);
     bool isHex = Radix == 16;
     // Check for floating point literals.
-    if (!isHex && (*CurPtr == '.' || *CurPtr == 'e')) {
-      ++CurPtr;
+    if (!isHex && (*CurPtr == '.' || *CurPtr == 'e' || *CurPtr == 'E')) {
+      if (*CurPtr == '.')
+        ++CurPtr;
       return LexFloatLiteral();
     }
 
