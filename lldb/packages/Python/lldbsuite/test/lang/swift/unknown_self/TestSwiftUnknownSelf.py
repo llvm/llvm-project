@@ -32,7 +32,9 @@ class TestSwiftUnknownSelf(lldbtest.TestBase):
         self.expect("expr self", substrs=["hello", "world"])
         self.expect("fr v self", substrs=["hello", "world"])
 
-    
+
+    @skipIf(archs=['ppc64le'])
+    # SR-10216
     @swiftTest
     def test_unknown_self_objc_ref(self):
         """Test unknown references to Objective-C objects."""
