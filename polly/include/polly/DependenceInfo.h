@@ -26,20 +26,9 @@
 #include "isl/ctx.h"
 #include "isl/isl-noexceptions.h"
 
-struct isl_pw_aff;
-struct isl_union_map;
-struct isl_union_set;
-struct isl_map;
-struct isl_set;
-struct clast_for;
-
 using namespace llvm;
 
 namespace polly {
-
-class Scop;
-class ScopStmt;
-class MemoryAccess;
 
 /// The accumulated dependence information for a SCoP.
 ///
@@ -313,7 +302,6 @@ private:
 } // namespace polly
 
 namespace llvm {
-class PassRegistry;
 void initializeDependenceInfoPass(llvm::PassRegistry &);
 void initializeDependenceInfoWrapperPassPass(llvm::PassRegistry &);
 } // namespace llvm

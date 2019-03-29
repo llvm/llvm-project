@@ -149,13 +149,13 @@ constexpr bool is_execution_policy_v = is_execution_policy<T>::value;
 } // namespace v1
 } // namespace execution
 
-namespace internal
+namespace __internal
 {
 template <class ExecPolicy, class T>
-using enable_if_execution_policy =
+using __enable_if_execution_policy =
     typename std::enable_if<__pstl::execution::is_execution_policy<typename std::decay<ExecPolicy>::type>::value,
                             T>::type;
-} // namespace internal
+} // namespace __internal
 
 } // namespace __pstl
 

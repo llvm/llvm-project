@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_OBJCOPY_COPY_CONFIG_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -35,15 +36,35 @@ struct MachineInfo {
   bool IsLittleEndian;
 };
 
+// Flags set by --set-section-flags or --rename-section. Interpretation of these
+// is format-specific and not all flags are meaningful for all object file
+// formats. This is a bitmask; many section flags may be set.
+enum SectionFlag {
+  SecNone = 0,
+  SecAlloc = 1 << 0,
+  SecLoad = 1 << 1,
+  SecNoload = 1 << 2,
+  SecReadonly = 1 << 3,
+  SecDebug = 1 << 4,
+  SecCode = 1 << 5,
+  SecData = 1 << 6,
+  SecRom = 1 << 7,
+  SecMerge = 1 << 8,
+  SecStrings = 1 << 9,
+  SecContents = 1 << 10,
+  SecShare = 1 << 11,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ SecShare)
+};
+
 struct SectionRename {
   StringRef OriginalName;
   StringRef NewName;
-  Optional<uint64_t> NewFlags;
+  Optional<SectionFlag> NewFlags;
 };
 
 struct SectionFlagsUpdate {
   StringRef Name;
-  uint64_t NewFlags;
+  SectionFlag NewFlags;
 };
 
 enum class DiscardType {

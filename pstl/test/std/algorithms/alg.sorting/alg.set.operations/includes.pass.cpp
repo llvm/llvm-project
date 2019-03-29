@@ -103,7 +103,7 @@ int32_t
 main()
 {
 
-    test_includes<float64_t, float64_t>(__pstl::internal::pstl_less());
+    test_includes<float64_t, float64_t>(__pstl::__internal::__pstl_less());
     test_includes<Num<int64_t>, Num<int32_t>>([](const Num<int64_t>& x, const Num<int32_t>& y) { return x < y; });
     std::cout << done() << std::endl;
 

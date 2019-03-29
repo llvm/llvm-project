@@ -86,7 +86,10 @@ int main(int argc, char **argv) {
   if (!Buf)
     return 1;
 
-  yaml::Input YIn(Buf.get()->getBuffer());
+  StringRef Buffer = Buf.get()->getBuffer();
+  if (Buffer.trim().size() == 0)
+    error("yaml2obj: Error opening '" + Input + "': Empty File.");
+  yaml::Input YIn(Buffer);
 
   int Res = convertYAML(YIn, Out->os());
   if (Res == 0)

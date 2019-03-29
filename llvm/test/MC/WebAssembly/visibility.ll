@@ -25,9 +25,4 @@ entry:
 ; CHECK-NEXT:         Name:            hiddenVis
 ; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:         Function:        1
-; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            target_features
-; CHECK-NEXT:     Features:
-; CHECK-NEXT:       - Prefix:          DISALLOWED
-; CHECK-NEXT:         Name:            atomics
 ; CHECK-NEXT: ...

@@ -15,12 +15,11 @@
 #define POLLY_CODEGEN_IRBUILDER_H
 
 #include "llvm/ADT/MapVector.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/ValueMap.h"
 
 namespace llvm {
+class Loop;
+class SCEV;
 class ScalarEvolution;
 } // namespace llvm
 

@@ -207,11 +207,6 @@ entry:
 ; CHECK-NEXT:         Name:            .data.alias_address
 ; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
-; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            target_features
-; CHECK-NEXT:     Features:
-; CHECK-NEXT:       - Prefix:          DISALLOWED
-; CHECK-NEXT:         Name:            atomics
 ; CHECK-NEXT: ...
 
 ; CHECK-SYMS: SYMBOL TABLE:

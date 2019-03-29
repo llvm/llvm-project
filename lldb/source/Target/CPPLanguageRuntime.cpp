@@ -170,7 +170,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   //
   // This covers the case of the lambda known at compile time.
   size_t first_open_angle_bracket = vtable_name.find('<') + 1;
-  size_t first_comma = vtable_name.find_first_of(',');
+  size_t first_comma = vtable_name.find(',');
 
   llvm::StringRef first_template_parameter =
       vtable_name.slice(first_open_angle_bracket, first_comma);

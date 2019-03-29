@@ -59,7 +59,7 @@ public:
 
   void EmitEndOfAsmFile(Module &M) override;
   void EmitProducerInfo(Module &M);
-  void EmitTargetFeatures();
+  void EmitTargetFeatures(Module &M);
   void EmitJumpTableInfo() override;
   void EmitConstantPool() override;
   void EmitFunctionBodyStart() override;

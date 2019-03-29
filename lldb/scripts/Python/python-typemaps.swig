@@ -333,18 +333,13 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
     PyObject* list = PyList_New(count);
     for (uint32_t j = 0; j < count; j++)
     {
-        if ($1[j] < UINT32_MAX)
+        PyObject* item = PyInt_FromLong($1[j]);
+        int ok = PyList_SetItem(list,j,item);
+        if (ok != 0)
         {
-            PyObject* item = PyInt_FromLong($1[j]);
-            int ok = PyList_SetItem(list,j,item);
-            if (ok != 0)
-            {
-                $result = Py_None;
-                break;
-            }
-        }
-        else
+            $result = Py_None;
             break;
+        }
     }
     $result = list;
 }

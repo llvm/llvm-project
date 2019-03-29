@@ -16,15 +16,7 @@
 #include "polly/CodeGen/IRBuilder.h"
 #include "polly/CodeGen/LoopGenerators.h"
 #include "polly/Support/ScopHelper.h"
-
 #include "llvm/ADT/SetVector.h"
-#include "llvm/IR/ValueMap.h"
-
-namespace llvm {
-class Value;
-class Pass;
-class BasicBlock;
-} // namespace llvm
 
 namespace polly {
 using namespace llvm;
