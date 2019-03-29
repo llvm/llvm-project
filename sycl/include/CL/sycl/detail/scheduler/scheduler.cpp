@@ -61,8 +61,7 @@ template <typename dataT, int dimensions, access::mode accessMode,
 void Node::addAccRequirement(
     accessor<dataT, dimensions, accessMode, accessTarget, isPlaceholder> &&Acc,
     int argIndex) {
-  detail::buffer_impl<buffer_allocator<char>> *buf =
-      Acc.__get_impl()->m_Buf;
+  detail::buffer_impl<buffer_allocator> *buf = Acc.__get_impl()->m_Buf;
   addBufRequirement<accessMode, accessTarget>(*buf);
   addInteropArg(nullptr, buf->get_size(), argIndex,
                 getReqForBuffer(m_Bufs, *buf));
@@ -134,7 +133,7 @@ void Node::addExplicitMemOp(
   auto *DestBase = Dest.__get_impl();
   assert(DestBase != nullptr &&
          "Accessor should have an initialized accessor_base");
-  detail::buffer_impl<buffer_allocator<char>> *Buf = DestBase->m_Buf;
+  detail::buffer_impl<buffer_allocator> *Buf = DestBase->m_Buf;
 
   range<Dimensions> Range = DestBase->AccessRange;
   id<Dimensions> Offset = DestBase->Offset;
@@ -162,10 +161,10 @@ void Node::addExplicitMemOp(
   assert(DestBase != nullptr &&
          "Accessor should have an initialized accessor_base");
 
-  detail::buffer_impl<buffer_allocator<char>> *SrcBuf = SrcBase->m_Buf;
+  detail::buffer_impl<buffer_allocator> *SrcBuf = SrcBase->m_Buf;
   assert(SrcBuf != nullptr &&
          "Accessor should have an initialized buffer_impl");
-  detail::buffer_impl<buffer_allocator<char>> *DestBuf = DestBase->m_Buf;
+  detail::buffer_impl<buffer_allocator> *DestBuf = DestBase->m_Buf;
   assert(DestBuf != nullptr &&
          "Accessor should have an initialized buffer_impl");
 
@@ -195,7 +194,7 @@ void Scheduler::updateHost(
   auto *AccBase = Acc.__get_impl();
   assert(AccBase != nullptr &&
          "Accessor should have an initialized accessor_base");
-  detail::buffer_impl<buffer_allocator<char>> *Buf = AccBase->m_Buf;
+  detail::buffer_impl<buffer_allocator> *Buf = AccBase->m_Buf;
 
   updateHost<mode, tgt>(*Buf, Event);
 }

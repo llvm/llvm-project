@@ -150,9 +150,9 @@ SYCL_ACCESSOR_IMPL(!isTargetHostAccess(accessTarget) &&
   // reinterpret casting while setting kernel arguments in order to get cl_mem
   // value from the buffer regardless of the accessor's dimensionality.
 #ifndef __SYCL_DEVICE_ONLY__
-  detail::buffer_impl<buffer_allocator<char>> *m_Buf = nullptr;
+  detail::buffer_impl<buffer_allocator> *m_Buf = nullptr;
 #else
-  char padding[sizeof(detail::buffer_impl<buffer_allocator<char>> *)];
+  char padding[sizeof(detail::buffer_impl<buffer_allocator> *)];
 #endif // __SYCL_DEVICE_ONLY__
 
   dataT *Data;
@@ -185,9 +185,9 @@ SYCL_ACCESSOR_IMPL(!isTargetHostAccess(accessTarget) &&
   // reinterpret casting while setting kernel arguments in order to get cl_mem
   // value from the buffer regardless of the accessor's dimensionality.
 #ifndef __SYCL_DEVICE_ONLY__
-  detail::buffer_impl<buffer_allocator<char>> *m_Buf = nullptr;
+  detail::buffer_impl<buffer_allocator> *m_Buf = nullptr;
 #else
-  char padding[sizeof(detail::buffer_impl<buffer_allocator<char>> *)];
+  char padding[sizeof(detail::buffer_impl<buffer_allocator> *)];
 #endif // __SYCL_DEVICE_ONLY__
 
   dataT *Data;

@@ -21,7 +21,7 @@ class queue;
 template <int dimentions> class range;
 
 template <typename T, int dimensions = 1,
-          typename AllocatorT = cl::sycl::buffer_allocator<char>>
+          typename AllocatorT = cl::sycl::buffer_allocator>
 class buffer {
 public:
   using value_type = T;
@@ -36,11 +36,11 @@ public:
         get_count() * sizeof(T), propList);
   }
 
-  // buffer(const range<dimensions> &bufferRange, AllocatorT allocator,
-  // const property_list &propList = {}) {
-  //     impl = std::make_shared<detail::buffer_impl>(bufferRange, allocator,
-  //     propList);
-  // }
+  buffer(const range<dimensions> &bufferRange, AllocatorT allocator,
+         const property_list &propList = {}) {
+    impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
+        get_count() * sizeof(T), propList, allocator);
+  }
 
   buffer(T *hostData, const range<dimensions> &bufferRange,
          const property_list &propList = {})
@@ -49,11 +49,11 @@ public:
         hostData, get_count() * sizeof(T), propList);
   }
 
-  // buffer(T *hostData, const range<dimensions> &bufferRange,
-  // AllocatorT allocator, const property_list &propList = {}) {
-  //     impl = std::make_shared<detail::buffer_impl>(hostData, bufferRange,
-  //     allocator, propList);
-  // }
+  buffer(T *hostData, const range<dimensions> &bufferRange,
+         AllocatorT allocator, const property_list &propList = {}) {
+    impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
+        hostData, get_count() * sizeof(T), propList, allocator);
+  }
 
   buffer(const T *hostData, const range<dimensions> &bufferRange,
          const property_list &propList = {})
@@ -62,18 +62,18 @@ public:
         hostData, get_count() * sizeof(T), propList);
   }
 
-  // buffer(const T *hostData, const range<dimensions> &bufferRange,
-  // AllocatorT allocator, const property_list &propList = {}) {
-  //     impl = std::make_shared<detail::buffer_impl>(hostData, bufferRange,
-  //     allocator, propList);
-  // }
+  buffer(const T *hostData, const range<dimensions> &bufferRange,
+         AllocatorT allocator, const property_list &propList = {}) {
+    impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
+        hostData, get_count() * sizeof(T), propList, allocator);
+  }
 
-  // buffer(const shared_ptr_class<T> &hostData,
-  // const range<dimensions> &bufferRange, AllocatorT allocator,
-  // const property_list &propList = {}) {
-  //     impl = std::make_shared<detail::buffer_impl>(hostData, bufferRange,
-  //     allocator, propList);
-  // }
+  buffer(const shared_ptr_class<T> &hostData,
+         const range<dimensions> &bufferRange, AllocatorT allocator,
+         const property_list &propList = {}) {
+    impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
+        hostData, get_count() * sizeof(T), propList, allocator);
+  }
 
   buffer(const shared_ptr_class<T> &hostData,
          const range<dimensions> &bufferRange,
@@ -83,12 +83,13 @@ public:
         hostData, get_count() * sizeof(T), propList);
   }
 
-  // template <class InputIterator>
-  // buffer<T, 1>(InputIterator first, InputIterator last, AllocatorT allocator,
-  // const property_list &propList = {}) {
-  //     impl = std::make_shared<detail::buffer_impl>(first, last, allocator,
-  //     propList);
-  // }
+  template <class InputIterator>
+  buffer(InputIterator first, InputIterator last, AllocatorT allocator,
+         const property_list &propList = {})
+      : Range(range<1>(std::distance(first, last))) {
+    impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
+        first, last, get_count() * sizeof(T), propList, allocator);
+  }
 
   template <class InputIterator, int N = dimensions,
             typename = std::enable_if<N == 1>>
@@ -135,7 +136,7 @@ public:
 
   size_t get_size() const { return impl->get_size(); }
 
-  // AllocatorT get_allocator() const { return impl->get_allocator(); }
+  AllocatorT get_allocator() const { return impl->get_allocator(); }
 
   template <access::mode mode,
             access::target target = access::target::global_buffer>

@@ -37,16 +37,18 @@ class handler;
 class queue;
 template <int dimentions> class id;
 template <int dimentions> class range;
-template <class T> using buffer_allocator = std::allocator<T>;
+using buffer_allocator = std::allocator<char>;
 namespace detail {
 template <typename AllocatorT> class buffer_impl {
 public:
-  buffer_impl(const size_t sizeInBytes, const property_list &propList)
-      : buffer_impl((void *)nullptr, sizeInBytes, propList) {}
+  buffer_impl(const size_t sizeInBytes, const property_list &propList,
+              AllocatorT allocator = AllocatorT())
+      : buffer_impl((void *)nullptr, sizeInBytes, propList, allocator) {}
 
   buffer_impl(void *hostData, const size_t sizeInBytes,
-              const property_list &propList)
-      : SizeInBytes(sizeInBytes), Props(propList) {
+              const property_list &propList,
+              AllocatorT allocator = AllocatorT())
+      : SizeInBytes(sizeInBytes), Props(propList), MAllocator(allocator) {
     if (Props.has_property<property::buffer::use_host_ptr>()) {
       BufPtr = hostData;
     } else {
@@ -62,8 +64,9 @@ public:
 
   // TODO temporary solution for allowing initialisation with const data
   buffer_impl(const void *hostData, const size_t sizeInBytes,
-              const property_list &propList)
-      : SizeInBytes(sizeInBytes), Props(propList) {
+              const property_list &propList,
+              AllocatorT allocator = AllocatorT())
+      : SizeInBytes(sizeInBytes), Props(propList), MAllocator(allocator) {
     if (Props.has_property<property::buffer::use_host_ptr>()) {
       // TODO make this buffer read only
       BufPtr = const_cast<void *>(hostData);
@@ -79,8 +82,9 @@ public:
 
   template <typename T>
   buffer_impl(const shared_ptr_class<T> &hostData, const size_t sizeInBytes,
-              const property_list &propList)
-      : SizeInBytes(sizeInBytes), Props(propList) {
+              const property_list &propList,
+              AllocatorT allocator = AllocatorT())
+      : SizeInBytes(sizeInBytes), Props(propList), MAllocator(allocator) {
     if (Props.has_property<property::buffer::use_host_ptr>()) {
       BufPtr = hostData.get();
     } else {
@@ -97,8 +101,9 @@ public:
 
   template <class InputIterator>
   buffer_impl(InputIterator first, InputIterator last, const size_t sizeInBytes,
-              const property_list &propList)
-      : SizeInBytes(sizeInBytes), Props(propList) {
+              const property_list &propList,
+              AllocatorT allocator = AllocatorT())
+      : SizeInBytes(sizeInBytes), Props(propList), MAllocator(allocator) {
     if (Props.has_property<property::buffer::use_host_ptr>()) {
       // TODO next line looks unsafe
       BufPtr = &*first;
@@ -170,7 +175,7 @@ public:
       throw cl::sycl::runtime_error(
           "set_final_data could not be used with interoperability buffer");
     static_assert(!std::is_const<Destination>::value,
-                  "Сan not write in a constant Destination. Destination should "
+                  "Can not write in a constant Destination. Destination should "
                   "not be const.");
     uploadData = [this, final_data]() mutable {
       auto *Ptr =
@@ -181,6 +186,8 @@ public:
       std::copy(Ptr, Ptr + SizeInBytes / ValSize, final_data);
     };
   }
+
+  AllocatorT get_allocator() const { return MAllocator; }
 
   template <typename T, int dimensions, access::mode mode,
             access::target target = access::target::global_buffer>
@@ -243,6 +250,7 @@ private:
   // This field must be the first to guarantee that it's safe to use
   // reinterpret casting while setting kernel arguments in order to get cl_mem
   // value from the buffer regardless of its dimensionality.
+  AllocatorT MAllocator;
   OpenCLMemState OCLState;
   bool OpenCLInterop = false;
   event AvailableEvent;
