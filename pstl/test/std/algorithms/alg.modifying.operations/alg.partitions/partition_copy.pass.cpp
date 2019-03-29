@@ -39,7 +39,7 @@ struct test_partition_copy
         EXPECT_TRUE(std::distance(true_first, actual_ret.first) == std::count_if(first, last, unary_op),
                     "partition_copy has wrong effect from true sequence");
         EXPECT_TRUE(std::distance(false_first, actual_ret.second) ==
-                        std::count_if(first, last, __pstl::internal::not_pred<UnaryOp>(unary_op)),
+                        std::count_if(first, last, __pstl::__internal::__not_pred<UnaryOp>(unary_op)),
                     "partition_copy has wrong effect from false sequence");
     }
 

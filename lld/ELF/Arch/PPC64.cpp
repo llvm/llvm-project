@@ -208,7 +208,6 @@ PPC64::PPC64() {
   PltEntrySize = 4;
   GotPltEntrySize = 8;
   GotBaseSymInGotPlt = false;
-  GotBaseSymOff = 0x8000;
   GotHeaderEntriesNum = 1;
   GotPltHeaderEntriesNum = 2;
   PltHeaderSize = 60;

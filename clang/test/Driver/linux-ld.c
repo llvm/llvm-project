@@ -997,6 +997,15 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-M %s
 // CHECK-ANDROID-HASH-STYLE-M: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-HASH-STYLE-M: "--hash-style=gnu"
+
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android21 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-NOEXECSTACK %s
+// CHECK-ANDROID-NOEXECSTACK: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-NOEXECSTACK: "-z" "noexecstack"
+// CHECK-ANDROID-NOEXECSTACK-NOT: "-z" "execstack"
+// CHECK-ANDROID-NOEXECSTACK-NOT: "-z,execstack"
+// CHECK-ANDROID-NOEXECSTACK-NOT: "-zexecstack"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 --target=mips64-linux-gnuabin32 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-GNUABIN32 %s

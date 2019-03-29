@@ -12,17 +12,9 @@
 #define POLLY_SCEV_VALIDATOR_H
 
 #include "polly/Support/ScopHelper.h"
-#include "llvm/ADT/SetVector.h"
 
 namespace llvm {
-class Region;
-class SCEV;
 class SCEVConstant;
-class ScalarEvolution;
-class Value;
-class Loop;
-class LoadInst;
-class CallInst;
 } // namespace llvm
 
 namespace polly {

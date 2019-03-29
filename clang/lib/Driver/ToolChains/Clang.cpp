@@ -2053,6 +2053,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   bool TakeNextArg = false;
 
   bool UseRelaxRelocations = C.getDefaultToolChain().useRelaxRelocations();
+  bool UseNoExecStack = C.getDefaultToolChain().isNoExecStackDefault();
   const char *MipsTargetFeature = nullptr;
   for (const Arg *A :
        Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
@@ -2134,7 +2135,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       } else if (Value == "--fatal-warnings") {
         CmdArgs.push_back("-massembler-fatal-warnings");
       } else if (Value == "--noexecstack") {
-        CmdArgs.push_back("-mnoexecstack");
+        UseNoExecStack = true;
       } else if (Value.startswith("-compress-debug-sections") ||
                  Value.startswith("--compress-debug-sections") ||
                  Value == "-nocompress-debug-sections" ||
@@ -2197,6 +2198,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
   if (UseRelaxRelocations)
     CmdArgs.push_back("--mrelax-relocations");
+  if (UseNoExecStack)
+    CmdArgs.push_back("-mnoexecstack");
   if (MipsTargetFeature != nullptr) {
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back(MipsTargetFeature);

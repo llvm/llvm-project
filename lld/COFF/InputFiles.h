@@ -127,6 +127,13 @@ public:
   // Returns the underlying COFF file.
   COFFObjectFile *getCOFFObj() { return COFFObj.get(); }
 
+  // Add a symbol for a range extension thunk. Return the new symbol table
+  // index. This index can be used to modify a relocation.
+  uint32_t addRangeThunkSymbol(Symbol *Thunk) {
+    Symbols.push_back(Thunk);
+    return Symbols.size() - 1;
+  }
+
   static std::vector<ObjFile *> Instances;
 
   // Flags in the absolute @feat.00 symbol if it is present. These usually

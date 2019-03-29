@@ -1082,7 +1082,6 @@ static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
   uint8_t *Buffer = Alloc.Allocate<uint8_t>(DebugChunk.getSize());
   assert(DebugChunk.OutputSectionOff == 0 &&
          "debug sections should not be in output sections");
-  DebugChunk.readRelocTargets();
   DebugChunk.writeTo(Buffer);
   return makeArrayRef(Buffer, DebugChunk.getSize());
 }

@@ -214,17 +214,24 @@ void elf::addReservedSymbols() {
   // the .got section.
   // We do not allow _GLOBAL_OFFSET_TABLE_ to be defined by input objects as the
   // correctness of some relocations depends on its value.
-  StringRef GotTableSymName =
+  StringRef GotSymName =
       (Config->EMachine == EM_PPC64) ? ".TOC." : "_GLOBAL_OFFSET_TABLE_";
-  if (Symbol *S = Symtab->find(GotTableSymName)) {
-    if (S->isDefined())
+
+  if (Symbol *S = Symtab->find(GotSymName)) {
+    if (S->isDefined()) {
       error(toString(S->File) + " cannot redefine linker defined symbol '" +
-            GotTableSymName + "'");
-    else
-      ElfSym::GlobalOffsetTable = Symtab->addDefined(
-          GotTableSymName, STV_HIDDEN, STT_NOTYPE, Target->GotBaseSymOff,
-          /*Size=*/0, STB_GLOBAL, Out::ElfHeader,
-          /*File=*/nullptr);
+            GotSymName + "'");
+      return;
+    }
+
+    uint64_t GotOff = 0;
+    if (Config->EMachine == EM_PPC || Config->EMachine == EM_PPC64)
+      GotOff = 0x8000;
+
+    ElfSym::GlobalOffsetTable =
+        Symtab->addDefined(GotSymName, STV_HIDDEN, STT_NOTYPE, GotOff,
+                           /*Size=*/0, STB_GLOBAL, Out::ElfHeader,
+                           /*File=*/nullptr);
   }
 
   // __ehdr_start is the location of ELF file headers. Note that we define

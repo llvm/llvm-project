@@ -198,7 +198,10 @@ readExponent(StringRef::iterator begin, StringRef::iterator end)
   const unsigned int overlargeExponent = 24000;  /* FIXME.  */
   StringRef::iterator p = begin;
 
-  assert(p != end && "Exponent has no digits");
+  // Treat no exponent as 0 to match binutils
+  if (p == end || ((*p == '-' || *p == '+') && (p + 1) == end)) {
+    return 0;
+  }
 
   isNegative = (*p == '-');
   if (*p == '-' || *p == '+') {

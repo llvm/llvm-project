@@ -15,13 +15,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/DeLICM.h"
+#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"
+#include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
 #include "polly/ZoneAlgo.h"
 #include "llvm/ADT/Statistic.h"
+
 #define DEBUG_TYPE "polly-delicm"
 
 using namespace polly;

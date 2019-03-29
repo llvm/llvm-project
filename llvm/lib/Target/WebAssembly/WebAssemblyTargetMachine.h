@@ -23,7 +23,6 @@ namespace llvm {
 class WebAssemblyTargetMachine final : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<WebAssemblySubtarget>> SubtargetMap;
-  mutable FeatureBitset UsedFeatures;
 
 public:
   WebAssemblyTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -45,8 +44,6 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
-
-  FeatureBitset getUsedFeatures() const { return UsedFeatures; }
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 

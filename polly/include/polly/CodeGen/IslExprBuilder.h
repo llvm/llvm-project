@@ -13,17 +13,7 @@
 
 #include "polly/CodeGen/IRBuilder.h"
 #include "polly/Support/ScopHelper.h"
-
-#include "llvm/ADT/MapVector.h"
-#include "isl/ast.h"
 #include "isl/isl-noexceptions.h"
-
-namespace llvm {
-class DataLayout;
-class ScalarEvolution;
-} // namespace llvm
-
-struct isl_id;
 
 namespace llvm {
 // Provide PointerLikeTypeTraits for isl_id.
