@@ -2,7 +2,16 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s
 
-extern int omp_default_mem_alloc;
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 struct S1; // expected-note 2 {{declared here}} expected-note 2 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
@@ -112,7 +121,7 @@ int foomain(I argc, C **argv) {
 {}
 #pragma omp target firstprivate(argv[1]) // expected-error {{expected variable name}}
 {}
-#pragma omp target firstprivate(e, g)
+#pragma omp target firstprivate(e, g) allocate(omp_thread_mem_alloc: e) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target' directive}}
 {}
 #pragma omp target firstprivate(h) // expected-error {{threadprivate or thread local variable cannot be firstprivate}}
 {}

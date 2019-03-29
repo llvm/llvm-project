@@ -44,22 +44,6 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
   Live = !Config->DoGC || !isCOMDAT();
 }
 
-// Initialize the RelocTargets vector, to allow redirecting certain relocations
-// to a thunk instead of the actual symbol the relocation's symbol table index
-// indicates.
-void SectionChunk::readRelocTargets() {
-  assert(RelocTargets.empty());
-  RelocTargets.reserve(Relocs.size());
-  for (const coff_relocation &Rel : Relocs)
-    RelocTargets.push_back(File->getSymbol(Rel.SymbolTableIndex));
-}
-
-// Reset RelocTargets to their original targets before thunks were added.
-void SectionChunk::resetRelocTargets() {
-  for (size_t I = 0, E = Relocs.size(); I < E; ++I)
-    RelocTargets[I] = File->getSymbol(Relocs[I].SymbolTableIndex);
-}
-
 static void add16(uint8_t *P, int16_t V) { write16le(P, read16le(P) + V); }
 static void add32(uint8_t *P, int32_t V) { write32le(P, read32le(P) + V); }
 static void add64(uint8_t *P, int64_t V) { write64le(P, read64le(P) + V); }
@@ -367,9 +351,8 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
 
     uint8_t *Off = Buf + OutputSectionOff + Rel.VirtualAddress;
 
-    // Use the potentially remapped Symbol instead of the one that the
-    // relocation points to.
-    auto *Sym = dyn_cast_or_null<Defined>(RelocTargets[I]);
+    auto *Sym =
+        dyn_cast_or_null<Defined>(File->getSymbol(Rel.SymbolTableIndex));
 
     // Get the output section of the symbol for this relocation.  The output
     // section is needed to compute SECREL and SECTION relocations used in debug
@@ -449,9 +432,7 @@ void SectionChunk::getBaserels(std::vector<Baserel> *Res) {
     uint8_t Ty = getBaserelType(Rel);
     if (Ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
-    // Use the potentially remapped Symbol instead of the one that the
-    // relocation points to.
-    Symbol *Target = RelocTargets[I];
+    Symbol *Target = File->getSymbol(Rel.SymbolTableIndex);
     if (!Target || isa<DefinedAbsolute>(Target))
       continue;
     Res->emplace_back(RVA + Rel.VirtualAddress, Ty);

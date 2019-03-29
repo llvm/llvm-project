@@ -4704,7 +4704,8 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       if (!N.Type.empty())
         W.printString(N.Type, N.Value);
     } else {
-      W.getOStream() << "Unknown note type: (" << format_hex(Type, 10) << ')';
+      W.printString("Type",
+                    "Unknown (" + to_string(format_hex(Type, 10)) + ")");
     }
   };
 

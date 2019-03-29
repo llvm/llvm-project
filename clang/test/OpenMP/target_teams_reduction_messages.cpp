@@ -6,7 +6,16 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -o - %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s
 
-extern int omp_default_mem_alloc;
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 void foo() {
 }
 
@@ -156,7 +165,7 @@ T tmain(T argc) {
 #pragma omp parallel for private(fl)
   for (int i = 0; i < 10; ++i)
   {}
-#pragma omp target teams reduction(+ : fl)
+#pragma omp target teams reduction(+ : fl) allocate(omp_thread_mem_alloc: fl) // expected-warning 2 {{allocator with the 'thread' trait access has unspecified behavior on 'target teams' directive}}
     foo();
 #pragma omp target teams
 #pragma omp parallel for reduction(- : fl)

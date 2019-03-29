@@ -412,6 +412,9 @@ public:
   /// Test whether this toolchain defaults to PIE.
   virtual bool isPIEDefault() const = 0;
 
+  /// Test whether this toolchaind defaults to non-executable stacks.
+  virtual bool isNoExecStackDefault() const;
+
   /// Tests whether this toolchain forces its default for PIC, PIE or
   /// non-PIC.  If this returns true, any PIC related flags should be ignored
   /// and instead the results of \c isPICDefault() and \c isPIEDefault() are

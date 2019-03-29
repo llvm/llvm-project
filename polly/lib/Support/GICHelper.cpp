@@ -9,18 +9,10 @@
 // Functions for converting between gmp objects and llvm::APInt.
 //
 //===----------------------------------------------------------------------===//
-#include "polly/Support/GICHelper.h"
-#include "llvm/IR/Value.h"
-#include "isl/aff.h"
-#include "isl/map.h"
-#include "isl/schedule.h"
-#include "isl/set.h"
-#include "isl/space.h"
-#include "isl/union_map.h"
-#include "isl/union_set.h"
-#include "isl/val.h"
 
-#include <climits>
+#include "polly/Support/GICHelper.h"
+#include "llvm/ADT/APInt.h"
+#include "isl/val.h"
 
 using namespace llvm;
 

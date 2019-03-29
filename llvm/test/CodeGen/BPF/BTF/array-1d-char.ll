@@ -21,24 +21,24 @@
 ; CHECK-NEXT:        .long   56
 ; CHECK-NEXT:        .long   56
 ; CHECK-NEXT:        .long   26
-; CHECK-NEXT:        .long   0                       # BTF_KIND_ARRAY(id = 1)
-; CHECK-NEXT:        .long   50331648                # 0x3000000
-; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   3
-; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   10
-; CHECK-NEXT:        .long   1                       # BTF_KIND_INT(id = 2)
-; CHECK-NEXT:        .long   16777216                # 0x1000000
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   32                      # 0x20
-; CHECK-NEXT:        .long   21                      # BTF_KIND_INT(id = 3)
+; CHECK-NEXT:        .long   1                       # BTF_KIND_INT(id = 1)
 ; CHECK-NEXT:        .long   16777216                # 0x1000000
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   16777224                # 0x1000008
+; CHECK-NEXT:        .long   0                       # BTF_KIND_ARRAY(id = 2)
+; CHECK-NEXT:        .long   50331648                # 0x3000000
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   1
+; CHECK-NEXT:        .long   3
+; CHECK-NEXT:        .long   10
+; CHECK-NEXT:        .long   6                       # BTF_KIND_INT(id = 3)
+; CHECK-NEXT:        .long   16777216                # 0x1000000
+; CHECK-NEXT:        .long   4
+; CHECK-NEXT:        .long   32                      # 0x20
 ; CHECK-NEXT:        .byte   0                       # string offset=0
-; CHECK-NEXT:        .ascii  "__ARRAY_SIZE_TYPE__"   # string offset=1
+; CHECK-NEXT:        .ascii  "char"                  # string offset=1
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "char"                  # string offset=21
+; CHECK-NEXT:        .ascii  "__ARRAY_SIZE_TYPE__"   # string offset=6
 ; CHECK-NEXT:        .byte   0
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
