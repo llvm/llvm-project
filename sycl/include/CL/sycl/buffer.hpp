@@ -153,20 +153,22 @@ public:
     return impl->template get_access<T, dimensions, mode>(*this);
   }
 
-  // template <access::mode mode, access::target target =
-  // access::target::global_buffer> accessor<T, dimensions, mode, target,
-  // access::placeholder::false_t> get_access( handler &commandGroupHandler,
-  // range<dimensions> accessRange, id<dimensions> accessOffset = {}) {
-  //     return impl->get_access(commandGroupHandler, accessRange,
-  //     accessOffset);
-  // }
+  template <access::mode mode,
+            access::target target = access::target::global_buffer>
+  accessor<T, dimensions, mode, target, access::placeholder::false_t>
+  get_access(handler &commandGroupHandler, range<dimensions> accessRange,
+             id<dimensions> accessOffset = {}) {
+    return impl->template get_access<T, dimensions, mode, target>(
+        *this, commandGroupHandler, accessRange, accessOffset);
+  }
 
-  // template <access::mode mode>
-  // accessor<T, dimensions, mode, access::target::host_buffer,
-  // access::placeholder::false_t> get_access( range<dimensions> accessRange,
-  // id<dimensions> accessOffset = {}) {
-  //     return impl->get_access(accessRange, accessOffset);
-  // }
+  template <access::mode mode>
+  accessor<T, dimensions, mode, access::target::host_buffer,
+           access::placeholder::false_t>
+  get_access(range<dimensions> accessRange, id<dimensions> accessOffset = {}) {
+    return impl->template get_access<T, dimensions, mode>(*this, accessRange,
+                                                          accessOffset);
+  }
 
   template <typename Destination = std::nullptr_t>
   void set_final_data(Destination finalData = nullptr) {

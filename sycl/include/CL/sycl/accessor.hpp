@@ -763,7 +763,7 @@ public:
 #ifdef __SYCL_DEVICE_ONLY__
       ; // This ctor can't be used in device code, so no need to define it.
 #else   // !__SYCL_DEVICE_ONLY__
-      : __impl(detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
+      : __impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
                bufferRef.get_range(), Offset) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {

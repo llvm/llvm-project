@@ -206,6 +206,26 @@ public:
                     access::placeholder::false_t>(Buffer);
   }
 
+  template <typename T, int dimensions, access::mode mode,
+            access::target target = access::target::global_buffer>
+  accessor<T, dimensions, mode, target, access::placeholder::false_t>
+  get_access(buffer<T, dimensions, AllocatorT> &Buffer,
+             handler &commandGroupHandler, range<dimensions> accessRange,
+             id<dimensions> accessOffset) {
+    return accessor<T, dimensions, mode, target, access::placeholder::false_t>(
+        Buffer, commandGroupHandler, accessRange, accessOffset);
+  }
+
+  template <typename T, int dimensions, access::mode mode>
+  accessor<T, dimensions, mode, access::target::host_buffer,
+           access::placeholder::false_t>
+  get_access(buffer<T, dimensions, AllocatorT> &Buffer,
+             range<dimensions> accessRange, id<dimensions> accessOffset) {
+    return accessor<T, dimensions, mode, access::target::host_buffer,
+                    access::placeholder::false_t>(Buffer, accessRange,
+                                                  accessOffset);
+  }
+
 public:
   void moveMemoryTo(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
                     EventImplPtr Event);
