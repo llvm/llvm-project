@@ -17,6 +17,7 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
+import platform
 
 
 class TestSwiftTypes(TestBase):
@@ -162,7 +163,9 @@ class TestSwiftTypes(TestBase):
                 'float64',
                 'value = 2.5'])
         float80_unsupported_platforms = ["ios"]
-        if self.getPlatform() not in float80_unsupported_platforms:
+        float80_unsupported_archs = ["ppc64le"]
+        if self.getPlatform() not in float80_unsupported_platforms \
+        and platform.machine() not in float80_unsupported_archs:
             self.expect(
                 "frame variable --raw float80",
                 substrs=[

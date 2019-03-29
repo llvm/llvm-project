@@ -1,3 +1,5 @@
+# XFAIL: powerpc64le
+# SR-10213
 # RUN: %build %p/inputs/main.c %p/inputs/symbol-list-lines.c %p/inputs/list-lines-helper.c --nodefaultlib -o %t
 # RUN: %lldbmi %t < %s | FileCheck %s
 
