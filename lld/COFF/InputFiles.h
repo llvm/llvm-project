@@ -74,12 +74,12 @@ public:
   StringRef ParentName;
 
   // Returns .drectve section contents if exist.
-  StringRef getDirectives() { return StringRef(Directives).trim(); }
+  StringRef getDirectives() { return Directives; }
 
 protected:
   InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
 
-  std::string Directives;
+  StringRef Directives;
 
 private:
   const Kind FileKind;

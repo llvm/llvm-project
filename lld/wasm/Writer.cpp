@@ -1152,13 +1152,12 @@ void Writer::processRelocations(InputChunk *Chunk) {
     case R_WASM_MEMORY_ADDR_SLEB:
     case R_WASM_MEMORY_ADDR_I32:
     case R_WASM_MEMORY_ADDR_LEB: {
-      DataSymbol *DataSym = File->getDataSymbol(Reloc.Index);
-      if (!Config->Relocatable && !isa<DefinedData>(DataSym) &&
-          !DataSym->isWeak())
-        error(File->getName() +
-              ": relocation of type R_WASM_MEMORY_ADDR_* "
-              "against undefined data symbol: " +
-              DataSym->getName());
+      DataSymbol *Sym = File->getDataSymbol(Reloc.Index);
+      if (!Config->Relocatable && !isa<DefinedData>(Sym) && !Sym->isWeak())
+        error(File->getName() + ": relocation " +
+              relocTypeToString(Reloc.Type) + " cannot be used againt symbol " +
+              Sym->getName() + "; recompile with -fPIC");
+
       break;
     }
     case R_WASM_GLOBAL_INDEX_LEB: {

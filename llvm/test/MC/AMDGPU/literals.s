@@ -4,11 +4,11 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=CIVI --check-prefix=GFX89
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=CIVI --check-prefix=GFX89 --check-prefix=GFX9
 
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI --check-prefix=NOSICIVI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI --check-prefix=NOSICIVI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI --check-prefix=NOCIVI --check-prefix=NOSICIVI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICIVI -check-prefix=NOVI -check-prefix=NOGFX89
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck %s -check-prefix=NOGFX89 -check-prefix=NOGFX9
+// RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGCN --check-prefix=NOSI --check-prefix=NOSICI --check-prefix=NOSICIVI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGCN --check-prefix=NOSI --check-prefix=NOSICI --check-prefix=NOSICIVI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGCN --check-prefix=NOSICI --check-prefix=NOCIVI --check-prefix=NOSICIVI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGCN --check-prefix=NOSICIVI --check-prefix=NOVI --check-prefix=NOGFX89
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGCN --check-prefix=NOGFX89 --check-prefix=NOGFX9
 
 //---------------------------------------------------------------------------//
 // fp literal, expected fp operand
@@ -477,6 +477,46 @@ v_fract_f64 v[0:1], 0.159154943091895317852646485335
 // SICI: v_trunc_f32_e32 v0, 0x3e22f983 ; encoding: [0xff,0x42,0x00,0x7e,0x83,0xf9,0x22,0x3e]
 // GFX89: v_trunc_f32_e32 v0, 0.15915494 ; encoding: [0xf8,0x38,0x00,0x7e]
 v_trunc_f32 v0, 0.159154943091895317852646485335
+
+//---------------------------------------------------------------------------//
+// integer literal truncation checks
+//---------------------------------------------------------------------------//
+
+// NOGCN: error: invalid operand for instruction
+s_mov_b32 s0, 0x101ffffffff
+
+// NOGCN: error: invalid operand for instruction
+s_mov_b32 s0, 0x1000000001
+
+// NOGCN: error: invalid operand for instruction
+s_mov_b32 s0, 0x1000000fff
+
+// NOGCN: error: invalid operand for instruction
+v_trunc_f32 v0, 0x1fffffffff0
+
+// NOGCN: error: invalid operand for instruction
+v_trunc_f32 v0, 0x100000001
+
+// NOGCN: error: invalid operand for instruction
+v_trunc_f32 v0, 0x1fffffff000
+
+// NOGCN: error: invalid operand for instruction
+s_mov_b64 s[0:1], 0x101ffffffff
+
+// NOGCN: error: invalid operand for instruction
+s_mov_b64 s[0:1], 0x1000000001
+
+// NOGCN: error: invalid operand for instruction
+s_mov_b64 s[0:1], 0x1000000fff
+
+// NOGCN: error: invalid operand for instruction
+v_trunc_f64 v[0:1], 0x1fffffffff0
+
+// NOGCN: error: invalid operand for instruction
+v_trunc_f64 v[0:1], 0x100000001
+
+// NOGCN: error: invalid operand for instruction
+v_trunc_f64 v[0:1], 0x1fffffff000
 
 //---------------------------------------------------------------------------//
 // named inline values like shared_base

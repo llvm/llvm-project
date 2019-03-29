@@ -180,13 +180,13 @@ namespace opts {
   cl::list<std::string> StringDump("string-dump", cl::desc("<number|name>"),
                                    cl::ZeroOrMore);
   cl::alias StringDumpShort("p", cl::desc("Alias for --string-dump"),
-                            cl::aliasopt(StringDump));
+                            cl::aliasopt(StringDump), cl::Prefix);
 
   // -hex-dump, -x
   cl::list<std::string> HexDump("hex-dump", cl::desc("<number|name>"),
                                 cl::ZeroOrMore);
   cl::alias HexDumpShort("x", cl::desc("Alias for --hex-dump"),
-                         cl::aliasopt(HexDump));
+                         cl::aliasopt(HexDump), cl::Prefix);
 
   // -demangle, -C
   cl::opt<bool> Demangle("demangle",

@@ -1583,6 +1583,9 @@ void PDBLinker::addImportFilesToPDB(ArrayRef<OutputSection *> OutputSections) {
     if (!File->ThunkSym)
       continue;
 
+    if (!File->ThunkLive)
+        continue;
+
     std::string DLL = StringRef(File->DLLName).lower();
     llvm::pdb::DbiModuleDescriptorBuilder *&Mod = DllToModuleDbi[DLL];
     if (!Mod) {

@@ -1468,7 +1468,7 @@ static void orderSegments(std::vector<Segment *> &Segments) {
 // This function finds a consistent layout for a list of segments starting from
 // an Offset. It assumes that Segments have been sorted by OrderSegments and
 // returns an Offset one past the end of the last segment.
-static uint64_t LayoutSegments(std::vector<Segment *> &Segments,
+static uint64_t layoutSegments(std::vector<Segment *> &Segments,
                                uint64_t Offset) {
   assert(std::is_sorted(std::begin(Segments), std::end(Segments),
                         compareSegmentsByOffset));
@@ -1551,7 +1551,7 @@ template <class ELFT> void ELFWriter<ELFT>::assignOffsets() {
   // Since the ELF Header (ElfHdrSegment) must be at the start of the file,
   // we start at offset 0.
   uint64_t Offset = 0;
-  Offset = LayoutSegments(OrderedSegments, Offset);
+  Offset = layoutSegments(OrderedSegments, Offset);
   Offset = layoutSections(Obj.sections(), Offset);
   // If we need to write the section header table out then we need to align the
   // Offset so that SHOffset is valid.

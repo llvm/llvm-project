@@ -568,7 +568,6 @@ def FeatureISAVersion9_0_6 : FeatureSet<
    FeatureDLInsts,
    FeatureDot1Insts,
    FeatureDot2Insts,
-   FeatureSRAMECC,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion9_0_9 : FeatureSet<

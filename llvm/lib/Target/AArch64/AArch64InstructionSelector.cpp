@@ -2561,11 +2561,7 @@ bool AArch64InstructionSelector::selectInsertElt(
   // Get information on the destination.
   unsigned DstReg = I.getOperand(0).getReg();
   const LLT DstTy = MRI.getType(DstReg);
-  if (DstTy.getSizeInBits() < 128) {
-    // TODO: Handle unpacked vectors.
-    LLVM_DEBUG(dbgs() << "Unpacked vectors not supported yet!");
-    return false;
-  }
+  unsigned VecSize = DstTy.getSizeInBits();
 
   // Get information on the element we want to insert into the destination.
   unsigned EltReg = I.getOperand(2).getReg();
@@ -2585,7 +2581,50 @@ bool AArch64InstructionSelector::selectInsertElt(
   unsigned SrcReg = I.getOperand(1).getReg();
   const RegisterBank &EltRB = *RBI.getRegBank(EltReg, MRI, TRI);
   MachineIRBuilder MIRBuilder(I);
-  emitLaneInsert(DstReg, SrcReg, EltReg, LaneIdx, EltRB, MIRBuilder);
+
+  if (VecSize < 128) {
+    // If the vector we're inserting into is smaller than 128 bits, widen it
+    // to 128 to do the insert.
+    MachineInstr *ScalarToVec = emitScalarToVector(
+        VecSize, &AArch64::FPR128RegClass, SrcReg, MIRBuilder);
+    if (!ScalarToVec)
+      return false;
+    SrcReg = ScalarToVec->getOperand(0).getReg();
+  }
+
+  // Create an insert into a new FPR128 register.
+  // Note that if our vector is already 128 bits, we end up emitting an extra
+  // register.
+  MachineInstr *InsMI =
+      emitLaneInsert(None, SrcReg, EltReg, LaneIdx, EltRB, MIRBuilder);
+
+  if (VecSize < 128) {
+    // If we had to widen to perform the insert, then we have to demote back to
+    // the original size to get the result we want.
+    unsigned DemoteVec = InsMI->getOperand(0).getReg();
+    const TargetRegisterClass *RC =
+        getMinClassForRegBank(*RBI.getRegBank(DemoteVec, MRI, TRI), VecSize);
+    if (RC != &AArch64::FPR32RegClass && RC != &AArch64::FPR64RegClass) {
+      LLVM_DEBUG(dbgs() << "Unsupported register class!\n");
+      return false;
+    }
+    unsigned SubReg = 0;
+    if (!getSubRegForClass(RC, TRI, SubReg))
+      return false;
+    if (SubReg != AArch64::ssub && SubReg != AArch64::dsub) {
+      LLVM_DEBUG(dbgs() << "Unsupported destination size! (" << VecSize
+                        << "\n");
+      return false;
+    }
+    MIRBuilder.buildInstr(TargetOpcode::COPY, {DstReg}, {})
+        .addReg(DemoteVec, 0, SubReg);
+    RBI.constrainGenericRegister(DstReg, *RC, MRI);
+  } else {
+    // No widening needed.
+    InsMI->getOperand(0).setReg(DstReg);
+    constrainSelectedInstRegOperands(*InsMI, TII, TRI, RBI);
+  }
+
   I.eraseFromParent();
   return true;
 }

@@ -3523,6 +3523,18 @@ const SCEV *ScalarEvolution::getSMaxExpr(const SCEV *LHS,
   return getSMaxExpr(Ops);
 }
 
+std::tuple<const SCEV *, FoldingSetNodeID, void *>
+ScalarEvolution::findExistingSCEVInCache(int SCEVType,
+                                         ArrayRef<const SCEV *> Ops) {
+  FoldingSetNodeID ID;
+  void *IP = nullptr;
+  ID.AddInteger(SCEVType);
+  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
+    ID.AddPointer(Ops[i]);
+  return std::tuple<const SCEV *, FoldingSetNodeID, void *>(
+      UniqueSCEVs.FindNodeOrInsertPos(ID, IP), std::move(ID), IP);
+}
+
 const SCEV *
 ScalarEvolution::getSMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
   assert(!Ops.empty() && "Cannot get empty smax!");
@@ -3536,6 +3548,11 @@ ScalarEvolution::getSMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
 
   // Sort by complexity, this groups all similar expression types together.
   GroupByComplexity(Ops, &LI, DT);
+
+  // Check if we have created the same SMax expression before.
+  if (const SCEV *S = std::get<0>(findExistingSCEVInCache(scSMaxExpr, Ops))) {
+    return S;
+  }
 
   // If there are any constants, fold them together.
   unsigned Idx = 0;
@@ -3604,16 +3621,16 @@ ScalarEvolution::getSMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
 
   // Okay, it looks like we really DO need an smax expr.  Check to see if we
   // already have one, otherwise create a new one.
+  const SCEV *ExistingSCEV;
   FoldingSetNodeID ID;
-  ID.AddInteger(scSMaxExpr);
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    ID.AddPointer(Ops[i]);
-  void *IP = nullptr;
-  if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP)) return S;
+  void *IP;
+  std::tie(ExistingSCEV, ID, IP) = findExistingSCEVInCache(scSMaxExpr, Ops);
+  if (ExistingSCEV)
+    return ExistingSCEV;
   const SCEV **O = SCEVAllocator.Allocate<const SCEV *>(Ops.size());
   std::uninitialized_copy(Ops.begin(), Ops.end(), O);
-  SCEV *S = new (SCEVAllocator) SCEVSMaxExpr(ID.Intern(SCEVAllocator),
-                                             O, Ops.size());
+  SCEV *S =
+      new (SCEVAllocator) SCEVSMaxExpr(ID.Intern(SCEVAllocator), O, Ops.size());
   UniqueSCEVs.InsertNode(S, IP);
   addToLoopUseLists(S);
   return S;
@@ -3638,6 +3655,11 @@ ScalarEvolution::getUMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
 
   // Sort by complexity, this groups all similar expression types together.
   GroupByComplexity(Ops, &LI, DT);
+
+  // Check if we have created the same UMax expression before.
+  if (const SCEV *S = std::get<0>(findExistingSCEVInCache(scUMaxExpr, Ops))) {
+    return S;
+  }
 
   // If there are any constants, fold them together.
   unsigned Idx = 0;
@@ -3707,12 +3729,12 @@ ScalarEvolution::getUMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
 
   // Okay, it looks like we really DO need a umax expr.  Check to see if we
   // already have one, otherwise create a new one.
+  const SCEV *ExistingSCEV;
   FoldingSetNodeID ID;
-  ID.AddInteger(scUMaxExpr);
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    ID.AddPointer(Ops[i]);
-  void *IP = nullptr;
-  if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP)) return S;
+  void *IP;
+  std::tie(ExistingSCEV, ID, IP) = findExistingSCEVInCache(scUMaxExpr, Ops);
+  if (ExistingSCEV)
+    return ExistingSCEV;
   const SCEV **O = SCEVAllocator.Allocate<const SCEV *>(Ops.size());
   std::uninitialized_copy(Ops.begin(), Ops.end(), O);
   SCEV *S = new (SCEVAllocator) SCEVUMaxExpr(ID.Intern(SCEVAllocator),

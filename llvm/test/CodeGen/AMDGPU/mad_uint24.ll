@@ -1,8 +1,8 @@
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 ; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=EG --check-prefix=FUNC
-; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=SI --check-prefix=FUNC --check-prefix=GCN
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN
-; RUN: llc < %s -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN
+; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=SI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN1
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
+; RUN: llc < %s -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN --check-prefix=GCN2
 
 declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 
@@ -30,8 +30,12 @@ entry:
 ; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
 ; EG: 16
 ; FIXME: Should be using scalar instructions here.
-; GCN: v_mad_u32_u24 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
-; GCN: v_bfe_i32 v{{[0-9]}}, [[MAD]], 0, 16
+; GCN1: v_mad_u32_u24 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; GCN1: v_bfe_i32 v{{[0-9]}}, [[MAD]], 0, 16
+; GCN2:	s_mul_i32 [[MUL:s[0-9]]], {{[s][0-9], [s][0-9]}}
+; GCN2:	s_add_i32 [[MAD:s[0-9]]], [[MUL]], s{{[0-9]}}
+; GCN2:	s_sext_i32_i16 s0, [[MAD]]
+; GCN2:	v_mov_b32_e32 v0, s0
 define amdgpu_kernel void @i16_mad24(i32 addrspace(1)* %out, i16 %a, i16 %b, i16 %c) {
 entry:
   %0 = mul i16 %a, %b
@@ -47,8 +51,12 @@ entry:
 ; The result must be sign-extended
 ; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
 ; EG: 8
-; GCN: v_mad_u32_u24 [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
-; GCN: v_bfe_i32 v{{[0-9]}}, [[MUL]], 0, 8
+; GCN1: v_mad_u32_u24 [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; GCN1: v_bfe_i32 v{{[0-9]}}, [[MUL]], 0, 8
+; GCN2:	s_mul_i32 [[MUL:s[0-9]]], {{[s][0-9], [s][0-9]}}
+; GCN2:	s_add_i32 [[MAD:s[0-9]]], [[MUL]], s{{[0-9]}}
+; GCN2:	s_sext_i32_i8 s0, [[MAD]]
+; GCN2:	v_mov_b32_e32 v0, s0
 define amdgpu_kernel void @i8_mad24(i32 addrspace(1)* %out, i8 %a, i8 %b, i8 %c) {
 entry:
   %0 = mul i8 %a, %b

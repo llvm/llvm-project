@@ -54,12 +54,6 @@ class SubtargetFeatureGeneration <string Value, string Subtarget,
         SubtargetFeature <Value, "Gen", Subtarget#"::"#Value,
                           Value#" GPU generation", Implies>;
 
-def FeatureDX10Clamp : SubtargetFeature<"dx10-clamp",
-  "DX10Clamp",
-  "true",
-  "clamp modifier clamps NaNs to 0.0"
->;
-
 def FeaturePromoteAlloca : SubtargetFeature <"promote-alloca",
   "EnablePromoteAlloca",
   "true",
