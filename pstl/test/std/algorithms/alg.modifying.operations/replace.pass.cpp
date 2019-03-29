@@ -151,7 +151,7 @@ struct test_non_const
 int32_t
 main()
 {
-    test<int32_t, float32_t>(__pstl::internal::equal_value<int32_t>(666));
+    test<int32_t, float32_t>(__pstl::__internal::__equal_value<int32_t>(666));
     test<uint16_t, uint8_t>([](const uint16_t& elem) { return elem % 3 < 2; });
     test<float64_t, int64_t>([](const float64_t& elem) { return elem * elem - 3.5 * elem > 10; });
     test<copy_int, copy_int>([](const copy_int& val) { return val.value / 5 > 2; });

@@ -29,7 +29,6 @@ public:
 
 PPC::PPC() {
   NoneRel = R_PPC_NONE;
-  GotBaseSymOff = 0x8000;
   GotBaseSymInGotPlt = false;
 }
 

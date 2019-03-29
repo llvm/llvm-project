@@ -27,7 +27,7 @@
 
 # CHECK: .long  1067928519
 .float 1.307
-        
+
 # CHECK: .quad	4617315517961601024
 # CHECK: .quad	4597526701198935065
 # CHECK: .quad	-4600933674317040845
@@ -48,10 +48,48 @@
 .double 1.e5
 # CHECK: .quad  4611686018427387904
 .double 2.
+# CHECK: .quad  4611686018427387904
+.double 2.e
+# CHECK: .quad  4611686018427387904
+.double 2.e+
+# CHECK: .quad  4611686018427387904
+.double 2.e-
+# CHECK: .quad  -4615288898129284301
+.double -1.2e
+# CHECK: .quad  4621819117588971520
+.double 1e1
+# CHECK: .quad	4591870180066957722
+.double 1e-1
 
-// APFloat should reject these with an error, not crash:
-//.double -1.2e+
-//.double -1.2e
+
+# CHECK: .quad  -4570379565595099136
+.double -1.2E3
+# CHECK: .quad  -4690170861623122860
+.double -1.2E-5
+# CHECK: .quad  -4465782973978902528
+.double -1.2E+10
+# CHECK: .quad  4681608360884174848
+.double 1E5
+# CHECK: .quad  4681608360884174848
+.double 1.E5
+# CHECK: .quad  4611686018427387904
+.double 2.E
+# CHECK: .quad  4611686018427387904
+.double 2.E+
+# CHECK: .quad  4611686018427387904
+.double 2.E-
+# CHECK: .quad  -4615288898129284301
+.double -1.2E
+# CHECK: .quad  4621819117588971520
+.double 1E1
+# CHECK: .quad  4591870180066957722
+.double 1E-1
+
+
+#CHECK-ERROR: unexpected token in '.double' directive
+.double 1e1e
+# CHECK-ERROR: Invalid sign in float literal
+.double 2.+1
 
 # CHECK: .long 1310177520
 .float 0x12f7.1ep+17
@@ -83,3 +121,4 @@
 
 # CHECK-ERROR: error: invalid hexadecimal floating-point constant: expected exponent part 'p'
 .float 0x1.2
+

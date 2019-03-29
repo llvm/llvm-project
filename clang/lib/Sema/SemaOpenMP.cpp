@@ -3640,6 +3640,33 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
   return ErrorFound;
 }
 
+static bool checkAllocateClauses(Sema &S, DSAStackTy *Stack,
+                                 ArrayRef<OMPClause *> Clauses) {
+  assert(!S.CurContext->isDependentContext() &&
+         "Expected non-dependent context.");
+  bool IsCorrect = true;
+  auto AllocateRange =
+      llvm::make_filter_range(Clauses, OMPAllocateClause::classof);
+  for (OMPClause *C : AllocateRange) {
+    auto *AC = cast<OMPAllocateClause>(C);
+    OMPAllocateDeclAttr::AllocatorTypeTy AllocatorKind =
+        getAllocatorKind(S, Stack, AC->getAllocator());
+    // OpenMP, 2.11.4 allocate Clause, Restrictions.
+    // For task, taskloop or target directives, allocation requests to memory
+    // allocators with the trait access set to thread result in unspecified
+    // behavior.
+    if (AllocatorKind == OMPAllocateDeclAttr::OMPThreadMemAlloc &&
+        (isOpenMPTaskingDirective(Stack->getCurrentDirective()) ||
+         isOpenMPTargetExecutionDirective(Stack->getCurrentDirective()))) {
+      S.Diag(AC->getAllocator()->getExprLoc(),
+             diag::warn_omp_allocate_thread_on_task_target_directive)
+          << getOpenMPDirectiveName(Stack->getCurrentDirective());
+      continue;
+    }
+  }
+  return !IsCorrect;
+}
+
 StmtResult Sema::ActOnOpenMPExecutableDirective(
     OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
     OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
@@ -3972,6 +3999,12 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   if (!AllowedNameModifiers.empty())
     ErrorFound = checkIfClauses(*this, Kind, Clauses, AllowedNameModifiers) ||
                  ErrorFound;
+
+  // Check allocate clauses.
+  if (!CurContext->isDependentContext()) {
+    ErrorFound = checkAllocateClauses(*this, DSAStack, ClausesWithImplicit) ||
+                 ErrorFound;
+  }
 
   if (ErrorFound)
     return StmtError();

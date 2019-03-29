@@ -14,10 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/LinkAllPasses.h"
-#include "polly/RegisterPasses.h"
 #include "polly/ScopDetection.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"

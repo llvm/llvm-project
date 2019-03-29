@@ -100,11 +100,10 @@ public:
 
 /// Handle array type.
 class BTFTypeArray : public BTFTypeBase {
-  const DICompositeType *ATy;
   struct BTF::BTFArray ArrayInfo;
 
 public:
-  BTFTypeArray(const DICompositeType *ATy);
+  BTFTypeArray(uint32_t ElemTypeId, uint32_t NumElems);
   uint32_t getSize() { return BTFTypeBase::getSize() + BTF::BTFArraySize; }
   void completeType(BTFDebug &BDebug);
   void emitType(MCStreamer &OS);

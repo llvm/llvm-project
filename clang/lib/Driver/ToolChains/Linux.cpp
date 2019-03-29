@@ -971,6 +971,10 @@ bool Linux::isPIEDefault() const {
           getTriple().isMusl() || getSanitizerArgs().requiresPIE();
 }
 
+bool Linux::isNoExecStackDefault() const {
+    return getTriple().isAndroid();
+}
+
 bool Linux::IsMathErrnoDefault() const {
   if (getTriple().isAndroid())
     return false;

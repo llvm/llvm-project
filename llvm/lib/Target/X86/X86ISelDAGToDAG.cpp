@@ -3501,39 +3501,45 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       break;
 
     int64_t Val = Cst->getSExtValue();
-    uint64_t ShlVal = ShlCst->getZExtValue();
+    uint64_t ShAmt = ShlCst->getZExtValue();
 
     // Make sure that we don't change the operation by removing bits.
     // This only matters for OR and XOR, AND is unaffected.
-    uint64_t RemovedBitsMask = (1ULL << ShlVal) - 1;
+    uint64_t RemovedBitsMask = (1ULL << ShAmt) - 1;
     if (Opcode != ISD::AND && (Val & RemovedBitsMask) != 0)
       break;
 
-    MVT CstVT = NVT;
-
     // Check the minimum bitwidth for the new constant.
-    // TODO: AND32ri is the same as AND64ri32 with zext imm.
-    // TODO: MOV32ri+OR64r is cheaper than MOV64ri64+OR64rr
     // TODO: Using 16 and 8 bit operations is also possible for or32 & xor32.
-    if (!isInt<8>(Val) && isInt<8>(Val >> ShlVal))
-      CstVT = MVT::i8;
-    else if (!isInt<32>(Val) && isInt<32>(Val >> ShlVal))
-      CstVT = MVT::i32;
+    auto CanShrinkImmediate = [&](int64_t &ShiftedVal) {
+      ShiftedVal = Val >> ShAmt;
+      if ((!isInt<8>(Val) && isInt<8>(ShiftedVal)) ||
+          (!isInt<32>(Val) && isInt<32>(ShiftedVal)))
+        return true;
+      // For 64-bit we can also try unsigned 32 bit immediates.
+      // AND32ri is the same as AND64ri32 with zext imm.
+      // MOV32ri+OR64r is cheaper than MOV64ri64+OR64rr
+      ShiftedVal = (uint64_t)Val >> ShAmt;
+      if (NVT == MVT::i64 && !isUInt<32>(Val) && isUInt<32>(ShiftedVal))
+        return true;
+      return false;
+    };
 
-    // Bail if there is no smaller encoding.
-    if (NVT == CstVT)
-      break;
+    int64_t ShiftedVal;
+    if (CanShrinkImmediate(ShiftedVal)) {
+      SDValue NewCst = CurDAG->getConstant(ShiftedVal, dl, NVT);
+      insertDAGNode(*CurDAG, SDValue(Node, 0), NewCst);
+      SDValue NewBinOp = CurDAG->getNode(Opcode, dl, NVT, N0->getOperand(0),
+                                         NewCst);
+      insertDAGNode(*CurDAG, SDValue(Node, 0), NewBinOp);
+      SDValue NewSHL = CurDAG->getNode(ISD::SHL, dl, NVT, NewBinOp,
+                                       N0->getOperand(1));
+      ReplaceNode(Node, NewSHL.getNode());
+      SelectCode(NewSHL.getNode());
+      return;
+    }
 
-    SDValue NewCst = CurDAG->getConstant(Val >> ShlVal, dl, NVT);
-    insertDAGNode(*CurDAG, SDValue(Node, 0), NewCst);
-    SDValue NewBinOp = CurDAG->getNode(Opcode, dl, NVT, N0->getOperand(0),
-                                       NewCst);
-    insertDAGNode(*CurDAG, SDValue(Node, 0), NewBinOp);
-    SDValue NewSHL = CurDAG->getNode(ISD::SHL, dl, NVT, NewBinOp,
-                                     N0->getOperand(1));
-    ReplaceNode(Node, NewSHL.getNode());
-    SelectCode(NewSHL.getNode());
-    return;
+    break;
   }
   case X86ISD::SMUL:
     // i16/i32/i64 are handled with isel patterns.

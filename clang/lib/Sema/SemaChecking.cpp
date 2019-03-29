@@ -11592,6 +11592,9 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
       }
 
       if (const auto *FD = dyn_cast<FunctionDecl>(PV->getDeclContext())) {
+        // Skip function template not specialized yet.
+        if (FD->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate)
+          return;
         auto ParamIter = llvm::find(FD->parameters(), PV);
         assert(ParamIter != FD->param_end());
         unsigned ParamNo = std::distance(FD->param_begin(), ParamIter);
