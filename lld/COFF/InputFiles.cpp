@@ -172,7 +172,7 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   if (Name == ".drectve") {
     ArrayRef<uint8_t> Data;
     COFFObj->getSectionContents(Sec, Data);
-    Directives = std::string((const char *)Data.data(), Data.size());
+    Directives = StringRef((const char *)Data.data(), Data.size());
     return nullptr;
   }
 

@@ -26,6 +26,7 @@ list(APPEND LLDB_TEST_DEPS
   llvm-config
   llvm-mc
   llvm-objcopy
+  llvm-readobj
   )
 
 if(TARGET lld)
