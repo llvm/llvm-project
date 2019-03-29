@@ -31,7 +31,7 @@
 } while (0)
 
 #define ADJUST_XY(C,I,S) do { \
-    float _w = (float)(FIELD(I,64,14) + 1U); \
+    float _w = (float)WORD(I,10); \
     float _h = (float)(FIELD(I,78,14) + 1U); \
     bool _f = FIELD(S,15,1); \
     float _p = _f ? 1.0f : _w; \
@@ -44,7 +44,7 @@
 } while (0)
 
 #define ADJUST_XYZ(C,I,S) do { \
-    float _w = (float)(FIELD(I,64,14) + 1U); \
+    float _w = (float)WORD(I,10); \
     float _h = (float)(FIELD(I,78,14) + 1U); \
     float _d = (float)(FIELD(I, 128, 13) + 1U); \
     bool _f = FIELD(S,15,1); \
