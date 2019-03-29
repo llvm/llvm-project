@@ -1187,9 +1187,11 @@ bool lldb_private::formatters::swift::GLKit_SummaryProvider(
 
   Process &process = *process_sp.get();
 
-  // Get the type name without the "simd.simd_" prefix.
+  // Get the type name without the "GLKit." prefix.
   ConstString full_type_name = valobj.GetTypeName();
   llvm::StringRef type_name = full_type_name.GetStringRef();
+  if (type_name.startswith("GLKit."))
+    type_name = type_name.drop_front(6);
 
   // Get the type of object this is.
   bool is_quaternion = type_name == "GLKQuaternion";

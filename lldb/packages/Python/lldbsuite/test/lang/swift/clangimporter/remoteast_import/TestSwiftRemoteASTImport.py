@@ -41,7 +41,7 @@ class TestSwiftRemoteASTImport(TestBase):
                                           lldb.SBFileSpec('Library.swift'))
         # FIXME: Reversing the order of these two commands does not work!
         self.expect("expr -d no-dynamic-values -- input",
-                    substrs=['(LibraryProtocol) $R0'])
+                    substrs=['(Library.LibraryProtocol) $R0'])
         self.expect("expr -d run-target -- input",
                     substrs=['(a.FromMainModule) $R2'])
         
