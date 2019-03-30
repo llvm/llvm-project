@@ -169,7 +169,7 @@ void Writer::createImportSection() {
     Import.Kind = WASM_EXTERNAL_MEMORY;
     Import.Memory.Flags = 0;
     Import.Memory.Initial = NumMemoryPages;
-    if (MaxMemoryPages != 0) {
+    if (MaxMemoryPages != 0 || Config->SharedMemory) {
       Import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
       Import.Memory.Maximum = MaxMemoryPages;
     }
@@ -257,7 +257,7 @@ void Writer::createMemorySection() {
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_MEMORY);
   raw_ostream &OS = Section->getStream();
 
-  bool HasMax = MaxMemoryPages != 0;
+  bool HasMax = MaxMemoryPages != 0 || Config->SharedMemory;
   writeUleb128(OS, 1, "memory count");
   unsigned Flags = 0;
   if (HasMax)
@@ -831,7 +831,8 @@ void Writer::layoutMemory() {
   NumMemoryPages = alignTo(MemoryPtr, WasmPageSize) / WasmPageSize;
   log("mem: total pages = " + Twine(NumMemoryPages));
 
-  if (Config->MaxMemory != 0) {
+  // Check max if explicitly supplied or required by shared memory
+  if (Config->MaxMemory != 0 || Config->SharedMemory) {
     if (Config->MaxMemory != alignTo(Config->MaxMemory, WasmPageSize))
       error("maximum memory must be " + Twine(WasmPageSize) + "-byte aligned");
     if (MemoryPtr > Config->MaxMemory)
@@ -927,8 +928,15 @@ void Writer::calculateTargetFeatures() {
   if (InferFeatures)
     TargetFeatures.insert(Used.begin(), Used.end());
 
+  if (TargetFeatures.count("atomics") && !Config->SharedMemory)
+    error("'atomics' feature is used, so --shared-memory must be used");
+
   if (!Config->CheckFeatures)
     return;
+
+  if (Disallowed.count("atomics") && Config->SharedMemory)
+    error(
+        "'atomics' feature is disallowed, so --shared-memory must not be used");
 
   // Validate that used features are allowed in output
   if (!InferFeatures) {
@@ -1144,13 +1152,12 @@ void Writer::processRelocations(InputChunk *Chunk) {
     case R_WASM_MEMORY_ADDR_SLEB:
     case R_WASM_MEMORY_ADDR_I32:
     case R_WASM_MEMORY_ADDR_LEB: {
-      DataSymbol *DataSym = File->getDataSymbol(Reloc.Index);
-      if (!Config->Relocatable && !isa<DefinedData>(DataSym) &&
-          !DataSym->isWeak())
-        error(File->getName() +
-              ": relocation of type R_WASM_MEMORY_ADDR_* "
-              "against undefined data symbol: " +
-              DataSym->getName());
+      DataSymbol *Sym = File->getDataSymbol(Reloc.Index);
+      if (!Config->Relocatable && !isa<DefinedData>(Sym) && !Sym->isWeak())
+        error(File->getName() + ": relocation " +
+              relocTypeToString(Reloc.Type) + " cannot be used againt symbol " +
+              Sym->getName() + "; recompile with -fPIC");
+
       break;
     }
     case R_WASM_GLOBAL_INDEX_LEB: {

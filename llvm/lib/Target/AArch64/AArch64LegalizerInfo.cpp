@@ -448,9 +448,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
       .legalIf([=](const LegalityQuery &Query) {
         const LLT &VecTy = Query.Types[0];
-        // TODO: Support destination sizes of < 128 bits.
         // TODO: Support s8 and s16
-        return VecTy == v4s32 || VecTy == v2s64;
+        return VecTy == v2s32 || VecTy == v4s32 || VecTy == v2s64;
       });
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)

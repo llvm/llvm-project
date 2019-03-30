@@ -159,10 +159,8 @@ define void @extsetcc(<4 x float> %x) {
 ; CHECK-LABEL: extsetcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vcmpnleps %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    vextractps $0, %xmm0, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movb %al, (%rax)
+; CHECK-NEXT:    vucomiss %xmm1, %xmm0
+; CHECK-NEXT:    setb (%rax)
 ; CHECK-NEXT:    retq
   %cmp = fcmp ult <4 x float> %x, zeroinitializer
   %sext = sext <4 x i1> %cmp to <4 x i32>

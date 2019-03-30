@@ -175,15 +175,6 @@ public:
   }
 };
 
-class PartialSection {
-public:
-  PartialSection(StringRef N, uint32_t Chars)
-      : Name(N), Characteristics(Chars) {}
-  StringRef Name;
-  unsigned Characteristics;
-  std::vector<Chunk *> Chunks;
-};
-
 // The writer writes a SymbolTable result to a file.
 class Writer {
 public:
@@ -312,6 +303,9 @@ void OutputSection::merge(OutputSection *Other) {
     C->setOutputSection(this);
   Chunks.insert(Chunks.end(), Other->Chunks.begin(), Other->Chunks.end());
   Other->Chunks.clear();
+  ContribSections.insert(ContribSections.end(), Other->ContribSections.begin(),
+                         Other->ContribSections.end());
+  Other->ContribSections.clear();
 }
 
 // Write the section header to a given buffer.
@@ -327,6 +321,10 @@ void OutputSection::writeHeaderTo(uint8_t *Buf) {
     strncpy(Hdr->Name, Name.data(),
             std::min(Name.size(), (size_t)COFF::NameSize));
   }
+}
+
+void OutputSection::addContributingPartialSection(PartialSection *Sec) {
+  ContribSections.push_back(Sec);
 }
 
 } // namespace coff
@@ -842,6 +840,8 @@ void Writer::createSections() {
     OutputSection *Sec = CreateSection(Name, OutChars);
     for (Chunk *C : PSec->Chunks)
       Sec->addChunk(C);
+
+    Sec->addContributingPartialSection(PSec);
   }
 
   // Finally, move some output sections to the end.

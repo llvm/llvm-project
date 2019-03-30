@@ -495,6 +495,45 @@ bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
+
+// Track defaults for fields in the MODE registser.
+struct SIModeRegisterDefaults {
+  /// Floating point opcodes that support exception flag gathering quiet and
+  /// propagate signaling NaN inputs per IEEE 754-2008. Min_dx10 and max_dx10
+  /// become IEEE 754- 2008 compliant due to signaling NaN propagation and
+  /// quieting.
+  bool IEEE : 1;
+
+  /// Used by the vector ALU to force DX10-style treatment of NaNs: when set,
+  /// clamp NaN to zero; otherwise, pass NaN through.
+  bool DX10Clamp : 1;
+
+  // TODO: FP mode fields
+
+  SIModeRegisterDefaults() :
+    IEEE(true),
+    DX10Clamp(true) {}
+
+  SIModeRegisterDefaults(const Function &F);
+
+  static SIModeRegisterDefaults getDefaultForCallingConv(CallingConv::ID CC) {
+    SIModeRegisterDefaults Mode;
+    Mode.DX10Clamp = true;
+    Mode.IEEE = AMDGPU::isCompute(CC);
+    return Mode;
+  }
+
+  bool operator ==(const SIModeRegisterDefaults Other) const {
+    return IEEE == Other.IEEE && DX10Clamp == Other.DX10Clamp;
+  }
+
+  // FIXME: Inlining should be OK for dx10-clamp, since the caller's mode should
+  // be able to override.
+  bool isInlineCompatible(SIModeRegisterDefaults CalleeMode) const {
+    return *this == CalleeMode;
+  }
+};
+
 } // end namespace AMDGPU
 } // end namespace llvm
 

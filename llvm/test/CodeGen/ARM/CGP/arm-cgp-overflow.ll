@@ -85,10 +85,11 @@ define i32 @overflow_add_positive_const_limit(i8 zeroext %a) {
 }
 
 ; CHECK-LABEL: unsafe_add_underflow:
-; CHECK:  subs r0, #2
-; CHECK:  uxtb [[EXT:r[0-9]+]], r0
-; CHECK:  cmp [[EXT]], #255
-; CHECK:  moveq r0, #8
+; CHECK: movs	r1, #16
+; CHECK: cmp	r0, #1
+; CHECK: it	eq
+; CHECK: moveq	r1, #8
+; CHECK: mov	r0, r1
 define i32 @unsafe_add_underflow(i8 zeroext %a) {
   %add = add i8 %a, -2
   %cmp = icmp ugt i8 %add, 254

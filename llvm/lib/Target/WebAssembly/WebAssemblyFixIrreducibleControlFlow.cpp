@@ -230,7 +230,7 @@ class WebAssemblyFixIrreducibleControlFlow final : public MachineFunctionPass {
                      MachineFunction &MF);
 
   void makeSingleEntryLoop(BlockSet &Entries, BlockSet &Blocks,
-                           MachineFunction &MF);
+                           MachineFunction &MF, const ReachabilityGraph &Graph);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -279,7 +279,7 @@ bool WebAssemblyFixIrreducibleControlFlow::processRegion(
       }
 
       if (MutualLoopEntries.size() > 1) {
-        makeSingleEntryLoop(MutualLoopEntries, Blocks, MF);
+        makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
         FoundIrreducibility = true;
         Changed = true;
         break;
@@ -315,9 +315,12 @@ bool WebAssemblyFixIrreducibleControlFlow::processRegion(
 // Given a set of entries to a single loop, create a single entry for that
 // loop by creating a dispatch block for them, routing control flow using
 // a helper variable. Also updates Blocks with any new blocks created, so
-// that we properly track all the blocks in the region.
+// that we properly track all the blocks in the region. But this does not update
+// ReachabilityGraph; this will be updated in the caller of this function as
+// needed.
 void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
-    BlockSet &Entries, BlockSet &Blocks, MachineFunction &MF) {
+    BlockSet &Entries, BlockSet &Blocks, MachineFunction &MF,
+    const ReachabilityGraph &Graph) {
   assert(Entries.size() >= 2);
 
   // Sort the entries to ensure a deterministic build.
@@ -385,36 +388,78 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
     }
   }
 
-  for (MachineBasicBlock *Pred : AllPreds) {
-    DenseMap<MachineBasicBlock *, MachineBasicBlock *> Map;
+  // This set stores predecessors within this loop.
+  DenseSet<MachineBasicBlock *> InLoop;
+  for (auto *Pred : AllPreds) {
     for (auto *Entry : Pred->successors()) {
-      if (!Entries.count(Entry)) {
+      if (!Entries.count(Entry))
         continue;
+      if (Graph.canReach(Entry, Pred)) {
+        InLoop.insert(Pred);
+        break;
       }
+    }
+  }
+
+  // Record if each entry has a layout predecessor. This map stores
+  // <<Predecessor is within the loop?, loop entry>, layout predecessor>
+  std::map<std::pair<bool, MachineBasicBlock *>, MachineBasicBlock *>
+      EntryToLayoutPred;
+  for (auto *Pred : AllPreds)
+    for (auto *Entry : Pred->successors())
+      if (Entries.count(Entry) && Pred->isLayoutSuccessor(Entry))
+        EntryToLayoutPred[std::make_pair(InLoop.count(Pred), Entry)] = Pred;
+
+  // We need to create at most two routing blocks per entry: one for
+  // predecessors outside the loop and one for predecessors inside the loop.
+  // This map stores
+  // <<Predecessor is within the loop?, loop entry>, routing block>
+  std::map<std::pair<bool, MachineBasicBlock *>, MachineBasicBlock *> Map;
+  for (auto *Pred : AllPreds) {
+    bool PredInLoop = InLoop.count(Pred);
+    for (auto *Entry : Pred->successors()) {
+      if (!Entries.count(Entry) ||
+          Map.count(std::make_pair(InLoop.count(Pred), Entry)))
+        continue;
+      // If there exists a layout predecessor of this entry and this predecessor
+      // is not that, we rather create a routing block after that layout
+      // predecessor to save a branch.
+      if (EntryToLayoutPred.count(std::make_pair(PredInLoop, Entry)) &&
+          EntryToLayoutPred[std::make_pair(PredInLoop, Entry)] != Pred)
+        continue;
 
       // This is a successor we need to rewrite.
-      MachineBasicBlock *Split = MF.CreateMachineBasicBlock();
+      MachineBasicBlock *Routing = MF.CreateMachineBasicBlock();
       MF.insert(Pred->isLayoutSuccessor(Entry)
                     ? MachineFunction::iterator(Entry)
                     : MF.end(),
-                Split);
-      Blocks.insert(Split);
+                Routing);
+      Blocks.insert(Routing);
 
       // Set the jump table's register of the index of the block we wish to
       // jump to, and jump to the jump table.
-      BuildMI(Split, DebugLoc(), TII.get(WebAssembly::CONST_I32), Reg)
+      BuildMI(Routing, DebugLoc(), TII.get(WebAssembly::CONST_I32), Reg)
           .addImm(Indices[Entry]);
-      BuildMI(Split, DebugLoc(), TII.get(WebAssembly::BR)).addMBB(Dispatch);
-      Split->addSuccessor(Dispatch);
-      Map[Entry] = Split;
+      BuildMI(Routing, DebugLoc(), TII.get(WebAssembly::BR)).addMBB(Dispatch);
+      Routing->addSuccessor(Dispatch);
+      Map[std::make_pair(PredInLoop, Entry)] = Routing;
     }
+  }
+
+  for (auto *Pred : AllPreds) {
+    bool PredInLoop = InLoop.count(Pred);
     // Remap the terminator operands and the successor list.
     for (MachineInstr &Term : Pred->terminators())
       for (auto &Op : Term.explicit_uses())
         if (Op.isMBB() && Indices.count(Op.getMBB()))
-          Op.setMBB(Map[Op.getMBB()]);
-    for (auto Rewrite : Map)
-      Pred->replaceSuccessor(Rewrite.first, Rewrite.second);
+          Op.setMBB(Map[std::make_pair(PredInLoop, Op.getMBB())]);
+
+    for (auto *Succ : Pred->successors()) {
+      if (!Entries.count(Succ))
+        continue;
+      auto *Routing = Map[std::make_pair(PredInLoop, Succ)];
+      Pred->replaceSuccessor(Succ, Routing);
+    }
   }
 
   // Create a fake default label, because br_table requires one.

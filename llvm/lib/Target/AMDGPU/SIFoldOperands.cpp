@@ -1120,7 +1120,8 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   // omod is ignored by hardware if IEEE bit is enabled. omod also does not
   // correctly handle signed zeros.
   //
-  bool IsIEEEMode = ST->enableIEEEBit(MF);
+  // FIXME: Also need to check strictfp
+  bool IsIEEEMode = MFI->getMode().IEEE;
   bool HasNSZ = MFI->hasNoSignedZerosFPMath();
 
   for (MachineBasicBlock *MBB : depth_first(&MF)) {
