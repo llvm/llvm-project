@@ -15,11 +15,15 @@ typedef unsigned vm_address_t;
 typedef unsigned vm_size_t;
 typedef void *ipc_space_t;
 typedef unsigned long io_user_reference_t;
+typedef struct ipc_port *ipc_port_t;
+typedef unsigned mach_port_t;
+typedef uint32_t UInt32;
 
 kern_return_t vm_deallocate(mach_port_name_t, vm_address_t, vm_size_t);
 kern_return_t mach_vm_deallocate(mach_port_name_t, vm_address_t, vm_size_t);
 void mig_deallocate(vm_address_t, vm_size_t);
 kern_return_t mach_port_deallocate(ipc_space_t, mach_port_name_t);
+void ipc_port_release(ipc_port_t);
 
 #define MIG_SERVER_ROUTINE __attribute__((mig_server_routine))
 
@@ -44,12 +48,17 @@ struct IOExternalMethodDispatch {};
 class IOUserClient {
 public:
   static IOReturn releaseAsyncReference64(OSAsyncReference64);
+  static IOReturn releaseNotificationPort(mach_port_t port);
 
   MIG_SERVER_ROUTINE
-  virtual IOReturn externalMethod(uint32_t selector, IOExternalMethodArguments *arguments,
-                                  IOExternalMethodDispatch *dispatch = 0, OSObject *target = 0, void *reference = 0);
-};
+  virtual IOReturn externalMethod(
+      uint32_t selector, IOExternalMethodArguments *arguments,
+      IOExternalMethodDispatch *dispatch = 0, OSObject *target = 0,
+      void *reference = 0);
 
+  MIG_SERVER_ROUTINE
+  virtual IOReturn registerNotificationPort(mach_port_t, UInt32, UInt32);
+};
 
 // Tests.
 
@@ -182,6 +191,13 @@ kern_return_t test_mig_deallocate(vm_address_t address, vm_size_t size) {
                                  // expected-note@-1{{MIG callback fails with error after deallocating argument value}}
 }
 
+MIG_SERVER_ROUTINE
+kern_return_t test_ipc_port_release(ipc_port_t port) {
+  ipc_port_release(port); // expected-note{{Value passed through parameter 'port' is deallocated}}
+  return KERN_ERROR; // expected-warning{{MIG callback fails with error after deallocating argument value}}
+							       // expected-note@-1{{MIG callback fails with error after deallocating argument value}}
+}
+
 // Let's try the C++11 attribute spelling syntax as well.
 [[clang::mig_server_routine]]
 IOReturn test_releaseAsyncReference64(IOExternalMethodArguments *arguments) {
@@ -205,5 +221,11 @@ class MyClient: public IOUserClient {
     releaseAsyncReference64(arguments->asyncReference); // expected-note{{Value passed through parameter 'arguments' is deallocated}}
     return kIOReturnError;                              // expected-warning{{MIG callback fails with error after deallocating argument value}}
                                                         // expected-note@-1{{MIG callback fails with error after deallocating argument value}}
+  }
+
+  IOReturn registerNotificationPort(mach_port_t port, UInt32 x, UInt32 y) {
+    releaseNotificationPort(port); // expected-note{{Value passed through parameter 'port' is deallocated}}
+    return kIOReturnError; // expected-warning{{MIG callback fails with error after deallocating argument value}}
+                           // expected-note@-1{{MIG callback fails with error after deallocating argument value}}
   }
 };
