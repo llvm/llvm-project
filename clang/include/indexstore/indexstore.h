@@ -84,6 +84,12 @@
 # define INDEXSTORE_NOESCAPE
 #endif
 
+#if __has_attribute(flag_enum)
+# define INDEXSTORE_OPTIONS __attribute__((flag_enum))
+#else
+# define INDEXSTORE_OPTIONS
+#endif
+
 INDEXSTORE_BEGIN_DECLS
 
 typedef void *indexstore_error_t;
@@ -263,7 +269,7 @@ typedef enum {
   INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORMODIFY = 1015,
 } indexstore_symbol_subkind_t;
 
-typedef enum {
+typedef enum INDEXSTORE_OPTIONS {
   INDEXSTORE_SYMBOL_PROPERTY_GENERIC                          = 1 << 0,
   INDEXSTORE_SYMBOL_PROPERTY_TEMPLATE_PARTIAL_SPECIALIZATION  = 1 << 1,
   INDEXSTORE_SYMBOL_PROPERTY_TEMPLATE_SPECIALIZATION          = 1 << 2,
@@ -283,7 +289,7 @@ typedef enum {
   INDEXSTORE_SYMBOL_LANG_SWIFT = 100,
 } indexstore_symbol_language_t;
 
-typedef enum {
+typedef enum INDEXSTORE_OPTIONS {
   INDEXSTORE_SYMBOL_ROLE_DECLARATION  = 1 << 0,
   INDEXSTORE_SYMBOL_ROLE_DEFINITION   = 1 << 1,
   INDEXSTORE_SYMBOL_ROLE_REFERENCE    = 1 << 2,
@@ -318,13 +324,13 @@ indexstore_symbol_get_kind(indexstore_symbol_t);
 INDEXSTORE_PUBLIC indexstore_symbol_subkind_t
 indexstore_symbol_get_subkind(indexstore_symbol_t);
 
-INDEXSTORE_PUBLIC uint64_t
+INDEXSTORE_PUBLIC indexstore_symbol_property_t
 indexstore_symbol_get_properties(indexstore_symbol_t);
 
-INDEXSTORE_PUBLIC uint64_t
+INDEXSTORE_PUBLIC indexstore_symbol_role_t
 indexstore_symbol_get_roles(indexstore_symbol_t);
 
-INDEXSTORE_PUBLIC uint64_t
+INDEXSTORE_PUBLIC indexstore_symbol_role_t
 indexstore_symbol_get_related_roles(indexstore_symbol_t);
 
 INDEXSTORE_PUBLIC indexstore_string_ref_t
@@ -338,7 +344,7 @@ indexstore_symbol_get_codegen_name(indexstore_symbol_t);
 
 typedef void *indexstore_symbol_relation_t;
 
-INDEXSTORE_PUBLIC uint64_t
+INDEXSTORE_PUBLIC indexstore_symbol_role_t
 indexstore_symbol_relation_get_roles(indexstore_symbol_relation_t);
 
 INDEXSTORE_PUBLIC indexstore_symbol_t
@@ -360,7 +366,7 @@ indexstore_occurrence_relations_apply_f(indexstore_occurrence_t,
                                         void *context,
         INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_symbol_relation_t symbol_rel));
 
-INDEXSTORE_PUBLIC uint64_t
+INDEXSTORE_PUBLIC indexstore_symbol_role_t
 indexstore_occurrence_get_roles(indexstore_occurrence_t);
 
 INDEXSTORE_PUBLIC void
