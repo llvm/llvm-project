@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Taint.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -25,6 +26,7 @@
 
 using namespace clang;
 using namespace ento;
+using namespace taint;
 
 namespace {
 class VLASizeChecker : public Checker< check::PreStmt<DeclStmt> > {
@@ -106,7 +108,7 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
     return;
 
   // Check if the size is tainted.
-  if (state->isTainted(sizeV)) {
+  if (isTainted(state, sizeV)) {
     reportBug(VLA_Tainted, SE, nullptr, C,
               llvm::make_unique<TaintBugVisitor>(sizeV));
     return;

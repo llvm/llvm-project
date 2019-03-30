@@ -411,7 +411,9 @@ void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
   // Mark the end of the loop (using arbitrary debug location that branched to
   // the loop end as its location).
   InsertPos = getEarliestInsertPos(AfterLoop, BeforeSet, AfterSet);
-  DebugLoc EndDL = (*AfterLoop->pred_rbegin())->findBranchDebugLoc();
+  DebugLoc EndDL = AfterLoop->pred_empty()
+                       ? DebugLoc()
+                       : (*AfterLoop->pred_rbegin())->findBranchDebugLoc();
   MachineInstr *End =
       BuildMI(*AfterLoop, InsertPos, EndDL, TII.get(WebAssembly::END_LOOP));
   registerScope(Begin, End);

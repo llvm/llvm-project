@@ -1,5 +1,7 @@
-; RUN: opt -basicaa -print-memoryssa -verify-memoryssa -analyze < %s 2>&1 | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -basicaa -print-memoryssa -verify-memoryssa -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
+; RUN: opt -memssa-check-limit=0 -basicaa -print-memoryssa -verify-memoryssa -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
+; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
+; RUN: opt -memssa-check-limit=0 -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
 
 ; %ptr can't alias %local, so we should be able to optimize the use of %local to
 ; point to the store to %local.
@@ -21,8 +23,10 @@ if.then:
 
 if.end:
 ; CHECK: 3 = MemoryPhi({entry,1},{if.then,2})
-; CHECK: MemoryUse(1)
-; CHECK-NEXT: load i8, i8* %local, align 1
+; NOLIMIT: MemoryUse(1) MayAlias
+; NOLIMIT-NEXT: load i8, i8* %local, align 1
+; LIMIT: MemoryUse(3) MayAlias
+; LIMIT-NEXT: load i8, i8* %local, align 1
   load i8, i8* %local, align 1
   ret void
 }
@@ -62,8 +66,10 @@ phi.1:
 ; Order matters here; phi.2 needs to come before phi.3, because that's the order
 ; they're visited in.
 ; CHECK: 6 = MemoryPhi({phi.2,4},{phi.3,3})
-; CHECK: MemoryUse(1)
-; CHECK-NEXT: load i8, i8* %local
+; NOLIMIT: MemoryUse(1) MayAlias
+; NOLIMIT-NEXT: load i8, i8* %local
+; LIMIT: MemoryUse(6) MayAlias
+; LIMIT-NEXT: load i8, i8* %local
   load i8, i8* %local
   ret void
 }
@@ -73,8 +79,10 @@ define void @cross_phi(i8* noalias %p1, i8* noalias %p2) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i8 0, i8* %p1
   store i8 0, i8* %p1
-; CHECK: MemoryUse(1)
-; CHECK-NEXT: load i8, i8* %p1
+; NOLIMIT: MemoryUse(1) MustAlias
+; NOLIMIT-NEXT: load i8, i8* %p1
+; LIMIT: MemoryUse(1) MayAlias
+; LIMIT-NEXT: load i8, i8* %p1
   load i8, i8* %p1
   br i1 undef, label %a, label %b
 
@@ -106,8 +114,10 @@ d:
 
 e:
 ; 8 = MemoryPhi({c,4},{d,5})
-; CHECK: MemoryUse(1)
-; CHECK-NEXT: load i8, i8* %p1
+; NOLIMIT: MemoryUse(1) MustAlias
+; NOLIMIT-NEXT: load i8, i8* %p1
+; LIMIT: MemoryUse(8) MayAlias
+; LIMIT-NEXT: load i8, i8* %p1
   load i8, i8* %p1
   ret void
 }
@@ -138,8 +148,10 @@ loop.3:
 ; CHECK: 4 = MemoryDef(7)
 ; CHECK-NEXT: store i8 2, i8* %p2
   store i8 2, i8* %p2
-; CHECK: MemoryUse(1)
-; CHECK-NEXT: load i8, i8* %p1
+; NOLIMIT: MemoryUse(1) MayAlias
+; NOLIMIT-NEXT: load i8, i8* %p1
+; LIMIT: MemoryUse(4) MayAlias
+; LIMIT-NEXT: load i8, i8* %p1
   load i8, i8* %p1
   br i1 undef, label %loop.2, label %loop.1
 }
@@ -167,14 +179,16 @@ if.then2:
 
 if.end:
 ; CHECK: 4 = MemoryPhi({while.cond,5},{if.then,1},{if.then2,2})
-; CHECK: MemoryUse(4)
+; CHECK: MemoryUse(4) MayAlias
 ; CHECK-NEXT: load i8, i8* %p1
   load i8, i8* %p1
 ; CHECK: 3 = MemoryDef(4)
 ; CHECK-NEXT: store i8 2, i8* %p2
   store i8 2, i8* %p2
-; CHECK: MemoryUse(4)
-; CHECK-NEXT: load i8, i8* %p1
+; NOLIMIT: MemoryUse(4) MayAlias
+; NOLIMIT-NEXT: load i8, i8* %p1
+; LIMIT: MemoryUse(3) MayAlias
+; LIMIT-NEXT: load i8, i8* %p1
   load i8, i8* %p1
   br label %while.cond
 }

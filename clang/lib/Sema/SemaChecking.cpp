@@ -307,6 +307,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   //  - Analyze the format string of sprintf to see how much of buffer is used.
   //  - Evaluate strlen of strcpy arguments, use as object size.
 
+  if (TheCall->isValueDependent() || TheCall->isTypeDependent())
+    return;
+
   unsigned BuiltinID = FD->getBuiltinID(/*ConsiderWrappers=*/true);
   if (!BuiltinID)
     return;

@@ -51,6 +51,10 @@ def FeatureBulkMemory :
       SubtargetFeature<"bulk-memory", "HasBulkMemory", "true",
                        "Enable bulk memory operations">;
 
+def FeatureMutableGlobals :
+      SubtargetFeature<"mutable-globals", "HasMutableGlobals", "true",
+                       "Enable mutable globals">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //===----------------------------------------------------------------------===//

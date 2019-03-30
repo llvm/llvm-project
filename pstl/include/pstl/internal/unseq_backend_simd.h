@@ -796,8 +796,9 @@ __simd_find_first_of(_ForwardIterator1 __first, _ForwardIterator1 __last, _Forwa
     {
         for (; __first != __last; ++__first)
         {
-            if (__simd_or(__s_first, __n2,
-                          __internal::__equal_value_by_pred<decltype(*__first), _BinaryPredicate>(*__first, __pred)))
+            if (__unseq_backend::__simd_or(
+                    __s_first, __n2,
+                    __internal::__equal_value_by_pred<decltype(*__first), _BinaryPredicate>(*__first, __pred)))
             {
                 return __first;
             }
@@ -807,10 +808,10 @@ __simd_find_first_of(_ForwardIterator1 __first, _ForwardIterator1 __last, _Forwa
     {
         for (; __s_first != __s_last; ++__s_first)
         {
-            const auto __result = __simd_first(__first, _DifferencType(0), __n1,
-                                               [__s_first, &__pred](_ForwardIterator1 __it, _DifferencType __i) {
-                                                   return __pred(__it[__i], *__s_first);
-                                               });
+            const auto __result = __unseq_backend::__simd_first(
+                __first, _DifferencType(0), __n1, [__s_first, &__pred](_ForwardIterator1 __it, _DifferencType __i) {
+                    return __pred(__it[__i], *__s_first);
+                });
             if (__result != __last)
             {
                 return __result;
@@ -825,9 +826,9 @@ _RandomAccessIterator
 __simd_remove_if(_RandomAccessIterator __first, _DifferenceType __n, _UnaryPredicate __pred) noexcept
 {
     // find first element we need to remove
-    auto __current =
-        __simd_first(__first, _DifferenceType(0), __n,
-                     [&__pred](_RandomAccessIterator __it, _DifferenceType __i) { return __pred(__it[__i]); });
+    auto __current = __unseq_backend::__simd_first(
+        __first, _DifferenceType(0), __n,
+        [&__pred](_RandomAccessIterator __it, _DifferenceType __i) { return __pred(__it[__i]); });
     __n -= __current - __first;
 
     // if we have in sequence only one element that pred(__current[1]) != false we can exit the function

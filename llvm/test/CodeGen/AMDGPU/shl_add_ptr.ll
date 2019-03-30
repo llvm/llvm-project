@@ -384,9 +384,11 @@ define void @shl_add_ptr_combine_2use_both_max_private_offset(i16 zeroext %idx.a
   ret void
 }
 
+; FIXME: This or should fold into an offset on the write
 ; GCN-LABEL: {{^}}shl_or_ptr_combine_2use_lds:
 ; GCN: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, v0
-; GCN: ds_write_b32 [[SCALE0]], v{{[0-9]+}} offset:32
+; GCN: v_or_b32_e32 [[SCALE1:v[0-9]+]], 32, [[SCALE0]]
+; GCN: ds_write_b32 [[SCALE1]], v{{[0-9]+}}
 
 ; GCN: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 4, v0
 ; GCN: ds_write_b32 [[SCALE1]], v{{[0-9]+}} offset:64

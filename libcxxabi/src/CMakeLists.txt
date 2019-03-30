@@ -153,9 +153,7 @@ macro(cxxabi_object_library name)
                           CXX_STANDARD_REQUIRED
                             ON
                           COMPILE_FLAGS
-                            "${LIBCXXABI_COMPILE_FLAGS}"
-                          POSITION_INDEPENDENT_CODE
-                            ON)
+                            "${LIBCXXABI_COMPILE_FLAGS}")
 
   if(ARGS_DEFINES)
     target_compile_definitions(${name} PRIVATE ${ARGS_DEFINES})
@@ -174,14 +172,13 @@ if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
       _LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS
       _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS
     FLAGS ${CXXABI_STATIC_OBJECTS_FLAGS})
-  cxxabi_object_library(cxxabi_shared_objects)
-  set(cxxabi_static_sources $<TARGET_OBJECTS:cxxabi_static_objects>)
-  set(cxxabi_shared_sources $<TARGET_OBJECTS:cxxabi_shared_objects>)
 else()
-  cxxabi_object_library(cxxabi_objects)
-  set(cxxabi_static_sources $<TARGET_OBJECTS:cxxabi_objects>)
-  set(cxxabi_shared_sources $<TARGET_OBJECTS:cxxabi_objects>)
+  cxxabi_object_library(cxxabi_static_objects)
 endif()
+
+cxxabi_object_library(cxxabi_shared_objects POSITION_INDEPENDENT_CODE ON)
+set(cxxabi_static_sources $<TARGET_OBJECTS:cxxabi_static_objects>)
+set(cxxabi_shared_sources $<TARGET_OBJECTS:cxxabi_shared_objects>)
 
 # Build the shared library.
 if (LIBCXXABI_ENABLE_SHARED)
@@ -238,9 +235,7 @@ if (LIBCXXABI_ENABLE_STATIC)
                           LINK_FLAGS
                             "${LIBCXXABI_LINK_FLAGS}"
                           OUTPUT_NAME
-                            "c++abi"
-                          POSITION_INDEPENDENT_CODE
-                            ON)
+                            "c++abi")
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_static")
   if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
     list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_static")

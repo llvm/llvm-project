@@ -9,10 +9,10 @@ target triple = "hexagon"
 @g0 = global <16 x float> zeroinitializer, align 8
 @g1 = global <16 x i32> zeroinitializer, align 8
 
-define void @fred(<16 x i16> %x) #0 {
+define void @fred(<16 x i16> %x, <16 x float> %y) #0 {
 b0:
   %v1 = load <16 x float>, <16 x float>* @g0, align 8
-  %v2 = fcmp olt <16 x float> undef, %v1
+  %v2 = fcmp olt <16 x float> %y, %v1
   %v3 = select <16 x i1> %v2, <16 x i16> %x, <16 x i16> zeroinitializer
   %v4 = sext <16 x i16> %v3 to <16 x i32>
   store <16 x i32> %v4, <16 x i32>* @g1, align 64

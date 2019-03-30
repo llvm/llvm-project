@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Taint.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -19,6 +20,7 @@
 
 using namespace clang;
 using namespace ento;
+using namespace taint;
 
 namespace {
 class DivZeroChecker : public Checker< check::PreStmt<BinaryOperator> > {
@@ -83,10 +85,10 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
     return;
   }
 
-  bool TaintedD = C.getState()->isTainted(*DV);
+  bool TaintedD = isTainted(C.getState(), *DV);
   if ((stateNotZero && stateZero && TaintedD)) {
     reportBug("Division by a tainted value, possibly zero", stateZero, C,
-              llvm::make_unique<TaintBugVisitor>(*DV));
+              llvm::make_unique<taint::TaintBugVisitor>(*DV));
     return;
   }
 

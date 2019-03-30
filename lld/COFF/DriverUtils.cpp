@@ -698,16 +698,19 @@ void assignExportOrdinals() {
 
 // Parses a string in the form of "key=value" and check
 // if value matches previous values for the same key.
-void checkFailIfMismatch(StringRef Arg, StringRef Source) {
+void checkFailIfMismatch(StringRef Arg, InputFile *Source) {
   StringRef K, V;
   std::tie(K, V) = Arg.split('=');
   if (K.empty() || V.empty())
     fatal("/failifmismatch: invalid argument: " + Arg);
-  std::pair<StringRef, StringRef> Existing = Config->MustMatch[K];
+  std::pair<StringRef, InputFile *> Existing = Config->MustMatch[K];
   if (!Existing.first.empty() && V != Existing.first) {
+    std::string SourceStr = Source ? toString(Source) : "cmd-line";
+    std::string ExistingStr =
+        Existing.second ? toString(Existing.second) : "cmd-line";
     fatal("/failifmismatch: mismatch detected for '" + K + "':\n>>> " +
-          Existing.second + " has value " + Existing.first + "\n>>> " +
-          Source + " has value " + V);
+          ExistingStr + " has value " + Existing.first + "\n>>> " + SourceStr +
+          " has value " + V);
   }
   Config->MustMatch[K] = {V, Source};
 }

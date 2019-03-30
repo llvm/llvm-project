@@ -172,7 +172,7 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   if (Name == ".drectve") {
     ArrayRef<uint8_t> Data;
     COFFObj->getSectionContents(Sec, Data);
-    Directives = std::string((const char *)Data.data(), Data.size());
+    Directives = StringRef((const char *)Data.data(), Data.size());
     return nullptr;
   }
 
@@ -778,7 +778,7 @@ static StringRef getBasename(StringRef Path) {
 std::string lld::toString(const coff::InputFile *File) {
   if (!File)
     return "<internal>";
-  if (File->ParentName.empty())
+  if (File->ParentName.empty() || File->kind() == coff::InputFile::ImportKind)
     return File->getName();
 
   return (getBasename(File->ParentName) + "(" + getBasename(File->getName()) +

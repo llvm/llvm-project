@@ -27,7 +27,6 @@ define amdgpu_kernel void @widen_i16_constant_load(i16 addrspace(4)* %arg) {
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_and_b32 s0, s0, 0xffff
 ; VI-NEXT:    s_addk_i32 s0, 0x3e7
 ; VI-NEXT:    s_or_b32 s0, s0, 4
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
@@ -439,7 +438,6 @@ define amdgpu_kernel void @widen_i16_constant32_load(i16 addrspace(6)* %arg) {
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_and_b32 s0, s0, 0xffff
 ; VI-NEXT:    s_addk_i32 s0, 0x3e7
 ; VI-NEXT:    s_or_b32 s0, s0, 4
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
@@ -477,7 +475,6 @@ define amdgpu_kernel void @widen_i16_global_invariant_load(i16 addrspace(1)* %ar
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_and_b32 s0, s0, 0xffff
 ; VI-NEXT:    s_addk_i32 s0, 0x3e7
 ; VI-NEXT:    s_or_b32 s0, s0, 1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
