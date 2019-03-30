@@ -11,12 +11,12 @@ include_directories(
 # We'd like to clang/unittests/Tooling/RewriterTestContext.h in the test.
 include_directories(${CLANG_SOURCE_DIR})
 
-add_extra_unittest(IncludeFixerTests
+add_extra_unittest(ClangIncludeFixerTests
   IncludeFixerTest.cpp
   FuzzySymbolIndexTests.cpp
   )
 
-target_link_libraries(IncludeFixerTests
+target_link_libraries(ClangIncludeFixerTests
   PRIVATE
   clangBasic
   clangFormat
