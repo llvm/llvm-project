@@ -862,9 +862,14 @@ static void updateCoroFrame(coro::Shape &Shape, Function *ResumeFn,
 
 static void postSplitCleanup(Function &F) {
   removeUnreachableBlocks(F);
+
+  // For now, we do a mandatory verification step because we don't
+  // entirely trust this pass.  Note that we don't want to add a verifier
+  // pass to FPM below because it will also verify all the global data.
+  verifyFunction(F);
+
   legacy::FunctionPassManager FPM(F.getParent());
 
-  FPM.add(createVerifierPass());
   FPM.add(createSCCPPass());
   FPM.add(createCFGSimplificationPass());
   FPM.add(createEarlyCSEPass());
