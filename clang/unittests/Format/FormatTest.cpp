@@ -9627,6 +9627,60 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("T A::operator() ();", Space);
   verifyFormat("X A::operator++ (T);", Space);
   verifyFormat("auto lambda = [] () { return 0; };", Space);
+  verifyFormat("int x = int (y);", Space);
+
+  FormatStyle SomeSpace = getLLVMStyle();
+  SomeSpace.SpaceBeforeParens = FormatStyle::SBPO_NonEmptyParentheses;
+
+  verifyFormat("[]() -> float {}", SomeSpace);
+  verifyFormat("[] (auto foo) {}", SomeSpace);
+  verifyFormat("[foo]() -> int {}", SomeSpace);
+  verifyFormat("int f();", SomeSpace);
+  verifyFormat("void f (int a, T b) {\n"
+               "  while (true)\n"
+               "    continue;\n"
+               "}",
+               SomeSpace);
+  verifyFormat("if (true)\n"
+               "  f();\n"
+               "else if (true)\n"
+               "  f();",
+               SomeSpace);
+  verifyFormat("do {\n"
+               "  do_something();\n"
+               "} while (something());",
+               SomeSpace);
+  verifyFormat("switch (x) {\n"
+               "default:\n"
+               "  break;\n"
+               "}",
+               SomeSpace);
+  verifyFormat("A::A() : a (1) {}", SomeSpace);
+  verifyFormat("void f() __attribute__ ((asdf));", SomeSpace);
+  verifyFormat("*(&a + 1);\n"
+               "&((&a)[1]);\n"
+               "a[(b + c) * d];\n"
+               "(((a + 1) * 2) + 3) * 4;",
+               SomeSpace);
+  verifyFormat("#define A(x) x", SomeSpace);
+  verifyFormat("#define A (x) x", SomeSpace);
+  verifyFormat("#if defined(x)\n"
+               "#endif",
+               SomeSpace);
+  verifyFormat("auto i = std::make_unique<int> (5);", SomeSpace);
+  verifyFormat("size_t x = sizeof (x);", SomeSpace);
+  verifyFormat("auto f (int x) -> decltype (x);", SomeSpace);
+  verifyFormat("int f (T x) noexcept (x.create());", SomeSpace);
+  verifyFormat("alignas (128) char a[128];", SomeSpace);
+  verifyFormat("size_t x = alignof (MyType);", SomeSpace);
+  verifyFormat("static_assert (sizeof (char) == 1, \"Impossible!\");",
+               SomeSpace);
+  verifyFormat("int f() throw (Deprecated);", SomeSpace);
+  verifyFormat("typedef void (*cb) (int);", SomeSpace);
+  verifyFormat("T A::operator()();", SomeSpace);
+  verifyFormat("X A::operator++ (T);", SomeSpace);
+  verifyFormat("int x = int (y);", SomeSpace);
+  verifyFormat("auto lambda = []() { return 0; };", SomeSpace);
 }
 
 TEST_F(FormatTest, ConfigurableSpacesInParentheses) {
@@ -11413,6 +11467,8 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::SBPO_Always);
   CHECK_PARSE("SpaceBeforeParens: ControlStatements", SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatements);
+  CHECK_PARSE("SpaceBeforeParens: NonEmptyParentheses", SpaceBeforeParens,
+              FormatStyle::SBPO_NonEmptyParentheses);
   // For backward compatibility:
   CHECK_PARSE("SpaceAfterControlStatementKeyword: false", SpaceBeforeParens,
               FormatStyle::SBPO_Never);

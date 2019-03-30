@@ -2473,3 +2473,83 @@ define <1 x i8> @avg_v1i8(<1 x i8> %x, <1 x i8> %y) {
   ret <1 x i8> %f
 }
 
+; _mm_avg_epu16( _mm_slli_epi16(a, 2), _mm_slli_epi16(b, 2))
+define <2 x i64> @PR41316(<2 x i64>, <2 x i64>) {
+; SSE2-LABEL: PR41316:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    psllw $2, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm1
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; SSE2-NEXT:    por {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm2[4],xmm4[5],xmm2[5],xmm4[6],xmm2[6],xmm4[7],xmm2[7]
+; SSE2-NEXT:    paddd %xmm3, %xmm4
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    pslld $15, %xmm4
+; SSE2-NEXT:    psrad $16, %xmm4
+; SSE2-NEXT:    pslld $15, %xmm0
+; SSE2-NEXT:    psrad $16, %xmm0
+; SSE2-NEXT:    packssdw %xmm4, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: PR41316:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsllw $2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsllw $2, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX1-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
+; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrld $1, %xmm2, %xmm1
+; AVX1-NEXT:    vpsrld $1, %xmm0, %xmm0
+; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR41316:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsllw $2, %xmm0, %xmm0
+; AVX2-NEXT:    vpsllw $2, %xmm1, %xmm1
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX2-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrld $1, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR41316:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsllw $2, %xmm0, %xmm0
+; AVX512-NEXT:    vpsllw $2, %xmm1, %xmm1
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsrld $1, %ymm0, %ymm0
+; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %3 = bitcast <2 x i64> %0 to <8 x i16>
+  %4 = shl <8 x i16> %3, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %5 = bitcast <2 x i64> %1 to <8 x i16>
+  %6 = shl <8 x i16> %5, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %7 = zext <8 x i16> %6 to <8 x i32>
+  %8 = or <8 x i16> %4, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %9 = zext <8 x i16> %8 to <8 x i32>
+  %10 = add nuw nsw <8 x i32> %9, %7
+  %11 = lshr <8 x i32> %10, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %12 = trunc <8 x i32> %11 to <8 x i16>
+  %13 = bitcast <8 x i16> %12 to <2 x i64>
+  ret <2 x i64> %13
+}
