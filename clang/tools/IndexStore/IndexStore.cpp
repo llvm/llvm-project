@@ -321,17 +321,17 @@ indexstore_symbol_get_language(indexstore_symbol_t sym) {
   return getIndexStoreLang(static_cast<IndexRecordDecl *>(sym)->SymInfo.Lang);
 }
 
-uint64_t
+indexstore_symbol_property_t
 indexstore_symbol_get_properties(indexstore_symbol_t sym) {
   return getIndexStoreProperties(static_cast<IndexRecordDecl *>(sym)->SymInfo.Properties);
 }
 
-uint64_t
+indexstore_symbol_role_t
 indexstore_symbol_get_roles(indexstore_symbol_t sym) {
   return getIndexStoreRoles(static_cast<IndexRecordDecl *>(sym)->Roles);
 }
 
-uint64_t
+indexstore_symbol_role_t
 indexstore_symbol_get_related_roles(indexstore_symbol_t sym) {
   return getIndexStoreRoles(static_cast<IndexRecordDecl *>(sym)->RelatedRoles);
 }
@@ -354,7 +354,7 @@ indexstore_symbol_get_codegen_name(indexstore_symbol_t sym) {
   return toIndexStoreString(D->CodeGenName);
 }
 
-uint64_t
+indexstore_symbol_role_t
 indexstore_symbol_relation_get_roles(indexstore_symbol_relation_t sym_rel) {
   return getIndexStoreRoles(static_cast<IndexRecordRelation *>(sym_rel)->Roles);
 }
@@ -394,7 +394,7 @@ indexstore_occurrence_relations_apply_f(indexstore_occurrence_t occur,
   return true;
 }
 
-uint64_t
+indexstore_symbol_role_t
 indexstore_occurrence_get_roles(indexstore_occurrence_t occur) {
   return getIndexStoreRoles(static_cast<IndexRecordOccurrence*>(occur)->Roles);
 }

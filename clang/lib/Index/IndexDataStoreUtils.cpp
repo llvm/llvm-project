@@ -410,7 +410,7 @@ indexstore_symbol_language_t index::getIndexStoreLang(SymbolLanguage L) {
 }
 
 /// Map a SymbolPropertySet to its indexstore representation.
-uint64_t index::getIndexStoreProperties(SymbolPropertySet Props) {
+indexstore_symbol_property_t index::getIndexStoreProperties(SymbolPropertySet Props) {
   uint64_t storeProp = 0;
   applyForEachSymbolProperty(Props, [&](SymbolProperty prop) {
     switch (prop) {
@@ -443,11 +443,11 @@ uint64_t index::getIndexStoreProperties(SymbolPropertySet Props) {
       break;
     }
   });
-  return storeProp;
+  return static_cast<indexstore_symbol_property_t>(storeProp);
 }
 
 /// Map a SymbolRoleSet to its indexstore representation.
-uint64_t index::getIndexStoreRoles(SymbolRoleSet Roles) {
+indexstore_symbol_role_t index::getIndexStoreRoles(SymbolRoleSet Roles) {
   uint64_t storeRoles = 0;
   applyForEachSymbolRole(Roles, [&](SymbolRole role) {
     switch (role) {
@@ -513,5 +513,5 @@ uint64_t index::getIndexStoreRoles(SymbolRoleSet Roles) {
       break;
     }
   });
-  return storeRoles;
+  return static_cast<indexstore_symbol_role_t>(storeRoles);
 }
