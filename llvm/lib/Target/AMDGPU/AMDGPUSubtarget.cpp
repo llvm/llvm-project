@@ -45,7 +45,7 @@ GCNSubtarget::~GCNSubtarget() = default;
 R600Subtarget &
 R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
                                                StringRef GPU, StringRef FS) {
-  SmallString<256> FullFS("+promote-alloca,+dx10-clamp,");
+  SmallString<256> FullFS("+promote-alloca,");
   FullFS += FS;
   ParseSubtargetFeatures(GPU, FullFS);
 
@@ -77,7 +77,7 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // Similarly we want enable-prt-strict-null to be on by default and not to
   // unset everything else if it is disabled
 
-  SmallString<256> FullFS("+promote-alloca,+dx10-clamp,+load-store-opt,");
+  SmallString<256> FullFS("+promote-alloca,+load-store-opt,");
 
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
     FullFS += "+flat-for-global,+unaligned-buffer-access,+trap-handler,";
@@ -164,7 +164,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HalfRate64Ops(false),
 
     FP64FP16Denormals(false),
-    DX10Clamp(false),
     FlatForGlobal(false),
     AutoWaitcntBeforeBarrier(false),
     CodeObjectV3(false),
@@ -461,7 +460,6 @@ R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
   FMA(false),
   CaymanISA(false),
   CFALUBug(false),
-  DX10Clamp(false),
   HasVertexCache(false),
   R600ALUInst(false),
   FP64(false),

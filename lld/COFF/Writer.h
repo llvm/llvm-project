@@ -22,6 +22,15 @@ static const int PageSize = 4096;
 
 void writeResult();
 
+class PartialSection {
+public:
+  PartialSection(StringRef N, uint32_t Chars)
+      : Name(N), Characteristics(Chars) {}
+  StringRef Name;
+  unsigned Characteristics;
+  std::vector<Chunk *> Chunks;
+};
+
 // OutputSection represents a section in an output file. It's a
 // container of chunks. OutputSection and Chunk are 1:N relationship.
 // Chunks cannot belong to more than one OutputSections. The writer
@@ -39,6 +48,7 @@ public:
   uint64_t getRVA() { return Header.VirtualAddress; }
   uint64_t getFileOff() { return Header.PointerToRawData; }
   void writeHeaderTo(uint8_t *Buf);
+  void addContributingPartialSection(PartialSection *Sec);
 
   // Returns the size of this section in an executable memory image.
   // This may be smaller than the raw size (the raw size is multiple
@@ -63,11 +73,13 @@ public:
   std::vector<Chunk *> Chunks;
   std::vector<Chunk *> OrigChunks;
 
+  std::vector<PartialSection *> ContribSections;
+
 private:
   uint32_t StringTableOff = 0;
 };
 
-}
-}
+} // namespace coff
+} // namespace lld
 
 #endif

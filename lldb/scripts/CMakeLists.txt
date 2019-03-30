@@ -9,8 +9,6 @@ set(SWIG_HEADERS
   ${LLDB_SOURCE_DIR}/include/lldb/lldb-versioning.h
 )
 
-include(FindPythonInterp)
-
 if(LLDB_BUILD_FRAMEWORK)
   set(framework_arg --framework --target-platform Darwin)
 endif()
@@ -52,6 +50,3 @@ if(NOT LLDB_BUILD_FRAMEWORK)
   # Install the LLDB python module
   install(DIRECTORY ${SWIG_PYTHON_DIR} DESTINATION ${SWIG_INSTALL_DIR})
 endif()
-
-# build Python modules
-add_subdirectory(Python/modules)

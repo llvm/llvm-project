@@ -49,8 +49,11 @@ public:
   StreamTee &operator=(const StreamTee &rhs) {
     if (this != &rhs) {
       Stream::operator=(rhs);
-      std::lock_guard<std::recursive_mutex> lhs_locker(m_streams_mutex);
-      std::lock_guard<std::recursive_mutex> rhs_locker(rhs.m_streams_mutex);
+      std::lock(m_streams_mutex, rhs.m_streams_mutex);
+      std::lock_guard<std::recursive_mutex> lhs_locker(m_streams_mutex,
+                                                       std::adopt_lock);
+      std::lock_guard<std::recursive_mutex> rhs_locker(rhs.m_streams_mutex,
+                                                       std::adopt_lock);
       m_streams = rhs.m_streams;
     }
     return *this;

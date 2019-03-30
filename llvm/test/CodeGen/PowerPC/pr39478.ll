@@ -5,13 +5,13 @@
 define void @pr39478(i64* %p64, i32* %p32) {
 ; CHECKLE-LABEL: pr39478:
 ; CHECKLE:       # %bb.0: # %entry
-; CHECKLE-NEXT:    lwz 3, 4(3)
+; CHECKLE-NEXT:    lbz 3, 4(3)
 ; CHECKLE-NEXT:    stb 3, 0(4)
 ; CHECKLE-NEXT:    blr
 ;
 ; CHECKBE-LABEL: pr39478:
 ; CHECKBE:       # %bb.0: # %entry
-; CHECKBE-NEXT:    lwz 3, 0(3)
+; CHECKBE-NEXT:    lbz 3, 3(3)
 ; CHECKBE-NEXT:    stb 3, 3(4)
 ; CHECKBE-NEXT:    blr
 entry:

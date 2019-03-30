@@ -218,6 +218,8 @@ protected:
 } // namespace wasm
 
 std::string toString(const wasm::InputChunk *);
+StringRef relocTypeToString(uint8_t RelocType);
+
 } // namespace lld
 
 #endif // LLD_WASM_INPUT_CHUNKS_H

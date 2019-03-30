@@ -1,8 +1,15 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_PASS_OBJECT_SIZE
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS
+// RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify
+// RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_PASS_OBJECT_SIZE
+// RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS
 
 typedef unsigned long size_t;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #if defined(USE_PASS_OBJECT_SIZE)
 void *memcpy(void *dst, const void *src, size_t c);
@@ -14,6 +21,10 @@ static void *memcpy(void *const dst __attribute__((pass_object_size(1))), const 
 #define memcpy(x,y,z) __builtin_memcpy(x,y,z)
 #else
 void *memcpy(void *dst, const void *src, size_t c);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 void call_memcpy() {
@@ -84,3 +95,25 @@ void call_vsnprintf() {
   __builtin_vsnprintf(buf, 10, "merp", list);
   __builtin_vsnprintf(buf, 11, "merp", list); // expected-warning {{'vsnprintf' size argument is too large; destination buffer has size 10, but size argument is 11}}
 }
+
+#ifdef __cplusplus
+template <class> struct S {
+  void mf() const {
+    __builtin_memset(const_cast<char *>(mv), 0, 0);
+  }
+
+  char mv[10];
+};
+
+template <int A, int B>
+void call_memcpy_dep() {
+  char bufferA[A];
+  char bufferB[B];
+  memcpy(bufferA, bufferB, 10); // expected-warning{{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
+}
+
+void call_call_memcpy() {
+  call_memcpy_dep<10, 9>();
+  call_memcpy_dep<9, 10>(); // expected-note {{in instantiation of function template specialization 'call_memcpy_dep<9, 10>' requested here}}
+}
+#endif

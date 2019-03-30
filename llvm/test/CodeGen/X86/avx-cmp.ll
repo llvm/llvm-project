@@ -23,12 +23,13 @@ define <4 x i64> @cmp01(<4 x double> %a, <4 x double> %b) nounwind {
 
 declare void @scale() nounwind
 
-define void @render() nounwind {
+define void @render(double %a0) nounwind {
 ; CHECK-LABEL: render:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB2_6
@@ -44,14 +45,16 @@ define void @render() nounwind {
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    testb %bpl, %bpl
 ; CHECK-NEXT:    jne .LBB2_2
-; CHECK-NEXT:  # %bb.4: # %for.body33
+; CHECK-NEXT:  # %bb.4: # %for.body33.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
+; CHECK-NEXT:    vmovsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero
 ; CHECK-NEXT:    vucomisd {{\.LCPI.*}}, %xmm0
 ; CHECK-NEXT:    jne .LBB2_5
 ; CHECK-NEXT:    jnp .LBB2_2
 ; CHECK-NEXT:  .LBB2_5: # %if.then
-; CHECK-NEXT:   # in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    callq   scale
+; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
+; CHECK-NEXT:    callq scale
 ; CHECK-NEXT:    jmp .LBB2_2
 ; CHECK-NEXT:  .LBB2_6: # %for.end52
 ; CHECK-NEXT:    addq $8, %rsp
@@ -69,7 +72,7 @@ for.cond30:
   br i1 false, label %for.body33, label %for.cond5
 
 for.body33:
-  %tobool = fcmp une double undef, 0.000000e+00
+  %tobool = fcmp une double %a0, 0.000000e+00
   br i1 %tobool, label %if.then, label %for.cond30
 
 if.then:
@@ -194,29 +197,29 @@ define <32 x i8> @v32i8_cmpeq(<32 x i8> %i, <32 x i8> %j) nounwind {
 
 ;; Scalar comparison
 
-define i32 @scalarcmpA() uwtable ssp {
+define i32 @scalarcmpA(double %a0) uwtable ssp {
 ; CHECK-LABEL: scalarcmpA:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vcmpeqsd %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
-  %cmp29 = fcmp oeq double undef, 0.000000e+00
+  %cmp29 = fcmp oeq double %a0, 0.000000e+00
   %res = zext i1 %cmp29 to i32
   ret i32 %res
 }
 
-define i32 @scalarcmpB() uwtable ssp {
+define i32 @scalarcmpB(float %a0) uwtable ssp {
 ; CHECK-LABEL: scalarcmpB:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vcmpeqss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovd %xmm0, %eax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
-  %cmp29 = fcmp oeq float undef, 0.000000e+00
+  %cmp29 = fcmp oeq float %a0, 0.000000e+00
   %res = zext i1 %cmp29 to i32
   ret i32 %res
 }

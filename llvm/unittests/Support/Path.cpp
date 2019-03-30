@@ -1492,6 +1492,29 @@ TEST_F(FileSystemTest, ReadWriteFileCanReadOrWrite) {
   verifyWrite(FD, "Buzz", true);
 }
 
+TEST_F(FileSystemTest, is_local) {
+  bool TestDirectoryIsLocal;
+  ASSERT_NO_ERROR(fs::is_local(TestDirectory, TestDirectoryIsLocal));
+  EXPECT_EQ(TestDirectoryIsLocal, fs::is_local(TestDirectory));
+
+  int FD;
+  SmallString<128> TempPath;
+  ASSERT_NO_ERROR(
+      fs::createUniqueFile(Twine(TestDirectory) + "/temp", FD, TempPath));
+  FileRemover Cleanup(TempPath);
+
+  // Make sure it exists.
+  ASSERT_TRUE(sys::fs::exists(Twine(TempPath)));
+
+  bool TempFileIsLocal;
+  ASSERT_NO_ERROR(fs::is_local(FD, TempFileIsLocal));
+  EXPECT_EQ(TempFileIsLocal, fs::is_local(FD));
+
+  // Expect that the file and its parent directory are equally local or equally
+  // remote.
+  EXPECT_EQ(TestDirectoryIsLocal, TempFileIsLocal);
+}
+
 TEST_F(FileSystemTest, set_current_path) {
   SmallString<128> path;
 

@@ -143,9 +143,9 @@ define i32 @test6() {
 ; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    movl $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    orl $0, %eax
-; CHECK-NEXT:    je .LBB5_3
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB5_3
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    jmp .LBB5_2

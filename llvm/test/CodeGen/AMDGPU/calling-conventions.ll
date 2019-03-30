@@ -181,11 +181,10 @@ define amdgpu_ps void @ps_mesa_v2i16(<2 x i16> %arg0) {
 }
 
 ; GCN-LABEL: {{^}}ps_mesa_inreg_v2i16:
-; VI: s_lshr_b32 s1, s0, 16
-; VI: s_add_i32 s1, s1, 1
+; VI: s_and_b32 s1, s0, 0xffff0000
 ; VI: s_add_i32 s0, s0, 1
+; VI: s_add_i32 s1, s1, 0x10000
 ; VI: s_and_b32 s0, s0, 0xffff
-; VI: s_lshl_b32 s1, s1, 16
 ; VI: s_or_b32 s0, s0, s1
 ; VI: v_mov_b32_e32 v0, s0
 
