@@ -99,14 +99,14 @@ define signext i32 @test_igesll_sext_z(i64 %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_igesll_sext_z:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sradi r3, r3, 63
 ; CHECK-BE-NEXT:    not r3, r3
+; CHECK-BE-NEXT:    sradi r3, r3, 63
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_igesll_sext_z:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    sradi r3, r3, 63
 ; CHECK-LE-NEXT:    not r3, r3
+; CHECK-LE-NEXT:    sradi r3, r3, 63
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp sgt i64 %a, -1

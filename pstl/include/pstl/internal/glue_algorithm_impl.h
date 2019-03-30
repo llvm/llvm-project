@@ -358,16 +358,15 @@ replace_if(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator
 {
     using namespace __pstl;
     typedef typename iterator_traits<_ForwardIterator>::reference _ElementType;
-    __internal::__pattern_walk1(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last,
-        [&__pred, &__new_value](_ElementType __elem) {
-            if (__pred(__elem))
-            {
-                __elem = __new_value;
-            }
-        },
-        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    __internal::__pattern_walk1(std::forward<_ExecutionPolicy>(__exec), __first, __last,
+                                [&__pred, &__new_value](_ElementType __elem) {
+                                    if (__pred(__elem))
+                                    {
+                                        __elem = __new_value;
+                                    }
+                                },
+                                __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
+                                __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Tp>

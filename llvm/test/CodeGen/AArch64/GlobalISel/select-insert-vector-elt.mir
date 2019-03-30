@@ -104,3 +104,61 @@ body:             |
     RET_ReallyLR implicit $q0
 
 ...
+---
+name:            v2s32_fpr
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d1, $s0
+
+    ; CHECK-LABEL: name: v2s32_fpr
+    ; CHECK: liveins: $d1, $s0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
+    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.dsub
+    ; CHECK: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY]], %subreg.ssub
+    ; CHECK: [[INSvi32lane:%[0-9]+]]:fpr128 = INSvi32lane [[INSERT_SUBREG]], 1, [[INSERT_SUBREG1]], 0
+    ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY [[INSvi32lane]].dsub
+    ; CHECK: $d0 = COPY [[COPY2]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(s32) = COPY $s0
+    %1:fpr(<2 x s32>) = COPY $d1
+    %3:gpr(s32) = G_CONSTANT i32 1
+    %2:fpr(<2 x s32>) = G_INSERT_VECTOR_ELT %1, %0(s32), %3(s32)
+    $d0 = COPY %2(<2 x s32>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            v2s32_gpr
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d0, $w0
+
+    ; CHECK-LABEL: name: v2s32_gpr
+    ; CHECK: liveins: $d0, $w0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.dsub
+    ; CHECK: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 1, [[COPY]]
+    ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr]].dsub
+    ; CHECK: $d0 = COPY [[COPY2]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:gpr(s32) = COPY $w0
+    %1:fpr(<2 x s32>) = COPY $d0
+    %3:gpr(s32) = G_CONSTANT i32 1
+    %2:fpr(<2 x s32>) = G_INSERT_VECTOR_ELT %1, %0(s32), %3(s32)
+    $d0 = COPY %2(<2 x s32>)
+    RET_ReallyLR implicit $d0
+
+...

@@ -148,6 +148,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
 
   AMDGPUFunctionArgInfo ArgInfo;
 
+  // State of MODE register, assumed FP mode.
+  AMDGPU::SIModeRegisterDefaults Mode;
+
   // Graphics info.
   unsigned PSInputAddr = 0;
   unsigned PSInputEnable = 0;
@@ -279,6 +282,10 @@ public:
 
   ArrayRef<SGPRSpillVGPRCSR> getSGPRSpillVGPRs() const {
     return SpillVGPRs;
+  }
+
+  AMDGPU::SIModeRegisterDefaults getMode() const {
+    return Mode;
   }
 
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);

@@ -80,43 +80,10 @@ public:
     checkReturnAux(RS, C);
   }
 
-  class Visitor : public BugReporterVisitor {
-  public:
-    void Profile(llvm::FoldingSetNodeID &ID) const {
-      static int X = 0;
-      ID.AddPointer(&X);
-    }
-
-    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-        BugReporterContext &BRC, BugReport &R);
-  };
 };
 } // end anonymous namespace
 
-// FIXME: It's a 'const ParmVarDecl *' but there's no ready-made GDM traits
-// specialization for this sort of types.
-REGISTER_TRAIT_WITH_PROGRAMSTATE(ReleasedParameter, const void *)
-
-std::shared_ptr<PathDiagnosticPiece>
-MIGChecker::Visitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
-                               BugReport &R) {
-  const auto *NewPVD = static_cast<const ParmVarDecl *>(
-      N->getState()->get<ReleasedParameter>());
-  const auto *OldPVD = static_cast<const ParmVarDecl *>(
-      N->getFirstPred()->getState()->get<ReleasedParameter>());
-  if (OldPVD == NewPVD)
-    return nullptr;
-
-  assert(NewPVD && "What is deallocated cannot be un-deallocated!");
-  SmallString<64> Str;
-  llvm::raw_svector_ostream OS(Str);
-  OS << "Value passed through parameter '" << NewPVD->getName()
-     << "' is deallocated";
-
-  PathDiagnosticLocation Loc =
-      PathDiagnosticLocation::create(N->getLocation(), BRC.getSourceManager());
-  return std::make_shared<PathDiagnosticEventPiece>(Loc, OS.str());
-}
+REGISTER_TRAIT_WITH_PROGRAMSTATE(ReleasedParameter, bool)
 
 static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C) {
   SymbolRef Sym = V.getAsSymbol();
@@ -195,7 +162,16 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
   if (!PVD)
     return;
 
-  C.addTransition(C.getState()->set<ReleasedParameter>(PVD));
+  const NoteTag *T = C.getNoteTag([this, PVD](BugReport &BR) -> std::string {
+    if (&BR.getBugType() != &BT)
+      return "";
+    SmallString<64> Str;
+    llvm::raw_svector_ostream OS(Str);
+    OS << "Value passed through parameter '" << PVD->getName()
+       << "\' is deallocated";
+    return OS.str();
+  });
+  C.addTransition(C.getState()->set<ReleasedParameter>(true), T);
 }
 
 // Returns true if V can potentially represent a "successful" kern_return_t.
@@ -260,7 +236,6 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
 
   R->addRange(RS->getSourceRange());
   bugreporter::trackExpressionValue(N, RS->getRetValue(), *R, false);
-  R->addVisitor(llvm::make_unique<Visitor>());
   C.emitReport(std::move(R));
 }
 
