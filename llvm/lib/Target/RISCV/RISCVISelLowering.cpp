@@ -633,6 +633,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return DCI.CombineTo(N, Op0.getOperand(0), Op0.getOperand(1));
 
     SDLoc DL(N);
+
+    // It's cheaper to materialise two 32-bit integers than to load a double
+    // from the constant pool and transfer it to integer registers through the
+    // stack.
+    if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op0)) {
+      APInt V = C->getValueAPF().bitcastToAPInt();
+      SDValue Lo = DAG.getConstant(V.trunc(32), DL, MVT::i32);
+      SDValue Hi = DAG.getConstant(V.lshr(32).trunc(32), DL, MVT::i32);
+      return DCI.CombineTo(N, Lo, Hi);
+    }
+
     // This is a target-specific version of a DAGCombine performed in
     // DAGCombiner::visitBITCAST. It performs the equivalent of:
     // fold (bitconvert (fneg x)) -> (xor (bitconvert x), signbit)

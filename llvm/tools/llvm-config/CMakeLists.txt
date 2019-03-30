@@ -78,7 +78,7 @@ if(CMAKE_CROSSCOMPILING AND NOT LLVM_CONFIG_PATH)
   set(LLVM_CONFIG_PATH "${LLVM_NATIVE_BUILD}/bin/llvm-config" CACHE STRING "")
 
   add_custom_command(OUTPUT "${LLVM_CONFIG_PATH}"
-    COMMAND ${CMAKE_COMMAND} --build . --target llvm-config --config $<CONFIGURATION>
+    COMMAND ${CMAKE_COMMAND} --build . --target llvm-config --config $<CONFIG>
     DEPENDS ${LLVM_NATIVE_BUILD}/CMakeCache.txt
     WORKING_DIRECTORY ${LLVM_NATIVE_BUILD}
     COMMENT "Building native llvm-config..."

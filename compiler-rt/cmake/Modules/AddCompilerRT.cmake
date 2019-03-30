@@ -615,7 +615,7 @@ macro(add_custom_libcxx name prefix)
     set(run_clean "$(MAKE)" "-C" "${BINARY_DIR}" "clean")
   else()
     set(run_clean ${CMAKE_COMMAND} --build ${BINARY_DIR} --target clean
-                                   --config "$<CONFIGURATION>")
+                                   --config "$<CONFIG>")
   endif()
 
   ExternalProject_Add_Step(${name} clean

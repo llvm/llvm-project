@@ -285,6 +285,8 @@ struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensOptions> {
     IO.enumCase(Value, "Never", FormatStyle::SBPO_Never);
     IO.enumCase(Value, "ControlStatements",
                 FormatStyle::SBPO_ControlStatements);
+    IO.enumCase(Value, "NonEmptyParentheses",
+                FormatStyle::SBPO_NonEmptyParentheses);
     IO.enumCase(Value, "Always", FormatStyle::SBPO_Always);
 
     // For backward compatibility.
@@ -1981,7 +1983,7 @@ static void sortJavaImports(const FormatStyle &Style,
 namespace {
 
 const char JavaImportRegexPattern[] =
-    "^[\t ]*import[\t ]*(static[\t ]*)?([^\t ]*)[\t ]*;";
+    "^[\t ]*import[\t ]+(static[\t ]*)?([^\t ]*)[\t ]*;";
 
 } // anonymous namespace
 

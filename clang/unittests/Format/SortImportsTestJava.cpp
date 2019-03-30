@@ -262,6 +262,21 @@ TEST_F(SortImportsTestJava, NoNewlineAtEnd) {
                  "import org.a;"));
 }
 
+TEST_F(SortImportsTestJava, ImportNamedFunction) {
+  EXPECT_EQ("import X;\n"
+            "class C {\n"
+            "  void m() {\n"
+            "    importFile();\n"
+            "  }\n"
+            "}\n",
+            sort("import X;\n"
+                 "class C {\n"
+                 "  void m() {\n"
+                 "    importFile();\n"
+                 "  }\n"
+                 "}\n"));
+}
+
 TEST_F(SortImportsTestJava, NoReplacementsForValidImports) {
   // Identical #includes have led to a failure with an unstable sort.
   std::string Code = "import org.a;\n"

@@ -164,6 +164,8 @@ private:
   unsigned splitPenalty(const AnnotatedLine &Line, const FormatToken &Tok,
                         bool InFunctionDecl);
 
+  bool spaceRequiredBeforeParens(const FormatToken &Right) const;
+
   bool spaceRequiredBetween(const AnnotatedLine &Line, const FormatToken &Left,
                             const FormatToken &Right);
 

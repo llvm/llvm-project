@@ -10,14 +10,10 @@ define double @double_imm() nounwind {
 ;
 ; RV32IFD-LABEL: double_imm:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    lui a0, %hi(.LCPI0_0)
-; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI0_0)
-; RV32IFD-NEXT:    fld ft0, 0(a0)
-; RV32IFD-NEXT:    fsd ft0, 8(sp)
-; RV32IFD-NEXT:    lw a0, 8(sp)
-; RV32IFD-NEXT:    lw a1, 12(sp)
-; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    lui a0, 345155
+; RV32IFD-NEXT:    addi a0, a0, -744
+; RV32IFD-NEXT:    lui a1, 262290
+; RV32IFD-NEXT:    addi a1, a1, 507
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: double_imm:
