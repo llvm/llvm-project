@@ -23,6 +23,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
 
@@ -4123,6 +4124,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
         std::make_pair(Function, PointOfInstantiation));
     return;
   }
+
+  llvm::TimeTraceScope TimeScope("InstantiateFunction", [&]() {
+    return Function->getQualifiedNameAsString();
+  });
 
   // If we're performing recursive template instantiation, create our own
   // queue of pending implicit instantiations that we will instantiate later,

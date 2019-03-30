@@ -2473,3 +2473,31 @@ define <1 x i8> @avg_v1i8(<1 x i8> %x, <1 x i8> %y) {
   ret <1 x i8> %f
 }
 
+; _mm_avg_epu16( _mm_slli_epi16(a, 2), _mm_slli_epi16(b, 2))
+define <2 x i64> @PR41316(<2 x i64>, <2 x i64>) {
+; SSE2-LABEL: PR41316:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    psllw $2, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm1
+; SSE2-NEXT:    pavgw %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: PR41316:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsllw $2, %xmm0, %xmm0
+; AVX-NEXT:    vpsllw $2, %xmm1, %xmm1
+; AVX-NEXT:    vpavgw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %3 = bitcast <2 x i64> %0 to <8 x i16>
+  %4 = shl <8 x i16> %3, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %5 = bitcast <2 x i64> %1 to <8 x i16>
+  %6 = shl <8 x i16> %5, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %7 = zext <8 x i16> %6 to <8 x i32>
+  %8 = or <8 x i16> %4, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %9 = zext <8 x i16> %8 to <8 x i32>
+  %10 = add nuw nsw <8 x i32> %9, %7
+  %11 = lshr <8 x i32> %10, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %12 = trunc <8 x i32> %11 to <8 x i16>
+  %13 = bitcast <8 x i16> %12 to <2 x i64>
+  ret <2 x i64> %13
+}

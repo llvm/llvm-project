@@ -59,6 +59,7 @@ public:
 
   iterator begin() { return iterator(Sections.data()); }
   iterator end() { return iterator(Sections.data() + Sections.size()); }
+  size_t size() const { return Sections.size(); }
 
   SectionBase *getSection(uint32_t Index, Twine ErrMsg);
 
