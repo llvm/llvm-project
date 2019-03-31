@@ -340,7 +340,7 @@ int main(int argc_, const char **argv_) {
   // response files written by clang will tokenize the same way in either mode.
   bool ClangCLMode = false;
   if (StringRef(TargetAndMode.DriverMode).equals("--driver-mode=cl") ||
-      std::find_if(argv.begin(), argv.end(), [](const char *F) {
+      llvm::find_if(argv, [](const char *F) {
         return F && strcmp(F, "--driver-mode=cl") == 0;
       }) != argv.end()) {
     ClangCLMode = true;

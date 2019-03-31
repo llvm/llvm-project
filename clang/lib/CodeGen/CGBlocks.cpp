@@ -274,6 +274,8 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
                                      /*constant*/ true, linkage, AddrSpace);
 
   if (linkage == llvm::GlobalValue::LinkOnceODRLinkage) {
+    if (CGM.supportsCOMDAT())
+      global->setComdat(CGM.getModule().getOrInsertComdat(descName));
     global->setVisibility(llvm::GlobalValue::HiddenVisibility);
     global->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   }

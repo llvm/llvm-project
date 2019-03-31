@@ -256,6 +256,9 @@ public:
   /// Show timers for individual actions.
   unsigned ShowTimers : 1;
 
+  /// Output time trace profile.
+  unsigned TimeTrace : 1;
+
   /// Show the -version text.
   unsigned ShowVersion : 1;
 
@@ -441,14 +444,15 @@ public:
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
-        ShowStats(false), ShowTimers(false), ShowVersion(false),
-        FixWhatYouCan(false), FixOnlyWarnings(false), FixAndRecompile(false),
-        FixToTemporaries(false), ARCMTMigrateEmitARCErrors(false),
-        SkipFunctionBodies(false), UseGlobalModuleIndex(true),
-        GenerateGlobalModuleIndex(true), ASTDumpDecls(false),
-        ASTDumpLookups(false), BuildingImplicitModule(false),
-        ModulesEmbedAllFiles(false), IncludeTimestamps(true),
-        IndexIgnoreSystemSymbols(false), IndexRecordCodegenName(false) {}
+        ShowStats(false), ShowTimers(false), TimeTrace(false),
+        ShowVersion(false), FixWhatYouCan(false), FixOnlyWarnings(false),
+        FixAndRecompile(false), FixToTemporaries(false),
+        ARCMTMigrateEmitARCErrors(false), SkipFunctionBodies(false),
+        UseGlobalModuleIndex(true), GenerateGlobalModuleIndex(true),
+        ASTDumpDecls(false), ASTDumpLookups(false),
+        BuildingImplicitModule(false), ModulesEmbedAllFiles(false),
+        IncludeTimestamps(true), IndexIgnoreSystemSymbols(false),
+        IndexRecordCodegenName(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return InputKind::C.

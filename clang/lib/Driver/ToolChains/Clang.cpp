@@ -3683,9 +3683,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         options::OPT_mllvm,
     };
     for (const auto &A : Args)
-      if (std::find(std::begin(kBitcodeOptionBlacklist),
-                    std::end(kBitcodeOptionBlacklist),
-                    A->getOption().getID()) !=
+      if (llvm::find(kBitcodeOptionBlacklist, A->getOption().getID()) !=
           std::end(kBitcodeOptionBlacklist))
         D.Diag(diag::err_drv_unsupported_embed_bitcode) << A->getSpelling();
 
@@ -4569,6 +4567,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_print_source_range_info);
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_parseable_fixits);
   Args.AddLastArg(CmdArgs, options::OPT_ftime_report);
+  Args.AddLastArg(CmdArgs, options::OPT_ftime_trace);
   Args.AddLastArg(CmdArgs, options::OPT_ftrapv);
   Args.AddLastArg(CmdArgs, options::OPT_malign_double);
 
