@@ -419,7 +419,7 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
   }
 
   reorderSubVector(VT, TransposedMatrix, VecOut, makeArrayRef(Concat, 16),
-		   NumOfElm, 4, Builder);
+                   NumOfElm, 4, Builder);
 }
 
 //  createShuffleStride returns shuffle mask of size N.

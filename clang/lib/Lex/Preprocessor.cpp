@@ -1132,14 +1132,14 @@ bool Preprocessor::parseSimpleIntegerLiteral(Token &Tok, uint64_t &Value) {
 
 void Preprocessor::addCommentHandler(CommentHandler *Handler) {
   assert(Handler && "NULL comment handler");
-  assert(std::find(CommentHandlers.begin(), CommentHandlers.end(), Handler) ==
-         CommentHandlers.end() && "Comment handler already registered");
+  assert(llvm::find(CommentHandlers, Handler) == CommentHandlers.end() &&
+         "Comment handler already registered");
   CommentHandlers.push_back(Handler);
 }
 
 void Preprocessor::removeCommentHandler(CommentHandler *Handler) {
   std::vector<CommentHandler *>::iterator Pos =
-      std::find(CommentHandlers.begin(), CommentHandlers.end(), Handler);
+      llvm::find(CommentHandlers, Handler);
   assert(Pos != CommentHandlers.end() && "Comment handler not registered");
   CommentHandlers.erase(Pos);
 }

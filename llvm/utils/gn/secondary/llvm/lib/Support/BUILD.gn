@@ -114,6 +114,7 @@ static_library("Support") {
     "TarWriter.cpp",
     "TargetParser.cpp",
     "ThreadPool.cpp",
+    "TimeProfiler.cpp",
     "Timer.cpp",
     "ToolOutputFile.cpp",
     "TrigramIndex.cpp",

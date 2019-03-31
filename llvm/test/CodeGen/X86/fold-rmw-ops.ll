@@ -2434,10 +2434,7 @@ b:
 define void @neg64_br() nounwind {
 ; CHECK-LABEL: neg64_br:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subq {{.*}}(%rip), %rax # encoding: [0x48,0x2b,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 3, value: g64-4, kind: reloc_riprel_4byte_relax_rex
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip) # encoding: [0x48,0x89,0x05,A,A,A,A]
+; CHECK-NEXT:    negq {{.*}}(%rip) # encoding: [0x48,0xf7,0x1d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: g64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    js .LBB76_1 # encoding: [0x78,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB76_1-1, kind: FK_PCRel_1
@@ -2468,10 +2465,7 @@ b:
 define void @neg32_br() nounwind {
 ; CHECK-LABEL: neg32_br:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subl {{.*}}(%rip), %eax # encoding: [0x2b,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 2, value: g32-4, kind: reloc_riprel_4byte
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip) # encoding: [0x89,0x05,A,A,A,A]
+; CHECK-NEXT:    negl {{.*}}(%rip) # encoding: [0xf7,0x1d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: g32-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    js .LBB77_1 # encoding: [0x78,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB77_1-1, kind: FK_PCRel_1
@@ -2502,10 +2496,7 @@ b:
 define void @neg16_br() nounwind {
 ; CHECK-LABEL: neg16_br:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subw {{.*}}(%rip), %ax # encoding: [0x66,0x2b,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 3, value: g16-4, kind: reloc_riprel_4byte
-; CHECK-NEXT:    movw %ax, {{.*}}(%rip) # encoding: [0x66,0x89,0x05,A,A,A,A]
+; CHECK-NEXT:    negw {{.*}}(%rip) # encoding: [0x66,0xf7,0x1d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: g16-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    js .LBB78_1 # encoding: [0x78,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB78_1-1, kind: FK_PCRel_1
@@ -2536,10 +2527,7 @@ b:
 define void @neg8_br() nounwind {
 ; CHECK-LABEL: neg8_br:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subb {{.*}}(%rip), %al # encoding: [0x2a,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 2, value: g8-4, kind: reloc_riprel_4byte
-; CHECK-NEXT:    movb %al, {{.*}}(%rip) # encoding: [0x88,0x05,A,A,A,A]
+; CHECK-NEXT:    negb {{.*}}(%rip) # encoding: [0xf6,0x1d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: g8-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    js .LBB79_1 # encoding: [0x78,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB79_1-1, kind: FK_PCRel_1

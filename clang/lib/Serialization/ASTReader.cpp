@@ -8528,7 +8528,7 @@ unsigned ASTReader::getModuleFileID(ModuleFile *F) {
     return ((F->BaseSubmoduleID + NUM_PREDEF_SUBMODULE_IDS) << 1) | 1;
 
   auto PCHModules = getModuleManager().pch_modules();
-  auto I = std::find(PCHModules.begin(), PCHModules.end(), F);
+  auto I = llvm::find(PCHModules, F);
   assert(I != PCHModules.end() && "emitting reference to unknown file");
   return (I - PCHModules.end()) << 1;
 }

@@ -1343,6 +1343,15 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
   if (!Shuf.isSelect())
     return nullptr;
 
+  // Canonicalize to choose from operand 0 first.
+  unsigned NumElts = Shuf.getType()->getVectorNumElements();
+  if (Shuf.getMaskValue(0) >= (int)NumElts) {
+    assert(!isa<UndefValue>(Shuf.getOperand(1)) &&
+           "Not expecting undef shuffle operand with select mask");
+    Shuf.commute();
+    return &Shuf;
+  }
+
   if (Instruction *I = foldSelectShuffleWith1Binop(Shuf))
     return I;
 

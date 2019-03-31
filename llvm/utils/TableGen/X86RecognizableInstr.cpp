@@ -109,7 +109,7 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
   std::vector<Record*> Predicates = Rec->getValueAsListOfDefs("Predicates");
   for (unsigned i = 0, e = Predicates.size(); i != e; ++i) {
     if (Predicates[i]->getName().find("Not64Bit") != Name.npos ||
-	Predicates[i]->getName().find("In32Bit") != Name.npos) {
+        Predicates[i]->getName().find("In32Bit") != Name.npos) {
       Is32Bit = true;
       break;
     }
