@@ -77,7 +77,7 @@ final:
 define <2 x i8> @vec3(i1 %cond1, i1 %cond2, <2 x i1> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @vec3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PHITMP1:%.*]] = shufflevector <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[PHITMP1:%.*]] = shufflevector <2 x i8> [[Z:%.*]], <2 x i8> [[Y:%.*]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[IF1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if1:
 ; CHECK-NEXT:    [[PHITMP2:%.*]] = shufflevector <2 x i8> [[Y]], <2 x i8> [[Z]], <2 x i32> <i32 0, i32 3>
