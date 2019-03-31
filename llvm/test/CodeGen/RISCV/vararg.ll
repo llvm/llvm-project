@@ -5,16 +5,26 @@
 ; RUN:   | FileCheck -check-prefix=ILP32-ILP32F-WITHFP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32D-ILP32-ILP32F-ILP32D-FPELIM %s
+; RUN: llc -mtriple=riscv32 -mattr=+d -target-abi ilp32f \
+; RUN:     -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV32D-ILP32-ILP32F-ILP32D-FPELIM %s
+; RUN: llc -mtriple=riscv32 -mattr=+d -target-abi ilp32d \
+; RUN:     -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV32D-ILP32-ILP32F-ILP32D-FPELIM %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=LP64-LP64F-LP64D-FPELIM %s
+; RUN: llc -mtriple=riscv64 -mattr=+d -target-abi lp64f \
+; RUN:     -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=LP64-LP64F-LP64D-FPELIM %s
+; RUN: llc -mtriple=riscv64 -mattr=+d -target-abi lp64d \
+; RUN:     -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=LP64-LP64F-LP64D-FPELIM %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs -frame-pointer=all < %s \
 ; RUN:   | FileCheck -check-prefix=LP64-LP64F-LP64D-WITHFP %s
 
-; TODO: RUN lines for ilp32f/ilp32d/lp64f/lp64d must be added when hard float
-; ABI Support lands. The same vararg calling convention is used for
-; ilp32/ilp32f/ilp32d and for lp64/lp64f/lp64d. Different CHECK lines are
-; required for RV32D due to slight codegen differences due to the way the
-; f64 load operations are lowered.
+; The same vararg calling convention is used for ilp32/ilp32f/ilp32d and for
+; lp64/lp64f/lp64d. Different CHECK lines are required for RV32D due to slight
+; codegen differences due to the way the f64 load operations are lowered.
 
 declare void @llvm.va_start(i8*)
 declare void @llvm.va_end(i8*)
