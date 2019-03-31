@@ -1241,7 +1241,7 @@ void AMDGPUInstPrinter::printEndpgm(const MCInst *MI, unsigned OpNo,
 #include "AMDGPUGenAsmWriter.inc"
 
 void R600InstPrinter::printInst(const MCInst *MI, raw_ostream &O,
-		                StringRef Annot, const MCSubtargetInfo &STI) {
+                                StringRef Annot, const MCSubtargetInfo &STI) {
   O.flush();
   printInstruction(MI, O);
   printAnnotation(O, Annot);

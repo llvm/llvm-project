@@ -427,23 +427,20 @@ bool X86TargetInfo::initFeatureMap(
   // Enable popcnt if sse4.2 is enabled and popcnt is not explicitly disabled.
   auto I = Features.find("sse4.2");
   if (I != Features.end() && I->getValue() &&
-      std::find(FeaturesVec.begin(), FeaturesVec.end(), "-popcnt") ==
-          FeaturesVec.end())
+      llvm::find(FeaturesVec, "-popcnt") == FeaturesVec.end())
     Features["popcnt"] = true;
 
   // Enable prfchw if 3DNow! is enabled and prfchw is not explicitly disabled.
   I = Features.find("3dnow");
   if (I != Features.end() && I->getValue() &&
-      std::find(FeaturesVec.begin(), FeaturesVec.end(), "-prfchw") ==
-          FeaturesVec.end())
+      llvm::find(FeaturesVec, "-prfchw") == FeaturesVec.end())
     Features["prfchw"] = true;
 
   // Additionally, if SSE is enabled and mmx is not explicitly disabled,
   // then enable MMX.
   I = Features.find("sse");
   if (I != Features.end() && I->getValue() &&
-      std::find(FeaturesVec.begin(), FeaturesVec.end(), "-mmx") ==
-          FeaturesVec.end())
+      llvm::find(FeaturesVec, "-mmx") == FeaturesVec.end())
     Features["mmx"] = true;
 
   return true;

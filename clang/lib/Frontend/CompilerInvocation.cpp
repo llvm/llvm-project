@@ -1413,9 +1413,9 @@ static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
   for (const auto &Prefix : VerifyPrefixes) {
     // Every prefix must start with a letter and contain only alphanumeric
     // characters, hyphens, and underscores.
-    auto BadChar = std::find_if(Prefix.begin(), Prefix.end(),
-                                [](char C){return !isAlphanumeric(C)
-                                                  && C != '-' && C != '_';});
+    auto BadChar = llvm::find_if(Prefix, [](char C) {
+      return !isAlphanumeric(C) && C != '-' && C != '_';
+    });
     if (BadChar != Prefix.end() || !isLetter(Prefix[0])) {
       Success = false;
       if (Diags) {

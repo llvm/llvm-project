@@ -1942,11 +1942,10 @@ static void DiagnoseUnimplementedAccessor(
     llvm::SmallPtrSet<const ObjCMethodDecl *, 8> &SMap) {
   // Check to see if we have a corresponding selector in SMap and with the
   // right method type.
-  auto I = std::find_if(SMap.begin(), SMap.end(),
-    [&](const ObjCMethodDecl *x) {
-      return x->getSelector() == Method &&
-             x->isClassMethod() == Prop->isClassProperty();
-    });
+  auto I = llvm::find_if(SMap, [&](const ObjCMethodDecl *x) {
+    return x->getSelector() == Method &&
+           x->isClassMethod() == Prop->isClassProperty();
+  });
   // When reporting on missing property setter/getter implementation in
   // categories, do not report when they are declared in primary class,
   // class's protocol, or one of it super classes. This is because,

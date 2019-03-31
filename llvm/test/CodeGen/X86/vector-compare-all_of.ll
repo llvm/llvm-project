@@ -8,17 +8,21 @@ define i64 @test_v2f64_sext(<2 x double> %a0, <2 x double> %a1) {
 ; SSE-LABEL: test_v2f64_sext:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cmpltpd %xmm0, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    movq %xmm0, %rax
+; SSE-NEXT:    movmskpd %xmm1, %ecx
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    cmpl $3, %ecx
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    negq %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2f64_sext:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vmovmskpd %xmm0, %ecx
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    cmpl $3, %ecx
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    negq %rax
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v2f64_sext:
@@ -42,9 +46,11 @@ define i64 @test_v4f64_sext(<4 x double> %a0, <4 x double> %a1) {
 ; SSE-NEXT:    cmpltpd %xmm1, %xmm3
 ; SSE-NEXT:    cmpltpd %xmm0, %xmm2
 ; SSE-NEXT:    andpd %xmm3, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    movq %xmm0, %rax
+; SSE-NEXT:    movmskpd %xmm2, %ecx
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    cmpl $3, %ecx
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    negq %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v4f64_sext:
@@ -273,17 +279,21 @@ define i64 @test_v2i64_sext(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test_v2i64_sext:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpgtq %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE-NEXT:    pand %xmm0, %xmm1
-; SSE-NEXT:    movq %xmm1, %rax
+; SSE-NEXT:    movmskpd %xmm0, %ecx
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    cmpl $3, %ecx
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    negq %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2i64_sext:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vmovmskpd %xmm0, %ecx
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    cmpl $3, %ecx
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    negq %rax
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v2i64_sext:
@@ -307,9 +317,11 @@ define i64 @test_v4i64_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; SSE-NEXT:    pcmpgtq %xmm3, %xmm1
 ; SSE-NEXT:    pcmpgtq %xmm2, %xmm0
 ; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE-NEXT:    pand %xmm0, %xmm1
-; SSE-NEXT:    movq %xmm1, %rax
+; SSE-NEXT:    movmskpd %xmm0, %ecx
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    cmpl $3, %ecx
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    negq %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v4i64_sext:

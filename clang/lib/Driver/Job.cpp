@@ -250,8 +250,8 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
         }
       }
 
-      auto Found = std::find_if(InputFilenames.begin(), InputFilenames.end(),
-                                [&Arg](StringRef IF) { return IF == Arg; });
+      auto Found = llvm::find_if(InputFilenames,
+                                 [&Arg](StringRef IF) { return IF == Arg; });
       if (Found != InputFilenames.end() &&
           (i == 0 || StringRef(Args[i - 1]) != "-main-file-name")) {
         // Replace the input file name with the crashinfo's file name.

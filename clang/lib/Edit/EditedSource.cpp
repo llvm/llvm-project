@@ -60,7 +60,7 @@ void EditedSource::finishedCommit() {
     MacroArgUse ArgUse;
     std::tie(ExpLoc, ArgUse) = ExpArg;
     auto &ArgUses = ExpansionToArgMap[ExpLoc.getRawEncoding()];
-    if (std::find(ArgUses.begin(), ArgUses.end(), ArgUse) == ArgUses.end())
+    if (llvm::find(ArgUses, ArgUse) == ArgUses.end())
       ArgUses.push_back(ArgUse);
   }
   CurrCommitMacroArgExps.clear();

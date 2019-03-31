@@ -16975,10 +16975,9 @@ ExprResult Sema::ActOnObjCAvailabilityCheckExpr(
 
   StringRef Platform = getASTContext().getTargetInfo().getPlatformName();
 
-  auto Spec = std::find_if(AvailSpecs.begin(), AvailSpecs.end(),
-                           [&](const AvailabilitySpec &Spec) {
-                             return Spec.getPlatform() == Platform;
-                           });
+  auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
+    return Spec.getPlatform() == Platform;
+  });
 
   VersionTuple Version;
   if (Spec != AvailSpecs.end())

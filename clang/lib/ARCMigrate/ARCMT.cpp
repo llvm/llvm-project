@@ -64,10 +64,10 @@ bool CapturedDiagList::hasDiagnostic(ArrayRef<unsigned> IDs,
   while (I != List.end()) {
     FullSourceLoc diagLoc = I->getLocation();
     if ((IDs.empty() || // empty means any diagnostic in the range.
-         std::find(IDs.begin(), IDs.end(), I->getID()) != IDs.end()) &&
+         llvm::find(IDs, I->getID()) != IDs.end()) &&
         !diagLoc.isBeforeInTranslationUnitThan(range.getBegin()) &&
         (diagLoc == range.getEnd() ||
-           diagLoc.isBeforeInTranslationUnitThan(range.getEnd()))) {
+         diagLoc.isBeforeInTranslationUnitThan(range.getEnd()))) {
       return true;
     }
 

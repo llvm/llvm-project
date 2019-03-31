@@ -440,8 +440,7 @@ TEST(ClangToolTest, StripDependencyFileAdjuster) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return std::find(FinalArgs.begin(), FinalArgs.end(), Flag) !=
-           FinalArgs.end();
+    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
   };
   EXPECT_FALSE(HasFlag("-MD"));
   EXPECT_FALSE(HasFlag("-MMD"));
@@ -472,8 +471,7 @@ TEST(ClangToolTest, StripPluginsAdjuster) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return std::find(FinalArgs.begin(), FinalArgs.end(), Flag) !=
-           FinalArgs.end();
+    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
   };
   EXPECT_FALSE(HasFlag("-Xclang"));
   EXPECT_FALSE(HasFlag("-add-plugin"));
