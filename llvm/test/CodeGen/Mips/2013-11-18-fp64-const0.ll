@@ -10,7 +10,7 @@
 ; of BuildPairF64 instead of BuildPairF64_64.
 
 ; FIXME: A redundant mthc1 is currently emitted.
-define void @autogen_SD3718491962() {
+define void @autogen_SD3718491962(double %a0) {
 ; CHECK-FP32-LABEL: autogen_SD3718491962:
 ; CHECK-FP32:       # %bb.0: # %BB
 ; CHECK-FP32-NEXT:    lui $1, %hi($CPI0_0)
@@ -19,10 +19,10 @@ define void @autogen_SD3718491962() {
 ; CHECK-FP32-NEXT:    mtc1 $zero, $f3
 ; CHECK-FP32-NEXT:  $BB0_1: # %CF88
 ; CHECK-FP32-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-FP32-NEXT:    c.ueq.d $f0, $f0
+; CHECK-FP32-NEXT:    c.ueq.d $f12, $f0
 ; CHECK-FP32-NEXT:    addiu $1, $zero, 1
 ; CHECK-FP32-NEXT:    movf $1, $zero, $fcc0
-; CHECK-FP32-NEXT:    c.olt.d $f0, $f2
+; CHECK-FP32-NEXT:    c.olt.d $f12, $f2
 ; CHECK-FP32-NEXT:    addiu $2, $zero, 1
 ; CHECK-FP32-NEXT:    movt $2, $zero, $fcc0
 ; CHECK-FP32-NEXT:    and $1, $2, $1
@@ -40,10 +40,10 @@ define void @autogen_SD3718491962() {
 ; CHECK-FP64-NEXT:    mthc1 $zero, $f1
 ; CHECK-FP64-NEXT:  $BB0_1: # %CF88
 ; CHECK-FP64-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-FP64-NEXT:    c.ueq.d $f0, $f0
+; CHECK-FP64-NEXT:    c.ueq.d $f12, $f0
 ; CHECK-FP64-NEXT:    addiu $1, $zero, 1
 ; CHECK-FP64-NEXT:    movf $1, $zero, $fcc0
-; CHECK-FP64-NEXT:    c.olt.d $f0, $f1
+; CHECK-FP64-NEXT:    c.olt.d $f12, $f1
 ; CHECK-FP64-NEXT:    addiu $2, $zero, 1
 ; CHECK-FP64-NEXT:    movt $2, $zero, $fcc0
 ; CHECK-FP64-NEXT:    and $1, $2, $1
@@ -53,8 +53,8 @@ define void @autogen_SD3718491962() {
 ; CHECK-FP64-NEXT:    jr $ra
 ; CHECK-FP64-NEXT:    nop
 BB:
-  %Cmp = fcmp ule double 0.000000e+00, undef
-  %Cmp11 = fcmp ueq double 0xFDBD965CF1BB7FDA, undef
+  %Cmp = fcmp ule double 0.000000e+00, %a0
+  %Cmp11 = fcmp ueq double 0xFDBD965CF1BB7FDA, %a0
   br label %CF88
 
 CF88:                                             ; preds = %CF86

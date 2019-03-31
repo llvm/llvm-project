@@ -96,6 +96,7 @@ static_library("Checkers") {
     "StackAddrEscapeChecker.cpp",
     "StdLibraryFunctionsChecker.cpp",
     "StreamChecker.cpp",
+    "Taint.cpp",
     "TaintTesterChecker.cpp",
     "TestAfterDivZeroChecker.cpp",
     "TraversalChecker.cpp",
