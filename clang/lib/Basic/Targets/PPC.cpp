@@ -214,31 +214,26 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
 static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
                                  const std::vector<std::string> &FeaturesVec) {
 
-  if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "-vsx") !=
-      FeaturesVec.end()) {
-    if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+power8-vector") !=
-        FeaturesVec.end()) {
+  if (llvm::find(FeaturesVec, "-vsx") != FeaturesVec.end()) {
+    if (llvm::find(FeaturesVec, "+power8-vector") != FeaturesVec.end()) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mpower8-vector"
                                                      << "-mno-vsx";
       return false;
     }
 
-    if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+direct-move") !=
-        FeaturesVec.end()) {
+    if (llvm::find(FeaturesVec, "+direct-move") != FeaturesVec.end()) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mdirect-move"
                                                      << "-mno-vsx";
       return false;
     }
 
-    if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+float128") !=
-        FeaturesVec.end()) {
+    if (llvm::find(FeaturesVec, "+float128") != FeaturesVec.end()) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128"
                                                      << "-mno-vsx";
       return false;
     }
 
-    if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+power9-vector") !=
-        FeaturesVec.end()) {
+    if (llvm::find(FeaturesVec, "+power9-vector") != FeaturesVec.end()) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mpower9-vector"
                                                      << "-mno-vsx";
       return false;
@@ -311,8 +306,7 @@ bool PPCTargetInfo::initFeatureMap(
     return false;
 
   if (!(ArchDefs & ArchDefinePwr9) && (ArchDefs & ArchDefinePpcgr) &&
-      std::find(FeaturesVec.begin(), FeaturesVec.end(), "+float128") !=
-          FeaturesVec.end()) {
+      llvm::find(FeaturesVec, "+float128") != FeaturesVec.end()) {
     // We have __float128 on PPC but not power 9 and above.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128" << CPU;
     return false;

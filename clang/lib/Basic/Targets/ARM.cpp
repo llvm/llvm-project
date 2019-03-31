@@ -476,7 +476,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     Features.push_back("-neonfp");
 
   // Remove front-end specific options which the backend handles differently.
-  auto Feature = std::find(Features.begin(), Features.end(), "+soft-float-abi");
+  auto Feature = llvm::find(Features, "+soft-float-abi");
   if (Feature != Features.end())
     Features.erase(Feature);
 

@@ -3682,9 +3682,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         options::OPT_mllvm,
     };
     for (const auto &A : Args)
-      if (std::find(std::begin(kBitcodeOptionBlacklist),
-                    std::end(kBitcodeOptionBlacklist),
-                    A->getOption().getID()) !=
+      if (llvm::find(kBitcodeOptionBlacklist, A->getOption().getID()) !=
           std::end(kBitcodeOptionBlacklist))
         D.Diag(diag::err_drv_unsupported_embed_bitcode) << A->getSpelling();
 

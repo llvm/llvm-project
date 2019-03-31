@@ -381,7 +381,7 @@ class ASTImporterTestBase : public CompilerOptionSpecificTest {
     // Create a virtual file in the To Ctx which corresponds to the file from
     // which we want to import the `From` Decl. Without this source locations
     // will be invalid in the ToCtx.
-    auto It = std::find_if(FromTUs.begin(), FromTUs.end(), [From](const TU &E) {
+    auto It = llvm::find_if(FromTUs, [From](const TU &E) {
       return E.TUDecl == From->getTranslationUnitDecl();
     });
     assert(It != FromTUs.end());
@@ -435,10 +435,9 @@ public:
   // name).
   TranslationUnitDecl *getTuDecl(StringRef SrcCode, Language Lang,
                                  StringRef FileName = "input.cc") {
-    assert(
-        std::find_if(FromTUs.begin(), FromTUs.end(), [FileName](const TU &E) {
-          return E.FileName == FileName;
-        }) == FromTUs.end());
+    assert(llvm::find_if(FromTUs, [FileName](const TU &E) {
+             return E.FileName == FileName;
+           }) == FromTUs.end());
 
     ArgVector Args = getArgVectorForLanguage(Lang);
     FromTUs.emplace_back(SrcCode, FileName, Args);

@@ -203,7 +203,7 @@ define <16 x i8> @test_insertqi_shuffle_04uu(<16 x i8> %v, <16 x i8> %i) {
 
 define <16 x i8> @test_insertqi_shuffle_8123uuuu(<16 x i8> %v, <16 x i8> %i) {
 ; CHECK-LABEL: @test_insertqi_shuffle_8123uuuu(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[V:%.*]], <16 x i8> [[I:%.*]], <16 x i32> <i32 16, i32 17, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[I:%.*]], <16 x i8> [[V:%.*]], <16 x i32> <i32 0, i32 1, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %1 = bitcast <16 x i8> %v to <2 x i64>

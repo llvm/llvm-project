@@ -236,6 +236,7 @@ module LLVM_intrinsic_gen {
   }
   module IR_IntrinsicInst { header "IR/IntrinsicInst.h" export * }
   module IR_PatternMatch { header "IR/PatternMatch.h" export * }
+  module IR_SafepointIRVerifier { header "IR/SafepointIRVerifier.h" export * }
   module IR_Statepoint { header "IR/Statepoint.h" export * }
 
   export *

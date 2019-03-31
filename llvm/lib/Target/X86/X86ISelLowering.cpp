@@ -34306,8 +34306,11 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
          ((Subtarget.hasAVX() && BitWidth >= 32) || Subtarget.hasAVX2()))))
     return SDValue();
 
-  // Don't bother performing this for 2-element vectors.
-  if (Match.getValueType().getVectorNumElements() <= 2)
+  // Make sure this isn't a vector of 1 element. The perf win from using MOVMSK
+  // diminishes with less elements in the reduction, but it is generally better
+  // to get the comparison over to the GPRs as soon as possible to reduce the
+  // number of vector ops.
+  if (Match.getValueType().getVectorNumElements() < 2)
     return SDValue();
 
   // Check that we are extracting a reduction of all sign bits.

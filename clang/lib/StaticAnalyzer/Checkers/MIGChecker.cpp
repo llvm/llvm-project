@@ -204,10 +204,10 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
   if (!isInMIGCall(C))
     return;
 
-  auto I = std::find_if(Deallocators.begin(), Deallocators.end(),
-                        [&](const std::pair<CallDescription, unsigned> &Item) {
-                          return Call.isCalled(Item.first);
-                        });
+  auto I = llvm::find_if(Deallocators,
+                         [&](const std::pair<CallDescription, unsigned> &Item) {
+                           return Call.isCalled(Item.first);
+                         });
   if (I == Deallocators.end())
     return;
 

@@ -274,8 +274,8 @@ public:
                            StringRef &SectionName,
                            unsigned &SectionIndex) const;
   std::string getStaticSymbolName(uint32_t Index) const;
-	StringRef getSymbolVersionByIndex(StringRef StrTab,
-	                                  uint32_t VersionSymbolIndex,
+  StringRef getSymbolVersionByIndex(StringRef StrTab,
+                                    uint32_t VersionSymbolIndex,
                                     bool &IsDefault) const;
 
   void printSymbolsHelper(bool IsDynamic) const;

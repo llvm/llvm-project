@@ -1369,8 +1369,7 @@ static void addContextEdges(PathPieces &pieces, SourceManager &SM,
         break;
 
       // If the source is in the same context, we're already good.
-      if (std::find(SrcContexts.begin(), SrcContexts.end(), DstContext) !=
-          SrcContexts.end())
+      if (llvm::find(SrcContexts, DstContext) != SrcContexts.end())
         break;
 
       // Update the subexpression node to point to the context edge.
