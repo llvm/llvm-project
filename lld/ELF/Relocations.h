@@ -23,7 +23,7 @@ class OutputSection;
 class SectionBase;
 
 // Represents a relocation type, such as R_X86_64_PC32 or R_ARM_THM_CALL.
-typedef uint32_t RelType;
+using RelType = uint32_t;
 
 // List of target-independent relocation types. Relocations read
 // from files are converted to these types so that the main code

@@ -64,3 +64,9 @@ call baz
 jal zero, .L1
 # CHECK-RELOC-NEXT: R_RISCV_BRANCH
 beq s1, s1, .L1
+
+1:
+# CHECK-RELOC-NEXT: R_RISCV_PCREL_HI20 .L1
+auipc t1, %pcrel_hi(.L1)
+# CHECK-RELOC-NEXT: R_RISCV_PCREL_LO12_I .Ltmp0
+addi t1, t1, %pcrel_lo(1b)

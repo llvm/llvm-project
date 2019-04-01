@@ -37,7 +37,7 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
-typedef DenseMap<const SectionBase *, SmallVector<Defined *, 4>> SymbolMapTy;
+using SymbolMapTy = DenseMap<const SectionBase *, SmallVector<Defined *, 4>>;
 
 static const std::string Indent8 = "        ";          // 8 spaces
 static const std::string Indent16 = "                "; // 16 spaces

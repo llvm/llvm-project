@@ -2474,8 +2474,8 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &Obj,
 static std::vector<GdbIndexSection::GdbSymbol>
 createSymbols(ArrayRef<std::vector<GdbIndexSection::NameAttrEntry>> NameAttrs,
               const std::vector<GdbIndexSection::GdbChunk> &Chunks) {
-  typedef GdbIndexSection::GdbSymbol GdbSymbol;
-  typedef GdbIndexSection::NameAttrEntry NameAttrEntry;
+  using GdbSymbol = GdbIndexSection::GdbSymbol;
+  using NameAttrEntry = GdbIndexSection::NameAttrEntry;
 
   // For each chunk, compute the number of compilation units preceding it.
   uint32_t CuIdx = 0;
@@ -2669,7 +2669,7 @@ void EhFrameHeader::writeTo(uint8_t *Buf) {
 // It is sorted by PC.
 void EhFrameHeader::write() {
   uint8_t *Buf = Out::BufferStart + getParent()->Offset + OutSecOff;
-  typedef EhFrameSection::FdeData FdeData;
+  using FdeData = EhFrameSection::FdeData;
 
   std::vector<FdeData> Fdes = In.EhFrame->getFdeData();
 

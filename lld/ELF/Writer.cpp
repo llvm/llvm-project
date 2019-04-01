@@ -40,9 +40,9 @@ namespace {
 template <class ELFT> class Writer {
 public:
   Writer() : Buffer(errorHandler().OutputBuffer) {}
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::Ehdr Elf_Ehdr;
-  typedef typename ELFT::Phdr Elf_Phdr;
+  using Elf_Shdr = typename ELFT::Shdr;
+  using Elf_Ehdr = typename ELFT::Ehdr;
+  using Elf_Phdr = typename ELFT::Phdr;
 
   void run();
 
