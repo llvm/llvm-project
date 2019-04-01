@@ -5,9 +5,7 @@
 
 define <4 x i32> @and(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @and(
-; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
-; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[X]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = and <4 x i32> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[R:%.*]] = and <4 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %sel1 = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
@@ -18,9 +16,7 @@ define <4 x i32> @and(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @or(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @or(
-; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
-; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[X]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = or <4 x i32> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[R:%.*]] = or <4 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %sel1 = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
@@ -33,9 +29,7 @@ define <4 x i32> @or(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @xor(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @xor(
-; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> [[Y]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = xor <4 x i32> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[R:%.*]] = xor <4 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %sel1 = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
@@ -48,13 +42,56 @@ define <4 x i32> @xor(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @add(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @add(
-; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[X]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = add nsw <4 x i32> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[R:%.*]] = add nsw <4 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %sel1 = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   %sel2 = shufflevector <4 x i32> %y, <4 x i32> %x, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  %r = add nsw <4 x i32> %sel1, %sel2
+  ret <4 x i32> %r
+}
+
+; Negative test - wrong operand
+
+define <4 x i32> @add_wrong_op(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: @add_wrong_op(
+; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[Z:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = add nsw <4 x i32> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %sel1 = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  %sel2 = shufflevector <4 x i32> %y, <4 x i32> %z, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  %r = add nsw <4 x i32> %sel1, %sel2
+  ret <4 x i32> %r
+}
+
+; Negative test - wrong mask (but we could handle this...)
+
+define <4 x i32> @add_non_select_mask(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @add_non_select_mask(
+; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 1, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[X]], <4 x i32> <i32 1, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = add nsw <4 x i32> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %sel1 = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 1, i32 5, i32 2, i32 7>
+  %sel2 = shufflevector <4 x i32> %y, <4 x i32> %x, <4 x i32> <i32 1, i32 5, i32 2, i32 7>
+  %r = add nsw <4 x i32> %sel1, %sel2
+  ret <4 x i32> %r
+}
+
+; Negative test - wrong mask (but we could handle this...)
+
+define <4 x i32> @add_masks_with_undefs(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @add_masks_with_undefs(
+; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 undef, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[X]], <4 x i32> <i32 undef, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = add nsw <4 x i32> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %sel1 = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 undef, i32 5, i32 2, i32 7>
+  %sel2 = shufflevector <4 x i32> %y, <4 x i32> %x, <4 x i32> <i32 undef, i32 5, i32 2, i32 7>
   %r = add nsw <4 x i32> %sel1, %sel2
   ret <4 x i32> %r
 }
@@ -76,9 +113,7 @@ define <4 x i32> @sub(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @mul(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @mul(
-; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[X]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = mul nuw <4 x i32> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw <4 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %sel1 = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 0, i32 1, i32 6, i32 3>
@@ -180,9 +215,7 @@ define <4 x i32> @ashr(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x float> @fadd(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @fadd(
-; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[X:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> [[Y]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = fadd <4 x float> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[R:%.*]] = fadd <4 x float> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %sel1 = shufflevector <4 x float> %x, <4 x float> %y, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
@@ -206,9 +239,7 @@ define <4 x float> @fsub(<4 x float> %x, <4 x float> %y) {
 
 define <4 x double> @fmul(<4 x double> %x, <4 x double> %y) {
 ; CHECK-LABEL: @fmul(
-; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x double> [[Y:%.*]], <4 x double> [[X:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x double> [[X]], <4 x double> [[Y]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = fmul nnan <4 x double> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan <4 x double> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
   %sel1 = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 4, i32 1, i32 6, i32 3>

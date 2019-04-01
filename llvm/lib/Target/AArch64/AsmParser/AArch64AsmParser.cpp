@@ -4096,15 +4096,6 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                    "unpredictable STXP instruction, status is also a source");
     break;
   }
-  case AArch64::LDGV: {
-    unsigned Rt = Inst.getOperand(0).getReg();
-    unsigned Rn = Inst.getOperand(1).getReg();
-    if (RI->isSubRegisterEq(Rt, Rn)) {
-      return Error(Loc[0],
-                  "unpredictable LDGV instruction, writeback register is also "
-                  "the target register");
-    }
-  }
   }
 
 

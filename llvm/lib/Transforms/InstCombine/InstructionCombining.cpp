@@ -1415,6 +1415,30 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
     return createBinOpShuffle(V1, V2, Mask);
   }
 
+  // If both arguments of a commutative binop are select-shuffles that use the
+  // same mask with commuted operands, the shuffles are unnecessary.
+  if (Inst.isCommutative() &&
+      match(LHS, m_ShuffleVector(m_Value(V1), m_Value(V2), m_Constant(Mask))) &&
+      match(RHS, m_ShuffleVector(m_Specific(V2), m_Specific(V1),
+                                 m_Specific(Mask)))) {
+    auto *LShuf = cast<ShuffleVectorInst>(LHS);
+    auto *RShuf = cast<ShuffleVectorInst>(RHS);
+    // TODO: Allow shuffles that contain undefs in the mask?
+    //       That is legal, but it reduces undef knowledge.
+    // TODO: Allow arbitrary shuffles by shuffling after binop?
+    //       That might be legal, but we have to deal with poison.
+    if (LShuf->isSelect() && !LShuf->getMask()->containsUndefElement() &&
+        RShuf->isSelect() && !RShuf->getMask()->containsUndefElement()) {
+      // Example:
+      // LHS = shuffle V1, V2, <0, 5, 6, 3>
+      // RHS = shuffle V2, V1, <0, 5, 6, 3>
+      // LHS + RHS --> (V10+V20, V21+V11, V22+V12, V13+V23) --> V1 + V2
+      Instruction *NewBO = BinaryOperator::Create(Opcode, V1, V2);
+      NewBO->copyIRFlags(&Inst);
+      return NewBO;
+    }
+  }
+
   // If one argument is a shuffle within one vector and the other is a constant,
   // try moving the shuffle after the binary operation. This canonicalization
   // intends to move shuffles closer to other shuffles and binops closer to

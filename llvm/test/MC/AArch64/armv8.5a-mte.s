@@ -420,6 +420,7 @@ mrs x4, tfsr_el2
 mrs x5, tfsr_el3
 mrs x6, tfsr_el12
 mrs x7, tfsre0_el1
+mrs x7, gmid_el1
 
 // CHECK: mrs x0, TCO           // encoding: [0xe0,0x42,0x3b,0xd5]
 // CHECK: mrs x1, GCR_EL1       // encoding: [0xc1,0x10,0x38,0xd5]
@@ -429,6 +430,7 @@ mrs x7, tfsre0_el1
 // CHECK: mrs x5, TFSR_EL3      // encoding: [0x05,0x66,0x3e,0xd5]
 // CHECK: mrs x6, TFSR_EL12     // encoding: [0x06,0x66,0x3d,0xd5]
 // CHECK: mrs x7, TFSRE0_EL1    // encoding: [0x27,0x66,0x38,0xd5]
+// CHECK: mrs x7, GMID_EL1      // encoding: [0x87,0x00,0x39,0xd5]
 
 // NOMTE: expected readable system register
 // NOMTE-NEXT: tco
@@ -446,6 +448,8 @@ mrs x7, tfsre0_el1
 // NOMTE-NEXT: tfsr_el12
 // NOMTE: expected readable system register
 // NOMTE-NEXT: tfsre0_el1
+// NOMTE: expected readable system register
+// NOMTE-NEXT: gmid_el1
 
 msr tco, #0
 
@@ -530,24 +534,38 @@ ldg x3, [x4, #4080]
 // NOMTE: instruction requires: mte
 // NOMTE: instruction requires: mte
 
-ldgv x0, [x1]!
-ldgv x1, [sp]!
-ldgv xzr, [x2]!
+ldgm x0, [x1]
+ldgm x1, [sp]
+ldgm xzr, [x2]
 
-// CHECK: ldgv x0, [x1]!  // encoding: [0x20,0x00,0xe0,0xd9]
-// CHECK: ldgv x1, [sp]!  // encoding: [0xe1,0x03,0xe0,0xd9]
-// CHECK: ldgv xzr, [x2]! // encoding: [0x5f,0x00,0xe0,0xd9]
+// CHECK: ldgm x0, [x1]  // encoding: [0x20,0x00,0xe0,0xd9]
+// CHECK: ldgm x1, [sp]  // encoding: [0xe1,0x03,0xe0,0xd9]
+// CHECK: ldgm xzr, [x2] // encoding: [0x5f,0x00,0xe0,0xd9]
 
 // NOMTE: instruction requires: mte
 // NOMTE: instruction requires: mte
+// NOMTE: instruction requires: mte
 
-stgv x0, [x1]!
-stgv x1, [sp]!
-stgv xzr, [x2]!
+stgm x0, [x1]
+stgm x1, [sp]
+stgm xzr, [x2]
 
-// CHECK: stgv x0, [x1]!  // encoding: [0x20,0x00,0xa0,0xd9]
-// CHECK: stgv x1, [sp]!  // encoding: [0xe1,0x03,0xa0,0xd9]
-// CHECK: stgv xzr, [x2]! // encoding: [0x5f,0x00,0xa0,0xd9]
+// CHECK: stgm x0, [x1]  // encoding: [0x20,0x00,0xa0,0xd9]
+// CHECK: stgm x1, [sp]  // encoding: [0xe1,0x03,0xa0,0xd9]
+// CHECK: stgm xzr, [x2] // encoding: [0x5f,0x00,0xa0,0xd9]
 
+// NOMTE: instruction requires: mte
+// NOMTE: instruction requires: mte
+// NOMTE: instruction requires: mte
+
+stzgm x0, [x1]
+stzgm x1, [sp]
+stzgm xzr, [x2]
+
+// CHECK: stzgm x0, [x1]  // encoding: [0x20,0x00,0x20,0xd9]
+// CHECK: stzgm x1, [sp]  // encoding: [0xe1,0x03,0x20,0xd9]
+// CHECK: stzgm xzr, [x2] // encoding: [0x5f,0x00,0x20,0xd9]
+
+// NOMTE: instruction requires: mte
 // NOMTE: instruction requires: mte
 // NOMTE: instruction requires: mte

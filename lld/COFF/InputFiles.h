@@ -51,6 +51,7 @@ class Lazy;
 class SectionChunk;
 class Symbol;
 class Undefined;
+class TpiSource;
 
 // The root class of input files.
 class InputFile {
@@ -167,6 +168,12 @@ public:
   // Whether the object was already merged into the final PDB or not
   bool MergedIntoPDB = false;
 
+  // If the OBJ has a .debug$T stream, this tells how it will be handled.
+  TpiSource *DebugTypesObj = nullptr;
+
+  // The .debug$T stream if there's one.
+  llvm::Optional<llvm::codeview::CVTypeArray> DebugTypes;
+
 private:
   const coff_section* getSection(uint32_t I);
   const coff_section *getSection(COFFSymbolRef Sym) {
@@ -176,6 +183,7 @@ private:
   void initializeChunks();
   void initializeSymbols();
   void initializeFlags();
+  void initializeDependencies();
 
   SectionChunk *
   readSection(uint32_t SectionNumber,

@@ -1256,12 +1256,15 @@ def : InstAlias<"cmpp $lhs, $rhs", (SUBPS XZR, GPR64sp:$lhs, GPR64sp:$rhs), 0>;
 def LDG : MemTagLoad<"ldg", "\t$Rt, [$Rn, $offset]">;
 def : InstAlias<"ldg $Rt, [$Rn]", (LDG GPR64:$Rt, GPR64sp:$Rn, 0), 1>;
 
-def LDGV : MemTagVector<1, "ldgv", "\t$Rt, [$Rn]!",
-                   (outs GPR64sp:$wback, GPR64:$Rt), (ins GPR64sp:$Rn)> {
-  let DecoderMethod = "DecodeLoadAllocTagArrayInstruction";
+def LDGM : MemTagVector<1, "ldgm", "\t$Rt, [$Rn]",
+                   (outs GPR64:$Rt), (ins GPR64sp:$Rn)>;
+def STGM : MemTagVector<0, "stgm", "\t$Rt, [$Rn]",
+                   (outs), (ins GPR64:$Rt, GPR64sp:$Rn)>;
+
+def STZGM : MemTagVector<0, "stzgm", "\t$Rt, [$Rn]",
+                   (outs), (ins GPR64:$Rt, GPR64sp:$Rn)> {
+  let Inst{23} = 0;
 }
-def STGV : MemTagVector<0, "stgv", "\t$Rt, [$Rn]!",
-                   (outs GPR64sp:$wback), (ins GPR64:$Rt, GPR64sp:$Rn)>;
 
 defm STG   : MemTagStore<0b00, "stg">;
 defm STZG  : MemTagStore<0b01, "stzg">;
