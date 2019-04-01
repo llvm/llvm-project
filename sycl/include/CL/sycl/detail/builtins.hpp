@@ -12,9 +12,6 @@
 #include <CL/sycl/detail/generic_type_traits.hpp>
 
 #include <type_traits>
-// TODO Delete this include after solving the problems in the test
-// infrastructure.
-#include <cmath>
 
 // TODO Decide whether to mark functions with this attribute.
 #define __NOEXC /*noexcept*/

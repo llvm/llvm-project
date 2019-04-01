@@ -188,13 +188,7 @@ int main() {
   translation units.
 - SYCL host device is not fully supported.
 - SYCL works only with OpenCL implementations supporting out-of-order queues.
-- `math.h` header is conflicting with SYCL headers. Please use `cmath` as a
-  workaround for now like below:
 
-```c++
-//#include <math.h>  // conflicting
-#include <cmath>
-```
 
 # Find More
 

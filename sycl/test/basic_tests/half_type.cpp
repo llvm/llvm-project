@@ -14,6 +14,8 @@
 
 #include <CL/sycl.hpp>
 
+#include <cmath>
+
 using namespace cl::sycl;
 
 constexpr float FLT_EPSILON = 9.77e-4;
