@@ -81,7 +81,6 @@ define amdgpu_kernel void @extract_w_offset_vgpr(i32 addrspace(1)* %out) {
   ; GCN: bb.1:
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN:   $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.5, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr3, implicit-def dead $m0 :: (load 8 from %stack.5, align 4, addrspace 5)
-  ; GCN:   $vgpr0 = SI_SPILL_V32_RESTORE %stack.4, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr3, 0, implicit $exec :: (load 4 from %stack.4, addrspace 5)
   ; GCN:   $vgpr1 = SI_SPILL_V32_RESTORE %stack.0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr3, 0, implicit $exec :: (load 4 from %stack.0, addrspace 5)
   ; GCN:   renamable $sgpr2 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
   ; GCN:   renamable $sgpr4_sgpr5 = V_CMP_EQ_U32_e64 $sgpr2, killed $vgpr1, implicit $exec
@@ -93,9 +92,7 @@ define amdgpu_kernel void @extract_w_offset_vgpr(i32 addrspace(1)* %out) {
   ; GCN:   renamable $vgpr19 = COPY renamable $vgpr18
   ; GCN:   renamable $sgpr6_sgpr7 = COPY renamable $sgpr4_sgpr5
   ; GCN:   SI_SPILL_S64_SAVE killed $sgpr6_sgpr7, %stack.5, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr3, implicit-def dead $m0 :: (store 8 into %stack.5, align 4, addrspace 5)
-  ; GCN:   SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.6, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr3, implicit-def dead $m0 :: (store 8 into %stack.6, align 4, addrspace 5)
   ; GCN:   SI_SPILL_V32_SAVE killed $vgpr19, %stack.4, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr3, 0, implicit $exec :: (store 4 into %stack.4, addrspace 5)
-  ; GCN:   SI_SPILL_V32_SAVE killed $vgpr0, %stack.7, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr3, 0, implicit $exec :: (store 4 into %stack.7, addrspace 5)
   ; GCN:   SI_SPILL_V32_SAVE killed $vgpr18, %stack.8, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr3, 0, implicit $exec :: (store 4 into %stack.8, addrspace 5)
   ; GCN:   $exec = S_XOR_B64_term $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
   ; GCN:   S_CBRANCH_EXECNZ %bb.1, implicit $exec

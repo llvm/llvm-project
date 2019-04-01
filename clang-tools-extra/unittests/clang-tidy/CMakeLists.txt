@@ -16,7 +16,8 @@ add_extra_unittest(ClangTidyTests
   ObjCModuleTest.cpp
   OverlappingReplacementsTest.cpp
   UsingInserterTest.cpp
-  ReadabilityModuleTest.cpp)
+  ReadabilityModuleTest.cpp
+  )
 
 target_link_libraries(ClangTidyTests
   PRIVATE

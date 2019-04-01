@@ -324,6 +324,10 @@ def : PatFpr32Fpr32<setole, FLE_S>;
 // handled by a RISC-V instruction and aren't expanded in the SelectionDAG
 // Legalizer.
 
+def : Pat<(seto FPR32:$rs1, FPR32:$rs2),
+          (AND (FEQ_S FPR32:$rs1, FPR32:$rs1),
+               (FEQ_S FPR32:$rs2, FPR32:$rs2))>;
+
 def : Pat<(setuo FPR32:$rs1, FPR32:$rs2),
           (SLTIU (AND (FEQ_S FPR32:$rs1, FPR32:$rs1),
                       (FEQ_S FPR32:$rs2, FPR32:$rs2)),

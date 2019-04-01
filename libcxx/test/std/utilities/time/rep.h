@@ -25,4 +25,40 @@ public:
     Rep& operator/=(Rep x) {data_ /= x.data_; return *this;}
 };
 
+// This is PR#41130
+
+struct NotARep {};
+
+// std::chrono:::duration has only '*', '/' and '%' taking a "Rep" parameter
+
+// Multiplication is commutative, division is not.
+template <class Rep, class Period>
+std::chrono::duration<Rep, Period>
+operator*(std::chrono::duration<Rep, Period> d, NotARep) { return d; }
+
+template <class Rep, class Period>
+std::chrono::duration<Rep, Period>
+operator*(NotARep, std::chrono::duration<Rep, Period> d) { return d; }
+
+template <class Rep, class Period>
+std::chrono::duration<Rep, Period>
+operator/(std::chrono::duration<Rep, Period> d, NotARep) { return d; }
+
+template <class Rep, class Period>
+std::chrono::duration<Rep, Period>
+operator%(std::chrono::duration<Rep, Period> d, NotARep) { return d; }
+
+// op= is not commutative.
+template <class Rep, class Period>
+std::chrono::duration<Rep, Period>&
+operator*=(std::chrono::duration<Rep, Period>& d, NotARep) { return d; }
+
+template <class Rep, class Period>
+std::chrono::duration<Rep, Period>&
+operator/=(std::chrono::duration<Rep, Period>& d, NotARep) { return d; }
+
+template <class Rep, class Period>
+std::chrono::duration<Rep, Period>&
+operator%=(std::chrono::duration<Rep, Period>& d, NotARep) { return d; }
+
 #endif  // REP_H
