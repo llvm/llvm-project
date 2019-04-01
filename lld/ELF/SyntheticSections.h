@@ -975,6 +975,11 @@ public:
 class ARMExidxSyntheticSection : public SyntheticSection {
 public:
   ARMExidxSyntheticSection();
+
+  // Add an input section to the ARMExidxSyntheticSection. Returns whether the
+  // section needs to be removed from the main input section list.
+  bool addSection(InputSection *IS);
+
   size_t getSize() const override { return Size; }
   void writeTo(uint8_t *Buf) override;
   bool isNeeded() const override { return !Empty; }
@@ -989,9 +994,6 @@ public:
   std::vector<InputSection *> ExidxSections;
 
 private:
-  // Derive Size from contents of ExecutableSections, including any linker
-  // generated sentinels. Also set the OutSecOff of the ExidxSections.
-  void setSizeAndOffsets();
   size_t Size;
 
   // Empty if ExecutableSections contains no dependent .ARM.exidx sections.

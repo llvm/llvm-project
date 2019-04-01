@@ -19,7 +19,7 @@
 #include "algorithm_fwd.h"
 
 #if __PSTL_USE_PAR_POLICIES
-#include "parallel_backend.h"
+#    include "parallel_backend.h"
 #endif
 
 namespace __pstl

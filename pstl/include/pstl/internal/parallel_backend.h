@@ -11,7 +11,7 @@
 #define __PSTL_parallel_backend_H
 
 #if __PSTL_PAR_BACKEND_TBB
-#include "parallel_backend_tbb.h"
+#    include "parallel_backend_tbb.h"
 #else
 __PSTL_PRAGMA_MESSAGE("Parallel backend was not specified");
 #endif

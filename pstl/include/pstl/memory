@@ -14,11 +14,11 @@
 
 #if __PSTL_EXECUTION_POLICIES_DEFINED
 // If <execution> has already been included, pull in implementations
-#include "internal/glue_memory_impl.h"
+#    include "internal/glue_memory_impl.h"
 #else
 // Otherwise just pull in forward declarations
-#include "internal/glue_memory_defs.h"
-#define __PSTL_MEMORY_FORWARD_DECLARED 1
+#    include "internal/glue_memory_defs.h"
+#    define __PSTL_MEMORY_FORWARD_DECLARED 1
 #endif
 
 #endif /* __PSTL_memory */
