@@ -87,8 +87,8 @@ template <class T> struct tuple_size; // undefined
 template <class... T> struct tuple_size<tuple<T...>>;
 template <class T>
  inline constexpr size_t tuple_size_v = tuple_size<T>::value; // C++17
-template <size_t I, class T> class tuple_element; // undefined
-template <size_t I, class... T> class tuple_element<I, tuple<T...>>;
+template <size_t I, class T> struct tuple_element; // undefined
+template <size_t I, class... T> struct tuple_element<I, tuple<T...>>;
 template <size_t I, class T>
   using tuple_element_t = typename tuple_element <I, T>::type; // C++14
 
