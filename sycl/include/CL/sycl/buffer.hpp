@@ -18,7 +18,7 @@ namespace cl {
 namespace sycl {
 class handler;
 class queue;
-template <int dimentions> class range;
+template <int dimensions> class range;
 
 template <typename T, int dimensions = 1,
           typename AllocatorT = cl::sycl::buffer_allocator>
@@ -28,6 +28,8 @@ public:
   using reference = value_type &;
   using const_reference = const value_type &;
   using allocator_type = AllocatorT;
+  template <int dims>
+  using EnableIfOneDimension = typename std::enable_if<1 == dims>::type;
 
   buffer(const range<dimensions> &bufferRange,
          const property_list &propList = {})
@@ -83,7 +85,8 @@ public:
         hostData, get_count() * sizeof(T), propList);
   }
 
-  template <class InputIterator>
+  template <class InputIterator, int N = dimensions,
+            typename = EnableIfOneDimension<N>>
   buffer(InputIterator first, InputIterator last, AllocatorT allocator,
          const property_list &propList = {})
       : Range(range<1>(std::distance(first, last))) {
@@ -92,7 +95,7 @@ public:
   }
 
   template <class InputIterator, int N = dimensions,
-            typename = std::enable_if<N == 1>>
+            typename = EnableIfOneDimension<N>>
   buffer(InputIterator first, InputIterator last,
          const property_list &propList = {})
       : Range(range<1>(std::distance(first, last))) {
@@ -105,7 +108,7 @@ public:
   //     impl = std::make_shared<detail::buffer_impl>(b, baseIndex, subRange);
   // }
 
-  template <int N = dimensions, typename = std::enable_if<N == 1>>
+  template <int N = dimensions, typename = EnableIfOneDimension<N>>
   buffer(cl_mem MemObject, const context &SyclContext,
          event AvailableEvent = {}) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
