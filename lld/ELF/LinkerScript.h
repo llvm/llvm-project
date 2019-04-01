@@ -67,7 +67,7 @@ struct ExprValue {
 // This represents an expression in the linker script.
 // ScriptParser::readExpr reads an expression and returns an Expr.
 // Later, we evaluate the expression by calling the function.
-typedef std::function<ExprValue()> Expr;
+using Expr = std::function<ExprValue()>;
 
 // This enum is used to implement linker script SECTIONS command.
 // https://sourceware.org/binutils/docs/ld/SECTIONS.html#SECTIONS

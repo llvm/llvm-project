@@ -215,21 +215,21 @@ void X86::writePltHeader(uint8_t *Buf) const {
 void X86::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                    uint64_t PltEntryAddr, int32_t Index,
                    unsigned RelOff) const {
-  const uint8_t Inst[] = {
-      0xff, 0x00, 0, 0, 0, 0, // jmp *foo_in_GOT or jmp *foo@GOT(%ebx)
-      0x68, 0, 0, 0, 0,       // pushl $reloc_offset
-      0xe9, 0, 0, 0, 0,       // jmp .PLT0@PC
-  };
-  memcpy(Buf, Inst, sizeof(Inst));
-
   if (Config->Pic) {
-    // jmp *foo@GOT(%ebx)
-    uint32_t Ebx = In.GotPlt->getVA();
-    Buf[1] = 0xa3;
-    write32le(Buf + 2, GotPltEntryAddr - Ebx);
+    const uint8_t Inst[] = {
+        0xff, 0xa3, 0, 0, 0, 0, // jmp *foo@GOT(%ebx)
+        0x68, 0,    0, 0, 0,    // pushl $reloc_offset
+        0xe9, 0,    0, 0, 0,    // jmp .PLT0@PC
+    };
+    memcpy(Buf, Inst, sizeof(Inst));
+    write32le(Buf + 2, GotPltEntryAddr - In.GotPlt->getVA());
   } else {
-    // jmp *foo_in_GOT
-    Buf[1] = 0x25;
+    const uint8_t Inst[] = {
+        0xff, 0x25, 0, 0, 0, 0, // jmp *foo@GOT
+        0x68, 0,    0, 0, 0,    // pushl $reloc_offset
+        0xe9, 0,    0, 0, 0,    // jmp .PLT0@PC
+    };
+    memcpy(Buf, Inst, sizeof(Inst));
     write32le(Buf + 2, GotPltEntryAddr);
   }
 
