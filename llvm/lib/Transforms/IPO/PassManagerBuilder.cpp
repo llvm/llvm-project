@@ -877,9 +877,74 @@ void PassManagerBuilder::populateModulePassManager(
       MPM.add(createArgumentPromotionPass()); // Scalarize uninlined fn args
     addFunctionSimplificationPasses(MPM);
     MPM.add(createReversePostOrderFunctionAttrsPass());
+
+    MPM.add(createIPSCCPPass());          // IP SCCP
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createGlobalOptimizerPass()); // Optimize out global vars
+    // Promote any localized global vars.
+    MPM.add(createPromoteMemoryToRegisterPass());
+
+    MPM.add(createDeadArgEliminationPass()); // Dead argument elimination
+
+    addInstructionCombiningPass(MPM); // Clean up after IPCP & DAE
+    MPM.add(createCFGSimplificationPass()); // Clean up after IPCP & DAE
+
     if (MergeFunctions)
       MPM.add(createMergeFunctionsPass());
     MPM.add(createBarrierNoopPass());
+
+    // We add a module alias analysis pass here. In part due to bugs in the
+    // analysis infrastructure this "works" in that the analysis stays alive
+    // for the entire SCC pass run below.
+    MPM.add(createGlobalsAAWrapperPass());
+
+    // Start of CallGraph SCC passes.
+    MPM.add(createPruneEHPass()); // Remove dead EH info
+    bool RunInliner = false;
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+      RunInliner = true;
+    }
+
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    if (OptLevel > 2)
+      MPM.add(createArgumentPromotionPass()); // Scalarize uninlined fn args
+
+    addFunctionSimplificationPasses(MPM);
+
+    // FIXME: This is a HACK! The inliner pass above implicitly creates a CGSCC
+    // pass manager that we are specifically trying to avoid. To prevent this
+    // we must insert a no-op module pass to reset the pass manager.
+    MPM.add(createBarrierNoopPass());
+
+    if (RunPartialInlining)
+      MPM.add(createPartialInliningPass());
+
+    if (OptLevel > 1)
+      // Remove avail extern fns and globals definitions if we aren't
+      // compiling an object file for later LTO. For LTO we want to preserve
+      // these so they are eligible for inlining at link-time. Note if they
+      // are unreferenced they will be removed by GlobalDCE later, so
+      // this only impacts referenced available externally globals.
+      // Eventually they will be suppressed during codegen, but eliminating
+      // here enables more opportunity for GlobalDCE as it may make
+      // globals referenced by available external functions dead
+      // and saves running remaining passes on the eliminated functions.
+      MPM.add(createEliminateAvailableExternallyPass());
+
+    MPM.add(createReversePostOrderFunctionAttrsPass());
+
+    // The inliner performs some kind of dead code elimination as it goes,
+    // but there are cases that are not really caught by it. We might
+    // at some point consider teaching the inliner about them, but it
+    // is OK for now to run GlobalOpt + GlobalDCE in tandem as their
+    // benefits generally outweight the cost, making the whole pipeline
+    // faster.
+    if (RunInliner) {
+      MPM.add(createGlobalOptimizerPass());
+      MPM.add(createGlobalDCEPass());
+    }
 
     TapirHasBeenLowered = true;
     // HACK to disable rerun of the pipeline after Tapir lowering.
