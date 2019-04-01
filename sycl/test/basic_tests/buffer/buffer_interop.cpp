@@ -16,10 +16,14 @@
 using namespace cl::sycl;
 
 int main() {
+  bool Failed = false;
   {
     const size_t Size = 32;
     int Init[Size] = {5};
     cl_int Error = CL_SUCCESS;
+    cl::sycl::range<1> InteropRange;
+    InteropRange[0] = Size;
+    size_t InteropSize = Size * sizeof(int);
 
     queue MyQueue;
 
@@ -28,6 +32,19 @@ int main() {
         Size * sizeof(int), Init, &Error);
     CHECK_OCL_CODE(Error);
     buffer<int, 1> Buffer(OpenCLBuffer, MyQueue.get_context());
+
+    if (Buffer.get_range() != InteropRange) {
+          assert(false);
+          Failed = true;
+    }
+    if (Buffer.get_size() != InteropSize) {
+          assert(false);
+          Failed = true;
+    }
+    if (Buffer.get_count() != Size) {
+          assert(false);
+          Failed = true;
+    }
 
     MyQueue.submit([&](handler &CGH) {
       auto B = Buffer.get_access<access::mode::write>(CGH);
@@ -58,8 +75,9 @@ int main() {
         std::cout << " array[" << i << "] is " << Result[i] << " expected "
                   << 20 << std::endl;
         assert(false);
+        Failed = true;
       }
     }
   }
-  return 0;
+  return Failed;
 }

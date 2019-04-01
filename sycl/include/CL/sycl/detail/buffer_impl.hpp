@@ -119,8 +119,9 @@ public:
   }
 
   buffer_impl(cl_mem MemObject, const context &SyclContext,
-              event AvailableEvent = {})
-      : OpenCLInterop(true), AvailableEvent(AvailableEvent) {
+              const size_t sizeInBytes, event AvailableEvent = {})
+      : OpenCLInterop(true), SizeInBytes(sizeInBytes),
+        AvailableEvent(AvailableEvent) {
     if (SyclContext.is_host())
       throw cl::sycl::invalid_parameter_error(
           "Creation of interoperability buffer using host context is not "

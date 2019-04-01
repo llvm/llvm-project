@@ -111,8 +111,13 @@ public:
   template <int N = dimensions, typename = EnableIfOneDimension<N>>
   buffer(cl_mem MemObject, const context &SyclContext,
          event AvailableEvent = {}) {
+
+    size_t BufSize = 0;
+    CHECK_OCL_CODE(clGetMemObjectInfo(MemObject, CL_MEM_SIZE, sizeof(size_t),
+                                      &BufSize, nullptr));
+    Range[0] = BufSize / sizeof(T);
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
-        MemObject, SyclContext, AvailableEvent);
+        MemObject, SyclContext, BufSize, AvailableEvent);
   }
 
   buffer(const buffer &rhs) = default;
