@@ -22,8 +22,8 @@
 #include "unseq_backend_simd.h"
 
 #if __PSTL_USE_PAR_POLICIES
-#include "parallel_backend.h"
-#include "parallel_impl.h"
+#    include "parallel_backend.h"
+#    include "parallel_impl.h"
 #endif
 
 namespace __pstl
@@ -2194,11 +2194,11 @@ __pattern_partial_sort_copy(_ExecutionPolicy&& __exec, _ForwardIterator __first,
                     _ForwardIterator __j1 = __first + (__j - __d_first);
 
                 // 1. Copy elements from input to output
-#if !__PSTL_ICC_18_OMP_SIMD_BROKEN
+#    if !__PSTL_ICC_18_OMP_SIMD_BROKEN
                     __internal::__brick_copy(__i1, __j1, __i, __is_vector);
-#else
+#    else
                     std::copy(__i1, __j1, __i);
-#endif
+#    endif
                     // 2. Sort elements in output sequence
                     std::sort(__i, __j, __comp);
                 },

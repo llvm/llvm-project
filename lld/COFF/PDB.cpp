@@ -9,6 +9,7 @@
 #include "PDB.h"
 #include "Chunks.h"
 #include "Config.h"
+#include "DebugTypes.h"
 #include "Driver.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -132,15 +133,12 @@ public:
                                            CVIndexMap *ObjectIndexMap);
 
   /// Reads and makes available a PDB.
-  Expected<const CVIndexMap &> maybeMergeTypeServerPDB(ObjFile *File,
-                                                       const CVType &FirstType);
+  Expected<const CVIndexMap &> maybeMergeTypeServerPDB(ObjFile *File);
 
   /// Merges a precompiled headers TPI map into the current TPI map. The
   /// precompiled headers object will also be loaded and remapped in the
   /// process.
-  Expected<const CVIndexMap &>
-  mergeInPrecompHeaderObj(ObjFile *File, const CVType &FirstType,
-                          CVIndexMap *ObjectIndexMap);
+  Error mergeInPrecompHeaderObj(ObjFile *File, CVIndexMap *ObjectIndexMap);
 
   /// Reads and makes available a precompiled headers object.
   ///
@@ -151,8 +149,7 @@ public:
   ///
   /// If the precompiled headers object was already loaded, this function will
   /// simply return its (remapped) TPI map.
-  Expected<const CVIndexMap &> aquirePrecompObj(ObjFile *File,
-                                                PrecompRecord Precomp);
+  Expected<const CVIndexMap &> aquirePrecompObj(ObjFile *File);
 
   /// Adds a precompiled headers object signature -> TPI mapping.
   std::pair<CVIndexMap &, bool /*already there*/>
@@ -373,21 +370,12 @@ Expected<const CVIndexMap &>
 PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
   ScopedTimer T(TypeMergingTimer);
 
-  bool IsPrecompiledHeader = false;
-
-  ArrayRef<uint8_t> Data = File->getDebugSection(".debug$T");
-  if (Data.empty()) {
-    // Try again, Microsoft precompiled headers use .debug$P instead of
-    // .debug$T
-    Data = File->getDebugSection(".debug$P");
-    IsPrecompiledHeader = true;
-  }
-  if (Data.empty())
-    return *ObjectIndexMap; // no debug info
+  if (!File->DebugTypesObj)
+      return *ObjectIndexMap; // no Types stream
 
   // Precompiled headers objects need to save the index map for further
   // reference by other objects which use the precompiled headers.
-  if (IsPrecompiledHeader) {
+  if (File->DebugTypesObj->Kind == TpiSource::PCH) {
     uint32_t PCHSignature = File->PCHSignature.getValueOr(0);
     if (PCHSignature == 0)
       fatal("No signature found for the precompiled headers OBJ (" +
@@ -409,33 +397,28 @@ PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
     }
   }
 
-  BinaryByteStream Stream(Data, support::little);
-  CVTypeArray Types;
-  BinaryStreamReader Reader(Stream);
-  if (auto EC = Reader.readArray(Types, Reader.getLength()))
-    fatal("Reader::readArray failed: " + toString(std::move(EC)));
-
-  auto FirstType = Types.begin();
-  if (FirstType == Types.end())
-    return *ObjectIndexMap;
-
-  if (FirstType->kind() == LF_TYPESERVER2) {
+  if (File->DebugTypesObj->Kind == TpiSource::UsingPDB) {
     // Look through type servers. If we've already seen this type server,
     // don't merge any type information.
-    return maybeMergeTypeServerPDB(File, *FirstType);
-  } else if (FirstType->kind() == LF_PRECOMP) {
+    return maybeMergeTypeServerPDB(File);
+  }
+  
+  CVTypeArray &Types = *File->DebugTypes;
+
+  if (File->DebugTypesObj->Kind == TpiSource::UsingPCH) {
     // This object was compiled with /Yu, so process the corresponding
     // precompiled headers object (/Yc) first. Some type indices in the current
     // object are referencing data in the precompiled headers object, so we need
     // both to be loaded.
-    auto E = mergeInPrecompHeaderObj(File, *FirstType, ObjectIndexMap);
-    if (!E)
-      return E.takeError();
+    Error E = mergeInPrecompHeaderObj(File, ObjectIndexMap);
+    if (E)
+      return std::move(E);
 
-    // Drop LF_PRECOMP record from the input stream, as it needs to be replaced
-    // with the precompiled headers object type stream.
-    // Note that we can't just call Types.drop_front(), as we explicitly want to
-    // rebase the stream.
+    // Drop LF_PRECOMP record from the input stream, as it has been replaced
+    // with the precompiled headers Type stream in the mergeInPrecompHeaderObj()
+    // call above. Note that we can't just call Types.drop_front(), as we
+    // explicitly want to rebase the stream.
+    CVTypeArray::Iterator FirstType = Types.begin();
     Types.setUnderlyingStream(
         Types.getUnderlyingStream().drop_front(FirstType->RecordData.size()));
   }
@@ -503,12 +486,9 @@ tryToLoadPDB(const codeview::GUID &GuidFromObj, StringRef TSPath) {
   return std::move(NS);
 }
 
-Expected<const CVIndexMap &>
-PDBLinker::maybeMergeTypeServerPDB(ObjFile *File, const CVType &FirstType) {
-  TypeServer2Record TS;
-  if (auto EC =
-          TypeDeserializer::deserializeAs(const_cast<CVType &>(FirstType), TS))
-    fatal("error reading record: " + toString(std::move(EC)));
+Expected<const CVIndexMap &> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File) {
+  const TypeServer2Record &TS =
+      retrieveDependencyInfo<TypeServer2Record>(File->DebugTypesObj);
 
   const codeview::GUID &TSId = TS.getGuid();
   StringRef TSPath = TS.getName();
@@ -617,15 +597,12 @@ PDBLinker::maybeMergeTypeServerPDB(ObjFile *File, const CVType &FirstType) {
   return IndexMap;
 }
 
-Expected<const CVIndexMap &>
-PDBLinker::mergeInPrecompHeaderObj(ObjFile *File, const CVType &FirstType,
-                                   CVIndexMap *ObjectIndexMap) {
-  PrecompRecord Precomp;
-  if (auto EC = TypeDeserializer::deserializeAs(const_cast<CVType &>(FirstType),
-                                                Precomp))
-    fatal("error reading record: " + toString(std::move(EC)));
+Error PDBLinker::mergeInPrecompHeaderObj(ObjFile *File,
+                                         CVIndexMap *ObjectIndexMap) {
+  const PrecompRecord &Precomp =
+      retrieveDependencyInfo<PrecompRecord>(File->DebugTypesObj);
 
-  auto E = aquirePrecompObj(File, Precomp);
+  Expected<const CVIndexMap &> E = aquirePrecompObj(File);
   if (!E)
     return E.takeError();
 
@@ -633,7 +610,7 @@ PDBLinker::mergeInPrecompHeaderObj(ObjFile *File, const CVType &FirstType,
   assert(PrecompIndexMap.IsPrecompiledTypeMap);
 
   if (PrecompIndexMap.TPIMap.empty())
-    return PrecompIndexMap;
+    return Error::success();
 
   assert(Precomp.getStartTypeIndex() == TypeIndex::FirstNonSimpleIndex);
   assert(Precomp.getTypesCount() <= PrecompIndexMap.TPIMap.size());
@@ -641,7 +618,7 @@ PDBLinker::mergeInPrecompHeaderObj(ObjFile *File, const CVType &FirstType,
   ObjectIndexMap->TPIMap.append(PrecompIndexMap.TPIMap.begin(),
                                 PrecompIndexMap.TPIMap.begin() +
                                     Precomp.getTypesCount());
-  return *ObjectIndexMap;
+  return Error::success();
 }
 
 static bool equals_path(StringRef path1, StringRef path2) {
@@ -677,8 +654,10 @@ PDBLinker::registerPrecompiledHeaders(uint32_t Signature) {
   return {IndexMap, false};
 }
 
-Expected<const CVIndexMap &>
-PDBLinker::aquirePrecompObj(ObjFile *File, PrecompRecord Precomp) {
+Expected<const CVIndexMap &> PDBLinker::aquirePrecompObj(ObjFile *File) {
+  const PrecompRecord &Precomp =
+      retrieveDependencyInfo<PrecompRecord>(File->DebugTypesObj);
+
   // First, check if we already loaded the precompiled headers object with this
   // signature. Return the type index mapping if we've already seen it.
   auto R = registerPrecompiledHeaders(Precomp.getSignature());
