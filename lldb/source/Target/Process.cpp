@@ -2261,8 +2261,9 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
       });
 
       if (bytes_written < size)
-        WriteMemoryPrivate(addr + bytes_written, ubuf + bytes_written,
-                           size - bytes_written, error);
+        return bytes_written + WriteMemoryPrivate(addr + bytes_written,
+                                                  ubuf + bytes_written,
+                                                  size - bytes_written, error);
     }
   } else {
     return WriteMemoryPrivate(addr, buf, size, error);
