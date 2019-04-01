@@ -22,7 +22,6 @@
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
@@ -155,8 +154,6 @@ private:
 
   /// The flag, which specifies the mode of inlining for the engine.
   InliningModes HowToInline;
-
-  NoteTag::Factory NoteTags;
 
 public:
   ExprEngine(cross_tu::CrossTranslationUnitContext &CTU, AnalysisManager &mgr,
@@ -398,8 +395,6 @@ public:
 
   SymbolManager &getSymbolManager() { return SymMgr; }
   MemRegionManager &getRegionManager() { return MRMgr; }
-
-  NoteTag::Factory &getNoteTags() { return NoteTags; }
 
 
   // Functions for external checking of whether we have unfinished work

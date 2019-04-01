@@ -1750,6 +1750,25 @@ ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
   setName(Name);
 }
 
+void ShuffleVectorInst::commute() {
+  int NumOpElts = Op<0>()->getType()->getVectorNumElements();
+  int NumMaskElts = getMask()->getType()->getVectorNumElements();
+  SmallVector<Constant*, 16> NewMask(NumMaskElts);
+  Type *Int32Ty = Type::getInt32Ty(getContext());
+  for (int i = 0; i != NumMaskElts; ++i) {
+    int MaskElt = getMaskValue(i);
+    if (MaskElt == -1) {
+      NewMask[i] = UndefValue::get(Int32Ty);
+      continue;
+    }
+    assert(MaskElt >= 0 && MaskElt < 2 * NumOpElts && "Out-of-range mask");
+    MaskElt = (MaskElt < NumOpElts) ? MaskElt + NumOpElts : MaskElt - NumOpElts;
+    NewMask[i] = ConstantInt::get(Int32Ty, MaskElt);
+  }
+  Op<2>() = ConstantVector::get(NewMask);
+  Op<0>().swap(Op<1>());
+}
+
 bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
                                         const Value *Mask) {
   // V1 and V2 must be vectors of the same type.

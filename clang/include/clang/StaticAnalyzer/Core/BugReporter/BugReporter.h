@@ -592,60 +592,6 @@ public:
   NodeMapClosure& getNodeResolver() { return NMC; }
 };
 
-
-/// The tag upon which the TagVisitor reacts. Add these in order to display
-/// additional PathDiagnosticEventPieces along the path.
-class NoteTag : public ProgramPointTag {
-public:
-  using Callback =
-      std::function<std::string(BugReporterContext &, BugReport &)>;
-
-private:
-  static int Kind;
-
-  const Callback Cb;
-
-  NoteTag(Callback &&Cb) : ProgramPointTag(&Kind), Cb(std::move(Cb)) {}
-
-public:
-  static bool classof(const ProgramPointTag *T) {
-    return T->getTagKind() == &Kind;
-  }
-
-  Optional<std::string> generateMessage(BugReporterContext &BRC,
-                                        BugReport &R) const {
-    std::string Msg = Cb(BRC, R);
-    if (Msg.empty())
-      return None;
-
-    return std::move(Msg);
-  }
-
-  StringRef getTagDescription() const override {
-    // TODO: Remember a few examples of generated messages
-    // and display them in the ExplodedGraph dump by
-    // returning them from this function.
-    return "Note Tag";
-  }
-
-  // Manage memory for NoteTag objects.
-  class Factory {
-    llvm::BumpPtrAllocator &Alloc;
-
-  public:
-    Factory(llvm::BumpPtrAllocator &Alloc) : Alloc(Alloc) {}
-
-    const NoteTag *makeNoteTag(Callback &&Cb) {
-      // We cannot use make_unique because we cannot access the private
-      // constructor from inside it.
-      NoteTag *Tag = Alloc.Allocate<NoteTag>();
-      return new (Tag) NoteTag(std::move(Cb));
-    }
-  };
-
-  friend class TagVisitor;
-};
-
 } // namespace ento
 
 } // namespace clang

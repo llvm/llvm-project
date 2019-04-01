@@ -2634,10 +2634,13 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
     return false;
 
   bool IsCommutable = false;
+  bool IsNegate = false;
   switch (Opc) {
   default:
     return false;
   case X86ISD::SUB:
+    IsNegate = isNullConstant(StoredVal.getOperand(0));
+    break;
   case X86ISD::SBB:
     break;
   case X86ISD::ADD:
@@ -2649,7 +2652,7 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
     break;
   }
 
-  unsigned LoadOpNo = 0;
+  unsigned LoadOpNo = IsNegate ? 1 : 0;
   LoadSDNode *LoadNode = nullptr;
   SDValue InputChain;
   if (!isFusableLoadOpStorePattern(StoreNode, StoredVal, CurDAG, LoadOpNo,
@@ -2687,8 +2690,18 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
 
   MachineSDNode *Result;
   switch (Opc) {
-  case X86ISD::ADD:
   case X86ISD::SUB:
+    // Handle negate.
+    if (IsNegate) {
+      unsigned NewOpc = SelectOpcode(X86::NEG64m, X86::NEG32m, X86::NEG16m,
+                                     X86::NEG8m);
+      const SDValue Ops[] = {Base, Scale, Index, Disp, Segment, InputChain};
+      Result = CurDAG->getMachineNode(NewOpc, SDLoc(Node), MVT::i32,
+                                      MVT::Other, Ops);
+      break;
+    }
+   LLVM_FALLTHROUGH;
+  case X86ISD::ADD:
     // Try to match inc/dec.
     if (!Subtarget->slowIncDec() || OptForSize) {
       bool IsOne = isOneConstant(StoredVal.getOperand(1));

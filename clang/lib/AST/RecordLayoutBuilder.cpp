@@ -238,7 +238,7 @@ EmptySubobjectMap::CanPlaceSubobjectAtOffset(const CXXRecordDecl *RD,
     return true;
 
   const ClassVectorTy &Classes = I->second;
-  if (std::find(Classes.begin(), Classes.end(), RD) == Classes.end())
+  if (llvm::find(Classes, RD) == Classes.end())
     return true;
 
   // There is already an empty class of the same type at this offset.

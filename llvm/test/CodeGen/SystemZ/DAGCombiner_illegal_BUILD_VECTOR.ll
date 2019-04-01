@@ -5,7 +5,7 @@
 ; BUILD_VECTOR node.
 
 
-define void @pr32422() {
+define void @pr32422(double %a0) {
 ; CHECK-LABEL: pr32422:
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:  .LBB0_1: # %CF
@@ -23,7 +23,7 @@ BB:
   br label %CF
 
 CF:                                               ; preds = %CF, %BB
-  %Cmp40 = fcmp uno double 0xC663C682E9619F00, undef
+  %Cmp40 = fcmp uno double 0xC663C682E9619F00, %a0
   br i1 %Cmp40, label %CF, label %CF353
 
 CF353:                                            ; preds = %CF

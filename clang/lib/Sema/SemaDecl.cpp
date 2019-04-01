@@ -8084,8 +8084,7 @@ static bool isOpenCLSizeDependentType(ASTContext &C, QualType Ty) {
   QualType DesugaredTy = Ty;
   do {
     ArrayRef<StringRef> Names(SizeTypeNames);
-    auto Match =
-        std::find(Names.begin(), Names.end(), DesugaredTy.getAsString());
+    auto Match = llvm::find(Names, DesugaredTy.getAsString());
     if (Names.end() != Match)
       return true;
 

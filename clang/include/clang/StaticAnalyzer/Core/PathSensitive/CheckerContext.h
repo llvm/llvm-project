@@ -219,24 +219,6 @@ public:
     Eng.getBugReporter().emitReport(std::move(R));
   }
 
-
-  /// Produce a program point tag that displays an additional path note
-  /// to the user. This is a lightweight alternative to the
-  /// BugReporterVisitor mechanism: instead of visiting the bug report
-  /// node-by-node to restore the sequence of events that led to discovering
-  /// a bug, you can add notes as you add your transitions.
-  const NoteTag *getNoteTag(NoteTag::Callback &&Cb) {
-    return Eng.getNoteTags().makeNoteTag(std::move(Cb));
-  }
-
-  /// A shorthand version of getNoteTag that doesn't require you to accept
-  /// the BugReporterContext arguments when you don't need it.
-  const NoteTag *getNoteTag(std::function<std::string(BugReport &)> &&Cb) {
-    return getNoteTag(
-        [Cb](BugReporterContext &, BugReport &BR) { return Cb(BR); });
-  }
-
-
   /// Returns the word that should be used to refer to the declaration
   /// in the report.
   StringRef getDeclDescription(const Decl *D);

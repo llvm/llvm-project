@@ -138,7 +138,7 @@ void OutputSection::addSection(InputSection *IS) {
 
 static void sortByOrder(MutableArrayRef<InputSection *> In,
                         llvm::function_ref<int(InputSectionBase *S)> Order) {
-  typedef std::pair<int, InputSection *> Pair;
+  using Pair = std::pair<int, InputSection *>;
   auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
 
   std::vector<Pair> V;
@@ -179,7 +179,7 @@ static void fill(uint8_t *Buf, size_t Size,
 
 // Compress section contents if this section contains debug info.
 template <class ELFT> void OutputSection::maybeCompress() {
-  typedef typename ELFT::Chdr Elf_Chdr;
+  using Elf_Chdr = typename ELFT::Chdr;
 
   // Compress only DWARF debug sections.
   if (!Config->CompressDebugSections || (Flags & SHF_ALLOC) ||

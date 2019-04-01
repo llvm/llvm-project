@@ -42,11 +42,12 @@ public:
   virtual ~ProgramPointTag();
   virtual StringRef getTagDescription() const = 0;
 
+protected:
   /// Used to implement 'isKind' in subclasses.
-  const void *getTagKind() const { return TagKind; }
+  const void *getTagKind() { return TagKind; }
 
 private:
-  const void *const TagKind;
+  const void *TagKind;
 };
 
 class SimpleProgramPointTag : public ProgramPointTag {

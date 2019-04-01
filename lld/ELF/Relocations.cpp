@@ -479,7 +479,7 @@ static RelExpr fromPlt(RelExpr Expr) {
 
 // Returns true if a given shared symbol is in a read-only segment in a DSO.
 template <class ELFT> static bool isReadOnly(SharedSymbol &SS) {
-  typedef typename ELFT::Phdr Elf_Phdr;
+  using Elf_Phdr = typename ELFT::Phdr;
 
   // Determine if the symbol is read-only by scanning the DSO's program headers.
   const SharedFile<ELFT> &File = SS.getFile<ELFT>();
@@ -498,7 +498,7 @@ template <class ELFT> static bool isReadOnly(SharedSymbol &SS) {
 // Otherwise, they would refer to different places at runtime.
 template <class ELFT>
 static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &SS) {
-  typedef typename ELFT::Sym Elf_Sym;
+  using Elf_Sym = typename ELFT::Sym;
 
   SharedFile<ELFT> &File = SS.getFile<ELFT>();
 

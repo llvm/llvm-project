@@ -54,11 +54,33 @@ class MIGChecker : public Checker<check::PostCall, check::PreStmt<ReturnStmt>,
       CALL(3, 1, "mach_vm_deallocate"),
       CALL(2, 0, "mig_deallocate"),
       CALL(2, 1, "mach_port_deallocate"),
+      CALL(1, 0, "device_deallocate"),
+      CALL(1, 0, "iokit_remove_connect_reference"),
+      CALL(1, 0, "iokit_remove_reference"),
+      CALL(1, 0, "iokit_release_port"),
+      CALL(1, 0, "ipc_port_release"),
+      CALL(1, 0, "ipc_port_release_sonce"),
+      CALL(1, 0, "ipc_voucher_attr_control_release"),
+      CALL(1, 0, "ipc_voucher_release"),
+      CALL(1, 0, "lock_set_dereference"),
+      CALL(1, 0, "memory_object_control_deallocate"),
+      CALL(1, 0, "pset_deallocate"),
+      CALL(1, 0, "semaphore_dereference"),
+      CALL(1, 0, "space_deallocate"),
+      CALL(1, 0, "space_inspect_deallocate"),
+      CALL(1, 0, "task_deallocate"),
+      CALL(1, 0, "task_inspect_deallocate"),
+      CALL(1, 0, "task_name_deallocate"),
+      CALL(1, 0, "thread_deallocate"),
+      CALL(1, 0, "thread_inspect_deallocate"),
+      CALL(1, 0, "upl_deallocate"),
+      CALL(1, 0, "vm_map_deallocate"),
       // E.g., if the checker sees a method 'releaseAsyncReference64()' that is
       // defined on class 'IOUserClient' that takes exactly 1 argument, it knows
       // that the argument is going to be consumed in the sense of the MIG
       // consume-on-success convention.
       CALL(1, 0, "IOUserClient", "releaseAsyncReference64"),
+      CALL(1, 0, "IOUserClient", "releaseNotificationPort"),
 #undef CALL
   };
 
@@ -80,10 +102,43 @@ public:
     checkReturnAux(RS, C);
   }
 
+  class Visitor : public BugReporterVisitor {
+  public:
+    void Profile(llvm::FoldingSetNodeID &ID) const {
+      static int X = 0;
+      ID.AddPointer(&X);
+    }
+
+    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+        BugReporterContext &BRC, BugReport &R);
+  };
 };
 } // end anonymous namespace
 
-REGISTER_TRAIT_WITH_PROGRAMSTATE(ReleasedParameter, bool)
+// FIXME: It's a 'const ParmVarDecl *' but there's no ready-made GDM traits
+// specialization for this sort of types.
+REGISTER_TRAIT_WITH_PROGRAMSTATE(ReleasedParameter, const void *)
+
+std::shared_ptr<PathDiagnosticPiece>
+MIGChecker::Visitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
+                               BugReport &R) {
+  const auto *NewPVD = static_cast<const ParmVarDecl *>(
+      N->getState()->get<ReleasedParameter>());
+  const auto *OldPVD = static_cast<const ParmVarDecl *>(
+      N->getFirstPred()->getState()->get<ReleasedParameter>());
+  if (OldPVD == NewPVD)
+    return nullptr;
+
+  assert(NewPVD && "What is deallocated cannot be un-deallocated!");
+  SmallString<64> Str;
+  llvm::raw_svector_ostream OS(Str);
+  OS << "Value passed through parameter '" << NewPVD->getName()
+     << "' is deallocated";
+
+  PathDiagnosticLocation Loc =
+      PathDiagnosticLocation::create(N->getLocation(), BRC.getSourceManager());
+  return std::make_shared<PathDiagnosticEventPiece>(Loc, OS.str());
+}
 
 static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C) {
   SymbolRef Sym = V.getAsSymbol();
@@ -149,10 +204,10 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
   if (!isInMIGCall(C))
     return;
 
-  auto I = std::find_if(Deallocators.begin(), Deallocators.end(),
-                        [&](const std::pair<CallDescription, unsigned> &Item) {
-                          return Call.isCalled(Item.first);
-                        });
+  auto I = llvm::find_if(Deallocators,
+                         [&](const std::pair<CallDescription, unsigned> &Item) {
+                           return Call.isCalled(Item.first);
+                         });
   if (I == Deallocators.end())
     return;
 
@@ -162,16 +217,7 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
   if (!PVD)
     return;
 
-  const NoteTag *T = C.getNoteTag([this, PVD](BugReport &BR) -> std::string {
-    if (&BR.getBugType() != &BT)
-      return "";
-    SmallString<64> Str;
-    llvm::raw_svector_ostream OS(Str);
-    OS << "Value passed through parameter '" << PVD->getName()
-       << "\' is deallocated";
-    return OS.str();
-  });
-  C.addTransition(C.getState()->set<ReleasedParameter>(true), T);
+  C.addTransition(C.getState()->set<ReleasedParameter>(PVD));
 }
 
 // Returns true if V can potentially represent a "successful" kern_return_t.
@@ -236,6 +282,7 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
 
   R->addRange(RS->getSourceRange());
   bugreporter::trackExpressionValue(N, RS->getRetValue(), *R, false);
+  R->addVisitor(llvm::make_unique<Visitor>());
   C.emitReport(std::move(R));
 }
 

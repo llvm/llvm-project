@@ -201,9 +201,7 @@ ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
       svalBuilder(StateMgr.getSValBuilder()),
       ObjCNoRet(mgr.getASTContext()),
       BR(mgr, *this),
-      VisitedCallees(VisitedCalleesIn),
-      HowToInline(HowToInlineIn),
-      NoteTags(G.getAllocator()) {
+      VisitedCallees(VisitedCalleesIn), HowToInline(HowToInlineIn) {
   unsigned TrimInterval = mgr.options.GraphTrimInterval;
   if (TrimInterval != 0) {
     // Enable eager node reclamation when constructing the ExplodedGraph.

@@ -254,8 +254,7 @@ void ModuleManager::removeModules(
   // Remove the modules from the PCH chain.
   for (auto I = First; I != Last; ++I) {
     if (!I->isModule()) {
-      PCHChain.erase(std::find(PCHChain.begin(), PCHChain.end(), &*I),
-                     PCHChain.end());
+      PCHChain.erase(llvm::find(PCHChain, &*I), PCHChain.end());
       break;
     }
   }

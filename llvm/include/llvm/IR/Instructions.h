@@ -2043,6 +2043,10 @@ public:
     return User::operator new(s, 3);
   }
 
+  /// Swap the first 2 operands and adjust the mask to preserve the semantics
+  /// of the instruction.
+  void commute();
+
   /// Return true if a shufflevector instruction can be
   /// formed with the specified operands.
   static bool isValidOperands(const Value *V1, const Value *V2,

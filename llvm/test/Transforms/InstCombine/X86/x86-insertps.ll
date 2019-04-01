@@ -69,7 +69,7 @@ define <4 x float> @insertps_0xc1(<4 x float> %v1, <4 x float> %v2) {
 
 define <4 x float> @insertps_0x00(<4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: @insertps_0x00(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[V1:%.*]], <4 x float> [[V2:%.*]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[V2:%.*]], <4 x float> [[V1:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %v1, <4 x float> %v2, i8 0)

@@ -1690,6 +1690,17 @@ struct FormatStyle {
     ///    }
     /// \endcode
     SBPO_ControlStatements,
+    /// Put a space before opening parentheses only if the parentheses are not
+    /// empty i.e. '()'
+    /// \code
+    ///   void() {
+    ///     if (true) {
+    ///       f();
+    ///       g (x, y, z);
+    ///     }
+    ///   }
+    /// \endcode
+    SBPO_NonEmptyParentheses,
     /// Always put a space before opening parentheses, except when it's
     /// prohibited by the syntax rules (in function-like macro definitions) or
     /// when determined by other style rules (after unary operators, opening

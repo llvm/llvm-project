@@ -55,7 +55,7 @@
 
 #include <sys/types.h>
 #if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__) &&   \
-    !defined(__linux__) && !defined(__FreeBSD_kernel__)
+    !defined(__linux__) && !defined(__FreeBSD_kernel__) && !defined(_AIX)
 #include <sys/statvfs.h>
 #define STATVFS statvfs
 #define FSTATVFS fstatvfs
@@ -76,6 +76,14 @@
 #endif
 #endif
 #include <sys/vfs.h>
+#elif defined(_AIX)
+#include <sys/statfs.h>
+
+// <sys/vmount.h> depends on `uint` to be a typedef from <sys/types.h> to
+// `uint_t`; however, <sys/types.h> does not always declare `uint`. We provide
+// the typedef prior to including <sys/vmount.h> to work around this issue.
+typedef uint_t uint;
+#include <sys/vmount.h>
 #else
 #include <sys/mount.h>
 #endif
@@ -249,7 +257,7 @@ uint32_t file_status::getLinkCount() const {
 
 ErrorOr<space_info> disk_space(const Twine &Path) {
   struct STATVFS Vfs;
-  if (::STATVFS(Path.str().c_str(), &Vfs))
+  if (::STATVFS(const_cast<char *>(Path.str().c_str()), &Vfs))
     return std::error_code(errno, std::generic_category());
   auto FrSize = STATVFS_F_FRSIZE(Vfs);
   space_info SpaceInfo;
@@ -409,6 +417,40 @@ static bool is_local_impl(struct STATVFS &Vfs) {
   StringRef fstype(Vfs.f_basetype);
   // NFS is the only non-local fstype??
   return !fstype.equals("nfs");
+#elif defined(_AIX)
+  // Call mntctl; try more than twice in case of timing issues with a concurrent
+  // mount.
+  int Ret;
+  size_t BufSize = 2048u;
+  std::unique_ptr<char[]> Buf;
+  int Tries = 3;
+  while (Tries--) {
+    Buf = llvm::make_unique<char[]>(BufSize);
+    Ret = mntctl(MCTL_QUERY, BufSize, Buf.get());
+    if (Ret != 0)
+      break;
+    BufSize = *reinterpret_cast<unsigned int *>(Buf.get());
+    Buf.reset();
+  }
+
+  if (Ret == -1)
+    // There was an error; "remote" is the conservative answer.
+    return false;
+
+  // Look for the correct vmount entry.
+  char *CurObjPtr = Buf.get();
+  while (Ret--) {
+    struct vmount *Vp = reinterpret_cast<struct vmount *>(CurObjPtr);
+    static_assert(sizeof(Vfs.f_fsid) == sizeof(Vp->vmt_fsid),
+                  "fsid length mismatch");
+    if (memcmp(&Vfs.f_fsid, &Vp->vmt_fsid, sizeof Vfs.f_fsid) == 0)
+      return (Vp->vmt_flags & MNT_REMOTE) == 0;
+
+    CurObjPtr += Vp->vmt_length;
+  }
+
+  // vmount entry not found; "remote" is the conservative answer.
+  return false;
 #else
   return !!(STATVFS_F_FLAG(Vfs) & MNT_LOCAL);
 #endif
@@ -416,7 +458,7 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 
 std::error_code is_local(const Twine &Path, bool &Result) {
   struct STATVFS Vfs;
-  if (::STATVFS(Path.str().c_str(), &Vfs))
+  if (::STATVFS(const_cast<char *>(Path.str().c_str()), &Vfs))
     return std::error_code(errno, std::generic_category());
 
   Result = is_local_impl(Vfs);

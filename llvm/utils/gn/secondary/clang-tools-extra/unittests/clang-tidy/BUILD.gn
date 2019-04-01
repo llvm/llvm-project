@@ -1,0 +1,36 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("ClangTidyTests") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang-tools-extra/clang-tidy",
+    "//clang-tools-extra/clang-tidy/android",
+    "//clang-tools-extra/clang-tidy/google",
+    "//clang-tools-extra/clang-tidy/llvm",
+    "//clang-tools-extra/clang-tidy/objc",
+    "//clang-tools-extra/clang-tidy/readability",
+    "//clang-tools-extra/clang-tidy/utils",
+    "//clang/lib/AST",
+    "//clang/lib/ASTMatchers",
+    "//clang/lib/Basic",
+    "//clang/lib/Frontend",
+    "//clang/lib/Lex",
+    "//clang/lib/Serialization",
+    "//clang/lib/Tooling",
+    "//clang/lib/Tooling/Core",
+    "//llvm/lib/Support",
+  ]
+  include_dirs = [ "//clang-tools-extra/clang-tidy" ]
+  sources = [
+    "ClangTidyDiagnosticConsumerTest.cpp",
+    "ClangTidyOptionsTest.cpp",
+    "GoogleModuleTest.cpp",
+    "IncludeInserterTest.cpp",
+    "LLVMModuleTest.cpp",
+    "NamespaceAliaserTest.cpp",
+    "ObjCModuleTest.cpp",
+    "OverlappingReplacementsTest.cpp",
+    "ReadabilityModuleTest.cpp",
+    "UsingInserterTest.cpp",
+  ]
+}
