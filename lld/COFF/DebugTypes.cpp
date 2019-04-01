@@ -71,14 +71,18 @@ TpiSource *coff::makeUsePrecompSource(ObjFile *F, PrecompRecord *Precomp) {
   return new UsePrecompSource(F, Precomp);
 }
 
+namespace lld {
+namespace coff {
 template <>
-const PrecompRecord &lld::coff::retrieveDependencyInfo(TpiSource *Source) {
+const PrecompRecord &retrieveDependencyInfo(TpiSource *Source) {
   assert(Source->Kind == TpiSource::UsingPCH);
   return ((UsePrecompSource *)Source)->PrecompDependency;
 }
 
 template <>
-const TypeServer2Record &lld::coff::retrieveDependencyInfo(TpiSource *Source) {
+const TypeServer2Record &retrieveDependencyInfo(TpiSource *Source) {
   assert(Source->Kind == TpiSource::UsingPDB);
   return ((UseTypeServerSource *)Source)->TypeServerDependency;
 }
+} // namespace coff
+} // namespace lld
