@@ -4221,6 +4221,11 @@ DependenceInfo::depends(GeneralAccess *SrcA, GeneralAccess *DstA,
 
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);
+  if (!SE->isSCEVable(SrcPtr->getType()) ||
+      !SE->isSCEVable(DstPtr->getType())) {
+    LLVM_DEBUG(dbgs() << "can't analyze non-scevable pointers\n");
+    return make_unique<Dependence>(Src, Dst);
+  }
   const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
   const SCEV *DstSCEV = SE->getSCEV(DstPtr);
   LLVM_DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
