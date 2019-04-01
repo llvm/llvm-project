@@ -648,10 +648,10 @@ void GotSection::finalizeContents() {
   Size = NumEntries * Config->Wordsize;
 }
 
-bool GotSection::empty() const {
+bool GotSection::isNeeded() const {
   // We need to emit a GOT even if it's empty if there's a relocation that is
   // relative to GOT(such as GOTOFFREL).
-  return NumEntries == 0 && !HasGotOffRel;
+  return NumEntries || HasGotOffRel;
 }
 
 void GotSection::writeTo(uint8_t *Buf) {
@@ -1004,10 +1004,10 @@ void MipsGotSection::build() {
   }
 }
 
-bool MipsGotSection::empty() const {
+bool MipsGotSection::isNeeded() const {
   // We add the .got section to the result for dynamic MIPS target because
   // its address and properties are mentioned in the .dynamic section.
-  return Config->Relocatable;
+  return !Config->Relocatable;
 }
 
 uint64_t MipsGotSection::getGp(const InputFile *F) const {
@@ -1111,10 +1111,10 @@ void GotPltSection::writeTo(uint8_t *Buf) {
   }
 }
 
-bool GotPltSection::empty() const {
+bool GotPltSection::isNeeded() const {
   // We need to emit GOTPLT even if it's empty if there's a relocation relative
   // to it.
-  return Entries.empty() && !HasGotPltOffRel;
+  return !Entries.empty() || HasGotPltOffRel;
 }
 
 static StringRef getIgotPltName() {
@@ -1320,7 +1320,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   if (OutputSection *Sec = In.DynStrTab->getParent())
     this->Link = Sec->SectionIndex;
 
-  if (!In.RelaDyn->empty()) {
+  if (In.RelaDyn->isNeeded()) {
     addInSec(In.RelaDyn->DynamicTag, In.RelaDyn);
     addSize(In.RelaDyn->SizeDynamicTag, In.RelaDyn->getParent());
 
@@ -1434,7 +1434,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   }
 
   // Glink dynamic tag is required by the V2 abi if the plt section isn't empty.
-  if (Config->EMachine == EM_PPC64 && !In.Plt->empty()) {
+  if (Config->EMachine == EM_PPC64 && In.Plt->isNeeded()) {
     // The Glink tag points to 32 bytes before the first lazy symbol resolution
     // stub, which starts directly after the header.
     Entries.push_back({DT_PPC64_GLINK, [=] {
@@ -2081,7 +2081,7 @@ void SymtabShndxSection::writeTo(uint8_t *Buf) {
   }
 }
 
-bool SymtabShndxSection::empty() const {
+bool SymtabShndxSection::isNeeded() const {
   // SHT_SYMTAB can hold symbols with section indices values up to
   // SHN_LORESERVE. If we need more, we want to use extension SHT_SYMTAB_SHNDX
   // section. Problem is that we reveal the final section indices a bit too
@@ -2091,7 +2091,7 @@ bool SymtabShndxSection::empty() const {
   for (BaseCommand *Base : Script->SectionCommands)
     if (isa<OutputSection>(Base))
       ++Size;
-  return Size < SHN_LORESERVE;
+  return Size >= SHN_LORESERVE;
 }
 
 void SymtabShndxSection::finalizeContents() {
@@ -2650,7 +2650,7 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
   }
 }
 
-bool GdbIndexSection::empty() const { return Chunks.empty(); }
+bool GdbIndexSection::isNeeded() const { return !Chunks.empty(); }
 
 EhFrameHeader::EhFrameHeader()
     : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 4, ".eh_frame_hdr") {}
@@ -2693,7 +2693,7 @@ size_t EhFrameHeader::getSize() const {
   return 12 + In.EhFrame->NumFdes * 8;
 }
 
-bool EhFrameHeader::empty() const { return In.EhFrame->empty(); }
+bool EhFrameHeader::isNeeded() const { return In.EhFrame->isNeeded(); }
 
 VersionDefinitionSection::VersionDefinitionSection()
     : SyntheticSection(SHF_ALLOC, SHT_GNU_verdef, sizeof(uint32_t),
@@ -2778,8 +2778,8 @@ void VersionTableSection::writeTo(uint8_t *Buf) {
   }
 }
 
-bool VersionTableSection::empty() const {
-  return !In.VerDef && In.VerNeed->empty();
+bool VersionTableSection::isNeeded() const {
+  return In.VerDef || In.VerNeed->isNeeded();
 }
 
 VersionNeedBaseSection::VersionNeedBaseSection()
@@ -2865,8 +2865,8 @@ template <class ELFT> size_t VersionNeedSection<ELFT>::getSize() const {
   return Size;
 }
 
-template <class ELFT> bool VersionNeedSection<ELFT>::empty() const {
-  return getNeedNum() == 0;
+template <class ELFT> bool VersionNeedSection<ELFT>::isNeeded() const {
+  return getNeedNum() != 0;
 }
 
 void MergeSyntheticSection::addSection(MergeInputSection *MS) {
@@ -3305,14 +3305,14 @@ void PPC64LongBranchTargetSection::writeTo(uint8_t *Buf) {
   }
 }
 
-bool PPC64LongBranchTargetSection::empty() const {
+bool PPC64LongBranchTargetSection::isNeeded() const {
   // `removeUnusedSyntheticSections()` is called before thunk allocation which
   // is too early to determine if this section will be empty or not. We need
   // Finalized to keep the section alive until after thunk creation. Finalized
   // only gets set to true once `finalizeSections()` is called after thunk
   // creation. Becuase of this, if we don't create any long-branch thunks we end
   // up with an empty .branch_lt section in the binary.
-  return Finalized && Entries.empty();
+  return !Finalized || !Entries.empty();
 }
 
 InStruct elf::In;
