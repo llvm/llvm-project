@@ -2117,86 +2117,42 @@ struct _LIBCPP_TEMPLATE_VIS make_unsigned
 template <class _Tp> using make_unsigned_t = typename make_unsigned<_Tp>::type;
 #endif
 
-#ifdef _LIBCPP_HAS_NO_VARIADICS
-
-template <class _Tp, class _Up = void, class _Vp = void>
-struct _LIBCPP_TEMPLATE_VIS common_type
-{
-public:
-    typedef typename common_type<typename common_type<_Tp, _Up>::type, _Vp>::type type;
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS common_type<void, void, void>
-{
-public:
-    typedef void type;
-};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, void, void>
-{
-public:
-    typedef typename common_type<_Tp, _Tp>::type type;
-};
-
-template <class _Tp, class _Up>
-struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up, void>
-{
-    typedef typename decay<decltype(
-        true ? _VSTD::declval<_Tp>() : _VSTD::declval<_Up>()
-      )>::type type;
-};
-
-#else  // _LIBCPP_HAS_NO_VARIADICS
-
-// bullet 1 - sizeof...(Tp) == 0
-
-template <class ..._Tp>
-struct _LIBCPP_TEMPLATE_VIS common_type {};
-
-// bullet 2 - sizeof...(Tp) == 1
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS common_type<_Tp>
-    : public common_type<_Tp, _Tp> {};
-
-// bullet 3 - sizeof...(Tp) == 2
-
 template <class _Tp, class _Up, class = void>
 struct __common_type2_imp {};
 
 template <class _Tp, class _Up>
 struct __common_type2_imp<_Tp, _Up,
-    typename __void_t<decltype(
-        true ? _VSTD::declval<_Tp>() : _VSTD::declval<_Up>()
-    )>::type>
+                          typename __void_t<decltype(
+                                            true ? _VSTD::declval<_Tp>() : _VSTD::declval<_Up>()
+                                            )>::type>
 {
-    typedef typename decay<decltype(
-        true ? _VSTD::declval<_Tp>() : _VSTD::declval<_Up>()
-    )>::type type;
+  typedef typename decay<decltype(
+                         true ? _VSTD::declval<_Tp>() : _VSTD::declval<_Up>()
+                         )>::type type;
 };
-
-template <class _Tp, class _Up,
-          class _DTp = typename decay<_Tp>::type,
-          class _DUp = typename decay<_Up>::type>
-using __common_type2 =
-  typename conditional<
-    is_same<_Tp, _DTp>::value && is_same<_Up, _DUp>::value,
-    __common_type2_imp<_Tp, _Up>,
-    common_type<_DTp, _DUp>
-  >::type;
-
-template <class _Tp, class _Up>
-struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up>
-    : __common_type2<_Tp, _Up> {};
-
-// bullet 4 - sizeof...(Tp) > 2
-
-template <class ...Tp> struct __common_types;
 
 template <class, class = void>
 struct __common_type_impl {};
+
+// Clang provides variadic templates in C++03 as an extension.
+#if !defined(_LIBCPP_CXX03_LANG) || defined(__clang__)
+# define _LIBCPP_OPTIONAL_PACK(...) , __VA_ARGS__
+template <class... Tp>
+struct __common_types;
+template <class... _Tp>
+struct _LIBCPP_TEMPLATE_VIS common_type;
+#else
+# define _LIBCPP_OPTIONAL_PACK(...)
+struct __no_arg;
+template <class _Tp, class _Up, class = __no_arg>
+struct __common_types;
+template <class _Tp = __no_arg, class _Up = __no_arg, class _Vp = __no_arg,
+          class _Unused = __no_arg>
+struct common_type {
+  static_assert(sizeof(_Unused) == 0,
+                "common_type accepts at most 3 arguments in C++03");
+};
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Up>
 struct __common_type_impl<
@@ -2206,24 +2162,49 @@ struct __common_type_impl<
   typedef typename common_type<_Tp, _Up>::type type;
 };
 
-template <class _Tp, class _Up, class ..._Vp>
-struct __common_type_impl<__common_types<_Tp, _Up, _Vp...>,
+template <class _Tp, class _Up, class _Vp _LIBCPP_OPTIONAL_PACK(class... _Rest)>
+struct __common_type_impl<
+    __common_types<_Tp, _Up, _Vp _LIBCPP_OPTIONAL_PACK(_Rest...)>,
     typename __void_t<typename common_type<_Tp, _Up>::type>::type>
-  : __common_type_impl<
-      __common_types<typename common_type<_Tp, _Up>::type, _Vp...> >
-{
-
+    : __common_type_impl<__common_types<typename common_type<_Tp, _Up>::type,
+                                        _Vp _LIBCPP_OPTIONAL_PACK(_Rest...)> > {
 };
 
-template <class _Tp, class _Up, class ..._Vp>
-struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up, _Vp...>
-    : __common_type_impl<__common_types<_Tp, _Up, _Vp...> > {};
+// bullet 1 - sizeof...(Tp) == 0
+
+template <>
+struct _LIBCPP_TEMPLATE_VIS common_type<> {};
+
+// bullet 2 - sizeof...(Tp) == 1
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS common_type<_Tp>
+    : public common_type<_Tp, _Tp> {};
+
+// bullet 3 - sizeof...(Tp) == 2
+
+template <class _Tp, class _Up>
+struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up>
+    : conditional<
+        is_same<_Tp, typename decay<_Tp>::type>::value && is_same<_Up, typename decay<_Up>::type>::value,
+        __common_type2_imp<_Tp, _Up>,
+        common_type<typename decay<_Tp>::type, typename decay<_Up>::type>
+    >::type
+{};
+
+// bullet 4 - sizeof...(Tp) > 2
+
+template <class _Tp, class _Up, class _Vp _LIBCPP_OPTIONAL_PACK(class... _Rest)>
+struct _LIBCPP_TEMPLATE_VIS
+    common_type<_Tp, _Up, _Vp _LIBCPP_OPTIONAL_PACK(_Rest...)>
+    : __common_type_impl<
+          __common_types<_Tp, _Up, _Vp _LIBCPP_OPTIONAL_PACK(_Rest...)> > {};
+
+#undef _LIBCPP_OPTIONAL_PACK
 
 #if _LIBCPP_STD_VER > 11
 template <class ..._Tp> using common_type_t = typename common_type<_Tp...>::type;
 #endif
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
 
 // is_assignable
 
