@@ -108,7 +108,8 @@ private:
 
   // Private member variables.
   mutable XStateType m_xstate_type;
-  FPR m_fpr; // Extended States Area, named FPR for historical reasons.
+  std::unique_ptr<FPR, llvm::FreeDeleter>
+      m_xstate; // Extended States Area, named FPR for historical reasons.
   struct iovec m_iovec;
   YMM m_ymm_set;
   MPX m_mpx_set;

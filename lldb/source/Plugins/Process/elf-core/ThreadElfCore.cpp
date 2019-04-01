@@ -112,6 +112,9 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
     case llvm::Triple::NetBSD: {
       switch (arch.GetMachine()) {
+      case llvm::Triple::aarch64:
+        reg_interface = new RegisterInfoPOSIX_arm64(arch);
+        break;
       case llvm::Triple::x86_64:
         reg_interface = new RegisterContextNetBSD_x86_64(arch);
         break;

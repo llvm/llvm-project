@@ -3002,15 +3002,6 @@ def : Pat<(ffloor Float32Regs:$a),
 def : Pat<(ffloor Float64Regs:$a),
           (CVT_f64_f64 Float64Regs:$a, CvtRMI)>;
 
-def : Pat<(f16 (fround Float16Regs:$a)),
-          (CVT_f16_f16 Float16Regs:$a, CvtRNI)>;
-def : Pat<(fround Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f32 (fround Float32Regs:$a)),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI)>, Requires<[doNoF32FTZ]>;
-def : Pat<(f64 (fround Float64Regs:$a)),
-          (CVT_f64_f64 Float64Regs:$a, CvtRNI)>;
-
 def : Pat<(ftrunc Float16Regs:$a),
           (CVT_f16_f16 Float16Regs:$a, CvtRZI)>;
 def : Pat<(ftrunc Float32Regs:$a),

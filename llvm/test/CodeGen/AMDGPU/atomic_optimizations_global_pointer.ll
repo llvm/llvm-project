@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX7LESS %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8MORE %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8MORE %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8MORE %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8MORE %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
@@ -133,9 +133,7 @@ entry:
 ; GFX7LESS-NOT: v_mbcnt_hi_u32_b32
 ; GFX7LESS-NOT: s_bcnt1_i32_b64
 ; GFX7LESS: buffer_atomic_sub v{{[0-9]+}}
-; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v[[sub_value:[0-9]+]] wave_shr:1 row_mask:0xf bank_mask:0xf
-; GFX8MORE: v_sub_u32_e32 v[[sub_value]],{{( vcc,)?}} v[[sub_value]], v{{[0-9]+}}
-; GFX8MORE: v_readlane_b32 s[[scalar_value:[0-9]+]], v[[sub_value]], 63
+; GFX8MORE: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
 ; GFX8MORE: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
 ; GFX8MORE: buffer_atomic_sub v[[value]]
 define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace(1)* %inout) {

@@ -322,8 +322,6 @@ define void @br_fcmp_one(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    and a0, a1, a0
 ; RV32IFD-NEXT:    feq.d a1, ft0, ft1
 ; RV32IFD-NEXT:    not a1, a1
-; RV32IFD-NEXT:    seqz a0, a0
-; RV32IFD-NEXT:    xori a0, a0, 1
 ; RV32IFD-NEXT:    and a0, a1, a0
 ; RV32IFD-NEXT:    bnez a0, .LBB7_2
 ; RV32IFD-NEXT:  # %bb.1: # %if.else
@@ -344,8 +342,6 @@ define void @br_fcmp_one(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    feq.d a1, ft0, ft1
 ; RV64IFD-NEXT:    not a1, a1
-; RV64IFD-NEXT:    seqz a0, a0
-; RV64IFD-NEXT:    xori a0, a0, 1
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    bnez a0, .LBB7_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else
@@ -377,8 +373,6 @@ define void @br_fcmp_ord(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    feq.d a0, ft1, ft1
 ; RV32IFD-NEXT:    feq.d a1, ft0, ft0
 ; RV32IFD-NEXT:    and a0, a1, a0
-; RV32IFD-NEXT:    seqz a0, a0
-; RV32IFD-NEXT:    xori a0, a0, 1
 ; RV32IFD-NEXT:    bnez a0, .LBB8_2
 ; RV32IFD-NEXT:  # %bb.1: # %if.else
 ; RV32IFD-NEXT:    lw ra, 12(sp)
@@ -396,8 +390,6 @@ define void @br_fcmp_ord(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
 ; RV64IFD-NEXT:    feq.d a0, ft0, ft0
 ; RV64IFD-NEXT:    and a0, a0, a1
-; RV64IFD-NEXT:    seqz a0, a0
-; RV64IFD-NEXT:    xori a0, a0, 1
 ; RV64IFD-NEXT:    bnez a0, .LBB8_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else
 ; RV64IFD-NEXT:    ld ra, 8(sp)

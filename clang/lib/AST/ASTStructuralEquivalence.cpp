@@ -860,10 +860,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   IdentifierInfo *Name2 = Field2->getIdentifier();
   if (!::IsStructurallyEquivalent(Name1, Name2)) {
     if (Context.Complain) {
-      Context.Diag2(Owner2->getLocation(),
-                    Context.ErrorOnTagTypeMismatch
-                        ? diag::err_odr_tag_type_inconsistent
-                        : diag::warn_odr_tag_type_inconsistent)
+      Context.Diag2(
+          Owner2->getLocation(),
+          Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
           << Context.ToCtx.getTypeDeclType(Owner2);
       Context.Diag2(Field2->getLocation(), diag::note_odr_field_name)
           << Field2->getDeclName();
@@ -876,10 +875,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (!IsStructurallyEquivalent(Context, Field1->getType(),
                                 Field2->getType())) {
     if (Context.Complain) {
-      Context.Diag2(Owner2->getLocation(),
-                    Context.ErrorOnTagTypeMismatch
-                        ? diag::err_odr_tag_type_inconsistent
-                        : diag::warn_odr_tag_type_inconsistent)
+      Context.Diag2(
+          Owner2->getLocation(),
+          Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
           << Context.ToCtx.getTypeDeclType(Owner2);
       Context.Diag2(Field2->getLocation(), diag::note_odr_field)
           << Field2->getDeclName() << Field2->getType();
@@ -891,10 +889,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   if (Field1->isBitField() != Field2->isBitField()) {
     if (Context.Complain) {
-      Context.Diag2(Owner2->getLocation(),
-                    Context.ErrorOnTagTypeMismatch
-                        ? diag::err_odr_tag_type_inconsistent
-                        : diag::warn_odr_tag_type_inconsistent)
+      Context.Diag2(
+          Owner2->getLocation(),
+          Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
           << Context.ToCtx.getTypeDeclType(Owner2);
       if (Field1->isBitField()) {
         Context.Diag1(Field1->getLocation(), diag::note_odr_bit_field)
@@ -921,9 +918,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (Bits1 != Bits2) {
       if (Context.Complain) {
         Context.Diag2(Owner2->getLocation(),
-                      Context.ErrorOnTagTypeMismatch
-                          ? diag::err_odr_tag_type_inconsistent
-                          : diag::warn_odr_tag_type_inconsistent)
+                      Context.getApplicableDiagnostic(
+                          diag::err_odr_tag_type_inconsistent))
             << Context.ToCtx.getTypeDeclType(Owner2);
         Context.Diag2(Field2->getLocation(), diag::note_odr_bit_field)
             << Field2->getDeclName() << Field2->getType() << Bits2;
@@ -992,10 +988,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      RecordDecl *D1, RecordDecl *D2) {
   if (D1->isUnion() != D2->isUnion()) {
     if (Context.Complain) {
-      Context.Diag2(D2->getLocation(),
-                    Context.ErrorOnTagTypeMismatch
-                        ? diag::err_odr_tag_type_inconsistent
-                        : diag::warn_odr_tag_type_inconsistent)
+      Context.Diag2(D2->getLocation(), Context.getApplicableDiagnostic(
+                                           diag::err_odr_tag_type_inconsistent))
           << Context.ToCtx.getTypeDeclType(D2);
       Context.Diag1(D1->getLocation(), diag::note_odr_tag_kind_here)
           << D1->getDeclName() << (unsigned)D1->getTagKind();
@@ -1072,7 +1066,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
       if (D1CXX->getNumBases() != D2CXX->getNumBases()) {
         if (Context.Complain) {
-          Context.Diag2(D2->getLocation(), diag::warn_odr_tag_type_inconsistent)
+          Context.Diag2(D2->getLocation(),
+                        Context.getApplicableDiagnostic(
+                            diag::err_odr_tag_type_inconsistent))
               << Context.ToCtx.getTypeDeclType(D2);
           Context.Diag2(D2->getLocation(), diag::note_odr_number_of_bases)
               << D2CXX->getNumBases();
@@ -1091,7 +1087,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                       Base2->getType())) {
           if (Context.Complain) {
             Context.Diag2(D2->getLocation(),
-                          diag::warn_odr_tag_type_inconsistent)
+                          Context.getApplicableDiagnostic(
+                              diag::err_odr_tag_type_inconsistent))
                 << Context.ToCtx.getTypeDeclType(D2);
             Context.Diag2(Base2->getBeginLoc(), diag::note_odr_base)
                 << Base2->getType() << Base2->getSourceRange();
@@ -1105,7 +1102,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
         if (Base1->isVirtual() != Base2->isVirtual()) {
           if (Context.Complain) {
             Context.Diag2(D2->getLocation(),
-                          diag::warn_odr_tag_type_inconsistent)
+                          Context.getApplicableDiagnostic(
+                              diag::err_odr_tag_type_inconsistent))
                 << Context.ToCtx.getTypeDeclType(D2);
             Context.Diag2(Base2->getBeginLoc(), diag::note_odr_virtual_base)
                 << Base2->isVirtual() << Base2->getSourceRange();
@@ -1118,15 +1116,16 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
       // Check the friends for consistency.
       CXXRecordDecl::friend_iterator Friend2 = D2CXX->friend_begin(),
-              Friend2End = D2CXX->friend_end();
+                                     Friend2End = D2CXX->friend_end();
       for (CXXRecordDecl::friend_iterator Friend1 = D1CXX->friend_begin(),
-                   Friend1End = D1CXX->friend_end();
+                                          Friend1End = D1CXX->friend_end();
            Friend1 != Friend1End; ++Friend1, ++Friend2) {
         if (Friend2 == Friend2End) {
           if (Context.Complain) {
             Context.Diag2(D2->getLocation(),
-                          diag::warn_odr_tag_type_inconsistent)
-                    << Context.ToCtx.getTypeDeclType(D2CXX);
+                          Context.getApplicableDiagnostic(
+                              diag::err_odr_tag_type_inconsistent))
+                << Context.ToCtx.getTypeDeclType(D2CXX);
             Context.Diag1((*Friend1)->getFriendLoc(), diag::note_odr_friend);
             Context.Diag2(D2->getLocation(), diag::note_odr_missing_friend);
           }
@@ -1135,8 +1134,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
         if (!IsStructurallyEquivalent(Context, *Friend1, *Friend2)) {
           if (Context.Complain) {
-            Context.Diag2(D2->getLocation(), diag::warn_odr_tag_type_inconsistent)
-              << Context.ToCtx.getTypeDeclType(D2CXX);
+            Context.Diag2(D2->getLocation(),
+                          Context.getApplicableDiagnostic(
+                              diag::err_odr_tag_type_inconsistent))
+                << Context.ToCtx.getTypeDeclType(D2CXX);
             Context.Diag1((*Friend1)->getFriendLoc(), diag::note_odr_friend);
             Context.Diag2((*Friend2)->getFriendLoc(), diag::note_odr_friend);
           }
@@ -1146,8 +1147,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
       if (Friend2 != Friend2End) {
         if (Context.Complain) {
-          Context.Diag2(D2->getLocation(), diag::warn_odr_tag_type_inconsistent)
-                  << Context.ToCtx.getTypeDeclType(D2);
+          Context.Diag2(D2->getLocation(),
+                        Context.getApplicableDiagnostic(
+                            diag::err_odr_tag_type_inconsistent))
+              << Context.ToCtx.getTypeDeclType(D2);
           Context.Diag2((*Friend2)->getFriendLoc(), diag::note_odr_friend);
           Context.Diag1(D1->getLocation(), diag::note_odr_missing_friend);
         }
@@ -1155,7 +1158,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       }
     } else if (D1CXX->getNumBases() > 0) {
       if (Context.Complain) {
-        Context.Diag2(D2->getLocation(), diag::warn_odr_tag_type_inconsistent)
+        Context.Diag2(D2->getLocation(),
+                      Context.getApplicableDiagnostic(
+                          diag::err_odr_tag_type_inconsistent))
             << Context.ToCtx.getTypeDeclType(D2);
         const CXXBaseSpecifier *Base1 = D1CXX->bases_begin();
         Context.Diag1(Base1->getBeginLoc(), diag::note_odr_base)
@@ -1175,9 +1180,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (Field2 == Field2End) {
       if (Context.Complain) {
         Context.Diag2(D2->getLocation(),
-                      Context.ErrorOnTagTypeMismatch
-                          ? diag::err_odr_tag_type_inconsistent
-                          : diag::warn_odr_tag_type_inconsistent)
+                      Context.getApplicableDiagnostic(
+                          diag::err_odr_tag_type_inconsistent))
             << Context.ToCtx.getTypeDeclType(D2);
         Context.Diag1(Field1->getLocation(), diag::note_odr_field)
             << Field1->getDeclName() << Field1->getType();
@@ -1192,10 +1196,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   if (Field2 != Field2End) {
     if (Context.Complain) {
-      Context.Diag2(D2->getLocation(),
-                    Context.ErrorOnTagTypeMismatch
-                        ? diag::err_odr_tag_type_inconsistent
-                        : diag::warn_odr_tag_type_inconsistent)
+      Context.Diag2(D2->getLocation(), Context.getApplicableDiagnostic(
+                                           diag::err_odr_tag_type_inconsistent))
           << Context.ToCtx.getTypeDeclType(D2);
       Context.Diag2(Field2->getLocation(), diag::note_odr_field)
           << Field2->getDeclName() << Field2->getType();
@@ -1226,9 +1228,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (EC2 == EC2End) {
       if (Context.Complain) {
         Context.Diag2(D2->getLocation(),
-                      Context.ErrorOnTagTypeMismatch
-                          ? diag::err_odr_tag_type_inconsistent
-                          : diag::warn_odr_tag_type_inconsistent)
+                      Context.getApplicableDiagnostic(
+                          diag::err_odr_tag_type_inconsistent))
             << Context.ToCtx.getTypeDeclType(D2);
         Context.Diag1(EC1->getLocation(), diag::note_odr_enumerator)
             << EC1->getDeclName() << EC1->getInitVal().toString(10);
@@ -1243,9 +1244,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
         !IsStructurallyEquivalent(EC1->getIdentifier(), EC2->getIdentifier())) {
       if (Context.Complain) {
         Context.Diag2(D2->getLocation(),
-                      Context.ErrorOnTagTypeMismatch
-                          ? diag::err_odr_tag_type_inconsistent
-                          : diag::warn_odr_tag_type_inconsistent)
+                      Context.getApplicableDiagnostic(
+                          diag::err_odr_tag_type_inconsistent))
             << Context.ToCtx.getTypeDeclType(D2);
         Context.Diag2(EC2->getLocation(), diag::note_odr_enumerator)
             << EC2->getDeclName() << EC2->getInitVal().toString(10);
@@ -1258,10 +1258,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   if (EC2 != EC2End) {
     if (Context.Complain) {
-      Context.Diag2(D2->getLocation(),
-                    Context.ErrorOnTagTypeMismatch
-                        ? diag::err_odr_tag_type_inconsistent
-                        : diag::warn_odr_tag_type_inconsistent)
+      Context.Diag2(D2->getLocation(), Context.getApplicableDiagnostic(
+                                           diag::err_odr_tag_type_inconsistent))
           << Context.ToCtx.getTypeDeclType(D2);
       Context.Diag2(EC2->getLocation(), diag::note_odr_enumerator)
           << EC2->getDeclName() << EC2->getInitVal().toString(10);
@@ -1279,7 +1277,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (Params1->size() != Params2->size()) {
     if (Context.Complain) {
       Context.Diag2(Params2->getTemplateLoc(),
-                    diag::err_odr_different_num_template_parameters)
+                    Context.getApplicableDiagnostic(
+                        diag::err_odr_different_num_template_parameters))
           << Params1->size() << Params2->size();
       Context.Diag1(Params1->getTemplateLoc(),
                     diag::note_odr_template_parameter_list);
@@ -1291,7 +1290,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (Params1->getParam(I)->getKind() != Params2->getParam(I)->getKind()) {
       if (Context.Complain) {
         Context.Diag2(Params2->getParam(I)->getLocation(),
-                      diag::err_odr_different_template_parameter_kind);
+                      Context.getApplicableDiagnostic(
+                          diag::err_odr_different_template_parameter_kind));
         Context.Diag1(Params1->getParam(I)->getLocation(),
                       diag::note_odr_template_parameter_here);
       }
@@ -1311,7 +1311,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      TemplateTypeParmDecl *D2) {
   if (D1->isParameterPack() != D2->isParameterPack()) {
     if (Context.Complain) {
-      Context.Diag2(D2->getLocation(), diag::err_odr_parameter_pack_non_pack)
+      Context.Diag2(D2->getLocation(),
+                    Context.getApplicableDiagnostic(
+                        diag::err_odr_parameter_pack_non_pack))
           << D2->isParameterPack();
       Context.Diag1(D1->getLocation(), diag::note_odr_parameter_pack_non_pack)
           << D1->isParameterPack();
@@ -1327,7 +1329,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      NonTypeTemplateParmDecl *D2) {
   if (D1->isParameterPack() != D2->isParameterPack()) {
     if (Context.Complain) {
-      Context.Diag2(D2->getLocation(), diag::err_odr_parameter_pack_non_pack)
+      Context.Diag2(D2->getLocation(),
+                    Context.getApplicableDiagnostic(
+                        diag::err_odr_parameter_pack_non_pack))
           << D2->isParameterPack();
       Context.Diag1(D1->getLocation(), diag::note_odr_parameter_pack_non_pack)
           << D1->isParameterPack();
@@ -1339,7 +1343,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (!IsStructurallyEquivalent(Context, D1->getType(), D2->getType())) {
     if (Context.Complain) {
       Context.Diag2(D2->getLocation(),
-                    diag::err_odr_non_type_parameter_type_inconsistent)
+                    Context.getApplicableDiagnostic(
+                        diag::err_odr_non_type_parameter_type_inconsistent))
           << D2->getType() << D1->getType();
       Context.Diag1(D1->getLocation(), diag::note_odr_value_here)
           << D1->getType();
@@ -1355,7 +1360,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      TemplateTemplateParmDecl *D2) {
   if (D1->isParameterPack() != D2->isParameterPack()) {
     if (Context.Complain) {
-      Context.Diag2(D2->getLocation(), diag::err_odr_parameter_pack_non_pack)
+      Context.Diag2(D2->getLocation(),
+                    Context.getApplicableDiagnostic(
+                        diag::err_odr_parameter_pack_non_pack))
           << D2->isParameterPack();
       Context.Diag1(D1->getLocation(), diag::note_odr_parameter_pack_non_pack)
           << D1->isParameterPack();
@@ -1509,6 +1516,52 @@ StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
   }
 
   return Index;
+}
+
+unsigned StructuralEquivalenceContext::getApplicableDiagnostic(
+    unsigned ErrorDiagnostic) {
+  if (ErrorOnTagTypeMismatch)
+    return ErrorDiagnostic;
+
+  switch (ErrorDiagnostic) {
+  case diag::err_odr_variable_type_inconsistent:
+    return diag::warn_odr_variable_type_inconsistent;
+  case diag::err_odr_variable_multiple_def:
+    return diag::warn_odr_variable_multiple_def;
+  case diag::err_odr_function_type_inconsistent:
+    return diag::warn_odr_function_type_inconsistent;
+  case diag::err_odr_tag_type_inconsistent:
+    return diag::warn_odr_tag_type_inconsistent;
+  case diag::err_odr_field_type_inconsistent:
+    return diag::warn_odr_field_type_inconsistent;
+  case diag::err_odr_ivar_type_inconsistent:
+    return diag::warn_odr_ivar_type_inconsistent;
+  case diag::err_odr_objc_superclass_inconsistent:
+    return diag::warn_odr_objc_superclass_inconsistent;
+  case diag::err_odr_objc_method_result_type_inconsistent:
+    return diag::warn_odr_objc_method_result_type_inconsistent;
+  case diag::err_odr_objc_method_num_params_inconsistent:
+    return diag::warn_odr_objc_method_num_params_inconsistent;
+  case diag::err_odr_objc_method_param_type_inconsistent:
+    return diag::warn_odr_objc_method_param_type_inconsistent;
+  case diag::err_odr_objc_method_variadic_inconsistent:
+    return diag::warn_odr_objc_method_variadic_inconsistent;
+  case diag::err_odr_objc_property_type_inconsistent:
+    return diag::warn_odr_objc_property_type_inconsistent;
+  case diag::err_odr_objc_property_impl_kind_inconsistent:
+    return diag::warn_odr_objc_property_impl_kind_inconsistent;
+  case diag::err_odr_objc_synthesize_ivar_inconsistent:
+    return diag::warn_odr_objc_synthesize_ivar_inconsistent;
+  case diag::err_odr_different_num_template_parameters:
+    return diag::warn_odr_different_num_template_parameters;
+  case diag::err_odr_different_template_parameter_kind:
+    return diag::warn_odr_different_template_parameter_kind;
+  case diag::err_odr_parameter_pack_non_pack:
+    return diag::warn_odr_parameter_pack_non_pack;
+  case diag::err_odr_non_type_parameter_type_inconsistent:
+    return diag::warn_odr_non_type_parameter_type_inconsistent;
+  }
+  llvm_unreachable("Diagnostic kind not handled in preceding switch");
 }
 
 bool StructuralEquivalenceContext::IsEquivalent(Decl *D1, Decl *D2) {

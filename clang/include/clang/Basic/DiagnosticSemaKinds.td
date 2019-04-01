@@ -9161,6 +9161,8 @@ def err_expected_allocator_clause : Error<"expected an 'allocator' clause "
 def warn_omp_allocate_thread_on_task_target_directive : Warning<
   "allocator with the 'thread' trait access has unspecified behavior on '%0' directive">,
   InGroup<OpenMPClauses>;
+def err_omp_expected_private_copy_for_allocate : Error<
+  "the referenced item is not found in any private clause on the same directive">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

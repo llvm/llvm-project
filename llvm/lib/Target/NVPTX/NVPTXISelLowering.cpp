@@ -546,12 +546,18 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // These map to conversion instructions for scalar FP types.
   for (const auto &Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT,
-                         ISD::FROUND, ISD::FTRUNC}) {
+                         ISD::FTRUNC}) {
     setOperationAction(Op, MVT::f16, Legal);
     setOperationAction(Op, MVT::f32, Legal);
     setOperationAction(Op, MVT::f64, Legal);
     setOperationAction(Op, MVT::v2f16, Expand);
   }
+
+  setOperationAction(ISD::FROUND, MVT::f16, Promote);
+  setOperationAction(ISD::FROUND, MVT::v2f16, Expand);
+  setOperationAction(ISD::FROUND, MVT::f32, Custom);
+  setOperationAction(ISD::FROUND, MVT::f64, Custom);
+
 
   // 'Expand' implements FCOPYSIGN without calling an external library.
   setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
@@ -2068,6 +2074,100 @@ SDValue NVPTXTargetLowering::LowerShiftLeftParts(SDValue Op,
   }
 }
 
+SDValue NVPTXTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+
+  if (VT == MVT::f32)
+    return LowerFROUND32(Op, DAG);
+
+  if (VT == MVT::f64)
+    return LowerFROUND64(Op, DAG);
+
+  llvm_unreachable("unhandled type");
+}
+
+// This is the the rounding method used in CUDA libdevice in C like code:
+// float roundf(float A)
+// {
+//   float RoundedA = (float) (int) ( A > 0 ? (A + 0.5f) : (A - 0.5f));
+//   RoundedA = abs(A) > 0x1.0p23 ? A : RoundedA;
+//   return abs(A) < 0.5 ? (float)(int)A : RoundedA;
+// }
+SDValue NVPTXTargetLowering::LowerFROUND32(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  SDValue A = Op.getOperand(0);
+  EVT VT = Op.getValueType();
+
+  SDValue AbsA = DAG.getNode(ISD::FABS, SL, VT, A);
+
+  // RoundedA = (float) (int) ( A > 0 ? (A + 0.5f) : (A - 0.5f))
+  SDValue Bitcast  = DAG.getNode(ISD::BITCAST, SL, MVT::i32, A);
+  const int SignBitMask = 0x80000000;
+  SDValue Sign = DAG.getNode(ISD::AND, SL, MVT::i32, Bitcast,
+                             DAG.getConstant(SignBitMask, SL, MVT::i32));
+  const int PointFiveInBits = 0x3F000000;
+  SDValue PointFiveWithSignRaw =
+      DAG.getNode(ISD::OR, SL, MVT::i32, Sign,
+                  DAG.getConstant(PointFiveInBits, SL, MVT::i32));
+  SDValue PointFiveWithSign =
+      DAG.getNode(ISD::BITCAST, SL, VT, PointFiveWithSignRaw);
+  SDValue AdjustedA = DAG.getNode(ISD::FADD, SL, VT, A, PointFiveWithSign);
+  SDValue RoundedA = DAG.getNode(ISD::FTRUNC, SL, VT, AdjustedA);
+
+  // RoundedA = abs(A) > 0x1.0p23 ? A : RoundedA;
+  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue IsLarge =
+      DAG.getSetCC(SL, SetCCVT, AbsA, DAG.getConstantFP(pow(2.0, 23.0), SL, VT),
+                   ISD::SETOGT);
+  RoundedA = DAG.getNode(ISD::SELECT, SL, VT, IsLarge, A, RoundedA);
+
+  // return abs(A) < 0.5 ? (float)(int)A : RoundedA;
+  SDValue IsSmall =DAG.getSetCC(SL, SetCCVT, AbsA,
+                                DAG.getConstantFP(0.5, SL, VT), ISD::SETOLT);
+  SDValue RoundedAForSmallA = DAG.getNode(ISD::FTRUNC, SL, VT, A);
+  return DAG.getNode(ISD::SELECT, SL, VT, IsSmall, RoundedAForSmallA, RoundedA);
+}
+
+// The implementation of round(double) is similar to that of round(float) in
+// that they both separate the value range into three regions and use a method
+// specific to the region to round the values. However, round(double) first
+// calculates the round of the absolute value and then adds the sign back while
+// round(float) directly rounds the value with sign.
+SDValue NVPTXTargetLowering::LowerFROUND64(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  SDValue A = Op.getOperand(0);
+  EVT VT = Op.getValueType();
+
+  SDValue AbsA = DAG.getNode(ISD::FABS, SL, VT, A);
+
+  // double RoundedA = (double) (int) (abs(A) + 0.5f);
+  SDValue AdjustedA = DAG.getNode(ISD::FADD, SL, VT, AbsA,
+                                  DAG.getConstantFP(0.5, SL, VT));
+  SDValue RoundedA = DAG.getNode(ISD::FTRUNC, SL, VT, AdjustedA);
+
+  // RoundedA = abs(A) < 0.5 ? (double)0 : RoundedA;
+  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue IsSmall =DAG.getSetCC(SL, SetCCVT, AbsA,
+                                DAG.getConstantFP(0.5, SL, VT), ISD::SETOLT);
+  RoundedA = DAG.getNode(ISD::SELECT, SL, VT, IsSmall,
+                         DAG.getConstantFP(0, SL, VT),
+                         RoundedA);
+
+  // Add sign to rounded_A
+  RoundedA = DAG.getNode(ISD::FCOPYSIGN, SL, VT, RoundedA, A);
+  DAG.getNode(ISD::FTRUNC, SL, VT, A);
+
+  // RoundedA = abs(A) > 0x1.0p52 ? A : RoundedA;
+  SDValue IsLarge =
+      DAG.getSetCC(SL, SetCCVT, AbsA, DAG.getConstantFP(pow(2.0, 52.0), SL, VT),
+                   ISD::SETOGT);
+  return DAG.getNode(ISD::SELECT, SL, VT, IsLarge, A, RoundedA);
+}
+
+
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -2098,6 +2198,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerShiftRightParts(Op, DAG);
   case ISD::SELECT:
     return LowerSelect(Op, DAG);
+  case ISD::FROUND:
+    return LowerFROUND(Op, DAG);
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }

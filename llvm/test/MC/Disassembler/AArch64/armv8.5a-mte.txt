@@ -407,13 +407,19 @@
 [0x20,0x00,0xa0,0xd9]
 [0xe1,0x03,0xa0,0xd9]
 [0x5f,0x00,0xa0,0xd9]
+[0x20,0x00,0x20,0xd9]
+[0xe1,0x03,0x20,0xd9]
+[0x5f,0x00,0x20,0xd9]
 
-# CHECK: ldgv x0, [x1]!
-# CHECK: ldgv x1, [sp]!
-# CHECK: ldgv xzr, [x2]!
-# CHECK: stgv x0, [x1]!
-# CHECK: stgv x1, [sp]!
-# CHECK: stgv xzr, [x2]!
+# CHECK: ldgm x0, [x1]
+# CHECK: ldgm x1, [sp]
+# CHECK: ldgm xzr, [x2]
+# CHECK: stgm x0, [x1]
+# CHECK: stgm x1, [sp]
+# CHECK: stgm xzr, [x2]
+# CHECK: stzgm x0, [x1]
+# CHECK: stzgm x1, [sp]
+# CHECK: stzgm xzr, [x2]
 
 # NOMTE:      warning: invalid instruction encoding
 # NOMTE-NEXT: [0x20,0x00,0xe0,0xd9]
@@ -427,6 +433,12 @@
 # NOMTE-NEXT: [0xe1,0x03,0xa0,0xd9]
 # NOMTE:      warning: invalid instruction encoding
 # NOMTE-NEXT: [0x5f,0x00,0xa0,0xd9]
+# NOMTE:      warning: invalid instruction encoding
+# NOMTE-NEXT: [0x20,0x00,0x20,0xd9]
+# NOMTE:      warning: invalid instruction encoding
+# NOMTE-NEXT: [0xe1,0x03,0x20,0xd9]
+# NOMTE:      warning: invalid instruction encoding
+# NOMTE-NEXT: [0x5f,0x00,0x20,0xd9]
 
 [0x60,0x76,0x08,0xd5]
 [0x81,0x76,0x08,0xd5]
@@ -493,6 +505,7 @@
 [0x05,0x66,0x3e,0xd5]
 [0x06,0x66,0x3d,0xd5]
 [0x27,0x66,0x38,0xd5]
+[0x88,0x00,0x39,0xd5]
 
 # CHECK: mrs x0, TCO
 # CHECK: mrs x1, GCR_EL1
@@ -502,6 +515,7 @@
 # CHECK: mrs x5, TFSR_EL3
 # CHECK: mrs x6, TFSR_EL12
 # CHECK: mrs x7, TFSRE0_EL1
+# CHECK: mrs x8, GMID_EL1
 
 # NOMTE: mrs x0, S3_3_C4_C2_7
 # NOMTE: mrs x1, S3_0_C1_C0_6
@@ -511,6 +525,7 @@
 # NOMTE: mrs x5, S3_6_C6_C6_0
 # NOMTE: mrs x6, S3_5_C6_C6_0
 # NOMTE: mrs x7, S3_0_C6_C6_1
+# NOMTE: mrs x8, S3_1_C0_C0_4
 
 [0x9f,0x40,0x03,0xd5]
 
@@ -525,6 +540,7 @@
 [0x05,0x66,0x1e,0xd5]
 [0x06,0x66,0x1d,0xd5]
 [0x27,0x66,0x18,0xd5]
+[0x88,0x00,0x19,0xd5]
 
 # CHECK: msr TCO, x0
 # CHECK: msr GCR_EL1, x1
@@ -534,6 +550,8 @@
 # CHECK: msr TFSR_EL3, x5
 # CHECK: msr TFSR_EL12, x6
 # CHECK: msr TFSRE0_EL1, x7
+# GMID_EL1 is read only
+# CHECK: msr S3_1_C0_C0_4, x8
 
 # NOMTE: msr S3_3_C4_C2_7, x0
 # NOMTE: msr S3_0_C1_C0_6, x1
@@ -543,3 +561,4 @@
 # NOMTE: msr S3_6_C6_C6_0, x5
 # NOMTE: msr S3_5_C6_C6_0, x6
 # NOMTE: msr S3_0_C6_C6_1, x7
+# NOMTE: msr S3_1_C0_C0_4, x8
