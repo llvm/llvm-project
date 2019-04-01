@@ -1,0 +1,15 @@
+group("unittests") {
+  deps = [
+    "clang-apply-replacements:ClangApplyReplacementsTests",
+    "clang-change-namespace:ClangChangeNamespaceTests",
+    "clang-doc:ClangDocTests",
+    "clang-include-fixer:ClangIncludeFixerTests",
+    "clang-include-fixer/find-all-symbols:FindAllSymbolsTests",
+    "clang-move:ClangMoveTests",
+    "clang-query:ClangQueryTests",
+    "clang-tidy:ClangTidyTests",
+    "clangd:ClangdTests",
+  ]
+  # FIXME: dep on clangd/xpc:ClangdXpcTests once it exists
+  testonly = true
+}
