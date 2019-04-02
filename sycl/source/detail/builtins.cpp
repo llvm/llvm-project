@@ -704,22 +704,42 @@ MAKE_1V_2V(fmod, s::cl_double, s::cl_double, s::cl_double)
 #ifndef NO_HALF_ENABLED
 MAKE_1V_2V(fmod, s::cl_half, s::cl_half, s::cl_half)
 #endif
-/* fract - disabled until proper C++11 compatible implementation
+
+// nextafter
+cl_float nextafter(s::cl_float x, s::cl_float y) __NOEXC {
+  return std::nextafter(x, y);
+}
+cl_double nextafter(s::cl_double x, s::cl_double y) __NOEXC {
+  return std::nextafter(x, y);
+}
+#ifdef __HAFL_ENABLED
+cl_half nextafter(s::cl_half x, s::cl_half y) __NOEXC {
+  return std::nextafter(x, y);
+}
+#endif
+MAKE_1V_2V(nextafter, s::cl_float, s::cl_float, s::cl_float)
+MAKE_1V_2V(nextafter, s::cl_double, s::cl_double, s::cl_double)
+#ifdef __HAFL_ENABLED
+MAKE_1V_2V(nextafter, s::cl_half, s::cl_half, s::cl_half)
+#endif
+
+// fract
+template<typename T>
+T __fract(T x, T* iptr) {
+  T f = std::floor(x);
+  *(iptr) = f;
+  return std::fmin(x - f, nextafter(T(1.0), T(0.0)));
+}
+
 cl_float fract(s::cl_float x, s::cl_float *iptr) __NOEXC {
-  decltype(x) f = std::floor(x);
-  iptr[0] = f;
-  return std::fmin(x - f, 0x1.fffffep-1f);
+  return __fract(x, iptr);
 }
 cl_double fract(s::cl_double x, s::cl_double *iptr) __NOEXC {
-  decltype(x) f = std::floor(x);
-  iptr[0] = f;
-  return std::fmin(x - f, 0x1.fffffep-1f);
+  return __fract(x, iptr);
 }
 #ifdef __HAFL_ENABLED
 cl_half fract(s::cl_half x, s::cl_half *iptr) __NOEXC {
-  decltype(x) f = std::floor(x);
-  iptr[0] = f;
-  return std::fmin(x - f, 0x1.fffffep-1f);
+  return __fract(x, iptr);
 }
 #endif
 MAKE_1V_2P(fract, s::cl_float, s::cl_float, s::cl_float)
@@ -727,7 +747,7 @@ MAKE_1V_2P(fract, s::cl_double, s::cl_double, s::cl_double)
 #ifdef __HAFL_ENABLED
 MAKE_1V_2P(fract, s::cl_half, s::cl_half, s::cl_half)
 #endif
-*/
+
 // frexp
 cl_float frexp(s::cl_float x, s::cl_int *exp) __NOEXC {
   return std::frexp(x, exp);
@@ -1004,24 +1024,6 @@ MAKE_1V(nan, s::cl_double, s::cl_ulong)
 MAKE_1V(nan, s::cl_double, s::ulonglong)
 #ifdef __HAFL_ENABLED
 MAKE_1V(nan, s::cl_half, s::cl_ushort)
-#endif
-
-// nextafter
-cl_float nextafter(s::cl_float x, s::cl_float y) __NOEXC {
-  return std::nextafter(x, y);
-}
-cl_double nextafter(s::cl_double x, s::cl_double y) __NOEXC {
-  return std::nextafter(x, y);
-}
-#ifdef __HAFL_ENABLED
-cl_half nextafter(s::cl_half x, s::cl_half y) __NOEXC {
-  return std::nextafter(x, y);
-}
-#endif
-MAKE_1V_2V(nextafter, s::cl_float, s::cl_float, s::cl_float)
-MAKE_1V_2V(nextafter, s::cl_double, s::cl_double, s::cl_double)
-#ifdef __HAFL_ENABLED
-MAKE_1V_2V(nextafter, s::cl_half, s::cl_half, s::cl_half)
 #endif
 
 // pow

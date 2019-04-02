@@ -94,7 +94,7 @@ int main() {
   }
 
   // fract with global memory
-  /*{
+  {
     cl::sycl::cl_float2 r{0, 0};
     cl::sycl::cl_float2 i{0, 0};
     {
@@ -154,7 +154,7 @@ int main() {
     assert(r2 == 0.5f);
     assert(i1 == 1.0f);
     assert(i2 == 2.0f);
-  }*/
+  }
 
   return 0;
 }

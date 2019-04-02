@@ -485,9 +485,8 @@ int main() {
     assert(r == 2.1f);
   }
 
-  // fract
   // fract with global memory
-  /*{
+  {
     cl::sycl::cl_float r{0};
     cl::sycl::cl_float i{999};
     {
@@ -532,7 +531,7 @@ int main() {
     std::cout << "r " << r << " i " << i << std::endl;
     assert(r == 0.5f);
     assert(i == 1.0f);
-  }*/
+  }
 
   // nan
   {
