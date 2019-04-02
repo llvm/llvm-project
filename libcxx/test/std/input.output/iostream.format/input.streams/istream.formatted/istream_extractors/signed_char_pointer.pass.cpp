@@ -13,6 +13,7 @@
 
 #include <istream>
 #include <cassert>
+#include "test_macros.h"
 
 template <class CharT>
 struct testbuf
@@ -103,6 +104,46 @@ int main(int, char**)
         assert(std::string((char*)s) == "");
     }
 #endif
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    {
+        testbuf<char> sb;
+        std::basic_istream<char> is(&sb);
+        is.exceptions(std::ios_base::failbit);
 
-  return 0;
+        bool threw = false;
+        try {
+            signed char s[20];
+            is.width(10);
+            is >> s;
+        } catch (std::ios_base::failure const&) {
+            threw = true;
+        }
+
+        assert(!is.bad());
+        assert(is.fail());
+        assert(is.eof());
+        assert(threw);
+    }
+    {
+        testbuf<char> sb;
+        std::basic_istream<char> is(&sb);
+        is.exceptions(std::ios_base::eofbit);
+
+        bool threw = false;
+        try {
+            signed char s[20];
+            is.width(10);
+            is >> s;
+        } catch (std::ios_base::failure const&) {
+            threw = true;
+        }
+
+        assert(!is.bad());
+        assert(is.fail());
+        assert(is.eof());
+        assert(threw);
+    }
+#endif
+
+    return 0;
 }
