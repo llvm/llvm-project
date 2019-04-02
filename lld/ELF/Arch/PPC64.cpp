@@ -928,7 +928,17 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
 
 
 uint32_t PPC64::getThunkSectionSpacing() const {
-  // REL14 range
+  // The placing of pre-created ThunkSections is controlled by the value
+  // ThunkSectionSpacing returned by getThunkSectionSpacing(). The aim is to
+  // place the ThunkSection such that all branches from the InputSections
+  // prior to the ThunkSection can reach a Thunk placed at the end of the
+  // ThunkSection. Graphically:
+  // | up to ThunkSectionSpacing .text input sections |
+  // | ThunkSection                                   |
+  // | up to ThunkSectionSpacing .text input sections |
+  // | ThunkSection                                   |
+  //
+  // On PowerPC64, we return the PPC64_REL14 relocation range
   return 0x8000;
 }
 
