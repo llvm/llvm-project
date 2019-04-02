@@ -15,7 +15,7 @@ Test that resilient APIs work regardless of the combination of library and execu
 import commands
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
@@ -36,29 +36,29 @@ class TestResilience(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
+    @skipUnlessDarwin
+    @swiftTest
     def test_cross_module_extension_a_a(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
         self.doTestWithFlavor("a", "a")
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
+    @skipUnlessDarwin
+    @swiftTest
     def test_cross_module_extension_a_b(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
         self.doTestWithFlavor("a", "b")
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
+    @skipUnlessDarwin
+    @swiftTest
     def test_cross_module_extension_b_a(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
         self.doTestWithFlavor("b", "a")
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
+    @skipUnlessDarwin
+    @swiftTest
     def test_cross_module_extension_b_b(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()

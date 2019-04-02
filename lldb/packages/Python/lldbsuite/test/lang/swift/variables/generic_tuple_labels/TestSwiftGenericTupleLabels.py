@@ -13,7 +13,7 @@
 Test that LLDB can reconstruct tuple labels from metadata
 """
 import lldb
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -24,48 +24,17 @@ class TestSwiftGenericTupleLabels(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
+    def setUp(self):
+        lldbtest.TestBase.setUp(self)
+
+    @swiftTest
     def test_generic_tuple_labels(self):
         """Test that LLDB can reconstruct tuple labels from metadata"""
         self.build()
-        self.do_test()
+        lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('main.swift'))
 
-    def setUp(self):
-        lldbtest.TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
-
-    def do_test(self):
-        """Test that LLDB can reconstruct tuple labels from metadata"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, lldbtest.VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.main_source_spec)
-        self.assertTrue(
-            breakpoint.GetNumLocations() > 0,
-            lldbtest.VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, lldbtest.PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
-        the_tuple = self.frame.FindVariable('x')
+        the_tuple = self.frame().FindVariable('x')
         the_tuple.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         the_tuple.SetPreferSyntheticValue(True)
 

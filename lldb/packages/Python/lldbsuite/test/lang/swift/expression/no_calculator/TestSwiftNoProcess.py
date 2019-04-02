@@ -14,7 +14,7 @@ Tests simple swift expressions
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -29,8 +29,8 @@ class TestSwiftNoProcess(TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    @decorators.swiftTest
-    @decorators.skipUnlessDarwin
+    @swiftTest
+    @skipUnlessDarwin
     def test_swift_no_target(self):
         """Tests that we give a reasonable error if we try to run expressions with no target"""
         result = lldb.SBCommandReturnObject()
@@ -40,8 +40,8 @@ class TestSwiftNoProcess(TestBase):
             ret_val == lldb.eReturnStatusFailed,
             "Swift expression with no target should fail.")
 
-    @decorators.swiftTest
-    @decorators.skipUnlessDarwin
+    @swiftTest
+    @skipUnlessDarwin
     def test_swift_no_process(self):
         """Tests that we give a reasonable error if we try to run expressions with no process"""
         self.build()

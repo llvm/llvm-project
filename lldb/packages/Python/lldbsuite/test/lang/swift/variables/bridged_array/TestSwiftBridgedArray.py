@@ -14,7 +14,7 @@ Check formatting for Swift.Array<T> that are bridged from ObjC
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -24,9 +24,9 @@ class TestSwiftBridgedArray(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
-    @decorators.expectedFailureAll(bugnumber="<rdar://problem/32024572>")
+    @skipUnlessDarwin
+    @swiftTest
+    @expectedFailureAll(bugnumber="<rdar://problem/32024572>")
     def test_swift_bridged_array(self):
         """Check formatting for Swift.Array<T> that are bridged from ObjC"""
         self.build()

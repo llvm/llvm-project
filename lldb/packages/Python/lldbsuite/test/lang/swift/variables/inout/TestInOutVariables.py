@@ -14,7 +14,7 @@ Test that @inout variables display reasonably
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -24,8 +24,8 @@ class TestInOutVariables(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_in_out_variables(self):
         """Test that @inout variables display reasonably"""
         self.build()
@@ -47,7 +47,7 @@ class TestInOutVariables(TestBase):
         if use_expression:
             # At present the expression parser strips off the @lvalue bit:
             message_end = "from EvaluateExpression"
-            x_actual = self.frame.EvaluateExpression(
+            x_actual = self.frame().EvaluateExpression(
                 "x", lldb.eDynamicCanRunTarget)
             self.assertTrue(
                 x_actual.GetError().Success(),
@@ -55,7 +55,7 @@ class TestInOutVariables(TestBase):
                 (x_actual.GetError().GetCString()))
         else:
             message_end = "from FindVariable"
-            x = self.frame.FindVariable("x").GetDynamicValue(
+            x = self.frame().FindVariable("x").GetDynamicValue(
                 lldb.eDynamicCanRunTarget)
             self.assertTrue(x.IsValid(), "did not find x %s" % (message_end))
             if is_wrapped:
@@ -96,15 +96,15 @@ class TestInOutVariables(TestBase):
 
     def check_struct_internal(self, ivar_value, use_expression):
         if use_expression:
-            x = self.frame.EvaluateExpression("x", lldb.eDynamicCanRunTarget)
+            x = self.frame().EvaluateExpression("x", lldb.eDynamicCanRunTarget)
             message_end = "from EvaluateExpression"
         else:
-            x = self.frame.FindVariable("x").GetDynamicValue(
+            x = self.frame().FindVariable("x").GetDynamicValue(
                 lldb.eDynamicCanRunTarget)
             message_end = "from FindVariable"
 
             # Make sure we can get the object description without crashing
-            _ = self.frame.FindVariable("x").description
+            _ = self.frame().FindVariable("x").description
 
         self.assertTrue(x.IsValid(), "did not find x %s" % (message_end))
         self.assertTrue(
@@ -132,9 +132,6 @@ class TestInOutVariables(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             self.process, breakpoint)
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
     def do_test(self):
         """Test that @inout variables display reasonably"""
@@ -181,7 +178,7 @@ class TestInOutVariables(TestBase):
 
         # Now on the way out let's modify the class and make sure it gets
         # modified both here and outside the functions:
-        var = self.frame.EvaluateExpression(
+        var = self.frame().EvaluateExpression(
             "x = Other(in1: 556678, in2: 667788)",
             lldb.eDynamicCanRunTarget)
         self.assertTrue(var.GetError().Success())
@@ -191,7 +188,7 @@ class TestInOutVariables(TestBase):
         self.process.Continue()
         self.check_next_stop(outer_bkpt)
 
-        svar = self.frame.FindVariable("x")
+        svar = self.frame().FindVariable("x")
         if not "unwrap":
             svar = svar.GetChildAtIndex(0)
         self.assertTrue(svar.GetSummary() == '"Keep going, nothing to see"')
@@ -211,7 +208,7 @@ class TestInOutVariables(TestBase):
         
         self.process.Continue()
         self.check_next_stop(fn_ptr_bkpt)
-        dict_var = self.frame.FindVariable("dict").GetChildAtIndex(0)
+        dict_var = self.frame().FindVariable("dict").GetChildAtIndex(0)
         self.assertTrue(dict_var.IsValid(), "Got an invalid value for the first element: %s"%(dict_var.GetError().GetCString()))
         func_value = dict_var.GetChildMemberWithName("value")
         self.assertTrue(func_value.IsValid(), "Got an invalid value for func ptr: %s"%(func_value.GetError().GetCString()))

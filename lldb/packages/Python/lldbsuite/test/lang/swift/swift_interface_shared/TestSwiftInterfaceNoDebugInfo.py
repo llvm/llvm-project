@@ -20,7 +20,7 @@ import commands
 import glob
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
@@ -30,13 +30,13 @@ import unittest2
 class TestSwiftInterfaceNoDebugInfo(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
+    @swiftTest
     def test_swift_interface(self):
         """Test that we load and handle modules that only have textual .swiftinterface files"""
         self.build()
         self.do_test()
 
-    @decorators.swiftTest
+    @swiftTest
     def test_swift_interface_fallback(self):
         """Test that we fall back to load from the .swiftinterface file if the .swiftmodule is invalid"""
         self.build()
@@ -49,7 +49,6 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.main_source = "main.swift"
 
     def do_test(self):
         # The custom swift module cache location
@@ -61,18 +60,17 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
                          "module cache should not exist")
 
         # Update the settings to use the custom module cache location
-        self.runCmd('settings set symbols.clang-modules-cache-path "%s"' % swift_mod_cache)
+        self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
+                    % swift_mod_cache)
 
         # Set a breakpoint in and launch the main executable
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                "break here", lldb.SBFileSpec(self.main_source),
-                exe_name="main")
-
-        self.frame = thread.frames[0]
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift"),
+            exe_name=self.getBuildArtifact("main"))
 
         # Check we are able to access the public fields of variables whose
         # types are from the .swiftinterface-only dylibs
-        var = self.frame.FindVariable("x")
+        var = self.frame().FindVariable("x")
         lldbutil.check_variable(self, var, False, typename="AA.MyPoint")
 
         child_y = var.GetChildMemberWithName("y") # MyPoint.y is public
@@ -83,8 +81,11 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
 
         # Expression evaluation using types from the .swiftinterface only
         # dylibs should work too
-        lldbutil.check_expression(self, self.frame, "y.magnitudeSquared", "404", use_summary=False)
-        lldbutil.check_expression(self, self.frame, "MyPoint(x: 1, y: 2).magnitudeSquared", "5", use_summary=False)
+        lldbutil.check_expression(
+            self, self.frame(), "y.magnitudeSquared", "404", use_summary=False)
+        lldbutil.check_expression(
+            self, self.frame(), "MyPoint(x: 1, y: 2).magnitudeSquared", "5",
+            use_summary=False)
 
         # Check the swift module cache was populated with the .swiftmodule
         # files of the loaded modules
@@ -107,21 +108,26 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         # Import C for the first time and check we can evaluate expressions
         # involving types from it
         self.runCmd("expr import CC")
-        lldbutil.check_expression(self, self.frame, "Baz.baz()", "23", use_summary=False)
+        lldbutil.check_expression(
+            self, self.frame(), "Baz.baz()", "23", use_summary=False)
 
         # Check we still have a single .swiftmodule in the cache for A and B
         # and that there is now one for C too
         a_modules = glob.glob(os.path.join(swift_mod_cache, 'AA-*.swiftmodule'))
         b_modules = glob.glob(os.path.join(swift_mod_cache, 'BB-*.swiftmodule'))
         c_modules = glob.glob(os.path.join(swift_mod_cache, 'CC-*.swiftmodule'))
-        self.assertEqual(len(a_modules), 1, "unexpected number of swiftmodules for A.swift")
-        self.assertEqual(len(b_modules), 1, "unexpected number of swiftmodules for B.swift")
-        self.assertEqual(len(c_modules), 1, "unexpected number of swiftmodules for C.swift")
+        self.assertEqual(len(a_modules), 1,
+                         "unexpected number of swiftmodules for A.swift")
+        self.assertEqual(len(b_modules), 1,
+                         "unexpected number of swiftmodules for B.swift")
+        self.assertEqual(len(c_modules), 1,
+                         "unexpected number of swiftmodules for C.swift")
 
         # Make sure the .swiftmodule files of A and B were re-used rather than
         # re-generated when they were re-imported
         for file in a_modules + b_modules:
-            self.assertTrue(is_old(file), "Swiftmodule file was regenerated rather than reused")
+            self.assertTrue(is_old(file),
+                            "Swiftmodule file was regenerated rather than reused")
 
 
 OLD_TIMESTAMP = 1390550700 # 2014-01-24T08:05:00+00:00

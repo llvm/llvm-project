@@ -17,7 +17,7 @@ Tests simple swift expressions
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -27,32 +27,24 @@ class TestSwiftBridgedStringVariables(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    def setUp(self):
+        TestBase.setUp(self)
+
+    @skipUnlessDarwin
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_swift_bridged_string_variables(self):
         """Test that Swift.String formats properly"""
         self.build()
-        self.do_test()
+        lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
-    def setUp(self):
-        TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
-
-    def do_test(self):
-        """Test that Swift.String formats properly"""
-        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(self,
-                "Set breakpoint here", self.main_source_spec)
-        self.frame = thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
-        s1 = self.frame.FindVariable("s1")
-        s2 = self.frame.FindVariable("s2")
-        s3 = self.frame.FindVariable("s3")
-        s4 = self.frame.FindVariable("s4")
-        s5 = self.frame.FindVariable("s5")
-        s6 = self.frame.FindVariable("s6")
+        s1 = self.frame().FindVariable("s1")
+        s2 = self.frame().FindVariable("s2")
+        s3 = self.frame().FindVariable("s3")
+        s4 = self.frame().FindVariable("s4")
+        s5 = self.frame().FindVariable("s5")
+        s6 = self.frame().FindVariable("s6")
 
         lldbutil.check_variable(self, s1, summary='"Hello world"')
         lldbutil.check_variable(self, s2, summary='"ΞΕΛΛΘ"')

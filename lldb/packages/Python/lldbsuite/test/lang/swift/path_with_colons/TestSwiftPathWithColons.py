@@ -14,7 +14,7 @@ Test that LLDB correctly handles paths with colons
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
@@ -28,10 +28,10 @@ class TestSwiftPathWithColon(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipUnlessDarwin
-    @decorators.skipIfiOSSimulator
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @skipUnlessDarwin
+    @skipIfiOSSimulator
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_path_with_colon(self):
         """Test that LLDB correctly handles paths with colons"""
         self.do_test()

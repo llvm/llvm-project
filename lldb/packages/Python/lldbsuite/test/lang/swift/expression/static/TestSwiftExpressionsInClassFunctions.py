@@ -14,7 +14,7 @@ Test expressions in the context of class functions
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -24,20 +24,11 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.swiftTest
-    def test_expressions_in_class_functions(self):
-        """Test expressions in class func contexts"""
-        self.build()
-        self.do_test()
-
     def setUp(self):
         TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def check_expression(self, expression, expected_result, use_summary=True):
-        value = self.frame.EvaluateExpression(expression)
+        value = self.frame().EvaluateExpression(expression)
         self.assertTrue(value.IsValid(), expression + "returned a valid value")
         if use_summary:
             answer = value.GetSummary()
@@ -47,8 +38,11 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
             expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)
 
-    def do_test(self):
+
+    @swiftTest
+    def test_expressions_in_class_functions(self):
         """Test expressions in class func contexts"""
+        self.build()
         exe_name = "a.out"
         exe = self.getBuildArtifact(exe_name)
 
@@ -62,12 +56,10 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
         for i in range(1, 8):
             breakpoints.append(
                 target.BreakpointCreateBySourceRegex(
-                    "breakpoint " + str(i),
-                    self.main_source_spec))
+                    "breakpoint " + str(i), lldb.SBFileSpec('main.swift')))
             self.assertTrue(
                 breakpoints[i].GetNumLocations() > 0,
-                "Didn't get valid breakpoint for %s" %
-                (str(i)))
+                "Didn't get valid breakpoint for %s" % (str(i)))
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
@@ -81,12 +73,7 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
                 process, breakpoints[i])
 
             self.assertTrue(len(threads) == 1)
-            self.thread = threads[0]
-            self.frame = self.thread.frames[0]
-            self.assertTrue(self.frame, "Frame 0 is valid.")
-
             self.check_expression("i", str(i), False)
-
             self.runCmd("continue")
 
 if __name__ == '__main__':

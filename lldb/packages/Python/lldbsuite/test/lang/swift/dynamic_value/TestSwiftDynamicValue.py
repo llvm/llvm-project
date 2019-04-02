@@ -14,7 +14,7 @@ Tests that dynamic values work correctly for Swift
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
@@ -23,7 +23,7 @@ class SwiftDynamicValueTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
+    @swiftTest
     def test_dynamic_value(self):
         """Tests that dynamic values work correctly for Swift"""
         self.build()
