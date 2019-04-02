@@ -14,7 +14,7 @@ Test support for generic types
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -24,7 +24,7 @@ class TestSwiftGenericTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
+    @swiftTest
     def test_swift_generic_types(self):
         """Test support for generic types"""
         self.build()

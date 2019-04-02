@@ -17,7 +17,7 @@ Tests simple swift expressions
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -27,53 +27,24 @@ class TestSwiftStringVariables(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    def setUp(self):
+        TestBase.setUp(self)
+
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_swift_string_variables(self):
         """Test that Swift.String formats properly"""
         self.build()
-        self.do_test()
+        lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
-    def setUp(self):
-        TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
-
-    def do_test(self):
-        """Test that Swift.String formats properly"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
-        s1 = self.frame.FindVariable("s1")
-        s2 = self.frame.FindVariable("s2")
+        s1 = self.frame().FindVariable("s1")
+        s2 = self.frame().FindVariable("s2")
 
         lldbutil.check_variable(self, s1, summary='"Hello world"')
         lldbutil.check_variable(self, s2, summary='"ΞΕΛΛΘ"')
 
-        TheVeryLongOne = self.frame.FindVariable("TheVeryLongOne")
+        TheVeryLongOne = self.frame().FindVariable("TheVeryLongOne")
         summaryOptions = lldb.SBTypeSummaryOptions()
         summaryOptions.SetCapping(lldb.eTypeSummaryUncapped)
         uncappedSummaryStream = lldb.SBStream()
@@ -92,9 +63,9 @@ class TestSwiftStringVariables(TestBase):
             cappedSummary.endswith('"...'),
             "cappedSummary ends with quote dot dot dot")
 
-        IContainZerosASCII = self.frame.FindVariable("IContainZerosASCII")
-        IContainZerosUnicode = self.frame.FindVariable("IContainZerosUnicode")
-        IContainEscapes = self.frame.FindVariable("IContainEscapes")
+        IContainZerosASCII = self.frame().FindVariable("IContainZerosASCII")
+        IContainZerosUnicode = self.frame().FindVariable("IContainZerosUnicode")
+        IContainEscapes = self.frame().FindVariable("IContainEscapes")
 
         lldbutil.check_variable(
             self,

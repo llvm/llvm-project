@@ -14,7 +14,7 @@ Tests scoped variables with swift expressions
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -24,19 +24,11 @@ class TestSwiftExprInProtocolExtension(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    def test_protocol_extension(self):
-        """Tests that swift expressions in protocol extension functions behave correctly"""
-        self.build()
-        self.do_test()
-
     def setUp(self):
         TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def check_expression(self, expression, expected_result, use_summary=True):
-        value = self.frame.EvaluateExpression(
+        value = self.frame().EvaluateExpression(
             expression, lldb.eDynamicCanRunTarget)
         self.assertTrue(value.IsValid(), expression + "returned a valid value")
         if use_summary:
@@ -54,9 +46,6 @@ class TestSwiftExprInProtocolExtension(TestBase):
     def continue_to_bkpt(self, process, bkpt):
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
     def continue_by_pattern(self, pattern):
         bkpt = self.target.BreakpointCreateBySourceRegex(
@@ -65,29 +54,28 @@ class TestSwiftExprInProtocolExtension(TestBase):
         self.continue_to_bkpt(self.process, bkpt)
         self.target.BreakpointDelete(bkpt.GetID())
 
-    def do_test(self):
+    @swiftTest
+    def test_protocol_extension(self):
         """Tests that swift expressions in protocol extension functions behave correctly"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
+        self.build()
 
         # Create the target
-        target = self.dbg.CreateTarget(exe)
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
         self.target = target
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
         static_bkpt = target.BreakpointCreateBySourceRegex(
-            'break here in static func', self.main_source_spec)
+            'break here in static func', lldb.SBFileSpec('main.swift'))
         self.assertTrue(static_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         method_bkpt = target.BreakpointCreateBySourceRegex(
-            'break here in method', self.main_source_spec)
+            'break here in method', lldb.SBFileSpec('main.swift'))
         self.assertTrue(method_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
         self.process = process
-
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
@@ -95,9 +83,6 @@ class TestSwiftExprInProtocolExtension(TestBase):
             process, method_bkpt)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
         # Check that we can evaluate expressions correctly in the struct
         # method.
@@ -106,7 +91,7 @@ class TestSwiftExprInProtocolExtension(TestBase):
         self.check_expression("local_var", "111", False)
 
         # And check that we got the type of self right:
-        self_var = self.frame.EvaluateExpression(
+        self_var = self.frame().EvaluateExpression(
             "self", lldb.eDynamicCanRunTarget)
         self_type_name = self_var.GetTypeName()
         print("Self type name is: ", self_type_name)
@@ -128,7 +113,7 @@ class TestSwiftExprInProtocolExtension(TestBase):
         self.check_expression("local_var", "111", False)
 
         # And check that we got the type of self right:
-        self_var = self.frame.EvaluateExpression(
+        self_var = self.frame().EvaluateExpression(
             "self", lldb.eDynamicCanRunTarget)
         self_type_name = self_var.GetTypeName()
         print("Self type name is: ", self_type_name)
@@ -150,7 +135,7 @@ class TestSwiftExprInProtocolExtension(TestBase):
         self.check_expression("local_var", "111", False)
 
         # And check that we got the type of self right:
-        self_var = self.frame.EvaluateExpression(
+        self_var = self.frame().EvaluateExpression(
             "self", lldb.eDynamicCanRunTarget)
         self_type_name = self_var.GetTypeName()
         print("Self type name is: ", self_type_name)

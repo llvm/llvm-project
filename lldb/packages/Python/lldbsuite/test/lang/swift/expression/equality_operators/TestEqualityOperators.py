@@ -16,7 +16,7 @@ import commands
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import no_match
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
@@ -32,9 +32,9 @@ class TestUnitTests(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is building a dSYM")
-    @decorators.expectedFailureAll(
+    @swiftTest
+    @skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is building a dSYM")
+    @expectedFailureAll(
         oslist=["linux"],
         bugnumber="rdar://28180489")
     def test_equality_operators_fileprivate(self):
@@ -42,9 +42,9 @@ class TestUnitTests(TestBase):
         self.build()
         self.do_test("Fooey.CompareEm1", "true", 1)
 
-    @decorators.swiftTest
-    @decorators.skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is building a dSYM")
-    @decorators.expectedFailureAll(
+    @swiftTest
+    @skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is building a dSYM")
+    @expectedFailureAll(
         oslist=["linux"],
         bugnumber="rdar://28180489")
     def test_equality_operators_private(self):
@@ -52,12 +52,12 @@ class TestUnitTests(TestBase):
         self.build()
         self.do_test("Fooey.CompareEm2", "false", 2)
 
-    @decorators.swiftTest
-    @decorators.skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is building a dSYM")
-    @decorators.expectedFailureAll(
+    @swiftTest
+    @skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is building a dSYM")
+    @expectedFailureAll(
         oslist=["linux"],
         bugnumber="rdar://28180489")
-    @decorators.expectedFailureAll(bugnumber="rdar://38483465")
+    @expectedFailureAll(bugnumber="rdar://38483465")
     def test_equality_operators_other_module(self):
         """Test that we resolve expression operators correctly"""
         self.build()
@@ -87,13 +87,10 @@ class TestUnitTests(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, bkpt)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
         options = lldb.SBExpressionOptions()
 
-        value = self.frame.EvaluateExpression("lhs == rhs", options)
+        value = self.frame().EvaluateExpression("lhs == rhs", options)
         self.assertTrue(
             value.GetError().Success(),
             "Expression in %s was successful" %
@@ -106,7 +103,7 @@ class TestUnitTests(TestBase):
              compare_value))
 
         # And make sure we got did increment the counter by the right value.
-        value = self.frame.EvaluateExpression("Fooey.GetCounter()", options)
+        value = self.frame().EvaluateExpression("Fooey.GetCounter()", options)
         self.assertTrue(value.GetError().Success(), "GetCounter failed with error %s"%(value.GetError().GetCString()))
 
         counter = value.GetValueAsUnsigned()
@@ -116,7 +113,7 @@ class TestUnitTests(TestBase):
 
         # Make sure the presence of these type specific == operators doesn't interfere
         # with finding other unrelated == operators.
-        value = self.frame.EvaluateExpression("1 == 2", options)
+        value = self.frame().EvaluateExpression("1 == 2", options)
         self.assertTrue(
             value.GetError().Success(),
             "1 == 2 expression couldn't run")

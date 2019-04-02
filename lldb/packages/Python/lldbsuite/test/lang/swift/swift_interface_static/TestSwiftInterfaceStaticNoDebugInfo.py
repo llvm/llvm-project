@@ -20,7 +20,7 @@ import commands
 import glob
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
@@ -30,13 +30,13 @@ import unittest2
 class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
+    @swiftTest
     def test_swift_interface(self):
         """Test that we load and handle modules that only have textual .swiftinterface files"""
         self.build()
         self.do_test()
 
-    @decorators.swiftTest
+    @swiftTest
     def test_swift_interface_fallback(self):
         """Test that we fall back to load from the .swiftinterface file if the .swiftmodule is invalid"""
         self.build()
@@ -48,7 +48,6 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.main_source = "main.swift"
 
     def do_test(self):
         # The custom swift module cache location
@@ -64,15 +63,13 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"' % swift_mod_cache)
 
         # Set a breakpoint in and launch the main executable
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                "break here", lldb.SBFileSpec(self.main_source),
-                exe_name="main")
-
-        self.frame = thread.frames[0]
+        lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('main.swift'),
+            exe_name=self.getBuildArtifact("main"))
 
         # Check we are able to access the public fields of variables whose
         # types are from the .swiftinterface-only modules
-        var = self.frame.FindVariable("x")
+        var = self.frame().FindVariable("x")
         lldbutil.check_variable(self, var, False, typename="AA.MyPoint")
 
         child_y = var.GetChildMemberWithName("y") # MyPoint.y is public
@@ -83,8 +80,12 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
 
         # Expression evaluation using types from the .swiftinterface only
         # modules should work too
-        lldbutil.check_expression(self, self.frame, "y.magnitudeSquared", "404", use_summary=False)
-        lldbutil.check_expression(self, self.frame, "MyPoint(x: 1, y: 2).magnitudeSquared", "5", use_summary=False)
+        lldbutil.check_expression(self, self.frame(),
+                                  "y.magnitudeSquared", "404",
+                                  use_summary=False)
+        lldbutil.check_expression(self, self.frame(),
+                                  "MyPoint(x: 1, y: 2).magnitudeSquared", "5",
+                                  use_summary=False)
 
         # Check the swift module cache was populated with the .swiftmodule
         # files of the loaded modules

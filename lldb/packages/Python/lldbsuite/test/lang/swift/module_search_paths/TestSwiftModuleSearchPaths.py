@@ -15,7 +15,7 @@ Tests that we can import modules located using target.swift-module-search-paths
 
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
@@ -29,8 +29,8 @@ class TestSwiftModuleSearchPaths(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_swift_module_search_paths(self):
         """
         Tests that we can import modules located using

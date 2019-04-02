@@ -14,7 +14,7 @@ Check that we can correctly figure out the dynamic type of generic things
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
@@ -23,7 +23,7 @@ class SwiftDynamicTypeGenericsTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
+    @swiftTest
     def test_genericresolution_commands(self):
         """Check that we can correctly figure out the dynamic type of generic things"""
         self.build()

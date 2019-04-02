@@ -14,7 +14,7 @@ Tests that Enum variables display correctly
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -24,8 +24,8 @@ class TestEnumVariables(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_enum_variables(self):
         """Tests that Enum variables display correctly"""
         self.build()
@@ -37,7 +37,7 @@ class TestEnumVariables(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def get_variable(self, name):
-        return self.frame.FindVariable(
+        return self.frame().FindVariable(
             name).GetDynamicValue(lldb.eDynamicCanRunTarget)
 
     def check_enum(
@@ -46,7 +46,7 @@ class TestEnumVariables(TestBase):
             value,
             child_summary=None,
             child_value=None):
-        var = self.frame.FindVariable(var_name)
+        var = self.frame().FindVariable(var_name)
         self.assertTrue(var.IsValid(), "invalid variable")
         self.assertTrue(var.GetValue() == value, "invalid value")
         if child_summary:
@@ -86,8 +86,6 @@ class TestEnumVariables(TestBase):
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
         #self.runCmd("frame variable")
 

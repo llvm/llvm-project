@@ -15,7 +15,7 @@ LSB significant.  Make sure that works.
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
@@ -24,8 +24,8 @@ class TestSwiftBool(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_swift_bool(self):
         """Test that we can inspect various Swift bools"""
         self.build()

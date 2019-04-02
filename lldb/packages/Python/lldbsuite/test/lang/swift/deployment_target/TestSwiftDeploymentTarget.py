@@ -14,7 +14,7 @@ import lldbsuite.test.lldbinline as lldbinline
 
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
@@ -23,10 +23,10 @@ class TestSwiftDeploymentTarget(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipUnlessDarwin
-    @decorators.skipIf(macos_version=["<", "10.11"])
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @skipUnlessDarwin
+    @skipIf(macos_version=["<", "10.11"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_swift_deployment_target(self):
         self.build()
 
@@ -35,10 +35,10 @@ class TestSwiftDeploymentTarget(TestBase):
                                           lldb.SBFileSpec('main.swift'))
         self.expect("p f", substrs=['i = 23'])
 
-    @decorators.skipUnlessDarwin
-    @decorators.skipIf(macos_version=["<", "10.11"])
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @skipUnlessDarwin
+    @skipIf(macos_version=["<", "10.11"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_swift_deployment_target_dlopen(self):
         self.build()
         # Create the target

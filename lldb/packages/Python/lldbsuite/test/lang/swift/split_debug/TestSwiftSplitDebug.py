@@ -13,7 +13,7 @@
 Test that split debug-info works properly
 """
 import lldb
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -24,7 +24,7 @@ class TestSwiftSplitDebug(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
+    @swiftTest
     def test_split_debug_info(self):
         """Test split debug info"""
         self.build()
@@ -32,23 +32,19 @@ class TestSwiftSplitDebug(lldbtest.TestBase):
 
     def setUp(self):
         lldbtest.TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def check_val(self, var_name, expected_val):
-        value = self.frame.EvaluateExpression(var_name,
+        value = self.frame().EvaluateExpression(var_name,
             lldb.eDynamicCanRunTarget)
 
-        self.assertTrue(value.IsValid(), "expr " + var_name + " returned a valid value")
+        self.assertTrue(value.IsValid(),
+                        "expr " + var_name + " returned a valid value")
         self.assertEquals(value.GetValue(), expected_val)
 
     def do_test(self):
         """Test the split debug info"""
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-            "Break here in main", self.main_source_spec)
-
-        self.frame = thread.frames[0]
-        self.assertTrue(self.frame.IsValid(), "Frame 0 is valid.")
+        lldbutil.run_to_source_breakpoint(
+            self, "Break here in main", lldb.SBFileSpec("main.swift"))
 
         self.check_val("c.c_x", "12345")
         self.check_val("c.c_y", "6789")

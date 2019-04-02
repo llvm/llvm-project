@@ -15,7 +15,7 @@ Effectively tests our chopper of Swift demangled names
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
@@ -24,8 +24,8 @@ class SwiftPartialBreakTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_swift_partial_break(self):
         """Tests that we can break on a partial name of a Swift function"""
         self.build()

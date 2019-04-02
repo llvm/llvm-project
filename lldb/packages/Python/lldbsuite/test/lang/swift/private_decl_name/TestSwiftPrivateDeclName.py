@@ -14,7 +14,7 @@ Test that we correctly find private decls
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -31,17 +31,13 @@ class TestSwiftPrivateDeclName(TestBase):
         self.b_source = "b.swift"
         self.b_source_spec = lldb.SBFileSpec(self.b_source)
 
-    @decorators.swiftTest
-    @decorators.expectedFailureAll(bugnumber="rdar://23236790")
+    @swiftTest
     def test_swift_private_decl_name(self):
         """Test that we correctly find private decls"""
         self.build()
-        self.do_test()
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
-        target = self.dbg.CreateTarget(exe)
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
@@ -59,11 +55,8 @@ class TestSwiftPrivateDeclName(TestBase):
             process, a_breakpoint)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        var = self.frame.FindVariable("a")
+        var = self.frame().FindVariable("a")
         child_a = var.GetChildMemberWithName("a")
         child_b = var.GetChildMemberWithName("b")
         child_c = var.GetChildMemberWithName("c")
@@ -77,11 +70,8 @@ class TestSwiftPrivateDeclName(TestBase):
             process, b_breakpoint)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        var = self.frame.FindVariable("a")
+        var = self.frame().FindVariable("a")
         child_a = var.GetChildMemberWithName("a")
         child_b = var.GetChildMemberWithName("b")
         child_c = var.GetChildMemberWithName("c")

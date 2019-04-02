@@ -12,7 +12,7 @@
 
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -25,9 +25,9 @@ class TestSwiftIncludeConflict(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @skipUnlessDarwin
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test(self):
         # To ensure we hit the rebuild problem remove the cache to avoid caching.
         mod_cache = self.getBuildArtifact("my-clang-modules-cache")

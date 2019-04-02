@@ -26,7 +26,8 @@ import commands
 # LLDB imports
 import lldb
 from lldbsuite.test.lldbtest import TestBase
-from lldbsuite.test import decorators, lldbtest, lldbutil
+from lldbsuite.test.decorators import *
+from lldbsuite.test import lldbtest, lldbutil
 
 
 class SwiftStaticLinkingMacOSTestCase(TestBase):
@@ -42,9 +43,6 @@ class SwiftStaticLinkingMacOSTestCase(TestBase):
             process, breakpoint)
 
         self.assertEquals(1, len(threads))
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
         patterns = [
             # Ensure we report a self with an address.
@@ -57,8 +55,8 @@ class SwiftStaticLinkingMacOSTestCase(TestBase):
         self.expect("frame variable self", patterns=patterns,
                     substrs=substrs)
 
-    @decorators.skipUnlessDarwin
-    @decorators.skipIf(bugnumber="<rdar://problem/31066897>")
+    @skipUnlessDarwin
+    @skipIf(bugnumber="<rdar://problem/31066897>")
     def test_variables_print_from_both_swift_modules(self):
         """Test that variables from two modules can be accessed."""
         self.build()

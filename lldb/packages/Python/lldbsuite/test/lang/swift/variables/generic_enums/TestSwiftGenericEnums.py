@@ -14,7 +14,7 @@ Test that we handle reasonably generically-typed enums
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -24,20 +24,11 @@ class TestSwiftGenericEnumTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.expectedFailureAll(bugnumber="Pending investigation")
-    def test_swift_generic_enum_types(self):
-        """Test that we handle reasonably generically-typed enums"""
-        self.build()
-        self.do_test()
-
     def setUp(self):
         TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def get_variable(self, name):
-        var = self.frame.FindVariable(
+        var = self.frame().FindVariable(
             name).GetDynamicValue(lldb.eDynamicCanRunTarget)
         var.SetPreferSyntheticValue(True)
         return var
@@ -55,18 +46,11 @@ class TestSwiftGenericEnumTypes(TestBase):
         self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName(
             "value").GetSummary() == value_summary, "invalid value summary")
 
-    def keep_going(self, process, breakpoint):
-        process.Continue()
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
-    def do_test(self):
-        """Tests that we properly vend synthetic children for Swift.Dictionary"""
+    @swiftTest
+    @expectedFailureAll(bugnumber="Pending investigation")
+    def test_swift_generic_enum_types(self):
+        """Test that we handle reasonably generically-typed enums"""
+        self.build()
         exe_name = "a.out"
         exe = self.getBuildArtifact(exe_name)
 
@@ -92,9 +76,6 @@ class TestSwiftGenericEnumTypes(TestBase):
             process, breakpoint1)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
@@ -120,9 +101,6 @@ class TestSwiftGenericEnumTypes(TestBase):
             process, breakpoint2)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
         value = self.get_variable("value")
         lldbutil.check_variable(

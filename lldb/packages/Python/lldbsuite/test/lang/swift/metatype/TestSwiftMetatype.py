@@ -14,7 +14,7 @@ Test the formatting of Swift metatypes
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -27,8 +27,8 @@ class TestSwiftMetatype(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_metatype(self):
         """Test the formatting of Swift metatypes"""
         self.build()
