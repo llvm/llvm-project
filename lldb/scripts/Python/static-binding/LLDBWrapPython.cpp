@@ -37649,18 +37649,13 @@ SWIGINTERN PyObject *_wrap_SBModule_GetVersion(PyObject *SWIGUNUSEDPARM(self), P
     PyObject* list = PyList_New(count);
     for (uint32_t j = 0; j < count; j++)
     {
-      if (arg2[j] < UINT32_MAX)
+      PyObject* item = PyInt_FromLong(arg2[j]);
+      int ok = PyList_SetItem(list,j,item);
+      if (ok != 0)
       {
-        PyObject* item = PyInt_FromLong(arg2[j]);
-        int ok = PyList_SetItem(list,j,item);
-        if (ok != 0)
-        {
-          resultobj = Py_None;
-          break;
-        }
+        resultobj = Py_None;
+        break;
       }
-      else
-      break;
     }
     resultobj = list;
   }
