@@ -51,5 +51,5 @@ void clang_unroll_plus_nounroll_and_jam(int *List, int Length, int Value) {
 // CHECK: ![[UNJ_4]] = !{!"llvm.loop.unroll_and_jam.count", i32 4}
 // CHECK: ![[LOOP_3]] = distinct !{![[LOOP_3]], ![[UNJ_DISABLE:.*]]}
 // CHECK: ![[UNJ_DISABLE]] = !{!"llvm.loop.unroll_and_jam.disable"}
-// CHECK: ![[LOOP_7]] = distinct !{![[LOOP_7]], ![[UNROLL_4:.*]], ![[UNJ_DISABLE:.*]]}
+// CHECK: ![[LOOP_7]] = distinct !{![[LOOP_7]], ![[UNJ_DISABLE:.*]], ![[UNROLL_4:.*]]}
 // CHECK: ![[UNROLL_4]] = !{!"llvm.loop.unroll.count", i32 4}

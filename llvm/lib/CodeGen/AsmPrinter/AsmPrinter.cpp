@@ -2925,13 +2925,16 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
 
   // Print the main label for the block.
   if (MBB.pred_empty() ||
-      (isBlockOnlyReachableByFallthrough(&MBB) && !MBB.isEHFuncletEntry())) {
+      (isBlockOnlyReachableByFallthrough(&MBB) && !MBB.isEHFuncletEntry() &&
+       !MBB.hasLabelMustBeEmitted())) {
     if (isVerbose()) {
       // NOTE: Want this comment at start of line, don't emit with AddComment.
       OutStreamer->emitRawComment(" %bb." + Twine(MBB.getNumber()) + ":",
                                   false);
     }
   } else {
+    if (isVerbose() && MBB.hasLabelMustBeEmitted())
+      OutStreamer->AddComment("Label of block must be emitted");
     OutStreamer->EmitLabel(MBB.getSymbol());
   }
 }

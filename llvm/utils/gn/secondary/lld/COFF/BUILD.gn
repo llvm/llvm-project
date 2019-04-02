@@ -28,6 +28,7 @@ static_library("COFF") {
   sources = [
     "Chunks.cpp",
     "DLL.cpp",
+    "DebugTypes.cpp",
     "Driver.cpp",
     "DriverUtils.cpp",
     "ICF.cpp",

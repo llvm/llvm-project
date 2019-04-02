@@ -193,6 +193,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 #define DEBUG_TYPE "loop-predication"
@@ -395,6 +396,9 @@ Value *LoopPredication::expandCheck(SCEVExpander &Expander,
 
   if (SE->isLoopEntryGuardedByCond(L, Pred, LHS, RHS))
     return Builder.getTrue();
+  if (SE->isLoopEntryGuardedByCond(L, ICmpInst::getInversePredicate(Pred),
+                                   LHS, RHS))
+    return Builder.getFalse();
 
   Instruction *InsertAt = &*Builder.GetInsertPoint();
   Value *LHSV = Expander.expandCodeFor(LHS, Ty, InsertAt);
@@ -641,7 +645,9 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
       LastCheck = Check;
     else
       LastCheck = Builder.CreateAnd(LastCheck, Check);
+  auto *OldCond = Guard->getOperand(0);
   Guard->setOperand(0, LastCheck);
+  RecursivelyDeleteTriviallyDeadInstructions(OldCond);
 
   LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
   return true;
@@ -676,9 +682,11 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   // Make sure that the check contains widenable condition and therefore can be
   // further widened.
   LastCheck = Builder.CreateAnd(LastCheck, WidenableCondition);
+  auto *OldCond = Guard->getOperand(0);
   Guard->setOperand(0, LastCheck);
   assert(isGuardAsWidenableBranch(Guard) &&
          "Stopped being a guard after transform?");
+  RecursivelyDeleteTriviallyDeadInstructions(OldCond);
 
   LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
   return true;

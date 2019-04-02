@@ -3041,37 +3041,7 @@ MipsRldMapSection::MipsRldMapSection()
 
 ARMExidxSyntheticSection::ARMExidxSyntheticSection()
     : SyntheticSection(SHF_ALLOC | SHF_LINK_ORDER, SHT_ARM_EXIDX,
-                       Config->Wordsize, ".ARM.exidx") {
-  for (InputSectionBase *&IS : InputSections) {
-    if (isa<InputSection>(IS) && IS->Type == SHT_ARM_EXIDX) {
-      ExidxSections.push_back(cast<InputSection>(IS));
-      IS = nullptr;
-    } else if (IS->Live && isa<InputSection>(IS) &&
-               IS->kind() != SectionBase::Synthetic &&
-               (IS->Flags & SHF_ALLOC) && (IS->Flags & SHF_EXECINSTR) &&
-               IS->getSize() > 0) {
-      ExecutableSections.push_back(cast<InputSection>(IS));
-    }
-  }
-  setSizeAndOffsets();
-
-  // FIXME: we do not output a relocation section when --emit-relocs is used
-  // as we do not have relocation sections for linker generated table entries
-  // and we would have to erase at a late stage relocations from merged entries.
-  // Given that exception tables are already position independent and a binary
-  // analyzer could derive the relocations we choose to erase the relocations.
-  if (Config->EmitRelocs)
-    for (InputSectionBase *&IS : InputSections)
-      if (IS && isa<InputSection>(IS) && IS->Type == SHT_REL) {
-        InputSection *RS = cast<InputSection>(IS);
-        if (InputSectionBase *EX = RS->getRelocatedSection())
-          if (isa<InputSection>(EX) && EX->Type == SHT_ARM_EXIDX)
-            IS = nullptr;
-      }
-
-  std::vector<InputSectionBase *> &V = InputSections;
-  V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());
-}
+                       Config->Wordsize, ".ARM.exidx") {}
 
 static InputSection *findExidxSection(InputSection *IS) {
   for (InputSection *D : IS->DependentSections)
@@ -3080,21 +3050,31 @@ static InputSection *findExidxSection(InputSection *IS) {
   return nullptr;
 }
 
-void ARMExidxSyntheticSection::setSizeAndOffsets() {
-  size_t Offset = 0;
-  Size = 0;
-  for (InputSection *IS : ExecutableSections) {
-    if (InputSection *D = findExidxSection(IS)) {
-      D->OutSecOff = Offset;
-      D->Parent = getParent();
-      Offset += D->getSize();
-      Empty = false;
-    } else {
-      Offset += 8;
-    }
+bool ARMExidxSyntheticSection::addSection(InputSection *IS) {
+  if (IS->Type == SHT_ARM_EXIDX) {
+    ExidxSections.push_back(IS);
+    return true;
   }
-  // Size includes Sentinel.
-  Size = Offset + 8;
+
+  if ((IS->Flags & SHF_ALLOC) && (IS->Flags & SHF_EXECINSTR) &&
+      IS->getSize() > 0) {
+    ExecutableSections.push_back(IS);
+    if (Empty && findExidxSection(IS))
+      Empty = false;
+    return false;
+  }
+
+  // FIXME: we do not output a relocation section when --emit-relocs is used
+  // as we do not have relocation sections for linker generated table entries
+  // and we would have to erase at a late stage relocations from merged entries.
+  // Given that exception tables are already position independent and a binary
+  // analyzer could derive the relocations we choose to erase the relocations.
+  if (Config->EmitRelocs && IS->Type == SHT_REL)
+    if (InputSectionBase *EX = IS->getRelocatedSection())
+      if (isa<InputSection>(EX) && EX->Type == SHT_ARM_EXIDX)
+        return true;
+
+  return false;
 }
 
 // References to .ARM.Extab Sections have bit 31 clear and are not the
@@ -3181,7 +3161,20 @@ void ARMExidxSyntheticSection::finalizeContents() {
     }
     ExecutableSections = std::move(SelectedSections);
   }
-  setSizeAndOffsets();
+
+  size_t Offset = 0;
+  Size = 0;
+  for (InputSection *IS : ExecutableSections) {
+    if (InputSection *D = findExidxSection(IS)) {
+      D->OutSecOff = Offset;
+      D->Parent = getParent();
+      Offset += D->getSize();
+    } else {
+      Offset += 8;
+    }
+  }
+  // Size includes Sentinel.
+  Size = Offset + 8;
 }
 
 InputSection *ARMExidxSyntheticSection::getLinkOrderDep() const {

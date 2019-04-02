@@ -556,6 +556,10 @@ private:
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFROUND32(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFROUND64(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLOADi1(SDValue Op, SelectionDAG &DAG) const;
 

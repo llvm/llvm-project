@@ -177,16 +177,25 @@ steady_clock::now() _NOEXCEPT
 
 #elif defined(_LIBCPP_WIN32API)
 
+// https://msdn.microsoft.com/en-us/library/windows/desktop/ms644905(v=vs.85).aspx says:
+//    If the function fails, the return value is zero. <snip>
+//    On systems that run Windows XP or later, the function will always succeed 
+//      and will thus never return zero.
+
+static LARGE_INTEGER
+__QueryPerformanceFrequency()
+{
+	LARGE_INTEGER val;
+	(void) QueryPerformanceFrequency(&val);
+	return val;
+}
+
 steady_clock::time_point
 steady_clock::now() _NOEXCEPT
 {
-  static LARGE_INTEGER freq;
-  static BOOL initialized = FALSE;
-  if (!initialized)
-    initialized = QueryPerformanceFrequency(&freq); // always succceeds
+  static const LARGE_INTEGER freq = __QueryPerformanceFrequency();
 
-  LARGE_INTEGER counter;
-  QueryPerformanceCounter(&counter);
+  LARGE_INTEGER counter = __QueryPerformanceFrequency();
   return time_point(duration(counter.QuadPart * nano::den / freq.QuadPart));
 }
 

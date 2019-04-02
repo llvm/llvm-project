@@ -208,7 +208,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIInsertSkipsPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
-  initializeSIFixWWMLivenessPass(*PR);
+  initializeSIPreAllocateWWMRegsPass(*PR);
   initializeSIFormMemoryClausesPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
@@ -879,9 +879,8 @@ void GCNPassConfig::addFastRegAlloc() {
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowID, false);
 
-  // This must be run after SILowerControlFlow, since it needs to use the
-  // machine-level CFG, but before register allocation.
-  insertPass(&SILowerControlFlowID, &SIFixWWMLivenessID, false);
+  // This must be run just after RegisterCoalescing.
+  insertPass(&RegisterCoalescerID, &SIPreAllocateWWMRegsID, false);
 
   TargetPassConfig::addFastRegAlloc();
 }
@@ -899,9 +898,8 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowID, false);
 
-  // This must be run after SILowerControlFlow, since it needs to use the
-  // machine-level CFG, but before register allocation.
-  insertPass(&SILowerControlFlowID, &SIFixWWMLivenessID, false);
+  // This must be run just after RegisterCoalescing.
+  insertPass(&RegisterCoalescerID, &SIPreAllocateWWMRegsID, false);
 
   TargetPassConfig::addOptimizedRegAlloc();
 }

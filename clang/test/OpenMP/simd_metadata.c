@@ -147,16 +147,16 @@ void h3(float *c, float *a, float *b, int size)
 // CHECK: [[LOOP_H1_HEADER:![0-9]+]] = distinct !{[[LOOP_H1_HEADER]], [[LOOP_WIDTH_8:![0-9]+]], [[LOOP_VEC_ENABLE]]}
 // CHECK: [[LOOP_WIDTH_8]] = !{!"llvm.loop.vectorize.width", i32 8}
 // CHECK: ![[ACCESS_GROUP_7]] = distinct !{}
-// CHECK: [[LOOP_H1_HEADER:![0-9]+]] = distinct !{[[LOOP_H1_HEADER]], [[LOOP_WIDTH_8]], [[LOOP_VEC_ENABLE]], ![[PARALLEL_ACCESSES_9:[0-9]+]]}
+// CHECK: [[LOOP_H1_HEADER:![0-9]+]] = distinct !{[[LOOP_H1_HEADER]], ![[PARALLEL_ACCESSES_9:[0-9]+]], [[LOOP_WIDTH_8]], [[LOOP_VEC_ENABLE]]}
 // CHECK: ![[PARALLEL_ACCESSES_9]] = !{!"llvm.loop.parallel_accesses", ![[ACCESS_GROUP_7]]}
 //
 // Metadata for h2:
 // CHECK: ![[ACCESS_GROUP_10]] = distinct !{}
-// CHECK: [[LOOP_H2_HEADER]] = distinct !{[[LOOP_H2_HEADER]], [[LOOP_VEC_ENABLE]], ![[PARALLEL_ACCESSES_12:[0-9]+]]}
+// CHECK: [[LOOP_H2_HEADER]] = distinct !{[[LOOP_H2_HEADER]], ![[PARALLEL_ACCESSES_12:[0-9]+]], [[LOOP_VEC_ENABLE]]}
 // CHECK: ![[PARALLEL_ACCESSES_12]] = !{!"llvm.loop.parallel_accesses", ![[ACCESS_GROUP_10]]}
 //
 // Metadata for h3:
 // CHECK: ![[ACCESS_GROUP_13]] = distinct !{}
-// CHECK: [[LOOP_H3_HEADER]] = distinct !{[[LOOP_H3_HEADER]], [[LOOP_VEC_ENABLE]], ![[PARALLEL_ACCESSES_15:[0-9]+]]}
+// CHECK: [[LOOP_H3_HEADER]] = distinct !{[[LOOP_H3_HEADER]], ![[PARALLEL_ACCESSES_15:[0-9]+]], [[LOOP_VEC_ENABLE]]}
 // CHECK: ![[PARALLEL_ACCESSES_15]] = !{!"llvm.loop.parallel_accesses", ![[ACCESS_GROUP_13]]}
 //

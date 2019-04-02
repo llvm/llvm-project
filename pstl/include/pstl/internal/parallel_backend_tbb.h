@@ -26,7 +26,7 @@
 #include <tbb/tbb_allocator.h>
 
 #if TBB_INTERFACE_VERSION < 10000
-#error Intel(R) Threading Building Blocks 2018 is required; older versions are not supported.
+#    error Intel(R) Threading Building Blocks 2018 is required; older versions are not supported.
 #endif
 
 namespace __pstl

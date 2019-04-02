@@ -14852,6 +14852,15 @@ OMPClause *Sema::ActOnOpenMPAllocateClause(
     if (AllocatorRes.isInvalid())
       return nullptr;
     Allocator = AllocatorRes.get();
+  } else {
+    // OpenMP 5.0, 2.11.4 allocate Clause, Restrictions.
+    // allocate clauses that appear on a target construct or on constructs in a
+    // target region must specify an allocator expression unless a requires
+    // directive with the dynamic_allocators clause is present in the same
+    // compilation unit.
+    if (LangOpts.OpenMPIsDevice &&
+        !DSAStack->hasRequiresDeclWithClause<OMPDynamicAllocatorsClause>())
+      targetDiag(StartLoc, diag::err_expected_allocator_expression);
   }
   // Analyze and build list of variables.
   SmallVector<Expr *, 8> Vars;

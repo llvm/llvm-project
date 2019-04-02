@@ -62,6 +62,11 @@ namespace X86 {
     IP_HAS_LOCK = 16,
     IP_HAS_NOTRACK = 32
   };
+
+  enum OperandType : unsigned {
+    /// AVX512 embedded rounding control. This should only have values 0-3.
+    OPERAND_ROUNDING_CONTROL = MCOI::OPERAND_FIRST_TARGET,
+  };
 } // end namespace X86;
 
 /// X86II - This namespace holds all of the target specific flags that
