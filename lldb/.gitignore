@@ -52,6 +52,7 @@ tags
 /llvm
 /DerivedData
 /cmark
+/compiler-rt
 PrebuiltSwiftlang
 intermediates
 
