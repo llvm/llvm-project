@@ -795,7 +795,7 @@ typename std::enable_if<detail::is_vigeninteger<T>::value, T>::type
 clamp(T x, typename T::element_type minval,
       typename T::element_type maxval) __NOEXC {
   __NO_SUPPORT_HOST_VERSION(clamp, T)
-  return __sycl_std::__invoke_s_clamp<T>(x, minval, maxval);
+  return __sycl_std::__invoke_s_clamp<T>(x, T(minval), T(maxval));
 }
 
 // geninteger clamp (geninteger x, sgeninteger minval, sgeninteger maxval)
@@ -804,7 +804,7 @@ typename std::enable_if<detail::is_vugeninteger<T>::value, T>::type
 clamp(T x, typename T::element_type minval,
       typename T::element_type maxval) __NOEXC {
   __NO_SUPPORT_HOST_VERSION(clamp, T)
-  return __sycl_std::__invoke_u_clamp<T>(x, minval, maxval);
+  return __sycl_std::__invoke_u_clamp<T>(x, T(minval), T(maxval));
 }
 
 // geninteger clz (geninteger x)
@@ -847,60 +847,60 @@ mad_sat(T a, T b, T c) __NOEXC {
   return __sycl_std::__invoke_u_mad_sat<T>(a, b, c);
 }
 
-// geninteger max (geninteger x, geninteger y)
+// igeninteger max (igeninteger x, igeninteger y)
 template <typename T>
 typename std::enable_if<detail::is_igeninteger<T>::value, T>::type
 max(T x, T y) __NOEXC {
   return __sycl_std::__invoke_s_max<T>(x, y);
 }
 
-// geninteger max (geninteger x, geninteger y)
+// ugeninteger max (ugeninteger x, ugeninteger y)
 template <typename T>
 typename std::enable_if<detail::is_ugeninteger<T>::value, T>::type
 max(T x, T y) __NOEXC {
   return __sycl_std::__invoke_u_max<T>(x, y);
 }
 
-// geninteger max (geninteger x, sgeninteger y)
+// igeninteger max (vigeninteger x, sigeninteger y)
 template <typename T>
 typename std::enable_if<detail::is_vigeninteger<T>::value, T>::type
 max(T x, typename T::element_type y) __NOEXC {
-  return __sycl_std::__invoke_s_max<T>(x, y);
+  return __sycl_std::__invoke_s_max<T>(x, T(y));
 }
 
-// geninteger max (geninteger x, sgeninteger y)
+// vugeninteger max (vugeninteger x, sugeninteger y)
 template <typename T>
 typename std::enable_if<detail::is_vugeninteger<T>::value, T>::type
 max(T x, typename T::element_type y) __NOEXC {
-  return __sycl_std::__invoke_u_max<T>(x, y);
+  return __sycl_std::__invoke_u_max<T>(x, T(y));
 }
 
-// geninteger min (geninteger x, geninteger y)
+// igeninteger min (igeninteger x, igeninteger y)
 template <typename T>
 typename std::enable_if<detail::is_igeninteger<T>::value, T>::type
 min(T x, T y) __NOEXC {
   return __sycl_std::__invoke_s_min<T>(x, y);
 }
 
-// geninteger min (geninteger x, geninteger y)
+// ugeninteger min (ugeninteger x, ugeninteger y)
 template <typename T>
 typename std::enable_if<detail::is_ugeninteger<T>::value, T>::type
 min(T x, T y) __NOEXC {
   return __sycl_std::__invoke_u_min<T>(x, y);
 }
 
-// geninteger min (geninteger x, sgeninteger y)
+// vigeninteger min (vigeninteger x, sigeninteger y)
 template <typename T>
 typename std::enable_if<detail::is_vigeninteger<T>::value, T>::type
 min(T x, typename T::element_type y) __NOEXC {
-  return __sycl_std::__invoke_s_min<T>(x, y);
+  return __sycl_std::__invoke_s_min<T>(x, T(y));
 }
 
-// geninteger min (geninteger x, sgeninteger y)
+// vugeninteger min (vugeninteger x, sugeninteger y)
 template <typename T>
 typename std::enable_if<detail::is_vugeninteger<T>::value, T>::type
 min(T x, typename T::element_type y) __NOEXC {
-  return __sycl_std::__invoke_u_min<T>(x, y);
+  return __sycl_std::__invoke_u_min<T>(x, T(y));
 }
 
 // geninteger mul_hi (geninteger x, geninteger y)
