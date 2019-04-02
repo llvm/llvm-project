@@ -129,10 +129,10 @@ void ICF::segregate(size_t Begin, size_t End, bool Constant) {
 bool ICF::assocEquals(const SectionChunk *A, const SectionChunk *B) {
   auto ChildClasses = [&](const SectionChunk *SC) {
     std::vector<uint32_t> Classes;
-    for (const SectionChunk *C : SC->children())
-      if (!C->SectionName.startswith(".debug") &&
-          C->SectionName != ".gfids$y" && C->SectionName != ".gljmp$y")
-        Classes.push_back(C->Class[Cnt % 2]);
+    for (const SectionChunk &C : SC->children())
+      if (!C.SectionName.startswith(".debug") &&
+          C.SectionName != ".gfids$y" && C.SectionName != ".gljmp$y")
+        Classes.push_back(C.Class[Cnt % 2]);
     return Classes;
   };
   return ChildClasses(A) == ChildClasses(B);

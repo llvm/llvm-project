@@ -9,8 +9,8 @@
 // test:
 
 // template <class charT, class traits, size_t N>
-// basic_ostream<charT, traits>&
-// operator<<(basic_ostream<charT, traits>& os, const bitset<N>& x);
+// basic_istream<charT, traits>&
+// operator>>(basic_istream<charT, traits>& is, bitset<N>& x);
 
 #include <bitset>
 #include <sstream>

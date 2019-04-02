@@ -13,7 +13,6 @@
 
 #include <istream>
 #include <cassert>
-#include "test_macros.h"
 
 template <class CharT>
 class testbuf
@@ -86,73 +85,6 @@ int main(int, char**)
         assert(!is.fail());
         assert(is.gcount() == 3);
     }
-#ifndef TEST_HAS_NO_EXCEPTIONS
-    {
-        testbuf<char> sb(" ");
-        std::basic_istream<char> is(&sb);
-        testbuf<char> sb2;
-        is.exceptions(std::ios_base::eofbit);
-        bool threw = false;
-        try {
-            is.get(sb2, '*');
-        } catch (std::ios_base::failure&) {
-            threw = true;
-        }
-        assert(threw);
-        assert(!is.bad());
-        assert( is.eof());
-        assert(!is.fail());
-    }
-    {
-        testbuf<wchar_t> sb(L" ");
-        std::basic_istream<wchar_t> is(&sb);
-        testbuf<wchar_t> sb2;
-        is.exceptions(std::ios_base::eofbit);
-        bool threw = false;
-        try {
-            is.get(sb2, L'*');
-        } catch (std::ios_base::failure&) {
-            threw = true;
-        }
-        assert(threw);
-        assert(!is.bad());
-        assert( is.eof());
-        assert(!is.fail());
-    }
 
-    {
-        testbuf<char> sb;
-        std::basic_istream<char> is(&sb);
-        testbuf<char> sb2;
-        is.exceptions(std::ios_base::eofbit);
-        bool threw = false;
-        try {
-            is.get(sb2, '*');
-        } catch (std::ios_base::failure&) {
-            threw = true;
-        }
-        assert(threw);
-        assert(!is.bad());
-        assert( is.eof());
-        assert( is.fail());
-    }
-    {
-        testbuf<wchar_t> sb;
-        std::basic_istream<wchar_t> is(&sb);
-        testbuf<wchar_t> sb2;
-        is.exceptions(std::ios_base::eofbit);
-        bool threw = false;
-        try {
-            is.get(sb2, L'*');
-        } catch (std::ios_base::failure&) {
-            threw = true;
-        }
-        assert(threw);
-        assert(!is.bad());
-        assert( is.eof());
-        assert( is.fail());
-    }
-#endif
-
-    return 0;
+  return 0;
 }

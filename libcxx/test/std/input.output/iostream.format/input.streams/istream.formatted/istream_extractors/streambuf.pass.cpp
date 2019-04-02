@@ -11,12 +11,10 @@
 // template <class charT, class traits = char_traits<charT> >
 //   class basic_istream;
 
-// basic_istream<charT,traits>& operator>>(basic_streambuf<charT,traits>* sb);
+// basic_istream<charT,traits>& operator<<(basic_streambuf<charT,traits>* sb);
 
 #include <istream>
 #include <cassert>
-
-#include "test_macros.h"
 
 template <class CharT>
 class testbuf
@@ -67,104 +65,6 @@ int main(int, char**)
         assert(sb2.str() == "testing...");
         assert(is.gcount() == 10);
     }
-#ifndef TEST_HAS_NO_EXCEPTIONS
-    {
-        testbuf<char> sb(" ");
-        std::basic_istream<char> is(&sb);
-        testbuf<char> sb2;
-        is.exceptions(std::istream::eofbit);
-        bool threw = false;
-        try {
-            is >> &sb2;
-        } catch (std::ios_base::failure&) {
-            threw = true;
-        }
-        assert(threw);
-        assert(!is.bad());
-        assert( is.eof());
-        assert(!is.fail());
-    }
-    {
-        testbuf<wchar_t> sb(L" ");
-        std::basic_istream<wchar_t> is(&sb);
-        testbuf<wchar_t> sb2;
-        is.exceptions(std::istream::eofbit);
-        bool threw = false;
-        try {
-            is >> &sb2;
-        } catch (std::ios_base::failure&) {
-            threw = true;
-        }
-        assert(threw);
-        assert(!is.bad());
-        assert( is.eof());
-        assert(!is.fail());
-    }
 
-    {
-        testbuf<char> sb;
-        std::basic_istream<char> is(&sb);
-        testbuf<char> sb2;
-        is.exceptions(std::istream::failbit);
-        bool threw = false;
-        try {
-            is >> &sb2;
-        } catch (std::ios_base::failure&) {
-            threw = true;
-        }
-        assert(threw);
-        assert(!is.bad());
-        assert( is.eof());
-        assert( is.fail());
-    }
-    {
-        testbuf<wchar_t> sb;
-        std::basic_istream<wchar_t> is(&sb);
-        testbuf<wchar_t> sb2;
-        is.exceptions(std::istream::failbit);
-        bool threw = false;
-        try {
-            is >> &sb2;
-        } catch (std::ios_base::failure&) {
-            threw = true;
-        }
-        assert(threw);
-        assert(!is.bad());
-        assert( is.eof());
-        assert( is.fail());
-    }
-
-    {
-        testbuf<char> sb;
-        std::basic_istream<char> is(&sb);
-        is.exceptions(std::istream::failbit);
-        bool threw = false;
-        try {
-            is >> static_cast<testbuf<char>*>(0);
-        } catch (std::ios_base::failure&) {
-            threw = true;
-        }
-        assert(threw);
-        assert(!is.bad());
-        assert(!is.eof());
-        assert( is.fail());
-    }
-    {
-        testbuf<wchar_t> sb;
-        std::basic_istream<wchar_t> is(&sb);
-        is.exceptions(std::istream::failbit);
-        bool threw = false;
-        try {
-            is >> static_cast<testbuf<wchar_t>*>(0);
-        } catch (std::ios_base::failure&) {
-            threw = true;
-        }
-        assert(threw);
-        assert(!is.bad());
-        assert(!is.eof());
-        assert( is.fail());
-    }
-#endif
-
-    return 0;
+  return 0;
 }
