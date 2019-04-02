@@ -64,10 +64,10 @@ class accessor {
 public:
   void use(void) const {}
   void use(void*) const {}
+  _ImplT<dimensions> impl;
+private:
   void __init(__global dataT *Ptr, range<dimensions> AccessRange,
               range<dimensions> MemRange, id<dimensions> Offset) {}
-
-  _ImplT<dimensions> __impl;
 };
 
 } // namespace sycl

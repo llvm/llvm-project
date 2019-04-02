@@ -16,10 +16,11 @@
 #include <CL/sycl/handler.hpp>
 #include <CL/sycl/id.hpp>
 #include <CL/sycl/pointers.hpp>
+#include <CL/sycl/detail/scheduler/scheduler.h>
+#include <CL/sycl/stl.hpp>
 
 namespace cl {
 namespace sycl {
-// TODO: 4.3.2 Implement common reference semantics
 namespace detail {
 
 template <typename dataT, int dimensions, access::mode accessMode,
@@ -114,10 +115,17 @@ struct accessor_impl;
 /// Available when (dimensions == 0).
 SYCL_ACCESSOR_IMPL(isTargetHostAccess(accessTarget) && dimensions == 0) {
   dataT *Data;
+  // For simplicity of the padding in the main accessor class
+  // we ensure that accessor_impl is not smaller than size of shared_ptr.
+  char padding[sizeof(std::shared_ptr<accessor_impl>) - sizeof(dataT *)];
   accessor_impl(dataT *Data) : Data(Data) {}
 
   // Returns the number of accessed elements.
   size_t get_count() const { return 1; }
+
+#ifdef __SYCL_DEVICE_ONLY__
+  bool operator==(const accessor_impl &Rhs) const { return Data == Rhs.Data; }
+#endif
 };
 
 /// Implementation of host accessor.
@@ -137,6 +145,13 @@ SYCL_ACCESSOR_IMPL(isTargetHostAccess(accessTarget) && dimensions > 0) {
 
   // Returns the number of accessed elements.
   size_t get_count() const { return AccessRange.size(); }
+
+#ifdef __SYCL_DEVICE_ONLY__
+  bool operator==(const accessor_impl &Rhs) const {
+    return Data == Rhs.Data && AccessRange == Rhs.AccessRange &&
+           MemRange == Rhs.MemRange && Offset == Rhs.Offset;
+  }
+#endif
 };
 
 /// Implementation of device (kernel) accessor providing access to a single
@@ -166,6 +181,10 @@ SYCL_ACCESSOR_IMPL(!isTargetHostAccess(accessTarget) &&
 
   // Returns the number of accessed elements.
   size_t get_count() const { return 1; }
+
+#ifdef __SYCL_DEVICE_ONLY__
+  bool operator==(const accessor_impl &Rhs) const { return Data == Rhs.Data; }
+#endif
 
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
@@ -209,6 +228,13 @@ SYCL_ACCESSOR_IMPL(!isTargetHostAccess(accessTarget) &&
   // Returns the number of accessed elements.
   size_t get_count() const { return AccessRange.size(); }
 
+#ifdef __SYCL_DEVICE_ONLY__
+  bool operator==(const accessor_impl &Rhs) const {
+    return Data == Rhs.Data && AccessRange == Rhs.AccessRange &&
+           MemRange == Rhs.MemRange && Offset == Rhs.Offset;
+  }
+#endif
+
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
                    dataT>::value,
@@ -247,6 +273,12 @@ SYCL_ACCESSOR_IMPL(accessTarget == access::target::local &&
 
   // Returns the number of accessed elements.
   size_t get_count() const { return 1; }
+
+#ifdef __SYCL_DEVICE_ONLY__
+  bool operator==(const accessor_impl &Rhs) const {
+    return ByteSize == Rhs.ByteSize && Data == Rhs.Data;
+  }
+#endif
 
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
@@ -298,6 +330,14 @@ SYCL_ACCESSOR_IMPL(accessTarget == access::target::local &&
   // Returns the number of accessed elements.
   size_t get_count() const { return AccessRange.size(); }
 
+#ifdef __SYCL_DEVICE_ONLY__
+  bool operator==(const accessor_impl &Rhs) const {
+    return ByteSize == Rhs.ByteSize && Data == Rhs.Data &&
+           AccessRange == Rhs.AccessRange && MemRange == Rhs.MemRange &&
+           Offset == Rhs.Offset;
+  }
+#endif
+
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
                    dataT>::value,
@@ -319,10 +359,24 @@ protected:
       accessor_impl<dataT, dimensions, accessMode, accessTarget, isPlaceholder>;
 
   const _ImplT *__get_impl() const {
+#ifdef __SYCL_DEVICE_ONLY__
     return reinterpret_cast<const _ImplT *>(this);
+#else
+    auto ImplPtrPtr = reinterpret_cast<const std::shared_ptr<_ImplT> *>(this);
+    const _ImplT* I = &**ImplPtrPtr;
+    return I;
+#endif
   }
 
-  _ImplT *__get_impl() { return reinterpret_cast<_ImplT *>(this); }
+  _ImplT *__get_impl() {
+#ifdef __SYCL_DEVICE_ONLY__
+    return reinterpret_cast<_ImplT *>(this);
+#else
+    auto ImplPtrPtr = reinterpret_cast<std::shared_ptr<_ImplT> *>(this);
+    _ImplT* I = &**ImplPtrPtr;
+    return I;
+#endif
+  }
 
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
@@ -569,15 +623,77 @@ class accessor
   // Make sure Impl field is the first in the class, so that it is
   // safe to reinterpret a pointer to accessor as a pointer to the
   // implementation.
-  _ImplT __impl;
+#ifdef __SYCL_DEVICE_ONLY__
+  _ImplT impl;
+#else
+  std::shared_ptr<_ImplT> impl;
+  char padding[sizeof(_ImplT) - sizeof(std::shared_ptr<_ImplT>)];
+#endif
 
+#ifdef __SYCL_DEVICE_ONLY__
   void __init(_ValueType *Ptr, range<dimensions> AccessRange,
               range<dimensions> MemRange, id<dimensions> Offset) {
-    __impl.Data = Ptr;
-    __impl.AccessRange = AccessRange;
-    __impl.MemRange = MemRange;
-    __impl.Offset = Offset;
+    impl.Data = Ptr;
+    impl.AccessRange = AccessRange;
+    impl.MemRange = MemRange;
+    impl.Offset = Offset;
   }
+#endif
+
+#ifndef __SYCL_DEVICE_ONLY__
+  detail::buffer_impl<buffer_allocator> *getBufImpl() const {
+    return impl->m_Buf;
+  }
+#endif
+
+  range<dimensions> getAccessRange() const {
+#ifdef __SYCL_DEVICE_ONLY__
+    return impl.AccessRange;
+#else
+    return impl->AccessRange;
+#endif
+  };
+
+  range<dimensions> getMemRange() const {
+#ifdef __SYCL_DEVICE_ONLY__
+    return impl.MemRange;
+#else
+    return impl->MemRange;
+#endif
+  };
+
+  id<dimensions> getOffset() const {
+#ifdef __SYCL_DEVICE_ONLY__
+    return impl.Offset;
+#else
+    return impl->Offset;
+#endif
+  };
+
+  size_t getByteSize() const {
+#ifdef __SYCL_DEVICE_ONLY__
+    return impl.ByteSize;
+#else
+    return impl->ByteSize;
+#endif
+  };
+
+  template <typename KernelType, int Dimensions, typename RangeType,
+            typename KernelArgType, bool SingleTask>
+  friend class cl::sycl::simple_scheduler::ExecuteKernelCommand;
+
+  template <int AccessDimensions, typename KernelType>
+  friend uint cl::sycl::simple_scheduler::passGlobalAccessorAsArg(
+      uint I, int LambdaOffset, cl_kernel ClKernel,
+      const KernelType &HostKernel);
+
+  template <int AccessDimensions, typename KernelType>
+  friend uint cl::sycl::simple_scheduler::passLocalAccessorAsArg(
+      uint I, int LambdaOffset, cl_kernel ClKernel,
+      const KernelType &HostKernel);
+
+  template <class Obj>
+  friend decltype(Obj::impl) detail::getSyclObjImpl(const Obj &SyclObject);
 
 public:
   using value_type = dataT;
@@ -606,7 +722,12 @@ public:
                 AccessTarget == access::target::constant_buffer))) &&
             Dimensions == 0),
            buffer<DataT, 1>>::type &bufferRef)
-      : __impl(detail::getSyclObjImpl(bufferRef)->BufPtr) {
+#ifdef __SYCL_DEVICE_ONLY__
+      : impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr) {
+#else
+      : impl(std::make_shared<_ImplT>(
+                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr)) {
+#endif
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
       if (BufImpl->OpenCLInterop) {
@@ -644,11 +765,16 @@ public:
            buffer<DataT, 1>>::type &bufferRef,
            handler &commandGroupHandlerRef)
 #ifdef __SYCL_DEVICE_ONLY__
-      ; // This ctor can't be used in device code, so no need to define it.
+      // Even though this ctor can not be used in device code, some
+      // dummy implementation is still needed.
+      // Pass nullptr as a pointer to mem and use buffers from the ctor
+      // arguments to avoid the need in adding utility functions for
+      // dummy/default initialization of range fields.
+      : impl(nullptr, (handler *)nullptr) {}
 #else // !__SYCL_DEVICE_ONLY__
-      : __impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
-               bufferRef.get_range(), bufferRef.get_range(),
-               &commandGroupHandlerRef) {
+      : impl(std::make_shared<_ImplT>(
+                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
+                 &commandGroupHandlerRef)) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
       throw cl::sycl::runtime_error(
@@ -656,7 +782,7 @@ public:
           "interoperability buffer");
     }
     commandGroupHandlerRef.AddBufDep<AccessMode, AccessTarget>(*BufImpl);
-    __impl.m_Buf = BufImpl.get();
+    impl->m_Buf = BufImpl.get();
   }
 #endif // !__SYCL_DEVICE_ONLY__
 
@@ -682,8 +808,14 @@ public:
                AccessTarget == access::target::constant_buffer))) &&
             Dimensions > 0),
            buffer<DataT, Dimensions>>::type &bufferRef)
-      : __impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
-               bufferRef.get_range(), bufferRef.get_range()) {
+#ifdef __SYCL_DEVICE_ONLY__
+      : impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
+             bufferRef.get_range(), bufferRef.get_range()) {
+#else
+      : impl(std::make_shared<_ImplT>(
+                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
+                 bufferRef.get_range(), bufferRef.get_range())) {
+#endif
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
       if (BufImpl->OpenCLInterop) {
@@ -721,11 +853,18 @@ public:
                buffer<DataT, Dimensions>>::type &bufferRef,
            handler &commandGroupHandlerRef)
 #ifdef __SYCL_DEVICE_ONLY__
-      ; // This ctor can't be used in device code, so no need to define it.
+      // Even though this ctor can not be used in device code, some
+      // dummy implementation is still needed.
+      // Pass nullptr as a pointer to mem and use buffers from the ctor
+      // arguments to avoid the need in adding utility functions for
+      // dummy/default initialization of range fields.
+      : impl(nullptr, bufferRef.get_range(), bufferRef.get_range(),
+             &commandGroupHandlerRef) {}
 #else
-      : __impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
-               bufferRef.get_range(), bufferRef.get_range(),
-               &commandGroupHandlerRef) {
+      : impl(std::make_shared<_ImplT>(
+                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
+                 bufferRef.get_range(), bufferRef.get_range(),
+                 &commandGroupHandlerRef)) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
       throw cl::sycl::runtime_error(
@@ -733,7 +872,7 @@ public:
           "interoperability buffer");
     }
     commandGroupHandlerRef.AddBufDep<AccessMode, AccessTarget>(*BufImpl);
-    __impl.m_Buf = BufImpl.get();
+    impl->m_Buf = BufImpl.get();
   }
 #endif
 
@@ -761,10 +900,17 @@ public:
                buffer<DataT, Dimensions>>::type &bufferRef,
            range<Dimensions> Range, id<Dimensions> Offset = {})
 #ifdef __SYCL_DEVICE_ONLY__
-      ; // This ctor can't be used in device code, so no need to define it.
+      // Even though this ctor can not be used in device code, some
+      // dummy implementation is still needed.
+      // Pass nullptr as a pointer to mem and use buffers from the ctor
+      // arguments to avoid the need in adding utility functions for
+      // dummy/default initialization of range<Dimensions> and
+      // id<Dimension> fields.
+      : impl(nullptr, Range, bufferRef.get_range(), Offset) {}
 #else   // !__SYCL_DEVICE_ONLY__
-      : __impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
-               bufferRef.get_range(), Offset) {
+      : impl(std::make_shared<_ImplT>(
+                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
+                 bufferRef.get_range(), Offset)) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
       if (BufImpl->OpenCLInterop) {
@@ -781,7 +927,7 @@ public:
           "interoperability buffer");
     }
   }
-#endif  // !__SYCL_DEVICE_ONLY__
+#endif // !__SYCL_DEVICE_ONLY__
 
   // buffer ctor #6:
   //   accessor(buffer &, handler &, range Range, id Offset);
@@ -804,10 +950,18 @@ public:
            handler &commandGroupHandlerRef, range<Dimensions> Range,
            id<Dimensions> Offset = {})
 #ifdef __SYCL_DEVICE_ONLY__
-      ; // This ctor can't be used in device code, so no need to define it.
+      // Even though this ctor can not be used in device code, some
+      // dummy implementation is still needed.
+      // Pass nullptr as a pointer to mem and use buffers from the ctor
+      // arguments to avoid the need in adding utility functions for
+      // dummy/default initialization of range<Dimensions> and
+      // id<Dimension> fields.
+      : impl(nullptr, Range, bufferRef.get_range(),
+             &commandGroupHandlerRef, Offset) {}
 #else   // !__SYCL_DEVICE_ONLY__
-      : __impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
-               bufferRef.get_range(), &commandGroupHandlerRef, Offset) {
+      : impl(std::make_shared<_ImplT>(
+                 (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
+                 bufferRef.get_range(), &commandGroupHandlerRef, Offset)) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
       throw cl::sycl::runtime_error(
@@ -815,9 +969,9 @@ public:
           "interoperability buffer");
     }
     commandGroupHandlerRef.AddBufDep<AccessMode, AccessTarget>(*BufImpl);
-    __impl.m_Buf = BufImpl.get();
+    impl->m_Buf = BufImpl.get();
   }
-#endif  // !__SYCL_DEVICE_ONLY__
+#endif // !__SYCL_DEVICE_ONLY__
 
   // TODO:
   // local accessor ctor #1
@@ -845,7 +999,23 @@ public:
                                     Dimensions > 0),
                                    range<Dimensions>>::type allocationSize,
            handler &commandGroupHandlerRef)
-      : __impl(allocationSize, &commandGroupHandlerRef) {}
+#ifdef __SYCL_DEVICE_ONLY__
+      : impl(allocationSize, &commandGroupHandlerRef) {}
+#else
+      : impl(std::make_shared<_ImplT>(allocationSize,
+                                      &commandGroupHandlerRef)) {}
+#endif
+
+  accessor(const accessor &rhs) = default;
+  accessor(accessor &&rhs) = default;
+
+  accessor &operator=(const accessor &rhs) = default;
+  accessor &operator=(accessor &&rhs) = default;
+
+  ~accessor() = default;
+
+  bool operator==(const accessor &rhs) const { return impl == rhs.impl; }
+  bool operator!=(const accessor &rhs) const { return !(*this == rhs); }
 };
 
 } // namespace sycl
@@ -854,4 +1024,25 @@ public:
 #undef SYCL_ACCESSOR_IMPL
 #undef SYCL_ACCESSOR_SUBCLASS
 
-//TODO hash for accessor
+namespace std {
+template <typename T, int Dimensions, cl::sycl::access::mode AccessMode,
+          cl::sycl::access::target AccessTarget,
+          cl::sycl::access::placeholder IsPlaceholder>
+struct hash<cl::sycl::accessor<T, Dimensions, AccessMode, AccessTarget,
+                               IsPlaceholder>> {
+  using AccType = cl::sycl::accessor<
+      T, Dimensions, AccessMode, AccessTarget, IsPlaceholder>;
+  using ImplType = cl::sycl::detail::accessor_impl<
+      T, Dimensions, AccessMode, AccessTarget, IsPlaceholder>;
+
+  size_t operator()(const AccType &A) const {
+#ifdef __SYCL_DEVICE_ONLY__
+    // Hash is not supported on DEVICE. Just return 0 here.
+    return 0;
+#else
+    std::shared_ptr<ImplType> ImplPtr = cl::sycl::detail::getSyclObjImpl(A);
+    return hash<std::shared_ptr<ImplType>>()(ImplPtr);
+#endif
+  }
+};
+} // namespace std

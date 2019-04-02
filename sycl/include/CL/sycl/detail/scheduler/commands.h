@@ -402,6 +402,18 @@ private:
   range<DimDest> m_BuffDestRange;
 };
 
+// The next two functions pass global/local accessor as a parameter
+// to the kernel. The paramter 'I' defines the current argument index
+// being passed to the kernel. 'LambdaOffset' gives the offset of the passed
+// accessor in lambda function. 'ClKernel' is the kernel. 'HostKernel'
+// is the pointer to the lambda function.
+template <int AccessDimensions, typename KernelType>
+uint passGlobalAccessorAsArg(uint I, int LambdaOffset, cl_kernel ClKernel,
+                             const KernelType &HostKernel);
+template <int AccessDimensions, typename KernelType>
+uint passLocalAccessorAsArg(uint I, int LambdaOffset, cl_kernel ClKernel,
+                            const KernelType &HostKernel);
+
 } // namespace simple_scheduler
 } // namespace sycl
 } // namespace cl

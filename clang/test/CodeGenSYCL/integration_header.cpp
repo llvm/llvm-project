@@ -22,28 +22,16 @@
 // CHECK-NEXT: const kernel_param_desc_t kernel_signatures[] = {
 // CHECK-NEXT:   //--- _ZTSZ4mainE12first_kernel
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2014, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 5 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 6 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 7 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 7 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 8 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 9 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 4062, 4 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 6112, 7 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- _ZTSN16second_namespace13second_kernelIcEE
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 5 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 6 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 6112, 4 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- _ZTS12third_kernelILi1Ei5pointIZ4mainE1XEE
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 5 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 6 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 6112, 4 },
 // CHECK-EMPTY:
 // CHECK-NEXT: };
 //

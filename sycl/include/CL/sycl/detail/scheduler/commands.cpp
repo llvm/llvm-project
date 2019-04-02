@@ -27,6 +27,52 @@ const Dst *getParamAddress(const Src *ptr, uint64_t Offset) {
   return reinterpret_cast<const Dst *>((const char *)ptr + Offset);
 }
 
+template <int AccessDimensions, typename KernelType>
+uint passGlobalAccessorAsArg(uint I, int LambdaOffset, cl_kernel ClKernel,
+                             const KernelType &HostKernel) {
+  using AccType = accessor<char, AccessDimensions, access::mode::read,
+                           access::target::global_buffer,
+                           access::placeholder::false_t>;
+  const AccType *Acc = getParamAddress<AccType>(&HostKernel, LambdaOffset);
+  cl_mem CLBuf = Acc->getBufImpl()->getOpenCLMem();
+  CHECK_OCL_CODE(clSetKernelArg(ClKernel, I, sizeof(cl_mem), &CLBuf));
+
+  range<AccessDimensions> AccessRange = Acc->getAccessRange();
+  CHECK_OCL_CODE(clSetKernelArg(ClKernel, I + 1,
+                                sizeof(range<AccessDimensions>),
+                                &AccessRange));
+  range<AccessDimensions> MemRange = Acc->getMemRange();
+  CHECK_OCL_CODE(clSetKernelArg(ClKernel, I + 2,
+                                sizeof(range<AccessDimensions>), &MemRange));
+  id<AccessDimensions> Offset = Acc->getOffset();
+  CHECK_OCL_CODE(clSetKernelArg(ClKernel, I + 3,
+                                sizeof(id<AccessDimensions>), &Offset));
+  return 4;
+}
+
+template <int AccessDimensions, typename KernelType>
+uint passLocalAccessorAsArg(uint I, int LambdaOffset, cl_kernel ClKernel,
+                            const KernelType &HostKernel) {
+  using AccType = accessor<char, AccessDimensions, access::mode::read,
+                           access::target::local,
+                           access::placeholder::false_t>;
+  const AccType *Acc = getParamAddress<AccType>(&HostKernel, LambdaOffset);
+  size_t ByteSize = Acc->getByteSize();
+  CHECK_OCL_CODE(clSetKernelArg(ClKernel, I, ByteSize, nullptr));
+
+  range<AccessDimensions> AccessRange = Acc->getAccessRange();
+  CHECK_OCL_CODE(clSetKernelArg(ClKernel, I + 1,
+                                sizeof(range<AccessDimensions>),
+                                &AccessRange));
+  range<AccessDimensions> MemRange = Acc->getMemRange();
+  CHECK_OCL_CODE(clSetKernelArg(ClKernel, I + 2,
+                                sizeof(range<AccessDimensions>), &MemRange));
+  id<AccessDimensions> Offset = Acc->getOffset();
+  CHECK_OCL_CODE(clSetKernelArg(ClKernel, I + 3,
+                                sizeof(id<AccessDimensions>), &Offset));
+  return 4;
+}
+
 template <typename KernelType, int Dimensions, typename RangeType,
           typename KernelArgType, bool SingleTask>
 void ExecuteKernelCommand<
@@ -46,30 +92,62 @@ void ExecuteKernelCommand<
   }
 
   if (m_KernelArgs != nullptr) {
+    unsigned ArgumentID = 0;
     for (unsigned I = 0; I < m_KernelArgsNum; ++I) {
       switch (m_KernelArgs[I].kind) {
       case csd::kernel_param_kind_t::kind_std_layout: {
         const void *Ptr =
             getParamAddress<void>(&m_HostKernel, m_KernelArgs[I].offset);
         CHECK_OCL_CODE(
-            clSetKernelArg(m_ClKernel, I, m_KernelArgs[I].info, Ptr));
+            clSetKernelArg(m_ClKernel, ArgumentID, m_KernelArgs[I].info, Ptr));
+        ArgumentID++;
         break;
       }
       case csd::kernel_param_kind_t::kind_accessor: {
-        switch (static_cast<cl::sycl::access::target>(m_KernelArgs[I].info)) {
-        case cl::sycl::access::target::global_buffer:
-        case cl::sycl::access::target::constant_buffer: {
-          auto *Ptr = *(getParamAddress<
-                        cl::sycl::detail::buffer_impl<std::allocator<char>> *>(
-              &m_HostKernel, m_KernelArgs[I].offset));
-          cl_mem CLBuf = Ptr->getOpenCLMem();
-          CHECK_OCL_CODE(clSetKernelArg(m_ClKernel, I, sizeof(cl_mem), &CLBuf));
+        int AccDims = m_KernelArgs[I].info >> 11;
+        int AccTarget = m_KernelArgs[I].info & 0x7ff;
+        switch (static_cast<cl::sycl::access::target>(AccTarget)) {
+        case access::target::global_buffer:
+        case access::target::constant_buffer: {
+          switch (AccDims) {
+          case 1:
+            ArgumentID += passGlobalAccessorAsArg<1, KernelType>(
+                ArgumentID, m_KernelArgs[I].offset, m_ClKernel, m_HostKernel);
+            break;
+          case 2:
+            ArgumentID += passGlobalAccessorAsArg<2, KernelType>(
+                ArgumentID, m_KernelArgs[I].offset, m_ClKernel, m_HostKernel);
+            break;
+          case 3:
+            ArgumentID += passGlobalAccessorAsArg<3, KernelType>(
+                ArgumentID, m_KernelArgs[I].offset, m_ClKernel, m_HostKernel);
+            break;
+          case 0:
+          default:
+            assert(0 && "Passing accessor with dimensions=0 is unsupported");
+            break;
+          }
           break;
         }
-        case cl::sycl::access::target::local: {
-          auto *Ptr =
-              getParamAddress<size_t>(&m_HostKernel, m_KernelArgs[I].offset);
-          CHECK_OCL_CODE(clSetKernelArg(m_ClKernel, I, *Ptr, nullptr));
+        case access::target::local: {
+          switch (AccDims) {
+          case 1:
+            ArgumentID += passLocalAccessorAsArg<1, KernelType>(
+                ArgumentID, m_KernelArgs[I].offset, m_ClKernel, m_HostKernel);
+            break;
+          case 2:
+            ArgumentID += passLocalAccessorAsArg<2, KernelType>(
+                ArgumentID, m_KernelArgs[I].offset, m_ClKernel, m_HostKernel);
+            break;
+          case 3:
+            ArgumentID += passLocalAccessorAsArg<3, KernelType>(
+                ArgumentID, m_KernelArgs[I].offset, m_ClKernel, m_HostKernel);
+            break;
+          case 0:
+          default:
+            assert(0 && "Passing accessor with dimensions=0 is unsupported");
+            break;
+          }
           break;
         }
         // TODO handle these cases
@@ -87,6 +165,7 @@ void ExecuteKernelCommand<
       }
     }
   }
+
   for (const auto &Arg : m_InteropArgs) {
     if (Arg.m_Ptr.get() != nullptr) {
       CHECK_OCL_CODE(clSetKernelArg(m_ClKernel, Arg.m_ArgIndex, Arg.m_Size,

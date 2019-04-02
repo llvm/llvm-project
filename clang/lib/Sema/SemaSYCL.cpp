@@ -650,21 +650,20 @@ static void buildArgTys(ASTContext &Context, CXXRecordDecl *KernelObj,
       CreateAndAddPrmDsc(Fld, PointerType);
 
       FieldDecl *AccessRangeFld =
-          getFieldDeclByName(RecordDecl, {"__impl", "AccessRange"});
+          getFieldDeclByName(RecordDecl, {"impl", "AccessRange"});
       assert(AccessRangeFld &&
-             "The accessor must contain the AccessRange from the __impl field");
+             "The accessor.impl must contain the AccessRange field");
       CreateAndAddPrmDsc(AccessRangeFld, AccessRangeFld->getType());
 
       FieldDecl *MemRangeFld =
-          getFieldDeclByName(RecordDecl, {"__impl", "MemRange"});
+          getFieldDeclByName(RecordDecl, {"impl", "MemRange"});
       assert(MemRangeFld &&
-             "The accessor must contain the MemRange from the __impl field");
+             "The accessor.impl must contain the MemRange field");
       CreateAndAddPrmDsc(MemRangeFld, MemRangeFld->getType());
 
       FieldDecl *OffsetFld =
-          getFieldDeclByName(RecordDecl, {"__impl", "Offset"});
-      assert(OffsetFld &&
-             "The accessor must contain the Offset from the __impl field");
+          getFieldDeclByName(RecordDecl, {"impl", "Offset"});
+      assert(OffsetFld && "The accessor.impl must contain the Offset field");
       CreateAndAddPrmDsc(OffsetFld, OffsetFld->getType());
     } else if (Util::isSyclStreamType(ArgTy)) {
       // the parameter is a SYCL stream object
@@ -710,37 +709,18 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
     uint64_t Offset = Layout.getFieldOffset(Fld->getFieldIndex()) / 8;
 
     if (Util::isSyclAccessorType(ArgTy)) {
-      // The parameter is a SYCL accessor object - split into three
-      // parameters, so need to generate three descriptors.
-      // ... first descriptor (translated to pointer kernel parameter):
+      // The parameter is a SYCL accessor object.
+      // The Info field of the parameter descriptor for accessor contains
+      // two template parameters packed into thid integer field:
+      //   - target (e.g. global_buffer, constant_buffer, local);
+      //   - dimension of the accessor.
       const auto *AccTy = ArgTy->getAsCXXRecordDecl();
       assert(AccTy && "accessor must be of a record type");
       const auto *AccTmplTy = cast<ClassTemplateSpecializationDecl>(AccTy);
-      H.addParamDesc(SYCLIntegrationHeader::kind_accessor,
-                     getAccessTarget(AccTmplTy), Offset);
-      // ... second descriptor (translated to access range kernel parameter):
-      FieldDecl *AccessRngFld =
-          getFieldDeclByName(AccTy, {"__impl", "AccessRange"}, &Offset);
-      uint64_t Sz =
-          Ctx.getTypeSizeInChars(AccessRngFld->getType()).getQuantity();
-      H.addParamDesc(SYCLIntegrationHeader::kind_std_layout,
-                     static_cast<unsigned>(Sz), static_cast<unsigned>(Offset));
-      // ... third descriptor (translated to mem range kernel parameter):
-      // Get offset in bytes
-      Offset = Layout.getFieldOffset(Fld->getFieldIndex()) / 8;
-      FieldDecl *MemRngFld =
-          getFieldDeclByName(AccTy, {"__impl", "MemRange"}, &Offset);
-      Sz = Ctx.getTypeSizeInChars(MemRngFld->getType()).getQuantity();
-      H.addParamDesc(SYCLIntegrationHeader::kind_std_layout,
-                     static_cast<unsigned>(Sz), static_cast<unsigned>(Offset));
-      // ... fourth descriptor (translated to id kernel parameter):
-      // Get offset in bytes
-      Offset = Layout.getFieldOffset(Fld->getFieldIndex()) / 8;
-      FieldDecl *OffstFld =
-          getFieldDeclByName(AccTy, {"__impl", "Offset"}, &Offset);
-      Sz = Ctx.getTypeSizeInChars(OffstFld->getType()).getQuantity();
-      H.addParamDesc(SYCLIntegrationHeader::kind_std_layout,
-                     static_cast<unsigned>(Sz), static_cast<unsigned>(Offset));
+      int Dims = static_cast<int>(
+          AccTmplTy->getTemplateArgs()[1].getAsIntegral().getExtValue());
+      int Info = getAccessTarget(AccTmplTy) | (Dims << 11);
+      H.addParamDesc(SYCLIntegrationHeader::kind_accessor, Info, Offset);
     } else if (Util::isSyclStreamType(ArgTy)) {
       // the parameter is a SYCL stream object
       llvm_unreachable("streams not supported yet");

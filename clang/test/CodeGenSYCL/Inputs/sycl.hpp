@@ -106,14 +106,15 @@ template <typename dataT, int dimensions, access::mode accessmode,
 class accessor {
 
 public:
-  void __init(__global dataT *Ptr, range<dimensions> AccessRange,
-              range<dimensions> MemRange, id<dimensions> Offset) {}
   void use(void) const {}
   template <typename... T>
   void use(T... args) {}
   template <typename... T>
   void use(T... args) const {}
-  _ImplT<dimensions> __impl;
+  _ImplT<dimensions> impl;
+private:
+  void __init(__global dataT *Ptr, range<dimensions> AccessRange,
+              range<dimensions> MemRange, id<dimensions> Offset) {}
 };
 
 class kernel {};
