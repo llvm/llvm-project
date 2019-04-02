@@ -59,7 +59,6 @@ int main() {
     assert(r > 0.333f && r < 0.334f); // ~0.33333333333333337
   }
 
-  // todo
   // asin
   {
     cl::sycl::cl_float r{0};
@@ -546,23 +545,6 @@ int main() {
     }
     std::cout << "r " << r << std::endl;
     assert(std::isnan(r));
-  }
-
-  // native exp
-  {
-    cl::sycl::cl_float r{0};
-    {
-      buffer<cl::sycl::cl_float, 1> BufR(&r, range<1>(1));
-      queue myQueue;
-      myQueue.submit([&](handler &cgh) {
-        auto AccR = BufR.get_access<access::mode::write>(cgh);
-        cgh.single_task<class nexpF1>([=]() {
-          AccR[0] = cl::sycl::native::exp(cl::sycl::cl_float{1.0f});
-        });
-      });
-    }
-    std::cout << "r " << r << std::endl;
-    assert(r > 2.718f && r < 2.719f); // ~2.718281828459045
   }
 
   return 0;
