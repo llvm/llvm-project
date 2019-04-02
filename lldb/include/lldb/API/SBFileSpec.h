@@ -30,6 +30,10 @@ public:
 
   explicit operator bool() const;
 
+  bool operator==(const SBFileSpec &rhs) const;
+
+  bool operator!=(const SBFileSpec &rhs) const;
+
   bool IsValid() const;
 
   bool Exists() const;

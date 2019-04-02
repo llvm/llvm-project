@@ -1212,13 +1212,16 @@ template <class ELFT> void ELFBuilder<ELFT>::build() {
   if (ShstrIndex == SHN_XINDEX)
     ShstrIndex = unwrapOrError(ElfFile.getSection(0))->sh_link;
 
-  Obj.SectionNames =
-      Obj.sections().template getSectionOfType<StringTableSection>(
-          ShstrIndex,
-          "e_shstrndx field value " + Twine(Ehdr.e_shstrndx) +
-              " in elf header " + " is invalid",
-          "e_shstrndx field value " + Twine(Ehdr.e_shstrndx) +
-              " in elf header " + " is not a string table");
+  if (ShstrIndex == SHN_UNDEF)
+    Obj.HadShdrs = false;
+  else
+    Obj.SectionNames =
+        Obj.sections().template getSectionOfType<StringTableSection>(
+            ShstrIndex,
+            "e_shstrndx field value " + Twine(Ehdr.e_shstrndx) +
+                " in elf header is invalid",
+            "e_shstrndx field value " + Twine(Ehdr.e_shstrndx) +
+                " in elf header is not a string table");
 }
 
 Writer::~Writer() {}
@@ -1371,6 +1374,10 @@ template <class ELFT> void ELFWriter<ELFT>::writeSegmentData() {
     std::memset(B + Offset, 0, Sec.Size);
   }
 }
+
+template <class ELFT>
+ELFWriter<ELFT>::ELFWriter(Object &Obj, Buffer &Buf, bool WSH)
+    : Writer(Obj, Buf), WriteSectionHeaders(WSH && Obj.HadShdrs) {}
 
 Error Object::removeSections(
     std::function<bool(const SectionBase &)> ToRemove) {
@@ -1558,9 +1565,10 @@ template <class ELFT> void ELFWriter<ELFT>::assignOffsets() {
 template <class ELFT> size_t ELFWriter<ELFT>::totalSize() const {
   // We already have the section header offset so we can calculate the total
   // size by just adding up the size of each section header.
-  auto NullSectionSize = WriteSectionHeaders ? sizeof(Elf_Shdr) : 0;
-  return Obj.SHOffset + Obj.sections().size() * sizeof(Elf_Shdr) +
-         NullSectionSize;
+  if (!WriteSectionHeaders)
+    return Obj.SHOffset;
+  size_t ShdrCount = Obj.sections().size() + 1; // Includes null shdr.
+  return Obj.SHOffset + ShdrCount * sizeof(Elf_Shdr);
 }
 
 template <class ELFT> Error ELFWriter<ELFT>::write() {

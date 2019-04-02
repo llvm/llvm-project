@@ -699,9 +699,9 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
         }
       }
     }
-
-    FuncInfo->removeSGPRToVGPRFrameIndices(MFI);
   }
+
+  FuncInfo->removeSGPRToVGPRFrameIndices(MFI);
 
   // FIXME: The other checks should be redundant with allStackObjectsAreDead,
   // but currently hasNonSpillStackObjects is set only from source

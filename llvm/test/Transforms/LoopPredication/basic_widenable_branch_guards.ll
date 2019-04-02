@@ -1863,6 +1863,65 @@ exit:                                             ; preds = %guarded, %entry
   ret i32 %result
 }
 
+; Make sure that if we're going to consider a branch widenable, that the
+; call to widenable condition is actually present.
+define i32 @negative_WC_required(i32* %array, i32 %length, i32 %n, i1 %unrelated) {
+; CHECK-LABEL: @negative_WC_required(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
+; CHECK-NEXT:    [[NOT_WIDENABLE:%.*]] = and i1 [[WITHIN_BOUNDS]], [[UNRELATED:%.*]]
+; CHECK-NEXT:    br i1 [[NOT_WIDENABLE]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
+; CHECK:       deopt:
+; CHECK-NEXT:    [[DEOPTCALL:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 9) [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTCALL]]
+; CHECK:       guarded:
+; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %tmp5 = icmp eq i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:                                   ; preds = %entry
+  br label %loop
+
+loop:
+  %i = phi i32 [ %i.next, %guarded ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  %not_widenable = and i1 %within.bounds, %unrelated
+  br i1 %not_widenable, label %guarded, label %deopt, !prof !0
+
+deopt:
+  %deoptcall = call i32 (...) @llvm.experimental.deoptimize.i32(i32 9) [ "deopt"() ]
+  ret i32 %deoptcall
+
+guarded:                                          ; preds = %loop
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  store i32 0, i32* %array.i.ptr, align 4
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp ult i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:                                             ; preds = %guarded, %entry
+  ret i32 0
+}
+
+
 declare i32 @llvm.experimental.deoptimize.i32(...)
 
 ; Function Attrs: inaccessiblememonly nounwind

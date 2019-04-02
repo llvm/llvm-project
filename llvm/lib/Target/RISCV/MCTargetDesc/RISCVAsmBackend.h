@@ -110,6 +110,7 @@ public:
       { "fixup_riscv_rvc_jump",      2,     11,  MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_riscv_rvc_branch",    0,     16,  MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_riscv_call",          0,     64,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_call_plt",      0,     64,  MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_riscv_relax",         0,      0,  0 },
       { "fixup_riscv_align",         0,      0,  0 }
     };
