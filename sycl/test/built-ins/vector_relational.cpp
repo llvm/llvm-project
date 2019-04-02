@@ -210,7 +210,7 @@ int main() {
                      // other value except Infinity.
   }
 
-  // isfinite : host only
+  // isfinite
   {
     cl::sycl::cl_int4 r{0};
     {
@@ -219,12 +219,8 @@ int main() {
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
         cgh.single_task<class isfiniteF4F4>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = cl::sycl::cl_int4{-1, -1, 0, 0};
-#else
           AccR[0] = cl::sycl::isfinite(
               cl::sycl::cl_float4{0.5f, 0.4f, NAN, INFINITY});
-#endif
         });
       });
     }
@@ -241,7 +237,7 @@ int main() {
     assert(r4 == 0);
   }
 
-  // isinf : host only
+  // isinf
   {
     cl::sycl::cl_int4 r{0};
     {
@@ -250,12 +246,8 @@ int main() {
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
         cgh.single_task<class isinfF4F4>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = cl::sycl::cl_int4{0, 0, 0, -1};
-#else
           AccR[0] =
               cl::sycl::isinf(cl::sycl::cl_float4{0.5f, 0.4f, NAN, INFINITY});
-#endif
         });
       });
     }
@@ -272,7 +264,7 @@ int main() {
     assert(r4 == -1);
   }
 
-  // isnan : host only
+  // isnan
   {
     cl::sycl::cl_int4 r{0};
     {
@@ -281,12 +273,8 @@ int main() {
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
         cgh.single_task<class isnanF4F4>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = cl::sycl::cl_int4{0, 0, -1, 0};
-#else
           AccR[0] =
               cl::sycl::isnan(cl::sycl::cl_float4{0.5f, 0.4f, NAN, INFINITY});
-#endif
         });
       });
     }
@@ -303,7 +291,7 @@ int main() {
     assert(r4 == 0);
   }
 
-  // isnormal : host only
+  // isnormal
   {
     cl::sycl::cl_int4 r{0};
     {
@@ -312,12 +300,8 @@ int main() {
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
         cgh.single_task<class isnormalF4F4>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = cl::sycl::cl_int4{-1, -1, 0, 0};
-#else
           AccR[0] = cl::sycl::isnormal(
               cl::sycl::cl_float4{0.5f, 0.4f, NAN, INFINITY});
-#endif
         });
       });
     }
@@ -390,7 +374,7 @@ int main() {
     assert(r4 == 0);
   }
 
-  // signbit : host only
+  // signbit
   {
     cl::sycl::cl_int4 r{0};
     {
@@ -399,12 +383,8 @@ int main() {
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
         cgh.single_task<class signbitF4>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = cl::sycl::cl_int4{0, -1, 0, 0};
-#else
           AccR[0] = cl::sycl::signbit(
               cl::sycl::cl_float4{0.5f, -12.0f, NAN, INFINITY});
-#endif
         });
       });
     }
@@ -421,7 +401,7 @@ int main() {
     assert(r4 == 0);
   }
 
-  // any : host only.
+  // any.
   // Call to the device function with vector parameters work. Scalars do not.
   {
     cl::sycl::cl_int r{0};
@@ -431,11 +411,7 @@ int main() {
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
         cgh.single_task<class anyI4>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = 1;
-#else
           AccR[0] = cl::sycl::any(cl::sycl::cl_int4{-12, -12, 0, 1});
-#endif
         });
       });
     }
@@ -445,7 +421,67 @@ int main() {
     assert(r1 == 1);
   }
 
-  // all : host only.
+  // any.
+  // Call to the device function with vector parameters work. Scalars do not.
+  {
+    cl::sycl::cl_int r{0};
+    {
+      buffer<cl::sycl::cl_int, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class anyI4negative>([=]() {
+          AccR[0] = cl::sycl::any(cl::sycl::cl_int4{-12, -12, -12, -12});
+        });
+      });
+    }
+    cl::sycl::cl_int r1 = r;
+
+    std::cout << "Any - r1 " << r1 << std::endl;
+    assert(r1 == 1);
+  }
+
+  // any.
+  // Call to the device function with vector parameters work. Scalars do not.
+  {
+    cl::sycl::cl_int r{0};
+    {
+      buffer<cl::sycl::cl_int, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class anyI4zero>([=]() {
+          AccR[0] = cl::sycl::any(cl::sycl::cl_int4{0, 0, 0, 0});
+        });
+      });
+    }
+    cl::sycl::cl_int r1 = r;
+
+    std::cout << "Any 0 r1 " << r1 << std::endl;
+    assert(r1 == 0);
+  }
+
+  // any.
+  // Call to the device function with vector parameters work. Scalars do not.
+  {
+    cl::sycl::cl_int r{0};
+    {
+      buffer<cl::sycl::cl_int, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class anyI4positive>([=]() {
+          AccR[0] = cl::sycl::any(cl::sycl::cl_int4{12, 12, 12, 12});
+        });
+      });
+    }
+    cl::sycl::cl_int r1 = r;
+
+    std::cout << "Any + r1 " << r1 << std::endl;
+    assert(r1 == 0);
+  }
+
+  // all.
   // Call to the device function with vector parameters work. Scalars do not.
   {
     cl::sycl::cl_int r{0};
@@ -455,14 +491,10 @@ int main() {
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
         cgh.single_task<class allI4>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = 1;
-#else
           AccR[0] = cl::sycl::all(cl::sycl::cl_int4{-12, -12, -12, -12});
           // Infinity (positive or negative) or Nan are not integers.
           // Passing them creates inconsistent results between host and device
           // execution.
-#endif
         });
       });
     }
@@ -470,6 +502,66 @@ int main() {
 
     std::cout << "All change r1 " << r1 << std::endl;
     assert(r1 == 1);
+  }
+
+  // all.
+  // Call to the device function with vector parameters work. Scalars do not.
+  {
+    cl::sycl::cl_int r{0};
+    {
+      buffer<cl::sycl::cl_int, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class allI4negative>([=]() {
+          AccR[0] = cl::sycl::all(cl::sycl::cl_int4{-12, -12, -12, -12});
+        });
+      });
+    }
+    cl::sycl::cl_int r1 = r;
+
+    std::cout << "All - r1 " << r1 << std::endl;
+    assert(r1 == 1);
+  }
+
+  // all.
+  // Call to the device function with vector parameters work. Scalars do not.
+  {
+    cl::sycl::cl_int r{0};
+    {
+      buffer<cl::sycl::cl_int, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class allI4zero>([=]() {
+          AccR[0] = cl::sycl::all(cl::sycl::cl_int4{0, 0, 0, 0});
+        });
+      });
+    }
+    cl::sycl::cl_int r1 = r;
+
+    std::cout << "All 0 r1 " << r1 << std::endl;
+    assert(r1 == 0);
+  }
+
+  // all.
+  // Call to the device function with vector parameters work. Scalars do not.
+  {
+    cl::sycl::cl_int r{0};
+    {
+      buffer<cl::sycl::cl_int, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class allI4positive>([=]() {
+          AccR[0] = cl::sycl::all(cl::sycl::cl_int4{12, 12, 12, 12});
+        });
+      });
+    }
+    cl::sycl::cl_int r1 = r;
+
+    std::cout << "All + r1 " << r1 << std::endl;
+    assert(r1 == 0);
   }
 
   // bitselect
@@ -502,7 +594,7 @@ int main() {
     assert(abs(r4 - 0.0f) < 0.01);
   }
 
-  // select : host only
+  // select
   {
     cl::sycl::cl_float4 r{0};
     {
@@ -511,16 +603,12 @@ int main() {
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
         cgh.single_task<class selectF4F4I4>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = cl::sycl::cl_float4{112.112f, 112.112f, 112.112f, 112.112f};
-#else
           AccR[0] = cl::sycl::select(
               cl::sycl::cl_float4{112.112f, 34.34f, 112.112f, 34.34f},
               cl::sycl::cl_float4{34.34f, 112.112f, 34.34f, 112.112f},
-              cl::sycl::cl_int4{0, -1, 0, -1});
+              cl::sycl::cl_int4{0, -1, 0, 1});
           // Using NAN/infinity as an input, which gets
           // selected by -1, produces a NAN/infinity as expected.
-#endif
         });
       });
     }
@@ -534,7 +622,7 @@ int main() {
     assert(r1 == 112.112f);
     assert(r2 == 112.112f);
     assert(r3 == 112.112f);
-    assert(r4 == 112.112f);
+    assert(r4 == 34.34f);
   }
 
   return 0;

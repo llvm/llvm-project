@@ -367,11 +367,15 @@ template <typename T>
 using is_gentype = std::integral_constant<bool, is_genfloat<T>::value ||
                                                     is_geninteger<T>::value>;
 
+// forward declarations
+template <typename T> class TryToGetElementType;
+
 // genintegerNbit All types within geninteger whose base type are N bits in
 // size, where N = 8, 16, 32, 64
 template <typename T, int N>
 using is_igenintegerNbit = typename std::integral_constant<
-    bool, is_igeninteger<T>::value || (sizeof(typename T::element_type) == N)>;
+    bool, is_igeninteger<T>::value &&
+              (sizeof(typename TryToGetElementType<T>::type) == N)>;
 
 // igeninteger8bit All types within igeninteger whose base type are 8 bits in
 // size
@@ -393,7 +397,8 @@ template <typename T> using is_igeninteger64bit = is_igenintegerNbit<T, 8>;
 // size, where N = 8, 16, 32, 64.
 template <typename T, int N>
 using is_ugenintegerNbit = typename std::integral_constant<
-    bool, is_ugeninteger<T>::value || (sizeof(typename T::element_type) == N)>;
+    bool, is_ugeninteger<T>::value &&
+              (sizeof(typename TryToGetElementType<T>::type) == N)>;
 
 // ugeninteger8bit All types within ugeninteger whose base type are 8 bits in
 // size
@@ -415,7 +420,8 @@ template <typename T> using is_ugeninteger64bit = is_ugenintegerNbit<T, 8>;
 // size, where N = 8, 16, 32, 64.
 template <typename T, int N>
 using is_genintegerNbit = typename std::integral_constant<
-    bool, is_geninteger<T>::value || (sizeof(typename T::element_type) == N)>;
+    bool, is_geninteger<T>::value &&
+              (sizeof(typename TryToGetElementType<T>::type) == N)>;
 
 // geninteger8bit All types within geninteger whose base type are 8 bits in size
 template <typename T> using is_geninteger8bit = is_genintegerNbit<T, 1>;
@@ -705,6 +711,183 @@ template <> struct make_upper<cl::sycl::cl_int> {
 };
 template <> struct make_upper<cl::sycl::cl_uint> {
   using type = cl::sycl::cl_ulong;
+};
+
+// Try to get pointer_t, otherwise T
+template <typename T> class TryToGetPointerT {
+  static T check(...);
+  template <typename A> static typename A::pointer_t check(const A &);
+
+public:
+  using type = decltype(check(T()));
+  static constexpr bool value = !std::is_same<T, type>::value;
+};
+
+// Try to get element_type, otherwise T
+template <typename T> class TryToGetElementType {
+  static T check(...);
+  template <typename A> static typename A::element_type check(const A &);
+
+public:
+  using type = decltype(check(T()));
+  static constexpr bool value = !std::is_same<T, type>::value;
+};
+
+// Try to get vector_t, otherwise T
+template <typename T> class TryToGetVectorT {
+  static T check(...);
+  template <typename A> static typename A::vector_t check(const A &);
+
+public:
+  using type = decltype(check(T()));
+  static constexpr bool value = !std::is_same<T, type>::value;
+};
+
+// Try to get pointer_t (if pointer_t indicates on the type with vector_t
+// creates a pointer type on vector_t), otherwise T
+template <typename T> class TryToGetPointerVecT {
+  static T check(...);
+  template <typename A>
+  static typename PtrValueType<
+      typename TryToGetVectorT<typename TryToGetElementType<A>::type>::type,
+      A::address_space>::type *
+  check(const A &);
+
+public:
+  using type = decltype(check(T()));
+};
+
+template <typename T, typename = typename std::enable_if<
+                          TryToGetPointerT<T>::value, std::true_type>::type>
+typename TryToGetPointerVecT<T>::type TryToGetPointer(T &t) {
+  // TODO find the better way to get the pointer to underlying data from vec
+  // class
+  return reinterpret_cast<typename TryToGetPointerVecT<T>::type>(t.get());
+}
+
+template <typename T, typename = typename std::enable_if<
+                          !TryToGetPointerT<T>::value, std::false_type>::type>
+T TryToGetPointer(T &t) {
+  return t;
+}
+
+// Converts T to OpenCL friendly
+template <typename T>
+using ConvertToOpenCLType = std::conditional<
+    TryToGetVectorT<T>::value, typename TryToGetVectorT<T>::type,
+    typename std::conditional<TryToGetPointerT<T>::value,
+                              typename TryToGetPointerVecT<T>::type, T>::type>;
+
+// Used for all,any and select relational built-in functions
+template <typename T> inline constexpr T msbMask(T) {
+  using UT = typename std::make_unsigned<T>::type;
+  return T(UT(1) << (sizeof(T) * 8 - 1));
+}
+
+template <typename T> inline constexpr bool msbIsSet(const T x) {
+  return (x & msbMask(x));
+}
+
+template <typename T>
+using common_rel_ret_t = typename detail::float_point_to_sign_integral<T>::type;
+
+// forward declaration
+template <int N> struct Boolean;
+
+// Try to get vector element count or 1 otherwise
+template <typename T, typename Enable = void> class TryToGetNumElements;
+
+template <typename T>
+struct TryToGetNumElements<
+    T, typename std::enable_if<TryToGetVectorT<T>::value>::type> {
+  static constexpr int value = T::get_count();
+};
+template <typename T>
+struct TryToGetNumElements<
+    T, typename std::enable_if<!TryToGetVectorT<T>::value>::type> {
+  static constexpr int value = 1;
+};
+
+// Used for relational comparison built-in functions
+template <typename T> struct RelationalReturnType {
+#ifdef __SYCL_DEVICE_ONLY__
+  using type = Boolean<TryToGetNumElements<T>::value>;
+#else
+  using type = common_rel_ret_t<T>;
+#endif
+};
+
+// Used for select built-in function
+template <typename T> struct SelectWrapperTypeArgC {
+#ifdef __SYCL_DEVICE_ONLY__
+  using type = Boolean<TryToGetNumElements<T>::value>;
+#else
+  using type = T;
+#endif
+};
+
+template <typename T>
+using select_arg_c_t = typename SelectWrapperTypeArgC<T>::type;
+
+template <typename T> using rel_ret_t = typename RelationalReturnType<T>::type;
+
+// Used for any and all built-in functions
+template <typename T> struct RelationalTestForSignBitType {
+#ifdef __SYCL_DEVICE_ONLY__
+  using return_type = detail::Boolean<1>;
+  using argument_type = detail::Boolean<TryToGetNumElements<T>::value>;
+#else
+  using return_type = cl::sycl::cl_int;
+  using argument_type = T;
+#endif
+};
+
+template <typename T>
+using rel_sign_bit_test_ret_t =
+    typename RelationalTestForSignBitType<T>::return_type;
+
+template <typename T>
+using rel_sign_bit_test_arg_t =
+    typename RelationalTestForSignBitType<T>::argument_type;
+
+template <typename T, typename Enable = void> struct RelConverter;
+
+template <typename T>
+struct RelConverter<
+    T, typename std::enable_if<TryToGetElementType<T>::value>::type> {
+  static const int N = T::get_count();
+#ifdef __SYCL_DEVICE_ONLY__
+  using bool_t = typename Boolean<N>::vector_t;
+  using ret_t = common_rel_ret_t<T>;
+#else
+  using bool_t = Boolean<N>;
+  using ret_t = rel_ret_t<T>;
+#endif
+
+  static ret_t apply(bool_t value) {
+#ifdef __SYCL_DEVICE_ONLY__
+    typename ret_t::vector_t result(0);
+    for (size_t I = 0; I < N; ++I) {
+      result[I] = 0 - value[I];
+    }
+    return result;
+#else
+    return value;
+#endif
+  }
+};
+
+template <typename T>
+struct RelConverter<
+    T, typename std::enable_if<!TryToGetElementType<T>::value>::type> {
+  using R = rel_ret_t<T>;
+#ifdef __SYCL_DEVICE_ONLY__
+  using value_t = bool;
+#else
+  using value_t = R;
+#endif
+
+  static R apply(value_t value) { return value; }
 };
 
 } // namespace detail

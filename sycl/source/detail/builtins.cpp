@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <CL/sycl/detail/generic_type_traits.hpp>
+
 #include <CL/sycl/exception.hpp>
 #include <CL/sycl/pointers.hpp>
 #include <CL/sycl/types.hpp>
@@ -176,8 +177,6 @@ namespace s = cl::sycl;
   __MAKE_SR_1V_OR(Fun, Fun, 4, Ret, Arg1)                                      \
   __MAKE_SR_1V_OR(Fun, Fun, 8, Ret, Arg1)                                      \
   __MAKE_SR_1V_OR(Fun, Fun, 16, Ret, Arg1)
-
-#define MSB_MASK(x) (((decltype(x))1) << ((sizeof(x) * 8) - 1))
 
 #define MAKE_1V_2P(Fun, Ret, Arg1, Arg2)                                       \
   __MAKE_1V_2P(Fun, 2, Ret, Arg1, Arg2)                                        \
@@ -1833,22 +1832,14 @@ MAKE_1V_FUNC(OpIsInf, __vOpIsInf, s::cl_short, s::cl_half)
 #endif
 
 // (OpIsNan)                // isnan
-cl_int OpIsNan(s::cl_float x) __NOEXC {
-  return (std::isnan(x));
-}
+cl_int OpIsNan(s::cl_float x) __NOEXC { return (std::isnan(x)); }
 cl_int OpIsNan(s::cl_double x) __NOEXC { return (std::isnan(x)); }
-cl_int __vOpIsNan(s::cl_float x) __NOEXC {
-  return -(std::isnan(x));
-}
+cl_int __vOpIsNan(s::cl_float x) __NOEXC { return -(std::isnan(x)); }
 cl_long __vOpIsNan(s::cl_double x) __NOEXC { return -(std::isnan(x)); }
 
 #ifndef NO_HALF_ENABLED
-cl_int OpIsNan(s::cl_half x) __NOEXC {
-  return (std::isnan(x));
-}
-cl_short __vOpIsNan(s::cl_half x) __NOEXC {
-  return -(std::isnan(x));
-}
+cl_int OpIsNan(s::cl_half x) __NOEXC { return (std::isnan(x)); }
+cl_short __vOpIsNan(s::cl_half x) __NOEXC { return -(std::isnan(x)); }
 #endif
 MAKE_1V_FUNC(OpIsNan, __vOpIsNan, s::cl_int, s::cl_float)
 MAKE_1V_FUNC(OpIsNan, __vOpIsNan, s::cl_long, s::cl_double)
@@ -1857,21 +1848,13 @@ MAKE_1V_FUNC(OpIsNan, __vOpIsNan, s::cl_short, s::cl_half)
 #endif
 
 // (OpIsNormal)             // isnormal
-cl_int OpIsNormal(s::cl_float x) __NOEXC {
-  return (std::isnormal(x));
-}
-cl_int OpIsNornmal(s::cl_double x) __NOEXC { return (std::isnormal(x)); }
-cl_int __vOpIsNormal(s::cl_float x) __NOEXC {
-  return -(std::isnormal(x));
-}
-cl_long __vOpIsNornmal(s::cl_double x) __NOEXC { return -(std::isnormal(x)); }
+cl_int OpIsNormal(s::cl_float x) __NOEXC { return (std::isnormal(x)); }
+cl_int OpIsNormal(s::cl_double x) __NOEXC { return (std::isnormal(x)); }
+cl_int __vOpIsNormal(s::cl_float x) __NOEXC { return -(std::isnormal(x)); }
+cl_long __vOpIsNormal(s::cl_double x) __NOEXC { return -(std::isnormal(x)); }
 #ifndef NO_HALF_ENABLED
-cl_int OpIsNormal(s::cl_half x) __NOEXC {
-  return (std::isnormal(x));
-}
-cl_short __vOpIsNormal(s::cl_half x) __NOEXC {
-  return -(std::isnormal(x));
-}
+cl_int OpIsNormal(s::cl_half x) __NOEXC { return (std::isnormal(x)); }
+cl_short __vOpIsNormal(s::cl_half x) __NOEXC { return -(std::isnormal(x)); }
 #endif
 MAKE_1V_FUNC(OpIsNormal, __vOpIsNormal, s::cl_int, s::cl_float)
 MAKE_1V_FUNC(OpIsNormal, __vOpIsNormal, s::cl_long, s::cl_double)
@@ -1881,16 +1864,16 @@ MAKE_1V_FUNC(OpIsNormal, __vOpIsNormal, s::cl_short, s::cl_half)
 
 // (OpOrdered)              // isordered
 cl_int OpOrdered(s::cl_float x, s::cl_float y) __NOEXC {
-  return !(std::isunordered(x,y));
+  return !(std::isunordered(x, y));
 }
 cl_int OpOrdered(s::cl_double x, s::cl_double y) __NOEXC {
-  return !(std::isunordered(x,y));
+  return !(std::isunordered(x, y));
 }
 cl_int __vOpOrdered(s::cl_float x, s::cl_float y) __NOEXC {
-  return -(!(std::isunordered(x,y)));
+  return -(!(std::isunordered(x, y)));
 }
 cl_long __vOpOrdered(s::cl_double x, s::cl_double y) __NOEXC {
-  return -(!(std::isunordered(x,y)));
+  return -(!(std::isunordered(x, y)));
 }
 #ifndef NO_HALF_ENABLED
 cl_int OpOrdered(s::cl_half x, s::cl_half y) __NOEXC {
@@ -1908,16 +1891,16 @@ MAKE_1V_2V_FUNC(OpOrdered, __vOpOrdered, s::cl_short, s::cl_half, s::cl_half)
 
 // (OpUnordered)            // isunordered
 cl_int OpUnordered(s::cl_float x, s::cl_float y) __NOEXC {
-  return std::isunordered(x,y);
+  return std::isunordered(x, y);
 }
 cl_int OpUnordered(s::cl_double x, s::cl_double y) __NOEXC {
-  return std::isunordered(x,y);
+  return std::isunordered(x, y);
 }
 cl_int __vOpUnordered(s::cl_float x, s::cl_float y) __NOEXC {
-  return -(std::isunordered(x,y));
+  return -(std::isunordered(x, y));
 }
 cl_long __vOpUnordered(s::cl_double x, s::cl_double y) __NOEXC {
-  return -(std::isunordered(x,y));
+  return -(std::isunordered(x, y));
 }
 #ifndef NO_HALF_ENABLED
 cl_int OpUnordered(s::cl_half x, s::cl_half y) __NOEXC {
@@ -1952,15 +1935,7 @@ MAKE_1V_FUNC(OpSignBitSet, __vOpSignBitSet, s::cl_short, s::cl_half)
 #endif
 
 // (OpAny)                  // any
-template <typename T> cl_int __OpAny(T x) {
-  return ((x & MSB_MASK(x)) == MSB_MASK(x));
-}
-cl_int OpAny(s::cl_char x) __NOEXC { return __OpAny(x); }
-cl_int OpAny(s::cl_short x) __NOEXC { return __OpAny(x); }
-cl_int OpAny(s::cl_int x) __NOEXC { return __OpAny(x); }
-cl_int OpAny(s::cl_long x) __NOEXC { return __OpAny(x); }
-cl_int OpAny(s::longlong x) __NOEXC { return __OpAny(x); }
-
+template <typename T> cl_int OpAny(T x) { return sycl::detail::msbIsSet(x); }
 MAKE_SR_1V_OR(OpAny, s::cl_int, s::cl_char)
 MAKE_SR_1V_OR(OpAny, s::cl_int, s::cl_short)
 MAKE_SR_1V_OR(OpAny, s::cl_int, s::cl_int)
@@ -1968,15 +1943,7 @@ MAKE_SR_1V_OR(OpAny, s::cl_int, s::cl_long)
 MAKE_SR_1V_OR(OpAny, s::cl_int, s::longlong)
 
 // (OpAll)                  // all
-template <typename T> cl_int __OpAll(T x) {
-  return ((x & MSB_MASK(x)) == MSB_MASK(x));
-}
-cl_int OpAll(s::cl_char x) __NOEXC { return __OpAll(x); }
-cl_int OpAll(s::cl_short x) __NOEXC { return __OpAll(x); }
-cl_int OpAll(s::cl_int x) __NOEXC { return __OpAll(x); }
-cl_int OpAll(s::cl_long x) __NOEXC { return __OpAll(x); }
-cl_int OpAll(s::longlong x) __NOEXC { return __OpAll(x); }
-
+template <typename T> cl_int OpAll(T x) { return sycl::detail::msbIsSet(x); }
 MAKE_SR_1V_AND(OpAll, s::cl_int, s::cl_char)
 MAKE_SR_1V_AND(OpAll, s::cl_int, s::cl_short)
 MAKE_SR_1V_AND(OpAll, s::cl_int, s::cl_int)
@@ -2057,82 +2024,83 @@ MAKE_SC_1V_2V_3V(bitselect, s::cl_half, s::cl_half, s::cl_half, s::cl_half)
 // for scalar: result = c ? b : a.
 // for vector: result[i] = (MSB of c[i] is set)? b[i] : a[i]
 
-template <typename T, typename T2> T __OpSelect(T a, T b, T2 c) {
+template <typename T, typename T2> T2 __OpSelect(T c, T2 b, T2 a) {
   return (c ? b : a);
 }
 
-template <typename T, typename T2> T __vOpSelect(T a, T b, T2 c) {
-  return ((c && MSB_MASK(c)) ? b : a);
+template <typename T, typename T2> T2 __vOpSelect(T c, T2 b, T2 a) {
+  return sycl::detail::msbIsSet(c) ? b : a;
 }
 
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_float, s::cl_float,
-                        s::cl_float, s::cl_int)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_float, s::cl_float,
-                        s::cl_float, s::cl_uint)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_double, s::cl_double,
-                        s::cl_double, s::cl_long)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_double, s::cl_double,
-                        s::cl_double, s::cl_ulong)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_double, s::cl_double,
-                        s::cl_double, s::longlong)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_double, s::cl_double,
-                        s::cl_double, s::ulonglong)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_float, s::cl_int,
+                        s::cl_float, s::cl_float)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_float, s::cl_uint,
+                        s::cl_float, s::cl_float)
+
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_double, s::cl_long,
+                        s::cl_double, s::cl_double)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_double, s::cl_ulong,
+                        s::cl_double, s::cl_double)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_double, s::longlong,
+                        s::cl_double, s::cl_double)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_double, s::ulonglong,
+                        s::cl_double, s::cl_double)
 
 MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_char, s::cl_char,
                         s::cl_char, s::cl_char)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_char, s::cl_char,
-                        s::cl_char, s::cl_uchar)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_char, s::cl_uchar,
+                        s::cl_char, s::cl_char)
 
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_uchar, s::cl_uchar,
-                        s::cl_uchar, s::cl_char)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_uchar, s::cl_char,
+                        s::cl_uchar, s::cl_uchar)
 MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_uchar, s::cl_uchar,
                         s::cl_uchar, s::cl_uchar)
 
 MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_short, s::cl_short,
                         s::cl_short, s::cl_short)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_short, s::cl_short,
-                        s::cl_short, s::cl_ushort)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_short, s::cl_ushort,
+                        s::cl_short, s::cl_short)
 
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_ushort, s::cl_ushort,
-                        s::cl_ushort, s::cl_short)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_ushort, s::cl_short,
+                        s::cl_ushort, s::cl_ushort)
 MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_ushort, s::cl_ushort,
                         s::cl_ushort, s::cl_ushort)
 
 MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_int, s::cl_int, s::cl_int,
                         s::cl_int)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_int, s::cl_int, s::cl_int,
-                        s::cl_uint)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_int, s::cl_uint, s::cl_int,
+                        s::cl_int)
 
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_uint, s::cl_uint,
-                        s::cl_uint, s::cl_int)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_uint, s::cl_int,
+                        s::cl_uint, s::cl_uint)
 MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_uint, s::cl_uint,
                         s::cl_uint, s::cl_uint)
 
 MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_long, s::cl_long,
                         s::cl_long, s::cl_long)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_long, s::cl_long,
-                        s::cl_long, s::cl_ulong)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_long, s::cl_ulong,
+                        s::cl_long, s::cl_long)
 
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_ulong, s::cl_ulong,
-                        s::cl_ulong, s::cl_long)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_ulong, s::cl_long,
+                        s::cl_ulong, s::cl_ulong)
 MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_ulong, s::cl_ulong,
                         s::cl_ulong, s::cl_ulong)
 
 MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::longlong, s::longlong,
                         s::longlong, s::longlong)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::longlong, s::longlong,
-                        s::longlong, s::ulonglong)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::longlong, s::ulonglong,
+                        s::longlong, s::longlong)
 
 MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::ulonglong, s::ulonglong,
                         s::ulonglong, s::ulonglong)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::ulonglong, s::ulonglong,
-                        s::ulonglong, s::longlong)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::ulonglong, s::longlong,
+                        s::ulonglong, s::ulonglong)
 
 #ifndef NO_HALF_ENABLED
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_half, s::cl_half,
-                        s::cl_half, s::cl_short)
-MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_half, s::cl_half,
-                        s::cl_half, s::cl_ushort)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_half, s::cl_short,
+                        s::cl_half, s::cl_half)
+MAKE_SC_FSC_1V_2V_3V_FV(OpSelect, __vOpSelect, s::cl_half, s::cl_ushort,
+                        s::cl_half, s::cl_half)
 #endif
 
 /* --------------- 4.13.3 Native Math functions. Host version ---------------*/

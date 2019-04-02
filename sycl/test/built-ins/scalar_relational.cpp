@@ -27,7 +27,7 @@ int main() {
         });
       });
     }
-    std::cout << "garima isequal r \t" << r << std::endl;
+    std::cout << "isequal r \t" << r << std::endl;
     assert(r == 1);
   }
 
@@ -139,7 +139,7 @@ int main() {
     assert(r == 0);
   }
 
-  // isfinite-float : host only
+  // isfinite-float
   {
     cl::sycl::cl_int r{1};
     {
@@ -147,20 +147,15 @@ int main() {
       queue myQueue;
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
-        cgh.single_task<class isfiniteF1>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = 0;
-#else
-          AccR[0] = cl::sycl::isfinite(cl::sycl::cl_float{NAN});
-#endif
-        });
+        cgh.single_task<class isfiniteF1>(
+            [=]() { AccR[0] = cl::sycl::isfinite(cl::sycl::cl_float{NAN}); });
       });
     }
     std::cout << "isfinite r \t" << r << std::endl;
     assert(r == 0);
   }
 
-  // isinf-float : host only
+  // isinf-float
   {
     cl::sycl::cl_int r{0};
     {
@@ -168,20 +163,15 @@ int main() {
       queue myQueue;
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
-        cgh.single_task<class isinfF1>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = 1;
-#else
-          AccR[0] = cl::sycl::isinf(cl::sycl::cl_float{INFINITY});
-#endif
-        });
+        cgh.single_task<class isinfF1>(
+            [=]() { AccR[0] = cl::sycl::isinf(cl::sycl::cl_float{INFINITY}); });
       });
     }
     std::cout << "isinf r \t" << r << std::endl;
     assert(r == 1);
   }
 
-  // isnan-float : host only
+  // isnan-float
   {
     cl::sycl::cl_int r{0};
     {
@@ -189,20 +179,15 @@ int main() {
       queue myQueue;
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
-        cgh.single_task<class isnanF1>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = 1;
-#else
-          AccR[0] = cl::sycl::isnan(cl::sycl::cl_float{NAN});
-#endif
-        });
+        cgh.single_task<class isnanF1>(
+            [=]() { AccR[0] = cl::sycl::isnan(cl::sycl::cl_float{NAN}); });
       });
     }
     std::cout << "isnan r \t" << r << std::endl;
     assert(r == 1);
   }
 
-  // isnormal-float : host only
+  // isnormal-float
   {
     cl::sycl::cl_int r{1};
     {
@@ -211,11 +196,24 @@ int main() {
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
         cgh.single_task<class isnormalF1>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = 0;
-#else
           AccR[0] = cl::sycl::isnormal(cl::sycl::cl_float{INFINITY});
-#endif
+        });
+      });
+    }
+    std::cout << "isnormal r \t" << r << std::endl;
+    assert(r == 0);
+  }
+
+  // isnormal-double
+  {
+    cl::sycl::cl_int r{1};
+    {
+      buffer<cl::sycl::cl_int, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class isnormalD1>([=]() {
+          AccR[0] = cl::sycl::isnormal(cl::sycl::cl_double{INFINITY});
         });
       });
     }
@@ -259,7 +257,7 @@ int main() {
     assert(r == 1);
   }
 
-  // signbit-float : host only
+  // signbit-float
   {
     cl::sycl::cl_int r{0};
     {
@@ -267,20 +265,15 @@ int main() {
       queue myQueue;
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
-        cgh.single_task<class signbitF1>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = 1;
-#else
-          AccR[0] = cl::sycl::signbit(cl::sycl::cl_float{-12.0f});
-#endif
-        });
+        cgh.single_task<class signbitF1>(
+            [=]() { AccR[0] = cl::sycl::signbit(cl::sycl::cl_float{-12.0f}); });
       });
     }
     std::cout << "signbit r \t" << r << std::endl;
     assert(r == 1);
   }
 
-  // any-integer : host only
+  // any-integer
   {
     cl::sycl::cl_int r{0};
     {
@@ -288,20 +281,46 @@ int main() {
       queue myQueue;
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
-        cgh.single_task<class anyF1>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = 1;
-#else
-          AccR[0] = cl::sycl::any(cl::sycl::cl_int{-12});
-#endif
-        });
+        cgh.single_task<class anyF1positive>(
+            [=]() { AccR[0] = cl::sycl::any(cl::sycl::cl_int{12}); });
       });
     }
-    std::cout << "any r \t" << r << std::endl;
+    std::cout << "any + r \t" << r << std::endl;
+    assert(r == 0);
+  }
+  // any-integer
+  {
+    cl::sycl::cl_int r{0};
+    {
+      buffer<cl::sycl::cl_int, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class anyF1zero>(
+            [=]() { AccR[0] = cl::sycl::any(cl::sycl::cl_int{0}); });
+      });
+    }
+    std::cout << "any 0 r \t" << r << std::endl;
+    assert(r == 0);
+  }
+
+  // any-integer
+  {
+    cl::sycl::cl_int r{0};
+    {
+      buffer<cl::sycl::cl_int, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class anyF1negative>(
+            [=]() { AccR[0] = cl::sycl::any(cl::sycl::cl_int{-12}); });
+      });
+    }
+    std::cout << "any - r \t" << r << std::endl;
     assert(r == 1);
   }
 
-  // all-integer : host only
+  // all-integer
   {
     cl::sycl::cl_int r{0};
     {
@@ -309,16 +328,43 @@ int main() {
       queue myQueue;
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
-        cgh.single_task<class allF1>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = 1;
-#else
-          AccR[0] = cl::sycl::all(cl::sycl::cl_int{-12});
-#endif
-        });
+        cgh.single_task<class allF1positive>(
+            [=]() { AccR[0] = cl::sycl::all(cl::sycl::cl_int{12}); });
       });
     }
-    std::cout << "all r \t" << r << std::endl;
+    std::cout << "all + r \t" << r << std::endl;
+    assert(r == 0);
+  }
+
+  // all-integer
+  {
+    cl::sycl::cl_int r{0};
+    {
+      buffer<cl::sycl::cl_int, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class allF1zero>(
+            [=]() { AccR[0] = cl::sycl::all(cl::sycl::cl_int{0}); });
+      });
+    }
+    std::cout << "all 0 r \t" << r << std::endl;
+    assert(r == 0);
+  }
+
+  // all-integer
+  {
+    cl::sycl::cl_int r{0};
+    {
+      buffer<cl::sycl::cl_int, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class allF1negative>(
+            [=]() { AccR[0] = cl::sycl::all(cl::sycl::cl_int{-12}); });
+      });
+    }
+    std::cout << "all - r \t" << r << std::endl;
     assert(r == 1);
   }
 
@@ -341,7 +387,7 @@ int main() {
     assert(r <= 80.5478 && r >= 80.5476); // r = 80.5477
   }
 
-  // select-float,int : host only
+  // select-float,int
   {
     cl::sycl::cl_float r{0};
     {
@@ -349,18 +395,52 @@ int main() {
       queue myQueue;
       myQueue.submit([&](handler &cgh) {
         auto AccR = BufR.get_access<access::mode::write>(cgh);
-        cgh.single_task<class selectF1F1I1>([=]() {
-#ifdef __SYCL_DEVICE_ONLY__
-          AccR[0] = 123.123;
-#else
+        cgh.single_task<class selectF1F1I1positive>([=]() {
           AccR[0] = cl::sycl::select(cl::sycl::cl_float{34.34},
                                      cl::sycl::cl_float{123.123},
                                      cl::sycl::cl_int{1});
-#endif
         });
       });
     }
-    std::cout << "select r \t" << r << std::endl;
+    std::cout << "select + r \t" << r << std::endl;
+    assert(r <= 123.124 && r >= 123.122); // r = 123.123
+  }
+
+  // select-float,int
+  {
+    cl::sycl::cl_float r{0};
+    {
+      buffer<cl::sycl::cl_float, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class selectF1F1I1zero>([=]() {
+          AccR[0] = cl::sycl::select(cl::sycl::cl_float{34.34},
+                                     cl::sycl::cl_float{123.123},
+                                     cl::sycl::cl_int{0});
+        });
+      });
+    }
+    std::cout << "select 0 r \t" << r << std::endl;
+    assert(r <= 34.35 && r >= 34.33); // r = 34.34
+  }
+
+  // select-float,int
+  {
+    cl::sycl::cl_float r{0};
+    {
+      buffer<cl::sycl::cl_float, 1> BufR(&r, range<1>(1));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto AccR = BufR.get_access<access::mode::write>(cgh);
+        cgh.single_task<class selectF1F1I1negative>([=]() {
+          AccR[0] = cl::sycl::select(cl::sycl::cl_float{34.34},
+                                     cl::sycl::cl_float{123.123},
+                                     cl::sycl::cl_int{-1});
+        });
+      });
+    }
+    std::cout << "select - r \t" << r << std::endl;
     assert(r <= 123.124 && r >= 123.122); // r = 123.123
   }
 

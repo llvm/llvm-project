@@ -9,6 +9,7 @@
 #pragma once
 
 #include <CL/sycl/detail/common.hpp>
+#include <CL/sycl/detail/generic_type_traits.hpp>
 
 #include <type_traits>
 // TODO Delete this include after solving the problems in the test
@@ -17,79 +18,6 @@
 
 // TODO Decide whether to mark functions with this attribute.
 #define __NOEXC /*noexcept*/
-
-namespace cl {
-namespace sycl {
-namespace detail {
-
-// Try to get pointer_t, otherwise T
-template <typename T> class TryToGetPointerT {
-  static T check(...);
-  template <typename A> static typename A::pointer_t check(const A &);
-
-public:
-  using type = decltype(check(T()));
-  static constexpr bool value = !std::is_same<T, type>::value;
-};
-
-// Try to get element_type, otherwise T
-template <typename T> class TryToGetElementType {
-  static T check(...);
-  template <typename A> static typename A::element_type check(const A &);
-
-public:
-  using type = decltype(check(T()));
-  static constexpr bool value = !std::is_same<T, type>::value;
-};
-
-// Try to get vector_t, otherwise T
-template <typename T> class TryToGetVectorT {
-  static T check(...);
-  template <typename A> static typename A::vector_t check(const A &);
-
-public:
-  using type = decltype(check(T()));
-  static constexpr bool value = !std::is_same<T, type>::value;
-};
-
-// Try to get pointer_t (if pointer_t indicates on the type with vector_t
-// creates a pointer type on vector_t), otherwise T
-template <typename T> class TryToGetPointerVecT {
-  static T check(...);
-  template <typename A>
-  static typename PtrValueType<
-      typename TryToGetVectorT<typename TryToGetElementType<A>::type>::type,
-      A::address_space>::type *
-  check(const A &);
-
-public:
-  using type = decltype(check(T()));
-};
-
-template <typename T, typename = typename std::enable_if<
-                          TryToGetPointerT<T>::value, std::true_type>::type>
-typename TryToGetPointerVecT<T>::type TryToGetPointer(T &t) {
-  // TODO find the better way to get the pointer to underlying data from vec
-  // class
-  return reinterpret_cast<typename TryToGetPointerVecT<T>::type>(t.get());
-}
-
-template <typename T, typename = typename std::enable_if<
-                          !TryToGetPointerT<T>::value, std::false_type>::type>
-T TryToGetPointer(T &t) {
-  return t;
-}
-
-// Converts T to OpenCL friendly
-template <typename T>
-using ConvertToOpenCLType = std::conditional<
-    TryToGetVectorT<T>::value, typename TryToGetVectorT<T>::type,
-    typename std::conditional<TryToGetPointerT<T>::value,
-                              typename TryToGetPointerVecT<T>::type, T>::type>;
-
-} // namespace detail
-} // namespace sycl
-} // namespace cl
 
 #define MAKE_CALL_ARG1(call)                                                   \
   template <typename R, typename T1>                                           \
