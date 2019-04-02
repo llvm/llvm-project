@@ -74,21 +74,27 @@ define double @floor_double(double %a) {
 
 ; CHECK-LABEL: round_float
 define float @round_float(float %a) {
-  ; CHECK: cvt.rni.f32.f32
+; check the use of sign mask and 0.5 to implement round
+; CHECK: and.b32 [[R1:%r[0-9]+]], {{.*}}, -2147483648;
+; CHECK: or.b32 {{.*}}, [[R1]], 1056964608;
   %b = call float @llvm.round.f32(float %a)
   ret float %b
 }
 
 ; CHECK-LABEL: round_float_ftz
 define float @round_float_ftz(float %a) #1 {
-  ; CHECK: cvt.rni.ftz.f32.f32
+; check the use of sign mask and 0.5 to implement round
+; CHECK: and.b32 [[R1:%r[0-9]+]], {{.*}}, -2147483648;
+; CHECK: or.b32 {{.*}}, [[R1]], 1056964608;
   %b = call float @llvm.round.f32(float %a)
   ret float %b
 }
 
 ; CHECK-LABEL: round_double
 define double @round_double(double %a) {
-  ; CHECK: cvt.rni.f64.f64
+; check the use of 0.5 to implement round
+; CHECK: setp.lt.f64 {{.*}}, [[R:%fd[0-9]+]], 0d3FE0000000000000;
+; CHECK: add.rn.f64 {{.*}}, [[R]], 0d3FE0000000000000;
   %b = call double @llvm.round.f64(double %a)
   ret double %b
 }

@@ -4024,7 +4024,7 @@ class BaseMemTag<bits<2> opc1, bits<2> opc2, string asm_insn,
 class MemTagVector<bit Load, string asm_insn, string asm_opnds,
                    dag oops, dag iops>
     : BaseMemTag<{0b1, Load}, 0b00, asm_insn, asm_opnds,
-                 "$Rn = $wback,@earlyclobber $wback", oops, iops> {
+                  "", oops, iops> {
   bits<5> Rt;
 
   let Inst{20-12} = 0b000000000;

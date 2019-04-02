@@ -374,72 +374,90 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
 }
 
+static SDValue getTargetNode(GlobalAddressSDNode *N, SDLoc DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, Flags);
+}
+
+static SDValue getTargetNode(BlockAddressSDNode *N, SDLoc DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetBlockAddress(N->getBlockAddress(), Ty, N->getOffset(),
+                                   Flags);
+}
+
+static SDValue getTargetNode(ConstantPoolSDNode *N, SDLoc DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetConstantPool(N->getConstVal(), Ty, N->getAlignment(),
+                                   N->getOffset(), Flags);
+}
+
+template <class NodeTy>
+SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+
+  switch (getTargetMachine().getCodeModel()) {
+  default:
+    report_fatal_error("Unsupported code model for lowering");
+  case CodeModel::Small: {
+    // Generate a sequence for accessing addresses within the first 2 GiB of
+    // address space. This generates the pattern (addi (lui %hi(sym)) %lo(sym)).
+    SDValue AddrHi = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_HI);
+    SDValue AddrLo = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_LO);
+    SDValue MNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, Ty, AddrHi), 0);
+    return SDValue(DAG.getMachineNode(RISCV::ADDI, DL, Ty, MNHi, AddrLo), 0);
+  }
+  case CodeModel::Medium: {
+    // Generate a sequence for accessing addresses within any 2GiB range within
+    // the address space. This generates the pattern (PseudoLLA sym), which
+    // expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
+    SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+    return SDValue(DAG.getMachineNode(RISCV::PseudoLLA, DL, Ty, Addr), 0);
+  }
+  }
+}
+
 SDValue RISCVTargetLowering::lowerGlobalAddress(SDValue Op,
                                                 SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT Ty = Op.getValueType();
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
-  const GlobalValue *GV = N->getGlobal();
   int64_t Offset = N->getOffset();
   MVT XLenVT = Subtarget.getXLenVT();
 
   if (isPositionIndependent())
     report_fatal_error("Unable to lowerGlobalAddress");
+
+  SDValue Addr = getAddr(N, DAG);
+
   // In order to maximise the opportunity for common subexpression elimination,
   // emit a separate ADD node for the global address offset instead of folding
   // it in the global address node. Later peephole optimisations may choose to
   // fold it back in when profitable.
-  SDValue GAHi = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, RISCVII::MO_HI);
-  SDValue GALo = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, RISCVII::MO_LO);
-  SDValue MNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, Ty, GAHi), 0);
-  SDValue MNLo =
-    SDValue(DAG.getMachineNode(RISCV::ADDI, DL, Ty, MNHi, GALo), 0);
   if (Offset != 0)
-    return DAG.getNode(ISD::ADD, DL, Ty, MNLo,
+    return DAG.getNode(ISD::ADD, DL, Ty, Addr,
                        DAG.getConstant(Offset, DL, XLenVT));
-  return MNLo;
+  return Addr;
 }
 
 SDValue RISCVTargetLowering::lowerBlockAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  EVT Ty = Op.getValueType();
   BlockAddressSDNode *N = cast<BlockAddressSDNode>(Op);
-  const BlockAddress *BA = N->getBlockAddress();
-  int64_t Offset = N->getOffset();
 
   if (isPositionIndependent())
     report_fatal_error("Unable to lowerBlockAddress");
 
-  SDValue BAHi = DAG.getTargetBlockAddress(BA, Ty, Offset, RISCVII::MO_HI);
-  SDValue BALo = DAG.getTargetBlockAddress(BA, Ty, Offset, RISCVII::MO_LO);
-  SDValue MNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, Ty, BAHi), 0);
-  SDValue MNLo =
-    SDValue(DAG.getMachineNode(RISCV::ADDI, DL, Ty, MNHi, BALo), 0);
-  return MNLo;
+  return getAddr(N, DAG);
 }
 
 SDValue RISCVTargetLowering::lowerConstantPool(SDValue Op,
                                                SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  EVT Ty = Op.getValueType();
   ConstantPoolSDNode *N = cast<ConstantPoolSDNode>(Op);
-  const Constant *CPA = N->getConstVal();
-  int64_t Offset = N->getOffset();
-  unsigned Alignment = N->getAlignment();
 
-  if (!isPositionIndependent()) {
-    SDValue CPAHi =
-        DAG.getTargetConstantPool(CPA, Ty, Alignment, Offset, RISCVII::MO_HI);
-    SDValue CPALo =
-        DAG.getTargetConstantPool(CPA, Ty, Alignment, Offset, RISCVII::MO_LO);
-    SDValue MNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, Ty, CPAHi), 0);
-    SDValue MNLo =
-        SDValue(DAG.getMachineNode(RISCV::ADDI, DL, Ty, MNHi, CPALo), 0);
-    return MNLo;
-  } else {
+  if (isPositionIndependent())
     report_fatal_error("Unable to lowerConstantPool");
-  }
+
+  return getAddr(N, DAG);
 }
 
 SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
@@ -1793,9 +1811,11 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
   // split it and then direct call can be matched by PseudoCALL.
   if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    Callee = DAG.getTargetGlobalAddress(S->getGlobal(), DL, PtrVT, 0, 0);
+    Callee = DAG.getTargetGlobalAddress(S->getGlobal(), DL, PtrVT, 0,
+                                        RISCVII::MO_CALL);
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, 0);
+    Callee =
+        DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, RISCVII::MO_CALL);
   }
 
   // The first call operand is the chain and the second is the target address.

@@ -42,10 +42,8 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C]](s64)
     ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP]](p0) :: (load 8)
-    ; CHECK: G_STORE [[LOAD]](s64), [[COPY1]](p0) :: (store 8, align 16)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[COPY1]], [[C1]](s64)
-    ; CHECK: G_STORE [[LOAD1]](s64), [[GEP1]](p0) :: (store 8)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[LOAD]](s64), [[LOAD1]](s64)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[COPY1]](p0) :: (store 16)
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(<2 x s64>) = G_LOAD %0(p0) :: (load 16)

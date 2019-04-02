@@ -14,7 +14,7 @@ class TestWriteMemory(GDBRemoteTestBase):
                 return "OK"
 
         self.server.responder = MyResponder()
-        target = self.dbg.CreateTarget('')
+        target = self.dbg.CreateTargetWithFileAndTargetTriple('', 'x86_64-pc-linux')
         process = self.connect(target)
 
         bp = target.BreakpointCreateByAddress(0x1000)

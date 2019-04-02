@@ -190,6 +190,18 @@ def bare_symbol : Operand<XLenVT> {
   let ParserMatchClass = BareSymbol;
 }
 
+def CallSymbol : AsmOperandClass {
+  let Name = "CallSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidCallSymbol";
+  let ParserMethod = "parseCallSymbol";
+}
+
+// A bare symbol used in call/tail only.
+def call_symbol : Operand<XLenVT> {
+  let ParserMatchClass = CallSymbol;
+}
+
 def CSRSystemRegister : AsmOperandClass {
   let Name = "CSRSystemRegister";
   let ParserMethod = "parseCSRSystemRegister";
@@ -844,7 +856,7 @@ def : Pat<(brind (add GPR:$rs1, simm12:$imm12)),
 // Define AsmString to print "call" when compile with -S flag.
 // Define isCodeGenOnly = 0 to support parsing assembly "call" instruction.
 let isCall = 1, Defs = [X1], isCodeGenOnly = 0 in
-def PseudoCALL : Pseudo<(outs), (ins bare_symbol:$func),
+def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func),
                         [(riscv_call tglobaladdr:$func)]> {
   let AsmString = "call\t$func";
 }
@@ -869,7 +881,7 @@ def PseudoRET : Pseudo<(outs), (ins), [(riscv_ret_flag)]>,
 // Define AsmString to print "tail" when compile with -S flag.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2],
     isCodeGenOnly = 0 in
-def PseudoTAIL : Pseudo<(outs), (ins bare_symbol:$dst), []> {
+def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), []> {
   let AsmString = "tail\t$dst";
 }
 

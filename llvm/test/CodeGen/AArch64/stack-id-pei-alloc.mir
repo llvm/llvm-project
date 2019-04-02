@@ -1,0 +1,56 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
+...
+# Ensure that objects with StackID > 0 are not allocated on the default stack
+# (will not be allocated an offset) and are not considered in the calculation of
+# the StackSize.
+# CHECK:      name: test_allocate
+# CHECK:      stackSize: 16
+# CHECK:      stack:
+# CHECK:        id: 0, name: '', type: default, offset: -8, size: 8, alignment: 8,
+# CHECK-NEXT:   stack-id: 0
+# CHECK:        id: 1, name: '', type: default, offset: -16, size: 8, alignment: 8,
+# CHECK-NEXT:   stack-id: 0
+# CHECK:        id: 2, name: '', type: default, offset: 0, size: 8, alignment: 8,
+# CHECK-NEXT:   stack-id: 42
+name:            test_allocate
+frameInfo:
+  maxAlignment:  16
+stack:
+  - { id: 0, stack-id: 0, size: 8, alignment: 8, offset: 0 }
+  - { id: 1, stack-id: 0, size: 8, alignment: 8, offset: 0 }
+  - { id: 2, stack-id: 42, size: 8, alignment: 8, offset: 0 }
+body:             |
+  bb.0.entry:
+    RET_ReallyLR
+---
+...
+# Ensure MaxAlignment becomes '32' even though we also have an object
+# with alignment of 64. MaxAlignment only pertains to the default stack
+# (StackID 0), so objects associated with a different StackID should
+# not be considered.
+#
+# CHECK: name: test_maxalign
+# CHECK: maxAlignment: 32
+name:            test_maxalign
+frameInfo:
+  maxAlignment:  16
+stack:
+  - { id: 0, stack-id: 0, size: 16, alignment: 32 }
+  - { id: 1, stack-id: 42, size: 16, alignment: 64 }
+body:             |
+  bb.0.entry:
+    RET_ReallyLR
+---
+...
+# CHECK: name: test_maxalign_fixedstack
+# CHECK: maxAlignment: 32
+name:            test_maxalign_fixedstack
+frameInfo:
+  maxAlignment:  16
+fixedStack:
+  - { id: 0, stack-id: 0, size: 16, alignment: 32 }
+  - { id: 1, stack-id: 42, size: 16, alignment: 64 }
+body:             |
+  bb.0.entry:
+    RET_ReallyLR
+---

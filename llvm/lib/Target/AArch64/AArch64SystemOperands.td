@@ -1457,6 +1457,7 @@ def : RWSysReg<"TFSR_EL2",         0b11, 0b100, 0b0110, 0b0101, 0b000>;
 def : RWSysReg<"TFSR_EL3",         0b11, 0b110, 0b0110, 0b0110, 0b000>;
 def : RWSysReg<"TFSR_EL12",        0b11, 0b101, 0b0110, 0b0110, 0b000>;
 def : RWSysReg<"TFSRE0_EL1",       0b11, 0b000, 0b0110, 0b0110, 0b001>;
+def : ROSysReg<"GMID_EL1",         0b11, 0b001, 0b0000, 0b0000, 0b100>;
 } // HasMTE
 
 // Cyclone specific system registers

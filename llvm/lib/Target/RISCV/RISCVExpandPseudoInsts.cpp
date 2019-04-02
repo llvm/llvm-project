@@ -54,6 +54,9 @@ private:
   bool expandAtomicCmpXchg(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, bool IsMasked,
                            int Width, MachineBasicBlock::iterator &NextMBBI);
+  bool expandLoadLocalAddress(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              MachineBasicBlock::iterator &NextMBBI);
 };
 
 char RISCVExpandPseudo::ID = 0;
@@ -117,6 +120,8 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandAtomicCmpXchg(MBB, MBBI, false, 64, NextMBBI);
   case RISCV::PseudoMaskedCmpXchg32:
     return expandAtomicCmpXchg(MBB, MBBI, true, 32, NextMBBI);
+  case RISCV::PseudoLLA:
+    return expandLoadLocalAddress(MBB, MBBI, NextMBBI);
   }
 
   return false;
@@ -594,6 +599,46 @@ bool RISCVExpandPseudo::expandAtomicCmpXchg(
   computeAndAddLiveIns(LiveRegs, *LoopTailMBB);
   computeAndAddLiveIns(LiveRegs, *DoneMBB);
 
+  return true;
+}
+
+bool RISCVExpandPseudo::expandLoadLocalAddress(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  unsigned DestReg = MI.getOperand(0).getReg();
+  const MachineOperand &Symbol = MI.getOperand(1);
+
+  MachineBasicBlock *NewMBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+
+  // Tell AsmPrinter that we unconditionally want the symbol of this label to be
+  // emitted.
+  NewMBB->setLabelMustBeEmitted();
+
+  MF->insert(++MBB.getIterator(), NewMBB);
+
+  BuildMI(NewMBB, DL, TII->get(RISCV::AUIPC), DestReg)
+      .addDisp(Symbol, 0, RISCVII::MO_PCREL_HI);
+  BuildMI(NewMBB, DL, TII->get(RISCV::ADDI), DestReg)
+      .addReg(DestReg)
+      .addMBB(NewMBB, RISCVII::MO_PCREL_LO);
+
+  // Move all the rest of the instructions to NewMBB.
+  NewMBB->splice(NewMBB->end(), &MBB, std::next(MBBI), MBB.end());
+  // Update machine-CFG edges.
+  NewMBB->transferSuccessorsAndUpdatePHIs(&MBB);
+  // Make the original basic block fall-through to the new.
+  MBB.addSuccessor(NewMBB);
+
+  // Make sure live-ins are correctly attached to this new basic block.
+  LivePhysRegs LiveRegs;
+  computeAndAddLiveIns(LiveRegs, *NewMBB);
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
   return true;
 }
 

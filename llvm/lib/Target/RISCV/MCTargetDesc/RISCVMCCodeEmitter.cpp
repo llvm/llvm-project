@@ -101,11 +101,7 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI, raw_ostream &OS,
 
   assert(Func.isExpr() && "Expected expression");
 
-  const MCExpr *Expr = Func.getExpr();
-
-  // Create function call expression CallExpr for AUIPC.
-  const MCExpr *CallExpr =
-      RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_CALL, Ctx);
+  const MCExpr *CallExpr = Func.getExpr();
 
   // Emit AUIPC Ra, Func with R_RISCV_CALL relocation type.
   TmpInst = MCInstBuilder(RISCV::AUIPC)

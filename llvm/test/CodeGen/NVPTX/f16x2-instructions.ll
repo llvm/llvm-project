@@ -1378,12 +1378,13 @@ define <2 x half> @test_nearbyint(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_round(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_round_param_0];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]];
-; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%h[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%h[0-9]+]], [[A0]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      ld.param.b32    {{.*}}, [test_round_param_0];
+; check the use of sign mask and 0.5 to implement round
+; CHECK:      and.b32 [[R1:%r[0-9]+]], {{.*}}, -2147483648;
+; CHECK:      or.b32 {{.*}}, [[R1]], 1056964608;
+; CHECK:      and.b32 [[R2:%r[0-9]+]], {{.*}}, -2147483648;
+; CHECK:      or.b32 {{.*}}, [[R2]], 1056964608;
+; CHECK:      st.param.b32    [func_retval0+0], {{.*}};
 ; CHECK:      ret;
 define <2 x half> @test_round(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.round.f16(<2 x half> %a)
