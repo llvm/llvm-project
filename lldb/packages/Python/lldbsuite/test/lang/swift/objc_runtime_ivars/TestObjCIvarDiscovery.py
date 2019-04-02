@@ -14,7 +14,7 @@ Test that we can correctly see ivars from the Objective-C runtime
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
@@ -29,15 +29,15 @@ class TestObjCIVarDiscovery(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    @decorators.skipUnlessDarwin
-    @decorators.expectedFailureAll(bugnumber="rdar://45929100")
+    @skipUnlessDarwin
+    @expectedFailureAll(bugnumber="rdar://45929100")
     def test_nodbg(self):
         self.build()
         shutil.rmtree(self.getBuildArtifact("aTestFramework.framework.dSYM"))
         self.do_test(False)
 
-    @decorators.skipUnlessDarwin
-    @decorators.expectedFailureAll(bugnumber="rdar://45929100")
+    @skipUnlessDarwin
+    @expectedFailureAll(bugnumber="rdar://45929100")
     def test_dbg(self):
         self.build()
         self.do_test(True)
@@ -49,36 +49,13 @@ class TestObjCIVarDiscovery(TestBase):
 
     def do_test(self, dbg):
         """Test that we can correctly see ivars from the Objective-C runtime"""
-        exe_name = "a.out"
-        src_main = lldb.SBFileSpec("main.swift")
-        exe = self.getBuildArtifact(exe_name)
-
         if dbg:
             self.runCmd("type category disable runtime-synthetics")
 
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', src_main)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
         # Launch the process, and do not stop at the entry point.
         envp = ['DYLD_FRAMEWORK_PATH=.']
-        process = target.LaunchSimple(None, envp, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
+        lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
         if dbg:
             self.expect(
@@ -91,7 +68,7 @@ class TestObjCIVarDiscovery(TestBase):
 
         self.runCmd("frame variable -d run --show-types --ptr-depth=1")
 
-        obj = self.prepare_value(self.frame.FindVariable("object"))
+        obj = self.prepare_value(self.frame().FindVariable("object"))
 
         mysubclass = self.prepare_value(obj.GetChildAtIndex(0))
         myclass = self.prepare_value(mysubclass.GetChildAtIndex(0))

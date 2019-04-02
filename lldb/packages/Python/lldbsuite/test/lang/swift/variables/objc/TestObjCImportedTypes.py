@@ -14,7 +14,7 @@ Test that we are able to deal with ObjC-imported types
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -24,51 +24,23 @@ class TestSwiftObjCImportedTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.skipUnlessDarwin
-    @decorators.expectedFailureDarwin("rdar://15930675")
-    def test_swift_objc_imported_types(self):
-        """Test that we are able to deal with ObjC-imported types"""
-        self.build()
-        self.do_test()
-
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    def do_test(self):
+    @swiftTest
+    @skipUnlessDarwin
+    @expectedFailureDarwin("rdar://15930675")
+    def test_swift_objc_imported_types(self):
         """Test that we are able to deal with ObjC-imported types"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
+        lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
-        nss = self.frame.FindVariable("nss")
-        nsn = self.frame.FindVariable("nsn")
-        nsmo = self.frame.FindVariable("nsmo")
-        nsmd = self.frame.FindVariable("nsmd")
+        nss = self.frame().FindVariable("nss")
+        nsn = self.frame().FindVariable("nsn")
+        nsmo = self.frame().FindVariable("nsmo")
+        nsmd = self.frame().FindVariable("nsmd")
 
         lldbutil.check_variable(
             self,

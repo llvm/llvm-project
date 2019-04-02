@@ -14,7 +14,7 @@ Test getting return values
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
@@ -25,29 +25,29 @@ class TestSwiftReturns(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    @decorators.swiftTest
-    @decorators.skipIfDarwin # rdar://problem/48924409
-    @decorators.skipIfLinux  # bugs.swift.org/SR-841
-    @decorators.expectedFailureAll(
+    @swiftTest
+    @skipIfDarwin # rdar://problem/48924409
+    @skipIfLinux  # bugs.swift.org/SR-841
+    @expectedFailureAll(
         oslist=["ios"],
         archs=["arm64"],
         bugnumber="rdar://27002915")
-    @decorators.expectedFailureAll(
+    @expectedFailureAll(
         bugnumber="rdar://problem/39246943")
     def test_swift_returns(self):
         """Test getting return values"""
         self.build()
         self.do_test()
 
-    @decorators.swiftTest
-    @decorators.skipIfLinux  # bugs.swift.org/SR-841
-    @decorators.expectedFailureAll(
+    @swiftTest
+    @skipIfLinux  # bugs.swift.org/SR-841
+    @expectedFailureAll(
         oslist=["ios"],
         archs=["arm64"],
         bugnumber="rdar://27002915")
-    @decorators.expectedFailureAll(
+    @expectedFailureAll(
         bugnumber="rdar://problem/39246943")
-    @decorators.skipIfOutOfTreeDebugserver
+    @skipIfOutOfTreeDebugserver
     def test_swift_float_returns(self):
         """Test getting float return values"""
         self.build()

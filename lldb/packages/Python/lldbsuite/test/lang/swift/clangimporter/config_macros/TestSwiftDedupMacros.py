@@ -12,7 +12,7 @@
 
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -28,9 +28,9 @@ class TestSwiftDedupMacros(TestBase):
     # that the underlying memory corruption issue has been addressed, but due
     # to the difficulty of reproducing the crash, we are not sure. If a crash
     # is observed, try to collect a crashlog before disabling this test.
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @skipUnlessDarwin
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def testSwiftDebugMacros(self):
         """This tests that configuration macros get uniqued when building the
         scratch ast context. Note that "-D MACRO" options with a space

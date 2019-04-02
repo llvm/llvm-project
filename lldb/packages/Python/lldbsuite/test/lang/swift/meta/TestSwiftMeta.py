@@ -12,7 +12,7 @@
 """
 Test the Swift test decorator itself.
 """
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import os
 
@@ -20,11 +20,11 @@ class TestSwiftMeta(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
+    @swiftTest
     def test_swiftDecorator(self):
         self.assertTrue(self.getDebugInfo() <> "gmodules")
 
-    @decorators.swiftTest
+    @swiftTest
     def test_swiftBuild(self):
         self.build()
         exe = self.getBuildArtifact()

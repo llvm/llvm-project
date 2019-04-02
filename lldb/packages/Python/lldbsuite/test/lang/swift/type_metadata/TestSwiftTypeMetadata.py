@@ -14,7 +14,7 @@ Test that LLDB can effectively use the type metadata to reconstruct dynamic type
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
@@ -23,8 +23,8 @@ class SwiftTypeMetadataTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.skipIfLinux # <rdar://problem/30783388> test crashing sometimes when run on linux
+    @swiftTest
+    @skipIfLinux # <rdar://problem/30783388> test crashing sometimes when run on linux
     def test_swift_type_metadata(self):
         """Test that LLDB can effectively use the type metadata to reconstruct dynamic types for Swift"""
         self.build()

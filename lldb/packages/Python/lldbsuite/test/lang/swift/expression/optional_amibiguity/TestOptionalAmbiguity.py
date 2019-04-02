@@ -10,6 +10,7 @@ import time
 import re
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
@@ -17,8 +18,8 @@ class TestOptionalAmbiguity(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_sample_rename_this(self):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.swift")

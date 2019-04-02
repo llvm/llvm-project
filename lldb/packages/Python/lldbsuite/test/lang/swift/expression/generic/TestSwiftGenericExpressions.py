@@ -13,7 +13,7 @@
 Test expressions in generic contexts
 """
 import lldb
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -29,23 +29,23 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    @decorators.skipIfLinux # <rdar://problem/30783388> test crashing sometimes when run on linux
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @skipIfLinux # <rdar://problem/30783388> test crashing sometimes when run on linux
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_generic_expressions(self):
         """Test expressions in generic contexts"""
         self.build()
         self.do_test()
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_ivars_in_generic_expressions(self):
         """Test ivar access through expressions in generic contexts"""
         self.build()
         self.do_ivar_test()
 
     def check_expression(self, expression, expected_result, use_summary=True):
-        value = self.frame.EvaluateExpression(expression)
+        value = self.frame().EvaluateExpression(expression)
         self.assertTrue(value.IsValid(), expression + "returned a valid value")
 
         self.assertTrue(value.GetError().Success(), "expression failed")
@@ -92,10 +92,6 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
                 process, breakpoints[i])
 
             self.assertTrue(len(threads) == 1)
-            self.thread = threads[0]
-            self.frame = self.thread.frames[0]
-            self.assertTrue(self.frame, "Frame 0 is valid.")
-
             self.check_expression("i", str(i), use_summary=False)
 
             self.runCmd("continue")
@@ -132,10 +128,6 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
                 process, breakpoints[i])
 
             self.assertTrue(len(threads) == 1)
-            self.thread = threads[0]
-            self.frame = self.thread.frames[0]
-            self.assertTrue(self.frame, "Frame 0 is valid.")
-
             self.check_expression(
                 "m_t", str(class_bkpts[i]), use_summary=False)
             self.check_expression(

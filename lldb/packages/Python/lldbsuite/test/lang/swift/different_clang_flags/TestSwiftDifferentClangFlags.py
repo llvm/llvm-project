@@ -15,7 +15,7 @@ Test that we use the right compiler flags when debugging
 import commands
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
@@ -35,57 +35,29 @@ class TestSwiftDifferentClangFlags(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
-    @decorators.skipIf(
+    def setUp(self):
+        TestBase.setUp(self)
+
+    @skipUnlessDarwin
+    @swiftTest
+    @skipIf(
         debug_info=decorators.no_match("dsym"),
         bugnumber="This test requires a stripped binary and a dSYM")
     def test_swift_different_clang_flags(self):
         """Test that we use the right compiler flags when debugging"""
         self.build()
-        self.do_test()
+        target, process, thread, modb_breakpoint = \
+            lldbutil.run_to_source_breakpoint(
+                self, 'break here', lldb.SBFileSpec("modb.swift"),
+                exe_name=self.getBuildArtifact("main"))
 
-    def setUp(self):
-        TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
-        self.modb_source = "modb.swift"
-        self.modb_source_spec = lldb.SBFileSpec(self.modb_source)
-
-    def do_test(self):
-        """Test that we use the right compiler flags when debugging"""
-        exe_name = "main"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
         main_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.main_source_spec)
-        self.assertTrue(
-            main_breakpoint.GetNumLocations() > 0,
-            VALID_BREAKPOINT)
-
-        modb_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.modb_source_spec)
+            'break here',lldb.SBFileSpec('main.swift'))
         self.assertTrue(
             modb_breakpoint.GetNumLocations() > 0,
             VALID_BREAKPOINT)
 
-        process = target.LaunchSimple(None, None, os.getcwd())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, modb_breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
-        var = self.frame.FindVariable("myThree")
+        var = self.frame().FindVariable("myThree")
         three = var.GetChildMemberWithName("three")
         lldbutil.check_variable(self, var, False, typename="modb.MyStruct")
         lldbutil.check_variable(self, three, False, value="3")
@@ -94,17 +66,12 @@ class TestSwiftDifferentClangFlags(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, main_breakpoint)
 
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
-        var = self.frame.FindVariable("a")
+        var = self.frame().FindVariable("a")
         lldbutil.check_variable(self, var, False, value="2")
-        var = self.frame.FindVariable("b")
+        var = self.frame().FindVariable("b")
         lldbutil.check_variable(self, var, False, value="3")
 
-        var = self.frame.EvaluateExpression("fA()")
+        var = self.frame().EvaluateExpression("fA()")
         lldbutil.check_variable(self, var, False, value="2")
 
 if __name__ == '__main__':

@@ -14,7 +14,7 @@ Test that we find the right file-local private decls using the discriminator
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 
@@ -33,7 +33,7 @@ class TestFilePrivate(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def check_expression(self, expression, expected_result, use_summary=True):
-        value = self.frame.EvaluateExpression(expression)
+        value = self.frame().EvaluateExpression(expression)
         self.assertTrue(value.IsValid(), expression + "returned a valid value")
         # print value.GetSummary()
         # print value.GetValue()
@@ -45,16 +45,14 @@ class TestFilePrivate(TestBase):
             expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test(self):
         """Test that we find the right file-local private decls using the discriminator"""
         self.build()
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
-        target = self.dbg.CreateTarget(exe)
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
@@ -77,10 +75,6 @@ class TestFilePrivate(TestBase):
             process, a_breakpoint)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
         self.check_expression("privateVariable", "\"five\"")
 
         process.Continue()
@@ -88,10 +82,6 @@ class TestFilePrivate(TestBase):
             process, b_breakpoint)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
         self.check_expression("privateVariable", "3", False)
 
         process.Continue()
@@ -99,9 +89,6 @@ class TestFilePrivate(TestBase):
             process, main_breakpoint)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
         self.check_expression("privateVariable", None)
         self.check_expression("privateVariable as Int", "3", False)
