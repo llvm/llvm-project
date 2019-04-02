@@ -85,7 +85,7 @@ uint64_t getNewShfFlags(SectionFlag AllFlags) {
   return NewFlags;
 }
 
-static uint64_t setSectionFlagsPreserveMask(uint64_t OldFlags,
+static uint64_t getSectionFlagsPreserveMask(uint64_t OldFlags,
                                             uint64_t NewFlags) {
   // Preserve some flags which should not be dropped when setting flags.
   // Also, preserve anything OS/processor dependant.
@@ -94,6 +94,19 @@ static uint64_t setSectionFlagsPreserveMask(uint64_t OldFlags,
                                 ELF::SHF_MASKOS | ELF::SHF_MASKPROC |
                                 ELF::SHF_TLS | ELF::SHF_INFO_LINK;
   return (OldFlags & PreserveMask) | (NewFlags & ~PreserveMask);
+}
+
+static void setSectionFlagsAndType(SectionBase &Sec, SectionFlag Flags) {
+  Sec.Flags = getSectionFlagsPreserveMask(Sec.Flags, getNewShfFlags(Flags));
+
+  // Certain flags also promote SHT_NOBITS to SHT_PROGBITS. Don't change other
+  // section types (RELA, SYMTAB, etc.).
+  const SectionFlag NoBitsToProgBitsMask =
+      SectionFlag::SecContents | SectionFlag::SecLoad | SectionFlag::SecNoload |
+      SectionFlag::SecCode | SectionFlag::SecData | SectionFlag::SecRom |
+      SectionFlag::SecDebug;
+  if (Sec.Type == SHT_NOBITS && (Flags & NoBitsToProgBitsMask))
+    Sec.Type = SHT_PROGBITS;
 }
 
 static ElfType getOutputElfType(const Binary &Bin) {
@@ -574,8 +587,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
         const SectionRename &SR = Iter->second;
         Sec.Name = SR.NewName;
         if (SR.NewFlags.hasValue())
-          Sec.Flags = setSectionFlagsPreserveMask(
-              Sec.Flags, getNewShfFlags(SR.NewFlags.getValue()));
+          setSectionFlagsAndType(Sec, SR.NewFlags.getValue());
       }
     }
   }
@@ -585,8 +597,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
       const auto Iter = Config.SetSectionFlags.find(Sec.Name);
       if (Iter != Config.SetSectionFlags.end()) {
         const SectionFlagsUpdate &SFU = Iter->second;
-        Sec.Flags = setSectionFlagsPreserveMask(Sec.Flags,
-                                                getNewShfFlags(SFU.NewFlags));
+        setSectionFlagsAndType(Sec, SFU.NewFlags);
       }
     }
   }

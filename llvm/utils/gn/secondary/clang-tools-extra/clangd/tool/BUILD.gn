@@ -1,9 +1,5 @@
+import("//clang-tools-extra/clangd/xpc/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
-
-declare_args() {
-  # Whether to build clangd's XPC components.
-  clangd_build_xpc = false
-}
 
 write_cmake_config("features") {
   # FIXME: Try moving Features.inc.in to tools, seems like a better location.
@@ -33,6 +29,12 @@ executable("clangd") {
     "//clang/lib/Tooling/Core",
     "//llvm/lib/Support",
   ]
+  if (clangd_build_xpc) {
+    deps += [
+      "//clang-tools-extra/clangd/xpc:conversions",
+      "//clang-tools-extra/clangd/xpc:transport",
+    ]
+  }
 
   include_dirs = [
     "..",
@@ -43,8 +45,4 @@ executable("clangd") {
   sources = [
     "ClangdMain.cpp",
   ]
-
-  if (clangd_build_xpc) {
-    # FIXME: Depend on clangdXpcJsonConversions, clangdXpcTransport
-  }
 }

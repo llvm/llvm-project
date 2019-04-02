@@ -83,7 +83,6 @@ const RegisterBank &MipsRegisterBankInfo::getRegBankFromRegClass(
   case Mips::FGRCCRegClassID:
   case Mips::FGR64RegClassID:
   case Mips::AFGR64RegClassID:
-  case Mips::AFGR64_and_OddSPRegClassID:
     return getRegBank(Mips::FPRBRegBankID);
   default:
     llvm_unreachable("Register class not supported");

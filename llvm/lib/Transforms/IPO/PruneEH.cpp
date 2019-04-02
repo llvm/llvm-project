@@ -203,7 +203,8 @@ static bool SimplifyFunction(Function *F, CallGraph &CG) {
 
     for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; )
       if (CallInst *CI = dyn_cast<CallInst>(I++))
-        if (CI->doesNotReturn() && !isa<UnreachableInst>(I)) {
+        if (CI->doesNotReturn() && !CI->isMustTailCall() &&
+            !isa<UnreachableInst>(I)) {
           // This call calls a function that cannot return.  Insert an
           // unreachable instruction after it and simplify the code.  Do this
           // by splitting the BB, adding the unreachable, then deleting the

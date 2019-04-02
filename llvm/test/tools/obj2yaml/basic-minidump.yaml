@@ -1,0 +1,35 @@
+# RUN: yaml2obj %s | obj2yaml - | FileCheck %s
+
+--- !minidump
+Streams:         
+  - Type:            SystemInfo
+    Processor Arch:  ARM64
+    Platform ID:     Linux
+    CSD Version RVA: 0x01020304
+    CPU:             
+      CPUID:           0x05060708
+  - Type:            LinuxAuxv
+    Content:         DEADBEEFBAADF00D
+  - Type:            LinuxMaps
+    Text:             |
+      400d9000-400db000 r-xp 00000000 b3:04 227        /system/bin/app_process
+      400db000-400dc000 r--p 00001000 b3:04 227        /system/bin/app_process
+
+...
+
+# CHECK:      --- !minidump
+# CHECK-NEXT: Streams:         
+# CHECK-NEXT:   - Type:            SystemInfo
+# CHECK-NEXT:     Processor Arch:  ARM64
+# CHECK-NEXT:     Platform ID:     Linux
+# CHECK-NEXT:     CSD Version RVA: 0x01020304
+# CHECK-NEXT:     CPU:             
+# CHECK-NEXT:       CPUID:           0x05060708
+# CHECK-NEXT:   - Type:            LinuxAuxv
+# CHECK-NEXT:     Content:         DEADBEEFBAADF00D
+# CHECK-NEXT:   - Type:            LinuxMaps
+# CHECK-NEXT:     Text:             |
+# CHECK-NEXT:       400d9000-400db000 r-xp 00000000 b3:04 227        /system/bin/app_process
+# CHECK-NEXT:       400db000-400dc000 r--p 00001000 b3:04 227        /system/bin/app_process
+# CHECK-EMPTY:
+# CHECK-NEXT: ...

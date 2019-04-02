@@ -24,15 +24,6 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
         if with_suffix:
             self.add_thread_suffix_request_packets()
         self.add_threadinfo_collection_packets()
-        self.test_sequence.add_log_lines([
-            # Start the inferior...
-            "read packet: $c#63",
-            # ... match output....
-            {"type": "output_match", "regex": self.maybe_strict_output_regex(
-                r"message:main entered\r\n")},
-        ], True)
-        # ... then interrupt.
-        self.add_interrupt_packets()
 
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)

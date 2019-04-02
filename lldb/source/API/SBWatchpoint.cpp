@@ -70,6 +70,20 @@ SBWatchpoint::operator bool() const {
   return bool(m_opaque_wp.lock());
 }
 
+bool SBWatchpoint::operator==(const SBWatchpoint &rhs) const {
+  LLDB_RECORD_METHOD_CONST(
+      bool, SBWatchpoint, operator==,(const SBWatchpoint &), rhs);
+
+  return GetSP() == rhs.GetSP();
+}
+
+bool SBWatchpoint::operator!=(const SBWatchpoint &rhs) const {
+  LLDB_RECORD_METHOD_CONST(
+      bool, SBWatchpoint, operator!=,(const SBWatchpoint &), rhs);
+
+  return !(*this == rhs);
+}
+
 SBError SBWatchpoint::GetError() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBError, SBWatchpoint, GetError);
 
@@ -303,6 +317,10 @@ void RegisterMethods<SBWatchpoint>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::watch_id_t, SBWatchpoint, GetID, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBWatchpoint, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBWatchpoint, operator bool, ());
+  LLDB_REGISTER_METHOD_CONST(
+      bool, SBWatchpoint, operator==,(const lldb::SBWatchpoint &));
+  LLDB_REGISTER_METHOD_CONST(
+      bool, SBWatchpoint, operator!=,(const lldb::SBWatchpoint &));
   LLDB_REGISTER_METHOD(lldb::SBError, SBWatchpoint, GetError, ());
   LLDB_REGISTER_METHOD(int32_t, SBWatchpoint, GetHardwareIndex, ());
   LLDB_REGISTER_METHOD(lldb::addr_t, SBWatchpoint, GetWatchAddress, ());

@@ -60,7 +60,6 @@ X test2(bool B) {
   // CHECK-NEXT: call void @llvm.lifetime.start
   // CHECK-NEXT: call {{.*}} @_ZN1XC1Ev
   // CHECK: call {{.*}} @_ZN1XC1ERKS_
-  // CHECK: call {{.*}} @_ZN1XC1ERKS_
   // CHECK: call {{.*}} @_ZN1XD1Ev
   // CHECK-NEXT: call void @llvm.lifetime.end
   // CHECK: call {{.*}} @_ZN1XD1Ev

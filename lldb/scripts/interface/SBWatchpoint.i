@@ -32,6 +32,10 @@ public:
 
     explicit operator bool() const;
 
+    bool operator==(const SBWatchpoint &rhs) const;
+
+    bool operator!=(const SBWatchpoint &rhs) const;
+
     SBError
     GetError();
 
