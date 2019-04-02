@@ -2333,6 +2333,8 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
   for (int CurRegEnc = FirstRegEnc - 1; CurRegEnc >= 0 && RegsNeeded;
        --CurRegEnc) {
     unsigned CurReg = RegClass->getRegister(CurRegEnc);
+    if (IsT1PushPop && CurReg > ARM::R7)
+      continue;
     if (!IsPop) {
       // Pushing any register is completely harmless, mark the register involved
       // as undef since we don't care about its value and must not restore it

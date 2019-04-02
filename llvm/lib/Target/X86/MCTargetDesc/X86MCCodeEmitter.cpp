@@ -879,7 +879,8 @@ void X86MCCodeEmitter::EmitVEXOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
       if (HasEVEX_RC) {
         unsigned RcOperand = NumOps-1;
         assert(RcOperand >= CurOp);
-        EVEX_rc = MI.getOperand(RcOperand).getImm() & 0x3;
+        EVEX_rc = MI.getOperand(RcOperand).getImm();
+        assert(EVEX_rc <= 3 && "Invalid rounding control!");
       }
       EncodeRC = true;
     }

@@ -9158,6 +9158,9 @@ def note_omp_previous_allocator : Note<
 def err_expected_allocator_clause : Error<"expected an 'allocator' clause "
   "inside of the target region; provide an 'allocator' clause or use 'requires'"
   " directive with the 'dynamic_allocators' clause">;
+def err_expected_allocator_expression : Error<"expected an allocator expression "
+  "inside of the target region; provide an allocator expression or use 'requires'"
+  " directive with the 'dynamic_allocators' clause">;
 def warn_omp_allocate_thread_on_task_target_directive : Warning<
   "allocator with the 'thread' trait access has unspecified behavior on '%0' directive">,
   InGroup<OpenMPClauses>;

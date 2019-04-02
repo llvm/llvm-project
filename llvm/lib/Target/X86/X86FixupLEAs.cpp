@@ -217,7 +217,7 @@ FixupLEAPass::usesRegister(MachineOperand &p, MachineBasicBlock::iterator I) {
   RegUsageState RegUsage = RU_NotUsed;
   MachineInstr &MI = *I;
 
-  for (unsigned int i = 0; i < MI.getNumOperands(); ++i) {
+  for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
     MachineOperand &opnd = MI.getOperand(i);
     if (opnd.isReg() && opnd.getReg() == p.getReg()) {
       if (opnd.isDef())
@@ -269,12 +269,12 @@ FixupLEAPass::searchBackwards(MachineOperand &p, MachineBasicBlock::iterator &I,
   return MachineBasicBlock::iterator();
 }
 
-static inline bool isLEA(const int Opcode) {
+static inline bool isLEA(const unsigned Opcode) {
   return Opcode == X86::LEA16r || Opcode == X86::LEA32r ||
          Opcode == X86::LEA64r || Opcode == X86::LEA64_32r;
 }
 
-static inline bool isInefficientLEAReg(unsigned int Reg) {
+static inline bool isInefficientLEAReg(unsigned Reg) {
   return Reg == X86::EBP || Reg == X86::RBP ||
          Reg == X86::R13D || Reg == X86::R13;
 }
@@ -297,7 +297,7 @@ static inline bool hasLEAOffset(const MachineOperand &Offset) {
   return (Offset.isImm() && Offset.getImm() != 0) || Offset.isGlobal();
 }
 
-static inline int getADDrrFromLEA(int LEAOpcode) {
+static inline unsigned getADDrrFromLEA(unsigned LEAOpcode) {
   switch (LEAOpcode) {
   default:
     llvm_unreachable("Unexpected LEA instruction");
@@ -311,7 +311,8 @@ static inline int getADDrrFromLEA(int LEAOpcode) {
   }
 }
 
-static inline int getADDriFromLEA(int LEAOpcode, const MachineOperand &Offset) {
+static inline unsigned getADDriFromLEA(unsigned LEAOpcode,
+                                       const MachineOperand &Offset) {
   bool IsInt8 = Offset.isImm() && isInt<8>(Offset.getImm());
   switch (LEAOpcode) {
   default:
@@ -343,12 +344,12 @@ static inline bool isLEASimpleIncOrDec(MachineInstr &LEA) {
 bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
                                MachineFunction::iterator MFI) const {
   MachineInstr &MI = *I;
-  int Opcode = MI.getOpcode();
+  unsigned Opcode = MI.getOpcode();
   if (!isLEA(Opcode))
     return false;
 
   if (isLEASimpleIncOrDec(MI) && TII->isSafeToClobberEFLAGS(*MFI, I)) {
-    int NewOpcode;
+    unsigned NewOpcode;
     bool isINC = MI.getOperand(1 + X86::AddrDisp).getImm() == 1;
     switch (Opcode) {
     case X86::LEA16r:
@@ -415,7 +416,7 @@ void FixupLEAPass::seekLEAFixup(MachineOperand &p,
 void FixupLEAPass::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
                                                 MachineFunction::iterator MFI) {
   MachineInstr &MI = *I;
-  const int Opcode = MI.getOpcode();
+  const unsigned Opcode = MI.getOpcode();
   if (!isLEA(Opcode))
     return;
 
@@ -467,7 +468,7 @@ MachineInstr *
 FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
                                         MachineFunction::iterator MFI) {
 
-  const int LEAOpcode = MI.getOpcode();
+  const unsigned LEAOpcode = MI.getOpcode();
   if (!isLEA(LEAOpcode))
     return nullptr;
 
@@ -484,9 +485,9 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
       Segment.getReg() != X86::NoRegister)
     return nullptr;
 
-  unsigned int DstR = Dst.getReg();
-  unsigned int BaseR = Base.getReg();
-  unsigned int IndexR = Index.getReg();
+  unsigned DstR = Dst.getReg();
+  unsigned BaseR = Base.getReg();
+  unsigned IndexR = Index.getReg();
   unsigned SSDstR =
       (LEAOpcode == X86::LEA64_32r) ? getX86SubSuperRegister(DstR, 64) : DstR;
   bool IsScale1 = Scale.getImm() == 1;
