@@ -289,9 +289,10 @@ class SubjectList<list<AttrSubject> subjects, SubjectDiag diag = WarnDiag,
   string CustomDiag = customDiag;
 }
 
-class LangOpt<string name, bit negated = 0> {
+class LangOpt<string name, bit negated = 0, string customCode = ""> {
   string Name = name;
   bit Negated = negated;
+  string CustomCode = customCode;
 }
 def MicrosoftExt : LangOpt<"MicrosoftExt">;
 def Borland : LangOpt<"Borland">;
@@ -303,6 +304,8 @@ def RenderScript : LangOpt<"RenderScript">;
 def ObjC : LangOpt<"ObjC">;
 def BlocksSupported : LangOpt<"Blocks">;
 def ObjCAutoRefCount : LangOpt<"ObjCAutoRefCount">;
+def ObjCNonFragileRuntime : LangOpt<"ObjCNonFragileRuntime", 0,
+                                    "LangOpts.ObjCRuntime.allowsClassStubs()">;
 
 // Defines targets for target-specific attributes. Empty lists are unchecked.
 class TargetSpec {
@@ -1814,6 +1817,13 @@ def ObjCRuntimeVisible : Attr {
   let Spellings = [Clang<"objc_runtime_visible">];
   let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
   let Documentation = [ObjCRuntimeVisibleDocs];
+}
+
+def ObjCClassStub : Attr {
+  let Spellings = [Clang<"objc_class_stub">];
+  let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
+  let Documentation = [ObjCClassStubDocs];
+  let LangOpts = [ObjCNonFragileRuntime];
 }
 
 def ObjCBoxable : Attr {
