@@ -30,7 +30,10 @@ class MiniDumpUUIDTestCase(TestBase):
 
     def verify_module(self, module, verify_path, verify_uuid):
         uuid = module.GetUUIDString()
-        self.assertEqual(verify_path, module.GetFileSpec().fullpath)
+        fullpath = module.GetFileSpec().fullpath
+        msg = 'Verify path ("%s") is contained in the fullpath ("%s")' % (
+                verify_path, fullpath)
+        self.assertTrue(verify_path in fullpath, msg)
         self.assertEqual(verify_uuid, uuid)
 
     def test_zero_uuid_modules(self):
