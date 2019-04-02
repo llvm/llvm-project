@@ -662,12 +662,12 @@ private:
 
   /// \returns the scalarization cost for this type. Scalarization in this
   /// context means the creation of vectors from a group of scalars.
-  int getGatherCost(Type *Ty, const DenseSet<unsigned> &ShuffledIndices);
+  int getGatherCost(Type *Ty, const DenseSet<unsigned> &ShuffledIndices) const;
 
   /// \returns the scalarization cost for this list of values. Assuming that
   /// this subtree gets vectorized, we may need to extract the values from the
   /// roots. This method calculates the cost of extracting the values.
-  int getGatherCost(ArrayRef<Value *> VL);
+  int getGatherCost(ArrayRef<Value *> VL) const;
 
   /// Set the Builder insert point to one after the last instruction in
   /// the bundle
@@ -679,7 +679,7 @@ private:
 
   /// \returns whether the VectorizableTree is fully vectorizable and will
   /// be beneficial even the tree height is tiny.
-  bool isFullyVectorizableTinyTree();
+  bool isFullyVectorizableTinyTree() const;
 
   /// \reorder commutative operands to get better probability of
   /// generating vectorized code.
@@ -2577,7 +2577,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
   }
 }
 
-bool BoUpSLP::isFullyVectorizableTinyTree() {
+bool BoUpSLP::isFullyVectorizableTinyTree() const {
   LLVM_DEBUG(dbgs() << "SLP: Check whether the tree with height "
                     << VectorizableTree.size() << " is fully vectorizable .\n");
 
@@ -2772,17 +2772,17 @@ int BoUpSLP::getTreeCost() {
 }
 
 int BoUpSLP::getGatherCost(Type *Ty,
-                           const DenseSet<unsigned> &ShuffledIndices) {
+                           const DenseSet<unsigned> &ShuffledIndices) const {
   int Cost = 0;
   for (unsigned i = 0, e = cast<VectorType>(Ty)->getNumElements(); i < e; ++i)
     if (!ShuffledIndices.count(i))
       Cost += TTI->getVectorInstrCost(Instruction::InsertElement, Ty, i);
   if (!ShuffledIndices.empty())
-      Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, Ty);
+    Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, Ty);
   return Cost;
 }
 
-int BoUpSLP::getGatherCost(ArrayRef<Value *> VL) {
+int BoUpSLP::getGatherCost(ArrayRef<Value *> VL) const {
   // Find the type of the operands in VL.
   Type *ScalarTy = VL[0]->getType();
   if (StoreInst *SI = dyn_cast<StoreInst>(VL[0]))
