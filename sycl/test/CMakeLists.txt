@@ -8,19 +8,9 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg
   )
 
-set(SYCL_TEST_DEPS
-  llvm-spirv
-  llvm-link
-  llc
-  clang
-  sycl-headers
-  get_device_count_by_type
-  FileCheck
-  ${SYCLLibrary}
-  )
 add_lit_testsuite(check-sycl "Running the SYCL regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   ARGS ${RT_TEST_ARGS}
-  DEPENDS ${SYCL_TEST_DEPS}
+  DEPENDS sycl-toolchain FileCheck get_device_count_by_type
   )
 set_target_properties(check-sycl PROPERTIES FOLDER "SYCL tests")

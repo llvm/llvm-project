@@ -6,16 +6,7 @@ OpenCL&trade; API to offload computations to accelerators.
 
 # Before You Begin
 
-Software requirements:
-
-Installing OpenCL 2.1 compatible software stack:
-1. OpenCL headers:
-
-   a. Download the OpenCL headers from
-[github.com/KhronosGroup/OpenCL-Headers](https://github.com/KhronosGroup/OpenCL-Headers)
-to your local machine. e.g. `/usr/local/include/CL` with environment var
-`$OPENCL_HEADERS`.
-2. OpenCL runtime for CPU and GPU:
+OpenCL runtime for CPU and/or GPU:
 
    a. OpenCL runtime for GPU: follow instructions on
 [github.com/intel/compute-runtime/releases](https://github.com/intel/compute-runtime/releases)
@@ -26,7 +17,7 @@ Runtime for OpenCL. Applications 18.1 for Linux* OS (64bit only)" on
 [https://software.intel.com/en-us/articles/opencl-drivers#cpu-section](https://software.intel.com/en-us/articles/opencl-drivers#cpu-section)
 and click on orange "Download" button to download & install.
 
-# Build the SYCL compiler
+# Build the SYCL compiler and runtime
 
 Download the LLVM* repository with SYCL support to your local machine folder
 e.g. `$HOME/sycl` (assuming environment var `$SYCL_HOME`) folder using
@@ -36,23 +27,29 @@ following command:
 git clone https://github.com/intel/llvm -b sycl $HOME/sycl
 ```
 
-Follow regular LLVM build instructions under:
-[llvm.org/docs/CMake.html](https://llvm.org/docs/CMake.html). To build SYCL
-runtime use modified CMake command below:
+Build the SYCL compiler and runtime following instruction below:
 
 ```bash
 mkdir $SYCL_HOME/build
 cd $SYCL_HOME/build
-cmake -DCMAKE_BUILD_TYPE=Release -DOpenCL_INCLUDE_DIR=$OPENCL_HEADERS \
+cmake -DCMAKE_BUILD_TYPE=Release \
 -DLLVM_ENABLE_PROJECTS="clang" \
 -DLLVM_EXTERNAL_SYCL_SOURCE_DIR=$SYCL_HOME/sycl \
 -DLLVM_EXTERNAL_LLVM_SPIRV_SOURCE_DIR=$SYCL_HOME/llvm-spirv \
 -DLLVM_TOOL_SYCL_BUILD=ON -DLLVM_TOOL_LLVM_SPIRV_BUILD=ON $SYCL_HOME/llvm
-make -j`nproc` check-all
+make -j`nproc` sycl-toolchain
 ```
 
 After the build completed, the SYCL compiler/include/libraries can be found
 under `$SYCL_HOME/build` directory.
+
+# Test the SYCL compiler and runtime
+
+Run LIT testing using the command below after building SYCL compiler and runtime.
+
+```bash
+make -j`nproc` check-all
+```
 
 # Creating a simple SYCL program
 

@@ -32,6 +32,7 @@ CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS=clang \
     -DLLVM_TOOL_SYCL_BUILD=ON -DLLVM_TOOL_LLVM_SPIRV_BUILD=ON \
     -DOpenCL_INCLUDE_DIR=OpenCL-Headers \
     -DOpenCL_LIBRARY=OpenCL-ICD-Loader/build/lib/libOpenCL.so \
+    -DLLVM_BUILD_TOOLS=OFF \
     ../llvm.src/llvm"
 
 cmake ${CMAKE_ARGS}

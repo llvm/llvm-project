@@ -26,4 +26,4 @@ done && shift $(($OPTIND - 1))
 # we're in llvm.obj dir
 BUILD_DIR=${PWD}
 
-make -j`nproc`
+make -j`nproc` sycl-toolchain

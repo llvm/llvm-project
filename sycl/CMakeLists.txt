@@ -27,30 +27,78 @@ endif()
 # Unlike PACKAGE_VERSION, CLANG_VERSION does not include LLVM_VERSION_SUFFIX.
 set(CLANG_VERSION "${CLANG_VERSION_MAJOR}.${CLANG_VERSION_MINOR}.${CLANG_VERSION_PATCHLEVEL}")
 
-set ( LLVM_INST_INC_DIRECTORY "lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION}/include" )
+set(LLVM_INST_INC_DIRECTORY "lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION}/include")
+set(dst_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/include)
 
-find_package(OpenCL REQUIRED)
+find_package(OpenCL)
 
-include_directories(${OpenCL_INCLUDE_DIRS})
-link_libraries(${OpenCL_LIBRARY})
+include(ExternalProject)
+
+if( NOT OpenCL_INCLUDE_DIRS )
+  message ("OpenCL_INCLUDE_DIRS is missed. Try to download headers from github.com")
+  set(OpenCL_INCLUDE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/OpenCL/inc")
+  ExternalProject_Add(ocl-headers
+    GIT_REPOSITORY    https://github.com/KhronosGroup/OpenCL-Headers.git
+    GIT_TAG           origin/master
+    SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/OpenCL/inc"
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND     ${CMAKE_COMMAND} -E copy_directory ${OpenCL_INCLUDE_DIRS}/CL ${dst_dir}/CL}
+    INSTALL_COMMAND   ""
+    STEP_TARGETS      build
+    COMMENT           "Downloading OpenCL headers."
+  )
+else()
+  message("OpenCL header have been found under ${OpenCL_INCLUDE_DIRS}.")
+  add_custom_target( ocl-headers ALL
+    DEPENDS ${OpenCL_INCLUDE_DIRS}
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${OpenCL_INCLUDE_DIRS}/CL ${dst_dir}/CL
+    COMMENT "Copying OpenCL headers ..."
+  )
+endif()
+
+if( NOT OpenCL_LIBRARIES )
+  message("OpenCL_LIBRARIES is missed. Try to build from GitHub sources.")
+  set(OpenCL_LIBRARIES "${LLVM_LIBRARY_OUTPUT_INTDIR}/libOpenCL.so")
+  ExternalProject_Add(ocl-icd
+    GIT_REPOSITORY    https://github.com/KhronosGroup/OpenCL-ICD-Loader.git
+    GIT_TAG           origin/master
+    SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/OpenCL/icd"
+    CONFIGURE_COMMAND ""
+    BUILD_IN_SOURCE   TRUE
+    BUILD_COMMAND     make C_INCLUDE_PATH=${CMAKE_CURRENT_BINARY_DIR}/OpenCL/inc
+    INSTALL_COMMAND   ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/OpenCL/icd/build/lib ${LLVM_LIBRARY_OUTPUT_INTDIR}
+    STEP_TARGETS      build,install
+    DEPENDS           ocl-headers
+  )
+else()
+  message("OpenCL loader has been found: ${OpenCL_LIBRARIES}.")
+  add_custom_target(ocl-icd
+    ${CMAKE_COMMAND} -E copy ${OpenCL_LIBRARIES}* ${LLVM_LIBRARY_OUTPUT_INTDIR}
+    COMMENT "Copying OpenCL ICD Loader ..."
+  )
+endif()
+
+set(SYCL_INCLUDE "${CMAKE_CURRENT_BINARY_DIR}/include/")
+set(OPENCL_INCLUDE "${OpenCL_INCLUDE_DIRS}")
 
 # Configure SYCL version macro
-set(sycl_inc_dir ${CMAKE_CURRENT_SOURCE_DIR}/include/CL)
+set(sycl_inc_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 string(TIMESTAMP __SYCL_COMPILER_VERSION "%Y%m%d")
-set(version_header "${sycl_inc_dir}/sycl/version.hpp")
+set(version_header "${sycl_inc_dir}/CL/sycl/version.hpp")
 configure_file("${version_header}.in" "${version_header}")
 
 # Copy SYCL headers
-set(sycl_inc_dir ${CMAKE_CURRENT_SOURCE_DIR}/include/CL)
-set(dst_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/include/CL)
 add_custom_target(sycl-headers ALL
-COMMAND ${CMAKE_COMMAND} -E copy_directory ${sycl_inc_dir} ${dst_dir}
+COMMAND ${CMAKE_COMMAND} -E copy_directory ${sycl_inc_dir}/CL ${dst_dir}/CL
 COMMENT "Copying SYCL headers ...")
 
 # Main library
 
 set(sourceRootPath "${CMAKE_CURRENT_SOURCE_DIR}/source")
 set(includeRootPath "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+include_directories(AFTER "${includeRootPath}" "${OpenCL_INCLUDE_DIRS}")
+link_libraries(${OpenCL_LIBRARIES})
 
 set(SYCLLibrary sycl)
 
@@ -67,9 +115,6 @@ set(SYCL_TESTS_BINARY_DIR ${SYCL_BINARY_DIR}/test)
 set(CLANG_IN_BUILD "${LLVM_BINARY_DIR}/bin/clang")
 
 set(LLVM_TOOLS_DIR "${LLVM_BINARY_DIR}/bin/")
-
-set(SYCL_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include/")
-set(OPENCL_INCLUDE "${OpenCL_INCLUDE_DIRS}")
 
 add_library("${SYCLLibrary}" SHARED
   "${includeRootPath}/CL/sycl.hpp"
@@ -106,7 +151,25 @@ add_library("${SYCLLibrary}" SHARED
   "${sourceRootPath}/spirv_ops.cpp"
 )
 
-include_directories("${SYCLLibrary}" "${includeRootPath}")
+add_dependencies("${SYCLLibrary}"
+  ocl-icd
+  ocl-headers
+  sycl-headers
+)
+
+add_custom_target( sycl-toolchain
+  DEPENDS "${SYCLLibrary}"
+          clang
+          clang-offload-wrapper
+          clang-offload-bundler
+          llc
+          llvm-as
+          llvm-dis
+          llvm-spirv
+          llvm-link
+          opt
+  COMMENT "Building SYCL compiler toolchain..."
+)
 
 set_target_properties("${SYCLLibrary}" PROPERTIES LINKER_LANGUAGE CXX)
 
@@ -119,40 +182,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
 endif()
 
 install(TARGETS "${SYCLLibrary}" DESTINATION "lib" COMPONENT ${SYCLLibrary})
-install(DIRECTORY "${includeRootPath}/." DESTINATION "${LLVM_INST_INC_DIRECTORY}" COMPONENT sycl_headers)
+install(DIRECTORY "${includeRootPath}/." DESTINATION "${LLVM_INST_INC_DIRECTORY}" COMPONENT sycl-headers)
 
 add_subdirectory( test )
 add_subdirectory( tools )
-
-set(manifest_list)
-set( DEPLOY_LIST
-  sycl
-  ocl_lib
-  ocl_headers
-  sycl_headers
-  clang
-  clang-offload-wrapper
-  clang-offload-bundler
-  llc
-  llvm-as
-  llvm-dis
-  llvm-spirv
-  llvm-link
-  opt
-)
-
-foreach( comp ${DEPLOY_LIST} )
-
-  message( STATUS "Adding component ${comp} to deploy")
-
-  set (manifest ${CMAKE_CURRENT_BINARY_DIR}/install_manifest_${comp}.txt)
-  add_custom_command(OUTPUT ${manifest}
-                     COMMAND "${CMAKE_COMMAND}"
-                             "-DCMAKE_INSTALL_COMPONENT=${comp}"
-                             -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                     COMMENT "Deploying component ${comp}"
-                     USES_TERMINAL)
-  list(APPEND manifest_list ${manifest})
-endforeach( comp )
-
-add_custom_target(deploy DEPENDS ${manifest_list})
