@@ -528,7 +528,7 @@ __input_c_string(basic_istream<_CharT, _Traits>& __is, _CharT* __p, size_t __n)
         typename basic_istream<_CharT, _Traits>::sentry __sen(__is);
         if (__sen)
         {
-            auto __s = __p;
+            _CharT* __s = __p;
             const ctype<_CharT>& __ct = use_facet<ctype<_CharT> >(__is.getloc());
             ios_base::iostate __err = ios_base::goodbit;
             while (__s != __p + (__n-1))
@@ -568,7 +568,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, _CharT (&__buf)[_Np])
 {
-    auto __n = _Np;
+    size_t __n = _Np;
     if (__is.width() > 0)
         __n = _VSTD::min(size_t(__is.width()), _Np);
     return _VSTD::__input_c_string(__is, __buf, __n);
