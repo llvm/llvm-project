@@ -1297,7 +1297,6 @@ protected:
     inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     void swap(basic_iostream& __rhs)
     { basic_istream<char_type, traits_type>::swap(__rhs); }
-public:
 };
 
 #ifndef _LIBCPP_CXX03_LANG
