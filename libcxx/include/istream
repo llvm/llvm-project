@@ -539,8 +539,8 @@ __input_c_string(basic_istream<_CharT, _Traits>& __is, _CharT* __p, size_t __n)
     {
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
-#endif
         {
+#endif
             _CharT* __s = __p;
             const ctype<_CharT>& __ct = use_facet<ctype<_CharT> >(__is.getloc());
             while (__s != __p + (__n-1))
