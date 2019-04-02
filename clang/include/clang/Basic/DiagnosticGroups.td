@@ -16,6 +16,7 @@ def Implicit : DiagGroup<"implicit", [
 ]>;
 
 // Empty DiagGroups are recognized by clang but ignored.
+def ODR : DiagGroup<"odr">;
 def : DiagGroup<"abi">;
 def AbsoluteValue : DiagGroup<"absolute-value">;
 def AddressOfTemporary : DiagGroup<"address-of-temporary">;
