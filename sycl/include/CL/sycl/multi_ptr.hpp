@@ -126,8 +126,11 @@ public:
     return reinterpret_cast<ElementType *>(m_Pointer);
   }
 
-  // Explicit conversion to a multi_ptr<void>
-  explicit operator multi_ptr<void, Space>() const;
+  // Implicit conversion to a multi_ptr<void>
+  operator multi_ptr<void, Space>() const {
+    using void_ptr_t = typename detail::PtrValueType<void, Space>::type *;
+    return multi_ptr<void, Space>(reinterpret_cast<void_ptr_t>(m_Pointer));
+  };
 
   // Arithmetic operators
   multi_ptr &operator++() {
@@ -209,6 +212,14 @@ public:
 #endif
   multi_ptr(std::nullptr_t) : m_Pointer(nullptr) {}
   ~multi_ptr() = default;
+
+  // TODO: this constructor is a temporary solution for the cases where
+  // the conversion to void multi pointer is used. Without it the compiler
+  // fails due to having 3 different same rank paths available.
+  // The issue is being discussed in Khronos groups now.
+  // See https://gitlab.khronos.org/sycl/Specification/issues/215 for details.
+  template <typename ElementType>
+  multi_ptr(const multi_ptr<ElementType, Space> &ETP) : m_Pointer(ETP.get()) {}
 
   // Assignment operators
   multi_ptr &operator=(const multi_ptr &) = default;
