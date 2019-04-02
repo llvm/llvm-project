@@ -1099,7 +1099,6 @@ dot(T p0, T p1) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_gengeofloat<T>::value, T>::type>
 cl::sycl::cl_float distance(T p0, T p1) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(distance, T)
   return __sycl_std::__invoke_distance<cl::sycl::cl_float>(p0, p1);
 }
 
@@ -1107,7 +1106,6 @@ cl::sycl::cl_float distance(T p0, T p1) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_gengeodouble<T>::value, T>::type>
 cl::sycl::cl_double distance(T p0, T p1) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(distance, T)
   return __sycl_std::__invoke_distance<cl::sycl::cl_double>(p0, p1);
 }
 
@@ -1116,7 +1114,6 @@ cl::sycl::cl_double distance(T p0, T p1) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_gengeohalf<T>::value, T>::type>
 cl::sycl::cl_half distance(T p0, T p1) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(distance, T)
   return __sycl_std::__invoke_distance<cl::sycl::cl_half>(p0, p1);
 }
 #endif
@@ -1125,7 +1122,6 @@ cl::sycl::cl_half distance(T p0, T p1) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_gengeofloat<T>::value, T>::type>
 cl::sycl::cl_float length(T p) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(length, T)
   return __sycl_std::__invoke_length<cl::sycl::cl_float>(p);
 }
 
@@ -1133,7 +1129,6 @@ cl::sycl::cl_float length(T p) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_gengeodouble<T>::value, T>::type>
 cl::sycl::cl_double length(T p) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(length, T)
   return __sycl_std::__invoke_length<cl::sycl::cl_double>(p);
 }
 
@@ -1142,7 +1137,6 @@ cl::sycl::cl_double length(T p) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_gengeohalf<T>::value, T>::type>
 cl::sycl::cl_half length(T p) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(length, T)
   return __sycl_std::__invoke_length<cl::sycl::cl_half>(p);
 }
 #endif
@@ -1151,7 +1145,6 @@ cl::sycl::cl_half length(T p) __NOEXC {
 template <typename T>
 typename std::enable_if<detail::is_gengeofloat<T>::value, T>::type
 normalize(T p) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(normalize, T)
   return __sycl_std::__invoke_normalize<T>(p);
 }
 
@@ -1159,7 +1152,6 @@ normalize(T p) __NOEXC {
 template <typename T>
 typename std::enable_if<detail::is_gengeodouble<T>::value, T>::type
 normalize(T p) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(normalize, T)
   return __sycl_std::__invoke_normalize<T>(p);
 }
 
@@ -1168,7 +1160,6 @@ normalize(T p) __NOEXC {
 template <typename T>
 typename std::enable_if<detail::is_gengeohalf<T>::value, T>::type
 normalize(T p) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(normalize, T)
   return __sycl_std::__invoke_normalize<T>(p);
 }
 #endif
@@ -1177,7 +1168,6 @@ normalize(T p) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_gengeofloat<T>::value, T>::type>
 cl::sycl::cl_float fast_distance(T p0, T p1) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(fast_distance, T)
   return __sycl_std::__invoke_fast_distance<cl::sycl::cl_float>(p0, p1);
 }
 
@@ -1185,7 +1175,6 @@ cl::sycl::cl_float fast_distance(T p0, T p1) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_gengeodouble<T>::value, T>::type>
 cl::sycl::cl_double fast_distance(T p0, T p1) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(fast_distance, T)
   return __sycl_std::__invoke_fast_distance<cl::sycl::cl_double>(p0, p1);
 }
 
@@ -1193,7 +1182,6 @@ cl::sycl::cl_double fast_distance(T p0, T p1) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_gengeofloat<T>::value, T>::type>
 cl::sycl::cl_float fast_length(T p) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(fast_length, T)
   return __sycl_std::__invoke_fast_length<cl::sycl::cl_float>(p);
 }
 
@@ -1201,7 +1189,6 @@ cl::sycl::cl_float fast_length(T p) __NOEXC {
 template <typename T, typename = typename std::enable_if<
                           detail::is_gengeodouble<T>::value, T>::type>
 cl::sycl::cl_double fast_length(T p) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(fast_length, T)
   return __sycl_std::__invoke_fast_length<cl::sycl::cl_double>(p);
 }
 
@@ -1209,7 +1196,6 @@ cl::sycl::cl_double fast_length(T p) __NOEXC {
 template <typename T>
 typename std::enable_if<detail::is_gengeofloat<T>::value, T>::type
 fast_normalize(T p) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(fast_normalize, T)
   return __sycl_std::__invoke_fast_normalize<T>(p);
 }
 
@@ -1217,7 +1203,6 @@ fast_normalize(T p) __NOEXC {
 template <typename T>
 typename std::enable_if<detail::is_gengeodouble<T>::value, T>::type
 fast_normalize(T p) __NOEXC {
-  __NO_SUPPORT_HOST_VERSION(fast_normalize, T)
   return __sycl_std::__invoke_fast_normalize<T>(p);
 }
 

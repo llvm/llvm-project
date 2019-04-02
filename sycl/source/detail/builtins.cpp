@@ -57,6 +57,15 @@ namespace s = cl::sycl;
     return r;                                                                  \
   }
 
+#define __MAKE_1V_RS(Fun, Call, N, Ret, Arg1)                                  \
+  Ret Fun __NOEXC(Arg1##N x) {                                                 \
+    Ret r = Ret();                                                             \
+    using base1_t = typename Arg1##N::element_type;                            \
+    detail::helper<N - 1>().run_1v_rs(                                         \
+        r, [](Ret &r, base1_t x) { return cl::__host_std::Call(r, x); }, x);   \
+    return r;                                                                  \
+  }
+
 #define __MAKE_1V_2V_3V(Fun, Call, N, Ret, Arg1, Arg2, Arg3)                   \
   Ret##N Fun __NOEXC(Arg1##N x, Arg2##N y, Arg3##N z) {                        \
     Ret##N r;                                                                  \
@@ -185,12 +194,10 @@ namespace s = cl::sycl;
   __MAKE_1V_2P(Fun, 8, Ret, Arg1, Arg2)                                        \
   __MAKE_1V_2P(Fun, 16, Ret, Arg1, Arg2)
 
-#define MAKE_1V_2V_RS(Fun, Call, Ret, Arg1, Arg2)                              \
+#define MAKE_GEO_1V_2V_RS(Fun, Call, Ret, Arg1, Arg2)                          \
   __MAKE_1V_2V_RS(Fun, Call, 2, Ret, Arg1, Arg2)                               \
   __MAKE_1V_2V_RS(Fun, Call, 3, Ret, Arg1, Arg2)                               \
-  __MAKE_1V_2V_RS(Fun, Call, 4, Ret, Arg1, Arg2)                               \
-  __MAKE_1V_2V_RS(Fun, Call, 8, Ret, Arg1, Arg2)                               \
-  __MAKE_1V_2V_RS(Fun, Call, 16, Ret, Arg1, Arg2)
+  __MAKE_1V_2V_RS(Fun, Call, 4, Ret, Arg1, Arg2)
 
 #define MAKE_1V_2V_3P(Fun, Ret, Arg1, Arg2, Arg3)                              \
   __MAKE_1V_2V_3P(Fun, 2, Ret, Arg1, Arg2, Arg3)                               \
@@ -225,6 +232,12 @@ template <int N> struct helper {
   void run_1v_2v_rs(Res &r, Op op, T1 x, T2 y) {
     helper<N - 1>().run_1v_2v_rs(r, op, x, y);
     op(r, x.template swizzle<N>(), y.template swizzle<N>());
+  }
+
+  template <typename Res, typename Op, typename T1>
+  void run_1v_rs(Res &r, Op op, T1 x) {
+    helper<N - 1>().run_1v_rs(r, op, x);
+    op(r, x.template swizzle<N>());
   }
 
   template <typename Res, typename Op, typename T1, typename T2>
@@ -282,6 +295,10 @@ template <> struct helper<0> {
   template <typename Res, typename Op, typename T1, typename T2>
   void run_1v_2v_rs(Res &r, Op op, T1 x, T2 y) {
     op(r, x.template swizzle<0>(), y.template swizzle<0>());
+  }
+  template <typename Res, typename Op, typename T1>
+  void run_1v_rs(Res &r, Op op, T1 x) {
+    op(r, x.template swizzle<0>());
   }
   template <typename Res, typename Op, typename T1, typename T2>
   void run_1v_2p(Res &r, Op op, T1 x, T2 y) {
@@ -1600,11 +1617,148 @@ cl_float OpFMul(s::cl_half p0, s::cl_half p1) {
 }
 #endif
 // OpDot
-MAKE_1V_2V_RS(OpDot, __OpFMul, s::cl_float, s::cl_float, s::cl_float)
-MAKE_1V_2V_RS(OpDot, __OpFMul, s::cl_double, s::cl_double, s::cl_double)
+MAKE_GEO_1V_2V_RS(OpDot, __OpFMul, s::cl_float, s::cl_float, s::cl_float)
+MAKE_GEO_1V_2V_RS(OpDot, __OpFMul, s::cl_double, s::cl_double, s::cl_double)
 #ifndef NO_HALF_ENABLED
-MAKE_1V_2V_RS(OpDot, __OpFMul, s::cl_half, s::cl_half, s::cl_half)
+MAKE_GEO_1V_2V_RS(OpDot, __OpFMul, s::cl_half, s::cl_half, s::cl_half)
 #endif
+
+// length
+template <typename T>
+typename std::enable_if<s::detail::is_sgengeo<T>::value, T>::type
+__length(T t) {
+  return std::sqrt(OpFMul(t, t));
+}
+
+template <typename T>
+typename std::enable_if<s::detail::is_vgengeo<T>::value,
+                        typename T::element_type>::type
+__length(T t) {
+  return std::sqrt(OpDot(t, t));
+}
+
+cl_float length(s::cl_float p) { return __length(p); }
+cl_double length(s::cl_double p) { return __length(p); }
+#ifndef NO_HALF_ENABLED
+cl_half length(s::cl_half p) { return __length(p); }
+#endif
+cl_float length(s::cl_float2 p) { return __length(p); }
+cl_float length(s::cl_float3 p) { return __length(p); }
+cl_float length(s::cl_float4 p) { return __length(p); }
+cl_double length(s::cl_double2 p) { return __length(p); }
+cl_double length(s::cl_double3 p) { return __length(p); }
+cl_double length(s::cl_double4 p) { return __length(p); }
+#ifndef NO_HALF_ENABLED
+cl_half length(s::cl_half2 p) { return __length(p); }
+cl_half length(s::cl_half3 p) { return __length(p); }
+cl_half length(s::cl_half4 p) { return __length(p); }
+#endif
+
+// distance
+cl_float distance(s::cl_float p0, s::cl_float p1) { return length(p0 - p1); }
+cl_double distance(s::cl_double p0, s::cl_double p1) { return length(p0 - p1); }
+#ifndef NO_HALF_ENABLED
+cl_half distance(s::cl_half p0, s::cl_half p1) { return length(p0 - p1); }
+#endif
+cl_float distance(s::cl_float2 p0, s::cl_float2 p1) { return length(p0 - p1); }
+cl_float distance(s::cl_float3 p0, s::cl_float3 p1) { return length(p0 - p1); }
+cl_float distance(s::cl_float4 p0, s::cl_float4 p1) { return length(p0 - p1); }
+cl_double distance(s::cl_double2 p0, s::cl_double2 p1) {
+  return length(p0 - p1);
+}
+cl_double distance(s::cl_double3 p0, s::cl_double3 p1) {
+  return length(p0 - p1);
+}
+cl_double distance(s::cl_double4 p0, s::cl_double4 p1) {
+  return length(p0 - p1);
+}
+#ifndef NO_HALF_ENABLED
+cl_half distance(s::cl_half2 p0, s::cl_half2 p1) { return length(p0 - p1); }
+cl_half distance(s::cl_half3 p0, s::cl_half3 p1) { return length(p0 - p1); }
+cl_half distance(s::cl_half4 p0, s::cl_half4 p1) { return length(p0 - p1); }
+#endif
+
+// normalize
+template <typename T>
+typename std::enable_if<s::detail::is_sgengeo<T>::value, T>::type
+__normalize(T t) {
+  T r = length(t);
+  return t / T(r);
+}
+
+template <typename T>
+typename std::enable_if<s::detail::is_vgengeo<T>::value, T>::type
+__normalize(T t) {
+  typename T::element_type r = length(t);
+  return t / T(r);
+}
+
+s::cl_float normalize(s::cl_float p) { return __normalize(p); }
+s::cl_float2 normalize(s::cl_float2 p) { return __normalize(p); }
+s::cl_float3 normalize(s::cl_float3 p) { return __normalize(p); }
+s::cl_float4 normalize(s::cl_float4 p) { return __normalize(p); }
+
+s::cl_double normalize(s::cl_double p) { return __normalize(p); }
+s::cl_double2 normalize(s::cl_double2 p) { return __normalize(p); }
+s::cl_double3 normalize(s::cl_double3 p) { return __normalize(p); }
+s::cl_double4 normalize(s::cl_double4 p) { return __normalize(p); }
+#ifndef NO_HALF_ENABLED
+s::cl_half normalize(s::cl_half p) { return __normalize(p); }
+s::cl_half2 normalize(s::cl_half2 p) { return __normalize(p); }
+s::cl_half3 normalize(s::cl_half3 p) { return __normalize(p); }
+s::cl_half4 normalize(s::cl_half4 p) { return __normalize(p); }
+#endif
+
+// fast_length
+template <typename T>
+typename std::enable_if<s::detail::is_vgengeo<T>::value,
+                        typename T::element_type>::type
+__fast_length(T t) {
+  return std::sqrt(OpDot(t, t));
+}
+cl_float fast_length(s::cl_float p) { return std::sqrt(OpFMul(p, p)); }
+cl_float fast_length(s::cl_float2 p) { return __fast_length(p); }
+cl_float fast_length(s::cl_float3 p) { return __fast_length(p); }
+cl_float fast_length(s::cl_float4 p) { return __fast_length(p); }
+
+// fast_normalize
+s::cl_int OpAll(s::cl_int2);
+s::cl_int OpAll(s::cl_int3);
+s::cl_int OpAll(s::cl_int4);
+template <typename T>
+typename std::enable_if<s::detail::is_vgengeo<T>::value, T>::type
+__fast_normalize(T t) {
+  if (OpAll(t == T(0.0f))) {
+    return t;
+  }
+  typename T::element_type r = std::sqrt(OpDot(t, t));
+  return t / T(r);
+}
+
+s::cl_float fast_normalize(s::cl_float p) {
+  if (p == 0.0f) {
+    return p;
+  }
+  s::cl_float r = std::sqrt(OpFMul(p, p));
+  return p / r;
+}
+s::cl_float2 fast_normalize(s::cl_float2 p) { return __fast_normalize(p); }
+s::cl_float3 fast_normalize(s::cl_float3 p) { return __fast_normalize(p); }
+s::cl_float4 fast_normalize(s::cl_float4 p) { return __fast_normalize(p); }
+
+// fast_distance
+cl_float fast_distance(s::cl_float p0, s::cl_float p1) {
+  return fast_length(p0 - p1);
+}
+cl_float fast_distance(s::cl_float2 p0, s::cl_float2 p1) {
+  return fast_length(p0 - p1);
+}
+cl_float fast_distance(s::cl_float3 p0, s::cl_float3 p1) {
+  return fast_length(p0 - p1);
+}
+cl_float fast_distance(s::cl_float4 p0, s::cl_float4 p1) {
+  return fast_length(p0 - p1);
+}
 
 /* --------------- 4.13.7 Relational functions. Host version --------------*/
 // OpFOrdEqual-isequal
@@ -2223,17 +2377,31 @@ MAKE_1V(half_tan, s::cl_float, s::cl_float)
 } // namespace __host_std
 } // namespace cl
 
+#undef __NOEXC
+#undef NO_HALF_ENABLED
 #undef __MAKE_1V
 #undef __MAKE_1V_2V
-#undef __MAKE_1V_2S
-#undef __MAKE_1V_2P
+#undef __MAKE_1V_2V_RS
+#undef __MAKE_1V_RS
 #undef __MAKE_1V_2V_3V
+#undef __MAKE_1V_2S
+#undef __MAKE_SR_1V_AND
+#undef __MAKE_SR_1V_OR
+#undef __MAKE_1V_2P
 #undef __MAKE_1V_2V_3P
 #undef MAKE_1V
+#undef MAKE_1V_FUNC
 #undef MAKE_1V_2V
-#undef MAKE_1V_2S
-#undef MAKE_1V_2P
+#undef MAKE_1V_2V_FUNC
 #undef MAKE_1V_2V_3V
+#undef MAKE_1V_2V_3V_FUNC
+#undef MAKE_SC_1V_2V_3V
+#undef MAKE_SC_FSC_1V_2V_3V_FV
+#undef MAKE_SC_3ARG
+#undef MAKE_1V_2S
+#undef MAKE_SR_1V_AND
+#undef MAKE_SR_1V_OR
+#undef MSB_MASK
+#undef MAKE_1V_2P
+#undef MAKE_GEO_1V_2V_RS
 #undef MAKE_1V_2V_3P
-
-#undef __NOEXC

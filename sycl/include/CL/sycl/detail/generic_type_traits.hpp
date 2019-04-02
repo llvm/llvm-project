@@ -136,6 +136,25 @@ using is_vgengeohalf =
     typename is_contained<T, type_list<cl_half2, cl_half3, cl_half4>>::type;
 #endif
 
+// sgengeo: float, double, half
+template <typename T>
+using is_sgengeo =
+    std::integral_constant<bool, is_contained<T, type_list<cl_float, cl_double
+#ifndef __HALF_NO_ENABLED
+                                                           ,
+                                                           cl_half
+#endif
+                                                           >>::value>;
+
+// vgengeo: vgengeofloat, vgengeodouble, vgengeohalf
+template <typename T>
+using is_vgengeo = std::integral_constant<bool, is_vgengeofloat<T>::value ||
+                                                    is_vgengeodouble<T>::value
+#ifndef __HALF_NO_ENABLED
+                                                    || is_vgengeohalf<T>::value
+#endif
+                                          >;
+
 // gencrossfloat:  float3, float4
 template <typename T>
 using is_gencrossfloat =
