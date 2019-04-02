@@ -137,6 +137,7 @@ class MiniDumpUUIDTestCase(TestBase):
         self.verify_module(modules[0], "/not/exist/a", None)
         self.verify_module(modules[1], "/not/exist/b", None)
 
+    @skipIf(oslist=['windows'])
     def test_partial_uuid_match(self):
         """
             Breakpad has been known to create minidump files using CvRecord in each
@@ -163,6 +164,7 @@ class MiniDumpUUIDTestCase(TestBase):
                            "libuuidmatch.so", 
                            "7295E17C-6668-9E05-CBB5-DEE5003865D5-5267C116")
 
+    @skipIf(oslist=['windows'])
     def test_partial_uuid_mismatch(self):
         """
             Breakpad has been known to create minidump files using CvRecord in each
