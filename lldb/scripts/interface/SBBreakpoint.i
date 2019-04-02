@@ -85,6 +85,10 @@ public:
 
     ~SBBreakpoint();
 
+    bool operator==(const lldb::SBBreakpoint &rhs);
+
+    bool operator!=(const lldb::SBBreakpoint &rhs);
+
     break_id_t
     GetID () const;
 
