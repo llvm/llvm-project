@@ -1,5 +1,5 @@
 // RUN: %clang_tsan %s -o %t
-// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
 
 // TODO(yln): fails on one of our bots, need to investigate
 // REQUIRES: disabled
@@ -37,5 +37,4 @@ int main(int argc, const char *argv[]) {
 
 // CHECK: Hello world.
 // CHECK: Data destructor.
-// CHECK-NOT: WARNING: ThreadSanitizer
 // CHECK: Done.
