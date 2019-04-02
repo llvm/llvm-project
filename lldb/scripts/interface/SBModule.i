@@ -184,6 +184,10 @@ public:
     const char *
     GetUUIDString () const;
 
+    bool operator==(const lldb::SBModule &rhs) const;
+
+    bool operator!=(const lldb::SBModule &rhs) const;
+
     lldb::SBSection
     FindSection (const char *sect_name);
 
