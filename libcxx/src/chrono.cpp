@@ -195,7 +195,8 @@ steady_clock::now() _NOEXCEPT
 {
   static const LARGE_INTEGER freq = __QueryPerformanceFrequency();
 
-  LARGE_INTEGER counter = __QueryPerformanceFrequency();
+  LARGE_INTEGER counter;
+  (void) QueryPerformanceCounter(&counter);
   return time_point(duration(counter.QuadPart * nano::den / freq.QuadPart));
 }
 

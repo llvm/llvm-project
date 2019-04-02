@@ -23,7 +23,7 @@ REGISTER_MAP_WITH_PROGRAMSTATE(TaintMap, SymbolRef, TaintTagType)
 
 // Partially tainted symbols.
 REGISTER_MAP_FACTORY_WITH_PROGRAMSTATE(TaintedSubRegions, const SubRegion *,
-                                       TaintTagType);
+                                       TaintTagType)
 REGISTER_MAP_WITH_PROGRAMSTATE(DerivedSymTaint, SymbolRef, TaintedSubRegions)
 
 void taint::printTaint(ProgramStateRef State, raw_ostream &Out, const char *NL,

@@ -45,6 +45,28 @@ define float @uitofp_trunc(i32 %arg) {
   ret float %round
 }
 
+define float @sitofp_ceil(i32 %arg) {
+; CHECK-LABEL: @sitofp_ceil(
+; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG:%.*]] to float
+; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.ceil.f32(float [[CVT]])
+; CHECK-NEXT:    ret float [[ROUND]]
+;
+  %cvt = sitofp i32 %arg to float
+  %round = call float @llvm.ceil.f32(float %cvt)
+  ret float %round
+}
+
+define float @uitofp_ceil(i32 %arg) {
+; CHECK-LABEL: @uitofp_ceil(
+; CHECK-NEXT:    [[CVT:%.*]] = uitofp i32 [[ARG:%.*]] to float
+; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.ceil.f32(float [[CVT]])
+; CHECK-NEXT:    ret float [[ROUND]]
+;
+  %cvt = uitofp i32 %arg to float
+  %round = call float @llvm.ceil.f32(float %cvt)
+  ret float %round
+}
+
 define float @sitofp_round(i32 %arg) {
 ; CHECK-LABEL: @sitofp_round(
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG:%.*]] to float
@@ -113,6 +135,7 @@ define float @uitofp_rint(i32 %arg) {
 
 declare float @llvm.floor.f32(float) #0
 declare float @llvm.trunc.f32(float) #0
+declare float @llvm.ceil.f32(float) #0
 declare float @llvm.round.f32(float) #0
 declare float @llvm.nearbyint.f32(float) #0
 declare float @llvm.rint.f32(float) #0

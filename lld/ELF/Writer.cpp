@@ -152,14 +152,18 @@ template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
   });
 }
 
-template <class ELFT> static void combineEhFrameSections() {
+template <class ELFT> static void combineEhSections() {
   for (InputSectionBase *&S : InputSections) {
-    EhInputSection *ES = dyn_cast<EhInputSection>(S);
-    if (!ES || !ES->Live)
+    if (!S->Live)
       continue;
 
-    In.EhFrame->addSection<ELFT>(ES);
-    S = nullptr;
+    if (auto *ES = dyn_cast<EhInputSection>(S)) {
+      In.EhFrame->addSection<ELFT>(ES);
+      S = nullptr;
+    } else if (S->kind() == SectionBase::Regular && In.ARMExidx &&
+               In.ARMExidx->addSection(cast<InputSection>(S))) {
+      S = nullptr;
+    }
   }
 
   std::vector<InputSectionBase *> &V = InputSections;
@@ -465,8 +469,11 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Such sections are of type input section.
   createSyntheticSections<ELFT>();
 
+  // Some input sections that are used for exception handling need to be moved
+  // into synthetic sections. Do that now so that they aren't assigned to
+  // output sections in the usual way.
   if (!Config->Relocatable)
-    combineEhFrameSections<ELFT>();
+    combineEhSections<ELFT>();
 
   // We want to process linker script commands. When SECTIONS command
   // is given we let it create sections.

@@ -610,7 +610,8 @@ def AVX512RCOperand : AsmOperandClass {
 }
 def AVX512RC : Operand<i32> {
   let PrintMethod = "printRoundingControl";
-  let OperandType = "OPERAND_IMMEDIATE";
+  let OperandNamespace = "X86";
+  let OperandType = "OPERAND_ROUNDING_CONTROL";
   let ParserMatchClass = AVX512RCOperand;
 }
 

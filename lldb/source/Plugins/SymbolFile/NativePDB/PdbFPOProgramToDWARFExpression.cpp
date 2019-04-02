@@ -27,9 +27,21 @@ namespace {
 class FPOProgramNode;
 class FPOProgramASTVisitor;
 
+class NodeAllocator {
+public:
+  template <typename T, typename... Args> T *makeNode(Args &&... args) {
+    void *new_node_mem = m_alloc.Allocate(sizeof(T), alignof(T));
+    return new (new_node_mem) T(std::forward<Args>(args)...);
+  }
+
+private:
+  llvm::BumpPtrAllocator m_alloc;
+};
+
 class FPOProgramNode {
 public:
   enum Kind {
+    Symbol,
     Register,
     IntegerLiteral,
     BinaryOp,
@@ -49,46 +61,31 @@ private:
   Kind m_token_kind;
 };
 
-class FPOProgramNodeRegisterRef : public FPOProgramNode {
+class FPOProgramNodeSymbol: public FPOProgramNode {
 public:
-  FPOProgramNodeRegisterRef(llvm::StringRef name)
-      : FPOProgramNode(Register), m_name(name) {}
+  FPOProgramNodeSymbol(llvm::StringRef name)
+      : FPOProgramNode(Symbol), m_name(name) {}
 
   void Accept(FPOProgramASTVisitor *visitor) override;
 
   llvm::StringRef GetName() const { return m_name; }
-  uint32_t GetLLDBRegNum() const { return m_lldb_reg_num; }
-
-  bool ResolveLLDBRegisterNum(llvm::Triple::ArchType arch_type);
 
 private:
   llvm::StringRef m_name;
-  uint32_t m_lldb_reg_num = LLDB_INVALID_REGNUM;
 };
 
-bool FPOProgramNodeRegisterRef::ResolveLLDBRegisterNum(
-    llvm::Triple::ArchType arch_type) {
+class FPOProgramNodeRegisterRef : public FPOProgramNode {
+public:
+  FPOProgramNodeRegisterRef(uint32_t lldb_reg_num)
+      : FPOProgramNode(Register), m_lldb_reg_num(lldb_reg_num) {}
 
-  llvm::StringRef reg_name = m_name.slice(1, m_name.size());
+  void Accept(FPOProgramASTVisitor *visitor) override;
 
-  // lookup register name to get lldb register number
-  llvm::ArrayRef<llvm::EnumEntry<uint16_t>> register_names =
-      llvm::codeview::getRegisterNames();
-  auto it = llvm::find_if(
-      register_names,
-      [&reg_name](const llvm::EnumEntry<uint16_t> &register_entry) {
-        return reg_name.compare_lower(register_entry.Name) == 0;
-      });
+  uint32_t GetLLDBRegNum() const { return m_lldb_reg_num; }
 
-  if (it == register_names.end()) {
-    return false;
-  }
-
-  auto reg_id = static_cast<llvm::codeview::RegisterId>(it->Value);
-  m_lldb_reg_num = npdb::GetLLDBRegisterNumber(arch_type, reg_id);
-
-  return m_lldb_reg_num != LLDB_INVALID_REGNUM;
-}
+private:
+  uint32_t m_lldb_reg_num;
+};
 
 class FPOProgramNodeIntegerLiteral : public FPOProgramNode {
 public:
@@ -157,11 +154,16 @@ class FPOProgramASTVisitor {
 public:
   virtual ~FPOProgramASTVisitor() = default;
 
+  virtual void Visit(FPOProgramNodeSymbol *node) {}
   virtual void Visit(FPOProgramNodeRegisterRef *node) {}
   virtual void Visit(FPOProgramNodeIntegerLiteral *node) {}
   virtual void Visit(FPOProgramNodeBinaryOp *node) {}
   virtual void Visit(FPOProgramNodeUnaryOp *node) {}
 };
+
+void FPOProgramNodeSymbol::Accept(FPOProgramASTVisitor *visitor) {
+  visitor->Visit(this);
+}
 
 void FPOProgramNodeRegisterRef::Accept(FPOProgramASTVisitor *visitor) {
   visitor->Visit(this);
@@ -216,11 +218,10 @@ void FPOProgramASTVisitorMergeDependent::Visit(FPOProgramNodeUnaryOp *node) {
 void FPOProgramASTVisitorMergeDependent::TryReplace(
     FPOProgramNode *&node_ref) const {
 
-  while (node_ref->GetKind() == FPOProgramNode::Register) {
-    auto *node_register_ref =
-        static_cast<FPOProgramNodeRegisterRef *>(node_ref);
+  while (node_ref->GetKind() == FPOProgramNode::Symbol) {
+    auto *node_symbol_ref = static_cast<FPOProgramNodeSymbol *>(node_ref);
 
-    auto it = m_dependent_programs.find(node_register_ref->GetName());
+    auto it = m_dependent_programs.find(node_symbol_ref->GetName());
     if (it == m_dependent_programs.end()) {
       break;
     }
@@ -234,39 +235,70 @@ public:
   FPOProgramASTVisitorResolveRegisterRefs(
       const llvm::DenseMap<llvm::StringRef, FPOProgramNode *>
           &dependent_programs,
-      llvm::Triple::ArchType arch_type)
-      : m_dependent_programs(dependent_programs), m_arch_type(arch_type) {}
+      llvm::Triple::ArchType arch_type, NodeAllocator &alloc)
+      : m_dependent_programs(dependent_programs), m_arch_type(arch_type),
+        m_alloc(alloc) {}
 
-  bool Resolve(FPOProgramNode *program);
+  bool Resolve(FPOProgramNode *&program);
 
 private:
-  void Visit(FPOProgramNodeRegisterRef *node) override;
-  void Visit(FPOProgramNodeIntegerLiteral *node) override {}
   void Visit(FPOProgramNodeBinaryOp *node) override;
   void Visit(FPOProgramNodeUnaryOp *node) override;
 
-private:
+  bool TryReplace(FPOProgramNode *&node_ref);
+
   const llvm::DenseMap<llvm::StringRef, FPOProgramNode *> &m_dependent_programs;
   llvm::Triple::ArchType m_arch_type;
+  NodeAllocator &m_alloc;
   bool m_no_error_flag = true;
 };
 
-bool FPOProgramASTVisitorResolveRegisterRefs::Resolve(FPOProgramNode *program) {
+bool FPOProgramASTVisitorResolveRegisterRefs::Resolve(FPOProgramNode *&program) {
+  if (!TryReplace(program))
+    return false;
   program->Accept(this);
   return m_no_error_flag;
 }
 
-void FPOProgramASTVisitorResolveRegisterRefs::Visit(
-    FPOProgramNodeRegisterRef *node) {
+static uint32_t ResolveLLDBRegisterNum(llvm::StringRef reg_name, llvm::Triple::ArchType arch_type) {
+  // lookup register name to get lldb register number
+  llvm::ArrayRef<llvm::EnumEntry<uint16_t>> register_names =
+      llvm::codeview::getRegisterNames();
+  auto it = llvm::find_if(
+      register_names,
+      [&reg_name](const llvm::EnumEntry<uint16_t> &register_entry) {
+        return reg_name.compare_lower(register_entry.Name) == 0;
+      });
 
-  // lookup register reference as lvalue in predecedent assignments
-  auto it = m_dependent_programs.find(node->GetName());
+  if (it == register_names.end())
+    return LLDB_INVALID_REGNUM;
+
+  auto reg_id = static_cast<llvm::codeview::RegisterId>(it->Value);
+  return npdb::GetLLDBRegisterNumber(arch_type, reg_id);
+}
+
+bool FPOProgramASTVisitorResolveRegisterRefs::TryReplace(
+    FPOProgramNode *&node_ref) {
+  if (node_ref->GetKind() != FPOProgramNode::Symbol)
+    return true;
+
+  auto *symbol = static_cast<FPOProgramNodeSymbol *>(node_ref);
+
+  // Look up register reference as lvalue in preceding assignments.
+  auto it = m_dependent_programs.find(symbol->GetName());
   if (it != m_dependent_programs.end()) {
-    // dependent programs are already resolved and valid
-    return;
+    // Dependent programs are handled elsewhere.
+    return true;
   }
-  // try to resolve register reference as lldb register name
-  m_no_error_flag = node->ResolveLLDBRegisterNum(m_arch_type);
+
+  uint32_t reg_num =
+      ResolveLLDBRegisterNum(symbol->GetName().drop_front(1), m_arch_type);
+
+  if (reg_num == LLDB_INVALID_REGNUM)
+    return false;
+
+  node_ref = m_alloc.makeNode<FPOProgramNodeRegisterRef>(reg_num);
+  return true;
 }
 
 void FPOProgramASTVisitorResolveRegisterRefs::Visit(
@@ -357,17 +389,6 @@ void FPOProgramASTVisitorDWARFCodegen::Visit(FPOProgramNodeUnaryOp *node) {
   }
 }
 
-class NodeAllocator {
-public:
-  template <typename T, typename... Args> T *makeNode(Args &&... args) {
-    void *new_node_mem = m_alloc.Allocate(sizeof(T), alignof(T));
-    return new (new_node_mem) T(std::forward<Args>(args)...);
-  }
-
-private:
-  llvm::BumpPtrAllocator m_alloc;
-};
-
 } // namespace
 
 static bool ParseFPOSingleAssignmentProgram(llvm::StringRef program,
@@ -427,8 +448,7 @@ static bool ParseFPOSingleAssignmentProgram(llvm::StringRef program,
     }
 
     if (cur.startswith("$")) {
-      // token is register ref
-      eval_stack.push_back(alloc.makeNode<FPOProgramNodeRegisterRef>(cur));
+      eval_stack.push_back(alloc.makeNode<FPOProgramNodeSymbol>(cur));
       continue;
     }
 
@@ -488,7 +508,7 @@ static FPOProgramNode *ParseFPOProgram(llvm::StringRef program,
 
     // check & resolve assignment program
     FPOProgramASTVisitorResolveRegisterRefs resolver(dependent_programs,
-                                                     arch_type);
+                                                     arch_type, alloc);
     if (!resolver.Resolve(rvalue_ast)) {
       return nullptr;
     }

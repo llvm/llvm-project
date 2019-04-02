@@ -2182,6 +2182,22 @@ let AddedComplexity = 4 in {
             (RLLG GR64:$val, (NILL GR32:$shift, imm32zx16trunc:$imm), 0)>;
 }
 
+// Substitute (x*64-s) with (-s), since shift/rotate instructions only
+// use the last 6 bits of the second operand register (making it modulo 64).
+let AddedComplexity = 4 in {
+  def : Pat<(shl GR64:$val, (sub imm32mod64,  GR32:$shift)),
+            (SLLG GR64:$val, (LCR GR32:$shift), 0)>;
+
+  def : Pat<(sra GR64:$val, (sub imm32mod64,  GR32:$shift)),
+            (SRAG GR64:$val, (LCR GR32:$shift), 0)>;
+
+  def : Pat<(srl GR64:$val, (sub imm32mod64,  GR32:$shift)),
+            (SRLG GR64:$val, (LCR GR32:$shift), 0)>;
+
+  def : Pat<(rotl GR64:$val, (sub imm32mod64,  GR32:$shift)),
+            (RLLG GR64:$val, (LCR GR32:$shift), 0)>;
+}
+
 // Peepholes for turning scalar operations into block operations.
 defm : BlockLoadStore<anyextloadi8, i32, MVCSequence, NCSequence, OCSequence,
                       XCSequence, 1>;

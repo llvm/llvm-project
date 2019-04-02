@@ -30,6 +30,7 @@ public:
     VK_RISCV_PCREL_HI,
     VK_RISCV_GOT_HI,
     VK_RISCV_CALL,
+    VK_RISCV_CALL_PLT,
     VK_RISCV_Invalid
   };
 

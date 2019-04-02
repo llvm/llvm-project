@@ -226,12 +226,11 @@ private:
 
 public:
   virtual ~ELFWriter() {}
-  bool WriteSectionHeaders = true;
+  bool WriteSectionHeaders;
 
   Error finalize() override;
   Error write() override;
-  ELFWriter(Object &Obj, Buffer &Buf, bool WSH)
-      : Writer(Obj, Buf), WriteSectionHeaders(WSH) {}
+  ELFWriter(Object &Obj, Buffer &Buf, bool WSH);
 };
 
 class BinaryWriter : public Writer {
@@ -810,6 +809,7 @@ public:
   uint32_t Version;
   uint32_t Flags;
 
+  bool HadShdrs = true;
   StringTableSection *SectionNames = nullptr;
   SymbolTableSection *SymbolTable = nullptr;
   SectionIndexSection *SectionIndexTable = nullptr;

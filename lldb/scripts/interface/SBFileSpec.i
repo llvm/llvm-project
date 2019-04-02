@@ -42,6 +42,10 @@ public:
 
     ~SBFileSpec ();
 
+    bool operator==(const SBFileSpec &rhs) const;
+
+    bool operator!=(const SBFileSpec &rhs) const;
+
     bool
     IsValid() const;
 

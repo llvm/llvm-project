@@ -52,6 +52,10 @@ enum Fixups {
   // fixup_riscv_call - A fixup representing a call attached to the auipc
   // instruction in a pair composed of adjacent auipc+jalr instructions.
   fixup_riscv_call,
+  // fixup_riscv_call_plt - A fixup representing a procedure linkage table call
+  // attached to the auipc instruction in a pair composed of adjacent auipc+jalr
+  // instructions.
+  fixup_riscv_call_plt,
   // fixup_riscv_relax - Used to generate an R_RISCV_RELAX relocation type,
   // which indicates the linker may relax the instruction pair.
   fixup_riscv_relax,

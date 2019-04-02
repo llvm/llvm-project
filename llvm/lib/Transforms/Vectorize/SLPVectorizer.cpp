@@ -583,7 +583,7 @@ public:
   /// the stored value. Otherwise, the size is the width of the largest loaded
   /// value reaching V. This method is used by the vectorizer to calculate
   /// vectorization factors.
-  unsigned getVectorElementSize(Value *V);
+  unsigned getVectorElementSize(Value *V) const;
 
   /// Compute the minimum type sizes required to represent the entries in a
   /// vectorizable tree.
@@ -606,7 +606,7 @@ public:
 
   /// \returns True if the VectorizableTree is both tiny and not fully
   /// vectorizable. We do not vectorize such trees.
-  bool isTreeTinyAndNotFullyVectorizable();
+  bool isTreeTinyAndNotFullyVectorizable() const;
 
   OptimizationRemarkEmitter *getORE() { return ORE; }
 
@@ -2601,7 +2601,7 @@ bool BoUpSLP::isFullyVectorizableTinyTree() const {
   return true;
 }
 
-bool BoUpSLP::isTreeTinyAndNotFullyVectorizable() {
+bool BoUpSLP::isTreeTinyAndNotFullyVectorizable() const {
   // We can vectorize the tree if its size is greater than or equal to the
   // minimum size specified by the MinTreeSize command line option.
   if (VectorizableTree.size() >= MinTreeSize)
@@ -4315,7 +4315,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   BS->ScheduleStart = nullptr;
 }
 
-unsigned BoUpSLP::getVectorElementSize(Value *V) {
+unsigned BoUpSLP::getVectorElementSize(Value *V) const {
   // If V is a store, just return the width of the stored value without
   // traversing the expression tree. This is the common case.
   if (auto *Store = dyn_cast<StoreInst>(V))

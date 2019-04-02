@@ -64,6 +64,15 @@ public:
 
     explicit operator bool() const;
 
+    // operator== is a free function, which swig does not handle, so we inject
+    // our own equality operator here
+    %pythoncode%{
+    def __eq__(self, other):
+      return not self.__ne__(other)
+    %}
+
+    bool operator!=(const SBAddress &rhs) const;
+
     void
     Clear ();
 

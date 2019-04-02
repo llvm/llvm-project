@@ -1438,9 +1438,10 @@ HoistTerminator:
 static bool canSinkInstructions(
     ArrayRef<Instruction *> Insts,
     DenseMap<Instruction *, SmallVector<Value *, 4>> &PHIOperands) {
-  // Prune out obviously bad instructions to move. Any non-store instruction
-  // must have exactly one use, and we check later that use is by a single,
-  // common PHI instruction in the successor.
+  // Prune out obviously bad instructions to move. Each instruction must have
+  // exactly zero or one use, and we check later that use is by a single, common
+  // PHI instruction in the successor.
+  bool HasUse = !Insts.front()->user_empty();
   for (auto *I : Insts) {
     // These instructions may change or break semantics if moved.
     if (isa<PHINode>(I) || I->isEHPad() || isa<AllocaInst>(I) ||
@@ -1454,9 +1455,10 @@ static bool canSinkInstructions(
       if (C->isInlineAsm())
         return false;
 
-    // Everything must have only one use too, apart from stores which
-    // have no uses.
-    if (!isa<StoreInst>(I) && !I->hasOneUse())
+    // Each instruction must have zero or one use.
+    if (HasUse && !I->hasOneUse())
+      return false;
+    if (!HasUse && !I->user_empty())
       return false;
   }
 
@@ -1465,11 +1467,11 @@ static bool canSinkInstructions(
     if (!I->isSameOperationAs(I0))
       return false;
 
-  // All instructions in Insts are known to be the same opcode. If they aren't
-  // stores, check the only user of each is a PHI or in the same block as the
-  // instruction, because if a user is in the same block as an instruction
-  // we're contemplating sinking, it must already be determined to be sinkable.
-  if (!isa<StoreInst>(I0)) {
+  // All instructions in Insts are known to be the same opcode. If they have a
+  // use, check that the only user is a PHI or in the same block as the
+  // instruction, because if a user is in the same block as an instruction we're
+  // contemplating sinking, it must already be determined to be sinkable.
+  if (HasUse) {
     auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
     auto *Succ = I0->getParent()->getTerminator()->getSuccessor(0);
     if (!all_of(Insts, [&PNUse,&Succ](const Instruction *I) -> bool {
@@ -1547,7 +1549,7 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   // it is slightly over-aggressive - it gets confused by commutative instructions
   // so double-check it here.
   Instruction *I0 = Insts.front();
-  if (!isa<StoreInst>(I0)) {
+  if (!I0->user_empty()) {
     auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
     if (!all_of(Insts, [&PNUse](const Instruction *I) -> bool {
           auto *U = cast<Instruction>(*I->user_begin());
@@ -1605,11 +1607,10 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       I0->andIRFlags(I);
     }
 
-  if (!isa<StoreInst>(I0)) {
+  if (!I0->user_empty()) {
     // canSinkLastInstruction checked that all instructions were used by
     // one and only one PHI node. Find that now, RAUW it to our common
     // instruction and nuke it.
-    assert(I0->hasOneUse());
     auto *PN = cast<PHINode>(*I0->user_begin());
     PN->replaceAllUsesWith(I0);
     PN->eraseFromParent();

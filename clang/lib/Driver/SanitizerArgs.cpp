@@ -768,6 +768,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
     AsanGlobalsDeadStripping =
         !TC.getTriple().isOSBinFormatELF() || TC.getTriple().isOSFuchsia() ||
+        TC.getTriple().isPS4() ||
         Args.hasArg(options::OPT_fsanitize_address_globals_dead_stripping);
 
     AsanUseOdrIndicator =
