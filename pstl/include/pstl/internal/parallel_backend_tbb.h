@@ -291,7 +291,7 @@ __split(_Index __m)
 }
 
 //------------------------------------------------------------------------
-// parallel_strict_scan
+// __parallel_strict_scan
 //------------------------------------------------------------------------
 
 template <typename _Index, typename _Tp, typename _Rp, typename _Cp>
@@ -350,7 +350,8 @@ __downsweep(_Index __i, _Index __m, _Index __tilesize, _Tp* __r, _Index __lastsi
 // T must have a trivial constructor and destructor.
 template <class _ExecutionPolicy, typename _Index, typename _Tp, typename _Rp, typename _Cp, typename _Sp, typename _Ap>
 void
-parallel_strict_scan(_ExecutionPolicy&&, _Index __n, _Tp __initial, _Rp __reduce, _Cp __combine, _Sp __scan, _Ap __apex)
+__parallel_strict_scan(_ExecutionPolicy&&, _Index __n, _Tp __initial, _Rp __reduce, _Cp __combine, _Sp __scan,
+                       _Ap __apex)
 {
     tbb::this_task_arena::isolate([=, &__combine]() {
         if (__n > 1)

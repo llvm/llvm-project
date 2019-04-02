@@ -596,6 +596,10 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbol))
     Config.SymbolsToKeep.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbols))
+    if (Error E = addSymbolsFromFile(Config.SymbolsToKeep, DC.Alloc,
+                                     Arg->getValue(), UseRegex))
+      return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_symbol)) {
     Expected<NewSymbolInfo> NSI = parseNewSymbolInfo(Arg->getValue());
     if (!NSI)

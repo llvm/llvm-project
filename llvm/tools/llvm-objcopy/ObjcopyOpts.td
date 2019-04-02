@@ -207,6 +207,15 @@ defm keep_symbol : Eq<"keep-symbol", "Do not remove symbol <symbol>">,
                    MetaVarName<"symbol">;
 def K : JoinedOrSeparate<["-"], "K">, Alias<keep_symbol>;
 
+defm keep_symbols
+    : Eq<"keep-symbols",
+         "Reads a list of symbols from <filename> and runs as if "
+         "--keep-symbol=<symbol> is set for each one. <filename> "
+         "contains one symbol per line and may contain comments beginning with "
+         "'#'. Leading and trailing whitespace is stripped from each line. May "
+         "be repeated to read symbols from many files.">,
+      MetaVarName<"filename">;
+
 def only_keep_debug
     : Flag<["-", "--"], "only-keep-debug">,
       HelpText<"Clear sections that would not be stripped by --strip-debug. "

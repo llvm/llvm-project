@@ -11,9 +11,8 @@
 // template <class... Types> class tuple;
 
 // template <size_t I, class... Types>
-// class tuple_element<I, tuple<Types...> >
+// struct tuple_element<I, tuple<Types...> >
 // {
-// public:
 //     typedef Ti type;
 // };
 

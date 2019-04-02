@@ -277,7 +277,7 @@ __pattern_transform_scan(_ExecutionPolicy&& __exec, _RandomAccessIterator __firs
         return __result;
     }
     return __internal::__except_handler([&]() {
-        __par_backend::parallel_strict_scan(
+        __par_backend::__parallel_strict_scan(
             std::forward<_ExecutionPolicy>(__exec), __n, __init,
             [__first, __unary_op, __binary_op, __result, __is_vector](_DifferenceType __i, _DifferenceType __len) {
                 return __internal::__brick_transform_scan(__first + __i, __first + (__i + __len), __result + __i,
