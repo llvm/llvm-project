@@ -1,4 +1,4 @@
-;===- ./lib/LLVMBuild.txt --------------------------------------*- Conf -*--===;
+;===- ./lib/SYCL/LLVMBuild.txt ------------------------------*- Conf -*-----===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -14,42 +14,8 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories =
- Analysis
- AsmParser
- Bitcode
- CodeGen
- DebugInfo
- Demangle
- ExecutionEngine
- FuzzMutate
- LineEditor
- Linker
- IR
- IRReader
- LTO
- MC
- MCA
- Object
- BinaryFormat
- ObjectYAML
- Option
- Remarks
- Passes
- ProfileData
- SYCL
- Support
- TableGen
- TextAPI
- Target
- Testing
- ToolDrivers
- Transforms
- WindowsManifest
- XRay
-
 [component_0]
-type = Group
-name = Libraries
-parent = $ROOT
+type = Library
+name = ASFixer
+parent = Libraries
+required_libraries = Passes Core Support TransformUtils
