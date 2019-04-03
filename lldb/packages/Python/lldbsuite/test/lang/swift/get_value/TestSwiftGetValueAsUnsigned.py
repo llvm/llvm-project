@@ -14,7 +14,7 @@ Tests that the SBValue::GetValueAsUnsigned() API works for Swift types
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
@@ -23,8 +23,8 @@ class SwiftGetValueAsUnsignedAPITest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_get_value_as_unsigned_sbapi(self):
         """Tests that the SBValue::GetValueAsUnsigned() API works for Swift types"""
         self.build()

@@ -13,7 +13,7 @@
 Check formatting for Swift.Array<T>
 """
 import lldb
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -29,9 +29,9 @@ class TestSwiftArrayType(lldbtest.TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    @decorators.swiftTest
-    @decorators.skipIf(bugnumber='rdar://30663811', oslist=['linux'])
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @skipIf(bugnumber='rdar://30663811', oslist=['linux'])
+    @add_test_categories(["swiftpr"])
     def test_array(self):
         """Check formatting for Swift.Array<T>"""
         self.build()

@@ -13,7 +13,7 @@
 Test that AddressOf returns sensible results
 """
 import lldb
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -24,20 +24,11 @@ class TestSwiftAddressOf(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
-    def test_any_type(self):
-        """Test the Any type"""
-        self.build()
-        self.do_test()
-
     def setUp(self):
         lldbtest.TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def check_variable(self, name, is_reference, contents = 0):
-        var = self.frame.FindVariable(name)
+        var = self.frame().FindVariable(name)
         self.assertTrue(var.IsValid(), "Couldn't find %s var: %s"%(name, var.GetError().GetCString()))
         if is_reference:
             self.assertTrue(var.GetType().IsReferenceType(), name + "was not supposed to be a reference.")
@@ -57,13 +48,14 @@ class TestSwiftAddressOf(lldbtest.TestBase):
         self.assertTrue(error.Success())
 
         
-    def do_test(self):
+    @swiftTest
+    @add_test_categories(["swiftpr"])
+    def test_any_type(self):
         """Test the Any type"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
+        self.build()
 
         # Create the target
-        target = self.dbg.CreateTarget(exe)
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
         self.assertTrue(target, lldbtest.VALID_TARGET)
 
         # Set the breakpoints:
@@ -71,14 +63,13 @@ class TestSwiftAddressOf(lldbtest.TestBase):
         breakpoints = {}
         for bkpt_text in bkpt_list:
             breakpoints[bkpt_text] = target.BreakpointCreateBySourceRegex(
-            'Break here in ' + bkpt_text, self.main_source_spec)
+                'Break here in ' + bkpt_text, lldb.SBFileSpec('main.swift'))
         self.assertTrue(
             breakpoints[bkpt_text].GetNumLocations() > 0,
             lldbtest.VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         self.process = target.LaunchSimple(None, None, os.getcwd())
-
         self.assertTrue(self.process, lldbtest.PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
@@ -86,32 +77,18 @@ class TestSwiftAddressOf(lldbtest.TestBase):
             self.process, breakpoints["main"])
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame.IsValid(), "Frame 0 is valid.")
 
         self.check_variable("c", True, 12345)
         self.check_variable("s", False, 12345)
         self.check_variable("int", False, 100)
 
-        threads = lldbutil.continue_to_breakpoint(self.process, breakpoints["takes_class"])
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-
+        lldbutil.continue_to_breakpoint(self.process, breakpoints["takes_class"])
         self.check_variable("in_class", True, 12345)
         
-        threads = lldbutil.continue_to_breakpoint(self.process, breakpoints["takes_struct"])
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-
+        lldbutil.continue_to_breakpoint(self.process, breakpoints["takes_struct"])
         self.check_variable("in_struct", False, 12345)
         
-        threads = lldbutil.continue_to_breakpoint(self.process, breakpoints["takes_inout"])
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
+        lldbutil.continue_to_breakpoint(self.process, breakpoints["takes_inout"])
 
         # Inout sugar is currently not preserved by the compiler so
         # the inout type appears as direct.

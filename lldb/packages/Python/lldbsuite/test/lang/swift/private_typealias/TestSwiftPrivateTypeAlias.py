@@ -14,7 +14,7 @@ Test that we correctly find private decls
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -26,19 +26,15 @@ class TestSwiftPrivateTypeAlias(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.a_source = "main.swift"
-        self.a_source_spec = lldb.SBFileSpec(self.a_source)
 
-    @decorators.swiftTest
-    @decorators.expectedFailureAll(bugnumber="rdar://24921067")
+    @swiftTest
+    @expectedFailureAll(bugnumber="rdar://24921067")
     def test_swift_private_typealias(self):
         """Test that we can correctly print variables whose types are private type aliases"""
         self.build()
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
-        target = self.dbg.CreateTarget(exe)
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
@@ -56,11 +52,8 @@ class TestSwiftPrivateTypeAlias(TestBase):
             process, breakpoint1)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        var = self.frame.FindVariable("i")
+        var = self.frame().FindVariable("i")
         lldbutil.check_variable(
             self,
             var,
@@ -73,11 +66,8 @@ class TestSwiftPrivateTypeAlias(TestBase):
             process, breakpoint2)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        var = self.frame.FindVariable("a")
+        var = self.frame().FindVariable("a")
         dict_child_0 = var.GetChildAtIndex(0)
         child_0 = dict_child_0.GetChildAtIndex(0)
         child_1 = dict_child_0.GetChildAtIndex(1)

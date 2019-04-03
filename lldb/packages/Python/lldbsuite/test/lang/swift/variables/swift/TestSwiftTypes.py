@@ -14,7 +14,7 @@ Test that we can inspect basic Swift types
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 import platform
@@ -24,8 +24,8 @@ class TestSwiftTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_swift_types(self):
         """Test that we can inspect basic Swift types"""
         self.build()
