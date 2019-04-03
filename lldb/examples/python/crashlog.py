@@ -284,7 +284,11 @@ class CrashLog(symbolication.Symbolicator):
                     try:
                         plist_root = plistlib.readPlistFromString(s)
                     except:
+<<<<<<< HEAD
                         print(("Got exception: ", sys.exc_info()[1], " handling dsymForUUID output: \n", s))
+=======
+                        print(("Got exception: ", sys.exc_value, " handling dsymForUUID output: \n", s)) 
+>>>>>>> 2553c7dbdcbb40b1e53fd8cd7db827a39b603adb
                         raise
                     if plist_root:
                         plist = plist_root[uuid_str]
