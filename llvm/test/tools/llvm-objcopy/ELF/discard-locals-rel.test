@@ -19,9 +19,8 @@ Sections:
         Symbol: .L.rel
         Type:   R_X86_64_PC32
 Symbols:
-  Local:
-    - Name:     .L.rel
-      Type:     STT_FUNC
-      Section:  .text
+  - Name:     .L.rel
+    Type:     STT_FUNC
+    Section:  .text
 
 # CHECK: not stripping symbol '.L.rel' because it is named in a relocation.

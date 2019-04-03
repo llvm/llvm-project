@@ -27,22 +27,21 @@ Sections:
     AddressAlign:    0x0000000000000010
     Size:            64
 Symbols:
-  Local:
-    - Name:     foo
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1000
-      Size:     8
-    - Name:     bar
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1008
-      Size:     8
-    - Name:     baz
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1010
-      Size:     8
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+    Size:     8
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1008
+    Size:     8
+  - Name:     baz
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1010
+    Size:     8
 
 #CHECK: Symbols [
 #CHECK-NEXT:  Symbol {

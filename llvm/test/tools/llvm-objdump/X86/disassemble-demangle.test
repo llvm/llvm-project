@@ -23,15 +23,14 @@ Sections:
     AddressAlign:    0x0000000000000010
     Content:         "0000000000000000"
 Symbols:
-  Local:
-    - Name:     _Z3fooi
-      Type:     STT_FUNC
-      Section:  .text1
-      Value:    0x1000
-    - Name:     _Z3foov
-      Type:     STT_FUNC
-      Section:  .text2
-      Value:    0x1010
+  - Name:     _Z3fooi
+    Type:     STT_FUNC
+    Section:  .text1
+    Value:    0x1000
+  - Name:     _Z3foov
+    Type:     STT_FUNC
+    Section:  .text2
+    Value:    0x1010
 
 # We just want to check that the symbols are demangled
 # DEMANGLE: foo(int)

@@ -932,7 +932,7 @@ public:
 
     if (getFeatureBits().none()) {
       // Set default features.
-      copySTI().ToggleFeature("SOUTHERN_ISLANDS");
+      copySTI().ToggleFeature("southern-islands");
     }
 
     setAvailableFeatures(ComputeAvailableFeatures(getFeatureBits()));

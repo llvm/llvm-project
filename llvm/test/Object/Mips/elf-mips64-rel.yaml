@@ -98,17 +98,17 @@ Sections:
     Size:            0x0F
 
 Symbols:
-  Local:
-    - Name:            .text
-      Type:            STT_SECTION
-      Section:         .text
-    - Name:            .rodata
-      Type:            STT_SECTION
-      Section:         .rodata
-  Global:
-    - Name:            main
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x58
-    - Name:            printf
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .rodata
+    Type:            STT_SECTION
+    Section:         .rodata
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x58
+    Binding:         STB_GLOBAL
+  - Name:            printf
+    Binding:         STB_GLOBAL
 ...

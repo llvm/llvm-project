@@ -4701,6 +4701,22 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
         match(Op0, m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0),
                                                m_Value(X)))) return X;
     break;
+  case Intrinsic::floor:
+  case Intrinsic::trunc:
+  case Intrinsic::ceil:
+  case Intrinsic::round:
+  case Intrinsic::nearbyint:
+  case Intrinsic::rint: {
+    // floor (sitofp x) -> sitofp x
+    // floor (uitofp x) -> uitofp x
+    //
+    // Converting from int always results in a finite integral number or
+    // infinity. For either of those inputs, these rounding functions always
+    // return the same value, so the rounding can be eliminated.
+    if (match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
+      return Op0;
+    break;
+  }
   default:
     break;
   }

@@ -435,6 +435,17 @@ public:
 
     lldb::SBError
     RunREPL (lldb::LanguageType language, const char *repl_options);
+
+    %pythoncode%{
+    def __iter__(self):
+        '''Iterate over all targets in a lldb.SBDebugger object.'''
+        return lldb_iter(self, 'GetNumTargets', 'GetTargetAtIndex')
+
+    def __len__(self):
+        '''Return the number of targets in a lldb.SBDebugger object.'''
+        return self.GetNumTargets()
+    %}
+
 }; // class SBDebugger
 
 } // namespace lldb

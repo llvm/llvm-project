@@ -38,19 +38,19 @@ Sections:
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     AddressAlign:    0x0000000000000010
 Symbols:
-  Local:           
-    - Name:            .text.foo
-      Type:            STT_SECTION
-      Section:         .text.foo         
-    - Name:            .text.bar
-      Type:            STT_SECTION
-      Section:         .text.bar
-  Weak:            
-    - Name:            foo
-      Type:            STT_FUNC
-      Section:         .text.foo
-      Size:            0x0000000000000000
-    - Name:            bar
-      Type:            STT_FUNC
-      Section:         .text.bar
-      Size:            0x0000000000000000
+  - Name:            .text.foo
+    Type:            STT_SECTION
+    Section:         .text.foo
+  - Name:            .text.bar
+    Type:            STT_SECTION
+    Section:         .text.bar
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text.foo
+    Size:            0x0000000000000000
+    Binding:         STB_WEAK
+  - Name:            bar
+    Type:            STT_FUNC
+    Section:         .text.bar
+    Size:            0x0000000000000000
+    Binding:         STB_WEAK

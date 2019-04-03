@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=pitcairn < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
 
 ; FUNC-LABEL: {{^}}v_test_imax_sge_i32:
@@ -238,7 +238,10 @@ define amdgpu_kernel void @simplify_demanded_bits_test_umax_ugt_i16(i32 addrspac
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_max_slt_i16:
 ; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x13
 ; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x1c
-; SI: s_max_i32 [[MAX:s[0-9]+]], [[A]], [[B]]
+; SI-DAG: s_sext_i32_i16 [[EXT_A:s[0-9]+]], [[A]]
+; SI-DAG: s_sext_i32_i16 [[EXT_B:s[0-9]+]], [[B]]
+
+; SI: s_max_i32 [[MAX:s[0-9]+]], [[EXT_A]], [[EXT_B]]
 ; SI: v_mov_b32_e32 [[VMAX:v[0-9]+]], [[MAX]]
 ; SI: buffer_store_dword [[VMAX]]
 

@@ -2773,7 +2773,7 @@ Decl has pointer identity in the AST.
 Given
   __attribute__((device)) void f() { ... }
 decl(hasAttr(clang::attr::CUDADevice)) matches the function declaration of
-f. If the matcher is use from clang-query, attr::Kind parameter should be
+f. If the matcher is used from clang-query, attr::Kind parameter should be
 passed as a quoted string. e.g., hasAttr("attr::CUDADevice").
 </pre></td></tr>
 

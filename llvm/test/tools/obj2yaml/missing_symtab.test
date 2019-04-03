@@ -2,4 +2,4 @@
 # test that we don't crash when passed object files without a symbol table
 # CHECK-LABEL: FileHeader:
 # CHECK-LABEL: Sections:
-# CHECK-LABEL: Symbols:
+# CHECK-NOT: Symbols:

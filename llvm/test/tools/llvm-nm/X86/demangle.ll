@@ -1,5 +1,6 @@
 ; RUN: llc -filetype=obj -mtriple=x86_64-pc-linux -o %t.o %s
 ; RUN: llvm-nm %t.o | FileCheck --check-prefix="MANGLED" %s
+; RUN: llvm-nm %t.o --no-demangle | FileCheck --check-prefix="MANGLED" %s
 ; RUN: llvm-nm -C %t.o | FileCheck --check-prefix="DEMANGLED" %s
 ; RUN: llvm-nm --demangle %t.o | FileCheck --check-prefix="DEMANGLED" %s
 
@@ -10,6 +11,12 @@
 ; RUN: llc -filetype=obj -mtriple=x86_64-pc-win32 -o %t.coff %s
 ; RUN: llvm-nm %t.coff | FileCheck --check-prefix="COFF-MANGLED" %s
 ; RUN: llvm-nm -C %t.coff | FileCheck --check-prefix="COFF-DEMANGLED" %s
+
+; Show that the last of --no-demangle/--demangle wins:
+; RUN: llvm-nm --demangle --no-demangle %t.o | FileCheck --check-prefix="MANGLED" %s
+; RUN: llvm-nm --no-demangle --demangle %t.o | FileCheck --check-prefix="DEMANGLED" %s
+; RUN: llvm-nm --no-demangle --demangle --no-demangle %t.o | FileCheck --check-prefix="MANGLED" %s
+; RUN: llvm-nm --demangle --no-demangle --demangle %t.o | FileCheck --check-prefix="DEMANGLED" %s
 
 define i32 @_Z3fooi(i32) #0 {
 entry:

@@ -332,6 +332,7 @@ protected:
   bool HasDot1Insts;
   bool HasDot2Insts;
   bool EnableSRAMECC;
+  bool DoesNotSupportSRAMECC;
   bool FlatAddressSpace;
   bool FlatInstOffsets;
   bool FlatGlobalInsts;

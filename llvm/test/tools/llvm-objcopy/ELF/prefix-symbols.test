@@ -18,17 +18,16 @@ Sections:
     AddressAlign:    0x0000000000000010
     Size:            64
 Symbols:
-  Local:
-    - Name:     foo
-      Type:     STT_SECTION
-      Section:  .text
-    - Name:     bar
-      Type:     STT_FILE
-      Section:  .text
-  Global:
-    - Name:     foobar
-      Type:     STT_FUNC
-      Section:  .text
+  - Name:     foo
+    Type:     STT_SECTION
+    Section:  .text
+  - Name:     bar
+    Type:     STT_FILE
+    Section:  .text
+  - Name:     foobar
+    Type:     STT_FUNC
+    Section:  .text
+    Binding:  STB_GLOBAL
 
 # COMMON: Symbols [
 # COMMON-NEXT:  Symbol {

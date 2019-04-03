@@ -42,7 +42,7 @@ class ELFDumper {
   ArrayRef<Elf_Word> ShndxTable;
 
   std::error_code dumpSymbols(const Elf_Shdr *Symtab,
-                              ELFYAML::SymbolsDef &Symbols);
+                              std::vector<ELFYAML::Symbol> &Symbols);
   std::error_code dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
                              StringRef StrTable, ELFYAML::Symbol &S);
   std::error_code dumpCommonSection(const Elf_Shdr *Shdr, ELFYAML::Section &S);
@@ -226,8 +226,9 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
 }
 
 template <class ELFT>
-std::error_code ELFDumper<ELFT>::dumpSymbols(const Elf_Shdr *Symtab,
-                                             ELFYAML::SymbolsDef &Symbols) {
+std::error_code
+ELFDumper<ELFT>::dumpSymbols(const Elf_Shdr *Symtab,
+                             std::vector<ELFYAML::Symbol> &Symbols) {
   if (!Symtab)
     return std::error_code();
 
@@ -240,33 +241,11 @@ std::error_code ELFDumper<ELFT>::dumpSymbols(const Elf_Shdr *Symtab,
   if (!SymtabOrErr)
     return errorToErrorCode(SymtabOrErr.takeError());
 
-  bool IsFirstSym = true;
-  for (const auto &Sym : *SymtabOrErr) {
-    if (IsFirstSym) {
-      IsFirstSym = false;
-      continue;
-    }
-
+  for (const auto &Sym : (*SymtabOrErr).drop_front()) {
     ELFYAML::Symbol S;
     if (auto EC = dumpSymbol(&Sym, Symtab, StrTable, S))
       return EC;
-
-    switch (Sym.getBinding()) {
-    case ELF::STB_LOCAL:
-      Symbols.Local.push_back(S);
-      break;
-    case ELF::STB_GLOBAL:
-      Symbols.Global.push_back(S);
-      break;
-    case ELF::STB_WEAK:
-      Symbols.Weak.push_back(S);
-      break;
-    case ELF::STB_GNU_UNIQUE:
-      Symbols.GNUUnique.push_back(S);
-      break;
-    default:
-      llvm_unreachable("Unknown ELF symbol binding");
-    }
+    Symbols.push_back(S);
   }
 
   return std::error_code();
@@ -280,6 +259,7 @@ ELFDumper<ELFT>::dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
   S.Value = Sym->st_value;
   S.Size = Sym->st_size;
   S.Other = Sym->st_other;
+  S.Binding = Sym->getBinding();
 
   Expected<StringRef> SymbolNameOrErr = getSymbolName(Sym, StrTable, SymTab);
   if (!SymbolNameOrErr)

@@ -495,6 +495,14 @@ public:
             for idx in range(len(accessor)):
                 children.append(accessor[idx])
             return children
+
+        def __iter__(self):
+            '''Iterate over all child values of a lldb.SBValue object.'''
+            return lldb_iter(self, 'GetNumChildren', 'GetChildAtIndex')
+
+        def __len__(self):
+            '''Return the number of child values of a lldb.SBValue object.'''
+            return self.GetNumChildren()
         
         __swig_getmethods__["children"] = get_value_child_list
         if _newclass: children = property(get_value_child_list, None, doc='''A read only property that returns a list() of lldb.SBValue objects for the children of the value.''')

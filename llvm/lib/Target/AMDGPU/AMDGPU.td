@@ -281,6 +281,12 @@ def FeatureDot2Insts : SubtargetFeature<"dot2-insts",
   "Has v_dot2_f32_f16, v_dot2_i32_i16, v_dot2_u32_u16, v_dot4_u32_u8, v_dot8_u32_u4 instructions"
 >;
 
+def FeatureDoesNotSupportSRAMECC : SubtargetFeature<"no-sram-ecc-support",
+  "DoesNotSupportSRAMECC",
+  "true",
+  "Hardware does not support SRAM ECC"
+>;
+
 def FeatureSRAMECC : SubtargetFeature<"sram-ecc",
   "EnableSRAMECC",
   "true",
@@ -431,33 +437,40 @@ def FeatureDisable : SubtargetFeature<"",
 >;
 
 class GCNSubtargetFeatureGeneration <string Value,
-                                  list<SubtargetFeature> Implies> :
-        SubtargetFeatureGeneration <Value, "GCNSubtarget", Implies>;
+                                     string FeatureName,
+                                     list<SubtargetFeature> Implies> :
+        SubtargetFeatureGeneration <Value, FeatureName, "GCNSubtarget", Implies>;
 
 def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
+    "southern-islands",
   [FeatureFP64, FeatureLocalMemorySize32768, FeatureMIMG_R128,
   FeatureWavefrontSize64,
-  FeatureLDSBankCount32, FeatureMovrel, FeatureTrigReducedRange]
+  FeatureLDSBankCount32, FeatureMovrel, FeatureTrigReducedRange,
+  FeatureDoesNotSupportSRAMECC]
 >;
 
 def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
+    "sea-islands",
   [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureFlatAddressSpace,
-  FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange]
+  FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange,
+  FeatureDoesNotSupportSRAMECC]
 >;
 
 def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
+  "volcanic-islands",
   [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
    FeatureWavefrontSize64, FeatureFlatAddressSpace,
    FeatureGCN3Encoding, FeatureCIInsts, FeatureVIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureVGPRIndexMode, FeatureMovrel,
    FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP,
-   FeatureIntClamp, FeatureTrigReducedRange
+   FeatureIntClamp, FeatureTrigReducedRange, FeatureDoesNotSupportSRAMECC
   ]
 >;
 
 def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
+  "gfx9",
   [FeatureFP64, FeatureLocalMemorySize65536,
    FeatureWavefrontSize64, FeatureFlatAddressSpace,
    FeatureGCN3Encoding, FeatureCIInsts, FeatureVIInsts, Feature16BitInsts,
@@ -545,19 +558,22 @@ def FeatureISAVersion9_0_0 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
-   FeatureCodeObjectV3]>;
+   FeatureCodeObjectV3,
+   FeatureDoesNotSupportSRAMECC]>;
 
 def FeatureISAVersion9_0_2 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
    FeatureXNACK,
+   FeatureDoesNotSupportSRAMECC,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion9_0_4 : FeatureSet<
   [FeatureGFX9,
    FeatureLDSBankCount32,
    FeatureFmaMixInsts,
+   FeatureDoesNotSupportSRAMECC,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion9_0_6 : FeatureSet<

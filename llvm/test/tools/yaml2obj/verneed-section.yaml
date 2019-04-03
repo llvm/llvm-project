@@ -69,5 +69,5 @@ Sections:
             Flags:           12
             Other:           2
 DynamicSymbols:
-  Global:
-    - Name:            f1
+  - Name:    f1
+    Binding: STB_GLOBAL

@@ -56,31 +56,18 @@ for.end:
 }
 
 define void @foo_optsize(i32 inreg %dns) optsize {
-; SLOW-LABEL: foo_optsize:
-; SLOW:       # %bb.0: # %entry
-; SLOW-NEXT:    xorl %ecx, %ecx
-; SLOW-NEXT:    decl %ecx
-; SLOW-NEXT:  .LBB2_1: # %for.body
-; SLOW-NEXT:    # =>This Inner Loop Header: Depth=1
-; SLOW-NEXT:    movzwl %cx, %edx
-; SLOW-NEXT:    decl %ecx
-; SLOW-NEXT:    cmpl %eax, %edx
-; SLOW-NEXT:    jl .LBB2_1
-; SLOW-NEXT:  # %bb.2: # %for.end
-; SLOW-NEXT:    retl
-;
-; FAST-LABEL: foo_optsize:
-; FAST:       # %bb.0: # %entry
-; FAST-NEXT:    xorl %ecx, %ecx
-; FAST-NEXT:    decl %ecx
-; FAST-NEXT:  .LBB2_1: # %for.body
-; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
-; FAST-NEXT:    movzwl %cx, %edx
-; FAST-NEXT:    leal -1(%ecx), %ecx
-; FAST-NEXT:    cmpl %eax, %edx
-; FAST-NEXT:    jl .LBB2_1
-; FAST-NEXT:  # %bb.2: # %for.end
-; FAST-NEXT:    retl
+; CHECK-LABEL: foo_optsize:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    decl %ecx
+; CHECK-NEXT:  .LBB2_1: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movzwl %cx, %edx
+; CHECK-NEXT:    decl %ecx
+; CHECK-NEXT:    cmpl %eax, %edx
+; CHECK-NEXT:    jl .LBB2_1
+; CHECK-NEXT:  # %bb.2: # %for.end
+; CHECK-NEXT:    retl
 entry:
   br label %for.body
 
@@ -96,31 +83,18 @@ for.end:
 }
 
 define void @bar_optsize(i32 inreg %dns) optsize {
-; SLOW-LABEL: bar_optsize:
-; SLOW:       # %bb.0: # %entry
-; SLOW-NEXT:    xorl %ecx, %ecx
-; SLOW-NEXT:    incl %ecx
-; SLOW-NEXT:  .LBB3_1: # %for.body
-; SLOW-NEXT:    # =>This Inner Loop Header: Depth=1
-; SLOW-NEXT:    movzwl %cx, %edx
-; SLOW-NEXT:    incl %ecx
-; SLOW-NEXT:    cmpl %eax, %edx
-; SLOW-NEXT:    jl .LBB3_1
-; SLOW-NEXT:  # %bb.2: # %for.end
-; SLOW-NEXT:    retl
-;
-; FAST-LABEL: bar_optsize:
-; FAST:       # %bb.0: # %entry
-; FAST-NEXT:    xorl %ecx, %ecx
-; FAST-NEXT:    incl %ecx
-; FAST-NEXT:  .LBB3_1: # %for.body
-; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
-; FAST-NEXT:    movzwl %cx, %edx
-; FAST-NEXT:    leal 1(%ecx), %ecx
-; FAST-NEXT:    cmpl %eax, %edx
-; FAST-NEXT:    jl .LBB3_1
-; FAST-NEXT:  # %bb.2: # %for.end
-; FAST-NEXT:    retl
+; CHECK-LABEL: bar_optsize:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    incl %ecx
+; CHECK-NEXT:  .LBB3_1: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movzwl %cx, %edx
+; CHECK-NEXT:    incl %ecx
+; CHECK-NEXT:    cmpl %eax, %edx
+; CHECK-NEXT:    jl .LBB3_1
+; CHECK-NEXT:  # %bb.2: # %for.end
+; CHECK-NEXT:    retl
 entry:
   br label %for.body
 

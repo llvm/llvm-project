@@ -104,6 +104,12 @@ static bool callHasFloatingPointArgument(const CallInst *CI) {
   });
 }
 
+static bool callHasFP128Argument(const CallInst *CI) {
+  return any_of(CI->operands(), [](const Use &OI) {
+    return OI->getType()->isFP128Ty();
+  });
+}
+
 static Value *convertStrToNumber(CallInst *CI, StringRef &Str, int64_t Base) {
   if (Base < 2 || Base > 36)
     // handle special zero base
@@ -2051,6 +2057,20 @@ Value *LibCallSimplifier::optimizePrintF(CallInst *CI, IRBuilder<> &B) {
     B.Insert(New);
     return New;
   }
+
+  // printf(format, ...) -> __small_printf(format, ...) if no 128-bit floating point
+  // arguments.
+  if (TLI->has(LibFunc_small_printf) && !callHasFP128Argument(CI)) {
+    Module *M = B.GetInsertBlock()->getParent()->getParent();
+    auto SmallPrintFFn =
+        M->getOrInsertFunction(TLI->getName(LibFunc_small_printf),
+                               FT, Callee->getAttributes());
+    CallInst *New = cast<CallInst>(CI->clone());
+    New->setCalledFunction(SmallPrintFFn);
+    B.Insert(New);
+    return New;
+  }
+
   return nullptr;
 }
 
@@ -2131,6 +2151,20 @@ Value *LibCallSimplifier::optimizeSPrintF(CallInst *CI, IRBuilder<> &B) {
     B.Insert(New);
     return New;
   }
+
+  // sprintf(str, format, ...) -> __small_sprintf(str, format, ...) if no 128-bit
+  // floating point arguments.
+  if (TLI->has(LibFunc_small_sprintf) && !callHasFP128Argument(CI)) {
+    Module *M = B.GetInsertBlock()->getParent()->getParent();
+    auto SmallSPrintFFn =
+        M->getOrInsertFunction(TLI->getName(LibFunc_small_sprintf),
+                               FT, Callee->getAttributes());
+    CallInst *New = cast<CallInst>(CI->clone());
+    New->setCalledFunction(SmallSPrintFFn);
+    B.Insert(New);
+    return New;
+  }
+
   return nullptr;
 }
 
@@ -2288,6 +2322,20 @@ Value *LibCallSimplifier::optimizeFPrintF(CallInst *CI, IRBuilder<> &B) {
     B.Insert(New);
     return New;
   }
+
+  // fprintf(stream, format, ...) -> __small_fprintf(stream, format, ...) if no
+  // 128-bit floating point arguments.
+  if (TLI->has(LibFunc_small_fprintf) && !callHasFP128Argument(CI)) {
+    Module *M = B.GetInsertBlock()->getParent()->getParent();
+    auto SmallFPrintFFn =
+        M->getOrInsertFunction(TLI->getName(LibFunc_small_fprintf),
+                               FT, Callee->getAttributes());
+    CallInst *New = cast<CallInst>(CI->clone());
+    New->setCalledFunction(SmallFPrintFFn);
+    B.Insert(New);
+    return New;
+  }
+
   return nullptr;
 }
 

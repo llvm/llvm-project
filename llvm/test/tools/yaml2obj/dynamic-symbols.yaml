@@ -14,18 +14,18 @@ Sections:
     Type: SHT_PROGBITS
     Flags: [ SHF_ALLOC, SHF_WRITE ]
 DynamicSymbols:
-  Global:
-    - Name: dynglobal
-      Type: STT_OBJECT
-      Section: .data
-  Weak:
-    - Name: dynweak
-      Type: STT_OBJECT
-      Section: .data
-  Local:
-    - Name: dynlocal
-      Type: STT_OBJECT
-      Section: .data
+  - Name: dynglobal
+    Type: STT_OBJECT
+    Section: .data
+    Binding: STB_GLOBAL
+  - Name: dynweak
+    Type: STT_OBJECT
+    Section: .data
+    Binding: STB_WEAK
+  - Name: dynlocal
+    Type: STT_OBJECT
+    Section: .data
+    Binding: STB_LOCAL
 
 # SECTION: Name: .dynsym
 # SECTION-NEXT: Type: SHT_DYNSYM

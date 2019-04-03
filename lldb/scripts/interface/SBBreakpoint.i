@@ -287,7 +287,17 @@ public:
             for idx in range(len(accessor)):
                 locations.append(accessor[idx])
             return locations
-        
+
+        def __iter__(self):
+            '''Iterate over all breakpoint locations in a lldb.SBBreakpoint
+            object.'''
+            return lldb_iter(self, 'GetNumLocations', 'GetLocationAtIndex')
+
+        def __len__(self):
+            '''Return the number of breakpoint locations in a lldb.SBBreakpoint
+            object.'''
+            return self.GetNumLocations()
+
         __swig_getmethods__["locations"] = get_breakpoint_location_list
         if _newclass: locations = property(get_breakpoint_location_list, None, doc='''A read only property that returns a list() of lldb.SBBreakpointLocation objects for this breakpoint.''')
         

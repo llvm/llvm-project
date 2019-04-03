@@ -534,8 +534,8 @@ static void distributeObjCPointerTypeAttrFromDeclarator(
       // attribute from being applied multiple times and gives
       // the source-location-filler something to work with.
       state.saveDeclSpecAttrs();
-      moveAttrFromListToList(attr, declarator.getAttributes(),
-                             declarator.getMutableDeclSpec().getAttributes());
+      declarator.getMutableDeclSpec().getAttributes().takeOneFrom(
+          declarator.getAttributes(), &attr);
       return;
     }
   }

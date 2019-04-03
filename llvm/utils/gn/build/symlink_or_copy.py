@@ -23,6 +23,11 @@ def main():
     # (which needs to be passed in as an arg), for cross builds.
     if sys.platform != 'win32':
         try:
+            os.makedirs(os.path.dirname(args.output))
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+        try:
             os.symlink(args.source, args.output)
         except OSError as e:
             if e.errno == errno.EEXIST:

@@ -53,9 +53,6 @@ public:
   /// constructor using the Options.get() methods below.
   ClangTidyCheck(StringRef CheckName, ClangTidyContext *Context);
 
-  /// DEPRECATED: Use the other overload.
-  virtual void registerPPCallbacks(CompilerInstance &Compiler) {}
-
   /// \brief Override this to register ``PPCallbacks`` in the preprocessor.
   ///
   /// This should be used for clang-tidy checks that analyze preprocessor-

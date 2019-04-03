@@ -686,7 +686,7 @@ private:
   void reorderInputsAccordingToOpcode(const InstructionsState &S,
                                       ArrayRef<Value *> VL,
                                       SmallVectorImpl<Value *> &Left,
-                                      SmallVectorImpl<Value *> &Right);
+                                      SmallVectorImpl<Value *> &Right) const;
   struct TreeEntry {
     TreeEntry(std::vector<TreeEntry> &Container) : Container(Container) {}
 
@@ -2872,10 +2872,9 @@ static bool shouldReorderOperands(int i, ArrayRef<Value *> Left,
   return false;
 }
 
-void BoUpSLP::reorderInputsAccordingToOpcode(const InstructionsState &S,
-                                             ArrayRef<Value *> VL,
-                                             SmallVectorImpl<Value *> &Left,
-                                             SmallVectorImpl<Value *> &Right) {
+void BoUpSLP::reorderInputsAccordingToOpcode(
+    const InstructionsState &S, ArrayRef<Value *> VL,
+    SmallVectorImpl<Value *> &Left, SmallVectorImpl<Value *> &Right) const {
   assert(!VL.empty() && Left.empty() && Right.empty() &&
          "Unexpected instruction/operand lists");
 

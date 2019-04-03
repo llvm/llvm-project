@@ -90,15 +90,9 @@ namespace WebAssemblyII {
 enum TOF {
   MO_NO_FLAG = 0,
 
-  // Flags to indicate the type of the symbol being referenced
-  MO_SYMBOL_FUNCTION = 0x1,
-  MO_SYMBOL_GLOBAL = 0x2,
-  MO_SYMBOL_EVENT = 0x4,
-  MO_SYMBOL_MASK = 0x7,
-
   // Address of data symbol via a wasm global.  This adds a level of indirection
   // similar to the GOT on native platforms.
-  MO_GOT = 0x8,
+  MO_GOT,
 };
 
 } // end namespace WebAssemblyII

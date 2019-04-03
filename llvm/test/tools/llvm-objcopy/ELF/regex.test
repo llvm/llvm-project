@@ -30,22 +30,21 @@ Sections:
     AddressAlign:    0x0000000000000010
     Size:            64
 Symbols:
-  Local:
-    - Name:     foobaz
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1000
-      Size:     8
-    - Name:     bar
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1008
-      Size:     8
-    - Name:     rebar
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1010
-      Size:     8
+  - Name:     foobaz
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+    Size:     8
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1008
+    Size:     8
+  - Name:     rebar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1010
+    Size:     8
 
 #REGEX1-NOT: foobaz
 #REGEX1-NOT: bar

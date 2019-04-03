@@ -16,8 +16,8 @@ Sections:
     Info:            0
     Type:            SHT_SYMTAB
 Symbols:
-  Global:
-    - Name: foo
+  - Name:          foo
+    Binding:       STB_GLOBAL
 
 ## sh_info has value 2 what says that non-local symbol `foo` is local.
 ## Check we report this case.
@@ -36,8 +36,8 @@ Sections:
     Info:            2
     Type:            SHT_SYMTAB
 Symbols:
-  Global:
-    - Name: foo
+  - Name:          foo
+    Binding:       STB_GLOBAL
 
 ## sh_info has value 0xff what is larger than number of symbols in a .symtab.
 ## Check we report this case.
@@ -55,5 +55,5 @@ Sections:
     Info:            0xff
     Type:            SHT_SYMTAB
 Symbols:
-  Global:
-    - Name: foo
+  - Name:          foo
+    Binding:       STB_GLOBAL

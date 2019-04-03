@@ -1,3 +1,4 @@
+import("//clang-tools-extra/clangd/xpc/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
@@ -35,8 +36,13 @@ write_lit_config("lit_site_cfg") {
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "PYTHON_EXECUTABLE=$python_path",
-    "CLANGD_BUILD_XPC_SUPPORT=0",  # FIXME
   ]
+
+  if (clangd_build_xpc) {
+    extra_values += [ "CLANGD_BUILD_XPC_SUPPORT=1" ]
+  } else {
+    extra_values += [ "CLANGD_BUILD_XPC_SUPPORT=0" ]
+  }
 
   if (clang_enable_static_analyzer) {
     extra_values += [ "CLANG_ENABLE_STATIC_ANALYZER=1" ]
@@ -83,6 +89,10 @@ group("test") {
     "//llvm/utils/llvm-lit",
     "//llvm/utils/not",
   ]
+  if (clangd_build_xpc) {
+    deps +=
+        [ "//clang-tools-extra/clangd/xpc/test-client:clangd-xpc-test-client" ]
+  }
 
   # FIXME: dep on dexp once it exist
   testonly = true

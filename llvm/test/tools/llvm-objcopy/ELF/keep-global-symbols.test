@@ -56,34 +56,42 @@ Sections:
     Type:          SHT_PROGBITS
     Flags:         [ SHF_ALLOC, SHF_EXECINSTR ]
 Symbols:
-  Local:
-    - Name:        Local1
-      Section:     .text
-    - Name:        Local2
-      Section:     .text
-  Weak:
-    - Name:        Weak1
-      Section:     .text
-    - Name:        Weak2
-      Section:     .text
-    - Name:        Weak3
-      Section:     .text
-  Global:
-    - Name:        Global1
-      Section:     .text
-    - Name:        Global2
-      Section:     .text
-    - Name:        Global3
-      Section:     .text
-    - Name:        Global4
-      Section:     .text
-    - Name:        Global5
-      Section:     .text
-    - Name:        Global6
-      Section:     .text
-    - Name:        "Global5 Global6"
-      Section:     .text
-    - Name:        Global7
+  - Name:        Local1
+    Section:     .text
+  - Name:        Local2
+    Section:     .text
+  - Name:        Global1
+    Section:     .text
+    Binding:     STB_GLOBAL
+  - Name:        Global2
+    Section:     .text
+    Binding:     STB_GLOBAL
+  - Name:        Global3
+    Section:     .text
+    Binding:     STB_GLOBAL
+  - Name:        Global4
+    Section:     .text
+    Binding:     STB_GLOBAL
+  - Name:        Global5
+    Section:     .text
+    Binding:     STB_GLOBAL
+  - Name:        Global6
+    Section:     .text
+    Binding:     STB_GLOBAL
+  - Name:        "Global5 Global6"
+    Section:     .text
+    Binding:     STB_GLOBAL
+  - Name:        Global7
+    Binding:     STB_GLOBAL
+  - Name:        Weak1
+    Section:     .text
+    Binding:     STB_WEAK
+  - Name:        Weak2
+    Section:     .text
+    Binding:     STB_WEAK
+  - Name:        Weak3
+    Section:     .text
+    Binding:     STB_WEAK
 
 # CHECK:      Symbol table '.symtab' contains 14 entries:
 # CHECK-NEXT:    Num: Value Size Type Bind Vis Ndx Name

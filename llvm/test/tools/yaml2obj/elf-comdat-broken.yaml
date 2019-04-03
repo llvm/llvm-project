@@ -16,8 +16,8 @@ Sections:
       - SectionOrType: 0xFF
       - SectionOrType: 3
 Symbols:
-  Global:
-    - Name:            foo
+  - Name:    foo
+  - Binding: STB_GLOBAL
 
 ## Check we are able to produce SHT_GROUP section with a custom Type (0xFF).
 # CHECK:       Groups {

@@ -36,8 +36,8 @@ Sections:
     Info:          26
     Type:          SHT_SYMTAB
 Symbols:
-  Global:
-    - Name: foo
+  - Name:    foo
+    Binding: STB_GLOBAL
 DynamicSymbols:
-  Global:
-    - Name: bar
+  - Name:    bar
+    Binding: STB_GLOBAL
