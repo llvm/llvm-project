@@ -37,8 +37,10 @@ int main(int, char**) {
   std::any_of(std::begin(arr), std::end(arr), P());
   std::binary_search(std::begin(arr), std::end(arr), 1);
   std::binary_search(std::begin(arr), std::end(arr), 1, std::greater<int>());
+#if TEST_STD_VER >= 17
   std::clamp(2, 1, 3);
   std::clamp(2, 1, 3, std::greater<int>());
+#endif
   std::count_if(std::begin(arr), std::end(arr), P());
   std::count(std::begin(arr), std::end(arr), 1);
   std::equal_range(std::begin(arr), std::end(arr), 1);
@@ -46,9 +48,11 @@ int main(int, char**) {
   std::equal(std::begin(arr), std::end(arr), std::begin(arr));
   std::equal(std::begin(arr), std::end(arr), std::begin(arr),
              std::greater<int>());
+#if TEST_STD_VER >= 14
   std::equal(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
   std::equal(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr),
              std::greater<int>());
+#endif
   std::find_end(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
   std::find_end(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr),
                 std::greater<int>());
@@ -71,10 +75,12 @@ int main(int, char**) {
   std::is_permutation(std::begin(arr), std::end(arr), std::begin(arr));
   std::is_permutation(std::begin(arr), std::end(arr), std::begin(arr),
                       std::greater<int>());
+#if TEST_STD_VER >= 14
   std::is_permutation(std::begin(arr), std::end(arr), std::begin(arr),
                       std::end(arr));
   std::is_permutation(std::begin(arr), std::end(arr), std::begin(arr),
                       std::end(arr), std::greater<int>());
+#endif
   std::is_sorted_until(std::begin(arr), std::end(arr));
   std::is_sorted_until(std::begin(arr), std::end(arr), std::greater<int>());
   std::is_sorted(std::begin(arr), std::end(arr));
@@ -89,26 +95,34 @@ int main(int, char**) {
   std::max_element(std::begin(arr), std::end(arr), std::greater<int>());
   std::max(1, 2);
   std::max(1, 2, std::greater<int>());
+#if TEST_STD_VER >= 11
   std::max({1, 2, 3});
   std::max({1, 2, 3}, std::greater<int>());
+#endif
   std::min_element(std::begin(arr), std::end(arr));
   std::min_element(std::begin(arr), std::end(arr), std::greater<int>());
   std::min(1, 2);
   std::min(1, 2, std::greater<int>());
+#if TEST_STD_VER >= 11
   std::min({1, 2, 3});
   std::min({1, 2, 3}, std::greater<int>());
+#endif
   std::minmax_element(std::begin(arr), std::end(arr));
   std::minmax_element(std::begin(arr), std::end(arr), std::greater<int>());
   std::minmax(1, 2);
   std::minmax(1, 2, std::greater<int>());
+#if TEST_STD_VER >= 11
   std::minmax({1, 2, 3});
   std::minmax({1, 2, 3}, std::greater<int>());
+#endif
   std::mismatch(std::begin(arr), std::end(arr), std::begin(arr));
   std::mismatch(std::begin(arr), std::end(arr), std::begin(arr),
                 std::greater<int>());
+#if TEST_STD_VER >= 14
   std::mismatch(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
   std::mismatch(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr),
                 std::greater<int>());
+#endif
   std::none_of(std::begin(arr), std::end(arr), P());
   std::remove_if(std::begin(arr), std::end(arr), P());
   std::remove(std::begin(arr), std::end(arr), 1);
@@ -117,8 +131,10 @@ int main(int, char**) {
   std::search(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
   std::search(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr),
               std::greater<int>());
+#if TEST_STD_VER >= 17
   std::search(std::begin(arr), std::end(arr),
               std::default_searcher(std::begin(arr), std::end(arr)));
+#endif
   std::unique(std::begin(arr), std::end(arr));
   std::unique(std::begin(arr), std::end(arr), std::greater<int>());
   std::upper_bound(std::begin(arr), std::end(arr), 1);
