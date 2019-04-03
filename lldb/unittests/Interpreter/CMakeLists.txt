@@ -6,8 +6,3 @@ add_lldb_unittest(InterpreterTests
     lldbInterpreter
     lldbUtilityHelpers
   )
-
-target_link_libraries(InterpreterTests
-  PRIVATE
-  ${PYTHON_LIBRARY}
-  )

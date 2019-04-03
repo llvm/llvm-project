@@ -160,7 +160,7 @@ public:
 
   ~CommandObjectTypeSummaryAdd() override = default;
 
-  void IOHandlerActivated(IOHandler &io_handler) override {
+  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
     static const char *g_summary_addreader_instructions =
         "Enter your Python command(s). Type 'DONE' to end.\n"
         "def function (valobj,internal_dict):\n"
@@ -169,7 +169,7 @@ public:
         "        internal_dict: an LLDB support object not to be used\"\"\"\n";
 
     StreamFileSP output_sp(io_handler.GetOutputStreamFile());
-    if (output_sp) {
+    if (output_sp && interactive) {
       output_sp->PutCString(g_summary_addreader_instructions);
       output_sp->Flush();
     }
@@ -412,9 +412,9 @@ protected:
     }
   }
 
-  void IOHandlerActivated(IOHandler &io_handler) override {
+  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
     StreamFileSP output_sp(io_handler.GetOutputStreamFile());
-    if (output_sp) {
+    if (output_sp && interactive) {
       output_sp->PutCString(g_synth_addreader_instructions);
       output_sp->Flush();
     }
