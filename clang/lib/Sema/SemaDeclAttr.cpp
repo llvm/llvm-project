@@ -7099,6 +7099,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_ObjCSubclassingRestricted:
     handleSimpleAttribute<ObjCSubclassingRestrictedAttr>(S, D, AL);
     break;
+  case ParsedAttr::AT_ObjCClassStub:
+    handleSimpleAttribute<ObjCClassStubAttr>(S, D, AL);
+    break;
   case ParsedAttr::AT_ObjCCompleteDefinition:
     handleSimpleAttribute<ObjCCompleteDefinitionAttr>(S, D, AL);
     break;
