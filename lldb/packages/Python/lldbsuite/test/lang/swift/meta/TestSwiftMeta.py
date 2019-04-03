@@ -22,7 +22,7 @@ class TestSwiftMeta(lldbtest.TestBase):
 
     @swiftTest
     def test_swiftDecorator(self):
-        self.assertTrue(self.getDebugInfo() <> "gmodules")
+        self.assertTrue(self.getDebugInfo() != "gmodules")
 
     @swiftTest
     def test_swiftBuild(self):
