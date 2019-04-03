@@ -118,6 +118,14 @@ public:
     operator != (const lldb::SBSection &rhs);
      
     %pythoncode %{
+        def __iter__(self):
+            '''Iterate over all subsections in a lldb.SBSection object.'''
+            return lldb_iter(self, 'GetNumSubSections', 'GetSubSectionAtIndex')
+
+        def __len__(self):
+            '''Return the number of subsections in a lldb.SBSection object.'''
+            return self.GetNumSubSections()
+
         def get_addr(self):
             return SBAddress(self, 0)
 
