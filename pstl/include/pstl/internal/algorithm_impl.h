@@ -408,6 +408,63 @@ __pattern_walk3(_ExecutionPolicy&& __exec, _RandomAccessIterator1 __first1, _Ran
 
 template <class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
 bool
+__brick_equal(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
+              _ForwardIterator2 __last2, _BinaryPredicate __p, /* IsVector = */ std::false_type) noexcept
+{
+    return std::equal(__first1, __last1, __first2, __last2, __p);
+}
+
+template <class _RandomAccessIterator1, class _RandomAccessIterator2, class _BinaryPredicate>
+bool
+__brick_equal(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1, _RandomAccessIterator2 __first2,
+              _RandomAccessIterator2 __last2, _BinaryPredicate __p, /* is_vector = */ std::true_type) noexcept
+{
+    if (__last1 - __first1 != __last2 - __first2)
+        return false;
+
+    return __unseq_backend::__simd_first(__first1, __last1 - __first1, __first2,
+                                         __internal::__not_pred<_BinaryPredicate>(__p))
+               .first == __last1;
+}
+
+template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate,
+          class _IsVector>
+bool
+__pattern_equal(_ExecutionPolicy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
+                _ForwardIterator2 __last2, _BinaryPredicate __p, _IsVector __is_vector, /* is_parallel = */
+                std::false_type) noexcept
+{
+    return __internal::__brick_equal(__first1, __last1, __first2, __last2, __p, __is_vector);
+}
+
+#if __PSTL_USE_PAR_POLICIES
+template <class _ExecutionPolicy, class _RandomAccessIterator1, class _RandomAccessIterator2, class _BinaryPredicate,
+          class _IsVector>
+bool
+__pattern_equal(_ExecutionPolicy&& __exec, _RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
+                _RandomAccessIterator2 __first2, _RandomAccessIterator2 __last2, _BinaryPredicate __p,
+                _IsVector __is_vector, /*is_parallel=*/std::true_type)
+{
+    if (__last1 - __first1 != __last2 - __first2)
+        return false;
+
+    return __internal::__except_handler([&]() {
+        return !__internal::__parallel_or(
+            std::forward<_ExecutionPolicy>(__exec), __first1, __last1,
+            [__first1, __first2, __p, __is_vector](_RandomAccessIterator1 __i, _RandomAccessIterator1 __j) {
+                return !__internal::__brick_equal(__i, __j, __first2 + (__i - __first1), __first2 + (__j - __first1),
+                                                  __p, __is_vector);
+            });
+    });
+}
+#endif
+
+//------------------------------------------------------------------------
+// equal version for sequences with equal length
+//------------------------------------------------------------------------
+
+template <class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+bool
 __brick_equal(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2, _BinaryPredicate __p,
               /* IsVector = */ std::false_type) noexcept
 {
