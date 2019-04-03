@@ -8,8 +8,8 @@
 #   (lldb) script import lldb.macosx.heap
 #----------------------------------------------------------------------
 
+from __future__ import print_function
 import lldb
-import commands
 import optparse
 import os
 import os.path
@@ -228,7 +228,7 @@ def append_regex_callback(option, opt, value, parser):
         ivar_regex = re.compile(value)
         parser.values.ivar_regex_blacklist.append(ivar_regex)
     except:
-        print 'error: an exception was thrown when compiling the ivar regular expression for "%s"' % value
+        print('error: an exception was thrown when compiling the ivar regular expression for "%s"' % value)
 
 
 def add_common_options(parser):
@@ -389,16 +389,16 @@ def find_variable_containing_address(verbose, frame, match_addr):
         if var_addr != lldb.LLDB_INVALID_ADDRESS:
             byte_size = var.GetType().GetByteSize()
             if verbose:
-                print 'frame #%u: [%#x - %#x) %s' % (frame.GetFrameID(), var.load_addr, var.load_addr + byte_size, var.name)
+                print('frame #%u: [%#x - %#x) %s' % (frame.GetFrameID(), var.load_addr, var.load_addr + byte_size, var.name))
             if var_addr == match_addr:
                 if verbose:
-                    print 'match'
+                    print('match')
                 return var
             else:
                 if byte_size > 0 and var_addr <= match_addr and match_addr < (
                         var_addr + byte_size):
                     if verbose:
-                        print 'match'
+                        print('match')
                     return var
     return None
 
@@ -616,10 +616,10 @@ lldb_info''' % (options.max_frames, options.max_history, addr)
     expr_options.SetPrefix(expr_prefix)
     expr_sbvalue = frame.EvaluateExpression(expr, expr_options)
     if options.verbose:
-        print "expression:"
-        print expr
-        print "expression result:"
-        print expr_sbvalue
+        print("expression:")
+        print(expr)
+        print("expression result:")
+        print(expr_sbvalue)
     if expr_sbvalue.error.Success():
         if history:
             malloc_stack_history = lldb.value(expr_sbvalue)
@@ -670,10 +670,10 @@ def display_match_results(
         expr_options.SetPrefix(expr_prefix)
     expr_sbvalue = frame.EvaluateExpression(expr, expr_options)
     if options.verbose:
-        print "expression:"
-        print expr
-        print "expression result:"
-        print expr_sbvalue
+        print("expression:")
+        print(expr)
+        print("expression result:")
+        print(expr_sbvalue)
     if expr_sbvalue.error.Success():
         match_value = lldb.value(expr_sbvalue)
         i = 0
@@ -863,14 +863,14 @@ def find_variable(debugger, command, result, dict):
 
     for arg in args:
         var_addr = int(arg, 16)
-        print >>result, "Finding a variable with address %#x..." % (var_addr)
+        print("Finding a variable with address %#x..." % (var_addr), file=result)
         done = False
         for thread in process:
             for frame in thread:
                 var = find_variable_containing_address(
                     options.verbose, frame, var_addr)
                 if var:
-                    print var
+                    print(var)
                     done = True
                     break
             if done:
@@ -1519,4 +1519,4 @@ lldb.debugger.HandleCommand(
 lldb.debugger.HandleCommand(
     'command script add -f %s.objc_refs objc_refs' %
     __name__)
-print '"malloc_info", "ptr_refs", "cstr_refs", "find_variable", and "objc_refs" commands have been installed, use the "--help" options on these commands for detailed help.'
+print('"malloc_info", "ptr_refs", "cstr_refs", "find_variable", and "objc_refs" commands have been installed, use the "--help" options on these commands for detailed help.')

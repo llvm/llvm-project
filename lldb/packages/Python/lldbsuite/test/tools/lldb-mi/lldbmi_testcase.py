@@ -42,8 +42,13 @@ class MiTestCaseBase(Base):
 
     def spawnLldbMi(self, exe=None, args=None, preconfig=True):
         import pexpect
-        self.child = pexpect.spawn("%s --interpreter %s" % (
-            self.lldbMiExec, args if args else ""), cwd=self.getBuildDir())
+        import sys
+        if sys.version_info.major == 3:
+          self.child = pexpect.spawnu("%s --interpreter %s" % (
+              self.lldbMiExec, args if args else ""), cwd=self.getBuildDir())
+        else:
+          self.child = pexpect.spawn("%s --interpreter %s" % (
+              self.lldbMiExec, args if args else ""), cwd=self.getBuildDir())
         self.child.setecho(True)
         self.mylog = self.getBuildArtifact("child.log")
         self.child.logfile_read = open(self.mylog, "w")

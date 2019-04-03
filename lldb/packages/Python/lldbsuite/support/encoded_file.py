@@ -32,6 +32,9 @@ def _encoded_write(old_write, encoding):
         # as unicode before attempting to write.
         if isinstance(s, six.binary_type):
             s = s.decode(encoding, "replace")
+        # Filter unreadable characters, Python 3 is stricter than python 2 about them.
+        import re
+        s = re.sub(r'[^\x00-\x7f]',r' ',s)
         return old_write(s)
     return impl
 
