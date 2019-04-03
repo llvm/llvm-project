@@ -8,8 +8,8 @@ FileHeader:
   Type:            ET_EXEC
   Machine:         EM_X86_64
 Symbols:
-  Global:
-    - Name:     test
-      Index:    SHN_HEXAGON_SCOMMON
+  - Name:     test
+    Index:    SHN_HEXAGON_SCOMMON
+    Binding:  STB_GLOBAL
 
 # CHECK: Symbol 'test' has unsupported value greater than or equal to SHN_LORESERVE: 65280

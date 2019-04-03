@@ -52,6 +52,7 @@ LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_RSS)
 // Just use 64, since it can hold 32-bit values too.
 LLVM_YAML_STRONG_TYPEDEF(uint64_t, ELF_SHF)
 LLVM_YAML_STRONG_TYPEDEF(uint16_t, ELF_SHN)
+LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STB)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STT)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STV)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STO)
@@ -97,16 +98,10 @@ struct Symbol {
   ELF_STT Type;
   StringRef Section;
   Optional<ELF_SHN> Index;
+  ELF_STB Binding;
   llvm::yaml::Hex64 Value;
   llvm::yaml::Hex64 Size;
   uint8_t Other;
-};
-
-struct SymbolsDef {
-  std::vector<Symbol> Local;
-  std::vector<Symbol> Global;
-  std::vector<Symbol> Weak;
-  std::vector<Symbol> GNUUnique;
 };
 
 struct SectionOrType {
@@ -289,8 +284,8 @@ struct Object {
   // cleaner and nicer if we read them from the YAML as a separate
   // top-level key, which automatically ensures that invariants like there
   // being a single SHT_SYMTAB section are upheld.
-  SymbolsDef Symbols;
-  SymbolsDef DynamicSymbols;
+  std::vector<Symbol> Symbols;
+  std::vector<Symbol> DynamicSymbols;
 };
 
 } // end namespace ELFYAML
@@ -360,6 +355,10 @@ struct ScalarBitSetTraits<ELFYAML::ELF_SHF> {
 
 template <> struct ScalarEnumerationTraits<ELFYAML::ELF_SHN> {
   static void enumeration(IO &IO, ELFYAML::ELF_SHN &Value);
+};
+
+template <> struct ScalarEnumerationTraits<ELFYAML::ELF_STB> {
+  static void enumeration(IO &IO, ELFYAML::ELF_STB &Value);
 };
 
 template <>
@@ -435,10 +434,6 @@ template <>
 struct MappingTraits<ELFYAML::Symbol> {
   static void mapping(IO &IO, ELFYAML::Symbol &Symbol);
   static StringRef validate(IO &IO, ELFYAML::Symbol &Symbol);
-};
-
-template <> struct MappingTraits<ELFYAML::SymbolsDef> {
-  static void mapping(IO &IO, ELFYAML::SymbolsDef &Symbols);
 };
 
 template <> struct MappingTraits<ELFYAML::DynamicEntry> {

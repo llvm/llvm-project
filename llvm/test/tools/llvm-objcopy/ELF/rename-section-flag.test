@@ -49,6 +49,16 @@
 # Invalid flags:
 # RUN: not llvm-objcopy --rename-section=.foo=.bar,xyzzy %t %t.xyzzy 2>&1 | FileCheck %s --check-prefix=BAD-FLAG
 
+# Upper-case flags:
+# RUN: llvm-objcopy --rename-section=.foo=.bar,ALLOC,LOAD,NOLOAD,READONLY,DEBUG,CODE,DATA,ROM,CONTENTS,MERGE,STRINGS,SHARE \
+# RUN:   --rename-section=.baz=.blah,ALLOC,LOAD,NOLOAD,READONLY,DEBUG,CODE,DATA,ROM,CONTENTS,MERGE,STRINGS,SHARE %t %t.upper
+# RUN: llvm-readobj --sections %t.upper | FileCheck %s --check-prefixes=CHECK,PROGBITS,ALLOC,EXEC,MERGE,STRINGS
+
+# Mixed-case flags:
+# RUN: llvm-objcopy --rename-section=.foo=.bar,aLlOc,LoAd,NoLoad,rEAdONly,Debug,codE,DaTa,rOm,CoNtEnTs,mErGe,sTRINGs,SharE \
+# RUN:   --rename-section=.baz=.blah,aLlOc,LoAd,NoLoad,rEAdONly,Debug,codE,DaTa,rOm,CoNtEnTs,mErGe,sTRINGs,SharE %t %t.mixed
+# RUN: llvm-readobj --sections %t.mixed | FileCheck %s --check-prefixes=CHECK,PROGBITS,ALLOC,EXEC,MERGE,STRINGS
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64

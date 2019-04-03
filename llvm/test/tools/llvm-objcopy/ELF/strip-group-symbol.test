@@ -23,9 +23,9 @@ Sections:
     AddressAlign:    0x0000000000000010
     Size:            64
 Symbols:
-  Weak:
-    - Name:            foo
-      Type:            STT_FUNC
-      Section:         .text
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_WEAK
 
 #CHECK: Symbol foo cannot be removed because it is referenced by the section .group[1].

@@ -283,6 +283,12 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     }
   }
 
+#if KMP_STATS_ENABLED
+  if (KMP_MASTER_GTID(gtid)) {
+    KMP_COUNT_VALUE(OMP_loop_dynamic_total_iterations, tc);
+  }
+#endif
+
   pr->u.p.lb = lb;
   pr->u.p.ub = ub;
   pr->u.p.st = st;

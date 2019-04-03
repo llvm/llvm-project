@@ -42,31 +42,32 @@ Sections:
     AddressAlign:    0x0000000000000010
     Content:         "0000000000000000"
 Symbols:
-  Local:
-    - Name:     Local
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1000
-      Size:     8
-  Weak:
-    - Name:     Weak
-      Type:     STT_FUNC
-      Size:     8
-      Section:  .text
-      Value:    0x1008
-  Global:
-    - Name:     Global
-      Type:     STT_FUNC
-      Size:     8
-      Section:  .text
-      Value:    0x1010
-    - Name:     GlobalUndef
-      Type:     STT_FUNC
-    - Name:     GlobalCommon
-      Type:     STT_OBJECT
-      Index:    SHN_COMMON
-      Value:    0x2006
-      Size:     2
+  - Name:     Local
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+    Size:     8
+  - Name:     Global
+    Type:     STT_FUNC
+    Size:     8
+    Section:  .text
+    Value:    0x1010
+    Binding:  STB_GLOBAL
+  - Name:     GlobalUndef
+    Type:     STT_FUNC
+    Binding:  STB_GLOBAL
+  - Name:     GlobalCommon
+    Type:     STT_OBJECT
+    Index:    SHN_COMMON
+    Value:    0x2006
+    Size:     2
+    Binding:  STB_GLOBAL
+  - Name:     Weak
+    Type:     STT_FUNC
+    Size:     8
+    Section:  .text
+    Value:    0x1008
+    Binding:  STB_WEAK
 
 #CHECK: Symbols [
 #CHECK-NEXT:  Symbol {

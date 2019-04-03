@@ -81,6 +81,7 @@ const RegisterBank &MipsRegisterBankInfo::getRegBankFromRegClass(
   case Mips::SP32RegClassID:
     return getRegBank(Mips::GPRBRegBankID);
   case Mips::FGRCCRegClassID:
+  case Mips::FGR32RegClassID:
   case Mips::FGR64RegClassID:
   case Mips::AFGR64RegClassID:
     return getRegBank(Mips::FPRBRegBankID);
@@ -128,9 +129,19 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_UREM:
     OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
     break;
+  case G_FADD:
+  case G_FSUB:
+  case G_FMUL:
+  case G_FDIV: {
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    assert((Size == 32 || Size == 64) && "Unsupported floating point size");
+    OperandsMapping = Size == 32 ? &Mips::ValueMappings[Mips::SPRIdx]
+                                 : &Mips::ValueMappings[Mips::DPRIdx];
+    break;
+  }
   case G_FCONSTANT: {
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    unsigned Size = Ty.getSizeInBits();
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    assert((Size == 32 || Size == 64) && "Unsupported floating point size");
     const RegisterBankInfo::ValueMapping *FPRValueMapping =
         Size == 32 ? &Mips::ValueMappings[Mips::SPRIdx]
                    : &Mips::ValueMappings[Mips::DPRIdx];

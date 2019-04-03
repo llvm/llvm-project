@@ -23,14 +23,13 @@ Sections:
     AddressAlign:    0x0000000000000010
     Size:            64
 Symbols:
-  Local:
-    - Name:     foo
-      Type:     STT_FILE
-      Section:  .text
-  Global:
-    - Name:     bar
-      Type:     STT_FUNC
-      Section:  .text
+  - Name:     foo
+    Type:     STT_FILE
+    Section:  .text
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Binding:  STB_GLOBAL
 
 #STRIPALL: Symbols [
 #STRIPALL-NEXT:  Symbol {

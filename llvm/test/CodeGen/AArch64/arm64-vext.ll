@@ -454,9 +454,9 @@ define <16 x i8> @vext1(<16 x i8> %_a) nounwind {
 define <2 x i64> @vext2(<2 x i64> %p0, <2 x i64> %p1) nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: vext2:
-; CHECK: ext.16b v1, v1, v1, #8
-; CHECK: ext.16b v0, v0, v0, #8
-; CHECK: add.2d  v0, v0, v1
+; CHECK:       add.2d  v0, v0, v1
+; CHECK-NEXT:  ext.16b v0, v0, v0, #8
+; CHECK-NEXT:  ret
   %t0 = shufflevector <2 x i64> %p1, <2 x i64> undef, <2 x i32> <i32 1, i32 0>
   %t1 = shufflevector <2 x i64> %p0, <2 x i64> undef, <2 x i32> <i32 1, i32 0>
   %t2 = add <2 x i64> %t1, %t0

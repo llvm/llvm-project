@@ -391,16 +391,6 @@ def FGR32 : RegisterClass<"Mips", [f32], 32, (sequence "F%u", 0, 31)> {
   }];
 }
 
-def FGRH32 : RegisterClass<"Mips", [f32], 32, (sequence "F_HI%u", 0, 31)>,
-             Unallocatable {
-  // Do not allocate odd registers when given -mattr=+nooddspreg.
-  let AltOrders = [(decimate FGRH32, 2)];
-  let AltOrderSelect = [{
-    const auto & S = MF.getSubtarget<MipsSubtarget>();
-    return S.isABI_O32() && !S.useOddSPReg();
-  }];
-}
-
 def AFGR64 : RegisterClass<"Mips", [f64], 64, (add
   // Return Values and Arguments
   D0, D1,
@@ -602,11 +592,6 @@ def StrictlyFGR32AsmOperand : MipsAsmRegOperand {
   let PredicateMethod = "isStrictlyFGRAsmReg";
 }
 
-def FGRH32AsmOperand : MipsAsmRegOperand {
-  let Name = "FGRH32AsmReg";
-  let PredicateMethod = "isFGRAsmReg";
-}
-
 def FCCRegsAsmOperand : MipsAsmRegOperand {
   let Name = "FCCAsmReg";
 }
@@ -712,10 +697,6 @@ def FGRCCOpnd : RegisterOperand<FGRCC> {
   // The assembler doesn't use register classes so we can re-use
   // FGR32AsmOperand.
   let ParserMatchClass = FGR32AsmOperand;
-}
-
-def FGRH32Opnd : RegisterOperand<FGRH32> {
-  let ParserMatchClass = FGRH32AsmOperand;
 }
 
 def FCCRegsOpnd : RegisterOperand<FCC> {

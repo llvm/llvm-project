@@ -171,33 +171,34 @@ Sections:
     Relocations:     
       - Offset:          0x0000000000000027
         Type:            R_X86_64_64
-Symbols:         
-  Local:           
-    - Name:            f.c
-      Type:            STT_FILE
-    - Type:            STT_SECTION
-      Section:         .text
-    - Type:            STT_SECTION
-      Section:         .debug_str
-    - Type:            STT_SECTION
-      Section:         .debug_abbrev
-    - Type:            STT_SECTION
-      Section:         .debug_info
-    - Type:            STT_SECTION
-      Section:         .debug_line
-  Global:          
-    - Name:            f1
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x0000000000000006
-    - Name:            f2
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x0000000000000010
-      Size:            0x0000000000000006
-    - Name:            f3
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x0000000000000020
-      Size:            0x0000000000000006
+Symbols:
+  - Name:            f.c
+    Type:            STT_FILE
+  - Type:            STT_SECTION
+    Section:         .text
+  - Type:            STT_SECTION
+    Section:         .debug_str
+  - Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Type:            STT_SECTION
+    Section:         .debug_info
+  - Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            f1
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x0000000000000006
+    Binding:         STB_GLOBAL
+  - Name:            f2
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000010
+    Size:            0x0000000000000006
+    Binding:         STB_GLOBAL
+  - Name:            f3
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000020
+    Size:            0x0000000000000006
+    Binding:         STB_GLOBAL
 ...

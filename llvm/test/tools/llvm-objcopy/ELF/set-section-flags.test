@@ -57,6 +57,18 @@
 # Setting flags for the same section multiple times:
 # RUN: not llvm-objcopy --set-section-flags=.foo=alloc --set-section-flags=.foo=load %t %t2 2>&1 | FileCheck %s --check-prefix=MULTIPLE-SETS
 
+# Upper-case flags:
+# RUN: llvm-objcopy --set-section-flags=.foo=ALLOC,LOAD,NOLOAD,READONLY,DEBUG,CODE,DATA,ROM,CONTENTS,MERGE,STRINGS,SHARE \
+# RUN:   --set-section-flags=.baz=ALLOC,LOAD,NOLOAD,READONLY,DEBUG,CODE,DATA,ROM,CONTENTS,MERGE,STRINGS,SHARE \
+# RUN:   --set-section-flags=.rela.baz=ALLOC,LOAD,NOLOAD,READONLY,DEBUG,CODE,DATA,ROM,CONTENTS,MERGE,STRINGS,SHARE %t %t.upper
+# RUN: llvm-readobj --sections %t.upper | FileCheck %s --check-prefixes=CHECK,PROGBITS,ALLOC,EXEC,MERGE,STRINGS
+
+# Mixed-case flags:
+# RUN: llvm-objcopy --set-section-flags=.foo=aLlOc,LoAd,NoLoad,rEAdONly,Debug,codE,DaTa,rOm,CoNtEnTs,mErGe,sTRINGs,SharE \
+# RUN:   --set-section-flags=.baz=aLlOc,LoAd,NoLoad,rEAdONly,Debug,codE,DaTa,rOm,CoNtEnTs,mErGe,sTRINGs,SharE \
+# RUN:   --set-section-flags=.rela.baz=aLlOc,LoAd,NoLoad,rEAdONly,Debug,codE,DaTa,rOm,CoNtEnTs,mErGe,sTRINGs,SharE %t %t.mixed
+# RUN: llvm-readobj --sections %t.mixed | FileCheck %s --check-prefixes=CHECK,PROGBITS,ALLOC,EXEC,MERGE,STRINGS
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64

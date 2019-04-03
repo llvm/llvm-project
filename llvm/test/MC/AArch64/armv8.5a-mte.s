@@ -90,15 +90,61 @@ gmi x30, x0, xzr
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: gmi x30, x0, xzr
 
-stg [x1]
-stg [x1, #-4096]
-stg [x2, #4080]
-stg [sp, #16]
+stg x0,  [x1]
+stg x1,  [x1, #-4096]
+stg x2,  [x2, #4080]
+stg x3,  [sp, #16]
+stg sp,  [sp, #16]
 
-// CHECK: stg [x1]              // encoding: [0x3f,0x08,0x20,0xd9]
-// CHECK: stg [x1, #-4096]      // encoding: [0x3f,0x08,0x30,0xd9]
-// CHECK: stg [x2, #4080]       // encoding: [0x5f,0xf8,0x2f,0xd9]
-// CHECK: stg [sp, #16]         // encoding: [0xff,0x1b,0x20,0xd9]
+// CHECK: stg x0,  [x1]              // encoding: [0x20,0x08,0x20,0xd9]
+// CHECK: stg x1,  [x1, #-4096]      // encoding: [0x21,0x08,0x30,0xd9]
+// CHECK: stg x2,  [x2, #4080]       // encoding: [0x42,0xf8,0x2f,0xd9]
+// CHECK: stg x3,  [sp, #16]         // encoding: [0xe3,0x1b,0x20,0xd9]
+// CHECK: stg sp,  [sp, #16]         // encoding: [0xff,0x1b,0x20,0xd9]
+
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stg
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stg
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stg
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stg
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stg
+
+stzg x0,  [x1]
+stzg x1,  [x1, #-4096]
+stzg x2,  [x2, #4080]
+stzg x3,  [sp, #16]
+stzg sp,  [sp, #16]
+
+// CHECK: stzg x0,  [x1]             // encoding: [0x20,0x08,0x60,0xd9]
+// CHECK: stzg x1,  [x1, #-4096]     // encoding: [0x21,0x08,0x70,0xd9]
+// CHECK: stzg x2,  [x2, #4080]      // encoding: [0x42,0xf8,0x6f,0xd9]
+// CHECK: stzg x3,  [sp, #16]        // encoding: [0xe3,0x1b,0x60,0xd9]
+// CHECK: stzg sp,  [sp, #16]        // encoding: [0xff,0x1b,0x60,0xd9]
+
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stzg
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stzg
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stzg
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stzg
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stzg
+
+stg x0,  [x1, #-4096]!
+stg x1,  [x2, #4080]!
+stg x2,  [sp, #16]!
+stg sp,  [sp, #16]!
+
+// CHECK: stg x0,  [x1, #-4096]!      // encoding: [0x20,0x0c,0x30,0xd9]
+// CHECK: stg x1,  [x2, #4080]!       // encoding: [0x41,0xfc,0x2f,0xd9]
+// CHECK: stg x2,  [sp, #16]!         // encoding: [0xe2,0x1f,0x20,0xd9]
+// CHECK: stg sp,  [sp, #16]!         // encoding: [0xff,0x1f,0x20,0xd9]
 
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stg
@@ -109,15 +155,15 @@ stg [sp, #16]
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stg
 
-stzg [x1]
-stzg [x1, #-4096]
-stzg [x2, #4080]
-stzg [sp, #16]
+stzg x0,  [x1, #-4096]!
+stzg x1,  [x2, #4080]!
+stzg x2,  [sp, #16]!
+stzg sp,  [sp, #16]!
 
-// CHECK: stzg [x1]             // encoding: [0x3f,0x08,0x60,0xd9]
-// CHECK: stzg [x1, #-4096]     // encoding: [0x3f,0x08,0x70,0xd9]
-// CHECK: stzg [x2, #4080]      // encoding: [0x5f,0xf8,0x6f,0xd9]
-// CHECK: stzg [sp, #16]        // encoding: [0xff,0x1b,0x60,0xd9]
+// CHECK: stzg x0,  [x1, #-4096]!     // encoding: [0x20,0x0c,0x70,0xd9]
+// CHECK: stzg x1,  [x2, #4080]!      // encoding: [0x41,0xfc,0x6f,0xd9]
+// CHECK: stzg x2,  [sp, #16]!        // encoding: [0xe2,0x1f,0x60,0xd9]
+// CHECK: stzg sp,  [sp, #16]!        // encoding: [0xff,0x1f,0x60,0xd9]
 
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stzg
@@ -128,13 +174,15 @@ stzg [sp, #16]
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stzg
 
-stg [x1, #-4096]!
-stg [x2, #4080]!
-stg [sp, #16]!
+stg x0,  [x1], #-4096
+stg x1,  [x2], #4080
+stg x2,  [sp], #16
+stg sp,  [sp], #16
 
-// CHECK: stg [x1, #-4096]!      // encoding: [0x3f,0x0c,0x30,0xd9]
-// CHECK: stg [x2, #4080]!       // encoding: [0x5f,0xfc,0x2f,0xd9]
-// CHECK: stg [sp, #16]!         // encoding: [0xff,0x1f,0x20,0xd9]
+// CHECK: stg x0,  [x1], #-4096       // encoding: [0x20,0x04,0x30,0xd9]
+// CHECK: stg x1,  [x2], #4080        // encoding: [0x41,0xf4,0x2f,0xd9]
+// CHECK: stg x2,  [sp], #16          // encoding: [0xe2,0x17,0x20,0xd9]
+// CHECK: stg sp,  [sp], #16          // encoding: [0xff,0x17,0x20,0xd9]
 
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stg
@@ -142,44 +190,18 @@ stg [sp, #16]!
 // NOMTE-NEXT: stg
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stg
-
-stzg [x1, #-4096]!
-stzg [x2, #4080]!
-stzg [sp, #16]!
-
-// CHECK: stzg [x1, #-4096]!     // encoding: [0x3f,0x0c,0x70,0xd9]
-// CHECK: stzg [x2, #4080]!      // encoding: [0x5f,0xfc,0x6f,0xd9]
-// CHECK: stzg [sp, #16]!        // encoding: [0xff,0x1f,0x60,0xd9]
-
-// NOMTE:      instruction requires: mte
-// NOMTE-NEXT: stzg
-// NOMTE:      instruction requires: mte
-// NOMTE-NEXT: stzg
-// NOMTE:      instruction requires: mte
-// NOMTE-NEXT: stzg
-
-stg [x1], #-4096
-stg [x2], #4080
-stg [sp], #16
-
-// CHECK: stg [x1], #-4096       // encoding: [0x3f,0x04,0x30,0xd9]
-// CHECK: stg [x2], #4080        // encoding: [0x5f,0xf4,0x2f,0xd9]
-// CHECK: stg [sp], #16          // encoding: [0xff,0x17,0x20,0xd9]
-
-// NOMTE:      instruction requires: mte
-// NOMTE-NEXT: stg
-// NOMTE:      instruction requires: mte
-// NOMTE-NEXT: stg
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stg
 
-stzg [x1], #-4096
-stzg [x2], #4080
-stzg [sp], #16
+stzg x0,  [x1], #-4096
+stzg x1,  [x2], #4080
+stzg x2,  [sp], #16
+stzg sp,  [sp], #16
 
-// CHECK: stzg [x1], #-4096      // encoding: [0x3f,0x04,0x70,0xd9]
-// CHECK: stzg [x2], #4080       // encoding: [0x5f,0xf4,0x6f,0xd9]
-// CHECK: stzg [sp], #16         // encoding: [0xff,0x17,0x60,0xd9]
+// CHECK: stzg x0,  [x1], #-4096      // encoding: [0x20,0x04,0x70,0xd9]
+// CHECK: stzg x1,  [x2], #4080       // encoding: [0x41,0xf4,0x6f,0xd9]
+// CHECK: stzg x2,  [sp], #16         // encoding: [0xe2,0x17,0x60,0xd9]
+// CHECK: stzg sp,  [sp], #16         // encoding: [0xff,0x17,0x60,0xd9]
 
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stzg
@@ -187,16 +209,64 @@ stzg [sp], #16
 // NOMTE-NEXT: stzg
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stzg
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stzg
 
-st2g [x1]
-st2g [x1, #-4096]
-st2g [x2, #4080]
-st2g [sp, #16]
+st2g x0,  [x1]
+st2g x1,  [x1, #-4096]
+st2g x2,  [x2, #4080]
+st2g x3,  [sp, #16]
+st2g sp,  [sp, #16]
 
-// CHECK: st2g [x1]              // encoding: [0x3f,0x08,0xa0,0xd9]
-// CHECK: st2g [x1, #-4096]      // encoding: [0x3f,0x08,0xb0,0xd9]
-// CHECK: st2g [x2, #4080]       // encoding: [0x5f,0xf8,0xaf,0xd9]
-// CHECK: st2g [sp, #16]         // encoding: [0xff,0x1b,0xa0,0xd9]
+// CHECK: st2g x0,  [x1]              // encoding: [0x20,0x08,0xa0,0xd9]
+// CHECK: st2g x1,  [x1, #-4096]      // encoding: [0x21,0x08,0xb0,0xd9]
+// CHECK: st2g x2,  [x2, #4080]       // encoding: [0x42,0xf8,0xaf,0xd9]
+// CHECK: st2g x3,  [sp, #16]         // encoding: [0xe3,0x1b,0xa0,0xd9]
+// CHECK: st2g sp,  [sp, #16]         // encoding: [0xff,0x1b,0xa0,0xd9]
+
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: st2g
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: st2g
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: st2g
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: st2g
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: st2g
+
+stz2g x0,  [x1]
+stz2g x1,  [x1, #-4096]
+stz2g x2,  [x2, #4080]
+stz2g x3,  [sp, #16]
+stz2g sp,  [sp, #16]
+
+// CHECK: stz2g x0,  [x1]             // encoding: [0x20,0x08,0xe0,0xd9]
+// CHECK: stz2g x1,  [x1, #-4096]     // encoding: [0x21,0x08,0xf0,0xd9]
+// CHECK: stz2g x2,  [x2, #4080]      // encoding: [0x42,0xf8,0xef,0xd9]
+// CHECK: stz2g x3,  [sp, #16]        // encoding: [0xe3,0x1b,0xe0,0xd9]
+// CHECK: stz2g sp,  [sp, #16]        // encoding: [0xff,0x1b,0xe0,0xd9]
+
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stz2g
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stz2g
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stz2g
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stz2g
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: stz2g
+
+st2g x0,  [x1, #-4096]!
+st2g x1,  [x2, #4080]!
+st2g x2,  [sp, #16]!
+st2g sp,  [sp, #16]!
+
+// CHECK: st2g x0,  [x1, #-4096]!     // encoding: [0x20,0x0c,0xb0,0xd9]
+// CHECK: st2g x1,  [x2, #4080]!      // encoding: [0x41,0xfc,0xaf,0xd9]
+// CHECK: st2g x2,  [sp, #16]!        // encoding: [0xe2,0x1f,0xa0,0xd9]
+// CHECK: st2g sp,  [sp, #16]!        // encoding: [0xff,0x1f,0xa0,0xd9]
 
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: st2g
@@ -207,15 +277,15 @@ st2g [sp, #16]
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: st2g
 
-stz2g [x1]
-stz2g [x1, #-4096]
-stz2g [x2, #4080]
-stz2g [sp, #16]
+stz2g x0,  [x1, #-4096]!
+stz2g x1,  [x2, #4080]!
+stz2g x2,  [sp, #16]!
+stz2g sp,  [sp, #16]!
 
-// CHECK: stz2g [x1]             // encoding: [0x3f,0x08,0xe0,0xd9]
-// CHECK: stz2g [x1, #-4096]     // encoding: [0x3f,0x08,0xf0,0xd9]
-// CHECK: stz2g [x2, #4080]      // encoding: [0x5f,0xf8,0xef,0xd9]
-// CHECK: stz2g [sp, #16]        // encoding: [0xff,0x1b,0xe0,0xd9]
+// CHECK: stz2g x0,  [x1, #-4096]!    // encoding: [0x20,0x0c,0xf0,0xd9]
+// CHECK: stz2g x1,  [x2, #4080]!     // encoding: [0x41,0xfc,0xef,0xd9]
+// CHECK: stz2g x2,  [sp, #16]!       // encoding: [0xe2,0x1f,0xe0,0xd9]
+// CHECK: stz2g sp,  [sp, #16]!       // encoding: [0xff,0x1f,0xe0,0xd9]
 
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stz2g
@@ -226,13 +296,15 @@ stz2g [sp, #16]
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stz2g
 
-st2g [x1, #-4096]!
-st2g [x2, #4080]!
-st2g [sp, #16]!
+st2g x0,  [x1], #-4096
+st2g x1,  [x2], #4080
+st2g x2,  [sp], #16
+st2g sp,  [sp], #16
 
-// CHECK: st2g [x1, #-4096]!     // encoding: [0x3f,0x0c,0xb0,0xd9]
-// CHECK: st2g [x2, #4080]!      // encoding: [0x5f,0xfc,0xaf,0xd9]
-// CHECK: st2g [sp, #16]!        // encoding: [0xff,0x1f,0xa0,0xd9]
+// CHECK: st2g x0,  [x1], #-4096      // encoding: [0x20,0x04,0xb0,0xd9]
+// CHECK: st2g x1,  [x2], #4080       // encoding: [0x41,0xf4,0xaf,0xd9]
+// CHECK: st2g x2,  [sp], #16         // encoding: [0xe2,0x17,0xa0,0xd9]
+// CHECK: st2g sp,  [sp], #16         // encoding: [0xff,0x17,0xa0,0xd9]
 
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: st2g
@@ -240,45 +312,21 @@ st2g [sp, #16]!
 // NOMTE-NEXT: st2g
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: st2g
+// NOMTE:      instruction requires: mte
+// NOMTE-NEXT: st2g
 
-stz2g [x1, #-4096]!
-stz2g [x2, #4080]!
-stz2g [sp, #16]!
+stz2g x0,  [x1], #-4096
+stz2g x1,  [x2], #4080
+stz2g x2,  [sp], #16
+stz2g sp,  [sp], #16
 
-// CHECK: stz2g [x1, #-4096]!    // encoding: [0x3f,0x0c,0xf0,0xd9]
-// CHECK: stz2g [x2, #4080]!     // encoding: [0x5f,0xfc,0xef,0xd9]
-// CHECK: stz2g [sp, #16]!       // encoding: [0xff,0x1f,0xe0,0xd9]
+// CHECK: stz2g x0,  [x1], #-4096     // encoding: [0x20,0x04,0xf0,0xd9]
+// CHECK: stz2g x1,  [x2], #4080      // encoding: [0x41,0xf4,0xef,0xd9]
+// CHECK: stz2g x2,  [sp], #16        // encoding: [0xe2,0x17,0xe0,0xd9]
+// CHECK: stz2g sp,  [sp], #16        // encoding: [0xff,0x17,0xe0,0xd9]
 
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stz2g
-// NOMTE:      instruction requires: mte
-// NOMTE-NEXT: stz2g
-// NOMTE:      instruction requires: mte
-// NOMTE-NEXT: stz2g
-
-st2g [x1], #-4096
-st2g [x2], #4080
-st2g [sp], #16
-
-// CHECK: st2g [x1], #-4096      // encoding: [0x3f,0x04,0xb0,0xd9]
-// CHECK: st2g [x2], #4080       // encoding: [0x5f,0xf4,0xaf,0xd9]
-// CHECK: st2g [sp], #16         // encoding: [0xff,0x17,0xa0,0xd9]
-
-// NOMTE:      instruction requires: mte
-// NOMTE-NEXT: st2g
-// NOMTE:      instruction requires: mte
-// NOMTE-NEXT: st2g
-// NOMTE:      instruction requires: mte
-// NOMTE-NEXT: st2g
-
-stz2g [x1], #-4096
-stz2g [x2], #4080
-stz2g [sp], #16
-
-// CHECK: stz2g [x1], #-4096     // encoding: [0x3f,0x04,0xf0,0xd9]
-// CHECK: stz2g [x2], #4080      // encoding: [0x5f,0xf4,0xef,0xd9]
-// CHECK: stz2g [sp], #16        // encoding: [0xff,0x17,0xe0,0xd9]
-
 // NOMTE:      instruction requires: mte
 // NOMTE-NEXT: stz2g
 // NOMTE:      instruction requires: mte

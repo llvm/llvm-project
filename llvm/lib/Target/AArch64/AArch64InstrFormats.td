@@ -4034,8 +4034,9 @@ class MemTagVector<bit Load, string asm_insn, string asm_opnds,
 }
 
 class MemTagLoad<string asm_insn, string asm_opnds>
-    : BaseMemTag<0b01, 0b00, asm_insn, asm_opnds, "", (outs GPR64:$Rt),
-                 (ins GPR64sp:$Rn, simm9s16:$offset)> {
+    : BaseMemTag<0b01, 0b00, asm_insn, asm_opnds, "$Rt = $wback",
+                 (outs GPR64:$wback),
+                 (ins GPR64:$Rt, GPR64sp:$Rn, simm9s16:$offset)> {
   bits<5> Rt;
   bits<9> offset;
 
@@ -4052,29 +4053,28 @@ class BaseMemTagStore<bits<2> opc1, bits<2> opc2, string asm_insn,
   bits<9> offset;
 
   let Inst{20-12} = offset;
-  let Inst{4-0}   = 0b11111;
-  let Unpredictable{4-0} = 0b11111;
+  let Inst{4-0}   = Rt;
 
   let mayStore = 1;
 }
 
 multiclass MemTagStore<bits<2> opc1, string insn> {
   def Offset :
-    BaseMemTagStore<opc1, 0b10, insn, "\t[$Rn, $offset]", "",
-                    (outs), (ins GPR64sp:$Rn, simm9s16:$offset)>;
+    BaseMemTagStore<opc1, 0b10, insn, "\t$Rt, [$Rn, $offset]", "",
+                    (outs), (ins GPR64sp:$Rt, GPR64sp:$Rn, simm9s16:$offset)>;
   def PreIndex :
-    BaseMemTagStore<opc1, 0b11, insn, "\t[$Rn, $offset]!",
+    BaseMemTagStore<opc1, 0b11, insn, "\t$Rt, [$Rn, $offset]!",
                     "$Rn = $wback,@earlyclobber $wback",
                     (outs GPR64sp:$wback),
-                    (ins GPR64sp:$Rn, simm9s16:$offset)>;
+                    (ins GPR64sp:$Rt, GPR64sp:$Rn, simm9s16:$offset)>;
   def PostIndex :
-    BaseMemTagStore<opc1, 0b01, insn, "\t[$Rn], $offset",
+    BaseMemTagStore<opc1, 0b01, insn, "\t$Rt, [$Rn], $offset",
                     "$Rn = $wback,@earlyclobber $wback",
                     (outs GPR64sp:$wback),
-                    (ins GPR64sp:$Rn, simm9s16:$offset)>;
+                    (ins GPR64sp:$Rt, GPR64sp:$Rn, simm9s16:$offset)>;
 
-  def : InstAlias<insn # "\t[$Rn]",
-                  (!cast<Instruction>(NAME # "Offset") GPR64sp:$Rn, 0)>;
+  def : InstAlias<insn # "\t$Rt, [$Rn]",
+                  (!cast<Instruction>(NAME # "Offset") GPR64sp:$Rt, GPR64sp:$Rn, 0)>;
 }
 
 //---

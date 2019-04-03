@@ -34301,11 +34301,8 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
   if (Match.getScalarValueSizeInBits() != BitWidth)
     return SDValue();
 
-  // We require AVX2 for PMOVMSKB for v16i16/v32i8;
   unsigned MatchSizeInBits = Match.getValueSizeInBits();
-  if (!(MatchSizeInBits == 128 ||
-        (MatchSizeInBits == 256 &&
-         ((Subtarget.hasAVX() && BitWidth >= 32) || Subtarget.hasAVX2()))))
+  if (!(MatchSizeInBits == 128 || (MatchSizeInBits == 256 && Subtarget.hasAVX())))
     return SDValue();
 
   // Make sure this isn't a vector of 1 element. The perf win from using MOVMSK
@@ -34319,6 +34316,14 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
   if (DAG.ComputeNumSignBits(Match) != BitWidth)
     return SDValue();
 
+  SDLoc DL(Extract);
+  if (MatchSizeInBits == 256 && BitWidth < 32 && !Subtarget.hasInt256()) {
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitVector(Match, DL);
+    Match = DAG.getNode(BinOp, DL, Lo.getValueType(), Lo, Hi);
+    MatchSizeInBits = Match.getValueSizeInBits();
+  }
+
   // For 32/64 bit comparisons use MOVMSKPS/MOVMSKPD, else PMOVMSKB.
   MVT MaskSrcVT;
   if (64 == BitWidth || 32 == BitWidth)
@@ -34327,7 +34332,6 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
   else
     MaskSrcVT = MVT::getVectorVT(MVT::i8, MatchSizeInBits / 8);
 
-  SDLoc DL(Extract);
   SDValue CmpC;
   ISD::CondCode CondCode;
   if (BinOp == ISD::OR) {
@@ -34344,9 +34348,9 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
 
   // The setcc produces an i8 of 0/1, so extend that to the result width and
   // negate to get the final 0/-1 mask value.
-  SDValue BitcastLogicOp = DAG.getBitcast(MaskSrcVT, Match);
-  SDValue Movmsk = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, BitcastLogicOp);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue BitcastLogicOp = DAG.getBitcast(MaskSrcVT, Match);
+  SDValue Movmsk = getPMOVMSKB(DL, BitcastLogicOp, DAG, Subtarget);
   EVT SetccVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                        MVT::i32);
   SDValue Setcc = DAG.getSetCC(DL, SetccVT, Movmsk, CmpC, CondCode);
@@ -43501,8 +43505,13 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   case 'i': {
     // Literal immediates are always ok.
     if (ConstantSDNode *CST = dyn_cast<ConstantSDNode>(Op)) {
-      // Widen to 64 bits here to get it sign extended.
-      Result = DAG.getTargetConstant(CST->getSExtValue(), SDLoc(Op), MVT::i64);
+      bool IsBool = CST->getConstantIntValue()->getBitWidth() == 1;
+      BooleanContent BCont = getBooleanContents(MVT::i64);
+      ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
+                                    : ISD::SIGN_EXTEND;
+      int64_t ExtVal = ExtOpc == ISD::ZERO_EXTEND ? CST->getZExtValue()
+                                                  : CST->getSExtValue();
+      Result = DAG.getTargetConstant(ExtVal, SDLoc(Op), MVT::i64);
       break;
     }
 

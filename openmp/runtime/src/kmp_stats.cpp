@@ -546,7 +546,6 @@ static std::string generateFilename(char const *prototype,
 // of __kmp_stats_global_output
 void kmp_stats_output_module::init() {
 
-  fprintf(stderr, "*** Stats enabled OpenMP* runtime ***\n");
   char *statsFileName = getenv("KMP_STATS_FILE");
   eventsFileName = getenv("KMP_STATS_EVENTS_FILE");
   plotFileName = getenv("KMP_STATS_PLOT_FILE");

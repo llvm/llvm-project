@@ -271,8 +271,8 @@ namespace {
     /// If so, return true.
     bool SimplifyDemandedBits(SDValue Op) {
       unsigned BitWidth = Op.getScalarValueSizeInBits();
-      APInt Demanded = APInt::getAllOnesValue(BitWidth);
-      return SimplifyDemandedBits(Op, Demanded);
+      APInt DemandedBits = APInt::getAllOnesValue(BitWidth);
+      return SimplifyDemandedBits(Op, DemandedBits);
     }
 
     /// Check the specified vector node value to see if it can be simplified or
@@ -280,8 +280,8 @@ namespace {
     /// elements. If so, return true.
     bool SimplifyDemandedVectorElts(SDValue Op) {
       unsigned NumElts = Op.getValueType().getVectorNumElements();
-      APInt Demanded = APInt::getAllOnesValue(NumElts);
-      return SimplifyDemandedVectorElts(Op, Demanded);
+      APInt DemandedElts = APInt::getAllOnesValue(NumElts);
+      return SimplifyDemandedVectorElts(Op, DemandedElts);
     }
 
     bool SimplifyDemandedBits(SDValue Op, const APInt &Demanded);
@@ -1093,10 +1093,10 @@ CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO) {
 
 /// Check the specified integer node value to see if it can be simplified or if
 /// things it uses can be simplified by bit propagation. If so, return true.
-bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &Demanded) {
+bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits) {
   TargetLowering::TargetLoweringOpt TLO(DAG, LegalTypes, LegalOperations);
   KnownBits Known;
-  if (!TLI.SimplifyDemandedBits(Op, Demanded, Known, TLO))
+  if (!TLI.SimplifyDemandedBits(Op, DemandedBits, Known, TLO))
     return false;
 
   // Revisit the node.
@@ -1115,12 +1115,13 @@ bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &Demanded) {
 /// Check the specified vector node value to see if it can be simplified or
 /// if things it uses can be simplified as it only uses some of the elements.
 /// If so, return true.
-bool DAGCombiner::SimplifyDemandedVectorElts(SDValue Op, const APInt &Demanded,
+bool DAGCombiner::SimplifyDemandedVectorElts(SDValue Op,
+                                             const APInt &DemandedElts,
                                              bool AssumeSingleUse) {
   TargetLowering::TargetLoweringOpt TLO(DAG, LegalTypes, LegalOperations);
   APInt KnownUndef, KnownZero;
-  if (!TLI.SimplifyDemandedVectorElts(Op, Demanded, KnownUndef, KnownZero, TLO,
-                                      0, AssumeSingleUse))
+  if (!TLI.SimplifyDemandedVectorElts(Op, DemandedElts, KnownUndef, KnownZero,
+                                      TLO, 0, AssumeSingleUse))
     return false;
 
   // Revisit the node.
@@ -6843,8 +6844,8 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   if (N1C && N0.getOpcode() == ISD::SRL && N0.hasOneUse() &&
       TLI.shouldFoldShiftPairToMask(N, Level)) {
     if (ConstantSDNode *N0C1 = isConstOrConstSplat(N0.getOperand(1))) {
-      uint64_t c1 = N0C1->getZExtValue();
-      if (c1 < OpSizeInBits) {
+      if (N0C1->getAPIntValue().ult(OpSizeInBits)) {
+        uint64_t c1 = N0C1->getZExtValue();
         uint64_t c2 = N1C->getZExtValue();
         APInt Mask = APInt::getHighBitsSet(OpSizeInBits, OpSizeInBits - c1);
         SDValue Shift;
@@ -18665,23 +18666,26 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
           Opcode, SDLoc(LHS), LHS.getValueType(), Ops, N->getFlags()))
     return Fold;
 
-  // Type legalization might introduce new shuffles in the DAG.
-  // Fold (VBinOp (shuffle (A, Undef, Mask)), (shuffle (B, Undef, Mask)))
-  //   -> (shuffle (VBinOp (A, B)), Undef, Mask).
-  if (LegalTypes && isa<ShuffleVectorSDNode>(LHS) &&
-      isa<ShuffleVectorSDNode>(RHS) && LHS.hasOneUse() && RHS.hasOneUse() &&
-      LHS.getOperand(1).isUndef() &&
-      RHS.getOperand(1).isUndef()) {
-    ShuffleVectorSDNode *SVN0 = cast<ShuffleVectorSDNode>(LHS);
-    ShuffleVectorSDNode *SVN1 = cast<ShuffleVectorSDNode>(RHS);
-
-    if (SVN0->getMask().equals(SVN1->getMask())) {
-      SDValue UndefVector = LHS.getOperand(1);
-      SDValue NewBinOp = DAG.getNode(Opcode, SDLoc(N), VT, LHS.getOperand(0),
+  // Move unary shuffles with identical masks after a vector binop:
+  // VBinOp (shuffle A, Undef, Mask), (shuffle B, Undef, Mask))
+  //   --> shuffle (VBinOp A, B), Undef, Mask
+  // This does not require type legality checks because we are creating the
+  // same types of operations that are in the original sequence. We do have to
+  // restrict ops like integer div that have immediate UB (eg, div-by-zero)
+  // though. This code is adapted from the identical transform in instcombine.
+  if (Opcode != ISD::UDIV && Opcode != ISD::SDIV &&
+      Opcode != ISD::UREM && Opcode != ISD::SREM &&
+      Opcode != ISD::UDIVREM && Opcode != ISD::SDIVREM) {
+    auto *Shuf0 = dyn_cast<ShuffleVectorSDNode>(LHS);
+    auto *Shuf1 = dyn_cast<ShuffleVectorSDNode>(RHS);
+    if (Shuf0 && Shuf1 && Shuf0->getMask().equals(Shuf1->getMask()) &&
+        LHS.getOperand(1).isUndef() && RHS.getOperand(1).isUndef() &&
+        (LHS.hasOneUse() || RHS.hasOneUse() || LHS == RHS)) {
+      SDLoc DL(N);
+      SDValue NewBinOp = DAG.getNode(Opcode, DL, VT, LHS.getOperand(0),
                                      RHS.getOperand(0), N->getFlags());
-      AddUsersToWorklist(N);
-      return DAG.getVectorShuffle(VT, SDLoc(N), NewBinOp, UndefVector,
-                                  SVN0->getMask());
+      SDValue UndefV = LHS.getOperand(1);
+      return DAG.getVectorShuffle(VT, DL, NewBinOp, UndefV, Shuf0->getMask());
     }
   }
 

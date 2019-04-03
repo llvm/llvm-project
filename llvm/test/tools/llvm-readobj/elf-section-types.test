@@ -218,5 +218,5 @@ Sections:
   - Name: hiuser
     Type: 0xffffffff
 Symbols:
-  Global:
-    - Name: foo
+  - Name:    foo
+    Binding: STB_GLOBAL

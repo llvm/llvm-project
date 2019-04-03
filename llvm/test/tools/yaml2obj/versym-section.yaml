@@ -82,7 +82,8 @@ Sections:
             Flags:           0
             Other:           4
 DynamicSymbols:
-  Global:
-    - Name:            f1
-    - Name:            f2
+  - Name:    f1
+    Binding: STB_GLOBAL
+  - Name:    f2
+    Binding: STB_GLOBAL
 ...

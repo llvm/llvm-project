@@ -16,6 +16,6 @@ FileHeader:
   Type:      ET_REL
   Machine:   EM_X86_64
 Symbols:
-  GNUUnique:
-    - Name:  foo
-      Type:  STT_OBJECT
+  - Name:    foo
+    Type:    STT_OBJECT
+    Binding: STB_GNU_UNIQUE

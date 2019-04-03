@@ -60,8 +60,8 @@ Sections:
         Type: R_X86_64_NONE
         Addend: -1
 DynamicSymbols:
-  Global:
-    - Name: force_dynsym
+  - Name:    force_dynsym
+    Binding: STB_GLOBAL
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x1000
