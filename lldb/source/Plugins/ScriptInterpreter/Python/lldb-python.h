@@ -32,6 +32,12 @@
 #undef _XOPEN_SOURCE
 #endif
 
+// Include locale before Python so _PY_PORT_CTYPE_UTF8_ISSUE doesn't cause
+// macro redefinitions.
+#if defined(__APPLE__)
+#include <locale>
+#endif
+
 // Include python for non windows machines
 #include <Python.h>
 #endif // LLDB_DISABLE_PYTHON

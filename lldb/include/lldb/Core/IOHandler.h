@@ -200,7 +200,7 @@ public:
 
   virtual ~IOHandlerDelegate() = default;
 
-  virtual void IOHandlerActivated(IOHandler &io_handler) {}
+  virtual void IOHandlerActivated(IOHandler &io_handler, bool interactive) {}
 
   virtual void IOHandlerDeactivated(IOHandler &io_handler) {}
 
