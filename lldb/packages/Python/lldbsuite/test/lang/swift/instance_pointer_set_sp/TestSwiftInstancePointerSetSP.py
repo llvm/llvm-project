@@ -13,7 +13,7 @@
 Test that we correctly track instance pointers in ValueObjectPrinter
 """
 import lldb
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -24,8 +24,8 @@ class TestSwiftInstancePointerSetSP(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_instancepointerset_sp(self):
         """Test that we correctly track instance pointers in ValueObjectPrinter"""
         self.build()

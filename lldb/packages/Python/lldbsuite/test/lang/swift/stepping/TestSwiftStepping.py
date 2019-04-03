@@ -13,7 +13,7 @@
 Tests simple swift stepping
 """
 import lldb
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -24,9 +24,8 @@ class TestSwiftStepping(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.skipIfLinux
-    @decorators.skipIfDarwin # rdar://49405390
+    @swiftTest
+    @skipIfLinux
     def test_swift_stepping(self):
         """Tests that we can step reliably in swift code."""
         self.build()

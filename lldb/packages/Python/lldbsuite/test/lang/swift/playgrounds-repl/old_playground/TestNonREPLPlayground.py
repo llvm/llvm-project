@@ -15,7 +15,7 @@ Test that playgrounds work
 import commands
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
@@ -31,46 +31,21 @@ class TestNonREPLPlayground(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
-    @decorators.skipIf(
-        debug_info=decorators.no_match("dsym"),
-        bugnumber="This test only builds one way")
-    def test_cross_module_extension(self):
-        """Test that playgrounds work"""
-        self.build()
-        self.do_test()
-
     def setUp(self):
         TestBase.setUp(self)
-        self.PlaygroundStub_source = "PlaygroundStub.swift"
-        self.PlaygroundStub_source_spec = lldb.SBFileSpec(
-            self.PlaygroundStub_source)
 
-    def do_test(self):
+    @skipUnlessDarwin
+    @swiftTest
+    @skipIf(
+        debug_info=decorators.no_match("dsym"),
+        bugnumber="This test only builds one way")
+    def test_playgrounds(self):
         """Test that playgrounds work"""
-        exe_name = "PlaygroundStub"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.PlaygroundStub_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        process = target.LaunchSimple(None, None, self.getBuildDir())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here',
+            lldb.SBFileSpec('PlaygroundStub.swift'),
+            exe_name = "PlaygroundStub")
 
         contents = ""
 
@@ -81,9 +56,9 @@ class TestNonREPLPlayground(TestBase):
         options.SetLanguage(lldb.eLanguageTypeSwift)
         options.SetPlaygroundTransformEnabled()
 
-        self.frame.EvaluateExpression(contents, options)
+        self.frame().EvaluateExpression(contents, options)
 
-        ret = self.frame.EvaluateExpression("get_output()")
+        ret = self.frame().EvaluateExpression("get_output()")
 
         playground_output = ret.GetSummary()
 

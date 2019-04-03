@@ -14,7 +14,7 @@ Tests scoped variables with swift expressions
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -24,8 +24,8 @@ class TestSwiftExpressionScopes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_expression_scopes(self):
         """Tests that swift expressions resolve scoped variables correctly"""
         self.build()
@@ -37,7 +37,7 @@ class TestSwiftExpressionScopes(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def check_expression(self, expression, expected_result, use_summary=True):
-        value = self.frame.EvaluateExpression(expression)
+        value = self.frame().EvaluateExpression(expression)
         self.assertTrue(value.IsValid(), expression + "returned a valid value")
         if use_summary:
             answer = value.GetSummary()
@@ -54,9 +54,6 @@ class TestSwiftExpressionScopes(TestBase):
     def continue_to_bkpt(self, process, bkpt):
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
     def continue_by_pattern(self, pattern):
         bkpt = self.target.BreakpointCreateBySourceRegex(
@@ -95,9 +92,6 @@ class TestSwiftExpressionScopes(TestBase):
             process, init_bkpt)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
         self.check_expression("in_class_a", "20", use_summary=False)
         self.check_expression("self.in_class_a", "20", use_summary=False)

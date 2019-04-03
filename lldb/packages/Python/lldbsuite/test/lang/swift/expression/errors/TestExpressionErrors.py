@@ -14,7 +14,7 @@ Tests catching thrown errors in swift expressions
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -45,7 +45,7 @@ class TestExpressionErrors(TestBase):
         self.assertTrue(func.IsValid(), "Couldn't find the function for %s"%(name))
         self.assertEqual(func.GetCanThrow(), expected,  "GetCanThrow was wrong for %s"%name)
 
-    @decorators.swiftTest
+    @swiftTest
     def test_swift_expression_errors(self):
         """Tests that swift expressions that throw report the errors correctly"""
         self.build()
@@ -59,9 +59,6 @@ class TestExpressionErrors(TestBase):
     def continue_to_bkpt(self, process, bkpt):
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
     def continue_by_pattern(self, pattern):
         bkpt = self.target.BreakpointCreateBySourceRegex(
@@ -98,15 +95,12 @@ class TestExpressionErrors(TestBase):
             process, global_scope_bkpt)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
         options = lldb.SBExpressionOptions()
         options.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)
 
         # FIXME: pull the "try" back out when we fix <rdar://problem/21949031>
-        enum_value = self.frame.EvaluateExpression(
+        enum_value = self.frame().EvaluateExpression(
             "IThrowEnumOver10(101)", options)
         self.assertTrue(enum_value.IsValid(), "Got a valid enum value.")
         self.assertTrue(
@@ -118,7 +112,7 @@ class TestExpressionErrors(TestBase):
             "Expected 'ImportantError', got %s" %
             (enum_value.GetValue()))
 
-        object_value = self.frame.EvaluateExpression(
+        object_value = self.frame().EvaluateExpression(
             "IThrowObjectOver10(101)", options)
         self.assertTrue(object_value.IsValid(), "Got a valid object value.")
         self.assertTrue(

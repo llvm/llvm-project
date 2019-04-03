@@ -14,7 +14,7 @@ Test weak, unowned and unmanaged types
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -24,48 +24,17 @@ class TestSwiftReferenceStorageTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipIf(archs=['ppc64le'])
-    #SR-10215
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    def setUp(self):
+        TestBase.setUp(self)
+
+    @decorators.skipIf(archs=['ppc64le']) #SR-10215
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test_swift_reference_storage_types(self):
         """Test weak, unowned and unmanaged types"""
         self.build()
-        self.do_test()
-
-    def setUp(self):
-        TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
-
-    def do_test(self):
-        """Test weak, unowned and unmanaged types"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here',
-            self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
+        lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
         self.expect('frame variable myclass.sub_001', substrs=['x = 1'])
         self.expect('frame variable myclass.sub_002', substrs=['x = 1'])
@@ -86,7 +55,7 @@ class TestSwiftReferenceStorageTypes(TestBase):
         self.expect('expression myclass.sub_003!', substrs=['x = 1'])
         self.expect('expression myclass.sub_004!', substrs=['x = 1'])
 
-        myclass = self.frame.FindVariable("myclass")
+        myclass = self.frame().FindVariable("myclass")
         sub_001 = myclass.GetChildMemberWithName("sub_001")
         sub_002 = myclass.GetChildMemberWithName("sub_002")
         sub_003 = myclass.GetChildMemberWithName("sub_003")
