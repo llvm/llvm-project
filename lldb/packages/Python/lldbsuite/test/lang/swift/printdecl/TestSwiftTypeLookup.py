@@ -12,7 +12,6 @@
 """
 Test the ability to look for type definitions at the command line
 """
-import commands
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *

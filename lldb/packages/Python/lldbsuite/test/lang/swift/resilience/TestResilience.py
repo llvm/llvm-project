@@ -12,7 +12,7 @@
 """
 Test that resilient APIs work regardless of the combination of library and executable
 """
-import commands
+import subprocess
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
@@ -22,13 +22,15 @@ import os.path
 import time
 import unittest2
 
+import sys
+if sys.version_info.major == 2:
+    import commands as subprocess
+else:
+    import subprocess
 
 def execute_command(command):
     # print '%% %s' % (command)
-    (exit_status, output) = commands.getstatusoutput(command)
-    # if output:
-    #     print output
-    # print 'status = %u' % (exit_status)
+    (exit_status, output) = subprocess.getstatusoutput(command)
     return exit_status
 
 

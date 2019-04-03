@@ -18,7 +18,6 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
-import commands
 import re
 import unittest2
 import shutil

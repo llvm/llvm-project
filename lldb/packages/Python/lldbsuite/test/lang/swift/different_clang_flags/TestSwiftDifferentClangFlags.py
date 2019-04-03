@@ -12,7 +12,6 @@
 """
 Test that we use the right compiler flags when debugging
 """
-import commands
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
@@ -21,10 +20,15 @@ import os
 import os.path
 import unittest2
 
+import sys
+if sys.version_info.major == 2:
+    import commands as subprocess
+else:
+    import subprocess
 
 def execute_command(command):
     # print '%% %s' % (command)
-    (exit_status, output) = commands.getstatusoutput(command)
+    (exit_status, output) = subprocess.getstatusoutput(command)
     # if output:
     #     print output
     # print 'status = %u' % (exit_status)
