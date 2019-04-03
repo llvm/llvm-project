@@ -153,6 +153,12 @@ FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
     MFI->insert(MBBI, NewMI); // Insert the new inst
     return NewMI;
   }
+  }
+
+  if (!MI.isConvertibleTo3Addr())
+    return nullptr;
+
+  switch (MI.getOpcode()) {
   case X86::ADD64ri32:
   case X86::ADD64ri8:
   case X86::ADD64ri32_DB:
@@ -194,7 +200,7 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &Func) {
   bool IsSlowLEA = ST.slowLEA();
   bool IsSlow3OpsLEA = ST.slow3OpsLEA();
 
-  OptIncDec = !ST.slowIncDec() || Func.getFunction().optForMinSize();
+  OptIncDec = !ST.slowIncDec() || Func.getFunction().optForSize();
   OptLEA = ST.LEAusesAG() || IsSlowLEA || IsSlow3OpsLEA;
 
   if (!OptLEA && !OptIncDec)

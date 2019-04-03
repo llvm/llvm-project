@@ -2864,17 +2864,35 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
     OrigPhi->setIncomingValue(BlockIdx, BCResumeVal);
   }
 
+  // We need the OrigLoop (scalar loop part) latch terminator to help
+  // produce correct debug info for the middle block BB instructions.
+  // The legality check stage guarantees that the loop will have a single
+  // latch.
+  assert(isa<BranchInst>(OrigLoop->getLoopLatch()->getTerminator()) &&
+         "Scalar loop latch terminator isn't a branch");
+  BranchInst *ScalarLatchBr =
+      cast<BranchInst>(OrigLoop->getLoopLatch()->getTerminator());
+
   // Add a check in the middle block to see if we have completed
   // all of the iterations in the first vector loop.
   // If (N - N%VF) == N, then we *don't* need to run the remainder.
   // If tail is to be folded, we know we don't need to run the remainder.
   Value *CmpN = Builder.getTrue();
-  if (!Cost->foldTailByMasking())
+  if (!Cost->foldTailByMasking()) {
     CmpN =
         CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ, Count,
                         CountRoundDown, "cmp.n", MiddleBlock->getTerminator());
-  ReplaceInstWithInst(MiddleBlock->getTerminator(),
-                      BranchInst::Create(ExitBlock, ScalarPH, CmpN));
+
+    // Provide correct stepping behaviour by using the same DebugLoc as the
+    // scalar loop latch branch cmp if it exists.
+    if (CmpInst *ScalarLatchCmp =
+            dyn_cast_or_null<CmpInst>(ScalarLatchBr->getCondition()))
+      cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchCmp->getDebugLoc());
+  }
+
+  BranchInst *BrInst = BranchInst::Create(ExitBlock, ScalarPH, CmpN);
+  BrInst->setDebugLoc(ScalarLatchBr->getDebugLoc());
+  ReplaceInstWithInst(MiddleBlock->getTerminator(), BrInst);
 
   // Get ready to start creating new instructions into the vectorized body.
   Builder.SetInsertPoint(&*VecBody->getFirstInsertionPt());

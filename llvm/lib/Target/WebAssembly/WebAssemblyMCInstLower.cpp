@@ -120,26 +120,27 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
   return WasmSym;
 }
 
-MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(
-    MCSymbol *Sym, int64_t Offset, bool IsFunc, unsigned TargetFlags) const {
-  MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
-  if (TargetFlags & WebAssemblyII::MO_GOT)
-    Kind = MCSymbolRefExpr::VK_GOT;
+MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
+                                                     MCSymbol *Sym) const {
+  bool isGOT = MO.getTargetFlags() == WebAssemblyII::MO_GOT;
+  MCSymbolRefExpr::VariantKind Kind =
+      isGOT ? MCSymbolRefExpr::VK_GOT : MCSymbolRefExpr::VK_None;
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Kind, Ctx);
 
-  if (Offset != 0) {
-    if (TargetFlags & WebAssemblyII::MO_GOT)
+  if (MO.getOffset() != 0) {
+    const auto *WasmSym = cast<MCSymbolWasm>(Sym);
+    if (isGOT)
       report_fatal_error("GOT symbol references do not support offsets");
-    unsigned Type = TargetFlags & WebAssemblyII::MO_SYMBOL_MASK;
-    assert((Type == WebAssemblyII::MO_SYMBOL_FUNCTION) == IsFunc);
-    if (Type == WebAssemblyII::MO_SYMBOL_FUNCTION || IsFunc)
+
+    if (WasmSym->isFunction())
       report_fatal_error("Function addresses with offsets not supported");
-    if (Type == WebAssemblyII::MO_SYMBOL_GLOBAL)
+    if (WasmSym->isGlobal())
       report_fatal_error("Global indexes with offsets not supported");
-    if (Type == WebAssemblyII::MO_SYMBOL_EVENT)
+    if (WasmSym->isEvent())
       report_fatal_error("Event indexes with offsets not supported");
-    Expr =
-        MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
+
+    Expr = MCBinaryExpr::createAdd(
+        Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
   }
 
   return MCOperand::createExpr(Expr);
@@ -236,24 +237,21 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       break;
     }
     case MachineOperand::MO_GlobalAddress:
-      MCOp = lowerSymbolOperand(GetGlobalAddressSymbol(MO), MO.getOffset(),
-                                MO.getGlobal()->getValueType()->isFunctionTy(),
-                                MO.getTargetFlags());
+      MCOp = lowerSymbolOperand(MO, GetGlobalAddressSymbol(MO));
       break;
     case MachineOperand::MO_ExternalSymbol:
       // The target flag indicates whether this is a symbol for a
       // variable or a function.
-      assert((MO.getTargetFlags() & ~WebAssemblyII::MO_SYMBOL_MASK) == 0 &&
+      assert(MO.getTargetFlags() == 0 &&
              "WebAssembly uses only symbol flags on ExternalSymbols");
-      MCOp = lowerSymbolOperand(
-          GetExternalSymbolSymbol(MO), /*Offset=*/0, false, MO.getTargetFlags());
+      MCOp = lowerSymbolOperand(MO, GetExternalSymbolSymbol(MO));
       break;
     case MachineOperand::MO_MCSymbol:
       // This is currently used only for LSDA symbols (GCC_except_table),
       // because global addresses or other external symbols are handled above.
       assert(MO.getTargetFlags() == 0 &&
              "WebAssembly does not use target flags on MCSymbol");
-      MCOp = lowerSymbolOperand(MO.getMCSymbol(), /*Offset=*/0, false, MO.getTargetFlags());
+      MCOp = lowerSymbolOperand(MO, MO.getMCSymbol());
       break;
     }
 

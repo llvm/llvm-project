@@ -10,6 +10,7 @@
 #include "Error.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/Minidump.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 
@@ -40,6 +41,8 @@ static Error dumpInput(StringRef File) {
   // TODO: If this is an archive, then burst it and dump each entry
   if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
     return errorCodeToError(dumpObject(*Obj));
+  if (MinidumpFile *Minidump = dyn_cast<MinidumpFile>(&Binary))
+    return minidump2yaml(outs(), *Minidump);
 
   return Error::success();
 }

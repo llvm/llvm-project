@@ -834,6 +834,9 @@ bool SampleProfileLoader::inlineHotFunctions(
           if (CalleeFunctionName == F.getName())
             continue;
 
+          if (!callsiteIsHot(FS, PSI))
+            continue;
+
           const char *Reason = "Callee function not available";
           auto R = SymbolMap.find(CalleeFunctionName);
           if (R != SymbolMap.end() && R->getValue() &&

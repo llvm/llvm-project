@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mtriple=r600-- -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
@@ -109,8 +109,8 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(<4 x i8> addrspace(1)* %out, [8 
 ; GCN: s_load_dword s
 
 ; SI: s_ashr_i32
-; SI: s_sext_i32_i16
 ; SI: s_ashr_i32
+; SI: s_sext_i32_i16
 ; SI: s_sext_i32_i16
 ; SI: s_min_i32
 ; SI: s_min_i32
@@ -381,7 +381,8 @@ define amdgpu_kernel void @s_test_umin_ult_i32(i32 addrspace(1)* %out, i32 %a, i
 ; FUNC-LABEL: @v_test_umin_ult_i32_multi_use
 ; SI-NOT: v_min
 ; GCN: v_cmp_lt_u32
-; SI-NEXT: v_cndmask_b32
+; SI-NOT: v_min
+; SI: v_cndmask_b32
 ; SI-NOT: v_min
 ; GCN: s_endpgm
 

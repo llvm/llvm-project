@@ -453,7 +453,6 @@ int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) {
 }
 
 int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   int WaitStatesNeeded = 0;
 
   WaitStatesNeeded = checkSoftClauseHazards(SMRD);

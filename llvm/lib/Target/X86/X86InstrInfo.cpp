@@ -869,7 +869,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
   bool Is8BitOp = false;
   unsigned MIOpc = MI.getOpcode();
   switch (MIOpc) {
-  default: return nullptr;
+  default: llvm_unreachable("Unreachable!");
   case X86::SHL64ri: {
     assert(MI.getNumOperands() >= 3 && "Unknown shift instruction!");
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);

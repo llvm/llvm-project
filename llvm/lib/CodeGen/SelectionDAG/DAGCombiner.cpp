@@ -427,10 +427,6 @@ namespace {
     SDValue replaceStoreOfFPConstant(StoreSDNode *ST);
 
     SDValue visitSTORE(SDNode *N);
-
-    SDValue ImproveLifetimeNodeChain(SDNode *N);
-
-    SDValue visitLIFETIME_START(SDNode *N);
     SDValue visitLIFETIME_END(SDNode *N);
     SDValue visitINSERT_VECTOR_ELT(SDNode *N);
     SDValue visitEXTRACT_VECTOR_ELT(SDNode *N);
@@ -1654,7 +1650,6 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::MLOAD:              return visitMLOAD(N);
   case ISD::MSCATTER:           return visitMSCATTER(N);
   case ISD::MSTORE:             return visitMSTORE(N);
-  case ISD::LIFETIME_START:     return visitLIFETIME_START(N);
   case ISD::LIFETIME_END:       return visitLIFETIME_END(N);
   case ISD::FP_TO_FP16:         return visitFP_TO_FP16(N);
   case ISD::FP16_TO_FP:         return visitFP16_TO_FP(N);
@@ -15705,33 +15700,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   return ReduceLoadOpStoreWidth(N);
 }
 
-SDValue DAGCombiner::ImproveLifetimeNodeChain(SDNode *N) {
-  auto Chain = N->getOperand(0);
-  auto NewChain = FindBetterChain(N, Chain);
-  if (NewChain != Chain) {
-    LifetimeSDNode *LN = cast<LifetimeSDNode>(N);
-    // Create New Node to prevent loop in CombineTo.
-    SDValue NewN = DAG.getLifetimeNode(N->getOpcode() == ISD::LIFETIME_START,
-                                       SDLoc(N), NewChain, LN->getFrameIndex(),
-                                       LN->hasOffset() ? LN->getSize() : -1,
-                                       LN->hasOffset() ? LN->getOffset() : -1);
-    AddToWorklist(NewN.getNode());
-    auto TF = DAG.getNode(ISD::TokenFactor, SDLoc(N), MVT::Other, Chain, NewN);
-    return CombineTo(N, TF);
-  }
-  return SDValue();
-}
-
-SDValue DAGCombiner::visitLIFETIME_START(SDNode *N) {
-  if (SDValue V = ImproveLifetimeNodeChain(N))
-    return V;
-  return SDValue();
-}
-
 SDValue DAGCombiner::visitLIFETIME_END(SDNode *N) {
-  if (SDValue V = ImproveLifetimeNodeChain(N))
-    return V;
-
   const auto *LifetimeEnd = cast<LifetimeSDNode>(N);
   if (!LifetimeEnd->hasOffset())
     return SDValue();
@@ -18689,10 +18658,11 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
   SDValue RHS = N->getOperand(1);
   SDValue Ops[] = {LHS, RHS};
   EVT VT = N->getValueType(0);
+  unsigned Opcode = N->getOpcode();
 
   // See if we can constant fold the vector operation.
   if (SDValue Fold = DAG.FoldConstantVectorArithmetic(
-          N->getOpcode(), SDLoc(LHS), LHS.getValueType(), Ops, N->getFlags()))
+          Opcode, SDLoc(LHS), LHS.getValueType(), Ops, N->getFlags()))
     return Fold;
 
   // Type legalization might introduce new shuffles in the DAG.
@@ -18707,9 +18677,8 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
 
     if (SVN0->getMask().equals(SVN1->getMask())) {
       SDValue UndefVector = LHS.getOperand(1);
-      SDValue NewBinOp = DAG.getNode(N->getOpcode(), SDLoc(N), VT,
-                                     LHS.getOperand(0), RHS.getOperand(0),
-                                     N->getFlags());
+      SDValue NewBinOp = DAG.getNode(Opcode, SDLoc(N), VT, LHS.getOperand(0),
+                                     RHS.getOperand(0), N->getFlags());
       AddUsersToWorklist(N);
       return DAG.getVectorShuffle(VT, SDLoc(N), NewBinOp, UndefVector,
                                   SVN0->getMask());
@@ -18729,12 +18698,12 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
     SDValue Z = LHS.getOperand(2);
     EVT NarrowVT = X.getValueType();
     if (NarrowVT == Y.getValueType() &&
-        TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), NarrowVT)) {
+        TLI.isOperationLegalOrCustomOrPromote(Opcode, NarrowVT)) {
       // (binop undef, undef) may not return undef, so compute that result.
       SDLoc DL(N);
-      SDValue VecC = DAG.getNode(N->getOpcode(), DL, VT, DAG.getUNDEF(VT),
-                                 DAG.getUNDEF(VT));
-      SDValue NarrowBO = DAG.getNode(N->getOpcode(), DL, NarrowVT, X, Y);
+      SDValue VecC =
+          DAG.getNode(Opcode, DL, VT, DAG.getUNDEF(VT), DAG.getUNDEF(VT));
+      SDValue NarrowBO = DAG.getNode(Opcode, DL, NarrowVT, X, Y);
       return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, VecC, NarrowBO, Z);
     }
   }

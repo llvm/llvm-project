@@ -1,3 +1,5 @@
+include(LLVMExternalProjectUtils)
+
 function(llvm_create_cross_target_internal target_name toolchain buildtype)
 
   if(NOT DEFINED LLVM_${target_name}_BUILD)
@@ -65,6 +67,31 @@ endfunction()
 
 function(llvm_create_cross_target target_name sysroot)
   llvm_create_cross_target_internal(${target_name} ${sysroot} ${CMAKE_BUILD_TYPE})
+endfunction()
+
+# Sets up a native build for a tool, used e.g. for cross-compilation and
+# LLVM_OPTIMIZED_TABLEGEN. Always builds in Release.
+# - target: The target to build natively
+# - output_path_var: A variable name which receives the path to the built target
+# - DEPENDS: Any additional dependencies for the target
+function(build_native_tool target output_path_var)
+  cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
+
+  if(CMAKE_CONFIGURATION_TYPES)
+    set(output_path "${LLVM_NATIVE_BUILD}/Release/bin/${target}")
+  else()
+    set(output_path "${LLVM_NATIVE_BUILD}/bin/${target}")
+  endif()
+
+  llvm_ExternalProject_BuildCmd(build_cmd ${target} ${LLVM_NATIVE_BUILD}
+                                CONFIGURATION Release)
+  add_custom_command(OUTPUT "${output_path}"
+                     COMMAND ${build_cmd}
+                     DEPENDS CONFIGURE_LLVM_NATIVE ${ARG_DEPENDS}
+                     WORKING_DIRECTORY "${LLVM_NATIVE_BUILD}"
+                     COMMENT "Building native ${target}..."
+                     USES_TERMINAL)
+  set(${output_path_var} "${output_path}" PARENT_SCOPE)
 endfunction()
 
 llvm_create_cross_target_internal(NATIVE "" Release)

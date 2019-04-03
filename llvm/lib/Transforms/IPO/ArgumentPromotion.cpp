@@ -58,11 +58,13 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -242,6 +244,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     assert(CS.getCalledFunction() == F);
     Instruction *Call = CS.getInstruction();
     const AttributeList &CallPAL = CS.getAttributes();
+    IRBuilder<NoFolder> IRB(Call);
 
     // Loop over the operands, inserting GEP and loads in the caller as
     // appropriate.
@@ -260,11 +263,11 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
             ConstantInt::get(Type::getInt32Ty(F->getContext()), 0), nullptr};
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
           Idxs[1] = ConstantInt::get(Type::getInt32Ty(F->getContext()), i);
-          Value *Idx = GetElementPtrInst::Create(
-              STy, *AI, Idxs, (*AI)->getName() + "." + Twine(i), Call);
+          auto *Idx =
+              IRB.CreateGEP(STy, *AI, Idxs, (*AI)->getName() + "." + Twine(i));
           // TODO: Tell AA about the new values?
-          Args.push_back(new LoadInst(STy->getElementType(i), Idx,
-                                      Idx->getName() + ".val", Call));
+          Args.push_back(IRB.CreateLoad(STy->getElementType(i), Idx,
+                                        Idx->getName() + ".val"));
           ArgAttrVec.push_back(AttributeSet());
         }
       } else if (!I->use_empty()) {
@@ -294,14 +297,13 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
                 ElTy = cast<CompositeType>(ElTy)->getTypeAtIndex(II);
             }
             // And create a GEP to extract those indices.
-            V = GetElementPtrInst::Create(ArgIndex.first, V, Ops,
-                                          V->getName() + ".idx", Call);
+            V = IRB.CreateGEP(ArgIndex.first, V, Ops, V->getName() + ".idx");
             Ops.clear();
           }
           // Since we're replacing a load make sure we take the alignment
           // of the previous load.
           LoadInst *newLoad =
-              new LoadInst(OrigLoad->getType(), V, V->getName() + ".val", Call);
+              IRB.CreateLoad(OrigLoad->getType(), V, V->getName() + ".val");
           newLoad->setAlignment(OrigLoad->getAlignment());
           // Transfer the AA info too.
           AAMDNodes AAInfo;
