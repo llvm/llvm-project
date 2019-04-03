@@ -40,23 +40,24 @@ def FeatureCFALUBug : SubtargetFeature<"cfalubug",
   "GPU has CF_ALU bug"
 >;
 
-class R600SubtargetFeatureGeneration <string Value,
+class R600SubtargetFeatureGeneration <string Value, string FeatureName,
                                   list<SubtargetFeature> Implies> :
-        SubtargetFeatureGeneration <Value, "R600Subtarget", Implies>;
+        SubtargetFeatureGeneration <Value, FeatureName, "R600Subtarget", Implies>;
 
-def FeatureR600 : R600SubtargetFeatureGeneration<"R600",
+def FeatureR600 : R600SubtargetFeatureGeneration<"R600", "r600",
   [FeatureR600ALUInst, FeatureFetchLimit8, FeatureLocalMemorySize0]
 >;
 
-def FeatureR700 : R600SubtargetFeatureGeneration<"R700",
+def FeatureR700 : R600SubtargetFeatureGeneration<"R700", "r700",
   [FeatureFetchLimit16, FeatureLocalMemorySize0]
 >;
 
-def FeatureEvergreen : R600SubtargetFeatureGeneration<"EVERGREEN",
+def FeatureEvergreen : R600SubtargetFeatureGeneration<"EVERGREEN", "evergreen",
   [FeatureFetchLimit16, FeatureLocalMemorySize32768]
 >;
 
 def FeatureNorthernIslands : R600SubtargetFeatureGeneration<"NORTHERN_ISLANDS",
+  "northern-islands",
   [FeatureFetchLimit16, FeatureWavefrontSize64,
    FeatureLocalMemorySize32768]
 >;

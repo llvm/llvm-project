@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-linux-gnu | FileCheck %s
+; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-linux-gnu 2>&1 | FileCheck %s --check-prefixes=GISEL,FALLBACK
 
 %0 = type { i64, i64 }
 
@@ -257,9 +258,12 @@ define i32 @test_store_release_i32(i32, i32 %val, i32* %addr) {
   ret i32 %res
 }
 
+; FALLBACK-NOT: remark:{{.*}}test_store_release_i64
 define i32 @test_store_release_i64(i32, i64 %val, i64* %addr) {
 ; CHECK-LABEL: test_store_release_i64:
 ; CHECK: stlxr w0, x1, [x2]
+; GISEL-LABEL: test_store_release_i64:
+; GISEL: stlxr w0, x1, [x2]
   %res = call i32 @llvm.aarch64.stlxr.p0i64(i64 %val, i64* %addr)
   ret i32 %res
 }

@@ -84,6 +84,10 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
     AMDGPU::FeatureTrapHandler,
     AMDGPU::FeatureCodeObjectV3,
 
+    // The default assumption needs to be ecc is enabled, but no directly
+    // exposed operations depend on it, so it can be safely inlined.
+    AMDGPU::FeatureSRAMECC,
+
     // Perf-tuning features
     AMDGPU::FeatureFastFMAF32,
     AMDGPU::HalfRate64Ops

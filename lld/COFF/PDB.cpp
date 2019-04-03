@@ -13,6 +13,7 @@
 #include "Driver.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "TypeMerger.h"
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Timer.h"
@@ -77,15 +78,6 @@ static Timer TpiStreamLayoutTimer("TPI Stream Layout", TotalPdbLinkTimer);
 static Timer DiskCommitTimer("Commit to Disk", TotalPdbLinkTimer);
 
 namespace {
-/// Map from type index and item index in a type server PDB to the
-/// corresponding index in the destination PDB.
-struct CVIndexMap {
-  SmallVector<TypeIndex, 0> TPIMap;
-  SmallVector<TypeIndex, 0> IPIMap;
-  bool IsTypeServerMap = false;
-  bool IsPrecompiledTypeMap = false;
-};
-
 class DebugSHandler;
 
 class PDBLinker {
@@ -93,8 +85,7 @@ class PDBLinker {
 
 public:
   PDBLinker(SymbolTable *Symtab)
-      : Alloc(), Symtab(Symtab), Builder(Alloc), TypeTable(Alloc),
-        IDTable(Alloc), GlobalTypeTable(Alloc), GlobalIDTable(Alloc) {
+      : Alloc(), Symtab(Symtab), Builder(Alloc), TMerger(Alloc) {
     // This isn't strictly necessary, but link.exe usually puts an empty string
     // as the first "valid" string in the string table, so we do the same in
     // order to maintain as much byte-for-byte compatibility as possible.
@@ -163,20 +154,6 @@ public:
   void addSections(ArrayRef<OutputSection *> OutputSections,
                    ArrayRef<uint8_t> SectionTable);
 
-  /// Get the type table or the global type table if /DEBUG:GHASH is enabled.
-  TypeCollection &getTypeTable() {
-    if (Config->DebugGHashes)
-      return GlobalTypeTable;
-    return TypeTable;
-  }
-
-  /// Get the ID table or the global ID table if /DEBUG:GHASH is enabled.
-  TypeCollection &getIDTable() {
-    if (Config->DebugGHashes)
-      return GlobalIDTable;
-    return IDTable;
-  }
-
   /// Write the PDB to disk and store the Guid generated for it in *Guid.
   void commit(codeview::GUID *Guid);
 
@@ -190,17 +167,7 @@ private:
 
   pdb::PDBFileBuilder Builder;
 
-  /// Type records that will go into the PDB TPI stream.
-  MergingTypeTableBuilder TypeTable;
-
-  /// Item records that will go into the PDB IPI stream.
-  MergingTypeTableBuilder IDTable;
-
-  /// Type records that will go into the PDB TPI stream (for /DEBUG:GHASH)
-  GlobalTypeTableBuilder GlobalTypeTable;
-
-  /// Item records that will go into the PDB IPI stream (for /DEBUG:GHASH)
-  GlobalTypeTableBuilder GlobalIDTable;
+  TypeMerger TMerger;
 
   /// PDBs use a single global string table for filenames in the file checksum
   /// table.
@@ -434,15 +401,15 @@ PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
       Hashes = OwnedHashes;
     }
 
-    if (auto Err = mergeTypeAndIdRecords(GlobalIDTable, GlobalTypeTable,
-                                         ObjectIndexMap->TPIMap, Types, Hashes,
-                                         File->PCHSignature))
+    if (auto Err = mergeTypeAndIdRecords(
+            TMerger.GlobalIDTable, TMerger.GlobalTypeTable,
+            ObjectIndexMap->TPIMap, Types, Hashes, File->PCHSignature))
       fatal("codeview::mergeTypeAndIdRecords failed: " +
             toString(std::move(Err)));
   } else {
-    if (auto Err =
-            mergeTypeAndIdRecords(IDTable, TypeTable, ObjectIndexMap->TPIMap,
-                                  Types, File->PCHSignature))
+    if (auto Err = mergeTypeAndIdRecords(TMerger.IDTable, TMerger.TypeTable,
+                                         ObjectIndexMap->TPIMap, Types,
+                                         File->PCHSignature))
       fatal("codeview::mergeTypeAndIdRecords failed: " +
             toString(std::move(Err)));
   }
@@ -573,24 +540,25 @@ Expected<const CVIndexMap &> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File) {
 
     Optional<uint32_t> EndPrecomp;
     // Merge TPI first, because the IPI stream will reference type indices.
-    if (auto Err = mergeTypeRecords(GlobalTypeTable, IndexMap.TPIMap,
-                                    ExpectedTpi->typeArray(), TpiHashes, EndPrecomp))
+    if (auto Err =
+            mergeTypeRecords(TMerger.GlobalTypeTable, IndexMap.TPIMap,
+                             ExpectedTpi->typeArray(), TpiHashes, EndPrecomp))
       fatal("codeview::mergeTypeRecords failed: " + toString(std::move(Err)));
 
     // Merge IPI.
-    if (auto Err =
-            mergeIdRecords(GlobalIDTable, IndexMap.TPIMap, IndexMap.IPIMap,
-                           ExpectedIpi->typeArray(), IpiHashes))
+    if (auto Err = mergeIdRecords(TMerger.GlobalIDTable, IndexMap.TPIMap,
+                                  IndexMap.IPIMap, ExpectedIpi->typeArray(),
+                                  IpiHashes))
       fatal("codeview::mergeIdRecords failed: " + toString(std::move(Err)));
   } else {
     // Merge TPI first, because the IPI stream will reference type indices.
-    if (auto Err = mergeTypeRecords(TypeTable, IndexMap.TPIMap,
+    if (auto Err = mergeTypeRecords(TMerger.TypeTable, IndexMap.TPIMap,
                                     ExpectedTpi->typeArray()))
       fatal("codeview::mergeTypeRecords failed: " + toString(std::move(Err)));
 
     // Merge IPI.
-    if (auto Err = mergeIdRecords(IDTable, IndexMap.TPIMap, IndexMap.IPIMap,
-                                  ExpectedIpi->typeArray()))
+    if (auto Err = mergeIdRecords(TMerger.IDTable, IndexMap.TPIMap,
+                                  IndexMap.IPIMap, ExpectedIpi->typeArray()))
       fatal("codeview::mergeIdRecords failed: " + toString(std::move(Err)));
   }
 
@@ -1014,7 +982,7 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
 
         // An object file may have S_xxx_ID symbols, but these get converted to
         // "real" symbols in a PDB.
-        translateIdSymbols(RecordBytes, getIDTable());
+        translateIdSymbols(RecordBytes, TMerger.getIDTable());
         Sym = CVSymbol(symbolKind(RecordBytes), RecordBytes);
 
         // If this record refers to an offset in the object file's string table,
@@ -1327,8 +1295,8 @@ void PDBLinker::addObjectsToPDB() {
 
   // Construct TPI and IPI stream contents.
   ScopedTimer T2(TpiStreamLayoutTimer);
-  addTypeInfo(Builder.getTpiBuilder(), getTypeTable());
-  addTypeInfo(Builder.getIpiBuilder(), getIDTable());
+  addTypeInfo(Builder.getTpiBuilder(), TMerger.getTypeTable());
+  addTypeInfo(Builder.getIpiBuilder(), TMerger.getIDTable());
   T2.stop();
 
   ScopedTimer T3(GlobalsLayoutTimer);
@@ -1371,7 +1339,8 @@ void PDBLinker::printStats() {
         "Input OBJ files (expanded from all cmd-line inputs)");
   Print(TypeServerIndexMappings.size(), "PDB type server dependencies");
   Print(PrecompTypeIndexMappings.size(), "Precomp OBJ dependencies");
-  Print(getTypeTable().size() + getIDTable().size(), "Merged TPI records");
+  Print(TMerger.getTypeTable().size() + TMerger.getIDTable().size(),
+        "Merged TPI records");
   Print(PDBStrTab.size(), "Output PDB strings");
   Print(GlobalSymbols, "Global symbol records");
   Print(ModuleSymbols, "Module symbol records");

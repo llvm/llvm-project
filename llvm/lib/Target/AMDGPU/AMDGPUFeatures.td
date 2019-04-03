@@ -49,9 +49,10 @@ def FeatureWavefrontSize16 : SubtargetFeatureWavefrontSize<16>;
 def FeatureWavefrontSize32 : SubtargetFeatureWavefrontSize<32>;
 def FeatureWavefrontSize64 : SubtargetFeatureWavefrontSize<64>;
 
-class SubtargetFeatureGeneration <string Value, string Subtarget,
+class SubtargetFeatureGeneration <string Value, string FeatureName,
+                                 string Subtarget,
                                   list<SubtargetFeature> Implies> :
-        SubtargetFeature <Value, "Gen", Subtarget#"::"#Value,
+        SubtargetFeature <FeatureName, "Gen", Subtarget#"::"#Value,
                           Value#" GPU generation", Implies>;
 
 def FeaturePromoteAlloca : SubtargetFeature <"promote-alloca",

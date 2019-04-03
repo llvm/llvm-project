@@ -18689,10 +18689,11 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
   SDValue RHS = N->getOperand(1);
   SDValue Ops[] = {LHS, RHS};
   EVT VT = N->getValueType(0);
+  unsigned Opcode = N->getOpcode();
 
   // See if we can constant fold the vector operation.
   if (SDValue Fold = DAG.FoldConstantVectorArithmetic(
-          N->getOpcode(), SDLoc(LHS), LHS.getValueType(), Ops, N->getFlags()))
+          Opcode, SDLoc(LHS), LHS.getValueType(), Ops, N->getFlags()))
     return Fold;
 
   // Type legalization might introduce new shuffles in the DAG.
@@ -18707,9 +18708,8 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
 
     if (SVN0->getMask().equals(SVN1->getMask())) {
       SDValue UndefVector = LHS.getOperand(1);
-      SDValue NewBinOp = DAG.getNode(N->getOpcode(), SDLoc(N), VT,
-                                     LHS.getOperand(0), RHS.getOperand(0),
-                                     N->getFlags());
+      SDValue NewBinOp = DAG.getNode(Opcode, SDLoc(N), VT, LHS.getOperand(0),
+                                     RHS.getOperand(0), N->getFlags());
       AddUsersToWorklist(N);
       return DAG.getVectorShuffle(VT, SDLoc(N), NewBinOp, UndefVector,
                                   SVN0->getMask());
@@ -18729,12 +18729,12 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
     SDValue Z = LHS.getOperand(2);
     EVT NarrowVT = X.getValueType();
     if (NarrowVT == Y.getValueType() &&
-        TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), NarrowVT)) {
+        TLI.isOperationLegalOrCustomOrPromote(Opcode, NarrowVT)) {
       // (binop undef, undef) may not return undef, so compute that result.
       SDLoc DL(N);
-      SDValue VecC = DAG.getNode(N->getOpcode(), DL, VT, DAG.getUNDEF(VT),
-                                 DAG.getUNDEF(VT));
-      SDValue NarrowBO = DAG.getNode(N->getOpcode(), DL, NarrowVT, X, Y);
+      SDValue VecC =
+          DAG.getNode(Opcode, DL, VT, DAG.getUNDEF(VT), DAG.getUNDEF(VT));
+      SDValue NarrowBO = DAG.getNode(Opcode, DL, NarrowVT, X, Y);
       return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, VecC, NarrowBO, Z);
     }
   }

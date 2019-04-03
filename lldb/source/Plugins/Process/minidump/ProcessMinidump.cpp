@@ -351,8 +351,6 @@ void ProcessMinidump::ReadModuleList() {
   std::vector<const MinidumpModule *> filtered_modules =
       m_minidump_parser->GetFilteredModuleList();
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
-
   for (auto module : filtered_modules) {
     llvm::Optional<std::string> name =
         m_minidump_parser->GetMinidumpString(module->module_name_rva);
@@ -360,6 +358,7 @@ void ProcessMinidump::ReadModuleList() {
     if (!name)
       continue;
 
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
     if (log) {
       log->Printf("ProcessMinidump::%s found module: name: %s %#010" PRIx64
                   "-%#010" PRIx64 " size: %" PRIu32,
@@ -375,46 +374,14 @@ void ProcessMinidump::ReadModuleList() {
       m_is_wow64 = true;
     }
 
-    if (log) {
-      log->Printf("ProcessMinidump::%s load module: name: %s", __FUNCTION__,
-                  name.getValue().c_str());
-    }
-
     const auto uuid = m_minidump_parser->GetModuleUUID(module);
     auto file_spec = FileSpec(name.getValue(), GetArchitecture().GetTriple());
     FileSystem::Instance().Resolve(file_spec);
     ModuleSpec module_spec(file_spec, uuid);
     module_spec.GetArchitecture() = GetArchitecture();
     Status error;
-    // Try and find a module with a full UUID that matches. This function will
-    // add the module to the target if it finds one.
     lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, &error);
-    if (!module_sp) {
-      // Try and find a module without specifying the UUID and only looking for
-      // the file given a basename. We then will look for a partial UUID match
-      // if we find any matches. This function will add the module to the
-      // target if it finds one, so we need to remove the module from the target
-      // if the UUID doesn't match during our manual UUID verification. This
-      // allows the "target.exec-search-paths" setting to specify one or more
-      // directories that contain executables that can be searched for matches.
-      ModuleSpec basename_module_spec(module_spec);
-      basename_module_spec.GetUUID().Clear();
-      basename_module_spec.GetFileSpec().GetDirectory().Clear();
-      module_sp = GetTarget().GetSharedModule(basename_module_spec, &error);
-      if (module_sp) {
-        // We consider the module to be a match if the minidump UUID is a
-        // prefix of the actual UUID, or if either of the UUIDs are empty.
-        const auto dmp_bytes = uuid.GetBytes();
-        const auto mod_bytes = module_sp->GetUUID().GetBytes();
-        const bool match = dmp_bytes.empty() || mod_bytes.empty() ||
-            mod_bytes.take_front(dmp_bytes.size()) == dmp_bytes;
-        if (!match) {
-            GetTarget().GetImages().Remove(module_sp);
-            module_sp.reset();
-        }
-      }
-    }
-    if (!module_sp) {
+    if (!module_sp || error.Fail()) {
       // We failed to locate a matching local object file. Fortunately, the
       // minidump format encodes enough information about each module's memory
       // range to allow us to create placeholder modules.
@@ -431,6 +398,11 @@ void ProcessMinidump::ReadModuleList() {
       module_sp = Module::CreateModuleFromObjectFile<PlaceholderObjectFile>(
           module_spec, module->base_of_image, module->size_of_image);
       GetTarget().GetImages().Append(module_sp);
+    }
+
+    if (log) {
+      log->Printf("ProcessMinidump::%s load module: name: %s", __FUNCTION__,
+                  name.getValue().c_str());
     }
 
     bool load_addr_changed = false;

@@ -199,7 +199,7 @@ unsigned WebAssemblyInstrInfo::insertBranch(
       const char *CPPExnSymbol = MF.createExternalSymbolName("__cpp_exception");
       BuildMI(&MBB, DL, get(WebAssembly::BR_ON_EXN))
           .addMBB(TBB)
-          .addExternalSymbol(CPPExnSymbol, WebAssemblyII::MO_SYMBOL_EVENT)
+          .addExternalSymbol(CPPExnSymbol)
           .add(Cond[1]);
     } else
       BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addMBB(TBB).add(Cond[1]);
