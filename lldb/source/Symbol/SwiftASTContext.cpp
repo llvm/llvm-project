@@ -2727,13 +2727,13 @@ public:
     m_ast_context.GetDiagnosticEngine().takeConsumers();
   }
 
-  virtual void handleDiagnostic(swift::SourceManager &source_mgr,
-                                swift::SourceLoc source_loc,
-                                swift::DiagnosticKind kind,
-                                llvm::StringRef formatString,
-                                llvm::ArrayRef<swift::DiagnosticArgument> formatArgs,
-                                const swift::DiagnosticInfo &info,
-                                const SourceLoc defaultDiagnosticLoc) {
+  virtual void
+  handleDiagnostic(swift::SourceManager &source_mgr,
+                   swift::SourceLoc source_loc, swift::DiagnosticKind kind,
+                   llvm::StringRef formatString,
+                   llvm::ArrayRef<swift::DiagnosticArgument> formatArgs,
+                   const swift::DiagnosticInfo &info,
+                   const SourceLoc bufferIndirectlyCausingDiagnostic) {
     llvm::StringRef bufferName = "<anonymous>";
     unsigned bufferID = 0;
     std::pair<unsigned, unsigned> line_col = {0, 0};
