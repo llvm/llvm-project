@@ -382,7 +382,15 @@ void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
   va_list ap;
   va_start(ap, microtask);
 
+#if KMP_STATS_ENABLED
   KMP_COUNT_BLOCK(OMP_TEAMS);
+  stats_state_e previous_state = KMP_GET_THREAD_STATE();
+  if (previous_state == stats_state_e::SERIAL_REGION) {
+    KMP_EXCHANGE_PARTITIONED_TIMER(OMP_teams_overhead);
+  } else {
+    KMP_PUSH_PARTITIONED_TIMER(OMP_teams_overhead);
+  }
+#endif
 
   // remember teams entry point and nesting level
   this_thr->th.th_teams_microtask = microtask;
@@ -442,6 +450,13 @@ void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
   this_thr->th.th_teams_level = 0;
   *(kmp_int64 *)(&this_thr->th.th_teams_size) = 0L;
   va_end(ap);
+#if KMP_STATS_ENABLED
+  if (previous_state == stats_state_e::SERIAL_REGION) {
+    KMP_EXCHANGE_PARTITIONED_TIMER(OMP_serial);
+  } else {
+    KMP_POP_PARTITIONED_TIMER();
+  }
+#endif // KMP_STATS_ENABLED
 }
 #endif /* OMP_40_ENABLED */
 
