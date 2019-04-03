@@ -271,8 +271,8 @@ namespace {
     /// If so, return true.
     bool SimplifyDemandedBits(SDValue Op) {
       unsigned BitWidth = Op.getScalarValueSizeInBits();
-      APInt Demanded = APInt::getAllOnesValue(BitWidth);
-      return SimplifyDemandedBits(Op, Demanded);
+      APInt DemandedBits = APInt::getAllOnesValue(BitWidth);
+      return SimplifyDemandedBits(Op, DemandedBits);
     }
 
     /// Check the specified vector node value to see if it can be simplified or
@@ -280,8 +280,8 @@ namespace {
     /// elements. If so, return true.
     bool SimplifyDemandedVectorElts(SDValue Op) {
       unsigned NumElts = Op.getValueType().getVectorNumElements();
-      APInt Demanded = APInt::getAllOnesValue(NumElts);
-      return SimplifyDemandedVectorElts(Op, Demanded);
+      APInt DemandedElts = APInt::getAllOnesValue(NumElts);
+      return SimplifyDemandedVectorElts(Op, DemandedElts);
     }
 
     bool SimplifyDemandedBits(SDValue Op, const APInt &Demanded);
@@ -427,10 +427,6 @@ namespace {
     SDValue replaceStoreOfFPConstant(StoreSDNode *ST);
 
     SDValue visitSTORE(SDNode *N);
-
-    SDValue ImproveLifetimeNodeChain(SDNode *N);
-
-    SDValue visitLIFETIME_START(SDNode *N);
     SDValue visitLIFETIME_END(SDNode *N);
     SDValue visitINSERT_VECTOR_ELT(SDNode *N);
     SDValue visitEXTRACT_VECTOR_ELT(SDNode *N);
@@ -1097,10 +1093,10 @@ CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO) {
 
 /// Check the specified integer node value to see if it can be simplified or if
 /// things it uses can be simplified by bit propagation. If so, return true.
-bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &Demanded) {
+bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits) {
   TargetLowering::TargetLoweringOpt TLO(DAG, LegalTypes, LegalOperations);
   KnownBits Known;
-  if (!TLI.SimplifyDemandedBits(Op, Demanded, Known, TLO))
+  if (!TLI.SimplifyDemandedBits(Op, DemandedBits, Known, TLO))
     return false;
 
   // Revisit the node.
@@ -1119,12 +1115,13 @@ bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &Demanded) {
 /// Check the specified vector node value to see if it can be simplified or
 /// if things it uses can be simplified as it only uses some of the elements.
 /// If so, return true.
-bool DAGCombiner::SimplifyDemandedVectorElts(SDValue Op, const APInt &Demanded,
+bool DAGCombiner::SimplifyDemandedVectorElts(SDValue Op,
+                                             const APInt &DemandedElts,
                                              bool AssumeSingleUse) {
   TargetLowering::TargetLoweringOpt TLO(DAG, LegalTypes, LegalOperations);
   APInt KnownUndef, KnownZero;
-  if (!TLI.SimplifyDemandedVectorElts(Op, Demanded, KnownUndef, KnownZero, TLO,
-                                      0, AssumeSingleUse))
+  if (!TLI.SimplifyDemandedVectorElts(Op, DemandedElts, KnownUndef, KnownZero,
+                                      TLO, 0, AssumeSingleUse))
     return false;
 
   // Revisit the node.
@@ -1654,7 +1651,6 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::MLOAD:              return visitMLOAD(N);
   case ISD::MSCATTER:           return visitMSCATTER(N);
   case ISD::MSTORE:             return visitMSTORE(N);
-  case ISD::LIFETIME_START:     return visitLIFETIME_START(N);
   case ISD::LIFETIME_END:       return visitLIFETIME_END(N);
   case ISD::FP_TO_FP16:         return visitFP_TO_FP16(N);
   case ISD::FP16_TO_FP:         return visitFP16_TO_FP(N);
@@ -6848,8 +6844,8 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   if (N1C && N0.getOpcode() == ISD::SRL && N0.hasOneUse() &&
       TLI.shouldFoldShiftPairToMask(N, Level)) {
     if (ConstantSDNode *N0C1 = isConstOrConstSplat(N0.getOperand(1))) {
-      uint64_t c1 = N0C1->getZExtValue();
-      if (c1 < OpSizeInBits) {
+      if (N0C1->getAPIntValue().ult(OpSizeInBits)) {
+        uint64_t c1 = N0C1->getZExtValue();
         uint64_t c2 = N1C->getZExtValue();
         APInt Mask = APInt::getHighBitsSet(OpSizeInBits, OpSizeInBits - c1);
         SDValue Shift;
@@ -15705,33 +15701,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   return ReduceLoadOpStoreWidth(N);
 }
 
-SDValue DAGCombiner::ImproveLifetimeNodeChain(SDNode *N) {
-  auto Chain = N->getOperand(0);
-  auto NewChain = FindBetterChain(N, Chain);
-  if (NewChain != Chain) {
-    LifetimeSDNode *LN = cast<LifetimeSDNode>(N);
-    // Create New Node to prevent loop in CombineTo.
-    SDValue NewN = DAG.getLifetimeNode(N->getOpcode() == ISD::LIFETIME_START,
-                                       SDLoc(N), NewChain, LN->getFrameIndex(),
-                                       LN->hasOffset() ? LN->getSize() : -1,
-                                       LN->hasOffset() ? LN->getOffset() : -1);
-    AddToWorklist(NewN.getNode());
-    auto TF = DAG.getNode(ISD::TokenFactor, SDLoc(N), MVT::Other, Chain, NewN);
-    return CombineTo(N, TF);
-  }
-  return SDValue();
-}
-
-SDValue DAGCombiner::visitLIFETIME_START(SDNode *N) {
-  if (SDValue V = ImproveLifetimeNodeChain(N))
-    return V;
-  return SDValue();
-}
-
 SDValue DAGCombiner::visitLIFETIME_END(SDNode *N) {
-  if (SDValue V = ImproveLifetimeNodeChain(N))
-    return V;
-
   const auto *LifetimeEnd = cast<LifetimeSDNode>(N);
   if (!LifetimeEnd->hasOffset())
     return SDValue();
@@ -18689,30 +18659,33 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
   SDValue RHS = N->getOperand(1);
   SDValue Ops[] = {LHS, RHS};
   EVT VT = N->getValueType(0);
+  unsigned Opcode = N->getOpcode();
 
   // See if we can constant fold the vector operation.
   if (SDValue Fold = DAG.FoldConstantVectorArithmetic(
-          N->getOpcode(), SDLoc(LHS), LHS.getValueType(), Ops, N->getFlags()))
+          Opcode, SDLoc(LHS), LHS.getValueType(), Ops, N->getFlags()))
     return Fold;
 
-  // Type legalization might introduce new shuffles in the DAG.
-  // Fold (VBinOp (shuffle (A, Undef, Mask)), (shuffle (B, Undef, Mask)))
-  //   -> (shuffle (VBinOp (A, B)), Undef, Mask).
-  if (LegalTypes && isa<ShuffleVectorSDNode>(LHS) &&
-      isa<ShuffleVectorSDNode>(RHS) && LHS.hasOneUse() && RHS.hasOneUse() &&
-      LHS.getOperand(1).isUndef() &&
-      RHS.getOperand(1).isUndef()) {
-    ShuffleVectorSDNode *SVN0 = cast<ShuffleVectorSDNode>(LHS);
-    ShuffleVectorSDNode *SVN1 = cast<ShuffleVectorSDNode>(RHS);
-
-    if (SVN0->getMask().equals(SVN1->getMask())) {
-      SDValue UndefVector = LHS.getOperand(1);
-      SDValue NewBinOp = DAG.getNode(N->getOpcode(), SDLoc(N), VT,
-                                     LHS.getOperand(0), RHS.getOperand(0),
-                                     N->getFlags());
-      AddUsersToWorklist(N);
-      return DAG.getVectorShuffle(VT, SDLoc(N), NewBinOp, UndefVector,
-                                  SVN0->getMask());
+  // Move unary shuffles with identical masks after a vector binop:
+  // VBinOp (shuffle A, Undef, Mask), (shuffle B, Undef, Mask))
+  //   --> shuffle (VBinOp A, B), Undef, Mask
+  // This does not require type legality checks because we are creating the
+  // same types of operations that are in the original sequence. We do have to
+  // restrict ops like integer div that have immediate UB (eg, div-by-zero)
+  // though. This code is adapted from the identical transform in instcombine.
+  if (Opcode != ISD::UDIV && Opcode != ISD::SDIV &&
+      Opcode != ISD::UREM && Opcode != ISD::SREM &&
+      Opcode != ISD::UDIVREM && Opcode != ISD::SDIVREM) {
+    auto *Shuf0 = dyn_cast<ShuffleVectorSDNode>(LHS);
+    auto *Shuf1 = dyn_cast<ShuffleVectorSDNode>(RHS);
+    if (Shuf0 && Shuf1 && Shuf0->getMask().equals(Shuf1->getMask()) &&
+        LHS.getOperand(1).isUndef() && RHS.getOperand(1).isUndef() &&
+        (LHS.hasOneUse() || RHS.hasOneUse() || LHS == RHS)) {
+      SDLoc DL(N);
+      SDValue NewBinOp = DAG.getNode(Opcode, DL, VT, LHS.getOperand(0),
+                                     RHS.getOperand(0), N->getFlags());
+      SDValue UndefV = LHS.getOperand(1);
+      return DAG.getVectorShuffle(VT, DL, NewBinOp, UndefV, Shuf0->getMask());
     }
   }
 
@@ -18729,12 +18702,12 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
     SDValue Z = LHS.getOperand(2);
     EVT NarrowVT = X.getValueType();
     if (NarrowVT == Y.getValueType() &&
-        TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), NarrowVT)) {
+        TLI.isOperationLegalOrCustomOrPromote(Opcode, NarrowVT)) {
       // (binop undef, undef) may not return undef, so compute that result.
       SDLoc DL(N);
-      SDValue VecC = DAG.getNode(N->getOpcode(), DL, VT, DAG.getUNDEF(VT),
-                                 DAG.getUNDEF(VT));
-      SDValue NarrowBO = DAG.getNode(N->getOpcode(), DL, NarrowVT, X, Y);
+      SDValue VecC =
+          DAG.getNode(Opcode, DL, VT, DAG.getUNDEF(VT), DAG.getUNDEF(VT));
+      SDValue NarrowBO = DAG.getNode(Opcode, DL, NarrowVT, X, Y);
       return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, VecC, NarrowBO, Z);
     }
   }

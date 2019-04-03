@@ -77,7 +77,11 @@ GNU-VERDEF: 0x000000006ffffff0 VERSYM               0x24c
 GNU-VERDEF: 0x000000006ffffffc VERDEF               0x25c
 GNU-VERDEF: 0x000000006ffffffd VERDEFNUM            3
 
-GNU-VERDEF: Dumper for .gnu.version is not implemented
+GNU-VERDEF:      Version symbols section '.gnu.version' contains 8 entries:
+GNU-VERDEF-NEXT:  Addr: 000000000000024c  Offset: 0x00024c  Link: 1 (.dynsym)
+GNU-VERDEF-NEXT:   000:   0 (*local*)       1 (*global*)      1 (*global*)      3 (VERSION2)
+GNU-VERDEF-NEXT:   004:   1 (*global*)      2 (VERSION1)      2 (VERSION1)      3 (VERSION2)
+
 GNU-VERDEF: Dumper for .gnu.version_d is not implemented
 
 RUN: llvm-readobj -V %p/Inputs/verneed.elf-x86-64 | FileCheck %s --check-prefix=LLVM-VERNEED
@@ -114,6 +118,9 @@ LLVM-VERNEED-NEXT:     }
 LLVM-VERNEED-NEXT:   }
 LLVM-VERNEED-NEXT: }
 
-GNU-VERNEED: Dumper for .gnu.version is not implemented
+GNU-VERNEED:      Version symbols section '.gnu.version' contains 4 entries:
+GNU-VERNEED-NEXT:  Addr: 0000000000010228  Offset: 0x000228  Link: 1 (.dynsym)
+GNU-VERNEED-NEXT:   000:   0 (*local*)       2 (v3)            3 (v2)            4 (v1)
+
 GNU-VERNEED: Dumper for .gnu.version_r is not implemented
 

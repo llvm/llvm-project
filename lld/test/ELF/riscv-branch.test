@@ -93,27 +93,26 @@ Sections:
         Type:            R_RISCV_BRANCH
         Addend:          -4096
 Symbols:
-  Local:
-    - Name:            .text
-      Type:            STT_SECTION
-      Section:         .text
-    - Name:            .data
-      Type:            STT_SECTION
-      Section:         .data
-    - Name:            .bss
-      Type:            STT_SECTION
-      Section:         .bss
-    - Name:            .reloc_max
-      Type:            STT_SECTION
-      Section:         .reloc_max
-    - Name:            L1
-      Section:         .reloc_max
-    - Name:            .reloc_min
-      Type:            STT_SECTION
-      Section:         .reloc_min
-    - Name:            L2
-      Section:         .reloc_min
-  Global:
-    - Name:            _start
-      Section:         .text
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .data
+    Type:            STT_SECTION
+    Section:         .data
+  - Name:            .bss
+    Type:            STT_SECTION
+    Section:         .bss
+  - Name:            .reloc_max
+    Type:            STT_SECTION
+    Section:         .reloc_max
+  - Name:            L1
+    Section:         .reloc_max
+  - Name:            .reloc_min
+    Type:            STT_SECTION
+    Section:         .reloc_min
+  - Name:            L2
+    Section:         .reloc_min
+  - Name:            _start
+    Section:         .text
+    Binding:         STB_GLOBAL
 ...

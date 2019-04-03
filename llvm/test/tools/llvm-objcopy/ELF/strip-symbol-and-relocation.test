@@ -43,6 +43,6 @@ Sections:
         Symbol:          bar
         Type:            R_X86_64_32S
 Symbols:
-  Global:
-    - Name:     bar
-      Section:  .text
+  - Name:     bar
+    Section:  .text
+    Binding:  STB_GLOBAL

@@ -73,9 +73,8 @@ Sections:
     Members:         
       - SectionOrType:   GRP_COMDAT
       - SectionOrType:   .foo
-Symbols:         
-  Local:           
-    - Name:            bar
-      Section:         .group
-    - Name:            zed
-      Section:         .group1
+Symbols:
+  - Name:            bar
+    Section:         .group
+  - Name:            zed
+    Section:         .group1

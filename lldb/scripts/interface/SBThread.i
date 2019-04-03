@@ -428,6 +428,14 @@ public:
     SafeToCallFunctions ();
 
     %pythoncode %{
+        def __iter__(self):
+            '''Iterate over all frames in a lldb.SBThread object.'''
+            return lldb_iter(self, 'GetNumFrames', 'GetFrameAtIndex')
+
+        def __len__(self):
+            '''Return the number of frames in a lldb.SBThread object.'''
+            return self.GetNumFrames()
+
         class frames_access(object):
             '''A helper object that will lazily hand out frames for a thread when supplied an index.'''
             def __init__(self, sbthread):

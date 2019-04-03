@@ -119,13 +119,12 @@ Sections:
         Symbol:      .text
         Type:        R_X86_64_32
 Symbols:
-  Local:
-    - Name:            func
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x0000000000000001
-    - Name:            sym
-      Section:         .text
-    - Name:            .text
-      Type:            STT_SECTION
-      Section:         .text
+  - Name:            func
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000001
+  - Name:            sym
+    Section:         .text
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text

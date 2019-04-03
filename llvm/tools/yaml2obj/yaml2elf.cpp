@@ -133,7 +133,7 @@ class ELFState {
   const ELFYAML::Object &Doc;
 
   bool buildSectionIndex();
-  bool buildSymbolIndex(const ELFYAML::SymbolsDef &);
+  bool buildSymbolIndex(ArrayRef<ELFYAML::Symbol> Symbols);
   void initELFHeader(Elf_Ehdr &Header);
   void initProgramHeaders(std::vector<Elf_Phdr> &PHeaders);
   bool initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
@@ -145,8 +145,7 @@ class ELFState {
                                ContiguousBlobAccumulator &CBA);
   void setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
                               std::vector<Elf_Shdr> &SHeaders);
-  void addSymbols(const std::vector<ELFYAML::Symbol> &Symbols,
-                  std::vector<Elf_Sym> &Syms, unsigned SymbolBinding,
+  void addSymbols(ArrayRef<ELFYAML::Symbol> Symbols, std::vector<Elf_Sym> &Syms,
                   const StringTableBuilder &Strtab);
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::RawContentSection &Section,
@@ -171,7 +170,6 @@ class ELFState {
   bool writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::DynamicSection &Section,
                            ContiguousBlobAccumulator &CBA);
-  bool hasDynamicSymbols() const;
   SmallVector<const char *, 5> implicitSectionNames() const;
 
   // - SHT_NULL entry (placed first, i.e. 0'th entry)
@@ -323,6 +321,13 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
   return true;
 }
 
+static size_t findFirstNonGlobal(ArrayRef<ELFYAML::Symbol> Symbols) {
+  for (size_t I = 0; I < Symbols.size(); ++I)
+    if (Symbols[I].Binding.value != ELF::STB_LOCAL)
+      return I;
+  return Symbols.size();
+}
+
 template <class ELFT>
 void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
                                              SymtabType STType,
@@ -335,7 +340,7 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
   const auto &Symbols = IsStatic ? Doc.Symbols : Doc.DynamicSymbols;
   auto &Strtab = IsStatic ? DotStrtab : DotDynstr;
   // One greater than symbol table index of the last local symbol.
-  SHeader.sh_info = Symbols.Local.size() + 1;
+  SHeader.sh_info = findFirstNonGlobal(Symbols) + 1;
   SHeader.sh_entsize = sizeof(Elf_Sym);
   SHeader.sh_addralign = 8;
 
@@ -359,10 +364,7 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
     Syms.push_back(Sym);
   }
 
-  addSymbols(Symbols.Local, Syms, ELF::STB_LOCAL, Strtab);
-  addSymbols(Symbols.Global, Syms, ELF::STB_GLOBAL, Strtab);
-  addSymbols(Symbols.Weak, Syms, ELF::STB_WEAK, Strtab);
-  addSymbols(Symbols.GNUUnique, Syms, ELF::STB_GNU_UNIQUE, Strtab);
+  addSymbols(Symbols, Syms, Strtab);
 
   writeArrayData(
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign),
@@ -471,16 +473,15 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
 }
 
 template <class ELFT>
-void ELFState<ELFT>::addSymbols(const std::vector<ELFYAML::Symbol> &Symbols,
+void ELFState<ELFT>::addSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
                                 std::vector<Elf_Sym> &Syms,
-                                unsigned SymbolBinding,
                                 const StringTableBuilder &Strtab) {
   for (const auto &Sym : Symbols) {
     Elf_Sym Symbol;
     zero(Symbol);
     if (!Sym.Name.empty())
       Symbol.st_name = Strtab.getOffset(Sym.Name);
-    Symbol.setBindingAndType(SymbolBinding, Sym.Type);
+    Symbol.setBindingAndType(Sym.Binding, Sym.Type);
     if (!Sym.Section.empty()) {
       unsigned Index;
       if (SN2I.lookup(Sym.Section, Index)) {
@@ -796,45 +797,41 @@ template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
 }
 
 template <class ELFT>
-bool ELFState<ELFT>::buildSymbolIndex(const ELFYAML::SymbolsDef &Symbols) {
+bool ELFState<ELFT>::buildSymbolIndex(ArrayRef<ELFYAML::Symbol> Symbols) {
+  bool GlobalSymbolSeen = false;
   std::size_t I = 0;
-  for (const std::vector<ELFYAML::Symbol> &V :
-       {Symbols.Local, Symbols.Global, Symbols.Weak, Symbols.GNUUnique}) {
-    for (const auto &Sym : V) {
-      ++I;
-      if (Sym.Name.empty())
-        continue;
-      if (SymN2I.addName(Sym.Name, I)) {
-        WithColor::error() << "Repeated symbol name: '" << Sym.Name << "'.\n";
-        return false;
-      }
+  for (const auto &Sym : Symbols) {
+    ++I;
+
+    StringRef Name = Sym.Name;
+    if (Sym.Binding.value == ELF::STB_LOCAL && GlobalSymbolSeen) {
+      WithColor::error() << "Local symbol '" + Name +
+                                "' after global in Symbols list.\n";
+      return false;
+    }
+    if (Sym.Binding.value != ELF::STB_LOCAL)
+      GlobalSymbolSeen = true;
+
+    if (!Name.empty() && SymN2I.addName(Name, I)) {
+      WithColor::error() << "Repeated symbol name: '" << Name << "'.\n";
+      return false;
     }
   }
   return true;
 }
 
 template <class ELFT> void ELFState<ELFT>::finalizeStrings() {
-  auto AddSymbols = [](StringTableBuilder &StrTab,
-                       const ELFYAML::SymbolsDef &Symbols) {
-    for (const auto &Sym : Symbols.Local)
-      StrTab.add(Sym.Name);
-    for (const auto &Sym : Symbols.Global)
-      StrTab.add(Sym.Name);
-    for (const auto &Sym : Symbols.Weak)
-      StrTab.add(Sym.Name);
-    for (const auto &Sym : Symbols.GNUUnique)
-      StrTab.add(Sym.Name);
-  };
-
   // Add the regular symbol names to .strtab section.
-  AddSymbols(DotStrtab, Doc.Symbols);
+  for (const ELFYAML::Symbol &Sym : Doc.Symbols)
+    DotStrtab.add(Sym.Name);
   DotStrtab.finalize();
 
-  if (!hasDynamicSymbols())
+  if (Doc.DynamicSymbols.empty())
     return;
 
   // Add the dynamic symbol names to .dynstr section.
-  AddSymbols(DotDynstr, Doc.DynamicSymbols);
+  for (const ELFYAML::Symbol &Sym : Doc.DynamicSymbols)
+    DotDynstr.add(Sym.Name);
 
   // SHT_GNU_verdef and SHT_GNU_verneed sections might also
   // add strings to .dynstr section.
@@ -901,7 +898,7 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, const ELFYAML::Object &Doc) {
   State.initStrtabSectionHeader(SHeaders[Index], ".strtab", State.DotStrtab, CBA);
   Index = State.SN2I.get(".shstrtab");
   State.initStrtabSectionHeader(SHeaders[Index], ".shstrtab", State.DotShStrtab, CBA);
-  if (State.hasDynamicSymbols()) {
+  if (!Doc.DynamicSymbols.empty()) {
     Index = State.SN2I.get(".dynsym");
     State.initSymtabSectionHeader(SHeaders[Index], SymtabType::Dynamic, CBA);
     SHeaders[Index].sh_flags |= ELF::SHF_ALLOC;
@@ -920,16 +917,9 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, const ELFYAML::Object &Doc) {
   return 0;
 }
 
-template <class ELFT> bool ELFState<ELFT>::hasDynamicSymbols() const {
-  return !Doc.DynamicSymbols.Global.empty() ||
-         !Doc.DynamicSymbols.Weak.empty() ||
-         !Doc.DynamicSymbols.Local.empty() ||
-         !Doc.DynamicSymbols.GNUUnique.empty();
-}
-
 template <class ELFT>
 SmallVector<const char *, 5> ELFState<ELFT>::implicitSectionNames() const {
-  if (!hasDynamicSymbols())
+  if (Doc.DynamicSymbols.empty())
     return {".symtab", ".strtab", ".shstrtab"};
   return {".symtab", ".strtab", ".shstrtab", ".dynsym", ".dynstr"};
 }

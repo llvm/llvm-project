@@ -11,10 +11,9 @@
 # CHECK-NEXT:   Type:      ET_REL
 # CHECK-NEXT:   Machine:   EM_X86_64
 # CHECK-NEXT: Symbols:
-# CHECK-NEXT:   GNUUnique:
-# CHECK-NEXT:     - Name:  foo
-# CHECK-NEXT:       Type:  STT_OBJECT
-# CHECK-NEXT: DynamicSymbols: {}
+# CHECK-NEXT:   - Name:    foo
+# CHECK-NEXT:     Type:    STT_OBJECT
+# CHECK-NEXT:     Binding: STB_GNU_UNIQUE
 # CHECK-NEXT: ...
 
 --- !ELF
@@ -25,6 +24,6 @@ FileHeader:
   Type:      ET_REL
   Machine:   EM_X86_64
 Symbols:
-  GNUUnique:
-    - Name:  foo
-      Type:  STT_OBJECT
+  - Name:    foo
+    Type:    STT_OBJECT
+    Binding: STB_GNU_UNIQUE

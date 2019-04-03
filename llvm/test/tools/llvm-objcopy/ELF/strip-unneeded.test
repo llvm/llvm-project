@@ -57,42 +57,43 @@ Sections:
         Symbol: foo
         Type:   R_X86_64_PC32
 Symbols:
-  Local:
-    - Name:     foo
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1000
-      Size:     8
-    - Name:     bar
-      Type:     STT_FUNC
-      Size:     8
-      Section:  .text
-      Value:    0x1008
-    - Name:     barfoo
-      Type:     STT_FUNC
-      Size:     8
-      Section:  .text
-      Value:    0x1010
-    - Name:     fileSymbol
-      Type:     STT_FILE
-    - Name:     sectionSymbol
-      Type:     STT_SECTION
-  Weak:
-    - Name:     baz
-      Type:     STT_FUNC
-      Size:     8
-      Section:  .text
-      Value:    0x1018
-    - Name:     foobaz
-      Type:     STT_FUNC
-  Global:
-    - Name:     foobar
-      Type:     STT_FUNC
-    - Name:     barbaz
-      Type:     STT_FUNC
-      Size:     8
-      Section:  .text
-      Value:    0x1020
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+    Size:     8
+  - Name:     bar
+    Type:     STT_FUNC
+    Size:     8
+    Section:  .text
+    Value:    0x1008
+  - Name:     barfoo
+    Type:     STT_FUNC
+    Size:     8
+    Section:  .text
+    Value:    0x1010
+  - Name:     fileSymbol
+    Type:     STT_FILE
+  - Name:     sectionSymbol
+    Type:     STT_SECTION
+  - Name:     foobar
+    Type:     STT_FUNC
+    Binding:  STB_GLOBAL
+  - Name:     barbaz
+    Type:     STT_FUNC
+    Size:     8
+    Section:  .text
+    Value:    0x1020
+    Binding:  STB_GLOBAL
+  - Name:     baz
+    Type:     STT_FUNC
+    Size:     8
+    Section:  .text
+    Value:    0x1018
+    Binding:  STB_WEAK
+  - Name:     foobaz
+    Type:     STT_FUNC
+    Binding:  STB_WEAK
 
 #CHECK: Symbols [
 #CHECK-NEXT:  Symbol {

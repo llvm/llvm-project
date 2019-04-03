@@ -273,7 +273,7 @@ define arm_aapcs_vfpcc i32 @t10(float %x) nounwind {
 entry:
 ; CHECK-LABEL: t10:
 ; CHECK: vmov.i32 q[[Q0:[0-9]+]], #0x3f000000
-; CHECK: vmul.f32 q8, q8, d[[DREG:[0-1]+]]
+; CHECK: vmul.f32 q8, q9, d1[0]
 ; CHECK: vadd.f32 q8, q8, q8
   %0 = shufflevector <4 x float> zeroinitializer, <4 x float> undef, <4 x i32> zeroinitializer ; <<4 x float>> [#uses=1]
   %1 = insertelement <4 x float> %0, float %x, i32 1 ; <<4 x float>> [#uses=1]

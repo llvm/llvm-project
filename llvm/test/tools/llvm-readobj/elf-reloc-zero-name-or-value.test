@@ -74,15 +74,15 @@ Sections:
         Addend: 1
         Symbol: sym
 Symbols:
-  Global:
-    - Name:    sym
-      Value:   0
-      Section: .text
+  - Name:    sym
+    Value:   0
+    Section: .text
+    Binding: STB_GLOBAL
 DynamicSymbols:
-  Global:
-    - Name:    sym
-      Value:   0
-      Section: .text
+  - Name:    sym
+    Value:   0
+    Section: .text
+    Binding: STB_GLOBAL
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x1000

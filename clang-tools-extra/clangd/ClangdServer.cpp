@@ -280,9 +280,9 @@ ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos) {
 }
 
 void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
-                          Callback<std::vector<tooling::Replacement>> CB) {
+                          Callback<std::vector<TextEdit>> CB) {
   auto Action = [Pos](Path File, std::string NewName,
-                      Callback<std::vector<tooling::Replacement>> CB,
+                      Callback<std::vector<TextEdit>> CB,
                       llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
@@ -306,7 +306,7 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
     if (!ResultCollector.Result.getValue())
       return CB(ResultCollector.Result->takeError());
 
-    std::vector<tooling::Replacement> Replacements;
+    std::vector<TextEdit> Replacements;
     for (const tooling::AtomicChange &Change : ResultCollector.Result->get()) {
       tooling::Replacements ChangeReps = Change.getReplacements();
       for (const auto &Rep : ChangeReps) {
@@ -320,7 +320,8 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
         //   * rename globally in project
         //   * rename in open files
         if (Rep.getFilePath() == File)
-          Replacements.push_back(Rep);
+          Replacements.push_back(
+              replacementToEdit(InpAST->Inputs.Contents, Rep));
       }
     }
     return CB(std::move(Replacements));

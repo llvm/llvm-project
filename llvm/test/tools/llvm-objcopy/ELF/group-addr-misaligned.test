@@ -33,6 +33,5 @@ Sections:
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
     AddressAlign:    0x0000000000000001
 Symbols:
-  Local:
-    - Name:            foo
-      Section:         .group
+  - Name:            foo
+    Section:         .group

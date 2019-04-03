@@ -53,15 +53,16 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC ]
 Symbols:
-  Global:
-    - Name:     foo
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1234
-    - Name:     bar
-      Type:     STT_OBJECT
-      Section:  .data
-      Value:    0xabcd
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1234
+    Binding:  STB_GLOBAL
+  - Name:     bar
+    Type:     STT_OBJECT
+    Section:  .data
+    Value:    0xabcd
+    Binding:  STB_GLOBAL
 
 # CHECK: Format:
 # 32-SAME:      ELF32-

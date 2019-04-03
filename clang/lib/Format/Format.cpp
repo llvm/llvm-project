@@ -784,6 +784,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.IncludeStyle.IncludeCategories = {
       {"^<ext/.*\\.h>", 2}, {"^<.*\\.h>", 1}, {"^<.*", 2}, {".*", 3}};
   GoogleStyle.IncludeStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
+  GoogleStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   GoogleStyle.IndentCaseLabels = true;
   GoogleStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
   GoogleStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Never;
@@ -1752,6 +1753,7 @@ FindCursorIndex(const SmallVectorImpl<IncludeDirective> &Includes,
 static void sortCppIncludes(const FormatStyle &Style,
                             const SmallVectorImpl<IncludeDirective> &Includes,
                             ArrayRef<tooling::Range> Ranges, StringRef FileName,
+                            StringRef Code,
                             tooling::Replacements &Replaces, unsigned *Cursor) {
   unsigned IncludesBeginOffset = Includes.front().Offset;
   unsigned IncludesEndOffset =
@@ -1787,6 +1789,10 @@ static void sortCppIncludes(const FormatStyle &Style,
 
   // If the #includes are out of order, we generate a single replacement fixing
   // the entire block. Otherwise, no replacement is generated.
+  // In case Style.IncldueStyle.IncludeBlocks != IBS_Preserve, this check is not
+  // enough as additional newlines might be added or removed across #include
+  // blocks. This we handle below by generating the updated #imclude blocks and
+  // comparing it to the original.
   if (Indices.size() == Includes.size() &&
       std::is_sorted(Indices.begin(), Indices.end()) &&
       Style.IncludeStyle.IncludeBlocks == tooling::IncludeStyle::IBS_Preserve)
@@ -1806,6 +1812,11 @@ static void sortCppIncludes(const FormatStyle &Style,
       *Cursor = IncludesBeginOffset + result.size() - CursorToEOLOffset;
     CurrentCategory = Includes[Index].Category;
   }
+
+  // If the #includes are out of order, we generate a single replacement fixing
+  // the entire range of blocks. Otherwise, no replacement is generated.
+  if (result == Code.substr(IncludesBeginOffset, IncludesBlockSize))
+    return;
 
   auto Err = Replaces.add(tooling::Replacement(
       FileName, Includes.front().Offset, IncludesBlockSize, result));
@@ -1875,8 +1886,8 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
           MainIncludeFound = true;
         IncludesInBlock.push_back({IncludeName, Line, Prev, Category});
       } else if (!IncludesInBlock.empty() && !EmptyLineSkipped) {
-        sortCppIncludes(Style, IncludesInBlock, Ranges, FileName, Replaces,
-                        Cursor);
+        sortCppIncludes(Style, IncludesInBlock, Ranges, FileName, Code,
+                        Replaces, Cursor);
         IncludesInBlock.clear();
         FirstIncludeBlock = false;
       }
@@ -1886,8 +1897,10 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
       break;
     SearchFrom = Pos + 1;
   }
-  if (!IncludesInBlock.empty())
-    sortCppIncludes(Style, IncludesInBlock, Ranges, FileName, Replaces, Cursor);
+  if (!IncludesInBlock.empty()) {
+    sortCppIncludes(Style, IncludesInBlock, Ranges, FileName, Code, Replaces,
+                    Cursor);
+  }
   return Replaces;
 }
 

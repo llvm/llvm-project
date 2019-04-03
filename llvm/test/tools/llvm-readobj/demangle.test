@@ -210,13 +210,14 @@ Sections:
     Link: .symtab
     Content: "0102"
 Symbols:
-  Global:
-    - Name:    _Z3fooc
-      Type:    STT_FUNC
-      Section: .text.foo
-    - Name:    _Z4blahf
-      Type:    STT_FUNC
-      Section: .text.foo
+  - Name:    _Z3fooc
+    Type:    STT_FUNC
+    Section: .text.foo
+    Binding: STB_GLOBAL
+  - Name:    _Z4blahf
+    Type:    STT_FUNC
+    Section: .text.foo
+    Binding: STB_GLOBAL
 ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_R, PF_X ]

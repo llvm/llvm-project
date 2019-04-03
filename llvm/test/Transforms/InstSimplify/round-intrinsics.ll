@@ -4,8 +4,7 @@
 define float @sitofp_floor(i32 %arg) {
 ; CHECK-LABEL: @sitofp_floor(
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.floor.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[ROUND]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = sitofp i32 %arg to float
   %round = call float @llvm.floor.f32(float %cvt)
@@ -15,8 +14,7 @@ define float @sitofp_floor(i32 %arg) {
 define float @uitofp_floor(i32 %arg) {
 ; CHECK-LABEL: @uitofp_floor(
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.floor.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[ROUND]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = uitofp i32 %arg to float
   %round = call float @llvm.floor.f32(float %cvt)
@@ -26,8 +24,7 @@ define float @uitofp_floor(i32 %arg) {
 define float @sitofp_trunc(i32 %arg) {
 ; CHECK-LABEL: @sitofp_trunc(
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.trunc.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[ROUND]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = sitofp i32 %arg to float
   %round = call float @llvm.trunc.f32(float %cvt)
@@ -37,8 +34,7 @@ define float @sitofp_trunc(i32 %arg) {
 define float @uitofp_trunc(i32 %arg) {
 ; CHECK-LABEL: @uitofp_trunc(
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.trunc.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[ROUND]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = uitofp i32 %arg to float
   %round = call float @llvm.trunc.f32(float %cvt)
@@ -48,8 +44,7 @@ define float @uitofp_trunc(i32 %arg) {
 define float @sitofp_ceil(i32 %arg) {
 ; CHECK-LABEL: @sitofp_ceil(
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.ceil.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[ROUND]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = sitofp i32 %arg to float
   %round = call float @llvm.ceil.f32(float %cvt)
@@ -59,8 +54,7 @@ define float @sitofp_ceil(i32 %arg) {
 define float @uitofp_ceil(i32 %arg) {
 ; CHECK-LABEL: @uitofp_ceil(
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.ceil.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[ROUND]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = uitofp i32 %arg to float
   %round = call float @llvm.ceil.f32(float %cvt)
@@ -70,8 +64,7 @@ define float @uitofp_ceil(i32 %arg) {
 define float @sitofp_round(i32 %arg) {
 ; CHECK-LABEL: @sitofp_round(
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.round.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[ROUND]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = sitofp i32 %arg to float
   %round = call float @llvm.round.f32(float %cvt)
@@ -81,8 +74,7 @@ define float @sitofp_round(i32 %arg) {
 define float @uitofp_round(i32 %arg) {
 ; CHECK-LABEL: @uitofp_round(
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.round.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[ROUND]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = uitofp i32 %arg to float
   %round = call float @llvm.round.f32(float %cvt)
@@ -92,8 +84,7 @@ define float @uitofp_round(i32 %arg) {
 define float @sitofp_nearbyint(i32 %arg) {
 ; CHECK-LABEL: @sitofp_nearbyint(
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[NEARBYINT:%.*]] = call float @llvm.nearbyint.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[NEARBYINT]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = sitofp i32 %arg to float
   %nearbyint = call float @llvm.nearbyint.f32(float %cvt)
@@ -103,8 +94,7 @@ define float @sitofp_nearbyint(i32 %arg) {
 define float @uitofp_nearbyint(i32 %arg) {
 ; CHECK-LABEL: @uitofp_nearbyint(
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[NEARBYINT:%.*]] = call float @llvm.nearbyint.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[NEARBYINT]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = uitofp i32 %arg to float
   %nearbyint = call float @llvm.nearbyint.f32(float %cvt)
@@ -114,8 +104,7 @@ define float @uitofp_nearbyint(i32 %arg) {
 define float @sitofp_rint(i32 %arg) {
 ; CHECK-LABEL: @sitofp_rint(
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[RINT:%.*]] = call float @llvm.rint.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[RINT]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = sitofp i32 %arg to float
   %rint = call float @llvm.rint.f32(float %cvt)
@@ -125,8 +114,7 @@ define float @sitofp_rint(i32 %arg) {
 define float @uitofp_rint(i32 %arg) {
 ; CHECK-LABEL: @uitofp_rint(
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp i32 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[RINT:%.*]] = call float @llvm.rint.f32(float [[CVT]])
-; CHECK-NEXT:    ret float [[RINT]]
+; CHECK-NEXT:    ret float [[CVT]]
 ;
   %cvt = uitofp i32 %arg to float
   %rint = call float @llvm.rint.f32(float %cvt)

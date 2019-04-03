@@ -96,6 +96,8 @@ private:
   bool selectConcatVectors(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectSplitVectorUnmerge(MachineInstr &I,
                                 MachineRegisterInfo &MRI) const;
+  bool selectIntrinsicWithSideEffects(MachineInstr &I,
+                                      MachineRegisterInfo &MRI) const;
 
   unsigned emitConstantPoolEntry(Constant *CPVal, MachineFunction &MF) const;
   MachineInstr *emitLoadFromConstantPool(Constant *CPVal,
@@ -1735,14 +1737,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return STI.isTargetDarwin() ? selectVaStartDarwin(I, MF, MRI)
                                 : selectVaStartAAPCS(I, MF, MRI);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-    if (!I.getOperand(0).isIntrinsicID())
-      return false;
-    if (I.getOperand(0).getIntrinsicID() != Intrinsic::trap)
-      return false;
-    BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::BRK))
-      .addImm(1);
-    I.eraseFromParent();
-    return true;
+    return selectIntrinsicWithSideEffects(I, MRI);
   case TargetOpcode::G_IMPLICIT_DEF: {
     I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
     const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
@@ -2699,6 +2694,71 @@ bool AArch64InstructionSelector::selectBuildVector(
     assert(PrevMI && "PrevMI was null?");
     PrevMI->getOperand(0).setReg(I.getOperand(0).getReg());
     constrainSelectedInstRegOperands(*PrevMI, TII, TRI, RBI);
+  }
+
+  I.eraseFromParent();
+  return true;
+}
+
+/// Helper function to emit the correct opcode for a llvm.aarch64.stlxr
+/// intrinsic.
+static unsigned getStlxrOpcode(unsigned NumBytesToStore) {
+  switch (NumBytesToStore) {
+  // TODO: 1, 2, and 4 byte stores.
+  case 8:
+    return AArch64::STLXRX;
+  default:
+    LLVM_DEBUG(dbgs() << "Unexpected number of bytes to store! ("
+                      << NumBytesToStore << ")\n");
+    break;
+  }
+  return 0;
+}
+
+bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  // Find the intrinsic ID.
+  auto IntrinOp = find_if(I.operands(), [&](const MachineOperand &Op) {
+    return Op.isIntrinsicID();
+  });
+  if (IntrinOp == I.operands_end())
+    return false;
+  unsigned IntrinID = IntrinOp->getIntrinsicID();
+  MachineIRBuilder MIRBuilder(I);
+
+  // Select the instruction.
+  switch (IntrinID) {
+  default:
+    return false;
+  case Intrinsic::trap:
+    MIRBuilder.buildInstr(AArch64::BRK, {}, {}).addImm(1);
+    break;
+  case Intrinsic::aarch64_stlxr:
+    unsigned StatReg = I.getOperand(0).getReg();
+    assert(RBI.getSizeInBits(StatReg, MRI, TRI) == 32 &&
+           "Status register must be 32 bits!");
+    unsigned SrcReg = I.getOperand(2).getReg();
+
+    if (RBI.getSizeInBits(SrcReg, MRI, TRI) != 64) {
+      LLVM_DEBUG(dbgs() << "Only support 64-bit sources right now.\n");
+      return false;
+    }
+
+    unsigned PtrReg = I.getOperand(3).getReg();
+    assert(MRI.getType(PtrReg).isPointer() && "Expected pointer operand");
+
+    // Expect only one memory operand.
+    if (!I.hasOneMemOperand())
+      return false;
+
+    const MachineMemOperand *MemOp = *I.memoperands_begin();
+    unsigned NumBytesToStore = MemOp->getSize();
+    unsigned Opc = getStlxrOpcode(NumBytesToStore);
+    if (!Opc)
+      return false;
+
+    auto StoreMI = MIRBuilder.buildInstr(Opc, {StatReg}, {SrcReg, PtrReg});
+    constrainSelectedInstRegOperands(*StoreMI, TII, TRI, RBI);
   }
 
   I.eraseFromParent();

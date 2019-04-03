@@ -9,8 +9,8 @@ if [ "$#" -le 1 ]; then
   usage
 fi
 
-[[ AR == /* ]] || AR=$PWD/$AR
-[[ LINK == /* ]] || LINK=$PWD/$LINK
+[[ $AR == /* ]] || AR=$PWD/$AR
+[[ $LINK == /* ]] || LINK=$PWD/$LINK
 
 INPUTS=
 OUTPUT=

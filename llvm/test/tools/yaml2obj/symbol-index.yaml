@@ -11,25 +11,32 @@ Sections:
   - Name: .text
     Type: SHT_PROGBITS
 Symbols:
-  Global:
-    - Name:     absolute1
-      Index:    SHN_ABS
-      Value:    0x1234
-    - Name:     absolute2
-      Index:    0xfff1
-      Value:    0x4321
-    - Name:     common1
-      Index:    SHN_COMMON
-    - Name:     common2
-      Index:    0xfff2
-    - Name:     good
-      Index:    0x1
-    - Name:     bad
-      Index:    0x42
-    - Name:     undef1
-      Index:    SHN_UNDEF
-    - Name:     undef2
-      Index:    0
+  - Name:     absolute1
+    Index:    SHN_ABS
+    Value:    0x1234
+    Binding:  STB_GLOBAL
+  - Name:     absolute2
+    Index:    0xfff1
+    Value:    0x4321
+    Binding:  STB_GLOBAL
+  - Name:     common1
+    Index:    SHN_COMMON
+    Binding:  STB_GLOBAL 
+  - Name:     common2
+    Index:    0xfff2
+    Binding:  STB_GLOBAL 
+  - Name:     good
+    Index:    0x1
+    Binding:  STB_GLOBAL
+  - Name:     bad
+    Index:    0x42
+    Binding:  STB_GLOBAL
+  - Name:     undef1
+    Index:    SHN_UNDEF
+    Binding:  STB_GLOBAL
+  - Name:     undef2
+    Index:    0
+    Binding:  STB_GLOBAL
 
 # CHECK:      Symbol table '.symtab' contains 9 entries
 # CHECK-NEXT:   Num: {{.*}} Ndx Name

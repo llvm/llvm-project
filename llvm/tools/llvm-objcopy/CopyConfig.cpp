@@ -94,18 +94,18 @@ public:
 
 static SectionFlag parseSectionRenameFlag(StringRef SectionName) {
   return llvm::StringSwitch<SectionFlag>(SectionName)
-      .Case("alloc", SectionFlag::SecAlloc)
-      .Case("load", SectionFlag::SecLoad)
-      .Case("noload", SectionFlag::SecNoload)
-      .Case("readonly", SectionFlag::SecReadonly)
-      .Case("debug", SectionFlag::SecDebug)
-      .Case("code", SectionFlag::SecCode)
-      .Case("data", SectionFlag::SecData)
-      .Case("rom", SectionFlag::SecRom)
-      .Case("merge", SectionFlag::SecMerge)
-      .Case("strings", SectionFlag::SecStrings)
-      .Case("contents", SectionFlag::SecContents)
-      .Case("share", SectionFlag::SecShare)
+      .CaseLower("alloc", SectionFlag::SecAlloc)
+      .CaseLower("load", SectionFlag::SecLoad)
+      .CaseLower("noload", SectionFlag::SecNoload)
+      .CaseLower("readonly", SectionFlag::SecReadonly)
+      .CaseLower("debug", SectionFlag::SecDebug)
+      .CaseLower("code", SectionFlag::SecCode)
+      .CaseLower("data", SectionFlag::SecData)
+      .CaseLower("rom", SectionFlag::SecRom)
+      .CaseLower("merge", SectionFlag::SecMerge)
+      .CaseLower("strings", SectionFlag::SecStrings)
+      .CaseLower("contents", SectionFlag::SecContents)
+      .CaseLower("share", SectionFlag::SecShare)
       .Default(SectionFlag::SecNone);
 }
 

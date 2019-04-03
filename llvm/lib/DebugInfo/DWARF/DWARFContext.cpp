@@ -925,6 +925,9 @@ DWARFContext::DIEsForAddress DWARFContext::getDIEsForAddress(uint64_t Address) {
     DWARFDie DIE = Worklist.back();
     Worklist.pop_back();
 
+    if (!DIE.isValid())
+      continue;
+
     if (DIE.getTag() == DW_TAG_lexical_block &&
         DIE.addressRangeContainsAddress(Address)) {
       Result.BlockDIE = DIE;

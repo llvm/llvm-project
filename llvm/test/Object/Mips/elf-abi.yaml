@@ -62,11 +62,11 @@ Sections:
     Size:            4
 
 Symbols:
-  Global:
-    - Name:    T1
-      Section: .text
-      Value:   0
-      Size:    4
+  - Name:    T1
+    Section: .text
+    Value:   0
+    Size:    4
+    Binding: STB_GLOBAL
 
 # o64
 --- !ELF
@@ -84,11 +84,11 @@ Sections:
     Size:            4
 
 Symbols:
-  Global:
-    - Name:    T1
-      Section: .text
-      Value:   0
-      Size:    4
+  - Name:    T1
+    Section: .text
+    Value:   0
+    Size:    4
+    Binding:  STB_GLOBAL
 
 # eabio32
 --- !ELF
@@ -106,11 +106,11 @@ Sections:
     Size:            4
 
 Symbols:
-  Global:
-    - Name:    T1
-      Section: .text
-      Value:   0
-      Size:    4
+  - Name:    T1
+    Section: .text
+    Value:   0
+    Size:    4
+    Binding:  STB_GLOBAL
 
 # eabi64
 --- !ELF
@@ -128,9 +128,9 @@ Sections:
     Size:            4
 
 Symbols:
-  Global:
-    - Name:    T1
-      Section: .text
-      Value:   0
-      Size:    4
+  - Name:    T1
+    Section: .text
+    Value:   0
+    Size:    4
+    Binding:  STB_GLOBAL
 ...

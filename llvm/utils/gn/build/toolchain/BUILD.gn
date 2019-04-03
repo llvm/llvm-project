@@ -113,9 +113,25 @@ template("unix_toolchain") {
       default_output_dir = "{{root_out_dir}}/bin"
     }
 
+    copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
     tool("copy") {
-      command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
+      command = copy_command
       description = "COPY {{source}} {{output}}"
+    }
+
+    if (current_os == "mac") {
+      tool("copy_bundle_data") {
+        # http://serverfault.com/q/209888/43689
+        _copydir = "mkdir -p {{output}} && cd {{source}} && " +
+                   "pax -rwl . \"\$OLDPWD\"/{{output}}"
+        command = "rm -rf {{output}} && if [[ -d {{source}} ]]; then " +
+                  _copydir + "; else " + copy_command + "; fi"
+        description = "COPY_BUNDLE_DATA {{source}} {{output}}"
+      }
+      tool("compile_xcassets") {
+        command = "false"
+        description = "The LLVM build doesn't use any xcasset files"
+      }
     }
 
     tool("stamp") {

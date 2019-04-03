@@ -17,5 +17,5 @@ Sections:
   - Name:            .symtab
     Type:            SHT_DYNAMIC
 Symbols:
-  Global:
-    - Name: foo
+  - Name:    foo
+    Binding: STB_GLOBAL

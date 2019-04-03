@@ -1046,6 +1046,34 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                   PtrTy.getSizeInBits() / 8, 8));
     return true;
   }
+  case Intrinsic::stacksave: {
+    // Save the stack pointer to the location provided by the intrinsic.
+    unsigned Reg = getOrCreateVReg(CI);
+    unsigned StackPtr = MF->getSubtarget()
+                            .getTargetLowering()
+                            ->getStackPointerRegisterToSaveRestore();
+
+    // If the target doesn't specify a stack pointer, then fall back.
+    if (!StackPtr)
+      return false;
+
+    MIRBuilder.buildCopy(Reg, StackPtr);
+    return true;
+  }
+  case Intrinsic::stackrestore: {
+    // Restore the stack pointer from the location provided by the intrinsic.
+    unsigned Reg = getOrCreateVReg(*CI.getArgOperand(0));
+    unsigned StackPtr = MF->getSubtarget()
+                            .getTargetLowering()
+                            ->getStackPointerRegisterToSaveRestore();
+
+    // If the target doesn't specify a stack pointer, then fall back.
+    if (!StackPtr)
+      return false;
+
+    MIRBuilder.buildCopy(StackPtr, Reg);
+    return true;
+  }
   case Intrinsic::cttz:
   case Intrinsic::ctlz: {
     ConstantInt *Cst = cast<ConstantInt>(CI.getArgOperand(1));

@@ -593,83 +593,69 @@ define <8 x i64> @bitselect_v8i64_mm(<8 x i64>* nocapture readonly, <8 x i64>* n
 }
 
 ; Check that mask registers don't get canonicalized.
-define void @bitselect_v4i1_loop(<4 x i32> %a0) {
+define <4 x i1> @bitselect_v4i1_loop(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: bitselect_v4i1_loop:
 ; SSE:       # %bb.0: # %bb
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pxor %xmm1, %xmm2
-; SSE-NEXT:    pcmpeqd {{.*}}(%rip), %xmm0
-; SSE-NEXT:    movdqa %xmm1, %xmm3
-; SSE-NEXT:    pandn %xmm0, %xmm3
-; SSE-NEXT:    .p2align 4, 0x90
-; SSE-NEXT:  .LBB12_1: # %bb1
-; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE-NEXT:    pand %xmm1, %xmm2
-; SSE-NEXT:    por %xmm3, %xmm2
-; SSE-NEXT:    jmp .LBB12_1
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm2
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [12,12,12,12]
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd {{.*}}(%rip), %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    pandn %xmm0, %xmm2
+; SSE-NEXT:    por %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    retq
 ;
 ; XOP-LABEL: bitselect_v4i1_loop:
 ; XOP:       # %bb.0: # %bb
-; XOP-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; XOP-NEXT:    vpcomneqd %xmm1, %xmm0, %xmm1
-; XOP-NEXT:    vpcomeqd {{.*}}(%rip), %xmm0, %xmm0
-; XOP-NEXT:    vmovdqa %xmm1, %xmm2
-; XOP-NEXT:    .p2align 4, 0x90
-; XOP-NEXT:  .LBB12_1: # %bb1
-; XOP-NEXT:    # =>This Inner Loop Header: Depth=1
-; XOP-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm2
-; XOP-NEXT:    jmp .LBB12_1
+; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; XOP-NEXT:    vpcomneqd %xmm2, %xmm0, %xmm0
+; XOP-NEXT:    vpcomeqd {{.*}}(%rip), %xmm1, %xmm2
+; XOP-NEXT:    vpcomeqd {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: bitselect_v4i1_loop:
 ; AVX1:       # %bb.0: # %bb
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm2
-; AVX1-NEXT:    vpcmpeqd {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    .p2align 4, 0x90
-; AVX1-NEXT:  .LBB12_1: # %bb1
-; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX1-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    jmp .LBB12_1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd {{.*}}(%rip), %xmm1, %xmm2
+; AVX1-NEXT:    vpcmpeqd {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: bitselect_v4i1_loop:
 ; AVX2:       # %bb.0: # %bb
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm2
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [12,12,12,12]
-; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    .p2align 4, 0x90
-; AVX2-NEXT:  .LBB12_1: # %bb1
-; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm2
-; AVX2-NEXT:    jmp .LBB12_1
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [12,12,12,12]
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [15,15,15,15]
+; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v4i1_loop:
 ; AVX512F:       # %bb.0: # %bb
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [12,12,12,12]
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k2
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0 {%k2}
-; AVX512F-NEXT:    .p2align 4, 0x90
-; AVX512F-NEXT:  .LBB12_1: # %bb1
-; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1 {%k1}
-; AVX512F-NEXT:    korw %k1, %k0, %k1
-; AVX512F-NEXT:    jmp .LBB12_1
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [12,12,12,12]
+; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [15,15,15,15]
+; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm1, %k2
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0 {%k2}
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1 {%k1}
+; AVX512F-NEXT:    korw %k0, %k1, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
 bb:
   %tmp = icmp ne <4 x i32> %a0, zeroinitializer
-  br label %bb1
-
-bb1:                                              ; preds = %bb1, %bb
-  %tmp2 = phi <4 x i1> [ %tmp, %bb ], [ %tmp4, %bb1 ]
-  %tmp3 = icmp eq <4 x i32> %a0, <i32 12, i32 12, i32 12, i32 12>
-  %tmp4 = select <4 x i1> %tmp, <4 x i1> %tmp3, <4 x i1> %tmp2
-  %tmp5 = and <4 x i1> %tmp4, %tmp
-  br label %bb1
+  %tmp2 = icmp eq <4 x i32> %a1, <i32 12, i32 12, i32 12, i32 12>
+  %tmp3 = icmp eq <4 x i32> %a1, <i32 15, i32 15, i32 15, i32 15>
+  %tmp4 = select <4 x i1> %tmp, <4 x i1> %tmp2, <4 x i1> %tmp3
+  ret <4 x i1> %tmp4
 }
+

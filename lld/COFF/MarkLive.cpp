@@ -64,8 +64,8 @@ void markLive(ArrayRef<Chunk *> Chunks) {
         AddSym(B);
 
     // Mark associative sections if any.
-    for (SectionChunk *C : SC->children())
-      Enqueue(C);
+    for (SectionChunk &C : SC->children())
+      Enqueue(&C);
   }
 }
 
