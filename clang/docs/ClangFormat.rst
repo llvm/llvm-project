@@ -165,6 +165,19 @@ menu item by renaming the script, and can assign the menu item a keyboard
 shortcut in the BBEdit preferences, under Menus & Shortcuts.
 
 
+CLion Integration
+==================
+
+:program:`clang-format` is integrated into `CLion <https://www.jetbrains
+.com/clion/>`_ as an alternative code formatter. It is disabled by default and
+can be turned on in Settings/Preferences | Editor | Code Style.
+
+If :program:`clang-format` support is enabled, CLion detects config files when
+opening a project and suggests overriding the current IDE settings. Code style
+rules from the ``.clang-format`` files are then applied automatically to all
+editor actions, including auto-completion, code generation, and refactorings.
+
+
 Visual Studio Integration
 =========================
 

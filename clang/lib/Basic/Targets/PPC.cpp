@@ -30,6 +30,7 @@ const Builtin::Info PPCTargetInfo::BuiltinInfo[] = {
 /// configured set of features.
 bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                          DiagnosticsEngine &Diags) {
+  FloatABI = HardFloat;
   for (const auto &Feature : Features) {
     if (Feature == "+altivec") {
       HasAltivec = true;
@@ -53,6 +54,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFloat128 = true;
     } else if (Feature == "+power9-vector") {
       HasP9Vector = true;
+    } else if (Feature == "-hard-float") {
+      FloatABI = SoftFloat;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.

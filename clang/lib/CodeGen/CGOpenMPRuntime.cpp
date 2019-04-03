@@ -7347,6 +7347,9 @@ private:
           Cap.getCaptureKind() == CapturedStmt::VCK_ByRef)
         return MappableExprsHandler::OMP_MAP_ALWAYS |
                MappableExprsHandler::OMP_MAP_TO;
+      if (Cap.getCapturedVar()->getType()->isAnyPointerType())
+        return MappableExprsHandler::OMP_MAP_TO |
+               MappableExprsHandler::OMP_MAP_PTR_AND_OBJ;
       return MappableExprsHandler::OMP_MAP_PRIVATE |
              MappableExprsHandler::OMP_MAP_TO;
     }
@@ -7992,14 +7995,20 @@ public:
         CGF.Builder.CreateMemCpy(
             CGF.MakeNaturalAlignAddrLValue(Addr, ElementType).getAddress(),
             Address(CV, CGF.getContext().getTypeAlignInChars(ElementType)),
-            CurSizes.back(),
-            /*isVolatile=*/false);
+            CurSizes.back(), /*isVolatile=*/false);
         // Use new global variable as the base pointers.
         CurBasePointers.push_back(Addr);
         CurPointers.push_back(Addr);
       } else {
         CurBasePointers.push_back(CV);
-        CurPointers.push_back(CV);
+        if (FirstPrivateDecls.count(VD) && ElementType->isAnyPointerType()) {
+          Address PtrAddr = CGF.EmitLoadOfReference(CGF.MakeAddrLValue(
+              CV, ElementType, CGF.getContext().getDeclAlign(VD),
+              AlignmentSource::Decl));
+          CurPointers.push_back(PtrAddr.getPointer());
+        } else {
+          CurPointers.push_back(CV);
+        }
       }
     }
     // Every default map produces a single argument which is a target parameter.
@@ -9752,13 +9761,9 @@ Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
     return Address::invalid();
   const auto *AA = CVD->getAttr<OMPAllocateDeclAttr>();
   // Use the default allocation.
-  if (AA->getAllocatorType() == OMPAllocateDeclAttr::OMPDefaultMemAlloc)
+  if (AA->getAllocatorType() == OMPAllocateDeclAttr::OMPDefaultMemAlloc &&
+      !AA->getAllocator())
     return Address::invalid();
-  auto &Elem = OpenMPLocThreadIDMap.FindAndConstruct(CGF.CurFn);
-  if (!Elem.second.ServiceInsertPt)
-    setLocThreadIdInsertPt(CGF);
-  CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
-  CGF.Builder.SetInsertPoint(Elem.second.ServiceInsertPt);
   llvm::Value *Size;
   CharUnits Align = CGM.getContext().getDeclAlign(CVD);
   if (CVD->getType()->isVariablyModifiedType()) {
