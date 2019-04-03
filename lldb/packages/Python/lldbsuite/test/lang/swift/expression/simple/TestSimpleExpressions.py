@@ -92,7 +92,7 @@ class TestSimpleSwiftExpressions(TestBase):
 
         # Non-simple names:
         self.check_expression(
-            u"\u20ac_varname".encode("utf-8"),
+            u"\u20ac_varname",
             "5",
             use_summary=False)
 
