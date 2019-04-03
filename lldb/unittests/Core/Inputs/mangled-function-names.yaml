@@ -33,84 +33,97 @@ Sections:
     Flags:           [ SHF_MERGE, SHF_STRINGS ]
     AddressAlign:    0x0000000000000001
     Content:         5562756E747520636C616E672076657273696F6E20332E352D317562756E74753120287472756E6B2920286261736564206F6E204C4C564D20332E352900
-Symbols:         
-  Local:           
-    - Type:            STT_SECTION
-      Section:         .text
-    - Type:            STT_SECTION
-      Section:         .anothertext
-      Value:           0x0000000000000010
-    - Type:            STT_SECTION
-      Section:         .eh_frame
-      Value:           0x0000000000000050
-    - Type:            STT_SECTION
-      Section:         .data
-      Value:           0x00000000000000A8
-    - Type:            STT_SECTION
-      Section:         .comment
-    - Name:            /tmp/a.c
-      Type:            STT_FILE
-    - Type:            STT_FILE
-  Global:          
-    - Name:            somedata
-      Type:            STT_OBJECT
-      Section:         .anothertext
-      Value:           0x0000000000000045
-    - Name:            main
-      Type:            STT_FUNC
-      Section:         .anothertext
-      Value:           0x0000000000000010
-      Size:            0x000000000000003F
-    - Name:            _Z3foov
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            puts@GLIBC_2.5
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            puts@GLIBC_2.6
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            _Z5annotv@VERSION3
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            _ZN1AC2Ev
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            _ZN1AD2Ev
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            _ZN1A3barEv
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            _ZGVZN4llvm4dbgsEvE7thestrm
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            _ZZN4llvm4dbgsEvE7thestrm
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            _ZTVN5clang4DeclE
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            -[ObjCfoo]
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            +[B ObjCbar(WithCategory)]
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
-    - Name:            _Z12undemangableEvx42
-      Type:            STT_FUNC
-      Section:         .text
-      Size:            0x000000000000000D
+Symbols:
+  - Type:            STT_SECTION
+    Section:         .text
+  - Type:            STT_SECTION
+    Section:         .anothertext
+    Value:           0x0000000000000010
+  - Type:            STT_SECTION
+    Section:         .eh_frame
+    Value:           0x0000000000000050
+  - Type:            STT_SECTION
+    Section:         .data
+    Value:           0x00000000000000A8
+  - Type:            STT_SECTION
+    Section:         .comment
+  - Name:            /tmp/a.c
+    Type:            STT_FILE
+  - Type:            STT_FILE          
+  - Name:            somedata
+    Type:            STT_OBJECT
+    Section:         .anothertext
+    Value:           0x0000000000000045
+    Binding:         STB_GLOBAL
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .anothertext
+    Value:           0x0000000000000010
+    Size:            0x000000000000003F
+    Binding:         STB_GLOBAL
+  - Name:            _Z3foov
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            puts@GLIBC_2.5
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            puts@GLIBC_2.6
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _Z5annotv@VERSION3
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZN1AC2Ev
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZN1AD2Ev
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZN1A3barEv
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZGVZN4llvm4dbgsEvE7thestrm
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZZN4llvm4dbgsEvE7thestrm
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZTVN5clang4DeclE
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            -[ObjCfoo]
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            +[B ObjCbar(WithCategory)]
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _Z12undemangableEvx42
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
 ...

@@ -29,7 +29,6 @@ Sections:
     AddressAlign:    0x04
     Content:         "FFFFFFFFFFFFFFFF"
 Symbols:
-  Local:
-    - Name:    .text
-      Type:    STT_SECTION
-      Section: .text
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text

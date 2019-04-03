@@ -82,22 +82,21 @@ Sections:
         Symbol:          L1
         Type:            R_RISCV_PCREL_LO12_I
 Symbols:
-  Local:
-    - Name:            .text
-      Type:            STT_SECTION
-      Section:         .text
-    - Name:            .data
-      Type:            STT_SECTION
-      Section:         .data
-    - Name:            .bss
-      Type:            STT_SECTION
-      Section:         .bss
-    - Name:            .reloc_neg
-      Type:            STT_SECTION
-      Section:         .reloc_neg
-    - Name:            L1
-      Section:         .reloc_neg
-  Global:
-    - Name:            _start
-      Section:         .text
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .data
+    Type:            STT_SECTION
+    Section:         .data
+  - Name:            .bss
+    Type:            STT_SECTION
+    Section:         .bss
+  - Name:            .reloc_neg
+    Type:            STT_SECTION
+    Section:         .reloc_neg
+  - Name:            L1
+    Section:         .reloc_neg
+  - Name:            _start
+    Section:         .text
+    Binding:         STB_GLOBAL
 ...

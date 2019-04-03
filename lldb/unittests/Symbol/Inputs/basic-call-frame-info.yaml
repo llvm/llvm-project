@@ -119,20 +119,22 @@ Sections:
 #  DW_CFA_advance_loc: 3 to 0000000000000284
 #  DW_CFA_def_cfa_register: r6 (rbp)
 Symbols:
-  Global:
-    - Name:            eh_frame
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x0000000000000260
-      Size:            0x000000000000000C
-    - Name:            debug_frame3
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x0000000000000270
-      Size:            0x000000000000000C
-    - Name:            debug_frame4
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x0000000000000280
-      Size:            0x000000000000000C
+  - Name:            eh_frame
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000260
+    Size:            0x000000000000000C
+    Binding:         STB_GLOBAL
+  - Name:            debug_frame3
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000270
+    Size:            0x000000000000000C
+    Binding:         STB_GLOBAL
+  - Name:            debug_frame4
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000280
+    Size:            0x000000000000000C
+    Binding:         STB_GLOBAL
 ...
