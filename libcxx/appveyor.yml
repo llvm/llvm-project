@@ -18,11 +18,12 @@ environment:
       GENERATOR: Ninja
       MAKE_PROGRAM: ninja
       APPVEYOR_SAVE_CACHE_ON_ERROR: true
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      MINGW_PATH: C:\mingw-w64\i686-6.3.0-posix-dwarf-rt_v5-rev1\mingw32\bin
-      GENERATOR: MinGW Makefiles
-      MAKE_PROGRAM: mingw32-make
-      APPVEYOR_SAVE_CACHE_ON_ERROR: true
+# TODO: Maybe re-enable this configuration? Do we want to support MSVC 2015's runtime?
+#    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+#      MINGW_PATH: C:\mingw-w64\i686-6.3.0-posix-dwarf-rt_v5-rev1\mingw32\bin
+#      GENERATOR: MinGW Makefiles
+#      MAKE_PROGRAM: mingw32-make
+#      APPVEYOR_SAVE_CACHE_ON_ERROR: true
 
 install:
   ############################################################################
