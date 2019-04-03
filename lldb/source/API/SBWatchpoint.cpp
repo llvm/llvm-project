@@ -43,7 +43,7 @@ const SBWatchpoint &SBWatchpoint::operator=(const SBWatchpoint &rhs) {
                      SBWatchpoint, operator=,(const lldb::SBWatchpoint &), rhs);
 
   m_opaque_wp = rhs.m_opaque_wp;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBWatchpoint::~SBWatchpoint() {}

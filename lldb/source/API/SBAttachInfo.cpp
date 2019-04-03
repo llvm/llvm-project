@@ -64,7 +64,7 @@ SBAttachInfo &SBAttachInfo::operator=(const SBAttachInfo &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = clone(rhs.m_opaque_sp);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 lldb::pid_t SBAttachInfo::GetProcessID() {

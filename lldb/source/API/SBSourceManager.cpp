@@ -101,7 +101,7 @@ operator=(const lldb::SBSourceManager &rhs) {
                      rhs);
 
   m_opaque_up.reset(new SourceManagerImpl(*(rhs.m_opaque_up.get())));
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBSourceManager::~SBSourceManager() {}
