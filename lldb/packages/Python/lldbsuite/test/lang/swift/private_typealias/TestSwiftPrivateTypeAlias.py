@@ -28,43 +28,28 @@ class TestSwiftPrivateTypeAlias(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
-    @expectedFailureAll(bugnumber="rdar://24921067")
     def test_swift_private_typealias(self):
         """Test that we can correctly print variables whose types are private type aliases"""
         self.build()
-
-        # Create the target
-        target = self.dbg.CreateTarget(self.getBuildArtifact())
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint1 = target.BreakpointCreateBySourceRegex(
-            'breakpoint 1', self.a_source_spec)
+        (target, process, thread, breakpoint1) = \
+            lldbutil.run_to_source_breakpoint(
+                self, 'breakpoint 1', lldb.SBFileSpec('main.swift'))
         breakpoint2 = target.BreakpointCreateBySourceRegex(
-            'breakpoint 2', self.a_source_spec)
+            'breakpoint 2', lldb.SBFileSpec('main.swift'))
         self.assertTrue(breakpoint1.GetNumLocations() > 0, VALID_BREAKPOINT)
         self.assertTrue(breakpoint2.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        process = target.LaunchSimple(None, None, os.getcwd())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint1)
-
-        self.assertTrue(len(threads) == 1)
 
         var = self.frame().FindVariable("i")
         lldbutil.check_variable(
             self,
             var,
             False,
-            typename="a.MyStruct.Type.IntegerType",
+            typename="a.MyStruct.IntegerType",
             value="123")
 
         process.Continue()
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint2)
-
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process,
+                                                             breakpoint2)
         self.assertTrue(len(threads) == 1)
 
         var = self.frame().FindVariable("a")
@@ -72,10 +57,8 @@ class TestSwiftPrivateTypeAlias(TestBase):
         child_0 = dict_child_0.GetChildAtIndex(0)
         child_1 = dict_child_0.GetChildAtIndex(1)
         lldbutil.check_variable(
-            self,
-            var,
-            False,
-            typename="Swift.Dictionary<Swift.String, a.MyStruct.Type.IntegerType>")
+            self, var, False, typename=
+            "Swift.Dictionary<Swift.String, a.MyStruct.IntegerType>")
         lldbutil.check_variable(self, child_0, False, '"hello"')
         lldbutil.check_variable(self, child_1, False, value='234')
 
