@@ -223,7 +223,11 @@ class CrashLog(symbolication.Symbolicator):
         """Class that represents a binary images in a darwin crash log"""
         dsymForUUIDBinary = os.path.expanduser('~rc/bin/dsymForUUID')
         if not os.path.exists(dsymForUUIDBinary):
-            dsymForUUIDBinary = subprocess.check_output('which dsymForUUID', shell=True)
+            try:
+                dsymForUUIDBinary = subprocess.check_output('which dsymForUUID',
+                                                            shell=True)
+            except:
+                dsymForUUIDBinary = ""
 
         dwarfdump_uuid_regex = re.compile(
             'UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*')
@@ -280,7 +284,7 @@ class CrashLog(symbolication.Symbolicator):
                     try:
                         plist_root = plistlib.readPlistFromString(s)
                     except:
-                        print(("Got exception: ", sys.exc_value, " handling dsymForUUID output: \n", s)) 
+                        print(("Got exception: ", sys.exc_info()[1], " handling dsymForUUID output: \n", s))
                         raise
                     if plist_root:
                         plist = plist_root[uuid_str]
