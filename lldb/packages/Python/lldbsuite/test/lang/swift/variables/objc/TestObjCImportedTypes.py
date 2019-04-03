@@ -26,14 +26,12 @@ class TestSwiftObjCImportedTypes(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @swiftTest
     @skipUnlessDarwin
-    @expectedFailureDarwin("rdar://15930675")
     def test_swift_objc_imported_types(self):
         """Test that we are able to deal with ObjC-imported types"""
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
@@ -63,14 +61,13 @@ class TestSwiftObjCImportedTypes(TestBase):
             use_dynamic=False,
             typename="Foundation.NSMutableDictionary")
 
-        # pending rdar://15798504, but not critical for the test
-        #lldbutil.check_variable(self, nss, use_dynamic=True, summary='@"abc"')
-        lldbutil.check_variable(self, nsn, use_dynamic=True, summary='(long)3')
+        lldbutil.check_variable(self, nss, use_dynamic=True, summary='"abc"')
+        lldbutil.check_variable(self, nsn, use_dynamic=True, summary='Int64(3)')
         lldbutil.check_variable(
             self,
             nsmo,
             use_dynamic=True,
-            typename='NSManagedObject *')
+            typename='CoreData.NSManagedObject')
         lldbutil.check_variable(
             self,
             nsmd,
