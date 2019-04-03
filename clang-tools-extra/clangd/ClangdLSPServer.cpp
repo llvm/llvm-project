@@ -541,19 +541,13 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
   Server->rename(
       File, Params.position, Params.newName,
       Bind(
-          [File, Code, Params](
-              decltype(Reply) Reply,
-              llvm::Expected<std::vector<tooling::Replacement>> Replacements) {
-            if (!Replacements)
-              return Reply(Replacements.takeError());
+          [File, Code, Params](decltype(Reply) Reply,
+                               llvm::Expected<std::vector<TextEdit>> Edits) {
+            if (!Edits)
+              return Reply(Edits.takeError());
 
-            // Turn the replacements into the format specified by the Language
-            // Server Protocol. Fuse them into one big JSON array.
-            std::vector<TextEdit> Edits;
-            for (const auto &R : *Replacements)
-              Edits.push_back(replacementToEdit(*Code, R));
             WorkspaceEdit WE;
-            WE.changes = {{Params.textDocument.uri.uri(), Edits}};
+            WE.changes = {{Params.textDocument.uri.uri(), *Edits}};
             Reply(WE);
           },
           std::move(Reply)));

@@ -84,17 +84,25 @@ Sections:
         Symbol:          f3
         Type:            R_X86_64_JUMP_SLOT
 Symbols:
-  Global:
-    - Name:            f1
-    - Name:            f2
-    - Name:            g1
-    - Name:            _Z2f1v
-    - Name:            f3
+  - Name:            f1
+    Binding:         STB_GLOBAL
+  - Name:            f2
+    Binding:         STB_GLOBAL
+  - Name:            g1
+    Binding:         STB_GLOBAL
+  - Name:            _Z2f1v
+    Binding:         STB_GLOBAL
+  - Name:            f3
+    Binding:         STB_GLOBAL
 DynamicSymbols:  
-  Global:          
-    - Name:            f1
-    - Name:            f2
-    - Name:            g1
-    - Name:            _Z2f1v
-    - Name:            f3
+  - Name:            f1
+    Binding:         STB_GLOBAL
+  - Name:            f2
+    Binding:         STB_GLOBAL
+  - Name:            g1
+    Binding:         STB_GLOBAL
+  - Name:            _Z2f1v
+    Binding:         STB_GLOBAL
+  - Name:            f3
+    Binding:         STB_GLOBAL
 ...

@@ -24,9 +24,9 @@ Sections:
         Type:   R_X86_64_PC32
 
 Symbols:
-  Global:
-    - Name:     foo
-      Type:     STT_FUNC
-      Size:     4
+  - Name:     foo
+    Type:     STT_FUNC
+    Size:     4
+    Binding:  STB_GLOBAL
 
 # CHECK: Symbol table .symtab cannot be removed because it is referenced by the relocation section .rel.text.

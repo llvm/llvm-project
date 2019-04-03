@@ -393,7 +393,6 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
 
   for (auto &Check : Checks) {
     Check->registerMatchers(&*Finder);
-    Check->registerPPCallbacks(Compiler);
     Check->registerPPCallbacks(*SM, PP, ModuleExpanderPP);
   }
 

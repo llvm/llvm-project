@@ -22,11 +22,10 @@ Sections:
         Symbol: foo
         Type:   R_X86_64_PC32
 Symbols:
-  Local:
-    - Name:     foo
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1000
-      Size:     8
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+    Size:     8
 
 #CHECK: not stripping symbol 'foo' because it is named in a relocation.

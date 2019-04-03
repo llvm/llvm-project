@@ -2209,68 +2209,64 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
   // may have placed in our tasks memory.
 
   BreakpointSiteList bp_sites_in_range;
-
-  if (m_breakpoint_site_list.FindInRange(addr, addr + size,
-                                         bp_sites_in_range)) {
-    // No breakpoint sites overlap
-    if (bp_sites_in_range.IsEmpty())
-      return WriteMemoryPrivate(addr, buf, size, error);
-    else {
-      const uint8_t *ubuf = (const uint8_t *)buf;
-      uint64_t bytes_written = 0;
-
-      bp_sites_in_range.ForEach([this, addr, size, &bytes_written, &ubuf,
-                                 &error](BreakpointSite *bp) -> void {
-
-        if (error.Success()) {
-          addr_t intersect_addr;
-          size_t intersect_size;
-          size_t opcode_offset;
-          const bool intersects = bp->IntersectsRange(
-              addr, size, &intersect_addr, &intersect_size, &opcode_offset);
-          UNUSED_IF_ASSERT_DISABLED(intersects);
-          assert(intersects);
-          assert(addr <= intersect_addr && intersect_addr < addr + size);
-          assert(addr < intersect_addr + intersect_size &&
-                 intersect_addr + intersect_size <= addr + size);
-          assert(opcode_offset + intersect_size <= bp->GetByteSize());
-
-          // Check for bytes before this breakpoint
-          const addr_t curr_addr = addr + bytes_written;
-          if (intersect_addr > curr_addr) {
-            // There are some bytes before this breakpoint that we need to just
-            // write to memory
-            size_t curr_size = intersect_addr - curr_addr;
-            size_t curr_bytes_written = WriteMemoryPrivate(
-                curr_addr, ubuf + bytes_written, curr_size, error);
-            bytes_written += curr_bytes_written;
-            if (curr_bytes_written != curr_size) {
-              // We weren't able to write all of the requested bytes, we are
-              // done looping and will return the number of bytes that we have
-              // written so far.
-              if (error.Success())
-                error.SetErrorToGenericError();
-            }
-          }
-          // Now write any bytes that would cover up any software breakpoints
-          // directly into the breakpoint opcode buffer
-          ::memcpy(bp->GetSavedOpcodeBytes() + opcode_offset,
-                   ubuf + bytes_written, intersect_size);
-          bytes_written += intersect_size;
-        }
-      });
-
-      if (bytes_written < size)
-        return bytes_written + WriteMemoryPrivate(addr + bytes_written,
-                                                  ubuf + bytes_written,
-                                                  size - bytes_written, error);
-    }
-  } else {
+  if (!m_breakpoint_site_list.FindInRange(addr, addr + size, bp_sites_in_range))
     return WriteMemoryPrivate(addr, buf, size, error);
-  }
+
+  // No breakpoint sites overlap
+  if (bp_sites_in_range.IsEmpty())
+    return WriteMemoryPrivate(addr, buf, size, error);
+
+  const uint8_t *ubuf = (const uint8_t *)buf;
+  uint64_t bytes_written = 0;
+
+  bp_sites_in_range.ForEach([this, addr, size, &bytes_written, &ubuf,
+                             &error](BreakpointSite *bp) -> void {
+    if (error.Fail())
+      return;
+
+    addr_t intersect_addr;
+    size_t intersect_size;
+    size_t opcode_offset;
+    const bool intersects = bp->IntersectsRange(
+        addr, size, &intersect_addr, &intersect_size, &opcode_offset);
+    UNUSED_IF_ASSERT_DISABLED(intersects);
+    assert(intersects);
+    assert(addr <= intersect_addr && intersect_addr < addr + size);
+    assert(addr < intersect_addr + intersect_size &&
+           intersect_addr + intersect_size <= addr + size);
+    assert(opcode_offset + intersect_size <= bp->GetByteSize());
+
+    // Check for bytes before this breakpoint
+    const addr_t curr_addr = addr + bytes_written;
+    if (intersect_addr > curr_addr) {
+      // There are some bytes before this breakpoint that we need to just
+      // write to memory
+      size_t curr_size = intersect_addr - curr_addr;
+      size_t curr_bytes_written =
+          WriteMemoryPrivate(curr_addr, ubuf + bytes_written, curr_size, error);
+      bytes_written += curr_bytes_written;
+      if (curr_bytes_written != curr_size) {
+        // We weren't able to write all of the requested bytes, we are
+        // done looping and will return the number of bytes that we have
+        // written so far.
+        if (error.Success())
+          error.SetErrorToGenericError();
+      }
+    }
+    // Now write any bytes that would cover up any software breakpoints
+    // directly into the breakpoint opcode buffer
+    ::memcpy(bp->GetSavedOpcodeBytes() + opcode_offset, ubuf + bytes_written,
+             intersect_size);
+    bytes_written += intersect_size;
+  });
 
   // Write any remaining bytes after the last breakpoint if we have any left
-  return 0; // bytes_written;
+  if (bytes_written < size)
+    bytes_written +=
+        WriteMemoryPrivate(addr + bytes_written, ubuf + bytes_written,
+                           size - bytes_written, error);
+
+  return bytes_written;
 }
 
 size_t Process::WriteScalarToMemory(addr_t addr, const Scalar &scalar,

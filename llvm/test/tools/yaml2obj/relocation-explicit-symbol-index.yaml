@@ -32,5 +32,5 @@ Sections:
         Offset: 0
         Symbol: 0x1
 Symbols:
-  Global:
-    - Name: foo
+  - Name: foo
+    Binding: STB_GLOBAL

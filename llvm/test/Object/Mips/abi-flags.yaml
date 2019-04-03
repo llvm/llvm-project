@@ -59,7 +59,6 @@ Sections:
   Flags2:       0x0
 
 Symbols:
-  Local:
-    - Name:    .MIPS.abiflags
-      Type:    STT_SECTION
-      Section: .MIPS.abiflags
+  - Name:    .MIPS.abiflags
+    Type:    STT_SECTION
+    Section: .MIPS.abiflags

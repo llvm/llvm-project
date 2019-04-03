@@ -53,9 +53,6 @@ public:
   /// constructor using the Options.get() methods below.
   ClangTidyCheck(StringRef CheckName, ClangTidyContext *Context);
 
-  /// DEPRECATED: Use the other overload.
-  virtual void registerPPCallbacks(CompilerInstance &Compiler) {}
-
   /// \brief Override this to register ``PPCallbacks`` in the preprocessor.
   ///
   /// This should be used for clang-tidy checks that analyze preprocessor-
@@ -188,7 +185,7 @@ protected:
   /// \brief Returns the main file name of the current translation unit.
   StringRef getCurrentMainFile() const { return Context->getCurrentFile(); }
   /// \brief Returns the language options from the context.
-  LangOptions getLangOpts() const { return Context->getLangOpts(); }
+  const LangOptions &getLangOpts() const { return Context->getLangOpts(); }
 };
 
 } // namespace tidy

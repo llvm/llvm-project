@@ -124,9 +124,12 @@ cl::opt<bool> NoSort("no-sort", cl::desc("Show symbols in order encountered"));
 cl::alias NoSortp("p", cl::desc("Alias for --no-sort"), cl::aliasopt(NoSort),
                   cl::Grouping);
 
-cl::opt<bool> Demangle("demangle", cl::desc("Demangle C++ symbol names"));
-cl::alias DemangleC("C", cl::desc("Alias for --demangle"), cl::aliasopt(Demangle),
-                    cl::Grouping);
+cl::opt<bool> Demangle("demangle", cl::ZeroOrMore,
+                       cl::desc("Demangle C++ symbol names"));
+cl::alias DemangleC("C", cl::desc("Alias for --demangle"),
+                    cl::aliasopt(Demangle), cl::Grouping);
+cl::opt<bool> NoDemangle("no-demangle", cl::init(false), cl::ZeroOrMore,
+                         cl::desc("Don't demangle symbol names"));
 
 cl::opt<bool> ReverseSort("reverse-sort", cl::desc("Sort in reverse order"));
 cl::alias ReverseSortr("r", cl::desc("Alias for --reverse-sort"),
@@ -2105,6 +2108,10 @@ int main(int argc, char **argv) {
     InputFilenames.push_back("a.out");
   if (InputFilenames.size() > 1)
     MultipleFiles = true;
+
+  // If both --demangle and --no-demangle are specified then pick the last one.
+  if (NoDemangle.getPosition() > Demangle.getPosition())
+    Demangle = !NoDemangle;
 
   for (unsigned i = 0; i < ArchFlags.size(); ++i) {
     if (ArchFlags[i] == "all") {

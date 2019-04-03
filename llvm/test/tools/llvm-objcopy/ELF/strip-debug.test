@@ -110,11 +110,12 @@ Sections:
     AddressAlign:    0x0000000000000010
     Content:         "00000000"
 Symbols:
-  Global:
-    - Name: foo
-      Section: .text
-    - Name: debugfoo
-      Section: .debugfoo
+  - Name:    foo
+    Section: .text
+    Binding:  STB_GLOBAL
+  - Name:    debugfoo
+    Section: .debugfoo
+    Binding:  STB_GLOBAL
 
 # CHECK: SectionHeaderCount: 5
 

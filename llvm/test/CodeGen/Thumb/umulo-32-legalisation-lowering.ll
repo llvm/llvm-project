@@ -13,19 +13,10 @@ define i1 @umulo32(i32 %l, i32 %r) unnamed_addr #0 {
 ; CHECK-BIG-NEXT:       movs r0, #0
 ; CHECK-BIG-NEXT:       movs r2, r0
 ; CHECK-NEXT:           bl __aeabi_lmul
-; CHECK-LITTLE-NEXT:    cmp  r1, #0
-; CHECK-LITTLE-NEXT:    bne  .LBB0_2
-; CHECK-LITTLE-NEXT:    @ %bb.1:
 ; CHECK-LITTLE-NEXT:    movs r0, r1
-; CHECK-LITTLE-NEXT:    b    .LBB0_3
-; CHECK-LITTLE-NEXT:    .LBB0_2:
-; CHECK-LITTLE-NEXT:    movs r0, #1
-; CHECK-LITTLE-NEXT:    .LBB0_3:
-; CHECK-BIG-NEXT:       cmp  r0, #0
-; CHECK-BIG-NEXT:       beq  .LBB0_2
-; CHECK-BIG-NEXT:       @ %bb.1:
-; CHECK-BIG-NEXT:       movs r0, #1
-; CHECK-BIG-NEXT:       .LBB0_2:
+; CHECK-LITTLE-NEXT:    subs r1, r1, #1
+; CHECK-BIG-NEXT:       subs r1, r0, #1
+; CHECK-NEXT:           sbcs r0, r1
 ; CHECK-NEXT:           pop {r7}
 ; CHECK-NEXT:           pop {r1}
 ; CHECK-NEXT:           bx r1

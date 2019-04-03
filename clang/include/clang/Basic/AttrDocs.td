@@ -921,8 +921,6 @@ and Objective-C methods.
   }];
 }
 
-
-
 def NoDebugDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -1057,7 +1055,7 @@ implementation of an override in a subclass does not call super.  For example:
 }
 
 def ObjCRuntimeNameDocs : Documentation {
-    let Category = DocCatFunction;
+    let Category = DocCatDecl;
     let Content = [{
 By default, the Objective-C interface or protocol identifier is used
 in the metadata name for that object. The `objc_runtime_name`
@@ -1078,14 +1076,17 @@ can only be placed before an @protocol or @interface declaration:
 }
 
 def ObjCRuntimeVisibleDocs : Documentation {
-    let Category = DocCatFunction;
+    let Category = DocCatDecl;
     let Content = [{
-This attribute specifies that the Objective-C class to which it applies is visible to the Objective-C runtime but not to the linker. Classes annotated with this attribute cannot be subclassed and cannot have categories defined for them.
+This attribute specifies that the Objective-C class to which it applies is
+visible to the Objective-C runtime but not to the linker. Classes annotated
+with this attribute cannot be subclassed and cannot have categories defined for
+them.
     }];
 }
 
 def ObjCBoxableDocs : Documentation {
-    let Category = DocCatFunction;
+    let Category = DocCatDecl;
     let Content = [{
 Structs and unions marked with the ``objc_boxable`` attribute can be used
 with the Objective-C boxed expression syntax, ``@(...)``.
@@ -1305,7 +1306,7 @@ Also see the documentation for `@available
 }
 
 def ExternalSourceSymbolDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocCatDecl;
   let Content = [{
 The ``external_source_symbol`` attribute specifies that a declaration originates
 from an external source and describes the nature of that source.
@@ -2449,7 +2450,7 @@ behavior of the program is undefined.
 }
 
 def FlagEnumDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 This attribute can be added to an enumerator to signal to the compiler that it
 is intended to be used as a flag type. This will cause the compiler to assume
@@ -2459,7 +2460,7 @@ manipulating bits of the enumerator when issuing warnings.
 }
 
 def EnumExtensibilityDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 Attribute ``enum_extensibility`` is used to distinguish between enum definitions
 that are extensible and those that are not. The attribute can take either
@@ -2508,7 +2509,7 @@ standard and instructs clang to be more lenient when issuing warnings.
 }
 
 def EmptyBasesDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 The empty_bases attribute permits the compiler to utilize the
 empty-base-optimization more frequently.
@@ -2518,7 +2519,7 @@ It is only supported when using the Microsoft C++ ABI.
 }
 
 def LayoutVersionDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 The layout_version attribute requests that the compiler utilize the class
 layout rules of a particular compiler version.
@@ -2544,7 +2545,7 @@ changes.
 }
 
 def TrivialABIDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatDecl;
   let Content = [{
 The ``trivial_abi`` attribute can be applied to a C++ class, struct, or union.
 It instructs the compiler to pass and return the type using the C ABI for the
@@ -2586,7 +2587,7 @@ Attribute ``trivial_abi`` has no effect in the following cases:
 }
 
 def MSInheritanceDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Heading = "__single_inhertiance, __multiple_inheritance, __virtual_inheritance";
   let Content = [{
 This collection of keywords is enabled under ``-fms-extensions`` and controls
@@ -2633,7 +2634,7 @@ an error:
 }
 
 def MSNoVTableDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 This attribute can be added to a class declaration or definition to signal to
 the compiler that constructors and destructors will not reference the virtual
@@ -2773,8 +2774,6 @@ def PipelineHintDocs : Documentation {
 
   }];
 }
-
-
 
 def OpenCLUnrollHintDocs : Documentation {
   let Category = DocCatStmt;
@@ -3345,7 +3344,7 @@ jumps from i386 arch code).
   }];
 }
 
-def AnyX86NoCfCheckDocs : Documentation{
+def AnyX86NoCfCheckDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 Jump Oriented Programming attacks rely on tampering with addresses used by
@@ -3613,7 +3612,7 @@ experimental at this time.
 }
 
 def DeprecatedDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocCatDecl;
   let Content = [{
 The ``deprecated`` attribute can be applied to a function, a variable, or a
 type. This is useful when identifying functions, variables, or types that are
@@ -3648,7 +3647,7 @@ Not all targets support this attribute. ELF target support depends on both the l
 }
 
 def LTOVisibilityDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 See :doc:`LTOVisibility`.
   }];
@@ -3684,7 +3683,7 @@ If a function has neither of these attributes, they become subject to the XRay h
 }
 
 def TransparentUnionDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 This attribute can be applied to a union to change the behaviour of calls to
 functions that have an argument with a transparent union type. The compiler
@@ -3702,7 +3701,7 @@ Transparent unions are not supported in C++.
 }
 
 def ObjCSubclassingRestrictedDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 This attribute can be added to an Objective-C ``@interface`` declaration to
 ensure that this class cannot be subclassed.
@@ -3710,7 +3709,7 @@ ensure that this class cannot be subclassed.
 }
 
 def ObjCNonLazyClassDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 This attribute can be added to an Objective-C ``@interface`` declaration to
 add the class to the list of non-lazily initialized classes. A non-lazy class
@@ -3724,7 +3723,7 @@ calling such a method.
 }
 
 def SelectAnyDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatDecl;
   let Content = [{
 This attribute appertains to a global symbol, causing it to have a weak
 definition (
@@ -3897,7 +3896,7 @@ it rather documents the programmer's intent.
 }
 
 def CallbackDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatFunction;
   let Content = [{
 The ``callback`` attribute specifies that the annotated function may invoke the
 specified callback zero or more times. The callback, as well as the passed
@@ -4070,7 +4069,7 @@ When compiled without ``-fobjc-arc``, this attribute is ignored.
 }]; }
 
 def MIGConventionDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatFunction;
   let Content = [{
   The Mach Interface Generator release-on-success convention dictates
 functions that follow it to only release arguments passed to them when they
@@ -4091,7 +4090,7 @@ attribute can also be written using C++11 syntax: ``[[mig::server_routine]]``.
 }
 
 def MSAllocatorDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatFunction;
   let Content = [{
 The ``__declspec(allocator)`` attribute is applied to functions that allocate
 memory, such as operator new in C++. When CodeView debug information is emitted

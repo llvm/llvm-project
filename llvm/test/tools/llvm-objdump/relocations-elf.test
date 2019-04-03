@@ -63,13 +63,12 @@ Sections:
       Type: R_X86_64_64
 
 Symbols:
-  Local:
-    - Name: loc1
-    - Name: loc2
-  Global:
-    - Name: glob1
-      Section: .text
-      Value: 0x0
-      Size: 4
-    - Name: glob2
-
+  - Name: loc1
+  - Name: loc2
+  - Name:    glob1
+    Section: .text
+    Value:   0x0
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    glob2
+    Binding: STB_GLOBAL

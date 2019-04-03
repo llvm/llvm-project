@@ -1138,6 +1138,7 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
   Fn->setVisibility(llvm::GlobalValue::HiddenVisibility);
   CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, Fn);
   CGM.SetLLVMFunctionAttributesForDefinition(nullptr, Fn);
+  Fn->setDoesNotThrow();
 
   // Attach 'noinline' at -Oz.
   if (CGM.getCodeGenOpts().OptimizeSize == 2)

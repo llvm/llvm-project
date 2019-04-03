@@ -383,3 +383,35 @@ Error MinidumpYAML::writeAsBinary(StringRef Yaml, raw_ostream &OS) {
   writeAsBinary(Obj, OS);
   return Error::success();
 }
+
+Expected<std::unique_ptr<Stream>>
+Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
+  StreamKind Kind = getKind(StreamDesc.Type);
+  switch (Kind) {
+  case StreamKind::RawContent:
+    return make_unique<RawContentStream>(StreamDesc.Type,
+                                         File.getRawStream(StreamDesc));
+  case StreamKind::SystemInfo: {
+    auto ExpectedInfo = File.getSystemInfo();
+    if (!ExpectedInfo)
+      return ExpectedInfo.takeError();
+    return make_unique<SystemInfoStream>(*ExpectedInfo);
+  }
+  case StreamKind::TextContent:
+    return make_unique<TextContentStream>(
+        StreamDesc.Type, toStringRef(File.getRawStream(StreamDesc)));
+  }
+  llvm_unreachable("Unhandled stream kind!");
+}
+
+Expected<Object> Object::create(const object::MinidumpFile &File) {
+  std::vector<std::unique_ptr<Stream>> Streams;
+  Streams.reserve(File.streams().size());
+  for (const Directory &StreamDesc : File.streams()) {
+    auto ExpectedStream = Stream::create(StreamDesc, File);
+    if (!ExpectedStream)
+      return ExpectedStream.takeError();
+    Streams.push_back(std::move(*ExpectedStream));
+  }
+  return Object(File.header(), std::move(Streams));
+}

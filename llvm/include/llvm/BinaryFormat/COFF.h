@@ -402,7 +402,7 @@ enum RelocationTypesARM64 : unsigned {
   IMAGE_REL_ARM64_REL32 = 0x0011,
 };
 
-enum COMDATType : unsigned {
+enum COMDATType : uint8_t {
   IMAGE_COMDAT_SELECT_NODUPLICATES = 1,
   IMAGE_COMDAT_SELECT_ANY,
   IMAGE_COMDAT_SELECT_SAME_SIZE,

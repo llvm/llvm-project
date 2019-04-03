@@ -39,6 +39,11 @@ bool llvm::parseWidenableBranch(const User *U, Value *&Condition,
                                 Value *&WidenableCondition,
                                 BasicBlock *&IfTrueBB, BasicBlock *&IfFalseBB) {
   using namespace llvm::PatternMatch;
-  return match(U, m_Br(m_And(m_Value(Condition), m_Value(WidenableCondition)),
-                       IfTrueBB, IfFalseBB));
+  if (!match(U, m_Br(m_And(m_Value(Condition), m_Value(WidenableCondition)),
+                     IfTrueBB, IfFalseBB)))
+    return false;
+  // TODO: At the moment, we only recognize the branch if the WC call in this
+  // specific position.  We should generalize!
+  return match(WidenableCondition,
+               m_Intrinsic<Intrinsic::experimental_widenable_condition>());
 }

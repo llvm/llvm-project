@@ -22,6 +22,5 @@ Sections:
         Symbol:          .text
         Type:            R_X86_64_NONE
 Symbols:
-  Local:
-    - Name:            .text
-      Type:            STT_SECTION
+  - Name:            .text
+    Type:            STT_SECTION

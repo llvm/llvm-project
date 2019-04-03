@@ -2359,3 +2359,15 @@ define void @test_i1_arg_zext(void (i1)* %f) {
   call void %f(i1 true)
   ret void
 }
+
+declare i8* @llvm.stacksave()
+declare void @llvm.stackrestore(i8*)
+define void @test_stacksaverestore() {
+  ; CHECK-LABEL: name: test_stacksaverestore
+  ; CHECK: [[SAVE:%[0-9]+]]:_(p0) = COPY $sp
+  ; CHECK-NEXT: $sp = COPY [[SAVE]](p0)
+  ; CHECK-NEXT: RET_ReallyLR
+  %sp = call i8* @llvm.stacksave()
+  call void @llvm.stackrestore(i8* %sp)
+  ret void
+}

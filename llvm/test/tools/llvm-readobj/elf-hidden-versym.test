@@ -1,0 +1,42 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf -V %t | FileCheck %s --check-prefix=HIDDEN
+
+# HIDDEN:      Version symbols section '.gnu.version' contains 2 entries:
+# HIDDEN-NEXT:  Addr: 0000000000200210  Offset: 0x000240  Link: 6 (.dynsym)
+# HIDDEN-NEXT:   000:   0 (*local*)       3h(hiddensym)
+
+--- !ELF
+FileHeader:
+  Class:             ELFCLASS64
+  Data:              ELFDATA2LSB
+  Type:              ET_EXEC
+  Machine:           EM_X86_64
+  Entry:             0x0000000000201000
+Sections:
+  - Name:            .gnu.version
+    Type:            SHT_GNU_versym
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000200210
+    Link:            .dynsym
+    AddressAlign:    0x0000000000000002
+    EntSize:         0x0000000000000002
+    Entries:         [ 0, 0x8003 ]
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000200250
+    Link:            .dynstr
+    AddressAlign:    0x0000000000000004
+    Info:            0x0000000000000001
+    Dependencies:
+      - Version:     1
+        File:        somefile
+        Entries:
+          - Name:    hiddensym
+            Hash:    1234
+            Flags:   0
+            Other:   3
+DynamicSymbols:
+  Global:
+    - Name:          h
+...

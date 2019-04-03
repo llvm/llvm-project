@@ -262,9 +262,13 @@ TEST_F(SortIncludesTest, CommentsAlwaysSeparateGroups) {
 TEST_F(SortIncludesTest, HandlesAngledIncludesAsSeparateBlocks) {
   EXPECT_EQ("#include \"a.h\"\n"
             "#include \"c.h\"\n"
+            "#include <array>\n"
             "#include <b.h>\n"
-            "#include <d.h>\n",
-            sort("#include <d.h>\n"
+            "#include <d.h>\n"
+            "#include <vector>\n",
+            sort("#include <vector>\n"
+                 "#include <d.h>\n"
+                 "#include <array>\n"
                  "#include <b.h>\n"
                  "#include \"c.h\"\n"
                  "#include \"a.h\"\n"));
@@ -272,9 +276,15 @@ TEST_F(SortIncludesTest, HandlesAngledIncludesAsSeparateBlocks) {
   FmtStyle = getGoogleStyle(FormatStyle::LK_Cpp);
   EXPECT_EQ("#include <b.h>\n"
             "#include <d.h>\n"
+            "\n"
+            "#include <array>\n"
+            "#include <vector>\n"
+            "\n"
             "#include \"a.h\"\n"
             "#include \"c.h\"\n",
-            sort("#include <d.h>\n"
+            sort("#include <vector>\n"
+                 "#include <d.h>\n"
+                 "#include <array>\n"
                  "#include <b.h>\n"
                  "#include \"c.h\"\n"
                  "#include \"a.h\"\n"));

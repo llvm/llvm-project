@@ -31,6 +31,10 @@ public:
 
   explicit operator bool() const;
 
+  // operator== is a free function
+
+  bool operator!=(const SBAddress &rhs) const;
+
   bool IsValid() const;
 
   void Clear();

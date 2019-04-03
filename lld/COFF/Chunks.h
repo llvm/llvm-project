@@ -50,7 +50,7 @@ const uint32_t TypeMask = 0x000000E0;
 // doesn't even have actual data (if common or bss).
 class Chunk {
 public:
-  enum Kind { SectionKind, OtherKind };
+  enum Kind : uint8_t { SectionKind, OtherKind };
   Kind kind() const { return ChunkKind; }
   virtual ~Chunk() = default;
 
@@ -107,6 +107,12 @@ protected:
   Chunk(Kind K = OtherKind) : ChunkKind(K) {}
   const Kind ChunkKind;
 
+public:
+  // Whether this section needs to be kept distinct from other sections during
+  // ICF. This is set by the driver using address-significance tables.
+  bool KeepUnique = false;
+
+protected:
   // The RVA of this chunk in the output. The writer sets a value.
   uint64_t RVA = 0;
 
@@ -116,10 +122,6 @@ protected:
 public:
   // The offset from beginning of the output section. The writer sets a value.
   uint64_t OutputSectionOff = 0;
-
-  // Whether this section needs to be kept distinct from other sections during
-  // ICF. This is set by the driver using address-significance tables.
-  bool KeepUnique = false;
 };
 
 // A chunk corresponding a section of an input file.
@@ -192,8 +194,34 @@ public:
                             symbol_iterator(File, Relocs.end()));
   }
 
+  // Single linked list iterator for associated comdat children.
+  class AssociatedIterator
+      : public llvm::iterator_facade_base<
+            AssociatedIterator, std::forward_iterator_tag, SectionChunk> {
+  public:
+    AssociatedIterator() = default;
+    AssociatedIterator(SectionChunk *Head) : Cur(Head) {}
+    AssociatedIterator &operator=(const AssociatedIterator &R) {
+      Cur = R.Cur;
+      return *this;
+    }
+    bool operator==(const AssociatedIterator &R) const { return Cur == R.Cur; }
+    const SectionChunk &operator*() const { return *Cur; }
+    SectionChunk &operator*() { return *Cur; }
+    AssociatedIterator &operator++() {
+      Cur = Cur->AssocChildren;
+      return *this;
+    }
+
+  private:
+    SectionChunk *Cur = nullptr;
+  };
+
   // Allow iteration over the associated child chunks for this section.
-  ArrayRef<SectionChunk *> children() const { return AssocChildren; }
+  llvm::iterator_range<AssociatedIterator> children() const {
+    return llvm::make_range(AssociatedIterator(AssocChildren),
+                            AssociatedIterator(nullptr));
+  }
 
   // The section ID this chunk belongs to in its Obj.
   uint32_t getSectionNumber() const;
@@ -208,35 +236,37 @@ public:
 
   bool isHotPatchable() const override { return File->HotPatchable; }
 
+  // The file that this chunk was created from.
+  ObjFile *File;
+
+  // Pointer to the COFF section header in the input file.
+  const coff_section *Header;
+
+  // The COMDAT leader symbol if this is a COMDAT chunk.
+  DefinedRegular *Sym = nullptr;
+
+  // Relocations for this section.
+  ArrayRef<coff_relocation> Relocs;
+
+  // The CRC of the contents as described in the COFF spec 4.5.5.
+  // Auxiliary Format 5: Section Definitions. Used for ICF.
+  uint32_t Checksum = 0;
+
+  // Used by the garbage collector.
+  bool Live;
+
+  // The COMDAT selection if this is a COMDAT chunk.
+  llvm::COFF::COMDATType Selection = (llvm::COFF::COMDATType)0;
+
   // A pointer pointing to a replacement for this chunk.
   // Initially it points to "this" object. If this chunk is merged
   // with other chunk by ICF, it points to another chunk,
   // and this chunk is considered as dead.
   SectionChunk *Repl;
 
-  // The CRC of the contents as described in the COFF spec 4.5.5.
-  // Auxiliary Format 5: Section Definitions. Used for ICF.
-  uint32_t Checksum = 0;
-
-  const coff_section *Header;
-
-  // The file that this chunk was created from.
-  ObjFile *File;
-
-  // The COMDAT leader symbol if this is a COMDAT chunk.
-  DefinedRegular *Sym = nullptr;
-
-  // The COMDAT selection if this is a COMDAT chunk.
-  llvm::COFF::COMDATType Selection = (llvm::COFF::COMDATType)0;
-
-  ArrayRef<coff_relocation> Relocs;
-
-  // Used by the garbage collector.
-  bool Live;
-
 private:
   StringRef SectionName;
-  std::vector<SectionChunk *> AssocChildren;
+  SectionChunk *AssocChildren = nullptr;
 
   // Used for ICF (Identical COMDAT Folding)
   void replace(SectionChunk *Other);

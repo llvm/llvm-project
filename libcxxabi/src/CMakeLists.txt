@@ -155,6 +155,10 @@ macro(cxxabi_object_library name)
                           COMPILE_FLAGS
                             "${LIBCXXABI_COMPILE_FLAGS}")
 
+  if(LIBCXXABI_ENABLE_PIC)
+    set_target_properties(${name} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  endif()
+
   if(ARGS_DEFINES)
     target_compile_definitions(${name} PRIVATE ${ARGS_DEFINES})
   endif()
@@ -176,7 +180,8 @@ else()
   cxxabi_object_library(cxxabi_static_objects)
 endif()
 
-cxxabi_object_library(cxxabi_shared_objects POSITION_INDEPENDENT_CODE ON)
+cxxabi_object_library(cxxabi_shared_objects)
+
 set(cxxabi_static_sources $<TARGET_OBJECTS:cxxabi_static_objects>)
 set(cxxabi_shared_sources $<TARGET_OBJECTS:cxxabi_shared_objects>)
 

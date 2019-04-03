@@ -18,8 +18,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
-#include <fstream>
-#include <sstream>
+#include "llvm/Support/LineIterator.h"
 
 using namespace llvm;
 
@@ -559,16 +558,16 @@ std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
   std::string Line;
   Content.push_back(Line); // Line 0 for empty string
 
+  std::unique_ptr<MemoryBuffer> Buf;
   auto Source = File->getSource();
-  if (Source) {
-    std::istringstream InputString(Source.getValue());
-    while (std::getline(InputString, Line))
-      Content.push_back(Line);
-  } else {
-    std::ifstream InputFile(FileName);
-    while (std::getline(InputFile, Line))
-      Content.push_back(Line);
-  }
+  if (Source)
+    Buf = MemoryBuffer::getMemBufferCopy(*Source);
+  else if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+               MemoryBuffer::getFile(FileName))
+    Buf = std::move(*BufOrErr);
+  if (Buf)
+    for (line_iterator I(*Buf, false), E; I != E; ++I)
+      Content.push_back(*I);
 
   FileContent[FileName] = Content;
   return FileName;

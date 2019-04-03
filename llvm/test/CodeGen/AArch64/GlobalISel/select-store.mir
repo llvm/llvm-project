@@ -29,6 +29,7 @@
   define void @store_gep_8_s32_fpr(i32* %addr) { ret void }
 
   define void @store_v2s32(i64 *%addr) { ret void }
+  define void @store_v2s64(i64 *%addr) { ret void }
 ...
 
 ---
@@ -416,5 +417,26 @@ body:             |
     %0(p0) = COPY $x0
     %1(<2 x s32>) = COPY $d1
     G_STORE  %1, %0 :: (store 8 into %ir.addr)
+
+...
+---
+name:            store_v2s64
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+body:             |
+  bb.0:
+    liveins: $x0, $d1
+    ; CHECK-LABEL: name: store_v2s64
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK: STRQui [[COPY1]], [[COPY]], 0 :: (store 16 into %ir.addr, align 8)
+    %0(p0) = COPY $x0
+    %1(<2 x s64>) = COPY $q1
+    G_STORE %1, %0 :: (store 16 into %ir.addr, align 8)
 
 ...

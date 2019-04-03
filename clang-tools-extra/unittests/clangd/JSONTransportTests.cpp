@@ -17,8 +17,8 @@ namespace {
 
 // No fmemopen on windows or on versions of MacOS X earlier than 10.13, so we
 // can't easily run this test.
-#if !(defined(WIN32) || (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) &&           \
-                         __MAC_OS_X_VERSION_MIN_REQUIRED < 101300))
+#if !(defined(_WIN32) || (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) &&          \
+                          __MAC_OS_X_VERSION_MIN_REQUIRED < 101300))
 
 // Fixture takes care of managing the input/output buffers for the transport.
 class JSONTransportTest : public ::testing::Test {

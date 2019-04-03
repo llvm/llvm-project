@@ -75,16 +75,9 @@ endif()
 add_file_dependencies(${CMAKE_CURRENT_SOURCE_DIR}/llvm-config.cpp ${BUILDVARIABLES_OBJPATH})
 
 if(CMAKE_CROSSCOMPILING AND NOT LLVM_CONFIG_PATH)
-  set(LLVM_CONFIG_PATH "${LLVM_NATIVE_BUILD}/bin/llvm-config" CACHE STRING "")
+  build_native_tool(llvm-config LLVM_CONFIG_PATH)
+  set(LLVM_CONFIG_PATH "${LLVM_CONFIG_PATH}" CACHE STRING "")
 
-  add_custom_command(OUTPUT "${LLVM_CONFIG_PATH}"
-    COMMAND ${CMAKE_COMMAND} --build . --target llvm-config --config $<CONFIG>
-    DEPENDS ${LLVM_NATIVE_BUILD}/CMakeCache.txt
-    WORKING_DIRECTORY ${LLVM_NATIVE_BUILD}
-    COMMENT "Building native llvm-config..."
-    USES_TERMINAL)
   add_custom_target(NativeLLVMConfig DEPENDS ${LLVM_CONFIG_PATH})
-  add_dependencies(NativeLLVMConfig CONFIGURE_LLVM_NATIVE)
-
   add_dependencies(llvm-config NativeLLVMConfig)
 endif()

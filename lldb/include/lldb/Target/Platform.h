@@ -596,7 +596,7 @@ public:
   virtual uint64_t WriteFile(lldb::user_id_t fd, uint64_t offset,
                              const void *src, uint64_t src_len, Status &error) {
     error.SetErrorStringWithFormat(
-        "Platform::ReadFile() is not supported in the %s platform",
+        "Platform::WriteFile() is not supported in the %s platform",
         GetName().GetCString());
     return -1;
   }

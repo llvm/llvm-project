@@ -33,18 +33,16 @@ Sections:
         Type:            R_ARM_THM_JUMP11
 
 Symbols:
- Global:
-   - Type:             STT_FUNC
-     Name:             _start
-     Value:            1
-     Section:          .text
- Local:
-   - Type:             STT_NOTYPE
-     Name:             "$t"
-     Section:          .text
-     Value:            0
- Weak:
-   - Type:             STT_NOTYPE
-     Name:             undefined_weak
-     Value:            0
-
+  - Type:             STT_NOTYPE
+    Name:             "$t"
+    Section:          .text
+    Value:            0
+  - Type:             STT_FUNC
+    Name:             _start
+    Value:            1
+    Section:          .text
+    Binding:          STB_GLOBAL
+  - Type:             STT_NOTYPE
+    Name:             undefined_weak
+    Value:            0
+    Binding:          STB_WEAK

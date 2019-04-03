@@ -69,6 +69,13 @@ bool lldb::operator==(const SBAddress &lhs, const SBAddress &rhs) {
   return false;
 }
 
+bool SBAddress::operator!=(const SBAddress &rhs) const {
+  LLDB_RECORD_METHOD_CONST(bool, SBAddress, operator!=,(const SBAddress &),
+                           &rhs);
+
+  return !(*this == rhs);
+}
+
 bool SBAddress::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBAddress, IsValid);
   return this->operator bool();
@@ -294,6 +301,8 @@ void RegisterMethods<SBAddress>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBAddress, (lldb::addr_t, lldb::SBTarget &));
   LLDB_REGISTER_METHOD(const lldb::SBAddress &,
                        SBAddress, operator=,(const lldb::SBAddress &));
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBAddress, operator!=,(const lldb::SBAddress &));
   LLDB_REGISTER_METHOD_CONST(bool, SBAddress, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBAddress, operator bool, ());
   LLDB_REGISTER_METHOD(void, SBAddress, Clear, ());

@@ -22,38 +22,43 @@ Sections:
     AddressAlign:    0x0000000000000010
     Content:         "0000000000000000"
 Symbols:
-  Global:
-    - Name:     _start
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1000
-      Size:     4
-    - Name:     bam
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1001
-      Size:     4
-      Visibility: STV_HIDDEN
-    - Name:     foo
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0x1004
-    - Name:     faz
-      Type:     STT_OBJECT
-      Section:  .data
-      Value:    0x2002
-      Size:     2
-      Visibility: STV_INTERNAL
-    - Name:     bar
-      Type:     STT_OBJECT
-      Section:  .data
-      Value:    0x2000
-      Size:     4
-    - Name:     baz
-      Type:     STT_OBJECT
-      Section:  .data
-      Value:    0x2004
-      Size:     4
+  - Name:     _start
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+    Size:     4
+    Binding:  STB_GLOBAL
+  - Name:     bam
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1001
+    Size:     4
+    Visibility: STV_HIDDEN
+    Binding:  STB_GLOBAL
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1004
+    Binding:  STB_GLOBAL
+  - Name:     faz
+    Type:     STT_OBJECT
+    Section:  .data
+    Value:    0x2002
+    Size:     2
+    Visibility: STV_INTERNAL
+    Binding:  STB_GLOBAL
+  - Name:     bar
+    Type:     STT_OBJECT
+    Section:  .data
+    Value:    0x2000
+    Size:     4
+    Binding:  STB_GLOBAL
+  - Name:     baz
+    Type:     STT_OBJECT
+    Section:  .data
+    Value:    0x2004
+    Size:     4
+    Binding:  STB_GLOBAL
 
 #CHECK: Symbols [
 #CHECK-NEXT:  Symbol {

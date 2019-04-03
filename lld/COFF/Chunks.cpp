@@ -30,8 +30,8 @@ namespace lld {
 namespace coff {
 
 SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
-    : Chunk(SectionKind), Repl(this), Header(H), File(F),
-      Relocs(File->getCOFFObj()->getRelocations(Header)) {
+    : Chunk(SectionKind), File(F), Header(H),
+      Relocs(File->getCOFFObj()->getRelocations(Header)), Repl(this) {
   // Initialize SectionName.
   File->getCOFFObj()->getSectionName(Header, SectionName);
 
@@ -43,6 +43,11 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
   // stripping will be in a comdat.
   Live = !Config->DoGC || !isCOMDAT();
 }
+
+// SectionChunk is one of the most frequently allocated classes, so it is
+// important to keep it as compact as possible. As of this writing, the number
+// below is the size of this class on x64 platforms.
+static_assert(sizeof(SectionChunk) <= 128, "SectionChunk grew unexpectedly");
 
 static void add16(uint8_t *P, int16_t V) { write16le(P, read16le(P) + V); }
 static void add32(uint8_t *P, int32_t V) { write32le(P, read32le(P) + V); }
@@ -394,7 +399,11 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
 }
 
 void SectionChunk::addAssociative(SectionChunk *Child) {
-  AssocChildren.push_back(Child);
+  // Insert this child at the head of the list.
+  assert(Child->AssocChildren == nullptr &&
+         "associated sections cannot have their own associated children");
+  Child->AssocChildren = AssocChildren;
+  AssocChildren = Child;
 }
 
 static uint8_t getBaserelType(const coff_relocation &Rel) {

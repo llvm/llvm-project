@@ -36,5 +36,5 @@ Sections:
     Address:      0x2000
     EntSize:      0x18
 DynamicSymbols:
-  Global:
-    - Name: foo
+  - Name:    foo
+    Binding: STB_GLOBAL

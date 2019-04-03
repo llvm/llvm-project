@@ -44,9 +44,9 @@ Sections:
     Size:          4
 
 Symbols:
-  Global:
-    - Name:    T1
-      Section: .text
-      Value:   0
-      Size:    4
+  - Name:    T1
+    Section: .text
+    Value:   0
+    Size:    4
+    Binding: STB_GLOBAL
 ...
