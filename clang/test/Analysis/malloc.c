@@ -1758,8 +1758,8 @@ void constEscape(const void *ptr);
 void testConstEscapeThroughAnotherField() {
   struct IntAndPtr s;
   s.p = malloc(sizeof(int));
-  constEscape(&(s.x));
-} // expected-warning {{Potential leak of memory pointed to by 's.p'}}
+  constEscape(&(s.x)); // could free s->p!
+} // no-warning
 
 // PR15623
 int testNoCheckerDataPropogationFromLogicalOpOperandToOpResult(void) {
@@ -1810,6 +1810,22 @@ void testLivenessBug(struct B *in_b) {
   livenessBugRealloc(b->a);
  ((void) 0); // An attempt to trick liveness analysis.
   livenessBugRealloc(b->a);
+}
+
+struct ListInfo {
+  struct ListInfo *next;
+};
+
+struct ConcreteListItem {
+  struct ListInfo li;
+  int i;
+};
+
+void list_add(struct ListInfo *list, struct ListInfo *item);
+
+void testCStyleListItems(struct ListInfo *list) {
+  struct ConcreteListItem *x = malloc(sizeof(struct ConcreteListItem));
+  list_add(list, &x->li); // will free 'x'.
 }
 
 // ----------------------------------------------------------------------------

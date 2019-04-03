@@ -9768,10 +9768,13 @@ Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
   CharUnits Align = CGM.getContext().getDeclAlign(CVD);
   if (CVD->getType()->isVariablyModifiedType()) {
     Size = CGF.getTypeSize(CVD->getType());
-    Align = CGM.getContext().getTypeAlignInChars(CVD->getType());
+    // Align the size: ((size + align - 1) / align) * align
+    Size = CGF.Builder.CreateNUWAdd(
+        Size, CGM.getSize(Align - CharUnits::fromQuantity(1)));
+    Size = CGF.Builder.CreateUDiv(Size, CGM.getSize(Align));
+    Size = CGF.Builder.CreateNUWMul(Size, CGM.getSize(Align));
   } else {
     CharUnits Sz = CGM.getContext().getTypeSizeInChars(CVD->getType());
-    Align = CGM.getContext().getDeclAlign(CVD);
     Size = CGM.getSize(Sz.alignTo(Align));
   }
   llvm::Value *ThreadID = getThreadID(CGF, CVD->getBeginLoc());

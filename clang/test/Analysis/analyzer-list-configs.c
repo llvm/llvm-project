@@ -3,7 +3,7 @@
 //
 // CHECK: USAGE: clang -cc1 [CLANG_OPTIONS] -analyzer-config <OPTION1=VALUE,OPTION2=VALUE,...>
 //
-// CHCEK:      clang -cc1 [CLANG_OPTIONS] -analyzer-config OPTION1=VALUE, -analyzer-config OPTION2=VALUE, ...
+// CHECK:      clang -cc1 [CLANG_OPTIONS] -analyzer-config OPTION1=VALUE, -analyzer-config OPTION2=VALUE, ...
 //
 // CHECK:      clang [CLANG_OPTIONS] -Xclang -analyzer-config -Xclang<OPTION1=VALUE,OPTION2=VALUE,...>
 //
