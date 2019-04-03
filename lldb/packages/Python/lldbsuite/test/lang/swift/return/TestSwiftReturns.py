@@ -109,8 +109,8 @@ class TestSwiftReturns(TestBase):
         err = self.compare_value(return_value, variable, False)
         if err:
             if self.TraceOn():
-                print 'return value: %s' % (return_value)
-                print '    variable: %s' % (variable)
+                print('return value: %s' % (return_value))
+                print('    variable: %s' % (variable))
             self.assertTrue(False, err)
 
     def verify_invisibility(self, variables):

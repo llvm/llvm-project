@@ -46,8 +46,8 @@ class TestSwiftExpressionScopes(TestBase):
         report_str = "%s expected: %s got: %s" % (
             expression, expected_result, answer)
         if answer != expected_result:
-            print report_str
-            print value.GetError()
+            print(report_str)
+            print(value.GetError())
 
         self.assertTrue(answer == expected_result, report_str)
 

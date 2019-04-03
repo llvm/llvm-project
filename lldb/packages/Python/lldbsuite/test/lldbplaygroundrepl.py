@@ -10,7 +10,6 @@
 #
 # ------------------------------------------------------------------------------
 import lldb
-import commands
 from lldbtest import *
 import decorators
 import lldbutil
@@ -18,6 +17,11 @@ import os
 import os.path
 import unittest2
 
+import sys
+if sys.version_info.major == 2:
+    import commands as subprocess
+else:
+    import subprocess
 
 class PlaygroundREPLTest(TestBase):
 
@@ -33,7 +37,7 @@ class PlaygroundREPLTest(TestBase):
         self.build()
 
     def execute_command(self, command):
-        (exit_status, output) = commands.getstatusoutput(command)
+        (exit_status, output) = subprocess.getstatusoutput(command)
         return exit_status
 
     def setUp(self):

@@ -12,7 +12,6 @@
 """
 Test that we correctly find private extension decls across modules
 """
-import commands
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *

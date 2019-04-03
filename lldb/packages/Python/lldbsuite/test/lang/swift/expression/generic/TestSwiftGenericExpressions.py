@@ -50,8 +50,8 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
 
         self.assertTrue(value.GetError().Success(), "expression failed")
         if self.TraceOn():
-            print value.GetSummary()
-            print value.GetValue()
+            print(value.GetSummary())
+            print(value.GetValue())
 
         if use_summary:
             answer = value.GetSummary()
