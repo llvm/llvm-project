@@ -24,6 +24,7 @@
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-private-types.h"
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
@@ -67,6 +68,20 @@ static bool KeepLookingInDylinker(SymbolContextList &sc_list, size_t start_idx);
 
 namespace {
 
+static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
+  {eSwiftModuleLoadingModePreferParseable, "prefer-parseable",
+    "Prefer loading Swift modules via their .swiftinterface file, but fall back "
+    " to the .swiftmodule if it is missing."},
+  {eSwiftModuleLoadingModePreferSerialized, "prefer-serialized",
+    "Prefer loading Swift module via their .swiftmodule file if present, but "
+    "fall back to the .swiftinterface if it is missing or invalid (default)."},
+  {eSwiftModuleLoadingModeOnlyParseable, "only-parseable",
+    "Only load Swift modules via their .swiftinterface file - ignore "
+    ".swiftmodule files."},
+  {eSwiftModuleLoadingModeOnlySerialized, "only-serialized",
+    "Only load Swift modules via their .swiftmodule file - ignore "
+    ".swiftinterface files."} };
+
 static constexpr PropertyDefinition g_properties[] = {
     {"enable-external-lookup", OptionValue::eTypeBoolean, true, true, nullptr,
      {},
@@ -85,12 +100,17 @@ static constexpr PropertyDefinition g_properties[] = {
          "when debugging Swift code"},
     {"clang-modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
      {},
-     "The path to the clang modules cache directory (-fmodules-cache-path)."}};
+     "The path to the clang modules cache directory (-fmodules-cache-path)."},
+    {"swift-module-loading-mode", OptionValue::eTypeEnum, false,
+     eSwiftModuleLoadingModePreferSerialized, nullptr,
+     OptionEnumValues(g_swift_module_loading_mode_enums),
+     "The module loading mode to use when loading modules for Swift."}};
 
 enum {
   ePropertyEnableExternalLookup,
   ePropertyUseDWARFImporter,
-  ePropertyClangModulesCachePath
+  ePropertyClangModulesCachePath,
+  ePropertySwiftModuleLoadingMode
 };
 
 } // namespace
@@ -103,6 +123,7 @@ ModuleListProperties::ModuleListProperties() {
   llvm::SmallString<128> path;
   clang::driver::Driver::getDefaultModuleCachePath(path);
   SetClangModulesCachePath(path);
+  SetSwiftModuleLoadingMode(eSwiftModuleLoadingModePreferSerialized);
 }
 
 bool ModuleListProperties::GetEnableExternalLookup() const {
@@ -127,6 +148,18 @@ bool ModuleListProperties::GetUseDWARFImporter() const {
 bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
   return m_collection_sp->SetPropertyAtIndexAsString(
       nullptr, ePropertyClangModulesCachePath, path);
+}
+
+SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
+  const uint32_t idx = ePropertySwiftModuleLoadingMode;
+  return (SwiftModuleLoadingMode)
+  m_collection_sp->GetPropertyAtIndexAsEnumeration(
+      nullptr, idx, g_properties[idx].default_uint_value);
+}
+
+bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode) {
+  return m_collection_sp->SetPropertyAtIndexAsEnumeration(
+      nullptr, ePropertySwiftModuleLoadingMode, mode);
 }
 
 

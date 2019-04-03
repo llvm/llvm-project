@@ -3023,20 +3023,43 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     std::string ModuleCachePath = GetClangImporterOptions().ModuleCachePath;
     StringRef PrebuiltModuleCachePath =
       GetCompilerInvocation().getFrontendOptions().PrebuiltModuleCachePath;
-    std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap(
-      swift::ParseableInterfaceModuleLoader::create(
-        *m_ast_context_ap, ModuleCachePath, PrebuiltModuleCachePath,
-        /*tracker=*/nullptr, swift::ModuleLoadingMode::PreferSerialized));
 
-    if (parseable_module_loader_ap) {
-      m_parseable_module_loader =
-      (swift::ParseableInterfaceModuleLoader *)parseable_module_loader_ap.get();
-      m_ast_context_ap->addModuleLoader(std::move(parseable_module_loader_ap));
+    auto props = ModuleList::GetGlobalModuleListProperties();
+    swift::ModuleLoadingMode loading_mode;
+    switch (props.GetSwiftModuleLoadingMode()) {
+      case eSwiftModuleLoadingModePreferSerialized:
+        loading_mode = swift::ModuleLoadingMode::PreferSerialized;
+        break;
+      case eSwiftModuleLoadingModePreferParseable:
+        loading_mode = swift::ModuleLoadingMode::PreferParseable;
+        break;
+      case eSwiftModuleLoadingModeOnlySerialized:
+        loading_mode = swift::ModuleLoadingMode::OnlySerialized;
+        break;
+      case eSwiftModuleLoadingModeOnlyParseable:
+        loading_mode = swift::ModuleLoadingMode::OnlyParseable;
+        break;
+    }
+
+    if (loading_mode != swift::ModuleLoadingMode::OnlySerialized) {
+      std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap(
+        swift::ParseableInterfaceModuleLoader::create(
+          *m_ast_context_ap, ModuleCachePath, PrebuiltModuleCachePath,
+          /*tracker=*/nullptr, loading_mode));
+
+      if (parseable_module_loader_ap) {
+        m_parseable_module_loader = (swift::ParseableInterfaceModuleLoader *)
+          parseable_module_loader_ap.get();
+        m_ast_context_ap->addModuleLoader(
+          std::move(parseable_module_loader_ap));
+      }
     }
 
     // Install the serialized module loader.
     std::unique_ptr<swift::ModuleLoader> serialized_module_loader_ap(
-        swift::SerializedModuleLoader::create(*m_ast_context_ap));
+        swift::SerializedModuleLoader::create(*m_ast_context_ap,
+                                              /*tracker=*/nullptr,
+                                              loading_mode));
 
     if (serialized_module_loader_ap) {
       m_serialized_module_loader =
