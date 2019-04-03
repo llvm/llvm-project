@@ -47,11 +47,11 @@ Sections:
     AddressAlign:    0x0000000000000010
     Content:         "00000000"
 Symbols:
-   Global:
-     - Name:     foo
-       Type:     STT_FUNC
-       Section:  .text
-       Value:    0x1004
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1004
+    Binding:  STB_GLOBAL
 
 # CHECK: Type: SHT_NULL
 

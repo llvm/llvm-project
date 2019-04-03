@@ -3355,7 +3355,57 @@ void GNUStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
     return;
 
   StringRef SecName = unwrapOrError(Obj->getSectionName(Sec));
-  OS << "Dumper for " << SecName << " is not implemented\n";
+  uint64_t Entries = Sec->sh_size / sizeof(Elf_Versym);
+
+  OS << "Version symbols section '" << SecName << "' "
+     << "contains " << Entries << " entries:\n";
+
+  const Elf_Shdr *SymTab = unwrapOrError(Obj->getSection(Sec->sh_link));
+  StringRef SymTabName = unwrapOrError(Obj->getSectionName(SymTab));
+  OS << " Addr: " << format_hex_no_prefix(Sec->sh_addr, 16)
+     << "  Offset: " << format_hex(Sec->sh_offset, 8)
+     << "  Link: " << Sec->sh_link << " (" << SymTabName << ")\n";
+
+  const uint8_t *VersymBuf =
+      reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
+  const ELFDumper<ELFT> *Dumper = this->dumper();
+  StringRef StrTable = Dumper->getDynamicStringTable();
+
+  // readelf prints 4 entries per line.
+  for (uint64_t VersymRow = 0; VersymRow < Entries; VersymRow += 4) {
+    OS << "  " << format_hex_no_prefix(VersymRow, 3) << ":";
+
+    for (uint64_t VersymIndex = 0;
+         (VersymIndex < 4) && (VersymIndex + VersymRow) < Entries;
+         ++VersymIndex) {
+      const Elf_Versym *Versym =
+          reinterpret_cast<const Elf_Versym *>(VersymBuf);
+      switch (Versym->vs_index) {
+      case 0:
+        OS << "   0 (*local*)    ";
+        break;
+      case 1:
+        OS << "   1 (*global*)   ";
+        break;
+      default:
+        OS << format("%4x%c", Versym->vs_index & VERSYM_VERSION,
+                     Versym->vs_index & VERSYM_HIDDEN ? 'h' : ' ');
+
+        bool IsDefault = true;
+        std::string VersionName = Dumper->getSymbolVersionByIndex(
+            StrTable, Versym->vs_index, IsDefault);
+
+        if (!VersionName.empty())
+          VersionName = "(" + VersionName + ")";
+        else
+          VersionName = "(*invalid*)";
+        OS << left_justify(VersionName, 13);
+      }
+      VersymBuf += sizeof(Elf_Versym);
+    }
+    OS << '\n';
+  }
+  OS << '\n';
 }
 
 template <class ELFT>

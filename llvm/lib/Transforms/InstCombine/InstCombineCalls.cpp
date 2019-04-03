@@ -1383,6 +1383,14 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombiner &IC) {
   assert(II.getIntrinsicID() == Intrinsic::ctpop &&
          "Expected ctpop intrinsic");
   Value *Op0 = II.getArgOperand(0);
+  Value *X;
+  // ctpop(bitreverse(x)) -> ctpop(x)
+  // ctpop(bswap(x)) -> ctpop(x)
+  if (match(Op0, m_BitReverse(m_Value(X))) || match(Op0, m_BSwap(m_Value(X)))) {
+    II.setOperand(0, X);
+    return &II;
+  }
+
   // FIXME: Try to simplify vectors of integers.
   auto *IT = dyn_cast<IntegerType>(Op0->getType());
   if (!IT)

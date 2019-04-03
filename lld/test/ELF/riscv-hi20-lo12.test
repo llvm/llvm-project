@@ -62,25 +62,24 @@ Sections:
     AddressAlign:    0x0000000000000001
     Content:         37C5DCFE130585A9
 Symbols:
-  Local:
-    - Name:            .text
-      Type:            STT_SECTION
-      Section:         .text
-    - Name:            .data
-      Type:            STT_SECTION
-      Section:         .data
-    - Name:            .bss
-      Type:            STT_SECTION
-      Section:         .bss
-    - Name:            .reloc_12345678
-      Type:            STT_SECTION
-      Section:         .reloc_12345678
-    - Name:            foo
-      Value:           0x00000000FEDCBA98
-    - Name:            .reloc_fedcba98
-      Type:            STT_SECTION
-      Section:         .reloc_fedcba98
-  Global:
-    - Name:            _start
-      Section:         .reloc_12345678
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .data
+    Type:            STT_SECTION
+    Section:         .data
+  - Name:            .bss
+    Type:            STT_SECTION
+    Section:         .bss
+  - Name:            .reloc_12345678
+    Type:            STT_SECTION
+    Section:         .reloc_12345678
+  - Name:            foo
+    Value:           0x00000000FEDCBA98
+  - Name:            .reloc_fedcba98
+    Type:            STT_SECTION
+    Section:         .reloc_fedcba98
+  - Name:            _start
+    Section:         .reloc_12345678
+    Binding:         STB_GLOBAL
 ...

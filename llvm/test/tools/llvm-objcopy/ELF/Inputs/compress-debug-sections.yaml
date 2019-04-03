@@ -44,15 +44,18 @@ Sections:
     Flags:           [ SHF_GROUP ]
     Content:         '00'
 Symbols:
-  Global:
-    - Name:    .debug_foo
-      Type:    STT_SECTION
-      Section: .debug_foo
-    - Name:    .notdebug_foo
-      Type:    STT_SECTION
-      Section: .notdebug_foo
-    - Name:    .Linfo_string0
-      Section: .debug_bar
-    - Name:    groupname
-      Section: .group
+  - Name:    .debug_foo
+    Type:    STT_SECTION
+    Section: .debug_foo
+    Binding:  STB_GLOBAL
+  - Name:    .notdebug_foo
+    Type:    STT_SECTION
+    Section: .notdebug_foo
+    Binding:  STB_GLOBAL
+  - Name:    .Linfo_string0
+    Section: .debug_bar
+    Binding:  STB_GLOBAL
+  - Name:    groupname
+    Section: .group
+    Binding:  STB_GLOBAL
 ...

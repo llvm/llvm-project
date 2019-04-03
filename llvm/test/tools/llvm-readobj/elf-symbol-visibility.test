@@ -52,12 +52,15 @@ Sections:
     # Symbol with st_name = 1, st_other = 0x4
     Content: "0000000000000000000000000000000001000000000000000000000000040000"
 Symbols:
-  Global:
-    - Name: default
-      Visibility: STV_DEFAULT
-    - Name: internal
-      Visibility: STV_INTERNAL
-    - Name: hidden
-      Visibility: STV_HIDDEN
-    - Name: protected
-      Visibility: STV_PROTECTED
+  - Name: default
+    Visibility: STV_DEFAULT
+    Binding: STB_GLOBAL
+  - Name: internal
+    Visibility: STV_INTERNAL
+    Binding: STB_GLOBAL
+  - Name: hidden
+    Visibility: STV_HIDDEN
+    Binding: STB_GLOBAL
+  - Name: protected
+    Visibility: STV_PROTECTED
+    Binding: STB_GLOBAL

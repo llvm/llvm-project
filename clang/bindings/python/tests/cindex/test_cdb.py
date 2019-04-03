@@ -23,8 +23,17 @@ class TestCDB(unittest.TestCase):
     def test_create_fail(self):
         """Check we fail loading a database with an assertion"""
         path = os.path.dirname(__file__)
+
+        # clang_CompilationDatabase_fromDirectory calls fprintf(stderr, ...)
+        # Suppress its output.
+        stderr = os.dup(2)
+        with open(os.devnull, 'wb') as null:
+            os.dup2(null.fileno(), 2)
         with self.assertRaises(CompilationDatabaseError) as cm:
             cdb = CompilationDatabase.fromDirectory(path)
+        os.dup2(stderr, 2)
+        os.close(stderr)
+
         e = cm.exception
         self.assertEqual(e.cdb_error,
             CompilationDatabaseError.ERROR_CANNOTLOADDATABASE)

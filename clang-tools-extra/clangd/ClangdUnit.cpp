@@ -299,7 +299,6 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
     for (const auto &Check : CTChecks) {
       // FIXME: the PP callbacks skip the entire preamble.
       // Checks that want to see #includes in the main file do not see them.
-      Check->registerPPCallbacks(*Clang);
       Check->registerPPCallbacks(Clang->getSourceManager(), PP, PP);
       Check->registerMatchers(&CTFinder);
     }

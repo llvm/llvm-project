@@ -80,6 +80,19 @@
 ; CHECK: ScopeEndSym {
 ; CHECK:   Kind: S_END {{.*}}
 ; CHECK: }
+; CHECK: BlockSym {
+; CHECK:   Kind: S_BLOCK32 {{.*}}
+; CHECK:   BlockName: 
+; CHECK: }
+; CHECK: ScopeEndSym {
+; CHECK: }
+; CHECK: BlockSym {
+; CHECK:   Kind: S_BLOCK32 {{.*}}
+; CHECK:   BlockName: 
+; CHECK: }
+; CHECK: ScopeEndSym {
+; CHECK:   Kind: S_END {{.*}}
+; CHECK: }
 ; CHECK: ProcEnd {
 ; CHECK: }
 ;

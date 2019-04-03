@@ -31,20 +31,22 @@ Sections:
     AddressAlign:    0x0000000000000004
     Size:            0x0000000000000004
 Symbols:
-  Global:
-    - Name:            Y
-      Type:            STT_OBJECT
-      Section:         .data
-      Value:           0x0000000000601000
-      Size:            0x0000000000000004
-    - Name:            _start
-      Type:            STT_FUNC
-      Section:         .text
-      Value:           0x0000000000400180
-      Size:            0x0000000000000014
-    - Name:            X
-      Type:            STT_OBJECT
-      Section:         .bss
-      Value:           0x0000000000601004
-      Size:            0x0000000000000004
+  - Name:            Y
+    Type:            STT_OBJECT
+    Section:         .data
+    Value:           0x0000000000601000
+    Size:            0x0000000000000004
+    Binding:         STB_GLOBAL
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000400180
+    Size:            0x0000000000000014
+    Binding:         STB_GLOBAL
+  - Name:            X
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0x0000000000601004
+    Size:            0x0000000000000004
+    Binding:         STB_GLOBAL
 ...

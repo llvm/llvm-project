@@ -51,7 +51,6 @@ Sections:
                        SHF_OS_NONCONFORMING, SHF_STRINGS, SHF_TLS, SHF_WRITE ]
     Content:        "a4a4a4a4"
 Symbols:
-  Local:
   - Name:            dummy
     Section:         .group
 

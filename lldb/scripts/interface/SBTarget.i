@@ -1103,6 +1103,21 @@ public:
                 modules.append(self.GetModuleAtIndex(idx))
             return modules
 
+        def module_iter(self):
+            '''Returns an iterator over all modules in a lldb.SBTarget
+            object.'''
+            return lldb_iter(self, 'GetNumModules', 'GetModuleAtIndex')
+
+        def breakpoint_iter(self):
+            '''Returns an iterator over all breakpoints in a lldb.SBTarget
+            object.'''
+            return lldb_iter(self, 'GetNumBreakpoints', 'GetBreakpointAtIndex')
+
+        def watchpoint_iter(self):
+            '''Returns an iterator over all watchpoints in a lldb.SBTarget
+            object.'''
+            return lldb_iter(self, 'GetNumWatchpoints', 'GetWatchpointAtIndex')
+
         __swig_getmethods__["modules"] = get_modules_array
         if _newclass: modules = property(get_modules_array, None, doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')
 

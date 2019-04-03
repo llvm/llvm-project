@@ -184,22 +184,29 @@ gmi x0, x1, #1
 // CHECK-NEXT: gmi x0, #1, x2
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: gmi x0, x1, #1
-
 stg
 stg x0
-stg [xzr]
-stg [x0, #-4112]
-stg [x0, #4096]
-stg [x0, #8]
-stg [x0, x1]
-stg [w0]
+stg w0
+stg sp
+stg #1
+stg x0, [x0, #-4112]
+stg x0, [x0, #4096]
+stg x0, [x0, #8]
+stg x0, [x0, x1]
+stg x0, [w0]
+stg x0, [xzr]
+stg x0, [#1]
 
 // CHECK: too few operands for instruction
 // CHECK-NEXT: stg
-// CHECK: invalid operand for instruction
+// CHECK: too few operands for instruction
 // CHECK-NEXT: stg x0
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: [xzr]
+// CHECK-NEXT: stg w0
+// CHECK: too few operands for instruction
+// CHECK-NEXT: stg sp
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stg #1
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
@@ -207,25 +214,37 @@ stg [w0]
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stg [x0, x1]
+// CHECK-NEXT: stg x0, [x0, x1]
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stg [w0]
+// CHECK-NEXT: stg x0, [w0]
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stg x0, [xzr]
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stg x0, [#1]
 
 stzg
 stzg x0
-stzg [xzr]
-stzg [x0, #-4112]
-stzg [x0, #4096]
-stzg [x0, #8]
-stzg [x0, x1]
-stzg [w0]
+stzg w0
+stzg sp
+stzg #1
+stzg x0, [x0, #-4112]
+stzg x0, [x0, #4096]
+stzg x0, [x0, #8]
+stzg x0, [x0, x1]
+stzg x0, [w0]
+stzg x0, [xzr]
+stzg x0, [#1]
 
 // CHECK: too few operands for instruction
 // CHECK-NEXT: stzg
-// CHECK: invalid operand for instruction
+// CHECK: too few operands for instruction
 // CHECK-NEXT: stzg x0
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: [xzr]
+// CHECK-NEXT: stzg w0
+// CHECK: too few operands for instruction
+// CHECK-NEXT: stzg sp
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stzg #1
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
@@ -233,32 +252,21 @@ stzg [w0]
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stzg [x0, x1]
+// CHECK-NEXT: stzg x0, [x0, x1]
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stzg [w0]
-
-stg [x0, #-4112]!
-stg [x0, #4096]!
-stg [x0, #8]!
-stg [x0, x1]!
-stg [w0, #255]!
-
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #8
+// CHECK-NEXT: stzg x0, [w0]
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stg [x0, x1]!
+// CHECK-NEXT: stzg x0, [xzr]
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stg [w0, #255]!
+// CHECK-NEXT: stzg x0, [#1]
 
-stzg [x0, #-4112]!
-stzg [x0, #4096]!
-stzg [x0, #8]!
-stzg [x0, x1]!
-stzg [w0, #255]!
+stg x0, [x0, #-4112]!
+stg x0, [x0, #4096]!
+stg x0, [x0, #8]!
+stg x0, [x0, x1]!
+stg x0, [w0]!
+stg x0, [xzr]!
+stg x0, [#1]!
 
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
@@ -267,32 +275,21 @@ stzg [w0, #255]!
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stzg [x0, x1]!
+// CHECK-NEXT: stg x0, [x0, x1]!
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stzg [w0, #255]!
-
-stg [x0], #-4112
-stg [x0], #4096
-stg [x0], #8
-stg [x0], x1
-stg [w0], #255
-
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #8
+// CHECK-NEXT: stg x0, [w0]!
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stg [x0], x1
+// CHECK-NEXT: stg x0, [xzr]!
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stg [w0], #255
+// CHECK-NEXT: stg x0, [#1]!
 
-stzg [x0], #-4112
-stzg [x0], #4096
-stzg [x0], #8
-stzg [x0], x1
-stzg [w0], #255
+stzg x0, [x0, #-4112]!
+stzg x0, [x0, #4096]!
+stzg x0, [x0, #8]!
+stzg x0, [x0, x1]!
+stzg x0, [w0]!
+stzg x0, [xzr]!
+stzg x0, [#1]!
 
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
@@ -301,25 +298,83 @@ stzg [w0], #255
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stzg [x0], x1
+// CHECK-NEXT: stzg x0, [x0, x1]!
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stzg [w0], #255
+// CHECK-NEXT: stzg x0, [w0]!
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stzg x0, [xzr]!
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stzg x0, [#1]!
+
+stg x0, [x0], #-4112
+stg x0, [x0], #4096
+stg x0, [x0], #8
+stg x0, [x0], x1
+stg x0, [w0], #255
+stg x0, [xzr], #255
+stg x0, [#1], #255
+
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #-4112
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #4096
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #8
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stg x0, [x0], x1
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stg x0, [w0], #255
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stg x0, [xzr], #255
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stg x0, [#1], #255
+
+stzg x0, [x0], #-4112
+stzg x0, [x0], #4096
+stzg x0, [x0], #8
+stzg x0, [x0], x1
+stzg x0, [w0], #255
+stzg x0, [xzr], #255
+stzg x0, [#1], #255
+
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #-4112
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #4096
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #8
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stzg x0, [x0], x1
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stzg x0, [w0], #255
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stzg x0, [xzr], #255
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stzg x0, [#1], #255
 
 st2g
 st2g x0
-st2g [xzr]
-st2g [x0, #-4112]
-st2g [x0, #4096]
-st2g [x0, #8]
-st2g [x0, x1]
-st2g [w0]
+st2g w0
+st2g sp
+st2g #1
+st2g x0, [x0, #-4112]
+st2g x0, [x0, #4096]
+st2g x0, [x0, #8]
+st2g x0, [x0, x1]
+st2g x0, [w0]
+st2g x0, [xzr]
+st2g x0, [#1]
 
 // CHECK: too few operands for instruction
 // CHECK-NEXT: st2g
-// CHECK: invalid operand for instruction
+// CHECK: too few operands for instruction
 // CHECK-NEXT: st2g x0
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: [xzr]
+// CHECK-NEXT: st2g w0
+// CHECK: too few operands for instruction
+// CHECK-NEXT: st2g sp
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: st2g #1
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
@@ -327,22 +382,37 @@ st2g [w0]
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: st2g [x0, x1]
+// CHECK-NEXT: st2g x0, [x0, x1]
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: st2g [w0]
+// CHECK-NEXT: st2g x0, [w0]
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: st2g x0, [xzr]
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: st2g x0, [#1]
 
 stz2g
-stz2g [xzr]
-stz2g [x0, #-4112]
-stz2g [x0, #4096]
-stz2g [x0, #8]
-stz2g [x0, x1]
-stz2g [w0]
+stz2g x0
+stz2g w0
+stz2g sp
+stz2g #1
+stz2g x0, [x0, #-4112]
+stz2g x0, [x0, #4096]
+stz2g x0, [x0, #8]
+stz2g x0, [x0, x1]
+stz2g x0, [w0]
+stz2g x0, [xzr]
+stz2g x0, [#1]
 
 // CHECK: too few operands for instruction
 // CHECK-NEXT: stz2g
+// CHECK: too few operands for instruction
+// CHECK-NEXT: stz2g x0
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: [xzr]
+// CHECK-NEXT: stz2g w0
+// CHECK: too few operands for instruction
+// CHECK-NEXT: stz2g sp
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stz2g #1
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
@@ -350,49 +420,21 @@ stz2g [w0]
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stz2g [x0, x1]
+// CHECK-NEXT: stz2g x0, [x0, x1]
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stz2g [w0]
-
-st2g [x0, #-4112]!
-st2g [x0, #4096]!
-st2g [x0, #8]!
-st2g [x0, x1]!
-st2g [w0, #255]!
-
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #8
+// CHECK-NEXT: stz2g x0, [w0]
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: st2g [x0, x1]!
+// CHECK-NEXT: stz2g x0, [xzr]
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: st2g [w0, #255]!
+// CHECK-NEXT: stz2g x0, [#1]
 
-stz2g [x0, #-4112]!
-stz2g [x0, #4096]!
-stz2g [x0, #8]!
-stz2g [x0, x1]!
-stz2g [w0, #255]!
-
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
-// CHECK-NEXT: #8
-// CHECK: invalid operand for instruction
-// CHECK-NEXT: stz2g [x0, x1]!
-// CHECK: invalid operand for instruction
-// CHECK-NEXT: stz2g [w0, #255]!
-
-st2g [x0], #-4112
-st2g [x0], #4096
-st2g [x0], #8
-st2g [x0], x1
-st2g [#1], #255
+st2g x0, [x0, #-4112]!
+st2g x0, [x0, #4096]!
+st2g x0, [x0, #8]!
+st2g x0, [x0, x1]!
+st2g x0, [w0, #256]!
+st2g x0, [xzr, #256]!
+st2g x0, [#1, #256]!
 
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
@@ -401,15 +443,21 @@ st2g [#1], #255
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: st2g [x0], x1
+// CHECK-NEXT: st2g x0, [x0, x1]!
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: st2g [#1], #255
+// CHECK-NEXT: st2g x0, [w0, #256]!
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: st2g x0, [xzr, #256]!
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: st2g x0, [#1, #256]!
 
-stz2g [x0], #-4112
-stz2g [x0], #4096
-stz2g [x0], #8
-stz2g [x0], x1
-stz2g [#0], x1
+stz2g x0, [x0, #-4112]!
+stz2g x0, [x0, #4096]!
+stz2g x0, [x0, #8]!
+stz2g x0, [x0, x1]!
+stz2g x0, [w0, #255]!
+stz2g x0, [xzr, #255]!
+stz2g x0, [#1, #255]!
 
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
@@ -418,9 +466,59 @@ stz2g [#0], x1
 // CHECK: index must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stz2g [x0], x1
+// CHECK-NEXT: stz2g x0, [x0, x1]!
 // CHECK: invalid operand for instruction
-// CHECK-NEXT: stz2g [#0], x1
+// CHECK-NEXT: stz2g x0, [w0, #255]!
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stz2g x0, [xzr, #255]!
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stz2g x0, [#1, #255]!
+
+st2g x0, [x0], #-4112
+st2g x0, [x0], #4096
+st2g x0, [x0], #8
+st2g x0, [x0], x1
+st2g x0, [w0], #255
+st2g x0, [xzr], #255
+st2g x0, [#1], #255
+
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #-4112
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #4096
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #8
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: st2g x0, [x0], x1
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: st2g x0, [w0], #255
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: st2g x0, [xzr], #255
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: st2g x0, [#1], #255
+
+stz2g x0, [x0], #-4112
+stz2g x0, [x0], #4096
+stz2g x0, [x0], #8
+stz2g x0, [x0], x1
+stz2g x0, [w0], #255
+stz2g x0, [xzr], #255
+stz2g x0, [#1], #255
+
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #-4112
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #4096
+// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK-NEXT: #8
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stz2g x0, [x0], x1
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stz2g x0, [w0], #255
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stz2g x0, [xzr], #255
+// CHECK: invalid operand for instruction
+// CHECK-NEXT: stz2g x0, [#1], #255
 
 stgp sp, x1, [x2, #16]
 stgp x0, sp, [x2, #16]
@@ -678,6 +776,7 @@ msr tfsr_el2, #4
 msr tfsr_el3, #5
 msr tfsr_el12, #6
 msr tfsre0_el1, #7
+// Is read only
 msr gmid_el1, #7
 
 // CHECK:      invalid operand for instruction

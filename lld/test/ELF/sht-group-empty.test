@@ -49,7 +49,7 @@ Sections:
         Symbol:          bar
         Type:            R_X86_64_64
 Symbols:
-  Global:
-    - Name:            foo
-    - Name:            bar
-
+  - Name:            foo
+    Binding:         STB_GLOBAL
+  - Name:            bar
+    Binding:         STB_GLOBAL

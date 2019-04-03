@@ -497,6 +497,15 @@ public:
             for idx in range(len(accessor)):
                 threads.append(accessor[idx])
             return threads
+
+        def __iter__(self):
+            '''Iterate over all threads in a lldb.SBProcess object.'''
+            return lldb_iter(self, 'GetNumThreads', 'GetThreadAtIndex')
+ 
+        def __len__(self):
+            '''Return the number of threads in a lldb.SBProcess object.'''
+            return self.GetNumThreads()
+
         
         __swig_getmethods__["threads"] = get_process_thread_list
         if _newclass: threads = property(get_process_thread_list, None, doc='''A read only property that returns a list() of lldb.SBThread objects for this process.''')

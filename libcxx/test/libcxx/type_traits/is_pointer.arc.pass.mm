@@ -18,7 +18,9 @@
 
 
 template <typename T>
-void test() {
+void test_is_pointer() {
+    static_assert(std::is_pointer<T>::value, "");
+
     static_assert(std::is_pointer<T __weak>::value, "");
     static_assert(std::is_pointer<T __strong>::value, "");
     static_assert(std::is_pointer<T __autoreleasing>::value, "");
@@ -43,14 +45,20 @@ void test() {
 @class Foo;
 
 int main(int, char**) {
-    test<id>();
-    test<id const>();
-    test<id volatile>();
-    test<id const volatile>();
-    test<Foo*>();
-    test<Foo const*>();
-    test<Foo volatile*>();
-    test<Foo const volatile*>();
+    test_is_pointer<id>();
+    test_is_pointer<id const>();
+    test_is_pointer<id volatile>();
+    test_is_pointer<id const volatile>();
+
+    test_is_pointer<Foo*>();
+    test_is_pointer<Foo const*>();
+    test_is_pointer<Foo volatile*>();
+    test_is_pointer<Foo const volatile*>();
+
+    test_is_pointer<void*>();
+    test_is_pointer<void const*>();
+    test_is_pointer<void volatile*>();
+    test_is_pointer<void const volatile*>();
 
     return 0;
 }
