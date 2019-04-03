@@ -66,7 +66,7 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
         starter_string = 'Starter Garbage\n'
         write_string = 'writing to file with mode: '
 
-        for path, mode in test_files.iteritems():
+        for path, mode in test_files.items():
             with open(path, 'w+') as init:
                 init.write(starter_string)
 
@@ -78,7 +78,7 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
         self.sendline(
             'command script add -f custom_command.write_file mywrite',
             patterns=[prompt])
-        for path, mode in test_files.iteritems():
+        for path, mode in test_files.items():
             command = 'mywrite "' + path + '" ' + mode
 
             self.sendline(command, patterns=[prompt])
@@ -87,7 +87,7 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
 
         self.quit(gracefully=False)
 
-        for path, mode in test_files.iteritems():
+        for path, mode in test_files.items():
             with open(path, 'r') as result:
                 if mode in ['r', 'a', 'a+']:
                     self.assertEquals(result.readline(), starter_string)

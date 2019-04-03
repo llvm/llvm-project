@@ -317,7 +317,7 @@ class FoundationTestCase(TestBase):
             lines = f.readlines()
             num_errors = 0
             for line in lines:
-                if string.find(line, "$__lldb") != -1:
+                if "$__lldb" in line:
                     if num_errors == 0:
                         print(
                             "error: found spurious name lookups when evaluating an expression:")

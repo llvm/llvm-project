@@ -10,7 +10,7 @@ gdb remote packet functional areas.  For now it contains
 the initial set of tests implemented.
 """
 
-from __future__ import print_function
+from __future__ import division, print_function
 
 
 import unittest2
@@ -18,6 +18,7 @@ import gdbremote_testcase
 import lldbgdbserverutils
 import platform
 import signal
+from lldbsuite.support import seven
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbdwarf import *
@@ -868,7 +869,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         # Ensure what we read from inferior memory is what we wrote.
         self.assertIsNotNone(context.get("read_contents"))
-        read_contents = context.get("read_contents").decode("hex")
+        read_contents = seven.unhexlify(context.get("read_contents"))
         self.assertEqual(read_contents, MEMORY_CONTENTS)
 
     @debugserver_test
@@ -1352,7 +1353,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         message_address = int(context.get("message_address"), 16)
 
         # Hex-encode the test message, adding null termination.
-        hex_encoded_message = TEST_MESSAGE.encode("hex")
+        hex_encoded_message = seven.hexlify(TEST_MESSAGE)
 
         # Write the message to the inferior. Verify that we can read it with the hex-encoded (m)
         # and binary (x) memory read packets.
@@ -1467,7 +1468,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         reg_index = self.select_modifiable_register(reg_infos)
         self.assertIsNotNone(reg_index)
-        reg_byte_size = int(reg_infos[reg_index]["bitsize"]) / 8
+        reg_byte_size = int(reg_infos[reg_index]["bitsize"]) // 8
         self.assertTrue(reg_byte_size > 0)
 
         # Run the process a bit so threads can start up, and collect register
