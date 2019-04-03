@@ -31,8 +31,8 @@ class TestSimpleSwiftExpressions(TestBase):
         value = self.frame().EvaluateExpression(expression)
         self.assertTrue(value.IsValid(), expression + "returned a valid value")
         if self.TraceOn():
-            print value.GetSummary()
-            print value.GetValue()
+            print(value.GetSummary())
+            print(value.GetValue())
         if use_summary:
             answer = value.GetSummary()
         else:

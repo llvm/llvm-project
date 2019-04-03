@@ -12,7 +12,6 @@
 """
 Test suppression of dynamic exclusivity enforcement
 """
-import commands
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
@@ -20,8 +19,14 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
 
+import sys
+if sys.version_info.major == 2:
+    import commands as subprocess
+else:
+    import subprocess
+
 def execute_command(command):
-    (exit_status, output) = commands.getstatusoutput(command)
+    (exit_status, output) = subprocess.getstatusoutput(command)
     return exit_status
 
 class TestExclusivitySuppression(TestBase):
@@ -86,8 +91,8 @@ class TestExclusivitySuppression(TestBase):
         value = frame.EvaluateExpression(expression)
         self.assertTrue(value.IsValid(), expression + " returned a valid value")
         if self.TraceOn():
-            print value.GetSummary()
-            print value.GetValue()
+            print(value.GetSummary())
+            print(value.GetValue())
         if use_summary:
             answer = value.GetSummary()
         else:

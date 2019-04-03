@@ -16,7 +16,6 @@ info. The module loader should generate the .swiftmodule for any
 .swiftinterface it finds unless it is already in the module cache.
 """
 
-import commands
 import glob
 import lldb
 from lldbsuite.test.lldbtest import *

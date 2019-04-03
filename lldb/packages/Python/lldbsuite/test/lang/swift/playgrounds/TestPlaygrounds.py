@@ -12,7 +12,7 @@
 """
 Test that playgrounds work
 """
-import commands
+import subprocess
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
@@ -22,9 +22,14 @@ import os.path
 import platform
 import unittest2
 
+import sys
+if sys.version_info.major == 2:
+    import commands as subprocess
+else:
+    import subprocess
 
 def execute_command(command):
-    (exit_status, output) = commands.getstatusoutput(command)
+    (exit_status, output) = subprocess.getstatusoutput(command)
     return exit_status
 
 

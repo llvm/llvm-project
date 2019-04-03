@@ -48,14 +48,14 @@ class TestSwiftStructChangeRerun(TestBase):
         if os.path.exists("main.swift"):
             os.unlink("main.swift")
         shutil.copyfile('main1.swift', "main.swift")
-        print 'build with main1.swift'
+        print('build with main1.swift')
         self.build()
         (target, process, thread, breakpoint) = \
             lldbutil.run_to_source_breakpoint(
                 self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
         var_a = self.frame().EvaluateExpression("a")
-        print var_a
+        print(var_a)
         var_a_a = var_a.GetChildMemberWithName("a")
         lldbutil.check_variable(self, var_a_a, False, value="12")
 
@@ -67,7 +67,7 @@ class TestSwiftStructChangeRerun(TestBase):
 
         process.Kill()
 
-        print 'build with main2.swift'
+        print('build with main2.swift')
         os.unlink("main.swift")
         shutil.copyfile('main2.swift', "main.swift")
         if build_dsym:
@@ -86,7 +86,7 @@ class TestSwiftStructChangeRerun(TestBase):
         self.assertTrue(len(threads) == 1)
 
         var_a = self.frame().EvaluateExpression("a")
-        print var_a
+        print(var_a)
         var_a_a = var_a.GetChildMemberWithName("a")
         lldbutil.check_variable(self, var_a_a, False, value="12")
 
