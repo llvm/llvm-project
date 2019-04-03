@@ -17,14 +17,112 @@
 // be tested here and in nodiscard_extensions.fail.cpp. They should also
 // be listed in `UsingLibcxx.rst` in the documentation for the extension.
 
+#include <algorithm>
+#include <functional>
+#include <iterator>
 #include <memory>
 
 #include "test_macros.h"
 
+struct P {
+  bool operator()(int) const { return false; }
+};
+
 int main(int, char**) {
-  {
-    std::get_temporary_buffer<int>(1); // intentional memory leak.
-  }
+  int arr[1] = { 1 };
+
+  std::adjacent_find(std::begin(arr), std::end(arr));
+  std::adjacent_find(std::begin(arr), std::end(arr), std::greater<int>());
+  std::all_of(std::begin(arr), std::end(arr), P());
+  std::any_of(std::begin(arr), std::end(arr), P());
+  std::binary_search(std::begin(arr), std::end(arr), 1);
+  std::binary_search(std::begin(arr), std::end(arr), 1, std::greater<int>());
+  std::clamp(2, 1, 3);
+  std::clamp(2, 1, 3, std::greater<int>());
+  std::count_if(std::begin(arr), std::end(arr), P());
+  std::count(std::begin(arr), std::end(arr), 1);
+  std::equal_range(std::begin(arr), std::end(arr), 1);
+  std::equal_range(std::begin(arr), std::end(arr), 1, std::greater<int>());
+  std::equal(std::begin(arr), std::end(arr), std::begin(arr));
+  std::equal(std::begin(arr), std::end(arr), std::begin(arr),
+             std::greater<int>());
+  std::equal(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
+  std::equal(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr),
+             std::greater<int>());
+  std::find_end(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
+  std::find_end(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr),
+                std::greater<int>());
+  std::find_first_of(std::begin(arr), std::end(arr), std::begin(arr),
+                     std::end(arr));
+  std::find_first_of(std::begin(arr), std::end(arr), std::begin(arr),
+                     std::end(arr), std::greater<int>());
+  std::find_if_not(std::begin(arr), std::end(arr), P());
+  std::find_if(std::begin(arr), std::end(arr), P());
+  std::find(std::begin(arr), std::end(arr), 1);
+  std::get_temporary_buffer<int>(1); // intentional memory leak.
+  std::includes(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
+  std::includes(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr),
+                std::greater<int>());
+  std::is_heap_until(std::begin(arr), std::end(arr));
+  std::is_heap_until(std::begin(arr), std::end(arr), std::greater<int>());
+  std::is_heap(std::begin(arr), std::end(arr));
+  std::is_heap(std::begin(arr), std::end(arr), std::greater<int>());
+  std::is_partitioned(std::begin(arr), std::end(arr), P());
+  std::is_permutation(std::begin(arr), std::end(arr), std::begin(arr));
+  std::is_permutation(std::begin(arr), std::end(arr), std::begin(arr),
+                      std::greater<int>());
+  std::is_permutation(std::begin(arr), std::end(arr), std::begin(arr),
+                      std::end(arr));
+  std::is_permutation(std::begin(arr), std::end(arr), std::begin(arr),
+                      std::end(arr), std::greater<int>());
+  std::is_sorted_until(std::begin(arr), std::end(arr));
+  std::is_sorted_until(std::begin(arr), std::end(arr), std::greater<int>());
+  std::is_sorted(std::begin(arr), std::end(arr));
+  std::is_sorted(std::begin(arr), std::end(arr), std::greater<int>());
+  std::lexicographical_compare(std::begin(arr), std::end(arr), std::begin(arr),
+                               std::end(arr));
+  std::lexicographical_compare(std::begin(arr), std::end(arr), std::begin(arr),
+                               std::end(arr), std::greater<int>());
+  std::lower_bound(std::begin(arr), std::end(arr), 1);
+  std::lower_bound(std::begin(arr), std::end(arr), 1, std::greater<int>());
+  std::max_element(std::begin(arr), std::end(arr));
+  std::max_element(std::begin(arr), std::end(arr), std::greater<int>());
+  std::max(1, 2);
+  std::max(1, 2, std::greater<int>());
+  std::max({1, 2, 3});
+  std::max({1, 2, 3}, std::greater<int>());
+  std::min_element(std::begin(arr), std::end(arr));
+  std::min_element(std::begin(arr), std::end(arr), std::greater<int>());
+  std::min(1, 2);
+  std::min(1, 2, std::greater<int>());
+  std::min({1, 2, 3});
+  std::min({1, 2, 3}, std::greater<int>());
+  std::minmax_element(std::begin(arr), std::end(arr));
+  std::minmax_element(std::begin(arr), std::end(arr), std::greater<int>());
+  std::minmax(1, 2);
+  std::minmax(1, 2, std::greater<int>());
+  std::minmax({1, 2, 3});
+  std::minmax({1, 2, 3}, std::greater<int>());
+  std::mismatch(std::begin(arr), std::end(arr), std::begin(arr));
+  std::mismatch(std::begin(arr), std::end(arr), std::begin(arr),
+                std::greater<int>());
+  std::mismatch(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
+  std::mismatch(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr),
+                std::greater<int>());
+  std::none_of(std::begin(arr), std::end(arr), P());
+  std::remove_if(std::begin(arr), std::end(arr), P());
+  std::remove(std::begin(arr), std::end(arr), 1);
+  std::search_n(std::begin(arr), std::end(arr), 1, 1);
+  std::search_n(std::begin(arr), std::end(arr), 1, 1, std::greater<int>());
+  std::search(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
+  std::search(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr),
+              std::greater<int>());
+  std::search(std::begin(arr), std::end(arr),
+              std::default_searcher(std::begin(arr), std::end(arr)));
+  std::unique(std::begin(arr), std::end(arr));
+  std::unique(std::begin(arr), std::end(arr), std::greater<int>());
+  std::upper_bound(std::begin(arr), std::end(arr), 1);
+  std::upper_bound(std::begin(arr), std::end(arr), 1, std::greater<int>());
 
   return 0;
 }

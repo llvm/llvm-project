@@ -304,4 +304,41 @@ Entities declared with ``_LIBCPP_NODISCARD_EXT``
 This section lists all extended applications of ``[[nodiscard]]`` to entities
 which no dialect declares as such (See the second form described above).
 
+* ``adjacent_find``
+* ``all_of``
+* ``any_of``
+* ``binary_search``
+* ``clamp``
+* ``count_if``
+* ``count``
+* ``equal_range``
+* ``equal``
+* ``find_end``
+* ``find_first_of``
+* ``find_if_not``
+* ``find_if``
+* ``find``
 * ``get_temporary_buffer``
+* ``includes``
+* ``is_heap_until``
+* ``is_heap``
+* ``is_partitioned``
+* ``is_permutation``
+* ``is_sorted_until``
+* ``is_sorted``
+* ``lexicographical_compare``
+* ``lower_bound``
+* ``max_element``
+* ``max``
+* ``min_element``
+* ``min``
+* ``minmax_element``
+* ``minmax``
+* ``mismatch``
+* ``none_of``
+* ``remove_if``
+* ``remove``
+* ``search_n``
+* ``search``
+* ``unique``
+* ``upper_bound``
