@@ -217,7 +217,7 @@ public:
   /// Rename all occurrences of the symbol at the \p Pos in \p File to
   /// \p NewName.
   void rename(PathRef File, Position Pos, llvm::StringRef NewName,
-              Callback<std::vector<tooling::Replacement>> CB);
+              Callback<std::vector<TextEdit>> CB);
 
   struct TweakRef {
     std::string ID;    /// ID to pass for applyTweak.
