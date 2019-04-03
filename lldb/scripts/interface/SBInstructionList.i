@@ -64,6 +64,11 @@ public:
     DumpEmulationForAllInstructions (const char *triple);
 
     %pythoncode %{
+        def __iter__(self):
+            '''Iterate over all instructions in a lldb.SBInstructionList
+            object.'''
+            return lldb_iter(self, 'GetSize', 'GetInstructionAtIndex')
+
         def __len__(self):
             '''Access len of the instruction list.'''
             return int(self.GetSize())

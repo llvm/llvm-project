@@ -62,6 +62,11 @@ public:
     Clear();
     
     %pythoncode %{
+        def __iter__(self):
+            '''Iterate over all symbol contexts in a lldb.SBSymbolContextList
+            object.'''
+            return lldb_iter(self, 'GetSize', 'GetContextAtIndex')
+
         def __len__(self):
             return int(self.GetSize())
 
