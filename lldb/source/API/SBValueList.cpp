@@ -111,7 +111,7 @@ const SBValueList &SBValueList::operator=(const SBValueList &rhs) {
     else
       m_opaque_up.reset();
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 ValueListImpl *SBValueList::operator->() { return m_opaque_up.get(); }

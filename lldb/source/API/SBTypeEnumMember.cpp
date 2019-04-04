@@ -40,12 +40,13 @@ SBTypeEnumMember::SBTypeEnumMember(const SBTypeEnumMember &rhs)
 }
 
 SBTypeEnumMember &SBTypeEnumMember::operator=(const SBTypeEnumMember &rhs) {
-  LLDB_RECORD_CONSTRUCTOR(SBTypeEnumMember, (const lldb::SBTypeEnumMember &),
-                          rhs);
+  LLDB_RECORD_METHOD(
+      SBTypeEnumMember &,
+      SBTypeEnumMember, operator=,(const lldb::SBTypeEnumMember &), rhs);
 
   if (this != &rhs)
     m_opaque_sp = clone(rhs.m_opaque_sp);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 bool SBTypeEnumMember::IsValid() const {
@@ -147,7 +148,7 @@ operator=(const SBTypeEnumMemberList &rhs) {
       Append(
           const_cast<SBTypeEnumMemberList &>(rhs).GetTypeEnumMemberAtIndex(i));
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 void SBTypeEnumMemberList::Append(SBTypeEnumMember enum_member) {

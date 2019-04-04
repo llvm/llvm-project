@@ -73,7 +73,7 @@ const SBModule &SBModule::operator=(const SBModule &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBModule::~SBModule() {}

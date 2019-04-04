@@ -72,7 +72,7 @@ const SBProcess &SBProcess::operator=(const SBProcess &rhs) {
 
   if (this != &rhs)
     m_opaque_wp = rhs.m_opaque_wp;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 //----------------------------------------------------------------------
