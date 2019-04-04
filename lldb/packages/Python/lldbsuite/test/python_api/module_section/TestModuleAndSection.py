@@ -45,6 +45,7 @@ class ModuleAndSectionAPIsTestCase(TestBase):
 
         print("Exe module: %s" % str(exe_module))
         print("Number of sections: %d" % exe_module.GetNumSections())
+        print("Number of symbols: %d" % len(exe_module))
         INDENT = ' ' * 4
         INDENT2 = INDENT * 2
         for sec in exe_module.section_iter():

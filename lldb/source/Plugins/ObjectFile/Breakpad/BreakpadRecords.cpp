@@ -16,11 +16,14 @@ using namespace lldb_private;
 using namespace lldb_private::breakpad;
 
 namespace {
-enum class Token { Unknown, Module, Info, CodeID, File, Func, Public, Stack };
+enum class Token { Unknown, Module, Info, CodeID, File, Func, Public, Stack, CFI, Init };
 }
 
-static Token toToken(llvm::StringRef str) {
-  return llvm::StringSwitch<Token>(str)
+template<typename T>
+static T stringTo(llvm::StringRef Str);
+
+template <> Token stringTo<Token>(llvm::StringRef Str) {
+  return llvm::StringSwitch<Token>(Str)
       .Case("MODULE", Token::Module)
       .Case("INFO", Token::Info)
       .Case("CODE_ID", Token::CodeID)
@@ -28,21 +31,25 @@ static Token toToken(llvm::StringRef str) {
       .Case("FUNC", Token::Func)
       .Case("PUBLIC", Token::Public)
       .Case("STACK", Token::Stack)
+      .Case("CFI", Token::CFI)
+      .Case("INIT", Token::Init)
       .Default(Token::Unknown);
 }
 
-static llvm::Triple::OSType toOS(llvm::StringRef str) {
+template <>
+llvm::Triple::OSType stringTo<llvm::Triple::OSType>(llvm::StringRef Str) {
   using llvm::Triple;
-  return llvm::StringSwitch<Triple::OSType>(str)
+  return llvm::StringSwitch<Triple::OSType>(Str)
       .Case("Linux", Triple::Linux)
       .Case("mac", Triple::MacOSX)
       .Case("windows", Triple::Win32)
       .Default(Triple::UnknownOS);
 }
 
-static llvm::Triple::ArchType toArch(llvm::StringRef str) {
+template <>
+llvm::Triple::ArchType stringTo<llvm::Triple::ArchType>(llvm::StringRef Str) {
   using llvm::Triple;
-  return llvm::StringSwitch<Triple::ArchType>(str)
+  return llvm::StringSwitch<Triple::ArchType>(Str)
       .Case("arm", Triple::arm)
       .Case("arm64", Triple::aarch64)
       .Case("mips", Triple::mips)
@@ -54,6 +61,13 @@ static llvm::Triple::ArchType toArch(llvm::StringRef str) {
       .Case("x86", Triple::x86)
       .Case("x86_64", Triple::x86_64)
       .Default(Triple::UnknownArch);
+}
+
+template<typename T>
+static T consume(llvm::StringRef &Str) {
+  llvm::StringRef Token;
+  std::tie(Token, Str) = getToken(Str);
+  return stringTo<T>(Token);
 }
 
 /// Return the number of hex digits needed to encode an (POD) object of a given
@@ -112,8 +126,8 @@ static UUID parseModuleId(llvm::Triple::OSType os, llvm::StringRef str) {
                                                          : sizeof(data.uuid));
 }
 
-Record::Kind Record::classify(llvm::StringRef Line) {
-  Token Tok = toToken(getToken(Line).first);
+llvm::Optional<Record::Kind> Record::classify(llvm::StringRef Line) {
+  Token Tok = consume<Token>(Line);
   switch (Tok) {
   case Token::Module:
     return Record::Module;
@@ -126,36 +140,45 @@ Record::Kind Record::classify(llvm::StringRef Line) {
   case Token::Public:
     return Record::Public;
   case Token::Stack:
-    return Record::Stack;
+    Tok = consume<Token>(Line);
+    switch (Tok) {
+    case Token::CFI:
+      Tok = consume<Token>(Line);
+      return Tok == Token::Init ? Record::StackCFIInit : Record::StackCFI;
+    default:
+      return llvm::None;
+    }
 
-  case Token::CodeID:
   case Token::Unknown:
     // Optimistically assume that any unrecognised token means this is a line
     // record, those don't have a special keyword and start directly with a
     // hex number. CODE_ID should never be at the start of a line, but if it
     // is, it can be treated the same way as a garbled line record.
     return Record::Line;
+
+  case Token::CodeID:
+  case Token::CFI:
+  case Token::Init:
+    // These should never appear at the start of a valid record.
+    return llvm::None;
   }
   llvm_unreachable("Fully covered switch above!");
 }
 
 llvm::Optional<ModuleRecord> ModuleRecord::parse(llvm::StringRef Line) {
   // MODULE Linux x86_64 E5894855C35DCCCCCCCCCCCCCCCCCCCC0 a.out
-  llvm::StringRef Str;
-  std::tie(Str, Line) = getToken(Line);
-  if (toToken(Str) != Token::Module)
+  if (consume<Token>(Line) != Token::Module)
     return llvm::None;
 
-  std::tie(Str, Line) = getToken(Line);
-  llvm::Triple::OSType OS = toOS(Str);
+  llvm::Triple::OSType OS = consume<llvm::Triple::OSType>(Line);
   if (OS == llvm::Triple::UnknownOS)
     return llvm::None;
 
-  std::tie(Str, Line) = getToken(Line);
-  llvm::Triple::ArchType Arch = toArch(Str);
+  llvm::Triple::ArchType Arch = consume<llvm::Triple::ArchType>(Line);
   if (Arch == llvm::Triple::UnknownArch)
     return llvm::None;
 
+  llvm::StringRef Str;
   std::tie(Str, Line) = getToken(Line);
   UUID ID = parseModuleId(OS, Str);
   if (!ID)
@@ -173,15 +196,13 @@ llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
 
 llvm::Optional<InfoRecord> InfoRecord::parse(llvm::StringRef Line) {
   // INFO CODE_ID 554889E55DC3CCCCCCCCCCCCCCCCCCCC [a.exe]
+  if (consume<Token>(Line) != Token::Info)
+    return llvm::None;
+
+  if (consume<Token>(Line) != Token::CodeID)
+    return llvm::None;
+
   llvm::StringRef Str;
-  std::tie(Str, Line) = getToken(Line);
-  if (toToken(Str) != Token::Info)
-    return llvm::None;
-
-  std::tie(Str, Line) = getToken(Line);
-  if (toToken(Str) != Token::CodeID)
-    return llvm::None;
-
   std::tie(Str, Line) = getToken(Line);
   // If we don't have any text following the code ID (e.g. on linux), we should
   // use this as the UUID. Otherwise, we should revert back to the module ID.
@@ -200,11 +221,10 @@ llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
 
 llvm::Optional<FileRecord> FileRecord::parse(llvm::StringRef Line) {
   // FILE number name
-  llvm::StringRef Str;
-  std::tie(Str, Line) = getToken(Line);
-  if (toToken(Str) != Token::File)
+  if (consume<Token>(Line) != Token::File)
     return llvm::None;
 
+  llvm::StringRef Str;
   size_t Number;
   std::tie(Str, Line) = getToken(Line);
   if (!to_integer(Str, Number))
@@ -231,11 +251,10 @@ static bool parsePublicOrFunc(llvm::StringRef Line, bool &Multiple,
 
   Token Tok = Size ? Token::Func : Token::Public;
 
-  llvm::StringRef Str;
-  std::tie(Str, Line) = getToken(Line);
-  if (toToken(Str) != Tok)
+  if (consume<Token>(Line) != Tok)
     return false;
 
+  llvm::StringRef Str;
   std::tie(Str, Line) = getToken(Line);
   Multiple = Str == "m";
 
@@ -354,8 +373,10 @@ llvm::StringRef breakpad::toString(Record::Kind K) {
     return "LINE";
   case Record::Public:
     return "PUBLIC";
-  case Record::Stack:
-    return "STACK";
+  case Record::StackCFIInit:
+    return "STACK CFI INIT";
+  case Record::StackCFI:
+    return "STACK CFI";
   }
   llvm_unreachable("Unknown record kind!");
 }
