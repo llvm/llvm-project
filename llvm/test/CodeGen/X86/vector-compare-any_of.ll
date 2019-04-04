@@ -611,13 +611,10 @@ define i16 @test_v16i16_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpcmpgtw %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
-; AVX1-NEXT:    vpmovmskb %xmm2, %edx
-; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    xorl %eax, %eax
-; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    setne %al
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    negl %eax
+; AVX1-NEXT:    sbbl %eax, %eax
 ; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -790,12 +787,10 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    vpmovmskb %xmm2, %ecx
-; AVX1-NEXT:    shll $16, %ecx
-; AVX1-NEXT:    orl %eax, %ecx
-; AVX1-NEXT:    setne %al
-; AVX1-NEXT:    negb %al
+; AVX1-NEXT:    negl %eax
+; AVX1-NEXT:    sbbb %al, %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1488,12 +1483,10 @@ define i1 @bool_reduction_v32i8(<32 x i8> %x, <32 x i8> %y) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    vpmovmskb %xmm2, %ecx
-; AVX1-NEXT:    shll $16, %ecx
-; AVX1-NEXT:    orl %eax, %ecx
-; AVX1-NEXT:    setne %al
-; AVX1-NEXT:    negb %al
+; AVX1-NEXT:    negl %eax
+; AVX1-NEXT:    sbbb %al, %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

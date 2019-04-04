@@ -374,7 +374,7 @@ static bool isRestoreCall(unsigned Opc) {
 }
 
 static inline bool isOptNone(const MachineFunction &MF) {
-    return MF.getFunction().hasFnAttribute(Attribute::OptimizeNone) ||
+    return MF.getFunction().optForNone() ||
            MF.getTarget().getOptLevel() == CodeGenOpt::None;
 }
 

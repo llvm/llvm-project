@@ -590,6 +590,9 @@ public:
     addAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
   }
 
+  /// Do not optimize this function (-O0).
+  bool optForNone() const { return hasFnAttribute(Attribute::OptimizeNone); }
+
   /// Optimize this function for minimum size (-Oz).
   bool optForMinSize() const { return hasFnAttribute(Attribute::MinSize); }
 

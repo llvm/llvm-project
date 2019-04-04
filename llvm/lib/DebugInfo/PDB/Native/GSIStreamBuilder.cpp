@@ -36,8 +36,8 @@ struct llvm::pdb::GSIHashStreamBuilder {
       return Empty;
     }
     static inline CVSymbol getTombstoneKey() {
-      static CVSymbol Tombstone(static_cast<SymbolKind>(-1),
-                                ArrayRef<uint8_t>());
+      static CVSymbol Tombstone(
+          DenseMapInfo<ArrayRef<uint8_t>>::getTombstoneKey());
       return Tombstone;
     }
     static unsigned getHashValue(const CVSymbol &Val) {

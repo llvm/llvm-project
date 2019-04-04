@@ -119,7 +119,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   // Calculate this function's optimization goal.
   unsigned OptimizationGoal;
-  if (F.hasFnAttribute(Attribute::OptimizeNone))
+  if (F.optForNone())
     // For best debugging illusion, speed and small size sacrificed
     OptimizationGoal = 6;
   else if (F.optForMinSize())

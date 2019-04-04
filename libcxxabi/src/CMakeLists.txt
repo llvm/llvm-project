@@ -139,55 +139,9 @@ if (LLVM_ENABLE_MODULES)
   string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 endif()
 
-macro(cxxabi_object_library name)
-  cmake_parse_arguments(ARGS "" "" "DEFINES;FLAGS" ${ARGN})
-
-  # Add a object library that contains the compiled source files.
-  add_library(${name} OBJECT ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
-  set_target_properties(${name}
-                        PROPERTIES
-                          CXX_EXTENSIONS
-                            OFF
-                          CXX_STANDARD
-                            11
-                          CXX_STANDARD_REQUIRED
-                            ON
-                          COMPILE_FLAGS
-                            "${LIBCXXABI_COMPILE_FLAGS}")
-
-  if(LIBCXXABI_ENABLE_PIC)
-    set_target_properties(${name} PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  endif()
-
-  if(ARGS_DEFINES)
-    target_compile_definitions(${name} PRIVATE ${ARGS_DEFINES})
-  endif()
-
-  if(ARGS_FLAGS)
-    target_compile_options(${name} PRIVATE ${ARGS_FLAGS})
-  endif()
-endmacro()
-
-if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
-  append_flags_if_supported(CXXABI_STATIC_OBJECTS_FLAGS -fvisibility=hidden)
-  append_flags_if_supported(CXXABI_STATIC_OBJECTS_FLAGS -fvisibility-global-new-delete-hidden)
-  cxxabi_object_library(cxxabi_static_objects
-    DEFINES
-      _LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS
-      _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS
-    FLAGS ${CXXABI_STATIC_OBJECTS_FLAGS})
-else()
-  cxxabi_object_library(cxxabi_static_objects)
-endif()
-
-cxxabi_object_library(cxxabi_shared_objects)
-
-set(cxxabi_static_sources $<TARGET_OBJECTS:cxxabi_static_objects>)
-set(cxxabi_shared_sources $<TARGET_OBJECTS:cxxabi_shared_objects>)
-
 # Build the shared library.
 if (LIBCXXABI_ENABLE_SHARED)
-  add_library(cxxabi_shared SHARED ${cxxabi_shared_sources})
+  add_library(cxxabi_shared SHARED ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxxabi_shared)
   endif()
@@ -200,16 +154,21 @@ if (LIBCXXABI_ENABLE_SHARED)
                             11
                           CXX_STANDARD_REQUIRED
                             ON
+                          COMPILE_FLAGS
+                            "${LIBCXXABI_COMPILE_FLAGS}"
                           LINK_FLAGS
                             "${LIBCXXABI_LINK_FLAGS} ${LIBCXXABI_SHARED_LINK_FLAGS}"
                           OUTPUT_NAME
                             "c++abi"
-                          POSITION_INDEPENDENT_CODE
-                            ON
                           SOVERSION
                             "1"
                           VERSION
                             "1.0")
+
+  if(LIBCXXABI_ENABLE_PIC)
+    set_target_properties(cxxabi_shared PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  endif()
+
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
   if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
     list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
@@ -218,16 +177,7 @@ endif()
 
 # Build the static library.
 if (LIBCXXABI_ENABLE_STATIC)
-  if (LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
-    if (TARGET unwind_static OR HAVE_LIBUNWIND)
-      if(LIBUNWIND_HERMETIC_STATIC_LIBRARY)
-        list(APPEND cxxabi_static_sources $<TARGET_OBJECTS:unwind_static_objects>)
-      else()
-        list(APPEND cxxabi_static_sources $<TARGET_OBJECTS:unwind_objects>)
-      endif()
-    endif()
-  endif()
-  add_library(cxxabi_static STATIC ${cxxabi_static_sources})
+  add_library(cxxabi_static STATIC ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
   target_link_libraries(cxxabi_static PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
   set_target_properties(cxxabi_static
                         PROPERTIES
@@ -237,13 +187,43 @@ if (LIBCXXABI_ENABLE_STATIC)
                             11
                           CXX_STANDARD_REQUIRED
                             ON
+                          COMPILE_FLAGS
+                            "${LIBCXXABI_COMPILE_FLAGS}"
                           LINK_FLAGS
                             "${LIBCXXABI_LINK_FLAGS}"
                           OUTPUT_NAME
                             "c++abi")
+
+  if(LIBCXXABI_ENABLE_PIC)
+    set_target_properties(cxxabi_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  endif()
+
+  if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
+    append_flags_if_supported(CXXABI_STATIC_LIBRARY_FLAGS -fvisibility=hidden)
+    append_flags_if_supported(CXXABI_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
+    target_compile_options(cxxabi_static PRIVATE ${CXXABI_STATIC_LIBRARY_FLAGS})
+    target_compile_definitions(cxxabi_static
+      PRIVATE
+        _LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS
+        _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+  endif()
+
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_static")
   if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
     list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_static")
+  endif()
+
+  # Merge the the libc++abi.a and libunwind.a into one.
+  if(LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
+    add_custom_command(TARGET cxxabi_static POST_BUILD
+      COMMAND ${PYTHON_EXECUTABLE} ${LIBCXXABI_LIBCXX_PATH}/utils/merge_archives.py
+      ARGS
+        -o "$<TARGET_LINKER_FILE:cxxabi_static>"
+        --ar "${CMAKE_AR}"
+        "$<TARGET_LINKER_FILE:cxxabi_static>"
+        "$<TARGET_LINKER_FILE:unwind_static>"
+      WORKING_DIRECTORY ${LIBCXXABI_BUILD_DIR}
+    )
   endif()
 endif()
 

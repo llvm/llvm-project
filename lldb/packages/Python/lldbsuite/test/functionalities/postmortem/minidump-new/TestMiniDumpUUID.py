@@ -160,7 +160,6 @@ class MiniDumpUUIDTestCase(TestBase):
         self.verify_module(modules[0], so_path, 
                            "7295E17C-6668-9E05-CBB5-DEE5003865D5-5267C116")
 
-    @expectedFailureAll(oslist=["windows"])
     def test_partial_uuid_mismatch(self):
         """
             Breakpad has been known to create minidump files using CvRecord in each

@@ -745,10 +745,11 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
 equal(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
       _ForwardIterator2 __last2, _BinaryPredicate __p)
 {
-    if (std::distance(__first1, __last1) == std::distance(__first2, __last2))
-        return std::equal(__first1, __last1, __first2, __p);
-
-    return false;
+    using namespace __pstl;
+    return __internal::__pattern_equal(
+        std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __p,
+        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1>(__exec),
+        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>

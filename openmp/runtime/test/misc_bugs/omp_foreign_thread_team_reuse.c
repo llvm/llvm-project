@@ -1,4 +1,4 @@
-// RUN: %libomp-compile -lpthread && %libomp-run
+// RUN: %libomp-compile-and-run
 #include <stdio.h>
 #include "omp_testsuite.h"
 

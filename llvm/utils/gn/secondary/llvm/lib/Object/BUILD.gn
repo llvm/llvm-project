@@ -36,5 +36,6 @@ static_library("Object") {
     "SymbolicFile.cpp",
     "WasmObjectFile.cpp",
     "WindowsResource.cpp",
+    "XCOFFObjectFile.cpp",
   ]
 }

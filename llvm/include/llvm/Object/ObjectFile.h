@@ -364,6 +364,9 @@ public:
   createCOFFObjectFile(MemoryBufferRef Object);
 
   static Expected<std::unique_ptr<ObjectFile>>
+  createXCOFFObjectFile(MemoryBufferRef Object);
+
+  static Expected<std::unique_ptr<ObjectFile>>
   createELFObjectFile(MemoryBufferRef Object);
 
   static Expected<std::unique_ptr<MachOObjectFile>>

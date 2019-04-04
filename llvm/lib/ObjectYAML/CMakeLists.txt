@@ -12,5 +12,6 @@ add_llvm_library(LLVMObjectYAML
   ObjectYAML.cpp
   MinidumpYAML.cpp
   WasmYAML.cpp
+  XCOFFYAML.cpp
   YAML.cpp
   )

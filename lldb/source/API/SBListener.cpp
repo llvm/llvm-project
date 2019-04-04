@@ -42,7 +42,7 @@ const lldb::SBListener &SBListener::operator=(const lldb::SBListener &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
     m_unused_ptr = nullptr;
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBListener::SBListener(const lldb::ListenerSP &listener_sp)

@@ -189,6 +189,7 @@ class WrapTerminatorInst<SOP_Pseudo base_inst> : SPseudoInstSI<
 }
 
 def S_MOV_B64_term : WrapTerminatorInst<S_MOV_B64>;
+def S_OR_B64_term : WrapTerminatorInst<S_OR_B64>;
 def S_XOR_B64_term : WrapTerminatorInst<S_XOR_B64>;
 def S_ANDN2_B64_term : WrapTerminatorInst<S_ANDN2_B64>;
 
