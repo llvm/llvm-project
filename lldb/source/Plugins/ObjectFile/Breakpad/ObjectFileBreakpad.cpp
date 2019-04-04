@@ -148,11 +148,14 @@ void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
     llvm::StringRef line;
     std::tie(line, text) = text.split('\n');
 
-    Record::Kind next_section = Record::classify(line);
+    llvm::Optional<Record::Kind> next_section = Record::classify(line);
     if (next_section == Record::Line) {
       // Line records logically belong to the preceding Func record, so we put
       // them in the same section.
       next_section = Record::Func;
+    } else if (next_section == Record::StackCFI) {
+      // Same goes for StackCFI and StackCFIInit
+      next_section = Record::StackCFIInit;
     }
     if (next_section == current_section)
       continue;
