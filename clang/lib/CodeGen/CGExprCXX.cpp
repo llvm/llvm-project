@@ -614,12 +614,10 @@ CodeGenFunction::EmitCXXConstructExpr(const CXXConstructExpr *E,
 
      case CXXConstructExpr::CK_NonVirtualBase:
       Type = Ctor_Base;
-    }
+     }
 
-    // Call the constructor.
-    EmitCXXConstructorCall(CD, Type, ForVirtualBase, Delegating,
-                           Dest.getAddress(), E, Dest.mayOverlap(),
-                           Dest.isSanitizerChecked());
+     // Call the constructor.
+     EmitCXXConstructorCall(CD, Type, ForVirtualBase, Delegating, Dest, E);
   }
 }
 

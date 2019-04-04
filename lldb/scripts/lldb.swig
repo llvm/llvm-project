@@ -91,12 +91,6 @@ def lldb_iter(obj, getsize, getelem):
     elem = getattr(obj, getelem)
     for i in range(size()):
         yield elem(i)
-
-# ==============================================================================
-# The modify-python-lldb.py script is responsible for post-processing this SWIG-
-# generated lldb.py module.  It is responsible for adding support for: iteration
-# protocol: __iter__, and built-in function len(): __len__.
-# ==============================================================================
 %}
 
 %include "./Python/python-typemaps.swig"

@@ -114,7 +114,6 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       ClangTidyOptProvider(Opts.ClangTidyOptProvider),
       SuggestMissingIncludes(Opts.SuggestMissingIncludes),
       WorkspaceRoot(Opts.WorkspaceRoot),
-      PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
       // is parsed.
@@ -176,11 +175,8 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
   if (!CodeCompleteOpts.Index) // Respect overridden index.
     CodeCompleteOpts.Index = Index;
 
-  // Copy PCHs to avoid accessing this->PCHs concurrently
-  std::shared_ptr<PCHContainerOperations> PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
-
-  auto Task = [PCHs, Pos, FS, CodeCompleteOpts,
+  auto Task = [Pos, FS, CodeCompleteOpts,
                this](Path File, Callback<CodeCompleteResult> CB,
                      llvm::Expected<InputsAndPreamble> IP) {
     if (!IP)
@@ -200,7 +196,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CodeCompleteResult Result = clangd::codeComplete(
-        File, IP->Command, IP->Preamble, IP->Contents, Pos, FS, PCHs,
+        File, IP->Command, IP->Preamble, IP->Contents, Pos, FS,
         CodeCompleteOpts, SpecFuzzyFind ? SpecFuzzyFind.getPointer() : nullptr);
     {
       clang::clangd::trace::Span Tracer("Completion results callback");
@@ -225,17 +221,16 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
 void ClangdServer::signatureHelp(PathRef File, Position Pos,
                                  Callback<SignatureHelp> CB) {
 
-  auto PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
   auto *Index = this->Index;
-  auto Action = [Pos, FS, PCHs, Index](Path File, Callback<SignatureHelp> CB,
-                                       llvm::Expected<InputsAndPreamble> IP) {
+  auto Action = [Pos, FS, Index](Path File, Callback<SignatureHelp> CB,
+                                 llvm::Expected<InputsAndPreamble> IP) {
     if (!IP)
       return CB(IP.takeError());
 
     auto PreambleData = IP->Preamble;
     CB(clangd::signatureHelp(File, IP->Command, PreambleData, IP->Contents, Pos,
-                             FS, PCHs, Index));
+                             FS, Index));
   };
 
   // Unlike code completion, we wait for an up-to-date preamble here.

@@ -12,6 +12,10 @@
 // GCC versions prior to 7.0 don't provide the required [[nodiscard]] attribute.
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6
 
+// AppleClang9 doesn't yet support C++17's implicitly synthesized deduction
+// guides from existing ctors, needed by default_searcher() below.
+// UNSUPPORTED: apple-clang-9
+
 // Test that entities declared [[nodiscard]] as at extension by libc++, are
 // only actually declared such when _LIBCPP_ENABLE_NODISCARD is specified.
 

@@ -94,10 +94,9 @@ ClBinaryName("obj", cl::init(""),
 static cl::alias
 ClBinaryNameAliasExe("exe", cl::desc("Alias for -obj"),
                      cl::NotHidden, cl::aliasopt(ClBinaryName));
-static cl::alias
-ClBinaryNameAliasE("e", cl::desc("Alias for -obj"),
-                   cl::NotHidden, cl::aliasopt(ClBinaryName));
-
+static cl::alias ClBinaryNameAliasE("e", cl::desc("Alias for -obj"),
+                                    cl::NotHidden, cl::Grouping, cl::Prefix,
+                                    cl::aliasopt(ClBinaryName));
 
 static cl::opt<std::string>
     ClDwpName("dwp", cl::init(""),
@@ -146,6 +145,14 @@ static cl::list<std::string> ClInputAddresses(cl::Positional,
 static cl::opt<std::string>
     ClFallbackDebugPath("fallback-debug-path", cl::init(""),
                         cl::desc("Fallback path for debug binaries."));
+
+static cl::opt<DIPrinter::OutputStyle>
+    ClOutputStyle("output-style", cl::init(DIPrinter::OutputStyle::LLVM),
+                  cl::desc("Specify print style"), cl::Hidden,
+                  cl::values(clEnumValN(DIPrinter::OutputStyle::LLVM, "LLVM",
+                                        "LLVM default style"),
+                             clEnumValN(DIPrinter::OutputStyle::GNU, "GNU",
+                                        "GNU addr2line style")));
 
 template<typename T>
 static bool error(Expected<T> &ResOrErr) {
@@ -256,7 +263,7 @@ int main(int argc, char **argv) {
 
   DIPrinter Printer(outs(), ClPrintFunctions != FunctionNameKind::None,
                     ClPrettyPrint, ClPrintSourceContextLines, ClVerbose,
-                    ClBasenames);
+                    ClBasenames, ClOutputStyle);
 
   if (ClInputAddresses.empty()) {
     const int kMaxInputStringLength = 1024;

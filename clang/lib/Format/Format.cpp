@@ -877,6 +877,11 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   } else if (Language == FormatStyle::LK_ObjC) {
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.ColumnLimit = 100;
+    // "Regroup" doesn't work well for ObjC yet (main header heuristic,
+    // relationship between ObjC standard library headers and other heades,
+    // #imports, etc.)
+    GoogleStyle.IncludeStyle.IncludeBlocks =
+        tooling::IncludeStyle::IBS_Preserve;
   }
 
   return GoogleStyle;

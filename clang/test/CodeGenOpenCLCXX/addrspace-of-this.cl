@@ -150,14 +150,12 @@ __kernel void test__global() {
 TEST(__local)
 
 // COMMON-LABEL: _Z11test__localv
-// EXPL: @__cxa_guard_acquire
 
-// Test the address space of 'this' when invoking a constructor for an object in non-default address space
-// EXPL: call void @_ZNU3AS41CC1Ev(%class.C addrspace(4)* addrspacecast (%class.C addrspace(3)* @_ZZ11test__localvE1c to %class.C addrspace(4)*))
+// Test that we don't initialize an object in local address space.
+// EXPL-NOT: call void @_ZNU3AS41CC1Ev(%class.C addrspace(4)* addrspacecast (%class.C addrspace(3)* @_ZZ11test__localvE1c to %class.C addrspace(4)*))
 
 // Test the address space of 'this' when invoking a method.
 // COMMON: %call = call i32 @_ZNU3AS41C3getEv(%class.C addrspace(4)* addrspacecast (%class.C addrspace(3)* @_ZZ11test__localvE1c to %class.C addrspace(4)*))
-
 
 // Test the address space of 'this' when invoking copy-constructor.
 // COMMON: [[C1GEN:%[0-9]+]] = addrspacecast %class.C* %c1 to %class.C addrspace(4)*

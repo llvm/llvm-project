@@ -1678,7 +1678,7 @@ bool CastExpr::CastConsistency() const {
     auto Ty = getType();
     auto SETy = getSubExpr()->getType();
     assert(getValueKindForType(Ty) == Expr::getValueKindForType(SETy));
-    if (isRValue()) {
+    if (/*isRValue()*/ !Ty->getPointeeType().isNull()) {
       Ty = Ty->getPointeeType();
       SETy = SETy->getPointeeType();
     }
