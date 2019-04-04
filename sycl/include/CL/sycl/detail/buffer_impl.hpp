@@ -99,23 +99,52 @@ public:
     }
   }
 
+  template <typename Iterator> struct is_const_iterator {
+    using pointer = typename std::iterator_traits<Iterator>::pointer;
+    static constexpr bool value =
+        std::is_const<typename std::remove_pointer<pointer>::type>::value;
+  };
+
+  template <typename Iterator>
+  using EnableIfConstIterator =
+      typename std::enable_if<is_const_iterator<Iterator>::value,
+                              Iterator>::type;
+
+  template <typename Iterator>
+  using EnableIfNotConstIterator =
+      typename std::enable_if<!is_const_iterator<Iterator>::value,
+                              Iterator>::type;
+
   template <class InputIterator>
-  buffer_impl(InputIterator first, InputIterator last, const size_t sizeInBytes,
-              const property_list &propList,
+  buffer_impl(EnableIfNotConstIterator<InputIterator> first, InputIterator last,
+              const size_t sizeInBytes, const property_list &propList,
               AllocatorT allocator = AllocatorT())
       : SizeInBytes(sizeInBytes), Props(propList), MAllocator(allocator) {
-    if (Props.has_property<property::buffer::use_host_ptr>()) {
-      // TODO next line looks unsafe
-      BufPtr = &*first;
-    } else {
-      BufData.resize(get_size());
-      BufPtr = reinterpret_cast<void *>(BufData.data());
-      // We need cast BufPtr to pointer to the iteration type to get correct
-      // offset in std::copy when it will increment destination pointer.
-      auto *Ptr = reinterpret_cast<
-          typename std::iterator_traits<InputIterator>::pointer>(BufPtr);
-      std::copy(first, last, Ptr);
-    }
+    BufData.resize(get_size());
+    BufPtr = reinterpret_cast<void *>(BufData.data());
+    // We need cast BufPtr to pointer to the iteration type to get correct
+    // offset in std::copy when it will increment destination pointer.
+    auto *Ptr =
+        reinterpret_cast<typename std::iterator_traits<InputIterator>::pointer>(
+            BufPtr);
+    std::copy(first, last, Ptr);
+    // Data is written back if InputIterator is not a const iterator.
+    set_final_data(first);
+  }
+
+  template <class InputIterator>
+  buffer_impl(EnableIfConstIterator<InputIterator> first, InputIterator last,
+              const size_t sizeInBytes, const property_list &propList,
+              AllocatorT allocator = AllocatorT())
+      : SizeInBytes(sizeInBytes), Props(propList), MAllocator(allocator) {
+    BufData.resize(get_size());
+    BufPtr = reinterpret_cast<void *>(BufData.data());
+    // We need cast BufPtr to pointer to the iteration type to get correct
+    // offset in std::copy when it will increment destination pointer.
+    typedef typename std::iterator_traits<InputIterator>::value_type value;
+    auto *Ptr = reinterpret_cast<typename std::add_pointer<
+        typename std::remove_const<value>::type>::type>(BufPtr);
+    std::copy(first, last, Ptr);
   }
 
   buffer_impl(cl_mem MemObject, const context &SyclContext,

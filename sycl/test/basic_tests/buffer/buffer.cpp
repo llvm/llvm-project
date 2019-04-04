@@ -403,8 +403,29 @@ int main() {
             range<1>{3}, [=](id<1> index) { B[index] = 20; });
       });
     }
-    // Data is not copied back in the desctruction of the buffer created from
-    // pair of iterators
+    // Data is copied back in the desctruction of the buffer created from
+    // pair of non-const iterators
+    for (int i = 0; i < 2; i++)
+      assert(data1[i] == -1);
+    for (int i = 2; i < 5; i++)
+      assert(data1[i] == 20);
+    for (int i = 5; i < 10; i++)
+      assert(data1[i] == -1);
+  }
+
+  // Check that data is not copied back in the desctruction of the buffer
+  // created from pair of const iterators
+  {
+    std::vector<int> data1(10, -1);
+    {
+      buffer<int, 1> b(data1.cbegin() + 2, data1.cbegin() + 5);
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto B = b.get_access<access::mode::read_write>(cgh);
+        cgh.parallel_for<class const_iter_constuctor>(
+            range<1>{3}, [=](id<1> index) { B[index] = 20; });
+      });
+    }
     for (int i = 0; i < 10; i++)
       assert(data1[i] == -1);
   }
@@ -435,9 +456,10 @@ int main() {
   // created from pair of iterators
   {
     std::vector<int> data1(10, -1);
+    std::vector<int> data2(10, -1);
     {
       buffer<int, 1> b(data1.begin() + 2, data1.begin() + 5);
-      b.set_final_data(data1.begin() + 2);
+      b.set_final_data(data2.begin() + 2);
       queue myQueue;
       myQueue.submit([&](handler &cgh) {
         auto B = b.get_access<access::mode::read_write>(cgh);
@@ -445,14 +467,12 @@ int main() {
             range<1>{3}, [=](id<1> index) { B[index] = 20; });
       });
     }
-    // Data is not copied back in the desctruction of the buffer created from
-    // pair of iterators
     for (int i = 0; i < 2; i++)
-      assert(data1[i] == -1);
+      assert(data2[i] == -1);
     for (int i = 2; i < 5; i++)
-      assert(data1[i] == 20);
+      assert(data2[i] == 20);
     for (int i = 5; i < 10; i++)
-      assert(data1[i] == -1);
+      assert(data2[i] == -1);
   }
 
   // Check that data is copied back after forcing write-back using
