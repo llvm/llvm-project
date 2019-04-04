@@ -741,7 +741,7 @@ def AtomWrite01_45 : SchedWriteRes<[AtomPort01]> {
   let Latency = 45;
   let ResourceCycles = [45];
 }
-def : InstRW<[AtomWrite01_45], (instrs MONITORrrr)>;
+def : InstRW<[AtomWrite01_45], (instrs MONITOR32rrr, MONITOR64rrr)>;
 
 def AtomWrite01_46 : SchedWriteRes<[AtomPort01]> {
   let Latency = 46;

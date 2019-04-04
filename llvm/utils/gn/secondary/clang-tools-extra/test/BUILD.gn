@@ -74,6 +74,7 @@ group("test") {
     "//clang-tools-extra/clang-query/tool:clang-query",
     "//clang-tools-extra/clang-reorder-fields/tool:clang-reorder-fields",
     "//clang-tools-extra/clang-tidy/tool:clang-tidy",
+    "//clang-tools-extra/clangd/index/dex/dexp",
     "//clang-tools-extra/clangd/indexer:clangd-indexer",
     "//clang-tools-extra/clangd/tool:clangd",
     "//clang-tools-extra/modularize",
@@ -93,8 +94,6 @@ group("test") {
     deps +=
         [ "//clang-tools-extra/clangd/xpc/test-client:clangd-xpc-test-client" ]
   }
-
-  # FIXME: dep on dexp once it exist
   testonly = true
 }
 

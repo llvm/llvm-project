@@ -143,7 +143,7 @@ operator=(const lldb::SBTypeSynthetic &rhs) {
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 bool SBTypeSynthetic::operator==(lldb::SBTypeSynthetic &rhs) {

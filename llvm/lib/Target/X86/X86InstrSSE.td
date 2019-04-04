@@ -5044,15 +5044,12 @@ let Constraints = "$src1 = $dst", Predicates = [UseSSSE3] in
 //===---------------------------------------------------------------------===//
 
 let SchedRW = [WriteSystem] in {
-let usesCustomInserter = 1 in {
-def MONITOR : PseudoI<(outs), (ins i32mem:$src1, GR32:$src2, GR32:$src3),
-                [(int_x86_sse3_monitor addr:$src1, GR32:$src2, GR32:$src3)]>,
-                Requires<[HasSSE3]>;
-}
-
 let Uses = [EAX, ECX, EDX] in
-def MONITORrrr : I<0x01, MRM_C8, (outs), (ins), "monitor", []>,
-                   TB, Requires<[HasSSE3]>;
+def MONITOR32rrr : I<0x01, MRM_C8, (outs), (ins), "monitor", []>,
+                     TB, Requires<[HasSSE3, Not64BitMode]>;
+let Uses = [RAX, ECX, EDX] in
+def MONITOR64rrr : I<0x01, MRM_C8, (outs), (ins), "monitor", []>,
+                     TB, Requires<[HasSSE3, In64BitMode]>;
 
 let Uses = [ECX, EAX] in
 def MWAITrr   : I<0x01, MRM_C9, (outs), (ins), "mwait",
@@ -5062,9 +5059,9 @@ def MWAITrr   : I<0x01, MRM_C9, (outs), (ins), "mwait",
 def : InstAlias<"mwait\t{%eax, %ecx|ecx, eax}", (MWAITrr)>, Requires<[Not64BitMode]>;
 def : InstAlias<"mwait\t{%rax, %rcx|rcx, rax}", (MWAITrr)>, Requires<[In64BitMode]>;
 
-def : InstAlias<"monitor\t{%eax, %ecx, %edx|edx, ecx, eax}", (MONITORrrr)>,
+def : InstAlias<"monitor\t{%eax, %ecx, %edx|edx, ecx, eax}", (MONITOR32rrr)>,
       Requires<[Not64BitMode]>;
-def : InstAlias<"monitor\t{%rax, %rcx, %rdx|rdx, rcx, rax}", (MONITORrrr)>,
+def : InstAlias<"monitor\t{%rax, %rcx, %rdx|rdx, rcx, rax}", (MONITOR64rrr)>,
       Requires<[In64BitMode]>;
 
 //===----------------------------------------------------------------------===//

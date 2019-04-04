@@ -61,6 +61,13 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::wasm_object;
     break;
   }
+
+  case 0x01:
+    // XCOFF format
+    if (startswith(Magic, "\x01\xDF"))
+      return file_magic::xcoff_object_32;
+    break;
+
   case 0xDE: // 0x0B17C0DE = BC wraper
     if (startswith(Magic, "\xDE\xC0\x17\x0B"))
       return file_magic::bitcode;

@@ -62,6 +62,36 @@
   #endif
 #endif
 
+#define STR(a) #a
+#define XSTR(a) STR(a)
+#define SYMBOL_NAME(name) XSTR(__USER_LABEL_PREFIX__) #name
+
+#if defined(__APPLE__)
+#define _LIBUNWIND_WEAK_ALIAS(name, aliasname)                                 \
+  __asm__(".globl " SYMBOL_NAME(aliasname));                                   \
+  __asm__(SYMBOL_NAME(aliasname) " = " SYMBOL_NAME(name));                     \
+  _LIBUNWIND_EXPORT                                                            \
+  extern "C" __typeof(name) aliasname __attribute__((weak_import));
+#elif defined(__ELF__)
+#define _LIBUNWIND_WEAK_ALIAS(name, aliasname)                                 \
+  _LIBUNWIND_EXPORT                                                            \
+  extern "C" __typeof(name) aliasname __attribute__((weak, alias(#name)));
+#elif defined(_WIN32)
+#if defined(__MINGW32__)
+#define _LIBUNWIND_WEAK_ALIAS(name, aliasname)                                 \
+  _LIBUNWIND_EXPORT                                                            \
+  extern "C" __typeof(name) aliasname __attribute__((alias(#name)));
+#else
+#define _LIBUNWIND_WEAK_ALIAS(name, aliasname)                                 \
+  __pragma(comment(linker, "/alternatename:" SYMBOL_NAME(aliasname) "="        \
+                                             SYMBOL_NAME(name)))               \
+  _LIBUNWIND_EXPORT \
+  extern "C" __typeof(name) aliasname;
+#endif
+#else
+#error Unsupported target
+#endif
+
 #if (defined(__APPLE__) && defined(__arm__)) || defined(__USING_SJLJ_EXCEPTIONS__)
 #define _LIBUNWIND_BUILD_SJLJ_APIS
 #endif

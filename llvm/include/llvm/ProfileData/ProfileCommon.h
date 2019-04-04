@@ -83,7 +83,8 @@ public:
   SampleProfileSummaryBuilder(std::vector<uint32_t> Cutoffs)
       : ProfileSummaryBuilder(std::move(Cutoffs)) {}
 
-  void addRecord(const sampleprof::FunctionSamples &FS);
+  void addRecord(const sampleprof::FunctionSamples &FS,
+                 bool isCallsiteSample = false);
   std::unique_ptr<ProfileSummary> getSummary();
 };
 

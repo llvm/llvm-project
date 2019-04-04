@@ -171,11 +171,11 @@ Error TypeDumpVisitor::visitTypeBegin(CVType &Record) {
 }
 
 Error TypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
-  W->startLine() << getLeafTypeName(Record.Type);
+  W->startLine() << getLeafTypeName(Record.kind());
   W->getOStream() << " (" << HexNumber(Index.getIndex()) << ")";
   W->getOStream() << " {\n";
   W->indent();
-  W->printEnum("TypeLeafKind", unsigned(Record.Type),
+  W->printEnum("TypeLeafKind", unsigned(Record.kind()),
                makeArrayRef(LeafTypeNames));
   return Error::success();
 }

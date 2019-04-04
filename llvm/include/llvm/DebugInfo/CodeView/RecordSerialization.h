@@ -31,6 +31,9 @@ using llvm::support::ulittle32_t;
 enum : unsigned { MaxRecordLength = 0xFF00 };
 
 struct RecordPrefix {
+  RecordPrefix() = default;
+  explicit RecordPrefix(uint16_t Kind) : RecordLen(2), RecordKind(Kind) {}
+
   ulittle16_t RecordLen;  // Record length, starting from &RecordKind.
   ulittle16_t RecordKind; // Record kind enum (SymRecordKind or TypeRecordKind)
 };

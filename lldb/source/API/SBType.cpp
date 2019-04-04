@@ -86,7 +86,7 @@ SBType &SBType::operator=(const SBType &rhs) {
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBType::~SBType() {}
@@ -592,7 +592,7 @@ SBTypeList &SBTypeList::operator=(const SBTypeList &rhs) {
          i < rhs_size; i++)
       Append(const_cast<SBTypeList &>(rhs).GetTypeAtIndex(i));
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 void SBTypeList::Append(SBType type) {
@@ -642,7 +642,7 @@ lldb::SBTypeMember &SBTypeMember::operator=(const lldb::SBTypeMember &rhs) {
     if (rhs.IsValid())
       m_opaque_up.reset(new TypeMemberImpl(rhs.ref()));
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 bool SBTypeMember::IsValid() const {
@@ -771,7 +771,7 @@ operator=(const lldb::SBTypeMemberFunction &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 bool SBTypeMemberFunction::IsValid() const {

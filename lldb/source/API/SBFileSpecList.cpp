@@ -41,7 +41,7 @@ const SBFileSpecList &SBFileSpecList::operator=(const SBFileSpecList &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 uint32_t SBFileSpecList::GetSize() const {

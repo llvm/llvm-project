@@ -38,7 +38,7 @@ const SBCompileUnit &SBCompileUnit::operator=(const SBCompileUnit &rhs) {
                      rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBCompileUnit::~SBCompileUnit() { m_opaque_ptr = NULL; }

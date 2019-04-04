@@ -20,14 +20,14 @@ define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
 ; CHECK: [[FAILED]]:
 ; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
 ; CHECK: clrex
-; CHECK: movs r0, #0
 ; CHECK: dmb ish
+; CHECK: movs r0, #0
 ; CHECK: bx lr
 
 ; CHECK: [[SUCCESS]]:
 ; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
-; CHECK: movs r0, #1
 ; CHECK: dmb ish
+; CHECK: movs r0, #1
 ; CHECK: bx lr
 
   %pair = cmpxchg i32* %p, i32 %oldval, i32 %newval seq_cst seq_cst

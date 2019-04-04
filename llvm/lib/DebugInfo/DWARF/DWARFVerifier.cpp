@@ -178,21 +178,11 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit) {
     if (Die.getTag() == DW_TAG_null)
       continue;
 
-    bool HasTypeAttr = false;
     for (auto AttrValue : Die.attributes()) {
       NumUnitErrors += verifyDebugInfoAttribute(Die, AttrValue);
       NumUnitErrors += verifyDebugInfoForm(Die, AttrValue);
-      HasTypeAttr |= (AttrValue.Attr == DW_AT_type);
     }
 
-    if (!HasTypeAttr && (Die.getTag() == DW_TAG_formal_parameter ||
-                         Die.getTag() == DW_TAG_variable ||
-                         Die.getTag() == DW_TAG_array_type)) {
-      error() << "DIE with tag " << TagString(Die.getTag())
-              << " is missing type attribute:\n";
-      dump(Die) << '\n';
-      NumUnitErrors++;
-    }
     NumUnitErrors += verifyDebugInfoCallSite(Die);
   }
 
@@ -621,7 +611,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
       dump(Die) << '\n';
       break;
     }
-    // Check that the index is within the bounds of the section. 
+    // Check that the index is within the bounds of the section.
     unsigned ItemSize = DieCU->getDwarfStringOffsetsByteSize();
     // Use a 64-bit type to calculate the offset to guard against overflow.
     uint64_t Offset =

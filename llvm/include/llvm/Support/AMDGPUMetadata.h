@@ -156,6 +156,8 @@ constexpr char Name[] = "Name";
 constexpr char TypeName[] = "TypeName";
 /// Key for Kernel::Arg::Metadata::mSize.
 constexpr char Size[] = "Size";
+/// Key for Kernel::Arg::Metadata::mOffset.
+constexpr char Offset[] = "Offset";
 /// Key for Kernel::Arg::Metadata::mAlign.
 constexpr char Align[] = "Align";
 /// Key for Kernel::Arg::Metadata::mValueKind.
@@ -188,6 +190,8 @@ struct Metadata final {
   std::string mTypeName = std::string();
   /// Size in bytes. Required.
   uint32_t mSize = 0;
+  /// Offset in bytes. Required for code object v3, unused for code object v2.
+  uint32_t mOffset = 0;
   /// Alignment in bytes. Required.
   uint32_t mAlign = 0;
   /// Value kind. Required.

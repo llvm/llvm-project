@@ -59,7 +59,7 @@ const SBFileSpec &SBFileSpec::operator=(const SBFileSpec &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 bool SBFileSpec::operator==(const SBFileSpec &rhs) const {

@@ -35,7 +35,7 @@ const SBModuleSpec &SBModuleSpec::operator=(const SBModuleSpec &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBModuleSpec::~SBModuleSpec() {}
@@ -166,7 +166,7 @@ SBModuleSpecList &SBModuleSpecList::operator=(const SBModuleSpecList &rhs) {
 
   if (this != &rhs)
     *m_opaque_up = *rhs.m_opaque_up;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBModuleSpecList::~SBModuleSpecList() {}

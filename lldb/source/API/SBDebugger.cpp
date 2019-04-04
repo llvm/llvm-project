@@ -182,7 +182,7 @@ SBDebugger &SBDebugger::operator=(const SBDebugger &rhs) {
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 void SBDebugger::Initialize() {
@@ -373,7 +373,7 @@ FILE *SBDebugger::GetInputFileHandle() {
   if (m_opaque_sp) {
     StreamFileSP stream_file_sp(m_opaque_sp->GetInputFile());
     if (stream_file_sp)
-      return stream_file_sp->GetFile().GetStream();
+      return LLDB_RECORD_RESULT(stream_file_sp->GetFile().GetStream());
   }
   return nullptr;
 }
@@ -384,7 +384,7 @@ FILE *SBDebugger::GetOutputFileHandle() {
   if (m_opaque_sp) {
     StreamFileSP stream_file_sp(m_opaque_sp->GetOutputFile());
     if (stream_file_sp)
-      return stream_file_sp->GetFile().GetStream();
+      return LLDB_RECORD_RESULT(stream_file_sp->GetFile().GetStream());
   }
   return nullptr;
 }
@@ -395,7 +395,7 @@ FILE *SBDebugger::GetErrorFileHandle() {
   if (m_opaque_sp) {
     StreamFileSP stream_file_sp(m_opaque_sp->GetErrorFile());
     if (stream_file_sp)
-      return stream_file_sp->GetFile().GetStream();
+      return LLDB_RECORD_RESULT(stream_file_sp->GetFile().GetStream());
   }
   return nullptr;
 }

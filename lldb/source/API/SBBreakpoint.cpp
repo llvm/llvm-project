@@ -62,7 +62,7 @@ const SBBreakpoint &SBBreakpoint::operator=(const SBBreakpoint &rhs) {
                      SBBreakpoint, operator=,(const lldb::SBBreakpoint &), rhs);
 
   m_opaque_wp = rhs.m_opaque_wp;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 bool SBBreakpoint::operator==(const lldb::SBBreakpoint &rhs) {
