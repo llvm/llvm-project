@@ -211,7 +211,6 @@ public:
 
 private:
   const bool StorePreamblesInMemory;
-  const std::shared_ptr<PCHContainerOperations> PCHOps;
   std::unique_ptr<ParsingCallbacks> Callbacks; // not nullptr
   Semaphore Barrier;
   llvm::StringMap<std::unique_ptr<FileData>> Files;

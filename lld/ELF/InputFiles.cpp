@@ -259,11 +259,6 @@ typename ELFT::SymRange ELFFileBase<ELFT>::getGlobalELFSyms() {
 }
 
 template <class ELFT>
-uint32_t ELFFileBase<ELFT>::getSectionIndex(const Elf_Sym &Sym) const {
-  return CHECK(getObj().getSectionIndex(&Sym, ELFSyms, SymtabSHNDX), this);
-}
-
-template <class ELFT>
 void ELFFileBase<ELFT>::initSymtab(ArrayRef<Elf_Shdr> Sections,
                                    const Elf_Shdr *Symtab) {
   FirstGlobal = Symtab->sh_info;
@@ -279,6 +274,12 @@ template <class ELFT>
 ObjFile<ELFT>::ObjFile(MemoryBufferRef M, StringRef ArchiveName)
     : ELFFileBase<ELFT>(Base::ObjKind, M) {
   this->ArchiveName = ArchiveName;
+}
+
+template <class ELFT>
+uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &Sym) const {
+  return CHECK(this->getObj().getSectionIndex(&Sym, this->ELFSyms, SymtabSHNDX),
+               this);
 }
 
 template <class ELFT> ArrayRef<Symbol *> ObjFile<ELFT>::getLocalSymbols() {
@@ -889,9 +890,6 @@ template <class ELFT> void SharedFile<ELFT>::parseDynamic() {
       break;
     case SHT_DYNAMIC:
       DynamicSec = &Sec;
-      break;
-    case SHT_SYMTAB_SHNDX:
-      this->SymtabSHNDX = CHECK(Obj.getSHNDXTable(Sec, Sections), this);
       break;
     case SHT_GNU_versym:
       this->VersymSec = &Sec;

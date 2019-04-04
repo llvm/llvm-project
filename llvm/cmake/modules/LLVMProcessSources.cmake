@@ -30,7 +30,15 @@ endmacro(add_td_sources)
 
 function(add_header_files_for_glob hdrs_out glob)
   file(GLOB hds ${glob})
-  set(${hdrs_out} ${hds} PARENT_SCOPE)
+  set(filtered)
+  foreach(file ${hds})
+    # Explicit existence check is necessary to filter dangling symlinks
+    # out.  See https://bugs.gentoo.org/674662.
+    if(EXISTS ${file})
+      list(APPEND filtered ${file})
+    endif()
+  endforeach()
+  set(${hdrs_out} ${filtered} PARENT_SCOPE)
 endfunction(add_header_files_for_glob)
 
 function(find_all_header_files hdrs_out additional_headerdirs)

@@ -202,6 +202,18 @@ def call_symbol : Operand<XLenVT> {
   let ParserMatchClass = CallSymbol;
 }
 
+def TPRelAddSymbol : AsmOperandClass {
+  let Name = "TPRelAddSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidTPRelAddSymbol";
+  let ParserMethod = "parseOperandWithModifier";
+}
+
+// A bare symbol with the %tprel_add variant.
+def tprel_add_symbol : Operand<XLenVT> {
+  let ParserMatchClass = TPRelAddSymbol;
+}
+
 def CSRSystemRegister : AsmOperandClass {
   let Name = "CSRSystemRegister";
   let ParserMethod = "parseCSRSystemRegister";
@@ -764,6 +776,15 @@ class shiftop<SDPatternOperator operator>
 def : PatGprGpr<shiftop<shl>, SLL>;
 def : PatGprGpr<shiftop<srl>, SRL>;
 def : PatGprGpr<shiftop<sra>, SRA>;
+
+// This is a special case of the ADD instruction used to facilitate the use of a
+// fourth operand to emit a relocation on a symbol relating to this instruction.
+// The relocation does not affect any bits of the instruction itself but is used
+// as a hint to the linker.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0 in
+def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
+                            (ins GPR:$rs1, GPR:$rs2, tprel_add_symbol:$src), [],
+                            "add", "$rd, $rs1, $rs2, $src">;
 
 /// FrameIndex calculations
 

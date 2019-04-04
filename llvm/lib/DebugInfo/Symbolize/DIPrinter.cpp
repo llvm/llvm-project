@@ -81,7 +81,10 @@ void DIPrinter::print(const DILineInfo &Info, bool Inlined) {
   else if (Basenames)
     Filename = llvm::sys::path::filename(Filename);
   if (!Verbose) {
-    OS << Filename << ":" << Info.Line << ":" << Info.Column << "\n";
+    OS << Filename << ":" << Info.Line;
+    if (Style == OutputStyle::LLVM)
+      OS << ":" << Info.Column;
+    OS << "\n";
     printContext(Filename, Info.Line);
     return;
   }

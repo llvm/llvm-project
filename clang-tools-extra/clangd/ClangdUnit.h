@@ -37,7 +37,6 @@ class FileSystem;
 } // namespace llvm
 
 namespace clang {
-class PCHContainerOperations;
 
 namespace tooling {
 struct CompileCommand;
@@ -73,7 +72,6 @@ public:
   build(std::unique_ptr<clang::CompilerInvocation> CI,
         std::shared_ptr<const PreambleData> Preamble,
         std::unique_ptr<llvm::MemoryBuffer> Buffer,
-        std::shared_ptr<PCHContainerOperations> PCHs,
         IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const SymbolIndex *Index,
         const ParseOptions &Opts);
 
@@ -146,8 +144,7 @@ std::shared_ptr<const PreambleData>
 buildPreamble(PathRef FileName, CompilerInvocation &CI,
               std::shared_ptr<const PreambleData> OldPreamble,
               const tooling::CompileCommand &OldCompileCommand,
-              const ParseInputs &Inputs,
-              std::shared_ptr<PCHContainerOperations> PCHs, bool StoreInMemory,
+              const ParseInputs &Inputs, bool StoreInMemory,
               PreambleParsedCallback PreambleCallback);
 
 /// Build an AST from provided user inputs. This function does not check if
@@ -156,8 +153,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
 llvm::Optional<ParsedAST>
 buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
          const ParseInputs &Inputs,
-         std::shared_ptr<const PreambleData> Preamble,
-         std::shared_ptr<PCHContainerOperations> PCHs);
+         std::shared_ptr<const PreambleData> Preamble);
 
 /// Get the beginning SourceLocation at a specified \p Pos.
 /// May be invalid if Pos is, or if there's no identifier.

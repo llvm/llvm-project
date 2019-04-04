@@ -20,12 +20,12 @@ namespace breakpad {
 
 class Record {
 public:
-  enum Kind { Module, Info, File, Func, Line, Public, Stack };
+  enum Kind { Module, Info, File, Func, Line, Public, StackCFIInit, StackCFI };
 
   /// Attempt to guess the kind of the record present in the argument without
   /// doing a full parse. The returned kind will always be correct for valid
   /// records, but the full parse can still fail in case of corrupted input.
-  static Kind classify(llvm::StringRef Line);
+  static llvm::Optional<Kind> classify(llvm::StringRef Line);
 
 protected:
   Record(Kind K) : TheKind(K) {}

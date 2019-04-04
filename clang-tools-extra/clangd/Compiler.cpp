@@ -10,6 +10,7 @@
 #include "Logger.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Serialization/PCHContainerOperations.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -71,7 +72,6 @@ std::unique_ptr<CompilerInstance>
 prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
                         const PrecompiledPreamble *Preamble,
                         std::unique_ptr<llvm::MemoryBuffer> Buffer,
-                        std::shared_ptr<PCHContainerOperations> PCHs,
                         llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                         DiagnosticConsumer &DiagsClient) {
   assert(VFS && "VFS is null");
@@ -88,7 +88,8 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
         CI->getFrontendOpts().Inputs[0].getFile(), Buffer.get());
   }
 
-  auto Clang = llvm::make_unique<CompilerInstance>(PCHs);
+  auto Clang = llvm::make_unique<CompilerInstance>(
+      std::make_shared<PCHContainerOperations>());
   Clang->setInvocation(std::move(CI));
   Clang->createDiagnostics(&DiagsClient, false);
 

@@ -36,8 +36,6 @@
 #include <utility>
 
 namespace clang {
-class PCHContainerOperations;
-
 namespace clangd {
 
 // FIXME: find a better name.
@@ -300,7 +298,6 @@ private:
   mutable std::mutex CachedCompletionFuzzyFindRequestMutex;
 
   llvm::Optional<std::string> WorkspaceRoot;
-  std::shared_ptr<PCHContainerOperations> PCHs;
   // WorkScheduler has to be the last member, because its destructor has to be
   // called before all other members to stop the worker thread that references
   // ClangdServer.
