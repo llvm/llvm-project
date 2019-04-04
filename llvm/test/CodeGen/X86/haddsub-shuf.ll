@@ -349,7 +349,6 @@ define <2 x double> @hadd_v2f64_scalar_splat(<2 x double> %a) {
 ; AVX2_FAST-LABEL: hadd_v2f64_scalar_splat:
 ; AVX2_FAST:       # %bb.0:
 ; AVX2_FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
-; AVX2_FAST-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX2_FAST-NEXT:    retq
   %a0 = extractelement <2 x double> %a, i32 0
   %a1 = extractelement <2 x double> %a, i32 1

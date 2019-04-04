@@ -3,8 +3,7 @@
 
 define i1 @test_nuw_and_unsigned_pred(i64 %x) {
 ; CHECK-LABEL: @test_nuw_and_unsigned_pred(
-; CHECK-NEXT:    [[Y:%.*]] = sub nuw i64 10, [[X:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ult i64 [[Y]], 3
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i64 [[X:%.*]], 7
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = sub nuw i64 10, %x
@@ -14,8 +13,7 @@ define i1 @test_nuw_and_unsigned_pred(i64 %x) {
 
 define i1 @test_nsw_and_signed_pred(i64 %x) {
 ; CHECK-LABEL: @test_nsw_and_signed_pred(
-; CHECK-NEXT:    [[Y:%.*]] = sub nsw i64 3, [[X:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i64 [[Y]], 10
+; CHECK-NEXT:    [[Z:%.*]] = icmp slt i64 [[X:%.*]], -7
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = sub nsw i64 3, %x
@@ -25,8 +23,7 @@ define i1 @test_nsw_and_signed_pred(i64 %x) {
 
 define i1 @test_nuw_nsw_and_unsigned_pred(i64 %x) {
 ; CHECK-LABEL: @test_nuw_nsw_and_unsigned_pred(
-; CHECK-NEXT:    [[Y:%.*]] = sub nuw nsw i64 10, [[X:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ult i64 [[Y]], 4
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i64 [[X:%.*]], 6
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = sub nuw nsw i64 10, %x
@@ -36,8 +33,7 @@ define i1 @test_nuw_nsw_and_unsigned_pred(i64 %x) {
 
 define i1 @test_nuw_nsw_and_signed_pred(i64 %x) {
 ; CHECK-LABEL: @test_nuw_nsw_and_signed_pred(
-; CHECK-NEXT:    [[Y:%.*]] = sub nuw nsw i64 10, [[X:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp slt i64 [[Y]], 3
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i64 [[X:%.*]], 7
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = sub nuw nsw i64 10, %x

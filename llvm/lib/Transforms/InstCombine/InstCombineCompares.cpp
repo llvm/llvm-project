@@ -2321,6 +2321,16 @@ Instruction *InstCombiner::foldICmpSubConstant(ICmpInst &Cmp,
                                                const APInt &C) {
   Value *X = Sub->getOperand(0), *Y = Sub->getOperand(1);
   ICmpInst::Predicate Pred = Cmp.getPredicate();
+  const APInt *C2;
+  APInt SubResult;
+
+  // (icmp P (sub nuw|nsw C2, Y), C) -> (icmp swap(P) Y, C2-C)
+  if (match(X, m_APInt(C2)) &&
+      ((Cmp.isUnsigned() && Sub->hasNoUnsignedWrap()) ||
+       (Cmp.isSigned() && Sub->hasNoSignedWrap())) &&
+      !subWithOverflow(SubResult, *C2, C, Cmp.isSigned()))
+    return new ICmpInst(Cmp.getSwappedPredicate(), Y,
+                        ConstantInt::get(Y->getType(), SubResult));
 
   // The following transforms are only worth it if the only user of the subtract
   // is the icmp.
@@ -2345,7 +2355,6 @@ Instruction *InstCombiner::foldICmpSubConstant(ICmpInst &Cmp,
       return new ICmpInst(ICmpInst::ICMP_SLE, X, Y);
   }
 
-  const APInt *C2;
   if (!match(X, m_APInt(C2)))
     return nullptr;
 

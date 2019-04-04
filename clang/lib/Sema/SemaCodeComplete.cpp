@@ -2605,6 +2605,11 @@ static std::string
 FormatFunctionParameter(const PrintingPolicy &Policy, const ParmVarDecl *Param,
                         bool SuppressName = false, bool SuppressBlock = false,
                         Optional<ArrayRef<QualType>> ObjCSubsts = None) {
+  // Params are unavailable in FunctionTypeLoc if the FunctionType is invalid.
+  // It would be better to pass in the param Type, which is usually avaliable.
+  // But this case is rare, so just pretend we fell back to int as elsewhere.
+  if (!Param)
+    return "int";
   bool ObjCMethodParam = isa<ObjCMethodDecl>(Param->getDeclContext());
   if (Param->getType()->isDependentType() ||
       !Param->getType()->isBlockPointerType()) {

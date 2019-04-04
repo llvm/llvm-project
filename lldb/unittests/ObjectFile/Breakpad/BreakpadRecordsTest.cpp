@@ -19,13 +19,18 @@ TEST(Record, classify) {
   EXPECT_EQ(Record::File, Record::classify("FILE"));
   EXPECT_EQ(Record::Func, Record::classify("FUNC"));
   EXPECT_EQ(Record::Public, Record::classify("PUBLIC"));
-  EXPECT_EQ(Record::Stack, Record::classify("STACK"));
+  EXPECT_EQ(Record::StackCFIInit, Record::classify("STACK CFI INIT"));
+  EXPECT_EQ(Record::StackCFI, Record::classify("STACK CFI"));
+
+  // Any obviously incorrect lines will be classified as such.
+  EXPECT_EQ(llvm::None, Record::classify("STACK"));
+  EXPECT_EQ(llvm::None, Record::classify("STACK CODE_ID"));
+  EXPECT_EQ(llvm::None, Record::classify("CODE_ID"));
 
   // Any line which does not start with a known keyword will be classified as a
   // line record, as those are the only ones that start without a keyword.
   EXPECT_EQ(Record::Line, Record::classify("deadbeef"));
   EXPECT_EQ(Record::Line, Record::classify("12"));
-  EXPECT_EQ(Record::Line, Record::classify("CODE_ID"));
 }
 
 TEST(ModuleRecord, parse) {

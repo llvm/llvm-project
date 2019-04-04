@@ -1237,6 +1237,18 @@ TEST(GoToInclude, All) {
   Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point("7"));
   ASSERT_TRUE(bool(Locations)) << "locateSymbolAt returned an error";
   EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range())));
+
+  // Objective C #import directive.
+  Annotations ObjC(R"objc(
+  #import "^foo.h"
+  )objc");
+  auto FooM = testPath("foo.m");
+  FS.Files[FooM] = ObjC.code();
+
+  Server.addDocument(FooM, ObjC.code());
+  Locations = runLocateSymbolAt(Server, FooM, ObjC.point());
+  ASSERT_TRUE(bool(Locations)) << "locateSymbolAt returned an error";
+  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range())));
 }
 
 TEST(LocateSymbol, WithPreamble) {

@@ -15,6 +15,7 @@
 #include "MCTargetDesc/RISCVAsmBackend.h"
 #include "RISCV.h"
 #include "RISCVFixupKinds.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -162,6 +163,9 @@ bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     case VK_RISCV_PCREL_LO:
     case VK_RISCV_PCREL_HI:
     case VK_RISCV_GOT_HI:
+    case VK_RISCV_TPREL_LO:
+    case VK_RISCV_TPREL_HI:
+    case VK_RISCV_TPREL_ADD:
       return false;
     }
   }
@@ -180,6 +184,9 @@ RISCVMCExpr::VariantKind RISCVMCExpr::getVariantKindForName(StringRef name) {
       .Case("pcrel_lo", VK_RISCV_PCREL_LO)
       .Case("pcrel_hi", VK_RISCV_PCREL_HI)
       .Case("got_pcrel_hi", VK_RISCV_GOT_HI)
+      .Case("tprel_lo", VK_RISCV_TPREL_LO)
+      .Case("tprel_hi", VK_RISCV_TPREL_HI)
+      .Case("tprel_add", VK_RISCV_TPREL_ADD)
       .Default(VK_RISCV_Invalid);
 }
 
@@ -197,15 +204,62 @@ StringRef RISCVMCExpr::getVariantKindName(VariantKind Kind) {
     return "pcrel_hi";
   case VK_RISCV_GOT_HI:
     return "got_pcrel_hi";
+  case VK_RISCV_TPREL_LO:
+    return "tprel_lo";
+  case VK_RISCV_TPREL_HI:
+    return "tprel_hi";
+  case VK_RISCV_TPREL_ADD:
+    return "tprel_add";
   }
+}
+
+static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
+  switch (Expr->getKind()) {
+  case MCExpr::Target:
+    llvm_unreachable("Can't handle nested target expression");
+    break;
+  case MCExpr::Constant:
+    break;
+
+  case MCExpr::Binary: {
+    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
+    fixELFSymbolsInTLSFixupsImpl(BE->getLHS(), Asm);
+    fixELFSymbolsInTLSFixupsImpl(BE->getRHS(), Asm);
+    break;
+  }
+
+  case MCExpr::SymbolRef: {
+    // We're known to be under a TLS fixup, so any symbol should be
+    // modified. There should be only one.
+    const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
+    cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
+    break;
+  }
+
+  case MCExpr::Unary:
+    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
+    break;
+  }
+}
+
+void RISCVMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
+  switch (getKind()) {
+  default:
+    return;
+  case VK_RISCV_TPREL_HI:
+    break;
+  }
+
+  fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
 }
 
 bool RISCVMCExpr::evaluateAsConstant(int64_t &Res) const {
   MCValue Value;
 
   if (Kind == VK_RISCV_PCREL_HI || Kind == VK_RISCV_PCREL_LO ||
-      Kind == VK_RISCV_GOT_HI || Kind == VK_RISCV_CALL ||
-      Kind == VK_RISCV_CALL_PLT)
+      Kind == VK_RISCV_GOT_HI || Kind == VK_RISCV_TPREL_HI ||
+      Kind == VK_RISCV_TPREL_LO || Kind == VK_RISCV_TPREL_ADD ||
+      Kind == VK_RISCV_CALL || Kind == VK_RISCV_CALL_PLT)
     return false;
 
   if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr, nullptr))

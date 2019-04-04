@@ -29,6 +29,9 @@ public:
     VK_RISCV_PCREL_LO,
     VK_RISCV_PCREL_HI,
     VK_RISCV_GOT_HI,
+    VK_RISCV_TPREL_LO,
+    VK_RISCV_TPREL_HI,
+    VK_RISCV_TPREL_ADD,
     VK_RISCV_CALL,
     VK_RISCV_CALL_PLT,
     VK_RISCV_Invalid
@@ -69,8 +72,7 @@ public:
     return getSubExpr()->findAssociatedFragment();
   }
 
-  // There are no TLS RISCVMCExprs at the moment.
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
+  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
 
   bool evaluateAsConstant(int64_t &Res) const;
 

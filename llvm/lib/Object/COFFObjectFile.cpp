@@ -1457,7 +1457,7 @@ std::error_code DelayImportDirectoryEntryRef::getName(StringRef &Result) const {
 
 std::error_code DelayImportDirectoryEntryRef::
 getDelayImportTable(const delay_import_directory_table_entry *&Result) const {
-  Result = Table;
+  Result = &Table[Index];
   return std::error_code();
 }
 

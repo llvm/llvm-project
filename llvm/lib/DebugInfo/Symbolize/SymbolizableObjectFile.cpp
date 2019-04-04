@@ -198,7 +198,10 @@ bool SymbolizableObjectFile::getNameFromSymbolTable(SymbolRef::Type Type,
   const auto &SymbolMap = Type == SymbolRef::ST_Function ? Functions : Objects;
   if (SymbolMap.empty())
     return false;
-  SymbolDesc SD = { Address, Address };
+  SymbolDesc SD = {Address, UINT64_C(-1)};
+  // SymbolDescs are sorted by (Addr,Size), if several SymbolDescs share the
+  // same Addr, pick the one with the largest Size. This helps us avoid symbols
+  // with no size information (Size=0).
   auto SymbolIterator = SymbolMap.upper_bound(SD);
   if (SymbolIterator == SymbolMap.begin())
     return false;

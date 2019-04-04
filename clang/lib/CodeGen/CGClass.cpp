@@ -1978,10 +1978,14 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
       pushRegularPartialArrayCleanup(arrayBegin, cur, type, eltAlignment,
                                      *destroyer);
     }
-
+    auto currAVS = AggValueSlot::forAddr(
+        curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap, AggValueSlot::IsNotZeroed,
+        NewPointerIsChecked ? AggValueSlot::IsSanitizerChecked
+                            : AggValueSlot::IsNotSanitizerChecked);
     EmitCXXConstructorCall(ctor, Ctor_Complete, /*ForVirtualBase=*/false,
-                           /*Delegating=*/false, curAddr, E,
-                           AggValueSlot::DoesNotOverlap, NewPointerIsChecked);
+                           /*Delegating=*/false, currAVS, E);
   }
 
   // Go to the next element.
@@ -2015,16 +2019,16 @@ void CodeGenFunction::destroyCXXObject(CodeGenFunction &CGF,
 void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                                              CXXCtorType Type,
                                              bool ForVirtualBase,
-                                             bool Delegating, Address This,
-                                             const CXXConstructExpr *E,
-                                             AggValueSlot::Overlap_t Overlap,
-                                             bool NewPointerIsChecked) {
+                                             bool Delegating,
+                                             AggValueSlot ThisAVS,
+                                             const CXXConstructExpr *E) {
   CallArgList Args;
-
-  LangAS SlotAS = E->getType().getAddressSpace();
+  Address This = ThisAVS.getAddress();
+  LangAS SlotAS = ThisAVS.getQualifiers().getAddressSpace();
   QualType ThisType = D->getThisType();
   LangAS ThisAS = ThisType.getTypePtr()->getPointeeType().getAddressSpace();
   llvm::Value *ThisPtr = This.getPointer();
+
   if (SlotAS != ThisAS) {
     unsigned TargetThisAS = getContext().getTargetAddressSpace(ThisAS);
     llvm::Type *NewType =
@@ -2032,6 +2036,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
     ThisPtr = getTargetHooks().performAddrSpaceCast(*this, This.getPointer(),
                                                     ThisAS, SlotAS, NewType);
   }
+
   // Push the this ptr.
   Args.add(RValue::get(ThisPtr), D->getThisType());
 
@@ -2045,7 +2050,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
     LValue Src = EmitLValue(Arg);
     QualType DestTy = getContext().getTypeDeclType(D->getParent());
     LValue Dest = MakeAddrLValue(This, DestTy);
-    EmitAggregateCopyCtor(Dest, Src, Overlap);
+    EmitAggregateCopyCtor(Dest, Src, ThisAVS.mayOverlap());
     return;
   }
 
@@ -2058,7 +2063,8 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                /*ParamsToSkip*/ 0, Order);
 
   EmitCXXConstructorCall(D, Type, ForVirtualBase, Delegating, This, Args,
-                         Overlap, E->getExprLoc(), NewPointerIsChecked);
+                         ThisAVS.mayOverlap(), E->getExprLoc(),
+                         ThisAVS.isSanitizerChecked());
 }
 
 static bool canEmitDelegateCallArgs(CodeGenFunction &CGF,

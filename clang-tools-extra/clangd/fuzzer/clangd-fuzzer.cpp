@@ -36,7 +36,8 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   ClangdServer::Options Opts;
 
   // Initialize and run ClangdLSPServer.
-  ClangdLSPServer LSPServer(*Transport, FS, CCOpts, llvm::None, false, Opts);
+  ClangdLSPServer LSPServer(*Transport, FS, CCOpts, llvm::None, false,
+                            llvm::None, Opts);
   LSPServer.run();
   return 0;
 }

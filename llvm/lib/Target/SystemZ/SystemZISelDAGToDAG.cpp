@@ -1275,6 +1275,9 @@ static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
     InputChain = LoadNode->getChain();
   } else if (Chain.getOpcode() == ISD::TokenFactor) {
     SmallVector<SDValue, 4> ChainOps;
+    SmallVector<const SDNode *, 4> LoopWorklist;
+    SmallPtrSet<const SDNode *, 16> Visited;
+    const unsigned int Max = 1024;
     for (unsigned i = 0, e = Chain.getNumOperands(); i != e; ++i) {
       SDValue Op = Chain.getOperand(i);
       if (Op == Load.getValue(1)) {
@@ -1283,28 +1286,26 @@ static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
         ChainOps.push_back(Load.getOperand(0));
         continue;
       }
-
-      // Make sure using Op as part of the chain would not cause a cycle here.
-      // In theory, we could check whether the chain node is a predecessor of
-      // the load. But that can be very expensive. Instead visit the uses and
-      // make sure they all have smaller node id than the load.
-      int LoadId = LoadNode->getNodeId();
-      for (SDNode::use_iterator UI = Op.getNode()->use_begin(),
-             UE = UI->use_end(); UI != UE; ++UI) {
-        if (UI.getUse().getResNo() != 0)
-          continue;
-        if (UI->getNodeId() > LoadId)
-          return false;
-      }
-
+      LoopWorklist.push_back(Op.getNode());
       ChainOps.push_back(Op);
     }
 
-    if (ChainCheck)
+    if (ChainCheck) {
+      // Add the other operand of StoredVal to worklist.
+      for (SDValue Op : StoredVal->ops())
+        if (Op.getNode() != LoadNode)
+          LoopWorklist.push_back(Op.getNode());
+
+      // Check if Load is reachable from any of the nodes in the worklist.
+      if (SDNode::hasPredecessorHelper(Load.getNode(), Visited, LoopWorklist, Max,
+                                       true))
+        return false;
+
       // Make a new TokenFactor with all the other input chains except
       // for the load.
       InputChain = CurDAG->getNode(ISD::TokenFactor, SDLoc(Chain),
                                    MVT::Other, ChainOps);
+    }
   }
   if (!ChainCheck)
     return false;
