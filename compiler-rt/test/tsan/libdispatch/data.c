@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 
-long global;
+long global = 42;
 
 int main(int argc, const char *argv[]) {
   fprintf(stderr, "Hello world.\n");
@@ -16,21 +16,21 @@ int main(int argc, const char *argv[]) {
   dispatch_queue_t q = dispatch_queue_create("my.queue", DISPATCH_QUEUE_SERIAL);
   dispatch_semaphore_t sem = dispatch_semaphore_create(0);
 
-  global = 44;
-  dispatch_data_t data = dispatch_data_create("buffer", 6, q, ^{
+  const char *buffer = "buffer";
+  size_t size = strlen(buffer);
+
+  dispatch_data_t data = dispatch_data_create(buffer, size, q, ^{
     fprintf(stderr, "Data destructor.\n");
     global++;
 
     dispatch_semaphore_signal(sem);
   });
   dispatch_release(data);
-  data = NULL;
 
   dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
 
-  data = dispatch_data_create("buffer", 6, q, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+  data = dispatch_data_create(buffer, size, q, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
   dispatch_release(data);
-  data = NULL;
 
   fprintf(stderr, "Done.\n");
 }
