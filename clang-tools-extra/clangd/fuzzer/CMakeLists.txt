@@ -1,6 +1,9 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-set(LLVM_LINK_COMPONENTS support)
+set(LLVM_LINK_COMPONENTS
+  FuzzMutate
+  Support
+  )
 
 # This fuzzer runs on oss-fuzz, so keep it around even if it looks unreferenced.
 add_llvm_fuzzer(clangd-fuzzer

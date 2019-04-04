@@ -985,7 +985,6 @@ struct SemaCompleteInput {
   llvm::StringRef Contents;
   Position Pos;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
-  std::shared_ptr<PCHContainerOperations> PCHs;
 };
 
 // Invokes Sema code completion on a file.
@@ -1044,8 +1043,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
       std::move(CI),
       (Input.Preamble && !CompletingInPreamble) ? &Input.Preamble->Preamble
                                                 : nullptr,
-      std::move(ContentsBuffer), std::move(Input.PCHs), std::move(VFS),
-      DummyDiagsConsumer);
+      std::move(ContentsBuffer), std::move(VFS), DummyDiagsConsumer);
   Clang->getPreprocessorOpts().SingleFileParseMode = CompletingInPreamble;
   Clang->setCodeCompletionConsumer(Consumer.release());
 
@@ -1568,12 +1566,11 @@ CodeCompleteResult
 codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
              const PreambleData *Preamble, llvm::StringRef Contents,
              Position Pos, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-             std::shared_ptr<PCHContainerOperations> PCHs,
              CodeCompleteOptions Opts, SpeculativeFuzzyFind *SpecFuzzyFind) {
   return CodeCompleteFlow(FileName,
                           Preamble ? Preamble->Includes : IncludeStructure(),
                           SpecFuzzyFind, Opts)
-      .run({FileName, Command, Preamble, Contents, Pos, VFS, PCHs});
+      .run({FileName, Command, Preamble, Contents, Pos, VFS});
 }
 
 SignatureHelp signatureHelp(PathRef FileName,
@@ -1581,7 +1578,6 @@ SignatureHelp signatureHelp(PathRef FileName,
                             const PreambleData *Preamble,
                             llvm::StringRef Contents, Position Pos,
                             llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                            std::shared_ptr<PCHContainerOperations> PCHs,
                             const SymbolIndex *Index) {
   SignatureHelp Result;
   clang::CodeCompleteOptions Options;
@@ -1592,9 +1588,7 @@ SignatureHelp signatureHelp(PathRef FileName,
   IncludeStructure PreambleInclusions; // Unused for signatureHelp
   semaCodeComplete(
       llvm::make_unique<SignatureHelpCollector>(Options, Index, Result),
-      Options,
-      {FileName, Command, Preamble, Contents, Pos, std::move(VFS),
-       std::move(PCHs)});
+      Options, {FileName, Command, Preamble, Contents, Pos, std::move(VFS)});
   return Result;
 }
 

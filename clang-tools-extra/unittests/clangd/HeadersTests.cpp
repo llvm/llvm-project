@@ -51,8 +51,8 @@ private:
     CI->getDiagnosticOpts().IgnoreWarnings = true;
     auto Clang = prepareCompilerInstance(
         std::move(CI), /*Preamble=*/nullptr,
-        llvm::MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile),
-        std::make_shared<PCHContainerOperations>(), VFS, IgnoreDiags);
+        llvm::MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile), VFS,
+        IgnoreDiags);
 
     EXPECT_FALSE(Clang->getFrontendOpts().Inputs.empty());
     return Clang;

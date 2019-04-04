@@ -409,9 +409,8 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Couldn't build compiler invocation");
   IgnoreDiagnostics IgnoreDiags;
-  auto Clang = prepareCompilerInstance(
-      std::move(CI), /*Preamble=*/nullptr, std::move(*Buf),
-      std::make_shared<PCHContainerOperations>(), Inputs.FS, IgnoreDiags);
+  auto Clang = prepareCompilerInstance(std::move(CI), /*Preamble=*/nullptr,
+                                       std::move(*Buf), Inputs.FS, IgnoreDiags);
   if (!Clang)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Couldn't build compiler instance");
