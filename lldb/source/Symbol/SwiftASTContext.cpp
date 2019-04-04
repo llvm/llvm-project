@@ -24,6 +24,7 @@
 #include "swift/AST/DebuggerClient.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/DiagnosticEngine.h"
+#include "swift/AST/DiagnosticsSema.h"
 #include "swift/AST/ExistentialLayout.h"
 #include "swift/AST/GenericSignature.h"
 #include "swift/AST/IRGenOptions.h"
@@ -1392,6 +1393,7 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
                                              /*NullTerminator=*/false);
         swift::ModuleFile::load(std::move(module_input_buffer), {}, false,
                                 loaded_module_file);
+
         swift::serialization::diagnoseSerializedASTLoadFailure(
             ast_ctx, swift::SourceLoc(), info, extended_validation_info,
             module_spec, "<invalid-doc-id>", loaded_module_file.get(),
@@ -2580,9 +2582,19 @@ swift::LangOptions &SwiftASTContext::GetLanguageOptions() {
 }
 
 swift::DiagnosticEngine &SwiftASTContext::GetDiagnosticEngine() {
-  if (m_diagnostic_engine_ap.get() == NULL)
+  if (!m_diagnostic_engine_ap) {
     m_diagnostic_engine_ap.reset(
         new swift::DiagnosticEngine(GetSourceManager()));
+
+    // The following diagnostics are fatal, but they are diagnosed at
+    // a very early point where the AST isn't yet destroyed beyond repair.
+    m_diagnostic_engine_ap->ignoreDiagnostic(
+        swift::diag::serialization_module_too_old.ID);
+    m_diagnostic_engine_ap->ignoreDiagnostic(
+        swift::diag::serialization_module_too_new.ID);
+    m_diagnostic_engine_ap->ignoreDiagnostic(
+        swift::diag::serialization_module_language_version_mismatch.ID);
+  }
   return *m_diagnostic_engine_ap;
 }
 
@@ -8175,19 +8187,58 @@ SwiftASTContextForExpressions::GetPersistentExpressionState() {
   return m_persistent_state_up.get();
 }
 
+static const char *getImportFailureString(swift::serialization::Status status) {
+  switch (status) {
+  case swift::serialization::Status::Valid:
+    return "The module is valid.";
+  case swift::serialization::Status::FormatTooOld:
+    return "The module file format is too old to be used by this version of "
+           "the debugger.";
+  case swift::serialization::Status::FormatTooNew:
+    return "The module file format is too new to be used by this version of "
+           "the debugger.";
+  case swift::serialization::Status::MissingDependency:
+    return "The module file depends on another module that can't be loaded.";
+  case swift::serialization::Status::MissingShadowedModule:
+    return "The module file is an overlay for a Clang module, which can't be "
+           "found.";
+  case swift::serialization::Status::CircularDependency:
+    return "The module file depends on a module that is still being loaded, "
+           "i.e. there is a circular dependency.";
+  case swift::serialization::Status::FailedToLoadBridgingHeader:
+    return "The module file depends on a bridging header that can't be loaded.";
+  case swift::serialization::Status::Malformed:
+    return "The module file is malformed in some way.";
+  case swift::serialization::Status::MalformedDocumentation:
+    return "The module documentation file is malformed in some way.";
+  case swift::serialization::Status::NameMismatch:
+    return "The module file's name does not match the module it is being "
+           "loaded into.";
+  case swift::serialization::Status::TargetIncompatible:
+    return "The module file was built for a different target platform.";
+  case swift::serialization::Status::TargetTooNew:
+    return "The module file was built for a target newer than the current "
+           "target.";
+  default:
+    return "An unknown error occurred.";
+  }
+}
+
 void lldb_private::printASTValidationInfo(
     const swift::serialization::ValidationInfo &ast_info,
     const swift::serialization::ExtendedValidationInfo &ext_ast_info,
     const Module &module, StringRef module_buf) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-  LLDB_LOG(log, R"(Unable to load AST for module {0} from library: {1}.
-  - targetTriple: {2}
-  - shortVersion: {3}
-  - bytes: {4} (module_buf bytes: {5})
-  - SDK path: {6}
+  LLDB_LOG(log, R"(Unable to load Swift AST for module {0} from library: {1}.
+  {2}
+  - targetTriple: {3}
+  - shortVersion: {4}
+  - bytes: {5} (module_buf bytes: {6})
+  - SDK path: {7}
   - Clang Importer Options:
 )",
            ast_info.name, module.GetSpecificationDescription(),
+           getImportFailureString(ast_info.status),
            ast_info.targetTriple, ast_info.shortVersion, ast_info.bytes,
            module_buf.size(), ext_ast_info.getSDKPath());
   for (StringRef ExtraOpt : ext_ast_info.getExtraClangImporterOptions())
