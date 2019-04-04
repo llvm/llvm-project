@@ -3782,6 +3782,28 @@ bool Sema::checkRangedIntegralArgument(Expr *E, const AttrType *TmpAttr,
 }
 
 template <typename AttrType>
+void Sema::AddOneConstantValueAttr(SourceRange AttrRange, Decl *D, Expr *E,
+                                   unsigned SpellingListIndex) {
+  AttrType TmpAttr(AttrRange, Context, E, SpellingListIndex);
+
+  if (!E->isValueDependent()) {
+    ExprResult ICE;
+    if (checkRangedIntegralArgument<AttrType>(E, &TmpAttr, ICE))
+      return;
+    E = ICE.get();
+  }
+
+  if (IntelFPGAMaxConcurrencyAttr::classof(&TmpAttr)) {
+    if (!D->hasAttr<IntelFPGAMemoryAttr>())
+      D->addAttr(IntelFPGAMemoryAttr::CreateImplicit(
+          Context, IntelFPGAMemoryAttr::Default));
+  }
+
+  D->addAttr(::new (Context)
+                 AttrType(AttrRange, Context, E, SpellingListIndex));
+}
+
+template <typename AttrType>
 void Sema::AddOneConstantPowerTwoValueAttr(SourceRange AttrRange, Decl *D,
                                            Expr *E,
                                            unsigned SpellingListIndex) {
@@ -5037,6 +5059,8 @@ static bool checkIntelFPGARegisterAttrCompatibility(Sema &S, Decl *D,
       InCompat = true;
   if (checkAttrMutualExclusion<IntelFPGABankWidthAttr>(S, D, Attr))
     InCompat = true;
+  if (checkAttrMutualExclusion<IntelFPGAMaxConcurrencyAttr>(S, D, Attr))
+    InCompat = true;
   if (auto *NBA = D->getAttr<IntelFPGANumBanksAttr>())
     if (!NBA->isImplicit() &&
         checkAttrMutualExclusion<IntelFPGANumBanksAttr>(S, D, Attr))
@@ -5070,6 +5094,17 @@ static void handleOneConstantPowerTwoValueAttr(Sema &S, Decl *D,
     return;
 
   S.AddOneConstantPowerTwoValueAttr<AttrType>(
+      Attr.getRange(), D, Attr.getArgAsExpr(0),
+      Attr.getAttributeSpellingListIndex());
+}
+
+static void handleIntelFPGAMaxConcurrencyAttr(Sema &S, Decl *D,
+                                              const ParsedAttr &Attr) {
+  checkForDuplicateAttribute<IntelFPGAMaxConcurrencyAttr>(S, D, Attr);
+  if (checkAttrMutualExclusion<IntelFPGARegisterAttr>(S, D, Attr))
+    return;
+
+  S.AddOneConstantValueAttr<IntelFPGAMaxConcurrencyAttr>(
       Attr.getRange(), D, Attr.getArgAsExpr(0),
       Attr.getAttributeSpellingListIndex());
 }
@@ -7435,6 +7470,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_IntelFPGANumBanks:
     handleOneConstantPowerTwoValueAttr<IntelFPGANumBanksAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_IntelFPGAMaxConcurrency:
+    handleIntelFPGAMaxConcurrencyAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:

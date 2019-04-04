@@ -1387,6 +1387,14 @@ def Mode : Attr {
   let PragmaAttributeSupport = 0;
 }
 
+def IntelFPGALocalNonConstVar : SubsetSubject<Var,
+                              [{S->hasLocalStorage() &&
+                                S->getKind() != Decl::ImplicitParam &&
+                                S->getKind() != Decl::ParmVar &&
+                                S->getKind() != Decl::NonTypeTemplateParm &&
+                                !S->getType().isConstQualified()}],
+                              "local non-const variables">;
+
 def IntelFPGAConstVar : SubsetSubject<Var,
                       [{S->getKind() != Decl::ImplicitParam &&
                         S->getKind() != Decl::ParmVar &&
@@ -1467,6 +1475,22 @@ def IntelFPGANumBanks : Attr {
   let AdditionalMembers = [{
     static unsigned getMinValue() {
       return 1;
+    }
+    static unsigned getMaxValue() {
+      return 1024*1024;
+    }
+  }];
+}
+
+def IntelFPGAMaxConcurrency : InheritableAttr {
+  let Spellings = [GNU<"max_concurrency">, CXX11<"intelfpga","max_concurrency">];
+  let Args = [ExprArgument<"Value">];
+  let LangOpts = [SYCL];
+  let Subjects = SubjectList<[IntelFPGALocalNonConstVar, Field], ErrorDiag>;
+  let Documentation = [IntelFPGAMaxConcurrencyAttrDocs];
+  let AdditionalMembers = [{
+    static unsigned getMinValue() {
+      return 0;
     }
     static unsigned getMaxValue() {
       return 1024*1024;

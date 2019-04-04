@@ -8755,6 +8755,9 @@ public:
   bool checkRangedIntegralArgument(Expr *E, const AttrType *TmpAttr,
                                    ExprResult &Result);
   template <typename AttrType>
+  void AddOneConstantValueAttr(SourceRange AttrRange, Decl *D, Expr *E,
+                               unsigned SpellingListIndex);
+  template <typename AttrType>
   void AddOneConstantPowerTwoValueAttr(SourceRange AttrRange, Decl *D, Expr *E,
                                        unsigned SpellingListIndex);
 

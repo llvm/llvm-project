@@ -3535,6 +3535,10 @@ void CodeGenModule::generateIntelFPGAAnnotation(
     llvm::APSInt BWAInt = BWA->getValue()->EvaluateKnownConstInt(getContext());
     Out << '{' << BWA->getSpelling() << ':' << BWAInt << '}';
   }
+  if (const auto *MCA = D->getAttr<IntelFPGAMaxConcurrencyAttr>()) {
+    llvm::APSInt MCAInt = MCA->getValue()->EvaluateKnownConstInt(getContext());
+    Out << '{' << MCA->getSpelling() << ':' << MCAInt << '}';
+  }
   if (const auto *NBA = D->getAttr<IntelFPGANumBanksAttr>()) {
     llvm::APSInt BWAInt = NBA->getValue()->EvaluateKnownConstInt(getContext());
     Out << '{' << NBA->getSpelling() << ':' << BWAInt << '}';

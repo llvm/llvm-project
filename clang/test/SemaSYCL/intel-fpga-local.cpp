@@ -53,7 +53,22 @@ void foo1()
   //CHECK: IntelFPGANumBanksAttr
   //CHECK-NEXT: ConstantExpr
   //CHECK-NEXT: IntegerLiteral{{.*}}4{{$}}
-  __attribute__((__numbanks__(4))) unsigned int v_six2[32];
+  [[intelfpga::numbanks(4)]] unsigned int v_six2[32];
+
+  //CHECK: VarDecl{{.*}}v_seven
+  //CHECK: IntelFPGAMemoryAttr{{.*}}Implicit
+  //CHECK: IntelFPGAMaxConcurrencyAttr
+  //CHECK-NEXT: ConstantExpr
+  //CHECK-NEXT: IntegerLiteral{{.*}}4{{$}}
+  __attribute__((max_concurrency(4)))
+  unsigned int v_seven[64];
+
+  //CHECK: VarDecl{{.*}}v_seven2
+  //CHECK: IntelFPGAMemoryAttr{{.*}}Implicit
+  //CHECK: IntelFPGAMaxConcurrencyAttr
+  //CHECK-NEXT: ConstantExpr
+  //CHECK-NEXT: IntegerLiteral{{.*}}8{{$}}
+  [[intelfpga::max_concurrency(8)]] unsigned int v_seven2[64];
 
   int __attribute__((__register__)) A;
   int __attribute__((__numbanks__(4), __bankwidth__(16))) E;
@@ -76,6 +91,12 @@ void foo1()
   __attribute__((__bankwidth__(16)))
   //expected-note@-2 {{conflicting attribute is here}}
   unsigned int reg_six[64];
+
+  //expected-error@+2{{attributes are not compatible}}
+  __attribute__((__register__))
+  __attribute__((__max_concurrency__(16)))
+  //expected-note@-2 {{conflicting attribute is here}}
+  unsigned int reg_six_two[64];
 
   //expected-error@+2{{attributes are not compatible}}
   __attribute__((__register__))
@@ -117,7 +138,7 @@ void foo1()
   __attribute__((__bankwidth__(3)))
   unsigned int bw_three[64];
 
-  //expected-error@+1{{requires integer constant between 1 and 1048576}}
+  //expected-error@+1{{'bankwidth' attribute requires integer constant between 1 and 1048576 inclusive}}
   __attribute__((__bankwidth__(-4)))
   unsigned int bw_four[64];
 
@@ -131,9 +152,42 @@ void foo1()
   __attribute__((__bankwidth__(4,8)))
   unsigned int bw_six[64];
 
-  //expected-error@+1{{requires integer constant between 1 and 1048576}}
+  //expected-error@+1{{'bankwidth' attribute requires integer constant between 1 and 1048576 inclusive}}
   __attribute__((__bankwidth__(0)))
   unsigned int bw_seven[64];
+
+  // max_concurrency
+  //expected-error@+2{{attributes are not compatible}}
+  __attribute__((__max_concurrency__(16)))
+  __attribute__((__register__))
+  //expected-note@-2 {{conflicting attribute is here}}
+  unsigned int mc_one[64];
+
+  //CHECK: VarDecl{{.*}}mc_two
+  //CHECK: IntelFPGAMaxConcurrencyAttr
+  //CHECK-NEXT: ConstantExpr
+  //CHECK-NEXT: IntegerLiteral{{.*}}8{{$}}
+  //CHECK: IntelFPGAMaxConcurrencyAttr
+  //CHECK-NEXT: ConstantExpr
+  //CHECK-NEXT: IntegerLiteral{{.*}}16{{$}}
+  //expected-warning@+2{{is already applied}}
+  __attribute__((__max_concurrency__(8)))
+  __attribute__((__max_concurrency__(16)))
+  unsigned int mc_two[64];
+
+  //expected-error@+1{{'max_concurrency' attribute requires integer constant between 0 and 1048576 inclusive}}
+  __attribute__((__max_concurrency__(-4)))
+  unsigned int mc_four[64];
+
+  int i_max_concurrency = 32; // expected-note {{declared here}}
+  //expected-error@+1{{expression is not an integral constant expression}}
+  __attribute__((__max_concurrency__(i_max_concurrency)))
+  //expected-note@-1{{read of non-const variable 'i_max_concurrency' is not allowed in a constant expression}}
+  unsigned int mc_five[64];
+
+  //expected-error@+1{{'__max_concurrency__' attribute takes one argument}}
+  __attribute__((__max_concurrency__(4,8)))
+  unsigned int mc_six[64];
 
   // numbanks
   //expected-error@+2{{attributes are not compatible}}
@@ -158,7 +212,7 @@ void foo1()
   __attribute__((__numbanks__(15)))
   unsigned int nb_three[64];
 
-  //expected-error@+1{{requires integer constant between 1 and 1048576}}
+  //expected-error@+1{{attribute requires integer constant between 1 and 1048576 inclusive}}
   __attribute__((__numbanks__(-4)))
   unsigned int nb_four[64];
 
@@ -172,10 +226,23 @@ void foo1()
   __attribute__((__numbanks__(4,8)))
   unsigned int nb_six[64];
 
-  //expected-error@+1{{requires integer constant between 1 and 1048576}}
+  //expected-error@+1{{'numbanks' attribute requires integer constant between 1 and 1048576 inclusive}}
   __attribute__((__numbanks__(0)))
   unsigned int nb_seven[64];
 }
+
+//expected-error@+1{{attribute only applies to local non-const variables and non-static data members}}
+__attribute__((__max_concurrency__(8)))
+__constant unsigned int ext_two[64] = { 1, 2, 3 };
+
+void other2()
+{
+  //expected-error@+1{{attribute only applies to local non-const variables and non-static data members}}
+  __attribute__((__max_concurrency__(8))) const int ext_six[64] = { 0, 1 };
+}
+
+//expected-error@+1{{attribute only applies to local non-const variables and non-static data members}}
+void other3(__attribute__((__max_concurrency__(8))) int pfoo) {}
 
 struct foo {
   //CHECK: FieldDecl{{.*}}v_two
@@ -207,6 +274,13 @@ struct foo {
   //CHECK-NEXT: ConstantExpr
   //CHECK-NEXT: IntegerLiteral{{.*}}8{{$}}
   __attribute__((__numbanks__(8))) unsigned int v_six[64];
+
+  //CHECK: FieldDecl{{.*}}v_seven
+  //CHECK: IntelFPGAMemoryAttr{{.*}}Implicit
+  //CHECK: IntelFPGAMaxConcurrencyAttr
+  //CHECK-NEXT: ConstantExpr
+  //CHECK-NEXT: IntegerLiteral{{.*}}4{{$}}
+  __attribute__((__max_concurrency__(4))) unsigned int v_seven[64];
 };
 
 template <typename name, typename Func>

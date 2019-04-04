@@ -1709,6 +1709,17 @@ with N banks.
   }];
 }
 
+def IntelFPGAMaxConcurrencyAttrDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "max_concurrency (IntelFGPA)";
+  let Content = [{
+This attribute may be attached to a variable or struct member declaration and
+instructs the backend to replicate the memory generated for the variable or
+struct member sufficiently to enable the specified number of simultaneous
+threads or loop iterations.
+  }];
+}
+
 def RISCVInterruptDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "interrupt (RISCV)";

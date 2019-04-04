@@ -4,9 +4,11 @@
 //CHECK: [[ANN2:@.str[\.]*[0-9]*]] = {{.*}}{register:1}
 //CHECK: [[ANN3:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}
 //CHECK: [[ANN4:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{bankwidth:4}
-//CHECK: [[ANN5:@.str[\.]*[0-9]*]] = {{.*}}{memory:BLOCK_RAM}
-//CHECK: [[ANN6:@.str[\.]*[0-9]*]] = {{.*}}{memory:MLAB}
-//CHECK: [[ANN7:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{bankwidth:8}
+//CHECK: [[ANN5:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{max_concurrency:8}
+//CHECK: [[ANN6:@.str[\.]*[0-9]*]] = {{.*}}{memory:BLOCK_RAM}
+//CHECK: [[ANN7:@.str[\.]*[0-9]*]] = {{.*}}{memory:MLAB}
+//CHECK: [[ANN8:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{bankwidth:8}
+//CHECK: [[ANN9:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{max_concurrency:4}
 
 void foo() {
   //CHECK: %[[VAR_ONE:[0-9]+]] = bitcast{{.*}}var_one
@@ -32,6 +34,7 @@ struct foo_two {
   int __attribute__((register)) f2;
   int __attribute__((__memory__)) f3;
   int __attribute__((__bankwidth__(4))) f4;
+  int __attribute__((max_concurrency(8))) f5;
 };
 
 void bar() {
@@ -52,6 +55,10 @@ void bar() {
   //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD4]]
   //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN4]]
   s1.f4 = 0;
+  //CHECK: %[[FIELD5:.*]] = getelementptr inbounds %struct.foo_two{{.*}}
+  //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD5]]
+  //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN5]]
+  s1.f5 = 0;
 }
 
 void baz() {
@@ -69,16 +76,20 @@ void baz() {
   int v_three [[intelfpga::memory]];
   //CHECK: %[[V_FOUR:[0-9]+]] = bitcast{{.*}}v_four
   //CHECK: %[[V_FOUR1:v_four[0-9]+]] = bitcast{{.*}}v_four
-  //CHECK: llvm.var.annotation{{.*}}%[[V_FOUR1]],{{.*}}[[ANN5]]
+  //CHECK: llvm.var.annotation{{.*}}%[[V_FOUR1]],{{.*}}[[ANN6]]
   int v_four [[intelfpga::memory("BLOCK_RAM")]];
   //CHECK: %[[V_FIVE:[0-9]+]] = bitcast{{.*}}v_five
   //CHECK: %[[V_FIVE1:v_five[0-9]+]] = bitcast{{.*}}v_five
-  //CHECK: llvm.var.annotation{{.*}}%[[V_FIVE1]],{{.*}}[[ANN6]]
+  //CHECK: llvm.var.annotation{{.*}}%[[V_FIVE1]],{{.*}}[[ANN7]]
   int v_five [[intelfpga::memory("MLAB")]];
   //CHECK: %[[V_SIX:[0-9]+]] = bitcast{{.*}}v_six
   //CHECK: %[[V_SIX1:v_six[0-9]+]] = bitcast{{.*}}v_six
-  //CHECK: llvm.var.annotation{{.*}}%[[V_SIX1]],{{.*}}[[ANN7]]
+  //CHECK: llvm.var.annotation{{.*}}%[[V_SIX1]],{{.*}}[[ANN8]]
   int v_six [[intelfpga::bankwidth(8)]];
+  //CHECK: %[[V_SEVEN:[0-9]+]] = bitcast{{.*}}v_seven
+  //CHECK: %[[V_SEVEN1:v_seven[0-9]+]] = bitcast{{.*}}v_seven
+  //CHECK: llvm.var.annotation{{.*}}%[[V_SEVEN1]],{{.*}}[[ANN9]]
+  int v_seven [[intelfpga::max_concurrency(4)]];
 }
 
 template <typename name, typename Func>
