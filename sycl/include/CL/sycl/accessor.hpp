@@ -810,11 +810,11 @@ public:
            buffer<DataT, Dimensions>>::type &bufferRef)
 #ifdef __SYCL_DEVICE_ONLY__
       : impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
-             bufferRef.get_range(), bufferRef.get_range()) {
+             bufferRef.MemRange, bufferRef.MemRange) {
 #else
       : impl(std::make_shared<_ImplT>(
                  (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
-                 bufferRef.get_range(), bufferRef.get_range())) {
+                 bufferRef.MemRange, bufferRef.MemRange)) {
 #endif
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
@@ -858,12 +858,12 @@ public:
       // Pass nullptr as a pointer to mem and use buffers from the ctor
       // arguments to avoid the need in adding utility functions for
       // dummy/default initialization of range fields.
-      : impl(nullptr, bufferRef.get_range(), bufferRef.get_range(),
+      : impl(nullptr, bufferRef.MemRange, bufferRef.MemRange,
              &commandGroupHandlerRef) {}
 #else
       : impl(std::make_shared<_ImplT>(
                  (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
-                 bufferRef.get_range(), bufferRef.get_range(),
+                 bufferRef.MemRange, bufferRef.MemRange,
                  &commandGroupHandlerRef)) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
@@ -906,11 +906,11 @@ public:
       // arguments to avoid the need in adding utility functions for
       // dummy/default initialization of range<Dimensions> and
       // id<Dimension> fields.
-      : impl(nullptr, Range, bufferRef.get_range(), Offset) {}
+      : impl(nullptr, Range, bufferRef.MemRange, Offset) {}
 #else   // !__SYCL_DEVICE_ONLY__
       : impl(std::make_shared<_ImplT>(
                  (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
-                 bufferRef.get_range(), Offset)) {
+                 bufferRef.MemRange, Offset)) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
       if (BufImpl->OpenCLInterop) {
@@ -956,12 +956,12 @@ public:
       // arguments to avoid the need in adding utility functions for
       // dummy/default initialization of range<Dimensions> and
       // id<Dimension> fields.
-      : impl(nullptr, Range, bufferRef.get_range(),
+      : impl(nullptr, Range, bufferRef.MemRange,
              &commandGroupHandlerRef, Offset) {}
 #else   // !__SYCL_DEVICE_ONLY__
       : impl(std::make_shared<_ImplT>(
                  (dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
-                 bufferRef.get_range(), &commandGroupHandlerRef, Offset)) {
+                 bufferRef.MemRange, &commandGroupHandlerRef, Offset)) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
       throw cl::sycl::runtime_error(

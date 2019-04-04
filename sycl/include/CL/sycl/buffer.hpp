@@ -33,46 +33,50 @@ public:
 
   buffer(const range<dimensions> &bufferRange,
          const property_list &propList = {})
-      : Range(bufferRange) {
+      : Range(bufferRange), MemRange(bufferRange) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         get_count() * sizeof(T), propList);
   }
 
   buffer(const range<dimensions> &bufferRange, AllocatorT allocator,
-         const property_list &propList = {}) {
+         const property_list &propList = {})
+      : Range(bufferRange), MemRange(bufferRange) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         get_count() * sizeof(T), propList, allocator);
   }
 
   buffer(T *hostData, const range<dimensions> &bufferRange,
          const property_list &propList = {})
-      : Range(bufferRange) {
+      : Range(bufferRange), MemRange(bufferRange) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         hostData, get_count() * sizeof(T), propList);
   }
 
   buffer(T *hostData, const range<dimensions> &bufferRange,
-         AllocatorT allocator, const property_list &propList = {}) {
+         AllocatorT allocator, const property_list &propList = {})
+      : Range(bufferRange), MemRange(bufferRange) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         hostData, get_count() * sizeof(T), propList, allocator);
   }
 
   buffer(const T *hostData, const range<dimensions> &bufferRange,
          const property_list &propList = {})
-      : Range(bufferRange) {
+      : Range(bufferRange), MemRange(bufferRange) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         hostData, get_count() * sizeof(T), propList);
   }
 
   buffer(const T *hostData, const range<dimensions> &bufferRange,
-         AllocatorT allocator, const property_list &propList = {}) {
+         AllocatorT allocator, const property_list &propList = {})
+      : Range(bufferRange), MemRange(bufferRange) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         hostData, get_count() * sizeof(T), propList, allocator);
   }
 
   buffer(const shared_ptr_class<T> &hostData,
          const range<dimensions> &bufferRange, AllocatorT allocator,
-         const property_list &propList = {}) {
+         const property_list &propList = {})
+      : Range(bufferRange), MemRange(bufferRange) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         hostData, get_count() * sizeof(T), propList, allocator);
   }
@@ -80,7 +84,7 @@ public:
   buffer(const shared_ptr_class<T> &hostData,
          const range<dimensions> &bufferRange,
          const property_list &propList = {})
-      : Range(bufferRange) {
+      : Range(bufferRange), MemRange(bufferRange) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         hostData, get_count() * sizeof(T), propList);
   }
@@ -89,7 +93,8 @@ public:
             typename = EnableIfOneDimension<N>>
   buffer(InputIterator first, InputIterator last, AllocatorT allocator,
          const property_list &propList = {})
-      : Range(range<1>(std::distance(first, last))) {
+      : Range(range<1>(std::distance(first, last))),
+        MemRange(range<1>(std::distance(first, last))) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         first, last, get_count() * sizeof(T), propList, allocator);
   }
@@ -98,15 +103,16 @@ public:
             typename = EnableIfOneDimension<N>>
   buffer(InputIterator first, InputIterator last,
          const property_list &propList = {})
-      : Range(range<1>(std::distance(first, last))) {
+      : Range(range<1>(std::distance(first, last))),
+        MemRange(range<1>(std::distance(first, last))) {
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         first, last, get_count() * sizeof(T), propList);
   }
 
-  // buffer(buffer<T, dimensions, AllocatorT> b, const id<dimensions>
-  // &baseIndex, const range<dimensions> &subRange) {
-  //     impl = std::make_shared<detail::buffer_impl>(b, baseIndex, subRange);
-  // }
+  buffer(buffer<T, dimensions, AllocatorT> &b, const id<dimensions> &baseIndex,
+         const range<dimensions> &subRange)
+      : impl(b.impl), Offset(baseIndex + b.Offset), Range(subRange), MemRange(b.MemRange),
+        IsSubBuffer(true) {}
 
   template <int N = dimensions, typename = EnableIfOneDimension<N>>
   buffer(cl_mem MemObject, const context &SyclContext,
@@ -116,6 +122,7 @@ public:
     CHECK_OCL_CODE(clGetMemObjectInfo(MemObject, CL_MEM_SIZE, sizeof(size_t),
                                       &BufSize, nullptr));
     Range[0] = BufSize / sizeof(T);
+    MemRange[0] = BufSize / sizeof(T);
     impl = std::make_shared<detail::buffer_impl<AllocatorT>>(
         MemObject, SyclContext, BufSize, AvailableEvent);
   }
@@ -150,6 +157,9 @@ public:
             access::target target = access::target::global_buffer>
   accessor<T, dimensions, mode, target, access::placeholder::false_t>
   get_access(handler &commandGroupHandler) {
+    if (IsSubBuffer)
+      return impl->template get_access<T, dimensions, mode, target>(
+          *this, commandGroupHandler, Range, Offset);
     return impl->template get_access<T, dimensions, mode, target>(
         *this, commandGroupHandler);
   }
@@ -158,6 +168,9 @@ public:
   accessor<T, dimensions, mode, access::target::host_buffer,
            access::placeholder::false_t>
   get_access() {
+    if (IsSubBuffer)
+      return impl->template get_access<T, dimensions, mode>(*this, Range,
+                                                            Offset);
     return impl->template get_access<T, dimensions, mode>(*this);
   }
 
@@ -185,7 +198,7 @@ public:
 
   void set_write_back(bool flag = true) { return impl->set_write_back(flag); }
 
-  // bool is_sub_buffer() const { return impl->is_sub_buffer(); }
+  bool is_sub_buffer() const { return IsSubBuffer; }
 
   template <typename ReinterpretT, int ReinterpretDim>
   buffer<ReinterpretT, ReinterpretDim, AllocatorT>
@@ -212,12 +225,22 @@ private:
   template <class Obj>
   friend decltype(Obj::impl) detail::getSyclObjImpl(const Obj &SyclObject);
   template <typename A, int dims, typename C> friend class buffer;
+  template <typename DataT, int dims, access::mode mode,
+            access::target target, access::placeholder isPlaceholder>
+  friend class accessor;
+  // If this buffer is subbuffer - this range represents range of the parent
+  // buffer
+  range<dimensions> MemRange;
+  bool IsSubBuffer = false;
   range<dimensions> Range;
+  // If this buffer is sub-buffer - offset field specifies the origin of the
+  // sub-buffer inside the parent buffer
+  id<dimensions> Offset;
 
   // Reinterpret contructor
   buffer(shared_ptr_class<detail::buffer_impl<AllocatorT>> Impl,
          range<dimensions> reinterpretRange)
-      : impl(Impl), Range(reinterpretRange){};
+      : impl(Impl), Range(reinterpretRange), MemRange(reinterpretRange) {};
 };
 } // namespace sycl
 } // namespace cl
