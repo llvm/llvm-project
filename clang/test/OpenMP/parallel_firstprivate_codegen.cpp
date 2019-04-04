@@ -33,6 +33,16 @@
 #ifndef HEADER
 #define HEADER
 
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 struct St {
   int a, b;
   St() : a(0), b(0) {}
@@ -322,7 +332,7 @@ int main() {
     s_arr[0] = var;
     sivar = 2;
   }
-#pragma omp parallel firstprivate(t_var)
+#pragma omp parallel allocate(omp_default_mem_alloc: t_var) firstprivate(t_var)
   {}
   return tmain<int>();
 #endif
@@ -333,6 +343,7 @@ int main() {
 // CHECK: [[T_VAR:%.+]] = alloca i32,
 // CHECK: [[T_VARCAST:%.+]] = alloca [[iz:i64|i32]],
 // CHECK: [[SIVARCAST:%.+]] = alloca [[iz]],
+// CHECK: [[T_VARCAST1:%.+]] = alloca [[iz:i64|i32]],
 // CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
 // CHECK: [[T_VARVAL:%.+]] = load i32, i32* [[T_VAR]],
 // CHECK-64: [[T_VARCONV:%.+]] = bitcast i64* [[T_VARCAST]] to i32*
@@ -345,6 +356,12 @@ int main() {
 // CHECK-32: store i32 [[SIVARVAL]], i32* [[SIVARCAST]],
 // CHECK: [[SIVARPVT:%.+]] = load [[iz]], [[iz]]* [[SIVARCAST]],
 // CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [2 x i32]*, [[iz]], [2 x [[S_FLOAT_TY]]]*, [[S_FLOAT_TY]]*, i{{[0-9]+}})* [[MAIN_MICROTASK:@.+]] to void {{.*}}[[iz]] [[T_VARPVT]],{{.*}}[[iz]] [[SIVARPVT]]
+// CHECK: [[T_VARVAL:%.+]] = load i32, i32* [[T_VAR]],
+// CHECK-64: [[T_VARCONV:%.+]] = bitcast i64* [[T_VARCAST1]] to i32*
+// CHECK-64: store i32 [[T_VARVAL]], i32* [[T_VARCONV]],
+// CHECK-32: store i32 [[T_VARVAL]], i32* [[T_VARCAST1]],
+// CHECK: [[T_VARPVT:%.+]] = load [[iz]], [[iz]]* [[T_VARCAST1]],
+// CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[iz]])* [[MAIN_MICROTASK1:@.+]] to void {{.*}}[[iz]] [[T_VARPVT]])
 // CHECK: = call {{.*}}i{{.+}} [[TMAIN_INT:@.+]]()
 // CHECK: call {{.*}} [[S_FLOAT_TY_DESTR:@.+]]([[S_FLOAT_TY]]*
 // CHECK: ret
@@ -387,6 +404,24 @@ int main() {
 // CHECK-DAG: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
 // CHECK-DAG: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]*
 // CHECK: ret void
+
+
+// CHECK:    define internal void [[MAIN_MICROTASK1]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[iz]] [[T_VAR:%.+]])
+// CHECK:    [[GTID_ADDR:%.+]] = alloca i32*,
+// CHECK:    store [[iz]] [[T_VAR]], [[iz]]* [[T_VAR_ADDR:%.+]],
+// CHECK-64: [[BC:%.+]] = bitcast [[iz]]* [[T_VAR_ADDR]] to i32*
+// CHECK:    [[GTID_PTR:%.+]] = load i32*, i32** [[GTID_ADDR]],
+// CHECK:    [[GTID:%.+]] = load i32, i32* [[GTID_PTR]],
+// CHECK:    [[ALLOCATOR:%.+]] = load i8**, i8*** @omp_default_mem_alloc,
+// CHECK:    [[T_VAR_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], [[iz]] 4, i8** [[ALLOCATOR]])
+// CHECK:    [[T_VAR_PRIV:%.+]] = bitcast i8* [[T_VAR_VOID_PTR]] to i32*
+// CHECK-32: [[T_VAR_VAL:%.+]] = load i32, i32* [[T_VAR_ADDR]],
+// CHECK-64: [[T_VAR_VAL:%.+]] = load i32, i32* [[BC]],
+// CHECK:    store i32 [[T_VAR_VAL]], i32* [[T_VAR_PRIV]],
+// CHECK:    call void @__kmpc_free(i32 [[GTID]], i8* [[T_VAR_VOID_PTR]], i8** [[ALLOCATOR]])
+// CHECK:    ret void
+
+
 // CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
 // CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]])
@@ -480,6 +515,16 @@ int main() {
 
 #endif
 #else
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 struct St {
   int a, b;
   St() : a(0), b(0) {}
@@ -488,7 +533,7 @@ struct St {
   void St_func(St s[2], int n, long double vla1[n]) {
     double vla2[n][n] __attribute__((aligned(128)));
     a = b;
-#pragma omp parallel firstprivate(s, vla1, vla2)
+#pragma omp parallel allocate(omp_thread_mem_alloc:vla2) firstprivate(s, vla1, vla2)
     vla1[b] = vla2[1][n - 1] = a = b;
   }
 };
@@ -521,9 +566,18 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // ARRAY-DAG: store %struct.St* %{{.+}}, %struct.St** [[PRIV_S]],
 // ARRAY-DAG: store x86_fp80* %{{.+}}, x86_fp80** [[PRIV_VLA1]],
 // ARRAY-DAG: store double* %{{.+}}, double** [[PRIV_VLA2]],
-// ARRAY: call i8* @llvm.stacksave()
 // ARRAY: [[SIZE:%.+]] = mul nuw i64 %{{.+}}, 8
-// ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 128 %{{.+}}, i8* align 128 %{{.+}}, i64 [[SIZE]], i1 false)
+// ARRAY: [[SZ1:%.+]] = add nuw i64 [[SIZE]], 127
+// ARRAY: [[SZ2:%.+]] = udiv i64 [[SZ1]], 128
+// ARRAY: [[SIZE:%.+]] = mul nuw i64 [[SZ2]], 128
+// ARRAY: [[ALLOCATOR:%.+]] = load i8**, i8*** @omp_thread_mem_alloc,
+// ARRAY: [[VLA2_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID:%.+]], i64 [[SIZE]], i8** [[ALLOCATOR]])
+// ARRAY: [[VLA2_PTR:%.+]] = bitcast i8* [[VLA2_VOID_PTR]] to double*
+// ARRAY: [[SIZE:%.+]] = mul nuw i64 %{{.+}}, 8
+// ARRAY: [[BC:%.+]] = bitcast double* [[VLA2_PTR]] to i8*
+// ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 128 [[BC]], i8* align 128 %{{.+}}, i64 [[SIZE]], i1 false)
+// ARRAY: call void @__kmpc_free(i32 [[GTID]], i8* [[VLA2_VOID_PTR]], i8** [[ALLOCATOR]])
+// ARRAY-NEXT: ret void
 #endif
 
 

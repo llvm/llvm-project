@@ -43,7 +43,7 @@ CommandReturnObject *SBCommandReturnObject::Release() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb_private::CommandReturnObject *,
                              SBCommandReturnObject, Release);
 
-  return m_opaque_up.release();
+  return LLDB_RECORD_RESULT(m_opaque_up.release());
 }
 
 const SBCommandReturnObject &SBCommandReturnObject::
@@ -55,7 +55,7 @@ operator=(const SBCommandReturnObject &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 bool SBCommandReturnObject::IsValid() const {

@@ -9,3 +9,23 @@
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ?f0@@YAXPEU?$AS_@$00$$CAD@__clang@@@Z
 ; CHECK-NEXT: error: Invalid mangled name
+
+?@@8
+; CHECK-EMPTY:
+; CHECK-NEXT: ?@@8
+; CHECK-NEXT: error: Invalid mangled name
+
+??
+; CHECK-EMPTY:
+; CHECK-NEXT: ??
+; CHECK-NEXT: error: Invalid mangled name
+
+??0@
+; CHECK-EMPTY:
+; CHECK-NEXT: ??0@
+; CHECK-NEXT: error: Invalid mangled name
+
+? @@   YC@
+; CHECK-EMPTY:
+; CHECK-NEXT: ? @@   YC@
+; CHECK-NEXT: error: Invalid mangled name

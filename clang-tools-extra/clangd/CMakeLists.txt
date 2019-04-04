@@ -116,7 +116,8 @@ add_clang_library(clangDaemon
   )
 
 add_subdirectory(refactor/tweaks)
-if( LLVM_LIB_FUZZING_ENGINE OR LLVM_USE_SANITIZE_COVERAGE )
+if (LINUX)
+  # FIXME: Make fuzzer not use linux-specific APIs, build it everywhere.
   add_subdirectory(fuzzer)
 endif()
 add_subdirectory(tool)

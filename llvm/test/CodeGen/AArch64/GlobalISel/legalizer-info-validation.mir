@@ -259,7 +259,7 @@
 # DEBUG:      .. the first uncovered type index: 1, OK
 #
 # DEBUG-NEXT: G_FEXP2 (opcode {{[0-9]+}}): 1 type index
-# DEBUG:      .. type index coverage check SKIPPED: no rules defined
+# DEBUG:      .. the first uncovered type index: 1, OK
 #
 # DEBUG-NEXT: G_FLOG (opcode {{[0-9]+}}): 1 type index
 # DEBUG:      .. the first uncovered type index: 1, OK

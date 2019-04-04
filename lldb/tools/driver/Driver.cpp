@@ -22,6 +22,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -469,85 +470,58 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   return error;
 }
 
-static ::FILE *PrepareCommandsForSourcing(const char *commands_data,
-                                          size_t commands_size, int fds[2]) {
-  enum PIPES { READ, WRITE }; // Constants 0 and 1 for READ and WRITE
-
-  ::FILE *commands_file = nullptr;
-  fds[0] = -1;
-  fds[1] = -1;
-  int err = 0;
+static inline int OpenPipe(int fds[2], std::size_t size) {
 #ifdef _WIN32
-  err = _pipe(fds, commands_size, O_BINARY);
+  return _pipe(fds, size, O_BINARY);
 #else
-  err = pipe(fds);
+  (void) size;
+  return pipe(fds);
 #endif
-  if (err == 0) {
-    ssize_t nrwr = write(fds[WRITE], commands_data, commands_size);
-    if (nrwr < 0) {
-      WithColor::error()
-          << format(
-                 "write(%i, %p, %" PRIu64
-                 ") failed (errno = %i) when trying to open LLDB commands pipe",
-                 fds[WRITE], static_cast<const void *>(commands_data),
-                 static_cast<uint64_t>(commands_size), errno)
-          << '\n';
-    } else if (static_cast<size_t>(nrwr) == commands_size) {
-// Close the write end of the pipe so when we give the read end to
-// the debugger/command interpreter it will exit when it consumes all
-// of the data
-#ifdef _WIN32
-      _close(fds[WRITE]);
-      fds[WRITE] = -1;
-#else
-      close(fds[WRITE]);
-      fds[WRITE] = -1;
-#endif
-      // Now open the read file descriptor in a FILE * that we can give to
-      // the debugger as an input handle
-      commands_file = fdopen(fds[READ], "r");
-      if (commands_file != nullptr) {
-        fds[READ] = -1; // The FILE * 'commands_file' now owns the read
-                        // descriptor Hand ownership if the FILE * over to the
-                        // debugger for "commands_file".
-      } else {
-        WithColor::error() << format("fdopen(%i, \"r\") failed (errno = %i) "
-                                     "when trying to open LLDB commands pipe",
-                                     fds[READ], errno)
-                           << '\n';
-      }
-    }
-  } else {
-    WithColor::error()
-        << "can't create pipe file descriptors for LLDB commands\n";
-  }
-
-  return commands_file;
 }
 
-void CleanupAfterCommandSourcing(int fds[2]) {
-  enum PIPES { READ, WRITE }; // Constants 0 and 1 for READ and WRITE
+static ::FILE *PrepareCommandsForSourcing(const char *commands_data,
+                                          size_t commands_size) {
+  enum PIPES { READ, WRITE }; // Indexes for the read and write fds
+  int fds[2] = {-1, -1};
 
-  // Close any pipes that we still have ownership of
-  if (fds[WRITE] != -1) {
-#ifdef _WIN32
-    _close(fds[WRITE]);
-    fds[WRITE] = -1;
-#else
-    close(fds[WRITE]);
-    fds[WRITE] = -1;
-#endif
+  if (OpenPipe(fds, commands_size) != 0) {
+    WithColor::error()
+        << "can't create pipe file descriptors for LLDB commands\n";
+    return nullptr;
   }
 
-  if (fds[READ] != -1) {
-#ifdef _WIN32
-    _close(fds[READ]);
-    fds[READ] = -1;
-#else
-    close(fds[READ]);
-    fds[READ] = -1;
-#endif
+  ssize_t nrwr = write(fds[WRITE], commands_data, commands_size);
+  if (nrwr != commands_size) {
+    WithColor::error()
+        << format(
+                "write(%i, %p, %" PRIu64
+                ") failed (errno = %i) when trying to open LLDB commands pipe",
+                fds[WRITE], static_cast<const void *>(commands_data),
+                static_cast<uint64_t>(commands_size), errno)
+        << '\n';
+    llvm::sys::Process::SafelyCloseFileDescriptor(fds[READ]);
+    llvm::sys::Process::SafelyCloseFileDescriptor(fds[WRITE]);
+    return nullptr;
   }
+
+  // Close the write end of the pipe, so that the command interpreter will exit
+  // when it consumes all the data.
+  llvm::sys::Process::SafelyCloseFileDescriptor(fds[WRITE]);
+
+  // Open the read file descriptor as a FILE * that we can return as an input
+  // handle.
+  ::FILE *commands_file = fdopen(fds[READ], "rb");
+  if (commands_file == nullptr) {
+    WithColor::error() << format("fdopen(%i, \"rb\") failed (errno = %i) "
+                                 "when trying to open LLDB commands pipe",
+                                 fds[READ], errno)
+                       << '\n';
+    llvm::sys::Process::SafelyCloseFileDescriptor(fds[READ]);
+    return nullptr;
+  }
+
+  // 'commands_file' now owns the read descriptor.
+  return commands_file;
 }
 
 std::string EscapeString(std::string arg) {
@@ -678,10 +652,9 @@ int Driver::MainLoop() {
   bool quit_requested = false;
   bool stopped_for_crash = false;
   if ((commands_data != nullptr) && (commands_size != 0u)) {
-    int initial_commands_fds[2];
     bool success = true;
     FILE *commands_file = PrepareCommandsForSourcing(
-        commands_data, commands_size, initial_commands_fds);
+        commands_data, commands_size);
     if (commands_file != nullptr) {
       m_debugger.SetInputFileHandle(commands_file, true);
 
@@ -703,14 +676,13 @@ int Driver::MainLoop() {
 
       if (m_option_data.m_batch && stopped_for_crash &&
           !m_option_data.m_after_crash_commands.empty()) {
-        int crash_command_fds[2];
         SBStream crash_commands_stream;
         WriteCommandsForSourcing(eCommandPlacementAfterCrash,
                                  crash_commands_stream);
         const char *crash_commands_data = crash_commands_stream.GetData();
         const size_t crash_commands_size = crash_commands_stream.GetSize();
         commands_file = PrepareCommandsForSourcing(
-            crash_commands_data, crash_commands_size, crash_command_fds);
+            crash_commands_data, crash_commands_size);
         if (commands_file != nullptr) {
           bool local_quit_requested;
           bool local_stopped_for_crash;
@@ -726,9 +698,6 @@ int Driver::MainLoop() {
       m_debugger.SetAsync(old_async);
     } else
       success = false;
-
-    // Close any pipes that we still have ownership of
-    CleanupAfterCommandSourcing(initial_commands_fds);
 
     // Something went wrong with command pipe
     if (!success) {

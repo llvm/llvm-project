@@ -10,6 +10,16 @@
 #ifndef HEADER
 #define HEADER
 
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 volatile double g, g_orig;
 volatile double &g1 = g_orig;
 
@@ -124,7 +134,7 @@ int main() {
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp parallel
-#pragma omp for reduction(& : var3)
+#pragma omp for reduction(& : var3) allocate(omp_cgroup_mem_alloc: var3)
   for (int i = 0; i < 10; ++i)
     ;
   return tmain<int, 42>();
@@ -778,7 +788,6 @@ int main() {
 // CHECK: define internal void [[MAIN_MICROTASK6]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* dereferenceable(48) %{{.+}})
 
 // CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [4 x [[S_FLOAT_TY]]]*,
-// CHECK: [[VAR3_PRIV:%.+]] = alloca [4 x [[S_FLOAT_TY]]],
 
 // Reduction list for runtime.
 // CHECK: [[RED_LIST:%.+]] = alloca [1 x i8*],
@@ -788,12 +797,15 @@ int main() {
 // CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
 // CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
 // CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+// CHECK: [[ALLOCATOR:%.+]] = load i8**, i8*** @omp_cgroup_mem_alloc,
+// CHECK: [[VAR3_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID:%.+]], i64 48, i8** [[ALLOCATOR]])
+// CHECK: [[VAR3_PRIV:%.+]] = bitcast i8* [[VAR3_VOID_PTR]] to [4 x %struct.S]*
 // CHECK: getelementptr inbounds [4 x [[S_FLOAT_TY]]], [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], i32 0, i32 0
 // CHECK: bitcast [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]] to [[S_FLOAT_TY]]*
 // CHECK: getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* %{{.+}}, i64 4
 
 // CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], [4 x [[S_FLOAT_TY]]]** %
-
+// CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[VAR3_VOID_PTR]], i8** [[ALLOCATOR]])
 // CHECK: ret void
 
 // CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT_42]]()

@@ -34,7 +34,7 @@ const SBSymbol &SBSymbol::operator=(const SBSymbol &rhs) {
                      SBSymbol, operator=,(const lldb::SBSymbol &), rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBSymbol::~SBSymbol() { m_opaque_ptr = NULL; }

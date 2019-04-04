@@ -75,7 +75,7 @@ operator=(const lldb::SBExecutionContext &rhs) {
       SBExecutionContext, operator=,(const lldb::SBExecutionContext &), rhs);
 
   m_exe_ctx_sp = rhs.m_exe_ctx_sp;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 ExecutionContextRef *SBExecutionContext::get() const {

@@ -240,7 +240,7 @@ const lldb::SBQueue &SBQueue::operator=(const lldb::SBQueue &rhs) {
                      SBQueue, operator=,(const lldb::SBQueue &), rhs);
 
   m_opaque_sp = rhs.m_opaque_sp;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBQueue::~SBQueue() {}

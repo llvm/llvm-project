@@ -38,7 +38,7 @@ const SBData &SBData::operator=(const SBData &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBData::~SBData() {}

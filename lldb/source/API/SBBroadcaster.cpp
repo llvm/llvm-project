@@ -45,7 +45,7 @@ const SBBroadcaster &SBBroadcaster::operator=(const SBBroadcaster &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
     m_opaque_ptr = rhs.m_opaque_ptr;
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBBroadcaster::~SBBroadcaster() { reset(NULL, false); }

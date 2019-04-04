@@ -466,6 +466,10 @@ IdentifierNode *
 Demangler::demangleFunctionIdentifierCode(StringView &MangledName) {
   assert(MangledName.startsWith('?'));
   MangledName = MangledName.dropFront();
+  if (MangledName.empty()) {
+    Error = true;
+    return nullptr;
+  }
 
   if (MangledName.consumeFront("__"))
     return demangleFunctionIdentifierCode(
@@ -637,6 +641,7 @@ translateIntrinsicFunctionCode(char CH, FunctionIdentifierCodeGroup Group) {
 IdentifierNode *
 Demangler::demangleFunctionIdentifierCode(StringView &MangledName,
                                           FunctionIdentifierCodeGroup Group) {
+  assert(!MangledName.empty());
   switch (Group) {
   case FunctionIdentifierCodeGroup::Basic:
     switch (char CH = MangledName.popFront()) {
@@ -1276,12 +1281,16 @@ StringLiteralError:
   return nullptr;
 }
 
+// Returns MangledName's prefix before the first '@', or an error if
+// MangledName contains no '@' or the prefix has length 0.
 StringView Demangler::demangleSimpleString(StringView &MangledName,
                                            bool Memorize) {
   StringView S;
   for (size_t i = 0; i < MangledName.size(); ++i) {
     if (MangledName[i] != '@')
       continue;
+    if (i == 0)
+      break;
     S = MangledName.substr(0, i);
     MangledName = MangledName.dropFront(i + 1);
 
@@ -1318,8 +1327,10 @@ Demangler::demangleLocallyScopedNamePiece(StringView &MangledName) {
 
   NamedIdentifierNode *Identifier = Arena.alloc<NamedIdentifierNode>();
   MangledName.consumeFront('?');
-  auto Number = demangleNumber(MangledName);
-  assert(!Number.second);
+  uint64_t Number = 0;
+  bool IsNegative = false;
+  std::tie(Number, IsNegative) = demangleNumber(MangledName);
+  assert(!IsNegative);
 
   // One ? to terminate the number
   MangledName.consumeFront('?');
@@ -1337,7 +1348,7 @@ Demangler::demangleLocallyScopedNamePiece(StringView &MangledName) {
   OS << '`';
   Scope->output(OS, OF_Default);
   OS << '\'';
-  OS << "::`" << Number.first << "'";
+  OS << "::`" << Number << "'";
   OS << '\0';
   char *Result = OS.getBuffer();
   Identifier->Name = copyString(Result);
@@ -1380,9 +1391,12 @@ Demangler::demangleFullyQualifiedSymbolName(StringView &MangledName) {
     return nullptr;
 
   if (Identifier->kind() == NodeKind::StructorIdentifier) {
+    if (QN->Components->Count < 2) {
+      Error = true;
+      return nullptr;
+    }
     StructorIdentifierNode *SIN =
         static_cast<StructorIdentifierNode *>(Identifier);
-    assert(QN->Components->Count >= 2);
     Node *ClassNode = QN->Components->Nodes[QN->Components->Count - 2];
     SIN->Class = static_cast<IdentifierNode *>(ClassNode);
   }
@@ -1937,7 +1951,7 @@ ArrayTypeNode *Demangler::demangleArrayType(StringView &MangledName) {
   for (uint64_t I = 0; I < Rank; ++I) {
     uint64_t D = 0;
     std::tie(D, IsNegative) = demangleNumber(MangledName);
-    if (IsNegative) {
+    if (Error || IsNegative) {
       Error = true;
       return nullptr;
     }

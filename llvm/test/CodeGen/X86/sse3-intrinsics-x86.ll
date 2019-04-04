@@ -134,17 +134,16 @@ declare <16 x i8> @llvm.x86.sse3.ldu.dq(i8*) nounwind readonly
 define void @monitor(i8* %P, i32 %E, i32 %H) nounwind {
 ; X86-LABEL: monitor:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx ## encoding: [0x8b,0x54,0x24,0x0c]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x08]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    leal (%eax), %eax ## encoding: [0x8d,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx ## encoding: [0x8b,0x54,0x24,0x0c]
 ; X86-NEXT:    monitor ## encoding: [0x0f,0x01,0xc8]
 ; X86-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-LABEL: monitor:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    movl %esi, %ecx ## encoding: [0x89,0xf1]
-; X64-NEXT:    leaq (%rdi), %rax ## encoding: [0x48,0x8d,0x07]
+; X64-NEXT:    movq %rdi, %rax ## encoding: [0x48,0x89,0xf8]
 ; X64-NEXT:    monitor ## encoding: [0x0f,0x01,0xc8]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   tail call void @llvm.x86.sse3.monitor(i8* %P, i32 %E, i32 %H)

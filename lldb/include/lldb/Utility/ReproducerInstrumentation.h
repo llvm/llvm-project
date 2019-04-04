@@ -185,7 +185,7 @@ template <typename... Ts> inline std::string log_args(const Ts &... ts) {
   }
 
 #define LLDB_RECORD_RESULT(Result)                                             \
-  sb_recorder ? sb_recorder->RecordResult(Result) : Result;
+  sb_recorder ? sb_recorder->RecordResult(Result) : (Result);
 
 /// The LLDB_RECORD_DUMMY macro is special because it doesn't actually record
 /// anything. It's used to track API boundaries when we cannot record for
@@ -643,13 +643,7 @@ public:
       return;
 
     unsigned id = m_registry.GetID(uintptr_t(f));
-
-#ifndef LLDB_REPRO_INSTR_TRACE
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "Recording {0}: {1}",
-             id, m_pretty_func);
-#else
-    llvm::errs() << "Recording " << id << ": " << m_pretty_func << "\n";
-#endif
+    Log(id);
 
     m_serializer.SerializeAll(id);
     m_serializer.SerializeAll(args...);
@@ -670,13 +664,7 @@ public:
       return;
 
     unsigned id = m_registry.GetID(uintptr_t(f));
-
-#ifndef LLDB_REPRO_INSTR_TRACE
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "Recording {0}: {1}",
-             id, m_pretty_func);
-#else
-    llvm::errs() << "Recording " << id << ": " << m_pretty_func << "\n";
-#endif
+    Log(id);
 
     m_serializer.SerializeAll(id);
     m_serializer.SerializeAll(args...);
@@ -687,14 +675,14 @@ public:
   }
 
   /// Record the result of a function call.
-  template <typename Result> Result RecordResult(const Result &r) {
+  template <typename Result> Result RecordResult(Result &&r) {
     UpdateBoundary();
     if (ShouldCapture()) {
       assert(!m_result_recorded);
       m_serializer.SerializeAll(r);
       m_result_recorded = true;
     }
-    return r;
+    return std::forward<Result>(r);
   }
 
 private:
@@ -704,6 +692,7 @@ private:
   }
 
   bool ShouldCapture() { return m_local_boundary; }
+  void Log(unsigned id);
 
   Serializer &m_serializer;
   Registry &m_registry;

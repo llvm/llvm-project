@@ -50,6 +50,7 @@ protected:
     // Object and children.
     ID_StartObjects,
     ID_COFF,
+    ID_XCOFF32, // AIX XCOFF 32-bit
 
     ID_ELF32L, // ELF 32-bit, little endian
     ID_ELF32B, // ELF 32-bit, big endian
@@ -118,6 +119,8 @@ public:
   bool isCOFF() const {
     return TypeID == ID_COFF;
   }
+
+  bool isXCOFF() const { return TypeID == ID_XCOFF32; }
 
   bool isWasm() const { return TypeID == ID_Wasm; }
 

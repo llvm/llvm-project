@@ -54,7 +54,7 @@ operator=(const lldb::SBStructuredData &rhs) {
       SBStructuredData, operator=,(const lldb::SBStructuredData &), rhs);
 
   *m_impl_up = *rhs.m_impl_up;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {

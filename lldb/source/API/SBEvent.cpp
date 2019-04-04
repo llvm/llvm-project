@@ -55,7 +55,7 @@ const SBEvent &SBEvent::operator=(const SBEvent &rhs) {
     m_event_sp = rhs.m_event_sp;
     m_opaque_ptr = rhs.m_opaque_ptr;
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBEvent::~SBEvent() {}

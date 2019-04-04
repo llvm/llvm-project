@@ -47,7 +47,6 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @skipIfNetBSD # Hangs on NetBSD as well
     @no_debug_info_test
     def test_by_pid(self):
@@ -65,7 +64,6 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @skipIfNetBSD # Hangs on NetBSD as well
     @no_debug_info_test
     def test_by_name(self):
@@ -94,14 +92,14 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE)
-        # Wait for a bit to ensure the process is launched
-        time.sleep(5)
+        # Wait for a bit to ensure the process is launched, but not for so long
+        # that the process has already finished by the time we attach.
+        time.sleep(3)
         self.attach(program=program)
         self.set_and_hit_breakpoint(continueToExit=True)
 
     @skipUnlessDarwin
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @skipIfNetBSD # Hangs on NetBSD as well
     @no_debug_info_test
     def test_by_name_waitFor(self):
@@ -120,7 +118,6 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @skipIfNetBSD # Hangs on NetBSD as well
     @no_debug_info_test
     def test_commands(self):
