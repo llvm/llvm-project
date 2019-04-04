@@ -759,7 +759,7 @@ static void translateIdSymbols(MutableArrayRef<uint8_t> &RecordData,
   if (Kind == SymbolKind::S_GPROC32_ID || Kind == SymbolKind::S_LPROC32_ID) {
     SmallVector<TiReference, 1> Refs;
     auto Content = RecordData.drop_front(sizeof(RecordPrefix));
-    CVSymbol Sym(Kind, RecordData);
+    CVSymbol Sym(RecordData);
     discoverTypeIndicesInSymbol(Sym, Refs);
     assert(Refs.size() == 1);
     assert(Refs.front().Count == 1);
@@ -959,7 +959,7 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
         MutableArrayRef<uint8_t> RecordBytes;
         if (NeedsRealignment) {
           RecordBytes = copyAndAlignSymbol(Sym, AlignedSymbolMem);
-          Sym = CVSymbol(Sym.kind(), RecordBytes);
+          Sym = CVSymbol(RecordBytes);
         } else {
           // Otherwise, we can actually mutate the symbol directly, since we
           // copied it to apply relocations.
@@ -983,7 +983,7 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
         // An object file may have S_xxx_ID symbols, but these get converted to
         // "real" symbols in a PDB.
         translateIdSymbols(RecordBytes, TMerger.getIDTable());
-        Sym = CVSymbol(symbolKind(RecordBytes), RecordBytes);
+        Sym = CVSymbol(RecordBytes);
 
         // If this record refers to an offset in the object file's string table,
         // add that item to the global PDB string table and re-write the index.
