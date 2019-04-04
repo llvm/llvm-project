@@ -96,6 +96,9 @@ void ManualDWARFIndex::Index() {
 }
 
 void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, IndexSet &set) {
+  assert(!unit.GetSymbolFileDWARF()->GetBaseCompileUnit() &&
+      "DWARFUnit associated with .dwo or .dwp should not be indexed directly");
+
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS);
 
   if (log) {
