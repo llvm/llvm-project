@@ -224,7 +224,7 @@ Error MinimalTypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
   // append to the existing line.
   P.formatLine("{0} | {1} [size = {2}",
                fmt_align(Index, AlignStyle::Right, Width),
-               formatTypeLeafKind(Record.Type), Record.length());
+               formatTypeLeafKind(Record.kind()), Record.length());
   if (Hashes) {
     std::string H;
     if (Index.toArrayIndex() >= HashValues.size()) {

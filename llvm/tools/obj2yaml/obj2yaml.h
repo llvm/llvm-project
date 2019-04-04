@@ -15,6 +15,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/Minidump.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
@@ -26,6 +27,8 @@ std::error_code macho2yaml(llvm::raw_ostream &Out,
                            const llvm::object::Binary &Obj);
 llvm::Error minidump2yaml(llvm::raw_ostream &Out,
                           const llvm::object::MinidumpFile &Obj);
+std::error_code xcoff2yaml(llvm::raw_ostream &Out,
+                           const llvm::object::XCOFFObjectFile &Obj);
 std::error_code wasm2yaml(llvm::raw_ostream &Out,
                           const llvm::object::WasmObjectFile &Obj);
 

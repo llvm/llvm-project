@@ -393,9 +393,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
   }
   bool Changed = false;
   for (auto &F : M) {
-    if (F.isDeclaration())
-      continue;
-    if (F.hasFnAttribute(Attribute::OptimizeNone))
+    if (F.isDeclaration() || F.optForNone())
       continue;
 
     std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;

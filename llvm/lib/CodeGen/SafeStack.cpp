@@ -728,7 +728,7 @@ void SafeStack::TryInlinePointerAddress() {
   if (!isa<CallInst>(UnsafeStackPtr))
     return;
 
-  if(F.hasFnAttribute(Attribute::OptimizeNone))
+  if(F.optForNone())
     return;
 
   CallSite CS(UnsafeStackPtr);

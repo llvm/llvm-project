@@ -20,7 +20,7 @@ CVSymbolVisitor::CVSymbolVisitor(SymbolVisitorCallbacks &Callbacks)
 template <typename T>
 static Error visitKnownRecord(CVSymbol &Record,
                               SymbolVisitorCallbacks &Callbacks) {
-  SymbolRecordKind RK = static_cast<SymbolRecordKind>(Record.Type);
+  SymbolRecordKind RK = static_cast<SymbolRecordKind>(Record.kind());
   T KnownRecord(RK);
   if (auto EC = Callbacks.visitKnownRecord(Record, KnownRecord))
     return EC;
@@ -29,7 +29,7 @@ static Error visitKnownRecord(CVSymbol &Record,
 
 static Error finishVisitation(CVSymbol &Record,
                               SymbolVisitorCallbacks &Callbacks) {
-  switch (Record.Type) {
+  switch (Record.kind()) {
   default:
     if (auto EC = Callbacks.visitUnknownSymbol(Record))
       return EC;

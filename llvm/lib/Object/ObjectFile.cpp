@@ -151,6 +151,8 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type) {
   case file_magic::coff_import_library:
   case file_magic::pecoff_executable:
     return createCOFFObjectFile(Object);
+  case file_magic::xcoff_object_32:
+    return createXCOFFObjectFile(Object);
   case file_magic::wasm_object:
     return createWasmObjectFile(Object);
   }

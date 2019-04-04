@@ -2036,7 +2036,7 @@ InlineCost llvm::getInlineCost(
     return llvm::InlineCost::getNever("conflicting attributes");
 
   // Don't inline this call if the caller has the optnone attribute.
-  if (Caller->hasFnAttribute(Attribute::OptimizeNone))
+  if (Caller->optForNone())
     return llvm::InlineCost::getNever("optnone attribute");
 
   // Don't inline a function that treats null pointer as valid into a caller

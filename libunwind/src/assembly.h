@@ -47,6 +47,7 @@
 #define HIDDEN_SYMBOL(name) .private_extern name
 #define WEAK_SYMBOL(name) .weak_reference name
 #define WEAK_ALIAS(name, aliasname)                                            \
+  .globl SYMBOL_NAME(aliasname) SEPARATOR                                      \
   WEAK_SYMBOL(aliasname) SEPARATOR                                             \
   SYMBOL_NAME(aliasname) = SYMBOL_NAME(name)
 

@@ -488,6 +488,17 @@ protected:
   // SubclassData.  These are designed to fit within a uint16_t so they pack
   // with NodeType.
 
+#if defined(_AIX) && (!defined(__GNUC__) || defined(__ibmxl__))
+// Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
+// and give the `pack` pragma push semantics.
+#define BEGIN_TWO_BYTE_PACK() _Pragma("pack(2)")
+#define END_TWO_BYTE_PACK() _Pragma("pack(pop)")
+#else
+#define BEGIN_TWO_BYTE_PACK()
+#define END_TWO_BYTE_PACK()
+#endif
+
+BEGIN_TWO_BYTE_PACK()
   class SDNodeBitfields {
     friend class SDNode;
     friend class MemIntrinsicSDNode;
@@ -560,6 +571,9 @@ protected:
     LoadSDNodeBitfields LoadSDNodeBits;
     StoreSDNodeBitfields StoreSDNodeBits;
   };
+END_TWO_BYTE_PACK()
+#undef BEGIN_TWO_BYTE_PACK
+#undef END_TWO_BYTE_PACK
 
   // RawSDNodeBits must cover the entirety of the union.  This means that all of
   // the union's members must have size <= RawSDNodeBits.  We write the RHS as

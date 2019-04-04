@@ -15,5 +15,6 @@ executable("obj2yaml") {
     "minidump2yaml.cpp",
     "obj2yaml.cpp",
     "wasm2yaml.cpp",
+    "xcoff2yaml.cpp",
   ]
 }

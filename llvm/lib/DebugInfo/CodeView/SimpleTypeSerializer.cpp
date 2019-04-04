@@ -3,13 +3,6 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-static void writeRecordPrefix(BinaryStreamWriter &Writer, TypeLeafKind Kind) {
-  RecordPrefix Prefix;
-  Prefix.RecordKind = Kind;
-  Prefix.RecordLen = 0;
-  cantFail(Writer.writeObject(Prefix));
-}
-
 static void addPadding(BinaryStreamWriter &Writer) {
   uint32_t Align = Writer.getOffset() % 4;
   if (Align == 0)
@@ -32,10 +25,12 @@ ArrayRef<uint8_t> SimpleTypeSerializer::serialize(T &Record) {
   BinaryStreamWriter Writer(ScratchBuffer, support::little);
   TypeRecordMapping Mapping(Writer);
 
-  CVType CVT;
-  CVT.Type = static_cast<TypeLeafKind>(Record.getKind());
+  // Write the record prefix first with a dummy length but real kind.
+  RecordPrefix DummyPrefix(uint16_t(Record.getKind()));
+  cantFail(Writer.writeObject(DummyPrefix));
 
-  writeRecordPrefix(Writer, CVT.Type);
+  RecordPrefix *Prefix = reinterpret_cast<RecordPrefix *>(ScratchBuffer.data());
+  CVType CVT(Prefix, sizeof(RecordPrefix));
 
   cantFail(Mapping.visitTypeBegin(CVT));
   cantFail(Mapping.visitKnownRecord(CVT, Record));
@@ -43,8 +38,7 @@ ArrayRef<uint8_t> SimpleTypeSerializer::serialize(T &Record) {
 
   addPadding(Writer);
 
-  RecordPrefix *Prefix = reinterpret_cast<RecordPrefix *>(ScratchBuffer.data());
-
+  // Update the size and kind after serialization.
   Prefix->RecordKind = CVT.kind();
   Prefix->RecordLen = Writer.getOffset() - sizeof(uint16_t);
 
