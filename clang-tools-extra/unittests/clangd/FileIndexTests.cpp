@@ -16,7 +16,6 @@
 #include "index/FileIndex.h"
 #include "index/Index.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Preprocessor.h"
@@ -231,14 +230,14 @@ TEST(FileIndexTest, HasSystemHeaderMappingsInPreamble) {
 
   // Prepare preamble.
   auto CI = buildCompilerInvocation(PI);
-  auto PreambleData = buildPreamble(
-      MainFile, *buildCompilerInvocation(PI), /*OldPreamble=*/nullptr,
-      tooling::CompileCommand(), PI, std::make_shared<PCHContainerOperations>(),
-      /*StoreInMemory=*/true,
-      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
-          const CanonicalIncludes &Includes) {
-        Index.updatePreamble(MainFile, Ctx, PP, Includes);
-      });
+  auto PreambleData =
+      buildPreamble(MainFile, *buildCompilerInvocation(PI),
+                    /*OldPreamble=*/nullptr, tooling::CompileCommand(), PI,
+                    /*StoreInMemory=*/true,
+                    [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
+                        const CanonicalIncludes &Includes) {
+                      Index.updatePreamble(MainFile, Ctx, PP, Includes);
+                    });
   auto Symbols = runFuzzyFind(Index, "");
   EXPECT_THAT(Symbols, ElementsAre(_));
   EXPECT_THAT(Symbols.begin()->IncludeHeaders.front().IncludeHeader,
@@ -306,7 +305,7 @@ TEST(FileIndexTest, RebuildWithPreamble) {
   bool IndexUpdated = false;
   buildPreamble(
       FooCpp, *CI, /*OldPreamble=*/nullptr, tooling::CompileCommand(), PI,
-      std::make_shared<PCHContainerOperations>(), /*StoreInMemory=*/true,
+      /*StoreInMemory=*/true,
       [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
           const CanonicalIncludes &CanonIncludes) {
         EXPECT_FALSE(IndexUpdated) << "Expected only a single index update";
@@ -392,17 +391,16 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
 
   // Prepare preamble.
   auto CI = buildCompilerInvocation(PI);
-  auto PreambleData = buildPreamble(
-      MainFile, *buildCompilerInvocation(PI), /*OldPreamble=*/nullptr,
-      tooling::CompileCommand(), PI, std::make_shared<PCHContainerOperations>(),
-      /*StoreInMemory=*/true,
-      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
-          const CanonicalIncludes &) {});
+  auto PreambleData =
+      buildPreamble(MainFile, *buildCompilerInvocation(PI),
+                    /*OldPreamble=*/nullptr, tooling::CompileCommand(), PI,
+                    /*StoreInMemory=*/true,
+                    [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
+                        const CanonicalIncludes &) {});
   // Build AST for main file with preamble.
   auto AST =
       ParsedAST::build(createInvocationFromCommandLine(Cmd), PreambleData,
-                       llvm::MemoryBuffer::getMemBufferCopy(Main.code()),
-                       std::make_shared<PCHContainerOperations>(), PI.FS,
+                       llvm::MemoryBuffer::getMemBufferCopy(Main.code()), PI.FS,
                        /*Index=*/nullptr, ParseOptions());
   ASSERT_TRUE(AST);
   FileIndex Index;

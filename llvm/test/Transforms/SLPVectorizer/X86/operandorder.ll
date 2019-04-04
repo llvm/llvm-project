@@ -3,12 +3,10 @@
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n8:16:32-S128"
 
-
-
 ; Make sure we order the operands of commutative operations so that we get
 ; bigger vectorizable trees.
 
-define void @shuffle_operands1(double * noalias %from, double * noalias %to,
+define void @shuffle_operands1(double * noalias %from, double * noalias %to, double %v1, double %v2) {
 ; CHECK-LABEL: @shuffle_operands1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[FROM:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 4
@@ -19,7 +17,6 @@ define void @shuffle_operands1(double * noalias %from, double * noalias %to,
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP6]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  double %v1, double %v2) {
   %from_1 = getelementptr double, double *%from, i64 1
   %v0_1 = load double , double * %from
   %v0_2 = load double , double * %from_1
@@ -31,7 +28,7 @@ define void @shuffle_operands1(double * noalias %from, double * noalias %to,
   ret void
 }
 
-define void @shuffle_preserve_broadcast(double * noalias %from,
+define void @shuffle_preserve_broadcast(double * noalias %from, double * noalias %to, double %v1, double %v2) {
 ; CHECK-LABEL: @shuffle_preserve_broadcast(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
@@ -51,8 +48,6 @@ define void @shuffle_preserve_broadcast(double * noalias %from,
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
-  double * noalias %to,
-  double %v1, double %v2) {
 entry:
 br label %lp
 
@@ -72,7 +67,7 @@ ext:
   ret void
 }
 
-define void @shuffle_preserve_broadcast2(double * noalias %from,
+define void @shuffle_preserve_broadcast2(double * noalias %from, double * noalias %to, double %v1, double %v2) {
 ; CHECK-LABEL: @shuffle_preserve_broadcast2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
@@ -92,8 +87,6 @@ define void @shuffle_preserve_broadcast2(double * noalias %from,
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
-  double * noalias %to,
-  double %v1, double %v2) {
 entry:
 br label %lp
 
@@ -113,7 +106,7 @@ ext:
   ret void
 }
 
-define void @shuffle_preserve_broadcast3(double * noalias %from,
+define void @shuffle_preserve_broadcast3(double * noalias %from, double * noalias %to, double %v1, double %v2) {
 ; CHECK-LABEL: @shuffle_preserve_broadcast3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
@@ -133,8 +126,6 @@ define void @shuffle_preserve_broadcast3(double * noalias %from,
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
-  double * noalias %to,
-  double %v1, double %v2) {
 entry:
 br label %lp
 
@@ -154,8 +145,7 @@ ext:
   ret void
 }
 
-
-define void @shuffle_preserve_broadcast4(double * noalias %from,
+define void @shuffle_preserve_broadcast4(double * noalias %from, double * noalias %to, double %v1, double %v2) {
 ; CHECK-LABEL: @shuffle_preserve_broadcast4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
@@ -175,8 +165,6 @@ define void @shuffle_preserve_broadcast4(double * noalias %from,
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
-  double * noalias %to,
-  double %v1, double %v2) {
 entry:
 br label %lp
 
@@ -196,7 +184,7 @@ ext:
   ret void
 }
 
-define void @shuffle_preserve_broadcast5(double * noalias %from,
+define void @shuffle_preserve_broadcast5(double * noalias %from, double * noalias %to, double %v1, double %v2) {
 ; CHECK-LABEL: @shuffle_preserve_broadcast5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
@@ -216,8 +204,6 @@ define void @shuffle_preserve_broadcast5(double * noalias %from,
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
-  double * noalias %to,
-  double %v1, double %v2) {
 entry:
 br label %lp
 
@@ -238,7 +224,7 @@ ext:
 }
 
 
-define void @shuffle_preserve_broadcast6(double * noalias %from,
+define void @shuffle_preserve_broadcast6(double * noalias %from, double * noalias %to, double %v1, double %v2) {
 ; CHECK-LABEL: @shuffle_preserve_broadcast6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
@@ -258,8 +244,6 @@ define void @shuffle_preserve_broadcast6(double * noalias %from,
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
-  double * noalias %to,
-  double %v1, double %v2) {
 entry:
 br label %lp
 
@@ -446,7 +430,7 @@ define void @load_reorder_float(float* nocapture %c, float* noalias nocapture re
 ; a[2] = (b[2]+c[2])+d[2];
 ; a[3] = (b[3]+c[3])+d[3];
 
-define void @opcode_reorder(float* noalias nocapture %a, float* noalias nocapture readonly %b,
+define void @opcode_reorder(float* noalias nocapture %a, float* noalias nocapture readonly %b, float* noalias nocapture readonly %c,float* noalias nocapture readonly %d) {
 ; CHECK-LABEL: @opcode_reorder(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[B:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
@@ -460,7 +444,6 @@ define void @opcode_reorder(float* noalias nocapture %a, float* noalias nocaptur
 ; CHECK-NEXT:    store <4 x float> [[TMP8]], <4 x float>* [[TMP9]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  float* noalias nocapture readonly %c,float* noalias nocapture readonly %d){
   %1 = load float, float* %b
   %2 = load float, float* %c
   %3 = fadd float %1, %2

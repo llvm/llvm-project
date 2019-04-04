@@ -32,6 +32,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -246,7 +247,6 @@ llvm::Optional<ParsedAST>
 ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
                  std::shared_ptr<const PreambleData> Preamble,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
-                 std::shared_ptr<PCHContainerOperations> PCHs,
                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                  const SymbolIndex *Index, const ParseOptions &Opts) {
   assert(CI);
@@ -259,9 +259,8 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   StoreDiags ASTDiags;
   std::string Content = Buffer->getBuffer();
 
-  auto Clang =
-      prepareCompilerInstance(std::move(CI), PreamblePCH, std::move(Buffer),
-                              std::move(PCHs), VFS, ASTDiags);
+  auto Clang = prepareCompilerInstance(std::move(CI), PreamblePCH,
+                                       std::move(Buffer), VFS, ASTDiags);
   if (!Clang)
     return None;
 
@@ -488,8 +487,7 @@ std::shared_ptr<const PreambleData>
 buildPreamble(PathRef FileName, CompilerInvocation &CI,
               std::shared_ptr<const PreambleData> OldPreamble,
               const tooling::CompileCommand &OldCompileCommand,
-              const ParseInputs &Inputs,
-              std::shared_ptr<PCHContainerOperations> PCHs, bool StoreInMemory,
+              const ParseInputs &Inputs, bool StoreInMemory,
               PreambleParsedCallback PreambleCallback) {
   // Note that we don't need to copy the input contents, preamble can live
   // without those.
@@ -534,7 +532,8 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
   auto StatCache = llvm::make_unique<PreambleFileStatusCache>(AbsFileName);
   auto BuiltPreamble = PrecompiledPreamble::Build(
       CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
-      StatCache->getProducingFS(Inputs.FS), PCHs, StoreInMemory,
+      StatCache->getProducingFS(Inputs.FS),
+      std::make_shared<PCHContainerOperations>(), StoreInMemory,
       SerializedDeclsCollector);
 
   // When building the AST for the main file, we do want the function
@@ -560,8 +559,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
 llvm::Optional<ParsedAST>
 buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
          const ParseInputs &Inputs,
-         std::shared_ptr<const PreambleData> Preamble,
-         std::shared_ptr<PCHContainerOperations> PCHs) {
+         std::shared_ptr<const PreambleData> Preamble) {
   trace::Span Tracer("BuildAST");
   SPAN_ATTACH(Tracer, "File", FileName);
 
@@ -577,7 +575,7 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
   return ParsedAST::build(llvm::make_unique<CompilerInvocation>(*Invocation),
                           Preamble,
                           llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents),
-                          PCHs, std::move(VFS), Inputs.Index, Inputs.Opts);
+                          std::move(VFS), Inputs.Index, Inputs.Opts);
 }
 
 SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,

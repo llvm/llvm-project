@@ -37,18 +37,13 @@ class ManagedStaticBase {
 protected:
   // This should only be used as a static variable, which guarantees that this
   // will be zero initialized.
-  mutable std::atomic<void *> Ptr{nullptr};
-  mutable void (*DeleterFn)(void *) = nullptr;
-  mutable const ManagedStaticBase *Next = nullptr;
+  mutable std::atomic<void *> Ptr;
+  mutable void (*DeleterFn)(void*);
+  mutable const ManagedStaticBase *Next;
 
   void RegisterManagedStatic(void *(*creator)(), void (*deleter)(void*)) const;
 
 public:
-  /// ManagedStaticBase must be constexpr constructed so that they can be
-  /// accessed during dynamic initilization of other global variables, such as
-  /// cl::opt command line flags.
-  constexpr ManagedStaticBase() = default;
-
   /// isConstructed - Return true if this object has not been created yet.
   bool isConstructed() const { return Ptr != nullptr; }
 

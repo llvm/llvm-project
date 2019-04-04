@@ -370,6 +370,29 @@ public:
     operator != (const lldb::SBModule &rhs) const;
              
     %pythoncode %{
+        def __len__(self):
+            '''Return the number of symbols in a lldb.SBModule object.'''
+            return self.GetNumSymbols()
+
+        def __iter__(self):
+            '''Iterate over all symbols in a lldb.SBModule object.'''
+            return lldb_iter(self, 'GetNumSymbols', 'GetSymbolAtIndex')
+
+        def section_iter(self):
+            '''Iterate over all sections in a lldb.SBModule object.'''
+            return lldb_iter(self, 'GetNumSections', 'GetSectionAtIndex')
+
+        def compile_unit_iter(self):
+            '''Iterate over all compile units in a lldb.SBModule object.'''
+            return lldb_iter(self, 'GetNumCompileUnits', 'GetCompileUnitAtIndex')
+
+        def symbol_in_section_iter(self, section):
+            '''Given a module and its contained section, returns an iterator on the
+            symbols within the section.'''
+            for sym in self:
+                if in_range(sym, section):
+                    yield sym
+
         class symbols_access(object):
             re_compile_type = type(re.compile('.'))
             '''A helper object that will lazily hand out lldb.SBSymbol objects for a module when supplied an index, name, or regular expression.'''

@@ -116,7 +116,7 @@ add_clang_library(clangDaemon
   )
 
 add_subdirectory(refactor/tweaks)
-if (LINUX)
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   # FIXME: Make fuzzer not use linux-specific APIs, build it everywhere.
   add_subdirectory(fuzzer)
 endif()

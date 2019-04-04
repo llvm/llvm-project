@@ -258,19 +258,16 @@ static bool filterArch(ObjectFile &Obj) {
     return true;
 
   if (auto *MachO = dyn_cast<MachOObjectFile>(&Obj)) {
-    std::string ObjArch =
-        Triple::getArchTypeName(MachO->getArchTriple().getArch());
-
     for (auto Arch : ArchFilters) {
-      // Match name.
-      if (Arch == ObjArch)
-        return true;
-
       // Match architecture number.
       unsigned Value;
       if (!StringRef(Arch).getAsInteger(0, Value))
         if (Value == getCPUType(*MachO))
           return true;
+
+      // Match as name.
+      if (MachO->getArchTriple().getArch() == Triple(Arch).getArch())
+        return true;
     }
   }
   return false;

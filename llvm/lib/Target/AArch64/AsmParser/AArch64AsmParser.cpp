@@ -5153,15 +5153,9 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
 /// parseDirectiveArchExtension
 ///   ::= .arch_extension [no]feature
 bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
-  MCAsmParser &Parser = getParser();
+  SMLoc ExtLoc = getLoc();
 
-  if (getLexer().isNot(AsmToken::Identifier))
-    return Error(getLexer().getLoc(), "expected architecture extension name");
-
-  const AsmToken &Tok = Parser.getTok();
-  StringRef Name = Tok.getString();
-  SMLoc ExtLoc = Tok.getLoc();
-  Lex();
+  StringRef Name = getParser().parseStringToEndOfStatement().trim();
 
   if (parseToken(AsmToken::EndOfStatement,
                  "unexpected token in '.arch_extension' directive"))
