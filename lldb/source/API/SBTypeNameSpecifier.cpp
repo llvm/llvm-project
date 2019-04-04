@@ -108,7 +108,7 @@ operator=(const lldb::SBTypeNameSpecifier &rhs) {
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 bool SBTypeNameSpecifier::operator==(lldb::SBTypeNameSpecifier &rhs) {

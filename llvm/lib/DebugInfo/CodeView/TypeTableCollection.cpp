@@ -36,11 +36,7 @@ Optional<TypeIndex> TypeTableCollection::getNext(TypeIndex Prev) {
 
 CVType TypeTableCollection::getType(TypeIndex Index) {
   assert(Index.toArrayIndex() < Records.size());
-  ArrayRef<uint8_t> Bytes = Records[Index.toArrayIndex()];
-  const RecordPrefix *Prefix =
-      reinterpret_cast<const RecordPrefix *>(Bytes.data());
-  TypeLeafKind Kind = static_cast<TypeLeafKind>(uint16_t(Prefix->RecordKind));
-  return CVType(Kind, Bytes);
+  return CVType(Records[Index.toArrayIndex()]);
 }
 
 StringRef TypeTableCollection::getTypeName(TypeIndex Index) {

@@ -20,6 +20,10 @@ using namespace llvm::object;
 static std::error_code dumpObject(const ObjectFile &Obj) {
   if (Obj.isCOFF())
     return coff2yaml(outs(), cast<COFFObjectFile>(Obj));
+
+  if (Obj.isXCOFF())
+    return xcoff2yaml(outs(), cast<XCOFFObjectFile>(Obj));
+
   if (Obj.isELF())
     return elf2yaml(outs(), Obj);
   if (Obj.isWasm())

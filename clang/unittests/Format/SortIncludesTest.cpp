@@ -8,6 +8,7 @@
 
 #include "FormatTestUtils.h"
 #include "clang/Format/Format.h"
+#include "llvm/ADT/None.h"
 #include "llvm/Support/Debug.h"
 #include "gtest/gtest.h"
 
@@ -24,9 +25,11 @@ protected:
   }
 
   std::string sort(StringRef Code, std::vector<tooling::Range> Ranges,
-                   StringRef FileName = "input.cc") {
+                   StringRef FileName = "input.cc",
+                   unsigned ExpectedNumRanges = 1) {
     auto Replaces = sortIncludes(FmtStyle, Code, Ranges, FileName);
     Ranges = tooling::calculateRangesAfterReplacements(Replaces, Ranges);
+    EXPECT_EQ(ExpectedNumRanges, Replaces.size());
     auto Sorted = applyAllReplacements(Code, Replaces);
     EXPECT_TRUE(static_cast<bool>(Sorted));
     auto Result = applyAllReplacements(
@@ -35,8 +38,10 @@ protected:
     return *Result;
   }
 
-  std::string sort(StringRef Code, StringRef FileName = "input.cpp") {
-    return sort(Code, GetCodeRange(Code), FileName);
+  std::string sort(StringRef Code,
+                   StringRef FileName = "input.cpp",
+                   unsigned ExpectedNumRanges = 1) {
+    return sort(Code, GetCodeRange(Code), FileName, ExpectedNumRanges);
   }
 
   unsigned newCursor(llvm::StringRef Code, unsigned Cursor) {
@@ -151,7 +156,7 @@ TEST_F(SortIncludesTest, SupportClangFormatOffCStyle) {
                  "#include <b>\n"
                  "#include <a>\n"
                  "#include <c>\n"
-                 "/* clang-format onwards */\n"));
+                 "/* clang-format onwards */\n", "input.h", 2));
 }
 
 TEST_F(SortIncludesTest, IncludeSortingCanBeDisabled) {
@@ -161,7 +166,8 @@ TEST_F(SortIncludesTest, IncludeSortingCanBeDisabled) {
             "#include \"b.h\"\n",
             sort("#include \"a.h\"\n"
                  "#include \"c.h\"\n"
-                 "#include \"b.h\"\n"));
+                 "#include \"b.h\"\n",
+                 "input.h", 0));
 }
 
 TEST_F(SortIncludesTest, MixIncludeAndImport) {
@@ -214,7 +220,7 @@ TEST_F(SortIncludesTest, SortsLocallyInEachBlock) {
             sort("#include \"a.h\"\n"
                  "#include \"c.h\"\n"
                  "\n"
-                 "#include \"b.h\"\n"));
+                 "#include \"b.h\"\n", "input.h", 0));
 }
 
 TEST_F(SortIncludesTest, SortsAllBlocksWhenMerging) {
@@ -458,7 +464,7 @@ TEST_F(SortIncludesTest, NegativePriorities) {
             sort("#include \"important_os_header.h\"\n"
                  "#include \"c_main.h\"\n"
                  "#include \"a_other.h\"\n",
-                 "c_main.cc"));
+                 "c_main.cc", 0));
 }
 
 TEST_F(SortIncludesTest, PriorityGroupsAreSeparatedWhenRegroupping) {
@@ -486,7 +492,7 @@ TEST_F(SortIncludesTest, PriorityGroupsAreSeparatedWhenRegroupping) {
                  "#include \"c_main.h\"\n"
                  "\n"
                  "#include \"a_other.h\"\n",
-                 "c_main.cc"));
+                 "c_main.cc", 0));
 }
 
 TEST_F(SortIncludesTest, CalculatesCorrectCursorPosition) {
@@ -634,7 +640,17 @@ TEST_F(SortIncludesTest, DoNotSortLikelyXml) {
             sort("<!--;\n"
                  "#include <b>\n"
                  "#include <a>\n"
-                 "-->"));
+                 "-->", "input.h", 0));
+}
+
+TEST_F(SortIncludesTest, DoNotOutputReplacementsForSortedBlocksWithRegrouping) {
+  Style.IncludeBlocks = Style.IBS_Regroup;
+  std::string Code = R"(
+#include "b.h"
+
+#include <a.h>
+)";
+  EXPECT_EQ(Code, sort(Code, "input.h", 0));
 }
 
 } // end namespace

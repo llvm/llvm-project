@@ -241,7 +241,7 @@ toolchain("win") {
   }
 
   tool("alink") {
-    command = "lib /nologo {{arflags}} /out:{{output}} {{inputs}}"
+    command = "$link /lib /nologo {{arflags}} /out:{{output}} {{inputs}}"
     description = "LIB {{output}}"
     outputs = [
       "{{output_dir}}/{{target_output_name}}.lib",

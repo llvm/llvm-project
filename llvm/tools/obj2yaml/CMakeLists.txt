@@ -14,6 +14,7 @@ add_llvm_tool(obj2yaml
   elf2yaml.cpp
   macho2yaml.cpp
   minidump2yaml.cpp
+  xcoff2yaml.cpp
   wasm2yaml.cpp
   Error.cpp
   )

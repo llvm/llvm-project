@@ -396,7 +396,7 @@ bool LoopPass::skipLoop(const Loop *L) const {
   if (Gate.isEnabled() && !Gate.shouldRunPass(this, getDescription(*L)))
     return true;
   // Check for the OptimizeNone attribute.
-  if (F->hasFnAttribute(Attribute::OptimizeNone)) {
+  if (F->optForNone()) {
     // FIXME: Report this to dbgs() only once per function.
     LLVM_DEBUG(dbgs() << "Skipping pass '" << getPassName() << "' in function "
                       << F->getName() << "\n");

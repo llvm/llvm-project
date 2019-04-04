@@ -271,8 +271,8 @@ namespace {
     /// If so, return true.
     bool SimplifyDemandedBits(SDValue Op) {
       unsigned BitWidth = Op.getScalarValueSizeInBits();
-      APInt Demanded = APInt::getAllOnesValue(BitWidth);
-      return SimplifyDemandedBits(Op, Demanded);
+      APInt DemandedBits = APInt::getAllOnesValue(BitWidth);
+      return SimplifyDemandedBits(Op, DemandedBits);
     }
 
     /// Check the specified vector node value to see if it can be simplified or
@@ -280,8 +280,8 @@ namespace {
     /// elements. If so, return true.
     bool SimplifyDemandedVectorElts(SDValue Op) {
       unsigned NumElts = Op.getValueType().getVectorNumElements();
-      APInt Demanded = APInt::getAllOnesValue(NumElts);
-      return SimplifyDemandedVectorElts(Op, Demanded);
+      APInt DemandedElts = APInt::getAllOnesValue(NumElts);
+      return SimplifyDemandedVectorElts(Op, DemandedElts);
     }
 
     bool SimplifyDemandedBits(SDValue Op, const APInt &Demanded);
@@ -1093,10 +1093,10 @@ CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO) {
 
 /// Check the specified integer node value to see if it can be simplified or if
 /// things it uses can be simplified by bit propagation. If so, return true.
-bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &Demanded) {
+bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits) {
   TargetLowering::TargetLoweringOpt TLO(DAG, LegalTypes, LegalOperations);
   KnownBits Known;
-  if (!TLI.SimplifyDemandedBits(Op, Demanded, Known, TLO))
+  if (!TLI.SimplifyDemandedBits(Op, DemandedBits, Known, TLO))
     return false;
 
   // Revisit the node.
@@ -1115,12 +1115,13 @@ bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &Demanded) {
 /// Check the specified vector node value to see if it can be simplified or
 /// if things it uses can be simplified as it only uses some of the elements.
 /// If so, return true.
-bool DAGCombiner::SimplifyDemandedVectorElts(SDValue Op, const APInt &Demanded,
+bool DAGCombiner::SimplifyDemandedVectorElts(SDValue Op,
+                                             const APInt &DemandedElts,
                                              bool AssumeSingleUse) {
   TargetLowering::TargetLoweringOpt TLO(DAG, LegalTypes, LegalOperations);
   APInt KnownUndef, KnownZero;
-  if (!TLI.SimplifyDemandedVectorElts(Op, Demanded, KnownUndef, KnownZero, TLO,
-                                      0, AssumeSingleUse))
+  if (!TLI.SimplifyDemandedVectorElts(Op, DemandedElts, KnownUndef, KnownZero,
+                                      TLO, 0, AssumeSingleUse))
     return false;
 
   // Revisit the node.

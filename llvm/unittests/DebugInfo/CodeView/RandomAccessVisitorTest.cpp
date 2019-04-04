@@ -42,8 +42,6 @@ inline bool operator!=(const ArrayRecord &R1, const ArrayRecord &R2) {
 }
 
 inline bool operator==(const CVType &R1, const CVType &R2) {
-  if (R1.Type != R2.Type)
-    return false;
   if (R1.RecordData != R2.RecordData)
     return false;
   return true;
@@ -107,7 +105,7 @@ public:
       GlobalState->Records.push_back(AR);
       GlobalState->Indices.push_back(Builder.writeLeafType(AR));
 
-      CVType Type(TypeLeafKind::LF_ARRAY, Builder.records().back());
+      CVType Type(Builder.records().back());
       GlobalState->TypeVector.push_back(Type);
 
       GlobalState->AllOffsets.push_back(
@@ -369,11 +367,10 @@ TEST_F(RandomAccessVisitorTest, CrossChunkName) {
   TypeIndex IndexOne = Builder.writeLeafType(Modifier);
 
   // set up a type stream that refers to the above two serialized records.
-  std::vector<CVType> TypeArray;
-  TypeArray.push_back(
-      CVType(static_cast<TypeLeafKind>(Class.Kind), Builder.records()[0]));
-  TypeArray.push_back(
-      CVType(static_cast<TypeLeafKind>(Modifier.Kind), Builder.records()[1]));
+  std::vector<CVType> TypeArray = {
+      {Builder.records()[0]},
+      {Builder.records()[1]},
+  };
   BinaryItemStream<CVType> ItemStream(llvm::support::little);
   ItemStream.setItems(TypeArray);
   VarStreamArray<CVType> TypeStream(ItemStream);

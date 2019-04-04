@@ -1029,6 +1029,14 @@ let AddedComplexity = 1 in {
             (AGFI GR64:$src1, imm64sx32n:$src2)>;
 }
 
+// And vice versa in one special case, where we need to load a
+// constant into a register in any case, but the negated constant
+// requires fewer instructions to load.
+def : Pat<(z_saddo GR64:$src1, imm64lh16n:$src2),
+          (SGR GR64:$src1, (LLILH imm64lh16n:$src2))>;
+def : Pat<(z_saddo GR64:$src1, imm64lf32n:$src2),
+          (SGR GR64:$src1, (LLILF imm64lf32n:$src2))>;
+
 // Subtraction producing a carry.
 let Defs = [CC] in {
   // Subtraction of a register.

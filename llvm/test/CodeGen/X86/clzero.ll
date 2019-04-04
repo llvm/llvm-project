@@ -5,14 +5,13 @@
 define void @foo(i8* %p) #0 {
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    leaq (%rdi), %rax
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    clzero
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: foo:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    leal (%eax), %eax
 ; X32-NEXT:    clzero
 ; X32-NEXT:    retl
 entry:

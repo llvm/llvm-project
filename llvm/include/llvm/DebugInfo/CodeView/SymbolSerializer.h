@@ -51,8 +51,8 @@ public:
   template <typename SymType>
   static CVSymbol writeOneSymbol(SymType &Sym, BumpPtrAllocator &Storage,
                                  CodeViewContainer Container) {
-    CVSymbol Result;
-    Result.Type = static_cast<SymbolKind>(Sym.Kind);
+    RecordPrefix Prefix{uint16_t(Sym.Kind)};
+    CVSymbol Result(&Prefix, sizeof(Prefix));
     SymbolSerializer Serializer(Storage, Container);
     consumeError(Serializer.visitSymbolBegin(Result));
     consumeError(Serializer.visitKnownRecord(Result, Sym));

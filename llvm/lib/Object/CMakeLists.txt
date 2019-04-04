@@ -23,6 +23,7 @@ add_llvm_library(LLVMObject
   SymbolSize.cpp
   WasmObjectFile.cpp
   WindowsResource.cpp
+  XCOFFObjectFile.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Object

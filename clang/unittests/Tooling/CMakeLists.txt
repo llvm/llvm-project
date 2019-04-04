@@ -50,7 +50,6 @@ add_clang_unittest(ToolingTests
   ReplacementsYamlTest.cpp
   RewriterTest.cpp
   ToolingTest.cpp
-  TransformerTest.cpp
   )
 
 target_link_libraries(ToolingTests

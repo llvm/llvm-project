@@ -18,6 +18,7 @@ static_library("ObjectYAML") {
     "MinidumpYAML.cpp",
     "ObjectYAML.cpp",
     "WasmYAML.cpp",
+    "XCOFFYAML.cpp",
     "YAML.cpp",
   ]
 }

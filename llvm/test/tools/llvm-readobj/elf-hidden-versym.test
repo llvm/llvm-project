@@ -37,6 +37,6 @@ Sections:
             Flags:   0
             Other:   3
 DynamicSymbols:
-  Global:
-    - Name:          h
+  - Name:          h
+    Binding:       STB_GLOBAL
 ...

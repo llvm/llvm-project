@@ -29,6 +29,7 @@ endif()
 
 add_library(ParallelSTL INTERFACE)
 add_library(pstl::ParallelSTL ALIAS ParallelSTL)
+target_compile_features(ParallelSTL INTERFACE cxx_std_17)
 
 if (PARALLELSTL_USE_PARALLEL_POLICIES)
     message(STATUS "Using Parallel Policies")

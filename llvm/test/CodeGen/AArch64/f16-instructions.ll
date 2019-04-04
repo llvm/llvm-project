@@ -919,6 +919,15 @@ define half @test_exp(half %a) #0 {
 ; CHECK-COMMON-NEXT: fcvt h0, s0
 ; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
 ; CHECK-COMMON-NEXT: ret
+
+; GISEL-LABEL: test_exp2:
+; GISEL-NEXT: stp x29, x30, [sp, #-16]!
+; GISEL-NEXT: mov  x29, sp
+; GISEL-NEXT: fcvt s0, h0
+; GISEL-NEXT: bl {{_?}}exp2f
+; GISEL-NEXT: fcvt h0, s0
+; GISEL-NEXT: ldp x29, x30, [sp], #16
+; GISEL-NEXT: ret
 define half @test_exp2(half %a) #0 {
   %r = call half @llvm.exp2.f16(half %a)
   ret half %r

@@ -66,14 +66,11 @@ void ContinuationRecordBuilder::begin(ContinuationRecordKind RecordKind) {
   InjectedSegmentBytes =
       ArrayRef<uint8_t>(FLIB, FLIB + sizeof(SegmentInjection));
 
-  CVType Type;
-  Type.Type = getTypeLeafKind(RecordKind);
+  // Seed the first record with an appropriate record prefix.
+  RecordPrefix Prefix(getTypeLeafKind(RecordKind));
+  CVType Type(&Prefix, sizeof(Prefix));
   cantFail(Mapping.visitTypeBegin(Type));
 
-  // Seed the first trecord with an appropriate record prefix.
-  RecordPrefix Prefix;
-  Prefix.RecordLen = 0;
-  Prefix.RecordKind = Type.Type;
   cantFail(SegmentWriter.writeObject(Prefix));
 }
 
@@ -156,14 +153,9 @@ CVType ContinuationRecordBuilder::createSegmentRecord(
   MutableArrayRef<uint8_t> Data = Buffer.data();
   Data = Data.slice(OffBegin, OffEnd - OffBegin);
 
-  CVType Type;
-  Type.Type = getTypeLeafKind(*Kind);
-  Type.RecordData = Data;
-
   // Write the length to the RecordPrefix, making sure it does not include
   // sizeof(RecordPrefix.Length)
   RecordPrefix *Prefix = reinterpret_cast<RecordPrefix *>(Data.data());
-  assert(Prefix->RecordKind == Type.Type);
   Prefix->RecordLen = Data.size() - sizeof(RecordPrefix::RecordLen);
 
   if (RefersTo.hasValue()) {
@@ -175,12 +167,12 @@ CVType ContinuationRecordBuilder::createSegmentRecord(
     CR->IndexRef = RefersTo->getIndex();
   }
 
-  return Type;
+  return CVType(Data);
 }
 
 std::vector<CVType> ContinuationRecordBuilder::end(TypeIndex Index) {
-  CVType Type;
-  Type.Type = getTypeLeafKind(*Kind);
+  RecordPrefix Prefix(getTypeLeafKind(*Kind));
+  CVType Type(&Prefix, sizeof(Prefix));
   cantFail(Mapping.visitTypeEnd(Type));
 
   // We're now done, and we have a series of segments each beginning at an

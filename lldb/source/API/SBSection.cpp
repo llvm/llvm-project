@@ -41,7 +41,7 @@ const SBSection &SBSection::operator=(const SBSection &rhs) {
                      SBSection, operator=,(const lldb::SBSection &), rhs);
 
   m_opaque_wp = rhs.m_opaque_wp;
-  return *this;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBSection::~SBSection() {}

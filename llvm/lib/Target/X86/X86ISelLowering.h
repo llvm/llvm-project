@@ -538,6 +538,12 @@ namespace llvm {
       // indicate whether it is valid in CF.
       RDSEED,
 
+      // Protection keys
+      // RDPKRU - Operand 0 is chain. Operand 1 is value for ECX.
+      // WRPKRU - Operand 0 is chain. Operand 1 is value for EDX. Operand 2 is
+      // value for ECX.
+      RDPKRU, WRPKRU,
+
       // SSE42 string comparisons.
       // These nodes produce 3 results, index, mask, and flags. X86ISelDAGToDAG
       // will emit one or two instructions based on which results are used. If

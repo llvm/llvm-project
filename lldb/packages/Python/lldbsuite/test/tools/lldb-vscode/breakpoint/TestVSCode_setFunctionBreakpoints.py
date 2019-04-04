@@ -21,7 +21,6 @@ class TestVSCode_setFunctionBreakpoints(
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # test hangs on linux under heavy load
     @no_debug_info_test
     def test_set_and_clear(self):
         '''Tests setting and clearing function breakpoints.
@@ -114,7 +113,6 @@ class TestVSCode_setFunctionBreakpoints(
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # test hangs on linux under heavy load
     @no_debug_info_test
     def test_functionality(self):
         '''Tests hitting breakpoints and the functionality of a single

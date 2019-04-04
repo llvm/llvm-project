@@ -37,6 +37,6 @@ Sections:
             Flags:   233
             Other:   3
 DynamicSymbols:
-  Global:
-    - Name:          f
+  - Name:          f
+    Binding:       STB_GLOBAL
 ...

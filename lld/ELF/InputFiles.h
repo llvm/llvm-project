@@ -161,15 +161,12 @@ public:
 
   StringRef getStringTable() const { return StringTable; }
 
-  uint32_t getSectionIndex(const Elf_Sym &Sym) const;
-
   Elf_Sym_Range getGlobalELFSyms();
   Elf_Sym_Range getELFSyms() const { return ELFSyms; }
 
 protected:
   ArrayRef<Elf_Sym> ELFSyms;
   uint32_t FirstGlobal = 0;
-  ArrayRef<Elf_Word> SymtabSHNDX;
   StringRef StringTable;
   void initSymtab(ArrayRef<Elf_Shdr> Sections, const Elf_Shdr *Symtab);
 };
@@ -201,6 +198,8 @@ public:
       fatal(toString(this) + ": invalid symbol index");
     return *this->Symbols[SymbolIndex];
   }
+
+  uint32_t getSectionIndex(const Elf_Sym &Sym) const;
 
   template <typename RelT> Symbol &getRelocTargetSym(const RelT &Rel) const {
     uint32_t SymIndex = Rel.getSymbol(Config->IsMips64EL);
@@ -246,6 +245,8 @@ private:
 
   bool shouldMerge(const Elf_Shdr &Sec);
   Symbol *createSymbol(const Elf_Sym *Sym);
+
+  ArrayRef<Elf_Word> SymtabSHNDX;
 
   // .shstrtab contents.
   StringRef SectionStringTable;

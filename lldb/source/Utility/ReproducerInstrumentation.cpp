@@ -117,4 +117,13 @@ Recorder::~Recorder() {
   UpdateBoundary();
 }
 
+void Recorder::Log(unsigned id) {
+#ifndef LLDB_REPRO_INSTR_TRACE
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "Recording {0}: {1}", id,
+           m_pretty_func);
+#else
+  llvm::errs() << "Recording " << id << ": " << m_pretty_func << "\n";
+#endif
+}
+
 bool lldb_private::repro::Recorder::g_global_boundary;

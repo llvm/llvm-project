@@ -248,7 +248,7 @@ struct UnknownSymbolRecord : public SymbolRecordBase {
     uint8_t *Buffer = Allocator.Allocate<uint8_t>(TotalLen);
     ::memcpy(Buffer, &Prefix, sizeof(RecordPrefix));
     ::memcpy(Buffer + sizeof(RecordPrefix), Data.data(), Data.size());
-    return CVSymbol(Kind, ArrayRef<uint8_t>(Buffer, TotalLen));
+    return CVSymbol(ArrayRef<uint8_t>(Buffer, TotalLen));
   }
 
   Error fromCodeViewSymbol(CVSymbol CVS) override {
