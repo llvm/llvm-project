@@ -21,9 +21,8 @@
 
 #define MAKE_CALL_ARG1(call)                                                   \
   template <typename R, typename T1>                                           \
-  ALWAYS_INLINE                                                                \
-      typename cl::sycl::detail::ConvertToOpenCLType<R>::type __invoke_##call( \
-          T1 t1) __NOEXC {                                                     \
+  ALWAYS_INLINE typename cl::sycl::detail::ConvertToOpenCLType<R>::type        \
+  __invoke_##call(T1 t1) __NOEXC {                                             \
     using Ret = typename cl::sycl::detail::ConvertToOpenCLType<R>::type;       \
     using Arg1 = typename cl::sycl::detail::ConvertToOpenCLType<T1>::type;     \
     extern Ret call(Arg1);                                                     \
@@ -32,9 +31,8 @@
 
 #define MAKE_CALL_ARG2(call)                                                   \
   template <typename R, typename T1, typename T2>                              \
-  ALWAYS_INLINE                                                                \
-      typename cl::sycl::detail::ConvertToOpenCLType<R>::type __invoke_##call( \
-          T1 t1, T2 t2) __NOEXC {                                              \
+  ALWAYS_INLINE typename cl::sycl::detail::ConvertToOpenCLType<R>::type        \
+  __invoke_##call(T1 t1, T2 t2) __NOEXC {                                      \
     using Ret = typename cl::sycl::detail::ConvertToOpenCLType<R>::type;       \
     using Arg1 = typename cl::sycl::detail::ConvertToOpenCLType<T1>::type;     \
     using Arg2 = typename cl::sycl::detail::ConvertToOpenCLType<T2>::type;     \
@@ -45,9 +43,8 @@
 
 #define MAKE_CALL_ARG3(call)                                                   \
   template <typename R, typename T1, typename T2, typename T3>                 \
-  ALWAYS_INLINE                                                                \
-      typename cl::sycl::detail::ConvertToOpenCLType<R>::type __invoke_##call( \
-          T1 t1, T2 t2, T3 t3) __NOEXC {                                       \
+  ALWAYS_INLINE typename cl::sycl::detail::ConvertToOpenCLType<R>::type        \
+  __invoke_##call(T1 t1, T2 t2, T3 t3) __NOEXC {                               \
     using Ret = typename cl::sycl::detail::ConvertToOpenCLType<R>::type;       \
     using Arg1 = typename cl::sycl::detail::ConvertToOpenCLType<T1>::type;     \
     using Arg2 = typename cl::sycl::detail::ConvertToOpenCLType<T2>::type;     \
