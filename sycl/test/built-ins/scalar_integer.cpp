@@ -17,8 +17,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class maxSI1SI1>([=]() {
           AccR[0] = s::max(s::cl_int{ 5 }, s::cl_int{ 2 });
@@ -33,8 +33,8 @@ int main() {
     s::cl_uint r{ 0 };
     {
       s::buffer<s::cl_uint, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class maxUI1UI1>([=]() {
           AccR[0] = s::max(s::cl_uint{ 5 }, s::cl_uint{ 2 });
@@ -49,8 +49,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class minSI1SI1>([=]() {
           AccR[0] = s::min(s::cl_int{ 5 }, s::cl_int{ 2 });
@@ -65,8 +65,8 @@ int main() {
     s::cl_uint r{ 0 };
     {
       s::buffer<s::cl_uint, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class minUI1UI1>([=]() {
           AccR[0] = s::min(s::cl_uint{ 5 }, s::cl_uint{ 2 });
@@ -81,8 +81,8 @@ int main() {
     s::cl_uint r{ 0 };
     {
       s::buffer<s::cl_uint, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class absSI1>([=]() {
           AccR[0] = s::abs(s::cl_int{ -5 });
@@ -97,8 +97,8 @@ int main() {
     s::cl_uint r{ 0 };
     {
       s::buffer<s::cl_uint, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class abs_diffSI1SI1>([=]() {
           AccR[0] = s::abs_diff(s::cl_int{ -5 }, s::cl_int{ -1 });
@@ -113,8 +113,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class add_satSI1SI1>([=]() {
           AccR[0] = s::add_sat(s::cl_int{ 0x7FFFFFFF }, s::cl_int{ 100 });
@@ -129,8 +129,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class haddSI1SI1>([=]() {
           AccR[0] = s::hadd(s::cl_int{ 0x0000007F }, s::cl_int{ 0x00000020 });
@@ -145,8 +145,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class rhaddSI1SI1>([=]() {
           AccR[0] = s::rhadd(s::cl_int{ 0x0000007F }, s::cl_int{ 0x00000020 });
@@ -161,8 +161,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class clampSI1SI1SI1>([=]() {
           AccR[0] = s::clamp(s::cl_int{ 5 }, s::cl_int{ 10 }, s::cl_int{ 30 });
@@ -177,8 +177,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class clzSI1>([=]() {
           AccR[0] = s::clz(s::cl_int{ 0x0FFFFFFF });
@@ -193,8 +193,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class mad_hiSI1SI1SI1>([=]() {
           AccR[0] = s::mad_hi(s::cl_int{ 0x10000000 }, s::cl_int{ 0x00000100 },
@@ -210,8 +210,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class mad_satSI1SI1SI1>([=]() {
           AccR[0] = s::mad_sat(s::cl_int{ 0x10000000 }, s::cl_int{ 0x00000100 },
@@ -228,8 +228,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class mul_hiSI1SI1>([=]() {
           AccR[0] = s::mul_hi(s::cl_int{ 0x10000000 }, s::cl_int{ 0x00000100 });
@@ -244,8 +244,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class rotateSI1SI1>([=]() {
           AccR[0] = s::rotate(s::cl_int{ 0x11100000 }, s::cl_int{ 12 });
@@ -260,8 +260,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class sub_satSI1SI1>([=]() {
           AccR[0] = s::sub_sat(s::cl_int{ 10 }, s::cl_int(0x80000000));
@@ -276,8 +276,8 @@ int main() {
     s::cl_ushort r{ 0 };
     {
       s::buffer<s::cl_ushort, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class upsampleUC1UC1>([=]() {
           AccR[0] = s::upsample(s::cl_uchar{ 0x10 }, s::cl_uchar{ 0x10 });
@@ -292,8 +292,8 @@ int main() {
     s::cl_short r{ 0 };
     {
       s::buffer<s::cl_short, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class upsampleSC1UC1>([=]() {
           AccR[0] = s::upsample(s::cl_char{ 0x10 }, s::cl_uchar{ 0x10 });
@@ -308,8 +308,8 @@ int main() {
     s::cl_uint r{ 0 };
     {
       s::buffer<s::cl_uint, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class upsampleUS1US1>([=]() {
           AccR[0] = s::upsample(s::cl_ushort{ 0x0010 }, s::cl_ushort{ 0x0010 });
@@ -324,8 +324,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class upsampleSS1US1>([=]() {
           AccR[0] = s::upsample(s::cl_short{ 0x0010 }, s::cl_ushort{ 0x0010 });
@@ -340,8 +340,8 @@ int main() {
     s::cl_ulong r{ 0 };
     {
       s::buffer<s::cl_ulong, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class upsampleUI1UI1>([=]() {
           AccR[0] =
@@ -357,8 +357,8 @@ int main() {
     s::cl_long r{ 0 };
     {
       s::buffer<s::cl_long, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class upsampleSI1UI1>([=]() {
           AccR[0] =
@@ -374,8 +374,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class popcountSI1>([=]() {
           AccR[0] = s::popcount(s::cl_int{ 0x000000FF });
@@ -390,8 +390,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class mad24SI1SI1SI1>([=]() {
           AccR[0] =
@@ -407,8 +407,8 @@ int main() {
     s::cl_int r{ 0 };
     {
       s::buffer<s::cl_int, 1> BufR(&r, s::range<1>(1));
-      s::queue myqueue;
-      myqueue.submit([&](s::handler &cgh) {
+      s::queue myQueue;
+      myQueue.submit([&](s::handler &cgh) {
         auto AccR = BufR.get_access<s::access::mode::write>(cgh);
         cgh.single_task<class mul24SI1SI1>([=]() {
           AccR[0] = s::mul24(s::cl_int(0xFFFFFFFF), s::cl_int{ 20 });
