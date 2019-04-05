@@ -12,6 +12,8 @@ add_clang_library(clangToolingRefactoring
   Rename/USRFinder.cpp
   Rename/USRFindingAction.cpp
   Rename/USRLocFinder.cpp
+  SourceCode.cpp
+  Transformer.cpp
 
   LINK_LIBS
   clangAST
