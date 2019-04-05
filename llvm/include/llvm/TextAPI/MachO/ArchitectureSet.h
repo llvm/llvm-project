@@ -69,11 +69,10 @@ public:
     void findNextSetBit() {
       if (Index == EndIndexVal)
         return;
-
-      do {
-        if (*ArchSet & (1UL << ++Index))
+      while (++Index < sizeof(Ty) * 8) {
+        if (*ArchSet & (1UL << Index))
           return;
-      } while (Index < sizeof(Ty) * 8);
+      }
 
       Index = EndIndexVal;
     }

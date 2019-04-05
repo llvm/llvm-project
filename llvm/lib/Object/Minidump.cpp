@@ -8,6 +8,7 @@
 
 #include "llvm/Object/Minidump.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/ConvertUTF.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -19,6 +20,37 @@ MinidumpFile::getRawStream(minidump::StreamType Type) const {
   if (It != StreamMap.end())
     return getRawStream(Streams[It->second]);
   return None;
+}
+
+Expected<std::string> MinidumpFile::getString(size_t Offset) const {
+  // Minidump strings consist of a 32-bit length field, which gives the size of
+  // the string in *bytes*. This is followed by the actual string encoded in
+  // UTF16.
+  auto ExpectedSize =
+      getDataSliceAs<support::ulittle32_t>(getData(), Offset, 1);
+  if (!ExpectedSize)
+    return ExpectedSize.takeError();
+  size_t Size = (*ExpectedSize)[0];
+  if (Size % 2 != 0)
+    return createError("String size not even");
+  Size /= 2;
+  if (Size == 0)
+    return "";
+
+  Offset += sizeof(support::ulittle32_t);
+  auto ExpectedData =
+      getDataSliceAs<support::ulittle16_t>(getData(), Offset, Size);
+  if (!ExpectedData)
+    return ExpectedData.takeError();
+
+  SmallVector<UTF16, 32> WStr(Size);
+  copy(*ExpectedData, WStr.begin());
+
+  std::string Result;
+  if (!convertUTF16ToUTF8String(WStr, Result))
+    return createError("String decoding failed");
+
+  return Result;
 }
 
 Expected<ArrayRef<uint8_t>>

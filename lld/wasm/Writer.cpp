@@ -1138,7 +1138,8 @@ void Writer::processRelocations(InputChunk *Chunk) {
   for (const WasmRelocation &Reloc : Chunk->getRelocations()) {
     switch (Reloc.Type) {
     case R_WASM_TABLE_INDEX_I32:
-    case R_WASM_TABLE_INDEX_SLEB: {
+    case R_WASM_TABLE_INDEX_SLEB:
+    case R_WASM_TABLE_INDEX_REL_SLEB: {
       FunctionSymbol *Sym = File->getFunctionSymbol(Reloc.Index);
       if (Sym->hasTableIndex() || !Sym->hasFunctionIndex())
         continue;
