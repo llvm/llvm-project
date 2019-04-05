@@ -3508,7 +3508,7 @@ static bool combineInstructionsOverFunction(
 
     MadeIRChange |= prepareICWorklistFromFunction(F, DL, &TLI, Worklist);
 
-    InstCombiner IC(Worklist, Builder, F.optForMinSize(), ExpensiveCombines, AA,
+    InstCombiner IC(Worklist, Builder, F.hasMinSize(), ExpensiveCombines, AA,
                     AC, TLI, DT, ORE, DL, LI);
     IC.MaxArraySizeForCombine = MaxArraySize;
 

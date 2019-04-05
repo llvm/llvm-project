@@ -1329,7 +1329,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
           annotateValueSite(*I.getParent()->getParent()->getParent(), I,
                             SortedCallTargets, Sum, IPVK_IndirectCallTarget,
                             SortedCallTargets.size());
-        } else if (!dyn_cast<IntrinsicInst>(&I)) {
+        } else if (!isa<IntrinsicInst>(&I)) {
           I.setMetadata(LLVMContext::MD_prof,
                         MDB.createBranchWeights(
                             {static_cast<uint32_t>(BlockWeights[BB])}));

@@ -657,7 +657,7 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
   const Function &F = MF.getFunction();
   Mode SaveOptMode = OptMode;
-  if (F.optForNone())
+  if (F.hasOptNone())
     OptMode = Mode::Fast;
   init(MF);
 

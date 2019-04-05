@@ -119,13 +119,13 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   // Calculate this function's optimization goal.
   unsigned OptimizationGoal;
-  if (F.optForNone())
+  if (F.hasOptNone())
     // For best debugging illusion, speed and small size sacrificed
     OptimizationGoal = 6;
-  else if (F.optForMinSize())
+  else if (F.hasMinSize())
     // Aggressively for small size, speed and debug illusion sacrificed
     OptimizationGoal = 4;
-  else if (F.optForSize())
+  else if (F.hasOptSize())
     // For small size, but speed and debugging illusion preserved
     OptimizationGoal = 3;
   else if (TM.getOptLevel() == CodeGenOpt::Aggressive)

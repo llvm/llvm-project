@@ -5220,7 +5220,7 @@ static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
       return DAG.getConstantFP(1.0, DL, LHS.getValueType());
 
     const Function &F = DAG.getMachineFunction().getFunction();
-    if (!F.optForSize() ||
+    if (!F.hasOptSize() ||
         // If optimizing for size, don't insert too many multiplies.
         // This inserts up to 5 multiplies.
         countPopulation(Val) + Log2_32(Val) < 7) {
@@ -10617,7 +10617,7 @@ MachineBasicBlock *SelectionDAGBuilder::peelDominantCaseCluster(
   // Don't perform if there is only one cluster or optimizing for size.
   if (SwitchPeelThreshold > 100 || !FuncInfo.BPI || Clusters.size() < 2 ||
       TM.getOptLevel() == CodeGenOpt::None ||
-      SwitchMBB->getParent()->getFunction().optForMinSize())
+      SwitchMBB->getParent()->getFunction().hasMinSize())
     return SwitchMBB;
 
   BranchProbability TopCaseProb = BranchProbability(SwitchPeelThreshold, 100);
@@ -10740,7 +10740,7 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
     unsigned NumClusters = W.LastCluster - W.FirstCluster + 1;
 
     if (NumClusters > 3 && TM.getOptLevel() != CodeGenOpt::None &&
-        !DefaultMBB->getParent()->getFunction().optForMinSize()) {
+        !DefaultMBB->getParent()->getFunction().hasMinSize()) {
       // For optimized builds, lower large range as a balanced binary tree.
       splitWorkItem(WorkList, W, SI.getCondition(), SwitchMBB);
       continue;

@@ -274,7 +274,7 @@ define <2 x double> @hadd_v2f64(<2 x double> %a) {
 ; SSSE3_SLOW:       # %bb.0:
 ; SSSE3_SLOW-NEXT:    movapd %xmm0, %xmm1
 ; SSSE3_SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSSE3_SLOW-NEXT:    addpd %xmm0, %xmm1
+; SSSE3_SLOW-NEXT:    addsd %xmm0, %xmm1
 ; SSSE3_SLOW-NEXT:    movddup {{.*#+}} xmm0 = xmm1[0,0]
 ; SSSE3_SLOW-NEXT:    retq
 ;
@@ -286,7 +286,7 @@ define <2 x double> @hadd_v2f64(<2 x double> %a) {
 ; AVX1_SLOW-LABEL: hadd_v2f64:
 ; AVX1_SLOW:       # %bb.0:
 ; AVX1_SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1_SLOW-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX1_SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX1_SLOW-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX1_SLOW-NEXT:    retq
 ;
@@ -298,7 +298,7 @@ define <2 x double> @hadd_v2f64(<2 x double> %a) {
 ; AVX2_SLOW-LABEL: hadd_v2f64:
 ; AVX2_SLOW:       # %bb.0:
 ; AVX2_SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX2_SLOW-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX2_SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX2_SLOW-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX2_SLOW-NEXT:    retq
 ;
@@ -398,12 +398,12 @@ define <4 x double> @hadd_v4f64(<4 x double> %a) {
 ; SSSE3_SLOW:       # %bb.0:
 ; SSSE3_SLOW-NEXT:    movapd %xmm0, %xmm2
 ; SSSE3_SLOW-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
-; SSSE3_SLOW-NEXT:    movapd %xmm1, %xmm3
-; SSSE3_SLOW-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm1[1]
-; SSSE3_SLOW-NEXT:    addpd %xmm1, %xmm3
-; SSSE3_SLOW-NEXT:    addpd %xmm0, %xmm2
+; SSSE3_SLOW-NEXT:    addsd %xmm0, %xmm2
 ; SSSE3_SLOW-NEXT:    movddup {{.*#+}} xmm0 = xmm2[0,0]
-; SSSE3_SLOW-NEXT:    movddup {{.*#+}} xmm1 = xmm3[0,0]
+; SSSE3_SLOW-NEXT:    movapd %xmm1, %xmm2
+; SSSE3_SLOW-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
+; SSSE3_SLOW-NEXT:    addsd %xmm1, %xmm2
+; SSSE3_SLOW-NEXT:    movddup {{.*#+}} xmm1 = xmm2[0,0]
 ; SSSE3_SLOW-NEXT:    retq
 ;
 ; SSSE3_FAST-LABEL: hadd_v4f64:
@@ -447,7 +447,7 @@ define <2 x double> @hsub_v2f64(<2 x double> %a) {
 ; SSSE3_SLOW:       # %bb.0:
 ; SSSE3_SLOW-NEXT:    movapd %xmm0, %xmm1
 ; SSSE3_SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSSE3_SLOW-NEXT:    subpd %xmm1, %xmm0
+; SSSE3_SLOW-NEXT:    subsd %xmm1, %xmm0
 ; SSSE3_SLOW-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0]
 ; SSSE3_SLOW-NEXT:    retq
 ;
@@ -459,7 +459,7 @@ define <2 x double> @hsub_v2f64(<2 x double> %a) {
 ; AVX1_SLOW-LABEL: hsub_v2f64:
 ; AVX1_SLOW:       # %bb.0:
 ; AVX1_SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1_SLOW-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
+; AVX1_SLOW-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX1_SLOW-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX1_SLOW-NEXT:    retq
 ;
@@ -471,7 +471,7 @@ define <2 x double> @hsub_v2f64(<2 x double> %a) {
 ; AVX2_SLOW-LABEL: hsub_v2f64:
 ; AVX2_SLOW:       # %bb.0:
 ; AVX2_SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX2_SLOW-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
+; AVX2_SLOW-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX2_SLOW-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX2_SLOW-NEXT:    retq
 ;
@@ -491,11 +491,11 @@ define <4 x double> @hsub_v4f64(<4 x double> %a) {
 ; SSSE3_SLOW:       # %bb.0:
 ; SSSE3_SLOW-NEXT:    movapd %xmm0, %xmm2
 ; SSSE3_SLOW-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
-; SSSE3_SLOW-NEXT:    movapd %xmm1, %xmm3
-; SSSE3_SLOW-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm1[1]
-; SSSE3_SLOW-NEXT:    subpd %xmm3, %xmm1
-; SSSE3_SLOW-NEXT:    subpd %xmm2, %xmm0
+; SSSE3_SLOW-NEXT:    subsd %xmm2, %xmm0
 ; SSSE3_SLOW-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0]
+; SSSE3_SLOW-NEXT:    movapd %xmm1, %xmm2
+; SSSE3_SLOW-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
+; SSSE3_SLOW-NEXT:    subsd %xmm2, %xmm1
 ; SSSE3_SLOW-NEXT:    movddup {{.*#+}} xmm1 = xmm1[0,0]
 ; SSSE3_SLOW-NEXT:    retq
 ;

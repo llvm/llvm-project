@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #===- lib/fuzzer/scripts/collect_data_flow.py ------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -39,7 +39,9 @@ def collect_dataflow_for_corpus(self, exe, corpus_dir, output_dir):
   for root, dirs, files in os.walk(corpus_dir):
     for f in files:
       path = os.path.join(root, f)
-      sha1 = hashlib.sha1(open(path).read()).hexdigest()
+      with open(path, 'rb') as fh:
+        data = fh.read()
+      sha1 = hashlib.sha1(data).hexdigest()
       output = os.path.join(output_dir, sha1)
       subprocess.call([self, exe, path, output])
   functions_txt = open(os.path.join(output_dir, "functions.txt"), "w")
@@ -55,11 +57,11 @@ def main(argv):
   q = [[0, size]]
   tmpdir = tempfile.mkdtemp(prefix="libfuzzer-tmp-")
   atexit.register(cleanup, tmpdir)
-  print "tmpdir: ", tmpdir
+  print("tmpdir: ", tmpdir)
   outputs = []
   while len(q):
     r = q.pop()
-    print "******* Trying:  ", r
+    print("******* Trying:  ", r)
     tmpfile = os.path.join(tmpdir, str(r[0]) + "-" + str(r[1]))
     ret = subprocess.call([exe, str(r[0]), str(r[1]), inp, tmpfile])
     if ret and r[1] - r[0] >= 2:
@@ -67,7 +69,7 @@ def main(argv):
       q.append([(r[1] + r[0]) / 2, r[1]])
     else:
       outputs.append(tmpfile)
-      print "******* Success: ", r
+      print("******* Success: ", r)
   f = sys.stdout
   if len(argv) >= 4:
     f = open(argv[3], "w")

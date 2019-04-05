@@ -876,7 +876,7 @@ SharedFile<ELFT>::SharedFile(MemoryBufferRef M, StringRef DefaultSoName)
 // Partially parse the shared object file so that we can call
 // getSoName on this object.
 template <class ELFT> void SharedFile<ELFT>::parseDynamic() {
-  const Elf_Shdr *DynamicSec = nullptr;
+  ArrayRef<Elf_Dyn> DynamicTags;
   const ELFFile<ELFT> Obj = this->getObj();
   ArrayRef<Elf_Shdr> Sections = CHECK(Obj.sections(), this);
 
@@ -889,7 +889,8 @@ template <class ELFT> void SharedFile<ELFT>::parseDynamic() {
       this->initSymtab(Sections, &Sec);
       break;
     case SHT_DYNAMIC:
-      DynamicSec = &Sec;
+      DynamicTags =
+          CHECK(Obj.template getSectionContentsAsArray<Elf_Dyn>(&Sec), this);
       break;
     case SHT_GNU_versym:
       this->VersymSec = &Sec;
@@ -904,11 +905,7 @@ template <class ELFT> void SharedFile<ELFT>::parseDynamic() {
     error("SHT_GNU_versym should be associated with symbol table");
 
   // Search for a DT_SONAME tag to initialize this->SoName.
-  if (!DynamicSec)
-    return;
-  ArrayRef<Elf_Dyn> Arr =
-      CHECK(Obj.template getSectionContentsAsArray<Elf_Dyn>(DynamicSec), this);
-  for (const Elf_Dyn &Dyn : Arr) {
+  for (const Elf_Dyn &Dyn : DynamicTags) {
     if (Dyn.d_tag == DT_NEEDED) {
       uint64_t Val = Dyn.getVal();
       if (Val >= this->StringTable.size())

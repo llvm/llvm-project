@@ -241,11 +241,14 @@ enum : unsigned {
 // Opcodes used in initializer expressions.
 enum : unsigned {
   WASM_OPCODE_END = 0x0b,
+  WASM_OPCODE_CALL = 0x10,
   WASM_OPCODE_GLOBAL_GET = 0x23,
+  WASM_OPCODE_I32_STORE = 0x36,
   WASM_OPCODE_I32_CONST = 0x41,
   WASM_OPCODE_I64_CONST = 0x42,
   WASM_OPCODE_F32_CONST = 0x43,
   WASM_OPCODE_F64_CONST = 0x44,
+  WASM_OPCODE_I32_ADD = 0x6a,
 };
 
 enum : unsigned {

@@ -279,9 +279,10 @@ define <8 x i8> @vclei8Z(<8 x i8>* %A) nounwind {
 ; Radar 8782191
 ; Floating-point comparisons against zero produce results with integer
 ; elements, not floating-point elements.
-define void @test_vclez_fp() nounwind optsize {
+define void @test_vclez_fp(<4 x float>* %A) nounwind optsize {
 ; CHECK-LABEL: test_vclez_fp:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcle.f32 q8, q8, #0
 ; CHECK-NEXT:    vmovn.i32 d16, q8
 ; CHECK-NEXT:    vmov.i8 d17, #0x1
@@ -289,7 +290,8 @@ define void @test_vclez_fp() nounwind optsize {
 ; CHECK-NEXT:    vadd.i8 d16, d16, d17
 ; CHECK-NEXT:    vst1.8 {d16}, [r0]
 entry:
-  %0 = fcmp ole <4 x float> undef, zeroinitializer
+  %ld = load <4 x float>, <4 x float>* %A
+  %0 = fcmp ole <4 x float> %ld, zeroinitializer
   %1 = sext <4 x i1> %0 to <4 x i16>
   %2 = add <4 x i16> %1, zeroinitializer
   %3 = shufflevector <4 x i16> %2, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

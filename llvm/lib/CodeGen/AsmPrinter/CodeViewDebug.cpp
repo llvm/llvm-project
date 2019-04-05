@@ -1342,7 +1342,7 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   FPO |= FrameProcedureOptions(uint32_t(CurFn->EncodedLocalFramePtrReg) << 14U);
   FPO |= FrameProcedureOptions(uint32_t(CurFn->EncodedParamFramePtrReg) << 16U);
   if (Asm->TM.getOptLevel() != CodeGenOpt::None &&
-      !GV.optForSize() && !GV.optForNone())
+      !GV.hasOptSize() && !GV.hasOptNone())
     FPO |= FrameProcedureOptions::OptimizedForSpeed;
   // FIXME: Set GuardCfg when it is implemented.
   CurFn->FrameProcOpts = FPO;

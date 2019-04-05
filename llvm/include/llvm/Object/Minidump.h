@@ -43,6 +43,10 @@ public:
   /// file does not contain a stream of this type.
   Optional<ArrayRef<uint8_t>> getRawStream(minidump::StreamType Type) const;
 
+  /// Returns the minidump string at the given offset. An error is returned if
+  /// we fail to parse the string, or the string is invalid UTF16.
+  Expected<std::string> getString(size_t Offset) const;
+
   /// Returns the contents of the SystemInfo stream, cast to the appropriate
   /// type. An error is returned if the file does not contain this stream, or
   /// the stream is smaller than the size of the SystemInfo structure. The

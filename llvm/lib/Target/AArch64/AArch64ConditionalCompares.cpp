@@ -940,7 +940,7 @@ bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
-  MinSize = MF.getFunction().optForMinSize();
+  MinSize = MF.getFunction().hasMinSize();
 
   bool Changed = false;
   CmpConv.runOnMachineFunction(MF, MBPI);

@@ -973,7 +973,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     LazyCallGraph::Node &N = *CG.lookup(F);
     if (CG.lookupSCC(N) != C)
       continue;
-    if (F.optForNone()) {
+    if (F.hasOptNone()) {
       setInlineRemark(Calls[i].first, "optnone attribute");
       continue;
     }

@@ -700,7 +700,7 @@ bool OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {
 
     // Remove redundant address calculations. Do it only for -Os/-Oz since only
     // a code size gain is expected from this part of the pass.
-    if (MF.getFunction().optForSize())
+    if (MF.getFunction().hasOptSize())
       Changed |= removeRedundantAddrCalc(LEAs);
   }
 

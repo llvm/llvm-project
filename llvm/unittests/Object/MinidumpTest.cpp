@@ -249,3 +249,38 @@ TEST(MinidumpFile, getSystemInfo) {
   EXPECT_EQ(0x08070605u, Info.CPU.X86.FeatureInfo);
   EXPECT_EQ(0x02010009u, Info.CPU.X86.AMDExtendedFeatures);
 }
+
+TEST(MinidumpFile, getString) {
+  std::vector<uint8_t> ManyStrings{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      2, 0, 0, 0,                           // NumberOfStreams,
+      0x20, 0, 0, 0,                        // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      8, 9, 0, 1, 2, 3, 4, 5,               // Flags
+                                            // Stream Directory
+      0, 0, 0, 0, 0, 0, 0, 0,               // Type, DataSize,
+      0x20, 0, 0, 0,                        // RVA
+      1, 0, 0, 0, 0, 0,                     // String1 - odd length
+      0, 0, 1, 0, 0, 0,                     // String2 - too long
+      2, 0, 0, 0, 0, 0xd8,                  // String3 - invalid utf16
+      0, 0, 0, 0, 0, 0,                     // String4 - ""
+      2, 0, 0, 0, 'a', 0,                   // String5 - "a"
+      0,                                    // Mis-align next string
+      2, 0, 0, 0, 'a', 0,                   // String6 - "a"
+
+  };
+  auto ExpectedFile = create(ManyStrings);
+  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
+  const MinidumpFile &File = **ExpectedFile;
+  EXPECT_THAT_EXPECTED(File.getString(44), Failed<BinaryError>());
+  EXPECT_THAT_EXPECTED(File.getString(50), Failed<BinaryError>());
+  EXPECT_THAT_EXPECTED(File.getString(56), Failed<BinaryError>());
+  EXPECT_THAT_EXPECTED(File.getString(62), HasValue(""));
+  EXPECT_THAT_EXPECTED(File.getString(68), HasValue("a"));
+  EXPECT_THAT_EXPECTED(File.getString(75), HasValue("a"));
+
+  // Check the case when the size field does not fit into the remaining data.
+  EXPECT_THAT_EXPECTED(File.getString(ManyStrings.size() - 2),
+                       Failed<BinaryError>());
+}

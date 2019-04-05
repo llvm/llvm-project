@@ -406,6 +406,10 @@ struct WasmSym {
   // Function that directly calls all ctors in priority order.
   static DefinedFunction *CallCtors;
 
+  // __wasm_apply_relocs
+  // Function that applies relocations to data segment post-instantiation.
+  static DefinedFunction *ApplyRelocs;
+
   // __dso_handle
   // Symbol used in calls to __cxa_atexit to determine current DLL
   static DefinedData *DsoHandle;

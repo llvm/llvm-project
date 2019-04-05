@@ -55,7 +55,7 @@ struct MCDwarfFile {
 
   /// The MD5 checksum, if there is one. Non-owning pointer to data allocated
   /// in MCContext.
-  MD5::MD5Result *Checksum = nullptr;
+  Optional<MD5::MD5Result> Checksum;
 
   /// The source code of the file. Non-owning reference to data allocated in
   /// MCContext.
@@ -223,7 +223,7 @@ public:
   MCDwarfLineTableHeader() = default;
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
-                                MD5::MD5Result *Checksum,
+                                Optional<MD5::MD5Result> Checksum,
                                 Optional<StringRef> &Source,
                                 unsigned FileNumber = 0);
   std::pair<MCSymbol *, MCSymbol *>
@@ -256,7 +256,7 @@ class MCDwarfDwoLineTable {
 
 public:
   void maybeSetRootFile(StringRef Directory, StringRef FileName,
-                        MD5::MD5Result *Checksum, Optional<StringRef> Source) {
+                        Optional<MD5::MD5Result> Checksum, Optional<StringRef> Source) {
     if (!Header.RootFile.Name.empty())
       return;
     Header.CompilationDir = Directory;
@@ -264,12 +264,12 @@ public:
     Header.RootFile.DirIndex = 0;
     Header.RootFile.Checksum = Checksum;
     Header.RootFile.Source = Source;
-    Header.trackMD5Usage(Checksum);
+    Header.trackMD5Usage(Checksum.hasValue());
     Header.HasSource = Source.hasValue();
   }
 
   unsigned getFile(StringRef Directory, StringRef FileName,
-                   MD5::MD5Result *Checksum, Optional<StringRef> Source) {
+                   Optional<MD5::MD5Result> Checksum, Optional<StringRef> Source) {
     return cantFail(Header.tryGetFile(Directory, FileName, Checksum, Source));
   }
 
@@ -290,24 +290,24 @@ public:
               Optional<MCDwarfLineStr> &LineStr) const;
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
-                                MD5::MD5Result *Checksum,
+                                Optional<MD5::MD5Result> Checksum,
                                 Optional<StringRef> Source,
                                 unsigned FileNumber = 0);
   unsigned getFile(StringRef &Directory, StringRef &FileName,
-                   MD5::MD5Result *Checksum, Optional<StringRef> &Source,
+                   Optional<MD5::MD5Result> Checksum, Optional<StringRef> &Source,
                    unsigned FileNumber = 0) {
     return cantFail(tryGetFile(Directory, FileName, Checksum, Source,
                                FileNumber));
   }
 
   void setRootFile(StringRef Directory, StringRef FileName,
-                   MD5::MD5Result *Checksum, Optional<StringRef> Source) {
+                   Optional<MD5::MD5Result> Checksum, Optional<StringRef> Source) {
     Header.CompilationDir = Directory;
     Header.RootFile.Name = FileName;
     Header.RootFile.DirIndex = 0;
     Header.RootFile.Checksum = Checksum;
     Header.RootFile.Source = Source;
-    Header.trackMD5Usage(Checksum);
+    Header.trackMD5Usage(Checksum.hasValue());
     Header.HasSource = Source.hasValue();
   }
 

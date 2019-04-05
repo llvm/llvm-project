@@ -118,6 +118,12 @@ TEST(CastingTest, isa) {
   EXPECT_TRUE(isa<foo>(B4));
 }
 
+TEST(CastingTest, isa_and_nonnull) {
+  EXPECT_TRUE(isa_and_nonnull<foo>(B2));
+  EXPECT_TRUE(isa_and_nonnull<foo>(B4));
+  EXPECT_FALSE(isa_and_nonnull<foo>(fub()));
+}
+
 TEST(CastingTest, cast) {
   foo &F1 = cast<foo>(B1);
   EXPECT_NE(&F1, null_foo);

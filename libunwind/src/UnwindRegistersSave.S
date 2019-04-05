@@ -972,8 +972,9 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   jmp %o7
    clr %o0                   // return UNW_ESUCCESS
 #endif
-#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
 
   WEAK_ALIAS(__unw_getcontext, unw_getcontext)
+
+#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
 
 NO_EXEC_STACK_DIRECTIVE

@@ -491,3 +491,17 @@ TEST_F(IsPotentiallyReachableTest, DiamondOneSideExcludedTest) {
                 "}");
   ExpectPath(true);
 }
+
+TEST_F(IsPotentiallyReachableTest, UnreachableToReachable) {
+  ParseAssembly("define void @test() {\n"
+                "entry:\n"
+                "  br label %exit\n"
+                "unreachableblock:\n"
+                "  %A = bitcast i8 undef to i8\n"
+                "  br label %exit\n"
+                "exit:\n"
+                "  %B = bitcast i8 undef to i8\n"
+                "  ret void\n"
+                "}");
+  ExpectPath(true);
+}

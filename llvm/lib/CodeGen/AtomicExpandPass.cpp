@@ -1111,11 +1111,11 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   bool HasReleasedLoadBB = !CI->isWeak() && ShouldInsertFencesForAtomic &&
                            SuccessOrder != AtomicOrdering::Monotonic &&
                            SuccessOrder != AtomicOrdering::Acquire &&
-                           !F->optForMinSize();
+                           !F->hasMinSize();
 
   // There's no overhead for sinking the release barrier in a weak cmpxchg, so
   // do it even on minsize.
-  bool UseUnconditionalReleaseBarrier = F->optForMinSize() && !CI->isWeak();
+  bool UseUnconditionalReleaseBarrier = F->hasMinSize() && !CI->isWeak();
 
   // Given: cmpxchg some_op iN* %addr, iN %desired, iN %new success_ord fail_ord
   //

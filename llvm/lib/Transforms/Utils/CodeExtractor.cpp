@@ -329,7 +329,7 @@ bool CodeExtractor::isLegalToShrinkwrapLifetimeMarkers(
         if (dyn_cast<Constant>(MemAddr))
           break;
         Value *Base = MemAddr->stripInBoundsConstantOffsets();
-        if (!dyn_cast<AllocaInst>(Base) || Base == AI)
+        if (!isa<AllocaInst>(Base) || Base == AI)
           return false;
         break;
       }

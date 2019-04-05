@@ -21,29 +21,29 @@ Architecture getArchitectureFromCpuType(uint32_t CPUType, uint32_t CPUSubType) {
 #define ARCHINFO(Arch, Type, Subtype)                                          \
   if (CPUType == (Type) &&                                                     \
       (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) == (Subtype))                    \
-    return Architecture::Arch;
+    return AK_##Arch;
 #include "llvm/TextAPI/MachO/Architecture.def"
 #undef ARCHINFO
 
-  return Architecture::unknown;
+  return AK_unknown;
 }
 
 Architecture getArchitectureFromName(StringRef Name) {
   return StringSwitch<Architecture>(Name)
-#define ARCHINFO(Arch, Type, Subtype) .Case(#Arch, Architecture::Arch)
+#define ARCHINFO(Arch, Type, Subtype) .Case(#Arch, AK_##Arch)
 #include "llvm/TextAPI/MachO/Architecture.def"
 #undef ARCHINFO
-      .Default(Architecture::unknown);
+      .Default(AK_unknown);
 }
 
 StringRef getArchitectureName(Architecture Arch) {
   switch (Arch) {
 #define ARCHINFO(Arch, Type, Subtype)                                          \
-  case Architecture::Arch:                                                     \
+  case AK_##Arch:                                                              \
     return #Arch;
 #include "llvm/TextAPI/MachO/Architecture.def"
 #undef ARCHINFO
-  case Architecture::unknown:
+  case AK_unknown:
     return "unknown";
   }
 
@@ -55,11 +55,11 @@ StringRef getArchitectureName(Architecture Arch) {
 std::pair<uint32_t, uint32_t> getCPUTypeFromArchitecture(Architecture Arch) {
   switch (Arch) {
 #define ARCHINFO(Arch, Type, Subtype)                                          \
-  case Architecture::Arch:                                                     \
+  case AK_##Arch:                                                              \
     return std::make_pair(Type, Subtype);
 #include "llvm/TextAPI/MachO/Architecture.def"
 #undef ARCHINFO
-  case Architecture::unknown:
+  case AK_unknown:
     return std::make_pair(0, 0);
   }
 
