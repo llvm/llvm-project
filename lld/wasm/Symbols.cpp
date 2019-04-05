@@ -24,6 +24,7 @@ using namespace lld;
 using namespace lld::wasm;
 
 DefinedFunction *WasmSym::CallCtors;
+DefinedFunction *WasmSym::ApplyRelocs;
 DefinedData *WasmSym::DsoHandle;
 DefinedData *WasmSym::DataEnd;
 DefinedData *WasmSym::HeapBase;

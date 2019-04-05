@@ -278,10 +278,15 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
   }
 }
 
-static StringRef getEntry(opt::InputArgList &Args, StringRef Default) {
+static StringRef getEntry(opt::InputArgList &Args) {
   auto *Arg = Args.getLastArg(OPT_entry, OPT_no_entry);
-  if (!Arg)
-    return Default;
+  if (!Arg) {
+    if (Args.hasArg(OPT_relocatable))
+      return "";
+    if (Args.hasArg(OPT_shared))
+      return "__wasm_call_ctors";
+    return "_start";
+  }
   if (Arg->getOption().getID() == OPT_no_entry)
     return "";
   return Arg->getValue();
@@ -298,7 +303,7 @@ static void setConfigs(opt::InputArgList &Args) {
   Config->CompressRelocations = Args.hasArg(OPT_compress_relocations);
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
-  Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
+  Config->Entry = getEntry(Args);
   Config->ExportAll = Args.hasArg(OPT_export_all);
   Config->ExportDynamic = Args.hasFlag(OPT_export_dynamic,
       OPT_no_export_dynamic, false);
@@ -422,10 +427,20 @@ static void createSyntheticSymbols() {
   static llvm::wasm::WasmGlobalType MutableGlobalTypeI32 = {WASM_TYPE_I32,
                                                             true};
 
-  if (!Config->Relocatable)
+  if (!Config->Relocatable) {
     WasmSym::CallCtors = Symtab->addSyntheticFunction(
         "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
+
+    if (Config->Pic) {
+      // For PIC code we create a synthetic function call __wasm_apply_relocs
+      // and add this as the first call in __wasm_call_ctors.
+      // We also unconditionally export 
+      WasmSym::ApplyRelocs = Symtab->addSyntheticFunction(
+          "__wasm_apply_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
+          make<SyntheticFunction>(NullSignature, "__wasm_apply_relocs"));
+    }
+  }
 
   // The __stack_pointer is imported in the shared library case, and exported
   // in the non-shared (executable) case.
@@ -518,18 +533,18 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->ImportTable = true;
   }
 
-  if (Config->Shared) {
-    Config->ImportMemory = true;
-    Config->ExportDynamic = true;
-    Config->AllowUndefined = true;
-  }
-
   // Handle --trace-symbol.
   for (auto *Arg : Args.filtered(OPT_trace_symbol))
     Symtab->trace(Arg->getValue());
 
   if (!Config->Relocatable)
     createSyntheticSymbols();
+
+  if (Config->Shared) {
+    Config->ImportMemory = true;
+    Config->ExportDynamic = true;
+    Config->AllowUndefined = true;
+  }
 
   createFiles(Args);
   if (errorCount())
@@ -547,15 +562,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     handleUndefined(Arg->getValue());
 
   Symbol *EntrySym = nullptr;
-  if (!Config->Relocatable) {
-    if (!Config->Shared && !Config->Entry.empty()) {
-      EntrySym = handleUndefined(Config->Entry);
-      if (EntrySym && EntrySym->isDefined())
-        EntrySym->ForceExport = true;
-      else
-        error("entry symbol not defined (pass --no-entry to supress): " +
-              Config->Entry);
-    }
+  if (!Config->Relocatable && !Config->Entry.empty()) {
+    EntrySym = handleUndefined(Config->Entry);
+    if (EntrySym && EntrySym->isDefined())
+      EntrySym->ForceExport = true;
+    else
+      error("entry symbol not defined (pass --no-entry to supress): " +
+            Config->Entry);
   }
 
   if (errorCount())

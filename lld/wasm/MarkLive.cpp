@@ -76,6 +76,11 @@ void lld::wasm::markLive() {
     }
   }
 
+  if (Config->Pic) {
+    Enqueue(WasmSym::CallCtors);
+    Enqueue(WasmSym::ApplyRelocs);
+  }
+
   // Follow relocations to mark all reachable chunks.
   while (!Q.empty()) {
     InputChunk *C = Q.pop_back_val();
