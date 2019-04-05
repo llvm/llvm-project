@@ -353,6 +353,8 @@ static bool matchFixedBiTypeAndAdvance(const std::string &ParsedText,
       break;
     case 'n': MatchedType = DBT_NullPtr;
       break;
+    case 'F': MatchedType = DBT_Half; Pos += 3; // _Float16 -> DF16_
+      break;
     default:
       return false;
     }

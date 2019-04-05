@@ -115,7 +115,7 @@ OCLCXX_MENC_BITYPE_FIXED(Float128R,    "De", "__fp128r")
                              ///< IEEE 754r decimal floating point (128 bits)
 OCLCXX_MENC_BITYPE_FIXED(Float32R,     "Df", "__fp32r")
                              ///< IEEE 754r decimal floating point (32 bits)
-OCLCXX_MENC_BITYPE_FIXED(Float16R,     "Dh", "half")
+OCLCXX_MENC_BITYPE_FIXED(Float16R,     "DF16_", "_Float16")
                              ///< IEEE 754r half-prec floating point (16 bits)
 OCLCXX_MENC_BITYPE_ALIAS(Half,         Float16R)
 OCLCXX_MENC_BITYPE_FIXED(Char32,       "Di", "char32_t")       ///< char32_t
