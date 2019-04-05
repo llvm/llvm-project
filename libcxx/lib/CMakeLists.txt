@@ -51,26 +51,6 @@ if (LIBCXX_GENERATE_COVERAGE AND NOT LIBCXX_COVERAGE_LIBRARY)
 endif()
 add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
 
-if (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
-               LIBCXX_CXX_ABI_LIBNAME STREQUAL "default")
-          AND NOT DEFINED LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
-  set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
-endif()
-
-if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-  if (APPLE)
-    add_library_flags("-Wl,-force_load" "${LIBCXX_CXX_STATIC_ABI_LIBRARY}")
-  else()
-    add_library_flags("-Wl,--whole-archive" "-Wl,-Bstatic")
-    add_library_flags("${LIBCXX_CXX_STATIC_ABI_LIBRARY}")
-    add_library_flags("-Wl,-Bdynamic" "-Wl,--no-whole-archive")
-  endif()
-elseif (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
-  add_library_flags("${LIBCXX_CXX_SHARED_ABI_LIBRARY}")
-else ()
-  add_interface_library("${LIBCXX_CXX_SHARED_ABI_LIBRARY}")
-endif()
-
 if (APPLE AND LLVM_USE_SANITIZER)
   if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
       ("${LLVM_USE_SANITIZER}" STREQUAL "Address;Undefined") OR
@@ -142,25 +122,6 @@ if (LIBCXX_TARGETING_MSVC)
   add_library_flags(iso_stdio_wide_specifiers)
 endif()
 
-if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
-  if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
-    set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++sjlj-abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
-  else()
-    set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
-  endif()
-  add_link_flags(
-    "-compatibility_version 1"
-    "-install_name /usr/lib/libc++.1.dylib"
-    "-Wl,-unexported_symbols_list,\"${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp\""
-    "-Wl,-reexported_symbols_list,\"${RE_EXPORT_LIST}\""
-    "-Wl,-force_symbols_not_weak_list,\"${CMAKE_CURRENT_SOURCE_DIR}/notweak.exp\""
-    "-Wl,-force_symbols_weak_list,\"${CMAKE_CURRENT_SOURCE_DIR}/weak.exp\"")
-
-  if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-    add_link_flags("-Wl,-reexported_symbols_list,\"${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp\"")
-  endif()
-endif()
-
 function(cxx_set_common_defines name)
   if(LIBCXX_CXX_ABI_HEADER_TARGET)
     add_dependencies(${name} ${LIBCXX_CXX_ABI_HEADER_TARGET})
@@ -209,6 +170,70 @@ if (LIBCXX_ENABLE_SHARED)
       DEFINE_SYMBOL ""
   )
   cxx_set_common_defines(cxx_shared)
+
+  # Link against libc++abi
+  if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
+    if (APPLE)
+      target_link_libraries(cxx_shared PRIVATE "-Wl,-force_load" "$<TARGET_LINKER_FILE:${LIBCXX_CXX_STATIC_ABI_LIBRARY}>")
+    else()
+      target_link_libraries(cxx_shared PRIVATE "-Wl,--whole-archive,-Bstatic" "$<TARGET_LINKER_FILE:${LIBCXX_CXX_STATIC_ABI_LIBRARY}>" "-Wl,-Bdynamic,--no-whole-archive")
+    endif()
+  else()
+    target_link_libraries(cxx_shared PRIVATE "${LIBCXX_CXX_SHARED_ABI_LIBRARY}")
+    list(APPEND LIBCXX_INTERFACE_LIBRARIES "${LIBCXX_CXX_STATIC_ABI_LIBRARY}")
+  endif()
+
+  # Maybe re-export symbols from libc++abi
+  if (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
+                 LIBCXX_CXX_ABI_LIBNAME STREQUAL "default")
+            AND NOT DEFINED LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
+    set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
+  endif()
+
+  if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
+    if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
+      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++sjlj-abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
+    else()
+      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
+    endif()
+    target_link_libraries(cxx_shared PRIVATE
+      "-compatibility_version 1"
+      "-install_name /usr/lib/libc++.1.dylib"
+      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp"
+      "-Wl,-reexported_symbols_list,${RE_EXPORT_LIST}"
+      "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/notweak.exp"
+      "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/weak.exp")
+
+    if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+      target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp")
+    endif()
+  endif()
+
+  # Generate a linker script in place of a libc++.so symlink. Rerun this command
+  # after cxx builds.
+  if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
+    # Get the name of the ABI library and handle the case where CXXABI_LIBNAME
+    # is a target name and not a library. Ex cxxabi_shared.
+    set(LIBCXX_INTERFACE_LIBRARY_NAMES)
+    foreach(lib ${LIBCXX_INTERFACE_LIBRARIES})
+      # FIXME: Handle cxxabi_static and unwind_static.
+      if (TARGET ${lib} OR
+          (${lib} MATCHES "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI) OR
+          (${lib} MATCHES "unwind(_static|_shared)?" AND HAVE_LIBUNWIND))
+        list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "$<TARGET_PROPERTY:${lib},OUTPUT_NAME>")
+      else()
+        list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "${lib}")
+      endif()
+    endforeach()
+    add_custom_command(TARGET cxx_shared POST_BUILD
+      COMMAND
+        ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script.py
+      ARGS
+        "$<TARGET_LINKER_FILE:cxx_shared>"
+        ${LIBCXX_INTERFACE_LIBRARY_NAMES}
+      WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
+    )
+  endif()
 
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
   if (LIBCXX_INSTALL_SHARED_LIBRARY)
@@ -311,35 +336,6 @@ if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       OUTPUT_NAME   "c++external_threads"
-  )
-endif()
-
-# Generate a linker script inplace of a libc++.so symlink. Rerun this command
-# after cxx builds.
-if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-  # Get the name of the ABI library and handle the case where CXXABI_LIBNAME
-  # is a target name and not a library. Ex cxxabi_shared.
-  set(LIBCXX_INTERFACE_LIBRARY_NAMES)
-  foreach(lib ${LIBCXX_INTERFACE_LIBRARIES})
-    # FIXME: Handle cxxabi_static and unwind_static.
-    if (TARGET ${lib} OR
-        (${lib} MATCHES "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI) OR
-        (${lib} MATCHES "unwind(_static|_shared)?" AND HAVE_LIBUNWIND))
-      list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "$<TARGET_PROPERTY:${lib},OUTPUT_NAME>")
-    else()
-      list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "${lib}")
-    endif()
-  endforeach()
-  #split_list(LIBCXX_INTERFACE_LIBRARY_NAMES)
-  # Generate a linker script inplace of a libc++.so symlink. Rerun this command
-  # after cxx builds.
-  add_custom_command(TARGET cxx_shared POST_BUILD
-    COMMAND
-      ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script.py
-    ARGS
-      "$<TARGET_LINKER_FILE:cxx_shared>"
-      ${LIBCXX_INTERFACE_LIBRARY_NAMES}
-    WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
   )
 endif()
 
