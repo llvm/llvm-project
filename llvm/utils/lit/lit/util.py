@@ -142,6 +142,25 @@ def detectCPUs():
     return 1  # Default
 
 
+def mkdir(path):
+    try:
+        if platform.system() == 'Windows':
+            from ctypes import windll
+            from ctypes import GetLastError, WinError
+
+            path = os.path.abspath(path)
+            NTPath = unicode(r'\\?\%s' % path)
+            if not windll.kernel32.CreateDirectoryW(NTPath, None):
+                raise WinError(GetLastError())
+        else:
+            os.mkdir(path)
+    except OSError:
+        e = sys.exc_info()[1]
+        # ignore EEXIST, which may occur during a race condition
+        if e.errno != errno.EEXIST:
+            raise
+
+
 def mkdir_p(path):
     """mkdir_p(path) - Make the "path" directory, if it does not exist; this
     will also make directories for any missing parent directories."""
@@ -152,13 +171,7 @@ def mkdir_p(path):
     if parent != path:
         mkdir_p(parent)
 
-    try:
-        os.mkdir(path)
-    except OSError:
-        e = sys.exc_info()[1]
-        # Ignore EEXIST, which may occur during a race condition.
-        if e.errno != errno.EEXIST:
-            raise
+    mkdir(path)
 
 
 def listdir_files(dirname, suffixes=None, exclude_filenames=None):

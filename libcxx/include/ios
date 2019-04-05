@@ -330,6 +330,15 @@ public:
     void __set_badbit_and_consider_rethrow();
     void __set_failbit_and_consider_rethrow();
 
+    _LIBCPP_INLINE_VISIBILITY
+    void __setstate_nothrow(iostate __state)
+    {
+        if (__rdbuf_)
+            __rdstate_ |= __state;
+        else
+            __rdstate_ |= __state | ios_base::badbit;
+    }
+
 protected:
     _LIBCPP_INLINE_VISIBILITY
     ios_base() {// purposefully does no initialization

@@ -486,6 +486,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .clampMaxNumElements(0, LocalPtr, 2)
     .clampMaxNumElements(0, PrivatePtr, 2)
     .scalarize(0)
+    .widenScalarToNextPow2(0)
     .legalIf(all(isPointer(0), typeIs(1, S1)));
 
   // TODO: Only the low 4/5/6 bits of the shift amount are observed, so we can

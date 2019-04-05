@@ -22,15 +22,6 @@ StringRef getText(CharSourceRange Range, const ASTContext &Context) {
   return Lexer::getSourceText(Range, Context.getSourceManager(),
                               Context.getLangOpts());
 }
-
-CharSourceRange maybeExtendRange(CharSourceRange Range, tok::TokenKind Next,
-                                 ASTContext &Context) {
-  Optional<Token> Tok = Lexer::findNextToken(
-      Range.getEnd(), Context.getSourceManager(), Context.getLangOpts());
-  if (!Tok || !Tok->is(Next))
-    return Range;
-  return CharSourceRange::getTokenRange(Range.getBegin(), Tok->getLocation());
-}
 } // namespace internal
 
 } // end namespace fixit

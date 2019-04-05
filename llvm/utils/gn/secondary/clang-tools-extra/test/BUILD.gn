@@ -39,9 +39,9 @@ write_lit_config("lit_site_cfg") {
   ]
 
   if (clangd_build_xpc) {
-    extra_values += [ "CLANGD_BUILD_XPC_SUPPORT=1" ]
+    extra_values += [ "CLANGD_BUILD_XPC=1" ]
   } else {
-    extra_values += [ "CLANGD_BUILD_XPC_SUPPORT=0" ]
+    extra_values += [ "CLANGD_BUILD_XPC=0" ]
   }
 
   if (clang_enable_static_analyzer) {
