@@ -180,7 +180,8 @@ if (LIBCXX_ENABLE_SHARED)
     endif()
   else()
     target_link_libraries(cxx_shared PRIVATE "${LIBCXX_CXX_SHARED_ABI_LIBRARY}")
-    list(APPEND LIBCXX_INTERFACE_LIBRARIES "${LIBCXX_CXX_STATIC_ABI_LIBRARY}")
+    list(APPEND LIBCXX_INTERFACE_LIBRARIES "${LIBCXX_CXX_SHARED_ABI_LIBRARY}") # For the linker script
+    list(APPEND LIBCXX_LIBRARIES "${LIBCXX_CXX_SHARED_ABI_LIBRARY}") # For the benchmarks
   endif()
 
   # Maybe re-export symbols from libc++abi
