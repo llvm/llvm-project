@@ -460,6 +460,21 @@ define <4 x float> @fdiv_constant_denominator_fmul_vec_constexpr(<4 x float> %x)
   ret <4 x float> %t3
 }
 
+; This shows that at least part of instcombine does not check constant
+; values to see if it is creating denorms (0x3800000000000000 is a denorm
+; for 32-bit float), so protecting against denorms in other parts is
+; probably not doing the intended job.
+
+define float @fmul_constant_reassociation(float %x) {
+; CHECK-LABEL: @fmul_constant_reassociation(
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], 0x3800000000000000
+; CHECK-NEXT:    ret float [[R]]
+;
+  %mul_flt_min = fmul reassoc nsz float %x, 0x3810000000000000
+  %r = fmul reassoc nsz float  %mul_flt_min, 0.5
+  ret float %r
+}
+
 ; Rule "X/C1 * C2 => X * (C2/C1) is not applicable if C2/C1 is abnormal
 ; 0x3810000000000000 == FLT_MIN
 

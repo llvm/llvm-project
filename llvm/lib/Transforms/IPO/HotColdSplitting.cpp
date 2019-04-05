@@ -149,7 +149,7 @@ static bool mayExtractBlock(const BasicBlock &BB) {
 /// module has profile data), set entry count to 0 to ensure treated as cold.
 /// Return true if the function is changed.
 static bool markFunctionCold(Function &F, bool UpdateEntryCount = false) {
-  assert(!F.optForNone() && "Can't mark this cold");
+  assert(!F.hasOptNone() && "Can't mark this cold");
   bool Changed = false;
   if (!F.hasFnAttribute(Attribute::Cold)) {
     F.addFnAttr(Attribute::Cold);
@@ -673,7 +673,7 @@ bool HotColdSplitting::run(Module &M) {
       continue;
 
     // Do not modify `optnone` functions.
-    if (F.optForNone())
+    if (F.hasOptNone())
       continue;
 
     // Detect inherently cold functions and mark them as such.

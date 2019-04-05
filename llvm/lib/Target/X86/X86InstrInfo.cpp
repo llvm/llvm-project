@@ -1453,7 +1453,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VBLENDPDrri:
   case X86::VBLENDPSrri:
     // If we're optimizing for size, try to use MOVSD/MOVSS.
-    if (MI.getParent()->getParent()->getFunction().optForSize()) {
+    if (MI.getParent()->getParent()->getFunction().hasOptSize()) {
       unsigned Mask, Opc;
       switch (MI.getOpcode()) {
       default: llvm_unreachable("Unreachable!");
@@ -4820,14 +4820,14 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // For CPUs that favor the register form of a call or push,
   // do not fold loads into calls or pushes, unless optimizing for size
   // aggressively.
-  if (isSlowTwoMemOps && !MF.getFunction().optForMinSize() &&
+  if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
       (MI.getOpcode() == X86::CALL32r || MI.getOpcode() == X86::CALL64r ||
        MI.getOpcode() == X86::PUSH16r || MI.getOpcode() == X86::PUSH32r ||
        MI.getOpcode() == X86::PUSH64r))
     return nullptr;
 
   // Avoid partial and undef register update stalls unless optimizing for size.
-  if (!MF.getFunction().optForSize() &&
+  if (!MF.getFunction().hasOptSize() &&
       (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
@@ -4995,7 +4995,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
     return nullptr;
 
   // Avoid partial and undef register update stalls unless optimizing for size.
-  if (!MF.getFunction().optForSize() &&
+  if (!MF.getFunction().hasOptSize() &&
       (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
@@ -5195,7 +5195,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (NoFusing) return nullptr;
 
   // Avoid partial and undef register update stalls unless optimizing for size.
-  if (!MF.getFunction().optForSize() &&
+  if (!MF.getFunction().hasOptSize() &&
       (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;

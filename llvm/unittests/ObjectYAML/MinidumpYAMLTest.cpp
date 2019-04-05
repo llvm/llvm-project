@@ -33,7 +33,6 @@ Streams:
   - Type:            SystemInfo
     Processor Arch:  ARM64
     Platform ID:     Linux
-    CSD Version RVA: 0x01020304
     CPU:
       CPUID:           0x05060708
   - Type:            LinuxMaps
@@ -54,7 +53,6 @@ Streams:
   const SystemInfo &SysInfo = *ExpectedSysInfo;
   EXPECT_EQ(ProcessorArchitecture::ARM64, SysInfo.ProcessorArch);
   EXPECT_EQ(OSPlatform::Linux, SysInfo.PlatformId);
-  EXPECT_EQ(0x01020304u, SysInfo.CSDVersionRVA);
   EXPECT_EQ(0x05060708u, SysInfo.CPU.Arm.CPUID);
 
   EXPECT_EQ(StreamType::LinuxMaps, File.streams()[1].Type);

@@ -96,24 +96,27 @@ define void @test_trunc64(double %in, half* %addr) {
   ret void
 }
 
-define i16 @test_fccmp(i1 %a) {
+define i16 @test_fccmp(i1 %a, i16 %in) {
 ; CHECK-LABEL: test_fccmp:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #24576
+; CHECK-NEXT:    fmov s0, w1
 ; CHECK-NEXT:    movk w8, #15974, lsl #16
 ; CHECK-NEXT:    mov w9, #16384
+; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    movk w9, #15428, lsl #16
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    fmov s1, w9
 ; CHECK-NEXT:    cset w8, pl
-; CHECK-NEXT:    fccmp s0, s0, #8, pl
+; CHECK-NEXT:    fccmp s0, s1, #8, pl
 ; CHECK-NEXT:    mov w9, #4
 ; CHECK-NEXT:    csinc w9, w9, wzr, mi
 ; CHECK-NEXT:    add w0, w8, w9
 ; CHECK-NEXT:    ret
-  %cmp0 = fcmp ogt half 0xH3333, undef
-  %cmp1 = fcmp ogt half 0xH2222, undef
+  %f16 = bitcast i16 %in to half
+  %cmp0 = fcmp ogt half 0xH3333, %f16
+  %cmp1 = fcmp ogt half 0xH2222, %f16
   %x = select i1 %cmp0, i16 0, i16 1
   %or = or i1 %cmp1, %cmp0
   %y = select i1 %or, i16 4, i16 1

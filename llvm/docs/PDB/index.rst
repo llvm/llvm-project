@@ -100,7 +100,8 @@ PDB file is as follows:
 |                    |                              | - Indices of public / global streams      |
 |                    |                              | - Section Contribution Information        |
 |                    |                              | - Source File Information                 |
-|                    |                              | - FPO / PGO Data                          |
+|                    |                              | - References to streams containing        |
+|                    |                              |   FPO / PGO Data                          |
 +--------------------+------------------------------+-------------------------------------------+
 | IPI Stream         | - Fixed Stream Index 4       | - CodeView Type Records                   |
 |                    |                              | - Index of IPI Hash Stream                |
@@ -108,8 +109,8 @@ PDB file is as follows:
 | /LinkInfo          | - Contained in PDB Stream    | - Unknown                                 |
 |                    |   Named Stream map           |                                           |
 +--------------------+------------------------------+-------------------------------------------+
-| /src/headerblock   | - Contained in PDB Stream    | - Unknown                                 |
-|                    |   Named Stream map           |                                           |
+| /src/headerblock   | - Contained in PDB Stream    | - Summary of embedded source file content |
+|                    |   Named Stream map           |   (e.g. natvis files)                     |
 +--------------------+------------------------------+-------------------------------------------+
 | /names             | - Contained in PDB Stream    | - PDB-wide global string table used for   |
 |                    |   Named Stream map           |   string de-duplication                   |
@@ -120,7 +121,7 @@ PDB file is as follows:
 | Public Stream      | - Contained in DBI Stream    | - Public (Exported) Symbol Records        |
 |                    |                              | - Index of Public Hash Stream             |
 +--------------------+------------------------------+-------------------------------------------+
-| Global Stream      | - Contained in DBI Stream    | - Global Symbol Records                   |
+| Global Stream      | - Contained in DBI Stream    | - Single combined master symbol-table     |
 |                    |                              | - Index of Global Hash Stream             |
 +--------------------+------------------------------+-------------------------------------------+
 | TPI Hash Stream    | - Contained in TPI Stream    | - Hash table for looking up TPI records   |
@@ -128,6 +129,10 @@ PDB file is as follows:
 +--------------------+------------------------------+-------------------------------------------+
 | IPI Hash Stream    | - Contained in IPI Stream    | - Hash table for looking up IPI records   |
 |                    |                              |   by name                                 |
++--------------------+------------------------------+-------------------------------------------+
+| * LINKER* Stream   | - Last Stream in PDB File    | - Executable section information          |
+|                    |                              | - Incremental linking thunks              |
+|                    |                              | - Linker version information              |
 +--------------------+------------------------------+-------------------------------------------+
 
 More information about the structure of each of these can be found on the

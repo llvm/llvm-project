@@ -46,14 +46,20 @@ Symbols:
     Value:    0x1010
     Size:     8
 
-#REGEX1-NOT: foobaz
-#REGEX1-NOT: bar
-#REGEX1-NOT: rebar
+#REGEX1:     Symbols [
+#REGEX1-NOT:   Name: foobaz
+#REGEX1-NOT:   Name: bar
+#REGEX1-NOT:   Name: rebar
+#REGEX1:     ]
 
-#REGEX2-NOT: foobaz
-#REGEX2: bar
-#REGEX2-NOT: rebar
+#REGEX2:     Symbols [
+#REGEX2-NOT:   Name: foobaz
+#REGEX2:       Name: bar
+#REGEX2-NOT:   Name: rebar
+#REGEX2:     ]
 
-#REGEX3: foobaz
-#REGEX3: bar
-#REGEX3: rebar
+#REGEX3: Symbols [
+#REGEX3:   Name: foobaz
+#REGEX3:   Name: bar
+#REGEX3:   Name: rebar
+#REGEX3: ]

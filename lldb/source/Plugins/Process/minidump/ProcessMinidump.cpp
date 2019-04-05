@@ -718,10 +718,12 @@ public:
     if (DumpDirectory()) {
       s.Printf("RVA        SIZE       TYPE       StreamType\n");
       s.Printf("---------- ---------- ---------- --------------------------\n");
-      for (const auto &pair: minidump.GetDirectoryMap())
-        s.Printf("0x%8.8x 0x%8.8x 0x%8.8x %s\n", (uint32_t)pair.second.RVA,
-                 (uint32_t)pair.second.DataSize, (unsigned)pair.first,
-                 MinidumpParser::GetStreamTypeAsString(pair.first).data());
+      for (const auto &stream_desc : minidump.GetMinidumpFile().streams())
+        s.Printf(
+            "0x%8.8x 0x%8.8x 0x%8.8x %s\n", (uint32_t)stream_desc.Location.RVA,
+            (uint32_t)stream_desc.Location.DataSize,
+            (unsigned)(StreamType)stream_desc.Type,
+            MinidumpParser::GetStreamTypeAsString(stream_desc.Type).data());
       s.Printf("\n");
     }
     auto DumpTextStream = [&](StreamType stream_type,

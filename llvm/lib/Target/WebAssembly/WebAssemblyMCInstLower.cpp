@@ -122,16 +122,31 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
 
 MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
                                                      MCSymbol *Sym) const {
-  bool isGOT = MO.getTargetFlags() == WebAssemblyII::MO_GOT;
-  MCSymbolRefExpr::VariantKind Kind =
-      isGOT ? MCSymbolRefExpr::VK_GOT : MCSymbolRefExpr::VK_None;
+  MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
+  unsigned TargetFlags = MO.getTargetFlags();
+
+  switch (TargetFlags) {
+    case WebAssemblyII::MO_NO_FLAG:
+      break;
+    case WebAssemblyII::MO_GOT:
+      Kind = MCSymbolRefExpr::VK_GOT;
+      break;
+    case WebAssemblyII::MO_MEMORY_BASE_REL:
+      Kind = MCSymbolRefExpr::VK_WASM_MBREL;
+      break;
+    case WebAssemblyII::MO_TABLE_BASE_REL:
+      Kind = MCSymbolRefExpr::VK_WASM_TBREL;
+      break;
+    default:
+      llvm_unreachable("Unknown target flag on GV operand");
+  }
+
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Kind, Ctx);
 
   if (MO.getOffset() != 0) {
     const auto *WasmSym = cast<MCSymbolWasm>(Sym);
-    if (isGOT)
+    if (TargetFlags == WebAssemblyII::MO_GOT)
       report_fatal_error("GOT symbol references do not support offsets");
-
     if (WasmSym->isFunction())
       report_fatal_error("Function addresses with offsets not supported");
     if (WasmSym->isGlobal())
@@ -217,7 +232,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
           WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
 
           const MCExpr *Expr = MCSymbolRefExpr::create(
-              WasmSym, MCSymbolRefExpr::VK_WebAssembly_TYPEINDEX, Ctx);
+              WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
           MCOp = MCOperand::createExpr(Expr);
           break;
         }

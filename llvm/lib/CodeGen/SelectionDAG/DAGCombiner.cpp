@@ -196,7 +196,7 @@ namespace {
     DAGCombiner(SelectionDAG &D, AliasAnalysis *AA, CodeGenOpt::Level OL)
         : DAG(D), TLI(D.getTargetLoweringInfo()), Level(BeforeLegalizeTypes),
           OptLevel(OL), AA(AA) {
-      ForCodeSize = DAG.getMachineFunction().getFunction().optForSize();
+      ForCodeSize = DAG.getMachineFunction().getFunction().hasOptSize();
 
       MaximumLegalStoreInBits = 0;
       for (MVT VT : MVT::all_valuetypes())
@@ -12188,7 +12188,7 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
 
     // Assume that libcalls are the smallest code.
     // TODO: This restriction should probably be lifted for vectors.
-    if (DAG.getMachineFunction().getFunction().optForSize())
+    if (DAG.getMachineFunction().getFunction().hasOptSize())
       return SDValue();
 
     // pow(X, 0.25) --> sqrt(sqrt(X))
@@ -18078,11 +18078,28 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
   // If it is a splat, check if the argument vector is another splat or a
   // build_vector.
   if (SVN->isSplat() && SVN->getSplatIndex() < (int)NumElts) {
-    SDNode *V = N0.getNode();
+    int SplatIndex = SVN->getSplatIndex();
+    if (TLI.isExtractVecEltCheap(VT, SplatIndex) &&
+        ISD::isBinaryOp(N0.getNode())) {
+      // splat (vector_bo L, R), Index -->
+      // splat (scalar_bo (extelt L, Index), (extelt R, Index))
+      SDValue L = N0.getOperand(0), R = N0.getOperand(1);
+      SDLoc DL(N);
+      EVT EltVT = VT.getScalarType();
+      SDValue Index = DAG.getIntPtrConstant(SplatIndex, DL);
+      SDValue ExtL = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, L, Index);
+      SDValue ExtR = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, R, Index);
+      SDValue NewBO = DAG.getNode(N0.getOpcode(), DL, EltVT, ExtL, ExtR,
+                                  N0.getNode()->getFlags());
+      SDValue Insert = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, NewBO);
+      SmallVector<int, 16> ZeroMask(VT.getVectorNumElements(), 0);
+      return DAG.getVectorShuffle(VT, DL, Insert, DAG.getUNDEF(VT), ZeroMask);
+    }
 
     // If this is a bit convert that changes the element type of the vector but
     // not the number of vector elements, look through it.  Be careful not to
     // look though conversions that change things like v4f32 to v2f64.
+    SDNode *V = N0.getNode();
     if (V->getOpcode() == ISD::BITCAST) {
       SDValue ConvInput = V->getOperand(0);
       if (ConvInput.getValueType().isVector() &&
@@ -18115,7 +18132,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
         return N0;
 
       // Canonicalize any other splat as a build_vector.
-      const SDValue &Splatted = V->getOperand(SVN->getSplatIndex());
+      SDValue Splatted = V->getOperand(SplatIndex);
       SmallVector<SDValue, 8> Ops(NumElts, Splatted);
       SDValue NewBV = DAG.getBuildVector(V->getValueType(0), SDLoc(N), Ops);
 
@@ -19213,7 +19230,7 @@ SDValue DAGCombiner::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
 SDValue DAGCombiner::BuildSDIV(SDNode *N) {
   // when optimising for minimum size, we don't want to expand a div to a mul
   // and a shift.
-  if (DAG.getMachineFunction().getFunction().optForMinSize())
+  if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
   SmallVector<SDNode *, 8> Built;
@@ -19254,7 +19271,7 @@ SDValue DAGCombiner::BuildSDIVPow2(SDNode *N) {
 SDValue DAGCombiner::BuildUDIV(SDNode *N) {
   // when optimising for minimum size, we don't want to expand a div to a mul
   // and a shift.
-  if (DAG.getMachineFunction().getFunction().optForMinSize())
+  if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
   SmallVector<SDNode *, 8> Built;

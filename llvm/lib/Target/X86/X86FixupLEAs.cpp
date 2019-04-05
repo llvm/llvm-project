@@ -200,7 +200,7 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &Func) {
   bool IsSlowLEA = ST.slowLEA();
   bool IsSlow3OpsLEA = ST.slow3OpsLEA();
 
-  OptIncDec = !ST.slowIncDec() || Func.getFunction().optForSize();
+  OptIncDec = !ST.slowIncDec() || Func.getFunction().hasOptSize();
   OptLEA = ST.LEAusesAG() || IsSlowLEA || IsSlow3OpsLEA;
 
   if (!OptLEA && !OptIncDec)

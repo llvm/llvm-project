@@ -330,7 +330,7 @@ bool GlobalMerge::doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
         Function *ParentFn = I->getParent()->getParent();
 
         // If we're only optimizing for size, ignore non-minsize functions.
-        if (OnlyOptimizeForSize && !ParentFn->optForMinSize())
+        if (OnlyOptimizeForSize && !ParentFn->hasMinSize())
           continue;
 
         size_t UGSIdx = GlobalUsesByFunction[ParentFn];

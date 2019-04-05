@@ -548,7 +548,7 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
                                            ConstCandVecType::iterator &MaxCostItr) {
   unsigned NumUses = 0;
 
-  if(!Entry->getParent()->optForSize() || std::distance(S,E) > 100) {
+  if(!Entry->getParent()->hasOptSize() || std::distance(S,E) > 100) {
     for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
       NumUses += ConstCand->Uses.size();
       if (ConstCand->CumulativeCost > MaxCostItr->CumulativeCost)

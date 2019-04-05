@@ -547,6 +547,15 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<LLT> Res,
   return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildUnmerge(LLT Res,
+                                                   const SrcOp &Op) {
+  unsigned NumReg = Op.getLLTTy(*getMRI()).getSizeInBits() / Res.getSizeInBits();
+  SmallVector<unsigned, 8> TmpVec;
+  for (unsigned I = 0; I != NumReg; ++I)
+    TmpVec.push_back(getMRI()->createGenericVirtualRegister(Res));
+  return buildUnmerge(TmpVec, Op);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<unsigned> Res,
                                                    const SrcOp &Op) {
   // Unfortunately to convert from ArrayRef<unsigned> to ArrayRef<DstOp>,

@@ -108,8 +108,9 @@ entry:
 define i64 @fun8(i16 zeroext %v) {
 ; CHECK-LABEL: fun8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sarw $4, %di
-; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    movswl %di, %eax
+; CHECK-NEXT:    shrl $4, %eax
+; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    shlq $4, %rax
 ; CHECK-NEXT:    retq
 entry:

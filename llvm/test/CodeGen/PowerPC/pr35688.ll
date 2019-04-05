@@ -6,16 +6,14 @@
 ; Function Attrs: nounwind
 define void @ec_GFp_nistp256_points_mul() {
 ; CHECK-LABEL: ec_GFp_nistp256_points_mul:
-; CHECK:    ld 5, 0(3)
-; CHECK:    li 3, 127
-; CHECK:    li 4, 0
-; CHECK:    subfic 6, 5, 0
-; CHECK:    subfze 6, 4
-; CHECK:    sradi 7, 6, 63
-; CHECK:    srad 6, 6, 3
-; CHECK:    subfc 5, 5, 7
-; CHECK:    subfe 5, 4, 6
+; CHECK:    ld 4, 0(3)
+; CHECK:    li 3, 0
+; CHECK:    subfic 5, 4, 0
+; CHECK:    subfze 5, 3
 ; CHECK:    sradi 5, 5, 63
+; CHECK:    subfc 4, 4, 5
+; CHECK:    subfe 4, 3, 5
+; CHECK:    sradi 4, 4, 63
 
 ; With MemorySSA, everything is taken out of the loop by licm.
 ; Loads and stores to undef are treated as non-aliasing.

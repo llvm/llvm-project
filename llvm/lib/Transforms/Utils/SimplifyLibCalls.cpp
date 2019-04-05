@@ -2375,7 +2375,7 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilder<> &B) {
 
   // Don't rewrite fputs to fwrite when optimising for size because fwrite
   // requires more arguments and thus extra MOVs are required.
-  if (CI->getFunction()->optForSize())
+  if (CI->getFunction()->hasOptSize())
     return nullptr;
 
   // Check if has any use

@@ -829,7 +829,7 @@ namespace llvm {
     }
 
     bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override {
-      if (DAG.getMachineFunction().getFunction().optForMinSize())
+      if (DAG.getMachineFunction().getFunction().hasMinSize())
         return false;
       return true;
     }
@@ -1073,6 +1073,12 @@ namespace llvm {
     /// the vector equivalent, so this always makes sense if the scalar op is
     /// supported.
     bool shouldScalarizeBinop(SDValue) const override;
+
+    /// Extract of a scalar FP value from index 0 of a vector is free.
+    bool isExtractVecEltCheap(EVT VT, unsigned Index) const override {
+      EVT EltVT = VT.getScalarType();
+      return (EltVT == MVT::f32 || EltVT == MVT::f64) && Index == 0;
+    }
 
     /// Overflow nodes should get combined/lowered to optimal instructions
     /// (they should allow eliminating explicit compares by getting flags from

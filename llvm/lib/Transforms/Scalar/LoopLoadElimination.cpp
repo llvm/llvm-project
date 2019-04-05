@@ -529,7 +529,7 @@ public:
     }
 
     if (!Checks.empty() || !LAI.getPSE().getUnionPredicate().isAlwaysTrue()) {
-      if (L->getHeader()->getParent()->optForSize()) {
+      if (L->getHeader()->getParent()->hasOptSize()) {
         LLVM_DEBUG(
             dbgs() << "Versioning is needed but not allowed when optimizing "
                       "for size.\n");

@@ -38,7 +38,7 @@ public:
   ArchitectureSet(const std::vector<Architecture> &Archs);
 
   void set(Architecture Arch) {
-    if (Arch == Architecture::unknown)
+    if (Arch == AK_unknown)
       return;
     ArchSet |= 1U << static_cast<int>(Arch);
   }
@@ -69,11 +69,10 @@ public:
     void findNextSetBit() {
       if (Index == EndIndexVal)
         return;
-
-      do {
-        if (*ArchSet & (1UL << ++Index))
+      while (++Index < sizeof(Ty) * 8) {
+        if (*ArchSet & (1UL << Index))
           return;
-      } while (Index < sizeof(Ty) * 8);
+      }
 
       Index = EndIndexVal;
     }

@@ -1369,7 +1369,7 @@ void MemIntrinsicVisitor::instrumentOneMemIntrinsic(MemIntrinsic &MI) {
   Type *Int64Ty = Builder.getInt64Ty();
   Type *I8PtrTy = Builder.getInt8PtrTy();
   Value *Length = MI.getLength();
-  assert(!dyn_cast<ConstantInt>(Length));
+  assert(!isa<ConstantInt>(Length));
   Builder.CreateCall(
       Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
       {ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),

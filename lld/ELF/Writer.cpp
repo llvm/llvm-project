@@ -560,9 +560,8 @@ template <class ELFT> void Writer<ELFT>::run() {
     error("failed to write to the output file: " + toString(std::move(E)));
 }
 
-static bool shouldKeepInSymtab(SectionBase *Sec, StringRef SymName,
-                               const Symbol &B) {
-  if (B.isSection())
+static bool shouldKeepInSymtab(const Defined &Sym) {
+  if (Sym.isSection())
     return false;
 
   if (Config->Discard == DiscardPolicy::None)
@@ -573,12 +572,15 @@ static bool shouldKeepInSymtab(SectionBase *Sec, StringRef SymName,
   // * --discard-locals is used.
   // * The symbol is in a SHF_MERGE section, which is normally the reason for
   //   the assembler keeping the .L symbol.
-  if (!SymName.startswith(".L") && !SymName.empty())
+  StringRef Name = Sym.getName();
+  bool IsLocal = Name.startswith(".L") || Name.empty();
+  if (!IsLocal)
     return true;
 
   if (Config->Discard == DiscardPolicy::Locals)
     return false;
 
+  SectionBase *Sec = Sym.Section;
   return !Sec || !(Sec->Flags & SHF_MERGE);
 }
 
@@ -623,9 +625,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
         continue;
       if (!includeInSymtab(*B))
         continue;
-
-      SectionBase *Sec = DR->Section;
-      if (!shouldKeepInSymtab(Sec, B->getName(), *B))
+      if (!shouldKeepInSymtab(*DR))
         continue;
       In.SymTab->addSymbol(B);
     }

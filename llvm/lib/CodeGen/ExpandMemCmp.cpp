@@ -721,7 +721,7 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   NumMemCmpCalls++;
 
   // Early exit from expansion if -Oz.
-  if (CI->getFunction()->optForMinSize())
+  if (CI->getFunction()->hasMinSize())
     return false;
 
   // Early exit from expansion if size is not a constant.
@@ -742,7 +742,7 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   if (!Options) return false;
 
   const unsigned MaxNumLoads =
-      TLI->getMaxExpandSizeMemcmp(CI->getFunction()->optForSize());
+      TLI->getMaxExpandSizeMemcmp(CI->getFunction()->hasOptSize());
 
   unsigned NumLoadsPerBlock = MemCmpEqZeroNumLoadsPerBlock.getNumOccurrences()
                                   ? MemCmpEqZeroNumLoadsPerBlock

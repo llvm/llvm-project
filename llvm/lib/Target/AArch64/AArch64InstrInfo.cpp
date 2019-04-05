@@ -5486,7 +5486,7 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
 
 bool AArch64InstrInfo::shouldOutlineFromFunctionByDefault(
   MachineFunction &MF) const {
-  return MF.getFunction().optForMinSize();
+  return MF.getFunction().hasMinSize();
 }
 
 #define GET_INSTRINFO_HELPERS

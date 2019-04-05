@@ -145,7 +145,7 @@ SourceLocation StaticAssertCheck::getLastParenLoc(const ASTContext *ASTCtx,
   const LangOptions &Opts = ASTCtx->getLangOpts();
   const SourceManager &SM = ASTCtx->getSourceManager();
 
-  llvm::MemoryBuffer *Buffer = SM.getBuffer(SM.getFileID(AssertLoc));
+  const llvm::MemoryBuffer *Buffer = SM.getBuffer(SM.getFileID(AssertLoc));
   if (!Buffer)
     return SourceLocation();
 

@@ -7162,7 +7162,7 @@ static bool processLoopInVPlanNativePath(
   // Check the function attributes to find out if this function should be
   // optimized for size.
   bool OptForSize =
-      Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
+      Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->hasOptSize();
 
   // Plan how to best vectorize, return the best VF and its cost.
   const VectorizationFactor VF = LVP.planInVPlanNativePath(OptForSize, UserVF);
@@ -7245,7 +7245,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Check the function attributes to find out if this function should be
   // optimized for size.
   bool OptForSize =
-      Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
+      Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->hasOptSize();
 
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
   // here. They may require CFG and instruction level transformations before

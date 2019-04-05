@@ -14707,7 +14707,7 @@ SDValue PPCTargetLowering::combineMUL(SDNode *N, DAGCombinerInfo &DCI) const {
     return SDValue();
 
   // An imul is usually smaller than the alternative sequence for legal type.
-  if (DAG.getMachineFunction().getFunction().optForMinSize() &&
+  if (DAG.getMachineFunction().getFunction().hasMinSize() &&
       isOperationLegal(ISD::MUL, N->getValueType(0)))
     return SDValue();
 

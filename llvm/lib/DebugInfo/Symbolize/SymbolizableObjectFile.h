@@ -75,12 +75,15 @@ private:
     // the following symbol.
     uint64_t Size;
 
+    bool operator==(const SymbolDesc &RHS) const {
+      return Addr == RHS.Addr && Size == RHS.Size;
+    }
     bool operator<(const SymbolDesc &RHS) const {
       return Addr != RHS.Addr ? Addr < RHS.Addr : Size < RHS.Size;
     }
   };
-  std::map<SymbolDesc, StringRef> Functions;
-  std::map<SymbolDesc, StringRef> Objects;
+  std::vector<std::pair<SymbolDesc, StringRef>> Functions;
+  std::vector<std::pair<SymbolDesc, StringRef>> Objects;
 
   SymbolizableObjectFile(object::ObjectFile *Obj,
                          std::unique_ptr<DIContext> DICtx);
