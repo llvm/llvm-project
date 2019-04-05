@@ -24,6 +24,9 @@ public:
   cl_device_id get() const override {
     throw invalid_object_error("This instance of device is a host instance");
   }
+  cl_device_id &getHandleRef() override {
+    throw invalid_object_error("This instance of device is a host instance");
+  }
 
   bool is_host() const override { return true; }
 

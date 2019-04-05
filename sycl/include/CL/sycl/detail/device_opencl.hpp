@@ -57,6 +57,10 @@ public:
     return id;
   }
 
+  cl_device_id &getHandleRef() override{
+    return id;
+  }
+
   bool is_host() const override { return false; }
 
   bool is_cpu() const override { return (type == CL_DEVICE_TYPE_CPU); }

@@ -29,6 +29,12 @@ public:
 
   virtual cl_device_id get() const = 0;
 
+  // Returns underlying native device object (if any) w/o reference count
+  // modification. Caller must ensure the returned object lives on stack only.
+  // It can also be safely passed to the underlying native runtime API.
+  // Warning. Returned reference will be invalid if device_impl was destroyed.
+  virtual cl_device_id &getHandleRef() = 0;
+
   virtual bool is_host() const = 0;
 
   virtual bool is_cpu() const = 0;

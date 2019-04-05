@@ -51,15 +51,23 @@ public:
     }
     Context = ProgramList[0]->Context;
     Devices = ProgramList[0]->Devices;
+    std::vector<device> DevicesSorted;
+    if (!is_host()) {
+      DevicesSorted = sort_devices_by_cl_device_id(Devices);
+    }
     for (const auto &Prg : ProgramList) {
       Prg->throw_if_state_is_not(program_state::compiled);
       if (Prg->Context != Context) {
         throw invalid_object_error(
             "Not all programs are associated with the same context");
       }
-      if (Prg->Devices != Devices) {
-        throw invalid_object_error(
-            "Not all programs are associated with the same devices");
+      if (!is_host()) {
+        std::vector<device> PrgDevicesSorted =
+            sort_devices_by_cl_device_id(Prg->Devices);
+        if (PrgDevicesSorted != DevicesSorted) {
+          throw invalid_object_error(
+              "Not all programs are associated with the same devices");
+        }
       }
     }
 
@@ -92,7 +100,20 @@ public:
     CHECK_OCL_CODE(clGetProgramInfo(ClProgram, CL_PROGRAM_DEVICES,
                                     sizeof(cl_device_id) * NumDevices,
                                     ClDevices.data(), nullptr));
-    Devices = vector_class<device>(ClDevices.begin(), ClDevices.end());
+    vector_class<device> SyclContextDevices = Context.get_devices();
+
+    // Keep only the subset of the devices (associated with context) that
+    // were actually used to create the program.
+    // This is possible when clCreateProgramWithBinary is used.
+    auto NewEnd = std::remove_if(
+        SyclContextDevices.begin(), SyclContextDevices.end(),
+        [&ClDevices](const sycl::device &Dev) {
+          return ClDevices.end() ==
+                 std::find(ClDevices.begin(), ClDevices.end(),
+                           detail::getSyclObjImpl(Dev)->getHandleRef());
+        });
+    SyclContextDevices.erase(NewEnd, SyclContextDevices.end());
+    Devices = SyclContextDevices;
     // TODO check build for each device instead
     cl_program_binary_type BinaryType;
     CHECK_OCL_CODE(clGetProgramBuildInfo(
@@ -369,6 +390,16 @@ private:
     }
     CHECK_OCL_CODE(Err);
     return ClKernel;
+  }
+
+  std::vector<device>
+  sort_devices_by_cl_device_id(vector_class<device> Devices) {
+    std::sort(Devices.begin(), Devices.end(),
+              [](const device &id1, const device &id2) {
+                return (detail::getSyclObjImpl(id1)->getHandleRef() <
+                        detail::getSyclObjImpl(id2)->getHandleRef());
+              });
+    return Devices;
   }
 
   void throw_if_state_is(program_state State) const {
