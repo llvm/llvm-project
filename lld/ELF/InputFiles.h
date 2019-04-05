@@ -145,35 +145,38 @@ private:
   const Kind FileKind;
 };
 
-template <typename ELFT> class ELFFileBase : public InputFile {
+class ELFFileBase : public InputFile {
 public:
-  using Elf_Shdr = typename ELFT::Shdr;
-  using Elf_Sym = typename ELFT::Sym;
-  using Elf_Word = typename ELFT::Word;
-  using Elf_Sym_Range = typename ELFT::SymRange;
-
   ELFFileBase(Kind K, MemoryBufferRef M);
+  template <typename ELFT> void parseHeader();
   static bool classof(const InputFile *F) { return F->isElf(); }
 
-  llvm::object::ELFFile<ELFT> getObj() const {
+  template <typename ELFT> llvm::object::ELFFile<ELFT> getObj() const {
     return check(llvm::object::ELFFile<ELFT>::create(MB.getBuffer()));
   }
 
   StringRef getStringTable() const { return StringTable; }
 
-  Elf_Sym_Range getGlobalELFSyms();
-  Elf_Sym_Range getELFSyms() const { return ELFSyms; }
+  template <typename ELFT> typename ELFT::SymRange getELFSyms() const {
+    return typename ELFT::SymRange(
+        reinterpret_cast<const typename ELFT::Sym *>(ELFSyms), NumELFSyms);
+  }
+  template <typename ELFT> typename ELFT::SymRange getGlobalELFSyms() const {
+    return getELFSyms<ELFT>().slice(FirstGlobal);
+  }
 
 protected:
-  ArrayRef<Elf_Sym> ELFSyms;
+  const void *ELFSyms = nullptr;
+  size_t NumELFSyms = 0;
   uint32_t FirstGlobal = 0;
   StringRef StringTable;
-  void initSymtab(ArrayRef<Elf_Shdr> Sections, const Elf_Shdr *Symtab);
+  template <typename ELFT>
+  void initSymtab(ArrayRef<typename ELFT::Shdr> Sections,
+                  const typename ELFT::Shdr *Symtab);
 };
 
 // .o file.
-template <class ELFT> class ObjFile : public ELFFileBase<ELFT> {
-  using Base = ELFFileBase<ELFT>;
+template <class ELFT> class ObjFile : public ELFFileBase {
   using Elf_Rel = typename ELFT::Rel;
   using Elf_Rela = typename ELFT::Rela;
   using Elf_Sym = typename ELFT::Sym;
@@ -185,7 +188,11 @@ template <class ELFT> class ObjFile : public ELFFileBase<ELFT> {
                                  const Elf_Shdr &Sec);
 
 public:
-  static bool classof(const InputFile *F) { return F->kind() == Base::ObjKind; }
+  static bool classof(const InputFile *F) { return F->kind() == ObjKind; }
+
+  llvm::object::ELFFile<ELFT> getObj() const {
+    return this->ELFFileBase::getObj<ELFT>();
+  }
 
   ArrayRef<Symbol *> getLocalSymbols();
   ArrayRef<Symbol *> getGlobalSymbols();
@@ -321,8 +328,7 @@ public:
 };
 
 // .so file.
-template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
-  using Base = ELFFileBase<ELFT>;
+template <class ELFT> class SharedFile : public ELFFileBase {
   using Elf_Dyn = typename ELFT::Dyn;
   using Elf_Shdr = typename ELFT::Shdr;
   using Elf_Sym = typename ELFT::Sym;
@@ -338,9 +344,7 @@ public:
   std::vector<StringRef> DtNeeded;
   std::string SoName;
 
-  static bool classof(const InputFile *F) {
-    return F->kind() == Base::SharedKind;
-  }
+  static bool classof(const InputFile *F) { return F->kind() == SharedKind; }
 
   SharedFile(MemoryBufferRef M, StringRef DefaultSoName);
 
