@@ -918,6 +918,9 @@ Loop *llvm::StripMineLoop(
     SplitBlock(NewReattB, NewReattB->getTerminator(), DT, LI);
   NewLatch->setName(Latch->getName() + ".strpm.outer");
 
+  // Move static allocas from TaskEntry into NewEntry.
+  MoveStaticAllocasInBlock(NewEntry, TaskEntry, Reattaches);
+
   // Insert a new detach instruction
   if (DI->hasUnwindDest()) {
     ReplaceInstWithInst(NewHeader->getTerminator(),
@@ -956,6 +959,7 @@ Loop *llvm::StripMineLoop(
     DT->changeImmediateDominator(LoopReattach, NewLatch);
   else
     EpilogPred = NewLatch;
+
 
   // The block structure of the stripmined loop should now look like so:
   //
@@ -1159,6 +1163,7 @@ Loop *llvm::StripMineLoop(
   // At this point, the code is well formed.  We now simplify the new loops,
   // doing constant propagation and dead code elimination as we go.
   simplifyLoopAfterStripMine(L, /*SimplifyIVs*/true, LI, SE, DT, AC);
+  simplifyLoopAfterStripMine(NewLoop, /*SimplifyIVs*/true, LI, SE, DT, AC);
   simplifyLoopAfterStripMine(remainderLoop, /*SimplifyIVs*/true, LI, SE, DT,
                              AC);
 

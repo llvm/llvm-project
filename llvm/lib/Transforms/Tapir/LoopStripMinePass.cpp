@@ -61,7 +61,7 @@ static cl::opt<bool> AllowParallelEpilog(
   cl::desc("Allow stripmined Tapir loops to execute their epilogs in parallel."));
 
 static cl::opt<bool> IncludeNestedSync(
-  "include-nested-sync", cl::Hidden, cl::init(false),
+  "include-nested-sync", cl::Hidden, cl::init(true),
   cl::desc("If the epilog is allowed to execute in parallel, include a sync "
            "instruction in the nested task."));
 

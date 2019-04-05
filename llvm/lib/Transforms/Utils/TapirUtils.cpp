@@ -112,9 +112,10 @@ static bool hasLifetimeMarkers(AllocaInst *AI) {
   return false;
 }
 
-// Move static allocas in a cloned block into the entry block of helper.  Leave
-// lifetime markers behind for those static allocas.  Returns true if the cloned
-// block still contains dynamic allocas, which cannot be moved.
+// Move static allocas in Block into Entry, which is assumed to do dominate
+// Block.  Leave lifetime markers behind in Block and before each instruction in
+// ExitPoints for those static allocas.  Returns true if Block still contains
+// dynamic allocas, which cannot be moved.
 bool llvm::MoveStaticAllocasInBlock(
     BasicBlock *Entry, BasicBlock *Block,
     SmallVectorImpl<Instruction *> &ExitPoints) {
