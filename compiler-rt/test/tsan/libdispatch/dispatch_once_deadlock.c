@@ -28,8 +28,8 @@ int main() {
 
   f();
 
-  pthread_mutex_t mutex = {0};
-  pthread_mutex_lock(&mutex);
+  pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_unlock(&mutex); // Unlock of an unlocked mutex
 
   fprintf(stderr, "g = %ld.\n", g);
   fprintf(stderr, "h = %ld.\n", h);
