@@ -111,6 +111,14 @@ template <typename T> void exit_if_not_equal(T val, T ref, const char *name) {
   }
 }
 
+template <> void exit_if_not_equal(half val, half ref, const char *name) {
+  if (std::fabs((float)val - (float)ref) > 0.01) {
+    std::cout << "Unexpected result for " << name << ": " << (float)val
+              << " expected value: " << (float)ref << std::endl;
+    exit(1);
+  }
+}
+
 template <typename T, int N>
 void exit_if_not_equal_vec(vec<T, N> val, vec<T, N> ref, const char *name) {
   if (!utils<T, N>::cmp_vec(ref, val)) {

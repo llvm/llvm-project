@@ -139,11 +139,18 @@ struct sub_group {
     return BinaryOperation::template calc<T, cl::__spirv::InclusiveScan>(x);
   }
 
+  template <typename T>
+  using EnableIfIsArithmeticOrHalf = typename std::enable_if<
+      (std::is_arithmetic<T>::value ||
+       std::is_same<typename std::remove_const<T>::type, half>::value),
+      T>::type;
+
+
   /* --- one - input shuffles --- */
   /* indices in [0 , sub - group size ) */
 
   template <typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+  EnableIfIsArithmeticOrHalf<T>
   shuffle(T x, id<1> local_id) {
     return cl::__spirv::OpSubgroupShuffleINTEL(x, local_id.get(0));
   }
@@ -156,7 +163,7 @@ struct sub_group {
   }
 
   template <typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+  EnableIfIsArithmeticOrHalf<T>
   shuffle_down(T x, uint32_t delta) {
     return shuffle_down(x, x, delta);
   }
@@ -168,7 +175,7 @@ struct sub_group {
   }
 
   template <typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+  EnableIfIsArithmeticOrHalf<T>
   shuffle_up(T x, uint32_t delta) {
     return shuffle_up(x, x, delta);
   }
@@ -180,7 +187,7 @@ struct sub_group {
   }
 
   template <typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+  EnableIfIsArithmeticOrHalf<T>
   shuffle_xor(T x, id<1> value) {
     return cl::__spirv::OpSubgroupShuffleXorINTEL(x, (uint32_t)value.get(0));
   }
@@ -195,7 +202,7 @@ struct sub_group {
   /* --- two - input shuffles --- */
   /* indices in [0 , 2* sub - group size ) */
   template <typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+  EnableIfIsArithmeticOrHalf<T>
   shuffle(T x, T y, id<1> local_id) {
     return cl::__spirv::OpSubgroupShuffleDownINTEL(
         x, y, local_id.get(0) - get_local_id().get(0));
@@ -210,7 +217,7 @@ struct sub_group {
   }
 
   template <typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+  EnableIfIsArithmeticOrHalf<T>
   shuffle_down(T current, T next, uint32_t delta) {
     return cl::__spirv::OpSubgroupShuffleDownINTEL(current, next, delta);
   }
@@ -223,7 +230,7 @@ struct sub_group {
   }
 
   template <typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+  EnableIfIsArithmeticOrHalf<T>
   shuffle_up(T previous, T current, uint32_t delta) {
     return cl::__spirv::OpSubgroupShuffleUpINTEL(previous, current, delta);
   }

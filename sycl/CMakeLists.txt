@@ -99,6 +99,7 @@ add_library("${SYCLLibrary}" SHARED
   "${sourceRootPath}/device_selector.cpp"
   "${sourceRootPath}/event.cpp"
   "${sourceRootPath}/exception.cpp"
+  "${sourceRootPath}/half_type.cpp"
   "${sourceRootPath}/kernel.cpp"
   "${sourceRootPath}/platform.cpp"
   "${sourceRootPath}/queue.cpp"

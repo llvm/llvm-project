@@ -45,10 +45,17 @@
 #endif // __HAS_EXT_VECTOR_TYPE__
 
 #include <CL/sycl/detail/common.hpp>
+#include <CL/sycl/half_type.hpp>
 #include <CL/sycl/multi_ptr.hpp>
 
 // 4.10.1: Scalar data types
 // 4.10.2: SYCL vector types
+
+#ifdef __SYCL_DEVICE_ONLY__
+using half = _Float16;
+#else
+using half = cl::sycl::detail::half_impl::half;
+#endif
 
 namespace cl {
 namespace sycl {
@@ -373,14 +380,43 @@ public:
   }
 
 #ifdef __SYCL_USE_EXT_VECTOR_TYPE__
-  explicit vec(const DataT &arg) {
+  template <typename T = void>
+  using EnableIfNotHostHalf = typename std::enable_if<
+      !std::is_same<DataT, cl::sycl::detail::half_impl::half>::value, T>::type;
+  template <typename T = void>
+  using EnableIfHostHalf = typename std::enable_if<
+      std::is_same<DataT, cl::sycl::detail::half_impl::half>::value, T>::type;
+
+  template <typename Ty = DataT>
+  explicit vec(const EnableIfNotHostHalf<Ty> &arg) {
     m_Data = (DataType)arg;
   }
 
   template <typename Ty = DataT>
-  typename std::enable_if<std::is_fundamental<Ty>::value, vec &>::type
-  operator=(const DataT &Rhs) {
+  typename std::enable_if<
+      std::is_fundamental<Ty>::value ||
+          std::is_same<typename std::remove_const<Ty>::type, half>::value,
+      vec &>::type
+  operator=(const EnableIfNotHostHalf<Ty> &Rhs) {
     m_Data = (DataType)Rhs;
+    return *this;
+  }
+
+  template <typename Ty = DataT> explicit vec(const EnableIfHostHalf<Ty> &arg) {
+    for (int i = 0; i < NumElements; ++i) {
+      setValue(i, arg);
+    }
+  }
+
+  template <typename Ty = DataT>
+  typename std::enable_if<
+      std::is_fundamental<Ty>::value ||
+          std::is_same<typename std::remove_const<Ty>::type, half>::value,
+      vec &>::type
+  operator=(const EnableIfHostHalf<Ty> &Rhs) {
+    for (int i = 0; i < NumElements; ++i) {
+      setValue(i, Rhs);
+    }
     return *this;
   }
 #else
@@ -391,7 +427,10 @@ public:
   }
 
   template <typename Ty = DataT>
-  typename std::enable_if<std::is_fundamental<Ty>::value, vec &>::type
+  typename std::enable_if<
+      std::is_fundamental<Ty>::value ||
+          std::is_same<typename std::remove_const<Ty>::type, half>::value,
+      vec &>::type
   operator=(const DataT &Rhs) {
     for (int i = 0; i < NumElements; ++i) {
       setValue(i, Rhs);
@@ -407,32 +446,32 @@ public:
   // Helper type to make specific constructors available only for specific
   // number of elements.
   template <int IdxNum, typename T = void>
-  using EnableIfMultipleElems =
-      typename std::enable_if<std::is_convertible<T, DataT>::value &&
-                                  NumElements == IdxNum,
-                              DataT>::type;
+  using EnableIfMultipleElems = typename std::enable_if<
+      std::is_convertible<T, DataT>::value && NumElements == IdxNum,
+      DataT>::type;
   template <typename Ty = DataT>
-  vec(const EnableIfMultipleElems<2, Ty> Arg0, const DataT Arg1)
+  vec(const EnableIfMultipleElems<2, Ty> Arg0,
+      const EnableIfNotHostHalf<Ty> Arg1)
       : m_Data{Arg0, Arg1} {}
   template <typename Ty = DataT>
-  vec(const EnableIfMultipleElems<3, Ty> Arg0, const DataT Arg1,
-      const DataT Arg2)
+  vec(const EnableIfMultipleElems<3, Ty> Arg0,
+      const EnableIfNotHostHalf<Ty> Arg1, const DataT Arg2)
       : m_Data{Arg0, Arg1, Arg2} {}
   template <typename Ty = DataT>
-  vec(const EnableIfMultipleElems<4, Ty> Arg0, const DataT Arg1,
-      const DataT Arg2, const Ty Arg3)
+  vec(const EnableIfMultipleElems<4, Ty> Arg0,
+      const EnableIfNotHostHalf<Ty> Arg1, const DataT Arg2, const Ty Arg3)
       : m_Data{Arg0, Arg1, Arg2, Arg3} {}
   template <typename Ty = DataT>
-  vec(const EnableIfMultipleElems<8, Ty> Arg0, const DataT Arg1,
-      const DataT Arg2, const DataT Arg3, const DataT Arg4, const DataT Arg5,
-      const DataT Arg6, const DataT Arg7)
+  vec(const EnableIfMultipleElems<8, Ty> Arg0,
+      const EnableIfNotHostHalf<Ty> Arg1, const DataT Arg2, const DataT Arg3,
+      const DataT Arg4, const DataT Arg5, const DataT Arg6, const DataT Arg7)
       : m_Data{Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7} {}
   template <typename Ty = DataT>
-  vec(const EnableIfMultipleElems<16, Ty> Arg0, const DataT Arg1,
-      const DataT Arg2, const DataT Arg3, const DataT Arg4, const DataT Arg5,
-      const DataT Arg6, const DataT Arg7, const DataT Arg8, const DataT Arg9,
-      const DataT ArgA, const DataT ArgB, const DataT ArgC, const DataT ArgD,
-      const DataT ArgE, const DataT ArgF)
+  vec(const EnableIfMultipleElems<16, Ty> Arg0,
+      const EnableIfNotHostHalf<Ty> Arg1, const DataT Arg2, const DataT Arg3,
+      const DataT Arg4, const DataT Arg5, const DataT Arg6, const DataT Arg7,
+      const DataT Arg8, const DataT Arg9, const DataT ArgA, const DataT ArgB,
+      const DataT ArgC, const DataT ArgD, const DataT ArgE, const DataT ArgF)
       : m_Data{Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7,
                Arg8, Arg9, ArgA, ArgB, ArgC, ArgD, ArgE, ArgF} {}
 #endif
@@ -580,15 +619,26 @@ public:
 
 #ifdef __SYCL_USE_EXT_VECTOR_TYPE__
 #define __SYCL_BINOP(BINOP, OPASSIGN)                                          \
-  vec operator BINOP(const vec &Rhs) const {                                   \
+  template <typename Ty = vec>                                                 \
+  vec operator BINOP(const EnableIfNotHostHalf<Ty> &Rhs) const {               \
     vec Ret;                                                                   \
     Ret.m_Data = m_Data BINOP Rhs.m_Data;                                      \
     return Ret;                                                                \
   }                                                                            \
+  template <typename Ty = vec>                                                 \
+  vec operator BINOP(const EnableIfHostHalf<Ty> &Rhs) const {                  \
+    vec Ret;                                                                   \
+    for (size_t I = 0; I < NumElements; ++I) {                                 \
+      Ret.setValue(I, (getValue(I) BINOP Rhs.getValue(I)));                    \
+    }                                                                          \
+    return Ret;                                                                \
+  }                                                                            \
   template <typename T>                                                        \
-  typename std::enable_if<std::is_convertible<T, DataT>::value &&              \
-                              std::is_fundamental<T>::value,                   \
-                          vec>::type                                           \
+  typename std::enable_if<                                                     \
+      std::is_convertible<DataT, T>::value &&                                  \
+          (std::is_fundamental<T>::value ||                                    \
+           std::is_same<typename std::remove_const<T>::type, half>::value),    \
+      vec>::type                                                               \
   operator BINOP(const T &Rhs) const {                                         \
     return *this BINOP vec(static_cast<const DataT &>(Rhs));                   \
   }                                                                            \
@@ -597,8 +647,8 @@ public:
     return *this;                                                              \
   }                                                                            \
   template <int Num = NumElements>                                             \
-  typename std::enable_if<Num != 1, vec &>::type operator OPASSIGN(            \
-      const DataT &Rhs) {                                                      \
+  typename std::enable_if<Num != 1, vec &>::type                               \
+  operator OPASSIGN(const DataT &Rhs) {                                        \
     *this = *this BINOP vec(Rhs);                                              \
     return *this;                                                              \
   }
@@ -612,9 +662,11 @@ public:
     return Ret;                                                                \
   }                                                                            \
   template <typename T>                                                        \
-  typename std::enable_if<std::is_convertible<T, DataT>::value &&              \
-                              std::is_fundamental<T>::value,                   \
-                          vec>::type                                           \
+  typename std::enable_if<                                                     \
+      std::is_convertible<DataT, T>::value &&                                  \
+          (std::is_fundamental<T>::value ||                                    \
+           std::is_same<typename std::remove_const<T>::type, half>::value),    \
+      vec>::type                                                               \
   operator BINOP(const T &Rhs) const {                                         \
     return *this BINOP vec(static_cast<const DataT &>(Rhs));                   \
   }                                                                            \
@@ -666,9 +718,11 @@ public:
     return Ret;                                                                \
   }                                                                            \
   template <typename T>                                                        \
-  typename std::enable_if<std::is_convertible<T, DataT>::value &&              \
-                              std::is_fundamental<T>::value,                   \
-                          vec<rel_t, NumElements>>::type                       \
+  typename std::enable_if<                                                     \
+      std::is_convertible<T, DataT>::value &&                                  \
+          (std::is_fundamental<T>::value ||                                    \
+           std::is_same<typename std::remove_const<T>::type, half>::value),    \
+      vec<rel_t, NumElements>>::type                                           \
   operator RELLOGOP(const T &Rhs) const {                                      \
     return *this RELLOGOP vec(static_cast<const DataT &>(Rhs));                \
   }
@@ -729,35 +783,66 @@ public:
   // vec<RET, NumElements> operatorOP(const DataT &Rhs) const;
 private:
   // Generic method that execute "Operation" on underlying values.
-  template <template <typename> class Operation>
-  vec<DataT, NumElements>
-  operatorHelper(const vec<DataT, NumElements> &Rhs) const {
-    vec<DataT, NumElements> Result;
 #ifdef __SYCL_USE_EXT_VECTOR_TYPE__
+  template <template <typename> class Operation,
+            typename Ty = vec<DataT, NumElements>>
+  vec<DataT, NumElements>
+  operatorHelper(const EnableIfNotHostHalf<Ty> &Rhs) const {
+    vec<DataT, NumElements> Result;
     Operation<DataType> Op;
     Result.m_Data = Op(m_Data, Rhs.m_Data);
-#else  // __SYCL_USE_EXT_VECTOR_TYPE__
+    return Result;
+  }
+
+  template <template <typename> class Operation,
+            typename Ty = vec<DataT, NumElements>>
+  vec<DataT, NumElements>
+  operatorHelper(const EnableIfHostHalf<Ty> &Rhs) const {
+    vec<DataT, NumElements> Result;
     Operation<DataT> Op;
     for (size_t I = 0; I < NumElements; ++I) {
       Result.setValue(I, Op(Rhs.getValue(I), getValue(I)));
     }
-#endif // __SYCL_USE_EXT_VECTOR_TYPE__
     return Result;
   }
+#else  // __SYCL_USE_EXT_VECTOR_TYPE__
+  template <template <typename> class Operation>
+  vec<DataT, NumElements>
+  operatorHelper(const vec<DataT, NumElements> &Rhs) const {
+    vec<DataT, NumElements> Result;
+    Operation<DataT> Op;
+    for (size_t I = 0; I < NumElements; ++I) {
+      Result.setValue(I, Op(Rhs.getValue(I), getValue(I)));
+    }
+    return Result;
+  }
+#endif // __SYCL_USE_EXT_VECTOR_TYPE__
 
 // setValue and getValue should be able to operate on different underlying
 // types: enum cl_float#N , builtin vector float#N, builtin type float.
 #ifdef __SYCL_USE_EXT_VECTOR_TYPE__
-  template <int Num = NumElements,
+  template <int Num = NumElements, typename Ty = int,
             typename = typename std::enable_if<1 != Num>::type>
-  void setValue(int Index, const DataT &Value, int) {
+  void setValue(EnableIfNotHostHalf<Ty> Index, const DataT &Value, int) {
     m_Data[Index] = Value;
   }
 
-  template <int Num = NumElements,
+  template <int Num = NumElements, typename Ty = int,
             typename = typename std::enable_if<1 != Num>::type>
-  DataT getValue(int Index, int) const {
+  DataT getValue(EnableIfNotHostHalf<Ty> Index, int) const {
     return m_Data[Index];
+  }
+
+  template <int Num = NumElements, typename Ty = int,
+            typename = typename std::enable_if<1 != Num>::type>
+  void setValue(EnableIfHostHalf<Ty> Index, const DataT &Value, int) {
+    m_Data.s[Index] = Value;
+  }
+
+  template <int Num = NumElements, typename Ty = int,
+            typename = typename std::enable_if<1 != Num>::type>
+  DataT getValue(EnableIfHostHalf<Ty> Index, int) const {
+    return m_Data.s[Index];
   }
 #else  // __SYCL_USE_EXT_VECTOR_TYPE__
   template <int Num = NumElements,
@@ -908,14 +993,16 @@ class SwizzleOp {
       1 != IdxNum && SwizzleOp::getNumElements() == IdxNum, T>::type;
 
   template <typename T>
-  using EnableIfScalarType =
-      typename std::enable_if<std::is_convertible<DataT, T>::value &&
-                              std::is_fundamental<T>::value>::type;
+  using EnableIfScalarType = typename std::enable_if<
+      std::is_convertible<DataT, T>::value &&
+      (std::is_fundamental<T>::value ||
+       std::is_same<typename std::remove_const<T>::type, half>::value)>::type;
 
   template <typename T>
-  using EnableIfNoScalarType =
-      typename std::enable_if<!std::is_convertible<DataT, T>::value ||
-                              !std::is_fundamental<T>::value>::type;
+  using EnableIfNoScalarType = typename std::enable_if<
+      !std::is_convertible<DataT, T>::value ||
+      !(std::is_fundamental<T>::value ||
+        std::is_same<typename std::remove_const<T>::type, half>::value)>::type;
 
   template <int... Indices>
   using Swizzle =
@@ -1437,7 +1524,10 @@ private:
 #endif
 #define __SYCL_BINOP(BINOP)                                                    \
   template <typename T, int Num>                                               \
-  typename std::enable_if<std::is_fundamental<T>::value, vec<T, Num>>::type    \
+  typename std::enable_if<                                                     \
+      std::is_fundamental<T>::value ||                                         \
+          std::is_same<typename std::remove_const<T>::type, half>::value,      \
+      vec<T, Num>>::type                                                       \
   operator BINOP(const T &Lhs, const vec<T, Num> &Rhs) {                       \
     return vec<T, Num>(Lhs) BINOP Rhs;                                         \
   }                                                                            \
@@ -1445,13 +1535,14 @@ private:
             template <typename> class OperationCurrentT, int... Indexes,       \
             typename T, typename T1 = typename VecT::element_type,             \
             int Num = sizeof...(Indexes)>                                      \
-  typename std::enable_if<std::is_convertible<T, T1>::value &&                 \
-                              std::is_fundamental<T>::value,                   \
-                          vec<T1, Num>>::type                                  \
-  operator BINOP(                                                              \
-      const T &Lhs,                                                            \
-      const detail::SwizzleOp<VecT, OperationLeftT, OperationRightT,           \
-                              OperationCurrentT, Indexes...> &Rhs) {           \
+  typename std::enable_if<                                                     \
+      std::is_convertible<T, T1>::value &&                                     \
+          (std::is_fundamental<T>::value ||                                    \
+           std::is_same<typename std::remove_const<T>::type, half>::value),    \
+      vec<T1, Num>>::type                                                      \
+  operator BINOP(const T &Lhs,                                                 \
+                 const detail::SwizzleOp<VecT, OperationLeftT, OperationRightT,\
+                                         OperationCurrentT, Indexes...> &Rhs) {\
     vec<T1, Num> Tmp = Rhs;                                                    \
     return Lhs BINOP Tmp;                                                      \
   }                                                                            \
@@ -1486,9 +1577,11 @@ __SYCL_BINOP(<<)
 #endif
 #define __SYCL_RELLOGOP(RELLOGOP)                                              \
   template <typename T, typename DataT, int Num>                               \
-  typename std::enable_if<std::is_convertible<T, DataT>::value &&              \
-                              std::is_fundamental<T>::value,                   \
-                          vec<detail::rel_t<DataT>, Num>>::type                \
+  typename std::enable_if<                                                     \
+      std::is_convertible<T, DataT>::value &&                                  \
+          (std::is_fundamental<T>::value ||                                    \
+           std::is_same<typename std::remove_const<T>::type, half>::value),    \
+      vec<detail::rel_t<DataT>, Num>>::type                                    \
   operator RELLOGOP(const T &Lhs, const vec<DataT, Num> &Rhs) {                \
     return vec<T, Num>(static_cast<T>(Lhs)) RELLOGOP Rhs;                      \
   }                                                                            \
@@ -1496,9 +1589,11 @@ __SYCL_BINOP(<<)
             template <typename> class OperationCurrentT, int... Indexes,       \
             typename T, typename T1 = typename VecT::element_type,             \
             int Num = sizeof...(Indexes)>                                      \
-  typename std::enable_if<std::is_convertible<T, T1>::value &&                 \
-                              std::is_fundamental<T>::value,                   \
-                          vec<detail::rel_t<T1>, Num>>::type                   \
+  typename std::enable_if<                                                     \
+      std::is_convertible<T, T1>::value &&                                     \
+          (std::is_fundamental<T>::value ||                                    \
+           std::is_same<typename std::remove_const<T>::type, half>::value),    \
+      vec<detail::rel_t<T1>, Num>>::type                                       \
   operator RELLOGOP(                                                           \
       const T &Lhs,                                                            \
       const detail::SwizzleOp<VecT, OperationLeftT, OperationRightT,           \
@@ -1530,6 +1625,7 @@ __SYCL_RELLOGOP(||)
 #undef __SYCL_RELLOGOP
 } // namespace sycl
 } // namespace cl
+
 
 #ifdef __SYCL_USE_EXT_VECTOR_TYPE__
 typedef char __char_t;
@@ -1609,13 +1705,18 @@ typedef float __float3_vec_t __attribute__((ext_vector_type(3)));
 typedef float __float4_vec_t __attribute__((ext_vector_type(4)));
 typedef float __float8_vec_t __attribute__((ext_vector_type(8)));
 typedef float __float16_vec_t __attribute__((ext_vector_type(16)));
-// TODO: Add support for half builtin type in clang for sycl target.
-// typedef half __half_t;
-// typedef half __half2_vec_t __attribute__((ext_vector_type(2)));
-// typedef half __half3_vec_t __attribute__((ext_vector_type(3)));
-// typedef half __half4_vec_t __attribute__((ext_vector_type(4)));
-// typedef half __half8_vec_t __attribute__((ext_vector_type(8)));
-// typedef half __half16_vec_t __attribute__((ext_vector_type(16)));
+// Half type is defined as custom class for host and _Float16 for device.
+// The ext_vector_type attribute is only applicable to integral and float
+// scalars so it's not possible to use attribute ext_vector_type for half on
+// host.
+#ifdef __SYCL_DEVICE_ONLY__
+typedef half __half_t;
+typedef half __half2_vec_t __attribute__((ext_vector_type(2)));
+typedef half __half3_vec_t __attribute__((ext_vector_type(3)));
+typedef half __half4_vec_t __attribute__((ext_vector_type(4)));
+typedef half __half8_vec_t __attribute__((ext_vector_type(8)));
+typedef half __half16_vec_t __attribute__((ext_vector_type(16)));
+#endif
 typedef double __double_t;
 typedef double __double2_vec_t __attribute__((ext_vector_type(2)));
 typedef double __double3_vec_t __attribute__((ext_vector_type(3)));
@@ -1625,6 +1726,7 @@ typedef double __double16_vec_t __attribute__((ext_vector_type(16)));
 
 #define GET_CL_TYPE(target, num) __##target##num##_vec_t
 #define GET_SCALAR_CL_TYPE(target) target
+
 #else // __SYCL_USE_EXT_VECTOR_TYPE__
 // For signed char. OpenCL doesn't have any type about `signed char`, therefore
 // we use type alias of cl_char instead.
@@ -1638,6 +1740,12 @@ using cl_schar16 = cl_char16;
 #define GET_CL_TYPE(target, num) cl_##target##num
 #define GET_SCALAR_CL_TYPE(target) cl_##target
 #endif // __SYCL_USE_EXT_VECTOR_TYPE__
+
+#ifndef __SYCL_DEVICE_ONLY__
+#define GET_CL_HALF_TYPE(target, num) cl_##target##num
+#else
+#define GET_CL_HALF_TYPE(target, num) __##target##num##_vec_t
+#endif
 
 namespace cl {
 namespace sycl {
@@ -1654,6 +1762,12 @@ namespace sycl {
     using DataType = ::GET_CL_TYPE(base, num);                                 \
   };
 
+#define DECLARE_HALF_CONVERTER(base, num)                                      \
+  template <> class BaseCLTypeConverter<base, num> {                           \
+  public:                                                                      \
+    using DataType = GET_CL_HALF_TYPE(base, num);                              \
+  };
+
 #define DECLARE_VECTOR_CONVERTERS(base)                                        \
   namespace detail {                                                           \
   DECLARE_CONVERTER(base, 2)                                                   \
@@ -1664,6 +1778,19 @@ namespace sycl {
   template <> class BaseCLTypeConverter<base, 1> {                             \
   public:                                                                      \
     using DataType = GET_SCALAR_CL_TYPE(base);                                 \
+  };                                                                           \
+  } // namespace detail
+
+#define DECLARE_HALF_VECTOR_CONVERTERS(base)                                   \
+  namespace detail {                                                           \
+  DECLARE_HALF_CONVERTER(base, 2)                                              \
+  DECLARE_HALF_CONVERTER(base, 3)                                              \
+  DECLARE_HALF_CONVERTER(base, 4)                                              \
+  DECLARE_HALF_CONVERTER(base, 8)                                              \
+  DECLARE_HALF_CONVERTER(base, 16)                                             \
+  template <> class BaseCLTypeConverter<base, 1> {                             \
+  public:                                                                      \
+    using DataType = half;                                                     \
   };                                                                           \
   } // namespace detail
 
@@ -1706,6 +1833,19 @@ namespace sycl {
   using char3 = vec<char, 3>;                                                  \
   using char2 = vec<char, 2>;
 
+#define DECLARE_SYCL_VEC_HALF_WO_CONVERTERS                                    \
+  using cl_half16 = vec<half, 16>;                                             \
+  using cl_half8 = vec<half, 8>;                                               \
+  using cl_half4 = vec<half, 4>;                                               \
+  using cl_half3 = vec<half, 3>;                                               \
+  using cl_half2 = vec<half, 2>;                                               \
+  using cl_half = half;                                                        \
+  using half16 = vec<half, 16>;                                                \
+  using half8 = vec<half, 8>;                                                  \
+  using half4 = vec<half, 4>;                                                  \
+  using half3 = vec<half, 3>;                                                  \
+  using half2 = vec<half, 2>;
+
 // cl_longlong/cl_ulonglong are not supported in SYCL
 #define DECLARE_SYCL_VEC_LONGLONG_WO_CONVERTERS(base)                          \
   using base##long16 = vec<base##long, 16>;                                    \
@@ -1726,6 +1866,10 @@ namespace sycl {
   DECLARE_VECTOR_LONGLONG_CONVERTERS(base)                                     \
   DECLARE_SYCL_VEC_LONGLONG_WO_CONVERTERS(base)
 
+#define DECLARE_SYCL_VEC_HALF(base)                                            \
+  DECLARE_HALF_VECTOR_CONVERTERS(base)                                         \
+  DECLARE_SYCL_VEC_HALF_WO_CONVERTERS
+
 DECLARE_SYCL_VEC_CHAR
 DECLARE_SYCL_VEC(schar)
 DECLARE_SYCL_VEC(uchar)
@@ -1737,14 +1881,13 @@ DECLARE_SYCL_VEC(long)
 DECLARE_SYCL_VEC(ulong)
 DECLARE_SYCL_VEC_LONGLONG(long)
 DECLARE_SYCL_VEC_LONGLONG(ulong)
+DECLARE_SYCL_VEC_HALF(half)
 DECLARE_SYCL_VEC(float)
 DECLARE_SYCL_VEC(double)
-// TODO: Fix half.
-typedef ::cl_half half;
-DECLARE_SYCL_VEC_WO_CONVERTERS(half)
 
 using cl_bool = ::cl_bool;
 using byte = uchar;
+using half = ::half;
 
 #undef GET_CL_TYPE
 #undef GET_SCALAR_CL_TYPE
