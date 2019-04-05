@@ -730,13 +730,8 @@ public:
 #endif
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
-      if (BufImpl->OpenCLInterop) {
-        throw cl::sycl::runtime_error(
-            "Host access to interoperability buffer is not allowed");
-      } else {
-        simple_scheduler::Scheduler::getInstance()
-            .copyBack<AccessMode, AccessTarget>(*BufImpl);
-      }
+      simple_scheduler::Scheduler::getInstance()
+          .copyBack<AccessMode, AccessTarget>(*BufImpl);
     }
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
       throw cl::sycl::runtime_error(
@@ -818,13 +813,8 @@ public:
 #endif
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
-      if (BufImpl->OpenCLInterop) {
-        throw cl::sycl::runtime_error(
-            "Host access to interoperability buffer is not allowed");
-      } else {
-        simple_scheduler::Scheduler::getInstance()
-            .copyBack<AccessMode, AccessTarget>(*BufImpl);
-      }
+      simple_scheduler::Scheduler::getInstance()
+          .copyBack<AccessMode, AccessTarget>(*BufImpl);
     }
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
       throw cl::sycl::runtime_error(
@@ -913,13 +903,8 @@ public:
                  bufferRef.MemRange, Offset)) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
-      if (BufImpl->OpenCLInterop) {
-        throw cl::sycl::runtime_error(
-            "Host access to interoperability buffer is not allowed");
-      } else {
-        simple_scheduler::Scheduler::getInstance()
-            .copyBack<AccessMode, AccessTarget>(*BufImpl);
-      }
+      simple_scheduler::Scheduler::getInstance()
+          .copyBack<AccessMode, AccessTarget>(*BufImpl);
     }
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
       throw cl::sycl::runtime_error(

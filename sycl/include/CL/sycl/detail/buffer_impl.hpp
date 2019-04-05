@@ -164,16 +164,16 @@ public:
           "Input context must be the same as the context of cl_mem");
     OCLState.Mem = MemObject;
     CHECK_OCL_CODE(clRetainMemObject(MemObject));
+
+    BufData.resize(get_size());
+    BufPtr = reinterpret_cast<void *>(BufData.data());
   }
 
   size_t get_size() const { return SizeInBytes; }
 
   ~buffer_impl() {
-    if (!OpenCLInterop)
-      // TODO. Use node instead?
-      simple_scheduler::Scheduler::getInstance()
-          .copyBack<access::mode::read_write, access::target::host_buffer>(
-              *this);
+    simple_scheduler::Scheduler::getInstance()
+        .copyBack<access::mode::read_write, access::target::host_buffer>(*this);
 
     if (uploadData != nullptr && NeedWriteBack) {
       uploadData();
@@ -189,9 +189,6 @@ public:
   void set_final_data(std::nullptr_t) { uploadData = nullptr; }
 
   template <typename T> void set_final_data(weak_ptr_class<T> final_data) {
-    if (OpenCLInterop)
-      throw cl::sycl::runtime_error(
-          "set_final_data could not be used with interoperability buffer");
     uploadData = [this, final_data]() {
       if (auto finalData = final_data.lock()) {
         T *Ptr = reinterpret_cast<T *>(BufPtr);
@@ -201,9 +198,6 @@ public:
   }
 
   template <typename Destination> void set_final_data(Destination final_data) {
-    if (OpenCLInterop)
-      throw cl::sycl::runtime_error(
-          "set_final_data could not be used with interoperability buffer");
     static_assert(!std::is_const<Destination>::value,
                   "Can not write in a constant Destination. Destination should "
                   "not be const.");
@@ -419,11 +413,6 @@ void buffer_impl<AllocatorT>::moveMemoryTo(
 
   ContextImplPtr Context = detail::getSyclObjImpl(Queue->get_context());
 
-  if (OpenCLInterop && (Context->getHandleRef() != OpenCLContext))
-    throw cl::sycl::runtime_error(
-        "Interoperability buffer could not be used in a context other than the "
-        "context associated with the OpenCL memory object.");
-
   // TODO: Move all implementation specific commands to separate file?
   // TODO: Make allocation in separate command?
 
@@ -551,11 +540,6 @@ void buffer_impl<AllocatorT>::allocate(QueueImplPtr Queue,
   detail::waitEvents(DepEvents);
 
   ContextImplPtr Context = detail::getSyclObjImpl(Queue->get_context());
-
-  if (OpenCLInterop && (Context->getHandleRef() != OpenCLContext))
-    throw cl::sycl::runtime_error(
-        "Interoperability buffer could not be used in a context other than the "
-        "context associated with the OpenCL memory object.");
 
   if (OpenCLInterop) {
     // For interoperability instance of the SYCL buffer class being constructed

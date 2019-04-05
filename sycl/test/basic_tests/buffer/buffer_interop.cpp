@@ -18,7 +18,7 @@ using namespace cl::sycl;
 int main() {
   bool Failed = false;
   {
-    const size_t Size = 32;
+    constexpr size_t Size = 32;
     int Init[Size] = {5};
     cl_int Error = CL_SUCCESS;
     cl::sycl::range<1> InteropRange;
@@ -31,7 +31,7 @@ int main() {
         MyQueue.get_context().get(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
         Size * sizeof(int), Init, &Error);
     CHECK_OCL_CODE(Error);
-    buffer<int, 1> Buffer(OpenCLBuffer, MyQueue.get_context());
+    buffer<int, 1> Buffer{OpenCLBuffer, MyQueue.get_context()};
 
     if (Buffer.get_range() != InteropRange) {
           assert(false);
@@ -55,8 +55,8 @@ int main() {
     int Data[Size] = {10};
     std::vector<int> Result(Size, 0);
     {
-      buffer<int, 1> BufferData(Data, range<1>(Size),
-                                {property::buffer::use_host_ptr()});
+      buffer<int, 1> BufferData{Data, range<1>(Size),
+                                {property::buffer::use_host_ptr()}};
       BufferData.set_final_data(Result.begin());
       MyQueue.submit([&](handler &CGH) {
         auto Data = BufferData.get_access<access::mode::write>(CGH);
@@ -78,6 +78,71 @@ int main() {
         Failed = true;
       }
     }
+  }
+  // Check set_final_data
+  {
+    constexpr size_t Size = 32;
+    int Init[Size] = {5};
+    int Result[Size] = {5};
+    cl_int Error = CL_SUCCESS;
+
+    queue MyQueue;
+
+    cl_mem OpenCLBuffer = clCreateBuffer(
+        MyQueue.get_context().get(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+        Size * sizeof(int), Init, &Error);
+    CHECK_OCL_CODE(Error);
+    {
+      buffer<int, 1> Buffer{OpenCLBuffer, MyQueue.get_context()};
+      Buffer.set_final_data(Result);
+
+      MyQueue.submit([&](handler &CGH) {
+        auto B = Buffer.get_access<access::mode::write>(CGH);
+        CGH.parallel_for<class FinalData>(
+            range<1>{Size}, [=](id<1> Index) { B[Index] = 10; });
+      });
+    }
+    Error = clReleaseMemObject(OpenCLBuffer);
+    CHECK_OCL_CODE(Error);
+    for (size_t i = 0; i < Size; ++i) {
+      if (Result[i] != 10) {
+        std::cout << " array[" << i << "] is " << Result[i] << " expected "
+                  << 10 << std::endl;
+        assert(false);
+        Failed = true;
+      }
+    }
+  }
+  // Check host accessor
+  {
+    constexpr size_t Size = 32;
+    int Init[Size] = {5};
+    cl_int Error = CL_SUCCESS;
+
+    queue MyQueue;
+
+    cl_mem OpenCLBuffer = clCreateBuffer(
+        MyQueue.get_context().get(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+        Size * sizeof(int), Init, &Error);
+    CHECK_OCL_CODE(Error);
+    buffer<int, 1> Buffer{OpenCLBuffer, MyQueue.get_context()};
+
+    MyQueue.submit([&](handler &CGH) {
+      auto B = Buffer.get_access<access::mode::write>(CGH);
+      CGH.parallel_for<class HostAccess>(range<1>{Size},
+                                        [=](id<1> Index) { B[Index] = 10; });
+    });
+    auto Acc = Buffer.get_access<cl::sycl::access::mode::read>();
+    for (size_t i = 0; i < Size; ++i) {
+      if (Acc[i] != 10) {
+        std::cout << " array[" << i << "] is " << Acc[i] << " expected "
+                  << 10 << std::endl;
+        assert(false);
+        Failed = true;
+      }
+    }
+    Error = clReleaseMemObject(OpenCLBuffer);
+    CHECK_OCL_CODE(Error);
   }
   return Failed;
 }
