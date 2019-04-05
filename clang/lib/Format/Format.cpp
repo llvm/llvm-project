@@ -877,6 +877,11 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   } else if (Language == FormatStyle::LK_ObjC) {
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.ColumnLimit = 100;
+    // "Regroup" doesn't work well for ObjC yet (main header heuristic,
+    // relationship between ObjC standard library headers and other heades,
+    // #imports, etc.)
+    GoogleStyle.IncludeStyle.IncludeBlocks =
+        tooling::IncludeStyle::IBS_Preserve;
   }
 
   return GoogleStyle;
@@ -893,9 +898,16 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
     // See styleguide for import groups:
     // https://chromium.googlesource.com/chromium/src/+/master/styleguide/java/java.md#Import-Order
     ChromiumStyle.JavaImportGroups = {
-        "android",      "com",  "dalvik",
-        "junit",        "org",  "com.google.android.apps.chrome",
-        "org.chromium", "java", "javax",
+        "android",
+        "androidx",
+        "com",
+        "dalvik",
+        "junit",
+        "org",
+        "com.google.android.apps.chrome",
+        "org.chromium",
+        "java",
+        "javax",
     };
     ChromiumStyle.SortIncludes = true;
   } else if (Language == FormatStyle::LK_JavaScript) {

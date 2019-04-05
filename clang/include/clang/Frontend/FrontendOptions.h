@@ -202,7 +202,7 @@ class FrontendInputFile {
   /// The input, if it comes from a buffer rather than a file. This object
   /// does not own the buffer, and the caller is responsible for ensuring
   /// that it outlives any users.
-  llvm::MemoryBuffer *Buffer = nullptr;
+  const llvm::MemoryBuffer *Buffer = nullptr;
 
   /// The kind of input, e.g., C source, AST file, LLVM IR.
   InputKind Kind;
@@ -214,7 +214,7 @@ public:
   FrontendInputFile() = default;
   FrontendInputFile(StringRef File, InputKind Kind, bool IsSystem = false)
       : File(File.str()), Kind(Kind), IsSystem(IsSystem) {}
-  FrontendInputFile(llvm::MemoryBuffer *Buffer, InputKind Kind,
+  FrontendInputFile(const llvm::MemoryBuffer *Buffer, InputKind Kind,
                     bool IsSystem = false)
       : Buffer(Buffer), Kind(Kind), IsSystem(IsSystem) {}
 
@@ -231,7 +231,7 @@ public:
     return File;
   }
 
-  llvm::MemoryBuffer *getBuffer() const {
+  const llvm::MemoryBuffer *getBuffer() const {
     assert(isBuffer());
     return Buffer;
   }

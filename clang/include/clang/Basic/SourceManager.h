@@ -105,7 +105,7 @@ namespace SrcMgr {
     ///
     /// This is owned by the ContentCache object.  The bits indicate
     /// whether the buffer is invalid.
-    mutable llvm::PointerIntPair<llvm::MemoryBuffer *, 2> Buffer;
+    mutable llvm::PointerIntPair<const llvm::MemoryBuffer *, 2> Buffer;
 
   public:
     /// Reference to the file entry representing this ContentCache.
@@ -184,10 +184,10 @@ namespace SrcMgr {
     ///   will be emitted at.
     ///
     /// \param Invalid If non-NULL, will be set \c true if an error occurred.
-    llvm::MemoryBuffer *getBuffer(DiagnosticsEngine &Diag,
-                                  const SourceManager &SM,
-                                  SourceLocation Loc = SourceLocation(),
-                                  bool *Invalid = nullptr) const;
+    const llvm::MemoryBuffer *getBuffer(DiagnosticsEngine &Diag,
+                                        const SourceManager &SM,
+                                        SourceLocation Loc = SourceLocation(),
+                                        bool *Invalid = nullptr) const;
 
     /// Returns the size of the content encapsulated by this
     /// ContentCache.
@@ -209,11 +209,13 @@ namespace SrcMgr {
 
     /// Get the underlying buffer, returning NULL if the buffer is not
     /// yet available.
-    llvm::MemoryBuffer *getRawBuffer() const { return Buffer.getPointer(); }
+    const llvm::MemoryBuffer *getRawBuffer() const {
+      return Buffer.getPointer();
+    }
 
     /// Replace the existing buffer (which will be deleted)
     /// with the given buffer.
-    void replaceBuffer(llvm::MemoryBuffer *B, bool DoNotFree = false);
+    void replaceBuffer(const llvm::MemoryBuffer *B, bool DoNotFree = false);
 
     /// Determine whether the buffer itself is invalid.
     bool isBufferInvalid() const {
@@ -841,7 +843,7 @@ public:
   ///
   /// This does no caching of the buffer and takes ownership of the
   /// MemoryBuffer, so only pass a MemoryBuffer to this once.
-  FileID createFileID(UnownedTag, llvm::MemoryBuffer *Buffer,
+  FileID createFileID(UnownedTag, const llvm::MemoryBuffer *Buffer,
                       SrcMgr::CharacteristicKind FileCharacter = SrcMgr::C_User,
                       int LoadedID = 0, unsigned LoadedOffset = 0,
                       SourceLocation IncludeLoc = SourceLocation()) {
@@ -887,8 +889,8 @@ public:
   ///
   /// \param Invalid If non-NULL, will be set \c true if an error
   /// occurs while retrieving the memory buffer.
-  llvm::MemoryBuffer *getMemoryBufferForFile(const FileEntry *File,
-                                             bool *Invalid = nullptr);
+  const llvm::MemoryBuffer *getMemoryBufferForFile(const FileEntry *File,
+                                                   bool *Invalid = nullptr);
 
   /// Override the contents of the given source file by providing an
   /// already-allocated buffer.
@@ -951,8 +953,8 @@ public:
   ///
   /// If there is an error opening this buffer the first time, this
   /// manufactures a temporary buffer and returns a non-empty error string.
-  llvm::MemoryBuffer *getBuffer(FileID FID, SourceLocation Loc,
-                                bool *Invalid = nullptr) const {
+  const llvm::MemoryBuffer *getBuffer(FileID FID, SourceLocation Loc,
+                                      bool *Invalid = nullptr) const {
     bool MyInvalid = false;
     const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &MyInvalid);
     if (MyInvalid || !Entry.isFile()) {
@@ -966,7 +968,8 @@ public:
                                                         Invalid);
   }
 
-  llvm::MemoryBuffer *getBuffer(FileID FID, bool *Invalid = nullptr) const {
+  const llvm::MemoryBuffer *getBuffer(FileID FID,
+                                      bool *Invalid = nullptr) const {
     bool MyInvalid = false;
     const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &MyInvalid);
     if (MyInvalid || !Entry.isFile()) {
@@ -1788,7 +1791,7 @@ private:
 
   /// Create a new ContentCache for the specified  memory buffer.
   const SrcMgr::ContentCache *
-  createMemBufferContentCache(llvm::MemoryBuffer *Buf, bool DoNotFree);
+  createMemBufferContentCache(const llvm::MemoryBuffer *Buf, bool DoNotFree);
 
   FileID getFileIDSlow(unsigned SLocOffset) const;
   FileID getFileIDLocal(unsigned SLocOffset) const;

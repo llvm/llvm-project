@@ -653,6 +653,18 @@ TEST_F(SortIncludesTest, DoNotOutputReplacementsForSortedBlocksWithRegrouping) {
   EXPECT_EQ(Code, sort(Code, "input.h", 0));
 }
 
+
+TEST_F(SortIncludesTest, DoNotRegroupGroupsInGoogleObjCStyle) {
+  FmtStyle = getGoogleStyle(FormatStyle::LK_ObjC);
+
+  EXPECT_EQ("#include <a.h>\n"
+            "#include <b.h>\n"
+            "#include \"a.h\"",
+            sort("#include <b.h>\n"
+                 "#include <a.h>\n"
+                 "#include \"a.h\""));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

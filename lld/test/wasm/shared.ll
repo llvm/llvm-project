@@ -32,6 +32,13 @@ entry:
   ret i8* bitcast (void ()* @func_external to i8*)
 }
 
+define default i8* @get_local_func_address() {
+entry:
+  ; Verify that a function which is otherwise not address taken *is* added to
+  ; the wasm table with referenced via R_WASM_TABLE_INDEX_REL_SLEB
+  ret i8* bitcast (i8* ()* @get_func_address to i8*)
+}
+
 declare void @func_external()
 
 ; check for dylink section at start
@@ -41,7 +48,7 @@ declare void @func_external()
 ; CHECK-NEXT:     Name:            dylink
 ; CHECK-NEXT:     MemorySize:      20
 ; CHECK-NEXT:     MemoryAlignment: 2
-; CHECK-NEXT:     TableSize:       2
+; CHECK-NEXT:     TableSize:       3
 ; CHECK-NEXT:     TableAlignment:  0
 ; CHECK-NEXT:     Needed:          []
 ; CHECK-NEXT:   - Type:            TYPE
@@ -61,7 +68,7 @@ declare void @func_external()
 ; CHECK-NEXT:         Table:
 ; CHECK-NEXT:           ElemType:        FUNCREF
 ; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Initial:         0x00000002
+; CHECK-NEXT:             Initial:         0x00000003
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __stack_pointer
 ; CHECK-NEXT:         Kind:            GLOBAL
@@ -106,7 +113,7 @@ declare void @func_external()
 ; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          GLOBAL_GET
 ; CHECK-NEXT:           Index:           2
-; CHECK-NEXT:         Functions:       [ 3, 0 ]
+; CHECK-NEXT:         Functions:       [ 5, 3, 0 ]
 
 ; check the generated code in __wasm_call_ctors and __wasm_apply_relocs functions
 ; TODO(sbc): Disassemble and verify instructions.
@@ -118,7 +125,7 @@ declare void @func_external()
 ; CHECK-NEXT:         Body:            10020B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:          []
-; CHECK-NEXT:         Body:            230141046A230241006A360200230141086A230241016A3602002301410C6A230141006A360200230141106A23033602000B
+; CHECK-NEXT:         Body:            230141046A230241016A360200230141086A230241026A3602002301410C6A230141006A360200230141106A23033602000B
 
 ; check the data segment initialized with __memory_base global as offset
 
@@ -129,4 +136,4 @@ declare void @func_external()
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          GLOBAL_GET
 ; CHECK-NEXT:           Index:           1
-; CHECK-NEXT:         Content:         '0200000000000000010000000000000000000000'
+; CHECK-NEXT:         Content:         '0200000001000000020000000000000000000000'

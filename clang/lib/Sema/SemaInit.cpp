@@ -7321,9 +7321,19 @@ ExprResult Sema::TemporaryMaterializationConversion(Expr *E) {
 ExprResult Sema::PerformQualificationConversion(Expr *E, QualType Ty,
                                                 ExprValueKind VK,
                                                 CheckedConversionKind CCK) {
-  CastKind CK = (Ty.getAddressSpace() != E->getType().getAddressSpace())
-                    ? CK_AddressSpaceConversion
-                    : CK_NoOp;
+
+  CastKind CK = CK_NoOp;
+
+  if (VK == VK_RValue) {
+    auto PointeeTy = Ty->getPointeeType();
+    auto ExprPointeeTy = E->getType()->getPointeeType();
+    if (!PointeeTy.isNull() &&
+        PointeeTy.getAddressSpace() != ExprPointeeTy.getAddressSpace())
+      CK = CK_AddressSpaceConversion;
+  } else if (Ty.getAddressSpace() != E->getType().getAddressSpace()) {
+    CK = CK_AddressSpaceConversion;
+  }
+
   return ImpCastExprToType(E, Ty, CK, VK, /*BasePath=*/nullptr, CCK);
 }
 
