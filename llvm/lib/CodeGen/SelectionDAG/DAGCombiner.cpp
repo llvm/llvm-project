@@ -196,7 +196,7 @@ namespace {
     DAGCombiner(SelectionDAG &D, AliasAnalysis *AA, CodeGenOpt::Level OL)
         : DAG(D), TLI(D.getTargetLoweringInfo()), Level(BeforeLegalizeTypes),
           OptLevel(OL), AA(AA) {
-      ForCodeSize = DAG.getMachineFunction().getFunction().optForSize();
+      ForCodeSize = DAG.getMachineFunction().getFunction().hasOptSize();
 
       MaximumLegalStoreInBits = 0;
       for (MVT VT : MVT::all_valuetypes())
@@ -12188,7 +12188,7 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
 
     // Assume that libcalls are the smallest code.
     // TODO: This restriction should probably be lifted for vectors.
-    if (DAG.getMachineFunction().getFunction().optForSize())
+    if (DAG.getMachineFunction().getFunction().hasOptSize())
       return SDValue();
 
     // pow(X, 0.25) --> sqrt(sqrt(X))
@@ -19213,7 +19213,7 @@ SDValue DAGCombiner::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
 SDValue DAGCombiner::BuildSDIV(SDNode *N) {
   // when optimising for minimum size, we don't want to expand a div to a mul
   // and a shift.
-  if (DAG.getMachineFunction().getFunction().optForMinSize())
+  if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
   SmallVector<SDNode *, 8> Built;
@@ -19254,7 +19254,7 @@ SDValue DAGCombiner::BuildSDIVPow2(SDNode *N) {
 SDValue DAGCombiner::BuildUDIV(SDNode *N) {
   // when optimising for minimum size, we don't want to expand a div to a mul
   // and a shift.
-  if (DAG.getMachineFunction().getFunction().optForMinSize())
+  if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
   SmallVector<SDNode *, 8> Built;

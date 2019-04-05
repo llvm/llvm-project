@@ -150,7 +150,7 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
 
   this->MF = &MF;
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
-  OptForSize = MF.getFunction().optForSize();
+  OptForSize = MF.getFunction().hasOptSize();
   MLI = &getAnalysis<MachineLoopInfo>();
   LiveRegs.init(TII->getRegisterInfo());
 

@@ -572,12 +572,13 @@ void MCContext::RemapDebugPaths() {
 void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
   // MCDwarf needs the root file as well as the compilation directory.
   // If we find a '.file 0' directive that will supersede these values.
-  MD5::MD5Result *Cksum = nullptr;
+  Optional<MD5::MD5Result> Cksum;
   if (getDwarfVersion() >= 5) {
     MD5 Hash;
-    Cksum = (MD5::MD5Result *)allocate(sizeof(MD5::MD5Result), 1);
+    MD5::MD5Result Sum;
     Hash.update(Buffer);
-    Hash.final(*Cksum);
+    Hash.final(Sum);
+    Cksum = Sum;
   }
   // Canonicalize the root filename. It cannot be empty, and should not
   // repeat the compilation dir.
@@ -600,7 +601,7 @@ void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
 Expected<unsigned> MCContext::getDwarfFile(StringRef Directory,
                                            StringRef FileName,
                                            unsigned FileNumber,
-                                           MD5::MD5Result *Checksum,
+                                           Optional<MD5::MD5Result> Checksum,
                                            Optional<StringRef> Source,
                                            unsigned CUID) {
   MCDwarfLineTable &Table = MCDwarfLineTablesCUMap[CUID];

@@ -66,13 +66,18 @@ public:
   /// before the next statepoint.  If we don't see it, we'll report
   /// an assertion.
   void scheduleRelocCall(const CallInst &RelocCall) {
-    PendingGCRelocateCalls.push_back(&RelocCall);
+    // We are not interested in lowering dead instructions.
+    if (!RelocCall.use_empty())
+      PendingGCRelocateCalls.push_back(&RelocCall);
   }
 
   /// Remove this gc_relocate from the list we're expecting to see
   /// before the next statepoint.  If we weren't expecting to see
   /// it, we'll report an assertion.
   void relocCallVisited(const CallInst &RelocCall) {
+    // We are not interested in lowering dead instructions.
+    if (RelocCall.use_empty())
+      return;
     auto I = llvm::find(PendingGCRelocateCalls, &RelocCall);
     assert(I != PendingGCRelocateCalls.end() &&
            "Visited unexpected gcrelocate call");

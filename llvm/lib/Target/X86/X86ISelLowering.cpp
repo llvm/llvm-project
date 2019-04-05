@@ -3780,9 +3780,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     } else if (VA.isRegLoc()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
       if (isVarArg && IsWin64) {
-        if (!Subtarget.hasSSE1())
-          errorUnsupported(
-              DAG, dl, "Win64 ABI varargs functions require SSE to be enabled");
         // Win64 ABI requires argument XMM reg to be copied to the corresponding
         // shadow reg if callee is a varargs function.
         unsigned ShadowReg = 0;
@@ -7762,7 +7759,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
   // TODO: If multiple splats are generated to load the same constant,
   // it may be detrimental to overall size. There needs to be a way to detect
   // that condition to know if this is truly a size win.
-  bool OptForSize = DAG.getMachineFunction().getFunction().optForSize();
+  bool OptForSize = DAG.getMachineFunction().getFunction().hasOptSize();
 
   // Handle broadcasting a single constant scalar from the constant pool
   // into a vector.
@@ -10669,7 +10666,7 @@ static SDValue lowerShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
   case MVT::v32i16:
   case MVT::v64i8: {
     // Attempt to lower to a bitmask if we can. Only if not optimizing for size.
-    bool OptForSize = DAG.getMachineFunction().getFunction().optForSize();
+    bool OptForSize = DAG.getMachineFunction().getFunction().hasOptSize();
     if (!OptForSize) {
       if (SDValue Masked = lowerShuffleAsBitMask(DL, VT, V1, V2, Mask, Zeroable,
                                                  Subtarget, DAG))
@@ -16985,7 +16982,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       // Bits [3:0] of the constant are the zero mask. The DAG Combiner may
       //   combine either bitwise AND or insert of float 0.0 to set these bits.
 
-      bool MinSize = DAG.getMachineFunction().getFunction().optForMinSize();
+      bool MinSize = DAG.getMachineFunction().getFunction().hasMinSize();
       if (IdxVal == 0 && (!MinSize || !MayFoldLoad(N1))) {
         // If this is an insertion of 32-bits into the low 32-bits of
         // a vector, we prefer to generate a blend with immediate rather
@@ -17639,7 +17636,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
          "Unexpected funnel shift type!");
 
   // Expand slow SHLD/SHRD cases if we are not optimizing for size.
-  bool OptForSize = DAG.getMachineFunction().getFunction().optForSize();
+  bool OptForSize = DAG.getMachineFunction().getFunction().hasOptSize();
   if (!OptForSize && Subtarget.isSHLDSlow())
     return SDValue();
 
@@ -18898,7 +18895,7 @@ static SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) {
 /// implementation, and likely shuffle complexity of the alternate sequence.
 static bool shouldUseHorizontalOp(bool IsSingleSource, SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
-  bool IsOptimizingSize = DAG.getMachineFunction().getFunction().optForSize();
+  bool IsOptimizingSize = DAG.getMachineFunction().getFunction().hasOptSize();
   bool HasFastHOps = Subtarget.hasFastHorizontalOps();
   return !IsSingleSource || IsOptimizingSize || HasFastHOps;
 }
@@ -19379,7 +19376,7 @@ SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
           !cast<ConstantSDNode>(Op0)->getAPIntValue().isSignedIntN(8)) ||
          (isa<ConstantSDNode>(Op1) &&
           !cast<ConstantSDNode>(Op1)->getAPIntValue().isSignedIntN(8))) &&
-        !DAG.getMachineFunction().getFunction().optForMinSize() &&
+        !DAG.getMachineFunction().getFunction().hasMinSize() &&
         !Subtarget.isAtom()) {
       unsigned ExtendOp =
           isX86CCUnsigned(X86CC) ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
@@ -19553,7 +19550,7 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
     } else {
       // Use BT if the immediate can't be encoded in a TEST instruction or we
       // are optimizing for size and the immedaite won't fit in a byte.
-      bool OptForSize = DAG.getMachineFunction().getFunction().optForSize();
+      bool OptForSize = DAG.getMachineFunction().getFunction().hasOptSize();
       if ((!isUInt<32>(AndRHSVal) || (OptForSize && !isUInt<8>(AndRHSVal))) &&
           isPowerOf2_64(AndRHSVal)) {
         Src = AndLHS;
@@ -19583,10 +19580,10 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
       DAG.MaskedValueIsZero(BitNo, APInt(BitNo.getValueSizeInBits(), 32)))
     Src = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Src);
 
-  // If the operand types disagree, extend the shift amount to match.  Since
-  // BT ignores high bits (like shifts) we can use anyextend.
+  // If the operand types disagree, extend or truncate the shift amount to match.
+  // Since BT ignores high bits (like shifts) we can use anyextend for the extension.
   if (Src.getValueType() != BitNo.getValueType())
-    BitNo = DAG.getNode(ISD::ANY_EXTEND, dl, Src.getValueType(), BitNo);
+    BitNo = DAG.getAnyExtOrTrunc(BitNo, dl, Src.getValueType());
 
   X86CC = DAG.getConstant(CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B,
                           dl, MVT::i8);
@@ -32790,9 +32787,18 @@ static SDValue combineShuffleOfConcatUndef(SDNode *N, SelectionDAG &DAG,
 /// Eliminate a redundant shuffle of a horizontal math op.
 static SDValue foldShuffleOfHorizOp(SDNode *N) {
   unsigned Opcode = N->getOpcode();
-  if (Opcode != X86ISD::MOVDDUP)
+  if (Opcode != X86ISD::MOVDDUP && Opcode != X86ISD::VBROADCAST)
     if (Opcode != ISD::VECTOR_SHUFFLE || !N->getOperand(1).isUndef())
       return SDValue();
+
+  // For a broadcast, peek through an extract element of index 0 to find the
+  // horizontal op: broadcast (ext_vec_elt HOp, 0)
+  if (Opcode == X86ISD::VBROADCAST) {
+    SDValue SrcOp = N->getOperand(0);
+    if (SrcOp.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        SrcOp.getValueType() == MVT::f64 && isNullConstant(SrcOp.getOperand(1)))
+      N = SrcOp.getNode();
+  }
 
   SDValue HOp = N->getOperand(0);
   if (HOp.getOpcode() != X86ISD::HADD && HOp.getOpcode() != X86ISD::FHADD &&
@@ -32808,10 +32814,11 @@ static SDValue foldShuffleOfHorizOp(SDNode *N) {
     return SDValue();
 
   // When the operands of a horizontal math op are identical, the low half of
-  // the result is the same as the high half. If the shuffle is also replicating
-  // low and high halves, we don't need the shuffle.
-  if (Opcode == X86ISD::MOVDDUP) {
+  // the result is the same as the high half. If a target shuffle is also
+  // replicating low and high halves, we don't need the shuffle.
+  if (Opcode == X86ISD::MOVDDUP || Opcode == X86ISD::VBROADCAST) {
     // movddup (hadd X, X) --> hadd X, X
+    // broadcast (extract_vec_elt (hadd X, X), 0) --> hadd X, X
     assert((HOp.getValueType() == MVT::v2f64 ||
             HOp.getValueType() == MVT::v4f64) && "Unexpected type for h-op");
     return HOp;
@@ -35925,7 +35932,7 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
   // pmulld is supported since SSE41. It is better to use pmulld
   // instead of pmullw+pmulhw, except for subtargets where pmulld is slower than
   // the expansion.
-  bool OptForMinSize = DAG.getMachineFunction().getFunction().optForMinSize();
+  bool OptForMinSize = DAG.getMachineFunction().getFunction().hasMinSize();
   if (Subtarget.hasSSE41() && (OptForMinSize || !Subtarget.isPMULLDSlow()))
     return SDValue();
 
@@ -36233,7 +36240,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   if (!MulConstantOptimization)
     return SDValue();
   // An imul is usually smaller than the alternative sequence.
-  if (DAG.getMachineFunction().getFunction().optForMinSize())
+  if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
   if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
@@ -37652,7 +37659,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // fold (or (x << c) | (y >> (64 - c))) ==> (shld64 x, y, c)
-  bool OptForSize = DAG.getMachineFunction().getFunction().optForSize();
+  bool OptForSize = DAG.getMachineFunction().getFunction().hasOptSize();
   unsigned Bits = VT.getScalarSizeInBits();
 
   // SHLD/SHRD instructions have lower register pressure, but on some
@@ -39931,7 +39938,7 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
 
   // If we have to respect NaN inputs, this takes at least 3 instructions.
   // Favor a library call when operating on a scalar and minimizing code size.
-  if (!VT.isVector() && DAG.getMachineFunction().getFunction().optForMinSize())
+  if (!VT.isVector() && DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
   EVT SetCCType = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
@@ -42789,6 +42796,7 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
     case ISD::ZERO_EXTEND:
     case ISD::ANY_EXTEND:
     case ISD::SHL:
+    case ISD::SRA:
     case ISD::SRL:
     case ISD::SUB:
     case ISD::ADD:
@@ -42864,6 +42872,7 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
   case ISD::ANY_EXTEND:
     break;
   case ISD::SHL:
+  case ISD::SRA:
   case ISD::SRL: {
     SDValue N0 = Op.getOperand(0);
     // Look out for (store (shl (load), x)).

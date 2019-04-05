@@ -423,6 +423,13 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OperandsMapping =
         getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr});
     break;
+  case DBG_VALUE: {
+    SmallVector<const ValueMapping *, 4> OperandBanks(NumOperands);
+    if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg())
+      OperandBanks[0] = &ARM::ValueMappings[ARM::GPR3OpsIdx];
+    OperandsMapping = getOperandsMapping(OperandBanks);
+    break;
+  }
   default:
     return getInvalidInstructionMapping();
   }

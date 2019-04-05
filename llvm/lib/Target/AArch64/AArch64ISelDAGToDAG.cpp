@@ -52,7 +52,7 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    ForCodeSize = MF.getFunction().optForSize();
+    ForCodeSize = MF.getFunction().hasOptSize();
     Subtarget = &MF.getSubtarget<AArch64Subtarget>();
     return SelectionDAGISel::runOnMachineFunction(MF);
   }

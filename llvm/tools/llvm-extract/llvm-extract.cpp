@@ -270,10 +270,10 @@ int main(int argc, char **argv) {
       ExitOnErr(F->materialize());
       for (auto &BB : *F) {
         for (auto &I : BB) {
-          auto *CI = dyn_cast<CallInst>(&I);
-          if (!CI)
+          CallBase *CB = dyn_cast<CallBase>(&I);
+          if (!CB)
             continue;
-          Function *CF = CI->getCalledFunction();
+          Function *CF = CB->getCalledFunction();
           if (!CF)
             continue;
           if (CF->isDeclaration() || GVs.count(CF))

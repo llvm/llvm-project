@@ -5,7 +5,7 @@ Streams:
   - Type:            SystemInfo
     Processor Arch:  ARM64
     Platform ID:     Linux
-    CSD Version RVA: 0x01020304
+    CSD Version:     Linux 3.13.0-91-generic
     CPU:             
       CPUID:           0x05060708
   - Type:            LinuxAuxv
@@ -22,7 +22,7 @@ Streams:
 # CHECK-NEXT:   - Type:            SystemInfo
 # CHECK-NEXT:     Processor Arch:  ARM64
 # CHECK-NEXT:     Platform ID:     Linux
-# CHECK-NEXT:     CSD Version RVA: 0x01020304
+# CHECK-NEXT:     CSD Version:     Linux 3.13.0-91-generic
 # CHECK-NEXT:     CPU:             
 # CHECK-NEXT:       CPUID:           0x05060708
 # CHECK-NEXT:   - Type:            LinuxAuxv

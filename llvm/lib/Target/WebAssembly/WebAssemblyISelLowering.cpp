@@ -1003,17 +1003,22 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
       MachineFunction &MF = DAG.getMachineFunction();
       MVT PtrVT = getPointerTy(MF.getDataLayout());
       const char *BaseName;
-      if (GV->getValueType()->isFunctionTy())
+      if (GV->getValueType()->isFunctionTy()) {
         BaseName = MF.createExternalSymbolName("__table_base");
-      else
+        OperandFlags = WebAssemblyII::MO_TABLE_BASE_REL;
+      }
+      else {
         BaseName = MF.createExternalSymbolName("__memory_base");
+        OperandFlags = WebAssemblyII::MO_MEMORY_BASE_REL;
+      }
       SDValue BaseAddr =
           DAG.getNode(WebAssemblyISD::Wrapper, DL, PtrVT,
                       DAG.getTargetExternalSymbol(BaseName, PtrVT));
 
       SDValue SymAddr = DAG.getNode(
           WebAssemblyISD::WrapperPIC, DL, VT,
-          DAG.getTargetGlobalAddress(GA->getGlobal(), DL, VT, GA->getOffset()));
+          DAG.getTargetGlobalAddress(GA->getGlobal(), DL, VT, GA->getOffset(),
+                                     OperandFlags));
 
       return DAG.getNode(ISD::ADD, DL, VT, BaseAddr, SymAddr);
     } else {

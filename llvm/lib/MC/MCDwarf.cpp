@@ -361,10 +361,10 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
   }
   MCOS->EmitULEB128IntValue(DwarfFile.DirIndex); // Directory number.
   if (EmitMD5) {
-    MD5::MD5Result *Cksum = DwarfFile.Checksum;
+    const MD5::MD5Result &Cksum = *DwarfFile.Checksum;
     MCOS->EmitBinaryData(
-        StringRef(reinterpret_cast<const char *>(Cksum->Bytes.data()),
-                  Cksum->Bytes.size()));
+        StringRef(reinterpret_cast<const char *>(Cksum.Bytes.data()),
+                  Cksum.Bytes.size()));
   }
   if (HasSource) {
     if (LineStr)
@@ -536,7 +536,7 @@ void MCDwarfLineTable::EmitCU(MCObjectStreamer *MCOS,
 
 Expected<unsigned> MCDwarfLineTable::tryGetFile(StringRef &Directory,
                                                 StringRef &FileName,
-                                                MD5::MD5Result *Checksum,
+                                                Optional<MD5::MD5Result> Checksum,
                                                 Optional<StringRef> Source,
                                                 unsigned FileNumber) {
   return Header.tryGetFile(Directory, FileName, Checksum, Source, FileNumber);
@@ -545,7 +545,7 @@ Expected<unsigned> MCDwarfLineTable::tryGetFile(StringRef &Directory,
 Expected<unsigned>
 MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
                                    StringRef &FileName,
-                                   MD5::MD5Result *Checksum,
+                                   Optional<MD5::MD5Result> Checksum,
                                    Optional<StringRef> &Source,
                                    unsigned FileNumber) {
   if (Directory == CompilationDir)
@@ -558,7 +558,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
   // Keep track of whether any or all files have an MD5 checksum.
   // If any files have embedded source, they all must.
   if (MCDwarfFiles.empty()) {
-    trackMD5Usage(Checksum);
+    trackMD5Usage(Checksum.hasValue());
     HasSource = (Source != None);
   }
   if (FileNumber == 0) {
@@ -623,7 +623,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
   File.Name = FileName;
   File.DirIndex = DirIndex;
   File.Checksum = Checksum;
-  trackMD5Usage(Checksum);
+  trackMD5Usage(Checksum.hasValue());
   File.Source = Source;
   if (Source)
     HasSource = true;

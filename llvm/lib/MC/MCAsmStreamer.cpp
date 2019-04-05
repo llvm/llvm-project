@@ -223,11 +223,11 @@ public:
   Expected<unsigned> tryEmitDwarfFileDirective(unsigned FileNo,
                                                StringRef Directory,
                                                StringRef Filename,
-                                               MD5::MD5Result *Checksum = 0,
+                                               Optional<MD5::MD5Result> Checksum = None,
                                                Optional<StringRef> Source = None,
                                                unsigned CUID = 0) override;
   void emitDwarfFile0Directive(StringRef Directory, StringRef Filename,
-                               MD5::MD5Result *Checksum,
+                               Optional<MD5::MD5Result> Checksum,
                                Optional<StringRef> Source,
                                unsigned CUID = 0) override;
   void EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
@@ -1151,7 +1151,7 @@ void MCAsmStreamer::EmitFileDirective(StringRef Filename) {
 
 static void printDwarfFileDirective(unsigned FileNo, StringRef Directory,
                                     StringRef Filename,
-                                    MD5::MD5Result *Checksum,
+                                    Optional<MD5::MD5Result> Checksum,
                                     Optional<StringRef> Source,
                                     bool UseDwarfDirectory,
                                     raw_svector_ostream &OS) {
@@ -1184,7 +1184,7 @@ static void printDwarfFileDirective(unsigned FileNo, StringRef Directory,
 
 Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
     unsigned FileNo, StringRef Directory, StringRef Filename,
-    MD5::MD5Result *Checksum, Optional<StringRef> Source, unsigned CUID) {
+    Optional<MD5::MD5Result> Checksum, Optional<StringRef> Source, unsigned CUID) {
   assert(CUID == 0 && "multiple CUs not supported by MCAsmStreamer");
 
   MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
@@ -1212,7 +1212,7 @@ Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
 
 void MCAsmStreamer::emitDwarfFile0Directive(StringRef Directory,
                                             StringRef Filename,
-                                            MD5::MD5Result *Checksum,
+                                            Optional<MD5::MD5Result> Checksum,
                                             Optional<StringRef> Source,
                                             unsigned CUID) {
   assert(CUID == 0);

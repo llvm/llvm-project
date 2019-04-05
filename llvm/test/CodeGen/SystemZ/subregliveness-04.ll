@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -disable-early-taildup -disable-cgp -systemz-subreg-liveness < %s | FileCheck %s
 
 ; Check for successful compilation.
-; CHECK: lhi %r0, -5
+; CHECK: lhi {{%r[0-9]+}}, -5
 
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-ibm-linux"
