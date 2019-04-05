@@ -260,3 +260,13 @@ def lldb_iter(obj, getsize, getelem):
 %include "./Python/python-extensions.swig"
 
 %include "./Python/python-wrapper.swig"
+
+%pythoncode%{
+debugger_unique_id = 0
+SBDebugger.Initialize()
+debugger = None
+target = SBTarget()
+process = SBProcess()
+thread = SBThread()
+frame = SBFrame()
+%}
