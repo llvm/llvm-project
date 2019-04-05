@@ -36,6 +36,8 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         shutil.rmtree(include)
 
     @swiftTest
+    # This test needs a working Remote Mirrors implementation.
+    @skipIf(oslist=['linux', 'windows'])
     def test_dwarf_importer(self):
         lldb.SBDebugger.MemoryPressureDetected()
         self.runCmd("settings set symbols.use-swift-dwarfimporter true")
@@ -51,6 +53,10 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
                                 target.FindFirstGlobalVariable("point"),
                                 typename="Point", num_children=2)
         self.expect("fr v point", substrs=["x = 1", "y = 2"])
+        self.expect("fr v point", substrs=["x = 1", "y = 2"])
+        self.expect("fr v pureSwiftStruct", substrs=["pure swift"])
+        self.expect("fr v swiftStructCMember",
+                    substrs=["swift struct c member"])
         logfile = open(log, "r")
         for line in logfile:
             self.assertFalse("missing required module" in line)

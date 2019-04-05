@@ -26,6 +26,7 @@
 #include "swift/AST/ExistentialLayout.h"
 #include "swift/AST/Module.h"
 #include "swift/AST/Types.h"
+#include "swift/AST/ASTWalker.h"
 #include "swift/Basic/SourceLoc.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/Demangler.h"
@@ -1569,6 +1570,36 @@ void SwiftLanguageRuntime::ReleaseAssociatedRemoteASTContext(
   m_remote_ast_contexts.erase(ctx);
 }
 
+namespace {
+class ASTVerifier : public swift::ASTWalker {
+  bool hasMissingPatterns = false;
+
+  bool walkToDeclPre(swift::Decl *D) override {
+    if (auto *PBD = llvm::dyn_cast<swift::PatternBindingDecl>(D)) {
+      if (PBD->getPatternList().empty()) {
+        hasMissingPatterns = true;
+        return false;
+      }
+    }
+    return true;
+  }
+
+public:
+  /// Detect (one form of) incomplete types. These may appear if
+  /// member variables have Clang-imported types that couldn't be
+  /// resolved.
+  static bool Verify(swift::Decl *D) {
+    if (!D)
+      return false;
+
+    ASTVerifier verifier;
+    D->walk(verifier);
+    return !verifier.hasMissingPatterns;
+  }
+};
+
+}
+
 llvm::Optional<uint64_t>
 SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
                                               ValueObject *instance,
@@ -1654,27 +1685,37 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
         }
   }
 
-  // Determine the member offset.
-  swift::remoteAST::Result<uint64_t> result = remote_ast->getOffsetOfMember(
-      swift_type, optmeta, member_name.GetStringRef());
-  if (result) {
+  // Try to determine whether it is safe to use RemoteAST.  RemoteAST
+  // is faster than RemoteMirrors, but can't do dynamic types (checked
+  // inside RemoteAST) or incomplete types (checked here).
+  bool safe_to_use_remote_ast = true;
+  if (swift::Decl *type_decl = swift_type->getNominalOrBoundGenericNominal())
+    safe_to_use_remote_ast &= ASTVerifier::Verify(type_decl);
+ 
+  // Use RemoteAST to determine the member offset.
+  if (safe_to_use_remote_ast) {
+    swift::remoteAST::Result<uint64_t> result = remote_ast->getOffsetOfMember(
+        swift_type, optmeta, member_name.GetStringRef());
+    if (result) {
+      if (log)
+        log->Printf(
+            "[MemberVariableOffsetResolver] offset discovered = %" PRIu64,
+            (uint64_t)result.getValue());
+
+      // Cache this result.
+      auto key = std::make_tuple(swift_type, member_name.GetCString());
+      m_member_offsets.insert(std::make_pair(key, result.getValue()));
+      return result.getValue();
+    }
+
+    const auto &failure = result.getFailure();
+    if (error)
+      error->SetErrorStringWithFormat("error in resolving type offset: %s",
+                                      failure.render().c_str());
     if (log)
-      log->Printf("[MemberVariableOffsetResolver] offset discovered = %" PRIu64,
-                  (uint64_t)result.getValue());
-
-    // Cache this result.
-    auto key = std::make_tuple(swift_type, member_name.GetCString());
-    m_member_offsets.insert(std::make_pair(key, result.getValue()));
-    return result.getValue();
+      log->Printf("[MemberVariableOffsetResolver] failure: %s",
+                  failure.render().c_str());
   }
-
-  const auto &failure = result.getFailure();
-  if (error)
-    error->SetErrorStringWithFormat("error in resolving type offset: %s",
-                                    failure.render().c_str());
-  if (log)
-    log->Printf("[MemberVariableOffsetResolver] failure: %s",
-                failure.render().c_str());
 
   // Try remote mirrors.
   const swift::reflection::TypeInfo *type_info = GetTypeInfo(instance_type);
