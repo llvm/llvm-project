@@ -105,14 +105,14 @@ body:             |
     liveins: $edi
   
     CMP32ri8 killed $edi, 2, implicit-def $eflags
-    JB_1 %bb.2, implicit $eflags
+    JCC_1 %bb.2, 2, implicit $eflags
     JMP_1 %bb.1
   
   bb.1.entry:
     successors: %bb.4(0x40000000), %bb.5(0x40000000)
     liveins: $eflags
   
-    JE_1 %bb.4, implicit killed $eflags
+    JCC_1 %bb.4, 4, implicit killed $eflags
     JMP_1 %bb.5
   
   bb.2.sw.bb:
@@ -120,7 +120,7 @@ body:             |
   
     $al = MOV8rm $rip, 1, $noreg, @static_local_guard, $noreg :: (volatile load acquire 1 from `i8* bitcast (i64* @static_local_guard to i8*)`, align 8)
     TEST8rr killed $al, $al, implicit-def $eflags
-    JNE_1 %bb.6, implicit killed $eflags
+    JCC_1 %bb.6, 5, implicit killed $eflags
     JMP_1 %bb.3
   
   bb.3.init.check.i:

@@ -16,7 +16,6 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 class ObjCDataFormatterCF(ObjCDataFormatterTestCase):
 
     @skipUnlessDarwin
-    @no_debug_info_test
     def test_coreframeworks_and_run_command(self):
         """Test formatters for Core OSX frameworks."""
         self.build()

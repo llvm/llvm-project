@@ -731,6 +731,9 @@ public:
   MachineInstrBuilder buildUnmerge(ArrayRef<LLT> Res, const SrcOp &Op);
   MachineInstrBuilder buildUnmerge(ArrayRef<unsigned> Res, const SrcOp &Op);
 
+  /// Build and insert an unmerge of \p Res sized pieces to cover \p Op
+  MachineInstrBuilder buildUnmerge(LLT Res, const SrcOp &Op);
+
   /// Build and insert \p Res = G_BUILD_VECTOR \p Op0, ...
   ///
   /// G_BUILD_VECTOR creates a vector value from multiple scalar registers.

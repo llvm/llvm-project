@@ -130,7 +130,7 @@ void ObjDumper::printSectionAsHex(const object::ObjectFile *Obj,
     // We are adding the (4 - i) last rows that are 8 characters each.
     // Then, the (4 - i) spaces that are in between the rows.
     // Least, if we cut in a middle of a row, we add the remaining characters,
-    // which is (8 - (k * 2))
+    // which is (8 - (k * 2)).
     if (i < 4)
       W.startLine() << format("%*c", (4 - i) * 8 + (4 - i) + (8 - (k * 2)),
                               ' ');

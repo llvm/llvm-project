@@ -247,10 +247,16 @@ OPTIONS
 
  If set, ignore instructions that do not have a sched class (class idx = 0).
 
- .. option:: -mcpu=<cpu name>
+.. option:: -mcpu=<cpu name>
 
-  If set, measure the cpu characteristics using the counters for this CPU. This
-  is useful when creating new sched models (the host CPU is unknown to LLVM).
+ If set, measure the cpu characteristics using the counters for this CPU. This
+ is useful when creating new sched models (the host CPU is unknown to LLVM).
+
+.. option:: --dump-object-to-disk=true
+
+ By default, llvm-exegesis will dump the generated code to a temporary file to
+ enable code inspection. You may disable it to speed up the execution and save
+ disk space.
 
 EXIT STATUS
 -----------

@@ -485,6 +485,14 @@ public:
                                             std::initializer_list<LLT> Types1) {
     return actionForCartesianProduct(LegalizeAction::Legal, Types0, Types1);
   }
+  /// The instruction is legal when type indexes 0, 1, and 2 are both their
+  /// respective lists.
+  LegalizeRuleSet &legalForCartesianProduct(std::initializer_list<LLT> Types0,
+                                            std::initializer_list<LLT> Types1,
+                                            std::initializer_list<LLT> Types2) {
+    return actionForCartesianProduct(LegalizeAction::Legal, Types0, Types1,
+                                     Types2);
+  }
 
   /// The instruction is lowered.
   LegalizeRuleSet &lower() {

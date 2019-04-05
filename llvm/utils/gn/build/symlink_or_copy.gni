@@ -16,9 +16,9 @@ template("symlink_or_copy") {
     script = "//llvm/utils/gn/build/symlink_or_copy.py"
     args = [
       "--stamp",
-      rebase_path(stamp, root_out_dir),
+      rebase_path(stamp, root_build_dir),
       invoker.source,
-      rebase_path(invoker.output, root_out_dir),
+      rebase_path(invoker.output, root_build_dir),
     ]
   }
 }

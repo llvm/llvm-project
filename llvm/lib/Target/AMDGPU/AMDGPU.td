@@ -143,16 +143,22 @@ def FeatureCIInsts : SubtargetFeature<"ci-insts",
   "Additional instructions for CI+"
 >;
 
-def FeatureVIInsts : SubtargetFeature<"vi-insts",
-  "VIInsts",
+def FeatureGFX8Insts : SubtargetFeature<"gfx8-insts",
+  "GFX8Insts",
   "true",
-  "Additional instructions for VI+"
+  "Additional instructions for GFX8+"
 >;
 
 def FeatureGFX9Insts : SubtargetFeature<"gfx9-insts",
   "GFX9Insts",
   "true",
   "Additional instructions for GFX9+"
+>;
+
+def FeatureGFX7GFX8GFX9Insts : SubtargetFeature<"gfx7-gfx8-gfx9-insts",
+  "GFX7GFX8GFX9Insts",
+  "true",
+  "Instructions shared in GFX7, GFX8, GFX9"
 >;
 
 def FeatureSMemRealTime : SubtargetFeature<"s-memrealtime",
@@ -454,18 +460,19 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureFlatAddressSpace,
   FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange,
-  FeatureDoesNotSupportSRAMECC]
+  FeatureGFX7GFX8GFX9Insts, FeatureDoesNotSupportSRAMECC]
 >;
 
 def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
   "volcanic-islands",
   [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
    FeatureWavefrontSize64, FeatureFlatAddressSpace,
-   FeatureGCN3Encoding, FeatureCIInsts, FeatureVIInsts, Feature16BitInsts,
+   FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureVGPRIndexMode, FeatureMovrel,
    FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP,
-   FeatureIntClamp, FeatureTrigReducedRange, FeatureDoesNotSupportSRAMECC
+   FeatureIntClamp, FeatureTrigReducedRange, FeatureDoesNotSupportSRAMECC,
+   FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts
   ]
 >;
 
@@ -473,13 +480,14 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
   "gfx9",
   [FeatureFP64, FeatureLocalMemorySize65536,
    FeatureWavefrontSize64, FeatureFlatAddressSpace,
-   FeatureGCN3Encoding, FeatureCIInsts, FeatureVIInsts, Feature16BitInsts,
+   FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3P, FeatureVGPRIndexMode,
    FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
    FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
-   FeatureAddNoCarryInsts, FeatureScalarAtomics, FeatureR128A16
+   FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
+   FeatureScalarAtomics, FeatureR128A16
   ]
 >;
 
@@ -672,23 +680,44 @@ def NullALU : InstrItinClass;
 // Predicate helper class
 //===----------------------------------------------------------------------===//
 
-def isSICI : Predicate<
-  "Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
-  "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS"
->, AssemblerPredicate<"!FeatureGCN3Encoding">;
+def isGFX6 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS">,
+  AssemblerPredicate<"FeatureSouthernIslands">;
+
+def isGFX6GFX7 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS">,
+  AssemblerPredicate<"!FeatureGCN3Encoding">;
+
+def isGFX7 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS">,
+  AssemblerPredicate<"!FeatureGCN3Encoding,FeatureCIInsts">;
+
+def isGFX7GFX8GFX9 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
+  AssemblerPredicate<"FeatureGFX7GFX8GFX9Insts">;
+
+def isGFX7Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS">,
+  AssemblerPredicate<"FeatureCIInsts">;
+
+def isGFX8Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">,
+  AssemblerPredicate<"FeatureGFX8Insts">;
+
+def isGFX9Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
+  AssemblerPredicate<"FeatureGFX9Insts">;
 
 def isVI : Predicate <
   "Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">,
   AssemblerPredicate<"FeatureGCN3Encoding">;
 
 def isGFX9 : Predicate <
-  "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
-  AssemblerPredicate<"FeatureGFX9Insts">;
-
-// TODO: Either the name to be changed or we simply use IsCI!
-def isCIVI : Predicate <
-  "Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS">,
-  AssemblerPredicate<"FeatureCIInsts">;
+  "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
+  AssemblerPredicate<"FeatureGCN3Encoding,FeatureGFX9Insts">;
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<"FeatureFlatAddressSpace">;
@@ -728,11 +757,12 @@ def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
 def HasSDWA : Predicate<"Subtarget->hasSDWA()">,
   AssemblerPredicate<"FeatureSDWA,FeatureVolcanicIslands">;
 
-def HasSDWA9 : Predicate<"Subtarget->hasSDWA()">,
-  AssemblerPredicate<"FeatureSDWA,FeatureGFX9">;
+def HasSDWA9 :
+  Predicate<"Subtarget->hasSDWA()">,
+  AssemblerPredicate<"FeatureGCN3Encoding,FeatureGFX9Insts,FeatureSDWA">;
 
 def HasDPP : Predicate<"Subtarget->hasDPP()">,
-  AssemblerPredicate<"FeatureDPP">;
+  AssemblerPredicate<"FeatureGCN3Encoding,FeatureDPP">;
 
 def HasR128A16 : Predicate<"Subtarget->hasR128A16()">,
   AssemblerPredicate<"FeatureR128A16">;

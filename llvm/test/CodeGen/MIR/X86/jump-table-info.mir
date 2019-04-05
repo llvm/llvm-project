@@ -74,7 +74,7 @@ body: |
 
     $eax = MOV32rr $edi, implicit-def $rax
     CMP32ri8 $edi, 3, implicit-def $eflags
-    JA_1 %bb.2, implicit $eflags
+    JCC_1 %bb.2, 7, implicit $eflags
 
   bb.1.entry:
     successors: %bb.3, %bb.4, %bb.5, %bb.6
@@ -117,7 +117,7 @@ body: |
 
     $eax = MOV32rr $edi, implicit-def $rax
     CMP32ri8 $edi, 3, implicit-def $eflags
-    JA_1 %bb.2, implicit $eflags
+    JCC_1 %bb.2, 7, implicit $eflags
 
   bb.1.entry:
     successors: %bb.3, %bb.4, %bb.5, %bb.6

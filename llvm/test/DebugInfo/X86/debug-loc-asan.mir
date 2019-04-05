@@ -226,7 +226,7 @@ body:             |
     MOV32mr $rsp, 1, $noreg, 60, $noreg, killed $edi :: (store 4 into %stack.1)
     MOV64mr $rsp, 1, $noreg, 48, $noreg, killed $rax :: (store 8 into %stack.2)
     MOV64mr $rsp, 1, $noreg, 40, $noreg, killed $rcx :: (store 8 into %stack.3)
-    JE_1 %bb.2, implicit $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
   
   bb.1 (%ir-block.3):
     $edi = MOV32ri 64, implicit-def $rdi
@@ -259,7 +259,7 @@ body:             |
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
     MOV64mr $rsp, 1, $noreg, 16, $noreg, killed $rsi :: (store 8 into %stack.6)
     MOV8mr $rsp, 1, $noreg, 15, $noreg, killed $r8b :: (store 1 into %stack.7)
-    JE_1 %bb.5, implicit $eflags
+    JCC_1 %bb.5, 4, implicit $eflags
   
   bb.3 (%ir-block.24):
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
@@ -269,7 +269,7 @@ body:             |
     $cl = MOV8rr $al, implicit killed $rax
     $dl = MOV8rm $rsp, 1, $noreg, 15, $noreg :: (load 1 from %stack.7)
     CMP8rr killed renamable $cl, killed renamable $dl, implicit-def $eflags
-    JL_1 %bb.5, implicit $eflags
+    JCC_1 %bb.5, 12, implicit $eflags
   
   bb.4 (%ir-block.29):
     successors: 
@@ -288,7 +288,7 @@ body:             |
     renamable $dl = MOV8rm killed renamable $rax, 1, $noreg, 2147450880, $noreg, debug-location !12 :: (load 1 from %ir.34)
     CMP8ri renamable $dl, 0, implicit-def $eflags, debug-location !12
     MOV8mr $rsp, 1, $noreg, 14, $noreg, killed $dl :: (store 1 into %stack.8)
-    JE_1 %bb.8, implicit $eflags, debug-location !12
+    JCC_1 %bb.8, 4, implicit $eflags, debug-location !12
   
   bb.6 (%ir-block.37):
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
@@ -298,7 +298,7 @@ body:             |
     $cl = MOV8rr $al, implicit killed $rax, debug-location !12
     $dl = MOV8rm $rsp, 1, $noreg, 14, $noreg :: (load 1 from %stack.8)
     CMP8rr killed renamable $cl, killed renamable $dl, implicit-def $eflags, debug-location !12
-    JL_1 %bb.8, implicit $eflags
+    JCC_1 %bb.8, 12, implicit $eflags
   
   bb.7 (%ir-block.42):
     successors: 
@@ -318,7 +318,7 @@ body:             |
     $rsi = MOV64rm $rsp, 1, $noreg, 48, $noreg :: (load 8 from %stack.2)
     CMP64rr killed renamable $rdx, killed renamable $rsi, implicit-def $eflags, debug-location !12
     MOV32mr $rsp, 1, $noreg, 8, $noreg, killed $ecx :: (store 4 into %stack.9)
-    JE_1 %bb.10, implicit $eflags, debug-location !12
+    JCC_1 %bb.10, 4, implicit $eflags, debug-location !12
   
   bb.9 (%ir-block.46):
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11

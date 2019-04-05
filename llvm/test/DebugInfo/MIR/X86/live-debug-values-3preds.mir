@@ -194,7 +194,7 @@ body:             |
     $r8d = MOV32rr $esi, debug-location !26
     $r8d = IMUL32rr killed $r8d, $edi, implicit-def dead $eflags, debug-location !26
     TEST32rr $r8d, $r8d, implicit-def $eflags, debug-location !31
-    JLE_1 %bb.9.for.end, implicit $eflags
+    JCC_1 %bb.9.for.end, 14, implicit $eflags
   
   bb.1.for.body.preheader:
     successors: %bb.3.for.body(0)
@@ -217,7 +217,7 @@ body:             |
     DBG_VALUE $ecx, _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
     TEST32rr $edi, $edi, implicit-def $eflags, debug-location !35
-    JG_1 %bb.4.if.then, implicit $eflags
+    JCC_1 %bb.4.if.then, 15, implicit $eflags
   
   bb.5.if.end:
     successors: %bb.6.if.then.4(4), %bb.7.if.end.6(124)
@@ -229,7 +229,7 @@ body:             |
     DBG_VALUE $ecx, _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
     TEST32rr $esi, $esi, implicit-def $eflags, debug-location !39
-    JG_1 %bb.6.if.then.4, implicit $eflags
+    JCC_1 %bb.6.if.then.4, 15, implicit $eflags
   
   bb.7.if.end.6:
     successors: %bb.8.if.then.8(4), %bb.2.for.cond(124)
@@ -241,7 +241,7 @@ body:             |
     DBG_VALUE $ecx, _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
     TEST32rr $edx, $edx, implicit-def $eflags, debug-location !45
-    JG_1 %bb.8.if.then.8, implicit $eflags
+    JCC_1 %bb.8.if.then.8, 15, implicit $eflags
   
   bb.2.for.cond:
     successors: %bb.3.for.body(124), %bb.9.for.end(4)
@@ -255,7 +255,7 @@ body:             |
     $eax = INC32r killed $eax, implicit-def dead $eflags, debug-location !44
     DBG_VALUE $eax, _, !13, !17, debug-location !25
     CMP32rr $eax, $r8d, implicit-def $eflags, debug-location !31
-    JL_1 %bb.3.for.body, implicit $eflags
+    JCC_1 %bb.3.for.body, 12, implicit $eflags
     JMP_1 %bb.9.for.end
   
   bb.4.if.then:

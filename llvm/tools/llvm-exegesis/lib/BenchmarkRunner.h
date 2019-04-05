@@ -45,7 +45,8 @@ public:
   virtual ~BenchmarkRunner();
 
   InstructionBenchmark runConfiguration(const BenchmarkCode &Configuration,
-                                        unsigned NumRepetitions) const;
+                                        unsigned NumRepetitions,
+                                        bool DumpObjectToDisk) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
@@ -84,7 +85,6 @@ private:
   llvm::Expected<std::string>
   writeObjectFile(const BenchmarkCode &Configuration,
                   llvm::ArrayRef<llvm::MCInst> Code) const;
-
 
   const std::unique_ptr<ScratchSpace> Scratch;
 };

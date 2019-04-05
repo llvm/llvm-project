@@ -58,6 +58,80 @@ the other streams, will change if the value is something other than ``VC70``.
   `UuidCreate <https://msdn.microsoft.com/en-us/library/windows/desktop/aa379205(v=vs.85).aspx>`__,
   although LLVM cannot rely on that, as it must work on non-Windows platforms.
   
+.. _pdb_named_stream_map:
+
+Named Stream Map
+================
+
+Following the header is a serialized hash table whose key type is a string, and
+whose value type is an integer.  The existence of a mapping ``X -> Y`` means
+that the stream with the name ``X`` has stream index ``Y`` in the underlying MSF
+file.  Note that not all streams are named (for example, the 
+:doc:`TPI Stream <TpiStream>` has a fixed index and as such there is no need to
+look up its index by name).  In practice, there are usually only a small number
+of named streams and these are enumerated in the table of streams in :doc:`index`.
+A corollary of this is if a stream does have a name (and as such is in the named
+stream map) then consulting the Named Stream Map is likely to be the only way to
+discover the stream's MSF stream index.  Several important streams (such as the
+global string table, which is called ``/names``) can only be located this way, and
+so it is important to both produce and consume this correctly as tools will not
+function correctly without it.
+
+.. important::
+   Some streams are located by fixed indices (e.g TPI Stream has index 2), but
+   other streams are located by fixed names (e.g. the string table is called
+   ``/names``) and can only be located by consulting the Named Stream Map.
+
+The on-disk layout of the Named Stream Map consists of 2 components.  The first is
+a buffer of string data prefixed by a 32-bit length.  The second is a serialized
+hash table whose key and value types are both ``uint32_t``.  The key is the offset
+of a null-terminated string in the string data buffer specifying the name of the
+stream, and the value is the MSF stream index of the stream with said name. 
+Note that although the key is an integer, the hash function used to find the right
+bucket hashes the string at the corresponding offset in the string data buffer.
+
+The on-disk layout of the serialized hash table is described at :doc:`HashTable`.
+
+Note that the entire Named Stream Map is not length-prefixed, so the only way to
+get to the data following it is to de-serialize it in its entirety.
+
+  
+.. _pdb_stream_features:
+
+PDB Feature Codes
+=================
+Following the Named Stream Map, and consuming all remaining bytes of the PDB
+Stream is a list of values from the following enumeration:
+
+.. code-block:: c++
+
+  enum class PdbRaw_FeatureSig : uint32_t {
+    VC110 = 20091201,
+    VC140 = 20140508,
+    NoTypeMerge = 0x4D544F4E,
+    MinimalDebugInfo = 0x494E494D,
+  };
+  
+The meaning of these values is summarized by the following table:
+
++------------------+-------------------------------------------------+
+| Flag             | Meaning                                         |
++==================+=================================================+
+| VC110            | - No other features flags are present           |
+|                  | - PDB contains an :doc:`IPI Stream <TpiStream>` |
++------------------+-------------------------------------------------+
+| VC140            | - Other feature flags may be present            |
+|                  | - PDB contains an :doc:`IPI Stream <TpiStream>` |
++------------------+-------------------------------------------------+
+| NoTypeMerge      | - Presumably duplicate types can appear in the  |
+|                  |   TPI Stream, although it's unclear why this    |
+|                  |   might happen.                                 |
++------------------+-------------------------------------------------+
+| MinimalDebugInfo | - Program was linked with /DEBUG:FASTLINK       |
+|                  | - There is no TPI / IPI stream, all type info   |
+|                  |   is contained in the original object files.    |
++------------------+-------------------------------------------------+
+  
 Matching a PDB to its executable
 ================================
 The linker is responsible for writing both the PDB and the final executable, and
