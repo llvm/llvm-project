@@ -12,6 +12,7 @@
 #include <CL/sycl/types.hpp>
 
 #include <type_traits>
+#include <limits>
 
 // TODO Delete when half type will supported by SYCL Runtime
 #define __HALF_NO_ENABLED
@@ -674,34 +675,35 @@ template <> struct float_point_to_int<cl_double8> { using type = cl_int8; };
 template <> struct float_point_to_int<cl_double16> { using type = cl_int16; };
 
 // Used for abs and abs_diff built-in
-template <typename T> struct make_unsigned;
-template <> struct make_unsigned<char> { using type = uchar; };
-template <> struct make_unsigned<char2> { using type = uchar2; };
-template <> struct make_unsigned<char3> { using type = uchar3; };
-template <> struct make_unsigned<char4> { using type = uchar4; };
-template <> struct make_unsigned<char8> { using type = uchar8; };
-template <> struct make_unsigned<char16> { using type = uchar16; };
+template <typename T> struct make_unsigned { using type = T; };
 
-template <> struct make_unsigned<short> { using type = ushort; };
-template <> struct make_unsigned<short2> { using type = ushort2; };
-template <> struct make_unsigned<short3> { using type = ushort3; };
-template <> struct make_unsigned<short4> { using type = ushort4; };
-template <> struct make_unsigned<short8> { using type = ushort8; };
-template <> struct make_unsigned<short16> { using type = ushort16; };
+template <> struct make_unsigned<cl_char> { using type = cl_uchar; };
+template <> struct make_unsigned<cl_char2> { using type = cl_uchar2; };
+template <> struct make_unsigned<cl_char3> { using type = cl_uchar3; };
+template <> struct make_unsigned<cl_char4> { using type = cl_uchar4; };
+template <> struct make_unsigned<cl_char8> { using type = cl_uchar8; };
+template <> struct make_unsigned<cl_char16> { using type = cl_uchar16; };
 
-template <> struct make_unsigned<int> { using type = uint; };
-template <> struct make_unsigned<int2> { using type = uint2; };
-template <> struct make_unsigned<int3> { using type = uint3; };
-template <> struct make_unsigned<int4> { using type = uint4; };
-template <> struct make_unsigned<int8> { using type = uint8; };
-template <> struct make_unsigned<int16> { using type = uint16; };
+template <> struct make_unsigned<cl_short> { using type = cl_ushort; };
+template <> struct make_unsigned<cl_short2> { using type = cl_ushort2; };
+template <> struct make_unsigned<cl_short3> { using type = cl_ushort3; };
+template <> struct make_unsigned<cl_short4> { using type = cl_ushort4; };
+template <> struct make_unsigned<cl_short8> { using type = cl_ushort8; };
+template <> struct make_unsigned<cl_short16> { using type = cl_ushort16; };
 
-template <> struct make_unsigned<long> { using type = ulong; };
-template <> struct make_unsigned<long2> { using type = ulong2; };
-template <> struct make_unsigned<long3> { using type = ulong3; };
-template <> struct make_unsigned<long4> { using type = ulong4; };
-template <> struct make_unsigned<long8> { using type = ulong8; };
-template <> struct make_unsigned<long16> { using type = ulong16; };
+template <> struct make_unsigned<cl_int> { using type = cl_uint; };
+template <> struct make_unsigned<cl_int2> { using type = cl_uint2; };
+template <> struct make_unsigned<cl_int3> { using type = cl_uint3; };
+template <> struct make_unsigned<cl_int4> { using type = cl_uint4; };
+template <> struct make_unsigned<cl_int8> { using type = cl_uint8; };
+template <> struct make_unsigned<cl_int16> { using type = cl_uint16; };
+
+template <> struct make_unsigned<cl_long> { using type = cl_ulong; };
+template <> struct make_unsigned<cl_long2> { using type = cl_ulong2; };
+template <> struct make_unsigned<cl_long3> { using type = cl_ulong3; };
+template <> struct make_unsigned<cl_long4> { using type = cl_ulong4; };
+template <> struct make_unsigned<cl_long8> { using type = cl_ulong8; };
+template <> struct make_unsigned<cl_long16> { using type = cl_ulong16; };
 
 template <> struct make_unsigned<longlong> { using type = ulonglong; };
 template <> struct make_unsigned<longlong2> { using type = ulonglong2; };
@@ -710,27 +712,102 @@ template <> struct make_unsigned<longlong4> { using type = ulonglong4; };
 template <> struct make_unsigned<longlong8> { using type = ulonglong8; };
 template <> struct make_unsigned<longlong16> { using type = ulonglong16; };
 
+template <typename T> struct make_signed { using type = T; };
+
+template <> struct make_signed<cl_uchar> { using type = cl_char; };
+template <> struct make_signed<cl_uchar2> { using type = cl_char2; };
+template <> struct make_signed<cl_uchar3> { using type = cl_char3; };
+template <> struct make_signed<cl_uchar4> { using type = cl_char4; };
+template <> struct make_signed<cl_uchar8> { using type = cl_char8; };
+template <> struct make_signed<cl_uchar16> { using type = cl_char16; };
+
+template <> struct make_signed<cl_ushort> { using type = cl_short; };
+template <> struct make_signed<cl_ushort2> { using type = cl_short2; };
+template <> struct make_signed<cl_ushort3> { using type = cl_short3; };
+template <> struct make_signed<cl_ushort4> { using type = cl_short4; };
+template <> struct make_signed<cl_ushort8> { using type = cl_short8; };
+template <> struct make_signed<cl_ushort16> { using type = cl_short16; };
+
+template <> struct make_signed<cl_uint> { using type = cl_int; };
+template <> struct make_signed<cl_uint2> { using type = cl_int2; };
+template <> struct make_signed<cl_uint3> { using type = cl_int3; };
+template <> struct make_signed<cl_uint4> { using type = cl_int4; };
+template <> struct make_signed<cl_uint8> { using type = cl_int8; };
+template <> struct make_signed<cl_uint16> { using type = cl_int16; };
+
+template <> struct make_signed<cl_ulong> { using type = cl_long; };
+template <> struct make_signed<cl_ulong2> { using type = cl_long2; };
+template <> struct make_signed<cl_ulong3> { using type = cl_long3; };
+template <> struct make_signed<cl_ulong4> { using type = cl_long4; };
+template <> struct make_signed<cl_ulong8> { using type = cl_long8; };
+template <> struct make_signed<cl_ulong16> { using type = cl_long16; };
+
+template <> struct make_signed<ulonglong> { using type = longlong; };
+template <> struct make_signed<ulonglong2> { using type = longlong2; };
+template <> struct make_signed<ulonglong3> { using type = longlong3; };
+template <> struct make_signed<ulonglong4> { using type = longlong4; };
+template <> struct make_signed<ulonglong8> { using type = longlong8; };
+template <> struct make_signed<ulonglong16> { using type = longlong16; };
+
 // Used for upsample built-in
 // Bases on Table 4.93: Scalar data type aliases supported by SYCL
 template <typename T> struct make_upper;
-template <> struct make_upper<cl::sycl::cl_char> {
-  using type = cl::sycl::cl_short;
-};
-template <> struct make_upper<cl::sycl::cl_uchar> {
-  using type = cl::sycl::cl_ushort;
-};
-template <> struct make_upper<cl::sycl::cl_short> {
-  using type = cl::sycl::cl_int;
-};
-template <> struct make_upper<cl::sycl::cl_ushort> {
-  using type = cl::sycl::cl_uint;
-};
-template <> struct make_upper<cl::sycl::cl_int> {
-  using type = cl::sycl::cl_long;
-};
-template <> struct make_upper<cl::sycl::cl_uint> {
-  using type = cl::sycl::cl_ulong;
-};
+
+template <> struct make_upper<cl_char> { using type = cl_short; };
+template <> struct make_upper<cl_char2> { using type = cl_short2; };
+template <> struct make_upper<cl_char3> { using type = cl_short3; };
+template <> struct make_upper<cl_char4> { using type = cl_short4; };
+template <> struct make_upper<cl_char8> { using type = cl_short8; };
+template <> struct make_upper<cl_char16> { using type = cl_short16; };
+
+template <> struct make_upper<cl_uchar> { using type = cl_ushort; };
+template <> struct make_upper<cl_uchar2> { using type = cl_ushort2; };
+template <> struct make_upper<cl_uchar3> { using type = cl_ushort3; };
+template <> struct make_upper<cl_uchar4> { using type = cl_ushort4; };
+template <> struct make_upper<cl_uchar8> { using type = cl_ushort8; };
+template <> struct make_upper<cl_uchar16> { using type = cl_ushort16; };
+
+template <> struct make_upper<cl_short> { using type = cl_int; };
+template <> struct make_upper<cl_short2> { using type = cl_int2; };
+template <> struct make_upper<cl_short3> { using type = cl_int3; };
+template <> struct make_upper<cl_short4> { using type = cl_int4; };
+template <> struct make_upper<cl_short8> { using type = cl_int8; };
+template <> struct make_upper<cl_short16> { using type = cl_int16; };
+
+template <> struct make_upper<cl_ushort> { using type = cl_uint; };
+template <> struct make_upper<cl_ushort2> { using type = cl_uint2; };
+template <> struct make_upper<cl_ushort3> { using type = cl_uint3; };
+template <> struct make_upper<cl_ushort4> { using type = cl_uint4; };
+template <> struct make_upper<cl_ushort8> { using type = cl_uint8; };
+template <> struct make_upper<cl_ushort16> { using type = cl_uint16; };
+
+template <> struct make_upper<cl_int> { using type = cl_long; };
+template <> struct make_upper<cl_int2> { using type = cl_long2; };
+template <> struct make_upper<cl_int3> { using type = cl_long3; };
+template <> struct make_upper<cl_int4> { using type = cl_long4; };
+template <> struct make_upper<cl_int8> { using type = cl_long8; };
+template <> struct make_upper<cl_int16> { using type = cl_long16; };
+
+template <> struct make_upper<cl_uint> { using type = cl_ulong; };
+template <> struct make_upper<cl_uint2> { using type = cl_ulong2; };
+template <> struct make_upper<cl_uint3> { using type = cl_ulong3; };
+template <> struct make_upper<cl_uint4> { using type = cl_ulong4; };
+template <> struct make_upper<cl_uint8> { using type = cl_ulong8; };
+template <> struct make_upper<cl_uint16> { using type = cl_ulong16; };
+
+template <> struct make_upper<cl_long> { using type = longlong; };
+template <> struct make_upper<cl_long2> { using type = longlong2; };
+template <> struct make_upper<cl_long3> { using type = longlong3; };
+template <> struct make_upper<cl_long4> { using type = longlong4; };
+template <> struct make_upper<cl_long8> { using type = longlong8; };
+template <> struct make_upper<cl_long16> { using type = longlong16; };
+
+template <> struct make_upper<cl_ulong> { using type = ulonglong; };
+template <> struct make_upper<cl_ulong2> { using type = ulonglong2; };
+template <> struct make_upper<cl_ulong3> { using type = ulonglong3; };
+template <> struct make_upper<cl_ulong4> { using type = ulonglong4; };
+template <> struct make_upper<cl_ulong8> { using type = ulonglong8; };
+template <> struct make_upper<cl_ulong16> { using type = ulonglong16; };
 
 // Try to get pointer_t, otherwise T
 template <typename T> class TryToGetPointerT {
@@ -908,6 +985,14 @@ struct RelConverter<
 
   static R apply(value_t value) { return value; }
 };
+
+template <typename T> static constexpr T max_v() {
+  return std::numeric_limits<T>::max();
+}
+
+template <typename T> static constexpr T min_v() {
+  return std::numeric_limits<T>::min();
+}
 
 } // namespace detail
 } // namespace sycl

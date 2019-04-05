@@ -22,6 +22,7 @@
 #define NO_HALF_ENABLED
 
 namespace s = cl::sycl;
+namespace d = s::detail;
 
 #define __MAKE_1V(Fun, Call, N, Ret, Arg1)                                     \
   Ret##N Fun __NOEXC(Arg1##N x) {                                              \
@@ -81,6 +82,19 @@ namespace s = cl::sycl;
     return r;                                                                  \
   }
 
+#define __MAKE_1V_2S_3S(Fun, N, Ret, Arg1, Arg2, Arg3)                         \
+  Ret##N Fun __NOEXC(Arg1##N x, Arg2 y, Arg3 z) {                              \
+    Ret##N r;                                                                  \
+    using base1_t = typename Arg1##N::element_type;                            \
+    detail::helper<N - 1>().run_1v_2s_3s(                                      \
+        r,                                                                     \
+        [](base1_t x, Arg2 y, Arg3 z) {                                        \
+          return cl::__host_std::Fun(x, y, z);                                 \
+        },                                                                     \
+        x, y, z);                                                              \
+    return r;                                                                  \
+  }
+
 #define __MAKE_1V_2S(Fun, N, Ret, Arg1, Arg2)                                  \
   Ret##N Fun __NOEXC(Arg1##N x, Arg2 y) {                                      \
     Ret##N r;                                                                  \
@@ -89,6 +103,7 @@ namespace s = cl::sycl;
         r, [](base1_t x, Arg2 y) { return cl::__host_std::Fun(x, y); }, x, y); \
     return r;                                                                  \
   }
+
 #define __MAKE_SR_1V_AND(Fun, Call, N, Ret, Arg1)                              \
   Ret Fun __NOEXC(Arg1##N x) {                                                 \
     Ret r;                                                                     \
@@ -97,6 +112,7 @@ namespace s = cl::sycl;
         r, [](base_t x) { return cl::__host_std::Call(x); }, x);               \
     return r;                                                                  \
   }
+
 #define __MAKE_SR_1V_OR(Fun, Call, N, Ret, Arg1)                               \
   Ret Fun __NOEXC(Arg1##N x) {                                                 \
     Ret r;                                                                     \
@@ -133,6 +149,7 @@ namespace s = cl::sycl;
   }
 
 #define MAKE_1V(Fun, Ret, Arg1) MAKE_1V_FUNC(Fun, Fun, Ret, Arg1)
+
 #define MAKE_1V_FUNC(Fun, Call, Ret, Arg1)                                     \
   __MAKE_1V(Fun, Call, 2, Ret, Arg1)                                           \
   __MAKE_1V(Fun, Call, 3, Ret, Arg1)                                           \
@@ -142,6 +159,7 @@ namespace s = cl::sycl;
 
 #define MAKE_1V_2V(Fun, Ret, Arg1, Arg2)                                       \
   MAKE_1V_2V_FUNC(Fun, Fun, Ret, Arg1, Arg2)
+
 #define MAKE_1V_2V_FUNC(Fun, Call, Ret, Arg1, Arg2)                            \
   __MAKE_1V_2V(Fun, Call, 2, Ret, Arg1, Arg2)                                  \
   __MAKE_1V_2V(Fun, Call, 3, Ret, Arg1, Arg2)                                  \
@@ -151,6 +169,7 @@ namespace s = cl::sycl;
 
 #define MAKE_1V_2V_3V(Fun, Ret, Arg1, Arg2, Arg3)                              \
   MAKE_1V_2V_3V_FUNC(Fun, Fun, Ret, Arg1, Arg2, Arg3)
+
 #define MAKE_1V_2V_3V_FUNC(Fun, Call, Ret, Arg1, Arg2, Arg3)                   \
   __MAKE_1V_2V_3V(Fun, Call, 2, Ret, Arg1, Arg2, Arg3)                         \
   __MAKE_1V_2V_3V(Fun, Call, 3, Ret, Arg1, Arg2, Arg3)                         \
@@ -161,17 +180,28 @@ namespace s = cl::sycl;
 #define MAKE_SC_1V_2V_3V(Fun, Ret, Arg1, Arg2, Arg3)                           \
   MAKE_SC_3ARG(Fun, Ret, Arg1, Arg2, Arg3)                                     \
   MAKE_1V_2V_3V_FUNC(Fun, Fun, Ret, Arg1, Arg2, Arg3)
+
 #define MAKE_SC_FSC_1V_2V_3V_FV(FunSc, FunV, Ret, Arg1, Arg2, Arg3)            \
   MAKE_SC_3ARG(FunSc, Ret, Arg1, Arg2, Arg3)                                   \
   MAKE_1V_2V_3V_FUNC(FunSc, FunV, Ret, Arg1, Arg2, Arg3)
+
 #define MAKE_SC_3ARG(Fun, Ret, Arg1, Arg2, Arg3)                               \
   Ret Fun __NOEXC(Arg1 x, Arg2 y, Arg3 z) { return (Ret)__##Fun(x, y, z); }
+
 #define MAKE_1V_2S(Fun, Ret, Arg1, Arg2)                                       \
   __MAKE_1V_2S(Fun, 2, Ret, Arg1, Arg2)                                        \
   __MAKE_1V_2S(Fun, 3, Ret, Arg1, Arg2)                                        \
   __MAKE_1V_2S(Fun, 4, Ret, Arg1, Arg2)                                        \
   __MAKE_1V_2S(Fun, 8, Ret, Arg1, Arg2)                                        \
   __MAKE_1V_2S(Fun, 16, Ret, Arg1, Arg2)
+
+#define MAKE_1V_2S_3S(Fun, Ret, Arg1, Arg2, Arg3)                              \
+  __MAKE_1V_2S_3S(Fun, 2, Ret, Arg1, Arg2, Arg3)                               \
+  __MAKE_1V_2S_3S(Fun, 3, Ret, Arg1, Arg2, Arg3)                               \
+  __MAKE_1V_2S_3S(Fun, 4, Ret, Arg1, Arg2, Arg3)                               \
+  __MAKE_1V_2S_3S(Fun, 8, Ret, Arg1, Arg2, Arg3)                               \
+  __MAKE_1V_2S_3S(Fun, 16, Ret, Arg1, Arg2, Arg3)
+
 
 #define MAKE_SR_1V_AND(Fun, Ret, Arg1)                                         \
   __MAKE_SR_1V_AND(Fun, Fun, 2, Ret, Arg1)                                     \
@@ -216,16 +246,24 @@ template <int N> struct helper {
     helper<N - 1>().run_1v(r, op, x);
     r.template swizzle<N>() = op(x.template swizzle<N>());
   }
+
   template <typename Res, typename Op, typename T1, typename T2>
   void run_1v_2v(Res &r, Op op, T1 x, T2 y) {
     helper<N - 1>().run_1v_2v(r, op, x, y);
     r.template swizzle<N>() =
         op(x.template swizzle<N>(), y.template swizzle<N>());
   }
+
   template <typename Res, typename Op, typename T1, typename T2>
   void run_1v_2s(Res &r, Op op, T1 x, T2 y) {
     helper<N - 1>().run_1v_2s(r, op, x, y);
     r.template swizzle<N>() = op(x.template swizzle<N>(), y);
+  }
+
+  template <typename Res, typename Op, typename T1, typename T2, typename T3>
+  void run_1v_2s_3s(Res &r, Op op, T1 x, T2 y, T3 z) {
+    helper<N - 1>().run_1v_2s_3s(r, op, x, y, z);
+    r.template swizzle<N>() = op(x.template swizzle<N>(), y, z);
   }
 
   template <typename Res, typename Op, typename T1, typename T2>
@@ -266,11 +304,13 @@ template <int N> struct helper {
         op(x.template swizzle<N>(), y.template swizzle<N>(),
            z.template swizzle<N>());
   }
+
   template <typename Res, typename Op, typename T1>
   void run_1v_sr_or(Res &r, Op op, T1 x) {
     helper<N - 1>().run_1v_sr_or(r, op, x);
     r = (op(x.template swizzle<N>()) || r);
   }
+
   template <typename Res, typename Op, typename T1>
   void run_1v_sr_and(Res &r, Op op, T1 x) {
     helper<N - 1>().run_1v_sr_and(r, op, x);
@@ -283,23 +323,33 @@ template <> struct helper<0> {
   void run_1v(Res &r, Op op, T1 x) {
     r.template swizzle<0>() = op(x.template swizzle<0>());
   }
+
   template <typename Res, typename Op, typename T1, typename T2>
   void run_1v_2v(Res &r, Op op, T1 x, T2 y) {
     r.template swizzle<0>() =
         op(x.template swizzle<0>(), y.template swizzle<0>());
   }
+
   template <typename Res, typename Op, typename T1, typename T2>
   void run_1v_2s(Res &r, Op op, T1 x, T2 y) {
     r.template swizzle<0>() = op(x.template swizzle<0>(), y);
   }
+
+  template <typename Res, typename Op, typename T1, typename T2, typename T3>
+  void run_1v_2s_3s(Res &r, Op op, T1 x, T2 y, T3 z) {
+    r.template swizzle<0>() = op(x.template swizzle<0>(), y, z);
+  }
+
   template <typename Res, typename Op, typename T1, typename T2>
   void run_1v_2v_rs(Res &r, Op op, T1 x, T2 y) {
     op(r, x.template swizzle<0>(), y.template swizzle<0>());
   }
+
   template <typename Res, typename Op, typename T1>
   void run_1v_rs(Res &r, Op op, T1 x) {
     op(r, x.template swizzle<0>());
   }
+
   template <typename Res, typename Op, typename T1, typename T2>
   void run_1v_2p(Res &r, Op op, T1 x, T2 y) {
     // TODO avoid creating a temporary variable
@@ -307,6 +357,7 @@ template <> struct helper<0> {
     r.template swizzle<0>() = op(x.template swizzle<0>(), &temp);
     y->template swizzle<0>() = temp;
   }
+
   template <typename Res, typename Op, typename T1, typename T2, typename T3>
   void run_1v_2v_3p(Res &r, Op op, T1 x, T2 y, T3 z) {
     // TODO avoid creating a temporary variable
@@ -315,22 +366,26 @@ template <> struct helper<0> {
         op(x.template swizzle<0>(), y.template swizzle<0>(), &temp);
     z->template swizzle<0>() = temp;
   }
+
   template <typename Res, typename Op, typename T1, typename T2, typename T3>
   void run_1v_2v_3v(Res &r, Op op, T1 x, T2 y, T3 z) {
     r.template swizzle<0>() =
         op(x.template swizzle<0>(), y.template swizzle<0>(),
            z.template swizzle<0>());
   }
+
   template <typename Res, typename Op, typename T1>
   void run_1v_sr_or(Res &r, Op op, T1 x) {
     r = op(x.template swizzle<0>());
   }
+
   template <typename Res, typename Op, typename T1>
   void run_1v_sr_and(Res &r, Op op, T1 x) {
     r = op(x.template swizzle<0>());
   }
 };
 } // namespace detail
+
 /* ----------------- 4.13.3 Math functions. Host version --------------------*/
 // acos
 cl_float acos(s::cl_float x) __NOEXC { return std::acos(x); }
@@ -1305,19 +1360,517 @@ MAKE_1V(trunc, s::cl_half, s::cl_half)
 #endif
 
 /* --------------- 4.13.4 Integer functions. Host version -------------------*/
+// u_abs
+cl_uchar u_abs(s::cl_uchar x) __NOEXC { return std::abs(x); }
+cl_ushort u_abs(s::cl_ushort x) __NOEXC { return std::abs(x); }
+cl_uint u_abs(s::cl_uint x) __NOEXC { return std::abs(x); }
+cl_ulong u_abs(s::cl_ulong x) __NOEXC { return std::abs(x); }
+s::ulonglong u_abs(s::ulonglong x) __NOEXC { return std::abs(x); }
+MAKE_1V(u_abs, s::cl_uchar, s::cl_uchar)
+MAKE_1V(u_abs, s::cl_ushort, s::cl_ushort)
+MAKE_1V(u_abs, s::cl_uint, s::cl_uint)
+MAKE_1V(u_abs, s::cl_ulong, s::cl_ulong)
+MAKE_1V(u_abs, s::ulonglong, s::ulonglong)
+
+// s_abs
+cl_uchar s_abs(s::cl_char x) __NOEXC { return std::abs(x); }
+cl_ushort s_abs(s::cl_short x) __NOEXC { return std::abs(x); }
+cl_uint s_abs(s::cl_int x) __NOEXC { return std::abs(x); }
+cl_ulong s_abs(s::cl_long x) __NOEXC { return std::abs(x); }
+s::ulonglong s_abs(s::longlong x) __NOEXC { return std::abs(x); }
+MAKE_1V(s_abs, s::cl_uchar, s::cl_char)
+MAKE_1V(s_abs, s::cl_ushort, s::cl_short)
+MAKE_1V(s_abs, s::cl_uint, s::cl_int)
+MAKE_1V(s_abs, s::cl_ulong, s::cl_long)
+MAKE_1V(s_abs, s::ulonglong, s::longlong)
+
+// u_abs_diff
+cl_uchar u_abs_diff(s::cl_uchar x, s::cl_uchar y) __NOEXC {
+  return std::abs(x - y);
+}
+cl_ushort u_abs_diff(s::cl_ushort x, s::cl_ushort y) __NOEXC {
+  return std::abs(x - y);
+}
+cl_uint u_abs_diff(s::cl_uint x, s::cl_uint y) __NOEXC {
+  return std::abs(x - y);
+}
+cl_ulong u_abs_diff(s::cl_ulong x, s::cl_ulong y) __NOEXC {
+  return std::abs(x - y);
+}
+s::ulonglong u_abs_diff(s::ulonglong x, s::ulonglong y) __NOEXC {
+  return std::abs(x - y);
+}
+MAKE_1V_2V(u_abs_diff, s::cl_uchar, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2V(u_abs_diff, s::cl_ushort, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2V(u_abs_diff, s::cl_uint, s::cl_uint, s::cl_uint)
+MAKE_1V_2V(u_abs_diff, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V(u_abs_diff, s::ulonglong, s::ulonglong, s::ulonglong)
+
+// s_abs_diff
+cl_uchar s_abs_diff(s::cl_char x, s::cl_char y) __NOEXC {
+  return std::abs(x - y);
+}
+cl_ushort s_abs_diff(s::cl_short x, s::cl_short y) __NOEXC {
+  return std::abs(x - y);
+}
+cl_uint s_abs_diff(s::cl_int x, s::cl_int y) __NOEXC { return std::abs(x - y); }
+cl_ulong s_abs_diff(s::cl_long x, s::cl_long y) __NOEXC {
+  return std::abs(x - y);
+}
+s::ulonglong s_abs_diff(s::longlong x, s::longlong y) __NOEXC {
+  return std::abs(x - y);
+}
+MAKE_1V_2V(s_abs_diff, s::cl_uchar, s::cl_char, s::cl_char)
+MAKE_1V_2V(s_abs_diff, s::cl_ushort, s::cl_short, s::cl_short)
+MAKE_1V_2V(s_abs_diff, s::cl_uint, s::cl_int, s::cl_int)
+MAKE_1V_2V(s_abs_diff, s::cl_ulong, s::cl_long, s::cl_long)
+MAKE_1V_2V(s_abs_diff, s::ulonglong, s::longlong, s::longlong)
+
+// u_add_sat
+template <typename T> T __u_add_sat(T x, T y) {
+  return (x < (d::max_v<T>() - y) ? x + y : d::max_v<T>());
+}
+
+cl_uchar u_add_sat(s::cl_uchar x, s::cl_uchar y) __NOEXC {
+  return __u_add_sat(x, y);
+}
+cl_ushort u_add_sat(s::cl_ushort x, s::cl_ushort y) __NOEXC {
+  return __u_add_sat(x, y);
+}
+cl_uint u_add_sat(s::cl_uint x, s::cl_uint y) __NOEXC {
+  return __u_add_sat(x, y);
+}
+cl_ulong u_add_sat(s::cl_ulong x, s::cl_ulong y) __NOEXC {
+  return __u_add_sat(x, y);
+}
+s::ulonglong u_add_sat(s::ulonglong x, s::ulonglong y) __NOEXC {
+  return __u_add_sat(x, y);
+}
+MAKE_1V_2V(u_add_sat, s::cl_uchar, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2V(u_add_sat, s::cl_ushort, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2V(u_add_sat, s::cl_uint, s::cl_uint, s::cl_uint)
+MAKE_1V_2V(u_add_sat, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V(u_add_sat, s::ulonglong, s::ulonglong, s::ulonglong)
+
+// s_add_sat
+template <typename T> T __s_add_sat(T x, T y) {
+  if (x > 0 && y > 0)
+    return (x < (d::max_v<T>() - y) ? (x + y) : d::max_v<T>());
+  if (x < 0 && y < 0)
+    return (x > (d::min_v<T>() - y) ? (x + y) : d::min_v<T>());
+  return x + y;
+}
+
+cl_char s_add_sat(s::cl_char x, s::cl_char y) __NOEXC {
+  return __s_add_sat(x, y);
+}
+cl_short s_add_sat(s::cl_short x, s::cl_short y) __NOEXC {
+  return __s_add_sat(x, y);
+}
+cl_int s_add_sat(s::cl_int x, s::cl_int y) __NOEXC { return __s_add_sat(x, y); }
+cl_long s_add_sat(s::cl_long x, s::cl_long y) __NOEXC {
+  return __s_add_sat(x, y);
+}
+s::longlong s_add_sat(s::longlong x, s::longlong y) __NOEXC {
+  return __s_add_sat(x, y);
+}
+MAKE_1V_2V(s_add_sat, s::cl_char, s::cl_char, s::cl_char)
+MAKE_1V_2V(s_add_sat, s::cl_short, s::cl_short, s::cl_short)
+MAKE_1V_2V(s_add_sat, s::cl_int, s::cl_int, s::cl_int)
+MAKE_1V_2V(s_add_sat, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2V(s_add_sat, s::longlong, s::longlong, s::longlong)
+
+// u_hadd
+template <typename T> T __hadd(T x, T y) {
+  const T one = 1;
+  return (x >> one) + (y >> one) + ((y & x) & one);
+}
+
+cl_uchar u_hadd(s::cl_uchar x, s::cl_uchar y) __NOEXC { return __hadd(x, y); }
+cl_ushort u_hadd(s::cl_ushort x, s::cl_ushort y) __NOEXC {
+  return __hadd(x, y);
+}
+cl_uint u_hadd(s::cl_uint x, s::cl_uint y) __NOEXC { return __hadd(x, y); }
+cl_ulong u_hadd(s::cl_ulong x, s::cl_ulong y) __NOEXC { return __hadd(x, y); }
+s::ulonglong u_hadd(s::ulonglong x, s::ulonglong y) __NOEXC {
+  return __hadd(x, y);
+}
+MAKE_1V_2V(u_hadd, s::cl_uchar, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2V(u_hadd, s::cl_ushort, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2V(u_hadd, s::cl_uint, s::cl_uint, s::cl_uint)
+MAKE_1V_2V(u_hadd, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V(u_hadd, s::ulonglong, s::ulonglong, s::ulonglong)
+
+// s_hadd
+cl_char s_hadd(s::cl_char x, s::cl_char y) __NOEXC { return __hadd(x, y); }
+cl_short s_hadd(s::cl_short x, s::cl_short y) __NOEXC { return __hadd(x, y); }
+cl_int s_hadd(s::cl_int x, s::cl_int y) __NOEXC { return __hadd(x, y); }
+cl_long s_hadd(s::cl_long x, s::cl_long y) __NOEXC { return __hadd(x, y); }
+s::longlong s_hadd(s::longlong x, s::longlong y) __NOEXC {
+  return __hadd(x, y);
+}
+MAKE_1V_2V(s_hadd, s::cl_char, s::cl_char, s::cl_char)
+MAKE_1V_2V(s_hadd, s::cl_short, s::cl_short, s::cl_short)
+MAKE_1V_2V(s_hadd, s::cl_int, s::cl_int, s::cl_int)
+MAKE_1V_2V(s_hadd, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2V(s_hadd, s::longlong, s::longlong, s::longlong)
+
+// u_rhadd
+template <typename T> T __rhadd(T x, T y) {
+  const T one = 1;
+  return (x >> one) + (y >> one) + ((y | x) & one);
+}
+
+cl_uchar u_rhadd(s::cl_uchar x, s::cl_uchar y) __NOEXC { return __rhadd(x, y); }
+cl_ushort u_rhadd(s::cl_ushort x, s::cl_ushort y) __NOEXC {
+  return __rhadd(x, y);
+}
+cl_uint u_rhadd(s::cl_uint x, s::cl_uint y) __NOEXC { return __rhadd(x, y); }
+cl_ulong u_rhadd(s::cl_ulong x, s::cl_ulong y) __NOEXC { return __rhadd(x, y); }
+s::ulonglong u_rhadd(s::ulonglong x, s::ulonglong y) __NOEXC {
+  return __rhadd(x, y);
+}
+MAKE_1V_2V(u_rhadd, s::cl_uchar, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2V(u_rhadd, s::cl_ushort, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2V(u_rhadd, s::cl_uint, s::cl_uint, s::cl_uint)
+MAKE_1V_2V(u_rhadd, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V(u_rhadd, s::ulonglong, s::ulonglong, s::ulonglong)
+
+// s_rhadd
+cl_char s_rhadd(s::cl_char x, s::cl_char y) __NOEXC { return __rhadd(x, y); }
+cl_short s_rhadd(s::cl_short x, s::cl_short y) __NOEXC { return __rhadd(x, y); }
+cl_int s_rhadd(s::cl_int x, s::cl_int y) __NOEXC { return __rhadd(x, y); }
+cl_long s_rhadd(s::cl_long x, s::cl_long y) __NOEXC { return __rhadd(x, y); }
+s::longlong s_rhadd(s::longlong x, s::longlong y) __NOEXC {
+  return __rhadd(x, y);
+}
+MAKE_1V_2V(s_rhadd, s::cl_char, s::cl_char, s::cl_char)
+MAKE_1V_2V(s_rhadd, s::cl_short, s::cl_short, s::cl_short)
+MAKE_1V_2V(s_rhadd, s::cl_int, s::cl_int, s::cl_int)
+MAKE_1V_2V(s_rhadd, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2V(s_rhadd, s::longlong, s::longlong, s::longlong)
+
+// u_clamp
+template <typename T> T __clamp(T x, T minval, T maxval) {
+  return std::min(std::max(x, minval), maxval);
+}
+
+cl_uchar u_clamp(s::cl_uchar x, s::cl_uchar minval,
+                 s::cl_uchar maxval) __NOEXC {
+  return __clamp(x, minval, maxval);
+}
+cl_ushort u_clamp(s::cl_ushort x, s::cl_ushort minval,
+                  s::cl_ushort maxval) __NOEXC {
+  return __clamp(x, minval, maxval);
+}
+cl_uint u_clamp(s::cl_uint x, s::cl_uint minval, s::cl_uint maxval) __NOEXC {
+  return __clamp(x, minval, maxval);
+}
+cl_ulong u_clamp(s::cl_ulong x, s::cl_ulong minval,
+                 s::cl_ulong maxval) __NOEXC {
+  return __clamp(x, minval, maxval);
+}
+s::ulonglong u_clamp(s::ulonglong x, s::ulonglong minval,
+                     s::ulonglong maxval) __NOEXC {
+  return __clamp(x, minval, maxval);
+}
+MAKE_1V_2V_3V(u_clamp, s::cl_uchar, s::cl_uchar, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2V_3V(u_clamp, s::cl_ushort, s::cl_ushort, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2V_3V(u_clamp, s::cl_uint, s::cl_uint, s::cl_uint, s::cl_uint)
+MAKE_1V_2V_3V(u_clamp, s::cl_ulong, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V_3V(u_clamp, s::ulonglong, s::ulonglong, s::ulonglong, s::ulonglong)
+MAKE_1V_2S_3S(u_clamp, s::cl_uchar, s::cl_uchar, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2S_3S(u_clamp, s::cl_ushort, s::cl_ushort, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2S_3S(u_clamp, s::cl_uint, s::cl_uint, s::cl_uint, s::cl_uint)
+MAKE_1V_2S_3S(u_clamp, s::cl_ulong, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2S_3S(u_clamp, s::ulonglong, s::ulonglong, s::ulonglong, s::ulonglong)
+
+// s_clamp
+cl_char s_clamp(s::cl_char x, s::cl_char minval, s::cl_char maxval) __NOEXC {
+  return __clamp(x, minval, maxval);
+}
+cl_short s_clamp(s::cl_short x, s::cl_short minval,
+                 s::cl_short maxval) __NOEXC {
+  return __clamp(x, minval, maxval);
+}
+cl_int s_clamp(s::cl_int x, s::cl_int minval, s::cl_int maxval) __NOEXC {
+  return __clamp(x, minval, maxval);
+}
+cl_long s_clamp(s::cl_long x, s::cl_long minval, s::cl_long maxval) __NOEXC {
+  return __clamp(x, minval, maxval);
+}
+s::longlong s_clamp(s::longlong x, s::longlong minval,
+                    s::longlong maxval) __NOEXC {
+  return __clamp(x, minval, maxval);
+}
+
+MAKE_1V_2V_3V(s_clamp, s::cl_char, s::cl_char, s::cl_char, s::cl_char)
+MAKE_1V_2V_3V(s_clamp, s::cl_short, s::cl_short, s::cl_short, s::cl_short)
+MAKE_1V_2V_3V(s_clamp, s::cl_int, s::cl_int, s::cl_int, s::cl_int)
+MAKE_1V_2V_3V(s_clamp, s::cl_long, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2V_3V(s_clamp, s::longlong, s::longlong, s::longlong, s::longlong)
+MAKE_1V_2S_3S(s_clamp, s::cl_char, s::cl_char, s::cl_char, s::cl_char)
+MAKE_1V_2S_3S(s_clamp, s::cl_short, s::cl_short, s::cl_short, s::cl_short)
+MAKE_1V_2S_3S(s_clamp, s::cl_int, s::cl_int, s::cl_int, s::cl_int)
+MAKE_1V_2S_3S(s_clamp, s::cl_long, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2S_3S(s_clamp, s::longlong, s::longlong, s::longlong, s::longlong)
+
+// clz
+template <typename T> inline constexpr T __clz_impl(T x, T m, T n = 0) {
+  return (x & m) ? n : __clz_impl(x, T(m >> 1), ++n);
+}
+
+template <typename T> inline constexpr T __clz(T x) {
+  using UT = typename std::make_unsigned<T>::type;
+  return (x == T(0)) ? sizeof(T) * 8 : __clz_impl<UT>(x, d::msbMask<UT>(x));
+}
+
+cl_uchar clz(s::cl_uchar x) __NOEXC { return __clz(x); }
+cl_char clz(s::cl_char x) __NOEXC { return __clz(x); }
+cl_ushort clz(s::cl_ushort x) __NOEXC { return __clz(x); }
+cl_short clz(s::cl_short x) __NOEXC { return __clz(x); }
+cl_uint clz(s::cl_uint x) __NOEXC { return __clz(x); }
+cl_int clz(s::cl_int x) __NOEXC { return __clz(x); }
+cl_ulong clz(s::cl_ulong x) __NOEXC { return __clz(x); }
+cl_long clz(s::cl_long x) __NOEXC { return __clz(x); }
+s::ulonglong clz(s::ulonglong x) __NOEXC { return __clz(x); }
+s::longlong clz(s::longlong x) __NOEXC { return __clz(x); }
+MAKE_1V(clz, s::cl_uchar, s::cl_uchar)
+MAKE_1V(clz, s::cl_char, s::cl_char)
+MAKE_1V(clz, s::cl_ushort, s::cl_ushort)
+MAKE_1V(clz, s::cl_short, s::cl_short)
+MAKE_1V(clz, s::cl_uint, s::cl_uint)
+MAKE_1V(clz, s::cl_int, s::cl_int)
+MAKE_1V(clz, s::cl_ulong, s::cl_ulong)
+MAKE_1V(clz, s::cl_long, s::cl_long)
+MAKE_1V(clz, s::longlong, s::longlong)
+MAKE_1V(clz, s::ulonglong, s::ulonglong)
+
+// s_mul_hi
+template <typename T> T __mul_hi(T a, T b) {
+  using UPT = typename d::make_upper<T>::type;
+  UPT a_s = a;
+  UPT b_s = b;
+  UPT mul = a_s * b_s;
+  return (mul >> (sizeof(T) * 8));
+}
+
+// T is minimum of 64 bits- long or longlong
+template <typename T> T __long_mul_hi(T a, T b) {
+  int halfsize = (sizeof(T) * 8) / 2;
+  T a1 = a >> halfsize;
+  T a0 = (a << halfsize) >> halfsize;
+  T b1 = b >> halfsize;
+  T b0 = (b << halfsize) >> halfsize;
+
+  // a1b1 - for bits - [64-128)
+  // a1b0 a0b1 for bits - [32-96)
+  // a0b0 for bits - [0-64)
+  T a1b1 = a1 * b1;
+  T a0b1 = a0 * b1;
+  T a1b0 = a1 * b0;
+  T a0b0 = a0 * b0;
+
+  // To get the upper 64 bits:
+  // 64 bits from a1b1, upper 32 bits from [a1b0 + (a0b1 + a0b0>>32 (carry bit
+  // in 33rd bit))] with carry bit on 64th bit - use of hadd. Add the a1b1 to
+  // the above 32 bit result.
+  T result =
+      a1b1 + (__hadd(a1b0, (a0b1 + (a0b0 >> halfsize))) >> (halfsize - 1));
+  return result;
+}
+
+cl_char s_mul_hi(cl_char a, cl_char b) { return __mul_hi(a, b); }
+cl_short s_mul_hi(cl_short a, cl_short b) { return __mul_hi(a, b); }
+cl_int s_mul_hi(cl_int a, cl_int b) { return __mul_hi(a, b); }
+cl_long s_mul_hi(s::cl_long x, s::cl_long y) __NOEXC {
+  return __long_mul_hi(x, y);
+}
+s::longlong s_mul_hi(s::longlong x, s::longlong y) __NOEXC {
+  return __long_mul_hi(x, y);
+}
+
+MAKE_1V_2V(s_mul_hi, s::cl_char, s::cl_char, s::cl_char)
+MAKE_1V_2V(s_mul_hi, s::cl_short, s::cl_short, s::cl_short)
+MAKE_1V_2V(s_mul_hi, s::cl_int, s::cl_int, s::cl_int)
+MAKE_1V_2V(s_mul_hi, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2V(s_mul_hi, s::longlong, s::longlong, s::longlong)
+
+// u_mul_hi
+cl_uchar u_mul_hi(cl_uchar a, cl_uchar b) { return __mul_hi(a, b); }
+cl_ushort u_mul_hi(cl_ushort a, cl_ushort b) { return __mul_hi(a, b); }
+cl_uint u_mul_hi(cl_uint a, cl_uint b) { return __mul_hi(a, b); }
+cl_ulong u_mul_hi(s::cl_ulong x, s::cl_ulong y) __NOEXC {
+  return __long_mul_hi(x, y);
+}
+s::ulonglong u_mul_hi(s::ulonglong x, s::ulonglong y) __NOEXC {
+  return __long_mul_hi(x, y);
+}
+
+MAKE_1V_2V(u_mul_hi, s::cl_uchar, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2V(u_mul_hi, s::cl_ushort, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2V(u_mul_hi, s::cl_uint, s::cl_uint, s::cl_uint)
+MAKE_1V_2V(u_mul_hi, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V(u_mul_hi, s::ulonglong, s::ulonglong, s::ulonglong)
+
+// s_mad_hi
+template <typename T> T __mad_hi(T a, T b, T c) { return __mul_hi(a, b) + c; }
+template <typename T> T __long_mad_hi(T a, T b, T c) {
+  return __long_mul_hi(a, b) + c;
+}
+
+cl_char s_mad_hi(s::cl_char x, s::cl_char minval, s::cl_char maxval) __NOEXC {
+  return __mad_hi(x, minval, maxval);
+}
+cl_short s_mad_hi(s::cl_short x, s::cl_short minval,
+                  s::cl_short maxval) __NOEXC {
+  return __mad_hi(x, minval, maxval);
+}
+cl_int s_mad_hi(s::cl_int x, s::cl_int minval, s::cl_int maxval) __NOEXC {
+  return __mad_hi(x, minval, maxval);
+}
+cl_long s_mad_hi(s::cl_long x, s::cl_long minval, s::cl_long maxval) __NOEXC {
+  return __long_mad_hi(x, minval, maxval);
+}
+s::longlong s_mad_hi(s::longlong x, s::longlong minval,
+                     s::longlong maxval) __NOEXC {
+  return __long_mad_hi(x, minval, maxval);
+}
+
+MAKE_1V_2V_3V(s_mad_hi, s::cl_char, s::cl_char, s::cl_char, s::cl_char)
+MAKE_1V_2V_3V(s_mad_hi, s::cl_short, s::cl_short, s::cl_short, s::cl_short)
+MAKE_1V_2V_3V(s_mad_hi, s::cl_int, s::cl_int, s::cl_int, s::cl_int)
+MAKE_1V_2V_3V(s_mad_hi, s::cl_long, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2V_3V(s_mad_hi, s::longlong, s::longlong, s::longlong, s::longlong)
+
+// u_mad_hi
+cl_uchar u_mad_hi(s::cl_uchar x, s::cl_uchar minval,
+                  s::cl_uchar maxval) __NOEXC {
+  return __mad_hi(x, minval, maxval);
+}
+cl_ushort u_mad_hi(s::cl_ushort x, s::cl_ushort minval,
+                   s::cl_ushort maxval) __NOEXC {
+  return __mad_hi(x, minval, maxval);
+}
+cl_uint u_mad_hi(s::cl_uint x, s::cl_uint minval, s::cl_uint maxval) __NOEXC {
+  return __mad_hi(x, minval, maxval);
+}
+cl_ulong u_mad_hi(s::cl_ulong x, s::cl_ulong minval,
+                  s::cl_ulong maxval) __NOEXC {
+  return __long_mad_hi(x, minval, maxval);
+}
+s::ulonglong u_mad_hi(s::ulonglong x, s::ulonglong minval,
+                      s::ulonglong maxval) __NOEXC {
+  return __long_mad_hi(x, minval, maxval);
+}
+MAKE_1V_2V_3V(u_mad_hi, s::cl_uchar, s::cl_uchar, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2V_3V(u_mad_hi, s::cl_ushort, s::cl_ushort, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2V_3V(u_mad_hi, s::cl_uint, s::cl_uint, s::cl_uint, s::cl_uint)
+MAKE_1V_2V_3V(u_mad_hi, s::cl_ulong, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V_3V(u_mad_hi, s::ulonglong, s::ulonglong, s::ulonglong, s::ulonglong)
+
+// s_mad_sat
+template <typename T> T __s_mad_sat(T a, T b, T c) {
+  using UPT = typename d::make_upper<T>::type;
+  UPT mul = UPT(a) * UPT(b);
+  const UPT max = d::max_v<T>();
+  const UPT min = d::min_v<T>();
+  mul = std::min(std::max(mul, min), max);
+  return s_add_sat(T(mul), c);
+}
+
+template <typename T> T __s_long_mad_sat(T a, T b, T c) {
+  bool neg_prod = (a < 0) ^ (b < 0);
+  T mulhi = s_mul_hi(a, b);
+  // check mul_hi. If it is any value != 0.
+  // if prod is +ve, any value in mulhi means we need to saturate.
+  // if prod is -ve, any value in mulhi besides -1 means we need to saturate.
+  if (!neg_prod && mulhi != 0)
+    return d::max_v<T>();
+  else if (neg_prod && mulhi != -1)
+    return d::max_v<T>(); // essentially some other negative value.
+  return s_add_sat(T(a * b), c);
+}
+
+cl_char s_mad_sat(s::cl_char a, s::cl_char b, s::cl_char c) __NOEXC {
+  return __s_mad_sat(a, b, c);
+}
+cl_short s_mad_sat(s::cl_short a, s::cl_short b, s::cl_short c) __NOEXC {
+  return __s_mad_sat(a, b, c);
+}
+cl_int s_mad_sat(s::cl_int a, s::cl_int b, s::cl_int c) __NOEXC {
+  return __s_mad_sat(a, b, c);
+}
+cl_long s_mad_sat(s::cl_long a, s::cl_long b, s::cl_long c) __NOEXC {
+  return __s_long_mad_sat(a, b, c);
+}
+s::longlong s_mad_sat(s::longlong a, s::longlong b, s::longlong c) __NOEXC {
+  return __s_long_mad_sat(a, b, c);
+}
+MAKE_1V_2V_3V(s_mad_sat, s::cl_char, s::cl_char, s::cl_char, s::cl_char)
+MAKE_1V_2V_3V(s_mad_sat, s::cl_short, s::cl_short, s::cl_short, s::cl_short)
+MAKE_1V_2V_3V(s_mad_sat, s::cl_int, s::cl_int, s::cl_int, s::cl_int)
+MAKE_1V_2V_3V(s_mad_sat, s::cl_long, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2V_3V(s_mad_sat, s::longlong, s::longlong, s::longlong, s::longlong)
+
+// u_mad_sat
+template <typename T> T __u_mad_sat(T a, T b, T c) {
+  using UPT = typename d::make_upper<T>::type;
+  UPT mul = UPT(a) * UPT(b);
+  const UPT min = d::min_v<T>();
+  const UPT max = d::max_v<T>();
+  mul = std::min(std::max(mul, min), max);
+  return u_add_sat(T(mul), c);
+}
+
+template <typename T> T __u_long_mad_sat(T a, T b, T c) {
+  T mulhi = u_mul_hi(a, b);
+  // check mul_hi. If it is any value != 0.
+  if (mulhi != 0)
+    return d::max_v<T>();
+  else
+    return u_add_sat(T(a * b), c);
+}
+
+cl_uchar u_mad_sat(s::cl_uchar a, s::cl_uchar b, s::cl_uchar c) __NOEXC {
+  return __u_mad_sat(a, b, c);
+}
+cl_ushort u_mad_sat(s::cl_ushort a, s::cl_ushort b, s::cl_ushort c) __NOEXC {
+  return __u_mad_sat(a, b, c);
+}
+cl_uint u_mad_sat(s::cl_uint a, s::cl_uint b, s::cl_uint c) __NOEXC {
+  return __u_mad_sat(a, b, c);
+}
+cl_ulong u_mad_sat(s::cl_ulong a, s::cl_ulong b, s::cl_ulong c) __NOEXC {
+  return __u_long_mad_sat(a, b, c);
+}
+s::ulonglong u_mad_sat(s::ulonglong a, s::ulonglong b, s::ulonglong c) __NOEXC {
+  return __u_long_mad_sat(a, b, c);
+}
+MAKE_1V_2V_3V(u_mad_sat, s::cl_uchar, s::cl_uchar, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2V_3V(u_mad_sat, s::cl_ushort, s::cl_ushort, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2V_3V(u_mad_sat, s::cl_uint, s::cl_uint, s::cl_uint, s::cl_uint)
+MAKE_1V_2V_3V(u_mad_sat, s::cl_ulong, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V_3V(u_mad_sat, s::ulonglong, s::ulonglong, s::ulonglong, s::ulonglong)
+
 // s_max
 cl_char s_max(s::cl_char x, s::cl_char y) __NOEXC { return std::max(x, y); }
 cl_short s_max(s::cl_short x, s::cl_short y) __NOEXC { return std::max(x, y); }
 cl_int s_max(s::cl_int x, s::cl_int y) __NOEXC { return std::max(x, y); }
 cl_long s_max(s::cl_long x, s::cl_long y) __NOEXC { return std::max(x, y); }
+s::longlong s_max(s::longlong x, s::longlong y) __NOEXC {
+  return std::max(x, y);
+}
 MAKE_1V_2V(s_max, s::cl_char, s::cl_char, s::cl_char)
 MAKE_1V_2V(s_max, s::cl_short, s::cl_short, s::cl_short)
 MAKE_1V_2V(s_max, s::cl_int, s::cl_int, s::cl_int)
 MAKE_1V_2V(s_max, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2V(s_max, s::longlong, s::longlong, s::longlong)
 MAKE_1V_2S(s_max, s::cl_char, s::cl_char, s::cl_char)
 MAKE_1V_2S(s_max, s::cl_short, s::cl_short, s::cl_short)
 MAKE_1V_2S(s_max, s::cl_int, s::cl_int, s::cl_int)
 MAKE_1V_2S(s_max, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2S(s_max, s::longlong, s::longlong, s::longlong)
 
 // u_max
 cl_uchar u_max(s::cl_uchar x, s::cl_uchar y) __NOEXC { return std::max(x, y); }
@@ -1326,28 +1879,38 @@ cl_ushort u_max(s::cl_ushort x, s::cl_ushort y) __NOEXC {
 }
 cl_uint u_max(s::cl_uint x, s::cl_uint y) __NOEXC { return std::max(x, y); }
 cl_ulong u_max(s::cl_ulong x, s::cl_ulong y) __NOEXC { return std::max(x, y); }
+s::ulonglong u_max(s::ulonglong x, s::ulonglong y) __NOEXC {
+  return std::max(x, y);
+}
 MAKE_1V_2V(u_max, s::cl_uchar, s::cl_uchar, s::cl_uchar)
 MAKE_1V_2V(u_max, s::cl_ushort, s::cl_ushort, s::cl_ushort)
 MAKE_1V_2V(u_max, s::cl_uint, s::cl_uint, s::cl_uint)
 MAKE_1V_2V(u_max, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V(u_max, s::ulonglong, s::ulonglong, s::ulonglong)
 MAKE_1V_2S(u_max, s::cl_uchar, s::cl_uchar, s::cl_uchar)
 MAKE_1V_2S(u_max, s::cl_ushort, s::cl_ushort, s::cl_ushort)
 MAKE_1V_2S(u_max, s::cl_uint, s::cl_uint, s::cl_uint)
 MAKE_1V_2S(u_max, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2S(u_max, s::ulonglong, s::ulonglong, s::ulonglong)
 
 // s_min
 cl_char s_min(s::cl_char x, s::cl_char y) __NOEXC { return std::min(x, y); }
 cl_short s_min(s::cl_short x, s::cl_short y) __NOEXC { return std::min(x, y); }
 cl_int s_min(s::cl_int x, s::cl_int y) __NOEXC { return std::min(x, y); }
 cl_long s_min(s::cl_long x, s::cl_long y) __NOEXC { return std::min(x, y); }
+s::longlong s_min(s::longlong x, s::longlong y) __NOEXC {
+  return std::min(x, y);
+}
 MAKE_1V_2V(s_min, s::cl_char, s::cl_char, s::cl_char)
 MAKE_1V_2V(s_min, s::cl_short, s::cl_short, s::cl_short)
 MAKE_1V_2V(s_min, s::cl_int, s::cl_int, s::cl_int)
 MAKE_1V_2V(s_min, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2V(s_min, s::longlong, s::longlong, s::longlong)
 MAKE_1V_2S(s_min, s::cl_char, s::cl_char, s::cl_char)
 MAKE_1V_2S(s_min, s::cl_short, s::cl_short, s::cl_short)
 MAKE_1V_2S(s_min, s::cl_int, s::cl_int, s::cl_int)
 MAKE_1V_2S(s_min, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2S(s_min, s::longlong, s::longlong, s::longlong)
 
 // u_min
 cl_uchar u_min(s::cl_uchar x, s::cl_uchar y) __NOEXC { return std::min(x, y); }
@@ -1356,14 +1919,205 @@ cl_ushort u_min(s::cl_ushort x, s::cl_ushort y) __NOEXC {
 }
 cl_uint u_min(s::cl_uint x, s::cl_uint y) __NOEXC { return std::min(x, y); }
 cl_ulong u_min(s::cl_ulong x, s::cl_ulong y) __NOEXC { return std::min(x, y); }
+s::ulonglong u_min(s::ulonglong x, s::ulonglong y) __NOEXC {
+  return std::min(x, y);
+}
 MAKE_1V_2V(u_min, s::cl_uchar, s::cl_uchar, s::cl_uchar)
 MAKE_1V_2V(u_min, s::cl_ushort, s::cl_ushort, s::cl_ushort)
 MAKE_1V_2V(u_min, s::cl_uint, s::cl_uint, s::cl_uint)
 MAKE_1V_2V(u_min, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V(u_min, s::ulonglong, s::ulonglong, s::ulonglong)
 MAKE_1V_2S(u_min, s::cl_uchar, s::cl_uchar, s::cl_uchar)
 MAKE_1V_2S(u_min, s::cl_ushort, s::cl_ushort, s::cl_ushort)
 MAKE_1V_2S(u_min, s::cl_uint, s::cl_uint, s::cl_uint)
 MAKE_1V_2S(u_min, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2S(u_min, s::ulonglong, s::ulonglong, s::ulonglong)
+
+// rotate
+template <typename T> T __rotate(T x, T n) {
+  using UT = typename std::make_unsigned<T>::type;
+  return (x << n) | (UT(x) >> ((sizeof(x) * 8) - n));
+}
+
+cl_uchar rotate(s::cl_uchar x, s::cl_uchar y) __NOEXC { return __rotate(x, y); }
+cl_ushort rotate(s::cl_ushort x, s::cl_ushort y) __NOEXC {
+  return __rotate(x, y);
+}
+cl_uint rotate(s::cl_uint x, s::cl_uint y) __NOEXC { return __rotate(x, y); }
+cl_ulong rotate(s::cl_ulong x, s::cl_ulong y) __NOEXC { return __rotate(x, y); }
+s::ulonglong rotate(s::ulonglong x, s::ulonglong y) __NOEXC {
+  return __rotate(x, y);
+}
+cl_char rotate(s::cl_char x, s::cl_char y) __NOEXC { return __rotate(x, y); }
+cl_short rotate(s::cl_short x, s::cl_short y) __NOEXC { return __rotate(x, y); }
+cl_int rotate(s::cl_int x, s::cl_int y) __NOEXC { return __rotate(x, y); }
+cl_long rotate(s::cl_long x, s::cl_long y) __NOEXC { return __rotate(x, y); }
+s::longlong rotate(s::longlong x, s::longlong y) __NOEXC {
+  return __rotate(x, y);
+}
+MAKE_1V_2V(rotate, s::cl_uchar, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2V(rotate, s::cl_ushort, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2V(rotate, s::cl_uint, s::cl_uint, s::cl_uint)
+MAKE_1V_2V(rotate, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V(rotate, s::ulonglong, s::ulonglong, s::ulonglong)
+MAKE_1V_2V(rotate, s::cl_char, s::cl_char, s::cl_char)
+MAKE_1V_2V(rotate, s::cl_short, s::cl_short, s::cl_short)
+MAKE_1V_2V(rotate, s::cl_int, s::cl_int, s::cl_int)
+MAKE_1V_2V(rotate, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2V(rotate, s::longlong, s::longlong, s::longlong)
+
+// u_sub_sat
+template <typename T> T __u_sub_sat(T x, T y) {
+  return (y < (x - d::min_v<T>())) ? (x - y) : d::min_v<T>();
+}
+
+cl_uchar u_sub_sat(s::cl_uchar x, s::cl_uchar y) __NOEXC {
+  return __u_sub_sat(x, y);
+}
+cl_ushort u_sub_sat(s::cl_ushort x, s::cl_ushort y) __NOEXC {
+  return __u_sub_sat(x, y);
+}
+cl_uint u_sub_sat(s::cl_uint x, s::cl_uint y) __NOEXC {
+  return __u_sub_sat(x, y);
+}
+cl_ulong u_sub_sat(s::cl_ulong x, s::cl_ulong y) __NOEXC {
+  return __u_sub_sat(x, y);
+}
+s::ulonglong u_sub_sat(s::ulonglong x, s::ulonglong y) __NOEXC {
+  return __u_sub_sat(x, y);
+}
+MAKE_1V_2V(u_sub_sat, s::cl_uchar, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2V(u_sub_sat, s::cl_ushort, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2V(u_sub_sat, s::cl_uint, s::cl_uint, s::cl_uint)
+MAKE_1V_2V(u_sub_sat, s::cl_ulong, s::cl_ulong, s::cl_ulong)
+MAKE_1V_2V(u_sub_sat, s::ulonglong, s::ulonglong, s::ulonglong)
+
+// s_sub_sat
+template <typename T> T __s_sub_sat(T x, T y) {
+  if (y > 0)
+    return (y < (x - d::min_v<T>()) ? x - y : d::min_v<T>());
+  else if (y < 0)
+    return (y > (x - d::max_v<T>()) ? x - y : d::max_v<T>());
+  else
+    return x;
+}
+
+cl_char s_sub_sat(s::cl_char x, s::cl_char y) __NOEXC {
+  return __s_sub_sat(x, y);
+}
+cl_short s_sub_sat(s::cl_short x, s::cl_short y) __NOEXC {
+  return __s_sub_sat(x, y);
+}
+cl_int s_sub_sat(s::cl_int x, s::cl_int y) __NOEXC { return __s_sub_sat(x, y); }
+cl_long s_sub_sat(s::cl_long x, s::cl_long y) __NOEXC {
+  return __s_sub_sat(x, y);
+}
+s::longlong s_sub_sat(s::longlong x, s::longlong y) __NOEXC {
+  return __s_sub_sat(x, y);
+}
+MAKE_1V_2V(s_sub_sat, s::cl_char, s::cl_char, s::cl_char)
+MAKE_1V_2V(s_sub_sat, s::cl_short, s::cl_short, s::cl_short)
+MAKE_1V_2V(s_sub_sat, s::cl_int, s::cl_int, s::cl_int)
+MAKE_1V_2V(s_sub_sat, s::cl_long, s::cl_long, s::cl_long)
+MAKE_1V_2V(s_sub_sat, s::longlong, s::longlong, s::longlong)
+
+// u_upsample
+template <typename T1, typename T2>
+typename d::make_upper<T1>::type __upsample(T1 hi, T2 lo) {
+  using UT = typename d::make_upper<T1>::type;
+  return (UT(hi) << (sizeof(T1) * 8)) | lo;
+}
+
+cl_ushort u_upsample(s::cl_uchar x, s::cl_uchar y) __NOEXC {
+  return __upsample(x, y);
+}
+cl_uint u_upsample(s::cl_ushort x, s::cl_ushort y) __NOEXC {
+  return __upsample(x, y);
+}
+cl_ulong u_upsample(s::cl_uint x, s::cl_uint y) __NOEXC {
+  return __upsample(x, y);
+}
+MAKE_1V_2V(u_upsample, s::cl_ushort, s::cl_uchar, s::cl_uchar)
+MAKE_1V_2V(u_upsample, s::cl_uint, s::cl_ushort, s::cl_ushort)
+MAKE_1V_2V(u_upsample, s::cl_ulong, s::cl_uint, s::cl_uint)
+
+// TODO delete when Intel CPU OpenCL runtime will be fixed
+// OpExtInst ... s_upsample -> _Z8upsampleij (now _Z8upsampleii)
+#define s_upsample u_upsample
+
+cl_short s_upsample(s::cl_char x, s::cl_uchar y) __NOEXC {
+  return __upsample(x, y);
+}
+cl_int s_upsample(s::cl_short x, s::cl_ushort y) __NOEXC {
+  return __upsample(x, y);
+}
+cl_long s_upsample(s::cl_int x, s::cl_uint y) __NOEXC {
+  return __upsample(x, y);
+}
+MAKE_1V_2V(u_upsample, s::cl_short, s::cl_char, s::cl_uchar)
+MAKE_1V_2V(u_upsample, s::cl_int, s::cl_short, s::cl_ushort)
+MAKE_1V_2V(u_upsample, s::cl_long, s::cl_int, s::cl_uint)
+
+#undef s_upsample
+
+// popcount
+template <typename T> inline constexpr T __popcount_impl(T x, size_t n = 0) {
+  return (x == T(0)) ? n : __popcount_impl(x >> 1, ((x & T(1)) ? ++n : n));
+}
+
+template <typename T> inline constexpr T __popcount(T x) {
+  using UT = typename d::make_unsigned<T>::type;
+  return __popcount_impl(UT(x));
+}
+
+cl_uchar popcount(s::cl_uchar x) __NOEXC { return __popcount(x); }
+cl_ushort popcount(s::cl_ushort x) __NOEXC { return __popcount(x); }
+cl_uint popcount(s::cl_uint x) __NOEXC { return __popcount(x); }
+cl_ulong popcount(s::cl_ulong x) __NOEXC { return __popcount(x); }
+s::ulonglong popcount(s::ulonglong x) __NOEXC { return __popcount(x); }
+MAKE_1V(popcount, s::cl_uchar, s::cl_uchar)
+MAKE_1V(popcount, s::cl_ushort, s::cl_ushort)
+MAKE_1V(popcount, s::cl_uint, s::cl_uint)
+MAKE_1V(popcount, s::cl_ulong, s::cl_ulong)
+MAKE_1V(popcount, s::ulonglong, s::ulonglong)
+
+cl_char popcount(s::cl_char x) __NOEXC { return __popcount(x); }
+cl_short popcount(s::cl_short x) __NOEXC { return __popcount(x); }
+cl_int popcount(s::cl_int x) __NOEXC { return __popcount(x); }
+cl_long popcount(s::cl_long x) __NOEXC { return __popcount(x); }
+s::longlong popcount(s::longlong x) __NOEXC { return __popcount(x); }
+MAKE_1V(popcount, s::cl_char, s::cl_char)
+MAKE_1V(popcount, s::cl_short, s::cl_short)
+MAKE_1V(popcount, s::cl_int, s::cl_int)
+MAKE_1V(popcount, s::cl_long, s::cl_long)
+MAKE_1V(popcount, s::longlong, s::longlong)
+
+// u_mad24
+template <typename T> T __mad24(T x, T y, T z) { return (x * y) + z; }
+
+cl_uint u_mad24(s::cl_uint x, s::cl_uint y, s::cl_uint z) __NOEXC {
+  return __mad24(x, y, z);
+}
+MAKE_1V_2V_3V(u_mad24, s::cl_uint, s::cl_uint, s::cl_uint, s::cl_uint)
+
+// s_mad24
+cl_int s_mad24(s::cl_int x, s::cl_int y, s::cl_int z) __NOEXC {
+  return __mad24(x, y, z);
+}
+
+MAKE_1V_2V_3V(s_mad24, s::cl_int, s::cl_int, s::cl_int, s::cl_int)
+
+// u_mul24
+template <typename T> T __mul24(T x, T y) { return (x * y); }
+
+cl_uint u_mul24(s::cl_uint x, s::cl_uint y) __NOEXC { return __mul24(x, y); }
+
+MAKE_1V_2V(u_mul24, s::cl_uint, s::cl_uint, s::cl_uint)
+
+// s_mul24
+cl_int s_mul24(s::cl_int x, s::cl_int y) __NOEXC { return __mul24(x, y); }
+
+MAKE_1V_2V(s_mul24, s::cl_int, s::cl_int, s::cl_int)
 
 /* --------------- 4.13.5 Common functions. Host version --------------------*/
 // fclamp
@@ -2401,7 +3155,6 @@ MAKE_1V(half_tan, s::cl_float, s::cl_float)
 #undef MAKE_1V_2S
 #undef MAKE_SR_1V_AND
 #undef MAKE_SR_1V_OR
-#undef MSB_MASK
 #undef MAKE_1V_2P
 #undef MAKE_GEO_1V_2V_RS
 #undef MAKE_1V_2V_3P
