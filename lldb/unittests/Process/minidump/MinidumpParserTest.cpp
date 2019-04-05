@@ -14,10 +14,12 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ObjectYAML/MinidumpYAML.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -49,17 +51,27 @@ public:
     ASSERT_GT(parser->GetData().size(), 0UL);
   }
 
-  void InvalidMinidump(const char *minidump_filename, uint64_t load_size) {
-    std::string filename = GetInputFilePath(minidump_filename);
-    auto BufferPtr =
-        FileSystem::Instance().CreateDataBuffer(filename, load_size, 0);
-    ASSERT_NE(BufferPtr, nullptr);
-
-    EXPECT_THAT_EXPECTED(MinidumpParser::Create(BufferPtr), llvm::Failed());
-  }
-
   llvm::Optional<MinidumpParser> parser;
 };
+
+TEST_F(MinidumpParserTest, InvalidMinidump) {
+  std::string duplicate_streams;
+  llvm::raw_string_ostream os(duplicate_streams);
+  ASSERT_THAT_ERROR(llvm::MinidumpYAML::writeAsBinary(R"(
+--- !minidump
+Streams:         
+  - Type:            LinuxAuxv
+    Content:         DEADBEEFBAADF00D
+  - Type:            LinuxAuxv
+    Content:         DEADBEEFBAADF00D
+  )",
+                                                      os),
+                    llvm::Succeeded());
+  os.flush();
+  auto data_buffer_sp = std::make_shared<DataBufferHeap>(
+      duplicate_streams.data(), duplicate_streams.size());
+  ASSERT_THAT_EXPECTED(MinidumpParser::Create(data_buffer_sp), llvm::Failed());
+}
 
 TEST_F(MinidumpParserTest, GetThreadsAndGetThreadContext) {
   SetUpData("linux-x86_64.dmp");
@@ -144,17 +156,6 @@ TEST_F(MinidumpParserTest, GetMemoryListPadded) {
   mem = parser->FindMemoryRange(0x8010);
   ASSERT_TRUE(mem.hasValue());
   EXPECT_EQ((lldb::addr_t)0x8010, mem->start);
-}
-
-TEST_F(MinidumpParserTest, TruncatedMinidumps) {
-  InvalidMinidump("linux-x86_64.dmp", 32);
-  InvalidMinidump("linux-x86_64.dmp", 100);
-  InvalidMinidump("linux-x86_64.dmp", 20 * 1024);
-}
-
-TEST_F(MinidumpParserTest, IllFormedMinidumps) {
-  InvalidMinidump("bad_duplicate_streams.dmp", -1);
-  InvalidMinidump("bad_overlapping_streams.dmp", -1);
 }
 
 TEST_F(MinidumpParserTest, GetArchitecture) {
