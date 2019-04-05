@@ -21,7 +21,7 @@ declare i32 @foo();
 define i32 @load_hidden_global() {
 ; CHECK-LABEL: load_hidden_global:
 ; PIC:         global.get $push[[L0:[0-9]+]]=, __memory_base{{$}}
-; PIC-NEXT:    i32.const $push[[L1:[0-9]+]]=, hidden_global{{$}}
+; PIC-NEXT:    i32.const $push[[L1:[0-9]+]]=, hidden_global@MBREL{{$}}
 ; PIC-NEXT:    i32.add $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; PIC-NEXT:    i32.load $push[[L3:[0-9]+]]=, 0($pop[[L2]]){{$}}
 
@@ -36,7 +36,7 @@ define i32 @load_hidden_global() {
 define i32 @load_hidden_global_offset() {
 ; CHECK-LABEL: load_hidden_global_offset:
 ; PIC:         global.get $push[[L0:[0-9]+]]=, __memory_base{{$}}
-; PIC-NEXT:    i32.const $push[[L1:[0-9]+]]=, hidden_global_array{{$}}
+; PIC-NEXT:    i32.const $push[[L1:[0-9]+]]=, hidden_global_array@MBREL{{$}}
 ; PIC-NEXT:    i32.add $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1:[0-9]+]]{{$}}
 ; PIC-NEXT:    i32.const $push[[L3:[0-9]+]]=, 20{{$}}
 ; PIC-NEXT:    i32.add $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
@@ -56,7 +56,7 @@ define i32 @load_hidden_global_offset() {
 define void @store_hidden_global(i32 %n) {
 ; CHECK-LABEL: store_hidden_global:
 ; PIC:         global.get $push[[L0:[0-9]+]]=, __memory_base{{$}}
-; PIC-NEXT:    i32.const $push[[L1:[0-9]+]]=, hidden_global{{$}}
+; PIC-NEXT:    i32.const $push[[L1:[0-9]+]]=, hidden_global@MBREL{{$}}
 ; PIC-NEXT:    i32.add $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; PIC-NEXT:    i32.store 0($pop[[L2]]), $0{{$}}
 
@@ -71,7 +71,7 @@ define void @store_hidden_global(i32 %n) {
 define void @store_hidden_global_offset(i32 %n) {
 ; CHECK-LABEL: store_hidden_global_offset:
 ; PIC:         global.get $push[[L0:[0-9]+]]=, __memory_base{{$}}
-; PIC-NEXT:    i32.const $push[[L1:[0-9]+]]=, hidden_global_array{{$}}
+; PIC-NEXT:    i32.const $push[[L1:[0-9]+]]=, hidden_global_array@MBREL{{$}}
 ; PIC-NEXT:    i32.add $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; PIC-NEXT:    i32.const $push[[L3:[0-9]+]]=, 20{{$}}
 ; PIC-NEXT:    i32.add $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}

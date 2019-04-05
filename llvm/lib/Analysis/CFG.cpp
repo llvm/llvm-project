@@ -254,8 +254,8 @@ bool llvm::isPotentiallyReachable(
   }
 
   if (DT) {
-    if (DT->isReachableFromEntry(A->getParent()) !=
-        DT->isReachableFromEntry(B->getParent()))
+    if (DT->isReachableFromEntry(A->getParent()) &&
+        !DT->isReachableFromEntry(B->getParent()))
       return false;
     if (!ExclusionSet || ExclusionSet->empty()) {
       if (A->getParent() == &A->getParent()->getParent()->getEntryBlock() &&

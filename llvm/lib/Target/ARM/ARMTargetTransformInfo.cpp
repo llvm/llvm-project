@@ -602,7 +602,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Disable loop unrolling for Oz and Os.
   UP.OptSizeThreshold = 0;
   UP.PartialOptSizeThreshold = 0;
-  if (L->getHeader()->getParent()->optForSize())
+  if (L->getHeader()->getParent()->hasOptSize())
     return;
 
   // Only enable on Thumb-2 targets.

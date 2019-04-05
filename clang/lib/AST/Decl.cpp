@@ -1531,10 +1531,16 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
                                    const PrintingPolicy &P) const {
   const DeclContext *Ctx = getDeclContext();
 
-  // For ObjC methods, look through categories and use the interface as context.
+  // For ObjC methods and properties, look through categories and use the
+  // interface as context.
   if (auto *MD = dyn_cast<ObjCMethodDecl>(this))
     if (auto *ID = MD->getClassInterface())
       Ctx = ID;
+  if (auto *PD = dyn_cast<ObjCPropertyDecl>(this)) {
+    if (auto *MD = PD->getGetterMethodDecl())
+      if (auto *ID = MD->getClassInterface())
+        Ctx = ID;
+  }
 
   if (Ctx->isFunctionOrMethod()) {
     printName(OS);

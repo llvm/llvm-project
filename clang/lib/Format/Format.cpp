@@ -898,9 +898,16 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
     // See styleguide for import groups:
     // https://chromium.googlesource.com/chromium/src/+/master/styleguide/java/java.md#Import-Order
     ChromiumStyle.JavaImportGroups = {
-        "android",      "com",  "dalvik",
-        "junit",        "org",  "com.google.android.apps.chrome",
-        "org.chromium", "java", "javax",
+        "android",
+        "androidx",
+        "com",
+        "dalvik",
+        "junit",
+        "org",
+        "com.google.android.apps.chrome",
+        "org.chromium",
+        "java",
+        "javax",
     };
     ChromiumStyle.SortIncludes = true;
   } else if (Language == FormatStyle::LK_JavaScript) {

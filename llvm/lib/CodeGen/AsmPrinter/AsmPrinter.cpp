@@ -2865,7 +2865,7 @@ void AsmPrinter::setupCodePaddingContext(const MachineBasicBlock &MBB,
                                          MCCodePaddingContext &Context) const {
   assert(MF != nullptr && "Machine function must be valid");
   Context.IsPaddingActive = !MF->hasInlineAsm() &&
-                            !MF->getFunction().optForSize() &&
+                            !MF->getFunction().hasOptSize() &&
                             TM.getOptLevel() != CodeGenOpt::None;
   Context.IsBasicBlockReachableViaFallthrough =
       std::find(MBB.pred_begin(), MBB.pred_end(), MBB.getPrevNode()) !=

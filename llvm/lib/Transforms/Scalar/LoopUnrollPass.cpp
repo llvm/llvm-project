@@ -198,7 +198,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   TTI.getUnrollingPreferences(L, SE, UP);
 
   // Apply size attributes
-  if (L->getHeader()->getParent()->optForSize()) {
+  if (L->getHeader()->getParent()->hasOptSize()) {
     UP.Threshold = UP.OptSizeThreshold;
     UP.PartialThreshold = UP.PartialOptSizeThreshold;
   }

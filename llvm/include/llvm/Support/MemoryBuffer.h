@@ -264,7 +264,7 @@ class MemoryBufferRef {
 
 public:
   MemoryBufferRef() = default;
-  MemoryBufferRef(MemoryBuffer& Buffer)
+  MemoryBufferRef(const MemoryBuffer& Buffer)
       : Buffer(Buffer.getBuffer()), Identifier(Buffer.getBufferIdentifier()) {}
   MemoryBufferRef(StringRef Buffer, StringRef Identifier)
       : Buffer(Buffer), Identifier(Identifier) {}

@@ -254,6 +254,15 @@
 #define LLVM_FALLTHROUGH
 #endif
 
+/// LLVM_REQUIRE_CONSTANT_INITIALIZATION - Apply this to globals to ensure that
+/// they are constant initialized.
+#if __has_cpp_attribute(clang::require_constant_initialization)
+#define LLVM_REQUIRE_CONSTANT_INITIALIZATION                                   \
+  [[clang::require_constant_initialization]]
+#else
+#define LLVM_REQUIRE_CONSTANT_INITIALIZATION
+#endif
+
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress
 /// pedantic diagnostics.
 #ifdef __GNUC__

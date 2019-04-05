@@ -18,7 +18,7 @@ namespace MachO {
 ArchitectureSet::ArchitectureSet(const std::vector<Architecture> &Archs)
     : ArchitectureSet() {
   for (auto Arch : Archs) {
-    if (Arch == Architecture::unknown)
+    if (Arch == AK_unknown)
       continue;
     set(Arch);
   }
@@ -51,7 +51,7 @@ ArchitectureSet::operator std::string() const {
 ArchitectureSet::operator std::vector<Architecture>() const {
   std::vector<Architecture> archs;
   for (auto arch : *this) {
-    if (arch == Architecture::unknown)
+    if (arch == AK_unknown)
       continue;
     archs.emplace_back(arch);
   }

@@ -115,6 +115,18 @@ PrintedWrittenNamedDeclCXX11Matches(StringRef Code, StringRef DeclName,
                                  "input.cc");
 }
 
+::testing::AssertionResult
+PrintedWrittenPropertyDeclObjCMatches(StringRef Code, StringRef DeclName,
+                                   StringRef ExpectedPrinted) {
+  std::vector<std::string> Args{"-std=c++11", "-xobjective-c++"};
+  return PrintedNamedDeclMatches(Code,
+                                 Args,
+                                 /*SuppressUnwrittenScope*/ true,
+                                 objcPropertyDecl(hasName(DeclName)).bind("id"),
+                                 ExpectedPrinted,
+                                 "input.m");
+}
+
 } // unnamed namespace
 
 TEST(NamedDeclPrinter, TestNamespace1) {
@@ -178,4 +190,32 @@ TEST(NamedDeclPrinter, TestLinkageInNamespace) {
     "namespace X { extern \"C\" { int A; } }",
     "A",
     "X::A"));
+}
+
+TEST(NamedDeclPrinter, TestObjCClassExtension) {
+  ASSERT_TRUE(PrintedWrittenPropertyDeclObjCMatches(
+    R"(
+      @interface Obj
+      @end
+
+      @interface Obj ()
+      @property(nonatomic) int property;
+      @end
+    )",
+    "property",
+    "Obj::property"));
+}
+
+TEST(NamedDeclPrinter, TestObjCClassExtensionWithGetter) {
+  ASSERT_TRUE(PrintedWrittenPropertyDeclObjCMatches(
+    R"(
+      @interface Obj
+      @end
+
+      @interface Obj ()
+      @property(nonatomic, getter=myPropertyGetter) int property;
+      @end
+    )",
+    "property",
+    "Obj::property"));
 }

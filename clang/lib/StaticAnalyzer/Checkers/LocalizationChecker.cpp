@@ -1140,7 +1140,7 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
   }
 
   bool Invalid = false;
-  llvm::MemoryBuffer *BF =
+  const llvm::MemoryBuffer *BF =
       Mgr.getSourceManager().getBuffer(SLInfo.first, SL, &Invalid);
   if (Invalid)
     return;

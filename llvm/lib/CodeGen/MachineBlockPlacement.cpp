@@ -1813,7 +1813,7 @@ MachineBlockPlacement::findBestLoopTop(const MachineLoop &L,
   // i.e. when the layout predecessor does not fallthrough to the loop header.
   // In practice this never happens though: there always seems to be a preheader
   // that can fallthrough and that is also placed before the header.
-  if (F->getFunction().optForSize())
+  if (F->getFunction().hasOptSize())
     return L.getHeader();
 
   // Check that the header hasn't been fused with a preheader block due to
@@ -2561,8 +2561,8 @@ void MachineBlockPlacement::alignBlocks() {
   // exclusively on the loop info here so that we can align backedges in
   // unnatural CFGs and backedges that were introduced purely because of the
   // loop rotations done during this layout pass.
-  if (F->getFunction().optForMinSize() ||
-      (F->getFunction().optForSize() && !TLI->alignLoopsWithOptSize()))
+  if (F->getFunction().hasMinSize() ||
+      (F->getFunction().hasOptSize() && !TLI->alignLoopsWithOptSize()))
     return;
   BlockChain &FunctionChain = *BlockToChain[&F->front()];
   if (FunctionChain.begin() == FunctionChain.end())
@@ -2837,7 +2837,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
   if (allowTailDupPlacement()) {
     MPDT = &getAnalysis<MachinePostDominatorTree>();
-    if (MF.getFunction().optForSize())
+    if (MF.getFunction().hasOptSize())
       TailDupSize = 1;
     bool PreRegAlloc = false;
     TailDup.initMF(MF, PreRegAlloc, MBPI, /* LayoutMode */ true, TailDupSize);
