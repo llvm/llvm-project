@@ -774,14 +774,14 @@ cl_float nextafter(s::cl_float x, s::cl_float y) __NOEXC {
 cl_double nextafter(s::cl_double x, s::cl_double y) __NOEXC {
   return std::nextafter(x, y);
 }
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 cl_half nextafter(s::cl_half x, s::cl_half y) __NOEXC {
   return std::nextafter(x, y);
 }
 #endif
 MAKE_1V_2V(nextafter, s::cl_float, s::cl_float, s::cl_float)
 MAKE_1V_2V(nextafter, s::cl_double, s::cl_double, s::cl_double)
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 MAKE_1V_2V(nextafter, s::cl_half, s::cl_half, s::cl_half)
 #endif
 
@@ -798,14 +798,14 @@ cl_float fract(s::cl_float x, s::cl_float *iptr) __NOEXC {
 cl_double fract(s::cl_double x, s::cl_double *iptr) __NOEXC {
   return __fract(x, iptr);
 }
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 cl_half fract(s::cl_half x, s::cl_half *iptr) __NOEXC {
   return __fract(x, iptr);
 }
 #endif
 MAKE_1V_2P(fract, s::cl_float, s::cl_float, s::cl_float)
 MAKE_1V_2P(fract, s::cl_double, s::cl_double, s::cl_double)
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 MAKE_1V_2P(fract, s::cl_half, s::cl_half, s::cl_half)
 #endif
 
@@ -816,14 +816,14 @@ cl_float frexp(s::cl_float x, s::cl_int *exp) __NOEXC {
 cl_double frexp(s::cl_double x, s::cl_int *exp) __NOEXC {
   return std::frexp(x, exp);
 }
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 cl_half frexp(s::cl_half x, s::cl_int *exp) __NOEXC {
   return std::frexp(x, exp);
 }
 #endif
 MAKE_1V_2P(frexp, s::cl_float, s::cl_float, s::cl_int)
 MAKE_1V_2P(frexp, s::cl_double, s::cl_double, s::cl_int)
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 MAKE_1V_2P(frexp, s::cl_half, s::cl_half, s::cl_int)
 #endif
 
@@ -888,14 +888,14 @@ cl_float lgamma_r(s::cl_float x, s::cl_int *signp) __NOEXC {
 cl_double lgamma_r(s::cl_double x, s::cl_int *signp) __NOEXC {
   return ::lgamma_r(x, signp);
 }
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 cl_half lgamma_r(s::cl_half x, s::cl_int *signp) __NOEXC {
   return ::lgamma_r(x, signp);
 }
 #endif
 MAKE_1V_2P(lgamma_r, s::cl_float, s::cl_float, s::cl_int)
 MAKE_1V_2P(lgamma_r, s::cl_double, s::cl_double, s::cl_int)
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 MAKE_1V_2P(lgamma_r, s::cl_half, s::cl_half, s::cl_int)
 #endif
 
@@ -1056,14 +1056,17 @@ cl_float modf(s::cl_float x, s::cl_float *iptr) __NOEXC {
 cl_double modf(s::cl_double x, s::cl_double *iptr) __NOEXC {
   return std::modf(x, iptr);
 }
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 cl_half modf(s::cl_half x, s::cl_half *iptr) __NOEXC {
-  return std::modf(x, iptr);
+  float t = 0;
+  float r = std::modf(x, &t);
+  *iptr = t;
+  return r;
 }
 #endif
 MAKE_1V_2P(modf, s::cl_float, s::cl_float, s::cl_float)
 MAKE_1V_2P(modf, s::cl_double, s::cl_double, s::cl_double)
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 MAKE_1V_2P(modf, s::cl_half, s::cl_half, s::cl_half)
 #endif
 
@@ -1077,37 +1080,39 @@ cl_double nan(s::cl_ulong nancode) __NOEXC {
 cl_double nan(s::ulonglong nancode) __NOEXC {
   return std::numeric_limits<double>::quiet_NaN();
 }
-#ifdef __HAFL_ENABLED
-cl_half nan(s::cl_ushort nancode) __NOEXC { return NAN; }
+#ifndef __HALF_NO_ENABLED
+cl_half nan(s::cl_ushort nancode) __NOEXC {
+  return s::cl_half(std::numeric_limits<float>::quiet_NaN());
+}
 #endif
 MAKE_1V(nan, s::cl_float, s::cl_uint)
 MAKE_1V(nan, s::cl_double, s::cl_ulong)
 MAKE_1V(nan, s::cl_double, s::ulonglong)
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 MAKE_1V(nan, s::cl_half, s::cl_ushort)
 #endif
 
 // pow
 cl_float pow(s::cl_float x, s::cl_float y) __NOEXC { return std::pow(x, y); }
 cl_double pow(s::cl_double x, s::cl_double y) __NOEXC { return std::pow(x, y); }
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 cl_half pow(s::cl_half x, s::cl_half y) __NOEXC { return std::pow(x, y); }
 #endif
 MAKE_1V_2V(pow, s::cl_float, s::cl_float, s::cl_float)
 MAKE_1V_2V(pow, s::cl_double, s::cl_double, s::cl_double)
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 MAKE_1V_2V(pow, s::cl_half, s::cl_half, s::cl_half)
 #endif
 
 // pown
 cl_float pown(s::cl_float x, s::cl_int y) __NOEXC { return std::pow(x, y); }
 cl_double pown(s::cl_double x, s::cl_int y) __NOEXC { return std::pow(x, y); }
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 cl_half pown(s::cl_half x, s::cl_int y) __NOEXC { return std::pow(x, y); }
 #endif
 MAKE_1V_2V(pown, s::cl_float, s::cl_float, s::cl_int)
 MAKE_1V_2V(pown, s::cl_double, s::cl_double, s::cl_int)
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 MAKE_1V_2V(pown, s::cl_half, s::cl_half, s::cl_int)
 #endif
 
@@ -1118,14 +1123,14 @@ cl_float powr(s::cl_float x, s::cl_float y) __NOEXC {
 cl_double powr(s::cl_double x, s::cl_double y) __NOEXC {
   return (x >= 0 ? std::pow(x, y) : x);
 }
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 cl_half powr(s::cl_half x, s::cl_half y) __NOEXC {
-  return (x >= 0 ? std::pow(x, y) : x);
+  return (x >= s::cl_half(0) ? std::pow(x, y) : s::cl_float(x));
 }
 #endif
 MAKE_1V_2V(powr, s::cl_float, s::cl_float, s::cl_float)
 MAKE_1V_2V(powr, s::cl_double, s::cl_double, s::cl_double)
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 MAKE_1V_2V(powr, s::cl_half, s::cl_half, s::cl_half)
 #endif
 
@@ -1136,14 +1141,14 @@ cl_float remainder(s::cl_float x, s::cl_float y) __NOEXC {
 cl_double remainder(s::cl_double x, s::cl_double y) __NOEXC {
   return std::remainder(x, y);
 }
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 cl_half remainder(s::cl_half x, s::cl_half y) __NOEXC {
   return std::remainder(x, y);
 }
 #endif
 MAKE_1V_2V(remainder, s::cl_float, s::cl_float, s::cl_float)
 MAKE_1V_2V(remainder, s::cl_double, s::cl_double, s::cl_double)
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 MAKE_1V_2V(remainder, s::cl_half, s::cl_half, s::cl_half)
 #endif
 
@@ -1154,14 +1159,14 @@ cl_float remquo(s::cl_float x, s::cl_float y, s::cl_int *quo) __NOEXC {
 cl_double remquo(s::cl_double x, s::cl_double y, s::cl_int *quo) __NOEXC {
   return std::remquo(x, y, quo);
 }
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 cl_half remquo(s::cl_half x, s::cl_half y, s::cl_int *quo) __NOEXC {
   return std::remquo(x, y, quo);
 }
 #endif
 MAKE_1V_2V_3P(remquo, s::cl_float, s::cl_float, s::cl_float, s::cl_int)
 MAKE_1V_2V_3P(remquo, s::cl_double, s::cl_double, s::cl_double, s::cl_int)
-#ifdef __HAFL_ENABLED
+#ifndef __HALF_NO_ENABLED
 MAKE_1V_2V_3P(remquo, s::cl_half, s::cl_half, s::cl_half, s::cl_int)
 #endif
 
@@ -2281,11 +2286,11 @@ cl_double sign(s::cl_double x) __NOEXC {
 #ifndef NO_HALF_ENABLED
 cl_half sign(s::cl_half x) __NOEXC {
   if (std::isnan(x)) {
-    return 0.0;
+    return s::cl_half(0.0);
   } else if (x > 0) {
-    return 1.0;
+    return s::cl_half(1.0);
   } else if (x < 0) {
-    return -1.0;
+    return s::cl_half(-1.0);
   } else /* x is +0.0 or -0.0} */ {
     return x;
   }
