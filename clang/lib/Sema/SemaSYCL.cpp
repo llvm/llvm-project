@@ -177,7 +177,7 @@ public:
   bool VisitMemberExpr(MemberExpr *E) {
     if (VarDecl *VD = dyn_cast<VarDecl>(E->getMemberDecl())) {
       bool IsConst = VD->getType().getNonReferenceType().isConstQualified();
-      if (VD->isStaticDataMember() && !IsConst)
+      if (!IsConst && VD->isStaticDataMember())
         SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict)
             << KernelNonConstStaticDataVariable;
     }
@@ -188,7 +188,10 @@ public:
     CheckSYCLType(E->getType(), E->getSourceRange());
     if (VarDecl *VD = dyn_cast<VarDecl>(E->getDecl())) {
       bool IsConst = VD->getType().getNonReferenceType().isConstQualified();
-      if (!IsConst && VD->hasGlobalStorage() && !VD->isStaticLocal() &&
+      if (!IsConst && VD->isStaticDataMember())
+        SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict)
+            << KernelNonConstStaticDataVariable;
+      else if (!IsConst && VD->hasGlobalStorage() && !VD->isStaticLocal() &&
           !VD->isStaticDataMember() && !isa<ParmVarDecl>(VD))
         SemaRef.Diag(E->getLocation(), diag::err_sycl_restrict)
             << KernelGlobalVariable;
