@@ -151,6 +151,7 @@ struct WasmRelocationEntry {
     switch (Type) {
     case wasm::R_WASM_MEMORY_ADDR_LEB:
     case wasm::R_WASM_MEMORY_ADDR_SLEB:
+    case wasm::R_WASM_MEMORY_ADDR_REL_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_I32:
     case wasm::R_WASM_FUNCTION_OFFSET_I32:
     case wasm::R_WASM_SECTION_OFFSET_I32:
@@ -580,6 +581,7 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
   }
 
   switch (RelEntry.Type) {
+  case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
   case wasm::R_WASM_TABLE_INDEX_SLEB:
   case wasm::R_WASM_TABLE_INDEX_I32: {
     // Provisional value is table address of the resolved symbol itself
@@ -604,6 +606,7 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
   }
   case wasm::R_WASM_MEMORY_ADDR_LEB:
   case wasm::R_WASM_MEMORY_ADDR_I32:
+  case wasm::R_WASM_MEMORY_ADDR_REL_SLEB:
   case wasm::R_WASM_MEMORY_ADDR_SLEB: {
     // Provisional value is address of the global
     const MCSymbolWasm *Sym = resolveSymbol(*RelEntry.Symbol);
@@ -698,7 +701,9 @@ void WasmObjectWriter::applyRelocations(
       writeI32(Stream, Value, Offset);
       break;
     case wasm::R_WASM_TABLE_INDEX_SLEB:
+    case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_SLEB:
+    case wasm::R_WASM_MEMORY_ADDR_REL_SLEB:
       writePatchableSLEB(Stream, Value, Offset);
       break;
     default:

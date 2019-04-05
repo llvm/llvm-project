@@ -12,6 +12,16 @@
 #ifndef HEADER
 #define HEADER
 
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 // CHECK-DAG: @reduction_size.[[ID:.+]]_[[CID:[0-9]+]].artificial.
 // CHECK-DAG: @reduction_size.[[ID]]_[[CID]].artificial..cache.
 
@@ -29,7 +39,7 @@ int main(int argc, char **argv) {
   float b;
   S c[5];
   short d[argc];
-#pragma omp taskgroup task_reduction(+: a, b, argc)
+#pragma omp taskgroup allocate(omp_pteam_mem_alloc: a) task_reduction(+: a, b, argc)
   {
 #pragma omp taskgroup task_reduction(-:c, d)
     ;

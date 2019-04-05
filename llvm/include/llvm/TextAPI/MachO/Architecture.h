@@ -20,11 +20,11 @@ namespace llvm {
 namespace MachO {
 
 /// Defines the architecture slices that are supported by Text-based Stub files.
-enum class Architecture : uint8_t {
-#define ARCHINFO(Arch, Type, SubType) Arch,
+enum Architecture : uint8_t {
+#define ARCHINFO(Arch, Type, SubType) AK_##Arch,
 #include "llvm/TextAPI/MachO/Architecture.def"
 #undef ARCHINFO
-  unknown, // this has to go last.
+  AK_unknown, // this has to go last.
 };
 
 /// Convert a CPU Type and Subtype pair to an architecture slice.

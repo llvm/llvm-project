@@ -2074,7 +2074,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     auto *GV = cast<GlobalAddressSDNode>(Callee)->getGlobal();
     auto *BB = CLI.CS.getParent();
     bool PreferIndirect =
-        Subtarget->isThumb() && Subtarget->optForMinSize() &&
+        Subtarget->isThumb() && Subtarget->hasMinSize() &&
         count_if(GV->users(), [&BB](const User *U) {
           return isa<Instruction>(U) && cast<Instruction>(U)->getParent() == BB;
         }) > 2;
@@ -2146,7 +2146,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       CallOpc = ARMISD::CALL_NOLINK;
     else if (doesNotRet && isDirect && Subtarget->hasRetAddrStack() &&
              // Emit regular call when code size is the priority
-             !Subtarget->optForMinSize())
+             !Subtarget->hasMinSize())
       // "mov lr, pc; b _foo" to avoid confusing the RSP
       CallOpc = ARMISD::CALL_NOLINK;
     else
@@ -7818,7 +7818,7 @@ ARMTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
     return SDValue();
 
   const auto &ST = static_cast<const ARMSubtarget&>(DAG.getSubtarget());
-  const bool MinSize = ST.optForMinSize();
+  const bool MinSize = ST.hasMinSize();
   const bool HasDivide = ST.isThumb() ? ST.hasDivideInThumbMode()
                                       : ST.hasDivideInARMMode();
 
@@ -14826,7 +14826,7 @@ bool ARMTargetLowering::isCheapToSpeculateCtlz() const {
 }
 
 bool ARMTargetLowering::shouldExpandShift(SelectionDAG &DAG, SDNode *N) const {
-  return !Subtarget->optForMinSize();
+  return !Subtarget->hasMinSize();
 }
 
 Value *ARMTargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,

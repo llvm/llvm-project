@@ -781,7 +781,7 @@ public:
   /// implements the DWARF2 '.file 4 "foo.c"' assembler directive.
   unsigned EmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
                                   StringRef Filename,
-                                  MD5::MD5Result *Checksum = nullptr,
+                                  Optional<MD5::MD5Result> Checksum = None,
                                   Optional<StringRef> Source = None,
                                   unsigned CUID = 0) {
     return cantFail(
@@ -796,12 +796,12 @@ public:
   /// '.file 4 "dir/foo.c" md5 "..." source "..."' assembler directive.
   virtual Expected<unsigned> tryEmitDwarfFileDirective(
       unsigned FileNo, StringRef Directory, StringRef Filename,
-      MD5::MD5Result *Checksum = nullptr, Optional<StringRef> Source = None,
+      Optional<MD5::MD5Result> Checksum = None, Optional<StringRef> Source = None,
       unsigned CUID = 0);
 
   /// Specify the "root" file of the compilation, using the ".file 0" extension.
   virtual void emitDwarfFile0Directive(StringRef Directory, StringRef Filename,
-                                       MD5::MD5Result *Checksum,
+                                       Optional<MD5::MD5Result> Checksum,
                                        Optional<StringRef> Source,
                                        unsigned CUID = 0);
 

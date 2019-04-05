@@ -42,14 +42,6 @@ private:
 WebAssemblyWasmObjectWriter::WebAssemblyWasmObjectWriter(bool Is64Bit)
     : MCWasmObjectTargetWriter(Is64Bit) {}
 
-static bool isFunctionSignatureRef(const MCSymbolRefExpr *Ref) {
-  return Ref->getKind() == MCSymbolRefExpr::VK_WebAssembly_TYPEINDEX;
-}
-
-static bool isGOTRef(const MCSymbolRefExpr *Ref) {
-  return Ref->getKind() == MCSymbolRefExpr::VK_GOT;
-}
-
 static const MCSection *getFixupSection(const MCExpr *Expr) {
   if (auto SyExp = dyn_cast<MCSymbolRefExpr>(Expr)) {
     if (SyExp->getSymbol().isInSection())
@@ -75,6 +67,23 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
   assert(RefA);
   auto& SymA = cast<MCSymbolWasm>(RefA->getSymbol());
 
+  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
+
+  switch (Modifier) {
+    case MCSymbolRefExpr::VK_GOT:
+      return wasm::R_WASM_GLOBAL_INDEX_LEB;
+    case MCSymbolRefExpr::VK_WASM_TBREL:
+      assert(SymA.isFunction());
+      return wasm::R_WASM_TABLE_INDEX_REL_SLEB;
+    case MCSymbolRefExpr::VK_WASM_MBREL:
+      assert(SymA.isData());
+      return wasm::R_WASM_MEMORY_ADDR_REL_SLEB;
+    case MCSymbolRefExpr::VK_WASM_TYPEINDEX:
+      return wasm::R_WASM_TYPE_INDEX_LEB;
+    default:
+      break;
+  }
+
   switch (unsigned(Fixup.getKind())) {
   case WebAssembly::fixup_sleb128_i32:
     if (SymA.isFunction())
@@ -83,14 +92,10 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
   case WebAssembly::fixup_sleb128_i64:
     llvm_unreachable("fixup_sleb128_i64 not implemented yet");
   case WebAssembly::fixup_uleb128_i32:
-    if (SymA.isGlobal() || isGOTRef(RefA))
+    if (SymA.isGlobal())
       return wasm::R_WASM_GLOBAL_INDEX_LEB;
-    if (SymA.isFunction()) {
-      if (isFunctionSignatureRef(RefA))
-        return wasm::R_WASM_TYPE_INDEX_LEB;
-      else
-        return wasm::R_WASM_FUNCTION_INDEX_LEB;
-    }
+    if (SymA.isFunction())
+      return wasm::R_WASM_FUNCTION_INDEX_LEB;
     if (SymA.isEvent())
       return wasm::R_WASM_EVENT_INDEX_LEB;
     return wasm::R_WASM_MEMORY_ADDR_LEB;

@@ -104,7 +104,7 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
   // extend .file to support this.
   unsigned CUID = Asm->OutStreamer->hasRawTextSupport() ? 0 : getUniqueID();
   if (!File)
-    return Asm->OutStreamer->EmitDwarfFileDirective(0, "", "", nullptr, None, CUID);
+    return Asm->OutStreamer->EmitDwarfFileDirective(0, "", "", None, None, CUID);
   return Asm->OutStreamer->EmitDwarfFileDirective(
       0, File->getDirectory(), File->getFilename(), getMD5AsBytes(File),
       File->getSource(), CUID);

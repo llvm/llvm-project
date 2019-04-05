@@ -38,7 +38,7 @@ public:
   ArchitectureSet(const std::vector<Architecture> &Archs);
 
   void set(Architecture Arch) {
-    if (Arch == Architecture::unknown)
+    if (Arch == AK_unknown)
       return;
     ArchSet |= 1U << static_cast<int>(Arch);
   }

@@ -10382,7 +10382,7 @@ static SDValue splitStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   // Don't split at -Oz.
-  if (DAG.getMachineFunction().getFunction().optForMinSize())
+  if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
   // Don't split v2i64 vectors. Memcpy lowering produces those and splitting

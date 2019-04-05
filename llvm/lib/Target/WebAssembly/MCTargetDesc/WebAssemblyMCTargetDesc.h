@@ -90,9 +90,21 @@ namespace WebAssemblyII {
 enum TOF {
   MO_NO_FLAG = 0,
 
-  // Address of data symbol via a wasm global.  This adds a level of indirection
-  // similar to the GOT on native platforms.
+  // On a symbol operand this indicates that the immediate is a wasm global
+  // index.  The value of the wasm global will be set to the symbol address at
+  // runtime.  This adds a level of indirection similar to the GOT on native
+  // platforms.
   MO_GOT,
+
+  // On a symbol operand this indicates that the immediate is the symbol
+  // address relative the __memory_base wasm global.
+  // Only applicable to data symbols.
+  MO_MEMORY_BASE_REL,
+
+  // On a symbol operand this indicates that the immediate is the symbol
+  // address relative the __table_base wasm global.
+  // Only applicable to function symbols.
+  MO_TABLE_BASE_REL,
 };
 
 } // end namespace WebAssemblyII

@@ -89,8 +89,7 @@ TEST(TBDv2, ReadFile) {
   EXPECT_TRUE(!!Result);
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
-  auto Archs = Architecture::armv7 | Architecture::armv7s |
-               Architecture::armv7k | Architecture::arm64;
+  auto Archs = AK_armv7 | AK_armv7s | AK_armv7k | AK_arm64;
   EXPECT_EQ(Archs, File->getArchitectures());
   EXPECT_EQ(PlatformKind::iOS, File->getPlatform());
   EXPECT_EQ(std::string("Test.dylib"), File->getInstallName());
@@ -157,8 +156,7 @@ TEST(TBDv2, ReadFile2) {
   EXPECT_TRUE(!!Result);
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
-  auto Archs = Architecture::armv7 | Architecture::armv7s |
-               Architecture::armv7k | Architecture::arm64;
+  auto Archs = AK_armv7 | AK_armv7s | AK_armv7k | AK_arm64;
   EXPECT_EQ(Archs, File->getArchitectures());
   EXPECT_EQ(PlatformKind::iOS, File->getPlatform());
   EXPECT_EQ(std::string("Test.dylib"), File->getInstallName());
@@ -201,25 +199,24 @@ TEST(TBDv2, WriteFile) {
   File.setPath("libfoo.dylib");
   File.setInstallName("/usr/lib/libfoo.dylib");
   File.setFileType(FileType::TBD_V2);
-  File.setArchitectures(Architecture::i386 | Architecture::x86_64);
+  File.setArchitectures(AK_i386 | AK_x86_64);
   File.setPlatform(PlatformKind::macOS);
   File.setCurrentVersion(PackedVersion(1, 2, 3));
   File.setTwoLevelNamespace();
   File.setApplicationExtensionSafe();
   File.setSwiftABIVersion(5);
   File.setObjCConstraint(ObjCConstraintType::Retain_Release);
-  File.addAllowableClient("clientA", Architecture::x86_64);
-  File.addReexportedLibrary("/usr/lib/libfoo.dylib", Architecture::x86_64);
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym1", Architecture::i386);
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym2", Architecture::i386,
+  File.addAllowableClient("clientA", AK_x86_64);
+  File.addReexportedLibrary("/usr/lib/libfoo.dylib", AK_x86_64);
+  File.addSymbol(SymbolKind::GlobalSymbol, "_sym1", AK_i386);
+  File.addSymbol(SymbolKind::GlobalSymbol, "_sym2", AK_i386,
                  SymbolFlags::WeakDefined);
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym3", Architecture::i386,
+  File.addSymbol(SymbolKind::GlobalSymbol, "_sym3", AK_i386,
                  SymbolFlags::ThreadLocalValue);
-  File.addSymbol(SymbolKind::ObjectiveCClass, "Class1", Architecture::x86_64);
-  File.addSymbol(SymbolKind::ObjectiveCClassEHType, "Class1",
-                 Architecture::x86_64);
+  File.addSymbol(SymbolKind::ObjectiveCClass, "Class1", AK_x86_64);
+  File.addSymbol(SymbolKind::ObjectiveCClassEHType, "Class1", AK_x86_64);
   File.addSymbol(SymbolKind::ObjectiveCInstanceVariable, "Class1._ivar1",
-                 Architecture::x86_64);
+                 AK_x86_64);
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);

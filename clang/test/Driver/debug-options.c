@@ -17,9 +17,14 @@
 // RUN: %clang -### -c -glldb %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G -check-prefix=G_LLDB %s
 // RUN: %clang -### -c -gsce %s -target x86_64-linux-gnu 2>&1 \
+// RUN:             | FileCheck -check-prefix=G -check-prefix=G_SCE %s
+
+// Android.
+// Android should always generate DWARF4.
+// RUN: %clang -### -c -g %s -target arm-linux-androideabi 2>&1 \
+// RUN:             | FileCheck -check-prefix=G -check-prefix=G_DWARF4 %s
 
 // Darwin.
-// RUN:             | FileCheck -check-prefix=G -check-prefix=G_SCE %s
 // RUN: %clang -### -c -g %s -target x86_64-apple-darwin 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_STANDALONE \
 // RUN:                         -check-prefix=G_DWARF2 \
@@ -272,6 +277,7 @@
 //
 // G_STANDALONE: "-cc1"
 // G_STANDALONE: "-debug-info-kind=standalone"
+// G_DWARF2: "-dwarf-version=2"
 // G_DWARF4: "-dwarf-version=4"
 //
 // G_GDB:  "-debugger-tuning=gdb"

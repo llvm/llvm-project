@@ -65,7 +65,9 @@ private:
   uint32_t lookupType(const WasmSignature &Sig);
   uint32_t registerType(const WasmSignature &Sig);
 
-  void createCtorFunction();
+  void createApplyRelocationsFunction();
+  void createCallCtorsFunction();
+
   void calculateInitFunctions();
   void processRelocations(InputChunk *Chunk);
   void assignIndexes();
@@ -1149,17 +1151,6 @@ void Writer::processRelocations(InputChunk *Chunk) {
       File->TypeMap[Reloc.Index] = registerType(Types[Reloc.Index]);
       File->TypeIsUsed[Reloc.Index] = true;
       break;
-    case R_WASM_MEMORY_ADDR_SLEB:
-    case R_WASM_MEMORY_ADDR_I32:
-    case R_WASM_MEMORY_ADDR_LEB: {
-      DataSymbol *Sym = File->getDataSymbol(Reloc.Index);
-      if (!Config->Relocatable && !isa<DefinedData>(Sym) && !Sym->isWeak())
-        error(File->getName() + ": relocation " +
-              relocTypeToString(Reloc.Type) + " cannot be used againt symbol " +
-              Sym->getName() + "; recompile with -fPIC");
-
-      break;
-    }
     case R_WASM_GLOBAL_INDEX_LEB: {
       auto* Sym = File->getSymbols()[Reloc.Index];
       if (!isa<GlobalSymbol>(Sym) && !Sym->isInGOT()) {
@@ -1168,7 +1159,24 @@ void Writer::processRelocations(InputChunk *Chunk) {
       }
     }
     }
+
+    if (Config->Pic) {
+      // Certain relocation types can't be used when building PIC output, since
+      // they would require absolute symbol addresses at link time.
+      switch (Reloc.Type) {
+      case R_WASM_TABLE_INDEX_SLEB:
+      case R_WASM_MEMORY_ADDR_SLEB:
+      case R_WASM_MEMORY_ADDR_LEB: {
+        Symbol *Sym = File->getSymbols()[Reloc.Index];
+        error(toString(File) + ": relocation " +
+              relocTypeToString(Reloc.Type) + " cannot be used againt symbol " +
+              toString(*Sym) + "; recompile with -fPIC");
+        break;
+      }
+      }
+    }
   }
+
 }
 
 void Writer::assignIndexes() {
@@ -1272,12 +1280,38 @@ void Writer::createOutputSegments() {
   }
 }
 
-static const int OPCODE_CALL = 0x10;
-static const int OPCODE_END = 0xb;
+// For -shared (PIC) output, we create create a synthetic function which will
+// apply any relocations to the data segments on startup.  This function is
+// called __wasm_apply_relocs and is added at the very beginning of
+// __wasm_call_ctors before any of the constructors run.
+void Writer::createApplyRelocationsFunction() {
+  LLVM_DEBUG(dbgs() << "createApplyRelocationsFunction\n");
+  // First write the body's contents to a string.
+  std::string BodyContent;
+  {
+    raw_string_ostream OS(BodyContent);
+    writeUleb128(OS, 0, "num locals");
+    for (const OutputSegment *Seg : Segments)
+      for (const InputSegment *InSeg : Seg->InputSegments)
+        InSeg->generateRelocationCode(OS);
+    writeU8(OS, WASM_OPCODE_END, "END");
+  }
+
+  // Once we know the size of the body we can create the final function body
+  std::string FunctionBody;
+  {
+    raw_string_ostream OS(FunctionBody);
+    writeUleb128(OS, BodyContent.size(), "function size");
+    OS << BodyContent;
+  }
+
+  ArrayRef<uint8_t> Body = arrayRefFromStringRef(Saver.save(FunctionBody));
+  cast<SyntheticFunction>(WasmSym::ApplyRelocs->Function)->setBody(Body);
+}
 
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
 // in input object.
-void Writer::createCtorFunction() {
+void Writer::createCallCtorsFunction() {
   if (!WasmSym::CallCtors->isLive())
     return;
 
@@ -1286,11 +1320,16 @@ void Writer::createCtorFunction() {
   {
     raw_string_ostream OS(BodyContent);
     writeUleb128(OS, 0, "num locals");
+    if (Config->Pic) {
+      writeU8(OS, WASM_OPCODE_CALL, "CALL");
+      writeUleb128(OS, WasmSym::ApplyRelocs->getFunctionIndex(),
+                   "function index");
+    }
     for (const WasmInitEntry &F : InitFunctions) {
-      writeU8(OS, OPCODE_CALL, "CALL");
+      writeU8(OS, WASM_OPCODE_CALL, "CALL");
       writeUleb128(OS, F.Sym->getFunctionIndex(), "function index");
     }
-    writeU8(OS, OPCODE_END, "END");
+    writeU8(OS, WASM_OPCODE_END, "END");
   }
 
   // Once we know the size of the body we can create the final function body
@@ -1348,12 +1387,15 @@ void Writer::run() {
   assignIndexes();
   log("-- calculateInitFunctions");
   calculateInitFunctions();
-  if (!Config->Relocatable)
-    createCtorFunction();
   log("-- calculateTypes");
   calculateTypes();
   log("-- layoutMemory");
   layoutMemory();
+  if (!Config->Relocatable) {
+    if (Config->Pic)
+      createApplyRelocationsFunction();
+    createCallCtorsFunction();
+  }
   log("-- calculateExports");
   calculateExports();
   log("-- calculateCustomSections");

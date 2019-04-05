@@ -1,10 +1,11 @@
-// RUN: %clangxx_tsan %s -o %t
-// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan %s %link_libcxx_tsan -o %t
+// RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
 
 #include <dispatch/dispatch.h>
 
-#import <memory>
-#import <stdatomic.h>
+#include <memory>
+#include <stdatomic.h>
+#include <cstdio>
 
 _Atomic(long) destructor_counter = 0;
 
@@ -39,5 +40,4 @@ int main(int argc, const char *argv[]) {
 }
 
 // CHECK: Hello world.
-// CHECK-NOT: WARNING: ThreadSanitizer
 // CHECK: Done.

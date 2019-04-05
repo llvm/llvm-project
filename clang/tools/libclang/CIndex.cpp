@@ -4228,7 +4228,7 @@ const char *clang_getFileContents(CXTranslationUnit TU, CXFile file,
   const SourceManager &SM = cxtu::getASTUnit(TU)->getSourceManager();
   FileID fid = SM.translateFile(static_cast<FileEntry *>(file));
   bool Invalid = true;
-  llvm::MemoryBuffer *buf = SM.getBuffer(fid, &Invalid);
+  const llvm::MemoryBuffer *buf = SM.getBuffer(fid, &Invalid);
   if (Invalid) {
     if (size)
       *size = 0;
