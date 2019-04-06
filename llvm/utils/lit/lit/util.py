@@ -149,7 +149,7 @@ def mkdir(path):
             from ctypes import GetLastError, WinError
 
             path = os.path.abspath(path)
-            NTPath = unicode(r'\\?\%s' % path)
+            NTPath = to_unicode(r'\\?\%s' % path)
             if not windll.kernel32.CreateDirectoryW(NTPath, None):
                 raise WinError(GetLastError())
         else:

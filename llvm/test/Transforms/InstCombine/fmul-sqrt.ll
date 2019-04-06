@@ -2,6 +2,7 @@
 ; RUN: opt -S -instcombine < %s | FileCheck %s
 
 declare double @llvm.sqrt.f64(double) nounwind readnone speculatable
+declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
 declare void @use(double)
 
 ; sqrt(a) * sqrt(b) no math flags
@@ -87,3 +88,86 @@ define double @sqrt_a_sqrt_b_sqrt_c_sqrt_d_reassoc(double %a, double %b, double 
   ret double %mul2
 }
 
+define double @rsqrt_squared(double %x) {
+; CHECK-LABEL: @rsqrt_squared(
+; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast double 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul fast double [[RSQRT]], [[RSQRT]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call fast double @llvm.sqrt.f64(double %x)
+  %rsqrt = fdiv fast double 1.0, %sqrt
+  %squared = fmul fast double %rsqrt, %rsqrt
+  ret double %squared
+}
+
+define double @sqrt_divisor_squared(double %x, double %y) {
+; CHECK-LABEL: @sqrt_divisor_squared(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[Y:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul reassoc nnan nsz double [[DIV]], [[DIV]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %x)
+  %div = fdiv double %y, %sqrt
+  %squared = fmul reassoc nnan nsz double %div, %div
+  ret double %squared
+}
+
+define double @sqrt_dividend_squared(double %x, double %y) {
+; CHECK-LABEL: @sqrt_dividend_squared(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast double [[SQRT]], [[Y:%.*]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul fast double [[DIV]], [[DIV]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %x)
+  %div = fdiv fast double %sqrt, %y
+  %squared = fmul fast double %div, %div
+  ret double %squared
+}
+
+; Negative test - require 'nsz'.
+
+define double @sqrt_divisor_not_enough_FMF(double %x, double %y) {
+; CHECK-LABEL: @sqrt_divisor_not_enough_FMF(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[Y:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul reassoc nnan double [[DIV]], [[DIV]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %x)
+  %div = fdiv double %y, %sqrt
+  %squared = fmul reassoc nnan double %div, %div
+  ret double %squared
+}
+
+define double @sqrt_squared_extra_use(double %x) {
+; CHECK-LABEL: @sqrt_squared_extra_use(
+; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast double 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    call void @use(double [[RSQRT]])
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul fast double [[RSQRT]], [[RSQRT]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call fast double @llvm.sqrt.f64(double %x)
+  %rsqrt = fdiv fast double 1.0, %sqrt
+  call void @use(double %rsqrt)
+  %squared = fmul fast double %rsqrt, %rsqrt
+  ret double %squared
+}
+
+; Minimal FMF to reassociate fmul+fdiv.
+
+define <2 x float> @sqrt_squared_vec(<2 x float> %x) {
+; CHECK-LABEL: @sqrt_squared_vec(
+; CHECK-NEXT:    [[SQRT:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[SQRT]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul reassoc <2 x float> [[RSQRT]], [[RSQRT]]
+; CHECK-NEXT:    ret <2 x float> [[SQUARED]]
+;
+  %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
+  %rsqrt = fdiv <2 x float> <float 1.0, float 1.0>, %sqrt
+  %squared = fmul reassoc <2 x float> %rsqrt, %rsqrt
+  ret <2 x float> %squared
+}

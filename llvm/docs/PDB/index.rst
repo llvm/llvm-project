@@ -52,7 +52,7 @@ File Layout
    ModiStream
    PublicStream
    GlobalStream
-   HashStream
+   HashTable
    CodeViewSymbols
    CodeViewTypes
 
@@ -130,10 +130,6 @@ PDB file is as follows:
 | IPI Hash Stream    | - Contained in IPI Stream    | - Hash table for looking up IPI records   |
 |                    |                              |   by name                                 |
 +--------------------+------------------------------+-------------------------------------------+
-| * LINKER* Stream   | - Last Stream in PDB File    | - Executable section information          |
-|                    |                              | - Incremental linking thunks              |
-|                    |                              | - Linker version information              |
-+--------------------+------------------------------+-------------------------------------------+
 
 More information about the structure of each of these can be found on the
 following pages:
@@ -158,9 +154,9 @@ following pages:
 :doc:`GlobalStream`
    Information about the Global Symbol Stream.
 
-:doc:`HashStream`
-   Information about the Hash Table stream, and how it can be used to quickly look up records
-   by name.
+:doc:`HashTable`
+   Information about the serialized hash table format used internally to represent things such
+   as the Named Stream Map and the Hash Adjusters in the :doc:`TPI/IPI Stream <TpiStream>`.
 
 CodeView
 ========

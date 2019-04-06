@@ -214,7 +214,7 @@ body:             |
     DBG_VALUE $ebx, _, !19, !13, debug-location !20
     CALL64pcrel32 @sink, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, debug-location !23
     TEST32rr $ebx, $ebx, implicit-def $eflags, debug-location !24
-    JE_1 %bb.2.if.end, implicit $eflags
+    JCC_1 %bb.2.if.end, 4, implicit $eflags
   
   bb.1.if.then:
     successors: %bb.2.if.end

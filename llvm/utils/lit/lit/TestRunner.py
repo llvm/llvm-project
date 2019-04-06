@@ -617,10 +617,10 @@ def executeBuiltinRm(cmd, cmd_shenv):
                     # NOTE: use ctypes to access `SHFileOperationsW` on Windows to
                     # use the NT style path to get access to long file paths which
                     # cannot be removed otherwise.
-                    from ctypes.wintypes import BOOL, HWND, LPCWSTR, POINTER, UINT, WORD
-                    from ctypes import c_void_p, byref
+                    from ctypes.wintypes import BOOL, HWND, LPCWSTR, UINT, WORD
+                    from ctypes import addressof, byref, c_void_p, create_unicode_buffer
                     from ctypes import Structure
-                    from ctypes import windll, WinError
+                    from ctypes import windll, WinError, POINTER
 
                     class SHFILEOPSTRUCTW(Structure):
                         _fields_ = [
@@ -634,7 +634,7 @@ def executeBuiltinRm(cmd, cmd_shenv):
                                 ('lpszProgressTitle', LPCWSTR),
                         ]
 
-                    FO_MOVE, FO_COPY, FO_DELETE, FO_RENAME = xrange(1, 5)
+                    FO_MOVE, FO_COPY, FO_DELETE, FO_RENAME = range(1, 5)
 
                     FOF_SILENT = 4
                     FOF_NOCONFIRMATION = 16
@@ -648,8 +648,10 @@ def executeBuiltinRm(cmd, cmd_shenv):
 
                     path = os.path.abspath(path)
 
+                    pFrom = create_unicode_buffer(path, len(path) + 2)
+                    pFrom[len(path)] = pFrom[len(path) + 1] = '\0'
                     operation = SHFILEOPSTRUCTW(wFunc=UINT(FO_DELETE),
-                                                pFrom=LPCWSTR(unicode(path + '\0')),
+                                                pFrom=LPCWSTR(addressof(pFrom)),
                                                 fFlags=FOF_NO_UI)
                     result = SHFileOperationW(byref(operation))
                     if result:

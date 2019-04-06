@@ -10,7 +10,7 @@ The PDB TPI and IPI Streams
 Introduction
 ============
 
-The PDB TPI Stream (Index 2) and IPI Stream (Index 3) contain information about
+The PDB TPI Stream (Index 2) and IPI Stream (Index 4) contain information about
 all types used in the program.  It is organized as a :ref:`header <tpi_header>`
 followed by a list of :doc:`CodeView Type Records <CodeViewTypes>`.  Types are
 referenced from various streams and records throughout the PDB by their
@@ -289,7 +289,15 @@ accurate.
   index.  This can be used to do a binary search followed bin a linear search to
   get amortized O(log n) lookup by type index.
 
-- **HashAdjBufferOffset / HashAdjBufferLength** - 
+- **HashAdjBufferOffset / HashAdjBufferLength** - The offset and size within
+  the TPI hash stream of a serialized hash table whose keys are the hash values
+  in the hash value buffer and whose values are type indices.  This appears to
+  be useful in incremental linking scenarios, so that if a type is modified an
+  entry can be created mapping the old hash value to the new type index so that
+  a PDB file consumer can always have the most up to date version of the type
+  without forcing the incremental linker to garbage collect and update
+  references that point to the old version to now point to the new version.
+  The layout of this hash table is described in :doc:`HashTable`.
 
 .. _tpi_records:
 

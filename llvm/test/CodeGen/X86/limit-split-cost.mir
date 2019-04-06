@@ -102,21 +102,21 @@ body:             |
   
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !3
     CMP32ri8 %0, 2, implicit-def $eflags
-    JE_1 %bb.6, implicit killed $eflags
+    JCC_1 %bb.6, 4, implicit killed $eflags
     JMP_1 %bb.2
   
   bb.2.do.body:
     successors: %bb.5(0x2aaaaaab), %bb.3(0x55555555)
   
     CMP32ri8 %0, 1, implicit-def $eflags
-    JE_1 %bb.5, implicit killed $eflags
+    JCC_1 %bb.5, 4, implicit killed $eflags
     JMP_1 %bb.3
   
   bb.3.do.body:
     successors: %bb.4, %bb.7
   
     TEST32rr %0, %0, implicit-def $eflags
-    JNE_1 %bb.7, implicit killed $eflags
+    JCC_1 %bb.7, 5, implicit killed $eflags
     JMP_1 %bb.4
   
   bb.4.sw.bb:
@@ -141,7 +141,7 @@ body:             |
     successors: %bb.8(0x04000000), %bb.1(0x7c000000)
   
     CMP32mi8 %6, 1, $noreg, 0, $noreg, 5, implicit-def $eflags :: (dereferenceable load 4 from @m, !tbaa !4)
-    JNE_1 %bb.1, implicit killed $eflags
+    JCC_1 %bb.1, 5, implicit killed $eflags
     JMP_1 %bb.8
   
   bb.8.do.end:

@@ -13,6 +13,9 @@
 #include "cxxabi.h"
 
 #include <exception>        // for std::terminate
+#include <new>              // for std::bad_alloc
+
+#include "abort_message.h"
 
 namespace __cxxabiv1 {
 
@@ -107,6 +110,32 @@ namespace {
 #pragma mark --Externally visible routines--
 #endif
 
+namespace {
+_LIBCXXABI_NORETURN
+void throw_bad_array_new_length() {
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
+  throw std::bad_array_new_length();
+#else
+  abort_message("__cxa_vec_new failed to allocate memory");
+#endif
+}
+
+size_t calculate_allocation_size_or_throw(size_t element_count,
+                                          size_t element_size,
+                                          size_t padding_size) {
+  const size_t element_heap_size = element_count * element_size;
+  if (element_heap_size / element_count != element_size)
+    throw_bad_array_new_length();
+
+  const size_t allocation_size = element_heap_size + padding_size;
+  if (allocation_size < element_heap_size)
+    throw_bad_array_new_length();
+
+  return allocation_size;
+}
+
+} // namespace
+
 extern "C" {
 
 // Equivalent to
@@ -119,7 +148,6 @@ __cxa_vec_new(size_t element_count, size_t element_size, size_t padding_size,
     return __cxa_vec_new2 ( element_count, element_size, padding_size, 
         constructor, destructor, &::operator new [], &::operator delete [] );
 }
-
 
 
 // Given the number and size of elements for an array and the non-negative
@@ -142,12 +170,13 @@ _LIBCXXABI_FUNC_VIS void *
 __cxa_vec_new2(size_t element_count, size_t element_size, size_t padding_size,
                void (*constructor)(void *), void (*destructor)(void *),
                void *(*alloc)(size_t), void (*dealloc)(void *)) {
-    const size_t heap_size = element_count * element_size + padding_size;
-    char * const heap_block = static_cast<char *> ( alloc ( heap_size ));
-    char *vec_base = heap_block;
-    
-    if ( NULL != vec_base ) {
-        st_heap_block2 heap ( dealloc, heap_block );
+  const size_t heap_size = calculate_allocation_size_or_throw(
+      element_count, element_size, padding_size);
+  char* const heap_block = static_cast<char*>(alloc(heap_size));
+  char* vec_base = heap_block;
+
+  if (NULL != vec_base) {
+    st_heap_block2 heap(dealloc, heap_block);
 
     //  put the padding before the array elements
         if ( 0 != padding_size ) {
@@ -170,12 +199,13 @@ _LIBCXXABI_FUNC_VIS void *
 __cxa_vec_new3(size_t element_count, size_t element_size, size_t padding_size,
                void (*constructor)(void *), void (*destructor)(void *),
                void *(*alloc)(size_t), void (*dealloc)(void *, size_t)) {
-    const size_t heap_size = element_count * element_size + padding_size;
-    char * const heap_block = static_cast<char *> ( alloc ( heap_size ));
-    char *vec_base = heap_block;
-    
-    if ( NULL != vec_base ) {
-        st_heap_block3 heap ( dealloc, heap_block, heap_size );
+  const size_t heap_size = calculate_allocation_size_or_throw(
+      element_count, element_size, padding_size);
+  char* const heap_block = static_cast<char*>(alloc(heap_size));
+  char* vec_base = heap_block;
+
+  if (NULL != vec_base) {
+    st_heap_block3 heap(dealloc, heap_block, heap_size);
 
     //  put the padding before the array elements
         if ( 0 != padding_size ) {

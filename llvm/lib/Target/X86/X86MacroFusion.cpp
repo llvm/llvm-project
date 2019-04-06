@@ -145,27 +145,31 @@ static FirstInstrKind classifyFirst(const MachineInstr &MI) {
 }
 
 static JumpKind classifySecond(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
+  X86::CondCode CC = X86::getCondFromBranch(MI);
+  if (CC == X86::COND_INVALID)
+    return JumpKind::Invalid;
+
+  switch (CC) {
   default:
     return JumpKind::Invalid;
-  case X86::JE_1:
-  case X86::JNE_1:
-  case X86::JL_1:
-  case X86::JLE_1:
-  case X86::JG_1:
-  case X86::JGE_1:
+  case X86::COND_E:
+  case X86::COND_NE:
+  case X86::COND_L:
+  case X86::COND_LE:
+  case X86::COND_G:
+  case X86::COND_GE:
     return JumpKind::ELG;
-  case X86::JB_1:
-  case X86::JBE_1:
-  case X86::JA_1:
-  case X86::JAE_1:
+  case X86::COND_B:
+  case X86::COND_BE:
+  case X86::COND_A:
+  case X86::COND_AE:
     return JumpKind::AB;
-  case X86::JS_1:
-  case X86::JNS_1:
-  case X86::JP_1:
-  case X86::JNP_1:
-  case X86::JO_1:
-  case X86::JNO_1:
+  case X86::COND_S:
+  case X86::COND_NS:
+  case X86::COND_P:
+  case X86::COND_NP:
+  case X86::COND_O:
+  case X86::COND_NO:
     return JumpKind::SPO;
   }
 }

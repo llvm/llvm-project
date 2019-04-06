@@ -312,9 +312,9 @@ attributes #0 = { nounwind }
 ;
 ; The first two cmovs got expanded to:
 ; %bb.0:
-;   JL_1 %bb.9
+;   JCC_1 %bb.9, 12
 ; %bb.7:
-;   JG_1 %bb.9
+;   JCC_1 %bb.9, 15
 ; %bb.8:
 ; %bb.9:
 ;   %12 = phi(%7, %bb.8, %11, %bb.0, %12, %bb.7)

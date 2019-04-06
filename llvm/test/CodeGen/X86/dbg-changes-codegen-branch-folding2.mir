@@ -78,7 +78,7 @@
 # CHECK: bb.10.for.body.9
 # CHECK: renamable $al
 # CHECK-NEXT: TEST8rr killed renamable $al
-# CHECK-NEXT: JNE_1
+# CHECK-NEXT: JCC_1
 # CHECK-NOT: $al = IMPLICIT_DEF
 # CHECK: bb.12.for.body.10
 
@@ -93,7 +93,7 @@ body:             |
   
     renamable $al = MOV8ri 1
     TEST8rr renamable $al, renamable $al, implicit-def $eflags
-    JNE_1 %bb.4, implicit killed $eflags
+    JCC_1 %bb.4, 5, implicit killed $eflags
   
   bb.1.for.cond.cleanup:
     successors: %bb.3, %bb.2
@@ -101,7 +101,7 @@ body:             |
   
     renamable $eax = MOV32rm $rsp, 1, $noreg, -16, $noreg 
     CMP32rm killed renamable $eax, $rip, 1, $noreg, $noreg, $noreg, implicit-def $eflags 
-    JBE_1 %bb.3, implicit $eflags
+    JCC_1 %bb.3, 6, implicit $eflags
   
   bb.2:
     successors: %bb.3
@@ -117,7 +117,7 @@ body:             |
   
     renamable $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def dead $eflags
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
-    JNE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
   
   bb.5.for.body.1:
     successors: %bb.1, %bb.6
@@ -125,13 +125,13 @@ body:             |
   
     renamable $al = MOV8ri 1
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
-    JNE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
   
   bb.6.for.body.2:
     successors: %bb.1, %bb.7
     liveins: $ecx, $eflags, $rdi
   
-    JNE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
   
   bb.7.for.body.3:
     successors: %bb.1, %bb.8
@@ -139,13 +139,13 @@ body:             |
   
     renamable $al = MOV8ri 1
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
-    JNE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
   
   bb.8.for.body.4:
     successors: %bb.1, %bb.9
     liveins: $ecx, $eflags, $rdi
   
-    JNE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
   
   bb.9.for.body.5:
     successors: %bb.1, %bb.10
@@ -153,13 +153,13 @@ body:             |
   
     renamable $al = MOV8ri 1
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
-    JNE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
   
   bb.10.for.body.6:
     successors: %bb.1, %bb.11
     liveins: $ecx, $eflags, $rdi
   
-    JNE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
   
   bb.11.for.body.7:
     successors: %bb.1, %bb.12
@@ -167,13 +167,13 @@ body:             |
   
     renamable $al = MOV8ri 1
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
-    JNE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
   
   bb.12.for.body.8:
     successors: %bb.1, %bb.13
     liveins: $ecx, $eflags, $rdi
   
-    JNE_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
   
   bb.13.for.body.9:
     successors: %bb.14, %bb.15
@@ -181,7 +181,7 @@ body:             |
   
     renamable $al = MOV8ri 1
     TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
-    JE_1 %bb.15, implicit $eflags
+    JCC_1 %bb.15, 4, implicit $eflags
   
   bb.14:
     successors: %bb.1
@@ -194,7 +194,7 @@ body:             |
     successors: %bb.16, %bb.17
     liveins: $eflags, $rdi
   
-    JE_1 %bb.17, implicit killed $eflags
+    JCC_1 %bb.17, 4, implicit killed $eflags
   
   bb.16:
     successors: %bb.1

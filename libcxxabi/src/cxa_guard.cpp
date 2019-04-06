@@ -12,6 +12,7 @@
 #include <__threading_support>
 
 #include <stdint.h>
+#include <string.h>
 
 /*
     This implementation must be careful to not call code external to this file
@@ -29,32 +30,38 @@ namespace __cxxabiv1
 namespace
 {
 
+enum InitializationResult {
+  INIT_COMPLETE,
+  INIT_NOT_COMPLETE,
+};
+
 #ifdef __arm__
 // A 32-bit, 4-byte-aligned static data value. The least significant 2 bits must
 // be statically initialized to 0.
 typedef uint32_t guard_type;
-
-inline void set_initialized(guard_type* guard_object) {
-    *guard_object |= 1;
-}
-
-// Test the lowest bit.
-inline bool is_initialized(guard_type* guard_object) {
-    return (*guard_object) & 1;
-}
-
 #else
 typedef uint64_t guard_type;
+#endif
 
-void set_initialized(guard_type* guard_object) {
-    char* initialized = (char*)guard_object;
-    *initialized = 1;
-}
-
-bool is_initialized(guard_type* guard_object) {
-    char* initialized = (char*)guard_object;
-    return *initialized;
-}
+#if !defined(_LIBCXXABI_HAS_NO_THREADS) && defined(__APPLE__) &&               \
+    !defined(__arm__)
+// This is a special-case pthread dependency for Mac. We can't pull this
+// out into libcxx's threading API (__threading_support) because not all
+// supported Mac environments provide this function (in pthread.h). To
+// make it possible to build/use libcxx in those environments, we have to
+// keep this pthread dependency local to libcxxabi. If there is some
+// convenient way to detect precisely when pthread_mach_thread_np is
+// available in a given Mac environment, it might still be possible to
+// bury this dependency in __threading_support.
+#ifndef _LIBCPP_HAS_THREAD_API_PTHREAD
+#error "How do I pthread_mach_thread_np()?"
+#endif
+#define LIBCXXABI_HAS_DEADLOCK_DETECTION
+#define LOCK_ID_FOR_THREAD() pthread_mach_thread_np(std::__libcpp_thread_get_current_id())
+typedef uint32_t lock_type;
+#else
+#define LOCK_ID_FOR_THREAD() true
+typedef bool lock_type;
 #endif
 
 enum class OnRelease : char { UNLOCK, UNLOCK_AND_BROADCAST };
@@ -106,164 +113,189 @@ std::__libcpp_condvar_t GlobalMutexGuard::guard_cv =
     _LIBCPP_CONDVAR_INITIALIZER;
 #endif
 
-#if defined(__APPLE__) && !defined(__arm__)
+struct GuardObject;
 
-typedef uint32_t lock_type;
+/// GuardValue - An abstraction for accessing the various fields and bits of
+///   the guard object.
+struct GuardValue {
+private:
+  explicit GuardValue(guard_type v) : value(v) {}
+  friend struct GuardObject;
 
-#if __LITTLE_ENDIAN__
+public:
+  /// Functions returning the values used to represent the uninitialized,
+  /// initialized, and initialization pending states.
+  static GuardValue ZERO();
+  static GuardValue INIT_COMPLETE();
+  static GuardValue INIT_PENDING();
 
-inline
-lock_type
-get_lock(uint64_t x)
-{
-    return static_cast<lock_type>(x >> 32);
-}
+  /// Returns true if the guard value represents that the initialization is
+  /// complete.
+  bool is_initialization_complete() const;
 
-inline
-void
-set_lock(uint64_t& x, lock_type y)
-{
-    x = static_cast<uint64_t>(y) << 32;
-}
+  /// Returns true if the guard value represents that the initialization is
+  /// currently pending.
+  bool is_initialization_pending() const;
 
-#else  // __LITTLE_ENDIAN__
+  /// Returns the lock value for the current guard value.
+  lock_type get_lock_value() const;
 
-inline
-lock_type
-get_lock(uint64_t x)
-{
-    return static_cast<lock_type>(x);
-}
+private:
+  // Returns a guard object corresponding to the specified lock value.
+  static guard_type guard_value_from_lock(lock_type l);
 
-inline
-void
-set_lock(uint64_t& x, lock_type y)
-{
-    x = y;
-}
+  // Returns the lock value represented by the specified guard object.
+  static lock_type lock_value_from_guard(guard_type g);
 
-#endif  // __LITTLE_ENDIAN__
+private:
+  guard_type value;
+};
 
-#else  // !__APPLE__ || __arm__
+/// GuardObject - Manages correctly reading and writing to the guard object.
+struct GuardObject {
+  explicit GuardObject(guard_type *g) : guard(g) {}
 
-typedef bool lock_type;
+  // Read the current value of the guard object.
+  // TODO: Make this read atomic.
+  GuardValue read() const;
 
-#if !defined(__arm__)
-static_assert(std::is_same<guard_type, uint64_t>::value, "");
+  // Write the specified value to the guard object.
+  // TODO: Make this atomic
+  void write(GuardValue new_val);
 
-inline lock_type get_lock(uint64_t x)
-{
-    union
-    {
-        uint64_t guard;
-        uint8_t lock[2];
-    } f = {x};
-    return f.lock[1] != 0;
-}
+private:
+  GuardObject(const GuardObject&) = delete;
+  GuardObject& operator=(const GuardObject&) = delete;
 
-inline void set_lock(uint64_t& x, lock_type y)
-{
-    union
-    {
-        uint64_t guard;
-        uint8_t lock[2];
-    } f = {0};
-    f.lock[1] = y;
-    x = f.guard;
-}
-#else // defined(__arm__)
-static_assert(std::is_same<guard_type, uint32_t>::value, "");
-
-inline lock_type get_lock(uint32_t x)
-{
-    union
-    {
-        uint32_t guard;
-        uint8_t lock[2];
-    } f = {x};
-    return f.lock[1] != 0;
-}
-
-inline void set_lock(uint32_t& x, lock_type y)
-{
-    union
-    {
-        uint32_t guard;
-        uint8_t lock[2];
-    } f = {0};
-    f.lock[1] = y;
-    x = f.guard;
-}
-
-#endif // !defined(__arm__)
-
-#endif  // __APPLE__ && !__arm__
+  guard_type *guard;
+};
 
 }  // unnamed namespace
 
 extern "C"
 {
 
-_LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(guard_type *guard_object) {
+_LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(guard_type* raw_guard_object) {
   GlobalMutexGuard gmutex("__cxa_guard_acquire", OnRelease::UNLOCK);
-  int result = !is_initialized(guard_object);
-  if (result) {
-#if defined(_LIBCXXABI_HAS_NO_THREADS)
-    // nothing to do
-#elif defined(__APPLE__) && !defined(__arm__)
-// This is a special-case pthread dependency for Mac. We can't pull this
-// out into libcxx's threading API (__threading_support) because not all
-// supported Mac environments provide this function (in pthread.h). To
-// make it possible to build/use libcxx in those environments, we have to
-// keep this pthread dependency local to libcxxabi. If there is some
-// convenient way to detect precisely when pthread_mach_thread_np is
-// available in a given Mac environment, it might still be possible to
-// bury this dependency in __threading_support.
-#ifdef _LIBCPP_HAS_THREAD_API_PTHREAD
-    const lock_type id =
-        pthread_mach_thread_np(std::__libcpp_thread_get_current_id());
-#else
-#error "How do I pthread_mach_thread_np()?"
-#endif
-    lock_type lock = get_lock(*guard_object);
-    if (lock) {
-      // if this thread set lock for this same guard_object, abort
-      if (lock == id)
-        abort_message("__cxa_guard_acquire detected deadlock");
-      do {
-        gmutex.wait_for_signal();
-        lock = get_lock(*guard_object);
-      } while (lock);
-      result = !is_initialized(guard_object);
-      if (result)
-        set_lock(*guard_object, id);
-    } else
-      set_lock(*guard_object, id);
-#else  // !__APPLE__ || __arm__
-    while (get_lock(*guard_object)) {
-      gmutex.wait_for_signal();
-    }
-    result = !is_initialized(guard_object);
-    if (result)
-      set_lock(*guard_object, true);
-#endif  // !__APPLE__ || __arm__
+  GuardObject guard(raw_guard_object);
+  GuardValue current_value = guard.read();
+
+  if (current_value.is_initialization_complete())
+    return INIT_COMPLETE;
+
+  const GuardValue LOCK_ID = GuardValue::INIT_PENDING();
+#ifdef LIBCXXABI_HAS_DEADLOCK_DETECTION
+   if (current_value.is_initialization_pending() &&
+       current_value.get_lock_value() == LOCK_ID.get_lock_value()) {
+    abort_message("__cxa_guard_acquire detected deadlock");
   }
-  return result;
+#endif
+  while (current_value.is_initialization_pending()) {
+      gmutex.wait_for_signal();
+      current_value = guard.read();
+  }
+  if (current_value.is_initialization_complete())
+    return INIT_COMPLETE;
+
+  guard.write(LOCK_ID);
+  return INIT_NOT_COMPLETE;
 }
 
-_LIBCXXABI_FUNC_VIS void __cxa_guard_release(guard_type *guard_object) {
+_LIBCXXABI_FUNC_VIS void __cxa_guard_release(guard_type *raw_guard_object) {
   GlobalMutexGuard gmutex("__cxa_guard_release",
                           OnRelease::UNLOCK_AND_BROADCAST);
-  *guard_object = 0;
-  set_initialized(guard_object);
+  GuardObject guard(raw_guard_object);
+  guard.write(GuardValue::ZERO());
+  guard.write(GuardValue::INIT_COMPLETE());
 }
 
-_LIBCXXABI_FUNC_VIS void __cxa_guard_abort(guard_type *guard_object) {
+_LIBCXXABI_FUNC_VIS void __cxa_guard_abort(guard_type *raw_guard_object) {
   GlobalMutexGuard gmutex("__cxa_guard_abort", OnRelease::UNLOCK);
-  *guard_object = 0;
+  GuardObject guard(raw_guard_object);
+  guard.write(GuardValue::ZERO());
+}
+}  // extern "C"
+
+//===----------------------------------------------------------------------===//
+//                        GuardObject Definitions
+//===----------------------------------------------------------------------===//
+
+GuardValue GuardObject::read() const {
+  // FIXME: Make this atomic
+  guard_type val = *guard;
+  return GuardValue(val);
 }
 
+void GuardObject::write(GuardValue new_val) {
+  // FIXME: make this atomic
+  *guard = new_val.value;
+}
 
-}  // extern "C"
+//===----------------------------------------------------------------------===//
+//                        GuardValue Definitions
+//===----------------------------------------------------------------------===//
+
+GuardValue GuardValue::ZERO() { return GuardValue(0); }
+
+GuardValue GuardValue::INIT_COMPLETE() {
+  guard_type value = {0};
+#ifdef __arm__
+  value |= 1;
+#else
+  char* init_bit = (char*)&value;
+  *init_bit = 1;
+#endif
+  return GuardValue(value);
+}
+
+GuardValue GuardValue::INIT_PENDING() {
+  return GuardValue(guard_value_from_lock(LOCK_ID_FOR_THREAD()));
+}
+
+bool GuardValue::is_initialization_complete() const {
+#ifdef __arm__
+  return value & 1;
+#else
+  const char* init_bit = (const char*)&value;
+  return *init_bit;
+#endif
+}
+
+bool GuardValue::is_initialization_pending() const {
+  return lock_value_from_guard(value) != 0;
+}
+
+lock_type GuardValue::get_lock_value() const {
+  return lock_value_from_guard(value);
+}
+
+// Create a guard object with the lock set to the specified value.
+guard_type GuardValue::guard_value_from_lock(lock_type l) {
+#if defined(__APPLE__) && !defined(__arm__)
+#if __LITTLE_ENDIAN__
+  return static_cast<guard_type>(l) << 32;
+#else
+  return static_cast<guard_type>(l);
+#endif
+#else  // defined(__APPLE__) && !defined(__arm__)
+  guard_type f = {0};
+  memcpy(static_cast<char*>(static_cast<void*>(&f)) + 1, &l, sizeof(lock_type));
+  return f;
+#endif // defined(__APPLE__) && !defined(__arm__)
+}
+
+lock_type GuardValue::lock_value_from_guard(guard_type g) {
+#if defined(__APPLE__) && !defined(__arm__)
+#if __LITTLE_ENDIAN__
+  return static_cast<lock_type>(g >> 32);
+#else
+  return static_cast<lock_type>(g);
+#endif
+#else  // defined(__APPLE__) && !defined(__arm__)
+  uint8_t guard_bytes[sizeof(guard_type)];
+  memcpy(&guard_bytes, &g, sizeof(guard_type));
+  return guard_bytes[1] != 0;
+#endif // defined(__APPLE__) && !defined(__arm__)
+}
 
 }  // __cxxabiv1

@@ -28,10 +28,13 @@ static Error isInvalidMemoryInstr(const Instruction &Instr) {
   // These have no memory access.
   case X86II::Pseudo:
   case X86II::RawFrm:
+  case X86II::AddCCFrm:
   case X86II::MRMDestReg:
   case X86II::MRMSrcReg:
   case X86II::MRMSrcReg4VOp3:
   case X86II::MRMSrcRegOp4:
+  case X86II::MRMSrcRegCC:
+  case X86II::MRMXrCC:
   case X86II::MRMXr:
   case X86II::MRM0r:
   case X86II::MRM1r:
@@ -118,6 +121,8 @@ static Error isInvalidMemoryInstr(const Instruction &Instr) {
   case X86II::MRMSrcMem:
   case X86II::MRMSrcMem4VOp3:
   case X86II::MRMSrcMemOp4:
+  case X86II::MRMSrcMemCC:
+  case X86II::MRMXmCC:
   case X86II::MRMXm:
   case X86II::MRM0m:
   case X86II::MRM1m:

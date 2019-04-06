@@ -89,8 +89,11 @@ enum : uint64_t {
   // Is a D16 buffer instruction.
   D16Buf = UINT64_C(1) << 50,
 
+  // FLAT instruction accesses FLAT_GLBL or FLAT_SCRATCH segment.
+  IsNonFlatSeg = UINT64_C(1) << 51,
+
   // Uses floating point double precision rounding mode
-  FPDPRounding = UINT64_C(1) << 51
+  FPDPRounding = UINT64_C(1) << 52
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

@@ -112,7 +112,7 @@ body:             |
   
     %13:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %13.sub_8bit, %13.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.2, implicit killed $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
     JMP_1 %bb.1
   
   bb.1:
@@ -124,7 +124,7 @@ body:             |
   
     %15:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %15.sub_8bit, %15.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.4, implicit killed $eflags
+    JCC_1 %bb.4, 5, implicit killed $eflags
     JMP_1 %bb.3
   
   bb.3:
@@ -139,7 +139,7 @@ body:             |
     MOV32mr undef %17:gr32, 1, $noreg, 0, $noreg, %1
     %18:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %18.sub_8bit, %18.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.6, implicit killed $eflags
+    JCC_1 %bb.6, 5, implicit killed $eflags
     JMP_1 %bb.5
   
   bb.5:
@@ -151,7 +151,7 @@ body:             |
   
     %20:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %20.sub_8bit, %20.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.8, implicit killed $eflags
+    JCC_1 %bb.8, 5, implicit killed $eflags
     JMP_1 %bb.7
   
   bb.7:
@@ -163,7 +163,7 @@ body:             |
   
     %22:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %22.sub_8bit, %22.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.10, implicit killed $eflags
+    JCC_1 %bb.10, 5, implicit killed $eflags
     JMP_1 %bb.9
   
   bb.9:
@@ -175,7 +175,7 @@ body:             |
   
     %24:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %24.sub_8bit, %24.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.12, implicit killed $eflags
+    JCC_1 %bb.12, 5, implicit killed $eflags
     JMP_1 %bb.11
   
   bb.11:
@@ -187,7 +187,7 @@ body:             |
   
     %26:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %26.sub_8bit, %26.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.14, implicit killed $eflags
+    JCC_1 %bb.14, 5, implicit killed $eflags
     JMP_1 %bb.13
   
   bb.13:
@@ -198,7 +198,7 @@ body:             |
     %0:gr32 = LEA32r %12, 1, $noreg, 80, $noreg
     %28:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %28.sub_8bit, %28.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.20, implicit killed $eflags
+    JCC_1 %bb.20, 5, implicit killed $eflags
     JMP_1 %bb.15
   
   bb.15:
@@ -206,7 +206,7 @@ body:             |
   
     %78:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %78.sub_8bit, %78.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.17, implicit killed $eflags
+    JCC_1 %bb.17, 5, implicit killed $eflags
     JMP_1 %bb.16
   
   bb.16:
@@ -217,7 +217,7 @@ body:             |
     successors: %bb.18(0x7fffffff), %bb.19(0x00000001)
   
     TEST8rr %78.sub_8bit, %78.sub_8bit, implicit-def $eflags
-    JE_1 %bb.19, implicit killed $eflags
+    JCC_1 %bb.19, 4, implicit killed $eflags
   
   bb.18:
     %79:gr32 = LEA32r %12, 1, $noreg, 80, $noreg
@@ -237,7 +237,7 @@ body:             |
     %35:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %35.sub_8bit, %35.sub_8bit, implicit-def $eflags
     %80:gr32 = IMPLICIT_DEF
-    JNE_1 %bb.23, implicit killed $eflags
+    JCC_1 %bb.23, 5, implicit killed $eflags
     JMP_1 %bb.22
   
   bb.22:
@@ -257,7 +257,7 @@ body:             |
     MOV32mi %80, 1, $noreg, 52, $noreg, @_ZN15COLLADASaxFWL1429ColladaParserAutoGen14Private15_preEnd__authorEv
     %39:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %39.sub_8bit, %39.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.25, implicit killed $eflags
+    JCC_1 %bb.25, 5, implicit killed $eflags
     JMP_1 %bb.24
   
   bb.24:
@@ -269,7 +269,7 @@ body:             |
   
     %41:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %41.sub_8bit, %41.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.27, implicit killed $eflags
+    JCC_1 %bb.27, 5, implicit killed $eflags
     JMP_1 %bb.26
   
   bb.26:
@@ -281,7 +281,7 @@ body:             |
   
     %43:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %43.sub_8bit, %43.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.29, implicit killed $eflags
+    JCC_1 %bb.29, 5, implicit killed $eflags
     JMP_1 %bb.28
   
   bb.28:
@@ -293,7 +293,7 @@ body:             |
   
     %45:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %45.sub_8bit, %45.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.31, implicit killed $eflags
+    JCC_1 %bb.31, 5, implicit killed $eflags
     JMP_1 %bb.30
   
   bb.30:
@@ -305,7 +305,7 @@ body:             |
   
     %47:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %47.sub_8bit, %47.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.33, implicit killed $eflags
+    JCC_1 %bb.33, 5, implicit killed $eflags
     JMP_1 %bb.32
   
   bb.32:
@@ -317,7 +317,7 @@ body:             |
   
     %49:gr8 = MOV8ri 1
     TEST8rr %49, %49, implicit-def $eflags
-    JNE_1 %bb.37, implicit killed $eflags
+    JCC_1 %bb.37, 5, implicit killed $eflags
     JMP_1 %bb.34
   
   bb.34:
@@ -325,7 +325,7 @@ body:             |
   
     %81:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %81.sub_8bit, %81.sub_8bit, implicit-def $eflags
-    JE_1 %bb.36, implicit killed $eflags
+    JCC_1 %bb.36, 4, implicit killed $eflags
   
   bb.35:
     %82:gr32 = LEA32r %12, 1, $noreg, 80, $noreg
@@ -355,7 +355,7 @@ body:             |
     MOV32mr undef %54:gr32, 1, $noreg, 0, $noreg, %1
     %55:gr32 = MOV32rm %12, 1, $noreg, 140, $noreg
     CMP32mi8 %55, 1, $noreg, 0, $noreg, 0, implicit-def $eflags
-    JE_1 %bb.40, implicit killed $eflags
+    JCC_1 %bb.40, 4, implicit killed $eflags
     JMP_1 %bb.39
   
   bb.39:
@@ -367,7 +367,7 @@ body:             |
   
     %56:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %56.sub_8bit, %56.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.42, implicit killed $eflags
+    JCC_1 %bb.42, 5, implicit killed $eflags
     JMP_1 %bb.41
   
   bb.41:
@@ -375,7 +375,7 @@ body:             |
   
     %58:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %58.sub_8bit, %58.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.43, implicit killed $eflags
+    JCC_1 %bb.43, 5, implicit killed $eflags
     JMP_1 %bb.44
   
   bb.42:
@@ -391,7 +391,7 @@ body:             |
   
     %60:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %60.sub_8bit, %60.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.46, implicit killed $eflags
+    JCC_1 %bb.46, 5, implicit killed $eflags
     JMP_1 %bb.45
   
   bb.45:
@@ -403,7 +403,7 @@ body:             |
   
     %62:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %62.sub_8bit, %62.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.48, implicit killed $eflags
+    JCC_1 %bb.48, 5, implicit killed $eflags
     JMP_1 %bb.47
   
   bb.47:
@@ -415,7 +415,7 @@ body:             |
   
     %64:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %64.sub_8bit, %64.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.50, implicit killed $eflags
+    JCC_1 %bb.50, 5, implicit killed $eflags
     JMP_1 %bb.49
   
   bb.49:
@@ -427,7 +427,7 @@ body:             |
   
     %66:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %66.sub_8bit, %66.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.52, implicit killed $eflags
+    JCC_1 %bb.52, 5, implicit killed $eflags
     JMP_1 %bb.51
   
   bb.51:
@@ -439,7 +439,7 @@ body:             |
   
     %68:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %68.sub_8bit, %68.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.54, implicit killed $eflags
+    JCC_1 %bb.54, 5, implicit killed $eflags
     JMP_1 %bb.53
   
   bb.53:
@@ -451,7 +451,7 @@ body:             |
   
     %70:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %70.sub_8bit, %70.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.56, implicit killed $eflags
+    JCC_1 %bb.56, 5, implicit killed $eflags
     JMP_1 %bb.55
   
   bb.55:
@@ -463,7 +463,7 @@ body:             |
   
     %72:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %72.sub_8bit, %72.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.58, implicit killed $eflags
+    JCC_1 %bb.58, 5, implicit killed $eflags
     JMP_1 %bb.57
   
   bb.57:
@@ -474,7 +474,7 @@ body:             |
     successors: %bb.62(0x00000001), %bb.59(0x7fffffff)
   
     CMP32mi8 %0, 1, $noreg, 0, $noreg, 0, implicit-def $eflags
-    JE_1 %bb.62, implicit killed $eflags
+    JCC_1 %bb.62, 4, implicit killed $eflags
     JMP_1 %bb.59
   
   bb.59:
@@ -483,7 +483,7 @@ body:             |
     successors: %bb.60(0x7fffffff), %bb.61(0x00000001)
   
     CMP32ri undef %75:gr32, 95406325, implicit-def $eflags
-    JB_1 %bb.61, implicit killed $eflags
+    JCC_1 %bb.61, 2, implicit killed $eflags
     JMP_1 %bb.60
   
   bb.61:
@@ -495,7 +495,7 @@ body:             |
   
     %76:gr32_abcd = MOV32r0 implicit-def dead $eflags
     TEST8rr %76.sub_8bit, %76.sub_8bit, implicit-def $eflags
-    JNE_1 %bb.64, implicit killed $eflags
+    JCC_1 %bb.64, 5, implicit killed $eflags
     JMP_1 %bb.63
   
   bb.63:

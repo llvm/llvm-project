@@ -31,7 +31,6 @@ config("compiler_defaults") {
     cflags += [ "-fdiagnostics-color" ]
     cflags_cc = [
       "-std=c++11",
-      "-fno-exceptions",
       "-fvisibility-inlines-hidden",
     ]
   } else {
@@ -137,6 +136,10 @@ config("compiler_defaults") {
   if (use_lld && host_os != "win") {
     ldflags += [ "-fuse-ld=lld" ]
   }
+}
+
+config("no_exceptions") {
+  cflags_cc = [ "-fno-exceptions" ]
 }
 
 config("no_rtti") {

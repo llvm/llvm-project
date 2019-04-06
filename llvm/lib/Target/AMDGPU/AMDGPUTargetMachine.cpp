@@ -163,6 +163,12 @@ static cl::opt<bool> EnableSIModeRegisterPass(
   cl::init(true),
   cl::Hidden);
 
+// Option is used in lit tests to prevent deadcoding of patterns inspected.
+static cl::opt<bool>
+EnableDCEInRA("amdgpu-dce-in-ra",
+    cl::init(true), cl::Hidden,
+    cl::desc("Enable machine DCE inside regalloc"));
+
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -900,6 +906,9 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   // This must be run just after RegisterCoalescing.
   insertPass(&RegisterCoalescerID, &SIPreAllocateWWMRegsID, false);
+
+  if (EnableDCEInRA)
+    insertPass(&RenameIndependentSubregsID, &DeadMachineInstructionElimID);
 
   TargetPassConfig::addOptimizedRegAlloc();
 }

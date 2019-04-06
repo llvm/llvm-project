@@ -24,7 +24,7 @@ body: |
     successors: %bb.1.less, %bb.2.exit
 
     CMP32ri8 $edi, 10, implicit-def $eflags
-    JG_1 %bb.2.exit, implicit $eflags
+    JCC_1 %bb.2.exit, 15, implicit $eflags
 
   bb.1.less:
     ; CHECK:      $eax = MOV32r0
