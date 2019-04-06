@@ -102,6 +102,14 @@ public:
   // matter as long as it's large enough.
   virtual unsigned getMaxMemoryAccessSize() const { return 0; }
 
+  // Assigns a random operand of the right type to variable Var.
+  // The default implementation only handles generic operand types.
+  // The target is responsible for handling any operand
+  // starting from OPERAND_FIRST_TARGET.
+  virtual void randomizeMCOperand(const Instruction &Instr, const Variable &Var,
+                                  llvm::MCOperand &AssignedValue,
+                                  const llvm::BitVector &ForbiddenRegs) const;
+
   // Creates a snippet generator for the given mode.
   std::unique_ptr<SnippetGenerator>
   createSnippetGenerator(InstructionBenchmark::ModeE Mode,

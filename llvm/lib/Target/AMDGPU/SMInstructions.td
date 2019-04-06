@@ -375,7 +375,7 @@ defm S_ATOMIC_DEC_X2              : SM_Pseudo_Atomics <"s_atomic_dec_x2", SReg_6
 
 } // let SubtargetPredicate = HasScalarAtomics
 
-let SubtargetPredicate = isGFX9 in {
+let SubtargetPredicate = isGFX9Only in {
 defm S_DCACHE_DISCARD    : SM_Pseudo_Discards <"s_dcache_discard">;
 defm S_DCACHE_DISCARD_X2 : SM_Pseudo_Discards <"s_dcache_discard_x2">;
 }
@@ -447,8 +447,8 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
   , Enc64 {
   bit glc;
 
-  let AssemblerPredicates = [isVI];
-  let DecoderNamespace = "VI";
+  let AssemblerPredicates = [isGFX8GFX9];
+  let DecoderNamespace = "GFX8";
 
   let Inst{5-0}   = !if(ps.has_sbase, sbase{6-1}, ?);
   let Inst{12-6}  = !if(ps.has_sdst, sdst{6-0}, ?);
@@ -636,7 +636,7 @@ class SMRD_Real_Load_IMM_ci <bits<5> op, SM_Load_Pseudo ps> :
   SM_Real<ps>,
   Enc64 {
 
-  let AssemblerPredicates = [isGFX7];
+  let AssemblerPredicates = [isGFX7Only];
   let DecoderNamespace = "GFX7";
   let InOperandList = (ins ps.BaseClass:$sbase, smrd_literal_offset:$offset, GLC:$glc);
 
@@ -673,7 +673,7 @@ class SMRD_Real_ci <bits<5> op, SM_Pseudo ps>
   , SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SI>
   , Enc32 {
 
-  let AssemblerPredicates = [isGFX7];
+  let AssemblerPredicates = [isGFX7Only];
   let DecoderNamespace = "GFX7";
 
   let Inst{7-0}   = !if(ps.has_offset, offset{7-0}, ?);
@@ -725,7 +725,7 @@ multiclass SMRD_Pattern <string Instr, ValueType vt> {
   def : GCNPat <
     (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
     (vt (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
-    let OtherPredicates = [isGFX7];
+    let OtherPredicates = [isGFX7Only];
   }
 
   // 3. SGPR offset
@@ -752,7 +752,7 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
   def : GCNPat <
     (vt (SIsbuffer_load v4i32:$sbase, (SMRDBufferImm32 i32:$offset), i1:$glc)),
     (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, (as_i1imm $glc))> {
-    let OtherPredicates = [isCIOnly];
+    let OtherPredicates = [isGFX7Only];
   }
 
   // 3. Offset loaded in an 32bit SGPR
@@ -793,11 +793,11 @@ def : GCNPat <
 >;
 }
 
-let OtherPredicates = [isVI] in {
+let OtherPredicates = [isGFX8Plus] in {
 
 def : GCNPat <
   (i64 (readcyclecounter)),
   (S_MEMREALTIME)
 >;
 
-} // let OtherPredicates = [isVI]
+} // let OtherPredicates = [isGFX8Plus]
