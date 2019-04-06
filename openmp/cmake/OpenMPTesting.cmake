@@ -123,7 +123,7 @@ else()
   # Unfortunately the top-level cmake/config-ix.cmake file mangles CMake's
   # CMAKE_THREAD_LIBS_INIT variable from the FindThreads package, so work
   # around that, until it is fixed there.
-  if(${CMAKE_THREAD_LIBS_INIT} STREQUAL "-lpthread")
+  if("${CMAKE_THREAD_LIBS_INIT}" STREQUAL "-lpthread")
     set(OPENMP_TEST_COMPILER_THREAD_FLAGS "-pthread")
   else()
     set(OPENMP_TEST_COMPILER_THREAD_FLAGS "${CMAKE_THREAD_LIBS_INIT}")
