@@ -100,8 +100,8 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
     return NewMBB;
   };
 
-  auto EmitCondJump = [&](unsigned Opcode, MachineBasicBlock *ThenMBB) {
-    BuildMI(*MBB, MBBI, DL, TII->get(Opcode)).addMBB(ThenMBB);
+  auto EmitCondJump = [&](unsigned CC, MachineBasicBlock *ThenMBB) {
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::JCC_1)).addMBB(ThenMBB).addImm(CC);
 
     auto *ElseMBB = CreateMBB();
     MF->insert(InsPt, ElseMBB);
@@ -109,10 +109,10 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
     MBBI = MBB->end();
   };
 
-  auto EmitCondJumpTarget = [&](unsigned Opcode, unsigned Target) {
+  auto EmitCondJumpTarget = [&](unsigned CC, unsigned Target) {
     auto *ThenMBB = CreateMBB();
     TargetMBBs.push_back({ThenMBB, Target});
-    EmitCondJump(Opcode, ThenMBB);
+    EmitCondJump(CC, ThenMBB);
   };
 
   auto EmitTailCall = [&](unsigned Target) {
@@ -129,23 +129,23 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
 
     if (NumTargets == 2) {
       CmpTarget(FirstTarget + 1);
-      EmitCondJumpTarget(X86::JB_1, FirstTarget);
+      EmitCondJumpTarget(X86::COND_B, FirstTarget);
       EmitTailCall(FirstTarget + 1);
       return;
     }
 
     if (NumTargets < 6) {
       CmpTarget(FirstTarget + 1);
-      EmitCondJumpTarget(X86::JB_1, FirstTarget);
-      EmitCondJumpTarget(X86::JE_1, FirstTarget + 1);
+      EmitCondJumpTarget(X86::COND_B, FirstTarget);
+      EmitCondJumpTarget(X86::COND_E, FirstTarget + 1);
       EmitBranchFunnel(FirstTarget + 2, NumTargets - 2);
       return;
     }
 
     auto *ThenMBB = CreateMBB();
     CmpTarget(FirstTarget + (NumTargets / 2));
-    EmitCondJump(X86::JB_1, ThenMBB);
-    EmitCondJumpTarget(X86::JE_1, FirstTarget + (NumTargets / 2));
+    EmitCondJump(X86::COND_B, ThenMBB);
+    EmitCondJumpTarget(X86::COND_E, FirstTarget + (NumTargets / 2));
     EmitBranchFunnel(FirstTarget + (NumTargets / 2) + 1,
                   NumTargets - (NumTargets / 2) - 1);
 

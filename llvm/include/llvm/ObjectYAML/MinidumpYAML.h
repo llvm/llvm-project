@@ -67,10 +67,12 @@ struct RawContentStream : public Stream {
 /// SystemInfo minidump stream.
 struct SystemInfoStream : public Stream {
   minidump::SystemInfo Info;
+  std::string CSDVersion;
 
-  explicit SystemInfoStream(const minidump::SystemInfo &Info)
+  explicit SystemInfoStream(const minidump::SystemInfo &Info,
+                            std::string CSDVersion)
       : Stream(StreamKind::SystemInfo, minidump::StreamType::SystemInfo),
-        Info(Info) {}
+        Info(Info), CSDVersion(std::move(CSDVersion)) {}
 
   SystemInfoStream()
       : Stream(StreamKind::SystemInfo, minidump::StreamType::SystemInfo) {

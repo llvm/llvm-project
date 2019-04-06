@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -2084,14 +2085,19 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
     case ISD::SETUGE: return getBoolConstant(R!=APFloat::cmpLessThan, dl, VT,
                                              OpVT);
     }
-  } else if (N1CFP && OpVT.isSimple()) {
+  } else if (N1CFP && OpVT.isSimple() && !N2.isUndef()) {
     // Ensure that the constant occurs on the RHS.
     ISD::CondCode SwappedCond = ISD::getSetCCSwappedOperands(Cond);
     if (!TLI->isCondCodeLegal(SwappedCond, OpVT.getSimpleVT()))
       return SDValue();
     return getSetCC(dl, VT, N2, N1, SwappedCond);
-  } else if (N2CFP && N2CFP->getValueAPF().isNaN()) {
-    // If an operand is known to be a nan, we can fold it.
+  } else if ((N2CFP && N2CFP->getValueAPF().isNaN()) ||
+             (OpVT.isFloatingPoint() && (N1.isUndef() || N2.isUndef()))) {
+    // If an operand is known to be a nan (or undef that could be a nan), we can
+    // fold it.
+    // Choosing NaN for the undef will always make unordered comparison succeed
+    // and ordered comparison fails.
+    // Matches behavior in llvm::ConstantFoldCompareInstruction.
     switch (ISD::getUnorderedFlavor(Cond)) {
     default:
       llvm_unreachable("Unknown flavor!");
@@ -3200,6 +3206,25 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known.Zero &= Known2.Zero;
     Known.One &= Known2.One;
+    break;
+  }
+  case ISD::CopyFromReg: {
+    auto R = cast<RegisterSDNode>(Op.getOperand(1));
+    const unsigned Reg = R->getReg();
+
+    const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+    if (!TRI->isVirtualRegister(Reg))
+      break;
+
+    const MachineRegisterInfo *MRI = &MF->getRegInfo();
+    if (!MRI->hasOneDef(Reg))
+      break;
+
+    const FunctionLoweringInfo::LiveOutInfo *LOI = FLI->GetLiveOutRegInfo(Reg);
+    if (!LOI || LOI->Known.getBitWidth() != BitWidth)
+      break;
+
+    Known = LOI->Known;
     break;
   }
   case ISD::FrameIndex:

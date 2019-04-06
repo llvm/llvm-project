@@ -25,7 +25,7 @@
 // RUN:             | FileCheck -check-prefix=G -check-prefix=G_DWARF4 %s
 
 // Darwin.
-// RUN: %clang -### -c -g %s -target x86_64-apple-darwin 2>&1 \
+// RUN: %clang -### -c -g %s -target x86_64-apple-darwin14 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_STANDALONE \
 // RUN:                         -check-prefix=G_DWARF2 \
 // RUN:                         -check-prefix=G_LLDB %s

@@ -166,10 +166,3 @@ new_content.finish()
 
 with open(output_name, 'w') as f_out:
     f_out.write(new_content.getvalue())
-    f_out.write('''debugger_unique_id = 0
-SBDebugger.Initialize()
-debugger = None
-target = SBTarget()
-process = SBProcess()
-thread = SBThread()
-frame = SBFrame()''')

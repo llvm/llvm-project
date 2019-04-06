@@ -248,6 +248,7 @@ def S_MOVRELD_B64 : SOP1_64 <"s_movreld_b64">;
 
 def S_CBRANCH_JOIN : SOP1_0_32R <"s_cbranch_join">;
 def S_MOV_REGRD_B32 : SOP1_32 <"s_mov_regrd_b32">;
+
 let Defs = [SCC] in {
 def S_ABS_I32 : SOP1_32 <"s_abs_i32">;
 } // End Defs = [SCC]
@@ -260,7 +261,7 @@ def S_SET_GPR_IDX_IDX : SOP1_0_32<"s_set_gpr_idx_idx"> {
 }
 }
 
-let SubtargetPredicate = isGFX9 in {
+let SubtargetPredicate = isGFX9Plus in {
   let hasSideEffects = 1, Defs = [EXEC, SCC], Uses = [EXEC] in {
     def S_ANDN1_SAVEEXEC_B64 : SOP1_64<"s_andn1_saveexec_b64">;
     def S_ORN1_SAVEEXEC_B64  : SOP1_64<"s_orn1_saveexec_b64">;
@@ -269,7 +270,7 @@ let SubtargetPredicate = isGFX9 in {
   } // End hasSideEffects = 1, Defs = [EXEC, SCC], Uses = [EXEC]
 
   def S_BITREPLICATE_B64_B32 : SOP1_64_32<"s_bitreplicate_b64_b32">;
-} // End SubtargetPredicate = isGFX9
+} // End SubtargetPredicate = isGFX9Plus
 
 //===----------------------------------------------------------------------===//
 // SOP2 Instructions
@@ -536,7 +537,7 @@ let SubtargetPredicate = isVI in {
   }
 }
 
-let SubtargetPredicate = isGFX9 in {
+let SubtargetPredicate = isGFX9Plus in {
   def S_PACK_LL_B32_B16 : SOP2_32<"s_pack_ll_b32_b16">;
   def S_PACK_LH_B32_B16 : SOP2_32<"s_pack_lh_b32_b16">;
   def S_PACK_HH_B32_B16 : SOP2_32<"s_pack_hh_b32_b16">;
@@ -554,7 +555,7 @@ let SubtargetPredicate = isGFX9 in {
     def S_MUL_HI_I32 : SOP2_32<"s_mul_hi_i32",
       [(set i32:$sdst, (UniformBinFrag<mulhs> SSrc_b32:$src0, SSrc_b32:$src1))]>;
   }
-}
+} // End SubtargetPredicate = isGFX9Plus
 
 //===----------------------------------------------------------------------===//
 // SOPK Instructions
@@ -730,7 +731,7 @@ def S_SETREG_IMM32_B32 : SOPK_Pseudo <
 
 } // End hasSideEffects = 1
 
-let SubtargetPredicate = isGFX9 in {
+let SubtargetPredicate = isGFX9Plus in {
   def S_CALL_B64 : SOPK_Pseudo<
       "s_call_b64",
       (outs SReg_64:$sdst),
@@ -738,7 +739,7 @@ let SubtargetPredicate = isGFX9 in {
       "$sdst, $simm16"> {
     let isCall = 1;
   }
-}
+} // End SubtargetPredicate = isGFX9Plus
 
 //===----------------------------------------------------------------------===//
 // SOPC Instructions
@@ -822,10 +823,10 @@ def S_BITCMP0_B64 : SOPC_64_32 <0x0e, "s_bitcmp0_b64">;
 def S_BITCMP1_B64 : SOPC_64_32 <0x0f, "s_bitcmp1_b64">;
 def S_SETVSKIP : SOPC_32 <0x10, "s_setvskip">;
 
-let SubtargetPredicate = isVI in {
+let SubtargetPredicate = isGFX8Plus in {
 def S_CMP_EQ_U64 : SOPC_CMP_64 <0x12, "s_cmp_eq_u64", COND_EQ>;
 def S_CMP_LG_U64 : SOPC_CMP_64 <0x13, "s_cmp_lg_u64", COND_NE>;
-}
+} // End SubtargetPredicate = isGFX8Plus
 
 let SubtargetPredicate = HasVGPRIndexMode in {
 def S_SET_GPR_IDX_ON : SOPC <0x11,
@@ -875,20 +876,19 @@ def S_ENDPGM : SOPP <0x00000001, (ins EndpgmImm:$simm16), "s_endpgm $simm16"> {
   let isReturn = 1;
 }
 
-let SubtargetPredicate = isVI in {
 def S_ENDPGM_SAVED : SOPP <0x0000001B, (ins), "s_endpgm_saved"> {
+  let SubtargetPredicate = isGFX8Plus;
   let simm16 = 0;
   let isBarrier = 1;
   let isReturn = 1;
 }
-}
 
-let SubtargetPredicate = isGFX9 in {
+let SubtargetPredicate = isGFX9Plus in {
   let isBarrier = 1, isReturn = 1, simm16 = 0 in {
     def S_ENDPGM_ORDERED_PS_DONE :
       SOPP<0x01e, (ins), "s_endpgm_ordered_ps_done">;
   } // End isBarrier = 1, isReturn = 1, simm16 = 0
-} // End SubtargetPredicate = isGFX9
+} // End SubtargetPredicate = isGFX9Plus
 
 let isBranch = 1, SchedRW = [WriteBranch] in {
 def S_BRANCH : SOPP <
@@ -963,12 +963,11 @@ def S_BARRIER : SOPP <0x0000000a, (ins), "s_barrier",
   let isConvergent = 1;
 }
 
-let SubtargetPredicate = isVI in {
 def S_WAKEUP : SOPP <0x00000003, (ins), "s_wakeup"> {
+  let SubtargetPredicate = isGFX8Plus;
   let simm16 = 0;
   let mayLoad = 1;
   let mayStore = 1;
-}
 }
 
 let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
@@ -1120,13 +1119,13 @@ def : GCNPat <
 
 
 //===----------------------------------------------------------------------===//
-// Real target instructions, move this to the appropriate subtarget TD file
+// Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
 
 class Select_si<string opName> :
   SIMCInstr<opName, SIEncodingFamily.SI> {
-  list<Predicate> AssemblerPredicates = [isSICI];
-  string DecoderNamespace = "SICI";
+  list<Predicate> AssemblerPredicates = [isGFX6GFX7];
+  string DecoderNamespace = "GFX6GFX7";
 }
 
 class SOP1_Real_si<bits<8> op, SOP1_Pseudo ps> :

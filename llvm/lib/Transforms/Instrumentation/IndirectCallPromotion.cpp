@@ -238,7 +238,7 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
     LLVM_DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
                       << "  Target_func: " << Target << "\n");
 
-    if (ICPInvokeOnly && dyn_cast<CallInst>(Inst)) {
+    if (ICPInvokeOnly && isa<CallInst>(Inst)) {
       LLVM_DEBUG(dbgs() << " Not promote: User options.\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", Inst)
@@ -246,7 +246,7 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
       });
       break;
     }
-    if (ICPCallOnly && dyn_cast<InvokeInst>(Inst)) {
+    if (ICPCallOnly && isa<InvokeInst>(Inst)) {
       LLVM_DEBUG(dbgs() << " Not promote: User option.\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", Inst)

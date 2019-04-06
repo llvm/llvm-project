@@ -60,3 +60,27 @@ def IsThreeOperandsLEABody :
 // X86GenInstrInfo.
 def IsThreeOperandsLEAFn :
     TIIPredicate<"isThreeOperandsLEA", IsThreeOperandsLEABody>;
+
+// A predicate to check for COND_A and COND_BE CMOVs which have an extra uop
+// on recent Intel CPUs.
+def IsCMOVArr_Or_CMOVBErr : CheckAny<[
+  CheckImmOperand_s<3, "X86::COND_A">,
+  CheckImmOperand_s<3, "X86::COND_BE">
+]>;
+
+def IsCMOVArm_Or_CMOVBErm : CheckAny<[
+  CheckImmOperand_s<7, "X86::COND_A">,
+  CheckImmOperand_s<7, "X86::COND_BE">
+]>;
+
+// A predicate to check for COND_A and COND_BE SETCCs which have an extra uop
+// on recent Intel CPUs.
+def IsSETAr_Or_SETBEr : CheckAny<[
+  CheckImmOperand_s<1, "X86::COND_A">,
+  CheckImmOperand_s<1, "X86::COND_BE">
+]>;
+
+def IsSETAm_Or_SETBEm : CheckAny<[
+  CheckImmOperand_s<5, "X86::COND_A">,
+  CheckImmOperand_s<5, "X86::COND_BE">
+]>;

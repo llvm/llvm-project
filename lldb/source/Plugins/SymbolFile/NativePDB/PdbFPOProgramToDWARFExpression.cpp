@@ -53,7 +53,7 @@ protected:
 
 public:
   virtual ~FPOProgramNode() = default;
-  virtual void Accept(FPOProgramASTVisitor *visitor) = 0;
+  virtual void Accept(FPOProgramASTVisitor &visitor) = 0;
 
   Kind GetKind() const { return m_token_kind; }
 
@@ -66,7 +66,7 @@ public:
   FPOProgramNodeSymbol(llvm::StringRef name)
       : FPOProgramNode(Symbol), m_name(name) {}
 
-  void Accept(FPOProgramASTVisitor *visitor) override;
+  void Accept(FPOProgramASTVisitor &visitor) override;
 
   llvm::StringRef GetName() const { return m_name; }
 
@@ -79,7 +79,7 @@ public:
   FPOProgramNodeRegisterRef(uint32_t lldb_reg_num)
       : FPOProgramNode(Register), m_lldb_reg_num(lldb_reg_num) {}
 
-  void Accept(FPOProgramASTVisitor *visitor) override;
+  void Accept(FPOProgramASTVisitor &visitor) override;
 
   uint32_t GetLLDBRegNum() const { return m_lldb_reg_num; }
 
@@ -92,7 +92,7 @@ public:
   FPOProgramNodeIntegerLiteral(uint32_t value)
       : FPOProgramNode(IntegerLiteral), m_value(value) {}
 
-  void Accept(FPOProgramASTVisitor *visitor) override;
+  void Accept(FPOProgramASTVisitor &visitor) override;
 
   uint32_t GetValue() const { return m_value; }
 
@@ -108,12 +108,12 @@ public:
     Align,
   };
 
-  FPOProgramNodeBinaryOp(OpType op_type, FPOProgramNode *left,
-                         FPOProgramNode *right)
-      : FPOProgramNode(BinaryOp), m_op_type(op_type), m_left(left),
-        m_right(right) {}
+  FPOProgramNodeBinaryOp(OpType op_type, FPOProgramNode &left,
+                         FPOProgramNode &right)
+      : FPOProgramNode(BinaryOp), m_op_type(op_type), m_left(&left),
+        m_right(&right) {}
 
-  void Accept(FPOProgramASTVisitor *visitor) override;
+  void Accept(FPOProgramASTVisitor &visitor) override;
 
   OpType GetOpType() const { return m_op_type; }
 
@@ -135,10 +135,10 @@ public:
     Deref,
   };
 
-  FPOProgramNodeUnaryOp(OpType op_type, FPOProgramNode *operand)
-      : FPOProgramNode(UnaryOp), m_op_type(op_type), m_operand(operand) {}
+  FPOProgramNodeUnaryOp(OpType op_type, FPOProgramNode &operand)
+      : FPOProgramNode(UnaryOp), m_op_type(op_type), m_operand(&operand) {}
 
-  void Accept(FPOProgramASTVisitor *visitor) override;
+  void Accept(FPOProgramASTVisitor &visitor) override;
 
   OpType GetOpType() const { return m_op_type; }
 
@@ -154,31 +154,31 @@ class FPOProgramASTVisitor {
 public:
   virtual ~FPOProgramASTVisitor() = default;
 
-  virtual void Visit(FPOProgramNodeSymbol *node) {}
-  virtual void Visit(FPOProgramNodeRegisterRef *node) {}
-  virtual void Visit(FPOProgramNodeIntegerLiteral *node) {}
-  virtual void Visit(FPOProgramNodeBinaryOp *node) {}
-  virtual void Visit(FPOProgramNodeUnaryOp *node) {}
+  virtual void Visit(FPOProgramNodeSymbol &node) {}
+  virtual void Visit(FPOProgramNodeRegisterRef &node) {}
+  virtual void Visit(FPOProgramNodeIntegerLiteral &node) {}
+  virtual void Visit(FPOProgramNodeBinaryOp &node) {}
+  virtual void Visit(FPOProgramNodeUnaryOp &node) {}
 };
 
-void FPOProgramNodeSymbol::Accept(FPOProgramASTVisitor *visitor) {
-  visitor->Visit(this);
+void FPOProgramNodeSymbol::Accept(FPOProgramASTVisitor &visitor) {
+  visitor.Visit(*this);
 }
 
-void FPOProgramNodeRegisterRef::Accept(FPOProgramASTVisitor *visitor) {
-  visitor->Visit(this);
+void FPOProgramNodeRegisterRef::Accept(FPOProgramASTVisitor &visitor) {
+  visitor.Visit(*this);
 }
 
-void FPOProgramNodeIntegerLiteral::Accept(FPOProgramASTVisitor *visitor) {
-  visitor->Visit(this);
+void FPOProgramNodeIntegerLiteral::Accept(FPOProgramASTVisitor &visitor) {
+  visitor.Visit(*this);
 }
 
-void FPOProgramNodeBinaryOp::Accept(FPOProgramASTVisitor *visitor) {
-  visitor->Visit(this);
+void FPOProgramNodeBinaryOp::Accept(FPOProgramASTVisitor &visitor) {
+  visitor.Visit(*this);
 }
 
-void FPOProgramNodeUnaryOp::Accept(FPOProgramASTVisitor *visitor) {
-  visitor->Visit(this);
+void FPOProgramNodeUnaryOp::Accept(FPOProgramASTVisitor &visitor) {
+  visitor.Visit(*this);
 }
 
 class FPOProgramASTVisitorMergeDependent : public FPOProgramASTVisitor {
@@ -191,10 +191,8 @@ public:
   void Merge(FPOProgramNode *&node_ref);
 
 private:
-  void Visit(FPOProgramNodeRegisterRef *node) override {}
-  void Visit(FPOProgramNodeIntegerLiteral *node) override {}
-  void Visit(FPOProgramNodeBinaryOp *node) override;
-  void Visit(FPOProgramNodeUnaryOp *node) override;
+  void Visit(FPOProgramNodeBinaryOp &node) override;
+  void Visit(FPOProgramNodeUnaryOp &node) override;
 
   void TryReplace(FPOProgramNode *&node_ref) const;
 
@@ -204,15 +202,15 @@ private:
 
 void FPOProgramASTVisitorMergeDependent::Merge(FPOProgramNode *&node_ref) {
   TryReplace(node_ref);
-  node_ref->Accept(this);
+  node_ref->Accept(*this);
 }
 
-void FPOProgramASTVisitorMergeDependent::Visit(FPOProgramNodeBinaryOp *node) {
-  Merge(node->Left());
-  Merge(node->Right());
+void FPOProgramASTVisitorMergeDependent::Visit(FPOProgramNodeBinaryOp &node) {
+  Merge(node.Left());
+  Merge(node.Right());
 }
-void FPOProgramASTVisitorMergeDependent::Visit(FPOProgramNodeUnaryOp *node) {
-  Merge(node->Operand());
+void FPOProgramASTVisitorMergeDependent::Visit(FPOProgramNodeUnaryOp &node) {
+  Merge(node.Operand());
 }
 
 void FPOProgramASTVisitorMergeDependent::TryReplace(
@@ -242,8 +240,8 @@ public:
   bool Resolve(FPOProgramNode *&program);
 
 private:
-  void Visit(FPOProgramNodeBinaryOp *node) override;
-  void Visit(FPOProgramNodeUnaryOp *node) override;
+  void Visit(FPOProgramNodeBinaryOp &node) override;
+  void Visit(FPOProgramNodeUnaryOp &node) override;
 
   bool TryReplace(FPOProgramNode *&node_ref);
 
@@ -256,7 +254,7 @@ private:
 bool FPOProgramASTVisitorResolveRegisterRefs::Resolve(FPOProgramNode *&program) {
   if (!TryReplace(program))
     return false;
-  program->Accept(this);
+  program->Accept(*this);
   return m_no_error_flag;
 }
 
@@ -302,38 +300,38 @@ bool FPOProgramASTVisitorResolveRegisterRefs::TryReplace(
 }
 
 void FPOProgramASTVisitorResolveRegisterRefs::Visit(
-    FPOProgramNodeBinaryOp *node) {
-  m_no_error_flag = Resolve(node->Left()) && Resolve(node->Right());
+    FPOProgramNodeBinaryOp &node) {
+  m_no_error_flag = Resolve(node.Left()) && Resolve(node.Right());
 }
 
 void FPOProgramASTVisitorResolveRegisterRefs::Visit(
-    FPOProgramNodeUnaryOp *node) {
-  m_no_error_flag = Resolve(node->Operand());
+    FPOProgramNodeUnaryOp &node) {
+  m_no_error_flag = Resolve(node.Operand());
 }
 
 class FPOProgramASTVisitorDWARFCodegen : public FPOProgramASTVisitor {
 public:
   FPOProgramASTVisitorDWARFCodegen(Stream &stream) : m_out_stream(stream) {}
 
-  void Emit(FPOProgramNode *program);
+  void Emit(FPOProgramNode &program);
 
 private:
-  void Visit(FPOProgramNodeRegisterRef *node) override;
-  void Visit(FPOProgramNodeIntegerLiteral *node) override;
-  void Visit(FPOProgramNodeBinaryOp *node) override;
-  void Visit(FPOProgramNodeUnaryOp *node) override;
+  void Visit(FPOProgramNodeRegisterRef &node) override;
+  void Visit(FPOProgramNodeIntegerLiteral &node) override;
+  void Visit(FPOProgramNodeBinaryOp &node) override;
+  void Visit(FPOProgramNodeUnaryOp &node) override;
 
 private:
   Stream &m_out_stream;
 };
 
-void FPOProgramASTVisitorDWARFCodegen::Emit(FPOProgramNode *program) {
-  program->Accept(this);
+void FPOProgramASTVisitorDWARFCodegen::Emit(FPOProgramNode &program) {
+  program.Accept(*this);
 }
 
-void FPOProgramASTVisitorDWARFCodegen::Visit(FPOProgramNodeRegisterRef *node) {
+void FPOProgramASTVisitorDWARFCodegen::Visit(FPOProgramNodeRegisterRef &node) {
 
-  uint32_t reg_num = node->GetLLDBRegNum();
+  uint32_t reg_num = node.GetLLDBRegNum();
   lldbassert(reg_num != LLDB_INVALID_REGNUM);
 
   if (reg_num > 31) {
@@ -346,18 +344,18 @@ void FPOProgramASTVisitorDWARFCodegen::Visit(FPOProgramNodeRegisterRef *node) {
 }
 
 void FPOProgramASTVisitorDWARFCodegen::Visit(
-    FPOProgramNodeIntegerLiteral *node) {
-  uint32_t value = node->GetValue();
+    FPOProgramNodeIntegerLiteral &node) {
+  uint32_t value = node.GetValue();
   m_out_stream.PutHex8(DW_OP_constu);
   m_out_stream.PutULEB128(value);
 }
 
-void FPOProgramASTVisitorDWARFCodegen::Visit(FPOProgramNodeBinaryOp *node) {
+void FPOProgramASTVisitorDWARFCodegen::Visit(FPOProgramNodeBinaryOp &node) {
 
-  Emit(node->Left());
-  Emit(node->Right());
+  Emit(*node.Left());
+  Emit(*node.Right());
 
-  switch (node->GetOpType()) {
+  switch (node.GetOpType()) {
   case FPOProgramNodeBinaryOp::Plus:
     m_out_stream.PutHex8(DW_OP_plus);
     // NOTE: can be optimized by using DW_OP_plus_uconst opcpode
@@ -379,10 +377,10 @@ void FPOProgramASTVisitorDWARFCodegen::Visit(FPOProgramNodeBinaryOp *node) {
   }
 }
 
-void FPOProgramASTVisitorDWARFCodegen::Visit(FPOProgramNodeUnaryOp *node) {
-  Emit(node->Operand());
+void FPOProgramASTVisitorDWARFCodegen::Visit(FPOProgramNodeUnaryOp &node) {
+  Emit(*node.Operand());
 
-  switch (node->GetOpType()) {
+  switch (node.GetOpType()) {
   case FPOProgramNodeUnaryOp::Deref:
     m_out_stream.PutHex8(DW_OP_deref);
     break;
@@ -429,7 +427,7 @@ static bool ParseFPOSingleAssignmentProgram(llvm::StringRef program,
       FPOProgramNode *right = eval_stack.pop_back_val();
       FPOProgramNode *left = eval_stack.pop_back_val();
       FPOProgramNode *node = alloc.makeNode<FPOProgramNodeBinaryOp>(
-          ops_binary_it->second, left, right);
+          ops_binary_it->second, *left, *right);
       eval_stack.push_back(node);
       continue;
     }
@@ -442,7 +440,7 @@ static bool ParseFPOSingleAssignmentProgram(llvm::StringRef program,
       }
       FPOProgramNode *operand = eval_stack.pop_back_val();
       FPOProgramNode *node =
-          alloc.makeNode<FPOProgramNodeUnaryOp>(ops_unary_it->second, operand);
+          alloc.makeNode<FPOProgramNodeUnaryOp>(ops_unary_it->second, *operand);
       eval_stack.push_back(node);
       continue;
     }
@@ -542,6 +540,6 @@ bool lldb_private::npdb::TranslateFPOProgramToDWARFExpression(
   }
 
   FPOProgramASTVisitorDWARFCodegen codegen(stream);
-  codegen.Emit(target_program);
+  codegen.Emit(*target_program);
   return true;
 }

@@ -73,10 +73,11 @@ entry:
 ; SOFT:       _Q_cmp
 ; SOFT:       cmp
 
-define i32 @f128_compare2() {
+define i32 @f128_compare2(fp128* byval %f0) {
 entry:
-  %0 = fcmp ogt fp128 undef, 0xL00000000000000000000000000000000
-  br i1 %0, label %"5", label %"7"
+  %0 = load fp128, fp128* %f0, align 8
+  %1 = fcmp ogt fp128 %0, 0xL00000000000000000000000000000000
+  br i1 %1, label %"5", label %"7"
 
 "5":                                              ; preds = %entry
   ret i32 0

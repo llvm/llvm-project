@@ -23,8 +23,8 @@ body: |
   bb.0.entry:
     $eax = MOV32rm $rdi, 1, _, 0, _
     CMP32ri8 $eax, 10, implicit-def $eflags
-  ; CHECK: [[@LINE+1]]:35: missing implicit register operand 'implicit $eflags'
-    JG_1 %bb.2.exit, implicit $eax
+  ; CHECK: [[@LINE+1]]:40: missing implicit register operand 'implicit $eflags'
+    JCC_1 %bb.2.exit, 15, implicit $eax
 
   bb.1.less:
     $eax = MOV32r0 implicit-def $eflags

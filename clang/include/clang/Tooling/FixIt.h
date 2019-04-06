@@ -20,7 +20,6 @@
 #define LLVM_CLANG_TOOLING_FIXIT_H
 
 #include "clang/AST/ASTContext.h"
-#include "clang/Basic/TokenKinds.h"
 
 namespace clang {
 namespace tooling {
@@ -44,55 +43,12 @@ inline CharSourceRange getSourceRange(const SourceLocation &Loc) {
 template <typename T> CharSourceRange getSourceRange(const T &Node) {
   return CharSourceRange::getTokenRange(Node.getSourceRange());
 }
-
-/// Extends \p Range to include the token \p Next, if it immediately follows the
-/// end of the range. Otherwise, returns \p Range unchanged.
-CharSourceRange maybeExtendRange(CharSourceRange Range, tok::TokenKind Next,
-                                 ASTContext &Context);
 } // end namespace internal
 
 /// Returns a textual representation of \p Node.
 template <typename T>
 StringRef getText(const T &Node, const ASTContext &Context) {
   return internal::getText(internal::getSourceRange(Node), Context);
-}
-
-/// Returns the source range spanning the node, extended to include \p Next, if
-/// it immediately follows \p Node. Otherwise, returns the normal range of \p
-/// Node.  See comments on `getExtendedText()` for examples.
-template <typename T>
-CharSourceRange getExtendedRange(const T &Node, tok::TokenKind Next,
-                                 ASTContext &Context) {
-  return internal::maybeExtendRange(internal::getSourceRange(Node), Next,
-                                    Context);
-}
-
-/// Returns the source text of the node, extended to include \p Next, if it
-/// immediately follows the node. Otherwise, returns the text of just \p Node.
-///
-/// For example, given statements S1 and S2 below:
-/// \code
-///   {
-///     // S1:
-///     if (!x) return foo();
-///     // S2:
-///     if (!x) { return 3; }
-///   }
-/// \endcode
-/// then
-/// \code
-///   getText(S1, Context) = "if (!x) return foo()"
-///   getExtendedText(S1, tok::TokenKind::semi, Context)
-///     = "if (!x) return foo();"
-///   getExtendedText(*S1.getThen(), tok::TokenKind::semi, Context)
-///     = "return foo();"
-///   getExtendedText(*S2.getThen(), tok::TokenKind::semi, Context)
-///     = getText(S2, Context) = "{ return 3; }"
-/// \endcode
-template <typename T>
-StringRef getExtendedText(const T &Node, tok::TokenKind Next,
-                          ASTContext &Context) {
-  return internal::getText(getExtendedRange(Node, Next, Context), Context);
 }
 
 // Returns a FixItHint to remove \p Node.

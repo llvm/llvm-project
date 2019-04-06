@@ -102,7 +102,7 @@ body:             |
     %0 = PHI %5, %bb.0, %3, %bb.5
     %6 = MOV32ri 1
     TEST32rr %4, %4, implicit-def $eflags
-    JE_1 %bb.3, implicit $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
     JMP_1 %bb.2
 
   bb.2.bb3:
@@ -115,7 +115,7 @@ body:             |
 
     %1 = PHI %6, %bb.1, %7, %bb.2
     TEST32rr %1, %1, implicit-def $eflags
-    JE_1 %bb.5, implicit $eflags
+    JCC_1 %bb.5, 4, implicit $eflags
     JMP_1 %bb.4
 
   bb.4.bb6:
@@ -136,7 +136,7 @@ body:             |
     ; CHECK-SAME: %10,
     ; CHECK-SAME: %2,
     %11 = SUB32ri8 %3, 10, implicit-def $eflags
-    JL_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 12, implicit $eflags
     JMP_1 %bb.6
 
   bb.6.bb8:
@@ -186,7 +186,7 @@ body:             |
     ; CHECK: %0:gr32 = PHI %6, %bb.0, %3, %bb.5
     %7 = MOV32ri 1
     TEST32rr %4, %4, implicit-def $eflags
-    JE_1 %bb.3, implicit $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
     JMP_1 %bb.2
 
   bb.2.bb3:
@@ -199,7 +199,7 @@ body:             |
 
     %1 = PHI %7, %bb.1, %8, %bb.2
     TEST32rr %1, %1, implicit-def $eflags
-    JE_1 %bb.5, implicit $eflags
+    JCC_1 %bb.5, 4, implicit $eflags
     JMP_1 %bb.4
 
   bb.4.bb6:
@@ -221,7 +221,7 @@ body:             |
     ; CHECK-SAME: %2,
     ; CHECK-SAME: %11,
     %12 = SUB32ri8 %3, 10, implicit-def $eflags
-    JL_1 %bb.1, implicit $eflags
+    JCC_1 %bb.1, 12, implicit $eflags
     JMP_1 %bb.6
 
   bb.6.bb8:

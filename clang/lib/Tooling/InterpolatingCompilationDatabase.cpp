@@ -226,6 +226,7 @@ struct TransferableCommand {
           LangStandard::getLangStandardForKind(Std).getName()).str());
     }
     Result.CommandLine.push_back(Filename);
+    Result.Heuristic = "inferred from " + Cmd.Filename;
     return Result;
   }
 
