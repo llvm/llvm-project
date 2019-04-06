@@ -81,10 +81,22 @@ SymbolizableObjectFile::create(object::ObjectFile *Obj,
 
   std::vector<std::pair<SymbolDesc, StringRef>> &Fs = res->Functions,
                                                 &Os = res->Objects;
-  llvm::sort(Fs);
-  Fs.erase(std::unique(Fs.begin(), Fs.end()), Fs.end());
-  llvm::sort(Os);
-  Os.erase(std::unique(Os.begin(), Os.end()), Os.end());
+  auto Uniquify = [](std::vector<std::pair<SymbolDesc, StringRef>> &S) {
+    // Sort by (Addr,Size,Name). If several SymbolDescs share the same Addr,
+    // pick the one with the largest Size. This helps us avoid symbols with no
+    // size information (Size=0).
+    llvm::sort(S);
+    auto I = S.begin(), E = S.end(), J = S.begin();
+    while (I != E) {
+      auto OI = I;
+      while (++I != E && OI->first.Addr == I->first.Addr) {
+      }
+      *J++ = I[-1];
+    }
+    S.erase(J, S.end());
+  };
+  Uniquify(Fs);
+  Uniquify(Os);
 
   return std::move(res);
 }
@@ -205,9 +217,6 @@ bool SymbolizableObjectFile::getNameFromSymbolTable(SymbolRef::Type Type,
                                                     uint64_t &Size) const {
   const auto &Symbols = Type == SymbolRef::ST_Function ? Functions : Objects;
   std::pair<SymbolDesc, StringRef> SD{{Address, UINT64_C(-1)}, StringRef()};
-  // SymbolDescs are sorted by (Addr,Size), if several SymbolDescs share the
-  // same Addr, pick the one with the largest Size. This helps us avoid symbols
-  // with no size information (Size=0).
   auto SymbolIterator = llvm::upper_bound(Symbols, SD);
   if (SymbolIterator == Symbols.begin())
     return false;

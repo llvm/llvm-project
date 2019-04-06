@@ -88,8 +88,8 @@ define double @sqrt_a_sqrt_b_sqrt_c_sqrt_d_reassoc(double %a, double %b, double 
   ret double %mul2
 }
 
-define double @sqrt_squared(double %x) {
-; CHECK-LABEL: @sqrt_squared(
+define double @rsqrt_squared(double %x) {
+; CHECK-LABEL: @rsqrt_squared(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast double 1.000000e+00, [[SQRT]]
 ; CHECK-NEXT:    [[SQUARED:%.*]] = fmul fast double [[RSQRT]], [[RSQRT]]
@@ -98,6 +98,47 @@ define double @sqrt_squared(double %x) {
   %sqrt = call fast double @llvm.sqrt.f64(double %x)
   %rsqrt = fdiv fast double 1.0, %sqrt
   %squared = fmul fast double %rsqrt, %rsqrt
+  ret double %squared
+}
+
+define double @sqrt_divisor_squared(double %x, double %y) {
+; CHECK-LABEL: @sqrt_divisor_squared(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[Y:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul reassoc nnan nsz double [[DIV]], [[DIV]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %x)
+  %div = fdiv double %y, %sqrt
+  %squared = fmul reassoc nnan nsz double %div, %div
+  ret double %squared
+}
+
+define double @sqrt_dividend_squared(double %x, double %y) {
+; CHECK-LABEL: @sqrt_dividend_squared(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast double [[SQRT]], [[Y:%.*]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul fast double [[DIV]], [[DIV]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %x)
+  %div = fdiv fast double %sqrt, %y
+  %squared = fmul fast double %div, %div
+  ret double %squared
+}
+
+; Negative test - require 'nsz'.
+
+define double @sqrt_divisor_not_enough_FMF(double %x, double %y) {
+; CHECK-LABEL: @sqrt_divisor_not_enough_FMF(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[Y:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[SQUARED:%.*]] = fmul reassoc nnan double [[DIV]], [[DIV]]
+; CHECK-NEXT:    ret double [[SQUARED]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %x)
+  %div = fdiv double %y, %sqrt
+  %squared = fmul reassoc nnan double %div, %div
   ret double %squared
 }
 

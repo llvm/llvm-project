@@ -1062,6 +1062,9 @@ public:
   LegalizeActionStep getAction(const MachineInstr &MI,
                                const MachineRegisterInfo &MRI) const;
 
+  bool isLegal(const LegalityQuery &Query) const {
+    return getAction(Query).Action == LegalizeAction::Legal;
+  }
   bool isLegal(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
   bool isLegalOrCustom(const MachineInstr &MI,
                        const MachineRegisterInfo &MRI) const;
