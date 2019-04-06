@@ -60,8 +60,6 @@ lldb::InstrumentationRuntimeType ThreadSanitizerRuntime::GetTypeStatic() {
 
 ThreadSanitizerRuntime::~ThreadSanitizerRuntime() { Deactivate(); }
 
-static constexpr std::chrono::seconds g_retrieve_data_function_timeout(2);
-
 const char *thread_sanitizer_retrieve_report_data_prefix = R"(
 extern "C"
 {
@@ -318,7 +316,7 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
   options.SetTryAllThreads(true);
   options.SetStopOthers(true);
   options.SetIgnoreBreakpoints(true);
-  options.SetTimeout(g_retrieve_data_function_timeout);
+  options.SetTimeout(process_sp->GetUtilityExpressionTimeout());
   options.SetPrefix(thread_sanitizer_retrieve_report_data_prefix);
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);

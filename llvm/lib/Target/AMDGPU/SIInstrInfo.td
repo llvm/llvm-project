@@ -5,20 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-def isCI : Predicate<"Subtarget->getGeneration() "
-                      ">= AMDGPUSubtarget::SEA_ISLANDS">;
-def isCIOnly : Predicate<"Subtarget->getGeneration() =="
-                         "AMDGPUSubtarget::SEA_ISLANDS">,
-  AssemblerPredicate <"FeatureSeaIslands">;
-def isVIOnly : Predicate<"Subtarget->getGeneration() =="
-                         "AMDGPUSubtarget::VOLCANIC_ISLANDS">,
-  AssemblerPredicate <"FeatureVolcanicIslands">;
 
 def DisableInst : Predicate <"false">, AssemblerPredicate<"FeatureDisable">;
 
 class GCNPredicateControl : PredicateControl {
   Predicate SIAssemblerPredicate = isGFX6GFX7;
-  Predicate VIAssemblerPredicate = isVI;
+  Predicate VIAssemblerPredicate = isGFX8GFX9;
 }
 
 // Execpt for the NONE field, this must be kept in sync with the
@@ -1157,8 +1149,8 @@ multiclass EXP_m<bit done, SDPatternOperator node> {
       def _vi : EXP_Helper<done>,
                 SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.VI>,
                 EXPe_vi {
-        let AssemblerPredicates = [isVI];
-        let DecoderNamespace = "VI";
+        let AssemblerPredicates = [isGFX8GFX9];
+        let DecoderNamespace = "GFX8";
         let DisableDecoder = DisableVIDecoder;
       }
     }
@@ -2016,7 +2008,7 @@ class VINTRP_Real_vi <bits <2> op, string opName, dag outs, dag ins,
   VINTRPe_vi <op>,
   SIMCInstr<opName, SIEncodingFamily.VI> {
   let AssemblerPredicate = VIAssemblerPredicate;
-  let DecoderNamespace = "VI";
+  let DecoderNamespace = "GFX8";
   let DisableDecoder = DisableVIDecoder;
 }
 

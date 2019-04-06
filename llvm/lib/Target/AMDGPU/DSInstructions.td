@@ -985,8 +985,8 @@ def DS_READ_B128_si       : DS_Real_si<0xff, DS_READ_B128>;
 class DS_Real_vi <bits<8> op, DS_Pseudo ds> :
   DS_Real <ds>,
   SIMCInstr <ds.Mnemonic, SIEncodingFamily.VI> {
-  let AssemblerPredicates = [isVI];
-  let DecoderNamespace="VI";
+  let AssemblerPredicates = [isGFX8GFX9];
+  let DecoderNamespace = "GFX8";
 
   // encoding
   let Inst{7-0}   = !if(ds.has_offset0, offset0, 0);

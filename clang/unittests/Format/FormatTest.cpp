@@ -5709,6 +5709,42 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "}\n"
                "template <class T> T *f(T &c);\n", // No break here.
                Style);
+  verifyFormat("int\n"
+               "foo(A<bool> a)\n"
+               "{\n"
+               "  return a;\n"
+               "}\n",
+               Style);
+  verifyFormat("int\n"
+               "foo(A<8> a)\n"
+               "{\n"
+               "  return a;\n"
+               "}\n",
+               Style);
+  verifyFormat("int\n"
+               "foo(A<B<bool>, 8> a)\n"
+               "{\n"
+               "  return a;\n"
+               "}\n",
+               Style);
+  verifyFormat("int\n"
+               "foo(A<B<8>, bool> a)\n"
+               "{\n"
+               "  return a;\n"
+               "}\n",
+               Style);
+  verifyFormat("int\n"
+               "foo(A<B<bool>, bool> a)\n"
+               "{\n"
+               "  return a;\n"
+               "}\n",
+               Style);
+  verifyFormat("int\n"
+               "foo(A<B<8>, 8> a)\n"
+               "{\n"
+               "  return a;\n"
+               "}\n",
+               Style);
 }
 
 TEST_F(FormatTest, AlwaysBreakBeforeMultilineStrings) {
