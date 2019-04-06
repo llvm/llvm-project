@@ -24,11 +24,11 @@
 ; CHECK-DAG: [[VREG1:%[^ ]+]]:gr64 = COPY $rsi
 ; CHECK-DAG: [[VREG2:%[^ ]+]]:gr64 = COPY $rdi
 ; CHECK: SUB64rr [[VREG2]], [[VREG1]]
-; CHECK-NEXT: JNE_1 {{.*}}, debug-location [[DLOC]]{{$}}
+; CHECK-NEXT: JCC_1 {{.*}}, debug-location [[DLOC]]{{$}}
 ; CHECK: [[VREG3:%[^ ]+]]:gr64 = PHI [[VREG2]]
 ; CHECK: [[VREG4:%[^ ]+]]:gr64 = nuw ADD64ri8 [[VREG3]], 4
 ; CHECK: SUB64rr [[VREG1]], [[VREG4]]
-; CHECK-NEXT: JNE_1 {{.*}}, debug-location [[DLOC]]{{$}}
+; CHECK-NEXT: JCC_1 {{.*}}, debug-location [[DLOC]]{{$}}
 ; CHECK-NEXT: JMP_1 {{.*}}, debug-location [[DLOC]]{{$}}
 
 target triple = "x86_64-unknown-linux-gnu"

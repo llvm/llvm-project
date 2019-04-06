@@ -17,7 +17,7 @@ def isVIOnly : Predicate<"Subtarget->getGeneration() =="
 def DisableInst : Predicate <"false">, AssemblerPredicate<"FeatureDisable">;
 
 class GCNPredicateControl : PredicateControl {
-  Predicate SIAssemblerPredicate = isSICI;
+  Predicate SIAssemblerPredicate = isGFX6GFX7;
   Predicate VIAssemblerPredicate = isVI;
 }
 
@@ -1149,8 +1149,8 @@ multiclass EXP_m<bit done, SDPatternOperator node> {
       def _si : EXP_Helper<done>,
                 SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.SI>,
                 EXPe {
-        let AssemblerPredicates = [isSICI];
-        let DecoderNamespace = "SICI";
+        let AssemblerPredicates = [isGFX6GFX7];
+        let DecoderNamespace = "GFX6GFX7";
         let DisableDecoder = DisableSIDecoder;
       }
 
@@ -2006,7 +2006,7 @@ class VINTRP_Real_si <bits <2> op, string opName, dag outs, dag ins,
   VINTRPe <op>,
   SIMCInstr<opName, SIEncodingFamily.SI> {
   let AssemblerPredicate = SIAssemblerPredicate;
-  let DecoderNamespace = "SICI";
+  let DecoderNamespace = "GFX6GFX7";
   let DisableDecoder = DisableSIDecoder;
 }
 

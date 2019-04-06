@@ -35,62 +35,24 @@ enum AsmComments {
   AC_EVEX_2_VEX = MachineInstr::TAsmComments
 };
 
-// X86 specific condition code. These correspond to X86_*_COND in
-// X86InstrInfo.td. They must be kept in synch.
-enum CondCode {
-  COND_A = 0,
-  COND_AE = 1,
-  COND_B = 2,
-  COND_BE = 3,
-  COND_E = 4,
-  COND_G = 5,
-  COND_GE = 6,
-  COND_L = 7,
-  COND_LE = 8,
-  COND_NE = 9,
-  COND_NO = 10,
-  COND_NP = 11,
-  COND_NS = 12,
-  COND_O = 13,
-  COND_P = 14,
-  COND_S = 15,
-  LAST_VALID_COND = COND_S,
-
-  // Artificial condition codes. These are used by AnalyzeBranch
-  // to indicate a block terminated with two conditional branches that together
-  // form a compound condition. They occur in code using FCMP_OEQ or FCMP_UNE,
-  // which can't be represented on x86 with a single condition. These
-  // are never used in MachineInstrs and are inverses of one another.
-  COND_NE_OR_P,
-  COND_E_AND_NP,
-
-  COND_INVALID
-};
-
-// Turn condition code into conditional branch opcode.
-unsigned GetCondBranchFromCond(CondCode CC);
-
 /// Return a pair of condition code for the given predicate and whether
 /// the instruction operands should be swaped to match the condition code.
 std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 
-/// Return a set opcode for the given condition and whether it has
-/// a memory operand.
-unsigned getSETFromCond(CondCode CC, bool HasMemoryOperand = false);
+/// Return a setcc opcode based on whether it has a memory operand.
+unsigned getSETOpc(bool HasMemoryOperand = false);
 
-/// Return a cmov opcode for the given condition, register size in
-/// bytes, and operand type.
-unsigned getCMovFromCond(CondCode CC, unsigned RegBytes,
-                         bool HasMemoryOperand = false);
+/// Return a cmov opcode for the given register size in bytes, and operand type.
+unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false);
 
-// Turn jCC opcode into condition code.
-CondCode getCondFromBranchOpc(unsigned Opc);
+// Turn jCC instruction into condition code.
+CondCode getCondFromBranch(const MachineInstr &MI);
 
-// Turn setCC opcode into condition code.
-CondCode getCondFromSETOpc(unsigned Opc);
+// Turn setCC instruction into condition code.
+CondCode getCondFromSETCC(const MachineInstr &MI);
 
-// Turn CMov opcode into condition code.
-CondCode getCondFromCMovOpc(unsigned Opc);
+// Turn CMov instruction into condition code.
+CondCode getCondFromCMov(const MachineInstr &MI);
 
 /// GetOppositeBranchCondition - Return the inverse of the specified cond,
 /// e.g. turning COND_E to COND_NE.

@@ -172,6 +172,19 @@ LazyCallGraph::LazyCallGraph(Module &M, TargetLibraryInfo &TLI) {
     addEdge(EntryEdges.Edges, EntryEdges.EdgeIndexMap, get(F), Edge::Ref);
   }
 
+  // Externally visible aliases of internal functions are also viable entry
+  // edges to the module.
+  for (auto &A : M.aliases()) {
+    if (A.hasLocalLinkage())
+      continue;
+    if (Function* F = dyn_cast<Function>(A.getAliasee())) {
+      LLVM_DEBUG(dbgs() << "  Adding '" << F->getName()
+                        << "' with alias '" << A.getName()
+                        << "' to entry set of the graph.\n");
+      addEdge(EntryEdges.Edges, EntryEdges.EdgeIndexMap, get(*F), Edge::Ref);
+    }
+  }
+
   // Now add entry nodes for functions reachable via initializers to globals.
   SmallVector<Constant *, 16> Worklist;
   SmallPtrSet<Constant *, 16> Visited;

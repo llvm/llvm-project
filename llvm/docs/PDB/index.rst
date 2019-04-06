@@ -130,10 +130,6 @@ PDB file is as follows:
 | IPI Hash Stream    | - Contained in IPI Stream    | - Hash table for looking up IPI records   |
 |                    |                              |   by name                                 |
 +--------------------+------------------------------+-------------------------------------------+
-| * LINKER* Stream   | - Last Stream in PDB File    | - Executable section information          |
-|                    |                              | - Incremental linking thunks              |
-|                    |                              | - Linker version information              |
-+--------------------+------------------------------+-------------------------------------------+
 
 More information about the structure of each of these can be found on the
 following pages:

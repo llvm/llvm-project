@@ -311,8 +311,9 @@ protected:
   bool IsGCN;
   bool GCN3Encoding;
   bool CIInsts;
-  bool VIInsts;
+  bool GFX8Insts;
   bool GFX9Insts;
+  bool GFX7GFX8GFX9Insts;
   bool SGPRInitBug;
   bool HasSMemRealTime;
   bool HasIntClamp;
@@ -770,7 +771,7 @@ public:
   }
 
   bool hasLDSFPAtomics() const {
-    return VIInsts;
+    return GFX8Insts;
   }
 
   bool hasDPP() const {
@@ -803,15 +804,16 @@ public:
   }
 
   bool hasSMovFedHazard() const {
-    return getGeneration() >= AMDGPUSubtarget::GFX9;
+    return getGeneration() == AMDGPUSubtarget::GFX9;
   }
 
   bool hasReadM0MovRelInterpHazard() const {
-    return getGeneration() >= AMDGPUSubtarget::GFX9;
+    return getGeneration() == AMDGPUSubtarget::GFX9;
   }
 
   bool hasReadM0SendMsgHazard() const {
-    return getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS;
+    return getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
+           getGeneration() <= AMDGPUSubtarget::GFX9;
   }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs

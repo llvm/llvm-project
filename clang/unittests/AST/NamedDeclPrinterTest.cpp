@@ -193,29 +193,33 @@ TEST(NamedDeclPrinter, TestLinkageInNamespace) {
 }
 
 TEST(NamedDeclPrinter, TestObjCClassExtension) {
-  ASSERT_TRUE(PrintedWrittenPropertyDeclObjCMatches(
-    R"(
-      @interface Obj
-      @end
+  const char *Code =
+R"(
+  @interface Obj
+  @end
 
-      @interface Obj ()
-      @property(nonatomic) int property;
-      @end
-    )",
+  @interface Obj ()
+  @property(nonatomic) int property;
+  @end
+)";
+  ASSERT_TRUE(PrintedWrittenPropertyDeclObjCMatches(
+    Code,
     "property",
     "Obj::property"));
 }
 
 TEST(NamedDeclPrinter, TestObjCClassExtensionWithGetter) {
-  ASSERT_TRUE(PrintedWrittenPropertyDeclObjCMatches(
-    R"(
-      @interface Obj
-      @end
+  const char *Code =
+R"(
+  @interface Obj
+  @end
 
-      @interface Obj ()
-      @property(nonatomic, getter=myPropertyGetter) int property;
-      @end
-    )",
+  @interface Obj ()
+  @property(nonatomic, getter=myPropertyGetter) int property;
+  @end
+)";
+  ASSERT_TRUE(PrintedWrittenPropertyDeclObjCMatches(
+    Code,
     "property",
     "Obj::property"));
 }

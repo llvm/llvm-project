@@ -13,6 +13,7 @@
 
 #include "llvm-c/Object.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/ObjectFile.h"
 
 using namespace llvm;
@@ -55,6 +56,33 @@ inline LLVMRelocationIteratorRef
 wrap(const relocation_iterator *SI) {
   return reinterpret_cast<LLVMRelocationIteratorRef>
     (const_cast<relocation_iterator*>(SI));
+}
+
+/*--.. Operations on binary files ..........................................--*/
+
+LLVMBinaryRef LLVMCreateBinary(LLVMMemoryBufferRef MemBuf,
+                               LLVMContextRef Context,
+                               char **ErrorMessage) {
+  auto maybeContext = Context ? unwrap(Context) : nullptr;
+  Expected<std::unique_ptr<Binary>> ObjOrErr(
+      createBinary(unwrap(MemBuf)->getMemBufferRef(), maybeContext));
+  if (!ObjOrErr) {
+    *ErrorMessage = strdup(toString(ObjOrErr.takeError()).c_str());
+    return nullptr;
+  }
+
+  return wrap(ObjOrErr.get().release());
+}
+
+LLVMMemoryBufferRef LLVMBinaryCopyMemoryBuffer(LLVMBinaryRef BR) {
+  auto Buf = unwrap(BR)->getMemoryBufferRef();
+  return wrap(llvm::MemoryBuffer::getMemBuffer(
+                Buf.getBuffer(), Buf.getBufferIdentifier(),
+                /*RequiresNullTerminator*/false).release());
+}
+
+void LLVMDisposeBinary(LLVMBinaryRef BR) {
+  delete unwrap(BR);
 }
 
 // ObjectFile creation

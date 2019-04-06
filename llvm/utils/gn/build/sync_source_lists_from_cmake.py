@@ -23,9 +23,9 @@ def sync_source_lists():
                                        shell=os.name == 'nt').splitlines()
 
     # Matches e.g. |   "foo.cpp",|, captures |foo| in group 1.
-    gn_cpp_re = re.compile(r'^\s*"([^"]+\.(?:cpp|h))",$', re.MULTILINE)
+    gn_cpp_re = re.compile(r'^\s*"([^"]+\.(?:cpp|c|h|S))",$', re.MULTILINE)
     # Matches e.g. |   foo.cpp|, captures |foo| in group 1.
-    cmake_cpp_re = re.compile(r'^\s*([A-Za-z_0-9/-]+\.(?:cpp|h))$',
+    cmake_cpp_re = re.compile(r'^\s*([A-Za-z_0-9/-]+\.(?:cpp|c|h|S))$',
                               re.MULTILINE)
 
     for gn_file in gn_files:

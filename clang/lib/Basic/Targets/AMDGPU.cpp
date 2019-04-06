@@ -150,7 +150,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX803:
     case GK_GFX802:
     case GK_GFX801:
-      Features["vi-insts"] = true;
+      Features["gfx8-insts"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
       Features["s-memrealtime"] = true;

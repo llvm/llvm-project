@@ -130,7 +130,7 @@ def : GISelVop2Pat <or, V_OR_B32_e32, i32>;
 
 def : GISelSop2Pat <sra, S_ASHR_I32, i32>;
 let AddedComplexity = 100 in {
-let SubtargetPredicate = isSICI in {
+let SubtargetPredicate = isGFX6GFX7 in {
 def : GISelVop2Pat <sra, V_ASHR_I32_e32, i32>;
 }
 def : GISelVop2CommutePat <sra, V_ASHRREV_I32_e32, i32>;

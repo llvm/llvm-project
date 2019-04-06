@@ -1791,7 +1791,7 @@ the arguments. Both arguments and the result have the bitwidth specified
 by the name of the builtin.
 
 ``__builtin_rotateright``
-_------------------------
+-------------------------
 
 * ``__builtin_rotateright8``
 * ``__builtin_rotateright16``

@@ -70,9 +70,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-// 2 second timeout when running utility functions
-static constexpr std::chrono::seconds g_utility_function_timeout(2);
-
 static const char *g_get_dynamic_class_info_name =
     "__lldb_apple_objc_v2_get_dynamic_class_info";
 // Testing using the new C++11 raw string literals. If this breaks GCC then we
@@ -1410,7 +1407,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
     options.SetTryAllThreads(false);
     options.SetStopOthers(true);
     options.SetIgnoreBreakpoints(true);
-    options.SetTimeout(g_utility_function_timeout);
+    options.SetTimeout(process->GetUtilityExpressionTimeout());
     options.SetIsForUtilityExpr(true);
 
     Value return_value;
@@ -1661,7 +1658,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     options.SetTryAllThreads(false);
     options.SetStopOthers(true);
     options.SetIgnoreBreakpoints(true);
-    options.SetTimeout(g_utility_function_timeout);
+    options.SetTimeout(process->GetUtilityExpressionTimeout());
     options.SetIsForUtilityExpr(true);
 
     Value return_value;

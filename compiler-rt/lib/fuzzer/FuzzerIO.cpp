@@ -62,7 +62,7 @@ void CopyFileToErr(const std::string &Path) {
 
 void WriteToFile(const Unit &U, const std::string &Path) {
   // Use raw C interface because this function may be called from a sig handler.
-  FILE *Out = fopen(Path.c_str(), "w");
+  FILE *Out = fopen(Path.c_str(), "wb");
   if (!Out) return;
   fwrite(U.data(), sizeof(U[0]), U.size(), Out);
   fclose(Out);

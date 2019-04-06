@@ -567,7 +567,7 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
   options.SetStopOthers(true);
-  options.SetTimeout(std::chrono::milliseconds(500));
+  options.SetTimeout(m_process->GetUtilityExpressionTimeout());
   options.SetTryAllThreads(false);
   thread_sp->CalculateExecutionContext(exe_ctx);
 

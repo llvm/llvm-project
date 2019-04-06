@@ -444,12 +444,24 @@ def PdWriteCRC32r64r64 : SchedWriteRes<[PdEX01]> {
 def : InstRW<[PdWriteCRC32r64r64], (instrs CRC32r64r64)>;
 
 defm : PdWriteResExPair<WriteCMOV,    [PdEX01]>; // Conditional move.
-defm : PdWriteResExPair<WriteCMOV2,   [PdEX01], 1, [], 1, 1>; // Conditional (CF + ZF flag) move.
 
-def : InstRW<[WriteCMOV2.Folded], (instrs CMOVG16rm, CMOVG32rm, CMOVG64rm,
-                                          CMOVGE16rm, CMOVGE32rm, CMOVGE64rm,
-                                          CMOVL16rm, CMOVL32rm, CMOVL64rm,
-                                          CMOVLE16rm, CMOVLE32rm, CMOVLE64rm)>;
+def PdWriteCMOVm : SchedWriteRes<[PdLoad, PdEX01]> {
+  let Latency = 5;
+  let ResourceCycles = [1, 1];
+  let NumMicroOps = 2;
+}
+
+def PdWriteCMOVmVar : SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<CheckImmOperand_s<7, "X86::COND_BE">>, [PdWriteCMOVm]>,
+  SchedVar<MCSchedPredicate<CheckImmOperand_s<7, "X86::COND_A">>,  [PdWriteCMOVm]>,
+  SchedVar<MCSchedPredicate<CheckImmOperand_s<7, "X86::COND_L">>,  [PdWriteCMOVm]>,
+  SchedVar<MCSchedPredicate<CheckImmOperand_s<7, "X86::COND_GE">>, [PdWriteCMOVm]>,
+  SchedVar<MCSchedPredicate<CheckImmOperand_s<7, "X86::COND_LE">>, [PdWriteCMOVm]>,
+  SchedVar<MCSchedPredicate<CheckImmOperand_s<7, "X86::COND_G">>,  [PdWriteCMOVm]>,
+  SchedVar<NoSchedPred, [WriteCMOV.Folded]>
+]>;
+
+def : InstRW<[PdWriteCMOVmVar], (instrs CMOV16rm, CMOV32rm, CMOV64rm)>;
 
 defm : PdWriteRes<WriteFCMOV,        [PdFPU0, PdFPFMA]>; // x87 conditional move.
 
@@ -460,8 +472,15 @@ def PdWriteSETGEmSETGmSETLEmSETLm : SchedWriteRes<[PdEX01]> {
   let ResourceCycles = [2];
   let NumMicroOps = 2;
 }
-def : InstRW<[PdWriteSETGEmSETGmSETLEmSETLm], (instrs SETGEm, SETGm,
-                                                      SETLEm, SETLm)>;
+
+def PdSETGEmSETGmSETLEmSETLm :  SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<CheckImmOperand_s<5, "X86::COND_GE">>, [PdWriteSETGEmSETGmSETLEmSETLm]>,
+  SchedVar<MCSchedPredicate<CheckImmOperand_s<5, "X86::COND_G">>,  [PdWriteSETGEmSETGmSETLEmSETLm]>,
+  SchedVar<MCSchedPredicate<CheckImmOperand_s<5, "X86::COND_LE">>, [PdWriteSETGEmSETGmSETLEmSETLm]>,
+  SchedVar<MCSchedPredicate<CheckImmOperand_s<5, "X86::COND_L">>,  [PdWriteSETGEmSETGmSETLEmSETLm]>,
+  SchedVar<NoSchedPred,                                            [WriteSETCCStore]>
+]>;
+def : InstRW<[PdSETGEmSETGmSETLEmSETLm], (instrs SETCCm)>;
 
 defm : PdWriteRes<WriteLAHFSAHF,      [PdEX01],          2,  [],     2>;
 

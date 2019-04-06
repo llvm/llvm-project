@@ -548,7 +548,7 @@ def DS_ORDERED_COUNT : DS_1A_RET_GDS<"ds_ordered_count">;
 // Instruction definitions for CI and newer.
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = isCIVI in {
+let SubtargetPredicate = isGFX7Plus in {
 
 defm DS_WRAP_RTN_B32 : DS_1A2D_RET_mc<"ds_wrap_rtn_b32", VGPR_32>;
 defm DS_CONDXCHG32_RTN_B64 : DS_1A1D_RET_mc<"ds_condxchg32_rtn_b64", VReg_64>;
@@ -567,13 +567,13 @@ defm DS_WRITE_B128 : DS_1A1D_NORET_mc<"ds_write_b128", VReg_128>;
 
 def DS_NOP : DS_VOID<"ds_nop">;
 
-} // let SubtargetPredicate = isCIVI
+} // let SubtargetPredicate = isGFX7Plus
 
 //===----------------------------------------------------------------------===//
 // Instruction definitions for VI and newer.
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = isVI in {
+let SubtargetPredicate = isGFX8Plus in {
 
 let Uses = [EXEC] in {
 def DS_PERMUTE_B32  : DS_1A1D_PERMUTE <"ds_permute_b32",
@@ -584,7 +584,7 @@ def DS_BPERMUTE_B32 : DS_1A1D_PERMUTE <"ds_bpermute_b32",
 
 def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
 
-} // let SubtargetPredicate = isVI
+} // let SubtargetPredicate = isGFX8Plus
 
 //===----------------------------------------------------------------------===//
 // DS Patterns
@@ -711,7 +711,7 @@ class DS64Bit4ByteAlignedWritePat<DS_Pseudo inst, PatFrag frag> : GCNPat<
 
 // v2i32 loads are split into i32 loads on SI during lowering, due to a bug
 // related to bounds checking.
-let OtherPredicates = [LDSRequiresM0Init, isCIVI] in {
+let OtherPredicates = [LDSRequiresM0Init, isGFX7Plus] in {
 def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32, load_local_m0>;
 def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32, store_local_m0>;
 }
@@ -804,18 +804,18 @@ def : Pat <
 >;
 
 //===----------------------------------------------------------------------===//
-// Real instructions
+// Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// SIInstructions.td
+// Base ENC_DS for GFX6, GFX7.
 //===----------------------------------------------------------------------===//
 
 class DS_Real_si <bits<8> op, DS_Pseudo ds> :
   DS_Real <ds>,
   SIMCInstr <ds.Mnemonic, SIEncodingFamily.SI> {
-  let AssemblerPredicates=[isSICI];
-  let DecoderNamespace="SICI";
+  let AssemblerPredicates=[isGFX6GFX7];
+  let DecoderNamespace="GFX6GFX7";
 
   // encoding
   let Inst{7-0}   = !if(ds.has_offset0, offset0, 0);
@@ -979,7 +979,7 @@ def DS_READ_B96_si        : DS_Real_si<0xfe, DS_READ_B96>;
 def DS_READ_B128_si       : DS_Real_si<0xff, DS_READ_B128>;
 
 //===----------------------------------------------------------------------===//
-// VIInstructions.td
+// GFX8, GFX9 (VI).
 //===----------------------------------------------------------------------===//
 
 class DS_Real_vi <bits<8> op, DS_Pseudo ds> :
