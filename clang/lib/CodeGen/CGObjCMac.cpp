@@ -726,7 +726,7 @@ public:
   /// Loads from a classref. For Objective-C stub classes, this invokes the
   /// initialization callback stored inside the stub. For all other classes
   /// this simply dereferences the pointer.
-  llvm::Constant *getLoadClassrefFn() const {
+  llvm::FunctionCallee getLoadClassrefFn() const {
     // Add the non-lazy-bind attribute, since objc_loadClassref is likely to
     // be called a lot.
     //
