@@ -495,6 +495,13 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPERAND(opcodeModifier)
     HANDLE_OPTIONAL(relocation)
     break;
+  case X86Local::AddCCFrm:
+    // Operand 1 (optional) is an address or immediate.
+    assert(numPhysicalOperands == 2 &&
+           "Unexpected number of operands for AddCCFrm");
+    HANDLE_OPERAND(relocation)
+    HANDLE_OPERAND(opcodeModifier)
+    break;
   case X86Local::MRMDestReg:
     // Operand 1 is a register operand in the R/M field.
     // - In AVX512 there may be a mask operand here -
@@ -580,6 +587,13 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPERAND(rmRegister)
     HANDLE_OPTIONAL(immediate)
     break;
+  case X86Local::MRMSrcRegCC:
+    assert(numPhysicalOperands == 3 &&
+           "Unexpected number of operands for MRMSrcRegCC");
+    HANDLE_OPERAND(roRegister)
+    HANDLE_OPERAND(rmRegister)
+    HANDLE_OPERAND(opcodeModifier)
+    break;
   case X86Local::MRMSrcMem:
     // Operand 1 is a register operand in the Reg/Opcode field.
     // Operand 2 is a memory operand (possibly SIB-extended)
@@ -620,6 +634,19 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPERAND(memory)
     HANDLE_OPTIONAL(immediate)
     break;
+  case X86Local::MRMSrcMemCC:
+    assert(numPhysicalOperands == 3 &&
+           "Unexpected number of operands for MRMSrcMemCC");
+    HANDLE_OPERAND(roRegister)
+    HANDLE_OPERAND(memory)
+    HANDLE_OPERAND(opcodeModifier)
+    break;
+  case X86Local::MRMXrCC:
+    assert(numPhysicalOperands == 2 &&
+           "Unexpected number of operands for MRMXrCC");
+    HANDLE_OPERAND(rmRegister)
+    HANDLE_OPERAND(opcodeModifier)
+    break;
   case X86Local::MRMXr:
   case X86Local::MRM0r:
   case X86Local::MRM1r:
@@ -644,6 +671,12 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPTIONAL(rmRegister)
     HANDLE_OPTIONAL(relocation)
     HANDLE_OPTIONAL(immediate)
+    break;
+  case X86Local::MRMXmCC:
+    assert(numPhysicalOperands == 2 &&
+           "Unexpected number of operands for MRMXm");
+    HANDLE_OPERAND(memory)
+    HANDLE_OPERAND(opcodeModifier)
     break;
   case X86Local::MRMXm:
   case X86Local::MRM0m:
@@ -723,12 +756,15 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::RawFrmDstSrc:
   case X86Local::RawFrmImm8:
   case X86Local::RawFrmImm16:
+  case X86Local::AddCCFrm:
     filter = llvm::make_unique<DumbFilter>();
     break;
   case X86Local::MRMDestReg:
   case X86Local::MRMSrcReg:
   case X86Local::MRMSrcReg4VOp3:
   case X86Local::MRMSrcRegOp4:
+  case X86Local::MRMSrcRegCC:
+  case X86Local::MRMXrCC:
   case X86Local::MRMXr:
     filter = llvm::make_unique<ModFilter>(true);
     break;
@@ -736,6 +772,8 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::MRMSrcMem:
   case X86Local::MRMSrcMem4VOp3:
   case X86Local::MRMSrcMemOp4:
+  case X86Local::MRMSrcMemCC:
+  case X86Local::MRMXmCC:
   case X86Local::MRMXm:
     filter = llvm::make_unique<ModFilter>(false);
     break;
@@ -768,14 +806,15 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   assert(opcodeType && "Opcode type not set");
   assert(filter && "Filter not set");
 
-  if (Form == X86Local::AddRegFrm) {
-    assert(((opcodeToSet & 7) == 0) &&
-           "ADDREG_FRM opcode not aligned");
+  if (Form == X86Local::AddRegFrm || Form == X86Local::MRMSrcRegCC ||
+      Form == X86Local::MRMSrcMemCC || Form == X86Local::MRMXrCC ||
+      Form == X86Local::MRMXmCC || Form == X86Local::AddCCFrm) {
+    unsigned Count = Form == X86Local::AddRegFrm ? 8 : 16;
+    assert(((opcodeToSet % Count) == 0) && "ADDREG_FRM opcode not aligned");
 
     uint8_t currentOpcode;
 
-    for (currentOpcode = opcodeToSet;
-         currentOpcode < opcodeToSet + 8;
+    for (currentOpcode = opcodeToSet; currentOpcode < opcodeToSet + Count;
          ++currentOpcode)
       tables.setTableFields(*opcodeType, insnContext(), currentOpcode, *filter,
                             UID, Is32Bit, OpPrefix == 0,
@@ -850,6 +889,7 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
   TYPE("i64i32imm_pcrel",     TYPE_REL)
   TYPE("i16imm_pcrel",        TYPE_REL)
   TYPE("i32imm_pcrel",        TYPE_REL)
+  TYPE("ccode",               TYPE_IMM)
   TYPE("AVX512RC",            TYPE_IMM)
   TYPE("brtarget32",          TYPE_REL)
   TYPE("brtarget16",          TYPE_REL)
@@ -1165,6 +1205,7 @@ RecognizableInstr::opcodeModifierEncodingFromString(const std::string &s,
   ENCODING("GR64",            ENCODING_RO)
   ENCODING("GR16",            ENCODING_Rv)
   ENCODING("GR8",             ENCODING_RB)
+  ENCODING("ccode",           ENCODING_CC)
   errs() << "Unhandled opcode modifier encoding " << s << "\n";
   llvm_unreachable("Unhandled opcode modifier encoding");
 }

@@ -1846,6 +1846,9 @@ static int readOperands(struct InternalInstruction* insn) {
       if (readOpcodeRegister(insn, 0))
         return -1;
       break;
+    case ENCODING_CC:
+      insn->immediates[1] = insn->opcode & 0xf;
+      break;
     case ENCODING_FP:
       break;
     case ENCODING_VVVV:

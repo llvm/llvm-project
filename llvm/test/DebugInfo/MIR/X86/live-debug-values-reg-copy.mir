@@ -159,7 +159,7 @@ body:             |
     $ebp = MOV32rr $eax, debug-location !15
     $edi = MOV32rr $ebx, debug-location !15
     CMP32ri8 renamable $ebp, 33, implicit-def $eflags, debug-location !15
-    JL_1 %bb.2, implicit killed $eflags, debug-location !15
+    JCC_1 %bb.2, 12, implicit killed $eflags, debug-location !15
 
   bb.1.if.then:
     successors: %bb.3(0x80000000)

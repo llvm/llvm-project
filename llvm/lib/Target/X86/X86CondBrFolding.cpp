@@ -225,10 +225,9 @@ void X86CondBrFolding::replaceBrDest(MachineBasicBlock *MBB,
   MachineInstr *BrMI;
   if (MBBInfo->TBB == OrigDest) {
     BrMI = MBBInfo->BrInstr;
-    unsigned JNCC = GetCondBranchFromCond(MBBInfo->BranchCode);
     MachineInstrBuilder MIB =
-        BuildMI(*MBB, BrMI, MBB->findDebugLoc(BrMI), TII->get(JNCC))
-            .addMBB(NewDest);
+        BuildMI(*MBB, BrMI, MBB->findDebugLoc(BrMI), TII->get(X86::JCC_1))
+            .addMBB(NewDest).addImm(MBBInfo->BranchCode);
     MBBInfo->TBB = NewDest;
     MBBInfo->BrInstr = MIB.getInstr();
   } else { // Should be the unconditional jump stmt.
@@ -254,8 +253,8 @@ void X86CondBrFolding::fixupModifiedCond(MachineBasicBlock *MBB) {
   MachineInstr *BrMI = MBBInfo->BrInstr;
   X86::CondCode CC = MBBInfo->BranchCode;
   MachineInstrBuilder MIB = BuildMI(*MBB, BrMI, MBB->findDebugLoc(BrMI),
-                                    TII->get(GetCondBranchFromCond(CC)))
-                                .addMBB(MBBInfo->TBB);
+                                    TII->get(X86::JCC_1))
+                                .addMBB(MBBInfo->TBB).addImm(CC);
   BrMI->eraseFromParent();
   MBBInfo->BrInstr = MIB.getInstr();
 
@@ -323,8 +322,8 @@ void X86CondBrFolding::optimizeCondBr(
       llvm_unreachable("unexpected condtional code.");
     }
     BuildMI(*RootMBB, UncondBrI, RootMBB->findDebugLoc(UncondBrI),
-            TII->get(GetCondBranchFromCond(NewCC)))
-        .addMBB(RootMBBInfo->FBB);
+            TII->get(X86::JCC_1))
+        .addMBB(RootMBBInfo->FBB).addImm(NewCC);
 
     // RootMBB: Jump to TargetMBB
     BuildMI(*RootMBB, UncondBrI, RootMBB->findDebugLoc(UncondBrI),
@@ -512,7 +511,7 @@ X86CondBrFolding::analyzeMBB(MachineBasicBlock &MBB) {
     if (I->isBranch()) {
       if (TBB)
         return nullptr;
-      CC = X86::getCondFromBranchOpc(I->getOpcode());
+      CC = X86::getCondFromBranch(*I);
       switch (CC) {
       default:
         return nullptr;

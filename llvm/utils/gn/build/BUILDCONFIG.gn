@@ -5,6 +5,7 @@
 shared_binary_target_configs = [
   "//llvm/utils/gn/build:compiler_defaults",
   "//llvm/utils/gn/build:llvm_code",
+  "//llvm/utils/gn/build:no_exceptions",
   "//llvm/utils/gn/build:no_rtti",
   "//llvm/utils/gn/build:thin_archive",
   "//llvm/utils/gn/build:warn_covered_switch_default",

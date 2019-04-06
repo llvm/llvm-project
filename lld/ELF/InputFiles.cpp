@@ -241,45 +241,46 @@ std::string lld::toString(const InputFile *F) {
   return F->ToStringCache;
 }
 
-template <class ELFT>
-ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef MB) : InputFile(K, MB) {
+ELFFileBase::ELFFileBase(Kind K, MemoryBufferRef MB) : InputFile(K, MB) {}
+
+template <class ELFT> void ELFFileBase::parseHeader() {
   if (ELFT::TargetEndianness == support::little)
     EKind = ELFT::Is64Bits ? ELF64LEKind : ELF32LEKind;
   else
     EKind = ELFT::Is64Bits ? ELF64BEKind : ELF32BEKind;
 
-  EMachine = getObj().getHeader()->e_machine;
-  OSABI = getObj().getHeader()->e_ident[llvm::ELF::EI_OSABI];
-  ABIVersion = getObj().getHeader()->e_ident[llvm::ELF::EI_ABIVERSION];
+  EMachine = getObj<ELFT>().getHeader()->e_machine;
+  OSABI = getObj<ELFT>().getHeader()->e_ident[llvm::ELF::EI_OSABI];
+  ABIVersion = getObj<ELFT>().getHeader()->e_ident[llvm::ELF::EI_ABIVERSION];
 }
 
 template <class ELFT>
-typename ELFT::SymRange ELFFileBase<ELFT>::getGlobalELFSyms() {
-  return makeArrayRef(ELFSyms.begin() + FirstGlobal, ELFSyms.end());
-}
-
-template <class ELFT>
-void ELFFileBase<ELFT>::initSymtab(ArrayRef<Elf_Shdr> Sections,
-                                   const Elf_Shdr *Symtab) {
+void ELFFileBase::initSymtab(ArrayRef<typename ELFT::Shdr> Sections,
+                             const typename ELFT::Shdr *Symtab) {
   FirstGlobal = Symtab->sh_info;
-  ELFSyms = CHECK(getObj().symbols(Symtab), this);
+  ArrayRef<typename ELFT::Sym> ELFSyms =
+      CHECK(getObj<ELFT>().symbols(Symtab), this);
   if (FirstGlobal == 0 || FirstGlobal > ELFSyms.size())
     fatal(toString(this) + ": invalid sh_info in symbol table");
+  this->ELFSyms = reinterpret_cast<const void *>(ELFSyms.data());
+  this->NumELFSyms = ELFSyms.size();
 
   StringTable =
-      CHECK(getObj().getStringTableForSymtab(*Symtab, Sections), this);
+      CHECK(getObj<ELFT>().getStringTableForSymtab(*Symtab, Sections), this);
 }
 
 template <class ELFT>
 ObjFile<ELFT>::ObjFile(MemoryBufferRef M, StringRef ArchiveName)
-    : ELFFileBase<ELFT>(Base::ObjKind, M) {
+    : ELFFileBase(ObjKind, M) {
+  parseHeader<ELFT>();
   this->ArchiveName = ArchiveName;
 }
 
 template <class ELFT>
 uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &Sym) const {
-  return CHECK(this->getObj().getSectionIndex(&Sym, this->ELFSyms, SymtabSHNDX),
-               this);
+  return CHECK(
+      this->getObj().getSectionIndex(&Sym, getELFSyms<ELFT>(), SymtabSHNDX),
+      this);
 }
 
 template <class ELFT> ArrayRef<Symbol *> ObjFile<ELFT>::getLocalSymbols() {
@@ -312,12 +313,12 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
                                               const Elf_Shdr &Sec) {
   // Group signatures are stored as symbol names in object files.
   // sh_info contains a symbol index, so we fetch a symbol and read its name.
-  if (this->ELFSyms.empty())
-    this->initSymtab(
+  if (this->getELFSyms<ELFT>().empty())
+    this->initSymtab<ELFT>(
         Sections, CHECK(object::getSection<ELFT>(Sections, Sec.sh_link), this));
 
   const Elf_Sym *Sym =
-      CHECK(object::getSymbol<ELFT>(this->ELFSyms, Sec.sh_info), this);
+      CHECK(object::getSymbol<ELFT>(this->getELFSyms<ELFT>(), Sec.sh_info), this);
   StringRef Signature = CHECK(Sym->getName(this->StringTable), this);
 
   // As a special case, if a symbol is a section symbol and has no name,
@@ -392,7 +393,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeJustSymbols() {
   for (const Elf_Shdr &Sec : ObjSections) {
     if (Sec.sh_type != SHT_SYMTAB)
       continue;
-    this->initSymtab(ObjSections, &Sec);
+    this->initSymtab<ELFT>(ObjSections, &Sec);
     return;
   }
 }
@@ -475,10 +476,10 @@ void ObjFile<ELFT>::initializeSections(
       break;
     }
     case SHT_SYMTAB:
-      this->initSymtab(ObjSections, &Sec);
+      this->initSymtab<ELFT>(ObjSections, &Sec);
       break;
     case SHT_SYMTAB_SHNDX:
-      this->SymtabSHNDX = CHECK(Obj.getSHNDXTable(Sec, ObjSections), this);
+      SymtabSHNDX = CHECK(Obj.getSHNDXTable(Sec, ObjSections), this);
       break;
     case SHT_STRTAB:
     case SHT_NULL:
@@ -678,12 +679,12 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     }
 
     if (Sec.sh_type == SHT_RELA) {
-      ArrayRef<Elf_Rela> Rels = CHECK(this->getObj().relas(&Sec), this);
+      ArrayRef<Elf_Rela> Rels = CHECK(getObj().relas(&Sec), this);
       Target->FirstRelocation = Rels.begin();
       Target->NumRelocations = Rels.size();
       Target->AreRelocsRela = true;
     } else {
-      ArrayRef<Elf_Rel> Rels = CHECK(this->getObj().rels(&Sec), this);
+      ArrayRef<Elf_Rel> Rels = CHECK(getObj().rels(&Sec), this);
       Target->FirstRelocation = Rels.begin();
       Target->NumRelocations = Rels.size();
       Target->AreRelocsRela = false;
@@ -771,19 +772,19 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
 
 template <class ELFT>
 StringRef ObjFile<ELFT>::getSectionName(const Elf_Shdr &Sec) {
-  return CHECK(this->getObj().getSectionName(&Sec, SectionStringTable), this);
+  return CHECK(getObj().getSectionName(&Sec, SectionStringTable), this);
 }
 
 template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
-  this->Symbols.reserve(this->ELFSyms.size());
-  for (const Elf_Sym &Sym : this->ELFSyms)
+  this->Symbols.reserve(this->getELFSyms<ELFT>().size());
+  for (const Elf_Sym &Sym : this->getELFSyms<ELFT>())
     this->Symbols.push_back(createSymbol(&Sym));
 }
 
 template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
   int Binding = Sym->getBinding();
 
-  uint32_t SecIdx = this->getSectionIndex(*Sym);
+  uint32_t SecIdx = getSectionIndex(*Sym);
   if (SecIdx >= this->Sections.size())
     fatal(toString(this) + ": invalid section index: " + Twine(SecIdx));
 
@@ -870,14 +871,16 @@ InputFile *ArchiveFile::fetch(const Archive::Symbol &Sym) {
 
 template <class ELFT>
 SharedFile<ELFT>::SharedFile(MemoryBufferRef M, StringRef DefaultSoName)
-    : ELFFileBase<ELFT>(Base::SharedKind, M), SoName(DefaultSoName),
-      IsNeeded(!Config->AsNeeded) {}
+    : ELFFileBase(SharedKind, M), SoName(DefaultSoName),
+      IsNeeded(!Config->AsNeeded) {
+  parseHeader<ELFT>();
+}
 
 // Partially parse the shared object file so that we can call
 // getSoName on this object.
 template <class ELFT> void SharedFile<ELFT>::parseDynamic() {
   ArrayRef<Elf_Dyn> DynamicTags;
-  const ELFFile<ELFT> Obj = this->getObj();
+  const ELFFile<ELFT> Obj = this->getObj<ELFT>();
   ArrayRef<Elf_Shdr> Sections = CHECK(Obj.sections(), this);
 
   // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
@@ -886,7 +889,7 @@ template <class ELFT> void SharedFile<ELFT>::parseDynamic() {
     default:
       continue;
     case SHT_DYNSYM:
-      this->initSymtab(Sections, &Sec);
+      this->initSymtab<ELFT>(Sections, &Sec);
       break;
     case SHT_DYNAMIC:
       DynamicTags =
@@ -901,7 +904,7 @@ template <class ELFT> void SharedFile<ELFT>::parseDynamic() {
     }
   }
 
-  if (this->VersymSec && this->ELFSyms.empty())
+  if (this->VersymSec && this->getELFSyms<ELFT>().empty())
     error("SHT_GNU_versym should be associated with symbol table");
 
   // Search for a DT_SONAME tag to initialize this->SoName.
@@ -923,7 +926,7 @@ template <class ELFT> void SharedFile<ELFT>::parseDynamic() {
 // Parses ".gnu.version" section which is a parallel array for the symbol table.
 // If a given file doesn't have ".gnu.version" section, returns VER_NDX_GLOBAL.
 template <class ELFT> std::vector<uint32_t> SharedFile<ELFT>::parseVersyms() {
-  size_t Size = this->ELFSyms.size() - this->FirstGlobal;
+  size_t Size = this->getELFSyms<ELFT>().size() - this->FirstGlobal;
   if (!VersymSec)
     return std::vector<uint32_t>(Size, VER_NDX_GLOBAL);
 
@@ -1001,7 +1004,7 @@ uint32_t SharedFile<ELFT>::getAlignment(ArrayRef<Elf_Shdr> Sections,
 template <class ELFT> void SharedFile<ELFT>::parseRest() {
   Verdefs = parseVerdefs();                       // parse .gnu.version_d
   std::vector<uint32_t> Versyms = parseVersyms(); // parse .gnu.version
-  ArrayRef<Elf_Shdr> Sections = CHECK(this->getObj().sections(), this);
+  ArrayRef<Elf_Shdr> Sections = CHECK(this->getObj<ELFT>().sections(), this);
 
   // System libraries can have a lot of symbols with versions. Using a
   // fixed buffer for computing the versions name (foo@ver) can save a
@@ -1009,7 +1012,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
   SmallString<0> VersionedNameBuffer;
 
   // Add symbols to the symbol table.
-  ArrayRef<Elf_Sym> Syms = this->getGlobalELFSyms();
+  ArrayRef<Elf_Sym> Syms = this->getGlobalELFSyms<ELFT>();
   for (size_t I = 0; I < Syms.size(); ++I) {
     const Elf_Sym &Sym = Syms[I];
 
@@ -1346,11 +1349,6 @@ template void LazyObjFile::parse<ELF32LE>();
 template void LazyObjFile::parse<ELF32BE>();
 template void LazyObjFile::parse<ELF64LE>();
 template void LazyObjFile::parse<ELF64BE>();
-
-template class elf::ELFFileBase<ELF32LE>;
-template class elf::ELFFileBase<ELF32BE>;
-template class elf::ELFFileBase<ELF64LE>;
-template class elf::ELFFileBase<ELF64BE>;
 
 template class elf::ObjFile<ELF32LE>;
 template class elf::ObjFile<ELF32BE>;

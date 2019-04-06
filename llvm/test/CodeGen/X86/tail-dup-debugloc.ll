@@ -6,7 +6,7 @@
 ; CHECK: [[DLOC:![0-9]+]] = !DILocation(line: 9, column: 5, scope: !{{[0-9]+}})
 ; CHECK: [[VREG:%[^ ]+]]:gr64 = COPY $rdi
 ; CHECK: TEST64rr [[VREG]], [[VREG]]
-; CHECK-NEXT: JE_1 {{.+}}, debug-location [[DLOC]]
+; CHECK-NEXT: JCC_1 {{.+}}, debug-location [[DLOC]]
 ; CHECK-NEXT: JMP_1 {{.+}}, debug-location [[DLOC]]
 
 target triple = "x86_64-unknown-linux-gnu"

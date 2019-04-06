@@ -306,7 +306,7 @@ defm V_CMPX_NEQ_F64 : VOPCX_F64 <"v_cmpx_neq_f64">;
 defm V_CMPX_NLT_F64 : VOPCX_F64 <"v_cmpx_nlt_f64">;
 defm V_CMPX_TRU_F64 : VOPCX_F64 <"v_cmpx_tru_f64">;
 
-let SubtargetPredicate = isSICI in {
+let SubtargetPredicate = isGFX6GFX7 in {
 
 defm V_CMPS_F_F32 : VOPC_F32 <"v_cmps_f_f32">;
 defm V_CMPS_LT_F32 : VOPC_F32 <"v_cmps_lt_f32", COND_NULL, "v_cmps_gt_f32">;
@@ -376,7 +376,7 @@ defm V_CMPSX_NEQ_F64 : VOPCX_F64 <"v_cmpsx_neq_f64">;
 defm V_CMPSX_NLT_F64 : VOPCX_F64 <"v_cmpsx_nlt_f64">;
 defm V_CMPSX_TRU_F64 : VOPCX_F64 <"v_cmpsx_tru_f64">;
 
-} // End SubtargetPredicate = isSICI
+} // End SubtargetPredicate = isGFX6GFX7
 
 let SubtargetPredicate = Has16BitInsts in {
 
@@ -694,7 +694,7 @@ def : FCMP_Pattern <COND_ULT, V_CMP_NGE_F16_e64, f16>;
 def : FCMP_Pattern <COND_ULE, V_CMP_NGT_F16_e64, f16>;
 
 //===----------------------------------------------------------------------===//
-// Target
+// Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -702,7 +702,7 @@ def : FCMP_Pattern <COND_ULE, V_CMP_NGT_F16_e64, f16>;
 //===----------------------------------------------------------------------===//
 
 multiclass VOPC_Real_si <bits<9> op> {
-  let AssemblerPredicates = [isSICI], DecoderNamespace = "SICI" in {
+  let AssemblerPredicates = [isGFX6GFX7], DecoderNamespace = "GFX6GFX7" in {
     def _e32_si :
       VOPC_Real<!cast<VOPC_Pseudo>(NAME#"_e32"), SIEncodingFamily.SI>,
       VOPCe<op{7-0}>;
@@ -718,7 +718,7 @@ multiclass VOPC_Real_si <bits<9> op> {
   }
   def : VOPCInstAlias <!cast<VOP3_Pseudo>(NAME#"_e64"),
                        !cast<Instruction>(NAME#"_e32_si")> {
-    let AssemblerPredicate = isSICI;
+    let AssemblerPredicate = isGFX6GFX7;
   }
 }
 

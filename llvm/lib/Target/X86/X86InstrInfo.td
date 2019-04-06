@@ -602,6 +602,12 @@ def offset64_32 : X86MemOffsOperand<i64imm, "printMemOffs32",
 def offset64_64 : X86MemOffsOperand<i64imm, "printMemOffs64",
                                     X86MemOffs64_64AsmOperand>;
 
+def ccode : Operand<i8> {
+  let PrintMethod = "printCondCode";
+  let OperandNamespace = "X86";
+  let OperandType = "OPERAND_COND_CODE";
+}
+
 class ImmSExtAsmOperandClass : AsmOperandClass {
   let SuperClasses = [ImmAsmOperand];
   let RenderMethod = "addImmOperands";
@@ -956,22 +962,22 @@ include "X86InstrFormats.td"
 
 // X86 specific condition code. These correspond to CondCode in
 // X86InstrInfo.h. They must be kept in synch.
-def X86_COND_A   : PatLeaf<(i8 0)>;  // alt. COND_NBE
-def X86_COND_AE  : PatLeaf<(i8 1)>;  // alt. COND_NC
+def X86_COND_O   : PatLeaf<(i8 0)>;
+def X86_COND_NO  : PatLeaf<(i8 1)>;
 def X86_COND_B   : PatLeaf<(i8 2)>;  // alt. COND_C
-def X86_COND_BE  : PatLeaf<(i8 3)>;  // alt. COND_NA
+def X86_COND_AE  : PatLeaf<(i8 3)>;  // alt. COND_NC
 def X86_COND_E   : PatLeaf<(i8 4)>;  // alt. COND_Z
-def X86_COND_G   : PatLeaf<(i8 5)>;  // alt. COND_NLE
-def X86_COND_GE  : PatLeaf<(i8 6)>;  // alt. COND_NL
-def X86_COND_L   : PatLeaf<(i8 7)>;  // alt. COND_NGE
-def X86_COND_LE  : PatLeaf<(i8 8)>;  // alt. COND_NG
-def X86_COND_NE  : PatLeaf<(i8 9)>;  // alt. COND_NZ
-def X86_COND_NO  : PatLeaf<(i8 10)>;
+def X86_COND_NE  : PatLeaf<(i8 5)>;  // alt. COND_NZ
+def X86_COND_BE  : PatLeaf<(i8 6)>;  // alt. COND_NA
+def X86_COND_A   : PatLeaf<(i8 7)>;  // alt. COND_NBE
+def X86_COND_S   : PatLeaf<(i8 8)>;
+def X86_COND_NS  : PatLeaf<(i8 9)>;
+def X86_COND_P   : PatLeaf<(i8 10)>; // alt. COND_PE
 def X86_COND_NP  : PatLeaf<(i8 11)>; // alt. COND_PO
-def X86_COND_NS  : PatLeaf<(i8 12)>;
-def X86_COND_O   : PatLeaf<(i8 13)>;
-def X86_COND_P   : PatLeaf<(i8 14)>; // alt. COND_PE
-def X86_COND_S   : PatLeaf<(i8 15)>;
+def X86_COND_L   : PatLeaf<(i8 12)>; // alt. COND_NGE
+def X86_COND_GE  : PatLeaf<(i8 13)>; // alt. COND_NL
+def X86_COND_LE  : PatLeaf<(i8 14)>; // alt. COND_NG
+def X86_COND_G   : PatLeaf<(i8 15)>; // alt. COND_NLE
 
 def i16immSExt8  : ImmLeaf<i16, [{ return isInt<8>(Imm); }]>;
 def i32immSExt8  : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;

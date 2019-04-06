@@ -144,7 +144,11 @@ static constexpr PropertyDefinition g_properties[] = {
          "stepping and variable availability may not behave as expected."},
     {"stop-on-exec", OptionValue::eTypeBoolean, true, true,
      nullptr, {},
-     "If true, stop when a shared library is loaded or unloaded."}};
+     "If true, stop when a shared library is loaded or unloaded."},
+    {"utility-expression-timeout", OptionValue::eTypeUInt64, false, 15,
+     nullptr, {},
+     "The time in seconds to wait for LLDB-internal utility expressions."}
+};
 
 enum {
   ePropertyDisableMemCache,
@@ -156,7 +160,8 @@ enum {
   ePropertyDetachKeepsStopped,
   ePropertyMemCacheLineSize,
   ePropertyWarningOptimization,
-  ePropertyStopOnExec
+  ePropertyStopOnExec,
+  ePropertyUtilityExpressionTimeout,
 };
 
 ProcessProperties::ProcessProperties(lldb_private::Process *process)
@@ -277,6 +282,13 @@ bool ProcessProperties::GetStopOnExec() const {
   const uint32_t idx = ePropertyStopOnExec;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_properties[idx].default_uint_value != 0);
+}
+
+std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
+  const uint32_t idx = ePropertyUtilityExpressionTimeout;
+  uint64_t value = m_collection_sp->GetPropertyAtIndexAsUInt64(
+     nullptr, idx, g_properties[idx].default_uint_value);
+  return std::chrono::seconds(value);
 }
 
 Status ProcessLaunchCommandOptions::SetOptionValue(
@@ -3606,10 +3618,10 @@ void Process::ControlPrivateStateThread(uint32_t signal) {
     bool receipt_received = false;
     if (PrivateStateThreadIsValid()) {
       while (!receipt_received) {
-        // Check for a receipt for 2 seconds and then check if the private
+        // Check for a receipt for n seconds and then check if the private
         // state thread is still around.
         receipt_received =
-            event_receipt_sp->WaitForEventReceived(std::chrono::seconds(2));
+          event_receipt_sp->WaitForEventReceived(GetUtilityExpressionTimeout());
         if (!receipt_received) {
           // Check if the private state thread is still around. If it isn't
           // then we are done waiting
@@ -4902,7 +4914,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
         }
 
         got_event =
-            listener_sp->GetEvent(event_sp, std::chrono::milliseconds(500));
+            listener_sp->GetEvent(event_sp, GetUtilityExpressionTimeout());
         if (!got_event) {
           if (log)
             log->Printf("Process::RunThreadPlan(): didn't get any event after "
@@ -5133,7 +5145,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
               log->PutCString("Process::RunThreadPlan(): Halt succeeded.");
 
             got_event =
-                listener_sp->GetEvent(event_sp, std::chrono::milliseconds(500));
+                listener_sp->GetEvent(event_sp, GetUtilityExpressionTimeout());
 
             if (got_event) {
               stop_state =

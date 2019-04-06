@@ -22,8 +22,8 @@ body: |
     successors: %bb.1.less, %bb.2.exit
 
     CMP32ri8 $edi, 10, implicit-def $eflags
-  ; CHECK: [[@LINE+1]]:31: duplicate 'implicit' register flag
-    JG_1 %bb.2.exit, implicit implicit $eflags
+  ; CHECK: [[@LINE+1]]:36: duplicate 'implicit' register flag
+    JCC_1 %bb.2.exit, 15, implicit implicit $eflags
 
   bb.1.less:
     $eax = MOV32r0 implicit-def $eflags

@@ -481,9 +481,7 @@ def : GCNPat<
     (V_SUBB_U32_e64 $src0, $src1, $src2, 0)
 >;
 
-// These instructions only exist on SI and CI
-let SubtargetPredicate = isSICI, Predicates = [isSICI] in {
-
+let SubtargetPredicate = isGFX6GFX7 in {
 defm V_MIN_LEGACY_F32 : VOP2Inst <"v_min_legacy_f32", VOP_F32_F32_F32, AMDGPUfmin_legacy>;
 defm V_MAX_LEGACY_F32 : VOP2Inst <"v_max_legacy_f32", VOP_F32_F32_F32, AMDGPUfmax_legacy>;
 
@@ -493,8 +491,7 @@ defm V_LSHR_B32 : VOP2Inst <"v_lshr_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, srl>;
 defm V_ASHR_I32 : VOP2Inst <"v_ashr_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, sra>;
 defm V_LSHL_B32 : VOP2Inst <"v_lshl_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, shl>;
 } // End isCommutable = 1
-
-} // End let SubtargetPredicate = SICI, Predicates = [isSICI]
+} // End SubtargetPredicate = isGFX6GFX7
 
 class DivergentBinOp<SDPatternOperator Op, VOP_Pseudo Inst> :
   GCNPat<
@@ -660,7 +657,7 @@ class ZExt_i16_i1_Pat <SDNode ext> : GCNPat <
                      $src)
 >;
 
-let Predicates = [Has16BitInsts] in {
+let Predicates = [Has16BitInsts, isGFX7GFX8GFX9] in {
 
 defm : Arithmetic_i16_Pats<add, V_ADD_U16_e64>;
 defm : Arithmetic_i16_Pats<mul, V_MUL_LO_U16_e64>;
@@ -706,13 +703,13 @@ def : GCNPat<
   (V_SUB_U16_e64 $src0, NegSubInlineConst16:$src1)
 >;
 
-} // End Predicates = [Has16BitInsts]
+} // End Predicates = [Has16BitInsts, isGFX7GFX8GFX9]
 
 //===----------------------------------------------------------------------===//
 // SI
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicates = [isSICI], DecoderNamespace = "SICI" in {
+let AssemblerPredicates = [isGFX6GFX7], DecoderNamespace = "GFX6GFX7" in {
 
 multiclass VOP2_Real_si <bits<6> op> {
   def _si :
@@ -743,7 +740,7 @@ multiclass VOP2be_Real_e32e64_si <bits<6> op> : VOP2_Real_e32_si<op> {
     VOP3be_si <{1, 0, 0, op{5-0}}, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
 }
 
-} // End AssemblerPredicates = [isSICI], DecoderNamespace = "SICI"
+} // End AssemblerPredicates = [isGFX6GFX7], DecoderNamespace = "GFX6GFX7"
 
 defm V_CNDMASK_B32        : VOP2_Real_e32e64_si <0x0>;
 defm V_ADD_F32            : VOP2_Real_e32e64_si <0x3>;

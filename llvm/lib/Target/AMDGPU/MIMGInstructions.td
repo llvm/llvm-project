@@ -260,10 +260,10 @@ class MIMG_Atomic_Helper <string asm, RegisterClass data_rc,
 multiclass MIMG_Atomic_Helper_m <mimg op, string asm, RegisterClass data_rc,
                                  RegisterClass addr_rc, bit enableDasm = 0> {
   let ssamp = 0, d16 = 0 in {
-    def _si : MIMG_Atomic_Helper<asm, data_rc, addr_rc, "SICI", enableDasm>,
+    def _si : MIMG_Atomic_Helper<asm, data_rc, addr_rc, "GFX6GFX7", enableDasm>,
               SIMCInstr<NAME, SIEncodingFamily.SI>,
               MIMGe<op.SI> {
-      let AssemblerPredicates = [isSICI];
+      let AssemblerPredicates = [isGFX6GFX7];
       let DisableDecoder = DisableSIDecoder;
     }
 

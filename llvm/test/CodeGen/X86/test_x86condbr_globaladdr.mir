@@ -18,7 +18,7 @@ body: |
     %1:gr32 = COPY $edx
     %2:gr32 = MOV32rm %1:gr32, 1, $noreg, 850256, $noreg
     %3:gr32 = SUB32ri %2:gr32, @img2buf_normal, implicit-def $eflags
-    JE_1 %bb.2, implicit $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
     JMP_1 %bb.3
 
   bb.2:

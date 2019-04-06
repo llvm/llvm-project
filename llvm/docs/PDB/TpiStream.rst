@@ -10,7 +10,7 @@ The PDB TPI and IPI Streams
 Introduction
 ============
 
-The PDB TPI Stream (Index 2) and IPI Stream (Index 3) contain information about
+The PDB TPI Stream (Index 2) and IPI Stream (Index 4) contain information about
 all types used in the program.  It is organized as a :ref:`header <tpi_header>`
 followed by a list of :doc:`CodeView Type Records <CodeViewTypes>`.  Types are
 referenced from various streams and records throughout the PDB by their

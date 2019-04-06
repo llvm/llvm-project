@@ -63,6 +63,8 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   // and are not considered done until both have been decremented.
   let VM_CNT = 1;
   let LGKM_CNT = !if(!or(is_flat_global, is_flat_scratch), 0, 1);
+
+  let IsNonFlatSeg = !if(!or(is_flat_global, is_flat_scratch), 1, 0);
 }
 
 class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
@@ -490,7 +492,8 @@ defm FLAT_ATOMIC_INC_X2     : FLAT_Atomic_Pseudo <"flat_atomic_inc_x2",
 defm FLAT_ATOMIC_DEC_X2     : FLAT_Atomic_Pseudo <"flat_atomic_dec_x2",
                                 VReg_64, i64, atomic_dec_flat>;
 
-let SubtargetPredicate = isCI in { // CI Only flat instructions : FIXME Only?
+// GFX7-only flat instructions.
+let SubtargetPredicate = isGFX7 in {
 
 defm FLAT_ATOMIC_FCMPSWAP    : FLAT_Atomic_Pseudo <"flat_atomic_fcmpswap",
                                 VGPR_32, f32, null_frag, v2f32, VReg_64>;
@@ -510,7 +513,7 @@ defm FLAT_ATOMIC_FMIN_X2     : FLAT_Atomic_Pseudo <"flat_atomic_fmin_x2",
 defm FLAT_ATOMIC_FMAX_X2     : FLAT_Atomic_Pseudo <"flat_atomic_fmax_x2",
                                 VReg_64, f64>;
 
-} // End SubtargetPredicate = isCI
+} // End SubtargetPredicate = isGFX7
 
 let SubtargetPredicate = HasFlatGlobalInsts in {
 defm GLOBAL_LOAD_UBYTE    : FLAT_Global_Load_Pseudo <"global_load_ubyte", VGPR_32>;
@@ -890,7 +893,7 @@ class FLAT_Real_ci <bits<7> op, FLAT_Pseudo ps> :
   FLAT_Real <op, ps>,
   SIMCInstr <ps.PseudoInstr, SIEncodingFamily.SI> {
   let AssemblerPredicate = isCIOnly;
-  let DecoderNamespace="CI";
+  let DecoderNamespace="GFX7";
 }
 
 def FLAT_LOAD_UBYTE_ci         : FLAT_Real_ci <0x8,  FLAT_LOAD_UBYTE>;
