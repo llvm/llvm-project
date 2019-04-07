@@ -11,7 +11,7 @@ declare_args() {
 
 static_library("builtins") {
   output_dir = crt_current_out_dir
-  output_name = "clang_rt.builtins-$crt_current_target"
+  output_name = "clang_rt.builtins$crt_current_target_suffix"
   complete_static_lib = true
   cflags = [
     "-fPIC",

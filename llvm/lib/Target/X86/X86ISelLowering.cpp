@@ -33662,23 +33662,22 @@ static SDValue XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
 // (i16 movmsk (16i8 sext (v16i1 x)))
 // before the illegal vector is scalarized on subtargets that don't have legal
 // vxi1 types.
-static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
+static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
+                                  const SDLoc &DL,
                                   const X86Subtarget &Subtarget) {
-  EVT VT = BitCast.getValueType();
-  SDValue N0 = BitCast.getOperand(0);
-  EVT VecVT = N0.getValueType();
+  EVT SrcVT = Src.getValueType();
 
-  if (!VT.isScalarInteger() || !VecVT.isSimple())
+  if (!VT.isScalarInteger() || !SrcVT.isSimple())
     return SDValue();
 
   // If the input is a truncate from v16i8 or v32i8 go ahead and use a
   // movmskb even with avx512. This will be better than truncating to vXi1 and
   // using a kmov. This can especially help KNL if the input is a v16i8/v32i8
   // vpcmpeqb/vpcmpgtb.
-  bool IsTruncated = N0.getOpcode() == ISD::TRUNCATE && N0.hasOneUse() &&
-                     (N0.getOperand(0).getValueType() == MVT::v16i8 ||
-                      N0.getOperand(0).getValueType() == MVT::v32i8 ||
-                      N0.getOperand(0).getValueType() == MVT::v64i8);
+  bool IsTruncated = Src.getOpcode() == ISD::TRUNCATE && Src.hasOneUse() &&
+                     (Src.getOperand(0).getValueType() == MVT::v16i8 ||
+                      Src.getOperand(0).getValueType() == MVT::v32i8 ||
+                      Src.getOperand(0).getValueType() == MVT::v64i8);
 
   // With AVX512 vxi1 types are legal and we prefer using k-regs.
   // MOVMSK is supported in SSE2 or later.
@@ -33696,7 +33695,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
   // For example, t0 := (v8i16 sext(v8i1 x)) needs to be shuffled as:
   // (v16i8 shuffle <0,2,4,6,8,10,12,14,u,u,...,u> (v16i8 bitcast t0), undef)
   MVT SExtVT;
-  switch (VecVT.getSimpleVT().SimpleTy) {
+  switch (SrcVT.getSimpleVT().SimpleTy) {
   default:
     return SDValue();
   case MVT::v2i1:
@@ -33706,8 +33705,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
     SExtVT = MVT::v4i32;
     // For cases such as (i4 bitcast (v4i1 setcc v4i64 v1, v2))
     // sign-extend to a 256-bit operation to avoid truncation.
-    if (N0.getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
-        N0.getOperand(0).getValueType().is256BitVector()) {
+    if (Src.getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
+        Src.getOperand(0).getValueType().is256BitVector()) {
       SExtVT = MVT::v4i64;
     }
     break;
@@ -33718,9 +33717,9 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
     // If the setcc operand is 128-bit, prefer sign-extending to 128-bit over
     // 256-bit because the shuffle is cheaper than sign extending the result of
     // the compare.
-    if (N0.getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
-        (N0.getOperand(0).getValueType().is256BitVector() ||
-         N0.getOperand(0).getValueType().is512BitVector())) {
+    if (Src.getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
+        (Src.getOperand(0).getValueType().is256BitVector() ||
+         Src.getOperand(0).getValueType().is512BitVector())) {
       SExtVT = MVT::v8i32;
     }
     break;
@@ -33744,8 +33743,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
     return SDValue();
   };
 
-  SDLoc DL(BitCast);
-  SDValue V = DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, N0);
+  SDValue V = DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);
 
   if (SExtVT == MVT::v64i8) {
     SDValue Lo, Hi;
@@ -33929,14 +33927,14 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   // before the setcc result is scalarized on subtargets that don't have legal
   // vxi1 types.
   if (DCI.isBeforeLegalize()) {
-    if (SDValue V = combineBitcastvxi1(DAG, SDValue(N, 0), Subtarget))
+    SDLoc dl(N);
+    if (SDValue V = combineBitcastvxi1(DAG, VT, N0, dl, Subtarget))
       return V;
 
     // If this is a bitcast between a MVT::v4i1/v2i1 and an illegal integer
     // type, widen both sides to avoid a trip through memory.
     if ((VT == MVT::v4i1 || VT == MVT::v2i1) && SrcVT.isScalarInteger() &&
         Subtarget.hasAVX512()) {
-      SDLoc dl(N);
       N0 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i8, N0);
       N0 = DAG.getBitcast(MVT::v8i1, N0);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, N0,

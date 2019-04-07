@@ -7275,8 +7275,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
     StringRef BytesStr;
     Sections[SectIdx].getContents(BytesStr);
-    ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(BytesStr.data()),
-                            BytesStr.size());
+    ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(BytesStr);
     uint64_t SectAddress = Sections[SectIdx].getAddress();
 
     bool symbolTableWorked = false;

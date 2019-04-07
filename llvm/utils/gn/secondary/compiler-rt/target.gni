@@ -1,10 +1,5 @@
 import("//clang/resource_dir.gni")
-
-if (current_os == "linux" || current_os == "android") {
-  crt_current_out_dir = "$clang_resource_dir/lib/linux"
-} else {
-  assert(false, "unimplemented current_os " + current_os)
-}
+import("//clang/runtimes.gni")
 
 if (current_cpu == "x86") {
   crt_current_target_arch = "i386"
@@ -16,7 +11,17 @@ if (current_cpu == "x86") {
   assert(false, "unimplemented current_cpu " + current_cpu)
 }
 
-crt_current_target = crt_current_target_arch
-if (current_os == "android") {
-  crt_current_target += "-android"
+if (clang_enable_per_target_runtime_dir) {
+  crt_current_out_dir = runtimes_dir
+
+  crt_current_target_suffix = ""
+} else if (current_os == "linux" || current_os == "android") {
+  crt_current_out_dir = "$clang_resource_dir/lib/linux"
+
+  crt_current_target_suffix = "-$crt_current_target_arch"
+  if (current_os == "android") {
+    crt_current_target_suffix += "-android"
+  }
+} else {
+  assert(false, "unimplemented current_os " + current_os)
 }

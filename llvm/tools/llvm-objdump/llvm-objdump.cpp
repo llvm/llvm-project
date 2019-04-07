@@ -1084,8 +1084,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
     StringRef BytesStr;
     error(Section.getContents(BytesStr));
-    ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(BytesStr.data()),
-                            BytesStr.size());
+    ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(BytesStr);
 
     uint64_t VMAAdjustment = 0;
     if (shouldAdjustVA(Section))
