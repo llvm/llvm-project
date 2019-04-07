@@ -965,6 +965,8 @@ upsample(T hi, T2 lo) __NOEXC {
       hi, lo);
 }
 
+#undef __invoke_s_upsample
+
 // geninteger popcount (geninteger x)
 template <typename T>
 typename std::enable_if<detail::is_geninteger<T>::value, T>::type

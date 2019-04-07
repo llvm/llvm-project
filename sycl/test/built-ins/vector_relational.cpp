@@ -6,7 +6,6 @@
 
 #include <CL/sycl.hpp>
 
-#include <array>
 #include <cassert>
 #include <cmath>
 
@@ -32,8 +31,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == -1);
     assert(r2 == 0);
     assert(r3 == 0);
@@ -59,8 +56,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == 0);
     assert(r2 == -1);
     assert(r3 == -1);
@@ -86,8 +81,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == 0);
     assert(r2 == -1);
     assert(r3 == 0);
@@ -113,8 +106,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == -1);
     assert(r2 == -1);
     assert(r3 == 0);
@@ -140,8 +131,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == 0);
     assert(r2 == -1);
     assert(r3 == 0);
@@ -167,8 +156,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == -1);
     assert(r2 == -1);
     assert(r3 == 0);
@@ -195,8 +182,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == 0);
     assert(r2 == -1);
     assert(r3 == 0);
@@ -222,8 +207,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == -1);
     assert(r2 == -1);
     assert(r3 == 0);
@@ -248,8 +231,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == 0);
     assert(r2 == 0);
     assert(r3 == 0);
@@ -274,8 +255,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == 0);
     assert(r2 == 0);
     assert(r3 == -1);
@@ -300,8 +279,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == -1);
     assert(r2 == -1);
     assert(r3 == 0);
@@ -327,8 +304,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == -1);
     assert(r2 == -1);
     assert(r3 == 0);
@@ -354,8 +329,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == 0);
     assert(r2 == 0);
     assert(r3 == -1);
@@ -380,8 +353,6 @@ int main() {
     s::cl_int r3 = r.z();
     s::cl_int r4 = r.w();
 
-    std::cout << "sign r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 "
-              << r4 << std::endl;
     assert(r1 == 0);
     assert(r2 == -1);
     assert(r3 == 0);
@@ -404,7 +375,6 @@ int main() {
     }
     s::cl_int r1 = r;
 
-    std::cout << "Any r1 " << r1 << std::endl;
     assert(r1 == 1);
   }
 
@@ -424,7 +394,6 @@ int main() {
     }
     s::cl_int r1 = r;
 
-    std::cout << "Any - r1 " << r1 << std::endl;
     assert(r1 == 1);
   }
 
@@ -444,7 +413,6 @@ int main() {
     }
     s::cl_int r1 = r;
 
-    std::cout << "Any 0 r1 " << r1 << std::endl;
     assert(r1 == 0);
   }
 
@@ -464,7 +432,6 @@ int main() {
     }
     s::cl_int r1 = r;
 
-    std::cout << "Any + r1 " << r1 << std::endl;
     assert(r1 == 0);
   }
 
@@ -487,7 +454,6 @@ int main() {
     }
     s::cl_int r1 = r;
 
-    std::cout << "All change r1 " << r1 << std::endl;
     assert(r1 == 1);
   }
 
@@ -507,7 +473,6 @@ int main() {
     }
     s::cl_int r1 = r;
 
-    std::cout << "All - r1 " << r1 << std::endl;
     assert(r1 == 1);
   }
 
@@ -527,7 +492,6 @@ int main() {
     }
     s::cl_int r1 = r;
 
-    std::cout << "All 0 r1 " << r1 << std::endl;
     assert(r1 == 0);
   }
 
@@ -547,7 +511,6 @@ int main() {
     }
     s::cl_int r1 = r;
 
-    std::cout << "All + r1 " << r1 << std::endl;
     assert(r1 == 0);
   }
 
@@ -572,8 +535,6 @@ int main() {
     s::cl_float r3 = r.z();
     s::cl_float r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(abs(r1 - 80.5477f) < 0.0001);
     assert(abs(r2 - 18.2322f) < 0.0001);
     assert(abs(r3 - 1.0f) < 0.01);
@@ -603,8 +564,6 @@ int main() {
     s::cl_float r3 = r.z();
     s::cl_float r4 = r.w();
 
-    std::cout << "r1 " << r1 << " r2 " << r2 << " r3 " << r3 << " r4 " << r4
-              << std::endl;
     assert(r1 == 112.112f);
     assert(r2 == 112.112f);
     assert(r3 == 112.112f);

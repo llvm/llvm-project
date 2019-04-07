@@ -1244,6 +1244,10 @@ template <typename T> static constexpr T min_v() {
   return std::numeric_limits<T>::min();
 }
 
+template <typename T> static constexpr T quiet_NaN() {
+  return std::numeric_limits<T>::quiet_NaN();
+}
+
 } // namespace detail
 } // namespace sycl
 } // namespace cl
