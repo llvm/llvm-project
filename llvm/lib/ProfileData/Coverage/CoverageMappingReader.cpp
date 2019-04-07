@@ -59,7 +59,7 @@ Error RawCoverageReader::readULEB128(uint64_t &Result) {
   if (Data.empty())
     return make_error<CoverageMapError>(coveragemap_error::truncated);
   unsigned N = 0;
-  Result = decodeULEB128(reinterpret_cast<const uint8_t *>(Data.data()), &N);
+  Result = decodeULEB128(Data.bytes_begin(), &N);
   if (N > Data.size())
     return make_error<CoverageMapError>(coveragemap_error::malformed);
   Data = Data.substr(N);
@@ -595,16 +595,14 @@ static Error loadTestingFormat(StringRef Data, InstrProfSymtab &ProfileNames,
   if (Data.empty())
     return make_error<CoverageMapError>(coveragemap_error::truncated);
   unsigned N = 0;
-  auto ProfileNamesSize =
-      decodeULEB128(reinterpret_cast<const uint8_t *>(Data.data()), &N);
+  uint64_t ProfileNamesSize = decodeULEB128(Data.bytes_begin(), &N);
   if (N > Data.size())
     return make_error<CoverageMapError>(coveragemap_error::malformed);
   Data = Data.substr(N);
   if (Data.empty())
     return make_error<CoverageMapError>(coveragemap_error::truncated);
   N = 0;
-  uint64_t Address =
-      decodeULEB128(reinterpret_cast<const uint8_t *>(Data.data()), &N);
+  uint64_t Address = decodeULEB128(Data.bytes_begin(), &N);
   if (N > Data.size())
     return make_error<CoverageMapError>(coveragemap_error::malformed);
   Data = Data.substr(N);

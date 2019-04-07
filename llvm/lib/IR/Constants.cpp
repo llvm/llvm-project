@@ -2576,7 +2576,7 @@ Constant *ConstantDataArray::getFP(LLVMContext &Context,
 Constant *ConstantDataArray::getString(LLVMContext &Context,
                                        StringRef Str, bool AddNull) {
   if (!AddNull) {
-    const uint8_t *Data = reinterpret_cast<const uint8_t *>(Str.data());
+    const uint8_t *Data = Str.bytes_begin();
     return get(Context, makeArrayRef(Data, Str.size()));
   }
 

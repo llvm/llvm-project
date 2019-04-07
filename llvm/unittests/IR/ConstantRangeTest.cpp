@@ -704,6 +704,8 @@ TEST_F(ConstantRangeTest, UDiv) {
 }
 
 TEST_F(ConstantRangeTest, Shl) {
+  ConstantRange Some2(APInt(16, 0xfff), APInt(16, 0x8000));
+  ConstantRange WrapNullMax(APInt(16, 0x1), APInt(16, 0x0));
   EXPECT_EQ(Full.shl(Full), Full);
   EXPECT_EQ(Full.shl(Empty), Empty);
   EXPECT_EQ(Full.shl(One), Full);    // TODO: [0, (-1 << 0xa) + 1)
@@ -720,6 +722,10 @@ TEST_F(ConstantRangeTest, Shl) {
   EXPECT_EQ(Some.shl(Some), Full);   // TODO: [0xa << 0xa, 0xfc01)
   EXPECT_EQ(Some.shl(Wrap), Full);   // TODO: [0xa, 0x7ff << 0x5 + 1)
   EXPECT_EQ(Wrap.shl(Wrap), Full);
+  EXPECT_EQ(
+      Some2.shl(ConstantRange(APInt(16, 0x1))),
+      ConstantRange(APInt(16, 0xfff << 0x1), APInt(16, 0x7fff << 0x1) + 1));
+  EXPECT_EQ(One.shl(WrapNullMax), Full);
 }
 
 TEST_F(ConstantRangeTest, Lshr) {

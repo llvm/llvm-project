@@ -1006,8 +1006,12 @@ ConstantRange::shl(const ConstantRange &Other) const {
   APInt max = getUnsignedMax();
   APInt Other_umax = Other.getUnsignedMax();
 
+  // If we are shifting by maximum amount of
+  // zero return return the original range.
+  if (Other_umax.isNullValue())
+    return *this;
   // there's overflow!
-  if (Other_umax.uge(max.countLeadingZeros()))
+  if (Other_umax.ugt(max.countLeadingZeros()))
     return getFull();
 
   // FIXME: implement the other tricky cases
