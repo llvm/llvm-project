@@ -5,7 +5,7 @@
 define i64 @test1(i8* %data) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    shlq $2, %rax
 ; CHECK-NEXT:    andl $60, %eax
 ; CHECK-NEXT:    retq
@@ -20,7 +20,7 @@ entry:
 define i8* @test2(i8* %data) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    andl $15, %eax
 ; CHECK-NEXT:    leaq (%rdi,%rax,4), %rax
 ; CHECK-NEXT:    retq
@@ -53,7 +53,7 @@ entry:
 define i64 @test4(i8* %data) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    shrq $2, %rax
 ; CHECK-NEXT:    andl $60, %eax
 ; CHECK-NEXT:    retq

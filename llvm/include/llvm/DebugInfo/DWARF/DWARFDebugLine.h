@@ -351,7 +351,7 @@ private:
     ParsingState(struct LineTable *LT);
 
     void resetRowAndSequence();
-    void appendRowToMatrix(uint32_t Offset);
+    void appendRowToMatrix();
 
     /// Line table we're currently parsing.
     struct LineTable *LineTable;

@@ -85,6 +85,52 @@ void LLVMDisposeBinary(LLVMBinaryRef BR) {
   delete unwrap(BR);
 }
 
+LLVMBinaryType LLVMBinaryGetType(LLVMBinaryRef BR) {
+  class BinaryTypeMapper final : public Binary {
+  public:
+    static LLVMBinaryType mapBinaryTypeToLLVMBinaryType(unsigned Kind) {
+      switch (Kind) {
+      case ID_Archive:
+        return LLVMBinaryTypeArchive;
+      case ID_MachOUniversalBinary:
+        return LLVMBinaryTypeMachOUniversalBinary;
+      case ID_COFFImportFile:
+        return LLVMBinaryTypeCOFFImportFile;
+      case ID_IR:
+        return LLVMBinaryTypeIR;
+      case ID_WinRes:
+        return LLVMBinaryTypeWinRes;
+      case ID_COFF:
+        return LLVMBinaryTypeCOFF;
+      case ID_ELF32L:
+        return LLVMBinaryTypeELF32L;
+      case ID_ELF32B:
+        return LLVMBinaryTypeELF32B;
+      case ID_ELF64L:
+        return LLVMBinaryTypeELF64L;
+      case ID_ELF64B:
+        return LLVMBinaryTypeELF64B;
+      case ID_MachO32L:
+        return LLVMBinaryTypeMachO32L;
+      case ID_MachO32B:
+        return LLVMBinaryTypeMachO32B;
+      case ID_MachO64L:
+        return LLVMBinaryTypeMachO64L;
+      case ID_MachO64B:
+        return LLVMBinaryTypeMachO64B;
+      case ID_Wasm:
+        return LLVMBinaryTypeWasm;
+      case ID_StartObjects:
+      case ID_EndObjects:
+        llvm_unreachable("Marker types are not valid binary kinds!");
+      default:
+        llvm_unreachable("Unknown binary kind!");
+      }
+    }
+  };
+  return BinaryTypeMapper::mapBinaryTypeToLLVMBinaryType(unwrap(BR)->getType());
+}
+
 // ObjectFile creation
 LLVMObjectFileRef LLVMCreateObjectFile(LLVMMemoryBufferRef MemBuf) {
   std::unique_ptr<MemoryBuffer> Buf(unwrap(MemBuf));

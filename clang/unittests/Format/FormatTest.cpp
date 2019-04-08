@@ -12822,6 +12822,24 @@ TEST_F(FormatTest, ConfigurableContinuationIndentWidth) {
             format("int i = longFunction(arg);", SixIndent));
 }
 
+TEST_F(FormatTest, WrappedClosingParenthesisIndent) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat(
+      "int Foo::getter(\n"
+      "    //\n"
+      ") const {\n"
+      "  return foo;\n"
+      "}",
+      Style);
+  verifyFormat(
+      "void Foo::setter(\n"
+      "    //\n"
+      ") {\n"
+      "  foo = 1;\n"
+      "}",
+      Style);
+}
+
 TEST_F(FormatTest, SpacesInAngles) {
   FormatStyle Spaces = getLLVMStyle();
   Spaces.SpacesInAngles = true;
