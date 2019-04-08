@@ -358,8 +358,7 @@ void ProcessMinidump::ReadModuleList() {
     FileSystem::Instance().Resolve(file_spec);
     ModuleSpec module_spec(file_spec, uuid);
     Status error;
-    lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, &error);
-    if (!module_sp || error.Fail()) {
+    lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, true /* notify */, &error);
       // We failed to locate a matching local object file. Fortunately, the
       // minidump format encodes enough information about each module's memory
       // range to allow us to create placeholder modules.
@@ -377,7 +376,7 @@ void ProcessMinidump::ReadModuleList() {
           std::make_shared<PlaceholderModule>(module_spec);
       placeholder_module->CreateImageSection(module, GetTarget());
       module_sp = placeholder_module;
-      GetTarget().GetImages().Append(module_sp);
+      GetTarget().GetImages().Append(module_sp, true /* notify */);
     }
 
     if (log) {
