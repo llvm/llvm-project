@@ -266,8 +266,8 @@ LLVM-specific variables
 **LLVM_ENABLE_THREADS**:BOOL
   Build with threads support, if available. Defaults to ON.
 
-**LLVM_ENABLE_CXX1Y**:BOOL
-  Build in C++1y mode, if available. Defaults to OFF.
+**LLVM_CXX_STD**:STRING
+  Build with the specified C++ standard. Defaults to "c++11".
 
 **LLVM_ENABLE_ASSERTIONS**:BOOL
   Enables code assertions. Defaults to ON if and only if ``CMAKE_BUILD_TYPE``

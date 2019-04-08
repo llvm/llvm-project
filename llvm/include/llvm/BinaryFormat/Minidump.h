@@ -124,6 +124,37 @@ struct SystemInfo {
 };
 static_assert(sizeof(SystemInfo) == 56, "");
 
+struct VSFixedFileInfo {
+  support::ulittle32_t Signature;
+  support::ulittle32_t StructVersion;
+  support::ulittle32_t FileVersionHigh;
+  support::ulittle32_t FileVersionLow;
+  support::ulittle32_t ProductVersionHigh;
+  support::ulittle32_t ProductVersionLow;
+  support::ulittle32_t FileFlagsMask;
+  support::ulittle32_t FileFlags;
+  support::ulittle32_t FileOS;
+  support::ulittle32_t FileType;
+  support::ulittle32_t FileSubtype;
+  support::ulittle32_t FileDateHigh;
+  support::ulittle32_t FileDateLow;
+};
+static_assert(sizeof(VSFixedFileInfo) == 52, "");
+
+struct Module {
+  support::ulittle64_t BaseOfImage;
+  support::ulittle32_t SizeOfImage;
+  support::ulittle32_t Checksum;
+  support::ulittle32_t TimeDateStamp;
+  support::ulittle32_t ModuleNameRVA;
+  VSFixedFileInfo VersionInfo;
+  LocationDescriptor CvRecord;
+  LocationDescriptor MiscRecord;
+  support::ulittle64_t Reserved0;
+  support::ulittle64_t Reserved1;
+};
+static_assert(sizeof(Module) == 108, "");
+
 } // namespace minidump
 
 template <> struct DenseMapInfo<minidump::StreamType> {

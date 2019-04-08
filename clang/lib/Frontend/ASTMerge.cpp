@@ -65,11 +65,13 @@ void ASTMergeAction::ExecuteAction() {
           if (II->isStr("__va_list_tag") || II->isStr("__builtin_va_list"))
             continue;
 
-      Decl *ToD = Importer.Import(D);
+      llvm::Expected<Decl *> ToDOrError = Importer.Import_New(D);
 
-      if (ToD) {
-        DeclGroupRef DGR(ToD);
+      if (ToDOrError) {
+        DeclGroupRef DGR(*ToDOrError);
         CI.getASTConsumer().HandleTopLevelDecl(DGR);
+      } else {
+        llvm::consumeError(ToDOrError.takeError());
       }
     }
   }

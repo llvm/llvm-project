@@ -16,7 +16,7 @@ define i256 @test1(i256 %a) nounwind {
 ; ILP-NEXT:    pushq %rbx
 ; ILP-NEXT:    movq %rdi, %rax
 ; ILP-NEXT:    xorl %r8d, %r8d
-; ILP-NEXT:    addb %sil, %sil
+; ILP-NEXT:    addq %rsi, %rsi
 ; ILP-NEXT:    addb $2, %sil
 ; ILP-NEXT:    orb $1, %sil
 ; ILP-NEXT:    movl $1, %r10d
@@ -61,7 +61,7 @@ define i256 @test1(i256 %a) nounwind {
 ; HYBRID-LABEL: test1:
 ; HYBRID:       # %bb.0:
 ; HYBRID-NEXT:    movq %rdi, %rax
-; HYBRID-NEXT:    addb %sil, %sil
+; HYBRID-NEXT:    addq %rsi, %rsi
 ; HYBRID-NEXT:    addb $2, %sil
 ; HYBRID-NEXT:    orb $1, %sil
 ; HYBRID-NEXT:    movb $-128, %cl
@@ -104,7 +104,7 @@ define i256 @test1(i256 %a) nounwind {
 ; BURR-LABEL: test1:
 ; BURR:       # %bb.0:
 ; BURR-NEXT:    movq %rdi, %rax
-; BURR-NEXT:    addb %sil, %sil
+; BURR-NEXT:    addq %rsi, %rsi
 ; BURR-NEXT:    addb $2, %sil
 ; BURR-NEXT:    orb $1, %sil
 ; BURR-NEXT:    movb $-128, %cl
@@ -148,7 +148,7 @@ define i256 @test1(i256 %a) nounwind {
 ; SRC:       # %bb.0:
 ; SRC-NEXT:    pushq %rbx
 ; SRC-NEXT:    movq %rdi, %rax
-; SRC-NEXT:    addb %sil, %sil
+; SRC-NEXT:    addq %rsi, %rsi
 ; SRC-NEXT:    addb $2, %sil
 ; SRC-NEXT:    orb $1, %sil
 ; SRC-NEXT:    movb $-128, %cl
@@ -195,7 +195,7 @@ define i256 @test1(i256 %a) nounwind {
 ; LIN-NEXT:    movq %rdi, %rax
 ; LIN-NEXT:    xorl %r9d, %r9d
 ; LIN-NEXT:    movl $1, %r8d
-; LIN-NEXT:    addb %sil, %sil
+; LIN-NEXT:    addq %rsi, %rsi
 ; LIN-NEXT:    addb $2, %sil
 ; LIN-NEXT:    orb $1, %sil
 ; LIN-NEXT:    movl $1, %edx

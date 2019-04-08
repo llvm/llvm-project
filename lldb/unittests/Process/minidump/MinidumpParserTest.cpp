@@ -51,6 +51,22 @@ public:
     ASSERT_GT(parser->GetData().size(), 0UL);
   }
 
+  llvm::Error SetUpFromYaml(llvm::StringRef yaml) {
+    std::string data;
+    llvm::raw_string_ostream os(data);
+    if (llvm::Error E = llvm::MinidumpYAML::writeAsBinary(yaml, os))
+      return E;
+
+    os.flush();
+    auto data_buffer_sp =
+        std::make_shared<DataBufferHeap>(data.data(), data.size());
+    auto expected_parser = MinidumpParser::Create(std::move(data_buffer_sp));
+    if (!expected_parser)
+      return expected_parser.takeError();
+    parser = std::move(*expected_parser);
+    return llvm::Error::success();
+  }
+
   llvm::Optional<MinidumpParser> parser;
 };
 
@@ -159,7 +175,22 @@ TEST_F(MinidumpParserTest, GetMemoryListPadded) {
 }
 
 TEST_F(MinidumpParserTest, GetArchitecture) {
-  SetUpData("linux-x86_64.dmp");
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:         
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Processor Level: 6
+    Processor Revision: 16130
+    Number of Processors: 1
+    Platform ID:     Linux
+    CPU:             
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+...
+)"),
+                    llvm::Succeeded());
   ASSERT_EQ(llvm::Triple::ArchType::x86_64,
             parser->GetArchitecture().GetMachine());
   ASSERT_EQ(llvm::Triple::OSType::Linux,
@@ -404,15 +435,37 @@ TEST_F(MinidumpParserTest, GetMemoryRegionInfoLinuxMaps) {
 }
 
 // Windows Minidump tests
-// fizzbuzz_no_heap.dmp is copied from the WinMiniDump tests
 TEST_F(MinidumpParserTest, GetArchitectureWindows) {
-  SetUpData("fizzbuzz_no_heap.dmp");
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:         
+  - Type:            SystemInfo
+    Processor Arch:  X86
+    Processor Level: 6
+    Processor Revision: 15876
+    Number of Processors: 32
+    Product type:    1
+    Major Version:   6
+    Minor Version:   1
+    Build Number:    7601
+    Platform ID:     Win32NT
+    CSD Version:     Service Pack 1
+    Suite Mask:      0x0100
+    CPU:             
+      Vendor ID:       GenuineIntel
+      Version Info:    0x000306E4
+      Feature Info:    0xBFEBFBFF
+      AMD Extended Features: 0x771EEC80
+...
+)"),
+                    llvm::Succeeded());
   ASSERT_EQ(llvm::Triple::ArchType::x86,
             parser->GetArchitecture().GetMachine());
   ASSERT_EQ(llvm::Triple::OSType::Win32,
             parser->GetArchitecture().GetTriple().getOS());
 }
 
+// fizzbuzz_no_heap.dmp is copied from the WinMiniDump tests
 TEST_F(MinidumpParserTest, GetLinuxProcStatusWindows) {
   SetUpData("fizzbuzz_no_heap.dmp");
   llvm::Optional<LinuxProcStatus> proc_status = parser->GetLinuxProcStatus();

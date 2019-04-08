@@ -8,6 +8,7 @@
 #include "../Target.h"
 
 #include "../Latency.h"
+#include "../SnippetGenerator.h"
 #include "../Uops.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
@@ -498,8 +499,8 @@ void ExegesisX86Target::randomizeMCOperand(
   const Operand &Op = Instr.getPrimaryOperand(Var);
   switch (Op.getExplicitOperandInfo().OperandType) {
   case llvm::X86::OperandType::OPERAND_COND_CODE:
-    // FIXME: explore all CC variants.
-    AssignedValue = llvm::MCOperand::createImm(1);
+    AssignedValue = llvm::MCOperand::createImm(
+        randomIndex(llvm::X86::CondCode::LAST_VALID_COND));
     break;
   default:
     break;

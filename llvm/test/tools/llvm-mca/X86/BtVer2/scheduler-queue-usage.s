@@ -26,7 +26,7 @@ add  %rsi, %rsi
 # CHECK-NEXT:  1      7     1.00    *                   vmulps	(%rsi), %xmm0, %xmm0
 # CHECK-NEXT:  1      1     0.50                        addq	%rsi, %rsi
 
-# CHECK:      Schedulers - number of cycles where we saw N instructions issued:
+# CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
 # CHECK-NEXT:  0,          9  (90.0%)
 # CHECK-NEXT:  2,          1  (10.0%)

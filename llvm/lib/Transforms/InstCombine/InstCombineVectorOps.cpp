@@ -1353,8 +1353,8 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
   // Canonicalize to choose from operand 0 first.
   unsigned NumElts = Shuf.getType()->getVectorNumElements();
   if (Shuf.getMaskValue(0) >= (int)NumElts) {
-    assert(!isa<UndefValue>(Shuf.getOperand(1)) &&
-           "Not expecting undef shuffle operand with select mask");
+    // TODO: Can we assert that both operands of a shuffle-select are not undef
+    // (otherwise, it would have been folded by instsimplify?
     Shuf.commute();
     return &Shuf;
   }

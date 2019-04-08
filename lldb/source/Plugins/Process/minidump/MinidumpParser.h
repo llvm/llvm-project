@@ -64,8 +64,6 @@ public:
 
   llvm::ArrayRef<uint8_t> GetThreadContextWow64(const MinidumpThread &td);
 
-  const SystemInfo *GetSystemInfo();
-
   ArchSpec GetArchitecture();
 
   const MinidumpMiscInfo *GetMiscInfo();
