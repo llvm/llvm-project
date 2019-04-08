@@ -123,7 +123,7 @@ Status Socket::TcpConnect(llvm::StringRef host_and_port,
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
   if (log)
     log->Printf("Socket::%s (host/port = %s)", __FUNCTION__,
-                host_and_port.data());
+                host_and_port.str().c_str());
 
   Status error;
   std::unique_ptr<Socket> connect_socket(
@@ -143,7 +143,7 @@ Status Socket::TcpListen(llvm::StringRef host_and_port,
                          Predicate<uint16_t> *predicate, int backlog) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
-    log->Printf("Socket::%s (%s)", __FUNCTION__, host_and_port.data());
+    log->Printf("Socket::%s (%s)", __FUNCTION__, host_and_port.str().c_str());
 
   Status error;
   std::string host_str;
@@ -183,7 +183,7 @@ Status Socket::UdpConnect(llvm::StringRef host_and_port,
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("Socket::%s (host/port = %s)", __FUNCTION__,
-                host_and_port.data());
+                host_and_port.str().c_str());
 
   return UDPSocket::Connect(host_and_port, child_processes_inherit, socket);
 }
@@ -259,8 +259,8 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
       llvm::StringRef("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)"));
   RegularExpression::Match regex_match(2);
   if (g_regex.Execute(host_and_port, &regex_match)) {
-    if (regex_match.GetMatchAtIndex(host_and_port.data(), 1, host_str) &&
-        regex_match.GetMatchAtIndex(host_and_port.data(), 2, port_str)) {
+    if (regex_match.GetMatchAtIndex(host_and_port, 1, host_str) &&
+        regex_match.GetMatchAtIndex(host_and_port, 2, port_str)) {
       // IPv6 addresses are wrapped in [] when specified with ports
       if (host_str.front() == '[' && host_str.back() == ']')
         host_str = host_str.substr(1, host_str.size() - 2);
@@ -274,7 +274,8 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
       // port is too large
       if (error_ptr)
         error_ptr->SetErrorStringWithFormat(
-            "invalid host:port specification: '%s'", host_and_port.data());
+            "invalid host:port specification: '%s'",
+            host_and_port.str().c_str());
       return false;
     }
   }
@@ -283,9 +284,7 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
   // integer, representing a port with an empty host.
   host_str.clear();
   port_str.clear();
-  bool ok = false;
-  port = StringConvert::ToUInt32(host_and_port.data(), UINT32_MAX, 10, &ok);
-  if (ok && port < UINT16_MAX) {
+  if (to_integer(host_and_port, port, 10) && port < UINT16_MAX) {
     port_str = host_and_port;
     if (error_ptr)
       error_ptr->Clear();
@@ -294,7 +293,7 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
 
   if (error_ptr)
     error_ptr->SetErrorStringWithFormat("invalid host:port specification: '%s'",
-                                        host_and_port.data());
+                                        host_and_port.str().c_str());
   return false;
 }
 
