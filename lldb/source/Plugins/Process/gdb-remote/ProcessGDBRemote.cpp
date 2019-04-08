@@ -111,10 +111,10 @@ void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
 namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"packet-timeout", OptionValue::eTypeUInt64, true, 1
+    {"packet-timeout", OptionValue::eTypeUInt64, true, 5
 #if defined(__has_feature)
 #if __has_feature(address_sanitizer)
-      + 4
+      * 2
 #endif
 #endif
       , NULL, {},

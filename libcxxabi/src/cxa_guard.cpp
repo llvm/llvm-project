@@ -211,7 +211,6 @@ _LIBCXXABI_FUNC_VIS void __cxa_guard_release(guard_type *raw_guard_object) {
   GlobalMutexGuard gmutex("__cxa_guard_release",
                           OnRelease::UNLOCK_AND_BROADCAST);
   GuardObject guard(raw_guard_object);
-  guard.store(GuardValue::ZERO());
   guard.store(GuardValue::INIT_COMPLETE());
 }
 

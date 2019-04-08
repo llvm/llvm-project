@@ -388,7 +388,8 @@ void ProcessMinidump::ReadModuleList() {
     Status error;
     // Try and find a module with a full UUID that matches. This function will
     // add the module to the target if it finds one.
-    lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, &error);
+    lldb::ModuleSP module_sp = GetTarget().GetOrCreateModule(module_spec, 
+                                                     true /* notify */, &error);
     if (!module_sp) {
       // Try and find a module without specifying the UUID and only looking for
       // the file given a basename. We then will look for a partial UUID match
@@ -400,7 +401,8 @@ void ProcessMinidump::ReadModuleList() {
       ModuleSpec basename_module_spec(module_spec);
       basename_module_spec.GetUUID().Clear();
       basename_module_spec.GetFileSpec().GetDirectory().Clear();
-      module_sp = GetTarget().GetSharedModule(basename_module_spec, &error);
+      module_sp = GetTarget().GetOrCreateModule(basename_module_spec, 
+                                                     true /* notify */, &error);
       if (module_sp) {
         // We consider the module to be a match if the minidump UUID is a
         // prefix of the actual UUID, or if either of the UUIDs are empty.
@@ -430,7 +432,7 @@ void ProcessMinidump::ReadModuleList() {
 
       module_sp = Module::CreateModuleFromObjectFile<PlaceholderObjectFile>(
           module_spec, module->base_of_image, module->size_of_image);
-      GetTarget().GetImages().Append(module_sp);
+      GetTarget().GetImages().Append(module_sp, true /* notify */);
     }
 
     bool load_addr_changed = false;
