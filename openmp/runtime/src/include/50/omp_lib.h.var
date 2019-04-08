@@ -38,8 +38,14 @@
       parameter(omp_control_tool_kind=omp_integer_kind)
       integer omp_control_tool_result_kind
       parameter(omp_control_tool_result_kind=omp_integer_kind)
-      integer omp_allocator_kind
-      parameter(omp_allocator_kind=int_ptr_kind())
+      integer omp_allocator_handle_kind
+      parameter(omp_allocator_handle_kind=int_ptr_kind())
+      integer omp_memspace_handle_kind
+      parameter(omp_memspace_handle_kind=int_ptr_kind())
+      integer omp_alloctrait_key_kind
+      parameter(omp_alloctrait_key_kind=omp_integer_kind)
+      integer omp_alloctrait_val_kind
+      parameter(omp_alloctrait_val_kind=int_ptr_kind())
       integer omp_pause_resource_kind
       parameter(omp_pause_resource_kind=omp_integer_kind)
 
@@ -119,24 +125,99 @@
       integer(omp_control_tool_result_kind)omp_control_tool_ignored
       parameter(omp_control_tool_ignored=1)
 
-      integer(kind=omp_allocator_kind)omp_null_allocator
+      integer(kind=omp_alloctrait_key_kind)omp_atk_threadmodel
+      parameter(omp_atk_threadmodel=1)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_alignment
+      parameter(omp_atk_alignment=2)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_access
+      parameter(omp_atk_access=3)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_pool_size
+      parameter(omp_atk_pool_size=4)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_fallback
+      parameter(omp_atk_fallback=5)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_fb_data
+      parameter(omp_atk_fb_data=6)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_pinned
+      parameter(omp_atk_pinned=7)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_partition
+      parameter(omp_atk_partition=8)
+
+      ! Reserved for future use
+      integer(kind=omp_alloctrait_val_kind)omp_atv_false
+      parameter(omp_atv_false=0)
+      ! Reserved for future use
+      integer(kind=omp_alloctrait_val_kind)omp_atv_true
+      parameter(omp_atv_true=1)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_default
+      parameter(omp_atv_default=2)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_contended
+      parameter(omp_atv_contended=3)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_uncontended
+      parameter(omp_atv_uncontended=4)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_sequential
+      parameter(omp_atv_sequential=5)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_private
+      parameter(omp_atv_private=6)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_all
+      parameter(omp_atv_all=7)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_thread
+      parameter(omp_atv_thread=8)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_pteam
+      parameter(omp_atv_pteam=9)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_cgroup
+      parameter(omp_atv_cgroup=10)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_default_mem_fb
+      parameter(omp_atv_default_mem_fb=11)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_null_fb
+      parameter(omp_atv_null_fb=12)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_abort_fb
+      parameter(omp_atv_abort_fb=13)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_allocator_fb
+      parameter(omp_atv_allocator_fb=14)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_environment
+      parameter(omp_atv_environment=15)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_nearest
+      parameter(omp_atv_nearest=16)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_blocked
+      parameter(omp_atv_blocked=17)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_interleaved
+      parameter(omp_atv_interleaved=18)
+
+      type omp_alloctrait
+        integer (kind=omp_alloctrait_key_kind) key
+        integer (kind=omp_alloctrait_val_kind) value
+      end type omp_alloctrait
+
+      integer(kind=omp_allocator_handle_kind)omp_null_allocator
       parameter(omp_null_allocator=0)
-      integer(kind=omp_allocator_kind)omp_default_mem_alloc
+      integer(kind=omp_allocator_handle_kind)omp_default_mem_alloc
       parameter(omp_default_mem_alloc=1)
-      integer(kind=omp_allocator_kind)omp_large_cap_mem_alloc
+      integer(kind=omp_allocator_handle_kind)omp_large_cap_mem_alloc
       parameter(omp_large_cap_mem_alloc=2)
-      integer(kind=omp_allocator_kind)omp_const_mem_alloc
+      integer(kind=omp_allocator_handle_kind)omp_const_mem_alloc
       parameter(omp_const_mem_alloc=3)
-      integer(kind=omp_allocator_kind)omp_high_bw_mem_alloc
+      integer(kind=omp_allocator_handle_kind)omp_high_bw_mem_alloc
       parameter(omp_high_bw_mem_alloc=4)
-      integer(kind=omp_allocator_kind)omp_low_lat_mem_alloc
+      integer(kind=omp_allocator_handle_kind)omp_low_lat_mem_alloc
       parameter(omp_low_lat_mem_alloc=5)
-      integer(kind=omp_allocator_kind)omp_cgroup_mem_alloc
+      integer(kind=omp_allocator_handle_kind)omp_cgroup_mem_alloc
       parameter(omp_cgroup_mem_alloc=6)
-      integer(kind=omp_allocator_kind)omp_pteam_mem_alloc
+      integer(kind=omp_allocator_handle_kind)omp_pteam_mem_alloc
       parameter(omp_pteam_mem_alloc=7)
-      integer(kind=omp_allocator_kind)omp_thread_mem_alloc
+      integer(kind=omp_allocator_handle_kind)omp_thread_mem_alloc
       parameter(omp_thread_mem_alloc=8)
+
+      integer(kind=omp_memspace_handle_kind)omp_default_mem_space
+      parameter(omp_default_mem_space=0)
+      integer(kind=omp_memspace_handle_kind)omp_large_cap_mem_space
+      parameter(omp_large_cap_mem_space=1)
+      integer(kind=omp_memspace_handle_kind)omp_const_mem_space
+      parameter(omp_const_mem_space=2)
+      integer(kind=omp_memspace_handle_kind)omp_high_bw_mem_space
+      parameter(omp_high_bw_mem_space=3)
+      integer(kind=omp_memspace_handle_kind)omp_low_lat_mem_space
+      parameter(omp_low_lat_mem_space=4)
+
       integer(kind=omp_pause_resource_kind)omp_pause_resume
       parameter(omp_pause_resume=0)
       integer(kind=omp_pause_resource_kind)omp_pause_soft
@@ -444,14 +525,27 @@
           integer (kind=omp_integer_kind) omp_get_max_task_priority
         end function omp_get_max_task_priority
 
-        subroutine omp_set_default_allocator(svar) bind(c)
+        function omp_init_allocator(memspace, ntraits, traits)
           import
-          integer (kind=omp_allocator_kind), value :: svar
+          integer (omp_allocator_handle_kind) omp_init_allocator
+          integer (omp_memspace_handle_kind) :: memspace
+          integer (omp_integer_kind) :: ntraits
+          type(omp_alloctrait), intent(in) :: traits(*)
+        end function omp_init_allocator
+
+        subroutine omp_destroy_allocator(allocator) bind(c)
+          import
+          integer (omp_allocator_handle_kind), value :: allocator
+        end subroutine omp_destroy_allocator
+
+        subroutine omp_set_default_allocator(allocator) bind(c)
+          import
+          integer (omp_allocator_handle_kind), value :: allocator
         end subroutine omp_set_default_allocator
 
         function omp_get_default_allocator() bind(c)
           import
-          integer (kind=omp_allocator_kind) omp_get_default_allocator
+          integer (omp_allocator_handle_kind) omp_get_default_allocator
         end function omp_get_default_allocator
 
         subroutine omp_set_affinity_format(format)
