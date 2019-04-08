@@ -413,7 +413,7 @@ define void @TestFPTruncF128_F80() nounwind {
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    movq (%rsp), %rax
 ; X64-NEXT:    movq %rax, {{.*}}(%rip)
-; X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    movw %ax, vf80+{{.*}}(%rip)
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
