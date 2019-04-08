@@ -858,24 +858,95 @@ extern int __kmp_hws_abs_flag; // absolute or per-item number requested
 
 #if OMP_50_ENABLED
 /* OpenMP 5.0 Memory Management support */
-extern int __kmp_memkind_available;
-extern int __kmp_hbw_mem_available;
-typedef void *omp_allocator_t;
-extern const omp_allocator_t *OMP_NULL_ALLOCATOR;
-extern const omp_allocator_t *omp_default_mem_alloc;
-extern const omp_allocator_t *omp_large_cap_mem_alloc;
-extern const omp_allocator_t *omp_const_mem_alloc;
-extern const omp_allocator_t *omp_high_bw_mem_alloc;
-extern const omp_allocator_t *omp_low_lat_mem_alloc;
-extern const omp_allocator_t *omp_cgroup_mem_alloc;
-extern const omp_allocator_t *omp_pteam_mem_alloc;
-extern const omp_allocator_t *omp_thread_mem_alloc;
-extern const omp_allocator_t *__kmp_def_allocator;
 
-extern void __kmpc_set_default_allocator(int gtid, const omp_allocator_t *al);
-extern const omp_allocator_t *__kmpc_get_default_allocator(int gtid);
-extern void *__kmpc_alloc(int gtid, size_t sz, const omp_allocator_t *al);
-extern void __kmpc_free(int gtid, void *ptr, const omp_allocator_t *al);
+#ifndef __OMP_H
+// Duplicate type definitios from omp.h
+typedef uintptr_t omp_uintptr_t;
+
+typedef enum {
+  OMP_ATK_THREADMODEL = 1,
+  OMP_ATK_ALIGNMENT = 2,
+  OMP_ATK_ACCESS = 3,
+  OMP_ATK_POOL_SIZE = 4,
+  OMP_ATK_FALLBACK = 5,
+  OMP_ATK_FB_DATA = 6,
+  OMP_ATK_PINNED = 7,
+  OMP_ATK_PARTITION = 8
+} omp_alloctrait_key_t;
+
+typedef enum {
+  OMP_ATV_FALSE = 0,
+  OMP_ATV_TRUE = 1,
+  OMP_ATV_DEFAULT = 2,
+  OMP_ATV_CONTENDED = 3,
+  OMP_ATV_UNCONTENDED = 4,
+  OMP_ATV_SEQUENTIAL = 5,
+  OMP_ATV_PRIVATE = 6,
+  OMP_ATV_ALL = 7,
+  OMP_ATV_THREAD = 8,
+  OMP_ATV_PTEAM = 9,
+  OMP_ATV_CGROUP = 10,
+  OMP_ATV_DEFAULT_MEM_FB = 11,
+  OMP_ATV_NULL_FB = 12,
+  OMP_ATV_ABORT_FB = 13,
+  OMP_ATV_ALLOCATOR_FB = 14,
+  OMP_ATV_ENVIRONMENT = 15,
+  OMP_ATV_NEAREST = 16,
+  OMP_ATV_BLOCKED = 17,
+  OMP_ATV_INTERLEAVED = 18
+} omp_alloctrait_value_t;
+
+typedef void *omp_memspace_handle_t;
+extern omp_memspace_handle_t const omp_default_mem_space;
+extern omp_memspace_handle_t const omp_large_cap_mem_space;
+extern omp_memspace_handle_t const omp_const_mem_space;
+extern omp_memspace_handle_t const omp_high_bw_mem_space;
+extern omp_memspace_handle_t const omp_low_lat_mem_space;
+
+typedef struct {
+  omp_alloctrait_key_t key;
+  omp_uintptr_t value;
+} omp_alloctrait_t;
+
+typedef void *omp_allocator_handle_t;
+extern omp_allocator_handle_t const omp_null_allocator;
+extern omp_allocator_handle_t const omp_default_mem_alloc;
+extern omp_allocator_handle_t const omp_large_cap_mem_alloc;
+extern omp_allocator_handle_t const omp_const_mem_alloc;
+extern omp_allocator_handle_t const omp_high_bw_mem_alloc;
+extern omp_allocator_handle_t const omp_low_lat_mem_alloc;
+extern omp_allocator_handle_t const omp_cgroup_mem_alloc;
+extern omp_allocator_handle_t const omp_pteam_mem_alloc;
+extern omp_allocator_handle_t const omp_thread_mem_alloc;
+extern omp_allocator_handle_t const kmp_max_mem_alloc;
+extern omp_allocator_handle_t __kmp_def_allocator;
+
+// end of duplicate type definitios from omp.h
+#endif
+
+extern int __kmp_memkind_available;
+
+typedef omp_memspace_handle_t kmp_memspace_t; // placeholder
+
+typedef struct kmp_allocator_t {
+  omp_memspace_handle_t memspace;
+  void **memkind; // pointer to memkind
+  int alignment;
+  omp_alloctrait_value_t fb;
+  kmp_allocator_t *fb_data;
+  kmp_uint64 pool_size;
+  kmp_uint64 pool_used;
+} kmp_allocator_t;
+
+extern omp_allocator_handle_t __kmpc_init_allocator(int gtid,
+                                                    omp_memspace_handle_t,
+                                                    int ntraits,
+                                                    omp_alloctrait_t traits[]);
+extern void __kmpc_destroy_allocator(int gtid, omp_allocator_handle_t al);
+extern void __kmpc_set_default_allocator(int gtid, omp_allocator_handle_t al);
+extern omp_allocator_handle_t __kmpc_get_default_allocator(int gtid);
+extern void *__kmpc_alloc(int gtid, size_t sz, omp_allocator_handle_t al);
+extern void __kmpc_free(int gtid, void *ptr, omp_allocator_handle_t al);
 
 extern void __kmp_init_memkind();
 extern void __kmp_fini_memkind();
@@ -2357,7 +2428,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   kmp_affin_mask_t *th_affin_mask; /* thread's current affinity mask */
 #endif
 #if OMP_50_ENABLED
-  void *const *th_def_allocator; /* per implicit task default allocator */
+  omp_allocator_handle_t th_def_allocator; /* default allocator */
 #endif
   /* The data set by the master at reinit, then R/W by the worker */
   KMP_ALIGN_CACHE int
@@ -2581,7 +2652,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   int t_size_changed; // team size was changed?: 0: no, 1: yes, -1: changed via
 // omp_set_num_threads() call
 #if OMP_50_ENABLED
-  void *const *t_def_allocator; /* per implicit task default allocator */
+  omp_allocator_handle_t t_def_allocator; /* default allocator */
 #endif
 
 // Read/write by workers as well
@@ -2951,7 +3022,6 @@ extern volatile int __kmp_nth;
 /* total number of threads reachable from some root thread including all root
    threads, and those in the thread pool */
 extern volatile int __kmp_all_nth;
-extern int __kmp_thread_pool_nth;
 extern std::atomic<int> __kmp_thread_pool_active_nth;
 
 extern kmp_root_t **__kmp_root; /* root of thread hierarchy */
@@ -3340,6 +3410,7 @@ extern void __kmp_common_destroy_gtid(int gtid);
 extern void __kmp_register_atfork(void);
 #endif
 extern void __kmp_suspend_initialize(void);
+extern void __kmp_suspend_initialize_thread(kmp_info_t *th);
 extern void __kmp_suspend_uninitialize_thread(kmp_info_t *th);
 
 extern kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
