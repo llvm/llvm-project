@@ -1130,8 +1130,8 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If we only care about the highest bit, don't bother shifting right.
     if (DemandedBits.isSignMask()) {
-      bool AlreadySignExtended =
-          TLO.DAG.ComputeNumSignBits(Op0) >= BitWidth - ExVTBits + 1;
+      unsigned NumSignBits = TLO.DAG.ComputeNumSignBits(Op0);
+      bool AlreadySignExtended = NumSignBits >= BitWidth - ExVTBits + 1;
       // However if the input is already sign extended we expect the sign
       // extension to be dropped altogether later and do not simplify.
       if (!AlreadySignExtended) {

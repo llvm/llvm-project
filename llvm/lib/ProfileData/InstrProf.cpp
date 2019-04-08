@@ -434,9 +434,8 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
 }
 
 Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
-  const uint8_t *P = reinterpret_cast<const uint8_t *>(NameStrings.data());
-  const uint8_t *EndP = reinterpret_cast<const uint8_t *>(NameStrings.data() +
-                                                          NameStrings.size());
+  const uint8_t *P = NameStrings.bytes_begin();
+  const uint8_t *EndP = NameStrings.bytes_end();
   while (P < EndP) {
     uint32_t N;
     uint64_t UncompressedSize = decodeULEB128(P, &N);

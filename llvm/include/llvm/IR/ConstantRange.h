@@ -219,8 +219,14 @@ public:
   /// Compare set size of this range with the range CR.
   bool isSizeStrictlySmallerThan(const ConstantRange &CR) const;
 
-  // Compare set size of this range with Value.
+  /// Compare set size of this range with Value.
   bool isSizeLargerThan(uint64_t MaxSize) const;
+
+  /// Return true if all values in this range are negative.
+  bool isAllNegative() const;
+
+  /// Return true if all values in this range are non-negative.
+  bool isAllNonNegative() const;
 
   /// Return the largest unsigned value contained in the ConstantRange.
   APInt getUnsignedMax() const;
@@ -249,20 +255,30 @@ public:
   /// the sets).
   ConstantRange difference(const ConstantRange &CR) const;
 
-  /// Return the range that results from the intersection of
-  /// this range with another range.  The resultant range is guaranteed to
-  /// include all elements contained in both input ranges, and to have the
-  /// smallest possible set size that does so.  Because there may be two
-  /// intersections with the same set size, A.intersectWith(B) might not
-  /// be equal to B.intersectWith(A).
-  ConstantRange intersectWith(const ConstantRange &CR) const;
+  /// If represented precisely, the result of some range operations may consist
+  /// of multiple disjoint ranges. As only a single range may be returned, any
+  /// range covering these disjoint ranges constitutes a valid result, but some
+  /// may be more useful than others depending on context. The preferred range
+  /// type specifies whether a range that is non-wrapping in the unsigned or
+  /// signed domain, or has the smallest size, is preferred. If a signedness is
+  /// preferred but all ranges are non-wrapping or all wrapping, then the
+  /// smallest set size is preferred. If there are multiple smallest sets, any
+  /// one of them may be returned.
+  enum PreferredRangeType { Smallest, Unsigned, Signed };
+
+  /// Return the range that results from the intersection of this range with
+  /// another range. If the intersection is disjoint, such that two results
+  /// are possible, the preferred range is determined by the PreferredRangeType.
+  ConstantRange intersectWith(const ConstantRange &CR,
+                              PreferredRangeType Type = Smallest) const;
 
   /// Return the range that results from the union of this range
   /// with another range.  The resultant range is guaranteed to include the
   /// elements of both sets, but may contain more.  For example, [3, 9) union
   /// [12,15) is [3, 15), which includes 9, 10, and 11, which were not included
   /// in either set before.
-  ConstantRange unionWith(const ConstantRange &CR) const;
+  ConstantRange unionWith(const ConstantRange &CR,
+                          PreferredRangeType Type = Smallest) const;
 
   /// Return a new range representing the possible values resulting
   /// from an application of the specified cast operator to this range. \p

@@ -424,7 +424,7 @@ void DWARFDebugLine::ParsingState::resetRowAndSequence() {
   Sequence.reset();
 }
 
-void DWARFDebugLine::ParsingState::appendRowToMatrix(uint32_t Offset) {
+void DWARFDebugLine::ParsingState::appendRowToMatrix() {
   if (Sequence.Empty) {
     // Record the beginning of instruction sequence.
     Sequence.Empty = false;
@@ -540,7 +540,7 @@ Error DWARFDebugLine::LineTable::parse(
         // address is that of the byte after the last target machine instruction
         // of the sequence.
         State.Row.EndSequence = true;
-        State.appendRowToMatrix(*OffsetPtr);
+        State.appendRowToMatrix();
         if (OS) {
           *OS << "\n";
           OS->indent(12);
@@ -642,7 +642,7 @@ Error DWARFDebugLine::LineTable::parse(
         // Takes no arguments. Append a row to the matrix using the
         // current values of the state-machine registers. Then set
         // the basic_block register to false.
-        State.appendRowToMatrix(*OffsetPtr);
+        State.appendRowToMatrix();
         if (OS) {
           *OS << "\n";
           OS->indent(12);
@@ -827,7 +827,7 @@ Error DWARFDebugLine::LineTable::parse(
         State.Row.dump(*OS);
       }
 
-      State.appendRowToMatrix(*OffsetPtr);
+      State.appendRowToMatrix();
       // Reset discriminator to 0.
       State.Row.Discriminator = 0;
     }

@@ -11946,6 +11946,13 @@ TEST_F(FormatTest, ConstructorInitializerIndentWidth) {
       "bool smaller = 1 < bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb(\n"
       "                       aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);",
       Style);
+
+  Style.BreakConstructorInitializers = FormatStyle::BCIS_AfterColon;
+  verifyFormat(
+      "SomeClass::Constructor() :\n"
+      "aaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaa),\n"
+      "aaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaa) {}",
+      Style);
 }
 
 TEST_F(FormatTest, BreakConstructorInitializersBeforeComma) {
@@ -12813,6 +12820,24 @@ TEST_F(FormatTest, ConfigurableContinuationIndentWidth) {
             "      longFunction(\n"
             "            arg);",
             format("int i = longFunction(arg);", SixIndent));
+}
+
+TEST_F(FormatTest, WrappedClosingParenthesisIndent) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat(
+      "int Foo::getter(\n"
+      "    //\n"
+      ") const {\n"
+      "  return foo;\n"
+      "}",
+      Style);
+  verifyFormat(
+      "void Foo::setter(\n"
+      "    //\n"
+      ") {\n"
+      "  foo = 1;\n"
+      "}",
+      Style);
 }
 
 TEST_F(FormatTest, SpacesInAngles) {

@@ -533,6 +533,37 @@ define i32 @clamp_check_for_no_infinite_loop2(i32 %i) {
   ret i32 %res
 }
 
+; Check that there is no infinite loop because of reverse cmp transformation:
+; (icmp slt smax(PositiveA, B) 2) -> (icmp eq B 1)
+define i32 @clamp_check_for_no_infinite_loop3(i32 %i) {
+; CHECK-LABEL: @clamp_check_for_no_infinite_loop3(
+; CHECK-NEXT:    [[I2:%.*]] = icmp sgt i32 [[I:%.*]], 1
+; CHECK-NEXT:    [[I3:%.*]] = select i1 [[I2]], i32 [[I]], i32 1
+; CHECK-NEXT:    br i1 true, label [[TRUELABEL:%.*]], label [[FALSELABEL:%.*]]
+; CHECK:       truelabel:
+; CHECK-NEXT:    [[I5:%.*]] = icmp slt i32 [[I3]], 2
+; CHECK-NEXT:    [[I6:%.*]] = select i1 [[I5]], i32 [[I3]], i32 2
+; CHECK-NEXT:    [[I7:%.*]] = shl nuw nsw i32 [[I6]], 2
+; CHECK-NEXT:    ret i32 [[I7]]
+; CHECK:       falselabel:
+; CHECK-NEXT:    ret i32 0
+;
+
+  %i2 = icmp sgt i32 %i, 1
+  %i3 = select i1 %i2, i32 %i, i32 1
+  %i4 = icmp sgt i32 %i3, 0
+  br i1 %i4, label %truelabel, label %falselabel
+
+truelabel: ; %i<=1, %i3>0
+  %i5 = icmp slt i32 %i3, 2
+  %i6 = select i1 %i5, i32 %i3, i32 2
+  %i7 = shl nuw nsw i32 %i6, 2
+  ret i32 %i7
+
+falselabel:
+  ret i32 0
+}
+
 ; The next 3 min tests should canonicalize to the same form...and not infinite loop.
 
 define double @PR31751_umin1(i32 %x) {

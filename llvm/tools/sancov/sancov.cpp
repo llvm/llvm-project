@@ -843,8 +843,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
 
     StringRef BytesStr;
     failIfError(Section.getContents(BytesStr));
-    ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(BytesStr.data()),
-                            BytesStr.size());
+    ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(BytesStr);
 
     for (uint64_t Index = 0, Size = 0; Index < Section.getSize();
          Index += Size) {
