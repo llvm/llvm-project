@@ -760,3 +760,84 @@ define <2 x i8> @udiv_common_factor_not_nuw_vec(<2 x i8> %x, <2 x i8> %y, <2 x i
   ret <2 x i8> %c
 }
 
+define i32 @test_exact_nsw_exact(i32 %x) {
+; CHECK-LABEL: @test_exact_nsw_exact(
+; CHECK-NEXT:    [[NEG:%.*]] = sdiv i32 [[X:%.*]], -3
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %div = sdiv exact i32 %x, 3
+  %neg = sub nsw i32 0, %div
+  ret i32 %neg
+}
+
+define <2 x i64> @test_exact_vec(<2 x i64> %x) {
+; CHECK-LABEL: @test_exact_vec(
+; CHECK-NEXT:    [[NEG:%.*]] = sdiv <2 x i64> [[X:%.*]], <i64 -3, i64 -4>
+; CHECK-NEXT:    ret <2 x i64> [[NEG]]
+;
+  %div = sdiv exact <2 x i64> %x, <i64 3, i64 4>
+  %neg = sub nsw <2 x i64> zeroinitializer, %div
+  ret <2 x i64> %neg
+}
+
+define i32 @test_exact_nonsw_exact(i32 %x) {
+; CHECK-LABEL: @test_exact_nonsw_exact(
+; CHECK-NEXT:    [[NEG:%.*]] = sdiv i32 [[X:%.*]], -3
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %div = sdiv exact i32 %x, 3
+  %neg = sub i32 0, %div
+  ret i32 %neg
+}
+
+define i32 @test_exact_nsw_noexact(i32 %x) {
+; CHECK-LABEL: @test_exact_nsw_noexact(
+; CHECK-NEXT:    [[NEG:%.*]] = sdiv i32 [[X:%.*]], -3
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %div = sdiv i32 %x, 3
+  %neg = sub nsw i32 0, %div
+  ret i32 %neg
+}
+
+define i32 @test_exact_nonsw_noexact(i32 %x) {
+; CHECK-LABEL: @test_exact_nonsw_noexact(
+; CHECK-NEXT:    [[NEG:%.*]] = sdiv i32 [[X:%.*]], -3
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %div = sdiv i32 %x, 3
+  %neg = sub nsw i32 0, %div
+  ret i32 %neg
+}
+
+define i32 @test_exact_div_nonconst(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_exact_div_nonconst(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[DIV]]
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %div = sdiv exact i32 %x, %y
+  %neg = sub nsw i32 0, %div
+  ret i32 %neg
+}
+
+define i32 @test_exact_div_one(i32 %x) {
+; CHECK-LABEL: @test_exact_div_one(
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %div = sdiv exact i32 %x, 1
+  %neg = sub nsw i32 0, %div
+  ret i32 %neg
+}
+
+define i8 @test_exact_div_minSigned(i8 %x) {
+; CHECK-LABEL: @test_exact_div_minSigned(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[NEG:%.*]] = sext i1 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[NEG]]
+;
+  %div = sdiv exact i8 %x, -128
+  %neg = sub nsw i8 0, %div
+  ret i8 %neg
+}

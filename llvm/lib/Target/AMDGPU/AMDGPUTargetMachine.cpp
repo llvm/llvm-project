@@ -169,6 +169,12 @@ EnableDCEInRA("amdgpu-dce-in-ra",
     cl::init(true), cl::Hidden,
     cl::desc("Enable machine DCE inside regalloc"));
 
+static cl::opt<bool> EnableScalarIRPasses(
+  "amdgpu-scalar-ir-passes",
+  cl::desc("Enable scalar IR passes"),
+  cl::init(true),
+  cl::Hidden);
+
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -670,7 +676,8 @@ void AMDGPUPassConfig::addIRPasses() {
     if (EnableSROA)
       addPass(createSROAPass());
 
-    addStraightLineScalarOptimizationPasses();
+    if (EnableScalarIRPasses)
+      addStraightLineScalarOptimizationPasses();
 
     if (EnableAMDGPUAliasAnalysis) {
       addPass(createAMDGPUAAWrapperPass());
@@ -696,7 +703,7 @@ void AMDGPUPassConfig::addIRPasses() {
   //   %1 = shl %a, 2
   //
   // but EarlyCSE can do neither of them.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::None && EnableScalarIRPasses)
     addEarlyCSEOrGVNPass();
 }
 

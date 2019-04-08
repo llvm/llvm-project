@@ -55,14 +55,21 @@ public:
     return getStream<minidump::SystemInfo>(minidump::StreamType::SystemInfo);
   }
 
+  /// Returns the module list embedded in the ModuleList stream. An error is
+  /// returned if the file does not contain this stream, or if the stream is
+  /// not large enough to contain the number of modules declared in the stream
+  /// header. The consistency of the Module entries themselves is not checked in
+  /// any way.
+  Expected<ArrayRef<minidump::Module>> getModuleList() const;
+
 private:
-  static Error createError(StringRef Str,
-                           object_error Err = object_error::parse_failed) {
-    return make_error<GenericBinaryError>(Str, Err);
+  static Error createError(StringRef Str) {
+    return make_error<GenericBinaryError>(Str, object_error::parse_failed);
   }
 
   static Error createEOFError() {
-    return createError("Unexpected EOF", object_error::unexpected_eof);
+    return make_error<GenericBinaryError>("Unexpected EOF",
+                                          object_error::unexpected_eof);
   }
 
   /// Return a slice of the given data array, with bounds checking.
@@ -101,9 +108,9 @@ Expected<const T &> MinidumpFile::getStream(minidump::StreamType Stream) const {
   if (auto OptionalStream = getRawStream(Stream)) {
     if (OptionalStream->size() >= sizeof(T))
       return *reinterpret_cast<const T *>(OptionalStream->data());
-    return createError("Malformed stream", object_error::unexpected_eof);
+    return createEOFError();
   }
-  return createError("No such stream", object_error::invalid_section_index);
+  return createError("No such stream");
 }
 
 template <typename T>

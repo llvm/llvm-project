@@ -1213,7 +1213,7 @@ define i32 @test66(i32 %x) {
 ; CHECK-LABEL: @test66(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X:%.*]], -101
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 -101
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[TMP2]], 1
+; CHECK-NEXT:    [[RES:%.*]] = add nuw i32 [[TMP2]], 1
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %1 = xor i32 %x, -1

@@ -522,17 +522,17 @@ bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
     Buffer = std::move(*BufferOrError);
   }
   // Chomp the file to get lines
-  size_t BufferSize = Buffer->getBufferSize();
-  const char *BufferStart = Buffer->getBufferStart();
-  for (const char *Start = BufferStart, *End = BufferStart;
-       End < BufferStart + BufferSize; End++)
-    if (*End == '\n' || End == BufferStart + BufferSize - 1 ||
-        (*End == '\r' && *(End + 1) == '\n')) {
-      LineCache[LineInfo.FileName].push_back(StringRef(Start, End - Start));
-      if (*End == '\r')
-        End++;
-      Start = End + 1;
+  const char *BufferStart = Buffer->getBufferStart(),
+             *BufferEnd = Buffer->getBufferEnd();
+  std::vector<StringRef> &Lines = LineCache[LineInfo.FileName];
+  const char *Start = BufferStart;
+  for (const char *I = BufferStart; I != BufferEnd; ++I)
+    if (*I == '\n') {
+      Lines.emplace_back(Start, I - Start - (BufferStart < I && I[-1] == '\r'));
+      Start = I + 1;
     }
+  if (Start < BufferEnd)
+    Lines.emplace_back(Start, BufferEnd - Start);
   SourceCache[LineInfo.FileName] = std::move(Buffer);
   return true;
 }
@@ -560,16 +560,12 @@ void SourcePrinter::printSourceLine(raw_ostream &OS,
     if (SourceCache.find(LineInfo.FileName) == SourceCache.end())
       if (!cacheSource(LineInfo))
         return;
-    auto FileBuffer = SourceCache.find(LineInfo.FileName);
-    if (FileBuffer != SourceCache.end()) {
-      auto LineBuffer = LineCache.find(LineInfo.FileName);
-      if (LineBuffer != LineCache.end()) {
-        if (LineInfo.Line > LineBuffer->second.size())
-          return;
-        // Vector begins at 0, line numbers are non-zero
-        OS << Delimiter << LineBuffer->second[LineInfo.Line - 1].ltrim()
-           << "\n";
-      }
+    auto LineBuffer = LineCache.find(LineInfo.FileName);
+    if (LineBuffer != LineCache.end()) {
+      if (LineInfo.Line > LineBuffer->second.size())
+        return;
+      // Vector begins at 0, line numbers are non-zero
+      OS << Delimiter << LineBuffer->second[LineInfo.Line - 1] << '\n';
     }
   }
   OldLineInfo = LineInfo;
@@ -914,6 +910,76 @@ static bool shouldAdjustVA(const SectionRef &Section) {
   return false;
 }
 
+static uint64_t
+dumpARMELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
+               const ObjectFile *Obj, ArrayRef<uint8_t> Bytes,
+               const std::vector<uint64_t> &TextMappingSymsAddr) {
+  support::endianness Endian =
+      Obj->isLittleEndian() ? support::little : support::big;
+  while (Index < End) {
+    outs() << format("%8" PRIx64 ":", SectionAddr + Index);
+    outs() << "\t";
+    if (Index + 4 <= End) {
+      dumpBytes(Bytes.slice(Index, 4), outs());
+      outs() << "\t.word\t"
+             << format_hex(
+                    support::endian::read32(Bytes.data() + Index, Endian), 10);
+      Index += 4;
+    } else if (Index + 2 <= End) {
+      dumpBytes(Bytes.slice(Index, 2), outs());
+      outs() << "\t\t.short\t"
+             << format_hex(
+                    support::endian::read16(Bytes.data() + Index, Endian), 6);
+      Index += 2;
+    } else {
+      dumpBytes(Bytes.slice(Index, 1), outs());
+      outs() << "\t\t.byte\t" << format_hex(Bytes[0], 4);
+      ++Index;
+    }
+    outs() << "\n";
+    if (std::binary_search(TextMappingSymsAddr.begin(),
+                           TextMappingSymsAddr.end(), Index))
+      break;
+  }
+  return Index;
+}
+
+static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
+                        ArrayRef<uint8_t> Bytes) {
+  // print out data up to 8 bytes at a time in hex and ascii
+  uint8_t AsciiData[9] = {'\0'};
+  uint8_t Byte;
+  int NumBytes = 0;
+
+  for (; Index < End; ++Index) {
+    if (NumBytes == 0) {
+      outs() << format("%8" PRIx64 ":", SectionAddr + Index);
+      outs() << "\t";
+    }
+    Byte = Bytes.slice(Index)[0];
+    outs() << format(" %02x", Byte);
+    AsciiData[NumBytes] = isPrint(Byte) ? Byte : '.';
+
+    uint8_t IndentOffset = 0;
+    NumBytes++;
+    if (Index == End - 1 || NumBytes > 8) {
+      // Indent the space for less than 8 bytes data.
+      // 2 spaces for byte and one for space between bytes
+      IndentOffset = 3 * (8 - NumBytes);
+      for (int Excess = NumBytes; Excess < 8; Excess++)
+        AsciiData[Excess] = '\0';
+      NumBytes = 8;
+    }
+    if (NumBytes == 8) {
+      AsciiData[8] = '\0';
+      outs() << std::string(IndentOffset, ' ') << "         ";
+      outs() << reinterpret_cast<char *>(AsciiData);
+      outs() << '\n';
+      NumBytes = 0;
+    }
+  }
+}
+
 static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                               MCContext &Ctx, MCDisassembler *DisAsm,
                               const MCInstrAnalysis *MIA, MCInstPrinter *IP,
@@ -1085,10 +1151,13 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
       // Check if we need to skip symbol
       // Skip if the symbol's data is not between StartAddress and StopAddress
-      if (End + SectionAddr < StartAddress ||
-          Start + SectionAddr > StopAddress) {
+      if (End + SectionAddr <= StartAddress ||
+          Start + SectionAddr >= StopAddress)
         continue;
-      }
+
+      // Stop disassembly at the stop address specified
+      if (End + SectionAddr > StopAddress)
+        End = StopAddress - SectionAddr;
 
       /// Skip if user requested specific symbols and this is not in the list
       if (!DisasmFuncsSet.empty() &&
@@ -1102,10 +1171,6 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
           outs() << SegmentName << ",";
         outs() << SectionName << ':';
       }
-
-      // Stop disassembly at the stop address specified
-      if (End + SectionAddr > StopAddress)
-        End = StopAddress - SectionAddr;
 
       if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
         if (std::get<2>(Symbols[SI]) == ELF::STT_AMDGPU_HSA_KERNEL) {
@@ -1154,102 +1219,37 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                             SectionAddr + Start, DebugOut, CommentStream);
       Start += Size;
 
-      for (Index = Start; Index < End; Index += Size) {
-        MCInst Inst;
+      Index = Start;
+      if (SectionAddr < StartAddress)
+        Index = std::max<uint64_t>(Index, StartAddress - SectionAddr);
 
-        if (Index + SectionAddr < StartAddress ||
-            Index + SectionAddr > StopAddress) {
-          // skip byte by byte till StartAddress is reached
-          Size = 1;
-          continue;
-        }
-        // AArch64 ELF binaries can interleave data and text in the
-        // same section. We rely on the markers introduced to
-        // understand what we need to dump. If the data marker is within a
-        // function, it is denoted as a word/short etc
-        if (isArmElf(Obj) && std::get<2>(Symbols[SI]) != ELF::STT_OBJECT &&
-            !DisassembleAll &&
+      // If there is a data symbol inside an ELF text section and we are
+      // only disassembling text (applicable all architectures), we are in a
+      // situation where we must print the data and not disassemble it.
+      if (Obj->isELF() && std::get<2>(Symbols[SI]) == ELF::STT_OBJECT &&
+          !DisassembleAll && Section.isText()) {
+        dumpELFData(SectionAddr, Index, End, Bytes);
+        Index = End;
+      }
+
+      bool CheckARMELFData = isArmElf(Obj) &&
+                             std::get<2>(Symbols[SI]) != ELF::STT_OBJECT &&
+                             !DisassembleAll;
+      while (Index < End) {
+        // AArch64 ELF binaries can interleave data and text in the same
+        // section. We rely on the markers introduced to understand what we
+        // need to dump. If the data marker is within a function, it is
+        // denoted as a word/short etc.
+        if (CheckARMELFData &&
             std::binary_search(DataMappingSymsAddr.begin(),
                                DataMappingSymsAddr.end(), Index)) {
-          // Switch to data.
-          support::endianness Endian =
-              Obj->isLittleEndian() ? support::little : support::big;
-          while (Index < End) {
-            outs() << format("%8" PRIx64 ":", SectionAddr + Index);
-            outs() << "\t";
-            if (Index + 4 <= End) {
-              dumpBytes(Bytes.slice(Index, 4), outs());
-              outs() << "\t.word\t"
-                     << format_hex(support::endian::read32(Bytes.data() + Index,
-                                                           Endian),
-                                   10);
-              Index += 4;
-            } else if (Index + 2 <= End) {
-              dumpBytes(Bytes.slice(Index, 2), outs());
-              outs() << "\t\t.short\t"
-                     << format_hex(support::endian::read16(Bytes.data() + Index,
-                                                           Endian),
-                                   6);
-              Index += 2;
-            } else {
-              dumpBytes(Bytes.slice(Index, 1), outs());
-              outs() << "\t\t.byte\t" << format_hex(Bytes[0], 4);
-              ++Index;
-            }
-            outs() << "\n";
-            if (std::binary_search(TextMappingSymsAddr.begin(),
-                                   TextMappingSymsAddr.end(), Index))
-              break;
-          }
+          Index = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
+                                 TextMappingSymsAddr);
+          continue;
         }
 
-        // If there is a data symbol inside an ELF text section and we are only
-        // disassembling text (applicable all architectures),
-        // we are in a situation where we must print the data and not
-        // disassemble it.
-        if (Obj->isELF() && std::get<2>(Symbols[SI]) == ELF::STT_OBJECT &&
-            !DisassembleAll && Section.isText()) {
-          // print out data up to 8 bytes at a time in hex and ascii
-          uint8_t AsciiData[9] = {'\0'};
-          uint8_t Byte;
-          int NumBytes = 0;
-
-          for (Index = Start; Index < End; Index += 1) {
-            if (((SectionAddr + Index) < StartAddress) ||
-                ((SectionAddr + Index) > StopAddress))
-              continue;
-            if (NumBytes == 0) {
-              outs() << format("%8" PRIx64 ":", SectionAddr + Index);
-              outs() << "\t";
-            }
-            Byte = Bytes.slice(Index)[0];
-            outs() << format(" %02x", Byte);
-            AsciiData[NumBytes] = isPrint(Byte) ? Byte : '.';
-
-            uint8_t IndentOffset = 0;
-            NumBytes++;
-            if (Index == End - 1 || NumBytes > 8) {
-              // Indent the space for less than 8 bytes data.
-              // 2 spaces for byte and one for space between bytes
-              IndentOffset = 3 * (8 - NumBytes);
-              for (int Excess = NumBytes; Excess < 8; Excess++)
-                AsciiData[Excess] = '\0';
-              NumBytes = 8;
-            }
-            if (NumBytes == 8) {
-              AsciiData[8] = '\0';
-              outs() << std::string(IndentOffset, ' ') << "         ";
-              outs() << reinterpret_cast<char *>(AsciiData);
-              outs() << '\n';
-              NumBytes = 0;
-            }
-          }
-        }
-        if (Index >= End)
-          break;
-
-        // When -z or --disassemble-zeroes are given we always dissasemble them.
-        // Otherwise we might want to skip zero bytes we see.
+        // When -z or --disassemble-zeroes are given we always dissasemble
+        // them. Otherwise we might want to skip zero bytes we see.
         if (!DisassembleZeroes) {
           uint64_t MaxOffset = End - Index;
           // For -reloc: print zero blocks patched by relocations, so that
@@ -1261,23 +1261,23 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                   countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
             outs() << "\t\t..." << '\n';
             Index += N;
-            if (Index >= End)
-              break;
+            continue;
           }
         }
 
         // Disassemble a real instruction or a data when disassemble all is
         // provided
-        bool Disassembled = DisAsm->getInstruction(Inst, Size, Bytes.slice(Index),
-                                                   SectionAddr + Index, DebugOut,
-                                                   CommentStream);
+        MCInst Inst;
+        bool Disassembled = DisAsm->getInstruction(
+            Inst, Size, Bytes.slice(Index), SectionAddr + Index, DebugOut,
+            CommentStream);
         if (Size == 0)
           Size = 1;
 
-        PIP.printInst(*IP, Disassembled ? &Inst : nullptr,
-                      Bytes.slice(Index, Size),
-                      {SectionAddr + Index + VMAAdjustment, Section.getIndex()},
-                      outs(), "", *STI, &SP, &Rels);
+        PIP.printInst(
+            *IP, Disassembled ? &Inst : nullptr, Bytes.slice(Index, Size),
+            {SectionAddr + Index + VMAAdjustment, Section.getIndex()}, outs(),
+            "", *STI, &SP, &Rels);
         outs() << CommentStream.str();
         Comments.clear();
 
@@ -1347,7 +1347,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
           while (RelCur != RelEnd) {
             uint64_t Offset = RelCur->getOffset();
             // If this relocation is hidden, skip it.
-            if (getHidden(*RelCur) || ((SectionAddr + Offset) < StartAddress)) {
+            if (getHidden(*RelCur) || SectionAddr + Offset < StartAddress) {
               ++RelCur;
               continue;
             }
@@ -1361,7 +1361,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
               Expected<section_iterator> SymSI =
                   RelCur->getSymbol()->getSection();
               if (SymSI && *SymSI != Obj->section_end() &&
-                  (shouldAdjustVA(**SymSI)))
+                  shouldAdjustVA(**SymSI))
                 Offset += AdjustVMA;
             }
 
@@ -1370,6 +1370,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
             ++RelCur;
           }
         }
+
+        Index += Size;
       }
     }
   }

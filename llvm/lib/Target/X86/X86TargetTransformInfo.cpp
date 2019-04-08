@@ -2379,8 +2379,8 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
   if (VT.isSimple() && LT.second != VT.getSimpleVT() &&
       LT.second.getVectorNumElements() == NumElem)
     // Promotion requires expand/truncate for data and a shuffle for mask.
-    Cost += getShuffleCost(TTI::SK_Select, SrcVTy, 0, nullptr) +
-            getShuffleCost(TTI::SK_Select, MaskTy, 0, nullptr);
+    Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, 0, nullptr) +
+            getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, 0, nullptr);
 
   else if (LT.second.getVectorNumElements() > NumElem) {
     VectorType *NewMaskTy = VectorType::get(MaskTy->getVectorElementType(),
