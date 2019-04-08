@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
+#include "llvm/Support/Casting.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -70,6 +71,10 @@ public:
 
   llvm::StringRef GetName() const { return m_name; }
 
+  static bool classof(const FPOProgramNode *node) {
+    return node->GetKind() == Symbol;
+  }
+
 private:
   llvm::StringRef m_name;
 };
@@ -83,6 +88,10 @@ public:
 
   uint32_t GetLLDBRegNum() const { return m_lldb_reg_num; }
 
+  static bool classof(const FPOProgramNode *node) {
+    return node->GetKind() == Register;
+  }
+
 private:
   uint32_t m_lldb_reg_num;
 };
@@ -95,6 +104,10 @@ public:
   void Accept(FPOProgramASTVisitor &visitor) override;
 
   uint32_t GetValue() const { return m_value; }
+
+  static bool classof(const FPOProgramNode *node) {
+    return node->GetKind() == IntegerLiteral;
+  }
 
 private:
   uint32_t m_value;
@@ -123,6 +136,10 @@ public:
   const FPOProgramNode *Right() const { return m_right; }
   FPOProgramNode *&Right() { return m_right; }
 
+  static bool classof(const FPOProgramNode *node) {
+    return node->GetKind() == BinaryOp;
+  }
+
 private:
   OpType m_op_type;
   FPOProgramNode *m_left;
@@ -144,6 +161,10 @@ public:
 
   const FPOProgramNode *Operand() const { return m_operand; }
   FPOProgramNode *&Operand() { return m_operand; }
+
+  static bool classof(const FPOProgramNode *node) {
+    return node->GetKind() == UnaryOp;
+  }
 
 private:
   OpType m_op_type;
@@ -216,10 +237,8 @@ void FPOProgramASTVisitorMergeDependent::Visit(FPOProgramNodeUnaryOp &node) {
 void FPOProgramASTVisitorMergeDependent::TryReplace(
     FPOProgramNode *&node_ref) const {
 
-  while (node_ref->GetKind() == FPOProgramNode::Symbol) {
-    auto *node_symbol_ref = static_cast<FPOProgramNodeSymbol *>(node_ref);
-
-    auto it = m_dependent_programs.find(node_symbol_ref->GetName());
+  while (auto *symbol = llvm::dyn_cast<FPOProgramNodeSymbol>(node_ref)) {
+    auto it = m_dependent_programs.find(symbol->GetName());
     if (it == m_dependent_programs.end()) {
       break;
     }
@@ -277,10 +296,9 @@ static uint32_t ResolveLLDBRegisterNum(llvm::StringRef reg_name, llvm::Triple::A
 
 bool FPOProgramASTVisitorResolveRegisterRefs::TryReplace(
     FPOProgramNode *&node_ref) {
-  if (node_ref->GetKind() != FPOProgramNode::Symbol)
+  auto *symbol = llvm::dyn_cast<FPOProgramNodeSymbol>(node_ref);
+  if (!symbol)
     return true;
-
-  auto *symbol = static_cast<FPOProgramNodeSymbol *>(node_ref);
 
   // Look up register reference as lvalue in preceding assignments.
   auto it = m_dependent_programs.find(symbol->GetName());
