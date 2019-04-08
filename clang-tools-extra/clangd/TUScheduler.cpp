@@ -47,6 +47,7 @@
 #include "Trace.h"
 #include "index/CanonicalIncludes.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
@@ -179,6 +180,7 @@ public:
   bool blockUntilIdle(Deadline Timeout) const;
 
   std::shared_ptr<const PreambleData> getPossiblyStalePreamble() const;
+
   /// Obtain a preamble reflecting all updates so far. Threadsafe.
   /// It may be delivered immediately, or later on the worker thread.
   void getCurrentPreamble(
@@ -242,7 +244,6 @@ private:
   /// Whether the diagnostics for the current FileInputs were reported to the
   /// users before.
   bool DiagsWereReported = false;
-  /// Size of the last AST
   /// Guards members used by both TUScheduler and the worker thread.
   mutable std::mutex Mutex;
   std::shared_ptr<const PreambleData> LastBuiltPreamble; /* GUARDED_BY(Mutex) */
@@ -858,9 +859,9 @@ void TUScheduler::runWithAST(
   It->second->Worker->runWithAST(Name, std::move(Action));
 }
 
-void TUScheduler::runWithPreamble(
-    llvm::StringRef Name, PathRef File, PreambleConsistency Consistency,
-    llvm::unique_function<void(llvm::Expected<InputsAndPreamble>)> Action) {
+void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
+                                  PreambleConsistency Consistency,
+                                  Callback<InputsAndPreamble> Action) {
   auto It = Files.find(File);
   if (It == Files.end()) {
     Action(llvm::make_error<LSPError>(
@@ -893,19 +894,21 @@ void TUScheduler::runWithPreamble(
   }
 
   std::shared_ptr<const ASTWorker> Worker = It->second->Worker.lock();
-  auto Task = [Worker, this](std::string Name, std::string File,
-                             std::string Contents,
-                             tooling::CompileCommand Command, Context Ctx,
-                             decltype(ConsistentPreamble) ConsistentPreamble,
-                             decltype(Action) Action) mutable {
+  auto Task = [Worker, Consistency,
+               this](std::string Name, std::string File, std::string Contents,
+                     tooling::CompileCommand Command, Context Ctx,
+                     decltype(ConsistentPreamble) ConsistentPreamble,
+                     decltype(Action) Action) mutable {
     std::shared_ptr<const PreambleData> Preamble;
     if (ConsistentPreamble.valid()) {
       Preamble = ConsistentPreamble.get();
     } else {
-      // We don't want to be running preamble actions before the preamble was
-      // built for the first time. This avoids extra work of processing the
-      // preamble headers in parallel multiple times.
-      Worker->waitForFirstPreamble();
+      if (Consistency != PreambleConsistency::StaleOrAbsent) {
+        // Wait until the preamble is built for the first time, if preamble is
+        // required. This avoids extra work of processing the preamble headers
+        // in parallel multiple times.
+        Worker->waitForFirstPreamble();
+      }
       Preamble = Worker->getPossiblyStalePreamble();
     }
 

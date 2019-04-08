@@ -421,12 +421,20 @@ else()
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." OFF)
   option(LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY "Compile with -fmodules-local-submodule-visibility." ON)
 endif()
-option(LLVM_ENABLE_CXX1Y "Compile with C++1y enabled." OFF)
-option(LLVM_ENABLE_CXX1Z "Compile with C++1z enabled." OFF)
 option(LLVM_ENABLE_LIBCXX "Use libc++ if available." OFF)
 option(LLVM_ENABLE_LLD "Use lld as C and C++ linker." OFF)
 option(LLVM_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LLVM_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
+
+set(LLVM_CXX_STD_default "c++11")
+# Preserve behaviour of legacy cache variables
+if (LLVM_ENABLE_CXX1Y)
+  set(LLVM_CXX_STD_default "c++1y")
+elseif (LLVM_ENABLE_CXX1Z)
+  set(LLVM_CXX_STD_default "c++1z")
+endif()
+set(LLVM_CXX_STD ${LLVM_CXX_STD_default}
+    CACHE STRING "C++ standard to use for compilation.")
 
 option(LLVM_ENABLE_DUMP "Enable dump functions even when assertions are disabled" OFF)
 

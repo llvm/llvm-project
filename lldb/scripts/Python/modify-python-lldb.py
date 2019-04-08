@@ -9,17 +9,13 @@
 # As a cleanup step, it also removes the 'residues' from the autodoc features of
 # swig.  For an example, take a look at SBTarget.h header file, where we take
 # advantage of the already existing doxygen C++-docblock and make it the Python
-# docstring for the same method.  The 'residues' in this context include the
-# '#endif', the '#ifdef SWIG', the c comment marker, the trailing blank (SPC's)
-# line, and the doxygen comment start marker.
+# docstring for the same method.  The 'residues' in this context include the c
+# comment marker, the trailing blank (SPC's) line, and the doxygen comment start
+# marker.
 #
 # In addition to the 'residues' removal during the cleanup step, it also
 # transforms the 'char' data type (which was actually 'char *' but the 'autodoc'
 # feature of swig removes ' *' from it) into 'str' (as a Python str type).
-#
-# It also calls SBDebugger.Initialize() to initialize the lldb debugger
-# subsystem.
-#
 
 # System modules
 import sys
@@ -47,8 +43,6 @@ else:
 #
 # Residues to be removed.
 #
-c_endif_swig = "#endif"
-c_ifdef_swig = "#ifdef SWIG"
 c_comment_marker = "//------------"
 # The pattern for recognizing the doxygen comment block line.
 doxygen_comment_start = re.compile("^\s*(/// ?)")
@@ -133,10 +127,7 @@ for line in content.splitlines():
             state |= CLEANUP_DOCSTRING
 
     if (state & CLEANUP_DOCSTRING):
-        # Cleanse the lldb.py of the autodoc'ed residues.
-        if c_ifdef_swig in line or c_endif_swig in line:
-            continue
-        # As well as the comment marker line.
+        # Remove the comment marker line.
         if c_comment_marker in line:
             continue
 

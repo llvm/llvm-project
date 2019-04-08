@@ -1150,19 +1150,18 @@ define void @demanded_i32(i32* nocapture readonly, i32* nocapture, i32) nounwind
 define zeroext i1 @demanded_with_known_zeroes(i32 %bit, i32 %bits) {
 ; X86-LABEL: demanded_with_known_zeroes:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    shlb $2, %cl
-; X86-NEXT:    movzbl %cl, %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    shlb $2, %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: demanded_with_known_zeroes:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    shlb $2, %dil
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    btl %eax, %esi
+; X64-NEXT:    shll $2, %edi
+; X64-NEXT:    btl %edi, %esi
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 entry:

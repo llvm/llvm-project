@@ -11,7 +11,9 @@
 #include "CodeComplete.h"
 #include "FindSymbols.h"
 #include "Headers.h"
+#include "Protocol.h"
 #include "SourceCode.h"
+#include "TUScheduler.h"
 #include "Trace.h"
 #include "index/CanonicalIncludes.h"
 #include "index/FileIndex.h"
@@ -21,6 +23,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
@@ -152,6 +155,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   if (ClangTidyOptProvider)
     Opts.ClangTidyOpts = ClangTidyOptProvider->getOptions(File);
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
+
   // FIXME: some build systems like Bazel will take time to preparing
   // environment to build the file, it would be nice if we could emit a
   // "PreparingBuild" status to inform users, it is non-trivial given the
@@ -183,6 +187,18 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
       return CB(IP.takeError());
     if (isCancelled())
       return CB(llvm::make_error<CancelledError>());
+    if (!IP->Preamble) {
+      vlog("File {0} is not ready for code completion. Enter fallback mode.",
+           File);
+      CodeCompleteResult CCR;
+      CCR.Context = CodeCompletionContext::CCC_Recovery;
+
+      // FIXME: perform simple completion e.g. using identifiers in the current
+      // file and symbols in the index.
+      // FIXME: let clients know that we've entered fallback mode.
+
+      return CB(std::move(CCR));
+    }
 
     llvm::Optional<SpeculativeFuzzyFind> SpecFuzzyFind;
     if (CodeCompleteOpts.Index && CodeCompleteOpts.SpeculativeIndexRequest) {
@@ -214,7 +230,9 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
   };
 
   // We use a potentially-stale preamble because latency is critical here.
-  WorkScheduler.runWithPreamble("CodeComplete", File, TUScheduler::Stale,
+  WorkScheduler.runWithPreamble("CodeComplete", File,
+                                Opts.AllowFallback ? TUScheduler::StaleOrAbsent
+                                                   : TUScheduler::Stale,
                                 Bind(Task, File.str(), std::move(CB)));
 }
 

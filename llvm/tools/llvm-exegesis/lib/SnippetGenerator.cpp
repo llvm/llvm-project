@@ -146,15 +146,16 @@ std::mt19937 &randomGenerator() {
   return RandomGenerator;
 }
 
-static size_t randomIndex(size_t Size) {
-  assert(Size > 0);
-  std::uniform_int_distribution<> Distribution(0, Size - 1);
+size_t randomIndex(size_t Max) {
+  std::uniform_int_distribution<> Distribution(0, Max);
   return Distribution(randomGenerator());
 }
 
 template <typename C>
 static auto randomElement(const C &Container) -> decltype(Container[0]) {
-  return Container[randomIndex(Container.size())];
+  assert(!Container.empty() &&
+         "Can't pick a random element from an empty container)");
+  return Container[randomIndex(Container.size() - 1)];
 }
 
 static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
@@ -176,7 +177,7 @@ static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
 size_t randomBit(const llvm::BitVector &Vector) {
   assert(Vector.any());
   auto Itr = Vector.set_bits_begin();
-  for (size_t I = randomIndex(Vector.count()); I != 0; --I)
+  for (size_t I = randomIndex(Vector.count() - 1); I != 0; --I)
     ++Itr;
   return *Itr;
 }

@@ -13,7 +13,9 @@
 #include "Function.h"
 #include "Threading.h"
 #include "index/CanonicalIncludes.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include <future>
 
 namespace clang {
@@ -32,6 +34,7 @@ struct InputsAndAST {
 struct InputsAndPreamble {
   llvm::StringRef Contents;
   const tooling::CompileCommand &Command;
+  // This can be nullptr if no preamble is availble.
   const PreambleData *Preamble;
 };
 
@@ -178,10 +181,14 @@ public:
     ///   reading source code from headers.
     /// This is the fastest option, usually a preamble is available immediately.
     Stale,
+    /// Besides accepting stale preamble, this also allow preamble to be absent
+    /// (not ready or failed to build).
+    StaleOrAbsent,
   };
+
   /// Schedule an async read of the preamble.
-  /// If there's no preamble yet (because the file was just opened), we'll wait
-  /// for it to build. The result may be null if it fails to build or is empty.
+  /// If there's no up-to-date preamble, we follow the PreambleConsistency
+  /// policy.
   /// If an error occurs, it is forwarded to the \p Action callback.
   /// Context cancellation is ignored and should be handled by the Action.
   /// (In practice, the Action is almost always executed immediately).
