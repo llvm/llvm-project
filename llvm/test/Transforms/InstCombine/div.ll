@@ -760,3 +760,22 @@ define <2 x i8> @udiv_common_factor_not_nuw_vec(<2 x i8> %x, <2 x i8> %y, <2 x i
   ret <2 x i8> %c
 }
 
+define i32 @test_exact(i32 %x) {
+; CHECK-LABEL: @test_exact(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X:%.*]], -3
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %div = sdiv exact i32 %x, 3
+  %neg = sub nsw i32 0, %div
+  ret i32 %neg
+}
+
+define <2 x i64> @test_exact_vec(<2 x i64> %x) {
+; CHECK-LABEL: @test_exact_vec(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv <2 x i64> [[X:%.*]], <i64 -3, i64 -4>
+; CHECK-NEXT:    ret <2 x i64> [[DIV]]
+;
+  %div = sdiv exact <2 x i64> %x, <i64 3, i64 4>
+  %neg = sub nsw <2 x i64> zeroinitializer, %div
+  ret <2 x i64> %neg
+}

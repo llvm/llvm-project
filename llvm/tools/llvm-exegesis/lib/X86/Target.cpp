@@ -433,6 +433,10 @@ private:
 
   unsigned getMaxMemoryAccessSize() const override { return 64; }
 
+  void randomizeMCOperand(const Instruction &Instr, const Variable &Var,
+                          llvm::MCOperand &AssignedValue,
+                          const llvm::BitVector &ForbiddenRegs) const override;
+
   void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
                           unsigned Offset) const override;
 
@@ -483,6 +487,23 @@ ExegesisX86Target::getScratchMemoryRegister(const llvm::Triple &TT) const {
     return 0;
   }
   return TT.isOSWindows() ? llvm::X86::RCX : llvm::X86::RDI;
+}
+
+void ExegesisX86Target::randomizeMCOperand(
+    const Instruction &Instr, const Variable &Var,
+    llvm::MCOperand &AssignedValue,
+    const llvm::BitVector &ForbiddenRegs) const {
+  ExegesisTarget::randomizeMCOperand(Instr, Var, AssignedValue, ForbiddenRegs);
+
+  const Operand &Op = Instr.getPrimaryOperand(Var);
+  switch (Op.getExplicitOperandInfo().OperandType) {
+  case llvm::X86::OperandType::OPERAND_COND_CODE:
+    // FIXME: explore all CC variants.
+    AssignedValue = llvm::MCOperand::createImm(1);
+    break;
+  default:
+    break;
+  }
 }
 
 void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,

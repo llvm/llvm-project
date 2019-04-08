@@ -2609,6 +2609,20 @@ LLVMBasicBlockRef LLVMCreateBasicBlockInContext(LLVMContextRef C,
   return wrap(llvm::BasicBlock::Create(*unwrap(C), Name));
 }
 
+void LLVMInsertExistingBasicBlockAfterInsertBlock(LLVMBuilderRef Builder,
+                                                  LLVMBasicBlockRef BB) {
+  BasicBlock *ToInsert = unwrap(BB);
+  BasicBlock *CurBB = unwrap(Builder)->GetInsertBlock();
+  assert(CurBB && "current insertion point is invalid!");
+  CurBB->getParent()->getBasicBlockList().insertAfter(CurBB->getIterator(),
+                                                      ToInsert);
+}
+
+void LLVMAppendExistingBasicBlock(LLVMValueRef Fn,
+                                  LLVMBasicBlockRef BB) {
+  unwrap<Function>(Fn)->getBasicBlockList().push_back(unwrap(BB));
+}
+
 LLVMBasicBlockRef LLVMAppendBasicBlockInContext(LLVMContextRef C,
                                                 LLVMValueRef FnRef,
                                                 const char *Name) {

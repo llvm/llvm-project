@@ -124,7 +124,7 @@ public:
 
   const NodeRef &operator*() const { return VisitQueue.front()->first; }
 
-  // This is a nonstandard operator-> that dereferenfces the pointer an extra
+  // This is a nonstandard operator-> that dereferences the pointer an extra
   // time so that you can actually call methods on the node, because the
   // contained type is a pointer.
   NodeRef operator->() const { return **this; }

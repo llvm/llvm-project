@@ -39,6 +39,71 @@ typedef struct LLVMOpaqueSectionIterator *LLVMSectionIteratorRef;
 typedef struct LLVMOpaqueSymbolIterator *LLVMSymbolIteratorRef;
 typedef struct LLVMOpaqueRelocationIterator *LLVMRelocationIteratorRef;
 
+typedef enum {
+  LLVMBinaryTypeArchive,                /**< Archive file. */
+  LLVMBinaryTypeMachOUniversalBinary,   /**< Mach-O Universal Binary file. */
+  LLVMBinaryTypeCOFFImportFile,         /**< COFF Import file. */
+  LLVMBinaryTypeIR,                     /**< LLVM IR. */
+  LLVMBinaryTypeWinRes,                 /**< Windows resource (.res) file. */
+  LLVMBinaryTypeCOFF,                   /**< COFF Object file. */
+  LLVMBinaryTypeELF32L,                 /**< ELF 32-bit, little endian. */
+  LLVMBinaryTypeELF32B,                 /**< ELF 32-bit, big endian. */
+  LLVMBinaryTypeELF64L,                 /**< ELF 64-bit, little endian. */
+  LLVMBinaryTypeELF64B,                 /**< ELF 64-bit, big endian. */
+  LLVMBinaryTypeMachO32L,               /**< MachO 32-bit, little endian. */
+  LLVMBinaryTypeMachO32B,               /**< MachO 32-bit, big endian. */
+  LLVMBinaryTypeMachO64L,               /**< MachO 64-bit, little endian. */
+  LLVMBinaryTypeMachO64B,               /**< MachO 64-bit, big endian. */
+  LLVMBinaryTypeWasm,                   /**< Web Assembly. */
+} LLVMBinaryType;
+
+/**
+ * Create a binary file from the given memory buffer.
+ *
+ * The exact type of the binary file will be inferred automatically, and the
+ * appropriate implementation selected.  The context may be NULL except if
+ * the resulting file is an LLVM IR file.
+ *
+ * The memory buffer is not consumed by this function.  It is the responsibilty
+ * of the caller to free it with \c LLVMDisposeMemoryBuffer.
+ *
+ * If NULL is returned, the \p ErrorMessage parameter is populated with the
+ * error's description.  It is then the caller's responsibility to free this
+ * message by calling \c LLVMDisposeMessage.
+ *
+ * @see llvm::object::createBinary
+ */
+LLVMBinaryRef LLVMCreateBinary(LLVMMemoryBufferRef MemBuf,
+                               LLVMContextRef Context,
+                               char **ErrorMessage);
+
+/**
+ * Dispose of a binary file.
+ *
+ * The binary file does not own its backing buffer.  It is the responsibilty
+ * of the caller to free it with \c LLVMDisposeMemoryBuffer.
+ */
+void LLVMDisposeBinary(LLVMBinaryRef BR);
+
+/**
+ * Retrieves a copy of the memory buffer associated with this object file.
+ *
+ * The returned buffer is merely a shallow copy and does not own the actual
+ * backing buffer of the binary. Nevertheless, it is the responsibility of the
+ * caller to free it with \c LLVMDisposeMemoryBuffer.
+ *
+ * @see llvm::object::getMemoryBufferRef
+ */
+LLVMMemoryBufferRef LLVMBinaryCopyMemoryBuffer(LLVMBinaryRef BR);
+
+/**
+ * Retrieve the specific type of a binary.
+ *
+ * @see llvm::object::Binary::getType
+ */
+LLVMBinaryType LLVMBinaryGetType(LLVMBinaryRef BR);
+
+
 // ObjectFile creation
 LLVMObjectFileRef LLVMCreateObjectFile(LLVMMemoryBufferRef MemBuf);
 void LLVMDisposeObjectFile(LLVMObjectFileRef ObjectFile);

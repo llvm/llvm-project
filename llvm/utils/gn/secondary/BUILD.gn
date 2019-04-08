@@ -9,6 +9,9 @@ group("default") {
     "//lld/test",
     "//llvm/test",
   ]
+  if (current_os == "linux") {
+    deps += [ "//compiler-rt" ]
+  }
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/test/hwasan" ]
   }

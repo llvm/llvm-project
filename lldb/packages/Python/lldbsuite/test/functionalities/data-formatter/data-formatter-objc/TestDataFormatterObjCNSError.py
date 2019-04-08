@@ -16,7 +16,6 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 class ObjCDataFormatterNSError(ObjCDataFormatterTestCase):
 
     @skipUnlessDarwin
-    @no_debug_info_test
     def test_nserror_with_run_command(self):
         """Test formatters for NSError."""
         self.appkit_tester_impl(self.nserror_data_formatter_commands)

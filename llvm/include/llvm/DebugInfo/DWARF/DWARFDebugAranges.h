@@ -49,10 +49,6 @@ private:
       return -1ULL;
     }
 
-    bool containsAddress(uint64_t Address) const {
-      return LowPC <= Address && Address < HighPC();
-    }
-
     bool operator<(const Range &other) const {
       return LowPC < other.LowPC;
     }

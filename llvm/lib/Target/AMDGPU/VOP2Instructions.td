@@ -815,7 +815,7 @@ class VOP2_DPPe <bits<6> op, VOP2_DPP_Pseudo ps, VOPProfile P = ps.Pfl> :
   let Inst{31}    = 0x0; //encoding
 }
 
-let AssemblerPredicates = [isVI], DecoderNamespace = "VI" in {
+let AssemblerPredicates = [isGFX8GFX9], DecoderNamespace = "GFX8" in {
 
 multiclass VOP2_Real_MADK_vi <bits<6> op> {
   def _vi : VOP2_Real<!cast<VOP2_Pseudo>(NAME), SIEncodingFamily.VI>,
@@ -849,7 +849,7 @@ multiclass Base_VOP2_Real_e32e64_vi <bits<6> op> :
   VOP2_Real_e32_vi<op>,
   VOP2_Real_e64_vi<{0, 1, 0, 0, op{5-0}}>;
 
-} // End AssemblerPredicates = [isVI], DecoderNamespace = "VI"
+} // End AssemblerPredicates = [isGFX8GFX9], DecoderNamespace = "GFX8"
 
 multiclass VOP2_SDWA_Real <bits<6> op> {
   def _sdwa_vi :
@@ -863,7 +863,7 @@ multiclass VOP2_SDWA9_Real <bits<6> op> {
     VOP2_SDWA9Ae <op{5-0}, !cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 }
 
-let AssemblerPredicates = [isVIOnly] in {
+let AssemblerPredicates = [isGFX8Only] in {
 
 multiclass VOP2be_Real_e32e64_vi_only <bits<6> op, string OpName, string AsmName> {
   def _e32_vi :
@@ -871,14 +871,14 @@ multiclass VOP2be_Real_e32e64_vi_only <bits<6> op, string OpName, string AsmName
     VOP2e<op{5-0}, !cast<VOP2_Pseudo>(OpName#"_e32").Pfl> {
       VOP2_Pseudo ps = !cast<VOP2_Pseudo>(OpName#"_e32");
       let AsmString = AsmName # ps.AsmOperands;
-      let DecoderNamespace = "VI";
+      let DecoderNamespace = "GFX8";
     }
   def _e64_vi :
     VOP3_Real<!cast<VOP3_Pseudo>(OpName#"_e64"), SIEncodingFamily.VI>,
     VOP3be_vi <{0, 1, 0, 0, op{5-0}}, !cast<VOP3_Pseudo>(OpName#"_e64").Pfl> {
       VOP3_Pseudo ps = !cast<VOP3_Pseudo>(OpName#"_e64");
       let AsmString = AsmName # ps.AsmOperands;
-      let DecoderNamespace = "VI";
+      let DecoderNamespace = "GFX8";
     }
   def _sdwa_vi :
     VOP_SDWA_Real <!cast<VOP2_SDWA_Pseudo>(OpName#"_sdwa")>,
@@ -896,7 +896,7 @@ multiclass VOP2be_Real_e32e64_vi_only <bits<6> op, string OpName, string AsmName
 }
 }
 
-let AssemblerPredicates = [isGFX9] in {
+let AssemblerPredicates = [isGFX9Only] in {
 
 multiclass VOP2be_Real_e32e64_gfx9 <bits<6> op, string OpName, string AsmName> {
   def _e32_gfx9 :
@@ -952,7 +952,7 @@ multiclass VOP2_Real_e32e64_gfx9 <bits<6> op> {
       }
 }
 
-} // AssemblerPredicates = [isGFX9]
+} // AssemblerPredicates = [isGFX9Only]
 
 multiclass VOP2_Real_e32e64_vi <bits<6> op> :
   Base_VOP2_Real_e32e64_vi<op>, VOP2_SDWA_Real<op>, VOP2_SDWA9_Real<op> {
@@ -1041,7 +1041,7 @@ defm V_MIN_U16            : VOP2_Real_e32e64_vi <0x31>;
 defm V_MIN_I16            : VOP2_Real_e32e64_vi <0x32>;
 defm V_LDEXP_F16          : VOP2_Real_e32e64_vi <0x33>;
 
-let SubtargetPredicate = isVI in {
+let SubtargetPredicate = isGFX8GFX9 in {
 
 // Aliases to simplify matching of floating-point instructions that
 // are VOP2 on SI and VOP3 on VI.
@@ -1061,7 +1061,7 @@ def : SI2_VI3Alias <"v_cvt_pknorm_i16_f32", V_CVT_PKNORM_I16_F32_e64_vi>;
 def : SI2_VI3Alias <"v_cvt_pknorm_u16_f32", V_CVT_PKNORM_U16_F32_e64_vi>;
 def : SI2_VI3Alias <"v_cvt_pkrtz_f16_f32", V_CVT_PKRTZ_F16_F32_e64_vi>;
 
-} // End SubtargetPredicate = isVI
+} // End SubtargetPredicate = isGFX8GFX9
 
 let SubtargetPredicate = HasDLInsts in {
 

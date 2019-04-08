@@ -689,7 +689,7 @@ def isGFX6GFX7 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS">,
   AssemblerPredicate<"!FeatureGCN3Encoding">;
 
-def isGFX7 :
+def isGFX7Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS">,
   AssemblerPredicate<"!FeatureGCN3Encoding,FeatureCIInsts">;
 
@@ -707,17 +707,22 @@ def isGFX8Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">,
   AssemblerPredicate<"FeatureGFX8Insts">;
 
+def isGFX8Only : Predicate<"Subtarget->getGeneration() =="
+                           "AMDGPUSubtarget::VOLCANIC_ISLANDS">,
+  AssemblerPredicate <"FeatureVolcanicIslands">;
+
 def isGFX9Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<"FeatureGFX9Insts">;
 
-def isVI : Predicate <
-  "Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">,
-  AssemblerPredicate<"FeatureGCN3Encoding">;
-
-def isGFX9 : Predicate <
+def isGFX9Only : Predicate <
   "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<"FeatureGCN3Encoding,FeatureGFX9Insts">;
+
+def isGFX8GFX9 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
+  AssemblerPredicate<"FeatureGFX8Insts,FeatureGCN3Encoding">;
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<"FeatureFlatAddressSpace">;

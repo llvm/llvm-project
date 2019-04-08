@@ -13,6 +13,7 @@
 #ifndef LLVM_OBJECT_BINARY_H
 #define LLVM_OBJECT_BINARY_H
 
+#include "llvm-c/Types.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Error.h"
@@ -161,6 +162,9 @@ public:
     return std::error_code();
   }
 };
+
+// Create wrappers for C Binding types (see CBindingWrapping.h).
+DEFINE_ISA_CONVERSION_FUNCTIONS(Binary, LLVMBinaryRef)
 
 /// Create a Binary from Source, autodetecting the file type.
 ///

@@ -176,17 +176,20 @@ void warn(StringRef Message);
 LLVM_ATTRIBUTE_NORETURN void error(Twine Message);
 LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, Twine Message);
 LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, std::error_code EC);
-LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, llvm::Error E);
-LLVM_ATTRIBUTE_NORETURN void report_error(StringRef FileName,
-                                          StringRef ArchiveName,
-                                          llvm::Error E,
-                                          StringRef ArchitectureName
-                                                    = StringRef());
-LLVM_ATTRIBUTE_NORETURN void report_error(StringRef ArchiveName,
-                                          const object::Archive::Child &C,
-                                          llvm::Error E,
-                                          StringRef ArchitectureName
-                                                    = StringRef());
+LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef File);
+LLVM_ATTRIBUTE_NORETURN void
+report_error(Error E, StringRef FileName, StringRef ArchiveName,
+             StringRef ArchitectureName = StringRef());
+LLVM_ATTRIBUTE_NORETURN void
+report_error(Error E, StringRef ArchiveName, const object::Archive::Child &C,
+             StringRef ArchitectureName = StringRef());
+
+template <typename T, typename... Ts>
+T unwrapOrError(Expected<T> EO, Ts &&... Args) {
+  if (EO)
+    return std::move(*EO);
+  report_error(EO.takeError(), std::forward<Ts>(Args)...);
+}
 
 } // end namespace llvm
 

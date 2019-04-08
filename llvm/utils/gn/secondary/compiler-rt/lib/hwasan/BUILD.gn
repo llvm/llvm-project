@@ -16,10 +16,10 @@ action("version_script") {
     "--version-list",
     "--extra",
     rebase_path(sources[0], root_build_dir),
-    rebase_path("$crt_current_out_dir/libclang_rt.hwasan-$crt_current_target.a",
+    rebase_path("$crt_current_out_dir/libclang_rt.hwasan$crt_current_target_suffix.a",
                 root_build_dir),
     rebase_path(
-        "$crt_current_out_dir/libclang_rt.hwasan_cxx-$crt_current_target.a",
+        "$crt_current_out_dir/libclang_rt.hwasan_cxx$crt_current_target_suffix.a",
         root_build_dir),
     "-o",
     rebase_path(outputs[0], root_build_dir),
@@ -75,7 +75,7 @@ source_set("cxx_sources") {
 
 static_library("hwasan") {
   output_dir = crt_current_out_dir
-  output_name = "clang_rt.hwasan-$crt_current_target"
+  output_name = "clang_rt.hwasan$crt_current_target_suffix"
   complete_static_lib = true
   configs -= [
     "//llvm/utils/gn/build:llvm_code",
@@ -89,7 +89,7 @@ static_library("hwasan") {
 
 static_library("hwasan_cxx") {
   output_dir = crt_current_out_dir
-  output_name = "clang_rt.hwasan_cxx-$crt_current_target"
+  output_name = "clang_rt.hwasan_cxx$crt_current_target_suffix"
   complete_static_lib = true
   configs -= [
     "//llvm/utils/gn/build:llvm_code",
@@ -103,7 +103,7 @@ static_library("hwasan_cxx") {
 
 shared_library("hwasan_shared") {
   output_dir = crt_current_out_dir
-  output_name = "clang_rt.hwasan-$crt_current_target"
+  output_name = "clang_rt.hwasan$crt_current_target_suffix"
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   deps = [

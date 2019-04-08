@@ -1121,7 +1121,19 @@ def extloadi32i16  : PatFrag<(ops node:$ptr), (i32 (extloadi16 node:$ptr))>;
 def extloadi64i1   : PatFrag<(ops node:$ptr), (i64 (extloadi1 node:$ptr))>;
 def extloadi64i8   : PatFrag<(ops node:$ptr), (i64 (extloadi8 node:$ptr))>;
 def extloadi64i16  : PatFrag<(ops node:$ptr), (i64 (extloadi16 node:$ptr))>;
-def extloadi64i32  : PatFrag<(ops node:$ptr), (i64 (extloadi32 node:$ptr))>;
+
+// We can treat an i8/i16 extending load to i64 as a 32 bit load if its known
+// to be 4 byte aligned or better.
+def extloadi64i32  : PatFrag<(ops node:$ptr), (i64 (unindexedload node:$ptr)), [{
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  ISD::LoadExtType ExtType = LD->getExtensionType();
+  if (ExtType != ISD::EXTLOAD)
+    return false;
+  if (LD->getMemoryVT() == MVT::i32)
+    return true;
+
+  return LD->getAlignment() >= 4 && !LD->isVolatile();
+}]>;
 
 
 // An 'and' node with a single use.

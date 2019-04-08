@@ -1279,14 +1279,16 @@ def : Pat<(extloadi32i16 addr:$src), (MOVZX32rm16 addr:$src)>;
 
 // For other extloads, use subregs, since the high contents of the register are
 // defined after an extload.
+// NOTE: The extloadi64i32 pattern needs to be first as it will try to form
+// 32-bit loads for 4 byte aligned i8/i16 loads.
+def : Pat<(extloadi64i32 addr:$src),
+          (SUBREG_TO_REG (i64 0), (MOV32rm addr:$src), sub_32bit)>;
 def : Pat<(extloadi64i1 addr:$src),
           (SUBREG_TO_REG (i64 0), (MOVZX32rm8 addr:$src), sub_32bit)>;
 def : Pat<(extloadi64i8 addr:$src),
           (SUBREG_TO_REG (i64 0), (MOVZX32rm8 addr:$src), sub_32bit)>;
 def : Pat<(extloadi64i16 addr:$src),
           (SUBREG_TO_REG (i64 0), (MOVZX32rm16 addr:$src), sub_32bit)>;
-def : Pat<(extloadi64i32 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOV32rm addr:$src), sub_32bit)>;
 
 // anyext. Define these to do an explicit zero-extend to
 // avoid partial-register updates.

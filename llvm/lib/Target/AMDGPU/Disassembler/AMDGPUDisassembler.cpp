@@ -226,7 +226,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // Try decode 32-bit instruction
     if (Bytes.size() < 4) break;
     const uint32_t DW = eatBytes<uint32_t>(Bytes);
-    Res = tryDecodeInst(DecoderTableVI32, MI, DW, Address);
+    Res = tryDecodeInst(DecoderTableGFX832, MI, DW, Address);
     if (Res) break;
 
     Res = tryDecodeInst(DecoderTableAMDGPU32, MI, DW, Address);
@@ -237,7 +237,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     if (Bytes.size() < 4) break;
     const uint64_t QW = ((uint64_t)eatBytes<uint32_t>(Bytes) << 32) | DW;
-    Res = tryDecodeInst(DecoderTableVI64, MI, QW, Address);
+    Res = tryDecodeInst(DecoderTableGFX864, MI, QW, Address);
     if (Res) break;
 
     Res = tryDecodeInst(DecoderTableAMDGPU64, MI, QW, Address);

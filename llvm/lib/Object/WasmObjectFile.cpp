@@ -255,7 +255,7 @@ WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
   }
 
   ReadContext Ctx;
-  Ctx.Start = reinterpret_cast<const uint8_t *>(getData().data());
+  Ctx.Start = getData().bytes_begin();
   Ctx.Ptr = Ctx.Start + 4;
   Ctx.End = Ctx.Start + getData().size();
 

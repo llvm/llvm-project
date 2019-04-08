@@ -621,7 +621,7 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
   expr_options.SetLanguage(eLanguageTypeC_plus_plus);
   expr_options.SetTrapExceptions(false); // dlopen can't throw exceptions, so
                                          // don't do the work to trap them.
-  expr_options.SetTimeout(std::chrono::seconds(2));
+  expr_options.SetTimeout(process->GetUtilityExpressionTimeout());
 
   Status expr_error;
   ExpressionResults result =
@@ -946,7 +946,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   options.SetUnwindOnError(true);
   options.SetTrapExceptions(false); // dlopen can't throw exceptions, so
                                     // don't do the work to trap them.
-  options.SetTimeout(std::chrono::seconds(2));
+  options.SetTimeout(process->GetUtilityExpressionTimeout());
   options.SetIsForUtilityExpr(true);
 
   Value return_value;

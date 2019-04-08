@@ -830,7 +830,7 @@ defm BUFFER_LOAD_DWORDX4 : MUBUF_Pseudo_Loads <
 // This is not described in AMD documentation,
 // but 'lds' versions of these opcodes are available
 // in at least GFX8+ chips. See Bug 37653.
-let SubtargetPredicate = isVI in {
+let SubtargetPredicate = isGFX8GFX9 in {
 defm BUFFER_LOAD_DWORDX2_LDS : MUBUF_Pseudo_Loads <
   "buffer_load_dwordx2", VReg_64, v2i32, null_frag, 0, 1
 >;
@@ -939,7 +939,7 @@ defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_dec_x2", VReg_64, i64, atomic_dec_global
 >;
 
-let SubtargetPredicate = isVI in {
+let SubtargetPredicate = isGFX8GFX9 in {
 def BUFFER_STORE_LDS_DWORD : MUBUF_Pseudo_Store_Lds <"buffer_store_lds_dword">;
 }
 
@@ -1804,8 +1804,8 @@ defm TBUFFER_STORE_FORMAT_XYZW : MTBUF_Real_AllAddr_si <7>;
 
 class MUBUF_Real_ci <bits<7> op, MUBUF_Pseudo ps> :
   MUBUF_Real_si<op, ps> {
-  let AssemblerPredicate=isCIOnly;
-  let DecoderNamespace="GFX7";
+  let AssemblerPredicate = isGFX7Only;
+  let DecoderNamespace = "GFX7";
 }
 
 def BUFFER_WBINVL1_VOL_ci : MUBUF_Real_ci <0x70, BUFFER_WBINVL1_VOL>;
@@ -1819,8 +1819,8 @@ class MUBUF_Real_vi <bits<7> op, MUBUF_Pseudo ps> :
   MUBUF_Real<op, ps>,
   Enc64,
   SIMCInstr<ps.PseudoInstr, SIEncodingFamily.VI> {
-  let AssemblerPredicate=isVI;
-  let DecoderNamespace="VI";
+  let AssemblerPredicate = isGFX8GFX9;
+  let DecoderNamespace = "GFX8";
 
   let Inst{11-0}  = !if(ps.has_offset, offset, ?);
   let Inst{12}    = ps.offen;
@@ -1994,8 +1994,8 @@ class MTBUF_Real_vi <bits<4> op, MTBUF_Pseudo ps> :
   MTBUF_Real<ps>,
   Enc64,
   SIMCInstr<ps.PseudoInstr, SIEncodingFamily.VI> {
-  let AssemblerPredicate=isVI;
-  let DecoderNamespace="VI";
+  let AssemblerPredicate = isGFX8GFX9;
+  let DecoderNamespace = "GFX8";
 
   let Inst{11-0}  = !if(ps.has_offset, offset, ?);
   let Inst{12}    = ps.offen;

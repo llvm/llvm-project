@@ -103,8 +103,7 @@ public:
   explicit SimpleBitstreamCursor(ArrayRef<uint8_t> BitcodeBytes)
       : BitcodeBytes(BitcodeBytes) {}
   explicit SimpleBitstreamCursor(StringRef BitcodeBytes)
-      : BitcodeBytes(reinterpret_cast<const uint8_t *>(BitcodeBytes.data()),
-                     BitcodeBytes.size()) {}
+      : BitcodeBytes(arrayRefFromStringRef(BitcodeBytes)) {}
   explicit SimpleBitstreamCursor(MemoryBufferRef BitcodeBytes)
       : SimpleBitstreamCursor(BitcodeBytes.getBuffer()) {}
 

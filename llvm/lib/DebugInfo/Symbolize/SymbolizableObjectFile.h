@@ -75,9 +75,6 @@ private:
     // the following symbol.
     uint64_t Size;
 
-    bool operator==(const SymbolDesc &RHS) const {
-      return Addr == RHS.Addr && Size == RHS.Size;
-    }
     bool operator<(const SymbolDesc &RHS) const {
       return Addr != RHS.Addr ? Addr < RHS.Addr : Size < RHS.Size;
     }

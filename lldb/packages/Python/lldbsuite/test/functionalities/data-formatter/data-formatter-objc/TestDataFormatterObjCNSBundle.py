@@ -16,7 +16,6 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 class ObjCDataFormatterNSBundle(ObjCDataFormatterTestCase):
 
     @skipUnlessDarwin
-    @no_debug_info_test
     def test_nsbundle_with_run_command(self):
         """Test formatters for NSBundle."""
         self.appkit_tester_impl(self.nsbundle_data_formatter_commands)

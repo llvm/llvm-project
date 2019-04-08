@@ -526,7 +526,7 @@ let Defs = [SCC] in {
 def S_ABSDIFF_I32 : SOP2_32 <"s_absdiff_i32">;
 } // End Defs = [SCC]
 
-let SubtargetPredicate = isVI in {
+let SubtargetPredicate = isGFX8GFX9 in {
   def S_RFE_RESTORE_B64 : SOP2_Pseudo <
     "s_rfe_restore_b64", (outs),
     (ins SSrc_b64:$src0, SSrc_b32:$src1),
@@ -1261,8 +1261,8 @@ def S_SETREG_IMM32_B32_si  : SOPK_Real64<0x15, S_SETREG_IMM32_B32>,
 
 class Select_vi<string opName> :
   SIMCInstr<opName, SIEncodingFamily.VI> {
-  list<Predicate> AssemblerPredicates = [isVI];
-  string DecoderNamespace = "VI";
+  list<Predicate> AssemblerPredicates = [isGFX8GFX9];
+  string DecoderNamespace = "GFX8";
 }
 
 class SOP1_Real_vi<bits<8> op, SOP1_Pseudo ps> :

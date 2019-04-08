@@ -16,7 +16,6 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 class ObjCDataFormatterNSPlain(ObjCDataFormatterTestCase):
 
     @skipUnlessDarwin
-    @no_debug_info_test
     def test_plain_objc_with_run_command(self):
         """Test basic ObjC formatting behavior."""
         self.build()

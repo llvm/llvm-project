@@ -16,7 +16,6 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 class ObjCDataFormatterNSURL(ObjCDataFormatterTestCase):
 
     @skipUnlessDarwin
-    @no_debug_info_test
     def test_nsurl_with_run_command(self):
         """Test formatters for NSURL."""
         self.appkit_tester_impl(self.nsurl_data_formatter_commands)

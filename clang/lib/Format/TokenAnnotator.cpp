@@ -2095,7 +2095,7 @@ static bool isFunctionDeclarationName(const FormatToken &Current,
     return true;
   for (const FormatToken *Tok = Next->Next; Tok && Tok != Next->MatchingParen;
        Tok = Tok->Next) {
-    if (Tok->is(tok::l_paren) && Tok->MatchingParen) {
+    if (Tok->isOneOf(tok::l_paren, TT_TemplateOpener) && Tok->MatchingParen) {
       Tok = Tok->MatchingParen;
       continue;
     }

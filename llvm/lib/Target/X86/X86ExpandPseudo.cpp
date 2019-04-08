@@ -26,6 +26,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-pseudo"
+#define X86_EXPAND_PSEUDO_NAME "X86 pseudo instruction expansion pass"
 
 namespace {
 class X86ExpandPseudo : public MachineFunctionPass {
@@ -65,7 +66,11 @@ private:
   bool ExpandMBB(MachineBasicBlock &MBB);
 };
 char X86ExpandPseudo::ID = 0;
+
 } // End anonymous namespace.
+
+INITIALIZE_PASS(X86ExpandPseudo, DEBUG_TYPE, X86_EXPAND_PSEUDO_NAME, false,
+                false)
 
 void X86ExpandPseudo::ExpandICallBranchFunnel(
     MachineBasicBlock *MBB, MachineBasicBlock::iterator MBBI) {
@@ -253,12 +258,14 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       for (unsigned i = 0; i != 5; ++i)
         MIB.add(MBBI->getOperand(i));
     } else if (Opcode == X86::TCRETURNri64) {
+      JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL,
               TII->get(IsWin64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
-          .addReg(JumpTarget.getReg(), RegState::Kill);
+          .add(JumpTarget);
     } else {
+      JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL, TII->get(X86::TAILJMPr))
-          .addReg(JumpTarget.getReg(), RegState::Kill);
+          .add(JumpTarget);
     }
 
     MachineInstr &NewMI = *std::prev(MBBI);

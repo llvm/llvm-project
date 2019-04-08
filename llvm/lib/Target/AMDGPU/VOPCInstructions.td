@@ -940,7 +940,7 @@ defm V_CMPX_CLASS_F64 : VOPC_Real_si <0xb8>;
 //===----------------------------------------------------------------------===//
 
 multiclass VOPC_Real_vi <bits<10> op> {
-  let AssemblerPredicates = [isVI], DecoderNamespace = "VI" in {
+  let AssemblerPredicates = [isGFX8GFX9], DecoderNamespace = "GFX8" in {
     def _e32_vi :
       VOPC_Real<!cast<VOPC_Pseudo>(NAME#"_e32"), SIEncodingFamily.VI>,
       VOPCe<op{7-0}>;
@@ -965,7 +965,7 @@ multiclass VOPC_Real_vi <bits<10> op> {
 
   def : VOPCInstAlias <!cast<VOP3_Pseudo>(NAME#"_e64"),
                        !cast<Instruction>(NAME#"_e32_vi")> {
-    let AssemblerPredicate = isVI;
+    let AssemblerPredicate = isGFX8GFX9;
   }
 }
 
