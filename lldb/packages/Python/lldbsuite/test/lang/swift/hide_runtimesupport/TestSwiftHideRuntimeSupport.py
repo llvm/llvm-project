@@ -26,8 +26,6 @@ class TestSwiftHideRuntimeSupport(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @swiftTest
     def test_swift_hide_runtime_support(self):
