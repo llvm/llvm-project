@@ -18,6 +18,7 @@ add_llvm_unittest(SupportTests
   CommandLineTest.cpp
   CompressionTest.cpp
   ConvertUTFTest.cpp
+  CRCTest.cpp
   DataExtractorTest.cpp
   DebugTest.cpp
   DebugCounterTest.cpp

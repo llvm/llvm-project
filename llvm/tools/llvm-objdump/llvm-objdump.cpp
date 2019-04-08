@@ -330,6 +330,13 @@ void llvm::error(std::error_code EC) {
   exit(1);
 }
 
+void llvm::error(Error E) {
+  if (!E)
+    return;
+  WithColor::error(errs(), ToolName) << toString(std::move(E));
+  exit(1);
+}
+
 LLVM_ATTRIBUTE_NORETURN void llvm::error(Twine Message) {
   WithColor::error(errs(), ToolName) << Message << ".\n";
   errs().flush();
@@ -437,8 +444,8 @@ bool llvm::isRelocAddressLess(RelocationRef A, RelocationRef B) {
   return A.getOffset() < B.getOffset();
 }
 
-static std::error_code getRelocationValueString(const RelocationRef &Rel,
-                                                SmallVectorImpl<char> &Result) {
+static Error getRelocationValueString(const RelocationRef &Rel,
+                                      SmallVectorImpl<char> &Result) {
   const ObjectFile *Obj = Rel.getObject();
   if (auto *ELF = dyn_cast<ELFObjectFileBase>(Obj))
     return getELFRelocationValueString(ELF, Rel, Result);
@@ -1235,7 +1242,6 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       bool CheckARMELFData = isArmElf(Obj) &&
                              std::get<2>(Symbols[SI]) != ELF::STT_OBJECT &&
                              !DisassembleAll;
-      MCInst Inst;
       while (Index < End) {
         // AArch64 ELF binaries can interleave data and text in the same
         // section. We rely on the markers introduced to understand what we
@@ -1268,7 +1274,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
         // Disassemble a real instruction or a data when disassemble all is
         // provided
-        Inst.clear();
+        MCInst Inst;
         bool Disassembled = DisAsm->getInstruction(
             Inst, Size, Bytes.slice(Index), SectionAddr + Index, DebugOut,
             CommentStream);
@@ -1555,7 +1561,6 @@ void llvm::printSectionHeaders(const ObjectFile *Obj) {
 }
 
 void llvm::printSectionContents(const ObjectFile *Obj) {
-  std::error_code EC;
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     StringRef Name;
     StringRef Contents;

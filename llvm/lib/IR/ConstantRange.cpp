@@ -314,13 +314,6 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
         Lower = APIntOps::RoundingSDiv(MinValue, V, APInt::Rounding::UP);
         Upper = APIntOps::RoundingSDiv(MaxValue, V, APInt::Rounding::DOWN);
       }
-      if (Unsigned) {
-        Lower = Lower.zextOrSelf(BitWidth);
-        Upper = Upper.zextOrSelf(BitWidth);
-      } else {
-        Lower = Lower.sextOrSelf(BitWidth);
-        Upper = Upper.sextOrSelf(BitWidth);
-      }
       // ConstantRange ctor take a half inclusive interval [Lower, Upper + 1).
       // Upper + 1 is guanranteed not to overflow, because |divisor| > 1. 0, -1,
       // and 1 are already handled as special cases.

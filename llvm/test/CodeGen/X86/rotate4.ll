@@ -633,9 +633,9 @@ define i32 @rotate_demanded_bits_2(i32, i32) {
 define i32 @rotate_demanded_bits_3(i32, i32) {
 ; X86-LABEL: rotate_demanded_bits_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    addb %cl, %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    roll %cl, %eax
 ; X86-NEXT:    retl
 ;

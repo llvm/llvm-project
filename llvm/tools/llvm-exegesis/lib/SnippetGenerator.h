@@ -77,6 +77,9 @@ private:
 // unit tests.
 std::mt19937 &randomGenerator();
 
+// Picks a random unsigned integer from 0 to Max (inclusive).
+size_t randomIndex(size_t Max);
+
 // Picks a random bit among the bits set in Vector and returns its index.
 // Precondition: Vector must have at least one bit set.
 size_t randomBit(const llvm::BitVector &Vector);

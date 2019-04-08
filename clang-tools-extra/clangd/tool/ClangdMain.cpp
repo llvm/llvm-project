@@ -231,6 +231,14 @@ static llvm::cl::opt<OffsetEncoding> ForceOffsetEncoding(
                                 "Offsets are in UTF-16 code units")),
     llvm::cl::init(OffsetEncoding::UnsupportedEncoding));
 
+static llvm::cl::opt<bool> AllowFallbackCompletion(
+    "allow-fallback-completion",
+    llvm::cl::desc(
+        "Allow falling back to code completion without compiling files (using "
+        "identifiers and symbol indexes), when file cannot be built or the "
+        "build is not ready."),
+    llvm::cl::init(false));
+
 namespace {
 
 /// \brief Supports a test URI scheme with relaxed constraints for lit tests.
@@ -437,6 +445,7 @@ int main(int argc, char *argv[]) {
   CCOpts.SpeculativeIndexRequest = Opts.StaticIndex;
   CCOpts.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   CCOpts.AllScopes = AllScopesCompletion;
+  CCOpts.AllowFallback = AllowFallbackCompletion;
 
   RealFileSystemProvider FSProvider;
   // Initialize and run ClangdLSPServer.
