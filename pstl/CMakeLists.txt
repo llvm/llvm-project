@@ -62,7 +62,7 @@ write_basic_package_version_file(
     COMPATIBILITY AnyNewerVersion)
 
 configure_file(
-    ParallelSTLConfig.cmake.in
+    cmake/ParallelSTLConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfig.cmake
     @ONLY)
 

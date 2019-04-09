@@ -52,6 +52,7 @@ set(SCUDO_UNIT_TEST_SOURCES
   atomic_test.cc
   bytemap_test.cc
   checksum_test.cc
+  flags_test.cc
   list_test.cc
   map_test.cc
   mutex_test.cc
