@@ -1,4 +1,4 @@
-; RUN: opt -S -hwasan -hwasan-allow-ifunc < %s | FileCheck %s
+; RUN: opt -S -hwasan < %s | FileCheck %s
 
 target triple = "aarch64--linux-android"
 

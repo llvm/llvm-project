@@ -441,6 +441,25 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
       return replaceInstUsesWith(I, Sqrt);
     }
 
+    // Like the similar transform in instsimplify, this requires 'nsz' because
+    // sqrt(-0.0) = -0.0, and -0.0 * -0.0 does not simplify to -0.0.
+    if (I.hasNoNaNs() && I.hasNoSignedZeros() && Op0 == Op1 &&
+        Op0->hasNUses(2)) {
+      // Peek through fdiv to find squaring of square root:
+      // (X / sqrt(Y)) * (X / sqrt(Y)) --> (X * X) / Y
+      if (match(Op0, m_FDiv(m_Value(X),
+                            m_Intrinsic<Intrinsic::sqrt>(m_Value(Y))))) {
+        Value *XX = Builder.CreateFMulFMF(X, X, &I);
+        return BinaryOperator::CreateFDivFMF(XX, Y, &I);
+      }
+      // (sqrt(Y) / X) * (sqrt(Y) / X) --> Y / (X * X)
+      if (match(Op0, m_FDiv(m_Intrinsic<Intrinsic::sqrt>(m_Value(Y)),
+                            m_Value(X)))) {
+        Value *XX = Builder.CreateFMulFMF(X, X, &I);
+        return BinaryOperator::CreateFDivFMF(Y, XX, &I);
+      }
+    }
+
     // exp(X) * exp(Y) -> exp(X + Y)
     // Match as long as at least one of exp has only one use.
     if (match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(X))) &&

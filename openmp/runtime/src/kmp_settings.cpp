@@ -3357,7 +3357,7 @@ static void __kmp_stg_parse_allocator(char const *name, char const *value,
     KMP_ASSERT(num > 0);
     switch (num) {
     case 4:
-      if (__kmp_hbw_mem_available) {
+      if (__kmp_memkind_available) {
         __kmp_def_allocator = omp_high_bw_mem_alloc;
       } else {
         __kmp_msg(kmp_ms_warning,
@@ -3406,7 +3406,7 @@ static void __kmp_stg_parse_allocator(char const *name, char const *value,
   }
   next = buf;
   if (__kmp_match_str("omp_high_bw_mem_alloc", buf, &next)) {
-    if (__kmp_hbw_mem_available) {
+    if (__kmp_memkind_available) {
       __kmp_def_allocator = omp_high_bw_mem_alloc;
     } else {
       __kmp_msg(kmp_ms_warning,

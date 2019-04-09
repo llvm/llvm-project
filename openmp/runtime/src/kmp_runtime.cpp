@@ -4264,15 +4264,24 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
       __kmp_thread_pool_insert_pt = NULL;
     }
     TCW_4(new_thr->th.th_in_pool, FALSE);
-    // Don't touch th_active_in_pool or th_active.
-    // The worker thread adjusts those flags as it sleeps/awakens.
-    __kmp_thread_pool_nth--;
+    __kmp_suspend_initialize_thread(new_thr);
+    __kmp_lock_suspend_mx(new_thr);
+    if (new_thr->th.th_active_in_pool == TRUE) {
+      KMP_DEBUG_ASSERT(new_thr->th.th_active == TRUE);
+      KMP_ATOMIC_DEC(&__kmp_thread_pool_active_nth);
+      new_thr->th.th_active_in_pool = FALSE;
+    }
+#if KMP_DEBUG
+    else {
+      KMP_DEBUG_ASSERT(new_thr->th.th_active == FALSE);
+    }
+#endif
+    __kmp_unlock_suspend_mx(new_thr);
 
     KA_TRACE(20, ("__kmp_allocate_thread: T#%d using thread T#%d\n",
                   __kmp_get_gtid(), new_thr->th.th_info.ds.ds_gtid));
     KMP_ASSERT(!new_thr->th.th_team);
     KMP_DEBUG_ASSERT(__kmp_nth < __kmp_threads_capacity);
-    KMP_DEBUG_ASSERT(__kmp_thread_pool_nth >= 0);
 
     /* setup the thread structure */
     __kmp_initialize_info(new_thr, team, new_tid,
@@ -5705,7 +5714,18 @@ void __kmp_free_thread(kmp_info_t *this_th) {
                    (this_th->th.th_info.ds.ds_gtid <
                     this_th->th.th_next_pool->th.th_info.ds.ds_gtid));
   TCW_4(this_th->th.th_in_pool, TRUE);
-  __kmp_thread_pool_nth++;
+  __kmp_suspend_initialize_thread(this_th);
+  __kmp_lock_suspend_mx(this_th);
+  if (this_th->th.th_active == TRUE) {
+    KMP_ATOMIC_INC(&__kmp_thread_pool_active_nth);
+    this_th->th.th_active_in_pool = TRUE;
+  }
+#if KMP_DEBUG
+  else {
+    KMP_DEBUG_ASSERT(this_th->th.th_active_in_pool == FALSE);
+  }
+#endif
+  __kmp_unlock_suspend_mx(this_th);
 
   TCW_4(__kmp_nth, __kmp_nth - 1);
 
@@ -5954,10 +5974,6 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
       KMP_ATOMIC_DEC(&__kmp_thread_pool_active_nth);
       KMP_DEBUG_ASSERT(__kmp_thread_pool_active_nth >= 0);
     }
-
-    // Decrement # of [worker] threads in the pool.
-    KMP_DEBUG_ASSERT(__kmp_thread_pool_nth > 0);
-    --__kmp_thread_pool_nth;
   }
 
   __kmp_free_implicit_task(thread);
@@ -6099,6 +6115,8 @@ static void __kmp_internal_end(void) {
       KMP_DEBUG_ASSERT(thread->th.th_reap_state == KMP_SAFE_TO_REAP);
       thread->th.th_next_pool = NULL;
       thread->th.th_in_pool = FALSE;
+      thread->th.th_active_in_pool = FALSE;
+      KMP_ATOMIC_DEC(&__kmp_thread_pool_active_nth);
       __kmp_reap_thread(thread, 0);
     }
     __kmp_thread_pool_insert_pt = NULL;

@@ -4205,6 +4205,15 @@ void __kmpc_doacross_fini(ident_t *loc, int gtid) {
 #endif
 
 #if OMP_50_ENABLED
+/* omp_alloc/omp_free only defined for C/C++, not for Fortran */
+void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
+  return __kmpc_alloc(__kmp_entry_gtid(), size, allocator);
+}
+
+void omp_free(void *ptr, omp_allocator_handle_t allocator) {
+  __kmpc_free(__kmp_entry_gtid(), ptr, allocator);
+}
+
 int __kmpc_get_target_offload(void) {
   if (!__kmp_init_serial) {
     __kmp_serial_initialize();

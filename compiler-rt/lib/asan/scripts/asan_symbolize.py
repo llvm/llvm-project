@@ -9,13 +9,13 @@
 import argparse
 import bisect
 import getopt
+import logging
 import os
 import re
 import subprocess
 import sys
 
 symbolizers = {}
-DEBUG = False
 demangle = False
 binutils_prefix = None
 sysroot_path = None
@@ -87,8 +87,7 @@ class LLVMSymbolizer(Symbolizer):
     if self.system == 'Darwin':
       for hint in self.dsym_hints:
         cmd.append('--dsym-hint=%s' % hint)
-    if DEBUG:
-      print(' '.join(cmd))
+    logging.debug(' '.join(cmd))
     try:
       result = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
@@ -105,8 +104,7 @@ class LLVMSymbolizer(Symbolizer):
     result = []
     try:
       symbolizer_input = '"%s" %s' % (binary, offset)
-      if DEBUG:
-        print(symbolizer_input)
+      logging.debug(symbolizer_input)
       self.pipe.stdin.write("%s\n" % symbolizer_input)
       while True:
         function_name = self.pipe.stdout.readline().rstrip()
@@ -151,8 +149,7 @@ class Addr2LineSymbolizer(Symbolizer):
     if demangle:
       cmd += ['--demangle']
     cmd += ['-e', self.binary]
-    if DEBUG:
-      print(' '.join(cmd))
+    logging.debug(' '.join(cmd))
     return subprocess.Popen(cmd,
                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                             bufsize=0,
@@ -221,8 +218,7 @@ class DarwinSymbolizer(Symbolizer):
     self.open_atos()
 
   def open_atos(self):
-    if DEBUG:
-      print('atos -o %s -arch %s' % (self.binary, self.arch))
+    logging.debug('atos -o %s -arch %s', self.binary, self.arch)
     cmdline = ['atos', '-o', self.binary, '-arch', self.arch]
     self.atos = UnbufferedLineConverter(cmdline, close_stderr=True)
 
@@ -240,8 +236,7 @@ class DarwinSymbolizer(Symbolizer):
     # A well-formed atos response looks like this:
     #   foo(type1, type2) (in object.name) (filename.cc:80)
     match = re.match('^(.*) \(in (.*)\) \((.*:\d*)\)$', atos_line)
-    if DEBUG:
-      print('atos_line: ', atos_line)
+    logging.debug('atos_line: %s', atos_line)
     if match:
       function_name = match.group(1)
       function_name = re.sub('\(.*?\)', '', function_name)
@@ -454,8 +449,7 @@ class SymbolizationLoop(object):
     match = re.match(stack_trace_line_format, line)
     if not match:
       return [self.current_line]
-    if DEBUG:
-      print(line)
+    logging.debug(line)
     _, frameno_str, addr, binary, offset = match.groups()
     arch = ""
     # Arch can be embedded in the filename, e.g.: "libabc.dylib:x86_64h"
@@ -479,8 +473,47 @@ class SymbolizationLoop(object):
         symbolized_line = self.symbolize_address(addr, original_binary, offset, arch)
     return self.get_symbolized_lines(symbolized_line)
 
+def add_logging_args(parser):
+  parser.add_argument('--log-dest',
+    default=None,
+    help='Destination path for script logging (default stderr).',
+  )
+  parser.add_argument('--log-level',
+    choices=['debug', 'info', 'warning', 'error', 'critical'],
+    default='info',
+    help='Log level for script (default: %(default)s).'
+  )
+
+def setup_logging():
+  # Set up a parser just for parsing the logging arguments.
+  # This is necessary because logging should be configured before we
+  # perform the main argument parsing.
+  parser = argparse.ArgumentParser(add_help=False)
+  add_logging_args(parser)
+  pargs, unparsed_args = parser.parse_known_args()
+
+  log_level = getattr(logging, pargs.log_level.upper())
+  if log_level == logging.DEBUG:
+    log_format = '%(levelname)s: [%(funcName)s() %(filename)s:%(lineno)d] %(message)s'
+  else:
+    log_format = '%(levelname)s: %(message)s'
+  basic_config = {
+    'level': log_level,
+    'format': log_format
+  }
+  log_dest = pargs.log_dest
+  if log_dest:
+    basic_config['filename'] = log_dest
+  logging.basicConfig(**basic_config)
+  logging.debug('Logging level set to "{}" and directing output to "{}"'.format(
+    pargs.log_level,
+    'stderr' if log_dest is None else log_dest)
+  )
+  return unparsed_args
+
 
 if __name__ == '__main__':
+  remaining_args = setup_logging()
   parser = argparse.ArgumentParser(
       formatter_class=argparse.RawDescriptionHelpFormatter,
       description='ASan symbolization script',
@@ -500,7 +533,9 @@ if __name__ == '__main__':
                       help='set log file name to parse, default is stdin')
   parser.add_argument('--force-system-symbolizer', action='store_true',
                       help='don\'t use llvm-symbolizer')
-  args = parser.parse_args()
+  # Add logging arguments so that `--help` shows them.
+  add_logging_args(parser)
+  args = parser.parse_args(remaining_args)
   if args.path_to_cut:
     fix_filename_patterns = args.path_to_cut
   if args.demangle:

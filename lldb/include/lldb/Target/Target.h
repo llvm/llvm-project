@@ -505,8 +505,42 @@ public:
 
   static void SetDefaultArchitecture(const ArchSpec &arch);
 
-  lldb::ModuleSP GetSharedModule(const ModuleSpec &module_spec,
-                                 Status *error_ptr = nullptr);
+  //------------------------------------------------------------------
+  /// Find a binary on the system and return its Module, 
+  /// or return an existing Module that is already in the Target.
+  ///
+  /// Given a ModuleSpec, find a binary satisifying that specification,
+  /// or identify a matching Module already present in the Target,
+  /// and return a shared pointer to it.
+  ///
+  /// \param[in] module_spec
+  ///     The criteria that must be matched for the binary being loaded.
+  ///     e.g. UUID, architecture, file path.
+  ///
+  /// \param[in] notify
+  ///     If notify is true, and the Module is new to this Target, 
+  ///     Target::ModulesDidLoad will be called.  
+  ///     If notify is false, it is assumed that the caller is adding 
+  ///     multiple Modules and will call ModulesDidLoad with the 
+  ///     full list at the end.
+  ///     ModulesDidLoad must be called when a Module/Modules have
+  ///     been added to the target, one way or the other.
+  ///
+  /// \param[out] error_ptr
+  ///     Optional argument, pointing to a Status object to fill in 
+  ///     with any results / messages while attempting to find/load
+  ///     this binary.  Many callers will be internal functions that
+  ///     will handle / summarize the failures in a custom way and
+  ///     don't use these messages.
+  ///
+  /// \return 
+  ///     An empty ModuleSP will be returned if no matching file
+  ///     was found.  If error_ptr was non-nullptr, an error message
+  ///     will likely be provided.
+  //------------------------------------------------------------------
+  lldb::ModuleSP GetOrCreateModule(const ModuleSpec &module_spec,
+                                   bool notify,
+                                   Status *error_ptr = nullptr);
 
   //----------------------------------------------------------------------
   // Settings accessors
@@ -1250,16 +1284,19 @@ protected:
   /// Implementing of ModuleList::Notifier.
   //------------------------------------------------------------------
 
-  void ModuleAdded(const ModuleList &module_list,
-                   const lldb::ModuleSP &module_sp) override;
+  void NotifyModuleAdded(const ModuleList &module_list,
+                         const lldb::ModuleSP &module_sp) override;
 
-  void ModuleRemoved(const ModuleList &module_list,
-                     const lldb::ModuleSP &module_sp) override;
+  void NotifyModuleRemoved(const ModuleList &module_list,
+                         const lldb::ModuleSP &module_sp) override;
 
-  void ModuleUpdated(const ModuleList &module_list,
-                     const lldb::ModuleSP &old_module_sp,
-                     const lldb::ModuleSP &new_module_sp) override;
-  void WillClearList(const ModuleList &module_list) override;
+  void NotifyModuleUpdated(const ModuleList &module_list,
+                           const lldb::ModuleSP &old_module_sp,
+                           const lldb::ModuleSP &new_module_sp) override;
+
+  void NotifyWillClearList(const ModuleList &module_list) override;
+
+  void NotifyModulesRemoved(lldb_private::ModuleList &module_list) override;
 
   class Arch {
   public:

@@ -1329,9 +1329,9 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
   SBThread sb_origin_thread;
 
-  if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
+  Process::StopLocker stop_locker;
+  if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
+    if (exe_ctx.HasThreadScope()) {
       ThreadSP real_thread(exe_ctx.GetThreadSP());
       if (real_thread) {
         ConstString type_const(type);

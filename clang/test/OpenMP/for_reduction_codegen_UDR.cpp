@@ -10,15 +10,18 @@
 #ifndef HEADER
 #define HEADER
 
-typedef void **omp_allocator_handle_t;
-extern const omp_allocator_handle_t omp_default_mem_alloc;
-extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
-extern const omp_allocator_handle_t omp_const_mem_alloc;
-extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
-extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
-extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
-extern const omp_allocator_handle_t omp_pteam_mem_alloc;
-extern const omp_allocator_handle_t omp_thread_mem_alloc;
+enum omp_allocator_handle_t {
+  omp_null_allocator = 0,
+  omp_default_mem_alloc = 1,
+  omp_large_cap_mem_alloc = 2,
+  omp_const_mem_alloc = 3,
+  omp_high_bw_mem_alloc = 4,
+  omp_low_lat_mem_alloc = 5,
+  omp_cgroup_mem_alloc = 6,
+  omp_pteam_mem_alloc = 7,
+  omp_thread_mem_alloc = 8,
+  KMP_ALLOCATOR_MAX_HANDLE = __UINTPTR_MAX__
+};
 
 volatile double g, g_orig;
 volatile double &g1 = g_orig;
@@ -797,15 +800,14 @@ int main() {
 // CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
 // CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
 // CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
-// CHECK: [[ALLOCATOR:%.+]] = load i8**, i8*** @omp_cgroup_mem_alloc,
-// CHECK: [[VAR3_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID:%.+]], i64 48, i8** [[ALLOCATOR]])
+// CHECK: [[VAR3_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID:%.+]], i64 48, i8* inttoptr (i64 6 to i8*))
 // CHECK: [[VAR3_PRIV:%.+]] = bitcast i8* [[VAR3_VOID_PTR]] to [4 x %struct.S]*
 // CHECK: getelementptr inbounds [4 x [[S_FLOAT_TY]]], [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], i32 0, i32 0
 // CHECK: bitcast [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]] to [[S_FLOAT_TY]]*
 // CHECK: getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* %{{.+}}, i64 4
 
 // CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], [4 x [[S_FLOAT_TY]]]** %
-// CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[VAR3_VOID_PTR]], i8** [[ALLOCATOR]])
+// CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[VAR3_VOID_PTR]], i8* inttoptr (i64 6 to i8*))
 // CHECK: ret void
 
 // CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT_42]]()

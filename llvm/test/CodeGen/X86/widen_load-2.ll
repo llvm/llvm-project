@@ -362,11 +362,9 @@ define void @rot(%i8vec3pack* nocapture sret %result, %i8vec3pack* %X, %i8vec3pa
 ; X86-NEXT:    movb $1, 2(%ecx)
 ; X86-NEXT:    movw $257, (%ecx) # imm = 0x101
 ; X86-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    psrld $1, %xmm1
-; X86-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
+; X86-NEXT:    psrld $1, %xmm0
+; X86-NEXT:    pextrb $8, %xmm0, 2(%eax)
 ; X86-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
-; X86-NEXT:    pextrb $8, %xmm1, 2(%eax)
 ; X86-NEXT:    pextrw $0, %xmm0, (%eax)
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    retl $4
@@ -379,11 +377,9 @@ define void @rot(%i8vec3pack* nocapture sret %result, %i8vec3pack* %X, %i8vec3pa
 ; X64-NEXT:    movb $1, 2(%rdx)
 ; X64-NEXT:    movw $257, (%rdx) # imm = 0x101
 ; X64-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X64-NEXT:    movdqa %xmm0, %xmm1
-; X64-NEXT:    psrld $1, %xmm1
-; X64-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
+; X64-NEXT:    psrld $1, %xmm0
+; X64-NEXT:    pextrb $8, %xmm0, 2(%rdi)
 ; X64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
-; X64-NEXT:    pextrb $8, %xmm1, 2(%rdi)
 ; X64-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; X64-NEXT:    retq
 entry:

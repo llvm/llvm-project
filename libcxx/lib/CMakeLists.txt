@@ -198,8 +198,6 @@ if (LIBCXX_ENABLE_SHARED)
       set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
     endif()
     target_link_libraries(cxx_shared PRIVATE
-      "-compatibility_version 1"
-      "-install_name /usr/lib/libc++.1.dylib"
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp"
       "-Wl,-reexported_symbols_list,${RE_EXPORT_LIST}"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/notweak.exp"
