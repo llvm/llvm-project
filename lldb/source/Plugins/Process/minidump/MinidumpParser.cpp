@@ -12,6 +12,7 @@
 
 #include "Plugins/Process/Utility/LinuxProcMaps.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 
 // C includes
 // C++ includes
@@ -180,29 +181,19 @@ MinidumpParser::GetThreadContextWow64(const MinidumpThread &td) {
   // stored in the first slot of the 64-bit TEB (wow64teb.Reserved1[0]).
 }
 
-const SystemInfo *MinidumpParser::GetSystemInfo() {
-  llvm::ArrayRef<uint8_t> data = GetStream(StreamType::SystemInfo);
-
-  if (data.size() == 0)
-    return nullptr;
-  const SystemInfo *system_info;
-
-  Status error = consumeObject(data, system_info);
-  if (error.Fail())
-    return nullptr;
-
-  return system_info;
-}
-
 ArchSpec MinidumpParser::GetArchitecture() {
   if (m_arch.IsValid())
     return m_arch;
 
   // Set the architecture in m_arch
-  const SystemInfo *system_info = GetSystemInfo();
+  llvm::Expected<const SystemInfo &> system_info = m_file->getSystemInfo();
 
-  if (!system_info)
+  if (!system_info) {
+    LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS),
+                   system_info.takeError(),
+                   "Failed to read SystemInfo stream: {0}");
     return m_arch;
+  }
 
   // TODO what to do about big endiand flavors of arm ?
   // TODO set the arm subarch stuff if the minidump has info about it

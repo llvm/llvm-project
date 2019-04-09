@@ -468,17 +468,16 @@ static bool getPDataSection(const COFFObjectFile *Obj,
   return false;
 }
 
-std::error_code
-llvm::getCOFFRelocationValueString(const COFFObjectFile *Obj,
-                                   const RelocationRef &Rel,
-                                   SmallVectorImpl<char> &Result) {
+Error llvm::getCOFFRelocationValueString(const COFFObjectFile *Obj,
+                                         const RelocationRef &Rel,
+                                         SmallVectorImpl<char> &Result) {
   symbol_iterator SymI = Rel.getSymbol();
   Expected<StringRef> SymNameOrErr = SymI->getName();
   if (!SymNameOrErr)
-    return errorToErrorCode(SymNameOrErr.takeError());
+    return SymNameOrErr.takeError();
   StringRef SymName = *SymNameOrErr;
   Result.append(SymName.begin(), SymName.end());
-  return std::error_code();
+  return Error::success();
 }
 
 static void printWin64EHUnwindInfo(const Win64EH::UnwindInfo *UI) {

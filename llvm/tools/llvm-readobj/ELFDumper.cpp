@@ -187,7 +187,8 @@ private:
   DynRegionInfo checkDRI(DynRegionInfo DRI) {
     const ELFFile<ELFT> *Obj = ObjF->getELFFile();
     if (DRI.Addr < Obj->base() ||
-        (const uint8_t *)DRI.Addr + DRI.Size > Obj->base() + Obj->getBufSize())
+        reinterpret_cast<const uint8_t *>(DRI.Addr) + DRI.Size >
+            Obj->base() + Obj->getBufSize())
       error(llvm::object::object_error::parse_failed);
     return DRI;
   }
@@ -556,7 +557,8 @@ template <class ELFT>
 void ELFDumper<ELFT>::LoadVersionNeeds(const Elf_Shdr *sec) const {
   unsigned vn_size = sec->sh_size;  // Size of section in bytes
   unsigned vn_count = sec->sh_info; // Number of Verneed entries
-  const char *sec_start = (const char *)ObjF->getELFFile()->base() + sec->sh_offset;
+  const char *sec_start = reinterpret_cast<const char *>(
+      ObjF->getELFFile()->base() + sec->sh_offset);
   const char *sec_end = sec_start + vn_size;
   // The first Verneed entry is at the start of the section.
   const char *p = sec_start;
@@ -590,7 +592,8 @@ template <class ELFT>
 void ELFDumper<ELFT>::LoadVersionDefs(const Elf_Shdr *sec) const {
   unsigned vd_size = sec->sh_size;  // Size of section in bytes
   unsigned vd_count = sec->sh_info; // Number of Verdef entries
-  const char *sec_start = (const char *)ObjF->getELFFile()->base() + sec->sh_offset;
+  const char *sec_start = reinterpret_cast<const char *>(
+      ObjF->getELFFile()->base() + sec->sh_offset);
   const char *sec_end = sec_start + vd_size;
   // The first Verdef entry is at the start of the section.
   const char *p = sec_start;
@@ -1412,7 +1415,8 @@ void ELFDumper<ELFT>::parseDynamicTable(
           reinterpret_cast<const Elf_GnuHash *>(toMappedAddr(Dyn.getPtr()));
       break;
     case ELF::DT_STRTAB:
-      StringTableBegin = (const char *)toMappedAddr(Dyn.getPtr());
+      StringTableBegin =
+          reinterpret_cast<const char *>(toMappedAddr(Dyn.getPtr()));
       break;
     case ELF::DT_STRSZ:
       StringTableSize = Dyn.getVal();
@@ -4362,8 +4366,9 @@ void LLVMStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
 
     if (opts::SectionData && Sec.sh_type != ELF::SHT_NOBITS) {
       ArrayRef<uint8_t> Data = unwrapOrError(Obj->getSectionContents(&Sec));
-      W.printBinaryBlock("SectionData",
-                         StringRef((const char *)Data.data(), Data.size()));
+      W.printBinaryBlock(
+          "SectionData",
+          StringRef(reinterpret_cast<const char *>(Data.data()), Data.size()));
     }
   }
 }
@@ -4541,7 +4546,8 @@ void LLVMStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
   W.printHex("Offset", Sec->sh_offset);
   W.printNumber("Link", Sec->sh_link);
 
-  const uint8_t *VersymBuf = (const uint8_t *)Obj->base() + Sec->sh_offset;
+  const uint8_t *VersymBuf =
+      reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
   const ELFDumper<ELFT> *Dumper = this->dumper();
   StringRef StrTable = Dumper->getDynamicStringTable();
 
@@ -4566,7 +4572,7 @@ void LLVMStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
     return;
 
   const uint8_t *SecStartAddress =
-      (const uint8_t *)Obj->base() + Sec->sh_offset;
+      reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
   const uint8_t *SecEndAddress = SecStartAddress + Sec->sh_size;
   const uint8_t *VerdefBuf = SecStartAddress;
   const Elf_Shdr *StrTab = unwrapOrError(Obj->getSection(Sec->sh_link));
@@ -4584,9 +4590,9 @@ void LLVMStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
     W.printEnum("Flags", Verdef->vd_flags, makeArrayRef(SymVersionFlags));
     W.printNumber("Index", Verdef->vd_ndx);
     W.printNumber("Hash", Verdef->vd_hash);
-    W.printString("Name",
-                  StringRef((const char *)(Obj->base() + StrTab->sh_offset +
-                                           Verdef->getAux()->vda_name)));
+    W.printString("Name", StringRef(reinterpret_cast<const char *>(
+                              Obj->base() + StrTab->sh_offset +
+                              Verdef->getAux()->vda_name)));
     if (!Verdef->vd_cnt)
       report_fatal_error("at least one definition string must exist");
     if (Verdef->vd_cnt > 2)
@@ -4598,8 +4604,8 @@ void LLVMStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
       const Elf_Verdaux *Verdaux =
           reinterpret_cast<const Elf_Verdaux *>(VerdauxBuf);
       W.printString("Predecessor",
-                    StringRef((const char *)(Obj->base() + StrTab->sh_offset +
-                                             Verdaux->vda_name)));
+                    StringRef(reinterpret_cast<const char *>(
+                        Obj->base() + StrTab->sh_offset + Verdaux->vda_name)));
     }
     VerdefBuf += Verdef->vd_next;
   }
@@ -4612,7 +4618,8 @@ void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
   if (!Sec)
     return;
 
-  const uint8_t *SecData = (const uint8_t *)Obj->base() + Sec->sh_offset;
+  const uint8_t *SecData =
+      reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
   const Elf_Shdr *StrTab = unwrapOrError(Obj->getSection(Sec->sh_link));
 
   const uint8_t *VerneedBuf = SecData;
@@ -4624,8 +4631,8 @@ void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
     W.printNumber("Version", Verneed->vn_version);
     W.printNumber("Count", Verneed->vn_cnt);
     W.printString("FileName",
-                  StringRef((const char *)(Obj->base() + StrTab->sh_offset +
-                                           Verneed->vn_file)));
+                  StringRef(reinterpret_cast<const char *>(
+                      Obj->base() + StrTab->sh_offset + Verneed->vn_file)));
 
     const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
     for (unsigned J = 0; J < Verneed->vn_cnt; ++J) {
@@ -4636,8 +4643,8 @@ void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
       W.printEnum("Flags", Vernaux->vna_flags, makeArrayRef(SymVersionFlags));
       W.printNumber("Index", Vernaux->vna_other);
       W.printString("Name",
-                    StringRef((const char *)(Obj->base() + StrTab->sh_offset +
-                                             Vernaux->vna_name)));
+                    StringRef(reinterpret_cast<const char *>(
+                        Obj->base() + StrTab->sh_offset + Vernaux->vna_name)));
       VernauxBuf += Vernaux->vna_next;
     }
     VerneedBuf += Verneed->vn_next;

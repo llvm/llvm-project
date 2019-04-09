@@ -50,14 +50,14 @@ Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> *Elf) {
 }
 
 template <class ELFT>
-static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
-                                                const RelocationRef &RelRef,
-                                                SmallVectorImpl<char> &Result) {
+static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
+                                      const RelocationRef &RelRef,
+                                      SmallVectorImpl<char> &Result) {
   const ELFFile<ELFT> &EF = *Obj->getELFFile();
   DataRefImpl Rel = RelRef.getRawDataRefImpl();
   auto SecOrErr = EF.getSection(Rel.d.a);
   if (!SecOrErr)
-    return errorToErrorCode(SecOrErr.takeError());
+    return SecOrErr.takeError();
 
   int64_t Addend = 0;
   // If there is no Symbol associated with the relocation, we set the undef
@@ -72,7 +72,7 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
     Addend = ERela->r_addend;
     Undef = ERela->getSymbol(false) == 0;
   } else if ((*SecOrErr)->sh_type != ELF::SHT_REL) {
-    return object_error::parse_failed;
+    return make_error<BinaryError>();
   }
 
   // Default scheme is to print Target, as well as "+ <addend>" for nonzero
@@ -86,17 +86,17 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
     if (Sym->getType() == ELF::STT_SECTION) {
       Expected<section_iterator> SymSI = SI->getSection();
       if (!SymSI)
-        return errorToErrorCode(SymSI.takeError());
+        return SymSI.takeError();
       const typename ELFT::Shdr *SymSec =
           Obj->getSection((*SymSI)->getRawDataRefImpl());
       auto SecName = EF.getSectionName(SymSec);
       if (!SecName)
-        return errorToErrorCode(SecName.takeError());
+        return SecName.takeError();
       Fmt << *SecName;
     } else {
       Expected<StringRef> SymName = SI->getName();
       if (!SymName)
-        return errorToErrorCode(SymName.takeError());
+        return SymName.takeError();
       if (Demangle)
         Fmt << demangle(*SymName);
       else
@@ -110,13 +110,12 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
     Fmt << (Addend < 0 ? "" : "+") << Addend;
   Fmt.flush();
   Result.append(FmtBuf.begin(), FmtBuf.end());
-  return std::error_code();
+  return Error::success();
 }
 
-std::error_code
-llvm::getELFRelocationValueString(const ELFObjectFileBase *Obj,
-                                  const RelocationRef &Rel,
-                                  SmallVectorImpl<char> &Result) {
+Error llvm::getELFRelocationValueString(const ELFObjectFileBase *Obj,
+                                        const RelocationRef &Rel,
+                                        SmallVectorImpl<char> &Result) {
   if (auto *ELF32LE = dyn_cast<ELF32LEObjectFile>(Obj))
     return getRelocationValueString(ELF32LE, Rel, Result);
   if (auto *ELF64LE = dyn_cast<ELF64LEObjectFile>(Obj))

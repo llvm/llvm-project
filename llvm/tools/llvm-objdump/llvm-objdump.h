@@ -121,26 +121,23 @@ private:
 // Various helper functions.
 SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O);
 
-std::error_code
-getELFRelocationValueString(const object::ELFObjectFileBase *Obj,
-                            const object::RelocationRef &Rel,
-                            llvm::SmallVectorImpl<char> &Result);
-std::error_code
-getCOFFRelocationValueString(const object::COFFObjectFile *Obj,
-                             const object::RelocationRef &Rel,
-                             llvm::SmallVectorImpl<char> &Result);
-std::error_code
-getWasmRelocationValueString(const object::WasmObjectFile *Obj,
-                             const object::RelocationRef &RelRef,
-                             llvm::SmallVectorImpl<char> &Result);
-std::error_code
-getMachORelocationValueString(const object::MachOObjectFile *Obj,
-                              const object::RelocationRef &RelRef,
-                              llvm::SmallVectorImpl<char> &Result);
+Error getELFRelocationValueString(const object::ELFObjectFileBase *Obj,
+                                  const object::RelocationRef &Rel,
+                                  llvm::SmallVectorImpl<char> &Result);
+Error getCOFFRelocationValueString(const object::COFFObjectFile *Obj,
+                                   const object::RelocationRef &Rel,
+                                   llvm::SmallVectorImpl<char> &Result);
+Error getWasmRelocationValueString(const object::WasmObjectFile *Obj,
+                                   const object::RelocationRef &RelRef,
+                                   llvm::SmallVectorImpl<char> &Result);
+Error getMachORelocationValueString(const object::MachOObjectFile *Obj,
+                                    const object::RelocationRef &RelRef,
+                                    llvm::SmallVectorImpl<char> &Result);
 
 uint64_t getELFSectionLMA(const object::ELFSectionRef& Sec);
 
 void error(std::error_code ec);
+void error(Error E);
 bool isRelocAddressLess(object::RelocationRef A, object::RelocationRef B);
 void parseInputMachO(StringRef Filename);
 void parseInputMachO(object::MachOUniversalBinary *UB);

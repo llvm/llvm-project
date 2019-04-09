@@ -1628,15 +1628,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // ld.bfd traces all DT_NEEDED to emulate the logic of the dynamic linker to
     // catch more cases. That is too much for us. Our approach resembles the one
     // used in ld.gold, achieves a good balance to be useful but not too smart.
-    for (InputFile *File : SharedFiles) {
-      SharedFile<ELFT> *F = cast<SharedFile<ELFT>>(File);
-      F->AllNeededIsKnown = llvm::all_of(F->DtNeeded, [&](StringRef Needed) {
-        return Symtab->SoNames.count(Needed);
-      });
-    }
+    for (SharedFile *File : SharedFiles)
+      File->AllNeededIsKnown =
+          llvm::all_of(File->DtNeeded, [&](StringRef Needed) {
+            return Symtab->SoNames.count(Needed);
+          });
     for (Symbol *Sym : Symtab->getSymbols())
       if (Sym->isUndefined() && !Sym->isWeak())
-        if (auto *F = dyn_cast_or_null<SharedFile<ELFT>>(Sym->File))
+        if (auto *F = dyn_cast_or_null<SharedFile>(Sym->File))
           if (F->AllNeededIsKnown)
             error(toString(F) + ": undefined reference to " + toString(*Sym));
   }
@@ -1651,9 +1650,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
     if (Sym->includeInDynsym()) {
       In.DynSymTab->addSymbol(Sym);
-      if (auto *File = dyn_cast_or_null<SharedFile<ELFT>>(Sym->File))
+      if (auto *File = dyn_cast_or_null<SharedFile>(Sym->File))
         if (File->IsNeeded && !Sym->isUndefined())
-          In.VerNeed->addSymbol(Sym);
+          addVerneed(Sym);
     }
   }
 

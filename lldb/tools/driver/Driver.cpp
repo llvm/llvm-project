@@ -491,7 +491,7 @@ static ::FILE *PrepareCommandsForSourcing(const char *commands_data,
   }
 
   ssize_t nrwr = write(fds[WRITE], commands_data, commands_size);
-  if (nrwr != commands_size) {
+  if (size_t(nrwr) != commands_size) {
     WithColor::error()
         << format(
                 "write(%i, %p, %" PRIu64

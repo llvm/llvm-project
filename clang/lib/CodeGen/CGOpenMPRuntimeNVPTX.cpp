@@ -318,6 +318,9 @@ class CheckVarsEscapingDeclContext final
         OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
       return;
     VD = cast<ValueDecl>(VD->getCanonicalDecl());
+    // Use user-specified allocation.
+    if (VD->hasAttrs() && VD->hasAttr<OMPAllocateDeclAttr>())
+      return;
     // Variables captured by value must be globalized.
     if (auto *CSI = CGF.CapturedStmtInfo) {
       if (const FieldDecl *FD = CSI->lookup(cast<VarDecl>(VD))) {
@@ -4725,7 +4728,6 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
 
 Address CGOpenMPRuntimeNVPTX::getAddressOfLocalVariable(CodeGenFunction &CGF,
                                                         const VarDecl *VD) {
-  bool UseDefaultAllocator = true;
   if (VD && VD->hasAttr<OMPAllocateDeclAttr>()) {
     const auto *A = VD->getAttr<OMPAllocateDeclAttr>();
     switch (A->getAllocatorType()) {
@@ -4733,17 +4735,48 @@ Address CGOpenMPRuntimeNVPTX::getAddressOfLocalVariable(CodeGenFunction &CGF,
       // threadlocal.
     case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
     case OMPAllocateDeclAttr::OMPThreadMemAlloc:
-      // Just pass-through to check if the globalization is required.
-      break;
-    case OMPAllocateDeclAttr::OMPLargeCapMemAlloc:
-    case OMPAllocateDeclAttr::OMPCGroupMemAlloc:
     case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
     case OMPAllocateDeclAttr::OMPLowLatMemAlloc:
-    case OMPAllocateDeclAttr::OMPConstMemAlloc:
-    case OMPAllocateDeclAttr::OMPPTeamMemAlloc:
+      // Follow the user decision - use default allocation.
+      return Address::invalid();
     case OMPAllocateDeclAttr::OMPUserDefinedMemAlloc:
-      UseDefaultAllocator = false;
-      break;
+      // TODO: implement aupport for user-defined allocators.
+      return Address::invalid();
+    case OMPAllocateDeclAttr::OMPConstMemAlloc: {
+      llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
+      auto *GV = new llvm::GlobalVariable(
+          CGM.getModule(), VarTy, /*isConstant=*/false,
+          llvm::GlobalValue::InternalLinkage,
+          llvm::Constant::getNullValue(VarTy), VD->getName(),
+          /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+          CGM.getContext().getTargetAddressSpace(LangAS::cuda_constant));
+      CharUnits Align = CGM.getContext().getDeclAlign(VD);
+      GV->setAlignment(Align.getQuantity());
+      return Address(GV, Align);
+    }
+    case OMPAllocateDeclAttr::OMPPTeamMemAlloc: {
+      llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
+      auto *GV = new llvm::GlobalVariable(
+          CGM.getModule(), VarTy, /*isConstant=*/false,
+          llvm::GlobalValue::InternalLinkage,
+          llvm::Constant::getNullValue(VarTy), VD->getName(),
+          /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+          CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared));
+      CharUnits Align = CGM.getContext().getDeclAlign(VD);
+      GV->setAlignment(Align.getQuantity());
+      return Address(GV, Align);
+    }
+    case OMPAllocateDeclAttr::OMPLargeCapMemAlloc:
+    case OMPAllocateDeclAttr::OMPCGroupMemAlloc: {
+      llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
+      auto *GV = new llvm::GlobalVariable(
+          CGM.getModule(), VarTy, /*isConstant=*/false,
+          llvm::GlobalValue::InternalLinkage,
+          llvm::Constant::getNullValue(VarTy), VD->getName());
+      CharUnits Align = CGM.getContext().getDeclAlign(VD);
+      GV->setAlignment(Align.getQuantity());
+      return Address(GV, Align);
+    }
     }
   }
 
@@ -4769,11 +4802,6 @@ Address CGOpenMPRuntimeNVPTX::getAddressOfLocalVariable(CodeGenFunction &CGF,
     }
   }
 
-  // TODO: replace it with return
-  // UseDefaultAllocator ? Address::invalid :
-  // CGOpenMPRuntime::getAddressOfLocalVariable(CGF, VD); when NVPTX libomp
-  // supports __kmpc_alloc|__kmpc_free.
-  (void)UseDefaultAllocator; // Prevent a warning.
   return Address::invalid();
 }
 

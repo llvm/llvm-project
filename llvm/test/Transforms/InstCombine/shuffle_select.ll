@@ -1454,3 +1454,13 @@ define <4 x i8> @or_add_2_vars(<4 x i8> %v, <4 x i8> %v1) {
   ret <4 x i8> %t3
 }
 
+; The undef operand is used to simplify the shuffle mask, but don't assert that too soon.
+
+define <4 x i32> @PR41419(<4 x i32> %v) {
+; CHECK-LABEL: @PR41419(
+; CHECK-NEXT:    ret <4 x i32> [[V:%.*]]
+;
+  %s = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 4, i32 5, i32 2, i32 7>
+  ret <4 x i32> %s
+}
+

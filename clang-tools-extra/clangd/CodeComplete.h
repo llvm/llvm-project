@@ -109,6 +109,12 @@ struct CodeCompleteOptions {
   ///
   /// Such completions can insert scope qualifiers.
   bool AllScopes = false;
+
+  /// Whether to allow falling back to code completion without compiling files
+  /// (using identifiers in the current file and symbol indexes), when file
+  /// cannot be built (e.g. missing compile command), or the build is not ready
+  /// (e.g. preamble is still being built).
+  bool AllowFallback = false;
 };
 
 // Semi-structured representation of a code-complete suggestion for our C++ API.

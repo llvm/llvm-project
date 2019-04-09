@@ -97,6 +97,8 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Tar = nullptr;
   memset(&In, 0, sizeof(In));
 
+  SharedFile::VernauxNum = 0;
+
   Config->ProgName = Args[0];
 
   Driver->main(Args);
@@ -1289,10 +1291,10 @@ template <class ELFT> static void handleLibcall(StringRef Name) {
 // to DT_NEEDED. If that happens, we need to eliminate shared symbols
 // created from the DSO. Otherwise, they become dangling references
 // that point to a non-existent DSO.
-template <class ELFT> static void demoteSharedSymbols() {
+static void demoteSharedSymbols() {
   for (Symbol *Sym : Symtab->getSymbols()) {
     if (auto *S = dyn_cast<SharedSymbol>(Sym)) {
-      if (!S->getFile<ELFT>().IsNeeded) {
+      if (!S->getFile().IsNeeded) {
         bool Used = S->Used;
         replaceSymbol<Undefined>(S, nullptr, S->getName(), STB_WEAK, S->StOther,
                                  S->Type);
@@ -1644,7 +1646,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // and identical code folding.
   splitSections<ELFT>();
   markLive<ELFT>();
-  demoteSharedSymbols<ELFT>();
+  demoteSharedSymbols();
   mergeSections();
   if (Config->ICF != ICFLevel::None) {
     findKeepUniqueSections<ELFT>(Args);

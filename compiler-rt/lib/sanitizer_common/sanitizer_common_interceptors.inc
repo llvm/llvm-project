@@ -3524,13 +3524,16 @@ INTERCEPTOR(SIZE_T, wcrtomb, char *dest, wchar_t src, void *ps) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, wcrtomb, dest, src, ps);
   if (ps) COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
-  SIZE_T res = REAL(wcrtomb)(dest, src, ps);
-  if (res != ((SIZE_T)-1) && dest) {
-    SIZE_T write_cnt = res;
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, write_cnt);
+
+  if (!dest)
+    return REAL(wcrtomb)(dest, src, ps);
+
+  char local_dest[32];
+  SIZE_T res = REAL(wcrtomb)(local_dest, src, ps);
+  if (res != ((SIZE_T)-1)) {
+    CHECK_LE(res, sizeof(local_dest));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, res);
+    REAL(memcpy)(dest, local_dest, res);
   }
   return res;
 }
