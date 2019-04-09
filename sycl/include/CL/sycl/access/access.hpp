@@ -97,6 +97,21 @@ struct DeviceValueType<dataT, access::target::host_buffer> {
   using type = dataT;
 };
 
+template <access::target accessTarget> struct TargetToAS {
+  constexpr static access::address_space AS =
+      access::address_space::global_space;
+};
+
+template <> struct TargetToAS<access::target::local> {
+  constexpr static access::address_space AS =
+      access::address_space::local_space;
+};
+
+template <> struct TargetToAS<access::target::constant_buffer> {
+  constexpr static access::address_space AS =
+      access::address_space::constant_space;
+};
+
 template <typename ElementType, access::address_space addressSpace>
 struct PtrValueType;
 

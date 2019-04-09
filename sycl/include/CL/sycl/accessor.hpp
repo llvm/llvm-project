@@ -6,6 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef SCHEDULER_20
+
+#include <CL/sycl/accessor2.hpp>
+
+#else
+
 #pragma once
 
 #include <type_traits>
@@ -1028,3 +1034,4 @@ struct hash<cl::sycl::accessor<T, Dimensions, AccessMode, AccessTarget,
   }
 };
 } // namespace std
+#endif // SCHEDULER_20

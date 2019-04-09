@@ -33,6 +33,10 @@ event_impl::~event_impl() {
   }
 }
 
+void event_impl::setComplete() {
+  CHECK_OCL_CODE(clSetUserEventStatus(m_Event, CL_COMPLETE));
+}
+
 void event_impl::waitInternal() const {
   if (!m_HostEvent) {
     CHECK_OCL_CODE(clWaitForEvents(1, &m_Event));

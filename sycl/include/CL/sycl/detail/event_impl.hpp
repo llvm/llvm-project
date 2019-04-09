@@ -48,6 +48,8 @@ public:
 
   void waitInternal() const;
 
+  void setComplete();
+
   // Warning. Returned reference will be invalid if event_impl was destroyed.
   cl_event &getHandleRef();
 

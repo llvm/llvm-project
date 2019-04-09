@@ -92,8 +92,9 @@ public:
                 Space == access::address_space::global_space>::type>
   multi_ptr(accessor<ElementType, dimensions, Mode,
                      access::target::global_buffer, isPlaceholder>
-                Accessor)
-      : multi_ptr(Accessor.get_pointer()) {}
+                Accessor) {
+    m_Pointer = reinterpret_cast<pointer_t>(Accessor.get_pointer().m_Pointer);
+  }
 
   // Only if Space == local_space
   template <
