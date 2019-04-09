@@ -20,7 +20,7 @@ namespace breakpad {
 
 class Record {
 public:
-  enum Kind { Module, Info, File, Func, Line, Public, StackCFIInit, StackCFI };
+  enum Kind { Module, Info, File, Func, Line, Public, StackCFI };
 
   /// Attempt to guess the kind of the record present in the argument without
   /// doing a full parse. The returned kind will always be correct for valid
@@ -140,6 +140,22 @@ public:
 
 bool operator==(const PublicRecord &L, const PublicRecord &R);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const PublicRecord &R);
+
+class StackCFIRecord : public Record {
+public:
+  static llvm::Optional<StackCFIRecord> parse(llvm::StringRef Line);
+  StackCFIRecord(lldb::addr_t Address, llvm::Optional<lldb::addr_t> Size,
+                 llvm::StringRef UnwindRules)
+      : Record(StackCFI), Address(Address), Size(Size),
+        UnwindRules(UnwindRules) {}
+
+  lldb::addr_t Address;
+  llvm::Optional<lldb::addr_t> Size;
+  llvm::StringRef UnwindRules;
+};
+
+bool operator==(const StackCFIRecord &L, const StackCFIRecord &R);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StackCFIRecord &R);
 
 } // namespace breakpad
 } // namespace lldb_private

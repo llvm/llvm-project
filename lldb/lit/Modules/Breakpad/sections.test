@@ -73,7 +73,7 @@ CHECK-NEXT:   )
 
 CHECK:        Index: 5
 CHECK-NEXT:   ID: 0x6
-CHECK-NEXT:   Name: STACK CFI INIT
+CHECK-NEXT:   Name: STACK CFI
 CHECK-NEXT:   Type: regular
 CHECK-NEXT:   Permissions: ---
 CHECK-NEXT:   Thread specific: no
