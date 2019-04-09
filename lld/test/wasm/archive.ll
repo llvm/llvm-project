@@ -47,6 +47,8 @@ entry:
 
 ; Verfiy errors include library name
 ; RUN: not wasm-ld -u archive2_symbol -u archive3_symbol %t.a %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-DUP %s
+; And that this also works with --whole-archive
+; RUN: not wasm-ld -u archive2_symbol -u archive3_symbol --whole-archive %t.a %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-DUP %s
 ; CHECK-DUP: error: duplicate symbol: bar
 ; CHECK-DUP: >>> defined in {{.*}}.a({{.*}}.a2.o)
 ; CHECK-DUP: >>> defined in {{.*}}.a({{.*}}.a3.o)
