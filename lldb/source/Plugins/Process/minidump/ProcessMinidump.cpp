@@ -358,7 +358,8 @@ void ProcessMinidump::ReadModuleList() {
     FileSystem::Instance().Resolve(file_spec);
     ModuleSpec module_spec(file_spec, uuid);
     Status error;
-    lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, true /* notify */, &error);
+    lldb::ModuleSP module_sp = GetTarget().GetOrCreateModule(module_spec, true /* notify */, &error);
+    if (!module_sp || error.Fail()) {
       // We failed to locate a matching local object file. Fortunately, the
       // minidump format encodes enough information about each module's memory
       // range to allow us to create placeholder modules.
