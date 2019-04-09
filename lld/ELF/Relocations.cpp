@@ -482,7 +482,7 @@ template <class ELFT> static bool isReadOnly(SharedSymbol &SS) {
   using Elf_Phdr = typename ELFT::Phdr;
 
   // Determine if the symbol is read-only by scanning the DSO's program headers.
-  const SharedFile<ELFT> &File = SS.getFile<ELFT>();
+  const SharedFile &File = SS.getFile();
   for (const Elf_Phdr &Phdr :
        check(File.template getObj<ELFT>().program_headers()))
     if ((Phdr.p_type == ELF::PT_LOAD || Phdr.p_type == ELF::PT_GNU_RELRO) &&
@@ -501,7 +501,7 @@ template <class ELFT>
 static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &SS) {
   using Elf_Sym = typename ELFT::Sym;
 
-  SharedFile<ELFT> &File = SS.getFile<ELFT>();
+  SharedFile &File = SS.getFile();
 
   SmallSet<SharedSymbol *, 4> Ret;
   for (const Elf_Sym &S : File.template getGlobalELFSyms<ELFT>()) {

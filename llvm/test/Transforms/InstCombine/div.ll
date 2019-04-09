@@ -780,6 +780,57 @@ define <2 x i64> @test_exact_vec(<2 x i64> %x) {
   ret <2 x i64> %neg
 }
 
+define <2 x i8> @negate_sdiv_vec_undef_elt(<2 x i8> %x) {
+; CHECK-LABEL: @negate_sdiv_vec_undef_elt(
+; CHECK-NEXT:    ret <2 x i8> undef
+;
+  %div = sdiv <2 x i8> %x, <i8 undef, i8 42>
+  %neg = sub <2 x i8> zeroinitializer, %div
+  ret <2 x i8> %neg
+}
+
+define <2 x i8> @negate_sdiv_vec_splat_one(<2 x i8> %x) {
+; CHECK-LABEL: @negate_sdiv_vec_splat_one(
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[NEG]]
+;
+  %div = sdiv <2 x i8> %x, <i8 1, i8 1>
+  %neg = sub <2 x i8> zeroinitializer, %div
+  ret <2 x i8> %neg
+}
+
+define <2 x i8> @negate_sdiv_vec_splat_signed_min(<2 x i8> %x) {
+; CHECK-LABEL: @negate_sdiv_vec_splat_signed_min(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[NEG:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[NEG]]
+;
+  %div = sdiv <2 x i8> %x, <i8 -128, i8 -128>
+  %neg = sub <2 x i8> zeroinitializer, %div
+  ret <2 x i8> %neg
+}
+
+define <2 x i8> @negate_sdiv_vec_one_element(<2 x i8> %x) {
+; CHECK-LABEL: @negate_sdiv_vec_one_element(
+; CHECK-NEXT:    [[NEG:%.*]] = sdiv <2 x i8> [[X:%.*]], <i8 1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> [[NEG]]
+;
+  %div = sdiv <2 x i8> %x, <i8 -1, i8 1>
+  %neg = sub <2 x i8> zeroinitializer, %div
+  ret <2 x i8> %neg
+}
+
+define <2 x i8> @negate_sdiv_vec_signed_min_elt(<2 x i8> %x) {
+; CHECK-LABEL: @negate_sdiv_vec_signed_min_elt(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv <2 x i8> [[X:%.*]], <i8 -1, i8 -128>
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[DIV]]
+; CHECK-NEXT:    ret <2 x i8> [[NEG]]
+;
+  %div = sdiv <2 x i8> %x, <i8 -1, i8 -128>
+  %neg = sub <2 x i8> zeroinitializer, %div
+  ret <2 x i8> %neg
+}
+
 define i32 @test_exact_nonsw_exact(i32 %x) {
 ; CHECK-LABEL: @test_exact_nonsw_exact(
 ; CHECK-NEXT:    [[NEG:%.*]] = sdiv exact i32 [[X:%.*]], -3

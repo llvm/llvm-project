@@ -1156,6 +1156,14 @@ void Verifier::visitDILexicalBlockFile(const DILexicalBlockFile &N) {
   visitDILexicalBlockBase(N);
 }
 
+void Verifier::visitDICommonBlock(const DICommonBlock &N) {
+  AssertDI(N.getTag() == dwarf::DW_TAG_common_block, "invalid tag", &N);
+  if (auto *S = N.getRawScope())
+    AssertDI(isa<DIScope>(S), "invalid scope ref", &N, S);
+  if (auto *S = N.getRawDecl())
+    AssertDI(isa<DIGlobalVariable>(S), "invalid declaration", &N, S);
+}
+
 void Verifier::visitDINamespace(const DINamespace &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_namespace, "invalid tag", &N);
   if (auto *S = N.getRawScope())
@@ -1224,7 +1232,6 @@ void Verifier::visitDIGlobalVariable(const DIGlobalVariable &N) {
   visitDIVariable(N);
 
   AssertDI(N.getTag() == dwarf::DW_TAG_variable, "invalid tag", &N);
-  AssertDI(!N.getName().empty(), "missing global variable name", &N);
   AssertDI(isType(N.getRawType()), "invalid type ref", &N, N.getRawType());
   AssertDI(N.getType(), "missing global variable type", &N);
   if (auto *Member = N.getRawStaticDataMemberDeclaration()) {

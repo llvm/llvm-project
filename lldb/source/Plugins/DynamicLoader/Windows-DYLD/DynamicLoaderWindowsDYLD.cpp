@@ -68,11 +68,9 @@ void DynamicLoaderWindowsDYLD::OnLoadModule(lldb::ModuleSP module_sp,
 
   // Resolve the module unless we already have one.
   if (!module_sp) {
-    // Confusingly, there is no Target::AddSharedModule.  Instead, calling
-    // GetSharedModule() with a new module will add it to the module list and
-    // return a corresponding ModuleSP.
     Status error;
-    module_sp = m_process->GetTarget().GetSharedModule(module_spec, &error);
+    module_sp = m_process->GetTarget().GetOrCreateModule(module_spec, 
+                                             true /* notify */, &error);
     if (error.Fail())
       return;
   }

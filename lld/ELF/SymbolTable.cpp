@@ -90,25 +90,8 @@ template <class ELFT> void SymbolTable::addFile(InputFile *File) {
     message(toString(File));
 
   // .so file
-  if (auto *F = dyn_cast<SharedFile<ELFT>>(File)) {
-    // DSOs are uniquified not by filename but by soname.
-    F->parseDynamic();
-    if (errorCount())
-      return;
-
-    // If a DSO appears more than once on the command line with and without
-    // --as-needed, --no-as-needed takes precedence over --as-needed because a
-    // user can add an extra DSO with --no-as-needed to force it to be added to
-    // the dependency list.
-    DenseMap<StringRef, InputFile *>::iterator It;
-    bool WasInserted;
-    std::tie(It, WasInserted) = SoNames.try_emplace(F->SoName, F);
-    cast<SharedFile<ELFT>>(It->second)->IsNeeded |= F->IsNeeded;
-    if (!WasInserted)
-      return;
-
-    SharedFiles.push_back(F);
-    F->parseRest();
+  if (auto *F = dyn_cast<SharedFile>(File)) {
+    F->parse<ELFT>();
     return;
   }
 
@@ -485,7 +468,7 @@ Defined *SymbolTable::addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
 }
 
 template <typename ELFT>
-void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> &File,
+void SymbolTable::addShared(StringRef Name, SharedFile &File,
                             const typename ELFT::Sym &Sym, uint32_t Alignment,
                             uint32_t VerdefIndex) {
   // DSO symbols do not affect visibility in the output, so we pass STV_DEFAULT
@@ -802,15 +785,15 @@ template void SymbolTable::fetchLazy<ELF32BE>(Symbol *);
 template void SymbolTable::fetchLazy<ELF64LE>(Symbol *);
 template void SymbolTable::fetchLazy<ELF64BE>(Symbol *);
 
-template void SymbolTable::addShared<ELF32LE>(StringRef, SharedFile<ELF32LE> &,
+template void SymbolTable::addShared<ELF32LE>(StringRef, SharedFile &,
                                               const typename ELF32LE::Sym &,
                                               uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF32BE>(StringRef, SharedFile<ELF32BE> &,
+template void SymbolTable::addShared<ELF32BE>(StringRef, SharedFile &,
                                               const typename ELF32BE::Sym &,
                                               uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF64LE>(StringRef, SharedFile<ELF64LE> &,
+template void SymbolTable::addShared<ELF64LE>(StringRef, SharedFile &,
                                               const typename ELF64LE::Sym &,
                                               uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF64BE>(StringRef, SharedFile<ELF64BE> &,
+template void SymbolTable::addShared<ELF64BE>(StringRef, SharedFile &,
                                               const typename ELF64BE::Sym &,
                                               uint32_t Alignment, uint32_t);

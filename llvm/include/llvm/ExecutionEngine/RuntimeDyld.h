@@ -52,18 +52,20 @@ private:
   std::string ErrMsg;
 };
 
-class RuntimeDyldCheckerImpl;
 class RuntimeDyldImpl;
 
 class RuntimeDyld {
-  friend class RuntimeDyldCheckerImpl;
-
 protected:
   // Change the address associated with a section when resolving relocations.
   // Any relocations already associated with the symbol will be re-resolved.
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 
 public:
+
+  using NotifyStubEmittedFunction =
+    std::function<void(StringRef FileName, StringRef SectionName,
+                       StringRef SymbolName, uint32_t StubOffset)>;
+
   /// Information about the loaded object.
   class LoadedObjectInfo : public llvm::LoadedObjectInfo {
     friend class RuntimeDyldImpl;
@@ -184,6 +186,9 @@ public:
   /// and resolve relocatons based on where they put it).
   void *getSymbolLocalAddress(StringRef Name) const;
 
+  /// Get the section ID for the section containing the given symbol.
+  unsigned getSymbolSectionID(StringRef Name) const;
+
   /// Get the target address and flags for the named symbol.
   /// This address is the one used for relocation.
   JITEvaluatedSymbol getSymbol(StringRef Name) const;
@@ -203,6 +208,19 @@ public:
   /// to the address in the target process as the running code will see it.
   /// This is the address which will be used for relocation resolution.
   void mapSectionAddress(const void *LocalAddress, uint64_t TargetAddress);
+
+  /// Returns the section's working memory.
+  StringRef getSectionContent(unsigned SectionID) const;
+
+  /// If the section was loaded, return the section's load address,
+  /// otherwise return None.
+  uint64_t getSectionLoadAddress(unsigned SectionID) const;
+
+  /// Set the NotifyStubEmitted callback. This is used for debugging
+  /// purposes. A callback is made for each stub that is generated.
+  void setNotifyStubEmitted(NotifyStubEmittedFunction NotifyStubEmitted) {
+    this->NotifyStubEmitted = std::move(NotifyStubEmitted);
+  }
 
   /// Register any EH frame sections that have been loaded but not previously
   /// registered with the memory manager.  Note, RuntimeDyld is responsible
@@ -265,7 +283,7 @@ private:
   MemoryManager &MemMgr;
   JITSymbolResolver &Resolver;
   bool ProcessAllSections;
-  RuntimeDyldCheckerImpl *Checker;
+  NotifyStubEmittedFunction NotifyStubEmitted;
 };
 
 // Asynchronous JIT link for ORC.

@@ -210,7 +210,7 @@ _LIBCXXABI_FUNC_VIS void __cxa_guard_release(guard_type *raw_guard_object) {
 }
 
 _LIBCXXABI_FUNC_VIS void __cxa_guard_abort(guard_type *raw_guard_object) {
-  GlobalMutexGuard gmutex("__cxa_guard_abort", OnRelease::UNLOCK);
+  GlobalMutexGuard gmutex("__cxa_guard_abort", OnRelease::UNLOCK_AND_BROADCAST);
   GuardObject guard(raw_guard_object);
   guard.write(GuardValue::ZERO());
 }

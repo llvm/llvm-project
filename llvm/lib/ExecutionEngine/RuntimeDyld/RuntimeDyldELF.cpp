@@ -1856,9 +1856,6 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
     Sections[GOTSectionID] =
         SectionEntry(".got", Addr, TotalSize, TotalSize, 0);
 
-    if (Checker)
-      Checker->registerSection(Obj.getFileName(), GOTSectionID);
-
     // For now, initialize all GOT entries to zero.  We'll fill them in as
     // needed when GOT-based relocations are applied.
     memset(Addr, 0, TotalSize);

@@ -124,7 +124,7 @@ Status Socket::TcpConnect(llvm::StringRef host_and_port,
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
   if (log)
     log->Printf("Socket::%s (host/port = %s)", __FUNCTION__,
-                host_and_port.data());
+                host_and_port.str().c_str());
 
   Status error;
   std::unique_ptr<Socket> connect_socket(
@@ -144,7 +144,7 @@ Status Socket::TcpListen(llvm::StringRef host_and_port,
                          Predicate<uint16_t> *predicate, int backlog) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
-    log->Printf("Socket::%s (%s)", __FUNCTION__, host_and_port.data());
+    log->Printf("Socket::%s (%s)", __FUNCTION__, host_and_port.str().c_str());
 
   Status error;
   std::string host_str;
@@ -184,7 +184,7 @@ Status Socket::UdpConnect(llvm::StringRef host_and_port,
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("Socket::%s (host/port = %s)", __FUNCTION__,
-                host_and_port.data());
+                host_and_port.str().c_str());
 
   return UDPSocket::Connect(host_and_port, child_processes_inherit, socket);
 }
@@ -275,7 +275,8 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
       // port is too large
       if (error_ptr)
         error_ptr->SetErrorStringWithFormat(
-            "invalid host:port specification: '%s'", host_and_port.data());
+            "invalid host:port specification: '%s'",
+            host_and_port.str().c_str());
       return false;
     }
   }
@@ -293,7 +294,7 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
 
   if (error_ptr)
     error_ptr->SetErrorStringWithFormat("invalid host:port specification: '%s'",
-                                        host_and_port.data());
+                                        host_and_port.str().c_str());
   return false;
 }
 

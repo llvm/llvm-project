@@ -786,37 +786,34 @@ public:
   bool isNeeded() const override;
 };
 
-class VersionNeedBaseSection : public SyntheticSection {
-protected:
-  // The next available version identifier.
-  unsigned NextIndex;
-
-public:
-  VersionNeedBaseSection();
-  virtual void addSymbol(Symbol *Sym) = 0;
-  virtual size_t getNeedNum() const = 0;
-};
-
 // The .gnu.version_r section defines the version identifiers used by
 // .gnu.version. It contains a linked list of Elf_Verneed data structures. Each
 // Elf_Verneed specifies the version requirements for a single DSO, and contains
 // a reference to a linked list of Elf_Vernaux data structures which define the
 // mapping from version identifiers to version names.
 template <class ELFT>
-class VersionNeedSection final : public VersionNeedBaseSection {
+class VersionNeedSection final : public SyntheticSection {
   using Elf_Verneed = typename ELFT::Verneed;
   using Elf_Vernaux = typename ELFT::Vernaux;
 
-  // A vector of shared files that need Elf_Verneed data structures and the
-  // string table offsets of their sonames.
-  std::vector<std::pair<SharedFile<ELFT> *, size_t>> Needed;
+  struct Vernaux {
+    uint64_t Hash;
+    uint32_t VerneedIndex;
+    uint64_t NameStrTab;
+  };
+
+  struct Verneed {
+    uint64_t NameStrTab;
+    std::vector<Vernaux> Vernauxs;
+  };
+
+  std::vector<Verneed> Verneeds;
 
 public:
-  void addSymbol(Symbol *Sym) override;
+  VersionNeedSection();
   void finalizeContents() override;
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
-  size_t getNeedNum() const override { return Needed.size(); }
   bool isNeeded() const override;
 };
 
@@ -1061,6 +1058,8 @@ void mergeSections();
 Defined *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                            uint64_t Size, InputSectionBase &Section);
 
+void addVerneed(Symbol *SS);
+
 // Linker generated sections which can be used as inputs.
 struct InStruct {
   InputSection *ARMAttributes;
@@ -1092,7 +1091,7 @@ struct InStruct {
   SymbolTableBaseSection *SymTab;
   SymtabShndxSection *SymTabShndx;
   VersionDefinitionSection *VerDef;
-  VersionNeedBaseSection *VerNeed;
+  SyntheticSection *VerNeed;
   VersionTableSection *VerSym;
 };
 

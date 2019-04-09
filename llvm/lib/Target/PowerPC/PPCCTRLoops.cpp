@@ -202,6 +202,7 @@ bool PPCCTRLoops::runOnFunction(Function &F) {
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
   LibInfo = TLIP ? &TLIP->getTLI() : nullptr;
   PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
+  SchedModel.init(STI);
 
   bool MadeChange = false;
 

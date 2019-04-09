@@ -344,15 +344,44 @@ double __kmps_get_wtick(void) {
 
 #if OMP_50_ENABLED
 /* OpenMP 5.0 Memory Management */
-const omp_allocator_t *OMP_NULL_ALLOCATOR = NULL;
-const omp_allocator_t *omp_default_mem_alloc = (const omp_allocator_t *)1;
-const omp_allocator_t *omp_large_cap_mem_alloc = (const omp_allocator_t *)2;
-const omp_allocator_t *omp_const_mem_alloc = (const omp_allocator_t *)3;
-const omp_allocator_t *omp_high_bw_mem_alloc = (const omp_allocator_t *)4;
-const omp_allocator_t *omp_low_lat_mem_alloc = (const omp_allocator_t *)5;
-const omp_allocator_t *omp_cgroup_mem_alloc = (const omp_allocator_t *)6;
-const omp_allocator_t *omp_pteam_mem_alloc = (const omp_allocator_t *)7;
-const omp_allocator_t *omp_thread_mem_alloc = (const omp_allocator_t *)8;
+#if KMP_OS_WINDOWS
+omp_allocator_handle_t const omp_null_allocator = 0;
+omp_allocator_handle_t const omp_default_mem_alloc =
+    (omp_allocator_handle_t const)1;
+omp_allocator_handle_t const omp_large_cap_mem_alloc =
+    (omp_allocator_handle_t const)2;
+omp_allocator_handle_t const omp_const_mem_alloc =
+    (omp_allocator_handle_t const)3;
+omp_allocator_handle_t const omp_high_bw_mem_alloc =
+    (omp_allocator_handle_t const)4;
+omp_allocator_handle_t const omp_low_lat_mem_alloc =
+    (omp_allocator_handle_t const)5;
+omp_allocator_handle_t const omp_cgroup_mem_alloc =
+    (omp_allocator_handle_t const)6;
+omp_allocator_handle_t const omp_pteam_mem_alloc =
+    (omp_allocator_handle_t const)7;
+omp_allocator_handle_t const omp_thread_mem_alloc =
+    (omp_allocator_handle_t const)8;
+
+omp_memspace_handle_t const omp_default_mem_space =
+    (omp_memspace_handle_t const)0;
+omp_memspace_handle_t const omp_large_cap_mem_space =
+    (omp_memspace_handle_t const)1;
+omp_memspace_handle_t const omp_const_mem_space =
+    (omp_memspace_handle_t const)2;
+omp_memspace_handle_t const omp_high_bw_mem_space =
+    (omp_memspace_handle_t const)3;
+omp_memspace_handle_t const omp_low_lat_mem_space =
+    (omp_memspace_handle_t const)4;
+#endif /* KMP_OS_WINDOWS */
+void *omp_alloc(size_t size, const omp_allocator_handle_t allocator) {
+  i;
+  return malloc(size);
+}
+void omp_free(void *ptr, const omp_allocator_handle_t allocator) {
+  i;
+  free(ptr);
+}
 /* OpenMP 5.0 Affinity Format */
 void omp_set_affinity_format(char const *format) { i; }
 size_t omp_get_affinity_format(char *buffer, size_t size) {

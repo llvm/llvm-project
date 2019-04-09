@@ -395,7 +395,8 @@ protected:
         debugger.GetTargetList().SetSelectedTarget(target_sp.get());
         if (must_set_platform_path) {
           ModuleSpec main_module_spec(file_spec);
-          ModuleSP module_sp = target_sp->GetSharedModule(main_module_spec);
+          ModuleSP module_sp = target_sp->GetOrCreateModule(main_module_spec,
+                                                          true /* notify */);
           if (module_sp)
             module_sp->SetPlatformFileSpec(remote_file);
         }
@@ -2598,7 +2599,8 @@ protected:
             module_spec.GetSymbolFileSpec() =
                 m_symbol_file.GetOptionValue().GetCurrentValue();
           if (Symbols::DownloadObjectAndSymbolFile(module_spec)) {
-            ModuleSP module_sp(target->GetSharedModule(module_spec));
+            ModuleSP module_sp(target->GetOrCreateModule(module_spec,
+                                                 true /* notify */));
             if (module_sp) {
               result.SetStatus(eReturnStatusSuccessFinishResult);
               return true;
@@ -2660,7 +2662,8 @@ protected:
             if (!module_spec.GetArchitecture().IsValid())
               module_spec.GetArchitecture() = target->GetArchitecture();
             Status error;
-            ModuleSP module_sp(target->GetSharedModule(module_spec, &error));
+            ModuleSP module_sp(target->GetOrCreateModule(module_spec, 
+                                            true /* notify */, &error));
             if (!module_sp) {
               const char *error_cstr = error.AsCString();
               if (error_cstr)
