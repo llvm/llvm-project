@@ -418,7 +418,6 @@ public:
 /// \see RegisterNotificationCallbacks (const Notifications&) @see
 /// UnregisterNotificationCallbacks (const Notifications&)
 //------------------------------------------------------------------
-#ifndef SWIG
   typedef struct {
     void *baton;
     void (*initialize)(void *baton, Process *process);
@@ -503,7 +502,6 @@ public:
 
     DISALLOW_COPY_AND_ASSIGN(ProcessEventData);
   };
-#endif // SWIG
 
   //------------------------------------------------------------------
   /// Construct with a shared pointer to a target, and the Process listener.
@@ -824,9 +822,7 @@ public:
 ///
 /// \see Process::Notifications
 //------------------------------------------------------------------
-#ifndef SWIG
   void RegisterNotificationCallbacks(const Process::Notifications &callbacks);
-#endif
 
 //------------------------------------------------------------------
 /// Unregister for process and thread notifications.
@@ -844,9 +840,7 @@ public:
 ///
 /// \see Process::Notifications
 //------------------------------------------------------------------
-#ifndef SWIG
   bool UnregisterNotificationCallbacks(const Process::Notifications &callbacks);
-#endif
 
   //==================================================================
   // Built in Process Control functions

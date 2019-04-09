@@ -1059,7 +1059,8 @@ template <class ELFT> void SharedFile::parse() {
 
     uint64_t Alignment = getAlignment<ELFT>(Sections, Sym);
     if (!(Versyms[I] & VERSYM_HIDDEN))
-      Symtab->addShared<ELFT>(Name, *this, Sym, Alignment, Idx);
+      Symtab->addShared(Name, Sym.getBinding(), Sym.st_other, Sym.getType(),
+                        Sym.st_value, Sym.st_size, Alignment, Idx, this);
 
     // Also add the symbol with the versioned name to handle undefined symbols
     // with explicit versions.
@@ -1078,7 +1079,9 @@ template <class ELFT> void SharedFile::parse() {
         reinterpret_cast<const Elf_Verdef *>(Verdefs[Idx])->getAux()->vda_name;
     VersionedNameBuffer.clear();
     Name = (Name + "@" + VerName).toStringRef(VersionedNameBuffer);
-    Symtab->addShared<ELFT>(Saver.save(Name), *this, Sym, Alignment, Idx);
+    Symtab->addShared(Saver.save(Name), Sym.getBinding(), Sym.st_other,
+                      Sym.getType(), Sym.st_value, Sym.st_size, Alignment, Idx,
+                      this);
   }
 }
 
