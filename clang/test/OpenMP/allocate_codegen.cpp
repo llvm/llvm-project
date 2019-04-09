@@ -17,15 +17,18 @@
 #ifndef HEADER
 #define HEADER
 
-typedef void **omp_allocator_handle_t;
-extern const omp_allocator_handle_t omp_default_mem_alloc;
-extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
-extern const omp_allocator_handle_t omp_const_mem_alloc;
-extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
-extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
-extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
-extern const omp_allocator_handle_t omp_pteam_mem_alloc;
-extern const omp_allocator_handle_t omp_thread_mem_alloc;
+enum omp_allocator_handle_t {
+  omp_null_allocator = 0,
+  omp_default_mem_alloc = 1,
+  omp_large_cap_mem_alloc = 2,
+  omp_const_mem_alloc = 3,
+  omp_high_bw_mem_alloc = 4,
+  omp_low_lat_mem_alloc = 5,
+  omp_cgroup_mem_alloc = 6,
+  omp_pteam_mem_alloc = 7,
+  omp_thread_mem_alloc = 8,
+  KMP_ALLOCATOR_MAX_HANDLE = __UINTPTR_MAX__
+};
 
 struct St{
  int a;
@@ -77,13 +80,12 @@ int main () {
 
 // CHECK: define {{.*}}i32 @{{.+}}foo{{.+}}()
 // CHECK:      [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @{{.+}})
-// CHECK-NEXT: [[OMP_CGROUP_MEM_ALLOC:%.+]] = load i8**, i8*** @omp_cgroup_mem_alloc,
-// CHECK-NEXT: [[V_VOID_ADDR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 4, i8** [[OMP_CGROUP_MEM_ALLOC]])
+// CHECK-NEXT: [[V_VOID_ADDR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 4, i8* inttoptr (i64 6 to i8*))
 // CHECK-NEXT: [[V_ADDR:%.+]] = bitcast i8* [[V_VOID_ADDR]] to i32*
 // CHECK-NOT:  {{__kmpc_alloc|__kmpc_free}}
 // CHECK:      store i32 %{{.+}}, i32* [[V_ADDR]],
 // CHECK-NEXT: [[V_VAL:%.+]] = load i32, i32* [[V_ADDR]],
-// CHECK-NEXT: call void @__kmpc_free(i32 [[GTID]], i8* [[V_VOID_ADDR]], i8** [[OMP_CGROUP_MEM_ALLOC]])
+// CHECK-NEXT: call void @__kmpc_free(i32 [[GTID]], i8* [[V_VOID_ADDR]], i8* inttoptr (i64 6 to i8*))
 // CHECK-NOT:  {{__kmpc_alloc|__kmpc_free}}
 // CHECK:      ret i32 [[V_VAL]]
 

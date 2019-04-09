@@ -915,7 +915,8 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
     FileSystem::Instance().Resolve(executable_file);
     ModuleSpec module_spec(executable_file);
     Status error;
-    module = GetTarget().GetSharedModule(module_spec, &error);
+    module = GetTarget().GetOrCreateModule(module_spec, 
+                                           true /* notify */, &error);
     if (!module) {
       return;
     }

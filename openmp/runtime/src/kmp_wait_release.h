@@ -326,7 +326,6 @@ final_spin=FALSE)
 
   // Main wait spin loop
   while (flag->notdone_check()) {
-    int in_pool;
     kmp_task_team_t *task_team = NULL;
     if (__kmp_tasking_mode != tskm_immediate_exec) {
       task_team = this_thr->th.th_task_team;
@@ -370,27 +369,6 @@ final_spin=FALSE)
     // If we are oversubscribed, or have waited a bit (and
     // KMP_LIBRARY=throughput), then yield
     KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
-
-    // Check if this thread was transferred from a team
-    // to the thread pool (or vice-versa) while spinning.
-    in_pool = !!TCR_4(this_thr->th.th_in_pool);
-    if (in_pool != !!this_thr->th.th_active_in_pool) {
-      if (in_pool) { // Recently transferred from team to pool
-        KMP_ATOMIC_INC(&__kmp_thread_pool_active_nth);
-        this_thr->th.th_active_in_pool = TRUE;
-        /* Here, we cannot assert that:
-           KMP_DEBUG_ASSERT(TCR_4(__kmp_thread_pool_active_nth) <=
-           __kmp_thread_pool_nth);
-           __kmp_thread_pool_nth is inc/dec'd by the master thread while the
-           fork/join lock is held, whereas __kmp_thread_pool_active_nth is
-           inc/dec'd asynchronously by the workers. The two can get out of sync
-           for brief periods of time.  */
-      } else { // Recently transferred from pool to team
-        KMP_ATOMIC_DEC(&__kmp_thread_pool_active_nth);
-        KMP_DEBUG_ASSERT(TCR_4(__kmp_thread_pool_active_nth) >= 0);
-        this_thr->th.th_active_in_pool = FALSE;
-      }
-    }
 
 #if KMP_STATS_ENABLED
     // Check if thread has been signalled to idle state

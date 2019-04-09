@@ -103,7 +103,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &Sec, RelTy &Rel,
 
   if (auto *SS = dyn_cast<SharedSymbol>(&Sym))
     if (!SS->isWeak())
-      SS->getFile<ELFT>().IsNeeded = true;
+      SS->getFile().IsNeeded = true;
 
   for (InputSectionBase *Sec : CNamedSections.lookup(Sym.getName()))
     enqueue(Sec, 0);
@@ -276,7 +276,7 @@ template <class ELFT> void elf::markLive() {
     for (Symbol *Sym : Symtab->getSymbols())
       if (auto *S = dyn_cast<SharedSymbol>(Sym))
         if (S->IsUsedInRegularObj && !S->isWeak())
-          S->getFile<ELFT>().IsNeeded = true;
+          S->getFile().IsNeeded = true;
     return;
   }
 

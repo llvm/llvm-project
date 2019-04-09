@@ -667,9 +667,9 @@ enum OpenMPRTLFunction {
   // Call to void *__kmpc_task_reduction_get_th_data(int gtid, void *tg, void
   // *d);
   OMPRTL__kmpc_task_reduction_get_th_data,
-  // Call to void *__kmpc_alloc(int gtid, size_t sz, const omp_allocator_t *al);
+  // Call to void *__kmpc_alloc(int gtid, size_t sz, omp_allocator_handle_t al);
   OMPRTL__kmpc_alloc,
-  // Call to void __kmpc_free(int gtid, void *ptr, const omp_allocator_t *al);
+  // Call to void __kmpc_free(int gtid, void *ptr, omp_allocator_handle_t al);
   OMPRTL__kmpc_free,
 
   //
@@ -2200,20 +2200,18 @@ llvm::FunctionCallee CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     break;
   }
   case OMPRTL__kmpc_alloc: {
-    // Build to void *__kmpc_alloc(int gtid, size_t sz, const omp_allocator_t
-    // *al);
-    // omp_allocator_t type is void *.
-    llvm::Type *TypeParams[] = {CGM.IntTy, CGM.SizeTy, CGM.VoidPtrPtrTy};
+    // Build to void *__kmpc_alloc(int gtid, size_t sz, omp_allocator_handle_t
+    // al); omp_allocator_handle_t type is void *.
+    llvm::Type *TypeParams[] = {CGM.IntTy, CGM.SizeTy, CGM.VoidPtrTy};
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidPtrTy, TypeParams, /*isVarArg=*/false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_alloc");
     break;
   }
   case OMPRTL__kmpc_free: {
-    // Build to void __kmpc_free(int gtid, void *ptr, const omp_allocator_t
-    // *al);
-    // omp_allocator_t type is void *.
-    llvm::Type *TypeParams[] = {CGM.IntTy, CGM.VoidPtrTy, CGM.VoidPtrPtrTy};
+    // Build to void __kmpc_free(int gtid, void *ptr, omp_allocator_handle_t
+    // al); omp_allocator_handle_t type is void *.
+    llvm::Type *TypeParams[] = {CGM.IntTy, CGM.VoidPtrTy, CGM.VoidPtrTy};
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_free");
@@ -9781,6 +9779,13 @@ Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
   assert(AA->getAllocator() &&
          "Expected allocator expression for non-default allocator.");
   llvm::Value *Allocator = CGF.EmitScalarExpr(AA->getAllocator());
+  // According to the standard, the original allocator type is a enum (integer).
+  // Convert to pointer type, if required.
+  if (Allocator->getType()->isIntegerTy())
+    Allocator = CGF.Builder.CreateIntToPtr(Allocator, CGM.VoidPtrTy);
+  else if (Allocator->getType()->isPointerTy())
+    Allocator = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(Allocator,
+                                                                CGM.VoidPtrTy);
   llvm::Value *Args[] = {ThreadID, Size, Allocator};
 
   llvm::Value *Addr =

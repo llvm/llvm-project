@@ -13,6 +13,7 @@
 #ifndef LLD_ELF_SYMBOLS_H
 #define LLD_ELF_SYMBOLS_H
 
+#include "InputFiles.h"
 #include "InputSection.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Strings.h"
@@ -29,8 +30,6 @@ std::string toString(const elf::Symbol &);
 std::string toString(const elf::InputFile *);
 
 namespace elf {
-
-template <class ELFT> class SharedFile;
 
 // This is a StringRef-like container that doesn't run strlen().
 //
@@ -266,9 +265,7 @@ public:
       this->Type = llvm::ELF::STT_FUNC;
   }
 
-  template <class ELFT> SharedFile<ELFT> &getFile() const {
-    return *cast<SharedFile<ELFT>>(File);
-  }
+  SharedFile &getFile() const { return *cast<SharedFile>(File); }
 
   uint32_t Alignment;
 

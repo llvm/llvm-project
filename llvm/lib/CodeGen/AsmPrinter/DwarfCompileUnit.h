@@ -139,6 +139,12 @@ public:
   getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV,
                                ArrayRef<GlobalExpr> GlobalExprs);
 
+  DIE *getOrCreateCommonBlock(const DICommonBlock *CB,
+                              ArrayRef<GlobalExpr> GlobalExprs);
+
+  void addLocationAttribute(DIE *ToDIE, const DIGlobalVariable *GV,
+                            ArrayRef<GlobalExpr> GlobalExprs);
+
   /// addLabelAddress - Add a dwarf label attribute data and value using
   /// either DW_FORM_addr or DW_FORM_GNU_addr_index.
   void addLabelAddress(DIE &Die, dwarf::Attribute Attribute,

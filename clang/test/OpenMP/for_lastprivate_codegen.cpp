@@ -14,15 +14,18 @@
 #ifndef HEADER
 #define HEADER
 
-typedef void **omp_allocator_handle_t;
-extern const omp_allocator_handle_t omp_default_mem_alloc;
-extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
-extern const omp_allocator_handle_t omp_const_mem_alloc;
-extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
-extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
-extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
-extern const omp_allocator_handle_t omp_pteam_mem_alloc;
-extern const omp_allocator_handle_t omp_thread_mem_alloc;
+enum omp_allocator_handle_t {
+  omp_null_allocator = 0,
+  omp_default_mem_alloc = 1,
+  omp_large_cap_mem_alloc = 2,
+  omp_const_mem_alloc = 3,
+  omp_high_bw_mem_alloc = 4,
+  omp_low_lat_mem_alloc = 5,
+  omp_cgroup_mem_alloc = 6,
+  omp_pteam_mem_alloc = 7,
+  omp_thread_mem_alloc = 8,
+  KMP_ALLOCATOR_MAX_HANDLE = __UINTPTR_MAX__
+};
 
 struct SS {
   int a;
@@ -605,8 +608,7 @@ int main() {
 // Check for default initialization.
 // CHECK: [[GTID_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[GTID_ADDR_REF]]
 // CHECK: [[GTID:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[GTID_REF]]
-// CHECK: [[ALLOCATOR:%.+]] = load i8**, i8*** @omp_const_mem_alloc,
-// CHECK: [[F_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 4, i8** [[ALLOCATOR]])
+// CHECK: [[F_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 4, i8* inttoptr (i64 3 to i8*))
 // CHECK: [[F_PRIV:%.+]] = bitcast i8* [[F_VOID_PTR]] to float*
 // CHECK: [[F_VAL:%.+]] = load float, float* [[F]],
 // CHECK: store float [[F_VAL]], float* [[F_PRIV]],
@@ -629,7 +631,7 @@ int main() {
 // CHECK-NEXT: br label %[[LAST_DONE]]
 // CHECK: [[LAST_DONE]]
 
-// CHECK:      call void @__kmpc_free(i32 [[GTID]], i8* [[F_VOID_PTR]], i8** [[ALLOCATOR]])
+// CHECK:      call void @__kmpc_free(i32 [[GTID]], i8* [[F_VOID_PTR]], i8* inttoptr (i64 3 to i8*))
 // CHECK-NEXT: call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
 // CHECK-NEXT: ret void
 
@@ -637,8 +639,7 @@ int main() {
 
 // CHECK: [[GTID_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[GTID_ADDR_REF]]
 // CHECK: [[GTID:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[GTID_REF]]
-// CHECK: [[ALLOCATOR:%.+]] = load i8**, i8*** @omp_const_mem_alloc,
-// CHECK: [[CNT_PRIV:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 1, i8** [[ALLOCATOR]])
+// CHECK: [[CNT_PRIV:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 1, i8* inttoptr (i64 3 to i8*))
 // CHECK: call {{.+}} @__kmpc_for_static_init_4(%{{.+}}* @{{.+}}, i32 [[GTID]], i32 34, i32* [[IS_LAST_ADDR:%.+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
 // UB = min(UB, GlobalUB)
 // CHECK-NEXT: [[UB:%.+]] = load i32, i32* [[OMP_UB]]
@@ -666,7 +667,7 @@ int main() {
 // CHECK-NEXT: br label %[[LAST_DONE]]
 // CHECK: [[LAST_DONE]]
 
-// CHECK:      call void @__kmpc_free(i32 [[GTID]], i8* [[CNT_PRIV]], i8** [[ALLOCATOR]])
+// CHECK:      call void @__kmpc_free(i32 [[GTID]], i8* [[CNT_PRIV]], i8* inttoptr (i64 3 to i8*))
 // CHECK-NEXT: call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
 // CHECK-NEXT: ret void
 

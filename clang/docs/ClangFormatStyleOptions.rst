@@ -407,47 +407,46 @@ the configuration (without a prefix: ``Auto``).
       };
       void f() { bar(); }
 
+
+
 **AllowShortIfStatementsOnASingleLine** (``ShortIfStyle``)
-  Dependent on the value, ``if (a) return 0;`` can be put on a
-  single line.
+  If ``true``, ``if (a) return;`` can be put on a single line.
 
   Possible values:
 
   * ``SIS_Never`` (in configuration: ``Never``)
-    Do not allow short if functions.
+    Never put short ifs on the same line.
 
     .. code-block:: c++
 
-       if (a)
-         return;
-       else
-         return;
+      if (a)
+        return ;
+      else {
+        return;
+      }
 
   * ``SIS_WithoutElse`` (in configuration: ``WithoutElse``)
-    Allow short if functions on the same line, as long as else
-    is not a compound statement.
+    Without else put short ifs on the same line only if
+    the else is not a compound statement.
 
     .. code-block:: c++
 
-       if (a) return;
-       else
-         return;
-
-       if (a)
-         return;
-       else {
-         return;
-       }
+      if (a) return;
+      else
+        return;
 
   * ``SIS_Always`` (in configuration: ``Always``)
-    Allow short if statements even if the else is a compound statement.
+    Always put short ifs on the same line if
+    the else is not a compound statement or not.
 
     .. code-block:: c++
 
-       if (a) return;
-       else {
-          return;
-       }
+      if (a) return;
+      else {
+        return;
+      }
+
+
 
 **AllowShortLambdasOnASingleLine** (``ShortLambdaStyle``)
   Dependent on the value, ``auto lambda []() { return 0; }`` can be put on a
@@ -704,6 +703,23 @@ the configuration (without a prefix: ``Auto``).
 
   Nested configuration flags:
 
+
+  * ``bool AfterCaseLabel`` Wrap case labels.
+
+    .. code-block:: c++
+
+      false:                                true:
+      switch (foo) {                vs.     switch (foo) {
+        case 1: {                             case 1:
+          bar();                              {
+          break;                                bar();
+        }                                       break;
+        default: {                            }
+          plop();                             default:
+        }                                     {
+      }                                         plop();
+                                              }
+                                            }
 
   * ``bool AfterClass`` Wrap class definitions.
 
@@ -1043,28 +1059,19 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      try
-      {
+      try {
         foo();
       }
-      catch ()
-      {
+      catch () {
       }
       void foo() { bar(); }
-      class foo
-      {
+      class foo {
       };
-      if (foo())
-      {
+      if (foo()) {
       }
-      else
-      {
+      else {
       }
-      enum X : int
-      {
-        A,
-        B
-      };
+      enum X : int { A, B };
 
   * ``BS_GNU`` (in configuration: ``GNU``)
     Always break before braces and add an extra level of indentation to
@@ -1502,6 +1509,7 @@ the configuration (without a prefix: ``Auto``).
            #include <foo>
          #endif
        #endif
+
 
 
 **IndentWidth** (``unsigned``)
@@ -1954,6 +1962,7 @@ the configuration (without a prefix: ``Auto``).
 
 **SpaceAfterLogicalNot** (``bool``)
   If ``true``, a space is inserted after the logical not operator (``!``).
+
   .. code-block:: c++
 
      true:                                  false:
@@ -2032,6 +2041,19 @@ the configuration (without a prefix: ``Auto``).
            f();
          }
        }
+
+  * ``SBPO_NonEmptyParentheses`` (in configuration: ``NonEmptyParentheses``)
+    Put a space before opening parentheses only if the parentheses are not
+    empty i.e. '()'
+
+    .. code-block:: c++
+
+      void() {
+        if (true) {
+          f();
+          g (x, y, z);
+        }
+      }
 
   * ``SBPO_Always`` (in configuration: ``Always``)
     Always put a space before opening parentheses, except when it's
