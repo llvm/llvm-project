@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef SCHEDULER_20
+#include <CL/sycl/handler2.hpp>
+
+#else
+
 #pragma once
 
 #include <CL/__spirv/spirv_vars.hpp>
@@ -728,3 +733,4 @@ public:
 };
 } // namespace sycl
 } // namespace cl
+#endif // SCHEDULER_20
