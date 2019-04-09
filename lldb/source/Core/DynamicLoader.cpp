@@ -96,7 +96,7 @@ ModuleSP DynamicLoader::GetTargetExecutable() {
       }
 
       if (!executable) {
-        executable = target.GetSharedModule(module_spec);
+        executable = target.GetOrCreateModule(module_spec, true /* notify */);
         if (executable.get() != target.GetExecutableModulePointer()) {
           // Don't load dependent images since we are in dyld where we will
           // know and find out about all images that are loaded
@@ -166,7 +166,8 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
     return module_sp;
   }
 
-  if ((module_sp = target.GetSharedModule(module_spec))) {
+  if ((module_sp = target.GetOrCreateModule(module_spec, 
+                                            true /* notify */))) {
     UpdateLoadedSections(module_sp, link_map_addr, base_addr,
                          base_addr_is_offset);
     return module_sp;
@@ -202,7 +203,8 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
         return module_sp;
       }
 
-      if ((module_sp = target.GetSharedModule(new_module_spec))) {
+      if ((module_sp = target.GetOrCreateModule(new_module_spec, 
+                                                true /* notify */))) {
         UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);
         return module_sp;
       }

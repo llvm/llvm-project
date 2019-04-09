@@ -96,14 +96,16 @@ public:
   public:
     virtual ~Notifier() = default;
 
-    virtual void ModuleAdded(const ModuleList &module_list,
-                             const lldb::ModuleSP &module_sp) = 0;
-    virtual void ModuleRemoved(const ModuleList &module_list,
-                               const lldb::ModuleSP &module_sp) = 0;
-    virtual void ModuleUpdated(const ModuleList &module_list,
-                               const lldb::ModuleSP &old_module_sp,
-                               const lldb::ModuleSP &new_module_sp) = 0;
-    virtual void WillClearList(const ModuleList &module_list) = 0;
+    virtual void NotifyModuleAdded(const ModuleList &module_list,
+                                   const lldb::ModuleSP &module_sp) = 0;
+    virtual void NotifyModuleRemoved(const ModuleList &module_list,
+                                     const lldb::ModuleSP &module_sp) = 0;
+    virtual void NotifyModuleUpdated(const ModuleList &module_list,
+                                     const lldb::ModuleSP &old_module_sp,
+                                     const lldb::ModuleSP &new_module_sp) = 0;
+    virtual void NotifyWillClearList(const ModuleList &module_list) = 0;
+
+    virtual void NotifyModulesRemoved(lldb_private::ModuleList &module_list) = 0;
   };
 
   //------------------------------------------------------------------
@@ -146,12 +148,20 @@ public:
   //------------------------------------------------------------------
   /// Append a module to the module list.
   ///
-  /// Appends the module to the collection.
-  ///
   /// \param[in] module_sp
   ///     A shared pointer to a module to add to this collection.
+  ///
+  /// \param[in] notify
+  ///     If true, and a notifier function is set, the notifier function
+  ///     will be called.  Defaults to true.
+  ///
+  ///     When this ModuleList is the Target's ModuleList, the notifier 
+  ///     function is Target::ModulesDidLoad -- the call to 
+  ///     ModulesDidLoad may be deferred when adding multiple Modules 
+  ///     to the Target, but it must be called at the end, 
+  ///     before resuming execution.
   //------------------------------------------------------------------
-  void Append(const lldb::ModuleSP &module_sp);
+  void Append(const lldb::ModuleSP &module_sp, bool notify = true);
 
   //------------------------------------------------------------------
   /// Append a module to the module list and remove any equivalent modules.
@@ -165,7 +175,22 @@ public:
   //------------------------------------------------------------------
   void ReplaceEquivalent(const lldb::ModuleSP &module_sp);
 
-  bool AppendIfNeeded(const lldb::ModuleSP &module_sp);
+  //------------------------------------------------------------------
+  /// Append a module to the module list, if it is not already there.
+  ///
+  /// \param[in] module_sp
+  ///
+  /// \param[in] notify
+  ///     If true, and a notifier function is set, the notifier function
+  ///     will be called.  Defaults to true.
+  ///
+  ///     When this ModuleList is the Target's ModuleList, the notifier 
+  ///     function is Target::ModulesDidLoad -- the call to 
+  ///     ModulesDidLoad may be deferred when adding multiple Modules 
+  ///     to the Target, but it must be called at the end, 
+  ///     before resuming execution.
+  //------------------------------------------------------------------
+  bool AppendIfNeeded(const lldb::ModuleSP &module_sp, bool notify = true);
 
   void Append(const ModuleList &module_list);
 
@@ -481,7 +506,23 @@ public:
                             std::vector<Address> &output_local,
                             std::vector<Address> &output_extern);
 
-  bool Remove(const lldb::ModuleSP &module_sp);
+  //------------------------------------------------------------------
+  /// Remove a module from the module list.
+  ///
+  /// \param[in] module_sp
+  ///     A shared pointer to a module to remove from this collection.
+  ///
+  /// \param[in] notify
+  ///     If true, and a notifier function is set, the notifier function
+  ///     will be called.  Defaults to true.
+  ///
+  ///     When this ModuleList is the Target's ModuleList, the notifier 
+  ///     function is Target::ModulesDidUnload -- the call to 
+  ///     ModulesDidUnload may be deferred when removing multiple Modules 
+  ///     from the Target, but it must be called at the end, 
+  ///     before resuming execution.
+  //------------------------------------------------------------------
+  bool Remove(const lldb::ModuleSP &module_sp, bool notify = true);
 
   size_t Remove(ModuleList &module_list);
 
