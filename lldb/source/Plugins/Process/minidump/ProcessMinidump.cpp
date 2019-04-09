@@ -354,34 +354,21 @@ void ProcessMinidump::ReadModuleList() {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
 
   for (auto module : filtered_modules) {
-    llvm::Optional<std::string> name =
-        m_minidump_parser->GetMinidumpString(module->module_name_rva);
-
-    if (!name)
-      continue;
-
-    if (log) {
-      log->Printf("ProcessMinidump::%s found module: name: %s %#010" PRIx64
-                  "-%#010" PRIx64 " size: %" PRIu32,
-                  __FUNCTION__, name.getValue().c_str(),
-                  uint64_t(module->base_of_image),
-                  module->base_of_image + module->size_of_image,
-                  uint32_t(module->size_of_image));
-    }
+    std::string name = cantFail(m_minidump_parser->GetMinidumpFile().getString(
+        module->module_name_rva));
+    LLDB_LOG(log, "found module: name: {0} {1:x10}-{2:x10} size: {3}", name,
+             module->base_of_image,
+             module->base_of_image + module->size_of_image,
+             module->size_of_image);
 
     // check if the process is wow64 - a 32 bit windows process running on a
     // 64 bit windows
-    if (llvm::StringRef(name.getValue()).endswith_lower("wow64.dll")) {
+    if (llvm::StringRef(name).endswith_lower("wow64.dll")) {
       m_is_wow64 = true;
     }
 
-    if (log) {
-      log->Printf("ProcessMinidump::%s load module: name: %s", __FUNCTION__,
-                  name.getValue().c_str());
-    }
-
     const auto uuid = m_minidump_parser->GetModuleUUID(module);
-    auto file_spec = FileSpec(name.getValue(), GetArchitecture().GetTriple());
+    auto file_spec = FileSpec(name, GetArchitecture().GetTriple());
     FileSystem::Instance().Resolve(file_spec);
     ModuleSpec module_spec(file_spec, uuid);
     module_spec.GetArchitecture() = GetArchitecture();
@@ -424,11 +411,10 @@ void ProcessMinidump::ReadModuleList() {
       // This enables most LLDB functionality involving address-to-module
       // translations (ex. identifing the module for a stack frame PC) and
       // modules/sections commands (ex. target modules list, ...)
-      if (log) {
-        log->Printf("Unable to locate the matching object file, creating a "
-                    "placeholder module for: %s",
-                    name.getValue().c_str());
-      }
+      LLDB_LOG(log,
+               "Unable to locate the matching object file, creating a "
+               "placeholder module for: {0}",
+               name);
 
       module_sp = Module::CreateModuleFromObjectFile<PlaceholderObjectFile>(
           module_spec, module->base_of_image, module->size_of_image);
