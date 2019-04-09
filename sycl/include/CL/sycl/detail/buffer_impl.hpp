@@ -6,6 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef SCHEDULER_20
+
+#include <CL/sycl/detail/buffer_impl2.hpp>
+
+#else
+
 #pragma once
 
 #include <CL/sycl/access/access.hpp>
@@ -608,3 +614,4 @@ cl_mem buffer_impl<AllocatorT>::getOpenCLMem() const {
 } // namespace detail
 } // namespace sycl
 } // namespace cl
+#endif // SCHEDULER_20

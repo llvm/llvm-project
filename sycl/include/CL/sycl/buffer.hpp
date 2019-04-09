@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #pragma once
-#include <CL/sycl/detail/buffer_impl.hpp>
+#ifdef SCHEDULER_20
+  #include <CL/sycl/detail/buffer_impl2.hpp>
+#else
+  #include <CL/sycl/detail/buffer_impl.hpp>
+#endif // SCHEDULER_20
 #include <CL/sycl/detail/common.hpp>
 #include <CL/sycl/exception.hpp>
 #include <CL/sycl/stl.hpp>
