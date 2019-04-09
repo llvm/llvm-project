@@ -128,6 +128,7 @@ add_library("${SYCLLibrary}" SHARED
   "${sourceRootPath}/detail/helpers.cpp"
   "${sourceRootPath}/detail/kernel_impl.cpp"
   "${sourceRootPath}/detail/kernel_info.cpp"
+  "${sourceRootPath}/detail/memory_manager.cpp"
   "${sourceRootPath}/detail/platform_host.cpp"
   "${sourceRootPath}/detail/platform_opencl.cpp"
   "${sourceRootPath}/detail/platform_info.cpp"
