@@ -1117,6 +1117,7 @@ TEST_F(FormatTest, FormatsSwitchStatement) {
   Style.IndentCaseLabels = true;
   Style.AllowShortBlocksOnASingleLine = false;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterCaseLabel = true;
   Style.BraceWrapping.AfterControlStatement = true;
   EXPECT_EQ("switch (n)\n"
             "{\n"
@@ -1134,6 +1135,27 @@ TEST_F(FormatTest, FormatsSwitchStatement) {
                    "    return false;\n"
                    "  }\n"
                    "  default: {\n"
+                   "    return true;\n"
+                   "  }\n"
+                   "}",
+                   Style));
+  Style.BraceWrapping.AfterCaseLabel = false;
+  EXPECT_EQ("switch (n)\n"
+            "{\n"
+            "  case 0: {\n"
+            "    return false;\n"
+            "  }\n"
+            "  default: {\n"
+            "    return true;\n"
+            "  }\n"
+            "}",
+            format("switch (n) {\n"
+                   "  case 0:\n"
+                   "  {\n"
+                   "    return false;\n"
+                   "  }\n"
+                   "  default:\n"
+                   "  {\n"
                    "    return true;\n"
                    "  }\n"
                    "}",
@@ -1291,6 +1313,7 @@ TEST_F(FormatTest, ShortCaseLabels) {
                    Style));
   Style.AllowShortCaseLabelsOnASingleLine = true;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterCaseLabel = true;
   Style.BraceWrapping.AfterControlStatement = true;
   EXPECT_EQ("switch (n)\n"
             "{\n"
@@ -9719,6 +9742,17 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("auto lambda = []() { return 0; };", SomeSpace);
 }
 
+TEST_F(FormatTest, SpaceAfterLogicalNot) {
+  FormatStyle Spaces = getLLVMStyle();
+  Spaces.SpaceAfterLogicalNot = true;
+
+  verifyFormat("bool x = ! y", Spaces);
+  verifyFormat("if (! isFailure())", Spaces);
+  verifyFormat("if (! (a && b))", Spaces);
+  verifyFormat("\"Error!\"", Spaces);
+  verifyFormat("! ! x", Spaces);
+}
+
 TEST_F(FormatTest, ConfigurableSpacesInParentheses) {
   FormatStyle Spaces = getLLVMStyle();
 
@@ -11345,6 +11379,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpaceBeforeInheritanceColon);
   CHECK_PARSE_BOOL(SpaceBeforeRangeBasedForLoopColon);
 
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterCaseLabel);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterControlStatement);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterEnum);
@@ -11510,6 +11545,12 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::SBPO_Never);
   CHECK_PARSE("SpaceAfterControlStatementKeyword: true", SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatements);
+
+  Style.SpaceAfterLogicalNot = false;
+  CHECK_PARSE("SpaceAfterLogicalNot: true", SpaceAfterLogicalNot,
+              true);
+  CHECK_PARSE("SpaceAfterLogicalNot: false", SpaceAfterLogicalNot,
+              false);
 
   Style.ColumnLimit = 123;
   FormatStyle BaseStyle = getLLVMStyle();
@@ -12824,20 +12865,18 @@ TEST_F(FormatTest, ConfigurableContinuationIndentWidth) {
 
 TEST_F(FormatTest, WrappedClosingParenthesisIndent) {
   FormatStyle Style = getLLVMStyle();
-  verifyFormat(
-      "int Foo::getter(\n"
-      "    //\n"
-      ") const {\n"
-      "  return foo;\n"
-      "}",
-      Style);
-  verifyFormat(
-      "void Foo::setter(\n"
-      "    //\n"
-      ") {\n"
-      "  foo = 1;\n"
-      "}",
-      Style);
+  verifyFormat("int Foo::getter(\n"
+               "    //\n"
+               ") const {\n"
+               "  return foo;\n"
+               "}",
+               Style);
+  verifyFormat("void Foo::setter(\n"
+               "    //\n"
+               ") {\n"
+               "  foo = 1;\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, SpacesInAngles) {

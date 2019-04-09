@@ -89,8 +89,8 @@ class TestImportBase : public CompilerOptionSpecificTest,
                        public ::testing::WithParamInterface<ArgVector> {
 
   template <typename NodeType>
-  NodeType importNode(ASTUnit *From, ASTUnit *To, ASTImporter &Importer,
-                      NodeType Node) {
+  llvm::Expected<NodeType> importNode(ASTUnit *From, ASTUnit *To,
+                                      ASTImporter &Importer, NodeType Node) {
     ASTContext &ToCtx = To->getASTContext();
 
     // Add 'From' file to virtual file system so importer can 'find' it
@@ -100,17 +100,19 @@ class TestImportBase : public CompilerOptionSpecificTest,
     createVirtualFileIfNeeded(To, FromFileName,
                               From->getBufferForFile(FromFileName));
 
-    auto Imported = Importer.Import(Node);
+    auto Imported = Importer.Import_New(Node);
 
-    // This should dump source locations and assert if some source locations
-    // were not imported.
-    SmallString<1024> ImportChecker;
-    llvm::raw_svector_ostream ToNothing(ImportChecker);
-    ToCtx.getTranslationUnitDecl()->print(ToNothing);
+    if (Imported) {
+      // This should dump source locations and assert if some source locations
+      // were not imported.
+      SmallString<1024> ImportChecker;
+      llvm::raw_svector_ostream ToNothing(ImportChecker);
+      ToCtx.getTranslationUnitDecl()->print(ToNothing);
 
-    // This traverses the AST to catch certain bugs like poorly or not
-    // implemented subtrees.
-    Imported->dump(ToNothing);
+      // This traverses the AST to catch certain bugs like poorly or not
+      // implemented subtrees.
+      (*Imported)->dump(ToNothing);
+    }
 
     return Imported;
   }
@@ -151,11 +153,16 @@ class TestImportBase : public CompilerOptionSpecificTest,
     EXPECT_TRUE(Verifier.match(ToImport, WrapperMatcher));
 
     auto Imported = importNode(FromAST.get(), ToAST.get(), Importer, ToImport);
-    if (!Imported)
-      return testing::AssertionFailure() << "Import failed, nullptr returned!";
+    if (!Imported) {
+      std::string ErrorText;
+      handleAllErrors(
+          Imported.takeError(),
+          [&ErrorText](const ImportError &Err) { ErrorText = Err.message(); });
+      return testing::AssertionFailure()
+             << "Import failed, error: \"" << ErrorText << "\"!";
+    }
 
-
-    return Verifier.match(Imported, WrapperMatcher);
+    return Verifier.match(*Imported, WrapperMatcher);
   }
 
   template <typename NodeType>
@@ -277,7 +284,9 @@ public:
       EXPECT_TRUE(FoundDecl.size() == 1);
       const Decl *ToImport = selectFirst<Decl>(DeclToImportID, FoundDecl);
       auto Imported = importNode(From, To, *ImporterRef, ToImport);
-      EXPECT_TRUE(Imported);
+      EXPECT_TRUE(static_cast<bool>(Imported));
+      if (!Imported)
+        llvm::consumeError(Imported.takeError());
     }
 
     // Find the declaration and import it.
@@ -339,13 +348,23 @@ class ASTImporterTestBase : public CompilerOptionSpecificTest {
     Decl *import(ASTImporterLookupTable &LookupTable, ASTUnit *ToAST,
                  Decl *FromDecl) {
       lazyInitImporter(LookupTable, ToAST);
-      return Importer->Import(FromDecl);
+      if (auto ImportedOrErr = Importer->Import_New(FromDecl))
+        return *ImportedOrErr;
+      else {
+        llvm::consumeError(ImportedOrErr.takeError());
+        return nullptr;
+      }
     }
 
     QualType import(ASTImporterLookupTable &LookupTable, ASTUnit *ToAST,
                     QualType FromType) {
       lazyInitImporter(LookupTable, ToAST);
-      return Importer->Import(FromType);
+      if (auto ImportedOrErr = Importer->Import_New(FromType))
+        return *ImportedOrErr;
+      else {
+        llvm::consumeError(ImportedOrErr.takeError());
+        return QualType{};
+      }
     }
   };
 

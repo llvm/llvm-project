@@ -91,17 +91,17 @@ public:
   ///
   /// \param[out] dst
   ///     pointer where the string value will be written. In case it is null,
-  ///     nothing will be written at @dst.
+  ///     nothing will be written at \a dst.
   ///
   /// \param[in] dst_len
-  ///     max number of characters that can be written at @dst. In case it is
-  ///     zero, nothing will be written at @dst. If this length is not enough
-  ///     to write the complete string value, (dst_len-1) bytes of the string
-  ///     value will be written at @dst followed by a null character.
+  ///     max number of characters that can be written at \a dst. In case it is
+  ///     zero, nothing will be written at \a dst. If this length is not enough
+  ///     to write the complete string value, (\a dst_len - 1) bytes of the
+  ///     string value will be written at \a dst followed by a null character.
   ///
   /// \return
   ///     Returns the byte size needed to completely write the string value at
-  ///     @dst in all cases.
+  ///     \a dst in all cases.
   //------------------------------------------------------------------
   size_t GetStringValue(char *dst, size_t dst_len) const;
 

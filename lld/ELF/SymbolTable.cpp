@@ -467,31 +467,30 @@ Defined *SymbolTable::addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
   return cast<Defined>(S);
 }
 
-template <typename ELFT>
-void SymbolTable::addShared(StringRef Name, SharedFile &File,
-                            const typename ELFT::Sym &Sym, uint32_t Alignment,
-                            uint32_t VerdefIndex) {
+void SymbolTable::addShared(StringRef Name, uint8_t Binding, uint8_t StOther,
+                            uint8_t Type, uint64_t Value, uint64_t Size,
+                            uint32_t Alignment, uint32_t VerdefIndex,
+                            InputFile *File) {
   // DSO symbols do not affect visibility in the output, so we pass STV_DEFAULT
   // as the visibility, which will leave the visibility in the symbol table
   // unchanged.
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, STV_DEFAULT,
-                                    /*CanOmitFromDynSym*/ true, &File);
+                                    /*CanOmitFromDynSym*/ true, File);
   // Make sure we preempt DSO symbols with default visibility.
-  if (Sym.getVisibility() == STV_DEFAULT)
+  if (getVisibility(StOther) == STV_DEFAULT)
     S->ExportDynamic = true;
 
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
   auto Replace = [&](uint8_t Binding) {
-    replaceSymbol<SharedSymbol>(S, File, Name, Binding, Sym.st_other,
-                                Sym.getType(), Sym.st_value, Sym.st_size,
-                                Alignment, VerdefIndex);
+    replaceSymbol<SharedSymbol>(S, *File, Name, Binding, StOther, Type, Value,
+                                Size, Alignment, VerdefIndex);
   };
 
   if (WasInserted)
-    Replace(Sym.getBinding());
+    Replace(Binding);
   else if (S->Visibility == STV_DEFAULT && (S->isUndefined() || S->isLazy()))
     Replace(S->Binding);
 }
@@ -784,16 +783,3 @@ template void SymbolTable::fetchLazy<ELF32LE>(Symbol *);
 template void SymbolTable::fetchLazy<ELF32BE>(Symbol *);
 template void SymbolTable::fetchLazy<ELF64LE>(Symbol *);
 template void SymbolTable::fetchLazy<ELF64BE>(Symbol *);
-
-template void SymbolTable::addShared<ELF32LE>(StringRef, SharedFile &,
-                                              const typename ELF32LE::Sym &,
-                                              uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF32BE>(StringRef, SharedFile &,
-                                              const typename ELF32BE::Sym &,
-                                              uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF64LE>(StringRef, SharedFile &,
-                                              const typename ELF64LE::Sym &,
-                                              uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF64BE>(StringRef, SharedFile &,
-                                              const typename ELF64BE::Sym &,
-                                              uint32_t Alignment, uint32_t);
