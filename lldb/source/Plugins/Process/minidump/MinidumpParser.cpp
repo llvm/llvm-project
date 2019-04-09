@@ -63,14 +63,6 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetStream(StreamType stream_type) {
       .getValueOr(llvm::ArrayRef<uint8_t>());
 }
 
-llvm::Optional<std::string> MinidumpParser::GetMinidumpString(uint32_t rva) {
-  auto arr_ref = m_data_sp->GetData();
-  if (rva > arr_ref.size())
-    return llvm::None;
-  arr_ref = arr_ref.drop_front(rva);
-  return parseMinidumpString(arr_ref);
-}
-
 UUID MinidumpParser::GetModuleUUID(const MinidumpModule *module) {
   auto cv_record =
       GetData().slice(module->CV_record.RVA, module->CV_record.DataSize);
@@ -244,13 +236,17 @@ ArchSpec MinidumpParser::GetArchitecture() {
     break;
   default: {
     triple.setOS(llvm::Triple::OSType::UnknownOS);
-    std::string csd_version;
-    if (auto s = GetMinidumpString(system_info->CSDVersionRVA))
-      csd_version = *s;
-    if (csd_version.find("Linux") != std::string::npos)
-      triple.setOS(llvm::Triple::OSType::Linux);
-    break;
+    auto ExpectedCSD = m_file->getString(system_info->CSDVersionRVA);
+    if (!ExpectedCSD) {
+      LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS),
+                     ExpectedCSD.takeError(),
+                     "Failed to CSD Version string: {0}");
+    } else {
+      if (ExpectedCSD->find("Linux") != std::string::npos)
+        triple.setOS(llvm::Triple::OSType::Linux);
     }
+    break;
+  }
   }
   m_arch.SetTriple(triple);
   return m_arch;
@@ -305,24 +301,22 @@ std::vector<const MinidumpModule *> MinidumpParser::GetFilteredModuleList() {
 
   std::vector<const MinidumpModule *> filtered_modules;
   
-  llvm::Optional<std::string> name;
-  std::string module_name;
-
   for (const auto &module : modules) {
-    name = GetMinidumpString(module.module_name_rva);
-    
-    if (!name)
+    auto ExpectedName = m_file->getString(module.module_name_rva);
+    if (!ExpectedName) {
+      LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES),
+                     ExpectedName.takeError(),
+                     "Failed to module name: {0}");
       continue;
-    
-    module_name = name.getValue();
-    
+    }
+
     MapType::iterator iter;
     bool inserted;
     // See if we have inserted this module aready into filtered_modules. If we
     // haven't insert an entry into module_name_to_filtered_index with the
     // index where we will insert it if it isn't in the vector already.
     std::tie(iter, inserted) = module_name_to_filtered_index.try_emplace(
-        module_name, filtered_modules.size());
+        *ExpectedName, filtered_modules.size());
 
     if (inserted) {
       // This module has not been seen yet, insert it into filtered_modules at

@@ -71,6 +71,15 @@ class X86AsmParser : public MCTargetAsmParser {
   ParseInstructionInfo *InstInfo;
   bool Code16GCC;
 
+  enum VEXEncoding {
+    VEXEncoding_Default,
+    VEXEncoding_VEX2,
+    VEXEncoding_VEX3,
+    VEXEncoding_EVEX,
+  };
+
+  VEXEncoding ForcedVEXEncoding = VEXEncoding_Default;
+
 private:
   SMLoc consumeToken() {
     MCAsmParser &Parser = getParser();
@@ -858,6 +867,8 @@ private:
   bool parseDirectiveFPOEndProc(SMLoc L);
   bool parseDirectiveFPOData(SMLoc L);
 
+  unsigned checkTargetMatchPredicate(MCInst &Inst) override;
+
   bool validateInstruction(MCInst &Inst, const OperandVector &Ops);
   bool processInstruction(MCInst &Inst, const OperandVector &Ops);
 
@@ -939,6 +950,9 @@ private:
   /// }
 
 public:
+  enum X86MatchResultTy {
+    Match_Unsupported = FIRST_TARGET_MATCH_RESULT_TY,
+  };
 
   X86AsmParser(const MCSubtargetInfo &sti, MCAsmParser &Parser,
                const MCInstrInfo &mii, const MCTargetOptions &Options)
@@ -2296,6 +2310,48 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   InstInfo = &Info;
+  std::string TempName; // Used when we parse a pseudo prefix.
+
+  // Reset the forced VEX encoding.
+  ForcedVEXEncoding = VEXEncoding_Default;
+
+  // Parse pseudo prefixes.
+  while (1) {
+    if (Name == "{") {
+      if (getLexer().isNot(AsmToken::Identifier))
+        return Error(Parser.getTok().getLoc(), "Unexpected token after '{'");
+      std::string Prefix = Parser.getTok().getString().lower();
+      Parser.Lex(); // Eat identifier.
+      if (getLexer().isNot(AsmToken::RCurly))
+        return Error(Parser.getTok().getLoc(), "Expected '}'");
+      Parser.Lex(); // Eat curly.
+
+      if (Prefix == "vex2")
+        ForcedVEXEncoding = VEXEncoding_VEX2;
+      else if (Prefix == "vex3")
+        ForcedVEXEncoding = VEXEncoding_VEX3;
+      else if (Prefix == "evex")
+        ForcedVEXEncoding = VEXEncoding_EVEX;
+      else
+        return Error(NameLoc, "unknown prefix");
+
+      NameLoc = Parser.getTok().getLoc();
+      if (getLexer().is(AsmToken::LCurly)) {
+        Parser.Lex();
+        Name = "{";
+      } else {
+        if (getLexer().isNot(AsmToken::Identifier))
+          return Error(Parser.getTok().getLoc(), "Expected identifier");
+        TempName = Parser.getTok().getString().lower();
+        Name = TempName;
+        Parser.Lex();
+      }
+      continue;
+    }
+
+    break;
+  }
+
   StringRef PatchedName = Name;
 
   if ((Name.equals("jmp") || Name.equals("jc") || Name.equals("jz")) &&
@@ -2943,6 +2999,22 @@ static unsigned getPrefixes(OperandVector &Operands) {
   return Result;
 }
 
+unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
+  unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &MCID = MII.get(Opc);
+
+  if (ForcedVEXEncoding == VEXEncoding_EVEX &&
+      (MCID.TSFlags & X86II::EncodingMask) != X86II::EVEX)
+    return Match_Unsupported;
+
+  if ((ForcedVEXEncoding == VEXEncoding_VEX2 ||
+       ForcedVEXEncoding == VEXEncoding_VEX3) &&
+      (MCID.TSFlags & X86II::EncodingMask) != X86II::VEX)
+    return Match_Unsupported;
+
+  return Match_Success;
+}
+
 bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
@@ -2956,18 +3028,24 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   MatchFPUWaitAlias(IDLoc, static_cast<X86Operand &>(*Operands[0]), Operands,
                     Out, MatchingInlineAsm);
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-  bool WasOriginallyInvalidOperand = false;
   unsigned Prefixes = getPrefixes(Operands);
 
   MCInst Inst;
+
+  // If VEX3 encoding is forced, we need to pass the USE_VEX3 flag to the
+  // encoder.
+  if (ForcedVEXEncoding == VEXEncoding_VEX3)
+    Prefixes |= X86::IP_USE_VEX3;
 
   if (Prefixes)
     Inst.setFlags(Prefixes);
 
   // First, try a direct match.
   FeatureBitset MissingFeatures;
-  switch (MatchInstruction(Operands, Inst, ErrorInfo, MissingFeatures,
-                           MatchingInlineAsm, isParsingIntelSyntax())) {
+  unsigned OriginalError = MatchInstruction(Operands, Inst, ErrorInfo,
+                                            MissingFeatures, MatchingInlineAsm,
+                                            isParsingIntelSyntax());
+  switch (OriginalError) {
   default: llvm_unreachable("Unexpected match result!");
   case Match_Success:
     if (!MatchingInlineAsm && validateInstruction(Inst, Operands))
@@ -2987,9 +3065,8 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MissingFeature:
     return ErrorMissingFeature(IDLoc, MissingFeatures, MatchingInlineAsm);
   case Match_InvalidOperand:
-    WasOriginallyInvalidOperand = true;
-    break;
   case Match_MnemonicFail:
+  case Match_Unsupported:
     break;
   }
   if (Op.getToken().empty()) {
@@ -3080,11 +3157,15 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   // If all of the instructions reported an invalid mnemonic, then the original
   // mnemonic was invalid.
   if (std::count(std::begin(Match), std::end(Match), Match_MnemonicFail) == 4) {
-    if (!WasOriginallyInvalidOperand) {
+    if (OriginalError == Match_MnemonicFail)
       return Error(IDLoc, "invalid instruction mnemonic '" + Base + "'",
                    Op.getLocRange(), MatchingInlineAsm);
-    }
 
+    if (OriginalError == Match_Unsupported)
+      return Error(IDLoc, "unsupported instruction", EmptyRange,
+                   MatchingInlineAsm);
+
+    assert(OriginalError == Match_InvalidOperand && "Unexpected error");
     // Recover location info for the operand if we know which was the problem.
     if (ErrorInfo != ~0ULL) {
       if (ErrorInfo >= Operands.size())
@@ -3100,6 +3181,13 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
 
     return Error(IDLoc, "invalid operand for instruction", EmptyRange,
+                 MatchingInlineAsm);
+  }
+
+  // If one instruction matched as unsupported, report this as unsupported.
+  if (std::count(std::begin(Match), std::end(Match),
+                 Match_Unsupported) == 1) {
+    return Error(IDLoc, "unsupported instruction", EmptyRange,
                  MatchingInlineAsm);
   }
 
@@ -3143,6 +3231,11 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
 
   MCInst Inst;
+
+  // If VEX3 encoding is forced, we need to pass the USE_VEX3 flag to the
+  // encoder.
+  if (ForcedVEXEncoding == VEXEncoding_VEX3)
+    Prefixes |= X86::IP_USE_VEX3;
 
   if (Prefixes)
     Inst.setFlags(Prefixes);
@@ -3290,6 +3383,13 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(UnsizedMemOp->getStartLoc(),
                  "ambiguous operand size for instruction '" + Mnemonic + "\'",
                  UnsizedMemOp->getLocRange());
+  }
+
+  // If one instruction matched as unsupported, report this as unsupported.
+  if (std::count(std::begin(Match), std::end(Match),
+                 Match_Unsupported) == 1) {
+    return Error(IDLoc, "unsupported instruction", EmptyRange,
+                 MatchingInlineAsm);
   }
 
   // If one instruction matched with a missing feature, report this as a

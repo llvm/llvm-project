@@ -426,16 +426,6 @@ option(LLVM_ENABLE_LLD "Use lld as C and C++ linker." OFF)
 option(LLVM_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LLVM_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 
-set(LLVM_CXX_STD_default "c++11")
-# Preserve behaviour of legacy cache variables
-if (LLVM_ENABLE_CXX1Y)
-  set(LLVM_CXX_STD_default "c++1y")
-elseif (LLVM_ENABLE_CXX1Z)
-  set(LLVM_CXX_STD_default "c++1z")
-endif()
-set(LLVM_CXX_STD ${LLVM_CXX_STD_default}
-    CACHE STRING "C++ standard to use for compilation.")
-
 option(LLVM_ENABLE_DUMP "Enable dump functions even when assertions are disabled" OFF)
 
 if( NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )

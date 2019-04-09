@@ -164,28 +164,19 @@ record in the array has the format:
   
 .. code-block:: c++
 
-  struct SectionContribEntry {
-    uint16_t Section;
-    char Padding1[2];
-    int32_t Offset;
-    int32_t Size;
-    uint32_t Characteristics;
-    uint16_t ModuleIndex;
-    char Padding2[2];
-    uint32_t DataCrc;
-    uint32_t RelocCrc;
-  };
-  
-While most of these are self-explanatory, the ``Characteristics`` field
-warrants some elaboration.  It corresponds to the ``Characteristics``
-field of the `IMAGE_SECTION_HEADER <https://msdn.microsoft.com/en-us/library/windows/desktop/ms680341(v=vs.85).aspx>`__
-structure.
-  
-.. code-block:: c++
-
   struct ModInfo {
     uint32_t Unused1;
-    SectionContribEntry SectionContr;
+    struct SectionContribEntry {
+      uint16_t Section;
+      char Padding1[2];
+      int32_t Offset;
+      int32_t Size;
+      uint32_t Characteristics;
+      uint16_t ModuleIndex;
+      char Padding2[2];
+      uint32_t DataCrc;
+      uint32_t RelocCrc;
+    } SectionContr;
     uint16_t Flags;
     uint16_t ModuleSymStream;
     uint32_t SymByteSize;
@@ -203,19 +194,35 @@ structure.
 - **SectionContr** - Describes the properties of the section in the final binary
   which contain the code and data from this module.
 
+  ``SectionContr.Characteristics`` corresponds to the ``Characteristics`` field
+  of the `IMAGE_SECTION_HEADER <https://msdn.microsoft.com/en-us/library/windows/desktop/ms680341(v=vs.85).aspx>`__
+  structure.
+  
+
 - **Flags** - A bitfield with the following format:
   
 .. code-block:: c++
 
-  uint16_t Dirty : 1;  // ``true`` if this ModInfo has been written since reading the PDB.
-  uint16_t EC : 1;     // ``true`` if EC information is present for this module. It is unknown what EC actually is.
+  // ``true`` if this ModInfo has been written since reading the PDB.  This is
+  // likely used to support incremental linking, so that the linker can decide
+  // if it needs to commit changes to disk.
+  uint16_t Dirty : 1;
+  // ``true`` if EC information is present for this module. EC is presumed to
+  // stand for "Edit & Continue", which LLVM does not support.  So this flag
+  // will always be be false.
+  uint16_t EC : 1;
   uint16_t Unused : 6;
-  uint16_t TSM : 8;    // Type Server Index for this module.  It is unknown what this is used for, but it is not used by LLVM.
+  // Type Server Index for this module.  This is assumed to be related to /Zi,
+  // but as LLVM treats /Zi as /Z7, this field will always be invalid for LLVM
+  // generated PDBs.
+  uint16_t TSM : 8;
   
 
 - **ModuleSymStream** - The index of the stream that contains symbol information
   for this module.  This includes CodeView symbol information as well as source
-  and line information.
+  and line information.  If this field is -1, then no additional debug info will
+  be present for this module (for example, this is what happens when you strip
+  private symbols from a PDB).
 
 - **SymByteSize** - The number of bytes of data from the stream identified by
   ``ModuleSymStream`` that represent CodeView symbol records.
@@ -225,7 +232,8 @@ structure.
 
 - **C13ByteSize** - The number of bytes of data from the stream identified by
   ``ModuleSymStream`` that represent C13-style CodeView line information.  At
-  most one of ``C11ByteSize`` and ``C13ByteSize`` will be non-zero.
+  most one of ``C11ByteSize`` and ``C13ByteSize`` will be non-zero.  Modern PDBs
+  always use C13 instead of C11.
 
 - **SourceFileCount** - The number of source files that contributed to this
   module during compilation.
@@ -263,10 +271,10 @@ with a single ``uint32_t`` which will be one of the following values:
   };
   
 ``Ver60`` is the only value which has been observed in a PDB so far.  Following
-this ``4`` byte field is an array of fixed-length structures.  If the version
-is ``Ver60``, it is an array of ``SectionContribEntry`` structures.  If the
-version is ``V2``, it is an array of ``SectionContribEntry2`` structures,
-defined as follows:
+this is an array of fixed-length structures.  If the version is ``Ver60``,
+it is an array of ``SectionContribEntry`` structures (this is the nested structure
+from the ``ModInfo`` type.  If the version is ``V2``, it is an array of
+``SectionContribEntry2`` structures, defined as follows:
   
 .. code-block:: c++
 
@@ -275,7 +283,9 @@ defined as follows:
     uint32_t ISectCoff;
   };
   
-The purpose of the second field is not well understood.
+The purpose of the second field is not well understood.  The name implies that
+is the index of the COFF section, but this also describes the existing field
+``SectionContribEntry::Section``.
   
 
 .. _dbi_section_map_substream:
@@ -283,7 +293,7 @@ The purpose of the second field is not well understood.
 Section Map Substream
 ^^^^^^^^^^^^^^^^^^^^^
 Begins at offset ``0`` immediately after the :ref:`dbi_sec_contr_substream` ends,
-and consumes ``Header->SectionMapSize`` bytes.  This substream begins with an ``8``
+and consumes ``Header->SectionMapSize`` bytes.  This substream begins with an ``4``
 byte header followed by an array of fixed-length records.  The header and records
 have the following layout:
   
@@ -385,8 +395,9 @@ usage of ``/Zi`` and ``mspdbsrv.exe``.  This substream will not be discussed fur
 EC Substream
 ^^^^^^^^^^^^
 Begins at offset ``0`` immediately after the :ref:`dbi_type_server_substream` ends,
-and consumes ``Header->ECSubstreamSize`` bytes.  Neither the purpose nor the layout
-of this substream is understood, and it will not be discussed further.
+and consumes ``Header->ECSubstreamSize`` bytes.  This is presumed to be related to
+Edit & Continue support in MSVC.  LLVM does not support Edit & Continue, so this
+stream will not be discussed further.
 
 .. _dbi_optional_dbg_stream:
 
@@ -402,9 +413,12 @@ are currently understood, although it's possible there may be more.  The
 layout of each stream generally corresponds exactly to a particular type
 of debug data directory from the PE/COFF file.  The format of these fields
 can be found in the `Microsoft PE/COFF Specification <https://www.microsoft.com/en-us/download/details.aspx?id=19509>`__.
+If any of these fields is -1, it means the corresponding type of debug info is
+not present in the PDB.
 
-**FPO Data** - ``DbgStreamArray[0]``.  The data in the referenced stream is a
-debug data directory of type ``IMAGE_DEBUG_TYPE_FPO``
+**FPO Data** - ``DbgStreamArray[0]``.  The data in the referenced stream is an
+array of ``FPO_DATA`` structures.  This contains the relocated contents of
+any ``.debug$F`` section from any of the linker inputs.
 
 **Exception Data** - ``DbgStreamArray[1]``.  The data in the referenced stream
 is a debug data directory of type ``IMAGE_DEBUG_TYPE_EXCEPTION``.
@@ -437,9 +451,12 @@ section from the executable, but that would make it identical to
 understood.
 
 **New FPO Data** - ``DbgStreamArray[9]``.  The data in the referenced stream is a
-debug data directory of type ``IMAGE_DEBUG_TYPE_FPO``.  It is not clear how this
-differs from ``DbgStreamArray[0]``, but in practice all observed PDB files have
-used the "new" format rather than the "old" format.
+debug data directory of type ``IMAGE_DEBUG_TYPE_FPO``.  Note that this is different
+from ``DbgStreamArray[0]`` in that ``.debug$F`` sections are only emitted by MASM.
+Thus, it is possible for both to appear in the same PDB if both MASM object files
+and cl object files are linked into the same program.
 
-**Original Section Header Data** - ``DbgStreamArray[10]``.  Assumed to be similar
-to ``DbgStreamArray[5]``, but has not been observed in practice.
+**Original Section Header Data** - ``DbgStreamArray[10]``.  Similar to 
+``DbgStreamArray[5]``, but contains the section headers before any binary translation
+has been performed.  This can be used in conjunction with ``DebugStreamArray[3]``
+and ``DbgStreamArray[4]`` to map instrumented and uninstrumented addresses.

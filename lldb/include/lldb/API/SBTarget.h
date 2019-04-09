@@ -772,7 +772,7 @@ public:
   ///    Only write breakpoints from this list.
   ///
   /// \param[in] append
-  ///    If \btrue, append the breakpoints in bkpt_list to the others
+  ///    If \b true, append the breakpoints in bkpt_list to the others
   ///    serialized in dest_file.  If dest_file doesn't exist, then a new
   ///    file will be created and the breakpoints in bkpt_list written to it.
   ///

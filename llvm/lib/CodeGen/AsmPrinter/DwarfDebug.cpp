@@ -1094,42 +1094,6 @@ static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
   llvm_unreachable("Unexpected 4-operand DBG_VALUE instruction!");
 }
 
-/// If this and Next are describing different fragments of the same
-/// variable, merge them by appending Next's values to the current
-/// list of values.
-/// Return true if the merge was successful.
-bool DebugLocEntry::MergeValues(const DebugLocEntry &Next) {
-  if (Begin == Next.Begin) {
-    auto *FirstExpr = cast<DIExpression>(Values[0].Expression);
-    auto *FirstNextExpr = cast<DIExpression>(Next.Values[0].Expression);
-    if (!FirstExpr->isFragment() || !FirstNextExpr->isFragment())
-      return false;
-
-    // We can only merge entries if none of the fragments overlap any others.
-    // In doing so, we can take advantage of the fact that both lists are
-    // sorted.
-    for (unsigned i = 0, j = 0; i < Values.size(); ++i) {
-      for (; j < Next.Values.size(); ++j) {
-        int res = cast<DIExpression>(Values[i].Expression)->fragmentCmp(
-            cast<DIExpression>(Next.Values[j].Expression));
-        if (res == 0) // The two expressions overlap, we can't merge.
-          return false;
-        // Values[i] is entirely before Next.Values[j],
-        // so go back to the next entry of Values.
-        else if (res == -1)
-          break;
-        // Next.Values[j] is entirely before Values[i], so go on to the
-        // next entry of Next.Values.
-      }
-    }
-
-    addValues(Next.Values);
-    End = Next.End;
-    return true;
-  }
-  return false;
-}
-
 /// Build the location list for all DBG_VALUEs in the function that
 /// describe the same variable.  If the ranges of several independent
 /// fragments of the same variable overlap partially, split them up and
@@ -1170,7 +1134,7 @@ DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
       continue;
     }
 
-    // If this fragment overlaps with any open ranges, truncate them.
+    // If this debug value overlaps with any open ranges, truncate them.
     const DIExpression *DIExpr = Begin->getDebugExpression();
     auto Last = remove_if(OpenRanges, [&](DebugLocEntry::Value R) {
       return DIExpr->fragmentsOverlap(R.getExpression());
@@ -1192,40 +1156,15 @@ DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     LLVM_DEBUG(dbgs() << "DotDebugLoc: " << *Begin << "\n");
 
     auto Value = getDebugLocValue(Begin);
+    OpenRanges.push_back(Value);
 
     // Omit entries with empty ranges as they do not have any effect in DWARF.
     if (StartLabel == EndLabel) {
-      // If this is a fragment, we must still add the value to the list of
-      // open ranges, since it may describe non-overlapping parts of the
-      // variable.
-      if (DIExpr->isFragment())
-        OpenRanges.push_back(Value);
       LLVM_DEBUG(dbgs() << "Omitting location list entry with empty range.\n");
       continue;
     }
 
-    DebugLocEntry Loc(StartLabel, EndLabel, Value);
-    bool couldMerge = false;
-
-    // If this is a fragment, it may belong to the current DebugLocEntry.
-    if (DIExpr->isFragment()) {
-      // Add this value to the list of open ranges.
-      OpenRanges.push_back(Value);
-
-      // Attempt to add the fragment to the last entry.
-      if (!DebugLoc.empty())
-        if (DebugLoc.back().MergeValues(Loc))
-          couldMerge = true;
-    }
-
-    if (!couldMerge) {
-      // Need to add a new DebugLocEntry. Add all values from still
-      // valid non-overlapping fragments.
-      if (OpenRanges.size())
-        Loc.addValues(OpenRanges);
-
-      DebugLoc.push_back(std::move(Loc));
-    }
+    DebugLoc.emplace_back(StartLabel, EndLabel, OpenRanges);
 
     // Attempt to coalesce the ranges of two otherwise identical
     // DebugLocEntries.
@@ -2008,6 +1947,8 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
                              DebugLocStream::ListBuilder &List,
                              const DIBasicType *BT,
                              DwarfCompileUnit &TheCU) {
+  assert(!Values.empty() &&
+         "location list entries without values are redundant");
   assert(Begin != End && "unexpected location list entry with empty range");
   DebugLocStream::EntryBuilder Entry(List, Begin, End);
   BufferByteStreamer Streamer = Entry.getStreamer();

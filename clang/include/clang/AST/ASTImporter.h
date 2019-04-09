@@ -215,7 +215,7 @@ class TypeSourceInfo;
     /// \returns The equivalent declaration in the "to" context, or the import
     /// error.
     llvm::Expected<Decl *> Import_New(Decl *FromD);
-    llvm::Expected<Decl *> Import_New(const Decl *FromD) {
+    llvm::Expected<const Decl *> Import_New(const Decl *FromD) {
       return Import_New(const_cast<Decl *>(FromD));
     }
     // FIXME: Remove this version.

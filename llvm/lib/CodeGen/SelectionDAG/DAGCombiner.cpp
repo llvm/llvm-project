@@ -3037,6 +3037,14 @@ SDValue DAGCombiner::visitSUBO(SDNode *N) {
     return CombineTo(N, DAG.getConstant(0, DL, VT),
                      DAG.getConstant(0, DL, CarryVT));
 
+  ConstantSDNode *N1C = getAsNonOpaqueConstant(N1);
+
+  // fold (subox, c) -> (addo x, -c)
+  if (IsSigned && N1C && !N1C->getAPIntValue().isMinSignedValue()) {
+    return DAG.getNode(ISD::SADDO, DL, N->getVTList(), N0,
+                       DAG.getConstant(-N1C->getAPIntValue(), DL, VT));
+  }
+
   // fold (subo x, 0) -> x + no borrow
   if (isNullOrNullSplat(N1))
     return CombineTo(N, N0, DAG.getConstant(0, DL, CarryVT));

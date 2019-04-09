@@ -19,7 +19,6 @@ TEST(Record, classify) {
   EXPECT_EQ(Record::File, Record::classify("FILE"));
   EXPECT_EQ(Record::Func, Record::classify("FUNC"));
   EXPECT_EQ(Record::Public, Record::classify("PUBLIC"));
-  EXPECT_EQ(Record::StackCFIInit, Record::classify("STACK CFI INIT"));
   EXPECT_EQ(Record::StackCFI, Record::classify("STACK CFI"));
 
   // Any obviously incorrect lines will be classified as such.
@@ -96,4 +95,27 @@ TEST(PublicRecord, parse) {
   EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC 47"));
   EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC m"));
   EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC"));
+}
+
+TEST(StackCFIRecord, parse) {
+  EXPECT_EQ(StackCFIRecord(0x47, 0x8, ".cfa: $esp 4 + $eip: .cfa 4 - ^"),
+            StackCFIRecord::parse(
+                "STACK CFI INIT 47 8 .cfa: $esp 4 + $eip: .cfa 4 - ^"));
+
+  EXPECT_EQ(StackCFIRecord(0x47, 0x8, ".cfa: $esp 4 +"),
+            StackCFIRecord::parse("STACK CFI INIT 47 8 .cfa: $esp 4 +  "));
+
+  EXPECT_EQ(StackCFIRecord(0x47, llvm::None, ".cfa: $esp 4 +"),
+            StackCFIRecord::parse("STACK CFI 47 .cfa: $esp 4 +"));
+
+  // The validity of the register value expressions is not checked
+  EXPECT_EQ(StackCFIRecord(0x47, 0x8, ".cfa: ^ ^ ^"),
+            StackCFIRecord::parse("STACK CFI INIT 47 8 .cfa: ^ ^ ^"));
+
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK CFI INIT 47"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK CFI INIT"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK CFI"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("FILE 47 foo"));
+  EXPECT_EQ(llvm::None, StackCFIRecord::parse("42 47"));
 }

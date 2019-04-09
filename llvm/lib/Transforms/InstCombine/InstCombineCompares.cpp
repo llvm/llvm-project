@@ -3961,29 +3961,25 @@ bool InstCombiner::OptimizeOverflowCheck(OverflowCheckFlavor OCF, Value *LHS,
   case OCF_INVALID:
     llvm_unreachable("bad overflow check kind!");
 
-  case OCF_UNSIGNED_ADD: {
-    OverflowResult OR = computeOverflowForUnsignedAdd(LHS, RHS, &OrigI);
-    if (OR == OverflowResult::NeverOverflows)
-      return SetResult(Builder.CreateNUWAdd(LHS, RHS), Builder.getFalse(),
-                       true);
-
-    if (OR == OverflowResult::AlwaysOverflows)
-      return SetResult(Builder.CreateAdd(LHS, RHS), Builder.getTrue(), true);
-
-    // Fall through uadd into sadd
-    LLVM_FALLTHROUGH;
-  }
+  case OCF_UNSIGNED_ADD:
   case OCF_SIGNED_ADD: {
     // X + 0 -> {X, false}
     if (match(RHS, m_Zero()))
       return SetResult(LHS, Builder.getFalse(), false);
 
-    // We can strength reduce this signed add into a regular add if we can prove
-    // that it will never overflow.
-    if (OCF == OCF_SIGNED_ADD)
+    if (OCF == OCF_UNSIGNED_ADD) {
+      OverflowResult OR = computeOverflowForUnsignedAdd(LHS, RHS, &OrigI);
+      if (OR == OverflowResult::NeverOverflows)
+        return SetResult(Builder.CreateNUWAdd(LHS, RHS), Builder.getFalse(),
+                         true);
+
+      if (OR == OverflowResult::AlwaysOverflows)
+        return SetResult(Builder.CreateAdd(LHS, RHS), Builder.getTrue(), true);
+    } else {
       if (willNotOverflowSignedAdd(LHS, RHS, OrigI))
         return SetResult(Builder.CreateNSWAdd(LHS, RHS), Builder.getFalse(),
                          true);
+    }
     break;
   }
 
@@ -3993,28 +3989,20 @@ bool InstCombiner::OptimizeOverflowCheck(OverflowCheckFlavor OCF, Value *LHS,
     if (match(RHS, m_Zero()))
       return SetResult(LHS, Builder.getFalse(), false);
 
-    if (OCF == OCF_SIGNED_SUB) {
-      if (willNotOverflowSignedSub(LHS, RHS, OrigI))
-        return SetResult(Builder.CreateNSWSub(LHS, RHS), Builder.getFalse(),
-                         true);
-    } else {
+    if (OCF == OCF_UNSIGNED_SUB) {
       if (willNotOverflowUnsignedSub(LHS, RHS, OrigI))
         return SetResult(Builder.CreateNUWSub(LHS, RHS), Builder.getFalse(),
+                         true);
+    } else {
+      if (willNotOverflowSignedSub(LHS, RHS, OrigI))
+        return SetResult(Builder.CreateNSWSub(LHS, RHS), Builder.getFalse(),
                          true);
     }
     break;
   }
 
-  case OCF_UNSIGNED_MUL: {
-    OverflowResult OR = computeOverflowForUnsignedMul(LHS, RHS, &OrigI);
-    if (OR == OverflowResult::NeverOverflows)
-      return SetResult(Builder.CreateNUWMul(LHS, RHS), Builder.getFalse(),
-                       true);
-    if (OR == OverflowResult::AlwaysOverflows)
-      return SetResult(Builder.CreateMul(LHS, RHS), Builder.getTrue(), true);
-    LLVM_FALLTHROUGH;
-  }
-  case OCF_SIGNED_MUL:
+  case OCF_UNSIGNED_MUL:
+  case OCF_SIGNED_MUL: {
     // X * undef -> undef
     if (isa<UndefValue>(RHS))
       return SetResult(RHS, UndefValue::get(Builder.getInt1Ty()), false);
@@ -4027,11 +4015,20 @@ bool InstCombiner::OptimizeOverflowCheck(OverflowCheckFlavor OCF, Value *LHS,
     if (match(RHS, m_One()))
       return SetResult(LHS, Builder.getFalse(), false);
 
-    if (OCF == OCF_SIGNED_MUL)
+    if (OCF == OCF_UNSIGNED_MUL) {
+      OverflowResult OR = computeOverflowForUnsignedMul(LHS, RHS, &OrigI);
+      if (OR == OverflowResult::NeverOverflows)
+        return SetResult(Builder.CreateNUWMul(LHS, RHS), Builder.getFalse(),
+                         true);
+      if (OR == OverflowResult::AlwaysOverflows)
+        return SetResult(Builder.CreateMul(LHS, RHS), Builder.getTrue(), true);
+    } else {
       if (willNotOverflowSignedMul(LHS, RHS, OrigI))
         return SetResult(Builder.CreateNSWMul(LHS, RHS), Builder.getFalse(),
                          true);
+    }
     break;
+  }
   }
 
   return false;

@@ -6,6 +6,10 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===------------------------------------------------------------------------===#
+"""
+Example of use:
+  asan_symbolize.py -c "$HOME/opt/cross/bin/arm-linux-gnueabi-" -s "$HOME/SymbolFiles" < asan.log
+"""
 import argparse
 import bisect
 import getopt
@@ -517,9 +521,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(
       formatter_class=argparse.RawDescriptionHelpFormatter,
       description='ASan symbolization script',
-      epilog='Example of use:\n'
-             'asan_symbolize.py -c "$HOME/opt/cross/bin/arm-linux-gnueabi-" '
-             '-s "$HOME/SymbolFiles" < asan.log')
+      epilog=__doc__)
   parser.add_argument('path_to_cut', nargs='*',
                       help='pattern to be cut from the result file path ')
   parser.add_argument('-d','--demangle', action='store_true',

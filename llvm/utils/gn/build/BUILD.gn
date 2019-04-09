@@ -139,7 +139,9 @@ config("compiler_defaults") {
 }
 
 config("no_exceptions") {
-  cflags_cc = [ "-fno-exceptions" ]
+  if (host_os != "win") {
+    cflags_cc = [ "-fno-exceptions" ]
+  }
 }
 
 config("no_rtti") {
