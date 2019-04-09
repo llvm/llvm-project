@@ -5,6 +5,8 @@
 //CHECK: [[ANN3:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}
 //CHECK: [[ANN4:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{bankwidth:4}
 //CHECK: [[ANN5:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{max_concurrency:8}
+//CHECK: [[ANN10:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{pump:1}
+//CHECK: [[ANN11:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{pump:2}
 //CHECK: [[ANN6:@.str[\.]*[0-9]*]] = {{.*}}{memory:BLOCK_RAM}
 //CHECK: [[ANN7:@.str[\.]*[0-9]*]] = {{.*}}{memory:MLAB}
 //CHECK: [[ANN8:@.str[\.]*[0-9]*]] = {{.*}}{memory:DEFAULT}{bankwidth:8}
@@ -35,6 +37,8 @@ struct foo_two {
   int __attribute__((__memory__)) f3;
   int __attribute__((__bankwidth__(4))) f4;
   int __attribute__((max_concurrency(8))) f5;
+  int __attribute__((singlepump)) f6;
+  int __attribute__((doublepump)) f7;
 };
 
 void bar() {
@@ -59,6 +63,14 @@ void bar() {
   //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD5]]
   //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN5]]
   s1.f5 = 0;
+  //CHECK: %[[FIELD6:.*]] = getelementptr inbounds %struct.foo_two{{.*}}
+  //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD6]]
+  //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN10]]
+  s1.f6 = 0;
+  //CHECK: %[[FIELD7:.*]] = getelementptr inbounds %struct.foo_two{{.*}}
+  //CHECK: %[[CAST:.*]] = bitcast{{.*}}%[[FIELD7]]
+  //CHECK: call i8* @llvm.ptr.annotation.p0i8{{.*}}%[[CAST]]{{.*}}[[ANN11]]
+  s1.f7 = 0;
 }
 
 void baz() {
@@ -90,6 +102,14 @@ void baz() {
   //CHECK: %[[V_SEVEN1:v_seven[0-9]+]] = bitcast{{.*}}v_seven
   //CHECK: llvm.var.annotation{{.*}}%[[V_SEVEN1]],{{.*}}[[ANN9]]
   int v_seven [[intelfpga::max_concurrency(4)]];
+  //CHECK: %[[V_EIGHT:[0-9]+]] = bitcast{{.*}}v_eight
+  //CHECK: %[[V_EIGHT1:v_eight[0-9]+]] = bitcast{{.*}}v_eight
+  //CHECK: llvm.var.annotation{{.*}}%[[V_EIGHT1]],{{.*}}[[ANN10]]
+  int v_eight [[intelfpga::singlepump]];
+  //CHECK: %[[V_NINE:[0-9]+]] = bitcast{{.*}}v_nine
+  //CHECK: %[[V_NINE1:v_nine[0-9]+]] = bitcast{{.*}}v_nine
+  //CHECK: llvm.var.annotation{{.*}}%[[V_NINE1]],{{.*}}[[ANN11]]
+  int v_nine [[intelfpga::doublepump]];
 }
 
 template <typename name, typename Func>

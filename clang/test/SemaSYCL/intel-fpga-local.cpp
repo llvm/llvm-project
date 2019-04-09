@@ -3,6 +3,17 @@
 //CHECK: FunctionDecl{{.*}}foo1
 void foo1()
 {
+  //CHECK: VarDecl{{.*}}v_one
+  //CHECK: IntelFPGAMemoryAttr{{.*}}Implicit
+  //CHECK: IntelFPGADoublePumpAttr
+  __attribute__((__doublepump__))
+  unsigned int v_one[64];
+
+  //CHECK: VarDecl{{.*}}v_one2
+  //CHECK: IntelFPGAMemoryAttr{{.*}}Implicit
+  //CHECK: IntelFPGADoublePumpAttr
+  [[intelfpga::doublepump]] unsigned int v_one2[64];
+
   //CHECK: VarDecl{{.*}}v_two
   //CHECK: IntelFPGAMemoryAttr
   __attribute__((__memory__))
@@ -24,6 +35,17 @@ void foo1()
   //CHECK: VarDecl{{.*}}v_three2
   //CHECK: IntelFPGARegisterAttr
   [[intelfpga::register]] unsigned int v_three2[32];
+
+  //CHECK: VarDecl{{.*}}v_four
+  //CHECK: IntelFPGAMemoryAttr{{.*}}Implicit
+  //CHECK: IntelFPGASinglePumpAttr
+  __attribute__((__singlepump__))
+  unsigned int v_four[64];
+
+  //CHECK: VarDecl{{.*}}v_four2
+  //CHECK: IntelFPGAMemoryAttr{{.*}}Implicit
+  //CHECK: IntelFPGASinglePumpAttr
+  [[intelfpga::singlepump]] unsigned int v_four2[64];
 
   //CHECK: VarDecl{{.*}}v_five
   //CHECK: IntelFPGAMemoryAttr{{.*}}Implicit
@@ -70,15 +92,78 @@ void foo1()
   //CHECK-NEXT: IntegerLiteral{{.*}}8{{$}}
   [[intelfpga::max_concurrency(8)]] unsigned int v_seven2[64];
 
+  //CHECK: VarDecl{{.*}}v_fourteen
+  //CHECK: IntelFPGADoublePumpAttr
+  //CHECK: IntelFPGAMemoryAttr{{.*}}MLAB{{$}}
+  __attribute__((__doublepump__))
+  __attribute__((__memory__("MLAB")))
+  unsigned int v_fourteen[64];
+
+  //CHECK: VarDecl{{.*}}v_fifteen
+  //CHECK: IntelFPGAMemoryAttr{{.*}}MLAB{{$}}
+  //CHECK: IntelFPGADoublePumpAttr
+  __attribute__((__memory__("MLAB")))
+  __attribute__((__doublepump__))
+  unsigned int v_fifteen[64];
+
   int __attribute__((__register__)) A;
+  int __attribute__((__numbanks__(4), __bankwidth__(16), __singlepump__)) B;
+  int __attribute__((__numbanks__(4), __bankwidth__(16), __doublepump__)) C;
   int __attribute__((__numbanks__(4), __bankwidth__(16))) E;
 
   // diagnostics
+
+  // **doublepump
+  //expected-error@+2{{attributes are not compatible}}
+  __attribute__((__doublepump__))
+  __attribute__((__singlepump__))
+  //expected-note@-2 {{conflicting attribute is here}}
+  unsigned int dp_one[64];
+
+  //expected-warning@+2{{attribute 'doublepump' is already applied}}
+  __attribute__((doublepump))
+  __attribute__((__doublepump__))
+  unsigned int dp_two[64];
+
+  //expected-error@+2{{attributes are not compatible}}
+  __attribute__((__doublepump__))
+  __attribute__((__register__))
+  //expected-note@-2 {{conflicting attribute is here}}
+  unsigned int dp_three[64];
+
+  // **singlepump
+  //expected-error@+1{{attributes are not compatible}}
+  __attribute__((__singlepump__,__doublepump__))
+  //expected-note@-1 {{conflicting attribute is here}}
+  unsigned int sp_one[64];
+
+  //expected-warning@+2{{attribute 'singlepump' is already applied}}
+  __attribute__((singlepump))
+  __attribute__((__singlepump__))
+  unsigned int sp_two[64];
+
+  //expected-error@+2{{attributes are not compatible}}
+  __attribute__((__singlepump__))
+  __attribute__((__register__))
+  //expected-note@-2 {{conflicting attribute is here}}
+  unsigned int sp_three[64];
 
   // **register
   //expected-warning@+1{{attribute 'register' is already applied}}
   __attribute__((register)) __attribute__((__register__))
   unsigned int reg_one[64];
+
+  //expected-error@+2{{attributes are not compatible}}
+  __attribute__((__register__))
+  __attribute__((__singlepump__))
+  //expected-note@-2 {{conflicting attribute is here}}
+  unsigned int reg_two[64];
+
+  //expected-error@+2{{attributes are not compatible}}
+  __attribute__((__register__))
+  __attribute__((__doublepump__))
+  //expected-note@-2 {{conflicting attribute is here}}
+  unsigned int reg_three[64];
 
   //expected-error@+2{{attributes are not compatible}}
   __attribute__((__register__))
@@ -245,6 +330,11 @@ void other2()
 void other3(__attribute__((__max_concurrency__(8))) int pfoo) {}
 
 struct foo {
+  //CHECK: FieldDecl{{.*}}v_one
+  //CHECK: IntelFPGAMemoryAttr{{.*}}Implicit
+  //CHECK: IntelFPGADoublePumpAttr
+  __attribute__((__doublepump__)) unsigned int v_one[64];
+
   //CHECK: FieldDecl{{.*}}v_two
   //CHECK: IntelFPGAMemoryAttr
   __attribute__((__memory__)) unsigned int v_two[64];
@@ -257,9 +347,20 @@ struct foo {
   //CHECK: IntelFPGAMemoryAttr{{.*}}BlockRAM{{$}}
   __attribute__((__memory__("BLOCK_RAM"))) unsigned int v_two_B[64];
 
+  //CHECK: FieldDecl{{.*}}v_two_C
+  //CHECK: IntelFPGAMemoryAttr{{.*}}BlockRAM{{$}}
+  //CHECK: IntelFPGADoublePumpAttr
+  __attribute__((__memory__("BLOCK_RAM")))
+  __attribute__((doublepump)) unsigned int v_two_C[64];
+
   //CHECK: FieldDecl{{.*}}v_three
   //CHECK: IntelFPGARegisterAttr
   __attribute__((__register__)) unsigned int v_three[64];
+
+  //CHECK: FieldDecl{{.*}}v_four
+  //CHECK: IntelFPGAMemoryAttr{{.*}}Implicit
+  //CHECK: IntelFPGASinglePumpAttr
+  __attribute__((__singlepump__)) unsigned int v_four[64];
 
   //CHECK: FieldDecl{{.*}}v_five
   //CHECK: IntelFPGAMemoryAttr{{.*}}Implicit

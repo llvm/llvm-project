@@ -5013,6 +5013,26 @@ static bool checkForDuplicateAttribute(Sema &S, Decl *D,
   return false;
 }
 
+/// Handle the __doublepump__ and __singlepump__ attributes.
+/// One but not both can be specified
+/// Both are incompatible with the __register__ attribute.
+template <typename AttrType, typename IncompatAttrType>
+static void handleIntelFPGAPumpAttr(Sema &S, Decl *D, const ParsedAttr &Attr) {
+
+  checkForDuplicateAttribute<AttrType>(S, D, Attr);
+  if (checkAttrMutualExclusion<IncompatAttrType>(S, D, Attr))
+    return;
+
+  if (checkAttrMutualExclusion<IntelFPGARegisterAttr>(S, D, Attr))
+    return;
+
+  if (!D->hasAttr<IntelFPGAMemoryAttr>())
+    D->addAttr(IntelFPGAMemoryAttr::CreateImplicit(
+        S.Context, IntelFPGAMemoryAttr::Default));
+
+  handleSimpleAttribute<AttrType>(S, D, Attr);
+}
+
 /// Handle the __memory__ attribute.
 /// This is incompatible with the __register__ attribute.
 static void handleIntelFPGAMemoryAttr(Sema &S, Decl *D,
@@ -5057,6 +5077,10 @@ static bool checkIntelFPGARegisterAttrCompatibility(Sema &S, Decl *D,
     if (!MA->isImplicit() &&
         checkAttrMutualExclusion<IntelFPGAMemoryAttr>(S, D, Attr))
       InCompat = true;
+  if (checkAttrMutualExclusion<IntelFPGADoublePumpAttr>(S, D, Attr))
+    InCompat = true;
+  if (checkAttrMutualExclusion<IntelFPGASinglePumpAttr>(S, D, Attr))
+    InCompat = true;
   if (checkAttrMutualExclusion<IntelFPGABankWidthAttr>(S, D, Attr))
     InCompat = true;
   if (checkAttrMutualExclusion<IntelFPGAMaxConcurrencyAttr>(S, D, Attr))
@@ -7459,6 +7483,14 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
 
   // Intel FPGA specific attributes
+  case ParsedAttr::AT_IntelFPGADoublePump:
+    handleIntelFPGAPumpAttr<IntelFPGADoublePumpAttr, IntelFPGASinglePumpAttr>(
+        S, D, AL);
+    break;
+  case ParsedAttr::AT_IntelFPGASinglePump:
+    handleIntelFPGAPumpAttr<IntelFPGASinglePumpAttr, IntelFPGADoublePumpAttr>(
+        S, D, AL);
+    break;
   case ParsedAttr::AT_IntelFPGAMemory:
     handleIntelFPGAMemoryAttr(S, D, AL);
     break;

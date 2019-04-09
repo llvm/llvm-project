@@ -3531,6 +3531,10 @@ void CodeGenModule::generateIntelFPGAAnnotation(
     }
     Out << '}';
   }
+  if (D->hasAttr<IntelFPGASinglePumpAttr>())
+    Out << "{pump:1}";
+  if (D->hasAttr<IntelFPGADoublePumpAttr>())
+    Out << "{pump:2}";
   if (const auto *BWA = D->getAttr<IntelFPGABankWidthAttr>()) {
     llvm::APSInt BWAInt = BWA->getValue()->EvaluateKnownConstInt(getContext());
     Out << '{' << BWA->getSpelling() << ':' << BWAInt << '}';

@@ -1419,6 +1419,22 @@ def IntelFPGALocalOrStaticVar : SubsetSubject<Var,
                                  S->hasLocalStorage())}],
                               "local variables, static variables">;
 
+def IntelFPGADoublePump : Attr {
+  let Spellings = [GNU<"doublepump">, CXX11<"intelfpga", "doublepump">];
+  let Subjects = SubjectList<[IntelFPGAConstVar, IntelFPGALocalOrStaticVar,
+                              Field], ErrorDiag>;
+  let LangOpts = [SYCL];
+  let Documentation = [IntelFPGADoublePumpAttrDocs];
+}
+
+def IntelFPGASinglePump : Attr {
+  let Spellings = [GNU<"singlepump">, CXX11<"intelfpga", "singlepump">];
+  let Subjects = SubjectList<[IntelFPGAConstVar, IntelFPGALocalOrStaticVar,
+                              Field], ErrorDiag>;
+  let LangOpts = [SYCL];
+  let Documentation = [IntelFPGASinglePumpAttrDocs];
+}
+
 def IntelFPGAMemory : Attr {
   let Spellings = [GNU<"memory">, CXX11<"intelfpga", "memory">];
   let Args = [EnumArgument<"Kind", "MemoryKind",

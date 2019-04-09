@@ -1668,6 +1668,26 @@ as ``-mlong-calls`` and ``-mno-long-calls``.
   }];
 }
 
+def IntelFPGADoublePumpAttrDocs : Documentation {
+let Category = DocCatVariable;
+  let Heading = "doublepump (IntelFPGA)";
+  let Content = [{
+This attribute may be attached to a variable or struct member declaration and
+instructs the backend to implement the variable or struct member in a memory
+that is clocked at twice the rate of its accessors.
+  }];
+}
+
+def IntelFPGASinglePumpAttrDocs : Documentation {
+let Category = DocCatVariable;
+  let Heading = "singlepump (IntelFPGA)";
+  let Content = [{
+This attribute may be attached to a variable or struct member declaration and
+instructs the backend to implement the variable or struct member in a memory
+that is clocked at the same rate as its accessors.
+  }];
+}
+
 def IntelFPGAMemoryAttrDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "memory (IntelFPGA)";
