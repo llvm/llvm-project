@@ -82,7 +82,10 @@ private:
 // .o file (wasm object file)
 class ObjFile : public InputFile {
 public:
-  explicit ObjFile(MemoryBufferRef M) : InputFile(ObjectKind, M) {}
+  explicit ObjFile(MemoryBufferRef M, StringRef ArchiveName)
+      : InputFile(ObjectKind, M) {
+    this->ArchiveName = ArchiveName;
+  }
   static bool classof(const InputFile *F) { return F->kind() == ObjectKind; }
 
   void parse() override;
@@ -144,7 +147,10 @@ public:
 // .bc file
 class BitcodeFile : public InputFile {
 public:
-  explicit BitcodeFile(MemoryBufferRef M) : InputFile(BitcodeKind, M) {}
+  explicit BitcodeFile(MemoryBufferRef M, StringRef ArchiveName)
+      : InputFile(BitcodeKind, M) {
+    this->ArchiveName = ArchiveName;
+  }
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
 
   void parse() override;
@@ -153,7 +159,7 @@ public:
 
 // Will report a fatal() error if the input buffer is not a valid bitcode
 // or wasm object file.
-InputFile *createObjectFile(MemoryBufferRef MB);
+InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "");
 
 // Opens a given file.
 llvm::Optional<MemoryBufferRef> readFile(StringRef Path);

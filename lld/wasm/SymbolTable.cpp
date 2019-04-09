@@ -58,7 +58,7 @@ void SymbolTable::addCombinedLTOObject() {
     LTO->add(*F);
 
   for (StringRef Filename : LTO->compile()) {
-    auto *Obj = make<ObjFile>(MemoryBufferRef(Filename, "lto.tmp"));
+    auto *Obj = make<ObjFile>(MemoryBufferRef(Filename, "lto.tmp"), "");
     Obj->parse();
     ObjectFiles.push_back(Obj);
   }
