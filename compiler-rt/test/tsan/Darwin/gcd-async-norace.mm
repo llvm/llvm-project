@@ -1,24 +1,25 @@
-// RUN: %clang_tsan %s -o %t -framework Foundation
+// RUN: %clang_tsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
-#import <Foundation/Foundation.h>
+#include "dispatch/dispatch.h"
+
+#include <stdio.h>
 
 long global;
 
 int main() {
-  NSLog(@"Hello world.");
+  fprintf(stderr, "Hello world.\n");
+  dispatch_semaphore_t done = dispatch_semaphore_create(0);
 
   global = 42;
   dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
     global = 43;
 
-    dispatch_sync(dispatch_get_main_queue(), ^{
-      CFRunLoopStop(CFRunLoopGetCurrent());
-    });
+    dispatch_semaphore_signal(done);
   });
 
-  CFRunLoopRun();
-  NSLog(@"Done.");
+  dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
+  fprintf(stderr, "Done.\n");
 }
 
 // CHECK: Hello world.
