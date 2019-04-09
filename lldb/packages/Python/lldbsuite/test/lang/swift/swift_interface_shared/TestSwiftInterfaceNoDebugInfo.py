@@ -30,12 +30,14 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
+    @skipIfLinux # rdar://49662256
     def test_swift_interface(self):
         """Test that we load and handle modules that only have textual .swiftinterface files"""
         self.build()
         self.do_test()
 
     @swiftTest
+    @skipIfLinux # rdar://49662256
     def test_swift_interface_fallback(self):
         """Test that we fall back to load from the .swiftinterface file if the .swiftmodule is invalid"""
         self.build()
