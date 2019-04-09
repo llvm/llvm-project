@@ -23,6 +23,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
@@ -163,7 +164,7 @@ bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
       MemoryBuffer::getFileOrSTDIN(Path);
   if (!MB)
     return false;
-  return !zlib::isAvailable() || CRCHash == zlib::crc32(MB.get()->getBuffer());
+  return CRCHash == llvm::crc32(0, MB.get()->getBuffer());
 }
 
 bool findDebugBinary(const std::string &OrigPath,

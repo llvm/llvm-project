@@ -46,6 +46,7 @@ static_library("Support") {
     "BranchProbability.cpp",
     "BuryPointer.cpp",
     "COM.cpp",
+    "CRC.cpp",
     "CachePruning.cpp",
     "Chrono.cpp",
     "CodeGenCoverage.cpp",

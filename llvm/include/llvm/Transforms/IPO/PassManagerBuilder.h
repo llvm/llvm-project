@@ -57,7 +57,7 @@ class PassManagerBase;
 ///   ...
 class PassManagerBuilder {
 public:
-  /// Extensions are passed the builder itself (so they can see how it is
+  /// Extensions are passed to the builder itself (so they can see how it is
   /// configured) as well as the pass manager to add stuff to.
   typedef std::function<void(const PassManagerBuilder &Builder,
                              legacy::PassManagerBase &PM)>

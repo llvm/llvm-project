@@ -123,7 +123,9 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
 
   // Construct the context before querying for the existence of the DIE in
   // case such construction creates the DIE.
-  DIE *ContextDIE = getOrCreateContextDIE(GVContext);
+  auto *CB = GVContext ? dyn_cast<DICommonBlock>(GVContext) : nullptr;
+  DIE *ContextDIE = CB ? getOrCreateCommonBlock(CB, GlobalExprs)
+    : getOrCreateContextDIE(GVContext);
 
   // Add to map.
   DIE *VariableDIE = &createAndAddDIE(GV->getTag(), *ContextDIE, GV);
@@ -166,6 +168,13 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     addTemplateParams(*VariableDIE, DINodeArray(TP));
 
   // Add location.
+  addLocationAttribute(VariableDIE, GV, GlobalExprs);
+
+  return VariableDIE;
+}
+
+void DwarfCompileUnit::addLocationAttribute(
+    DIE *VariableDIE, const DIGlobalVariable *GV, ArrayRef<GlobalExpr> GlobalExprs) {
   bool addToAccelTable = false;
   DIELoc *Loc = nullptr;
   Optional<unsigned> NVPTXAddressSpace;
@@ -288,8 +297,25 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
         DD->useAllLinkageNames())
       DD->addAccelName(*CUNode, GV->getLinkageName(), *VariableDIE);
   }
+}
 
-  return VariableDIE;
+DIE *DwarfCompileUnit::getOrCreateCommonBlock(
+    const DICommonBlock *CB, ArrayRef<GlobalExpr> GlobalExprs) {
+  // Construct the context before querying for the existence of the DIE in case
+  // such construction creates the DIE.
+  DIE *ContextDIE = getOrCreateContextDIE(CB->getScope());
+
+  if (DIE *NDie = getDIE(CB))
+    return NDie;
+  DIE &NDie = createAndAddDIE(dwarf::DW_TAG_common_block, *ContextDIE, CB);
+  StringRef Name = CB->getName().empty() ? "_BLNK_" : CB->getName();
+  addString(NDie, dwarf::DW_AT_name, Name);
+  addGlobalName(Name, NDie, CB->getScope());
+  if (CB->getFile())
+    addSourceLine(NDie, CB->getLineNo(), CB->getFile());
+  if (DIGlobalVariable *V = CB->getDecl())
+    getCU().addLocationAttribute(&NDie, V, GlobalExprs);
+  return &NDie;
 }
 
 void DwarfCompileUnit::addRange(RangeSpan Range) {

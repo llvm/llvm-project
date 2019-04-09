@@ -4052,7 +4052,7 @@ def VPEXTRWrr : Ii8<0xC5, MRMSrcReg,
                     "vpextrw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     [(set GR32orGR64:$dst, (X86pextrw (v8i16 VR128:$src1),
                                             imm:$src2))]>,
-                PD, VEX, Sched<[WriteVecExtract]>;
+                PD, VEX, VEX_WIG, Sched<[WriteVecExtract]>;
 def PEXTRWrr : PDIi8<0xC5, MRMSrcReg,
                     (outs GR32orGR64:$dst), (ins VR128:$src1, u8imm:$src2),
                     "pextrw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
@@ -4062,7 +4062,7 @@ def PEXTRWrr : PDIi8<0xC5, MRMSrcReg,
 
 // Insert
 let Predicates = [HasAVX, NoBWI] in
-defm VPINSRW : sse2_pinsrw<0>, PD, VEX_4V;
+defm VPINSRW : sse2_pinsrw<0>, PD, VEX_4V, VEX_WIG;
 
 let Predicates = [UseSSE2], Constraints = "$src1 = $dst" in
 defm PINSRW : sse2_pinsrw, PD;
@@ -5362,7 +5362,7 @@ multiclass SS41I_extract8<bits<8> opc, string OpcodeStr> {
 }
 
 let Predicates = [HasAVX, NoBWI] in
-  defm VPEXTRB : SS41I_extract8<0x14, "vpextrb">, VEX;
+  defm VPEXTRB : SS41I_extract8<0x14, "vpextrb">, VEX, VEX_WIG;
 
 defm PEXTRB      : SS41I_extract8<0x14, "pextrb">;
 
@@ -5386,7 +5386,7 @@ multiclass SS41I_extract16<bits<8> opc, string OpcodeStr> {
 }
 
 let Predicates = [HasAVX, NoBWI] in
-  defm VPEXTRW : SS41I_extract16<0x15, "vpextrw">, VEX;
+  defm VPEXTRW : SS41I_extract16<0x15, "vpextrw">, VEX, VEX_WIG;
 
 defm PEXTRW      : SS41I_extract16<0x15, "pextrw">;
 
@@ -5485,7 +5485,7 @@ multiclass SS41I_insert8<bits<8> opc, string asm, bit Is2Addr = 1> {
 }
 
 let Predicates = [HasAVX, NoBWI] in
-  defm VPINSRB : SS41I_insert8<0x20, "vpinsrb", 0>, VEX_4V;
+  defm VPINSRB : SS41I_insert8<0x20, "vpinsrb", 0>, VEX_4V, VEX_WIG;
 let Constraints = "$src1 = $dst" in
   defm PINSRB  : SS41I_insert8<0x20, "pinsrb">;
 

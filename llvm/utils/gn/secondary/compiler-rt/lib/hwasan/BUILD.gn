@@ -16,8 +16,9 @@ action("version_script") {
     "--version-list",
     "--extra",
     rebase_path(sources[0], root_build_dir),
-    rebase_path("$crt_current_out_dir/libclang_rt.hwasan$crt_current_target_suffix.a",
-                root_build_dir),
+    rebase_path(
+        "$crt_current_out_dir/libclang_rt.hwasan$crt_current_target_suffix.a",
+        root_build_dir),
     rebase_path(
         "$crt_current_out_dir/libclang_rt.hwasan_cxx$crt_current_target_suffix.a",
         root_build_dir),

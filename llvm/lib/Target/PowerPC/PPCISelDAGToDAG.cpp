@@ -2372,7 +2372,7 @@ public:
 
   // Here we try to match complex bit permutations into a set of
   // rotate-and-shift/shift/and/or instructions, using a set of heuristics
-  // known to produce optimial code for common cases (like i32 byte swapping).
+  // known to produce optimal code for common cases (like i32 byte swapping).
   SDNode *Select(SDNode *N) {
     Memoizer.clear();
     auto Result =
@@ -4213,12 +4213,12 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
 
   // Without this setb optimization, the outer SELECT_CC will be manually
   // selected to SELECT_CC_I4/SELECT_CC_I8 Pseudo, then expand-isel-pseudos pass
-  // transforms pseduo instruction to isel instruction. When there are more than
+  // transforms pseudo instruction to isel instruction. When there are more than
   // one use for result like zext/sext, with current optimization we only see
   // isel is replaced by setb but can't see any significant gain. Since
   // setb has longer latency than original isel, we should avoid this. Another
   // point is that setb requires comparison always kept, it can break the
-  // oppotunity to get the comparison away if we have in future.
+  // opportunity to get the comparison away if we have in future.
   if (!SetOrSelCC.hasOneUse() || (!InnerIsSel && !FalseRes.hasOneUse()))
     return false;
 

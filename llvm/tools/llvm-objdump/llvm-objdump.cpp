@@ -330,6 +330,13 @@ void llvm::error(std::error_code EC) {
   exit(1);
 }
 
+void llvm::error(Error E) {
+  if (!E)
+    return;
+  WithColor::error(errs(), ToolName) << toString(std::move(E));
+  exit(1);
+}
+
 LLVM_ATTRIBUTE_NORETURN void llvm::error(Twine Message) {
   WithColor::error(errs(), ToolName) << Message << ".\n";
   errs().flush();
@@ -345,14 +352,6 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
                                                 Twine Message) {
   WithColor::error(errs(), ToolName)
       << "'" << File << "': " << Message << ".\n";
-  exit(1);
-}
-
-LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
-                                                std::error_code EC) {
-  assert(EC);
-  WithColor::error(errs(), ToolName)
-      << "'" << File << "': " << EC.message() << ".\n";
   exit(1);
 }
 
@@ -437,8 +436,8 @@ bool llvm::isRelocAddressLess(RelocationRef A, RelocationRef B) {
   return A.getOffset() < B.getOffset();
 }
 
-static std::error_code getRelocationValueString(const RelocationRef &Rel,
-                                                SmallVectorImpl<char> &Result) {
+static Error getRelocationValueString(const RelocationRef &Rel,
+                                      SmallVectorImpl<char> &Result) {
   const ObjectFile *Obj = Rel.getObject();
   if (auto *ELF = dyn_cast<ELFObjectFileBase>(Obj))
     return getELFRelocationValueString(ELF, Rel, Result);
@@ -1554,7 +1553,6 @@ void llvm::printSectionHeaders(const ObjectFile *Obj) {
 }
 
 void llvm::printSectionContents(const ObjectFile *Obj) {
-  std::error_code EC;
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     StringRef Name;
     StringRef Contents;
@@ -2007,7 +2005,8 @@ static void dumpArchive(const Archive *A) {
     else if (COFFImportFile *I = dyn_cast<COFFImportFile>(&*ChildOrErr.get()))
       dumpObject(I, A, &C);
     else
-      report_error(A->getFileName(), object_error::invalid_file_type);
+      report_error(errorCodeToError(object_error::invalid_file_type),
+                   A->getFileName());
   }
   if (Err)
     report_error(std::move(Err), A->getFileName());
@@ -2034,7 +2033,7 @@ static void dumpInput(StringRef file) {
   else if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Binary))
     parseInputMachO(UB);
   else
-    report_error(file, object_error::invalid_file_type);
+    report_error(errorCodeToError(object_error::invalid_file_type), file);
 }
 
 int main(int argc, char **argv) {

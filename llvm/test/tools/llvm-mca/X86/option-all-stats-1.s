@@ -41,7 +41,7 @@ add %eax, %eax
 # FULLREPORT-NEXT:  1,              62  (60.2%)
 # FULLREPORT-NEXT:  2,              19  (18.4%)
 
-# FULLREPORT:      Schedulers - number of cycles where we saw N instructions issued:
+# FULLREPORT:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # FULLREPORT-NEXT: [# issued], [# cycles]
 # FULLREPORT-NEXT:  0,          3  (2.9%)
 # FULLREPORT-NEXT:  1,          100  (97.1%)

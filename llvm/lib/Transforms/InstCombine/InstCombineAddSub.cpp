@@ -1693,8 +1693,11 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
 
     // 0 - (X sdiv C)  -> (X sdiv -C)  provided the negation doesn't overflow.
     if (match(Op1, m_SDiv(m_Value(X), m_Constant(C))) && match(Op0, m_Zero()) &&
-        C->isNotMinSignedValue() && !C->isOneValue())
-      return BinaryOperator::CreateSDiv(X, ConstantExpr::getNeg(C));
+        C->isNotMinSignedValue() && !C->isOneValue()) {
+      auto *BO = BinaryOperator::CreateSDiv(X, ConstantExpr::getNeg(C));
+      BO->setIsExact(cast<BinaryOperator>(Op1)->isExact());
+      return BO;
+    }
 
     // 0 - (X << Y)  -> (-X << Y)   when X is freely negatable.
     if (match(Op1, m_Shl(m_Value(X), m_Value(Y))) && match(Op0, m_Zero()))

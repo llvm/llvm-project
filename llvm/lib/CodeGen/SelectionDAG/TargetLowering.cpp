@@ -1394,6 +1394,7 @@ bool TargetLowering::SimplifyDemandedBits(
                              TLO.DAG.getNode(ISD::SHL, dl, VT, Sign, ShAmt));
       }
     }
+
     // If bitcast from a vector, see if we can use SimplifyDemandedVectorElts by
     // demanding the element if any bits from it are demanded.
     // TODO - bigendian once we have test coverage.
@@ -1401,26 +1402,26 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SrcVT.isVector() && NumSrcEltBits > 1 &&
         (BitWidth % NumSrcEltBits) == 0 &&
         TLO.DAG.getDataLayout().isLittleEndian()) {
-      unsigned Scale = BitWidth / NumSrcEltBits;
-      auto GetDemandedSubMask = [&](APInt &DemandedSubElts) -> bool {
-        DemandedSubElts = APInt::getNullValue(Scale);
+      auto GetDemandedSrcMask = [&](APInt &DemandedSrcElts) -> bool {
+        unsigned Scale = BitWidth / NumSrcEltBits;
+        unsigned NumSrcElts = SrcVT.getVectorNumElements();
+        DemandedSrcElts = APInt::getNullValue(NumSrcElts);
         for (unsigned i = 0; i != Scale; ++i) {
           unsigned Offset = i * NumSrcEltBits;
           APInt Sub = DemandedBits.extractBits(NumSrcEltBits, Offset);
           if (!Sub.isNullValue())
-            DemandedSubElts.setBit(i);
+            for (unsigned j = 0; j != NumElts; ++j)
+              if (DemandedElts[j])
+                DemandedSrcElts.setBit((j * Scale) + i);
         }
         return true;
       };
 
-      APInt DemandedSubElts;
-      if (GetDemandedSubMask(DemandedSubElts)) {
-        unsigned NumSrcElts = SrcVT.getVectorNumElements();
-        APInt DemandedElts = APInt::getSplat(NumSrcElts, DemandedSubElts);
-
-        APInt KnownUndef, KnownZero;
-        if (SimplifyDemandedVectorElts(Src, DemandedElts, KnownUndef, KnownZero,
-                                       TLO, Depth + 1))
+      APInt DemandedSrcElts;
+      if (GetDemandedSrcMask(DemandedSrcElts)) {
+        APInt KnownSrcUndef, KnownSrcZero;
+        if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownSrcUndef,
+                                       KnownSrcZero, TLO, Depth + 1))
           return true;
       }
     }

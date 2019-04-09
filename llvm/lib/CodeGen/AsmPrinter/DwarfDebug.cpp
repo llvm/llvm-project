@@ -1094,42 +1094,6 @@ static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
   llvm_unreachable("Unexpected 4-operand DBG_VALUE instruction!");
 }
 
-/// If this and Next are describing different fragments of the same
-/// variable, merge them by appending Next's values to the current
-/// list of values.
-/// Return true if the merge was successful.
-bool DebugLocEntry::MergeValues(const DebugLocEntry &Next) {
-  if (Begin == Next.Begin) {
-    auto *FirstExpr = cast<DIExpression>(Values[0].Expression);
-    auto *FirstNextExpr = cast<DIExpression>(Next.Values[0].Expression);
-    if (!FirstExpr->isFragment() || !FirstNextExpr->isFragment())
-      return false;
-
-    // We can only merge entries if none of the fragments overlap any others.
-    // In doing so, we can take advantage of the fact that both lists are
-    // sorted.
-    for (unsigned i = 0, j = 0; i < Values.size(); ++i) {
-      for (; j < Next.Values.size(); ++j) {
-        int res = cast<DIExpression>(Values[i].Expression)->fragmentCmp(
-            cast<DIExpression>(Next.Values[j].Expression));
-        if (res == 0) // The two expressions overlap, we can't merge.
-          return false;
-        // Values[i] is entirely before Next.Values[j],
-        // so go back to the next entry of Values.
-        else if (res == -1)
-          break;
-        // Next.Values[j] is entirely before Values[i], so go on to the
-        // next entry of Next.Values.
-      }
-    }
-
-    addValues(Next.Values);
-    End = Next.End;
-    return true;
-  }
-  return false;
-}
-
 /// Build the location list for all DBG_VALUEs in the function that
 /// describe the same variable.  If the ranges of several independent
 /// fragments of the same variable overlap partially, split them up and
@@ -1205,27 +1169,17 @@ DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     }
 
     DebugLocEntry Loc(StartLabel, EndLabel, Value);
-    bool couldMerge = false;
 
-    // If this is a fragment, it may belong to the current DebugLocEntry.
     if (DIExpr->isFragment()) {
       // Add this value to the list of open ranges.
       OpenRanges.push_back(Value);
-
-      // Attempt to add the fragment to the last entry.
-      if (!DebugLoc.empty())
-        if (DebugLoc.back().MergeValues(Loc))
-          couldMerge = true;
     }
 
-    if (!couldMerge) {
-      // Need to add a new DebugLocEntry. Add all values from still
-      // valid non-overlapping fragments.
-      if (OpenRanges.size())
-        Loc.addValues(OpenRanges);
+    // Add all values from still valid non-overlapping fragments.
+    if (OpenRanges.size())
+      Loc.addValues(OpenRanges);
 
-      DebugLoc.push_back(std::move(Loc));
-    }
+    DebugLoc.push_back(std::move(Loc));
 
     // Attempt to coalesce the ranges of two otherwise identical
     // DebugLocEntries.

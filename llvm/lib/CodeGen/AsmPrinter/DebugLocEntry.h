@@ -105,12 +105,6 @@ public:
     Values.push_back(std::move(Val));
   }
 
-  /// If this and Next are describing different pieces of the same
-  /// variable, merge them by appending Next's values to the current
-  /// list of values.
-  /// Return true if the merge was successful.
-  bool MergeValues(const DebugLocEntry &Next);
-
   /// Attempt to merge this DebugLocEntry with Next and return
   /// true if the merge was successful. Entries can be merged if they
   /// share the same Loc/Constant and if Next immediately follows this

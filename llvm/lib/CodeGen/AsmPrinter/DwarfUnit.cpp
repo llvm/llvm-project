@@ -691,7 +691,7 @@ void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
     DD->addAccelType(*CUNode, Ty->getName(), TyDIE, Flags);
 
     if (!Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||
-        isa<DINamespace>(Context))
+        isa<DINamespace>(Context) || isa<DICommonBlock>(Context))
       addGlobalType(Ty, TyDIE, Context);
   }
 }

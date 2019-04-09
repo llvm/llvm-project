@@ -76,6 +76,7 @@ add_llvm_library(LLVMSupport
   CodeGenCoverage.cpp
   CommandLine.cpp
   Compression.cpp
+  CRC.cpp
   ConvertUTF.cpp
   ConvertUTFWrapper.cpp
   CrashRecoveryContext.cpp
