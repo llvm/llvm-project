@@ -31,27 +31,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
  * THE SOFTWARE.
  *
- *******************************************************************************/
+ ******************************************************************************/
 
+#include "amd_comgr.h"
+#include "common.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "amd_comgr.h"
-#include "common.h"
 
-void parse_isa_name(amd_comgr_action_info_t data_action, const char *isa_name,
-                    amd_comgr_status_t expected_status) {
-  amd_comgr_status_t true_status =
-      amd_comgr_action_info_set_isa_name(data_action, isa_name);
-  if (true_status != expected_status) {
+void parseIsaName(amd_comgr_action_info_t dataAction, const char *isaName,
+                  amd_comgr_status_t expectedStatus) {
+  amd_comgr_status_t trueStatus =
+      amd_comgr_action_info_set_isa_name(dataAction, isaName);
+  if (trueStatus != expectedStatus) {
     amd_comgr_status_t status;
-    const char *true_status_string, *expected_status_string;
-    status = amd_comgr_status_string(true_status, &true_status_string);
+    const char *trueStatusString, *expectedStatusString;
+    status = amd_comgr_status_string(trueStatus, &trueStatusString);
     checkError(status, "amd_comgr_status_string");
-    status = amd_comgr_status_string(expected_status, &expected_status_string);
+    status = amd_comgr_status_string(expectedStatus, &expectedStatusString);
     checkError(status, "amd_comgr_status_string");
-    printf("Parsing \"%s\" resulted in \"%s\"; expected \"%s\"\n", isa_name,
-           true_status_string, expected_status_string);
+    printf("Parsing \"%s\" resulted in \"%s\"; expected \"%s\"\n", isaName,
+           trueStatusString, expectedStatusString);
     exit(1);
   }
 }
@@ -63,28 +63,25 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_create_action_info(&dataAction);
   checkError(status, "amd_comgr_create_action_info");
 
-  parse_isa_name(dataAction, "amdgcn-amd-amdhsa--gfx803",
-                 AMD_COMGR_STATUS_SUCCESS);
-  parse_isa_name(dataAction, "amdgcn-amd-amdhsa--gfx801+xnack",
-                 AMD_COMGR_STATUS_SUCCESS);
-  parse_isa_name(dataAction, "",
-                 AMD_COMGR_STATUS_SUCCESS);
-  parse_isa_name(dataAction, NULL,
-                 AMD_COMGR_STATUS_SUCCESS);
-  parse_isa_name(dataAction, "amdgcn-amd-amdhsa-opencl-gfx803",
-                 AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parse_isa_name(dataAction, "amdgcn-amd-amdhsa-gfx803",
-                 AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parse_isa_name(dataAction, "gfx803",
-                 AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parse_isa_name(dataAction, " amdgcn-amd-amdhsa--gfx803",
-                 AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parse_isa_name(dataAction, " amdgcn-amd-amdhsa--gfx803 ",
-                 AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parse_isa_name(dataAction, "amdgcn-amd-amdhsa--gfx803 ",
-                 AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parse_isa_name(dataAction, "   amdgcn-amd-amdhsa--gfx803  ",
-                 AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
+  parseIsaName(dataAction, "amdgcn-amd-amdhsa--gfx803",
+               AMD_COMGR_STATUS_SUCCESS);
+  parseIsaName(dataAction, "amdgcn-amd-amdhsa--gfx801+xnack",
+               AMD_COMGR_STATUS_SUCCESS);
+  parseIsaName(dataAction, "", AMD_COMGR_STATUS_SUCCESS);
+  parseIsaName(dataAction, NULL, AMD_COMGR_STATUS_SUCCESS);
+  parseIsaName(dataAction, "amdgcn-amd-amdhsa-opencl-gfx803",
+               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
+  parseIsaName(dataAction, "amdgcn-amd-amdhsa-gfx803",
+               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
+  parseIsaName(dataAction, "gfx803", AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
+  parseIsaName(dataAction, " amdgcn-amd-amdhsa--gfx803",
+               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
+  parseIsaName(dataAction, " amdgcn-amd-amdhsa--gfx803 ",
+               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
+  parseIsaName(dataAction, "amdgcn-amd-amdhsa--gfx803 ",
+               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
+  parseIsaName(dataAction, "   amdgcn-amd-amdhsa--gfx803  ",
+               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
 
   status = amd_comgr_destroy_action_info(dataAction);
   checkError(status, "amd_comgr_destroy_action_info");

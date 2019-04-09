@@ -1,114 +1,108 @@
 /*******************************************************************************
-*
-* University of Illinois/NCSA
-* Open Source License
-*
-* Copyright (c) 2003-2017 University of Illinois at Urbana-Champaign.
-* Modifications (c) 2018 Advanced Micro Devices, Inc.
-* All rights reserved.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* with the Software without restriction, including without limitation the
-* rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-* sell copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-*     * Redistributions of source code must retain the above copyright notice,
-*       this list of conditions and the following disclaimers.
-*
-*     * Redistributions in binary form must reproduce the above copyright
-*       notice, this list of conditions and the following disclaimers in the
-*       documentation and/or other materials provided with the distribution.
-*
-*     * Neither the names of the LLVM Team, University of Illinois at
-*       Urbana-Champaign, nor the names of its contributors may be used to
-*       endorse or promote products derived from this Software without specific
-*       prior written permission.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-* CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
-* THE SOFTWARE.
-*
-*******************************************************************************/
+ *
+ * University of Illinois/NCSA
+ * Open Source License
+ *
+ * Copyright (c) 2003-2017 University of Illinois at Urbana-Champaign.
+ * Modifications (c) 2018 Advanced Micro Devices, Inc.
+ * All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * with the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimers.
+ *
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimers in the
+ *       documentation and/or other materials provided with the distribution.
+ *
+ *     * Neither the names of the LLVM Team, University of Illinois at
+ *       Urbana-Champaign, nor the names of its contributors may be used to
+ *       endorse or promote products derived from this Software without specific
+ *       prior written permission.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+ * THE SOFTWARE.
+ *
+ ******************************************************************************/
 
-#include <iostream>
+#include "amd_comgr.h"
 #include "comgr.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/SymbolSize.h"
-#include "amd_comgr.h"
+#include "llvm/Support/raw_ostream.h"
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::support;
 using namespace COMGR;
 
 SymbolContext::SymbolContext()
-  : name(nullptr),
-    type(AMD_COMGR_SYMBOL_TYPE_NOTYPE),
-    size(0),
-    undefined(true),
-    value(0) {}
+    : Name(nullptr), Type(AMD_COMGR_SYMBOL_TYPE_NOTYPE), Size(0),
+      Undefined(true), Value(0) {}
 
-SymbolContext::~SymbolContext() {
-  free(name);
-}
+SymbolContext::~SymbolContext() { free(Name); }
 
-amd_comgr_status_t SymbolContext::SetName(llvm::StringRef Name) {
-  return SetCStr(name, Name);
+amd_comgr_status_t SymbolContext::setName(llvm::StringRef Name) {
+  return setCStr(this->Name, Name);
 }
 
 amd_comgr_symbol_type_t
-SymbolHelper::map_to_comgr_symbol_type(SymbolRef::Type stype, uint64_t flags)
-{
-  amd_comgr_symbol_type_t type;
+SymbolHelper::mapToComgrSymbolType(SymbolRef::Type Stype, uint64_t Flags) {
+  amd_comgr_symbol_type_t Type;
 
-  switch (stype) {
-    case SymbolRef::ST_Unknown:
-         type = AMD_COMGR_SYMBOL_TYPE_NOTYPE;
-         break;
-    case SymbolRef::ST_File:
-         type = AMD_COMGR_SYMBOL_TYPE_FILE;
-         break;
-    case SymbolRef::ST_Function:
-         type = AMD_COMGR_SYMBOL_TYPE_FUNC;
-         break;
-    case SymbolRef::ST_Data:
-         if (flags & SymbolRef::SF_Common)
-           type = AMD_COMGR_SYMBOL_TYPE_COMMON;
-         else
-           type = AMD_COMGR_SYMBOL_TYPE_OBJECT;
-         break;
-    case SymbolRef::ST_Debug:
-         type = AMD_COMGR_SYMBOL_TYPE_SECTION;
-         break;
-    default:
-         type = AMD_COMGR_SYMBOL_TYPE_NOTYPE;
-         break;  // Please Check:
-                 // Actually there is a ST_Other, the API may be missing
-                 // a default amd_comgr_symbol_type_t here.
+  switch (Stype) {
+  case SymbolRef::ST_Unknown:
+    Type = AMD_COMGR_SYMBOL_TYPE_NOTYPE;
+    break;
+  case SymbolRef::ST_File:
+    Type = AMD_COMGR_SYMBOL_TYPE_FILE;
+    break;
+  case SymbolRef::ST_Function:
+    Type = AMD_COMGR_SYMBOL_TYPE_FUNC;
+    break;
+  case SymbolRef::ST_Data:
+    if (Flags & SymbolRef::SF_Common)
+      Type = AMD_COMGR_SYMBOL_TYPE_COMMON;
+    else
+      Type = AMD_COMGR_SYMBOL_TYPE_OBJECT;
+    break;
+  case SymbolRef::ST_Debug:
+    Type = AMD_COMGR_SYMBOL_TYPE_SECTION;
+    break;
+  default:
+    Type = AMD_COMGR_SYMBOL_TYPE_NOTYPE;
+    break; // Please Check:
+           // Actually there is a ST_Other, the API may be missing
+           // a default amd_comgr_symbol_type_t here.
   }
 
-  return type;
+  return Type;
 }
 
 // SymbolHelper version of createBinary, contrary to the one in Binary.cpp,
 // in_text is textual input, not a filename.
-Expected<OwningBinary<Binary>> SymbolHelper::create_binary(StringRef in_text) {
+Expected<OwningBinary<Binary>> SymbolHelper::createBinary(StringRef InText) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-    MemoryBuffer::getMemBuffer(in_text);
+      MemoryBuffer::getMemBuffer(InText);
   if (std::error_code EC = BufOrErr.getError())
     return errorCodeToError(EC);
   std::unique_ptr<MemoryBuffer> &Buffer = BufOrErr.get();
 
   Expected<std::unique_ptr<Binary>> BinOrErr =
-      createBinary( Buffer->getMemBufferRef());
+      llvm::object::createBinary(Buffer->getMemBufferRef());
   if (!BinOrErr)
     return BinOrErr.takeError();
   std::unique_ptr<Binary> &Bin = BinOrErr.get();
@@ -116,59 +110,59 @@ Expected<OwningBinary<Binary>> SymbolHelper::create_binary(StringRef in_text) {
   return OwningBinary<Binary>(std::move(Bin), std::move(Buffer));
 }
 
-SymbolContext*
-SymbolHelper::search_symbol(StringRef ins, const char *name, amd_comgr_data_kind_t kind)
-{
-  StringRef sname(name);
+SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
+                                          amd_comgr_data_kind_t Kind) {
+  StringRef Sname(Name);
 
-  Expected<OwningBinary<Binary>> BinaryOrErr = create_binary(ins);
+  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(Ins);
   if (!BinaryOrErr) {
     return NULL;
   }
 
   Binary &Binary = *BinaryOrErr.get().getBinary();
 
-  if (ObjectFile *obj = dyn_cast<ObjectFile>(&Binary)) {
+  if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary)) {
 
-    std::vector<SymbolRef> symbol_list ;
-    symbol_list.clear();
+    std::vector<SymbolRef> SymbolList;
+    SymbolList.clear();
 
     // extract the symbol list from dynsymtab or symtab
-    if (const auto *E = dyn_cast<ELFObjectFileBase>(obj)) {
-      if (kind == AMD_COMGR_DATA_KIND_EXECUTABLE) {
+    if (const auto *E = dyn_cast<ELFObjectFileBase>(Obj)) {
+      if (Kind == AMD_COMGR_DATA_KIND_EXECUTABLE) {
         // executable kind, search dynsymtab
-        iterator_range<elf_symbol_iterator> dsyms = E->getDynamicSymbolIterators();
-        for (ELFSymbolRef dsym : dsyms)
-          symbol_list.push_back(dsym);
+        iterator_range<elf_symbol_iterator> Dsyms =
+            E->getDynamicSymbolIterators();
+        for (ELFSymbolRef Dsym : Dsyms)
+          SymbolList.push_back(Dsym);
 
-      } else if (kind == AMD_COMGR_DATA_KIND_RELOCATABLE) {
+      } else if (Kind == AMD_COMGR_DATA_KIND_RELOCATABLE) {
         // relocatable kind, search symtab
-        auto syms = E->symbols();
-        for (ELFSymbolRef sym : syms)
-          symbol_list.push_back(sym);
+        auto Syms = E->symbols();
+        for (ELFSymbolRef Sym : Syms)
+          SymbolList.push_back(Sym);
       }
     }
 
     // Find symbol with specified name
-    SymbolRef fsym;
-    bool found = false;
-    for (auto &symbol: symbol_list) {
-      Expected<StringRef> symNameOrErr = symbol.getName();
-      if (!symNameOrErr)
+    SymbolRef Fsym;
+    bool Found = false;
+    for (auto &Symbol : SymbolList) {
+      Expected<StringRef> SymNameOrErr = Symbol.getName();
+      if (!SymNameOrErr)
         return NULL;
-      StringRef sym_name = *symNameOrErr;
-      if (sym_name.equals(sname)) {
+      StringRef SymName = *SymNameOrErr;
+      if (SymName.equals(Sname)) {
 #if DEBUG
         outs() << "Found! " << sname.data() << "\n";
 #endif
-        fsym = symbol;
-        found = true;
+        Fsym = Symbol;
+        Found = true;
         break;
       }
     }
 
-    if (!found)
-       return NULL;
+    if (!Found)
+      return NULL;
 
     // ATTENTION: Do not attempt to split out the above "find symbol" code
     // into a separate function returning a found SymbolRef. For some
@@ -179,114 +173,115 @@ SymbolHelper::search_symbol(StringRef ins, const char *name, amd_comgr_data_kind
     // problem, but basically the reason is unknown.
 
     // Found the specified symbol, fill the SymbolContext values
-    SymbolContext *symp = new (std::nothrow) SymbolContext();
-    if (symp == NULL)
-      return NULL;   // out of space
+    SymbolContext *Symp = new (std::nothrow) SymbolContext();
+    if (Symp == NULL)
+      return NULL; // out of space
 
-    symp->SetName(name);
-    symp->value = fsym.getValue();
+    Symp->setName(Name);
+    Symp->Value = Fsym.getValue();
 
-    Expected<SymbolRef::Type> TypeOrErr = fsym.getType();
+    Expected<SymbolRef::Type> TypeOrErr = Fsym.getType();
     if (!TypeOrErr)
       return NULL;
 
     // get flags in symbol
     // SymbolRef does not directly use ELF::STT_<types>, it maps them to
     // SymbolRef::ST_<types> in ELFObjectFile<ELFT>::getSymbolType().
-    DataRefImpl symb = fsym.getRawDataRefImpl();
-    uint64_t flags = fsym.getObject()->getSymbolFlags(symb);
-    symp->type = map_to_comgr_symbol_type(*TypeOrErr, flags);
+    DataRefImpl Symb = Fsym.getRawDataRefImpl();
+    uint64_t Flags = Fsym.getObject()->getSymbolFlags(Symb);
+    Symp->Type = mapToComgrSymbolType(*TypeOrErr, Flags);
 
     // symbol size
-    ELFSymbolRef esym(fsym);
-    symp->size = esym.getSize();
+    ELFSymbolRef Esym(Fsym);
+    Symp->Size = Esym.getSize();
 
     // symbol undefined?
-    if (flags & SymbolRef::SF_Undefined)
-      symp->undefined = true;
+    if (Flags & SymbolRef::SF_Undefined)
+      Symp->Undefined = true;
     else
-      symp->undefined = false;
+      Symp->Undefined = false;
 
-    return symp;
+    return Symp;
   }
 
   return NULL;
 }
 
-amd_comgr_status_t SymbolHelper::iterate_table(
-    StringRef ins, amd_comgr_data_kind_t kind,
-    amd_comgr_status_t (*callback)(amd_comgr_symbol_t, void *),
-    void *user_data) {
-  Expected<OwningBinary<Binary>> BinaryOrErr = create_binary(ins);
+amd_comgr_status_t SymbolHelper::iterateTable(
+    StringRef Ins, amd_comgr_data_kind_t Kind,
+    amd_comgr_status_t (*Callback)(amd_comgr_symbol_t, void *),
+    void *UserData) {
+  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(Ins);
   if (!BinaryOrErr) {
     return AMD_COMGR_STATUS_ERROR;
   }
 
   Binary &Binary = *BinaryOrErr.get().getBinary();
 
-  if (ObjectFile *obj = dyn_cast<ObjectFile>(&Binary)) {
+  if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary)) {
 
-    std::vector<SymbolRef> symbol_list ;
-    symbol_list.clear();
+    std::vector<SymbolRef> SymbolList;
+    SymbolList.clear();
 
     // extract the symbol list from dynsymtab or symtab
-    if (const auto *E = dyn_cast<ELFObjectFileBase>(obj)) {
-      if (kind == AMD_COMGR_DATA_KIND_EXECUTABLE) {
+    if (const auto *E = dyn_cast<ELFObjectFileBase>(Obj)) {
+      if (Kind == AMD_COMGR_DATA_KIND_EXECUTABLE) {
         // executable kind, search dynsymtab
-        iterator_range<elf_symbol_iterator> dsyms = E->getDynamicSymbolIterators();
-        for (ELFSymbolRef dsym : dsyms)
-          symbol_list.push_back(dsym);
+        iterator_range<elf_symbol_iterator> Dsyms =
+            E->getDynamicSymbolIterators();
+        for (ELFSymbolRef Dsym : Dsyms)
+          SymbolList.push_back(Dsym);
 
-      } else if (kind == AMD_COMGR_DATA_KIND_RELOCATABLE) {
+      } else if (Kind == AMD_COMGR_DATA_KIND_RELOCATABLE) {
         // relocatable kind, search symtab
-        auto syms = E->symbols();
-        for (ELFSymbolRef sym : syms)
-          symbol_list.push_back(sym);
+        auto Syms = E->symbols();
+        for (ELFSymbolRef Sym : Syms)
+          SymbolList.push_back(Sym);
       }
     }
 
     // iterate all symbols
-    for (auto &symbol: symbol_list) {
+    for (auto &Symbol : SymbolList) {
       // create symbol context
-      SymbolContext *ctxp = new (std::nothrow) SymbolContext();
-      if (ctxp == NULL)
+      SymbolContext *Ctxp = new (std::nothrow) SymbolContext();
+      if (Ctxp == NULL)
         return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
       // get name
-      Expected<StringRef> symNameOrErr = symbol.getName();
-      if (!symNameOrErr)
+      Expected<StringRef> SymNameOrErr = Symbol.getName();
+      if (!SymNameOrErr)
         return AMD_COMGR_STATUS_ERROR;
-      StringRef sym_name = *symNameOrErr;
-      ctxp->SetName(sym_name);
-      ctxp->value = symbol.getValue();
+      StringRef SymName = *SymNameOrErr;
+      Ctxp->setName(SymName);
+      Ctxp->Value = Symbol.getValue();
 
       // get type
-      Expected<SymbolRef::Type> TypeOrErr = symbol.getType();
+      Expected<SymbolRef::Type> TypeOrErr = Symbol.getType();
       if (!TypeOrErr)
         return AMD_COMGR_STATUS_ERROR;
-      DataRefImpl symb = symbol.getRawDataRefImpl();
-      uint64_t flags = symbol.getObject()->getSymbolFlags(symb);
-      ctxp->type = map_to_comgr_symbol_type(*TypeOrErr, flags);
+      DataRefImpl Symb = Symbol.getRawDataRefImpl();
+      uint64_t Flags = Symbol.getObject()->getSymbolFlags(Symb);
+      Ctxp->Type = mapToComgrSymbolType(*TypeOrErr, Flags);
 
       // get size
-      ELFSymbolRef esym(symbol);
-      ctxp->size = esym.getSize();
+      ELFSymbolRef Esym(Symbol);
+      Ctxp->Size = Esym.getSize();
 
       // set undefined
-      ctxp->undefined = (flags & SymbolRef::SF_Undefined) ? true : false;
+      Ctxp->Undefined = (Flags & SymbolRef::SF_Undefined) ? true : false;
 
       // create amd_comgr_symbol_t
-      COMGR::DataSymbol *symp = new (std::nothrow) COMGR::DataSymbol(ctxp);
-      if (symp == NULL)
+      COMGR::DataSymbol *Symp = new (std::nothrow) COMGR::DataSymbol(Ctxp);
+      if (Symp == NULL)
         return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-      amd_comgr_symbol_t symt = COMGR::DataSymbol::Convert(symp);
+      amd_comgr_symbol_t Symt = COMGR::DataSymbol::convert(Symp);
 
       // invoke callback(symbol, user_data)
-      (*callback)(symt, user_data);
+      (*Callback)(Symt, UserData);
 
       // delete symt completely to avoid memory leak,
       // user needs to save if necessary in callback
-      delete symp;
+      delete Symp;
 
     } // next symbol in list
 

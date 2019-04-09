@@ -1,42 +1,43 @@
 /*******************************************************************************
-*
-* University of Illinois/NCSA
-* Open Source License
-*
-* Copyright (c) 2003-2017 University of Illinois at Urbana-Champaign.
-* Modifications (c) 2018 Advanced Micro Devices, Inc.
-* All rights reserved.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* with the Software without restriction, including without limitation the
-* rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-* sell copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-*     * Redistributions of source code must retain the above copyright notice,
-*       this list of conditions and the following disclaimers.
-*
-*     * Redistributions in binary form must reproduce the above copyright
-*       notice, this list of conditions and the following disclaimers in the
-*       documentation and/or other materials provided with the distribution.
-*
-*     * Neither the names of the LLVM Team, University of Illinois at
-*       Urbana-Champaign, nor the names of its contributors may be used to
-*       endorse or promote products derived from this Software without specific
-*       prior written permission.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-* CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
-* THE SOFTWARE.
-*
-*******************************************************************************/
+ *
+ * University of Illinois/NCSA
+ * Open Source License
+ *
+ * Copyright (c) 2003-2017 University of Illinois at Urbana-Champaign.
+ * Modifications (c) 2018 Advanced Micro Devices, Inc.
+ * All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * with the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimers.
+ *
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimers in the
+ *       documentation and/or other materials provided with the distribution.
+ *
+ *     * Neither the names of the LLVM Team, University of Illinois at
+ *       Urbana-Champaign, nor the names of its contributors may be used to
+ *       endorse or promote products derived from this Software without specific
+ *       prior written permission.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+ * THE SOFTWARE.
+ *
+ ******************************************************************************/
 
 #include "comgr-compiler.h"
+#include "lld/Common/Driver.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -46,7 +47,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/FrontendTool/Utils.h"
-#include "lld/Common/Driver.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -177,7 +177,7 @@ public:
                              ArrayRef<const char *> Argv,
                              DiagnosticsEngine &Diags);
 };
-}
+} // namespace
 
 bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
                                          ArrayRef<const char *> Argv,
@@ -206,8 +206,8 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
     if (OptTbl->findNearest(ArgString, Nearest, IncludedFlagsBitmask) > 1)
       Diags.Report(diag::err_drv_unknown_argument) << ArgString;
     else
-      Diags.Report(diag::err_drv_unknown_argument_with_suggestion) << ArgString
-                                                                   << Nearest;
+      Diags.Report(diag::err_drv_unknown_argument_with_suggestion)
+          << ArgString << Nearest;
     Success = false;
   }
 
@@ -315,8 +315,8 @@ getOutputStream(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
   auto Out = llvm::make_unique<raw_fd_ostream>(
       Opts.OutputPath, EC, (Binary ? sys::fs::F_None : sys::fs::F_Text));
   if (EC) {
-    Diags.Report(diag::err_fe_unable_to_open_output) << Opts.OutputPath
-                                                     << EC.message();
+    Diags.Report(diag::err_fe_unable_to_open_output)
+        << Opts.OutputPath << EC.message();
     return nullptr;
   }
 
@@ -324,8 +324,7 @@ getOutputStream(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
 }
 
 static bool ExecuteAssembler(AssemblerInvocation &Opts,
-                             DiagnosticsEngine &Diags,
-                             raw_ostream &DiagOS) {
+                             DiagnosticsEngine &Diags, raw_ostream &DiagOS) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
@@ -499,21 +498,21 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   return Failed;
 }
 
-static SmallString<128> GetFilePath(DataObject *Object, StringRef Dir) {
+static SmallString<128> getFilePath(DataObject *Object, StringRef Dir) {
   SmallString<128> Path(Dir);
-  path::append(Path, Object->name);
+  path::append(Path, Object->Name);
   return Path;
 }
 
-static amd_comgr_status_t InputFromFile(DataObject *Object, StringRef Path) {
+static amd_comgr_status_t inputFromFile(DataObject *Object, StringRef Path) {
   auto BufOrError = MemoryBuffer::getFile(Path);
   if (std::error_code EC = BufOrError.getError())
     return AMD_COMGR_STATUS_ERROR;
-  Object->SetData(BufOrError.get()->getBuffer());
+  Object->setData(BufOrError.get()->getBuffer());
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-static amd_comgr_status_t OutputToFile(DataObject *Object, StringRef Path) {
+static amd_comgr_status_t outputToFile(DataObject *Object, StringRef Path) {
   SmallString<128> DirPath = Path;
   path::remove_filename(DirPath);
   if (fs::create_directories(DirPath))
@@ -522,14 +521,14 @@ static amd_comgr_status_t OutputToFile(DataObject *Object, StringRef Path) {
   raw_fd_ostream OS(Path, EC, fs::F_None);
   if (EC)
     return AMD_COMGR_STATUS_ERROR;
-  OS << StringRef(Object->data, Object->size);
+  OS << StringRef(Object->Data, Object->Size);
   OS.close();
   if (OS.has_error())
     return AMD_COMGR_STATUS_ERROR;
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-static void InitializeCommandLineArgs(SmallVectorImpl<const char *> &Args) {
+static void initializeCommandLineArgs(SmallVectorImpl<const char *> &Args) {
   // Workaround for flawed Driver::BuildCompilation(...) implementation,
   // which eliminates 1st argument, cause it actually awaits argv[0].
   Args.clear();
@@ -537,30 +536,31 @@ static void InitializeCommandLineArgs(SmallVectorImpl<const char *> &Args) {
 }
 
 // Parse -mllvm options
-static amd_comgr_status_t ParseLLVMOptions(const std::vector<std::string>& Options) {
-  std::vector<const char*> LLVMArgs;
+static amd_comgr_status_t
+parseLLVMOptions(const std::vector<std::string> &Options) {
+  std::vector<const char *> LLVMArgs;
   for (auto Option : Options) {
     LLVMArgs.push_back("");
     LLVMArgs.push_back(Option.c_str());
-    if (!cl::ParseCommandLineOptions(LLVMArgs.size(), &LLVMArgs[0], "-mllvm options parsing"))
+    if (!cl::ParseCommandLineOptions(LLVMArgs.size(), &LLVMArgs[0],
+                                     "-mllvm options parsing"))
       return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
     LLVMArgs.clear();
   }
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-static amd_comgr_status_t LLDLink(llvm::ArrayRef<const char *> Args,
-    llvm::raw_ostream &LogS) {
-  ArgStringList LLDArgs(
-      llvm::iterator_range<ArrayRef<const char *>::iterator>(Args.begin(),
-                                                             Args.end()));
+static amd_comgr_status_t linkWithLLD(llvm::ArrayRef<const char *> Args,
+                                      llvm::raw_ostream &LogS) {
+  ArgStringList LLDArgs(llvm::iterator_range<ArrayRef<const char *>::iterator>(
+      Args.begin(), Args.end()));
   LLDArgs.insert(LLDArgs.begin(), "");
   ArrayRef<const char *> ArgRefs = llvm::makeArrayRef(LLDArgs);
-  static std::mutex m_screen;
-  m_screen.lock();
-  bool lldRet = lld::elf::link(ArgRefs, false, LogS);
-  m_screen.unlock();
-  if (!lldRet)
+  static std::mutex MScreen;
+  MScreen.lock();
+  bool LLDRet = lld::elf::link(ArgRefs, false, LogS);
+  MScreen.unlock();
+  if (!LLDRet)
     return AMD_COMGR_STATUS_ERROR;
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -574,7 +574,7 @@ InProcessDriver::InProcessDriver(raw_ostream &DiagOS)
   TheDriver->setCheckInputsExist(false);
 }
 
-amd_comgr_status_t InProcessDriver::Execute(ArrayRef<const char *> Args) {
+amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
   std::unique_ptr<Compilation> C(TheDriver->BuildCompilation(Args));
   if (!C)
     return C->containsError() ? AMD_COMGR_STATUS_ERROR
@@ -582,7 +582,7 @@ amd_comgr_status_t InProcessDriver::Execute(ArrayRef<const char *> Args) {
   for (auto &Job : C->getJobs()) {
     auto Arguments = Job.getArguments();
     SmallVector<const char *, 128> Argv;
-    InitializeCommandLineArgs(Argv);
+    initializeCommandLineArgs(Argv);
     Argv.append(Arguments.begin(), Arguments.end());
     Argv.push_back(nullptr);
 
@@ -591,7 +591,7 @@ amd_comgr_status_t InProcessDriver::Execute(ArrayRef<const char *> Args) {
     if (IT != Argv.end())
       Argv.erase(IT);
 
-    ClearLLVMOptions();
+    clearLLVMOptions();
 
     DiagOS << "COMGR::InProcessDriver::Execute argv:";
     for (auto &Arg : Argv)
@@ -615,12 +615,12 @@ amd_comgr_status_t InProcessDriver::Execute(ArrayRef<const char *> Args) {
       AssemblerInvocation Asm;
       if (!AssemblerInvocation::CreateFromArgs(Asm, Argv, Diags))
         return AMD_COMGR_STATUS_ERROR;
-      if (auto Status = ParseLLVMOptions(Asm.LLVMArgs))
+      if (auto Status = parseLLVMOptions(Asm.LLVMArgs))
         return Status;
       if (ExecuteAssembler(Asm, Diags, DiagOS))
         return AMD_COMGR_STATUS_ERROR;
     } else if (Job.getCreator().getName() == LinkerJobName) {
-      if (auto Status = LLDLink(Arguments, DiagOS))
+      if (auto Status = linkWithLLD(Arguments, DiagOS))
         return Status;
     } else {
       return AMD_COMGR_STATUS_ERROR;
@@ -629,8 +629,7 @@ amd_comgr_status_t InProcessDriver::Execute(ArrayRef<const char *> Args) {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-
-amd_comgr_status_t AMDGPUCompiler::CreateTmpDirs() {
+amd_comgr_status_t AMDGPUCompiler::createTmpDirs() {
   if (fs::createUniqueDirectory("comgr", TmpDir))
     return AMD_COMGR_STATUS_ERROR;
 
@@ -652,7 +651,7 @@ amd_comgr_status_t AMDGPUCompiler::CreateTmpDirs() {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMDGPUCompiler::RemoveTmpDirs() {
+amd_comgr_status_t AMDGPUCompiler::removeTmpDirs() {
   if (TmpDir.empty())
     return AMD_COMGR_STATUS_SUCCESS;
   if (fs::remove_directories(TmpDir))
@@ -660,7 +659,7 @@ amd_comgr_status_t AMDGPUCompiler::RemoveTmpDirs() {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMDGPUCompiler::ProcessFile(const char *InputFilePath,
+amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
                                                const char *OutputFilePath) {
   SmallVector<const char *, 128> Argv;
 
@@ -677,29 +676,29 @@ amd_comgr_status_t AMDGPUCompiler::ProcessFile(const char *InputFilePath,
 
   InProcessDriver TheDriver(LogS);
 
-  return TheDriver.Execute(Argv);
+  return TheDriver.execute(Argv);
 }
 
 amd_comgr_status_t
-AMDGPUCompiler::ProcessFiles(amd_comgr_data_kind_t OutputKind,
+AMDGPUCompiler::processFiles(amd_comgr_data_kind_t OutputKind,
                              const char *OutputSuffix) {
-  for (auto Input : InSet->data_objects) {
-    if (Input->data_kind != AMD_COMGR_DATA_KIND_INCLUDE)
+  for (auto Input : InSet->DataObjects) {
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_INCLUDE)
       continue;
-    auto IncludeFilePath = GetFilePath(Input, IncludeDir);
-    if (auto Status = OutputToFile(Input, IncludeFilePath))
+    auto IncludeFilePath = getFilePath(Input, IncludeDir);
+    if (auto Status = outputToFile(Input, IncludeFilePath))
       return Status;
   }
 
-  for (auto Input : InSet->data_objects) {
-    if (Input->data_kind != AMD_COMGR_DATA_KIND_SOURCE
-        && Input->data_kind != AMD_COMGR_DATA_KIND_BC
-        && Input->data_kind != AMD_COMGR_DATA_KIND_RELOCATABLE
-        && Input->data_kind != AMD_COMGR_DATA_KIND_EXECUTABLE)
+  for (auto Input : InSet->DataObjects) {
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_SOURCE &&
+        Input->DataKind != AMD_COMGR_DATA_KIND_BC &&
+        Input->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE &&
+        Input->DataKind != AMD_COMGR_DATA_KIND_EXECUTABLE)
       continue;
 
-    auto InputFilePath = GetFilePath(Input, InputDir);
-    if (auto Status = OutputToFile(Input, InputFilePath))
+    auto InputFilePath = getFilePath(Input, InputDir);
+    if (auto Status = outputToFile(Input, InputFilePath))
       return Status;
 
     amd_comgr_data_t OutputT;
@@ -707,16 +706,16 @@ AMDGPUCompiler::ProcessFiles(amd_comgr_data_kind_t OutputKind,
       return Status;
     ScopedDataObjectReleaser SDOR(OutputT);
 
-    DataObject *Output = DataObject::Convert(OutputT);
-    Output->SetName(std::string(Input->name) + OutputSuffix);
+    DataObject *Output = DataObject::convert(OutputT);
+    Output->setName(std::string(Input->Name) + OutputSuffix);
 
-    auto OutputFilePath = GetFilePath(Output, OutputDir);
+    auto OutputFilePath = getFilePath(Output, OutputDir);
 
     if (auto Status =
-            ProcessFile(InputFilePath.c_str(), OutputFilePath.c_str()))
+            processFile(InputFilePath.c_str(), OutputFilePath.c_str()))
       return Status;
 
-    if (auto Status = InputFromFile(Output, OutputFilePath))
+    if (auto Status = inputFromFile(Output, OutputFilePath))
       return Status;
 
     if (auto Status = amd_comgr_data_set_add(OutSetT, OutputT))
@@ -726,31 +725,31 @@ AMDGPUCompiler::ProcessFiles(amd_comgr_data_kind_t OutputKind,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-void AMDGPUCompiler::ParseOptions() {
-  if (!ActionInfo->action_options)
+void AMDGPUCompiler::parseOptions() {
+  if (!ActionInfo->Options)
     return;
-  StringRef OptionsRef(ActionInfo->action_options);
+  StringRef OptionsRef(ActionInfo->Options);
   SmallVector<StringRef, 16> OptionRefs;
   OptionsRef.split(OptionRefs, ' ');
   for (auto &Option : OptionRefs)
     Options.push_back(Option);
 }
 
-amd_comgr_status_t AMDGPUCompiler::AddIncludeFlags() {
-  if (ActionInfo->action_path) {
+amd_comgr_status_t AMDGPUCompiler::addIncludeFlags() {
+  if (ActionInfo->Path) {
     Args.push_back("-I");
-    Args.push_back(ActionInfo->action_path);
+    Args.push_back(ActionInfo->Path);
   }
 
   Args.push_back("-I");
   Args.push_back(IncludeDir.c_str());
 
-  for (auto Input : InSet->data_objects) {
-    if (Input->data_kind != AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER)
+  for (auto Input : InSet->DataObjects) {
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER)
       continue;
-    PrecompiledHeaders.push_back(GetFilePath(Input, IncludeDir));
+    PrecompiledHeaders.push_back(getFilePath(Input, IncludeDir));
     auto &PrecompiledHeaderPath = PrecompiledHeaders.back();
-    if (auto Status = OutputToFile(Input, PrecompiledHeaderPath))
+    if (auto Status = outputToFile(Input, PrecompiledHeaderPath))
       return Status;
     Args.push_back("-include-pch");
     Args.push_back(PrecompiledHeaderPath.c_str());
@@ -761,9 +760,10 @@ amd_comgr_status_t AMDGPUCompiler::AddIncludeFlags() {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMDGPUCompiler::AddTargetIdentifierFlags(llvm::StringRef IdentStr) {
+amd_comgr_status_t
+AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr) {
   TargetIdentifier Ident;
-  if (auto Status = ParseTargetIdentifier(IdentStr, Ident))
+  if (auto Status = parseTargetIdentifier(IdentStr, Ident))
     return Status;
   Triple = (Twine(Ident.Arch) + "-" + Ident.Vendor + "-" + Ident.OS).str();
   CPU = (Twine("-mcpu=") + Ident.Processor).str();
@@ -790,21 +790,21 @@ amd_comgr_status_t AMDGPUCompiler::AddTargetIdentifierFlags(llvm::StringRef Iden
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMDGPUCompiler::PreprocessToSource() {
-  if (auto Status = CreateTmpDirs())
+amd_comgr_status_t AMDGPUCompiler::preprocessToSource() {
+  if (auto Status = createTmpDirs())
     return Status;
 
-  if (ActionInfo->isa_name)
-    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
+  if (ActionInfo->IsaName)
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
       return Status;
 
-  if (auto Status = AddIncludeFlags())
+  if (auto Status = addIncludeFlags())
     return Status;
 
   Args.push_back("-x");
   Args.push_back("cl");
 
-  switch (ActionInfo->language) {
+  switch (ActionInfo->Language) {
   case AMD_COMGR_LANGUAGE_OPENCL_1_2:
     Args.push_back("-std=cl1.2");
     break;
@@ -817,24 +817,24 @@ amd_comgr_status_t AMDGPUCompiler::PreprocessToSource() {
 
   Args.push_back("-E");
 
-  return ProcessFiles(AMD_COMGR_DATA_KIND_SOURCE, ".i");
+  return processFiles(AMD_COMGR_DATA_KIND_SOURCE, ".i");
 }
 
-amd_comgr_status_t AMDGPUCompiler::CompileToBitcode() {
-  if (auto Status = CreateTmpDirs())
+amd_comgr_status_t AMDGPUCompiler::compileToBitcode() {
+  if (auto Status = createTmpDirs())
     return Status;
 
-  if (ActionInfo->isa_name)
-    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
+  if (ActionInfo->IsaName)
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
       return Status;
 
-  if (auto Status = AddIncludeFlags())
+  if (auto Status = addIncludeFlags())
     return Status;
 
   Args.push_back("-x");
   Args.push_back("cl");
 
-  switch (ActionInfo->language) {
+  switch (ActionInfo->Language) {
   case AMD_COMGR_LANGUAGE_OPENCL_1_2:
     Args.push_back("-std=cl1.2");
     break;
@@ -848,11 +848,11 @@ amd_comgr_status_t AMDGPUCompiler::CompileToBitcode() {
   Args.push_back("-c");
   Args.push_back("-emit-llvm");
 
-  return ProcessFiles(AMD_COMGR_DATA_KIND_BC, ".bc");
+  return processFiles(AMD_COMGR_DATA_KIND_BC, ".bc");
 }
 
-amd_comgr_status_t AMDGPUCompiler::LinkBitcodeToBitcode() {
-  if (auto Status = CreateTmpDirs())
+amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
+  if (auto Status = createTmpDirs())
     return Status;
 
   LLVMContext Context;
@@ -863,8 +863,8 @@ amd_comgr_status_t AMDGPUCompiler::LinkBitcodeToBitcode() {
   Linker L(*Composite);
   unsigned ApplicableFlags = Linker::Flags::None;
 
-  for (auto Input : InSet->data_objects) {
-    if (Input->data_kind != AMD_COMGR_DATA_KIND_BC)
+  for (auto Input : InSet->DataObjects) {
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_BC)
       continue;
 
     SMDiagnostic SMDiag;
@@ -873,10 +873,10 @@ amd_comgr_status_t AMDGPUCompiler::LinkBitcodeToBitcode() {
     // composite) so MemoryBuffer::getMemBuffer is sufficient.
     auto Mod =
         getLazyIRModule(MemoryBuffer::getMemBuffer(
-                            StringRef(Input->data, Input->size), "", false),
+                            StringRef(Input->Data, Input->Size), "", false),
                         SMDiag, Context, true);
     if (!Mod) {
-      SMDiag.print(Input->name, LogS, /* ShowColors */ false);
+      SMDiag.print(Input->Name, LogS, /* ShowColors */ false);
       return AMD_COMGR_STATUS_ERROR;
     }
     if (verifyModule(*Mod, &LogS))
@@ -898,69 +898,69 @@ amd_comgr_status_t AMDGPUCompiler::LinkBitcodeToBitcode() {
     return Status;
   ScopedDataObjectReleaser SDOR(OutputT);
 
-  DataObject *Output = DataObject::Convert(OutputT);
-  Output->SetName("linked.bc");
-  Output->SetData(OutBuf);
+  DataObject *Output = DataObject::convert(OutputT);
+  Output->setName("linked.bc");
+  Output->setData(OutBuf);
 
   return amd_comgr_data_set_add(OutSetT, OutputT);
 }
 
-amd_comgr_status_t AMDGPUCompiler::CodeGenBitcodeToRelocatable() {
-  if (auto Status = CreateTmpDirs())
+amd_comgr_status_t AMDGPUCompiler::codeGenBitcodeToRelocatable() {
+  if (auto Status = createTmpDirs())
     return Status;
 
-  if (ActionInfo->isa_name)
-    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
+  if (ActionInfo->IsaName)
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
       return Status;
 
   Args.push_back("-c");
 
-  return ProcessFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o");
+  return processFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o");
 }
 
-amd_comgr_status_t AMDGPUCompiler::CodeGenBitcodeToAssembly() {
-  if (auto Status = CreateTmpDirs())
+amd_comgr_status_t AMDGPUCompiler::codeGenBitcodeToAssembly() {
+  if (auto Status = createTmpDirs())
     return Status;
 
-  if (ActionInfo->isa_name)
-    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
+  if (ActionInfo->IsaName)
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
       return Status;
 
   Args.push_back("-S");
 
-  return ProcessFiles(AMD_COMGR_DATA_KIND_SOURCE, ".s");
+  return processFiles(AMD_COMGR_DATA_KIND_SOURCE, ".s");
 }
 
-amd_comgr_status_t AMDGPUCompiler::AssembleToRelocatable() {
-  if (auto Status = CreateTmpDirs())
+amd_comgr_status_t AMDGPUCompiler::assembleToRelocatable() {
+  if (auto Status = createTmpDirs())
     return Status;
 
-  if (ActionInfo->isa_name)
-    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
+  if (ActionInfo->IsaName)
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
       return Status;
 
-  if (auto Status = AddIncludeFlags())
+  if (auto Status = addIncludeFlags())
     return Status;
 
   Args.push_back("-c");
 
-  return ProcessFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o");
+  return processFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o");
 }
 
-amd_comgr_status_t AMDGPUCompiler::LinkToRelocatable() {
-  if (auto Status = CreateTmpDirs())
+amd_comgr_status_t AMDGPUCompiler::linkToRelocatable() {
+  if (auto Status = createTmpDirs())
     return Status;
 
   for (auto &Option : Options)
     Args.push_back(Option.c_str());
 
   SmallVector<SmallString<128>, 128> Inputs;
-  for (auto Input : InSet->data_objects) {
-    if (Input->data_kind != AMD_COMGR_DATA_KIND_RELOCATABLE)
+  for (auto Input : InSet->DataObjects) {
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE)
       continue;
 
-    Inputs.push_back(GetFilePath(Input, InputDir));
-    if (auto Status = OutputToFile(Input, Inputs.back()))
+    Inputs.push_back(getFilePath(Input, InputDir));
+    if (auto Status = outputToFile(Input, Inputs.back()))
       return Status;
     Args.push_back(Inputs.back().c_str());
   }
@@ -971,41 +971,41 @@ amd_comgr_status_t AMDGPUCompiler::LinkToRelocatable() {
     return Status;
   ScopedDataObjectReleaser SDOR(OutputT);
 
-  DataObject *Output = DataObject::Convert(OutputT);
-  Output->SetName("a.o");
-  auto OutputFilePath = GetFilePath(Output, OutputDir);
+  DataObject *Output = DataObject::convert(OutputT);
+  Output->setName("a.o");
+  auto OutputFilePath = getFilePath(Output, OutputDir);
   Args.push_back("-o");
   Args.push_back(OutputFilePath.c_str());
 
   Args.push_back("-r");
 
-  if (auto Status = LLDLink(Args, LogS))
+  if (auto Status = linkWithLLD(Args, LogS))
     return Status;
 
-  if (auto Status = InputFromFile(Output, OutputFilePath))
+  if (auto Status = inputFromFile(Output, OutputFilePath))
     return Status;
 
   return amd_comgr_data_set_add(OutSetT, OutputT);
 }
 
-amd_comgr_status_t AMDGPUCompiler::LinkToExecutable() {
-  if (auto Status = CreateTmpDirs())
+amd_comgr_status_t AMDGPUCompiler::linkToExecutable() {
+  if (auto Status = createTmpDirs())
     return Status;
 
-  if (ActionInfo->isa_name)
-    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
-        return Status;
+  if (ActionInfo->IsaName)
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
+      return Status;
 
   for (auto &Option : Options)
     Args.push_back(Option.c_str());
 
   SmallVector<SmallString<128>, 128> Inputs;
-  for (auto Input : InSet->data_objects) {
-    if (Input->data_kind != AMD_COMGR_DATA_KIND_RELOCATABLE)
+  for (auto Input : InSet->DataObjects) {
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE)
       continue;
 
-    Inputs.push_back(GetFilePath(Input, InputDir));
-    if (auto Status = OutputToFile(Input, Inputs.back()))
+    Inputs.push_back(getFilePath(Input, InputDir));
+    if (auto Status = outputToFile(Input, Inputs.back()))
       return Status;
     Args.push_back(Inputs.back().c_str());
   }
@@ -1016,18 +1016,18 @@ amd_comgr_status_t AMDGPUCompiler::LinkToExecutable() {
     return Status;
   ScopedDataObjectReleaser SDOR(OutputT);
 
-  DataObject *Output = DataObject::Convert(OutputT);
-  Output->SetName("a.so");
-  auto OutputFilePath = GetFilePath(Output, OutputDir);
+  DataObject *Output = DataObject::convert(OutputT);
+  Output->setName("a.so");
+  auto OutputFilePath = getFilePath(Output, OutputDir);
   Args.push_back("-o");
   Args.push_back(OutputFilePath.c_str());
 
   InProcessDriver TheDriver(LogS);
 
-  if (auto Status = TheDriver.Execute(Args))
+  if (auto Status = TheDriver.execute(Args))
     return Status;
 
-  if (auto Status = InputFromFile(Output, OutputFilePath))
+  if (auto Status = inputFromFile(Output, OutputFilePath))
     return Status;
 
   return amd_comgr_data_set_add(OutSetT, OutputT);
@@ -1035,14 +1035,12 @@ amd_comgr_status_t AMDGPUCompiler::LinkToExecutable() {
 
 AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
                                DataSet *OutSet, raw_ostream &LogS)
-    : ActionInfo(ActionInfo), InSet(InSet), OutSetT(DataSet::Convert(OutSet)),
+    : ActionInfo(ActionInfo), InSet(InSet), OutSetT(DataSet::convert(OutSet)),
       LogS(LogS) {
-  InitializeCommandLineArgs(Args);
-  ParseOptions();
+  initializeCommandLineArgs(Args);
+  parseOptions();
 }
 
-AMDGPUCompiler::~AMDGPUCompiler() {
-  RemoveTmpDirs();
-}
+AMDGPUCompiler::~AMDGPUCompiler() { removeTmpDirs(); }
 
-}
+} // namespace COMGR

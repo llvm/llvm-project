@@ -1,40 +1,40 @@
 /*******************************************************************************
-*
-* University of Illinois/NCSA
-* Open Source License
-*
-* Copyright (c) 2003-2017 University of Illinois at Urbana-Champaign.
-* Modifications (c) 2018 Advanced Micro Devices, Inc.
-* All rights reserved.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* with the Software without restriction, including without limitation the
-* rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-* sell copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-*     * Redistributions of source code must retain the above copyright notice,
-*       this list of conditions and the following disclaimers.
-*
-*     * Redistributions in binary form must reproduce the above copyright
-*       notice, this list of conditions and the following disclaimers in the
-*       documentation and/or other materials provided with the distribution.
-*
-*     * Neither the names of the LLVM Team, University of Illinois at
-*       Urbana-Champaign, nor the names of its contributors may be used to
-*       endorse or promote products derived from this Software without specific
-*       prior written permission.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-* CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
-* THE SOFTWARE.
-*
-*******************************************************************************/
+ *
+ * University of Illinois/NCSA
+ * Open Source License
+ *
+ * Copyright (c) 2003-2017 University of Illinois at Urbana-Champaign.
+ * Modifications (c) 2018 Advanced Micro Devices, Inc.
+ * All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * with the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimers.
+ *
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimers in the
+ *       documentation and/or other materials provided with the distribution.
+ *
+ *     * Neither the names of the LLVM Team, University of Illinois at
+ *       Urbana-Champaign, nor the names of its contributors may be used to
+ *       endorse or promote products derived from this Software without specific
+ *       prior written permission.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+ * THE SOFTWARE.
+ *
+ ******************************************************************************/
 
 #ifndef COMGR_COMPILER_H
 #define COMGR_COMPILER_H
@@ -59,7 +59,7 @@ class InProcessDriver {
 
 public:
   InProcessDriver(llvm::raw_ostream &DiagOS);
-  amd_comgr_status_t Execute(llvm::ArrayRef<const char *> Args);
+  amd_comgr_status_t execute(llvm::ArrayRef<const char *> Args);
 };
 
 /// Manages executing Compiler-related actions.
@@ -71,7 +71,7 @@ class AMDGPUCompiler {
     AMDGPUCompiler *Compiler = nullptr;
 
     AMDGPUCompilerDiagnosticHandler(AMDGPUCompiler *Compiler)
-      : Compiler(Compiler) {}
+        : Compiler(Compiler) {}
 
     bool handleDiagnostics(const DiagnosticInfo &DI) override {
       assert(Compiler && "Compiler cannot be nullptr");
@@ -109,30 +109,31 @@ class AMDGPUCompiler {
   llvm::SmallString<128> IncludeDir;
   llvm::raw_ostream &LogS;
 
-  amd_comgr_status_t CreateTmpDirs();
-  amd_comgr_status_t RemoveTmpDirs();
-  amd_comgr_status_t ProcessFile(const char *InputFilePath,
+  amd_comgr_status_t createTmpDirs();
+  amd_comgr_status_t removeTmpDirs();
+  amd_comgr_status_t processFile(const char *InputFilePath,
                                  const char *OutputFilePath);
   /// Process each file in @c InSet individually, placing output in @c OutSet.
-  amd_comgr_status_t ProcessFiles(amd_comgr_data_kind_t OutputKind,
+  amd_comgr_status_t processFiles(amd_comgr_data_kind_t OutputKind,
                                   const char *OutputSuffix);
-  void ParseOptions();
-  amd_comgr_status_t AddIncludeFlags();
-  amd_comgr_status_t AddTargetIdentifierFlags(llvm::StringRef IdentStr);
+  void parseOptions();
+  amd_comgr_status_t addIncludeFlags();
+  amd_comgr_status_t addTargetIdentifierFlags(llvm::StringRef IdentStr);
 
 public:
-  AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet, DataSet *OutSet, raw_ostream &LogS);
+  AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet, DataSet *OutSet,
+                 raw_ostream &LogS);
   ~AMDGPUCompiler();
 
-  amd_comgr_status_t PreprocessToSource();
-  amd_comgr_status_t CompileToBitcode();
-  amd_comgr_status_t LinkBitcodeToBitcode();
-  amd_comgr_status_t CodeGenBitcodeToRelocatable();
-  amd_comgr_status_t CodeGenBitcodeToAssembly();
-  amd_comgr_status_t AssembleToRelocatable();
-  amd_comgr_status_t LinkToRelocatable();
-  amd_comgr_status_t LinkToExecutable();
+  amd_comgr_status_t preprocessToSource();
+  amd_comgr_status_t compileToBitcode();
+  amd_comgr_status_t linkBitcodeToBitcode();
+  amd_comgr_status_t codeGenBitcodeToRelocatable();
+  amd_comgr_status_t codeGenBitcodeToAssembly();
+  amd_comgr_status_t assembleToRelocatable();
+  amd_comgr_status_t linkToRelocatable();
+  amd_comgr_status_t linkToExecutable();
 };
-}
+} // namespace COMGR
 
 #endif

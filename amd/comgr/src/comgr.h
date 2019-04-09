@@ -1,44 +1,44 @@
 /*******************************************************************************
-*
-* University of Illinois/NCSA
-* Open Source License
-*
-* Copyright (c) 2018 Advanced Micro Devices, Inc. All Rights Reserved.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* with the Software without restriction, including without limitation the
-* rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-* sell copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-*     * Redistributions of source code must retain the above copyright notice,
-*       this list of conditions and the following disclaimers.
-*
-*     * Redistributions in binary form must reproduce the above copyright
-*       notice, this list of conditions and the following disclaimers in the
-*       documentation and/or other materials provided with the distribution.
-*
-*     * Neither the names of Advanced Micro Devices, Inc. nor the names of its
-*       contributors may be used to endorse or promote products derived from
-*       this Software without specific prior written permission.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
-* THE SOFTWARE.
-*
-*******************************************************************************/
+ *
+ * University of Illinois/NCSA
+ * Open Source License
+ *
+ * Copyright (c) 2018 Advanced Micro Devices, Inc. All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * with the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimers.
+ *
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimers in the
+ *       documentation and/or other materials provided with the distribution.
+ *
+ *     * Neither the names of Advanced Micro Devices, Inc. nor the names of its
+ *       contributors may be used to endorse or promote products derived from
+ *       this Software without specific prior written permission.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+ * THE SOFTWARE.
+ *
+ ******************************************************************************/
 
 #ifndef COMGR_DATA_H_
 #define COMGR_DATA_H_
 
+#include "amd_comgr.h"
 #include "comgr-msgpack.h"
 #include "comgr-symbol.h"
-#include "amd_comgr.h"
 #include "yaml-cpp/yaml.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -56,7 +56,7 @@ struct DataSymbol;
 /// If @p Dest is non-null, it will first be freed.
 ///
 /// @p Src may contain null bytes.
-amd_comgr_status_t SetCStr(char *&Dest, llvm::StringRef Src,
+amd_comgr_status_t setCStr(char *&Dest, llvm::StringRef Src,
                            size_t *Size = nullptr);
 
 /// Components of a "Code Object Target Identification" string.
@@ -79,59 +79,55 @@ struct TargetIdentifier {
 ///
 /// @param IdentStr [in] The string to parse.
 /// @param Ident [out] The components of the identification string.
-amd_comgr_status_t ParseTargetIdentifier(llvm::StringRef IdentStr,
-        TargetIdentifier &Ident);
+amd_comgr_status_t parseTargetIdentifier(llvm::StringRef IdentStr,
+                                         TargetIdentifier &Ident);
 
 /// Ensure all required LLVM initialization functions have been invoked at least
 /// once in this process.
-void EnsureLLVMInitialized();
+void ensureLLVMInitialized();
 
 /// Reset all `llvm::cl` options to their default values.
-void ClearLLVMOptions();
+void clearLLVMOptions();
+
+/// Return `true` if the kind is valid, or false otherwise.
+bool isDataKindValid(amd_comgr_data_kind_t DataKind);
 
 struct DataObject {
 
   // Allocate a new DataObject and return a pointer to it.
-  static DataObject *allocate(amd_comgr_data_kind_t data_kind);
+  static DataObject *allocate(amd_comgr_data_kind_t DataKind);
 
   // Decrement the refcount of this DataObject, and free it when it reaches 0.
   void release();
 
-  static amd_comgr_data_t Convert(DataObject* data) {
-    amd_comgr_data_t handle = {
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(data))};
-    return handle;
+  static amd_comgr_data_t convert(DataObject *Data) {
+    amd_comgr_data_t Handle = {
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Data))};
+    return Handle;
   }
 
-  static const amd_comgr_data_t Convert(const DataObject* data) {
-    const amd_comgr_data_t handle = {
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(data))};
-    return handle;
+  static const amd_comgr_data_t convert(const DataObject *Data) {
+    const amd_comgr_data_t Handle = {
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Data))};
+    return Handle;
   }
 
-  static DataObject *Convert(amd_comgr_data_t data) {
-    return reinterpret_cast<DataObject *>(data.handle);
+  static DataObject *convert(amd_comgr_data_t Data) {
+    return reinterpret_cast<DataObject *>(Data.handle);
   }
 
-  bool kind_is_valid() {
-    if (data_kind > AMD_COMGR_DATA_KIND_UNDEF &&
-        data_kind <= AMD_COMGR_DATA_KIND_LAST)
-      return true;
-    return false;
-  }
+  bool hasValidDataKind() { return isDataKindValid(DataKind); }
 
-  amd_comgr_status_t SetName(llvm::StringRef Name);
-  amd_comgr_status_t SetData(llvm::StringRef Data);
-  void SetMetadata(DataMeta *Metadata);
+  amd_comgr_status_t setName(llvm::StringRef Name);
+  amd_comgr_status_t setData(llvm::StringRef Data);
+  void setMetadata(DataMeta *Metadata);
 
-  void dump();
-
-  amd_comgr_data_kind_t data_kind;
-  char *data;
-  char *name;
-  size_t size;
-  int refcount;
-  DataSymbol *data_sym;
+  amd_comgr_data_kind_t DataKind;
+  char *Data;
+  char *Name;
+  size_t Size;
+  int RefCount;
+  DataSymbol *DataSym;
 
 private:
   // We require this type be allocated via new, specifically through calling
@@ -139,7 +135,7 @@ private:
   // sure the type is not constructed without new, or destructed without
   // checking the reference count, we mark the constructor and destructor
   // private.
-  DataObject(amd_comgr_data_kind_t kind);
+  DataObject(amd_comgr_data_kind_t Kind);
   ~DataObject();
 };
 
@@ -152,7 +148,7 @@ public:
   ScopedDataObjectReleaser(DataObject *Obj) : Obj(Obj) {}
 
   ScopedDataObjectReleaser(amd_comgr_data_t Obj)
-      : Obj(DataObject::Convert(Obj)) {}
+      : Obj(DataObject::convert(Obj)) {}
 
   ~ScopedDataObjectReleaser() { Obj->release(); }
 };
@@ -162,25 +158,23 @@ struct DataSet {
   DataSet();
   ~DataSet();
 
-  static amd_comgr_data_set_t Convert(DataSet* data_set ) {
-    amd_comgr_data_set_t handle = {
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(data_set))};
-    return handle;
+  static amd_comgr_data_set_t convert(DataSet *Set) {
+    amd_comgr_data_set_t Handle = {
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Set))};
+    return Handle;
   }
 
-  static const amd_comgr_data_set_t Convert(const DataSet* data_set) {
-    const amd_comgr_data_set_t handle = {
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(data_set))};
-    return handle;
+  static const amd_comgr_data_set_t convert(const DataSet *Set) {
+    const amd_comgr_data_set_t Handle = {
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Set))};
+    return Handle;
   }
 
-  static DataSet *Convert(amd_comgr_data_set_t data_set) {
-    return reinterpret_cast<DataSet *>(data_set.handle);
+  static DataSet *convert(amd_comgr_data_set_t Set) {
+    return reinterpret_cast<DataSet *>(Set.handle);
   }
 
-  void dump();
-
-  llvm::SmallSetVector<DataObject *, 8> data_objects;
+  llvm::SmallSetVector<DataObject *, 8> DataObjects;
 };
 
 struct DataAction {
@@ -188,84 +182,82 @@ struct DataAction {
   // duration of the COMGR library. Once initialized, they should never be
   // reset.
 
-
   DataAction();
   ~DataAction();
 
-  static amd_comgr_action_info_t Convert(DataAction* action) {
-    amd_comgr_action_info_t handle = {
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(action))};
-    return handle;
+  static amd_comgr_action_info_t convert(DataAction *Action) {
+    amd_comgr_action_info_t Handle = {
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Action))};
+    return Handle;
   }
 
-  static const amd_comgr_action_info_t Convert(const DataAction* action) {
-    const amd_comgr_action_info_t handle = {
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(action))};
-    return handle;
+  static const amd_comgr_action_info_t convert(const DataAction *Action) {
+    const amd_comgr_action_info_t Handle = {
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Action))};
+    return Handle;
   }
 
-  static DataAction *Convert(amd_comgr_action_info_t action) {
-    return reinterpret_cast<DataAction *>(action.handle);
+  static DataAction *convert(amd_comgr_action_info_t Action) {
+    return reinterpret_cast<DataAction *>(Action.handle);
   }
 
-  amd_comgr_status_t SetIsaName(llvm::StringRef IsaName);
-  amd_comgr_status_t SetActionOptions(llvm::StringRef ActionOptions);
-  amd_comgr_status_t SetActionPath(llvm::StringRef ActionPath);
+  amd_comgr_status_t setIsaName(llvm::StringRef IsaName);
+  amd_comgr_status_t setActionOptions(llvm::StringRef ActionOptions);
+  amd_comgr_status_t setActionPath(llvm::StringRef ActionPath);
 
-  char *isa_name;
-  char *action_options;
-  char *action_path;
-  amd_comgr_language_t language;
-  bool logging;
+  char *IsaName;
+  char *Options;
+  char *Path;
+  amd_comgr_language_t Language;
+  bool Logging;
 };
 
 struct DataMeta {
-  static amd_comgr_metadata_node_t Convert(DataMeta* meta) {
-    amd_comgr_metadata_node_t handle = {
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(meta))};
-    return handle;
+  static amd_comgr_metadata_node_t convert(DataMeta *Meta) {
+    amd_comgr_metadata_node_t Handle = {
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Meta))};
+    return Handle;
   }
 
-  static const amd_comgr_metadata_node_t Convert(const DataMeta* meta) {
-    const amd_comgr_metadata_node_t handle = {
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(meta))};
-    return handle;
+  static const amd_comgr_metadata_node_t convert(const DataMeta *Meta) {
+    const amd_comgr_metadata_node_t Handle = {
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Meta))};
+    return Handle;
   }
 
-  static DataMeta *Convert(amd_comgr_metadata_node_t meta) {
-    return reinterpret_cast<DataMeta *>(meta.handle);
+  static DataMeta *convert(amd_comgr_metadata_node_t Meta) {
+    return reinterpret_cast<DataMeta *>(Meta.handle);
   }
 
-  void dump();
+  amd_comgr_metadata_kind_t getMetadataKind();
 
-  YAML::Node node;
-  std::shared_ptr<msgpack::Node> msgpack_node;
-  amd_comgr_metadata_kind_t get_metadata_kind();
+  YAML::Node YAMLNode;
+  std::shared_ptr<msgpack::Node> MsgPackNode;
 };
 
 struct DataSymbol {
-  DataSymbol(SymbolContext *data_sym);
+  DataSymbol(SymbolContext *DataSym);
   ~DataSymbol();
 
-  static amd_comgr_symbol_t Convert(DataSymbol* sym) {
-    amd_comgr_symbol_t handle = {
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(sym))};
-    return handle;
+  static amd_comgr_symbol_t convert(DataSymbol *Sym) {
+    amd_comgr_symbol_t Handle = {
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Sym))};
+    return Handle;
   }
 
-  static const amd_comgr_symbol_t Convert(const DataSymbol* sym) {
-    const amd_comgr_symbol_t handle = {
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(sym))};
-    return handle;
+  static const amd_comgr_symbol_t convert(const DataSymbol *Sym) {
+    const amd_comgr_symbol_t Handle = {
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Sym))};
+    return Handle;
   }
 
-  static DataSymbol *Convert(amd_comgr_symbol_t sym) {
-    return reinterpret_cast<DataSymbol *>(sym.handle);
+  static DataSymbol *convert(amd_comgr_symbol_t Sym) {
+    return reinterpret_cast<DataSymbol *>(Sym.handle);
   }
 
-  SymbolContext *data_sym;
+  SymbolContext *DataSym;
 };
 
-}  // namespace CO
+} // namespace COMGR
 
 #endif // header guard

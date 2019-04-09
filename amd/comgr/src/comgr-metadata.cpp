@@ -1,37 +1,37 @@
 /*******************************************************************************
-*
-* University of Illinois/NCSA
-* Open Source License
-*
-* Copyright (c) 2018 Advanced Micro Devices, Inc. All Rights Reserved.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* with the Software without restriction, including without limitation the
-* rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-* sell copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-*     * Redistributions of source code must retain the above copyright notice,
-*       this list of conditions and the following disclaimers.
-*
-*     * Redistributions in binary form must reproduce the above copyright
-*       notice, this list of conditions and the following disclaimers in the
-*       documentation and/or other materials provided with the distribution.
-*
-*     * Neither the names of Advanced Micro Devices, Inc. nor the names of its
-*       contributors may be used to endorse or promote products derived from
-*       this Software without specific prior written permission.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
-* THE SOFTWARE.
-*
-*******************************************************************************/
+ *
+ * University of Illinois/NCSA
+ * Open Source License
+ *
+ * Copyright (c) 2018 Advanced Micro Devices, Inc. All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * with the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimers.
+ *
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimers in the
+ *       documentation and/or other materials provided with the distribution.
+ *
+ *     * Neither the names of Advanced Micro Devices, Inc. nor the names of its
+ *       contributors may be used to endorse or promote products derived from
+ *       this Software without specific prior written permission.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+ * THE SOFTWARE.
+ *
+ ******************************************************************************/
 
 #include "comgr-metadata.h"
 #include "comgr-msgpack.h"
@@ -55,7 +55,7 @@ template <typename ELFT> using Elf_Note = typename ELFT::Note;
 static Expected<std::unique_ptr<ELFObjectFileBase>>
 getELFObjectFileBase(DataObject *DataP) {
   std::unique_ptr<MemoryBuffer> Buf =
-      MemoryBuffer::getMemBuffer(StringRef(DataP->data, DataP->size));
+      MemoryBuffer::getMemBuffer(StringRef(DataP->Data, DataP->Size));
 
   Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
       ObjectFile::createELFObjectFile(*Buf);
@@ -130,7 +130,7 @@ static amd_comgr_status_t processElfNotes(const ELFObjectFile<ELFT> *Obj,
 
 template <class ELFT>
 static amd_comgr_status_t getElfMetadataRoot(const ELFObjectFile<ELFT> *Obj,
-                                             DataMeta *metap) {
+                                             DataMeta *MetaP) {
   amd_comgr_status_t NoteStatus = AMD_COMGR_STATUS_SUCCESS;
   auto ProcessNote = [&](const Elf_Note<ELFT> &Note) {
     auto DescString =
@@ -138,14 +138,14 @@ static amd_comgr_status_t getElfMetadataRoot(const ELFObjectFile<ELFT> *Obj,
                   Note.getDesc().size());
     if (Note.getName() == "AMD" &&
         Note.getType() == ELF::NT_AMD_AMDGPU_HSA_METADATA) {
-      metap->node = YAML::Load(DescString);
+      MetaP->YAMLNode = YAML::Load(DescString);
       return true;
     } else if (((Note.getName() == "AMD" || Note.getName() == "AMDGPU") &&
                 Note.getType() == PAL_METADATA_NOTE_TYPE) ||
                (Note.getName() == "AMDGPU" &&
                 Note.getType() == ELF::NT_AMDGPU_METADATA)) {
       msgpack::Reader MPReader(DescString);
-      NoteStatus = COMGR::msgpack::parse(MPReader, metap->msgpack_node);
+      NoteStatus = COMGR::msgpack::parse(MPReader, MetaP->MsgPackNode);
       return true;
     }
     return false;
@@ -157,38 +157,37 @@ static amd_comgr_status_t getElfMetadataRoot(const ELFObjectFile<ELFT> *Obj,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t getMetadataRoot(DataObject *DataP, DataMeta *metap) {
+amd_comgr_status_t getMetadataRoot(DataObject *DataP, DataMeta *MetaP) {
   auto ObjOrErr = getELFObjectFileBase(DataP);
   if (errorToBool(ObjOrErr.takeError()))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   auto Obj = ObjOrErr->get();
 
   if (auto ELF32LE = dyn_cast<ELF32LEObjectFile>(Obj))
-    return getElfMetadataRoot(ELF32LE, metap);
+    return getElfMetadataRoot(ELF32LE, MetaP);
   if (auto ELF64LE = dyn_cast<ELF64LEObjectFile>(Obj))
-    return getElfMetadataRoot(ELF64LE, metap);
+    return getElfMetadataRoot(ELF64LE, MetaP);
   if (auto ELF32BE = dyn_cast<ELF32BEObjectFile>(Obj))
-    return getElfMetadataRoot(ELF32BE, metap);
+    return getElfMetadataRoot(ELF32BE, MetaP);
   auto ELF64BE = dyn_cast<ELF64BEObjectFile>(Obj);
-  return getElfMetadataRoot(ELF64BE, metap);
+  return getElfMetadataRoot(ELF64BE, MetaP);
 }
 
 #define NT_AMDGPU_HSA_ISA 3
+// NOLINTNEXTLINE(readability-identifier-naming)
 typedef struct amdgpu_hsa_note_isa_s {
-  uint16_t vendor_name_size;
-  uint16_t architecture_name_size;
-  uint32_t major;
-  uint32_t minor;
-  uint32_t stepping;
-  char vendor_and_architecture_name[1];
+  uint16_t vendor_name_size;            // NOLINT(readability-identifier-naming)
+  uint16_t architecture_name_size;      // NOLINT(readability-identifier-naming)
+  uint32_t major;                       // NOLINT(readability-identifier-naming)
+  uint32_t minor;                       // NOLINT(readability-identifier-naming)
+  uint32_t stepping;                    // NOLINT(readability-identifier-naming)
+  char vendor_and_architecture_name[1]; // NOLINT(readability-identifier-naming)
 } amdgpu_hsa_note_isa_t;
 
-static amd_comgr_status_t GetNoteIsaName(StringRef VendorName,
-                              StringRef ArchitectureName,
-                              uint32_t MajorVersion, uint32_t MinorVersion,
-                              uint32_t Stepping,
-                              uint32_t EFlags,
-                              std::string &NoteIsaName) {
+static amd_comgr_status_t
+getNoteIsaName(StringRef VendorName, StringRef ArchitectureName,
+               uint32_t MajorVersion, uint32_t MinorVersion, uint32_t Stepping,
+               uint32_t EFlags, std::string &NoteIsaName) {
   std::string OldName;
   OldName += VendorName;
   OldName += ":";
@@ -266,8 +265,9 @@ static amd_comgr_status_t getElfIsaNameV2(const ELFObjectFile<ELFT> *Obj,
       auto EFlags = Obj->getELFFile()->getHeader()->e_flags;
 
       std::string NoteIsaName;
-      NoteStatus = GetNoteIsaName(VendorName, ArchitectureName, NoteIsa->major,
-          NoteIsa->minor, NoteIsa->stepping, EFlags, NoteIsaName);
+      NoteStatus = getNoteIsaName(VendorName, ArchitectureName, NoteIsa->major,
+                                  NoteIsa->minor, NoteIsa->stepping, EFlags,
+                                  NoteIsaName);
       if (NoteStatus)
         return true;
 
@@ -499,11 +499,11 @@ struct IsaInfo {
 #include "comgr-isa-metadata.def"
 };
 
-static_assert((sizeof(SupportedIsas) / sizeof(*SupportedIsas)) == (sizeof(IsaInfos) / sizeof(*IsaInfos)), "all SupportedIsas must have matching IsaInfos");
+static_assert((sizeof(SupportedIsas) / sizeof(*SupportedIsas)) ==
+                  (sizeof(IsaInfos) / sizeof(*IsaInfos)),
+              "all SupportedIsas must have matching IsaInfos");
 
-size_t getIsaCount() {
-  return sizeof(SupportedIsas) / sizeof(*SupportedIsas);
-}
+size_t getIsaCount() { return sizeof(SupportedIsas) / sizeof(*SupportedIsas); }
 
 const char *getIsaName(size_t Index) { return SupportedIsas[Index]; }
 
@@ -514,7 +514,7 @@ amd_comgr_status_t getIsaMetadata(StringRef IsaName, DataMeta *Meta) {
   auto IsaIndex = std::distance(std::begin(SupportedIsas), IsaIterator);
 
   TargetIdentifier Ident;
-  if (auto Status = ParseTargetIdentifier(IsaName, Ident))
+  if (auto Status = parseTargetIdentifier(IsaName, Ident))
     return Status;
 
   auto Root = std::make_shared<COMGR::msgpack::Map>();
@@ -531,9 +531,11 @@ amd_comgr_status_t getIsaMetadata(StringRef IsaName, DataMeta *Meta) {
   Root->Elements[COMGR::msgpack::String::make("Processor")] =
       COMGR::msgpack::String::make(Ident.Processor);
   auto XNACKEnabled = false;
-  auto FeaturesNode = std::make_shared<COMGR::msgpack::List>(Ident.Features.size());
+  auto FeaturesNode =
+      std::make_shared<COMGR::msgpack::List>(Ident.Features.size());
   for (size_t I = 0; I < Ident.Features.size(); ++I) {
-    FeaturesNode->Elements[I].reset(new COMGR::msgpack::String(Ident.Features[I]));
+    FeaturesNode->Elements[I].reset(
+        new COMGR::msgpack::String(Ident.Features[I]));
     if (Ident.Features[I] == "xnack")
       XNACKEnabled = true;
   }
@@ -568,7 +570,7 @@ amd_comgr_status_t getIsaMetadata(StringRef IsaName, DataMeta *Meta) {
   Root->Elements[msgpack::String::make("LDSBankCount")] =
       msgpack::String::make(std::to_string(Info.LDSBankCount));
 
-  Meta->msgpack_node = Root;
+  Meta->MsgPackNode = Root;
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -579,8 +581,8 @@ bool isValidIsaName(StringRef IsaName) {
     return false;
 
   TargetIdentifier Ident;
-  return ParseTargetIdentifier(IsaName, Ident) == AMD_COMGR_STATUS_SUCCESS;
+  return parseTargetIdentifier(IsaName, Ident) == AMD_COMGR_STATUS_SUCCESS;
 }
 
-} // namespace COMGR
 } // namespace metadata
+} // namespace COMGR

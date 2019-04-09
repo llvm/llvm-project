@@ -92,3 +92,16 @@ backwards-incompatible change introduced.
 * `1.2`: Introduce `amd_comgr_disassemble_instruction` and associated APIS.
 * `1.1`: First versioned release. Versions before this have no guaranteed
   compatibility.
+
+Coding Standards
+----------------
+
+Wherever possible, Comgr adheres to the same coding standards as
+[LLVM](https://llvm.org/docs/CodingStandards.html). Comgr also includes
+configuration files for
+[clang-format](https://clang.llvm.org/docs/ClangFormat.html) and
+[clang-tidy](https://clang.llvm.org/extra/clang-tidy/), which should be used to
+ensure patches conform where reasonable.
+
+One notable exception is the `test/` subdirectory which prefers `camelBack` for
+identifiers rather than `CamelCase`.
