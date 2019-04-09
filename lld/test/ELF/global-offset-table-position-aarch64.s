@@ -20,7 +20,7 @@ _start:
 .long _GLOBAL_OFFSET_TABLE_ - .
 
 // CHECK: Name: _GLOBAL_OFFSET_TABLE_ (11)
-// CHECK-NEXT:     Value: 0x20008
+// CHECK-NEXT:     Value: 0x30008
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local (0x0)
 // CHECK-NEXT:     Type: None (0x0)

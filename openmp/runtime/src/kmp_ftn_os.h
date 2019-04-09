@@ -132,10 +132,10 @@
 
 #if OMP_50_ENABLED
 #define FTN_CONTROL_TOOL omp_control_tool
+#define FTN_INIT_ALLOCATOR omp_init_allocator
+#define FTN_DESTROY_ALLOCATOR omp_destroy_allocator
 #define FTN_SET_DEFAULT_ALLOCATOR omp_set_default_allocator
 #define FTN_GET_DEFAULT_ALLOCATOR omp_get_default_allocator
-#define FTN_ALLOC omp_alloc
-#define FTN_FREE omp_free
 #define FTN_GET_DEVICE_NUM omp_get_device_num
 #define FTN_SET_AFFINITY_FORMAT omp_set_affinity_format
 #define FTN_GET_AFFINITY_FORMAT omp_get_affinity_format
@@ -143,6 +143,7 @@
 #define FTN_CAPTURE_AFFINITY omp_capture_affinity
 #define FTN_PAUSE_RESOURCE omp_pause_resource
 #define FTN_PAUSE_RESOURCE_ALL omp_pause_resource_all
+#define FTN_GET_SUPPORTED_ACTIVE_LEVELS omp_get_supported_active_levels
 #endif
 
 #endif /* KMP_FTN_PLAIN */
@@ -263,6 +264,8 @@
 
 #if OMP_50_ENABLED
 #define FTN_CONTROL_TOOL omp_control_tool_
+#define FTN_INIT_ALLOCATOR omp_init_allocator_
+#define FTN_DESTROY_ALLOCATOR omp_destroy_allocator_
 #define FTN_SET_DEFAULT_ALLOCATOR omp_set_default_allocator_
 #define FTN_GET_DEFAULT_ALLOCATOR omp_get_default_allocator_
 #define FTN_ALLOC omp_alloc_
@@ -274,6 +277,7 @@
 #define FTN_CAPTURE_AFFINITY omp_capture_affinity_
 #define FTN_PAUSE_RESOURCE omp_pause_resource_
 #define FTN_PAUSE_RESOURCE_ALL omp_pause_resource_all_
+#define FTN_GET_SUPPORTED_ACTIVE_LEVELS omp_get_supported_active_levels_
 #endif
 
 #endif /* KMP_FTN_APPEND */
@@ -394,10 +398,10 @@
 
 #if OMP_50_ENABLED
 #define FTN_CONTROL_TOOL OMP_CONTROL_TOOL
+#define FTN_INIT_ALLOCATOR OMP_INIT_ALLOCATOR
+#define FTN_DESTROY_ALLOCATOR OMP_DESTROY_ALLOCATOR
 #define FTN_SET_DEFAULT_ALLOCATOR OMP_SET_DEFAULT_ALLOCATOR
 #define FTN_GET_DEFAULT_ALLOCATOR OMP_GET_DEFAULT_ALLOCATOR
-#define FTN_ALLOC OMP_ALLOC
-#define FTN_FREE OMP_FREE
 #define FTN_GET_DEVICE_NUM OMP_GET_DEVICE_NUM
 #define FTN_SET_AFFINITY_FORMAT OMP_SET_AFFINITY_FORMAT
 #define FTN_GET_AFFINITY_FORMAT OMP_GET_AFFINITY_FORMAT
@@ -405,6 +409,7 @@
 #define FTN_CAPTURE_AFFINITY OMP_CAPTURE_AFFINITY
 #define FTN_PAUSE_RESOURCE OMP_PAUSE_RESOURCE
 #define FTN_PAUSE_RESOURCE_ALL OMP_PAUSE_RESOURCE_ALL
+#define FTN_GET_SUPPORTED_ACTIVE_LEVELS OMP_GET_SUPPORTED_ACTIVE_LEVELS
 #endif
 
 #endif /* KMP_FTN_UPPER */
@@ -525,6 +530,8 @@
 
 #if OMP_50_ENABLED
 #define FTN_CONTROL_TOOL OMP_CONTROL_TOOL_
+#define FTN_INIT_ALLOCATOR OMP_INIT_ALLOCATOR_
+#define FTN_DESTROY_ALLOCATOR OMP_DESTROY_ALLOCATOR_
 #define FTN_SET_DEFAULT_ALLOCATOR OMP_SET_DEFAULT_ALLOCATOR_
 #define FTN_GET_DEFAULT_ALLOCATOR OMP_GET_DEFAULT_ALLOCATOR_
 #define FTN_ALLOC OMP_ALLOC_
@@ -536,6 +543,7 @@
 #define FTN_CAPTURE_AFFINITY OMP_CAPTURE_AFFINITY_
 #define FTN_PAUSE_RESOURCE OMP_PAUSE_RESOURCE_
 #define FTN_PAUSE_RESOURCE_ALL OMP_PAUSE_RESOURCE_ALL_
+#define FTN_GET_SUPPORTED_ACTIVE_LEVELS OMP_GET_SUPPORTED_ACTIVE_LEVELS_
 #endif
 
 #endif /* KMP_FTN_UAPPEND */
@@ -626,8 +634,6 @@
 #define KMP_API_NAME_GOMP_TASKYIELD GOMP_taskyield
 
 // All GOMP_4.0 symbols
-// TODO: As of 2013-10-14, none of the GOMP_4.0 functions are implemented in
-// libomp
 #define KMP_API_NAME_GOMP_BARRIER_CANCEL GOMP_barrier_cancel
 #define KMP_API_NAME_GOMP_CANCEL GOMP_cancel
 #define KMP_API_NAME_GOMP_CANCELLATION_POINT GOMP_cancellation_point

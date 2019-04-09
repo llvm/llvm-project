@@ -24,7 +24,6 @@
 
 #include "Driver.h"
 #include "Config.h"
-#include "Filesystem.h"
 #include "ICF.h"
 #include "InputFiles.h"
 #include "InputSection.h"
@@ -40,6 +39,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
@@ -97,6 +97,8 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Tar = nullptr;
   memset(&In, 0, sizeof(In));
 
+  SharedFile::VernauxNum = 0;
+
   Config->ProgName = Args[0];
 
   Driver->main(Args);
@@ -129,7 +131,7 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
           .Cases("elf32btsmip", "elf32btsmipn32", {ELF32BEKind, EM_MIPS})
           .Cases("elf32ltsmip", "elf32ltsmipn32", {ELF32LEKind, EM_MIPS})
           .Case("elf32lriscv", {ELF32LEKind, EM_RISCV})
-          .Case("elf32ppc", {ELF32BEKind, EM_PPC})
+          .Cases("elf32ppc", "elf32ppclinux", {ELF32BEKind, EM_PPC})
           .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
           .Case("elf64lriscv", {ELF64LEKind, EM_RISCV})
@@ -213,7 +215,15 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     // understand the LLVM bitcode file. It is a pretty common error, so
     // we'll handle it as if it had a symbol table.
     if (!File->isEmpty() && !File->hasSymbolTable()) {
-      for (const auto &P : getArchiveMembers(MBRef))
+      // Check if all members are bitcode files. If not, ignore, which is the
+      // default action without the LTO hack described above.
+      for (const std::pair<MemoryBufferRef, uint64_t> &P :
+           getArchiveMembers(MBRef))
+        if (identify_magic(P.first.getBuffer()) != file_magic::bitcode)
+          return;
+
+      for (const std::pair<MemoryBufferRef, uint64_t> &P :
+           getArchiveMembers(MBRef))
         Files.push_back(make<LazyObjFile>(P.first, Path, P.second));
       return;
     }
@@ -370,6 +380,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
 
   // Interpret this flag early because error() depends on them.
   errorHandler().ErrorLimit = args::getInteger(Args, OPT_error_limit, 20);
+  checkZOptions(Args);
 
   // Handle -help
   if (Args.hasArg(OPT_help)) {
@@ -410,7 +421,6 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   }
 
   readConfigs(Args);
-  checkZOptions(Args);
 
   // The behavior of -v or --version is a bit strange, but this is
   // needed for compatibility with GNU linkers.
@@ -800,6 +810,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Args.hasArg(OPT_ignore_function_address_equality);
   Config->Init = Args.getLastArgValue(OPT_init, "_init");
   Config->LTOAAPipeline = Args.getLastArgValue(OPT_lto_aa_pipeline);
+  Config->LTOCSProfileGenerate = Args.hasArg(OPT_lto_cs_profile_generate);
+  Config->LTOCSProfileFile = Args.getLastArgValue(OPT_lto_cs_profile_file);
   Config->LTODebugPassManager = Args.hasArg(OPT_lto_debug_pass_manager);
   Config->LTONewPassManager = Args.hasArg(OPT_lto_new_pass_manager);
   Config->LTONewPmPasses = Args.getLastArgValue(OPT_lto_newpm_passes);
@@ -816,6 +828,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->OFormatBinary = isOutputFormatBinary(Args);
   Config->Omagic = Args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   Config->OptRemarksFilename = Args.getLastArgValue(OPT_opt_remarks_filename);
+  Config->OptRemarksPasses = Args.getLastArgValue(OPT_opt_remarks_passes);
   Config->OptRemarksWithHotness = Args.hasArg(OPT_opt_remarks_with_hotness);
   Config->Optimize = args::getInteger(Args, OPT_O, 1);
   Config->OrphanHandling = getOrphanHandling(Args);
@@ -825,6 +838,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
   Config->PrintGcSections =
       Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
+  Config->PrintSymbolOrder =
+      Args.getLastArgValue(OPT_print_symbol_order);
   Config->Rpath = getRpath(Args);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
@@ -1224,7 +1239,6 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &Args) {
 // A special library name "ALL" means all archive files.
 //
 // This is not a popular option, but some programs such as bionic libc use it.
-template <class ELFT>
 static void excludeLibs(opt::InputArgList &Args) {
   DenseSet<StringRef> Libs = getExcludeLibs(Args);
   bool All = Libs.count("ALL");
@@ -1277,10 +1291,10 @@ template <class ELFT> static void handleLibcall(StringRef Name) {
 // to DT_NEEDED. If that happens, we need to eliminate shared symbols
 // created from the DSO. Otherwise, they become dangling references
 // that point to a non-existent DSO.
-template <class ELFT> static void demoteSharedSymbols() {
+static void demoteSharedSymbols() {
   for (Symbol *Sym : Symtab->getSymbols()) {
     if (auto *S = dyn_cast<SharedSymbol>(Sym)) {
-      if (!S->getFile<ELFT>().IsNeeded) {
+      if (!S->getFile().IsNeeded) {
         bool Used = S->Used;
         replaceSymbol<Undefined>(S, nullptr, S->getName(), STB_WEAK, S->StOther,
                                  S->Type);
@@ -1413,7 +1427,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &Args) {
 // When this function is executed, only InputFiles and symbol table
 // contain pointers to symbol objects. We visit them to replace pointers,
 // so that wrapped symbols are swapped as instructed by the command line.
-template <class ELFT> static void wrapSymbols(ArrayRef<WrappedSymbol> Wrapped) {
+static void wrapSymbols(ArrayRef<WrappedSymbol> Wrapped) {
   DenseMap<Symbol *, Symbol *> Map;
   for (const WrappedSymbol &W : Wrapped) {
     Map[W.Sym] = W.Wrap;
@@ -1442,13 +1456,6 @@ static const char *LibcallRoutineNames[] = {
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
-  Target = getTarget();
-  InX<ELFT>::VerSym = nullptr;
-  InX<ELFT>::VerNeed = nullptr;
-
-  Config->MaxPageSize = getMaxPageSize(Args);
-  Config->ImageBase = getImageBase(Args);
-
   // If a -hash-style option was not given, set to a default value,
   // which varies depending on the target.
   if (!Args.hasArg(OPT_hash_style)) {
@@ -1546,7 +1553,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle the -exclude-libs option.
   if (Args.hasArg(OPT_exclude_libs))
-    excludeLibs<ELFT>(Args);
+    excludeLibs(Args);
 
   // Create ElfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
@@ -1591,7 +1598,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Apply symbol renames for -wrap.
   if (!Wrapped.empty())
-    wrapSymbols<ELFT>(Wrapped);
+    wrapSymbols(Wrapped);
 
   // Now that we have a complete list of input files.
   // Beyond this point, no new files are added.
@@ -1606,12 +1613,20 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // We do not want to emit debug sections if --strip-all
   // or -strip-debug are given.
-  if (Config->Strip != StripPolicy::None)
+  if (Config->Strip != StripPolicy::None) {
     llvm::erase_if(InputSections, [](InputSectionBase *S) {
       return S->Name.startswith(".debug") || S->Name.startswith(".zdebug");
     });
+  }
+
+  // The Target instance handles target-specific stuff, such as applying
+  // relocations or writing a PLT section. It also contains target-dependent
+  // values such as a default image base address.
+  Target = getTarget();
 
   Config->EFlags = Target->calcEFlags();
+  Config->MaxPageSize = getMaxPageSize(Args);
+  Config->ImageBase = getImageBase(Args);
 
   if (Config->EMachine == EM_ARM) {
     // FIXME: These warnings can be removed when lld only uses these features
@@ -1631,7 +1646,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // and identical code folding.
   splitSections<ELFT>();
   markLive<ELFT>();
-  demoteSharedSymbols<ELFT>();
+  demoteSharedSymbols();
   mergeSections();
   if (Config->ICF != ICFLevel::None) {
     findKeepUniqueSections<ELFT>(Args);

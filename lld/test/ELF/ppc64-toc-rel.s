@@ -65,18 +65,18 @@ _start:
 
 # CHECK:      Disassembly of section .text:
 # CHECK-NEXT: _start:
-# CHECK:      10010008:       {{.*}}     addis 3, 2, -1
+# CHECK:      10010008:       {{.*}}     addis 3, 2, 1
 # CHECK-NEXT: 1001000c:       {{.*}}     addi 3, 3, -32768
 
 # CHECK:      Disassembly of section .data:
 # CHECK-NEXT: global_a:
-# CHECK-NEXT: 10020000:       {{.*}}
+# CHECK-NEXT: 10030000:       {{.*}}
 
 # CHECK-LE:      Disassembly of section .got:
 # CHECK-LE-NEXT: .got:
-# CHECK-LE-NEXT: 10030000:       00 80 03 10
+# CHECK-LE-NEXT: 10020000:       00 80 02 10
 
 # CHECK-BE:      Disassembly of section .got:
 # CHECK-BE-NEXT: .got:
-# CHECK-BE-NEXT: 10030000:       00 00 00 00
-# CHECK-BE-NEXT: 10030004:       10 03 80 00
+# CHECK-BE-NEXT: 10020000:       00 00 00 00
+# CHECK-BE-NEXT: 10020004:       10 02 80 00

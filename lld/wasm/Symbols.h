@@ -98,12 +98,30 @@ public:
   WasmSymbolType getWasmType() const;
   bool isExported() const;
 
-  // True if this symbol was referenced by a regular (non-bitcode) object.
+  // True if the symbol was used for linking and thus need to be added to the
+  // output file's symbol table. This is true for all symbols except for
+  // unreferenced DSO symbols, lazy (archive) symbols, and bitcode symbols that
+  // are unreferenced except by other bitcode objects.
   unsigned IsUsedInRegularObj : 1;
+
+  // True if ths symbol is explicity marked for export (i.e. via the -e/--export
+  // command line flag)
   unsigned ForceExport : 1;
 
   // True if this symbol is specified by --trace-symbol option.
   unsigned Traced : 1;
+
+  const WasmSignature* getSignature() const;
+
+  bool isInGOT() const { return GOTIndex != INVALID_INDEX; }
+
+  uint32_t getGOTIndex() const {
+    assert(GOTIndex != INVALID_INDEX);
+    return GOTIndex;
+  }
+
+  void setGOTIndex(uint32_t Index);
+  bool hasGOTIndex() const { return GOTIndex != INVALID_INDEX; }
 
 protected:
   Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
@@ -116,6 +134,7 @@ protected:
   uint32_t Flags;
   InputFile *File;
   uint32_t OutputSymbolIndex = INVALID_INDEX;
+  uint32_t GOTIndex = INVALID_INDEX;
   bool Referenced;
 };
 
@@ -386,6 +405,10 @@ struct WasmSym {
   // __wasm_call_ctors
   // Function that directly calls all ctors in priority order.
   static DefinedFunction *CallCtors;
+
+  // __wasm_apply_relocs
+  // Function that applies relocations to data segment post-instantiation.
+  static DefinedFunction *ApplyRelocs;
 
   // __dso_handle
   // Symbol used in calls to __cxa_atexit to determine current DLL

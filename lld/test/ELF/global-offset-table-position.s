@@ -22,7 +22,7 @@ callq	f@PLT
 .long _GLOBAL_OFFSET_TABLE_ - .
 
 // CHECK:     Name: _GLOBAL_OFFSET_TABLE_
-// CHECK-NEXT:     Value: 0x2008
+// CHECK-NEXT:     Value: 0x3008
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None (0x0)

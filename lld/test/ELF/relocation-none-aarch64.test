@@ -20,5 +20,4 @@ Sections:
     Info:            .text
     Relocations:
       - Offset:          0
-        Symbol:          ''
         Type:            R_AARCH64_NONE

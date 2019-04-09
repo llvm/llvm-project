@@ -269,7 +269,7 @@ template <typename T> kmp_uint32 __kmp_eq(T value, T checker) {
 }
 
 /*
-    Spin wait loop that first does pause, then yield.
+    Spin wait loop that pauses between checks.
     Waits until function returns non-zero when called with *spinner and check.
     Does NOT put threads to sleep.
     Arguments:
@@ -282,15 +282,14 @@ template <typename T> kmp_uint32 __kmp_eq(T value, T checker) {
         is used to report locks consistently. For example, if lock is acquired
         immediately, its address is reported to ittnotify via
         KMP_FSYNC_ACQUIRED(). However, it lock cannot be acquired immediately
-        and lock routine calls to KMP_WAIT_YIELD(), the later should report the
+        and lock routine calls to KMP_WAIT(), the later should report the
         same address, not an address of low-level spinner.
 #endif // USE_ITT_BUILD
     TODO: make inline function (move to header file for icl)
 */
 template <typename UT>
-static UT __kmp_wait_yield(volatile UT *spinner, UT checker,
-                           kmp_uint32 (*pred)(UT, UT)
-                               USE_ITT_BUILD_ARG(void *obj)) {
+static UT __kmp_wait(volatile UT *spinner, UT checker,
+                     kmp_uint32 (*pred)(UT, UT) USE_ITT_BUILD_ARG(void *obj)) {
   // note: we may not belong to a team at this point
   volatile UT *spin = spinner;
   UT check = checker;
@@ -308,12 +307,8 @@ static UT __kmp_wait_yield(volatile UT *spinner, UT checker,
        It causes problems with infinite recursion because of exit lock */
     /* if ( TCR_4(__kmp_global.g.g_done) && __kmp_global.g.g_abort)
         __kmp_abort_thread(); */
-
-    // if we are oversubscribed,
-    // or have waited a bit (and KMP_LIBRARY=throughput, then yield
-    // pause is in the following code
-    KMP_YIELD(TCR_4(__kmp_nth) > __kmp_avail_proc);
-    KMP_YIELD_SPIN(spins);
+    // If oversubscribed, or have waited a bit then yield.
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
   }
   KMP_FSYNC_SPIN_ACQUIRED(obj);
   return r;
@@ -379,8 +374,8 @@ void __kmp_dispatch_deo(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
       __kmp_str_free(&buff);
     }
 #endif
-    __kmp_wait_yield<UT>(&sh->u.s.ordered_iteration, lower,
-                         __kmp_ge<UT> USE_ITT_BUILD_ARG(NULL));
+    __kmp_wait<UT>(&sh->u.s.ordered_iteration, lower,
+                   __kmp_ge<UT> USE_ITT_BUILD_ARG(NULL));
     KMP_MB(); /* is this necessary? */
 #ifdef KMP_DEBUG
     {

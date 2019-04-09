@@ -120,37 +120,37 @@ entry:
 ; CHECK-NEXT:         Offset:          0x0000002D
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6
-; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           0
 ; CHECK-NEXT:         Content:         68656C6C6F0A00
 ; CHECK-NEXT:       - SectionOffset:   18
-; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           8
 ; CHECK-NEXT:         Content:         '01000000'
 ; CHECK-NEXT:       - SectionOffset:   27
-; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           12
 ; CHECK-NEXT:         Content:         '02000000'
 ; CHECK-NEXT:       - SectionOffset:   36
-; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           16
 ; CHECK-NEXT:         Content:         '03000000'
 ; CHECK-NEXT:       - SectionOffset:   45
-; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           24
 ; CHECK-NEXT:         Content:         '00000000'
 ; CHECK-NEXT:       - SectionOffset:   54
-; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           28

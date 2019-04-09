@@ -46,10 +46,12 @@ class Chunk;
 class Defined;
 class DefinedImportData;
 class DefinedImportThunk;
+class DefinedRegular;
 class Lazy;
 class SectionChunk;
 class Symbol;
 class Undefined;
+class TpiSource;
 
 // The root class of input files.
 class InputFile {
@@ -73,12 +75,12 @@ public:
   StringRef ParentName;
 
   // Returns .drectve section contents if exist.
-  StringRef getDirectives() { return StringRef(Directives).trim(); }
+  StringRef getDirectives() { return Directives; }
 
 protected:
   InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
 
-  std::string Directives;
+  StringRef Directives;
 
 private:
   const Kind FileKind;
@@ -98,7 +100,6 @@ public:
 
 private:
   std::unique_ptr<Archive> File;
-  std::string Filename;
   llvm::DenseSet<uint64_t> Seen;
 };
 
@@ -116,6 +117,8 @@ public:
   ArrayRef<SectionChunk *> getGuardLJmpChunks() { return GuardLJmpChunks; }
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
 
+  ArrayRef<uint8_t> getDebugSection(StringRef SecName);
+
   // Returns a Symbol object for the SymbolIndex'th symbol in the
   // underlying object file.
   Symbol *getSymbol(uint32_t SymbolIndex) {
@@ -125,8 +128,12 @@ public:
   // Returns the underlying COFF file.
   COFFObjectFile *getCOFFObj() { return COFFObj.get(); }
 
-  // Whether the object was already merged into the final PDB or not
-  bool wasProcessedForPDB() const { return !!ModuleDBI; }
+  // Add a symbol for a range extension thunk. Return the new symbol table
+  // index. This index can be used to modify a relocation.
+  uint32_t addRangeThunkSymbol(Symbol *Thunk) {
+    Symbols.push_back(Thunk);
+    return Symbols.size() - 1;
+  }
 
   static std::vector<ObjFile *> Instances;
 
@@ -155,11 +162,28 @@ public:
   // precompiled object. Any difference indicates out-of-date objects.
   llvm::Optional<uint32_t> PCHSignature;
 
+  // Tells whether this file was compiled with /hotpatch
+  bool HotPatchable = false;
+
+  // Whether the object was already merged into the final PDB or not
+  bool MergedIntoPDB = false;
+
+  // If the OBJ has a .debug$T stream, this tells how it will be handled.
+  TpiSource *DebugTypesObj = nullptr;
+
+  // The .debug$T stream if there's one.
+  llvm::Optional<llvm::codeview::CVTypeArray> DebugTypes;
+
 private:
   const coff_section* getSection(uint32_t I);
+  const coff_section *getSection(COFFSymbolRef Sym) {
+    return getSection(Sym.getSectionNumber());
+  }
 
   void initializeChunks();
   void initializeSymbols();
+  void initializeFlags();
+  void initializeDependencies();
 
   SectionChunk *
   readSection(uint32_t SectionNumber,
@@ -182,6 +206,16 @@ private:
   void maybeAssociateSEHForMingw(
       COFFSymbolRef Sym, const llvm::object::coff_aux_section_definition *Def,
       const llvm::DenseMap<StringRef, uint32_t> &PrevailingSectionMap);
+
+  // Given a new symbol Sym with comdat selection Selection, if the new
+  // symbol is not (yet) Prevailing and the existing comdat leader set to
+  // Leader, emits a diagnostic if the new symbol and its selection doesn't
+  // match the existing symbol and its selection. If either old or new
+  // symbol have selection IMAGE_COMDAT_SELECT_LARGEST, Sym might replace
+  // the existing leader. In that case, Prevailing is set to true.
+  void handleComdatSelection(COFFSymbolRef Sym,
+                             llvm::COFF::COMDATType &Selection,
+                             bool &Prevailing, DefinedRegular *Leader);
 
   llvm::Optional<Symbol *>
   createDefined(COFFSymbolRef Sym,

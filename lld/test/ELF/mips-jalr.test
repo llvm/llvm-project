@@ -38,15 +38,14 @@ Sections:
         Type:    R_MIPS_JALR
 
 Symbols:
-  Local:
-    - Name:     T1
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0
-      Size:     4
-  Global:
-    - Name:     __start
-      Type:     STT_FUNC
-      Section:  .text
-      Value:    0
-      Size:     4
+  - Name:     T1
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0
+    Size:     4
+  - Name:     __start
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0
+    Size:     4
+    Binding:  STB_GLOBAL

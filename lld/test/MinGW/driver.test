@@ -74,6 +74,9 @@ WHOLE-ARCHIVE: foo.o -wholearchive:bar.a baz.a
 RUN: ld.lld -### -m i386pep foo.o | FileCheck -check-prefix MINGW-FLAG %s
 MINGW-FLAG: -lldmingw
 
+RUN: ld.lld -### -m i386pep foo.o --exclude-all-symbols | FileCheck -check-prefix EXCLUDE-ALL %s
+EXCLUDE-ALL: -exclude-all-symbols
+
 RUN: ld.lld -### -m i386pep foo.o --export-all-symbols | FileCheck -check-prefix EXPORT-ALL %s
 EXPORT-ALL: -export-all-symbols
 

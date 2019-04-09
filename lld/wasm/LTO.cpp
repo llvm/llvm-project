@@ -47,9 +47,6 @@ static std::unique_ptr<lto::LTO> createLTO() {
   C.Options.FunctionSections = true;
   C.Options.DataSections = true;
 
-  // Wasm currently only supports ThreadModel::Single
-  C.Options.ThreadModel = ThreadModel::Single;
-
   C.DisableVerify = Config->DisableVerify;
   C.DiagHandler = diagnosticHandler;
   C.OptLevel = Config->LTOO;

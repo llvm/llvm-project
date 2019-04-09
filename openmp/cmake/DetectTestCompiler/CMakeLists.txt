@@ -18,8 +18,12 @@ if (NOT OpenMP_Found)
   set(OpenMP_CXX_FLAGS "-fopenmp")
 endif()
 
-set(C_FLAGS ${flags} ${OpenMP_C_FLAGS})
-set(CXX_FLAGS ${flags} ${OpenMP_CXX_FLAGS})
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads REQUIRED)
+
+set(C_FLAGS "${OpenMP_C_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+set(CXX_FLAGS "${OpenMP_CXX_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
 
 # TODO: Implement blockaddress in GlobalISel and remove this flag!
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang")

@@ -18,10 +18,13 @@
 using namespace llvm;
 using namespace llvm::object;
 
+using namespace lld::coff;
+
 // Returns a symbol name for an error message.
 std::string lld::toString(coff::Symbol &B) {
-  if (Optional<std::string> S = lld::demangleMSVC(B.getName()))
-    return ("\"" + *S + "\" (" + B.getName() + ")").str();
+  if (Config->Demangle)
+    if (Optional<std::string> S = lld::demangleMSVC(B.getName()))
+      return *S;
   return B.getName();
 }
 

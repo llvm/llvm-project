@@ -62,11 +62,6 @@ int __kmp_version = 0;
 std::atomic<kmp_int32> __kmp_team_counter = ATOMIC_VAR_INIT(0);
 std::atomic<kmp_int32> __kmp_task_counter = ATOMIC_VAR_INIT(0);
 
-unsigned int __kmp_init_wait =
-    KMP_DEFAULT_INIT_WAIT; /* initial number of spin-tests   */
-unsigned int __kmp_next_wait =
-    KMP_DEFAULT_NEXT_WAIT; /* susequent number of spin-tests */
-
 size_t __kmp_stksize = KMP_DEFAULT_STKSIZE;
 #if KMP_USE_MONITOR
 size_t __kmp_monitor_stksize = 0; // auto adjust
@@ -132,10 +127,9 @@ int __kmp_dflt_team_nth = 0;
 int __kmp_dflt_team_nth_ub = 0;
 int __kmp_tp_capacity = 0;
 int __kmp_tp_cached = 0;
-int __kmp_dflt_nested = FALSE;
 int __kmp_dispatch_num_buffers = KMP_DFLT_DISP_NUM_BUFF;
-int __kmp_dflt_max_active_levels =
-    KMP_MAX_ACTIVE_LEVELS_LIMIT; /* max_active_levels limit */
+int __kmp_dflt_max_active_levels = 1; // Nesting off by default
+bool __kmp_dflt_max_active_levels_set = false; // Don't override set value
 #if KMP_NESTED_HOT_TEAMS
 int __kmp_hot_teams_mode = 0; /* 0 - free extra threads when reduced */
 /* 1 - keep extra threads when reduced */
@@ -306,17 +300,37 @@ kmp_uint64 __kmp_taskloop_min_tasks = 0;
 
 #if OMP_50_ENABLED
 int __kmp_memkind_available = 0;
-int __kmp_hbw_mem_available = 0;
-const omp_allocator_t *OMP_NULL_ALLOCATOR = NULL;
-const omp_allocator_t *omp_default_mem_alloc = (const omp_allocator_t *)1;
-const omp_allocator_t *omp_large_cap_mem_alloc = (const omp_allocator_t *)2;
-const omp_allocator_t *omp_const_mem_alloc = (const omp_allocator_t *)3;
-const omp_allocator_t *omp_high_bw_mem_alloc = (const omp_allocator_t *)4;
-const omp_allocator_t *omp_low_lat_mem_alloc = (const omp_allocator_t *)5;
-const omp_allocator_t *omp_cgroup_mem_alloc = (const omp_allocator_t *)6;
-const omp_allocator_t *omp_pteam_mem_alloc = (const omp_allocator_t *)7;
-const omp_allocator_t *omp_thread_mem_alloc = (const omp_allocator_t *)8;
-void *const *__kmp_def_allocator = omp_default_mem_alloc;
+omp_allocator_handle_t const omp_null_allocator = NULL;
+omp_allocator_handle_t const omp_default_mem_alloc =
+    (omp_allocator_handle_t const)1;
+omp_allocator_handle_t const omp_large_cap_mem_alloc =
+    (omp_allocator_handle_t const)2;
+omp_allocator_handle_t const omp_const_mem_alloc =
+    (omp_allocator_handle_t const)3;
+omp_allocator_handle_t const omp_high_bw_mem_alloc =
+    (omp_allocator_handle_t const)4;
+omp_allocator_handle_t const omp_low_lat_mem_alloc =
+    (omp_allocator_handle_t const)5;
+omp_allocator_handle_t const omp_cgroup_mem_alloc =
+    (omp_allocator_handle_t const)6;
+omp_allocator_handle_t const omp_pteam_mem_alloc =
+    (omp_allocator_handle_t const)7;
+omp_allocator_handle_t const omp_thread_mem_alloc =
+    (omp_allocator_handle_t const)8;
+omp_allocator_handle_t const kmp_max_mem_alloc =
+    (omp_allocator_handle_t const)1024;
+omp_allocator_handle_t __kmp_def_allocator = omp_default_mem_alloc;
+
+omp_memspace_handle_t const omp_default_mem_space =
+    (omp_memspace_handle_t const)0;
+omp_memspace_handle_t const omp_large_cap_mem_space =
+    (omp_memspace_handle_t const)1;
+omp_memspace_handle_t const omp_const_mem_space =
+    (omp_memspace_handle_t const)2;
+omp_memspace_handle_t const omp_high_bw_mem_space =
+    (omp_memspace_handle_t const)3;
+omp_memspace_handle_t const omp_low_lat_mem_space =
+    (omp_memspace_handle_t const)4;
 #endif
 
 /* This check ensures that the compiler is passing the correct data type for the
@@ -395,21 +409,16 @@ int __kmp_env_blocktime = FALSE; /* KMP_BLOCKTIME specified? */
 int __kmp_env_checks = FALSE; /* KMP_CHECKS specified?    */
 int __kmp_env_consistency_check = FALSE; /* KMP_CONSISTENCY_CHECK specified? */
 
+// From KMP_USE_YIELD:
+// 0 = never yield;
+// 1 = always yield (default);
+// 2 = yield only if oversubscribed
+kmp_int32 __kmp_use_yield = 1;
+// This will be 1 if KMP_USE_YIELD environment variable was set explicitly
+kmp_int32 __kmp_use_yield_exp_set = 0;
+
 kmp_uint32 __kmp_yield_init = KMP_INIT_WAIT;
 kmp_uint32 __kmp_yield_next = KMP_NEXT_WAIT;
-
-#if KMP_USE_MONITOR
-kmp_uint32 __kmp_yielding_on = 1;
-#endif
-#if KMP_OS_CNK
-kmp_uint32 __kmp_yield_cycle = 0;
-#else
-kmp_uint32 __kmp_yield_cycle = 1; /* Yield-cycle is on by default */
-#endif
-kmp_int32 __kmp_yield_on_count =
-    10; /* By default, yielding is on for 10 monitor periods. */
-kmp_int32 __kmp_yield_off_count =
-    1; /* By default, yielding is off for 1 monitor periods. */
 
 /* ------------------------------------------------------ */
 /* STATE mostly syncronized with global lock */
@@ -425,7 +434,6 @@ kmp_root_t **__kmp_root = NULL;
 KMP_ALIGN_CACHE
 volatile int __kmp_nth = 0;
 volatile int __kmp_all_nth = 0;
-int __kmp_thread_pool_nth = 0;
 volatile kmp_info_t *__kmp_thread_pool = NULL;
 volatile kmp_team_t *__kmp_team_pool = NULL;
 

@@ -97,6 +97,9 @@ if config.llvm_libxml2_enabled:
 if config.have_dia_sdk:
     config.available_features.add("diasdk")
 
+if config.sizeof_void_p == 8:
+    config.available_features.add("llvm-64-bits")
+
 tar_executable = lit.util.which('tar', config.environment['PATH'])
 if tar_executable:
     tar_version = subprocess.Popen(

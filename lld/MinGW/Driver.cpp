@@ -176,6 +176,8 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
     Add("-dll");
   if (Args.hasArg(OPT_verbose))
     Add("-verbose");
+  if (Args.hasArg(OPT_exclude_all_symbols))
+    Add("-exclude-all-symbols");
   if (Args.hasArg(OPT_export_all_symbols))
     Add("-export-all-symbols");
   if (Args.hasArg(OPT_large_address_aware))

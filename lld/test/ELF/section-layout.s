@@ -32,6 +32,7 @@ _start:
 // For non-executable and non-writable sections, PROGBITS appear after others.
 // CHECK: Name: a
 // CHECK: Name: b
+
 // CHECK: Name: c
 // CHECK: Name: d
 
@@ -40,12 +41,12 @@ _start:
 // CHECK: Name: k
 // CHECK: Name: l
 
-// Writable sections appear before TLS and other relro sections.
-// CHECK: Name: i
-
 // TLS sections are only sorted on NOBITS.
 // CHECK: Name: e
 // CHECK: Name: g
+
+// Writable sections appear after TLS and other relro sections.
+// CHECK: Name: i
 
 // CHECK: Name: j
 

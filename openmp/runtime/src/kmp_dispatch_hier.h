@@ -1,3 +1,15 @@
+/*
+ * kmp_dispatch_hier.h -- hierarchical scheduling methods and data structures
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef KMP_DISPATCH_HIER_H
 #define KMP_DISPATCH_HIER_H
 #include "kmp.h"
@@ -263,8 +275,8 @@ void core_barrier_impl<T>::barrier(kmp_int32 id,
                 next_wait_value));
   char v = (current_wait_value ? 0x1 : 0x0);
   (RCAST(volatile char *, &(bdata->val[current_index])))[id] = v;
-  __kmp_wait_yield<kmp_uint64>(&(bdata->val[current_index]), current_wait_value,
-                               __kmp_eq<kmp_uint64> USE_ITT_BUILD_ARG(NULL));
+  __kmp_wait<kmp_uint64>(&(bdata->val[current_index]), current_wait_value,
+                         __kmp_eq<kmp_uint64> USE_ITT_BUILD_ARG(NULL));
   tdata->wait_val[current_index] = next_wait_value;
   tdata->index = next_index;
 }
@@ -310,8 +322,8 @@ void counter_barrier_impl<T>::barrier(kmp_int32 id,
                 next_wait_value));
   val = RCAST(volatile kmp_int64 *, &(bdata->val[current_index]));
   KMP_TEST_THEN_INC64(val);
-  __kmp_wait_yield<kmp_uint64>(&(bdata->val[current_index]), current_wait_value,
-                               __kmp_ge<kmp_uint64> USE_ITT_BUILD_ARG(NULL));
+  __kmp_wait<kmp_uint64>(&(bdata->val[current_index]), current_wait_value,
+                         __kmp_ge<kmp_uint64> USE_ITT_BUILD_ARG(NULL));
   tdata->wait_val[current_index] = next_wait_value;
   tdata->index = next_index;
 }

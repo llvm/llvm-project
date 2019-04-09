@@ -134,7 +134,7 @@ RAW-NEXT:              Obj: `{{.*}}pdb.test.tmp2.obj`:
 RAW-NEXT:              debug stream: 12, # files: 1, has ec info: false
 RAW-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
 RAW-NEXT:   Mod 0002 | `* Linker *`:
-RAW-NEXT:              SC[???]  | mod = 2, 0000:0000, size = 0, data crc = 0, reloc crc = 0
+RAW-NEXT:              SC[???]  | mod = 65535, 65535:0000, size = -1, data crc = 0, reloc crc = 0
 RAW-NEXT:                         none
 RAW-NEXT:              Obj: ``:
 RAW-NEXT:              debug stream: 13, # files: 0, has ec info: false

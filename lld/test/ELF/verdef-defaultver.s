@@ -150,8 +150,8 @@
 # EXE-NEXT:  ]
 # EXE-NEXT:  Version symbols {
 # EXE-NEXT:    Section Name: .gnu.version
-# EXE-NEXT:    Address: 0x200228
-# EXE-NEXT:    Offset: 0x228
+# EXE-NEXT:    Address: 0x200260
+# EXE-NEXT:    Offset: 0x260
 # EXE-NEXT:    Link: 1
 # EXE-NEXT:    Symbols [
 # EXE-NEXT:      Symbol {

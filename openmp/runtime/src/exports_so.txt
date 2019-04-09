@@ -54,7 +54,6 @@ VERSION {
         ___kmp_allocate;
         ___kmp_free;
         __kmp_thread_pool;
-        __kmp_thread_pool_nth;
 
 	__kmp_reset_stats;
 
@@ -83,7 +82,7 @@ VERSION {
         __kmp_reap_worker;
         __kmp_release_64;
         __kmp_wait_64;
-        __kmp_wait_yield_4;
+        __kmp_wait_4;
 
         # ittnotify symbols to be used by debugger
         __kmp_itt_fini_ittlib;

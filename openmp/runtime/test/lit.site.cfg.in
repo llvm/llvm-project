@@ -1,6 +1,5 @@
 @AUTO_GEN_COMMENT@
 
-config.target_triple = "@TARGET_TRIPLE@"
 config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
 config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
 config.test_compiler_features = @OPENMP_TEST_COMPILER_FEATURES@

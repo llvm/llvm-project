@@ -17,7 +17,7 @@
 # CHECK-NEXT:     Section:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name:  (0)
+# CHECK-NEXT:     Name: .text (0)
 # CHECK-NEXT:     Value:
 # CHECK-NEXT:     Size:
 # CHECK-NEXT:     Binding:

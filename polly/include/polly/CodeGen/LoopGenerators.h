@@ -15,18 +15,25 @@
 
 #include "polly/CodeGen/IRBuilder.h"
 #include "polly/Support/ScopHelper.h"
-
 #include "llvm/ADT/SetVector.h"
-#include "llvm/IR/ValueMap.h"
-
-namespace llvm {
-class Value;
-class Pass;
-class BasicBlock;
-} // namespace llvm
 
 namespace polly {
 using namespace llvm;
+
+/// General scheduling types of parallel OpenMP for loops.
+/// Initialization values taken from OpenMP's enum in kmp.h: sched_type.
+/// Currently, only 'static' scheduling may change from chunked to non-chunked.
+enum class OMPGeneralSchedulingType {
+  StaticChunked = 33,
+  StaticNonChunked = 34,
+  Dynamic = 35,
+  Guided = 36,
+  Runtime = 37
+};
+
+extern int PollyNumThreads;
+extern OMPGeneralSchedulingType PollyScheduling;
+extern int PollyChunkSize;
 
 /// Create a scalar do/for-style loop.
 ///
@@ -132,7 +139,7 @@ public:
                             SetVector<Value *> &Values, ValueMapT &VMap,
                             BasicBlock::iterator *LoopBody);
 
-private:
+protected:
   /// The IR builder we use to create instructions.
   PollyIRBuilder &Builder;
 
@@ -149,38 +156,6 @@ private:
   Module *M;
 
 public:
-  /// The functions below can be used if one does not want to generate a
-  /// specific OpenMP parallel loop, but generate individual parts of it
-  /// (e.g., the subfunction definition).
-
-  /// Create a runtime library call to spawn the worker threads.
-  ///
-  /// @param SubFn      The subfunction which holds the loop body.
-  /// @param SubFnParam The parameter for the subfunction (basically the struct
-  ///                   filled with the outside values).
-  /// @param LB         The lower bound for the loop we parallelize.
-  /// @param UB         The upper bound for the loop we parallelize.
-  /// @param Stride     The stride of the loop we parallelize.
-  void createCallSpawnThreads(Value *SubFn, Value *SubFnParam, Value *LB,
-                              Value *UB, Value *Stride);
-
-  /// Create a runtime library call to join the worker threads.
-  void createCallJoinThreads();
-
-  /// Create a runtime library call to get the next work item.
-  ///
-  /// @param LBPtr A pointer value to store the work item begin in.
-  /// @param UBPtr A pointer value to store the work item end in.
-  ///
-  /// @returns A true value if the work item is not empty.
-  Value *createCallGetWorkItem(Value *LBPtr, Value *UBPtr);
-
-  /// Create a runtime library call to allow cleanup of the thread.
-  ///
-  /// @note This function is called right before the thread will exit the
-  ///       subfunction and only if the runtime system depends on it.
-  void createCallCleanupThread();
-
   /// Create a struct for all @p Values and store them in there.
   ///
   /// @param Values The values which should be stored in the struct.
@@ -198,7 +173,29 @@ public:
                                Value *Struct, ValueMapT &VMap);
 
   /// Create the definition of the parallel subfunction.
+  ///
+  /// @return A pointer to the subfunction.
   Function *createSubFnDefinition();
+
+  /// Create the runtime library calls for spawn and join of the worker threads.
+  /// Additionally, places a call to the specified subfunction.
+  ///
+  /// @param SubFn      The subfunction which holds the loop body.
+  /// @param SubFnParam The parameter for the subfunction (basically the struct
+  ///                   filled with the outside values).
+  /// @param LB         The lower bound for the loop we parallelize.
+  /// @param UB         The upper bound for the loop we parallelize.
+  /// @param Stride     The stride of the loop we parallelize.
+  virtual void deployParallelExecution(Value *SubFn, Value *SubFnParam,
+                                       Value *LB, Value *UB, Value *Stride) = 0;
+
+  /// Prepare the definition of the parallel subfunction.
+  /// Creates the argument list and names them (as well as the subfunction).
+  ///
+  /// @param F A pointer to the (parallel) subfunction's parent function.
+  ///
+  /// @return The pointer to the (parallel) subfunction.
+  virtual Function *prepareSubFnDefinition(Function *F) const = 0;
 
   /// Create the parallel subfunction.
   ///
@@ -211,9 +208,9 @@ public:
   /// @param SubFn  The newly created subfunction is returned here.
   ///
   /// @return The newly created induction variable.
-  Value *createSubFn(Value *Stride, AllocaInst *Struct,
-                     SetVector<Value *> UsedValues, ValueMapT &VMap,
-                     Function **SubFn);
+  virtual std::tuple<Value *, Function *>
+  createSubFn(Value *Stride, AllocaInst *Struct, SetVector<Value *> UsedValues,
+              ValueMapT &VMap) = 0;
 };
 } // end namespace polly
 #endif

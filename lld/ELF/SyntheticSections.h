@@ -31,7 +31,6 @@
 namespace lld {
 namespace elf {
 class Defined;
-class SharedSymbol;
 
 class SyntheticSection : public InputSection {
 public:
@@ -49,7 +48,7 @@ public:
   // If the section has the SHF_ALLOC flag and the size may be changed if
   // thunks are added, update the section size.
   virtual bool updateAllocSize() { return false; }
-  virtual bool empty() const { return false; }
+  virtual bool isNeeded() const { return true; }
 
   static bool classof(const SectionBase *D) {
     return D->kind() == InputSectionBase::Synthetic;
@@ -67,7 +66,7 @@ public:
   EhFrameSection();
   void writeTo(uint8_t *Buf) override;
   void finalizeContents() override;
-  bool empty() const override { return Sections.empty(); }
+  bool isNeeded() const override { return !Sections.empty(); }
   size_t getSize() const override { return Size; }
 
   template <class ELFT> void addSection(InputSectionBase *S);
@@ -112,7 +111,7 @@ public:
   GotSection();
   size_t getSize() const override { return Size; }
   void finalizeContents() override;
-  bool empty() const override;
+  bool isNeeded() const override;
   void writeTo(uint8_t *Buf) override;
 
   void addEntry(Symbol &Sym);
@@ -172,7 +171,7 @@ public:
   void writeTo(uint8_t *) override {
     llvm_unreachable("unexpected writeTo() call for SHT_NOBITS section");
   }
-  bool empty() const override { return getSize() == 0; }
+  bool isNeeded() const override { return Size != 0; }
   size_t getSize() const override { return Size; }
 
   static bool classof(const SectionBase *S) { return S->Bss; }
@@ -186,11 +185,11 @@ public:
   size_t getSize() const override { return Size; }
   bool updateAllocSize() override;
   void finalizeContents() override;
-  bool empty() const override;
+  bool isNeeded() const override;
 
   // Join separate GOTs built for each input file to generate
   // primary and optional multiple secondary GOTs.
-  template <class ELFT> void build();
+  void build();
 
   void addEntry(InputFile &File, Symbol &Sym, int64_t Addend, RelExpr Expr);
   void addDynTlsEntry(InputFile &File, Symbol &Sym);
@@ -309,7 +308,7 @@ private:
   uint64_t Size = 0;
 
   // Symbol and addend.
-  typedef std::pair<Symbol *, int64_t> GotEntry;
+  using GotEntry = std::pair<Symbol *, int64_t>;
 
   struct FileGot {
     InputFile *File = nullptr;
@@ -362,7 +361,11 @@ public:
   void addEntry(Symbol &Sym);
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) override;
-  bool empty() const override;
+  bool isNeeded() const override;
+
+  // Flag to force GotPlt to be in output if we have relocations
+  // that relies on its address.
+  bool HasGotPltOffRel = false;
 
 private:
   std::vector<const Symbol *> Entries;
@@ -378,7 +381,7 @@ public:
   void addEntry(Symbol &Sym);
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) override;
-  bool empty() const override { return Entries.empty(); }
+  bool isNeeded() const override { return !Entries.empty(); }
 
 private:
   std::vector<const Symbol *> Entries;
@@ -418,7 +421,6 @@ public:
 
   uint64_t getOffset() const;
   uint32_t getSymIndex() const;
-  const InputSectionBase *getInputSec() const { return InputSec; }
 
   // Computes the addend of the dynamic relocation. Note that this is not the
   // same as the Addend member variable as it also includes the symbol address
@@ -441,12 +443,12 @@ private:
 };
 
 template <class ELFT> class DynamicSection final : public SyntheticSection {
-  typedef typename ELFT::Dyn Elf_Dyn;
-  typedef typename ELFT::Rel Elf_Rel;
-  typedef typename ELFT::Rela Elf_Rela;
-  typedef typename ELFT::Relr Elf_Relr;
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::Sym Elf_Sym;
+  using Elf_Dyn = typename ELFT::Dyn;
+  using Elf_Rel = typename ELFT::Rel;
+  using Elf_Rela = typename ELFT::Rela;
+  using Elf_Relr = typename ELFT::Relr;
+  using Elf_Shdr = typename ELFT::Shdr;
+  using Elf_Sym = typename ELFT::Sym;
 
   // finalizeContents() fills this vector with the section contents.
   std::vector<std::pair<int32_t, std::function<uint64_t()>>> Entries;
@@ -481,7 +483,7 @@ public:
                 uint64_t OffsetInSec, Symbol *Sym, int64_t Addend, RelExpr Expr,
                 RelType Type);
   void addReloc(const DynamicReloc &Reloc);
-  bool empty() const override { return Relocs.empty(); }
+  bool isNeeded() const override { return !Relocs.empty(); }
   size_t getSize() const override { return Relocs.size() * this->Entsize; }
   size_t getRelativeRelocCount() const { return NumRelativeRelocs; }
   void finalizeContents() override;
@@ -494,12 +496,11 @@ protected:
 
 template <class ELFT>
 class RelocationSection final : public RelocationBaseSection {
-  typedef typename ELFT::Rel Elf_Rel;
-  typedef typename ELFT::Rela Elf_Rela;
+  using Elf_Rel = typename ELFT::Rel;
+  using Elf_Rela = typename ELFT::Rela;
 
 public:
   RelocationSection(StringRef Name, bool Sort);
-  unsigned getRelocOffset();
   void writeTo(uint8_t *Buf) override;
 
 private:
@@ -508,8 +509,8 @@ private:
 
 template <class ELFT>
 class AndroidPackedRelocationSection final : public RelocationBaseSection {
-  typedef typename ELFT::Rel Elf_Rel;
-  typedef typename ELFT::Rela Elf_Rela;
+  using Elf_Rel = typename ELFT::Rel;
+  using Elf_Rela = typename ELFT::Rela;
 
 public:
   AndroidPackedRelocationSection(StringRef Name);
@@ -534,7 +535,7 @@ struct RelativeReloc {
 class RelrBaseSection : public SyntheticSection {
 public:
   RelrBaseSection();
-  bool empty() const override { return Relocs.empty(); }
+  bool isNeeded() const override { return !Relocs.empty(); }
   std::vector<RelativeReloc> Relocs;
 };
 
@@ -543,7 +544,7 @@ public:
 //   https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
 // For more details, see the comment in RelrSection::updateAllocSize().
 template <class ELFT> class RelrSection final : public RelrBaseSection {
-  typedef typename ELFT::Relr Elf_Relr;
+  using Elf_Relr = typename ELFT::Relr;
 
 public:
   RelrSection();
@@ -588,7 +589,7 @@ protected:
 
 template <class ELFT>
 class SymbolTableSection final : public SymbolTableBaseSection {
-  typedef typename ELFT::Sym Elf_Sym;
+  using Elf_Sym = typename ELFT::Sym;
 
 public:
   SymbolTableSection(StringTableSection &StrTabSec);
@@ -601,7 +602,7 @@ public:
 
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
-  bool empty() const override;
+  bool isNeeded() const override;
   void finalizeContents() override;
 };
 
@@ -658,15 +659,14 @@ public:
   PltSection(bool IsIplt);
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
-  bool empty() const override { return Entries.empty(); }
+  bool isNeeded() const override { return !Entries.empty(); }
   void addSymbols();
   template <class ELFT> void addEntry(Symbol &Sym);
 
   size_t HeaderSize;
 
 private:
-  unsigned getPltRelocOff() const;
-  std::vector<std::pair<const Symbol *, unsigned>> Entries;
+  std::vector<const Symbol *> Entries;
   bool IsIplt;
 };
 
@@ -706,7 +706,7 @@ public:
   template <typename ELFT> static GdbIndexSection *create();
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override { return Size; }
-  bool empty() const override;
+  bool isNeeded() const override;
 
 private:
   struct GdbIndexHeader {
@@ -743,9 +743,10 @@ private:
 class EhFrameHeader final : public SyntheticSection {
 public:
   EhFrameHeader();
+  void write();
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
-  bool empty() const override;
+  bool isNeeded() const override;
 };
 
 // For more information about .gnu.version and .gnu.version_r see:
@@ -776,14 +777,13 @@ private:
 // identifier defined in the either .gnu.version_r or .gnu.version_d section.
 // The values 0 and 1 are reserved. All other values are used for versions in
 // the own object or in any of the dependencies.
-template <class ELFT>
 class VersionTableSection final : public SyntheticSection {
 public:
   VersionTableSection();
   void finalizeContents() override;
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) override;
-  bool empty() const override;
+  bool isNeeded() const override;
 };
 
 // The .gnu.version_r section defines the version identifiers used by
@@ -791,25 +791,30 @@ public:
 // Elf_Verneed specifies the version requirements for a single DSO, and contains
 // a reference to a linked list of Elf_Vernaux data structures which define the
 // mapping from version identifiers to version names.
-template <class ELFT> class VersionNeedSection final : public SyntheticSection {
-  typedef typename ELFT::Verneed Elf_Verneed;
-  typedef typename ELFT::Vernaux Elf_Vernaux;
+template <class ELFT>
+class VersionNeedSection final : public SyntheticSection {
+  using Elf_Verneed = typename ELFT::Verneed;
+  using Elf_Vernaux = typename ELFT::Vernaux;
 
-  // A vector of shared files that need Elf_Verneed data structures and the
-  // string table offsets of their sonames.
-  std::vector<std::pair<SharedFile<ELFT> *, size_t>> Needed;
+  struct Vernaux {
+    uint64_t Hash;
+    uint32_t VerneedIndex;
+    uint64_t NameStrTab;
+  };
 
-  // The next available version identifier.
-  unsigned NextIndex;
+  struct Verneed {
+    uint64_t NameStrTab;
+    std::vector<Vernaux> Vernauxs;
+  };
+
+  std::vector<Verneed> Verneeds;
 
 public:
   VersionNeedSection();
-  void addSymbol(Symbol *Sym);
   void finalizeContents() override;
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
-  size_t getNeedNum() const { return Needed.size(); }
-  bool empty() const override;
+  bool isNeeded() const override;
 };
 
 // MergeSyntheticSection is a class that allows us to put mergeable sections
@@ -872,7 +877,7 @@ private:
 // .MIPS.abiflags section.
 template <class ELFT>
 class MipsAbiFlagsSection final : public SyntheticSection {
-  typedef llvm::object::Elf_Mips_ABIFlags<ELFT> Elf_Mips_ABIFlags;
+  using Elf_Mips_ABIFlags = llvm::object::Elf_Mips_ABIFlags<ELFT>;
 
 public:
   static MipsAbiFlagsSection *create();
@@ -887,8 +892,8 @@ private:
 
 // .MIPS.options section.
 template <class ELFT> class MipsOptionsSection final : public SyntheticSection {
-  typedef llvm::object::Elf_Mips_Options<ELFT> Elf_Mips_Options;
-  typedef llvm::object::Elf_Mips_RegInfo<ELFT> Elf_Mips_RegInfo;
+  using Elf_Mips_Options = llvm::object::Elf_Mips_Options<ELFT>;
+  using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
 
 public:
   static MipsOptionsSection *create();
@@ -906,7 +911,7 @@ private:
 
 // MIPS .reginfo section.
 template <class ELFT> class MipsReginfoSection final : public SyntheticSection {
-  typedef llvm::object::Elf_Mips_RegInfo<ELFT> Elf_Mips_RegInfo;
+  using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
 
 public:
   static MipsReginfoSection *create();
@@ -930,19 +935,78 @@ public:
   void writeTo(uint8_t *Buf) override {}
 };
 
-class ARMExidxSentinelSection : public SyntheticSection {
+// Representation of the combined .ARM.Exidx input sections. We process these
+// as a SyntheticSection like .eh_frame as we need to merge duplicate entries
+// and add terminating sentinel entries.
+//
+// The .ARM.exidx input sections after SHF_LINK_ORDER processing is done form
+// a table that the unwinder can derive (Addresses are encoded as offsets from
+// table):
+// | Address of function | Unwind instructions for function |
+// where the unwind instructions are either a small number of unwind or the
+// special EXIDX_CANTUNWIND entry representing no unwinding information.
+// When an exception is thrown from an address A, the unwinder searches the
+// table for the closest table entry with Address of function <= A. This means
+// that for two consecutive table entries:
+// | A1 | U1 |
+// | A2 | U2 |
+// The range of addresses described by U1 is [A1, A2)
+//
+// There are two cases where we need a linker generated table entry to fixup
+// the address ranges in the table
+// Case 1:
+// - A sentinel entry added with an address higher than all
+// executable sections. This was needed to work around libunwind bug pr31091.
+// - After address assignment we need to find the highest addressed executable
+// section and use the limit of that section so that the unwinder never
+// matches it.
+// Case 2:
+// - InputSections without a .ARM.exidx section (usually from Assembly)
+// need a table entry so that they terminate the range of the previously
+// function. This is pr40277.
+//
+// Instead of storing pointers to the .ARM.exidx InputSections from
+// InputObjects, we store pointers to the executable sections that need
+// .ARM.exidx sections. We can then use the dependentSections of these to
+// either find the .ARM.exidx section or know that we need to generate one.
+class ARMExidxSyntheticSection : public SyntheticSection {
 public:
-  ARMExidxSentinelSection();
-  size_t getSize() const override { return 8; }
+  ARMExidxSyntheticSection();
+
+  // Add an input section to the ARMExidxSyntheticSection. Returns whether the
+  // section needs to be removed from the main input section list.
+  bool addSection(InputSection *IS);
+
+  size_t getSize() const override { return Size; }
   void writeTo(uint8_t *Buf) override;
-  bool empty() const override;
+  bool isNeeded() const override { return !Empty; }
+  // Sort and remove duplicate entries.
+  void finalizeContents() override;
+  InputSection *getLinkOrderDep() const;
 
   static bool classof(const SectionBase *D);
 
-  // The last section referenced by a regular .ARM.exidx section.
-  // It is found and filled in Writer<ELFT>::resolveShfLinkOrder().
-  // The sentinel points at the end of that section.
-  InputSection *Highest = nullptr;
+  // Links to the ARMExidxSections so we can transfer the relocations once the
+  // layout is known.
+  std::vector<InputSection *> ExidxSections;
+
+private:
+  size_t Size;
+
+  // Empty if ExecutableSections contains no dependent .ARM.exidx sections.
+  bool Empty = true;
+
+  // Instead of storing pointers to the .ARM.exidx InputSections from
+  // InputObjects, we store pointers to the executable sections that need
+  // .ARM.exidx sections. We can then use the dependentSections of these to
+  // either find the .ARM.exidx section or know that we need to generate one.
+  std::vector<InputSection *> ExecutableSections;
+
+  // The executable InputSection with the highest address to use for the
+  // sentinel. We store separately from ExecutableSections as merging of
+  // duplicate entries may mean this InputSection is removed from
+  // ExecutableSections.
+  InputSection *Sentinel = nullptr;
 };
 
 // A container for one or more linker generated thunks. Instances of these
@@ -978,7 +1042,7 @@ public:
   void addEntry(Symbol &Sym);
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) override;
-  bool empty() const override;
+  bool isNeeded() const override;
   void finalizeContents() override { Finalized = true; }
 
 private:
@@ -994,9 +1058,12 @@ void mergeSections();
 Defined *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                            uint64_t Size, InputSectionBase &Section);
 
+void addVerneed(Symbol *SS);
+
 // Linker generated sections which can be used as inputs.
 struct InStruct {
   InputSection *ARMAttributes;
+  ARMExidxSyntheticSection *ARMExidx;
   BssSection *Bss;
   BssSection *BssRelRo;
   BuildIdSection *BuildId;
@@ -1007,8 +1074,6 @@ struct InStruct {
   SymbolTableBaseSection *DynSymTab;
   GnuHashTableSection *GnuHashTab;
   HashTableSection *HashTab;
-  InputSection *Interp;
-  GdbIndexSection *GdbIndex;
   GotSection *Got;
   GotPltSection *GotPlt;
   IgotPltSection *IgotPlt;
@@ -1026,17 +1091,12 @@ struct InStruct {
   SymbolTableBaseSection *SymTab;
   SymtabShndxSection *SymTabShndx;
   VersionDefinitionSection *VerDef;
+  SyntheticSection *VerNeed;
+  VersionTableSection *VerSym;
 };
 
 extern InStruct In;
 
-template <class ELFT> struct InX {
-  static VersionTableSection<ELFT> *VerSym;
-  static VersionNeedSection<ELFT> *VerNeed;
-};
-
-template <class ELFT> VersionTableSection<ELFT> *InX<ELFT>::VerSym;
-template <class ELFT> VersionNeedSection<ELFT> *InX<ELFT>::VerNeed;
 } // namespace elf
 } // namespace lld
 

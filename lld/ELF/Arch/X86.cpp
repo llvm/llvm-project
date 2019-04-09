@@ -87,9 +87,9 @@ RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
   case R_386_TLS_LDO_32:
     return R_ABS;
   case R_386_TLS_GD:
-    return R_TLSGD_GOT_FROM_END;
+    return R_TLSGD_GOTPLT;
   case R_386_TLS_LDM:
-    return R_TLSLD_GOT_FROM_END;
+    return R_TLSLD_GOTPLT;
   case R_386_PLT32:
     return R_PLT_PC;
   case R_386_PC8:
@@ -97,7 +97,7 @@ RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
   case R_386_PC32:
     return R_PC;
   case R_386_GOTPC:
-    return R_GOTONLY_PC_FROM_END;
+    return R_GOTPLTONLY_PC;
   case R_386_TLS_IE:
     return R_GOT;
   case R_386_GOT32:
@@ -136,12 +136,12 @@ RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
     // of a displacement or an immediate field of a valid machine
     // instruction. That means a ModRM byte is at Loc[-1]. By taking a look at
     // the byte, we can determine whether the instruction uses the operand as an
-    // absolute address (R_GOT) or a register-relative address (R_GOT_FROM_END).
-    return (Loc[-1] & 0xc7) == 0x5 ? R_GOT : R_GOT_FROM_END;
+    // absolute address (R_GOT) or a register-relative address (R_GOTPLT).
+    return (Loc[-1] & 0xc7) == 0x5 ? R_GOT : R_GOTPLT;
   case R_386_TLS_GOTIE:
-    return R_GOT_FROM_END;
+    return R_GOTPLT;
   case R_386_GOTOFF:
-    return R_GOTREL_FROM_END;
+    return R_GOTPLTREL;
   case R_386_TLS_LE:
     return R_TLS;
   case R_386_TLS_LE_32:
@@ -149,7 +149,9 @@ RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
   case R_386_NONE:
     return R_NONE;
   default:
-    return R_INVALID;
+    error(getErrorLocation(Loc) + "unknown relocation (" + Twine(Type) +
+          ") against symbol " + toString(S));
+    return R_NONE;
   }
 }
 
@@ -191,16 +193,11 @@ RelType X86::getDynRel(RelType Type) const {
 void X86::writePltHeader(uint8_t *Buf) const {
   if (Config->Pic) {
     const uint8_t V[] = {
-        0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl GOTPLT+4(%ebx)
-        0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp *GOTPLT+8(%ebx)
+        0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl 4(%ebx)
+        0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp *8(%ebx)
         0x90, 0x90, 0x90, 0x90              // nop
     };
     memcpy(Buf, V, sizeof(V));
-
-    uint32_t Ebx = In.Got->getVA() + In.Got->getSize();
-    uint32_t GotPlt = In.GotPlt->getVA() - Ebx;
-    write32le(Buf + 2, GotPlt + 4);
-    write32le(Buf + 8, GotPlt + 8);
     return;
   }
 
@@ -218,26 +215,26 @@ void X86::writePltHeader(uint8_t *Buf) const {
 void X86::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                    uint64_t PltEntryAddr, int32_t Index,
                    unsigned RelOff) const {
-  const uint8_t Inst[] = {
-      0xff, 0x00, 0, 0, 0, 0, // jmp *foo_in_GOT or jmp *foo@GOT(%ebx)
-      0x68, 0, 0, 0, 0,       // pushl $reloc_offset
-      0xe9, 0, 0, 0, 0,       // jmp .PLT0@PC
-  };
-  memcpy(Buf, Inst, sizeof(Inst));
-
   if (Config->Pic) {
-    // jmp *foo@GOT(%ebx)
-    uint32_t Ebx = In.Got->getVA() + In.Got->getSize();
-    Buf[1] = 0xa3;
-    write32le(Buf + 2, GotPltEntryAddr - Ebx);
+    const uint8_t Inst[] = {
+        0xff, 0xa3, 0, 0, 0, 0, // jmp *foo@GOT(%ebx)
+        0x68, 0,    0, 0, 0,    // pushl $reloc_offset
+        0xe9, 0,    0, 0, 0,    // jmp .PLT0@PC
+    };
+    memcpy(Buf, Inst, sizeof(Inst));
+    write32le(Buf + 2, GotPltEntryAddr - In.GotPlt->getVA());
   } else {
-    // jmp *foo_in_GOT
-    Buf[1] = 0x25;
+    const uint8_t Inst[] = {
+        0xff, 0x25, 0, 0, 0, 0, // jmp *foo@GOT
+        0x68, 0,    0, 0, 0,    // pushl $reloc_offset
+        0xe9, 0,    0, 0, 0,    // jmp .PLT0@PC
+    };
+    memcpy(Buf, Inst, sizeof(Inst));
     write32le(Buf + 2, GotPltEntryAddr);
   }
 
   write32le(Buf + 7, RelOff);
-  write32le(Buf + 12, -getPltEntryOffset(Index) - 16);
+  write32le(Buf + 12, -PltHeaderSize - PltEntrySize * Index - 16);
 }
 
 int64_t X86::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
@@ -318,7 +315,7 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write32le(Loc, Val);
     break;
   default:
-    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    llvm_unreachable("unknown relocation");
   }
 }
 
@@ -443,9 +440,9 @@ void RetpolinePic::writeGotPlt(uint8_t *Buf, const Symbol &S) const {
 
 void RetpolinePic::writePltHeader(uint8_t *Buf) const {
   const uint8_t Insn[] = {
-      0xff, 0xb3, 0,    0,    0,    0,          // 0:    pushl GOTPLT+4(%ebx)
+      0xff, 0xb3, 4,    0,    0,    0,          // 0:    pushl 4(%ebx)
       0x50,                                     // 6:    pushl %eax
-      0x8b, 0x83, 0,    0,    0,    0,          // 7:    mov GOTPLT+8(%ebx), %eax
+      0x8b, 0x83, 8,    0,    0,    0,          // 7:    mov 8(%ebx), %eax
       0xe8, 0x0e, 0x00, 0x00, 0x00,             // d:    call next
       0xf3, 0x90,                               // 12: loop: pause
       0x0f, 0xae, 0xe8,                         // 14:   lfence
@@ -460,11 +457,6 @@ void RetpolinePic::writePltHeader(uint8_t *Buf) const {
       0xcc,                                     // 2f:   int3; padding
   };
   memcpy(Buf, Insn, sizeof(Insn));
-
-  uint32_t Ebx = In.Got->getVA() + In.Got->getSize();
-  uint32_t GotPlt = In.GotPlt->getVA() - Ebx;
-  write32le(Buf + 2, GotPlt + 4);
-  write32le(Buf + 9, GotPlt + 8);
 }
 
 void RetpolinePic::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
@@ -481,8 +473,8 @@ void RetpolinePic::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
-  uint32_t Ebx = In.Got->getVA() + In.Got->getSize();
-  unsigned Off = getPltEntryOffset(Index);
+  uint32_t Ebx = In.GotPlt->getVA();
+  unsigned Off = PltHeaderSize + PltEntrySize * Index;
   write32le(Buf + 3, GotPltEntryAddr - Ebx);
   write32le(Buf + 8, -Off - 12 + 32);
   write32le(Buf + 13, -Off - 17 + 18);
@@ -540,7 +532,7 @@ void RetpolineNoPic::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
-  unsigned Off = getPltEntryOffset(Index);
+  unsigned Off = PltHeaderSize + PltEntrySize * Index;
   write32le(Buf + 2, GotPltEntryAddr);
   write32le(Buf + 7, -Off - 11 + 32);
   write32le(Buf + 12, -Off - 16 + 17);

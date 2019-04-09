@@ -1,7 +1,7 @@
 // RUN: %libomp-compile && env OMP_CANCELLATION=true %libomp-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // Current GOMP interface implementation does not support cancellation; icc 16 does not distinguish between sections and loops
-// XFAIL: gcc, icc-16
+// XFAIL: icc-16
 
 #include "callback.h"
 #include <unistd.h>
@@ -59,9 +59,9 @@ int main()
   
   // cancel for and sections
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_cancel: task_data=[[TASK_ID:[0-9]+]], flags=ompt_cancel_loop|ompt_cancel_activated=20, codeptr_ra={{0x[0-f]*}}
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_cancel: task_data=[[TASK_ID:[0-9]+]], flags=ompt_cancel_sections|ompt_cancel_activated=18, codeptr_ra={{0x[0-f]*}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_cancel: task_data=[[TASK_ID:[0-9]+]], flags=ompt_cancel_sections|ompt_cancel_{{activated=18|detected=34}}, codeptr_ra={{0x[0-f]*}}
   // CHECK: {{^}}[[OTHER_THREAD_ID:[0-9]+]]: ompt_event_cancel: task_data=[[TASK_ID:[0-9]+]], flags=ompt_cancel_loop|ompt_cancel_detected=36, codeptr_ra={{0x[0-f]*}}
-  // CHECK: {{^}}[[OTHER_THREAD_ID:[0-9]+]]: ompt_event_cancel: task_data=[[TASK_ID:[0-9]+]], flags=ompt_cancel_sections|ompt_cancel_detected=34, codeptr_ra={{0x[0-f]*}}
+  // CHECK: {{^}}[[OTHER_THREAD_ID:[0-9]+]]: ompt_event_cancel: task_data=[[TASK_ID:[0-9]+]], flags=ompt_cancel_sections|ompt_cancel_{{activated=18|detected=34}}, codeptr_ra={{0x[0-f]*}}
 
   return 0;
 }

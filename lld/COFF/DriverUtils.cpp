@@ -249,6 +249,27 @@ void parseAligncomm(StringRef S) {
   Config->AlignComm[Name] = std::max(Config->AlignComm[Name], 1 << V);
 }
 
+// Parses /functionpadmin option argument.
+void parseFunctionPadMin(llvm::opt::Arg *A, llvm::COFF::MachineTypes Machine) {
+  StringRef Arg = A->getNumValues() ? A->getValue() : "";
+  if (!Arg.empty()) {
+    // Optional padding in bytes is given.
+    if (Arg.getAsInteger(0, Config->FunctionPadMin))
+      error("/functionpadmin: invalid argument: " + Arg);
+    return;
+  }
+  // No optional argument given.
+  // Set default padding based on machine, similar to link.exe.
+  // There is no default padding for ARM platforms.
+  if (Machine == I386) {
+    Config->FunctionPadMin = 5;
+  } else if (Machine == AMD64) {
+    Config->FunctionPadMin = 6;
+  } else {
+    error("/functionpadmin: invalid argument for this machine: " + Arg);
+  }
+}
+
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 // Results are directly written to Config.
 void parseManifest(StringRef Arg) {
@@ -677,16 +698,21 @@ void assignExportOrdinals() {
 
 // Parses a string in the form of "key=value" and check
 // if value matches previous values for the same key.
-void checkFailIfMismatch(StringRef Arg) {
+void checkFailIfMismatch(StringRef Arg, InputFile *Source) {
   StringRef K, V;
   std::tie(K, V) = Arg.split('=');
   if (K.empty() || V.empty())
     fatal("/failifmismatch: invalid argument: " + Arg);
-  StringRef Existing = Config->MustMatch[K];
-  if (!Existing.empty() && V != Existing)
-    fatal("/failifmismatch: mismatch detected: " + Existing + " and " + V +
-          " for key " + K);
-  Config->MustMatch[K] = V;
+  std::pair<StringRef, InputFile *> Existing = Config->MustMatch[K];
+  if (!Existing.first.empty() && V != Existing.first) {
+    std::string SourceStr = Source ? toString(Source) : "cmd-line";
+    std::string ExistingStr =
+        Existing.second ? toString(Existing.second) : "cmd-line";
+    fatal("/failifmismatch: mismatch detected for '" + K + "':\n>>> " +
+          ExistingStr + " has value " + Existing.first + "\n>>> " + SourceStr +
+          " has value " + V);
+  }
+  Config->MustMatch[K] = {V, Source};
 }
 
 // Convert Windows resource files (.res files) to a .obj file.

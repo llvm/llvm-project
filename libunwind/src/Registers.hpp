@@ -2154,7 +2154,7 @@ inline Registers_arm::Registers_arm(const void *registers)
     _saved_vfp_d16_d31(false) {
   static_assert((check_fit<Registers_arm, unw_context_t>::does_fit),
                 "arm registers do not fit into unw_context_t");
-  // See unw_getcontext() note about data.
+  // See __unw_getcontext() note about data.
   memcpy(&_registers, registers, sizeof(_registers));
   memset(&_vfp_d0_d15_pad, 0, sizeof(_vfp_d0_d15_pad));
   memset(&_vfp_d16_d31, 0, sizeof(_vfp_d16_d31));
@@ -2433,7 +2433,7 @@ inline const char *Registers_arm::getRegisterName(int regNum) {
 
 inline bool Registers_arm::validFloatRegister(int regNum) const {
   // NOTE: Consider the intel MMX registers floating points so the
-  // unw_get_fpreg can be used to transmit the 64-bit data back.
+  // __unw_get_fpreg can be used to transmit the 64-bit data back.
   return ((regNum >= UNW_ARM_D0) && (regNum <= UNW_ARM_D31))
 #if defined(__ARM_WMMX)
       || ((regNum >= UNW_ARM_WR0) && (regNum <= UNW_ARM_WR15))

@@ -19,8 +19,6 @@ namespace elf {
 class InputFile;
 class OutputSection;
 class InputSectionBase;
-template <class ELFT> class ObjFile;
-class SymbolTable;
 template <class ELFT> void writeResult();
 
 // This describes a program header entry.

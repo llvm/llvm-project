@@ -9,6 +9,7 @@
 #include "InputFiles.h"
 #include "Chunks.h"
 #include "Config.h"
+#include "DebugTypes.h"
 #include "Driver.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -19,6 +20,10 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
+#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Casting.h"
@@ -34,6 +39,7 @@
 
 using namespace llvm;
 using namespace llvm::COFF;
+using namespace llvm::codeview;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 
@@ -124,6 +130,8 @@ void ObjFile::parse() {
   // Read section and symbol tables.
   initializeChunks();
   initializeSymbols();
+  initializeFlags();
+  initializeDependencies();
 }
 
 const coff_section* ObjFile::getSection(uint32_t I) {
@@ -167,7 +175,7 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   if (Name == ".drectve") {
     ArrayRef<uint8_t> Data;
     COFFObj->getSectionContents(Sec, Data);
-    Directives = std::string((const char *)Data.data(), Data.size());
+    Directives = StringRef((const char *)Data.data(), Data.size());
     return nullptr;
   }
 
@@ -384,6 +392,107 @@ Symbol *ObjFile::createUndefined(COFFSymbolRef Sym) {
   return Symtab->addUndefined(Name, this, Sym.isWeakExternal());
 }
 
+void ObjFile::handleComdatSelection(COFFSymbolRef Sym, COMDATType &Selection,
+                                    bool &Prevailing, DefinedRegular *Leader) {
+  if (Prevailing)
+    return;
+  // There's already an existing comdat for this symbol: `Leader`.
+  // Use the comdats's selection field to determine if the new
+  // symbol in `Sym` should be discarded, produce a duplicate symbol
+  // error, etc.
+
+  SectionChunk *LeaderChunk = nullptr;
+  COMDATType LeaderSelection = IMAGE_COMDAT_SELECT_ANY;
+
+  if (Leader->Data) {
+    LeaderChunk = Leader->getChunk();
+    LeaderSelection = LeaderChunk->Selection;
+  } else {
+    // FIXME: comdats from LTO files don't know their selection; treat them
+    // as "any".
+    Selection = LeaderSelection;
+  }
+
+  if ((Selection == IMAGE_COMDAT_SELECT_ANY &&
+       LeaderSelection == IMAGE_COMDAT_SELECT_LARGEST) ||
+      (Selection == IMAGE_COMDAT_SELECT_LARGEST &&
+       LeaderSelection == IMAGE_COMDAT_SELECT_ANY)) {
+    // cl.exe picks "any" for vftables when building with /GR- and
+    // "largest" when building with /GR. To be able to link object files
+    // compiled with each flag, "any" and "largest" are merged as "largest".
+    LeaderSelection = Selection = IMAGE_COMDAT_SELECT_LARGEST;
+  }
+
+  // Other than that, comdat selections must match.  This is a bit more
+  // strict than link.exe which allows merging "any" and "largest" if "any"
+  // is the first symbol the linker sees, and it allows merging "largest"
+  // with everything (!) if "largest" is the first symbol the linker sees.
+  // Making this symmetric independent of which selection is seen first
+  // seems better though.
+  // (This behavior matches ModuleLinker::getComdatResult().)
+  if (Selection != LeaderSelection) {
+    log(("conflicting comdat type for " + toString(*Leader) + ": " +
+         Twine((int)LeaderSelection) + " in " + toString(Leader->getFile()) +
+         " and " + Twine((int)Selection) + " in " + toString(this))
+            .str());
+    Symtab->reportDuplicate(Leader, this);
+    return;
+  }
+
+  switch (Selection) {
+  case IMAGE_COMDAT_SELECT_NODUPLICATES:
+    Symtab->reportDuplicate(Leader, this);
+    break;
+
+  case IMAGE_COMDAT_SELECT_ANY:
+    // Nothing to do.
+    break;
+
+  case IMAGE_COMDAT_SELECT_SAME_SIZE:
+    if (LeaderChunk->getSize() != getSection(Sym)->SizeOfRawData)
+      Symtab->reportDuplicate(Leader, this);
+    break;
+
+  case IMAGE_COMDAT_SELECT_EXACT_MATCH: {
+    SectionChunk NewChunk(this, getSection(Sym));
+    // link.exe only compares section contents here and doesn't complain
+    // if the two comdat sections have e.g. different alignment.
+    // Match that.
+    if (LeaderChunk->getContents() != NewChunk.getContents())
+      Symtab->reportDuplicate(Leader, this);
+    break;
+  }
+
+  case IMAGE_COMDAT_SELECT_ASSOCIATIVE:
+    // createDefined() is never called for IMAGE_COMDAT_SELECT_ASSOCIATIVE.
+    // (This means lld-link doesn't produce duplicate symbol errors for
+    // associative comdats while link.exe does, but associate comdats
+    // are never extern in practice.)
+    llvm_unreachable("createDefined not called for associative comdats");
+
+  case IMAGE_COMDAT_SELECT_LARGEST:
+    if (LeaderChunk->getSize() < getSection(Sym)->SizeOfRawData) {
+      // Replace the existing comdat symbol with the new one.
+      StringRef Name;
+      COFFObj->getSymbolName(Sym, Name);
+      // FIXME: This is incorrect: With /opt:noref, the previous sections
+      // make it into the final executable as well. Correct handling would
+      // be to undo reading of the whole old section that's being replaced,
+      // or doing one pass that determines what the final largest comdat
+      // is for all IMAGE_COMDAT_SELECT_LARGEST comdats and then reading
+      // only the largest one.
+      replaceSymbol<DefinedRegular>(Leader, this, Name, /*IsCOMDAT*/ true,
+                                    /*IsExternal*/ true, Sym.getGeneric(),
+                                    nullptr);
+      Prevailing = true;
+    }
+    break;
+
+  case IMAGE_COMDAT_SELECT_NEWEST:
+    llvm_unreachable("should have been rejected earlier");
+  }
+}
+
 Optional<Symbol *> ObjFile::createDefined(
     COFFSymbolRef Sym,
     std::vector<const coff_aux_section_definition *> &ComdatDefs,
@@ -463,104 +572,8 @@ Optional<Symbol *> ObjFile::createDefined(
     }
     COMDATType Selection = (COMDATType)Def->Selection;
 
-    if (!Prevailing && Leader->isCOMDAT()) {
-      // There's already an existing comdat for this symbol: `Leader`.
-      // Use the comdats's selection field to determine if the new
-      // symbol in `Sym` should be discarded, produce a duplicate symbol
-      // error, etc.
-
-      SectionChunk *LeaderChunk = nullptr;
-      COMDATType LeaderSelection = IMAGE_COMDAT_SELECT_ANY;
-
-      if (Leader->Data) {
-        LeaderChunk = Leader->getChunk();
-        LeaderSelection = LeaderChunk->Selection;
-      } else {
-        // FIXME: comdats from LTO files don't know their selection; treat them
-        // as "any".
-        Selection = LeaderSelection;
-      }
-
-      if ((Selection == IMAGE_COMDAT_SELECT_ANY &&
-           LeaderSelection == IMAGE_COMDAT_SELECT_LARGEST) ||
-          (Selection == IMAGE_COMDAT_SELECT_LARGEST &&
-           LeaderSelection == IMAGE_COMDAT_SELECT_ANY)) {
-        // cl.exe picks "any" for vftables when building with /GR- and
-        // "largest" when building with /GR. To be able to link object files
-        // compiled with each flag, "any" and "largest" are merged as "largest".
-        LeaderSelection = Selection = IMAGE_COMDAT_SELECT_LARGEST;
-      }
-
-      // Other than that, comdat selections must match.  This is a bit more
-      // strict than link.exe which allows merging "any" and "largest" if "any"
-      // is the first symbol the linker sees, and it allows merging "largest"
-      // with everything (!) if "largest" is the first symbol the linker sees.
-      // Making this symmetric independent of which selection is seen first
-      // seems better though.
-      // (This behavior matches ModuleLinker::getComdatResult().)
-      if (Selection != LeaderSelection) {
-        std::string Msg = ("conflicting comdat type for " + toString(*Leader) +
-                           ": " + Twine((int)LeaderSelection) + " in " +
-                           toString(Leader->getFile()) + " and " +
-                           Twine((int)Selection) + " in " + toString(this))
-                              .str();
-        if (Config->ForceMultiple)
-          warn(Msg);
-        else
-          error(Msg);
-      }
-
-      switch (Selection) {
-      case IMAGE_COMDAT_SELECT_NODUPLICATES:
-        Symtab->reportDuplicate(Leader, this);
-        break;
-
-      case IMAGE_COMDAT_SELECT_ANY:
-        // Nothing to do.
-        break;
-
-      case IMAGE_COMDAT_SELECT_SAME_SIZE:
-        if (LeaderChunk->getSize() != getSection(SectionNumber)->SizeOfRawData)
-          Symtab->reportDuplicate(Leader, this);
-        break;
-
-      case IMAGE_COMDAT_SELECT_EXACT_MATCH: {
-        SectionChunk NewChunk(this, getSection(SectionNumber));
-        // link.exe only compares section contents here and doesn't complain
-        // if the two comdat sections have e.g. different alignment.
-        // Match that.
-        if (LeaderChunk->getContents() != NewChunk.getContents())
-          Symtab->reportDuplicate(Leader, this);
-        break;
-      }
-
-      case IMAGE_COMDAT_SELECT_ASSOCIATIVE:
-        // createDefined() is never called for IMAGE_COMDAT_SELECT_ASSOCIATIVE.
-        // (This means lld-link doesn't produce duplicate symbol errors for
-        // associative comdats while link.exe does, but associate comdats
-        // are never extern in practice.)
-        llvm_unreachable("createDefined not called for associative comdats");
-
-      case IMAGE_COMDAT_SELECT_LARGEST:
-        if (LeaderChunk->getSize() < getSection(SectionNumber)->SizeOfRawData) {
-          // Replace the existing comdat symbol with the new one.
-          // FIXME: This is incorrect: With /opt:noref, the previous sections
-          // make it into the final executable as well. Correct handling would
-          // be to undo reading of the whole old section that's being replaced,
-          // or doing one pass that determines what the final largest comdat
-          // is for all IMAGE_COMDAT_SELECT_LARGEST comdats and then reading
-          // only the largest one.
-          replaceSymbol<DefinedRegular>(
-              Leader, this, GetName(), /*IsCOMDAT*/ true,
-              /*IsExternal*/ true, Sym.getGeneric(), nullptr);
-          Prevailing = true;
-        }
-        break;
-
-      case IMAGE_COMDAT_SELECT_NEWEST:
-        llvm_unreachable("should have been rejected earlier");
-      }
-    }
+    if (Leader->isCOMDAT())
+      handleComdatSelection(Sym, Selection, Prevailing, Leader);
 
     if (Prevailing) {
       SectionChunk *C = readSection(SectionNumber, Def, GetName());
@@ -591,6 +604,112 @@ MachineTypes ObjFile::getMachineType() {
   if (COFFObj)
     return static_cast<MachineTypes>(COFFObj->getMachine());
   return IMAGE_FILE_MACHINE_UNKNOWN;
+}
+
+ArrayRef<uint8_t> ObjFile::getDebugSection(StringRef SecName) {
+  if (SectionChunk *Sec = SectionChunk::findByName(DebugChunks, SecName))
+    return Sec->consumeDebugMagic();
+  return {};
+}
+
+// OBJ files systematically store critical informations in a .debug$S stream,
+// even if the TU was compiled with no debug info. At least two records are
+// always there. S_OBJNAME stores a 32-bit signature, which is loaded into the
+// PCHSignature member. S_COMPILE3 stores compile-time cmd-line flags. This is
+// currently used to initialize the HotPatchable member.
+void ObjFile::initializeFlags() {
+  ArrayRef<uint8_t> Data = getDebugSection(".debug$S");
+  if (Data.empty())
+    return;
+
+  DebugSubsectionArray Subsections;
+
+  BinaryStreamReader Reader(Data, support::little);
+  ExitOnError ExitOnErr;
+  ExitOnErr(Reader.readArray(Subsections, Data.size()));
+
+  for (const DebugSubsectionRecord &SS : Subsections) {
+    if (SS.kind() != DebugSubsectionKind::Symbols)
+      continue;
+
+    unsigned Offset = 0;
+
+    // Only parse the first two records. We are only looking for S_OBJNAME
+    // and S_COMPILE3, and they usually appear at the beginning of the
+    // stream.
+    for (unsigned I = 0; I < 2; ++I) {
+      Expected<CVSymbol> Sym = readSymbolFromStream(SS.getRecordData(), Offset);
+      if (!Sym) {
+        consumeError(Sym.takeError());
+        return;
+      }
+      if (Sym->kind() == SymbolKind::S_COMPILE3) {
+        auto CS =
+            cantFail(SymbolDeserializer::deserializeAs<Compile3Sym>(Sym.get()));
+        HotPatchable =
+            (CS.Flags & CompileSym3Flags::HotPatch) != CompileSym3Flags::None;
+      }
+      if (Sym->kind() == SymbolKind::S_OBJNAME) {
+        auto ObjName = cantFail(SymbolDeserializer::deserializeAs<ObjNameSym>(
+            Sym.get()));
+        PCHSignature = ObjName.Signature;
+      }
+      Offset += Sym->length();
+    }
+  }
+}
+
+// Depending on the compilation flags, OBJs can refer to external files,
+// necessary to merge this OBJ into the final PDB. We currently support two
+// types of external files: Precomp/PCH OBJs, when compiling with /Yc and /Yu.
+// And PDB type servers, when compiling with /Zi. This function extracts these
+// dependencies and makes them available as a TpiSource interface (see
+// DebugTypes.h).
+void ObjFile::initializeDependencies() {
+  if (!Config->Debug)
+    return;
+
+  bool IsPCH = false;
+
+  ArrayRef<uint8_t> Data = getDebugSection(".debug$P");
+  if (!Data.empty())
+    IsPCH = true;
+  else
+    Data = getDebugSection(".debug$T");
+
+  if (Data.empty())
+    return;
+
+  CVTypeArray Types;
+  BinaryStreamReader Reader(Data, support::little);
+  cantFail(Reader.readArray(Types, Reader.getLength()));
+
+  CVTypeArray::Iterator FirstType = Types.begin();
+  if (FirstType == Types.end())
+    return;
+
+  DebugTypes.emplace(Types);
+
+  if (IsPCH) {
+    DebugTypesObj = makePrecompSource(this);
+    return;
+  }
+
+  if (FirstType->kind() == LF_TYPESERVER2) {
+    TypeServer2Record TS = cantFail(
+        TypeDeserializer::deserializeAs<TypeServer2Record>(FirstType->data()));
+    DebugTypesObj = makeUseTypeServerSource(this, &TS);
+    return;
+  }
+
+  if (FirstType->kind() == LF_PRECOMP) {
+    PrecompRecord Precomp = cantFail(
+        TypeDeserializer::deserializeAs<PrecompRecord>(FirstType->data()));
+    DebugTypesObj = makeUsePrecompSource(this, &Precomp);
+    return;
+  }
+
+  DebugTypesObj = makeTpiSource(this);
 }
 
 StringRef ltrim1(StringRef S, const char *Chars) {
@@ -683,6 +802,8 @@ void BitcodeFile::parse() {
       Sym = Symtab->addRegular(this, SymName);
     }
     Symbols.push_back(Sym);
+    if (ObjSym.isUsed())
+      Config->GCRoot.push_back(Sym);
   }
   Directives = Obj->getCOFFLinkerOpts();
 }
@@ -713,7 +834,7 @@ static StringRef getBasename(StringRef Path) {
 std::string lld::toString(const coff::InputFile *File) {
   if (!File)
     return "<internal>";
-  if (File->ParentName.empty())
+  if (File->ParentName.empty() || File->kind() == coff::InputFile::ImportKind)
     return File->getName();
 
   return (getBasename(File->ParentName) + "(" + getBasename(File->getName()) +

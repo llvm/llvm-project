@@ -25,10 +25,10 @@ movabsq	$set_data, %rax
 // CHECK-NEXT: Address: 0x201010
 
 // CHECK:      Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:   0x202000 R_X86_64_64 foo 0x0
+// CHECK-NEXT:   0x203000 R_X86_64_64 foo 0x0
 // CHECK-NEXT: }
 // CHECK-NEXT: Section ({{.*}}) .rela.plt {
-// CHECK-NEXT:   0x202020 R_X86_64_JUMP_SLOT set_data 0x0
+// CHECK-NEXT:   0x203020 R_X86_64_JUMP_SLOT set_data 0x0
 // CHECK-NEXT: }
 
 // CHECK:      Name: foo

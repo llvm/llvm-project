@@ -49,9 +49,8 @@ public:
                       SectionBase *Section, InputFile *File);
 
   template <class ELFT>
-  void addShared(StringRef Name, SharedFile<ELFT> &F,
-                 const typename ELFT::Sym &Sym, uint32_t Alignment,
-                 uint32_t VerdefIndex);
+  void addShared(StringRef Name, SharedFile &F, const typename ELFT::Sym &Sym,
+                 uint32_t Alignment, uint32_t VerdefIndex);
 
   template <class ELFT>
   void addLazyArchive(StringRef Name, ArchiveFile &F,
@@ -80,7 +79,7 @@ public:
   void handleDynamicList();
 
   // Set of .so files to not link the same shared object file more than once.
-  llvm::DenseMap<StringRef, InputFile *> SoNames;
+  llvm::DenseMap<StringRef, SharedFile *> SoNames;
 
 private:
   std::pair<Symbol *, bool> insertName(StringRef Name);

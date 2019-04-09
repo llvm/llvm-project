@@ -8,10 +8,7 @@
 # CHECK: 201000: 90 nop
 
 # RUN: ld.lld %t.o -o %t2
-
-# FIXME: Add "RUN" in front of this line once the test passes on Windows
-# with it.
-# diff %t1 %t2
+# RUN: diff %t1 %t2
 
 .globl _start
 _start:

@@ -19,12 +19,13 @@
 // CHECK-NEXT: LOAD
 // CHECK-NEXT: LOAD
 // CHECK-NEXT: LOAD
+// CHECK-NEXT: LOAD
 // CHECK-NEXT: DYNAMIC
 // CHECK-NEXT: GNU_RELRO
 // CHECK: Section to Segment mapping:
 
-// FULLRELRO:  05     .openbsd.randomdata .dynamic .got .got.plt {{$}}
-// PARTRELRO:  05     .openbsd.randomdata .dynamic .got {{$}}
+// FULLRELRO:  03     .openbsd.randomdata .dynamic .got .got.plt {{$}}
+// PARTRELRO:  03     .openbsd.randomdata .dynamic .got {{$}}
 
 
 // NORELRO-NOT: GNU_RELRO

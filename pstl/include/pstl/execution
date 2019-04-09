@@ -16,21 +16,21 @@
 #define __PSTL_EXECUTION_POLICIES_DEFINED 1
 
 #if __PSTL_ALGORITHM_FORWARD_DECLARED
-#include "internal/glue_algorithm_impl.h"
+#    include "internal/glue_algorithm_impl.h"
 #endif
 
 #if __PSTL_MEMORY_FORWARD_DECLARED
-#include "internal/glue_memory_impl.h"
+#    include "internal/glue_memory_impl.h"
 #endif
 
 #if __PSTL_NUMERIC_FORWARD_DECLARED
-#include "internal/glue_numeric_impl.h"
+#    include "internal/glue_numeric_impl.h"
 #endif
 
 #if __PSTL_CPP17_EXECUTION_POLICIES_PRESENT
 __PSTL_PRAGMA_MESSAGE_POLICIES("The <Parallel STL> execution policies are defined in the namespace __pstl::execution")
 #else
-#include "internal/glue_execution_defs.h"
+#    include "internal/glue_execution_defs.h"
 __PSTL_PRAGMA_MESSAGE_POLICIES(
     "The <Parallel STL> execution policies are injected into the standard namespace std::execution")
 #endif
