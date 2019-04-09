@@ -94,7 +94,7 @@ amd_comgr_status_t print_symbol(
 {
   amd_comgr_status_t status;
 
-  int nlen;
+  size_t nlen;
   status = amd_comgr_symbol_get_info(symbol, AMD_COMGR_SYMBOL_INFO_NAME_LENGTH, (void*)&nlen);
   checkError(status, "amd_comgr_symbol_get_info_1");
 

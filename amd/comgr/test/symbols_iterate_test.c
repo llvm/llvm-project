@@ -39,40 +39,27 @@
 #include <string.h>
 #include "common.h"
 
-int main(int argc, char *argv[])
-{
-  char *arg;
-  long size1;
+int main(int argc, char *argv[]) {
+  long size;
   char *buf;
   amd_comgr_data_t dataObject;
-  amd_comgr_symbol_t sym1;
   amd_comgr_status_t status;
+  int count = 1;
 
-  // Read input file
-  size1 = setBuf(TEST_OBJ_DIR "/shared.so", &buf);
+  size = setBuf(TEST_OBJ_DIR "/shared.so", &buf);
 
-  // Create data object
-  { printf("Test 1 ...\n");
+  status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &dataObject);
+  checkError(status, "amd_comgr_create_data");
 
-    status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &dataObject);
-    checkError(status, "amd_comgr_create_data");
+  status = amd_comgr_set_data(dataObject, size, buf);
+  checkError(status, "amd_comgr_set_data");
 
-    status = amd_comgr_set_data(dataObject, size1, buf);
-    checkError(status, "amd_comgr_set_data");
-  }
+  status = amd_comgr_iterate_symbols(dataObject, print_symbol, &count);
+  checkError(status, "amd_comgr_iterate_symbols");
 
-  { printf("Test 2 ...\n");
-
-    int count = 1;
-    status = amd_comgr_iterate_symbols(dataObject, print_symbol, &count);
-    checkError(status, "amd_comgr_iterate_symbols");
-  }
-
-  { printf("Cleanup ...\n");
-    status = amd_comgr_release_data(dataObject);
-    checkError(status, "amd_comgr_release_data");
-    free(buf);
-  }
+  status = amd_comgr_release_data(dataObject);
+  checkError(status, "amd_comgr_release_data");
+  free(buf);
 
   return 0;
 }

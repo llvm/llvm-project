@@ -58,10 +58,8 @@ add_comgr_test(disasm_options_test)
 add_comgr_test(metadata_tp_test)
 add_comgr_test(metadata_yaml_test)
 add_comgr_test(metadata_msgpack_test)
-# FIXME: Add this test again when upstream LLVM emits kernel symbols to .dynsym
-#add_comgr_test(symbols_test)
-# FIXME: Add this test again when upstream LLVM emits kernel symbols to .dynsym
-#add_comgr_test(symbols_iterate_test)
+add_comgr_test(symbols_test)
+add_comgr_test(symbols_iterate_test)
 add_comgr_test(compile_test)
 add_comgr_test(compile_minimal_test)
 add_comgr_test(compile_log_test)

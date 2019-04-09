@@ -39,26 +39,27 @@
 #include <string.h>
 #include "common.h"
 
-int main(int argc, char *argv[])
-{
-  long size1;
+int main(int argc, char *argv[]) {
+  long size;
   char *buf;
   amd_comgr_data_t dataObject;
-  amd_comgr_symbol_t sym1;
+  amd_comgr_symbol_t sym;
   amd_comgr_status_t status;
   int count = 1;
 
-  size1 = setBuf(TEST_OBJ_DIR "/shared.so", &buf);
+  size = setBuf(TEST_OBJ_DIR "/shared.so", &buf);
 
   status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &dataObject);
   checkError(status, "amd_comgr_create_data");
 
-  status = amd_comgr_set_data(dataObject, size1, buf);
+  status = amd_comgr_set_data(dataObject, size, buf);
   checkError(status, "amd_comgr_set_data");
 
-  status = amd_comgr_symbol_lookup(dataObject, "baz", &sym1);
+  status = amd_comgr_symbol_lookup(
+      dataObject, "bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+      &sym);
   checkError(status, "amd_comgr_symbol_lookup");
-  print_symbol(sym1, &count);
+  print_symbol(sym, &count);
 
   status = amd_comgr_release_data(dataObject);
   checkError(status, "amd_comgr_release_data");
