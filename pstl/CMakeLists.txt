@@ -27,6 +27,9 @@ if (NOT TBB_DIR)
     endif()
 endif()
 
+###############################################################################
+# Setup the ParallelSTL library target
+###############################################################################
 add_library(ParallelSTL INTERFACE)
 add_library(pstl::ParallelSTL ALIAS ParallelSTL)
 target_compile_features(ParallelSTL INTERFACE cxx_std_17)
@@ -55,19 +58,34 @@ target_include_directories(ParallelSTL
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfigVersion.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY AnyNewerVersion)
-
-configure_file(
-    cmake/ParallelSTLConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfig.cmake
-    @ONLY)
-
-export(TARGETS ParallelSTL NAMESPACE pstl:: FILE ParallelSTLTargets.cmake)
-export(PACKAGE ParallelSTL)
-
+###############################################################################
+# Setup tests
+###############################################################################
 enable_testing()
 add_subdirectory(test)
+
+###############################################################################
+# Install the target and the associated CMake files
+###############################################################################
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfigVersion.cmake"
+                                 COMPATIBILITY ExactVersion)
+
+configure_file(cmake/ParallelSTLConfig.cmake.in
+               "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfig.cmake"
+               @ONLY)
+
+install(TARGETS ParallelSTL
+        EXPORT ParallelSTLTargets)
+install(EXPORT ParallelSTLTargets
+        FILE ParallelSTLTargets.cmake
+        NAMESPACE pstl::
+        DESTINATION lib/cmake/ParallelSTL)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfig.cmake"
+              "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfigVersion.cmake"
+        DESTINATION lib/cmake/ParallelSTL)
+install(DIRECTORY include/pstl
+        DESTINATION include)
+
+add_custom_target(install-pstl
+                  COMMAND "${CMAKE_COMMAND}" -P "${PROJECT_BINARY_DIR}/cmake_install.cmake" -DCOMPONENT=ParallelSTL)

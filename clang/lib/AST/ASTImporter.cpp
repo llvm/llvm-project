@@ -1947,7 +1947,7 @@ bool ASTNodeImporter::IsStructuralMatch(VarDecl *FromVar, VarDecl *ToVar,
 
 bool ASTNodeImporter::IsStructuralMatch(EnumDecl *FromEnum, EnumDecl *ToEnum) {
   // Eliminate a potential failure point where we attempt to re-import
-  // something we're trying to import while completin ToEnum
+  // something we're trying to import while completing ToEnum.
   if (Decl *ToOrigin = Importer.GetOriginalDecl(ToEnum))
     if (auto *ToOriginEnum = dyn_cast<EnumDecl>(ToOrigin))
         ToEnum = ToOriginEnum;

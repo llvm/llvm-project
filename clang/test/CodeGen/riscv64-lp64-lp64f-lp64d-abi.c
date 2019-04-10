@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -triple riscv64 -emit-llvm %s -o - | FileCheck %s
 
+// This file contains test cases that will have the same output for the lp64,
+// lp64f, and lp64d ABIs.
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -176,8 +179,8 @@ v32i8 f_vec_large_v32i8_ret() {
   return (v32i8){1, 2, 3, 4, 5, 6, 7, 8};
 }
 
-// Scalars passed on the stack should have signext/zeroext attributes (they
-// are anyext).
+// Scalars passed on the stack should not have signext/zeroext attributes
+// (they are anyext).
 
 // CHECK-LABEL: define signext i32 @f_scalar_stack_1(i64 %a.coerce, [2 x i64] %b.coerce, i128 %c.coerce, %struct.large* %d, i8 zeroext %e, i8 signext %f, i8 %g, i8 %h)
 int f_scalar_stack_1(struct tiny a, struct small b, struct small_aligned c,
@@ -185,8 +188,8 @@ int f_scalar_stack_1(struct tiny a, struct small b, struct small_aligned c,
   return g + h;
 }
 
-// CHECK-LABEL: define signext i32 @f_scalar_stack_2(i32 signext %a, i128 %b, float %c, fp128 %d, <32 x i8>*, i8 zeroext %f, i8 %g, i8 %h)
-int f_scalar_stack_2(int32_t a, __int128_t b, float c, long double d, v32i8 e,
+// CHECK-LABEL: define signext i32 @f_scalar_stack_2(i32 signext %a, i128 %b, i64 %c, fp128 %d, <32 x i8>*, i8 zeroext %f, i8 %g, i8 %h)
+int f_scalar_stack_2(int32_t a, __int128_t b, int64_t c, long double d, v32i8 e,
                      uint8_t f, int8_t g, uint8_t h) {
   return g + h;
 }

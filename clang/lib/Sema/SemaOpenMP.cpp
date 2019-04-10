@@ -2361,9 +2361,6 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPAllocateDirective(
         (VD->getStorageClass() == SC_Register && VD->hasAttr<AsmLabelAttr>() &&
          !VD->isLocalVarDecl()))
       continue;
-    // Do not apply for parameters.
-    if (isa<ParmVarDecl>(VD))
-      continue;
 
     // If the used several times in the allocate directive, the same allocator
     // must be used.
