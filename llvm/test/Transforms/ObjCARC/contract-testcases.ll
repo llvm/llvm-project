@@ -87,9 +87,9 @@ lpad:                                             ; preds = %entry
   resume { i8*, i32 } undef
 }
 
-!clang.arc.retainAutoreleasedReturnValueMarker = !{!0}
+!llvm.module.flags = !{!0}
 
-!0 = !{!"mov\09r7, r7\09\09@ marker for objc_retainAutoreleaseReturnValue"}
+!0 = !{i32 1, !"clang.arc.retainAutoreleasedReturnValueMarker", !"mov\09r7, r7\09\09@ marker for objc_retainAutoreleaseReturnValue"}
 
 ; CHECK: attributes #0 = { optsize }
 ; CHECK: attributes [[NUW]] = { nounwind }
