@@ -38,8 +38,8 @@ declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
 declare i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8*)
 declare void @bar(i8*)
 
-!clang.arc.retainAutoreleasedReturnValueMarker = !{!0}
+!llvm.module.flags = !{!0}
 
-!0 = !{!"mov\09r7, r7\09\09@ marker for return value optimization"}
+!0 = !{i32 1, !"clang.arc.retainAutoreleasedReturnValueMarker", !"mov\09r7, r7\09\09@ marker for return value optimization"}
 
 ; CHECK: attributes [[NUW]] = { nounwind }
