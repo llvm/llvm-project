@@ -66,20 +66,24 @@ public:
     if (!is_host()) {
       vector_class<cl_device_id> ClDevices(get_cl_devices());
       vector_class<cl_program> ClPrograms;
+      bool NonInterOpToLink = false;
       for (const auto &Prg : ProgramList) {
+        if (!Prg->IsLinkable && NonInterOpToLink)
+          continue;
+        NonInterOpToLink |= !Prg->IsLinkable;
         ClPrograms.push_back(Prg->ClProgram);
       }
-      cl_int Err;
+      cl_int Err = CL_SUCCESS;
       ClProgram = clLinkProgram(detail::getSyclObjImpl(Context)->getHandleRef(),
                                 ClDevices.size(), ClDevices.data(),
-                                LinkOptions.c_str(), ProgramList.size(),
+                                LinkOptions.c_str(), ClPrograms.size(),
                                 ClPrograms.data(), nullptr, nullptr, &Err);
       CHECK_OCL_CODE_THROW(Err, compile_program_error);
     }
   }
 
   program_impl(const context &Context, cl_program ClProgram)
-      : ClProgram(ClProgram), Context(Context) {
+      : ClProgram(ClProgram), Context(Context), IsLinkable(true) {
     // TODO handle the case when cl_program build is in progress
     cl_uint NumDevices;
     CHECK_OCL_CODE(clGetProgramInfo(ClProgram, CL_PROGRAM_NUM_DEVICES,
@@ -382,6 +386,7 @@ private:
   cl_program ClProgram = nullptr;
   program_state State = program_state::none;
   context Context;
+  bool IsLinkable = false;
   vector_class<device> Devices;
   string_class CompileOptions;
   string_class LinkOptions;
