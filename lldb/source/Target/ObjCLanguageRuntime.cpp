@@ -27,9 +27,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 ObjCLanguageRuntime::~ObjCLanguageRuntime() {}
 
 ObjCLanguageRuntime::ObjCLanguageRuntime(Process *process)
@@ -355,9 +353,7 @@ bool ObjCLanguageRuntime::GetTypeBitSize(const CompilerType &compiler_type,
   return found;
 }
 
-//------------------------------------------------------------------
 // Exception breakpoint Precondition class for ObjC:
-//------------------------------------------------------------------
 void ObjCLanguageRuntime::ObjCExceptionPrecondition::AddClassName(
     const char *class_name) {
   m_class_names.insert(class_name);

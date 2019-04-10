@@ -29,13 +29,11 @@ class Decoder;
 
 namespace ptdecoder {
 
-//----------------------------------------------------------------------
 /// \class PTInstruction
 /// Represents an assembly instruction containing raw
 ///     instruction bytes, instruction address along with information
 ///     regarding execution flow context and Intel(R) Processor Trace
 ///     context.
-//----------------------------------------------------------------------
 class PTInstruction {
 public:
   PTInstruction();
@@ -49,7 +47,6 @@ public:
   // Get instruction address in inferior's memory image
   uint64_t GetInsnAddress() const;
 
-  //------------------------------------------------------------------
   /// Get raw bytes of the instruction in the buffer.
   ///
   /// \param[out] buf
@@ -67,7 +64,6 @@ public:
   ///     Number of bytes of the instruction actually written to @buf if API
   ///     succeeds. In case of errors, total number of raw bytes of the
   ///     instruction is returned.
-  //------------------------------------------------------------------
   size_t GetRawBytes(void *buf, size_t size) const;
 
   // Get error string if it represents an invalid instruction. For a valid
@@ -81,11 +77,9 @@ private:
   std::shared_ptr<ptdecoder_private::Instruction> m_opaque_sp;
 };
 
-//---------------------------------------------------------------------------
 /// \class PTInstructionList
 /// Represents a list of assembly instructions. Each instruction is of
 ///     type PTInstruction.
-//---------------------------------------------------------------------------
 class PTInstructionList {
 public:
   PTInstructionList();
@@ -110,12 +104,10 @@ private:
   std::shared_ptr<ptdecoder_private::InstructionList> m_opaque_sp;
 };
 
-//----------------------------------------------------------------------
 /// \class PTTraceOptions
 /// Provides configuration options like trace type, trace buffer size,
 ///     meta data buffer size along with other Intel(R) Processor Trace
 ///     specific options.
-//----------------------------------------------------------------------
 class PTTraceOptions {
 public:
   PTTraceOptions();
@@ -130,7 +122,6 @@ public:
 
   uint64_t GetMetaDataBufferSize() const;
 
-  //------------------------------------------------------------------
   /// Get Intel(R) Processor Trace specific configuration options (apart from
   /// trace buffer size, meta data buffer size and TraceType) formatted as
   /// json text i.e. {"Name":Value,"Name":Value} pairs, where "Value" is a
@@ -139,7 +130,6 @@ public:
   ///
   /// \return
   ///     A string formatted as json text {"Name":Value,"Name":Value}
-  //------------------------------------------------------------------
   lldb::SBStructuredData GetTraceParams(lldb::SBError &error);
 
 private:
@@ -150,7 +140,6 @@ private:
   std::shared_ptr<ptdecoder_private::TraceOptions> m_opaque_sp;
 };
 
-//----------------------------------------------------------------------
 /// \class PTDecoder
 /// This class makes use of Intel(R) Processor Trace hardware feature
 ///     (implememted inside LLDB) to gather trace data for an inferior (being
@@ -163,7 +152,6 @@ private:
 ///     - stop the trace for a thread/process,
 ///     - get the execution flow (assembly instructions) for a thread and
 ///     - get trace specific information for a thread
-//----------------------------------------------------------------------
 class PTDecoder {
 public:
   PTDecoder(lldb::SBDebugger &sbdebugger);
@@ -172,7 +160,6 @@ public:
 
   ~PTDecoder();
 
-  //------------------------------------------------------------------
   /// Start Intel(R) Processor Trace on a thread or complete process with
   /// Intel(R) Processor Trace specific configuration options
   ///
@@ -211,12 +198,10 @@ public:
   ///
   /// \param[out] sberror
   ///     An error with the failure reason if API fails. Else success.
-  //------------------------------------------------------------------
   void StartProcessorTrace(lldb::SBProcess &sbprocess,
                            lldb::SBTraceOptions &sbtraceoptions,
                            lldb::SBError &sberror);
 
-  //------------------------------------------------------------------
   /// Stop Intel(R) Processor Trace on a thread or complete process.
   ///
   /// \param[in] sbprocess
@@ -231,11 +216,9 @@ public:
   ///
   /// \param[out] sberror
   ///     An error with the failure reason if API fails. Else success.
-  //------------------------------------------------------------------
   void StopProcessorTrace(lldb::SBProcess &sbprocess, lldb::SBError &sberror,
                           lldb::tid_t tid = LLDB_INVALID_THREAD_ID);
 
-  //------------------------------------------------------------------
   /// Get instruction log containing the execution flow for a thread of a
   /// process in terms of assembly instructions executed.
   ///
@@ -269,13 +252,11 @@ public:
   ///
   /// \param[out] sberror
   ///     An error with the failure reason if API fails. Else success.
-  //------------------------------------------------------------------
   void GetInstructionLogAtOffset(lldb::SBProcess &sbprocess, lldb::tid_t tid,
                                  uint32_t offset, uint32_t count,
                                  PTInstructionList &result_list,
                                  lldb::SBError &sberror);
 
-  //------------------------------------------------------------------
   /// Get Intel(R) Processor Trace specific information for a thread of a
   /// process. The information contains the actual configuration options with
   /// which the trace was started for this thread.
@@ -296,7 +277,6 @@ public:
   ///
   /// \param[out] sberror
   ///     An error with the failure reason if API fails. Else success.
-  //------------------------------------------------------------------
   void GetProcessorTraceInfo(lldb::SBProcess &sbprocess, lldb::tid_t tid,
                              PTTraceOptions &options, lldb::SBError &sberror);
 

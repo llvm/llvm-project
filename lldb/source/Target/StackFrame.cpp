@@ -259,12 +259,10 @@ Block *StackFrame::GetFrameBlock() {
   return nullptr;
 }
 
-//----------------------------------------------------------------------
 // Get the symbol context if we already haven't done so by resolving the
 // PC address as much as possible. This way when we pass around a
 // StackFrame object, everyone will have as much information as possible and no
 // one will ever have to look things up manually.
-//----------------------------------------------------------------------
 const SymbolContext &
 StackFrame::GetSymbolContext(SymbolContextItem resolve_scope) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -1453,7 +1451,6 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
   return GetValueForOffset(frame, pointee, offset);
 }
 
-//------------------------------------------------------------------
 /// Attempt to reconstruct the ValueObject for the address contained in a
 /// given register plus an offset.
 ///
@@ -1479,7 +1476,6 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
 ///   A string describing the base for the ExpressionPath.  This could be a
 ///     variable, a register value, an argument, or a function return value.
 ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
-//------------------------------------------------------------------
 lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
                                    int64_t offset, Disassembler &disassembler,
                                    VariableList &variables, const Address &pc) {

@@ -14,9 +14,7 @@
 #include "lldb/Interpreter/Options.h"
 
 namespace lldb_private {
-//-------------------------------------------------------------------------
 // OptionGroupOutputFile
-//-------------------------------------------------------------------------
 
 class OptionGroupOutputFile : public OptionGroup {
 public:

@@ -27,12 +27,10 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace std;
 
-//----------------------------------------------------------------------
 // Parse
 //
 // Parse all information in the debug_line_data into an internal
 // representation.
-//----------------------------------------------------------------------
 void DWARFDebugLine::Parse(const DWARFDataExtractor &debug_line_data) {
   m_lineTableMap.clear();
   lldb::offset_t offset = 0;
@@ -61,9 +59,7 @@ void DWARFDebugLine::ParseIfNeeded(const DWARFDataExtractor &debug_line_data) {
     Parse(debug_line_data);
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugLine::GetLineTable
-//----------------------------------------------------------------------
 DWARFDebugLine::LineTable::shared_ptr
 DWARFDebugLine::GetLineTable(const dw_offset_t offset) const {
   DWARFDebugLine::LineTable::shared_ptr line_table_shared_ptr;
@@ -73,13 +69,11 @@ DWARFDebugLine::GetLineTable(const dw_offset_t offset) const {
   return line_table_shared_ptr;
 }
 
-//----------------------------------------------------------------------
 // Parse
 //
 // Parse the entire line table contents calling callback each time a new
 // prologue is parsed and every time a new row is to be added to the line
 // table.
-//----------------------------------------------------------------------
 void DWARFDebugLine::Parse(const DWARFDataExtractor &debug_line_data,
                            DWARFDebugLine::State::Callback callback,
                            void *userData) {
@@ -111,9 +105,7 @@ ReadDescriptors(const DWARFDataExtractor &debug_line_data,
 }
 } // namespace
 
-//----------------------------------------------------------------------
 // DWARFDebugLine::ParsePrologue
-//----------------------------------------------------------------------
 bool DWARFDebugLine::ParsePrologue(const DWARFDataExtractor &debug_line_data,
                                    lldb::offset_t *offset_ptr,
                                    Prologue *prologue, DWARFUnit *dwarf_cu) {
@@ -273,13 +265,11 @@ bool DWARFDebugLine::ParseSupportFiles(
   return true;
 }
 
-//----------------------------------------------------------------------
 // ParseStatementTable
 //
 // Parse a single line table (prologue and all rows) and call the callback
 // function once for the prologue (row in state will be zero) and each time a
 // row is to be added to the line table.
-//----------------------------------------------------------------------
 bool DWARFDebugLine::ParseStatementTable(
     const DWARFDataExtractor &debug_line_data, lldb::offset_t *offset_ptr,
     DWARFDebugLine::State::Callback callback, void *userData, DWARFUnit *dwarf_cu) {
@@ -552,9 +542,7 @@ bool DWARFDebugLine::ParseStatementTable(
   return end_offset;
 }
 
-//----------------------------------------------------------------------
 // ParseStatementTableCallback
-//----------------------------------------------------------------------
 static void ParseStatementTableCallback(dw_offset_t offset,
                                         const DWARFDebugLine::State &state,
                                         void *userData) {
@@ -571,12 +559,10 @@ static void ParseStatementTableCallback(dw_offset_t offset,
   }
 }
 
-//----------------------------------------------------------------------
 // ParseStatementTable
 //
 // Parse a line table at offset and populate the LineTable class with the
 // prologue and all rows.
-//----------------------------------------------------------------------
 bool DWARFDebugLine::ParseStatementTable(
     const DWARFDataExtractor &debug_line_data, lldb::offset_t *offset_ptr,
     LineTable *line_table, DWARFUnit *dwarf_cu) {
@@ -588,9 +574,7 @@ inline bool DWARFDebugLine::Prologue::IsValid() const {
   return SymbolFileDWARF::SupportedVersion(version);
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugLine::Prologue::Dump
-//----------------------------------------------------------------------
 void DWARFDebugLine::Prologue::Dump(Log *log) {
   uint32_t i;
 
@@ -629,11 +613,9 @@ void DWARFDebugLine::Prologue::Dump(Log *log) {
   }
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugLine::ParsePrologue::Append
 //
 // Append the contents of the prologue to the binary stream buffer
-//----------------------------------------------------------------------
 // void
 // DWARFDebugLine::Prologue::Append(BinaryStreamBuf& buff) const
 //{
@@ -695,18 +677,14 @@ void DWARFDebugLine::LineTable::AppendRow(const DWARFDebugLine::Row &state) {
   rows.push_back(state);
 }
 
-//----------------------------------------------------------------------
 // Compare function for the binary search in
 // DWARFDebugLine::LineTable::LookupAddress()
-//----------------------------------------------------------------------
 static bool FindMatchingAddress(const DWARFDebugLine::Row &row1,
                                 const DWARFDebugLine::Row &row2) {
   return row1.address < row2.address;
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugLine::LineTable::LookupAddress
-//----------------------------------------------------------------------
 uint32_t DWARFDebugLine::LineTable::LookupAddress(dw_addr_t address,
                                                   dw_addr_t cu_high_pc) const {
   uint32_t index = UINT32_MAX;
@@ -739,26 +717,20 @@ uint32_t DWARFDebugLine::LineTable::LookupAddress(dw_addr_t address,
   return index; // Failed to find address
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugLine::Row::Row
-//----------------------------------------------------------------------
 DWARFDebugLine::Row::Row(bool default_is_stmt)
     : address(0), line(1), column(0), file(1), is_stmt(default_is_stmt),
       basic_block(false), end_sequence(false), prologue_end(false),
       epilogue_begin(false), isa(0) {}
 
-//----------------------------------------------------------------------
 // Called after a row is appended to the matrix
-//----------------------------------------------------------------------
 void DWARFDebugLine::Row::PostAppend() {
   basic_block = false;
   prologue_end = false;
   epilogue_begin = false;
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugLine::Row::Reset
-//----------------------------------------------------------------------
 void DWARFDebugLine::Row::Reset(bool default_is_stmt) {
   address = 0;
   line = 1;
@@ -771,9 +743,7 @@ void DWARFDebugLine::Row::Reset(bool default_is_stmt) {
   epilogue_begin = false;
   isa = 0;
 }
-//----------------------------------------------------------------------
 // DWARFDebugLine::Row::Dump
-//----------------------------------------------------------------------
 void DWARFDebugLine::Row::Dump(Log *log) const {
   log->Printf("0x%16.16" PRIx64 " %6u %6u %6u %3u %s%s%s%s%s", address, line,
               column, file, isa, is_stmt ? " is_stmt" : "",
@@ -783,9 +753,7 @@ void DWARFDebugLine::Row::Dump(Log *log) const {
               end_sequence ? " end_sequence" : "");
 }
 
-//----------------------------------------------------------------------
 // Compare function LineTable structures
-//----------------------------------------------------------------------
 static bool AddressLessThan(const DWARFDebugLine::Row &a,
                             const DWARFDebugLine::Row &b) {
   return a.address < b.address;
@@ -825,9 +793,7 @@ void DWARFDebugLine::Row::Insert(Row::collection &state_coll,
   }
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugLine::State::State
-//----------------------------------------------------------------------
 DWARFDebugLine::State::State(Prologue::shared_ptr &p, Log *l,
                              DWARFDebugLine::State::Callback cb, void *userData)
     : Row(p->default_is_stmt), prologue(p), log(l), callback(cb),
@@ -837,14 +803,10 @@ DWARFDebugLine::State::State(Prologue::shared_ptr &p, Log *l,
     callback(0, *this, callbackUserData);
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugLine::State::Reset
-//----------------------------------------------------------------------
 void DWARFDebugLine::State::Reset() { Row::Reset(prologue->default_is_stmt); }
 
-//----------------------------------------------------------------------
 // DWARFDebugLine::State::AppendRowToMatrix
-//----------------------------------------------------------------------
 void DWARFDebugLine::State::AppendRowToMatrix(dw_offset_t offset) {
   // Each time we are to add an entry into the line table matrix call the
   // callback function so that someone can do something with the current state
@@ -864,9 +826,7 @@ void DWARFDebugLine::State::AppendRowToMatrix(dw_offset_t offset) {
   PostAppend();
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugLine::State::Finalize
-//----------------------------------------------------------------------
 void DWARFDebugLine::State::Finalize(dw_offset_t offset) {
   // Call the callback with a special row state when we are done parsing a line
   // table

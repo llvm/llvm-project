@@ -48,9 +48,7 @@ static constexpr OptionDefinition g_log_options[] = {
 
 class CommandObjectLogEnable : public CommandObjectParsed {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommandObjectLogEnable(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "log enable",
                             "Enable logging for a single log channel.",
@@ -187,9 +185,7 @@ protected:
 
 class CommandObjectLogDisable : public CommandObjectParsed {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommandObjectLogDisable(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "log disable",
                             "Disable one or more log channel categories.",
@@ -247,9 +243,7 @@ protected:
 
 class CommandObjectLogList : public CommandObjectParsed {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommandObjectLogList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "log list",
                             "List the log categories for one or more log "
@@ -294,9 +288,7 @@ protected:
 
 class CommandObjectLogTimer : public CommandObjectParsed {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommandObjectLogTimer(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "log timers",
                             "Enable, disable, dump, and reset LLDB internal "

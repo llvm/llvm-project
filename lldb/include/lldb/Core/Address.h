@@ -50,7 +50,6 @@ struct LineEntry;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class Address Address.h "lldb/Core/Address.h"
 /// A section + offset based address class.
 ///
@@ -78,13 +77,10 @@ namespace lldb_private {
 /// load addresses of the main executable and any images (shared libraries)
 /// will be  resolved/unresolved. When this happens, breakpoints that are in
 /// one of these sections can be set/cleared.
-//----------------------------------------------------------------------
 class Address {
 public:
-  //------------------------------------------------------------------
   /// Dump styles allow the Address::Dump(Stream *,DumpStyle) const function
   /// to display Address contents in a variety of ways.
-  //------------------------------------------------------------------
   typedef enum {
     DumpStyleInvalid,           ///< Invalid dump style
     DumpStyleSectionNameOffset, ///< Display as the section name + offset.
@@ -127,26 +123,21 @@ public:
     ///< dereferenced address using DumpStyleResolvedDescription
   } DumpStyle;
 
-  //------------------------------------------------------------------
   /// Default constructor.
   ///
   /// Initialize with a invalid section (NULL) and an invalid offset
   /// (LLDB_INVALID_ADDRESS).
-  //------------------------------------------------------------------
   Address() : m_section_wp(), m_offset(LLDB_INVALID_ADDRESS) {}
 
-  //------------------------------------------------------------------
   /// Copy constructor
   ///
   /// Makes a copy of the another Address object \a rhs.
   ///
   /// \param[in] rhs
   ///     A const Address object reference to copy.
-  //------------------------------------------------------------------
   Address(const Address &rhs)
       : m_section_wp(rhs.m_section_wp), m_offset(rhs.m_offset) {}
 
-  //------------------------------------------------------------------
   /// Construct with a section pointer and offset.
   ///
   /// Initialize the address with the supplied \a section and \a offset.
@@ -157,7 +148,6 @@ public:
   ///
   /// \param[in] offset
   ///     The offset in bytes into \a section.
-  //------------------------------------------------------------------
   Address(const lldb::SectionSP &section_sp, lldb::addr_t offset)
       : m_section_wp(), // Don't init with section_sp in case section_sp is
                         // invalid (the weak_ptr will throw)
@@ -166,7 +156,6 @@ public:
       m_section_wp = section_sp;
   }
 
-  //------------------------------------------------------------------
   /// Construct with a virtual address and section list.
   ///
   /// Initialize and resolve the address with the supplied virtual address \a
@@ -177,12 +166,10 @@ public:
   ///
   /// \param[in] section_list
   ///     A list of sections, one of which may contain the \a file_addr.
-  //------------------------------------------------------------------
   Address(lldb::addr_t file_addr, const SectionList *section_list);
 
   Address(lldb::addr_t abs_addr);
 
-//------------------------------------------------------------------
 /// Assignment operator.
 ///
 /// Copies the address value from another Address object \a rhs into \a this
@@ -193,21 +180,17 @@ public:
 ///
 /// \return
 ///     A const Address object reference to \a this.
-//------------------------------------------------------------------
   const Address &operator=(const Address &rhs);
 
-  //------------------------------------------------------------------
   /// Clear the object's state.
   ///
   /// Sets the section to an invalid value (NULL) and an invalid offset
   /// (LLDB_INVALID_ADDRESS).
-  //------------------------------------------------------------------
   void Clear() {
     m_section_wp.reset();
     m_offset = LLDB_INVALID_ADDRESS;
   }
 
-  //------------------------------------------------------------------
   /// Compare two Address objects.
   ///
   /// \param[in] lhs
@@ -220,7 +203,6 @@ public:
   ///     \li -1 if lhs < rhs
   ///     \li 0 if lhs == rhs
   ///     \li 1 if lhs > rhs
-  //------------------------------------------------------------------
   static int CompareFileAddress(const Address &lhs, const Address &rhs);
 
   static int CompareLoadAddress(const Address &lhs, const Address &rhs,
@@ -239,7 +221,6 @@ public:
     }
   };
 
-  //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
   /// Dump a description of the contents of this object to the supplied stream
@@ -262,14 +243,12 @@ public:
   ///     in such cases.
   ///
   /// \see Address::DumpStyle
-  //------------------------------------------------------------------
   bool Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
             DumpStyle fallback_style = DumpStyleInvalid,
             uint32_t addr_byte_size = UINT32_MAX) const;
 
   AddressClass GetAddressClass() const;
 
-  //------------------------------------------------------------------
   /// Get the file address.
   ///
   /// If an address comes from a file on disk that has section relative
@@ -280,10 +259,8 @@ public:
   ///     The valid file virtual address, or LLDB_INVALID_ADDRESS if
   ///     the address doesn't have a file virtual address (image is
   ///     from memory only with no representation on disk).
-  //------------------------------------------------------------------
   lldb::addr_t GetFileAddress() const;
 
-  //------------------------------------------------------------------
   /// Get the load address.
   ///
   /// If an address comes from a file on disk that has section relative
@@ -296,10 +273,8 @@ public:
   /// \return
   ///     The valid load virtual address, or LLDB_INVALID_ADDRESS if
   ///     the address is currently not loaded.
-  //------------------------------------------------------------------
   lldb::addr_t GetLoadAddress(Target *target) const;
 
-  //------------------------------------------------------------------
   /// Get the load address as a callable code load address.
   ///
   /// This function will first resolve its address to a load address. Then, if
@@ -312,11 +287,9 @@ public:
   /// \return
   ///     The valid load virtual address, or LLDB_INVALID_ADDRESS if
   ///     the address is currently not loaded.
-  //------------------------------------------------------------------
   lldb::addr_t GetCallableLoadAddress(Target *target,
                                       bool is_indirect = false) const;
 
-  //------------------------------------------------------------------
   /// Get the load address as an opcode load address.
   ///
   /// This function will first resolve its address to a load address. Then, if
@@ -332,21 +305,17 @@ public:
   ///     The valid load virtual address with extra callable bits
   ///     removed, or LLDB_INVALID_ADDRESS if the address is currently
   ///     not loaded.
-  //------------------------------------------------------------------
   lldb::addr_t GetOpcodeLoadAddress(
       Target *target,
       AddressClass addr_class = AddressClass::eInvalid) const;
 
-  //------------------------------------------------------------------
   /// Get the section relative offset value.
   ///
   /// \return
   ///     The current offset, or LLDB_INVALID_ADDRESS if this address
   ///     doesn't contain a valid offset.
-  //------------------------------------------------------------------
   lldb::addr_t GetOffset() const { return m_offset; }
 
-  //------------------------------------------------------------------
   /// Check if an address is section offset.
   ///
   /// When converting a virtual file or load address into a section offset
@@ -358,12 +327,10 @@ public:
   /// \return
   ///     Returns \b true if the address has a valid section and
   ///     offset, \b false otherwise.
-  //------------------------------------------------------------------
   bool IsSectionOffset() const {
     return IsValid() && (GetSection().get() != nullptr);
   }
 
-  //------------------------------------------------------------------
   /// Check if the object state is valid.
   ///
   /// A valid Address object contains either a section pointer and
@@ -373,18 +340,14 @@ public:
   /// \return
   ///     Returns \b true if the offset is valid, \b false
   ///     otherwise.
-  //------------------------------------------------------------------
   bool IsValid() const { return m_offset != LLDB_INVALID_ADDRESS; }
 
-  //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
   /// \return
   ///     The number of bytes that this object occupies in memory.
-  //------------------------------------------------------------------
   size_t MemorySize() const;
 
-  //------------------------------------------------------------------
   /// Resolve a file virtual address using a section list.
   ///
   /// Given a list of sections, attempt to resolve \a addr as an offset into
@@ -393,11 +356,9 @@ public:
   /// \return
   ///     Returns \b true if \a addr was able to be resolved, \b false
   ///     otherwise.
-  //------------------------------------------------------------------
   bool ResolveAddressUsingFileSections(lldb::addr_t addr,
                                        const SectionList *sections);
 
-  //------------------------------------------------------------------
   /// Set the address to represent \a load_addr.
   ///
   /// The address will attempt to find a loaded section within \a target that
@@ -423,7 +384,6 @@ public:
   ///     address to not resolve to a section in a module, this often
   ///     happens for JIT'ed code, or any load addresses on the stack
   ///     or heap.
-  //------------------------------------------------------------------
   bool SetLoadAddress(lldb::addr_t load_addr, Target *target,
                       bool allow_section_end = false);
 
@@ -434,26 +394,21 @@ public:
 
   bool SetCallableLoadAddress(lldb::addr_t load_addr, Target *target);
 
-  //------------------------------------------------------------------
   /// Get accessor for the module for this address.
   ///
   /// \return
   ///     Returns the Module pointer that this address is an offset
   ///     in, or NULL if this address doesn't belong in a module, or
   ///     isn't resolved yet.
-  //------------------------------------------------------------------
   lldb::ModuleSP GetModule() const;
 
-  //------------------------------------------------------------------
   /// Get const accessor for the section.
   ///
   /// \return
   ///     Returns the const lldb::Section pointer that this address is an
   ///     offset in, or NULL if this address is absolute.
-  //------------------------------------------------------------------
   lldb::SectionSP GetSection() const { return m_section_wp.lock(); }
 
-  //------------------------------------------------------------------
   /// Set accessor for the offset.
   ///
   /// \param[in] offset
@@ -461,7 +416,6 @@ public:
   ///
   /// \return
   ///     Returns \b true if the offset changed, \b false otherwise.
-  //------------------------------------------------------------------
   bool SetOffset(lldb::addr_t offset) {
     bool changed = m_offset != offset;
     m_offset = offset;
@@ -481,21 +435,18 @@ public:
     return false;
   }
 
-  //------------------------------------------------------------------
   /// Set accessor for the section.
   ///
   /// \param[in] section
   ///     A new lldb::Section pointer to use as the section base. Can
   ///     be NULL for absolute addresses that are not relative to
   ///     any section.
-  //------------------------------------------------------------------
   void SetSection(const lldb::SectionSP &section_sp) {
     m_section_wp = section_sp;
   }
 
   void ClearSection() { m_section_wp.reset(); }
 
-  //------------------------------------------------------------------
   /// Reconstruct a symbol context from an address.
   ///
   /// This class doesn't inherit from SymbolContextScope because many address
@@ -504,7 +455,6 @@ public:
   /// module found in the section.
   ///
   /// \see SymbolContextScope::CalculateSymbolContext(SymbolContext*)
-  //------------------------------------------------------------------
   uint32_t CalculateSymbolContext(SymbolContext *sc,
                                   lldb::SymbolContextItem resolve_scope =
                                       lldb::eSymbolContextEverything) const;
@@ -521,33 +471,26 @@ public:
 
   bool CalculateSymbolContextLineEntry(LineEntry &line_entry) const;
 
-  //------------------------------------------------------------------
   // Returns true if the section should be valid, but isn't because the shared
   // pointer to the section can't be reconstructed from a weak pointer that
   // contains a valid weak reference to a section. Returns false if the section
   // weak pointer has no reference to a section, or if the section is still
   // valid
-  //------------------------------------------------------------------
   bool SectionWasDeleted() const;
 
 protected:
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   lldb::SectionWP m_section_wp; ///< The section for the address, can be NULL.
   lldb::addr_t m_offset; ///< Offset into section if \a m_section_wp is valid...
 
-  //------------------------------------------------------------------
   // Returns true if the m_section_wp once had a reference to a valid section
   // shared pointer, but no longer does. This can happen if we have an address
   // from a module that gets unloaded and deleted. This function should only be
   // called if GetSection() returns an empty shared pointer and you want to
   // know if this address used to have a valid section.
-  //------------------------------------------------------------------
   bool SectionWasDeletedPrivate() const;
 };
 
-//----------------------------------------------------------------------
 // NOTE: Be careful using this operator. It can correctly compare two
 // addresses from the same Module correctly. It can't compare two addresses
 // from different modules in any meaningful way, but it will compare the module
@@ -559,7 +502,6 @@ protected:
 //   address results to make much sense
 //
 // This basically lets Address objects be used in ordered collection classes.
-//----------------------------------------------------------------------
 bool operator<(const Address &lhs, const Address &rhs);
 bool operator>(const Address &lhs, const Address &rhs);
 bool operator==(const Address &lhs, const Address &rhs);

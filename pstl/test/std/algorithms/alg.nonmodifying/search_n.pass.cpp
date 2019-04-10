@@ -23,8 +23,8 @@ using namespace TestUtils;
 
 struct test_one_policy
 {
-#if __PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
-    __PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
+#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
+    _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
     template <typename Iterator, typename Size, typename T, typename Predicate>
     void
     operator()(pstl::execution::unsequenced_policy, Iterator b, Iterator e, Size count, const T& value, Predicate pred)
@@ -101,7 +101,7 @@ main()
     test<int32_t>();
     test<uint16_t>();
     test<float64_t>();
-#if !__PSTL_ICC_16_17_TEST_REDUCTION_BOOL_TYPE_RELEASE_64_BROKEN
+#if !_PSTL_ICC_16_17_TEST_REDUCTION_BOOL_TYPE_RELEASE_64_BROKEN
     test<bool>();
 #endif
 

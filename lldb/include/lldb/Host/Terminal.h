@@ -41,26 +41,19 @@ protected:
   int m_fd; // This may or may not be a terminal file descriptor
 };
 
-//----------------------------------------------------------------------
 /// \class State Terminal.h "lldb/Host/Terminal.h"
 /// A terminal state saving/restoring class.
 ///
 /// This class can be used to remember the terminal state for a file
 /// descriptor and later restore that state as it originally was.
-//----------------------------------------------------------------------
 class TerminalState {
 public:
-  //------------------------------------------------------------------
   /// Default constructor
-  //------------------------------------------------------------------
   TerminalState();
 
-  //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   ~TerminalState();
 
-  //------------------------------------------------------------------
   /// Save the TTY state for \a fd.
   ///
   /// Save the current state of the TTY for the file descriptor "fd" and if
@@ -77,10 +70,8 @@ public:
   /// \return
   ///     Returns \b true if \a fd describes a TTY and if the state
   ///     was able to be saved, \b false otherwise.
-  //------------------------------------------------------------------
   bool Save(int fd, bool save_process_group);
 
-  //------------------------------------------------------------------
   /// Restore the TTY state to the cached state.
   ///
   /// Restore the state of the TTY using the cached values from a previous
@@ -89,52 +80,41 @@ public:
   /// \return
   ///     Returns \b true if the TTY state was successfully restored,
   ///     \b false otherwise.
-  //------------------------------------------------------------------
   bool Restore() const;
 
-  //------------------------------------------------------------------
   /// Test for valid cached TTY state information.
   ///
   /// \return
   ///     Returns \b true if this object has valid saved TTY state
   ///     settings that can be used to restore a previous state,
   ///     \b false otherwise.
-  //------------------------------------------------------------------
   bool IsValid() const;
 
   void Clear();
 
 protected:
-  //------------------------------------------------------------------
   /// Test if tflags is valid.
   ///
   /// \return
   ///     Returns \b true if \a m_tflags is valid and can be restored,
   ///     \b false otherwise.
-  //------------------------------------------------------------------
   bool TFlagsIsValid() const;
 
-  //------------------------------------------------------------------
   /// Test if ttystate is valid.
   ///
   /// \return
   ///     Returns \b true if \a m_ttystate is valid and can be
   ///     restored, \b false otherwise.
-  //------------------------------------------------------------------
   bool TTYStateIsValid() const;
 
-  //------------------------------------------------------------------
   /// Test if the process group information is valid.
   ///
   /// \return
   ///     Returns \b true if \a m_process_group is valid and can be
   ///     restored, \b false otherwise.
-  //------------------------------------------------------------------
   bool ProcessGroupIsValid() const;
 
-  //------------------------------------------------------------------
   // Member variables
-  //------------------------------------------------------------------
   Terminal m_tty; ///< A terminal
   int m_tflags;   ///< Cached tflags information.
 #ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
@@ -144,43 +124,32 @@ protected:
   lldb::pid_t m_process_group; ///< Cached process group information.
 };
 
-//----------------------------------------------------------------------
 /// \class TerminalStateSwitcher Terminal.h "lldb/Host/Terminal.h"
 /// A TTY state switching class.
 ///
 /// This class can be used to remember 2 TTY states for a given file
 /// descriptor and switch between the two states.
-//----------------------------------------------------------------------
 class TerminalStateSwitcher {
 public:
-  //------------------------------------------------------------------
   /// Constructor
-  //------------------------------------------------------------------
   TerminalStateSwitcher();
 
-  //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   ~TerminalStateSwitcher();
 
-  //------------------------------------------------------------------
   /// Get the number of possible states to save.
   ///
   /// \return
   ///     The number of states that this TTY switcher object contains.
-  //------------------------------------------------------------------
   uint32_t GetNumberOfStates() const;
 
-  //------------------------------------------------------------------
   /// Restore the TTY state for state at index \a idx.
   ///
   /// \return
   ///     Returns \b true if the TTY state was successfully restored,
   ///     \b false otherwise.
-  //------------------------------------------------------------------
   bool Restore(uint32_t idx) const;
 
-  //------------------------------------------------------------------
   /// Save the TTY state information for the state at index \a idx. The TTY
   /// state is saved for the file descriptor \a fd and the process group
   /// information will also be saved if requested by \a save_process_group.
@@ -198,13 +167,10 @@ public:
   /// \return
   ///     Returns \b true if the save was successful, \b false
   ///     otherwise.
-  //------------------------------------------------------------------
   bool Save(uint32_t idx, int fd, bool save_process_group);
 
 protected:
-  //------------------------------------------------------------------
   // Member variables
-  //------------------------------------------------------------------
   mutable uint32_t m_currentState; ///< The currently active TTY state index.
   TerminalState
       m_ttystates[2]; ///< The array of TTY states that holds saved TTY info.

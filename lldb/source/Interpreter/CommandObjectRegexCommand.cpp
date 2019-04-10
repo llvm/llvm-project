@@ -14,9 +14,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // CommandObjectRegexCommand constructor
-//----------------------------------------------------------------------
 CommandObjectRegexCommand::CommandObjectRegexCommand(
     CommandInterpreter &interpreter, llvm::StringRef name, llvm::StringRef help,
   llvm::StringRef syntax, uint32_t max_matches, uint32_t completion_type_mask,
@@ -25,9 +23,7 @@ CommandObjectRegexCommand::CommandObjectRegexCommand(
       m_max_matches(max_matches), m_completion_type_mask(completion_type_mask),
       m_entries(), m_is_removable(is_removable) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 CommandObjectRegexCommand::~CommandObjectRegexCommand() {}
 
 bool CommandObjectRegexCommand::DoExecute(llvm::StringRef command,

@@ -24,9 +24,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // BreakpointResolverScripted:
-//----------------------------------------------------------------------
 BreakpointResolverScripted::BreakpointResolverScripted(
     Breakpoint *bkpt, 
     const llvm::StringRef class_name,

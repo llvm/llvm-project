@@ -9,7 +9,6 @@
 #ifndef lldb_Host_HostInfo_h_
 #define lldb_Host_HostInfo_h_
 
-//----------------------------------------------------------------------
 /// \class HostInfo HostInfo.h "lldb/Host/HostInfo.h"
 /// A class that provides host computer information.
 ///
@@ -32,7 +31,6 @@
 /// method and if used in a context where the method doesn't make sense, will
 /// generate a compiler error.
 ///
-//----------------------------------------------------------------------
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/HostInfoWindows.h"

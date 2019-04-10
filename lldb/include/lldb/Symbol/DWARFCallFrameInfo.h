@@ -49,7 +49,6 @@ public:
 
   typedef RangeVector<lldb::addr_t, uint32_t> FunctionAddressAndSizeVector;
 
-  //------------------------------------------------------------------
   // Build a vector of file address and size for all functions in this Module
   // based on the eh_frame FDE entries.
   //

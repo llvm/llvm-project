@@ -228,46 +228,6 @@ private:
   LinuxProcStatus() = default;
 };
 
-// MinidumpModule stuff
-struct MinidumpVSFixedFileInfo {
-  llvm::support::ulittle32_t signature;
-  llvm::support::ulittle32_t struct_version;
-  llvm::support::ulittle32_t file_version_hi;
-  llvm::support::ulittle32_t file_version_lo;
-  llvm::support::ulittle32_t product_version_hi;
-  llvm::support::ulittle32_t product_version_lo;
-  // file_flags_mask - identifies valid bits in fileFlags
-  llvm::support::ulittle32_t file_flags_mask;
-  llvm::support::ulittle32_t file_flags;
-  llvm::support::ulittle32_t file_os;
-  llvm::support::ulittle32_t file_type;
-  llvm::support::ulittle32_t file_subtype;
-  llvm::support::ulittle32_t file_date_hi;
-  llvm::support::ulittle32_t file_date_lo;
-};
-static_assert(sizeof(MinidumpVSFixedFileInfo) == 52,
-              "sizeof MinidumpVSFixedFileInfo is not correct!");
-
-struct MinidumpModule {
-  llvm::support::ulittle64_t base_of_image;
-  llvm::support::ulittle32_t size_of_image;
-  llvm::support::ulittle32_t checksum;
-  llvm::support::ulittle32_t time_date_stamp;
-  llvm::support::ulittle32_t module_name_rva;
-  MinidumpVSFixedFileInfo version_info;
-  LocationDescriptor CV_record;
-  LocationDescriptor misc_record;
-  llvm::support::ulittle32_t reserved0[2];
-  llvm::support::ulittle32_t reserved1[2];
-
-  static const MinidumpModule *Parse(llvm::ArrayRef<uint8_t> &data);
-
-  static llvm::ArrayRef<MinidumpModule>
-  ParseModuleList(llvm::ArrayRef<uint8_t> &data);
-};
-static_assert(sizeof(MinidumpModule) == 108,
-              "sizeof MinidumpVSFixedFileInfo is not correct!");
-
 // Exception stuff
 struct MinidumpException {
   enum : unsigned {

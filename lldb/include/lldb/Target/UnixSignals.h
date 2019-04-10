@@ -24,9 +24,7 @@ public:
   static lldb::UnixSignalsSP Create(const ArchSpec &arch);
   static lldb::UnixSignalsSP CreateForHost();
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   UnixSignals();
 
   virtual ~UnixSignals();
@@ -95,9 +93,7 @@ public:
                                           llvm::Optional<bool> should_notify);
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from UnixSignals can see and modify these
-  //------------------------------------------------------------------
 
   struct Signal {
     ConstString m_name;

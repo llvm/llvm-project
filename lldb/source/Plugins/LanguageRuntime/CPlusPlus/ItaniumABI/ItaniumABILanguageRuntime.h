@@ -26,9 +26,7 @@ class ItaniumABILanguageRuntime : public lldb_private::CPPLanguageRuntime {
 public:
   ~ItaniumABILanguageRuntime() override = default;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -68,9 +66,7 @@ public:
   lldb::ValueObjectSP GetExceptionObjectForThread(
       lldb::ThreadSP thread_sp) override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

@@ -229,9 +229,7 @@ CommandObjectDisassemble::CommandOptions::GetDefinitions() {
   return llvm::makeArrayRef(g_disassemble_options);
 }
 
-//-------------------------------------------------------------------------
 // CommandObjectDisassemble
-//-------------------------------------------------------------------------
 
 CommandObjectDisassemble::CommandObjectDisassemble(
     CommandInterpreter &interpreter)

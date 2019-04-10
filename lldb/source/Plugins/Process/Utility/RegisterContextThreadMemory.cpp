@@ -54,9 +54,7 @@ void RegisterContextThreadMemory::UpdateRegisterContext() {
   }
 }
 
-//------------------------------------------------------------------
 // Subclasses must override these functions
-//------------------------------------------------------------------
 void RegisterContextThreadMemory::InvalidateAllRegisters() {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)

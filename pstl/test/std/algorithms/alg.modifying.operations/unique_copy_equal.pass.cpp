@@ -24,7 +24,7 @@ using namespace TestUtils;
 
 struct run_unique_copy
 {
-#if __PSTL_ICC_16_VC14_TEST_PAR_TBB_RT_RELEASE_64_BROKEN // dummy specializations to skip testing in case of broken configuration
+#if _PSTL_ICC_16_VC14_TEST_PAR_TBB_RT_RELEASE_64_BROKEN // dummy specializations to skip testing in case of broken configuration
     template <typename InputIterator, typename OutputIterator, typename OutputIterator2, typename Size,
               typename Predicate, typename T>
     void
@@ -126,7 +126,7 @@ main(int32_t argc, char* argv[])
 
     test<float32_t>(float32_t(42), std::equal_to<float32_t>(),
                     [](int32_t j) { return float32_t(5 * j / 23 ^ (j / 7)); });
-#if !__PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
+#if !_PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
     test<float32_t>(float32_t(42), [](float32_t x, float32_t y) { return false; },
                     [](int32_t j) { return float32_t(j); }, false);
 #endif

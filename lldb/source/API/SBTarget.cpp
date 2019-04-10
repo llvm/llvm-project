@@ -97,9 +97,7 @@ Status AttachToProcess(ProcessAttachInfo &attach_info, Target &target) {
 
 } // namespace
 
-//----------------------------------------------------------------------
 // SBTarget constructor
-//----------------------------------------------------------------------
 SBTarget::SBTarget() : m_opaque_sp() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTarget);
 }
@@ -121,9 +119,7 @@ const SBTarget &SBTarget::operator=(const SBTarget &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SBTarget::~SBTarget() {}
 
 bool SBTarget::EventIsTargetEvent(const SBEvent &event) {

@@ -10,7 +10,6 @@
 #include "MIUtilMapIdToVariant.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIUtilMapIdToVariant constructor.
 // Type:    Method.
 // Args:    None.
@@ -20,7 +19,6 @@
 CMIUtilMapIdToVariant::CMIUtilMapIdToVariant() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIUtilMapIdToVariant destructor.
 // Type:    Method.
 // Args:    None.
@@ -30,7 +28,6 @@ CMIUtilMapIdToVariant::CMIUtilMapIdToVariant() {}
 CMIUtilMapIdToVariant::~CMIUtilMapIdToVariant() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Remove at the data from *this container.
 // Type:    Method.
 // Args:    None.
@@ -40,7 +37,6 @@ CMIUtilMapIdToVariant::~CMIUtilMapIdToVariant() {}
 void CMIUtilMapIdToVariant::Clear() { m_mapKeyToVariantValue.clear(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Check an ID is present already in *this container.
 // Type:    Method.
 // Args:    vId - (R) Unique ID i.e. GUID.
@@ -55,7 +51,6 @@ bool CMIUtilMapIdToVariant::HaveAlready(const CMIUtilString &vId) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Determine if *this container is currently holding any data.
 // Type:    Method.
 // Args:    None.
@@ -67,7 +62,6 @@ bool CMIUtilMapIdToVariant::IsEmpty() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Check the ID is valid to be registered.
 // Type:    Method.
 // Args:    vId - (R) Unique ID i.e. GUID.
@@ -85,7 +79,6 @@ bool CMIUtilMapIdToVariant::IsValid(const CMIUtilString &vId) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Remove from *this contain a data object specified by ID. The data
 // object
 //          when removed also calls its destructor should it have one.

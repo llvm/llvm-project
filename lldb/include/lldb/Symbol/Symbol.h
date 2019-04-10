@@ -48,35 +48,27 @@ public:
 
   bool ValueIsAddress() const;
 
-  //------------------------------------------------------------------
   // The GetAddressRef() accessor functions should only be called if you
   // previously call ValueIsAddress() otherwise you might get an reference to
   // an Address object that contains an constant integer value in
   // m_addr_range.m_base_addr.m_offset which could be incorrectly used to
   // represent an absolute address since it has no section.
-  //------------------------------------------------------------------
   Address &GetAddressRef() { return m_addr_range.GetBaseAddress(); }
 
   const Address &GetAddressRef() const { return m_addr_range.GetBaseAddress(); }
 
-  //------------------------------------------------------------------
   // Makes sure the symbol's value is an address and returns the file address.
   // Returns LLDB_INVALID_ADDRESS if the symbol's value isn't an address.
-  //------------------------------------------------------------------
   lldb::addr_t GetFileAddress() const;
 
-  //------------------------------------------------------------------
   // Makes sure the symbol's value is an address and gets the load address
   // using \a target if it is. Returns LLDB_INVALID_ADDRESS if the symbol's
   // value isn't an address or if the section isn't loaded in \a target.
-  //------------------------------------------------------------------
   lldb::addr_t GetLoadAddress(Target *target) const;
 
-  //------------------------------------------------------------------
   // Access the address value. Do NOT hand out the AddressRange as an object as
   // the byte size of the address range may not be filled in and it should be
   // accessed via GetByteSize().
-  //------------------------------------------------------------------
   Address GetAddress() const {
     // Make sure the our value is an address before we hand a copy out. We use
     // the Address inside m_addr_range to contain the value for symbols that
@@ -203,22 +195,18 @@ public:
   void SetContainsLinkerAnnotations(bool b) {
     m_contains_linker_annotations = b;
   }
-  //------------------------------------------------------------------
   /// \copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
   ///
   /// \see SymbolContextScope
-  //------------------------------------------------------------------
   void CalculateSymbolContext(SymbolContext *sc) override;
 
   lldb::ModuleSP CalculateSymbolContextModule() override;
 
   Symbol *CalculateSymbolContextSymbol() override;
 
-  //------------------------------------------------------------------
   /// \copydoc SymbolContextScope::DumpSymbolContext(Stream*)
   ///
   /// \see SymbolContextScope
-  //------------------------------------------------------------------
   void DumpSymbolContext(Stream *s) override;
 
   lldb::DisassemblerSP GetInstructions(const ExecutionContext &exe_ctx,

@@ -328,10 +328,8 @@ size_t SymbolFileDWARF::GetTypes(SymbolContextScope *sc_scope,
   return num_types_added;
 }
 
-//----------------------------------------------------------------------
 // Gets the first parent that is a lexical block, function or inlined
 // subroutine, or compile unit.
-//----------------------------------------------------------------------
 DWARFDIE
 SymbolFileDWARF::GetParentSymbolContextDIE(const DWARFDIE &child_die) {
   DWARFDIE die;
@@ -959,9 +957,7 @@ struct ParseDWARFLineTableCallbackInfo {
   lldb::addr_t addr_mask;
 };
 
-//----------------------------------------------------------------------
 // ParseStatementTableCallback
-//----------------------------------------------------------------------
 static void ParseDWARFLineTableCallback(dw_offset_t offset,
                                         const DWARFDebugLine::State &state,
                                         void *userData) {
@@ -2787,7 +2783,6 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
   return type_sp;
 }
 
-//----------------------------------------------------------------------
 // This function helps to ensure that the declaration contexts match for two
 // different DIEs. Often times debug information will refer to a forward
 // declaration of a type (the equivalent of "struct my_struct;". There will
@@ -2797,7 +2792,6 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
 // type was in the same declaration context as the original DIE. This function
 // can efficiently compare two DIEs and will return true when the declaration
 // context matches, and false when they don't.
-//----------------------------------------------------------------------
 bool SymbolFileDWARF::DIEDeclContextsMatch(const DWARFDIE &die1,
                                            const DWARFDIE &die2) {
   if (die1 == die2)
@@ -3788,9 +3782,7 @@ SymbolFileDWARF::ParseCallEdgesInFunction(UserID func_id) {
   return {};
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString SymbolFileDWARF::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t SymbolFileDWARF::GetPluginVersion() { return 1; }

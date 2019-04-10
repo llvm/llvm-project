@@ -16,9 +16,7 @@ class ModuleList;
 
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // AddressResolver:
-//----------------------------------------------------------------------
 AddressResolver::AddressResolver() {}
 
 AddressResolver::~AddressResolver() {}

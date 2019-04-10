@@ -46,9 +46,7 @@ private:
   size_t
   GetStackFrameData_x86_64(const lldb_private::ExecutionContext &exe_ctx);
 
-  //------------------------------------------------------------------
   // For UnwindMacOSXFrameBackchain only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(UnwindMacOSXFrameBackchain);
 };
 

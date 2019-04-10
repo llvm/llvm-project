@@ -234,6 +234,10 @@ public:
   // but had one or more functions with the no_split_stack attribute.
   bool SomeNoSplitStack = false;
 
+  // True if the file has any live Regular or Merge sections that aren't
+  // the LDSA section.
+  bool HasLiveCodeOrData = false;
+
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *AddrsigSec = nullptr;
 

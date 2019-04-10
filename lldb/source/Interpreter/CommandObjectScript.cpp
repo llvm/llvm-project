@@ -21,9 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectScript
-//-------------------------------------------------------------------------
 
 CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter,
                                          ScriptLanguage script_lang)

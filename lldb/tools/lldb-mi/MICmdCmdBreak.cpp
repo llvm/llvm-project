@@ -33,7 +33,6 @@
 #include "MICmnStreamStdout.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakInsert constructor.
 // Type:    Method.
 // Args:    None.
@@ -57,7 +56,6 @@ CMICmdCmdBreakInsert::CMICmdCmdBreakInsert()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakInsert destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -67,7 +65,6 @@ CMICmdCmdBreakInsert::CMICmdCmdBreakInsert()
 CMICmdCmdBreakInsert::~CMICmdCmdBreakInsert() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -104,7 +101,6 @@ bool CMICmdCmdBreakInsert::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Helper function for CMICmdCmdBreakInsert::Execute().
 //
 // Given a string, return the position of the ':' separator in 'file:func'
@@ -122,7 +118,6 @@ static size_t findFileSeparatorPos(const std::string &x) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -323,7 +318,6 @@ bool CMICmdCmdBreakInsert::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -359,7 +353,6 @@ bool CMICmdCmdBreakInsert::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -372,12 +365,8 @@ CMICmdBase *CMICmdCmdBreakInsert::CreateSelf() {
   return new CMICmdCmdBreakInsert();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakDelete constructor.
 // Type:    Method.
 // Args:    None.
@@ -394,7 +383,6 @@ CMICmdCmdBreakDelete::CMICmdCmdBreakDelete()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakDelete destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -404,7 +392,6 @@ CMICmdCmdBreakDelete::CMICmdCmdBreakDelete()
 CMICmdCmdBreakDelete::~CMICmdCmdBreakDelete() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -422,7 +409,6 @@ bool CMICmdCmdBreakDelete::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -461,7 +447,6 @@ bool CMICmdCmdBreakDelete::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -480,7 +465,6 @@ bool CMICmdCmdBreakDelete::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -493,12 +477,8 @@ CMICmdBase *CMICmdCmdBreakDelete::CreateSelf() {
   return new CMICmdCmdBreakDelete();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakDisable constructor.
 // Type:    Method.
 // Args:    None.
@@ -516,7 +496,6 @@ CMICmdCmdBreakDisable::CMICmdCmdBreakDisable()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakDisable destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -526,7 +505,6 @@ CMICmdCmdBreakDisable::CMICmdCmdBreakDisable()
 CMICmdCmdBreakDisable::~CMICmdCmdBreakDisable() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -544,7 +522,6 @@ bool CMICmdCmdBreakDisable::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -581,7 +558,6 @@ bool CMICmdCmdBreakDisable::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -612,7 +588,6 @@ bool CMICmdCmdBreakDisable::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -625,12 +600,8 @@ CMICmdBase *CMICmdCmdBreakDisable::CreateSelf() {
   return new CMICmdCmdBreakDisable();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakEnable constructor.
 // Type:    Method.
 // Args:    None.
@@ -648,7 +619,6 @@ CMICmdCmdBreakEnable::CMICmdCmdBreakEnable()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakEnable destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -658,7 +628,6 @@ CMICmdCmdBreakEnable::CMICmdCmdBreakEnable()
 CMICmdCmdBreakEnable::~CMICmdCmdBreakEnable() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -676,7 +645,6 @@ bool CMICmdCmdBreakEnable::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -713,7 +681,6 @@ bool CMICmdCmdBreakEnable::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -744,7 +711,6 @@ bool CMICmdCmdBreakEnable::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -757,12 +723,8 @@ CMICmdBase *CMICmdCmdBreakEnable::CreateSelf() {
   return new CMICmdCmdBreakEnable();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakAfter constructor.
 // Type:    Method.
 // Args:    None.
@@ -780,7 +742,6 @@ CMICmdCmdBreakAfter::CMICmdCmdBreakAfter()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakAfter destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -790,7 +751,6 @@ CMICmdCmdBreakAfter::CMICmdCmdBreakAfter()
 CMICmdCmdBreakAfter::~CMICmdCmdBreakAfter() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -808,7 +768,6 @@ bool CMICmdCmdBreakAfter::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -854,7 +813,6 @@ bool CMICmdCmdBreakAfter::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -873,7 +831,6 @@ bool CMICmdCmdBreakAfter::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -886,12 +843,8 @@ CMICmdBase *CMICmdCmdBreakAfter::CreateSelf() {
   return new CMICmdCmdBreakAfter();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakCondition constructor.
 // Type:    Method.
 // Args:    None.
@@ -914,7 +867,6 @@ CMICmdCmdBreakCondition::CMICmdCmdBreakCondition()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdBreakCondition destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -924,7 +876,6 @@ CMICmdCmdBreakCondition::CMICmdCmdBreakCondition()
 CMICmdCmdBreakCondition::~CMICmdCmdBreakCondition() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -946,7 +897,6 @@ bool CMICmdCmdBreakCondition::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -993,7 +943,6 @@ bool CMICmdCmdBreakCondition::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -1012,7 +961,6 @@ bool CMICmdCmdBreakCondition::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -1026,7 +974,6 @@ CMICmdBase *CMICmdCmdBreakCondition::CreateSelf() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: A breakpoint expression can be passed to *this command as:
 //              a single string i.e. '2' -> ok.
 //              a quoted string i.e. "a > 100" -> ok

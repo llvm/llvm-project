@@ -35,7 +35,6 @@ const CMICmdCmdGdbShow::MapGdbOptionNameToFnGdbOptionPtr_t
         {"breakpoint", &CMICmdCmdGdbShow::OptionFnBreakpoint}};
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdGdbShow constructor.
 // Type:    Method.
 // Args:    None.
@@ -54,7 +53,6 @@ CMICmdCmdGdbShow::CMICmdCmdGdbShow()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdGdbShow destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -64,7 +62,6 @@ CMICmdCmdGdbShow::CMICmdCmdGdbShow()
 CMICmdCmdGdbShow::~CMICmdCmdGdbShow() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -82,7 +79,6 @@ bool CMICmdCmdGdbShow::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command is executed in this
 // function.
 // Type:    Overridden.
@@ -134,7 +130,6 @@ bool CMICmdCmdGdbShow::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute() method.
@@ -190,7 +185,6 @@ bool CMICmdCmdGdbShow::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -202,7 +196,6 @@ bool CMICmdCmdGdbShow::Acknowledge() {
 CMICmdBase *CMICmdCmdGdbShow::CreateSelf() { return new CMICmdCmdGdbShow(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the print function's pointer for the matching print
 // request.
 // Type:    Method.
@@ -227,7 +220,6 @@ bool CMICmdCmdGdbShow::GetOptionFn(const CMIUtilString &vrPrintFnName,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Carry out work to complete the GDB show option 'target-async' to
 // prepare
 //          and send back the requested information.
@@ -251,7 +243,6 @@ bool CMICmdCmdGdbShow::OptionFnTargetAsync(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Carry out work to complete the GDB show option 'print' to prepare
 // and send
 //          back the requested information.
@@ -302,7 +293,6 @@ bool CMICmdCmdGdbShow::OptionFnPrint(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Carry out work to complete the GDB show option 'language' to prepare
 //          and send back the requested information.
 // Type:    Method.
@@ -328,7 +318,6 @@ bool CMICmdCmdGdbShow::OptionFnLanguage(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Carry out work to complete the GDB show option 'disassembly-flavor' to prepare
 //          and send back the requested information.
 // Type:    Method.
@@ -348,7 +337,6 @@ bool CMICmdCmdGdbShow::OptionFnDisassemblyFlavor(const CMIUtilString::VecString_
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Carry out work to complete the GDB show option 'breakpoint' to
 // prepare
 //          and send back the requested information.
@@ -385,7 +373,6 @@ bool CMICmdCmdGdbShow::OptionFnBreakpoint(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Carry out work to complete the GDB show option to prepare and send
 // back the
 //          requested information.

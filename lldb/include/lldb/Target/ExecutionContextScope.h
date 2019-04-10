@@ -13,7 +13,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// @class ExecutionContextScope ExecutionContextScope.h
 /// "lldb/Target/ExecutionContextScope.h" Inherit from this if your object can
 /// reconstruct its
@@ -30,7 +29,6 @@ namespace lldb_private {
 ///
 /// Objects that adhere to this protocol can reconstruct enough of a execution
 /// context to allow functions that take a execution contexts to be called.
-//----------------------------------------------------------------------
 class ExecutionContextScope {
 public:
   virtual ~ExecutionContextScope() {}
@@ -43,7 +41,6 @@ public:
 
   virtual lldb::StackFrameSP CalculateStackFrame() = 0;
 
-  //------------------------------------------------------------------
   /// Reconstruct the object's execution context into \a sc.
   ///
   /// The object should fill in as much of the ExecutionContextScope as it can
@@ -53,7 +50,6 @@ public:
   /// \param[out] exe_ctx
   ///     A reference to an execution context object that gets filled
   ///     in.
-  //------------------------------------------------------------------
   virtual void CalculateExecutionContext(ExecutionContext &exe_ctx) = 0;
 };
 

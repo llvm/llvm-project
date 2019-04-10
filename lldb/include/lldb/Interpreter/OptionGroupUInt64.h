@@ -14,9 +14,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // OptionGroupUInt64
-//-------------------------------------------------------------------------
 
 class OptionGroupUInt64 : public OptionGroup {
 public:

@@ -451,7 +451,6 @@ uint32_t MachThreadList::ProcessDidStop(MachProcess *process) {
   return num_threads;
 }
 
-//----------------------------------------------------------------------
 // Check each thread in our thread list to see if we should notify our
 // client of the current halt in execution.
 //
@@ -461,7 +460,6 @@ uint32_t MachThreadList::ProcessDidStop(MachProcess *process) {
 // RETURNS
 //    true if we should stop and notify our clients
 //    false if we should resume our child process and skip notification
-//----------------------------------------------------------------------
 bool MachThreadList::ShouldStop(bool &step_more) {
   PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
   uint32_t should_stop = false;

@@ -35,7 +35,6 @@ public:
   // a port chosen by the OS.
   void SetPortMap(PortMap &&port_map);
 
-  //----------------------------------------------------------------------
   // If we are using a port map where we can only use certain ports,
   // get the next available port.
   //
@@ -43,7 +42,6 @@ public:
   //
   // If we aren't using a port map, return 0 to indicate we should bind to
   // port 0 and then figure out which port we used.
-  //----------------------------------------------------------------------
   uint16_t GetNextAvailablePort();
 
   bool AssociatePortWithProcess(uint16_t port, lldb::pid_t pid);

@@ -69,4 +69,8 @@
 #define _LIBCXXABI_NO_CFI
 #endif
 
+#if defined(__arm__)
+#  define _LIBCXXABI_GUARD_ABI_ARM
+#endif
+
 #endif // ____CXXABI_CONFIG_H

@@ -1613,11 +1613,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // We do not want to emit debug sections if --strip-all
   // or -strip-debug are given.
-  if (Config->Strip != StripPolicy::None) {
-    llvm::erase_if(InputSections, [](InputSectionBase *S) {
-      return S->Name.startswith(".debug") || S->Name.startswith(".zdebug");
-    });
-  }
+  if (Config->Strip != StripPolicy::None)
+    llvm::erase_if(InputSections, [](InputSectionBase *S) { return S->Debug; });
 
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent

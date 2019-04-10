@@ -13,9 +13,7 @@
 
 class CFCMutableArray : public CFCReleaser<CFMutableArrayRef> {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CFCMutableArray(CFMutableArrayRef array = NULL);
   CFCMutableArray(const CFCMutableArray &rhs); // This will copy the array
                                                // contents into a new array

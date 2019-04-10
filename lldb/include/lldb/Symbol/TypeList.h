@@ -19,9 +19,7 @@ namespace lldb_private {
 
 class TypeList {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   TypeList();
 
   virtual ~TypeList();

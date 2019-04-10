@@ -117,9 +117,7 @@ public:
     FileCache m_file_cache;
   };
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   // A source manager can be made with a non-null target, in which case it can
   // use the path remappings to find
   // source files that are not in their build locations.  With no target it

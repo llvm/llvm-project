@@ -60,16 +60,12 @@ public:
 protected:
   friend class ProcessKDP;
 
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   std::string m_thread_name;
   std::string m_dispatch_queue_name;
   lldb::addr_t m_thread_dispatch_qaddr;
   lldb::StopInfoSP m_cached_stop_info_sp;
-  //------------------------------------------------------------------
   // Protected member functions.
-  //------------------------------------------------------------------
   virtual bool CalculateStopInfo();
 };
 

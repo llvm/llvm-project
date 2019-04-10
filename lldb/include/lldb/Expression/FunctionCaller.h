@@ -22,7 +22,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class FunctionCaller FunctionCaller.h "lldb/Expression/FunctionCaller.h"
 /// Encapsulates a function that can be called.
 ///
@@ -54,7 +53,6 @@ namespace lldb_private {
 ///
 /// Any of the methods that take arg_addr_ptr can be passed nullptr, and the
 /// argument space will be managed for you.
-//----------------------------------------------------------------------
 class FunctionCaller : public Expression {
 public:
   /// LLVM-style RTTI support.
@@ -62,7 +60,6 @@ public:
     return E->getKind() == eKindFunctionCaller;
   }
   
-  //------------------------------------------------------------------
   /// Constructor
   ///
   /// \param[in] exe_scope
@@ -82,18 +79,14 @@ public:
   /// \param[in] arg_value_list
   ///     The default values to use when calling this function.  Can
   ///     be overridden using WriteFunctionArguments().
-  //------------------------------------------------------------------
   FunctionCaller(ExecutionContextScope &exe_scope,
                  const CompilerType &return_type,
                  const Address &function_address,
                  const ValueList &arg_value_list, const char *name);
 
-  //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   ~FunctionCaller() override;
 
-  //------------------------------------------------------------------
   /// Compile the wrapper function
   ///
   /// \param[in] thread_to_use_sp
@@ -106,11 +99,9 @@ public:
   ///
   /// \return
   ///     The number of errors.
-  //------------------------------------------------------------------
   virtual unsigned CompileFunction(lldb::ThreadSP thread_to_use_sp,
                                    DiagnosticManager &diagnostic_manager) = 0;
 
-  //------------------------------------------------------------------
   /// Insert the default function wrapper and its default argument struct
   ///
   /// \param[in] exe_ctx
@@ -127,11 +118,9 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   bool InsertFunction(ExecutionContext &exe_ctx, lldb::addr_t &args_addr_ref,
                       DiagnosticManager &diagnostic_manager);
 
-  //------------------------------------------------------------------
   /// Insert the default function wrapper (using the JIT)
   ///
   /// \param[in] exe_ctx
@@ -143,11 +132,9 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   bool WriteFunctionWrapper(ExecutionContext &exe_ctx,
                             DiagnosticManager &diagnostic_manager);
 
-  //------------------------------------------------------------------
   /// Insert the default function argument struct
   ///
   /// \param[in] exe_ctx
@@ -164,12 +151,10 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   bool WriteFunctionArguments(ExecutionContext &exe_ctx,
                               lldb::addr_t &args_addr_ref,
                               DiagnosticManager &diagnostic_manager);
 
-  //------------------------------------------------------------------
   /// Insert an argument struct with a non-default function address and non-
   /// default argument values
   ///
@@ -190,13 +175,11 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   bool WriteFunctionArguments(ExecutionContext &exe_ctx,
                               lldb::addr_t &args_addr_ref,
                               ValueList &arg_values,
                               DiagnosticManager &diagnostic_manager);
 
-  //------------------------------------------------------------------
   /// Run the function this FunctionCaller was created with.
   ///
   /// This is the full version.
@@ -228,13 +211,11 @@ public:
   /// \return
   ///     Returns one of the ExpressionResults enum indicating function call
   ///     status.
-  //------------------------------------------------------------------
   lldb::ExpressionResults
   ExecuteFunction(ExecutionContext &exe_ctx, lldb::addr_t *args_addr_ptr,
                   const EvaluateExpressionOptions &options,
                   DiagnosticManager &diagnostic_manager, Value &results);
 
-  //------------------------------------------------------------------
   /// Get a thread plan to run the function this FunctionCaller was created
   /// with.
   ///
@@ -259,13 +240,11 @@ public:
   ///
   /// \return
   ///     A ThreadPlan shared pointer for executing the function.
-  //------------------------------------------------------------------
   lldb::ThreadPlanSP
   GetThreadPlanToCallFunction(ExecutionContext &exe_ctx, lldb::addr_t args_addr,
                               const EvaluateExpressionOptions &options,
                               DiagnosticManager &diagnostic_manager);
 
-  //------------------------------------------------------------------
   /// Get the result of the function from its struct
   ///
   /// \param[in] exe_ctx
@@ -279,11 +258,9 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   bool FetchFunctionResults(ExecutionContext &exe_ctx, lldb::addr_t args_addr,
                             Value &ret_value);
 
-  //------------------------------------------------------------------
   /// Deallocate the arguments structure
   ///
   /// \param[in] exe_ctx
@@ -292,42 +269,29 @@ public:
   ///
   /// \param[in] args_addr
   ///     The address of the argument struct.
-  //------------------------------------------------------------------
   void DeallocateFunctionResults(ExecutionContext &exe_ctx,
                                  lldb::addr_t args_addr);
 
-  //------------------------------------------------------------------
   /// Interface for ClangExpression
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Return the string that the parser should parse.  Must be a full
   /// translation unit.
-  //------------------------------------------------------------------
   const char *Text() override { return m_wrapper_function_text.c_str(); }
 
-  //------------------------------------------------------------------
   /// Return the function name that should be used for executing the
   /// expression.  Text() should contain the definition of this function.
-  //------------------------------------------------------------------
   const char *FunctionName() override {
     return m_wrapper_function_name.c_str();
   }
 
-  //------------------------------------------------------------------
   /// Return the object that the parser should use when registering local
   /// variables. May be nullptr if the Expression doesn't care.
-  //------------------------------------------------------------------
   ExpressionVariableList *LocalVariables() { return nullptr; }
 
-  //------------------------------------------------------------------
   /// Return true if validation code should be inserted into the expression.
-  //------------------------------------------------------------------
   bool NeedsValidation() override { return false; }
 
-  //------------------------------------------------------------------
   /// Return true if external variables in the expression should be resolved.
-  //------------------------------------------------------------------
   bool NeedsVariableResolution() override { return false; }
 
   ValueList GetArgumentValues() const { return m_arg_values; }
@@ -366,7 +330,6 @@ protected:
   bool m_struct_valid; ///< True if the ASTStructExtractor has populated the
                        ///variables below.
 
-  //------------------------------------------------------------------
   /// These values are populated by the ASTStructExtractor
   size_t m_struct_size; ///< The size of the argument struct, in bytes.
   std::vector<uint64_t>
@@ -374,7 +337,6 @@ protected:
   uint64_t m_return_size;   ///< The size of the result variable, in bytes.
   uint64_t m_return_offset; ///< The offset of the result variable in the
                             ///struct, in bytes.
-  //------------------------------------------------------------------
 
   ValueList m_arg_values; ///< The default values of the arguments.
 

@@ -11,9 +11,7 @@
 
 // LLDB register codes (e.g. RegisterKind == eRegisterKindLLDB)
 
-// ---------------------------------------------------------------------------
 // Internal codes for all ppc64le registers.
-// ---------------------------------------------------------------------------
 enum {
   k_first_gpr_ppc64le,
   gpr_r0_ppc64le = k_first_gpr_ppc64le,

@@ -53,7 +53,6 @@ public:
 typedef std::shared_ptr<PlatformProperties> PlatformPropertiesSP;
 typedef llvm::SmallVector<lldb::addr_t, 6> MmapArgList;
 
-//----------------------------------------------------------------------
 /// \class Platform Platform.h "lldb/Target/Platform.h"
 /// A plug-in interface definition class for debug platform that
 /// includes many platform abilities such as:
@@ -65,20 +64,15 @@ typedef llvm::SmallVector<lldb::addr_t, 6> MmapArgList;
 ///     \li execute shell commands
 ///     \li listing and getting info for existing processes
 ///     \li attaching and possibly debugging the platform's kernel
-//----------------------------------------------------------------------
 class Platform : public PluginInterface {
 public:
-  //------------------------------------------------------------------
   /// Default Constructor
-  //------------------------------------------------------------------
   Platform(bool is_host_platform);
 
-  //------------------------------------------------------------------
   /// Destructor.
   ///
   /// The destructor is virtual since this class is designed to be inherited
   /// from by the plug-in instance.
-  //------------------------------------------------------------------
   ~Platform() override;
 
   static void Initialize();
@@ -87,7 +81,6 @@ public:
 
   static const PlatformPropertiesSP &GetGlobalPlatformProperties();
 
-  //------------------------------------------------------------------
   /// Get the native host platform plug-in.
   ///
   /// There should only be one of these for each host that LLDB runs upon that
@@ -97,7 +90,6 @@ public:
   ///
   /// This platform will be used as the default platform when launching or
   /// attaching to processes unless another platform is specified.
-  //------------------------------------------------------------------
   static lldb::PlatformSP GetHostPlatform();
 
   static lldb::PlatformSP
@@ -115,14 +107,11 @@ public:
   static lldb::PlatformSP Create(const ArchSpec &arch,
                                  ArchSpec *platform_arch_ptr, Status &error);
 
-  //------------------------------------------------------------------------
   /// Augments the triple either with information from platform or the host
   /// system (if platform is null).
-  //------------------------------------------------------------------------
   static ArchSpec GetAugmentedArchSpec(Platform *platform,
                                        llvm::StringRef triple);
 
-  //------------------------------------------------------------------
   /// Find a platform plugin for a given process.
   ///
   /// Scans the installed Platform plug-ins and tries to find an instance that
@@ -135,11 +124,9 @@ public:
   /// \param[in] plugin_name
   ///     An optional name of a specific platform plug-in that
   ///     should be used. If nullptr, pick the best plug-in.
-  //------------------------------------------------------------------
   //        static lldb::PlatformSP
   //        FindPlugin (Process *process, ConstString plugin_name);
 
-  //------------------------------------------------------------------
   /// Set the target's executable based off of the existing architecture
   /// information in \a target given a path to an executable \a exe_file.
   ///
@@ -155,12 +142,10 @@ public:
   /// \return
   ///     Returns \b true if this Platform plug-in was able to find
   ///     a suitable executable, \b false otherwise.
-  //------------------------------------------------------------------
   virtual Status ResolveExecutable(const ModuleSpec &module_spec,
                                    lldb::ModuleSP &module_sp,
                                    const FileSpecList *module_search_paths_ptr);
 
-  //------------------------------------------------------------------
   /// Find a symbol file given a symbol file module specification.
   ///
   /// Each platform might have tricks to find symbol files for an executable
@@ -206,18 +191,14 @@ public:
   ///
   /// \return
   ///     Returns an error that describes success or failure.
-  //------------------------------------------------------------------
   virtual Status ResolveSymbolFile(Target &target, const ModuleSpec &sym_spec,
                                    FileSpec &sym_file);
 
-  //------------------------------------------------------------------
   /// Resolves the FileSpec to a (possibly) remote path. Remote platforms must
   /// override this to resolve to a path on the remote side.
-  //------------------------------------------------------------------
   virtual bool ResolveRemotePath(const FileSpec &platform_path,
                                  FileSpec &resolved_platform_path);
 
-  //------------------------------------------------------------------
   /// Get the OS version from a connected platform.
   ///
   /// Some platforms might not be connected to a remote platform, but can
@@ -225,7 +206,6 @@ public:
   /// platforms that will run native programs on the current host, but the
   /// simulator might be simulating a different OS. The \a process parameter
   /// might be specified to help to determine the OS version.
-  //------------------------------------------------------------------
   virtual llvm::VersionTuple GetOSVersion(Process *process = nullptr);
 
   bool SetOSVersion(llvm::VersionTuple os_version);
@@ -243,23 +223,19 @@ public:
 
   virtual const char *GetDescription() = 0;
 
-  //------------------------------------------------------------------
   /// Report the current status for this platform.
   ///
   /// The returned string usually involves returning the OS version (if
   /// available), and any SDK directory that might be being used for local
   /// file caching, and if connected a quick blurb about what this platform is
   /// connected to.
-  //------------------------------------------------------------------
   virtual void GetStatus(Stream &strm);
 
-  //------------------------------------------------------------------
   // Subclasses must be able to fetch the current OS version
   //
   // Remote classes must be connected for this to succeed. Local subclasses
   // don't need to override this function as it will just call the
   // HostInfo::GetOSVersion().
-  //------------------------------------------------------------------
   virtual bool GetRemoteOSVersion() { return false; }
 
   virtual bool GetRemoteOSBuildString(std::string &s) {
@@ -281,7 +257,6 @@ public:
 
   virtual bool SetRemoteWorkingDirectory(const FileSpec &working_dir);
 
-  //------------------------------------------------------------------
   /// Retrieve the system include directories on this platform for the
   /// given language.
   ///
@@ -290,7 +265,6 @@ public:
   ///
   /// \param[out] directories
   ///     The include directories for this system.
-  //------------------------------------------------------------------
   virtual std::vector<std::string>
   GetSystemIncludeDirectories(lldb::LanguageType lang) {
     return {};
@@ -298,7 +272,6 @@ public:
 
   virtual UserIDResolver &GetUserIDResolver() = 0;
 
-  //------------------------------------------------------------------
   /// Locate a file for a platform.
   ///
   /// The default implementation of this function will return the same file
@@ -325,16 +298,13 @@ public:
   ///
   /// \return
   ///     An error object.
-  //------------------------------------------------------------------
   virtual Status GetFileWithUUID(const FileSpec &platform_file,
                                  const UUID *uuid_ptr, FileSpec &local_file);
 
-  //----------------------------------------------------------------------
   // Locate the scripting resource given a module specification.
   //
   // Locating the file should happen only on the local computer or using the
   // current computers global settings.
-  //----------------------------------------------------------------------
   virtual FileSpecList
   LocateExecutableScriptingResources(Target *target, Module &module,
                                      Stream *feedback_stream);
@@ -352,7 +322,6 @@ public:
 
   virtual Status DisconnectRemote();
 
-  //------------------------------------------------------------------
   /// Get the platform's supported architectures in the order in which they
   /// should be searched.
   ///
@@ -366,56 +335,43 @@ public:
   /// \return
   ///     \b true if \a arch was filled in and is valid, \b false
   ///     otherwise.
-  //------------------------------------------------------------------
   virtual bool GetSupportedArchitectureAtIndex(uint32_t idx,
                                                ArchSpec &arch) = 0;
 
   virtual size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  BreakpointSite *bp_site);
 
-  //------------------------------------------------------------------
   /// Launch a new process on a platform, not necessarily for debugging, it
   /// could be just for running the process.
-  //------------------------------------------------------------------
   virtual Status LaunchProcess(ProcessLaunchInfo &launch_info);
 
-  //------------------------------------------------------------------
   /// Perform expansion of the command-line for this launch info This can
   /// potentially involve wildcard expansion
   /// environment variable replacement, and whatever other
   /// argument magic the platform defines as part of its typical
   /// user experience
-  //------------------------------------------------------------------
   virtual Status ShellExpandArguments(ProcessLaunchInfo &launch_info);
 
-  //------------------------------------------------------------------
   /// Kill process on a platform.
-  //------------------------------------------------------------------
   virtual Status KillProcess(const lldb::pid_t pid);
 
-  //------------------------------------------------------------------
   /// Lets a platform answer if it is compatible with a given architecture and
   /// the target triple contained within.
-  //------------------------------------------------------------------
   virtual bool IsCompatibleArchitecture(const ArchSpec &arch,
                                         bool exact_arch_match,
                                         ArchSpec *compatible_arch_ptr);
 
-  //------------------------------------------------------------------
   /// Not all platforms will support debugging a process by spawning somehow
   /// halted for a debugger (specified using the "eLaunchFlagDebug" launch
   /// flag) and then attaching. If your platform doesn't support this,
   /// override this function and return false.
-  //------------------------------------------------------------------
   virtual bool CanDebugProcess() { return true; }
 
-  //------------------------------------------------------------------
   /// Subclasses do not need to implement this function as it uses the
   /// Platform::LaunchProcess() followed by Platform::Attach (). Remote
   /// platforms will want to subclass this function in order to be able to
   /// intercept STDIO and possibly launch a separate process that will debug
   /// the debuggee.
-  //------------------------------------------------------------------
   virtual lldb::ProcessSP
   DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
                Target *target, // Can be nullptr, if nullptr create a new
@@ -428,7 +384,6 @@ public:
                                          lldb_private::Target *target,
                                          lldb_private::Status &error);
 
-  //------------------------------------------------------------------
   /// Attach to an existing process using a process ID.
   ///
   /// Each platform subclass needs to implement this function and attempt to
@@ -445,7 +400,6 @@ public:
   ///     to the default Process subclass for the platform that is
   ///     attached to the process, or an empty shared pointer with an
   ///     appropriate error fill into the \a error object.
-  //------------------------------------------------------------------
   virtual lldb::ProcessSP Attach(ProcessAttachInfo &attach_info,
                                  Debugger &debugger,
                                  Target *target, // Can be nullptr, if nullptr
@@ -453,7 +407,6 @@ public:
                                                  // use existing one
                                  Status &error) = 0;
 
-  //------------------------------------------------------------------
   /// Attach to an existing process by process name.
   ///
   /// This function is not meant to be overridden by Process subclasses. It
@@ -468,32 +421,25 @@ public:
   /// \return
   ///     Returns \a pid if attaching was successful, or
   ///     LLDB_INVALID_PROCESS_ID if attaching fails.
-  //------------------------------------------------------------------
   //        virtual lldb::ProcessSP
   //        Attach (const char *process_name,
   //                bool wait_for_launch,
   //                Status &error) = 0;
 
-  //------------------------------------------------------------------
   // The base class Platform will take care of the host platform. Subclasses
   // will need to fill in the remote case.
-  //------------------------------------------------------------------
   virtual uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &proc_infos);
 
   virtual bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info);
 
-  //------------------------------------------------------------------
   // Set a breakpoint on all functions that can end up creating a thread for
   // this platform. This is needed when running expressions and also for
   // process control.
-  //------------------------------------------------------------------
   virtual lldb::BreakpointSP SetThreadCreationBreakpoint(Target &target);
 
-  //------------------------------------------------------------------
   // Given a target, find the local SDK directory if one exists on the current
   // host.
-  //------------------------------------------------------------------
   virtual lldb_private::ConstString
   GetSDKDirectory(lldb_private::Target &target) {
     return lldb_private::ConstString();
@@ -520,11 +466,9 @@ public:
       m_os_version_set_while_connected = m_system_arch.IsValid();
   }
 
-  //---------------------------------------------------------------------------
   /// If the triple contains not specify the vendor, os, and environment
   /// parts, we "augment" these using information from the platform and return
   /// the resulting ArchSpec object.
-  //---------------------------------------------------------------------------
   ArchSpec GetAugmentedArchSpec(llvm::StringRef triple);
 
   // Used for column widths
@@ -610,7 +554,6 @@ public:
   CreateSymlink(const FileSpec &src,  // The name of the link is in src
                 const FileSpec &dst); // The symlink points to dst
 
-  //----------------------------------------------------------------------
   /// Install a file or directory to the remote system.
   ///
   /// Install is similar to Platform::PutFile(), but it differs in that if an
@@ -633,7 +576,6 @@ public:
   ///
   /// \return
   ///     An error object that describes anything that went wrong.
-  //----------------------------------------------------------------------
   virtual Status Install(const FileSpec &src, const FileSpec &dst);
 
   virtual Environment GetEnvironment();
@@ -709,7 +651,6 @@ public:
 
   lldb::UnixSignalsSP GetUnixSignals();
 
-  //------------------------------------------------------------------
   /// Locate a queue name given a thread's qaddr
   ///
   /// On a system using libdispatch ("Grand Central Dispatch") style queues, a
@@ -729,13 +670,11 @@ public:
   ///     The name of the queue, if there is one.  An empty string
   ///     means that this thread is not associated with a dispatch
   ///     queue.
-  //------------------------------------------------------------------
   virtual std::string
   GetQueueNameForThreadQAddress(Process *process, lldb::addr_t dispatch_qaddr) {
     return "";
   }
 
-  //------------------------------------------------------------------
   /// Locate a queue ID given a thread's qaddr
   ///
   /// On a system using libdispatch ("Grand Central Dispatch") style queues, a
@@ -754,13 +693,11 @@ public:
   /// \return
   ///     The queue_id for this thread, if this thread is associated
   ///     with a dispatch queue.  Else LLDB_INVALID_QUEUE_ID is returned.
-  //------------------------------------------------------------------
   virtual lldb::queue_id_t
   GetQueueIDForThreadQAddress(Process *process, lldb::addr_t dispatch_qaddr) {
     return LLDB_INVALID_QUEUE_ID;
   }
 
-  //------------------------------------------------------------------
   /// Provide a list of trap handler function names for this platform
   ///
   /// The unwinder needs to treat trap handlers specially -- the stack frame
@@ -780,10 +717,8 @@ public:
   ///
   /// \return
   ///     A list of symbol names.  The list may be empty.
-  //------------------------------------------------------------------
   virtual const std::vector<ConstString> &GetTrapHandlerSymbolNames();
 
-  //------------------------------------------------------------------
   /// Find a support executable that may not live within in the standard
   /// locations related to LLDB.
   ///
@@ -797,17 +732,13 @@ public:
   /// \return
   ///     A FileSpec pointing to the executable on disk, or an invalid
   ///     FileSpec if the executable cannot be found.
-  //------------------------------------------------------------------
   virtual FileSpec LocateExecutable(const char *basename) { return FileSpec(); }
 
-  //------------------------------------------------------------------
   /// Allow the platform to set preferred memory cache line size. If non-zero
   /// (and the user has not set cache line size explicitly), this value will
   /// be used as the cache line size for memory reads.
-  //------------------------------------------------------------------
   virtual uint32_t GetDefaultMemoryCacheLineSize() { return 0; }
 
-  //------------------------------------------------------------------
   /// Load a shared library into this process.
   ///
   /// Try and load a shared library into the current process. This call might
@@ -839,13 +770,11 @@ public:
   ///     later used to unload the shared library. A value of
   ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
   ///     library can't be opened.
-  //------------------------------------------------------------------
   uint32_t LoadImage(lldb_private::Process *process,
                      const lldb_private::FileSpec &local_file,
                      const lldb_private::FileSpec &remote_file,
                      lldb_private::Status &error);
 
-  //------------------------------------------------------------------
   /// Load a shared library specified by base name into this process,
   /// looking by hand along a set of paths.
   ///
@@ -876,7 +805,6 @@ public:
   ///     passed to UnloadImage. A value of
   ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
   ///     library can't be opened.
-  //------------------------------------------------------------------
   uint32_t LoadImageUsingPaths(lldb_private::Process *process,
                                const lldb_private::FileSpec &library_name,
                                const std::vector<std::string> &paths,
@@ -892,7 +820,6 @@ public:
   virtual Status UnloadImage(lldb_private::Process *process,
                              uint32_t image_token);
 
-  //------------------------------------------------------------------
   /// Connect to all processes waiting for a debugger to attach
   ///
   /// If the platform have a list of processes waiting for a debugger to
@@ -907,7 +834,6 @@ public:
   ///
   /// \return
   ///     The number of processes we are successfully connected to.
-  //------------------------------------------------------------------
   virtual size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
                                            lldb_private::Status &error);
 
@@ -947,7 +873,6 @@ protected:
   bool m_calculated_trap_handlers;
   const std::unique_ptr<ModuleCache> m_module_cache;
 
-  //------------------------------------------------------------------
   /// Ask the Platform subclass to fill in the list of trap handler names
   ///
   /// For most Unix user process environments, this will be a single function
@@ -959,7 +884,6 @@ protected:
   /// The base class Platform ivar m_trap_handlers should be updated by the
   /// Platform subclass when this method is called.  If there are no
   /// predefined trap handlers, this method may be a no-op.
-  //------------------------------------------------------------------
   virtual void CalculateTrapHandlerSymbolNames() = 0;
 
   Status GetCachedExecutable(ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
@@ -1025,14 +949,12 @@ public:
     return platform_sp;
   }
 
-  //------------------------------------------------------------------
   /// Select the active platform.
   ///
   /// In order to debug remotely, other platform's can be remotely connected
   /// to and set as the selected platform for any subsequent debugging. This
   /// allows connection to remote targets and allows the ability to discover
   /// process info, launch and attach to remote processes.
-  //------------------------------------------------------------------
   lldb::PlatformSP GetSelectedPlatform() {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_selected_platform_sp && !m_platforms.empty())

@@ -22,10 +22,8 @@
 #include <set>
 
 namespace lldb_private {
-//----------------------------------------------------------------------
 // CompilerContext allows an array of these items to be passed to perform
 // detailed lookups in SymbolVendor and SymbolFile functions.
-//----------------------------------------------------------------------
 struct CompilerContext {
   CompilerContext(CompilerContextKind t, ConstString n)
       : type(t), name(n) {}

@@ -3104,9 +3104,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                           type = eSymbolTypeLocal;
                           break;
 
-                        //----------------------------------------------------------------------
                         // INCL scopes
-                        //----------------------------------------------------------------------
                         case N_BINCL:
                           // include file beginning: name,,NO_SECT,0,sum We use
                           // the current number of symbols in the symbol table
@@ -3167,9 +3165,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                           type = eSymbolTypeLineEntry;
                           break;
 
-                        //----------------------------------------------------------------------
                         // Left and Right Braces
-                        //----------------------------------------------------------------------
                         case N_LBRAC:
                           // left bracket: 0,,NO_SECT,nesting level,address We
                           // use the current number of symbols in the symbol
@@ -3204,9 +3200,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                           type = eSymbolTypeHeaderFile;
                           break;
 
-                        //----------------------------------------------------------------------
                         // COMM scopes
-                        //----------------------------------------------------------------------
                         case N_BCOMM:
                           // begin common: name,,NO_SECT,0,0
                           // We use the current number of symbols in the symbol
@@ -4052,9 +4046,7 @@ size_t ObjectFileMachO::ParseSymtab() {
             type = eSymbolTypeLocal;
             break;
 
-          //----------------------------------------------------------------------
           // INCL scopes
-          //----------------------------------------------------------------------
           case N_BINCL:
             // include file beginning: name,,NO_SECT,0,sum We use the current
             // number of symbols in the symbol table in lieu of using nlist_idx
@@ -4112,9 +4104,7 @@ size_t ObjectFileMachO::ParseSymtab() {
             type = eSymbolTypeLineEntry;
             break;
 
-          //----------------------------------------------------------------------
           // Left and Right Braces
-          //----------------------------------------------------------------------
           case N_LBRAC:
             // left bracket: 0,,NO_SECT,nesting level,address We use the
             // current number of symbols in the symbol table in lieu of using
@@ -4146,9 +4136,7 @@ size_t ObjectFileMachO::ParseSymtab() {
             type = eSymbolTypeHeaderFile;
             break;
 
-          //----------------------------------------------------------------------
           // COMM scopes
-          //----------------------------------------------------------------------
           case N_BCOMM:
             // begin common: name,,NO_SECT,0,0
             // We use the current number of symbols in the symbol table in lieu
@@ -5966,9 +5954,7 @@ bool ObjectFileMachO::AllowAssemblyEmulationUnwindPlans() {
   return m_allow_assembly_emulation_unwind_plans;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString ObjectFileMachO::GetPluginName() {
   return GetPluginNameStatic();
 }

@@ -23,9 +23,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordBreakpoint
-//-------------------------------------------------------------------------
 
 class CommandObjectMultiwordBreakpoint : public CommandObjectMultiword {
 public:

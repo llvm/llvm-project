@@ -24,10 +24,8 @@ public:
 
   void OverrideStopInfo(Thread &thread) const override {}
 
-  //------------------------------------------------------------------
   /// This method compares current address with current function's
   /// local entry point, returning the bytes to skip if they match.
-  //------------------------------------------------------------------
   size_t GetBytesToSkip(Symbol &func, const Address &curr_addr) const override;
 
   void AdjustBreakpointAddress(const Symbol &func,

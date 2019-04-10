@@ -41,9 +41,7 @@ CompilerType::CompilerType(clang::ASTContext *ast, clang::QualType qual_type)
 
 CompilerType::~CompilerType() {}
 
-//----------------------------------------------------------------------
 // Tests
-//----------------------------------------------------------------------
 
 bool CompilerType::IsAggregateType() const {
   if (IsValid())
@@ -270,9 +268,7 @@ bool CompilerType::IsBeingDefined() const {
   return m_type_system->IsBeingDefined(m_type);
 }
 
-//----------------------------------------------------------------------
 // Type Completion
-//----------------------------------------------------------------------
 
 bool CompilerType::GetCompleteType() const {
   if (!IsValid())
@@ -280,9 +276,7 @@ bool CompilerType::GetCompleteType() const {
   return m_type_system->GetCompleteType(m_type);
 }
 
-//----------------------------------------------------------------------
 // AST related queries
-//----------------------------------------------------------------------
 size_t CompilerType::GetPointerByteSize() const {
   if (m_type_system)
     return m_type_system->GetPointerByteSize();
@@ -351,9 +345,7 @@ unsigned CompilerType::GetTypeQualifiers() const {
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Creating related types
-//----------------------------------------------------------------------
 
 CompilerType CompilerType::GetArrayElementType(uint64_t *stride) const {
   if (IsValid()) {
@@ -487,9 +479,7 @@ CompilerType CompilerType::GetTypedefedType() const {
     return CompilerType();
 }
 
-//----------------------------------------------------------------------
 // Create related types using the current type's AST
-//----------------------------------------------------------------------
 
 CompilerType
 CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
@@ -497,9 +487,7 @@ CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
     return m_type_system->GetBasicTypeFromAST(basic_type);
   return CompilerType();
 }
-//----------------------------------------------------------------------
 // Exploring the type
-//----------------------------------------------------------------------
 
 llvm::Optional<uint64_t>
 CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
@@ -748,9 +736,7 @@ size_t CompilerType::ConvertStringToFloatValue(const char *s, uint8_t *dst,
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Dumping types
-//----------------------------------------------------------------------
 #define DEPTH_INCREMENT 2
 
 void CompilerType::DumpValue(ExecutionContext *exe_ctx, Stream *s,

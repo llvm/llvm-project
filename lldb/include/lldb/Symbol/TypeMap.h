@@ -19,9 +19,7 @@ namespace lldb_private {
 
 class TypeMap {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   TypeMap();
 
   virtual ~TypeMap();

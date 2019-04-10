@@ -44,10 +44,8 @@ public:
                            const struct timespec *timeout_abstime = NULL) const;
 
 protected:
-  //----------------------------------------------------------------------
   // pthread condition and mutex variable to control access and allow
   // blocking between the main thread and the spotlight index thread.
-  //----------------------------------------------------------------------
   mutable PThreadMutex m_mutex;
   mutable PThreadCondition m_set_condition;
   mutable PThreadCondition m_reset_condition;
