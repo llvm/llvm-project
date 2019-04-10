@@ -268,8 +268,11 @@ bool TaskSimplify::runOnFunction(Function &F) {
 
 PreservedAnalyses TaskSimplifyPass::run(Function &F,
                                         FunctionAnalysisManager &AM) {
+  if (F.empty())
+    return PreservedAnalyses::all();
+
   TaskInfo &TI = AM.getResult<TaskAnalysis>(F);
-  if (F.empty() || TI.isSerial())
+  if (TI.isSerial())
     return PreservedAnalyses::all();
 
   bool Changed = false;
