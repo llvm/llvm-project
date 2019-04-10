@@ -1032,7 +1032,8 @@ void ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
   // GetSharedModule() with a new module will add it to the module list and
   // return a corresponding ModuleSP.
   Status error;
-  ModuleSP module = GetTarget().GetSharedModule(module_spec, &error);
+  ModuleSP module = GetTarget().GetOrCreateModule(module_spec,
+                                                  true /* notify */, &error);
   bool load_addr_changed = false;
   module->SetLoadAddress(GetTarget(), module_addr, false, load_addr_changed);
 
