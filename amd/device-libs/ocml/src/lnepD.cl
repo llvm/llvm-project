@@ -11,7 +11,7 @@
 #include "ep.h"
 
 CONSTATTR double
-MATH_PRIVATE(lnep)(double2 a)
+MATH_PRIVATE(lnep)(double2 a, int ea)
 {
     int b = BUILTIN_FREXP_MANT_F64(a.hi) < (2.0/3.0);
     int e = BUILTIN_FREXP_EXP_F64(a.hi) - b;
@@ -26,7 +26,7 @@ MATH_PRIVATE(lnep)(double2 a)
                    0x1.999999999999cp-2);
 
     // ln(2)*e + 2*x + x^3(c3 + x^2*p)
-    double2 r = add(mul(con(0x1.62e42fefa39efp-1, 0x1.abc9e3b39803fp-56), (double)e),
+    double2 r = add(mul(con(0x1.62e42fefa39efp-1, 0x1.abc9e3b39803fp-56), (double)(e + ea)),
                     fadd(ldx(x,1),
                          mul(mul(s, x), 
                              fadd(con(0x1.5555555555555p-1,0x1.543b0d5df274dp-55),

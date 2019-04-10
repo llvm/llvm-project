@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-extern CONSTATTR double MATH_PRIVATE(lnep)(double2 x);
+extern CONSTATTR double MATH_PRIVATE(lnep)(double2 a, int ea);
 
 #define DOUBLE_SPECIALIZATION
 #include "ep.h"
@@ -15,7 +15,7 @@ extern CONSTATTR double MATH_PRIVATE(lnep)(double2 x);
 CONSTATTR double
 MATH_MANGLE(log1p)(double x)
 {
-    double z = MATH_PRIVATE(lnep)(add(1.0, x));
+    double z = MATH_PRIVATE(lnep)(add(1.0, x), 0);
 
     if (!FINITE_ONLY_OPT()) {
         z = BUILTIN_CLASS_F64(x, CLASS_PINF) ? x : z;

@@ -16,8 +16,8 @@ CONSTATTR double
 MATH_MANGLE(tanh)(double x)
 {
     double y = BUILTIN_ABS_F64(x);
-    double2 e = MATH_PRIVATE(epexpep)(sub(y, con(0x1.62e42fefa39efp-1,0x1.abc9e3b39803fp-56)));
-    double2 ei = ldx(rcp(e), -2);
+    double2 e = MATH_PRIVATE(epexpep)(con(y, 0.0));
+    double2 ei = rcp(e);
     double2 t = fdiv(fsub(e, ei), fadd(e, ei));
     double z = t.hi;
 

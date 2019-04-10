@@ -16,8 +16,8 @@ CONSTATTR float
 MATH_MANGLE(tanh)(float x)
 {
     float y = BUILTIN_ABS_F32(x);
-    float2 e = MATH_PRIVATE(epexpep)(sub(y, con(0x1.62e430p-1f, -0x1.05c610p-29f)));
-    float2 ei = ldx(rcp(e), -2);
+    float2 e = MATH_PRIVATE(epexpep)(con(y, 0.0f));
+    float2 ei = rcp(e);
     float2 t = fdiv(fsub(e, ei), fadd(e, ei));
     float z = t.hi;
 

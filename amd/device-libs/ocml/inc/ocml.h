@@ -667,6 +667,32 @@ DECL_CONST_OCML_UNARY_F16(native_cos)
 DECL_CONST_OCML_UNARY_F16(native_exp2)
 DECL_CONST_OCML_UNARY_F16(native_log2)
 
+extern __attribute__((const)) float OCML_MANGLE_F32(cabs)(float2);
+extern __attribute__((const)) double OCML_MANGLE_F64(cabs)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(cexp)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(cexp)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(clog)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(clog)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(ccos)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(ccos)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(ccosh)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(ccosh)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(csin)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(csin)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(csinh)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(csinh)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(ctan)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(ctan)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(ctanh)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(ctanh)(double2);
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 

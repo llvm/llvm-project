@@ -10,7 +10,7 @@
 #define FLOAT_SPECIALIZATION
 #include "ep.h"
 
-extern CONSTATTR float MATH_PRIVATE(lnep)(float2 x);
+extern CONSTATTR float MATH_PRIVATE(lnep)(float2 a, int ea);
 
 CONSTATTR float
 MATH_MANGLE(asinh)(float x)
@@ -20,7 +20,8 @@ MATH_MANGLE(asinh)(float x)
     float s = b ? 0x1.0p-64f : 1.0f;
     float sy = y * s;
     float2 a = add(sy, root2(add(sqr(sy), s*s)));
-    float z = MATH_PRIVATE(lnep)(a) + (b ? 0x1.62e430p+5f : 0.0f);
+    float z = MATH_PRIVATE(lnep)(a, b ? 64 : 0);
+
     z = y < 0x1.0p-12f ? y : z;
 
     if (!FINITE_ONLY_OPT()) {
