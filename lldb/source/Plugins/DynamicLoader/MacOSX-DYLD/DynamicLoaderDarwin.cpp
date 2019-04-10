@@ -122,7 +122,9 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
 
   if (!module_sp) {
     if (can_create) {
-      module_sp = target.GetSharedModule(module_spec);
+      // We'll call Target::ModulesDidLoad after all the modules have been
+      // added to the target, don't let it be called for every one.
+      module_sp = target.GetOrCreateModule(module_spec, false /* notify */);
       if (!module_sp || module_sp->GetObjectFile() == NULL)
         module_sp = m_process->ReadModuleFromMemory(image_info.file_spec,
                                                     image_info.address);
@@ -637,7 +639,8 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
               module_spec.SetObjectOffset(objfile->GetFileOffset() +
                                           commpage_section->GetFileOffset());
               module_spec.SetObjectSize(objfile->GetByteSize());
-              commpage_image_module_sp = target.GetSharedModule(module_spec);
+              commpage_image_module_sp = target.GetOrCreateModule(module_spec, 
+                                                               true /* notify */);
               if (!commpage_image_module_sp ||
                   commpage_image_module_sp->GetObjectFile() == NULL) {
                 commpage_image_module_sp = m_process->ReadModuleFromMemory(

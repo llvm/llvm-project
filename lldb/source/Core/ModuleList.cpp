@@ -195,11 +195,13 @@ void ModuleList::AppendImpl(const ModuleSP &module_sp, bool use_notifier) {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     m_modules.push_back(module_sp);
     if (use_notifier && m_notifier)
-      m_notifier->ModuleAdded(*this, module_sp);
+      m_notifier->NotifyModuleAdded(*this, module_sp);
   }
 }
 
-void ModuleList::Append(const ModuleSP &module_sp) { AppendImpl(module_sp); }
+void ModuleList::Append(const ModuleSP &module_sp, bool notify) { 
+  AppendImpl(module_sp, notify); 
+}
 
 void ModuleList::ReplaceEquivalent(const ModuleSP &module_sp) {
   if (module_sp) {
@@ -225,7 +227,7 @@ void ModuleList::ReplaceEquivalent(const ModuleSP &module_sp) {
   }
 }
 
-bool ModuleList::AppendIfNeeded(const ModuleSP &module_sp) {
+bool ModuleList::AppendIfNeeded(const ModuleSP &module_sp, bool notify) {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     collection::iterator pos, end = m_modules.end();
@@ -234,7 +236,7 @@ bool ModuleList::AppendIfNeeded(const ModuleSP &module_sp) {
         return false; // Already in the list
     }
     // Only push module_sp on the list if it wasn't already in there.
-    Append(module_sp);
+    Append(module_sp, notify);
     return true;
   }
   return false;
@@ -262,7 +264,7 @@ bool ModuleList::RemoveImpl(const ModuleSP &module_sp, bool use_notifier) {
       if (pos->get() == module_sp.get()) {
         m_modules.erase(pos);
         if (use_notifier && m_notifier)
-          m_notifier->ModuleRemoved(*this, module_sp);
+          m_notifier->NotifyModuleRemoved(*this, module_sp);
         return true;
       }
     }
@@ -276,12 +278,12 @@ ModuleList::RemoveImpl(ModuleList::collection::iterator pos,
   ModuleSP module_sp(*pos);
   collection::iterator retval = m_modules.erase(pos);
   if (use_notifier && m_notifier)
-    m_notifier->ModuleRemoved(*this, module_sp);
+    m_notifier->NotifyModuleRemoved(*this, module_sp);
   return retval;
 }
 
-bool ModuleList::Remove(const ModuleSP &module_sp) {
-  return RemoveImpl(module_sp);
+bool ModuleList::Remove(const ModuleSP &module_sp, bool notify) {
+  return RemoveImpl(module_sp, notify);
 }
 
 bool ModuleList::ReplaceModule(const lldb::ModuleSP &old_module_sp,
@@ -290,7 +292,7 @@ bool ModuleList::ReplaceModule(const lldb::ModuleSP &old_module_sp,
     return false;
   AppendImpl(new_module_sp, false);
   if (m_notifier)
-    m_notifier->ModuleUpdated(*this, old_module_sp, new_module_sp);
+    m_notifier->NotifyModuleUpdated(*this, old_module_sp, new_module_sp);
   return true;
 }
 
@@ -339,9 +341,11 @@ size_t ModuleList::Remove(ModuleList &module_list) {
   size_t num_removed = 0;
   collection::iterator pos, end = module_list.m_modules.end();
   for (pos = module_list.m_modules.begin(); pos != end; ++pos) {
-    if (Remove(*pos))
+    if (Remove(*pos, false /* notify */))
       ++num_removed;
   }
+  if (m_notifier)
+    m_notifier->NotifyModulesRemoved(module_list);
   return num_removed;
 }
 
@@ -352,7 +356,7 @@ void ModuleList::Destroy() { ClearImpl(); }
 void ModuleList::ClearImpl(bool use_notifier) {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   if (use_notifier && m_notifier)
-    m_notifier->WillClearList(*this);
+    m_notifier->NotifyWillClearList(*this);
   m_modules.clear();
 }
 
