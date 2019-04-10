@@ -1,5 +1,5 @@
 // RUN: %clang -target x86_64-apple-darwin -fsyntax-only -Xclang -verify %s
-// RUN: %clang -target x86_64-apple-darwin -x objective-c++ -fsyntax-only -Xclang -verify %s
+// RUN: %clang -target x86_64-apple-darwin -x objective-c++ -stdlib=libc++ -fsyntax-only -Xclang -verify %s
 
 @interface NSObject
 @end
