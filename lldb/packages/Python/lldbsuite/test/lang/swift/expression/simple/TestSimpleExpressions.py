@@ -17,6 +17,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
+import sys
 import unittest2
 
 
@@ -91,10 +92,18 @@ class TestSimpleSwiftExpressions(TestBase):
         # self.check_expression ("my_global", "30")
 
         # Non-simple names:
-        self.check_expression(
-            u"\u20ac_varname".encode("utf-8"),
-            "5",
-            use_summary=False)
+        # Note: python 2 and python 3 have different default encodings.
+        # This can be removed once python 2 is gone entirely.
+        if sys.version_info.major == 2:
+            self.check_expression(
+                u"\u20ac_varname".encode("utf-8"),
+                "5",
+                use_summary=False)
+        else:
+            self.check_expression(
+                u"\u20ac_varname",
+                "5",
+                use_summary=False)
 
         # See if we can do the same manipulations with tuples:
         # Commented out due to: <rdar://problem/15476525> Expressions with

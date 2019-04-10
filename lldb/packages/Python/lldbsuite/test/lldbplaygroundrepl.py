@@ -9,10 +9,9 @@
 # See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 #
 # ------------------------------------------------------------------------------
-import lldb
-from lldbtest import *
-import decorators
-import lldbutil
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
 import unittest2
