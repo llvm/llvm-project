@@ -236,6 +236,11 @@ private:
 /// Returns true if Tapir-loop hints require loop outlining during lowering.
 bool hintsDemandOutlining(const TapirLoopHints &Hints);
 
+/// Given an loop ID metadata node, returns the loop hint metadata node with the
+/// given name (for example, "tapir.loop.stripmine.disable").  If no such
+/// metadata node exists, then nullptr is returned.
+MDNode *GetStripMineMetadata(MDNode *LoopID, StringRef Name);
+
 /// Examine a given loop to determine if it is a Tapir loop that can and should
 /// be processed.  Returns the Task that encodes the loop body if so, or nullptr
 /// if not.

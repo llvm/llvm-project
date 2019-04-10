@@ -16,8 +16,8 @@ namespace llvm {
 
 class Function;
 
-/// Loop stripmining pass that will support both full and partial unrolling.  It
-/// is a function pass to have access to function and module analyses.
+/// Loop stripmining pass.  It is a function pass to have access to function and
+/// module analyses.
 class LoopStripMinePass : public PassInfoMixin<LoopStripMinePass> {
 public:
   explicit LoopStripMinePass() {}

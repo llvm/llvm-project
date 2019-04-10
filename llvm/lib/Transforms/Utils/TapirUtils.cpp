@@ -1194,6 +1194,29 @@ bool llvm::hintsDemandOutlining(const TapirLoopHints &Hints) {
   }
 }
 
+/// Given an loop id metadata node, returns the loop hint metadata node with the
+/// given name (for example, "tapir.loop.stripmine.count"). If no such metadata
+/// node exists, then nullptr is returned.
+MDNode *llvm::GetStripMineMetadata(MDNode *LoopID, StringRef Name) {
+  // First operand should refer to the loop id itself.
+  assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
+  assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
+
+  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
+    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+    if (!MD)
+      continue;
+
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+    if (!S)
+      continue;
+
+    if (Name.equals(S->getString()))
+      return MD;
+  }
+  return nullptr;
+}
+
 /// Examine a given loop to determine if it is a Tapir loop.  Returns the Task
 /// that encodes the loop body if so, or nullptr if not.
 Task *llvm::getTaskIfTapirLoop(const Loop *L, TaskInfo *TI) {

@@ -22,6 +22,7 @@
 #include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/WorkSpanAnalysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -40,22 +41,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-stripmine"
 
-static cl::opt<unsigned> StripMineCount(
-    "stripmine-count", cl::Hidden,
-    cl::desc("Use this stripmine count for all loops, for testing purposes"));
-
-static cl::opt<unsigned> StripMineCoarseningFactor(
-    "stripmine-coarsen-factor", cl::Hidden,
-    cl::desc("Use this coarsening factor for stripmining"));
-
-static cl::opt<bool> StripMineUnrollRemainder(
-  "stripmine-unroll-remainder", cl::Hidden,
-  cl::desc("Allow the loop remainder after stripmining to be unrolled."));
-
-static cl::opt<bool> SerializeUnprofitable(
-  "serialize-unprofitable-loops", cl::Hidden, cl::init(false),
-  cl::desc("Serialize any Tapir loops found to be unprofitable."));
-
 static cl::opt<bool> AllowParallelEpilog(
   "allow-parallel-epilog", cl::Hidden, cl::init(true),
   cl::desc("Allow stripmined Tapir loops to execute their epilogs in parallel."));
@@ -64,12 +49,6 @@ static cl::opt<bool> IncludeNestedSync(
   "include-nested-sync", cl::Hidden, cl::init(true),
   cl::desc("If the epilog is allowed to execute in parallel, include a sync "
            "instruction in the nested task."));
-
-/// Constants for stripmining cost analysis.
-namespace StripMineConstants {
-/// Default coarsening factor for strpimined Tapir loops.
-const unsigned DefaultCoarseningFactor = 2048;
-}
 
 /// Create an analysis remark that explains why stripmining failed
 ///
@@ -96,129 +75,28 @@ createMissedAnalysis(StringRef RemarkName, const Loop *TheLoop,
   return R;
 }
 
-/// Gather the various unrolling parameters based on the defaults, compiler
-/// flags, TTI overrides and user specified parameters.
-TargetTransformInfo::StripMiningPreferences llvm::gatherStripMiningPreferences(
-    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
-    Optional<unsigned> UserCount) {
-  TargetTransformInfo::StripMiningPreferences SMP;
 
-  // Set up the defaults
-  SMP.Count = 0;
-  SMP.AllowExpensiveTripCount = false;
-  SMP.DefaultCoarseningFactor =
-    (StripMineCoarseningFactor.getNumOccurrences() > 0) ?
-    StripMineCoarseningFactor : StripMineConstants::DefaultCoarseningFactor;
-  SMP.UnrollRemainder = false;
-
-  // Override with any target specific settings
-  TTI.getStripMiningPreferences(L, SE, SMP);
-
-  // Apply any user values specified by cl::opt
-  if (UserCount.hasValue())
-    SMP.Count = *UserCount;
-  if (StripMineUnrollRemainder.getNumOccurrences() > 0)
-    SMP.UnrollRemainder = StripMineUnrollRemainder;
-
-  return SMP;
-}
-
-// Helper method to get a constant trip count for the given loop.
-static unsigned getConstTripCount(const Loop *L, ScalarEvolution &SE) {
-  unsigned ConstTripCount = 0;
-  // If there are multiple exiting blocks but one of them is the latch, use
-  // the latch for the trip count estimation. Otherwise insist on a single
-  // exiting block for the trip count estimation.
-  BasicBlock *ExitingBlock = L->getLoopLatch();
-  if (!ExitingBlock || !L->isLoopExiting(ExitingBlock))
-    ExitingBlock = L->getExitingBlock();
-  if (ExitingBlock)
-    ConstTripCount = SE.getSmallConstantTripCount(L, ExitingBlock);
-  return ConstTripCount;
-}
-
-/// Recursive helper routine to estimate the amount of work in a loop.
-static unsigned ApproximateLoopSizeHelper(const Loop *L, CodeMetrics &Metrics,
-                                          bool &UnknownSize, LoopInfo *LI,
-                                          ScalarEvolution &SE) {
-  if (UnknownSize)
-    return std::numeric_limits<unsigned>::max();
-
-  // TODO: Handle control flow within the loop more intelligently.
-  unsigned LoopSize = 0;
-  for (Loop *SubL : *L) {
-    unsigned SubLoopSize = ApproximateLoopSizeHelper(SubL, Metrics, UnknownSize,
-                                                     LI, SE);
-    // Quit early if the size of this subloop is already too big.
-    if (std::numeric_limits<unsigned>::max() == SubLoopSize)
-      LoopSize = std::numeric_limits<unsigned>::max();
-
-    // Find a constant trip count if available
-    unsigned ConstTripCount = getConstTripCount(SubL, SE);
-    // TODO: Use a more precise analysis to account for non-constant trip
-    // counts.
-    if (!ConstTripCount) {
-      UnknownSize = true;
-      // If we cannot compute a constant trip count, assume this subloop
-      // executes at least once.
-      ConstTripCount = 1;
-    }
-
-    // Check if the total size of this subloop is huge.
-    if (std::numeric_limits<unsigned>::max() / ConstTripCount > SubLoopSize)
-      LoopSize = std::numeric_limits<unsigned>::max();
-
-    // Check if this subloop suffices to make loop L huge.
-    if (std::numeric_limits<unsigned>::max() - LoopSize <
-        (SubLoopSize * ConstTripCount))
-      LoopSize = std::numeric_limits<unsigned>::max();
-
-    // Add in the size of this subloop.
-    LoopSize += (SubLoopSize * ConstTripCount);
-  }
-
-  // After looking at all subloops, if we've concluded we have a huge loop size,
-  // return early.
-  if (std::numeric_limits<unsigned>::max() == LoopSize)
-    return LoopSize;
-
-  for (BasicBlock *BB : L->blocks())
-    if (LI->getLoopFor(BB) == L) {
-      // Check if this BB suffices to make loop L huge.
-      if (std::numeric_limits<unsigned>::max() - LoopSize <
-          Metrics.NumBBInsts[BB])
-        return std::numeric_limits<unsigned>::max();
-      LoopSize += Metrics.NumBBInsts[BB];
-    }
-
-  return LoopSize;
-}
-
-/// ApproximateLoopSize - Approximate the size of the loop.
-unsigned llvm::ApproximateLoopSize(
+/// Approximate the work of the body of the loop L.  Returns several relevant
+/// properties of loop L via by-reference arguments.
+static int64_t ApproximateLoopCost(
     const Loop *L, unsigned &NumCalls, bool &NotDuplicatable,
     bool &Convergent, bool &IsRecursive, bool &UnknownSize,
     const TargetTransformInfo &TTI, LoopInfo *LI, ScalarEvolution &SE,
     const SmallPtrSetImpl<const Value *> &EphValues,
     TargetLibraryInfo *TLI) {
 
-  // TODO: Use more precise analysis to estimate the work in each call.
-  // TODO: Use vectorizability to enhance cost analysis.
+  WSCost LoopCost;
+  estimateLoopCost(LoopCost, L, LI, &SE, TTI, TLI, EphValues);
 
-  CodeMetrics Metrics;
-  for (BasicBlock *BB : L->blocks())
-    Metrics.analyzeBasicBlock(BB, TTI, EphValues, TLI);
   // Exclude calls to builtins when counting the calls.  This assumes that all
   // builtin functions are cheap.
-  NumCalls = Metrics.NumCalls - Metrics.NumBuiltinCalls;
-  NotDuplicatable = Metrics.notDuplicatable;
-  Convergent = Metrics.convergent;
-  IsRecursive = Metrics.isRecursive;
+  NumCalls = LoopCost.Metrics.NumCalls - LoopCost.Metrics.NumBuiltinCalls;
+  NotDuplicatable = LoopCost.Metrics.notDuplicatable;
+  Convergent = LoopCost.Metrics.convergent;
+  IsRecursive = LoopCost.Metrics.isRecursive;
+  UnknownSize = LoopCost.UnknownCost;
 
-  unsigned LoopSize = ApproximateLoopSizeHelper(L, Metrics, UnknownSize, LI,
-                                                SE);
-
-  return LoopSize;
+  return LoopCost.Work;
 }
 
 // Returns the loop hint metadata node with the given name (for example,
@@ -240,54 +118,6 @@ static bool HasStripMineEnablePragma(const Loop *L) {
   return GetStripMineMetadataForLoop(L, "tapir.loop.stripmine.enable");
 }
 
-// If loop has an grainsize pragma return the (necessarily positive) value from
-// the pragma for stripmining.  Otherwise return 0.
-static unsigned StripMineCountPragmaValue(const Loop *L) {
-  TapirLoopHints Hints(L);
-  return Hints.getGrainsize();
-}
-
-// Returns true if stripmine count was set explicitly.
-// Calculates stripmine count and writes it to SMP.Count.
-bool llvm::computeStripMineCount(
-    Loop *L, const TargetTransformInfo &TTI, unsigned LoopSize,
-    TargetTransformInfo::StripMiningPreferences &SMP) {
-  // Check for explicit Count.
-  // 1st priority is stripmine count set by "stripmine-count" option.
-  bool UserStripMineCount = StripMineCount.getNumOccurrences() > 0;
-  if (UserStripMineCount) {
-    SMP.Count = StripMineCount;
-    SMP.AllowExpensiveTripCount = true;
-    return true;
-  }
-
-  // 2nd priority is stripmine count set by pragma.
-  unsigned PragmaCount = StripMineCountPragmaValue(L);
-  if (PragmaCount > 0) {
-    SMP.Count = PragmaCount;
-    SMP.AllowExpensiveTripCount = true;
-    return true;
-  }
-
-  // 3rd priority is computed stripmine count.
-  //
-  // We want to coarsen the loop such that the work of detaching a loop
-  // iteration is tiny compared to the work of the loop body.  Specifically, we
-  // want the total cost of the parallel loop to be at most (1 + \eps) times the
-  // cost of its serial projection.  Let G is the grainsize, n the number of
-  // loop iterations, d the cost of a detach, and S the work of the loop body.
-  // Then we want
-  //
-  //   (n/G)(G*S + d) <= (1 + \eps)(n * S)
-  //
-  // Solving for G yeilds G >= d/(\eps * S).  Substituting in \eps = 1/C for a
-  // given coarsening factor C gives the equation below.
-  Instruction *DetachI = L->getHeader()->getTerminator();
-  SMP.Count = SMP.DefaultCoarseningFactor * TTI.getUserCost(DetachI) / LoopSize;
-
-  return false;
-}
-
 static bool tryToStripMineLoop(
     Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     const TargetTransformInfo &TTI, AssumptionCache &AC, TaskInfo *TI,
@@ -298,19 +128,21 @@ static bool tryToStripMineLoop(
     return false;
   TapirLoopHints Hints(L);
 
+  if (HasStripMineDisablePragma(L))
+    return false;
+
   LLVM_DEBUG(dbgs() << "Loop Strip Mine: F["
                     << L->getHeader()->getParent()->getName() << "] Loop %"
                     << L->getHeader()->getName() << "\n");
-  if (HasStripMineDisablePragma(L))
-    return false;
+
   if (!L->isLoopSimplifyForm()) {
     LLVM_DEBUG(
         dbgs() << "  Not stripmining loop which is not in loop-simplify form.\n");
     return false;
   }
   bool StripMiningRequested = HasStripMineEnablePragma(L);
-  TargetTransformInfo::StripMiningPreferences SMP = gatherStripMiningPreferences(
-      L, SE, TTI, ProvidedCount);
+  TargetTransformInfo::StripMiningPreferences SMP =
+    gatherStripMiningPreferences(L, SE, TTI, ProvidedCount);
 
   unsigned NumCalls = 0;
   bool NotDuplicatable = false;
@@ -321,11 +153,11 @@ static bool tryToStripMineLoop(
   SmallPtrSet<const Value *, 32> EphValues;
   CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
 
-  unsigned LoopSize =
-      ApproximateLoopSize(L, NumCalls, NotDuplicatable, Convergent, IsRecursive,
+  int64_t LoopCost =
+      ApproximateLoopCost(L, NumCalls, NotDuplicatable, Convergent, IsRecursive,
                           UnknownSize, TTI, LI, SE, EphValues, TLI);
-  // computeStripMineCount() determines the count to stripmine the loop.
-  bool explicitCount = computeStripMineCount(L, TTI, LoopSize, SMP);
+  // Determine the iteration count of the eventual stripmined the loop.
+  bool explicitCount = computeStripMineCount(L, TTI, LoopCost, SMP);
 
   // If the loop size is unknown, then we cannot compute a stripmining count for
   // it.
@@ -341,8 +173,8 @@ static bool tryToStripMineLoop(
 
   // If the loop size is enormous, then we might want to use a stripmining count
   // of 1 for it.
-  LLVM_DEBUG(dbgs() << "  Loop Size = " << LoopSize << "\n");
-  if (!explicitCount && std::numeric_limits<unsigned>::max() == LoopSize) {
+  LLVM_DEBUG(dbgs() << "  Loop Cost = " << LoopCost << "\n");
+  if (!explicitCount && std::numeric_limits<int64_t>::max() == LoopCost) {
     LLVM_DEBUG(dbgs() << "  Not stripmining loop with very large size.\n");
     if (Hints.getGrainsize() == 1)
       return false;
@@ -425,20 +257,6 @@ static bool tryToStripMineLoop(
 
   // Stripmining factor (Count) must be less or equal to TripCount.
   if (ConstTripCount && SMP.Count >= ConstTripCount) {
-    if (SerializeUnprofitable) {
-      ORE.emit(DiagnosticInfoOptimizationFailure(
-                   DEBUG_TYPE, "SerializingUnprofitableParallelLoop",
-                   L->getStartLoc(), L->getHeader())
-               << "Serializing parallel loop that appears to be unprofitable "
-               << "to parallelize.");
-      SerializeDetach(cast<DetachInst>(L->getHeader()->getTerminator()), T,
-                      &DT);
-      Hints.clearHintsMetadata();
-      L->setDerivedFromTapirLoop();
-      // Recalculate TaskInfo
-      TI->recalculate(*DT.getRoot()->getParent(), DT);
-      return true;
-    }
     ORE.emit(createMissedAnalysis("FullStripMine", L)
              << "Stripmining count larger than loop trip count.");
     ORE.emit(DiagnosticInfoOptimizationFailure(
@@ -467,7 +285,7 @@ static bool tryToStripMineLoop(
   Instruction *DetachI = L->getHeader()->getTerminator();
   bool ParallelEpilog = AllowParallelEpilog &&
     ((SMP.Count < SMP.DefaultCoarseningFactor) ||
-     (LoopSize >= static_cast<unsigned>(2 * TTI.getUserCost(DetachI))));
+     (LoopCost >= static_cast<unsigned>(2 * TTI.getUserCost(DetachI))));
 
   // Some parallel runtimes, such as Cilk, require nested parallel tasks to be
   // synchronized.

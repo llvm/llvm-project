@@ -43,6 +43,24 @@ using namespace llvm;
 #define LSM_NAME "loop-stripmine"
 #define DEBUG_TYPE LSM_NAME
 
+static cl::opt<unsigned> StripMineCount(
+    "stripmine-count", cl::Hidden,
+    cl::desc("Use this stripmine count for all loops, for testing purposes"));
+
+static cl::opt<unsigned> StripMineCoarseningFactor(
+    "stripmine-coarsen-factor", cl::Hidden,
+    cl::desc("Use this coarsening factor for stripmining"));
+
+static cl::opt<bool> StripMineUnrollRemainder(
+  "stripmine-unroll-remainder", cl::Hidden,
+  cl::desc("Allow the loop remainder after stripmining to be unrolled."));
+
+/// Constants for stripmining cost analysis.
+namespace StripMineConstants {
+/// Default coarsening factor for strpimined Tapir loops.
+const unsigned DefaultCoarseningFactor = 2048;
+}
+
 /// Create an analysis remark that explains why stripmining failed.
 ///
 /// \p RemarkName is the identifier for the remark.  If \p I is passed it is an
@@ -144,6 +162,81 @@ void llvm::simplifyLoopAfterStripMine(Loop *L, bool SimplifyIVs, LoopInfo *LI,
   // fold to constants, eagerly propagating those here will require fewer
   // cleanup passes to be run.  Alternatively, a LoopEarlyCSE might be
   // appropriate.
+}
+
+/// Gather the various unrolling parameters based on the defaults, compiler
+/// flags, TTI overrides and user specified parameters.
+TargetTransformInfo::StripMiningPreferences llvm::gatherStripMiningPreferences(
+    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
+    Optional<unsigned> UserCount) {
+  TargetTransformInfo::StripMiningPreferences SMP;
+
+  // Set up the defaults
+  SMP.Count = 0;
+  SMP.AllowExpensiveTripCount = false;
+  SMP.DefaultCoarseningFactor =
+    (StripMineCoarseningFactor.getNumOccurrences() > 0) ?
+    StripMineCoarseningFactor : StripMineConstants::DefaultCoarseningFactor;
+  SMP.UnrollRemainder = false;
+
+  // Override with any target specific settings
+  TTI.getStripMiningPreferences(L, SE, SMP);
+
+  // Apply any user values specified by cl::opt
+  if (UserCount.hasValue())
+    SMP.Count = *UserCount;
+  if (StripMineUnrollRemainder.getNumOccurrences() > 0)
+    SMP.UnrollRemainder = StripMineUnrollRemainder;
+
+  return SMP;
+}
+
+// If loop has an grainsize pragma return the (necessarily positive) value from
+// the pragma for stripmining.  Otherwise return 0.
+static unsigned StripMineCountPragmaValue(const Loop *L) {
+  TapirLoopHints Hints(L);
+  return Hints.getGrainsize();
+}
+
+// Returns true if stripmine count was set explicitly.
+// Calculates stripmine count and writes it to SMP.Count.
+bool llvm::computeStripMineCount(
+    Loop *L, const TargetTransformInfo &TTI, int64_t LoopCost,
+    TargetTransformInfo::StripMiningPreferences &SMP) {
+  // Check for explicit Count.
+  // 1st priority is stripmine count set by "stripmine-count" option.
+  bool UserStripMineCount = StripMineCount.getNumOccurrences() > 0;
+  if (UserStripMineCount) {
+    SMP.Count = StripMineCount;
+    SMP.AllowExpensiveTripCount = true;
+    return true;
+  }
+
+  // 2nd priority is stripmine count set by pragma.
+  unsigned PragmaCount = StripMineCountPragmaValue(L);
+  if (PragmaCount > 0) {
+    SMP.Count = PragmaCount;
+    SMP.AllowExpensiveTripCount = true;
+    return true;
+  }
+
+  // 3rd priority is computed stripmine count.
+  //
+  // We want to coarsen the loop such that the work of detaching a loop
+  // iteration is tiny compared to the work of the loop body.  Specifically, we
+  // want the total cost of the parallel loop to be at most (1 + \eps) times the
+  // cost of its serial projection.  Let G is the grainsize, n the number of
+  // loop iterations, d the cost of a detach, and S the work of the loop body.
+  // Then we want
+  //
+  //   (n/G)(G*S + d) <= (1 + \eps)(n * S)
+  //
+  // Solving for G yeilds G >= d/(\eps * S).  Substituting in \eps = 1/C for a
+  // given coarsening factor C gives the equation below.
+  Instruction *DetachI = L->getHeader()->getTerminator();
+  SMP.Count = SMP.DefaultCoarseningFactor * TTI.getUserCost(DetachI) / LoopCost;
+
+  return false;
 }
 
 static Task *getTapirLoopForStripMining(const Loop *L, TaskInfo &TI,
@@ -1182,27 +1275,4 @@ Loop *llvm::StripMineLoop(
     TI->recalculate(*Header->getParent(), *DT);
 
   return NewLoop;
-}
-
-/// Given an loop id metadata node, returns the loop hint metadata node with the
-/// given name (for example, "tapir.loop.stripmine.count"). If no such metadata
-/// node exists, then nullptr is returned.
-MDNode *llvm::GetStripMineMetadata(MDNode *LoopID, StringRef Name) {
-  // First operand should refer to the loop id itself.
-  assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
-  assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
-
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-    if (!MD)
-      continue;
-
-    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-    if (!S)
-      continue;
-
-    if (Name.equals(S->getString()))
-      return MD;
-  }
-  return nullptr;
 }
