@@ -4,6 +4,9 @@
 //
 // Generate all the types of files we can bundle.
 //
+// generate the emulated fat object:
+// RUN: %clangxx -O0 -target powerpc64le-ibm-linux-gnu -DEMULATE_FAT_OBJ %s -c -o %s.o
+//
 // RUN: %clang -O0 -target powerpc64le-ibm-linux-gnu %s -E -o %t.i
 // RUN: %clangxx -O0 -target powerpc64le-ibm-linux-gnu -x c++ %s -E -o %t.ii
 // RUN: %clang -O0 -target powerpc64le-ibm-linux-gnu %s -S -emit-llvm -o %t.ll
@@ -253,8 +256,32 @@
 // RUN: diff %t.empty %t.res.tgt1
 // RUN: diff %t.empty %t.res.tgt2
 
+#ifdef EMULATE_FAT_OBJ
+#define BUNDLE_SECTION_PREFIX "__CLANG_OFFLOAD_BUNDLE__"
+#define BUNDLE_SIZE_SECTION_PREFIX "__CLANG_OFFLOAD_BUNDLE_SIZE__"
+
+#define TARGET_HOST "host-powerpc64le-ibm-linux-gnu"
+#define TARGET1 "openmp-powerpc64le-ibm-linux-gnu"
+#define TARGET2 "openmp-x86_64-pc-linux-gnu"
+
+// not to rely on <cstdint>:
+typedef long long int64_t;
+
+// Populate sections with special names recognized by the unbundler;
+// this emulates a fat object created by the bundler
+char str0[] __attribute__((section(BUNDLE_SECTION_PREFIX TARGET_HOST))) = { 0 };
+int64_t size0[] __attribute__((section(BUNDLE_SIZE_SECTION_PREFIX TARGET_HOST))) = { 1 };
+
+char str1[] __attribute__((section(BUNDLE_SECTION_PREFIX TARGET1))) = { "Content of device file 1\n" };
+int64_t size1[] __attribute__((section(BUNDLE_SIZE_SECTION_PREFIX TARGET1))) = { 25 };
+
+char str2[] __attribute__((section(BUNDLE_SECTION_PREFIX TARGET2))) = { "Content of device file 2\n" };
+int64_t size2[] __attribute__((section(BUNDLE_SIZE_SECTION_PREFIX TARGET2))) = { 25 };
+#endif // EMULATE_FAT_OBJ
+
 // Some code so that we can create a binary out of this file.
 int A = 0;
 void test_func(void) {
   ++A;
 }
+
