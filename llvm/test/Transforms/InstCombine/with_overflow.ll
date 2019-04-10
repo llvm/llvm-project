@@ -544,8 +544,9 @@ define { i8, i1 } @uadd_always_overflow(i8 %x) nounwind {
 define { i8, i1 } @usub_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @usub_always_overflow(
 ; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], 64
-; CHECK-NEXT:    [[A:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 63, i8 [[Y]])
-; CHECK-NEXT:    ret { i8, i1 } [[A]]
+; CHECK-NEXT:    [[A:%.*]] = sub nsw i8 63, [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
 ;
   %y = or i8 %x, 64
   %a = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 63, i8 %y)
@@ -567,8 +568,9 @@ define { i8, i1 } @sadd_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @sadd_always_overflow(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 100
 ; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C]], i8 [[X]], i8 100
-; CHECK-NEXT:    [[A:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[Y]], i8 28)
-; CHECK-NEXT:    ret { i8, i1 } [[A]]
+; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[Y]], 28
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
 ;
   %c = icmp sgt i8 %x, 100
   %y = select i1 %c, i8 %x, i8 100
@@ -580,8 +582,9 @@ define { i8, i1 } @ssub_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @ssub_always_overflow(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 29
 ; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C]], i8 [[X]], i8 29
-; CHECK-NEXT:    [[A:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 -100, i8 [[Y]])
-; CHECK-NEXT:    ret { i8, i1 } [[A]]
+; CHECK-NEXT:    [[A:%.*]] = sub nuw i8 -100, [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
 ;
   %c = icmp sgt i8 %x, 29
   %y = select i1 %c, i8 %x, i8 29

@@ -17,6 +17,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/Socket.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Timer.h"
@@ -90,6 +91,11 @@ llvm::Error SystemInitializerCommon::Initialize() {
 
   Log::Initialize();
   HostInfo::Initialize();
+
+  llvm::Error error = Socket::Initialize();
+  if (error)
+    return error;
+
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
 
@@ -132,6 +138,7 @@ void SystemInitializerCommon::Terminate() {
   ProcessWindowsLog::Terminate();
 #endif
 
+  Socket::Terminate();
   HostInfo::Terminate();
   Log::DisableAllLogChannels();
   FileSystem::Terminate();

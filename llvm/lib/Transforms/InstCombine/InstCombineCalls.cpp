@@ -2125,6 +2125,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     }
     break;
   }
+
   case Intrinsic::umul_with_overflow:
   case Intrinsic::smul_with_overflow:
     if (Instruction *I = canonicalizeConstantArg0ToArg1(CI))
@@ -2132,9 +2133,29 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     LLVM_FALLTHROUGH;
 
   case Intrinsic::usub_with_overflow:
+    if (Instruction *I = foldIntrinsicWithOverflowCommon(II))
+      return I;
+    break;
+
   case Intrinsic::ssub_with_overflow: {
     if (Instruction *I = foldIntrinsicWithOverflowCommon(II))
       return I;
+
+    Constant *C;
+    Value *Arg0 = II->getArgOperand(0);
+    Value *Arg1 = II->getArgOperand(1);
+    // Given a constant C that is not the minimum signed value
+    // for an integer of a given bit width:
+    //
+    // ssubo X, C -> saddo X, -C
+    if (match(Arg1, m_Constant(C)) && C->isNotMinSignedValue()) {
+      Value *NegVal = ConstantExpr::getNeg(C);
+      // Build a saddo call that is equivalent to the discovered
+      // ssubo call.
+      return replaceInstUsesWith(
+          *II, Builder.CreateBinaryIntrinsic(Intrinsic::sadd_with_overflow,
+                                             Arg0, NegVal));
+    }
 
     break;
   }

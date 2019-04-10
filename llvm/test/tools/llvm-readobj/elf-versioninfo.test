@@ -92,29 +92,33 @@ LLVM-VERNEED-NEXT:   Dependency {
 LLVM-VERNEED-NEXT:     Version: 1
 LLVM-VERNEED-NEXT:     Count: 2
 LLVM-VERNEED-NEXT:     FileName: verneed1.so.0
-LLVM-VERNEED-NEXT:     Entry {
-LLVM-VERNEED-NEXT:       Hash: 1938
-LLVM-VERNEED-NEXT:       Flags: 0x0
-LLVM-VERNEED-NEXT:       Index: 3
-LLVM-VERNEED-NEXT:       Name: v2
-LLVM-VERNEED-NEXT:     }
-LLVM-VERNEED-NEXT:     Entry {
-LLVM-VERNEED-NEXT:       Hash: 1939
-LLVM-VERNEED-NEXT:       Flags: 0x0
-LLVM-VERNEED-NEXT:       Index: 2
-LLVM-VERNEED-NEXT:       Name: v3
-LLVM-VERNEED-NEXT:     }
+LLVM-VERNEED-NEXT:     Entries [
+LLVM-VERNEED-NEXT:       Entry {
+LLVM-VERNEED-NEXT:         Hash: 1938
+LLVM-VERNEED-NEXT:         Flags: 0x0
+LLVM-VERNEED-NEXT:         Index: 3
+LLVM-VERNEED-NEXT:         Name: v2
+LLVM-VERNEED-NEXT:       }
+LLVM-VERNEED-NEXT:       Entry {
+LLVM-VERNEED-NEXT:         Hash: 1939
+LLVM-VERNEED-NEXT:         Flags: 0x0
+LLVM-VERNEED-NEXT:         Index: 2
+LLVM-VERNEED-NEXT:         Name: v3
+LLVM-VERNEED-NEXT:       }
+LLVM-VERNEED-NEXT:     ]
 LLVM-VERNEED-NEXT:   }
 LLVM-VERNEED-NEXT:   Dependency {
 LLVM-VERNEED-NEXT:     Version: 1
 LLVM-VERNEED-NEXT:     Count: 1
 LLVM-VERNEED-NEXT:     FileName: verneed2.so.0
-LLVM-VERNEED-NEXT:     Entry {
-LLVM-VERNEED-NEXT:       Hash: 1937
-LLVM-VERNEED-NEXT:       Flags: 0x0
-LLVM-VERNEED-NEXT:       Index: 4
-LLVM-VERNEED-NEXT:       Name: v1
-LLVM-VERNEED-NEXT:     }
+LLVM-VERNEED-NEXT:     Entries [
+LLVM-VERNEED-NEXT:       Entry {
+LLVM-VERNEED-NEXT:         Hash: 1937
+LLVM-VERNEED-NEXT:         Flags: 0x0
+LLVM-VERNEED-NEXT:         Index: 4
+LLVM-VERNEED-NEXT:         Name: v1
+LLVM-VERNEED-NEXT:       }
+LLVM-VERNEED-NEXT:     ]
 LLVM-VERNEED-NEXT:   }
 LLVM-VERNEED-NEXT: }
 

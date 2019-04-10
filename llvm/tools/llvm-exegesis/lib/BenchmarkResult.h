@@ -79,10 +79,11 @@ struct InstructionBenchmark {
   static llvm::Expected<std::vector<InstructionBenchmark>>
   readYamls(const LLVMState &State, llvm::StringRef Filename);
 
-  void readYamlFrom(const LLVMState &State, llvm::StringRef InputContent);
+  llvm::Error readYamlFrom(const LLVMState &State,
+                           llvm::StringRef InputContent);
 
   // Write functions, non-const because of YAML traits.
-  void writeYamlTo(const LLVMState &State, llvm::raw_ostream &S);
+  llvm::Error writeYamlTo(const LLVMState &State, llvm::raw_ostream &S);
 
   llvm::Error writeYaml(const LLVMState &State, const llvm::StringRef Filename);
 };

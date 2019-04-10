@@ -5355,6 +5355,16 @@ def : Pat<(i64 (int_aarch64_neon_vcvtfp2fxu (f16 FPR16:$Rn), vecshiftR64:$imm)),
             (i64 (IMPLICIT_DEF)),
             (FCVTZUh FPR16:$Rn, vecshiftR64:$imm),
             hsub))>;
+def : Pat<(i32 (int_aarch64_neon_facge (f16 FPR16:$Rn), (f16 FPR16:$Rm))),
+          (i32 (INSERT_SUBREG
+            (i32 (IMPLICIT_DEF)),
+            (FACGE16 FPR16:$Rn, FPR16:$Rm),
+            hsub))>;
+def : Pat<(i32 (int_aarch64_neon_facgt (f16 FPR16:$Rn), (f16 FPR16:$Rm))),
+          (i32 (INSERT_SUBREG
+            (i32 (IMPLICIT_DEF)),
+            (FACGT16 FPR16:$Rn, FPR16:$Rm),
+            hsub))>;
 
 defm SHL      : SIMDScalarLShiftD<   0, 0b01010, "shl", AArch64vshl>;
 defm SLI      : SIMDScalarLShiftDTied<1, 0b01010, "sli">;

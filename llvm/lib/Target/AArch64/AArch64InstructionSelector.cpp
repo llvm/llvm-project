@@ -840,13 +840,10 @@ bool AArch64InstructionSelector::selectVectorSHL(
     return false;
 
   unsigned Opc = 0;
-  const TargetRegisterClass *RC = nullptr;
   if (Ty == LLT::vector(4, 32)) {
     Opc = AArch64::USHLv4i32;
-    RC = &AArch64::FPR128RegClass;
   } else if (Ty == LLT::vector(2, 32)) {
     Opc = AArch64::USHLv2i32;
-    RC = &AArch64::FPR64RegClass;
   } else {
     LLVM_DEBUG(dbgs() << "Unhandled G_SHL type");
     return false;

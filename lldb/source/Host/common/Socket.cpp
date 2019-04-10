@@ -19,6 +19,8 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/WindowsError.h"
 
 #ifndef LLDB_DISABLE_POSIX
 #include "lldb/Host/posix/DomainSocket.h"
@@ -77,6 +79,31 @@ Socket::Socket(SocketProtocol protocol, bool should_close,
       m_child_processes_inherit(child_processes_inherit) {}
 
 Socket::~Socket() { Close(); }
+
+llvm::Error Socket::Initialize() {
+#if defined(_WIN32)
+  auto wVersion = WINSOCK_VERSION;
+  WSADATA wsaData;
+  int err = ::WSAStartup(wVersion, &wsaData);
+  if (err == 0) {
+    if (wsaData.wVersion < wVersion) {
+      WSACleanup();
+      return llvm::make_error<llvm::StringError>(
+          "WSASock version is not expected.", llvm::inconvertibleErrorCode());
+    }
+  } else {
+    return llvm::errorCodeToError(llvm::mapWindowsError(::WSAGetLastError()));
+  }
+#endif
+
+  return llvm::Error::success();
+}
+
+void Socket::Terminate() {
+#if defined(_WIN32)
+  ::WSACleanup();
+#endif
+}
 
 std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
                                        bool child_processes_inherit,

@@ -169,9 +169,8 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
 }
 
 static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
-                               MachineModuleInfo *MMI, int InlineAsmVariant,
-                               AsmPrinter *AP, unsigned LocCookie,
-                               raw_ostream &OS) {
+                               MachineModuleInfo *MMI, AsmPrinter *AP,
+                               unsigned LocCookie, raw_ostream &OS) {
   // Switch to the inline assembly variant.
   OS << "\t.intel_syntax\n\t";
 
@@ -263,11 +262,9 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
         ++OpNo;  // Skip over the ID number.
 
         if (InlineAsm::isMemKind(OpFlags)) {
-          Error = AP->PrintAsmMemoryOperand(MI, OpNo, InlineAsmVariant,
-                                            /*Modifier*/ nullptr, OS);
+          Error = AP->PrintAsmMemoryOperand(MI, OpNo, /*Modifier*/ nullptr, OS);
         } else {
-          Error = AP->PrintAsmOperand(MI, OpNo, InlineAsmVariant,
-                                      /*Modifier*/ nullptr, OS);
+          Error = AP->PrintAsmOperand(MI, OpNo, /*Modifier*/ nullptr, OS);
         }
       }
       if (Error) {
@@ -284,9 +281,9 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
 }
 
 static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
-                                MachineModuleInfo *MMI, int InlineAsmVariant,
-                                int AsmPrinterVariant, AsmPrinter *AP,
-                                unsigned LocCookie, raw_ostream &OS) {
+                                MachineModuleInfo *MMI, int AsmPrinterVariant,
+                                AsmPrinter *AP, unsigned LocCookie,
+                                raw_ostream &OS) {
   int CurVariant = -1;            // The number of the {.|.|.} region we are in.
   const char *LastEmitted = AsmStr; // One past the last character emitted.
   unsigned NumOperands = MI->getNumOperands();
@@ -441,11 +438,10 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
             }
           } else {
             if (InlineAsm::isMemKind(OpFlags)) {
-              Error = AP->PrintAsmMemoryOperand(MI, OpNo, InlineAsmVariant,
-                                                Modifier[0] ? Modifier : nullptr,
-                                                OS);
+              Error = AP->PrintAsmMemoryOperand(
+                  MI, OpNo, Modifier[0] ? Modifier : nullptr, OS);
             } else {
-              Error = AP->PrintAsmOperand(MI, OpNo, InlineAsmVariant,
+              Error = AP->PrintAsmOperand(MI, OpNo,
                                           Modifier[0] ? Modifier : nullptr, OS);
             }
           }
@@ -515,13 +511,11 @@ void AsmPrinter::EmitInlineAsm(const MachineInstr *MI) const {
 
   // The variant of the current asmprinter.
   int AsmPrinterVariant = MAI->getAssemblerDialect();
-  InlineAsm::AsmDialect InlineAsmVariant = MI->getInlineAsmDialect();
   AsmPrinter *AP = const_cast<AsmPrinter*>(this);
-  if (InlineAsmVariant == InlineAsm::AD_ATT)
-    EmitGCCInlineAsmStr(AsmStr, MI, MMI, InlineAsmVariant, AsmPrinterVariant,
-                        AP, LocCookie, OS);
+  if (MI->getInlineAsmDialect() == InlineAsm::AD_ATT)
+    EmitGCCInlineAsmStr(AsmStr, MI, MMI, AsmPrinterVariant, AP, LocCookie, OS);
   else
-    EmitMSInlineAsmStr(AsmStr, MI, MMI, InlineAsmVariant, AP, LocCookie, OS);
+    EmitMSInlineAsmStr(AsmStr, MI, MMI, AP, LocCookie, OS);
 
   // Emit warnings if we use reserved registers on the clobber list, as
   // that might give surprising results.
@@ -607,8 +601,7 @@ void AsmPrinter::PrintSpecial(const MachineInstr *MI, raw_ostream &OS,
 /// instruction, using the specified assembler variant.  Targets should
 /// override this to format as appropriate.
 bool AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                 unsigned AsmVariant, const char *ExtraCode,
-                                 raw_ostream &O) {
+                                 const char *ExtraCode, raw_ostream &O) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0) return true; // Unknown modifier.
@@ -638,7 +631,6 @@ bool AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 bool AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                                       unsigned AsmVariant,
                                        const char *ExtraCode, raw_ostream &O) {
   // Target doesn't support this yet!
   return true;

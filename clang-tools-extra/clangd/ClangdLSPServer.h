@@ -11,6 +11,7 @@
 
 #include "ClangdServer.h"
 #include "DraftStore.h"
+#include "Features.inc"
 #include "FindSymbols.h"
 #include "GlobalCompilationDatabase.h"
 #include "Path.h"

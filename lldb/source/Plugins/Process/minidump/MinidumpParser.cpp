@@ -24,21 +24,6 @@
 using namespace lldb_private;
 using namespace minidump;
 
-const Header *ParseHeader(llvm::ArrayRef<uint8_t> &data) {
-  const Header *header = nullptr;
-  Status error = consumeObject(data, header);
-
-  uint32_t signature = header->Signature;
-  uint32_t version = header->Version & 0x0000ffff;
-  // the high 16 bits of the version field are implementation specific
-
-  if (error.Fail() || signature != Header::MagicSignature ||
-      version != Header::MagicVersion)
-    return nullptr;
-
-  return header;
-}
-
 llvm::Expected<MinidumpParser>
 MinidumpParser::Create(const lldb::DataBufferSP &data_sp) {
   auto ExpectedFile = llvm::object::MinidumpFile::create(
@@ -63,9 +48,9 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetStream(StreamType stream_type) {
       .getValueOr(llvm::ArrayRef<uint8_t>());
 }
 
-UUID MinidumpParser::GetModuleUUID(const MinidumpModule *module) {
+UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
   auto cv_record =
-      GetData().slice(module->CV_record.RVA, module->CV_record.DataSize);
+      GetData().slice(module->CvRecord.RVA, module->CvRecord.DataSize);
 
   // Read the CV record signature
   const llvm::support::ulittle32_t *signature = nullptr;
@@ -284,28 +269,36 @@ llvm::Optional<lldb::pid_t> MinidumpParser::GetPid() {
   return llvm::None;
 }
 
-llvm::ArrayRef<MinidumpModule> MinidumpParser::GetModuleList() {
-  llvm::ArrayRef<uint8_t> data = GetStream(StreamType::ModuleList);
+llvm::ArrayRef<minidump::Module> MinidumpParser::GetModuleList() {
+  auto ExpectedModules = GetMinidumpFile().getModuleList();
+  if (ExpectedModules)
+    return *ExpectedModules;
 
-  if (data.size() == 0)
-    return {};
-
-  return MinidumpModule::ParseModuleList(data);
+  LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES),
+                 ExpectedModules.takeError(),
+                 "Failed to read module list: {0}");
+  return {};
 }
 
-std::vector<const MinidumpModule *> MinidumpParser::GetFilteredModuleList() {
-  llvm::ArrayRef<MinidumpModule> modules = GetModuleList();
+std::vector<const minidump::Module *> MinidumpParser::GetFilteredModuleList() {
+  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES);
+  auto ExpectedModules = GetMinidumpFile().getModuleList();
+  if (!ExpectedModules) {
+    LLDB_LOG_ERROR(log, ExpectedModules.takeError(),
+                   "Failed to read module list: {0}");
+    return {};
+  }
+
   // map module_name -> filtered_modules index
   typedef llvm::StringMap<size_t> MapType;
   MapType module_name_to_filtered_index;
 
-  std::vector<const MinidumpModule *> filtered_modules;
-  
-  for (const auto &module : modules) {
-    auto ExpectedName = m_file->getString(module.module_name_rva);
+  std::vector<const minidump::Module *> filtered_modules;
+
+  for (const auto &module : *ExpectedModules) {
+    auto ExpectedName = m_file->getString(module.ModuleNameRVA);
     if (!ExpectedName) {
-      LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES),
-                     ExpectedName.takeError(),
+      LLDB_LOG_ERROR(log, ExpectedName.takeError(),
                      "Failed to module name: {0}");
       continue;
     }
@@ -328,7 +321,7 @@ std::vector<const MinidumpModule *> MinidumpParser::GetFilteredModuleList() {
       // times when they are mapped discontiguously, so find the module with
       // the lowest "base_of_image" and use that as the filtered module.
       auto dup_module = filtered_modules[iter->second];
-      if (module.base_of_image < dup_module->base_of_image)
+      if (module.BaseOfImage < dup_module->BaseOfImage)
         filtered_modules[iter->second] = &module;
     }
   }

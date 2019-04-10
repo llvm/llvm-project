@@ -254,9 +254,8 @@ public:
     auto Factory = llvm::make_unique<SymbolIndexActionFactory>(
         CollectorOpts, PragmaHandler.get());
 
-    std::vector<std::string> Args = {
-        "symbol_collector", "-fsyntax-only", "-xc++",
-        "-std=c++11",       "-include",      TestHeaderName};
+    std::vector<std::string> Args = {"symbol_collector", "-fsyntax-only",
+                                     "-xc++", "-include", TestHeaderName};
     Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
     // This allows to override the "-xc++" with something else, i.e.
     // -xobjective-c++.
@@ -1163,6 +1162,15 @@ TEST_F(SymbolCollectorTest, UsingDecl) {
   })";
   runSymbolCollector(Header, /**/ "");
   EXPECT_THAT(Symbols, Contains(QName("std::foo")));
+}
+
+TEST_F(SymbolCollectorTest, CBuiltins) {
+  // In C, printf in stdio.h is a redecl of an implicit builtin.
+  const char *Header = R"(
+    extern int printf(const char*, ...);
+  )";
+  runSymbolCollector(Header, /**/ "", {"-xc"});
+  EXPECT_THAT(Symbols, Contains(QName("printf")));
 }
 
 } // namespace

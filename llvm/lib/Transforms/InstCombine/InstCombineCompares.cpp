@@ -3967,19 +3967,21 @@ bool InstCombiner::OptimizeOverflowCheck(OverflowCheckFlavor OCF, Value *LHS,
     if (match(RHS, m_Zero()))
       return SetResult(LHS, Builder.getFalse(), false);
 
+    OverflowResult OR;
     if (OCF == OCF_UNSIGNED_ADD) {
-      OverflowResult OR = computeOverflowForUnsignedAdd(LHS, RHS, &OrigI);
+      OR = computeOverflowForUnsignedAdd(LHS, RHS, &OrigI);
       if (OR == OverflowResult::NeverOverflows)
         return SetResult(Builder.CreateNUWAdd(LHS, RHS), Builder.getFalse(),
                          true);
-
-      if (OR == OverflowResult::AlwaysOverflows)
-        return SetResult(Builder.CreateAdd(LHS, RHS), Builder.getTrue(), true);
     } else {
-      if (willNotOverflowSignedAdd(LHS, RHS, OrigI))
+      OR = computeOverflowForSignedAdd(LHS, RHS, &OrigI);
+      if (OR == OverflowResult::NeverOverflows)
         return SetResult(Builder.CreateNSWAdd(LHS, RHS), Builder.getFalse(),
                          true);
     }
+
+    if (OR == OverflowResult::AlwaysOverflows)
+      return SetResult(Builder.CreateAdd(LHS, RHS), Builder.getTrue(), true);
     break;
   }
 
@@ -3989,15 +3991,21 @@ bool InstCombiner::OptimizeOverflowCheck(OverflowCheckFlavor OCF, Value *LHS,
     if (match(RHS, m_Zero()))
       return SetResult(LHS, Builder.getFalse(), false);
 
+    OverflowResult OR;
     if (OCF == OCF_UNSIGNED_SUB) {
-      if (willNotOverflowUnsignedSub(LHS, RHS, OrigI))
+      OR = computeOverflowForUnsignedSub(LHS, RHS, &OrigI);
+      if (OR == OverflowResult::NeverOverflows)
         return SetResult(Builder.CreateNUWSub(LHS, RHS), Builder.getFalse(),
                          true);
     } else {
-      if (willNotOverflowSignedSub(LHS, RHS, OrigI))
+      OR = computeOverflowForSignedSub(LHS, RHS, &OrigI);
+      if (OR == OverflowResult::NeverOverflows)
         return SetResult(Builder.CreateNSWSub(LHS, RHS), Builder.getFalse(),
                          true);
     }
+
+    if (OR == OverflowResult::AlwaysOverflows)
+      return SetResult(Builder.CreateSub(LHS, RHS), Builder.getTrue(), true);
     break;
   }
 
@@ -4015,15 +4023,17 @@ bool InstCombiner::OptimizeOverflowCheck(OverflowCheckFlavor OCF, Value *LHS,
     if (match(RHS, m_One()))
       return SetResult(LHS, Builder.getFalse(), false);
 
+    OverflowResult OR;
     if (OCF == OCF_UNSIGNED_MUL) {
-      OverflowResult OR = computeOverflowForUnsignedMul(LHS, RHS, &OrigI);
+      OR = computeOverflowForUnsignedMul(LHS, RHS, &OrigI);
       if (OR == OverflowResult::NeverOverflows)
         return SetResult(Builder.CreateNUWMul(LHS, RHS), Builder.getFalse(),
                          true);
       if (OR == OverflowResult::AlwaysOverflows)
         return SetResult(Builder.CreateMul(LHS, RHS), Builder.getTrue(), true);
     } else {
-      if (willNotOverflowSignedMul(LHS, RHS, OrigI))
+      OR = computeOverflowForSignedMul(LHS, RHS, &OrigI);
+      if (OR == OverflowResult::NeverOverflows)
         return SetResult(Builder.CreateNSWMul(LHS, RHS), Builder.getFalse(),
                          true);
     }

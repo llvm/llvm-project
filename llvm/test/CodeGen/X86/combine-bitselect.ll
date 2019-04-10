@@ -370,44 +370,36 @@ define <8 x i64> @bitselect_v8i64_rm(<8 x i64>, <8 x i64>* nocapture readonly) {
 ;
 ; XOP-LABEL: bitselect_v8i64_rm:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [8589934593,3,8589934593,3]
-; XOP-NEXT:    # ymm2 = mem[0,1,0,1]
-; XOP-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; XOP-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612]
-; XOP-NEXT:    # ymm2 = mem[0,1,0,1]
-; XOP-NEXT:    vandps 32(%rdi), %ymm2, %ymm3
-; XOP-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; XOP-NEXT:    vandps (%rdi), %ymm2, %ymm2
-; XOP-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; XOP-NEXT:    vmovdqa (%rdi), %ymm2
+; XOP-NEXT:    vmovdqa 32(%rdi), %ymm3
+; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm4 = [18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612]
+; XOP-NEXT:    # ymm4 = mem[0,1,0,1]
+; XOP-NEXT:    vpcmov %ymm4, %ymm0, %ymm2, %ymm0
+; XOP-NEXT:    vpcmov %ymm4, %ymm1, %ymm3, %ymm1
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: bitselect_v8i64_rm:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [8589934593,3,8589934593,3]
-; AVX1-NEXT:    # ymm2 = mem[0,1,0,1]
-; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612]
 ; AVX1-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX1-NEXT:    vandps 32(%rdi), %ymm2, %ymm3
+; AVX1-NEXT:    vandps (%rdi), %ymm2, %ymm4
+; AVX1-NEXT:    vandnps %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vorps %ymm0, %ymm4, %ymm0
+; AVX1-NEXT:    vandnps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; AVX1-NEXT:    vandps (%rdi), %ymm2, %ymm2
-; AVX1-NEXT:    vorps %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: bitselect_v8i64_rm:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [8589934593,3,8589934593,3]
-; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
-; AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612]
 ; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX2-NEXT:    vandps 32(%rdi), %ymm2, %ymm3
+; AVX2-NEXT:    vandps (%rdi), %ymm2, %ymm4
+; AVX2-NEXT:    vandnps %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vorps %ymm0, %ymm4, %ymm0
+; AVX2-NEXT:    vandnps %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vandps (%rdi), %ymm2, %ymm2
-; AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v8i64_rm:
@@ -455,16 +447,12 @@ define <8 x i64> @bitselect_v8i64_mr(<8 x i64>* nocapture readonly, <8 x i64>) {
 ;
 ; XOP-LABEL: bitselect_v8i64_mr:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [12884901890,4294967296,12884901890,4294967296]
-; XOP-NEXT:    # ymm2 = mem[0,1,0,1]
-; XOP-NEXT:    vandps 32(%rdi), %ymm2, %ymm3
-; XOP-NEXT:    vandps (%rdi), %ymm2, %ymm2
-; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm4 = [18446744060824649725,18446744069414584319,18446744060824649725,18446744069414584319]
+; XOP-NEXT:    vmovdqa (%rdi), %ymm2
+; XOP-NEXT:    vmovdqa 32(%rdi), %ymm3
+; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm4 = [12884901890,4294967296,12884901890,4294967296]
 ; XOP-NEXT:    # ymm4 = mem[0,1,0,1]
-; XOP-NEXT:    vandps %ymm4, %ymm1, %ymm1
-; XOP-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; XOP-NEXT:    vandps %ymm4, %ymm0, %ymm0
-; XOP-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; XOP-NEXT:    vpcmov %ymm4, %ymm0, %ymm2, %ymm0
+; XOP-NEXT:    vpcmov %ymm4, %ymm1, %ymm3, %ymm1
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: bitselect_v8i64_mr:
@@ -472,13 +460,11 @@ define <8 x i64> @bitselect_v8i64_mr(<8 x i64>* nocapture readonly, <8 x i64>) {
 ; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [12884901890,4294967296,12884901890,4294967296]
 ; AVX1-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX1-NEXT:    vandps 32(%rdi), %ymm2, %ymm3
-; AVX1-NEXT:    vandps (%rdi), %ymm2, %ymm2
-; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm4 = [18446744060824649725,18446744069414584319,18446744060824649725,18446744069414584319]
-; AVX1-NEXT:    # ymm4 = mem[0,1,0,1]
-; AVX1-NEXT:    vandps %ymm4, %ymm1, %ymm1
+; AVX1-NEXT:    vandps (%rdi), %ymm2, %ymm4
+; AVX1-NEXT:    vandnps %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vorps %ymm0, %ymm4, %ymm0
+; AVX1-NEXT:    vandnps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; AVX1-NEXT:    vandps %ymm4, %ymm0, %ymm0
-; AVX1-NEXT:    vorps %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: bitselect_v8i64_mr:
@@ -486,13 +472,11 @@ define <8 x i64> @bitselect_v8i64_mr(<8 x i64>* nocapture readonly, <8 x i64>) {
 ; AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [12884901890,4294967296,12884901890,4294967296]
 ; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX2-NEXT:    vandps 32(%rdi), %ymm2, %ymm3
-; AVX2-NEXT:    vandps (%rdi), %ymm2, %ymm2
-; AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm4 = [18446744060824649725,18446744069414584319,18446744060824649725,18446744069414584319]
-; AVX2-NEXT:    # ymm4 = mem[0,1,0,1]
-; AVX2-NEXT:    vandps %ymm4, %ymm1, %ymm1
+; AVX2-NEXT:    vandps (%rdi), %ymm2, %ymm4
+; AVX2-NEXT:    vandnps %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vorps %ymm0, %ymm4, %ymm0
+; AVX2-NEXT:    vandnps %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vandps %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v8i64_mr:
@@ -536,44 +520,36 @@ define <8 x i64> @bitselect_v8i64_mm(<8 x i64>* nocapture readonly, <8 x i64>* n
 ;
 ; XOP-LABEL: bitselect_v8i64_mm:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = [3,8589934593,3,8589934593]
-; XOP-NEXT:    # ymm0 = mem[0,1,0,1]
-; XOP-NEXT:    vandps 32(%rdi), %ymm0, %ymm1
-; XOP-NEXT:    vandps (%rdi), %ymm0, %ymm0
+; XOP-NEXT:    vmovdqa (%rsi), %ymm0
+; XOP-NEXT:    vmovdqa 32(%rsi), %ymm1
 ; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
 ; XOP-NEXT:    # ymm2 = mem[0,1,0,1]
-; XOP-NEXT:    vandps 32(%rsi), %ymm2, %ymm3
-; XOP-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; XOP-NEXT:    vandps (%rsi), %ymm2, %ymm2
-; XOP-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; XOP-NEXT:    vpcmov %ymm2, (%rdi), %ymm0, %ymm0
+; XOP-NEXT:    vpcmov %ymm2, 32(%rdi), %ymm1, %ymm1
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: bitselect_v8i64_mm:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = [3,8589934593,3,8589934593]
-; AVX1-NEXT:    # ymm0 = mem[0,1,0,1]
-; AVX1-NEXT:    vandps 32(%rdi), %ymm0, %ymm1
-; AVX1-NEXT:    vandps (%rdi), %ymm0, %ymm0
-; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
-; AVX1-NEXT:    # ymm2 = mem[0,1,0,1]
-; AVX1-NEXT:    vandps 32(%rsi), %ymm2, %ymm3
-; AVX1-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; AVX1-NEXT:    vandps (%rsi), %ymm2, %ymm2
-; AVX1-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; AVX1-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX1-NEXT:    vandps 32(%rsi), %ymm1, %ymm2
+; AVX1-NEXT:    vandps (%rsi), %ymm1, %ymm0
+; AVX1-NEXT:    vandnps (%rdi), %ymm1, %ymm3
+; AVX1-NEXT:    vorps %ymm3, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps 32(%rdi), %ymm1, %ymm1
+; AVX1-NEXT:    vorps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: bitselect_v8i64_mm:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = [3,8589934593,3,8589934593]
-; AVX2-NEXT:    # ymm0 = mem[0,1,0,1]
-; AVX2-NEXT:    vandps 32(%rdi), %ymm0, %ymm1
-; AVX2-NEXT:    vandps (%rdi), %ymm0, %ymm0
-; AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
-; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
-; AVX2-NEXT:    vandps 32(%rsi), %ymm2, %ymm3
-; AVX2-NEXT:    vorps %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vandps (%rsi), %ymm2, %ymm2
-; AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX2-NEXT:    vandps 32(%rsi), %ymm1, %ymm2
+; AVX2-NEXT:    vandps (%rsi), %ymm1, %ymm0
+; AVX2-NEXT:    vandnps (%rdi), %ymm1, %ymm3
+; AVX2-NEXT:    vorps %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vandnps 32(%rdi), %ymm1, %ymm1
+; AVX2-NEXT:    vorps %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v8i64_mm:
