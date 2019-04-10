@@ -452,6 +452,15 @@ unsigned LLVMDILocationGetColumn(LLVMMetadataRef Location);
 LLVMMetadataRef LLVMDILocationGetScope(LLVMMetadataRef Location);
 
 /**
+ * Get the "inline at" location associated with this debug location.
+ * \param Location     The debug location.
+ *
+ * @see DILocation::getInlinedAt()
+ */
+LLVMMetadataRef LLVMDILocationGetInlinedAt(LLVMMetadataRef Location);
+
+
+/**
  * Create a type array.
  * \param Builder        The DIBuilder.
  * \param Data           The type elements.
@@ -1191,6 +1200,22 @@ LLVMMetadataRef LLVMGetSubprogram(LLVMValueRef Func);
  * @see llvm::Function::setSubprogram()
  */
 void LLVMSetSubprogram(LLVMValueRef Func, LLVMMetadataRef SP);
+
+/**
+ * Get the debug location for the given instruction.
+ *
+ * @see llvm::Instruction::getDebugLoc()
+ */
+LLVMMetadataRef LLVMInstructionGetDebugLoc(LLVMValueRef Inst);
+
+/**
+ * Set the debug location for the given instruction.
+ *
+ * To clear the location metadata of the given instruction, pass NULL to \p Loc.
+ *
+ * @see llvm::Instruction::setDebugLoc()
+ */
+void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc);
 
 /**
  * Obtain the enumerated type of a Metadata instance.

@@ -34,9 +34,6 @@ def get_stopped_threads(process, reason):
 class SBProcess
 {
 public:
-    //------------------------------------------------------------------
-    /// Broadcaster event bits definitions.
-    //------------------------------------------------------------------
     enum
     {
         eBroadcastBitStateChanged   = (1 << 0),

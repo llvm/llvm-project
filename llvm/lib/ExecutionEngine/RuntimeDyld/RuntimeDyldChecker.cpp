@@ -853,7 +853,7 @@ RuntimeDyldChecker::RuntimeDyldChecker(
                       MCDisassembler *Disassembler,
                       MCInstPrinter *InstPrinter,
                       raw_ostream &ErrStream)
-    : Impl(llvm::make_unique<RuntimeDyldCheckerImpl>(
+    : Impl(::llvm::make_unique<RuntimeDyldCheckerImpl>(
                                             std::move(IsSymbolValid),
                                             std::move(GetSymbolAddress),
                                             std::move(GetSymbolContent),

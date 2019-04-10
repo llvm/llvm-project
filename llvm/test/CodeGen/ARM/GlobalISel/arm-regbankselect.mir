@@ -71,6 +71,9 @@
   define void @test_fpext_s32_to_s64() #0 { ret void }
   define void @test_fptrunc_s64_to_s32() #0 { ret void }
 
+  define void @test_fpconst_s32() #0 { ret void }
+  define void @test_fpconst_s64() #0 { ret void }
+
   define void @test_fptosi_s32() #0 { ret void }
   define void @test_fptosi_s64() #0 { ret void }
   define void @test_fptoui_s32() #0 { ret void }
@@ -1285,6 +1288,42 @@ body:             |
     %1(s32) = G_FPTRUNC %0
     $s0 = COPY %1(s32)
     BX_RET 14, $noreg, implicit $s0
+...
+---
+name:            test_fpconst_s32
+# CHECK-LABEL: name: test_fpconst_s32
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: fprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+body:             |
+  bb.0:
+    liveins:
+
+    %0(s32) = G_FCONSTANT float -1.25
+    $s0 = COPY %0(s32)
+    BX_RET 14, $noreg, implicit $s0
+...
+---
+name:            test_fpconst_s64
+# CHECK-LABEL: name: test_fpconst_s64
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: fprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+body:             |
+  bb.0:
+    liveins:
+
+    %0(s64) = G_FCONSTANT double -2.4
+    $d0 = COPY %0(s64)
+    BX_RET 14, $noreg, implicit $d0
 ...
 ---
 name:            test_fptosi_s32

@@ -744,15 +744,8 @@ bool ObjCARCContract::doInitialization(Module &M) {
   EP.init(&M);
 
   // Initialize RVInstMarker.
-  RVInstMarker = nullptr;
-  if (NamedMDNode *NMD =
-          M.getNamedMetadata("clang.arc.retainAutoreleasedReturnValueMarker"))
-    if (NMD->getNumOperands() == 1) {
-      const MDNode *N = NMD->getOperand(0);
-      if (N->getNumOperands() == 1)
-        if (const MDString *S = dyn_cast<MDString>(N->getOperand(0)))
-          RVInstMarker = S;
-    }
+  const char *MarkerKey = "clang.arc.retainAutoreleasedReturnValueMarker";
+  RVInstMarker = dyn_cast_or_null<MDString>(M.getModuleFlag(MarkerKey));
 
   return false;
 }

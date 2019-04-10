@@ -34,7 +34,6 @@ extern "C" {
  */
 
 // Opaque type wrappers
-typedef struct LLVMOpaqueObjectFile *LLVMObjectFileRef;
 typedef struct LLVMOpaqueSectionIterator *LLVMSectionIteratorRef;
 typedef struct LLVMOpaqueSymbolIterator *LLVMSymbolIteratorRef;
 typedef struct LLVMOpaqueRelocationIterator *LLVMRelocationIteratorRef;
@@ -103,25 +102,56 @@ LLVMMemoryBufferRef LLVMBinaryCopyMemoryBuffer(LLVMBinaryRef BR);
  */
 LLVMBinaryType LLVMBinaryGetType(LLVMBinaryRef BR);
 
+/**
+ * Retrieve a copy of the the section iterator for this object file.
+ *
+ * If there are no sections, the result is NULL.
+ *
+ * The returned iterator is merely a shallow copy. Nevertheless, it is
+ * the responsibility of the caller to free it with
+ * \c LLVMDisposeSectionIterator.
+ *
+ * @see llvm::object::sections()
+ */
+LLVMSectionIteratorRef LLVMObjectFileCopySectionIterator(LLVMBinaryRef BR);
 
-// ObjectFile creation
-LLVMObjectFileRef LLVMCreateObjectFile(LLVMMemoryBufferRef MemBuf);
-void LLVMDisposeObjectFile(LLVMObjectFileRef ObjectFile);
+/**
+ * Returns whether the given section iterator is at the end.
+ *
+ * @see llvm::object::section_end
+ */
+LLVMBool LLVMObjectFileIsSectionIteratorAtEnd(LLVMBinaryRef BR,
+                                              LLVMSectionIteratorRef SI);
 
-// ObjectFile Section iterators
-LLVMSectionIteratorRef LLVMGetSections(LLVMObjectFileRef ObjectFile);
+/**
+ * Retrieve a copy of the the symbol iterator for this object file.
+ *
+ * If there are no symbols, the result is NULL.
+ *
+ * The returned iterator is merely a shallow copy. Nevertheless, it is
+ * the responsibility of the caller to free it with
+ * \c LLVMDisposeSymbolIterator.
+ *
+ * @see llvm::object::symbols()
+ */
+LLVMSymbolIteratorRef LLVMObjectFileCopySymbolIterator(LLVMBinaryRef BR);
+
+/**
+ * Returns whether the given symbol iterator is at the end.
+ *
+ * @see llvm::object::symbol_end
+ */
+LLVMBool LLVMObjectFileIsSymbolIteratorAtEnd(LLVMBinaryRef BR,
+                                             LLVMSymbolIteratorRef SI);
+
 void LLVMDisposeSectionIterator(LLVMSectionIteratorRef SI);
-LLVMBool LLVMIsSectionIteratorAtEnd(LLVMObjectFileRef ObjectFile,
-                                LLVMSectionIteratorRef SI);
+
 void LLVMMoveToNextSection(LLVMSectionIteratorRef SI);
 void LLVMMoveToContainingSection(LLVMSectionIteratorRef Sect,
                                  LLVMSymbolIteratorRef Sym);
 
 // ObjectFile Symbol iterators
-LLVMSymbolIteratorRef LLVMGetSymbols(LLVMObjectFileRef ObjectFile);
 void LLVMDisposeSymbolIterator(LLVMSymbolIteratorRef SI);
-LLVMBool LLVMIsSymbolIteratorAtEnd(LLVMObjectFileRef ObjectFile,
-                                LLVMSymbolIteratorRef SI);
 void LLVMMoveToNextSymbol(LLVMSymbolIteratorRef SI);
 
 // SectionRef accessors
@@ -154,6 +184,28 @@ uint64_t LLVMGetRelocationType(LLVMRelocationIteratorRef RI);
 const char *LLVMGetRelocationTypeName(LLVMRelocationIteratorRef RI);
 const char *LLVMGetRelocationValueString(LLVMRelocationIteratorRef RI);
 
+/** Deprecated: Use LLVMBinaryRef instead. */
+typedef struct LLVMOpaqueObjectFile *LLVMObjectFileRef;
+
+/** Deprecated: Use LLVMCreateBinary instead. */
+LLVMObjectFileRef LLVMCreateObjectFile(LLVMMemoryBufferRef MemBuf);
+
+/** Deprecated: Use LLVMDisposeBinary instead. */
+void LLVMDisposeObjectFile(LLVMObjectFileRef ObjectFile);
+
+/** Deprecated: Use LLVMObjectFileCopySectionIterator instead. */
+LLVMSectionIteratorRef LLVMGetSections(LLVMObjectFileRef ObjectFile);
+
+/** Deprecated: Use LLVMObjectFileIsSectionIteratorAtEnd instead. */
+LLVMBool LLVMIsSectionIteratorAtEnd(LLVMObjectFileRef ObjectFile,
+                                    LLVMSectionIteratorRef SI);
+
+/** Deprecated: Use LLVMObjectFileCopySymbolIterator instead. */
+LLVMSymbolIteratorRef LLVMGetSymbols(LLVMObjectFileRef ObjectFile);
+
+/** Deprecated: Use LLVMObjectFileIsSymbolIteratorAtEnd instead. */
+LLVMBool LLVMIsSymbolIteratorAtEnd(LLVMObjectFileRef ObjectFile,
+                                   LLVMSymbolIteratorRef SI);
 /**
  * @}
  */

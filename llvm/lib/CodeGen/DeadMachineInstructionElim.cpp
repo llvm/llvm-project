@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -34,7 +32,6 @@ namespace {
     const TargetRegisterInfo *TRI;
     const MachineRegisterInfo *MRI;
     const TargetInstrInfo *TII;
-    LiveIntervals *LIS;
     BitVector LivePhysRegs;
 
   public:
@@ -44,7 +41,7 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
+      AU.setPreservesCFG();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -81,15 +78,9 @@ bool DeadMachineInstructionElim::isDead(const MachineInstr *MI) const {
       unsigned Reg = MO.getReg();
       if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
         // Don't delete live physreg defs, or any reserved register defs.
-        // Do not remove physreg defs if we have LIS as we may be unable
-        // to accurately recompute its liveness.
-        if (LivePhysRegs.test(Reg) || MRI->isReserved(Reg) || LIS)
+        if (LivePhysRegs.test(Reg) || MRI->isReserved(Reg))
           return false;
       } else {
-        // An instruction can also use its def in case if it is a tied operand.
-        // TODO: Technically we can also remove it if def dominates the use.
-        //       This can happen when two instructions define different subregs
-        //       of the same register.
         for (const MachineInstr &Use : MRI->use_nodbg_instructions(Reg)) {
           if (&Use != MI)
             // This def has a non-debug use. Don't delete the instruction!
@@ -111,8 +102,6 @@ bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget().getInstrInfo();
-  LIS = getAnalysisIfAvailable<LiveIntervals>();
-  DenseSet<unsigned> RecalcRegs;
 
   // Loop over all instructions in all blocks, from bottom to top, so that it's
   // more likely that chains of dependent but ultimately dead instructions will
@@ -138,14 +127,6 @@ bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
       // If the instruction is dead, delete it!
       if (isDead(MI)) {
         LLVM_DEBUG(dbgs() << "DeadMachineInstructionElim: DELETING: " << *MI);
-        if (LIS) {
-          for (const MachineOperand &MO : MI->operands()) {
-            if (MO.isReg() && TRI->isVirtualRegister(MO.getReg()))
-              RecalcRegs.insert(MO.getReg());
-          }
-          LIS->RemoveMachineInstrFromMaps(*MI);
-        }
-
         // It is possible that some DBG_VALUE instructions refer to this
         // instruction.  They get marked as undef and will be deleted
         // in the live debug variable analysis.
@@ -189,12 +170,5 @@ bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
   }
 
   LivePhysRegs.clear();
-
-  for (auto Reg : RecalcRegs) {
-    LIS->removeInterval(Reg);
-    if (!MRI->reg_empty(Reg))
-      LIS->createAndComputeVirtRegInterval(Reg);
-  }
-
   return AnyChanges;
 }

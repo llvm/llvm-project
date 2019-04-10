@@ -148,29 +148,33 @@
 # CHECK-NEXT:      Version: 1
 # CHECK-NEXT:      Count: 2
 # CHECK-NEXT:      FileName: verneed1.so.0
-# CHECK-NEXT:      Entry {
-# CHECK-NEXT:        Hash: 1938
-# CHECK-NEXT:        Flags: 0x0
-# CHECK-NEXT:        Index: 3
-# CHECK-NEXT:        Name: v2
-# CHECK-NEXT:      }
-# CHECK-NEXT:      Entry {
-# CHECK-NEXT:        Hash: 1939
-# CHECK-NEXT:        Flags: 0x0
-# CHECK-NEXT:        Index: 2
-# CHECK-NEXT:        Name: v3
-# CHECK-NEXT:      }
+# CHECK-NEXT:      Entries [
+# CHECK-NEXT:        Entry {
+# CHECK-NEXT:          Hash: 1938
+# CHECK-NEXT:          Flags: 0x0
+# CHECK-NEXT:          Index: 3
+# CHECK-NEXT:          Name: v2
+# CHECK-NEXT:        }
+# CHECK-NEXT:        Entry {
+# CHECK-NEXT:          Hash: 1939
+# CHECK-NEXT:          Flags: 0x0
+# CHECK-NEXT:          Index: 2
+# CHECK-NEXT:          Name: v3
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ]
 # CHECK-NEXT:    }
 # CHECK-NEXT:    Dependency {
 # CHECK-NEXT:      Version: 1
 # CHECK-NEXT:      Count: 1
 # CHECK-NEXT:      FileName: verneed2.so.0
-# CHECK-NEXT:      Entry {
-# CHECK-NEXT:        Hash: 1937
-# CHECK-NEXT:        Flags: 0x0
-# CHECK-NEXT:        Index: 4
-# CHECK-NEXT:        Name: v1
-# CHECK-NEXT:      }
+# CHECK-NEXT:      Entries [
+# CHECK-NEXT:        Entry {
+# CHECK-NEXT:          Hash: 1937
+# CHECK-NEXT:          Flags: 0x0
+# CHECK-NEXT:          Index: 4
+# CHECK-NEXT:          Name: v1
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ]
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 

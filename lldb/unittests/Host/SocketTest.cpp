@@ -18,6 +18,7 @@
 #include "lldb/Host/common/UDPSocket.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Testing/Support/Error.h"
 
 #ifndef LLDB_DISABLE_POSIX
 #include "lldb/Host/posix/DomainSocket.h"
@@ -28,17 +29,10 @@ using namespace lldb_private;
 class SocketTest : public testing::Test {
 public:
   void SetUp() override {
-#if defined(_MSC_VER)
-    WSADATA data;
-    ::WSAStartup(MAKEWORD(2, 2), &data);
-#endif
+    ASSERT_THAT_ERROR(Socket::Initialize(), llvm::Succeeded());
   }
 
-  void TearDown() override {
-#if defined(_MSC_VER)
-    ::WSACleanup();
-#endif
-  }
+  void TearDown() override { Socket::Terminate(); }
 
 protected:
   static void AcceptThread(Socket *listen_socket,

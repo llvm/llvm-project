@@ -46,6 +46,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   const LLT v2s32 = LLT::vector(2, 32);
   const LLT v4s32 = LLT::vector(4, 32);
   const LLT v2s64 = LLT::vector(2, 64);
+  const LLT v2p0 = LLT::vector(2, p0);
 
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
     .legalFor({p0, s1, s8, s16, s32, s64, v4s32, v2s64})
@@ -105,10 +106,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_LSHR, G_ASHR})
-    .legalFor({{s32, s32}, {s64, s64}})
-    .clampScalar(1, s32, s64)
-    .clampScalar(0, s32, s64)
-    .minScalarSameAs(1, 0);
+      .legalFor({{s32, s32}, {s64, s64}, {v2s32, v2s32}, {v4s32, v4s32}})
+      .clampScalar(1, s32, s64)
+      .clampScalar(0, s32, s64)
+      .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder({G_SREM, G_UREM})
       .lowerFor({s1, s8, s16, s32, s64});
@@ -258,10 +259,34 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder(G_ICMP)
-      .legalFor({{s32, s32}, {s32, s64}, {s32, p0}})
+      .legalFor({{s32, s32},
+                 {s32, s64},
+                 {s32, p0},
+                 {v4s32, v4s32},
+                 {v2s32, v2s32},
+                 {v2s64, v2s64},
+                 {v2s64, v2p0},
+                 {v4s16, v4s16},
+                 {v8s16, v8s16},
+                 {v8s8, v8s8},
+                 {v16s8, v16s8}})
       .clampScalar(0, s32, s32)
       .clampScalar(1, s32, s64)
-      .widenScalarToNextPow2(1);
+      .minScalarEltSameAsIf(
+          [=](const LegalityQuery &Query) {
+            const LLT &Ty = Query.Types[0];
+            const LLT &SrcTy = Query.Types[1];
+            return Ty.isVector() && !SrcTy.getElementType().isPointer() &&
+                   Ty.getElementType() != SrcTy.getElementType();
+          },
+          0, 1)
+      .minScalarOrEltIf(
+          [=](const LegalityQuery &Query) { return Query.Types[1] == v2s16; },
+          1, s32)
+      .minScalarOrEltIf(
+          [=](const LegalityQuery &Query) { return Query.Types[1] == v2p0; }, 0,
+          s64)
+      .widenScalarOrEltToNextPow2(1);
 
   getActionDefinitionsBuilder(G_FCMP)
       .legalFor({{s32, s32}, {s32, s64}})
@@ -272,6 +297,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   // Extensions
   getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
       .legalForCartesianProduct({s8, s16, s32, s64}, {s1, s8, s16, s32});
+
+  getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
 
   // FP conversions
   getActionDefinitionsBuilder(G_FPTRUNC).legalFor(

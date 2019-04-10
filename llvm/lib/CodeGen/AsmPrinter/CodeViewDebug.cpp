@@ -1154,13 +1154,15 @@ static bool needsReferenceType(const DbgVariableLocation &Loc) {
 }
 
 void CodeViewDebug::calculateRanges(
-    LocalVariable &Var, const DbgValueHistoryMap::InstrRanges &Ranges) {
+    LocalVariable &Var, const DbgValueHistoryMap::Entries &Entries) {
   const TargetRegisterInfo *TRI = Asm->MF->getSubtarget().getRegisterInfo();
 
   // Calculate the definition ranges.
-  for (auto I = Ranges.begin(), E = Ranges.end(); I != E; ++I) {
-    const InsnRange &Range = *I;
-    const MachineInstr *DVInst = Range.first;
+  for (auto I = Entries.begin(), E = Entries.end(); I != E; ++I) {
+    const auto &Entry = *I;
+    if (!Entry.isDbgValue())
+      continue;
+    const MachineInstr *DVInst = Entry.getInstr();
     assert(DVInst->isDebugValue() && "Invalid History entry");
     // FIXME: Find a way to represent constant variables, since they are
     // relatively common.
@@ -1187,7 +1189,7 @@ void CodeViewDebug::calculateRanges(
       // Start over using that.
       Var.UseReferenceType = true;
       Var.DefRanges.clear();
-      calculateRanges(Var, Ranges);
+      calculateRanges(Var, Entries);
       return;
     }
 
@@ -1215,21 +1217,15 @@ void CodeViewDebug::calculateRanges(
     }
 
     // Compute the label range.
-    const MCSymbol *Begin = getLabelBeforeInsn(Range.first);
-    const MCSymbol *End = getLabelAfterInsn(Range.second);
-    if (!End) {
-      // This range is valid until the next overlapping bitpiece. In the
-      // common case, ranges will not be bitpieces, so they will overlap.
-      auto J = std::next(I);
-      const DIExpression *DIExpr = DVInst->getDebugExpression();
-      while (J != E &&
-             !DIExpr->fragmentsOverlap(J->first->getDebugExpression()))
-        ++J;
-      if (J != E)
-        End = getLabelBeforeInsn(J->first);
-      else
-        End = Asm->getFunctionEnd();
-    }
+    const MCSymbol *Begin = getLabelBeforeInsn(Entry.getInstr());
+    const MCSymbol *End;
+    if (Entry.getEndIndex() != DbgValueHistoryMap::NoEntry) {
+      auto &EndingEntry = Entries[Entry.getEndIndex()];
+      End = EndingEntry.isDbgValue()
+                ? getLabelBeforeInsn(EndingEntry.getInstr())
+                : getLabelAfterInsn(EndingEntry.getInstr());
+    } else
+      End = Asm->getFunctionEnd();
 
     // If the last range end is our begin, just extend the last range.
     // Otherwise make a new range.
@@ -1257,7 +1253,7 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
     const DILocation *InlinedAt = IV.second;
 
     // Instruction ranges, specifying where IV is accessible.
-    const auto &Ranges = I.second;
+    const auto &Entries = I.second;
 
     LexicalScope *Scope = nullptr;
     if (InlinedAt)
@@ -1271,7 +1267,7 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
     LocalVariable Var;
     Var.DIVar = DIVar;
 
-    calculateRanges(Var, Ranges);
+    calculateRanges(Var, Entries);
     recordLocalVariable(std::move(Var), Scope);
   }
 }

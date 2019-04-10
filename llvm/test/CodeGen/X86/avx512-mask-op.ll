@@ -1069,10 +1069,9 @@ define <64 x i8> @test16(i64 %x) {
 ; KNL-NEXT:    kmovw %ecx, %k1
 ; KNL-NEXT:    kmovw %eax, %k2
 ; KNL-NEXT:    kmovw %edi, %k3
-; KNL-NEXT:    movb $1, %al
-; KNL-NEXT:    kmovw %eax, %k4
-; KNL-NEXT:    kshiftrw $5, %k0, %k5
-; KNL-NEXT:    kxorw %k4, %k5, %k4
+; KNL-NEXT:    kshiftrw $5, %k0, %k4
+; KNL-NEXT:    kxnorw %k0, %k0, %k5
+; KNL-NEXT:    kxorw %k5, %k4, %k4
 ; KNL-NEXT:    kshiftlw $15, %k4, %k4
 ; KNL-NEXT:    kshiftrw $10, %k4, %k4
 ; KNL-NEXT:    kxorw %k4, %k0, %k4
@@ -1091,8 +1090,7 @@ define <64 x i8> @test16(i64 %x) {
 ; SKX-LABEL: test16:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    kmovq %rdi, %k0
-; SKX-NEXT:    movb $1, %al
-; SKX-NEXT:    kmovd %eax, %k1
+; SKX-NEXT:    kxnorw %k0, %k0, %k1
 ; SKX-NEXT:    kshiftrq $5, %k0, %k2
 ; SKX-NEXT:    kxorq %k1, %k2, %k1
 ; SKX-NEXT:    kshiftlq $63, %k1, %k1
@@ -1104,8 +1102,7 @@ define <64 x i8> @test16(i64 %x) {
 ; AVX512BW-LABEL: test16:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovq %rdi, %k0
-; AVX512BW-NEXT:    movb $1, %al
-; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    kxnorw %k0, %k0, %k1
 ; AVX512BW-NEXT:    kshiftrq $5, %k0, %k2
 ; AVX512BW-NEXT:    kxorq %k1, %k2, %k1
 ; AVX512BW-NEXT:    kshiftlq $63, %k1, %k1
@@ -1125,10 +1122,9 @@ define <64 x i8> @test16(i64 %x) {
 ; AVX512DQ-NEXT:    kmovw %ecx, %k1
 ; AVX512DQ-NEXT:    kmovw %eax, %k2
 ; AVX512DQ-NEXT:    kmovw %edi, %k3
-; AVX512DQ-NEXT:    movb $1, %al
-; AVX512DQ-NEXT:    kmovw %eax, %k4
-; AVX512DQ-NEXT:    kshiftrw $5, %k0, %k5
-; AVX512DQ-NEXT:    kxorw %k4, %k5, %k4
+; AVX512DQ-NEXT:    kshiftrw $5, %k0, %k4
+; AVX512DQ-NEXT:    kxnorw %k0, %k0, %k5
+; AVX512DQ-NEXT:    kxorw %k5, %k4, %k4
 ; AVX512DQ-NEXT:    kshiftlw $15, %k4, %k4
 ; AVX512DQ-NEXT:    kshiftrw $10, %k4, %k4
 ; AVX512DQ-NEXT:    kxorw %k4, %k0, %k0
@@ -1147,10 +1143,9 @@ define <64 x i8> @test16(i64 %x) {
 ; X86-LABEL: test16:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k0
-; X86-NEXT:    movb $1, %al
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    kshiftrq $5, %k0, %k2
-; X86-NEXT:    kxorq %k1, %k2, %k1
+; X86-NEXT:    kshiftrq $5, %k0, %k1
+; X86-NEXT:    kxnorw %k0, %k0, %k2
+; X86-NEXT:    kxorq %k2, %k1, %k1
 ; X86-NEXT:    kshiftlq $63, %k1, %k1
 ; X86-NEXT:    kshiftrq $58, %k1, %k1
 ; X86-NEXT:    kxorq %k1, %k0, %k0

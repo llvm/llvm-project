@@ -4635,6 +4635,7 @@ void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
                       Obj->base() + StrTab->sh_offset + Verneed->vn_file)));
 
     const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
+    ListScope L(W, "Entries");
     for (unsigned J = 0; J < Verneed->vn_cnt; ++J) {
       const Elf_Vernaux *Vernaux =
           reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);

@@ -50,6 +50,9 @@ public:
 
   ~Socket() override;
 
+  static llvm::Error Initialize();
+  static void Terminate();
+
   static std::unique_ptr<Socket> Create(const SocketProtocol protocol,
                                         bool child_processes_inherit,
                                         Status &error);

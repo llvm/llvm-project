@@ -37,6 +37,7 @@
 #include "index/Symbol.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Format/Format.h"
@@ -190,7 +191,9 @@ struct CompletionCandidate {
 
   // Returns a token identifying the overload set this is part of.
   // 0 indicates it's not part of any overload set.
-  size_t overloadSet() const {
+  size_t overloadSet(const CodeCompleteOptions &Opts) const {
+    if (!Opts.BundleOverloads)
+      return 0;
     llvm::SmallString<256> Scratch;
     if (IndexResult) {
       switch (IndexResult->SymInfo.Kind) {
@@ -207,7 +210,7 @@ struct CompletionCandidate {
         // This could break #include insertion.
         return llvm::hash_combine(
             (IndexResult->Scope + IndexResult->Name).toStringRef(Scratch),
-            headerToInsertIfAllowed().getValueOr(""));
+            headerToInsertIfAllowed(Opts).getValueOr(""));
       default:
         return 0;
       }
@@ -222,12 +225,14 @@ struct CompletionCandidate {
       D->printQualifiedName(OS);
     }
     return llvm::hash_combine(Scratch,
-                              headerToInsertIfAllowed().getValueOr(""));
+                              headerToInsertIfAllowed(Opts).getValueOr(""));
   }
 
   // The best header to include if include insertion is allowed.
-  llvm::Optional<llvm::StringRef> headerToInsertIfAllowed() const {
-    if (RankedIncludeHeaders.empty())
+  llvm::Optional<llvm::StringRef>
+  headerToInsertIfAllowed(const CodeCompleteOptions &Opts) const {
+    if (Opts.InsertIncludes == CodeCompleteOptions::NeverInsert ||
+        RankedIncludeHeaders.empty())
       return None;
     if (SemaResult && SemaResult->Declaration) {
       // Avoid inserting new #include if the declaration is found in the current
@@ -337,7 +342,7 @@ struct CodeCompletionBuilder {
           Includes.calculateIncludePath(*ResolvedDeclaring, *ResolvedInserted),
           Includes.shouldInsertInclude(*ResolvedDeclaring, *ResolvedInserted));
     };
-    bool ShouldInsert = C.headerToInsertIfAllowed().hasValue();
+    bool ShouldInsert = C.headerToInsertIfAllowed(Opts).hasValue();
     // Calculate include paths and edits for all possible headers.
     for (const auto &Inc : C.RankedIncludeHeaders) {
       if (auto ToInclude = Inserted(Inc)) {
@@ -1110,14 +1115,12 @@ llvm::Optional<FuzzyFindRequest>
 speculativeFuzzyFindRequestForCompletion(FuzzyFindRequest CachedReq,
                                          PathRef File, llvm::StringRef Content,
                                          Position Pos) {
-  auto Filter = speculateCompletionFilter(Content, Pos);
-  if (!Filter) {
-    elog("Failed to speculate filter text for code completion at Pos "
-         "{0}:{1}: {2}",
-         Pos.line, Pos.character, Filter.takeError());
-    return None;
+  auto Offset = positionToOffset(Content, Pos);
+  if (!Offset) {
+    elog("No speculative filter: bad offset {0} in {1}", Pos, File);
+    return llvm::None;
   }
-  CachedReq.Query = *Filter;
+  CachedReq.Query = guessCompletionPrefix(Content, *Offset).Name;
   return CachedReq;
 }
 
@@ -1374,7 +1377,7 @@ private:
       if (C.IndexResult)
         C.RankedIncludeHeaders = getRankedIncludes(*C.IndexResult);
       C.Name = IndexResult ? IndexResult->Name : Recorder->getName(*SemaResult);
-      if (auto OverloadSet = Opts.BundleOverloads ? C.overloadSet() : 0) {
+      if (auto OverloadSet = C.overloadSet(Opts)) {
         auto Ret = BundleLookup.try_emplace(OverloadSet, Bundles.size());
         if (Ret.second)
           Bundles.emplace_back();
@@ -1537,29 +1540,26 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   return Result;
 }
 
-llvm::Expected<llvm::StringRef>
-speculateCompletionFilter(llvm::StringRef Content, Position Pos) {
-  auto Offset = positionToOffset(Content, Pos);
-  if (!Offset)
-    return llvm::make_error<llvm::StringError>(
-        "Failed to convert position to offset in content.",
-        llvm::inconvertibleErrorCode());
-  if (*Offset == 0)
-    return "";
+CompletionPrefix
+guessCompletionPrefix(llvm::StringRef Content, unsigned Offset) {
+  assert(Offset <= Content.size());
+  StringRef Rest = Content.take_front(Offset);
+  CompletionPrefix Result;
 
-  // Start from the character before the cursor.
-  int St = *Offset - 1;
-  // FIXME(ioeric): consider UTF characters?
-  auto IsValidIdentifierChar = [](char C) {
-    return ((C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z') ||
-            (C >= '0' && C <= '9') || (C == '_'));
-  };
-  size_t Len = 0;
-  for (; (St >= 0) && IsValidIdentifierChar(Content[St]); --St, ++Len) {
-  }
-  if (Len > 0)
-    St++; // Shift to the first valid character.
-  return Content.substr(St, Len);
+  // Consume the unqualified name. We only handle ASCII characters.
+  // isIdentifierBody will let us match "0invalid", but we don't mind.
+  while (!Rest.empty() && isIdentifierBody(Rest.back()))
+    Rest = Rest.drop_back();
+  Result.Name = Content.slice(Rest.size(), Offset);
+
+  // Consume qualifiers.
+  while (Rest.consume_back("::") && !Rest.endswith(":")) // reject ::::
+    while (!Rest.empty() && isIdentifierBody(Rest.back()))
+      Rest = Rest.drop_back();
+  Result.Qualifier =
+      Content.slice(Rest.size(), Result.Name.begin() - Content.begin());
+
+  return Result;
 }
 
 CodeCompleteResult

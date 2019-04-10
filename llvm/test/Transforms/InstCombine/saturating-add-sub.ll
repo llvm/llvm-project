@@ -391,7 +391,7 @@ define i8 @test_scalar_uadd_udiv_known_bits(i8 %a, i8 %b) {
 define i8 @test_scalar_sadd_srem_no_ov(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_srem_no_ov(
 ; CHECK-NEXT:    [[B:%.*]] = srem i8 [[A:%.*]], 100
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[B]], i8 28)
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[B]], 28
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %b = srem i8 %a, 100
@@ -414,7 +414,7 @@ define i8 @test_scalar_sadd_srem_and_no_ov(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_scalar_sadd_srem_and_no_ov(
 ; CHECK-NEXT:    [[AA:%.*]] = srem i8 [[A:%.*]], 100
 ; CHECK-NEXT:    [[BB:%.*]] = and i8 [[B:%.*]], 15
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[AA]], i8 [[BB]])
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[AA]], [[BB]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %aa = srem i8 %a, 100
@@ -928,7 +928,7 @@ define i8 @test_scalar_ssub_add_nsw_no_ov(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_scalar_ssub_add_nsw_no_ov(
 ; CHECK-NEXT:    [[AA:%.*]] = add nsw i8 [[A:%.*]], 7
 ; CHECK-NEXT:    [[BB:%.*]] = and i8 [[B:%.*]], 7
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[AA]], i8 [[BB]])
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[AA]], [[BB]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %aa = add nsw i8 %a, 7
@@ -954,7 +954,7 @@ define <2 x i8> @test_vector_ssub_add_nsw_no_ov_splat(<2 x i8> %a, <2 x i8> %b) 
 ; CHECK-LABEL: @test_vector_ssub_add_nsw_no_ov_splat(
 ; CHECK-NEXT:    [[AA:%.*]] = add nsw <2 x i8> [[A:%.*]], <i8 7, i8 7>
 ; CHECK-NEXT:    [[BB:%.*]] = and <2 x i8> [[B:%.*]], <i8 7, i8 7>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[AA]], <2 x i8> [[BB]])
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> [[AA]], [[BB]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %aa = add nsw <2 x i8> %a, <i8 7, i8 7>
@@ -967,7 +967,7 @@ define <2 x i8> @test_vector_ssub_add_nsw_no_ov_nonsplat1(<2 x i8> %a, <2 x i8> 
 ; CHECK-LABEL: @test_vector_ssub_add_nsw_no_ov_nonsplat1(
 ; CHECK-NEXT:    [[AA:%.*]] = add nsw <2 x i8> [[A:%.*]], <i8 7, i8 7>
 ; CHECK-NEXT:    [[BB:%.*]] = and <2 x i8> [[B:%.*]], <i8 7, i8 6>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[AA]], <2 x i8> [[BB]])
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> [[AA]], [[BB]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %aa = add nsw <2 x i8> %a, <i8 7, i8 7>

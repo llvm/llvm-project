@@ -979,7 +979,8 @@ void X86MCCodeEmitter::EmitVEXOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
     uint8_t LastByte = VEX_PP | (VEX_L << 2) | (VEX_4V << 3);
 
     // Can we use the 2 byte VEX prefix?
-    if (Encoding == X86II::VEX && VEX_B && VEX_X && !VEX_W && (VEX_5M == 1)) {
+    if (!(MI.getFlags() & X86::IP_USE_VEX3) &&
+        Encoding == X86II::VEX && VEX_B && VEX_X && !VEX_W && (VEX_5M == 1)) {
       EmitByte(0xC5, CurByte, OS);
       EmitByte(LastByte | (VEX_R << 7), CurByte, OS);
       return;

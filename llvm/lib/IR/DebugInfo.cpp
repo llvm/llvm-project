@@ -899,6 +899,10 @@ LLVMMetadataRef LLVMDILocationGetScope(LLVMMetadataRef Location) {
   return wrap(unwrapDI<DILocation>(Location)->getScope());
 }
 
+LLVMMetadataRef LLVMDILocationGetInlinedAt(LLVMMetadataRef Location) {
+  return wrap(unwrapDI<DILocation>(Location)->getInlinedAt());
+}
+
 LLVMMetadataRef LLVMDIBuilderCreateEnumerator(LLVMDIBuilderRef Builder,
                                               const char *Name, size_t NameLen,
                                               int64_t Value,
@@ -1353,6 +1357,17 @@ LLVMMetadataRef LLVMGetSubprogram(LLVMValueRef Func) {
 
 void LLVMSetSubprogram(LLVMValueRef Func, LLVMMetadataRef SP) {
   unwrap<Function>(Func)->setSubprogram(unwrap<DISubprogram>(SP));
+}
+
+LLVMMetadataRef LLVMInstructionGetDebugLoc(LLVMValueRef Inst) {
+  return wrap(unwrap<Instruction>(Inst)->getDebugLoc().getAsMDNode());
+}
+
+void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc) {
+  if (Loc)
+    unwrap<Instruction>(Inst)->setDebugLoc(DebugLoc(unwrap<MDNode>(Loc)));
+  else
+    unwrap<Instruction>(Inst)->setDebugLoc(DebugLoc());
 }
 
 LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {

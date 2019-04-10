@@ -19,7 +19,8 @@ define { i32, i1 } @simple_fold(i32 %x) {
 
 define { i32, i1 } @fold_mixed_signs(i32 %x) {
 ; CHECK-LABEL: @fold_mixed_signs(
-; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X:%.*]], i32 6)
+; CHECK-NEXT:    [[B:%.*]] = add nsw i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 false }, i32 [[B]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %a = add nsw i32 %x, 13

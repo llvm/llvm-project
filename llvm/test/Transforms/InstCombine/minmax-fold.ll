@@ -1423,7 +1423,7 @@ define i8 @PR14613_smin(i8 %x) {
 ; CHECK-LABEL: @PR14613_smin(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[X:%.*]], 40
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 40
-; CHECK-NEXT:    [[U7:%.*]] = add i8 [[TMP2]], 15
+; CHECK-NEXT:    [[U7:%.*]] = add nsw i8 [[TMP2]], 15
 ; CHECK-NEXT:    ret i8 [[U7]]
 ;
   %u4 = sext i8 %x to i32

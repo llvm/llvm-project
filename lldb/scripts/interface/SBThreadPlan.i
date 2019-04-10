@@ -48,11 +48,14 @@ public:
     lldb::StopReason
     GetStopReason();
 
+    %feature("docstring", "
     /// Get the number of words associated with the stop reason.
     /// See also GetStopReasonDataAtIndex().
+    ") GetStopReasonDataCount;
     size_t
     GetStopReasonDataCount();
 
+    %feature("docstring", "
     //--------------------------------------------------------------------------
     /// Get information associated with a stop reason.
     ///
@@ -71,6 +74,7 @@ public:
     /// eStopReasonExec          0
     /// eStopReasonPlanComplete  0
     //--------------------------------------------------------------------------
+    ") GetStopReasonDataAtIndex;
     uint64_t
     GetStopReasonDataAtIndex(uint32_t idx);
 
@@ -94,7 +98,6 @@ public:
 
     explicit operator bool() const;
 
-    // This section allows an SBThreadPlan to push another of the common types of plans...
     SBThreadPlan
     QueueThreadPlanForStepOverRange (SBAddress &start_address,
                                      lldb::addr_t range_size);
