@@ -314,9 +314,7 @@ bool ItaniumABILanguageRuntime::IsVTableName(const char *name) {
   return strstr(name, "_vptr$") == name;
 }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 LanguageRuntime *
 ItaniumABILanguageRuntime::CreateInstance(Process *process,
                                           lldb::LanguageType language) {
@@ -428,9 +426,7 @@ lldb_private::ConstString ItaniumABILanguageRuntime::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString ItaniumABILanguageRuntime::GetPluginName() {
   return GetPluginNameStatic();
 }

@@ -50,9 +50,7 @@ public:
   uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
                                                uint32_t num) override;
 
-  //---------------------------------------------------------------------------
   // Note: prefer kernel definitions over user-land
-  //---------------------------------------------------------------------------
   enum FPRType {
     eNotValid = 0,
     eFSAVE, // TODO

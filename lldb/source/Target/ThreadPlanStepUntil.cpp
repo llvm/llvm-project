@@ -19,10 +19,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanStepUntil: Run until we reach a given line number or step out of
 // the current frame
-//----------------------------------------------------------------------
 
 ThreadPlanStepUntil::ThreadPlanStepUntil(Thread &thread,
                                          lldb::addr_t *address_list,

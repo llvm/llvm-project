@@ -24,9 +24,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // Options
-//-------------------------------------------------------------------------
 Options::Options() : m_getopt_table() { BuildValidOptionSets(); }
 
 Options::~Options() {}

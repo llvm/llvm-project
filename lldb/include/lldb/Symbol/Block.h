@@ -22,7 +22,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class Block Block.h "lldb/Symbol/Block.h"
 /// A class that describes a single lexical block.
 ///
@@ -39,13 +38,11 @@ namespace lldb_private {
 /// Inlined functions are represented by attaching a InlineFunctionInfo shared
 /// pointer object to a block. Inlined functions are represented as named
 /// blocks.
-//----------------------------------------------------------------------
 class Block : public UserID, public SymbolContextScope {
 public:
   typedef RangeArray<uint32_t, uint32_t, 1> RangeList;
   typedef RangeList::Entry Range;
 
-  //------------------------------------------------------------------
   /// Construct with a User ID \a uid, \a depth.
   ///
   /// Initialize this block with the specified UID \a uid. The \a depth in the
@@ -67,24 +64,18 @@ public:
   ///     The block list that this object belongs to.
   ///
   /// \see BlockList
-  //------------------------------------------------------------------
   Block(lldb::user_id_t uid);
 
-  //------------------------------------------------------------------
   /// Destructor.
-  //------------------------------------------------------------------
   ~Block() override;
 
-  //------------------------------------------------------------------
   /// Add a child to this object.
   ///
   /// \param[in] child_block_sp
   ///     A shared pointer to a child block that will get added to
   ///     this block.
-  //------------------------------------------------------------------
   void AddChild(const lldb::BlockSP &child_block_sp);
 
-  //------------------------------------------------------------------
   /// Add a new offset range to this block.
   ///
   /// \param[in] start_offset
@@ -94,16 +85,13 @@ public:
   /// \param[in] end_offset
   ///     An offset into this Function's address range that
   ///     describes the end address of a range for this block.
-  //------------------------------------------------------------------
   void AddRange(const Range &range);
 
   void FinalizeRanges();
 
-  //------------------------------------------------------------------
   /// \copydoc SymbolContextScope::CalculateSymbolContext(SymbolContext*)
   ///
   /// \see SymbolContextScope
-  //------------------------------------------------------------------
   void CalculateSymbolContext(SymbolContext *sc) override;
 
   lldb::ModuleSP CalculateSymbolContextModule() override;
@@ -114,7 +102,6 @@ public:
 
   Block *CalculateSymbolContextBlock() override;
 
-  //------------------------------------------------------------------
   /// Check if an offset is in one of the block offset ranges.
   ///
   /// \param[in] range_offset
@@ -123,10 +110,8 @@ public:
   /// \return
   ///     Returns \b true if \a range_offset falls in one of this
   ///     block's ranges, \b false otherwise.
-  //------------------------------------------------------------------
   bool Contains(lldb::addr_t range_offset) const;
 
-  //------------------------------------------------------------------
   /// Check if a offset range is in one of the block offset ranges.
   ///
   /// \param[in] range
@@ -135,10 +120,8 @@ public:
   /// \return
   ///     Returns \b true if \a range falls in one of this
   ///     block's ranges, \b false otherwise.
-  //------------------------------------------------------------------
   bool Contains(const Range &range) const;
 
-  //------------------------------------------------------------------
   /// Check if this object contains "block" as a child block at any depth.
   ///
   /// \param[in] block
@@ -147,10 +130,8 @@ public:
   /// \return
   ///     Returns \b true if \a block is a child of this block, \b
   ///     false otherwise.
-  //------------------------------------------------------------------
   bool Contains(const Block *block) const;
 
-  //------------------------------------------------------------------
   /// Dump the block contents.
   ///
   /// \param[in] s
@@ -168,15 +149,12 @@ public:
   ///
   /// \param[in] show_context
   ///     If \b true, variables will dump their context information.
-  //------------------------------------------------------------------
   void Dump(Stream *s, lldb::addr_t base_addr, int32_t depth,
             bool show_context) const;
 
-  //------------------------------------------------------------------
   /// \copydoc SymbolContextScope::DumpSymbolContext(Stream*)
   ///
   /// \see SymbolContextScope
-  //------------------------------------------------------------------
   void DumpSymbolContext(Stream *s) override;
 
   void DumpAddressRanges(Stream *s, lldb::addr_t base_addr);
@@ -184,16 +162,13 @@ public:
   void GetDescription(Stream *s, Function *function,
                       lldb::DescriptionLevel level, Target *target) const;
 
-  //------------------------------------------------------------------
   /// Get the parent block.
   ///
   /// \return
   ///     The parent block pointer, or nullptr if this block has no
   ///     parent.
-  //------------------------------------------------------------------
   Block *GetParent() const;
 
-  //------------------------------------------------------------------
   /// Get the inlined block that contains this block.
   ///
   /// \return
@@ -201,39 +176,31 @@ public:
   ///     this block, else parent blocks will be searched to see if
   ///     any contain this block. nullptr will be returned if this block
   ///     nor any parent blocks are inlined function blocks.
-  //------------------------------------------------------------------
   Block *GetContainingInlinedBlock();
 
-  //------------------------------------------------------------------
   /// Get the inlined parent block for this block.
   ///
   /// \return
   ///     The parent block pointer, or nullptr if this block has no
   ///     parent.
-  //------------------------------------------------------------------
   Block *GetInlinedParent();
 
-  //------------------------------------------------------------------
   /// Get the sibling block for this block.
   ///
   /// \return
   ///     The sibling block pointer, or nullptr if this block has no
   ///     sibling.
-  //------------------------------------------------------------------
   Block *GetSibling() const;
 
-  //------------------------------------------------------------------
   /// Get the first child block.
   ///
   /// \return
   ///     The first child block pointer, or nullptr if this block has no
   ///     children.
-  //------------------------------------------------------------------
   Block *GetFirstChild() const {
     return (m_children.empty() ? nullptr : m_children.front().get());
   }
 
-  //------------------------------------------------------------------
   /// Get the variable list for this block only.
   ///
   /// \param[in] can_create
@@ -244,10 +211,8 @@ public:
   /// \return
   ///     A variable list shared pointer that contains all variables
   ///     for this block.
-  //------------------------------------------------------------------
   lldb::VariableListSP GetBlockVariableList(bool can_create);
 
-  //------------------------------------------------------------------
   /// Get the variable list for this block and optionally all child blocks if
   /// \a get_child_variables is \b true.
   ///
@@ -271,13 +236,11 @@ public:
   /// \return
   ///     A variable list shared pointer that contains all variables
   ///     for this block.
-  //------------------------------------------------------------------
   uint32_t AppendBlockVariables(bool can_create, bool get_child_block_variables,
                                 bool stop_if_child_block_is_inlined_function,
                                 const std::function<bool(Variable *)> &filter,
                                 VariableList *variable_list);
 
-  //------------------------------------------------------------------
   /// Appends the variables from this block, and optionally from all parent
   /// blocks, to \a variable_list.
   ///
@@ -304,34 +267,28 @@ public:
   /// \return
   ///     The number of variable that were appended to \a
   ///     variable_list.
-  //------------------------------------------------------------------
   uint32_t AppendVariables(bool can_create, bool get_parent_variables,
                            bool stop_if_block_is_inlined_function,
                            const std::function<bool(Variable *)> &filter,
                            VariableList *variable_list);
 
-  //------------------------------------------------------------------
   /// Get const accessor for any inlined function information.
   ///
   /// \return
   ///     A const pointer to any inlined function information, or nullptr
   ///     if this is a regular block.
-  //------------------------------------------------------------------
   const InlineFunctionInfo *GetInlinedFunctionInfo() const {
     return m_inlineInfoSP.get();
   }
 
-  //------------------------------------------------------------------
   /// Get the symbol file which contains debug info for this block's
   /// symbol context module.
   ///
   /// \return A pointer to the symbol file or nullptr.
-  //------------------------------------------------------------------
   SymbolFile *GetSymbolFile();
 
   CompilerDeclContext GetDeclContext();
 
-  //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
   /// Returns the cost of this object plus any owned objects from the ranges,
@@ -339,10 +296,8 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object occupies in memory.
-  //------------------------------------------------------------------
   size_t MemorySize() const;
 
-  //------------------------------------------------------------------
   /// Set accessor for any inlined function information.
   ///
   /// \param[in] name
@@ -362,7 +317,6 @@ public:
   /// \param[in] call_decl_ptr
   ///     Optional calling location declaration information that
   ///     describes from where this inlined function was called.
-  //------------------------------------------------------------------
   void SetInlinedFunctionInfo(const char *name, const char *mangled,
                               const Declaration *decl_ptr,
                               const Declaration *call_decl_ptr);
@@ -371,7 +325,6 @@ public:
     m_parent_scope = parent_scope;
   }
 
-  //------------------------------------------------------------------
   /// Set accessor for the variable list.
   ///
   /// Called by the SymbolFile plug-ins after they have parsed the variable
@@ -379,7 +332,6 @@ public:
   ///
   /// \param[in] variable_list_sp
   ///     A shared pointer to a VariableList.
-  //------------------------------------------------------------------
   void SetVariableList(lldb::VariableListSP &variable_list_sp) {
     m_variable_list_sp = variable_list_sp;
   }
@@ -401,10 +353,8 @@ public:
 
   uint32_t GetRangeIndexContainingAddress(const Address &addr);
 
-  //------------------------------------------------------------------
   // Since blocks might have multiple discontiguous address ranges, we need to
   // be able to get at any of the address ranges in a block.
-  //------------------------------------------------------------------
   bool GetRangeAtIndex(uint32_t range_idx, AddressRange &range);
 
   bool GetStartAddress(Address &addr);
@@ -413,9 +363,7 @@ public:
 
 protected:
   typedef std::vector<lldb::BlockSP> collection;
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   SymbolContextScope *m_parent_scope;
   collection m_children;
   RangeList m_ranges;

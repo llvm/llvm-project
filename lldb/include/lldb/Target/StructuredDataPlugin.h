@@ -16,7 +16,6 @@ namespace lldb_private {
 
 class CommandObjectMultiword;
 
-// -----------------------------------------------------------------------------
 /// Plugin that supports process-related structured data sent asynchronously
 /// from the debug monitor (e.g. debugserver, lldb-server, etc.)
 ///
@@ -37,7 +36,6 @@ class CommandObjectMultiword;
 /// and error streams such that the plugin can display something about the
 /// event, at a time when the debugger ensures it is safe to write to the
 /// output or error streams.
-// -----------------------------------------------------------------------------
 
 class StructuredDataPlugin
     : public PluginInterface,
@@ -47,11 +45,8 @@ public:
 
   lldb::ProcessSP GetProcess() const;
 
-  // -------------------------------------------------------------------------
   // Public instance API
-  // -------------------------------------------------------------------------
 
-  // -------------------------------------------------------------------------
   /// Return whether this plugin supports the given StructuredData feature.
   ///
   /// When Process is informed of a list of process-monitor-supported
@@ -69,10 +64,8 @@ public:
   ///
   /// \return
   ///     true if the plugin supports the feature; otherwise, false.
-  // -------------------------------------------------------------------------
   virtual bool SupportsStructuredDataType(ConstString type_name) = 0;
 
-  // -------------------------------------------------------------------------
   /// Handle the arrival of asynchronous structured data from the process.
   ///
   /// When asynchronous structured data arrives from the process monitor,
@@ -98,12 +91,10 @@ public:
   ///     be a dictionary.  The only key required is the aforementioned
   ///     key named "type" that must be a string value containing the
   ///     structured data type name.
-  // -------------------------------------------------------------------------
   virtual void
   HandleArrivalOfStructuredData(Process &process, ConstString type_name,
                                 const StructuredData::ObjectSP &object_sp) = 0;
 
-  // -------------------------------------------------------------------------
   /// Get a human-readable description of the contents of the data.
   ///
   /// In command-line LLDB, this method will be called by the Debugger
@@ -121,11 +112,9 @@ public:
   /// \return
   ///     The error if formatting the object contents failed; otherwise,
   ///     success.
-  // -------------------------------------------------------------------------
   virtual Status GetDescription(const StructuredData::ObjectSP &object_sp,
                                 lldb_private::Stream &stream) = 0;
 
-  // -------------------------------------------------------------------------
   /// Returns whether the plugin's features are enabled.
   ///
   /// This is a convenience method for plugins that can enable or disable
@@ -135,10 +124,8 @@ public:
   /// \param[in] type_name
   ///     The name of the feature tag for the asynchronous structured data.
   ///     This is needed for plugins that support more than one feature.
-  // -------------------------------------------------------------------------
   virtual bool GetEnabled(ConstString type_name) const;
 
-  // -------------------------------------------------------------------------
   /// Allow the plugin to do work related to modules that loaded in the
   /// the corresponding process.
   ///
@@ -154,16 +141,12 @@ public:
   /// \param[in] module_list
   ///     The list of modules that the process registered as having just
   ///     loaded.  See \b Process::ModulesDidLoad(...).
-  // -------------------------------------------------------------------------
   virtual void ModulesDidLoad(Process &process, ModuleList &module_list);
 
 protected:
-  // -------------------------------------------------------------------------
   // Derived-class API
-  // -------------------------------------------------------------------------
   StructuredDataPlugin(const lldb::ProcessWP &process_wp);
 
-  // -------------------------------------------------------------------------
   /// Derived classes must call this before attempting to hook up commands
   /// to the 'plugin structured-data' tree.
   ///
@@ -174,7 +157,6 @@ protected:
   /// \param[in] debugger
   ///     The Debugger instance for which we're creating the required shared
   ///     components for the StructuredDataPlugin derived classes.
-  // -------------------------------------------------------------------------
   static void InitializeBasePluginForDebugger(Debugger &debugger);
 
 private:

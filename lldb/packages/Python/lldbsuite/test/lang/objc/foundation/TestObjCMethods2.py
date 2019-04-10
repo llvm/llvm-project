@@ -5,8 +5,6 @@ Test more expression command sequences with objective-c.
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -18,40 +16,36 @@ class FoundationTestCase2(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Find the line numbers to break at.
-        self.lines = []
-        self.lines.append(
-            line_number(
-                'main.m',
-                '// Break here for selector: tests'))
-        self.lines.append(
-            line_number(
-                'main.m',
-                '// Break here for NSArray tests'))
-        self.lines.append(
-            line_number(
-                'main.m',
-                '// Break here for NSString tests'))
-        self.lines.append(
-            line_number(
-                'main.m',
-                '// Break here for description test'))
-        self.lines.append(
-            line_number(
-                'main.m',
-                '// Set break point at this line'))
-
-    def test_more_expr_commands(self):
+    def test_expr_commands(self):
         """More expression commands for objective-c."""
         self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
+        lines = []
+        lines.append(
+            line_number(
+                'main.m',
+                '// Break here for selector: tests'))
+        lines.append(
+            line_number(
+                'main.m',
+                '// Break here for NSArray tests'))
+        lines.append(
+            line_number(
+                'main.m',
+                '// Break here for NSString tests'))
+        lines.append(
+            line_number(
+                'main.m',
+                '// Break here for description test'))
+        lines.append(
+            line_number(
+                'main.m',
+                '// Set break point at this line'))
+
         # Create a bunch of breakpoints.
-        for line in self.lines:
+        for line in lines:
             lldbutil.run_break_set_by_file_and_line(
                 self, "main.m", line, num_expected_locations=1, loc_exact=True)
 

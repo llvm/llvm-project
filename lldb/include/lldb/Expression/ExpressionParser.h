@@ -18,16 +18,13 @@ namespace lldb_private {
 
 class IRExecutionUnit;
 
-//----------------------------------------------------------------------
 /// \class ExpressionParser ExpressionParser.h
 /// "lldb/Expression/ExpressionParser.h" Encapsulates an instance of a
 /// compiler that can parse expressions.
 ///
 /// ExpressionParser is the base class for llvm based Expression parsers.
-//----------------------------------------------------------------------
 class ExpressionParser {
 public:
-  //------------------------------------------------------------------
   /// Constructor
   ///
   /// Initializes class variables.
@@ -39,17 +36,13 @@ public:
   ///
   /// \param[in] expr
   ///     The expression to be parsed.
-  //------------------------------------------------------------------
   ExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
                    bool generate_debug_info)
       : m_expr(expr), m_generate_debug_info(generate_debug_info) {}
 
-  //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   virtual ~ExpressionParser(){};
 
-  //------------------------------------------------------------------
   /// Attempts to find possible command line completions for the given
   /// expression.
   ///
@@ -80,11 +73,9 @@ public:
   /// \return
   ///     True if we added any completion results to the output;
   ///     false otherwise.
-  //------------------------------------------------------------------
   virtual bool Complete(CompletionRequest &request, unsigned line, unsigned pos,
                         unsigned typed_pos) = 0;
 
-  //------------------------------------------------------------------
   /// Parse a single expression and convert it to IR using Clang.  Don't wrap
   /// the expression in anything at all.
   ///
@@ -99,7 +90,6 @@ public:
                          uint32_t first_line = 0,
                          uint32_t last_line = UINT32_MAX) = 0;
 
-  //------------------------------------------------------------------
   /// Try to use the FixIts in the diagnostic_manager to rewrite the
   /// expression.  If successful, the rewritten expression is stored in the
   /// diagnostic_manager, get it out with GetFixedExpression.
@@ -109,12 +99,10 @@ public:
   ///
   /// \return
   ///     \b true if the rewrite was successful, \b false otherwise.
-  //------------------------------------------------------------------
   virtual bool RewriteExpression(DiagnosticManager &diagnostic_manager) {
     return false;
   }
 
-  //------------------------------------------------------------------
   /// Ready an already-parsed expression for execution, possibly evaluating it
   /// statically.
   ///
@@ -145,7 +133,6 @@ public:
   /// \return
   ///     An error code indicating the success or failure of the operation.
   ///     Test with Success().
-  //------------------------------------------------------------------
   virtual Status
   PrepareForExecution(lldb::addr_t &func_addr, lldb::addr_t &func_end,
                       std::shared_ptr<IRExecutionUnit> &execution_unit_sp,

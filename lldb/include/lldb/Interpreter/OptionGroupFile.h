@@ -15,9 +15,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // OptionGroupFile
-//-------------------------------------------------------------------------
 
 class OptionGroupFile : public OptionGroup {
 public:
@@ -47,9 +45,7 @@ protected:
   OptionDefinition m_option_definition;
 };
 
-//-------------------------------------------------------------------------
 // OptionGroupFileList
-//-------------------------------------------------------------------------
 
 class OptionGroupFileList : public OptionGroup {
 public:

@@ -25,9 +25,7 @@ public:
 
   ~PlatformDarwin() override;
 
-  //------------------------------------------------------------
   // lldb_private::Platform functions
-  //------------------------------------------------------------
   lldb_private::Status
   ResolveSymbolFile(lldb_private::Target &target,
                     const lldb_private::ModuleSpec &sym_spec,

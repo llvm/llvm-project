@@ -34,9 +34,7 @@ void DNBTerminate();
 
 nub_bool_t DNBSetArchitecture(const char *arch);
 
-//----------------------------------------------------------------------
 // Process control
-//----------------------------------------------------------------------
 nub_process_t DNBProcessLaunch(
     const char *path, char const *argv[], const char *envp[],
     const char *working_directory, // NULL => don't change, non-NULL => set
@@ -102,9 +100,7 @@ DNBProcessSetEnableAsyncProfiling(nub_process_t pid, nub_bool_t enable,
                                   DNBProfileDataScanType scan_type) DNB_EXPORT;
 DarwinLogEventVector DNBProcessGetAvailableDarwinLogEvents(nub_process_t pid);
 
-//----------------------------------------------------------------------
 // Process status
-//----------------------------------------------------------------------
 nub_bool_t DNBProcessIsAlive(nub_process_t pid) DNB_EXPORT;
 nub_state_t DNBProcessGetState(nub_process_t pid) DNB_EXPORT;
 nub_bool_t DNBProcessGetExitStatus(nub_process_t pid, int *status) DNB_EXPORT;
@@ -149,24 +145,18 @@ nub_size_t DNBProcessGetAvailableProfileData(nub_process_t pid, char *buf,
 nub_size_t DNBProcessGetStopCount(nub_process_t pid) DNB_EXPORT;
 uint32_t DNBProcessGetCPUType(nub_process_t pid) DNB_EXPORT;
 
-//----------------------------------------------------------------------
 // Process executable and arguments
-//----------------------------------------------------------------------
 const char *DNBProcessGetExecutablePath(nub_process_t pid);
 const char *DNBProcessGetArgumentAtIndex(nub_process_t pid, nub_size_t idx);
 nub_size_t DNBProcessGetArgumentCount(nub_process_t pid);
 
-//----------------------------------------------------------------------
 // Process events
-//----------------------------------------------------------------------
 nub_event_t DNBProcessWaitForEvents(nub_process_t pid, nub_event_t event_mask,
                                     bool wait_for_set,
                                     struct timespec *timeout);
 void DNBProcessResetEvents(nub_process_t pid, nub_event_t event_mask);
 
-//----------------------------------------------------------------------
 // Thread functions
-//----------------------------------------------------------------------
 const char *DNBThreadGetName(nub_process_t pid, nub_thread_t tid);
 nub_bool_t
 DNBThreadGetIdentifierInfo(nub_process_t pid, nub_thread_t tid,
@@ -215,16 +205,12 @@ DNBGetLibrariesInfoForAddresses(nub_process_t pid,
 JSONGenerator::ObjectSP DNBGetSharedCacheInfo(nub_process_t pid);
 
 //
-//----------------------------------------------------------------------
 // Breakpoint functions
-//----------------------------------------------------------------------
 nub_bool_t DNBBreakpointSet(nub_process_t pid, nub_addr_t addr, nub_size_t size,
                             nub_bool_t hardware);
 nub_bool_t DNBBreakpointClear(nub_process_t pid, nub_addr_t addr);
 
-//----------------------------------------------------------------------
 // Watchpoint functions
-//----------------------------------------------------------------------
 nub_bool_t DNBWatchpointSet(nub_process_t pid, nub_addr_t addr, nub_size_t size,
                             uint32_t watch_flags, nub_bool_t hardware);
 nub_bool_t DNBWatchpointClear(nub_process_t pid, nub_addr_t addr);
@@ -235,9 +221,7 @@ const DNBRegisterSetInfo *DNBGetRegisterSetInfo(nub_size_t *num_reg_sets);
 nub_bool_t DNBGetRegisterInfoByName(const char *reg_name,
                                     DNBRegisterInfo *info);
 
-//----------------------------------------------------------------------
 // Other static nub information calls.
-//----------------------------------------------------------------------
 const char *DNBStateAsString(nub_state_t state);
 nub_bool_t DNBResolveExecutablePath(const char *path, char *resolved_path,
                                     size_t resolved_path_size);

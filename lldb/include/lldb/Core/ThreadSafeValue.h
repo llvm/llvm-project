@@ -18,9 +18,7 @@ namespace lldb_private {
 
 template <class T> class ThreadSafeValue {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   ThreadSafeValue() : m_value(), m_mutex() {}
 
   ThreadSafeValue(const T &value) : m_value(value), m_mutex() {}
@@ -55,9 +53,7 @@ private:
   T m_value;
   mutable std::recursive_mutex m_mutex;
 
-  //------------------------------------------------------------------
   // For ThreadSafeValue only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(ThreadSafeValue);
 };
 

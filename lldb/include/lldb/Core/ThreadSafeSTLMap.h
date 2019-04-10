@@ -21,9 +21,7 @@ public:
   typedef std::map<_Key, _Tp> collection;
   typedef typename collection::iterator iterator;
   typedef typename collection::const_iterator const_iterator;
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   ThreadSafeSTLMap() : m_collection(), m_mutex() {}
 
   ~ThreadSafeSTLMap() {}
@@ -121,9 +119,7 @@ private:
   collection m_collection;
   mutable std::recursive_mutex m_mutex;
 
-  //------------------------------------------------------------------
   // For ThreadSafeSTLMap only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(ThreadSafeSTLMap);
 };
 

@@ -25,10 +25,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanStepRange: Step through a stack range, either stepping over or
 // into based on the value of \a type.
-//----------------------------------------------------------------------
 
 ThreadPlanStepRange::ThreadPlanStepRange(ThreadPlanKind kind, const char *name,
                                          Thread &thread,

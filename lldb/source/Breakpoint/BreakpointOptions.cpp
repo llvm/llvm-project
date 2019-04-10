@@ -119,9 +119,7 @@ bool BreakpointOptions::NullCallback(void *baton,
   return true;
 }
 
-//----------------------------------------------------------------------
 // BreakpointOptions constructor
-//----------------------------------------------------------------------
 BreakpointOptions::BreakpointOptions(bool all_flags_set)
     : m_callback(BreakpointOptions::NullCallback), m_callback_baton_sp(),
       m_baton_is_command_baton(false), m_callback_is_synchronous(false),
@@ -147,9 +145,7 @@ BreakpointOptions::BreakpointOptions(const char *condition, bool enabled,
     }
 }
 
-//----------------------------------------------------------------------
 // BreakpointOptions copy constructor
-//----------------------------------------------------------------------
 BreakpointOptions::BreakpointOptions(const BreakpointOptions &rhs)
     : m_callback(rhs.m_callback), m_callback_baton_sp(rhs.m_callback_baton_sp),
       m_baton_is_command_baton(rhs.m_baton_is_command_baton),
@@ -163,9 +159,7 @@ BreakpointOptions::BreakpointOptions(const BreakpointOptions &rhs)
   m_condition_text_hash = rhs.m_condition_text_hash;
 }
 
-//----------------------------------------------------------------------
 // BreakpointOptions assignment operator
-//----------------------------------------------------------------------
 const BreakpointOptions &BreakpointOptions::
 operator=(const BreakpointOptions &rhs) {
   m_callback = rhs.m_callback;
@@ -236,9 +230,7 @@ void BreakpointOptions::CopyOverSetOptions(const BreakpointOptions &incoming)
   }
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 BreakpointOptions::~BreakpointOptions() = default;
 
 std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
@@ -406,9 +398,7 @@ StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
   return options_dict_sp;
 }
 
-//------------------------------------------------------------------
 // Callbacks
-//------------------------------------------------------------------
 void BreakpointOptions::SetCallback(BreakpointHitCallback callback,
                                     const lldb::BatonSP &callback_baton_sp,
                                     bool callback_is_synchronous) {

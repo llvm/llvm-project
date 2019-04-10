@@ -25,9 +25,7 @@ class AppleObjCRuntimeV2 : public AppleObjCRuntime {
 public:
   ~AppleObjCRuntimeV2() override = default;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -61,9 +59,7 @@ public:
 
   UtilityFunction *CreateObjectChecker(const char *) override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

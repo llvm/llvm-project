@@ -29,7 +29,6 @@
 
 #include <memory>
 
-//----------------------------------------------------------------------
 // We recently fixed a leak in one of the Instruction subclasses where the
 // instruction will only hold a weak reference to the disassembler to avoid a
 // cycle that was keeping both objects alive (leak) and we need the
@@ -48,7 +47,6 @@
 // objects that are given out have a strong reference to the disassembler and
 // the instruction so that the object can live and successfully respond to all
 // queries.
-//----------------------------------------------------------------------
 class InstructionImpl {
 public:
   InstructionImpl(const lldb::DisassemblerSP &disasm_sp,

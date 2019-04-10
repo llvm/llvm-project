@@ -31,16 +31,13 @@ class GDBRemoteCommunicationServerLLGS
     : public GDBRemoteCommunicationServerCommon,
       public NativeProcessProtocol::NativeDelegate {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   GDBRemoteCommunicationServerLLGS(
       MainLoop &mainloop,
       const NativeProcessProtocol::Factory &process_factory);
 
   void SetLaunchInfo(const ProcessLaunchInfo &info);
 
-  //------------------------------------------------------------------
   /// Launch a process with the current launch settings.
   ///
   /// This method supports running an lldb-gdbserver or similar
@@ -50,10 +47,8 @@ public:
   /// \return
   ///     An Status object indicating the success or failure of the
   ///     launch.
-  //------------------------------------------------------------------
   Status LaunchProcess() override;
 
-  //------------------------------------------------------------------
   /// Attach to a process.
   ///
   /// This method supports attaching llgs to a process accessible via the
@@ -62,12 +57,9 @@ public:
   /// \return
   ///     An Status object indicating the success or failure of the
   ///     attach operation.
-  //------------------------------------------------------------------
   Status AttachToProcess(lldb::pid_t pid);
 
-  //------------------------------------------------------------------
   // NativeProcessProtocol::NativeDelegate overrides
-  //------------------------------------------------------------------
   void InitializeDelegate(NativeProcessProtocol *process) override;
 
   void ProcessStateChanged(NativeProcessProtocol *process,
@@ -222,9 +214,7 @@ private:
 
   void StopSTDIOForwarding();
 
-  //------------------------------------------------------------------
   // For GDBRemoteCommunicationServerLLGS only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunicationServerLLGS);
 };
 

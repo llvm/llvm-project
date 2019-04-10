@@ -24,9 +24,7 @@
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
-// ----------------------------------------------------------------------------
 // Private namespace.
-// ----------------------------------------------------------------------------
 
 namespace {
 // x86 32-bit general purpose registers.
@@ -207,9 +205,7 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
 
 #define REG_CONTEXT_SIZE (GetRegisterInfoInterface().GetGPRSize() + sizeof(FPR))
 
-// ----------------------------------------------------------------------------
 // Required ptrace defines.
-// ----------------------------------------------------------------------------
 
 // Support ptrace extensions even when compiled without required kernel support
 #ifndef NT_X86_XSTATE
@@ -225,18 +221,14 @@ static inline unsigned int fxsr_regset(const ArchSpec &arch) {
   return arch.GetAddressByteSize() == 8 ? NT_PRFPREG : NT_PRXFPREG;
 }
 
-// ----------------------------------------------------------------------------
 // Required MPX define.
-// ----------------------------------------------------------------------------
 
 // Support MPX extensions also if compiled with compiler without MPX support.
 #ifndef bit_MPX
 #define bit_MPX 0x4000
 #endif
 
-// ----------------------------------------------------------------------------
 // XCR0 extended register sets masks.
-// ----------------------------------------------------------------------------
 #define mask_XSTATE_AVX (1ULL << 2)
 #define mask_XSTATE_BNDREGS (1ULL << 3)
 #define mask_XSTATE_BNDCFG (1ULL << 4)
@@ -249,9 +241,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
       new NativeRegisterContextLinux_x86_64(target_arch, native_thread));
 }
 
-// ----------------------------------------------------------------------------
 // NativeRegisterContextLinux_x86_64 members.
-// ----------------------------------------------------------------------------
 
 static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {

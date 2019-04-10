@@ -288,9 +288,7 @@ bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
   return true;
 }
 
-//----------------------------------------------------------------------
 // ProcessGDBRemote constructor
-//----------------------------------------------------------------------
 ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
                                    ListenerSP listener_sp)
     : Process(target_sp, listener_sp),
@@ -353,9 +351,7 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
     m_gdb_comm.SetPacketTimeout(std::chrono::seconds(timeout_seconds));
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 ProcessGDBRemote::~ProcessGDBRemote() {
   //  m_mach_process.UnregisterNotificationCallbacks (this);
   Clear();
@@ -373,9 +369,7 @@ ProcessGDBRemote::~ProcessGDBRemote() {
   KillDebugserverProcess();
 }
 
-//----------------------------------------------------------------------
 // PluginInterface
-//----------------------------------------------------------------------
 ConstString ProcessGDBRemote::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t ProcessGDBRemote::GetPluginVersion() { return 1; }
@@ -809,9 +803,7 @@ Status ProcessGDBRemote::WillLaunchOrAttach() {
   return error;
 }
 
-//----------------------------------------------------------------------
 // Process Control
-//----------------------------------------------------------------------
 Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
                                   ProcessLaunchInfo &launch_info) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
@@ -2724,9 +2716,7 @@ void ProcessGDBRemote::SetUnixSignals(const UnixSignalsSP &signals_sp) {
   Process::SetUnixSignals(std::make_shared<GDBRemoteSignals>(signals_sp));
 }
 
-//------------------------------------------------------------------
 // Process Queries
-//------------------------------------------------------------------
 
 bool ProcessGDBRemote::IsAlive() {
   return m_gdb_comm.IsConnected() && Process::IsAlive();
@@ -2770,9 +2760,7 @@ void ProcessGDBRemote::WillPublicStop() {
   }
 }
 
-//------------------------------------------------------------------
 // Process Memory
-//------------------------------------------------------------------
 size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
                                       Status &error) {
   GetMaxMemorySize();
@@ -3133,9 +3121,7 @@ Status ProcessGDBRemote::DoDeallocateMemory(lldb::addr_t addr) {
   return error;
 }
 
-//------------------------------------------------------------------
 // Process STDIO
-//------------------------------------------------------------------
 size_t ProcessGDBRemote::PutSTDIN(const char *src, size_t src_len,
                                   Status &error) {
   if (m_stdio_communication.IsConnected()) {

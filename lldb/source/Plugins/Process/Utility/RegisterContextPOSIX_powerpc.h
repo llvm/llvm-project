@@ -16,9 +16,7 @@
 
 class ProcessMonitor;
 
-// ---------------------------------------------------------------------------
 // Internal codes for all powerpc registers.
-// ---------------------------------------------------------------------------
 enum {
   k_first_gpr_powerpc,
   gpr_r0_powerpc = k_first_gpr_powerpc,

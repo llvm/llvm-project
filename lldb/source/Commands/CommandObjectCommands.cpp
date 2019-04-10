@@ -29,9 +29,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsSource
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_history_options[] = {
     // clang-format off
@@ -188,9 +186,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsSource
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_source_options[] = {
     // clang-format off
@@ -339,9 +335,7 @@ protected:
 };
 
 #pragma mark CommandObjectCommandsAlias
-//-------------------------------------------------------------------------
 // CommandObjectCommandsAlias
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_alias_options[] = {
     // clang-format off
@@ -765,9 +759,7 @@ protected:
 };
 
 #pragma mark CommandObjectCommandsUnalias
-//-------------------------------------------------------------------------
 // CommandObjectCommandsUnalias
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsUnalias : public CommandObjectParsed {
 public:
@@ -848,9 +840,7 @@ protected:
 };
 
 #pragma mark CommandObjectCommandsDelete
-//-------------------------------------------------------------------------
 // CommandObjectCommandsDelete
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsDelete : public CommandObjectParsed {
 public:
@@ -913,9 +903,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsAddRegex
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_regex_options[] = {
     // clang-format off
@@ -1407,9 +1395,7 @@ private:
   bool m_fetched_help_long : 1;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptImport
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_script_import_options[] = {
     // clang-format off
@@ -1533,9 +1519,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptAdd
-//-------------------------------------------------------------------------
 static constexpr OptionEnumValueElement g_script_synchro_type[] = {
   {eScriptedCommandSynchronicitySynchronous, "synchronous",
    "Run synchronous"},
@@ -1780,9 +1764,7 @@ protected:
   ScriptedCommandSynchronicity m_synchronicity;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptList
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsScriptList : public CommandObjectParsed {
 public:
@@ -1801,9 +1783,7 @@ public:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptClear
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsScriptClear : public CommandObjectParsed {
 public:
@@ -1823,9 +1803,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptDelete
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsScriptDelete : public CommandObjectParsed {
 public:
@@ -1875,9 +1853,7 @@ protected:
 
 #pragma mark CommandObjectMultiwordCommandsScript
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordCommandsScript
-//-------------------------------------------------------------------------
 
 class CommandObjectMultiwordCommandsScript : public CommandObjectMultiword {
 public:
@@ -1907,9 +1883,7 @@ public:
 
 #pragma mark CommandObjectMultiwordCommands
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordCommands
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordCommands::CommandObjectMultiwordCommands(
     CommandInterpreter &interpreter)

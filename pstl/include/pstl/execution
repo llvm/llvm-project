@@ -7,31 +7,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PSTL_execution
-#define __PSTL_execution
+#ifndef _PSTL_EXECUTION
+#define _PSTL_EXECUTION
 
 #include "internal/pstl_config.h"
 #include "internal/execution_defs.h"
 
-#define __PSTL_EXECUTION_POLICIES_DEFINED 1
+#define _PSTL_EXECUTION_POLICIES_DEFINED 1
 
-#if __PSTL_ALGORITHM_FORWARD_DECLARED
+#if _PSTL_ALGORITHM_FORWARD_DECLARED
 #    include "internal/glue_algorithm_impl.h"
 #endif
 
-#if __PSTL_MEMORY_FORWARD_DECLARED
+#if _PSTL_MEMORY_FORWARD_DECLARED
 #    include "internal/glue_memory_impl.h"
 #endif
 
-#if __PSTL_NUMERIC_FORWARD_DECLARED
+#if _PSTL_NUMERIC_FORWARD_DECLARED
 #    include "internal/glue_numeric_impl.h"
 #endif
 
-#if __PSTL_CPP17_EXECUTION_POLICIES_PRESENT
-__PSTL_PRAGMA_MESSAGE_POLICIES("The <Parallel STL> execution policies are defined in the namespace __pstl::execution")
+#if _PSTL_CPP17_EXECUTION_POLICIES_PRESENT
+_PSTL_PRAGMA_MESSAGE_POLICIES("The <Parallel STL> execution policies are defined in the namespace __pstl::execution")
 #else
 #    include "internal/glue_execution_defs.h"
-__PSTL_PRAGMA_MESSAGE_POLICIES(
+_PSTL_PRAGMA_MESSAGE_POLICIES(
     "The <Parallel STL> execution policies are injected into the standard namespace std::execution")
 #endif
 
@@ -43,6 +43,6 @@ namespace execution
 {
 using namespace __pstl::execution;
 }
-}
+} // namespace pstl
 
-#endif /* __PSTL_execution */
+#endif /* _PSTL_EXECUTION */

@@ -1231,9 +1231,7 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
   });
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString SymbolFileDWARFDebugMap::GetPluginName() {
   return GetPluginNameStatic();
 }

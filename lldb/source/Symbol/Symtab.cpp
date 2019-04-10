@@ -220,9 +220,7 @@ const Symbol *Symtab::SymbolAtIndex(size_t idx) const {
   return nullptr;
 }
 
-//----------------------------------------------------------------------
 // InitNameIndexes
-//----------------------------------------------------------------------
 static bool lldb_skip_name(llvm::StringRef mangled,
                            Mangled::ManglingScheme scheme) {
   switch (scheme) {

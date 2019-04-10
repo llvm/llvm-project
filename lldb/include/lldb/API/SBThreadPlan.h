@@ -42,7 +42,6 @@ public:
   /// See also GetStopReasonDataAtIndex().
   size_t GetStopReasonDataCount();
 
-  //--------------------------------------------------------------------------
   /// Get information associated with a stop reason.
   ///
   /// Breakpoint stop reasons will have data that consists of pairs of
@@ -59,7 +58,6 @@ public:
   /// eStopReasonException     N     exception data
   /// eStopReasonExec          0
   /// eStopReasonPlanComplete  0
-  //--------------------------------------------------------------------------
   uint64_t GetStopReasonDataAtIndex(uint32_t idx);
 
   SBThread GetThread() const;

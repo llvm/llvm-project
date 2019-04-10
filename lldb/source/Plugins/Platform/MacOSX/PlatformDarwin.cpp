@@ -46,19 +46,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformDarwin::PlatformDarwin(bool is_host)
     : PlatformPOSIX(is_host), // This is the local host platform
       m_developer_directory() {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformDarwin::~PlatformDarwin() {}
 
 FileSpecList PlatformDarwin::LocateExecutableScriptingResources(

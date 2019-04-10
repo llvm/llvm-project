@@ -90,17 +90,13 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
   return false;
 }
 
-//----------------------------------------------------------------------
 // ProcessElfCore constructor
-//----------------------------------------------------------------------
 ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp,
                                lldb::ListenerSP listener_sp,
                                const FileSpec &core_file)
     : Process(target_sp, listener_sp), m_core_file(core_file) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 ProcessElfCore::~ProcessElfCore() {
   Clear();
   // We need to call finalize on the process before destroying ourselves to
@@ -110,9 +106,7 @@ ProcessElfCore::~ProcessElfCore() {
   Finalize();
 }
 
-//----------------------------------------------------------------------
 // PluginInterface
-//----------------------------------------------------------------------
 ConstString ProcessElfCore::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t ProcessElfCore::GetPluginVersion() { return 1; }
@@ -146,9 +140,7 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
   return addr;
 }
 
-//----------------------------------------------------------------------
 // Process Control
-//----------------------------------------------------------------------
 Status ProcessElfCore::DoLoadCore() {
   Status error;
   if (!m_core_module_sp) {
@@ -279,15 +271,11 @@ void ProcessElfCore::RefreshStateAfterStop() {}
 
 Status ProcessElfCore::DoDestroy() { return Status(); }
 
-//------------------------------------------------------------------
 // Process Queries
-//------------------------------------------------------------------
 
 bool ProcessElfCore::IsAlive() { return true; }
 
-//------------------------------------------------------------------
 // Process Memory
-//------------------------------------------------------------------
 size_t ProcessElfCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                   Status &error) {
   // Don't allow the caching that lldb_private::Process::ReadMemory does since

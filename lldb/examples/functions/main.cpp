@@ -29,7 +29,6 @@
 
 using namespace lldb;
 
-//----------------------------------------------------------------------
 // This quick sample code shows how to create a debugger instance and
 // create an executable target without adding dependent shared
 // libraries. It will then set a regular expression breakpoint to get
@@ -47,7 +46,6 @@ using namespace lldb;
 //
 //    $ DYLD_FRAMEWORK_PATH=/Volumes/data/lldb/tot/build/Debug ./a.out
 //    executable_path1 [executable_path2 ...]
-//----------------------------------------------------------------------
 class LLDBSentry {
 public:
   LLDBSentry() {

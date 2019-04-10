@@ -42,14 +42,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 // Static Variables
-//------------------------------------------------------------------
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 void PlatformDarwinKernel::Initialize() {
   PlatformDarwin::Initialize();
 
@@ -180,9 +176,7 @@ const char *PlatformDarwinKernel::GetDescriptionStatic() {
   return "Darwin Kernel platform plug-in.";
 }
 
-//------------------------------------------------------------------
 /// Code to handle the PlatformDarwinKernel settings
-//------------------------------------------------------------------
 
 static constexpr PropertyDefinition g_properties[] = {
     {"search-locally-for-kexts", OptionValue::eTypeBoolean, true, true, NULL,
@@ -246,9 +240,7 @@ void PlatformDarwinKernel::DebuggerInitialize(
   }
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformDarwinKernel::PlatformDarwinKernel(
     lldb_private::LazyBool is_ios_debug_session)
     : PlatformDarwin(false), // This is a remote platform
@@ -265,12 +257,10 @@ PlatformDarwinKernel::PlatformDarwinKernel(
   }
 }
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformDarwinKernel::~PlatformDarwinKernel() {}
 
 void PlatformDarwinKernel::GetStatus(Stream &strm) {

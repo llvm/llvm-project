@@ -60,9 +60,7 @@ public:
   int HandleCompletion(CompletionRequest &request) override;
 
 protected:
-  //------------------------------------------------------------------
   // IOHandler::Delegate functions
-  //------------------------------------------------------------------
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &line) override;
 

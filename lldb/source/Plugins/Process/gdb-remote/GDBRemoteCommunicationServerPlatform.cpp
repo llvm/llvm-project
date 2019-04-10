@@ -40,9 +40,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
-//----------------------------------------------------------------------
 // GDBRemoteCommunicationServerPlatform constructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
     const Socket::SocketProtocol socket_protocol, const char *socket_scheme)
     : GDBRemoteCommunicationServerCommon("gdb-remote.server",
@@ -86,9 +84,7 @@ GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
                         });
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationServerPlatform::~GDBRemoteCommunicationServerPlatform() {}
 
 Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(

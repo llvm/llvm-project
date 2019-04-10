@@ -25,9 +25,7 @@ public:
 
   void ExecuteInterpreterLoop() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -39,9 +37,7 @@ public:
 
   static const char *GetPluginDescriptionStatic();
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

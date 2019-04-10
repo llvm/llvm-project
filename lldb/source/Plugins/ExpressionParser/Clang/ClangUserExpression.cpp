@@ -702,7 +702,6 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   return true;
 }
 
-//------------------------------------------------------------------
 /// Converts an absolute position inside a given code string into
 /// a column/line pair.
 ///
@@ -720,7 +719,6 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 /// \param[out] column
 ///     The column in the line that contains the absolute position.
 ///     The first character in a line is indexed as 0.
-//------------------------------------------------------------------
 static void AbsPosToLineColumnPos(size_t abs_pos, llvm::StringRef code,
                                   unsigned &line, unsigned &column) {
   // Reset to code position to beginning of the file.

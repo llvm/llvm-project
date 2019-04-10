@@ -21,13 +21,11 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class File File.h "lldb/Host/File.h"
 /// A file class.
 ///
 /// A file class that divides abstracts the LLDB core from host file
 /// functionality.
-//----------------------------------------------------------------------
 class File : public IOObject {
 public:
   static int kInvalidDescriptor;
@@ -73,18 +71,15 @@ public:
         m_is_real_terminal(eLazyBoolCalculate),
         m_supports_colors(eLazyBoolCalculate) {}
 
-  //------------------------------------------------------------------
   /// Destructor.
   ///
   /// The destructor is virtual in case this class is subclassed.
-  //------------------------------------------------------------------
   ~File() override;
 
   bool IsValid() const override {
     return DescriptorIsValid() || StreamIsValid();
   }
 
-  //------------------------------------------------------------------
   /// Convert to pointer operator.
   ///
   /// This allows code to check a File object to see if it contains anything
@@ -99,10 +94,8 @@ public:
   /// \return
   ///     A pointer to this object if either the directory or filename
   ///     is valid, nullptr otherwise.
-  //------------------------------------------------------------------
   operator bool() const { return DescriptorIsValid() || StreamIsValid(); }
 
-  //------------------------------------------------------------------
   /// Logical NOT operator.
   ///
   /// This allows code to check a File object to see if it is invalid using
@@ -117,15 +110,12 @@ public:
   /// \return
   ///     Returns \b true if the object has an empty directory and
   ///     filename, \b false otherwise.
-  //------------------------------------------------------------------
   bool operator!() const { return !DescriptorIsValid() && !StreamIsValid(); }
 
-  //------------------------------------------------------------------
   /// Get the file spec for this file.
   ///
   /// \return
   ///     A reference to the file specification object.
-  //------------------------------------------------------------------
   Status GetFileSpec(FileSpec &file_spec) const;
 
   Status Close() override;
@@ -142,7 +132,6 @@ public:
 
   void SetStream(FILE *fh, bool transfer_ownership);
 
-  //------------------------------------------------------------------
   /// Read bytes from a file from the current file position.
   ///
   /// NOTE: This function is NOT thread safe. Use the read function
@@ -159,10 +148,8 @@ public:
   /// \return
   ///     An error object that indicates success or the reason for
   ///     failure.
-  //------------------------------------------------------------------
   Status Read(void *buf, size_t &num_bytes) override;
 
-  //------------------------------------------------------------------
   /// Write bytes to a file at the current file position.
   ///
   /// NOTE: This function is NOT thread safe. Use the write function
@@ -180,10 +167,8 @@ public:
   /// \return
   ///     An error object that indicates success or the reason for
   ///     failure.
-  //------------------------------------------------------------------
   Status Write(const void *buf, size_t &num_bytes) override;
 
-  //------------------------------------------------------------------
   /// Seek to an offset relative to the beginning of the file.
   ///
   /// NOTE: This function is NOT thread safe, other threads that
@@ -202,10 +187,8 @@ public:
   ///
   /// \return
   ///     The resulting seek offset, or -1 on error.
-  //------------------------------------------------------------------
   off_t SeekFromStart(off_t offset, Status *error_ptr = nullptr);
 
-  //------------------------------------------------------------------
   /// Seek to an offset relative to the current file position.
   ///
   /// NOTE: This function is NOT thread safe, other threads that
@@ -224,10 +207,8 @@ public:
   ///
   /// \return
   ///     The resulting seek offset, or -1 on error.
-  //------------------------------------------------------------------
   off_t SeekFromCurrent(off_t offset, Status *error_ptr = nullptr);
 
-  //------------------------------------------------------------------
   /// Seek to an offset relative to the end of the file.
   ///
   /// NOTE: This function is NOT thread safe, other threads that
@@ -247,10 +228,8 @@ public:
   ///
   /// \return
   ///     The resulting seek offset, or -1 on error.
-  //------------------------------------------------------------------
   off_t SeekFromEnd(off_t offset, Status *error_ptr = nullptr);
 
-  //------------------------------------------------------------------
   /// Read bytes from a file from the specified file offset.
   ///
   /// NOTE: This function is thread safe in that clients manager their
@@ -272,10 +251,8 @@ public:
   /// \return
   ///     An error object that indicates success or the reason for
   ///     failure.
-  //------------------------------------------------------------------
   Status Read(void *dst, size_t &num_bytes, off_t &offset);
 
-  //------------------------------------------------------------------
   /// Read bytes from a file from the specified file offset.
   ///
   /// NOTE: This function is thread safe in that clients manager their
@@ -303,11 +280,9 @@ public:
   /// \return
   ///     An error object that indicates success or the reason for
   ///     failure.
-  //------------------------------------------------------------------
   Status Read(size_t &num_bytes, off_t &offset, bool null_terminate,
               lldb::DataBufferSP &data_buffer_sp);
 
-  //------------------------------------------------------------------
   /// Write bytes to a file at the specified file offset.
   ///
   /// NOTE: This function is thread safe in that clients manager their
@@ -331,46 +306,36 @@ public:
   /// \return
   ///     An error object that indicates success or the reason for
   ///     failure.
-  //------------------------------------------------------------------
   Status Write(const void *src, size_t &num_bytes, off_t &offset);
 
-  //------------------------------------------------------------------
   /// Flush the current stream
   ///
   /// \return
   ///     An error object that indicates success or the reason for
   ///     failure.
-  //------------------------------------------------------------------
   Status Flush();
 
-  //------------------------------------------------------------------
   /// Sync to disk.
   ///
   /// \return
   ///     An error object that indicates success or the reason for
   ///     failure.
-  //------------------------------------------------------------------
   Status Sync();
 
-  //------------------------------------------------------------------
   /// Get the permissions for a this file.
   ///
   /// \return
   ///     Bits logical OR'ed together from the permission bits defined
   ///     in lldb_private::File::Permissions.
-  //------------------------------------------------------------------
   uint32_t GetPermissions(Status &error) const;
 
-  //------------------------------------------------------------------
   /// Return true if this file is interactive.
   ///
   /// \return
   ///     True if this file is a terminal (tty or pty), false
   ///     otherwise.
-  //------------------------------------------------------------------
   bool GetIsInteractive();
 
-  //------------------------------------------------------------------
   /// Return true if this file from a real terminal.
   ///
   /// Just knowing a file is a interactive isn't enough, we also need to know
@@ -380,12 +345,10 @@ public:
   /// \return
   ///     True if this file is a terminal (tty, not a pty) that has
   ///     a non-zero width and height, false otherwise.
-  //------------------------------------------------------------------
   bool GetIsRealTerminal();
 
   bool GetIsTerminalWithColors();
 
-  //------------------------------------------------------------------
   /// Output printf formatted output to the stream.
   ///
   /// Print some formatted output to the stream.
@@ -396,7 +359,6 @@ public:
   /// \param[in] ...
   ///     Variable arguments that are needed for the printf style
   ///     format string \a format.
-  //------------------------------------------------------------------
   size_t Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
   size_t PrintfVarArg(const char *format, va_list args);
@@ -412,9 +374,7 @@ protected:
 
   void CalculateInteractiveAndTerminal();
 
-  //------------------------------------------------------------------
   // Member variables
-  //------------------------------------------------------------------
   int m_descriptor;
   FILE *m_stream;
   uint32_t m_options;

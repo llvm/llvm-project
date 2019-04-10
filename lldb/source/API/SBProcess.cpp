@@ -53,9 +53,7 @@ SBProcess::SBProcess() : m_opaque_wp() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBProcess);
 }
 
-//----------------------------------------------------------------------
 // SBProcess constructor
-//----------------------------------------------------------------------
 
 SBProcess::SBProcess(const SBProcess &rhs) : m_opaque_wp(rhs.m_opaque_wp) {
   LLDB_RECORD_CONSTRUCTOR(SBProcess, (const lldb::SBProcess &), rhs);
@@ -75,9 +73,7 @@ const SBProcess &SBProcess::operator=(const SBProcess &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SBProcess::~SBProcess() {}
 
 const char *SBProcess::GetBroadcasterClassName() {

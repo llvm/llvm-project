@@ -267,9 +267,7 @@ public:
       m_command_thread_state = s;
   }
 
-  //----------------------------------------------------------------------
   // IOHandlerDelegate
-  //----------------------------------------------------------------------
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override;
 
   void IOHandlerInputComplete(IOHandler &io_handler,
@@ -278,9 +276,7 @@ public:
   static lldb::ScriptInterpreterSP
   CreateInstance(CommandInterpreter &interpreter);
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

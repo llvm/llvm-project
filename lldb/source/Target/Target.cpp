@@ -3477,9 +3477,7 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
   }
 }
 
-//--------------------------------------------------------------
 // Target::StopHook
-//--------------------------------------------------------------
 Target::StopHook::StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid)
     : UserID(uid), m_target_sp(target_sp), m_commands(), m_specifier_sp(),
       m_thread_spec_up() {}
@@ -3546,9 +3544,7 @@ void Target::StopHook::GetDescription(Stream *s,
   s->SetIndentLevel(indent_level);
 }
 
-//--------------------------------------------------------------
 // class TargetProperties
-//--------------------------------------------------------------
 
 // clang-format off
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
@@ -3924,9 +3920,7 @@ protected:
   mutable bool m_got_host_env;
 };
 
-//----------------------------------------------------------------------
 // TargetProperties
-//----------------------------------------------------------------------
 static constexpr PropertyDefinition g_experimental_properties[]{
     {"inject-local-vars", OptionValue::eTypeBoolean, true, true, nullptr,
      {},
@@ -3959,9 +3953,7 @@ TargetExperimentalProperties::TargetExperimentalProperties()
   m_collection_sp->Initialize(g_experimental_properties);
 }
 
-//----------------------------------------------------------------------
 // TargetProperties
-//----------------------------------------------------------------------
 TargetProperties::TargetProperties(Target *target)
     : Properties(), m_launch_info() {
   if (target) {
@@ -4614,7 +4606,6 @@ uint32_t EvaluateExpressionOptions::GetExpressionNumber() const {
 
 //----------------------------------------------------------------------
 // Target::TargetEventData
-//----------------------------------------------------------------------
 
 Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp)
     : EventData(), m_target_sp(target_sp), m_module_list() {}

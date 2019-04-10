@@ -261,9 +261,7 @@ public:
   GetLanguagesSupportingREPLs(std::set<lldb::LanguageType> &languages);
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from Language can see and modify these
-  //------------------------------------------------------------------
 
   Language();
 

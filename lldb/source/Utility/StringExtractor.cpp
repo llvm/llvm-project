@@ -24,9 +24,7 @@ static inline int xdigit_to_sint(char ch) {
   return -1;
 }
 
-//----------------------------------------------------------------------
 // StringExtractor constructor
-//----------------------------------------------------------------------
 StringExtractor::StringExtractor() : m_packet(), m_index(0) {}
 
 StringExtractor::StringExtractor(llvm::StringRef packet_str)
@@ -40,15 +38,11 @@ StringExtractor::StringExtractor(const char *packet_cstr)
     m_packet.assign(packet_cstr);
 }
 
-//----------------------------------------------------------------------
 // StringExtractor copy constructor
-//----------------------------------------------------------------------
 StringExtractor::StringExtractor(const StringExtractor &rhs)
     : m_packet(rhs.m_packet), m_index(rhs.m_index) {}
 
-//----------------------------------------------------------------------
 // StringExtractor assignment operator
-//----------------------------------------------------------------------
 const StringExtractor &StringExtractor::operator=(const StringExtractor &rhs) {
   if (this != &rhs) {
     m_packet = rhs.m_packet;
@@ -57,9 +51,7 @@ const StringExtractor &StringExtractor::operator=(const StringExtractor &rhs) {
   return *this;
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 StringExtractor::~StringExtractor() {}
 
 char StringExtractor::GetChar(char fail_value) {
@@ -72,13 +64,11 @@ char StringExtractor::GetChar(char fail_value) {
   return fail_value;
 }
 
-//----------------------------------------------------------------------
 // If a pair of valid hex digits exist at the head of the StringExtractor they
 // are decoded into an unsigned byte and returned by this function
 //
 // If there is not a pair of valid hex digits at the head of the
 // StringExtractor, it is left unchanged and -1 is returned
-//----------------------------------------------------------------------
 int StringExtractor::DecodeHexU8() {
   SkipSpaces();
   if (GetBytesLeft() < 2) {
@@ -93,10 +83,8 @@ int StringExtractor::DecodeHexU8() {
   return (uint8_t)((hi_nibble << 4) + lo_nibble);
 }
 
-//----------------------------------------------------------------------
 // Extract an unsigned character from two hex ASCII chars in the packet string,
 // or return fail_value on failure
-//----------------------------------------------------------------------
 uint8_t StringExtractor::GetHexU8(uint8_t fail_value, bool set_eof_on_fail) {
   // On success, fail_value will be overwritten with the next character in the
   // stream
@@ -304,12 +292,10 @@ size_t StringExtractor::GetHexBytes(llvm::MutableArrayRef<uint8_t> dest,
   return bytes_extracted;
 }
 
-//----------------------------------------------------------------------
 // Decodes all valid hex encoded bytes at the head of the StringExtractor,
 // limited by dst_len.
 //
 // Returns the number of bytes successfully decoded
-//----------------------------------------------------------------------
 size_t StringExtractor::GetHexBytesAvail(llvm::MutableArrayRef<uint8_t> dest) {
   size_t bytes_extracted = 0;
   while (!dest.empty()) {

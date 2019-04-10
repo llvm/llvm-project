@@ -22,10 +22,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Promote to max type currently follows the ANSI C rule for type promotion in
 // expressions.
-//----------------------------------------------------------------------
 static Scalar::Type PromoteToMaxType(
     const Scalar &lhs,  // The const left hand side object
     const Scalar &rhs,  // The const right hand side object

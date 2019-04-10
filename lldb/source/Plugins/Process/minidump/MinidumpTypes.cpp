@@ -84,33 +84,6 @@ LinuxProcStatus::Parse(llvm::ArrayRef<uint8_t> &data) {
 
 lldb::pid_t LinuxProcStatus::GetPid() const { return pid; }
 
-// Module stuff
-const MinidumpModule *MinidumpModule::Parse(llvm::ArrayRef<uint8_t> &data) {
-  const MinidumpModule *module = nullptr;
-  Status error = consumeObject(data, module);
-  if (error.Fail())
-    return nullptr;
-
-  return module;
-}
-
-llvm::ArrayRef<MinidumpModule>
-MinidumpModule::ParseModuleList(llvm::ArrayRef<uint8_t> &data) {
-  const auto orig_size = data.size();
-  const llvm::support::ulittle32_t *modules_count;
-  Status error = consumeObject(data, modules_count);
-  if (error.Fail() || *modules_count * sizeof(MinidumpModule) > data.size())
-    return {};
-  
-  // Compilers might end up padding an extra 4 bytes depending on how the
-  // structure is padded by the compiler and the #pragma pack settings.
-  if (4 + *modules_count * sizeof(MinidumpModule) < orig_size)
-    data = data.drop_front(4);
-  
-  return llvm::ArrayRef<MinidumpModule>(
-      reinterpret_cast<const MinidumpModule *>(data.data()), *modules_count);
-}
-
 // Exception stuff
 const MinidumpExceptionStream *
 MinidumpExceptionStream::Parse(llvm::ArrayRef<uint8_t> &data) {

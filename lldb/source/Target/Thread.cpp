@@ -171,9 +171,7 @@ uint64_t ThreadProperties::GetMaxBacktraceDepth() const {
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
-//------------------------------------------------------------------
 // Thread Event Data
-//------------------------------------------------------------------
 
 ConstString Thread::ThreadEventData::GetFlavorString() {
   static ConstString g_flavor("Thread::ThreadEventData");
@@ -234,9 +232,7 @@ Thread::ThreadEventData::GetStackFrameFromEvent(const Event *event_ptr) {
   return frame_sp;
 }
 
-//------------------------------------------------------------------
 // Thread class
-//------------------------------------------------------------------
 
 ConstString &Thread::GetStaticBroadcasterClass() {
   static ConstString class_name("lldb.thread");

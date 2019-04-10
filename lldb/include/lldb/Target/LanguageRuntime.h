@@ -184,9 +184,7 @@ public:
   static bool IsSymbolAnyRuntimeThunk(Symbol &symbol);
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from LanguageRuntime can see and modify these
-  //------------------------------------------------------------------
 
   LanguageRuntime(Process *process);
   Process *m_process;

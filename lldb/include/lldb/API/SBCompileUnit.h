@@ -48,7 +48,6 @@ public:
   uint32_t FindSupportFileIndex(uint32_t start_idx, const SBFileSpec &sb_file,
                                 bool full);
 
-  //------------------------------------------------------------------
   /// Get all types matching \a type_mask from debug info in this
   /// compile unit.
   ///
@@ -62,7 +61,6 @@ public:
   ///
   /// \return
   ///    A list of types in this compile unit that match \a type_mask
-  //------------------------------------------------------------------
   lldb::SBTypeList GetTypes(uint32_t type_mask = lldb::eTypeClassAny);
 
   lldb::LanguageType GetLanguage();

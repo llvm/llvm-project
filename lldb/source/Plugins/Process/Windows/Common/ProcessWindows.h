@@ -25,9 +25,7 @@ class ProcessWindowsData;
 
 class ProcessWindows : public Process, public IDebugDelegate {
 public:
-  //------------------------------------------------------------------
   // Static functions.
-  //------------------------------------------------------------------
   static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
                                         lldb::ListenerSP listener_sp,
                                         const FileSpec *);
@@ -40,9 +38,7 @@ public:
 
   static const char *GetPluginDescriptionStatic();
 
-  //------------------------------------------------------------------
   // Constructors and destructors
-  //------------------------------------------------------------------
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
 
   ~ProcessWindows();

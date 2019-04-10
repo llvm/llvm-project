@@ -36,21 +36,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformPOSIX::PlatformPOSIX(bool is_host)
     : RemoteAwarePlatform(is_host), // This is the local host platform
       m_option_group_platform_rsync(new OptionGroupPlatformRSync()),
       m_option_group_platform_ssh(new OptionGroupPlatformSSH()),
       m_option_group_platform_caching(new OptionGroupPlatformCaching()) {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformPOSIX::~PlatformPOSIX() {}
 
 lldb_private::OptionGroupOptions *PlatformPOSIX::GetConnectionOptions(

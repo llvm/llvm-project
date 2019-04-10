@@ -2115,7 +2115,6 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
     return false;
 
 #if defined LLDB_CONFIGURATION_DEBUG
-  //----------------------------------------------------------------------
   // For debugging purposes, the LLDB_DWARF_DONT_COMPLETE_TYPENAMES environment
   // variable can be set with one or more typenames separated by ';'
   // characters. This will cause this function to not complete any types whose
@@ -2125,7 +2124,6 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
   //
   // LLDB_DWARF_DONT_COMPLETE_TYPENAMES=Foo
   // LLDB_DWARF_DONT_COMPLETE_TYPENAMES=Foo;Bar;Baz
-  //----------------------------------------------------------------------
   const char *dont_complete_typenames_cstr =
       getenv("LLDB_DWARF_DONT_COMPLETE_TYPENAMES");
   if (dont_complete_typenames_cstr && dont_complete_typenames_cstr[0]) {

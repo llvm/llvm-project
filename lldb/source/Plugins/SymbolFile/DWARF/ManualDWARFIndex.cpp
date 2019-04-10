@@ -43,10 +43,8 @@ void ManualDWARFIndex::Index() {
 
   std::vector<IndexSet> sets(units_to_index.size());
 
-  //----------------------------------------------------------------------
   // Keep memory down by clearing DIEs for any compile units if indexing
   // caused us to load the compile unit's DIEs.
-  //----------------------------------------------------------------------
   std::vector<llvm::Optional<DWARFUnit::ScopedExtractDIEs>> clear_cu_dies(
       units_to_index.size());
   auto parser_fn = [&](size_t cu_idx) {
@@ -59,7 +57,6 @@ void ManualDWARFIndex::Index() {
 
   // Create a task runner that extracts dies for each DWARF compile unit in a
   // separate thread
-  //----------------------------------------------------------------------
   // First figure out which compile units didn't have their DIEs already
   // parsed and remember this.  If no DIEs were parsed prior to this index
   // function call, we are going to want to clear the CU dies after we are

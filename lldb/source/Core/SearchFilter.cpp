@@ -175,9 +175,7 @@ lldb::SearchFilterSP SearchFilter::CopyForBreakpoint(Breakpoint &breakpoint) {
   return ret_sp;
 }
 
-//----------------------------------------------------------------------
 // Helper functions for serialization.
-//----------------------------------------------------------------------
 
 StructuredData::DictionarySP
 SearchFilter::WrapOptionsDict(StructuredData::DictionarySP options_dict_sp) {
@@ -208,10 +206,8 @@ void SearchFilter::SerializeFileSpecList(
   options_dict_sp->AddItem(GetKey(name), module_array_sp);
 }
 
-//----------------------------------------------------------------------
 // UTILITY Functions to help iterate down through the elements of the
 // SymbolContext.
-//----------------------------------------------------------------------
 
 void SearchFilter::Search(Searcher &searcher) {
   SymbolContext empty_sc;
@@ -367,11 +363,9 @@ Searcher::CallbackReturn SearchFilter::DoFunctionIteration(
   return Searcher::eCallbackReturnContinue;
 }
 
-//----------------------------------------------------------------------
 //  SearchFilterForUnconstrainedSearches:
 //  Selects a shared library matching a given file spec, consulting the targets
 //  "black list".
-//----------------------------------------------------------------------
 SearchFilterSP SearchFilterForUnconstrainedSearches::CreateFromStructuredData(
     Target &target, const StructuredData::Dictionary &data_dict,
     Status &error) {
@@ -407,10 +401,8 @@ lldb::SearchFilterSP SearchFilterForUnconstrainedSearches::DoCopyForBreakpoint(
   return std::make_shared<SearchFilterForUnconstrainedSearches>(*this);
 }
 
-//----------------------------------------------------------------------
 //  SearchFilterByModule:
 //  Selects a shared library matching a given file spec
-//----------------------------------------------------------------------
 
 SearchFilterByModule::SearchFilterByModule(const lldb::TargetSP &target_sp,
                                            const FileSpec &module)
@@ -537,10 +529,8 @@ StructuredData::ObjectSP SearchFilterByModule::SerializeToStructuredData() {
   return WrapOptionsDict(options_dict_sp);
 }
 
-//----------------------------------------------------------------------
 //  SearchFilterByModuleList:
 //  Selects a shared library matching a given file spec
-//----------------------------------------------------------------------
 
 SearchFilterByModuleList::SearchFilterByModuleList(
     const lldb::TargetSP &target_sp, const FileSpecList &module_list)
@@ -691,10 +681,8 @@ StructuredData::ObjectSP SearchFilterByModuleList::SerializeToStructuredData() {
   return WrapOptionsDict(options_dict_sp);
 }
 
-//----------------------------------------------------------------------
 //  SearchFilterByModuleListAndCU:
 //  Selects a shared library matching a given file spec
-//----------------------------------------------------------------------
 
 SearchFilterByModuleListAndCU::SearchFilterByModuleListAndCU(
     const lldb::TargetSP &target_sp, const FileSpecList &module_list,

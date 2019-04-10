@@ -21,7 +21,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // The symbol vendor class is designed to abstract the process of searching for
 // debug information for a given module. Platforms can subclass this class and
 // provide extra ways to find debug information. Examples would be a subclass
@@ -29,15 +28,12 @@ namespace lldb_private {
 // or runtime data in the object files. A symbol vendor can use multiple
 // sources (SymbolFile objects) to provide the information and only parse as
 // deep as needed in order to provide the information that is requested.
-//----------------------------------------------------------------------
 class SymbolVendor : public ModuleChild, public PluginInterface {
 public:
   static SymbolVendor *FindPlugin(const lldb::ModuleSP &module_sp,
                                   Stream *feedback_strm);
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   SymbolVendor(const lldb::ModuleSP &module_sp);
 
   ~SymbolVendor() override;
@@ -147,12 +143,9 @@ public:
   //------------------------------------------------------------------
   /// Notify the SymbolVendor that the file addresses in the Sections
   /// for this module have been changed.
-  //------------------------------------------------------------------
   virtual void SectionFileAddressesChanged();
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
@@ -169,9 +162,7 @@ public:
   virtual bool ForceInlineSourceFileCheck();
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from SymbolVendor can see and modify these
-  //------------------------------------------------------------------
   typedef std::vector<lldb::CompUnitSP> CompileUnits;
   typedef CompileUnits::iterator CompileUnitIter;
   typedef CompileUnits::const_iterator CompileUnitConstIter;
@@ -188,9 +179,7 @@ protected:
                     // the symbol file each time when it is needed
 
 private:
-  //------------------------------------------------------------------
   // For SymbolVendor only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(SymbolVendor);
 };
 

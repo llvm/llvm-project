@@ -21,7 +21,6 @@ class TargetList : public Broadcaster {
 private:
   friend class Debugger;
 
-  //------------------------------------------------------------------
   /// Constructor
   ///
   /// The constructor for the target list is private. Clients can
@@ -29,13 +28,10 @@ private:
   /// lldb_private::Debugger::GetSharedInstance().GetTargetList().
   ///
   /// \see static TargetList& lldb_private::Debugger::GetTargetList().
-  //------------------------------------------------------------------
   TargetList(Debugger &debugger);
 
 public:
-  //------------------------------------------------------------------
   /// Broadcaster event bits definitions.
-  //------------------------------------------------------------------
   enum { eBroadcastBitInterrupt = (1 << 0) };
 
   // These two functions fill out the Broadcaster interface:
@@ -48,7 +44,6 @@ public:
 
   ~TargetList() override;
 
-  //------------------------------------------------------------------
   /// Create a new Target.
   ///
   /// Clients must use this function to create a Target. This allows
@@ -85,25 +80,21 @@ public:
   ///
   /// \return
   ///     An error object that indicates success or failure
-  //------------------------------------------------------------------
   Status CreateTarget(Debugger &debugger, llvm::StringRef user_exe_path,
                       llvm::StringRef triple_str,
                       LoadDependentFiles get_dependent_modules,
                       const OptionGroupPlatform *platform_options,
                       lldb::TargetSP &target_sp);
 
-  //------------------------------------------------------------------
   /// Create a new Target.
   ///
   /// Same as the function above, but used when you already know the
   /// platform you will be using
-  //------------------------------------------------------------------
   Status CreateTarget(Debugger &debugger, llvm::StringRef user_exe_path,
                       const ArchSpec &arch,
                       LoadDependentFiles get_dependent_modules,
                       lldb::PlatformSP &platform_sp, lldb::TargetSP &target_sp);
 
-  //------------------------------------------------------------------
   /// Delete a Target object from the list.
   ///
   /// When clients are done with the Target objects, this function
@@ -118,7 +109,6 @@ public:
   ///     from this target list, \b false otherwise. The client will
   ///     be left with the last remaining shared pointer to the target
   ///     in \a target_sp which can then be properly released.
-  //------------------------------------------------------------------
   bool DeleteTarget(lldb::TargetSP &target_sp);
 
   int GetNumTargets() const;
@@ -127,7 +117,6 @@ public:
 
   uint32_t GetIndexOfTarget(lldb::TargetSP target_sp) const;
 
-  //------------------------------------------------------------------
   /// Find the target that contains has an executable whose path
   /// matches \a exe_file_spec, and whose architecture matches
   /// \a arch_ptr if arch_ptr is not nullptr.
@@ -149,12 +138,10 @@ public:
   ///     pointer will contain nullptr if no target objects have a
   ///     executable whose full or partial path matches
   ///     with a matching process ID.
-  //------------------------------------------------------------------
   lldb::TargetSP FindTargetWithExecutableAndArchitecture(
       const FileSpec &exe_file_spec,
       const ArchSpec *exe_arch_ptr = nullptr) const;
 
-  //------------------------------------------------------------------
   /// Find the target that contains a process with process ID \a
   /// pid.
   ///
@@ -165,14 +152,12 @@ public:
   ///     A shared pointer to a target object. The returned shared
   ///     pointer will contain nullptr if no target objects own a process
   ///     with a matching process ID.
-  //------------------------------------------------------------------
   lldb::TargetSP FindTargetWithProcessID(lldb::pid_t pid) const;
 
   lldb::TargetSP FindTargetWithProcess(lldb_private::Process *process) const;
 
   lldb::TargetSP GetTargetSP(Target *target) const;
 
-  //------------------------------------------------------------------
   /// Send an async interrupt to one or all processes.
   ///
   /// Find the target that contains the process with process ID \a
@@ -186,7 +171,6 @@ public:
   ///
   /// \return
   ///     The number of async interrupts sent.
-  //------------------------------------------------------------------
   uint32_t SendAsyncInterrupt(lldb::pid_t pid = LLDB_INVALID_PROCESS_ID);
 
   uint32_t SignalIfRunning(lldb::pid_t pid, int signo);
@@ -197,9 +181,7 @@ public:
 
 protected:
   typedef std::vector<lldb::TargetSP> collection;
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   collection m_target_list;
   lldb::TargetSP m_dummy_target_sp;
   mutable std::recursive_mutex m_target_list_mutex;

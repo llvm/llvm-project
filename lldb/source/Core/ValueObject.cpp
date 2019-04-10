@@ -86,7 +86,6 @@ static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
 
 //----------------------------------------------------------------------
 // ValueObject constructor
-//----------------------------------------------------------------------
 ValueObject::ValueObject(ValueObject &parent)
     : UserID(++g_value_obj_uid), // Unique identifier for every value object
       m_parent(&parent), m_root(NULL), m_update_point(parent.GetUpdatePoint()),
@@ -114,9 +113,7 @@ ValueObject::ValueObject(ValueObject &parent)
   m_manager->ManageObject(this);
 }
 
-//----------------------------------------------------------------------
 // ValueObject constructor
-//----------------------------------------------------------------------
 ValueObject::ValueObject(ExecutionContextScope *exe_scope,
                          AddressType child_ptr_or_ref_addr_type)
     : UserID(++g_value_obj_uid), // Unique identifier for every value object
@@ -151,9 +148,7 @@ ValueObject::ValueObject(ExecutionContextScope *exe_scope,
   m_manager->ManageObject(this);
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 ValueObject::~ValueObject() {}
 
 bool ValueObject::UpdateValueIfNeeded(bool update_format) {

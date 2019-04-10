@@ -18,12 +18,10 @@ namespace lldb_private {
 class Status;
 class HostThread;
 
-//----------------------------------------------------------------------
 // IDebugDelegate
 //
 // IDebugDelegate defines an interface which allows implementors to receive
 // notification of events that happen in a debugged process.
-//----------------------------------------------------------------------
 class IDebugDelegate {
 public:
   virtual ~IDebugDelegate() {}

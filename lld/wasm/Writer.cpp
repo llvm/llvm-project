@@ -1162,22 +1162,33 @@ void Writer::processRelocations(InputChunk *Chunk) {
     }
 
     if (Config->Pic) {
-      // Certain relocation types can't be used when building PIC output, since
-      // they would require absolute symbol addresses at link time.
       switch (Reloc.Type) {
       case R_WASM_TABLE_INDEX_SLEB:
       case R_WASM_MEMORY_ADDR_SLEB:
       case R_WASM_MEMORY_ADDR_LEB: {
+        // Certain relocation types can't be used when building PIC output, since
+        // they would require absolute symbol addresses at link time.
         Symbol *Sym = File->getSymbols()[Reloc.Index];
         error(toString(File) + ": relocation " +
               relocTypeToString(Reloc.Type) + " cannot be used againt symbol " +
               toString(*Sym) + "; recompile with -fPIC");
         break;
       }
+      case R_WASM_TABLE_INDEX_I32:
+      case R_WASM_MEMORY_ADDR_I32: {
+        // These relocation types are only present in the data section and
+        // will be converted into code by `generateRelocationCode`.  This code
+        // requires the symbols to have GOT entires.
+        auto* Sym = File->getSymbols()[Reloc.Index];
+        if (!Sym->isHidden() && !Sym->isLocal() && !Sym->isInGOT()) {
+          Sym->setGOTIndex(NumImportedGlobals++);
+          GOTSymbols.push_back(Sym);
+        }
+        break;
+      }
       }
     }
   }
-
 }
 
 void Writer::assignIndexes() {

@@ -23,9 +23,7 @@ class AppleObjCRuntime : public lldb_private::ObjCLanguageRuntime {
 public:
   ~AppleObjCRuntime() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   // Note there is no CreateInstance, Initialize & Terminate functions here,
   // because
   // you can't make an instance of this generic runtime.

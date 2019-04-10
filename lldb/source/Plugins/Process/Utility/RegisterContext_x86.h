@@ -16,9 +16,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace lldb_private {
-//---------------------------------------------------------------------------
 // i386 ehframe, dwarf regnums
-//---------------------------------------------------------------------------
 
 // Register numbers seen in eh_frame (eRegisterKindEHFrame) on i386 systems
 // (non-Darwin)
@@ -131,9 +129,7 @@ enum {
   dwarf_bnd3_i386,
 };
 
-//---------------------------------------------------------------------------
 // AMD x86_64, AMD64, Intel EM64T, or Intel 64 ehframe, dwarf regnums
-//---------------------------------------------------------------------------
 
 // EHFrame and DWARF Register numbers (eRegisterKindEHFrame &
 // eRegisterKindDWARF)
@@ -241,9 +237,7 @@ enum {
   // dwarf_k7_x86_64,
 };
 
-//---------------------------------------------------------------------------
 // Generic floating-point registers
-//---------------------------------------------------------------------------
 
 struct MMSReg {
   uint8_t bytes[10];
@@ -282,9 +276,7 @@ struct FXSAVE {
   uint8_t padding2[40];
 };
 
-//---------------------------------------------------------------------------
 // Extended floating-point registers
-//---------------------------------------------------------------------------
 
 struct YMMHReg {
   uint8_t bytes[16]; // 16 * 8 bits for the high bytes of each YMM register

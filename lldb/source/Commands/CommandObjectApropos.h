@@ -14,9 +14,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectApropos
-//-------------------------------------------------------------------------
 
 class CommandObjectApropos : public CommandObjectParsed {
 public:

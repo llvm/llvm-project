@@ -71,6 +71,7 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
 
   NumRelocations = 0;
   AreRelocsRela = false;
+  Debug = Name.startswith(".debug") || Name.startswith(".zdebug");
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.

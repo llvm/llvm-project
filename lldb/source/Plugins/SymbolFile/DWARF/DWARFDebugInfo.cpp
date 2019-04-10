@@ -27,16 +27,12 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace std;
 
-//----------------------------------------------------------------------
 // Constructor
-//----------------------------------------------------------------------
 DWARFDebugInfo::DWARFDebugInfo(lldb_private::DWARFContext &context)
     : m_dwarf2Data(NULL), m_context(context), m_compile_units(),
       m_cu_aranges_up() {}
 
-//----------------------------------------------------------------------
 // SetDwarfData
-//----------------------------------------------------------------------
 void DWARFDebugInfo::SetDwarfData(SymbolFileDWARF *dwarf2Data) {
   m_dwarf2Data = dwarf2Data;
   m_compile_units.clear();
@@ -201,11 +197,9 @@ DWARFDebugInfo::GetDIEForDIEOffset(dw_offset_t die_offset) {
   return DWARFDIE();
 }
 
-//----------------------------------------------------------------------
 // GetDIE()
 //
 // Get the DIE (Debug Information Entry) with the specified offset.
-//----------------------------------------------------------------------
 DWARFDIE
 DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
   DWARFUnit *cu = GetCompileUnit(die_ref);

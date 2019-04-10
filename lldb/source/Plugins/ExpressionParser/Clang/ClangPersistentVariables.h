@@ -25,7 +25,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class ClangPersistentVariables ClangPersistentVariables.h
 /// "lldb/Expression/ClangPersistentVariables.h" Manages persistent values
 /// that need to be preserved between expression invocations.
@@ -33,7 +32,6 @@ namespace lldb_private {
 /// A list of variables that can be accessed and updated by any expression.  See
 /// ClangPersistentVariable for more discussion.  Also provides an increasing,
 /// 0-based counter for naming result variables.
-//----------------------------------------------------------------------
 class ClangPersistentVariables : public PersistentExpressionState {
 public:
   //----------------------------------------------------------------------
@@ -43,9 +41,7 @@ public:
 
   ~ClangPersistentVariables() override = default;
 
-  //------------------------------------------------------------------
   // llvm casting support
-  //------------------------------------------------------------------
   static bool classof(const PersistentExpressionState *pv) {
     return pv->getKind() == PersistentExpressionState::eKindClang;
   }

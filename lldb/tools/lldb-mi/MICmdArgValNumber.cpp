@@ -11,7 +11,6 @@
 #include "MICmdArgContext.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValNumber constructor.
 // Type:    Method.
 // Args:    None.
@@ -23,7 +22,6 @@ CMICmdArgValNumber::CMICmdArgValNumber()
       m_nNumber(0) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValNumber constructor.
 // Type:    Method.
 // Args:    vrArgName          - (R) Argument's name to search by.
@@ -45,7 +43,6 @@ CMICmdArgValNumber::CMICmdArgValNumber(
       m_nNumberFormatMask(vnNumberFormatMask), m_nNumber(0) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValNumber destructor.
 // Type:    Overridden.
 // Args:    None.
@@ -55,7 +52,6 @@ CMICmdArgValNumber::CMICmdArgValNumber(
 CMICmdArgValNumber::~CMICmdArgValNumber() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Parse the command's argument options string and try to extract the
 // value *this
 //          argument is looking for.
@@ -105,7 +101,6 @@ bool CMICmdArgValNumber::Validate(CMICmdArgContext &vwArgContext) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Examine the string and determine if it is a valid string type
 // argument.
 // Type:    Method.
@@ -134,7 +129,6 @@ bool CMICmdArgValNumber::IsArgNumber(const CMIUtilString &vrTxt) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Extract the thread group number from the thread group argument.
 // Type:    Method.
 // Args:    vrTxt   - (R) Some text.
@@ -153,7 +147,6 @@ bool CMICmdArgValNumber::ExtractNumber(const CMIUtilString &vrTxt) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the thread group ID found in the argument.
 // Type:    Method.
 // Args:    None.

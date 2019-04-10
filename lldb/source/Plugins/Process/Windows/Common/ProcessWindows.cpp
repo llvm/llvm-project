@@ -136,7 +136,6 @@ const char *ProcessWindows::GetPluginDescriptionStatic() {
   return "Process plugin for Windows";
 }
 
-//------------------------------------------------------------------------------
 // Constructors and destructors.
 
 ProcessWindows::ProcessWindows(lldb::TargetSP target_sp,
@@ -161,7 +160,6 @@ size_t ProcessWindows::PutSTDIN(const char *buf, size_t buf_size,
   return 0;
 }
 
-//------------------------------------------------------------------------------
 // ProcessInterface protocol.
 
 lldb_private::ConstString ProcessWindows::GetPluginName() {

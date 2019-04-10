@@ -48,9 +48,7 @@ using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 using namespace std::chrono;
 
-//----------------------------------------------------------------------
 // GDBRemoteCommunicationClient constructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
     : GDBRemoteClientBase("gdb-remote.client", "gdb-remote.client.rx_packet"),
       m_supports_not_sending_acks(eLazyBoolCalculate),
@@ -105,9 +103,7 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supported_async_json_packets_sp(), m_qXfer_memory_map(),
       m_qXfer_memory_map_loaded(false) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationClient::~GDBRemoteCommunicationClient() {
   if (IsConnected())
     Disconnect();

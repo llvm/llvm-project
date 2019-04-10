@@ -17,11 +17,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Create an instance of this class. This function is filled into the plugin
 // info class that gets handed out by the plugin factory and allows the lldb to
 // instantiate an instance of this class.
-//----------------------------------------------------------------------
 DynamicLoader *DynamicLoaderStatic::CreateInstance(Process *process,
                                                    bool force) {
   bool create = force;
@@ -48,31 +46,23 @@ DynamicLoader *DynamicLoaderStatic::CreateInstance(Process *process,
   return NULL;
 }
 
-//----------------------------------------------------------------------
 // Constructor
-//----------------------------------------------------------------------
 DynamicLoaderStatic::DynamicLoaderStatic(Process *process)
     : DynamicLoader(process) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 DynamicLoaderStatic::~DynamicLoaderStatic() {}
 
-//------------------------------------------------------------------
 /// Called after attaching a process.
 ///
 /// Allow DynamicLoader plug-ins to execute some code after
 /// attaching to a process.
-//------------------------------------------------------------------
 void DynamicLoaderStatic::DidAttach() { LoadAllImagesAtFileAddresses(); }
 
-//------------------------------------------------------------------
 /// Called after attaching a process.
 ///
 /// Allow DynamicLoader plug-ins to execute some code after
 /// attaching to a process.
-//------------------------------------------------------------------
 void DynamicLoaderStatic::DidLaunch() { LoadAllImagesAtFileAddresses(); }
 
 void DynamicLoaderStatic::LoadAllImagesAtFileAddresses() {
@@ -156,9 +146,7 @@ const char *DynamicLoaderStatic::GetPluginDescriptionStatic() {
          "addresses contained in each image.";
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString DynamicLoaderStatic::GetPluginName() {
   return GetPluginNameStatic();
 }

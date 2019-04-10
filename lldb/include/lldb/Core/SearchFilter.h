@@ -50,16 +50,12 @@ class Target;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class Searcher SearchFilter.h "lldb/Core/SearchFilter.h" Class that is
 /// driven by the SearchFilter to search the SymbolContext space of the target
 /// program.
-//----------------------------------------------------------------------
 
-//----------------------------------------------------------------------
 /// General Outline:
 /// Provides the callback and search depth for the SearchFilter search.
-//----------------------------------------------------------------------
 
 class Searcher {
 public:
@@ -79,23 +75,18 @@ public:
 
   virtual lldb::SearchDepth GetDepth() = 0;
 
-  //------------------------------------------------------------------
   /// Prints a canonical description for the searcher to the stream \a s.
   ///
   /// \param[in] s
   ///   Stream to which the output is copied.
-  //------------------------------------------------------------------
   virtual void GetDescription(Stream *s);
 };
 
-//----------------------------------------------------------------------
 /// \class SearchFilter SearchFilter.h "lldb/Core/SearchFilter.h" Class
 /// descends through the SymbolContext space of the target, applying a filter
 /// at each stage till it reaches the depth specified by the GetDepth method
 /// of the searcher, and calls its callback at that point.
-//----------------------------------------------------------------------
 
-//----------------------------------------------------------------------
 /// General Outline:
 /// Provides the callback and search depth for the SearchFilter search.
 ///
@@ -106,16 +97,13 @@ public:
 /// that since the resolution of the Searcher may be greater than that of the
 /// SearchFilter, before the Searcher qualifies an address it should pass it
 /// to "AddressPasses." The default implementation is "Everything Passes."
-//----------------------------------------------------------------------
 
 class SearchFilter {
 public:
-  //------------------------------------------------------------------
   /// The basic constructor takes a Target, which gives the space to search.
   ///
   /// \param[in] target
   ///    The Target that provides the module list to search.
-  //------------------------------------------------------------------
   SearchFilter(const lldb::TargetSP &target_sp);
 
   SearchFilter(const SearchFilter &rhs);
@@ -126,17 +114,14 @@ public:
 
   SearchFilter &operator=(const SearchFilter &rhs);
 
-  //------------------------------------------------------------------
   /// Call this method with a file spec to see if that spec passes the filter.
   ///
   /// \param[in] spec
   ///    The file spec to check against the filter.
   /// \return
   ///    \b true if \a spec passes, and \b false otherwise.
-  //------------------------------------------------------------------
   virtual bool ModulePasses(const FileSpec &spec);
 
-  //------------------------------------------------------------------
   /// Call this method with a Module to see if that module passes the filter.
   ///
   /// \param[in] module
@@ -144,10 +129,8 @@ public:
   ///
   /// \return
   ///    \b true if \a module passes, and \b false otherwise.
-  //------------------------------------------------------------------
   virtual bool ModulePasses(const lldb::ModuleSP &module_sp);
 
-  //------------------------------------------------------------------
   /// Call this method with a Address to see if \a address passes the filter.
   ///
   /// \param[in] addr
@@ -155,10 +138,8 @@ public:
   ///
   /// \return
   ///    \b true if \a address passes, and \b false otherwise.
-  //------------------------------------------------------------------
   virtual bool AddressPasses(Address &addr);
 
-  //------------------------------------------------------------------
   /// Call this method with a FileSpec to see if \a file spec passes the
   /// filter as the name of a compilation unit.
   ///
@@ -167,10 +148,8 @@ public:
   ///
   /// \return
   ///    \b true if \a file spec passes, and \b false otherwise.
-  //------------------------------------------------------------------
   virtual bool CompUnitPasses(FileSpec &fileSpec);
 
-  //------------------------------------------------------------------
   /// Call this method with a CompileUnit to see if \a comp unit passes the
   /// filter.
   ///
@@ -179,10 +158,8 @@ public:
   ///
   /// \return
   ///    \b true if \a Comp Unit passes, and \b false otherwise.
-  //------------------------------------------------------------------
   virtual bool CompUnitPasses(CompileUnit &compUnit);
 
-  //------------------------------------------------------------------
   /// Call this method with a Function to see if \a function passes the
   /// filter.
   ///
@@ -191,19 +168,15 @@ public:
   ///
   /// \return
   ///    \b true if \a function passes, and \b false otherwise.
-  //------------------------------------------------------------------
   virtual bool FunctionPasses(Function &function);
 
-  //------------------------------------------------------------------
   /// Call this method to do the search using the Searcher.
   ///
   /// \param[in] searcher
   ///    The searcher to drive with this search.
   ///
-  //------------------------------------------------------------------
   virtual void Search(Searcher &searcher);
 
-  //------------------------------------------------------------------
   /// Call this method to do the search using the Searcher in the module list
   /// \a modules.
   ///
@@ -213,10 +186,8 @@ public:
   /// \param[in] modules
   ///    The module list within which to restrict the search.
   ///
-  //------------------------------------------------------------------
   virtual void SearchInModuleList(Searcher &searcher, ModuleList &modules);
 
-  //------------------------------------------------------------------
   /// This determines which items are REQUIRED for the filter to pass. For
   /// instance, if you are filtering by Compilation Unit, obviously symbols
   /// that have no compilation unit can't pass  So return eSymbolContextCU and
@@ -227,20 +198,15 @@ public:
   ///    The required elements for the search, which is an or'ed together
   ///    set of lldb:SearchContextItem enum's.
   ///
-  //------------------------------------------------------------------
   virtual uint32_t GetFilterRequiredItems();
 
-  //------------------------------------------------------------------
   /// Prints a canonical description for the search filter to the stream \a s.
   ///
   /// \param[in] s
   ///   Stream to which the output is copied.
-  //------------------------------------------------------------------
   virtual void GetDescription(Stream *s);
 
-  //------------------------------------------------------------------
   /// Standard "Dump" method.  At present it does nothing.
-  //------------------------------------------------------------------
   virtual void Dump(Stream *s) const;
 
   lldb::SearchFilterSP CopyForBreakpoint(Breakpoint &breakpoint);
@@ -328,12 +294,10 @@ private:
   unsigned char SubclassID;
 };
 
-//----------------------------------------------------------------------
 /// \class SearchFilterForUnconstrainedSearches SearchFilter.h
 /// "lldb/Core/SearchFilter.h" This is a SearchFilter that searches through
 /// all modules.  It also consults the
 /// Target::ModuleIsExcludedForUnconstrainedSearches.
-//----------------------------------------------------------------------
 class SearchFilterForUnconstrainedSearches : public SearchFilter {
 public:
   SearchFilterForUnconstrainedSearches(const lldb::TargetSP &target_sp)
@@ -356,14 +320,11 @@ protected:
   lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
 };
 
-//----------------------------------------------------------------------
 /// \class SearchFilterByModule SearchFilter.h "lldb/Core/SearchFilter.h" This
 /// is a SearchFilter that restricts the search to a given module.
-//----------------------------------------------------------------------
 
 class SearchFilterByModule : public SearchFilter {
 public:
-  //------------------------------------------------------------------
   /// The basic constructor takes a Target, which gives the space to search,
   /// and the module to restrict the search to.
   ///
@@ -372,7 +333,6 @@ public:
   ///
   /// \param[in] module
   ///    The Module that limits the search.
-  //------------------------------------------------------------------
   SearchFilterByModule(const lldb::TargetSP &targetSP, const FileSpec &module);
 
   SearchFilterByModule(const SearchFilterByModule &rhs);
@@ -415,7 +375,6 @@ private:
 
 class SearchFilterByModuleList : public SearchFilter {
 public:
-  //------------------------------------------------------------------
   /// The basic constructor takes a Target, which gives the space to search,
   /// and the module list to restrict the search to.
   ///
@@ -424,7 +383,6 @@ public:
   ///
   /// \param[in] module
   ///    The Module that limits the search.
-  //------------------------------------------------------------------
   SearchFilterByModuleList(const lldb::TargetSP &targetSP,
                            const FileSpecList &module_list);
 
@@ -474,7 +432,6 @@ protected:
 
 class SearchFilterByModuleListAndCU : public SearchFilterByModuleList {
 public:
-  //------------------------------------------------------------------
   /// The basic constructor takes a Target, which gives the space to search,
   /// and the module list to restrict the search to.
   ///
@@ -483,7 +440,6 @@ public:
   ///
   /// \param[in] module
   ///    The Module that limits the search.
-  //------------------------------------------------------------------
   SearchFilterByModuleListAndCU(const lldb::TargetSP &targetSP,
                                 const FileSpecList &module_list,
                                 const FileSpecList &cu_list);

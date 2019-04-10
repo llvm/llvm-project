@@ -55,9 +55,7 @@ const static uint32_t g_default_packet_timeout_sec = 20; // seconds
 const static uint32_t g_default_packet_timeout_sec = 0; // not specified
 #endif
 
-//----------------------------------------------------------------------
 // GDBRemoteCommunicationServerCommon constructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
     const char *comm_name, const char *listener_name)
     : GDBRemoteCommunicationServer(comm_name, listener_name),
@@ -176,9 +174,7 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
       &GDBRemoteCommunicationServerCommon::Handle_vFile_unlink);
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationServerCommon::~GDBRemoteCommunicationServerCommon() {}
 
 GDBRemoteCommunication::PacketResult

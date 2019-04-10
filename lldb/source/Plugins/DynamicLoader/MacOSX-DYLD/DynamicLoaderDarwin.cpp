@@ -51,46 +51,36 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Constructor
-//----------------------------------------------------------------------
 DynamicLoaderDarwin::DynamicLoaderDarwin(Process *process)
     : DynamicLoader(process), m_dyld_module_wp(), m_libpthread_module_wp(),
       m_pthread_getspecific_addr(), m_tid_to_tls_map(), m_dyld_image_infos(),
       m_dyld_image_infos_stop_id(UINT32_MAX), m_dyld(), m_mutex() {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 DynamicLoaderDarwin::~DynamicLoaderDarwin() {}
 
-//------------------------------------------------------------------
 /// Called after attaching a process.
 ///
 /// Allow DynamicLoader plug-ins to execute some code after
 /// attaching to a process.
-//------------------------------------------------------------------
 void DynamicLoaderDarwin::DidAttach() {
   PrivateInitialize(m_process);
   DoInitialImageFetch();
   SetNotificationBreakpoint();
 }
 
-//------------------------------------------------------------------
 /// Called after attaching a process.
 ///
 /// Allow DynamicLoader plug-ins to execute some code after
 /// attaching to a process.
-//------------------------------------------------------------------
 void DynamicLoaderDarwin::DidLaunch() {
   PrivateInitialize(m_process);
   DoInitialImageFetch();
   SetNotificationBreakpoint();
 }
 
-//----------------------------------------------------------------------
 // Clear out the state of this class.
-//----------------------------------------------------------------------
 void DynamicLoaderDarwin::Clear(bool clear_process) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (clear_process)
@@ -220,10 +210,8 @@ void DynamicLoaderDarwin::UnloadAllImages() {
   }
 }
 
-//----------------------------------------------------------------------
 // Update the load addresses for all segments in MODULE using the updated INFO
 // that is passed in.
-//----------------------------------------------------------------------
 bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
                                                  ImageInfo &info) {
   bool changed = false;
@@ -300,9 +288,7 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
   return changed;
 }
 
-//----------------------------------------------------------------------
 // Unload the segments in MODULE using the INFO that is passed in.
-//----------------------------------------------------------------------
 bool DynamicLoaderDarwin::UnloadModuleSections(Module *module,
                                                ImageInfo &info) {
   bool changed = false;
@@ -683,7 +669,6 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
   return true;
 }
 
-//----------------------------------------------------------------------
 // On Mac OS X libobjc (the Objective-C runtime) has several critical dispatch
 // functions written in hand-written assembly, and also have hand-written
 // unwind information in the eh_frame section.  Normally we prefer analyzing
@@ -695,7 +680,6 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
 // extensible so they could have an Apple-specific flag) which indicates that
 // the instructions are asynchronous -- accurate at every instruction, instead
 // of our normal default assumption that they are not.
-//----------------------------------------------------------------------
 
 bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
   ModuleSP module_sp;
@@ -713,9 +697,7 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
   return objc_runtime != NULL && objc_runtime->IsModuleObjCLibrary(module_sp);
 }
 
-//----------------------------------------------------------------------
 // Dump a Segment to the file handle provided.
-//----------------------------------------------------------------------
 void DynamicLoaderDarwin::Segment::PutToLog(Log *log,
                                             lldb::addr_t slide) const {
   if (log) {
@@ -740,9 +722,7 @@ DynamicLoaderDarwin::ImageInfo::FindSegment(ConstString name) const {
   return NULL;
 }
 
-//----------------------------------------------------------------------
 // Dump an image info structure to the file handle provided.
-//----------------------------------------------------------------------
 void DynamicLoaderDarwin::ImageInfo::PutToLog(Log *log) const {
   if (!log)
     return;
@@ -765,9 +745,7 @@ void DynamicLoaderDarwin::PrivateInitialize(Process *process) {
   m_process->GetTarget().ClearAllLoadedSections();
 }
 
-//----------------------------------------------------------------------
 // Member function that gets called when the process state changes.
-//----------------------------------------------------------------------
 void DynamicLoaderDarwin::PrivateProcessStateChanged(Process *process,
                                                      StateType state) {
   DEBUG_PRINTF("DynamicLoaderDarwin::%s(%s)\n", __FUNCTION__,

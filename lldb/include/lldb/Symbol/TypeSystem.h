@@ -29,12 +29,9 @@ class PDBASTParser;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // Interface for representing the Type Systems in different languages.
-//----------------------------------------------------------------------
 class TypeSystem : public PluginInterface {
 public:
-  //----------------------------------------------------------------------
   // Intrusive type system that allows us to use llvm casting.
   //
   // To add a new type system:
@@ -64,7 +61,6 @@ public:
   //
   // Then you can use the llvm casting on any "TypeSystem *" to get an instance
   // of your subclass.
-  //----------------------------------------------------------------------
   enum LLVMCastKind {
     eKindClang,
     eKindSwift,
@@ -72,9 +68,7 @@ public:
     kNumKinds
   };
 
-  //----------------------------------------------------------------------
   // Constructors and Destructors
-  //----------------------------------------------------------------------
   TypeSystem(LLVMCastKind kind);
 
   ~TypeSystem() override;
@@ -103,9 +97,7 @@ public:
   // Returns true if the symbol file changed during the set accessor.
   virtual void SetSymbolFile(SymbolFile *sym_file) { m_sym_file = sym_file; }
 
-  //----------------------------------------------------------------------
   // CompilerDecl functions
-  //----------------------------------------------------------------------
   virtual ConstString DeclGetName(void *opaque_decl) = 0;
 
   virtual ConstString DeclGetMangledName(void *opaque_decl);
@@ -119,9 +111,7 @@ public:
   virtual CompilerType DeclGetFunctionArgumentType(void *opaque_decl,
                                                    size_t arg_idx);
 
-  //----------------------------------------------------------------------
   // CompilerDeclContext functions
-  //----------------------------------------------------------------------
 
   virtual std::vector<CompilerDecl>
   DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,
@@ -141,9 +131,7 @@ public:
   virtual bool DeclContextIsContainedInLookup(void *opaque_decl_ctx,
                                               void *other_opaque_decl_ctx) = 0;
 
-  //----------------------------------------------------------------------
   // Tests
-  //----------------------------------------------------------------------
 
   virtual bool IsArrayType(lldb::opaque_compiler_type_t type,
                            CompilerType *element_type, uint64_t *size,
@@ -214,19 +202,14 @@ public:
 
   //----------------------------------------------------------------------
   // Type Completion
-  //----------------------------------------------------------------------
 
   virtual bool GetCompleteType(lldb::opaque_compiler_type_t type) = 0;
 
-  //----------------------------------------------------------------------
   // AST related queries
-  //----------------------------------------------------------------------
 
   virtual uint32_t GetPointerByteSize() = 0;
 
-  //----------------------------------------------------------------------
   // Accessors
-  //----------------------------------------------------------------------
 
   virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type) = 0;
 
@@ -253,9 +236,7 @@ public:
 
   virtual lldb::TypeClass GetTypeClass(lldb::opaque_compiler_type_t type) = 0;
 
-  //----------------------------------------------------------------------
   // Creating related types
-  //----------------------------------------------------------------------
 
   virtual CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
                                            uint64_t *stride) = 0;
@@ -303,9 +284,7 @@ public:
                                      const char *name,
                                      const CompilerDeclContext &decl_ctx);
 
-  //----------------------------------------------------------------------
   // Exploring the type
-  //----------------------------------------------------------------------
 
   virtual llvm::Optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
@@ -395,7 +374,6 @@ public:
 
   //----------------------------------------------------------------------
   // Dumping types
-  //----------------------------------------------------------------------
 
 #ifndef NDEBUG
   /// Convenience LLVM-style dump method for use in the debugger only.
@@ -425,9 +403,7 @@ public:
   virtual void DumpTypeDescription(lldb::opaque_compiler_type_t type,
                                    Stream *s) = 0;
 
-  //----------------------------------------------------------------------
   // TODO: These methods appear unused. Should they be removed?
-  //----------------------------------------------------------------------
 
   virtual bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) = 0;
 
@@ -443,9 +419,7 @@ public:
                                            const char *s, uint8_t *dst,
                                            size_t dst_size) = 0;
 
-  //----------------------------------------------------------------------
   // TODO: Determine if these methods should move to ClangASTContext.
-  //----------------------------------------------------------------------
 
   virtual bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,
                                         CompilerType *pointee_type) = 0;

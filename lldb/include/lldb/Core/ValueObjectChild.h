@@ -25,9 +25,7 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // A child of another ValueObject.
-//----------------------------------------------------------------------
 class ValueObjectChild : public ValueObject {
 public:
   ~ValueObjectChild() override;

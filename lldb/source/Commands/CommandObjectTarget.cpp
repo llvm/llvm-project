@@ -201,9 +201,7 @@ private:
 
 #pragma mark CommandObjectTargetCreate
 
-//-------------------------------------------------------------------------
 // "target create"
-//-------------------------------------------------------------------------
 
 class CommandObjectTargetCreate : public CommandObjectParsed {
 public:
@@ -476,9 +474,7 @@ private:
 
 #pragma mark CommandObjectTargetList
 
-//----------------------------------------------------------------------
 // "target list"
-//----------------------------------------------------------------------
 
 class CommandObjectTargetList : public CommandObjectParsed {
 public:
@@ -511,9 +507,7 @@ protected:
 
 #pragma mark CommandObjectTargetSelect
 
-//----------------------------------------------------------------------
 // "target select"
-//----------------------------------------------------------------------
 
 class CommandObjectTargetSelect : public CommandObjectParsed {
 public:
@@ -576,9 +570,7 @@ protected:
 
 #pragma mark CommandObjectTargetSelect
 
-//----------------------------------------------------------------------
 // "target delete"
-//----------------------------------------------------------------------
 
 class CommandObjectTargetDelete : public CommandObjectParsed {
 public:
@@ -689,9 +681,7 @@ protected:
 
 #pragma mark CommandObjectTargetVariable
 
-//----------------------------------------------------------------------
 // "target variable"
-//----------------------------------------------------------------------
 
 class CommandObjectTargetVariable : public CommandObjectParsed {
   static const uint32_t SHORT_OPTION_FILE = 0x66696c65; // 'file'
@@ -1317,9 +1307,7 @@ protected:
   }
 };
 
-//----------------------------------------------------------------------
 // Static Helper functions
-//----------------------------------------------------------------------
 static void DumpModuleArchitecture(Stream &strm, Module *module,
                                    bool full_triple, uint32_t width) {
   if (module) {
@@ -1830,10 +1818,8 @@ static size_t FindModulesByName(Target *target, const char *module_name,
 
 #pragma mark CommandObjectTargetModulesModuleAutoComplete
 
-//----------------------------------------------------------------------
 // A base command object class that can auto complete with module file
 // paths
-//----------------------------------------------------------------------
 
 class CommandObjectTargetModulesModuleAutoComplete
     : public CommandObjectParsed {
@@ -1872,10 +1858,8 @@ public:
 
 #pragma mark CommandObjectTargetModulesSourceFileAutoComplete
 
-//----------------------------------------------------------------------
 // A base command object class that can auto complete with module source
 // file paths
-//----------------------------------------------------------------------
 
 class CommandObjectTargetModulesSourceFileAutoComplete
     : public CommandObjectParsed {
@@ -2141,9 +2125,7 @@ protected:
 
 #pragma mark CommandObjectTargetModulesDumpSections
 
-//----------------------------------------------------------------------
 // Image section dumping command
-//----------------------------------------------------------------------
 
 class CommandObjectTargetModulesDumpSections
     : public CommandObjectTargetModulesModuleAutoComplete {
@@ -2236,9 +2218,7 @@ protected:
 
 #pragma mark CommandObjectTargetModulesDumpSections
 
-//----------------------------------------------------------------------
 // Clang AST dumping command
-//----------------------------------------------------------------------
 
 class CommandObjectTargetModulesDumpClangAST
     : public CommandObjectTargetModulesModuleAutoComplete {
@@ -2315,9 +2295,7 @@ protected:
 
 #pragma mark CommandObjectTargetModulesDumpSymfile
 
-//----------------------------------------------------------------------
 // Image debug symbol dumping command
-//----------------------------------------------------------------------
 
 class CommandObjectTargetModulesDumpSymfile
     : public CommandObjectTargetModulesModuleAutoComplete {
@@ -2406,9 +2384,7 @@ protected:
 
 #pragma mark CommandObjectTargetModulesDumpLineTable
 
-//----------------------------------------------------------------------
 // Image debug line table dumping command
-//----------------------------------------------------------------------
 
 class CommandObjectTargetModulesDumpLineTable
     : public CommandObjectTargetModulesSourceFileAutoComplete {
@@ -2518,15 +2494,11 @@ protected:
 
 #pragma mark CommandObjectTargetModulesDump
 
-//----------------------------------------------------------------------
 // Dump multi-word command for target modules
-//----------------------------------------------------------------------
 
 class CommandObjectTargetModulesDump : public CommandObjectMultiword {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommandObjectTargetModulesDump(CommandInterpreter &interpreter)
       : CommandObjectMultiword(
             interpreter, "target modules dump",
@@ -3012,9 +2984,7 @@ protected:
   OptionGroupUInt64 m_slide_option;
 };
 
-//----------------------------------------------------------------------
 // List images with associated information
-//----------------------------------------------------------------------
 
 static constexpr OptionDefinition g_target_modules_list_options[] = {
     // clang-format off
@@ -3378,9 +3348,7 @@ protected:
 
 #pragma mark CommandObjectTargetModulesShowUnwind
 
-//----------------------------------------------------------------------
 // Lookup unwind information in images
-//----------------------------------------------------------------------
 
 static constexpr OptionDefinition g_target_modules_show_unwind_options[] = {
     // clang-format off
@@ -3683,9 +3651,7 @@ protected:
   CommandOptions m_options;
 };
 
-//----------------------------------------------------------------------
 // Lookup information in images
-//----------------------------------------------------------------------
 
 static constexpr OptionDefinition g_target_modules_lookup_options[] = {
     // clang-format off
@@ -4071,9 +4037,7 @@ protected:
 
 #pragma mark CommandObjectMultiwordImageSearchPaths
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordImageSearchPaths
-//-------------------------------------------------------------------------
 
 class CommandObjectTargetModulesImageSearchPaths
     : public CommandObjectMultiword {
@@ -4106,15 +4070,11 @@ public:
 
 #pragma mark CommandObjectTargetModules
 
-//-------------------------------------------------------------------------
 // CommandObjectTargetModules
-//-------------------------------------------------------------------------
 
 class CommandObjectTargetModules : public CommandObjectMultiword {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommandObjectTargetModules(CommandInterpreter &interpreter)
       : CommandObjectMultiword(interpreter, "target modules",
                                "Commands for accessing information for one or "
@@ -4143,9 +4103,7 @@ public:
   ~CommandObjectTargetModules() override = default;
 
 private:
-  //------------------------------------------------------------------
   // For CommandObjectTargetModules only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(CommandObjectTargetModules);
 };
 
@@ -4538,15 +4496,11 @@ protected:
 
 #pragma mark CommandObjectTargetSymbols
 
-//-------------------------------------------------------------------------
 // CommandObjectTargetSymbols
-//-------------------------------------------------------------------------
 
 class CommandObjectTargetSymbols : public CommandObjectMultiword {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommandObjectTargetSymbols(CommandInterpreter &interpreter)
       : CommandObjectMultiword(
             interpreter, "target symbols",
@@ -4559,17 +4513,13 @@ public:
   ~CommandObjectTargetSymbols() override = default;
 
 private:
-  //------------------------------------------------------------------
   // For CommandObjectTargetModules only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(CommandObjectTargetSymbols);
 };
 
 #pragma mark CommandObjectTargetStopHookAdd
 
-//-------------------------------------------------------------------------
 // CommandObjectTargetStopHookAdd
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_target_stop_hook_add_options[] = {
     // clang-format off
@@ -4899,9 +4849,7 @@ private:
 
 #pragma mark CommandObjectTargetStopHookDelete
 
-//-------------------------------------------------------------------------
 // CommandObjectTargetStopHookDelete
-//-------------------------------------------------------------------------
 
 class CommandObjectTargetStopHookDelete : public CommandObjectParsed {
 public:
@@ -4957,9 +4905,7 @@ protected:
 
 #pragma mark CommandObjectTargetStopHookEnableDisable
 
-//-------------------------------------------------------------------------
 // CommandObjectTargetStopHookEnableDisable
-//-------------------------------------------------------------------------
 
 class CommandObjectTargetStopHookEnableDisable : public CommandObjectParsed {
 public:
@@ -5014,9 +4960,7 @@ private:
 
 #pragma mark CommandObjectTargetStopHookList
 
-//-------------------------------------------------------------------------
 // CommandObjectTargetStopHookList
-//-------------------------------------------------------------------------
 
 class CommandObjectTargetStopHookList : public CommandObjectParsed {
 public:
@@ -5055,9 +4999,7 @@ protected:
 
 #pragma mark CommandObjectMultiwordTargetStopHooks
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordTargetStopHooks
-//-------------------------------------------------------------------------
 
 class CommandObjectMultiwordTargetStopHooks : public CommandObjectMultiword {
 public:
@@ -5088,9 +5030,7 @@ public:
 
 #pragma mark CommandObjectMultiwordTarget
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordTarget
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
     CommandInterpreter &interpreter)

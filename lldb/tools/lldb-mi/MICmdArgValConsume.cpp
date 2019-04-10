@@ -11,7 +11,6 @@
 #include "MICmdArgContext.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValConsume constructor.
 // Type:    Method.
 // Args:    None.
@@ -21,7 +20,6 @@
 CMICmdArgValConsume::CMICmdArgValConsume() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValConsume constructor.
 // Type:    Method.
 // Args:    vrArgName       - (R) Argument's name to search by.
@@ -35,7 +33,6 @@ CMICmdArgValConsume::CMICmdArgValConsume(const CMIUtilString &vrArgName,
     : CMICmdArgValBaseTemplate(vrArgName, vbMandatory, true) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValConsume destructor.
 // Type:    Overidden.
 // Args:    None.
@@ -45,7 +42,6 @@ CMICmdArgValConsume::CMICmdArgValConsume(const CMIUtilString &vrArgName,
 CMICmdArgValConsume::~CMICmdArgValConsume() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Parse the command's argument options string and try to extract the
 // value *this
 //          argument is looking for.
@@ -81,7 +77,6 @@ bool CMICmdArgValConsume::Validate(CMICmdArgContext &vwArgContext) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Nothing to examine as we just want to consume the argument or option
 // (ignore
 //          it).

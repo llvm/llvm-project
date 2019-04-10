@@ -327,17 +327,18 @@ void InputSegment::generateRelocationCode(raw_ostream &OS) const {
       break;
     case R_WASM_MEMORY_ADDR_I32: {
       Symbol *Sym = File->getSymbol(Rel);
-      if (Sym->isUndefined()) {
-        // Undefined addresses are accessed via imported GOT globals
-        writeU8(OS, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
-        writeUleb128(OS, Sym->getGOTIndex(), "global index");
-      } else {
-        // Defined global data is accessed via known offset from __memory_base
+      if (Sym->isLocal() || Sym->isHidden()) {
+        // Hidden/Local data symbols are accessed via known offset from
+        // __memory_base
         writeU8(OS, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
         writeUleb128(OS, WasmSym::MemoryBase->getGlobalIndex(), "memory_base");
         writeU8(OS, WASM_OPCODE_I32_CONST, "CONST");
         writeSleb128(OS, File->calcNewValue(Rel), "new memory offset");
         writeU8(OS, WASM_OPCODE_I32_ADD, "ADD");
+      } else {
+        // Default data symbols are accessed via imported GOT globals
+        writeU8(OS, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+        writeUleb128(OS, Sym->getGOTIndex(), "global index");
       }
       break;
     }

@@ -287,9 +287,7 @@ public:
   OptionValueUInt64 m_offset;
 };
 
-//----------------------------------------------------------------------
 // Read memory from the inferior process
-//----------------------------------------------------------------------
 class CommandObjectMemoryRead : public CommandObjectParsed {
 public:
   CommandObjectMemoryRead(CommandInterpreter &interpreter)
@@ -891,9 +889,7 @@ static constexpr OptionDefinition g_memory_find_option_table[] = {
     // clang-format on
 };
 
-//----------------------------------------------------------------------
 // Find the specified data in memory
-//----------------------------------------------------------------------
 class CommandObjectMemoryFind : public CommandObjectParsed {
 public:
   class OptionGroupFindMemory : public OptionGroup {
@@ -1188,9 +1184,7 @@ static constexpr OptionDefinition g_memory_write_option_table[] = {
     // clang-format on
 };
 
-//----------------------------------------------------------------------
 // Write memory to the inferior process
-//----------------------------------------------------------------------
 class CommandObjectMemoryWrite : public CommandObjectParsed {
 public:
   class OptionGroupWriteMemory : public OptionGroup {
@@ -1597,9 +1591,7 @@ protected:
   OptionGroupWriteMemory m_memory_options;
 };
 
-//----------------------------------------------------------------------
 // Get malloc/free history of a memory address.
-//----------------------------------------------------------------------
 class CommandObjectMemoryHistory : public CommandObjectParsed {
 public:
   CommandObjectMemoryHistory(CommandInterpreter &interpreter)
@@ -1679,9 +1671,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectMemoryRegion
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectMemoryRegion
 
 class CommandObjectMemoryRegion : public CommandObjectParsed {
@@ -1772,9 +1762,7 @@ protected:
   lldb::addr_t m_prev_end_addr;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectMemory
-//-------------------------------------------------------------------------
 
 CommandObjectMemory::CommandObjectMemory(CommandInterpreter &interpreter)
     : CommandObjectMultiword(

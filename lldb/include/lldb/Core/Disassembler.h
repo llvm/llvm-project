@@ -109,7 +109,6 @@ public:
     m_address = addr;
   }
 
-  //------------------------------------------------------------------
   /// Dump the text representation of this Instruction to a Stream
   ///
   /// Print the (optional) address, (optional) bytes, opcode,
@@ -159,7 +158,6 @@ public:
   ///     Debugger::FormatDisassemblerAddress() string)
   ///     so this method can properly align the instruction opcodes.
   ///     May be 0 to indicate no indentation/alignment of the opcodes.
-  //------------------------------------------------------------------
   virtual void Dump(Stream *s, uint32_t max_opcode_byte_size, bool show_address,
                     bool show_bytes, const ExecutionContext *exe_ctx,
                     const SymbolContext *sym_ctx,
@@ -423,9 +421,7 @@ public:
               uint32_t num_instructions, bool mixed_source_and_assembly,
               uint32_t num_mixed_context_lines, uint32_t options, Stream &strm);
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   Disassembler(const ArchSpec &arch, const char *flavor);
   ~Disassembler() override;
 
@@ -535,18 +531,14 @@ protected:
     return ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, sl);
   };
 
-  //------------------------------------------------------------------
   // Classes that inherit from Disassembler can see and modify these
-  //------------------------------------------------------------------
   ArchSpec m_arch;
   InstructionList m_instruction_list;
   lldb::addr_t m_base_addr;
   std::string m_flavor;
 
 private:
-  //------------------------------------------------------------------
   // For Disassembler only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(Disassembler);
 };
 

@@ -24,7 +24,7 @@ using namespace TestUtils;
 struct test_one_policy
 {
     //dummy specialization by policy type, in case of broken configuration
-#if __PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN || __PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN
+#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN || _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN
 
     template <typename Iterator1, typename Predicate>
     void
@@ -93,7 +93,7 @@ main()
     test<float64_t>([](const float64_t x) { return x < 0; });
     test<int32_t>([](const int32_t x) { return x > 1000; });
     test<uint16_t>([](const uint16_t x) { return x % 5 < 3; });
-#if !__PSTL_ICC_18_TEST_EARLY_EXIT_MONOTONIC_RELEASE_BROKEN && !__PSTL_ICC_19_TEST_IS_PARTITIONED_RELEASE_BROKEN
+#if !_PSTL_ICC_18_TEST_EARLY_EXIT_MONOTONIC_RELEASE_BROKEN && !_PSTL_ICC_19_TEST_IS_PARTITIONED_RELEASE_BROKEN
     test<LocalWrapper<float64_t>>([](const LocalWrapper<float64_t>& x) { return true; });
 #endif
 

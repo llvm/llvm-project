@@ -28,26 +28,20 @@ using namespace lldb_private;
 #define UNSUPPORTED_ERROR ("Apple simulators aren't supported on this platform")
 #endif
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 void PlatformAppleSimulator::Initialize() { PlatformDarwin::Initialize(); }
 
 void PlatformAppleSimulator::Terminate() { PlatformDarwin::Terminate(); }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformAppleSimulator::PlatformAppleSimulator()
     : PlatformDarwin(true), m_core_sim_path_mutex(),
       m_core_simulator_framework_path(), m_device() {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformAppleSimulator::~PlatformAppleSimulator() {}
 
 lldb_private::Status PlatformAppleSimulator::LaunchProcess(
