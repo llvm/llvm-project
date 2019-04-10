@@ -1060,13 +1060,13 @@ defm CVTSD2SI64 : sse12_cvt_sint<0x2D, VR128, GR64, i64, v2f64, X86cvts2si,
 let isCodeGenOnly = 1 in {
   let Predicates = [UseAVX] in {
   defm VCVTSI2SS : sse12_cvt_sint_3addr<0x2A, GR32, VR128,
-            i32mem, "cvtsi2ss{l}", WriteCvtI2SS, 0>, XS, VEX_4V;
+            i32mem, "cvtsi2ss{l}", WriteCvtI2SS, 0>, XS, VEX_4V, VEX_LIG;
   defm VCVTSI642SS : sse12_cvt_sint_3addr<0x2A, GR64, VR128,
-            i64mem, "cvtsi2ss{q}", WriteCvtI2SS, 0>, XS, VEX_4V, VEX_W;
+            i64mem, "cvtsi2ss{q}", WriteCvtI2SS, 0>, XS, VEX_4V, VEX_LIG, VEX_W;
   defm VCVTSI2SD : sse12_cvt_sint_3addr<0x2A, GR32, VR128,
-            i32mem, "cvtsi2sd{l}", WriteCvtI2SD, 0>, XD, VEX_4V;
+            i32mem, "cvtsi2sd{l}", WriteCvtI2SD, 0>, XD, VEX_4V, VEX_LIG;
   defm VCVTSI642SD : sse12_cvt_sint_3addr<0x2A, GR64, VR128,
-            i64mem, "cvtsi2sd{q}", WriteCvtI2SD, 0>, XD, VEX_4V, VEX_W;
+            i64mem, "cvtsi2sd{q}", WriteCvtI2SD, 0>, XD, VEX_4V, VEX_LIG, VEX_W;
   }
   let Constraints = "$src1 = $dst" in {
     defm CVTSI2SS : sse12_cvt_sint_3addr<0x2A, GR32, VR128,
@@ -1087,18 +1087,18 @@ let isCodeGenOnly = 1 in {
 let Predicates = [UseAVX] in {
 defm VCVTTSS2SI : sse12_cvt_sint<0x2C, VR128, GR32, i32, v4f32, X86cvtts2Int,
                                 ssmem, sse_load_f32, "cvttss2si",
-                                WriteCvtSS2I>, XS, VEX;
+                                WriteCvtSS2I>, XS, VEX, VEX_LIG;
 defm VCVTTSS2SI64 : sse12_cvt_sint<0x2C, VR128, GR64, i64, v4f32,
                                X86cvtts2Int, ssmem, sse_load_f32,
                                "cvttss2si", WriteCvtSS2I>,
-                               XS, VEX, VEX_W;
+                               XS, VEX, VEX_LIG, VEX_W;
 defm VCVTTSD2SI : sse12_cvt_sint<0x2C, VR128, GR32, i32, v2f64, X86cvtts2Int,
                                 sdmem, sse_load_f64, "cvttsd2si",
-                                WriteCvtSS2I>, XD, VEX;
+                                WriteCvtSS2I>, XD, VEX, VEX_LIG;
 defm VCVTTSD2SI64 : sse12_cvt_sint<0x2C, VR128, GR64, i64, v2f64,
                               X86cvtts2Int, sdmem, sse_load_f64,
                               "cvttsd2si", WriteCvtSS2I>,
-                              XD, VEX, VEX_W;
+                              XD, VEX, VEX_LIG, VEX_W;
 }
 defm CVTTSS2SI : sse12_cvt_sint<0x2C, VR128, GR32, i32, v4f32, X86cvtts2Int,
                                     ssmem, sse_load_f32, "cvttss2si",
@@ -1216,14 +1216,14 @@ def VCVTSD2SSrr_Int: I<0x5A, MRMSrcReg,
                        "vcvtsd2ss\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                        [(set VR128:$dst,
                          (v4f32 (X86frounds VR128:$src1, (v2f64 VR128:$src2))))]>,
-                       XD, VEX_4V, VEX_WIG, Requires<[UseAVX]>,
+                       XD, VEX_4V, VEX_LIG, VEX_WIG, Requires<[UseAVX]>,
                        Sched<[WriteCvtSD2SS]>;
 def VCVTSD2SSrm_Int: I<0x5A, MRMSrcMem,
                        (outs VR128:$dst), (ins VR128:$src1, sdmem:$src2),
                        "vcvtsd2ss\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                        [(set VR128:$dst,
                          (v4f32 (X86frounds VR128:$src1, sse_load_f64:$src2)))]>,
-                       XD, VEX_4V, VEX_WIG, Requires<[UseAVX]>,
+                       XD, VEX_4V, VEX_LIG, VEX_WIG, Requires<[UseAVX]>,
                        Sched<[WriteCvtSD2SS.Folded, WriteCvtSD2SS.ReadAfterFold]>;
 let Constraints = "$src1 = $dst" in {
 def CVTSD2SSrr_Int: I<0x5A, MRMSrcReg,
@@ -1295,13 +1295,13 @@ let isCodeGenOnly = 1, hasSideEffects = 0 in {
 def VCVTSS2SDrr_Int: I<0x5A, MRMSrcReg,
                       (outs VR128:$dst), (ins VR128:$src1, VR128:$src2),
                     "vcvtss2sd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-                    []>, XS, VEX_4V, VEX_WIG,
+                    []>, XS, VEX_4V, VEX_LIG, VEX_WIG,
                     Requires<[HasAVX]>, Sched<[WriteCvtSS2SD]>;
 let mayLoad = 1 in
 def VCVTSS2SDrm_Int: I<0x5A, MRMSrcMem,
                       (outs VR128:$dst), (ins VR128:$src1, ssmem:$src2),
                     "vcvtss2sd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-                    []>, XS, VEX_4V, VEX_WIG, Requires<[HasAVX]>,
+                    []>, XS, VEX_4V, VEX_LIG, VEX_WIG, Requires<[HasAVX]>,
                     Sched<[WriteCvtSS2SD.Folded, WriteCvtSS2SD.ReadAfterFold]>;
 let Constraints = "$src1 = $dst" in { // SSE2 instructions with XS prefix
 def CVTSS2SDrr_Int: I<0x5A, MRMSrcReg,
@@ -1825,12 +1825,13 @@ let isCodeGenOnly = 1 in {
   let ExeDomain = SSEPackedSingle in
   defm VCMPSS  : sse12_cmp_scalar_int<ssmem, int_x86_sse_cmp_ss,
                        "cmpss\t{$cc, $src, $src1, $dst|$dst, $src1, $src, $cc}",
-                       SchedWriteFCmpSizes.PS.Scl, sse_load_f32>, XS, VEX_4V;
+                       SchedWriteFCmpSizes.PS.Scl, sse_load_f32>,
+                       XS, VEX_4V, VEX_LIG, VEX_WIG;
   let ExeDomain = SSEPackedDouble in
   defm VCMPSD  : sse12_cmp_scalar_int<sdmem, int_x86_sse2_cmp_sd,
                        "cmpsd\t{$cc, $src, $src1, $dst|$dst, $src1, $src, $cc}",
                        SchedWriteFCmpSizes.PD.Scl, sse_load_f64>,
-                       XD, VEX_4V;
+                       XD, VEX_4V, VEX_LIG, VEX_WIG;
   let Constraints = "$src1 = $dst" in {
     let ExeDomain = SSEPackedSingle in
     defm CMPSS  : sse12_cmp_scalar_int<ssmem, int_x86_sse_cmp_ss,
@@ -1894,14 +1895,14 @@ let Defs = [EFLAGS] in {
 
   let isCodeGenOnly = 1 in {
     defm VUCOMISS  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v4f32, ssmem,
-                      sse_load_f32, "ucomiss", WriteFCom>, PS, VEX, VEX_WIG;
+                      sse_load_f32, "ucomiss", WriteFCom>, PS, VEX, VEX_LIG, VEX_WIG;
     defm VUCOMISD  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v2f64, sdmem,
-                      sse_load_f64, "ucomisd", WriteFCom>, PD, VEX, VEX_WIG;
+                      sse_load_f64, "ucomisd", WriteFCom>, PD, VEX, VEX_LIG, VEX_WIG;
 
     defm VCOMISS  : sse12_ord_cmp_int<0x2F, VR128, X86comi, v4f32, ssmem,
-                       sse_load_f32, "comiss", WriteFCom>, PS, VEX, VEX_WIG;
+                       sse_load_f32, "comiss", WriteFCom>, PS, VEX, VEX_LIG, VEX_WIG;
     defm VCOMISD  : sse12_ord_cmp_int<0x2F, VR128, X86comi, v2f64, sdmem,
-                       sse_load_f64, "comisd", WriteFCom>, PD, VEX, VEX_WIG;
+                       sse_load_f64, "comisd", WriteFCom>, PD, VEX, VEX_LIG, VEX_WIG;
   }
   defm UCOMISS  : sse12_ord_cmp<0x2E, FR32, X86cmp, f32, f32mem, loadf32,
                                   "ucomiss", WriteFCom>, PS;

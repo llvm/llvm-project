@@ -303,6 +303,10 @@ static cl::alias
                              cl::CommaSeparated,
                              cl::aliasopt(DisassemblerOptions));
 
+static cl::opt<bool>
+    Wide("wide", cl::desc("Ignored for compatibility with GNU objdump"));
+static cl::alias WideShort("w", cl::Grouping, cl::aliasopt(Wide));
+
 static StringRef ToolName;
 
 typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;

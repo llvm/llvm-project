@@ -131,6 +131,34 @@ LLVMBinaryType LLVMBinaryGetType(LLVMBinaryRef BR) {
   return BinaryTypeMapper::mapBinaryTypeToLLVMBinaryType(unwrap(BR)->getType());
 }
 
+LLVMSectionIteratorRef LLVMObjectFileCopySectionIterator(LLVMBinaryRef BR) {
+  auto OF = cast<ObjectFile>(unwrap(BR));
+  auto sections = OF->sections();
+  if (sections.begin() == sections.end())
+    return nullptr;
+  return wrap(new section_iterator(sections.begin()));
+}
+
+LLVMBool LLVMObjectFileIsSectionIteratorAtEnd(LLVMBinaryRef BR,
+                                              LLVMSectionIteratorRef SI) {
+  auto OF = cast<ObjectFile>(unwrap(BR));
+  return (*unwrap(SI) == OF->section_end()) ? 1 : 0;
+}
+
+LLVMSymbolIteratorRef LLVMObjectFileCopySymbolIterator(LLVMBinaryRef BR) {
+  auto OF = cast<ObjectFile>(unwrap(BR));
+  auto symbols = OF->symbols();
+  if (symbols.begin() == symbols.end())
+    return nullptr;
+  return wrap(new symbol_iterator(symbols.begin()));
+}
+
+LLVMBool LLVMObjectFileIsSymbolIteratorAtEnd(LLVMBinaryRef BR,
+                                             LLVMSymbolIteratorRef SI) {
+  auto OF = cast<ObjectFile>(unwrap(BR));
+  return (*unwrap(SI) == OF->symbol_end()) ? 1 : 0;
+}
+
 // ObjectFile creation
 LLVMObjectFileRef LLVMCreateObjectFile(LLVMMemoryBufferRef MemBuf) {
   std::unique_ptr<MemoryBuffer> Buf(unwrap(MemBuf));

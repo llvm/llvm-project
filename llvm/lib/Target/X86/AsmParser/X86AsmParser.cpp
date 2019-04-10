@@ -2310,7 +2310,6 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   InstInfo = &Info;
-  std::string TempName; // Used when we parse a pseudo prefix.
 
   // Reset the forced VEX encoding.
   ForcedVEXEncoding = VEXEncoding_Default;
@@ -2342,8 +2341,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       } else {
         if (getLexer().isNot(AsmToken::Identifier))
           return Error(Parser.getTok().getLoc(), "Expected identifier");
-        TempName = Parser.getTok().getString().lower();
-        Name = TempName;
+        // FIXME: The mnemonic won't match correctly if its not in lower case.
+        Name = Parser.getTok().getString();
         Parser.Lex();
       }
       continue;
@@ -2545,6 +2544,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       Flags = X86::IP_NO_PREFIX;
       break;
     }
+    // FIXME: The mnemonic won't match correctly if its not in lower case.
     Name = Parser.getTok().getString();
     Parser.Lex(); // eat the prefix
     // Hack: we could have something like "rep # some comment" or
@@ -2552,6 +2552,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     while (Name.startswith(";") || Name.startswith("\n") ||
            Name.startswith("#") || Name.startswith("\t") ||
            Name.startswith("/")) {
+      // FIXME: The mnemonic won't match correctly if its not in lower case.
       Name = Parser.getTok().getString();
       Parser.Lex(); // go to next prefix or instr
     }
@@ -3011,6 +3012,23 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
        ForcedVEXEncoding == VEXEncoding_VEX3) &&
       (MCID.TSFlags & X86II::EncodingMask) != X86II::VEX)
     return Match_Unsupported;
+
+  // These instructions match ambiguously with their VEX encoded counterparts
+  // and appear first in the matching table. Reject them unless we're forcing
+  // EVEX encoding.
+  // FIXME: We really need a way to break the ambiguity.
+  switch (Opc) {
+  case X86::VCVTSD2SIZrm_Int:
+  case X86::VCVTSD2SI64Zrm_Int:
+  case X86::VCVTSS2SIZrm_Int:
+  case X86::VCVTSS2SI64Zrm_Int:
+  case X86::VCVTTSD2SIZrm:   case X86::VCVTTSD2SIZrm_Int:
+  case X86::VCVTTSD2SI64Zrm: case X86::VCVTTSD2SI64Zrm_Int:
+  case X86::VCVTTSS2SIZrm:   case X86::VCVTTSS2SIZrm_Int:
+  case X86::VCVTTSS2SI64Zrm: case X86::VCVTTSS2SI64Zrm_Int:
+    if (ForcedVEXEncoding != VEXEncoding_EVEX)
+      return Match_Unsupported;
+  }
 
   return Match_Success;
 }

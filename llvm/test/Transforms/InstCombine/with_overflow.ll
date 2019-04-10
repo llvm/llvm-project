@@ -2,7 +2,11 @@
 ; RUN: opt -instcombine -S < %s | FileCheck %s
 
 declare { i8, i1 } @llvm.uadd.with.overflow.i8(i8, i8) nounwind readnone
+declare { i8, i1 } @llvm.sadd.with.overflow.i8(i8, i8) nounwind readnone
+declare { i8, i1 } @llvm.usub.with.overflow.i8(i8, i8) nounwind readnone
+declare { i8, i1 } @llvm.ssub.with.overflow.i8(i8, i8) nounwind readnone
 declare { i8, i1 } @llvm.umul.with.overflow.i8(i8, i8) nounwind readnone
+declare { i8, i1 } @llvm.smul.with.overflow.i8(i8, i8) nounwind readnone
 declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
 declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32) nounwind readnone
 declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32) nounwind readnone
@@ -521,4 +525,79 @@ define { i32, i1 } @umul_canonicalize_constant_arg0(i32 %x) nounwind {
 ;
   %a = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 42, i32 %x)
   ret { i32, i1 } %a
+}
+
+; Always overflow tests
+
+define { i8, i1 } @uadd_always_overflow(i8 %x) nounwind {
+; CHECK-LABEL: @uadd_always_overflow(
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[Y]], 64
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
+;
+  %y = or i8 %x, 192
+  %a = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %y, i8 64)
+  ret { i8, i1 } %a
+}
+
+define { i8, i1 } @usub_always_overflow(i8 %x) nounwind {
+; CHECK-LABEL: @usub_always_overflow(
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], 64
+; CHECK-NEXT:    [[A:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 63, i8 [[Y]])
+; CHECK-NEXT:    ret { i8, i1 } [[A]]
+;
+  %y = or i8 %x, 64
+  %a = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 63, i8 %y)
+  ret { i8, i1 } %a
+}
+
+define { i8, i1 } @umul_always_overflow(i8 %x) nounwind {
+; CHECK-LABEL: @umul_always_overflow(
+; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
+;
+  %y = or i8 %x, 128
+  %a = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %y, i8 2)
+  ret { i8, i1 } %a
+}
+
+define { i8, i1 } @sadd_always_overflow(i8 %x) nounwind {
+; CHECK-LABEL: @sadd_always_overflow(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 100
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C]], i8 [[X]], i8 100
+; CHECK-NEXT:    [[A:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[Y]], i8 28)
+; CHECK-NEXT:    ret { i8, i1 } [[A]]
+;
+  %c = icmp sgt i8 %x, 100
+  %y = select i1 %c, i8 %x, i8 100
+  %a = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %y, i8 28)
+  ret { i8, i1 } %a
+}
+
+define { i8, i1 } @ssub_always_overflow(i8 %x) nounwind {
+; CHECK-LABEL: @ssub_always_overflow(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 29
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C]], i8 [[X]], i8 29
+; CHECK-NEXT:    [[A:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 -100, i8 [[Y]])
+; CHECK-NEXT:    ret { i8, i1 } [[A]]
+;
+  %c = icmp sgt i8 %x, 29
+  %y = select i1 %c, i8 %x, i8 29
+  %a = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 -100, i8 %y)
+  ret { i8, i1 } %a
+}
+
+define { i8, i1 } @smul_always_overflow(i8 %x) nounwind {
+; CHECK-LABEL: @smul_always_overflow(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 100
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C]], i8 [[X]], i8 100
+; CHECK-NEXT:    [[A:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[Y]], i8 2)
+; CHECK-NEXT:    ret { i8, i1 } [[A]]
+;
+  %c = icmp sgt i8 %x, 100
+  %y = select i1 %c, i8 %x, i8 100
+  %a = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %y, i8 2)
+  ret { i8, i1 } %a
 }
