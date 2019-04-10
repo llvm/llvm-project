@@ -47,7 +47,10 @@ class TestREPLExceptions(TestBase):
         build_dir = self.getBuildDir()
         repl_args = [lldbtest_config.lldbExec, "-x", "--repl=-enable-objc-interop -sdk %s -L%s -I%s"%(sdk_root, build_dir, build_dir)]
         repl_proc = subprocess.Popen(repl_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=build_dir)
-        (stdoutdata, stderrdata) = repl_proc.communicate(input="import Wrapper\ncall_cpp()\n:quit")
+        input_str = "import Wrapper\ncall_cpp()\n:quit"
+        (stdoutdata, stderrdata) = repl_proc.communicate(input=input_str.encode())
+        stdoutdata = stdoutdata.decode("utf-8") if stdoutdata else None
+        stderrdata = stderrdata.decode("utf-8") if stderrdata else None
         self.assertTrue("I called it successfully" in stdoutdata, "Didn't call call_cpp successfully: out: \n%s\nerr: %s"%(stdoutdata, stderrdata))
         
     def do_repl_mode_test(self):

@@ -10,7 +10,7 @@
 #
 # ------------------------------------------------------------------------------
 import lldb
-from lldbpexpect import *
+from lldbsuite.test.lldbpexpect import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2

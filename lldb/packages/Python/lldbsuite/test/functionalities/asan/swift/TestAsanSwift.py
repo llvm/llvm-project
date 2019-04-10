@@ -83,7 +83,7 @@ class AsanSwiftTestCase(lldbtest.TestBase):
             thread.GetStopReason(),
             lldb.eStopReasonInstrumentation)
 
-        for i in xrange(0, thread.GetNumFrames()):
+        for i in range(0, thread.GetNumFrames()):
             frame = thread.GetFrameAtIndex(i)
             if frame.GetFunctionName() == "main":
                 self.expect("frame select %d" % i, "at main.swift")

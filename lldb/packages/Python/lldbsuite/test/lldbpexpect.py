@@ -57,9 +57,14 @@ else:
             if timeout is None:
                 timeout = 30
             logfile = sys.stdout if self.TraceOn() else None
-            self.child = pexpect.spawn(
-                '%s --no-use-colors %s' %
-                (lldbtest_config.lldbExec, self.launchArgs()), logfile=logfile)
+            if sys.version_info.major == 3:
+                self.child = pexpect.spawnu(
+                    '%s --no-use-colors %s' %
+                    (lldbtest_config.lldbExec, self.launchArgs()), logfile=logfile)
+            else:
+                self.child = pexpect.spawn(
+                    '%s --no-use-colors %s' %
+                    (lldbtest_config.lldbExec, self.launchArgs()), logfile=logfile)
             self.child.timeout = timeout
             self.timeout = timeout
 
