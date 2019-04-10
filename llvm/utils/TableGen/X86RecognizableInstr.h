@@ -142,10 +142,6 @@ namespace X86Local {
   enum {
     AdSize16 = 1, AdSize32 = 2, AdSize64 = 3
   };
-
-  enum {
-    VEX_W0 = 0, VEX_W1 = 1, VEX_WIG = 2, VEX_W1X = 3
-  };
 }
 
 namespace X86Disassembler {
@@ -179,8 +175,10 @@ private:
   bool HasREX_WPrefix;
   /// The hasVEX_4V field from the record
   bool HasVEX_4V;
-  /// The VEX_WPrefix field from the record
-  uint8_t VEX_WPrefix;
+  /// The HasVEX_WPrefix field from the record
+  bool HasVEX_W;
+  /// The IgnoresVEX_W field from the record
+  bool IgnoresVEX_W;
   /// Inferred from the operands; indicates whether the L bit in the VEX prefix is set
   bool HasVEX_LPrefix;
   /// The ignoreVEX_L field from the record

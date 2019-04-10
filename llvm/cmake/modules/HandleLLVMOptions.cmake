@@ -18,6 +18,16 @@ else()
   set(LINKER_IS_LLD_LINK FALSE)
 endif()
 
+set(LLVM_CXX_STD_default "c++11")
+# Preserve behaviour of legacy cache variables
+if (LLVM_ENABLE_CXX1Y)
+  set(LLVM_CXX_STD_default "c++1y")
+elseif (LLVM_ENABLE_CXX1Z)
+  set(LLVM_CXX_STD_default "c++1z")
+endif()
+set(LLVM_CXX_STD ${LLVM_CXX_STD_default}
+    CACHE STRING "C++ standard to use for compilation.")
+
 set(LLVM_ENABLE_LTO OFF CACHE STRING "Build LLVM with LTO. May be specified as Thin or Full to use a particular kind of LTO")
 string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
 
@@ -442,7 +452,7 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
    if (CYGWIN OR MINGW)
       # MinGW and Cygwin are a bit stricter and lack things like
       # 'strdup', 'stricmp', etc in c++11 mode.
-      string(REPLACE "c++" "gnu++" "${LLVM_CXX_STD}" gnu_LLVM_CXX_STD)
+      string(REPLACE "c++" "gnu++" gnu_LLVM_CXX_STD "${LLVM_CXX_STD}")
       append("-std=${gnu_LLVM_CXX_STD}" CMAKE_CXX_FLAGS)
     else()
       append("-std=${LLVM_CXX_STD}" CMAKE_CXX_FLAGS)

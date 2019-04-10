@@ -1329,9 +1329,9 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
   SBThread sb_origin_thread;
 
-  if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
+  Process::StopLocker stop_locker;
+  if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
+    if (exe_ctx.HasThreadScope()) {
       ThreadSP real_thread(exe_ctx.GetThreadSP());
       if (real_thread) {
         ConstString type_const(type);
@@ -1398,21 +1398,11 @@ bool SBThread::SafeToCallFunctions() {
 }
 
 lldb_private::Thread *SBThread::operator->() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb_private::Thread *, SBThread, operator->);
-
-  ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
-  if (thread_sp)
-    return LLDB_RECORD_RESULT(thread_sp.get());
-  return nullptr;
+  return get();
 }
 
 lldb_private::Thread *SBThread::get() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb_private::Thread *, SBThread, get);
-
-  ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
-  if (thread_sp)
-    return LLDB_RECORD_RESULT(thread_sp.get());
-  return nullptr;
+  return m_opaque_sp->GetThreadSP().get();
 }
 
 namespace lldb_private {
@@ -1516,8 +1506,6 @@ void RegisterMethods<SBThread>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBThread, SBThread, GetCurrentExceptionBacktrace,
                        ());
   LLDB_REGISTER_METHOD(bool, SBThread, SafeToCallFunctions, ());
-  LLDB_REGISTER_METHOD(lldb_private::Thread *, SBThread, operator->,());
-  LLDB_REGISTER_METHOD(lldb_private::Thread *, SBThread, get, ());
 }
 
 }

@@ -355,14 +355,6 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
-                                                std::error_code EC) {
-  assert(EC);
-  WithColor::error(errs(), ToolName)
-      << "'" << File << "': " << EC.message() << ".\n";
-  exit(1);
-}
-
 LLVM_ATTRIBUTE_NORETURN void llvm::report_error(Error E, StringRef File) {
   assert(E);
   std::string Buf;
@@ -2013,7 +2005,8 @@ static void dumpArchive(const Archive *A) {
     else if (COFFImportFile *I = dyn_cast<COFFImportFile>(&*ChildOrErr.get()))
       dumpObject(I, A, &C);
     else
-      report_error(A->getFileName(), object_error::invalid_file_type);
+      report_error(errorCodeToError(object_error::invalid_file_type),
+                   A->getFileName());
   }
   if (Err)
     report_error(std::move(Err), A->getFileName());
@@ -2040,7 +2033,7 @@ static void dumpInput(StringRef file) {
   else if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Binary))
     parseInputMachO(UB);
   else
-    report_error(file, object_error::invalid_file_type);
+    report_error(errorCodeToError(object_error::invalid_file_type), file);
 }
 
 int main(int argc, char **argv) {

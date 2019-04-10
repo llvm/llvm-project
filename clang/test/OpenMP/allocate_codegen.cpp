@@ -91,4 +91,18 @@ int main () {
 
 // CHECK-NOT:  call {{.+}} {{__kmpc_alloc|__kmpc_free}}
 extern template int ST<int>::m;
+
+// CHECK: define void @{{.+}}bar{{.+}}(i32 %{{.+}}, float* {{.+}})
+void bar(int a, float &z) {
+// CHECK: [[A_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID:%.+]], i64 4, i8* inttoptr (i64 1 to i8*))
+// CHECK: [[A_ADDR:%.+]] = bitcast i8* [[A_VOID_PTR]] to i32*
+// CHECK: store i32 %{{.+}}, i32* [[A_ADDR]],
+// CHECK: [[Z_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 8, i8* inttoptr (i64 1 to i8*))
+// CHECK: [[Z_ADDR:%.+]] = bitcast i8* [[Z_VOID_PTR]] to float**
+// CHECK: store float* %{{.+}}, float** [[Z_ADDR]],
+#pragma omp allocate(a,z) allocator(omp_default_mem_alloc)
+// CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[Z_VOID_PTR]], i8* inttoptr (i64 1 to i8*))
+// CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[A_VOID_PTR]], i8* inttoptr (i64 1 to i8*))
+// CHECK: ret void
+}
 #endif

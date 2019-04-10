@@ -205,14 +205,7 @@ public:
 
   bool SafeToCallFunctions();
 
-#ifndef SWIG
-  lldb_private::Thread *operator->();
-
-  lldb_private::Thread *get();
-
-#endif
-
-protected:
+private:
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
   friend class SBBreakpointCallbackBaton;
@@ -223,16 +216,18 @@ protected:
   friend class SBValue;
   friend class lldb_private::QueueImpl;
   friend class SBQueueItem;
+  friend class SBThreadPlan;
 
   void SetThread(const lldb::ThreadSP &lldb_object_sp);
 
-#ifndef SWIG
   SBError ResumeNewPlan(lldb_private::ExecutionContext &exe_ctx,
                         lldb_private::ThreadPlan *new_plan);
-#endif
 
-private:
   lldb::ExecutionContextRefSP m_opaque_sp;
+
+  lldb_private::Thread *operator->();
+
+  lldb_private::Thread *get();
 };
 
 } // namespace lldb

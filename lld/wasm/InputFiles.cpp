@@ -42,18 +42,19 @@ Optional<MemoryBufferRef> lld::wasm::readFile(StringRef Path) {
   return MBRef;
 }
 
-InputFile *lld::wasm::createObjectFile(MemoryBufferRef MB) {
+InputFile *lld::wasm::createObjectFile(MemoryBufferRef MB,
+                                       StringRef ArchiveName) {
   file_magic Magic = identify_magic(MB.getBuffer());
   if (Magic == file_magic::wasm_object) {
     std::unique_ptr<Binary> Bin = check(createBinary(MB));
     auto *Obj = cast<WasmObjectFile>(Bin.get());
     if (Obj->isSharedObject())
       return make<SharedFile>(MB);
-    return make<ObjFile>(MB);
+    return make<ObjFile>(MB, ArchiveName);
   }
 
   if (Magic == file_magic::bitcode)
-    return make<BitcodeFile>(MB);
+    return make<BitcodeFile>(MB, ArchiveName);
 
   fatal("unknown file type: " + MB.getBufferIdentifier());
 }
@@ -435,8 +436,7 @@ void ArchiveFile::addMember(const Archive::Symbol *Sym) {
             "could not get the buffer for the member defining symbol " +
                 Sym->getName());
 
-  InputFile *Obj = createObjectFile(MB);
-  Obj->ArchiveName = getName();
+  InputFile *Obj = createObjectFile(MB, getName());
   Symtab->addFile(Obj);
 }
 

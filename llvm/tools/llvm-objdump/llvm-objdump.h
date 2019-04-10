@@ -172,7 +172,6 @@ void printSymbolTable(const object::ObjectFile *O, StringRef ArchiveName,
 void warn(StringRef Message);
 LLVM_ATTRIBUTE_NORETURN void error(Twine Message);
 LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, Twine Message);
-LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, std::error_code EC);
 LLVM_ATTRIBUTE_NORETURN void report_error(Error E, StringRef File);
 LLVM_ATTRIBUTE_NORETURN void
 report_error(Error E, StringRef FileName, StringRef ArchiveName,

@@ -194,9 +194,7 @@ public:
 /// \return
 ///     A const Address object reference to \a this.
 //------------------------------------------------------------------
-#ifndef SWIG
   const Address &operator=(const Address &rhs);
-#endif
 
   //------------------------------------------------------------------
   /// Clear the object's state.

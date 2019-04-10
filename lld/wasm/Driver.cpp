@@ -226,7 +226,7 @@ void LinkerDriver::addFile(StringRef Path) {
     // Handle -whole-archive.
     if (InWholeArchive) {
       for (MemoryBufferRef &M : getArchiveMembers(MBRef))
-        Files.push_back(createObjectFile(M));
+        Files.push_back(createObjectFile(M, Path));
       return;
     }
 

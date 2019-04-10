@@ -12,6 +12,17 @@ define i32 @test_sdiv_canonicalize_op0(i32 %x, i32 %y) {
   ret i32 %sdiv
 }
 
+define i32 @test_sdiv_canonicalize_op0_exact(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sdiv_canonicalize_op0_exact(
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv exact i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[SDIV]]
+;
+  %neg = sub nsw i32 0, %x
+  %sdiv = sdiv exact i32 %neg, %y
+  ret i32 %sdiv
+}
+
 define i32 @test_sdiv_canonicalize_op1(i32 %x, i32 %z) {
 ; CHECK-LABEL: @test_sdiv_canonicalize_op1(
 ; CHECK-NEXT:    [[Y:%.*]] = mul i32 [[Z:%.*]], 3

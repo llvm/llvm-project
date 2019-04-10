@@ -362,14 +362,12 @@ static void printRelocationTargetName(const MachOObjectFile *O,
     // If we couldn't find a symbol that this relocation refers to, try
     // to find a section beginning instead.
     for (const SectionRef &Section : ToolSectionFilter(*O)) {
-      std::error_code ec;
-
       StringRef Name;
       uint64_t Addr = Section.getAddress();
       if (Addr != Val)
         continue;
-      if ((ec = Section.getName(Name)))
-        report_error(O->getFileName(), ec);
+      if (std::error_code EC = Section.getName(Name))
+        report_error(errorCodeToError(EC), O->getFileName());
       Fmt << Name;
       return;
     }

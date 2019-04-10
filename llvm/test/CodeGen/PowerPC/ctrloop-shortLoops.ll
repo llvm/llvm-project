@@ -122,7 +122,7 @@ for.end:                                          ; preds = %if.end
 ; a2q should use mtctr, but pwr8 should not use mtctr.
 define signext i32 @testTripCount5() {
 ; CHECK-LABEL: testTripCount5:
-; CHECK-PWR8: mtctr
+; CHECK-PWR8-NOT: mtctr
 ; CHECK-A2Q: mtctr
  
 entry:

@@ -1,14 +1,14 @@
 ; Test -hwasan-with-ifunc flag.
 ;
-; RUN: opt -hwasan -hwasan-allow-ifunc -S < %s | \
+; RUN: opt -hwasan -S < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS,CHECK-HISTORY
-; RUN: opt -hwasan -hwasan-allow-ifunc -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=1 < %s | \
+; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=1 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS,CHECK-HISTORY
-; RUN: opt -hwasan -hwasan-allow-ifunc -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=0 < %s | \
+; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-IFUNC,CHECK-NOHISTORY
-; RUN: opt -hwasan -hwasan-allow-ifunc -S -hwasan-with-ifunc=0 -hwasan-with-tls=0 < %s | \
+; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-GLOBAL,CHECK-NOHISTORY
-; RUN: opt -hwasan -hwasan-allow-ifunc -S -hwasan-with-ifunc=1  -hwasan-with-tls=0 < %s | \
+; RUN: opt -hwasan -S -hwasan-with-ifunc=1  -hwasan-with-tls=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECk-NOGLOBAL,CHECK-IFUNC,CHECK-NOHISTORY
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

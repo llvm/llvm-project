@@ -9,7 +9,6 @@
 #include "__cxxabi_config.h"
 
 #include "abort_message.h"
-#include "include/atomic_support.h"
 #include <__threading_support>
 
 #include <stdint.h>
@@ -156,18 +155,13 @@ private:
 struct GuardObject {
   explicit GuardObject(guard_type *g) : guard(g) {}
 
-  /// Load the current value from the guard object.
-  GuardValue load() const;
+  // Read the current value of the guard object.
+  // TODO: Make this read atomic.
+  GuardValue read() const;
 
-  /// Store the specified value in the guard object.
-  void store(GuardValue new_val);
-
-  /// Store the specified value in the guard object and return the previous value.
-  GuardValue exchange(GuardValue new_val);
-
-  /// Perform a atomic compare and exchange operation. Return true if
-  // desired is written to the guard object.
-  bool compare_exchange(GuardValue *expected, GuardValue desired);
+  // Write the specified value to the guard object.
+  // TODO: Make this atomic
+  void write(GuardValue new_val);
 
 private:
   GuardObject(const GuardObject&) = delete;
@@ -184,7 +178,7 @@ extern "C"
 _LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(guard_type* raw_guard_object) {
   GlobalMutexGuard gmutex("__cxa_guard_acquire", OnRelease::UNLOCK);
   GuardObject guard(raw_guard_object);
-  GuardValue current_value = guard.load();
+  GuardValue current_value = guard.read();
 
   if (current_value.is_initialization_complete())
     return INIT_COMPLETE;
@@ -198,12 +192,12 @@ _LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(guard_type* raw_guard_object) {
 #endif
   while (current_value.is_initialization_pending()) {
       gmutex.wait_for_signal();
-      current_value = guard.load();
+      current_value = guard.read();
   }
   if (current_value.is_initialization_complete())
     return INIT_COMPLETE;
 
-  guard.store(LOCK_ID);
+  guard.write(LOCK_ID);
   return INIT_NOT_COMPLETE;
 }
 
@@ -211,13 +205,14 @@ _LIBCXXABI_FUNC_VIS void __cxa_guard_release(guard_type *raw_guard_object) {
   GlobalMutexGuard gmutex("__cxa_guard_release",
                           OnRelease::UNLOCK_AND_BROADCAST);
   GuardObject guard(raw_guard_object);
-  guard.store(GuardValue::INIT_COMPLETE());
+  guard.write(GuardValue::ZERO());
+  guard.write(GuardValue::INIT_COMPLETE());
 }
 
 _LIBCXXABI_FUNC_VIS void __cxa_guard_abort(guard_type *raw_guard_object) {
   GlobalMutexGuard gmutex("__cxa_guard_abort", OnRelease::UNLOCK_AND_BROADCAST);
   GuardObject guard(raw_guard_object);
-  guard.store(GuardValue::ZERO());
+  guard.write(GuardValue::ZERO());
 }
 }  // extern "C"
 
@@ -225,25 +220,16 @@ _LIBCXXABI_FUNC_VIS void __cxa_guard_abort(guard_type *raw_guard_object) {
 //                        GuardObject Definitions
 //===----------------------------------------------------------------------===//
 
-GuardValue GuardObject::load() const {
-  return GuardValue(std::__libcpp_atomic_load(guard));
+GuardValue GuardObject::read() const {
+  // FIXME: Make this atomic
+  guard_type val = *guard;
+  return GuardValue(val);
 }
 
-void GuardObject::store(GuardValue new_val) {
-  std::__libcpp_atomic_store(guard, new_val.value);
+void GuardObject::write(GuardValue new_val) {
+  // FIXME: make this atomic
+  *guard = new_val.value;
 }
-
-GuardValue GuardObject::exchange(GuardValue new_val) {
-  return GuardValue(
-      std::__libcpp_atomic_exchange(guard, new_val.value, std::_AO_Acq_Rel));
-}
-
-bool GuardObject::compare_exchange(GuardValue* expected,
-                                   GuardValue desired) {
-  return std::__libcpp_atomic_compare_exchange(guard, &expected->value, desired.value,
-                                               std::_AO_Acq_Rel, std::_AO_Acquire);
-}
-
 
 //===----------------------------------------------------------------------===//
 //                        GuardValue Definitions

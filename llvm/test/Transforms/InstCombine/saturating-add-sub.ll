@@ -391,7 +391,7 @@ define i8 @test_scalar_uadd_udiv_known_bits(i8 %a, i8 %b) {
 define i8 @test_scalar_sadd_srem_no_ov(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_srem_no_ov(
 ; CHECK-NEXT:    [[B:%.*]] = srem i8 [[A:%.*]], 100
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[B]], i8 28)
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[B]], 28
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %b = srem i8 %a, 100
@@ -414,7 +414,7 @@ define i8 @test_scalar_sadd_srem_and_no_ov(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_scalar_sadd_srem_and_no_ov(
 ; CHECK-NEXT:    [[AA:%.*]] = srem i8 [[A:%.*]], 100
 ; CHECK-NEXT:    [[BB:%.*]] = and i8 [[B:%.*]], 15
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[AA]], i8 [[BB]])
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[AA]], [[BB]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %aa = srem i8 %a, 100

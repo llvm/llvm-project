@@ -160,10 +160,6 @@ static cl::opt<bool> ClInlineAllChecks("hwasan-inline-all-checks",
                                        cl::desc("inline all checks"),
                                        cl::Hidden, cl::init(false));
 
-static cl::opt<bool> ClAllowIfunc("hwasan-allow-ifunc",
-                                  cl::desc("allow the use of ifunc"),
-                                  cl::Hidden, cl::init(false));
-
 namespace {
 
 /// An instrumentation pass implementing detection of addressability bugs
@@ -836,7 +832,7 @@ Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
   if (!Mapping.InTls)
     return getDynamicShadowNonTls(IRB);
 
-  if (ClAllowIfunc && !WithFrameRecord && TargetTriple.isAndroid())
+  if (!WithFrameRecord && TargetTriple.isAndroid())
     return getDynamicShadowIfunc(IRB);
 
   Value *SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);

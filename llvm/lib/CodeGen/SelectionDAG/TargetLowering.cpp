@@ -1395,36 +1395,39 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
-    // If bitcast from a vector, see if we can use SimplifyDemandedVectorElts by
-    // demanding the element if any bits from it are demanded.
+    // Bitcast from a vector using SimplifyDemanded Bits/VectorElts.
+    // Demand the elt/bit if any of the original elts/bits are demanded.
     // TODO - bigendian once we have test coverage.
     // TODO - bool vectors once SimplifyDemandedVectorElts has SETCC support.
     if (SrcVT.isVector() && NumSrcEltBits > 1 &&
         (BitWidth % NumSrcEltBits) == 0 &&
         TLO.DAG.getDataLayout().isLittleEndian()) {
-      auto GetDemandedSrcMask = [&](APInt &DemandedSrcElts) -> bool {
-        unsigned Scale = BitWidth / NumSrcEltBits;
-        unsigned NumSrcElts = SrcVT.getVectorNumElements();
-        DemandedSrcElts = APInt::getNullValue(NumSrcElts);
-        for (unsigned i = 0; i != Scale; ++i) {
-          unsigned Offset = i * NumSrcEltBits;
-          APInt Sub = DemandedBits.extractBits(NumSrcEltBits, Offset);
-          if (!Sub.isNullValue())
-            for (unsigned j = 0; j != NumElts; ++j)
-              if (DemandedElts[j])
-                DemandedSrcElts.setBit((j * Scale) + i);
+      unsigned Scale = BitWidth / NumSrcEltBits;
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      APInt DemandedSrcBits = APInt::getNullValue(NumSrcEltBits);
+      APInt DemandedSrcElts = APInt::getNullValue(NumSrcElts);
+      for (unsigned i = 0; i != Scale; ++i) {
+        unsigned Offset = i * NumSrcEltBits;
+        APInt Sub = DemandedBits.extractBits(NumSrcEltBits, Offset);
+        if (!Sub.isNullValue()) {
+          DemandedSrcBits |= Sub;
+          for (unsigned j = 0; j != NumElts; ++j)
+            if (DemandedElts[j])
+              DemandedSrcElts.setBit((j * Scale) + i);
         }
-        return true;
-      };
-
-      APInt DemandedSrcElts;
-      if (GetDemandedSrcMask(DemandedSrcElts)) {
-        APInt KnownSrcUndef, KnownSrcZero;
-        if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownSrcUndef,
-                                       KnownSrcZero, TLO, Depth + 1))
-          return true;
       }
+
+      APInt KnownSrcUndef, KnownSrcZero;
+      if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownSrcUndef,
+                                     KnownSrcZero, TLO, Depth + 1))
+        return true;
+
+      KnownBits KnownSrcBits;
+      if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedSrcElts,
+                               KnownSrcBits, TLO, Depth + 1))
+        return true;
     }
+
     // If this is a bitcast, let computeKnownBits handle it.  Only do this on a
     // recursive call where Known may be useful to the caller.
     if (Depth > 0) {
