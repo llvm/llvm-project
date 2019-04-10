@@ -210,13 +210,10 @@ class TAPS : TA { Prefix OpPrefix = PS; }
 class TAPD : TA { Prefix OpPrefix = PD; }
 class TAXD : TA { Prefix OpPrefix = XD; }
 class VEX    { Encoding OpEnc = EncVEX; }
-class VEX_W    { bits<2> VEX_WPrefix = 1; }
-class VEX_WIG  { bits<2> VEX_WPrefix = 2; }
+class VEX_W    { bit HasVEX_W = 1; }
+class VEX_WIG  { bit IgnoresVEX_W = 1; }
 // Special version of VEX_W that can be changed to VEX.W==0 for EVEX2VEX.
-// FIXME: We should consider adding separate bits for VEX_WIG and the extra
-// part of W1X. This would probably simplify the tablegen emitters and
-// the TSFlags creation below.
-class VEX_W1X  { bits<2> VEX_WPrefix = 3; }
+class VEX_W1X  { bit HasVEX_W = 1; bit EVEX_W1_VEX_W0 = 1; }
 class VEX_4V : VEX { bit hasVEX_4V = 1; }
 class VEX_L  { bit hasVEX_L = 1; }
 class VEX_LIG { bit ignoresVEX_L = 1; }
@@ -300,7 +297,10 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   bit hasREPPrefix = 0;     // Does this inst have a REP prefix?
   Encoding OpEnc = EncNormal; // Encoding used by this instruction
   bits<2> OpEncBits = OpEnc.Value;
-  bits<2> VEX_WPrefix = 0;  // Does this inst set the VEX_W field?
+  bit HasVEX_W = 0;         // Does this inst set the VEX_W field?
+  bit IgnoresVEX_W = 0;     // Does this inst ignore VEX_W field?
+  bit EVEX_W1_VEX_W0 = 0;   // This EVEX inst with VEX.W==1 can become a VEX
+                            // instruction with VEX.W == 0.
   bit hasVEX_4V = 0;        // Does this inst require the VEX.VVVV field?
   bit hasVEX_L = 0;         // Does this inst use large (256-bit) registers?
   bit ignoresVEX_L = 0;     // Does this instruction ignore the L-bit
@@ -315,11 +315,8 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   bit hasEVEX_RC = 0;       // Explicitly specified rounding control in FP instruction.
   bit hasNoTrackPrefix = 0; // Does this inst has 0x3E (NoTrack) prefix?
 
-  bits<2> EVEX_LL;
-  let EVEX_LL{0} = hasVEX_L;
-  let EVEX_LL{1} = hasEVEX_L2;
   // Vector size in bytes.
-  bits<7> VectSize = !shl(16, EVEX_LL);
+  bits<7> VectSize = !if(hasEVEX_L2, 64, !if(hasVEX_L, 32, 16));
 
   // The scaling factor for AVX512's compressed displacement is either
   //   - the size of a  power-of-two number of elements or
@@ -359,7 +356,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{29-28} = OpEncBits;
   let TSFlags{37-30} = Opcode;
   // Currently no need for second bit in TSFlags - W Ignore is equivalent to 0.
-  let TSFlags{38}    = VEX_WPrefix{0};
+  let TSFlags{38}    = HasVEX_W;
   let TSFlags{39}    = hasVEX_4V;
   let TSFlags{40}    = hasVEX_L;
   let TSFlags{41}    = hasEVEX_K;

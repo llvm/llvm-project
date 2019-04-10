@@ -9,7 +9,10 @@
 #ifndef LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 #define LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/Support/Endian.h"
 
 #include <cstdint>
 #include <memory>
@@ -69,15 +72,33 @@ class raw_ostream;
 ///
 class RuntimeDyldChecker {
 public:
-  RuntimeDyldChecker(RuntimeDyld &RTDyld, MCDisassembler *Disassembler,
+
+  using IsSymbolValidFunction = std::function<bool(StringRef Symbol)>;
+  using GetSymbolAddressFunction =
+    std::function<Expected<JITTargetAddress>(StringRef Symbol)>;
+  using GetSymbolContentFunction =
+    std::function<Expected<StringRef>(StringRef Symbol)>;
+  using GetSectionLoadAddressFunction =
+    std::function<Optional<JITTargetAddress>(StringRef FileName,
+                                             StringRef SectionName)>;
+  using GetSectionContentFunction =
+    std::function<Expected<StringRef>(StringRef FileName,
+                                      StringRef SectionName)>;
+  using GetStubOffsetInSectionFunction =
+    std::function<Expected<uint32_t>(StringRef FileName,
+                                     StringRef SectionName,
+                                     StringRef SymbolName)>;
+
+  RuntimeDyldChecker(IsSymbolValidFunction IsSymbolValid,
+                     GetSymbolAddressFunction GetSymbolAddress,
+                     GetSymbolContentFunction GetSymbolContent,
+                     GetSectionLoadAddressFunction GetSectionLoadAddresss,
+                     GetSectionContentFunction GetSectionContent,
+                     GetStubOffsetInSectionFunction GetStubOffsetInSection,
+                     support::endianness Endianness,
+                     MCDisassembler *Disassembler,
                      MCInstPrinter *InstPrinter, raw_ostream &ErrStream);
   ~RuntimeDyldChecker();
-
-  // Get the associated RTDyld instance.
-  RuntimeDyld& getRTDyld();
-
-  // Get the associated RTDyld instance.
-  const RuntimeDyld& getRTDyld() const;
 
   /// Check a single expression against the attached RuntimeDyld
   ///        instance.
@@ -99,7 +120,7 @@ public:
                                                   bool LocalAddress);
 
   /// If there is a section at the given local address, return its load
-  ///        address, otherwise return none.
+  /// address, otherwise return none.
   Optional<uint64_t> getSectionLoadAddress(void *LocalAddress) const;
 
 private:

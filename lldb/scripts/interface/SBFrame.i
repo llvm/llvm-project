@@ -210,14 +210,11 @@ public:
     void
     Clear();
 
-#ifndef SWIG
     bool
     operator == (const lldb::SBFrame &rhs) const;
 
     bool
     operator != (const lldb::SBFrame &rhs) const;
-
-#endif
 
     %feature("docstring", "
     /// The version that doesn't supply a 'use_dynamic' value will use the

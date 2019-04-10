@@ -54,7 +54,6 @@ VERSION {
         ___kmp_allocate;
         ___kmp_free;
         __kmp_thread_pool;
-        __kmp_thread_pool_nth;
 
 	__kmp_reset_stats;
 

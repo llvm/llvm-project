@@ -841,7 +841,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // the DebugSymbols framework with the UUID to find the binary via its
       // search methods.
       if (!m_module_sp) {
-        m_module_sp = target.GetSharedModule(module_spec);
+        m_module_sp = target.GetOrCreateModule(module_spec, true /* notify */);
       }
 
       if (IsKernel() && !m_module_sp) {

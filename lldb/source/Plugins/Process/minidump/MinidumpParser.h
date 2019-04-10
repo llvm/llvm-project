@@ -52,8 +52,6 @@ public:
 
   llvm::ArrayRef<uint8_t> GetStream(StreamType stream_type);
 
-  llvm::Optional<std::string> GetMinidumpString(uint32_t rva);
-
   UUID GetModuleUUID(const MinidumpModule* module);
 
   llvm::ArrayRef<MinidumpThread> GetThreads();

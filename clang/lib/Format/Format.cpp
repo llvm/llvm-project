@@ -511,6 +511,7 @@ template <> struct MappingTraits<FormatStyle> {
 
 template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
   static void mapping(IO &IO, FormatStyle::BraceWrappingFlags &Wrapping) {
+    IO.mapOptional("AfterCaseLabel", Wrapping.AfterCaseLabel);
     IO.mapOptional("AfterClass", Wrapping.AfterClass);
     IO.mapOptional("AfterControlStatement", Wrapping.AfterControlStatement);
     IO.mapOptional("AfterEnum", Wrapping.AfterEnum);
@@ -603,7 +604,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
   if (Style.BreakBeforeBraces == FormatStyle::BS_Custom)
     return Style;
   FormatStyle Expanded = Style;
-  Expanded.BraceWrapping = {false, false, false, false, false,
+  Expanded.BraceWrapping = {false, false, false, false, false, false,
                             false, false, false, false, false,
                             false, false, true,  true,  true};
   switch (Style.BreakBeforeBraces) {
@@ -628,6 +629,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     Expanded.BraceWrapping.BeforeElse = true;
     break;
   case FormatStyle::BS_Allman:
+    Expanded.BraceWrapping.AfterCaseLabel = true;
     Expanded.BraceWrapping.AfterClass = true;
     Expanded.BraceWrapping.AfterControlStatement = true;
     Expanded.BraceWrapping.AfterEnum = true;
@@ -641,7 +643,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     break;
   case FormatStyle::BS_GNU:
     Expanded.BraceWrapping = {true, true, true, true, true, true, true, true,
-                              true, true, true, true, true, true, true};
+                              true, true, true, true, true, true, true, true};
     break;
   case FormatStyle::BS_WebKit:
     Expanded.BraceWrapping.AfterFunction = true;
@@ -680,7 +682,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
-  LLVMStyle.BraceWrapping = {false, false, false, false, false,
+  LLVMStyle.BraceWrapping = {false, false, false, false, false, false,
                              false, false, false, false, false,
                              false, false, true,  true,  true};
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
