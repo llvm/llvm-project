@@ -154,7 +154,7 @@ define i8 @and1_lshr1_is_cmp_eq_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_multiuse(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i8 1, %x
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SH]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[SH]], [[AND]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[SH]], [[AND]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
   %sh = lshr i8 1, %x

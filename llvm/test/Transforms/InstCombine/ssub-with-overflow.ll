@@ -22,9 +22,9 @@ define { i32, i1 } @simple_fold(i32 %x) {
 
 define { i32, i1 } @fold_mixed_signs(i32 %x) {
 ; CHECK-LABEL: @fold_mixed_signs(
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], -13
-; CHECK-NEXT:    [[B:%.*]] = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 [[A]], i32 -7)
-; CHECK-NEXT:    ret { i32, i1 } [[B]]
+; CHECK-NEXT:    [[B:%.*]] = add nsw i32 [[X:%.*]], -6
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 false }, i32 [[B]], 0
+; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %a = sub nsw i32 %x, 13
   %b = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %a, i32 -7)

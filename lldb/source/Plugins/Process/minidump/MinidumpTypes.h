@@ -70,11 +70,6 @@ Status consumeObject(llvm::ArrayRef<uint8_t> &Buffer, const T *&Object) {
   return error;
 }
 
-// parse a MinidumpString which is with UTF-16
-// Reference:
-// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680395(v=vs.85).aspx
-llvm::Optional<std::string> parseMinidumpString(llvm::ArrayRef<uint8_t> &data);
-
 // Reference:
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms680384(v=vs.85).aspx
 struct MinidumpMemoryDescriptor {

@@ -14,43 +14,6 @@
 using namespace lldb_private;
 using namespace minidump;
 
-// Minidump string
-llvm::Optional<std::string>
-lldb_private::minidump::parseMinidumpString(llvm::ArrayRef<uint8_t> &data) {
-  std::string result;
-
-  const llvm::support::ulittle32_t *source_length;
-  Status error = consumeObject(data, source_length);
-
-  if (error.Fail() || *source_length > data.size() || *source_length % 2 != 0)
-    return llvm::None;
-
-  auto *source_start =
-      reinterpret_cast<const llvm::support::ulittle16_t *>(data.data());
-  // source_length is the length of the string in bytes we need the length of
-  // the string in UTF-16 characters/code points (16 bits per char) that's why
-  // it's divided by 2
-  uint32_t utf16_length = *source_length / 2;
-
-  // Correct the endianness and alignment of the string.
-  llvm::SmallVector<llvm::UTF16, 64> utf16(utf16_length, 0);
-  std::copy_n(source_start, utf16_length, utf16.begin());
-
-  const llvm::UTF16 *utf16_start = utf16.begin();
-
-  // resize to worst case length
-  result.resize(UNI_MAX_UTF8_BYTES_PER_CODE_POINT * utf16_length);
-  auto result_start = reinterpret_cast<llvm::UTF8 *>(&result[0]);
-  const auto result_end = result_start + result.size();
-  llvm::ConvertUTF16toUTF8(&utf16_start, utf16.end(), &result_start, result_end,
-                           llvm::strictConversion);
-  const auto result_size =
-      std::distance(reinterpret_cast<llvm::UTF8 *>(&result[0]), result_start);
-  result.resize(result_size); // shrink to actual length
-
-  return result;
-}
-
 // MinidumpThread
 const MinidumpThread *MinidumpThread::Parse(llvm::ArrayRef<uint8_t> &data) {
   const MinidumpThread *thread = nullptr;

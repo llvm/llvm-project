@@ -143,8 +143,7 @@ llvm::Optional<Record::Kind> Record::classify(llvm::StringRef Line) {
     Tok = consume<Token>(Line);
     switch (Tok) {
     case Token::CFI:
-      Tok = consume<Token>(Line);
-      return Tok == Token::Init ? Record::StackCFIInit : Record::StackCFI;
+      return Record::StackCFI;
     default:
       return llvm::None;
     }
@@ -359,6 +358,55 @@ llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
                              R.Name);
 }
 
+llvm::Optional<StackCFIRecord> StackCFIRecord::parse(llvm::StringRef Line) {
+  // STACK CFI INIT address size reg1: expr1 reg2: expr2 ...
+  // or
+  // STACK CFI address reg1: expr1 reg2: expr2 ...
+  // No token in exprN ends with a colon.
+
+  if (consume<Token>(Line) != Token::Stack)
+    return llvm::None;
+  if (consume<Token>(Line) != Token::CFI)
+    return llvm::None;
+
+  llvm::StringRef Str;
+  std::tie(Str, Line) = getToken(Line);
+
+  bool IsInitRecord = stringTo<Token>(Str) == Token::Init;
+  if (IsInitRecord)
+    std::tie(Str, Line) = getToken(Line);
+
+  lldb::addr_t Address;
+  if (!to_integer(Str, Address, 16))
+    return llvm::None;
+
+  llvm::Optional<lldb::addr_t> Size;
+  if (IsInitRecord) {
+    Size.emplace();
+    std::tie(Str, Line) = getToken(Line);
+    if (!to_integer(Str, *Size, 16))
+      return llvm::None;
+  }
+
+  return StackCFIRecord(Address, Size, Line.trim());
+}
+
+bool breakpad::operator==(const StackCFIRecord &L, const StackCFIRecord &R) {
+  return L.Address == R.Address && L.Size == R.Size &&
+         L.UnwindRules == R.UnwindRules;
+}
+
+llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
+                                        const StackCFIRecord &R) {
+  OS << "STACK CFI ";
+  if (R.Size)
+    OS << "INIT ";
+  OS << llvm::formatv("{0:x-} ", R.Address);
+  if (R.Size)
+    OS << llvm::formatv("{0:x-} ", *R.Size);
+  return OS << " " << R.UnwindRules;
+}
+
 llvm::StringRef breakpad::toString(Record::Kind K) {
   switch (K) {
   case Record::Module:
@@ -373,8 +421,6 @@ llvm::StringRef breakpad::toString(Record::Kind K) {
     return "LINE";
   case Record::Public:
     return "PUBLIC";
-  case Record::StackCFIInit:
-    return "STACK CFI INIT";
   case Record::StackCFI:
     return "STACK CFI";
   }

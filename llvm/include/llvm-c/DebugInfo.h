@@ -1193,6 +1193,22 @@ LLVMMetadataRef LLVMGetSubprogram(LLVMValueRef Func);
 void LLVMSetSubprogram(LLVMValueRef Func, LLVMMetadataRef SP);
 
 /**
+ * Get the debug location for the given instruction.
+ *
+ * @see llvm::Instruction::getDebugLoc()
+ */
+LLVMMetadataRef LLVMInstructionGetDebugLoc(LLVMValueRef Inst);
+
+/**
+ * Set the debug location for the given instruction.
+ *
+ * To clear the location metadata of the given instruction, pass NULL to \p Loc.
+ *
+ * @see llvm::Instruction::setDebugLoc()
+ */
+void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc);
+
+/**
  * Obtain the enumerated type of a Metadata instance.
  *
  * @see llvm::Metadata::getMetadataID()

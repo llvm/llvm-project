@@ -202,3 +202,34 @@ body:             |
     $q0 = COPY %2
 
 ...
+
+---
+name: test_ashr_v2i32
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_ashr_v2i32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s32>) = G_ASHR [[COPY]], [[COPY1]](<2 x s32>)
+    ; CHECK: $d0 = COPY [[ASHR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $d0
+    %1:_(<2 x s32>) = COPY $d1
+    %2:_(<2 x s32>) = G_ASHR %0, %1
+    $d0 = COPY %2
+
+...
+---
+name: test_ashr_v4i32
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_ashr_v4i32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK: [[ASHR:%[0-9]+]]:_(<4 x s32>) = G_ASHR [[COPY]], [[COPY1]](<4 x s32>)
+    ; CHECK: $q0 = COPY [[ASHR]](<4 x s32>)
+    %0:_(<4 x s32>) = COPY $q0
+    %1:_(<4 x s32>) = COPY $q1
+    %2:_(<4 x s32>) = G_ASHR %0, %1
+    $q0 = COPY %2
+
+...

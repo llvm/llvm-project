@@ -1015,6 +1015,10 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
       (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)))
     return BinaryOperator::CreateNeg(Op0);
 
+  // X / INT_MIN --> X == INT_MIN
+  if (match(Op1, m_SignMask()))
+    return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), I.getType());
+
   const APInt *Op1C;
   if (match(Op1, m_APInt(Op1C))) {
     // sdiv exact X, C  -->  ashr exact X, log2(C)
@@ -1039,17 +1043,14 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
       Value *NarrowOp = Builder.CreateSDiv(Op0Src, NarrowDivisor);
       return new SExtInst(NarrowOp, Op0->getType());
     }
-  }
 
-  if (Constant *RHS = dyn_cast<Constant>(Op1)) {
-    // X/INT_MIN -> X == INT_MIN
-    if (RHS->isMinSignedValue())
-      return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), I.getType());
-
-    // -X/C  -->  X/-C  provided the negation doesn't overflow.
-    Value *X;
-    if (match(Op0, m_NSWSub(m_Zero(), m_Value(X)))) {
-      auto *BO = BinaryOperator::CreateSDiv(X, ConstantExpr::getNeg(RHS));
+    // -X / C --> X / -C (if the negation doesn't overflow).
+    // TODO: This could be enhanced to handle arbitrary vector constants by
+    //       checking if all elements are not the min-signed-val.
+    if (!Op1C->isMinSignedValue() &&
+        match(Op0, m_NSWSub(m_Zero(), m_Value(X)))) {
+      Constant *NegC = ConstantInt::get(I.getType(), -(*Op1C));
+      Instruction *BO = BinaryOperator::CreateSDiv(X, NegC);
       BO->setIsExact(I.isExact());
       return BO;
     }

@@ -83,7 +83,8 @@ declare {i32, i1} @llvm.usub.with.overflow.i32(i32, i32)
 define i1 @func3(i32 %x) nounwind {
 ; CHECK-LABEL: func3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    decl %eax
 ; CHECK-NEXT:    seto %al
 ; CHECK-NEXT:    retl
 entry:

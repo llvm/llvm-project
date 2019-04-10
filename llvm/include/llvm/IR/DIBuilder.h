@@ -706,12 +706,12 @@ namespace llvm {
                  DITemplateParameterArray TParams = nullptr,
                  DITypeArray ThrownTypes = nullptr);
 
-    /// Create common block entry for a Fortran common block
-    /// \param Scope       Scope of this common block
-    /// \param Name        The name of this common block
-    /// \param File        The file this common block is defined
-    /// \param LineNo      Line number
-    /// \param VarList     List of variables that a located in common block
+    /// Create common block entry for a Fortran common block.
+    /// \param Scope       Scope of this common block.
+    /// \param decl        Global variable declaration.
+    /// \param Name        The name of this common block.
+    /// \param File        The file this common block is defined.
+    /// \param LineNo      Line number.
     DICommonBlock *createCommonBlock(DIScope *Scope, DIGlobalVariable *decl,
                                      StringRef Name, DIFile *File,
                                      unsigned LineNo);

@@ -65,6 +65,10 @@ public:
 
     virtual ~ValueHandler() = default;
 
+    /// Returns true if the handler is dealing with formal arguments,
+    /// not with return values etc.
+    virtual bool isArgumentHandler() const { return false; }
+
     /// Materialize a VReg containing the address of the specified
     /// stack-based object. This is either based on a FrameIndex or
     /// direct SP manipulation, depending on the context. \p MPO

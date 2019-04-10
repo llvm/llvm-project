@@ -154,9 +154,9 @@ define zeroext i1 @f9(i64 %dummy, i64 %a, i64 *%res) {
 ; Check the next value down, which must use register subtraction instead.
 define zeroext i1 @f10(i64 %dummy, i64 %a, i64 *%res) {
 ; CHECK-LABEL: f10:
-; CHECK: lgfi [[REG1:%r[0-9]+]], -2147483648
-; CHECK: sgr %r3, [[REG1]]
-; CHECK-DAG: stg %r3, 0(%r4)
+; CHECK: llilh [[REG1:%r[0-9]+]], 32768
+; CHECK: agr [[REG1]], %r3
+; CHECK-DAG: stg [[REG1]], 0(%r4)
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
 ; CHECK-DAG: afi [[REG]], 1342177280
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33

@@ -37,6 +37,8 @@ set(SCUDO_SOURCES
   checksum.cc
   crc32_hw.cc
   common.cc
+  flags.cc
+  flags_parser.cc
   fuchsia.cc
   linux.cc
   report.cc
@@ -57,6 +59,9 @@ set(SCUDO_HEADERS
   atomic_helpers.h
   bytemap.h
   checksum.h
+  flags.h
+  flags_parser.h
+  interface.h
   internal_defs.h
   linux.h
   list.h
