@@ -166,6 +166,7 @@
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Tapir/LoopSpawningTI.h"
 #include "llvm/Transforms/Tapir/LoopStripMinePass.h"
+#include "llvm/Transforms/Tapir/SerializeSmallTasks.h"
 #include "llvm/Transforms/Tapir/TapirToTarget.h"
 #include "llvm/Transforms/Tapir/DRFScopedNoAliasAA.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"

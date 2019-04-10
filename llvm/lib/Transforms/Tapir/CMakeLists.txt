@@ -11,6 +11,7 @@ add_llvm_library(LLVMTapirOpts
   OpenMPABI.cpp
   Outline.cpp
   RedundantSpawn.cpp
+  SerializeSmallTasks.cpp
   SmallBlock.cpp
   SpawnRestructure.cpp
   SpawnUnswitch.cpp

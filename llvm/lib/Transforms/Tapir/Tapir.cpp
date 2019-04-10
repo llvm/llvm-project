@@ -33,6 +33,7 @@ void llvm::initializeTapirOpts(PassRegistry &Registry) {
   initializeTaskSimplifyPass(Registry);
   initializeDRFScopedNoAliasWrapperPassPass(Registry);
   initializeLoopStripMinePass(Registry);
+  initializeSerializeSmallTasksPass(Registry);
 }
 
 void LLVMInitializeTapirOpts(LLVMPassRegistryRef R) {

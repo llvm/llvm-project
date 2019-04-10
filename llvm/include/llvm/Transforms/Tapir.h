@@ -92,6 +92,12 @@ FunctionPass *createDRFScopedNoAliasWrapperPass();
 //
 Pass *createLoopStripMinePass(int Count = -1);
 
+//===----------------------------------------------------------------------===//
+//
+// SerializeSmallTasksPass - Serialize small Tapir tasks
+//
+FunctionPass *createSerializeSmallTasksPass();
+
 } // End llvm namespace
 
 #endif
