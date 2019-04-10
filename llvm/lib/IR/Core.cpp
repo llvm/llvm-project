@@ -3006,6 +3006,17 @@ void LLVMDisposeBuilder(LLVMBuilderRef Builder) {
 
 /*--.. Metadata builders ...................................................--*/
 
+LLVMMetadataRef LLVMGetCurrentDebugLocation2(LLVMBuilderRef Builder) {
+  return wrap(unwrap(Builder)->getCurrentDebugLocation().getAsMDNode());
+}
+
+void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder, LLVMMetadataRef Loc) {
+  if (Loc)
+    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(unwrap<MDNode>(Loc)));
+  else
+    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc());
+}
+
 void LLVMSetCurrentDebugLocation(LLVMBuilderRef Builder, LLVMValueRef L) {
   MDNode *Loc =
       L ? cast<MDNode>(unwrap<MetadataAsValue>(L)->getMetadata()) : nullptr;
@@ -3021,7 +3032,6 @@ LLVMValueRef LLVMGetCurrentDebugLocation(LLVMBuilderRef Builder) {
 void LLVMSetInstDebugLocation(LLVMBuilderRef Builder, LLVMValueRef Inst) {
   unwrap(Builder)->SetInstDebugLocation(unwrap<Instruction>(Inst));
 }
-
 
 /*--.. Instruction builders ................................................--*/
 

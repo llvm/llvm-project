@@ -1056,6 +1056,12 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
     }
   }
 
+  // -X / Y --> -(X / Y)
+  Value *Y;
+  if (match(&I, m_SDiv(m_OneUse(m_NSWSub(m_Zero(), m_Value(X))), m_Value(Y))))
+    return BinaryOperator::CreateNSWNeg(
+        Builder.CreateSDiv(X, Y, I.getName(), I.isExact()));
+
   // If the sign bits of both operands are zero (i.e. we can prove they are
   // unsigned inputs), turn this into a udiv.
   APInt Mask(APInt::getSignMask(I.getType()->getScalarSizeInBits()));

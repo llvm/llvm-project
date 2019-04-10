@@ -179,18 +179,20 @@
 # EXE-NEXT:      Version: 1
 # EXE-NEXT:      Count: 2
 # EXE-NEXT:      FileName: shared
-# EXE-NEXT:      Entry {
-# EXE-NEXT:        Hash: 1425
-# EXE-NEXT:        Flags: 0x0
-# EXE-NEXT:        Index: 2
-# EXE-NEXT:        Name: V1
-# EXE-NEXT:      }
-# EXE-NEXT:      Entry {
-# EXE-NEXT:        Hash: 1426
-# EXE-NEXT:        Flags: 0x0
-# EXE-NEXT:        Index: 3
-# EXE-NEXT:        Name: V2
-# EXE-NEXT:      }
+# EXE-NEXT:      Entries [
+# EXE-NEXT:        Entry {
+# EXE-NEXT:          Hash: 1425
+# EXE-NEXT:          Flags: 0x0
+# EXE-NEXT:          Index: 2
+# EXE-NEXT:          Name: V1
+# EXE-NEXT:        }
+# EXE-NEXT:        Entry {
+# EXE-NEXT:          Hash: 1426
+# EXE-NEXT:          Flags: 0x0
+# EXE-NEXT:          Index: 3
+# EXE-NEXT:          Name: V2
+# EXE-NEXT:        }
+# EXE-NEXT:      ]
 # EXE-NEXT:    }
 # EXE-NEXT:  }
 

@@ -65,11 +65,9 @@ public:
   void EmitFunctionBodyStart() override;
   void EmitInstruction(const MachineInstr *MI) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       unsigned AsmVariant, const char *ExtraCode,
-                       raw_ostream &OS) override;
+                       const char *ExtraCode, raw_ostream &OS) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                             unsigned AsmVariant, const char *ExtraCode,
-                             raw_ostream &OS) override;
+                             const char *ExtraCode, raw_ostream &OS) override;
 
   MVT getRegType(unsigned RegNo) const;
   std::string regToString(const MachineOperand &MO);

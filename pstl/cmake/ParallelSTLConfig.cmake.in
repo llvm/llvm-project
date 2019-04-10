@@ -10,8 +10,10 @@ include(CMakeFindDependencyMacro)
 
 set(PARALLELSTL_BACKEND "@PARALLELSTL_BACKEND@")
 
-if(PARALLELSTL_BACKEND STREQUAL "tbb")
-    find_dependency(TBB 2018 REQUIRED tbb)
+if (PARALLELSTL_BACKEND STREQUAL "tbb")
+    find_dependency(TBB REQUIRED tbb)
 endif()
 
-include("${CMAKE_CURRENT_LIST_DIR}/ParallelSTLTargets.cmake")
+if (NOT TARGET pstl::ParallelSTL)
+    include("${CMAKE_CURRENT_LIST_DIR}/ParallelSTLTargets.cmake")
+endif()

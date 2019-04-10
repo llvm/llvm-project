@@ -3,8 +3,8 @@
 
 define i32 @test_sdiv_canonicalize_op0(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sdiv_canonicalize_op0(
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV1:%.*]] = sdiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sub nsw i32 0, [[SDIV1]]
 ; CHECK-NEXT:    ret i32 [[SDIV]]
 ;
   %neg = sub nsw i32 0, %x
@@ -14,8 +14,8 @@ define i32 @test_sdiv_canonicalize_op0(i32 %x, i32 %y) {
 
 define i32 @test_sdiv_canonicalize_op0_exact(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sdiv_canonicalize_op0_exact(
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[SDIV:%.*]] = sdiv exact i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV1:%.*]] = sdiv exact i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sub nsw i32 0, [[SDIV1]]
 ; CHECK-NEXT:    ret i32 [[SDIV]]
 ;
   %neg = sub nsw i32 0, %x
@@ -23,6 +23,7 @@ define i32 @test_sdiv_canonicalize_op0_exact(i32 %x, i32 %y) {
   ret i32 %sdiv
 }
 
+; (X/-Y) is not equal to -(X/Y), don't canonicalize.
 define i32 @test_sdiv_canonicalize_op1(i32 %x, i32 %z) {
 ; CHECK-LABEL: @test_sdiv_canonicalize_op1(
 ; CHECK-NEXT:    [[Y:%.*]] = mul i32 [[Z:%.*]], 3
@@ -49,8 +50,8 @@ define i32 @test_sdiv_canonicalize_nonsw(i32 %x, i32 %y) {
 
 define <2 x i32> @test_sdiv_canonicalize_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @test_sdiv_canonicalize_vec(
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[SDIV:%.*]] = sdiv <2 x i32> [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV1:%.*]] = sdiv <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sub nsw <2 x i32> zeroinitializer, [[SDIV1]]
 ; CHECK-NEXT:    ret <2 x i32> [[SDIV]]
 ;
   %neg = sub nsw <2 x i32> <i32 0, i32 0>, %x
@@ -71,9 +72,8 @@ define i32 @test_sdiv_canonicalize_multiple_uses(i32 %x, i32 %y) {
   ret i32 %sdiv2
 }
 
-; There is combination: (X/-CE) -> -(X/CE)
-; There is another combination: -(X/CE) -> (X/-CE)
-; Make sure don't combine them endless.
+; There is combination: -(X/CE) -> (X/-CE).
+; If combines (X/-CE) to -(X/CE), make sure don't combine them endless.
 
 @X = global i32 5
 

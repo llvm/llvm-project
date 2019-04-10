@@ -594,16 +594,14 @@ public:
   /// specified assembler variant.  Targets should override this to format as
   /// appropriate.  This method can return true if the operand is erroneous.
   virtual bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                               unsigned AsmVariant, const char *ExtraCode,
-                               raw_ostream &OS);
+                               const char *ExtraCode, raw_ostream &OS);
 
   /// Print the specified operand of MI, an INLINEASM instruction, using the
   /// specified assembler variant as an address. Targets should override this to
   /// format as appropriate.  This method can return true if the operand is
   /// erroneous.
   virtual bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                                     unsigned AsmVariant, const char *ExtraCode,
-                                     raw_ostream &OS);
+                                     const char *ExtraCode, raw_ostream &OS);
 
   /// Let the target do anything it needs to do before emitting inlineasm.
   /// \p StartInfo - the subtarget info before parsing inline asm

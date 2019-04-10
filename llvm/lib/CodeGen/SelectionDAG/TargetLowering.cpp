@@ -595,6 +595,45 @@ bool TargetLowering::SimplifyDemandedBits(
 
     return false;
   }
+  case ISD::INSERT_SUBVECTOR: {
+    SDValue Base = Op.getOperand(0);
+    SDValue Sub = Op.getOperand(1);
+    EVT SubVT = Sub.getValueType();
+    unsigned NumSubElts = SubVT.getVectorNumElements();
+
+    // If index isn't constant, assume we need the original demanded base
+    // elements and ALL the inserted subvector elements.
+    APInt BaseElts = DemandedElts;
+    APInt SubElts = APInt::getAllOnesValue(NumSubElts);
+    if (isa<ConstantSDNode>(Op.getOperand(2))) {
+      const APInt &Idx = Op.getConstantOperandAPInt(2);
+      if (Idx.ule(NumElts - NumSubElts)) {
+        unsigned SubIdx = Idx.getZExtValue();
+        SubElts = DemandedElts.extractBits(NumSubElts, SubIdx);
+        BaseElts.insertBits(APInt::getNullValue(NumSubElts), SubIdx);
+      }
+    }
+
+    KnownBits KnownSub, KnownBase;
+    if (SimplifyDemandedBits(Sub, DemandedBits, SubElts, KnownSub, TLO,
+                             Depth + 1))
+      return true;
+    if (SimplifyDemandedBits(Base, DemandedBits, BaseElts, KnownBase, TLO,
+                             Depth + 1))
+      return true;
+
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    if (!!SubElts) {
+        Known.One &= KnownSub.One;
+        Known.Zero &= KnownSub.Zero;
+    }
+    if (!!BaseElts) {
+        Known.One &= KnownBase.One;
+        Known.Zero &= KnownBase.Zero;
+    }
+    break;
+  }
   case ISD::CONCAT_VECTORS: {
     Known.Zero.setAllBits();
     Known.One.setAllBits();

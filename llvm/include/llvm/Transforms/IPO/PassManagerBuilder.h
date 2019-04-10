@@ -142,7 +142,6 @@ public:
   const ModuleSummaryIndex *ImportSummary = nullptr;
 
   bool DisableTailCalls;
-  bool DisableUnitAtATime;
   bool DisableUnrollLoops;
   bool SLPVectorize;
   bool LoopVectorize;

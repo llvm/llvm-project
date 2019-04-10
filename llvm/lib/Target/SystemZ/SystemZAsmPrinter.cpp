@@ -617,9 +617,7 @@ EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
   OutStreamer->EmitValue(Expr, Size);
 }
 
-bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
-                                        unsigned OpNo,
-                                        unsigned AsmVariant,
+bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
   if (ExtraCode && *ExtraCode == 'n') {
@@ -636,7 +634,6 @@ bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
 
 bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned OpNo,
-                                              unsigned AsmVariant,
                                               const char *ExtraCode,
                                               raw_ostream &OS) {
   SystemZInstPrinter::printAddress(MI->getOperand(OpNo).getReg(),

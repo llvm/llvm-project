@@ -26,6 +26,7 @@ public:
     void
     Clear();
     
+    %feature("docstring", "
     //------------------------------------------------------------------
     /// Get const accessor for the module file.
     ///
@@ -36,12 +37,14 @@ public:
     /// @return
     ///     A const reference to the file specification object.
     //------------------------------------------------------------------
+    ") GetFileSpec;
     lldb::SBFileSpec
     GetFileSpec ();
     
     void
     SetFileSpec (const lldb::SBFileSpec &fspec);
     
+    %feature("docstring", "
     //------------------------------------------------------------------
     /// Get accessor for the module platform file.
     ///
@@ -57,6 +60,7 @@ public:
     /// @return
     ///     A const reference to the file specification object.
     //------------------------------------------------------------------
+    ") GetPlatformFileSpec;
     lldb::SBFileSpec
     GetPlatformFileSpec ();
     

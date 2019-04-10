@@ -758,9 +758,7 @@ bool MCDwarfLineAddr::FixedEncode(MCContext &Context,
     *Offset = OS.tell();
     *Size = AddrSize;
     SetDelta = false;
-    std::vector<uint8_t> FillData;
-    FillData.insert(FillData.begin(), AddrSize, 0);
-    OS.write(reinterpret_cast<char *>(FillData.data()), AddrSize);
+    OS.write_zeros(AddrSize);
   } else {
     OS << char(dwarf::DW_LNS_fixed_advance_pc);
     // Generate fixup for 2-bytes address delta.
