@@ -534,6 +534,15 @@ public:
     return false;
   }
 
+  /// Return true if it is profitable to fold a pair of shifts into a mask.
+  /// This is usually true on most targets. But some targets, like Thumb1,
+  /// have immediate shift instructions, but no immediate "and" instruction;
+  /// this makes the fold unprofitable.
+  virtual bool shouldFoldShiftPairToMask(const SDNode *N,
+                                         CombineLevel Level) const {
+    return true;
+  }
+
   /// Should we tranform the IR-optimal check for whether given truncation
   /// down into KeptBits would be truncating or not:
   ///   (add %x, (1 << (KeptBits-1))) srccond (1 << KeptBits)
@@ -3135,15 +3144,6 @@ public:
   /// @param Level the current DAGCombine legalization level.
   virtual bool isDesirableToCommuteWithShift(const SDNode *N,
                                              CombineLevel Level) const {
-    return true;
-  }
-
-  /// Return true if it is profitable to fold a pair of shifts into a mask.
-  /// This is usually true on most targets. But some targets, like Thumb1,
-  /// have immediate shift instructions, but no immediate "and" instruction;
-  /// this makes the fold unprofitable.
-  virtual bool shouldFoldShiftPairToMask(const SDNode *N,
-                                         CombineLevel Level) const {
     return true;
   }
 

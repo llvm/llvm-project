@@ -1225,6 +1225,42 @@ entry:
   ret <8 x half> %shuffle.i
 }
 
+define <4 x half> @test_vld_dup1_4xhalf(half* %b) {
+; CHECK-LABEL: test_vld_dup1_4xhalf:
+; CHECK:       vld1.16 {d0[]}, [r0:16]
+; CHECK-NEXT:  bx      lr
+
+entry:
+  %b1 = load half, half* %b, align 2
+  %vecinit = insertelement <4 x half> undef, half %b1, i32 0
+  %vecinit2 = insertelement <4 x half> %vecinit, half %b1, i32 1
+  %vecinit3 = insertelement <4 x half> %vecinit2, half %b1, i32 2
+  %vecinit4 = insertelement <4 x half> %vecinit3, half %b1, i32 3
+  ret <4 x half> %vecinit4
+}
+
+define <8 x half> @test_vld_dup1_8xhalf(half* %b) local_unnamed_addr {
+; CHECK-LABEL: test_vld_dup1_8xhalf:
+; CHECK:       vld1.16 {d0[], d1[]}, [r0:16]
+; CHECK-NEXT:  bx      lr
+
+entry:
+  %b1 = load half, half* %b, align 2
+  %vecinit = insertelement <8 x half> undef, half %b1, i32 0
+  %vecinit8 = shufflevector <8 x half> %vecinit, <8 x half> undef, <8 x i32> zeroinitializer
+  ret <8 x half> %vecinit8
+}
+
+define <8 x half> @test_shufflevector8xhalf(<4 x half> %a) {
+; CHECK-LABEL: test_shufflevector8xhalf:
+; CHECK:       vmov.f64        d1, d0
+; CHECK-NEXT:  bx      lr
+
+entry:
+  %r = shufflevector <4 x half> %a, <4 x half> %a, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x half> %r
+}
+
 declare <4 x half> @llvm.fabs.v4f16(<4 x half>)
 declare <8 x half> @llvm.fabs.v8f16(<8 x half>)
 declare <4 x i16> @llvm.arm.neon.vcvtas.v4i16.v4f16(<4 x half>)

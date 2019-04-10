@@ -622,7 +622,7 @@ int main() {
 
 // CHECK-NOT: call i32 @__kmpc_reduce
 
-// CHECK: ret void
+// CHECK: }
 
 // CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],

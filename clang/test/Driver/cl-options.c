@@ -400,7 +400,7 @@
 // RUN:     /d2FH4 \
 // RUN:     /docname \
 // RUN:     /EHsc \
-// RUN:     /F \
+// RUN:     /F 42 \
 // RUN:     /FA \
 // RUN:     /FAc \
 // RUN:     /Fafilename \

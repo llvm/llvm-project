@@ -348,18 +348,17 @@ bool ProcessMinidump::UpdateThreadList(ThreadList &old_thread_list,
 }
 
 void ProcessMinidump::ReadModuleList() {
-  std::vector<const MinidumpModule *> filtered_modules =
+  std::vector<const minidump::Module *> filtered_modules =
       m_minidump_parser->GetFilteredModuleList();
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
 
   for (auto module : filtered_modules) {
     std::string name = cantFail(m_minidump_parser->GetMinidumpFile().getString(
-        module->module_name_rva));
+        module->ModuleNameRVA));
     LLDB_LOG(log, "found module: name: {0} {1:x10}-{2:x10} size: {3}", name,
-             module->base_of_image,
-             module->base_of_image + module->size_of_image,
-             module->size_of_image);
+             module->BaseOfImage, module->BaseOfImage + module->SizeOfImage,
+             module->SizeOfImage);
 
     // check if the process is wow64 - a 32 bit windows process running on a
     // 64 bit windows
@@ -417,12 +416,12 @@ void ProcessMinidump::ReadModuleList() {
                name);
 
       module_sp = Module::CreateModuleFromObjectFile<PlaceholderObjectFile>(
-          module_spec, module->base_of_image, module->size_of_image);
+          module_spec, module->BaseOfImage, module->SizeOfImage);
       GetTarget().GetImages().Append(module_sp, true /* notify */);
     }
 
     bool load_addr_changed = false;
-    module_sp->SetLoadAddress(GetTarget(), module->base_of_image, false,
+    module_sp->SetLoadAddress(GetTarget(), module->BaseOfImage, false,
                               load_addr_changed);
   }
 }

@@ -236,8 +236,6 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
                                           const ASTContext &ASTCtx,
                                           const Options &Opts,
                                           bool IsMainFileOnly) {
-  if (ND.isImplicit())
-    return false;
   // Skip anonymous declarations, e.g (anonymous enum/class/struct).
   if (ND.getDeclName().isEmpty())
     return false;
@@ -328,7 +326,9 @@ bool SymbolCollector::handleDeclOccurence(
   // then no public declaration was visible, so assume it's main-file only.
   bool IsMainFileOnly =
       SM.isWrittenInMainFile(SM.getExpansionLoc(ND->getBeginLoc()));
-  if (!shouldCollectSymbol(*ND, *ASTCtx, Opts, IsMainFileOnly))
+  // In C, printf is a redecl of an implicit builtin! So check OrigD instead.
+  if (ASTNode.OrigD->isImplicit() ||
+      !shouldCollectSymbol(*ND, *ASTCtx, Opts, IsMainFileOnly))
     return true;
   // Do not store references to main-file symbols.
   if (CollectRef && !IsMainFileOnly && !isa<NamespaceDecl>(ND) &&

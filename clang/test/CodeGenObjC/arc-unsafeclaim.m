@@ -231,4 +231,5 @@ void test_cast_to_void() {
 
 // This is always at the end of the module.
 
-// CHECK-OPTIMIZED: !clang.arc.retainAutoreleasedReturnValueMarker = !{!0}
+// CHECK-OPTIMIZED: !llvm.module.flags = !{!0,
+// CHECK-OPTIMIZED: !0 = !{i32 1, !"clang.arc.retainAutoreleasedReturnValueMarker", !"mov{{.*}}marker for objc_retainAutoreleaseReturnValue"}

@@ -52,7 +52,7 @@ public:
 
   llvm::ArrayRef<uint8_t> GetStream(StreamType stream_type);
 
-  UUID GetModuleUUID(const MinidumpModule* module);
+  UUID GetModuleUUID(const minidump::Module *module);
 
   llvm::ArrayRef<MinidumpThread> GetThreads();
 
@@ -70,13 +70,13 @@ public:
 
   llvm::Optional<lldb::pid_t> GetPid();
 
-  llvm::ArrayRef<MinidumpModule> GetModuleList();
+  llvm::ArrayRef<minidump::Module> GetModuleList();
 
   // There are cases in which there is more than one record in the ModuleList
   // for the same module name.(e.g. when the binary has non contiguous segments)
   // So this function returns a filtered module list - if it finds records that
   // have the same name, it keeps the copy with the lowest load address.
-  std::vector<const MinidumpModule *> GetFilteredModuleList();
+  std::vector<const minidump::Module *> GetFilteredModuleList();
 
   const MinidumpExceptionStream *GetExceptionStream();
 

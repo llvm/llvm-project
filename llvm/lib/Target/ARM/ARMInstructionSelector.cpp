@@ -137,6 +137,9 @@ private:
   unsigned selectLoadStoreOpCode(unsigned Opc, unsigned RegBank,
                                  unsigned Size) const;
 
+  void renderVFPF32Imm(MachineInstrBuilder &New, const MachineInstr &Old) const;
+  void renderVFPF64Imm(MachineInstrBuilder &New, const MachineInstr &Old) const;
+
 #define GET_GLOBALISEL_PREDICATES_DECL
 #include "ARMGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_DECL
@@ -798,10 +801,35 @@ bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
 
 bool ARMInstructionSelector::selectShift(unsigned ShiftOpc,
                                          MachineInstrBuilder &MIB) const {
+  assert(!STI.isThumb() && "Unsupported subtarget");
   MIB->setDesc(TII.get(ARM::MOVsr));
   MIB.addImm(ShiftOpc);
   MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+}
+
+void ARMInstructionSelector::renderVFPF32Imm(
+    MachineInstrBuilder &NewInstBuilder, const MachineInstr &OldInst) const {
+  assert(OldInst.getOpcode() == TargetOpcode::G_FCONSTANT &&
+         "Expected G_FCONSTANT");
+
+  APFloat FPImmValue = OldInst.getOperand(1).getFPImm()->getValueAPF();
+  int FPImmEncoding = ARM_AM::getFP32Imm(FPImmValue);
+  assert(FPImmEncoding != -1 && "Invalid immediate value");
+
+  NewInstBuilder.addImm(FPImmEncoding);
+}
+
+void ARMInstructionSelector::renderVFPF64Imm(
+    MachineInstrBuilder &NewInstBuilder, const MachineInstr &OldInst) const {
+  assert(OldInst.getOpcode() == TargetOpcode::G_FCONSTANT &&
+         "Expected G_FCONSTANT");
+
+  APFloat FPImmValue = OldInst.getOperand(1).getFPImm()->getValueAPF();
+  int FPImmEncoding = ARM_AM::getFP64Imm(FPImmValue);
+  assert(FPImmEncoding != -1 && "Invalid immediate value");
+
+  NewInstBuilder.addImm(FPImmEncoding);
 }
 
 bool ARMInstructionSelector::select(MachineInstr &I,
@@ -954,8 +982,30 @@ bool ARMInstructionSelector::select(MachineInstr &I,
       }
     }
 
+    assert(!STI.isThumb() && "Unsupported subtarget");
     I.setDesc(TII.get(ARM::MOVi));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+    break;
+  }
+  case G_FCONSTANT: {
+    // Load from constant pool
+    unsigned Size = MRI.getType(I.getOperand(0).getReg()).getSizeInBits() / 8;
+    unsigned Alignment = Size;
+
+    assert((Size == 4 || Size == 8) && "Unsupported FP constant type");
+    auto LoadOpcode = Size == 4 ? ARM::VLDRS : ARM::VLDRD;
+
+    auto ConstPool = MF.getConstantPool();
+    auto CPIndex =
+        ConstPool->getConstantPoolIndex(I.getOperand(1).getFPImm(), Alignment);
+    MIB->setDesc(TII.get(LoadOpcode));
+    MIB->RemoveOperand(1);
+    MIB.addConstantPoolIndex(CPIndex, /*Offset*/ 0, /*TargetFlags*/ 0)
+        .addMemOperand(
+            MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                                    MachineMemOperand::MOLoad, Size, Alignment))
+        .addImm(0)
+        .add(predOps(ARMCC::AL));
     break;
   }
   case G_INTTOPTR:

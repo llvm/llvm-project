@@ -1016,6 +1016,8 @@ public:
            getOpcode() == TargetOpcode::INLINEASM_BR;
   }
 
+  /// FIXME: Seems like a layering violation that the AsmDialect, which is X86
+  /// specific, be attached to a generic MachineInstr.
   bool isMSInlineAsm() const {
     return isInlineAsm() && getInlineAsmDialect() == InlineAsm::AD_Intel;
   }

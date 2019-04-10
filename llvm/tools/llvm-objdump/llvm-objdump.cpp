@@ -614,7 +614,7 @@ public:
     if (MI)
       IP.printInst(MI, OS, "", STI);
     else
-      OS << " <unknown>";
+      OS << "\t<unknown>";
   }
 };
 PrettyPrinter PrettyPrinterInst;
@@ -629,7 +629,7 @@ public:
     if (!NoShowRawInsn) {
       OS << "\t";
       dumpBytes(Bytes.slice(0, 4), OS);
-      OS << format("%08" PRIx32, opcode);
+      OS << format("\t%08" PRIx32, opcode);
     }
   }
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
@@ -768,7 +768,7 @@ public:
     if (MI)
       IP.printInst(MI, OS, "", STI);
     else
-      OS << " <unknown>";
+      OS << "\t<unknown>";
   }
 };
 BPFPrettyPrinter BPFPrettyPrinterInst;

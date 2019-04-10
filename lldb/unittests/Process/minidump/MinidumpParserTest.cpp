@@ -132,10 +132,10 @@ TEST_F(MinidumpParserTest, GetModuleListNotPadded) {
   SetUpData("module-list-not-padded.dmp");
   auto module_list = parser->GetModuleList();
   ASSERT_EQ(2UL, module_list.size());
-  EXPECT_EQ(0x1000UL, module_list[0].base_of_image);
-  EXPECT_EQ(0x2000UL, module_list[0].size_of_image);
-  EXPECT_EQ(0x5000UL, module_list[1].base_of_image);
-  EXPECT_EQ(0x3000UL, module_list[1].size_of_image);
+  EXPECT_EQ(0x1000UL, module_list[0].BaseOfImage);
+  EXPECT_EQ(0x2000UL, module_list[0].SizeOfImage);
+  EXPECT_EQ(0x5000UL, module_list[1].BaseOfImage);
+  EXPECT_EQ(0x3000UL, module_list[1].SizeOfImage);
 }
 
 TEST_F(MinidumpParserTest, GetModuleListPadded) {
@@ -144,10 +144,10 @@ TEST_F(MinidumpParserTest, GetModuleListPadded) {
   SetUpData("module-list-padded.dmp");
   auto module_list = parser->GetModuleList();
   ASSERT_EQ(2UL, module_list.size());
-  EXPECT_EQ(0x1000UL, module_list[0].base_of_image);
-  EXPECT_EQ(0x2000UL, module_list[0].size_of_image);
-  EXPECT_EQ(0x5000UL, module_list[1].base_of_image);
-  EXPECT_EQ(0x3000UL, module_list[1].size_of_image);
+  EXPECT_EQ(0x1000UL, module_list[0].BaseOfImage);
+  EXPECT_EQ(0x2000UL, module_list[0].SizeOfImage);
+  EXPECT_EQ(0x5000UL, module_list[1].BaseOfImage);
+  EXPECT_EQ(0x3000UL, module_list[1].SizeOfImage);
 }
 
 TEST_F(MinidumpParserTest, GetMemoryListNotPadded) {
@@ -220,10 +220,10 @@ TEST_F(MinidumpParserTest, GetPid) {
 
 TEST_F(MinidumpParserTest, GetModuleList) {
   SetUpData("linux-x86_64.dmp");
-  llvm::ArrayRef<MinidumpModule> modules = parser->GetModuleList();
+  llvm::ArrayRef<minidump::Module> modules = parser->GetModuleList();
   ASSERT_EQ(8UL, modules.size());
   const auto &getName = [&](size_t i) {
-    return parser->GetMinidumpFile().getString(modules[i].module_name_rva);
+    return parser->GetMinidumpFile().getString(modules[i].ModuleNameRVA);
   };
 
   EXPECT_THAT_EXPECTED(
@@ -248,15 +248,15 @@ TEST_F(MinidumpParserTest, GetModuleList) {
 
 TEST_F(MinidumpParserTest, GetFilteredModuleList) {
   SetUpData("linux-x86_64_not_crashed.dmp");
-  llvm::ArrayRef<MinidumpModule> modules = parser->GetModuleList();
-  std::vector<const MinidumpModule *> filtered_modules =
+  llvm::ArrayRef<minidump::Module> modules = parser->GetModuleList();
+  std::vector<const minidump::Module *> filtered_modules =
       parser->GetFilteredModuleList();
   EXPECT_EQ(10UL, modules.size());
   EXPECT_EQ(9UL, filtered_modules.size());
   std::vector<std::string> names;
-  for (const MinidumpModule *m : filtered_modules)
+  for (const minidump::Module *m : filtered_modules)
     names.push_back(
-        cantFail(parser->GetMinidumpFile().getString(m->module_name_rva)));
+        cantFail(parser->GetMinidumpFile().getString(m->ModuleNameRVA)));
 
   EXPECT_EQ(1u, llvm::count(names, "/tmp/test/linux-x86_64_not_crashed"));
 }
@@ -496,10 +496,10 @@ TEST_F(MinidumpParserTest, GetPidWow64) {
 
 TEST_F(MinidumpParserTest, GetModuleListWow64) {
   SetUpData("fizzbuzz_wow64.dmp");
-  llvm::ArrayRef<MinidumpModule> modules = parser->GetModuleList();
+  llvm::ArrayRef<minidump::Module> modules = parser->GetModuleList();
   ASSERT_EQ(16UL, modules.size());
   const auto &getName = [&](size_t i) {
-    return parser->GetMinidumpFile().getString(modules[i].module_name_rva);
+    return parser->GetMinidumpFile().getString(modules[i].ModuleNameRVA);
   };
 
   EXPECT_THAT_EXPECTED(
@@ -654,11 +654,11 @@ TEST_F(MinidumpParserTest, MinidumpDuplicateModuleMinAddress) {
   // That we end up with one module in the filtered list with the
   // range [0x1000-0x2000). MinidumpParser::GetFilteredModuleList() is
   // trying to ensure that if we have the same module mentioned more than
-  // one time, we pick the one with the lowest base_of_image.
-  std::vector<const MinidumpModule *> filtered_modules =
+  // one time, we pick the one with the lowest BaseOfImage.
+  std::vector<const minidump::Module *> filtered_modules =
       parser->GetFilteredModuleList();
   EXPECT_EQ(1u, filtered_modules.size());
-  EXPECT_EQ(0x0000000000001000u, filtered_modules[0]->base_of_image);
+  EXPECT_EQ(0x0000000000001000u, filtered_modules[0]->BaseOfImage);
 }
 
 TEST_F(MinidumpParserTest, MinidumpModuleOrder) {
@@ -670,17 +670,17 @@ TEST_F(MinidumpParserTest, MinidumpModuleOrder) {
   // and in the same order. Previous versions of the
   // MinidumpParser::GetFilteredModuleList() function would sort all images
   // by address and modify the order of the modules.
-  std::vector<const MinidumpModule *> filtered_modules =
+  std::vector<const minidump::Module *> filtered_modules =
       parser->GetFilteredModuleList();
   llvm::Optional<std::string> name;
   EXPECT_EQ(2u, filtered_modules.size());
-  EXPECT_EQ(0x0000000000002000u, filtered_modules[0]->base_of_image);
+  EXPECT_EQ(0x0000000000002000u, filtered_modules[0]->BaseOfImage);
   EXPECT_THAT_EXPECTED(
-      parser->GetMinidumpFile().getString(filtered_modules[0]->module_name_rva),
+      parser->GetMinidumpFile().getString(filtered_modules[0]->ModuleNameRVA),
       llvm::HasValue("/tmp/a"));
-  EXPECT_EQ(0x0000000000001000u, filtered_modules[1]->base_of_image);
+  EXPECT_EQ(0x0000000000001000u, filtered_modules[1]->BaseOfImage);
   EXPECT_THAT_EXPECTED(
-      parser->GetMinidumpFile().getString(filtered_modules[1]->module_name_rva),
+      parser->GetMinidumpFile().getString(filtered_modules[1]->ModuleNameRVA),
       llvm::HasValue("/tmp/b"));
 }
 
