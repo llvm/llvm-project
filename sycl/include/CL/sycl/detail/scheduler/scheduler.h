@@ -6,6 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef SCHEDULER_20
+
+#include <CL/sycl/detail/scheduler/scheduler.hpp>
+
+#else
+
 #pragma once
 
 #include <CL/sycl/context.hpp>
@@ -240,3 +246,4 @@ private:
 } // namespace simple_scheduler
 } // namespace sycl
 } // namespace cl
+#endif // SCHEDULER_20

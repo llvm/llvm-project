@@ -59,11 +59,16 @@ public:
   // with the cl_event object stored in this class
   void setContextImpl(const ContextImplPtr &Context);
 
+  void *getCommand() { return m_Command; }
+
+  void setCommand(void *Command) { m_Command = Command; }
+
 private:
   cl_event m_Event = nullptr;
   ContextImplPtr m_Context;
   bool m_OpenCLInterop = false;
   bool m_HostEvent = true;
+  void *m_Command = nullptr;
 };
 
 } // namespace detail

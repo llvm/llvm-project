@@ -29,6 +29,13 @@ int main() {
       auto Offset = id<2>(1, 1);
       auto SubRange = range<2>(M - 2, N - 2);
       queue MyQueue;
+
+      MyQueue.submit([&](handler &cgh) {
+        auto B = Buffer.get_access<access::mode::read_write>(cgh);
+        cgh.parallel_for<class Subbuf_test_init>(
+            OrigRange, [=](id<2> Index) { B[Index] = 0; });
+      });
+
       buffer<int, 2> SubBuffer(Buffer, Offset, SubRange);
       MyQueue.submit([&](handler &cgh) {
         auto B = SubBuffer.get_access<access::mode::read_write>(cgh);

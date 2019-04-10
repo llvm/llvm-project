@@ -1,7 +1,7 @@
 // RUN: %clang -std=c++11 -fsycl %s -o %t.out -lstdc++ -lOpenCL -lsycl
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
 // RUN: %CPU_RUN_PLACEHOLDER %t.out
-// RUN: %GPU_RUN_PLACEHOLDER %t.out
+// RUNx: %GPU_RUN_PLACEHOLDER %t.out
 // RUN: %ACC_RUN_PLACEHOLDER %t.out
 //==--------------- vote.cpp - SYCL sub_group vote test --*- C++ -*---------==//
 //
@@ -32,6 +32,15 @@ void check(queue Queue, const int G, const int L, const int D, const int R) {
       cgh.parallel_for<class init>(range<1>{(unsigned)G}, [=](id<1> index) {
         sganyacc[index] = 0;
         sgallacc[index] = 0;
+      });
+    });
+
+    Queue.submit([&](handler &cgh) {
+      auto sganyacc = sganybuf.get_access<access::mode::read_write>(cgh);
+      auto sgallacc = sgallbuf.get_access<access::mode::read_write>(cgh);
+      cgh.parallel_for<class init_bufs>(NdRange, [=](nd_item<1> NdItem) {
+        sganyacc[NdItem.get_global_id()] = 0;
+        sgallacc[NdItem.get_global_id()] = 0;
       });
     });
 

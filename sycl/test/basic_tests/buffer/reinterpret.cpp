@@ -12,6 +12,8 @@
 
 #include <CL/sycl.hpp>
 
+#include <climits>
+
 // This tests verifies basic cases of using cl::sycl::buffer::reinterpret
 // functionality - changing buffer type and range. This test checks that
 // original buffer updates when we write to reinterpreted buffer and also checks

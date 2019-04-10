@@ -112,6 +112,8 @@ public:
                                                            Device.get(), Value);
   }
 
+  cl_kernel &getHandleRef() { return ClKernel; }
+
 private:
   cl_kernel ClKernel;
   context Context;

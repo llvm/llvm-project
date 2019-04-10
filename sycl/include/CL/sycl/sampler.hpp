@@ -11,7 +11,6 @@
 #include <CL/__spirv/spirv_types.hpp>
 #include <CL/sycl/detail/common.hpp>
 #include <CL/sycl/detail/sampler_impl.hpp>
-#include <CL/sycl/handler.hpp>
 
 namespace cl {
 namespace sycl {

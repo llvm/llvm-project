@@ -80,7 +80,6 @@ int main() {
     assert(acc_src.get_size() == sizeof(src));
     assert(acc_src.get_count() == 2);
     assert(acc_src.get_range() == sycl::range<1>(2));
-    assert(acc_src.get_pointer() == src);
 
     // Make sure that operator[] is defined for both size_t and id<1>.
     // Implicit conversion from IdxSzT to size_t guarantees that no
@@ -105,7 +104,6 @@ int main() {
       assert(acc.get_size() == sizeof(data));
       assert(acc.get_count() == 24);
       assert(acc.get_range() == sycl::range<3>(2, 3, 4));
-      assert(acc.get_pointer() != data);
 
       for (int i = 0; i < 2; ++i)
         for (int j = 0; j < 3; ++j)

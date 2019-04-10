@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include <CL/sycl.hpp>
 #include <iostream>
+#include <set>
 
 using namespace cl::sycl;
 
