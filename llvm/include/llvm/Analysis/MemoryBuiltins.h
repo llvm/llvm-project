@@ -251,7 +251,7 @@ using SizeOffsetEvalType = std::pair<Value *, Value *>;
 /// May create code to compute the result at run-time.
 class ObjectSizeOffsetEvaluator
   : public InstVisitor<ObjectSizeOffsetEvaluator, SizeOffsetEvalType> {
-  using BuilderTy = IRBuilder<TargetFolder>;
+  using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   using WeakEvalType = std::pair<WeakTrackingVH, WeakTrackingVH>;
   using CacheMapTy = DenseMap<const Value *, WeakEvalType>;
   using PtrSetTy = SmallPtrSet<const Value *, 8>;
@@ -265,6 +265,7 @@ class ObjectSizeOffsetEvaluator
   CacheMapTy CacheMap;
   PtrSetTy SeenVals;
   ObjectSizeOpts EvalOpts;
+  SmallPtrSet<Instruction *, 8> InsertedInstructions;
 
   SizeOffsetEvalType compute_(Value *V);
 
