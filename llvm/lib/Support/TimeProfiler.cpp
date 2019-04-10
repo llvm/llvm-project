@@ -13,6 +13,7 @@
 
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FileSystem.h"
 #include <cassert>
 #include <chrono>
@@ -51,7 +52,9 @@ static std::string escapeString(StringRef Src) {
 }
 
 typedef duration<steady_clock::rep, steady_clock::period> DurationType;
-typedef std::pair<std::string, DurationType> NameAndDuration;
+typedef std::pair<size_t, DurationType> CountAndDurationType;
+typedef std::pair<std::string, CountAndDurationType>
+    NameAndCountAndDurationType;
 
 struct Entry {
   time_point<steady_clock> Start;
@@ -89,8 +92,9 @@ struct TimeTraceProfiler {
     if (std::find_if(++Stack.rbegin(), Stack.rend(), [&](const Entry &Val) {
           return Val.Name == E.Name;
         }) == Stack.rend()) {
-      TotalPerName[E.Name] += E.Duration;
-      CountPerName[E.Name]++;
+      auto &CountAndTotal = CountAndTotalPerName[E.Name];
+      CountAndTotal.first++;
+      CountAndTotal.second += E.Duration;
     }
 
     Stack.pop_back();
@@ -115,23 +119,23 @@ struct TimeTraceProfiler {
     // Emit totals by section name as additional "thread" events, sorted from
     // longest one.
     int Tid = 1;
-    std::vector<NameAndDuration> SortedTotals;
-    SortedTotals.reserve(TotalPerName.size());
-    for (const auto &E : TotalPerName) {
-      SortedTotals.push_back(E);
+    std::vector<NameAndCountAndDurationType> SortedTotals;
+    SortedTotals.reserve(CountAndTotalPerName.size());
+    for (const auto &E : CountAndTotalPerName) {
+      SortedTotals.emplace_back(E.getKey(), E.getValue());
     }
     std::sort(SortedTotals.begin(), SortedTotals.end(),
-              [](const NameAndDuration &A, const NameAndDuration &B) {
-                return A.second > B.second;
+              [](const NameAndCountAndDurationType &A,
+                 const NameAndCountAndDurationType &B) {
+                return A.second.second > B.second.second;
               });
     for (const auto &E : SortedTotals) {
-      auto DurUs = duration_cast<microseconds>(E.second).count();
+      auto DurUs = duration_cast<microseconds>(E.second.second).count();
+      auto Count = CountAndTotalPerName[E.first].first;
       *OS << "{ \"pid\":1, \"tid\":" << Tid << ", \"ph\":\"X\", \"ts\":" << 0
           << ", \"dur\":" << DurUs << ", \"name\":\"Total "
-          << escapeString(E.first)
-          << "\", \"args\":{ \"count\":" << CountPerName[E.first]
-          << ", \"avg ms\":" << (DurUs / CountPerName[E.first] / 1000)
-          << "} },\n";
+          << escapeString(E.first) << "\", \"args\":{ \"count\":" << Count
+          << ", \"avg ms\":" << (DurUs / Count / 1000) << "} },\n";
       ++Tid;
     }
 
@@ -143,8 +147,7 @@ struct TimeTraceProfiler {
 
   std::vector<Entry> Stack;
   std::vector<Entry> Entries;
-  std::unordered_map<std::string, DurationType> TotalPerName;
-  std::unordered_map<std::string, size_t> CountPerName;
+  StringMap<CountAndDurationType> CountAndTotalPerName;
   time_point<steady_clock> StartTime;
 };
 

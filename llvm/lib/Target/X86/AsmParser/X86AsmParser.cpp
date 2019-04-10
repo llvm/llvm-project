@@ -71,6 +71,15 @@ class X86AsmParser : public MCTargetAsmParser {
   ParseInstructionInfo *InstInfo;
   bool Code16GCC;
 
+  enum VEXEncoding {
+    VEXEncoding_Default,
+    VEXEncoding_VEX2,
+    VEXEncoding_VEX3,
+    VEXEncoding_EVEX,
+  };
+
+  VEXEncoding ForcedVEXEncoding = VEXEncoding_Default;
+
 private:
   SMLoc consumeToken() {
     MCAsmParser &Parser = getParser();
@@ -858,6 +867,8 @@ private:
   bool parseDirectiveFPOEndProc(SMLoc L);
   bool parseDirectiveFPOData(SMLoc L);
 
+  unsigned checkTargetMatchPredicate(MCInst &Inst) override;
+
   bool validateInstruction(MCInst &Inst, const OperandVector &Ops);
   bool processInstruction(MCInst &Inst, const OperandVector &Ops);
 
@@ -939,6 +950,9 @@ private:
   /// }
 
 public:
+  enum X86MatchResultTy {
+    Match_Unsupported = FIRST_TARGET_MATCH_RESULT_TY,
+  };
 
   X86AsmParser(const MCSubtargetInfo &sti, MCAsmParser &Parser,
                const MCInstrInfo &mii, const MCTargetOptions &Options)
@@ -2296,6 +2310,47 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   InstInfo = &Info;
+
+  // Reset the forced VEX encoding.
+  ForcedVEXEncoding = VEXEncoding_Default;
+
+  // Parse pseudo prefixes.
+  while (1) {
+    if (Name == "{") {
+      if (getLexer().isNot(AsmToken::Identifier))
+        return Error(Parser.getTok().getLoc(), "Unexpected token after '{'");
+      std::string Prefix = Parser.getTok().getString().lower();
+      Parser.Lex(); // Eat identifier.
+      if (getLexer().isNot(AsmToken::RCurly))
+        return Error(Parser.getTok().getLoc(), "Expected '}'");
+      Parser.Lex(); // Eat curly.
+
+      if (Prefix == "vex2")
+        ForcedVEXEncoding = VEXEncoding_VEX2;
+      else if (Prefix == "vex3")
+        ForcedVEXEncoding = VEXEncoding_VEX3;
+      else if (Prefix == "evex")
+        ForcedVEXEncoding = VEXEncoding_EVEX;
+      else
+        return Error(NameLoc, "unknown prefix");
+
+      NameLoc = Parser.getTok().getLoc();
+      if (getLexer().is(AsmToken::LCurly)) {
+        Parser.Lex();
+        Name = "{";
+      } else {
+        if (getLexer().isNot(AsmToken::Identifier))
+          return Error(Parser.getTok().getLoc(), "Expected identifier");
+        // FIXME: The mnemonic won't match correctly if its not in lower case.
+        Name = Parser.getTok().getString();
+        Parser.Lex();
+      }
+      continue;
+    }
+
+    break;
+  }
+
   StringRef PatchedName = Name;
 
   if ((Name.equals("jmp") || Name.equals("jc") || Name.equals("jz")) &&
@@ -2489,6 +2544,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       Flags = X86::IP_NO_PREFIX;
       break;
     }
+    // FIXME: The mnemonic won't match correctly if its not in lower case.
     Name = Parser.getTok().getString();
     Parser.Lex(); // eat the prefix
     // Hack: we could have something like "rep # some comment" or
@@ -2496,6 +2552,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     while (Name.startswith(";") || Name.startswith("\n") ||
            Name.startswith("#") || Name.startswith("\t") ||
            Name.startswith("/")) {
+      // FIXME: The mnemonic won't match correctly if its not in lower case.
       Name = Parser.getTok().getString();
       Parser.Lex(); // go to next prefix or instr
     }
@@ -2773,7 +2830,69 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 }
 
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
-  return false;
+  const MCRegisterInfo *MRI = getContext().getRegisterInfo();
+
+  switch (Inst.getOpcode()) {
+  default: return false;
+  case X86::VMOVZPQILo2PQIrr:
+  case X86::VMOVAPDrr:
+  case X86::VMOVAPDYrr:
+  case X86::VMOVAPSrr:
+  case X86::VMOVAPSYrr:
+  case X86::VMOVDQArr:
+  case X86::VMOVDQAYrr:
+  case X86::VMOVDQUrr:
+  case X86::VMOVDQUYrr:
+  case X86::VMOVUPDrr:
+  case X86::VMOVUPDYrr:
+  case X86::VMOVUPSrr:
+  case X86::VMOVUPSYrr: {
+    // We can get a smaller encoding by using VEX.R instead of VEX.B if one of
+    // the registers is extended, but other isn't.
+    if (ForcedVEXEncoding == VEXEncoding_VEX3 ||
+        MRI->getEncodingValue(Inst.getOperand(0).getReg()) >= 8 ||
+        MRI->getEncodingValue(Inst.getOperand(1).getReg()) < 8)
+      return false;
+
+    unsigned NewOpc;
+    switch (Inst.getOpcode()) {
+    default: llvm_unreachable("Invalid opcode");
+    case X86::VMOVZPQILo2PQIrr: NewOpc = X86::VMOVPQI2QIrr;   break;
+    case X86::VMOVAPDrr:        NewOpc = X86::VMOVAPDrr_REV;  break;
+    case X86::VMOVAPDYrr:       NewOpc = X86::VMOVAPDYrr_REV; break;
+    case X86::VMOVAPSrr:        NewOpc = X86::VMOVAPSrr_REV;  break;
+    case X86::VMOVAPSYrr:       NewOpc = X86::VMOVAPSYrr_REV; break;
+    case X86::VMOVDQArr:        NewOpc = X86::VMOVDQArr_REV;  break;
+    case X86::VMOVDQAYrr:       NewOpc = X86::VMOVDQAYrr_REV; break;
+    case X86::VMOVDQUrr:        NewOpc = X86::VMOVDQUrr_REV;  break;
+    case X86::VMOVDQUYrr:       NewOpc = X86::VMOVDQUYrr_REV; break;
+    case X86::VMOVUPDrr:        NewOpc = X86::VMOVUPDrr_REV;  break;
+    case X86::VMOVUPDYrr:       NewOpc = X86::VMOVUPDYrr_REV; break;
+    case X86::VMOVUPSrr:        NewOpc = X86::VMOVUPSrr_REV;  break;
+    case X86::VMOVUPSYrr:       NewOpc = X86::VMOVUPSYrr_REV; break;
+    }
+    Inst.setOpcode(NewOpc);
+    return true;
+  }
+  case X86::VMOVSDrr:
+  case X86::VMOVSSrr: {
+    // We can get a smaller encoding by using VEX.R instead of VEX.B if one of
+    // the registers is extended, but other isn't.
+    if (ForcedVEXEncoding == VEXEncoding_VEX3 ||
+        MRI->getEncodingValue(Inst.getOperand(0).getReg()) >= 8 ||
+        MRI->getEncodingValue(Inst.getOperand(2).getReg()) < 8)
+      return false;
+
+    unsigned NewOpc;
+    switch (Inst.getOpcode()) {
+    default: llvm_unreachable("Invalid opcode");
+    case X86::VMOVSDrr: NewOpc = X86::VMOVSDrr_REV; break;
+    case X86::VMOVSSrr: NewOpc = X86::VMOVSSrr_REV; break;
+    }
+    Inst.setOpcode(NewOpc);
+    return true;
+  }
+  }
 }
 
 bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
@@ -2943,6 +3062,39 @@ static unsigned getPrefixes(OperandVector &Operands) {
   return Result;
 }
 
+unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
+  unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &MCID = MII.get(Opc);
+
+  if (ForcedVEXEncoding == VEXEncoding_EVEX &&
+      (MCID.TSFlags & X86II::EncodingMask) != X86II::EVEX)
+    return Match_Unsupported;
+
+  if ((ForcedVEXEncoding == VEXEncoding_VEX2 ||
+       ForcedVEXEncoding == VEXEncoding_VEX3) &&
+      (MCID.TSFlags & X86II::EncodingMask) != X86II::VEX)
+    return Match_Unsupported;
+
+  // These instructions match ambiguously with their VEX encoded counterparts
+  // and appear first in the matching table. Reject them unless we're forcing
+  // EVEX encoding.
+  // FIXME: We really need a way to break the ambiguity.
+  switch (Opc) {
+  case X86::VCVTSD2SIZrm_Int:
+  case X86::VCVTSD2SI64Zrm_Int:
+  case X86::VCVTSS2SIZrm_Int:
+  case X86::VCVTSS2SI64Zrm_Int:
+  case X86::VCVTTSD2SIZrm:   case X86::VCVTTSD2SIZrm_Int:
+  case X86::VCVTTSD2SI64Zrm: case X86::VCVTTSD2SI64Zrm_Int:
+  case X86::VCVTTSS2SIZrm:   case X86::VCVTTSS2SIZrm_Int:
+  case X86::VCVTTSS2SI64Zrm: case X86::VCVTTSS2SI64Zrm_Int:
+    if (ForcedVEXEncoding != VEXEncoding_EVEX)
+      return Match_Unsupported;
+  }
+
+  return Match_Success;
+}
+
 bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
@@ -2956,18 +3108,24 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   MatchFPUWaitAlias(IDLoc, static_cast<X86Operand &>(*Operands[0]), Operands,
                     Out, MatchingInlineAsm);
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-  bool WasOriginallyInvalidOperand = false;
   unsigned Prefixes = getPrefixes(Operands);
 
   MCInst Inst;
+
+  // If VEX3 encoding is forced, we need to pass the USE_VEX3 flag to the
+  // encoder.
+  if (ForcedVEXEncoding == VEXEncoding_VEX3)
+    Prefixes |= X86::IP_USE_VEX3;
 
   if (Prefixes)
     Inst.setFlags(Prefixes);
 
   // First, try a direct match.
   FeatureBitset MissingFeatures;
-  switch (MatchInstruction(Operands, Inst, ErrorInfo, MissingFeatures,
-                           MatchingInlineAsm, isParsingIntelSyntax())) {
+  unsigned OriginalError = MatchInstruction(Operands, Inst, ErrorInfo,
+                                            MissingFeatures, MatchingInlineAsm,
+                                            isParsingIntelSyntax());
+  switch (OriginalError) {
   default: llvm_unreachable("Unexpected match result!");
   case Match_Success:
     if (!MatchingInlineAsm && validateInstruction(Inst, Operands))
@@ -2987,9 +3145,8 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MissingFeature:
     return ErrorMissingFeature(IDLoc, MissingFeatures, MatchingInlineAsm);
   case Match_InvalidOperand:
-    WasOriginallyInvalidOperand = true;
-    break;
   case Match_MnemonicFail:
+  case Match_Unsupported:
     break;
   }
   if (Op.getToken().empty()) {
@@ -3080,11 +3237,15 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   // If all of the instructions reported an invalid mnemonic, then the original
   // mnemonic was invalid.
   if (std::count(std::begin(Match), std::end(Match), Match_MnemonicFail) == 4) {
-    if (!WasOriginallyInvalidOperand) {
+    if (OriginalError == Match_MnemonicFail)
       return Error(IDLoc, "invalid instruction mnemonic '" + Base + "'",
                    Op.getLocRange(), MatchingInlineAsm);
-    }
 
+    if (OriginalError == Match_Unsupported)
+      return Error(IDLoc, "unsupported instruction", EmptyRange,
+                   MatchingInlineAsm);
+
+    assert(OriginalError == Match_InvalidOperand && "Unexpected error");
     // Recover location info for the operand if we know which was the problem.
     if (ErrorInfo != ~0ULL) {
       if (ErrorInfo >= Operands.size())
@@ -3100,6 +3261,13 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
 
     return Error(IDLoc, "invalid operand for instruction", EmptyRange,
+                 MatchingInlineAsm);
+  }
+
+  // If one instruction matched as unsupported, report this as unsupported.
+  if (std::count(std::begin(Match), std::end(Match),
+                 Match_Unsupported) == 1) {
+    return Error(IDLoc, "unsupported instruction", EmptyRange,
                  MatchingInlineAsm);
   }
 
@@ -3143,6 +3311,11 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
 
   MCInst Inst;
+
+  // If VEX3 encoding is forced, we need to pass the USE_VEX3 flag to the
+  // encoder.
+  if (ForcedVEXEncoding == VEXEncoding_VEX3)
+    Prefixes |= X86::IP_USE_VEX3;
 
   if (Prefixes)
     Inst.setFlags(Prefixes);
@@ -3290,6 +3463,13 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(UnsizedMemOp->getStartLoc(),
                  "ambiguous operand size for instruction '" + Mnemonic + "\'",
                  UnsizedMemOp->getLocRange());
+  }
+
+  // If one instruction matched as unsupported, report this as unsupported.
+  if (std::count(std::begin(Match), std::end(Match),
+                 Match_Unsupported) == 1) {
+    return Error(IDLoc, "unsupported instruction", EmptyRange,
+                 MatchingInlineAsm);
   }
 
   // If one instruction matched with a missing feature, report this as a

@@ -1473,151 +1473,16 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
   switch (VecLib) {
   case Accelerate: {
     const VecDesc VecFuncs[] = {
-        // Floating-Point Arithmetic and Auxiliary Functions
-        {"ceilf", "vceilf", 4},
-        {"fabsf", "vfabsf", 4},
-        {"llvm.fabs.f32", "vfabsf", 4},
-        {"floorf", "vfloorf", 4},
-        {"sqrtf", "vsqrtf", 4},
-        {"llvm.sqrt.f32", "vsqrtf", 4},
-
-        // Exponential and Logarithmic Functions
-        {"expf", "vexpf", 4},
-        {"llvm.exp.f32", "vexpf", 4},
-        {"expm1f", "vexpm1f", 4},
-        {"logf", "vlogf", 4},
-        {"llvm.log.f32", "vlogf", 4},
-        {"log1pf", "vlog1pf", 4},
-        {"log10f", "vlog10f", 4},
-        {"llvm.log10.f32", "vlog10f", 4},
-        {"logbf", "vlogbf", 4},
-
-        // Trigonometric Functions
-        {"sinf", "vsinf", 4},
-        {"llvm.sin.f32", "vsinf", 4},
-        {"cosf", "vcosf", 4},
-        {"llvm.cos.f32", "vcosf", 4},
-        {"tanf", "vtanf", 4},
-        {"asinf", "vasinf", 4},
-        {"acosf", "vacosf", 4},
-        {"atanf", "vatanf", 4},
-
-        // Hyperbolic Functions
-        {"sinhf", "vsinhf", 4},
-        {"coshf", "vcoshf", 4},
-        {"tanhf", "vtanhf", 4},
-        {"asinhf", "vasinhf", 4},
-        {"acoshf", "vacoshf", 4},
-        {"atanhf", "vatanhf", 4},
+    #define TLI_DEFINE_ACCELERATE_VECFUNCS
+    #include "llvm/Analysis/VecFuncs.def"
     };
     addVectorizableFunctions(VecFuncs);
     break;
   }
   case SVML: {
     const VecDesc VecFuncs[] = {
-        {"sin", "__svml_sin2", 2},
-        {"sin", "__svml_sin4", 4},
-        {"sin", "__svml_sin8", 8},
-
-        {"sinf", "__svml_sinf4", 4},
-        {"sinf", "__svml_sinf8", 8},
-        {"sinf", "__svml_sinf16", 16},
-
-        {"llvm.sin.f64", "__svml_sin2", 2},
-        {"llvm.sin.f64", "__svml_sin4", 4},
-        {"llvm.sin.f64", "__svml_sin8", 8},
-
-        {"llvm.sin.f32", "__svml_sinf4", 4},
-        {"llvm.sin.f32", "__svml_sinf8", 8},
-        {"llvm.sin.f32", "__svml_sinf16", 16},
-
-        {"cos", "__svml_cos2", 2},
-        {"cos", "__svml_cos4", 4},
-        {"cos", "__svml_cos8", 8},
-
-        {"cosf", "__svml_cosf4", 4},
-        {"cosf", "__svml_cosf8", 8},
-        {"cosf", "__svml_cosf16", 16},
-
-        {"llvm.cos.f64", "__svml_cos2", 2},
-        {"llvm.cos.f64", "__svml_cos4", 4},
-        {"llvm.cos.f64", "__svml_cos8", 8},
-
-        {"llvm.cos.f32", "__svml_cosf4", 4},
-        {"llvm.cos.f32", "__svml_cosf8", 8},
-        {"llvm.cos.f32", "__svml_cosf16", 16},
-
-        {"pow", "__svml_pow2", 2},
-        {"pow", "__svml_pow4", 4},
-        {"pow", "__svml_pow8", 8},
-
-        {"powf", "__svml_powf4", 4},
-        {"powf", "__svml_powf8", 8},
-        {"powf", "__svml_powf16", 16},
-
-        { "__pow_finite", "__svml_pow2", 2 },
-        { "__pow_finite", "__svml_pow4", 4 },
-        { "__pow_finite", "__svml_pow8", 8 },
-
-        { "__powf_finite", "__svml_powf4", 4 },
-        { "__powf_finite", "__svml_powf8", 8 },
-        { "__powf_finite", "__svml_powf16", 16 },
-
-        {"llvm.pow.f64", "__svml_pow2", 2},
-        {"llvm.pow.f64", "__svml_pow4", 4},
-        {"llvm.pow.f64", "__svml_pow8", 8},
-
-        {"llvm.pow.f32", "__svml_powf4", 4},
-        {"llvm.pow.f32", "__svml_powf8", 8},
-        {"llvm.pow.f32", "__svml_powf16", 16},
-
-        {"exp", "__svml_exp2", 2},
-        {"exp", "__svml_exp4", 4},
-        {"exp", "__svml_exp8", 8},
-
-        {"expf", "__svml_expf4", 4},
-        {"expf", "__svml_expf8", 8},
-        {"expf", "__svml_expf16", 16},
-
-        { "__exp_finite", "__svml_exp2", 2 },
-        { "__exp_finite", "__svml_exp4", 4 },
-        { "__exp_finite", "__svml_exp8", 8 },
-
-        { "__expf_finite", "__svml_expf4", 4 },
-        { "__expf_finite", "__svml_expf8", 8 },
-        { "__expf_finite", "__svml_expf16", 16 },
-
-        {"llvm.exp.f64", "__svml_exp2", 2},
-        {"llvm.exp.f64", "__svml_exp4", 4},
-        {"llvm.exp.f64", "__svml_exp8", 8},
-
-        {"llvm.exp.f32", "__svml_expf4", 4},
-        {"llvm.exp.f32", "__svml_expf8", 8},
-        {"llvm.exp.f32", "__svml_expf16", 16},
-
-        {"log", "__svml_log2", 2},
-        {"log", "__svml_log4", 4},
-        {"log", "__svml_log8", 8},
-
-        {"logf", "__svml_logf4", 4},
-        {"logf", "__svml_logf8", 8},
-        {"logf", "__svml_logf16", 16},
-
-        { "__log_finite", "__svml_log2", 2 },
-        { "__log_finite", "__svml_log4", 4 },
-        { "__log_finite", "__svml_log8", 8 },
-
-        { "__logf_finite", "__svml_logf4", 4 },
-        { "__logf_finite", "__svml_logf8", 8 },
-        { "__logf_finite", "__svml_logf16", 16 },
-
-        {"llvm.log.f64", "__svml_log2", 2},
-        {"llvm.log.f64", "__svml_log4", 4},
-        {"llvm.log.f64", "__svml_log8", 8},
-
-        {"llvm.log.f32", "__svml_logf4", 4},
-        {"llvm.log.f32", "__svml_logf8", 8},
-        {"llvm.log.f32", "__svml_logf16", 16},
+    #define TLI_DEFINE_SVML_VECFUNCS
+    #include "llvm/Analysis/VecFuncs.def"
     };
     addVectorizableFunctions(VecFuncs);
     break;

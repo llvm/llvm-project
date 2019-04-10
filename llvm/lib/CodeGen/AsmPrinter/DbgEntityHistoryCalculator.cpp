@@ -41,40 +41,43 @@ static unsigned isDescribedByReg(const MachineInstr &MI) {
   return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : 0;
 }
 
-void DbgValueHistoryMap::startInstrRange(InlinedEntity Var,
-                                         const MachineInstr &MI) {
+void DbgValueHistoryMap::startEntry(InlinedEntity Var, const MachineInstr &MI) {
   // Instruction range should start with a DBG_VALUE instruction for the
   // variable.
   assert(MI.isDebugValue() && "not a DBG_VALUE");
-  auto &Ranges = VarInstrRanges[Var];
-  if (!Ranges.empty() && Ranges.back().second == nullptr &&
-      Ranges.back().first->isIdenticalTo(MI)) {
+  auto &Entries = VarEntries[Var];
+  if (!Entries.empty() && !Entries.back().isClosed() &&
+      Entries.back().getBegin()->isIdenticalTo(MI)) {
     LLVM_DEBUG(dbgs() << "Coalescing identical DBG_VALUE entries:\n"
-                      << "\t" << Ranges.back().first << "\t" << MI << "\n");
+                      << "\t" << Entries.back().getBegin() << "\t" << MI
+                      << "\n");
     return;
   }
-  Ranges.push_back(std::make_pair(&MI, nullptr));
+  Entries.emplace_back(&MI);
 }
 
-void DbgValueHistoryMap::endInstrRange(InlinedEntity Var,
-                                       const MachineInstr &MI) {
-  auto &Ranges = VarInstrRanges[Var];
-  // Verify that the current instruction range is not yet closed.
-  assert(!Ranges.empty() && Ranges.back().second == nullptr);
+void DbgValueHistoryMap::endEntry(InlinedEntity Var, const MachineInstr &MI) {
+  auto &Entries = VarEntries[Var];
+  assert(!Entries.empty() && "No range exists for variable!");
+  Entries.back().endEntry(MI);
+}
+
+void DbgValueHistoryMap::Entry::endEntry(const MachineInstr &MI) {
   // For now, instruction ranges are not allowed to cross basic block
   // boundaries.
-  assert(Ranges.back().first->getParent() == MI.getParent());
-  Ranges.back().second = &MI;
+  assert(Begin->getParent() == MI.getParent());
+  assert(!isClosed() && "Range is already closed!");
+  End = &MI;
 }
 
 unsigned DbgValueHistoryMap::getRegisterForVar(InlinedEntity Var) const {
-  const auto &I = VarInstrRanges.find(Var);
-  if (I == VarInstrRanges.end())
+  const auto &I = VarEntries.find(Var);
+  if (I == VarEntries.end())
     return 0;
-  const auto &Ranges = I->second;
-  if (Ranges.empty() || Ranges.back().second != nullptr)
+  const auto &Entries = I->second;
+  if (Entries.empty() || Entries.back().isClosed())
     return 0;
-  return isDescribedByReg(*Ranges.back().first);
+  return isDescribedByReg(*Entries.back().getBegin());
 }
 
 void DbgLabelInstrMap::addInstr(InlinedEntity Label, const MachineInstr &MI) {
@@ -122,7 +125,7 @@ static void clobberRegisterUses(RegDescribedVarsMap &RegVars,
   // Iterate over all variables described by this register and add this
   // instruction to their history, clobbering it.
   for (const auto &Var : I->second)
-    HistMap.endInstrRange(Var, ClobberingInstr);
+    HistMap.endEntry(Var, ClobberingInstr);
   RegVars.erase(I);
 }
 
@@ -252,7 +255,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
         if (unsigned PrevReg = DbgValues.getRegisterForVar(Var))
           dropRegDescribedVar(RegVars, PrevReg, Var);
 
-        DbgValues.startInstrRange(Var, MI);
+        DbgValues.startEntry(Var, MI);
 
         if (unsigned NewReg = isDescribedByReg(MI))
           addRegDescribedVar(RegVars, NewReg, Var);
@@ -288,7 +291,7 @@ LLVM_DUMP_METHOD void DbgValueHistoryMap::dump() const {
   dbgs() << "DbgValueHistoryMap:\n";
   for (const auto &VarRangePair : *this) {
     const InlinedEntity &Var = VarRangePair.first;
-    const InstrRanges &Ranges = VarRangePair.second;
+    const Entries &Entries = VarRangePair.second;
 
     const DILocalVariable *LocalVar = cast<DILocalVariable>(Var.first);
     const DILocation *Location = Var.second;
@@ -303,10 +306,10 @@ LLVM_DUMP_METHOD void DbgValueHistoryMap::dump() const {
 
     dbgs() << " --\n";
 
-    for (const InstrRange &Range : Ranges) {
-      dbgs() << "   Begin: " << *Range.first;
-      if (Range.second)
-        dbgs() << "   End  : " << *Range.second;
+    for (const auto &Entry : Entries) {
+      dbgs() << "   Begin: " << *Entry.getBegin();
+      if (Entry.getEnd())
+        dbgs() << "   End  : " << *Entry.getEnd();
       dbgs() << "\n";
     }
   }

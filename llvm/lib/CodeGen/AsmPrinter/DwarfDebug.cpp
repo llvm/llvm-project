@@ -1117,14 +1117,13 @@ static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
 // [1-3]    [x, (reg0, fragment  0, 32), (reg1, fragment 32, 32)]
 // [3-4]    [x, (reg1, fragment 32, 32)]
 // [4- ]    [x, (mem,  fragment  0, 64)]
-void
-DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
-                              const DbgValueHistoryMap::InstrRanges &Ranges) {
+void DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
+                                   const DbgValueHistoryMap::Entries &Entries) {
   SmallVector<DebugLocEntry::Value, 4> OpenRanges;
 
-  for (auto I = Ranges.begin(), E = Ranges.end(); I != E; ++I) {
-    const MachineInstr *Begin = I->first;
-    const MachineInstr *End = I->second;
+  for (auto EI = Entries.begin(), EE = Entries.end(); EI != EE; ++EI) {
+    const MachineInstr *Begin = EI->getBegin();
+    const MachineInstr *End = EI->getEnd();
     assert(Begin->isDebugValue() && "Invalid History entry");
 
     // Check if a variable is inaccessible in this range.
@@ -1134,7 +1133,7 @@ DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
       continue;
     }
 
-    // If this fragment overlaps with any open ranges, truncate them.
+    // If this debug value overlaps with any open ranges, truncate them.
     const DIExpression *DIExpr = Begin->getDebugExpression();
     auto Last = remove_if(OpenRanges, [&](DebugLocEntry::Value R) {
       return DIExpr->fragmentsOverlap(R.getExpression());
@@ -1147,39 +1146,24 @@ DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     const MCSymbol *EndLabel;
     if (End != nullptr)
       EndLabel = getLabelAfterInsn(End);
-    else if (std::next(I) == Ranges.end())
+    else if (std::next(EI) == Entries.end())
       EndLabel = Asm->getFunctionEnd();
     else
-      EndLabel = getLabelBeforeInsn(std::next(I)->first);
+      EndLabel = getLabelBeforeInsn(std::next(EI)->getBegin());
     assert(EndLabel && "Forgot label after instruction ending a range!");
 
     LLVM_DEBUG(dbgs() << "DotDebugLoc: " << *Begin << "\n");
 
     auto Value = getDebugLocValue(Begin);
+    OpenRanges.push_back(Value);
 
     // Omit entries with empty ranges as they do not have any effect in DWARF.
     if (StartLabel == EndLabel) {
-      // If this is a fragment, we must still add the value to the list of
-      // open ranges, since it may describe non-overlapping parts of the
-      // variable.
-      if (DIExpr->isFragment())
-        OpenRanges.push_back(Value);
       LLVM_DEBUG(dbgs() << "Omitting location list entry with empty range.\n");
       continue;
     }
 
-    DebugLocEntry Loc(StartLabel, EndLabel, Value);
-
-    if (DIExpr->isFragment()) {
-      // Add this value to the list of open ranges.
-      OpenRanges.push_back(Value);
-    }
-
-    // Add all values from still valid non-overlapping fragments.
-    if (OpenRanges.size())
-      Loc.addValues(OpenRanges);
-
-    DebugLoc.push_back(std::move(Loc));
+    DebugLoc.emplace_back(StartLabel, EndLabel, OpenRanges);
 
     // Attempt to coalesce the ranges of two otherwise identical
     // DebugLocEntries.
@@ -1290,8 +1274,8 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
       continue;
 
     // Instruction ranges, specifying where IV is accessible.
-    const auto &Ranges = I.second;
-    if (Ranges.empty())
+    const auto &HistoryMapEntries = I.second;
+    if (HistoryMapEntries.empty())
       continue;
 
     LexicalScope *Scope = nullptr;
@@ -1308,12 +1292,12 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     DbgVariable *RegVar = cast<DbgVariable>(createConcreteEntity(TheCU,
                                             *Scope, LocalVar, IV.second));
 
-    const MachineInstr *MInsn = Ranges.front().first;
+    const MachineInstr *MInsn = HistoryMapEntries.front().getBegin();
     assert(MInsn->isDebugValue() && "History must begin with debug value");
 
     // Check if there is a single DBG_VALUE, valid throughout the var's scope.
-    if (Ranges.size() == 1 &&
-        validThroughout(LScopes, MInsn, Ranges.front().second)) {
+    if (HistoryMapEntries.size() == 1 &&
+        validThroughout(LScopes, MInsn, HistoryMapEntries.front().getEnd())) {
       RegVar->initializeDbgValue(MInsn);
       continue;
     }
@@ -1326,7 +1310,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
 
     // Build the location list for this variable.
     SmallVector<DebugLocEntry, 8> Entries;
-    buildLocationList(Entries, Ranges);
+    buildLocationList(Entries, HistoryMapEntries);
 
     // If the variable has a DIBasicType, extract it.  Basic types cannot have
     // unique identifiers, so don't bother resolving the type with the
@@ -1962,6 +1946,8 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
                              DebugLocStream::ListBuilder &List,
                              const DIBasicType *BT,
                              DwarfCompileUnit &TheCU) {
+  assert(!Values.empty() &&
+         "location list entries without values are redundant");
   assert(Begin != End && "unexpected location list entry with empty range");
   DebugLocStream::EntryBuilder Entry(List, Begin, End);
   BufferByteStreamer Streamer = Entry.getStreamer();

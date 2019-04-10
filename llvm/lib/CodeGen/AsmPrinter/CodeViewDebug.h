@@ -222,7 +222,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   codeview::TypeIndex getFuncIdForSubprogram(const DISubprogram *SP);
 
   void calculateRanges(LocalVariable &Var,
-                       const DbgValueHistoryMap::InstrRanges &Ranges);
+                       const DbgValueHistoryMap::Entries &Entries);
 
   static void collectInlineSiteChildren(SmallVectorImpl<unsigned> &Children,
                                         const FunctionInfo &FI,

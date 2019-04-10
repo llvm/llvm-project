@@ -67,6 +67,9 @@ private:
   bool selectCompareBranch(MachineInstr &I, MachineFunction &MF,
                            MachineRegisterInfo &MRI) const;
 
+  bool selectVectorASHR(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  bool selectVectorSHL(MachineInstr &I, MachineRegisterInfo &MRI) const;
+
   // Helper to generate an equivalent of scalar_to_vector into a new register,
   // returned via 'Dst'.
   MachineInstr *emitScalarToVector(unsigned EltSize,
@@ -98,6 +101,7 @@ private:
                                 MachineRegisterInfo &MRI) const;
   bool selectIntrinsicWithSideEffects(MachineInstr &I,
                                       MachineRegisterInfo &MRI) const;
+  bool selectVectorICmp(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   unsigned emitConstantPoolEntry(Constant *CPVal, MachineFunction &MF) const;
   MachineInstr *emitLoadFromConstantPool(Constant *CPVal,
@@ -824,6 +828,77 @@ bool AArch64InstructionSelector::selectCompareBranch(
   return true;
 }
 
+bool AArch64InstructionSelector::selectVectorSHL(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_SHL);
+  unsigned DstReg = I.getOperand(0).getReg();
+  const LLT Ty = MRI.getType(DstReg);
+  unsigned Src1Reg = I.getOperand(1).getReg();
+  unsigned Src2Reg = I.getOperand(2).getReg();
+
+  if (!Ty.isVector())
+    return false;
+
+  unsigned Opc = 0;
+  const TargetRegisterClass *RC = nullptr;
+  if (Ty == LLT::vector(4, 32)) {
+    Opc = AArch64::USHLv4i32;
+    RC = &AArch64::FPR128RegClass;
+  } else if (Ty == LLT::vector(2, 32)) {
+    Opc = AArch64::USHLv2i32;
+    RC = &AArch64::FPR64RegClass;
+  } else {
+    LLVM_DEBUG(dbgs() << "Unhandled G_SHL type");
+    return false;
+  }
+
+  MachineIRBuilder MIB(I);
+  auto UShl = MIB.buildInstr(Opc, {DstReg}, {Src1Reg, Src2Reg});
+  constrainSelectedInstRegOperands(*UShl, TII, TRI, RBI);
+  I.eraseFromParent();
+  return true;
+}
+
+bool AArch64InstructionSelector::selectVectorASHR(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_ASHR);
+  unsigned DstReg = I.getOperand(0).getReg();
+  const LLT Ty = MRI.getType(DstReg);
+  unsigned Src1Reg = I.getOperand(1).getReg();
+  unsigned Src2Reg = I.getOperand(2).getReg();
+
+  if (!Ty.isVector())
+    return false;
+
+  // There is not a shift right register instruction, but the shift left
+  // register instruction takes a signed value, where negative numbers specify a
+  // right shift.
+
+  unsigned Opc = 0;
+  unsigned NegOpc = 0;
+  const TargetRegisterClass *RC = nullptr;
+  if (Ty == LLT::vector(4, 32)) {
+    Opc = AArch64::SSHLv4i32;
+    NegOpc = AArch64::NEGv4i32;
+    RC = &AArch64::FPR128RegClass;
+  } else if (Ty == LLT::vector(2, 32)) {
+    Opc = AArch64::SSHLv2i32;
+    NegOpc = AArch64::NEGv2i32;
+    RC = &AArch64::FPR64RegClass;
+  } else {
+    LLVM_DEBUG(dbgs() << "Unhandled G_ASHR type");
+    return false;
+  }
+
+  MachineIRBuilder MIB(I);
+  auto Neg = MIB.buildInstr(NegOpc, {RC}, {Src2Reg});
+  constrainSelectedInstRegOperands(*Neg, TII, TRI, RBI);
+  auto SShl = MIB.buildInstr(Opc, {DstReg}, {Src1Reg, Neg});
+  constrainSelectedInstRegOperands(*SShl, TII, TRI, RBI);
+  I.eraseFromParent();
+  return true;
+}
+
 bool AArch64InstructionSelector::selectVaStartAAPCS(
     MachineInstr &I, MachineFunction &MF, MachineRegisterInfo &MRI) const {
   return false;
@@ -1318,10 +1393,17 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
 
-  case TargetOpcode::G_OR:
-  case TargetOpcode::G_SHL:
-  case TargetOpcode::G_LSHR:
   case TargetOpcode::G_ASHR:
+    if (MRI.getType(I.getOperand(0).getReg()).isVector())
+      return selectVectorASHR(I, MRI);
+    LLVM_FALLTHROUGH;
+  case TargetOpcode::G_SHL:
+    if (Opcode == TargetOpcode::G_SHL &&
+        MRI.getType(I.getOperand(0).getReg()).isVector())
+      return selectVectorSHL(I, MRI);
+    LLVM_FALLTHROUGH;
+  case TargetOpcode::G_OR:
+  case TargetOpcode::G_LSHR:
   case TargetOpcode::G_GEP: {
     // Reject the various things we don't support yet.
     if (unsupportedBinOp(I, RBI, MRI, TRI))
@@ -1625,6 +1707,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return true;
   }
   case TargetOpcode::G_ICMP: {
+    if (Ty.isVector())
+      return selectVectorICmp(I, MRI);
+
     if (Ty != LLT::scalar(32)) {
       LLVM_DEBUG(dbgs() << "G_ICMP result has type: " << Ty
                         << ", expected: " << LLT::scalar(32) << '\n');
@@ -1783,6 +1868,178 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   }
 
   return false;
+}
+
+bool AArch64InstructionSelector::selectVectorICmp(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  unsigned DstReg = I.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  unsigned SrcReg = I.getOperand(2).getReg();
+  unsigned Src2Reg = I.getOperand(3).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  unsigned SrcEltSize = SrcTy.getElementType().getSizeInBits();
+  unsigned NumElts = DstTy.getNumElements();
+
+  // First index is element size, 0 == 8b, 1 == 16b, 2 == 32b, 3 == 64b
+  // Second index is num elts, 0 == v2, 1 == v4, 2 == v8, 3 == v16
+  // Third index is cc opcode:
+  // 0 == eq
+  // 1 == ugt
+  // 2 == uge
+  // 3 == ult
+  // 4 == ule
+  // 5 == sgt
+  // 6 == sge
+  // 7 == slt
+  // 8 == sle
+  // ne is done by negating 'eq' result.
+
+  // This table below assumes that for some comparisons the operands will be
+  // commuted.
+  // ult op == commute + ugt op
+  // ule op == commute + uge op
+  // slt op == commute + sgt op
+  // sle op == commute + sge op
+  unsigned PredIdx = 0;
+  bool SwapOperands = false;
+  CmpInst::Predicate Pred = (CmpInst::Predicate)I.getOperand(1).getPredicate();
+  switch (Pred) {
+  case CmpInst::ICMP_NE:
+  case CmpInst::ICMP_EQ:
+    PredIdx = 0;
+    break;
+  case CmpInst::ICMP_UGT:
+    PredIdx = 1;
+    break;
+  case CmpInst::ICMP_UGE:
+    PredIdx = 2;
+    break;
+  case CmpInst::ICMP_ULT:
+    PredIdx = 3;
+    SwapOperands = true;
+    break;
+  case CmpInst::ICMP_ULE:
+    PredIdx = 4;
+    SwapOperands = true;
+    break;
+  case CmpInst::ICMP_SGT:
+    PredIdx = 5;
+    break;
+  case CmpInst::ICMP_SGE:
+    PredIdx = 6;
+    break;
+  case CmpInst::ICMP_SLT:
+    PredIdx = 7;
+    SwapOperands = true;
+    break;
+  case CmpInst::ICMP_SLE:
+    PredIdx = 8;
+    SwapOperands = true;
+    break;
+  default:
+    llvm_unreachable("Unhandled icmp predicate");
+    return false;
+  }
+
+  // This table obviously should be tablegen'd when we have our GISel native
+  // tablegen selector.
+
+  static const unsigned OpcTable[4][4][9] = {
+      {
+          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */},
+          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */},
+          {AArch64::CMEQv8i8, AArch64::CMHIv8i8, AArch64::CMHSv8i8,
+           AArch64::CMHIv8i8, AArch64::CMHSv8i8, AArch64::CMGTv8i8,
+           AArch64::CMGEv8i8, AArch64::CMGTv8i8, AArch64::CMGEv8i8},
+          {AArch64::CMEQv16i8, AArch64::CMHIv16i8, AArch64::CMHSv16i8,
+           AArch64::CMHIv16i8, AArch64::CMHSv16i8, AArch64::CMGTv16i8,
+           AArch64::CMGEv16i8, AArch64::CMGTv16i8, AArch64::CMGEv16i8}
+      },
+      {
+          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */},
+          {AArch64::CMEQv4i16, AArch64::CMHIv4i16, AArch64::CMHSv4i16,
+           AArch64::CMHIv4i16, AArch64::CMHSv4i16, AArch64::CMGTv4i16,
+           AArch64::CMGEv4i16, AArch64::CMGTv4i16, AArch64::CMGEv4i16},
+          {AArch64::CMEQv8i16, AArch64::CMHIv8i16, AArch64::CMHSv8i16,
+           AArch64::CMHIv8i16, AArch64::CMHSv8i16, AArch64::CMGTv8i16,
+           AArch64::CMGEv8i16, AArch64::CMGTv8i16, AArch64::CMGEv8i16},
+          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */}
+      },
+      {
+          {AArch64::CMEQv2i32, AArch64::CMHIv2i32, AArch64::CMHSv2i32,
+           AArch64::CMHIv2i32, AArch64::CMHSv2i32, AArch64::CMGTv2i32,
+           AArch64::CMGEv2i32, AArch64::CMGTv2i32, AArch64::CMGEv2i32},
+          {AArch64::CMEQv4i32, AArch64::CMHIv4i32, AArch64::CMHSv4i32,
+           AArch64::CMHIv4i32, AArch64::CMHSv4i32, AArch64::CMGTv4i32,
+           AArch64::CMGEv4i32, AArch64::CMGTv4i32, AArch64::CMGEv4i32},
+          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */},
+          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */}
+      },
+      {
+          {AArch64::CMEQv2i64, AArch64::CMHIv2i64, AArch64::CMHSv2i64,
+           AArch64::CMHIv2i64, AArch64::CMHSv2i64, AArch64::CMGTv2i64,
+           AArch64::CMGEv2i64, AArch64::CMGTv2i64, AArch64::CMGEv2i64},
+          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */},
+          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */},
+          {0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */, 0 /* invalid */, 0 /* invalid */, 0 /* invalid */,
+           0 /* invalid */}
+      },
+  };
+  unsigned EltIdx = Log2_32(SrcEltSize / 8);
+  unsigned NumEltsIdx = Log2_32(NumElts / 2);
+  unsigned Opc = OpcTable[EltIdx][NumEltsIdx][PredIdx];
+  if (!Opc) {
+    LLVM_DEBUG(dbgs() << "Could not map G_ICMP to cmp opcode");
+    return false;
+  }
+
+  const RegisterBank &VecRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+  const TargetRegisterClass *SrcRC =
+      getRegClassForTypeOnBank(SrcTy, VecRB, RBI, true);
+  if (!SrcRC) {
+    LLVM_DEBUG(dbgs() << "Could not determine source register class.\n");
+    return false;
+  }
+
+  unsigned NotOpc = Pred == ICmpInst::ICMP_NE ? AArch64::NOTv8i8 : 0;
+  if (SrcTy.getSizeInBits() == 128)
+    NotOpc = NotOpc ? AArch64::NOTv16i8 : 0;
+
+  if (SwapOperands)
+    std::swap(SrcReg, Src2Reg);
+
+  MachineIRBuilder MIB(I);
+  auto Cmp = MIB.buildInstr(Opc, {SrcRC}, {SrcReg, Src2Reg});
+  constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
+
+  // Invert if we had a 'ne' cc.
+  if (NotOpc) {
+    Cmp = MIB.buildInstr(NotOpc, {DstReg}, {Cmp});
+    constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
+  } else {
+    MIB.buildCopy(DstReg, Cmp.getReg(0));
+  }
+  RBI.constrainGenericRegister(DstReg, *SrcRC, MRI);
+  I.eraseFromParent();
+  return true;
 }
 
 MachineInstr *AArch64InstructionSelector::emitScalarToVector(

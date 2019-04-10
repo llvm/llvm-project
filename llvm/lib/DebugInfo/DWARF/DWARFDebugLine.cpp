@@ -842,7 +842,7 @@ Error DWARFDebugLine::LineTable::parse(
 
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {
-    llvm::sort(Sequences, Sequence::orderByLowPC);
+    llvm::sort(Sequences, Sequence::orderByHighPC);
     // Note: actually, instruction address ranges of sequences should not
     // overlap (in shared objects and executables). If they do, the address
     // lookup would still work, though, but result would be ambiguous.
@@ -860,46 +860,22 @@ uint32_t DWARFDebugLine::LineTable::findRowInSeq(
   if (!Seq.containsPC(Address))
     return UnknownRowIndex;
   assert(Seq.SectionIndex == Address.SectionIndex);
-  // Search for instruction address in the rows describing the sequence.
-  // Rows are stored in a vector, so we may use arithmetical operations with
-  // iterators.
+  // In some cases, e.g. first instruction in a function, the compiler generates
+  // two entries, both with the same address. We want the last one.
+  //
+  // In general we want a non-empty range: the last row whose address is less
+  // than or equal to Address. This can be computed as upper_bound - 1.
   DWARFDebugLine::Row Row;
   Row.Address = Address;
   RowIter FirstRow = Rows.begin() + Seq.FirstRowIndex;
   RowIter LastRow = Rows.begin() + Seq.LastRowIndex;
-  LineTable::RowIter RowPos = std::lower_bound(
-      FirstRow, LastRow, Row, DWARFDebugLine::Row::orderByAddress);
-  // Since Address is in Seq, FirstRow <= RowPos < LastRow.
-  assert(FirstRow <= RowPos && RowPos < LastRow);
+  assert(FirstRow->Address.Address <= Row.Address.Address &&
+         Row.Address.Address < LastRow[-1].Address.Address);
+  RowIter RowPos = std::upper_bound(FirstRow + 1, LastRow - 1, Row,
+                                    DWARFDebugLine::Row::orderByAddress) -
+                   1;
   assert(Seq.SectionIndex == RowPos->Address.SectionIndex);
-  if (RowPos->Address.Address != Address.Address) {
-    // lower_bound either lands on the RowPos with the same Address
-    // as the queried one, or on the first that's larger.
-    assert(RowPos->Address.Address > Address.Address);
-    // We know RowPos can't be FirstRow, in this case,
-    // because the queried Address is in Seq. So if it were
-    // FirstRow, then RowPos->Address.Address == Address.Address,
-    // and we wouldn't be here.
-    assert(RowPos != FirstRow);
-    --RowPos;
-  }
-  // In some cases, e.g. first instruction in a function, the compiler generates
-  // two entries, both with the same address. We want the last one.
-  // There are 2 cases wrt. RowPos and the addresses in records before/after it:
-  // 1) RowPos's address is the one we looked for. In this case, we want to
-  // skip any potential empty ranges.
-  // 2) RowPos's address is less than the one we looked for. In that case, we
-  // arrived here by finding the first range with a greater address,
-  // then decrementing 1. If the address of this range is part of a sequence of
-  // empty ones, it is the last one.
-  // In either case, the loop below lands on the correct RowPos.
-  while (RowPos->Address.Address == (RowPos + 1)->Address.Address) {
-    ++RowPos;
-  }
-
-  assert(RowPos < LastRow);
-  uint32_t Index = Seq.FirstRowIndex + (RowPos - FirstRow);
-  return Index;
+  return RowPos - Rows.begin();
 }
 
 uint32_t DWARFDebugLine::LineTable::lookupAddress(
@@ -919,31 +895,15 @@ uint32_t DWARFDebugLine::LineTable::lookupAddress(
 
 uint32_t DWARFDebugLine::LineTable::lookupAddressImpl(
     object::SectionedAddress Address) const {
-  if (Sequences.empty())
-    return UnknownRowIndex;
   // First, find an instruction sequence containing the given address.
   DWARFDebugLine::Sequence Sequence;
   Sequence.SectionIndex = Address.SectionIndex;
-  Sequence.LowPC = Address.Address;
-  SequenceIter FirstSeq = Sequences.begin();
-  SequenceIter LastSeq = Sequences.end();
-  SequenceIter SeqPos = std::lower_bound(
-      FirstSeq, LastSeq, Sequence, DWARFDebugLine::Sequence::orderByLowPC);
-  DWARFDebugLine::Sequence FoundSeq;
-
-  if (SeqPos == LastSeq) {
-    FoundSeq = Sequences.back();
-  } else if (SeqPos->LowPC == Address.Address &&
-             SeqPos->SectionIndex == Address.SectionIndex) {
-    FoundSeq = *SeqPos;
-  } else {
-    if (SeqPos == FirstSeq)
-      return UnknownRowIndex;
-    FoundSeq = *(SeqPos - 1);
-  }
-  if (FoundSeq.SectionIndex != Address.SectionIndex)
+  Sequence.HighPC = Address.Address;
+  SequenceIter It = llvm::upper_bound(Sequences, Sequence,
+                                      DWARFDebugLine::Sequence::orderByHighPC);
+  if (It == Sequences.end() || It->SectionIndex != Address.SectionIndex)
     return UnknownRowIndex;
-  return findRowInSeq(FoundSeq, Address);
+  return findRowInSeq(*It, Address);
 }
 
 bool DWARFDebugLine::LineTable::lookupAddressRange(
@@ -971,17 +931,11 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
   // First, find an instruction sequence containing the given address.
   DWARFDebugLine::Sequence Sequence;
   Sequence.SectionIndex = Address.SectionIndex;
-  Sequence.LowPC = Address.Address;
-  SequenceIter FirstSeq = Sequences.begin();
+  Sequence.HighPC = Address.Address;
   SequenceIter LastSeq = Sequences.end();
-  SequenceIter SeqPos = std::lower_bound(
-      FirstSeq, LastSeq, Sequence, DWARFDebugLine::Sequence::orderByLowPC);
-  if (SeqPos == LastSeq || !SeqPos->containsPC(Address)) {
-    if (SeqPos == FirstSeq)
-      return false;
-    SeqPos--;
-  }
-  if (!SeqPos->containsPC(Address))
+  SequenceIter SeqPos = llvm::upper_bound(
+      Sequences, Sequence, DWARFDebugLine::Sequence::orderByHighPC);
+  if (SeqPos == LastSeq || !SeqPos->containsPC(Address))
     return false;
 
   SequenceIter StartPos = SeqPos;

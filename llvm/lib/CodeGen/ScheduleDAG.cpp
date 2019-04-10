@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
@@ -36,6 +37,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "pre-RA-sched"
+
+STATISTIC(NumNewPredsAdded, "Number of times a  single predecessor was added");
+STATISTIC(NumTopoInits,
+          "Number of times the topological order has been recomputed");
 
 #ifndef NDEBUG
 static cl::opt<bool> StressSchedOpt(
@@ -497,6 +502,7 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
   }
 
   Visited.resize(DAGSize);
+  NumTopoInits++;
 
 #ifndef NDEBUG
   // Check correctness of the ordering
@@ -523,6 +529,8 @@ void ScheduleDAGTopologicalSort::AddPred(SUnit *Y, SUnit *X) {
     // Recompute topological indexes.
     Shift(Visited, LowerBound, UpperBound);
   }
+
+  NumNewPredsAdded++;
 }
 
 void ScheduleDAGTopologicalSort::RemovePred(SUnit *M, SUnit *N) {

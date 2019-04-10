@@ -253,7 +253,19 @@ private:
   bool shouldMerge(const Elf_Shdr &Sec);
   Symbol *createSymbol(const Elf_Sym *Sym);
 
-  ArrayRef<Elf_Word> SymtabSHNDX;
+  // Each ELF symbol contains a section index which the symbol belongs to.
+  // However, because the number of bits dedicated for that is limited, a
+  // symbol can directly point to a section only when the section index is
+  // equal to or smaller than 65280.
+  //
+  // If an object file contains more than 65280 sections, the file must
+  // contain .symtab_shndxr section. The section contains an array of
+  // 32-bit integers whose size is the same as the number of symbols.
+  // Nth symbol's section index is in the Nth entry of .symtab_shndxr.
+  //
+  // The following variable contains the contents of .symtab_shndxr.
+  // If the section does not exist (which is common), the array is empty.
+  ArrayRef<Elf_Word> ShndxTable;
 
   // .shstrtab contents.
   StringRef SectionStringTable;

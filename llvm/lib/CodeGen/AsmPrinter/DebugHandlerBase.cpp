@@ -211,8 +211,8 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
 
   // Request labels for the full history.
   for (const auto &I : DbgValues) {
-    const auto &Ranges = I.second;
-    if (Ranges.empty())
+    const auto &Entries = I.second;
+    if (Entries.empty())
       continue;
 
     auto IsDescribedByReg = [](const MachineInstr *MI) {
@@ -228,31 +228,32 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
     // doing that violates the ranges that are calculated in the history map.
     // However, we currently do not emit debug values for constant arguments
     // directly at the start of the function, so this code is still useful.
-    const DILocalVariable *DIVar = Ranges.front().first->getDebugVariable();
+    const DILocalVariable *DIVar =
+        Entries.front().getBegin()->getDebugVariable();
     if (DIVar->isParameter() &&
         getDISubprogram(DIVar->getScope())->describes(&MF->getFunction())) {
-      if (!IsDescribedByReg(Ranges.front().first))
-        LabelsBeforeInsn[Ranges.front().first] = Asm->getFunctionBegin();
-      if (Ranges.front().first->getDebugExpression()->isFragment()) {
+      if (!IsDescribedByReg(Entries.front().getBegin()))
+        LabelsBeforeInsn[Entries.front().getBegin()] = Asm->getFunctionBegin();
+      if (Entries.front().getBegin()->getDebugExpression()->isFragment()) {
         // Mark all non-overlapping initial fragments.
-        for (auto I = Ranges.begin(); I != Ranges.end(); ++I) {
-          const DIExpression *Fragment = I->first->getDebugExpression();
-          if (std::any_of(Ranges.begin(), I,
-                          [&](DbgValueHistoryMap::InstrRange Pred) {
+        for (auto I = Entries.begin(); I != Entries.end(); ++I) {
+          const DIExpression *Fragment = I->getBegin()->getDebugExpression();
+          if (std::any_of(Entries.begin(), I,
+                          [&](DbgValueHistoryMap::Entry Pred) {
                             return Fragment->fragmentsOverlap(
-                                Pred.first->getDebugExpression());
+                                Pred.getBegin()->getDebugExpression());
                           }))
             break;
-          if (!IsDescribedByReg(I->first))
-            LabelsBeforeInsn[I->first] = Asm->getFunctionBegin();
+          if (!IsDescribedByReg(I->getBegin()))
+            LabelsBeforeInsn[I->getBegin()] = Asm->getFunctionBegin();
         }
       }
     }
 
-    for (const auto &Range : Ranges) {
-      requestLabelBeforeInsn(Range.first);
-      if (Range.second)
-        requestLabelAfterInsn(Range.second);
+    for (const auto &Entry : Entries) {
+      requestLabelBeforeInsn(Entry.getBegin());
+      if (Entry.getEnd())
+        requestLabelAfterInsn(Entry.getEnd());
     }
   }
 

@@ -73,7 +73,7 @@ for.end15:                                        ; preds = %outer.inc, %entry
 ; CHECK-LABEL: case2
 ; CHECK: LV: Loop hints: force=enabled width=0 unroll=0
 ; CHECK: LV: We can vectorize this outer loop!
-; CHECK: LV: Using computed VF 1 to build VPlans.
+; CHECK: LV: Using VF 1 to build VPlans.
 
 define void @case2(i32* nocapture %a, i32* nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
 entry:

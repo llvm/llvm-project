@@ -60,7 +60,8 @@ namespace X86 {
     IP_HAS_REPEAT_NE = 4,
     IP_HAS_REPEAT = 8,
     IP_HAS_LOCK = 16,
-    IP_HAS_NOTRACK = 32
+    IP_HAS_NOTRACK = 32,
+    IP_USE_VEX3 = 64,
   };
 
   enum OperandType : unsigned {
