@@ -772,6 +772,11 @@ public:
   virtual ~CGOpenMPRuntime() {}
   virtual void clear();
 
+  /// Checks if the \p Body is the \a CompoundStmt and returns its child
+  /// statement iff there is only one that is not evaluatable at the compile
+  /// time.
+  static const Stmt *getSingleCompoundChild(ASTContext &Ctx, const Stmt *Body);
+
   /// Get the platform-specific name separator.
   std::string getName(ArrayRef<StringRef> Parts) const;
 

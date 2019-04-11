@@ -255,6 +255,7 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
     if (CurBB->empty() || ReturnBlock.getBlock()->use_empty()) {
       ReturnBlock.getBlock()->replaceAllUsesWith(CurBB);
       delete ReturnBlock.getBlock();
+      ReturnBlock = JumpDest();
     } else
       EmitBlock(ReturnBlock.getBlock());
     return llvm::DebugLoc();
@@ -274,6 +275,7 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
       Builder.SetInsertPoint(BI->getParent());
       BI->eraseFromParent();
       delete ReturnBlock.getBlock();
+      ReturnBlock = JumpDest();
       return Loc;
     }
   }
@@ -448,6 +450,19 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // 5. Width of vector aguments and return types for functions called by this
   //    function.
   CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
+
+  // If we generated an unreachable return block, delete it now.
+  if (ReturnBlock.isValid() && ReturnBlock.getBlock()->use_empty()) {
+    Builder.ClearInsertionPoint();
+    ReturnBlock.getBlock()->eraseFromParent();
+  }
+  if (ReturnValue.isValid()) {
+    auto *RetAlloca = dyn_cast<llvm::AllocaInst>(ReturnValue.getPointer());
+    if (RetAlloca && RetAlloca->use_empty()) {
+      RetAlloca->eraseFromParent();
+      ReturnValue = Address::invalid();
+    }
+  }
 }
 
 /// ShouldInstrumentFunction - Return true if the current function should be

@@ -45,6 +45,13 @@ struct ArrayMember {
   int w, x, y, z;
 };
 
+struct ZeroLengthArrayMember {
+    NonPOD np;
+    int a;
+    int b[0];
+    int c;
+};
+
 struct VolatileMember {
   int a, b, c, d;
   volatile int v;
@@ -109,6 +116,7 @@ CALL_AO(Basic)
 CALL_AO(PODMember)
 CALL_AO(PODLikeMember)
 CALL_AO(ArrayMember)
+CALL_AO(ZeroLengthArrayMember)
 CALL_AO(VolatileMember)
 CALL_AO(BitfieldMember)
 CALL_AO(InnerClassMember)
@@ -141,6 +149,12 @@ CALL_AO(PackedMembers)
 // CHECK: call dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 64, i1 {{.*}})
 // CHECK: ret %struct.ArrayMember*
+
+// ZeroLengthArrayMember copy-assignment:
+// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.ZeroLengthArrayMember* @_ZN21ZeroLengthArrayMemberaSERKS_(%struct.ZeroLengthArrayMember* %this, %struct.ZeroLengthArrayMember* dereferenceable({{[0-9]+}}))
+// CHECK: call dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 8, i1 {{.*}})
+// CHECK: ret %struct.ZeroLengthArrayMember*
 
 // VolatileMember copy-assignment:
 // CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.VolatileMember* @_ZN14VolatileMemberaSERKS_(%struct.VolatileMember* %this, %struct.VolatileMember* dereferenceable({{[0-9]+}}))

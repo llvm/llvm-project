@@ -2892,7 +2892,7 @@ static const Decl *getCanonicalParmVarDecl(const Decl *D) {
       unsigned i = PV->getFunctionScopeIndex();
       // This parameter might be from a freestanding function type within the
       // function and isn't necessarily referring to one of FD's parameters.
-      if (FD->getParamDecl(i) == PV)
+      if (i < FD->getNumParams() && FD->getParamDecl(i) == PV)
         return FD->getCanonicalDecl()->getParamDecl(i);
     }
   }
