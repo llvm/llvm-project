@@ -17,9 +17,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordWatchpoint
-//-------------------------------------------------------------------------
 
 class CommandObjectWatchpointCommand : public CommandObjectMultiword {
 public:

@@ -3973,15 +3973,15 @@ bool InstCombiner::OptimizeOverflowCheck(OverflowCheckFlavor OCF, Value *LHS,
       if (OR == OverflowResult::NeverOverflows)
         return SetResult(Builder.CreateNUWAdd(LHS, RHS), Builder.getFalse(),
                          true);
-
-      if (OR == OverflowResult::AlwaysOverflows)
-        return SetResult(Builder.CreateAdd(LHS, RHS), Builder.getTrue(), true);
     } else {
       OR = computeOverflowForSignedAdd(LHS, RHS, &OrigI);
       if (OR == OverflowResult::NeverOverflows)
         return SetResult(Builder.CreateNSWAdd(LHS, RHS), Builder.getFalse(),
                          true);
     }
+
+    if (OR == OverflowResult::AlwaysOverflows)
+      return SetResult(Builder.CreateAdd(LHS, RHS), Builder.getTrue(), true);
     break;
   }
 
@@ -3997,15 +3997,15 @@ bool InstCombiner::OptimizeOverflowCheck(OverflowCheckFlavor OCF, Value *LHS,
       if (OR == OverflowResult::NeverOverflows)
         return SetResult(Builder.CreateNUWSub(LHS, RHS), Builder.getFalse(),
                          true);
-
-      if (OR == OverflowResult::AlwaysOverflows)
-        return SetResult(Builder.CreateSub(LHS, RHS), Builder.getTrue(), true);
     } else {
       OR = computeOverflowForSignedSub(LHS, RHS, &OrigI);
       if (OR == OverflowResult::NeverOverflows)
         return SetResult(Builder.CreateNSWSub(LHS, RHS), Builder.getFalse(),
                          true);
     }
+
+    if (OR == OverflowResult::AlwaysOverflows)
+      return SetResult(Builder.CreateSub(LHS, RHS), Builder.getTrue(), true);
     break;
   }
 

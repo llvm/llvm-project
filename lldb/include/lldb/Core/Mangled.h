@@ -22,7 +22,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class Mangled Mangled.h "lldb/Core/Mangled.h"
 /// A class that handles mangled names.
 ///
@@ -33,7 +32,6 @@ namespace lldb_private {
 /// class for their mangled names. Uniqued string pools are used for the
 /// mangled, demangled, and token string values to allow for faster
 /// comparisons and for efficient memory use.
-//----------------------------------------------------------------------
 class Mangled {
 public:
   enum NamePreference {
@@ -48,14 +46,11 @@ public:
     eManglingSchemeItanium
   };
 
-  //----------------------------------------------------------------------
   /// Default constructor.
   ///
   /// Initialize with both mangled and demangled names empty.
-  //----------------------------------------------------------------------
   Mangled();
 
-  //----------------------------------------------------------------------
   /// Construct with name.
   ///
   /// Constructor with an optional string and a boolean indicating if it is
@@ -67,11 +62,9 @@ public:
   /// \param[in] is_mangled
   ///     If \b true then \a name is a mangled name, if \b false then
   ///     \a name is demangled.
-  //----------------------------------------------------------------------
   Mangled(ConstString name, bool is_mangled);
   Mangled(llvm::StringRef name, bool is_mangled);
 
-  //----------------------------------------------------------------------
   /// Construct with name.
   ///
   /// Constructor with an optional string and auto-detect if \a name is
@@ -79,20 +72,16 @@ public:
   ///
   /// \param[in] name
   ///     The already const name to copy into this object.
-  //----------------------------------------------------------------------
   explicit Mangled(ConstString name);
 
   explicit Mangled(llvm::StringRef name);
 
-  //----------------------------------------------------------------------
   /// Destructor
   ///
   /// Releases its ref counts on the mangled and demangled strings that live
   /// in the global string pool.
-  //----------------------------------------------------------------------
   ~Mangled();
 
-  //----------------------------------------------------------------------
   /// Convert to pointer operator.
   ///
   /// This allows code to check a Mangled object to see if it contains a valid
@@ -107,10 +96,8 @@ public:
   /// \return
   ///     A pointer to this object if either the mangled or unmangled
   ///     name is set, NULL otherwise.
-  //----------------------------------------------------------------------
   operator void *() const;
 
-  //----------------------------------------------------------------------
   /// Logical NOT operator.
   ///
   /// This allows code to check a Mangled object to see if it contains an
@@ -125,15 +112,11 @@ public:
   /// \return
   ///     Returns \b true if the object has an empty mangled and
   ///     unmangled name, \b false otherwise.
-  //----------------------------------------------------------------------
   bool operator!() const;
 
-  //----------------------------------------------------------------------
   /// Clear the mangled and demangled values.
-  //----------------------------------------------------------------------
   void Clear();
 
-  //----------------------------------------------------------------------
   /// Compare the mangled string values
   ///
   /// Compares the Mangled::GetName() string in \a lhs and \a rhs.
@@ -148,10 +131,8 @@ public:
   ///     \li -1 if \a lhs is less than \a rhs
   ///     \li 0 if \a lhs is equal to \a rhs
   ///     \li 1 if \a lhs is greater than \a rhs
-  //----------------------------------------------------------------------
   static int Compare(const Mangled &lhs, const Mangled &rhs);
 
-  //----------------------------------------------------------------------
   /// Dump a description of this object to a Stream \a s.
   ///
   /// Dump a Mangled object to stream \a s. We don't force our demangled name
@@ -159,54 +140,42 @@ public:
   ///
   /// \param[in] s
   ///     The stream to which to dump the object description.
-  //----------------------------------------------------------------------
   void Dump(Stream *s) const;
 
-  //----------------------------------------------------------------------
   /// Dump a debug description of this object to a Stream \a s.
   ///
   /// \param[in] s
   ///     The stream to which to dump the object description.
-  //----------------------------------------------------------------------
   void DumpDebug(Stream *s) const;
 
-  //----------------------------------------------------------------------
   /// Demangled name get accessor.
   ///
   /// \return
   ///     A const reference to the demangled name string object.
-  //----------------------------------------------------------------------
   ConstString GetDemangledName(lldb::LanguageType language) const;
 
-  //----------------------------------------------------------------------
   /// Display demangled name get accessor.
   ///
   /// \return
   ///     A const reference to the display demangled name string object.
-  //----------------------------------------------------------------------
   ConstString GetDisplayDemangledName(lldb::LanguageType language) const;
 
   void SetDemangledName(ConstString name) { m_demangled = name; }
 
   void SetMangledName(ConstString name) { m_mangled = name; }
 
-  //----------------------------------------------------------------------
   /// Mangled name get accessor.
   ///
   /// \return
   ///     A reference to the mangled name string object.
-  //----------------------------------------------------------------------
   ConstString &GetMangledName() { return m_mangled; }
 
-  //----------------------------------------------------------------------
   /// Mangled name get accessor.
   ///
   /// \return
   ///     A const reference to the mangled name string object.
-  //----------------------------------------------------------------------
   ConstString GetMangledName() const { return m_mangled; }
 
-  //----------------------------------------------------------------------
   /// Best name get accessor.
   ///
   /// \param[in] preference
@@ -216,11 +185,9 @@ public:
   ///     A const reference to the preferred name string object if this
   ///     object has a valid name of that kind, else a const reference to the
   ///     other name is returned.
-  //----------------------------------------------------------------------
   ConstString GetName(lldb::LanguageType language,
                       NamePreference preference = ePreferDemangled) const;
 
-  //----------------------------------------------------------------------
   /// Check if "name" matches either the mangled or demangled name.
   ///
   /// \param[in] name
@@ -228,7 +195,6 @@ public:
   ///
   /// \return
   ///     \b True if \a name matches either name, \b false otherwise.
-  //----------------------------------------------------------------------
   bool NameMatches(ConstString name, lldb::LanguageType language) const {
     if (m_mangled == name)
       return true;
@@ -237,7 +203,6 @@ public:
   bool NameMatches(const RegularExpression &regex,
                    lldb::LanguageType language) const;
 
-  //----------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
   /// Return the size in bytes that this object takes in memory. This returns
@@ -248,10 +213,8 @@ public:
   ///     The number of bytes that this object occupies in memory.
   ///
   /// \see ConstString::StaticMemorySize ()
-  //----------------------------------------------------------------------
   size_t MemorySize() const;
 
-  //----------------------------------------------------------------------
   /// Set the string value in this object.
   ///
   /// If \a is_mangled is \b true, then the mangled named is set to \a name,
@@ -263,10 +226,8 @@ public:
   /// \param[in] is_mangled
   ///     If \b true then \a name is a mangled name, if \b false then
   ///     \a name is demangled.
-  //----------------------------------------------------------------------
   void SetValue(ConstString name, bool is_mangled);
 
-  //----------------------------------------------------------------------
   /// Set the string value in this object.
   ///
   /// This version auto detects if the string is mangled by inspecting the
@@ -274,10 +235,8 @@ public:
   ///
   /// \param[in] name
   ///     The already const version of the name for this object.
-  //----------------------------------------------------------------------
   void SetValue(ConstString name);
 
-  //----------------------------------------------------------------------
   /// Try to guess the language from the mangling.
   ///
   /// For a mangled name to have a language it must have both a mangled and a
@@ -292,13 +251,11 @@ public:
   /// \return
   ///     The language for the mangled/demangled name, eLanguageTypeUnknown
   ///     if there is no mangled or demangled counterpart.
-  //----------------------------------------------------------------------
   lldb::LanguageType GuessLanguage() const;
 
   /// Function signature for filtering mangled names.
   using SkipMangledNameFn = bool(llvm::StringRef, ManglingScheme);
 
-  //----------------------------------------------------------------------
   /// Trigger explicit demangling to obtain rich mangling information. This is
   /// optimized for batch processing while populating a name index. To get the
   /// pure demangled name string for a single entity, use GetDemangledName()
@@ -321,14 +278,11 @@ public:
   ///
   /// \return
   ///     True on success, false otherwise.
-  //----------------------------------------------------------------------
   bool DemangleWithRichManglingInfo(RichManglingContext &context,
                                     SkipMangledNameFn *skip_mangled_name);
 
 private:
-  //----------------------------------------------------------------------
   /// Mangled member variables.
-  //----------------------------------------------------------------------
   ConstString m_mangled;           ///< The mangled version of the name
   mutable ConstString m_demangled; ///< Mutable so we can get it on demand with
                                    ///a const version of this object

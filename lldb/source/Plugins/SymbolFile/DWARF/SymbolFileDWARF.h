@@ -36,9 +36,7 @@
 #include "DWARFIndex.h"
 #include "UniqueDWARFASTType.h"
 
-//----------------------------------------------------------------------
 // Forward Declarations for this DWARF plugin
-//----------------------------------------------------------------------
 class DebugMapModule;
 class DWARFAbbreviationDeclaration;
 class DWARFAbbreviationDeclarationSet;
@@ -68,9 +66,7 @@ public:
   friend class DWARFDIE;
   friend class DWARFASTParserClang;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -86,9 +82,7 @@ public:
 
   static const lldb_private::FileSpecList &GetSymlinkPaths();
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
 
   SymbolFileDWARF(lldb_private::ObjectFile *ofile);
 
@@ -98,9 +92,7 @@ public:
 
   void InitializeObject() override;
 
-  //------------------------------------------------------------------
   // Compile Unit function calls
-  //------------------------------------------------------------------
 
   uint32_t GetNumCompileUnits() override;
 
@@ -219,9 +211,7 @@ public:
 
   std::recursive_mutex &GetModuleMutex() const override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

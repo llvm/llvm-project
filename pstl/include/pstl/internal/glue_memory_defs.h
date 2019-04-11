@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PSTL_glue_memory_defs_H
-#define __PSTL_glue_memory_defs_H
+#ifndef _PSTL_GLUE_MEMORY_DEFS_H
+#define _PSTL_GLUE_MEMORY_DEFS_H
 
 #include "execution_defs.h"
 
@@ -76,4 +76,4 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 uninitialized_value_construct_n(_ExecutionPolicy&& __exec, _ForwardIterator __first, _Size __n);
 
 } //  namespace std
-#endif /* __PSTL_glue_memory_defs_H */
+#endif /* _PSTL_GLUE_MEMORY_DEFS_H */

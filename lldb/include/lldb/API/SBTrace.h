@@ -19,7 +19,6 @@ namespace lldb {
 class LLDB_API SBTrace {
 public:
   SBTrace();
-  //------------------------------------------------------------------
   /// Obtain the trace data as raw bytes.
   ///
   /// \param[out] error
@@ -47,19 +46,15 @@ public:
   ///
   /// \return
   ///     The size of the trace data effectively read by the API call.
-  //------------------------------------------------------------------
   size_t GetTraceData(SBError &error, void *buf, size_t size, size_t offset = 0,
                       lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID);
 
-  //------------------------------------------------------------------
   /// Obtain any meta data as raw bytes for the tracing instance.
   /// The input parameter definition is similar to the previous
   /// function.
-  //------------------------------------------------------------------
   size_t GetMetaData(SBError &error, void *buf, size_t size, size_t offset = 0,
                      lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID);
 
-  //------------------------------------------------------------------
   /// Stop the tracing instance. Stopping the trace will also
   /// lead to deletion of any gathered trace data.
   ///
@@ -80,11 +75,9 @@ public:
   ///     trace id of the process.
   ///     Now if the StopTrace API is called for the whole process,
   ///     thread A will not be stopped and must be stopped separately.
-  //------------------------------------------------------------------
   void StopTrace(SBError &error,
                  lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID);
 
-  //------------------------------------------------------------------
   /// Get the trace configuration being used for the trace instance.
   /// The threadid in the SBTraceOptions needs to be set when the
   /// configuration used by a specific thread is being requested.
@@ -95,7 +88,6 @@ public:
   ///
   /// \param[out] error
   ///     An error explaining what went wrong.
-  //------------------------------------------------------------------
   void GetTraceConfig(SBTraceOptions &options, SBError &error);
 
   lldb::user_id_t GetTraceUID();

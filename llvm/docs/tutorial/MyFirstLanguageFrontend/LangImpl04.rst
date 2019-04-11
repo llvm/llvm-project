@@ -652,7 +652,7 @@ properly at runtime.
 
 Here is the code:
 
-.. literalinclude:: ../../examples/Kaleidoscope/Chapter4/toy.cpp
+.. literalinclude:: ../../../examples/Kaleidoscope/Chapter4/toy.cpp
    :language: c++
 
 `Next: Extending the language: control flow <LangImpl05.html>`_

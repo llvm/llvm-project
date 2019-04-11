@@ -17,9 +17,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectApropos
-//-------------------------------------------------------------------------
 
 CommandObjectApropos::CommandObjectApropos(CommandInterpreter &interpreter)
     : CommandObjectParsed(

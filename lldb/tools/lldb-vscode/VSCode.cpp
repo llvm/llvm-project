@@ -78,11 +78,9 @@ VSCode::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
   return nullptr;
 }
 
-//----------------------------------------------------------------------
 // Send the JSON in "json_str" to the "out" stream. Correctly send the
 // "Content-Length:" field followed by the length, followed by the raw
 // JSON bytes.
-//----------------------------------------------------------------------
 void VSCode::SendJSON(const std::string &json_str) {
   output.write_full("Content-Length: ");
   output.write_full(llvm::utostr(json_str.size()));
@@ -96,10 +94,8 @@ void VSCode::SendJSON(const std::string &json_str) {
   }
 }
 
-//----------------------------------------------------------------------
 // Serialize the JSON value into a string and send the JSON packet to
 // the "out" stream.
-//----------------------------------------------------------------------
 void VSCode::SendJSON(const llvm::json::Value &json) {
   std::string s;
   llvm::raw_string_ostream strm(s);
@@ -109,9 +105,7 @@ void VSCode::SendJSON(const llvm::json::Value &json) {
   SendJSON(strm.str());
 }
 
-//----------------------------------------------------------------------
 // Read a JSON packet from the "in" stream.
-//----------------------------------------------------------------------
 std::string VSCode::ReadJSON() {
   std::string length_str;
   std::string json_str;
@@ -135,7 +129,6 @@ std::string VSCode::ReadJSON() {
   return json_str;
 }
 
-//----------------------------------------------------------------------
 // "OutputEvent": {
 //   "allOf": [ { "$ref": "#/definitions/Event" }, {
 //     "type": "object",
@@ -196,7 +189,6 @@ std::string VSCode::ReadJSON() {
 //     "required": [ "event", "body" ]
 //   }]
 // }
-//----------------------------------------------------------------------
 void VSCode::SendOutput(OutputType o, const llvm::StringRef output) {
   if (output.empty())
     return;

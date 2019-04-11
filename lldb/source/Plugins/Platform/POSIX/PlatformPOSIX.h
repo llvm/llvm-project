@@ -21,9 +21,7 @@ public:
 
   ~PlatformPOSIX() override;
 
-  //------------------------------------------------------------
   // lldb_private::Platform functions
-  //------------------------------------------------------------
 
   lldb_private::OptionGroupOptions *
   GetConnectionOptions(lldb_private::CommandInterpreter &interpreter) override;

@@ -64,7 +64,6 @@ private:
 };
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Given a thread object start its (worker) thread to do work. The
 // object is
 //          added to the *this manager for housekeeping and deletion of all

@@ -360,17 +360,22 @@ end:
   ret void
 }
 
-define void @test20(i32 %in) {
-; CHECK-LABEL: @test20
+define void @test20(i32 %in) nounwind {
+; CHECK-LABEL: test20:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbnz w0, #2, .LBB19_2
+; CHECK-NEXT:  // %bb.1: // %then
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    bl t
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:  .LBB19_2: // %end
+; CHECK-NEXT:    ret
   %shl = shl i32 %in, 3
   %zext = zext i32 %shl to i64
   %and = and i64 %zext, 32
   %cond = icmp eq i64 %and, 0
   br i1 %cond, label %then, label %end
 
-; FIXME: Should be no lsl
-; CHECK: lsl w8, w0, #3
-; CHECK: tbnz w8, #5
 
 then:
   call void @t()

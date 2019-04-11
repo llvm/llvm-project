@@ -87,9 +87,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
   (GetRegisterInfoInterface().GetGPRSize() + sizeof(FPR_linux_mips) +          \
    sizeof(MSA_linux_mips))
 
-// ----------------------------------------------------------------------------
 // NativeRegisterContextLinux_mips64 members.
-// ----------------------------------------------------------------------------
 
 static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {

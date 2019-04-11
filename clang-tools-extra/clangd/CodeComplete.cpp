@@ -45,6 +45,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
@@ -543,54 +544,59 @@ struct SpecifiedScope {
 // (e.g. enclosing namespace).
 std::pair<std::vector<std::string>, bool>
 getQueryScopes(CodeCompletionContext &CCContext, const Sema &CCSema,
+               const CompletionPrefix &HeuristicPrefix,
                const CodeCompleteOptions &Opts) {
-  auto GetAllAccessibleScopes = [](CodeCompletionContext &CCContext) {
-    SpecifiedScope Info;
-    for (auto *Context : CCContext.getVisitedContexts()) {
-      if (isa<TranslationUnitDecl>(Context))
-        Info.AccessibleScopes.push_back(""); // global namespace
-      else if (isa<NamespaceDecl>(Context))
-        Info.AccessibleScopes.push_back(printNamespaceScope(*Context));
+  SpecifiedScope Scopes;
+  for (auto *Context : CCContext.getVisitedContexts()) {
+    if (isa<TranslationUnitDecl>(Context))
+      Scopes.AccessibleScopes.push_back(""); // global namespace
+    else if (isa<NamespaceDecl>(Context))
+      Scopes.AccessibleScopes.push_back(printNamespaceScope(*Context));
+  }
+
+  const CXXScopeSpec *SemaSpecifier =
+      CCContext.getCXXScopeSpecifier().getValueOr(nullptr);
+  // Case 1: unqualified completion.
+  if (!SemaSpecifier) {
+    // Case 2 (exception): sema saw no qualifier, but there appears to be one!
+    // This can happen e.g. in incomplete macro expansions. Use heuristics.
+    if (!HeuristicPrefix.Qualifier.empty()) {
+      vlog("Sema said no scope specifier, but we saw {0} in the source code",
+           HeuristicPrefix.Qualifier);
+      StringRef SpelledSpecifier = HeuristicPrefix.Qualifier;
+      if (SpelledSpecifier.consume_front("::"))
+        Scopes.AccessibleScopes = {""};
+      Scopes.UnresolvedQualifier = SpelledSpecifier;
+      return {Scopes.scopesForIndexQuery(), false};
     }
-    return Info;
-  };
-
-  auto SS = CCContext.getCXXScopeSpecifier();
-
-  // Unqualified completion (e.g. "vec^").
-  if (!SS) {
-    std::vector<std::string> Scopes;
+    // The enclosing namespace must be first, it gets a quality boost.
+    std::vector<std::string> EnclosingAtFront;
     std::string EnclosingScope = printNamespaceScope(*CCSema.CurContext);
-    Scopes.push_back(EnclosingScope);
-    for (auto &S : GetAllAccessibleScopes(CCContext).scopesForIndexQuery()) {
+    EnclosingAtFront.push_back(EnclosingScope);
+    for (auto &S : Scopes.scopesForIndexQuery()) {
       if (EnclosingScope != S)
-        Scopes.push_back(std::move(S));
+        EnclosingAtFront.push_back(std::move(S));
     }
-    // Allow AllScopes completion only for there is no explicit scope qualifier.
-    return {Scopes, Opts.AllScopes};
+    // Allow AllScopes completion as there is no explicit scope qualifier.
+    return {EnclosingAtFront, Opts.AllScopes};
   }
+  // Case 3: sema saw and resolved a scope qualifier.
+  if (SemaSpecifier && SemaSpecifier->isValid())
+    return {Scopes.scopesForIndexQuery(), false};
 
-  // Qualified completion ("std::vec^"), we have two cases depending on whether
-  // the qualifier can be resolved by Sema.
-  if ((*SS)->isValid()) { // Resolved qualifier.
-    return {GetAllAccessibleScopes(CCContext).scopesForIndexQuery(), false};
-  }
-
-  // Unresolved qualifier.
-  SpecifiedScope Info = GetAllAccessibleScopes(CCContext);
-  Info.AccessibleScopes.push_back(""); // Make sure global scope is included.
-
-  llvm::StringRef SpelledSpecifier =
-      Lexer::getSourceText(CharSourceRange::getCharRange((*SS)->getRange()),
-                           CCSema.SourceMgr, clang::LangOptions());
+  // Case 4: There was a qualifier, and Sema didn't resolve it.
+  Scopes.AccessibleScopes.push_back(""); // Make sure global scope is included.
+  llvm::StringRef SpelledSpecifier = Lexer::getSourceText(
+      CharSourceRange::getCharRange(SemaSpecifier->getRange()),
+      CCSema.SourceMgr, clang::LangOptions());
   if (SpelledSpecifier.consume_front("::"))
-    Info.AccessibleScopes = {""};
-  Info.UnresolvedQualifier = SpelledSpecifier;
+    Scopes.AccessibleScopes = {""};
+  Scopes.UnresolvedQualifier = SpelledSpecifier;
   // Sema excludes the trailing "::".
-  if (!Info.UnresolvedQualifier->empty())
-    *Info.UnresolvedQualifier += "::";
+  if (!Scopes.UnresolvedQualifier->empty())
+    *Scopes.UnresolvedQualifier += "::";
 
-  return {Info.scopesForIndexQuery(), false};
+  return {Scopes.scopesForIndexQuery(), false};
 }
 
 // Should we perform index-based completion in a context of the specified kind?
@@ -988,7 +994,7 @@ struct SemaCompleteInput {
   const tooling::CompileCommand &Command;
   const PreambleData *Preamble;
   llvm::StringRef Contents;
-  Position Pos;
+  size_t Offset;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
 };
 
@@ -1019,14 +1025,9 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // Setup code completion.
   FrontendOpts.CodeCompleteOpts = Options;
   FrontendOpts.CodeCompletionAt.FileName = Input.FileName;
-  auto Offset = positionToOffset(Input.Contents, Input.Pos);
-  if (!Offset) {
-    elog("Code completion position was invalid {0}", Offset.takeError());
-    return false;
-  }
   std::tie(FrontendOpts.CodeCompletionAt.Line,
            FrontendOpts.CodeCompletionAt.Column) =
-      offsetToClangLineColumn(Input.Contents, *Offset);
+      offsetToClangLineColumn(Input.Contents, Input.Offset);
 
   std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(Input.Contents, Input.FileName);
@@ -1040,7 +1041,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // skip all includes in this case; these completions are really simple.
   bool CompletingInPreamble =
       ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0).Size >
-      *Offset;
+      Input.Offset;
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
   // the remapped buffers do not get freed.
   IgnoreDiagnostics DummyDiagsConsumer;
@@ -1111,16 +1112,9 @@ std::future<SymbolSlab> startAsyncFuzzyFind(const SymbolIndex &Index,
 // Creates a `FuzzyFindRequest` based on the cached index request from the
 // last completion, if any, and the speculated completion filter text in the
 // source code.
-llvm::Optional<FuzzyFindRequest>
-speculativeFuzzyFindRequestForCompletion(FuzzyFindRequest CachedReq,
-                                         PathRef File, llvm::StringRef Content,
-                                         Position Pos) {
-  auto Offset = positionToOffset(Content, Pos);
-  if (!Offset) {
-    elog("No speculative filter: bad offset {0} in {1}", Pos, File);
-    return llvm::None;
-  }
-  CachedReq.Query = guessCompletionPrefix(Content, *Offset).Name;
+FuzzyFindRequest speculativeFuzzyFindRequestForCompletion(
+    FuzzyFindRequest CachedReq, const CompletionPrefix &HeuristicPrefix) {
+  CachedReq.Query = HeuristicPrefix.Name;
   return CachedReq;
 }
 
@@ -1163,6 +1157,7 @@ class CodeCompleteFlow {
   CompletionRecorder *Recorder = nullptr;
   int NSema = 0, NIndex = 0, NBoth = 0; // Counters for logging.
   bool Incomplete = false;       // Would more be available with a higher limit?
+  CompletionPrefix HeuristicPrefix;
   llvm::Optional<FuzzyMatcher> Filter;  // Initialized once Sema runs.
   std::vector<std::string> QueryScopes; // Initialized once Sema runs.
   // Initialized once QueryScopes is initialized, if there are scopes.
@@ -1190,12 +1185,13 @@ public:
 
   CodeCompleteResult run(const SemaCompleteInput &SemaCCInput) && {
     trace::Span Tracer("CodeCompleteFlow");
+    HeuristicPrefix =
+        guessCompletionPrefix(SemaCCInput.Contents, SemaCCInput.Offset);
     if (Opts.Index && SpecFuzzyFind && SpecFuzzyFind->CachedReq.hasValue()) {
       assert(!SpecFuzzyFind->Result.valid());
-      if ((SpecReq = speculativeFuzzyFindRequestForCompletion(
-               *SpecFuzzyFind->CachedReq, SemaCCInput.FileName,
-               SemaCCInput.Contents, SemaCCInput.Pos)))
-        SpecFuzzyFind->Result = startAsyncFuzzyFind(*Opts.Index, *SpecReq);
+      SpecReq = speculativeFuzzyFindRequestForCompletion(
+          *SpecFuzzyFind->CachedReq, HeuristicPrefix);
+      SpecFuzzyFind->Result = startAsyncFuzzyFind(*Opts.Index, *SpecReq);
     }
 
     // We run Sema code completion first. It builds an AST and calculates:
@@ -1289,8 +1285,8 @@ private:
     }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
-    std::tie(QueryScopes, AllScopes) =
-        getQueryScopes(Recorder->CCContext, *Recorder->CCSema, Opts);
+    std::tie(QueryScopes, AllScopes) = getQueryScopes(
+        Recorder->CCContext, *Recorder->CCSema, HeuristicPrefix, Opts);
     if (!QueryScopes.empty())
       ScopeProximity.emplace(QueryScopes);
     PreferredType =
@@ -1567,10 +1563,15 @@ codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
              const PreambleData *Preamble, llvm::StringRef Contents,
              Position Pos, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
              CodeCompleteOptions Opts, SpeculativeFuzzyFind *SpecFuzzyFind) {
+  auto Offset = positionToOffset(Contents, Pos);
+  if (!Offset) {
+    elog("Code completion position was invalid {0}", Offset.takeError());
+    return CodeCompleteResult();
+  }
   return CodeCompleteFlow(FileName,
                           Preamble ? Preamble->Includes : IncludeStructure(),
                           SpecFuzzyFind, Opts)
-      .run({FileName, Command, Preamble, Contents, Pos, VFS});
+      .run({FileName, Command, Preamble, Contents, *Offset, VFS});
 }
 
 SignatureHelp signatureHelp(PathRef FileName,
@@ -1579,6 +1580,11 @@ SignatureHelp signatureHelp(PathRef FileName,
                             llvm::StringRef Contents, Position Pos,
                             llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                             const SymbolIndex *Index) {
+  auto Offset = positionToOffset(Contents, Pos);
+  if (!Offset) {
+    elog("Code completion position was invalid {0}", Offset.takeError());
+    return SignatureHelp();
+  }
   SignatureHelp Result;
   clang::CodeCompleteOptions Options;
   Options.IncludeGlobals = false;
@@ -1588,7 +1594,8 @@ SignatureHelp signatureHelp(PathRef FileName,
   IncludeStructure PreambleInclusions; // Unused for signatureHelp
   semaCodeComplete(
       llvm::make_unique<SignatureHelpCollector>(Options, Index, Result),
-      Options, {FileName, Command, Preamble, Contents, Pos, std::move(VFS)});
+      Options,
+      {FileName, Command, Preamble, Contents, *Offset, std::move(VFS)});
   return Result;
 }
 

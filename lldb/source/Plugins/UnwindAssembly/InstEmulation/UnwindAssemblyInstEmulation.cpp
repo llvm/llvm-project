@@ -28,9 +28,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-----------------------------------------------------------------------------------------------
 //  UnwindAssemblyInstEmulation method definitions
-//-----------------------------------------------------------------------------------------------
 
 bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     AddressRange &range, Thread &thread, UnwindPlan &unwind_plan) {
@@ -305,9 +303,7 @@ UnwindAssemblyInstEmulation::CreateInstance(const ArchSpec &arch) {
   return NULL;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol in UnwindAssemblyParser_x86
-//------------------------------------------------------------------
 ConstString UnwindAssemblyInstEmulation::GetPluginName() {
   return GetPluginNameStatic();
 }

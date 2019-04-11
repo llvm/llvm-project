@@ -39,13 +39,11 @@ public:
   uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
                                                uint32_t num) override;
 
-  //------------------------------------------------------------------
   // If all of the thread register are in a contiguous buffer in
   // memory, then the default ReadRegister/WriteRegister and
   // ReadAllRegisterValues/WriteAllRegisterValues will work. If thread
   // registers are not contiguous, clients will want to subclass this
   // class and modify the read/write functions as needed.
-  //------------------------------------------------------------------
 
   bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
                     lldb_private::RegisterValue &reg_value) override;

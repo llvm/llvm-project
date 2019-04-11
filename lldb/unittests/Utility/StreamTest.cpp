@@ -279,9 +279,7 @@ TEST_F(StreamTest, PutMaxHex64ByteOrderLittle) {
   EXPECT_EQ("12341278563412efcdab9078563412", TakeValue());
 }
 
-//------------------------------------------------------------------------------
 // Shift operator tests.
-//------------------------------------------------------------------------------
 
 TEST_F(StreamTest, ShiftOperatorChars) {
   s << 'a' << 'b';
@@ -345,9 +343,7 @@ TEST_F(StreamTest, PutPtr) {
 // that it should use the host byte order.
 const static auto hostByteOrder = lldb::eByteOrderInvalid;
 
-//------------------------------------------------------------------------------
 // PutRawBytes/PutBytesAsRawHex tests.
-//------------------------------------------------------------------------------
 
 TEST_F(StreamTest, PutBytesAsRawHex8ToBigEndian) {
   uint32_t value = 0x12345678;
@@ -405,9 +401,7 @@ TEST_F(StreamTest, PutRawBytesToMixedEndian) {
 #endif
 }
 
-//------------------------------------------------------------------------------
 // ULEB128 support for binary streams.
-//------------------------------------------------------------------------------
 
 TEST_F(BinaryStreamTest, PutULEB128OneByte) {
   auto bytes = s.PutULEB128(0x74ULL);
@@ -493,9 +487,7 @@ TEST_F(BinaryStreamTest, PutULEB128One) {
   EXPECT_EQ(1U, bytes);
 }
 
-//------------------------------------------------------------------------------
 // SLEB128 support for binary streams.
-//------------------------------------------------------------------------------
 
 TEST_F(BinaryStreamTest, PutSLEB128OneByte) {
   auto bytes = s.PutSLEB128(0x74LL);
@@ -581,9 +573,7 @@ TEST_F(BinaryStreamTest, PutSLEB128One) {
   EXPECT_EQ(1U, bytes);
 }
 
-//------------------------------------------------------------------------------
 // SLEB128/ULEB128 support for non-binary streams.
-//------------------------------------------------------------------------------
 
 // The logic for this is very simple, so it should be enough to test some basic
 // use cases.

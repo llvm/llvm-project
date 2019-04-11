@@ -16,6 +16,7 @@
       <item> !tail </item>
       <item> !con </item>
       <item> !add </item>
+      <item> !mul </item>
       <item> !shl </item>
       <item> !sra </item>
       <item> !srl </item>
@@ -27,6 +28,7 @@
       <item> !strconcat </item>
       <item> !cast </item>
       <item> !listconcat </item>
+      <item> !listsplat </item>
       <item> !size </item>
       <item> !foldl </item>
       <item> !isa </item>

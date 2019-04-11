@@ -43,11 +43,9 @@ public:
   bool doInitialization(Module &M) override;
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       unsigned AsmVariant, const char *ExtraCode,
-                       raw_ostream &O) override;
+                       const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
-                             unsigned AsmVariant, const char *ExtraCode,
-                             raw_ostream &O) override;
+                             const char *ExtraCode, raw_ostream &O) override;
 
   void EmitInstruction(const MachineInstr *MI) override;
 };
@@ -104,7 +102,6 @@ void BPFAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
 }
 
 bool BPFAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                    unsigned /*AsmVariant*/,
                                     const char *ExtraCode, raw_ostream &O) {
   if (ExtraCode && ExtraCode[0])
     return true; // BPF does not have special modifiers
@@ -114,8 +111,7 @@ bool BPFAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 bool BPFAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
-                                          unsigned OpNum, unsigned AsmVariant,
-                                          const char *ExtraCode,
+                                          unsigned OpNum, const char *ExtraCode,
                                           raw_ostream &O) {
   assert(OpNum + 1 < MI->getNumOperands() && "Insufficient operands");
   const MachineOperand &BaseMO = MI->getOperand(OpNum);

@@ -18,7 +18,6 @@
 #include "MICmdArgValThreadGrp.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValListBase constructor.
 // Type:    Method.
 // Args:    None.
@@ -29,7 +28,6 @@ CMICmdArgValListBase::CMICmdArgValListBase()
     : m_eArgType(eArgValType_invalid) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValListBase constructor.
 // Type:    Method.
 // Args:    vrArgName       - (R) Argument's name to search by.
@@ -47,7 +45,6 @@ CMICmdArgValListBase::CMICmdArgValListBase(const CMIUtilString &vrArgName,
       m_eArgType(eArgValType_invalid) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValListBase constructor.
 // Type:    Method.
 // Args:    vrArgName       - (R) Argument's name to search by.
@@ -68,7 +65,6 @@ CMICmdArgValListBase::CMICmdArgValListBase(const CMIUtilString &vrArgName,
       m_eArgType(veType) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValListBase destructor.
 // Type:    Overridden.
 // Args:    None.
@@ -81,7 +77,6 @@ CMICmdArgValListBase::~CMICmdArgValListBase() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Tear down resources used by *this object.
 // Type:    Method.
 // Args:    None.
@@ -102,7 +97,6 @@ void CMICmdArgValListBase::Destroy() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Create an CMICmdArgValBase derived object matching the type
 // specified
 //          and put the option or argument's value inside it.
@@ -163,7 +157,6 @@ CMICmdArgValListBase::CreationObj(const CMIUtilString &vrTxt,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Validate the option or argument is the correct type.
 // Type:    Method.
 // Args:    vrTxt   - (R) Text version the option or argument.

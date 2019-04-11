@@ -103,7 +103,7 @@ LLVMMemoryBufferRef LLVMBinaryCopyMemoryBuffer(LLVMBinaryRef BR);
 LLVMBinaryType LLVMBinaryGetType(LLVMBinaryRef BR);
 
 /**
- * Retrieve a copy of the the section iterator for this object file.
+ * Retrieve a copy of the section iterator for this object file.
  *
  * If there are no sections, the result is NULL.
  *
@@ -124,7 +124,7 @@ LLVMBool LLVMObjectFileIsSectionIteratorAtEnd(LLVMBinaryRef BR,
                                               LLVMSectionIteratorRef SI);
 
 /**
- * Retrieve a copy of the the symbol iterator for this object file.
+ * Retrieve a copy of the symbol iterator for this object file.
  *
  * If there are no symbols, the result is NULL.
  *

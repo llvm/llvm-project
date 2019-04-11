@@ -26,9 +26,7 @@ class Variable : public UserID, public std::enable_shared_from_this<Variable> {
 public:
   typedef RangeVector<lldb::addr_t, lldb::addr_t> RangeList;
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   Variable(lldb::user_id_t uid, const char *name,
            const char
                *mangled, // The mangled or fully qualified name of the variable.

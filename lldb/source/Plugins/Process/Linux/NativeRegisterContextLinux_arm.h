@@ -40,9 +40,7 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  //------------------------------------------------------------------
   // Hardware breakpoints/watchpoint management functions
-  //------------------------------------------------------------------
 
   uint32_t NumSupportedHardwareBreakpoints() override;
 

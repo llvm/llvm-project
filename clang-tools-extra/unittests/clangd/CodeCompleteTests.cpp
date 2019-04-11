@@ -2384,19 +2384,19 @@ TEST(CompletionTest, NestedScopeIsUnresolved) {
               UnorderedElementsAre(AllOf(Qualifier(""), Named("XYZ"))));
 }
 
-// Regression test: clang parser gets confused here and doesn't report the ns::
-// prefix - naive behavior is to insert it again.
-// However we can recognize this from the source code.
-// Test disabled until we can make it pass.
-TEST(CompletionTest, DISABLED_NamespaceDoubleInsertion) {
+// Clang parser gets confused here and doesn't report the ns:: prefix.
+// Naive behavior is to insert it again. We examine the source and recover.
+TEST(CompletionTest, NamespaceDoubleInsertion) {
   clangd::CodeCompleteOptions Opts = {};
 
   auto Results = completions(R"cpp(
+    namespace foo {
     namespace ns {}
     #define M(X) < X
     M(ns::ABC^
+    }
   )cpp",
-                             {cls("ns::ABCDE")}, Opts);
+                             {cls("foo::ns::ABCDE")}, Opts);
   EXPECT_THAT(Results.Completions,
               UnorderedElementsAre(AllOf(Qualifier(""), Named("ABCDE"))));
 }

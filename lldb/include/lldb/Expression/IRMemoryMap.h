@@ -17,7 +17,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class IRMemoryMap IRMemoryMap.h "lldb/Expression/IRMemoryMap.h"
 /// Encapsulates memory that may exist in the process but must
 ///     also be available in the host process.
@@ -32,7 +31,6 @@ namespace lldb_private {
 /// address in the tar at which they reside.  If the inferior does not exist,
 /// allocations still get made-up addresses.  If an inferior appears at some
 /// point, then those addresses need to be re-mapped.
-//----------------------------------------------------------------------
 class IRMemoryMap {
 public:
   IRMemoryMap(lldb::TargetSP target_sp);

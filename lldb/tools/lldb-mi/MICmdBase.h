@@ -136,7 +136,6 @@ protected:
 };
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the command argument or option object pointer so that it
 // can be
 //          examined. If the option found and valid get the value (number,
@@ -170,7 +169,6 @@ T *CMICmdBase::GetOption(const CMIUtilString &vStrOptionName) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the command argument or option object pointer using
 // template function
 //          CMICmdBase::GetOption(). Should the argument (by name) not be found

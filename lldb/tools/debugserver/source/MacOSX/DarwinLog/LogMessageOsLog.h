@@ -16,13 +16,11 @@
 
 using ActivityStreamEntry = struct os_activity_stream_entry_s;
 
-// -----------------------------------------------------------------------------
 /// Provides a unified wrapper around os_log()-style log messages.
 ///
 /// The lifetime of this class is intended to be very short.  The caller
 /// must ensure that the passed in ActivityStore and ActivityStreamEntry
 /// outlive this LogMessageOsLog entry.
-// -----------------------------------------------------------------------------
 
 class LogMessageOsLog : public LogMessage {
 public:

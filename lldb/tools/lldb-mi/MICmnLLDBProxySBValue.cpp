@@ -17,7 +17,6 @@
 #include "MIUtilString.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the numerical value from the SBValue object. If the
 // function fails
 //          it could indicate the SBValue object does not represent an internal
@@ -51,7 +50,6 @@ bool CMICmnLLDBProxySBValue::GetValueAsUnsigned(const lldb::SBValue &vrValue,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the numerical value from the SBValue object. If the
 // function fails
 //          it could indicate the SBValue object does not represent an internal
@@ -85,7 +83,6 @@ bool CMICmnLLDBProxySBValue::GetValueAsSigned(const lldb::SBValue &vrValue,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the NUL terminated string from the SBValue object if it of
 // the type
 //          unsigned char *.

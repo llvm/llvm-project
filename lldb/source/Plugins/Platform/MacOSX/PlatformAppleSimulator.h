@@ -19,16 +19,12 @@
 
 class PlatformAppleSimulator : public PlatformDarwin {
 public:
-  //------------------------------------------------------------
   // Class Functions
-  //------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
 
-  //------------------------------------------------------------
   // Class Methods
-  //------------------------------------------------------------
   PlatformAppleSimulator();
 
   virtual ~PlatformAppleSimulator();

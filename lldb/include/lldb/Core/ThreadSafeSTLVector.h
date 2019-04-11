@@ -22,9 +22,7 @@ public:
   typedef std::vector<_Object> collection;
   typedef typename collection::iterator iterator;
   typedef typename collection::const_iterator const_iterator;
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   ThreadSafeSTLVector() : m_collection(), m_mutex() {}
 
   ~ThreadSafeSTLVector() = default;
@@ -65,9 +63,7 @@ private:
   collection m_collection;
   mutable std::recursive_mutex m_mutex;
 
-  //------------------------------------------------------------------
   // For ThreadSafeSTLVector only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(ThreadSafeSTLVector);
 };
 

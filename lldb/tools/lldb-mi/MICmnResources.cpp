@@ -461,7 +461,6 @@ const CMICmnResources::SRsrcTextData
          "Command '%s'. Must specify either a PID or a Name"}};
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnResources constructor.
 // Type:    Method.
 // Args:    None.
@@ -473,7 +472,6 @@ CMICmnResources::CMICmnResources() : m_nResourceId2TextDataSize(0) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnResources destructor.
 // Type:    Overridden.
 // Args:    None.
@@ -485,7 +483,6 @@ CMICmnResources::~CMICmnResources() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialize the resources and set locality for the server.
 // Type:    Method.
 // Args:    None.
@@ -505,7 +502,6 @@ bool CMICmnResources::Initialize() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Release resources for *this object.
 // Type:    Method.
 // Args:    None.
@@ -529,7 +525,6 @@ bool CMICmnResources::Shutdown() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialize the resources and set locality for the server.
 // Type:    Method.
 // Args:    None.
@@ -550,7 +545,6 @@ bool CMICmnResources::ReadResourceStringData() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the corresponding text assigned to the resource ID.
 // Type:    Method.
 // Args:    vResourceId - (R) MI resource ID.
@@ -567,7 +561,6 @@ CMIUtilString CMICmnResources::GetString(const MIuint vResourceId) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Determine the MI resource ID existings.
 // Type:    Method.
 // Args:    vResourceId - (R) MI resource ID.
@@ -581,7 +574,6 @@ bool CMICmnResources::HasString(const MIuint vResourceId) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the resource text data for the given resource ID. If a
 // resource ID
 //          cannot be found and error is given returning the ID of the resource

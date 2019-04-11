@@ -10,9 +10,7 @@
 #define LLDB_lldb_private_forward_h_
 
 namespace lldb_private {
-// --------------------------------------------------------------- Class
 // forward decls.
-// ---------------------------------------------------------------
 class NativeProcessProtocol;
 class NativeRegisterContext;
 class NativeThreadProtocol;

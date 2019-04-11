@@ -37,9 +37,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectIterateOverThreads
-//-------------------------------------------------------------------------
 
 class CommandObjectIterateOverThreads : public CommandObjectParsed {
 
@@ -238,9 +236,7 @@ protected:
   bool m_add_return = true;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectThreadBacktrace
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_thread_backtrace_options[] = {
     // clang-format off
@@ -807,9 +803,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectThreadContinue
-//-------------------------------------------------------------------------
 
 class CommandObjectThreadContinue : public CommandObjectParsed {
 public:
@@ -987,9 +981,7 @@ public:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectThreadUntil
-//-------------------------------------------------------------------------
 
 static constexpr OptionEnumValueElement g_duo_running_mode[] = {
     {eOnlyThisThread, "this-thread", "Run only this thread"},
@@ -1328,9 +1320,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectThreadSelect
-//-------------------------------------------------------------------------
 
 class CommandObjectThreadSelect : public CommandObjectParsed {
 public:
@@ -1391,9 +1381,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectThreadList
-//-------------------------------------------------------------------------
 
 class CommandObjectThreadList : public CommandObjectParsed {
 public:
@@ -1423,9 +1411,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectThreadInfo
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_thread_info_options[] = {
     // clang-format off
@@ -1518,9 +1504,7 @@ public:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectThreadException
-//-------------------------------------------------------------------------
 
 class CommandObjectThreadException : public CommandObjectIterateOverThreads {
  public:
@@ -1563,9 +1547,7 @@ class CommandObjectThreadException : public CommandObjectIterateOverThreads {
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectThreadReturn
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_thread_return_options[] = {
     // clang-format off
@@ -1741,9 +1723,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectThreadJump
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_thread_jump_options[] = {
     // clang-format off
@@ -1889,13 +1869,9 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // Next are the subcommands of CommandObjectMultiwordThreadPlan
-//-------------------------------------------------------------------------
 
-//-------------------------------------------------------------------------
 // CommandObjectThreadPlanList
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_thread_plan_list_options[] = {
     // clang-format off
@@ -2061,9 +2037,7 @@ public:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordThreadPlan
-//-------------------------------------------------------------------------
 
 class CommandObjectMultiwordThreadPlan : public CommandObjectMultiword {
 public:
@@ -2082,9 +2056,7 @@ public:
   ~CommandObjectMultiwordThreadPlan() override = default;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordThread
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordThread::CommandObjectMultiwordThread(
     CommandInterpreter &interpreter)

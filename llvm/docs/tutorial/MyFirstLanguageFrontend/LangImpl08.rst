@@ -212,7 +212,7 @@ expected:
 Full Code Listing
 =================
 
-.. literalinclude:: ../../examples/Kaleidoscope/Chapter8/toy.cpp
+.. literalinclude:: ../../../examples/Kaleidoscope/Chapter8/toy.cpp
    :language: c++
 
 `Next: Adding Debug Information <LangImpl09.html>`_

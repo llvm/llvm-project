@@ -47,9 +47,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Constructors
-//----------------------------------------------------------------------
 SBThreadPlan::SBThreadPlan() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBThreadPlan); }
 
 SBThreadPlan::SBThreadPlan(const ThreadPlanSP &lldb_object_sp)
@@ -72,9 +70,7 @@ SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name) {
     m_opaque_sp = std::make_shared<ThreadPlanPython>(*thread, class_name);
 }
 
-//----------------------------------------------------------------------
 // Assignment operator
-//----------------------------------------------------------------------
 
 const lldb::SBThreadPlan &SBThreadPlan::operator=(const SBThreadPlan &rhs) {
   LLDB_RECORD_METHOD(const lldb::SBThreadPlan &,
@@ -84,9 +80,7 @@ const lldb::SBThreadPlan &SBThreadPlan::operator=(const SBThreadPlan &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   return LLDB_RECORD_RESULT(*this);
 }
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SBThreadPlan::~SBThreadPlan() {}
 
 lldb_private::ThreadPlan *SBThreadPlan::get() { return m_opaque_sp.get(); }

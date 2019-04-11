@@ -11,9 +11,7 @@
 
 #include <cstdint>
 
-//----------------------------------------------------------------------
 // Log Bits specific to logging in lldb
-//----------------------------------------------------------------------
 #define LIBLLDB_LOG_PROCESS (1u << 1)
 #define LIBLLDB_LOG_THREAD (1u << 2)
 #define LIBLLDB_LOG_DYNAMIC_LOADER (1u << 3)

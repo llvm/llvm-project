@@ -54,9 +54,7 @@ static Status EnsureFDFlags(int fd, int flags) {
   return error;
 }
 
-// -----------------------------------------------------------------------------
 // Public Static Methods
-// -----------------------------------------------------------------------------
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
@@ -136,9 +134,7 @@ NativeProcessNetBSD::Factory::Attach(
   return std::move(process_up);
 }
 
-// -----------------------------------------------------------------------------
 // Public Instance Methods
-// -----------------------------------------------------------------------------
 
 NativeProcessNetBSD::NativeProcessNetBSD(::pid_t pid, int terminal_fd,
                                          NativeDelegate &delegate,

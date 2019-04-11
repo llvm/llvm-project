@@ -33,14 +33,10 @@ namespace lldb_private {
 class Process;
 }
 
-//------------------------------------------------------------------
 // Static Variables
-//------------------------------------------------------------------
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 void PlatformiOSSimulator::Initialize() {
   PlatformAppleSimulator::Initialize();
 
@@ -151,19 +147,15 @@ const char *PlatformiOSSimulator::GetDescriptionStatic() {
   return "iOS simulator platform plug-in.";
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformiOSSimulator::PlatformiOSSimulator()
     : PlatformAppleSimulator(), m_sdk_dir_mutex(), m_sdk_directory(),
       m_build_update() {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformiOSSimulator::~PlatformiOSSimulator() {}
 
 void PlatformiOSSimulator::GetStatus(Stream &strm) {

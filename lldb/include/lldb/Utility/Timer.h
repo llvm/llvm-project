@@ -17,10 +17,8 @@
 namespace lldb_private {
 class Stream;
 
-//----------------------------------------------------------------------
 /// \class Timer Timer.h "lldb/Utility/Timer.h"
 /// A timer class that simplifies common timing metrics.
-//----------------------------------------------------------------------
 
 class Timer {
 public:
@@ -37,15 +35,11 @@ public:
     DISALLOW_COPY_AND_ASSIGN(Category);
   };
 
-  //--------------------------------------------------------------
   /// Default constructor.
-  //--------------------------------------------------------------
   Timer(Category &category, const char *format, ...)
       __attribute__((format(printf, 3, 4)));
 
-  //--------------------------------------------------------------
   /// Destructor
-  //--------------------------------------------------------------
   ~Timer();
 
   void Dump();

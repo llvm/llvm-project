@@ -12,9 +12,7 @@
 namespace lldb_private {
 // LLDB register codes (e.g. RegisterKind == eRegisterKindLLDB)
 
-//---------------------------------------------------------------------------
 // Internal codes for all mips registers.
-//---------------------------------------------------------------------------
 enum {
   k_first_gpr_mips64,
   gpr_zero_mips64 = k_first_gpr_mips64,

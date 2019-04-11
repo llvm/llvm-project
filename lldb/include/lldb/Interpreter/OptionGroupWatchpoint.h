@@ -13,9 +13,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // OptionGroupWatchpoint
-//-------------------------------------------------------------------------
 
 class OptionGroupWatchpoint : public OptionGroup {
 public:

@@ -130,3 +130,49 @@ body:             |
     $q1 = COPY %8(<2 x s64>)
     $q2 = COPY %9(<2 x s64>)
 ...
+---
+name:            add_v8i16
+alignment:       2
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $q0, $q1
+
+    ; CHECK-LABEL: name: add_v8i16
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK: [[ADD:%[0-9]+]]:_(<8 x s16>) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK: $q0 = COPY [[ADD]](<8 x s16>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<8 x s16>) = COPY $q0
+    %1:_(<8 x s16>) = COPY $q1
+    %2:_(<8 x s16>) = G_ADD %0, %1
+    $q0 = COPY %2(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            add_v16i8
+alignment:       2
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $q0, $q1
+
+    ; CHECK-LABEL: name: add_v16i8
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK: [[ADD:%[0-9]+]]:_(<16 x s8>) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK: $q0 = COPY [[ADD]](<16 x s8>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<16 x s8>) = COPY $q0
+    %1:_(<16 x s8>) = COPY $q1
+    %2:_(<16 x s8>) = G_ADD %0, %1
+    $q0 = COPY %2(<16 x s8>)
+    RET_ReallyLR implicit $q0
+
+...

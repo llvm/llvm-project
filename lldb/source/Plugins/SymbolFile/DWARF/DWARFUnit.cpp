@@ -34,9 +34,7 @@ DWARFUnit::DWARFUnit(SymbolFileDWARF *dwarf)
 
 DWARFUnit::~DWARFUnit() {}
 
-//----------------------------------------------------------------------
 // Parses first DIE of a compile unit.
-//----------------------------------------------------------------------
 void DWARFUnit::ExtractUnitDIEIfNeeded() {
   {
     llvm::sys::ScopedReader lock(m_first_die_mutex);
@@ -67,10 +65,8 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   }
 }
 
-//----------------------------------------------------------------------
 // Parses a compile unit and indexes its DIEs if it hasn't already been done.
 // It will leave this compile unit extracted forever.
-//----------------------------------------------------------------------
 void DWARFUnit::ExtractDIEsIfNeeded() {
   m_cancel_scopes = true;
 
@@ -86,13 +82,11 @@ void DWARFUnit::ExtractDIEsIfNeeded() {
   ExtractDIEsRWLocked();
 }
 
-//----------------------------------------------------------------------
 // Parses a compile unit and indexes its DIEs if it hasn't already been done.
 // It will clear this compile unit after returned instance gets out of scope,
 // no other ScopedExtractDIEs instance is running for this compile unit
 // and no ExtractDIEsIfNeeded() has been executed during this ScopedExtractDIEs
 // lifetime.
-//----------------------------------------------------------------------
 DWARFUnit::ScopedExtractDIEs DWARFUnit::ExtractDIEsScoped() {
   ScopedExtractDIEs scoped(this);
 
@@ -145,10 +139,8 @@ DWARFUnit::ScopedExtractDIEs &DWARFUnit::ScopedExtractDIEs::operator=(
   return *this;
 }
 
-//----------------------------------------------------------------------
 // Parses a compile unit and indexes its DIEs, m_die_array_mutex must be
 // held R/W and m_die_array must be empty.
-//----------------------------------------------------------------------
 void DWARFUnit::ExtractDIEsRWLocked() {
   llvm::sys::ScopedWriter first_die_lock(m_first_die_mutex);
 
@@ -532,21 +524,17 @@ DWARFFormValue::FixedFormSizes DWARFUnit::GetFixedFormSizes() {
 
 void DWARFUnit::SetBaseAddress(dw_addr_t base_addr) { m_base_addr = base_addr; }
 
-//----------------------------------------------------------------------
 // Compare function DWARFDebugAranges::Range structures
-//----------------------------------------------------------------------
 static bool CompareDIEOffset(const DWARFDebugInfoEntry &die,
                              const dw_offset_t die_offset) {
   return die.GetOffset() < die_offset;
 }
 
-//----------------------------------------------------------------------
 // GetDIE()
 //
 // Get the DIE (Debug Information Entry) with the specified offset by first
 // checking if the DIE is contained within this compile unit and grabbing the
 // DIE from this compile unit. Otherwise we grab the DIE from the DWARF file.
-//----------------------------------------------------------------------
 DWARFDIE
 DWARFUnit::GetDIE(dw_offset_t die_offset) {
   if (die_offset != DW_INVALID_OFFSET) {

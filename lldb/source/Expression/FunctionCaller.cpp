@@ -29,9 +29,7 @@
 
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // FunctionCaller constructor
-//----------------------------------------------------------------------
 FunctionCaller::FunctionCaller(ExecutionContextScope &exe_scope,
                                const CompilerType &return_type,
                                const Address &functionAddress,
@@ -51,9 +49,7 @@ FunctionCaller::FunctionCaller(ExecutionContextScope &exe_scope,
   assert(m_jit_process_wp.lock());
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 FunctionCaller::~FunctionCaller() {
   lldb::ProcessSP process_sp(m_jit_process_wp.lock());
   if (process_sp) {

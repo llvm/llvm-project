@@ -30,14 +30,10 @@ namespace lldb_private {
 class Process;
 }
 
-//------------------------------------------------------------------
 // Static Variables
-//------------------------------------------------------------------
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 void PlatformAppleWatchSimulator::Initialize() {
   PlatformDarwin::Initialize();
 
@@ -147,18 +143,14 @@ const char *PlatformAppleWatchSimulator::GetDescriptionStatic() {
   return "Apple Watch simulator platform plug-in.";
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformAppleWatchSimulator::PlatformAppleWatchSimulator()
     : PlatformDarwin(true), m_sdk_directory() {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformAppleWatchSimulator::~PlatformAppleWatchSimulator() {}
 
 void PlatformAppleWatchSimulator::GetStatus(Stream &strm) {

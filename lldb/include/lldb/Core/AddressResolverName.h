@@ -27,11 +27,9 @@ class SymbolContext;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class AddressResolverName AddressResolverName.h
 /// "lldb/Core/AddressResolverName.h" This class finds addresses for a given
 /// function name, either by exact match or by regular expression.
-//----------------------------------------------------------------------
 
 class AddressResolverName : public AddressResolver {
 public:

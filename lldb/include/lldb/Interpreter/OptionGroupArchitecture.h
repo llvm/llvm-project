@@ -14,9 +14,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // OptionGroupArchitecture
-//-------------------------------------------------------------------------
 
 class OptionGroupArchitecture : public OptionGroup {
 public:

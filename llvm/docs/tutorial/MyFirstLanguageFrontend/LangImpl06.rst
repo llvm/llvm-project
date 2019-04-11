@@ -760,7 +760,7 @@ will cause problems on Windows.
 
 Here is the code:
 
-.. literalinclude:: ../../examples/Kaleidoscope/Chapter6/toy.cpp
+.. literalinclude:: ../../../examples/Kaleidoscope/Chapter6/toy.cpp
    :language: c++
 
 `Next: Extending the language: mutable variables / SSA

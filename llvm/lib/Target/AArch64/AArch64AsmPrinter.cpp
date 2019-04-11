@@ -153,11 +153,9 @@ private:
                           raw_ostream &O);
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                       unsigned AsmVariant, const char *ExtraCode,
-                       raw_ostream &O) override;
+                       const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
-                             unsigned AsmVariant, const char *ExtraCode,
-                             raw_ostream &O) override;
+                             const char *ExtraCode, raw_ostream &O) override;
 
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
 
@@ -491,12 +489,11 @@ bool AArch64AsmPrinter::printAsmRegInClass(const MachineOperand &MO,
 }
 
 bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                                        unsigned AsmVariant,
                                         const char *ExtraCode, raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(OpNum);
 
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNum, AsmVariant, ExtraCode, O))
+  if (!AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O))
     return false;
 
   // Does this asm operand have a single letter operand modifier?
@@ -508,7 +505,7 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     default:
       return true; // Unknown modifier.
     case 'a':      // Print 'a' modifier
-      PrintAsmMemoryOperand(MI, OpNum, AsmVariant, ExtraCode, O);
+      PrintAsmMemoryOperand(MI, OpNum, ExtraCode, O);
       return false;
     case 'w':      // Print W register
     case 'x':      // Print X register
@@ -575,7 +572,6 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
 bool AArch64AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned OpNum,
-                                              unsigned AsmVariant,
                                               const char *ExtraCode,
                                               raw_ostream &O) {
   if (ExtraCode && ExtraCode[0] && ExtraCode[0] != 'a')

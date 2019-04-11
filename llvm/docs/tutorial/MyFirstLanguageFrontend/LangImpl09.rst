@@ -458,7 +458,7 @@ debug information. To build this example, use:
 
 Here is the code:
 
-.. literalinclude:: ../../examples/Kaleidoscope/Chapter9/toy.cpp
+.. literalinclude:: ../../../examples/Kaleidoscope/Chapter9/toy.cpp
    :language: c++
 
 `Next: Conclusion and other useful LLVM tidbits <LangImpl10.html>`_

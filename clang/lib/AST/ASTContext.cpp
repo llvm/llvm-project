@@ -99,19 +99,12 @@ enum FloatingRank {
 };
 
 RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
-  if (!CommentsLoaded && ExternalSource) {
-    ExternalSource->ReadComments();
-
-#ifndef NDEBUG
-    ArrayRef<RawComment *> RawComments = Comments.getComments();
-    assert(std::is_sorted(RawComments.begin(), RawComments.end(),
-                          BeforeThanCompare<RawComment>(SourceMgr)));
-#endif
-
-    CommentsLoaded = true;
-  }
-
   assert(D);
+
+  // If we already tried to load comments but there are none,
+  // we won't find anything.
+  if (CommentsLoaded && Comments.getComments().empty())
+    return nullptr;
 
   // User can not attach documentation to implicit declarations.
   if (D->isImplicit())
@@ -162,12 +155,6 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
       isa<TemplateTemplateParmDecl>(D))
     return nullptr;
 
-  ArrayRef<RawComment *> RawComments = Comments.getComments();
-
-  // If there are no comments anywhere, we won't find anything.
-  if (RawComments.empty())
-    return nullptr;
-
   // Find declaration location.
   // For Objective-C declarations we generally don't expect to have multiple
   // declarators, thus use declaration starting location as the "declaration
@@ -204,6 +191,23 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
   // If the declaration doesn't map directly to a location in a file, we
   // can't find the comment.
   if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
+    return nullptr;
+
+  if (!CommentsLoaded && ExternalSource) {
+    ExternalSource->ReadComments();
+
+#ifndef NDEBUG
+    ArrayRef<RawComment *> RawComments = Comments.getComments();
+    assert(std::is_sorted(RawComments.begin(), RawComments.end(),
+                          BeforeThanCompare<RawComment>(SourceMgr)));
+#endif
+
+    CommentsLoaded = true;
+  }
+
+  ArrayRef<RawComment *> RawComments = Comments.getComments();
+  // If there are no comments anywhere, we won't find anything.
+  if (RawComments.empty())
     return nullptr;
 
   // Find the comment that occurs just after this declaration.

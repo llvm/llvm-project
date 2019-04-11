@@ -30,9 +30,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-----------------------------------------------------------------------------------------------
 //  UnwindAssemblyParser_x86 method definitions
-//-----------------------------------------------------------------------------------------------
 
 UnwindAssembly_x86::UnwindAssembly_x86(const ArchSpec &arch)
     : lldb_private::UnwindAssembly(arch),
@@ -244,9 +242,7 @@ UnwindAssembly *UnwindAssembly_x86::CreateInstance(const ArchSpec &arch) {
   return NULL;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol in UnwindAssemblyParser_x86
-//------------------------------------------------------------------
 
 ConstString UnwindAssembly_x86::GetPluginName() {
   return GetPluginNameStatic();

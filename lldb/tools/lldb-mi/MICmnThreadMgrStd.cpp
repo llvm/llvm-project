@@ -13,7 +13,6 @@
 #include "MIUtilSingletonHelper.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnThreadMgr constructor.
 // Type:    Method.
 // Args:    None.
@@ -23,7 +22,6 @@
 CMICmnThreadMgrStd::CMICmnThreadMgrStd() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnThreadMgr destructor.
 // Type:    Method.
 // Args:    None.
@@ -33,7 +31,6 @@ CMICmnThreadMgrStd::CMICmnThreadMgrStd() {}
 CMICmnThreadMgrStd::~CMICmnThreadMgrStd() { Shutdown(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialise resources for *this thread manager.
 // Type:    Method.
 // Args:    None.
@@ -70,7 +67,6 @@ bool CMICmnThreadMgrStd::Initialize() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Release resources for *this thread manager.
 // Type:    Method.
 // Args:    None.
@@ -107,7 +103,6 @@ bool CMICmnThreadMgrStd::Shutdown() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Ask the thread manager to kill all threads and wait until they have
 // died
 // Type:    Method.
@@ -134,7 +129,6 @@ bool CMICmnThreadMgrStd::ThreadAllTerminate() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add a thread object to *this manager's list of thread objects. The
 // list to
 //          used to manage thread objects centrally.

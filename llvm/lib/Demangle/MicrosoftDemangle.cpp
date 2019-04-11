@@ -696,8 +696,6 @@ SymbolNode *Demangler::demangleEncodedSymbol(StringView &MangledName,
     StorageClass SC = demangleVariableStorageClass(MangledName);
     return demangleVariableEncoding(MangledName, SC);
   }
-  case '8':
-    return nullptr;
   }
   FunctionSymbolNode *FSN = demangleFunctionEncoding(MangledName);
 

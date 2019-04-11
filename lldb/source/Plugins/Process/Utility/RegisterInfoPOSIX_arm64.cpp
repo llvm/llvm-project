@@ -48,9 +48,7 @@
    sizeof(RegisterInfoPOSIX_arm64::FPU) +                                      \
    sizeof(RegisterInfoPOSIX_arm64::EXC))
 
-//-----------------------------------------------------------------------------
 // Include RegisterInfos_arm64 to declare our g_register_infos_arm64 structure.
-//-----------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_ARM64_STRUCT
 #include "RegisterInfos_arm64.h"
 #undef DECLARE_REGISTER_INFOS_ARM64_STRUCT

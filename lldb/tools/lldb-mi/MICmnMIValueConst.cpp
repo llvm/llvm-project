@@ -13,7 +13,6 @@
 const CMIUtilString CMICmnMIValueConst::ms_constStrDblQuote("\"");
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueConst constructor.
 // Type:    Method.
 // Args:    vString - (R) MI Const c-string value.
@@ -26,7 +25,6 @@ CMICmnMIValueConst::CMICmnMIValueConst(const CMIUtilString &vString)
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueConst constructor.
 // Type:    Method.
 // Args:    vString     - (R) MI Const c-string value.
@@ -42,7 +40,6 @@ CMICmnMIValueConst::CMICmnMIValueConst(const CMIUtilString &vString,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueConst destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -52,7 +49,6 @@ CMICmnMIValueConst::CMICmnMIValueConst(const CMIUtilString &vString,
 CMICmnMIValueConst::~CMICmnMIValueConst() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Build the Value Const data.
 // Type:    Method.
 // Args:    None.

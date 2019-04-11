@@ -11,7 +11,6 @@
 #include "MICmdArgContext.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValPrintValues constructor.
 // Type:    Method.
 // Args:    None.
@@ -21,7 +20,6 @@
 CMICmdArgValPrintValues::CMICmdArgValPrintValues() : m_nPrintValues(0) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValPrintValues constructor.
 // Type:    Method.
 // Args:    vrArgName       - (R) Argument's name to search by.
@@ -39,7 +37,6 @@ CMICmdArgValPrintValues::CMICmdArgValPrintValues(const CMIUtilString &vrArgName,
       m_nPrintValues(0) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgValPrintValues destructor.
 // Type:    Overridden.
 // Args:    None.
@@ -49,7 +46,6 @@ CMICmdArgValPrintValues::CMICmdArgValPrintValues(const CMIUtilString &vrArgName,
 CMICmdArgValPrintValues::~CMICmdArgValPrintValues() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Parse the command's argument options string and try to extract the
 // value *this
 //          argument is looking for.
@@ -76,7 +72,6 @@ bool CMICmdArgValPrintValues::Validate(CMICmdArgContext &vwArgContext) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Examine the string and determine if it is a valid string type
 // argument.
 // Type:    Method.
@@ -95,7 +90,6 @@ bool CMICmdArgValPrintValues::IsArgPrintValues(
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Extract the print-values from the print-values argument.
 // Type:    Method.
 // Args:    vrTxt   - (R) Some text.
@@ -120,7 +114,6 @@ bool CMICmdArgValPrintValues::ExtractPrintValues(const CMIUtilString &vrTxt) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the print-values found in the argument.
 // Type:    Method.
 // Args:    None.

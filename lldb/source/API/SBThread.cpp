@@ -56,9 +56,7 @@ const char *SBThread::GetBroadcasterClassName() {
   return Thread::GetStaticBroadcasterClass().AsCString();
 }
 
-//----------------------------------------------------------------------
 // Constructors
-//----------------------------------------------------------------------
 SBThread::SBThread() : m_opaque_sp(new ExecutionContextRef()) {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBThread);
 }
@@ -74,9 +72,7 @@ SBThread::SBThread(const SBThread &rhs) : m_opaque_sp() {
   m_opaque_sp = clone(rhs.m_opaque_sp);
 }
 
-//----------------------------------------------------------------------
 // Assignment operator
-//----------------------------------------------------------------------
 
 const lldb::SBThread &SBThread::operator=(const SBThread &rhs) {
   LLDB_RECORD_METHOD(const lldb::SBThread &,
@@ -87,9 +83,7 @@ const lldb::SBThread &SBThread::operator=(const SBThread &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SBThread::~SBThread() {}
 
 lldb::SBQueue SBThread::GetQueue() const {

@@ -83,13 +83,11 @@ public:
   bool GetEnableExternalLookup() const;
 }; 
 
-//----------------------------------------------------------------------
 /// \class ModuleList ModuleList.h "lldb/Core/ModuleList.h"
 /// A collection class for Module objects.
 ///
 /// Modules in the module collection class are stored as reference counted
 /// shared pointers to Module objects.
-//----------------------------------------------------------------------
 class ModuleList {
 public:
   class Notifier {
@@ -108,31 +106,24 @@ public:
     virtual void NotifyModulesRemoved(lldb_private::ModuleList &module_list) = 0;
   };
 
-  //------------------------------------------------------------------
   /// Default constructor.
   ///
   /// Creates an empty list of Module objects.
-  //------------------------------------------------------------------
   ModuleList();
 
-  //------------------------------------------------------------------
   /// Copy Constructor.
   ///
   /// Creates a new module list object with a copy of the modules from \a rhs.
   ///
   /// \param[in] rhs
   ///     Another module list object.
-  //------------------------------------------------------------------
   ModuleList(const ModuleList &rhs);
 
   ModuleList(ModuleList::Notifier *notifier);
 
-  //------------------------------------------------------------------
   /// Destructor.
-  //------------------------------------------------------------------
   ~ModuleList();
 
-  //------------------------------------------------------------------
   /// Assignment operator.
   ///
   /// Copies the module list from \a rhs into this list.
@@ -142,10 +133,8 @@ public:
   ///
   /// \return
   ///     A const reference to this object.
-  //------------------------------------------------------------------
   const ModuleList &operator=(const ModuleList &rhs);
 
-  //------------------------------------------------------------------
   /// Append a module to the module list.
   ///
   /// \param[in] module_sp
@@ -160,10 +149,8 @@ public:
   ///     ModulesDidLoad may be deferred when adding multiple Modules 
   ///     to the Target, but it must be called at the end, 
   ///     before resuming execution.
-  //------------------------------------------------------------------
   void Append(const lldb::ModuleSP &module_sp, bool notify = true);
 
-  //------------------------------------------------------------------
   /// Append a module to the module list and remove any equivalent modules.
   /// Equivalent modules are ones whose file, platform file and architecture
   /// matches.
@@ -172,10 +159,8 @@ public:
   ///
   /// \param[in] module_sp
   ///     A shared pointer to a module to replace in this collection.
-  //------------------------------------------------------------------
   void ReplaceEquivalent(const lldb::ModuleSP &module_sp);
 
-  //------------------------------------------------------------------
   /// Append a module to the module list, if it is not already there.
   ///
   /// \param[in] module_sp
@@ -189,7 +174,6 @@ public:
   ///     ModulesDidLoad may be deferred when adding multiple Modules 
   ///     to the Target, but it must be called at the end, 
   ///     before resuming execution.
-  //------------------------------------------------------------------
   bool AppendIfNeeded(const lldb::ModuleSP &module_sp, bool notify = true);
 
   void Append(const ModuleList &module_list);
@@ -199,26 +183,21 @@ public:
   bool ReplaceModule(const lldb::ModuleSP &old_module_sp,
                      const lldb::ModuleSP &new_module_sp);
 
-  //------------------------------------------------------------------
   /// Clear the object's state.
   ///
   /// Clears the list of modules and releases a reference to each module
   /// object and if the reference count goes to zero, the module will be
   /// deleted.
-  //------------------------------------------------------------------
   void Clear();
 
-  //------------------------------------------------------------------
   /// Clear the object's state.
   ///
   /// Clears the list of modules and releases a reference to each module
   /// object and if the reference count goes to zero, the module will be
   /// deleted. Also release all memory that might be held by any collection
   /// classes (like std::vector)
-  //------------------------------------------------------------------
   void Destroy();
 
-  //------------------------------------------------------------------
   /// Dump the description of each module contained in this list.
   ///
   /// Dump the description of each module contained in this list to the
@@ -228,7 +207,6 @@ public:
   ///     The stream to which to dump the object description.
   ///
   /// \see Module::Dump(Stream *) const
-  //------------------------------------------------------------------
   void Dump(Stream *s) const;
 
   void LogUUIDAndPaths(Log *log, const char *prefix_cstr);
@@ -237,7 +215,6 @@ public:
 
   size_t GetIndexForModule(const Module *module) const;
 
-  //------------------------------------------------------------------
   /// Get the module shared pointer for the module at index \a idx.
   ///
   /// \param[in] idx
@@ -248,10 +225,8 @@ public:
   ///     \a idx is out of range.
   ///
   /// \see ModuleList::GetSize()
-  //------------------------------------------------------------------
   lldb::ModuleSP GetModuleAtIndex(size_t idx) const;
 
-  //------------------------------------------------------------------
   /// Get the module shared pointer for the module at index \a idx without
   /// acquiring the ModuleList mutex.  This MUST already have been acquired
   /// with ModuleList::GetMutex and locked for this call to be safe.
@@ -264,10 +239,8 @@ public:
   ///     \a idx is out of range.
   ///
   /// \see ModuleList::GetSize()
-  //------------------------------------------------------------------
   lldb::ModuleSP GetModuleAtIndexUnlocked(size_t idx) const;
 
-  //------------------------------------------------------------------
   /// Get the module pointer for the module at index \a idx.
   ///
   /// \param[in] idx
@@ -278,10 +251,8 @@ public:
   ///     of range.
   ///
   /// \see ModuleList::GetSize()
-  //------------------------------------------------------------------
   Module *GetModulePointerAtIndex(size_t idx) const;
 
-  //------------------------------------------------------------------
   /// Get the module pointer for the module at index \a idx without acquiring
   /// the ModuleList mutex.  This MUST already have been acquired with
   /// ModuleList::GetMutex and locked for this call to be safe.
@@ -294,10 +265,8 @@ public:
   ///     of range.
   ///
   /// \see ModuleList::GetSize()
-  //------------------------------------------------------------------
   Module *GetModulePointerAtIndexUnlocked(size_t idx) const;
 
-  //------------------------------------------------------------------
   /// Find compile units by partial or full path.
   ///
   /// Finds all compile units that match \a path in all of the modules and
@@ -317,33 +286,25 @@ public:
   ///
   /// \return
   ///     The number of matches added to \a sc_list.
-  //------------------------------------------------------------------
   size_t FindCompileUnits(const FileSpec &path, bool append,
                           SymbolContextList &sc_list) const;
 
-  //------------------------------------------------------------------
   /// \see Module::FindFunctions ()
-  //------------------------------------------------------------------
   size_t FindFunctions(ConstString name,
                        lldb::FunctionNameType name_type_mask,
                        bool include_symbols, bool include_inlines, bool append,
                        SymbolContextList &sc_list) const;
 
-  //------------------------------------------------------------------
   /// \see Module::FindFunctionSymbols ()
-  //------------------------------------------------------------------
   size_t FindFunctionSymbols(ConstString name,
                              lldb::FunctionNameType name_type_mask,
                              SymbolContextList &sc_list);
 
-  //------------------------------------------------------------------
   /// \see Module::FindFunctions ()
-  //------------------------------------------------------------------
   size_t FindFunctions(const RegularExpression &name, bool include_symbols,
                        bool include_inlines, bool append,
                        SymbolContextList &sc_list);
 
-  //------------------------------------------------------------------
   /// Find global and static variables by name.
   ///
   /// \param[in] name
@@ -359,11 +320,9 @@ public:
   ///
   /// \return
   ///     The number of matches added to \a variable_list.
-  //------------------------------------------------------------------
   size_t FindGlobalVariables(ConstString name, size_t max_matches,
                              VariableList &variable_list) const;
 
-  //------------------------------------------------------------------
   /// Find global and static variables by regular expression.
   ///
   /// \param[in] regex
@@ -378,11 +337,9 @@ public:
   ///
   /// \return
   ///     The number of matches added to \a variable_list.
-  //------------------------------------------------------------------
   size_t FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
                              VariableList &variable_list) const;
 
-  //------------------------------------------------------------------
   /// Finds the first module whose file specification matches \a file_spec.
   ///
   /// \param[in] file_spec_ptr
@@ -411,19 +368,16 @@ public:
   ///
   /// \return
   ///     The number of matching modules found by the search.
-  //------------------------------------------------------------------
   size_t FindModules(const ModuleSpec &module_spec,
                      ModuleList &matching_module_list) const;
 
   lldb::ModuleSP FindModule(const Module *module_ptr) const;
 
-  //------------------------------------------------------------------
   // Find a module by UUID
   //
   // The UUID value for a module is extracted from the ObjectFile and is the
   // MD5 checksum, or a smarter object file equivalent, so finding modules by
   // UUID values is very efficient and accurate.
-  //------------------------------------------------------------------
   lldb::ModuleSP FindModule(const UUID &uuid) const;
 
   lldb::ModuleSP FindFirstModule(const ModuleSpec &module_spec) const;
@@ -438,7 +392,6 @@ public:
                                          SymbolContextList &sc_list,
                                          bool append = false) const;
 
-  //------------------------------------------------------------------
   /// Find types by name.
   ///
   /// \param[in] search_first
@@ -470,7 +423,6 @@ public:
   ///
   /// \return
   ///     The number of matches added to \a type_list.
-  //------------------------------------------------------------------
   size_t FindTypes(Module *search_first, ConstString name,
                    bool name_is_fully_qualified, size_t max_matches,
                    llvm::DenseSet<SymbolFile *> &searched_symbol_files,
@@ -478,7 +430,6 @@ public:
 
   bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
 
-  //------------------------------------------------------------------
   /// Find addresses by file/line
   ///
   /// \param[in] target_sp
@@ -506,7 +457,6 @@ public:
                             std::vector<Address> &output_local,
                             std::vector<Address> &output_extern);
 
-  //------------------------------------------------------------------
   /// Remove a module from the module list.
   ///
   /// \param[in] module_sp
@@ -521,7 +471,6 @@ public:
   ///     ModulesDidUnload may be deferred when removing multiple Modules 
   ///     from the Target, but it must be called at the end, 
   ///     before resuming execution.
-  //------------------------------------------------------------------
   bool Remove(const lldb::ModuleSP &module_sp, bool notify = true);
 
   size_t Remove(ModuleList &module_list);
@@ -532,36 +481,28 @@ public:
 
   bool ResolveFileAddress(lldb::addr_t vm_addr, Address &so_addr) const;
 
-  //------------------------------------------------------------------
   /// \copydoc Module::ResolveSymbolContextForAddress (const Address
   /// &,uint32_t,SymbolContext&)
-  //------------------------------------------------------------------
   uint32_t ResolveSymbolContextForAddress(const Address &so_addr,
                                           lldb::SymbolContextItem resolve_scope,
                                           SymbolContext &sc) const;
 
-  //------------------------------------------------------------------
   /// \copydoc Module::ResolveSymbolContextForFilePath (const char
   /// *,uint32_t,bool,uint32_t,SymbolContextList&)
-  //------------------------------------------------------------------
   uint32_t ResolveSymbolContextForFilePath(
       const char *file_path, uint32_t line, bool check_inlines,
       lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list) const;
 
-  //------------------------------------------------------------------
   /// \copydoc Module::ResolveSymbolContextsForFileSpec (const FileSpec
   /// &,uint32_t,bool,uint32_t,SymbolContextList&)
-  //------------------------------------------------------------------
   uint32_t ResolveSymbolContextsForFileSpec(
       const FileSpec &file_spec, uint32_t line, bool check_inlines,
       lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list) const;
 
-  //------------------------------------------------------------------
   /// Gets the size of the module list.
   ///
   /// \return
   ///     The number of modules in the module list.
-  //------------------------------------------------------------------
   size_t GetSize() const;
 
   bool LoadScriptingResourcesInTarget(Target *target, std::list<Status> &errors,
@@ -592,9 +533,7 @@ public:
                    &callback) const;
 
 protected:
-  //------------------------------------------------------------------
   // Class typedefs.
-  //------------------------------------------------------------------
   typedef std::vector<lldb::ModuleSP>
       collection; ///< The module collection type.
 
@@ -607,9 +546,7 @@ protected:
 
   void ClearImpl(bool use_notifier = true);
 
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   collection m_modules; ///< The collection of modules.
   mutable std::recursive_mutex m_modules_mutex;
 

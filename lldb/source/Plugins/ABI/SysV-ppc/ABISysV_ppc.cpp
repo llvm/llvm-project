@@ -213,9 +213,7 @@ ABISysV_ppc::GetRegisterInfoArray(uint32_t &count) {
 
 size_t ABISysV_ppc::GetRedZoneSize() const { return 224; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABISysV_ppc::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
@@ -975,9 +973,7 @@ lldb_private::ConstString ABISysV_ppc::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ABISysV_ppc::GetPluginName() {
   return GetPluginNameStatic();

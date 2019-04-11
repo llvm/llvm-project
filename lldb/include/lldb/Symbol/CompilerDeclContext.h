@@ -18,9 +18,7 @@ namespace lldb_private {
 
 class CompilerDeclContext {
 public:
-  //----------------------------------------------------------------------
   // Constructors and Destructors
-  //----------------------------------------------------------------------
   CompilerDeclContext() : m_type_system(nullptr), m_opaque_decl_ctx(nullptr) {}
 
   CompilerDeclContext(TypeSystem *type_system, void *decl_ctx)
@@ -28,9 +26,7 @@ public:
 
   ~CompilerDeclContext() {}
 
-  //----------------------------------------------------------------------
   // Tests
-  //----------------------------------------------------------------------
 
   explicit operator bool() const { return IsValid(); }
 
@@ -49,7 +45,6 @@ public:
   std::vector<CompilerDecl> FindDeclByName(ConstString name,
                                            const bool ignore_using_decls);
 
-  //----------------------------------------------------------------------
   /// Checks if this decl context represents a method of a class.
   ///
   /// \param[out] language_ptr
@@ -70,12 +65,10 @@ public:
   /// \return
   ///     Returns true if this is a decl context that represents a method
   ///     in a struct, union or class.
-  //----------------------------------------------------------------------
   bool IsClassMethod(lldb::LanguageType *language_ptr,
                      bool *is_instance_method_ptr,
                      ConstString *language_object_name_ptr);
 
-  //----------------------------------------------------------------------
   /// Check if the given other decl context is contained in the lookup
   /// of this decl context (for example because the other context is a nested
   /// inline namespace).
@@ -87,12 +80,9 @@ public:
   /// @return
   ///     Returns true iff the other decl context is contained in the lookup
   ///     of this decl context.
-  //----------------------------------------------------------------------
   bool IsContainedInLookup(CompilerDeclContext other) const;
 
-  //----------------------------------------------------------------------
   // Accessors
-  //----------------------------------------------------------------------
 
   TypeSystem *GetTypeSystem() const { return m_type_system; }
 

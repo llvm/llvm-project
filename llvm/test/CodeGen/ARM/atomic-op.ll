@@ -183,11 +183,11 @@ entry:
   ret void
 }
 
-define void @func2(i16 %int_val) nounwind {
+define void @func2() nounwind {
 entry:
   %val = alloca i16
   %old = alloca i16
-  store i16 %int_val, i16* %val
+  store i16 31, i16* %val
   ; CHECK: ldrex
   ; CHECK: cmp
   ; CHECK: strex
@@ -197,7 +197,7 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %0 = atomicrmw umin i16* %val, i16 16 monotonic
   store i16 %0, i16* %old
-  %uneg = sub i16 0, 2
+  %uneg = sub i16 0, 1
   ; CHECK: ldrex
   ; CHECK: cmp
   ; CHECK: strex
@@ -249,7 +249,7 @@ entry:
   ; CHECK-T1-M0: bl ___sync_fetch_and_umin_1
   ; CHECK-BAREMETAL: cmp
   ; CHECK-BAREMETAL-NOT: __sync
-  %uneg = sub i8 0, 2
+  %uneg = sub i8 0, 1
   %1 = atomicrmw umin i8* %val, i8 %uneg monotonic
   store i8 %1, i8* %old
   ; CHECK: ldrex

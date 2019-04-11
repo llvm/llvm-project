@@ -790,9 +790,7 @@ const uint32_t RenderScriptRuntime::AllocationDetails::RSTypeToFormat[][3] = {
     // RS_TYPE_MATRIX_2X2
     {eFormatVectorOfFloat32, eFormatVectorOfFloat32, sizeof(float) * 4}};
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 LanguageRuntime *
 RenderScriptRuntime::CreateInstance(Process *process,
                                     lldb::LanguageType language) {
@@ -1030,9 +1028,7 @@ void RenderScriptRuntime::ModulesDidLoad(const ModuleList &module_list) {
   }
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString RenderScriptRuntime::GetPluginName() {
   return GetPluginNameStatic();
 }

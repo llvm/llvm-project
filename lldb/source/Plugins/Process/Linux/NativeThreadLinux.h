@@ -30,9 +30,7 @@ class NativeThreadLinux : public NativeThreadProtocol {
 public:
   NativeThreadLinux(NativeProcessLinux &process, lldb::tid_t tid);
 
-  // ---------------------------------------------------------------------
   // NativeThreadProtocol Interface
-  // ---------------------------------------------------------------------
   std::string GetName() override;
 
   lldb::StateType GetState() override;
@@ -54,9 +52,7 @@ public:
   Status RemoveHardwareBreakpoint(lldb::addr_t addr) override;
 
 private:
-  // ---------------------------------------------------------------------
   // Interface for friend classes
-  // ---------------------------------------------------------------------
 
   /// Resumes the thread.  If \p signo is anything but
   /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
@@ -91,18 +87,14 @@ private:
 
   Status RequestStop();
 
-  // ---------------------------------------------------------------------
   // Private interface
-  // ---------------------------------------------------------------------
   void MaybeLogStateChange(lldb::StateType new_state);
 
   NativeProcessLinux &GetProcess();
 
   void SetStopped();
 
-  // ---------------------------------------------------------------------
   // Member Variables
-  // ---------------------------------------------------------------------
   lldb::StateType m_state;
   ThreadStopInfo m_stop_info;
   std::unique_ptr<NativeRegisterContextLinux> m_reg_context_up;

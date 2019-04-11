@@ -34,9 +34,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Thread Registers
-//----------------------------------------------------------------------
 
 ThreadKDP::ThreadKDP(Process &process, lldb::tid_t tid)
     : Thread(process, tid), m_thread_name(), m_dispatch_queue_name(),

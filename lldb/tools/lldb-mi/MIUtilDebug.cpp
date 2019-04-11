@@ -17,7 +17,6 @@
 #include "MIUtilDebug.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIUtilDebug constructor.
 // Type:    Method.
 // Args:    None.
@@ -27,7 +26,6 @@
 CMIUtilDebug::CMIUtilDebug() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIUtilDebug destructor.
 // Type:    Method.
 // Args:    None.
@@ -37,7 +35,6 @@ CMIUtilDebug::CMIUtilDebug() {}
 CMIUtilDebug::~CMIUtilDebug() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Temporarily stall the process/application to give the programmer the
 //          opportunity to attach a debugger. How to use: Put a break in the
 //          programmer
@@ -61,16 +58,12 @@ void CMIUtilDebug::WaitForDbgAttachInfinteLoop() {
   }
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 // Instantiations:
 CMICmnLog &CMIUtilDebugFnTrace::ms_rLog = CMICmnLog::Instance();
 MIuint CMIUtilDebugFnTrace::ms_fnDepthCnt = 0;
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIUtilDebugFnTrace constructor.
 // Type:    Method.
 // Args:    vFnName - (R) The text to insert into the log.
@@ -85,7 +78,6 @@ CMIUtilDebugFnTrace::CMIUtilDebugFnTrace(const CMIUtilString &vFnName)
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIUtilDebugFnTrace destructor.
 // Type:    Method.
 // Args:    None.
