@@ -10,9 +10,11 @@
 #ifndef _PSTL_CONFIG_H
 #define _PSTL_CONFIG_H
 
-#define PSTL_VERSION 203
-#define PSTL_VERSION_MAJOR (PSTL_VERSION / 100)
-#define PSTL_VERSION_MINOR (PSTL_VERSION - PSTL_VERSION_MAJOR * 100)
+// The version is XYYZ, where X is major, YY is minor, and Z is patch (i.e. X.YY.Z)
+#define _PSTL_VERSION 9000
+#define _PSTL_VERSION_MAJOR (_PSTL_VERSION / 1000)
+#define _PSTL_VERSION_MINOR ((_PSTL_VERSION % 1000) / 10)
+#define _PSTL_VERSION_PATCH (_PSTL_VERSION % 10)
 
 // Check the user-defined macro for parallel policies
 #if defined(PSTL_USE_PARALLEL_POLICIES)

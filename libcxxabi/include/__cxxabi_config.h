@@ -61,6 +61,8 @@
 
 #if defined(__clang__)
 #define _LIBCXXABI_COMPILER_CLANG
+#elif defined(__GNUC__)
+#define _LIBCXXABI_COMPILER_GCC
 #endif
 
 #if __has_attribute(__no_sanitize__) && defined(_LIBCXXABI_COMPILER_CLANG)
