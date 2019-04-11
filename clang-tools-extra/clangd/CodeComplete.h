@@ -225,7 +225,11 @@ struct SpeculativeFuzzyFind {
   std::future<SymbolSlab> Result;
 };
 
-/// Get code completions at a specified \p Pos in \p FileName.
+/// Gets code completions at a specified \p Pos in \p FileName.
+///
+/// If \p Preamble is nullptr, this runs code completion without compiling the
+/// code.
+///
 /// If \p SpecFuzzyFind is set, a speculative and asynchronous fuzzy find index
 /// request (based on cached request) will be run before parsing sema. In case
 /// the speculative result is used by code completion (e.g. speculation failed),

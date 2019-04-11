@@ -62,9 +62,8 @@ static bool IsInRanges(const IntRange &R,
   // Find the first range whose High field is >= R.High,
   // then check if the Low field is <= R.Low. If so, we
   // have a Range that covers R.
-  auto I = std::lower_bound(
-      Ranges.begin(), Ranges.end(), R,
-      [](const IntRange &A, const IntRange &B) { return A.High < B.High; });
+  auto I = llvm::lower_bound(
+      Ranges, R, [](IntRange A, IntRange B) { return A.High < B.High; });
   return I != Ranges.end() && I->Low <= R.Low;
 }
 

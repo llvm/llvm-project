@@ -542,6 +542,7 @@ size_t MutationDispatcher::MutateWithMask(uint8_t *Data, size_t Size,
     if (Mask[I])
       T[OneBits++] = Data[I];
 
+  if (!OneBits) return 0;
   assert(!T.empty());
   size_t NewSize = Mutate(T.data(), OneBits, OneBits);
   assert(NewSize <= OneBits);

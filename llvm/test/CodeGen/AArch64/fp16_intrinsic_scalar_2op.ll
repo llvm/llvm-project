@@ -342,3 +342,13 @@ entry:
   %0 = trunc i32 %facg to i16
   ret i16 %0
 }
+
+define dso_local half @vcvth_n_f16_s64_test(i64 %a) {
+; CHECK-LABEL: vcvth_n_f16_s64_test:
+; CHECK:       fmov    d0, x0
+; CHECK-NEXT:  scvtf   h0, h0, #16
+; CHECK-NEXT:  ret
+entry:
+  %vcvth_n_f16_s64 = tail call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i64(i64 %a, i32 16)
+  ret half %vcvth_n_f16_s64
+}

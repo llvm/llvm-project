@@ -44,7 +44,12 @@ enum class CvSignature : uint32_t {
 // Reference:
 // https://crashpad.chromium.org/doxygen/structcrashpad_1_1CodeViewRecordPDB70.html
 struct CvRecordPdb70 {
-  uint8_t Uuid[16];
+  struct {
+    llvm::support::ulittle32_t Data1;
+    llvm::support::ulittle16_t Data2;
+    llvm::support::ulittle16_t Data3;
+    uint8_t Data4[8];
+  } Uuid;
   llvm::support::ulittle32_t Age;
   // char PDBFileName[];
 };

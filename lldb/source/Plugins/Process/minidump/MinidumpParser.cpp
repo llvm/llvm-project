@@ -66,40 +66,23 @@ UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
     Status error = consumeObject(cv_record, pdb70_uuid);
     if (error.Fail())
       return UUID();
-    // If the age field is not zero, then include the entire pdb70_uuid struct
-    if (pdb70_uuid->Age != 0)
-      return UUID::fromData(pdb70_uuid, sizeof(*pdb70_uuid));
 
-    // Many times UUIDs are all zeroes. This can cause more than one module
-    // to claim it has a valid UUID of all zeroes and causes the files to all
-    // merge into the first module that claims this valid zero UUID.
-    bool all_zeroes = true;
-    for (size_t i = 0; all_zeroes && i < sizeof(pdb70_uuid->Uuid); ++i)
-      all_zeroes = pdb70_uuid->Uuid[i] == 0;
-    if (all_zeroes)
-      return UUID();
-    
-    if (GetArchitecture().GetTriple().getVendor() == llvm::Triple::Apple) {
-      // Breakpad incorrectly byte swaps the first 32 bit and next 2 16 bit
-      // values in the UUID field. Undo this so we can match things up
-      // with our symbol files
-      uint8_t apple_uuid[16];
-      // Byte swap the first 32 bits
-      apple_uuid[0] = pdb70_uuid->Uuid[3];
-      apple_uuid[1] = pdb70_uuid->Uuid[2];
-      apple_uuid[2] = pdb70_uuid->Uuid[1];
-      apple_uuid[3] = pdb70_uuid->Uuid[0];
-      // Byte swap the next 16 bit value
-      apple_uuid[4] = pdb70_uuid->Uuid[5];
-      apple_uuid[5] = pdb70_uuid->Uuid[4];
-      // Byte swap the next 16 bit value
-      apple_uuid[6] = pdb70_uuid->Uuid[7];
-      apple_uuid[7] = pdb70_uuid->Uuid[6];
-      for (size_t i = 8; i < sizeof(pdb70_uuid->Uuid); ++i)
-        apple_uuid[i] = pdb70_uuid->Uuid[i];
-      return UUID::fromData(apple_uuid, sizeof(apple_uuid));
+    CvRecordPdb70 swapped;
+    if (!GetArchitecture().GetTriple().isOSBinFormatELF()) {
+      // LLDB's UUID class treats the data as a sequence of bytes, but breakpad
+      // interprets it as a sequence of little-endian fields, which it converts
+      // to big-endian when converting to text. Swap the bytes to big endian so
+      // that the string representation comes out right.
+      swapped = *pdb70_uuid;
+      llvm::sys::swapByteOrder(swapped.Uuid.Data1);
+      llvm::sys::swapByteOrder(swapped.Uuid.Data2);
+      llvm::sys::swapByteOrder(swapped.Uuid.Data3);
+      llvm::sys::swapByteOrder(swapped.Age);
+      pdb70_uuid = &swapped;
     }
-    return UUID::fromData(pdb70_uuid->Uuid, sizeof(pdb70_uuid->Uuid));
+    if (pdb70_uuid->Age != 0)
+      return UUID::fromOptionalData(pdb70_uuid, sizeof(*pdb70_uuid));
+    return UUID::fromOptionalData(&pdb70_uuid->Uuid, sizeof(pdb70_uuid->Uuid));
   } else if (cv_signature == CvSignature::ElfBuildId)
     return UUID::fromOptionalData(cv_record);
 

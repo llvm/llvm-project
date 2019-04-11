@@ -180,8 +180,8 @@ void BitcodeReaderValueList::resolveConstantForwardRefs() {
           NewOp = RealVal;
         } else {
           // Otherwise, look up the placeholder in ResolveConstants.
-          ResolveConstantsTy::iterator It = std::lower_bound(
-              ResolveConstants.begin(), ResolveConstants.end(),
+          ResolveConstantsTy::iterator It = llvm::lower_bound(
+              ResolveConstants,
               std::pair<Constant *, unsigned>(cast<Constant>(*I), 0));
           assert(It != ResolveConstants.end() && It->first == *I);
           NewOp = operator[](It->second);

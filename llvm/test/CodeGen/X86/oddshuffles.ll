@@ -1241,7 +1241,7 @@ define void @interleave_24i16_in(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2,
 ; XOP-NEXT:    vmovdqu (%rsi), %xmm0
 ; XOP-NEXT:    vmovdqu (%rdx), %xmm1
 ; XOP-NEXT:    vmovdqu (%rcx), %xmm2
-; XOP-NEXT:    vpperm {{.*#+}} xmm3 = xmm0[4,5,6,7],xmm1[6,7],xmm0[6,7,8,9],xmm1[8,9],xmm0[8,9,10,11]
+; XOP-NEXT:    vpperm {{.*#+}} xmm3 = xmm0[u,u,6,7],xmm1[6,7],xmm0[u,u,8,9],xmm1[8,9],xmm0[u,u,10,11]
 ; XOP-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[1,1,2,2]
 ; XOP-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0],xmm3[1,2],xmm4[3],xmm3[4,5],xmm4[6],xmm3[7]
 ; XOP-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]

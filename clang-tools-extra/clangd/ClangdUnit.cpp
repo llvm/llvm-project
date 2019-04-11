@@ -311,7 +311,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
     auto Style = getFormatStyleForFile(MainInput.getFile(), Content, VFS.get());
     auto Inserter = std::make_shared<IncludeInserter>(
         MainInput.getFile(), Content, Style, BuildDir.get(),
-        Clang->getPreprocessor().getHeaderSearchInfo());
+        &Clang->getPreprocessor().getHeaderSearchInfo());
     if (Preamble) {
       for (const auto &Inc : Preamble->Includes.MainFileIncludes)
         Inserter->addExisting(Inc);

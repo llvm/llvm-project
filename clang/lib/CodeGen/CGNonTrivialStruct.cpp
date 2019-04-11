@@ -826,12 +826,12 @@ static void callSpecialFunction(G &&Gen, StringRef FuncName, QualType QT,
 template <size_t N> std::array<Address, N> createNullAddressArray();
 
 template <> std::array<Address, 1> createNullAddressArray() {
-  return std::array<Address, 1>({Address(nullptr, CharUnits::Zero())});
+  return std::array<Address, 1>({{Address(nullptr, CharUnits::Zero())}});
 }
 
 template <> std::array<Address, 2> createNullAddressArray() {
-  return std::array<Address, 2>({Address(nullptr, CharUnits::Zero()),
-                                 Address(nullptr, CharUnits::Zero())});
+  return std::array<Address, 2>({{Address(nullptr, CharUnits::Zero()),
+                                  Address(nullptr, CharUnits::Zero())}});
 }
 
 template <class G, size_t N>
