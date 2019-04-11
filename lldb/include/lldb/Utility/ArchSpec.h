@@ -22,7 +22,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class ArchSpec ArchSpec.h "lldb/Utility/ArchSpec.h" An architecture
 /// specification class.
 ///
@@ -30,7 +29,6 @@ namespace lldb_private {
 /// string representation, or an llvm::Triple.  Keeping all of the conversions
 /// of strings to architecture enumeration values confined to this class
 /// allows new architecture support to be added easily.
-//----------------------------------------------------------------------
 class ArchSpec {
 public:
   enum MIPSSubType {
@@ -235,131 +233,99 @@ public:
 
   };
 
-  //------------------------------------------------------------------
   /// Default constructor.
   ///
   /// Default constructor that initializes the object with invalid cpu type
   /// and subtype values.
-  //------------------------------------------------------------------
   ArchSpec();
 
-  //------------------------------------------------------------------
   /// Constructor over triple.
   ///
   /// Constructs an ArchSpec with properties consistent with the given Triple.
-  //------------------------------------------------------------------
   explicit ArchSpec(const llvm::Triple &triple);
   explicit ArchSpec(const char *triple_cstr);
   explicit ArchSpec(llvm::StringRef triple_str);
-  //------------------------------------------------------------------
   /// Constructor over architecture name.
   ///
   /// Constructs an ArchSpec with properties consistent with the given object
   /// type and architecture name.
-  //------------------------------------------------------------------
   explicit ArchSpec(ArchitectureType arch_type, uint32_t cpu_type,
                     uint32_t cpu_subtype);
 
-  //------------------------------------------------------------------
   /// Destructor.
-  //------------------------------------------------------------------
   ~ArchSpec();
 
-  //------------------------------------------------------------------
   /// Assignment operator.
   ///
   /// \param[in] rhs another ArchSpec object to copy.
   ///
   /// \return A const reference to this object.
-  //------------------------------------------------------------------
   const ArchSpec &operator=(const ArchSpec &rhs);
 
-  //---------------------------------------------------------------------------
   /// Returns true if the OS, vendor and environment fields of the triple are
   /// unset. The triple is expected to be normalized
   /// (llvm::Triple::normalize).
-  //---------------------------------------------------------------------------
   static bool ContainsOnlyArch(const llvm::Triple &normalized_triple);
 
   static void ListSupportedArchNames(StringList &list);
   static size_t AutoComplete(CompletionRequest &request);
 
-  //------------------------------------------------------------------
   /// Returns a static string representing the current architecture.
   ///
   /// \return A static string corresponding to the current
   ///         architecture.
-  //------------------------------------------------------------------
   const char *GetArchitectureName() const;
 
-  //-----------------------------------------------------------------
   /// if MIPS architecture return true.
   ///
   ///  \return a boolean value.
-  //-----------------------------------------------------------------
   bool IsMIPS() const;
 
-  //------------------------------------------------------------------
   /// Returns a string representing current architecture as a target CPU for
   /// tools like compiler, disassembler etc.
   ///
   /// \return A string representing target CPU for the current
   ///         architecture.
-  //------------------------------------------------------------------
   std::string GetClangTargetCPU() const;
 
-  //------------------------------------------------------------------
   /// Return a string representing target application ABI.
   ///
   /// \return A string representing target application ABI.
-  //------------------------------------------------------------------
   std::string GetTargetABI() const;
 
-  //------------------------------------------------------------------
   /// Clears the object state.
   ///
   /// Clears the object state back to a default invalid state.
-  //------------------------------------------------------------------
   void Clear();
 
-  //------------------------------------------------------------------
   /// Returns the size in bytes of an address of the current architecture.
   ///
   /// \return The byte size of an address of the current architecture.
-  //------------------------------------------------------------------
   uint32_t GetAddressByteSize() const;
 
-  //------------------------------------------------------------------
   /// Returns a machine family for the current architecture.
   ///
   /// \return An LLVM arch type.
-  //------------------------------------------------------------------
   llvm::Triple::ArchType GetMachine() const;
 
-  //------------------------------------------------------------------
   /// Returns the distribution id of the architecture.
   ///
   /// This will be something like "ubuntu", "fedora", etc. on Linux.
   ///
   /// \return A ConstString ref containing the distribution id,
   ///         potentially empty.
-  //------------------------------------------------------------------
   ConstString GetDistributionId() const;
 
-  //------------------------------------------------------------------
   /// Set the distribution id of the architecture.
   ///
   /// This will be something like "ubuntu", "fedora", etc. on Linux. This
   /// should be the same value returned by HostInfo::GetDistributionId ().
-  ///------------------------------------------------------------------
   void SetDistributionId(const char *distribution_id);
 
-  //------------------------------------------------------------------
   /// Tests if this ArchSpec is valid.
   ///
   /// \return True if the current architecture is valid, false
   ///         otherwise.
-  //------------------------------------------------------------------
   bool IsValid() const {
     return m_core >= eCore_arm_generic && m_core < kNumCores;
   }
@@ -375,7 +341,6 @@ public:
     return m_triple.hasEnvironment();
   }
 
-  //------------------------------------------------------------------
   /// Merges fields from another ArchSpec into this ArchSpec.
   ///
   /// This will use the supplied ArchSpec to fill in any fields of the triple
@@ -385,10 +350,8 @@ public:
   /// have a triple which is x64-pc-windows-msvc, then merging that triple
   /// into this one will result in the triple i386-pc-windows-msvc.
   ///
-  //------------------------------------------------------------------
   void MergeFrom(const ArchSpec &other);
 
-  //------------------------------------------------------------------
   /// Change the architecture object type, CPU type and OS type.
   ///
   /// \param[in] arch_type The object type of this ArchSpec.
@@ -423,26 +386,21 @@ public:
   ///   *-*-netbsd
   ///   *-*-openbsd
   ///   *-*-solaris
-  //------------------------------------------------------------------
   bool SetArchitecture(ArchitectureType arch_type, uint32_t cpu, uint32_t sub,
                        uint32_t os = 0);
 
-  //------------------------------------------------------------------
   /// Returns the byte order for the architecture specification.
   ///
   /// \return The endian enumeration for the current endianness of
   ///     the architecture specification
-  //------------------------------------------------------------------
   lldb::ByteOrder GetByteOrder() const;
 
-  //------------------------------------------------------------------
   /// Sets this ArchSpec's byte order.
   ///
   /// In the common case there is no need to call this method as the byte
   /// order can almost always be determined by the architecture. However, many
   /// CPU's are bi-endian (ARM, Alpha, PowerPC, etc) and the default/assumed
   /// byte order may be incorrect.
-  //------------------------------------------------------------------
   void SetByteOrder(lldb::ByteOrder byte_order) { m_byte_order = byte_order; }
 
   uint32_t GetMinimumOpcodeByteSize() const;
@@ -455,39 +413,30 @@ public:
 
   uint32_t GetMachOCPUSubType() const;
 
-  //------------------------------------------------------------------
   /// Architecture data byte width accessor
   ///
   /// \return the size in 8-bit (host) bytes of a minimum addressable unit
   /// from the Architecture's data bus
-  //------------------------------------------------------------------
   uint32_t GetDataByteSize() const;
 
-  //------------------------------------------------------------------
   /// Architecture code byte width accessor
   ///
   /// \return the size in 8-bit (host) bytes of a minimum addressable unit
   /// from the Architecture's code bus
-  //------------------------------------------------------------------
   uint32_t GetCodeByteSize() const;
 
-  //------------------------------------------------------------------
   /// Architecture triple accessor.
   ///
   /// \return A triple describing this ArchSpec.
-  //------------------------------------------------------------------
   llvm::Triple &GetTriple() { return m_triple; }
 
-  //------------------------------------------------------------------
   /// Architecture triple accessor.
   ///
   /// \return A triple describing this ArchSpec.
-  //------------------------------------------------------------------
   const llvm::Triple &GetTriple() const { return m_triple; }
 
   void DumpTriple(Stream &s) const;
 
-  //------------------------------------------------------------------
   /// Architecture triple setter.
   ///
   /// Configures this ArchSpec according to the given triple.  If the triple
@@ -498,44 +447,35 @@ public:
   /// etc.
   ///
   /// \return A triple describing this ArchSpec.
-  //------------------------------------------------------------------
   bool SetTriple(const llvm::Triple &triple);
 
   bool SetTriple(llvm::StringRef triple_str);
 
-  //------------------------------------------------------------------
   /// Returns the default endianness of the architecture.
   ///
   /// \return The endian enumeration for the default endianness of
   ///         the architecture.
-  //------------------------------------------------------------------
   lldb::ByteOrder GetDefaultEndian() const;
 
-  //------------------------------------------------------------------
   /// Returns true if 'char' is a signed type by default in the architecture
   /// false otherwise
   ///
   /// \return True if 'char' is a signed type by default on the
   ///         architecture and false otherwise.
-  //------------------------------------------------------------------
   bool CharIsSignedByDefault() const;
 
-  //------------------------------------------------------------------
   /// Compare an ArchSpec to another ArchSpec, requiring an exact cpu type
   /// match between them. e.g. armv7s is not an exact match with armv7 - this
   /// would return false
   ///
   /// \return true if the two ArchSpecs match.
-  //------------------------------------------------------------------
   bool IsExactMatch(const ArchSpec &rhs) const;
 
-  //------------------------------------------------------------------
   /// Compare an ArchSpec to another ArchSpec, requiring a compatible cpu type
   /// match between them. e.g. armv7s is compatible with armv7 - this method
   /// would return true
   ///
   /// \return true if the two ArchSpecs are compatible
-  //------------------------------------------------------------------
   bool IsCompatibleMatch(const ArchSpec &rhs) const;
 
   bool IsFullySpecifiedTriple() const;
@@ -545,7 +485,6 @@ public:
                               bool &os_version_different,
                               bool &env_different) const;
 
-  //------------------------------------------------------------------
   /// Detect whether this architecture uses thumb code exclusively
   ///
   /// Some embedded ARM chips (e.g. the ARM Cortex M0-7 line) can only execute
@@ -557,7 +496,6 @@ public:
   ///
   /// \return true if this is an arm ArchSpec which can only execute Thumb
   ///         instructions
-  //------------------------------------------------------------------
   bool IsAlwaysThumbInstructions() const;
 
   uint32_t GetFlags() const { return m_flags; }
@@ -585,7 +523,6 @@ protected:
   void CoreUpdated(bool update_triple);
 };
 
-//------------------------------------------------------------------
 /// \fn bool operator< (const ArchSpec& lhs, const ArchSpec& rhs) Less than
 /// operator.
 ///
@@ -595,7 +532,6 @@ protected:
 /// rhs The Left Hand Side ArchSpec object to compare.
 ///
 /// \return true if \a lhs is less than \a rhs
-//------------------------------------------------------------------
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
 bool operator==(const ArchSpec &lhs, const ArchSpec &rhs);
 

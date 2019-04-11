@@ -25,10 +25,8 @@ using namespace lldb;
 
 uint32_t ThreadPlanStepOverRange::s_default_flag_values = 0;
 
-//----------------------------------------------------------------------
 // ThreadPlanStepOverRange: Step through a stack range, either stepping over or
 // into based on the value of \a type.
-//----------------------------------------------------------------------
 
 ThreadPlanStepOverRange::ThreadPlanStepOverRange(
     Thread &thread, const AddressRange &range,

@@ -17,10 +17,8 @@
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/UUID.h"
 
-//----------------------------------------------------------------------
 // This class needs to be hidden as eventually belongs in a plugin that
 // will export the ObjectFile protocol
-//----------------------------------------------------------------------
 class ObjectFileMachO : public lldb_private::ObjectFile {
 public:
   ObjectFileMachO(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
@@ -33,9 +31,7 @@ public:
 
   ~ObjectFileMachO() override = default;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -67,9 +63,7 @@ public:
   static bool MagicBytesMatch(lldb::DataBufferSP &data_sp, lldb::addr_t offset,
                               lldb::addr_t length);
 
-  //------------------------------------------------------------------
   // Member Functions
-  //------------------------------------------------------------------
   bool ParseHeader() override;
 
   bool SetLoadAddress(lldb_private::Target &target, lldb::addr_t value,
@@ -132,9 +126,7 @@ public:
 
   bool AllowAssemblyEmulationUnwindPlans() override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

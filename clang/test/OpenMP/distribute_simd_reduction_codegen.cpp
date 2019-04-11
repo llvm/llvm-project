@@ -46,7 +46,7 @@ int main() {
   // LAMBDA: call void [[OUTER_LAMBDA:@.+]](
   [&]() {
     // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
-    // LAMBDA: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
+    // LAMBDA: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
     // LAMBDA: call void @[[LOFFL1:.+]](
     // LAMBDA:  ret
 #pragma omp target
@@ -123,7 +123,7 @@ int main() {
 }
 
 // CHECK: define {{.*}}i{{[0-9]+}} @main()
-// CHECK: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
+// CHECK: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
 // CHECK: call void @[[OFFL1:.+]](i{{64|32}} %{{.+}})
 // CHECK: {{%.+}} = call{{.*}} i32 @[[TMAIN_INT:.+]]()
 // CHECK:  ret

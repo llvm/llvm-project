@@ -23,9 +23,7 @@ public:
 
   ~ObjectContainerUniversalMachO() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -48,9 +46,7 @@ public:
 
   static bool MagicBytesMatch(const lldb_private::DataExtractor &data);
 
-  //------------------------------------------------------------------
   // Member Functions
-  //------------------------------------------------------------------
   bool ParseHeader() override;
 
   void Dump(lldb_private::Stream *s) const override;
@@ -62,9 +58,7 @@ public:
 
   lldb::ObjectFileSP GetObjectFile(const lldb_private::FileSpec *file) override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

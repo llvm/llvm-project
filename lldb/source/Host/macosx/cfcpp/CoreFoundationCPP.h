@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//----------------------------------------------------------------------
 //
 //  CoreFoundationCPP.h
 //  CoreFoundationCPP
@@ -13,7 +12,6 @@
 //  Created by Greg Clayton on 4/23/09.
 //
 //
-//----------------------------------------------------------------------
 
 #ifndef CoreFoundationCPP_CoreFoundationCPP_H_
 #define CoreFoundationCPP_CoreFoundationCPP_H_

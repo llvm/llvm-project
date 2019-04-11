@@ -31,7 +31,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -3206,25 +3205,6 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known.Zero &= Known2.Zero;
     Known.One &= Known2.One;
-    break;
-  }
-  case ISD::CopyFromReg: {
-    auto R = cast<RegisterSDNode>(Op.getOperand(1));
-    const unsigned Reg = R->getReg();
-
-    const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-    if (!TRI->isVirtualRegister(Reg))
-      break;
-
-    const MachineRegisterInfo *MRI = &MF->getRegInfo();
-    if (!MRI->hasOneDef(Reg))
-      break;
-
-    const FunctionLoweringInfo::LiveOutInfo *LOI = FLI->GetLiveOutRegInfo(Reg);
-    if (!LOI || LOI->Known.getBitWidth() != BitWidth)
-      break;
-
-    Known = LOI->Known;
     break;
   }
   case ISD::FrameIndex:

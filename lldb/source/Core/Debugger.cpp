@@ -824,7 +824,6 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
 Debugger::~Debugger() { Clear(); }
 
 void Debugger::Clear() {
-  //----------------------------------------------------------------------
   // Make sure we call this function only once. With the C++ global destructor
   // chain having a list of debuggers and with code that can be running on
   // other threads, we need to ensure this doesn't happen multiple times.
@@ -833,7 +832,6 @@ void Debugger::Clear() {
   //     Debugger::~Debugger();
   //     static void Debugger::Destroy(lldb::DebuggerSP &debugger_sp);
   //     static void Debugger::Terminate();
-  //----------------------------------------------------------------------
   llvm::call_once(m_clear_once, [this]() {
     ClearIOHandlers();
     StopIOHandlerThread();

@@ -613,13 +613,11 @@ ClangExpressionParser::~ClangExpressionParser() {}
 
 namespace {
 
-//----------------------------------------------------------------------
 /// \class CodeComplete
 ///
 /// A code completion consumer for the clang Sema that is responsible for
 /// creating the completion suggestions when a user requests completion
 /// of an incomplete `expr` invocation.
-//----------------------------------------------------------------------
 class CodeComplete : public CodeCompleteConsumer {
   CodeCompletionTUInfo m_info;
 

@@ -14,17 +14,13 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace std;
 
-//----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::Clear()
-//----------------------------------------------------------------------
 void DWARFAbbreviationDeclarationSet::Clear() {
   m_idx_offset = 0;
   m_decls.clear();
 }
 
-//----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::Extract()
-//----------------------------------------------------------------------
 llvm::Error
 DWARFAbbreviationDeclarationSet::extract(const DWARFDataExtractor &data,
                                          lldb::offset_t *offset_ptr) {
@@ -54,9 +50,7 @@ DWARFAbbreviationDeclarationSet::extract(const DWARFDataExtractor &data,
   return llvm::ErrorSuccess();
 }
 
-//----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration()
-//----------------------------------------------------------------------
 const DWARFAbbreviationDeclaration *
 DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(
     dw_uleb128_t abbrCode) const {
@@ -76,9 +70,7 @@ DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(
 }
 
 
-//----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::GetUnsupportedForms()
-//----------------------------------------------------------------------
 void DWARFAbbreviationDeclarationSet::GetUnsupportedForms(
     std::set<dw_form_t> &invalid_forms) const {
   for (const auto &abbr_decl : m_decls) {
@@ -91,13 +83,11 @@ void DWARFAbbreviationDeclarationSet::GetUnsupportedForms(
   }
 }
 
-//----------------------------------------------------------------------
 // Encode
 //
 // Encode the abbreviation table onto the end of the buffer provided into a
 // byte representation as would be found in a ".debug_abbrev" debug information
 // section.
-//----------------------------------------------------------------------
 // void
 // DWARFAbbreviationDeclarationSet::Encode(BinaryStreamBuf& debug_abbrev_buf)
 // const
@@ -109,15 +99,11 @@ void DWARFAbbreviationDeclarationSet::GetUnsupportedForms(
 //  debug_abbrev_buf.Append8(0);
 //}
 
-//----------------------------------------------------------------------
 // DWARFDebugAbbrev constructor
-//----------------------------------------------------------------------
 DWARFDebugAbbrev::DWARFDebugAbbrev()
     : m_abbrevCollMap(), m_prev_abbr_offset_pos(m_abbrevCollMap.end()) {}
 
-//----------------------------------------------------------------------
 // DWARFDebugAbbrev::Parse()
-//----------------------------------------------------------------------
 llvm::Error DWARFDebugAbbrev::parse(const DWARFDataExtractor &data) {
   lldb::offset_t offset = 0;
 
@@ -135,9 +121,7 @@ llvm::Error DWARFDebugAbbrev::parse(const DWARFDataExtractor &data) {
   return llvm::ErrorSuccess();
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugAbbrev::GetAbbreviationDeclarationSet()
-//----------------------------------------------------------------------
 const DWARFAbbreviationDeclarationSet *
 DWARFDebugAbbrev::GetAbbreviationDeclarationSet(
     dw_offset_t cu_abbr_offset) const {
@@ -156,9 +140,7 @@ DWARFDebugAbbrev::GetAbbreviationDeclarationSet(
   return NULL;
 }
 
-//----------------------------------------------------------------------
 // DWARFDebugAbbrev::GetUnsupportedForms()
-//----------------------------------------------------------------------
 void DWARFDebugAbbrev::GetUnsupportedForms(
     std::set<dw_form_t> &invalid_forms) const {
   for (const auto &pair : m_abbrevCollMap)

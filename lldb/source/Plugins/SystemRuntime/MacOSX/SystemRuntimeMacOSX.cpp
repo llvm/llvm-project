@@ -34,11 +34,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Create an instance of this class. This function is filled into the plugin
 // info class that gets handed out by the plugin factory and allows the lldb to
 // instantiate an instance of this class.
-//----------------------------------------------------------------------
 SystemRuntime *SystemRuntimeMacOSX::CreateInstance(Process *process) {
   bool create = false;
   if (!create) {
@@ -75,9 +73,7 @@ SystemRuntime *SystemRuntimeMacOSX::CreateInstance(Process *process) {
   return NULL;
 }
 
-//----------------------------------------------------------------------
 // Constructor
-//----------------------------------------------------------------------
 SystemRuntimeMacOSX::SystemRuntimeMacOSX(Process *process)
     : SystemRuntime(process), m_break_id(LLDB_INVALID_BREAK_ID), m_mutex(),
       m_get_queues_handler(process), m_get_pending_items_handler(process),
@@ -92,9 +88,7 @@ SystemRuntimeMacOSX::SystemRuntimeMacOSX(Process *process)
       m_dispatch_voucher_offsets_addr(LLDB_INVALID_ADDRESS),
       m_libdispatch_voucher_offsets() {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SystemRuntimeMacOSX::~SystemRuntimeMacOSX() { Clear(true); }
 
 void SystemRuntimeMacOSX::Detach() {
@@ -104,9 +98,7 @@ void SystemRuntimeMacOSX::Detach() {
   m_get_thread_item_info_handler.Detach();
 }
 
-//----------------------------------------------------------------------
 // Clear out the state of this class.
-//----------------------------------------------------------------------
 void SystemRuntimeMacOSX::Clear(bool clear_process) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
@@ -1012,9 +1004,7 @@ const char *SystemRuntimeMacOSX::GetPluginDescriptionStatic() {
   return "System runtime plugin for Mac OS X native libraries.";
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString SystemRuntimeMacOSX::GetPluginName() {
   return GetPluginNameStatic();
 }

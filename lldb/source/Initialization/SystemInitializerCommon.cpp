@@ -108,9 +108,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
   EmulateInstructionMIPS::Initialize();
   EmulateInstructionMIPS64::Initialize();
 
-  //----------------------------------------------------------------------
   // Apple/Darwin hosted plugins
-  //----------------------------------------------------------------------
   ObjectContainerUniversalMachO::Initialize();
 
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)

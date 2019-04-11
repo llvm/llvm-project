@@ -347,6 +347,7 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
 DWARFDebugLine::Row::Row(bool DefaultIsStmt) { reset(DefaultIsStmt); }
 
 void DWARFDebugLine::Row::postAppend() {
+  Discriminator = 0;
   BasicBlock = false;
   PrologueEnd = false;
   EpilogueBegin = false;
@@ -640,15 +641,14 @@ Error DWARFDebugLine::LineTable::parse(
       // Standard Opcodes
       case DW_LNS_copy:
         // Takes no arguments. Append a row to the matrix using the
-        // current values of the state-machine registers. Then set
-        // the basic_block register to false.
-        State.appendRowToMatrix();
+        // current values of the state-machine registers.
         if (OS) {
           *OS << "\n";
           OS->indent(12);
           State.Row.dump(*OS);
           *OS << "\n";
         }
+        State.appendRowToMatrix();
         break;
 
       case DW_LNS_advance_pc:
@@ -828,8 +828,6 @@ Error DWARFDebugLine::LineTable::parse(
       }
 
       State.appendRowToMatrix();
-      // Reset discriminator to 0.
-      State.Row.Discriminator = 0;
     }
     if(OS)
       *OS << "\n";

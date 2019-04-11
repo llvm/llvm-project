@@ -79,9 +79,7 @@ public:
 #endif
 }
 
-//----------------------------------------------------------------------
 // option descriptors for getopt_long_only()
-//----------------------------------------------------------------------
 
 static int g_debug = 0;
 static int g_verbose = 0;
@@ -106,9 +104,7 @@ static struct option g_long_options[] = {
     {"fd", required_argument, NULL, 'F'},
     {NULL, 0, NULL, 0}};
 
-//----------------------------------------------------------------------
 // Watch for signals
-//----------------------------------------------------------------------
 static int g_sighup_received_count = 0;
 
 #ifndef _WIN32
@@ -356,9 +352,7 @@ void ConnectToRemote(MainLoop &mainloop,
   printf("Connection established.\n");
 }
 
-//----------------------------------------------------------------------
 // main
-//----------------------------------------------------------------------
 int main_gdbserver(int argc, char *argv[]) {
   Status error;
   MainLoop mainloop;

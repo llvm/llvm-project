@@ -27,9 +27,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // AddressResolverFileLine:
-//----------------------------------------------------------------------
 AddressResolverFileLine::AddressResolverFileLine(const FileSpec &file_spec,
                                                  uint32_t line_no,
                                                  bool check_inlines)

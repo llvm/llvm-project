@@ -236,7 +236,8 @@ multiclass fma3s_rm_132<bits<8> opc, string OpcodeStr,
                 Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
 }
 
-let Constraints = "$src1 = $dst", isCommutable = 1, hasSideEffects = 0 in
+let Constraints = "$src1 = $dst", isCommutable = 1, isCodeGenOnly = 1,
+    hasSideEffects = 0 in
 multiclass fma3s_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                        string OpStr, string PackTy, string Suff,
                        SDNode OpNode, RegisterClass RC,
@@ -262,8 +263,7 @@ multiclass fma3s_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
 // the lowest element of the FMA*_Int instruction. Even though such analysis
 // may be not implemented yet we allow the routines doing the actual commute
 // transformation to decide if one or another instruction is commutable or not.
-let Constraints = "$src1 = $dst", isCommutable = 1, isCodeGenOnly = 1,
-    hasSideEffects = 0 in
+let Constraints = "$src1 = $dst", isCommutable = 1, hasSideEffects = 0 in
 multiclass fma3s_rm_int<bits<8> opc, string OpcodeStr,
                         Operand memopr, RegisterClass RC,
                         X86FoldableSchedWrite sched> {

@@ -119,11 +119,9 @@ static const DynamicLoaderDarwinKernelPropertiesSP &GetGlobalProperties() {
   return g_settings_sp;
 }
 
-//----------------------------------------------------------------------
 // Create an instance of this class. This function is filled into the plugin
 // info class that gets handed out by the plugin factory and allows the lldb to
 // instantiate an instance of this class.
-//----------------------------------------------------------------------
 DynamicLoader *DynamicLoaderDarwinKernel::CreateInstance(Process *process,
                                                          bool force) {
   if (!force) {
@@ -194,11 +192,9 @@ DynamicLoaderDarwinKernel::SearchForDarwinKernel(Process *process) {
   return kernel_load_address;
 }
 
-//----------------------------------------------------------------------
 // Check if the kernel binary is loaded in memory without a slide. First verify
 // that the ExecutableModule is a kernel before we proceed. Returns the address
 // of the kernel if one was found, else LLDB_INVALID_ADDRESS.
-//----------------------------------------------------------------------
 lldb::addr_t
 DynamicLoaderDarwinKernel::SearchForKernelAtSameLoadAddr(Process *process) {
   Module *exe_module = process->GetTarget().GetExecutableModulePointer();
@@ -224,11 +220,9 @@ DynamicLoaderDarwinKernel::SearchForKernelAtSameLoadAddr(Process *process) {
   return LLDB_INVALID_ADDRESS;
 }
 
-//----------------------------------------------------------------------
 // If the debug flag is included in the boot-args nvram setting, the kernel's
 // load address will be noted in the lowglo page at a fixed address Returns the
 // address of the kernel if one was found, else LLDB_INVALID_ADDRESS.
-//----------------------------------------------------------------------
 lldb::addr_t
 DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
   if (GetGlobalProperties()->GetScanType() == eKASLRScanNone)
@@ -275,13 +269,11 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
   return LLDB_INVALID_ADDRESS;
 }
 
-//----------------------------------------------------------------------
 // If the kernel is currently executing when lldb attaches, and we don't have a
 // better way of finding the kernel's load address, try searching backwards
 // from the current pc value looking for the kernel's Mach header in memory.
 // Returns the address of the kernel if one was found, else
 // LLDB_INVALID_ADDRESS.
-//----------------------------------------------------------------------
 lldb::addr_t
 DynamicLoaderDarwinKernel::SearchForKernelNearPC(Process *process) {
   if (GetGlobalProperties()->GetScanType() == eKASLRScanNone ||
@@ -336,12 +328,10 @@ DynamicLoaderDarwinKernel::SearchForKernelNearPC(Process *process) {
   return LLDB_INVALID_ADDRESS;
 }
 
-//----------------------------------------------------------------------
 // Scan through the valid address range for a kernel binary. This is uselessly
 // slow in 64-bit environments so we don't even try it. This scan is not
 // enabled by default even for 32-bit targets. Returns the address of the
 // kernel if one was found, else LLDB_INVALID_ADDRESS.
-//----------------------------------------------------------------------
 lldb::addr_t DynamicLoaderDarwinKernel::SearchForKernelViaExhaustiveSearch(
     Process *process) {
   if (GetGlobalProperties()->GetScanType() != eKASLRScanExhaustiveScan) {
@@ -381,12 +371,10 @@ lldb::addr_t DynamicLoaderDarwinKernel::SearchForKernelViaExhaustiveSearch(
   return LLDB_INVALID_ADDRESS;
 }
 
-//----------------------------------------------------------------------
 // Read the mach_header struct out of memory and return it.
 // Returns true if the mach_header was successfully read,
 // Returns false if there was a problem reading the header, or it was not
 // a Mach-O header.
-//----------------------------------------------------------------------
 
 bool
 DynamicLoaderDarwinKernel::ReadMachHeader(addr_t addr, Process *process, llvm::MachO::mach_header &header,
@@ -427,12 +415,10 @@ DynamicLoaderDarwinKernel::ReadMachHeader(addr_t addr, Process *process, llvm::M
   return true;
 }
 
-//----------------------------------------------------------------------
 // Given an address in memory, look to see if there is a kernel image at that
 // address.
 // Returns a UUID; if a kernel was not found at that address, UUID.IsValid()
 // will be false.
-//----------------------------------------------------------------------
 lldb_private::UUID
 DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
                                                         Process *process,
@@ -504,9 +490,7 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
   return UUID();
 }
 
-//----------------------------------------------------------------------
 // Constructor
-//----------------------------------------------------------------------
 DynamicLoaderDarwinKernel::DynamicLoaderDarwinKernel(Process *process,
                                                      lldb::addr_t kernel_addr)
     : DynamicLoader(process), m_kernel_load_address(kernel_addr), m_kernel(),
@@ -524,40 +508,32 @@ DynamicLoaderDarwinKernel::DynamicLoaderDarwinKernel(Process *process,
   }
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 DynamicLoaderDarwinKernel::~DynamicLoaderDarwinKernel() { Clear(true); }
 
 void DynamicLoaderDarwinKernel::UpdateIfNeeded() {
   LoadKernelModuleIfNeeded();
   SetNotificationBreakpointIfNeeded();
 }
-//------------------------------------------------------------------
 /// Called after attaching a process.
 ///
 /// Allow DynamicLoader plug-ins to execute some code after
 /// attaching to a process.
-//------------------------------------------------------------------
 void DynamicLoaderDarwinKernel::DidAttach() {
   PrivateInitialize(m_process);
   UpdateIfNeeded();
 }
 
-//------------------------------------------------------------------
 /// Called after attaching a process.
 ///
 /// Allow DynamicLoader plug-ins to execute some code after
 /// attaching to a process.
-//------------------------------------------------------------------
 void DynamicLoaderDarwinKernel::DidLaunch() {
   PrivateInitialize(m_process);
   UpdateIfNeeded();
 }
 
-//----------------------------------------------------------------------
 // Clear out the state of this class.
-//----------------------------------------------------------------------
 void DynamicLoaderDarwinKernel::Clear(bool clear_process) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
@@ -985,11 +961,9 @@ DynamicLoaderDarwinKernel::KextImageInfo::GetArchitecture() const {
   return lldb_private::ArchSpec();
 }
 
-//----------------------------------------------------------------------
 // Load the kernel module and initialize the "m_kernel" member. Return true
 // _only_ if the kernel is loaded the first time through (subsequent calls to
 // this function should return false after the kernel has been already loaded).
-//----------------------------------------------------------------------
 void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
   if (!m_kext_summary_header_ptr_addr.IsValid()) {
     m_kernel.Clear();
@@ -1064,12 +1038,10 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
   }
 }
 
-//----------------------------------------------------------------------
 // Static callback function that gets called when our DYLD notification
 // breakpoint gets hit. We update all of our image infos and then let our super
 // class DynamicLoader class decide if we should stop or not (based on global
 // preference).
-//----------------------------------------------------------------------
 bool DynamicLoaderDarwinKernel::BreakpointHitCallback(
     void *baton, StoppointCallbackContext *context, user_id_t break_id,
     user_id_t break_loc_id) {
@@ -1439,9 +1411,7 @@ bool DynamicLoaderDarwinKernel::ReadAllKextSummaries() {
   return false;
 }
 
-//----------------------------------------------------------------------
 // Dump an image info structure to the file handle provided.
-//----------------------------------------------------------------------
 void DynamicLoaderDarwinKernel::KextImageInfo::PutToLog(Log *log) const {
   if (m_load_address == LLDB_INVALID_ADDRESS) {
     LLDB_LOG(log, "uuid={0} name=\"{1}\" (UNLOADED)", m_uuid.GetAsString(),
@@ -1452,10 +1422,8 @@ void DynamicLoaderDarwinKernel::KextImageInfo::PutToLog(Log *log) const {
   }
 }
 
-//----------------------------------------------------------------------
 // Dump the _dyld_all_image_infos members and all current image infos that we
 // have parsed to the file handle provided.
-//----------------------------------------------------------------------
 void DynamicLoaderDarwinKernel::PutToLog(Log *log) const {
   if (log == NULL)
     return;
@@ -1507,9 +1475,7 @@ void DynamicLoaderDarwinKernel::SetNotificationBreakpointIfNeeded() {
   }
 }
 
-//----------------------------------------------------------------------
 // Member function that gets called when the process state changes.
-//----------------------------------------------------------------------
 void DynamicLoaderDarwinKernel::PrivateProcessStateChanged(Process *process,
                                                            StateType state) {
   DEBUG_PRINTF("DynamicLoaderDarwinKernel::%s(%s)\n", __FUNCTION__,
@@ -1586,9 +1552,7 @@ const char *DynamicLoaderDarwinKernel::GetPluginDescriptionStatic() {
          "in the MacOSX kernel.";
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString DynamicLoaderDarwinKernel::GetPluginName() {
   return GetPluginNameStatic();
 }

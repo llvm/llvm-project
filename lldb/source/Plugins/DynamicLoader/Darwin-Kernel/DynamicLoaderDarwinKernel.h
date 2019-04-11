@@ -28,9 +28,7 @@ public:
 
   ~DynamicLoaderDarwinKernel() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -46,12 +44,10 @@ public:
 
   static lldb::addr_t SearchForDarwinKernel(lldb_private::Process *process);
 
-  //------------------------------------------------------------------
   /// Called after attaching a process.
   ///
   /// Allow DynamicLoader plug-ins to execute some code after
   /// attaching to a process.
-  //------------------------------------------------------------------
   void DidAttach() override;
 
   void DidLaunch() override;
@@ -61,9 +57,7 @@ public:
 
   lldb_private::Status CanLoadImage() override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

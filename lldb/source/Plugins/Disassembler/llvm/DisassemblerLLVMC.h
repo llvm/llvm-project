@@ -26,9 +26,7 @@ public:
 
   ~DisassemblerLLVMC() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -43,9 +41,7 @@ public:
                             lldb::offset_t data_offset, size_t num_instructions,
                             bool append, bool data_from_file) override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

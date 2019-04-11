@@ -45,9 +45,7 @@ public:
                      lldb::tid_t unique_thread_id = 0,
                      ::thread_t mach_thread_port = 0);
 
-  // -----------------------------------------------------------------
   // NativeThreadProtocol Interface
-  // -----------------------------------------------------------------
   std::string GetName() override;
 
   lldb::StateType GetState() override;
@@ -62,15 +60,11 @@ public:
 
   Status RemoveWatchpoint(lldb::addr_t addr) override;
 
-  // -----------------------------------------------------------------
   // New methods that are fine for others to call.
-  // -----------------------------------------------------------------
   void Dump(Stream &stream) const;
 
 private:
-  // -----------------------------------------------------------------
   // Interface for friend classes
-  // -----------------------------------------------------------------
 
   /// Resumes the thread.  If \p signo is anything but
   /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
@@ -118,20 +112,16 @@ private:
 
   Status RequestStop();
 
-  // -------------------------------------------------------------------------
   /// Return the mach thread port number for this thread.
   ///
   /// \return
   ///     The mach port number for this thread.  Returns NULL_THREAD
   ///     when the thread is invalid.
-  // -------------------------------------------------------------------------
   thread_t GetMachPortNumber() const { return m_mach_thread_port; }
 
   static bool MachPortNumberIsValid(::thread_t thread);
 
-  // ---------------------------------------------------------------------
   // Private interface
-  // ---------------------------------------------------------------------
   bool GetIdentifierInfo();
 
   void MaybeLogStateChange(lldb::StateType new_state);
@@ -144,9 +134,7 @@ private:
 
   inline void MaybeCleanupSingleStepWorkaround();
 
-  // -----------------------------------------------------------------
   // Member Variables
-  // -----------------------------------------------------------------
 
   // The mach thread port for the thread.
   ::thread_t m_mach_thread_port;

@@ -29,9 +29,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanCallUserExpression: Plan to call a single function
-//----------------------------------------------------------------------
 
 ThreadPlanCallUserExpression::ThreadPlanCallUserExpression(
     Thread &thread, Address &function, llvm::ArrayRef<lldb::addr_t> args,

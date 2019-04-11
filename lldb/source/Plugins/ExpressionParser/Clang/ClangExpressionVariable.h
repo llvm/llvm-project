@@ -34,7 +34,6 @@ namespace lldb_private {
 
 class ValueObjectConstResult;
 
-//----------------------------------------------------------------------
 /// \class ClangExpressionVariable ClangExpressionVariable.h
 /// "lldb/Expression/ClangExpressionVariable.h" Encapsulates one variable for
 /// the expression parser.
@@ -55,7 +54,6 @@ class ValueObjectConstResult;
 ///
 /// This class supports all of these use cases using simple type polymorphism,
 /// and provides necessary support methods.  Its interface is RTTI-neutral.
-//----------------------------------------------------------------------
 class ClangExpressionVariable : public ExpressionVariable {
 public:
   ClangExpressionVariable(ExecutionContextScope *exe_scope,
@@ -71,12 +69,9 @@ public:
                           const TypeFromUser &user_type,
                           lldb::ByteOrder byte_order, uint32_t addr_byte_size);
 
-  //----------------------------------------------------------------------
   /// Utility functions for dealing with ExpressionVariableLists in Clang-
   /// specific ways
-  //----------------------------------------------------------------------
 
-  //----------------------------------------------------------------------
   /// Finds a variable by NamedDecl in the list.
   ///
   /// \param[in] name
@@ -84,7 +79,6 @@ public:
   ///
   /// \return
   ///     The variable requested, or NULL if that variable is not in the list.
-  //----------------------------------------------------------------------
   static ClangExpressionVariable *
   FindVariableInList(ExpressionVariableList &list, const clang::NamedDecl *decl,
                      uint64_t parser_id) {
@@ -104,7 +98,6 @@ public:
     return nullptr;
   }
 
-  //----------------------------------------------------------------------
   /// If the variable contains its own data, make a Value point at it. If \a
   /// exe_ctx in not NULL, the value will be resolved in with that execution
   /// context.
@@ -118,12 +111,9 @@ public:
   /// \return
   ///     True on success; false otherwise (in particular, if this variable
   ///     does not contain its own data).
-  //----------------------------------------------------------------------
   bool PointValueAtData(Value &value, ExecutionContext *exe_ctx);
 
-  //----------------------------------------------------------------------
   /// The following values should not live beyond parsing
-  //----------------------------------------------------------------------
   class ParserVars {
   public:
     ParserVars()
@@ -148,22 +138,16 @@ private:
   ParserVarMap m_parser_vars;
 
 public:
-  //----------------------------------------------------------------------
   /// Make this variable usable by the parser by allocating space for parser-
   /// specific variables
-  //----------------------------------------------------------------------
   void EnableParserVars(uint64_t parser_id) {
     m_parser_vars.insert(std::make_pair(parser_id, ParserVars()));
   }
 
-  //----------------------------------------------------------------------
   /// Deallocate parser-specific variables
-  //----------------------------------------------------------------------
   void DisableParserVars(uint64_t parser_id) { m_parser_vars.erase(parser_id); }
 
-  //----------------------------------------------------------------------
   /// Access parser-specific variables
-  //----------------------------------------------------------------------
   ParserVars *GetParserVars(uint64_t parser_id) {
     ParserVarMap::iterator i = m_parser_vars.find(parser_id);
 
@@ -173,9 +157,7 @@ public:
       return &i->second;
   }
 
-  //----------------------------------------------------------------------
   /// The following values are valid if the variable is used by JIT code
-  //----------------------------------------------------------------------
   struct JITVars {
     JITVars() : m_alignment(0), m_size(0), m_offset(0) {}
 
@@ -191,17 +173,13 @@ private:
   JITVarMap m_jit_vars;
 
 public:
-  //----------------------------------------------------------------------
   /// Make this variable usable for materializing for the JIT by allocating
   /// space for JIT-specific variables
-  //----------------------------------------------------------------------
   void EnableJITVars(uint64_t parser_id) {
     m_jit_vars.insert(std::make_pair(parser_id, JITVars()));
   }
 
-  //----------------------------------------------------------------------
   /// Deallocate JIT-specific variables
-  //----------------------------------------------------------------------
   void DisableJITVars(uint64_t parser_id) { m_jit_vars.erase(parser_id); }
 
   JITVars *GetJITVars(uint64_t parser_id) {
@@ -215,16 +193,12 @@ public:
 
   TypeFromUser GetTypeFromUser();
 
-  //------------------------------------------------------------------
   // llvm casting support
-  //------------------------------------------------------------------
   static bool classof(const ExpressionVariable *ev) {
     return ev->getKind() == ExpressionVariable::eKindClang;
   }
 
-  //----------------------------------------------------------------------
   /// Members
-  //----------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(ClangExpressionVariable);
 };
 

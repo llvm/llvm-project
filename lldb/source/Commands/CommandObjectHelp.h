@@ -15,9 +15,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectHelp
-//-------------------------------------------------------------------------
 
 class CommandObjectHelp : public CommandObjectParsed {
 public:

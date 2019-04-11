@@ -52,9 +52,7 @@ public:
 
   ~ObjectFilePECOFF() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -123,9 +121,7 @@ public:
 
   ObjectFile::Strata CalculateStrata() override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

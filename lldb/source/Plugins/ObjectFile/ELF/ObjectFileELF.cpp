@@ -336,9 +336,7 @@ static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
 // Arbitrary constant used as UUID prefix for core files.
 const uint32_t ObjectFileELF::g_core_uuid_magic(0xE210C);
 
-//------------------------------------------------------------------
 // Static methods.
-//------------------------------------------------------------------
 void ObjectFileELF::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance,
@@ -711,17 +709,13 @@ size_t ObjectFileELF::GetModuleSpecifications(
   return specs.GetSize() - initial_count;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString ObjectFileELF::GetPluginName() {
   return GetPluginNameStatic();
 }
 
 uint32_t ObjectFileELF::GetPluginVersion() { return m_plugin_version; }
-//------------------------------------------------------------------
 // ObjectFile protocol
-//------------------------------------------------------------------
 
 ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
                              DataBufferSP &data_sp, lldb::offset_t data_offset,
@@ -1009,9 +1003,7 @@ Address ObjectFileELF::GetBaseAddress() {
   return LLDB_INVALID_ADDRESS;
 }
 
-//----------------------------------------------------------------------
 // ParseDependentModules
-//----------------------------------------------------------------------
 size_t ObjectFileELF::ParseDependentModules() {
   if (m_filespec_up)
     return m_filespec_up->GetSize();
@@ -1070,9 +1062,7 @@ size_t ObjectFileELF::ParseDependentModules() {
   return m_filespec_up->GetSize();
 }
 
-//----------------------------------------------------------------------
 // GetProgramHeaderInfo
-//----------------------------------------------------------------------
 size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
                                            DataExtractor &object_data,
                                            const ELFHeader &header) {
@@ -1107,9 +1097,7 @@ size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
   return program_headers.size();
 }
 
-//----------------------------------------------------------------------
 // ParseProgramHeaders
-//----------------------------------------------------------------------
 bool ObjectFileELF::ParseProgramHeaders() {
   return GetProgramHeaderInfo(m_program_headers, m_data, m_header) != 0;
 }
@@ -1302,8 +1290,6 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       // the contents look like this in a 64 bit ELF core file: count     =
       // 0x000000000000000a (10) page_size = 0x0000000000001000 (4096) Index
       // start              end                file_ofs           path =====
-      // ------------------ ------------------ ------------------
-      // ------------------------------------- [  0] 0x0000000000400000
       // 0x0000000000401000 0x0000000000000000 /tmp/a.out [  1]
       // 0x0000000000600000 0x0000000000601000 0x0000000000000000 /tmp/a.out [
       // 2] 0x0000000000601000 0x0000000000602000 0x0000000000000001 /tmp/a.out
@@ -1427,9 +1413,7 @@ void ObjectFileELF::ParseARMAttributes(DataExtractor &data, uint64_t length,
   }
 }
 
-//----------------------------------------------------------------------
 // GetSectionHeaderInfo
-//----------------------------------------------------------------------
 size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                                            DataExtractor &object_data,
                                            const elf::ELFHeader &header,
@@ -1662,9 +1646,7 @@ ObjectFileELF::StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
   return symbol_name.substr(0, pos);
 }
 
-//----------------------------------------------------------------------
 // ParseSectionHeaders
-//----------------------------------------------------------------------
 size_t ObjectFileELF::ParseSectionHeaders() {
   return GetSectionHeaderInfo(m_section_headers, m_data, m_header, m_uuid,
                               m_gnu_debuglink_file, m_gnu_debuglink_crc,
@@ -2932,7 +2914,6 @@ bool ObjectFileELF::IsStripped() {
 //
 // Dump the specifics of the runtime file container (such as any headers
 // segments, sections, etc).
-//----------------------------------------------------------------------
 void ObjectFileELF::Dump(Stream *s) {
   ModuleSP module_sp(GetModule());
   if (!module_sp) {
@@ -2966,11 +2947,9 @@ void ObjectFileELF::Dump(Stream *s) {
   s->EOL();
 }
 
-//----------------------------------------------------------------------
 // DumpELFHeader
 //
 // Dump the ELF header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFHeader(Stream *s, const ELFHeader &header) {
   s->PutCString("ELF Header\n");
   s->Printf("e_ident[EI_MAG0   ] = 0x%2.2x\n", header.e_ident[EI_MAG0]);
@@ -3003,11 +2982,9 @@ void ObjectFileELF::DumpELFHeader(Stream *s, const ELFHeader &header) {
   s->Printf("e_shstrndx  = 0x%8.8x\n", header.e_shstrndx);
 }
 
-//----------------------------------------------------------------------
 // DumpELFHeader_e_type
 //
 // Dump an token value for the ELF header member e_type
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFHeader_e_type(Stream *s, elf_half e_type) {
   switch (e_type) {
   case ET_NONE:
@@ -3030,11 +3007,9 @@ void ObjectFileELF::DumpELFHeader_e_type(Stream *s, elf_half e_type) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpELFHeader_e_ident_EI_DATA
 //
 // Dump an token value for the ELF header member e_ident[EI_DATA]
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFHeader_e_ident_EI_DATA(Stream *s,
                                                   unsigned char ei_data) {
   switch (ei_data) {
@@ -3052,11 +3027,9 @@ void ObjectFileELF::DumpELFHeader_e_ident_EI_DATA(Stream *s,
   }
 }
 
-//----------------------------------------------------------------------
 // DumpELFProgramHeader
 //
 // Dump a single ELF program header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFProgramHeader(Stream *s,
                                          const ELFProgramHeader &ph) {
   DumpELFProgramHeader_p_type(s, ph.p_type);
@@ -3069,12 +3042,10 @@ void ObjectFileELF::DumpELFProgramHeader(Stream *s,
   s->Printf(") %8.8" PRIx64, ph.p_align);
 }
 
-//----------------------------------------------------------------------
 // DumpELFProgramHeader_p_type
 //
 // Dump an token value for the ELF program header member p_type which describes
 // the type of the program header
-// ----------------------------------------------------------------------
 void ObjectFileELF::DumpELFProgramHeader_p_type(Stream *s, elf_word p_type) {
   const int kStrWidth = 15;
   switch (p_type) {
@@ -3093,11 +3064,9 @@ void ObjectFileELF::DumpELFProgramHeader_p_type(Stream *s, elf_word p_type) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpELFProgramHeader_p_flags
 //
 // Dump an token value for the ELF program header member p_flags
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFProgramHeader_p_flags(Stream *s, elf_word p_flags) {
   *s << ((p_flags & PF_X) ? "PF_X" : "    ")
      << (((p_flags & PF_X) && (p_flags & PF_W)) ? '+' : ' ')
@@ -3106,11 +3075,9 @@ void ObjectFileELF::DumpELFProgramHeader_p_flags(Stream *s, elf_word p_flags) {
      << ((p_flags & PF_R) ? "PF_R" : "    ");
 }
 
-//----------------------------------------------------------------------
 // DumpELFProgramHeaders
 //
 // Dump all of the ELF program header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFProgramHeaders(Stream *s) {
   if (!ParseProgramHeaders())
     return;
@@ -3128,11 +3095,9 @@ void ObjectFileELF::DumpELFProgramHeaders(Stream *s) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpELFSectionHeader
 //
 // Dump a single ELF section header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFSectionHeader(Stream *s,
                                          const ELFSectionHeaderInfo &sh) {
   s->Printf("%8.8x ", sh.sh_name);
@@ -3145,12 +3110,10 @@ void ObjectFileELF::DumpELFSectionHeader(Stream *s,
   s->Printf(" %8.8" PRIx64 " %8.8" PRIx64, sh.sh_addralign, sh.sh_entsize);
 }
 
-//----------------------------------------------------------------------
 // DumpELFSectionHeader_sh_type
 //
 // Dump an token value for the ELF section header member sh_type which
 // describes the type of the section
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFSectionHeader_sh_type(Stream *s, elf_word sh_type) {
   const int kStrWidth = 12;
   switch (sh_type) {
@@ -3176,11 +3139,9 @@ void ObjectFileELF::DumpELFSectionHeader_sh_type(Stream *s, elf_word sh_type) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpELFSectionHeader_sh_flags
 //
 // Dump an token value for the ELF section header member sh_flags
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFSectionHeader_sh_flags(Stream *s,
                                                   elf_xword sh_flags) {
   *s << ((sh_flags & SHF_WRITE) ? "WRITE" : "     ")
@@ -3190,11 +3151,9 @@ void ObjectFileELF::DumpELFSectionHeader_sh_flags(Stream *s,
      << ((sh_flags & SHF_EXECINSTR) ? "EXECINSTR" : "         ");
 }
 
-//----------------------------------------------------------------------
 // DumpELFSectionHeaders
 //
 // Dump all of the ELF section header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFileELF::DumpELFSectionHeaders(Stream *s) {
   if (!ParseSectionHeaders())
     return;

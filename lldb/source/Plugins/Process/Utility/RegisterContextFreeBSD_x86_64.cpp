@@ -61,10 +61,8 @@ struct UserArea {
 
 #define DR_OFFSET(reg_index) (LLVM_EXTENSION offsetof(DBG, dr[reg_index]))
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_x86_64 to declare our g_register_infos_x86_64
 // structure.
-//---------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_X86_64_STRUCT
 #include "RegisterInfos_x86_64.h"
 #undef DECLARE_REGISTER_INFOS_X86_64_STRUCT
@@ -88,10 +86,8 @@ GetRegisterInfo_i386(const lldb_private::ArchSpec &arch) {
     g_register_infos.insert(g_register_infos.end(), &base_info[0],
                             &base_info[k_num_registers_i386]);
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_x86_64 to update the g_register_infos structure
 //  with x86_64 offsets.
-//---------------------------------------------------------------------------
 #define UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS
 #include "RegisterInfos_x86_64.h"
 #undef UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS

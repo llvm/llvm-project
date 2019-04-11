@@ -9,24 +9,18 @@
 #include "CFCMutableArray.h"
 #include "CFCString.h"
 
-//----------------------------------------------------------------------
 // CFCString constructor
-//----------------------------------------------------------------------
 CFCMutableArray::CFCMutableArray(CFMutableArrayRef s)
     : CFCReleaser<CFMutableArrayRef>(s) {}
 
-//----------------------------------------------------------------------
 // CFCMutableArray copy constructor
-//----------------------------------------------------------------------
 CFCMutableArray::CFCMutableArray(const CFCMutableArray &rhs)
     : CFCReleaser<CFMutableArrayRef>(rhs) // NOTE: this won't make a copy of the
                                           // array, just add a new reference to
                                           // it
 {}
 
-//----------------------------------------------------------------------
 // CFCMutableArray copy constructor
-//----------------------------------------------------------------------
 CFCMutableArray &CFCMutableArray::operator=(const CFCMutableArray &rhs) {
   if (this != &rhs)
     *this = rhs; // NOTE: this operator won't make a copy of the array, just add
@@ -34,9 +28,7 @@ CFCMutableArray &CFCMutableArray::operator=(const CFCMutableArray &rhs) {
   return *this;
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 CFCMutableArray::~CFCMutableArray() {}
 
 CFIndex CFCMutableArray::GetCount() const {

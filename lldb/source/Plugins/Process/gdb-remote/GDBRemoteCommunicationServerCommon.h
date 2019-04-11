@@ -131,7 +131,6 @@ protected:
                           });
   }
 
-  //------------------------------------------------------------------
   /// Launch a process with the current launch settings.
   ///
   /// This method supports running an lldb-gdbserver or similar
@@ -141,7 +140,6 @@ protected:
   /// \return
   ///     An Status object indicating the success or failure of the
   ///     launch.
-  //------------------------------------------------------------------
   virtual Status LaunchProcess() = 0;
 
   virtual FileSpec FindModuleFile(const std::string &module_path,

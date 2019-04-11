@@ -19,17 +19,13 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // MemoryCache constructor
-//----------------------------------------------------------------------
 MemoryCache::MemoryCache(Process &process)
     : m_mutex(), m_L1_cache(), m_L2_cache(), m_invalid_ranges(),
       m_process(process),
       m_L2_cache_line_byte_size(process.GetMemoryCacheLineSize()) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 MemoryCache::~MemoryCache() {}
 
 void MemoryCache::Clear(bool clear_invalid_ranges) {

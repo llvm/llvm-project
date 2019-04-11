@@ -11038,6 +11038,12 @@ static SDValue getTestBitOperand(SDValue Op, unsigned &Bit, bool &Invert,
     return getTestBitOperand(Op->getOperand(0), Bit, Invert, DAG);
   }
 
+  // (tbz (any_ext x), b) -> (tbz x, b) if we don't use the extended bits.
+  if (Op->getOpcode() == ISD::ANY_EXTEND &&
+      Bit < Op->getOperand(0).getValueSizeInBits()) {
+    return getTestBitOperand(Op->getOperand(0), Bit, Invert, DAG);
+  }
+
   if (Op->getNumOperands() != 2)
     return Op;
 

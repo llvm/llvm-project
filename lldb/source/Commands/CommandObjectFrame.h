@@ -14,9 +14,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordFrame
-//-------------------------------------------------------------------------
 
 class CommandObjectMultiwordFrame : public CommandObjectMultiword {
 public:

@@ -21,7 +21,6 @@
 #include "llvm/Support/Errno.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIUtilFileStd constructor.
 // Type:    Method.
 // Args:    None.
@@ -42,7 +41,6 @@ CMIUtilFileStd::CMIUtilFileStd()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMIUtilFileStd destructor.
 // Type:    Method.
 // Args:    None.
@@ -52,7 +50,6 @@ CMIUtilFileStd::CMIUtilFileStd()
 CMIUtilFileStd::~CMIUtilFileStd() { Close(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Open file for writing. On the first call to this function after
 // *this object
 //          is created the file is either created or replace, from then on open
@@ -111,7 +108,6 @@ bool CMIUtilFileStd::CreateWrite(const CMIUtilString &vFileNamePath,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write data to existing opened file.
 // Type:    Method.
 // Args:    vData - (R) Text data.
@@ -149,7 +145,6 @@ bool CMIUtilFileStd::Write(const CMIUtilString &vData) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write data to existing opened file.
 // Type:    Method.
 // Args:    vData       - (R) Text data.
@@ -186,7 +181,6 @@ bool CMIUtilFileStd::Write(const char *vpData, const MIuint vCharCnt) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Close existing opened file. Note Close() must must an open!
 // Type:    Method.
 // Args:    None.
@@ -204,7 +198,6 @@ void CMIUtilFileStd::Close() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve state of whether the file is ok.
 // Type:    Method.
 // Args:    None.
@@ -215,7 +208,6 @@ void CMIUtilFileStd::Close() {
 bool CMIUtilFileStd::IsOk() const { return !m_bFileError; }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Status on a file existing already.
 // Type:    Method.
 // Args:    vFileNamePath.
@@ -239,7 +231,6 @@ bool CMIUtilFileStd::IsFileExist(const CMIUtilString &vFileNamePath) const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the file current carriage line return characters used.
 // Type:    Method.
 // Args:    None.
@@ -251,7 +242,6 @@ const CMIUtilString &CMIUtilFileStd::GetLineReturn() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Given a file name directory path, strip off the filename and return
 // the path.
 //          It look for either backslash or forward slash.
@@ -275,7 +265,6 @@ CMIUtilFileStd::StripOffFileName(const CMIUtilString &vDirectoryPath) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Return either backslash or forward slash appropriate to the OS this
 // application
 //          is running on.

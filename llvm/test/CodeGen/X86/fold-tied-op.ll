@@ -6,8 +6,8 @@ target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386--netbsd"
 
 ; CHECK-LABEL: fn1
-; CHECK:       addl {{.*#+}} 4-byte Folded Reload
 ; CHECK:       orl  {{.*#+}} 4-byte Folded Reload
+; CHECK:       addl {{.*#+}} 4-byte Folded Reload
 ; CHECK:       xorl {{.*#+}} 4-byte Folded Reload
 ; CHECK:       xorl {{.*#+}} 4-byte Folded Reload
 ; CHECK:       retl

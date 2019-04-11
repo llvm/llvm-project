@@ -32,12 +32,10 @@ class Stream;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // A class designed to hold onto values and their corresponding types.
 // Operators are defined and Scalar objects will correctly promote their types
 // and values before performing these operations. Type promotion currently
 // follows the ANSI C type promotion rules.
-//----------------------------------------------------------------------
 class Scalar {
 public:
   enum Type {
@@ -59,9 +57,7 @@ public:
     e_long_double
   };
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   Scalar();
   Scalar(int v) : m_type(e_sint), m_float((float)0) {
     m_integer = llvm::APInt(sizeof(int) * 8, v, true);
@@ -171,12 +167,10 @@ public:
 
   static Scalar::Type GetValueTypeForFloatWithByteSize(size_t byte_size);
 
-  //----------------------------------------------------------------------
   // All operators can benefits from the implicit conversions that will happen
   // automagically by the compiler, so no temporary objects will need to be
   // created. As a result, we currently don't need a variety of overloaded set
   // value accessors.
-  //----------------------------------------------------------------------
   Scalar &operator=(const int i);
   Scalar &operator=(unsigned int v);
   Scalar &operator=(long v);
@@ -193,41 +187,29 @@ public:
   Scalar &operator>>=(const Scalar &rhs); // Shift right (arithmetic)
   Scalar &operator&=(const Scalar &rhs);
 
-  //----------------------------------------------------------------------
   // Shifts the current value to the right without maintaining the current sign
   // of the value (if it is signed).
-  //----------------------------------------------------------------------
   bool ShiftRightLogical(const Scalar &rhs); // Returns true on success
 
-  //----------------------------------------------------------------------
   // Takes the absolute value of the current value if it is signed, else the
   // value remains unchanged. Returns false if the contained value has a void
   // type.
-  //----------------------------------------------------------------------
   bool AbsoluteValue(); // Returns true on success
-  //----------------------------------------------------------------------
   // Negates the current value (even for unsigned values). Returns false if the
   // contained value has a void type.
-  //----------------------------------------------------------------------
   bool UnaryNegate(); // Returns true on success
-  //----------------------------------------------------------------------
   // Inverts all bits in the current value as long as it isn't void or a
   // float/double/long double type. Returns false if the contained value has a
   // void/float/double/long double type, else the value is inverted and true is
   // returned.
-  //----------------------------------------------------------------------
   bool OnesComplement(); // Returns true on success
 
-  //----------------------------------------------------------------------
   // Access the type of the current value.
-  //----------------------------------------------------------------------
   Scalar::Type GetType() const { return m_type; }
 
-  //----------------------------------------------------------------------
   // Returns a casted value of the current contained data without modifying the
   // current value. FAIL_VALUE will be returned if the type of the value is
   // void or invalid.
-  //----------------------------------------------------------------------
   int SInt(int fail_value = 0) const;
 
   unsigned char UChar(unsigned char fail_value = 0) const;
@@ -302,9 +284,7 @@ protected:
   typedef double double_t;
   typedef long double long_double_t;
 
-  //------------------------------------------------------------------
   // Classes that inherit from Scalar can see and modify these
-  //------------------------------------------------------------------
   Scalar::Type m_type;
   llvm::APInt m_integer;
   llvm::APFloat m_float;
@@ -329,7 +309,6 @@ private:
   friend bool operator>=(const Scalar &lhs, const Scalar &rhs);
 };
 
-//----------------------------------------------------------------------
 // Split out the operators into a format where the compiler will be able to
 // implicitly convert numbers into Scalar objects.
 //
@@ -343,7 +322,6 @@ private:
 //  Item 19 of "Effective C++ Second Edition" by Scott Meyers
 //  Differentiate among members functions, non-member functions, and
 //  friend functions
-//----------------------------------------------------------------------
 const Scalar operator+(const Scalar &lhs, const Scalar &rhs);
 const Scalar operator-(const Scalar &lhs, const Scalar &rhs);
 const Scalar operator/(const Scalar &lhs, const Scalar &rhs);

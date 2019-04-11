@@ -112,7 +112,7 @@ main()
 {
 
     // for user-defined types
-#if !__PSTL_ICC_16_VC14_TEST_PAR_TBB_RT_RELEASE_64_BROKEN
+#if !_PSTL_ICC_16_VC14_TEST_PAR_TBB_RT_RELEASE_64_BROKEN
     test_uninit_construct_by_type<Wrapper<int32_t>>();
     test_uninit_construct_by_type<Wrapper<std::vector<std::string>>>();
 #endif

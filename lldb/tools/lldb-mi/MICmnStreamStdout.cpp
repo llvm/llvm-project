@@ -13,7 +13,6 @@
 #include "MIDriver.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnStreamStdout constructor.
 // Type:    Method.
 // Args:    None.
@@ -23,7 +22,6 @@
 CMICmnStreamStdout::CMICmnStreamStdout() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnStreamStdout destructor.
 // Type:    Overridable.
 // Args:    None.
@@ -33,7 +31,6 @@ CMICmnStreamStdout::CMICmnStreamStdout() {}
 CMICmnStreamStdout::~CMICmnStreamStdout() { Shutdown(); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Initialize resources for *this Stdout stream.
 // Type:    Method.
 // Args:    None.
@@ -63,7 +60,6 @@ bool CMICmnStreamStdout::Initialize() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Release resources for *this Stdout stream.
 // Type:    Method.
 // Args:    None.
@@ -86,7 +82,6 @@ bool CMICmnStreamStdout::Shutdown() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write an MI format type response to stdout. The text data does not
 // need to
 //          include a carriage line return as this is added to the text. The
@@ -106,7 +101,6 @@ bool CMICmnStreamStdout::WriteMIResponse(const CMIUtilString &vText,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write text data to stdout. The text data does not need to
 //          include a carriage line return as this is added to the text. The
 //          function also
@@ -132,7 +126,6 @@ bool CMICmnStreamStdout::Write(const CMIUtilString &vText,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write text data to stdout. The text data does not need to
 //          include a carriage line return as this is added to the text. The
 //          function also
@@ -179,7 +172,6 @@ bool CMICmnStreamStdout::WritePriv(const CMIUtilString &vText,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Lock the availability of the stream stdout. Other users of *this
 // stream will
 //          be stalled until it is available (Unlock()).
@@ -195,7 +187,6 @@ bool CMICmnStreamStdout::Lock() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Release a previously locked stdout.
 // Type:    Method.
 // Args:    None.
@@ -209,7 +200,6 @@ bool CMICmnStreamStdout::Unlock() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Take a text data and send to the stdout stream. Also output to the
 // MI Log
 //          file.
@@ -225,7 +215,6 @@ bool CMICmnStreamStdout::TextToStdout(const CMIUtilString &vrTxt) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Write prompt to stdout if it's enabled.
 // Type:    Static method.
 // Args:    None.

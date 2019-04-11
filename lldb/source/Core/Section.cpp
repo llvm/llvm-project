@@ -381,9 +381,7 @@ bool Section::Slide(addr_t slide_amount, bool slide_children) {
   return false;
 }
 
-//------------------------------------------------------------------
 /// Get the permissions as OR'ed bits from lldb::Permissions
-//------------------------------------------------------------------
 uint32_t Section::GetPermissions() const {
   uint32_t permissions = 0;
   if (m_readable)
@@ -395,9 +393,7 @@ uint32_t Section::GetPermissions() const {
   return permissions;
 }
 
-//------------------------------------------------------------------
 /// Set the permissions using bits OR'ed from lldb::Permissions
-//------------------------------------------------------------------
 void Section::SetPermissions(uint32_t permissions) {
   m_readable = (permissions & ePermissionsReadable) != 0;
   m_writable = (permissions & ePermissionsWritable) != 0;

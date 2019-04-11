@@ -21,10 +21,8 @@ class Stream;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // A vm address range. These can represent offsets ranges or actual
 // addresses.
-//----------------------------------------------------------------------
 class VMRange {
 public:
   typedef std::vector<VMRange> collection;

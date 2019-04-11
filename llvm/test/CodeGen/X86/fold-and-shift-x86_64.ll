@@ -75,3 +75,20 @@ entry:
   %tmp9 = load i8, i8* %tmp7
   ret i8 %tmp9
 }
+
+define i8 @t6(i8* %X, i32 %i) {
+; CHECK-LABEL: t6:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    andl $15, %esi
+; CHECK-NEXT:    movb (%rdi,%rsi,4), %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp2 = shl i32 %i, 2
+  %tmp3 = zext i32 %tmp2 to i64
+  %tmp4 = and i64 %tmp3, 60
+  %tmp7 = getelementptr i8, i8* %X, i64 %tmp4
+  %tmp9 = load i8, i8* %tmp7
+  ret i8 %tmp9
+}
+

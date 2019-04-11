@@ -17,9 +17,7 @@ public:
 
   ~PlatformMacOSX() override;
 
-  //------------------------------------------------------------
   // Class functions
-  //------------------------------------------------------------
   static lldb::PlatformSP CreateInstance(bool force,
                                          const lldb_private::ArchSpec *arch);
 
@@ -31,9 +29,7 @@ public:
 
   static const char *GetDescriptionStatic(bool is_host);
 
-  //------------------------------------------------------------
   // lldb_private::PluginInterface functions
-  //------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override {
     return GetPluginNameStatic(IsHost());
   }

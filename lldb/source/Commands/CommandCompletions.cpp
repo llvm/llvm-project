@@ -349,9 +349,7 @@ CommandCompletions::Completer::Completer(CommandInterpreter &interpreter,
 
 CommandCompletions::Completer::~Completer() = default;
 
-//----------------------------------------------------------------------
 // SourceFileCompleter
-//----------------------------------------------------------------------
 
 CommandCompletions::SourceFileCompleter::SourceFileCompleter(
     CommandInterpreter &interpreter, bool include_support_files,
@@ -424,9 +422,7 @@ CommandCompletions::SourceFileCompleter::DoCompletion(SearchFilter *filter) {
   return m_request.GetNumberOfMatches();
 }
 
-//----------------------------------------------------------------------
 // SymbolCompleter
-//----------------------------------------------------------------------
 
 static bool regex_chars(const char comp) {
   return (comp == '[' || comp == ']' || comp == '(' || comp == ')' ||
@@ -492,9 +488,7 @@ size_t CommandCompletions::SymbolCompleter::DoCompletion(SearchFilter *filter) {
   return m_request.GetNumberOfMatches();
 }
 
-//----------------------------------------------------------------------
 // ModuleCompleter
-//----------------------------------------------------------------------
 CommandCompletions::ModuleCompleter::ModuleCompleter(
     CommandInterpreter &interpreter, CompletionRequest &request)
     : CommandCompletions::Completer(interpreter, request) {

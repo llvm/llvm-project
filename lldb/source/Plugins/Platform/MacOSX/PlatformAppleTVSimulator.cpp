@@ -32,14 +32,10 @@ namespace lldb_private {
 class Process;
 }
 
-//------------------------------------------------------------------
 // Static Variables
-//------------------------------------------------------------------
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 void PlatformAppleTVSimulator::Initialize() {
   PlatformDarwin::Initialize();
 
@@ -147,18 +143,14 @@ const char *PlatformAppleTVSimulator::GetDescriptionStatic() {
   return "Apple TV simulator platform plug-in.";
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformAppleTVSimulator::PlatformAppleTVSimulator()
     : PlatformDarwin(true), m_sdk_dir_mutex(), m_sdk_directory() {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformAppleTVSimulator::~PlatformAppleTVSimulator() {}
 
 void PlatformAppleTVSimulator::GetStatus(Stream &strm) {

@@ -17,9 +17,7 @@ namespace lldb_private {
 
 class Unwind {
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from Unwind can see and modify these
-  //------------------------------------------------------------------
   Unwind(Thread &thread) : m_thread(thread), m_unwind_mutex() {}
 
 public:
@@ -62,9 +60,7 @@ public:
   Thread &GetThread() { return m_thread; }
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from Unwind can see and modify these
-  //------------------------------------------------------------------
   virtual void DoClear() = 0;
 
   virtual uint32_t DoGetFrameCount() = 0;

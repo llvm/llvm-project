@@ -190,16 +190,13 @@ public:
       lldb_private::CommandInterpreter *interpreter_ptr =
           nullptr); // Access using SBDebugger::GetCommandInterpreter();
 
-  //----------------------------------------------------------------------
   /// Return true if the command interpreter is the active IO handler.
   ///
   /// This indicates that any input coming into the debugger handles will
   /// go to the command interpreter and will result in LLDB command line
   /// commands being executed.
-  //----------------------------------------------------------------------
   bool IsActive();
 
-  //----------------------------------------------------------------------
   /// Get the string that needs to be written to the debugger stdin file
   /// handle when a control character is typed.
   ///
@@ -215,36 +212,27 @@ public:
   ///     The string that should be written into the file handle that is
   ///     feeding the input stream for the debugger, or nullptr if there is
   ///     no string for this control key.
-  //----------------------------------------------------------------------
   const char *GetIOHandlerControlSequence(char ch);
 
   bool GetPromptOnQuit();
 
   void SetPromptOnQuit(bool b);
 
-  //----------------------------------------------------------------------
   /// Sets whether the command interpreter should allow custom exit codes
   /// for the 'quit' command.
-  //----------------------------------------------------------------------
   void AllowExitCodeOnQuit(bool allow);
 
-  //----------------------------------------------------------------------
   /// Returns true if the user has called the 'quit' command with a custom exit
   /// code.
-  //----------------------------------------------------------------------
   bool HasCustomQuitExitCode();
 
-  //----------------------------------------------------------------------
   /// Returns the exit code that the user has specified when running the
   /// 'quit' command. Returns 0 if the user hasn't called 'quit' at all or
   /// without a custom exit code.
-  //----------------------------------------------------------------------
   int GetQuitStatus();
 
-  //----------------------------------------------------------------------
   /// Resolve the command just as HandleCommand would, expanding abbreviations
   /// and aliases.  If successful, result->GetOutput has the full expansion.
-  //----------------------------------------------------------------------
   void ResolveCommand(const char *command_line, SBCommandReturnObject &result);
 
 protected:

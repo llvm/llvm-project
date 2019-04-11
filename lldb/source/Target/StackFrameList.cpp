@@ -31,9 +31,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // StackFrameList constructor
-//----------------------------------------------------------------------
 StackFrameList::StackFrameList(Thread &thread,
                                const lldb::StackFrameListSP &prev_frames_sp,
                                bool show_inline_frames)

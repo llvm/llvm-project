@@ -110,8 +110,8 @@ main_body:
 
 ;CHECK-LABEL: {{^}}s_buffer_load_index_across_bb:
 ;CHECK-NOT: s_waitcnt;
-;CHECK-NOT: v_or_b32
-;CHECK: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen offset:8
+;CHECK: v_or_b32
+;CHECK: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
 define amdgpu_ps void @s_buffer_load_index_across_bb(<4 x i32> inreg %desc, i32 %index) {
 main_body:
   %tmp = shl i32 %index, 4
@@ -127,8 +127,10 @@ bb1:                                              ; preds = %main_body
 
 ;CHECK-LABEL: {{^}}s_buffer_load_index_across_bb_merged:
 ;CHECK-NOT: s_waitcnt;
-;CHECK-NOT: v_or_b32
-;CHECK: buffer_load_dwordx2 v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen offset:8
+;CHECK: v_or_b32
+;CHECK: v_or_b32
+;CHECK: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+;CHECK: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
 define amdgpu_ps void @s_buffer_load_index_across_bb_merged(<4 x i32> inreg %desc, i32 %index) {
 main_body:
   %tmp = shl i32 %index, 4

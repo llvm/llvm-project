@@ -15,9 +15,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanShouldStopHere constructor
-//----------------------------------------------------------------------
 ThreadPlanShouldStopHere::ThreadPlanShouldStopHere(ThreadPlan *owner)
     : m_callbacks(), m_baton(nullptr), m_owner(owner),
       m_flags(ThreadPlanShouldStopHere::eNone) {

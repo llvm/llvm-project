@@ -28,10 +28,8 @@ using namespace lldb_private;
 uint32_t ThreadPlanStepInRange::s_default_flag_values =
     ThreadPlanShouldStopHere::eStepInAvoidNoDebug;
 
-//----------------------------------------------------------------------
 // ThreadPlanStepInRange: Step through a stack range, either stepping over or
 // into based on the value of \a type.
-//----------------------------------------------------------------------
 
 ThreadPlanStepInRange::ThreadPlanStepInRange(
     Thread &thread, const AddressRange &range,

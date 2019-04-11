@@ -178,9 +178,7 @@ kern_return_t DNBArchMachPPC::EnableHardwareSingleStep(bool enable) {
   return m_state.GetError(e_regSetGPR, Read);
 }
 
-//----------------------------------------------------------------------
 // Register information definitions for 32 bit PowerPC.
-//----------------------------------------------------------------------
 
 enum gpr_regnums {
   e_regNumGPR_srr0,
@@ -319,11 +317,9 @@ const size_t k_num_vec_registers =
 const size_t k_num_ppc_registers = k_num_gpr_registers + k_num_fpr_registers +
                                    k_num_exc_registers + k_num_vec_registers;
 
-//----------------------------------------------------------------------
 // Register set definitions. The first definitions at register set index
 // of zero is for all registers, followed by other registers sets. The
 // register information for the all register set need not be filled in.
-//----------------------------------------------------------------------
 static const DNBRegisterSetInfo g_reg_sets[] = {
     {"PowerPC Registers", NULL, k_num_ppc_registers},
     {"General Purpose Registers", g_gpr_registers, k_num_gpr_registers},

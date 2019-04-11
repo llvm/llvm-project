@@ -78,9 +78,7 @@ bool StopInfo::HasTargetRunSinceMe() {
   return false;
 }
 
-//----------------------------------------------------------------------
 // StopInfoBreakpoint
-//----------------------------------------------------------------------
 
 namespace lldb_private {
 class StopInfoBreakpoint : public StopInfo {
@@ -575,9 +573,7 @@ private:
   bool m_was_one_shot;
 };
 
-//----------------------------------------------------------------------
 // StopInfoWatchpoint
-//----------------------------------------------------------------------
 
 class StopInfoWatchpoint : public StopInfo {
 public:
@@ -912,9 +908,7 @@ private:
   lldb::addr_t m_watch_hit_addr;
 };
 
-//----------------------------------------------------------------------
 // StopInfoUnixSignal
-//----------------------------------------------------------------------
 
 class StopInfoUnixSignal : public StopInfo {
 public:
@@ -989,9 +983,7 @@ public:
   }
 };
 
-//----------------------------------------------------------------------
 // StopInfoTrace
-//----------------------------------------------------------------------
 
 class StopInfoTrace : public StopInfo {
 public:
@@ -1009,9 +1001,7 @@ public:
   }
 };
 
-//----------------------------------------------------------------------
 // StopInfoException
-//----------------------------------------------------------------------
 
 class StopInfoException : public StopInfo {
 public:
@@ -1033,9 +1023,7 @@ public:
   }
 };
 
-//----------------------------------------------------------------------
 // StopInfoThreadPlan
-//----------------------------------------------------------------------
 
 class StopInfoThreadPlan : public StopInfo {
 public:
@@ -1078,9 +1066,7 @@ private:
   ExpressionVariableSP m_expression_variable_sp;
 };
 
-//----------------------------------------------------------------------
 // StopInfoExec
-//----------------------------------------------------------------------
 
 class StopInfoExec : public StopInfo {
 public:

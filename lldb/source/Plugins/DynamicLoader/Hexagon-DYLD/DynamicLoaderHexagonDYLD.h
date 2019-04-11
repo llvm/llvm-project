@@ -31,9 +31,7 @@ public:
   static lldb_private::DynamicLoader *
   CreateInstance(lldb_private::Process *process, bool force);
 
-  //------------------------------------------------------------------
   // DynamicLoader protocol
-  //------------------------------------------------------------------
 
   void DidAttach() override;
 
@@ -48,9 +46,7 @@ public:
                                   const lldb::ThreadSP thread,
                                   lldb::addr_t tls_file_addr) override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

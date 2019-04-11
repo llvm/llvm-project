@@ -964,6 +964,7 @@ def BWWriteResGroup59 : SchedWriteRes<[BWPort0,BWPort23]> {
 }
 def: InstRW<[BWWriteResGroup59], (instrs CVTPS2PDrm, VCVTPS2PDrm,
                                          CVTSS2SDrm, VCVTSS2SDrm,
+                                         CVTSS2SDrm_Int, VCVTSS2SDrm_Int,
                                          VPSLLVQrm,
                                          VPSRLVQrm)>;
 

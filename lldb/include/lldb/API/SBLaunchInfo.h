@@ -42,7 +42,6 @@ public:
 
   SBFileSpec GetExecutableFile();
 
-  //----------------------------------------------------------------------
   /// Set the executable file that will be used to launch the process and
   /// optionally set it as the first argument in the argument vector.
   ///
@@ -64,26 +63,21 @@ public:
   ///     If true, then the path will be inserted into the argument vector
   ///     prior to launching. Otherwise the argument vector will be left
   ///     alone.
-  //----------------------------------------------------------------------
   void SetExecutableFile(SBFileSpec exe_file, bool add_as_first_arg);
 
-  //----------------------------------------------------------------------
   /// Get the listener that will be used to receive process events.
   ///
   /// If no listener has been set via a call to
   /// SBLaunchInfo::SetListener(), then an invalid SBListener will be
   /// returned (SBListener::IsValid() will return false). If a listener
   /// has been set, then the valid listener object will be returned.
-  //----------------------------------------------------------------------
   SBListener GetListener();
 
-  //----------------------------------------------------------------------
   /// Set the listener that will be used to receive process events.
   ///
   /// By default the SBDebugger, which has a listener, that the SBTarget
   /// belongs to will listen for the process events. Calling this function
   /// allows a different listener to be used to listen for process events.
-  //----------------------------------------------------------------------
   void SetListener(SBListener &listener);
 
   uint32_t GetNumArguments();

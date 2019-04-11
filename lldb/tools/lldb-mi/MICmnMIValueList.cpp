@@ -11,7 +11,6 @@
 #include "MICmnResources.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueList constructor.
 // Type:    Method.
 // Args:    vbValueTypeList - (R) True = yes value type list, false = result
@@ -24,7 +23,6 @@ CMICmnMIValueList::CMICmnMIValueList(const bool vbValueTypeList) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueList constructor.
 //          Construct a results only list.
 //          return MIstatus::failure.
@@ -40,7 +38,6 @@ CMICmnMIValueList::CMICmnMIValueList(const CMICmnMIValueResult &vResult) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueList constructor.
 //          Construct a value only list.
 // Type:    Method.
@@ -55,7 +52,6 @@ CMICmnMIValueList::CMICmnMIValueList(const CMICmnMIValue &vValue) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValueList destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -65,7 +61,6 @@ CMICmnMIValueList::CMICmnMIValueList(const CMICmnMIValue &vValue) {
 CMICmnMIValueList::~CMICmnMIValueList() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Build the result value's mandatory data part, one tuple
 // Type:    Method.
 // Args:    None.
@@ -78,7 +73,6 @@ void CMICmnMIValueList::BuildList() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add another MI result object to  the value list's of list is
 // results.
 //          Only result objects can be added to a list of result otherwise this
@@ -94,7 +88,6 @@ void CMICmnMIValueList::Add(const CMICmnMIValueResult &vResult) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add another MI value object to  the value list's of list is values.
 //          Only values objects can be added to a list of values otherwise this
 //          function
@@ -107,7 +100,6 @@ void CMICmnMIValueList::Add(const CMICmnMIValueResult &vResult) {
 void CMICmnMIValueList::Add(const CMICmnMIValue &vValue) { BuildList(vValue); }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add another MI result object to  the value list's of list is
 // results.
 //          Only result objects can be added to a list of result otherwise this
@@ -134,7 +126,6 @@ void CMICmnMIValueList::BuildList(const CMICmnMIValueResult &vResult) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add another MI value object to  the value list's of list is values.
 //          Only values objects can be added to a list of values otherwise this
 //          function
@@ -164,7 +155,6 @@ void CMICmnMIValueList::BuildList(const CMICmnMIValue &vValue) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the contents of *this value object but without the outer
 // most
 //          brackets.
