@@ -27,11 +27,11 @@ int main(int argc, const char *argv[]) {
 
     dispatch_semaphore_signal(done);
   });
-  dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
 
   my_global2 = 10;
   dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_MSEC)), q, NULL, &callback);
 
+  dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
   dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
   fprintf(stderr, "done\n");
   return 0;
