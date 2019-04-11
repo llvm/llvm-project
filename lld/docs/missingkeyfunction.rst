@@ -51,7 +51,7 @@ you won't see any undefined reference errors that point directly to the problem.
 The solution in this case is to implement the missing function.
 
 Forgetting to declare a virtual function in an abstract class as pure
--------------------------------------------------------------------
+---------------------------------------------------------------------
 
 Say you have an abstract base class declared in a header file::
 
@@ -74,7 +74,7 @@ The solution in this case is to add the missing ``= 0`` to the declaration of
 ``A::bar``.
 
 Key function is defined, but the linker doesn't see it
-----------------------------------------------------
+------------------------------------------------------
 
 It's also possible that you have defined the key function somewhere, but the
 object file containing the definition of that function isn't being linked into

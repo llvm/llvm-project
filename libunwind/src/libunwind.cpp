@@ -236,7 +236,7 @@ _LIBUNWIND_HIDDEN void __unw_save_vfp_as_X(unw_cursor_t *cursor) {
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   return co->saveVFPAsX();
 }
-_LIBUNWIND_WEAK_ALIAS(__unw_save_vfp_as_X, unw_save_cfp_as_X)
+_LIBUNWIND_WEAK_ALIAS(__unw_save_vfp_as_X, unw_save_vfp_as_X)
 #endif
 
 
