@@ -46,9 +46,7 @@ static void initialize() {
 static void terminate() { g_debugger_lifetime->Terminate(); }
 } // namespace llgs
 
-//----------------------------------------------------------------------
 // main
-//----------------------------------------------------------------------
 int main(int argc, char *argv[]) {
   llvm::StringRef ToolName = argv[0];
   llvm::sys::PrintStackTraceOnErrorSignal(ToolName);

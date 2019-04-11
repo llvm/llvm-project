@@ -23,9 +23,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanPython
-//----------------------------------------------------------------------
 
 ThreadPlanPython::ThreadPlanPython(Thread &thread, const char *class_name)
     : ThreadPlan(ThreadPlan::eKindPython, "Python based Thread Plan", thread,

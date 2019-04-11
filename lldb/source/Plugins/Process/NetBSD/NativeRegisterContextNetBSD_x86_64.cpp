@@ -31,9 +31,7 @@
 using namespace lldb_private;
 using namespace lldb_private::process_netbsd;
 
-// ----------------------------------------------------------------------------
 // Private namespace.
-// ----------------------------------------------------------------------------
 
 namespace {
 // x86 64-bit general purpose registers.
@@ -152,9 +150,7 @@ NativeRegisterContextNetBSD::CreateHostNativeRegisterContextNetBSD(
   return new NativeRegisterContextNetBSD_x86_64(target_arch, native_thread);
 }
 
-// ----------------------------------------------------------------------------
 // NativeRegisterContextNetBSD_x86_64 members.
-// ----------------------------------------------------------------------------
 
 static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {

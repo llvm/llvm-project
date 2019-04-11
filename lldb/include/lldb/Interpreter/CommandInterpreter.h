@@ -29,7 +29,6 @@ namespace lldb_private {
 
 class CommandInterpreterRunOptions {
 public:
-  //------------------------------------------------------------------
   /// Construct a CommandInterpreterRunOptions object. This class is used to
   /// control all the instances where we run multiple commands, e.g.
   /// HandleCommands, HandleCommandsFromFile, RunCommandInterpreter.
@@ -59,7 +58,6 @@ public:
   /// \param[in] add_to_history
   ///    If \b true add the commands to the command history. If \b false, don't
   ///    add them.
-  //------------------------------------------------------------------
   CommandInterpreterRunOptions(LazyBool stop_on_continue,
                                LazyBool stop_on_error, LazyBool stop_on_crash,
                                LazyBool echo_commands, LazyBool echo_comments,
@@ -254,7 +252,6 @@ public:
 
   bool WasInterrupted() const;
 
-  //------------------------------------------------------------------
   /// Execute a list of commands in sequence.
   ///
   /// \param[in] commands
@@ -272,12 +269,10 @@ public:
   ///    safely,
   ///    and failed with some explanation if we aborted executing the commands
   ///    at some point.
-  //------------------------------------------------------------------
   void HandleCommands(const StringList &commands, ExecutionContext *context,
                       CommandInterpreterRunOptions &options,
                       CommandReturnObject &result);
 
-  //------------------------------------------------------------------
   /// Execute a list of commands from a file.
   ///
   /// \param[in] file
@@ -295,7 +290,6 @@ public:
   ///    safely,
   ///    and failed with some explanation if we aborted executing the commands
   ///    at some point.
-  //------------------------------------------------------------------
   void HandleCommandsFromFile(FileSpec &file, ExecutionContext *context,
                               CommandInterpreterRunOptions &options,
                               CommandReturnObject &result);
@@ -459,9 +453,7 @@ public:
 
   const char *GetCommandPrefix();
 
-  //------------------------------------------------------------------
   // Properties
-  //------------------------------------------------------------------
   bool GetExpandRegexAliases() const;
 
   bool GetPromptOnQuit() const;
@@ -474,28 +466,22 @@ public:
   bool GetEchoCommentCommands() const;
   void SetEchoCommentCommands(bool b);
 
-  //------------------------------------------------------------------
   /// Specify if the command interpreter should allow that the user can
   /// specify a custom exit code when calling 'quit'.
-  //------------------------------------------------------------------
   void AllowExitCodeOnQuit(bool allow);
 
-  //------------------------------------------------------------------
   /// Sets the exit code for the quit command.
   /// \param[in] exit_code
   ///     The exit code that the driver should return on exit.
   /// \return True if the exit code was successfully set; false if the
   ///         interpreter doesn't allow custom exit codes.
   /// \see AllowExitCodeOnQuit
-  //------------------------------------------------------------------
   LLVM_NODISCARD bool SetQuitExitCode(int exit_code);
 
-  //------------------------------------------------------------------
   /// Returns the exit code that the user has specified when running the
   /// 'quit' command.
   /// \param[out] exited
   ///     Set to true if the user has called quit with a custom exit code.
-  //------------------------------------------------------------------
   int GetQuitExitCode(bool &exited) const;
 
   void ResolveCommand(const char *command_line, CommandReturnObject &result);
@@ -517,9 +503,7 @@ public:
 protected:
   friend class Debugger;
 
-  //------------------------------------------------------------------
   // IOHandlerDelegate functions
-  //------------------------------------------------------------------
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &line) override;
 

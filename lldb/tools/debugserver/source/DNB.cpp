@@ -62,12 +62,10 @@ static size_t
 GetAllInfosMatchingName(const char *process_name,
                         std::vector<struct kinfo_proc> &matching_proc_infos);
 
-//----------------------------------------------------------------------
 // A Thread safe singleton to get a process map pointer.
 //
 // Returns a pointer to the existing process map, or a pointer to a
 // newly created process map if CAN_CREATE is non-zero.
-//----------------------------------------------------------------------
 static ProcessMap *GetProcessMap(bool can_create) {
   static ProcessMap *g_process_map_ptr = NULL;
 
@@ -80,13 +78,11 @@ static ProcessMap *GetProcessMap(bool can_create) {
   return g_process_map_ptr;
 }
 
-//----------------------------------------------------------------------
 // Add PID to the shared process pointer map.
 //
 // Return non-zero value if we succeed in adding the process to the map.
 // The only time this should fail is if we run out of memory and can't
 // allocate a ProcessMap.
-//----------------------------------------------------------------------
 static nub_bool_t AddProcessToMap(nub_process_t pid, MachProcessSP &procSP) {
   ProcessMap *process_map = GetProcessMap(true);
   if (process_map) {
@@ -96,11 +92,9 @@ static nub_bool_t AddProcessToMap(nub_process_t pid, MachProcessSP &procSP) {
   return false;
 }
 
-//----------------------------------------------------------------------
 // Remove the shared pointer for PID from the process map.
 //
 // Returns the number of items removed from the process map.
-//----------------------------------------------------------------------
 // static size_t
 // RemoveProcessFromMap (nub_process_t pid)
 //{
@@ -112,12 +106,10 @@ static nub_bool_t AddProcessToMap(nub_process_t pid, MachProcessSP &procSP) {
 //    return 0;
 //}
 
-//----------------------------------------------------------------------
 // Get the shared pointer for PID from the existing process map.
 //
 // Returns true if we successfully find a shared pointer to a
 // MachProcess object.
-//----------------------------------------------------------------------
 static nub_bool_t GetProcessSP(nub_process_t pid, MachProcessSP &procSP) {
   ProcessMap *process_map = GetProcessMap(false);
   if (process_map != NULL) {
@@ -811,9 +803,7 @@ nub_bool_t DNBProcessIsAlive(nub_process_t pid) {
   return eStateInvalid;
 }
 
-//----------------------------------------------------------------------
 // Process and Thread state information
-//----------------------------------------------------------------------
 nub_state_t DNBProcessGetState(nub_process_t pid) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
@@ -822,9 +812,7 @@ nub_state_t DNBProcessGetState(nub_process_t pid) {
   return eStateInvalid;
 }
 
-//----------------------------------------------------------------------
 // Process and Thread state information
-//----------------------------------------------------------------------
 nub_bool_t DNBProcessGetExitStatus(nub_process_t pid, int *status) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
@@ -1031,9 +1019,7 @@ const char *DNBProcessGetArgumentAtIndex(nub_process_t pid, nub_size_t idx) {
   return NULL;
 }
 
-//----------------------------------------------------------------------
 // Execution control
-//----------------------------------------------------------------------
 nub_bool_t DNBProcessResume(nub_process_t pid,
                             const DNBThreadResumeAction *actions,
                             size_t num_actions) {
@@ -1128,9 +1114,7 @@ nub_bool_t DNBBreakpointClear(nub_process_t pid, nub_addr_t addr) {
   return false; // Failed
 }
 
-//----------------------------------------------------------------------
 // Watchpoints
-//----------------------------------------------------------------------
 nub_bool_t DNBWatchpointSet(nub_process_t pid, nub_addr_t addr, nub_size_t size,
                             uint32_t watch_flags, nub_bool_t hardware) {
   MachProcessSP procSP;
@@ -1146,9 +1130,7 @@ nub_bool_t DNBWatchpointClear(nub_process_t pid, nub_addr_t addr) {
   return false; // Failed
 }
 
-//----------------------------------------------------------------------
 // Return the number of supported hardware watchpoints.
-//----------------------------------------------------------------------
 uint32_t DNBWatchpointGetNumSupportedHWP(nub_process_t pid) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP))
@@ -1156,13 +1138,11 @@ uint32_t DNBWatchpointGetNumSupportedHWP(nub_process_t pid) {
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Read memory in the address space of process PID. This call will take
 // care of setting and restoring permissions and breaking up the memory
 // read into multiple chunks as required.
 //
 // RETURNS: number of bytes actually read
-//----------------------------------------------------------------------
 nub_size_t DNBProcessMemoryRead(nub_process_t pid, nub_addr_t addr,
                                 nub_size_t size, void *buf) {
   MachProcessSP procSP;
@@ -1246,13 +1226,11 @@ std::string DNBProcessMemoryReadCStringFixed(nub_process_t pid, nub_addr_t addr,
   return cstr;
 }
 
-//----------------------------------------------------------------------
 // Write memory to the address space of process PID. This call will take
 // care of setting and restoring permissions and breaking up the memory
 // write into multiple chunks as required.
 //
 // RETURNS: number of bytes actually written
-//----------------------------------------------------------------------
 nub_size_t DNBProcessMemoryWrite(nub_process_t pid, nub_addr_t addr,
                                  nub_size_t size, const void *buf) {
   MachProcessSP procSP;
@@ -1276,7 +1254,6 @@ nub_bool_t DNBProcessMemoryDeallocate(nub_process_t pid, nub_addr_t addr) {
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Find attributes of the memory region that contains ADDR for process PID,
 // if possible, and return a string describing those attributes.
 //
@@ -1289,7 +1266,6 @@ nub_bool_t DNBProcessMemoryDeallocate(nub_process_t pid, nub_addr_t addr) {
 // Returns -1 if this platform cannot look up information about memory regions
 // or if we do not yet have a valid launched process.
 //
-//----------------------------------------------------------------------
 int DNBProcessMemoryRegionInfo(nub_process_t pid, nub_addr_t addr,
                                DNBRegionInfo *region_info) {
   MachProcessSP procSP;
@@ -1321,9 +1297,7 @@ nub_bool_t DNBProcessSetEnableAsyncProfiling(nub_process_t pid,
   return false;
 }
 
-//----------------------------------------------------------------------
 // Get the number of threads for the specified process.
-//----------------------------------------------------------------------
 nub_size_t DNBProcessGetNumThreads(nub_process_t pid) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP))
@@ -1331,9 +1305,7 @@ nub_size_t DNBProcessGetNumThreads(nub_process_t pid) {
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Get the thread ID of the current thread.
-//----------------------------------------------------------------------
 nub_thread_t DNBProcessGetCurrentThread(nub_process_t pid) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP))
@@ -1341,9 +1313,7 @@ nub_thread_t DNBProcessGetCurrentThread(nub_process_t pid) {
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Get the mach port number of the current thread.
-//----------------------------------------------------------------------
 nub_thread_t DNBProcessGetCurrentThreadMachPort(nub_process_t pid) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP))
@@ -1351,9 +1321,7 @@ nub_thread_t DNBProcessGetCurrentThreadMachPort(nub_process_t pid) {
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Change the current thread.
-//----------------------------------------------------------------------
 nub_thread_t DNBProcessSetCurrentThread(nub_process_t pid, nub_thread_t tid) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP))
@@ -1361,10 +1329,8 @@ nub_thread_t DNBProcessSetCurrentThread(nub_process_t pid, nub_thread_t tid) {
   return INVALID_NUB_THREAD;
 }
 
-//----------------------------------------------------------------------
 // Dump a string describing a thread's stop reason to the specified file
 // handle
-//----------------------------------------------------------------------
 nub_bool_t DNBThreadGetStopReason(nub_process_t pid, nub_thread_t tid,
                                   struct DNBThreadStopInfo *stop_info) {
   MachProcessSP procSP;
@@ -1373,13 +1339,11 @@ nub_bool_t DNBThreadGetStopReason(nub_process_t pid, nub_thread_t tid,
   return false;
 }
 
-//----------------------------------------------------------------------
 // Return string description for the specified thread.
 //
 // RETURNS: NULL if the thread isn't valid, else a NULL terminated C
 // string from a static buffer that must be copied prior to subsequent
 // calls.
-//----------------------------------------------------------------------
 const char *DNBThreadGetInfo(nub_process_t pid, nub_thread_t tid) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP))
@@ -1387,9 +1351,7 @@ const char *DNBThreadGetInfo(nub_process_t pid, nub_thread_t tid) {
   return NULL;
 }
 
-//----------------------------------------------------------------------
 // Get the thread ID given a thread index.
-//----------------------------------------------------------------------
 nub_thread_t DNBProcessGetThreadAtIndex(nub_process_t pid, size_t thread_idx) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP))
@@ -1397,10 +1359,8 @@ nub_thread_t DNBProcessGetThreadAtIndex(nub_process_t pid, size_t thread_idx) {
   return INVALID_NUB_THREAD;
 }
 
-//----------------------------------------------------------------------
 // Do whatever is needed to sync the thread's register state with it's kernel
 // values.
-//----------------------------------------------------------------------
 nub_bool_t DNBProcessSyncThreadState(nub_process_t pid, nub_thread_t tid) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP))
@@ -1440,11 +1400,9 @@ const char *DNBGetDeploymentInfo(nub_process_t pid,
 }
 
 
-//----------------------------------------------------------------------
 // Get the current shared library information for a process. Only return
 // the shared libraries that have changed since the last shared library
 // state changed event if only_changed is non-zero.
-//----------------------------------------------------------------------
 nub_size_t
 DNBProcessGetSharedLibraryInfo(nub_process_t pid, nub_bool_t only_changed,
                                struct DNBExecutableImageInfo **image_infos) {
@@ -1461,16 +1419,12 @@ DNBProcessGetSharedLibraryInfo(nub_process_t pid, nub_bool_t only_changed,
 uint32_t DNBGetRegisterCPUType() {
   return DNBArchProtocol::GetRegisterCPUType();
 }
-//----------------------------------------------------------------------
 // Get the register set information for a specific thread.
-//----------------------------------------------------------------------
 const DNBRegisterSetInfo *DNBGetRegisterSetInfo(nub_size_t *num_reg_sets) {
   return DNBArchProtocol::GetRegisterSetInfo(num_reg_sets);
 }
 
-//----------------------------------------------------------------------
 // Read a register value by register set and register index.
-//----------------------------------------------------------------------
 nub_bool_t DNBThreadGetRegisterValueByID(nub_process_t pid, nub_thread_t tid,
                                          uint32_t set, uint32_t reg,
                                          DNBRegisterValue *value) {
@@ -1533,9 +1487,7 @@ nub_bool_t DNBThreadRestoreRegisterState(nub_process_t pid, nub_thread_t tid,
   return false;
 }
 
-//----------------------------------------------------------------------
 // Read a register value by name.
-//----------------------------------------------------------------------
 nub_bool_t DNBThreadGetRegisterValueByName(nub_process_t pid, nub_thread_t tid,
                                            uint32_t reg_set,
                                            const char *reg_name,
@@ -1567,9 +1519,7 @@ nub_bool_t DNBThreadGetRegisterValueByName(nub_process_t pid, nub_thread_t tid,
   return false;
 }
 
-//----------------------------------------------------------------------
 // Read a register set and register number from the register name.
-//----------------------------------------------------------------------
 nub_bool_t DNBGetRegisterInfoByName(const char *reg_name,
                                     DNBRegisterInfo *info) {
   const struct DNBRegisterSetInfo *set_info;
@@ -1604,10 +1554,8 @@ nub_bool_t DNBGetRegisterInfoByName(const char *reg_name,
   return false;
 }
 
-//----------------------------------------------------------------------
 // Set the name to address callback function that this nub can use
 // for any name to address lookups that are needed.
-//----------------------------------------------------------------------
 nub_bool_t DNBProcessSetNameToAddressCallback(nub_process_t pid,
                                               DNBCallbackNameToAddress callback,
                                               void *baton) {
@@ -1619,10 +1567,8 @@ nub_bool_t DNBProcessSetNameToAddressCallback(nub_process_t pid,
   return false;
 }
 
-//----------------------------------------------------------------------
 // Set the name to address callback function that this nub can use
 // for any name to address lookups that are needed.
-//----------------------------------------------------------------------
 nub_bool_t DNBProcessSetSharedLibraryInfoCallback(
     nub_process_t pid, DNBCallbackCopyExecutableImageInfos callback,
     void *baton) {

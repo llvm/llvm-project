@@ -32,9 +32,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 #pragma mark CommandObjectSourceInfo
-//----------------------------------------------------------------------
 // CommandObjectSourceInfo - debug line entries dumping command
-//----------------------------------------------------------------------
 
 static constexpr OptionDefinition g_source_info_options[] = {
     // clang-format off
@@ -644,9 +642,7 @@ protected:
 };
 
 #pragma mark CommandObjectSourceList
-//-------------------------------------------------------------------------
 // CommandObjectSourceList
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_source_list_options[] = {
     // clang-format off
@@ -1292,9 +1288,7 @@ protected:
 };
 
 #pragma mark CommandObjectMultiwordSource
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordSource
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordSource::CommandObjectMultiwordSource(
     CommandInterpreter &interpreter)

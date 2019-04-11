@@ -24,9 +24,7 @@ class ConstString;
 
 namespace lldb_private {
 
-//---------------------------------------------------------------------------------
 // A ValueObject that represents a given value represented as a different type.
-//---------------------------------------------------------------------------------
 class ValueObjectCast : public ValueObject {
 public:
   ~ValueObjectCast() override;

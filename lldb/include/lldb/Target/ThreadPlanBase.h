@@ -15,12 +15,10 @@
 
 namespace lldb_private {
 
-//------------------------------------------------------------------
 //  Base thread plans:
 //  This is the generic version of the bottom most plan on the plan stack.  It
 //  should
 //  be able to handle generic breakpoint hitting, and signals and exceptions.
-//------------------------------------------------------------------
 
 class ThreadPlanBase : public ThreadPlan {
   friend class Process; // RunThreadPlan manages "stopper" base plans.

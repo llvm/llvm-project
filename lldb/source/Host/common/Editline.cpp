@@ -260,9 +260,7 @@ protected:
 }
 }
 
-//------------------------------------------------------------------
 // Editline private methods
-//------------------------------------------------------------------
 
 void Editline::SetBaseLineNumber(int line_number) {
   std::stringstream line_number_stream;
@@ -856,10 +854,8 @@ unsigned char Editline::BufferEndCommand(int ch) {
   return CC_NEWLINE;
 }
 
-//------------------------------------------------------------------------------
 /// Prints completions and their descriptions to the given file. Only the
 /// completions in the interval [start, end) are printed.
-//------------------------------------------------------------------------------
 static void PrintCompletion(FILE *output_file, size_t start, size_t end,
                             StringList &completions, StringList &descriptions) {
   // This is an 'int' because of printf.
@@ -1144,9 +1140,7 @@ void Editline::ConfigureEditor(bool multiline) {
   }
 }
 
-//------------------------------------------------------------------
 // Editline public methods
-//------------------------------------------------------------------
 
 Editline *Editline::InstanceFor(EditLine *editline) {
   Editline *editor;

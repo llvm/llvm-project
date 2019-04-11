@@ -24,10 +24,8 @@
 
 namespace lldb_private {
 
-//------------------------------------------------------------------
 //  ThreadPlanPython:
 //
-//------------------------------------------------------------------
 
 class ThreadPlanPython : public ThreadPlan {
 public:

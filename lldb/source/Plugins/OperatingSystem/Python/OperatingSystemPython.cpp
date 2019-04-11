@@ -139,9 +139,7 @@ DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
   return m_register_info_up.get();
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString OperatingSystemPython::GetPluginName() {
   return GetPluginNameStatic();
 }

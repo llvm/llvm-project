@@ -116,10 +116,8 @@ HostThread Host::StartMonitoringChildProcess(
 }
 
 #ifndef __linux__
-//------------------------------------------------------------------
 // Scoped class that will disable thread canceling when it is constructed, and
 // exception safely restore the previous value it when it goes out of scope.
-//------------------------------------------------------------------
 class ScopedPThreadCancelDisabler {
 public:
   ScopedPThreadCancelDisabler() {

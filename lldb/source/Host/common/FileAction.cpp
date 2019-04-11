@@ -14,9 +14,7 @@
 
 using namespace lldb_private;
 
-//----------------------------------------------------------------------------
 // FileAction member functions
-//----------------------------------------------------------------------------
 
 FileAction::FileAction()
     : m_action(eFileActionNone), m_fd(-1), m_arg(-1), m_file_spec() {}

@@ -22,19 +22,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_mips64 to declare our g_register_infos_mips64
 // structure.
-//---------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_MIPS64_STRUCT
 #define LINUX_MIPS64
 #include "RegisterInfos_mips64.h"
 #undef LINUX_MIPS64
 #undef DECLARE_REGISTER_INFOS_MIPS64_STRUCT
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_mips to declare our g_register_infos_mips structure.
-//---------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_MIPS_STRUCT
 #include "RegisterInfos_mips.h"
 #undef DECLARE_REGISTER_INFOS_MIPS_STRUCT

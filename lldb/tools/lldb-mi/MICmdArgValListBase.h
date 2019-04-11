@@ -45,7 +45,6 @@ public:
   // Enums:
 public:
   //++
-  //---------------------------------------------------------------------------------
   // Details: CMICmdArgValListBase needs to know what type of argument to look
   // for in
   //          the command options text. It also needs to create argument objects

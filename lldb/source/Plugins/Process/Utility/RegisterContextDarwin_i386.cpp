@@ -460,11 +460,9 @@ const size_t k_num_gpr_registers = llvm::array_lengthof(g_gpr_regnums);
 const size_t k_num_fpu_registers = llvm::array_lengthof(g_fpu_regnums);
 const size_t k_num_exc_registers = llvm::array_lengthof(g_exc_regnums);
 
-//----------------------------------------------------------------------
 // Register set definitions. The first definitions at register set index of
 // zero is for all registers, followed by other registers sets. The register
 // information for the all register set need not be filled in.
-//----------------------------------------------------------------------
 static const RegisterSet g_reg_sets[] = {
     {
         "General Purpose Registers", "gpr", k_num_gpr_registers, g_gpr_regnums,
@@ -484,9 +482,7 @@ const RegisterSet *RegisterContextDarwin_i386::GetRegisterSet(size_t reg_set) {
   return NULL;
 }
 
-//----------------------------------------------------------------------
 // Register information definitions for 32 bit i386.
-//----------------------------------------------------------------------
 int RegisterContextDarwin_i386::GetSetForNativeRegNum(int reg_num) {
   if (reg_num < fpu_fcw)
     return GPRRegSet;

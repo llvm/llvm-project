@@ -22,19 +22,15 @@ FileSpecList::FileSpecList() : m_files() {}
 
 FileSpecList::~FileSpecList() = default;
 
-//------------------------------------------------------------------
 // Append the "file_spec" to the end of the file spec list.
-//------------------------------------------------------------------
 void FileSpecList::Append(const FileSpec &file_spec) {
   m_files.push_back(file_spec);
 }
 
-//------------------------------------------------------------------
 // Only append the "file_spec" if this list doesn't already contain it.
 //
 // Returns true if "file_spec" was added, false if this list already contained
 // a copy of "file_spec".
-//------------------------------------------------------------------
 bool FileSpecList::AppendIfUnique(const FileSpec &file_spec) {
   collection::iterator end = m_files.end();
   if (find(m_files.begin(), end, file_spec) == end) {
@@ -44,14 +40,10 @@ bool FileSpecList::AppendIfUnique(const FileSpec &file_spec) {
   return false;
 }
 
-//------------------------------------------------------------------
 // Clears the file list.
-//------------------------------------------------------------------
 void FileSpecList::Clear() { m_files.clear(); }
 
-//------------------------------------------------------------------
 // Dumps the file list to the supplied stream pointer "s".
-//------------------------------------------------------------------
 void FileSpecList::Dump(Stream *s, const char *separator_cstr) const {
   collection::const_iterator pos, end = m_files.end();
   for (pos = m_files.begin(); pos != end; ++pos) {
@@ -61,13 +53,11 @@ void FileSpecList::Dump(Stream *s, const char *separator_cstr) const {
   }
 }
 
-//------------------------------------------------------------------
 // Find the index of the file in the file spec list that matches "file_spec"
 // starting "start_idx" entries into the file spec list.
 //
 // Returns the valid index of the file that matches "file_spec" if it is found,
 // else std::numeric_limits<uint32_t>::max() is returned.
-//------------------------------------------------------------------
 size_t FileSpecList::FindFileIndex(size_t start_idx, const FileSpec &file_spec,
                                    bool full) const {
   const size_t num_files = m_files.size();
@@ -92,10 +82,8 @@ size_t FileSpecList::FindFileIndex(size_t start_idx, const FileSpec &file_spec,
   return UINT32_MAX;
 }
 
-//------------------------------------------------------------------
 // Returns the FileSpec object at index "idx". If "idx" is out of range, then
 // an empty FileSpec object will be returned.
-//------------------------------------------------------------------
 const FileSpec &FileSpecList::GetFileSpecAtIndex(size_t idx) const {
   if (idx < m_files.size())
     return m_files[idx];
@@ -109,12 +97,10 @@ const FileSpec *FileSpecList::GetFileSpecPointerAtIndex(size_t idx) const {
   return nullptr;
 }
 
-//------------------------------------------------------------------
 // Return the size in bytes that this object takes in memory. This returns the
 // size in bytes of this object's member variables and any FileSpec objects its
 // member variables contain, the result doesn't not include the string values
 // for the directories any filenames as those are in shared string pools.
-//------------------------------------------------------------------
 size_t FileSpecList::MemorySize() const {
   size_t mem_size = sizeof(FileSpecList);
   collection::const_iterator pos, end = m_files.end();
@@ -125,9 +111,7 @@ size_t FileSpecList::MemorySize() const {
   return mem_size;
 }
 
-//------------------------------------------------------------------
 // Return the number of files in the file spec list.
-//------------------------------------------------------------------
 size_t FileSpecList::GetSize() const { return m_files.size(); }
 
 size_t FileSpecList::GetFilesMatchingPartialPath(const char *path,

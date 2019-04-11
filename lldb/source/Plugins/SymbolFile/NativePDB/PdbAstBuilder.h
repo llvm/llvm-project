@@ -50,9 +50,7 @@ struct DeclStatus {
 
 class PdbAstBuilder {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   PdbAstBuilder(ObjectFile &obj, PdbIndex &index);
 
   clang::DeclContext &GetTranslationUnitDecl();

@@ -7302,7 +7302,7 @@ defm VPMADD52HUQ : avx512_pmadd52_common<0xb5, "vpmadd52huq", x86vpmadd52h,
 multiclass avx512_vcvtsi<bits<8> opc, SDPatternOperator OpNode, X86FoldableSchedWrite sched,
                     RegisterClass SrcRC, X86VectorVTInfo DstVT,
                     X86MemOperand x86memop, PatFrag ld_frag, string asm> {
-  let hasSideEffects = 0 in {
+  let hasSideEffects = 0, isCodeGenOnly = 1 in {
     def rr : SI<opc, MRMSrcReg, (outs DstVT.FRC:$dst),
               (ins DstVT.FRC:$src1, SrcRC:$src),
               !strconcat(asm,"\t{$src, $src1, $dst|$dst, $src1, $src}"), []>,
@@ -7313,22 +7313,20 @@ multiclass avx512_vcvtsi<bits<8> opc, SDPatternOperator OpNode, X86FoldableSched
               !strconcat(asm,"\t{$src, $src1, $dst|$dst, $src1, $src}"), []>,
               EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
   } // hasSideEffects = 0
-  let isCodeGenOnly = 1 in {
-    def rr_Int : SI<opc, MRMSrcReg, (outs DstVT.RC:$dst),
-                  (ins DstVT.RC:$src1, SrcRC:$src2),
-                  !strconcat(asm,"\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                  [(set DstVT.RC:$dst,
-                        (OpNode (DstVT.VT DstVT.RC:$src1), SrcRC:$src2))]>,
-                 EVEX_4V, Sched<[sched, ReadDefault, ReadInt2Fpu]>;
+  def rr_Int : SI<opc, MRMSrcReg, (outs DstVT.RC:$dst),
+                (ins DstVT.RC:$src1, SrcRC:$src2),
+                !strconcat(asm,"\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                [(set DstVT.RC:$dst,
+                      (OpNode (DstVT.VT DstVT.RC:$src1), SrcRC:$src2))]>,
+               EVEX_4V, Sched<[sched, ReadDefault, ReadInt2Fpu]>;
 
-    def rm_Int : SI<opc, MRMSrcMem, (outs DstVT.RC:$dst),
-                  (ins DstVT.RC:$src1, x86memop:$src2),
-                  !strconcat(asm,"\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                  [(set DstVT.RC:$dst,
-                        (OpNode (DstVT.VT DstVT.RC:$src1),
-                                 (ld_frag addr:$src2)))]>,
-                  EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
-  }//isCodeGenOnly = 1
+  def rm_Int : SI<opc, MRMSrcMem, (outs DstVT.RC:$dst),
+                (ins DstVT.RC:$src1, x86memop:$src2),
+                !strconcat(asm,"\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                [(set DstVT.RC:$dst,
+                      (OpNode (DstVT.VT DstVT.RC:$src1),
+                               (ld_frag addr:$src2)))]>,
+                EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_vcvtsi_round<bits<8> opc, SDNode OpNode,
@@ -7372,9 +7370,9 @@ defm VCVTSI642SDZ: avx512_vcvtsi_common<0x2A, X86SintToFp, X86SintToFpRnd,
                                  XD, VEX_W, EVEX_CD8<64, CD8VT1>;
 
 def : InstAlias<"vcvtsi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
-              (VCVTSI2SSZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0, "att">;
+              (VCVTSI2SSZrm_Int VR128X:$dst, VR128X:$src1, i32mem:$src), 0, "att">;
 def : InstAlias<"vcvtsi2sd\t{$src, $src1, $dst|$dst, $src1, $src}",
-              (VCVTSI2SDZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0, "att">;
+              (VCVTSI2SDZrm_Int VR128X:$dst, VR128X:$src1, i32mem:$src), 0, "att">;
 
 def : Pat<(f32 (sint_to_fp (loadi32 addr:$src))),
           (VCVTSI2SSZrm (f32 (IMPLICIT_DEF)), addr:$src)>;
@@ -7411,9 +7409,9 @@ defm VCVTUSI642SDZ : avx512_vcvtsi_common<0x7B, X86UintToFp, X86UintToFpRnd,
                                   XD, VEX_W, EVEX_CD8<64, CD8VT1>;
 
 def : InstAlias<"vcvtusi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
-              (VCVTUSI2SSZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0, "att">;
+              (VCVTUSI2SSZrm_Int VR128X:$dst, VR128X:$src1, i32mem:$src), 0, "att">;
 def : InstAlias<"vcvtusi2sd\t{$src, $src1, $dst|$dst, $src1, $src}",
-              (VCVTUSI2SDZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0, "att">;
+              (VCVTUSI2SDZrm_Int VR128X:$dst, VR128X:$src1, i32mem:$src), 0, "att">;
 
 def : Pat<(f32 (uint_to_fp (loadi32 addr:$src))),
           (VCVTUSI2SSZrm (f32 (IMPLICIT_DEF)), addr:$src)>;

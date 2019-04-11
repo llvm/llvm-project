@@ -63,9 +63,7 @@ public:
 
   bool IsArmHardFloat(lldb_private::Thread &thread) const;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
 
   static void Initialize();
 
@@ -75,9 +73,7 @@ public:
 
   static lldb_private::ConstString GetPluginNameStatic();
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
 
   lldb_private::ConstString GetPluginName() override;
 

@@ -18,9 +18,7 @@
 
 class CFString : public CFReleaser<CFStringRef> {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CFString(CFStringRef cf_str = NULL);
   CFString(const char *s, CFStringEncoding encoding = kCFStringEncodingUTF8);
   CFString(const CFString &rhs);

@@ -19,9 +19,7 @@ class NativeThreadProtocol;
 class NativeRegisterContext
     : public std::enable_shared_from_this<NativeRegisterContext> {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   NativeRegisterContext(NativeThreadProtocol &thread);
 
   virtual ~NativeRegisterContext();
@@ -29,9 +27,7 @@ public:
   // void
   // InvalidateIfNeeded (bool force);
 
-  //------------------------------------------------------------------
   // Subclasses must override these functions
-  //------------------------------------------------------------------
   // virtual void
   // InvalidateAllRegisters () = 0;
 
@@ -60,9 +56,7 @@ public:
   uint32_t ConvertRegisterKindToRegisterNumber(uint32_t kind,
                                                uint32_t num) const;
 
-  //------------------------------------------------------------------
   // Subclasses can override these functions if desired
-  //------------------------------------------------------------------
   virtual uint32_t NumSupportedHardwareBreakpoints();
 
   virtual uint32_t SetHardwareBreakpoint(lldb::addr_t addr, size_t size);
@@ -115,9 +109,7 @@ public:
                              lldb::addr_t dst_addr, size_t dst_len,
                              const RegisterValue &reg_value);
 
-  //------------------------------------------------------------------
   // Subclasses should not override these
-  //------------------------------------------------------------------
   virtual lldb::tid_t GetThreadID() const;
 
   virtual NativeThreadProtocol &GetThread() { return m_thread; }
@@ -170,18 +162,14 @@ public:
   // }
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from RegisterContext can see and modify these
-  //------------------------------------------------------------------
   NativeThreadProtocol
       &m_thread; // The thread that this register context belongs to.
   // uint32_t m_stop_id;             // The stop ID that any data in this
   // context is valid for
 
 private:
-  //------------------------------------------------------------------
   // For RegisterContext only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(NativeRegisterContext);
 };
 

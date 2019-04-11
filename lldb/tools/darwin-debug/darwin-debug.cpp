@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-//----------------------------------------------------------------------
 // Darwin launch helper
 //
 // This program was written to allow programs to be launched in a new
@@ -20,7 +19,6 @@
 //
 // Since it uses darwin specific flags this code should not be compiled
 // on other systems.
-//----------------------------------------------------------------------
 #if defined(__APPLE__)
 
 #include <crt_externs.h>

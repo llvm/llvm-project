@@ -22,14 +22,12 @@ namespace lldb_private {
 
 class UserIDResolver;
 
-//----------------------------------------------------------------------
 // ProcessInfo
 //
 // A base class for information for a process. This can be used to fill
 // out information for a process prior to launching it, or it can be used for
 // an instance of a process and can be filled in with the existing values for
 // that process.
-//----------------------------------------------------------------------
 class ProcessInfo {
 public:
   ProcessInfo();
@@ -103,12 +101,10 @@ protected:
   lldb::pid_t m_pid;
 };
 
-//----------------------------------------------------------------------
 // ProcessInstanceInfo
 //
 // Describes an existing process and any discoverable information that pertains
 // to that process.
-//----------------------------------------------------------------------
 class ProcessInstanceInfo : public ProcessInfo {
 public:
   ProcessInstanceInfo()
@@ -199,11 +195,9 @@ protected:
   std::vector<ProcessInstanceInfo> m_infos;
 };
 
-//----------------------------------------------------------------------
 // ProcessInstanceInfoMatch
 //
 // A class to help matching one ProcessInstanceInfo to another.
-//----------------------------------------------------------------------
 
 class ProcessInstanceInfoMatch {
 public:

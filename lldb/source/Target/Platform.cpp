@@ -117,7 +117,6 @@ bool PlatformProperties::SetModuleCacheDirectory(const FileSpec &dir_spec) {
       nullptr, ePropertyModuleCacheDirectory, dir_spec);
 }
 
-//------------------------------------------------------------------
 /// Get the native host platform plug-in.
 ///
 /// There should only be one of these for each host that LLDB runs
@@ -126,7 +125,6 @@ bool PlatformProperties::SetModuleCacheDirectory(const FileSpec &dir_spec) {
 ///
 /// This platform will be used as the default platform when launching
 /// or attaching to processes unless another platform is specified.
-//------------------------------------------------------------------
 PlatformSP Platform::GetHostPlatform() { return GetHostPlatformSP(); }
 
 static std::vector<PlatformSP> &GetPlatformList() {
@@ -377,9 +375,7 @@ ArchSpec Platform::GetAugmentedArchSpec(Platform *platform, llvm::StringRef trip
   return HostInfo::GetAugmentedArchSpec(triple);
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 Platform::Platform(bool is_host)
     : m_is_host(is_host), m_os_version_set_while_connected(false),
       m_system_arch_set_while_connected(false), m_sdk_sysroot(), m_sdk_build(),
@@ -394,12 +390,10 @@ Platform::Platform(bool is_host)
     log->Printf("%p Platform::Platform()", static_cast<void *>(this));
 }
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 Platform::~Platform() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
   if (log)
@@ -1198,10 +1192,8 @@ Platform::GetPlatformForArchitecture(const ArchSpec &arch,
   return platform_sp;
 }
 
-//------------------------------------------------------------------
 /// Lets a platform answer if it is compatible with a given
 /// architecture and the target triple contained within.
-//------------------------------------------------------------------
 bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
                                         bool exact_arch_match,
                                         ArchSpec *compatible_arch_ptr) {

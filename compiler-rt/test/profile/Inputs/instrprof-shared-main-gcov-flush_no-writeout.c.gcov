@@ -38,4 +38,4 @@
 // CHECK-NEXT:        -:   33:  bar(5);
 // CHECK-NEXT:        -:   34:
 // CHECK-NEXT:        -:   35:  return 0;
-// CHECK-NEXT:    #####:   36:}
+// CHECK-NEXT:        -:   36:}

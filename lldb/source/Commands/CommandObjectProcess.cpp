@@ -100,9 +100,7 @@ protected:
   std::string m_new_process_action;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessLaunch
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessLaunch
 class CommandObjectProcessLaunch : public CommandObjectProcessLaunchOrAttach {
 public:
@@ -295,9 +293,7 @@ protected:
 //#undef SET2
 //#undef SET3
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessAttach
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_process_attach_options[] = {
     // clang-format off
@@ -547,9 +543,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessContinue
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_process_continue_options[] = {
     // clang-format off
@@ -711,9 +705,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessDetach
-//-------------------------------------------------------------------------
 static constexpr OptionDefinition g_process_detach_options[] = {
     // clang-format off
   { LLDB_OPT_SET_1, false, "keep-stopped", 's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean, "Whether or not the process should be kept stopped on detach (if possible)." },
@@ -809,9 +801,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessConnect
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_process_connect_options[] = {
     // clang-format off
@@ -915,9 +905,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessPlugin
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessPlugin
 
 class CommandObjectProcessPlugin : public CommandObjectProxy {
@@ -938,9 +926,7 @@ public:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessLoad
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_process_load_options[] = {
     // clang-format off
@@ -1054,9 +1040,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessUnload
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessUnload
 
 class CommandObjectProcessUnload : public CommandObjectParsed {
@@ -1102,9 +1086,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessSignal
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessSignal
 
 class CommandObjectProcessSignal : public CommandObjectParsed {
@@ -1169,9 +1151,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessInterrupt
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessInterrupt
 
 class CommandObjectProcessInterrupt : public CommandObjectParsed {
@@ -1213,9 +1193,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessKill
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessKill
 
 class CommandObjectProcessKill : public CommandObjectParsed {
@@ -1256,9 +1234,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessSaveCore
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessSaveCore
 
 class CommandObjectProcessSaveCore : public CommandObjectParsed {
@@ -1302,9 +1278,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessStatus
-//-------------------------------------------------------------------------
 #pragma mark CommandObjectProcessStatus
 
 class CommandObjectProcessStatus : public CommandObjectParsed {
@@ -1336,9 +1310,7 @@ public:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectProcessHandle
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_process_handle_options[] = {
     // clang-format off
@@ -1595,9 +1567,7 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordProcess
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(
     CommandInterpreter &interpreter)

@@ -43,9 +43,7 @@ ConstString Breakpoint::GetEventIdentifier() {
 const char *Breakpoint::g_option_names[static_cast<uint32_t>(
     Breakpoint::OptionNames::LastOptionName)]{"Names", "Hardware"};
 
-//----------------------------------------------------------------------
 // Breakpoint constructor
-//----------------------------------------------------------------------
 Breakpoint::Breakpoint(Target &target, SearchFilterSP &filter_sp,
                        BreakpointResolverSP &resolver_sp, bool hardware,
                        bool resolve_indirect_symbols)
@@ -68,14 +66,10 @@ Breakpoint::Breakpoint(Target &new_target, Breakpoint &source_bp)
   m_filter_sp = source_bp.m_filter_sp->CopyForBreakpoint(*this);
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 Breakpoint::~Breakpoint() = default;
 
-//----------------------------------------------------------------------
 // Serialization
-//----------------------------------------------------------------------
 StructuredData::ObjectSP Breakpoint::SerializeToStructuredData() {
   // Serialize the resolver:
   StructuredData::DictionarySP breakpoint_dict_sp(
@@ -496,9 +490,7 @@ void Breakpoint::ClearAllBreakpointSites() {
   m_locations.ClearAllBreakpointSites();
 }
 
-//----------------------------------------------------------------------
 // ModulesChanged: Pass in a list of new modules, and
-//----------------------------------------------------------------------
 
 void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
                                 bool delete_locations) {

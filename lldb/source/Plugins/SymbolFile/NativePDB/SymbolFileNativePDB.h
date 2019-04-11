@@ -44,9 +44,7 @@ class SymbolFileNativePDB : public SymbolFile {
   friend class UdtRecordCompleter;
 
 public:
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -59,9 +57,7 @@ public:
 
   static SymbolFile *CreateInstance(ObjectFile *obj_file);
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   SymbolFileNativePDB(ObjectFile *ofile);
 
   ~SymbolFileNativePDB() override;
@@ -70,9 +66,7 @@ public:
 
   void InitializeObject() override;
 
-  //------------------------------------------------------------------
   // Compile Unit function calls
-  //------------------------------------------------------------------
 
   uint32_t GetNumCompileUnits() override;
 

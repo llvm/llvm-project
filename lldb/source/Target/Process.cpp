@@ -3910,9 +3910,7 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
   return NULL;
 }
 
-//------------------------------------------------------------------
 // Process Event Data
-//------------------------------------------------------------------
 
 Process::ProcessEventData::ProcessEventData()
     : EventData(), m_process_wp(), m_state(eStateInvalid), m_restarted(false),
@@ -4288,9 +4286,7 @@ size_t Process::GetAsyncProfileData(char *buf, size_t buf_size, Status &error) {
   return bytes_available;
 }
 
-//------------------------------------------------------------------
 // Process STDIO
-//------------------------------------------------------------------
 
 size_t Process::GetSTDOUT(char *buf, size_t buf_size, Status &error) {
   std::lock_guard<std::recursive_mutex> guard(m_stdio_communication_mutex);

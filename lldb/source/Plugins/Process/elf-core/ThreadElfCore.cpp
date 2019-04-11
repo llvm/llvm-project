@@ -43,9 +43,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Construct a Thread object with given data
-//----------------------------------------------------------------------
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
     : Thread(process, td.tid), m_thread_name(td.name), m_thread_reg_ctx_sp(),
       m_signo(td.signo), m_gpregset_data(td.gpregset), m_notes(td.notes) {}
@@ -248,9 +246,7 @@ bool ThreadElfCore::CalculateStopInfo() {
   return false;
 }
 
-//----------------------------------------------------------------
 // Parse PRSTATUS from NOTE entry
-//----------------------------------------------------------------
 ELFLinuxPrStatus::ELFLinuxPrStatus() {
   memset(this, 0, sizeof(ELFLinuxPrStatus));
 }
@@ -324,9 +320,7 @@ Status ELFLinuxPrStatus::Parse(const DataExtractor &data,
   return error;
 }
 
-//----------------------------------------------------------------
 // Parse PRPSINFO from NOTE entry
-//----------------------------------------------------------------
 ELFLinuxPrPsInfo::ELFLinuxPrPsInfo() {
   memset(this, 0, sizeof(ELFLinuxPrPsInfo));
 }
@@ -402,9 +396,7 @@ Status ELFLinuxPrPsInfo::Parse(const DataExtractor &data,
   return error;
 }
 
-//----------------------------------------------------------------
 // Parse SIGINFO from NOTE entry
-//----------------------------------------------------------------
 ELFLinuxSigInfo::ELFLinuxSigInfo() { memset(this, 0, sizeof(ELFLinuxSigInfo)); }
 
 size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {

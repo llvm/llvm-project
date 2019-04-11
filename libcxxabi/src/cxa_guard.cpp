@@ -35,7 +35,7 @@ enum InitializationResult {
   INIT_NOT_COMPLETE,
 };
 
-#ifdef __arm__
+#if defined(_LIBCXXABI_GUARD_ABI_ARM)
 // A 32-bit, 4-byte-aligned static data value. The least significant 2 bits must
 // be statically initialized to 0.
 typedef uint32_t guard_type;
@@ -44,7 +44,7 @@ typedef uint64_t guard_type;
 #endif
 
 #if !defined(_LIBCXXABI_HAS_NO_THREADS) && defined(__APPLE__) &&               \
-    !defined(__arm__)
+    !defined(_LIBCXXABI_GUARD_ABI_ARM)
 // This is a special-case pthread dependency for Mac. We can't pull this
 // out into libcxx's threading API (__threading_support) because not all
 // supported Mac environments provide this function (in pthread.h). To
@@ -239,7 +239,7 @@ GuardValue GuardValue::ZERO() { return GuardValue(0); }
 
 GuardValue GuardValue::INIT_COMPLETE() {
   guard_type value = {0};
-#ifdef __arm__
+#if defined(_LIBCXXABI_GUARD_ABI_ARM)
   value |= 1;
 #else
   char* init_bit = (char*)&value;
@@ -253,7 +253,7 @@ GuardValue GuardValue::INIT_PENDING() {
 }
 
 bool GuardValue::is_initialization_complete() const {
-#ifdef __arm__
+#if defined(_LIBCXXABI_GUARD_ABI_ARM)
   return value & 1;
 #else
   const char* init_bit = (const char*)&value;
@@ -271,31 +271,31 @@ lock_type GuardValue::get_lock_value() const {
 
 // Create a guard object with the lock set to the specified value.
 guard_type GuardValue::guard_value_from_lock(lock_type l) {
-#if defined(__APPLE__) && !defined(__arm__)
+#if defined(__APPLE__) && !defined(_LIBCXXABI_GUARD_ABI_ARM)
 #if __LITTLE_ENDIAN__
   return static_cast<guard_type>(l) << 32;
 #else
   return static_cast<guard_type>(l);
 #endif
-#else  // defined(__APPLE__) && !defined(__arm__)
+#else  // defined(__APPLE__) && !defined(_LIBCXXABI_GUARD_ABI_ARM)
   guard_type f = {0};
   memcpy(static_cast<char*>(static_cast<void*>(&f)) + 1, &l, sizeof(lock_type));
   return f;
-#endif // defined(__APPLE__) && !defined(__arm__)
+#endif // defined(__APPLE__) && !defined(_LIBCXXABI_GUARD_ABI_ARM)
 }
 
 lock_type GuardValue::lock_value_from_guard(guard_type g) {
-#if defined(__APPLE__) && !defined(__arm__)
+#if defined(__APPLE__) && !defined(_LIBCXXABI_GUARD_ABI_ARM)
 #if __LITTLE_ENDIAN__
   return static_cast<lock_type>(g >> 32);
 #else
   return static_cast<lock_type>(g);
 #endif
-#else  // defined(__APPLE__) && !defined(__arm__)
+#else  // defined(__APPLE__) && !defined(_LIBCXXABI_GUARD_ABI_ARM)
   uint8_t guard_bytes[sizeof(guard_type)];
   memcpy(&guard_bytes, &g, sizeof(guard_type));
   return guard_bytes[1] != 0;
-#endif // defined(__APPLE__) && !defined(__arm__)
+#endif // defined(__APPLE__) && !defined(_LIBCXXABI_GUARD_ABI_ARM)
 }
 
 }  // __cxxabiv1

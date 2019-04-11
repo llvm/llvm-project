@@ -17,9 +17,7 @@ namespace lldb_private {
 
 class CompilerDecl {
 public:
-  //----------------------------------------------------------------------
   // Constructors and Destructors
-  //----------------------------------------------------------------------
   CompilerDecl() : m_type_system(nullptr), m_opaque_decl(nullptr) {}
 
   CompilerDecl(TypeSystem *type_system, void *decl)
@@ -27,9 +25,7 @@ public:
 
   ~CompilerDecl() {}
 
-  //----------------------------------------------------------------------
   // Tests
-  //----------------------------------------------------------------------
 
   explicit operator bool() const { return IsValid(); }
 
@@ -45,9 +41,7 @@ public:
 
   bool IsClang() const;
 
-  //----------------------------------------------------------------------
   // Accessors
-  //----------------------------------------------------------------------
 
   TypeSystem *GetTypeSystem() const { return m_type_system; }
 

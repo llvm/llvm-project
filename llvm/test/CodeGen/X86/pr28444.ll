@@ -11,8 +11,9 @@
 define void @extractelt_mismatch_vector_element_type(i32 %arg, i1 %x) {
 ; CHECK-LABEL: extractelt_mismatch_vector_element_type:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movb $1, (%rax)
-; CHECK-NEXT:    movb $1, (%rax)
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    movb %al, (%rax)
+; CHECK-NEXT:    movb %al, (%rax)
 ; CHECK-NEXT:    retq
 bb:
   %tmp = icmp ult i32 %arg, 0

@@ -27,9 +27,7 @@ public:
 
   ~OperatingSystemPython() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static lldb_private::OperatingSystem *
   CreateInstance(lldb_private::Process *process, bool force);
 
@@ -41,16 +39,12 @@ public:
 
   static const char *GetPluginDescriptionStatic();
 
-  //------------------------------------------------------------------
   // lldb_private::PluginInterface Methods
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
 
-  //------------------------------------------------------------------
   // lldb_private::OperatingSystem Methods
-  //------------------------------------------------------------------
   bool UpdateThreadList(lldb_private::ThreadList &old_thread_list,
                         lldb_private::ThreadList &real_thread_list,
                         lldb_private::ThreadList &new_thread_list) override;
@@ -64,9 +58,7 @@ public:
   lldb::StopInfoSP
   CreateThreadStopReason(lldb_private::Thread *thread) override;
 
-  //------------------------------------------------------------------
   // Method for lazy creation of threads on demand
-  //------------------------------------------------------------------
   lldb::ThreadSP CreateThread(lldb::tid_t tid, lldb::addr_t context) override;
 
 protected:

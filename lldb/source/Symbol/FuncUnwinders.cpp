@@ -28,9 +28,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//------------------------------------------------
 /// constructor
-//------------------------------------------------
 
 FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, AddressRange range)
     : m_unwind_table(unwind_table), m_range(range), m_mutex(),
@@ -49,9 +47,7 @@ FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, AddressRange range)
       m_tried_unwind_arch_default_at_func_entry(false),
       m_first_non_prologue_insn() {}
 
-//------------------------------------------------
 /// destructor
-//------------------------------------------------
 
 FuncUnwinders::~FuncUnwinders() {}
 

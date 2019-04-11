@@ -564,6 +564,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("foldl", tgtok::XFoldl)
     .Case("foreach", tgtok::XForEach)
     .Case("listconcat", tgtok::XListConcat)
+    .Case("listsplat", tgtok::XListSplat)
     .Case("strconcat", tgtok::XStrConcat)
     .Default(tgtok::Error);
 

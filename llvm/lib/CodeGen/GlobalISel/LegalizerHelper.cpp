@@ -473,6 +473,38 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_CONSTANT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    const APInt &Val = MI.getOperand(1).getCImm()->getValue();
+    unsigned TotalSize = Ty.getSizeInBits();
+    unsigned NarrowSize = NarrowTy.getSizeInBits();
+    int NumParts = TotalSize / NarrowSize;
+
+    SmallVector<unsigned, 4> PartRegs;
+    for (int I = 0; I != NumParts; ++I) {
+      unsigned Offset = I * NarrowSize;
+      auto K = MIRBuilder.buildConstant(NarrowTy,
+                                        Val.lshr(Offset).trunc(NarrowSize));
+      PartRegs.push_back(K.getReg(0));
+    }
+
+    LLT LeftoverTy;
+    unsigned LeftoverBits = TotalSize - NumParts * NarrowSize;
+    SmallVector<unsigned, 1> LeftoverRegs;
+    if (LeftoverBits != 0) {
+      LeftoverTy = LLT::scalar(LeftoverBits);
+      auto K = MIRBuilder.buildConstant(
+        LeftoverTy,
+        Val.lshr(NumParts * NarrowSize).trunc(LeftoverBits));
+      LeftoverRegs.push_back(K.getReg(0));
+    }
+
+    insertParts(MI.getOperand(0).getReg(),
+                Ty, NarrowTy, PartRegs, LeftoverTy, LeftoverRegs);
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_ADD: {
     // FIXME: add support for when SizeOp0 isn't an exact multiple of
     // NarrowSize.
@@ -614,31 +646,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     }
 
     return reduceLoadStoreWidth(MI, 0, NarrowTy);
-  }
-  case TargetOpcode::G_CONSTANT: {
-    // FIXME: add support for when SizeOp0 isn't an exact multiple of
-    // NarrowSize.
-    if (SizeOp0 % NarrowSize != 0)
-      return UnableToLegalize;
-    int NumParts = SizeOp0 / NarrowSize;
-    const APInt &Cst = MI.getOperand(1).getCImm()->getValue();
-    LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
-
-    SmallVector<unsigned, 2> DstRegs;
-    for (int i = 0; i < NumParts; ++i) {
-      unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy);
-      ConstantInt *CI =
-          ConstantInt::get(Ctx, Cst.lshr(NarrowSize * i).trunc(NarrowSize));
-      MIRBuilder.buildConstant(DstReg, *CI);
-      DstRegs.push_back(DstReg);
-    }
-    unsigned DstReg = MI.getOperand(0).getReg();
-    if(MRI.getType(DstReg).isVector())
-      MIRBuilder.buildBuildVector(DstReg, DstRegs);
-    else
-      MIRBuilder.buildMerge(DstReg, DstRegs);
-    MI.eraseFromParent();
-    return Legalized;
   }
   case TargetOpcode::G_SELECT:
     return narrowScalarSelect(MI, TypeIdx, NarrowTy);
@@ -2183,6 +2190,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FSIN:
   case G_FSQRT:
   case G_BSWAP:
+  case G_SDIV:
     return fewerElementsVectorBasic(MI, TypeIdx, NarrowTy);
   case G_SHL:
   case G_LSHR:

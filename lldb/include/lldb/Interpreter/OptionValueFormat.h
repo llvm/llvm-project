@@ -24,9 +24,7 @@ public:
 
   ~OptionValueFormat() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeFormat; }
 
@@ -48,9 +46,7 @@ public:
 
   lldb::OptionValueSP DeepCopy() const override;
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   lldb::Format GetCurrentValue() const { return m_current_value; }
 

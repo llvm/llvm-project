@@ -15,9 +15,7 @@
 
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // UriParser::Parse
-//----------------------------------------------------------------------
 bool UriParser::Parse(llvm::StringRef uri, llvm::StringRef &scheme,
                       llvm::StringRef &hostname, int &port,
                       llvm::StringRef &path) {

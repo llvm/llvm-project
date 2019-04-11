@@ -21,9 +21,7 @@ public:
   typedef void (*ChangedCallback)(const PathMappingList &path_list,
                                   void *baton);
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   PathMappingList();
 
   PathMappingList(ChangedCallback callback, void *callback_baton);
@@ -65,7 +63,6 @@ public:
                uint32_t index, bool notify);
   bool RemapPath(ConstString path, ConstString &new_path) const;
 
-  //------------------------------------------------------------------
   /// Remaps a source file given \a path into \a new_path.
   ///
   /// Remaps \a path if any source remappings match. This function
@@ -81,13 +78,11 @@ public:
   /// \return
   ///     /b true if \a path was successfully located and \a new_path
   ///     is filled in with a new source path, \b false otherwise.
-  //------------------------------------------------------------------
   bool RemapPath(llvm::StringRef path, std::string &new_path) const;
   bool RemapPath(const char *, std::string &) const = delete;
 
   bool ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const;
 
-  //------------------------------------------------------------------
   /// Finds a source file given a file spec using the path remappings.
   ///
   /// Tries to resolve \a orig_spec by checking the path remappings.
@@ -106,7 +101,6 @@ public:
   ///     /b true if \a orig_spec was successfully located and
   ///     \a new_spec is filled in with an existing file spec,
   ///     \b false otherwise.
-  //------------------------------------------------------------------
   bool FindFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
 
   uint32_t FindIndexForPath(ConstString path) const;

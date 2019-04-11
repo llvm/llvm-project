@@ -303,12 +303,10 @@ uint32_t ObjectFilePECOFF::GetAddressByteSize() const {
   return 4;
 }
 
-//----------------------------------------------------------------------
 // NeedsEndianSwap
 //
 // Return true if an endian swap needs to occur when extracting data from this
 // file.
-//----------------------------------------------------------------------
 bool ObjectFilePECOFF::NeedsEndianSwap() const {
 #if defined(__LITTLE_ENDIAN__)
   return false;
@@ -316,9 +314,7 @@ bool ObjectFilePECOFF::NeedsEndianSwap() const {
   return true;
 #endif
 }
-//----------------------------------------------------------------------
 // ParseDOSHeader
-//----------------------------------------------------------------------
 bool ObjectFilePECOFF::ParseDOSHeader(DataExtractor &data,
                                       dos_header_t &dos_header) {
   bool success = false;
@@ -377,9 +373,7 @@ bool ObjectFilePECOFF::ParseDOSHeader(DataExtractor &data,
   return success;
 }
 
-//----------------------------------------------------------------------
 // ParserCOFFHeader
-//----------------------------------------------------------------------
 bool ObjectFilePECOFF::ParseCOFFHeader(DataExtractor &data,
                                        lldb::offset_t *offset_ptr,
                                        coff_header_t &coff_header) {
@@ -489,9 +483,7 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
   return data;
 }
 
-//----------------------------------------------------------------------
 // ParseSectionHeaders
-//----------------------------------------------------------------------
 bool ObjectFilePECOFF::ParseSectionHeaders(
     uint32_t section_header_data_offset) {
   const uint32_t nsects = m_coff_header.nsects;
@@ -544,9 +536,7 @@ llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
   return hdr_name;
 }
 
-//----------------------------------------------------------------------
 // GetNListSymtab
-//----------------------------------------------------------------------
 Symtab *ObjectFilePECOFF::GetSymtab() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
@@ -930,12 +920,10 @@ Address ObjectFilePECOFF::GetBaseAddress() {
   return Address(GetSectionList()->GetSectionAtIndex(0), 0);
 }
 
-//----------------------------------------------------------------------
 // Dump
 //
 // Dump the specifics of the runtime file container (such as any headers
 // segments, sections, etc).
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::Dump(Stream *s) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
@@ -972,11 +960,9 @@ void ObjectFilePECOFF::Dump(Stream *s) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpDOSHeader
 //
 // Dump the MS-DOS header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpDOSHeader(Stream *s, const dos_header_t &header) {
   s->PutCString("MSDOS Header\n");
   s->Printf("  e_magic    = 0x%4.4x\n", header.e_magic);
@@ -1006,11 +992,9 @@ void ObjectFilePECOFF::DumpDOSHeader(Stream *s, const dos_header_t &header) {
   s->Printf("  e_lfanew   = 0x%8.8x\n", header.e_lfanew);
 }
 
-//----------------------------------------------------------------------
 // DumpCOFFHeader
 //
 // Dump the COFF header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpCOFFHeader(Stream *s, const coff_header_t &header) {
   s->PutCString("COFF Header\n");
   s->Printf("  machine = 0x%4.4x\n", header.machine);
@@ -1021,11 +1005,9 @@ void ObjectFilePECOFF::DumpCOFFHeader(Stream *s, const coff_header_t &header) {
   s->Printf("  hdrsize = 0x%4.4x\n", header.hdrsize);
 }
 
-//----------------------------------------------------------------------
 // DumpOptCOFFHeader
 //
 // Dump the optional COFF header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpOptCOFFHeader(Stream *s,
                                          const coff_opt_header_t &header) {
   s->PutCString("Optional COFF Header\n");
@@ -1079,11 +1061,9 @@ void ObjectFilePECOFF::DumpOptCOFFHeader(Stream *s,
               header.data_dirs[i].vmaddr, header.data_dirs[i].vmsize);
   }
 }
-//----------------------------------------------------------------------
 // DumpSectionHeader
 //
 // Dump a single ELF section header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpSectionHeader(Stream *s,
                                          const section_header_t &sh) {
   std::string name = GetSectionName(sh);
@@ -1093,11 +1073,9 @@ void ObjectFilePECOFF::DumpSectionHeader(Stream *s,
             sh.lineoff, sh.nreloc, sh.nline, sh.flags);
 }
 
-//----------------------------------------------------------------------
 // DumpSectionHeaders
 //
 // Dump all of the ELF section header to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpSectionHeaders(Stream *s) {
 
   s->PutCString("Section Headers\n");
@@ -1115,11 +1093,9 @@ void ObjectFilePECOFF::DumpSectionHeaders(Stream *s) {
   }
 }
 
-//----------------------------------------------------------------------
 // DumpDependentModules
 //
 // Dump all of the dependent modules to the specified output stream
-//----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpDependentModules(lldb_private::Stream *s) {
   auto num_modules = ParseDependentModules();
   if (num_modules > 0) {
@@ -1179,9 +1155,7 @@ ObjectFile::Type ObjectFilePECOFF::CalculateType() {
 
 ObjectFile::Strata ObjectFilePECOFF::CalculateStrata() { return eStrataUser; }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString ObjectFilePECOFF::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t ObjectFilePECOFF::GetPluginVersion() { return 1; }

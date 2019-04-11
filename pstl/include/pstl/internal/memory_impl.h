@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PSTL_memory_impl_H
-#define __PSTL_memory_impl_H
+#ifndef _PSTL_MEMORY_IMPL_H
+#define _PSTL_MEMORY_IMPL_H
 
 #include <iterator>
 
@@ -53,4 +53,4 @@ __brick_uninitialized_move(_ForwardIterator __first, _ForwardIterator __last, _O
 } // namespace __internal
 } // namespace __pstl
 
-#endif /* __PSTL_memory_impl_H */
+#endif /* _PSTL_MEMORY_IMPL_H */

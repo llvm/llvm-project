@@ -23,9 +23,7 @@ public:
     // value.
     eStopIDNow = UINT32_MAX
   };
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   SectionLoadHistory() : m_stop_id_to_section_load_list(), m_mutex() {}
 
   ~SectionLoadHistory() {

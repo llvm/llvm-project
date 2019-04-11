@@ -10,19 +10,19 @@
 int
 main (int argc, char** argv)
 {
-  int master, slave;
-  openpty(&master, &slave, NULL, NULL, NULL);
-  assert(__msan_test_shadow(&master, sizeof(master)) == -1);
-  assert(__msan_test_shadow(&slave, sizeof(slave)) == -1);
+  int parent, worker;
+  openpty(&parent, &worker, NULL, NULL, NULL);
+  assert(__msan_test_shadow(&parent, sizeof(parent)) == -1);
+  assert(__msan_test_shadow(&worker, sizeof(worker)) == -1);
 
   char name[255];
-  ttyname_r(master, name, sizeof(name));
+  ttyname_r(parent, name, sizeof(name));
   assert(__msan_test_shadow(name, strlen(name) + 1) == -1);
 
-  char *name_p = ttyname(master);
+  char *name_p = ttyname(parent);
   assert(__msan_test_shadow(name_p, strlen(name_p) + 1) == -1);
 
-  int master2;
-  forkpty(&master2, NULL, NULL, NULL);
-  assert(__msan_test_shadow(&master2, sizeof(master2)) == -1);
+  int parent2;
+  forkpty(&parent2, NULL, NULL, NULL);
+  assert(__msan_test_shadow(&parent2, sizeof(parent2)) == -1);
 }

@@ -23,12 +23,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // GetDwarfEHPtr
 //
 // Used for calls when the value type is specified by a DWARF EH Frame pointer
 // encoding.
-//----------------------------------------------------------------------
 static uint64_t
 GetGNUEHPointer(const DataExtractor &DE, offset_t *offset_ptr,
                 uint32_t eh_ptr_enc, addr_t pc_rel_addr, addr_t text_addr,

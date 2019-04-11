@@ -14,9 +14,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiword
-//-------------------------------------------------------------------------
 
 class CommandObjectMultiword : public CommandObject {
   // These two want to iterate over the subcommand dictionary.

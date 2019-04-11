@@ -51,7 +51,6 @@ public:
   /// See also GetStopReasonDataAtIndex().
   size_t GetStopReasonDataCount();
 
-  //--------------------------------------------------------------------------
   /// Get information associated with a stop reason.
   ///
   /// Breakpoint stop reasons will have data that consists of pairs of
@@ -68,7 +67,6 @@ public:
   /// eStopReasonException     N     exception data
   /// eStopReasonExec          0
   /// eStopReasonPlanComplete  0
-  //--------------------------------------------------------------------------
   uint64_t GetStopReasonDataAtIndex(uint32_t idx);
 
   bool GetStopReasonExtendedInfoAsJSON(lldb::SBStream &stream);
@@ -134,7 +132,6 @@ public:
 
   SBError UnwindInnermostExpression();
 
-  //--------------------------------------------------------------------------
   /// LLDB currently supports process centric debugging which means when any
   /// thread in a process stops, all other threads are stopped. The Suspend()
   /// call here tells our process to suspend a thread and not let it run when
@@ -154,7 +151,6 @@ public:
   /// Suspend() and Resume() functions are not currently reference counted, if
   /// anyone has the need for them to be reference counted, please let us
   /// know.
-  //--------------------------------------------------------------------------
   bool Suspend();
 
   bool Suspend(SBError &error);

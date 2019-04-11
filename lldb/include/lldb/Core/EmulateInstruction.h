@@ -44,7 +44,6 @@ class UnwindPlan;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class EmulateInstruction EmulateInstruction.h
 /// "lldb/Core/EmulateInstruction.h"
 /// A class that allows emulation of CPU opcodes.
@@ -102,7 +101,6 @@ namespace lldb_private {
 /// paths in a debugger (single step prediction, finding save restore
 /// locations of registers for unwinding stack frame variables) and emulating
 /// the instruction is just a bonus.
-//----------------------------------------------------------------------
 
 class EmulateInstruction : public PluginInterface {
 public:
@@ -367,9 +365,7 @@ public:
 
   ~EmulateInstruction() override = default;
 
-  //----------------------------------------------------------------------
   // Mandatory overrides
-  //----------------------------------------------------------------------
   virtual bool
   SupportsEmulatingInstructionsOfType(InstructionType inst_type) = 0;
 
@@ -389,9 +385,7 @@ public:
   virtual bool GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num,
                                RegisterInfo &reg_info) = 0;
 
-  //----------------------------------------------------------------------
   // Optional overrides
-  //----------------------------------------------------------------------
   virtual bool SetInstruction(const Opcode &insn_opcode,
                               const Address &inst_addr, Target *target);
 
@@ -400,9 +394,7 @@ public:
   static const char *TranslateRegister(lldb::RegisterKind reg_kind,
                                        uint32_t reg_num, std::string &reg_name);
 
-  //----------------------------------------------------------------------
   // RegisterInfo variants
-  //----------------------------------------------------------------------
   bool ReadRegister(const RegisterInfo *reg_info, RegisterValue &reg_value);
 
   uint64_t ReadRegisterUnsigned(const RegisterInfo *reg_info,
@@ -414,9 +406,7 @@ public:
   bool WriteRegisterUnsigned(const Context &context,
                              const RegisterInfo *reg_info, uint64_t reg_value);
 
-  //----------------------------------------------------------------------
   // Register kind and number variants
-  //----------------------------------------------------------------------
   bool ReadRegister(lldb::RegisterKind reg_kind, uint32_t reg_num,
                     RegisterValue &reg_value);
 
@@ -520,9 +510,7 @@ protected:
   Opcode m_opcode;
 
 private:
-  //------------------------------------------------------------------
   // For EmulateInstruction only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(EmulateInstruction);
 };
 

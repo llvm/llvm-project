@@ -1397,8 +1397,8 @@ def HWWriteResGroup78_1 : SchedWriteRes<[HWPort1,HWPort5,HWPort23]> {
   let ResourceCycles = [1,1,1];
 }
 def: InstRW<[HWWriteResGroup78_1], (instrs MMX_CVTPI2PDirm,
-                                           CVTSD2SSrm,
-                                           VCVTSD2SSrm)>;
+                                           CVTSD2SSrm, CVTSD2SSrm_Int,
+                                           VCVTSD2SSrm, VCVTSD2SSrm_Int)>;
 
 def HWWriteResGroup80 : SchedWriteRes<[HWPort5,HWPort23,HWPort015]> {
   let Latency = 9;

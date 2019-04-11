@@ -62,9 +62,7 @@ public:
     eStepOutAvoidNoDebug = (1 << 2)
   };
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   ThreadPlanShouldStopHere(ThreadPlan *owner);
 
   ThreadPlanShouldStopHere(ThreadPlan *owner,

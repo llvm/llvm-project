@@ -25,7 +25,6 @@ public:
   
   BreakpointLocationCollection &operator=(const BreakpointLocationCollection &rhs);
 
-  //------------------------------------------------------------------
   /// Add the breakpoint \a bp_loc_sp to the list.
   ///
   /// \param[in] bp_sp
@@ -34,10 +33,8 @@ public:
   ///
   /// \result
   ///     Returns breakpoint location id.
-  //------------------------------------------------------------------
   void Add(const lldb::BreakpointLocationSP &bp_loc_sp);
 
-  //------------------------------------------------------------------
   /// Removes the breakpoint location given by \b breakID from this
   /// list.
   ///
@@ -49,10 +46,8 @@ public:
   ///
   /// \result
   ///     \b true if the breakpoint was in the list.
-  //------------------------------------------------------------------
   bool Remove(lldb::break_id_t break_id, lldb::break_id_t break_loc_id);
 
-  //------------------------------------------------------------------
   /// Returns a shared pointer to the breakpoint location with id \a
   /// breakID.
   ///
@@ -65,11 +60,9 @@ public:
   /// \result
   ///     A shared pointer to the breakpoint.  May contain a NULL
   ///     pointer if the breakpoint doesn't exist.
-  //------------------------------------------------------------------
   lldb::BreakpointLocationSP FindByIDPair(lldb::break_id_t break_id,
                                           lldb::break_id_t break_loc_id);
 
-  //------------------------------------------------------------------
   /// Returns a shared pointer to the breakpoint location with id \a
   /// breakID, const version.
   ///
@@ -82,11 +75,9 @@ public:
   /// \result
   ///     A shared pointer to the breakpoint.  May contain a NULL
   ///     pointer if the breakpoint doesn't exist.
-  //------------------------------------------------------------------
   const lldb::BreakpointLocationSP
   FindByIDPair(lldb::break_id_t break_id, lldb::break_id_t break_loc_id) const;
 
-  //------------------------------------------------------------------
   /// Returns a shared pointer to the breakpoint location with index
   /// \a i.
   ///
@@ -96,10 +87,8 @@ public:
   /// \result
   ///     A shared pointer to the breakpoint.  May contain a NULL
   ///     pointer if the breakpoint doesn't exist.
-  //------------------------------------------------------------------
   lldb::BreakpointLocationSP GetByIndex(size_t i);
 
-  //------------------------------------------------------------------
   /// Returns a shared pointer to the breakpoint location with index
   /// \a i, const version.
   ///
@@ -109,18 +98,14 @@ public:
   /// \result
   ///     A shared pointer to the breakpoint.  May contain a NULL
   ///     pointer if the breakpoint doesn't exist.
-  //------------------------------------------------------------------
   const lldb::BreakpointLocationSP GetByIndex(size_t i) const;
 
-  //------------------------------------------------------------------
   /// Returns the number of elements in this breakpoint location list.
   ///
   /// \result
   ///     The number of elements.
-  //------------------------------------------------------------------
   size_t GetSize() const { return m_break_loc_collection.size(); }
 
-  //------------------------------------------------------------------
   /// Enquires of all the breakpoint locations in this list whether
   /// we should stop at a hit at \a breakID.
   ///
@@ -132,10 +117,8 @@ public:
   ///
   /// \return
   ///    \b true if we should stop, \b false otherwise.
-  //------------------------------------------------------------------
   bool ShouldStop(StoppointCallbackContext *context);
 
-  //------------------------------------------------------------------
   /// Print a description of the breakpoint locations in this list
   /// to the stream \a s.
   ///
@@ -147,10 +130,8 @@ public:
   ///     provide.
   ///
   /// \see lldb::DescriptionLevel
-  //------------------------------------------------------------------
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
 
-  //------------------------------------------------------------------
   /// Check whether this collection of breakpoint locations have any
   /// thread specifiers, and if yes, is \a thread_id contained in any
   /// of these specifiers.
@@ -161,28 +142,21 @@ public:
   /// return
   ///     \b true if the collection contains at least one location that
   ///     would be valid for this thread, false otherwise.
-  //------------------------------------------------------------------
   bool ValidForThisThread(Thread *thread);
 
-  //------------------------------------------------------------------
   /// Tell whether ALL the breakpoints in the location collection are internal.
   ///
   /// \result
   ///     \b true if all breakpoint locations are owned by internal breakpoints,
   ///     \b false otherwise.
-  //------------------------------------------------------------------
   bool IsInternal() const;
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from BreakpointLocationCollection can see and modify
   // these
-  //------------------------------------------------------------------
 
 private:
-  //------------------------------------------------------------------
   // For BreakpointLocationCollection only
-  //------------------------------------------------------------------
 
   typedef std::vector<lldb::BreakpointLocationSP> collection;
 

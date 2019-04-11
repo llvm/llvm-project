@@ -28,14 +28,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 // Static Variables
-//------------------------------------------------------------------
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 void PlatformRemoteAppleWatch::Initialize() {
   PlatformDarwin::Initialize();
 
@@ -149,9 +145,7 @@ const char *PlatformRemoteAppleWatch::GetDescriptionStatic() {
   return "Remote Apple Watch platform plug-in.";
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformRemoteAppleWatch::PlatformRemoteAppleWatch()
     : PlatformRemoteDarwinDevice() {}
 

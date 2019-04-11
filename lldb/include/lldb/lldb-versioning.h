@@ -10,9 +10,7 @@
 #ifndef LLDB_lldb_versioning_h_
 #define LLDB_lldb_versioning_h_
 
-//----------------------------------------------------------------------
 // LLDB API version
-//----------------------------------------------------------------------
 #define LLDB_API_MAJOR_VERSION 1
 #define LLDB_API_MINOR_VERSION 0
 

@@ -18,26 +18,19 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class WatchpointOptions WatchpointOptions.h
 /// "lldb/Breakpoint/WatchpointOptions.h" Class that manages the options on a
 /// watchpoint.
-//----------------------------------------------------------------------
 
 class WatchpointOptions {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
-  //------------------------------------------------------------------
   /// Default constructor.  The watchpoint is enabled, and has no condition,
   /// callback, ignore count, etc...
-  //------------------------------------------------------------------
   WatchpointOptions();
   WatchpointOptions(const WatchpointOptions &rhs);
 
   static WatchpointOptions *CopyOptionsNoCallback(WatchpointOptions &rhs);
-  //------------------------------------------------------------------
   /// This constructor allows you to specify all the watchpoint options.
   ///
   /// \param[in] callback
@@ -49,18 +42,14 @@ public:
   ///
   /// \param[in] thread_id
   ///    Only stop if \a thread_id hits the watchpoint.
-  //------------------------------------------------------------------
   WatchpointOptions(WatchpointHitCallback callback, void *baton,
                     lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID);
 
   virtual ~WatchpointOptions();
 
-  //------------------------------------------------------------------
   // Operators
-  //------------------------------------------------------------------
   const WatchpointOptions &operator=(const WatchpointOptions &rhs);
 
-  //------------------------------------------------------------------
   // Callbacks
   //
   // Watchpoint callbacks come in two forms, synchronous and asynchronous.
@@ -88,9 +77,7 @@ public:
   //  take a bit of plumbing to get
   //  that to work.
   //
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Adds a callback to the watchpoint option set.
   ///
   /// \param[in] callback
@@ -102,19 +89,15 @@ public:
   /// \param[in] synchronous
   ///    Whether this is a synchronous or asynchronous callback.  See discussion
   ///    above.
-  //------------------------------------------------------------------
   void SetCallback(WatchpointHitCallback callback,
                    const lldb::BatonSP &baton_sp, bool synchronous = false);
 
-  //------------------------------------------------------------------
   /// Remove the callback from this option set.
-  //------------------------------------------------------------------
   void ClearCallback();
 
   // The rest of these functions are meant to be used only within the
   // watchpoint handling mechanism.
 
-  //------------------------------------------------------------------
   /// Use this function to invoke the callback for a specific stop.
   ///
   /// \param[in] context
@@ -130,72 +113,55 @@ public:
   ///
   /// \return
   ///     The callback return value.
-  //------------------------------------------------------------------
   bool InvokeCallback(StoppointCallbackContext *context,
                       lldb::user_id_t watch_id);
 
-  //------------------------------------------------------------------
   /// Used in InvokeCallback to tell whether it is the right time to run this
   /// kind of callback.
   ///
   /// \return
   ///     The synchronicity of our callback.
-  //------------------------------------------------------------------
   bool IsCallbackSynchronous() { return m_callback_is_synchronous; }
 
-  //------------------------------------------------------------------
   /// Fetch the baton from the callback.
   ///
   /// \return
   ///     The baton.
-  //------------------------------------------------------------------
   Baton *GetBaton();
 
-  //------------------------------------------------------------------
   /// Fetch  a const version of the baton from the callback.
   ///
   /// \return
   ///     The baton.
-  //------------------------------------------------------------------
   const Baton *GetBaton() const;
 
-  //------------------------------------------------------------------
   /// Return the current thread spec for this option. This will return nullptr
   /// if the no thread specifications have been set for this Option yet.
   /// \return
   ///     The thread specification pointer for this option, or nullptr if none
   ///     has
   ///     been set yet.
-  //------------------------------------------------------------------
   const ThreadSpec *GetThreadSpecNoCreate() const;
 
-  //------------------------------------------------------------------
   /// Returns a pointer to the ThreadSpec for this option, creating it. if it
   /// hasn't been created already.   This API is used for setting the
   /// ThreadSpec items for this option.
-  //------------------------------------------------------------------
   ThreadSpec *GetThreadSpec();
 
   void SetThreadID(lldb::tid_t thread_id);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) const;
 
-  //------------------------------------------------------------------
   /// Get description for callback only.
-  //------------------------------------------------------------------
   void GetCallbackDescription(Stream *s, lldb::DescriptionLevel level) const;
 
-  //------------------------------------------------------------------
   /// Returns true if the watchpoint option has a callback set.
-  //------------------------------------------------------------------
   bool HasCallback();
 
-  //------------------------------------------------------------------
   /// This is the default empty callback.
   /// \return
   ///     The thread id for which the watchpoint hit will stop,
   ///     LLDB_INVALID_THREAD_ID for all threads.
-  //------------------------------------------------------------------
   static bool NullCallback(void *baton, StoppointCallbackContext *context,
                            lldb::user_id_t watch_id);
 
@@ -218,14 +184,10 @@ public:
   };
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from WatchpointOptions can see and modify these
-  //------------------------------------------------------------------
 
 private:
-  //------------------------------------------------------------------
   // For WatchpointOptions only
-  //------------------------------------------------------------------
   WatchpointHitCallback m_callback;  // This is the callback function pointer
   lldb::BatonSP m_callback_baton_sp; // This is the client data for the callback
   bool m_callback_is_synchronous;

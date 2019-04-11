@@ -13,16 +13,12 @@
 
 class CFCMutableDictionary : public CFCReleaser<CFMutableDictionaryRef> {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CFCMutableDictionary(CFMutableDictionaryRef s = NULL);
   CFCMutableDictionary(const CFCMutableDictionary &rhs);
   virtual ~CFCMutableDictionary();
 
-  //------------------------------------------------------------------
   // Operators
-  //------------------------------------------------------------------
   const CFCMutableDictionary &operator=(const CFCMutableDictionary &rhs);
 
   CFIndex GetCount() const;
@@ -61,14 +57,10 @@ public:
   CFMutableDictionaryRef Dictionary(bool can_create);
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from CFCMutableDictionary can see and modify these
-  //------------------------------------------------------------------
 
 private:
-  //------------------------------------------------------------------
   // For CFCMutableDictionary only
-  //------------------------------------------------------------------
 };
 
 #endif // CoreFoundationCPP_CFMutableDictionary_h_

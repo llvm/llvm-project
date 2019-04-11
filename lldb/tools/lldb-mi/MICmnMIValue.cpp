@@ -11,7 +11,6 @@
 #include "MICmnResources.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValue constructor.
 // Type:    Method.
 // Args:    None.
@@ -22,7 +21,6 @@ CMICmnMIValue::CMICmnMIValue()
     : m_strValue(MIRSRC(IDS_WORD_INVALIDBRKTS)), m_bJustConstructed(true) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmnMIValue destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -32,7 +30,6 @@ CMICmnMIValue::CMICmnMIValue()
 CMICmnMIValue::~CMICmnMIValue() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Return the MI value as a string. The string is a direct result of
 //          work done on *this value so if not enough data is added then it is
 //          possible to return a malformed value. If nothing has been set or

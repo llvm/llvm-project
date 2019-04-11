@@ -18,9 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // RichManglingContext
-//----------------------------------------------------------------------
 void RichManglingContext::ResetProvider(InfoProvider new_provider) {
   // If we want to support parsers for other languages some day, we need a
   // switch here to delete the correct parser type.

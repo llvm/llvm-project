@@ -34,9 +34,7 @@ ConstString &TargetList::GetStaticBroadcasterClass() {
   return class_name;
 }
 
-//----------------------------------------------------------------------
 // TargetList constructor
-//----------------------------------------------------------------------
 TargetList::TargetList(Debugger &debugger)
     : Broadcaster(debugger.GetBroadcasterManager(),
                   TargetList::GetStaticBroadcasterClass().AsCString()),
@@ -44,9 +42,7 @@ TargetList::TargetList(Debugger &debugger)
   CheckInWithManager();
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 TargetList::~TargetList() {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   m_target_list.clear();
