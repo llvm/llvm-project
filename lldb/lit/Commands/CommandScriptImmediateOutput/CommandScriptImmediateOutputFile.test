@@ -1,5 +1,3 @@
-# UNSUPPORTED: system-windows
-
 # Test that LLDB correctly allows scripted commands to set immediate output to
 # a file.
 
