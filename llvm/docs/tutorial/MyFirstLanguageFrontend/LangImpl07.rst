@@ -1,3 +1,5 @@
+:orphan:
+
 =======================================================
 Kaleidoscope: Extending the Language: Mutable Variables
 =======================================================
@@ -876,7 +878,7 @@ mutable variables and var/in support. To build this example, use:
 
 Here is the code:
 
-.. literalinclude:: ../../examples/Kaleidoscope/Chapter7/toy.cpp
+.. literalinclude:: ../../../examples/Kaleidoscope/Chapter7/toy.cpp
    :language: c++
 
 `Next: Compiling to Object Code <LangImpl08.html>`_

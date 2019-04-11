@@ -58,7 +58,6 @@ public:
   MCSymbol *getSym() const { return RangeSym; }
   const DwarfCompileUnit &getCU() const { return *CU; }
   const SmallVectorImpl<RangeSpan> &getRanges() const { return Ranges; }
-  void addRange(RangeSpan Range) { Ranges.push_back(Range); }
 };
 
 class DwarfFile {

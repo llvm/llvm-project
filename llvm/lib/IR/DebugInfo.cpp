@@ -899,6 +899,10 @@ LLVMMetadataRef LLVMDILocationGetScope(LLVMMetadataRef Location) {
   return wrap(unwrapDI<DILocation>(Location)->getScope());
 }
 
+LLVMMetadataRef LLVMDILocationGetInlinedAt(LLVMMetadataRef Location) {
+  return wrap(unwrapDI<DILocation>(Location)->getInlinedAt());
+}
+
 LLVMMetadataRef LLVMDIBuilderCreateEnumerator(LLVMDIBuilderRef Builder,
                                               const char *Name, size_t NameLen,
                                               int64_t Value,

@@ -46,12 +46,10 @@ public:
                     const char *Modifier = 0);
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                       unsigned AsmVariant, const char *ExtraCode,
-                       raw_ostream &O) override;
+                       const char *ExtraCode, raw_ostream &O) override;
 
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
-                             unsigned AsmVariant, const char *ExtraCode,
-                             raw_ostream &O) override;
+                             const char *ExtraCode, raw_ostream &O) override;
 
   void EmitInstruction(const MachineInstr *MI) override;
 
@@ -85,11 +83,10 @@ void AVRAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                                    unsigned AsmVariant, const char *ExtraCode,
-                                    raw_ostream &O) {
+                                    const char *ExtraCode, raw_ostream &O) {
   // Default asm printer can only deal with some extra codes,
   // so try it first.
-  bool Error = AsmPrinter::PrintAsmOperand(MI, OpNum, AsmVariant, ExtraCode, O);
+  bool Error = AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O);
 
   if (Error && ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0)
@@ -137,8 +134,7 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 }
 
 bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
-                                          unsigned OpNum, unsigned AsmVariant,
-                                          const char *ExtraCode,
+                                          unsigned OpNum, const char *ExtraCode,
                                           raw_ostream &O) {
   if (ExtraCode && ExtraCode[0]) {
     llvm_unreachable("This branch is not implemented yet");

@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_DBGVALUEHISTORYCALCULATOR_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include <utility>
@@ -21,30 +22,54 @@ class MachineFunction;
 class MachineInstr;
 class TargetRegisterInfo;
 
-// For each user variable, keep a list of instruction ranges where this variable
-// is accessible. The variables are listed in order of appearance.
+/// For each user variable, keep a list of instruction ranges where this
+/// variable is accessible. The variables are listed in order of appearance.
 class DbgValueHistoryMap {
 public:
-  /// Specifies an instruction range where a DBG_VALUE is valid.
+  /// Index in the entry vector.
+  typedef size_t EntryIndex;
+
+  /// Special value to indicate that an entry is valid until the end of the
+  /// function.
+  static const EntryIndex NoEntry = std::numeric_limits<EntryIndex>::max();
+
+  /// Specifies a change in a variable's debug value history.
   ///
-  /// \p Begin is a DBG_VALUE instruction, specifying the location of a
-  /// variable, which is assumed to be valid until the end of the range. If \p
-  /// End is not specified, the location is valid until the first overlapping
-  /// DBG_VALUE if any such DBG_VALUE exists, otherwise it is valid until the
-  /// end of the function.
+  /// There exist two types of entries:
+  ///
+  /// * Debug value entry:
+  ///
+  ///   A new debug value becomes live. If the entry's \p EndIndex is \p NoEntry,
+  ///   the value is valid until the end of the function. For other values, the
+  ///   index points to the entry in the entry vector that ends this debug
+  ///   value. The ending entry can either be an overlapping debug value, or
+  ///   an instruction that clobbers the value.
+  ///
+  /// * Clobbering entry:
+  ///
+  ///   This entry's instruction clobbers one or more preceding
+  ///   register-described debug values that have their end index
+  ///   set to this entry's position in the entry vector.
   class Entry {
-    const MachineInstr *Begin;
-    const MachineInstr *End;
-
   public:
-    Entry(const MachineInstr *Begin) : Begin(Begin), End(nullptr) {}
+    enum EntryKind { DbgValue, Clobber };
 
-    const MachineInstr *getBegin() const { return Begin; }
-    const MachineInstr *getEnd() const { return End; }
+    Entry(const MachineInstr *Instr, EntryKind Kind)
+        : Instr(Instr, Kind), EndIndex(NoEntry) {}
 
-    bool isClosed() const { return End; }
+    const MachineInstr *getInstr() const { return Instr.getPointer(); }
+    EntryIndex getEndIndex() const { return EndIndex; }
+    EntryKind getEntryKind() const { return Instr.getInt(); }
 
-    void endEntry(const MachineInstr &End);
+    bool isClobber() const { return getEntryKind() == Clobber; }
+    bool isDbgValue() const { return getEntryKind() == DbgValue; }
+    bool isClosed() const { return EndIndex != NoEntry; }
+
+    void endEntry(EntryIndex EndIndex);
+
+  private:
+    PointerIntPair<const MachineInstr *, 1, EntryKind> Instr;
+    EntryIndex EndIndex;
   };
   using Entries = SmallVector<Entry, 4>;
   using InlinedEntity = std::pair<const DINode *, const DILocation *>;
@@ -54,12 +79,14 @@ private:
   EntriesMap VarEntries;
 
 public:
-  void startEntry(InlinedEntity Var, const MachineInstr &MI);
-  void endEntry(InlinedEntity Var, const MachineInstr &MI);
+  bool startDbgValue(InlinedEntity Var, const MachineInstr &MI,
+                     EntryIndex &NewIndex);
+  EntryIndex startClobber(InlinedEntity Var, const MachineInstr &MI);
 
-  // Returns register currently describing @Var. If @Var is currently
-  // unaccessible or is not described by a register, returns 0.
-  unsigned getRegisterForVar(InlinedEntity Var) const;
+  Entry &getEntry(InlinedEntity Var, EntryIndex Index) {
+    auto &Entries = VarEntries[Var];
+    return Entries[Index];
+  }
 
   bool empty() const { return VarEntries.empty(); }
   void clear() { VarEntries.clear(); }

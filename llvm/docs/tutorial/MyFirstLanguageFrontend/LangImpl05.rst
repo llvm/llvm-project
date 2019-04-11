@@ -1,3 +1,5 @@
+:orphan:
+
 ==================================================
 Kaleidoscope: Extending the Language: Control Flow
 ==================================================
@@ -807,7 +809,7 @@ the if/then/else and for expressions. To build this example, use:
 
 Here is the code:
 
-.. literalinclude:: ../../examples/Kaleidoscope/Chapter5/toy.cpp
+.. literalinclude:: ../../../examples/Kaleidoscope/Chapter5/toy.cpp
    :language: c++
 
 `Next: Extending the language: user-defined operators <LangImpl06.html>`_

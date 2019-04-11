@@ -1,3 +1,5 @@
+:orphan:
+
 ========================================
 Kaleidoscope: Code generation to LLVM IR
 ========================================
@@ -561,7 +563,7 @@ our makefile/command line about which options to use:
 
 Here is the code:
 
-.. literalinclude:: ../../examples/Kaleidoscope/Chapter3/toy.cpp
+.. literalinclude:: ../../../examples/Kaleidoscope/Chapter3/toy.cpp
    :language: c++
 
 `Next: Adding JIT and Optimizer Support <LangImpl04.html>`_

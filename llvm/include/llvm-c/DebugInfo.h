@@ -452,6 +452,15 @@ unsigned LLVMDILocationGetColumn(LLVMMetadataRef Location);
 LLVMMetadataRef LLVMDILocationGetScope(LLVMMetadataRef Location);
 
 /**
+ * Get the "inline at" location associated with this debug location.
+ * \param Location     The debug location.
+ *
+ * @see DILocation::getInlinedAt()
+ */
+LLVMMetadataRef LLVMDILocationGetInlinedAt(LLVMMetadataRef Location);
+
+
+/**
  * Create a type array.
  * \param Builder        The DIBuilder.
  * \param Data           The type elements.

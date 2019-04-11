@@ -1160,7 +1160,9 @@ void CodeViewDebug::calculateRanges(
   // Calculate the definition ranges.
   for (auto I = Entries.begin(), E = Entries.end(); I != E; ++I) {
     const auto &Entry = *I;
-    const MachineInstr *DVInst = Entry.getBegin();
+    if (!Entry.isDbgValue())
+      continue;
+    const MachineInstr *DVInst = Entry.getInstr();
     assert(DVInst->isDebugValue() && "Invalid History entry");
     // FIXME: Find a way to represent constant variables, since they are
     // relatively common.
@@ -1215,21 +1217,15 @@ void CodeViewDebug::calculateRanges(
     }
 
     // Compute the label range.
-    const MCSymbol *Begin = getLabelBeforeInsn(Entry.getBegin());
-    const MCSymbol *End = getLabelAfterInsn(Entry.getEnd());
-    if (!End) {
-      // This range is valid until the next overlapping bitpiece. In the
-      // common case, ranges will not be bitpieces, so they will overlap.
-      auto J = std::next(I);
-      const DIExpression *DIExpr = DVInst->getDebugExpression();
-      while (J != E &&
-             !DIExpr->fragmentsOverlap(J->getBegin()->getDebugExpression()))
-        ++J;
-      if (J != E)
-        End = getLabelBeforeInsn(J->getBegin());
-      else
-        End = Asm->getFunctionEnd();
-    }
+    const MCSymbol *Begin = getLabelBeforeInsn(Entry.getInstr());
+    const MCSymbol *End;
+    if (Entry.getEndIndex() != DbgValueHistoryMap::NoEntry) {
+      auto &EndingEntry = Entries[Entry.getEndIndex()];
+      End = EndingEntry.isDbgValue()
+                ? getLabelBeforeInsn(EndingEntry.getInstr())
+                : getLabelAfterInsn(EndingEntry.getInstr());
+    } else
+      End = Asm->getFunctionEnd();
 
     // If the last range end is our begin, just extend the last range.
     // Otherwise make a new range.

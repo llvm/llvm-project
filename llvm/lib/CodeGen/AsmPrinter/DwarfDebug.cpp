@@ -1095,67 +1095,92 @@ static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
 }
 
 /// Build the location list for all DBG_VALUEs in the function that
-/// describe the same variable.  If the ranges of several independent
-/// fragments of the same variable overlap partially, split them up and
-/// combine the ranges. The resulting DebugLocEntries are will have
+/// describe the same variable. The resulting DebugLocEntries will have
 /// strict monotonically increasing begin addresses and will never
 /// overlap.
 //
+// See the definition of DbgValueHistoryMap::Entry for an explanation of the
+// different kinds of history map entries. One thing to be aware of is that if
+// a debug value is ended by another entry (rather than being valid until the
+// end of the function), that entry's instruction may or may not be included in
+// the range, depending on if the entry is a clobbering entry (it has an
+// instruction that clobbers one or more preceding locations), or if it is an
+// (overlapping) debug value entry. This distinction can be seen in the example
+// below. The first debug value is ended by the clobbering entry 2, and the
+// second and third debug values are ended by the overlapping debug value entry
+// 4.
+//
 // Input:
 //
-//   Ranges History [var, loc, fragment ofs size]
-// 0 |      [x, (reg0, fragment 0, 32)]
-// 1 | |    [x, (reg1, fragment 32, 32)] <- IsFragmentOfPrevEntry
-// 2 | |    ...
-// 3   |    [clobber reg0]
-// 4        [x, (mem, fragment 0, 64)] <- overlapping with both previous fragments of
-//                                     x.
+//   History map entries [type, end index, mi]
 //
-// Output:
+// 0 |      [DbgValue, 2, DBG_VALUE $reg0, [...] (fragment 0, 32)]
+// 1 | |    [DbgValue, 4, DBG_VALUE $reg1, [...] (fragment 32, 32)]
+// 2 | |    [Clobber, $reg0 = [...], -, -]
+// 3   | |  [DbgValue, 4, DBG_VALUE 123, [...] (fragment 64, 32)]
+// 4        [DbgValue, ~0, DBG_VALUE @g, [...] (fragment 0, 96)]
 //
-// [0-1]    [x, (reg0, fragment  0, 32)]
-// [1-3]    [x, (reg0, fragment  0, 32), (reg1, fragment 32, 32)]
-// [3-4]    [x, (reg1, fragment 32, 32)]
-// [4- ]    [x, (mem,  fragment  0, 64)]
+// Output [start, end) [Value...]:
+//
+// [0-1)    [(reg0, fragment 0, 32)]
+// [1-3)    [(reg0, fragment 0, 32), (reg1, fragment 32, 32)]
+// [3-4)    [(reg1, fragment 32, 32), (123, fragment 64, 32)]
+// [4-)     [(@g, fragment 0, 96)]
 void DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
                                    const DbgValueHistoryMap::Entries &Entries) {
-  SmallVector<DebugLocEntry::Value, 4> OpenRanges;
+  using OpenRange =
+      std::pair<DbgValueHistoryMap::EntryIndex, DebugLocEntry::Value>;
+  SmallVector<OpenRange, 4> OpenRanges;
 
-  for (auto EI = Entries.begin(), EE = Entries.end(); EI != EE; ++EI) {
-    const MachineInstr *Begin = EI->getBegin();
-    const MachineInstr *End = EI->getEnd();
-    assert(Begin->isDebugValue() && "Invalid History entry");
+  for (auto EB = Entries.begin(), EI = EB, EE = Entries.end(); EI != EE; ++EI) {
+    const MachineInstr *Instr = EI->getInstr();
 
-    // Check if a variable is inaccessible in this range.
-    if (Begin->getNumOperands() > 1 &&
-        Begin->getOperand(0).isReg() && !Begin->getOperand(0).getReg()) {
-      OpenRanges.clear();
-      continue;
+    if (EI->isDbgValue()) {
+      // Check if a variable is inaccessible in this range.
+      // TODO: This should only truncate open ranges that are overlapping.
+      if (Instr->getNumOperands() > 1 &&
+          Instr->getOperand(0).isReg() && !Instr->getOperand(0).getReg()) {
+        OpenRanges.clear();
+        continue;
+      }
     }
 
-    // If this debug value overlaps with any open ranges, truncate them.
-    const DIExpression *DIExpr = Begin->getDebugExpression();
-    auto Last = remove_if(OpenRanges, [&](DebugLocEntry::Value R) {
-      return DIExpr->fragmentsOverlap(R.getExpression());
-    });
+    // Remove all values that are no longer live.
+    size_t Index = std::distance(EB, EI);
+    auto Last =
+        remove_if(OpenRanges, [&](OpenRange &R) { return R.first <= Index; });
     OpenRanges.erase(Last, OpenRanges.end());
 
-    const MCSymbol *StartLabel = getLabelBeforeInsn(Begin);
-    assert(StartLabel && "Forgot label before DBG_VALUE starting a range!");
+    // If we are dealing with a clobbering entry, this iteration will result in
+    // a location list entry starting after the clobbering instruction.
+    const MCSymbol *StartLabel =
+        EI->isClobber() ? getLabelAfterInsn(Instr) : getLabelBeforeInsn(Instr);
+    assert(StartLabel &&
+           "Forgot label before/after instruction starting a range!");
 
     const MCSymbol *EndLabel;
-    if (End != nullptr)
-      EndLabel = getLabelAfterInsn(End);
-    else if (std::next(EI) == Entries.end())
+    if (std::next(EI) == Entries.end())
       EndLabel = Asm->getFunctionEnd();
+    else if (std::next(EI)->isClobber())
+      EndLabel = getLabelAfterInsn(std::next(EI)->getInstr());
     else
-      EndLabel = getLabelBeforeInsn(std::next(EI)->getBegin());
+      EndLabel = getLabelBeforeInsn(std::next(EI)->getInstr());
     assert(EndLabel && "Forgot label after instruction ending a range!");
 
-    LLVM_DEBUG(dbgs() << "DotDebugLoc: " << *Begin << "\n");
+    if (EI->isDbgValue())
+      LLVM_DEBUG(dbgs() << "DotDebugLoc: " << *Instr << "\n");
 
-    auto Value = getDebugLocValue(Begin);
-    OpenRanges.push_back(Value);
+    // If this history map entry has a debug value, add that to the list of
+    // open ranges.
+    if (EI->isDbgValue()) {
+      auto Value = getDebugLocValue(Instr);
+      OpenRanges.emplace_back(EI->getEndIndex(), Value);
+    }
+
+    // Location list entries with empty location descriptions are redundant
+    // information in DWARF, so do not emit those.
+    if (OpenRanges.empty())
+      continue;
 
     // Omit entries with empty ranges as they do not have any effect in DWARF.
     if (StartLabel == EndLabel) {
@@ -1163,7 +1188,10 @@ void DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
       continue;
     }
 
-    DebugLoc.emplace_back(StartLabel, EndLabel, OpenRanges);
+    SmallVector<DebugLocEntry::Value, 4> Values;
+    for (auto &R : OpenRanges)
+      Values.push_back(R.second);
+    DebugLoc.emplace_back(StartLabel, EndLabel, Values);
 
     // Attempt to coalesce the ranges of two otherwise identical
     // DebugLocEntries.
@@ -1292,15 +1320,23 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     DbgVariable *RegVar = cast<DbgVariable>(createConcreteEntity(TheCU,
                                             *Scope, LocalVar, IV.second));
 
-    const MachineInstr *MInsn = HistoryMapEntries.front().getBegin();
+    const MachineInstr *MInsn = HistoryMapEntries.front().getInstr();
     assert(MInsn->isDebugValue() && "History must begin with debug value");
 
     // Check if there is a single DBG_VALUE, valid throughout the var's scope.
-    if (HistoryMapEntries.size() == 1 &&
-        validThroughout(LScopes, MInsn, HistoryMapEntries.front().getEnd())) {
-      RegVar->initializeDbgValue(MInsn);
-      continue;
+    // If the history map contains a single debug value, there may be an
+    // additional entry which clobbers the debug value.
+    bool SingleValueWithClobber =
+        HistoryMapEntries.size() == 2 && HistoryMapEntries[1].isClobber();
+    if (HistoryMapEntries.size() == 1 || SingleValueWithClobber) {
+      const auto *End =
+          SingleValueWithClobber ? HistoryMapEntries[1].getInstr() : nullptr;
+      if (validThroughout(LScopes, MInsn, End)) {
+        RegVar->initializeDbgValue(MInsn);
+        continue;
+      }
     }
+
     // Do not emit location lists if .debug_loc secton is disabled.
     if (!useLocSection())
       continue;

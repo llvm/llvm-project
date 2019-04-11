@@ -5920,6 +5920,19 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
     }
   }
 
+  // Extract constant bits from a subvector broadcast.
+  if (Op.getOpcode() == X86ISD::SUBV_BROADCAST) {
+    SmallVector<APInt, 16> SubEltBits;
+    if (getTargetConstantBitsFromNode(Op.getOperand(0), EltSizeInBits,
+                                      UndefElts, SubEltBits, AllowWholeUndefs,
+                                      AllowPartialUndefs)) {
+      UndefElts = APInt::getSplat(NumElts, UndefElts);
+      while (EltBits.size() < NumElts)
+        EltBits.append(SubEltBits.begin(), SubEltBits.end());
+      return true;
+    }
+  }
+
   // Extract a rematerialized scalar constant insertion.
   if (Op.getOpcode() == X86ISD::VZEXT_MOVL &&
       Op.getOperand(0).getOpcode() == ISD::SCALAR_TO_VECTOR &&
@@ -19582,10 +19595,10 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
       DAG.MaskedValueIsZero(BitNo, APInt(BitNo.getValueSizeInBits(), 32)))
     Src = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Src);
 
-  // If the operand types disagree, extend or truncate the shift amount to match.
-  // Since BT ignores high bits (like shifts) we can use anyextend for the extension.
+  // If the operand types disagree, extend the shift amount to match.  Since
+  // BT ignores high bits (like shifts) we can use anyextend.
   if (Src.getValueType() != BitNo.getValueType())
-    BitNo = DAG.getAnyExtOrTrunc(BitNo, dl, Src.getValueType());
+    BitNo = DAG.getNode(ISD::ANY_EXTEND, dl, Src.getValueType(), BitNo);
 
   X86CC = DAG.getConstant(CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B,
                           dl, MVT::i8);

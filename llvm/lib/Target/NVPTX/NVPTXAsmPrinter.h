@@ -230,13 +230,11 @@ private:
   void printReturnValStr(const Function *, raw_ostream &O);
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       unsigned AsmVariant, const char *ExtraCode,
-                       raw_ostream &) override;
+                       const char *ExtraCode, raw_ostream &) override;
   void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
                     const char *Modifier = nullptr);
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                             unsigned AsmVariant, const char *ExtraCode,
-                             raw_ostream &) override;
+                             const char *ExtraCode, raw_ostream &) override;
 
   const MCExpr *lowerConstantForGV(const Constant *CV, bool ProcessingGeneric);
   void printMCExpr(const MCExpr &Expr, raw_ostream &OS);

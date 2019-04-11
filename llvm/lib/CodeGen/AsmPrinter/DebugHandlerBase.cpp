@@ -229,31 +229,35 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
     // However, we currently do not emit debug values for constant arguments
     // directly at the start of the function, so this code is still useful.
     const DILocalVariable *DIVar =
-        Entries.front().getBegin()->getDebugVariable();
+        Entries.front().getInstr()->getDebugVariable();
     if (DIVar->isParameter() &&
         getDISubprogram(DIVar->getScope())->describes(&MF->getFunction())) {
-      if (!IsDescribedByReg(Entries.front().getBegin()))
-        LabelsBeforeInsn[Entries.front().getBegin()] = Asm->getFunctionBegin();
-      if (Entries.front().getBegin()->getDebugExpression()->isFragment()) {
+      if (!IsDescribedByReg(Entries.front().getInstr()))
+        LabelsBeforeInsn[Entries.front().getInstr()] = Asm->getFunctionBegin();
+      if (Entries.front().getInstr()->getDebugExpression()->isFragment()) {
         // Mark all non-overlapping initial fragments.
         for (auto I = Entries.begin(); I != Entries.end(); ++I) {
-          const DIExpression *Fragment = I->getBegin()->getDebugExpression();
+          if (!I->isDbgValue())
+            continue;
+          const DIExpression *Fragment = I->getInstr()->getDebugExpression();
           if (std::any_of(Entries.begin(), I,
                           [&](DbgValueHistoryMap::Entry Pred) {
-                            return Fragment->fragmentsOverlap(
-                                Pred.getBegin()->getDebugExpression());
+                            return Pred.isDbgValue() &&
+                                   Fragment->fragmentsOverlap(
+                                       Pred.getInstr()->getDebugExpression());
                           }))
             break;
-          if (!IsDescribedByReg(I->getBegin()))
-            LabelsBeforeInsn[I->getBegin()] = Asm->getFunctionBegin();
+          if (!IsDescribedByReg(I->getInstr()))
+            LabelsBeforeInsn[I->getInstr()] = Asm->getFunctionBegin();
         }
       }
     }
 
     for (const auto &Entry : Entries) {
-      requestLabelBeforeInsn(Entry.getBegin());
-      if (Entry.getEnd())
-        requestLabelAfterInsn(Entry.getEnd());
+      if (Entry.isDbgValue())
+        requestLabelBeforeInsn(Entry.getInstr());
+      else
+        requestLabelAfterInsn(Entry.getInstr());
     }
   }
 
