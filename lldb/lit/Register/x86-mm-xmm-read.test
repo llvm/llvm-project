@@ -1,5 +1,5 @@
 # REQUIRES: native && (target-x86 || target-x86_64)
-# RUN: %clang++ %p/Inputs/x86-mm-xmm-read.cpp -o %t
+# RUN: %clangxx %p/Inputs/x86-mm-xmm-read.cpp -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
 process launch
 
