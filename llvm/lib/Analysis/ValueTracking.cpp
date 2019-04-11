@@ -625,7 +625,10 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 
     CmpInst::Predicate Pred;
     uint64_t C;
-    if (Cmp->getPredicate() == ICmpInst::ICMP_EQ) {
+    switch (Cmp->getPredicate()) {
+    default:
+      break;
+    case ICmpInst::ICMP_EQ:
       // assume(v = a)
       if (match(Cmp, m_c_ICmp(Pred, m_V, m_Value(A))) &&
           isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
@@ -762,7 +765,8 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
         Known.Zero |= RHSKnown.One  << C;
         Known.One  |= RHSKnown.Zero << C;
       }
-    } else if (Cmp->getPredicate() == ICmpInst::ICMP_SGE) {
+      break;
+    case ICmpInst::ICMP_SGE:
       // assume(v >=_s c) where c is non-negative
       if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
           isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
@@ -774,7 +778,8 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
           Known.makeNonNegative();
         }
       }
-    } else if (Cmp->getPredicate() == ICmpInst::ICMP_SGT) {
+      break;
+    case ICmpInst::ICMP_SGT:
       // assume(v >_s c) where c is at least -1.
       if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
           isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
@@ -786,7 +791,8 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
           Known.makeNonNegative();
         }
       }
-    } else if (Cmp->getPredicate() == ICmpInst::ICMP_SLE) {
+      break;
+    case ICmpInst::ICMP_SLE:
       // assume(v <=_s c) where c is negative
       if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
           isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
@@ -798,7 +804,8 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
           Known.makeNegative();
         }
       }
-    } else if (Cmp->getPredicate() == ICmpInst::ICMP_SLT) {
+      break;
+    case ICmpInst::ICMP_SLT:
       // assume(v <_s c) where c is non-positive
       if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
           isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
@@ -810,8 +817,9 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
           Known.makeNegative();
         }
       }
-    // assume(v <=_u c)
-    } else if (Cmp->getPredicate() == ICmpInst::ICMP_ULE) {
+      break;
+    case ICmpInst::ICMP_ULE:
+      // assume(v <=_u c)
       if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
           isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
         KnownBits RHSKnown(BitWidth);
@@ -820,8 +828,9 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
         // Whatever high bits in c are zero are known to be zero.
         Known.Zero.setHighBits(RHSKnown.countMinLeadingZeros());
       }
+      break;
+    case ICmpInst::ICMP_ULT:
       // assume(v <_u c)
-    } else if (Cmp->getPredicate() == ICmpInst::ICMP_ULT) {
       if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
           isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
         KnownBits RHSKnown(BitWidth);
@@ -842,6 +851,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
         else
           Known.Zero.setHighBits(RHSKnown.countMinLeadingZeros());
       }
+      break;
     }
   }
 

@@ -3738,21 +3738,35 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Any calls now have event arguments passed.
     if (NumArgs >= 7) {
       llvm::Type *EventTy = ConvertType(getContext().OCLClkEventTy);
-      llvm::Type *EventPtrTy = EventTy->getPointerTo(
+      llvm::PointerType *EventPtrTy = EventTy->getPointerTo(
           CGM.getContext().getTargetAddressSpace(LangAS::opencl_generic));
 
       llvm::Value *NumEvents =
           Builder.CreateZExtOrTrunc(EmitScalarExpr(E->getArg(3)), Int32Ty);
-      llvm::Value *EventList =
-          E->getArg(4)->getType()->isArrayType()
-              ? EmitArrayToPointerDecay(E->getArg(4)).getPointer()
-              : EmitScalarExpr(E->getArg(4));
-      llvm::Value *ClkEvent = EmitScalarExpr(E->getArg(5));
-      // Convert to generic address space.
-      EventList = Builder.CreatePointerCast(EventList, EventPtrTy);
-      ClkEvent = ClkEvent->getType()->isIntegerTy()
-                   ? Builder.CreateBitOrPointerCast(ClkEvent, EventPtrTy)
-                   : Builder.CreatePointerCast(ClkEvent, EventPtrTy);
+
+      // Since SemaOpenCLBuiltinEnqueueKernel allows fifth and sixth arguments
+      // to be a null pointer constant (including `0` literal), we can take it
+      // into account and emit null pointer directly.
+      llvm::Value *EventWaitList = nullptr;
+      if (E->getArg(4)->isNullPointerConstant(
+              getContext(), Expr::NPC_ValueDependentIsNotNull)) {
+        EventWaitList = llvm::ConstantPointerNull::get(EventPtrTy);
+      } else {
+        EventWaitList = E->getArg(4)->getType()->isArrayType()
+                        ? EmitArrayToPointerDecay(E->getArg(4)).getPointer()
+                        : EmitScalarExpr(E->getArg(4));
+        // Convert to generic address space.
+        EventWaitList = Builder.CreatePointerCast(EventWaitList, EventPtrTy);
+      }
+      llvm::Value *EventRet = nullptr;
+      if (E->getArg(5)->isNullPointerConstant(
+              getContext(), Expr::NPC_ValueDependentIsNotNull)) {
+        EventRet = llvm::ConstantPointerNull::get(EventPtrTy);
+      } else {
+        EventRet =
+            Builder.CreatePointerCast(EmitScalarExpr(E->getArg(5)), EventPtrTy);
+      }
+
       auto Info =
           CGM.getOpenCLRuntime().emitOpenCLEnqueuedBlock(*this, E->getArg(6));
       llvm::Value *Kernel =
@@ -3764,8 +3778,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           QueueTy,    Int32Ty,    RangeTy,          Int32Ty,
           EventPtrTy, EventPtrTy, GenericVoidPtrTy, GenericVoidPtrTy};
 
-      std::vector<llvm::Value *> Args = {Queue,     Flags,    Range,  NumEvents,
-                                         EventList, ClkEvent, Kernel, Block};
+      std::vector<llvm::Value *> Args = {Queue,     Flags,         Range,
+                                         NumEvents, EventWaitList, EventRet,
+                                         Kernel,    Block};
 
       if (NumArgs == 7) {
         // Has events but no variadics.

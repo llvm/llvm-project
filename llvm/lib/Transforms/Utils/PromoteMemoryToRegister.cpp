@@ -487,11 +487,10 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
     unsigned LoadIdx = LBI.getInstructionIndex(LI);
 
     // Find the nearest store that has a lower index than this load.
-    StoresByIndexTy::iterator I =
-        std::lower_bound(StoresByIndex.begin(), StoresByIndex.end(),
-                         std::make_pair(LoadIdx,
-                                        static_cast<StoreInst *>(nullptr)),
-                         less_first());
+    StoresByIndexTy::iterator I = llvm::lower_bound(
+        StoresByIndex,
+        std::make_pair(LoadIdx, static_cast<StoreInst *>(nullptr)),
+        less_first());
     if (I == StoresByIndex.begin()) {
       if (StoresByIndex.empty())
         // If there are no stores, the load takes the undef value.
@@ -758,9 +757,8 @@ void PromoteMem2Reg::run() {
     // them from the Preds list.
     for (unsigned i = 0, e = SomePHI->getNumIncomingValues(); i != e; ++i) {
       // Do a log(n) search of the Preds list for the entry we want.
-      SmallVectorImpl<BasicBlock *>::iterator EntIt = std::lower_bound(
-          Preds.begin(), Preds.end(), SomePHI->getIncomingBlock(i),
-          CompareBBNumbers);
+      SmallVectorImpl<BasicBlock *>::iterator EntIt = llvm::lower_bound(
+          Preds, SomePHI->getIncomingBlock(i), CompareBBNumbers);
       assert(EntIt != Preds.end() && *EntIt == SomePHI->getIncomingBlock(i) &&
              "PHI node has entry for a block which is not a predecessor!");
 

@@ -20,10 +20,11 @@ namespace clangd {
 // This is a bitfield as information can be combined from several sources.
 enum class SymbolOrigin : uint8_t {
   Unknown = 0,
-  AST = 1 << 0,     // Directly from the AST (indexes should not set this).
-  Dynamic = 1 << 1, // From the dynamic index of opened files.
-  Static = 1 << 2,  // From the static, externally-built index.
-  Merge = 1 << 3,   // A non-trivial index merge was performed.
+  AST = 1 << 0,        // Directly from the AST (indexes should not set this).
+  Dynamic = 1 << 1,    // From the dynamic index of opened files.
+  Static = 1 << 2,     // From the static, externally-built index.
+  Merge = 1 << 3,      // A non-trivial index merge was performed.
+  Identifier = 1 << 4, // Raw identifiers in file.
   // Remaining bits reserved for index implementations.
 };
 

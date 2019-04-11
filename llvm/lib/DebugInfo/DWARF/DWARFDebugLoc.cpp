@@ -57,8 +57,8 @@ void DWARFDebugLoc::LocationList::dump(raw_ostream &OS, bool IsLittleEndian,
 
 DWARFDebugLoc::LocationList const *
 DWARFDebugLoc::getLocationListAtOffset(uint64_t Offset) const {
-  auto It = std::lower_bound(
-      Locations.begin(), Locations.end(), Offset,
+  auto It = llvm::lower_bound(
+      Locations, Offset,
       [](const LocationList &L, uint64_t Offset) { return L.Offset < Offset; });
   if (It != Locations.end() && It->Offset == Offset)
     return &(*It);
@@ -213,8 +213,8 @@ void DWARFDebugLoclists::parse(DataExtractor data, unsigned Version) {
 
 DWARFDebugLoclists::LocationList const *
 DWARFDebugLoclists::getLocationListAtOffset(uint64_t Offset) const {
-  auto It = std::lower_bound(
-      Locations.begin(), Locations.end(), Offset,
+  auto It = llvm::lower_bound(
+      Locations, Offset,
       [](const LocationList &L, uint64_t Offset) { return L.Offset < Offset; });
   if (It != Locations.end() && It->Offset == Offset)
     return &(*It);

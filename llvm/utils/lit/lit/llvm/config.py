@@ -96,6 +96,10 @@ class LLVMConfig(object):
                 features.add('x86_64-linux')
             if re.match(r'.*-windows-msvc$', target_triple):
                 features.add('target-windows')
+            if re.match(r'^i.86.*', target_triple):
+                features.add('target-x86')
+            elif re.match(r'^x86_64.*', target_triple):
+                features.add('target-x86_64')
 
         use_gmalloc = lit_config.params.get('use_gmalloc', None)
         if lit.util.pythonize_bool(use_gmalloc):

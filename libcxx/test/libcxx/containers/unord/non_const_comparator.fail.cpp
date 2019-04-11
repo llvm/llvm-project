@@ -33,10 +33,10 @@ int main(int, char**) {
   static_assert(!std::__invokable<BadEqual const&, int const&, int const&>::value, "");
   static_assert(std::__invokable<BadEqual&, int const&, int const&>::value, "");
 
-  // expected-warning@unordered_set:* 2 {{the specified comparator type does not provide a const call operator}}
-  // expected-warning@unordered_map:* 2 {{the specified comparator type does not provide a const call operator}}
-  // expected-warning@unordered_set:* 2 {{the specified hash functor does not provide a const call operator}}
-  // expected-warning@unordered_map:* 2 {{the specified hash functor does not provide a const call operator}}
+  // expected-warning@unordered_set:* 2 {{the specified comparator type does not provide a viable const call operator}}
+  // expected-warning@unordered_map:* 2 {{the specified comparator type does not provide a viable const call operator}}
+  // expected-warning@unordered_set:* 2 {{the specified hash functor does not provide a viable const call operator}}
+  // expected-warning@unordered_map:* 2 {{the specified hash functor does not provide a viable const call operator}}
 
   {
     using C = std::unordered_set<int, BadHash, BadEqual>;

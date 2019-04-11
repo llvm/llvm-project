@@ -4462,10 +4462,10 @@ static void __kmp_stg_parse_hw_subset(char const *name, char const *value,
   pos = input;
   components[level++] = pos;
   while ((pos = strchr(pos, ','))) {
+    if (level >= MAX_T_LEVEL)
+      goto err; // too many components provided
     *pos = '\0'; // modify input and avoid more copying
     components[level++] = ++pos; // expect something after ","
-    if (level > MAX_T_LEVEL)
-      goto err; // too many components provided
   }
   // Check each component
   for (int i = 0; i < level; ++i) {

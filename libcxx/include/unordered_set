@@ -390,7 +390,6 @@ public:
     typedef const value_type&                                          const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
                   "Invalid allocator::value_type");
-    static_assert(sizeof(__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
 
 private:
     typedef __hash_table<value_type, hasher, key_equal, allocator_type> __table;
@@ -486,7 +485,11 @@ public:
         : unordered_set(__il, __n, __hf, key_equal(), __a) {}
 #endif
 #endif  // _LIBCPP_CXX03_LANG
-    // ~unordered_set() = default;
+    _LIBCPP_INLINE_VISIBILITY
+    ~unordered_set() {
+        static_assert(sizeof(__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
+    }
+
     _LIBCPP_INLINE_VISIBILITY
     unordered_set& operator=(const unordered_set& __u)
     {
@@ -990,7 +993,6 @@ public:
     typedef const value_type&                                          const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
                   "Invalid allocator::value_type");
-    static_assert(sizeof(__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
 
 private:
     typedef __hash_table<value_type, hasher, key_equal, allocator_type> __table;
@@ -1084,7 +1086,11 @@ public:
       : unordered_multiset(__il, __n, __hf, key_equal(), __a) {}
 #endif
 #endif  // _LIBCPP_CXX03_LANG
-    // ~unordered_multiset() = default;
+    _LIBCPP_INLINE_VISIBILITY
+    ~unordered_multiset() {
+        static_assert(sizeof(__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
+    }
+
     _LIBCPP_INLINE_VISIBILITY
     unordered_multiset& operator=(const unordered_multiset& __u)
     {

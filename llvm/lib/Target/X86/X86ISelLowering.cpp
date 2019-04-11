@@ -33225,9 +33225,27 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     }
     break;
   }
-  case X86ISD::PSHUFB: {
-    // TODO - simplify other variable shuffle masks.
+  case X86ISD::VPERMV: {
+    SDValue Mask = Op.getOperand(0);
+    APInt MaskUndef, MaskZero;
+    if (SimplifyDemandedVectorElts(Mask, DemandedElts, MaskUndef, MaskZero, TLO,
+                                   Depth + 1))
+      return true;
+    break;
+  }
+  case X86ISD::PSHUFB:
+  case X86ISD::VPERMV3:
+  case X86ISD::VPERMILPV: {
     SDValue Mask = Op.getOperand(1);
+    APInt MaskUndef, MaskZero;
+    if (SimplifyDemandedVectorElts(Mask, DemandedElts, MaskUndef, MaskZero, TLO,
+                                   Depth + 1))
+      return true;
+    break;
+  }
+  case X86ISD::VPPERM:
+  case X86ISD::VPERMIL2: {
+    SDValue Mask = Op.getOperand(2);
     APInt MaskUndef, MaskZero;
     if (SimplifyDemandedVectorElts(Mask, DemandedElts, MaskUndef, MaskZero, TLO,
                                    Depth + 1))

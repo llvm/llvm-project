@@ -6,7 +6,7 @@
 //
 //  
 //  This file implements the "Array Construction and Destruction APIs"
-//  http://mentorembedded.github.io/cxx-abi/abi.html#array-ctor
+//  https://itanium-cxx-abi.github.io/cxx-abi/abi.html#array-ctor
 //  
 //===----------------------------------------------------------------------===//
 

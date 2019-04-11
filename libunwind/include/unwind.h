@@ -6,7 +6,7 @@
 //
 //
 // C++ ABI Level 1 ABI documented at:
-//   http://mentorembedded.github.io/cxx-abi/abi-eh.html
+//   https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html
 //
 //===----------------------------------------------------------------------===//
 
