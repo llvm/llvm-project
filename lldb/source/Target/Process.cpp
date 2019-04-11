@@ -292,13 +292,6 @@ std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
   return std::chrono::seconds(value);
 }
 
-std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
-  const uint32_t idx = ePropertyUtilityExpressionTimeout;
-  uint64_t value = m_collection_sp->GetPropertyAtIndexAsUInt64(
-     nullptr, idx, g_properties[idx].default_uint_value);
-  return std::chrono::seconds(value);
-}
-
 Status ProcessLaunchCommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
