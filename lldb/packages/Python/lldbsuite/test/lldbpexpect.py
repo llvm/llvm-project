@@ -51,7 +51,7 @@ else:
             TestBase.setUp(self)
 
         def launchArgs(self):
-            pass
+            return ""
 
         def launch(self, timeout=None):
             if timeout is None:
