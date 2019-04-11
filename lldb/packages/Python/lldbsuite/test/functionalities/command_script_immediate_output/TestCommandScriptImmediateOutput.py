@@ -31,7 +31,9 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
     @skipIfDarwin
     def test_command_script_immediate_output_console(self):
         """Test that LLDB correctly allows scripted commands to set immediate output to the console."""
+        prompt = "\(lldb\) "
         self.launch(timeout=10)
+        self.expect(prompt)
 
         script = os.path.join(self.getSourceDir(), 'custom_command.py')
         prompt = "\(lldb\) "
@@ -44,7 +46,7 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
             'mycommand',
             patterns='this is a test string, just a test string')
         self.sendline('command script delete mycommand', patterns=[prompt])
-        self.quit(gracefully=False)
+        self.quit()
 
     @skipIfRemote  # test not remote-ready llvm.org/pr24813
     @expectedFailureAll(
@@ -54,7 +56,9 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
     @skipIfDarwin
     def test_command_script_immediate_output_file(self):
         """Test that LLDB correctly allows scripted commands to set immediate output to a file."""
+        prompt = "\(lldb\) "
         self.launch(timeout=10)
+        self.expect(prompt)
 
         test_files = {self.getBuildArtifact('read.txt'): 'r',
                       self.getBuildArtifact('write.txt'): 'w',
@@ -71,7 +75,6 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
                 init.write(starter_string)
 
         script = os.path.join(self.getSourceDir(), 'custom_command.py')
-        prompt = "\(lldb\) "
 
         self.sendline('command script import %s' % script, patterns=[prompt])
 
@@ -85,7 +88,7 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
 
         self.sendline('command script delete mywrite', patterns=[prompt])
 
-        self.quit(gracefully=False)
+        self.quit()
 
         for path, mode in test_files.items():
             with open(path, 'r') as result:
@@ -96,4 +99,3 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
                         result.readline(), write_string + mode + '\n')
 
             self.assertTrue(os.path.isfile(path))
-            os.remove(path)
