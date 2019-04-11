@@ -402,7 +402,7 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   case lldb_mm5_x86_64:
   case lldb_mm6_x86_64:
   case lldb_mm7_x86_64:
-    reg_value.SetBytes(&m_fpr_x86_64.fxstate.fx_xmm[reg - lldb_mm0_x86_64],
+    reg_value.SetBytes(&m_fpr_x86_64.fxstate.fx_87_ac[reg - lldb_mm0_x86_64],
                        reg_info->byte_size, endian::InlHostByteOrder());
     break;
   case lldb_xmm0_x86_64:
@@ -598,7 +598,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
   case lldb_mm5_x86_64:
   case lldb_mm6_x86_64:
   case lldb_mm7_x86_64:
-    ::memcpy(&m_fpr_x86_64.fxstate.fx_xmm[reg - lldb_mm0_x86_64],
+    ::memcpy(&m_fpr_x86_64.fxstate.fx_87_ac[reg - lldb_mm0_x86_64],
              reg_value.GetBytes(), reg_value.GetByteSize());
     break;
   case lldb_xmm0_x86_64:
