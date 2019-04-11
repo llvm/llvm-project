@@ -29,6 +29,7 @@ void foo();
 
 @interface E
 @end
+// expected-error@+1 {{'objc_nonlazy_class' attribute only applies to Objective-C interfaces}}
 __attribute__((objc_nonlazy_class))
-@implementation E // expected-error {{prefix attribute must be followed by an interface or protocol}}
+@implementation E
 @end
