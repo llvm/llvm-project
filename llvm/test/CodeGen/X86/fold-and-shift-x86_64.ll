@@ -76,14 +76,12 @@ entry:
   ret i8 %tmp9
 }
 
-; FIXME should be able to fold shift into address.
 define i8 @t6(i8* %X, i32 %i) {
 ; CHECK-LABEL: t6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    shll $2, %esi
-; CHECK-NEXT:    andl $60, %esi
-; CHECK-NEXT:    movb (%rdi,%rsi), %al
+; CHECK-NEXT:    andl $15, %esi
+; CHECK-NEXT:    movb (%rdi,%rsi,4), %al
 ; CHECK-NEXT:    retq
 entry:
   %tmp2 = shl i32 %i, 2

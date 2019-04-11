@@ -79,6 +79,9 @@ public:
   /// Emit the module-level metadata that the platform cares about.
   virtual void emitModuleMetadata(MCStreamer &Streamer, Module &M) const {}
 
+  /// Get the module-level metadata that the platform cares about.
+  virtual void getModuleMetadata(Module &M) {}
+
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,

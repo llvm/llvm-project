@@ -901,7 +901,8 @@ def PdWriteCVTSI642SDrr_CVTSI642SSrr_CVTSI2SDr_CVTSI2SSrr : SchedWriteRes<[PdFPU
   let Latency = 13;
   let NumMicroOps = 2;
 }
-def : InstRW<[PdWriteCVTSI642SDrr_CVTSI642SSrr_CVTSI2SDr_CVTSI2SSrr], (instrs CVTSI642SDrr, CVTSI642SSrr, CVTSI2SDrr, CVTSI2SSrr)>;
+def : InstRW<[PdWriteCVTSI642SDrr_CVTSI642SSrr_CVTSI2SDr_CVTSI2SSrr], (instrs CVTSI642SDrr, CVTSI642SSrr, CVTSI2SDrr, CVTSI2SSrr,
+                                                                              CVTSI642SDrr_Int, CVTSI642SSrr_Int, CVTSI2SDrr_Int, CVTSI2SSrr_Int)>;
 
 defm : PdWriteResXMMPair<WriteCvtI2PD,   [PdFPU1, PdFPSTO], 8, [],     2>;
 defm : PdWriteResYMMPair<WriteCvtI2PDY,  [PdFPU1, PdFPSTO], 8, [2, 1], 4, 1>;

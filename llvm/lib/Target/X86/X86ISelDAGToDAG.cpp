@@ -1378,11 +1378,30 @@ static bool foldMaskAndShiftToExtract(SelectionDAG &DAG, SDValue N,
 // allows us to fold the shift into this addressing mode. Returns false if the
 // transform succeeded.
 static bool foldMaskedShiftToScaledMask(SelectionDAG &DAG, SDValue N,
-                                        SDValue Shift, SDValue X,
                                         X86ISelAddressMode &AM) {
+  SDValue Shift = N.getOperand(0);
+
+  // Use a signed mask so that shifting right will insert sign bits. These
+  // bits will be removed when we shift the result left so it doesn't matter
+  // what we use. This might allow a smaller immediate encoding.
+  int64_t Mask = cast<ConstantSDNode>(N->getOperand(1))->getSExtValue();
+
+  // If we have an any_extend feeding the AND, look through it to see if there
+  // is a shift behind it. But only if the AND doesn't use the extended bits.
+  // FIXME: Generalize this to other ANY_EXTEND than i32 to i64?
+  bool FoundAnyExtend = false;
+  if (Shift.getOpcode() == ISD::ANY_EXTEND && Shift.hasOneUse() &&
+      Shift.getOperand(0).getSimpleValueType() == MVT::i32 &&
+      isUInt<32>(Mask)) {
+    FoundAnyExtend = true;
+    Shift = Shift.getOperand(0);
+  }
+
   if (Shift.getOpcode() != ISD::SHL ||
       !isa<ConstantSDNode>(Shift.getOperand(1)))
     return true;
+
+  SDValue X = Shift.getOperand(0);
 
   // Not likely to be profitable if either the AND or SHIFT node has more
   // than one use (unless all uses are for address computation). Besides,
@@ -1395,13 +1414,14 @@ static bool foldMaskedShiftToScaledMask(SelectionDAG &DAG, SDValue N,
   if (ShiftAmt != 1 && ShiftAmt != 2 && ShiftAmt != 3)
     return true;
 
-  // Use a signed mask so that shifting right will insert sign bits. These
-  // bits will be removed when we shift the result left so it doesn't matter
-  // what we use. This might allow a smaller immediate encoding.
-  int64_t Mask = cast<ConstantSDNode>(N->getOperand(1))->getSExtValue();
-
   MVT VT = N.getSimpleValueType();
   SDLoc DL(N);
+  if (FoundAnyExtend) {
+    SDValue NewX = DAG.getNode(ISD::ANY_EXTEND, DL, VT, X);
+    insertDAGNode(DAG, N, NewX);
+    X = NewX;
+  }
+
   SDValue NewMask = DAG.getConstant(Mask >> ShiftAmt, DL, VT);
   SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, X, NewMask);
   SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, NewAnd, Shift.getOperand(1));
@@ -1851,29 +1871,31 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     assert(N.getSimpleValueType().getSizeInBits() <= 64 &&
            "Unexpected value size!");
 
-    SDValue Shift = N.getOperand(0);
-    if (Shift.getOpcode() != ISD::SRL && Shift.getOpcode() != ISD::SHL) break;
-    SDValue X = Shift.getOperand(0);
-
     if (!isa<ConstantSDNode>(N.getOperand(1)))
       break;
-    uint64_t Mask = N.getConstantOperandVal(1);
 
-    // Try to fold the mask and shift into an extract and scale.
-    if (!foldMaskAndShiftToExtract(*CurDAG, N, Mask, Shift, X, AM))
-      return false;
+    if (N.getOperand(0).getOpcode() == ISD::SRL) {
+      SDValue Shift = N.getOperand(0);
+      SDValue X = Shift.getOperand(0);
 
-    // Try to fold the mask and shift directly into the scale.
-    if (!foldMaskAndShiftToScale(*CurDAG, N, Mask, Shift, X, AM))
-      return false;
+      uint64_t Mask = N.getConstantOperandVal(1);
+
+      // Try to fold the mask and shift into an extract and scale.
+      if (!foldMaskAndShiftToExtract(*CurDAG, N, Mask, Shift, X, AM))
+        return false;
+
+      // Try to fold the mask and shift directly into the scale.
+      if (!foldMaskAndShiftToScale(*CurDAG, N, Mask, Shift, X, AM))
+        return false;
+
+      // Try to fold the mask and shift into BEXTR and scale.
+      if (!foldMaskedShiftToBEXTR(*CurDAG, N, Mask, Shift, X, AM, *Subtarget))
+        return false;
+    }
 
     // Try to swap the mask and shift to place shifts which can be done as
     // a scale on the outside of the mask.
-    if (!foldMaskedShiftToScaledMask(*CurDAG, N, Shift, X, AM))
-      return false;
-
-    // Try to fold the mask and shift into BEXTR and scale.
-    if (!foldMaskedShiftToBEXTR(*CurDAG, N, Mask, Shift, X, AM, *Subtarget))
+    if (!foldMaskedShiftToScaledMask(*CurDAG, N, AM))
       return false;
 
     break;

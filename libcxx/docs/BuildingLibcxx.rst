@@ -201,7 +201,7 @@ libc++ specific options
 
   **Default**: ``OFF``
 
-  Do not export any symbols from the static libc++ library. This is useful when
+  Do not export any symbols from the static libc++ library.
   This is useful when the static libc++ library is being linked into shared
   libraries that may be used in with other shared libraries that use different
   C++ library. We want to avoid avoid exporting any libc++ symbols in that case.
