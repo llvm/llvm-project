@@ -33,21 +33,17 @@ public:
   static void Initialize();
   static void Terminate();
 
-  //------------------------------------------------------------------
   /// Gets the host target triple as a const string.
   ///
   /// \return
   ///     A const string object containing the host target triple.
-  //------------------------------------------------------------------
   static llvm::StringRef GetTargetTriple();
 
-  //------------------------------------------------------------------
   /// Gets the host architecture.
   ///
   /// \return
   ///     A const architecture object that represents the host
   ///     architecture.
-  //------------------------------------------------------------------
   enum ArchitectureKind {
     eArchKindDefault, // The overall default architecture that applications will
                       // run on this host
@@ -92,11 +88,9 @@ public:
   /// FileSpec is filled in.
   static FileSpec GetGlobalTempDir();
 
-  //---------------------------------------------------------------------------
   /// If the triple does not specify the vendor, os, and environment parts, we
   /// "augment" these using information from the host and return the resulting
   /// ArchSpec object.
-  //---------------------------------------------------------------------------
   static ArchSpec GetAugmentedArchSpec(llvm::StringRef triple);
 
   static bool ComputePathRelativeToLibrary(FileSpec &file_spec,

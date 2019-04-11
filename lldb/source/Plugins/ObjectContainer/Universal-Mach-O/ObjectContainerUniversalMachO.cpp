@@ -202,9 +202,7 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
   return ObjectFileSP();
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 lldb_private::ConstString ObjectContainerUniversalMachO::GetPluginName() {
   return GetPluginNameStatic();
 }

@@ -20,9 +20,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Constructors
-//----------------------------------------------------------------------
 SBQueueItem::SBQueueItem() : m_queue_item_sp() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBQueueItem);
 }
@@ -33,9 +31,7 @@ SBQueueItem::SBQueueItem(const QueueItemSP &queue_item_sp)
                           queue_item_sp);
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SBQueueItem::~SBQueueItem() { m_queue_item_sp.reset(); }
 
 bool SBQueueItem::IsValid() const {

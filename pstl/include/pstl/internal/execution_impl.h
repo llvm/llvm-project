@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PSTL_execution_impl_H
-#define __PSTL_execution_impl_H
+#ifndef _PSTL_EXECUTION_IMPL_H
+#define _PSTL_EXECUTION_IMPL_H
 
 #include <iterator>
 #include <type_traits>
@@ -87,7 +87,7 @@ struct __policy_traits<unsequenced_policy>
     typedef std::true_type allow_vector;
 };
 
-#if __PSTL_USE_PAR_POLICIES
+#if _PSTL_USE_PAR_POLICIES
 template <>
 struct __policy_traits<parallel_policy>
 {
@@ -160,4 +160,4 @@ struct __prefer_parallel_tag
 } // namespace __internal
 } // namespace __pstl
 
-#endif /* __PSTL_execution_impl_H */
+#endif /* _PSTL_EXECUTION_IMPL_H */

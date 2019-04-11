@@ -56,6 +56,52 @@ body: |
 ...
 
 ---
+name: test_xor_s96
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+
+    ; CHECK-LABEL: name: test_xor_s96
+    ; CHECK: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s96) = COPY $vgpr3_vgpr4_vgpr5
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[COPY]](s96), 0
+    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY]](s96), 64
+    ; CHECK: [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[COPY1]](s96), 0
+    ; CHECK: [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY1]](s96), 64
+    ; CHECK: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[EXTRACT]], [[EXTRACT2]]
+    ; CHECK: [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[EXTRACT1]], [[EXTRACT3]]
+    ; CHECK: [[DEF:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+    ; CHECK: [[INSERT:%[0-9]+]]:_(s96) = G_INSERT [[DEF]], [[XOR]](s64), 0
+    ; CHECK: [[INSERT1:%[0-9]+]]:_(s96) = G_INSERT [[INSERT]], [[XOR1]](s32), 64
+    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[INSERT1]](s96)
+    %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(s96) = COPY $vgpr3_vgpr4_vgpr5
+    %2:_(s96) = G_XOR %0, %1
+    $vgpr0_vgpr1_vgpr2 = COPY %2
+...
+
+---
+name: test_xor_128
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+
+    ; CHECK-LABEL: name: test_xor_128
+    ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](s128)
+    ; CHECK: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[UV]], [[UV2]]
+    ; CHECK: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[UV1]], [[UV3]]
+    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[XOR]](s64), [[XOR1]](s64)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
+    %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %2:_(s128) = G_XOR %0, %1
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2
+...
+
+---
 name: test_xor_s7
 body: |
   bb.0:

@@ -27,9 +27,7 @@ public:
 
   ~OptionValueLanguage() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeLanguage; }
 
@@ -51,9 +49,7 @@ public:
 
   lldb::OptionValueSP DeepCopy() const override;
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   lldb::LanguageType GetCurrentValue() const { return m_current_value; }
 

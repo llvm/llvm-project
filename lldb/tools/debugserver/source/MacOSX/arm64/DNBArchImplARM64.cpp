@@ -947,9 +947,7 @@ nub_addr_t DNBArchMachARM64::GetWatchAddress(const DBG &debug_state,
   return bits(debug_state.__wvr[hw_index], 63, 0);
 }
 
-//----------------------------------------------------------------------
 // Register information definitions for 64 bit ARMv8.
-//----------------------------------------------------------------------
 enum gpr_regnums {
   gpr_x0 = 0,
   gpr_x1,
@@ -1689,11 +1687,9 @@ const size_t DNBArchMachARM64::k_num_exc_registers =
 const size_t DNBArchMachARM64::k_num_all_registers =
     k_num_gpr_registers + k_num_vfp_registers + k_num_exc_registers;
 
-//----------------------------------------------------------------------
 // Register set definitions. The first definitions at register set index
 // of zero is for all registers, followed by other registers sets. The
 // register information for the all register set need not be filled in.
-//----------------------------------------------------------------------
 const DNBRegisterSetInfo DNBArchMachARM64::g_reg_sets[] = {
     {"ARM64 Registers", NULL, k_num_all_registers},
     {"General Purpose Registers", g_gpr_registers, k_num_gpr_registers},

@@ -15,9 +15,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectGUI
-//-------------------------------------------------------------------------
 
 CommandObjectGUI::CommandObjectGUI(CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "gui",

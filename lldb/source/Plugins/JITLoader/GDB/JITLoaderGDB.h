@@ -20,9 +20,7 @@ public:
 
   ~JITLoaderGDB() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -36,16 +34,12 @@ public:
 
   static void DebuggerInitialize(lldb_private::Debugger &debugger);
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
 
-  //------------------------------------------------------------------
   // JITLoader interface
-  //------------------------------------------------------------------
   void DidAttach() override;
 
   void DidLaunch() override;

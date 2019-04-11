@@ -28,7 +28,6 @@ class CMICmdArgValNumber : public CMICmdArgValBaseTemplate<MIint64> {
   // Enums:
 public:
   //++
-  //---------------------------------------------------------------------------------
   // Details: CMICmdArgValNumber needs to know what format of argument to look
   // for in
   //          the command options text.

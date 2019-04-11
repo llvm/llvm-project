@@ -62,9 +62,7 @@ protected:
 
   typedef std::vector<DWARFUnitSP> CompileUnitColl;
 
-  //----------------------------------------------------------------------
   // Member variables
-  //----------------------------------------------------------------------
   SymbolFileDWARF *m_dwarf2Data;
   lldb_private::DWARFContext &m_context;
   CompileUnitColl m_compile_units;

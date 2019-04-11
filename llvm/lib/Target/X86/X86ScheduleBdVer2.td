@@ -208,7 +208,10 @@ multiclass __pdWriteResPair<X86FoldableSchedWrite SchedRW,
                     !add(Lat, LoadLat),
                     !if(!and(!empty(Res), !eq(LoadRes, 1)),
                       [],
-                      !listconcat([LoadRes], Res)),
+                      !listconcat([LoadRes],
+                        !if(!empty(Res),
+                          !listsplat(1, !size(ExePorts)),
+                          Res))),
                     !add(UOps, LoadUOps)>;
 }
 
@@ -230,7 +233,7 @@ multiclass PdWriteResXMMPair<X86FoldableSchedWrite SchedRW,
 
 multiclass PdWriteResYMMPair<X86FoldableSchedWrite SchedRW,
                              list<ProcResourceKind> ExePorts, int Lat,
-                             list<int> Res, int UOps = 2,
+                             list<int> Res = [], int UOps = 2,
                              int LoadUOps = 0> {
   defm : __pdWriteResPair<SchedRW, ExePorts, Lat, Res, UOps,
                            /*LoadLat*/5, /*LoadRes*/2, LoadUOps>;
@@ -723,7 +726,7 @@ defm : X86WriteResPairUnsupported<WriteFMul64Z>;
 
 defm : PdWriteResXMMPair<WriteFMA,          [PdFPU, PdFPFMA], 5>;
 defm : PdWriteResXMMPair<WriteFMAX,         [PdFPU, PdFPFMA], 5>;
-defm : PdWriteResYMMPair<WriteFMAY,         [PdFPU, PdFPFMA], 5,   [1, 1]>;
+defm : PdWriteResYMMPair<WriteFMAY,         [PdFPU, PdFPFMA], 5>;
 defm : X86WriteResPairUnsupported<WriteFMAZ>;
 
 
@@ -1037,7 +1040,7 @@ defm : PdWriteResXMMPair<WritePHMINPOS,      [PdFPU0,  PdFPMAL], 4, [], 2>;
 
 defm : PdWriteResXMMPair<WriteShuffle,       [PdFPU01, PdFPMAL], 2>;
 defm : PdWriteResXMMPair<WriteShuffleX,      [PdFPU01, PdFPMAL], 2>;
-defm : PdWriteResYMMPair<WriteShuffleY,      [PdFPU01, PdFPMAL], 2,   [1, 1]>;
+defm : PdWriteResYMMPair<WriteShuffleY,      [PdFPU01, PdFPMAL], 2>;
 defm : X86WriteResPairUnsupported<WriteShuffleZ>;
 
 defm : PdWriteResXMMPair<WriteVarShuffle,    [PdFPU01, PdFPMAL], 3, [1, 4]>;

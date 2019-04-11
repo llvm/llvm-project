@@ -68,8 +68,8 @@ is_equal(Iterator first, Iterator last, Iterator d_first)
 
 struct test_one_policy
 {
-#if __PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
-    __PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specializations to skip testing in case of broken configuration
+#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
+    _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specializations to skip testing in case of broken configuration
     template <typename BiDirIt, typename Size, typename UnaryOp, typename Generator>
     void
     operator()(pstl::execution::unsequenced_policy, BiDirIt first, BiDirIt last, BiDirIt exp_first, BiDirIt exp_last,
@@ -83,7 +83,7 @@ struct test_one_policy
                BiDirIt exp_last, Size n, UnaryOp unary_op, Generator generator)
     {
     }
-#elif __PSTL_ICC_16_VC14_TEST_PAR_TBB_RT_RELEASE_64_BROKEN //dummy specializations to skip testing in case of broken configuration
+#elif _PSTL_ICC_16_VC14_TEST_PAR_TBB_RT_RELEASE_64_BROKEN //dummy specializations to skip testing in case of broken configuration
     template <typename BiDirIt, typename Size, typename UnaryOp, typename Generator>
     void
     operator()(pstl::execution::parallel_policy, BiDirIt first, BiDirIt last, BiDirIt exp_first, BiDirIt exp_last,
@@ -168,7 +168,7 @@ struct test_non_const
 int32_t
 main()
 {
-#if !__PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
+#if !_PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
     test_by_type<int32_t>([](int32_t i) { return i; }, [](int32_t) { return true; });
 #endif
     test_by_type<float64_t>([](int32_t i) { return -i; }, [](const float64_t x) { return x < 0; });

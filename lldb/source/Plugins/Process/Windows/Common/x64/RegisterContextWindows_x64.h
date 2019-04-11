@@ -18,16 +18,12 @@ class Thread;
 
 class RegisterContextWindows_x64 : public RegisterContextWindows {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   RegisterContextWindows_x64(Thread &thread, uint32_t concrete_frame_idx);
 
   virtual ~RegisterContextWindows_x64();
 
-  //------------------------------------------------------------------
   // Subclasses must override these functions
-  //------------------------------------------------------------------
   size_t GetRegisterCount() override;
 
   const RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;

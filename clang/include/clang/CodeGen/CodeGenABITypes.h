@@ -30,6 +30,7 @@
 namespace llvm {
   class DataLayout;
   class Module;
+  class Function;
   class FunctionType;
   class Type;
 }
@@ -82,6 +83,59 @@ llvm::Type *convertTypeForMemory(CodeGenModule &CGM, QualType T);
 /// be a field in RD directly (i.e. not an inherited field).
 unsigned getLLVMFieldNumber(CodeGenModule &CGM,
                             const RecordDecl *RD, const FieldDecl *FD);
+
+/// Returns the default constructor for a C struct with non-trivially copyable
+/// fields, generating it if necessary. The returned function uses the `cdecl`
+/// calling convention, returns void, and takes a single argument that is a
+/// pointer to the address of the struct.
+llvm::Function *getNonTrivialCStructDefaultConstructor(CodeGenModule &GCM,
+                                                       CharUnits DstAlignment,
+                                                       bool IsVolatile,
+                                                       QualType QT);
+
+/// Returns the copy constructor for a C struct with non-trivially copyable
+/// fields, generating it if necessary. The returned function uses the `cdecl`
+/// calling convention, returns void, and takes two arguments: pointers to the
+/// addresses of the destination and source structs, respectively.
+llvm::Function *getNonTrivialCStructCopyConstructor(CodeGenModule &CGM,
+                                                    CharUnits DstAlignment,
+                                                    CharUnits SrcAlignment,
+                                                    bool IsVolatile,
+                                                    QualType QT);
+
+/// Returns the move constructor for a C struct with non-trivially copyable
+/// fields, generating it if necessary. The returned function uses the `cdecl`
+/// calling convention, returns void, and takes two arguments: pointers to the
+/// addresses of the destination and source structs, respectively.
+llvm::Function *getNonTrivialCStructMoveConstructor(CodeGenModule &CGM,
+                                                    CharUnits DstAlignment,
+                                                    CharUnits SrcAlignment,
+                                                    bool IsVolatile,
+                                                    QualType QT);
+
+/// Returns the copy assignment operator for a C struct with non-trivially
+/// copyable fields, generating it if necessary. The returned function uses the
+/// `cdecl` calling convention, returns void, and takes two arguments: pointers
+/// to the addresses of the destination and source structs, respectively.
+llvm::Function *getNonTrivialCStructCopyAssignmentOperator(
+    CodeGenModule &CGM, CharUnits DstAlignment, CharUnits SrcAlignment,
+    bool IsVolatile, QualType QT);
+
+/// Return the move assignment operator for a C struct with non-trivially
+/// copyable fields, generating it if necessary. The returned function uses the
+/// `cdecl` calling convention, returns void, and takes two arguments: pointers
+/// to the addresses of the destination and source structs, respectively.
+llvm::Function *getNonTrivialCStructMoveAssignmentOperator(
+    CodeGenModule &CGM, CharUnits DstAlignment, CharUnits SrcAlignment,
+    bool IsVolatile, QualType QT);
+
+/// Returns the destructor for a C struct with non-trivially copyable fields,
+/// generating it if necessary. The returned function uses the `cdecl` calling
+/// convention, returns void, and takes a single argument that is a pointer to
+/// the address of the struct.
+llvm::Function *getNonTrivialCStructDestructor(CodeGenModule &CGM,
+                                               CharUnits DstAlignment,
+                                               bool IsVolatile, QualType QT);
 
 }  // end namespace CodeGen
 }  // end namespace clang

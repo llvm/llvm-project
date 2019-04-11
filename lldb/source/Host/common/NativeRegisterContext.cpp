@@ -21,9 +21,7 @@ using namespace lldb_private;
 NativeRegisterContext::NativeRegisterContext(NativeThreadProtocol &thread)
     : m_thread(thread) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 NativeRegisterContext::~NativeRegisterContext() {}
 
 // FIXME revisit invalidation, process stop ids, etc.  Right now we don't

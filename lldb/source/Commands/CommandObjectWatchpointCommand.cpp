@@ -24,9 +24,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointCommandAdd
-//-------------------------------------------------------------------------
 
 // FIXME: "script-type" needs to have its contents determined dynamically, so
 // somebody can add a new scripting
@@ -478,9 +476,7 @@ private:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointCommandDelete
-//-------------------------------------------------------------------------
 
 class CommandObjectWatchpointCommandDelete : public CommandObjectParsed {
 public:
@@ -558,9 +554,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointCommandList
-//-------------------------------------------------------------------------
 
 class CommandObjectWatchpointCommandList : public CommandObjectParsed {
 public:
@@ -658,9 +652,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointCommand
-//-------------------------------------------------------------------------
 
 CommandObjectWatchpointCommand::CommandObjectWatchpointCommand(
     CommandInterpreter &interpreter)

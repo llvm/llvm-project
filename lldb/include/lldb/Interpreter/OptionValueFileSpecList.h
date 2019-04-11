@@ -23,9 +23,7 @@ public:
 
   ~OptionValueFileSpecList() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeFileSpecList; }
 
@@ -49,9 +47,7 @@ public:
 
   bool IsAggregateValue() const override { return true; }
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   FileSpecList &GetCurrentValue() { return m_current_value; }
 

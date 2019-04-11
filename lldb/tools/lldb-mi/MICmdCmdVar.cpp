@@ -40,7 +40,6 @@
 #include <algorithm>
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarCreate constructor.
 // Type:    Method.
 // Args:    None.
@@ -60,7 +59,6 @@ CMICmdCmdVarCreate::CMICmdCmdVarCreate()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarCreate destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -70,7 +68,6 @@ CMICmdCmdVarCreate::CMICmdCmdVarCreate()
 CMICmdCmdVarCreate::~CMICmdCmdVarCreate() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -89,7 +86,6 @@ bool CMICmdCmdVarCreate::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -211,7 +207,6 @@ bool CMICmdCmdVarCreate::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -264,7 +259,6 @@ bool CMICmdCmdVarCreate::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -278,7 +272,6 @@ CMICmdBase *CMICmdCmdVarCreate::CreateSelf() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Complete SBValue object and its children to get
 // SBValue::GetValueDidChange
 //          work.
@@ -304,12 +297,8 @@ void CMICmdCmdVarCreate::CompleteSBValue(lldb::SBValue &vrwValue) {
   }
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarUpdate constructor.
 // Type:    Method.
 // Args:    None.
@@ -327,7 +316,6 @@ CMICmdCmdVarUpdate::CMICmdCmdVarUpdate()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarUpdate destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -337,7 +325,6 @@ CMICmdCmdVarUpdate::CMICmdCmdVarUpdate()
 CMICmdCmdVarUpdate::~CMICmdCmdVarUpdate() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -355,7 +342,6 @@ bool CMICmdCmdVarUpdate::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -408,7 +394,6 @@ bool CMICmdCmdVarUpdate::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -441,7 +426,6 @@ bool CMICmdCmdVarUpdate::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -455,7 +439,6 @@ CMICmdBase *CMICmdCmdVarUpdate::CreateSelf() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Form the MI response for multiple variables.
 // Type:    Method.
 // Args:    vrStrVarName    - (R)   Session var object's name.
@@ -491,7 +474,6 @@ void CMICmdCmdVarUpdate::MIFormResponse(const CMIUtilString &vrStrVarName,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Determine if the var object was changed.
 // Type:    Method.
 // Args:    vrVarObj    - (R)   Session var object to examine.
@@ -527,12 +509,8 @@ bool CMICmdCmdVarUpdate::ExamineSBValueForChange(lldb::SBValue &vrwValue,
   return MIstatus::success;
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarDelete constructor.
 // Type:    Method.
 // Args:    None.
@@ -548,7 +526,6 @@ CMICmdCmdVarDelete::CMICmdCmdVarDelete() : m_constStrArgName("name") {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -564,7 +541,6 @@ bool CMICmdCmdVarDelete::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarDelete destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -574,7 +550,6 @@ bool CMICmdCmdVarDelete::ParseArgs() {
 CMICmdCmdVarDelete::~CMICmdCmdVarDelete() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -595,7 +570,6 @@ bool CMICmdCmdVarDelete::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -614,7 +588,6 @@ bool CMICmdCmdVarDelete::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -627,12 +600,8 @@ CMICmdBase *CMICmdCmdVarDelete::CreateSelf() {
   return new CMICmdCmdVarDelete();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarAssign constructor.
 // Type:    Method.
 // Args:    None.
@@ -650,7 +619,6 @@ CMICmdCmdVarAssign::CMICmdCmdVarAssign()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarAssign destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -660,7 +628,6 @@ CMICmdCmdVarAssign::CMICmdCmdVarAssign()
 CMICmdCmdVarAssign::~CMICmdCmdVarAssign() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -677,7 +644,6 @@ bool CMICmdCmdVarAssign::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -715,7 +681,6 @@ bool CMICmdCmdVarAssign::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -751,7 +716,6 @@ bool CMICmdCmdVarAssign::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -764,12 +728,8 @@ CMICmdBase *CMICmdCmdVarAssign::CreateSelf() {
   return new CMICmdCmdVarAssign();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarSetFormat constructor.
 // Type:    Method.
 // Args:    None.
@@ -786,7 +746,6 @@ CMICmdCmdVarSetFormat::CMICmdCmdVarSetFormat()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarSetFormat destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -796,7 +755,6 @@ CMICmdCmdVarSetFormat::CMICmdCmdVarSetFormat()
 CMICmdCmdVarSetFormat::~CMICmdCmdVarSetFormat() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -813,7 +771,6 @@ bool CMICmdCmdVarSetFormat::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -854,7 +811,6 @@ bool CMICmdCmdVarSetFormat::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -897,7 +853,6 @@ bool CMICmdCmdVarSetFormat::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -910,12 +865,8 @@ CMICmdBase *CMICmdCmdVarSetFormat::CreateSelf() {
   return new CMICmdCmdVarSetFormat();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarListChildren constructor.
 // Type:    Method.
 // Args:    None.
@@ -934,7 +885,6 @@ CMICmdCmdVarListChildren::CMICmdCmdVarListChildren()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarListChildren destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -944,7 +894,6 @@ CMICmdCmdVarListChildren::CMICmdCmdVarListChildren()
 CMICmdCmdVarListChildren::~CMICmdCmdVarListChildren() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -964,7 +913,6 @@ bool CMICmdCmdVarListChildren::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -1077,7 +1025,6 @@ bool CMICmdCmdVarListChildren::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -1119,7 +1066,6 @@ bool CMICmdCmdVarListChildren::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -1132,12 +1078,8 @@ CMICmdBase *CMICmdCmdVarListChildren::CreateSelf() {
   return new CMICmdCmdVarListChildren();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarEvaluateExpression constructor.
 // Type:    Method.
 // Args:    None.
@@ -1155,7 +1097,6 @@ CMICmdCmdVarEvaluateExpression::CMICmdCmdVarEvaluateExpression()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarEvaluateExpression destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -1165,7 +1106,6 @@ CMICmdCmdVarEvaluateExpression::CMICmdCmdVarEvaluateExpression()
 CMICmdCmdVarEvaluateExpression::~CMICmdCmdVarEvaluateExpression() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -1184,7 +1124,6 @@ bool CMICmdCmdVarEvaluateExpression::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -1219,7 +1158,6 @@ bool CMICmdCmdVarEvaluateExpression::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -1252,7 +1190,6 @@ bool CMICmdCmdVarEvaluateExpression::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -1265,12 +1202,8 @@ CMICmdBase *CMICmdCmdVarEvaluateExpression::CreateSelf() {
   return new CMICmdCmdVarEvaluateExpression();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarInfoPathExpression constructor.
 // Type:    Method.
 // Args:    None.
@@ -1287,7 +1220,6 @@ CMICmdCmdVarInfoPathExpression::CMICmdCmdVarInfoPathExpression()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarInfoPathExpression destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -1297,7 +1229,6 @@ CMICmdCmdVarInfoPathExpression::CMICmdCmdVarInfoPathExpression()
 CMICmdCmdVarInfoPathExpression::~CMICmdCmdVarInfoPathExpression() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -1313,7 +1244,6 @@ bool CMICmdCmdVarInfoPathExpression::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -1384,7 +1314,6 @@ bool CMICmdCmdVarInfoPathExpression::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -1416,7 +1345,6 @@ bool CMICmdCmdVarInfoPathExpression::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.
@@ -1429,12 +1357,8 @@ CMICmdBase *CMICmdCmdVarInfoPathExpression::CreateSelf() {
   return new CMICmdCmdVarInfoPathExpression();
 }
 
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarShowAttributes constructor.
 // Type:    Method.
 // Args:    None.
@@ -1451,7 +1375,6 @@ CMICmdCmdVarShowAttributes::CMICmdCmdVarShowAttributes()
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarShowAttributes destructor.
 // Type:    Overrideable.
 // Args:    None.
@@ -1461,7 +1384,6 @@ CMICmdCmdVarShowAttributes::CMICmdCmdVarShowAttributes()
 CMICmdCmdVarShowAttributes::~CMICmdCmdVarShowAttributes() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The parses the command line
 // options
 //          arguments to extract values for each of those arguments.
@@ -1477,7 +1399,6 @@ bool CMICmdCmdVarShowAttributes::ParseArgs() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command does work in this
 // function.
 //          The command is likely to communicate with the LLDB SBDebugger in
@@ -1504,7 +1425,6 @@ bool CMICmdCmdVarShowAttributes::Execute() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: The invoker requires this function. The command prepares a MI Record
 // Result
 //          for the work carried out in the Execute().
@@ -1527,7 +1447,6 @@ bool CMICmdCmdVarShowAttributes::Acknowledge() {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Required by the CMICmdFactory when registering *this command. The
 // factory
 //          calls this function to create an instance of *this command.

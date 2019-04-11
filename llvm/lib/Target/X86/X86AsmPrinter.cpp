@@ -200,32 +200,7 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
 }
 
 static void printOperand(X86AsmPrinter &P, const MachineInstr *MI,
-                         unsigned OpNo, raw_ostream &O,
-                         const char *Modifier = nullptr);
-
-/// printPCRelImm - This is used to print an immediate value that ends up
-/// being encoded as a pc-relative value.  These print slightly differently, for
-/// example, a $ is not emitted.
-static void printPCRelImm(X86AsmPrinter &P, const MachineInstr *MI,
-                          unsigned OpNo, raw_ostream &O) {
-  const MachineOperand &MO = MI->getOperand(OpNo);
-  switch (MO.getType()) {
-  default: llvm_unreachable("Unknown pcrel immediate operand");
-  case MachineOperand::MO_Register:
-    // pc-relativeness was handled when computing the value in the reg.
-    printOperand(P, MI, OpNo, O);
-    return;
-  case MachineOperand::MO_Immediate:
-    O << MO.getImm();
-    return;
-  case MachineOperand::MO_GlobalAddress:
-    printSymbolOperand(P, MO, O);
-    return;
-  }
-}
-
-static void printOperand(X86AsmPrinter &P, const MachineInstr *MI,
-                         unsigned OpNo, raw_ostream &O, const char *Modifier) {
+                         unsigned OpNo, raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(OpNo);
   const bool IsATT = MI->getInlineAsmDialect() == InlineAsm::AD_ATT;
   switch (MO.getType()) {
@@ -233,14 +208,7 @@ static void printOperand(X86AsmPrinter &P, const MachineInstr *MI,
   case MachineOperand::MO_Register: {
     if (IsATT)
       O << '%';
-    unsigned Reg = MO.getReg();
-    if (Modifier && strncmp(Modifier, "subreg", strlen("subreg")) == 0) {
-      unsigned Size = (strcmp(Modifier+6,"64") == 0) ? 64 :
-                      (strcmp(Modifier+6,"32") == 0) ? 32 :
-                      (strcmp(Modifier+6,"16") == 0) ? 16 : 8;
-      Reg = getX86SubSuperRegister(Reg, Size);
-    }
-    O << X86ATTInstPrinter::getRegisterName(Reg);
+    O << X86ATTInstPrinter::getRegisterName(MO.getReg());
     return;
   }
 
@@ -264,9 +232,52 @@ static void printOperand(X86AsmPrinter &P, const MachineInstr *MI,
   }
 }
 
+
+/// printModifiedOperand - Print subregisters based on supplied modifier,
+/// deferring to printOperand() if no modifier was supplied or if operand is not
+/// a register.
+static void printModifiedOperand(X86AsmPrinter &P, const MachineInstr *MI,
+                                 unsigned OpNo, raw_ostream &O,
+                                 const char *Modifier) {
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  if (!Modifier || MO.getType() != MachineOperand::MO_Register)
+    return printOperand(P, MI, OpNo, O);
+  if (MI->getInlineAsmDialect() == InlineAsm::AD_ATT)
+    O << '%';
+  unsigned Reg = MO.getReg();
+  if (strncmp(Modifier, "subreg", strlen("subreg")) == 0) {
+    unsigned Size = (strcmp(Modifier+6,"64") == 0) ? 64 :
+        (strcmp(Modifier+6,"32") == 0) ? 32 :
+        (strcmp(Modifier+6,"16") == 0) ? 16 : 8;
+    Reg = getX86SubSuperRegister(Reg, Size);
+  }
+  O << X86ATTInstPrinter::getRegisterName(Reg);
+}
+
+/// printPCRelImm - This is used to print an immediate value that ends up
+/// being encoded as a pc-relative value.  These print slightly differently, for
+/// example, a $ is not emitted.
+static void printPCRelImm(X86AsmPrinter &P, const MachineInstr *MI,
+                          unsigned OpNo, raw_ostream &O) {
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  switch (MO.getType()) {
+  default: llvm_unreachable("Unknown pcrel immediate operand");
+  case MachineOperand::MO_Register:
+    // pc-relativeness was handled when computing the value in the reg.
+    printOperand(P, MI, OpNo, O);
+    return;
+  case MachineOperand::MO_Immediate:
+    O << MO.getImm();
+    return;
+  case MachineOperand::MO_GlobalAddress:
+    printSymbolOperand(P, MO, O);
+    return;
+  }
+}
+
 static void printLeaMemReference(X86AsmPrinter &P, const MachineInstr *MI,
                                  unsigned Op, raw_ostream &O,
-                                 const char *Modifier = nullptr) {
+                                 const char *Modifier) {
   const MachineOperand &BaseReg  = MI->getOperand(Op+X86::AddrBaseReg);
   const MachineOperand &IndexReg = MI->getOperand(Op+X86::AddrIndexReg);
   const MachineOperand &DispSpec = MI->getOperand(Op+X86::AddrDisp);
@@ -303,11 +314,11 @@ static void printLeaMemReference(X86AsmPrinter &P, const MachineInstr *MI,
 
     O << '(';
     if (HasBaseReg)
-      printOperand(P, MI, Op+X86::AddrBaseReg, O, Modifier);
+      printModifiedOperand(P, MI, Op+X86::AddrBaseReg, O, Modifier);
 
     if (IndexReg.getReg()) {
       O << ',';
-      printOperand(P, MI, Op+X86::AddrIndexReg, O, Modifier);
+      printModifiedOperand(P, MI, Op+X86::AddrIndexReg, O, Modifier);
       unsigned ScaleVal = MI->getOperand(Op+X86::AddrScaleAmt).getImm();
       if (ScaleVal != 1)
         O << ',' << ScaleVal;
@@ -318,19 +329,18 @@ static void printLeaMemReference(X86AsmPrinter &P, const MachineInstr *MI,
 
 static void printMemReference(X86AsmPrinter &P, const MachineInstr *MI,
                               unsigned Op, raw_ostream &O,
-                              const char *Modifier = nullptr) {
+                              const char *Modifier) {
   assert(isMem(*MI, Op) && "Invalid memory reference!");
   const MachineOperand &Segment = MI->getOperand(Op+X86::AddrSegmentReg);
   if (Segment.getReg()) {
-    printOperand(P, MI, Op+X86::AddrSegmentReg, O, Modifier);
+    printModifiedOperand(P, MI, Op+X86::AddrSegmentReg, O, Modifier);
     O << ':';
   }
   printLeaMemReference(P, MI, Op, O, Modifier);
 }
 
 static void printIntelMemReference(X86AsmPrinter &P, const MachineInstr *MI,
-                                   unsigned Op, raw_ostream &O,
-                                   const char *Modifier = nullptr) {
+                                   unsigned Op, raw_ostream &O) {
   const MachineOperand &BaseReg  = MI->getOperand(Op+X86::AddrBaseReg);
   unsigned ScaleVal = MI->getOperand(Op+X86::AddrScaleAmt).getImm();
   const MachineOperand &IndexReg = MI->getOperand(Op+X86::AddrIndexReg);
@@ -339,7 +349,7 @@ static void printIntelMemReference(X86AsmPrinter &P, const MachineInstr *MI,
 
   // If this has a segment register, print it.
   if (SegReg.getReg()) {
-    printOperand(P, MI, Op + X86::AddrSegmentReg, O, Modifier);
+    printOperand(P, MI, Op + X86::AddrSegmentReg, O);
     O << ':';
   }
 
@@ -347,7 +357,7 @@ static void printIntelMemReference(X86AsmPrinter &P, const MachineInstr *MI,
 
   bool NeedPlus = false;
   if (BaseReg.getReg()) {
-    printOperand(P, MI, Op + X86::AddrBaseReg, O, Modifier);
+    printOperand(P, MI, Op + X86::AddrBaseReg, O);
     NeedPlus = true;
   }
 
@@ -355,13 +365,13 @@ static void printIntelMemReference(X86AsmPrinter &P, const MachineInstr *MI,
     if (NeedPlus) O << " + ";
     if (ScaleVal != 1)
       O << ScaleVal << '*';
-    printOperand(P, MI, Op + X86::AddrIndexReg, O, Modifier);
+    printOperand(P, MI, Op + X86::AddrIndexReg, O);
     NeedPlus = true;
   }
 
   if (!DispSpec.isImm()) {
     if (NeedPlus) O << " + ";
-    printOperand(P, MI, Op + X86::AddrDisp, O, Modifier);
+    printOperand(P, MI, Op + X86::AddrDisp, O);
   } else {
     int64_t DispVal = DispSpec.getImm();
     if (DispVal || (!IndexReg.getReg() && !BaseReg.getReg())) {
@@ -510,7 +520,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     }
   }
 
-  printOperand(*this, MI, OpNo, O, /*Modifier*/ nullptr);
+  printOperand(*this, MI, OpNo, O);
   return false;
 }
 
@@ -542,7 +552,7 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
       return false;
     }
   }
-  printMemReference(*this, MI, OpNo, O);
+  printMemReference(*this, MI, OpNo, O, nullptr);
   return false;
 }
 

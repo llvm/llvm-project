@@ -61,9 +61,7 @@ bool AppleObjCRuntimeV1::GetDynamicTypeAndAddress(
   return !class_type_or_name.IsEmpty();
 }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 lldb_private::LanguageRuntime *
 AppleObjCRuntimeV1::CreateInstance(Process *process,
                                    lldb::LanguageType language) {
@@ -97,9 +95,7 @@ lldb_private::ConstString AppleObjCRuntimeV1::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString AppleObjCRuntimeV1::GetPluginName() {
   return GetPluginNameStatic();
 }

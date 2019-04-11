@@ -43,7 +43,6 @@ class IRExecutionUnit;
 class IRMemoryMap;
 }
 
-//----------------------------------------------------------------------
 /// \class IRForTarget IRForTarget.h "lldb/Expression/IRForTarget.h"
 /// Transforms the IR for a function to run in the target
 ///
@@ -55,12 +54,10 @@ class IRMemoryMap;
 /// transformations to the IR which make it relocatable.  These
 /// transformations are discussed in more detail next to their relevant
 /// functions.
-//----------------------------------------------------------------------
 class IRForTarget : public llvm::ModulePass {
 public:
   enum class LookupResult { Success, Fail, Ignore };
 
-  //------------------------------------------------------------------
   /// Constructor
   ///
   /// \param[in] decl_map
@@ -90,18 +87,14 @@ public:
   ///
   /// \param[in] func_name
   ///     The name of the function to prepare for execution in the target.
-  //------------------------------------------------------------------
   IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map, bool resolve_vars,
               lldb_private::IRExecutionUnit &execution_unit,
               lldb_private::Stream &error_stream,
               const char *func_name = "$__lldb_expr");
 
-  //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   ~IRForTarget() override;
 
-  //------------------------------------------------------------------
   /// Run this IR transformer on a single module
   ///
   /// Implementation of the llvm::ModulePass::runOnModule() function.
@@ -117,28 +110,22 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool runOnModule(llvm::Module &llvm_module) override;
 
-  //------------------------------------------------------------------
   /// Interface stub
   ///
   /// Implementation of the llvm::ModulePass::assignPassManager() function.
-  //------------------------------------------------------------------
   void assignPassManager(llvm::PMStack &pass_mgr_stack,
                          llvm::PassManagerType pass_mgr_type =
                              llvm::PMT_ModulePassManager) override;
 
-  //------------------------------------------------------------------
   /// Returns PMT_ModulePassManager
   ///
   /// Implementation of the llvm::ModulePass::getPotentialPassManagerType()
   /// function.
-  //------------------------------------------------------------------
   llvm::PassManagerType getPotentialPassManagerType() const override;
 
 private:
-  //------------------------------------------------------------------
   /// Ensures that the current function's linkage is set to external.
   /// Otherwise the JIT may not return an address for it.
   ///
@@ -147,15 +134,11 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   bool FixFunctionLinkage(llvm::Function &llvm_function);
 
-  //------------------------------------------------------------------
   /// A module-level pass to replace all function pointers with their
   /// integer equivalents.
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// The top-level pass implementation
   ///
   /// \param[in] llvm_module
@@ -166,15 +149,11 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   bool HasSideEffects(llvm::Function &llvm_function);
 
-  //------------------------------------------------------------------
   /// A function-level pass to check whether the function has side
   /// effects.
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Get the address of a function, and a location to put the complete Value
   /// of the function if one is available.
   ///
@@ -193,18 +172,14 @@ private:
   ///
   /// \return
   ///     The pointer.
-  //------------------------------------------------------------------
   LookupResult GetFunctionAddress(llvm::Function *function, uint64_t &ptr,
                                   lldb_private::ConstString &name,
                                   llvm::Constant **&value_ptr);
 
-  //------------------------------------------------------------------
   /// A function-level pass to take the generated global value
   /// $__lldb_expr_result and make it into a persistent variable. Also see
   /// ASTResultSynthesizer.
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Find the NamedDecl corresponding to a Value.  This interface is exposed
   /// for the IR interpreter.
   ///
@@ -216,7 +191,6 @@ private:
   ///
   /// \return
   ///     The corresponding variable declaration
-  //------------------------------------------------------------------
 public:
   static clang::NamedDecl *DeclForGlobal(const llvm::GlobalValue *global_val,
                                          llvm::Module *module);
@@ -224,7 +198,6 @@ public:
 private:
   clang::NamedDecl *DeclForGlobal(llvm::GlobalValue *global);
 
-  //------------------------------------------------------------------
   /// Set the constant result variable m_const_result to the provided
   /// constant, assuming it can be evaluated.  The result variable will be
   /// reset to NULL later if the expression has side effects.
@@ -237,22 +210,18 @@ private:
   ///
   /// \param[in] type
   ///     The Clang type of the result variable.
-  //------------------------------------------------------------------
   void MaybeSetConstantResult(llvm::Constant *initializer,
                               lldb_private::ConstString name,
                               lldb_private::TypeFromParser type);
 
-  //------------------------------------------------------------------
   /// If the IR represents a cast of a variable, set m_const_result to the
   /// result of the cast.  The result variable will be reset to
   /// NULL latger if the expression has side effects.
   ///
   /// \param[in] type
   ///     The Clang type of the result variable.
-  //------------------------------------------------------------------
   void MaybeSetCastResult(lldb_private::TypeFromParser type);
 
-  //------------------------------------------------------------------
   /// The top-level pass implementation
   ///
   /// \param[in] llvm_function
@@ -260,15 +229,11 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool CreateResultVariable(llvm::Function &llvm_function);
 
-  //------------------------------------------------------------------
   /// A module-level pass to find Objective-C constant strings and
   /// transform them to calls to CFStringCreateWithBytes.
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Rewrite a single Objective-C constant string.
   ///
   /// \param[in] NSStr
@@ -280,19 +245,15 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool RewriteObjCConstString(llvm::GlobalVariable *NSStr,
                               llvm::GlobalVariable *CStr);
 
-  //------------------------------------------------------------------
   /// The top-level pass implementation
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool RewriteObjCConstStrings();
 
-  //------------------------------------------------------------------
   /// A basic block-level pass to find all Objective-C method calls and
   /// rewrite them to use sel_registerName instead of statically allocated
   /// selectors.  The reason is that the selectors are created on the
@@ -300,9 +261,7 @@ private:
   /// section and prepare them.  This doesn't happen when code is copied into
   /// the target, though, and there's no easy way to induce the runtime to
   /// scan them.  So instead we get our selectors from sel_registerName.
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Replace a single selector reference
   ///
   /// \param[in] selector_load
@@ -310,10 +269,8 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool RewriteObjCSelector(llvm::Instruction *selector_load);
 
-  //------------------------------------------------------------------
   /// The top-level pass implementation
   ///
   /// \param[in] basic_block
@@ -321,16 +278,12 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool RewriteObjCSelectors(llvm::BasicBlock &basic_block);
 
-  //------------------------------------------------------------------
   /// A basic block-level pass to find all Objective-C class references that
   /// use the old-style Objective-C runtime and rewrite them to use
   /// class_getClass instead of statically allocated class references.
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Replace a single old-style class reference
   ///
   /// \param[in] selector_load
@@ -338,10 +291,8 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool RewriteObjCClassReference(llvm::Instruction *class_load);
 
-  //------------------------------------------------------------------
   /// The top-level pass implementation
   ///
   /// \param[in] basic_block
@@ -349,10 +300,8 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool RewriteObjCClassReferences(llvm::BasicBlock &basic_block);
 
-  //------------------------------------------------------------------
   /// A basic block-level pass to find all newly-declared persistent
   /// variables and register them with the ClangExprDeclMap.  This allows them
   /// to be materialized and dematerialized like normal external variables.
@@ -360,9 +309,7 @@ private:
   /// locals, so they have an allocation. This pass excises these allocations
   /// and makes references look like external references where they will be
   /// resolved -- like all other external references -- by ResolveExternals().
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Handle a single allocation of a persistent variable
   ///
   /// \param[in] persistent_alloc
@@ -370,26 +317,20 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool RewritePersistentAlloc(llvm::Instruction *persistent_alloc);
 
-  //------------------------------------------------------------------
   /// The top-level pass implementation
   ///
   /// \param[in] basic_block
   ///     The basic block currently being processed.
-  //------------------------------------------------------------------
   bool RewritePersistentAllocs(llvm::BasicBlock &basic_block);
 
-  //------------------------------------------------------------------
   /// A function-level pass to find all external variables and functions
   /// used in the IR.  Each found external variable is added to the struct,
   /// and each external function is resolved in place, its call replaced with
   /// a call to a function pointer whose value is the address of the function
   /// in the target process.
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Write an initializer to a memory array of assumed sufficient size.
   ///
   /// \param[in] data
@@ -400,10 +341,8 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool MaterializeInitializer(uint8_t *data, llvm::Constant *initializer);
 
-  //------------------------------------------------------------------
   /// Move an internal variable into the static allocation section.
   ///
   /// \param[in] global_variable
@@ -411,10 +350,8 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool MaterializeInternalVariable(llvm::GlobalVariable *global_variable);
 
-  //------------------------------------------------------------------
   /// Handle a single externally-defined variable
   ///
   /// \param[in] value
@@ -422,10 +359,8 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool MaybeHandleVariable(llvm::Value *value);
 
-  //------------------------------------------------------------------
   /// Handle a single externally-defined symbol
   ///
   /// \param[in] symbol
@@ -433,10 +368,8 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool HandleSymbol(llvm::Value *symbol);
 
-  //------------------------------------------------------------------
   /// Handle a single externally-defined Objective-C class
   ///
   /// \param[in] classlist_reference
@@ -445,10 +378,8 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool HandleObjCClass(llvm::Value *classlist_reference);
 
-  //------------------------------------------------------------------
   /// Handle all the arguments to a function call
   ///
   /// \param[in] C
@@ -456,10 +387,8 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool MaybeHandleCallArguments(llvm::CallInst *call_inst);
 
-  //------------------------------------------------------------------
   /// Resolve variable references in calls to external functions
   ///
   /// \param[in] basic_block
@@ -467,10 +396,8 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool ResolveCalls(llvm::BasicBlock &basic_block);
 
-  //------------------------------------------------------------------
   /// Remove calls to __cxa_atexit, which should never be generated by
   /// expressions.
   ///
@@ -480,10 +407,8 @@ private:
   /// \return
   ///     True if the scan was successful; false if some operation
   ///     failed
-  //------------------------------------------------------------------
   bool RemoveCXAAtExit(llvm::BasicBlock &basic_block);
 
-  //------------------------------------------------------------------
   /// The top-level pass implementation
   ///
   /// \param[in] basic_block
@@ -491,25 +416,19 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool ResolveExternals(llvm::Function &llvm_function);
 
-  //------------------------------------------------------------------
   /// A basic block-level pass to excise guard variables from the code.
   /// The result for the function is passed through Clang as a static
   /// variable.  Static variables normally have guard variables to ensure that
   /// they are only initialized once.
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// Rewrite a load to a guard variable to return constant 0.
   ///
   /// \param[in] guard_load
   ///     The load instruction to zero out.
-  //------------------------------------------------------------------
   void TurnGuardLoadIntoZero(llvm::Instruction *guard_load);
 
-  //------------------------------------------------------------------
   /// The top-level pass implementation
   ///
   /// \param[in] basic_block
@@ -517,17 +436,13 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool RemoveGuards(llvm::BasicBlock &basic_block);
 
-  //------------------------------------------------------------------
   /// A function-level pass to make all external variable references
   /// point at the correct offsets from the void* passed into the function.
   /// ClangExpressionDeclMap::DoStructLayout() must be called beforehand, so
   /// that the offsets are valid.
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   /// The top-level pass implementation
   ///
   /// \param[in] llvm_function
@@ -535,7 +450,6 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool ReplaceVariables(llvm::Function &llvm_function);
 
   /// Flags
@@ -585,7 +499,6 @@ private:
                                              ///final
   /// location of the static allocation.
 
-  //------------------------------------------------------------------
   /// UnfoldConstant operates on a constant [Old] which has just been replaced
   /// with a value [New].  We assume that new_value has been properly placed
   /// early in the function, in front of the first instruction in the entry
@@ -603,7 +516,6 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
 
   class FunctionValueCache {
   public:
@@ -627,7 +539,6 @@ private:
                              FunctionValueCache &entry_instruction_finder,
                              lldb_private::Stream &error_stream);
 
-  //------------------------------------------------------------------
   /// Construct a reference to m_reloc_placeholder with a given type and
   /// offset.  This typically happens after inserting data into
   /// m_data_allocator.
@@ -640,10 +551,8 @@ private:
   ///
   /// \return
   ///     The Constant for the reference, usually a ConstantExpr.
-  //------------------------------------------------------------------
   llvm::Constant *BuildRelocation(llvm::Type *type, uint64_t offset);
 
-  //------------------------------------------------------------------
   /// Commit the allocation in m_data_allocator and use its final location to
   /// replace m_reloc_placeholder.
   ///
@@ -652,7 +561,6 @@ private:
   ///
   /// \return
   ///     True on success; false otherwise
-  //------------------------------------------------------------------
   bool CompleteDataAllocation();
 };
 

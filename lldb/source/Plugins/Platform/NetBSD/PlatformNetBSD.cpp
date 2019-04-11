@@ -36,7 +36,6 @@ using namespace lldb_private::platform_netbsd;
 
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 
 PlatformSP PlatformNetBSD::CreateInstance(bool force, const ArchSpec *arch) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
@@ -111,9 +110,7 @@ void PlatformNetBSD::Terminate() {
   PlatformPOSIX::Terminate();
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformNetBSD::PlatformNetBSD(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
 {}

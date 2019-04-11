@@ -31,13 +31,11 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace {
-//----------------------------------------------------------------------
 // The HostInfoBaseFields is a work around for windows not supporting static
 // variables correctly in a thread safe way. Really each of the variables in
 // HostInfoBaseFields should live in the functions in which they are used and
 // each one should be static, but the work around is in place to avoid this
 // restriction. Ick.
-//----------------------------------------------------------------------
 
 struct HostInfoBaseFields {
   ~HostInfoBaseFields() {

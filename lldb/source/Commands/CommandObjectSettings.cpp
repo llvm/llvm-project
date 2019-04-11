@@ -19,9 +19,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectSettingsSet
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_settings_set_options[] = {
     // clang-format off
@@ -253,9 +251,7 @@ private:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectSettingsShow -- Show current values
-//-------------------------------------------------------------------------
 
 class CommandObjectSettingsShow : public CommandObjectParsed {
 public:
@@ -315,9 +311,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectSettingsWrite -- Write settings to file
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_settings_write_options[] = {
     // clang-format off
@@ -442,9 +436,7 @@ private:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectSettingsRead -- Read settings from file
-//-------------------------------------------------------------------------
 
 static constexpr OptionDefinition g_settings_read_options[] = {
     // clang-format off
@@ -519,9 +511,7 @@ private:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectSettingsList -- List settable variables
-//-------------------------------------------------------------------------
 
 class CommandObjectSettingsList : public CommandObjectParsed {
 public:
@@ -596,9 +586,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectSettingsRemove
-//-------------------------------------------------------------------------
 
 class CommandObjectSettingsRemove : public CommandObjectRaw {
 public:
@@ -696,9 +684,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectSettingsReplace
-//-------------------------------------------------------------------------
 
 class CommandObjectSettingsReplace : public CommandObjectRaw {
 public:
@@ -800,9 +786,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectSettingsInsertBefore
-//-------------------------------------------------------------------------
 
 class CommandObjectSettingsInsertBefore : public CommandObjectRaw {
 public:
@@ -906,9 +890,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectSettingInsertAfter
-//-------------------------------------------------------------------------
 
 class CommandObjectSettingsInsertAfter : public CommandObjectRaw {
 public:
@@ -1011,9 +993,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectSettingsAppend
-//-------------------------------------------------------------------------
 
 class CommandObjectSettingsAppend : public CommandObjectRaw {
 public:
@@ -1107,9 +1087,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectSettingsClear
-//-------------------------------------------------------------------------
 
 class CommandObjectSettingsClear : public CommandObjectParsed {
 public:
@@ -1177,9 +1155,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordSettings
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordSettings::CommandObjectMultiwordSettings(
     CommandInterpreter &interpreter)

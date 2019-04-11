@@ -17,9 +17,7 @@ namespace breakpad {
 
 class ObjectFileBreakpad : public ObjectFile {
 public:
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
   static void Terminate();
 
@@ -45,16 +43,12 @@ public:
                                         lldb::offset_t length,
                                         ModuleSpecList &specs);
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   ConstString GetPluginName() override { return GetPluginNameStatic(); }
 
   uint32_t GetPluginVersion() override { return 1; }
 
-  //------------------------------------------------------------------
   // ObjectFile Protocol.
-  //------------------------------------------------------------------
 
   bool ParseHeader() override;
 

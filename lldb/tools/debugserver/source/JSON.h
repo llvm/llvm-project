@@ -203,7 +203,6 @@ public:
 
   JSONValue::SP GetObject(const std::string &key) const;
 
-  // -------------------------------------------------------------------------
   /// Return keyed value as bool
   ///
   /// \param[in] key
@@ -217,7 +216,6 @@ public:
   ///     true if the key existed as was a bool value; false otherwise.
   ///     Note the return value is *not* the value of the bool, use
   ///     \b value for that.
-  // -------------------------------------------------------------------------
   bool GetObjectAsBool(const std::string &key, bool &value) const;
 
   bool GetObjectAsString(const std::string &key, std::string &value) const;

@@ -32,10 +32,8 @@
 using namespace clang;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 // Scoped class that will remove an active lexical decl from the set when it
 // goes out of scope.
-//------------------------------------------------------------------
 namespace {
 class ScopedLexicalDeclEraser {
 public:

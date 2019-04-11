@@ -1690,13 +1690,14 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     // Scale must not be used already.
     if (AM.IndexReg.getNode() != nullptr || AM.Scale != 1) break;
 
+    // We only handle up to 64-bit values here as those are what matter for
+    // addressing mode optimizations.
+    assert(N.getSimpleValueType().getSizeInBits() <= 64 &&
+           "Unexpected value size!");
+
     SDValue And = N.getOperand(0);
     if (And.getOpcode() != ISD::AND) break;
     SDValue X = And.getOperand(0);
-
-    // We only handle up to 64-bit values here as those are what matter for
-    // addressing mode optimizations.
-    if (X.getSimpleValueType().getSizeInBits() > 64) break;
 
     // The mask used for the transform is expected to be post-shift, but we
     // found the shift first so just apply the shift to the mask before passing
@@ -1845,13 +1846,14 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     // Scale must not be used already.
     if (AM.IndexReg.getNode() != nullptr || AM.Scale != 1) break;
 
+    // We only handle up to 64-bit values here as those are what matter for
+    // addressing mode optimizations.
+    assert(N.getSimpleValueType().getSizeInBits() <= 64 &&
+           "Unexpected value size!");
+
     SDValue Shift = N.getOperand(0);
     if (Shift.getOpcode() != ISD::SRL && Shift.getOpcode() != ISD::SHL) break;
     SDValue X = Shift.getOperand(0);
-
-    // We only handle up to 64-bit values here as those are what matter for
-    // addressing mode optimizations.
-    if (X.getSimpleValueType().getSizeInBits() > 64) break;
 
     if (!isa<ConstantSDNode>(N.getOperand(1)))
       break;

@@ -29,9 +29,7 @@ public:
 
   void DidPush() override;
 
-  // -------------------------------------------------------------------------
   // ThreadPlan API
-  // -------------------------------------------------------------------------
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
 

@@ -23,9 +23,7 @@ class PDBASTParser;
 
 class SymbolFilePDB : public lldb_private::SymbolFile {
 public:
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -39,9 +37,7 @@ public:
   static lldb_private::SymbolFile *
   CreateInstance(lldb_private::ObjectFile *obj_file);
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   SymbolFilePDB(lldb_private::ObjectFile *ofile);
 
   ~SymbolFilePDB() override;
@@ -50,9 +46,7 @@ public:
 
   void InitializeObject() override;
 
-  //------------------------------------------------------------------
   // Compile Unit function calls
-  //------------------------------------------------------------------
 
   uint32_t GetNumCompileUnits() override;
 

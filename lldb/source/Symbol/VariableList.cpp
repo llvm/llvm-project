@@ -16,14 +16,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // VariableList constructor
-//----------------------------------------------------------------------
 VariableList::VariableList() : m_variables() {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 VariableList::~VariableList() {}
 
 void VariableList::AddVariable(const VariableSP &var_sp) {

@@ -86,7 +86,7 @@ struct test_brick_partial_sort
             if (m1 - first > 1)
             {
                 auto complex = std::ceil(n * std::log(float32_t(m1 - first)));
-#if defined(__PSTL_PAR_BACKEND_TBB)
+#if defined(_PSTL_PAR_BACKEND_TBB)
                 auto p = tbb::this_task_arena::max_concurrency();
 #else
                 auto p = 1;

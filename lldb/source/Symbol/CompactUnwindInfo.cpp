@@ -157,9 +157,7 @@ FLAGS_ANONYMOUS_ENUM(){
     llvm::countTrailingZeros(static_cast<uint32_t>(mask), llvm::ZB_Width)) &   \
    (((1 << llvm::countPopulation(static_cast<uint32_t>(mask)))) - 1))
 
-//----------------------
 // constructor
-//----------------------
 
 CompactUnwindInfo::CompactUnwindInfo(ObjectFile &objfile, SectionSP &section_sp)
     : m_objfile(objfile), m_section_sp(section_sp),
@@ -167,9 +165,7 @@ CompactUnwindInfo::CompactUnwindInfo(ObjectFile &objfile, SectionSP &section_sp)
       m_indexes_computed(eLazyBoolCalculate), m_unwindinfo_data(),
       m_unwindinfo_data_computed(false), m_unwind_header() {}
 
-//----------------------
 // destructor
-//----------------------
 
 CompactUnwindInfo::~CompactUnwindInfo() {}
 

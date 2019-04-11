@@ -31,9 +31,7 @@
 using namespace lldb_private;
 using namespace lldb;
 
-//----------------------------------------------------------------------
 // BreakpointResolver:
-//----------------------------------------------------------------------
 const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
                                                   "SymbolName",  "SourceRegex",
                                                   "Exception",   "Unknown"};

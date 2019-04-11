@@ -34,9 +34,7 @@ public:
 
   ~SystemRuntimeMacOSX() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -48,9 +46,7 @@ public:
   static lldb_private::SystemRuntime *
   CreateInstance(lldb_private::Process *process);
 
-  //------------------------------------------------------------------
   // instance methods
-  //------------------------------------------------------------------
 
   void Clear(bool clear_process);
 
@@ -101,9 +97,7 @@ public:
 
   bool SafeToCallFunctionsOnThisThread(lldb::ThreadSP thread_sp) override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

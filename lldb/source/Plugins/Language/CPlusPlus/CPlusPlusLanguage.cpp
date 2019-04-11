@@ -56,9 +56,7 @@ lldb_private::ConstString CPlusPlusLanguage::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString CPlusPlusLanguage::GetPluginName() {
   return GetPluginNameStatic();
@@ -66,9 +64,7 @@ lldb_private::ConstString CPlusPlusLanguage::GetPluginName() {
 
 uint32_t CPlusPlusLanguage::GetPluginVersion() { return 1; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 Language *CPlusPlusLanguage::CreateInstance(lldb::LanguageType language) {
   if (Language::LanguageIsCPlusPlus(language))

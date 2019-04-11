@@ -142,13 +142,9 @@ bool CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
   return !in_range;
 }
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointList
-//-------------------------------------------------------------------------
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointList::Options
-//-------------------------------------------------------------------------
 #pragma mark List::CommandOptions
 
 static constexpr OptionDefinition g_watchpoint_list_options[] = {
@@ -295,9 +291,7 @@ private:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointEnable
-//-------------------------------------------------------------------------
 #pragma mark Enable
 
 class CommandObjectWatchpointEnable : public CommandObjectParsed {
@@ -366,9 +360,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointDisable
-//-------------------------------------------------------------------------
 #pragma mark Disable
 
 class CommandObjectWatchpointDisable : public CommandObjectParsed {
@@ -441,9 +433,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointDelete
-//-------------------------------------------------------------------------
 #pragma mark Delete
 
 class CommandObjectWatchpointDelete : public CommandObjectParsed {
@@ -517,9 +507,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointIgnore
-//-------------------------------------------------------------------------
 
 #pragma mark Ignore::CommandOptions
 static constexpr OptionDefinition g_watchpoint_ignore_options[] = {
@@ -638,9 +626,7 @@ private:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointModify
-//-------------------------------------------------------------------------
 
 #pragma mark Modify::CommandOptions
 
@@ -769,9 +755,7 @@ private:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointSetVariable
-//-------------------------------------------------------------------------
 #pragma mark SetVariable
 
 class CommandObjectWatchpointSetVariable : public CommandObjectParsed {
@@ -959,9 +943,7 @@ private:
   OptionGroupWatchpoint m_option_watchpoint;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointSetExpression
-//-------------------------------------------------------------------------
 #pragma mark Set
 
 class CommandObjectWatchpointSetExpression : public CommandObjectRaw {
@@ -1127,9 +1109,7 @@ private:
   OptionGroupWatchpoint m_option_watchpoint;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectWatchpointSet
-//-------------------------------------------------------------------------
 #pragma mark Set
 
 class CommandObjectWatchpointSet : public CommandObjectMultiword {
@@ -1150,9 +1130,7 @@ public:
   ~CommandObjectWatchpointSet() override = default;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordWatchpoint
-//-------------------------------------------------------------------------
 #pragma mark MultiwordWatchpoint
 
 CommandObjectMultiwordWatchpoint::CommandObjectMultiwordWatchpoint(

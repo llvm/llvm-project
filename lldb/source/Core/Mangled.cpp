@@ -124,15 +124,11 @@ get_demangled_name_without_arguments(ConstString mangled,
 }
 
 #pragma mark Mangled
-//----------------------------------------------------------------------
 // Default constructor
-//----------------------------------------------------------------------
 Mangled::Mangled() : m_mangled(), m_demangled() {}
 
-//----------------------------------------------------------------------
 // Constructor with an optional string and a boolean indicating if it is the
 // mangled version.
-//----------------------------------------------------------------------
 Mangled::Mangled(ConstString s, bool mangled)
     : m_mangled(), m_demangled() {
   if (s)
@@ -154,54 +150,42 @@ Mangled::Mangled(llvm::StringRef name) {
     SetValue(ConstString(name));
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 Mangled::~Mangled() {}
 
-//----------------------------------------------------------------------
 // Convert to pointer operator. This allows code to check any Mangled objects
 // to see if they contain anything valid using code such as:
 //
 //  Mangled mangled(...);
 //  if (mangled)
 //  { ...
-//----------------------------------------------------------------------
 Mangled::operator void *() const {
   return (m_mangled) ? const_cast<Mangled *>(this) : NULL;
 }
 
-//----------------------------------------------------------------------
 // Logical NOT operator. This allows code to check any Mangled objects to see
 // if they are invalid using code such as:
 //
 //  Mangled mangled(...);
 //  if (!file_spec)
 //  { ...
-//----------------------------------------------------------------------
 bool Mangled::operator!() const { return !m_mangled; }
 
-//----------------------------------------------------------------------
 // Clear the mangled and demangled values.
-//----------------------------------------------------------------------
 void Mangled::Clear() {
   m_mangled.Clear();
   m_demangled.Clear();
 }
 
-//----------------------------------------------------------------------
 // Compare the string values.
-//----------------------------------------------------------------------
 int Mangled::Compare(const Mangled &a, const Mangled &b) {
   return ConstString::Compare(
       a.GetName(lldb::eLanguageTypeUnknown, ePreferMangled),
       b.GetName(lldb::eLanguageTypeUnknown, ePreferMangled));
 }
 
-//----------------------------------------------------------------------
 // Set the string value in this objects. If "mangled" is true, then the mangled
 // named is set with the new value in "s", else the demangled name is set.
-//----------------------------------------------------------------------
 void Mangled::SetValue(ConstString s, bool mangled) {
   if (s) {
     if (mangled) {
@@ -232,9 +216,7 @@ void Mangled::SetValue(ConstString name) {
   }
 }
 
-//----------------------------------------------------------------------
 // Local helpers for different demangling implementations.
-//----------------------------------------------------------------------
 static char *GetMSVCDemangledStr(const char *M) {
 #if defined(_MSC_VER)
   const size_t demangled_length = 2048;
@@ -287,10 +269,8 @@ static char *GetItaniumDemangledStr(const char *M) {
   return demangled_cstr;
 }
 
-//----------------------------------------------------------------------
 // Explicit demangling for scheduled requests during batch processing. This
 // makes use of ItaniumPartialDemangler's rich demangle info
-//----------------------------------------------------------------------
 bool Mangled::DemangleWithRichManglingInfo(
     RichManglingContext &context, SkipMangledNameFn *skip_mangled_name) {
   // We need to generate and cache the demangled name.
@@ -356,12 +336,10 @@ bool Mangled::DemangleWithRichManglingInfo(
   llvm_unreachable("Fully covered switch above!");
 }
 
-//----------------------------------------------------------------------
 // Generate the demangled name on demand using this accessor. Code in this
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
-//----------------------------------------------------------------------
 ConstString 
 Mangled::GetDemangledName(lldb::LanguageType language) const {
   // Check to make sure we have a valid mangled name and that we haven't
@@ -421,9 +399,7 @@ bool Mangled::NameMatches(const RegularExpression &regex,
   return demangled && regex.Execute(demangled.AsCString());
 }
 
-//----------------------------------------------------------------------
 // Get the demangled name if there is one, else return the mangled name.
-//----------------------------------------------------------------------
 ConstString Mangled::GetName(lldb::LanguageType language,
                              Mangled::NamePreference preference) const {
   if (preference == ePreferMangled && m_mangled)
@@ -444,10 +420,8 @@ ConstString Mangled::GetName(lldb::LanguageType language,
   return demangled;
 }
 
-//----------------------------------------------------------------------
 // Dump a Mangled object to stream "s". We don't force our demangled name to be
 // computed currently (we don't use the accessor).
-//----------------------------------------------------------------------
 void Mangled::Dump(Stream *s) const {
   if (m_mangled) {
     *s << ", mangled = " << m_mangled;
@@ -458,10 +432,8 @@ void Mangled::Dump(Stream *s) const {
   }
 }
 
-//----------------------------------------------------------------------
 // Dumps a debug version of this string with extra object and state information
 // to stream "s".
-//----------------------------------------------------------------------
 void Mangled::DumpDebug(Stream *s) const {
   s->Printf("%*p: Mangled mangled = ", static_cast<int>(sizeof(void *) * 2),
             static_cast<const void *>(this));
@@ -470,23 +442,19 @@ void Mangled::DumpDebug(Stream *s) const {
   m_demangled.DumpDebug(s);
 }
 
-//----------------------------------------------------------------------
 // Return the size in byte that this object takes in memory. The size includes
 // the size of the objects it owns, and not the strings that it references
 // because they are shared strings.
-//----------------------------------------------------------------------
 size_t Mangled::MemorySize() const {
   return m_mangled.MemorySize() + m_demangled.MemorySize();
 }
 
-//----------------------------------------------------------------------
 // We "guess" the language because we can't determine a symbol's language from
 // it's name.  For example, a Pascal symbol can be mangled using the C++
 // Itanium scheme, and defined in a compilation unit within the same module as
 // other C++ units.  In addition, different targets could have different ways
 // of mangling names from a given language, likewise the compilation units
 // within those targets.
-//----------------------------------------------------------------------
 lldb::LanguageType Mangled::GuessLanguage() const {
   ConstString mangled = GetMangledName();
   if (mangled) {
@@ -507,9 +475,7 @@ lldb::LanguageType Mangled::GuessLanguage() const {
   return lldb::eLanguageTypeUnknown;
 }
 
-//----------------------------------------------------------------------
 // Dump OBJ to the supplied stream S.
-//----------------------------------------------------------------------
 Stream &operator<<(Stream &s, const Mangled &obj) {
   if (obj.GetMangledName())
     s << "mangled = '" << obj.GetMangledName() << "'";

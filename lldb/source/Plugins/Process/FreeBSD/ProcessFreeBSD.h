@@ -23,9 +23,7 @@ class FreeBSDThread;
 class ProcessFreeBSD : public lldb_private::Process {
 
 public:
-  //------------------------------------------------------------------
   // Static functions.
-  //------------------------------------------------------------------
   static lldb::ProcessSP
   CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                  const lldb_private::FileSpec *crash_file_path);
@@ -38,9 +36,7 @@ public:
 
   static const char *GetPluginDescriptionStatic();
 
-  //------------------------------------------------------------------
   // Constructors and destructors
-  //------------------------------------------------------------------
   ProcessFreeBSD(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                  lldb::UnixSignalsSP &unix_signals_sp);
 
@@ -48,17 +44,13 @@ public:
 
   virtual lldb_private::Status WillResume() override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   virtual lldb_private::ConstString GetPluginName() override;
 
   virtual uint32_t GetPluginVersion() override;
 
 public:
-  //------------------------------------------------------------------
   // Process protocol.
-  //------------------------------------------------------------------
   void Finalize() override;
 
   bool CanDebug(lldb::TargetSP target_sp,
@@ -137,7 +129,6 @@ public:
 
   const lldb::DataBufferSP GetAuxvData() override;
 
-  //--------------------------------------------------------------------------
   // ProcessFreeBSD internal API.
 
   /// Registers the given message with this process.

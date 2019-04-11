@@ -17,9 +17,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectRegexCommand
-//-------------------------------------------------------------------------
 
 class CommandObjectRegexCommand : public CommandObjectRaw {
 public:

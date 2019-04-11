@@ -26,9 +26,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // PlatformConnectOptions
-//----------------------------------------------------------------------
 struct PlatformConnectOptions {
   PlatformConnectOptions(const char *url = NULL)
       : m_url(), m_rsync_options(), m_rsync_remote_path_prefix(),
@@ -48,9 +46,7 @@ struct PlatformConnectOptions {
   ConstString m_local_cache_directory;
 };
 
-//----------------------------------------------------------------------
 // PlatformShellCommand
-//----------------------------------------------------------------------
 struct PlatformShellCommand {
   PlatformShellCommand(const char *shell_command = NULL)
       : m_command(), m_working_dir(), m_status(0), m_signo(0) {
@@ -67,9 +63,7 @@ struct PlatformShellCommand {
   int m_signo;
   Timeout<std::ratio<1>> m_timeout = llvm::None;
 };
-//----------------------------------------------------------------------
 // SBPlatformConnectOptions
-//----------------------------------------------------------------------
 SBPlatformConnectOptions::SBPlatformConnectOptions(const char *url)
     : m_opaque_ptr(new PlatformConnectOptions(url)) {
   LLDB_RECORD_CONSTRUCTOR(SBPlatformConnectOptions, (const char *), url);
@@ -164,9 +158,7 @@ void SBPlatformConnectOptions::SetLocalCacheDirectory(const char *path) {
     m_opaque_ptr->m_local_cache_directory = ConstString();
 }
 
-//----------------------------------------------------------------------
 // SBPlatformShellCommand
-//----------------------------------------------------------------------
 SBPlatformShellCommand::SBPlatformShellCommand(const char *shell_command)
     : m_opaque_ptr(new PlatformShellCommand(shell_command)) {
   LLDB_RECORD_CONSTRUCTOR(SBPlatformShellCommand, (const char *),
@@ -268,9 +260,7 @@ const char *SBPlatformShellCommand::GetOutput() {
   return m_opaque_ptr->m_output.c_str();
 }
 
-//----------------------------------------------------------------------
 // SBPlatform
-//----------------------------------------------------------------------
 SBPlatform::SBPlatform() : m_opaque_sp() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBPlatform);
 }

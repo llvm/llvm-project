@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PSTL_numeric
-#define __PSTL_numeric
+#ifndef _PSTL_NUMERIC
+#define _PSTL_NUMERIC
 
 #include "internal/pstl_config.h"
 
-#if __PSTL_EXECUTION_POLICIES_DEFINED
+#if _PSTL_EXECUTION_POLICIES_DEFINED
 // If <execution> has already been included, pull in implementations
 #    include "internal/glue_numeric_impl.h"
 #else
 // Otherwise just pull in forward declarations
 #    include "internal/glue_numeric_defs.h"
-#    define __PSTL_NUMERIC_FORWARD_DECLARED 1
+#    define _PSTL_NUMERIC_FORWARD_DECLARED 1
 #endif
 
-#endif /* __PSTL_numeric */
+#endif /* _PSTL_NUMERIC */

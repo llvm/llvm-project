@@ -53,9 +53,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
-//----------------------------------------------------------------------
 // GDBRemoteCommunication constructor
-//----------------------------------------------------------------------
 GDBRemoteCommunication::GDBRemoteCommunication(const char *comm_name,
                                                const char *listener_name)
     : Communication(comm_name),
@@ -69,9 +67,7 @@ GDBRemoteCommunication::GDBRemoteCommunication(const char *comm_name,
       m_listen_url() {
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 GDBRemoteCommunication::~GDBRemoteCommunication() {
   if (IsConnected()) {
     Disconnect();
@@ -300,7 +296,6 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
       case eConnectionStatusTimedOut:
       case eConnectionStatusInterrupted:
         if (sync_on_timeout) {
-          //------------------------------------------------------------------
           /// Sync the remote GDB server and make sure we get a response that
           /// corresponds to what we send.
           ///
@@ -323,7 +318,6 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
           /// packets. So if we timeout, we need to ensure that we can get
           /// back on track. If we can't get back on track, we must
           /// disconnect.
-          //------------------------------------------------------------------
           bool sync_success = false;
           bool got_actual_response = false;
           // We timed out, we need to sync back up with the

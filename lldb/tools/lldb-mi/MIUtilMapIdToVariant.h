@@ -55,7 +55,6 @@ private:
 };
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Add to *this container a data object of general type identified by
 // an ID.
 //          If the data with that ID already exists in the container it is
@@ -89,7 +88,6 @@ bool CMIUtilMapIdToVariant::Add(const CMIUtilString &vId, const T &vData) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve a data object from *this container identified by the
 // specified ID.
 // Type:    Method.

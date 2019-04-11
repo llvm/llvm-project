@@ -140,7 +140,6 @@ extern long PtraceWrapper(int req, lldb::pid_t pid, void *addr, int data) {
 PtraceWrapper((req), (pid), (addr), (data))
 #endif
 
-//------------------------------------------------------------------------------
 // Static implementations of ProcessMonitor::ReadMemory and
 // ProcessMonitor::WriteMemory.  This enables mutual recursion between these
 // functions without needed to go thru the thread funnel.
@@ -195,7 +194,6 @@ static bool EnsureFDFlags(int fd, int flags, Status &error) {
   return true;
 }
 
-//------------------------------------------------------------------------------
 /// \class Operation
 /// Represents a ProcessMonitor operation.
 ///
@@ -213,7 +211,6 @@ public:
   virtual void Execute(ProcessMonitor *monitor) = 0;
 };
 
-//------------------------------------------------------------------------------
 /// \class ReadOperation
 /// Implements ProcessMonitor::ReadMemory.
 class ReadOperation : public Operation {
@@ -239,7 +236,6 @@ void ReadOperation::Execute(ProcessMonitor *monitor) {
   m_result = DoReadMemory(pid, m_addr, m_buff, m_size, m_error);
 }
 
-//------------------------------------------------------------------------------
 /// \class WriteOperation
 /// Implements ProcessMonitor::WriteMemory.
 class WriteOperation : public Operation {
@@ -265,7 +261,6 @@ void WriteOperation::Execute(ProcessMonitor *monitor) {
   m_result = DoWriteMemory(pid, m_addr, m_buff, m_size, m_error);
 }
 
-//------------------------------------------------------------------------------
 /// \class ReadRegOperation
 /// Implements ProcessMonitor::ReadRegisterValue.
 class ReadRegOperation : public Operation {
@@ -305,7 +300,6 @@ void ReadRegOperation::Execute(ProcessMonitor *monitor) {
   }
 }
 
-//------------------------------------------------------------------------------
 /// \class WriteRegOperation
 /// Implements ProcessMonitor::WriteRegisterValue.
 class WriteRegOperation : public Operation {
@@ -338,7 +332,6 @@ void WriteRegOperation::Execute(ProcessMonitor *monitor) {
     m_result = true;
 }
 
-//------------------------------------------------------------------------------
 /// \class ReadDebugRegOperation
 /// Implements ProcessMonitor::ReadDebugRegisterValue.
 class ReadDebugRegOperation : public Operation {
@@ -373,7 +366,6 @@ void ReadDebugRegOperation::Execute(ProcessMonitor *monitor) {
   }
 }
 
-//------------------------------------------------------------------------------
 /// \class WriteDebugRegOperation
 /// Implements ProcessMonitor::WriteDebugRegisterValue.
 class WriteDebugRegOperation : public Operation {
@@ -406,7 +398,6 @@ void WriteDebugRegOperation::Execute(ProcessMonitor *monitor) {
     m_result = true;
 }
 
-//------------------------------------------------------------------------------
 /// \class ReadGPROperation
 /// Implements ProcessMonitor::ReadGPR.
 class ReadGPROperation : public Operation {
@@ -433,7 +424,6 @@ void ReadGPROperation::Execute(ProcessMonitor *monitor) {
     m_result = true;
 }
 
-//------------------------------------------------------------------------------
 /// \class ReadFPROperation
 /// Implements ProcessMonitor::ReadFPR.
 class ReadFPROperation : public Operation {
@@ -456,7 +446,6 @@ void ReadFPROperation::Execute(ProcessMonitor *monitor) {
     m_result = true;
 }
 
-//------------------------------------------------------------------------------
 /// \class WriteGPROperation
 /// Implements ProcessMonitor::WriteGPR.
 class WriteGPROperation : public Operation {
@@ -479,7 +468,6 @@ void WriteGPROperation::Execute(ProcessMonitor *monitor) {
     m_result = true;
 }
 
-//------------------------------------------------------------------------------
 /// \class WriteFPROperation
 /// Implements ProcessMonitor::WriteFPR.
 class WriteFPROperation : public Operation {
@@ -502,7 +490,6 @@ void WriteFPROperation::Execute(ProcessMonitor *monitor) {
     m_result = true;
 }
 
-//------------------------------------------------------------------------------
 /// \class ResumeOperation
 /// Implements ProcessMonitor::Resume.
 class ResumeOperation : public Operation {
@@ -533,7 +520,6 @@ void ResumeOperation::Execute(ProcessMonitor *monitor) {
     m_result = true;
 }
 
-//------------------------------------------------------------------------------
 /// \class SingleStepOperation
 /// Implements ProcessMonitor::SingleStep.
 class SingleStepOperation : public Operation {
@@ -561,7 +547,6 @@ void SingleStepOperation::Execute(ProcessMonitor *monitor) {
     m_result = true;
 }
 
-//------------------------------------------------------------------------------
 /// \class LwpInfoOperation
 /// Implements ProcessMonitor::GetLwpInfo.
 class LwpInfoOperation : public Operation {
@@ -590,7 +575,6 @@ void LwpInfoOperation::Execute(ProcessMonitor *monitor) {
   }
 }
 
-//------------------------------------------------------------------------------
 /// \class ThreadSuspendOperation
 /// Implements ProcessMonitor::ThreadSuspend.
 class ThreadSuspendOperation : public Operation {
@@ -610,7 +594,6 @@ void ThreadSuspendOperation::Execute(ProcessMonitor *monitor) {
   m_result = !PTRACE(m_suspend ? PT_SUSPEND : PT_RESUME, m_tid, NULL, 0);
 }
 
-//------------------------------------------------------------------------------
 /// \class EventMessageOperation
 /// Implements ProcessMonitor::GetEventMessage.
 class EventMessageOperation : public Operation {
@@ -640,7 +623,6 @@ void EventMessageOperation::Execute(ProcessMonitor *monitor) {
   }
 }
 
-//------------------------------------------------------------------------------
 /// \class KillOperation
 /// Implements ProcessMonitor::Kill.
 class KillOperation : public Operation {
@@ -662,7 +644,6 @@ void KillOperation::Execute(ProcessMonitor *monitor) {
     m_result = true;
 }
 
-//------------------------------------------------------------------------------
 /// \class DetachOperation
 /// Implements ProcessMonitor::Detach.
 class DetachOperation : public Operation {
@@ -708,7 +689,6 @@ ProcessMonitor::AttachArgs::AttachArgs(ProcessMonitor *monitor, lldb::pid_t pid)
 
 ProcessMonitor::AttachArgs::~AttachArgs() {}
 
-//------------------------------------------------------------------------------
 /// The basic design of the ProcessMonitor is built around two threads.
 ///
 /// One thread (@see SignalThread) simply blocks on a call to waitpid()
@@ -805,7 +785,6 @@ ProcessMonitor::ProcessMonitor(ProcessFreeBSD *process, lldb::pid_t pid,
 
 ProcessMonitor::~ProcessMonitor() { StopMonitor(); }
 
-//------------------------------------------------------------------------------
 // Thread setup and tear down.
 void ProcessMonitor::StartLaunchOpThread(LaunchArgs *args, Status &error) {
   static const char *g_thread_name = "lldb.process.freebsd.operation";

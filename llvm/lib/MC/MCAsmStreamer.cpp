@@ -1911,7 +1911,7 @@ void MCAsmStreamer::FinishImpl() {
   // Emit the label for the line table, if requested - since the rest of the
   // line table will be defined by .loc/.file directives, and not emitted
   // directly, the label is the only work required here.
-  auto &Tables = getContext().getMCDwarfLineTables();
+  const auto &Tables = getContext().getMCDwarfLineTables();
   if (!Tables.empty()) {
     assert(Tables.size() == 1 && "asm output only supports one line table");
     if (auto *Label = Tables.begin()->second.getLabel()) {

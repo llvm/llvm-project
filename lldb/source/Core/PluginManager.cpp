@@ -1539,9 +1539,7 @@ lldb::ScriptInterpreterSP PluginManager::GetScriptInterpreterForLanguage(
 #pragma mark -
 #pragma mark StructuredDataPlugin
 
-// -----------------------------------------------------------------------------
 // StructuredDataPlugin
-// -----------------------------------------------------------------------------
 
 struct StructuredDataPluginInstance {
   StructuredDataPluginInstance()

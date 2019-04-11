@@ -20,9 +20,7 @@
 
 //#define DB_PTHREAD_LOG_EVENTS
 
-//----------------------------------------------------------------------
 /// Enumerations for broadcasting.
-//----------------------------------------------------------------------
 namespace lldb_private {
 
 typedef enum {
@@ -32,7 +30,6 @@ typedef enum {
                      /// modified.
 } PredicateBroadcastType;
 
-//----------------------------------------------------------------------
 /// \class Predicate Predicate.h "lldb/Utility/Predicate.h"
 /// A C++ wrapper class for providing threaded access to a value of
 /// type T.
@@ -41,18 +38,14 @@ typedef enum {
 /// of type T. Threads can efficiently wait for bits within T to be set
 /// or reset, or wait for T to be set to be equal/not equal to a
 /// specified values.
-//----------------------------------------------------------------------
 template <class T> class Predicate {
 public:
-  //------------------------------------------------------------------
   /// Default constructor.
   ///
   /// Initializes the mutex, condition and value with their default
   /// constructors.
-  //------------------------------------------------------------------
   Predicate() : m_value(), m_mutex(), m_condition() {}
 
-  //------------------------------------------------------------------
   /// Construct with initial T value \a initial_value.
   ///
   /// Initializes the mutex and condition with their default
@@ -60,18 +53,14 @@ public:
   ///
   /// \param[in] initial_value
   ///     The initial value for our T object.
-  //------------------------------------------------------------------
   Predicate(T initial_value)
       : m_value(initial_value), m_mutex(), m_condition() {}
 
-  //------------------------------------------------------------------
   /// Destructor.
   ///
   /// Destroy the condition, mutex, and T objects.
-  //------------------------------------------------------------------
   ~Predicate() = default;
 
-  //------------------------------------------------------------------
   /// Value get accessor.
   ///
   /// Copies the current \a m_value in a thread safe manor and returns
@@ -79,14 +68,12 @@ public:
   ///
   /// \return
   ///     A copy of the current value.
-  //------------------------------------------------------------------
   T GetValue() const {
     std::lock_guard<std::mutex> guard(m_mutex);
     T value = m_value;
     return value;
   }
 
-  //------------------------------------------------------------------
   /// Value set accessor.
   ///
   /// Set the contained \a m_value to \a new_value in a thread safe
@@ -100,7 +87,6 @@ public:
   ///     PredicateBroadcastType enumeration for details.
   ///
   /// \see Predicate::Broadcast()
-  //------------------------------------------------------------------
   void SetValue(T value, PredicateBroadcastType broadcast_type) {
     std::lock_guard<std::mutex> guard(m_mutex);
 #ifdef DB_PTHREAD_LOG_EVENTS
@@ -113,7 +99,6 @@ public:
     Broadcast(old_value, broadcast_type);
   }
 
-  //------------------------------------------------------------------
   /// Wait for Cond(m_value) to be true.
   ///
   /// Waits in a thread safe way for Cond(m_value) to be true. If Cond(m_value)
@@ -134,7 +119,6 @@ public:
   /// \return
   ///     \li m_value if Cond(m_value) is true.
   ///     \li None otherwise (timeout occurred).
-  //------------------------------------------------------------------
   template <typename C>
   llvm::Optional<T> WaitFor(C Cond, const Timeout<std::micro> &timeout) {
     std::unique_lock<std::mutex> lock(m_mutex);
@@ -147,7 +131,6 @@ public:
       return m_value;
     return llvm::None;
   }
-  //------------------------------------------------------------------
   /// Wait for \a m_value to be equal to \a value.
   ///
   /// Waits in a thread safe way for \a m_value to be equal to \a
@@ -170,14 +153,12 @@ public:
   /// \return
   ///     \li \b true if the \a m_value is equal to \a value
   ///     \li \b false otherwise (timeout occurred)
-  //------------------------------------------------------------------
   bool WaitForValueEqualTo(T value,
                            const Timeout<std::micro> &timeout = llvm::None) {
     return WaitFor([&value](T current) { return value == current; }, timeout) !=
            llvm::None;
   }
 
-  //------------------------------------------------------------------
   /// Wait for \a m_value to not be equal to \a value.
   ///
   /// Waits in a thread safe way for \a m_value to not be equal to \a
@@ -200,7 +181,6 @@ public:
   /// \return
   ///     \li m_value if m_value != value
   ///     \li None otherwise (timeout occurred).
-  //------------------------------------------------------------------
   llvm::Optional<T>
   WaitForValueNotEqualTo(T value,
                          const Timeout<std::micro> &timeout = llvm::None) {
@@ -208,10 +188,8 @@ public:
   }
 
 protected:
-  //----------------------------------------------------------------------
   // pthread condition and mutex variable to control access and allow blocking
   // between the main thread and the spotlight index thread.
-  //----------------------------------------------------------------------
   T m_value; ///< The templatized value T that we are protecting access to
   mutable std::mutex m_mutex; ///< The mutex to use when accessing the data
   std::condition_variable m_condition; ///< The pthread condition variable to
@@ -219,7 +197,6 @@ protected:
                                        /// or changed.
 
 private:
-  //------------------------------------------------------------------
   /// Broadcast if needed.
   ///
   /// Check to see if we need to broadcast to our condition variable
@@ -233,7 +210,6 @@ private:
   ///
   /// If \a broadcast_type is eBroadcastOnChange, the condition
   /// variable be broadcast if the owned value changes.
-  //------------------------------------------------------------------
   void Broadcast(T old_value, PredicateBroadcastType broadcast_type) {
     bool broadcast =
         (broadcast_type == eBroadcastAlways) ||

@@ -49,7 +49,10 @@ public:
 
     ArgInfo(unsigned Reg, Type *Ty, ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy{},
             bool IsFixed = true)
-        : Reg(Reg), Ty(Ty), Flags(Flags), IsFixed(IsFixed) {}
+      : Reg(Reg), Ty(Ty), Flags(Flags), IsFixed(IsFixed) {
+      assert((Ty->isVoidTy() == (Reg == 0)) &&
+             "only void types should have no register");
+    }
   };
 
   /// Argument handling is mostly uniform between the four places that

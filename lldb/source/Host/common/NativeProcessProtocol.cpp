@@ -19,9 +19,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-// -----------------------------------------------------------------------------
 // NativeProcessProtocol Members
-// -----------------------------------------------------------------------------
 
 NativeProcessProtocol::NativeProcessProtocol(lldb::pid_t pid, int terminal_fd,
                                              NativeDelegate &delegate)

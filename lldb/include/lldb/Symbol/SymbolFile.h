@@ -32,14 +32,12 @@ namespace lldb_private {
 
 class SymbolFile : public PluginInterface {
 public:
-  //------------------------------------------------------------------
   // Symbol file ability bits.
   //
   // Each symbol file can claim to support one or more symbol file abilities.
   // These get returned from SymbolFile::GetAbilities(). These help us to
   // determine which plug-in will be best to load the debug information found
   // in files.
-  //------------------------------------------------------------------
   enum Abilities {
     CompileUnits = (1u << 0),
     LineTables = (1u << 1),
@@ -53,15 +51,12 @@ public:
 
   static SymbolFile *FindPlugin(ObjectFile *obj_file);
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   SymbolFile(ObjectFile *obj_file)
       : m_obj_file(obj_file), m_abilities(0), m_calculated_abilities(false) {}
 
   ~SymbolFile() override {}
 
-  //------------------------------------------------------------------
   /// Get a mask of what this symbol file supports for the object file
   /// that it was constructed with.
   ///
@@ -89,7 +84,6 @@ public:
   ///     A uint32_t mask containing bits from the SymbolFile::Abilities
   ///     enumeration. Any bits that are set represent an ability that
   ///     this symbol plug-in can parse from the object file.
-  ///------------------------------------------------------------------
   uint32_t GetAbilities() {
     if (!m_calculated_abilities) {
       m_abilities = CalculateAbilities();
@@ -101,13 +95,10 @@ public:
 
   virtual uint32_t CalculateAbilities() = 0;
 
-  //------------------------------------------------------------------
   /// Symbols file subclasses should override this to return the Module that
   /// owns the TypeSystem that this symbol file modifies type information in.
-  //------------------------------------------------------------------
   virtual std::recursive_mutex &GetModuleMutex() const;
 
-  //------------------------------------------------------------------
   /// Initialize the SymbolFile object.
   ///
   /// The SymbolFile object with the best set of abilities (detected
@@ -115,12 +106,9 @@ public:
   /// called if it is chosen to parse an object file. More complete
   /// initialization can happen in this function which will get called
   /// prior to any other functions in the SymbolFile protocol.
-  //------------------------------------------------------------------
   virtual void InitializeObject() {}
 
-  //------------------------------------------------------------------
   // Compile Unit function calls
-  //------------------------------------------------------------------
   // Approach 1 - iterator
   virtual uint32_t GetNumCompileUnits() = 0;
   virtual lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) = 0;
@@ -231,10 +219,8 @@ public:
 
   virtual void AddSymbols(Symtab &symtab) {}
 
-  //------------------------------------------------------------------
   /// Notify the SymbolFile that the file addresses in the Sections
   /// for this module have been changed.
-  //------------------------------------------------------------------
   virtual void SectionFileAddressesChanged() {}
 
   virtual void Dump(Stream &s) {}

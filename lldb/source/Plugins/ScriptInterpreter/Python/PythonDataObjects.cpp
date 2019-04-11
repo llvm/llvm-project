@@ -33,9 +33,7 @@ void StructuredPythonObject::Dump(Stream &s, bool pretty_print) const {
   s << "Python Obj: 0x" << GetValue();
 }
 
-//----------------------------------------------------------------------
 // PythonObject
-//----------------------------------------------------------------------
 
 void PythonObject::Dump(Stream &strm) const {
   if (m_py_obj) {
@@ -202,9 +200,7 @@ StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
   }
 }
 
-//----------------------------------------------------------------------
 // PythonString
-//----------------------------------------------------------------------
 PythonBytes::PythonBytes() : PythonObject() {}
 
 PythonBytes::PythonBytes(llvm::ArrayRef<uint8_t> bytes) : PythonObject() {
@@ -338,9 +334,7 @@ StructuredData::StringSP PythonByteArray::CreateStructuredString() const {
   return result;
 }
 
-//----------------------------------------------------------------------
 // PythonString
-//----------------------------------------------------------------------
 
 PythonString::PythonString(PyRefType type, PyObject *py_obj) : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a string
@@ -438,9 +432,7 @@ StructuredData::StringSP PythonString::CreateStructuredString() const {
   return result;
 }
 
-//----------------------------------------------------------------------
 // PythonInteger
-//----------------------------------------------------------------------
 
 PythonInteger::PythonInteger() : PythonObject() {}
 
@@ -530,9 +522,7 @@ StructuredData::IntegerSP PythonInteger::CreateStructuredInteger() const {
   return result;
 }
 
-//----------------------------------------------------------------------
 // PythonBoolean
-//----------------------------------------------------------------------
 
 PythonBoolean::PythonBoolean(PyRefType type, PyObject *py_obj)
     : PythonObject() {
@@ -579,9 +569,7 @@ StructuredData::BooleanSP PythonBoolean::CreateStructuredBoolean() const {
   return result;
 }
 
-//----------------------------------------------------------------------
 // PythonList
-//----------------------------------------------------------------------
 
 PythonList::PythonList(PyInitialValue value) : PythonObject() {
   if (value == PyInitialValue::Empty)
@@ -660,9 +648,7 @@ StructuredData::ArraySP PythonList::CreateStructuredArray() const {
   return result;
 }
 
-//----------------------------------------------------------------------
 // PythonTuple
-//----------------------------------------------------------------------
 
 PythonTuple::PythonTuple(PyInitialValue value) : PythonObject() {
   if (value == PyInitialValue::Empty)
@@ -756,9 +742,7 @@ StructuredData::ArraySP PythonTuple::CreateStructuredArray() const {
   return result;
 }
 
-//----------------------------------------------------------------------
 // PythonDictionary
-//----------------------------------------------------------------------
 
 PythonDictionary::PythonDictionary(PyInitialValue value) : PythonObject() {
   if (value == PyInitialValue::Empty)

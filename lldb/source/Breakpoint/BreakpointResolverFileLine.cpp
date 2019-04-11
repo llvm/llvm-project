@@ -18,9 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // BreakpointResolverFileLine:
-//----------------------------------------------------------------------
 BreakpointResolverFileLine::BreakpointResolverFileLine(
     Breakpoint *bkpt, const FileSpec &file_spec, uint32_t line_no,
     uint32_t column, lldb::addr_t offset, bool check_inlines,

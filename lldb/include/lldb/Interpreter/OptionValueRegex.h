@@ -21,9 +21,7 @@ public:
 
   ~OptionValueRegex() override = default;
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeRegex; }
 
@@ -45,9 +43,7 @@ public:
 
   lldb::OptionValueSP DeepCopy() const override;
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
   const RegularExpression *GetCurrentValue() const {
     return (m_regex.IsValid() ? &m_regex : nullptr);
   }

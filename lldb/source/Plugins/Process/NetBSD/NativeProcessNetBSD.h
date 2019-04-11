@@ -38,9 +38,7 @@ public:
            MainLoop &mainloop) const override;
   };
 
-  // ---------------------------------------------------------------------
   // NativeProcessProtocol Interface
-  // ---------------------------------------------------------------------
   Status Resume(const ResumeActionList &resume_actions) override;
 
   Status Halt() override;
@@ -83,9 +81,7 @@ public:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   GetAuxvData() const override;
 
-  // ---------------------------------------------------------------------
   // Interface used by NativeRegisterContext-derived classes.
-  // ---------------------------------------------------------------------
   static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
                               int data = 0, int *result = nullptr);
 
@@ -95,9 +91,7 @@ private:
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
   std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
 
-  // ---------------------------------------------------------------------
   // Private Instance Methods
-  // ---------------------------------------------------------------------
   NativeProcessNetBSD(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
                       const ArchSpec &arch, MainLoop &mainloop);
 

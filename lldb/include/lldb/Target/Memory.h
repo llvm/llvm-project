@@ -16,15 +16,11 @@
 #include <vector>
 
 namespace lldb_private {
-//----------------------------------------------------------------------
 // A class to track memory that was read from a live process between
 // runs.
-//----------------------------------------------------------------------
 class MemoryCache {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   MemoryCache(Process &process);
 
   ~MemoryCache();
@@ -51,9 +47,7 @@ protected:
   typedef std::map<lldb::addr_t, lldb::DataBufferSP> BlockMap;
   typedef RangeArray<lldb::addr_t, lldb::addr_t, 4> InvalidRanges;
   typedef Range<lldb::addr_t, lldb::addr_t> AddrRange;
-  //------------------------------------------------------------------
   // Classes that inherit from MemoryCache can see and modify these
-  //------------------------------------------------------------------
   std::recursive_mutex m_mutex;
   BlockMap m_L1_cache; // A first level memory cache whose chunk sizes vary that
                        // will be used only if the memory read fits entirely in
@@ -111,16 +105,12 @@ protected:
   RangeVector<lldb::addr_t, uint32_t> m_reserved_blocks;
 };
 
-//----------------------------------------------------------------------
 // A class that can track allocated memory and give out allocated memory
 // without us having to make an allocate/deallocate call every time we need
 // some memory in a process that is being debugged.
-//----------------------------------------------------------------------
 class AllocatedMemoryCache {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   AllocatedMemoryCache(Process &process);
 
   ~AllocatedMemoryCache();
@@ -138,9 +128,7 @@ protected:
   AllocatedBlockSP AllocatePage(uint32_t byte_size, uint32_t permissions,
                                 uint32_t chunk_size, Status &error);
 
-  //------------------------------------------------------------------
   // Classes that inherit from MemoryCache can see and modify these
-  //------------------------------------------------------------------
   Process &m_process;
   std::recursive_mutex m_mutex;
   typedef std::multimap<uint32_t, AllocatedBlockSP> PermissionsToBlockMap;

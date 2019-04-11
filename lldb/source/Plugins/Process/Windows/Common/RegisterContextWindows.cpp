@@ -23,9 +23,7 @@ using namespace lldb_private;
 
 const DWORD kWinContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
 
-//------------------------------------------------------------------
 // Constructors and Destructors
-//------------------------------------------------------------------
 RegisterContextWindows::RegisterContextWindows(Thread &thread,
                                                uint32_t concrete_frame_idx)
     : RegisterContext(thread, concrete_frame_idx), m_context(),
@@ -78,9 +76,7 @@ uint32_t RegisterContextWindows::ConvertRegisterKindToRegisterNumber(
   return LLDB_INVALID_REGNUM;
 }
 
-//------------------------------------------------------------------
 // Subclasses can these functions if desired
-//------------------------------------------------------------------
 uint32_t RegisterContextWindows::NumSupportedHardwareBreakpoints() {
   // Support for hardware breakpoints not yet implemented.
   return 0;

@@ -18,14 +18,12 @@
 
 namespace lldb_private {
 
-//------------------------------------------------------------------
 // QueueList:
 // This is the container for libdispatch aka Grand Central Dispatch Queue
 // objects.
 //
 // Each Process will have a QueueList.  When the process execution is paused,
 // the QueueList may be populated with Queues by the SystemRuntime.
-//------------------------------------------------------------------
 
 class QueueList {
   friend class Process;
@@ -35,22 +33,18 @@ public:
 
   ~QueueList();
 
-  //------------------------------------------------------------------
   /// Get the number of libdispatch queues that are available
   ///
   /// \return
   ///     The number of queues that are stored in the QueueList.
-  //------------------------------------------------------------------
   uint32_t GetSize();
 
-  //------------------------------------------------------------------
   /// Get the Queue at a given index number
   ///
   /// \param [in] idx
   ///     The index number (0-based) of the queue.
   /// \return
   ///     The Queue at that index number.
-  //------------------------------------------------------------------
   lldb::QueueSP GetQueueAtIndex(uint32_t idx);
 
   typedef std::vector<lldb::QueueSP> collection;
@@ -58,29 +52,22 @@ public:
                                  std::mutex>
       QueueIterable;
 
-  //------------------------------------------------------------------
   /// Iterate over the list of queues
   ///
   /// \return
   ///     An Iterable object which can be used to loop over the queues
   ///     that exist.
-  //------------------------------------------------------------------
   QueueIterable Queues() { return QueueIterable(m_queues, m_mutex); }
 
-  //------------------------------------------------------------------
   /// Clear out the list of queues from the QueueList
-  //------------------------------------------------------------------
   void Clear();
 
-  //------------------------------------------------------------------
   /// Add a Queue to the QueueList
   ///
   /// \param [in] queue
   ///     Used by the SystemRuntime to populate the QueueList
-  //------------------------------------------------------------------
   void AddQueue(lldb::QueueSP queue);
 
-  //------------------------------------------------------------------
   /// Find a queue in the QueueList by QueueID
   ///
   /// \param [in] qid
@@ -89,10 +76,8 @@ public:
   /// \return
   ///     A QueueSP to the queue requested, if it is present in the QueueList.
   ///     An empty QueueSP will be returned if this queue was not found.
-  //------------------------------------------------------------------
   lldb::QueueSP FindQueueByID(lldb::queue_id_t qid);
 
-  //------------------------------------------------------------------
   /// Find a queue in the QueueList by IndexID
   ///
   /// \param [in] index_id
@@ -104,15 +89,12 @@ public:
   /// \return
   ///     A QueueSP to the queue requested, if it is present in the QueueList.
   ///     An empty QueueSP will be returned if this queue was not found.
-  //------------------------------------------------------------------
   lldb::QueueSP FindQueueByIndexID(uint32_t index_id);
 
   std::mutex &GetMutex();
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from Process can see and modify these
-  //------------------------------------------------------------------
   Process *m_process; ///< The process that manages this queue list.
   uint32_t
       m_stop_id; ///< The process stop ID that this queue list is valid for.

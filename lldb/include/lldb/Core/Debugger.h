@@ -74,12 +74,10 @@ class raw_ostream;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class Debugger Debugger.h "lldb/Core/Debugger.h"
 /// A class to manage flag bits.
 ///
 /// Provides a global root objects for the debugger core.
-//----------------------------------------------------------------------
 
 class Debugger : public std::enable_shared_from_this<Debugger>,
                  public UserID,
@@ -169,7 +167,6 @@ public:
   }
 
   ExecutionContext GetSelectedExecutionContext();
-  //------------------------------------------------------------------
   /// Get accessor for the target list.
   ///
   /// The target list is part of the global debugger object. This the single
@@ -178,7 +175,6 @@ public:
   ///
   /// \return
   ///     A global shared target list.
-  //------------------------------------------------------------------
   TargetList &GetTargetList() { return m_target_list; }
 
   PlatformList &GetPlatformList() { return m_platform_list; }
@@ -187,10 +183,8 @@ public:
 
   void DispatchInputEndOfFile();
 
-  //------------------------------------------------------------------
   // If any of the streams are not set, set them to the in/out/err stream of
   // the top most input reader to ensure they at least have something
-  //------------------------------------------------------------------
   void AdoptTopIOHandlerFilesIfInvalid(lldb::StreamFileSP &in,
                                        lldb::StreamFileSP &out,
                                        lldb::StreamFileSP &err);
@@ -229,9 +223,7 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
-  //----------------------------------------------------------------------
   // Properties Functions
-  //----------------------------------------------------------------------
   enum StopDisassemblyType {
     eStopDisassemblyTypeNever = 0,
     eStopDisassemblyTypeNoDebugInfo,
@@ -416,9 +408,7 @@ protected:
   lldb::ListenerSP m_forward_listener_sp;
   llvm::once_flag m_clear_once;
 
-  //----------------------------------------------------------------------
   // Events for m_sync_broadcaster
-  //----------------------------------------------------------------------
   enum {
     eBroadcastBitEventThreadIsListening = (1 << 0),
   };

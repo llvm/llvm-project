@@ -19,7 +19,6 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 /// \class LLVMUserExpression LLVMUserExpression.h
 /// "lldb/Expression/LLVMUserExpression.h" Encapsulates a one-time expression
 /// for use in lldb.
@@ -30,7 +29,6 @@ namespace lldb_private {
 /// expression. The actual parsing part will be provided by the specific
 /// implementations of LLVMUserExpression - which will be vended through the
 /// appropriate TypeSystem.
-//----------------------------------------------------------------------
 class LLVMUserExpression : public UserExpression {
 public:
   /// LLVM-style RTTI support.
@@ -65,10 +63,8 @@ public:
 
   bool CanInterpret() override { return m_can_interpret; }
 
-  //------------------------------------------------------------------
   /// Return the string that the parser should parse.  Must be a full
   /// translation unit.
-  //------------------------------------------------------------------
   const char *Text() override { return m_transformed_text.c_str(); }
 
   lldb::ModuleSP GetJITModule() override;

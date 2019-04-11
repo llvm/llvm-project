@@ -10,7 +10,6 @@
 #include "MICmdArgContext.h"
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgContext constructor.
 // Type:    Method.
 // Args:    None.
@@ -20,7 +19,6 @@
 CMICmdArgContext::CMICmdArgContext() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgContext constructor.
 // Type:    Method.
 // Args:    vrCmdLineArgsRaw    - (R) The text description of the arguments
@@ -32,7 +30,6 @@ CMICmdArgContext::CMICmdArgContext(const CMIUtilString &vrCmdLineArgsRaw)
     : m_strCmdArgsAndOptions(vrCmdLineArgsRaw) {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: CMICmdArgContext destructor.
 // Type:    Method.
 // Args:    None.
@@ -42,7 +39,6 @@ CMICmdArgContext::CMICmdArgContext(const CMIUtilString &vrCmdLineArgsRaw)
 CMICmdArgContext::~CMICmdArgContext() {}
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve the remainder of the command's argument options left to
 // parse.
 // Type:    Method.
@@ -55,7 +51,6 @@ const CMIUtilString &CMICmdArgContext::GetArgsLeftToParse() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Ask if this arguments string has any arguments.
 // Type:    Method.
 // Args:    None.
@@ -68,7 +63,6 @@ bool CMICmdArgContext::IsEmpty() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Remove the argument from the options text and any space after the
 // argument
 //          if applicable.
@@ -127,7 +121,6 @@ bool CMICmdArgContext::RemoveArg(const CMIUtilString &vArg) {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Remove the argument at the Nth word position along in the context
 // string.
 //          Any space after the argument is removed if applicable. A search is
@@ -187,7 +180,6 @@ bool CMICmdArgContext::RemoveArgAtPos(const CMIUtilString &vArg,
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve number of arguments or options present in the command's
 // option text.
 // Type:    Method.
@@ -201,7 +193,6 @@ size_t CMICmdArgContext::GetNumberArgsPresent() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Retrieve all the arguments or options remaining in *this context.
 // Type:    Method.
 // Args:    None.
@@ -215,7 +206,6 @@ CMIUtilString::VecString_t CMICmdArgContext::GetArgs() const {
 }
 
 //++
-//------------------------------------------------------------------------------------
 // Details: Copy assignment operator.
 // Type:    Method.
 // Args:    vOther  - (R) The variable to copy from.

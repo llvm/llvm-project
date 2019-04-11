@@ -15,11 +15,9 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // PlatformOptionGroup
 //
 // Make platform options available to any commands that need the settings.
-//-------------------------------------------------------------------------
 class OptionGroupPlatform : public OptionGroup {
 public:
   OptionGroupPlatform(bool include_platform_option)
