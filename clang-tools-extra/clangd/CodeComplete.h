@@ -68,6 +68,11 @@ struct CodeCompleteOptions {
   /// If more results are available, we set CompletionList.isIncomplete.
   size_t Limit = 0;
 
+  enum IncludeInsertion {
+    IWYU,
+    NeverInsert,
+  } InsertIncludes = IncludeInsertion::IWYU;
+
   /// A visual indicator to prepend to the completion label to indicate whether
   /// completion result would trigger an #include insertion or not.
   struct IncludeInsertionIndicator {
@@ -220,7 +225,11 @@ struct SpeculativeFuzzyFind {
   std::future<SymbolSlab> Result;
 };
 
-/// Get code completions at a specified \p Pos in \p FileName.
+/// Gets code completions at a specified \p Pos in \p FileName.
+///
+/// If \p Preamble is nullptr, this runs code completion without compiling the
+/// code.
+///
 /// If \p SpecFuzzyFind is set, a speculative and asynchronous fuzzy find index
 /// request (based on cached request) will be run before parsing sema. In case
 /// the speculative result is used by code completion (e.g. speculation failed),
@@ -254,10 +263,21 @@ SignatureHelp signatureHelp(PathRef FileName,
 // completion.
 bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx);
 
-/// Retrives a speculative code completion filter text before the cursor.
-/// Exposed for testing only.
-llvm::Expected<llvm::StringRef>
-speculateCompletionFilter(llvm::StringRef Content, Position Pos);
+// Text immediately before the completion point that should be completed.
+// This is heuristically derived from the source code, and is used when:
+//   - semantic analysis fails
+//   - semantic analysis may be slow, and we speculatively query the index
+struct CompletionPrefix {
+  // The unqualified partial name.
+  // If there is none, begin() == end() == completion position.
+  llvm::StringRef Name;
+  // The spelled scope qualifier, such as Foo::.
+  // If there is none, begin() == end() == Name.begin().
+  llvm::StringRef Qualifier;
+};
+// Heuristically parses before Offset to determine what should be completed.
+CompletionPrefix guessCompletionPrefix(llvm::StringRef Content,
+                                       unsigned Offset);
 
 } // namespace clangd
 } // namespace clang

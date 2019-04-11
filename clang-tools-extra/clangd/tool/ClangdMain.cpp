@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Features.inc"
 #include "ClangdLSPServer.h"
+#include "CodeComplete.h"
+#include "Features.inc"
 #include "Path.h"
 #include "Protocol.h"
 #include "Trace.h"
@@ -153,6 +154,20 @@ static llvm::cl::opt<bool> AllScopesCompletion(
 static llvm::cl::opt<bool> ShowOrigins(
     "debug-origin", llvm::cl::desc("Show origins of completion items"),
     llvm::cl::init(CodeCompleteOptions().ShowOrigins), llvm::cl::Hidden);
+
+static llvm::cl::opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion(
+    "header-insertion",
+    llvm::cl::desc("Add #include directives when accepting code completions"),
+    llvm::cl::init(CodeCompleteOptions().InsertIncludes),
+    llvm::cl::values(
+        clEnumValN(CodeCompleteOptions::IWYU, "iwyu",
+                   "Include what you use. "
+                   "Insert the owning header for top-level symbols, unless the "
+                   "header is already directly included or the symbol is "
+                   "forward-declared."),
+        clEnumValN(
+            CodeCompleteOptions::NeverInsert, "never",
+            "Never insert #include directives as part of code completion")));
 
 static llvm::cl::opt<bool> HeaderInsertionDecorators(
     "header-insertion-decorators",
@@ -438,6 +453,7 @@ int main(int argc, char *argv[]) {
   CCOpts.Limit = LimitResults;
   CCOpts.BundleOverloads = CompletionStyle != Detailed;
   CCOpts.ShowOrigins = ShowOrigins;
+  CCOpts.InsertIncludes = HeaderInsertion;
   if (!HeaderInsertionDecorators) {
     CCOpts.IncludeIndicator.Insert.clear();
     CCOpts.IncludeIndicator.NoInsert.clear();

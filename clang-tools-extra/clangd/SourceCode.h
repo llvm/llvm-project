@@ -156,6 +156,10 @@ llvm::Expected<tooling::Replacements>
 cleanupAndFormat(StringRef Code, const tooling::Replacements &Replaces,
                  const format::FormatStyle &Style);
 
+/// Collects identifiers with counts in the source code.
+llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
+                                             const format::FormatStyle &Style);
+
 } // namespace clangd
 } // namespace clang
 #endif

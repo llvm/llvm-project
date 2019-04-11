@@ -20,6 +20,7 @@
 #include "TestTU.h"
 #include "index/MemIndex.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
@@ -32,7 +33,6 @@ namespace {
 using ::llvm::Failed;
 using ::testing::AllOf;
 using ::testing::Contains;
-using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::HasSubstr;
@@ -137,6 +137,25 @@ CodeCompleteResult completions(llvm::StringRef Text,
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
   return completions(Server, Text, std::move(IndexSymbols), std::move(Opts),
                      FilePath);
+}
+
+// Builds a server and runs code completion.
+// If IndexSymbols is non-empty, an index will be built and passed to opts.
+CodeCompleteResult completionsNoCompile(llvm::StringRef Text,
+                                        std::vector<Symbol> IndexSymbols = {},
+                                        clangd::CodeCompleteOptions Opts = {},
+                                        PathRef FilePath = "foo.cpp") {
+  std::unique_ptr<SymbolIndex> OverrideIndex;
+  if (!IndexSymbols.empty()) {
+    assert(!Opts.Index && "both Index and IndexSymbols given!");
+    OverrideIndex = memIndex(std::move(IndexSymbols));
+    Opts.Index = OverrideIndex.get();
+  }
+
+  MockFSProvider FS;
+  Annotations Test(Text);
+  return codeComplete(FilePath, tooling::CompileCommand(), /*Preamble=*/nullptr,
+                      Test.code(), Test.point(), FS.getFileSystem(), Opts);
 }
 
 Symbol withReferences(int N, Symbol S) {
@@ -556,6 +575,16 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
                              {Sym});
   EXPECT_THAT(Results.Completions,
               ElementsAre(AllOf(Named("X"), InsertInclude("\"bar.h\""))));
+  // Can be disabled via option.
+  CodeCompleteOptions NoInsertion;
+  NoInsertion.InsertIncludes = CodeCompleteOptions::NeverInsert;
+  Results = completions(Server,
+                             R"cpp(
+          int main() { ns::^ }
+      )cpp",
+                             {Sym}, NoInsertion);
+  EXPECT_THAT(Results.Completions,
+              ElementsAre(AllOf(Named("X"), Not(InsertInclude()))));
   // Duplicate based on inclusions in preamble.
   Results = completions(Server,
                         R"cpp(
@@ -1915,28 +1944,37 @@ TEST(CompletionTest, OverridesNonIdentName) {
   )cpp");
 }
 
-TEST(SpeculateCompletionFilter, Filters) {
-  Annotations F(R"cpp($bof^
-      $bol^
-      ab$ab^
-      x.ab$dot^
-      x.$dotempty^
-      x::ab$scoped^
-      x::$scopedempty^
+TEST(GuessCompletionPrefix, Filters) {
+  for (llvm::StringRef Case : {
+    "[[scope::]][[ident]]^",
+    "[[]][[]]^",
+    "\n[[]][[]]^",
+    "[[]][[ab]]^",
+    "x.[[]][[ab]]^",
+    "x.[[]][[]]^",
+    "[[x::]][[ab]]^",
+    "[[x::]][[]]^",
+    "[[::x::]][[ab]]^",
+    "some text [[scope::more::]][[identif]]^ier",
+    "some text [[scope::]][[mor]]^e::identifier",
+    "weird case foo::[[::bar::]][[baz]]^",
+  }) {
+    Annotations F(Case);
+    auto Offset = cantFail(positionToOffset(F.code(), F.point()));
+    auto ToStringRef = [&](Range R) {
+      return F.code().slice(cantFail(positionToOffset(F.code(), R.start)),
+                            cantFail(positionToOffset(F.code(), R.end)));
+    };
+    auto WantQualifier = ToStringRef(F.ranges()[0]),
+         WantName = ToStringRef(F.ranges()[1]);
 
-  )cpp");
-  auto speculate = [&](StringRef PointName) {
-    auto Filter = speculateCompletionFilter(F.code(), F.point(PointName));
-    assert(Filter);
-    return *Filter;
-  };
-  EXPECT_EQ(speculate("bof"), "");
-  EXPECT_EQ(speculate("bol"), "");
-  EXPECT_EQ(speculate("ab"), "ab");
-  EXPECT_EQ(speculate("dot"), "ab");
-  EXPECT_EQ(speculate("dotempty"), "");
-  EXPECT_EQ(speculate("scoped"), "ab");
-  EXPECT_EQ(speculate("scopedempty"), "");
+    auto Prefix = guessCompletionPrefix(F.code(), Offset);
+    // Even when components are empty, check their offsets are correct.
+    EXPECT_EQ(WantQualifier, Prefix.Qualifier) << Case;
+    EXPECT_EQ(WantQualifier.begin(), Prefix.Qualifier.begin()) << Case;
+    EXPECT_EQ(WantName, Prefix.Name) << Case;
+    EXPECT_EQ(WantName.begin(), Prefix.Name.begin()) << Case;
+  }
 }
 
 TEST(CompletionTest, EnableSpeculativeIndexRequest) {
@@ -2364,6 +2402,50 @@ TEST(CompletionTest, NestedScopeIsUnresolved) {
                              {cls("a::b::c::XYZ")}, Opts);
   EXPECT_THAT(Results.Completions,
               UnorderedElementsAre(AllOf(Qualifier(""), Named("XYZ"))));
+}
+
+// Clang parser gets confused here and doesn't report the ns:: prefix.
+// Naive behavior is to insert it again. We examine the source and recover.
+TEST(CompletionTest, NamespaceDoubleInsertion) {
+  clangd::CodeCompleteOptions Opts = {};
+
+  auto Results = completions(R"cpp(
+    namespace foo {
+    namespace ns {}
+    #define M(X) < X
+    M(ns::ABC^
+    }
+  )cpp",
+                             {cls("foo::ns::ABCDE")}, Opts);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Named("ABCDE"))));
+}
+
+TEST(NoCompileCompletionTest, Basic) {
+  auto Results = completionsNoCompile(R"cpp(
+    void func() {
+      int xyz;
+      int abc;
+      ^
+    }
+  )cpp");
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(Named("void"), Named("func"), Named("int"),
+                                   Named("xyz"), Named("abc")));
+}
+
+TEST(NoCompileCompletionTest, WithFilter) {
+  auto Results = completionsNoCompile(R"cpp(
+    void func() {
+      int sym1;
+      int sym2;
+      int xyz1;
+      int xyz2;
+      sy^
+    }
+  )cpp");
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(Named("sym1"), Named("sym2")));
 }
 
 } // namespace

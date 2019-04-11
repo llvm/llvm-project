@@ -9,6 +9,7 @@
 #include "Context.h"
 #include "Protocol.h"
 #include "SourceCode.h"
+#include "clang/Format/Format.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Testing/Support/Error.h"
@@ -302,6 +303,23 @@ TEST(SourceCodeTests, SourceLocationInMainFile) {
     EXPECT_THAT_EXPECTED(sourceLocationInMainFile(SM, P),
                          HasValue(StartOfFile.getLocWithOffset(Offset)));
   }
+}
+
+TEST(SourceCodeTests, CollectIdentifiers) {
+  auto Style = format::getLLVMStyle();
+  auto IDs = collectIdentifiers(R"cpp(
+  #include "a.h"
+  void foo() { int xyz; int abc = xyz; return foo(); }
+  )cpp",
+                                Style);
+  EXPECT_EQ(IDs.size(), 7u);
+  EXPECT_EQ(IDs["include"], 1u);
+  EXPECT_EQ(IDs["void"], 1u);
+  EXPECT_EQ(IDs["int"], 2u);
+  EXPECT_EQ(IDs["xyz"], 2u);
+  EXPECT_EQ(IDs["abc"], 1u);
+  EXPECT_EQ(IDs["return"], 1u);
+  EXPECT_EQ(IDs["foo"], 2u);
 }
 
 } // namespace
