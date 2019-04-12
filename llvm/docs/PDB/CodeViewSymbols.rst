@@ -52,13 +52,51 @@ to appear in a PDB file.  Public Symbols (which appear only in the
 Public Symbols
 --------------
 
+Public symbols are the CodeView equivalent of DWARF ``.debug_pubnames``.  There
+is one public symbol record for every function or variable in the program that
+has a mangled name.  The :doc:`Publics Stream <PublicStream>`, which contains these
+records, additionally contains a hash table that allows one to quickly locate a
+record by mangled name.
+
 S_PUB32 (0x110e)
 ^^^^^^^^^^^^^^^^
+
+There is only type of public symbol, an ``S_PUB32`` which describes a mangled
+name, a flag indicating what kind of symbol it is (e.g. function, variable), and
+the symbol's address.  The :ref:`dbi_section_map_substream` of the
+:doc:`DBI Stream <DbiStream>` can be consulted to determine what module this address
+corresponds to, and from there that module's :doc:`module debug stream <ModiStream>`
+can be consulted to locate full information for the symbol with the given address.
 
 .. _global_symbols:
 
 Global Symbols
 --------------
+
+While there is one :ref:`public symbol <public_symbols>` for every symbol in the
+program with `external` linkage, there is one global symbol for every symbol in the
+program with linkage (including internal linkage).  As a result, global symbols do
+not describe a mangled name *or* an address, since symbols with internal linkage
+need not have any mangling at all, and also may not have an address.  Thus, all
+global symbols simply refer directly to the full symbol record via a module/offset
+combination.
+
+Similarly to :ref:`public symbols <public_symbols>`, all global symbols are contained
+in a single :doc:`Globals Stream <GlobalStream>`, which contains a hash table mapping
+fully qualified name to the corresponding record in the globals stream (which as
+mentioned, then contains information allowing one to locate the full record in the
+corresponding module symbol stream).
+
+Note that a consequence and limitation of this design is that program-wide lookup
+by anything other than an exact textually matching fully-qualified name of whatever
+the compiler decided to emit is impractical.  This differs from DWARF, where even
+though we don't necessarily have O(1) lookup by basename within a given scope (including
+O(1) scope, we at least have O(n) access within a given scope).
+
+.. important::
+   Program-wide lookup of names by anything other than an exact textually matching fully
+   qualified name is not possible.
+
 
 S_GDATA32
 ^^^^^^^^^^
@@ -71,7 +109,6 @@ S_PROCREF (0x1125)
 
 S_LPROCREF (0x1127)
 ^^^^^^^^^^^^^^^^^^^
-
 
 S_GMANDATA (0x111d)
 ^^^^^^^^^^^^^^^^^^^

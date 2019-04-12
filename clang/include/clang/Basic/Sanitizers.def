@@ -40,6 +40,12 @@
 // AddressSanitizer
 SANITIZER("address", Address)
 
+// Requires AddressSanitizer
+SANITIZER("pointer-compare", PointerCompare)
+
+// Requires AddressSanitizer
+SANITIZER("pointer-subtract", PointerSubtract)
+
 // Kernel AddressSanitizer (KASan)
 SANITIZER("kernel-address", KernelAddress)
 

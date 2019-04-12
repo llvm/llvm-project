@@ -100,6 +100,20 @@ extern "C" void LLVMInitializePowerPCTarget() {
   RegisterTargetMachine<PPCTargetMachine> C(getThePPC64LETarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializePPCCTRLoopsPass(PR);
+#ifndef NDEBUG
+  initializePPCCTRLoopsVerifyPass(PR);
+#endif
+  initializePPCLoopPreIncPrepPass(PR);
+  initializePPCTOCRegDepsPass(PR);
+  initializePPCEarlyReturnPass(PR);
+  initializePPCVSXCopyPass(PR);
+  initializePPCVSXFMAMutatePass(PR);
+  initializePPCVSXSwapRemovalPass(PR);
+  initializePPCReduceCRLogicalsPass(PR);
+  initializePPCBSelPass(PR);
+  initializePPCBranchCoalescingPass(PR);
+  initializePPCQPXLoadSplatPass(PR);
   initializePPCBoolRetToIntPass(PR);
   initializePPCExpandISELPass(PR);
   initializePPCPreEmitPeepholePass(PR);

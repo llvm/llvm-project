@@ -6,7 +6,7 @@ define i64 @test1(i8* %data) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    shlq $2, %rax
+; CHECK-NEXT:    shll $2, %eax
 ; CHECK-NEXT:    andl $60, %eax
 ; CHECK-NEXT:    retq
 entry:

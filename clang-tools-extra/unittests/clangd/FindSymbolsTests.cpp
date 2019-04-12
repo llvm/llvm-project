@@ -147,8 +147,7 @@ TEST_F(WorkspaceSymbolsTest, InMainFile) {
       int test() {}
       static test2() {}
       )cpp");
-  EXPECT_THAT(getSymbols("test"), 
-              ElementsAre(QName("test"), QName("test2")));
+  EXPECT_THAT(getSymbols("test"), ElementsAre(QName("test"), QName("test2")));
 }
 
 TEST_F(WorkspaceSymbolsTest, Namespaces) {
@@ -299,6 +298,23 @@ TEST_F(WorkspaceSymbolsTest, WithLimit) {
 
   Limit = 1;
   EXPECT_THAT(getSymbols("foo"), ElementsAre(QName("foo")));
+}
+
+TEST_F(WorkspaceSymbolsTest, TempSpecs) {
+  addFile("foo.h", R"cpp(
+      template <typename T, typename U, int X = 5> class Foo {};
+      template <typename T> class Foo<int, T> {};
+      template <> class Foo<bool, int> {};
+      template <> class Foo<bool, int, 3> {};
+      )cpp");
+  // Foo is higher ranked because of exact name match.
+  EXPECT_THAT(
+      getSymbols("Foo"),
+      UnorderedElementsAre(
+          AllOf(QName("Foo"), WithKind(SymbolKind::Class)),
+          AllOf(QName("Foo<int, T>"), WithKind(SymbolKind::Class)),
+          AllOf(QName("Foo<bool, int>"), WithKind(SymbolKind::Class)),
+          AllOf(QName("Foo<bool, int, 3>"), WithKind(SymbolKind::Class))));
 }
 
 namespace {
@@ -525,11 +541,9 @@ TEST_F(DocumentSymbolsTest, Template) {
           AllOf(WithName("Tmpl<double>"), WithKind(SymbolKind::Struct),
                 Children()),
           AllOf(WithName("funcTmpl"), Children()),
-          // FIXME(ibiryukov): template args should be <int> to match the code.
-          AllOf(WithName("funcTmpl<int, double, float>"), Children()),
+          AllOf(WithName("funcTmpl<int>"), Children()),
           AllOf(WithName("varTmpl"), Children()),
-          // FIXME(ibiryukov): template args should be <int> to match the code.
-          AllOf(WithName("varTmpl<int, double>"), Children())));
+          AllOf(WithName("varTmpl<int>"), Children())));
 }
 
 TEST_F(DocumentSymbolsTest, Namespaces) {
@@ -651,6 +665,23 @@ TEST_F(DocumentSymbolsTest, UsingDirectives) {
               ElementsAre(WithName("ns"), WithName("ns_alias"),
                           WithName("using namespace ::ns"),
                           WithName("using namespace ns_alias")));
+}
+
+TEST_F(DocumentSymbolsTest, TempSpecs) {
+  addFile("foo.cpp", R"cpp(
+      template <typename T, typename U, int X = 5> class Foo {};
+      template <typename T> class Foo<int, T> {};
+      template <> class Foo<bool, int> {};
+      template <> class Foo<bool, int, 3> {};
+      )cpp");
+  // Foo is higher ranked because of exact name match.
+  EXPECT_THAT(
+      getSymbols("foo.cpp"),
+      UnorderedElementsAre(
+          AllOf(WithName("Foo"), WithKind(SymbolKind::Class)),
+          AllOf(WithName("Foo<int, T>"), WithKind(SymbolKind::Class)),
+          AllOf(WithName("Foo<bool, int>"), WithKind(SymbolKind::Class)),
+          AllOf(WithName("Foo<bool, int, 3>"), WithKind(SymbolKind::Class))));
 }
 
 } // namespace clangd

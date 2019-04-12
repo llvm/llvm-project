@@ -12,6 +12,7 @@
 
 #include "AArch64TargetStreamer.h"
 #include "llvm/MC/ConstantPools.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
 using namespace llvm;

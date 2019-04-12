@@ -17,6 +17,7 @@
 #include "SparcRegisterInfo.h"
 #include "SparcTargetMachine.h"
 #include "SparcTargetObjectFile.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"

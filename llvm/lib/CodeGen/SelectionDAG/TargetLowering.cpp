@@ -961,6 +961,12 @@ bool TargetLowering::SimplifyDemandedBits(
                                Known, TLO, Depth + 1))
         return true;
 
+      // Try shrinking the operation as long as the shift amount will still be
+      // in range.
+      if ((ShAmt < DemandedBits.getActiveBits()) &&
+          ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO))
+        return true;
+
       // Convert (shl (anyext x, c)) to (anyext (shl x, c)) if the high bits
       // are not demanded. This will likely allow the anyext to be folded away.
       if (Op0.getOpcode() == ISD::ANY_EXTEND) {

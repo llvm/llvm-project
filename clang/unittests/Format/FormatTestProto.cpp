@@ -193,6 +193,10 @@ TEST_F(FormatTestProto, DoesntWrapFileOptions) {
              "\"some.really.long.package.that.exceeds.the.column.limit\";"));
 }
 
+TEST_F(FormatTestProto, TrailingCommentAfterFileOption) {
+  verifyFormat("option java_package = \"foo.pkg\";  // comment\n");
+}
+
 TEST_F(FormatTestProto, FormatsOptions) {
   verifyFormat("option (MyProto.options) = {\n"
                "  field_a: OK\n"

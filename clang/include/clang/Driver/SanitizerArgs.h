@@ -38,6 +38,8 @@ class SanitizerArgs {
   bool AsanPoisonCustomArrayCookie = false;
   bool AsanGlobalsDeadStripping = false;
   bool AsanUseOdrIndicator = false;
+  bool AsanInvalidPointerCmp = false;
+  bool AsanInvalidPointerSub = false;
   std::string HwasanAbi;
   bool LinkCXXRuntimes = false;
   bool NeedPIE = false;

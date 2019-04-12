@@ -481,9 +481,14 @@ private:
 public:
   virtual ~SectionIndexSection() {}
   void addIndex(uint32_t Index) {
-    Indexes.push_back(Index);
-    Size += 4;
+    assert(Size > 0);
+    Indexes.push_back(Index);    
   }
+
+  void reserve(size_t NumSymbols) {
+    Indexes.reserve(NumSymbols);
+    Size = NumSymbols * 4;
+  }  
   void setSymTab(SymbolTableSection *SymTab) { Symbols = SymTab; }
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;
@@ -524,6 +529,7 @@ public:
     SectionIndexTable = ShndxTable;
   }
   const SectionIndexSection *getShndxTable() const { return SectionIndexTable; }
+  void fillShndxTable();
   const SectionBase *getStrTab() const { return SymbolNames; }
   const Symbol *getSymbolByIndex(uint32_t Index) const;
   Symbol *getSymbolByIndex(uint32_t Index);
