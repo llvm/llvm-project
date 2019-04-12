@@ -165,6 +165,18 @@ public:
                 Accessor)
       : multi_ptr(Accessor.get_pointer()) {}
 
+  // TODO: This constructor is the temporary solution for the existing problem
+  // with conversions from multi_ptr<ElementType, Space> to
+  // multi_ptr<const ElementType, Space>. Without it the compiler
+  // fails due to having 3 different same rank paths available.
+  // Constructs multi_ptr<const ElementType, Space>:
+  //   multi_ptr<ElementType, Space> -> multi_ptr<const ElementTYpe, Space>
+  template <typename ET = ElementType>
+  multi_ptr(typename std::enable_if<
+      std::is_const<ET>::value && std::is_same<ET, ElementType>::value,
+      const multi_ptr<typename std::remove_const<ET>::type, Space> >::type &ETP)
+      : m_Pointer(ETP.get()) {}
+
   // Returns the underlying OpenCL C pointer
   pointer_t get() const { return m_Pointer; }
 
@@ -174,10 +186,32 @@ public:
   }
 
   // Implicit conversion to a multi_ptr<void>
-  operator multi_ptr<void, Space>() const {
-    using void_ptr_t = typename detail::PtrValueType<void, Space>::type *;
-    return multi_ptr<void, Space>(reinterpret_cast<void_ptr_t>(m_Pointer));
-  };
+  // Only available when ElementType is not const-qualified
+  template <typename ET = ElementType>
+  operator multi_ptr<typename std::enable_if<
+      std::is_same<ET, ElementType>::value && !std::is_const<ET>::value,
+      void>::type, Space>() const {
+    using ptr_t = typename detail::PtrValueType<void, Space>::type *;
+    return multi_ptr<void, Space>(reinterpret_cast<ptr_t>(m_Pointer));
+  }
+
+  // Implicit conversion to a multi_ptr<const void>
+  // Only available when ElementType is const-qualified
+  template <typename ET = ElementType>
+  operator multi_ptr<typename std::enable_if<
+      std::is_same<ET, ElementType>::value && std::is_const<ET>::value,
+      const void>::type, Space>() const {
+    using ptr_t = typename detail::PtrValueType<const void, Space>::type *;
+    return multi_ptr<const void, Space>(reinterpret_cast<ptr_t>(m_Pointer));
+  }
+
+  // Implicit conversion to multi_ptr<const ElementType, Space>
+  operator multi_ptr<const ElementType, Space>() const {
+    using ptr_t =
+        typename detail::PtrValueType<const ElementType, Space>::type *;
+    return multi_ptr<const ElementType, Space>(
+        reinterpret_cast<ptr_t>(m_Pointer));
+  }
 
   // Arithmetic operators
   multi_ptr &operator++() {
@@ -260,11 +294,10 @@ public:
   multi_ptr(std::nullptr_t) : m_Pointer(nullptr) {}
   ~multi_ptr() = default;
 
-  // TODO: this constructor is a temporary solution for the cases where
-  // the conversion to void multi pointer is used. Without it the compiler
+  // TODO: This constructor is the temporary solution for the existing problem
+  // with conversions from multi_ptr<ElementType, Space> to
+  // multi_ptr<void, Space>. Without it the compiler
   // fails due to having 3 different same rank paths available.
-  // The issue is being discussed in Khronos groups now.
-  // See https://gitlab.khronos.org/sycl/Specification/issues/215 for details.
   template <typename ElementType>
   multi_ptr(const multi_ptr<ElementType, Space> &ETP) : m_Pointer(ETP.get()) {}
 
@@ -327,7 +360,7 @@ public:
   pointer_t get() const { return m_Pointer; }
 
   // Implicit conversion to the underlying pointer type
-  operator void *() const { return m_Pointer; };
+  operator void*() const { return reinterpret_cast<void *>(m_Pointer); };
 
   // Explicit conversion to a multi_ptr<ElementType>
   template <typename ElementType>
@@ -336,6 +369,133 @@ public:
         typename detail::PtrValueType<ElementType, Space>::type *;
     return multi_ptr<ElementType, Space>(
         static_cast<elem_pointer_t>(m_Pointer));
+  }
+
+  // Implicit conversion to multi_ptr<const void, Space>
+  operator multi_ptr<const void, Space>() const {
+    using ptr_t = typename detail::PtrValueType<const void, Space>::type *;
+    return multi_ptr<const void, Space>(reinterpret_cast<ptr_t>(m_Pointer));
+  }
+
+private:
+  pointer_t m_Pointer;
+};
+
+// Specialization of multi_ptr for const void
+template <access::address_space Space>
+class multi_ptr<const void, Space> {
+public:
+  using element_type = const void;
+  using difference_type = std::ptrdiff_t;
+
+  // Implementation defined pointer types that correspond to
+  // SYCL/OpenCL interoperability types for OpenCL C functions
+  using pointer_t = typename detail::PtrValueType<const void, Space>::type *;
+  using const_pointer_t =
+      typename detail::PtrValueType<const void, Space>::type const *;
+
+  static constexpr access::address_space address_space = Space;
+
+  // Constructors
+  multi_ptr() : m_Pointer(nullptr) {}
+  multi_ptr(const multi_ptr &) = default;
+  multi_ptr(multi_ptr &&) = default;
+  multi_ptr(pointer_t pointer) : m_Pointer(pointer) {}
+#ifdef __SYCL_DEVICE_ONLY__
+  multi_ptr(const void *pointer)
+      : m_Pointer(reinterpret_cast<pointer_t>(pointer)) {
+    // TODO An implementation should reject an argument if the deduced
+    // address space is not compatible with Space.
+  }
+#endif
+  multi_ptr(std::nullptr_t) : m_Pointer(nullptr) {}
+  ~multi_ptr() = default;
+
+  // TODO: This constructor is the temporary solution for the existing problem
+  // with conversions from multi_ptr<ElementType, Space> to
+  // multi_ptr<const void, Space>. Without it the compiler
+  // fails due to having 3 different same rank paths available.
+  template <typename ElementType>
+  multi_ptr(const multi_ptr<ElementType, Space> &ETP) : m_Pointer(ETP.get()) {}
+
+  // Assignment operators
+  multi_ptr &operator=(const multi_ptr &) = default;
+  multi_ptr &operator=(multi_ptr &&) = default;
+  multi_ptr &operator=(pointer_t pointer) {
+    m_Pointer = pointer;
+    return *this;
+  }
+#ifdef __SYCL_DEVICE_ONLY__
+  multi_ptr &operator=(const void *pointer) {
+    // TODO An implementation should reject an argument if the deduced
+    // address space is not compatible with Space.
+    m_Pointer = reinterpret_cast<pointer_t>(pointer);
+    return *this;
+  }
+#endif
+  multi_ptr &operator=(std::nullptr_t) {
+    m_Pointer = nullptr;
+    return *this;
+  }
+
+  // Only if Space == global_space
+  template <typename ElementType, int dimensions, access::mode Mode,
+            access::address_space _Space = Space,
+            typename = typename std::enable_if<
+                _Space == Space &&
+                Space == access::address_space::global_space>::type>
+  multi_ptr(
+      accessor<ElementType, dimensions, Mode, access::target::global_buffer,
+               access::placeholder::false_t>
+          Accessor)
+      : multi_ptr(Accessor.get_pointer()) {}
+
+  // Only if Space == local_space
+  template <
+      typename ElementType, int dimensions, access::mode Mode,
+      access::address_space _Space = Space,
+      typename = typename std::enable_if<
+          _Space == Space && Space == access::address_space::local_space>::type>
+  multi_ptr(accessor<ElementType, dimensions, Mode, access::target::local,
+                     access::placeholder::false_t>
+                Accessor)
+      : multi_ptr(Accessor.get_pointer()) {}
+
+  // Only if Space == constant_space
+  template <typename ElementType, int dimensions, access::mode Mode,
+            access::address_space _Space = Space,
+            typename = typename std::enable_if<
+                _Space == Space &&
+                Space == access::address_space::constant_space>::type>
+  multi_ptr(
+      accessor<ElementType, dimensions, Mode, access::target::constant_buffer,
+               access::placeholder::false_t>
+          Accessor)
+      : multi_ptr(Accessor.get_pointer()) {}
+
+  // Returns the underlying OpenCL C pointer
+  pointer_t get() const { return m_Pointer; }
+
+  // Implicit conversion to the underlying pointer type
+  operator const void*() const {
+    return reinterpret_cast<const void *>(m_Pointer);
+  };
+
+  // Explicit conversion to a multi_ptr<const ElementType>
+  // multi_ptr<const void, Space> -> multi_ptr<const void, Space>
+  // The result type must have const specifier.
+  template <typename ElementType>
+  explicit operator multi_ptr<const ElementType, Space>() const {
+    using elem_pointer_t =
+        typename detail::PtrValueType<const ElementType, Space>::type *;
+    return multi_ptr<const ElementType, Space>(
+        static_cast<elem_pointer_t>(m_Pointer));
+  }
+
+  // Implicit conversion to multi_ptr<const void, Space>
+  operator multi_ptr<const void, Space>() const {
+    using ptr_t = typename detail::PtrValueType<const void, Space>::type *;
+    return multi_ptr<const void, Space>(reinterpret_cast<ptr_t>(m_Pointer));
   }
 
 private:
