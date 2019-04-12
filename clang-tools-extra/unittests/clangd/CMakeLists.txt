@@ -13,6 +13,7 @@ include_directories(
 
 add_extra_unittest(ClangdTests
   Annotations.cpp
+  PrintASTTests.cpp
   BackgroundIndexTests.cpp
   CancellationTests.cpp
   ClangdTests.cpp
