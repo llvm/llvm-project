@@ -160,6 +160,8 @@ private:
 template <typename ResultT = void>
 class FPOProgramASTVisitor {
 protected:
+  virtual ~FPOProgramASTVisitor() = default;
+
   virtual ResultT Visit(FPOProgramNodeBinaryOp &binary,
                         FPOProgramNode *&ref) = 0;
   virtual ResultT Visit(FPOProgramNodeUnaryOp &unary, FPOProgramNode *&ref) = 0;
