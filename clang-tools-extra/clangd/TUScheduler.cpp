@@ -355,7 +355,8 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     FileInputs = Inputs;
     DiagsWereReported = false;
     emitTUStatus({TUAction::BuildingPreamble, TaskName});
-    log("Updating file {0} with command [{1}] {2}", FileName,
+    log("Updating file {0} with command {1}\n[{2}]\n{3}", FileName,
+        Inputs.CompileCommand.Heuristic,
         Inputs.CompileCommand.Directory,
         llvm::join(Inputs.CompileCommand.CommandLine, " "));
     // Rebuild the preamble and the AST.

@@ -90,7 +90,7 @@ protected:
 
     IncludeInserter Inserter(MainFile, /*Code=*/"", format::getLLVMStyle(),
                              CDB.getCompileCommand(MainFile)->Directory,
-                             Clang->getPreprocessor().getHeaderSearchInfo());
+                             &Clang->getPreprocessor().getHeaderSearchInfo());
     for (const auto &Inc : Inclusions)
       Inserter.addExisting(Inc);
     auto Declaring = ToHeaderFile(Original);
@@ -110,7 +110,7 @@ protected:
 
     IncludeInserter Inserter(MainFile, /*Code=*/"", format::getLLVMStyle(),
                              CDB.getCompileCommand(MainFile)->Directory,
-                             Clang->getPreprocessor().getHeaderSearchInfo());
+                             &Clang->getPreprocessor().getHeaderSearchInfo());
     auto Edit = Inserter.insert(VerbatimHeader);
     Action.EndSourceFile();
     return Edit;
@@ -250,6 +250,24 @@ TEST_F(HeadersTest, PreferInserted) {
   auto Edit = insert("<y>");
   EXPECT_TRUE(Edit.hasValue());
   EXPECT_TRUE(StringRef(Edit->newText).contains("<y>"));
+}
+
+TEST(Headers, NoHeaderSearchInfo) {
+  std::string MainFile = testPath("main.cpp");
+  IncludeInserter Inserter(MainFile, /*Code=*/"", format::getLLVMStyle(),
+                           /*BuildDir=*/"", /*HeaderSearchInfo=*/nullptr);
+
+  auto HeaderPath = testPath("sub/bar.h");
+  auto Declaring = HeaderFile{HeaderPath, /*Verbatim=*/false};
+  auto Inserting = HeaderFile{HeaderPath, /*Verbatim=*/false};
+  auto Verbatim = HeaderFile{"<x>", /*Verbatim=*/true};
+
+  EXPECT_EQ(Inserter.calculateIncludePath(Declaring, Inserting),
+            "\"" + HeaderPath + "\"");
+  EXPECT_EQ(Inserter.shouldInsertInclude(Declaring, Inserting), false);
+
+  EXPECT_EQ(Inserter.calculateIncludePath(Declaring, Verbatim), "<x>");
+  EXPECT_EQ(Inserter.shouldInsertInclude(Declaring, Verbatim), true);
 }
 
 } // namespace

@@ -25584,17 +25584,18 @@ bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 
 // Note: this turns large loads into lock cmpxchg8b/16b.
 // TODO: In 32-bit mode, use MOVLPS when SSE1 is available?
-// TODO: In 32-bit mode, use FILD/FISTP when X87 is available?
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   Type *MemType = LI->getType();
 
   // If this a 64 bit atomic load on a 32-bit target and SSE2 is enabled, we
-  // can use movq to do the load.
+  // can use movq to do the load. If we have X87 we can load into an 80-bit
+  // X87 register and store it to a stack temporary.
   bool NoImplicitFloatOps =
       LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat);
   if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
-      !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2())
+      !Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
+      (Subtarget.hasSSE2() || Subtarget.hasX87()))
     return AtomicExpansionKind::None;
 
   return needsCmpXchgNb(MemType) ? AtomicExpansionKind::CmpXChg
@@ -27440,23 +27441,57 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     bool NoImplicitFloatOps =
         DAG.getMachineFunction().getFunction().hasFnAttribute(
             Attribute::NoImplicitFloat);
-    if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
-        Subtarget.hasSSE2()) {
+    if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps) {
       auto *Node = cast<AtomicSDNode>(N);
-      // Use a VZEXT_LOAD which will be selected as MOVQ. Then extract the lower
-      // 64-bits.
-      SDVTList Tys = DAG.getVTList(MVT::v2i64, MVT::Other);
-      SDValue Ops[] = { Node->getChain(), Node->getBasePtr() };
-      SDValue Ld = DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, dl, Tys, Ops,
-                                           MVT::i64, Node->getMemOperand());
-      SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Ld,
-                                DAG.getIntPtrConstant(0, dl));
-      Results.push_back(Res);
-      Results.push_back(Ld.getValue(1));
-      return;
+      if (Subtarget.hasSSE2()) {
+        // Use a VZEXT_LOAD which will be selected as MOVQ. Then extract the
+        // lower 64-bits.
+        SDVTList Tys = DAG.getVTList(MVT::v2i64, MVT::Other);
+        SDValue Ops[] = { Node->getChain(), Node->getBasePtr() };
+        SDValue Ld = DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, dl, Tys, Ops,
+                                             MVT::i64, Node->getMemOperand());
+        SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Ld,
+                                  DAG.getIntPtrConstant(0, dl));
+        Results.push_back(Res);
+        Results.push_back(Ld.getValue(1));
+        return;
+      }
+      if (Subtarget.hasX87()) {
+        // First load this into an 80-bit X87 register. This will put the whole
+        // integer into the significand.
+        // FIXME: Do we need to glue? See FIXME comment in BuildFILD.
+        SDVTList Tys = DAG.getVTList(MVT::f80, MVT::Other, MVT::Glue);
+        SDValue Ops[] = { Node->getChain(), Node->getBasePtr() };
+        SDValue Result = DAG.getMemIntrinsicNode(X86ISD::FILD_FLAG,
+                                                 dl, Tys, Ops, MVT::i64,
+                                                 Node->getMemOperand());
+        SDValue Chain = Result.getValue(1);
+        SDValue InFlag = Result.getValue(2);
+
+        // Now store the X87 register to a stack temporary and convert to i64.
+        // This store is not atomic and doesn't need to be.
+        // FIXME: We don't need a stack temporary if the result of the load
+        // is already being stored. We could just directly store there.
+        SDValue StackPtr = DAG.CreateStackTemporary(MVT::i64);
+        int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+        MachinePointerInfo MPI =
+            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
+        SDValue StoreOps[] = { Chain, Result, StackPtr, InFlag };
+        Chain = DAG.getMemIntrinsicNode(X86ISD::FIST, dl,
+                                        DAG.getVTList(MVT::Other), StoreOps,
+                                        MVT::i64, MPI, 0 /*Align*/,
+                                        MachineMemOperand::MOStore);
+
+        // Finally load the value back from the stack temporary and return it.
+        // This load is not atomic and doesn't need to be.
+        // This load will be further type legalized.
+        Result = DAG.getLoad(MVT::i64, dl, Chain, StackPtr, MPI);
+        Results.push_back(Result);
+        Results.push_back(Result.getValue(1));
+        return;
+      }
     }
     // TODO: Use MOVLPS when SSE1 is available?
-    // TODO: Use FILD/FISTP when X87 is available?
     // Delegate to generic TypeLegalization. Situations we can really handle
     // should have already been dealt with by AtomicExpandPass.cpp.
     break;
@@ -27649,6 +27684,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FXOR:               return "X86ISD::FXOR";
   case X86ISD::FILD:               return "X86ISD::FILD";
   case X86ISD::FILD_FLAG:          return "X86ISD::FILD_FLAG";
+  case X86ISD::FIST:               return "X86ISD::FIST";
   case X86ISD::FP_TO_INT_IN_MEM:   return "X86ISD::FP_TO_INT_IN_MEM";
   case X86ISD::FLD:                return "X86ISD::FLD";
   case X86ISD::FST:                return "X86ISD::FST";
@@ -29055,53 +29091,6 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
 }
 
 MachineBasicBlock *
-X86TargetLowering::EmitLoweredAtomicFP(MachineInstr &MI,
-                                       MachineBasicBlock *BB) const {
-  // Combine the following atomic floating-point modification pattern:
-  //   a.store(reg OP a.load(acquire), release)
-  // Transform them into:
-  //   OPss (%gpr), %xmm
-  //   movss %xmm, (%gpr)
-  // Or sd equivalent for 64-bit operations.
-  unsigned MOp, FOp;
-  switch (MI.getOpcode()) {
-  default: llvm_unreachable("unexpected instr type for EmitLoweredAtomicFP");
-  case X86::RELEASE_FADD32mr:
-    FOp = X86::ADDSSrm;
-    MOp = X86::MOVSSmr;
-    break;
-  case X86::RELEASE_FADD64mr:
-    FOp = X86::ADDSDrm;
-    MOp = X86::MOVSDmr;
-    break;
-  }
-  const X86InstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MI.getDebugLoc();
-  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-  unsigned ValOpIdx = X86::AddrNumOperands;
-  unsigned VSrc = MI.getOperand(ValOpIdx).getReg();
-  MachineInstrBuilder MIB =
-      BuildMI(*BB, MI, DL, TII->get(FOp),
-              MRI.createVirtualRegister(MRI.getRegClass(VSrc)))
-          .addReg(VSrc);
-  for (int i = 0; i < X86::AddrNumOperands; ++i) {
-    MachineOperand &Operand = MI.getOperand(i);
-    // Clear any kill flags on register operands as we'll create a second
-    // instruction using the same address operands.
-    if (Operand.isReg())
-      Operand.setIsKill(false);
-    MIB.add(Operand);
-  }
-  MachineInstr *FOpMI = MIB;
-  MIB = BuildMI(*BB, MI, DL, TII->get(MOp));
-  for (int i = 0; i < X86::AddrNumOperands; ++i)
-    MIB.add(MI.getOperand(i));
-  MIB.addReg(FOpMI->getOperand(0).getReg(), RegState::Kill);
-  MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return BB;
-}
-
-MachineBasicBlock *
 X86TargetLowering::EmitLoweredSegAlloca(MachineInstr &MI,
                                         MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
@@ -30335,10 +30324,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
-
-  case X86::RELEASE_FADD32mr:
-  case X86::RELEASE_FADD64mr:
-    return EmitLoweredAtomicFP(MI, BB);
 
   case X86::FP32_TO_INT16_IN_MEM:
   case X86::FP32_TO_INT32_IN_MEM:
@@ -33225,9 +33210,27 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     }
     break;
   }
-  case X86ISD::PSHUFB: {
-    // TODO - simplify other variable shuffle masks.
+  case X86ISD::VPERMV: {
+    SDValue Mask = Op.getOperand(0);
+    APInt MaskUndef, MaskZero;
+    if (SimplifyDemandedVectorElts(Mask, DemandedElts, MaskUndef, MaskZero, TLO,
+                                   Depth + 1))
+      return true;
+    break;
+  }
+  case X86ISD::PSHUFB:
+  case X86ISD::VPERMV3:
+  case X86ISD::VPERMILPV: {
     SDValue Mask = Op.getOperand(1);
+    APInt MaskUndef, MaskZero;
+    if (SimplifyDemandedVectorElts(Mask, DemandedElts, MaskUndef, MaskZero, TLO,
+                                   Depth + 1))
+      return true;
+    break;
+  }
+  case X86ISD::VPPERM:
+  case X86ISD::VPERMIL2: {
+    SDValue Mask = Op.getOperand(2);
     APInt MaskUndef, MaskZero;
     if (SimplifyDemandedVectorElts(Mask, DemandedElts, MaskUndef, MaskZero, TLO,
                                    Depth + 1))
@@ -34552,8 +34555,12 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG) {
   // Vector FP selects don't fit the pattern of FP math ops (because the
   // condition has a different type and we have to change the opcode), so deal
   // with those here.
+  // FIXME: This is restricted to pre type legalization by ensuring the setcc
+  // has i1 elements. If we loosen this we need to convert vector bool to a
+  // scalar bool.
   if (Vec.getOpcode() == ISD::VSELECT &&
       Vec.getOperand(0).getOpcode() == ISD::SETCC &&
+      Vec.getOperand(0).getValueType().getScalarType() == MVT::i1 &&
       Vec.getOperand(0).getOperand(0).getValueType() == VecVT) {
     // ext (sel Cond, X, Y), 0 --> sel (ext Cond, 0), (ext X, 0), (ext Y, 0)
     SDLoc DL(ExtElt);

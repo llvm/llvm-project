@@ -1,15 +1,15 @@
-// RUN: %clang_tsan %s -o %t -framework Foundation
+// RUN: %clang_tsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
-#import <Foundation/Foundation.h>
+#include "dispatch/dispatch.h"
 
-#import "../test.h"
+#include <stdio.h>
 
 long global;
 
 int main() {
-  NSLog(@"Hello world.");
-  NSLog(@"addr=%p\n", &global);
+  fprintf(stderr, "Hello world.\n");
+  dispatch_semaphore_t done = dispatch_semaphore_create(0);
 
   dispatch_queue_t q1 = dispatch_queue_create("my.queue1", DISPATCH_QUEUE_CONCURRENT);
   dispatch_queue_t q2 = dispatch_queue_create("my.queue2", DISPATCH_QUEUE_SERIAL);
@@ -26,13 +26,11 @@ int main() {
   }
 
   dispatch_barrier_async(q1, ^{
-    dispatch_sync(dispatch_get_main_queue(), ^{
-      CFRunLoopStop(CFRunLoopGetCurrent());
-    });
+    dispatch_semaphore_signal(done);
   });
 
-  CFRunLoopRun();
-  NSLog(@"Done.");
+  dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
+  fprintf(stderr, "Done.\n");
 }
 
 // CHECK: Hello world.

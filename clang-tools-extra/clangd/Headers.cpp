@@ -175,6 +175,8 @@ void IncludeInserter::addExisting(const Inclusion &Inc) {
 bool IncludeInserter::shouldInsertInclude(
     const HeaderFile &DeclaringHeader, const HeaderFile &InsertedHeader) const {
   assert(DeclaringHeader.valid() && InsertedHeader.valid());
+  if (!HeaderSearchInfo && !InsertedHeader.Verbatim)
+    return false;
   if (FileName == DeclaringHeader.File || FileName == InsertedHeader.File)
     return false;
   auto Included = [&](llvm::StringRef Header) {
@@ -190,7 +192,9 @@ IncludeInserter::calculateIncludePath(const HeaderFile &DeclaringHeader,
   if (InsertedHeader.Verbatim)
     return InsertedHeader.File;
   bool IsSystem = false;
-  std::string Suggested = HeaderSearchInfo.suggestPathToFileForDiagnostics(
+  if (!HeaderSearchInfo)
+    return "\"" + InsertedHeader.File + "\"";
+  std::string Suggested = HeaderSearchInfo->suggestPathToFileForDiagnostics(
       InsertedHeader.File, BuildDir, &IsSystem);
   if (IsSystem)
     Suggested = "<" + Suggested + ">";

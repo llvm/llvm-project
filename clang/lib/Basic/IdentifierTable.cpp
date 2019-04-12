@@ -218,7 +218,7 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   if (LangOpts.DeclSpecKeyword)
     AddKeyword("__declspec", tok::kw___declspec, KEYALL, LangOpts, *this);
 
-  // Add the '_experimental_modules_import' contextual keyword.
+  // Add the 'import' contextual keyword.
   get("import").setModulesImport(true);
 }
 

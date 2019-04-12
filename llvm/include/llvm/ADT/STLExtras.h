@@ -1277,28 +1277,32 @@ auto partition(R &&Range, UnaryPredicate P) -> decltype(adl_begin(Range)) {
 
 /// Provide wrappers to std::lower_bound which take ranges instead of having to
 /// pass begin/end explicitly.
-template <typename R, typename ForwardIt>
-auto lower_bound(R &&Range, ForwardIt I) -> decltype(adl_begin(Range)) {
-  return std::lower_bound(adl_begin(Range), adl_end(Range), I);
+template <typename R, typename T>
+auto lower_bound(R &&Range, T &&Value) -> decltype(adl_begin(Range)) {
+  return std::lower_bound(adl_begin(Range), adl_end(Range),
+                          std::forward<T>(Value));
 }
 
-template <typename R, typename ForwardIt, typename Compare>
-auto lower_bound(R &&Range, ForwardIt I, Compare C)
+template <typename R, typename T, typename Compare>
+auto lower_bound(R &&Range, T &&Value, Compare C)
     -> decltype(adl_begin(Range)) {
-  return std::lower_bound(adl_begin(Range), adl_end(Range), I, C);
+  return std::lower_bound(adl_begin(Range), adl_end(Range),
+                          std::forward<T>(Value), C);
 }
 
 /// Provide wrappers to std::upper_bound which take ranges instead of having to
 /// pass begin/end explicitly.
-template <typename R, typename ForwardIt>
-auto upper_bound(R &&Range, ForwardIt I) -> decltype(adl_begin(Range)) {
-  return std::upper_bound(adl_begin(Range), adl_end(Range), I);
+template <typename R, typename T>
+auto upper_bound(R &&Range, T &&Value) -> decltype(adl_begin(Range)) {
+  return std::upper_bound(adl_begin(Range), adl_end(Range),
+                          std::forward<T>(Value));
 }
 
-template <typename R, typename ForwardIt, typename Compare>
-auto upper_bound(R &&Range, ForwardIt I, Compare C)
+template <typename R, typename T, typename Compare>
+auto upper_bound(R &&Range, T &&Value, Compare C)
     -> decltype(adl_begin(Range)) {
-  return std::upper_bound(adl_begin(Range), adl_end(Range), I, C);
+  return std::upper_bound(adl_begin(Range), adl_end(Range),
+                          std::forward<T>(Value), C);
 }
 /// Wrapper function around std::equal to detect if all elements
 /// in a container are same.

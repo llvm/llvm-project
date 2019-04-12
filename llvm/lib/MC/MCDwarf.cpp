@@ -378,8 +378,7 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
 }
 
 void MCDwarfLineTableHeader::emitV5FileDirTables(
-    MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr,
-    StringRef CtxCompilationDir) const {
+    MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr) const {
   // The directory format, which is just a list of the directory paths.  In a
   // non-split object, these are references to .debug_line_str; in a split
   // object, they are inline strings.
@@ -389,8 +388,9 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
                                     : dwarf::DW_FORM_string);
   MCOS->EmitULEB128IntValue(MCDwarfDirs.size() + 1);
   // Try not to emit an empty compilation directory.
-  const StringRef CompDir =
-      CompilationDir.empty() ? CtxCompilationDir : StringRef(CompilationDir);
+  const StringRef CompDir = CompilationDir.empty()
+                                ? MCOS->getContext().getCompilationDir()
+                                : StringRef(CompilationDir);
   if (LineStr) {
     // Record path strings, emit references here.
     LineStr->emitRef(MCOS, CompDir);
@@ -509,7 +509,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   // Put out the directory and file tables.  The formats vary depending on
   // the version.
   if (LineTableVersion >= 5)
-    emitV5FileDirTables(MCOS, LineStr, context.getCompilationDir());
+    emitV5FileDirTables(MCOS, LineStr);
   else
     emitV2FileDirTables(MCOS);
 

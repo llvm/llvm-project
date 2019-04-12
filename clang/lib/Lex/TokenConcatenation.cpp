@@ -160,6 +160,11 @@ static char GetFirstChar(const Preprocessor &PP, const Token &Tok) {
 bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
                                      const Token &PrevTok,
                                      const Token &Tok) const {
+  // Conservatively assume that every annotation token that has a printable
+  // form requires whitespace.
+  if (PrevTok.isAnnotation())
+    return true;
+
   // First, check to see if the tokens were directly adjacent in the original
   // source.  If they were, it must be okay to stick them together: if there
   // were an issue, the tokens would have been lexed differently.

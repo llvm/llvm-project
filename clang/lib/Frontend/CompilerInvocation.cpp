@@ -2594,13 +2594,18 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasFlag(OPT_fdouble_square_bracket_attributes,
                    OPT_fno_double_square_bracket_attributes, Opts.CPlusPlus11);
 
+  Opts.CPlusPlusModules = Opts.CPlusPlus2a;
   Opts.ModulesTS = Args.hasArg(OPT_fmodules_ts);
-  Opts.Modules = Args.hasArg(OPT_fmodules) || Opts.ModulesTS;
+  Opts.Modules =
+      Args.hasArg(OPT_fmodules) || Opts.ModulesTS || Opts.CPlusPlusModules;
   Opts.ModulesStrictDeclUse = Args.hasArg(OPT_fmodules_strict_decluse);
   Opts.ModulesDeclUse =
       Args.hasArg(OPT_fmodules_decluse) || Opts.ModulesStrictDeclUse;
+  // FIXME: We only need this in C++ modules / Modules TS if we might textually
+  // enter a different module (eg, when building a header unit).
   Opts.ModulesLocalVisibility =
-      Args.hasArg(OPT_fmodules_local_submodule_visibility) || Opts.ModulesTS;
+      Args.hasArg(OPT_fmodules_local_submodule_visibility) || Opts.ModulesTS ||
+      Opts.CPlusPlusModules;
   Opts.ModulesCodegen = Args.hasArg(OPT_fmodules_codegen);
   Opts.ModulesDebugInfo = Args.hasArg(OPT_fmodules_debuginfo);
   Opts.ModulesSearchAll = Opts.Modules &&

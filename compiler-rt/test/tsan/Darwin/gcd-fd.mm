@@ -17,8 +17,8 @@ int main(int argc, const char *argv[]) {
       0666, queue, ^(int error) { });
   dispatch_io_set_high_water(channel, 1);
 
-  NSData *ns_data = [NSMutableData dataWithLength:1000];
-  dispatch_data_t data = dispatch_data_create(ns_data.bytes, ns_data.length, NULL, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+  char buf[1000];
+  dispatch_data_t data = dispatch_data_create(buf, sizeof(buf), NULL, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
 
   my_global++;
   dispatch_io_write(channel, 0, data, queue, ^(bool done, dispatch_data_t remainingData, int error) {

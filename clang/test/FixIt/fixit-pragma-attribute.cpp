@@ -16,8 +16,8 @@
 // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:133-[[@LINE-2]]:153}:""
 
 #pragma clang attribute push (__attribute__((annotate("subRuleContradictions"))), apply_to = any(variable, variable(is_parameter), function(is_member), variable(is_global)))
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:108-[[@LINE-1]]:132}:""
-// CHECK: fix-it:{{.*}}:{[[@LINE-2]]:153-[[@LINE-2]]:172}:""
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:153-[[@LINE-1]]:172}:""
+// CHECK: fix-it:{{.*}}:{[[@LINE-2]]:108-[[@LINE-2]]:132}:""
 
 #pragma clang attribute pop
 

@@ -1,3 +1,5 @@
+:orphan:
+
 ===========================================
 Kaleidoscope: Implementing a Parser and AST
 ===========================================
@@ -730,7 +732,7 @@ our makefile/command line about which options to use:
 
 Here is the code:
 
-.. literalinclude:: ../../examples/Kaleidoscope/Chapter2/toy.cpp
+.. literalinclude:: ../../../examples/Kaleidoscope/Chapter2/toy.cpp
    :language: c++
 
 `Next: Implementing Code Generation to LLVM IR <LangImpl03.html>`_

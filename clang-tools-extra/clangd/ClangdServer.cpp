@@ -23,7 +23,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
@@ -187,28 +186,23 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
       return CB(IP.takeError());
     if (isCancelled())
       return CB(llvm::make_error<CancelledError>());
-    if (!IP->Preamble) {
-      vlog("File {0} is not ready for code completion. Enter fallback mode.",
-           File);
-      CodeCompleteResult CCR;
-      CCR.Context = CodeCompletionContext::CCC_Recovery;
-
-      // FIXME: perform simple completion e.g. using identifiers in the current
-      // file and symbols in the index.
-      // FIXME: let clients know that we've entered fallback mode.
-
-      return CB(std::move(CCR));
-    }
 
     llvm::Optional<SpeculativeFuzzyFind> SpecFuzzyFind;
-    if (CodeCompleteOpts.Index && CodeCompleteOpts.SpeculativeIndexRequest) {
-      SpecFuzzyFind.emplace();
-      {
-        std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
-        SpecFuzzyFind->CachedReq = CachedCompletionFuzzyFindRequestByFile[File];
+    if (!IP->Preamble) {
+      // No speculation in Fallback mode, as it's supposed to be much faster
+      // without compiling.
+      vlog("Build for file {0} is not ready. Enter fallback mode.", File);
+    } else {
+      if (CodeCompleteOpts.Index && CodeCompleteOpts.SpeculativeIndexRequest) {
+        SpecFuzzyFind.emplace();
+        {
+          std::lock_guard<std::mutex> Lock(
+              CachedCompletionFuzzyFindRequestMutex);
+          SpecFuzzyFind->CachedReq =
+              CachedCompletionFuzzyFindRequestByFile[File];
+        }
       }
     }
-
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CodeCompleteResult Result = clangd::codeComplete(

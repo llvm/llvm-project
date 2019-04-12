@@ -207,6 +207,8 @@ private:
   NamedIdentifierNode *demangleBackRefName(StringView &MangledName);
   IdentifierNode *demangleTemplateInstantiationName(StringView &MangledName,
                                                     NameBackrefBehavior NBB);
+  IntrinsicFunctionKind
+  translateIntrinsicFunctionCode(char CH, FunctionIdentifierCodeGroup Group);
   IdentifierNode *demangleFunctionIdentifierCode(StringView &MangledName);
   IdentifierNode *
   demangleFunctionIdentifierCode(StringView &MangledName,

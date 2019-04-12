@@ -535,12 +535,12 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   EXPECT_ERROR(runLocateSymbolAt(Server, FooCpp, Position()));
   EXPECT_ERROR(runFindDocumentHighlights(Server, FooCpp, Position()));
   EXPECT_ERROR(runRename(Server, FooCpp, Position(), "new_name"));
-  // FIXME: codeComplete and signatureHelp should also return errors when they
-  // can't parse the file.
+  // Identifier-based fallback completion.
   EXPECT_THAT(cantFail(runCodeComplete(Server, FooCpp, Position(),
                                        clangd::CodeCompleteOptions()))
                   .Completions,
-              IsEmpty());
+              ElementsAre(Field(&CodeCompletion::Name, "int"),
+                          Field(&CodeCompletion::Name, "main")));
   auto SigHelp = runSignatureHelp(Server, FooCpp, Position());
   ASSERT_TRUE(bool(SigHelp)) << "signatureHelp returned an error";
   EXPECT_THAT(SigHelp->signatures, IsEmpty());
@@ -1066,10 +1066,11 @@ TEST_F(ClangdVFSTest, FallbackWhenPreambleIsNotReady) {
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
 
   auto FooCpp = testPath("foo.cpp");
-  Annotations Code(R"cpp(
+   Annotations Code(R"cpp(
+    namespace ns { int xyz; }
+    using namespace ns;
     int main() {
-      int xyz;
-      xy^
+       xy^
     })cpp");
   FS.Files[FooCpp] = FooCpp;
 
@@ -1081,17 +1082,21 @@ TEST_F(ClangdVFSTest, FallbackWhenPreambleIsNotReady) {
   Server.addDocument(FooCpp, Code.code());
   ASSERT_TRUE(Server.blockUntilIdleForTest());
   auto Res = cantFail(runCodeComplete(Server, FooCpp, Code.point(), Opts));
-  EXPECT_THAT(Res.Completions, IsEmpty());
   EXPECT_EQ(Res.Context, CodeCompletionContext::CCC_Recovery);
+  // Identifier-based fallback completion doesn't know about "symbol" scope.
+  EXPECT_THAT(Res.Completions,
+              ElementsAre(AllOf(Field(&CodeCompletion::Name, "xyz"),
+                                Field(&CodeCompletion::Scope, ""))));
 
   // Make the compile command work again.
   CDB.ExtraClangFlags = {"-std=c++11"};
   Server.addDocument(FooCpp, Code.code());
   ASSERT_TRUE(Server.blockUntilIdleForTest());
   EXPECT_THAT(cantFail(runCodeComplete(Server, FooCpp, Code.point(),
-                                       Opts))
+                                       clangd::CodeCompleteOptions()))
                   .Completions,
-              ElementsAre(Field(&CodeCompletion::Name, "xyz")));
+              ElementsAre(AllOf(Field(&CodeCompletion::Name, "xyz"),
+                                Field(&CodeCompletion::Scope, "ns::"))));
 }
 
 } // namespace
